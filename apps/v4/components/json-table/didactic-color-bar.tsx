@@ -166,7 +166,7 @@ export const DidacticColorBar: React.FC<DidacticColorBarProps> = ({
   return (
     <div className={cn("flex flex-col", sizeTokens[size].gap, className)}>
       <div className="flex w-full items-center justify-between">
-        <span className={cn("font-medium text-black", sizeTokens[size].text)}>
+        <span className={cn("font-medium text-foreground", sizeTokens[size].text)}>
           {"Score"}
         </span>
         <span

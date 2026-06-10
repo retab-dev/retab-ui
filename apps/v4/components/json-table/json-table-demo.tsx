@@ -4,64 +4,48 @@ import * as React from "react";
 import type { JSONSchema7 } from "json-schema";
 
 import type { TableDocument } from "@/components/json-table/lib/projects-types";
+import { stripReasoningFields } from "@/components/json-table/lib/json-schema-utils";
 import { SingleFileTableView } from "@/components/json-table/single-file-table-view";
+import sampleSchema from "@/components/json-table/sample/schema.json";
+import sampleData from "@/components/json-table/sample/data.json";
 
+/** Recursively drop Retab's `X-Reasoning*` schema extensions so the table
+ *  renders no reasoning columns/indicators. */
+function stripSchemaReasoning(node: unknown): unknown {
+  if (Array.isArray(node)) return node.map(stripSchemaReasoning);
+  if (node && typeof node === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(node)) {
+      if (key.startsWith("X-Reasoning")) continue;
+      out[key] = stripSchemaReasoning(value);
+    }
+    return out;
+  }
+  return node;
+}
+
+// Real extraction: an oil & gas revenue statement (nested check + properties →
+// production → line items). `prediction` is the extracted output object.
 const document = {
   id: "doc_1",
   project_id: "proj_1",
   mime_data: {
     id: "file_1",
-    filename: "invoice.pdf",
+    filename: "revenue-statement.pdf",
     mime_type: "application/pdf",
   },
   prediction_data: {
-    prediction: {
-      invoice_number: "INV-1024",
-      total: 1280.5,
-      paid: false,
-      vendor: { name: "Acme Corp", country: "US" },
-      line_items: [
-        { description: "Widget", quantity: 3, unit_price: 426.83 },
-        { description: "Gadget", quantity: 1, unit_price: 0 },
-      ],
-    },
+    prediction: stripReasoningFields(sampleData) as Record<string, unknown>,
   },
   extraction_id: null,
 } as unknown as TableDocument;
 
-const schema: JSONSchema7 = {
-  type: "object",
-  properties: {
-    invoice_number: { type: "string", title: "Invoice #" },
-    total: { type: "number", title: "Total" },
-    paid: { type: "boolean", title: "Paid" },
-    vendor: {
-      type: "object",
-      title: "Vendor",
-      properties: {
-        name: { type: "string", title: "Name" },
-        country: { type: "string", title: "Country" },
-      },
-    },
-    line_items: {
-      type: "array",
-      title: "Line items",
-      items: {
-        type: "object",
-        properties: {
-          description: { type: "string", title: "Description" },
-          quantity: { type: "integer", title: "Qty" },
-          unit_price: { type: "number", title: "Unit price" },
-        },
-      },
-    },
-  },
-};
+const schema = stripSchemaReasoning(sampleSchema) as unknown as JSONSchema7;
 
 export function JsonTableDemo() {
   const [currentSchema, setSchema] = React.useState<JSONSchema7>(schema);
   return (
-    <div className="not-prose h-[480px] overflow-auto rounded-xl border bg-white">
+    <div className="not-prose flex h-[480px] flex-col overflow-hidden rounded-xl border bg-background">
       <SingleFileTableView
         document={document}
         schema={currentSchema}

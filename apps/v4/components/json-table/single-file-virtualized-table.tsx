@@ -379,7 +379,7 @@ export const SingleFileVirtualizedTable =
                 <HoverCardPortalContext.Provider value={{ setPortalOpen }}>
                   <div
                     ref={hoverCardRef}
-                    className="overflow-hidden rounded-md border border-gray-200 bg-white p-0 shadow-lg"
+                    className="overflow-hidden rounded-md border border-border bg-background p-0 shadow-lg"
                   >
                     <DataCellPopoverCardContent
                       similarityType={similarityType}

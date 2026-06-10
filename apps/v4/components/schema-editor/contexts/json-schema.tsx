@@ -271,16 +271,6 @@ function JsonSchemaEditorProviderRaw({
 
         let count = 0;
 
-        // Count special properties directly on the current node
-        if (
-          node["X-Reasoning"] === true ||
-          (node["X-ReasoningPrompt"] !== undefined &&
-            node["X-ReasoningPrompt"] !== null &&
-            node["X-ReasoningPrompt"] !== "")
-        ) {
-          count += 1;
-        }
-
         // Handle $ref references
         if (node.$ref && typeof node.$ref === "string") {
           // Parse the reference path

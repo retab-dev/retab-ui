@@ -3,19 +3,16 @@
     "Charges": {
       "properties": {
         "weight_charge": {
-          "X-ReasoningPrompt": "Document your analysis of the weight charge for the entire consignment.\n1. Look for 'Weight Charge' or similar in the charges section.\n2. This should be the sum of all line item totals based on rate × chargeable weight.\n3. Verify if the amount matches any calculation of line item totals.\n4. Note any discrepancies and explain your reasoning.\n\nExample: \"Found weight charge of €1,125.00, which matches the sum of all line item totals.\"\n",
           "description": "Weight charge for the entire consignment",
           "title": "Weight Charge",
           "type": "number"
         },
         "valuation_charge": {
-          "X-ReasoningPrompt": "Document your analysis of the valuation charge.\n1. Look for 'Valuation Charge' or similar in the charges section.\n2. This is typically a percentage of the declared value for carriage.\n3. If not explicitly stated but a declared value exists, check for standard rates (often 0.5% of declared value).\n4. If no valuation charge is listed, use 0.\n\nExample: \"Found valuation charge of €25.00 based on declared value of €5,000.00 at 0.5%.\"\n",
           "description": "Valuation charge to cover declared value",
           "title": "Valuation Charge",
           "type": "number"
         },
         "tax": {
-          "X-ReasoningPrompt": "Document your analysis of the tax amount.\n1. Look for 'Tax' or specific tax names (VAT, GST) in the charges section.\n2. Note the percentage rate if stated.\n3. Verify if the tax amount matches the calculation based on taxable amount and rate.\n4. If no tax is listed, use a value of 0.\n\nExample: \"Found tax amount of €230.00, which is 20% VAT on the sum of weight and valuation charges.\"\n",
           "description": "Tax imposed on the shipment",
           "title": "Tax",
           "type": "number"
@@ -31,13 +28,11 @@
           "type": "number"
         },
         "total_prepaid": {
-          "X-ReasoningPrompt": "Document your analysis of the total prepaid amount.\n1. Look for 'Total Prepaid' or 'Prepaid' in the charges section.\n2. This should be the sum of all charges that are marked as prepaid.\n3. Verify if the amount matches the calculation of all applicable charges.\n4. If charges are split between prepaid and collect, note which ones are included in prepaid.\n\nExample: \"Found total prepaid amount of €1,380.00, which matches the sum of weight charge, valuation charge, and tax.\"\n",
           "description": "Total amount prepaid",
           "title": "Total Prepaid",
           "type": "number"
         },
         "total_collect": {
-          "X-ReasoningPrompt": "Document your analysis of the total collect amount.\n1. Look for 'Total Collect' or 'Collect' in the charges section.\n2. This should be the sum of all charges that are marked as collect (to be paid by consignee).\n3. Verify if the amount matches the calculation of all applicable collect charges.\n4. If no collect charges are listed, use a value of 0.\n\nExample: \"Found total collect amount of €50.00, which matches the 'Other Charges Due Carrier' marked as collect.\"\n",
           "description": "Total amount to collect",
           "title": "Total Collect",
           "type": "number"
@@ -175,13 +170,11 @@
     "ShipmentDetail": {
       "properties": {
         "pieces": {
-          "X-ReasoningPrompt": "Document your analysis of the piece count for this shipment line item.\n1. Look for numeric values in the 'No. of Pieces' or similar column.\n2. Verify if the number is a whole number or requires decimal precision.\n3. If pieces appear as a range or with qualifiers, explain how you determined the value.\n4. Cross-check against any total piece counts to ensure consistency.\n\nExample: \"Found '12' in the pieces column. This appears to be an integer count with no decimal component.\"\n",
           "description": "Number of pieces in this line item",
           "title": "Pieces",
           "type": "number"
         },
         "gross_weight": {
-          "X-ReasoningPrompt": "Document your analysis of the gross weight for this shipment line item.\n1. Identify the gross weight value in the appropriate column.\n2. Note the units (kg, lb) and convert to numeric value if needed.\n3. For combined weights (e.g., \"12.5K\" or \"100 LBS\"), convert to a simple numeric value.\n4. Verify if the weight matches any calculations based on piece count and per-piece weight.\n\nExample: \"Found gross weight of '245.5 kg'. Converting to numeric value: 245.5\"\n",
           "description": "Gross weight for this line item",
           "title": "Gross Weight",
           "type": "number"
@@ -192,7 +185,6 @@
           "type": "string"
         },
         "chargeable_weight": {
-          "X-ReasoningPrompt": "Document your analysis of the chargeable weight for this shipment line item.\n1. Look for chargeable weight in the appropriate column.\n2. If not explicitly stated, determine if volumetric weight applies.\n3. For air freight, chargeable weight is the greater of actual weight or volumetric weight (dimensional weight).\n4. Volumetric weight is typically calculated as (Length × Width × Height in cm) ÷ 6000 for international air shipments.\n\nExample: \"Found chargeable weight of 300 kg, which is higher than the gross weight of 245.5 kg, indicating dimensional weight applies.\"\n",
           "description": "Chargeable weight for this line item",
           "title": "Chargeable Weight",
           "type": "number"
@@ -203,13 +195,11 @@
           "type": "string"
         },
         "rate_or_charge": {
-          "X-ReasoningPrompt": "Document your analysis of the rate or charge for this shipment line item.\n1. Identify the rate in the appropriate column (often labeled 'Rate' or 'Charge').\n2. Note whether the rate is per kg, per piece, or per shipment.\n3. Convert any formatted values (e.g., \"USD 2.50/kg\") to a simple numeric value.\n4. Verify if the rate, when multiplied by the applicable weight or pieces, equals the line item total.\n\nExample: \"Found rate of '€3.75' per kg. Converting to numeric value: 3.75\"\n",
           "description": "Rate or charge applied per unit",
           "title": "Rate Or Charge",
           "type": "number"
         },
         "total": {
-          "X-ReasoningPrompt": "Document your analysis of the total charge for this shipment line item.\n1. Look for the total charge in the appropriate column.\n2. If not explicitly stated, calculate as (rate × chargeable weight).\n3. Verify if the calculated total matches any stated total.\n4. Note any discrepancies and explain your reasoning.\n\nExample: \"Found total charge of €1,125.00. This matches the calculation of 3.75 × 300 = 1,125.\"\n",
           "description": "Total charge for this line item",
           "title": "Total",
           "type": "number"
@@ -325,7 +315,6 @@
       "description": "Details about the flight, origin, and destination"
     },
     "shipment_details": {
-      "X-ReasoningPrompt": "Document your analysis of all shipment line items.\n1. Identify each distinct line item in the shipment details section.\n2. For each line item, extract the pieces, weights, rates, dimensions, and descriptions.\n3. Verify if multiple line items share characteristics or if they represent different goods.\n4. Check if totals across all line items match any stated shipment totals.\n5. Note any special handling requirements or hazardous materials information.\n\nExample: \"Identified 3 line items:\n- Line 1: 5 boxes of electronics, 120kg\n- Line 2: 2 pallets of machinery parts, 450kg\n- Line 3: 1 crate of fragile equipment, 85kg\nTotal pieces (8) and weight (655kg) match the stated shipment totals.\"\n",
       "description": "Line items in the shipment detailing pieces, weight, rate, etc.",
       "items": {
         "$ref": "#/$defs/ShipmentDetail"
@@ -343,7 +332,6 @@
       "type": "string"
     },
     "disclaimers": {
-      "X-ReasoningPrompt": "Document your analysis of all disclaimers and notes.\n1. Identify each distinct disclaimer, caution, or note on the air waybill.\n2. Separate multi-line disclaimers into individual entries when they represent distinct points.\n3. Include regulatory notices, liability limitations, and special handling instructions.\n4. Note the location of disclaimers (header, footer, margins, back of document).\n\nExample: \"Identified 4 distinct disclaimers:\n1. 'Carriage subject to Warsaw Convention limitations of liability'\n2. 'Dangerous goods declaration attached'\n3. 'Not negotiable unless consigned to order'\n4. 'Insurance coverage not included unless specified'\"\n",
       "description": "Important disclaimers or notes displayed on the air waybill",
       "items": {
         "type": "string"

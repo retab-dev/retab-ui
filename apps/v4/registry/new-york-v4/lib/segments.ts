@@ -55,11 +55,13 @@ function normalizePages(pages: number[]): number[] {
 /** Normalize partition/split output into the shared `Segment[]` model. */
 export function toSegments(
   output: SegmentChunk[] | null | undefined,
-  confidences?: (number | null | undefined)[]
+  confidences?: (number | null | undefined)[],
+  /** Reuse a shared color map (e.g. so partition votes match the consensus). */
+  colorOverride?: Map<string, string>
 ): Segment[] {
   if (!output) return []
   const labels = output.map((c) => c.key ?? c.name ?? "")
-  const colors = buildColorMap(labels)
+  const colors = colorOverride ?? buildColorMap(labels)
   return output.map((chunk, index) => {
     const label = labels[index]
     return {

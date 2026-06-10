@@ -1,9 +1,7 @@
 {
   "title": "Components",
   "pages": [
-    "index",
-    "uiform",
-    "json-form",
+    "index",    "json-form",
     "json-table",
     "schema-builder",
     "csv-viewer",

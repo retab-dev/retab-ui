@@ -1,7 +1,8 @@
-import { JSONSchema7, JSONSchema7Definition } from "json-schema";
-// Extend JSONSchema7 to include our custom properties
-export interface ExtendedJSONSchema7 extends JSONSchema7 {
-  "X-ReasoningPrompt"?: string;
-  "X-Reasoning"?: boolean;
-  "X-ComputedField"?: boolean;
-}
+import type { JSONSchema7 } from "json-schema";
+
+/**
+ * The schema editor works with standard JSON Schema (Draft 7). This is a plain
+ * alias for `JSONSchema7` — no custom extensions — kept under a single shared
+ * name so the editor's many imports stay stable.
+ */
+export type ExtendedJSONSchema7 = JSONSchema7;

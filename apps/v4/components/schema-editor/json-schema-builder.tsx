@@ -382,16 +382,10 @@ function JsonSchemaEditorRaw({
   fullCodeModeState,
   showTemplatesButton = false,
   editMode = "editable",
-  setDisplayEvanescentButtons,
-  onSchemaFixWithAI,
 }: {
   fullCodeModeState?: [boolean, (value: boolean) => void];
   showTemplatesButton?: boolean;
   editMode?: "promptOnly" | "readOnly" | "editable";
-  setDisplayEvanescentButtons?: (display: boolean) => void;
-  addFileToContext?: boolean;
-  setShowInitialSchemaGenerateDialog?: (open: boolean) => void;
-  onSchemaFixWithAI?: (validationErrors: string) => Promise<void>;
 }) {
   const [internalFullCodeMode, setInternalFullCodeMode] = useState(false);
 
@@ -435,8 +429,6 @@ function JsonSchemaEditorRaw({
         <ValidationErrorDisplay
           validationErrors={validationErrors}
           variant="full"
-          showFixButton={!!onSchemaFixWithAI}
-          onSchemaFixWithAI={onSchemaFixWithAI}
         />
 
         {/* Top Level Editor */}
@@ -459,7 +451,6 @@ function JsonSchemaEditorRaw({
         ) : (
           <TopLevelEditor
             onChange={setSchema}
-            setDisplayEvanescentButtons={setDisplayEvanescentButtons}
             node={schema}
             editMode={editMode}
             setOpenLayoutDialog={setOpenLayoutDialog}
@@ -483,7 +474,6 @@ function JsonSchemaEditorRaw({
             setDefsAccordionOpen={handleDefsAccordionChange}
             draggedParentRef={draggedParentRef}
             draggedPropertyRef={draggedPropertyRef}
-            setDisplayEvanescentButtons={setDisplayEvanescentButtons}
           />
           <DefsEditor
             editMode={editMode}

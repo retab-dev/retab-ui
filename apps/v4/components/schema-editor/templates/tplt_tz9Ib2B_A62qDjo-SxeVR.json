@@ -18,9 +18,10 @@
       ]
     }
   },
-  "required": ["sentiment"],
+  "required": [
+    "sentiment"
+  ],
   "additionalProperties": false,
   "$defs": {},
-  "X-ReasoningPrompt": "",
   "X-ReferenceQuote": false
 }

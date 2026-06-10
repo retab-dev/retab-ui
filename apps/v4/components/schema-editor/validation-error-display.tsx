@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { AlertCircle, Sparkles, ChevronDown, ChevronRight } from "lucide-react";
-import { Button } from "@/components/ui-retab/button";
+import { AlertCircle, ChevronDown, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ValidationErrorDisplayProps {
@@ -12,65 +11,22 @@ interface ValidationErrorDisplayProps {
    * Whether to show the full error panel or just an inline indicator
    */
   variant?: "full" | "inline" | "compact";
-  /**
-   * Whether to show the "Fix with AI" button
-   */
-  showFixButton?: boolean;
-  /**
-   * Custom handler for the "Fix with AI" button click
-   * Receives the validation errors as a parameter
-   */
-  onSchemaFixWithAI?: (validationErrors: string) => void | Promise<void>;
-  /**
-   * Custom button text for the fix button
-   */
-  fixButtonText?: string;
-  /**
-   * Custom button icon (optional, defaults to Sparkles)
-   */
-  fixButtonIcon?: React.ReactNode;
 }
 
 export function ValidationErrorDisplay({
   validationErrors,
   className,
   variant = "full",
-  showFixButton = true,
-  onSchemaFixWithAI,
-  fixButtonText = "Fix with AI",
-  fixButtonIcon,
 }: ValidationErrorDisplayProps) {
-  const [isLoading, setIsLoading] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
-
-  // Only show fix button if we have a handler and showFixButton is true
-  const shouldShowFixButton = showFixButton && onSchemaFixWithAI;
 
   // Don't render if there are no errors
   if (!validationErrors) {
     return null;
   }
 
-  const handleFixClick = async () => {
-    if (!onSchemaFixWithAI) return;
-
-    setIsLoading(true);
-    try {
-      await onSchemaFixWithAI(validationErrors);
-    } catch (error) {
-      console.error("Error in fix handler:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   // Parse errors into individual items for better display
   const errorItems = validationErrors.split("\n\n").filter(Boolean);
-
-  // Default icon if none provided
-  const defaultIcon = <Sparkles className="h-3 w-3" />;
-  const inlineIcon = fixButtonIcon || defaultIcon;
-  const compactIcon = fixButtonIcon || <Sparkles className="h-3 w-3" />;
 
   if (variant === "compact") {
     return (
@@ -101,21 +57,9 @@ export function ValidationErrorDisplay({
               {errorItems.length !== 1 ? "s" : ""}
             </span>
           </button>
-          {shouldShowFixButton && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleFixClick}
-              disabled={isLoading}
-              className="h-6 flex-shrink-0 px-2 text-xs text-destructive hover:bg-background/5 hover:text-destructive"
-            >
-              <span className="mr-1">{compactIcon}</span>
-              {isLoading ? "Processing..." : fixButtonText}
-            </Button>
-          )}
         </div>
         {isExpanded && (
-          <div className="box-border w-full overflow-hidden border-t border-destructive/30 bg-destructive/10/20 px-3 py-2">
+          <div className="box-border w-full overflow-hidden border-t border-destructive/30 bg-destructive/10 px-3 py-2">
             <div className="w-full max-w-full space-y-1">
               {errorItems.map((error, index) => (
                 <div
@@ -160,18 +104,6 @@ export function ValidationErrorDisplay({
             Schema validation errors ({errorItems.length})
           </span>
         </button>
-        {shouldShowFixButton && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleFixClick}
-            disabled={isLoading}
-            className="h-7 flex-shrink-0 px-2 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
-          >
-            <span className="mr-1">{inlineIcon}</span>
-            {isLoading ? "Processing..." : fixButtonText}
-          </Button>
-        )}
       </div>
       {isExpanded && (
         <div className="box-border w-full space-y-3 overflow-hidden border-t border-destructive px-3 py-2">

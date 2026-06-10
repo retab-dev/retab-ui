@@ -97,16 +97,20 @@ export interface PdfViewerProps {
   renderPageOverlay?: (props: PdfPageOverlayProps) => React.ReactNode
   /** Fired with the 1-based page nearest the top of the viewport as you scroll. */
   onVisiblePageChange?: (page: number) => void
+  /** Drop the outer border/rounded/background so the viewer fills its container. */
+  bare?: boolean
 }
 
 export function PdfViewer(props: PdfViewerProps) {
   const isClient = useIsClient()
   if (!isClient) {
-    return <PdfViewerFallback className={props.className} />
+    return <PdfViewerFallback className={props.className} bare={props.bare} />
   }
   return (
     <PdfErrorBoundary className={props.className}>
-      <React.Suspense fallback={<PdfViewerFallback className={props.className} />}>
+      <React.Suspense
+        fallback={<PdfViewerFallback className={props.className} bare={props.bare} />}
+      >
         <PdfViewerInner {...props} />
       </React.Suspense>
     </PdfErrorBoundary>
@@ -121,6 +125,7 @@ function PdfViewerInner({
   downloadFileName,
   renderPageOverlay,
   onVisiblePageChange,
+  bare = false,
 }: PdfViewerProps) {
   const doc = React.use(getDocumentResource(src))
   const firstPage = React.use(getPageResource(doc, 1))
@@ -177,7 +182,8 @@ function PdfViewerInner({
   return (
     <div
       className={cn(
-        "flex min-h-0 flex-col overflow-hidden rounded-xl border bg-muted/30",
+        "flex min-h-0 flex-col overflow-hidden",
+        bare ? "h-full bg-muted/20" : "rounded-xl border bg-muted/30",
         className
       )}
       data-slot="pdf-viewer"
@@ -317,6 +323,7 @@ function PdfPage({
       style={{ width: viewport.width, height: viewport.height }}
       data-slot="pdf-page"
       data-page={pageNumber}
+      data-page-number={pageNumber}
     >
       <canvas
         ref={canvasRef}
@@ -357,11 +364,18 @@ function IconButton({
   )
 }
 
-function PdfViewerFallback({ className }: { className?: string }) {
+function PdfViewerFallback({
+  className,
+  bare = false,
+}: {
+  className?: string
+  bare?: boolean
+}) {
   return (
     <div
       className={cn(
-        "flex min-h-64 items-center justify-center rounded-xl border bg-muted/30",
+        "flex items-center justify-center",
+        bare ? "h-full bg-muted/20" : "min-h-64 rounded-xl border bg-muted/30",
         className
       )}
     >

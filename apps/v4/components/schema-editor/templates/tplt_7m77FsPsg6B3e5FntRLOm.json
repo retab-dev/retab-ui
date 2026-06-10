@@ -29,9 +29,12 @@
       "description": "One concise English sentence explaining the reasoning behind the chosen category."
     }
   },
-  "required": ["category", "confidence", "rationale"],
+  "required": [
+    "category",
+    "confidence",
+    "rationale"
+  ],
   "additionalProperties": false,
   "$defs": {},
-  "X-ReasoningPrompt": "",
   "X-ReferenceQuote": false
 }

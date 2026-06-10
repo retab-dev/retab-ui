@@ -23,6 +23,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui-retab/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui-retab/alert-dialog";
 import { Input } from "@/components/ui-retab/input";
 import { Textarea } from "@/components/ui-retab/textarea";
 import {
@@ -40,7 +50,6 @@ type SchemaEditorMode = "promptOnly" | "readOnly" | "editable";
 
 type TopLevelEditorProps = {
   onChange: (newNode: ExtendedJSONSchema7) => void | Promise<void>;
-  setDisplayEvanescentButtons?: (display: boolean) => void;
   node: ExtendedJSONSchema7;
   editMode: SchemaEditorMode;
   setOpenLayoutDialog: (open: boolean) => void;
@@ -57,7 +66,6 @@ export function buildTopLevelMetadataValues(node: ExtendedJSONSchema7) {
 
 export function TopLevelEditor({
   onChange,
-  setDisplayEvanescentButtons,
   node,
   editMode,
   setOpenLayoutDialog: _setOpenLayoutDialog,
@@ -65,6 +73,9 @@ export function TopLevelEditor({
 }: TopLevelEditorProps) {
   const [metadataDialogOpen, setMetadataDialogOpen] = useState(false);
   const [templatesDialogOpen, setTemplatesDialogOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<
+    "eraseAll" | "eraseDescriptions" | null
+  >(null);
   const [metadataValues, setMetadataValues] = useState(() =>
     buildTopLevelMetadataValues(node),
   );
@@ -113,17 +124,11 @@ export function TopLevelEditor({
   };
 
   const handleEraseAll = async () => {
-    if (
-      window.confirm(
-        "Are you sure you want to erase the current schema? This action cannot be undone.",
-      )
-    ) {
-      await onChange({
-        title: "",
-        type: "object",
-        properties: {},
-      });
-    }
+    await onChange({
+      title: "",
+      type: "object",
+      properties: {},
+    });
   };
 
   const stripFieldEverywhere = (
@@ -277,18 +282,12 @@ export function TopLevelEditor({
   };
 
   const handleEraseAllDescriptions = async () => {
-    if (
-      window.confirm(
-        "Are you sure you want to delete all descriptions in this schema? This cannot be undone.",
-      )
-    ) {
-      await onChange(
-        stripFieldEverywhere(
-          node as JSONSchema7Definition,
-          "description",
-        ) as ExtendedJSONSchema7,
-      );
-    }
+    await onChange(
+      stripFieldEverywhere(
+        node as JSONSchema7Definition,
+        "description",
+      ) as ExtendedJSONSchema7,
+    );
   };
 
   const handleDownloadSchema = () => {
@@ -424,8 +423,6 @@ export function TopLevelEditor({
             onKeyDown={(event) => {
               if (event.key === "Enter") handleNameSubmit();
             }}
-            onMouseEnter={() => setDisplayEvanescentButtons?.(true)}
-            onMouseLeave={() => setDisplayEvanescentButtons?.(false)}
             autoFocus
             disabled={editMode === "readOnly" || editMode === "promptOnly"}
           />
@@ -457,14 +454,16 @@ export function TopLevelEditor({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               {editMode === "editable" && (
-                <DropdownMenuItem onClick={handleEraseAll}>
+                <DropdownMenuItem onClick={() => setConfirmAction("eraseAll")}>
                   <Trash2 className="mr-2 h-4 w-4" />
                   Delete Schema
                 </DropdownMenuItem>
               )}
 
               {(editMode === "editable" || editMode === "promptOnly") && (
-                <DropdownMenuItem onClick={handleEraseAllDescriptions}>
+                <DropdownMenuItem
+                  onClick={() => setConfirmAction("eraseDescriptions")}
+                >
                   <MessageCircleOff className="mr-2 h-4 w-4" />
                   Delete all descriptions
                 </DropdownMenuItem>
@@ -505,8 +504,6 @@ export function TopLevelEditor({
                 handleDescriptionSubmit();
               }
             }}
-            onMouseEnter={() => setDisplayEvanescentButtons?.(true)}
-            onMouseLeave={() => setDisplayEvanescentButtons?.(false)}
             autoFocus
             disabled={editMode === "readOnly"}
           />
@@ -555,6 +552,39 @@ export function TopLevelEditor({
         open={templatesDialogOpen}
         onOpenChange={setTemplatesDialogOpen}
       />
+
+      <AlertDialog
+        open={confirmAction !== null}
+        onOpenChange={(open) => !open && setConfirmAction(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmAction === "eraseAll"
+                ? "Delete schema?"
+                : "Delete all descriptions?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmAction === "eraseAll"
+                ? "This clears every field in the current schema. This action cannot be undone."
+                : "This removes the description from every field in the schema. This action cannot be undone."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (confirmAction === "eraseAll") void handleEraseAll();
+                else if (confirmAction === "eraseDescriptions")
+                  void handleEraseAllDescriptions();
+                setConfirmAction(null);
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

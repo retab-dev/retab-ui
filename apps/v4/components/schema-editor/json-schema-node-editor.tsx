@@ -114,7 +114,6 @@ export function SchemaNodeEditor({
   draggedParentRef,
   draggedPropertyRef,
   editMode = "editable",
-  setDisplayEvanescentButtons: _setDisplayEvanescentButtons,
   hidePencilButton = false,
 }: {
   name: string;
@@ -133,7 +132,6 @@ export function SchemaNodeEditor({
   draggedParentRef: React.RefObject<string | null>;
   draggedPropertyRef: React.RefObject<string | null>;
   editMode?: "promptOnly" | "readOnly" | "editable";
-  setDisplayEvanescentButtons?: (display: boolean) => void;
   hidePencilButton?: boolean;
 }) {
   const parentPath = path;
@@ -286,14 +284,11 @@ export function SchemaNodeEditor({
   };
 
   const reorderProperties = (sourceKey: string, targetKey: string) => {
-    //console.log('[DRAG] reorderProperties - sourceKey:', sourceKey, 'targetKey:', targetKey);
     const currentProperties = effective.properties || {};
     const keys = Object.keys(currentProperties);
-    //console.log('[DRAG] Current property keys:', keys);
 
     const sourceIndex = keys.indexOf(sourceKey);
     const targetIndex = keys.indexOf(targetKey);
-    //console.log('[DRAG] sourceIndex:', sourceIndex, 'targetIndex:', targetIndex);
 
     // Basic validation
     if (
@@ -342,28 +337,22 @@ export function SchemaNodeEditor({
       }
     });
 
-    //console.log('[DRAG] Reordered keys:', reorderedKeys);
-    //console.log('[DRAG] New properties object keys:', Object.keys(newProperties));
 
     // Update the schema state
     const updatedEffective = { ...effective, properties: newProperties };
     const finalUpdatedNode = updateEffectiveNode(node, updatedEffective);
-    //console.log('[DRAG] Calling onChange with updated node. Old keys:', Object.keys(effective.properties || {}), 'New keys:', Object.keys(newProperties));
     onChange(finalUpdatedNode);
-    //console.log('[DRAG] onChange called');
   };
   /* ------------------- Drag and Drop Handlers ------------------- */
   const handleDragStart = (
     event: React.DragEvent<HTMLDivElement>,
     propName: string,
   ) => {
-    //console.log('[DRAG] handleDragStart - propName:', propName, 'parentPath:', parentPath);
     event.stopPropagation();
     event.dataTransfer.setData("text/plain", propName);
     event.dataTransfer.effectAllowed = "move";
     draggedParentRef.current = parentPath;
     draggedPropertyRef.current = propName;
-    //console.log('[DRAG] draggedParentRef.current:', draggedParentRef.current, 'draggedPropertyRef.current:', draggedPropertyRef.current);
 
     // Create a custom drag image
     const dragElement = document.createElement("div");
@@ -430,11 +419,9 @@ export function SchemaNodeEditor({
     event: React.DragEvent<HTMLDivElement>,
     targetPropName: string,
   ) => {
-    //console.log('[DRAG] handleDrop - targetPropName:', targetPropName);
     event.stopPropagation();
     event.preventDefault();
     const sourcePropName = event.dataTransfer.getData("text/plain");
-    //console.log('[DRAG] sourcePropName:', sourcePropName, 'draggedParentRef.current:', draggedParentRef.current, 'parentPath:', parentPath);
 
     event.currentTarget.classList.remove("border-t-2");
     event.currentTarget.classList.remove("border-b-2");
@@ -446,10 +433,8 @@ export function SchemaNodeEditor({
       sourcePropName !== targetPropName &&
       draggedParentRef.current === parentPath
     ) {
-      //console.log('[DRAG] Calling reorderProperties with source:', sourcePropName, 'target:', targetPropName);
       reorderProperties(sourcePropName, targetPropName);
     } else {
-      //console.log('[DRAG] Drop condition not met - sourcePropName:', sourcePropName, 'targetPropName:', targetPropName, 'parentPath match:', draggedParentRef.current === parentPath);
     }
   };
 

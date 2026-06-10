@@ -1,30 +1,14 @@
 "use client";
 
-import {
-  useCallback,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
 import { Loader2, Scissors } from "lucide-react";
 
-import { cn } from "@/lib/utils";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui-retab/tooltip";
 import { type SplitView } from "@/components/viewers/lib/split-types";
-import {
-  buildPageRuns,
-  buildSplitDiagramColorMap,
-  getMaxSplitDiagramPage,
-} from "@/components/viewers/split/split-segment-diagram-utils";
-import { SplitSegmentDiagram } from "@/components/viewers/split/split-segment-diagram";
+import { segmentsPageCount, toSegments } from "@/lib/segments";
+import { SegmentLegend } from "@/components/ui/segment-legend";
+import { PageRibbon } from "@/components/ui/page-ribbon";
 
-/** Handlers a document surface calls to keep the diagram/legend in sync. */
+/** Handlers a document surface calls to keep the ribbon/legend in sync. */
 export interface SplitDocumentHandlers {
   onCurrentPageChange: (page: number) => void;
 }
@@ -36,121 +20,27 @@ export interface SplitViewerProps {
   renderDocument?: (handlers: SplitDocumentHandlers) => ReactNode;
 }
 
-export function buildSplitLegendItems(
-  splitResult: SplitView,
-  currentPage: number,
-) {
-  const colorMap = buildSplitDiagramColorMap(splitResult);
-  const legendItemsByName = new Map<
-    string,
-    { name: string; color: string; isUsed: boolean; isActive: boolean }
-  >();
-
-  for (const split of splitResult.output) {
-    const pageRuns = buildPageRuns(split.pages);
-    const existing = legendItemsByName.get(split.name);
-    const isUsed = pageRuns.length > 0;
-    const isActive = pageRuns.some(
-      (run) => currentPage >= run.start_page && currentPage < run.end_page + 1,
-    );
-
-    legendItemsByName.set(split.name, {
-      name: split.name,
-      color: existing?.color ?? colorMap.get(split.name) ?? "#4E79A7",
-      isUsed: (existing?.isUsed ?? false) || isUsed,
-      isActive: (existing?.isActive ?? false) || isActive,
-    });
-  }
-
-  return Array.from(legendItemsByName.values()).sort((left, right) =>
-    left.name.localeCompare(right.name),
-  );
-}
-
-function SplitLegendStrip({
-  splitResult,
-  currentPage,
-}: {
-  splitResult: SplitView;
-  currentPage: number;
-}) {
-  const [isShowingAll, setIsShowingAll] = useState(false);
-  const legendItems = useMemo(
-    () => buildSplitLegendItems(splitResult, currentPage),
-    [currentPage, splitResult],
-  );
-
-  const visibleLegendItems = isShowingAll
-    ? legendItems
-    : legendItems.filter((item) => item.isUsed);
-  const hasHiddenItems = legendItems.some((item) => !item.isUsed);
-
-  if (visibleLegendItems.length === 0) {
-    return null;
-  }
-
-  return (
-    <div
-      className="shrink-0 border-b border-zinc-200 bg-white px-3 py-2 text-zinc-950"
-      aria-label="Split legend"
-    >
-      <div className="grid grid-cols-4 gap-x-4 gap-y-1.5">
-        {visibleLegendItems.map((item) => (
-          <div key={item.name} className="flex min-w-0 items-center gap-2">
-            <span
-              aria-hidden
-              className="h-3 w-5 shrink-0 border border-zinc-950/50"
-              style={{ backgroundColor: item.color }}
-            />
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span
-                  className={cn(
-                    "truncate text-xs",
-                    item.isActive
-                      ? "font-semibold text-black"
-                      : "font-normal text-gray-600",
-                  )}
-                >
-                  {item.name}
-                </span>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="max-w-xs break-words">
-                {item.name}
-              </TooltipContent>
-            </Tooltip>
-          </div>
-        ))}
-      </div>
-      {hasHiddenItems ? (
-        <button
-          type="button"
-          className="mt-2 text-[10px] font-medium text-zinc-500 underline-offset-2 hover:text-zinc-950 hover:underline"
-          onClick={() => setIsShowingAll((showingAll) => !showingAll)}
-        >
-          {isShowingAll ? "Hide unused" : "Show all"}
-        </button>
-      ) : null}
-    </div>
-  );
-}
-
 export function SplitViewer({
   result,
   isProcessing = false,
   renderDocument,
 }: SplitViewerProps) {
   const [currentPage, setCurrentPage] = useState(1);
+  const [activeId, setActiveId] = useState<string | null>(null);
   const previewRef = useRef<HTMLDivElement | null>(null);
   const hasOutput = !!result && result.output.length > 0;
-  const pageCount = useMemo(() => getMaxSplitDiagramPage(result), [result]);
+
+  // One Segment per subdocument — the sidebar ribbon and the legend share it.
+  const segments = useMemo(
+    () => toSegments(result?.output ?? []),
+    [result?.output],
+  );
+  const pageCount = useMemo(() => segmentsPageCount(segments), [segments]);
 
   const handleJumpToPage = useCallback((page: number) => {
-    if (!previewRef.current) return;
-    const target = previewRef.current.querySelector<HTMLElement>(
-      `[data-page-number="${page}"]`,
-    );
-    target?.scrollIntoView({ behavior: "smooth", block: "start" });
+    previewRef.current
+      ?.querySelector<HTMLElement>(`[data-page-number="${page}"]`)
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, []);
 
   if (!hasOutput) {
@@ -177,35 +67,49 @@ export function SplitViewer({
   }
 
   return (
-    <TooltipProvider>
-      <div className="flex h-full min-h-0">
-        {pageCount > 0 ? (
-          <div className="flex shrink-0 overflow-auto border-r border-zinc-200 bg-white">
-            <SplitSegmentDiagram
-              splitResult={result!}
-              pageCount={pageCount}
-              currentPage={currentPage}
-              onSelectSplit={(_name, page) => handleJumpToPage(page)}
-              onSelectVote={(_name, _voteIndex, page) => handleJumpToPage(page)}
-              onJumpToPage={handleJumpToPage}
-            />
-          </div>
-        ) : null}
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-white">
-          <SplitLegendStrip splitResult={result!} currentPage={currentPage} />
-          <section ref={previewRef} className="min-h-0 flex-1 overflow-hidden">
-            {renderDocument ? (
-              renderDocument({ onCurrentPageChange: setCurrentPage })
-            ) : (
-              <div className="flex h-full items-center justify-center">
-                <span className="text-sm text-zinc-500">
-                  No document available
-                </span>
-              </div>
-            )}
-          </section>
+    <div className="flex min-h-0 flex-1">
+      {pageCount > 0 ? (
+        <div className="flex shrink-0 overflow-auto border-r border-zinc-200 bg-white px-3 py-6">
+          <PageRibbon
+            orientation="vertical"
+            rows={[{ id: "split", segments }]}
+            pageCount={pageCount}
+            currentPage={currentPage}
+            activeId={activeId}
+            onActivate={setActiveId}
+            onSelectPage={handleJumpToPage}
+            showTicks
+          />
         </div>
+      ) : null}
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-white">
+        <div
+          className="shrink-0 border-b border-zinc-200 bg-white px-3 py-2"
+          aria-label="Split legend"
+        >
+          <SegmentLegend
+            segments={segments}
+            currentPage={currentPage}
+            activeId={activeId}
+            onActivate={setActiveId}
+            onSelect={(id) => {
+              const seg = segments.find((s) => s.id === id);
+              if (seg?.pages.length) handleJumpToPage(seg.pages[0]);
+            }}
+            columns={4}
+            showUnusedToggle
+          />
+        </div>
+        <section ref={previewRef} className="min-h-0 flex-1 overflow-hidden">
+          {renderDocument ? (
+            renderDocument({ onCurrentPageChange: setCurrentPage })
+          ) : (
+            <div className="flex h-full items-center justify-center">
+              <span className="text-sm text-zinc-500">No document available</span>
+            </div>
+          )}
+        </section>
       </div>
-    </TooltipProvider>
+    </div>
   );
 }

@@ -22,9 +22,11 @@ import { CopyButton } from "@/components/copy-button"
 import { DocsMdxCodeBlock } from "@/components/docs-code-block"
 import { getIconForLanguageExtension } from "@/components/icons"
 import { RetabSchemaBuilderDemo } from "@/components/retab-schema-builder-demo"
-import { CsvViewerDemo } from "@/components/csv-viewer-demo"
+import {
+  CsvViewerDemo,
+  CsvViewerStreamingDemo,
+} from "@/components/csv-viewer-demo"
 import { PdfViewerDemo } from "@/components/pdf-viewer-demo"
-import { UiFormDemo } from "@/components/uiform-demo"
 import { JsonFormDemo } from "@/components/json-form-demo"
 import { JsonTableDemo } from "@/components/json-table/json-table-demo"
 import {
@@ -337,8 +339,8 @@ export const mdxComponents = {
   DocsMdxCodeBlock,
   RetabSchemaBuilderDemo,
   CsvViewerDemo,
+  CsvViewerStreamingDemo,
   PdfViewerDemo,
-  UiFormDemo,
   JsonFormDemo,
   JsonTableDemo,
   ParseViewerDemo,

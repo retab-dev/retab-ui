@@ -1,5 +1,4 @@
 {
-  "X-ReasoningPrompt": "Before extracting the structured fields, use this space to outline your plan. Resolve uncertainties such as missing or obscured details, confirm the card's network and subtype from any logos or text, and ensure the correct length and grouping for the card number. Decide how to handle potential inconsistencies (e.g., unusual date formats or incomplete names) and confirm that each extracted value corresponds accurately to the area indicated on the card image.",
   "properties": {
     "card_number": {
       "X-FieldPrompt": "Locate the credit card number (usually embossed or printed on the front). Extract all digits in the correct sequence, ignoring any spaces or dashes.",

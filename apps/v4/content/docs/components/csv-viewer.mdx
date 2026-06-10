@@ -42,7 +42,8 @@ const data = parseCsv(text, { delimiter: "\t" }) // { columns, rows }
 - **Virtualized rows _and_ columns** — only the visible window of cells is rendered (`@tanstack/react-virtual`), so wide and tall tables stay fast. Toggle with the `virtualized` prop.
 - **Sortable columns** — click a header to sort (`@tanstack/react-table`).
 - **Sticky header and row numbers**, horizontal scroll for wide tables.
-- **Self-contained parser** — handles quoted fields, escaped quotes, and delimiters/newlines inside quotes.
+- **Self-contained, incremental parser** — handles quoted fields, escaped quotes, and delimiters/newlines inside quotes, across chunk boundaries.
+- **Off-thread streaming** — pass a `File`/`Blob` as `source` to parse in a Web Worker (or a time-sliced main-thread fallback) with rows arriving progressively.
 
 ## Virtualization
 
@@ -54,17 +55,40 @@ render every cell instead:
 <CsvViewer value={csv} virtualized={false} />
 ```
 
+## Streaming large files
+
+`value` parses synchronously, which is fine for small inputs but blocks the main
+thread for large ones. For big files, pass a `File`/`Blob` (or a string) as
+`source` instead: it's parsed **off the render path** — in a Web Worker when
+available, falling back to a time-sliced main-thread reader — and rows stream in
+progressively. The parser is incremental, so it never needs the whole file in
+memory at once during parsing.
+
+<CsvViewerStreamingDemo />
+
+```tsx
+// e.g. straight from a file input
+<CsvViewer source={file} />
+
+// opt out of the worker (time-sliced main thread instead)
+<CsvViewer source={file} worker={false} />
+```
+
 ## Props
 
 | Prop | Type | Description |
 | --- | --- | --- |
-| `value` | `string` | Raw CSV/TSV text. Provide this or `data`. |
+| `value` | `string` | Raw CSV/TSV text, parsed synchronously. Provide this, `data`, or `source`. |
 | `data` | `ParsedCsv` | Pre-parsed `{ columns, rows }`. |
-| `delimiter` | `string` | Field delimiter for `value` (defaults to `,`; use `\t` for TSV). |
+| `source` | `Blob \| File \| string` | A large source parsed off the render path, streamed in progressively. |
+| `worker` | `boolean` | Parse `source` in a Web Worker when available (falls back to main thread). Defaults to `true`. |
+| `batchSize` | `number` | Rows per progressive batch when streaming a `source`. Defaults to `5000`. |
+| `delimiter` | `string` | Field delimiter for `value`/`source` (defaults to `,`; use `\t` for TSV). |
 | `hasHeader` | `boolean` | Treat the first record as a header. Defaults to `true`. |
 | `showRowNumbers` | `boolean` | Show the leading row-number column. Defaults to `true`. |
 | `virtualized` | `boolean` | Virtualize rows and columns with TanStack Virtual. Defaults to `true`. |
-| `overscan` | `number` | Rows/columns rendered beyond the visible window when virtualizing. Defaults to `8`. |
+| `overscan` | `number` | Rows rendered beyond the visible window when virtualizing (and the default for columns). Defaults to `8`. |
+| `columnOverscan` | `number` | Columns rendered beyond the visible window. Defaults to `overscan`. |
 | `rowHeight` | `number` | Row height in pixels. Defaults to `33`. |
 | `columnWidth` | `number` | Column width in pixels. Defaults to `180`. |
 | `height` | `number` | Scroll viewport height in pixels. Defaults to `480`. |

@@ -106,14 +106,7 @@ import { autoFormatDateTimeFields } from "@/components/uiform/lib/date-utils";
 import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/uiform/ui/dialog";
 import { PropertyEditor } from "@/components/schema-editor/property-dialog";
 import { Switch } from "@/components/uiform/ui/switch";
-import { expandRefs } from "@/components/uiform/uiform";
-
-// Local replacement for the removed computed-fields overlay DSL type. The DSL,
-// its ComputedFieldCard editor, and the breakdown UI have all been deleted; the
-// context still carries an (always-undefined) computationSpec for contract stability.
-type ComputationSpec = {
-  computations: Record<string, { expression: string; result_type?: string }>;
-};
+import { expandRefs } from "@/components/uiform/lib/expand-refs";
 
 /*
 --------------------------------
@@ -159,18 +152,6 @@ export interface ConsensusChoice {
   likelihoods?: Record<string, number>;
 }
 
-const getReasoningPath = (path: string): string => {
-  const parts = path.split(".");
-  const fieldName = parts.pop() || "";
-  const parentPath = parts.join(".");
-
-  // If there's a parent path, construct reasoning___fieldName within that path
-  if (parentPath) {
-    return `${parentPath}.reasoning___${fieldName}`;
-  }
-  // Otherwise, it's a top-level field
-  return `reasoning___${fieldName}`;
-};
 
 // Sentinel values for Select components (Radix forbids empty string values)
 const NULL_OPTION = "__none__";
@@ -193,7 +174,6 @@ const fromSelectValue = (v: string): any => {
 export interface ConsensusAlternative {
   value: any;
   index: number;
-  reasoning: string | null;
 }
 
 export interface ConsensusContent {
@@ -216,7 +196,6 @@ export interface ConfigProps {
   titles?: Record<string, boolean>;
   descriptions?: boolean;
   showPrompts?: boolean;
-  showReasoning?: boolean;
   showConsensus?: boolean;
   showSources?: boolean;
   showErrors?: boolean;
@@ -257,8 +236,6 @@ export interface UiFormProps {
   formFieldIdPrefix?: string;
   showVerifiedProperty?: boolean;
   projectId?: string;
-  computationSpec?: ComputationSpec;
-  setComputationSpec?: (spec: ComputationSpec) => void;
 }
 
 interface UiFormContextValue extends UiFormProps {
@@ -822,10 +799,6 @@ export const ajvResolver: Resolver =
                     addFormats(ajv)
                     ajvErrors(ajv);
                     ajv.addKeyword("X-InferenceOnly")
-                    ajv.addKeyword("X-ReasoningPrompt")
-                    
-                    
-                    ajv.addKeyword("reasoning")
                     ajv.addFormat("currency", {
                         type: "string",
                         validate: (x) => true,
@@ -923,15 +896,6 @@ export function mergeDescriptions(
     merged["description"] = outerSchema["description"];
   }
 
-  // Outer reasoning preferred if present
-  if ("X-ReasoningPrompt" in outerSchema) {
-    merged["X-ReasoningPrompt"] = outerSchema["X-ReasoningPrompt"];
-  } else if ("X-ReasoningPrompt" in innerSchema) {
-    merged["X-ReasoningPrompt"] = innerSchema["X-ReasoningPrompt"];
-  }
-
-  // Outer LLM Description preferred if present
-
   // Add this: Merge X-EnumTranslation
   if ("X-EnumTranslation" in outerSchema) {
     merged["X-EnumTranslation"] = outerSchema["X-EnumTranslation"];
@@ -1021,49 +985,28 @@ export const getScalarValueColor = (
   return getColor(colormap, value, inverse, 0.3);
 };
 
-// Centralized helper to apply highlight styles for verified and computed fields
+// Centralized helper to apply highlight styles for verified fields
 const highlightClasses = (
   isVerified: boolean,
-  isComputedField: boolean,
+  _isComputedField: boolean,
   style: "ring" | "border" = "border",
-  isBoolean: boolean = false,
-  fieldValue?: any,
+  _isBoolean: boolean = false,
+  _fieldValue?: any,
 ) => {
-  // For boolean computed fields, use special color coding
-  if (isComputedField && isBoolean) {
-    const booleanStyling = getComputedBooleanFieldStyling(fieldValue);
-    return booleanStyling;
-  }
-
   if (style === "ring") {
     return cn(
       isVerified &&
         "bg-green-50 ring-green-500 ring-2 data-[state=checked]:!bg-green-200 data-[state=checked]:!border-green-600 data-[state=checked]:!text-green-700",
-      isComputedField &&
-        "bg-blue-50 ring-blue-500 ring-2 data-[state=checked]:!bg-blue-200 data-[state=checked]:!border-blue-600 data-[state=checked]:!text-blue-700",
     );
   }
   return cn(
     isVerified &&
       "bg-green-50 border border-green-500 data-[state=checked]:!bg-green-200 data-[state=checked]:!border-green-600 data-[state=checked]:!text-green-700",
-    isComputedField &&
-      "bg-blue-50 border border-blue-500 data-[state=checked]:!bg-blue-200 data-[state=checked]:!border-blue-600 data-[state=checked]:!text-blue-700",
   );
 };
 
 // Match data-cell function field color coding
 const getFunctionFieldStyling = (value: any): string => {
-  if (value === true)
-    return "border-green-500 border bg-green-50 data-[state=checked]:!bg-green-200 data-[state=checked]:!border-green-600 data-[state=checked]:!text-green-700";
-  if (value === false)
-    return "border-red-500 border bg-red-50 data-[state=checked]:!bg-red-200 data-[state=checked]:!border-red-600 data-[state=checked]:!text-red-700";
-  if (value === null || value === undefined)
-    return "border-yellow-500 border bg-yellow-50 data-[state=checked]:!bg-yellow-200 data-[state=checked]:!border-yellow-600 data-[state=checked]:!text-yellow-700";
-  return "border-green-500 border bg-green-50 data-[state=checked]:!bg-green-200 data-[state=checked]:!border-green-600 data-[state=checked]:!text-green-700";
-};
-
-// Computed boolean field color coding - same as function fields
-const getComputedBooleanFieldStyling = (value: any): string => {
   if (value === true)
     return "border-green-500 border bg-green-50 data-[state=checked]:!bg-green-200 data-[state=checked]:!border-green-600 data-[state=checked]:!text-green-700";
   if (value === false)
@@ -1877,14 +1820,11 @@ const calculateConsensusContent = (
   const alternativeValues: ConsensusAlternative[] = consensusDetails
     .slice(1) // Drop the consolidated answer (choices[0])
     .map((choice: ConsensusChoice, index: number): ConsensusAlternative => {
-      const reasoningPath = getReasoningPath(fieldPath);
       const value = getValueByPath(choice.data, fieldPath);
-      const reasoning = getValueByPath(choice.data, reasoningPath);
 
       return {
         value: value,
         index: index + 2, // Start at 2 since we dropped index 1 (consolidated)
-        reasoning: reasoning,
       };
     })
     .filter((item: ConsensusAlternative) => item.value !== undefined);
@@ -1944,95 +1884,6 @@ const toSchemaPath = (p: string): string => {
     .join(".");
 };
 
-// Reusable reasoning badge component
-const reasoningTooltipViewportClassName =
-  "max-h-[min(24rem,80vh)] overflow-auto pr-1";
-
-const ReasoningBadge: React.FC<{
-  show: boolean;
-  content: any;
-  id: string;
-  hideWhenConsensus?: boolean;
-}> = ({ show, content, id, hideWhenConsensus }) =>
-  !show || !content || hideWhenConsensus ? null : (
-    <TooltipProvider key={id}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <div className="flex items-center">
-            <Atom className="h-4 w-4 text-blue-300" />
-          </div>
-        </TooltipTrigger>
-        <TooltipContent className="max-w-xs">
-          <div className={reasoningTooltipViewportClassName}>
-            <div className="mb-1 text-xs text-blue-300">Reasoning:</div>
-            {typeof content === "string" ? (
-              <div className="break-words whitespace-pre-wrap">{content}</div>
-            ) : (
-              <pre className="rounded border bg-muted p-1 text-xs leading-snug font-medium whitespace-pre-wrap text-foreground">
-                {JSON.stringify(content, null, 2)}
-              </pre>
-            )}
-          </div>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  );
-
-interface ConsensusReasoningBadgeProps {
-  show: boolean;
-  content: ConsensusContent | null;
-  id: string;
-}
-
-export const ConsensusReasoningBadge: React.FC<
-  ConsensusReasoningBadgeProps
-> = ({ show, content, id }) => {
-  // Bail if disabled or malformed content
-  if (!show || !content || !content.alternatives) {
-    return null;
-  }
-
-  // Pull out only the alternatives that actually carry reasoning text
-  const reasonedAlternatives = content.alternatives.filter(
-    (alt: ConsensusAlternative) => !!alt.reasoning,
-  );
-
-  if (reasonedAlternatives.length === 0) {
-    return null; // nothing to display
-  }
-
-  return (
-    <TooltipProvider key={id} delayDuration={300}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <div className="flex cursor-pointer items-center">
-            <Atom className="h-4 w-4 text-blue-300" />
-          </div>
-        </TooltipTrigger>
-        <TooltipContent className="max-w-xs break-words">
-          <div className={reasoningTooltipViewportClassName}>
-            <div className="mb-1 text-xs font-medium text-blue-300">
-              Model reasonings
-            </div>
-            <div className="space-y-2">
-              {reasonedAlternatives.map((alt, idx) => (
-                <div key={idx} className="space-y-1">
-                  <div>Model {alt.index - 1}</div>
-
-                  <div className="rounded border bg-muted p-1 text-xs leading-snug font-medium whitespace-pre-wrap text-foreground">
-                    {alt.reasoning}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  );
-};
-
-export default ConsensusReasoningBadge;
 // Reusable consensus badge component
 export const ConsensusBadge: React.FC<{
   show: boolean;
@@ -2659,11 +2510,6 @@ const ArrayRendererItem = React.memo<ArrayRendererItemProps>(
       disabled: globalDisabled,
     } = useUiFormContext();
 
-    const reasoningPathInner = `${arrayBaseName}.${innerIdx}.reasoning___item`;
-    const reasoningContent = pathExists(form.getValues(), reasoningPathInner)
-      ? getNestedValue(form.getValues(), reasoningPathInner)
-      : null;
-
     // ✅ Hook is now at the top level of this component
     const itemPath = `${arrayBaseName}.${innerIdx}`;
     const consensusContent = React.useMemo(() => {
@@ -2728,18 +2574,6 @@ const ArrayRendererItem = React.memo<ArrayRendererItemProps>(
                 </FormControl>
               </FormItem>
             )}
-          />
-          <ReasoningBadge
-            show={config?.showReasoning ?? false}
-            content={reasoningContent}
-            id={`${elementKey}-reasoning-enum-${innerIdx}`}
-            hideWhenConsensus={!!consensusContent}
-          />
-
-          <ConsensusReasoningBadge
-            show={config?.showReasoning ?? false}
-            content={consensusContent}
-            id={`${elementKey}-consensus-reasoning-enum-${innerIdx}`}
           />
           {!globalDisabled && (
             <Button
@@ -2819,19 +2653,6 @@ const ArrayRendererItem = React.memo<ArrayRendererItemProps>(
             />
           </div>
 
-          <ReasoningBadge
-            show={config?.showReasoning ?? false}
-            content={reasoningContent}
-            id={`${elementKey}-reasoning-prim-${innerIdx}`}
-            hideWhenConsensus={!!consensusContent}
-          />
-
-          <ConsensusReasoningBadge
-            show={config?.showReasoning ?? false}
-            content={consensusContent}
-            id={`${elementKey}-consensus-reasoning-prim-${innerIdx}`}
-          />
-
           {/* Ensure the delete button doesn't stretch */}
           {!globalDisabled && (
             <Button
@@ -2876,19 +2697,6 @@ const ArrayRendererItem = React.memo<ArrayRendererItemProps>(
             <AccordionTrigger className="pr-2 pl-2">
               <div className="flex flex-row items-center gap-2 text-xs">
                 {labelItem + ` #${innerIdx + 1}`}
-
-                <ReasoningBadge
-                  show={config?.showReasoning ?? false}
-                  content={reasoningContent}
-                  id={`${elementKey}-reasoning-tooltip-${innerIdx}`}
-                  hideWhenConsensus={!!consensusContent}
-                />
-
-                <ConsensusReasoningBadge
-                  show={config?.showReasoning ?? false}
-                  content={consensusContent}
-                  id={`${elementKey}-consensus-reasoning-tooltip-${innerIdx}`}
-                />
               </div>
             </AccordionTrigger>
           </div>
@@ -2948,8 +2756,6 @@ const ArrayRenderer: React.FC<ArrayRendererProps> = ({ path, className }) => {
     config,
     propertyEditorMode,
     showPropertyEditorPencil,
-    computationSpec,
-    setComputationSpec,
   } = useUiFormContext();
   const { projectId } = useUiFormContext();
 
@@ -3000,16 +2806,10 @@ const ArrayRenderer: React.FC<ArrayRendererProps> = ({ path, className }) => {
     enumOptions = itemsSchema.enum;
   }
 
-  const reasoningPath = getReasoningPath(path);
-  const reasoningContentRoot = pathExists(form.getValues(), reasoningPath)
-    ? getNestedValue(form.getValues(), reasoningPath)
-    : null;
   // Check for X-FieldTranslation first, then fall back to translations or array name
   const label = path.split(".").pop();
   const labelItem = itemsSchema?.title || "Item";
-  const isArrayComputedField = Boolean(
-    (arraySchema as any)?.["X-ComputedField"],
-  );
+  const isArrayComputedField = false;
   // Read current value without mutating form state during render.
   // Mutating here triggers React warnings and can create render loops.
   const rawArrayData = getNestedValue(form.getValues(), currentPath);
@@ -3154,23 +2954,6 @@ const ArrayRenderer: React.FC<ArrayRendererProps> = ({ path, className }) => {
         >
           {label}
         </FormLabel>
-
-        <ReasoningBadge
-          show={config?.showReasoning ?? false}
-          content={reasoningContentRoot}
-          id={`${path}-reasoning-root`}
-          hideWhenConsensus={!!consensusContentRoot}
-        />
-
-        {Boolean(config?.showReasoning) &&
-          Boolean(config?.showConsensus) &&
-          Boolean(consensusContentRoot) && (
-            <ConsensusReasoningBadge
-              show={Boolean(config?.showReasoning)}
-              content={consensusContentRoot}
-              id={`${path}-consensus-reasoning-root`}
-            />
-          )}
 
         {setSchema && showPropertyEditorPencil !== false && (
           <Dialog modal>
@@ -3342,8 +3125,6 @@ const PrimitiveRenderer: React.FC<PrimitiveRendererProps> = ({
     setValidationFlags,
     showVerifiedProperty,
     projectId,
-    computationSpec,
-    setComputationSpec,
   } = useUiFormContext();
 
   const formData = form.getValues();
@@ -3358,12 +3139,6 @@ const PrimitiveRenderer: React.FC<PrimitiveRendererProps> = ({
     fieldValue !== null && fieldValue !== undefined ? String(fieldValue) : "";
   const [isDraftActive, setIsDraftActive] = React.useState(false);
   const [isPopoverOpen, setIsPopoverOpen] = React.useState(false);
-  // Check if there's a corresponding reasoning field
-  // For nested fields, we need to handle the path correctly
-  const reasoningFieldPath = getReasoningPath(path);
-  const reasoningContent = pathExists(formData, reasoningFieldPath)
-    ? getNestedValue(formData, reasoningFieldPath)
-    : null;
   // Calculate consensus content dynamically from consensusDetails
   const consensusContent = React.useMemo(() => {
     return calculateConsensusContent(consensusDetails, path);
@@ -3375,10 +3150,7 @@ const PrimitiveRenderer: React.FC<PrimitiveRendererProps> = ({
   // This simplifies the logic for determining the field's type, options, and whether it's required.
   const { schema: subschema, nullable } = unwrapSchema(rawSubschema, schema);
   const isRequired = !nullable;
-  const isComputedField = Boolean(
-    (subschema as any)?.["X-ComputedField"] ||
-      (rawSubschema as any)?.["X-ComputedField"],
-  );
+  const isComputedField = false;
   const isFunctionField = Boolean(
     (subschema as any)?.["X-FunctionField"] ||
       (rawSubschema as any)?.["X-FunctionField"],
@@ -3573,12 +3345,11 @@ const PrimitiveRenderer: React.FC<PrimitiveRendererProps> = ({
           className={cn(
             "flex cursor-pointer items-center gap-1",
             size === "sm" ? "text-xs" : "text-xs",
-            isComputedField && "text-blue-900 opacity-90",
           )}
           onMouseEnter={onMouseEnter}
         >
           {label}
-          {isRequired && !isComputedField && (
+          {isRequired && (
             <span className="text-red-500">*</span>
           )}
         </FormLabel>
@@ -3659,39 +3430,6 @@ const PrimitiveRenderer: React.FC<PrimitiveRendererProps> = ({
             </Tooltip>
           </TooltipProvider>
         )}
-        {config?.showPrompts && subschema["X-ReasoningPrompt"] && (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="flex items-center rounded-full border border-foreground px-1 text-xs font-light">
-                  <Atom
-                    className={cn(
-                      className,
-                      "text-muted-foreground h-[14px] w-[14px] cursor-pointer border-none bg-transparent shadow-none outline-transparent outline-none",
-                    )}
-                  />
-                  Reasoning
-                </div>
-              </TooltipTrigger>
-              <TooltipContent
-                side="right"
-                className="w-[200px] p-0"
-                sideOffset={2}
-              >
-                <TooltipArrow />
-                <div
-                  className={cn(
-                    "border border-foreground",
-                    className,
-                    "focus-ring-0 rounded-md p-3 text-xs shadow-none outline-transparent outline-none",
-                  )}
-                >
-                  {subschema["X-ReasoningPrompt"]}
-                </div>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        )}
         {setSourcesFieldPath && !isEditing && config?.showSources && (
           <Search
             className={cn(
@@ -3701,25 +3439,12 @@ const PrimitiveRenderer: React.FC<PrimitiveRendererProps> = ({
             onMouseEnter={onMouseEnter}
           />
         )}
-        <ReasoningBadge
-          show={config?.showReasoning ?? false}
-          content={reasoningContent}
-          id={`${path}-reasoning`}
-          hideWhenConsensus={!!consensusContent}
-        />
         <ConsensusBadge
           show={config?.showConsensus ?? false}
           consolidated_value={fieldValue}
           content={consensusContent}
           id={`${path}-consensus`}
         />
-        {config?.showReasoning && config?.showConsensus && consensusContent && (
-          <ConsensusReasoningBadge
-            show={config?.showReasoning}
-            content={consensusContent}
-            id={`${path}-consensus-reasoning`}
-          />
-        )}
         {/* json schema editor button */}
         {setSchema && showPropertyEditorPencil !== false && (
           <Dialog modal>
@@ -3742,9 +3467,6 @@ const PrimitiveRenderer: React.FC<PrimitiveRendererProps> = ({
               onInteractOutside={(e) => {
                 e.preventDefault();
               }}
-              onEscapeKeyDown={(e) => {
-                if (isComputedField) e.preventDefault();
-              }}
             >
               <DialogTitle className="px-4 pt-3 pb-0 text-lg font-semibold">
                 Edit field
@@ -3761,18 +3483,7 @@ const PrimitiveRenderer: React.FC<PrimitiveRendererProps> = ({
           </Dialog>
         )}
 
-        {isComputedField && (
-          <div
-            className="ml-auto flex items-center"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <span className="text-xs font-normal text-blue-900 opacity-70">
-              computed value
-            </span>
-          </div>
-        )}
-
-        {showVerifiedProperty === true && !isComputedField && (
+        {showVerifiedProperty === true && (
           <div
             className="ml-auto flex items-center gap-2"
             onClick={(e) => e.stopPropagation()}
@@ -3799,9 +3510,8 @@ const PrimitiveRenderer: React.FC<PrimitiveRendererProps> = ({
   const isFieldDisabled =
     disabled ||
     isProcessing ||
-    isComputedField ||
     isFunctionField ||
-    (isStreaming && isFieldUndefined); // Only disable if streaming AND field is "Undefined"; also lock computed fields and function fields
+    (isStreaming && isFieldUndefined); // Only disable if streaming AND field is "Undefined"; also lock function fields
   const activeEditedValue = resolveDraftValue(
     committedEditedValue,
     editedValue,
@@ -3860,13 +3570,9 @@ const PrimitiveRenderer: React.FC<PrimitiveRendererProps> = ({
     return matches;
   });
 
-  // Get indication text and reasoning for this highlighted field
-  const fieldReasoningMap: Map<string, string> | undefined = (config as any)
-    ?.fieldReasoningMap;
+  // Get indication text for this highlighted field
   const indicationText =
     matchedHighlightPattern && fieldIndicationMap?.get(matchedHighlightPattern);
-  const reasoningText =
-    matchedHighlightPattern && fieldReasoningMap?.get(matchedHighlightPattern);
   const highlightedFieldClass = isHighlightedField
     ? "ring-2 ring-amber-400 bg-amber-50/50 rounded-lg p-2 mb-2"
     : "";
@@ -3876,21 +3582,13 @@ const PrimitiveRenderer: React.FC<PrimitiveRendererProps> = ({
       className={cn("group space-y-2", highlightedFieldClass)}
       key={path}
     >
-      {/* Indication text and reasoning for highlighted fields */}
-      {isHighlightedField && (indicationText || reasoningText) && (
+      {/* Indication text for highlighted fields */}
+      {isHighlightedField && indicationText && (
         <div className="flex flex-col gap-1 rounded border border-amber-300 bg-amber-100 px-2 py-1.5 text-xs text-amber-800">
-          {indicationText && (
-            <div className="flex items-center gap-1.5">
-              <MessageSquareWarning className="h-3.5 w-3.5 flex-shrink-0" />
-              <span>{indicationText}</span>
-            </div>
-          )}
-          {reasoningText && (
-            <div className="flex items-start gap-1.5 text-amber-700">
-              <Atom className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
-              <span className="italic">Reasoning: {reasoningText}</span>
-            </div>
-          )}
+          <div className="flex items-center gap-1.5">
+            <MessageSquareWarning className="h-3.5 w-3.5 flex-shrink-0" />
+            <span>{indicationText}</span>
+          </div>
         </div>
       )}
       <FormField
@@ -4295,15 +3993,6 @@ const ObjectRenderer: React.FC<ObjectRendererProps> = ({
 
   const showLabel = !!label && !isArrayItem && path !== "";
 
-  // Compute reasoning content for this object path (e.g., reasoning___commercial)
-  const objectReasoningPath = getReasoningPath(path);
-  const objectReasoningContent = pathExists(
-    form.getValues(),
-    objectReasoningPath,
-  )
-    ? getNestedValue(form.getValues(), objectReasoningPath)
-    : null;
-
   const currentValue = form.getValues(path);
 
   const handleCreateObject = () => {
@@ -4373,11 +4062,6 @@ const ObjectRenderer: React.FC<ObjectRendererProps> = ({
           >
             {label}
           </FormLabel>
-          <ReasoningBadge
-            show={config?.showReasoning ?? false}
-            content={objectReasoningContent}
-            id={`${path}-reasoning-object`}
-          />
         </div>
       )}
 
@@ -4526,7 +4210,6 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({ className }) => {
     consensusDetails,
   } = useUiFormContext();
   const formData = form.getValues();
-  const rootReasoning = formData?.reasoning___root || formData?.reasoning__root;
   const rootConsensus = calculateConsensusContent(consensusDetails, "");
 
   return (
@@ -4535,26 +4218,6 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({ className }) => {
         className="flex h-full w-full flex-col"
         onSubmit={form.handleSubmit(onSubmit)}
       >
-        <div className="mx-auto flex flex-row items-center gap-2">
-          <ReasoningBadge
-            show={config?.showReasoning ?? false}
-            content={rootReasoning}
-            id="root-reasoning"
-            hideWhenConsensus={!!rootConsensus}
-          />
-
-          {rootReasoning &&
-            rootConsensus &&
-            config?.showReasoning &&
-            config?.showConsensus && (
-              <ConsensusReasoningBadge
-                show={config?.showReasoning}
-                content={rootConsensus}
-                id="root-consensus-reasoning"
-              />
-            )}
-        </div>
-
         <ObjectRenderer className={className} path="" />
 
         {Object.keys(form.formState.errors).length > 0 &&
@@ -4710,8 +4373,6 @@ export const UiFormContextProviderRaw: React.FC<{
     setValidationFlags,
     showVerifiedProperty,
     projectId,
-    computationSpec,
-    setComputationSpec,
     formFieldIdPrefix,
   } = containerProps;
 
@@ -4742,8 +4403,6 @@ export const UiFormContextProviderRaw: React.FC<{
     setValidationFlags,
     showVerifiedProperty,
     projectId,
-    computationSpec,
-    setComputationSpec,
     formFieldIdPrefix,
   };
   return (

@@ -15,7 +15,12 @@ import {
 } from "@tanstack/react-table"
 import { useVirtualizer } from "@tanstack/react-virtual"
 
-import { type ParsedCsv, parseCsv } from "@/lib/csv"
+import {
+  type ParsedCsv,
+  createCsvParser,
+  parseCsv,
+  streamCsv,
+} from "@/lib/csv"
 import { cn } from "@/lib/utils"
 
 type Row = string[]
@@ -33,6 +38,19 @@ export interface CsvViewerProps {
   value?: string
   /** Pre-parsed data, if you already have columns + rows. */
   data?: ParsedCsv
+  /**
+   * A large CSV source to parse off the render path — a `File`/`Blob`, or a raw
+   * CSV string. Rows stream in progressively, keeping the main thread
+   * responsive. Prefer this over `value` for big inputs.
+   */
+  source?: Blob | string
+  /**
+   * Parse `source` in a Web Worker when available (falls back to a time-sliced
+   * main-thread reader). Defaults to true. Ignored for `value` / `data`.
+   */
+  worker?: boolean
+  /** Rows per progressive batch when streaming a `source`. Defaults to 5000. */
+  batchSize?: number
   /** Field delimiter for `value` (defaults to ","; use "\t" for TSV). */
   delimiter?: string
   /** Treat the first record of `value` as a header row. Defaults to true. */
@@ -46,12 +64,17 @@ export interface CsvViewerProps {
    */
   virtualized?: boolean
   /**
-   * Number of rows/columns to render beyond the visible window when
-   * virtualizing. Higher values reduce blank flashes while fast-scrolling at
-   * the cost of more DOM nodes. Defaults to 8. Ignored when `virtualized` is
-   * false.
+   * Number of rows to render beyond the visible window when virtualizing, and
+   * the default for columns. Higher values reduce blank flashes while
+   * fast-scrolling at the cost of more DOM nodes. Defaults to 8. Ignored when
+   * `virtualized` is false.
    */
   overscan?: number
+  /**
+   * Number of columns to render beyond the visible window when virtualizing.
+   * Defaults to `overscan`. Tune separately from rows for very wide tables.
+   */
+  columnOverscan?: number
   /** Row height in pixels. Defaults to 33. */
   rowHeight?: number
   /** Column width in pixels. Defaults to 180. */
@@ -66,37 +89,42 @@ export interface CsvViewerProps {
 export function CsvViewer({
   value,
   data,
+  source,
+  worker = true,
+  batchSize = 5000,
   delimiter,
   hasHeader,
   showRowNumbers = true,
   virtualized = true,
   overscan = 8,
+  columnOverscan,
   rowHeight = 33,
   columnWidth = 180,
   height = 480,
   label = "CSV data",
   className,
 }: CsvViewerProps) {
-  const parsed = React.useMemo<ParsedCsv>(
-    () => data ?? parseCsv(value ?? "", { delimiter, hasHeader }),
-    [data, value, delimiter, hasHeader]
-  )
+  const {
+    columns: parsedColumns,
+    rows: parsedRows,
+    loading,
+  } = useCsvData({ data, value, source, delimiter, hasHeader, worker, batchSize })
 
   const [sorting, setSorting] = React.useState<SortingState>([])
 
   const columns = React.useMemo<ColumnDef<Row>[]>(
     () =>
-      parsed.columns.map((name, index) => ({
+      parsedColumns.map((name, index) => ({
         id: `col_${index}`,
         header: name || `Column ${index + 1}`,
         accessorFn: (row) => row[index] ?? "",
         sortingFn: "alphanumeric",
       })),
-    [parsed.columns]
+    [parsedColumns]
   )
 
   const table = useReactTable({
-    data: parsed.rows,
+    data: parsedRows,
     columns,
     state: { sorting },
     onSortingChange: setSorting,
@@ -116,7 +144,7 @@ export function CsvViewer({
     }
   }
 
-  const colCount = parsed.columns.length
+  const colCount = parsedColumns.length
   const colOffset = showRowNumbers ? 1 : 0
 
   const rowVirtualizer = useVirtualizer({
@@ -131,7 +159,7 @@ export function CsvViewer({
     count: colCount,
     getScrollElement: () => scrollRef.current,
     estimateSize: () => columnWidth,
-    overscan,
+    overscan: columnOverscan ?? overscan,
   })
 
   // Resolve the columns to render + the left/right spacer track widths. When
@@ -143,7 +171,7 @@ export function CsvViewer({
   }>(() => {
     if (!virtualized) {
       return {
-        columnItems: parsed.columns.map((_, index) => ({
+        columnItems: parsedColumns.map((_, index) => ({
           index,
           size: columnWidth,
         })),
@@ -165,7 +193,7 @@ export function CsvViewer({
   }, [
     virtualized,
     columnWidth,
-    parsed.columns,
+    parsedColumns,
     columnVirtualizer.getVirtualItems(),
     columnVirtualizer.getTotalSize(),
   ])
@@ -185,7 +213,7 @@ export function CsvViewer({
       data-slot="csv-viewer"
       role="table"
       aria-label={label}
-      aria-rowcount={parsed.rows.length + 1}
+      aria-rowcount={parsedRows.length + 1}
       aria-colcount={colCount + colOffset}
       className={cn(
         "flex flex-col overflow-hidden rounded-xl border bg-card text-sm",
@@ -295,9 +323,16 @@ export function CsvViewer({
       </div>
 
       <div className="flex shrink-0 items-center justify-between border-t px-3 py-1.5 text-xs text-muted-foreground">
-        <span>
-          {parsed.rows.length.toLocaleString()} row
-          {parsed.rows.length === 1 ? "" : "s"}
+        <span className="flex items-center gap-1.5">
+          {loading ? (
+            <span
+              aria-hidden
+              className="size-2 animate-pulse rounded-full bg-primary"
+            />
+          ) : null}
+          {parsedRows.length.toLocaleString()} row
+          {parsedRows.length === 1 ? "" : "s"}
+          {loading ? " · loading…" : ""}
         </span>
         <span>
           {colCount} column{colCount === 1 ? "" : "s"}
@@ -440,6 +475,163 @@ function CsvRow({
       <Spacer width={rightPad} />
     </div>
   )
+}
+
+interface CsvDataState {
+  columns: string[]
+  rows: string[][]
+  loading: boolean
+}
+
+/**
+ * Resolve the table's data from one of three inputs:
+ * - `data`: already parsed (sync).
+ * - `value`: a CSV string, parsed synchronously (fine for small inputs).
+ * - `source`: a Blob/File/string streamed off the render path (worker when
+ *   available, else a time-sliced main-thread reader), with rows appended
+ *   progressively.
+ */
+function useCsvData({
+  data,
+  value,
+  source,
+  delimiter,
+  hasHeader = true,
+  worker = true,
+  batchSize = 5000,
+}: {
+  data?: ParsedCsv
+  value?: string
+  source?: Blob | string
+  delimiter?: string
+  hasHeader?: boolean
+  worker?: boolean
+  batchSize?: number
+}): CsvDataState {
+  const sync = React.useMemo<ParsedCsv | null>(() => {
+    if (data) return data
+    if (source == null && value != null) {
+      return parseCsv(value, { delimiter, hasHeader })
+    }
+    return null
+  }, [data, value, source, delimiter, hasHeader])
+
+  const [stream, setStream] = React.useState<CsvDataState>({
+    columns: [],
+    rows: [],
+    loading: false,
+  })
+
+  React.useEffect(() => {
+    if (source == null) return
+
+    let cancelled = false
+    const controller = new AbortController()
+    const rows: string[][] = []
+    let cols: string[] = []
+    setStream({ columns: [], rows: [], loading: true })
+
+    const onColumns = (c: string[]) => {
+      if (cancelled) return
+      cols = c
+      setStream((s) => ({ ...s, columns: c }))
+    }
+    const onRows = (batch: string[][]) => {
+      if (cancelled) return
+      for (const r of batch) rows.push(r)
+      setStream({ columns: cols, rows: rows.slice(), loading: true })
+    }
+    const onDone = () => {
+      if (cancelled) return
+      setStream((s) => ({ ...s, loading: false }))
+    }
+
+    const runMainThread = () =>
+      void streamCsv(
+        source,
+        { onColumns, onRows, onDone, onError: onDone },
+        { delimiter, hasHeader, batchSize, signal: controller.signal }
+      )
+
+    let w: Worker | null = null
+    if (worker && typeof Worker !== "undefined") {
+      try {
+        w = buildCsvWorker()
+        w.onmessage = (event: MessageEvent) => {
+          const m = event.data
+          if (m.type === "columns") onColumns(m.columns)
+          else if (m.type === "rows") onRows(m.rows)
+          else if (m.type === "done" || m.type === "error") {
+            onDone()
+            w?.terminate()
+          }
+        }
+        w.onerror = () => {
+          w?.terminate()
+          w = null
+          if (!cancelled) runMainThread()
+        }
+        w.postMessage({ source, delimiter, hasHeader, batchSize })
+      } catch {
+        w = null
+        runMainThread()
+      }
+    } else {
+      runMainThread()
+    }
+
+    return () => {
+      cancelled = true
+      controller.abort()
+      try {
+        w?.terminate()
+      } catch {
+        // ignore
+      }
+    }
+  }, [source, delimiter, hasHeader, worker, batchSize])
+
+  if (sync) return { columns: sync.columns, rows: sync.rows, loading: false }
+  return stream
+}
+
+/**
+ * Build a self-contained CSV worker by serializing the parser into a Blob URL.
+ * This keeps the worker dependency-free (no separate bundled file) while sharing
+ * one source of truth for parsing. The worker reads a Blob with `.text()` so the
+ * full string is never materialized on the main thread.
+ */
+function buildCsvWorker(): Worker {
+  const src =
+    "var createCsvParser = " +
+    createCsvParser.toString() +
+    ";\n" +
+    "self.onmessage = async function (e) {\n" +
+    "  var d = e.data, source = d.source, delimiter = d.delimiter, hasHeader = d.hasHeader, batchSize = d.batchSize || 5000;\n" +
+    "  try {\n" +
+    "    var text = typeof source === 'string' ? source : await source.text();\n" +
+    "    var parser = createCsvParser({ delimiter: delimiter });\n" +
+    "    var records = parser.push(text).concat(parser.flush());\n" +
+    "    var width = 0, columns = [], start = 0;\n" +
+    "    if (records.length) {\n" +
+    "      if (hasHeader) { columns = records[0]; width = columns.length; start = 1; }\n" +
+    "      else { width = records[0].length; for (var k = 0; k < width; k++) columns.push('Column ' + (k + 1)); }\n" +
+    "    }\n" +
+    "    self.postMessage({ type: 'columns', columns: columns });\n" +
+    "    var batch = [];\n" +
+    "    for (var i = start; i < records.length; i++) {\n" +
+    "      var rec = records[i];\n" +
+    "      if (rec.length < width) { while (rec.length < width) rec.push(''); }\n" +
+    "      else if (rec.length > width) { rec = rec.slice(0, width); }\n" +
+    "      batch.push(rec);\n" +
+    "      if (batch.length >= batchSize) { self.postMessage({ type: 'rows', rows: batch }); batch = []; }\n" +
+    "    }\n" +
+    "    if (batch.length) self.postMessage({ type: 'rows', rows: batch });\n" +
+    "    self.postMessage({ type: 'done' });\n" +
+    "  } catch (err) { self.postMessage({ type: 'error', message: String(err) }); }\n" +
+    "};\n"
+  const blob = new Blob([src], { type: "text/javascript" })
+  return new Worker(URL.createObjectURL(blob))
 }
 
 export { type ParsedCsv }

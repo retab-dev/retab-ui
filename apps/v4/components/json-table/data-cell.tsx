@@ -433,7 +433,7 @@ export function SimpleFakeTextarea({
         isEditing &&
           !disabled &&
           "cursor-text outline-none focus:outline-1 focus:outline-blue-500",
-        "cursor-pointer hover:bg-gray-100",
+        "cursor-pointer hover:bg-muted",
         className,
       )}
       onDoubleClick={handleDoubleClick}
@@ -1752,7 +1752,7 @@ const DataCellContent = (
                 try {
                   const date = parseDateStringAsLocal(liveStringValue);
                   if (!date) {
-                    return <span className="text-gray-300">Pick a date</span>;
+                    return <span className="text-muted-foreground">Pick a date</span>;
                   }
                   return format(date, "PP");
                 } catch {
@@ -1827,7 +1827,7 @@ const DataCellContent = (
                 setIsInputFocused(false);
               }}
               disabled={!isEditableReference}
-              className={`!text-3xs h-full rounded-none px-2 py-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 ${focusedField === `${docId}:${actualKey}` ? "absolute top-0 left-0 z-10 bg-white" : ""}`} //min-w-[200px]
+              className={`!text-3xs h-full rounded-none px-2 py-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 ${focusedField === `${docId}:${actualKey}` ? "absolute top-0 left-0 z-10 bg-background" : ""}`} //min-w-[200px]
             />
           ) : (
             <div className="text-3xs flex h-full w-full items-center truncate px-2 py-0">
@@ -1895,7 +1895,7 @@ const DataCellContent = (
                 "!text-3xs h-full w-full rounded-none px-2 py-2 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0",
                 !effectiveValue && "text-muted-foreground",
                 focusedField === `${docId}:${actualKey}`
-                  ? "absolute top-[1px] left-[1px] z-10 h-64 min-w-[200px] bg-white shadow-md outline-1 outline-blue-500"
+                  ? "absolute top-[1px] left-[1px] z-10 h-64 min-w-[200px] bg-background shadow-md outline-1 outline-blue-500"
                   : "", //min-w-[200px]
               )}
               style={{

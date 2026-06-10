@@ -10,7 +10,7 @@ import { Input } from "@/components/ui-retab/input";
 import { Label } from "@/components/ui-retab/label";
 import { Textarea } from "@/components/ui-retab/textarea";
 import { Switch } from "@/components/ui-retab/switch";
-import { DialogClose } from "@/components/ui-retab/dialog";
+import { DialogClose, DialogFooter } from "@/components/ui-retab/dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui-retab/tooltip";
 import { ChevronLeft, X, AlertCircle } from "lucide-react";
 import { useJsonSchema } from "@/components/schema-editor/contexts/json-schema";
@@ -149,13 +149,8 @@ export function PropertyForm({
     setEditedName(data.name);
 
     // Automatically set the title to match the name
-    const {
-      "X-Reasoning": _xr,
-      "X-ReasoningPrompt": _xrp,
-      ...baseProperty
-    } = editedProperty;
     const updatedProperty = {
-      ...baseProperty,
+      ...editedProperty,
       title: formatTitle(data.name),
       description: data.description,
     };
@@ -502,7 +497,7 @@ export function PropertyForm({
 
         {/* Fixed action buttons at the bottom - hidden in readOnly mode */}
         {editMode !== "readOnly" && (
-          <div className="flex justify-between p-4">
+          <DialogFooter className="mx-0 mb-0 flex-row justify-between sm:justify-between">
             {/* Delete button on the left */}
             <div>
               {onDelete && editMode === "editable" && (
@@ -564,7 +559,7 @@ export function PropertyForm({
                 <Button
                   type="submit"
                   size="sm"
-                  className="group before:transtion-opacity relative isolate inline-flex h-[1.875rem] items-center justify-center overflow-hidden rounded-md bg-primary px-3 text-left text-sm font-medium text-primary-foreground shadow-[0_1px_theme(colors.white/0.07)_inset,0_1px_3px_theme(colors.gray.900/0.2)] ring-1 ring-ring transition duration-300 ease-[cubic-bezier(0.4,0.36,0,1)] before:pointer-events-none before:absolute before:inset-0 before:-z-10 before:rounded-md before:bg-gradient-to-b before:from-white/20 before:opacity-50 before:duration-300 before:ease-[cubic-bezier(0.4,0.36,0,1)] after:pointer-events-none after:absolute after:inset-0 after:-z-10 after:rounded-md after:bg-gradient-to-b after:from-white/10 after:from-[46%] after:to-[54%] after:mix-blend-overlay hover:bg-primary/90 hover:opacity-80 hover:before:opacity-100"
+                  className="px-3"
                   disabled={
                     isEnumWithoutOptions ||
                     !!nameSemanticError ||
@@ -575,7 +570,7 @@ export function PropertyForm({
                 </Button>
               )}
             </div>
-          </div>
+          </DialogFooter>
         )}
       </form>
     </Form>

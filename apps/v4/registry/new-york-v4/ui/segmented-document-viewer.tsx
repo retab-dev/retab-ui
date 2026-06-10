@@ -113,9 +113,10 @@ export function SegmentedDocumentViewer({
             onSelectPage={jumpToPage}
           />
           {src ? (
-            <div ref={documentRef} className="min-h-0 flex-1">
+            <div ref={documentRef} className="min-h-0 flex-1 overflow-hidden rounded-md border">
               <PdfViewer
                 src={src}
+                bare
                 className="h-full"
                 onVisiblePageChange={setCurrentPage}
                 renderPageOverlay={({ pageNumber }) => {

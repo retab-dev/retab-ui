@@ -352,7 +352,7 @@ export const TypeAdaptedInput: React.FC<TypeAdaptedInputProps> = ({
     return (
       <Textarea
         className={cn(
-          "h-40 w-full resize-none rounded-md border bg-gray-50 p-2 !text-xs",
+          "h-40 w-full resize-none rounded-md border bg-muted p-2 !text-xs",
           className,
         )}
         value={pretty}
@@ -378,7 +378,7 @@ export const TypeAdaptedInput: React.FC<TypeAdaptedInputProps> = ({
   return (
     <Textarea
       className={cn(
-        "h-24 w-full resize-none rounded-md border bg-gray-50 p-2 !text-xs",
+        "h-24 w-full resize-none rounded-md border bg-muted p-2 !text-xs",
         className,
       )}
       value={value ?? ""}
@@ -1113,10 +1113,10 @@ const DataCellPopoverCardContentInner = ({
 
   return (
     <div className="w-[240px]">
-      <div className="w-full border-b border-gray-200 bg-gray-100 p-2">
+      <div className="w-full border-b border-border bg-muted p-2">
         <div className="min-w-0 flex-1">
           <div className="group flex w-full flex-col items-start justify-between gap-2">
-            {/* <h2 className="text-xs font-medium text-gray-900 truncate flex items-center gap-1">
+            {/* <h2 className="text-xs font-medium text-foreground truncate flex items-center gap-1">
                <Tooltip>
                 <TooltipTrigger asChild>
                   <div className="bg-[#969696] shrink-0 rounded-full w-3 h-3 flex items-center justify-center group" onClick={() => setShowInfoPanel(!showInfoPanel)}>
@@ -1133,7 +1133,7 @@ const DataCellPopoverCardContentInner = ({
             <div className="flex w-full items-start justify-between gap-2">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <h2 className="max-w-full min-w-0 truncate text-xs font-medium text-gray-900">
+                  <h2 className="max-w-full min-w-0 truncate text-xs font-medium text-foreground">
                     {selectedFieldPath || "Field"}
                   </h2>
                 </TooltipTrigger>
@@ -1213,7 +1213,7 @@ const DataCellPopoverCardContentInner = ({
             <Card className="gap-0 border-none p-0 shadow-none">
               <CardHeader className="p-0">
                 <CardTitle>
-                  <div className="flex items-center gap-2 text-gray-700">
+                  <div className="flex items-center gap-2 text-foreground">
                     <div className="text-xs font-medium tracking-wide uppercase">
                       Reasoning
                     </div>
@@ -1222,9 +1222,9 @@ const DataCellPopoverCardContentInner = ({
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="cursor-pointer rounded border bg-gray-50 p-1 text-xs">
+                <div className="cursor-pointer rounded border bg-muted p-1 text-xs">
                   <textarea
-                    className="flex min-h-32 w-full resize-none font-medium text-gray-700"
+                    className="flex min-h-32 w-full resize-none font-medium text-foreground"
                     value={reasoning}
                     readOnly
                   />
@@ -1240,7 +1240,7 @@ const DataCellPopoverCardContentInner = ({
                 <CardHeader className="p-0">
                   <CardTitle>
                     <div>
-                      <div className="flex items-center justify-between text-gray-800">
+                      <div className="flex items-center justify-between text-foreground">
                         <div className="flex items-center gap-2">
                           <div className="flex text-xs font-medium tracking-wide uppercase">
                             {"Ground Truth"}
@@ -1253,7 +1253,7 @@ const DataCellPopoverCardContentInner = ({
                             <button
                               type="button"
                               disabled={isSavingDatasetValue}
-                              className="rounded-md border px-2 py-1 text-[10px] hover:bg-gray-50"
+                              className="rounded-md border px-2 py-1 text-[10px] hover:bg-muted"
                               onClick={() => {
                                 setEditingDatasetValueAny(value);
                               }}
@@ -1295,7 +1295,7 @@ const DataCellPopoverCardContentInner = ({
                         <div className="ml-auto flex items-center gap-2">
                           <button
                             disabled={isSavingDatasetValue}
-                            className="rounded-md bg-slate-900 px-2 py-1 text-xs text-white disabled:opacity-50"
+                            className="rounded-md bg-muted px-2 py-1 text-xs text-white disabled:opacity-50"
                             onClick={async () => {
                               setIsSavingDatasetValue(true);
                               try {
@@ -1335,7 +1335,7 @@ const DataCellPopoverCardContentInner = ({
                         <TooltipTrigger asChild>
                           <div
                             className={
-                              "flex cursor-pointer flex-col rounded border bg-gray-50 p-1 text-xs transition-colors hover:bg-gray-100"
+                              "flex cursor-pointer flex-col rounded border bg-muted p-1 text-xs transition-colors hover:bg-muted"
                             }
                             role="button"
                             tabIndex={0}
@@ -1363,7 +1363,7 @@ const DataCellPopoverCardContentInner = ({
                               }
                             }}
                           >
-                            <div className="flex max-w-32 items-center gap-1 truncate pb-4 font-medium text-gray-700">
+                            <div className="flex max-w-32 items-center gap-1 truncate pb-4 font-medium text-foreground">
                               <span className="truncate">
                                 {referenceValueString}
                               </span>
@@ -1377,9 +1377,9 @@ const DataCellPopoverCardContentInner = ({
                     </TooltipProvider>
                   )}
                   {!isReconciliationMode && (
-                    <div className="mt-auto ml-auto flex items-center justify-end gap-1 pt-1 text-xs text-[10px] !text-gray-600">
+                    <div className="mt-auto ml-auto flex items-center justify-end gap-1 pt-1 text-xs text-[10px] !text-muted-foreground">
                       <span className="flex items-center gap-0.5">
-                        <span className="rounded-sm border border-gray-300 px-1 py-0.5 font-light opacity-100">
+                        <span className="rounded-sm border border-border px-1 py-0.5 font-light opacity-100">
                           {typeof navigator !== "undefined" &&
                           /mac|iphone|ipad|ipod/i.test(
                             (navigator as any).userAgentData?.platform ||
@@ -1389,7 +1389,7 @@ const DataCellPopoverCardContentInner = ({
                             ? "⌘"
                             : "CTRL"}
                         </span>
-                        <span className="rounded-sm border border-gray-300 px-1 py-0.5 font-light opacity-100">
+                        <span className="rounded-sm border border-border px-1 py-0.5 font-light opacity-100">
                           {"E"}
                         </span>
                       </span>
@@ -1410,7 +1410,7 @@ const DataCellPopoverCardContentInner = ({
                               <div className="">
                                 <div
                                   className={cn(
-                                    "flex items-center gap-2 pt-1 text-gray-800",
+                                    "flex items-center gap-2 pt-1 text-foreground",
                                     !isReconciliationMode && "cursor-pointer",
                                   )}
                                 >
@@ -1453,9 +1453,9 @@ const DataCellPopoverCardContentInner = ({
                     className="justify-center"
                   />
                   {!isReconciliationMode && (
-                    <div className="mt-2 flex items-center justify-end gap-1 text-xs text-[10px] !text-gray-600">
+                    <div className="mt-2 flex items-center justify-end gap-1 text-xs text-[10px] !text-muted-foreground">
                       <span className="flex items-center gap-0.5">
-                        <span className="rounded-sm border border-gray-300 px-1 py-0.5 font-light opacity-100">
+                        <span className="rounded-sm border border-border px-1 py-0.5 font-light opacity-100">
                           {typeof navigator !== "undefined" &&
                           /mac|iphone|ipad|ipod/i.test(
                             (navigator as any).userAgentData?.platform ||
@@ -1465,7 +1465,7 @@ const DataCellPopoverCardContentInner = ({
                             ? "⌘"
                             : "CTRL"}
                         </span>
-                        <span className="rounded-sm border border-gray-300 px-1 py-0.5 font-light opacity-100">
+                        <span className="rounded-sm border border-border px-1 py-0.5 font-light opacity-100">
                           {"G"}
                         </span>
                       </span>
@@ -1482,7 +1482,7 @@ const DataCellPopoverCardContentInner = ({
               <Card className="gap-0 border-none p-0 shadow-none">
                 <CardHeader className="p-0">
                   <CardTitle>
-                    <div className="flex items-center gap-2 text-gray-800">
+                    <div className="flex items-center gap-2 text-foreground">
                       <div className="flex text-xs font-medium tracking-wide uppercase">
                         Consensus
                       </div>
@@ -1504,8 +1504,8 @@ const DataCellPopoverCardContentInner = ({
                   </div>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <div className="cursor-pointer rounded border bg-gray-50 p-1 text-xs">
-                        <div className="max-w-32 truncate font-medium text-gray-700">
+                      <div className="cursor-pointer rounded border bg-muted p-1 text-xs">
+                        <div className="max-w-32 truncate font-medium text-foreground">
                           {valueString}
                         </div>
                       </div>
@@ -1542,8 +1542,8 @@ const DataCellPopoverCardContentInner = ({
                               <TooltipTrigger asChild>
                                 <div className="text-muted-foreground flex items-center gap-2 text-xs">
                                   {`${index + 1}.`}
-                                  <div className="cursor-pointer rounded border bg-gray-50 p-1 text-xs">
-                                    <div className="max-w-24 grow truncate font-medium text-gray-700">
+                                  <div className="cursor-pointer rounded border bg-muted p-1 text-xs">
+                                    <div className="max-w-24 grow truncate font-medium text-foreground">
                                       {displayValue}
                                     </div>
                                   </div>
@@ -1609,9 +1609,9 @@ const DataCellPopoverCardContentInner = ({
                     }}
                   >
                     Delete row
-                    <div className="mt-auto ml-auto flex items-center justify-end gap-1 text-xs text-[10px] !text-gray-600">
+                    <div className="mt-auto ml-auto flex items-center justify-end gap-1 text-xs text-[10px] !text-muted-foreground">
                       <span className="flex items-center gap-0.5">
-                        <span className="rounded-sm border border-gray-300 px-1 py-0.5 font-light opacity-100">
+                        <span className="rounded-sm border border-border px-1 py-0.5 font-light opacity-100">
                           {typeof navigator !== "undefined" &&
                           /mac|iphone|ipad|ipod/i.test(
                             (navigator as any).userAgentData?.platform ||
@@ -1621,7 +1621,7 @@ const DataCellPopoverCardContentInner = ({
                             ? "⌘"
                             : "CTRL"}
                         </span>
-                        <span className="rounded-sm border border-gray-300 px-1 py-0.5 font-light opacity-100">
+                        <span className="rounded-sm border border-border px-1 py-0.5 font-light opacity-100">
                           Del
                         </span>
                       </span>
@@ -1634,9 +1634,9 @@ const DataCellPopoverCardContentInner = ({
                   className="w-full justify-start text-xs font-normal"
                 >
                   Edit cell
-                  <div className="ml-auto flex items-center gap-1 text-xs text-[10px] font-light !text-gray-600">
-                    {/*<SquareMousePointer className="size-[12px] shrink-0 text-gray-500" />*/}
-                    <span className="rounded-sm border border-gray-300 px-1 py-0.5 font-light opacity-100">
+                  <div className="ml-auto flex items-center gap-1 text-xs text-[10px] font-light !text-muted-foreground">
+                    {/*<SquareMousePointer className="size-[12px] shrink-0 text-muted-foreground" />*/}
+                    <span className="rounded-sm border border-border px-1 py-0.5 font-light opacity-100">
                       Click
                     </span>
                   </div>
@@ -1656,9 +1656,9 @@ const DataCellPopoverCardContentInner = ({
                   }}
                 >
                   {currentValidity ? "Mark as unverified" : "Mark as verified"}
-                  <div className="mt-auto ml-auto flex items-center justify-end gap-1 text-xs text-[10px] !text-gray-600">
+                  <div className="mt-auto ml-auto flex items-center justify-end gap-1 text-xs text-[10px] !text-muted-foreground">
                     <span className="flex items-center gap-0.5">
-                      <span className="rounded-sm border border-gray-300 px-1 py-0.5 font-light opacity-100">
+                      <span className="rounded-sm border border-border px-1 py-0.5 font-light opacity-100">
                         {typeof navigator !== "undefined" &&
                         /mac|iphone|ipad|ipod/i.test(
                           (navigator as any).userAgentData?.platform ||
@@ -1668,7 +1668,7 @@ const DataCellPopoverCardContentInner = ({
                           ? "⌘"
                           : "CTRL"}
                       </span>
-                      <span className="rounded-sm border border-gray-300 px-1 py-0.5 font-light opacity-100">
+                      <span className="rounded-sm border border-border px-1 py-0.5 font-light opacity-100">
                         E
                       </span>
                     </span>
@@ -1685,9 +1685,9 @@ const DataCellPopoverCardContentInner = ({
                   }}
                 >
                   {"Hide Info Panel"}
-                  <div className="mt-auto ml-auto flex items-center justify-end gap-1 text-xs text-[10px] !text-gray-600">
+                  <div className="mt-auto ml-auto flex items-center justify-end gap-1 text-xs text-[10px] !text-muted-foreground">
                     <span className="flex items-center gap-0.5">
-                      <span className="rounded-sm border border-gray-300 px-1 py-0.5 font-light opacity-100">
+                      <span className="rounded-sm border border-border px-1 py-0.5 font-light opacity-100">
                         {typeof navigator !== "undefined" &&
                         /mac|iphone|ipad|ipod/i.test(
                           (navigator as any).userAgentData?.platform ||
@@ -1697,7 +1697,7 @@ const DataCellPopoverCardContentInner = ({
                           ? "⌘"
                           : "CTRL"}
                       </span>
-                      <span className="rounded-sm border border-gray-300 px-1 py-0.5 font-light opacity-100">
+                      <span className="rounded-sm border border-border px-1 py-0.5 font-light opacity-100">
                         I
                       </span>
                     </span>

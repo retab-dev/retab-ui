@@ -38,7 +38,10 @@ export function getEffectiveType(node: ExtendedJSONSchema7): {
       if (nonNull.type === "string" && nonNull.format === "date") {
         return { type: "date", isNullable };
       }
-      if (nonNull.type === "string" && nonNull.format === "iso-time") {
+      if (
+        nonNull.type === "string" &&
+        (nonNull.format === "time" || nonNull.format === "iso-time")
+      ) {
         return { type: "time", isNullable };
       }
       if (nonNull.type === "string" && nonNull.format === "date-time") {
@@ -132,13 +135,7 @@ export function setNullable(
   node: ExtendedJSONSchema7,
   nullable: boolean,
 ): ExtendedJSONSchema7 {
-  const {
-    title,
-    description,
-    "X-ReasoningPrompt": reasoningPrompt,
-    "X-Reasoning": reasoningEnabled,
-    ...rest
-  } = node;
+  const { title, description, ...rest } = node;
 
   if (nullable) {
     if (node.anyOf && Array.isArray(node.anyOf)) {
@@ -152,10 +149,6 @@ export function setNullable(
         anyOf: [{ ...nonNullObj }, { type: "null" }],
         ...(title ? { title } : {}),
         ...(description ? { description } : {}),
-        ...(reasoningPrompt !== undefined
-          ? { "X-ReasoningPrompt": reasoningPrompt }
-          : {}),
-        ...(reasoningEnabled ? { "X-Reasoning": true } : {}),
       };
     }
 
@@ -163,10 +156,6 @@ export function setNullable(
       anyOf: [{ ...rest }, { type: "null" }],
       ...(title ? { title } : {}),
       ...(description ? { description } : {}),
-      ...(reasoningPrompt !== undefined
-        ? { "X-ReasoningPrompt": reasoningPrompt }
-        : {}),
-      ...(reasoningEnabled ? { "X-Reasoning": true } : {}),
     };
   }
 
@@ -181,10 +170,6 @@ export function setNullable(
       ...nonNullObj,
       ...(title ? { title } : {}),
       ...(description ? { description } : {}),
-      ...(reasoningPrompt !== undefined
-        ? { "X-ReasoningPrompt": reasoningPrompt }
-        : {}),
-      ...(reasoningEnabled ? { "X-Reasoning": true } : {}),
     };
   }
 
@@ -228,21 +213,15 @@ export function updateNodeWithMetadata(
             typeof branch === "object" && branch.type === "null",
         ) || { type: "null" };
 
-        const result = {
+        return {
           ...node,
           anyOf: [pureBranch, nullBranch],
           ...metadata,
         };
-        if (!result["X-Reasoning"]) delete result["X-Reasoning"];
-        if (!result["X-ReasoningPrompt"]) delete result["X-ReasoningPrompt"];
-        return result;
       }
     }
   }
-  const result = { ...node, ...metadata };
-  if (!result["X-Reasoning"]) delete result["X-Reasoning"];
-  if (!result["X-ReasoningPrompt"]) delete result["X-ReasoningPrompt"];
-  return result;
+  return { ...node, ...metadata };
 }
 
 export function updateSchemaProperty(

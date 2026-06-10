@@ -1,7 +1,11 @@
 {
   "$defs": {
     "BusinessModel": {
-      "enum": ["B2B", "B2C", "C2C"],
+      "enum": [
+        "B2B",
+        "B2C",
+        "C2C"
+      ],
       "title": "BusinessModel",
       "type": "string"
     },
@@ -24,12 +28,21 @@
           "description": "Relationship of the identified company with the startup from the deck"
         }
       },
-      "required": ["name", "type", "relationship"],
+      "required": [
+        "name",
+        "type",
+        "relationship"
+      ],
       "title": "Company",
       "type": "object"
     },
     "CompanyEnum": {
-      "enum": ["school", "investor", "startup", "corporate"],
+      "enum": [
+        "school",
+        "investor",
+        "startup",
+        "corporate"
+      ],
       "title": "CompanyEnum",
       "type": "string"
     },
@@ -71,7 +84,12 @@
           "type": "string"
         }
       },
-      "required": ["firstName", "lastName", "title", "pastExperiences"],
+      "required": [
+        "firstName",
+        "lastName",
+        "title",
+        "pastExperiences"
+      ],
       "title": "TeamMember",
       "type": "object"
     }
@@ -98,24 +116,20 @@
     "investors": {
       "$ref": "#/$defs/Company",
       "X-FieldPrompt": "Look for investors, often cited in slides with backed by or cap tables",
-      "X-ReasoningPrompt": "Think about the investors. Detail your thought process, and explain logically, step by step, who are the investors, detailing the cues and evidence for each one. For example: 1) Found X in cap table showing Y% ownership 2) Identified Z from 'backed by' slide with logo and investment date 3) etc.",
       "description": "Existing investors in the startup"
     },
     "competitors": {
       "$ref": "#/$defs/Company",
       "X-FieldPrompt": "Look for competitors, often cited in competition slides",
-      "X-ReasoningPrompt": "Walk through your analysis of the competitive landscape step by step: 1) Which companies are positioned as direct competitors? 2) What specific features/offerings overlap? 3) What market segments do they compete in? 4) What evidence supports each competitor identification?",
       "description": "Competitors identified by the startup in the deck"
     },
     "clients": {
       "$ref": "#/$defs/Company",
       "X-FieldPrompt": "Look for clients, often cited in traction or commercial pipeline slides slides",
-      "X-ReasoningPrompt": "Break down your client analysis systematically: 1) Which companies are mentioned as current clients vs pipeline? 2) What evidence shows their client status (testimonials, case studies, logos)? 3) What stage is each client relationship? 4) Are there any specific metrics or success stories mentioned?",
       "description": "Clients (B2B) in pipe or signed by the startup in the deck"
     },
     "team": {
       "X-FieldPrompt": "Look for the founding team and executives at the company",
-      "X-ReasoningPrompt": "Analyze the team composition methodically: 1) Who are the key founders/executives? 2) What specific evidence validates their roles? 3) How did you verify their background and experience? 4) What makes their experience relevant to this venture?",
       "description": "Company Team",
       "items": {
         "$ref": "#/$defs/TeamMember"
@@ -126,7 +140,6 @@
     "businessModel": {
       "$ref": "#/$defs/BusinessModel",
       "X-FieldPrompt": "Guess the business model based on products, offering, clients",
-      "X-ReasoningPrompt": "Explain your business model classification process: 1) Who are the primary customers? 2) What is the revenue generation method? 3) How does the product/service flow between parties? 4) What specific slides or content supports this classification?",
       "description": "Business model of the startup"
     }
   },

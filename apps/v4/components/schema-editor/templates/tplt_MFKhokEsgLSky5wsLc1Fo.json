@@ -57,7 +57,6 @@
     "FinancialMetrics": {
       "properties": {
         "revenue": {
-          "X-ReasoningPrompt": "Document your analysis of the revenue figure.\n1. Identify the most recent fiscal year revenue reported in the filing.\n2. Note whether this is from audited financial statements or another source.\n3. Verify the time period this revenue represents (e.g., full year, partial year).\n4. If multiple revenue figures exist, explain which one you selected and why.\n5. Note the currency and any necessary conversions applied.\n\nExample: \"Found revenue of $134.5 million for FY2022 in the audited financial statements section. This represents the most recent full fiscal year.\"\n",
           "anyOf": [
             {
               "type": "number"
@@ -70,7 +69,6 @@
           "title": "Revenue"
         },
         "net_income_loss": {
-          "X-ReasoningPrompt": "Document your analysis of the net income/loss figure.\n1. Identify the most recent fiscal year net income/loss reported.\n2. Ensure the figure matches the same time period as the reported revenue.\n3. Note whether this is from continuing operations or includes extraordinary items.\n4. For losses, represent as a negative number.\n5. Verify the figure against any reconciliations or adjustments mentioned.\n\nExample: \"Found net loss of $27.8 million for FY2022. This figure represents consolidated loss from continuing operations before income taxes.\"\n",
           "anyOf": [
             {
               "type": "number"
@@ -83,7 +81,6 @@
           "title": "Net Income Loss"
         },
         "total_assets": {
-          "X-ReasoningPrompt": "Document your analysis of the total assets figure.\n1. Identify the most recent balance sheet date and the total assets reported.\n2. Note if there are any significant changes mentioned since that date.\n3. Verify if there are any off-balance sheet items that should be considered.\n4. Check for any pro forma adjustments that might affect this figure.\n\nExample: \"Found total assets of $456.2 million as of December 31, 2022. The filing notes no significant changes since this date.\"\n",
           "anyOf": [
             {
               "type": "number"
@@ -96,7 +93,6 @@
           "title": "Total Assets"
         },
         "total_liabilities": {
-          "X-ReasoningPrompt": "Document your analysis of the total liabilities figure.\n1. Identify the most recent balance sheet date and the total liabilities reported.\n2. Ensure this aligns with the same reporting date as total assets.\n3. Note whether this includes both current and long-term liabilities.\n4. Check for any contingent liabilities that may not be fully represented.\n5. Verify any debt that will be retired or added as part of the IPO process.\n\nExample: \"Found total liabilities of $322.5 million as of December 31, 2022. This includes $145.3M in current liabilities and $177.2M in long-term liabilities.\"\n",
           "anyOf": [
             {
               "type": "number"
@@ -109,7 +105,6 @@
           "title": "Total Liabilities"
         },
         "total_equity": {
-          "X-ReasoningPrompt": "Document your analysis of the total equity figure.\n1. Identify the most recent total shareholders' equity reported.\n2. Verify if this matches total assets minus total liabilities.\n3. Note any significant components (e.g., preferred stock, accumulated deficit).\n4. Check how the IPO will affect this figure based on pro forma statements.\n5. Document any recent equity transactions not reflected in the most recent balance sheet.\n\nExample: \"Found total shareholders' equity of $133.7 million as of December 31, 2022. This matches the difference between total assets and total liabilities.\"\n",
           "anyOf": [
             {
               "type": "number"
@@ -145,7 +140,6 @@
           "type": "string"
         },
         "compensation": {
-          "X-ReasoningPrompt": "Document your analysis of the compensation information.\n1. Extract total compensation package details, including salary, bonuses, stock options, and other benefits.\n2. Note which fiscal year the compensation data represents.\n3. Include any significant post-IPO compensation changes mentioned.\n4. For board members, include any board fees or committee compensations.\n5. If precise figures aren't available, describe the compensation structure.\n\nExample: \"Found compensation for John Smith of $750,000 base salary, $500,000 performance bonus, and stock options valued at $2.5 million for fiscal year 2022.\"\n",
           "anyOf": [
             {
               "type": "string"
@@ -158,14 +152,17 @@
           "title": "Compensation"
         }
       },
-      "required": ["name", "title", "compensation"],
+      "required": [
+        "name",
+        "title",
+        "compensation"
+      ],
       "title": "ManagementMember",
       "type": "object"
     },
     "OfferingDetails": {
       "properties": {
         "shares_offered": {
-          "X-ReasoningPrompt": "Document your analysis of shares offered.\n1. Identify the total number of shares being offered in the IPO.\n2. Distinguish between primary shares (issued by company) and secondary shares (sold by existing shareholders).\n3. Note any over-allotment options (green shoe) and the number of additional shares covered.\n4. Check for any reserved shares for specific groups (employees, strategic partners, etc.).\n5. Verify if the number is subject to stock splits mentioned in the filing.\n\nExample: \"Found offering of 10,000,000 shares, comprising 8,000,000 primary shares and 2,000,000 secondary shares, with an additional 1,500,000 shares available through the underwriters' option.\"\n",
           "anyOf": [
             {
               "type": "integer"
@@ -190,7 +187,6 @@
           "title": "Proposed Ticker Symbol"
         },
         "price_range": {
-          "X-ReasoningPrompt": "Document your analysis of the price range.\n1. Identify the proposed price range for the IPO shares.\n2. Note whether this is a preliminary range subject to change.\n3. Check for any factors mentioned that might influence the final pricing.\n4. If multiple currency denominations exist, note the primary trading currency.\n5. Verify if any price adjustments due to stock splits are mentioned.\n\nExample: \"Found proposed price range of $18.00 to $20.00 per share. The filing notes this is a preliminary estimate and subject to market conditions at the time of the offering.\"\n",
           "anyOf": [
             {
               "type": "string"
@@ -235,7 +231,6 @@
           "type": "string"
         },
         "ownership_percentage": {
-          "X-ReasoningPrompt": "Document your analysis of the ownership percentage.\n1. Identify the shareholder's current ownership percentage before the IPO.\n2. Note any pre-IPO restructuring that affects this percentage.\n3. Calculate post-IPO ownership percentage if provided or calculable.\n4. Verify if this represents voting power or economic interest if they differ.\n5. Note any special rights or restrictions associated with this ownership.\n\nExample: \"Found that Acme Ventures owns 15.7% of outstanding shares pre-IPO. After the offering, this will be diluted to approximately 12.3% assuming no additional purchases.\"\n",
           "anyOf": [
             {
               "type": "number"
@@ -248,7 +243,10 @@
           "title": "Ownership Percentage"
         }
       },
-      "required": ["name", "ownership_percentage"],
+      "required": [
+        "name",
+        "ownership_percentage"
+      ],
       "title": "Shareholder",
       "type": "object"
     }
@@ -265,7 +263,6 @@
       "$ref": "#/$defs/FinancialMetrics"
     },
     "risk_factors": {
-      "X-ReasoningPrompt": "Document your analysis of the risk factors.\n1. Identify the major risk categories in the Risk Factors section.\n2. Prioritize risks based on how prominently they're featured and how much detail is provided.\n3. Summarize each major risk in 1-2 sentences, capturing the specific concern and potential impact.\n4. Focus on risks that are company-specific rather than standard boilerplate risks.\n5. Include any quantitative measures of risk if provided (e.g., customer concentration percentages).\n\nExample: \"Identified 12 major risk categories. Prioritized the following based on emphasis and specificity:\n1. Customer concentration risk: 60% of revenue comes from top 3 customers\n2. Intellectual property challenges: 5 pending patent lawsuits could impact core product line\n3. Regulatory uncertainty: New FDA regulations could delay product approval by 12-18 months\"\n",
       "description": "List of summarized major risk factors.",
       "items": {
         "type": "string"
@@ -281,7 +278,6 @@
       "type": "array"
     },
     "use_of_proceeds": {
-      "X-ReasoningPrompt": "Document your analysis of the use of proceeds.\n1. Identify all stated purposes for the IPO funds with approximate allocations if available.\n2. Note whether allocations are presented as exact amounts or general percentages/priorities.\n3. Identify any contingent uses based on offering size or other factors.\n4. Check for any statements about debt repayment and specific debt instruments mentioned.\n5. Note whether any proceeds will go to existing shareholders rather than the company.\n\nExample: \"Approximately $150M in net proceeds expected. Allocations stated as: 40% for R&D, 30% for sales expansion, 20% for debt repayment (specifically the 2025 Senior Notes), and 10% for general corporate purposes. No proceeds allocated to existing shareholders.\"\n",
       "anyOf": [
         {
           "type": "string"

@@ -2,7 +2,7 @@ import { JSONSchemaType } from "ajv";
 import { ajvResolver } from "@hookform/resolvers/ajv";
 import { JSONSchema7, JSONSchema7Definition } from "json-schema";
 import { useForm } from "react-hook-form";
-import { scalarValueType, UiForm, UiFormContent } from "@/components/ui-retab/uiform";
+import { scalarValueType, UiForm, UiFormContent } from "@/components/json-form/json-form";
 import { resolveSchemaReference } from "@/components/json-table/lib/json-schema-utils";
 import { getTheme } from "@/components/json-table/lib/themes";
 

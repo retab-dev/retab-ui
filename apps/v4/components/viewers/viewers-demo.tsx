@@ -9,6 +9,7 @@ import type { ParseResponse } from "@/components/viewers/lib/parse-types";
 import { ParseViewer } from "@/components/viewers/parse/parse-viewer";
 import type { FormField } from "@/components/viewers/lib/edit-types";
 import { EditViewer } from "@/components/viewers/edit/edit-viewer";
+import { PdfViewer } from "@/components/ui/pdf-viewer";
 import splitSample from "@/components/viewers/sample-data/split.json";
 import partitionSample from "@/components/viewers/sample-data/partition.json";
 
@@ -86,14 +87,16 @@ function FakeDocument({
 
 export function PartitionViewerDemo() {
   return (
-    <div className="not-prose h-[640px] overflow-hidden rounded-xl border">
+    <div className="not-prose flex flex-col overflow-hidden rounded-xl border" style={{ height: 640 }}>
       <PartitionViewer
         result={partitionResult}
-        renderDocument={() => (
-          <iframe
+        renderDocument={(handlers) => (
+          <PdfViewer
             src={PARTITION_PDF_URL}
-            title="tapstone"
-            className="h-full w-full bg-white"
+            bare
+            downloadFileName="tapstone.pdf"
+            onVisiblePageChange={handlers.onCurrentPageChange}
+            className="h-full"
           />
         )}
       />
@@ -103,7 +106,7 @@ export function PartitionViewerDemo() {
 
 export function ClassificationViewerDemo() {
   return (
-    <div className="not-prose h-[360px] overflow-hidden rounded-xl border">
+    <div className="not-prose flex flex-col overflow-hidden rounded-xl border" style={{ height: 360 }}>
       <ClassifierViewer
         result={{
           category: "Invoice",
@@ -125,14 +128,16 @@ export function ClassificationViewerDemo() {
 
 export function SplitViewerDemo() {
   return (
-    <div className="not-prose h-[640px] overflow-hidden rounded-xl border">
+    <div className="not-prose flex flex-col overflow-hidden rounded-xl border" style={{ height: 640 }}>
       <SplitViewer
         result={splitResult}
-        renderDocument={() => (
-          <iframe
+        renderDocument={(handlers) => (
+          <PdfViewer
             src={SPLIT_PDF_URL}
-            title="Harris 2023 federal & state tax returns"
-            className="h-full w-full bg-white"
+            bare
+            downloadFileName="harris_2023_federal_state_returns.pdf"
+            onVisiblePageChange={handlers.onCurrentPageChange}
+            className="h-full"
           />
         )}
       />
@@ -142,7 +147,7 @@ export function SplitViewerDemo() {
 
 export function ParseViewerDemo() {
   return (
-    <div className="not-prose h-[420px] overflow-hidden rounded-xl border">
+    <div className="not-prose flex flex-col overflow-hidden rounded-xl border" style={{ height: 420 }}>
       <ParseViewer result={parseResult} />
     </div>
   );
@@ -150,7 +155,7 @@ export function ParseViewerDemo() {
 
 export function EditViewerDemo() {
   return (
-    <div className="not-prose h-[520px] overflow-hidden rounded-xl border">
+    <div className="not-prose flex flex-col overflow-hidden rounded-xl border" style={{ height: 520 }}>
       <EditViewer
         detectedFields={editFields}
         hasFilled

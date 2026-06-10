@@ -92,35 +92,37 @@ export const reviewTheme: Theme = {
   plusButtonIcon: "text-violet-600/20",
 };
 
+// Vanilla / shadcn-token theme: follows the consumer's theme via semantic tokens
+// instead of fixed dashboard gray. This is the default theme the table renders.
 export const grayTheme: Theme = {
   // Header colors
-  headerBg: "bg-gray-100 hover:bg-gray-200",
-  headerText: "text-gray-800 hover:text-gray-800",
-  subHeaderBg: "bg-gray-200",
-  subHeaderHoverBg: "hover:bg-gray-300",
+  headerBg: "bg-muted hover:bg-muted/80",
+  headerText: "text-foreground hover:text-foreground",
+  subHeaderBg: "bg-muted",
+  subHeaderHoverBg: "hover:bg-accent",
   // Border colors
-  border: "border-gray-200",
-  verticalLine: "bg-gray-200",
+  border: "border-border",
+  verticalLine: "bg-border",
 
   // Cell backgrounds
-  tableContainerBg: "bg-white",
-  tableRowBg: "bg-transparent hover:bg-gray-100",
-  tableCellBg: "bg-transparent hover:bg-gray-50",
-  forbiddenCellBg: "bg-gray-100",
+  tableContainerBg: "bg-background",
+  tableRowBg: "bg-transparent hover:bg-muted/50",
+  tableCellBg: "bg-transparent hover:bg-muted/30",
+  forbiddenCellBg: "bg-muted",
 
   // Interactive elements
-  selectedBg: "bg-gray-300",
-  selectedHoverBg: "hover:bg-gray-400",
+  selectedBg: "bg-accent",
+  selectedHoverBg: "hover:bg-accent/80",
 
   // Tooltip colors
-  tooltipBg: "bg-gray-100",
-  tooltipText: "text-gray-800",
+  tooltipBg: "bg-popover",
+  tooltipText: "text-popover-foreground",
 
   // Text and opacity
   disabledOpacity: "disabled:opacity-100 text-inherit",
 
   // Plus button icons
-  plusButtonIcon: "text-gray-600",
+  plusButtonIcon: "text-muted-foreground",
 };
 
 export const neutralTheme: Theme = {
