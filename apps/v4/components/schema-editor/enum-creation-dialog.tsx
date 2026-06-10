@@ -70,17 +70,17 @@ function EnumCreationDialogContent({
   const validValuesCount = enumValues.filter((val) => val.trim() !== "").length;
 
   return (
-    <DialogContent className="flex max-h-[90vh] max-w-lg flex-col p-6">
-      <DialogHeader className="flex-shrink-0">
-        <DialogTitle className="text-xl font-bold">Update Field</DialogTitle>
-        <DialogDescription className="text-sm text-muted-foreground">
+    <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+      <DialogHeader>
+        <DialogTitle>Update Field</DialogTitle>
+        <DialogDescription>
           Define the allowed values for this field.
         </DialogDescription>
       </DialogHeader>
 
-      <div className="mt-4 flex-1 space-y-4 overflow-y-auto pr-2">
+      <div className="space-y-4">
         <div>
-          <Label className="mb-2 block text-sm font-medium text-foreground">
+          <Label className="mb-2">
             Enabled Options
           </Label>
 
@@ -153,7 +153,7 @@ function EnumCreationDialogContent({
         </div>
       </div>
 
-      <DialogFooter className="mt-6 flex-shrink-0">
+      <DialogFooter>
         <Button type="button" variant="outline" onClick={handleCancel}>
           Cancel
         </Button>

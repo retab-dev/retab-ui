@@ -29,6 +29,7 @@ import {
 } from "@/components/csv-viewer-demo"
 import { PdfViewerDemo } from "@/components/pdf-viewer-demo"
 import { JsonFormDemo } from "@/components/json-form-demo"
+import { JsonFormFieldDemo } from "@/components/json-form-field-demo"
 import { JsonTableDemo } from "@/components/json-table/json-table-demo"
 import {
   ClassificationViewerDemo,
@@ -344,6 +345,7 @@ export const mdxComponents = {
   CsvViewerStreamingDemo,
   PdfViewerDemo,
   JsonFormDemo,
+  JsonFormFieldDemo,
   JsonTableDemo,
   ParseViewerDemo,
   ClassificationViewerDemo,

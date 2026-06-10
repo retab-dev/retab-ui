@@ -50,84 +50,70 @@ export function RootDialog({
 }: RootDialogProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="flex max-h-[90vh] flex-col gap-0 p-0">
-        <div className="flex-1 overflow-y-auto">
-          <DialogHeader className="flex-shrink-0 p-4 pb-2">
-            <DialogTitle className="text-xl font-bold">
-              {editMode === "readOnly" ? "View Schema" : "Edit Schema"}
-            </DialogTitle>
-            <DialogDescription className="text-sm text-muted-foreground">
-              {editMode === "readOnly"
-                ? "View schema title and description."
-                : "Modify schema title and description."}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 p-4 pt-2">
-            <div>
-              <div className="flex flex-row items-center gap-2">
-                <Label
-                  htmlFor={`${path}-title`}
-                  className="block text-sm font-medium text-foreground"
-                >
-                  Schema Title
-                </Label>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Info className="h-4 w-4" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    This title will be used by the AI to understand what we are
-                    extracting.
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-              <Input
-                id={`${path}-title`}
-                value={schemaTitle}
-                onChange={(e) => setSchemaTitle(e.target.value)}
-                className="mt-1"
-                placeholder="Enter schema title"
-                disabled={editMode === "readOnly" || editMode === "promptOnly"}
-              />
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>
+            {editMode === "readOnly" ? "View Schema" : "Edit Schema"}
+          </DialogTitle>
+          <DialogDescription>
+            {editMode === "readOnly"
+              ? "View schema title and description."
+              : "Modify schema title and description."}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="grid gap-4">
+          <div className="grid gap-2">
+            <div className="flex items-center gap-2">
+              <Label htmlFor={`${path}-title`}>Schema Title</Label>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="size-4 text-muted-foreground" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  This title is used by the model to understand what is being
+                  extracted.
+                </TooltipContent>
+              </Tooltip>
             </div>
-            <div>
-              <Label
-                htmlFor={`${path}-description`}
-                className="block text-sm font-medium text-foreground"
-              >
-                Description
-              </Label>
-              <Textarea
-                id={`${path}-description`}
-                value={metadataValues.description}
-                onChange={(e) =>
-                  setMetadataValues({
-                    ...metadataValues,
-                    description: e.target.value,
-                  })
-                }
-                className="mt-1"
-                placeholder="Add a description to your schema"
-                disabled={editMode === "readOnly"}
-              />
-            </div>
+            <Input
+              id={`${path}-title`}
+              value={schemaTitle}
+              onChange={(e) => setSchemaTitle(e.target.value)}
+              placeholder="Enter schema title"
+              disabled={editMode === "readOnly" || editMode === "promptOnly"}
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor={`${path}-description`}>Description</Label>
+            <Textarea
+              id={`${path}-description`}
+              value={metadataValues.description}
+              onChange={(e) =>
+                setMetadataValues({
+                  ...metadataValues,
+                  description: e.target.value,
+                })
+              }
+              placeholder="Add a description to your schema"
+              disabled={editMode === "readOnly"}
+            />
           </div>
         </div>
-        <DialogFooter className="flex-shrink-0 p-4">
+
+        <DialogFooter>
           <Button type="button" variant="outline" onClick={onClose}>
             Cancel
           </Button>
           <Button
             type="button"
             onClick={() => {
-              // Create metadata update object
-              const updatedMetadata = {
-                ...metadataValues,
-                title: schemaTitle,
-              };
-
-              // Update the root schema node with the new metadata
-              onChange(updateNodeWithMetadata(node, updatedMetadata));
+              onChange(
+                updateNodeWithMetadata(node, {
+                  ...metadataValues,
+                  title: schemaTitle,
+                }),
+              );
               onClose();
             }}
             disabled={editMode === "readOnly"}

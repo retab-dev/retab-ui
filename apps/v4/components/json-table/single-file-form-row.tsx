@@ -20,6 +20,10 @@ interface SingleFileFormRowProps {
   tableAndPaths: { table: unknown[][]; paths: (PathInfo | undefined)[][] };
   visibleKeys: string[];
   rowCount: number;
+  /** Which sub-row of the document this renders (set by the row virtualizer). */
+  rowIdx: number;
+  /** Absolute-positioning style from the virtualizer (translateY/height). */
+  style?: React.CSSProperties;
   onUpdateDocument?: (patch: any) => Promise<void>;
   editMode: "promptOnly" | "editable" | "readOnly";
   allowEditing?: boolean;
@@ -43,6 +47,8 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
     tableAndPaths,
     visibleKeys,
     rowCount,
+    rowIdx,
+    style,
     onUpdateDocument,
     editMode,
     allowEditing = true,
@@ -105,58 +111,53 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
       }
     };
 
-    // Render all sub-rows for this document
+    // Render a single sub-row (one of the document's `rowCount` rows). Which
+    // rows are mounted is decided by the row virtualizer in the parent.
+    const rowHeightPx = getRowHeightPx(rowHeight);
     return (
-      <>
-        {Array(rowCount)
-          .fill(0)
-          .map((_, rowIdx) => {
-            return (
-              <TableRow
-                key={`row-${rowIdx}`}
-                className={`flex border-b-0 ${theme.border} ${theme.tableRowBg} w-full`}
-                style={{
-                  height: `${getRowHeightPx(rowHeight)}px`,
-                  minHeight: `${getRowHeightPx(rowHeight)}px`,
-                  minWidth: "100%",
-                }}
-              >
-                {/* Data cells */}
-                {visibleKeys.map((key, colIdx) => {
-                  const pathInfo = paths[rowIdx]?.[colIdx];
+      <TableRow
+        data-index={rowIdx}
+        className={`flex border-b-0 ${theme.border} ${theme.tableRowBg} w-full`}
+        style={{
+          height: `${rowHeightPx}px`,
+          minHeight: `${rowHeightPx}px`,
+          minWidth: "100%",
+          ...style,
+        }}
+      >
+        {/* Data cells */}
+        {visibleKeys.map((key, colIdx) => {
+          const pathInfo = paths[rowIdx]?.[colIdx];
 
-                  return (
-                    <DataCell
-                      key={`${key}-${rowIdx}`}
-                      keyValue={key}
-                      rowIdx={rowIdx}
-                      colIdx={colIdx}
-                      pathInfo={pathInfo}
-                      schema={schema}
-                      row={row}
-                      index={0}
-                      docId={documentId}
-                      cellColorState={cellColorState}
-                      columnWidth={columnWidth}
-                      setOpenPopover={() => {}}
-                      openPopover={null}
-                      onGroundTruthDataChange={handleDataChange}
-                      currentIterationId="single-file"
-                      similarityType="aligned"
-                      validationFlags={{}}
-                      allowEditing={allowEditing}
-                      onCellHoverStart={onCellHoverStart}
-                      onCellHoverEnd={onCellHoverEnd}
-                      rowDistanceData={distanceData}
-                      fieldIndicationMap={fieldIndicationMap}
-                      fieldReasoningMap={fieldReasoningMap}
-                    />
-                  );
-                })}
-              </TableRow>
-            );
-          })}
-      </>
+          return (
+            <DataCell
+              key={`${key}-${rowIdx}`}
+              keyValue={key}
+              rowIdx={rowIdx}
+              colIdx={colIdx}
+              pathInfo={pathInfo}
+              schema={schema}
+              row={row}
+              index={0}
+              docId={documentId}
+              cellColorState={cellColorState}
+              columnWidth={columnWidth}
+              setOpenPopover={() => {}}
+              openPopover={null}
+              onGroundTruthDataChange={handleDataChange}
+              currentIterationId="single-file"
+              similarityType="aligned"
+              validationFlags={{}}
+              allowEditing={allowEditing}
+              onCellHoverStart={onCellHoverStart}
+              onCellHoverEnd={onCellHoverEnd}
+              rowDistanceData={distanceData}
+              fieldIndicationMap={fieldIndicationMap}
+              fieldReasoningMap={fieldReasoningMap}
+            />
+          );
+        })}
+      </TableRow>
     );
   },
 );

@@ -89,7 +89,7 @@ export function CreateDefinitionDialog({
           }}
         />
       ) : null}
-      <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-[700px]">
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Create New Definition</DialogTitle>
           <DialogDescription>
@@ -98,27 +98,24 @@ export function CreateDefinitionDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="mb-4">
-          <Label
-            htmlFor="defName"
-            className="block text-sm font-medium text-foreground"
-          >
-            Definition Name<span className="ml-[2px] text-destructive">*</span>
+        <div className="grid gap-1.5">
+          <Label htmlFor="defName">
+            Definition Name<span className="ml-0.5 text-destructive">*</span>
           </Label>
           <Input
             id="defName"
             value={newDefName}
             onChange={(e) => handleNameChange(e.target.value)}
-            className={`mt-1 ${nameError ? "border-destructive" : ""}`}
+            className={nameError ? "border-destructive" : undefined}
             placeholder="e.g. person_address or personAddress"
           />
           {nameError && (
-            <p className="mt-1 flex items-center gap-1 text-sm font-medium text-destructive">
+            <p className="flex items-center gap-1 text-sm font-medium text-destructive">
               <AlertCircle className="h-3 w-3" />
               {nameError}
             </p>
           )}
-          <p className="mt-1 text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             Must start with a letter or underscore, contain only letters,
             digits, or underscores, and be at most 64 characters.
           </p>

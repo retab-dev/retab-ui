@@ -23,7 +23,6 @@ export function ItemTypeSelector({
   label = "Type",
   isRoot = false,
   editMode = "editable",
-  setDialogMode,
   disabled = false,
   focusPath: _focusPath,
 }: {
@@ -34,7 +33,6 @@ export function ItemTypeSelector({
   label?: string;
   isRoot?: boolean;
   editMode?: "promptOnly" | "readOnly" | "editable";
-  setDialogMode: (mode: "object-editor" | "array-editor") => void;
   disabled?: boolean;
   focusPath?: string;
 }) {
@@ -42,7 +40,6 @@ export function ItemTypeSelector({
   const [createDefinitionOpen, setCreateDefinitionOpen] = useState(false);
 
   // Store the item editor state
-  const [, setEditingItems] = useState<ExtendedJSONSchema7 | null>(null);
 
   const effectiveType = getEffectiveType(value);
 
@@ -64,7 +61,7 @@ export function ItemTypeSelector({
       />
 
       {!isRoot && (
-        <Label className="mb-2 block text-sm font-medium text-foreground">
+        <Label className="mb-2">
           {label}
         </Label>
       )}
@@ -311,42 +308,6 @@ export function ItemTypeSelector({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {/* For object types, use SchemaNodeEditor in a dialog */}
-      {effectiveType.type === "object" &&
-        !value.$ref &&
-        editMode !== "readOnly" && (
-          <div className="mt-3 text-sm">
-            <Button
-              disabled={disabled}
-              variant="secondary"
-              className="w-full"
-              onClick={() => {
-                setDialogMode("object-editor");
-              }}
-            >
-              Edit Object Properties
-            </Button>
-          </div>
-        )}
-
-      {/* For array types, use SchemaNodeEditor in a dialog */}
-      {effectiveType.type === "array" && (
-        <div className="mt-3 text-sm">
-          <Button
-            disabled={disabled}
-            variant="secondary"
-            className="w-full"
-            onClick={() => {
-              setEditingItems(
-                (value.items as ExtendedJSONSchema7) || { type: "string" },
-              );
-              setDialogMode("array-editor");
-            }}
-          >
-            Edit List Items
-          </Button>
-        </div>
-      )}
 
       {/* Multiple choice options - keep as before */}
       {(() => {
@@ -361,7 +322,7 @@ export function ItemTypeSelector({
         return Array.isArray((effective as any).enum);
       })() && (
         <div className="mt-3">
-          <Label className="mb-2 block text-sm font-medium text-foreground">
+          <Label className="mb-2">
             Enabled options
           </Label>
           <div className="mb-2 flex flex-wrap gap-2">

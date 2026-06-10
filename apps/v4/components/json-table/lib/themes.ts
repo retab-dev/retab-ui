@@ -95,11 +95,16 @@ export const reviewTheme: Theme = {
 // Vanilla / shadcn-token theme: follows the consumer's theme via semantic tokens
 // instead of fixed dashboard gray. This is the default theme the table renders.
 export const grayTheme: Theme = {
-  // Header colors
-  headerBg: "bg-muted hover:bg-muted/80",
+  // Header colors. Use an OPAQUE color-mix gray (like the CSV viewer) rather
+  // than translucent `bg-muted`: the grouped, multi-row header stacks the
+  // header background several layers deep, and a translucent token accumulates
+  // into a too-dark band. An opaque tint stays a flat, light gray.
+  headerBg:
+    "bg-[color-mix(in_oklab,var(--background)_96%,var(--foreground))] hover:bg-[color-mix(in_oklab,var(--background)_92%,var(--foreground))]",
   headerText: "text-foreground hover:text-foreground",
-  subHeaderBg: "bg-muted",
-  subHeaderHoverBg: "hover:bg-accent",
+  subHeaderBg: "bg-[color-mix(in_oklab,var(--background)_96%,var(--foreground))]",
+  subHeaderHoverBg:
+    "hover:bg-[color-mix(in_oklab,var(--background)_92%,var(--foreground))]",
   // Border colors
   border: "border-border",
   verticalLine: "bg-border",
@@ -108,7 +113,8 @@ export const grayTheme: Theme = {
   tableContainerBg: "bg-background",
   tableRowBg: "bg-transparent hover:bg-muted/50",
   tableCellBg: "bg-transparent hover:bg-muted/30",
-  forbiddenCellBg: "bg-muted",
+  forbiddenCellBg:
+    "bg-[color-mix(in_oklab,var(--background)_92%,var(--foreground))]",
 
   // Interactive elements
   selectedBg: "bg-accent",

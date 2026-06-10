@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui-retab/textarea";
 import { Switch } from "@/components/ui-retab/switch";
 import { DialogClose, DialogFooter } from "@/components/ui-retab/dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui-retab/tooltip";
-import { ChevronLeft, X, AlertCircle } from "lucide-react";
+import { X, AlertCircle } from "lucide-react";
 import { useJsonSchema } from "@/components/schema-editor/contexts/json-schema";
 import { setNullable, getEffectiveType, formatTitle } from "@/components/schema-editor/json-schema-builder";
 import { SchemaNodeEditor } from "@/components/schema-editor/json-schema-node-editor";
@@ -33,6 +33,7 @@ const propertyFormSchema = z.object({
     }),
   description: z.string().optional(),
   required: z.boolean(),
+  nullable: z.boolean(),
 });
 
 type PropertyFormValues = z.infer<typeof propertyFormSchema>;
@@ -54,6 +55,8 @@ export function PropertyForm({
   wrapCancelInDialogClose,
   wrapSubmitInDialogClose,
   fieldPathOverride,
+  isRequired,
+  onRequiredChange,
 }: {
   editedProperty: ExtendedJSONSchema7;
   setEditedProperty: React.Dispatch<React.SetStateAction<ExtendedJSONSchema7>>;
@@ -73,6 +76,10 @@ export function PropertyForm({
   wrapCancelInDialogClose?: boolean;
   wrapSubmitInDialogClose?: boolean;
   fieldPathOverride?: string;
+  /** Whether this field is in its parent object's `required` array. */
+  isRequired?: boolean;
+  /** Toggle this field's membership in the parent's `required` array. */
+  onRequiredChange?: (required: boolean) => void;
 }) {
   const handleEditedJsonSchemaChange = useCallback(
     (newSchema: React.SetStateAction<ExtendedJSONSchema7>) => {
@@ -85,9 +92,6 @@ export function PropertyForm({
     [editedJsonSchema, setEditedJsonSchema],
   );
 
-  const [dialogMode, setDialogMode] = useState<
-    "main" | "array-editor" | "object-editor"
-  >("main");
   const { jsonSchema } = useJsonSchema();
 
   // Create refs outside of conditional rendering
@@ -126,12 +130,14 @@ export function PropertyForm({
     defaultValues: {
       name: editedName,
       description: editedProperty.description || "",
-      required: !getEffectiveType(editedProperty).isNullable,
+      required: isRequired ?? false,
+      nullable: getEffectiveType(editedProperty).isNullable,
     },
     values: {
       name: editedName,
       description: editedProperty.description || "",
-      required: !getEffectiveType(editedProperty).isNullable,
+      required: isRequired ?? false,
+      nullable: getEffectiveType(editedProperty).isNullable,
     },
     mode: "onBlur", // Validate on blur to show errors early
   });
@@ -155,9 +161,12 @@ export function PropertyForm({
       description: data.description,
     };
 
-    // Update nullable status based on required field
-    const nullableProperty = setNullable(updatedProperty, !data.required);
+    // Apply nullability from the explicit Nullable control (independent of required).
+    const nullableProperty = setNullable(updatedProperty, data.nullable);
     setEditedProperty(nullableProperty);
+
+    // Update parent object's `required` array membership.
+    onRequiredChange?.(data.required);
 
     // Call parent onSubmit
     if (onSubmit) {
@@ -230,12 +239,13 @@ export function PropertyForm({
     form.setValue("description", value);
   };
 
-  const handleRequiredChange = (checked: boolean | "indeterminate") => {
-    if (typeof checked === "boolean") {
-      const updatedProperty = setNullable(editedProperty, !checked);
-      setEditedProperty(updatedProperty);
-      form.setValue("required", checked);
-    }
+  const handleRequiredChange = (checked: boolean) => {
+    form.setValue("required", checked);
+  };
+
+  const handleNullableChange = (checked: boolean) => {
+    setEditedProperty(setNullable(editedProperty, checked));
+    form.setValue("nullable", checked);
   };
 
   // AI generation removed in project builder
@@ -257,97 +267,6 @@ export function PropertyForm({
   const isEnumWithoutOptions =
     isEnumSelected && getEffectiveEnumValues().length === 0;
 
-  // Render a different UI based on dialog mode
-  if (
-    editMode === "editable" &&
-    dialogMode === "array-editor" &&
-    getEffectiveType(editedProperty).type === "array"
-  ) {
-    return (
-      <div className="max-h-[80vh] space-y-4 overflow-y-auto p-4">
-        <div className="mb-4 flex items-center">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setDialogMode("main")}
-          >
-            <ChevronLeft className="mr-2 h-4 w-4" />
-          </Button>
-          <h2 className="ml-2 text-lg font-medium">Edit list items</h2>
-        </div>
-
-        <div className="rounded-md bg-muted p-4">
-          <SchemaNodeEditor
-            name="items"
-            node={
-              (editedProperty.items as ExtendedJSONSchema7) || {
-                type: "string",
-              }
-            }
-            onChange={(updatedItems) => {
-              setEditedProperty({
-                ...editedProperty,
-                items: updatedItems,
-              });
-            }}
-            jsonSchema={editedJsonSchema}
-            setJsonSchema={handleEditedJsonSchemaChange}
-            path="#/array-item"
-            defs={jsonSchema.$defs || {}}
-            canDelete={false}
-            setDefsAccordionOpen={() => {}}
-            draggedParentRef={draggedParentRef}
-            draggedPropertyRef={draggedPropertyRef}
-            hidePencilButton={true}
-          />
-        </div>
-
-        <div className="mt-4 flex justify-end space-x-2">
-          <Button onClick={() => setDialogMode("main")}>Done</Button>
-        </div>
-      </div>
-    );
-  }
-
-  if (
-    editMode === "editable" &&
-    dialogMode === "object-editor" &&
-    getEffectiveType(editedProperty).type === "object"
-  ) {
-    return (
-      <div className="max-h-[80vh] space-y-4 overflow-y-auto p-4">
-        <div className="mb-4 flex items-center">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setDialogMode("main")}
-          >
-            <ChevronLeft className="mr-2 h-4 w-4" />
-          </Button>
-          <h2 className="ml-2 text-lg font-medium">Edit Object Properties</h2>
-        </div>
-
-        <SchemaNodeEditor
-          name={editedName}
-          node={editedProperty as ExtendedJSONSchema7}
-          onChange={setEditedProperty}
-          jsonSchema={editedJsonSchema}
-          setJsonSchema={handleEditedJsonSchemaChange}
-          path="#/object"
-          defs={jsonSchema.$defs || {}}
-          canDelete={false}
-          setDefsAccordionOpen={() => {}}
-          draggedParentRef={draggedParentRef}
-          draggedPropertyRef={draggedPropertyRef}
-        />
-
-        <div className="mt-4 flex justify-end space-x-2">
-          <Button onClick={() => setDialogMode("main")}>Done</Button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <Form {...form}>
       <form
@@ -366,10 +285,7 @@ export function PropertyForm({
               render={({ field: _field, fieldState }) => (
                 <FormItem>
                   <div className="flex flex-row items-center gap-2">
-                    <Label
-                      htmlFor="name"
-                      className="block text-sm font-medium text-foreground"
-                    >
+                    <Label htmlFor="name">
                       Name
                     </Label>
                   </div>
@@ -402,10 +318,7 @@ export function PropertyForm({
             />
 
             <div>
-              <Label
-                htmlFor="type"
-                className="block text-sm font-medium text-foreground"
-              >
+              <Label htmlFor="type">
                 Data type
               </Label>
               <ItemTypeSelector
@@ -415,23 +328,111 @@ export function PropertyForm({
                 value={editedProperty}
                 onChange={setEditedProperty}
                 setJsonSchema={setEditedJsonSchema}
-                setDialogMode={setDialogMode}
                 isRoot={true}
                 focusPath={fieldPathOverride ?? editedName}
               />
             </div>
-            <div className="flex flex-row items-center justify-between">
+
+            {editMode === "editable" &&
+              getEffectiveType(editedProperty).type === "object" &&
+              !editedProperty.$ref && (
+                <div className="rounded-md border bg-muted/30 p-3">
+                  <SchemaNodeEditor
+                    name={editedName}
+                    node={editedProperty as ExtendedJSONSchema7}
+                    onChange={setEditedProperty}
+                    jsonSchema={editedJsonSchema}
+                    setJsonSchema={handleEditedJsonSchemaChange}
+                    path="#/object"
+                    defs={jsonSchema.$defs || {}}
+                    canDelete={false}
+                    setDefsAccordionOpen={() => {}}
+                    draggedParentRef={draggedParentRef}
+                    draggedPropertyRef={draggedPropertyRef}
+                  />
+                </div>
+              )}
+            {editMode === "editable" &&
+              getEffectiveType(editedProperty).type === "array" && (
+                <div className="space-y-2 rounded-md border bg-muted/30 p-3">
+                  <Label className="text-xs text-muted-foreground">
+                    List item type
+                  </Label>
+                  <SchemaNodeEditor
+                    name="items"
+                    node={
+                      (editedProperty.items as ExtendedJSONSchema7) || {
+                        type: "string",
+                      }
+                    }
+                    onChange={(updatedItems) => {
+                      setEditedProperty({
+                        ...editedProperty,
+                        items: updatedItems,
+                      });
+                    }}
+                    jsonSchema={editedJsonSchema}
+                    setJsonSchema={handleEditedJsonSchemaChange}
+                    path="#/array-item"
+                    defs={jsonSchema.$defs || {}}
+                    canDelete={false}
+                    setDefsAccordionOpen={() => {}}
+                    draggedParentRef={draggedParentRef}
+                    draggedPropertyRef={draggedPropertyRef}
+                    hidePencilButton={true}
+                  />
+                </div>
+              )}
+            <div className="flex flex-row items-center gap-6">
+              {onRequiredChange ? (
+                <FormField
+                  control={form.control}
+                  name="required"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center space-y-0 space-x-2">
+                      <FormControl>
+                        <Switch
+                          id="required"
+                          disabled={editMode !== "editable"}
+                          checked={field.value}
+                          onCheckedChange={handleRequiredChange}
+                          className={
+                            editMode !== "editable" ? "disabled:opacity-100" : ""
+                          }
+                        />
+                      </FormControl>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Label
+                            htmlFor="required"
+                            className="cursor-pointer"
+                          >
+                            Required
+                          </Label>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs">
+                          <p>
+                            Required fields must be present in the object. This
+                            adds the field to the parent object&apos;s{" "}
+                            <code>required</code> list.
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </FormItem>
+                  )}
+                />
+              ) : null}
               <FormField
                 control={form.control}
-                name="required"
-                render={({ field: _field2 }) => (
+                name="nullable"
+                render={({ field }) => (
                   <FormItem className="flex flex-row items-center space-y-0 space-x-2">
                     <FormControl>
                       <Switch
-                        id="required"
+                        id="nullable"
                         disabled={editMode !== "editable"}
-                        checked={!getEffectiveType(editedProperty).isNullable}
-                        onCheckedChange={handleRequiredChange}
+                        checked={field.value}
+                        onCheckedChange={handleNullableChange}
                         className={
                           editMode !== "editable" ? "disabled:opacity-100" : ""
                         }
@@ -440,20 +441,16 @@ export function PropertyForm({
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Label
-                          htmlFor="required"
-                          className="cursor-pointer text-sm font-medium text-foreground"
+                          htmlFor="nullable"
+                          className="cursor-pointer"
                         >
-                          Required
+                          Nullable
                         </Label>
                       </TooltipTrigger>
                       <TooltipContent className="max-w-xs">
                         <p>
-                          When a field is required, it must have a value and
-                          cannot be null or undefined.
-                        </p>
-                        <p>
-                          Required fields must be provided when submitting data
-                          for this schema.
+                          Nullable fields allow <code>null</code> as a value (the
+                          type is widened to include <code>null</code>).
                         </p>
                       </TooltipContent>
                     </Tooltip>
@@ -469,10 +466,7 @@ export function PropertyForm({
               render={({ field }) => (
                 <FormItem className="group">
                   <div className="flex flex-row items-center justify-between gap-2">
-                    <Label
-                      htmlFor="description"
-                      className="block text-sm font-medium text-foreground"
-                    >
+                    <Label htmlFor="description">
                       Description
                     </Label>
                   </div>
@@ -503,13 +497,9 @@ export function PropertyForm({
               {onDelete && editMode === "editable" && (
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="destructive"
                   size="sm"
-                  disabled={false}
                   onClick={onDelete}
-                  className={
-                    "border-destructive text-destructive hover:border-destructive hover:text-destructive"
-                  }
                 >
                   Delete Property
                 </Button>

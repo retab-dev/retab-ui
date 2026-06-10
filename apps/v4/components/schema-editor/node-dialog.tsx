@@ -20,6 +20,8 @@ interface NodeDialogProps {
   node: ExtendedJSONSchema7;
   name: string;
   editMode: "promptOnly" | "readOnly" | "editable";
+  isRequired?: boolean;
+  onRequiredChange?: (required: boolean) => void;
 }
 
 export function NodeDialog({
@@ -32,6 +34,8 @@ export function NodeDialog({
   node,
   name,
   editMode,
+  isRequired,
+  onRequiredChange,
 }: NodeDialogProps) {
   // State for PropertyForm
   const [editedProperty, setEditedProperty] =
@@ -83,10 +87,10 @@ export function NodeDialog({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-h-[90vh] gap-2 overflow-y-auto p-0 sm:max-w-xl">
         <DialogHeader className="px-4 pt-4">
-          <DialogTitle className="text-xl font-bold">
+          <DialogTitle>
             {editMode === "readOnly" ? "View Property" : "Edit Property"}
           </DialogTitle>
-          <DialogDescription className="text-muted-foreground text-sm">
+          <DialogDescription>
             {editMode === "readOnly"
               ? "View property name, type, description, and other characteristics."
               : "Modify property name, type, description, and other characteristics."}
@@ -107,6 +111,8 @@ export function NodeDialog({
           submitLabel="Save"
           onNameError={handleNameError}
           editMode={editMode}
+          isRequired={isRequired}
+          onRequiredChange={onRequiredChange}
           wrapCancelInDialogClose
         />
       </DialogContent>

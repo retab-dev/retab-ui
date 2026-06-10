@@ -245,7 +245,7 @@ export function CsvViewer({
               role="columnheader"
               aria-colindex={1}
               aria-label="Row number"
-              className="sticky left-0 z-10 flex items-center justify-end border-r bg-muted/60 px-2 text-xs font-medium text-muted-foreground"
+              className="sticky left-0 z-10 flex items-center justify-end border-r bg-[color-mix(in_oklab,var(--card)_97%,var(--foreground))] px-2 text-xs font-medium text-muted-foreground"
             >
               #
             </div>
@@ -452,7 +452,7 @@ function CsvRow({
           role="rowheader"
           aria-colindex={1}
           data-slot="csv-row-number"
-          className="sticky left-0 z-[1] flex items-center justify-end border-r bg-card px-2 text-xs tabular-nums text-muted-foreground group-hover:bg-muted/40"
+          className="sticky left-0 z-[1] flex items-center justify-end border-r bg-card px-2 text-xs tabular-nums text-muted-foreground group-hover:bg-[color-mix(in_oklab,var(--card)_97%,var(--foreground))]"
         >
           {index + 1}
         </div>

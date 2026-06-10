@@ -146,13 +146,6 @@ export type AIProvider =
   | "Groq"
   | "Together";
 
-export interface ConsensusChoice {
-  data: Record<string, any>;
-  index: number;
-  likelihoods?: Record<string, number>;
-}
-
-
 // Sentinel values for Select components (Radix forbids empty string values)
 const NULL_OPTION = "__none__";
 const EMPTY_OPTION = "__empty__";
@@ -171,18 +164,6 @@ const fromSelectValue = (v: string): any => {
   return v;
 };
 
-export interface ConsensusAlternative {
-  value: any;
-  index: number;
-}
-
-export interface ConsensusContent {
-  consolidated_value: any;
-  alternatives: ConsensusAlternative[];
-  count: number;
-  agreement: number;
-  hasVariation: boolean;
-}
 
 export interface Document {
   document: {
@@ -196,7 +177,6 @@ export interface ConfigProps {
   titles?: Record<string, boolean>;
   descriptions?: boolean;
   showPrompts?: boolean;
-  showConsensus?: boolean;
   showSources?: boolean;
   showErrors?: boolean;
   submitText?: string;
@@ -228,7 +208,6 @@ export interface UiFormProps {
   setSourcesFieldPath?: (fieldPath: string | null) => void;
   titlePosition: TitlePosition;
   setLikelihoods: (likelihoods: Record<string, any>) => void;
-  consensusDetails?: ConsensusChoice[]; // Array of completion choices for consensus display
   propertyEditorMode: "promptOnly" | "readOnly" | "editable";
   showPropertyEditorPencil: boolean;
   validationFlags: Record<string, any>;
@@ -996,24 +975,24 @@ const highlightClasses = (
   if (style === "ring") {
     return cn(
       isVerified &&
-        "bg-green-50 ring-green-500 ring-2 data-[state=checked]:!bg-green-200 data-[state=checked]:!border-green-600 data-[state=checked]:!text-green-700",
+        "bg-success/10 ring-success ring-2 data-[state=checked]:!bg-success/20 data-[state=checked]:!border-success data-[state=checked]:!text-success-foreground",
     );
   }
   return cn(
     isVerified &&
-      "bg-green-50 border border-green-500 data-[state=checked]:!bg-green-200 data-[state=checked]:!border-green-600 data-[state=checked]:!text-green-700",
+      "bg-success/10 border border-success data-[state=checked]:!bg-success/20 data-[state=checked]:!border-success data-[state=checked]:!text-success-foreground",
   );
 };
 
 // Match data-cell function field color coding
 const getFunctionFieldStyling = (value: any): string => {
   if (value === true)
-    return "border-green-500 border bg-green-50 data-[state=checked]:!bg-green-200 data-[state=checked]:!border-green-600 data-[state=checked]:!text-green-700";
+    return "border-success border bg-success/10 data-[state=checked]:!bg-success/20 data-[state=checked]:!border-success data-[state=checked]:!text-success-foreground";
   if (value === false)
-    return "border-red-500 border bg-red-50 data-[state=checked]:!bg-red-200 data-[state=checked]:!border-red-600 data-[state=checked]:!text-red-700";
+    return "border-destructive border bg-destructive/10 data-[state=checked]:!bg-destructive/20 data-[state=checked]:!border-destructive data-[state=checked]:!text-destructive";
   if (value === null || value === undefined)
-    return "border-yellow-500 border bg-yellow-50 data-[state=checked]:!bg-yellow-200 data-[state=checked]:!border-yellow-600 data-[state=checked]:!text-yellow-700";
-  return "border-green-500 border bg-green-50 data-[state=checked]:!bg-green-200 data-[state=checked]:!border-green-600 data-[state=checked]:!text-green-700";
+    return "border-warning border bg-warning/10 data-[state=checked]:!bg-warning/20 data-[state=checked]:!border-warning data-[state=checked]:!text-warning-foreground";
+  return "border-success border bg-success/10 data-[state=checked]:!bg-success/20 data-[state=checked]:!border-success data-[state=checked]:!text-success-foreground";
 };
 
 export interface StyledInputProps extends InputProps {
@@ -2051,17 +2030,29 @@ const getGroundTruthBadgeColors = (
   scalarValueType: scalarValueType = "similarity",
 ): { bg: string; text: string; border: string } => {
   if (similarity === undefined || isNaN(similarity)) {
-    return { bg: "#f1f5f9", text: "#334155", border: "#e2e8f0" }; // slate-100, slate-700, slate-200
+    return {
+      bg: "var(--color-muted)",
+      text: "var(--color-muted-foreground)",
+      border: "var(--color-border)",
+    };
   }
 
   // For mismatch mode: 0 = mismatch (amber), 1 = not mismatch (transparent/neutral)
   if (scalarValueType === "mismatch") {
     if (similarity === 1) {
       // Not a mismatch - neutral colors
-      return { bg: "#f1f5f9", text: "#334155", border: "#e2e8f0" }; // slate-100, slate-700, slate-200
+      return {
+      bg: "var(--color-muted)",
+      text: "var(--color-muted-foreground)",
+      border: "var(--color-border)",
+    };
     }
-    // Is a mismatch - amber colors
-    return { bg: "#FEF3C7", text: "#92400E", border: "#F59E0B" }; // amber-100, amber-800, amber-500
+    // Is a mismatch - warning colors
+    return {
+      bg: "color-mix(in oklab, var(--color-warning) 20%, transparent)",
+      text: "var(--color-warning-foreground)",
+      border: "var(--color-warning)",
+    };
   }
 
   // Default similarity mode: Use the distances colormap with light background
@@ -2314,7 +2305,7 @@ const GroundTruthBadge: React.FC<{
             checked={!isInMismatches}
             onCheckedChange={() => handleToggleMismatch()}
             className={cn(
-              "h-3.5 w-6 data-[state=checked]:bg-emerald-400 data-[state=unchecked]:bg-orange-400",
+              "h-3.5 w-6 data-[state=checked]:bg-success data-[state=unchecked]:bg-warning",
               "[&_span]:h-2.5 [&_span]:w-2.5 [&_span]:data-[state=checked]:translate-x-[10px] [&_span]:data-[state=unchecked]:translate-x-[2px]",
             )}
             title={isInMismatches ? "Mark as OK" : "Mark as mismatch"}
@@ -2322,7 +2313,7 @@ const GroundTruthBadge: React.FC<{
           <span
             className={cn(
               "text-[10px] font-medium",
-              isInMismatches ? "text-orange-600" : "text-emerald-600",
+              isInMismatches ? "text-warning-foreground" : "text-success",
             )}
           >
             {isInMismatches ? "Mismatch" : "✓ OK"}
@@ -2377,6 +2368,7 @@ const ArrayRendererItem = React.memo<ArrayRendererItemProps>(
       disabled: globalDisabled,
     } = useUiFormContext();
 
+    const itemPath = `${arrayBaseName}.${innerIdx}`;
     const itemKey = `${elementKey}-item-${innerIdx}`;
 
     if (enumOptions) {
@@ -3201,7 +3193,7 @@ const PrimitiveRenderer: React.FC<PrimitiveRendererProps> = ({
         >
           {label}
           {isRequired && (
-            <span className="text-red-500">*</span>
+            <span className="text-destructive">*</span>
           )}
         </FormLabel>
         <GroundTruthBadge
@@ -3419,7 +3411,7 @@ const PrimitiveRenderer: React.FC<PrimitiveRendererProps> = ({
   const indicationText =
     matchedHighlightPattern && fieldIndicationMap?.get(matchedHighlightPattern);
   const highlightedFieldClass = isHighlightedField
-    ? "ring-2 ring-amber-400 bg-amber-50/50 rounded-lg p-2 mb-2"
+    ? "ring-2 ring-warning bg-warning/10 rounded-lg p-2 mb-2"
     : "";
   return (
     <div
@@ -3429,7 +3421,7 @@ const PrimitiveRenderer: React.FC<PrimitiveRendererProps> = ({
     >
       {/* Indication text for highlighted fields */}
       {isHighlightedField && indicationText && (
-        <div className="flex flex-col gap-1 rounded border border-amber-300 bg-amber-100 px-2 py-1.5 text-xs text-amber-800">
+        <div className="flex flex-col gap-1 rounded border border-warning bg-warning/20 px-2 py-1.5 text-xs text-warning-foreground">
           <div className="flex items-center gap-1.5">
             <MessageSquareWarning className="h-3.5 w-3.5 flex-shrink-0" />
             <span>{indicationText}</span>
@@ -3636,7 +3628,7 @@ const PrimitiveRenderer: React.FC<PrimitiveRendererProps> = ({
                   <Skeleton
                     className={cn(
                       size === "sm" ? "h-[32px]" : "h-[42px]",
-                      "flex animate-pulse rounded-md border-none bg-muted text-red-200 outline-none",
+                      "flex animate-pulse rounded-md border-none bg-muted text-destructive/40 outline-none",
                     )}
                   />
                 ) : fieldType === "date" ? (
@@ -3800,7 +3792,7 @@ const PrimitiveRenderer: React.FC<PrimitiveRendererProps> = ({
               <FormMessage
                 className={cn(
                   className,
-                  "mt-4 flex border-none bg-transparent text-left text-xs text-red-600 shadow-none hover:bg-transparent",
+                  "mt-4 flex border-none bg-transparent text-left text-xs text-destructive shadow-none hover:bg-transparent",
                 )}
               />
             </FormItem>
@@ -4066,7 +4058,7 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({ className }) => {
         {Object.keys(form.formState.errors).length > 0 &&
           config?.showErrors === true && (
             <div className="mt-6 font-light">
-              <p className="mb-2 text-sm font-medium text-red-500">
+              <p className="mb-2 text-sm font-medium text-destructive">
                 {"Please fix the following errors:"}
               </p>
               {findErrors(form.formState.errors).map(({ path, error }) => {
@@ -4079,10 +4071,10 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({ className }) => {
                   >
                     <TriangleAlert
                       size={16}
-                      className="mr-1 inline-block text-red-500"
+                      className="mr-1 inline-block text-destructive"
                     />
                     <span className="">{path.join(" > ")}</span>
-                    <span className="ml-1 text-red-500">{translatedError}</span>
+                    <span className="ml-1 text-destructive">{translatedError}</span>
                   </div>
                 );
               })}
@@ -4209,7 +4201,6 @@ export const UiFormContextProviderRaw: React.FC<{
     disabled,
     titlePosition,
     showSubmit,
-    consensusDetails,
     propertyEditorMode,
     showPropertyEditorPencil,
     validationFlags,
@@ -4237,7 +4228,6 @@ export const UiFormContextProviderRaw: React.FC<{
     disabled,
     titlePosition,
     setSourcesFieldPath,
-    consensusDetails,
     isEditing,
     setIsEditing,
     propertyEditorMode,

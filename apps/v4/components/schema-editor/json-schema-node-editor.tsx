@@ -4,7 +4,6 @@ import * as React from "react";
 import { useState } from "react";
 import { Button } from "@/components/ui-retab/button";
 import { Input } from "@/components/ui-retab/input";
-import { Label } from "@/components/ui-retab/label";
 import { Checkbox } from "@/components/ui-retab/checkbox";
 import {
   Pencil,
@@ -70,7 +69,6 @@ import {
   formatTitle,
   getEffectiveType,
   renamePropertyAtPath,
-  setNullable,
   updateEffectiveNode,
   updateSchemaProperty,
   updateType,
@@ -115,6 +113,8 @@ export function SchemaNodeEditor({
   draggedPropertyRef,
   editMode = "editable",
   hidePencilButton = false,
+  isRequired,
+  onRequiredChange,
 }: {
   name: string;
   node: ExtendedJSONSchema7;
@@ -133,6 +133,10 @@ export function SchemaNodeEditor({
   draggedPropertyRef: React.RefObject<string | null>;
   editMode?: "promptOnly" | "readOnly" | "editable";
   hidePencilButton?: boolean;
+  /** Whether this field is in its parent object's `required` array. */
+  isRequired?: boolean;
+  /** Toggle this field's membership in the parent's `required` array. */
+  onRequiredChange?: (required: boolean) => void;
 }) {
   const parentPath = path;
   const { type: localType, isNullable: localNullable } = getEffectiveType(node);
@@ -208,11 +212,6 @@ export function SchemaNodeEditor({
     // No need to change anything since we haven't applied the enum type yet
   };
 
-  const handleNullableChange = (checked: boolean) => {
-    const updated = setNullable(node, checked);
-    onChange(updated);
-  };
-
   const handlePropertyNameSubmit = () => {
     const err = validateInline(editedPropertyName);
     if (err) {
@@ -260,7 +259,7 @@ export function SchemaNodeEditor({
 
     // Focus back on the input field for adding another enum value
     const inputElement = document.querySelector(
-      'input[placeholder="New enum value"]',
+      'input[placeholder="New choice"]',
     );
     if (inputElement) {
       (inputElement as HTMLInputElement).focus();
@@ -491,7 +490,7 @@ export function SchemaNodeEditor({
           {isEditable ? (
             <Tooltip>
               <TooltipTrigger asChild>
-                <GripVertical className="h-12 w-6 cursor-pointer px-1 py-4 text-primary-foreground group-hover:text-muted-foreground" />
+                <GripVertical className="h-12 w-6 cursor-pointer px-1 py-4 text-transparent group-hover:text-muted-foreground" />
               </TooltipTrigger>
             </Tooltip>
           ) : (
@@ -675,15 +674,15 @@ export function SchemaNodeEditor({
               </Tooltip>
             )}
 
-            {isEditable && (
+            {isEditable && onRequiredChange && (
               <div className="mt-2 flex items-center sm:mt-0">
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Checkbox
                       id={`${path}-required`}
-                      checked={!localNullable}
+                      checked={!!isRequired}
                       onCheckedChange={(checked) =>
-                        handleNullableChange(!Boolean(checked))
+                        onRequiredChange(Boolean(checked))
                       }
                     />
                   </TooltipTrigger>
@@ -948,6 +947,24 @@ export function SchemaNodeEditor({
                                   draggedParentRef={draggedParentRef}
                                   draggedPropertyRef={draggedPropertyRef}
                                   editMode={editMode}
+                                  isRequired={
+                                    Array.isArray(effective.required) &&
+                                    effective.required.includes(propName)
+                                  }
+                                  onRequiredChange={(req) => {
+                                    const cur = Array.isArray(effective.required)
+                                      ? effective.required
+                                      : [];
+                                    const newRequired = req
+                                      ? Array.from(new Set([...cur, propName]))
+                                      : cur.filter((r) => r !== propName);
+                                    onChange(
+                                      updateEffectiveNode(node, {
+                                        ...effective,
+                                        required: newRequired,
+                                      }),
+                                    );
+                                  }}
                                   name={propName}
                                   node={propValue as ExtendedJSONSchema7}
                                   jsonSchema={jsonSchema}
@@ -1317,7 +1334,6 @@ export function SchemaNodeEditor({
       {/* ------------------- Enum Editor UI ------------------- */}
       {localType === "enum" && (
         <div className="ml-6">
-          <Label className="font-normal text-muted-foreground">Possible values</Label>
           {effective.enum && effective.enum.length > 0 ? (
             <ul className="mt-1 mb-2 flex flex-wrap gap-2">
               {effective.enum.map((val: any, index: number) => (
@@ -1354,7 +1370,7 @@ export function SchemaNodeEditor({
           <div className="flex items-center gap-3">
             <Input
               ref={newEnumInputRef}
-              placeholder="New enum value"
+              placeholder="New choice"
               className="w-40"
               value={newEnumValue}
               onChange={(e) => setNewEnumValue(e.target.value)}
@@ -1398,6 +1414,8 @@ export function SchemaNodeEditor({
           node={node}
           name={name}
           editMode={editMode}
+          isRequired={isRequired}
+          onRequiredChange={onRequiredChange}
         />
       ) : null}
 

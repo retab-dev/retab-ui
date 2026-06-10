@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { useState } from "react";
-import { Editor } from "@/components/schema-editor/monaco-editor";
 import { Button } from "@/components/ui-retab/button";
 import { Input } from "@/components/ui-retab/input";
 import { Label } from "@/components/ui-retab/label";
@@ -433,18 +432,16 @@ function JsonSchemaEditorRaw({
 
         {/* Top Level Editor */}
         {fullCodeMode ? (
-          <Editor
-            language="json"
-            theme="vs-dark"
-            className="h-full min-h-0 flex-1 overflow-hidden rounded-lg"
-            value={JSON.stringify(schema, null, 2)}
-            options={{ automaticLayout: true }}
-            onChange={async (newValue) => {
+          <textarea
+            spellCheck={false}
+            className="h-full min-h-0 flex-1 resize-none overflow-auto rounded-lg border bg-muted/30 p-3 font-mono text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            defaultValue={JSON.stringify(schema, null, 2)}
+            onChange={async (e) => {
               try {
-                const newSchema = JSON.parse(newValue || "");
+                const newSchema = JSON.parse(e.target.value || "");
                 await setSchema(newSchema);
               } catch {
-                // Optionally handle parse errors here.
+                // Ignore invalid JSON while the user is typing.
               }
             }}
           />

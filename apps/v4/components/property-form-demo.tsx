@@ -8,11 +8,15 @@ import { type ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-sc
 
 export function PropertyFormDemo() {
   const [property, setProperty] = React.useState<ExtendedJSONSchema7>({
-    type: "string",
-    enum: ["USD", "EUR", "GBP"],
+    type: "object",
     description: "",
+    properties: {
+      street: { type: "string" },
+      city: { type: "string" },
+    },
+    required: ["street"],
   })
-  const [name, setName] = React.useState("currency")
+  const [name, setName] = React.useState("address")
   const [schema, setSchema] = React.useState<ExtendedJSONSchema7>({
     type: "object",
     properties: {},

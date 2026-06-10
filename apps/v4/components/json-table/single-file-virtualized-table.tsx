@@ -1,7 +1,14 @@
 "use client";
 
-import React, { useMemo, useState, useRef, useCallback } from "react";
+import React, {
+  useMemo,
+  useState,
+  useRef,
+  useCallback,
+  useLayoutEffect,
+} from "react";
 import { createPortal } from "react-dom";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { JSONSchema7 } from "json-schema";
 import { ColumnDef } from "@tanstack/react-table";
 import {
@@ -333,8 +340,34 @@ export const SingleFileVirtualizedTable =
         getCoreRowModel: getCoreRowModel(),
       });
 
-      const totalHeight = rowCount * getRowHeightPx(rowHeight);
       const totalWidth = visibleKeys.length * getColumnWidthPx(columnWidth);
+
+      // ── Row virtualization ──────────────────────────────────────────────
+      // Rows are fixed height, so a simple fixed-size virtualizer only mounts
+      // the rows in (and just past) the viewport. The scroll element is the
+      // outer overflow-auto container; `scrollMargin` accounts for the sticky
+      // header that precedes the list inside it.
+      const rowHeightPx = getRowHeightPx(rowHeight);
+      const scrollRef = useRef<HTMLDivElement>(null);
+      const headerScrollRef = useRef<HTMLDivElement>(null);
+      const bodyRef = useRef<HTMLTableSectionElement>(null);
+      // Render virtualized rows only after mount: on the server the scroll
+      // element and header offset aren't known, so deferring avoids a
+      // hydration mismatch and lets the virtualizer read the laid-out
+      // `offsetTop` (header height) for scrollMargin.
+      const [mounted, setMounted] = useState(false);
+      useLayoutEffect(() => {
+        setMounted(true);
+      }, [visibleKeys.length, rowHeightPx]);
+      const rowVirtualizer = useVirtualizer({
+        count: rowCount,
+        getScrollElement: () => scrollRef.current,
+        estimateSize: () => rowHeightPx,
+        overscan: 12,
+        scrollMargin: bodyRef.current?.offsetTop ?? 0,
+      });
+      const virtualRows = rowVirtualizer.getVirtualItems();
+      const docRow = table.getRowModel().rows[0];
       const hoverCardPositionRunner =
         showHoverCard && hoverInfo ? (
           <HoverCardPositionRunner
@@ -411,15 +444,21 @@ export const SingleFileVirtualizedTable =
           {hoverCardElement}
 
           <div
-            className={`relative flex min-h-0 min-w-0 flex-1 ${theme.tableContainerBg}`}
+            className={`relative flex min-h-0 min-w-0 flex-1 flex-col ${theme.tableContainerBg}`}
           >
-            <div className="h-full w-full overflow-auto">
+            {/* Header: a fixed, opaque bar outside the vertical scroll. It
+                scrolls horizontally in sync with the body so columns stay
+                aligned, while rows scroll underneath it. A sticky header
+                inside the transformed/virtualized body shows rows through it
+                (transforms break sticky) — the CSV viewer uses the same
+                separated-header approach. */}
+            <div
+              ref={headerScrollRef}
+              className={`w-full shrink-0 overflow-x-hidden ${theme.headerBg}`}
+            >
               <Table
-                className={`relative flex w-full flex-col rounded-none ${theme.tableContainerBg}`}
-                style={{
-                  minWidth: `${totalWidth}px`,
-                  height: `${totalHeight}px`,
-                }}
+                className={`relative flex w-full flex-col rounded-none ${theme.headerBg}`}
+                style={{ minWidth: `${totalWidth}px` }}
               >
                 <SingleFileTableHeader
                   table={table}
@@ -430,31 +469,69 @@ export const SingleFileVirtualizedTable =
                   foldAllSignal={foldAllSignal}
                   setFoldAllSignal={setFoldAllSignal}
                 />
-                <TableBody className="relative flex h-full w-full flex-col">
-                  {table.getRowModel().rows.map((row, _index) => (
-                    <SingleFileFormRow
-                      key={row.id}
-                      row={row}
-                      tableAndPaths={tableAndPaths}
-                      columns={columns}
-                      schema={schema}
-                      visibleKeys={visibleKeys}
-                      rowCount={rowCount}
-                      onUpdateDocument={onUpdateDocument}
-                      editMode={editMode}
-                      allowEditing={allowEditing}
-                      onCellHoverStart={
-                        showHoverCard ? handleCellHoverStart : onCellHoverStart
-                      }
-                      onCellHoverEnd={
-                        showHoverCard ? handleCellHoverEnd : undefined
-                      }
-                      cellColorState={cellColorState}
-                      distanceData={distanceData}
-                      fieldIndicationMap={fieldIndicationMap}
-                      fieldReasoningMap={fieldReasoningMap}
-                    />
-                  ))}
+              </Table>
+            </div>
+            <div
+              ref={scrollRef}
+              className="w-full flex-1 overflow-auto"
+              onScroll={(e) => {
+                if (headerScrollRef.current) {
+                  headerScrollRef.current.scrollLeft =
+                    e.currentTarget.scrollLeft;
+                }
+              }}
+            >
+              <Table
+                className={`relative flex w-full flex-col rounded-none ${theme.tableContainerBg}`}
+                style={{
+                  minWidth: `${totalWidth}px`,
+                }}
+              >
+                <TableBody
+                  ref={bodyRef}
+                  className={`relative w-full ${theme.tableContainerBg}`}
+                  style={{
+                    height: `${rowVirtualizer.getTotalSize()}px`,
+                    minWidth: "100%",
+                  }}
+                >
+                  {mounted && docRow
+                    ? virtualRows.map((vrow) => (
+                        <SingleFileFormRow
+                          key={vrow.key}
+                          rowIdx={vrow.index}
+                          style={{
+                            position: "absolute",
+                            top: 0,
+                            left: 0,
+                            transform: `translateY(${
+                              vrow.start - rowVirtualizer.options.scrollMargin
+                            }px)`,
+                          }}
+                          row={docRow}
+                          tableAndPaths={tableAndPaths}
+                          columns={columns}
+                          schema={schema}
+                          visibleKeys={visibleKeys}
+                          rowCount={rowCount}
+                          onUpdateDocument={onUpdateDocument}
+                          editMode={editMode}
+                          allowEditing={allowEditing}
+                          onCellHoverStart={
+                            showHoverCard
+                              ? handleCellHoverStart
+                              : onCellHoverStart
+                          }
+                          onCellHoverEnd={
+                            showHoverCard ? handleCellHoverEnd : undefined
+                          }
+                          cellColorState={cellColorState}
+                          distanceData={distanceData}
+                          fieldIndicationMap={fieldIndicationMap}
+                          fieldReasoningMap={fieldReasoningMap}
+                        />
+                      ))
+                    : null}
                 </TableBody>
               </Table>
             </div>
