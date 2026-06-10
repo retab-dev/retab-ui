@@ -1,0 +1,206 @@
+{
+  "$defs": {
+    "LineItem": {
+      "properties": {
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Primary description of the product or service.",
+          "title": "Description"
+        },
+        "additional_description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Additional description such as region or platform.",
+          "title": "Additional Description"
+        },
+        "quantity": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Number of units purchased or consumed.",
+          "title": "Quantity"
+        },
+        "unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Unit of measurement and price rate for the main item.",
+          "title": "Unit"
+        },
+        "unit_price": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Price per unit if explicitly provided.",
+          "title": "Unit Price"
+        },
+        "amount": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Total amount charged for this line item.",
+          "title": "Amount"
+        },
+        "sub_items": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/SubItem"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Breakdown of charges within this line item.",
+          "title": "Sub Items"
+        }
+      },
+      "title": "LineItem",
+      "type": "object"
+    },
+    "SubItem": {
+      "properties": {
+        "quantity": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Quantity for this sub-item, e.g., GB days, hours.",
+          "title": "Quantity"
+        },
+        "unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Unit of measurement and price rate for the sub-item.",
+          "title": "Unit"
+        },
+        "amount": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Monetary amount for the sub-item.",
+          "title": "Amount"
+        }
+      },
+      "title": "SubItem",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "supplier_name": {
+      "description": "Name of the supplier issuing the invoice.",
+      "title": "Supplier Name",
+      "type": "string"
+    },
+    "supplier_address": {
+      "description": "Full postal address of the supplier.",
+      "title": "Supplier Address",
+      "type": "string"
+    },
+    "invoice_id": {
+      "description": "Unique identifier for the invoice.",
+      "title": "Invoice Id",
+      "type": "string"
+    },
+    "invoice_type": {
+      "description": "Type of invoice, e.g., 'utility_statement'.",
+      "title": "Invoice Type",
+      "type": "string"
+    },
+    "line_items": {
+      "description": "List of all line items included in the invoice.",
+      "items": {
+        "$ref": "#/$defs/LineItem"
+      },
+      "title": "Line Items",
+      "type": "array"
+    },
+    "net_amount": {
+      "description": "Total amount before taxes.",
+      "title": "Net Amount",
+      "type": "number"
+    },
+    "total_tax_amount": {
+      "description": "Total tax amount applied to the invoice.",
+      "title": "Total Tax Amount",
+      "type": "number"
+    },
+    "total_amount": {
+      "description": "Total payable amount including taxes.",
+      "title": "Total Amount",
+      "type": "number"
+    }
+  },
+  "required": [
+    "supplier_name",
+    "supplier_address",
+    "invoice_id",
+    "invoice_type",
+    "line_items",
+    "net_amount",
+    "total_tax_amount",
+    "total_amount"
+  ],
+  "title": "Invoice",
+  "type": "object"
+}

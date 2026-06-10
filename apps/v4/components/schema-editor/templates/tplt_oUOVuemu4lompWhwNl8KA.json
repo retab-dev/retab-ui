@@ -1,0 +1,58 @@
+{
+  "X-ReasoningPrompt": "Before extracting the structured fields, use this space to outline your plan. Resolve uncertainties such as missing or obscured details, confirm the card's network and subtype from any logos or text, and ensure the correct length and grouping for the card number. Decide how to handle potential inconsistencies (e.g., unusual date formats or incomplete names) and confirm that each extracted value corresponds accurately to the area indicated on the card image.",
+  "properties": {
+    "card_number": {
+      "X-FieldPrompt": "Locate the credit card number (usually embossed or printed on the front). Extract all digits in the correct sequence, ignoring any spaces or dashes.",
+      "description": "The card number exactly as displayed on the front of the card",
+      "title": "Card Number",
+      "type": "string"
+    },
+    "card_holder_name": {
+      "X-FieldPrompt": "Identify and extract the cardholder name as it appears on the card, usually in uppercase letters on the front.",
+      "description": "The name of the cardholder as it appears on the card",
+      "title": "Card Holder Name",
+      "type": "string"
+    },
+    "network": {
+      "X-FieldPrompt": "Determine the card's payment network (e.g., Visa, MasterCard, Amex) based on any logos or known BIN ranges.",
+      "description": "The card's payment network (e.g., Visa, MasterCard, American Express)",
+      "title": "Network",
+      "type": "string"
+    },
+    "subtype": {
+      "X-FieldPrompt": "If visible, extract the card's subtype (such as Platinum, Gold), typically indicated near the network branding.",
+      "description": "The card's subtype or level (e.g., Platinum, Gold, etc.)",
+      "title": "Subtype",
+      "type": "string"
+    },
+    "expiration_date": {
+      "X-FieldPrompt": "Locate the expiration date on the card, usually in MM/YY or MM/YYYY format. Capture the date exactly as shown on the card.",
+      "description": "The expiration date printed on the card, in the format MM/YY or MM/YYYY",
+      "title": "Expiration Date",
+      "type": "string"
+    },
+    "cvv": {
+      "X-FieldPrompt": "If available, extract the three- or four-digit CVV/CVC code, typically found on the back of the card.",
+      "description": "The card's security code (CVV/CVC)",
+      "title": "Cvv",
+      "type": "string"
+    },
+    "issuer": {
+      "X-FieldPrompt": "Identify the issuer's name or logo (e.g., the bank or financial institution) and extract it as presented.",
+      "description": "The financial institution or organization that issued the card",
+      "title": "Issuer",
+      "type": "string"
+    }
+  },
+  "required": [
+    "card_number",
+    "card_holder_name",
+    "network",
+    "subtype",
+    "expiration_date",
+    "cvv",
+    "issuer"
+  ],
+  "title": "Credit_Card_Schema",
+  "type": "object"
+}

@@ -1,0 +1,721 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry.json",
+  "name": "retab-ui",
+  "homepage": "https://github.com/retab-dev/ui",
+  "items": [
+    {
+      "name": "utils",
+      "type": "registry:lib",
+      "title": "Utils",
+      "description": "Shared class name helper used by Retab UI registry components.",
+      "dependencies": [
+        "clsx@^2.1.1",
+        "tailwind-merge@^3.3.1"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/lib/utils.ts",
+          "type": "registry:lib",
+          "target": "@lib/utils.ts"
+        }
+      ]
+    },
+    {
+      "name": "use-mobile",
+      "type": "registry:hook",
+      "title": "Use Mobile",
+      "description": "A media query hook for mobile responsive UI.",
+      "files": [
+        {
+          "path": "registry/new-york-v4/hooks/use-mobile.ts",
+          "type": "registry:hook",
+          "target": "@hooks/use-mobile.ts"
+        }
+      ]
+    },
+    {
+      "name": "accordion",
+      "type": "registry:ui",
+      "title": "Accordion",
+      "description": "A vertically stacked set of expandable content panels.",
+      "dependencies": [
+        "@base-ui/react@^1.4.1",
+        "@hugeicons/core-free-icons@^4.2.0",
+        "@hugeicons/react@^1.1.6"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/accordion.tsx",
+          "type": "registry:ui",
+          "target": "@ui/accordion.tsx"
+        }
+      ]
+    },
+    {
+      "name": "alert",
+      "type": "registry:ui",
+      "title": "Alert",
+      "description": "A callout for displaying contextual messages.",
+      "dependencies": [
+        "class-variance-authority@^0.7.1"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/alert.tsx",
+          "type": "registry:ui",
+          "target": "@ui/alert.tsx"
+        }
+      ]
+    },
+    {
+      "name": "aspect-ratio",
+      "type": "registry:ui",
+      "title": "Aspect Ratio",
+      "description": "A small wrapper for preserving media aspect ratios.",
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/aspect-ratio.tsx",
+          "type": "registry:ui",
+          "target": "@ui/aspect-ratio.tsx"
+        }
+      ]
+    },
+    {
+      "name": "autocomplete",
+      "type": "registry:ui",
+      "title": "Autocomplete",
+      "description": "An autocomplete input built on Base UI primitives.",
+      "dependencies": [
+        "@base-ui/react@^1.4.1",
+        "@hugeicons/core-free-icons@^4.2.0",
+        "@hugeicons/react@^1.1.6"
+      ],
+      "registryDependencies": [
+        "input",
+        "scroll-area",
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/autocomplete.tsx",
+          "type": "registry:ui",
+          "target": "@ui/autocomplete.tsx"
+        }
+      ]
+    },
+    {
+      "name": "badge",
+      "type": "registry:ui",
+      "title": "Badge",
+      "description": "A compact label for status, metadata, and categorization.",
+      "dependencies": [
+        "@base-ui/react@^1.4.1",
+        "class-variance-authority@^0.7.1"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/badge.tsx",
+          "type": "registry:ui",
+          "target": "@ui/badge.tsx"
+        }
+      ]
+    },
+    {
+      "name": "breadcrumb",
+      "type": "registry:ui",
+      "title": "Breadcrumb",
+      "description": "Navigation breadcrumbs for page hierarchy.",
+      "dependencies": [
+        "@base-ui/react@^1.4.1",
+        "@hugeicons/core-free-icons@^4.2.0",
+        "@hugeicons/react@^1.1.6"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/breadcrumb.tsx",
+          "type": "registry:ui",
+          "target": "@ui/breadcrumb.tsx"
+        }
+      ]
+    },
+    {
+      "name": "button",
+      "type": "registry:ui",
+      "title": "Button",
+      "description": "A polymorphic button primitive with variants, sizes, and loading state.",
+      "dependencies": [
+        "@base-ui/react@^1.4.1",
+        "class-variance-authority@^0.7.1"
+      ],
+      "registryDependencies": [
+        "spinner",
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/button.tsx",
+          "type": "registry:ui",
+          "target": "@ui/button.tsx"
+        }
+      ]
+    },
+    {
+      "name": "card",
+      "type": "registry:ui",
+      "title": "Card",
+      "description": "A flexible container primitive for grouped content.",
+      "dependencies": [
+        "@base-ui/react@^1.4.1"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/card.tsx",
+          "type": "registry:ui",
+          "target": "@ui/card.tsx"
+        }
+      ]
+    },
+    {
+      "name": "collapsible",
+      "type": "registry:ui",
+      "title": "Collapsible",
+      "description": "A disclosure primitive for expandable content.",
+      "dependencies": [
+        "@base-ui/react@^1.4.1"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/collapsible.tsx",
+          "type": "registry:ui",
+          "target": "@ui/collapsible.tsx"
+        }
+      ]
+    },
+    {
+      "name": "command",
+      "type": "registry:ui",
+      "title": "Command",
+      "description": "A command menu surface powered by cmdk.",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.2.0",
+        "@hugeicons/react@^1.1.6",
+        "cmdk@^1.1.1"
+      ],
+      "registryDependencies": [
+        "dialog",
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/command.tsx",
+          "type": "registry:ui",
+          "target": "@ui/command.tsx"
+        }
+      ]
+    },
+    {
+      "name": "dialog",
+      "type": "registry:ui",
+      "title": "Dialog",
+      "description": "An accessible modal dialog built on Base UI.",
+      "dependencies": [
+        "@base-ui/react@^1.4.1",
+        "@hugeicons/core-free-icons@^4.2.0",
+        "@hugeicons/react@^1.1.6"
+      ],
+      "registryDependencies": [
+        "button",
+        "scroll-area",
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/dialog.tsx",
+          "type": "registry:ui",
+          "target": "@ui/dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "dropdown-menu",
+      "type": "registry:ui",
+      "title": "Dropdown Menu",
+      "description": "A dropdown menu built on Base UI menu primitives.",
+      "dependencies": [
+        "@base-ui/react@^1.4.1",
+        "@hugeicons/core-free-icons@^4.2.0",
+        "@hugeicons/react@^1.1.6"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/dropdown-menu.tsx",
+          "type": "registry:ui",
+          "target": "@ui/dropdown-menu.tsx"
+        }
+      ]
+    },
+    {
+      "name": "input",
+      "type": "registry:ui",
+      "title": "Input",
+      "description": "A styled text input built on Base UI.",
+      "dependencies": [
+        "@base-ui/react@^1.4.1"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/input.tsx",
+          "type": "registry:ui",
+          "target": "@ui/input.tsx"
+        }
+      ]
+    },
+    {
+      "name": "group",
+      "type": "registry:ui",
+      "title": "Group",
+      "description": "A connected control group primitive for buttons, inputs, separators, and text addons.",
+      "dependencies": [
+        "@base-ui/react@^1.4.1",
+        "class-variance-authority@^0.7.1"
+      ],
+      "registryDependencies": [
+        "separator",
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "components/ui/group.tsx",
+          "type": "registry:ui",
+          "target": "@ui/group.tsx"
+        }
+      ]
+    },
+    {
+      "name": "kbd",
+      "type": "registry:ui",
+      "title": "Kbd",
+      "description": "A keyboard shortcut display primitive.",
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/kbd.tsx",
+          "type": "registry:ui",
+          "target": "@ui/kbd.tsx"
+        }
+      ]
+    },
+    {
+      "name": "popover",
+      "type": "registry:ui",
+      "title": "Popover",
+      "description": "A floating popover built on Base UI.",
+      "dependencies": [
+        "@base-ui/react@^1.4.1"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/popover.tsx",
+          "type": "registry:ui",
+          "target": "@ui/popover.tsx"
+        }
+      ]
+    },
+    {
+      "name": "scroll-area",
+      "type": "registry:ui",
+      "title": "Scroll Area",
+      "description": "A custom scroll area built on Base UI.",
+      "dependencies": [
+        "@base-ui/react@^1.4.1"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/scroll-area.tsx",
+          "type": "registry:ui",
+          "target": "@ui/scroll-area.tsx"
+        }
+      ]
+    },
+    {
+      "name": "select",
+      "type": "registry:ui",
+      "title": "Select",
+      "description": "A select control built on Base UI.",
+      "dependencies": [
+        "@base-ui/react@^1.4.1",
+        "@hugeicons/core-free-icons@^4.2.0",
+        "@hugeicons/react@^1.1.6",
+        "class-variance-authority@^0.7.1"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/select.tsx",
+          "type": "registry:ui",
+          "target": "@ui/select.tsx"
+        }
+      ]
+    },
+    {
+      "name": "separator",
+      "type": "registry:ui",
+      "title": "Separator",
+      "description": "A visual separator built on Base UI.",
+      "dependencies": [
+        "@base-ui/react@^1.4.1"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/separator.tsx",
+          "type": "registry:ui",
+          "target": "@ui/separator.tsx"
+        }
+      ]
+    },
+    {
+      "name": "sheet",
+      "type": "registry:ui",
+      "title": "Sheet",
+      "description": "A side sheet built on Base UI dialog primitives.",
+      "dependencies": [
+        "@base-ui/react@^1.4.1",
+        "@hugeicons/core-free-icons@^4.2.0",
+        "@hugeicons/react@^1.1.6"
+      ],
+      "registryDependencies": [
+        "button",
+        "scroll-area",
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/sheet.tsx",
+          "type": "registry:ui",
+          "target": "@ui/sheet.tsx"
+        }
+      ]
+    },
+    {
+      "name": "sidebar",
+      "type": "registry:ui",
+      "title": "Sidebar",
+      "description": "A responsive application sidebar with menu, rail, and provider primitives.",
+      "dependencies": [
+        "@base-ui/react@^1.4.1",
+        "@hugeicons/core-free-icons@^4.2.0",
+        "@hugeicons/react@^1.1.6",
+        "class-variance-authority@^0.7.1"
+      ],
+      "registryDependencies": [
+        "button",
+        "input",
+        "scroll-area",
+        "separator",
+        "skeleton",
+        "use-mobile",
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/sidebar.tsx",
+          "type": "registry:ui",
+          "target": "@ui/sidebar.tsx"
+        }
+      ]
+    },
+    {
+      "name": "skeleton",
+      "type": "registry:ui",
+      "title": "Skeleton",
+      "description": "A loading placeholder with shimmer animation.",
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/skeleton.tsx",
+          "type": "registry:ui",
+          "target": "@ui/skeleton.tsx"
+        }
+      ]
+    },
+    {
+      "name": "sonner",
+      "type": "registry:ui",
+      "title": "Sonner",
+      "description": "A themed toast provider for Sonner.",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.2.0",
+        "@hugeicons/react@^1.1.6",
+        "next-themes@0.4.6",
+        "sonner@^2.0.0"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/sonner.tsx",
+          "type": "registry:ui",
+          "target": "@ui/sonner.tsx"
+        }
+      ]
+    },
+    {
+      "name": "spinner",
+      "type": "registry:ui",
+      "title": "Spinner",
+      "description": "A compact loading spinner using Hugeicons.",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.2.0",
+        "@hugeicons/react@^1.1.6"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/spinner.tsx",
+          "type": "registry:ui",
+          "target": "@ui/spinner.tsx"
+        }
+      ]
+    },
+    {
+      "name": "tabs",
+      "type": "registry:ui",
+      "title": "Tabs",
+      "description": "A tabs primitive built on Base UI.",
+      "dependencies": [
+        "@base-ui/react@^1.4.1"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/tabs.tsx",
+          "type": "registry:ui",
+          "target": "@ui/tabs.tsx"
+        }
+      ]
+    },
+    {
+      "name": "tooltip",
+      "type": "registry:ui",
+      "title": "Tooltip",
+      "description": "A tooltip primitive built on Base UI.",
+      "dependencies": [
+        "@base-ui/react@^1.4.1"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/tooltip.tsx",
+          "type": "registry:ui",
+          "target": "@ui/tooltip.tsx"
+        }
+      ]
+    },
+    {
+      "name": "resizable",
+      "type": "registry:ui",
+      "title": "Resizable",
+      "description": "Resizable panel primitives using react-resizable-panels.",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.2.0",
+        "@hugeicons/react@^1.1.6",
+        "react-resizable-panels@^4.11.2"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "components/ui/resizable.tsx",
+          "type": "registry:ui",
+          "target": "@ui/resizable.tsx"
+        }
+      ]
+    },
+    {
+      "name": "csv",
+      "type": "registry:lib",
+      "title": "CSV parser",
+      "description": "A small, dependency-free RFC 4180-ish CSV/TSV parser returning a header and rectangular rows.",
+      "files": [
+        {
+          "path": "registry/new-york-v4/lib/csv.ts",
+          "type": "registry:lib",
+          "target": "@lib/csv.ts"
+        }
+      ]
+    },
+    {
+      "name": "csv-viewer",
+      "type": "registry:ui",
+      "title": "CSV Viewer",
+      "description": "A virtualized CSV/TSV table built on TanStack Table and TanStack Virtual: sortable columns, sticky header, row numbers, horizontal scroll.",
+      "dependencies": [
+        "@tanstack/react-table@^8.21.3",
+        "@tanstack/react-virtual@^3.13.12"
+      ],
+      "registryDependencies": [
+        "csv",
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/csv-viewer.tsx",
+          "type": "registry:ui",
+          "target": "@ui/csv-viewer.tsx"
+        }
+      ]
+    },
+    {
+      "name": "pdf-viewer",
+      "type": "registry:ui",
+      "title": "PDF Viewer",
+      "description": "A pdfjs-backed PDF viewer: continuous scroll, zoom, rotate, fit-to-width, download, and a per-page overlay slot for bounding-box citations. No useEffect.",
+      "dependencies": [
+        "pdfjs-dist@5.4.296"
+      ],
+      "registryDependencies": [
+        "utils",
+        "button",
+        "scroll-area",
+        "separator",
+        "spinner"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/pdf-viewer.tsx",
+          "type": "registry:ui",
+          "target": "@ui/pdf-viewer.tsx"
+        }
+      ]
+    },
+    {
+      "name": "segments",
+      "type": "registry:lib",
+      "title": "Segments model",
+      "description": "Shared model + helpers for page-segmented results (partition/split): Segment type, Tableau palette, color map, page-range and confidence helpers.",
+      "files": [
+        {
+          "path": "registry/new-york-v4/lib/segments.ts",
+          "type": "registry:lib",
+          "target": "@lib/segments.ts"
+        }
+      ]
+    },
+    {
+      "name": "segment-legend",
+      "type": "registry:ui",
+      "title": "Segment Legend",
+      "description": "Compact color legend for a Segment[] with shared hover/selection state.",
+      "registryDependencies": [
+        "segments",
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/segment-legend.tsx",
+          "type": "registry:ui",
+          "target": "@ui/segment-legend.tsx"
+        }
+      ]
+    },
+    {
+      "name": "segment-sidebar",
+      "type": "registry:ui",
+      "title": "Segment Sidebar",
+      "description": "Selectable list of segments with page ranges and confidence bars.",
+      "registryDependencies": [
+        "segments",
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/segment-sidebar.tsx",
+          "type": "registry:ui",
+          "target": "@ui/segment-sidebar.tsx"
+        }
+      ]
+    },
+    {
+      "name": "page-timeline",
+      "type": "registry:ui",
+      "title": "Page Timeline",
+      "description": "A colored page strip that ties a Segment[] to the document; hover/select syncing and click-to-jump.",
+      "registryDependencies": [
+        "segments",
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/page-timeline.tsx",
+          "type": "registry:ui",
+          "target": "@ui/page-timeline.tsx"
+        }
+      ]
+    },
+    {
+      "name": "segmented-document-viewer",
+      "type": "registry:ui",
+      "title": "Segmented Document Viewer",
+      "description": "Composes SegmentSidebar + SegmentLegend + PageTimeline + an optional PDF document with per-segment color overlays. The shared engine behind partition and split viewers.",
+      "registryDependencies": [
+        "segments",
+        "utils",
+        "segment-legend",
+        "segment-sidebar",
+        "page-timeline",
+        "pdf-viewer"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/segmented-document-viewer.tsx",
+          "type": "registry:ui",
+          "target": "@ui/segmented-document-viewer.tsx"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,81 @@
+---
+title: CSV Viewer
+description: A virtualized CSV/TSV table built on TanStack Table and TanStack Virtual.
+---
+
+The CSV Viewer renders CSV or TSV text as a sortable, virtualized table. It uses
+[TanStack Table](https://tanstack.com/table) for the table model and
+[TanStack Virtual](https://tanstack.com/virtual) for row and column virtualization, so it
+stays smooth with tens of thousands of rows. Parsing is handled by a small,
+dependency-free RFC 4180 parser.
+
+<CsvViewerDemo />
+
+## Installation
+
+```bash
+npx shadcn@latest add @retab/csv-viewer
+```
+
+## Usage
+
+```tsx
+import { CsvViewer } from "@/components/ui/csv-viewer"
+
+export function Example({ csv }: { csv: string }) {
+  return <CsvViewer value={csv} height={480} />
+}
+```
+
+You can also pass already-parsed data:
+
+```tsx
+import { CsvViewer } from "@/components/ui/csv-viewer"
+import { parseCsv } from "@/lib/csv"
+
+const data = parseCsv(text, { delimiter: "\t" }) // { columns, rows }
+;<CsvViewer data={data} />
+```
+
+## Features
+
+- **Virtualized rows _and_ columns** — only the visible window of cells is rendered (`@tanstack/react-virtual`), so wide and tall tables stay fast. Toggle with the `virtualized` prop.
+- **Sortable columns** — click a header to sort (`@tanstack/react-table`).
+- **Sticky header and row numbers**, horizontal scroll for wide tables.
+- **Self-contained parser** — handles quoted fields, escaped quotes, and delimiters/newlines inside quotes.
+
+## Virtualization
+
+Virtualization is on by default and keeps the table fast with large datasets —
+only the visible window of rows and columns is rendered. For small tables you can
+render every cell instead:
+
+```tsx
+<CsvViewer value={csv} virtualized={false} />
+```
+
+## Props
+
+| Prop | Type | Description |
+| --- | --- | --- |
+| `value` | `string` | Raw CSV/TSV text. Provide this or `data`. |
+| `data` | `ParsedCsv` | Pre-parsed `{ columns, rows }`. |
+| `delimiter` | `string` | Field delimiter for `value` (defaults to `,`; use `\t` for TSV). |
+| `hasHeader` | `boolean` | Treat the first record as a header. Defaults to `true`. |
+| `showRowNumbers` | `boolean` | Show the leading row-number column. Defaults to `true`. |
+| `virtualized` | `boolean` | Virtualize rows and columns with TanStack Virtual. Defaults to `true`. |
+| `overscan` | `number` | Rows/columns rendered beyond the visible window when virtualizing. Defaults to `8`. |
+| `rowHeight` | `number` | Row height in pixels. Defaults to `33`. |
+| `columnWidth` | `number` | Column width in pixels. Defaults to `180`. |
+| `height` | `number` | Scroll viewport height in pixels. Defaults to `480`. |
+| `label` | `string` | Accessible label for the table (`aria-label`). Defaults to `"CSV data"`. |
+| `className` | `string` | Optional class on the viewer container. |
+
+## Accessibility
+
+The viewer renders ARIA table semantics (`role="table"` with `rowgroup`, `row`,
+`columnheader`, `rowheader`, and `cell` roles), `aria-rowcount` / `aria-colcount`
+reflecting the full dataset (not just the virtualized window), and `aria-sort` on
+sortable column headers. Each part also exposes a `data-slot` attribute
+(`csv-header`, `csv-header-cell`, `csv-body`, `csv-row`, `csv-row-number`,
+`csv-cell`) so you can target it in CSS.

@@ -1,0 +1,60 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "initial_term": {
+      "description": "The initial duration of the contract.",
+      "title": "Initial Term",
+      "type": "string"
+    },
+    "governing_law": {
+      "description": "The legal jurisdiction governing the contract.",
+      "title": "Governing Law",
+      "type": "string"
+    },
+    "agreement_date": {
+      "description": "The date when the agreement was signed.",
+      "title": "Agreement Date",
+      "type": "string"
+    },
+    "renewal_term": {
+      "description": "The terms under which the contract may be renewed.",
+      "title": "Renewal Term",
+      "type": "string"
+    },
+    "effective_date": {
+      "description": "The date when the contract becomes effective.",
+      "title": "Effective Date",
+      "type": "string"
+    },
+    "notice_to_terminate_renewal": {
+      "description": "The required notice period to terminate or renew the contract.",
+      "title": "Notice To Terminate Renewal",
+      "type": "string"
+    },
+    "parties": {
+      "description": "The list of parties involved in the contract.",
+      "items": {
+        "type": "string"
+      },
+      "title": "Parties",
+      "type": "array"
+    },
+    "document_name": {
+      "description": "The name of the contract document.",
+      "title": "Document Name",
+      "type": "string"
+    }
+  },
+  "required": [
+    "initial_term",
+    "governing_law",
+    "agreement_date",
+    "renewal_term",
+    "effective_date",
+    "notice_to_terminate_renewal",
+    "parties",
+    "document_name"
+  ],
+  "title": "Contract",
+  "type": "object"
+}

@@ -1,0 +1,123 @@
+{
+  "$defs": {
+    "MRZ": {
+      "properties": {
+        "line1": {
+          "description": "First line of the MRZ",
+          "title": "Line1",
+          "type": "string"
+        },
+        "line2": {
+          "description": "Second line of the MRZ",
+          "title": "Line2",
+          "type": "string"
+        }
+      },
+      "required": ["line1", "line2"],
+      "title": "MRZ",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "document_type": {
+      "description": "Denotes the type of document, e.g., 'P' for passport",
+      "title": "Document Type",
+      "type": "string"
+    },
+    "passport_number": {
+      "description": "The unique passport number",
+      "title": "Passport Number",
+      "type": "string"
+    },
+    "country_code": {
+      "description": "The 3-letter ISO country code of the issuing country",
+      "title": "Country Code",
+      "type": "string"
+    },
+    "nationality": {
+      "description": "Holder's nationality",
+      "title": "Nationality",
+      "type": "string"
+    },
+    "surname": {
+      "description": "Holder's family name",
+      "title": "Surname",
+      "type": "string"
+    },
+    "given_names": {
+      "description": "Holder's given name(s)",
+      "title": "Given Names",
+      "type": "string"
+    },
+    "sex": {
+      "description": "Holder's gender (e.g., M/F/X)",
+      "title": "Sex",
+      "type": "string"
+    },
+    "date_of_birth": {
+      "description": "Holder's date of birth",
+      "title": "Date Of Birth",
+      "type": "string"
+    },
+    "place_of_birth": {
+      "description": "Holder's place of birth",
+      "title": "Place Of Birth",
+      "type": "string"
+    },
+    "height": {
+      "description": "Holder's height",
+      "title": "Height",
+      "type": "string"
+    },
+    "eye_color": {
+      "description": "Holder's eye color",
+      "title": "Eye Color",
+      "type": "string"
+    },
+    "date_of_issue": {
+      "description": "Passport issue date",
+      "title": "Date Of Issue",
+      "type": "string"
+    },
+    "date_of_expiry": {
+      "description": "Expiry date of the passport",
+      "title": "Date Of Expiry",
+      "type": "string"
+    },
+    "issuing_authority": {
+      "description": "Name of the authority that issued the passport",
+      "title": "Issuing Authority",
+      "type": "string"
+    },
+    "mrz": {
+      "$ref": "#/$defs/MRZ",
+      "description": "Machine-readable zone data"
+    },
+    "signature": {
+      "description": "Holder's signature or reference",
+      "title": "Signature",
+      "type": "string"
+    }
+  },
+  "required": [
+    "document_type",
+    "passport_number",
+    "country_code",
+    "nationality",
+    "surname",
+    "given_names",
+    "sex",
+    "date_of_birth",
+    "place_of_birth",
+    "height",
+    "eye_color",
+    "date_of_issue",
+    "date_of_expiry",
+    "issuing_authority",
+    "mrz",
+    "signature"
+  ],
+  "title": "Passport",
+  "type": "object"
+}

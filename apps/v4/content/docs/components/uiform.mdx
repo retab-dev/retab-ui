@@ -1,0 +1,62 @@
+---
+title: UiForm
+description: Render and edit structured extraction data as a schema-driven form — the Retab dashboard's signature component.
+---
+
+`UiForm` renders a JSON Schema and a data object as an editable form: typed
+fields, nested objects, arrays, date/time pickers, enums, checkboxes, and
+per-field confidence/consensus visualization. It is the component Retab
+(formerly uiform) was named after. Form state is owned by a `react-hook-form`
+instance you pass in.
+
+<UiFormDemo />
+
+## Usage
+
+```tsx
+import { useForm } from "react-hook-form"
+import { UiForm, UiFormContent } from "@/components/uiform/uiform"
+
+export function Example() {
+  const form = useForm({ defaultValues: { invoice_number: "INV-1024", total: 1280.5 } })
+  return (
+    <UiForm
+      schema={schema}
+      form={form}
+      onSubmit={(data) => console.log(data)}
+      variant="normal"
+      size="lg"
+      isStreaming={false}
+      isProcessing={false}
+      scalarValueDisplay="none"
+      scalarValueType="none"
+      likelihoods={{}}
+      setLikelihoods={() => {}}
+      titlePosition="row"
+      propertyEditorMode="readOnly"
+      showPropertyEditorPencil={false}
+      validationFlags={{}}
+      setValidationFlags={() => {}}
+    >
+      <UiFormContent />
+    </UiForm>
+  )
+}
+```
+
+## Key props
+
+| Prop | Type | Description |
+| --- | --- | --- |
+| `schema` | `JSONSchema7` | The schema describing the form's structure. |
+| `form` | `UseFormReturn` | A `react-hook-form` instance holding the data values. |
+| `onSubmit` | `SubmitHandler` | Submit handler. |
+| `variant` | `"normal" \| "flow"` | Layout variant. |
+| `size` | `"sm" \| "lg"` | Field sizing. |
+| `scalarValueDisplay` / `scalarValueType` | enums | Per-field confidence / consensus visualization. |
+| `likelihoods` / `setLikelihoods` | `Record<string, any>` | Per-field confidence scores. |
+| `titlePosition` | `"row" \| "object" \| "none"` | Label layout. |
+| `isStreaming` / `isProcessing` | `boolean` | UI state flags (skeleton while processing). |
+
+`UiForm` is a context provider; render `<UiFormContent />` (or your own parts
+that read `useUiFormContext()`) inside it.

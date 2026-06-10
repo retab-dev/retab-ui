@@ -1,0 +1,13 @@
+---
+title: Edit Viewer
+description: Renders a Retab edit result — original/filled document views and the detected form fields.
+---
+
+The edit viewer renders the output of a Retab **edit**: a view switcher between
+the original and filled document, plus a table of the detected form fields with
+their inferred values. Ported from the Retab dashboard playground.
+
+<EditViewerDemo />
+
+The document views are supplied through a `renderDocument` render-prop. The
+field table comes from the edit result's `detectedFields`.

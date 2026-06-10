@@ -1,0 +1,117 @@
+{
+  "$defs": {
+    "TeamMember": {
+      "properties": {
+        "firstName": {
+          "description": "First name of the team member",
+          "title": "Firstname",
+          "type": "string"
+        },
+        "lastName": {
+          "description": "Last name of the team member",
+          "title": "Lastname",
+          "type": "string"
+        },
+        "title": {
+          "description": "Title, position of the team member",
+          "title": "Title",
+          "type": "string"
+        },
+        "pastExperiences": {
+          "description": "Previous experiences",
+          "title": "Pastexperiences",
+          "type": "string"
+        },
+        "education": {
+          "description": "List of schools attended by the team member",
+          "items": {
+            "type": "string"
+          },
+          "title": "Education",
+          "type": "array"
+        }
+      },
+      "required": [
+        "firstName",
+        "lastName",
+        "title",
+        "pastExperiences",
+        "education"
+      ],
+      "title": "TeamMember",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "name": {
+      "description": "Name of the company",
+      "title": "Name",
+      "type": "string"
+    },
+    "website": {
+      "description": "URL of the company website",
+      "title": "Website",
+      "type": "string"
+    },
+    "country": {
+      "description": "2 letter Country code of the company ",
+      "title": "Country",
+      "type": "string"
+    },
+    "investors": {
+      "X-ReasoningPrompt": "Think about the investors. Detail your thought process, and explain logically, step by step, who are the investors, detailing the cues and evidence for each one. For example: 1) Found X in cap table showing Y% ownership 2) Identified Z from 'backed by' slide with logo and investment date 3) etc.",
+      "description": "Existing investors in the startup",
+      "items": {
+        "type": "string"
+      },
+      "title": "Investors",
+      "type": "array"
+    },
+    "competitors": {
+      "X-ReasoningPrompt": "Walk through your analysis of the competitive landscape step by step: 1) Which companies are positioned as direct competitors? 2) What specific features/offerings overlap? 3) What market segments do they compete in? 4) What evidence supports each competitor identification?",
+      "description": "Competitors identified by the startup in the deck",
+      "items": {
+        "type": "string"
+      },
+      "title": "Competitors",
+      "type": "array"
+    },
+    "clients": {
+      "X-ReasoningPrompt": "Break down your client analysis systematically: 1) Which companies are mentioned as current clients vs pipeline? 2) What evidence shows their client status (testimonials, case studies, logos)? 3) What stage is each client relationship? 4) Are there any specific metrics or success stories mentioned?",
+      "description": "Clients (B2B) in pipe or signed by the startup in the deck",
+      "items": {
+        "type": "string"
+      },
+      "title": "Clients",
+      "type": "array"
+    },
+    "team": {
+      "X-ReasoningPrompt": "Analyze the team composition methodically: 1) Who are the key founders/executives? 2) What specific evidence validates their roles? 3) How did you verify their background and experience? 4) What makes their experience relevant to this venture?",
+      "description": "Company Team",
+      "items": {
+        "$ref": "#/$defs/TeamMember"
+      },
+      "title": "Team",
+      "type": "array"
+    },
+    "businessModel": {
+      "X-ReasoningPrompt": "Explain your business model classification process: 1) Who are the primary customers? 2) What is the revenue generation method? 3) How does the product/service flow between parties? 4) What specific slides or content supports this classification?",
+      "description": "Business model of the startup",
+      "enum": ["B2B", "B2C", "C2C"],
+      "title": "Businessmodel",
+      "type": "string"
+    }
+  },
+  "required": [
+    "name",
+    "website",
+    "country",
+    "investors",
+    "competitors",
+    "clients",
+    "team",
+    "businessModel"
+  ],
+  "title": "PitchDeck",
+  "type": "object"
+}

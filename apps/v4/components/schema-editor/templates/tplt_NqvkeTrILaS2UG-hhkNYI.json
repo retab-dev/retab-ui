@@ -1,0 +1,161 @@
+{
+  "$defs": {
+    "Address": {
+      "properties": {
+        "street_address_or_postal_box": {
+          "description": "Street address or postal box",
+          "title": "Street Address Or Postal Box",
+          "type": "string"
+        },
+        "additional_street_address_or_postal_box": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Additional address details",
+          "title": "Additional Street Address Or Postal Box"
+        },
+        "city": {
+          "description": "City",
+          "title": "City",
+          "type": "string"
+        },
+        "state": {
+          "description": "State",
+          "title": "State",
+          "type": "string"
+        },
+        "zip": {
+          "description": "ZIP code",
+          "title": "Zip",
+          "type": "string"
+        }
+      },
+      "required": ["street_address_or_postal_box", "city", "state", "zip"],
+      "title": "Address",
+      "type": "object"
+    },
+    "FullName": {
+      "properties": {
+        "first_name": {
+          "description": "First name",
+          "title": "First Name",
+          "type": "string"
+        },
+        "last_name": {
+          "description": "Last name",
+          "title": "Last Name",
+          "type": "string"
+        }
+      },
+      "required": ["first_name", "last_name"],
+      "title": "FullName",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "ssn": {
+      "description": "Employee's Social Security Number",
+      "title": "Ssn",
+      "type": "string"
+    },
+    "employer_state_id_number_line1": {
+      "description": "Employer's state ID number",
+      "title": "Employer State Id Number Line1",
+      "type": "string"
+    },
+    "employer_name": {
+      "description": "Employer's company name",
+      "title": "Employer Name",
+      "type": "string"
+    },
+    "employer_address": {
+      "$ref": "#/$defs/Address",
+      "description": "Employer's address"
+    },
+    "federal_income_tax_withheld": {
+      "description": "Federal income tax withheld",
+      "title": "Federal Income Tax Withheld",
+      "type": "number"
+    },
+    "social_security_tax_withheld": {
+      "description": "Social security tax withheld",
+      "title": "Social Security Tax Withheld",
+      "type": "number"
+    },
+    "medicare_wages_and_tips": {
+      "description": "Medicare wages and tips",
+      "title": "Medicare Wages And Tips",
+      "type": "number"
+    },
+    "social_security_wages": {
+      "description": "Social security wages",
+      "title": "Social Security Wages",
+      "type": "number"
+    },
+    "employee_name": {
+      "$ref": "#/$defs/FullName",
+      "description": "Employee's full name"
+    },
+    "employee_address": {
+      "$ref": "#/$defs/Address",
+      "description": "Employee's address"
+    },
+    "form_year": {
+      "description": "The year of the W-2 form",
+      "title": "Form Year",
+      "type": "integer"
+    },
+    "medicare_tax_withheld": {
+      "description": "Medicare tax withheld",
+      "title": "Medicare Tax Withheld",
+      "type": "number"
+    },
+    "ein": {
+      "description": "Employer Identification Number",
+      "title": "Ein",
+      "type": "string"
+    },
+    "wages_tips_other_compensation": {
+      "description": "Wages, tips, and other compensation",
+      "title": "Wages Tips Other Compensation",
+      "type": "number"
+    },
+    "state_income_tax_line1": {
+      "description": "State income tax withheld",
+      "title": "State Income Tax Line1",
+      "type": "number"
+    },
+    "state_wages_tips_etc_line1": {
+      "description": "State wages, tips, etc.",
+      "title": "State Wages Tips Etc Line1",
+      "type": "number"
+    }
+  },
+  "required": [
+    "ssn",
+    "employer_state_id_number_line1",
+    "employer_name",
+    "employer_address",
+    "federal_income_tax_withheld",
+    "social_security_tax_withheld",
+    "medicare_wages_and_tips",
+    "social_security_wages",
+    "employee_name",
+    "employee_address",
+    "form_year",
+    "medicare_tax_withheld",
+    "ein",
+    "wages_tips_other_compensation",
+    "state_income_tax_line1",
+    "state_wages_tips_etc_line1"
+  ],
+  "title": "W2",
+  "type": "object"
+}

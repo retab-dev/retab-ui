@@ -1,0 +1,452 @@
+{
+  "$defs": {
+    "DeductionItem": {
+      "properties": {
+        "deduction_type": {
+          "description": "Type/category of deduction (e.g., 'Assurance chômage').",
+          "title": "Deduction Type",
+          "type": "string"
+        },
+        "deduction_this_period": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Amount of this deduction in the current pay period.",
+          "title": "Deduction This Period"
+        },
+        "deduction_ytd": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Year-to-date total for this deduction type.",
+          "title": "Deduction Ytd"
+        },
+        "rate": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Rate used for this deduction, if any.",
+          "title": "Rate"
+        },
+        "notes": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Free-form notes parsed from the line, if any.",
+          "title": "Notes"
+        }
+      },
+      "required": ["deduction_type"],
+      "title": "DeductionItem",
+      "type": "object"
+    },
+    "EarningItem": {
+      "properties": {
+        "earning_type": {
+          "description": "Type/category of earning (e.g., 'Salaire de base').",
+          "title": "Earning Type",
+          "type": "string"
+        },
+        "earning_this_period": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Amount of this earning in the current pay period.",
+          "title": "Earning This Period"
+        },
+        "earning_ytd": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Year-to-date total for this earning type.",
+          "title": "Earning Ytd"
+        },
+        "earning_rate": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Rate used (percentage or unit rate) if applicable.",
+          "title": "Earning Rate"
+        },
+        "unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Unit context for the rate or quantity (e.g., 'hours', 'percent').",
+          "title": "Unit"
+        },
+        "quantity": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Quantity associated with the earning (e.g., number of hours).",
+          "title": "Quantity"
+        },
+        "notes": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Free-form notes parsed from the line, if any.",
+          "title": "Notes"
+        }
+      },
+      "required": ["earning_type"],
+      "title": "EarningItem",
+      "type": "object"
+    },
+    "Employee": {
+      "properties": {
+        "name": {
+          "description": "Full name of the employee as shown on the payslip.",
+          "title": "Name",
+          "type": "string"
+        },
+        "employee_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Internal employee identifier, if applicable.",
+          "title": "Employee Id"
+        },
+        "ssn": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Employee social security / national ID number, if present.",
+          "title": "Ssn"
+        },
+        "address": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Postal address of the employee, if present on the slip.",
+          "title": "Address"
+        }
+      },
+      "required": ["name"],
+      "title": "Employee",
+      "type": "object"
+    },
+    "Employer": {
+      "properties": {
+        "name": {
+          "description": "Legal name of the employer (company or organization).",
+          "title": "Name",
+          "type": "string"
+        },
+        "address": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Postal address of the employer.",
+          "title": "Address"
+        },
+        "registration_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Employer registration/tax ID (e.g., SIRET, EIN), if available.",
+          "title": "Registration Id"
+        }
+      },
+      "required": ["name"],
+      "title": "Employer",
+      "type": "object"
+    },
+    "PayFrequency": {
+      "enum": [
+        "weekly",
+        "biweekly",
+        "semimonthly",
+        "monthly",
+        "quarterly",
+        "annually",
+        "other"
+      ],
+      "title": "PayFrequency",
+      "type": "string"
+    },
+    "PayPeriod": {
+      "properties": {
+        "start_date": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Inclusive start date of the pay period.",
+          "title": "Start Date"
+        },
+        "end_date": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Inclusive end date of the pay period.",
+          "title": "End Date"
+        },
+        "pay_date": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Date on which the payment is made.",
+          "title": "Pay Date"
+        },
+        "frequency": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PayFrequency"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Declared pay frequency (e.g., monthly, biweekly)."
+        }
+      },
+      "title": "PayPeriod",
+      "type": "object"
+    },
+    "Totals": {
+      "properties": {
+        "gross_earnings": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Total gross earnings for the pay period.",
+          "title": "Gross Earnings"
+        },
+        "total_deductions": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Total of all deductions for the period.",
+          "title": "Total Deductions"
+        },
+        "net_pay": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Net pay after all deductions for the period.",
+          "title": "Net Pay"
+        }
+      },
+      "title": "Totals",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "slip_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Unique identifier for this payslip, if available.",
+      "title": "Slip Id"
+    },
+    "currency": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "ISO 4217 currency code (e.g., 'EUR', 'USD').",
+      "title": "Currency"
+    },
+    "employer": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Employer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Employer information as presented on the payslip."
+    },
+    "employee": {
+      "$ref": "#/$defs/Employee",
+      "description": "Employee information as presented on the payslip."
+    },
+    "period": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/PayPeriod"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Pay period dates and frequency."
+    },
+    "earnings": {
+      "description": "All earning lines included in the payslip.",
+      "items": {
+        "$ref": "#/$defs/EarningItem"
+      },
+      "title": "Earnings",
+      "type": "array"
+    },
+    "deductions": {
+      "description": "All deduction lines included in the payslip.",
+      "items": {
+        "$ref": "#/$defs/DeductionItem"
+      },
+      "title": "Deductions",
+      "type": "array"
+    },
+    "totals": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Totals"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Gross, total deductions, and net pay totals."
+    }
+  },
+  "required": ["employee"],
+  "title": "PaySlip",
+  "type": "object"
+}

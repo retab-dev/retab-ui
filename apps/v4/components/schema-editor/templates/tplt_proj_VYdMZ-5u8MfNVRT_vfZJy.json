@@ -1,0 +1,466 @@
+{
+  "$defs": {
+    "Address": {
+      "properties": {
+        "street1": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Primary street address.",
+          "title": "Street1"
+        },
+        "street2": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Secondary address line (apt, unit).",
+          "title": "Street2"
+        },
+        "city": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "City.",
+          "title": "City"
+        },
+        "state": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Two-letter USPS state/territory code (e.g., CA, NY, TX).",
+          "title": "State"
+        },
+        "postal_code": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "ZIP or ZIP+4 (e.g., 94105 or 94105-1234).",
+          "title": "Postal Code"
+        }
+      },
+      "title": "Address",
+      "type": "object"
+    },
+    "EyeColor": {
+      "enum": [
+        "BLACK",
+        "BLUE",
+        "BROWN",
+        "GRAY",
+        "GREEN",
+        "HAZEL",
+        "MAROON",
+        "PINK",
+        "DICHROMATIC",
+        "OTHER"
+      ],
+      "title": "EyeColor",
+      "type": "string"
+    },
+    "HairColor": {
+      "enum": [
+        "BALD",
+        "BLACK",
+        "BLONDE",
+        "BROWN",
+        "GRAY",
+        "RED",
+        "SANDY",
+        "WHITE",
+        "OTHER"
+      ],
+      "title": "HairColor",
+      "type": "string"
+    },
+    "PersonName": {
+      "properties": {
+        "given": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "First name.",
+          "title": "Given"
+        },
+        "middle": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Middle name or initial.",
+          "title": "Middle"
+        },
+        "family": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Last name / surname.",
+          "title": "Family"
+        },
+        "suffix": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Name suffix (e.g., Jr, Sr, III).",
+          "title": "Suffix"
+        },
+        "full": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Full name as printed on the card.",
+          "title": "Full"
+        }
+      },
+      "title": "PersonName",
+      "type": "object"
+    },
+    "Sex": {
+      "enum": ["M", "F", "X"],
+      "title": "Sex",
+      "type": "string"
+    }
+  },
+  "properties": {
+    "license_number": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "State-issued driver license number (DLN).",
+      "title": "License Number"
+    },
+    "document_number": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Card/document ID distinct from the DLN (if printed).",
+      "title": "Document Number"
+    },
+    "issuer_state": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Two-letter state code of the issuing authority (e.g., CA, NY).",
+      "title": "Issuer State"
+    },
+    "issuer_agency": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": "DMV",
+      "description": "Issuing agency name (e.g., DMV, BMV, MVA).",
+      "title": "Issuer Agency"
+    },
+    "name": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/PersonName"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Cardholder name components."
+    },
+    "address": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Address"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Cardholder mailing/residential address."
+    },
+    "date_of_birth": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Cardholder date of birth (YYYY-MM-DD).",
+      "title": "Date Of Birth"
+    },
+    "issue_date": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Card issue date (YYYY-MM-DD).",
+      "title": "Issue Date"
+    },
+    "expiration_date": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Card expiration date (YYYY-MM-DD).",
+      "title": "Expiration Date"
+    },
+    "real_id": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "True if Real ID-compliant (gold star or equivalent).",
+      "title": "Real Id"
+    },
+    "sex": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Sex"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Cardholder sex as printed (M/F/X)."
+    },
+    "height": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Height as printed (often in feet/inches or inches; e.g., '5-11' or '71 IN').",
+      "title": "Height"
+    },
+    "weight": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Weight as printed (unit varies by state).",
+      "title": "Weight"
+    },
+    "eye_color": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/EyeColor"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Eye color."
+    },
+    "hair_color": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/HairColor"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Hair color."
+    },
+    "license_class": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Vehicle class (e.g., D, C, M).",
+      "title": "License Class"
+    },
+    "endorsements": {
+      "description": "Endorsements printed on the license (e.g., motorcycle).",
+      "items": {
+        "type": "string"
+      },
+      "title": "Endorsements",
+      "type": "array"
+    },
+    "restrictions": {
+      "description": "Restrictions (e.g., corrective lenses).",
+      "items": {
+        "type": "string"
+      },
+      "title": "Restrictions",
+      "type": "array"
+    },
+    "aamva_version": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "AAMVA DL/ID version detected from PDF417 data, if parsed.",
+      "title": "Aamva Version"
+    },
+    "pdf417_raw": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Raw PDF417 payload (string).",
+      "title": "Pdf417 Raw"
+    },
+    "face_image_url": {
+      "anyOf": [
+        {
+          "format": "uri",
+          "maxLength": 2083,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Reference to the portrait image, if extracted and stored.",
+      "title": "Face Image Url"
+    },
+    "signature_image_url": {
+      "anyOf": [
+        {
+          "format": "uri",
+          "maxLength": 2083,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Reference to the signature image, if extracted and stored.",
+      "title": "Signature Image Url"
+    }
+  },
+  "title": "DriversLicense",
+  "type": "object"
+}

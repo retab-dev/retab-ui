@@ -1,0 +1,14 @@
+---
+title: Parse Viewer
+description: Renders a Retab parse result — per-page text, rendered markdown, and the source document.
+---
+
+The parse viewer renders the output of a Retab **parse**: extracted per-page
+text, a rendered-markdown view, and an optional document tab. Ported verbatim
+from the Retab dashboard playground.
+
+<ParseViewerDemo />
+
+It takes the parse result as a prop; the source document is supplied through a
+`renderDocument` render-prop, so the viewer carries no document-rendering
+dependency of its own.

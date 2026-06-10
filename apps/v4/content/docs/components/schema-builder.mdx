@@ -1,0 +1,53 @@
+---
+title: Schema Builder
+description: Build the JSON Schema that drives a Retab extraction — the same editor used in the Retab dashboard.
+---
+
+The Schema Builder is the JSON Schema editor from the Retab dashboard: recursive
+fields, a type picker, required and nullable toggles, enums, `$defs` /
+references, reusable templates, a full-code (Monaco) mode, and live validation.
+It is controlled via a provider that owns the `json_schema` an extraction runs
+against, and emits standard JSON Schema.
+
+<RetabSchemaBuilderDemo />
+
+## Usage
+
+Wrap the editor in `JsonSchemaEditorProvider` and give it your schema state:
+
+```tsx
+import { useState } from "react"
+import { JsonSchemaEditor } from "@/components/schema-editor/json-schema-builder"
+import { JsonSchemaEditorProvider } from "@/components/schema-editor/contexts/json-schema"
+import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
+
+export function Example() {
+  const [schema, setSchema] = useState<ExtendedJSONSchema7>({
+    type: "object",
+    properties: {},
+    required: [],
+  })
+  return (
+    <JsonSchemaEditorProvider jsonSchema={schema} setJsonSchema={setSchema}>
+      <JsonSchemaEditor />
+    </JsonSchemaEditorProvider>
+  )
+}
+```
+
+## Provider props
+
+| Prop | Type | Description |
+| --- | --- | --- |
+| `jsonSchema` | `ExtendedJSONSchema7` | The schema state. |
+| `setJsonSchema` | `Dispatch<SetStateAction<ExtendedJSONSchema7>>` | State setter the editor calls on every edit. |
+| `persistJsonSchemaCallback` | `(schema) => Promise<void>` | Optional. Called to persist changes. |
+
+## Editor props
+
+| Prop | Type | Description |
+| --- | --- | --- |
+| `editMode` | `"editable" \| "readOnly" \| "promptOnly"` | Defaults to `"editable"`. |
+| `showTemplatesButton` | `boolean` | Show the reusable-template picker. |
+| `fullCodeModeState` | `[boolean, (v: boolean) => void]` | Control the Monaco full-code toggle. |
+| `onSchemaFixWithAI` | `(errors: string) => Promise<void>` | Optional. Wire up an AI "fix validation errors" action. |

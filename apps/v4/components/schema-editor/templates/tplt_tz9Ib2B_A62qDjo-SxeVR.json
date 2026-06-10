@@ -1,0 +1,26 @@
+{
+  "title": "Social-Media Brand Sentiment & Intent",
+  "description": "Schema for extracting an author’s sentiment or intent toward Acme Corp from any social-media post, comment, or review.",
+  "type": "object",
+  "X-SchemaType": "flat",
+  "properties": {
+    "sentiment": {
+      "type": "string",
+      "description": "Categorized attitude or intent expressed toward the brand.",
+      "enum": [
+        "Strong Praise",
+        "Mild Praise",
+        "Neutral",
+        "Mild Complaint",
+        "Strong Complaint",
+        "Product Question",
+        "Troll / Spam"
+      ]
+    }
+  },
+  "required": ["sentiment"],
+  "additionalProperties": false,
+  "$defs": {},
+  "X-ReasoningPrompt": "",
+  "X-ReferenceQuote": false
+}

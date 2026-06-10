@@ -1,0 +1,285 @@
+{
+  "$defs": {
+    "CarrierInformation": {
+      "additionalProperties": false,
+      "properties": {
+        "carrier_name": {
+          "description": "Name of the carrier.",
+          "title": "Carrier Name",
+          "type": "string"
+        },
+        "trailer_number": {
+          "description": "Trailer number.",
+          "title": "Trailer Number",
+          "type": "string"
+        },
+        "seal_numbers": {
+          "description": "Seal numbers.",
+          "title": "Seal Numbers",
+          "type": "string"
+        },
+        "pro_number": {
+          "description": "Pro number.",
+          "title": "Pro Number",
+          "type": "string"
+        },
+        "quote_number": {
+          "description": "Quote number.",
+          "title": "Quote Number",
+          "type": "string"
+        },
+        "customer_po_number": {
+          "description": "Customer purchase order number.",
+          "title": "Customer Po Number",
+          "type": "string"
+        },
+        "freight_charges_term": {
+          "description": "Terms of freight charges.",
+          "title": "Freight Charges Term",
+          "type": "string"
+        }
+      },
+      "required": [
+        "carrier_name",
+        "trailer_number",
+        "seal_numbers",
+        "pro_number",
+        "quote_number",
+        "customer_po_number",
+        "freight_charges_term"
+      ],
+      "title": "CarrierInformation",
+      "type": "object"
+    },
+    "HandlingUnit": {
+      "additionalProperties": false,
+      "properties": {
+        "qty": {
+          "description": "Quantity of handling units.",
+          "title": "Qty",
+          "type": "number"
+        },
+        "type": {
+          "description": "Type of handling unit.",
+          "title": "Type",
+          "type": "string"
+        },
+        "weight": {
+          "description": "Weight of the handling unit.",
+          "title": "Weight",
+          "type": "string"
+        },
+        "hazmat": {
+          "description": "Hazardous material indicator.",
+          "title": "Hazmat",
+          "type": "string"
+        },
+        "non_stackable": {
+          "description": "Non-stackable indicator.",
+          "title": "Non Stackable",
+          "type": "string"
+        },
+        "description": {
+          "description": "Description of the goods.",
+          "title": "Description",
+          "type": "string"
+        },
+        "nmfc": {
+          "description": "National Motor Freight Classification.",
+          "title": "Nmfc",
+          "type": "string"
+        },
+        "class": {
+          "description": "Freight class.",
+          "title": "Class",
+          "type": "string"
+        }
+      },
+      "required": [
+        "qty",
+        "type",
+        "weight",
+        "hazmat",
+        "non_stackable",
+        "description",
+        "nmfc",
+        "class"
+      ],
+      "title": "HandlingUnit",
+      "type": "object"
+    },
+    "ShipFrom": {
+      "additionalProperties": false,
+      "properties": {
+        "company_name": {
+          "description": "Name of the company shipping the goods.",
+          "title": "Company Name",
+          "type": "string"
+        },
+        "address": {
+          "description": "Address of the shipping company.",
+          "title": "Address",
+          "type": "string"
+        },
+        "location_type": {
+          "description": "Type of location for pickup.",
+          "title": "Location Type",
+          "type": "string"
+        },
+        "contact_number": {
+          "description": "Contact number for the pickup location.",
+          "title": "Contact Number",
+          "type": "string"
+        },
+        "pickup_hours": {
+          "description": "Hours during which pickup is available.",
+          "title": "Pickup Hours",
+          "type": "string"
+        },
+        "sid": {
+          "description": "Shipment ID number.",
+          "title": "Sid",
+          "type": "string"
+        },
+        "special_handling": {
+          "description": "Special handling instructions.",
+          "title": "Special Handling",
+          "type": "string"
+        }
+      },
+      "required": [
+        "company_name",
+        "address",
+        "location_type",
+        "contact_number",
+        "pickup_hours",
+        "sid",
+        "special_handling"
+      ],
+      "title": "ShipFrom",
+      "type": "object"
+    },
+    "ShipTo": {
+      "additionalProperties": false,
+      "properties": {
+        "company_name": {
+          "description": "Name of the company receiving the goods.",
+          "title": "Company Name",
+          "type": "string"
+        },
+        "address": {
+          "description": "Address of the receiving company.",
+          "title": "Address",
+          "type": "string"
+        },
+        "location_type": {
+          "description": "Type of location for delivery.",
+          "title": "Location Type",
+          "type": "string"
+        },
+        "contact_number": {
+          "description": "Contact number for the delivery location.",
+          "title": "Contact Number",
+          "type": "string"
+        },
+        "delivery_hours": {
+          "description": "Hours during which delivery is available.",
+          "title": "Delivery Hours",
+          "type": "string"
+        },
+        "cid": {
+          "description": "Consignee ID number.",
+          "title": "Cid",
+          "type": "string"
+        },
+        "special_handling": {
+          "description": "Special handling instructions.",
+          "title": "Special Handling",
+          "type": "string"
+        }
+      },
+      "required": [
+        "company_name",
+        "address",
+        "location_type",
+        "contact_number",
+        "delivery_hours",
+        "cid",
+        "special_handling"
+      ],
+      "title": "ShipTo",
+      "type": "object"
+    },
+    "ThirdPartyBillTo": {
+      "additionalProperties": false,
+      "properties": {
+        "company_name": {
+          "description": "Name of the third party company.",
+          "title": "Company Name",
+          "type": "string"
+        },
+        "address": {
+          "description": "Address of the third party company.",
+          "title": "Address",
+          "type": "string"
+        },
+        "contact_number": {
+          "description": "Contact number for the third party.",
+          "title": "Contact Number",
+          "type": "string"
+        }
+      },
+      "required": ["company_name", "address", "contact_number"],
+      "title": "ThirdPartyBillTo",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "ship_date": {
+      "description": "The date the shipment is scheduled to be shipped.",
+      "title": "Ship Date",
+      "type": "string"
+    },
+    "bol_number": {
+      "description": "The unique Bill of Lading number.",
+      "title": "Bol Number",
+      "type": "string"
+    },
+    "ship_from": {
+      "$ref": "#/$defs/ShipFrom",
+      "description": "Information about the shipping origin."
+    },
+    "ship_to": {
+      "$ref": "#/$defs/ShipTo",
+      "description": "Information about the shipping destination."
+    },
+    "third_party_bill_to": {
+      "$ref": "#/$defs/ThirdPartyBillTo",
+      "description": "Information about the third party responsible for freight charges."
+    },
+    "carrier_information": {
+      "$ref": "#/$defs/CarrierInformation",
+      "description": "Information about the carrier."
+    },
+    "handling_units": {
+      "description": "Details of the handling units.",
+      "items": {
+        "$ref": "#/$defs/HandlingUnit"
+      },
+      "title": "Handling Units",
+      "type": "array"
+    }
+  },
+  "required": [
+    "ship_date",
+    "bol_number",
+    "ship_from",
+    "ship_to",
+    "third_party_bill_to",
+    "carrier_information",
+    "handling_units"
+  ],
+  "title": "BillOfLading",
+  "type": "object"
+}

@@ -1,0 +1,60 @@
+---
+title: JSON Form
+description: Render and edit structured data as a schema-driven, accordion-grouped form.
+---
+
+`JsonForm` renders a JSON Schema and a data object as an editable, accordion-grouped
+form: nested objects collapse into sections, arrays expand into repeatable rows,
+and each field is typed (text, number, date/time, enum, checkbox) with optional
+per-field confidence visualization. It's the accordion-layout sibling of
+[UiForm](/docs/components/uiform), restyled to follow your theme via shadcn tokens.
+
+Form state is owned by a `react-hook-form` instance you pass in.
+
+<JsonFormDemo />
+
+## Usage
+
+```tsx
+import { useForm } from "react-hook-form"
+import { UiForm, UiFormContent } from "@/components/json-form/json-form"
+
+export function Example() {
+  const form = useForm({ defaultValues: { invoice_number: "INV-1024", total: 1280.5 } })
+  return (
+    <UiForm
+      schema={schema}
+      form={form}
+      onSubmit={(data) => console.log(data)}
+      variant="normal"
+      size="lg"
+      isStreaming={false}
+      isProcessing={false}
+      scalarValueDisplay="none"
+      scalarValueType="none"
+      likelihoods={{}}
+      setLikelihoods={() => {}}
+      titlePosition="object"
+      propertyEditorMode="readOnly"
+      showPropertyEditorPencil={false}
+      validationFlags={{}}
+      setValidationFlags={() => {}}
+    >
+      <UiFormContent />
+    </UiForm>
+  )
+}
+```
+
+## Key props
+
+| Prop | Type | Description |
+| --- | --- | --- |
+| `schema` | `JSONSchema7` | The schema describing the form's structure. |
+| `form` | `UseFormReturn` | A `react-hook-form` instance holding the data values. |
+| `titlePosition` | `"row" \| "object" \| "none"` | `"object"` groups nested objects into accordion sections. |
+| `variant` / `size` | enums | Layout variant and field sizing. |
+| `scalarValueDisplay` / `scalarValueType` | enums | Per-field confidence / consensus visualization. |
+| `isStreaming` / `isProcessing` | `boolean` | UI state flags (skeleton while processing). |
+
+`UiForm` is a context provider; render `<UiFormContent />` inside it.

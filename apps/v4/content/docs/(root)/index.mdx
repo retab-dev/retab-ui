@@ -1,0 +1,29 @@
+---
+title: Introduction
+description: Open source, headless UI components for rendering the results of Retab's document AI primitives.
+---
+
+Retab UI is an open source component library for building document AI product
+surfaces on top of [Retab](https://retab.com). It provides headless, unstyled
+React components that render the results of Retab's six core primitives, so you
+can drop a viewer into your own app and theme it to match your product.
+
+The components are installed as source through the shadcn registry — you own the
+code, you control the styling.
+
+## The six primitives
+
+- **Parse** — render extracted per-page text and markdown from a document.
+- **Extraction** — render structured JSON pulled from a document against a schema, with optional source grounding.
+- **Edit** — render AI-filled form fields, overlaid on the document by bounding box.
+- **Classification** — render a document's predicted category and reasoning.
+- **Partition** — render a document segmented into keyed chunks by page range.
+- **Split** — render a document divided into named subdocuments by page range.
+
+## Base primitives
+
+The shared base components (button, tabs, dialog, popover, tooltip, sidebar, and
+the rest) are standard [shadcn/ui](https://ui.shadcn.com) primitives. Icons come
+from [Hugeicons](https://hugeicons.com/).
+
+Start with [Components](/docs/components) for the full list.

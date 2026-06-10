@@ -1,0 +1,187 @@
+{
+  "$defs": {
+    "AdditionalInformation": {
+      "additionalProperties": false,
+      "properties": {
+        "division": {
+          "description": "Division handling the shipment.",
+          "title": "Division",
+          "type": "string"
+        },
+        "origin": {
+          "description": "Origin of the shipment.",
+          "title": "Origin",
+          "type": "string"
+        },
+        "destination": {
+          "description": "Destination of the shipment.",
+          "title": "Destination",
+          "type": "string"
+        }
+      },
+      "required": ["division", "origin", "destination"],
+      "title": "AdditionalInformation",
+      "type": "object"
+    },
+    "Party": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "description": "Name of the party.",
+          "title": "Name",
+          "type": "string"
+        },
+        "address": {
+          "description": "Address of the party.",
+          "title": "Address",
+          "type": "string"
+        }
+      },
+      "required": ["name", "address"],
+      "title": "Party",
+      "type": "object"
+    },
+    "WarehouseItem": {
+      "additionalProperties": false,
+      "properties": {
+        "pieces": {
+          "description": "Number of pieces.",
+          "title": "Pieces",
+          "type": "integer"
+        },
+        "package": {
+          "description": "Type of package.",
+          "title": "Package",
+          "type": "string"
+        },
+        "dimensions": {
+          "description": "Dimensions of the package.",
+          "title": "Dimensions",
+          "type": "string"
+        },
+        "description": {
+          "description": "Description of the item.",
+          "title": "Description",
+          "type": "string"
+        },
+        "weight_kg": {
+          "description": "Weight in kilograms.",
+          "title": "Weight Kg",
+          "type": "number"
+        },
+        "weight_lb": {
+          "description": "Weight in pounds.",
+          "title": "Weight Lb",
+          "type": "number"
+        },
+        "volume_m3": {
+          "description": "Volume in cubic meters.",
+          "title": "Volume M3",
+          "type": "number"
+        },
+        "volume_ft3": {
+          "description": "Volume in cubic feet.",
+          "title": "Volume Ft3",
+          "type": "number"
+        },
+        "vol_weight_kg": {
+          "description": "Volumetric weight in kilograms.",
+          "title": "Vol Weight Kg",
+          "type": "number"
+        },
+        "vol_weight_lb": {
+          "description": "Volumetric weight in pounds.",
+          "title": "Vol Weight Lb",
+          "type": "number"
+        },
+        "location": {
+          "description": "Location of the item.",
+          "title": "Location",
+          "type": "string"
+        }
+      },
+      "required": [
+        "pieces",
+        "package",
+        "dimensions",
+        "description",
+        "weight_kg",
+        "weight_lb",
+        "volume_m3",
+        "volume_ft3",
+        "vol_weight_kg",
+        "vol_weight_lb",
+        "location"
+      ],
+      "title": "WarehouseItem",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "receipt_number": {
+      "description": "The unique warehouse receipt number.",
+      "title": "Receipt Number",
+      "type": "string"
+    },
+    "page": {
+      "description": "Page number of the receipt.",
+      "title": "Page",
+      "type": "string"
+    },
+    "date": {
+      "description": "Date of the receipt.",
+      "title": "Date",
+      "type": "string"
+    },
+    "shipper": {
+      "$ref": "#/$defs/Party",
+      "description": "Details of the shipper."
+    },
+    "consignee": {
+      "$ref": "#/$defs/Party",
+      "description": "Details of the consignee."
+    },
+    "additional_information": {
+      "$ref": "#/$defs/AdditionalInformation",
+      "description": "Additional information about the shipment."
+    },
+    "items": {
+      "description": "List of items in the shipment.",
+      "items": {
+        "$ref": "#/$defs/WarehouseItem"
+      },
+      "title": "Items",
+      "type": "array"
+    },
+    "comments": {
+      "description": "Comments on the receipt.",
+      "title": "Comments",
+      "type": "string"
+    },
+    "received_by": {
+      "description": "Signature of the person who received the goods.",
+      "title": "Received By",
+      "type": "string"
+    },
+    "received_date": {
+      "description": "Date when the goods were received.",
+      "title": "Received Date",
+      "type": "string"
+    }
+  },
+  "required": [
+    "receipt_number",
+    "page",
+    "date",
+    "shipper",
+    "consignee",
+    "additional_information",
+    "items",
+    "comments",
+    "received_by",
+    "received_date"
+  ],
+  "title": "WarehouseReceipt",
+  "type": "object"
+}

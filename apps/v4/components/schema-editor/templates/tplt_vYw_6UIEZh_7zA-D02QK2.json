@@ -1,0 +1,205 @@
+{
+  "$defs": {
+    "EmergencyContact": {
+      "additionalProperties": false,
+      "properties": {
+        "contact_person": {
+          "description": "Name of the emergency contact person.",
+          "title": "Contact Person",
+          "type": "string"
+        },
+        "home_phone": {
+          "description": "Home phone number of the emergency contact.",
+          "title": "Home Phone",
+          "type": "string"
+        },
+        "address": {
+          "description": "Address of the emergency contact.",
+          "title": "Address",
+          "type": "string"
+        },
+        "work_phone": {
+          "description": "Work phone number of the emergency contact.",
+          "title": "Work Phone",
+          "type": "string"
+        }
+      },
+      "required": ["contact_person", "home_phone", "address", "work_phone"],
+      "title": "EmergencyContact",
+      "type": "object"
+    },
+    "Insurance": {
+      "additionalProperties": false,
+      "properties": {
+        "insurance_company": {
+          "description": "Name of the insurance company.",
+          "title": "Insurance Company",
+          "type": "string"
+        },
+        "policy_number": {
+          "description": "Insurance policy number.",
+          "title": "Policy Number",
+          "type": "string"
+        },
+        "address": {
+          "description": "Address of the insurance company.",
+          "title": "Address",
+          "type": "string"
+        },
+        "expiry_date": {
+          "description": "Expiry date of the insurance policy.",
+          "title": "Expiry Date",
+          "type": "string"
+        },
+        "medical_insurance": {
+          "description": "Indicates if the patient has medical insurance.",
+          "title": "Medical Insurance",
+          "type": "string"
+        }
+      },
+      "required": [
+        "insurance_company",
+        "policy_number",
+        "address",
+        "expiry_date",
+        "medical_insurance"
+      ],
+      "title": "Insurance",
+      "type": "object"
+    },
+    "InsuranceDetails": {
+      "additionalProperties": false,
+      "properties": {
+        "allergies": {
+          "description": "List of allergies.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Allergies",
+          "type": "array"
+        },
+        "medications": {
+          "description": "List of medications taken regularly.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Medications",
+          "type": "array"
+        }
+      },
+      "required": ["allergies", "medications"],
+      "title": "InsuranceDetails",
+      "type": "object"
+    },
+    "MedicalHistory": {
+      "additionalProperties": false,
+      "properties": {
+        "chicken_pox": {
+          "description": "Immunity status for Chicken Pox.",
+          "title": "Chicken Pox",
+          "type": "string"
+        },
+        "hepatitis_b_vaccination": {
+          "description": "Vaccination status for Hepatitis B.",
+          "title": "Hepatitis B Vaccination",
+          "type": "string"
+        },
+        "measles": {
+          "description": "Immunity status for Measles.",
+          "title": "Measles",
+          "type": "string"
+        },
+        "medical_problems": {
+          "description": "List of medical problems.",
+          "title": "Medical Problems",
+          "type": "string"
+        }
+      },
+      "required": [
+        "chicken_pox",
+        "hepatitis_b_vaccination",
+        "measles",
+        "medical_problems"
+      ],
+      "title": "MedicalHistory",
+      "type": "object"
+    },
+    "PatientInfo": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "description": "The patient's full name.",
+          "title": "Name",
+          "type": "string"
+        },
+        "phone": {
+          "description": "The patient's phone number.",
+          "title": "Phone",
+          "type": "string"
+        },
+        "address": {
+          "description": "The patient's address.",
+          "title": "Address",
+          "type": "string"
+        },
+        "birth_date": {
+          "description": "The patient's birth date.",
+          "title": "Birth Date",
+          "type": "string"
+        },
+        "weight": {
+          "description": "The patient's weight.",
+          "title": "Weight",
+          "type": "number"
+        },
+        "height": {
+          "description": "The patient's height.",
+          "title": "Height",
+          "type": "number"
+        }
+      },
+      "required": [
+        "name",
+        "phone",
+        "address",
+        "birth_date",
+        "weight",
+        "height"
+      ],
+      "title": "PatientInfo",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "patient_info": {
+      "$ref": "#/$defs/PatientInfo",
+      "description": "Information about the patient."
+    },
+    "emergency_contact": {
+      "$ref": "#/$defs/EmergencyContact",
+      "description": "Emergency contact information."
+    },
+    "medical_history": {
+      "$ref": "#/$defs/MedicalHistory",
+      "description": "General medical history of the patient."
+    },
+    "insurance": {
+      "$ref": "#/$defs/Insurance",
+      "description": "Medical insurance information."
+    },
+    "insurance_details": {
+      "$ref": "#/$defs/InsuranceDetails",
+      "description": "Details about medical insurance."
+    }
+  },
+  "required": [
+    "patient_info",
+    "emergency_contact",
+    "medical_history",
+    "insurance",
+    "insurance_details"
+  ],
+  "title": "MedicalRecord",
+  "type": "object"
+}

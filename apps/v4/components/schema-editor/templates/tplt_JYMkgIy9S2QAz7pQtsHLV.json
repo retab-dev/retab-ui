@@ -1,0 +1,564 @@
+{
+  "$defs": {
+    "Electrical": {
+      "additionalProperties": false,
+      "properties": {
+        "additional_space_available": {
+          "description": "Indicates if additional space is available.",
+          "title": "Additional Space Available",
+          "type": "boolean"
+        },
+        "box_location": {
+          "description": "Location of the electrical box.",
+          "title": "Box Location",
+          "type": "string"
+        },
+        "capacity": {
+          "description": "Capacity of the electrical system.",
+          "title": "Capacity",
+          "type": "string"
+        },
+        "conductor_type": {
+          "description": "Type of conductor used.",
+          "title": "Conductor Type",
+          "type": "string"
+        },
+        "general_wiring": {
+          "description": "General wiring information.",
+          "title": "General Wiring",
+          "type": "string"
+        },
+        "number_of_disconnects": {
+          "description": "Number of disconnects in the electrical system.",
+          "title": "Number Of Disconnects",
+          "type": "string"
+        },
+        "panel_manufacturer": {
+          "description": "Manufacturer of the electrical panel.",
+          "title": "Panel Manufacturer",
+          "type": "string"
+        },
+        "panel_type": {
+          "description": "Type of electrical panel.",
+          "title": "Panel Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "additional_space_available",
+        "box_location",
+        "capacity",
+        "conductor_type",
+        "general_wiring",
+        "number_of_disconnects",
+        "panel_manufacturer",
+        "panel_type"
+      ],
+      "title": "Electrical",
+      "type": "object"
+    },
+    "ExteriorOfStructure": {
+      "additionalProperties": false,
+      "properties": {
+        "exterior_siding_type": {
+          "description": "Type of exterior siding.",
+          "title": "Exterior Siding Type",
+          "type": "string"
+        },
+        "lot_size_approx": {
+          "description": "Approximate lot size.",
+          "title": "Lot Size Approx",
+          "type": "string"
+        },
+        "temperature": {
+          "description": "Temperature at the time of inspection.",
+          "title": "Temperature",
+          "type": "string"
+        },
+        "wall_structure": {
+          "description": "Type of wall structure.",
+          "title": "Wall Structure",
+          "type": "string"
+        },
+        "weather_conditions": {
+          "description": "Weather conditions during inspection.",
+          "title": "Weather Conditions",
+          "type": "string"
+        }
+      },
+      "required": [
+        "exterior_siding_type",
+        "lot_size_approx",
+        "temperature",
+        "wall_structure",
+        "weather_conditions"
+      ],
+      "title": "ExteriorOfStructure",
+      "type": "object"
+    },
+    "GeneralHVACInformation": {
+      "additionalProperties": false,
+      "properties": {
+        "inside_unit_brand": {
+          "description": "Brand of the inside HVAC unit.",
+          "title": "Inside Unit Brand",
+          "type": "string"
+        },
+        "inside_unit_model": {
+          "description": "Model number of the inside HVAC unit.",
+          "title": "Inside Unit Model",
+          "type": "string"
+        },
+        "inside_unit_type": {
+          "description": "Type of the inside HVAC unit.",
+          "title": "Inside Unit Type",
+          "type": "string"
+        },
+        "outside_unit_brand": {
+          "description": "Brand of the outside HVAC unit.",
+          "title": "Outside Unit Brand",
+          "type": "string"
+        },
+        "outside_unit_model": {
+          "description": "Model number of the outside HVAC unit.",
+          "title": "Outside Unit Model",
+          "type": "string"
+        },
+        "outside_unit_type": {
+          "description": "Type of the outside HVAC unit.",
+          "title": "Outside Unit Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "inside_unit_brand",
+        "inside_unit_model",
+        "inside_unit_type",
+        "outside_unit_brand",
+        "outside_unit_model",
+        "outside_unit_type"
+      ],
+      "title": "GeneralHVACInformation",
+      "type": "object"
+    },
+    "HUDInformation": {
+      "additionalProperties": false,
+      "properties": {
+        "fha_number": {
+          "description": "FHA number associated with the property.",
+          "title": "Fha Number",
+          "type": "string"
+        },
+        "date_of_foreclosure": {
+          "description": "Date of foreclosure, if applicable.",
+          "title": "Date Of Foreclosure",
+          "type": "string"
+        },
+        "date_re_keyed": {
+          "description": "Date the property was re-keyed, if applicable.",
+          "title": "Date Re Keyed",
+          "type": "string"
+        }
+      },
+      "required": ["fha_number", "date_of_foreclosure", "date_re_keyed"],
+      "title": "HUDInformation",
+      "type": "object"
+    },
+    "InspectionInformation": {
+      "additionalProperties": false,
+      "properties": {
+        "date_assigned": {
+          "description": "Date the inspection was assigned.",
+          "title": "Date Assigned",
+          "type": "string"
+        },
+        "date_inspected": {
+          "description": "Date the inspection was conducted.",
+          "title": "Date Inspected",
+          "type": "string"
+        },
+        "type_of_inspection": {
+          "$ref": "#/$defs/TypeOfInspection",
+          "description": "Types of inspections conducted."
+        }
+      },
+      "required": ["date_assigned", "date_inspected", "type_of_inspection"],
+      "title": "InspectionInformation",
+      "type": "object"
+    },
+    "MortgageeInformation": {
+      "additionalProperties": false,
+      "properties": {
+        "loan_number": {
+          "description": "Loan number associated with the property.",
+          "title": "Loan Number",
+          "type": "string"
+        },
+        "mortgagee": {
+          "description": "Name of the mortgagee.",
+          "title": "Mortgagee",
+          "type": "string"
+        },
+        "street_address": {
+          "description": "Street address of the mortgagee.",
+          "title": "Street Address",
+          "type": "string"
+        },
+        "city": {
+          "description": "City where the mortgagee is located.",
+          "title": "City",
+          "type": "string"
+        },
+        "state": {
+          "description": "State where the mortgagee is located.",
+          "title": "State",
+          "type": "string"
+        },
+        "zip": {
+          "description": "ZIP code of the mortgagee location.",
+          "title": "Zip",
+          "type": "string"
+        },
+        "mortgage_contact": {
+          "description": "Contact person for the mortgagee.",
+          "title": "Mortgage Contact",
+          "type": "string"
+        },
+        "height_hundred_number": {
+          "description": "800 number for the mortgagee.",
+          "title": "Height Hundred Number",
+          "type": "string"
+        },
+        "commercial_number": {
+          "description": "Commercial number for the mortgagee.",
+          "title": "Commercial Number",
+          "type": "string"
+        }
+      },
+      "required": [
+        "loan_number",
+        "mortgagee",
+        "street_address",
+        "city",
+        "state",
+        "zip",
+        "mortgage_contact",
+        "height_hundred_number",
+        "commercial_number"
+      ],
+      "title": "MortgageeInformation",
+      "type": "object"
+    },
+    "Plumbing": {
+      "additionalProperties": false,
+      "properties": {
+        "waste_disposal": {
+          "description": "Type of waste disposal.",
+          "title": "Waste Disposal",
+          "type": "string"
+        },
+        "waste_piping": {
+          "description": "Type of waste piping.",
+          "title": "Waste Piping",
+          "type": "string"
+        },
+        "water_heater_capacity": {
+          "description": "Capacity of the water heater.",
+          "title": "Water Heater Capacity",
+          "type": "string"
+        },
+        "water_heater_manufacturer": {
+          "description": "Manufacturer of the water heater.",
+          "title": "Water Heater Manufacturer",
+          "type": "string"
+        },
+        "water_heater_model_number": {
+          "description": "Model number of the water heater.",
+          "title": "Water Heater Model Number",
+          "type": "string"
+        },
+        "water_piping": {
+          "description": "Type of water piping.",
+          "title": "Water Piping",
+          "type": "string"
+        },
+        "water_supply": {
+          "description": "Source of water supply.",
+          "title": "Water Supply",
+          "type": "string"
+        }
+      },
+      "required": [
+        "waste_disposal",
+        "waste_piping",
+        "water_heater_capacity",
+        "water_heater_manufacturer",
+        "water_heater_model_number",
+        "water_piping",
+        "water_supply"
+      ],
+      "title": "Plumbing",
+      "type": "object"
+    },
+    "PropertyInformation": {
+      "additionalProperties": false,
+      "properties": {
+        "street_address": {
+          "description": "Street address of the property.",
+          "title": "Street Address",
+          "type": "string"
+        },
+        "city": {
+          "description": "City where the property is located.",
+          "title": "City",
+          "type": "string"
+        },
+        "state": {
+          "description": "State where the property is located.",
+          "title": "State",
+          "type": "string"
+        },
+        "zip": {
+          "description": "ZIP code of the property location.",
+          "title": "Zip",
+          "type": "string"
+        },
+        "occupancy_status": {
+          "description": "Occupancy status of the property.",
+          "title": "Occupancy Status",
+          "type": "string"
+        },
+        "type_property": {
+          "description": "Type of the property.",
+          "title": "Type Property",
+          "type": "string"
+        },
+        "sq_ft_approx": {
+          "description": "Approximate square footage of the property.",
+          "title": "Sq Ft Approx",
+          "type": "string"
+        },
+        "est_age_yr_built": {
+          "description": "Estimated age or year built of the property.",
+          "title": "Est Age Yr Built",
+          "type": "string"
+        },
+        "if_mfg_home_vin_tags": {
+          "description": "VIN tags if the property is a manufactured home.",
+          "title": "If Mfg Home Vin Tags",
+          "type": "string"
+        }
+      },
+      "required": [
+        "street_address",
+        "city",
+        "state",
+        "zip",
+        "occupancy_status",
+        "type_property",
+        "sq_ft_approx",
+        "est_age_yr_built",
+        "if_mfg_home_vin_tags"
+      ],
+      "title": "PropertyInformation",
+      "type": "object"
+    },
+    "PropertyStatus": {
+      "additionalProperties": false,
+      "properties": {
+        "property_acceptable": {
+          "description": "Indicates if the property is acceptable.",
+          "title": "Property Acceptable",
+          "type": "boolean"
+        },
+        "property_needs_attention": {
+          "description": "Indicates if the property needs attention.",
+          "title": "Property Needs Attention",
+          "type": "boolean"
+        },
+        "critical_condition": {
+          "description": "Indicates if the property is in critical condition.",
+          "title": "Critical Condition",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "property_acceptable",
+        "property_needs_attention",
+        "critical_condition"
+      ],
+      "title": "PropertyStatus",
+      "type": "object"
+    },
+    "Roofing": {
+      "additionalProperties": false,
+      "properties": {
+        "attic_vent_type": {
+          "description": "Type of attic vent.",
+          "title": "Attic Vent Type",
+          "type": "string"
+        },
+        "gutter_type": {
+          "description": "Type of gutter.",
+          "title": "Gutter Type",
+          "type": "string"
+        },
+        "method_to_observe_attic": {
+          "description": "Method used to observe the attic.",
+          "title": "Method To Observe Attic",
+          "type": "string"
+        },
+        "method_to_observe_roof": {
+          "description": "Method used to observe the roof.",
+          "title": "Method To Observe Roof",
+          "type": "string"
+        },
+        "number_of_layers": {
+          "description": "Number of layers on the roof.",
+          "title": "Number Of Layers",
+          "type": "string"
+        },
+        "roof_type": {
+          "description": "Type of roof.",
+          "title": "Roof Type",
+          "type": "string"
+        },
+        "roofing_material": {
+          "description": "Material used for roofing.",
+          "title": "Roofing Material",
+          "type": "string"
+        }
+      },
+      "required": [
+        "attic_vent_type",
+        "gutter_type",
+        "method_to_observe_attic",
+        "method_to_observe_roof",
+        "number_of_layers",
+        "roof_type",
+        "roofing_material"
+      ],
+      "title": "Roofing",
+      "type": "object"
+    },
+    "StructuralComponents": {
+      "additionalProperties": false,
+      "properties": {
+        "access_method": {
+          "description": "Method used to access the property.",
+          "title": "Access Method",
+          "type": "string"
+        },
+        "foundation_type": {
+          "description": "Type of foundation of the property.",
+          "title": "Foundation Type",
+          "type": "string"
+        },
+        "basement_type": {
+          "description": "Type of basement of the property.",
+          "title": "Basement Type",
+          "type": "string"
+        }
+      },
+      "required": ["access_method", "foundation_type", "basement_type"],
+      "title": "StructuralComponents",
+      "type": "object"
+    },
+    "TypeOfInspection": {
+      "additionalProperties": false,
+      "properties": {
+        "pre_conveyance": {
+          "description": "Indicates if a pre-conveyance inspection was conducted.",
+          "title": "Pre Conveyance",
+          "type": "boolean"
+        },
+        "initial_inspection": {
+          "description": "Indicates if an initial inspection was conducted.",
+          "title": "Initial Inspection",
+          "type": "boolean"
+        },
+        "routine": {
+          "description": "Indicates if a routine inspection was conducted.",
+          "title": "Routine",
+          "type": "boolean"
+        },
+        "spi": {
+          "description": "Indicates if an SPI inspection was conducted.",
+          "title": "Spi",
+          "type": "boolean"
+        }
+      },
+      "required": ["pre_conveyance", "initial_inspection", "routine", "spi"],
+      "title": "TypeOfInspection",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "date": {
+      "description": "The date of the property inspection.",
+      "title": "Date",
+      "type": "string"
+    },
+    "property_status": {
+      "$ref": "#/$defs/PropertyStatus",
+      "description": "The status of the property inspection."
+    },
+    "property_information": {
+      "$ref": "#/$defs/PropertyInformation",
+      "description": "Basic property information."
+    },
+    "hud_information": {
+      "$ref": "#/$defs/HUDInformation",
+      "description": "HUD related information for the property."
+    },
+    "inspection_information": {
+      "$ref": "#/$defs/InspectionInformation",
+      "description": "Information about the inspection."
+    },
+    "mortgagee_information": {
+      "$ref": "#/$defs/MortgageeInformation",
+      "description": "Information about the mortgagee for initial inspection."
+    },
+    "structural_components": {
+      "$ref": "#/$defs/StructuralComponents",
+      "description": "Details about the structural components of the property."
+    },
+    "exterior_of_structure": {
+      "$ref": "#/$defs/ExteriorOfStructure",
+      "description": "Details about the exterior of the structure."
+    },
+    "roofing": {
+      "$ref": "#/$defs/Roofing",
+      "description": "Details about the roofing of the property."
+    },
+    "plumbing": {
+      "$ref": "#/$defs/Plumbing",
+      "description": "Details about the plumbing of the property."
+    },
+    "electrical": {
+      "$ref": "#/$defs/Electrical",
+      "description": "Details about the electrical system of the property."
+    },
+    "general_hvac_information": {
+      "$ref": "#/$defs/GeneralHVACInformation",
+      "description": "General HVAC information of the property."
+    }
+  },
+  "required": [
+    "date",
+    "property_status",
+    "property_information",
+    "hud_information",
+    "inspection_information",
+    "mortgagee_information",
+    "structural_components",
+    "exterior_of_structure",
+    "roofing",
+    "plumbing",
+    "electrical",
+    "general_hvac_information"
+  ],
+  "title": "PropertyInspectionReport",
+  "type": "object"
+}

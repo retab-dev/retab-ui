@@ -1,0 +1,14 @@
+---
+title: Classification Viewer
+description: Renders a Retab classification result — the predicted category and reasoning over the document.
+---
+
+The classification viewer renders the output of a Retab **classification**: the
+predicted category as a pill with the reasoning in a tooltip, overlaid on the
+source document (or input text). Ported verbatim from the Retab dashboard
+playground.
+
+<ClassificationViewerDemo />
+
+For text inputs it renders the text directly; for file inputs the source
+document is supplied through a `renderDocument` render-prop.

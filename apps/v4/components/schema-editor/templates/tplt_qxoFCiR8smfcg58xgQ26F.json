@@ -1,0 +1,275 @@
+{
+  "$defs": {
+    "Assets": {
+      "additionalProperties": false,
+      "properties": {
+        "current_assets": {
+          "$ref": "#/$defs/CurrentAssets",
+          "description": "Assets expected to be converted to cash or used within one year."
+        },
+        "non_current_assets": {
+          "$ref": "#/$defs/NonCurrentAssets",
+          "description": "Assets expected to provide value beyond one year."
+        }
+      },
+      "required": ["current_assets", "non_current_assets"],
+      "title": "Assets",
+      "type": "object"
+    },
+    "CurrentAssets": {
+      "additionalProperties": false,
+      "properties": {
+        "cash_and_cash_equivalents": {
+          "description": "Cash and cash equivalents available.",
+          "title": "Cash And Cash Equivalents",
+          "type": "number"
+        },
+        "short_term_marketable_securities": {
+          "description": "Marketable securities expected to be liquidated within a year.",
+          "title": "Short Term Marketable Securities",
+          "type": "number"
+        },
+        "accounts_receivable_net": {
+          "description": "Money owed to the company by its customers, net of allowances.",
+          "title": "Accounts Receivable Net",
+          "type": "number"
+        },
+        "inventory": {
+          "description": "Goods available for sale.",
+          "title": "Inventory",
+          "type": "number"
+        },
+        "prepaid_expenses_and_other_current_assets": {
+          "description": "Expenses paid in advance and other current assets.",
+          "title": "Prepaid Expenses And Other Current Assets",
+          "type": "number"
+        }
+      },
+      "required": [
+        "cash_and_cash_equivalents",
+        "short_term_marketable_securities",
+        "accounts_receivable_net",
+        "inventory",
+        "prepaid_expenses_and_other_current_assets"
+      ],
+      "title": "CurrentAssets",
+      "type": "object"
+    },
+    "CurrentLiabilities": {
+      "additionalProperties": false,
+      "properties": {
+        "accounts_payable": {
+          "description": "Money owed by the company to its suppliers.",
+          "title": "Accounts Payable",
+          "type": "number"
+        },
+        "accrued_liabilities_and_other": {
+          "description": "Liabilities that have been incurred but not yet paid.",
+          "title": "Accrued Liabilities And Other",
+          "type": "number"
+        },
+        "deferred_revenue": {
+          "description": "Revenue received but not yet earned.",
+          "title": "Deferred Revenue",
+          "type": "number"
+        },
+        "customer_deposits": {
+          "description": "Deposits received from customers.",
+          "title": "Customer Deposits",
+          "type": "number"
+        },
+        "current_portion_of_debt_and_finance_leases": {
+          "description": "Current portion of long-term debt and finance leases.",
+          "title": "Current Portion Of Debt And Finance Leases",
+          "type": "number"
+        }
+      },
+      "required": [
+        "accounts_payable",
+        "accrued_liabilities_and_other",
+        "deferred_revenue",
+        "customer_deposits",
+        "current_portion_of_debt_and_finance_leases"
+      ],
+      "title": "CurrentLiabilities",
+      "type": "object"
+    },
+    "Equity": {
+      "additionalProperties": false,
+      "properties": {
+        "stockholders_equity": {
+          "$ref": "#/$defs/StockholdersEquity",
+          "description": "Equity attributable to the company's stockholders."
+        },
+        "noncontrolling_interests_in_subsidiaries": {
+          "description": "Equity interests in subsidiaries not attributable to the parent company.",
+          "title": "Noncontrolling Interests In Subsidiaries",
+          "type": "number"
+        }
+      },
+      "required": [
+        "stockholders_equity",
+        "noncontrolling_interests_in_subsidiaries"
+      ],
+      "title": "Equity",
+      "type": "object"
+    },
+    "Liabilities": {
+      "additionalProperties": false,
+      "properties": {
+        "current_liabilities": {
+          "$ref": "#/$defs/CurrentLiabilities",
+          "description": "Liabilities expected to be settled within one year."
+        },
+        "non_current_liabilities": {
+          "$ref": "#/$defs/NonCurrentLiabilities",
+          "description": "Liabilities expected to be settled beyond one year."
+        }
+      },
+      "required": ["current_liabilities", "non_current_liabilities"],
+      "title": "Liabilities",
+      "type": "object"
+    },
+    "NonCurrentAssets": {
+      "additionalProperties": false,
+      "properties": {
+        "operating_lease_vehicles_net": {
+          "description": "Net value of vehicles under operating leases.",
+          "title": "Operating Lease Vehicles Net",
+          "type": "number"
+        },
+        "solar_energy_systems_net": {
+          "description": "Net value of solar energy systems.",
+          "title": "Solar Energy Systems Net",
+          "type": "number"
+        },
+        "property_plant_and_equipment_net": {
+          "description": "Net value of property, plant, and equipment.",
+          "title": "Property Plant And Equipment Net",
+          "type": "number"
+        },
+        "operating_lease_right_of_use_assets": {
+          "description": "Right-of-use assets for operating leases.",
+          "title": "Operating Lease Right Of Use Assets",
+          "type": "number"
+        },
+        "digital_assets_net": {
+          "description": "Net value of digital assets held.",
+          "title": "Digital Assets Net",
+          "type": "number"
+        },
+        "intangible_assets_net": {
+          "description": "Net value of intangible assets.",
+          "title": "Intangible Assets Net",
+          "type": "number"
+        },
+        "goodwill": {
+          "description": "Value of goodwill.",
+          "title": "Goodwill",
+          "type": "number"
+        },
+        "other_non_current_assets": {
+          "description": "Other non-current assets.",
+          "title": "Other Non Current Assets",
+          "type": "number"
+        }
+      },
+      "required": [
+        "operating_lease_vehicles_net",
+        "solar_energy_systems_net",
+        "property_plant_and_equipment_net",
+        "operating_lease_right_of_use_assets",
+        "digital_assets_net",
+        "intangible_assets_net",
+        "goodwill",
+        "other_non_current_assets"
+      ],
+      "title": "NonCurrentAssets",
+      "type": "object"
+    },
+    "NonCurrentLiabilities": {
+      "additionalProperties": false,
+      "properties": {
+        "debt_and_finance_leases_net_of_current_portion": {
+          "description": "Long-term debt and finance leases, net of current portion.",
+          "title": "Debt And Finance Leases Net Of Current Portion",
+          "type": "number"
+        },
+        "deferred_revenue_net_of_current_portion": {
+          "description": "Deferred revenue expected to be recognized beyond one year.",
+          "title": "Deferred Revenue Net Of Current Portion",
+          "type": "number"
+        },
+        "other_long_term_liabilities": {
+          "description": "Other long-term liabilities.",
+          "title": "Other Long Term Liabilities",
+          "type": "number"
+        }
+      },
+      "required": [
+        "debt_and_finance_leases_net_of_current_portion",
+        "deferred_revenue_net_of_current_portion",
+        "other_long_term_liabilities"
+      ],
+      "title": "NonCurrentLiabilities",
+      "type": "object"
+    },
+    "StockholdersEquity": {
+      "additionalProperties": false,
+      "properties": {
+        "preferred_stock": {
+          "description": "Value of preferred stock.",
+          "title": "Preferred Stock",
+          "type": "number"
+        },
+        "common_stock": {
+          "description": "Value of common stock.",
+          "title": "Common Stock",
+          "type": "number"
+        },
+        "additional_paid_in_capital": {
+          "description": "Additional paid-in capital.",
+          "title": "Additional Paid In Capital",
+          "type": "number"
+        },
+        "accumulated_other_comprehensive_income_loss": {
+          "description": "Accumulated other comprehensive income or loss.",
+          "title": "Accumulated Other Comprehensive Income Loss",
+          "type": "number"
+        },
+        "retained_earnings": {
+          "description": "Retained earnings of the company.",
+          "title": "Retained Earnings",
+          "type": "number"
+        }
+      },
+      "required": [
+        "preferred_stock",
+        "common_stock",
+        "additional_paid_in_capital",
+        "accumulated_other_comprehensive_income_loss",
+        "retained_earnings"
+      ],
+      "title": "StockholdersEquity",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "assets": {
+      "$ref": "#/$defs/Assets",
+      "description": "Details of the company's assets."
+    },
+    "liabilities": {
+      "$ref": "#/$defs/Liabilities",
+      "description": "Details of the company's liabilities."
+    },
+    "equity": {
+      "$ref": "#/$defs/Equity",
+      "description": "Details of the company's equity."
+    }
+  },
+  "required": ["assets", "liabilities", "equity"],
+  "title": "BalanceSheet",
+  "type": "object"
+}

@@ -1,0 +1,133 @@
+{
+  "additionalProperties": false,
+  "description": "Enhanced Pydantic model for Identity Card Schema",
+  "properties": {
+    "surname": {
+      "description": "Surname (family name) of the cardholder as stated on the card.",
+      "title": "Surname",
+      "type": "string"
+    },
+    "given_names": {
+      "description": "Given names of the cardholder as stated on the card.",
+      "title": "Given Names",
+      "type": "string"
+    },
+    "sex": {
+      "description": "Sex of the cardholder, represented as M (Male), F (Female)",
+      "enum": ["M", "F"],
+      "title": "Sex",
+      "type": "string"
+    },
+    "nationality": {
+      "description": "Nationality of the cardholder, typically as an ISO 3166-1 alpha-3 country code.",
+      "title": "Nationality",
+      "type": "string"
+    },
+    "date_of_birth": {
+      "description": "Date of birth of the cardholder, formatted as YYYY-MM-DD.",
+      "format": "date",
+      "title": "Date Of Birth",
+      "type": "string"
+    },
+    "place_of_birth": {
+      "description": "Place of birth of the cardholder, typically city and/or country.",
+      "title": "Place Of Birth",
+      "type": "string"
+    },
+    "alternate_name": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Alternate or maiden name of the cardholder, if applicable.",
+      "title": "Alternate Name"
+    },
+    "signature": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Transcription or description of the cardholder's signature, if available.",
+      "title": "Signature"
+    },
+    "document_number": {
+      "description": "Unique document number of the identity card.",
+      "title": "Document Number",
+      "type": "string"
+    },
+    "date_of_issue": {
+      "description": "Issue date of the identity card, formatted as YYYY-MM-DD.",
+      "format": "date",
+      "title": "Date Of Issue",
+      "type": "string"
+    },
+    "date_of_expiry": {
+      "description": "Expiry date of the identity card, formatted as YYYY-MM-DD.",
+      "format": "date",
+      "title": "Date Of Expiry",
+      "type": "string"
+    },
+    "issuing_authority": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Authority that issued the identity card.",
+      "title": "Issuing Authority"
+    },
+    "security_features": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Notes about visible security features such as holograms or watermarks.",
+      "title": "Security Features"
+    },
+    "extraction_notes": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Additional notes regarding uncertainties or discrepancies during extraction.",
+      "title": "Extraction Notes"
+    }
+  },
+  "required": [
+    "surname",
+    "given_names",
+    "sex",
+    "nationality",
+    "date_of_birth",
+    "place_of_birth",
+    "document_number",
+    "date_of_issue",
+    "date_of_expiry"
+  ],
+  "title": "IdentityCard",
+  "type": "object"
+}

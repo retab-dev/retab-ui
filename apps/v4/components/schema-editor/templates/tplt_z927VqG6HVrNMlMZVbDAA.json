@@ -1,0 +1,198 @@
+{
+  "$defs": {
+    "DeductionItem": {
+      "properties": {
+        "deduction_this_period": {
+          "description": "Amount deducted this period",
+          "title": "Deduction This Period",
+          "type": "number"
+        },
+        "deduction_type": {
+          "description": "Type of deduction",
+          "title": "Deduction Type",
+          "type": "string"
+        },
+        "deduction_ytd": {
+          "description": "Year-to-date deduction amount",
+          "title": "Deduction Ytd",
+          "type": "number"
+        }
+      },
+      "required": ["deduction_this_period", "deduction_type", "deduction_ytd"],
+      "title": "DeductionItem",
+      "type": "object"
+    },
+    "EarningItem": {
+      "properties": {
+        "earning_hours": {
+          "description": "Hours worked for this earning item",
+          "title": "Earning Hours",
+          "type": "number"
+        },
+        "earning_rate": {
+          "description": "Hourly rate for this earning item",
+          "title": "Earning Rate",
+          "type": "number"
+        },
+        "earning_this_period": {
+          "description": "Amount earned this period",
+          "title": "Earning This Period",
+          "type": "number"
+        },
+        "earning_type": {
+          "description": "Type of earning",
+          "title": "Earning Type",
+          "type": "string"
+        },
+        "earning_ytd": {
+          "description": "Year-to-date earning amount",
+          "title": "Earning Ytd",
+          "type": "number"
+        }
+      },
+      "required": [
+        "earning_hours",
+        "earning_rate",
+        "earning_this_period",
+        "earning_type",
+        "earning_ytd"
+      ],
+      "title": "EarningItem",
+      "type": "object"
+    },
+    "TaxItem": {
+      "properties": {
+        "tax_this_period": {
+          "description": "Tax amount deducted this period",
+          "title": "Tax This Period",
+          "type": "number"
+        },
+        "tax_type": {
+          "description": "Type of tax",
+          "title": "Tax Type",
+          "type": "string"
+        },
+        "tax_ytd": {
+          "description": "Year-to-date tax amount",
+          "title": "Tax Ytd",
+          "type": "number"
+        }
+      },
+      "required": ["tax_this_period", "tax_type", "tax_ytd"],
+      "title": "TaxItem",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "employer_address": {
+      "description": "Address of the employer",
+      "title": "Employer Address",
+      "type": "string"
+    },
+    "gross_earnings": {
+      "description": "Gross earnings for the period",
+      "title": "Gross Earnings",
+      "type": "number"
+    },
+    "deductions": {
+      "description": "List of deductions applied",
+      "items": {
+        "$ref": "#/$defs/DeductionItem"
+      },
+      "title": "Deductions",
+      "type": "array"
+    },
+    "federal_marital_status": {
+      "description": "Federal marital status of the employee",
+      "title": "Federal Marital Status",
+      "type": "string"
+    },
+    "employee_name": {
+      "description": "Name of the employee",
+      "title": "Employee Name",
+      "type": "string"
+    },
+    "gross_earnings_ytd": {
+      "description": "Year-to-date gross earnings",
+      "title": "Gross Earnings Ytd",
+      "type": "number"
+    },
+    "end_date": {
+      "description": "End date of the pay period",
+      "title": "End Date",
+      "type": "string"
+    },
+    "employer_name": {
+      "description": "Name of the employer",
+      "title": "Employer Name",
+      "type": "string"
+    },
+    "pay_date": {
+      "description": "Date the payment was issued",
+      "title": "Pay Date",
+      "type": "string"
+    },
+    "state_allowance": {
+      "description": "State allowances claimed",
+      "title": "State Allowance",
+      "type": "integer"
+    },
+    "ssn": {
+      "description": "Social Security Number of the employee",
+      "title": "Ssn",
+      "type": "string"
+    },
+    "employee_address": {
+      "description": "Address of the employee",
+      "title": "Employee Address",
+      "type": "string"
+    },
+    "taxes": {
+      "description": "List of taxes applied",
+      "items": {
+        "$ref": "#/$defs/TaxItem"
+      },
+      "title": "Taxes",
+      "type": "array"
+    },
+    "federal_allowance": {
+      "description": "Federal allowances claimed",
+      "title": "Federal Allowance",
+      "type": "integer"
+    },
+    "earnings": {
+      "description": "List of earnings",
+      "items": {
+        "$ref": "#/$defs/EarningItem"
+      },
+      "title": "Earnings",
+      "type": "array"
+    },
+    "net_pay": {
+      "description": "Net pay after deductions",
+      "title": "Net Pay",
+      "type": "number"
+    }
+  },
+  "required": [
+    "employer_address",
+    "gross_earnings",
+    "deductions",
+    "federal_marital_status",
+    "employee_name",
+    "gross_earnings_ytd",
+    "end_date",
+    "employer_name",
+    "pay_date",
+    "state_allowance",
+    "ssn",
+    "employee_address",
+    "taxes",
+    "federal_allowance",
+    "earnings",
+    "net_pay"
+  ],
+  "title": "PaySlip",
+  "type": "object"
+}

@@ -1,0 +1,173 @@
+{
+  "$defs": {
+    "LeaseTerms": {
+      "properties": {
+        "duration": {
+          "description": "Duration of the lease.",
+          "title": "Duration",
+          "type": "string"
+        },
+        "start_date": {
+          "description": "Start date of the lease.",
+          "title": "Start Date",
+          "type": "string"
+        },
+        "rent": {
+          "description": "Monthly rent amount.",
+          "title": "Rent",
+          "type": "string"
+        },
+        "advance_rent": {
+          "description": "Advance rent amount.",
+          "title": "Advance Rent",
+          "type": "string"
+        },
+        "payment_terms": {
+          "description": "Terms of payment after advance rent period.",
+          "title": "Payment Terms",
+          "type": "string"
+        }
+      },
+      "required": [
+        "duration",
+        "start_date",
+        "rent",
+        "advance_rent",
+        "payment_terms"
+      ],
+      "title": "LeaseTerms",
+      "type": "object"
+    },
+    "PartyInfo": {
+      "properties": {
+        "name": {
+          "description": "Name of the lessor.",
+          "title": "Name",
+          "type": "string"
+        },
+        "father_name": {
+          "description": "Father's name of the lessor.",
+          "title": "Father Name",
+          "type": "string"
+        },
+        "address": {
+          "description": "Residential address of the lessor.",
+          "title": "Address",
+          "type": "string"
+        },
+        "nic": {
+          "description": "National Identity Card number of the lessor.",
+          "title": "Nic",
+          "type": "string"
+        }
+      },
+      "required": ["name", "father_name", "address", "nic"],
+      "title": "PartyInfo",
+      "type": "object"
+    },
+    "PropertyDetails": {
+      "properties": {
+        "house_number": {
+          "description": "House number of the property.",
+          "title": "House Number",
+          "type": "string"
+        },
+        "block": {
+          "description": "Block of the property.",
+          "title": "Block",
+          "type": "string"
+        },
+        "phase": {
+          "description": "Phase of the property.",
+          "title": "Phase",
+          "type": "string"
+        },
+        "location": {
+          "description": "Location of the property.",
+          "title": "Location",
+          "type": "string"
+        },
+        "description": {
+          "description": "Description of the property including rooms and facilities.",
+          "title": "Description",
+          "type": "string"
+        },
+        "telephone": {
+          "description": "Telephone connection number of the property.",
+          "title": "Telephone",
+          "type": "string"
+        }
+      },
+      "required": [
+        "house_number",
+        "block",
+        "phase",
+        "location",
+        "description",
+        "telephone"
+      ],
+      "title": "PropertyDetails",
+      "type": "object"
+    },
+    "TenantInfo": {
+      "properties": {
+        "name": {
+          "description": "Name of the lessee.",
+          "title": "Name",
+          "type": "string"
+        },
+        "father_name": {
+          "description": "Father's name of the lessee.",
+          "title": "Father Name",
+          "type": "string"
+        },
+        "address": {
+          "description": "Residential address of the lessee.",
+          "title": "Address",
+          "type": "string"
+        },
+        "passport": {
+          "description": "Passport number of the lessee.",
+          "title": "Passport",
+          "type": "string"
+        }
+      },
+      "required": ["name", "father_name", "address", "passport"],
+      "title": "TenantInfo",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "agreement_date": {
+      "description": "The date when the agreement was made.",
+      "title": "Agreement Date",
+      "type": "string"
+    },
+    "lessor": {
+      "$ref": "#/$defs/PartyInfo",
+      "description": "Details of the lessor or landlady."
+    },
+    "lessee": {
+      "$ref": "#/$defs/TenantInfo",
+      "description": "Details of the lessee or tenant."
+    },
+    "property_details": {
+      "$ref": "#/$defs/PropertyDetails",
+      "description": "Details of the property being leased."
+    },
+    "lease_terms": {
+      "$ref": "#/$defs/LeaseTerms",
+      "description": "Terms and conditions of the lease."
+    }
+  },
+  "required": [
+    "agreement_date",
+    "lessor",
+    "lessee",
+    "property_details",
+    "lease_terms"
+  ],
+  "title": "LeaseAgreement",
+  "type": "object"
+}

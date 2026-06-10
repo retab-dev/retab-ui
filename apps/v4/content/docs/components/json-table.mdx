@@ -1,0 +1,43 @@
+---
+title: JSON Table
+description: Render structured extraction data as a schema-driven, virtualized table.
+---
+
+`JsonTable` renders a JSON Schema and an extracted data object as a virtualized,
+spreadsheet-style table: columns are derived from the schema, nested objects flatten
+into grouped columns, arrays expand into rows, and each cell is typed (text, number,
+date/time, enum, checkbox) with optional per-cell confidence/consensus coloring and a
+source-citation popover. It's the table-layout sibling of
+[JSON Form](/docs/components/json-form) and [UiForm](/docs/components/uiform).
+
+Built on [TanStack Table](https://tanstack.com/table) for the table model and the same
+schema/header engine the Retab dashboard uses.
+
+<JsonTableDemo />
+
+## Usage
+
+```tsx
+import { SingleFileTableView } from "@/components/json-table/single-file-table-view"
+
+export function Example() {
+  return (
+    <SingleFileTableView
+      document={document}
+      schema={schema}
+      editMode="readOnly"
+    />
+  )
+}
+```
+
+## Key props
+
+| Prop | Type | Description |
+| --- | --- | --- |
+| `document` | `TableDocument` | The document whose `prediction_data.prediction` holds the extracted values. |
+| `schema` | `JSONSchema7` | The schema describing the table's columns. |
+| `setSchema` | `(schema) => void` | Optional — enables editing field descriptions / reasoning from the header. |
+| `editMode` | `"readOnly" \| "editable" \| "promptOnly"` | Controls whether cells can be edited. |
+| `cellColorState` | `"none" \| "consensus" \| "similarity" \| "mismatch"` | Per-cell background coloring. |
+| `showHoverCard` | `boolean` | Show the source-citation popover on cell hover. |

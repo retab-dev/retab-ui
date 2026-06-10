@@ -1,0 +1,155 @@
+{
+  "$defs": {
+    "RentRollTenant": {
+      "additionalProperties": false,
+      "properties": {
+        "suite_number_or_floor": {
+          "description": "Suite number or floor.",
+          "title": "Suite Number Or Floor",
+          "type": "string"
+        },
+        "tenant_name": {
+          "description": "Name of the tenant.",
+          "title": "Tenant Name",
+          "type": "string"
+        },
+        "size_sf": {
+          "description": "Size in square feet.",
+          "title": "Size Sf",
+          "type": "number"
+        },
+        "percent_of_nrsf": {
+          "description": "Percentage of net rentable square footage.",
+          "title": "Percent Of Nrsf",
+          "type": "string"
+        },
+        "annual_rent": {
+          "description": "Annual rent amount.",
+          "title": "Annual Rent",
+          "type": "string"
+        },
+        "base_rent_psf": {
+          "description": "Base rent per square foot.",
+          "title": "Base Rent Psf",
+          "type": "string"
+        },
+        "percent_of_total": {
+          "description": "Percentage of total.",
+          "title": "Percent Of Total",
+          "type": "string"
+        },
+        "lease_type": {
+          "description": "Type of lease.",
+          "title": "Lease Type",
+          "type": "string"
+        },
+        "lease_commence": {
+          "description": "Lease commencement date.",
+          "title": "Lease Commence",
+          "type": "string"
+        },
+        "lease_expiration": {
+          "description": "Lease expiration date.",
+          "title": "Lease Expiration",
+          "type": "string"
+        },
+        "term_mos": {
+          "description": "Lease term in months.",
+          "title": "Term Mos",
+          "type": "integer"
+        },
+        "term": {
+          "description": "Indicates if the term is active.",
+          "title": "Term",
+          "type": "string"
+        },
+        "roll": {
+          "description": "Roll information.",
+          "title": "Roll",
+          "type": "string"
+        },
+        "notes": {
+          "description": "Additional notes.",
+          "title": "Notes",
+          "type": "string"
+        },
+        "tenant_category": {
+          "description": "Category of the tenant.",
+          "title": "Tenant Category",
+          "type": "string"
+        }
+      },
+      "required": [
+        "suite_number_or_floor",
+        "tenant_name",
+        "size_sf",
+        "percent_of_nrsf",
+        "annual_rent",
+        "base_rent_psf",
+        "percent_of_total",
+        "lease_type",
+        "lease_commence",
+        "lease_expiration",
+        "term_mos",
+        "term",
+        "roll",
+        "notes",
+        "tenant_category"
+      ],
+      "title": "RentRollTenant",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "number_of_tenants": {
+      "description": "Total number of tenants.",
+      "title": "Number Of Tenants",
+      "type": "integer"
+    },
+    "total_rentable_sf": {
+      "description": "Total rentable square footage.",
+      "title": "Total Rentable Sf",
+      "type": "number"
+    },
+    "rent_roll_as_of": {
+      "description": "Date of the rent roll.",
+      "title": "Rent Roll As Of",
+      "type": "string"
+    },
+    "current_occupancy_percentage": {
+      "description": "Current occupancy percentage.",
+      "title": "Current Occupancy Percentage",
+      "type": "string"
+    },
+    "annual_rent_revenue": {
+      "description": "Annual rent revenue.",
+      "title": "Annual Rent Revenue",
+      "type": "string"
+    },
+    "weighted_average_rent_per_sf": {
+      "description": "Weighted average rent per square foot.",
+      "title": "Weighted Average Rent Per Sf",
+      "type": "string"
+    },
+    "tenants": {
+      "description": "List of tenants and their lease details.",
+      "items": {
+        "$ref": "#/$defs/RentRollTenant"
+      },
+      "title": "Tenants",
+      "type": "array"
+    }
+  },
+  "required": [
+    "number_of_tenants",
+    "total_rentable_sf",
+    "rent_roll_as_of",
+    "current_occupancy_percentage",
+    "annual_rent_revenue",
+    "weighted_average_rent_per_sf",
+    "tenants"
+  ],
+  "title": "CommercialRentRoll",
+  "type": "object"
+}

@@ -1,0 +1,118 @@
+{
+  "$defs": {
+    "Closing": {
+      "additionalProperties": false,
+      "properties": {
+        "salutation": {
+          "description": "Closing salutation.",
+          "title": "Salutation",
+          "type": "string"
+        },
+        "signature": {
+          "description": "Signature of the sender.",
+          "title": "Signature",
+          "type": "string"
+        }
+      },
+      "required": ["salutation", "signature"],
+      "title": "Closing",
+      "type": "object"
+    },
+    "Recipient": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "description": "Name of the recipient.",
+          "title": "Name",
+          "type": "string"
+        },
+        "address": {
+          "description": "Address of the recipient.",
+          "title": "Address",
+          "type": "string"
+        },
+        "email": {
+          "description": "Email address of the recipient.",
+          "title": "Email",
+          "type": "string"
+        }
+      },
+      "required": ["name", "address", "email"],
+      "title": "Recipient",
+      "type": "object"
+    },
+    "Sender": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "description": "Name of the sender.",
+          "title": "Name",
+          "type": "string"
+        },
+        "title": {
+          "description": "Job title of the sender.",
+          "title": "Title",
+          "type": "string"
+        },
+        "contact": {
+          "$ref": "#/$defs/SenderContact",
+          "description": "Contact details of the sender."
+        }
+      },
+      "required": ["name", "title", "contact"],
+      "title": "Sender",
+      "type": "object"
+    },
+    "SenderContact": {
+      "additionalProperties": false,
+      "properties": {
+        "telephone": {
+          "description": "Telephone number of the sender.",
+          "title": "Telephone",
+          "type": "string"
+        },
+        "email": {
+          "description": "Email address of the sender.",
+          "title": "Email",
+          "type": "string"
+        },
+        "address": {
+          "description": "Physical address of the sender.",
+          "title": "Address",
+          "type": "string"
+        },
+        "linkedin": {
+          "description": "LinkedIn profile URL of the sender.",
+          "title": "Linkedin",
+          "type": "string"
+        }
+      },
+      "required": ["telephone", "email", "address", "linkedin"],
+      "title": "SenderContact",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "sender": {
+      "$ref": "#/$defs/Sender",
+      "description": "Information about the sender of the cover letter."
+    },
+    "recipient": {
+      "$ref": "#/$defs/Recipient",
+      "description": "Information about the recipient of the cover letter."
+    },
+    "body": {
+      "description": "The main content of the cover letter.",
+      "title": "Body",
+      "type": "string"
+    },
+    "closing": {
+      "$ref": "#/$defs/Closing",
+      "description": "Closing section of the cover letter."
+    }
+  },
+  "required": ["sender", "recipient", "body", "closing"],
+  "title": "CoverLetter",
+  "type": "object"
+}

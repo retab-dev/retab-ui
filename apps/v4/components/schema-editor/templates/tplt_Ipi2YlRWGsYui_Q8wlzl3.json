@@ -1,0 +1,25 @@
+{
+  "title": "HR Screening Decision Schema",
+  "description": "Schema for storing the HR screening decision for a candidate applying to the Strategy Consultant position at Praxis Strategy Partners.",
+  "type": "object",
+  "X-SchemaType": "flat",
+  "properties": {
+    "decision": {
+      "type": "string",
+      "description": "The HR screening decision for the candidate.",
+      "enum": [
+        "reject",
+        "phone_screen",
+        "technical_interview",
+        "manager_interview",
+        "executive_interview",
+        "hold_pool"
+      ]
+    }
+  },
+  "required": ["decision"],
+  "additionalProperties": false,
+  "$defs": {},
+  "X-ReasoningPrompt": "",
+  "X-ReferenceQuote": false
+}
