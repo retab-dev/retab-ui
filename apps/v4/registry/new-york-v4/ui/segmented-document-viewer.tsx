@@ -73,80 +73,97 @@ export function SegmentedDocumentViewer({
         className
       )}
     >
-      {title ? (
-        <div className="flex h-10 flex-shrink-0 items-center border-b px-3 text-sm font-medium">
-          {title}
-        </div>
-      ) : null}
-
-      <div className="flex-shrink-0 border-b px-3 py-2">
-        <SegmentLegend
-          segments={segments}
-          activeId={activeId}
-          onActivate={setActiveId}
-          onSelect={(id) => {
-            const seg = segments.find((s) => s.id === id)
-            if (seg?.pages.length) jumpToPage(seg.pages[0])
-          }}
-        />
-      </div>
-
-      <div className="flex min-h-0 flex-1">
-        <aside className="w-64 flex-shrink-0 border-r">
-          <SegmentSidebar
+      {(() => {
+        const legend = (
+          <SegmentLegend
             segments={segments}
-            activeId={activeId}
-            onActivate={setActiveId}
-            unitLabel={unitLabel}
-            onSelect={(seg) => seg.pages.length && jumpToPage(seg.pages[0])}
-            className="h-full"
-          />
-        </aside>
-
-        <div className="flex min-w-0 flex-1 flex-col gap-2 p-3">
-          <PageTimeline
-            segments={segments}
-            pageCount={total}
-            activeId={activeId}
-            onActivate={setActiveId}
             currentPage={currentPage}
-            onSelectPage={jumpToPage}
+            activeId={activeId}
+            onActivate={setActiveId}
+            onSelect={(id) => {
+              const seg = segments.find((s) => s.id === id)
+              if (seg?.pages.length) jumpToPage(seg.pages[0])
+            }}
+            columns={4}
+            showUnusedToggle
           />
-          {src ? (
-            <div ref={documentRef} className="min-h-0 flex-1 overflow-hidden rounded-md border">
-              <PdfViewer
-                src={src}
-                bare
-                className="h-full"
-                onVisiblePageChange={setCurrentPage}
-                renderPageOverlay={({ pageNumber }) => {
-                  const ownerIdx = owners.get(pageNumber) ?? []
-                  if (ownerIdx.length === 0) return null
-                  const owner = byIndex.get(ownerIdx[0])
-                  if (!owner) return null
-                  const active =
-                    activeSegment != null &&
-                    ownerIdx.includes(activeSegment.index)
-                  return (
-                    <div
-                      className="absolute inset-0 transition-colors"
-                      style={{
-                        backgroundColor: withAlpha(owner.color, active ? 0.22 : 0.08),
-                        outline: active ? `3px solid ${owner.color}` : undefined,
-                        outlineOffset: -3,
-                      }}
-                    />
-                  )
-                }}
+        )
+        const sidebar = (
+          <aside className="h-full w-64 flex-shrink-0 overflow-auto border-r">
+            <SegmentSidebar
+              segments={segments}
+              activeId={activeId}
+              onActivate={setActiveId}
+              unitLabel={unitLabel}
+              onSelect={(seg) => seg.pages.length && jumpToPage(seg.pages[0])}
+              className="h-full"
+            />
+          </aside>
+        )
+        const header = (
+          <div className="border-b">
+            {title ? (
+              <div className="px-3 pt-2 text-sm font-medium">{title}</div>
+            ) : null}
+            <div className="px-3 py-2">{legend}</div>
+            <div className="px-3 pb-2">
+              <PageTimeline
+                segments={segments}
+                pageCount={total}
+                activeId={activeId}
+                onActivate={setActiveId}
+                currentPage={currentPage}
+                onSelectPage={jumpToPage}
               />
             </div>
-          ) : (
-            <div className="flex flex-1 items-center justify-center rounded-md border border-dashed text-xs text-muted-foreground">
-              Pass a document URL to preview pages with color overlays.
-            </div>
-          )}
-        </div>
-      </div>
+          </div>
+        )
+
+        if (!src) {
+          return (
+            <>
+              {header}
+              <div className="flex min-h-0 flex-1">
+                {sidebar}
+                <div className="flex flex-1 items-center justify-center p-3 text-center text-xs text-muted-foreground">
+                  Pass a document URL to preview pages with color overlays.
+                </div>
+              </div>
+            </>
+          )
+        }
+
+        return (
+          <div ref={documentRef} className="min-h-0 flex-1">
+            <PdfViewer
+              src={src}
+              bare
+              className="h-full"
+              header={header}
+              aside={sidebar}
+              onVisiblePageChange={setCurrentPage}
+              renderPageOverlay={({ pageNumber }) => {
+                const ownerIdx = owners.get(pageNumber) ?? []
+                if (ownerIdx.length === 0) return null
+                const owner = byIndex.get(ownerIdx[0])
+                if (!owner) return null
+                const active =
+                  activeSegment != null && ownerIdx.includes(activeSegment.index)
+                return (
+                  <div
+                    className="absolute inset-0 transition-colors"
+                    style={{
+                      backgroundColor: withAlpha(owner.color, active ? 0.22 : 0.08),
+                      outline: active ? `3px solid ${owner.color}` : undefined,
+                      outlineOffset: -3,
+                    }}
+                  />
+                )
+              }}
+            />
+          </div>
+        )
+      })()}
     </div>
   )
 }

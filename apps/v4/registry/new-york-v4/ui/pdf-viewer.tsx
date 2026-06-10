@@ -194,6 +194,8 @@ function PdfViewerInner({
       )}
       data-slot="pdf-viewer"
     >
+      {/* Pecking order: toolbar spans the full width; below it the sidebar
+          claims the full height and the header (legend) spans the main column. */}
       {toolbar ? (
         <div className="flex h-10 flex-shrink-0 items-center gap-1 border-b bg-card px-2">
           <span className="px-1 text-xs text-muted-foreground tabular-nums">
@@ -240,30 +242,31 @@ function PdfViewerInner({
         </div>
       ) : null}
 
-      {header ? <div data-slot="pdf-viewer-header">{header}</div> : null}
-
       <div className="flex min-h-0 flex-1">
         {aside ? (
           <div data-slot="pdf-viewer-aside" className="flex-shrink-0">
             {aside}
           </div>
         ) : null}
-        <ScrollArea className="min-h-0 flex-1">
-          <div ref={containerRef} className="flex flex-col items-center gap-4 p-4">
-            {Array.from({ length: doc.numPages }, (_, i) => (
-              <React.Suspense key={i} fallback={<PageSkeleton />}>
-                <PdfPage
-                  doc={doc}
-                  pageNumber={i + 1}
-                  scale={scale}
-                  rotation={rotation}
-                  renderOverlay={renderPageOverlay}
-                  onVisibility={onVisiblePageChange ? reportVisibility : undefined}
-                />
-              </React.Suspense>
-            ))}
-          </div>
-        </ScrollArea>
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          {header ? <div data-slot="pdf-viewer-header">{header}</div> : null}
+          <ScrollArea className="min-h-0 flex-1">
+            <div ref={containerRef} className="flex flex-col items-center gap-4 p-4">
+              {Array.from({ length: doc.numPages }, (_, i) => (
+                <React.Suspense key={i} fallback={<PageSkeleton />}>
+                  <PdfPage
+                    doc={doc}
+                    pageNumber={i + 1}
+                    scale={scale}
+                    rotation={rotation}
+                    renderOverlay={renderPageOverlay}
+                    onVisibility={onVisiblePageChange ? reportVisibility : undefined}
+                  />
+                </React.Suspense>
+              ))}
+            </div>
+          </ScrollArea>
+        </div>
       </div>
     </div>
   )
@@ -286,7 +289,9 @@ function PdfPage({
 }) {
   const page = React.use(getPageResource(doc, pageNumber))
   const viewport = React.useMemo(
-    () => page.getViewport({ scale, rotation }),
+    // Add the user rotation to the page's intrinsic /Rotate so pages authored
+    // with a rotation (common in form bundles) display in their true orientation.
+    () => page.getViewport({ scale, rotation: ((page.rotate ?? 0) + rotation) % 360 }),
     [page, scale, rotation]
   )
   const dpr =
