@@ -97,6 +97,7 @@ export function PartitionViewerDemo() {
             downloadFileName="tapstone.pdf"
             header={handlers.header}
             onVisiblePageChange={handlers.onCurrentPageChange}
+            onScrollProgressChange={handlers.onScrollProgressChange}
             className="h-full"
           />
         )}

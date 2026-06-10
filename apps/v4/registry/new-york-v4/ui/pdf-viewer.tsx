@@ -97,6 +97,8 @@ export interface PdfViewerProps {
   renderPageOverlay?: (props: PdfPageOverlayProps) => React.ReactNode
   /** Fired with the 1-based page nearest the top of the viewport as you scroll. */
   onVisiblePageChange?: (page: number) => void
+  /** Fired with scroll progress in [0, 1] (for a fine-grained scroll cursor). */
+  onScrollProgressChange?: (progress: number) => void
   /** Drop the outer border/rounded/background so the viewer fills its container. */
   bare?: boolean
   /** Rendered as a full-width strip directly below the toolbar (e.g. a legend). */
@@ -129,6 +131,7 @@ function PdfViewerInner({
   downloadFileName,
   renderPageOverlay,
   onVisiblePageChange,
+  onScrollProgressChange,
   bare = false,
   header,
   aside,
@@ -157,27 +160,32 @@ function PdfViewerInner({
     return () => observer.disconnect()
   }, [])
 
-  // Track which page is most visible and report it (for sync with a timeline).
-  const pageRatios = React.useRef(new Map<number, number>())
+  // Report the page nearest the top of the scroll viewport as the user scrolls.
+  // We watch the actual scroll container (not the browser viewport) so the
+  // current-page cursor stays in sync even when the viewer is embedded.
+  const scrollViewportRef = React.useRef<HTMLDivElement | null>(null)
   const lastReported = React.useRef(0)
-  const reportVisibility = React.useCallback(
-    (page: number, ratio: number) => {
-      pageRatios.current.set(page, ratio)
-      let bestRatio = 0
-      let bestPage = lastReported.current || 1
-      pageRatios.current.forEach((r, p) => {
-        if (r > bestRatio) {
-          bestRatio = r
-          bestPage = p
-        }
-      })
-      if (bestPage !== lastReported.current) {
-        lastReported.current = bestPage
-        onVisiblePageChange?.(bestPage)
+  const handleScroll = React.useCallback(() => {
+    const viewport = scrollViewportRef.current
+    if (!viewport) return
+    const scrollable = viewport.scrollHeight - viewport.clientHeight
+    onScrollProgressChange?.(scrollable > 0 ? viewport.scrollTop / scrollable : 0)
+    const rect = viewport.getBoundingClientRect()
+    const marker = rect.top + rect.height * 0.2
+    const pages = viewport.querySelectorAll<HTMLElement>("[data-page-number]")
+    let current = 1
+    for (const el of pages) {
+      if (el.getBoundingClientRect().top <= marker) {
+        current = Number(el.dataset.pageNumber)
+      } else {
+        break
       }
-    },
-    [onVisiblePageChange]
-  )
+    }
+    if (current && current !== lastReported.current) {
+      lastReported.current = current
+      onVisiblePageChange?.(current)
+    }
+  }, [onVisiblePageChange, onScrollProgressChange])
 
   const fitScale = containerWidth ? (containerWidth - 32) / baseWidth : 1
   const scale = manualScale ?? fitScale
@@ -250,7 +258,15 @@ function PdfViewerInner({
         ) : null}
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           {header ? <div data-slot="pdf-viewer-header">{header}</div> : null}
-          <ScrollArea className="min-h-0 flex-1">
+          <ScrollArea
+            className="min-h-0 flex-1"
+            viewportRef={scrollViewportRef}
+            viewportProps={
+              onVisiblePageChange || onScrollProgressChange
+                ? { onScroll: handleScroll }
+                : undefined
+            }
+          >
             <div ref={containerRef} className="flex flex-col items-center gap-4 p-4">
               {Array.from({ length: doc.numPages }, (_, i) => (
                 <React.Suspense key={i} fallback={<PageSkeleton />}>
@@ -260,7 +276,6 @@ function PdfViewerInner({
                     scale={scale}
                     rotation={rotation}
                     renderOverlay={renderPageOverlay}
-                    onVisibility={onVisiblePageChange ? reportVisibility : undefined}
                   />
                 </React.Suspense>
               ))}
@@ -278,14 +293,12 @@ function PdfPage({
   scale,
   rotation,
   renderOverlay,
-  onVisibility,
 }: {
   doc: PDFDocumentProxy
   pageNumber: number
   scale: number
   rotation: number
   renderOverlay?: (props: PdfPageOverlayProps) => React.ReactNode
-  onVisibility?: (page: number, ratio: number) => void
 }) {
   const page = React.use(getPageResource(doc, pageNumber))
   const viewport = React.useMemo(
@@ -319,27 +332,8 @@ function PdfPage({
     [page, viewport, dpr]
   )
 
-  // Report visibility via an IntersectionObserver attached in a ref callback.
-  const wrapperRef = React.useCallback(
-    (el: HTMLDivElement | null) => {
-      if (!el || !onVisibility) return
-      const observer = new IntersectionObserver(
-        (entries) => {
-          for (const entry of entries) {
-            onVisibility(pageNumber, entry.intersectionRatio)
-          }
-        },
-        { threshold: [0, 0.1, 0.25, 0.5, 0.75, 1], rootMargin: "-10% 0px -80% 0px" }
-      )
-      observer.observe(el)
-      return () => observer.disconnect()
-    },
-    [pageNumber, onVisibility]
-  )
-
   return (
     <div
-      ref={wrapperRef}
       className="relative shadow-sm ring-1 ring-border"
       style={{ width: viewport.width, height: viewport.height }}
       data-slot="pdf-page"
