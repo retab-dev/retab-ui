@@ -1,0 +1,68 @@
+---
+title: Property Form
+description: The edit form for a single schema property — the content of the Schema Builder's Edit Property dialog.
+---
+
+`PropertyForm` is the body of the Schema Builder's **Edit Property** dialog: name,
+data type, type-specific options (enum values, array item type, `$ref`), required
+and nullable toggles, description, and the reasoning controls. It's a controlled
+form — you own the property state and the form reports changes back through
+setters and `onSubmit`.
+
+It renders just the form (no dialog chrome), so you can drop it into a dialog
+(`<DialogContent>`), a popover, or an inline panel.
+
+<PropertyFormDemo />
+
+## Usage
+
+```tsx
+import { useState } from "react"
+import { PropertyForm } from "@/components/schema-editor/property-form"
+import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
+
+export function Example() {
+  const [property, setProperty] = useState<ExtendedJSONSchema7>({ type: "string" })
+  const [name, setName] = useState("currency")
+  const [schema, setSchema] = useState<ExtendedJSONSchema7>({
+    type: "object",
+    properties: {},
+    $defs: {},
+  })
+
+  return (
+    <PropertyForm
+      editedProperty={property}
+      setEditedProperty={setProperty}
+      setJsonSchema={setSchema}
+      editedJsonSchema={schema}
+      setEditedJsonSchema={setSchema}
+      editedName={name}
+      setEditedName={setName}
+      submitLabel="Save"
+      onSubmit={(values) => console.log(values)}
+      onCancel={() => {}}
+      onDelete={() => {}}
+    />
+  )
+}
+```
+
+## Props
+
+| Prop | Type | Description |
+| --- | --- | --- |
+| `editedProperty` | `ExtendedJSONSchema7` | The property schema being edited. |
+| `setEditedProperty` | `Dispatch<SetStateAction<ExtendedJSONSchema7>>` | Updates the property schema. |
+| `editedName` | `string` | The property's field name. |
+| `setEditedName` | `(name: string) => void` | Updates the field name. |
+| `editedJsonSchema` / `setEditedJsonSchema` | `ExtendedJSONSchema7` / setter | The root schema, used to resolve and manage `$defs`. |
+| `onSubmit` | `(values?: { name; property }) => void` | Called on Save. |
+| `onCancel` | `() => void` | Called on Cancel. |
+| `onDelete` | `() => void` | Optional. Shows the Delete Property action. |
+| `submitLabel` | `string` | Submit button label. Defaults to `"Save Changes"`. |
+| `editMode` | `"editable" \| "readOnly" \| "promptOnly"` | Defaults to `"editable"`. |
+| `wrapCancelInDialogClose` / `wrapSubmitInDialogClose` | `boolean` | Wrap the Cancel/Save buttons in `DialogClose` when used inside a dialog. |
+
+The Schema Builder uses `PropertyForm` inside a dialog — see
+[Schema Builder](/docs/components/schema-builder).

@@ -193,7 +193,7 @@
         "start_time": {
           "anyOf": [
             {
-              "format": "iso-time",
+              "format": "time",
               "type": "string"
             },
             {
@@ -207,7 +207,7 @@
         "end_time": {
           "anyOf": [
             {
-              "format": "iso-time",
+              "format": "time",
               "type": "string"
             },
             {
@@ -421,7 +421,7 @@
         "start_time": {
           "anyOf": [
             {
-              "format": "iso-time",
+              "format": "time",
               "type": "string"
             },
             {
@@ -435,7 +435,7 @@
         "end_time": {
           "anyOf": [
             {
-              "format": "iso-time",
+              "format": "time",
               "type": "string"
             },
             {

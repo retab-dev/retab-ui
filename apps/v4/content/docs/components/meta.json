@@ -4,6 +4,7 @@
     "index",    "json-form",
     "json-table",
     "schema-builder",
+    "property-form",
     "csv-viewer",
     "pdf-viewer",
     "parse-viewer",

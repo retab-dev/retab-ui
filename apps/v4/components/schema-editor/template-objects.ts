@@ -285,13 +285,13 @@ export const templateObjects: Record<
       },
       start_time: {
         examples: ["09:00"],
-        format: "iso-time",
+        format: "time",
         title: "Start Time",
         type: "string",
       },
       end_time: {
         examples: ["11:30"],
-        format: "iso-time",
+        format: "time",
         title: "End Time",
         type: "string",
       },

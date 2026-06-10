@@ -99,6 +99,10 @@ export interface PdfViewerProps {
   onVisiblePageChange?: (page: number) => void
   /** Drop the outer border/rounded/background so the viewer fills its container. */
   bare?: boolean
+  /** Rendered as a full-width strip directly below the toolbar (e.g. a legend). */
+  header?: React.ReactNode
+  /** Rendered as a left rail alongside the scrolling pages (e.g. a page ribbon). */
+  aside?: React.ReactNode
 }
 
 export function PdfViewer(props: PdfViewerProps) {
@@ -126,6 +130,8 @@ function PdfViewerInner({
   renderPageOverlay,
   onVisiblePageChange,
   bare = false,
+  header,
+  aside,
 }: PdfViewerProps) {
   const doc = React.use(getDocumentResource(src))
   const firstPage = React.use(getPageResource(doc, 1))
@@ -234,22 +240,31 @@ function PdfViewerInner({
         </div>
       ) : null}
 
-      <ScrollArea className="min-h-0 flex-1">
-        <div ref={containerRef} className="flex flex-col items-center gap-4 p-4">
-          {Array.from({ length: doc.numPages }, (_, i) => (
-            <React.Suspense key={i} fallback={<PageSkeleton />}>
-              <PdfPage
-                doc={doc}
-                pageNumber={i + 1}
-                scale={scale}
-                rotation={rotation}
-                renderOverlay={renderPageOverlay}
-                onVisibility={onVisiblePageChange ? reportVisibility : undefined}
-              />
-            </React.Suspense>
-          ))}
-        </div>
-      </ScrollArea>
+      {header ? <div data-slot="pdf-viewer-header">{header}</div> : null}
+
+      <div className="flex min-h-0 flex-1">
+        {aside ? (
+          <div data-slot="pdf-viewer-aside" className="flex-shrink-0">
+            {aside}
+          </div>
+        ) : null}
+        <ScrollArea className="min-h-0 flex-1">
+          <div ref={containerRef} className="flex flex-col items-center gap-4 p-4">
+            {Array.from({ length: doc.numPages }, (_, i) => (
+              <React.Suspense key={i} fallback={<PageSkeleton />}>
+                <PdfPage
+                  doc={doc}
+                  pageNumber={i + 1}
+                  scale={scale}
+                  rotation={rotation}
+                  renderOverlay={renderPageOverlay}
+                  onVisibility={onVisiblePageChange ? reportVisibility : undefined}
+                />
+              </React.Suspense>
+            ))}
+          </div>
+        </ScrollArea>
+      </div>
     </div>
   )
 }
@@ -286,6 +301,7 @@ function PdfPage({
       canvas.width = Math.floor(viewport.width * dpr)
       canvas.height = Math.floor(viewport.height * dpr)
       const renderTask = page.render({
+        canvas,
         canvasContext: context,
         viewport,
         transform: dpr !== 1 ? [dpr, 0, 0, dpr, 0, 0] : undefined,

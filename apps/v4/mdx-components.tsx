@@ -22,6 +22,7 @@ import { CopyButton } from "@/components/copy-button"
 import { DocsMdxCodeBlock } from "@/components/docs-code-block"
 import { getIconForLanguageExtension } from "@/components/icons"
 import { RetabSchemaBuilderDemo } from "@/components/retab-schema-builder-demo"
+import { PropertyFormDemo } from "@/components/property-form-demo"
 import {
   CsvViewerDemo,
   CsvViewerStreamingDemo,
@@ -338,6 +339,7 @@ export const mdxComponents = {
   CodeCollapsibleWrapper,
   DocsMdxCodeBlock,
   RetabSchemaBuilderDemo,
+  PropertyFormDemo,
   CsvViewerDemo,
   CsvViewerStreamingDemo,
   PdfViewerDemo,

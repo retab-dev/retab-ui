@@ -135,12 +135,14 @@ export function CsvViewer({
   const tableRows = table.getRowModel().rows
   const headers = table.getHeaderGroups()[0]?.headers ?? []
   const scrollRef = React.useRef<HTMLDivElement>(null)
-  const headerRef = React.useRef<HTMLDivElement>(null)
+  const headerScrollRef = React.useRef<HTMLDivElement>(null)
 
-  // Keep the (separate) header aligned with the body's horizontal scroll.
+  // Mirror the body's horizontal scroll by *scrolling* the header (not
+  // transforming it), so the header's sticky row-number cell pins exactly like
+  // the body's — transforms break sticky positioning.
   const handleBodyScroll = (event: React.UIEvent<HTMLDivElement>) => {
-    if (headerRef.current) {
-      headerRef.current.style.transform = `translateX(-${event.currentTarget.scrollLeft}px)`
+    if (headerScrollRef.current) {
+      headerScrollRef.current.scrollLeft = event.currentTarget.scrollLeft
     }
   }
 
@@ -223,12 +225,12 @@ export function CsvViewer({
       {/* Header — a separate element above the body, synced to the body's
           horizontal scroll. The body's vertical scrollbar can't paint over it. */}
       <div
+        ref={headerScrollRef}
         role="rowgroup"
         data-slot="csv-header"
         className="overflow-hidden border-b bg-muted/60"
       >
         <div
-          ref={headerRef}
           role="row"
           aria-rowindex={1}
           className="grid"

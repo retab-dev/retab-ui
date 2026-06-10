@@ -95,6 +95,7 @@ export function PartitionViewerDemo() {
             src={PARTITION_PDF_URL}
             bare
             downloadFileName="tapstone.pdf"
+            header={handlers.header}
             onVisiblePageChange={handlers.onCurrentPageChange}
             className="h-full"
           />
@@ -136,6 +137,8 @@ export function SplitViewerDemo() {
             src={SPLIT_PDF_URL}
             bare
             downloadFileName="harris_2023_federal_state_returns.pdf"
+            header={handlers.header}
+            aside={handlers.aside}
             onVisiblePageChange={handlers.onCurrentPageChange}
             className="h-full"
           />

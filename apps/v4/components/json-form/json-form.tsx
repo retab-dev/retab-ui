@@ -1803,55 +1803,6 @@ const getNestedValue = (obj: Record<string, any>, path: string): any => {
   }, obj);
 };
 
-// Helper function to calculate consensus content from consensusDetails
-const calculateConsensusContent = (
-  consensusDetails: ConsensusChoice[] | undefined,
-  fieldPath: string,
-): ConsensusContent | null => {
-  if (!consensusDetails || consensusDetails.length <= 1) {
-    return null;
-  }
-
-  // console.log("Calculating consensus content for field:", fieldPath);
-  // console.log("Consensus details:", consensusDetails);
-
-  // Exclude the first element (consolidated answer) and build alternatives
-  const consensusValue = getValueByPath(consensusDetails[0].data, fieldPath);
-  const alternativeValues: ConsensusAlternative[] = consensusDetails
-    .slice(1) // Drop the consolidated answer (choices[0])
-    .map((choice: ConsensusChoice, index: number): ConsensusAlternative => {
-      const value = getValueByPath(choice.data, fieldPath);
-
-      return {
-        value: value,
-        index: index + 2, // Start at 2 since we dropped index 1 (consolidated)
-      };
-    })
-    .filter((item: ConsensusAlternative) => item.value !== undefined);
-
-  // Calculate agreement
-  const stable = (v: any): string =>
-    JSON.stringify(Array.isArray(v) ? v : (v ?? ""));
-
-  const uniqueValues = [
-    ...new Set(alternativeValues.map((a) => stable(a.value))),
-  ];
-  const agreementRatio =
-    alternativeValues.length > 0
-      ? alternativeValues.filter(
-          (a) => stable(a.value) === stable(consensusValue), // Consider all empty-like values as an empty string for agreementRatio calculation
-        ).length / alternativeValues.length
-      : 1;
-
-  return {
-    consolidated_value: consensusValue,
-    alternatives: alternativeValues,
-    count: alternativeValues.length,
-    agreement: agreementRatio,
-    hasVariation: uniqueValues.length > 1,
-  };
-};
-
 const _replaceWildcards = (
   name: string,
   indices: number[],
@@ -1883,89 +1834,6 @@ const toSchemaPath = (p: string): string => {
     .map((seg) => (/^\d+$/.test(seg) ? "*" : seg))
     .join(".");
 };
-
-// Reusable consensus badge component
-export const ConsensusBadge: React.FC<{
-  show: boolean;
-  consolidated_value: any;
-  content: ConsensusContent | null;
-  id: string;
-}> = ({ show, content, id, consolidated_value }) =>
-  !show || !content ? null : (
-    <TooltipProvider key={id}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <div className="flex items-center">
-            <Blend className="h-4 w-4 text-blue-300" />
-          </div>
-        </TooltipTrigger>
-        <TooltipContent className="max-w-xs">
-          <div className="mb-1 text-xs text-blue-300">Consensus:</div>
-          {content && content.alternatives ? (
-            <div className="space-y-2">
-              <div className="text-xs">
-                Agreement: {(content.agreement * 100).toFixed(0)}% (
-                {content.count} choices)
-                {content.hasVariation && (
-                  <span className="ml-1 text-yellow-400">
-                    • Variation detected
-                  </span>
-                )}
-              </div>
-
-              <div className="text-xs font-medium">Consensus:</div>
-              <div className="max-h-32 space-y-1 overflow-y-auto">
-                <div
-                  key={"zero"}
-                  className="flex items-center justify-between gap-2"
-                >
-                  <div className="rounded border bg-muted p-1 text-xs">
-                    <div className="truncate font-medium text-foreground">
-                      {typeof consolidated_value === "object"
-                        ? JSON.stringify(consolidated_value)
-                        : String(consolidated_value || "null")}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="text-xs font-medium">Alternatives:</div>
-              <div className="max-h-32 space-y-1 overflow-y-auto">
-                {content.alternatives.map(
-                  (alt: ConsensusAlternative, index: number) => (
-                    <div key={index} className="flex items-center gap-2">
-                      Model {alt.index - 1}:
-                      <div className="rounded border bg-muted p-1 text-xs">
-                        <div className="truncate font-medium text-foreground">
-                          {typeof alt.value === "object"
-                            ? JSON.stringify(alt.value)
-                            : String(alt.value || "null")}
-                        </div>
-                      </div>
-                      {/*{alt.reasoning && (
-                                                <TooltipProvider>
-                                                    <Tooltip>
-                                                        <TooltipTrigger asChild>
-                                                            <Atom className="w-3 h-3 text-muted-foreground cursor-pointer" />
-                                                        </TooltipTrigger>
-                                                        <TooltipContent side="left" className="max-w-xs break-words">
-                                                            <p className="text-xs">Reasoning: {alt.reasoning}</p>
-                                                        </TooltipContent>
-                                                    </Tooltip>
-                                                </TooltipProvider>
-                                            )}*/}
-                    </div>
-                  ),
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="">{content ? String(content) : ""}</div>
-          )}
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  );
 
 // Helper function to format ground truth values for display
 const formatGroundTruthValue = (value: any): string => {
@@ -2503,18 +2371,11 @@ const ArrayRendererItem = React.memo<ArrayRendererItemProps>(
     setSourcesFieldPath: _setSourcesFieldPath,
   }) => {
     const {
-      consensusDetails,
       form,
       config,
       scalarValueType,
       disabled: globalDisabled,
     } = useUiFormContext();
-
-    // ✅ Hook is now at the top level of this component
-    const itemPath = `${arrayBaseName}.${innerIdx}`;
-    const consensusContent = React.useMemo(() => {
-      return calculateConsensusContent(consensusDetails, itemPath);
-    }, [consensusDetails, itemPath]);
 
     const itemKey = `${elementKey}-item-${innerIdx}`;
 
@@ -2752,7 +2613,6 @@ const ArrayRenderer: React.FC<ArrayRendererProps> = ({ path, className }) => {
     size,
     setLikelihoods,
     setSourcesFieldPath,
-    consensusDetails,
     config,
     propertyEditorMode,
     showPropertyEditorPencil,
@@ -2763,10 +2623,6 @@ const ArrayRenderer: React.FC<ArrayRendererProps> = ({ path, className }) => {
 
   // NEW: normalize array schema
   const { schema: normalizedArraySchema } = unwrapSchema(arraySchema, schema);
-
-  const consensusContentRoot = React.useMemo(() => {
-    return calculateConsensusContent(consensusDetails, path);
-  }, [consensusDetails, path]);
 
   if (!arraySchema) return null;
 
@@ -3114,7 +2970,6 @@ const PrimitiveRenderer: React.FC<PrimitiveRendererProps> = ({
     setLikelihoods,
     setSourcesFieldPath,
     config,
-    consensusDetails,
     isEditing,
     setIsEditing,
     propertyEditorMode,
@@ -3139,10 +2994,6 @@ const PrimitiveRenderer: React.FC<PrimitiveRendererProps> = ({
     fieldValue !== null && fieldValue !== undefined ? String(fieldValue) : "";
   const [isDraftActive, setIsDraftActive] = React.useState(false);
   const [isPopoverOpen, setIsPopoverOpen] = React.useState(false);
-  // Calculate consensus content dynamically from consensusDetails
-  const consensusContent = React.useMemo(() => {
-    return calculateConsensusContent(consensusDetails, path);
-  }, [consensusDetails, path]);
 
   // --- FIX STARTS HERE ---
   // This block replaces the old complex logic for determining field type.
@@ -3439,12 +3290,6 @@ const PrimitiveRenderer: React.FC<PrimitiveRendererProps> = ({
             onMouseEnter={onMouseEnter}
           />
         )}
-        <ConsensusBadge
-          show={config?.showConsensus ?? false}
-          consolidated_value={fieldValue}
-          content={consensusContent}
-          id={`${path}-consensus`}
-        />
         {/* json schema editor button */}
         {setSchema && showPropertyEditorPencil !== false && (
           <Dialog modal>
@@ -4207,10 +4052,8 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({ className }) => {
     isStreaming,
     size,
     disabled,
-    consensusDetails,
   } = useUiFormContext();
   const formData = form.getValues();
-  const rootConsensus = calculateConsensusContent(consensusDetails, "");
 
   return (
     <Form {...form}>

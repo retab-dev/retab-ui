@@ -60,7 +60,10 @@ export function getEffectiveType(node: ExtendedJSONSchema7): {
   if (node.type === "string" && node.format === "date") {
     return { type: "date", isNullable: false };
   }
-  if (node.type === "string" && node.format === "iso-time") {
+  if (
+    node.type === "string" &&
+    (node.format === "time" || node.format === "iso-time")
+  ) {
     return { type: "time", isNullable: false };
   }
   if (node.type === "string" && node.format === "date-time") {
@@ -90,7 +93,7 @@ export function defaultSchemaForType(type: string): ExtendedJSONSchema7 {
     case "date":
       return { type: "string", format: "date" };
     case "time":
-      return { type: "string", format: "iso-time" };
+      return { type: "string", format: "time" };
     case "datetime":
       return { type: "string", format: "date-time" };
     default:

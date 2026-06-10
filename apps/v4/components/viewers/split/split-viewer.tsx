@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { Loader2, Scissors } from "lucide-react";
 
 import { type SplitView } from "@/components/viewers/lib/split-types";
@@ -8,15 +14,20 @@ import { segmentsPageCount, toSegments } from "@/lib/segments";
 import { SegmentLegend } from "@/components/ui/segment-legend";
 import { PageRibbon } from "@/components/ui/page-ribbon";
 
-/** Handlers a document surface calls to keep the ribbon/legend in sync. */
+/**
+ * Handlers a document surface receives. `header` (the legend) and `aside` (the
+ * page ribbon) are the viewer's chrome — the surface renders them around the
+ * document so the document's own controls stay on top.
+ */
 export interface SplitDocumentHandlers {
   onCurrentPageChange: (page: number) => void;
+  header: ReactNode;
+  aside: ReactNode;
 }
 
 export interface SplitViewerProps {
   result: SplitView | null;
   isProcessing?: boolean;
-  /** Render the source document (with split overlays, ideally). */
   renderDocument?: (handlers: SplitDocumentHandlers) => ReactNode;
 }
 
@@ -30,7 +41,6 @@ export function SplitViewer({
   const previewRef = useRef<HTMLDivElement | null>(null);
   const hasOutput = !!result && result.output.length > 0;
 
-  // One Segment per subdocument — the sidebar ribbon and the legend share it.
   const segments = useMemo(
     () => toSegments(result?.output ?? []),
     [result?.output],
@@ -66,50 +76,49 @@ export function SplitViewer({
     );
   }
 
-  return (
-    <div className="flex min-h-0 flex-1">
-      {pageCount > 0 ? (
-        <div className="flex shrink-0 overflow-auto border-r border-zinc-200 bg-white px-3 py-6">
-          <PageRibbon
-            orientation="vertical"
-            rows={[{ id: "split", segments }]}
-            pageCount={pageCount}
-            currentPage={currentPage}
-            activeId={activeId}
-            onActivate={setActiveId}
-            onSelectPage={handleJumpToPage}
-            showTicks
-          />
-        </div>
-      ) : null}
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-white">
-        <div
-          className="shrink-0 border-b border-zinc-200 bg-white px-3 py-2"
-          aria-label="Split legend"
-        >
-          <SegmentLegend
-            segments={segments}
-            currentPage={currentPage}
-            activeId={activeId}
-            onActivate={setActiveId}
-            onSelect={(id) => {
-              const seg = segments.find((s) => s.id === id);
-              if (seg?.pages.length) handleJumpToPage(seg.pages[0]);
-            }}
-            columns={4}
-            showUnusedToggle
-          />
-        </div>
-        <section ref={previewRef} className="min-h-0 flex-1 overflow-hidden">
-          {renderDocument ? (
-            renderDocument({ onCurrentPageChange: setCurrentPage })
-          ) : (
-            <div className="flex h-full items-center justify-center">
-              <span className="text-sm text-zinc-500">No document available</span>
-            </div>
-          )}
-        </section>
+  // The legend sits below the document toolbar; the ribbon is the left rail.
+  const header = (
+    <div className="border-b border-zinc-200 bg-white px-3 py-2">
+      <SegmentLegend
+        segments={segments}
+        currentPage={currentPage}
+        activeId={activeId}
+        onActivate={setActiveId}
+        onSelect={(id) => {
+          const seg = segments.find((s) => s.id === id);
+          if (seg?.pages.length) handleJumpToPage(seg.pages[0]);
+        }}
+        columns={4}
+        showUnusedToggle
+      />
+    </div>
+  );
+
+  const aside =
+    pageCount > 0 ? (
+      <div className="h-full overflow-auto border-r border-zinc-200 bg-white px-3 py-6">
+        <PageRibbon
+          orientation="vertical"
+          rows={[{ id: "split", segments }]}
+          pageCount={pageCount}
+          currentPage={currentPage}
+          activeId={activeId}
+          onActivate={setActiveId}
+          onSelectPage={handleJumpToPage}
+          showTicks
+        />
       </div>
+    ) : null;
+
+  return (
+    <div ref={previewRef} className="flex min-h-0 flex-1 bg-white">
+      {renderDocument ? (
+        renderDocument({ onCurrentPageChange: setCurrentPage, header, aside })
+      ) : (
+        <div className="flex h-full flex-1 items-center justify-center">
+          <span className="text-sm text-zinc-500">No document available</span>
+        </div>
+      )}
     </div>
   );
 }

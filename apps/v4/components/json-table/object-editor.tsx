@@ -51,9 +51,7 @@ export function ObjectEditor({
         form={form}
         schema={property}
         variant="normal"
-        config={{
-          showReasoning: true,
-        }}
+        config={{}}
         size="sm"
         className="w-full"
         disabled={disabled}
@@ -142,9 +140,7 @@ export function ArrayEditor({
         form={form}
         schema={wrapperSchema}
         variant="normal"
-        config={{
-          showReasoning: true,
-        }}
+        config={{}}
         size="sm"
         className="w-full"
         disabled={disabled}
