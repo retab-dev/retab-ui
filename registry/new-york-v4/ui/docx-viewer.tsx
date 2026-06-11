@@ -286,6 +286,8 @@ function DocxViewerInner({
   // current-page cursor stays in sync even when the viewer is embedded.
   const scrollViewportRef = React.useRef<HTMLDivElement | null>(null)
   const lastReported = React.useRef(0)
+  // The page nearest the top of the viewport, shown as "Page N of M" in the toolbar.
+  const [currentPage, setCurrentPage] = React.useState(1)
   // Coalesce scroll work to one frame: the layout reads below (getBoundingClientRect
   // over every page) shouldn't run on every scroll event.
   const scrollFrame = React.useRef(0)
@@ -308,6 +310,7 @@ function DocxViewerInner({
     }
     if (current && current !== lastReported.current) {
       lastReported.current = current
+      setCurrentPage(current)
       onVisiblePageChange?.(current)
     }
   }, [onVisiblePageChange, onScrollProgressChange])
@@ -454,7 +457,7 @@ function DocxViewerInner({
           <span className="px-1 text-xs text-muted-foreground tabular-nums">
             {ready ? (
               <>
-                {numPages} page{numPages === 1 ? "" : "s"}
+                Page {Math.min(currentPage, numPages)} of {numPages}
               </>
             ) : (
               // Page count is unknown until docx-preview lays out — skeleton it.
@@ -512,11 +515,8 @@ function DocxViewerInner({
           <ScrollArea
             className="min-h-0 flex-1"
             viewportRef={scrollViewportRef}
-            viewportProps={
-              onVisiblePageChange || onScrollProgressChange
-                ? { onScroll: handleScroll }
-                : undefined
-            }
+            // Always track scroll so the toolbar's "Page N of M" updates.
+            viewportProps={{ onScroll: handleScroll }}
           >
             <div ref={containerRef} className="flex flex-col items-center p-4">
               {/* A document-shaped skeleton stands in for the pages until

@@ -174,7 +174,7 @@ export const VIEWER_BLOCKS = [
     registryName: "legend-variants-block",
     title: "Legend Variants",
     description:
-      "The split viewer shown with every legend placement — a 2×2 gallery over one attention.pdf split result: bar, floating, inset, and a vertical rail, all sharing one selection.",
+      "The split viewer shown with every legend placement — bar, floating, and a vertical rail — over one attention.pdf split result, all sharing one selection.",
     command: getRegistryAddCommand("legend-variants-block"),
     docsHref: "/docs/components/split-viewer",
     viewHref: "/view/blocks/legend-variants",

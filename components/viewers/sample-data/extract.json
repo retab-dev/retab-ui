@@ -2,96 +2,96 @@
   {
     "key": "accountNumber",
     "label": "Account number",
-    "value": "000000710753986",
+    "value": "000009752",
     "source": {
-      "content": "000000710753986",
+      "content": "000009752",
       "anchor": {
         "kind": "pdf_bbox",
         "page": 1,
-        "left": 0.7026,
-        "top": 0.073,
-        "width": 0.1412,
-        "height": 0.0164
+        "left": 0.8199,
+        "top": 0.181,
+        "width": 0.0746,
+        "height": 0.0127
       }
     }
   },
   {
-    "key": "statementPeriod",
-    "label": "Statement period",
-    "value": "Oct 1 \u2013 Oct 31, 2021",
+    "key": "statementDate",
+    "label": "Statement date",
+    "value": "June 5, 2003",
     "source": {
-      "content": "October 01, 2021 through October 31, 2021",
+      "content": "June 5, 2003",
       "anchor": {
         "kind": "pdf_bbox",
         "page": 1,
-        "left": 0.5902,
-        "top": 0.0589,
-        "width": 0.2509,
-        "height": 0.0136
+        "left": 0.8033,
+        "top": 0.216,
+        "width": 0.0898,
+        "height": 0.0127
       }
     }
   },
   {
-    "key": "magicjack",
-    "label": "Magicjack purchase",
-    "value": "$20.91",
+    "key": "beginningBalance",
+    "label": "Beginning balance",
+    "value": "$7,126.11",
     "source": {
-      "content": "$20.91",
+      "content": "$7,126.11",
       "anchor": {
         "kind": "pdf_bbox",
         "page": 1,
-        "left": 0.8217,
-        "top": 0.1657,
-        "width": 0.0499,
-        "height": 0.0152
+        "left": 0.8248,
+        "top": 0.3337,
+        "width": 0.0672,
+        "height": 0.0101
       }
     }
   },
   {
-    "key": "sprint",
-    "label": "Sprint Wireless",
-    "value": "$453.46",
+    "key": "endingBalance",
+    "label": "Ending balance",
+    "value": "$10,521.19",
     "source": {
-      "content": "453.46",
+      "content": "$10,521.19",
       "anchor": {
         "kind": "pdf_bbox",
         "page": 1,
-        "left": 0.8217,
-        "top": 0.1991,
-        "width": 0.0499,
-        "height": 0.0152
+        "left": 0.8174,
+        "top": 0.4225,
+        "width": 0.0757,
+        "height": 0.0127
+      }
+    }
+  },
+  {
+    "key": "totalDeposits",
+    "label": "Total deposits & credits",
+    "value": "$3,615.08",
+    "source": {
+      "content": "$3,615.08",
+      "anchor": {
+        "kind": "pdf_bbox",
+        "page": 1,
+        "left": 0.8259,
+        "top": 0.508,
+        "width": 0.0672,
+        "height": 0.0101
       }
     }
   },
   {
     "key": "atmWithdrawal",
-    "label": "Non-Chase ATM withdrawal",
-    "value": "$303.00",
+    "label": "ATM withdrawal",
+    "value": "$20.00",
     "source": {
-      "content": "303.00",
+      "content": "$20.00",
       "anchor": {
         "kind": "pdf_bbox",
         "page": 1,
-        "left": 0.8217,
-        "top": 0.2324,
-        "width": 0.0499,
-        "height": 0.0152
-      }
-    }
-  },
-  {
-    "key": "hostgator",
-    "label": "Hostgator.com",
-    "value": "$97.50",
-    "source": {
-      "content": "97.50",
-      "anchor": {
-        "kind": "pdf_bbox",
-        "page": 1,
-        "left": 0.8301,
-        "top": 0.2491,
-        "width": 0.0417,
-        "height": 0.0152
+        "left": 0.8444,
+        "top": 0.6405,
+        "width": 0.0463,
+        "height": 0.0101
       }
     }
   }

@@ -29,7 +29,6 @@ interface SingleFileTableViewProps {
     fieldPath: string;
     rect: DOMRect;
   }) => void;
-  showHoverCard?: boolean; // Show hover card popover on cell hover
   /** Direct callback for ground truth changes (used in reconciliation mode) */
   onGroundTruthChange?: (fieldPath: string, newValue: any) => void;
   /** Map from field paths to indication texts (for review) */
@@ -50,7 +49,6 @@ export const SingleFileTableView = React.memo<SingleFileTableViewProps>(
     editMode = "editable",
     allowEditing = true,
     onCellHoverStart,
-    showHoverCard = false,
     onGroundTruthChange,
     fieldIndicationMap,
     fieldReasoningMap,
@@ -123,7 +121,6 @@ export const SingleFileTableView = React.memo<SingleFileTableViewProps>(
             editMode={editMode}
             allowEditing={allowEditing}
             onCellHoverStart={onCellHoverStart}
-            showHoverCard={showHoverCard}
             onGroundTruthChange={onGroundTruthChange}
             fieldIndicationMap={fieldIndicationMap}
             fieldReasoningMap={fieldReasoningMap}

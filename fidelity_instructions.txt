@@ -1,0 +1,42 @@
+{
+  "account_owners": [
+    "David Alan Whitmore",
+    "Elena Marie Whitmore"
+  ],
+  "fidelity_accounts": [
+    "X41-872034",
+    "X41-872035"
+  ],
+  "wire_instructions": {
+    "bank_name": "Wells Fargo Bank, N.A.",
+    "routing_or_aba_number": "121000248",
+    "account_number": "4872019365",
+    "account_owner_names": "David Alan Whitmore & Elena Marie Whitmore",
+    "recipient_address": {
+      "street": "1450 Montgomery Street, Suite 700",
+      "city": "San Francisco",
+      "state_or_province": "CA",
+      "postal_code": "94104",
+      "country": "United States"
+    },
+    "for_further_credit": "For Further Credit to Whitmore Family Trust, Acc #88210456",
+    "account_outside_united_states": false
+  },
+  "correspondent_bank": {
+    "routing_or_aba_number": "N/A",
+    "bank_name": "N/A",
+    "swift_code": "N/A",
+    "country": "N/A"
+  },
+  "w8_reason": "N/A — domestic transfer to a U.S. financial institution matching country of tax residence",
+  "signatures": [
+    {
+      "printed_name": "DAVID ALAN WHITMORE",
+      "date": "06/11/2026"
+    },
+    {
+      "printed_name": "ELENA MARIE WHITMORE",
+      "date": "06/11/2026"
+    }
+  ]
+}

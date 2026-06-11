@@ -176,7 +176,6 @@ export function SchemaNodeEditor({
 
   const { type: localType, isNullable: localNullable } = getEffectiveType(node);
   const isEditable = editMode === "editable";
-  const _isPromptOnly = editMode === "promptOnly";
 
   const [metadataDialogOpen, setMetadataDialogOpen] = useState(false);
   const [enumCreationDialogOpen, setEnumCreationDialogOpen] = useState(false);

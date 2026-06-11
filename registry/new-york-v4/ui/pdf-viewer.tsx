@@ -327,6 +327,8 @@ function PdfViewerInner({
     setViewportEl(el)
   }, [])
   const lastReported = React.useRef(0)
+  // The page nearest the top of the viewport, shown as "Page N of M" in the toolbar.
+  const [currentPage, setCurrentPage] = React.useState(1)
   // Coalesce scroll work to one frame: the layout reads below (getBoundingClientRect
   // over every page slot) shouldn't run on every scroll event.
   const scrollFrame = React.useRef(0)
@@ -349,6 +351,7 @@ function PdfViewerInner({
     }
     if (current && current !== lastReported.current) {
       lastReported.current = current
+      setCurrentPage(current)
       onVisiblePageChange?.(current)
     }
   }, [onVisiblePageChange, onScrollProgressChange])
@@ -482,7 +485,7 @@ function PdfViewerInner({
             </IconButton>
           ) : null}
           <span className="px-1 text-xs text-muted-foreground tabular-nums">
-            {doc.numPages} page{doc.numPages === 1 ? "" : "s"}
+            Page {Math.min(currentPage, doc.numPages)} of {doc.numPages}
           </span>
           <div className="ml-auto flex items-center gap-1">
             <IconButton label="Zoom out" onClick={() => zoom(1 / 1.2)}>
@@ -539,11 +542,9 @@ function PdfViewerInner({
             <ScrollArea
               className="min-h-0 flex-1"
               viewportRef={setScrollViewport}
-              viewportProps={
-                onVisiblePageChange || onScrollProgressChange
-                  ? { onScroll: handleScroll }
-                  : undefined
-              }
+              // Always track scroll so the toolbar's "Page N of M" updates, even
+              // when no external page/scroll callbacks are wired up.
+              viewportProps={{ onScroll: handleScroll }}
             >
               <div ref={containerRef} className="flex flex-col items-center gap-4 p-4">
                 {Array.from({ length: doc.numPages }, (_, i) => {

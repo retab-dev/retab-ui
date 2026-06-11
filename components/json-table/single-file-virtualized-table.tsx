@@ -1,7 +1,6 @@
 "use client";
 
-import React, { useMemo, useState, useRef, useCallback } from "react";
-import { createPortal } from "react-dom";
+import React, { useMemo, useState, useRef } from "react";
 import { JSONSchema7 } from "json-schema";
 import {
   Table,
@@ -25,10 +24,7 @@ import {
 } from "./table-options-store";
 import { getTheme } from "@/components/json-table/lib/themes";
 import { HoverInfoContext, HoverInfo } from "./hover-info-context";
-import { HoverCardPortalContext } from "./hover-card-context";
-import { DataCellPopoverCardContent } from "./data-cell-popover-card-content";
 import { useFixedRowWindow } from "./lib/use-fixed-row-window";
-import { useMountEffect } from "@/hooks/useMountEffect";
 
 interface SingleFileVirtualizedTableProps {
   stopAt: string[];
@@ -49,7 +45,6 @@ interface SingleFileVirtualizedTableProps {
     fieldPath: string;
     rect: DOMRect;
   }) => void;
-  showHoverCard?: boolean;
   /** Direct callback for ground truth changes (used in reconciliation mode) */
   onGroundTruthChange?: (fieldPath: string, newValue: any) => void;
   /** Map from field paths to indication texts (for review) */
@@ -119,41 +114,6 @@ const SingleFileTableHeader = React.memo(
 );
 SingleFileTableHeader.displayName = "SingleFileTableHeader";
 
-function HoverCardPositionRunner({
-  hoverInfo,
-  hoverCardRef,
-  setHoverCardPos,
-}: {
-  hoverInfo: HoverInfo;
-  hoverCardRef: React.RefObject<HTMLDivElement | null>;
-  setHoverCardPos: React.Dispatch<
-    React.SetStateAction<{ left: number; top: number }>
-  >;
-}) {
-  useMountEffect(() => {
-    const GAP = 0;
-    const PAD = 8;
-    const DIFF = 34;
-    const compute = () => {
-      const el = hoverCardRef.current;
-      const cardWidth = el?.offsetWidth ?? 240;
-      const cardHeight = el?.offsetHeight ?? 200;
-      let left = hoverInfo.rect.left - GAP - cardWidth;
-      let top = hoverInfo.rect.top - DIFF;
-      top = Math.max(PAD, Math.min(top, window.innerHeight - cardHeight - PAD));
-      if (left < PAD) {
-        left = hoverInfo.rect.right + GAP;
-      }
-      setHoverCardPos({ left, top });
-    };
-
-    const raf = requestAnimationFrame(compute);
-    return () => cancelAnimationFrame(raf);
-  });
-
-  return null;
-}
-
 export const SingleFileVirtualizedTable =
   React.memo<SingleFileVirtualizedTableProps>(
     ({
@@ -171,7 +131,6 @@ export const SingleFileVirtualizedTable =
       editMode,
       allowEditing = true,
       onCellHoverStart,
-      showHoverCard = false,
       onGroundTruthChange,
       fieldIndicationMap,
       fieldReasoningMap,
@@ -187,57 +146,6 @@ export const SingleFileVirtualizedTable =
       // Which object/array cell has its inline editor popover open (by field
       // key). Held at the table level so it survives row virtualization.
       const [openPopover, setOpenPopover] = useState<string | null>(null);
-
-      // Hover card state and refs
-      const hoverCardRef = useRef<HTMLDivElement>(null);
-      const [hoverCardPos, setHoverCardPos] = useState<{
-        left: number;
-        top: number;
-      }>({ left: 0, top: 0 });
-      const clearHoverTimeoutRef = useRef<number | null>(null);
-      const isPointerInCardRef = useRef<boolean>(false);
-      const [portalOpen, setPortalOpen] = useState(false);
-
-      // Handle cell hover start
-      const handleCellHoverStart = useCallback(
-        (info: { docId: string; fieldPath: string; rect: DOMRect }) => {
-          if (clearHoverTimeoutRef.current) {
-            clearTimeout(clearHoverTimeoutRef.current);
-            clearHoverTimeoutRef.current = null;
-          }
-          // Do not change the displayed field while the pointer is over the card
-          if (isPointerInCardRef.current) {
-            return;
-          }
-          setHoverInfo(info);
-          onCellHoverStart?.(info);
-        },
-        [onCellHoverStart],
-      );
-
-      // Handle cell hover end
-      const handleCellHoverEnd = useCallback(() => {
-        if (clearHoverTimeoutRef.current) {
-          clearTimeout(clearHoverTimeoutRef.current);
-        }
-        if (isPointerInCardRef.current || portalOpen) return; // keep showing while over card or when portal is open
-        // Small delay to avoid flicker crossing tiny gaps
-        clearHoverTimeoutRef.current = window.setTimeout(() => {
-          setHoverInfo(null);
-          clearHoverTimeoutRef.current = null;
-        }, 10);
-      }, [portalOpen]);
-
-      // Noop update function for read-only mode
-      const noopUpdateDocument = useCallback(async () => {}, []);
-      //         documentId: document.id,
-      //         documentRef: document,
-      //         columnsRef: columns,
-      //         tableAndPathsRef: tableAndPaths,
-      //         schemaRef: schema,
-      //         onUpdateDocumentRef: onUpdateDocument,
-      //     });
-      // }, [rowCount, visibleKeys, document, columns, tableAndPaths, schema, onUpdateDocument]);
 
       // Cells read the document via `row.original` — that's all the old
       // TanStack row gave them, so a one-field wrapper is the whole "row model".
@@ -264,73 +172,9 @@ export const SingleFileVirtualizedTable =
         rowHeight: rowHeightPx,
         overscan,
       });
-      const hoverCardPositionRunner =
-        showHoverCard && hoverInfo ? (
-          <HoverCardPositionRunner
-            key={`${hoverInfo.docId}:${hoverInfo.fieldPath}:${hoverInfo.rect.left}:${hoverInfo.rect.top}:${hoverInfo.rect.right}`}
-            hoverInfo={hoverInfo}
-            hoverCardRef={hoverCardRef}
-            setHoverCardPos={setHoverCardPos}
-          />
-        ) : null;
-
-      // Render hover card via portal to document.body to avoid transform/stacking context issues
-      const hoverCardElement =
-        showHoverCard && hoverInfo && typeof window !== "undefined"
-          ? createPortal(
-              <div
-                className="z-[9999]"
-                style={{
-                  position: "fixed",
-                  left: `${hoverCardPos.left}px`,
-                  top: `${hoverCardPos.top}px`,
-                  pointerEvents: "auto",
-                }}
-                onMouseEnter={() => {
-                  isPointerInCardRef.current = true;
-                  if (clearHoverTimeoutRef.current) {
-                    clearTimeout(clearHoverTimeoutRef.current);
-                    clearHoverTimeoutRef.current = null;
-                  }
-                }}
-                onMouseLeave={() => {
-                  isPointerInCardRef.current = false;
-                  if (!clearHoverTimeoutRef.current && !portalOpen) {
-                    clearHoverTimeoutRef.current = window.setTimeout(() => {
-                      setHoverInfo(null);
-                      clearHoverTimeoutRef.current = null;
-                    }, 120);
-                  }
-                }}
-              >
-                <HoverCardPortalContext.Provider value={{ setPortalOpen }}>
-                  <div
-                    ref={hoverCardRef}
-                    className="overflow-hidden rounded-md border border-border bg-background p-0 shadow-lg"
-                  >
-                    <DataCellPopoverCardContent
-                      document={document}
-                      selectedFieldPath={hoverInfo.fieldPath}
-                      currentIterationId="single-file"
-                      updateDocument={noopUpdateDocument}
-                      jsonSchema={schema}
-                      onGroundTruthChange={onGroundTruthChange}
-                      fieldIndicationMap={fieldIndicationMap}
-                      fieldReasoningMap={fieldReasoningMap}
-                    />
-                  </div>
-                </HoverCardPortalContext.Provider>
-              </div>,
-              window.document.body,
-            )
-          : null;
 
       return (
         <HoverInfoContext.Provider value={{ hoverInfo, setHoverInfo }}>
-          {hoverCardPositionRunner}
-          {/* Hover Card rendered via portal */}
-          {hoverCardElement}
-
           <div
             className={`relative flex min-h-0 min-w-0 flex-1 flex-col ${theme.tableContainerBg}`}
           >
@@ -400,14 +244,7 @@ export const SingleFileVirtualizedTable =
                           onUpdateDocument={onUpdateDocument}
                           editMode={editMode}
                           allowEditing={allowEditing}
-                          onCellHoverStart={
-                            showHoverCard
-                              ? handleCellHoverStart
-                              : onCellHoverStart
-                          }
-                          onCellHoverEnd={
-                            showHoverCard ? handleCellHoverEnd : undefined
-                          }
+                          onCellHoverStart={onCellHoverStart}
                           fieldIndicationMap={fieldIndicationMap}
                           fieldReasoningMap={fieldReasoningMap}
                         />

@@ -169,12 +169,6 @@ function getPropertyInfoCached(
   return info;
 }
 
-// TypeScript interface for hovered cell data
-export interface PopoverCellData {
-  mouseX: number;
-  mouseY: number;
-}
-
 export function DoubleClickInput({
   className,
   disabled = false,
@@ -452,11 +446,7 @@ function calculateVariables(props: DataCellProps & {}) {
   };
 }
 
-const DataCellContent = (
-  props: DataCellProps & {
-    onCellClick?: (cellData: PopoverCellData) => void;
-  },
-) => {
+const DataCellContent = (props: DataCellProps) => {
   const { hoverInfo, setHoverInfo } = useHoverInfo();
 
   const {
@@ -1341,11 +1331,7 @@ const DataCellContent = (
 };
 
 export const DataCell = React.memo(
-  (
-    props: DataCellProps & {
-      onCellClick?: (cellData: PopoverCellData) => void;
-    },
-  ) => {
+  (props: DataCellProps) => {
     return <DataCellContent {...props} />;
   },
   (prev: DataCellProps, next: DataCellProps) => {

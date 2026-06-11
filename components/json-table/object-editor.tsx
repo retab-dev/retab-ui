@@ -1,10 +1,9 @@
 import { useEffect } from "react";
 import { JSONSchemaType } from "ajv";
 import { ajvResolver } from "@hookform/resolvers/ajv";
-import { JSONSchema7, JSONSchema7Definition } from "json-schema";
+import { JSONSchema7 } from "json-schema";
 import { useForm, type UseFormReturn } from "react-hook-form";
 import { JsonForm } from "@/components/json-form/json-form";
-import { resolveSchemaReference } from "@/components/json-table/lib/json-schema-utils";
 import { getTheme } from "@/components/json-table/lib/themes";
 
 // Kept for caller compatibility; the lightweight JsonForm renders no scalar
@@ -116,34 +115,4 @@ export function ArrayEditor({
       </fieldset>
     </div>
   );
-}
-
-// Make sure to export isArrayProperty from components.tsx as well
-export function isArrayProperty(
-  property: JSONSchema7Definition,
-  schema: JSONSchema7,
-): boolean {
-  if (typeof property !== "object" || property === null) return false;
-
-  if (property.type === "array") return true;
-
-  const types = ["oneOf", "anyOf", "allOf"] as const;
-  for (const type of types) {
-    if (Array.isArray(property[type])) {
-      for (const subSchema of property[type]) {
-        if (typeof subSchema === "object" && subSchema?.type === "array") {
-          return true;
-        }
-      }
-    }
-  }
-
-  if (property.$ref && typeof property.$ref === "string") {
-    const referenced = resolveSchemaReference(property, schema);
-    if (referenced && referenced.type === "array") {
-      return true;
-    }
-  }
-
-  return false;
 }

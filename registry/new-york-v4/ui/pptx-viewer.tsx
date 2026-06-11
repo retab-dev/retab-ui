@@ -332,6 +332,8 @@ function PptxViewerInner({
   // Report the slide nearest the top of the scroll viewport as the user scrolls.
   const scrollViewportRef = React.useRef<HTMLDivElement | null>(null)
   const lastReported = React.useRef(0)
+  // The slide nearest the top of the viewport, shown as "Slide N of M".
+  const [currentSlide, setCurrentSlide] = React.useState(1)
   const handleScroll = React.useCallback(() => {
     const viewport = scrollViewportRef.current
     if (!viewport) return
@@ -350,6 +352,7 @@ function PptxViewerInner({
     }
     if (current && current !== lastReported.current) {
       lastReported.current = current
+      setCurrentSlide(current)
       onVisiblePageChange?.(current)
     }
   }, [onVisiblePageChange, onScrollProgressChange])
@@ -380,7 +383,7 @@ function PptxViewerInner({
       {toolbar ? (
         <div className="flex h-10 flex-shrink-0 items-center gap-1 border-b bg-card px-2">
           <span className="px-1 text-xs text-muted-foreground tabular-nums">
-            {slideCount} slide{slideCount === 1 ? "" : "s"}
+            Slide {Math.min(currentSlide, slideCount)} of {slideCount}
           </span>
           <div className="ml-auto flex items-center gap-1">
             <IconButton label="Zoom out" onClick={() => zoom(1 / 1.2)}>

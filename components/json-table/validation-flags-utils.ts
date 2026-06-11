@@ -1,27 +1,5 @@
 import { DatasetDocument } from "@/components/json-table/lib/projects-types";
 
-const setAllFlagsTrue = (node: any): any => {
-  if (typeof node === "boolean") return true;
-  if (Array.isArray(node)) return node.map(setAllFlagsTrue);
-  if (node && typeof node === "object") {
-    const out: any = {};
-    for (const k of Object.keys(node)) out[k] = setAllFlagsTrue(node[k]);
-    return out;
-  }
-  return node;
-};
-
-export const markDocumentAsVerified = (
-  doc: DatasetDocument,
-  updateDatasetDocument: (docId: string, patch: any) => Promise<any>,
-) => {
-  const prev = (doc?.validation_flags as any) || {};
-  const next = setAllFlagsTrue(prev);
-  const patch: Partial<DatasetDocument> = { validation_flags: next };
-  updateDatasetDocument(doc.id, patch);
-  return true;
-};
-
 // Helper: Get flag value at a specific path in the flags tree
 export const getFlagAtPath = (
   flagsTree: any,

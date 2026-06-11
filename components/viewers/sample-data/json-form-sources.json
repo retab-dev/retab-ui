@@ -2,7 +2,7 @@
   "object": "extraction.sources",
   "document_type": "pdf",
   "file": {
-    "id": "file_bank_statement_oct_2021",
+    "id": "file_bank_statement_jun_2003",
     "filename": "bank-statement.pdf",
     "mime_type": "application/pdf"
   },
@@ -14,9 +14,9 @@
         "type": "string",
         "description": "Account number"
       },
-      "statement_period": {
+      "statement_date": {
         "type": "string",
-        "description": "Statement period"
+        "description": "Statement date"
       },
       "transactions": {
         "type": "array",
@@ -37,432 +37,288 @@
         }
       }
     },
-    "required": ["account_number", "statement_period"]
+    "required": [
+      "account_number",
+      "statement_date"
+    ]
   },
   "extraction": {
-    "account_number": "000000710753986",
-    "statement_period": "October 01, 2021 through October 31, 2021",
+    "account_number": "000009752",
+    "statement_date": "June 5, 2003",
     "transactions": [
       {
-        "date": "10/01",
-        "description": "Sprint Wireless",
-        "amount": 453.46
+        "date": "05-15",
+        "description": "Deposit",
+        "amount": 3615.08
       },
       {
-        "date": "10/04",
-        "description": "Buchwald Jewelers",
-        "amount": 2000.0
+        "date": "05-18",
+        "description": "ATM Withdrawal",
+        "amount": 20
       },
       {
-        "date": "10/05",
-        "description": "Costco Wholesale",
-        "amount": 275.0
+        "date": "05-12",
+        "description": "Check #1001",
+        "amount": 75
       },
       {
-        "date": "10/06",
-        "description": "Padron Cigars",
-        "amount": 419.01
+        "date": "05-18",
+        "description": "Check #1002",
+        "amount": 30
       },
       {
-        "date": "10/06",
-        "description": "Bass Pro Shops",
-        "amount": 331.57
-      },
-      {
-        "date": "10/07",
-        "description": "Magicjack",
-        "amount": 20.91
-      },
-      {
-        "date": "10/08",
-        "description": "Non-Chase ATM Withdrawal",
-        "amount": 303.0
-      },
-      {
-        "date": "10/09",
-        "description": "Hostgator.com",
-        "amount": 97.5
+        "date": "05-24",
+        "description": "Check #1003",
+        "amount": 200
       }
     ]
   },
   "sources": {
     "account_number": {
-      "value": "000000710753986",
+      "value": "000009752",
       "source": {
-        "content": "000000710753986",
+        "content": "000009752",
         "anchor": {
           "kind": "pdf_bbox",
           "page": 1,
-          "left": 0.7051,
-          "top": 0.0749,
-          "width": 0.1363,
-          "height": 0.0126
+          "left": 0.8199,
+          "top": 0.181,
+          "width": 0.0746,
+          "height": 0.0127
         }
       }
     },
-    "statement_period": {
-      "value": "October 01, 2021 through October 31, 2021",
+    "statement_date": {
+      "value": "June 5, 2003",
       "source": {
-        "content": "October 01, 2021 through October 31, 2021",
+        "content": "June 5, 2003",
         "anchor": {
           "kind": "pdf_bbox",
           "page": 1,
-          "left": 0.5926,
-          "top": 0.0608,
-          "width": 0.246,
-          "height": 0.0098
+          "left": 0.8033,
+          "top": 0.216,
+          "width": 0.0898,
+          "height": 0.0127
         }
       }
     },
     "transactions": [
       {
         "date": {
-          "value": "10/01",
+          "value": "05-15",
           "source": {
-            "content": "10 01",
+            "content": "05-15",
             "anchor": {
               "kind": "pdf_bbox",
               "page": 1,
-              "left": 0.0549,
-              "top": 0.201,
-              "width": 0.0368,
-              "height": 0.0114
+              "left": 0.6345,
+              "top": 0.508,
+              "width": 0.0385,
+              "height": 0.0101
             }
           }
         },
         "description": {
-          "value": "Sprint Wireless",
+          "value": "Deposit",
           "source": {
-            "content": "Sprint",
+            "content": "Deposit",
             "anchor": {
               "kind": "pdf_bbox",
               "page": 1,
-              "left": 0.3334,
-              "top": 0.201,
-              "width": 0.0384,
-              "height": 0.0114
+              "left": 0.1299,
+              "top": 0.508,
+              "width": 0.0512,
+              "height": 0.0101
             }
           }
         },
         "amount": {
-          "value": 453.46,
+          "value": 3615.08,
           "source": {
-            "content": "453.46",
+            "content": "3,615.08",
             "anchor": {
               "kind": "pdf_bbox",
               "page": 1,
-              "left": 0.8242,
-              "top": 0.201,
-              "width": 0.045,
-              "height": 0.0114
+              "left": 0.8259,
+              "top": 0.508,
+              "width": 0.0672,
+              "height": 0.0101
             }
           }
         }
       },
       {
         "date": {
-          "value": "10/04",
+          "value": "05-18",
           "source": {
-            "content": "10 04",
+            "content": "05-18",
             "anchor": {
               "kind": "pdf_bbox",
               "page": 1,
-              "left": 0.0549,
-              "top": 0.451,
-              "width": 0.0368,
-              "height": 0.0114
+              "left": 0.5366,
+              "top": 0.6405,
+              "width": 0.0389,
+              "height": 0.0101
             }
           }
         },
         "description": {
-          "value": "Buchwald Jewelers",
+          "value": "ATM Withdrawal",
           "source": {
-            "content": "Buchwald",
+            "content": "ATM Withdrawal",
             "anchor": {
               "kind": "pdf_bbox",
               "page": 1,
-              "left": 0.3204,
-              "top": 0.451,
-              "width": 0.0638,
-              "height": 0.0114
+              "left": 0.1299,
+              "top": 0.615,
+              "width": 0.1089,
+              "height": 0.0101
             }
           }
         },
         "amount": {
-          "value": 2000.0,
+          "value": 20,
           "source": {
-            "content": "2,000.00",
+            "content": "20.00",
             "anchor": {
               "kind": "pdf_bbox",
               "page": 1,
-              "left": 0.8118,
-              "top": 0.451,
-              "width": 0.0572,
-              "height": 0.0114
+              "left": 0.8444,
+              "top": 0.6405,
+              "width": 0.0463,
+              "height": 0.0101
             }
           }
         }
       },
       {
         "date": {
-          "value": "10/05",
+          "value": "05-12",
           "source": {
-            "content": "10 05",
+            "content": "05-12",
             "anchor": {
               "kind": "pdf_bbox",
               "page": 1,
-              "left": 0.0549,
-              "top": 0.6676,
-              "width": 0.0368,
-              "height": 0.0114
+              "left": 0.1299,
+              "top": 0.7623,
+              "width": 0.0402,
+              "height": 0.0126
             }
           }
         },
         "description": {
-          "value": "Costco Wholesale",
+          "value": "Check #1001",
           "source": {
-            "content": "Costco",
+            "content": "1001",
             "anchor": {
               "kind": "pdf_bbox",
               "page": 1,
-              "left": 0.3204,
-              "top": 0.6676,
-              "width": 0.0458,
-              "height": 0.0114
+              "left": 0.2302,
+              "top": 0.7623,
+              "width": 0.0345,
+              "height": 0.0126
             }
           }
         },
         "amount": {
-          "value": 275.0,
+          "value": 75,
           "source": {
-            "content": "275.00",
+            "content": "75.00",
             "anchor": {
               "kind": "pdf_bbox",
               "page": 1,
-              "left": 0.8242,
-              "top": 0.6676,
-              "width": 0.045,
-              "height": 0.0114
+              "left": 0.3873,
+              "top": 0.7623,
+              "width": 0.0391,
+              "height": 0.0126
             }
           }
         }
       },
       {
         "date": {
-          "value": "10/06",
+          "value": "05-18",
           "source": {
-            "content": "10 06",
+            "content": "05-18",
             "anchor": {
               "kind": "pdf_bbox",
               "page": 1,
-              "left": 0.0549,
-              "top": 0.6843,
-              "width": 0.0368,
-              "height": 0.0114
+              "left": 0.1299,
+              "top": 0.7784,
+              "width": 0.0402,
+              "height": 0.0126
             }
           }
         },
         "description": {
-          "value": "Padron Cigars",
+          "value": "Check #1002",
           "source": {
-            "content": "Padron",
+            "content": "1002",
             "anchor": {
               "kind": "pdf_bbox",
               "page": 1,
-              "left": 0.3334,
-              "top": 0.6843,
-              "width": 0.0474,
-              "height": 0.0114
+              "left": 0.2302,
+              "top": 0.7784,
+              "width": 0.0345,
+              "height": 0.0126
             }
           }
         },
         "amount": {
-          "value": 419.01,
+          "value": 30,
           "source": {
-            "content": "419.01",
+            "content": "30.00",
             "anchor": {
               "kind": "pdf_bbox",
               "page": 1,
-              "left": 0.8242,
-              "top": 0.6843,
-              "width": 0.045,
-              "height": 0.0114
+              "left": 0.3873,
+              "top": 0.7784,
+              "width": 0.0391,
+              "height": 0.0126
             }
           }
         }
       },
       {
         "date": {
-          "value": "10/06",
+          "value": "05-24",
           "source": {
-            "content": "10 06",
+            "content": "05-24",
             "anchor": {
               "kind": "pdf_bbox",
               "page": 1,
-              "left": 0.0549,
-              "top": 0.751,
-              "width": 0.0368,
-              "height": 0.0114
+              "left": 0.1299,
+              "top": 0.7954,
+              "width": 0.0402,
+              "height": 0.0126
             }
           }
         },
         "description": {
-          "value": "Bass Pro Shops",
+          "value": "Check #1003",
           "source": {
-            "content": "Bass",
+            "content": "1003",
             "anchor": {
               "kind": "pdf_bbox",
               "page": 1,
-              "left": 0.2983,
-              "top": 0.751,
-              "width": 0.0327,
-              "height": 0.0114
+              "left": 0.2302,
+              "top": 0.7954,
+              "width": 0.0345,
+              "height": 0.0126
             }
           }
         },
         "amount": {
-          "value": 331.57,
+          "value": 200,
           "source": {
-            "content": "331.57",
+            "content": "200.00",
             "anchor": {
               "kind": "pdf_bbox",
               "page": 1,
-              "left": 0.8242,
-              "top": 0.751,
-              "width": 0.045,
-              "height": 0.0114
-            }
-          }
-        }
-      },
-      {
-        "date": {
-          "value": "10/07",
-          "source": {
-            "content": "10 07",
-            "anchor": {
-              "kind": "pdf_bbox",
-              "page": 1,
-              "left": 0.0549,
-              "top": 0.1657,
-              "width": 0.0368,
-              "height": 0.0114
-            }
-          }
-        },
-        "description": {
-          "value": "Magicjack",
-          "source": {
-            "content": "Magicjack",
-            "anchor": {
-              "kind": "pdf_bbox",
-              "page": 1,
-              "left": 0.3334,
-              "top": 0.1657,
-              "width": 0.063,
-              "height": 0.0114
-            }
-          }
-        },
-        "amount": {
-          "value": 20.91,
-          "source": {
-            "content": "20.91",
-            "anchor": {
-              "kind": "pdf_bbox",
-              "page": 1,
-              "left": 0.8217,
-              "top": 0.1657,
-              "width": 0.0499,
-              "height": 0.0152
-            }
-          }
-        }
-      },
-      {
-        "date": {
-          "value": "10/08",
-          "source": {
-            "content": "10 08",
-            "anchor": {
-              "kind": "pdf_bbox",
-              "page": 1,
-              "left": 0.0549,
-              "top": 0.2324,
-              "width": 0.0368,
-              "height": 0.0114
-            }
-          }
-        },
-        "description": {
-          "value": "Non-Chase ATM Withdrawal",
-          "source": {
-            "content": "Non-Chase",
-            "anchor": {
-              "kind": "pdf_bbox",
-              "page": 1,
-              "left": 0.2983,
-              "top": 0.2324,
-              "width": 0.085,
-              "height": 0.0114
-            }
-          }
-        },
-        "amount": {
-          "value": 303.0,
-          "source": {
-            "content": "303.00",
-            "anchor": {
-              "kind": "pdf_bbox",
-              "page": 1,
-              "left": 0.8217,
-              "top": 0.2324,
-              "width": 0.0499,
-              "height": 0.0152
-            }
-          }
-        }
-      },
-      {
-        "date": {
-          "value": "10/09",
-          "source": {
-            "content": "10 09",
-            "anchor": {
-              "kind": "pdf_bbox",
-              "page": 1,
-              "left": 0.0549,
-              "top": 0.2491,
-              "width": 0.0368,
-              "height": 0.0114
-            }
-          }
-        },
-        "description": {
-          "value": "Hostgator.com",
-          "source": {
-            "content": "Hostgator",
-            "anchor": {
-              "kind": "pdf_bbox",
-              "page": 1,
-              "left": 0.3334,
-              "top": 0.2491,
-              "width": 0.075,
-              "height": 0.0114
-            }
-          }
-        },
-        "amount": {
-          "value": 97.5,
-          "source": {
-            "content": "97.50",
-            "anchor": {
-              "kind": "pdf_bbox",
-              "page": 1,
-              "left": 0.8301,
-              "top": 0.2491,
-              "width": 0.0417,
-              "height": 0.0152
+              "left": 0.3787,
+              "top": 0.7954,
+              "width": 0.0477,
+              "height": 0.0126
             }
           }
         }

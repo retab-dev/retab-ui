@@ -35,8 +35,8 @@ type Preset = {
 }
 
 // Every way the legend can sit on the document. The page ribbon stays the left
-// rail throughout; the legend takes the top, floats over the page, insets into a
-// panel, or runs down the right edge — so each is independent of the ribbon.
+// rail throughout; the legend takes the top, floats over the page, or runs down
+// the right edge — so each is independent of the ribbon.
 const PRESETS: Preset[] = [
   { label: "Bar", variant: "bar", orientation: "horizontal", side: "top", slot: "top" },
   { label: "Floating", variant: "floating", orientation: "horizontal", side: "top", slot: "overlay" },

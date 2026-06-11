@@ -17,41 +17,6 @@ export const useSheetOptionsStore = create<SheetOptionsState>((set) => ({
   setColumnWidth: (width) => set({ columnWidth: width }),
 }));
 
-// Utility functions for calculating dimensions
-export const getRowHeightClass = (height: RowHeight): string => {
-  switch (height) {
-    case "small":
-      return "h-6";
-    case "medium":
-      return "h-8";
-    case "large":
-      return "h-10";
-    case "xl":
-      return "h-12";
-    case "xxl":
-      return "h-14";
-    default:
-      return "h-8";
-  }
-};
-
-export const getColumnWidthClass = (width: ColumnWidth): string => {
-  switch (width) {
-    case "small":
-      return "w-12";
-    case "medium":
-      return "w-16";
-    case "large":
-      return "w-24";
-    case "xl":
-      return "w-32";
-    case "xxl":
-      return "w-40";
-    default:
-      return "w-16";
-  }
-};
-
 // Get pixel values for calculations
 export const getColumnWidthPx = (width: ColumnWidth): number => {
   switch (width) {
@@ -87,6 +52,4 @@ export const getRowHeightPx = (height: RowHeight): number => {
   }
 };
 // Fixed column widths
-export const CHECKBOX_COLUMN_WIDTH = 40;
-export const FILE_COLUMN_WIDTH = 120;
 export const ACTION_COLUMN_WIDTH = 40;
