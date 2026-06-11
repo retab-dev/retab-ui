@@ -21,6 +21,7 @@ import { PageRibbon } from "@/components/ui/page-ribbon";
  */
 export interface SplitDocumentHandlers {
   onCurrentPageChange: (page: number) => void;
+  onScrollProgressChange: (progress: number) => void;
   header: ReactNode;
   aside: ReactNode;
 }
@@ -37,6 +38,7 @@ export function SplitViewer({
   renderDocument,
 }: SplitViewerProps) {
   const [currentPage, setCurrentPage] = useState(1);
+  const [scrollProgress, setScrollProgress] = useState(0);
   const [activeId, setActiveId] = useState<string | null>(null);
   const previewRef = useRef<HTMLDivElement | null>(null);
   const hasOutput = !!result && result.output.length > 0;
@@ -55,19 +57,19 @@ export function SplitViewer({
 
   if (!hasOutput) {
     return (
-      <div className="flex h-full flex-1 flex-col items-center justify-center gap-4 bg-gray-50 px-8 text-gray-400">
+      <div className="flex h-full flex-1 flex-col items-center justify-center gap-4 bg-muted px-8 text-muted-foreground">
         {isProcessing ? (
           <>
-            <Loader2 className="h-12 w-12 animate-spin text-amber-500" />
-            <p className="text-center text-base text-gray-500">Splitting...</p>
+            <Loader2 className="h-12 w-12 animate-spin text-warning-foreground" />
+            <p className="text-center text-base text-muted-foreground">Splitting...</p>
           </>
         ) : (
           <>
-            <Scissors className="h-16 w-16 text-gray-200" />
-            <p className="text-center text-base text-gray-500">
+            <Scissors className="h-16 w-16 text-muted-foreground" />
+            <p className="text-center text-base text-muted-foreground">
               Run split to see output
             </p>
-            <p className="max-w-sm text-center text-sm text-gray-400">
+            <p className="max-w-sm text-center text-sm text-muted-foreground">
               Upload a document, define subdocuments, then click Run Split
             </p>
           </>
@@ -78,7 +80,7 @@ export function SplitViewer({
 
   // The legend sits below the document toolbar; the ribbon is the left rail.
   const header = (
-    <div className="border-b border-zinc-200 bg-white px-3 py-2">
+    <div className="border-b border-border bg-background px-3 py-2">
       <SegmentLegend
         segments={segments}
         currentPage={currentPage}
@@ -96,12 +98,13 @@ export function SplitViewer({
 
   const aside =
     pageCount > 0 ? (
-      <div className="h-full overflow-auto border-r border-zinc-200 bg-white px-3 py-6">
+      <div className="h-full overflow-auto border-r border-border bg-background px-3 py-6">
         <PageRibbon
           orientation="vertical"
           rows={[{ id: "split", segments }]}
           pageCount={pageCount}
           currentPage={currentPage}
+          scrollProgress={scrollProgress}
           activeId={activeId}
           onActivate={setActiveId}
           onSelectPage={handleJumpToPage}
@@ -111,12 +114,17 @@ export function SplitViewer({
     ) : null;
 
   return (
-    <div ref={previewRef} className="flex min-h-0 flex-1 bg-white">
+    <div ref={previewRef} className="flex min-h-0 flex-1 bg-background">
       {renderDocument ? (
-        renderDocument({ onCurrentPageChange: setCurrentPage, header, aside })
+        renderDocument({
+          onCurrentPageChange: setCurrentPage,
+          onScrollProgressChange: setScrollProgress,
+          header,
+          aside,
+        })
       ) : (
         <div className="flex h-full flex-1 items-center justify-center">
-          <span className="text-sm text-zinc-500">No document available</span>
+          <span className="text-sm text-muted-foreground">No document available</span>
         </div>
       )}
     </div>

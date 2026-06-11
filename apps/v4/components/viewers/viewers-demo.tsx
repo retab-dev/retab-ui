@@ -62,7 +62,7 @@ function FakeDocument({
 }) {
   return (
     <div
-      className="h-full overflow-auto bg-zinc-50 p-4"
+      className="h-full overflow-auto bg-muted p-4"
       onScroll={(e) => {
         const el = e.currentTarget;
         const progress = el.scrollTop / (el.scrollHeight - el.clientHeight || 1);
@@ -74,7 +74,7 @@ function FakeDocument({
         <div
           key={i}
           data-page-number={i + 1}
-          className="mx-auto mb-4 flex aspect-[3/4] w-64 items-center justify-center rounded border bg-white text-sm text-zinc-400 shadow-sm"
+          className="mx-auto mb-4 flex aspect-[3/4] w-64 items-center justify-center rounded border bg-background text-sm text-muted-foreground shadow-sm"
         >
           Page {i + 1}
         </div>
@@ -141,6 +141,7 @@ export function SplitViewerDemo() {
             header={handlers.header}
             aside={handlers.aside}
             onVisiblePageChange={handlers.onCurrentPageChange}
+            onScrollProgressChange={handlers.onScrollProgressChange}
             className="h-full"
           />
         )}
@@ -165,7 +166,7 @@ export function EditViewerDemo() {
         hasFilled
         hasOriginal
         renderDocument={(view) => (
-          <div className="flex h-full items-center justify-center bg-zinc-50 text-sm text-zinc-400 capitalize">
+          <div className="flex h-full items-center justify-center bg-muted text-sm text-muted-foreground capitalize">
             {view} document
           </div>
         )}
