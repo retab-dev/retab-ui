@@ -159,16 +159,42 @@ export function detectCategory(
   return "unsupported"
 }
 
+// --- profiling -----------------------------------------------------------------
+
+/**
+ * Logs `[file-viewer] <label> <ms>` when `globalThis.__FILE_VIEWER_PROFILE__` is
+ * set. Costs nothing otherwise — a profiler flips the flag before navigation.
+ */
+async function timed<T>(label: string, fn: () => Promise<T>): Promise<T> {
+  const on =
+    typeof globalThis !== "undefined" &&
+    (globalThis as { __FILE_VIEWER_PROFILE__?: boolean }).__FILE_VIEWER_PROFILE__
+  if (!on) return fn()
+  const t0 = performance.now()
+  try {
+    return await fn()
+  } finally {
+    // eslint-disable-next-line no-console
+    console.log(`[file-viewer] ${label} ${(performance.now() - t0).toFixed(1)}ms`)
+  }
+}
+
+function baseName(src: string): string {
+  return src.split("/").pop() ?? src
+}
+
 // --- resource caches: stable promises so React `use()` can read them ---------
 
 const textCache = new Map<string, Promise<string>>()
 function getText(src: string): Promise<string> {
   let p = textCache.get(src)
   if (!p) {
-    p = fetch(src).then((r) => {
-      if (!r.ok) throw new Error(`Failed to load file: ${r.status}`)
-      return r.text()
-    })
+    p = timed(`text:fetch ${baseName(src)}`, () =>
+      fetch(src).then((r) => {
+        if (!r.ok) throw new Error(`Failed to load file: ${r.status}`)
+        return r.text()
+      })
+    )
     textCache.set(src, p)
   }
   return p
@@ -178,10 +204,12 @@ const blobCache = new Map<string, Promise<Blob>>()
 function getBlob(src: string): Promise<Blob> {
   let p = blobCache.get(src)
   if (!p) {
-    p = fetch(src).then((r) => {
-      if (!r.ok) throw new Error(`Failed to load file: ${r.status}`)
-      return r.blob()
-    })
+    p = timed(`blob:fetch ${baseName(src)}`, () =>
+      fetch(src).then((r) => {
+        if (!r.ok) throw new Error(`Failed to load file: ${r.status}`)
+        return r.blob()
+      })
+    )
     blobCache.set(src, p)
   }
   return p
@@ -211,11 +239,13 @@ const markdownCache = new Map<string, Promise<string>>()
 function getMarkdownHtml(src: string): Promise<string> {
   let p = markdownCache.get(src)
   if (!p) {
-    p = Promise.all([getText(src), import("marked"), loadSanitizer()]).then(
-      async ([text, { marked }, DOMPurify]) => {
-        const dirty = String(await marked.parse(text, { gfm: true }))
-        return DOMPurify.sanitize(dirty)
-      }
+    p = timed(`markdown:render ${baseName(src)}`, () =>
+      Promise.all([getText(src), import("marked"), loadSanitizer()]).then(
+        async ([text, { marked }, DOMPurify]) => {
+          const dirty = String(await marked.parse(text, { gfm: true }))
+          return DOMPurify.sanitize(dirty)
+        }
+      )
     )
     markdownCache.set(src, p)
   }
@@ -299,11 +329,144 @@ function FileViewerInner({
   }
 }
 
-// --- text / code / JSON viewer (virtualized) ---------------------------------
+// --- text / code / JSON viewer (streamed + virtualized) ----------------------
 
 const TEXT_FONT = 12.5
 const TEXT_LINE_HEIGHT = 20
 const TEXT_CHAR_WIDTH = TEXT_FONT * 0.6 // monospace approximation
+// How much of the file to reveal per step. The first frame paints after one
+// chunk instead of waiting for (and splitting) the whole file, and a 200 MB log
+// only ever holds what's been scrolled to in memory + the bytes not yet read.
+const TEXT_PAGE_BYTES = 512 * 1024
+// Start loading the next chunk when the viewport is within this many px of the
+// bottom, so scrolling stays ahead of the reader.
+const TEXT_LOAD_AHEAD_PX = 600
+
+interface TextSnapshot {
+  text: string
+  bytesLoaded: number
+  totalBytes: number | null
+  done: boolean
+}
+
+// Per-source loader: the running text + a streaming TextDecoder so multibyte
+// characters split across a byte-range boundary decode correctly. Lives in a
+// module cache (not component state) so a remount reuses the bytes already read.
+interface TextLoaderState extends TextSnapshot {
+  decoder: TextDecoder
+}
+
+const textLoaderCache = new Map<string, TextLoaderState>()
+
+interface RangeResult {
+  buf: ArrayBuffer
+  /** 200 means the server ignored Range and returned the whole file. */
+  whole: boolean
+  /** Total file size from Content-Range / Content-Length, when known. */
+  total: number | null
+}
+
+async function fetchRange(src: string, start: number, end: number): Promise<RangeResult> {
+  const res = await fetch(src, { headers: { Range: `bytes=${start}-${end}` } })
+  if (res.status === 416) return { buf: new ArrayBuffer(0), whole: false, total: null }
+  if (!res.ok) throw new Error(`Failed to load file: ${res.status}`)
+  const buf = await res.arrayBuffer()
+  let total: number | null = null
+  const contentRange = res.headers.get("content-range")
+  if (contentRange) {
+    const m = contentRange.match(/\/(\d+)\s*$/)
+    if (m) total = Number(m[1])
+  } else {
+    const len = Number(res.headers.get("content-length"))
+    if (Number.isFinite(len) && len > 0) total = len
+  }
+  return { buf, whole: res.status === 200, total }
+}
+
+function snapshotOf(loader: TextLoaderState): TextSnapshot {
+  return {
+    text: loader.text,
+    bytesLoaded: loader.bytesLoaded,
+    totalBytes: loader.totalBytes,
+    done: loader.done,
+  }
+}
+
+/**
+ * First-chunk loader read via `React.use()` so the text viewer suspends like
+ * every other viewer — no effect, no stream lifecycle to clean up. `loadAll`
+ * (JSON) fetches the whole file since it can only be pretty-printed complete;
+ * everything else fetches just the first byte-range page for an instant paint.
+ * Cached per source so a remount resolves instantly and resumes where it left off.
+ */
+const firstChunkCache = new Map<string, Promise<TextSnapshot>>()
+function loadFirstChunk(src: string, loadAll: boolean): Promise<TextSnapshot> {
+  let p = firstChunkCache.get(src)
+  if (!p) {
+    p = timed(`text:first-chunk ${baseName(src)}`, async () => {
+      const decoder = new TextDecoder()
+      if (loadAll) {
+        const res = await fetch(src)
+        if (!res.ok) throw new Error(`Failed to load file: ${res.status}`)
+        const text = await res.text()
+        const loader: TextLoaderState = {
+          text,
+          bytesLoaded: text.length,
+          totalBytes: text.length,
+          done: true,
+          decoder,
+        }
+        textLoaderCache.set(src, loader)
+        return snapshotOf(loader)
+      }
+      const { buf, whole, total } = await fetchRange(src, 0, TEXT_PAGE_BYTES - 1)
+      const text = decoder.decode(buf, { stream: !whole })
+      const bytesLoaded = buf.byteLength
+      const done =
+        whole ||
+        buf.byteLength < TEXT_PAGE_BYTES ||
+        (total != null && bytesLoaded >= total)
+      const loader: TextLoaderState = {
+        text: done && !whole ? text + decoder.decode() : text,
+        bytesLoaded,
+        totalBytes: whole ? bytesLoaded : total,
+        done,
+        decoder,
+      }
+      textLoaderCache.set(src, loader)
+      return snapshotOf(loader)
+    })
+    firstChunkCache.set(src, p)
+  }
+  return p
+}
+
+/** Fetch the next byte-range page and append it. Event-driven (scroll), so no effect. */
+async function loadNextChunk(src: string): Promise<TextSnapshot> {
+  const loader = textLoaderCache.get(src)
+  if (!loader || loader.done) {
+    return loader
+      ? snapshotOf(loader)
+      : { text: "", bytesLoaded: 0, totalBytes: null, done: true }
+  }
+  const start = loader.bytesLoaded
+  const { buf, total } = await fetchRange(src, start, start + TEXT_PAGE_BYTES - 1)
+  loader.bytesLoaded += buf.byteLength
+  if (total != null) loader.totalBytes = total
+  const reachedEnd =
+    buf.byteLength === 0 ||
+    buf.byteLength < TEXT_PAGE_BYTES ||
+    (loader.totalBytes != null && loader.bytesLoaded >= loader.totalBytes)
+  loader.text += loader.decoder.decode(buf, { stream: !reachedEnd })
+  if (reachedEnd) loader.done = true
+  return snapshotOf(loader)
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
 
 function TextDocViewer({
   src,
@@ -316,19 +479,43 @@ function TextDocViewer({
   className?: string
   bare?: boolean
 }) {
-  const raw = React.use(getText(src))
+  // JSON must be fully present before it can be parsed + pretty-printed.
+  const isJson = /\.(json|json5)$/i.test(fileName)
+  // Suspends until the first byte-range page is ready — like every other viewer.
+  const initial = React.use(loadFirstChunk(src, isJson))
 
-  // Pretty-print JSON so it's readable regardless of how it was minified.
+  const [snap, setSnap] = React.useState<TextSnapshot>(initial)
+  const [loadingMore, setLoadingMore] = React.useState(false)
+  // Reset state during render when the source changes (no effect needed). `use`
+  // above re-suspends on a new src, so `initial` is already the new file here.
+  const [renderedSrc, setRenderedSrc] = React.useState(src)
+  if (renderedSrc !== src) {
+    setRenderedSrc(src)
+    setSnap(initial)
+    setLoadingMore(false)
+  }
+
+  const loadMore = React.useCallback(() => {
+    setLoadingMore((busy) => {
+      if (busy) return busy
+      void loadNextChunk(src).then((next) => {
+        setSnap(next)
+        setLoadingMore(false)
+      })
+      return true
+    })
+  }, [src])
+
   const text = React.useMemo(() => {
-    if (/\.(json|json5)$/i.test(fileName)) {
+    if (isJson && snap.done) {
       try {
-        return JSON.stringify(JSON.parse(raw), null, 2)
+        return JSON.stringify(JSON.parse(snap.text), null, 2)
       } catch {
         /* not valid JSON — show as-is */
       }
     }
-    return raw
-  }, [raw, fileName])
+    return snap.text
+  }, [snap.text, snap.done, isJson])
 
   const lines = React.useMemo(() => text.replace(/\n$/, "").split("\n"), [text])
   const maxChars = React.useMemo(
@@ -344,19 +531,31 @@ function TextDocViewer({
     overscan: 16,
   })
 
-  const digits = String(lines.length).length
+  // Pull the next page as the viewport nears the end of what's loaded.
+  const handleScroll = React.useCallback(
+    (e: React.UIEvent<HTMLDivElement>) => {
+      if (snap.done || loadingMore) return
+      const el = e.currentTarget
+      if (el.scrollHeight - el.scrollTop - el.clientHeight < TEXT_LOAD_AHEAD_PX) {
+        loadMore()
+      }
+    },
+    [snap.done, loadingMore, loadMore]
+  )
+
+  const digits = String(Math.max(lines.length, 1)).length
   const gutterWidth = Math.max(40, 12 + digits * 8)
   const contentWidth = Math.ceil(maxChars * TEXT_CHAR_WIDTH) + 24
   const totalWidth = gutterWidth + contentWidth
 
+  const meta = snap.done
+    ? `${lines.length.toLocaleString()} line${lines.length === 1 ? "" : "s"}`
+    : `${lines.length.toLocaleString()} lines · ${formatBytes(snap.bytesLoaded)}${
+        snap.totalBytes ? ` / ${formatBytes(snap.totalBytes)}` : ""
+      } loaded`
+
   return (
-    <DocShell
-      fileName={fileName}
-      src={src}
-      className={className}
-      bare={bare}
-      meta={`${lines.length.toLocaleString()} line${lines.length === 1 ? "" : "s"}`}
-    >
+    <DocShell fileName={fileName} src={src} className={className} bare={bare} meta={meta}>
       <div
         className="relative min-h-0 flex-1 overflow-hidden bg-card font-mono"
         style={{ fontSize: TEXT_FONT, lineHeight: `${TEXT_LINE_HEIGHT}px` }}
@@ -370,7 +569,11 @@ function TextDocViewer({
           className="pointer-events-none absolute inset-y-0 left-0 z-0 bg-[color-mix(in_oklab,var(--card)_96%,var(--foreground))]"
           style={{ width: gutterWidth }}
         />
-        <div ref={scrollRef} className="absolute inset-0 overflow-auto">
+        <div
+          ref={scrollRef}
+          onScroll={handleScroll}
+          className="absolute inset-0 overflow-auto"
+        >
           <div
             style={{
               height: virtualizer.getTotalSize(),

@@ -13,9 +13,12 @@ fields, extraction sources) on top of the rendered image.
 
 It treats a **multi-page TIFF as N frames** — rendered exactly like N PDF pages.
 Browsers can't decode TIFF natively, so the viewer decodes it with
-[UTIF.js](https://github.com/photopea/UTIF.js), but only the frames near the
-viewport, and it caps how many decoded bitmaps it keeps in memory — so a
-hundred-page scan stays smooth and bounded.
+[UTIF.js](https://github.com/photopea/UTIF.js) **in a Web Worker**: the file bytes
+are transferred in once, and each near-viewport frame is decoded off-thread and
+handed back as a transferred `ImageBitmap` — so the decode and the pixels never
+touch the main heap. It caps how many decoded bitmaps it keeps and frees the
+worker's per-frame buffers as it goes, so a hundred-page scan stays smooth and
+flat in memory.
 
 It is built without `useEffect`: the image source loads with React's `use()` and
 Suspense, frames mount lazily via an `IntersectionObserver`, and each canvas
@@ -29,9 +32,9 @@ draws from a ref callback (releasing its bitmap on cleanup).
 npx shadcn@latest add @retab/image-viewer
 ```
 
-This pulls in `utif` for the TIFF path. Plain images (PNG, JPEG, WebP, GIF, AVIF)
-use only the browser's native decoders — `utif` is loaded lazily and only when a
-TIFF is actually opened.
+This pulls in `utif` for the TIFF path. It runs inside the bundled Web Worker, so
+the parser stays out of your main bundle entirely. Plain images (PNG, JPEG, WebP,
+GIF, AVIF) use only the browser's native decoders and never load `utif`.
 
 ## Usage
 
@@ -73,15 +76,17 @@ normalized boxes map with simple percentages:
 
 ## How it performs
 
-- **Native decode.** `createImageBitmap` decodes off the main thread and returns
-  a GPU-friendly bitmap that draws to canvas with no further decode cost — used
-  for both plain images (from a `Blob`) and decoded TIFF frames (from `ImageData`).
+- **Off-thread decode.** Plain images decode via `createImageBitmap` (already
+  off-thread); TIFF frames decode in a Web Worker that transfers the resulting
+  `ImageBitmap` back. Either way the heavy work and the pixels stay off the main
+  thread, so scrolling never blocks on decode.
 - **Lazy frames.** Each frame reserves its box from the TIFF's IFD dimensions up
   front, so scroll height is correct without decoding anything. Pixels decode
   only when a frame nears the viewport.
-- **Bounded memory.** Decoded bitmaps past a small cap are closed and re-decoded
-  on scroll-back (cheap — the source bytes stay cached), so a many-page TIFF
-  never holds every full-resolution bitmap at once.
+- **Bounded memory.** Decoded bitmaps past a small cap are closed (and re-decoded
+  cheaply on scroll-back), and the worker frees UTIF's per-frame buffer after each
+  decode — so a 48-page scan holds flat memory across a full scroll instead of
+  accumulating every page's pixels.
 
 ## Props
 

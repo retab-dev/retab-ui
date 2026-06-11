@@ -66,6 +66,8 @@ interface SingleFileVirtualizedTableProps {
   fieldIndicationMap?: Map<string, string>;
   /** Map from field paths to reasoning texts extracted from data (for review) */
   fieldReasoningMap?: Map<string, string>;
+  /** Rows to render beyond the viewport on each side (virtualization buffer). Default 12. */
+  overscan?: number;
 }
 
 const SingleFileTableHeader = React.memo(
@@ -205,6 +207,7 @@ export const SingleFileVirtualizedTable =
       onGroundTruthChange,
       fieldIndicationMap,
       fieldReasoningMap,
+      overscan = 12,
     }) => {
       // DEBUG: Log showHoverCard prop value
       //console.log('[SingleFileVirtualizedTable] showHoverCard prop:', showHoverCard);
@@ -367,7 +370,7 @@ export const SingleFileVirtualizedTable =
         count: rowCount,
         getScrollElement: () => scrollRef.current,
         estimateSize: () => rowHeightPx,
-        overscan: 12,
+        overscan,
         scrollMargin: bodyRef.current?.offsetTop ?? 0,
       });
       const virtualRows = rowVirtualizer.getVirtualItems();

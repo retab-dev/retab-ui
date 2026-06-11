@@ -2,16 +2,6 @@
 
 import * as React from "react"
 import { ChevronDown, ChevronUp } from "lucide-react"
-import {
-  type ColumnDef,
-  type Header,
-  type Row as TableRowModel,
-  type SortingState,
-  flexRender,
-  getCoreRowModel,
-  getSortedRowModel,
-  useReactTable,
-} from "@tanstack/react-table"
 import { useVirtualizer } from "@tanstack/react-virtual"
 
 import {
@@ -109,30 +99,39 @@ export function CsvViewer({
     loading,
   } = useCsvData({ data, value, source, delimiter, hasHeader, worker, batchSize })
 
-  const [sorting, setSorting] = React.useState<SortingState>([])
+  // Sort is a single column + direction. We render straight from the raw
+  // `string[][]` and, when sorted, keep only a lightweight array of row indices —
+  // never per-row view objects — so a 200k-row file stays at data size in memory
+  // instead of the hundreds of MB a full table row model would cost.
+  const [sort, setSort] = React.useState<{ index: number; desc: boolean } | null>(
+    null
+  )
+  const toggleSort = React.useCallback((index: number) => {
+    setSort((s) =>
+      !s || s.index !== index
+        ? { index, desc: false }
+        : s.desc
+          ? null
+          : { index, desc: true }
+    )
+  }, [])
 
-  const columns = React.useMemo<ColumnDef<Row>[]>(
-    () =>
-      parsedColumns.map((name, index) => ({
-        id: `col_${index}`,
-        header: name || `Column ${index + 1}`,
-        accessorFn: (row) => row[index] ?? "",
-        sortingFn: "alphanumeric",
-      })),
-    [parsedColumns]
+  // `order` maps display position → source row index. Null means identity
+  // (unsorted), so the common case allocates nothing.
+  const order = React.useMemo<number[] | null>(() => {
+    if (!sort) return null
+    const idx = parsedRows.map((_, i) => i)
+    const col = sort.index
+    idx.sort((a, b) => compareCells(parsedRows[a][col] ?? "", parsedRows[b][col] ?? ""))
+    if (sort.desc) idx.reverse()
+    return idx
+  }, [parsedRows, sort])
+
+  const rowAt = React.useCallback(
+    (display: number): Row => parsedRows[order ? order[display] : display],
+    [parsedRows, order]
   )
 
-  const table = useReactTable({
-    data: parsedRows,
-    columns,
-    state: { sorting },
-    onSortingChange: setSorting,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-  })
-
-  const tableRows = table.getRowModel().rows
-  const headers = table.getHeaderGroups()[0]?.headers ?? []
   const scrollRef = React.useRef<HTMLDivElement>(null)
   const headerScrollRef = React.useRef<HTMLDivElement>(null)
 
@@ -149,7 +148,7 @@ export function CsvViewer({
   const colOffset = showRowNumbers ? 1 : 0
 
   const rowVirtualizer = useVirtualizer({
-    count: tableRows.length,
+    count: parsedRows.length,
     getScrollElement: () => scrollRef.current,
     estimateSize: () => rowHeight,
     overscan,
@@ -199,12 +198,14 @@ export function CsvViewer({
     columnVirtualizer.getTotalSize(),
   ])
 
-  const gridTemplate = buildGridTemplate({
-    showRowNumbers,
-    leftPad,
-    columnItems,
-    rightPad,
-  })
+  // Memoize so its identity is stable across vertical scroll (columnItems only
+  // changes on horizontal scroll/resize). A stable gridTemplate keeps CsvRow's
+  // props stable, so React.memo skips the rows that stay put and only the rows
+  // entering the window re-render.
+  const gridTemplate = React.useMemo(
+    () => buildGridTemplate({ showRowNumbers, leftPad, columnItems, rightPad }),
+    [showRowNumbers, leftPad, columnItems, rightPad]
+  )
   const totalWidth =
     (showRowNumbers ? ROW_NUMBER_WIDTH : 0) + colCount * columnWidth
   const virtualRows = rowVirtualizer.getVirtualItems()
@@ -252,9 +253,13 @@ export function CsvViewer({
           <Spacer width={leftPad} />
           {columnItems.map((item) => (
             <HeaderCell
-              key={headers[item.index]?.id ?? item.index}
-              header={headers[item.index]}
+              key={item.index}
+              name={parsedColumns[item.index] || `Column ${item.index + 1}`}
               colIndex={colOffset + item.index + 1}
+              sorted={
+                sort?.index === item.index ? (sort.desc ? "desc" : "asc") : false
+              }
+              onToggle={() => toggleSort(item.index)}
             />
           ))}
           <Spacer width={rightPad} />
@@ -270,7 +275,7 @@ export function CsvViewer({
         style={{ height, maxHeight: "100%" }}
         onScroll={handleBodyScroll}
       >
-        {tableRows.length === 0 ? (
+        {parsedRows.length === 0 ? (
           <div className="flex h-24 items-center justify-center text-xs text-muted-foreground">
             No rows
           </div>
@@ -286,8 +291,8 @@ export function CsvViewer({
             {virtualized
               ? virtualRows.map((virtualRow) => (
                   <CsvRow
-                    key={tableRows[virtualRow.index].id}
-                    row={tableRows[virtualRow.index]}
+                    key={virtualRow.index}
+                    cells={rowAt(virtualRow.index)}
                     index={virtualRow.index}
                     gridTemplate={gridTemplate}
                     rowHeight={rowHeight}
@@ -296,19 +301,13 @@ export function CsvViewer({
                     columnItems={columnItems}
                     leftPad={leftPad}
                     rightPad={rightPad}
-                    style={{
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      width: "100%",
-                      transform: `translateY(${virtualRow.start}px)`,
-                    }}
+                    start={virtualRow.start}
                   />
                 ))
-              : tableRows.map((row, index) => (
+              : parsedRows.map((_, index) => (
                   <CsvRow
-                    key={row.id}
-                    row={row}
+                    key={index}
+                    cells={rowAt(index)}
                     index={index}
                     gridTemplate={gridTemplate}
                     rowHeight={rowHeight}
@@ -371,14 +370,16 @@ function Spacer({ width }: { width: number }) {
 }
 
 function HeaderCell({
-  header,
+  name,
   colIndex,
+  sorted,
+  onToggle,
 }: {
-  header?: Header<Row, unknown>
+  name: string
   colIndex: number
+  sorted: "asc" | "desc" | false
+  onToggle: () => void
 }) {
-  if (!header) return <div role="presentation" aria-hidden />
-  const sorted = header.column.getIsSorted()
   return (
     <div
       role="columnheader"
@@ -395,13 +396,11 @@ function HeaderCell({
     >
       <button
         type="button"
-        onClick={header.column.getToggleSortingHandler()}
+        onClick={onToggle}
         className="flex h-9 w-full items-center gap-1 px-3 text-left text-xs font-semibold hover:bg-muted focus-visible:bg-muted focus-visible:outline-none"
-        title={`Sort by ${String(header.column.columnDef.header)}`}
+        title={`Sort by ${name}`}
       >
-        <span className="truncate">
-          {flexRender(header.column.columnDef.header, header.getContext())}
-        </span>
+        <span className="truncate">{name}</span>
         {sorted ? (
           sorted === "asc" ? (
             <ChevronUp
@@ -420,8 +419,18 @@ function HeaderCell({
   )
 }
 
-function CsvRow({
-  row,
+/** Alphanumeric compare: numeric when both sides parse as finite numbers. */
+function compareCells(a: string, b: string): number {
+  const na = Number(a)
+  const nb = Number(b)
+  if (a !== "" && b !== "" && !Number.isNaN(na) && !Number.isNaN(nb)) {
+    return na - nb
+  }
+  return a < b ? -1 : a > b ? 1 : 0
+}
+
+const CsvRow = React.memo(function CsvRow({
+  cells,
   index,
   gridTemplate,
   rowHeight,
@@ -430,9 +439,9 @@ function CsvRow({
   columnItems,
   leftPad,
   rightPad,
-  style,
+  start,
 }: {
-  row: TableRowModel<Row>
+  cells: Row | undefined
   index: number
   gridTemplate: string
   rowHeight: number
@@ -441,16 +450,30 @@ function CsvRow({
   columnItems: ColumnItem[]
   leftPad: number
   rightPad: number
-  style?: React.CSSProperties
+  /** Absolute Y offset when virtualized; undefined renders in normal flow. */
+  start?: number
 }) {
-  const cells = row.getVisibleCells()
+  // Built from primitive props so a row that stays in the window keeps a stable
+  // identity and React.memo skips it — only rows entering the window re-render.
+  const style: React.CSSProperties =
+    start === undefined
+      ? { gridTemplateColumns: gridTemplate, height: rowHeight }
+      : {
+          gridTemplateColumns: gridTemplate,
+          height: rowHeight,
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: "100%",
+          transform: `translateY(${start}px)`,
+        }
   return (
     <div
       role="row"
       aria-rowindex={index + 2}
       data-slot="csv-row"
       className="group grid border-b hover:bg-muted/40"
-      style={{ gridTemplateColumns: gridTemplate, height: rowHeight, ...style }}
+      style={style}
     >
       {showRowNumbers ? (
         <div
@@ -464,11 +487,10 @@ function CsvRow({
       ) : null}
       <Spacer width={leftPad} />
       {columnItems.map((item) => {
-        const cell = cells[item.index]
-        const text = cell ? String(cell.getValue() ?? "") : ""
+        const text = cells?.[item.index] ?? ""
         return (
           <div
-            key={cell?.id ?? item.index}
+            key={item.index}
             role="cell"
             aria-colindex={colOffset + item.index + 1}
             data-slot="csv-cell"
@@ -482,7 +504,7 @@ function CsvRow({
       <Spacer width={rightPad} />
     </div>
   )
-}
+})
 
 interface CsvDataState {
   columns: string[]

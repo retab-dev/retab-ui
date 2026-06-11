@@ -23,6 +23,7 @@ import {
   toJsonSchema,
   type SchemaDocument,
 } from "@/components/schema-editor/document";
+import { requireAllProperties } from "@/components/schema-editor/json-schema-builder-utils";
 
 /** Order-insensitive structural signature, to tell our own echo from a genuine
  *  external change to the controlled `jsonSchema` prop. */
@@ -145,10 +146,11 @@ function JsonSchemaEditorProviderRaw({
     }
   }, [jsonSchemaProp]);
 
-  // Stage 0 guarantees toJsonSchema(fromJsonSchema(x)) === x byte-for-byte, so
-  // exposing the projection is transparent to every existing reader.
+  // Editor policy: every property is required. The projection (and every emit
+  // below) forces all-required, so the toggle is gone and the output is always
+  // consistent regardless of the loaded schema.
   const jsonSchema = useMemo(
-    () => toJsonSchema(doc) as ExtendedJSONSchema7,
+    () => requireAllProperties(toJsonSchema(doc)) as ExtendedJSONSchema7,
     [doc],
   );
   const computedSchema = providedComputedSchema ?? jsonSchema;
@@ -168,7 +170,9 @@ function JsonSchemaEditorProviderRaw({
       if (next === prev) return;
       docRef.current = next; // keep ref current for sequential calls in one tick
       setDoc(next);
-      const schema = toJsonSchema(next) as ExtendedJSONSchema7;
+      const schema = requireAllProperties(
+        toJsonSchema(next),
+      ) as ExtendedJSONSchema7;
       syncedSignatureRef.current = schemaSignature(schema);
       if (externalSetJsonSchema) externalSetJsonSchema(schema);
       if ((persist ?? true) && persistJsonSchemaCallback) {
@@ -250,8 +254,9 @@ function JsonSchemaEditorProviderRaw({
       }
 
       // Resolve value once
-      const newValue =
-        typeof value === "function" ? value(jsonSchemaRef.current) : value;
+      const newValue = requireAllProperties(
+        typeof value === "function" ? value(jsonSchemaRef.current) : value,
+      ) as ExtendedJSONSchema7;
 
       // Check if anything changed (values or property order)
       const orderChanged = hasPropertyOrderChanged(

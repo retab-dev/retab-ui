@@ -11,19 +11,26 @@ import { Spinner } from "@/components/ui/spinner"
 
 // The heavy SheetJS parse runs in a Web Worker (see ./xlsx-viewer.worker), so a
 // large workbook never freezes the UI thread. The worker owns @e965/xlsx and
-// ships back the parsed worksheet objects; the main thread keeps a synchronous,
-// O(1) lazy read off those objects, so the parser never enters the main bundle.
+// flattens each sheet into a compact shape (one text blob + transferable typed
+// arrays) so crossing the worker boundary costs a string clone, not a clone of
+// every cell object. The main thread reads cells synchronously off that — O(1),
+// no re-materialization — and the parser never enters the main bundle.
 
-/** The fields of a SheetJS cell we actually read. */
-interface RawCell {
-  t?: string
-  v?: unknown
-  w?: string
+/** One sheet, flattened for cheap transfer and O(1) reads. */
+interface CompactSheet {
+  name: string
+  rows: number
+  cols: number
+  /** All cell texts concatenated in row-major order. */
+  text: string
+  /** Length rows*cols+1; cell `i`'s text is text.slice(offsets[i], offsets[i+1]). */
+  offsets: Uint32Array
+  /** Length rows*cols; 1 = numeric/date. */
+  numeric: Uint8Array
 }
-type Worksheet = Record<string, RawCell | undefined>
 
 type XlsxWorkerResponse =
-  | { ok: true; sheets: SheetMeta[]; worksheets: Worksheet[] }
+  | { ok: true; sheets: CompactSheet[] }
   | { ok: false; error: string }
 
 // --- workbook model ----------------------------------------------------------
@@ -44,9 +51,8 @@ interface SheetMeta {
 interface XlsxSource {
   sheets: SheetMeta[]
   /**
-   * Read one cell on demand straight from the parsed worksheet. O(1), with no
-   * per-sheet materialization — so opening a sheet and scrolling only ever touch
-   * the cells in the visible window, and memory stays flat regardless of size.
+   * Read one cell synchronously from the compact sheet — a typed-array index plus
+   * a string slice. Memory stays flat regardless of size.
    */
   getCell(sheetIndex: number, row: number, col: number): Cell
 }
@@ -58,16 +64,21 @@ async function buildXlsxSource(src: string): Promise<XlsxSource> {
   if (!res.ok) throw new Error(`Failed to load spreadsheet: ${res.status}`)
   const buf = await res.arrayBuffer()
 
-  const { sheets, worksheets } = await parseInWorker(buf)
+  const compact = await parseInWorker(buf)
+  const sheets: SheetMeta[] = compact.map((s) => ({
+    name: s.name,
+    rowCount: s.rows,
+    colCount: s.cols,
+  }))
 
   const getCell = (sheetIndex: number, row: number, col: number): Cell => {
-    const ws = worksheets[sheetIndex]
-    if (!ws) return EMPTY_CELL
-    const cell = ws[`${colLabel(col)}${row + 1}`]
-    if (!cell) return EMPTY_CELL
-    const text = cell.w ?? (cell.v != null ? String(cell.v) : "")
-    // Excel right-aligns numbers and dates.
-    return { text, numeric: cell.t === "n" || cell.t === "d" }
+    const s = compact[sheetIndex]
+    if (!s || row >= s.rows || col >= s.cols) return EMPTY_CELL
+    const idx = row * s.cols + col
+    const start = s.offsets[idx]
+    const end = s.offsets[idx + 1]
+    if (start === end) return EMPTY_CELL // empty cell
+    return { text: s.text.slice(start, end), numeric: s.numeric[idx] === 1 }
   }
 
   return { sheets, getCell }
@@ -75,12 +86,10 @@ async function buildXlsxSource(src: string): Promise<XlsxSource> {
 
 /**
  * Parse the workbook off the main thread. The ArrayBuffer is transferred (not
- * copied) into the worker; once the parsed worksheets come back the worker is
- * terminated, leaving only the data on the main thread.
+ * copied) into the worker; the compact sheets come back with their typed arrays
+ * transferred (zero-copy) and the worker is terminated.
  */
-function parseInWorker(
-  buffer: ArrayBuffer
-): Promise<{ sheets: SheetMeta[]; worksheets: Worksheet[] }> {
+function parseInWorker(buffer: ArrayBuffer): Promise<CompactSheet[]> {
   return new Promise((resolve, reject) => {
     if (typeof Worker === "undefined") {
       reject(new Error("Web Workers are unavailable in this environment"))
@@ -93,7 +102,7 @@ function parseInWorker(
     worker.onmessage = (event: MessageEvent<XlsxWorkerResponse>) => {
       const data = event.data
       worker.terminate()
-      if (data.ok) resolve({ sheets: data.sheets, worksheets: data.worksheets })
+      if (data.ok) resolve(data.sheets)
       else reject(new Error(data.error))
     }
     worker.onerror = (event) => {
@@ -376,7 +385,12 @@ function SheetGrid({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [colWidth, columnVirtualizer.getVirtualItems(), columnVirtualizer.getTotalSize()])
 
-  const gridTemplate = buildGridTemplate({ gutterWidth, leftPad, columnItems, rightPad })
+  // Memoized so its identity is stable across vertical scroll, keeping SheetRow's
+  // props stable so React.memo can skip rows that stay in the window.
+  const gridTemplate = React.useMemo(
+    () => buildGridTemplate({ gutterWidth, leftPad, columnItems, rightPad }),
+    [gutterWidth, leftPad, columnItems, rightPad]
+  )
   const totalWidth = gutterWidth + colCount * colWidth
   const virtualRows = rowVirtualizer.getVirtualItems()
 
@@ -445,13 +459,7 @@ function SheetGrid({
               columnItems={columnItems}
               leftPad={leftPad}
               rightPad={rightPad}
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                width: "100%",
-                transform: `translateY(${virtualRow.start}px)`,
-              }}
+              start={virtualRow.start}
             />
           ))}
         </div>
@@ -470,7 +478,7 @@ const SheetRow = React.memo(function SheetRow({
   columnItems,
   leftPad,
   rightPad,
-  style,
+  start,
 }: {
   rowIndex: number
   getCell: (row: number, col: number) => Cell
@@ -479,12 +487,24 @@ const SheetRow = React.memo(function SheetRow({
   columnItems: ColumnItem[]
   leftPad: number
   rightPad: number
-  style?: React.CSSProperties
+  /** Absolute Y offset of the virtualized row. */
+  start: number
 }) {
+  // Built from primitive props so a stationary row keeps a stable identity and
+  // React.memo skips it — only rows entering the window re-render.
+  const style: React.CSSProperties = {
+    gridTemplateColumns: gridTemplate,
+    height: rowHeight,
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: "100%",
+    transform: `translateY(${start}px)`,
+  }
   return (
     <div
       className="group grid border-b hover:bg-muted/40"
-      style={{ gridTemplateColumns: gridTemplate, height: rowHeight, ...style }}
+      style={style}
     >
       <div className="sticky left-0 z-[1] flex items-center justify-end border-r bg-card px-2 tabular-nums text-muted-foreground group-hover:bg-[color-mix(in_oklab,var(--card)_97%,var(--foreground))]">
         {rowIndex + 1}

@@ -6,6 +6,57 @@ import { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-
 import { getEffectiveNode } from "@/components/schema-editor/lib/json-schema-utils";
 import { templateObjects } from "./template-objects";
 
+/**
+ * Editor policy: every object property is required. Recursively sets each
+ * object's `required` to all of its property keys (through nested objects,
+ * array items, composition branches, and `$defs`/`definitions`). Nullability is
+ * orthogonal and left untouched — a field can be both required and nullable.
+ */
+export function requireAllProperties(
+  schema: JSONSchema7Definition,
+): JSONSchema7Definition {
+  if (typeof schema !== "object" || schema === null) return schema;
+
+  const out: Record<string, unknown> = { ...schema };
+
+  if (out.properties && typeof out.properties === "object") {
+    const props = out.properties as Record<string, JSONSchema7Definition>;
+    const next: Record<string, JSONSchema7Definition> = {};
+    for (const [key, value] of Object.entries(props)) {
+      next[key] = requireAllProperties(value);
+    }
+    out.properties = next;
+    out.required = Object.keys(next);
+  }
+
+  if (out.items) {
+    out.items = Array.isArray(out.items)
+      ? out.items.map((item) =>
+          requireAllProperties(item as JSONSchema7Definition),
+        )
+      : requireAllProperties(out.items as JSONSchema7Definition);
+  }
+
+  for (const key of ["anyOf", "oneOf", "allOf"] as const) {
+    if (Array.isArray(out[key])) {
+      out[key] = (out[key] as JSONSchema7Definition[]).map(requireAllProperties);
+    }
+  }
+
+  for (const key of ["$defs", "definitions"] as const) {
+    if (out[key] && typeof out[key] === "object") {
+      const defs = out[key] as Record<string, JSONSchema7Definition>;
+      const next: Record<string, JSONSchema7Definition> = {};
+      for (const [name, value] of Object.entries(defs)) {
+        next[name] = requireAllProperties(value);
+      }
+      out[key] = next;
+    }
+  }
+
+  return out as JSONSchema7Definition;
+}
+
 export function formatTitle(rawName: string): string {
   return rawName
     .replace(/([a-z\d])([A-Z])/g, "$1 $2")

@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Spinner } from "@/components/ui/spinner"
 
 // docx-preview is browser-only, so it is imported lazily on the client. jszip
 // (its single dependency) is resolved by the bundler from the installed package.
@@ -149,7 +148,12 @@ function DocxViewerInner({
     let frame = 0
     let latest = el.clientWidth
     const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) latest = entry.contentRect.width
+      // Use clientWidth (content + padding), matching the init read above, so
+      // the `- 32` in fitScale subtracts the p-4 padding exactly once. Using
+      // entry.contentRect.width here (which already excludes padding) would
+      // double-subtract it, shrinking the page 32px below the full content
+      // width — and below the w-full skeleton that stands in for it.
+      for (const entry of entries) latest = (entry.target as HTMLElement).clientWidth
       if (frame) return
       frame = requestAnimationFrame(() => {
         frame = 0
@@ -345,7 +349,12 @@ function DocxViewerInner({
                 : undefined
             }
           >
-            <div ref={containerRef} className="relative flex flex-col items-center p-4">
+            <div ref={containerRef} className="flex flex-col items-center p-4">
+              {/* A document-shaped skeleton stands in for the pages until
+                  docx-preview lays them out. Rendered before the host (which is
+                  taller than the viewport) so the invisible, not-yet-measured
+                  host stays below the fold during the brief measure window. */}
+              {!ready ? <DocxSkeleton /> : null}
               {/* docx-preview renders the .docx-wrapper into this host; `zoom`
                   scales the laid-out pages (and scroll height) cheaply. Kept
                   invisible (not display:none — it must stay measurable) until
@@ -360,11 +369,6 @@ function DocxViewerInner({
                 )}
                 style={{ zoom: scale }}
               />
-              {!ready ? (
-                <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                  <Spinner className="size-5 text-muted-foreground" />
-                </div>
-              ) : null}
             </div>
           </ScrollArea>
         </div>
@@ -392,6 +396,10 @@ function IconButton({
   )
 }
 
+// Shown while the document resource and docx-preview load (before DocxViewerInner
+// mounts). Same chrome as the loaded viewer — a toolbar with skeletoned values
+// plus a document-shaped skeleton — so the topbar is always present and there is
+// no spinner anywhere; nothing jumps when the real document fades in.
 function DocxViewerFallback({
   className,
   bare = false,
@@ -402,13 +410,75 @@ function DocxViewerFallback({
   return (
     <div
       className={cn(
-        "flex items-center justify-center",
-        bare ? "h-full bg-muted/20" : "min-h-64 rounded-xl border bg-muted/30",
+        "flex min-h-0 flex-col overflow-hidden",
+        bare ? "h-full bg-muted/20" : "rounded-xl border bg-muted/30",
         className
       )}
+      data-slot="docx-viewer"
     >
-      <Spinner className="size-5 text-muted-foreground" />
+      <DocxToolbarSkeleton />
+      <div className="min-h-0 flex-1 overflow-auto">
+        <div className="flex flex-col items-center p-4">
+          <DocxSkeleton />
+        </div>
+      </div>
     </div>
+  )
+}
+
+// A static mirror of the real toolbar: the two undetermined values (page count,
+// zoom %) are skeletons; the controls are present but inert.
+function DocxToolbarSkeleton() {
+  return (
+    <div className="flex h-10 flex-shrink-0 items-center gap-1 border-b bg-card px-2">
+      <span className="px-1">
+        <Skeleton className="inline-block h-3 w-12 align-middle" />
+      </span>
+      <div className="ml-auto flex items-center gap-1">
+        <ToolbarIconPlaceholder>
+          <Minus />
+        </ToolbarIconPlaceholder>
+        <span className="w-12 text-center">
+          <Skeleton className="inline-block h-3 w-8 align-middle" />
+        </span>
+        <ToolbarIconPlaceholder>
+          <Plus />
+        </ToolbarIconPlaceholder>
+        <ToolbarIconPlaceholder>
+          <Maximize />
+        </ToolbarIconPlaceholder>
+        <Separator orientation="vertical" className="mx-1 h-4" />
+        <ToolbarIconPlaceholder>
+          <Download />
+        </ToolbarIconPlaceholder>
+      </div>
+    </div>
+  )
+}
+
+function ToolbarIconPlaceholder({ children }: { children: React.ReactNode }) {
+  return (
+    <Button
+      variant="ghost"
+      size="icon-sm"
+      className="size-7"
+      disabled
+      tabIndex={-1}
+      aria-hidden
+    >
+      {children}
+    </Button>
+  )
+}
+
+// A plain gray page-shaped block stands in for the document while it loads.
+// The sample is US Letter (w:pgSz 12240 × 15840 twips = 8.5" × 11"), so the
+// aspect matches the rendered page; `w-full` inside the container's p-4 equals
+// the fit-width page width — so the block is the same size as the document that
+// replaces it. (For A4 docs this would be 210 / 297.)
+function DocxSkeleton() {
+  return (
+    <Skeleton aria-hidden className="w-full rounded-sm" style={{ aspectRatio: "8.5 / 11" }} />
   )
 }
 

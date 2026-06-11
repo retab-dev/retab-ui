@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
-import { Spinner } from "@/components/ui/spinner"
+import { Skeleton } from "@/components/ui/skeleton"
 
 // pdfjs touches browser-only globals (DOMMatrix) at module eval, so it must be
 // imported lazily on the client. The worker is resolved by the bundler from the
@@ -252,7 +252,11 @@ function PdfViewerInner({
     let frame = 0
     let latest = el.clientWidth
     const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) latest = entry.contentRect.width
+      // clientWidth (content + padding), matching the init read above, so the
+      // `- 32` in fitScale subtracts the p-4 padding exactly once. contentRect
+      // already excludes padding, so using it here would double-subtract and
+      // render pages 32px below the full content width.
+      for (const entry of entries) latest = (entry.target as HTMLElement).clientWidth
       if (frame) return
       frame = requestAnimationFrame(() => {
         frame = 0
@@ -646,23 +650,20 @@ function PdfViewerFallback({
   return (
     <div
       className={cn(
-        "flex items-center justify-center",
+        "flex p-4",
         bare ? "h-full bg-muted/20" : "min-h-64 rounded-xl border bg-muted/30",
         className
       )}
     >
-      <Spinner className="size-5 text-muted-foreground" />
+      <Skeleton className="min-h-48 w-full flex-1 rounded-md" />
     </div>
   )
 }
 
 function PageSkeleton() {
-  // Fills the parent slot, which already reserves the page's estimated size.
-  return (
-    <div className="flex size-full min-h-32 flex-1 items-center justify-center self-stretch rounded-md bg-muted">
-      <Spinner className="size-4 text-muted-foreground" />
-    </div>
-  )
+  // A plain gray block fills the parent slot, which already reserves the page's
+  // estimated size — so the skeleton is exactly the size of the page it stands in for.
+  return <Skeleton className="size-full min-h-32 flex-1 self-stretch rounded-md" />
 }
 
 function clamp(value: number, min: number, max: number) {

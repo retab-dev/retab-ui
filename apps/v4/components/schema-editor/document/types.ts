@@ -80,6 +80,18 @@ export interface DocumentNode {
    * lossless.
    */
   rest: Record<string, unknown>
+
+  /**
+   * Internal: source key order, replayed on export for byte-faithful round-trips.
+   * Kept off `rest` so a real keyword named `__order` can't collide with it.
+   */
+  order?: string[]
+
+  /**
+   * Internal: a boolean schema (`true` / `false`) has no structure to model; its
+   * literal value is carried here.
+   */
+  booleanSchema?: boolean
 }
 
 /**

@@ -45,6 +45,8 @@ import { TemplatesDialog } from "@/components/schema-editor/templates-dialog";
 import { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types";
 
 import { updateNodeWithMetadata } from "./json-schema-builder-utils";
+import { useJsonSchemaOptional } from "@/components/schema-editor/contexts/json-schema";
+import { replaceNodeJson } from "@/components/schema-editor/document";
 
 type SchemaEditorMode = "promptOnly" | "readOnly" | "editable";
 
@@ -71,6 +73,17 @@ export function TopLevelEditor({
   setOpenLayoutDialog: _setOpenLayoutDialog,
   showTemplatesButton = false,
 }: TopLevelEditorProps) {
+  const topCtx = useJsonSchemaOptional();
+  // Route a root-level (whole-node) update through the Document when possible, so
+  // child node ids stay stable; fall back to the bubbling onChange otherwise.
+  const applyRootNode = (newNode: ExtendedJSONSchema7) => {
+    if (topCtx?.applyDocOp) {
+      topCtx.applyDocOp((d) => replaceNodeJson(d, d.root.id, newNode));
+    } else {
+      void onChange(newNode);
+    }
+  };
+
   const [metadataDialogOpen, setMetadataDialogOpen] = useState(false);
   const [templatesDialogOpen, setTemplatesDialogOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<
@@ -99,7 +112,7 @@ export function TopLevelEditor({
         ...buildTopLevelMetadataValues(node),
         title: effectiveEditedName || "",
       };
-      onChange(updateNodeWithMetadata(node, updatedMetadata));
+      applyRootNode(updateNodeWithMetadata(node, updatedMetadata));
     }
     setIsNameDirty(false);
     setEditedName(node.title || "");
@@ -111,7 +124,7 @@ export function TopLevelEditor({
         ...buildTopLevelMetadataValues(node),
         description: effectiveEditedDescription,
       };
-      onChange(updateNodeWithMetadata(node, updatedMetadata));
+      applyRootNode(updateNodeWithMetadata(node, updatedMetadata));
     }
     setIsDescriptionDirty(false);
     setEditedDescription(node.description || "");

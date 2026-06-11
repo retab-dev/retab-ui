@@ -4,7 +4,6 @@ import * as React from "react";
 import { useState } from "react";
 import { Button } from "@/components/ui-retab/button";
 import { Input } from "@/components/ui-retab/input";
-import { Checkbox } from "@/components/ui-retab/checkbox";
 import {
   Pencil,
   PlusIcon,
@@ -710,24 +709,6 @@ export function SchemaNodeEditor({
               </Tooltip>
             )}
 
-            {isEditable && onRequiredChange && (
-              <div className="mt-2 flex items-center sm:mt-0">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Checkbox
-                      id={`${path}-required`}
-                      checked={!!isRequired}
-                      onCheckedChange={(checked) =>
-                        onRequiredChange(Boolean(checked))
-                      }
-                    />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Required</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-            )}
 
             {isEditable ? (
               <DropdownMenu>

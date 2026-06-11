@@ -239,10 +239,6 @@ export function PropertyForm({
     form.setValue("description", value);
   };
 
-  const handleRequiredChange = (checked: boolean) => {
-    form.setValue("required", checked);
-  };
-
   const handleNullableChange = (checked: boolean) => {
     setEditedProperty(setNullable(editedProperty, checked));
     form.setValue("nullable", checked);
@@ -384,44 +380,6 @@ export function PropertyForm({
                 </div>
               )}
             <div className="flex flex-row items-center gap-6">
-              {onRequiredChange ? (
-                <FormField
-                  control={form.control}
-                  name="required"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center space-y-0 space-x-2">
-                      <FormControl>
-                        <Switch
-                          id="required"
-                          disabled={editMode !== "editable"}
-                          checked={field.value}
-                          onCheckedChange={handleRequiredChange}
-                          className={
-                            editMode !== "editable" ? "disabled:opacity-100" : ""
-                          }
-                        />
-                      </FormControl>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Label
-                            htmlFor="required"
-                            className="cursor-pointer"
-                          >
-                            Required
-                          </Label>
-                        </TooltipTrigger>
-                        <TooltipContent className="max-w-xs">
-                          <p>
-                            Required fields must be present in the object. This
-                            adds the field to the parent object&apos;s{" "}
-                            <code>required</code> list.
-                          </p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </FormItem>
-                  )}
-                />
-              ) : null}
               <FormField
                 control={form.control}
                 name="nullable"

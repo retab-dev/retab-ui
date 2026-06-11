@@ -7,11 +7,26 @@ description: A JSON-Schema-driven form built entirely on shadcn's FormField abst
 `FormField` → `FormItem` / `FormLabel` / `FormControl` / `FormDescription` /
 `FormMessage` chain, so every field inherits shadcn's react-hook-form wiring,
 accessibility, and error display with no bespoke styling. Objects nest into
-fieldsets, arrays repeat with add/remove, and scalars map to the matching
-control (input, number, checkbox, select, date, textarea).
+collapsible sections, arrays repeat with add/remove, and scalars map to the
+matching control (input, number, checkbox, select, date, textarea).
 
 `JsonForm` is a thin convenience wrapper that renders a whole schema; you own
 the `useForm()` instance.
+
+It is built to scale to deep, repetitive documents — the demo below is a real
+extraction nested three arrays deep (`properties[] → production[] → line_items[]`),
+several thousand leaf fields in total:
+
+- **Lazy mount** — nested objects and arrays are collapsible; their children are
+  only mounted in the DOM while expanded, so the tree boots as a handful of
+  summary rows instead of thousands of inputs.
+- **Table mode** — an array whose items are flat objects of scalars renders as a
+  dense editable table (a column per field) instead of a stack of cards.
+- **Virtualization** — long arrays (card *or* table mode) window their rows, so
+  only the visible items are in the DOM.
+- **Isolated re-renders** — each row subscribes only to its own field state, so a
+  keystroke never re-renders its siblings. Pair with `useForm({ mode: "onBlur" })`
+  to avoid validating the whole tree on every change.
 
 <JsonFormFieldDemo />
 
@@ -63,5 +78,6 @@ import { JsonFormField } from "@/components/json-form-field/json-form-field"
 | `schema` | `JSONSchema7` | The field's schema. |
 | `required` | `boolean` | Adds the required marker. |
 | `label` | `string` | Overrides the label derived from `title` / the key. |
+| `depth` | `number` | Nesting depth; controls the default collapse state. Defaults to `0`. |
 
 It must be rendered inside a shadcn `<Form>` (which `JsonForm` provides).

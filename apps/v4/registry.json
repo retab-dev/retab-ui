@@ -580,9 +580,8 @@
       "name": "csv-viewer",
       "type": "registry:ui",
       "title": "CSV Viewer",
-      "description": "A virtualized CSV/TSV table built on TanStack Table and TanStack Virtual: sortable columns, sticky header, row numbers, horizontal scroll.",
+      "description": "A virtualized CSV/TSV table on TanStack Virtual: sortable columns, sticky header, row numbers, horizontal scroll. Renders straight from raw rows (no table row model) so it stays flat in memory on huge files.",
       "dependencies": [
-        "@tanstack/react-table@^8.21.3",
         "@tanstack/react-virtual@^3.13.12",
         "lucide-react"
       ],
@@ -612,7 +611,7 @@
         "button",
         "scroll-area",
         "separator",
-        "spinner"
+        "skeleton"
       ],
       "files": [
         {
@@ -660,7 +659,7 @@
         "button",
         "scroll-area",
         "separator",
-        "spinner"
+        "skeleton"
       ],
       "files": [
         {
@@ -691,7 +690,7 @@
         "button",
         "scroll-area",
         "separator",
-        "spinner"
+        "skeleton"
       ],
       "files": [
         {

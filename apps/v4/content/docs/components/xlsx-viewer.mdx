@@ -17,9 +17,10 @@ currencies as Excel displays them), numbers are right-aligned, and the column
 letters / row numbers match real spreadsheet cell references.
 
 It is built without `useEffect` for data loading: the workbook loads with React's
-`use()` and Suspense, and cells are read **on demand** straight from the parsed
-worksheet — only the cells in the visible window are ever touched, so opening a
-sheet and scrolling never build big in-memory arrays.
+`use()` and Suspense. The parse runs in a **Web Worker**, which flattens each
+sheet into a compact form (one text blob plus typed arrays) and hands that back —
+so even a 60k-row workbook never freezes the UI thread. Cells are then read
+synchronously off that compact form (a typed-array index + a string slice).
 
 <XlsxViewerDemo />
 
@@ -47,13 +48,15 @@ Switch sheets with the tab strip along the bottom; zoom scales the whole grid
 
 ## How it performs
 
-- **Client-side parse.** The workbook is read in the browser — no conversion
-  service. The heavy parser is code-split and only loaded when a viewer mounts.
+- **Off-thread parse.** The workbook is parsed in a Web Worker — no conversion
+  service, and no UI freeze. The worker flattens each sheet to a text blob +
+  transferable typed arrays, so crossing the worker boundary costs a string clone
+  rather than a clone of every cell object.
 - **Row + column virtualization.** Built on `@tanstack/react-virtual`: only the
   visible window of cells is rendered, with a small overscan to avoid blank
-  flashes while scrolling.
-- **On-demand cells.** Cells are read directly from the parsed worksheet for just
-  the visible window — no per-sheet materialization — so switching sheets is
+  flashes while scrolling, and rows that stay in view are skipped on re-render.
+- **Synchronous cell reads.** Each cell is a typed-array index plus a string
+  slice off the compact sheet — no per-cell objects — so switching sheets is
   instant and memory stays flat no matter how large the sheet.
 
 ## Fidelity

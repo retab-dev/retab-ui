@@ -81,7 +81,9 @@ export function fromJsonSchema(schema: JSONSchema7): SchemaDocument {
     def.node = nodeFromSchema(rawDefs[def.name], refMap)
   }
 
-  const root = nodeFromSchema(schema, refMap, /* stripDefs */ true)
+  // Strip only the PRIMARY defs keyword from the root; if the (unusual) other
+  // keyword is also present, it's carried verbatim in `rest` so it isn't lost.
+  const root = nodeFromSchema(schema, refMap, defsKeyword)
 
   return {
     root,
@@ -93,18 +95,18 @@ export function fromJsonSchema(schema: JSONSchema7): SchemaDocument {
 function nodeFromSchema(
   schema: JSONSchema7Definition,
   refMap: RefMap,
-  stripDefs = false
+  stripKeyword?: string
 ): DocumentNode {
   // A boolean schema (`true` / `false`) has no structure to model — preserve it.
   if (typeof schema === "boolean") {
-    return { id: createId(), rest: { __booleanSchema: schema } }
+    return { id: createId(), rest: {}, booleanSchema: schema }
   }
 
   const node: DocumentNode = { id: createId(), rest: {} }
 
   // Record the source key order so the projection can replay it exactly,
   // keeping round-trips byte-faithful (no $defs/keyword reshuffling on edit).
-  node.rest.__order = Object.keys(schema)
+  node.order = Object.keys(schema)
 
   if (typeof schema.$ref === "string") {
     const defId = refMap.get(schema.$ref)
@@ -131,9 +133,14 @@ function nodeFromSchema(
     )
   }
 
-  // Tuple `items` (array form) is rare; carry it in `rest` for v1.
-  if (schema.items && !Array.isArray(schema.items)) {
-    node.items = nodeFromSchema(schema.items, refMap)
+  if (schema.items !== undefined) {
+    if (Array.isArray(schema.items)) {
+      // Tuple `items` (array form) is rare and not UI-editable; carry it
+      // verbatim in `rest` so it survives the round-trip losslessly.
+      node.rest.items = schema.items
+    } else {
+      node.items = nodeFromSchema(schema.items, refMap)
+    }
   }
 
   for (const key of ["anyOf", "oneOf", "allOf"] as const) {
@@ -146,7 +153,7 @@ function nodeFromSchema(
   // Carry every keyword we don't model.
   for (const [key, value] of Object.entries(schema)) {
     if (MODELED_NODE_KEYS.has(key)) continue
-    if (stripDefs && (key === "$defs" || key === "definitions")) continue
+    if (stripKeyword && key === stripKeyword) continue
     if (node.enum && key === ENUM_DESCRIPTIONS_KEY) continue // folded into enum
     node.rest[key] = value
   }
@@ -195,7 +202,7 @@ export function toJsonSchema(doc: SchemaDocument): JSONSchema7 {
   // Replay the root key order (so $defs lands back where the source had it).
   return applyKeyOrder(
     out as Record<string, unknown>,
-    doc.root.rest.__order
+    doc.root.order
   ) as JSONSchema7
 }
 
@@ -226,10 +233,12 @@ export function nodeFromJson(
     refMap.set(`#/$defs/${def.name}`, def.id)
     refMap.set(`#/definitions/${def.name}`, def.id)
   }
-  // Strip `$defs`/`definitions` — definitions live at the document level, not on
-  // a node; this keeps a root-level edit (whose JSON still carries `$defs`) from
-  // duplicating them into the root node's `rest`.
-  return nodeFromSchema(schema, refMap, /* stripDefs */ true)
+  // Strip the document's primary defs keyword — definitions live at the document
+  // level, not on a node; this keeps a root-level edit (whose JSON still carries
+  // `$defs`) from duplicating them into the root node's `rest`.
+  const defsKeyword =
+    doc.rest.defsKeyword === "definitions" ? "definitions" : "$defs"
+  return nodeFromSchema(schema, refMap, defsKeyword)
 }
 
 function nodeToSchema(
@@ -237,8 +246,8 @@ function nodeToSchema(
   defNameById: Map<string, string>,
   defsKeyword: string
 ): JSONSchema7Definition {
-  if (node.rest.__booleanSchema !== undefined) {
-    return node.rest.__booleanSchema as boolean
+  if (node.booleanSchema !== undefined) {
+    return node.booleanSchema
   }
 
   // Emit modeled keys first in a natural reading order ($ref, type, title, …),
@@ -280,7 +289,10 @@ function nodeToSchema(
       if (entry.required) required.push(key)
     }
     out.properties = properties
-    if (required.length > 0) out.required = required
+    // Emit `required` when it has entries, or when the source had an explicit
+    // (possibly empty) `required` key — so `required: []` round-trips faithfully.
+    const hadRequiredKey = node.order?.includes("required") ?? false
+    if (required.length > 0 || hadRequiredKey) out.required = required
   }
 
   if (node.items) {
@@ -296,12 +308,11 @@ function nodeToSchema(
 
   // Trailing unmodeled keywords (const, default, format, pattern, x-*, …).
   for (const [key, value] of Object.entries(node.rest)) {
-    if (key === "__booleanSchema" || key === "__order") continue
     if (key in out) continue // modeled field already won this key
     out[key] = value
   }
 
-  return applyKeyOrder(out, node.rest.__order) as JSONSchema7
+  return applyKeyOrder(out, node.order) as JSONSchema7
 }
 
 /**

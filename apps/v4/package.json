@@ -80,6 +80,8 @@
   "devDependencies": {
     "@ianvs/prettier-plugin-sort-imports": "^4.4.1",
     "@tailwindcss/postcss": "^4.2.4",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/react": "^16",
     "@types/json-schema": "^7.0.15",
     "@types/lodash": "^4.17.13",
     "@types/node": "^20",
@@ -87,6 +89,7 @@
     "@types/react-dom": "19.2.2",
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
+    "jsdom": "^29.1.1",
     "prettier": "^3.4.2",
     "prettier-plugin-tailwindcss": "^0.7.2",
     "shadcn": "^4.8.2",

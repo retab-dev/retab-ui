@@ -7,29 +7,30 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
-import { Spinner } from "@/components/ui/spinner"
+import { Skeleton } from "@/components/ui/skeleton"
 
-// utif ships no types — declare the slice of the API we use. It decodes
-// multi-page TIFFs (the IFD list) that browsers can't decode natively.
-type Ifd = { t256?: number[]; t257?: number[]; width?: number; height?: number }
-interface Utif {
-  decode(buf: ArrayBuffer | Uint8Array): Ifd[]
-  decodeImage(buf: ArrayBuffer | Uint8Array, ifd: Ifd): void
-  toRGBA8(ifd: Ifd): Uint8Array
+// Browsers can't decode multi-page TIFFs natively, so the heavy decode (UTIF)
+// runs in a Web Worker (see ./image-viewer.worker): it transfers decoded
+// ImageBitmaps back — keeping the pixels off the main heap — and frees UTIF's
+// per-frame buffers, so the parser never enters the main bundle and decoding a
+// long scan never blocks scrolling.
+interface TiffWorkerInit {
+  type: "init"
+  ok: boolean
+  frames?: FrameMeta[]
+  error?: string
 }
-
-// utif touches no browser globals, but it's only needed on the TIFF path, so we
-// load it lazily and only once.
-let utifPromise: Promise<Utif> | null = null
-function loadUtif(): Promise<Utif> {
-  if (!utifPromise) {
-    utifPromise = import(
-      // @ts-expect-error utif ships no type declarations; typed via the Utif interface.
-      "utif"
-    ).then((m) => (m.default ?? m) as unknown as Utif)
-  }
-  return utifPromise
+interface TiffWorkerDecoded {
+  type: "decoded"
+  id: number
+  bitmap: ImageBitmap
 }
+interface TiffWorkerError {
+  type: "error"
+  id: number
+  message: string
+}
+type TiffWorkerResponse = TiffWorkerInit | TiffWorkerDecoded | TiffWorkerError
 
 // --- frame source: one model for plain images and multi-page TIFFs -----------
 //
@@ -132,25 +133,7 @@ async function buildImageSource(src: string): Promise<ImageSource> {
   const contentType = res.headers.get("content-type")
 
   if (looksLikeTiff(src, contentType, buf)) {
-    const UTIF = await loadUtif()
-    const ifds = UTIF.decode(buf)
-    if (ifds.length === 0) throw new Error("TIFF has no frames")
-    const frames: FrameMeta[] = ifds.map((ifd) => ({
-      width: ifd.t256?.[0] ?? ifd.width ?? 0,
-      height: ifd.t257?.[0] ?? ifd.height ?? 0,
-    }))
-    return createSource("tiff", frames, async (i) => {
-      const ifd = ifds[i]
-      // decodeImage mutates the ifd in place; toRGBA8 reads from it.
-      UTIF.decodeImage(buf, ifd)
-      const rgba = UTIF.toRGBA8(ifd)
-      const w = ifd.width ?? frames[i].width
-      const h = ifd.height ?? frames[i].height
-      // Copy into a fresh ArrayBuffer-backed clamped array (utif may hand back a
-      // view, and ImageData rejects SharedArrayBuffer-backed buffers).
-      const data = new ImageData(new Uint8ClampedArray(rgba), w, h)
-      return createImageBitmap(data)
-    })
+    return buildTiffSource(buf)
   }
 
   // Plain image: let the browser decode it natively (off-main-thread via
@@ -160,6 +143,59 @@ async function buildImageSource(src: string): Promise<ImageSource> {
   const frames: FrameMeta[] = [{ width: probe.width, height: probe.height }]
   probe.close()
   return createSource("image", frames, () => createImageBitmap(blob))
+}
+
+/**
+ * Decode a multi-page TIFF in a worker. The byte buffer is transferred in once;
+ * per-frame decode requests come back as transferred ImageBitmaps, so the heavy
+ * decode and the pixels stay off the main thread entirely.
+ */
+function buildTiffSource(buffer: ArrayBuffer): Promise<ImageSource> {
+  return new Promise((resolve, reject) => {
+    if (typeof Worker === "undefined") {
+      reject(new Error("Web Workers are unavailable in this environment"))
+      return
+    }
+    const worker = new Worker(
+      new URL("./image-viewer.worker", import.meta.url),
+      { type: "module" }
+    )
+    const pending = new Map<
+      number,
+      { resolve: (b: ImageBitmap) => void; reject: (e: Error) => void }
+    >()
+    let nextId = 0
+
+    worker.onmessage = (event: MessageEvent<TiffWorkerResponse>) => {
+      const msg = event.data
+      if (msg.type === "init") {
+        if (!msg.ok || !msg.frames) {
+          worker.terminate()
+          reject(new Error(msg.error ?? "Failed to read TIFF"))
+          return
+        }
+        const decode = (i: number) =>
+          new Promise<ImageBitmap>((res, rej) => {
+            const id = nextId++
+            pending.set(id, { resolve: res, reject: rej })
+            worker.postMessage({ type: "decode", id, index: i })
+          })
+        resolve(createSource("tiff", msg.frames, decode))
+      } else if (msg.type === "decoded") {
+        pending.get(msg.id)?.resolve(msg.bitmap)
+        pending.delete(msg.id)
+      } else if (msg.type === "error") {
+        pending.get(msg.id)?.reject(new Error(msg.message))
+        pending.delete(msg.id)
+      }
+    }
+    worker.onerror = (event) => {
+      worker.terminate()
+      reject(new Error(event.message || "TIFF worker failed"))
+    }
+    // Transfer the bytes into the worker (no copy); it owns them thereafter.
+    worker.postMessage({ type: "init", buffer }, [buffer])
+  })
 }
 
 // --- resource cache: stable promises so React `use()` can read them ----------
@@ -260,7 +296,11 @@ function ImageViewerInner({
     if (!el) return
     setContainerWidth(el.clientWidth)
     const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) setContainerWidth(entry.contentRect.width)
+      // clientWidth (content + padding), matching the init read above, so the
+      // `- 32` in fitScale subtracts the p-4 padding exactly once (contentRect
+      // already excludes it, which would double-subtract and shrink the image).
+      for (const entry of entries)
+        setContainerWidth((entry.target as HTMLElement).clientWidth)
     })
     observer.observe(el)
     return () => observer.disconnect()
@@ -460,9 +500,9 @@ function ImageFrame({
           rotation={rotation}
         />
       ) : (
-        <div className="absolute inset-0 flex items-center justify-center bg-white">
-          <Spinner className="size-4 text-muted-foreground" />
-        </div>
+        // A plain gray block fills the frame box (already sized to the image),
+        // so the skeleton is exactly the size of the image it stands in for.
+        <Skeleton className="absolute inset-0 rounded-none" />
       )}
       {renderOverlay ? (
         <div className="pointer-events-none absolute inset-0">
@@ -567,12 +607,12 @@ function ImageViewerFallback({
   return (
     <div
       className={cn(
-        "flex items-center justify-center",
+        "flex p-4",
         bare ? "h-full bg-muted/20" : "min-h-64 rounded-xl border bg-muted/30",
         className
       )}
     >
-      <Spinner className="size-5 text-muted-foreground" />
+      <Skeleton className="min-h-48 w-full flex-1 rounded-md" />
     </div>
   )
 }

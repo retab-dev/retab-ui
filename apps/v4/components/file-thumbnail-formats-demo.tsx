@@ -48,11 +48,67 @@ const SAMPLES: FormatSample[] = [
     type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   },
   {
+    label: "PPTX",
+    kind: "pptx",
+    src: "/samples/sample-deck.pptx",
+    name: "sample-deck.pptx",
+    type: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  },
+  {
     label: "XLSX",
     kind: "xlsx",
     src: "/samples/nvidia-financials-fy2024.xlsx",
     name: "nvidia-financials.xlsx",
     type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  },
+  {
+    label: "CSV",
+    kind: "csv",
+    src: "/samples/sales.csv",
+    name: "sales.csv",
+    type: "text/csv",
+  },
+  {
+    label: "Markdown",
+    kind: "markdown",
+    src: "/samples/release-notes.md",
+    name: "release-notes.md",
+    type: "text/markdown",
+  },
+  {
+    label: "HTML",
+    kind: "html",
+    src: "/samples/welcome.html",
+    name: "welcome.html",
+    type: "text/html",
+  },
+  {
+    label: "JSON",
+    kind: "text",
+    src: "/samples/app-config.json",
+    name: "app-config.json",
+    type: "application/json",
+  },
+  {
+    label: "Code",
+    kind: "text",
+    src: "/samples/use-debounced-value.ts",
+    name: "use-debounced-value.ts",
+    type: "text/plain",
+  },
+  {
+    label: "Log",
+    kind: "text",
+    src: "/samples/server.log",
+    name: "server.log",
+    type: "text/plain",
+  },
+  {
+    label: "TIFF",
+    kind: "tiff",
+    src: "/samples/nvidia-10q-scan.tiff",
+    name: "nvidia-10q-scan.tiff",
+    type: "image/tiff",
   },
 ]
 
@@ -62,10 +118,10 @@ export function FileThumbnailFormatsDemo() {
       data-slot="component-preview"
       className="group relative mt-4 mb-2 flex flex-col overflow-hidden rounded-xl border"
     >
-      <div className="bg-background grid gap-6 p-6 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="bg-background grid grid-cols-6 gap-3 p-6">
         {SAMPLES.map((sample) => (
-          <div key={sample.label} className="space-y-2">
-            <div className="text-sm font-medium">{sample.label}</div>
+          <div key={sample.label} className="space-y-1.5">
+            <div className="truncate text-xs font-medium">{sample.label}</div>
             <DocumentThumbnail
               kind={sample.kind}
               src={sample.src}
@@ -86,9 +142,14 @@ const formatsDemoCode = `"use client"
 import { DocumentThumbnail } from "@/components/document-thumbnail"
 import { FileThumbnail } from "@/components/ui/file-thumbnail"
 
-// DocumentThumbnail renders the first unit — page 1, first sheet — with the
-// standard libraries (pdfjs-dist, @e965/xlsx, docx-preview) and drops it into
-// the FileThumbnail shell. Pass previewAspectRatio={1} for uniform square tiles.
+// DocumentThumbnail renders the first unit — page 1, first sheet, first slide,
+// first TIFF frame, or the head of a text/markdown/html/csv file — using the
+// standard libraries (pdfjs-dist, @e965/xlsx, pptxviewjs, docx-preview, utif,
+// marked) and drops it into the FileThumbnail shell. Pass previewAspectRatio={1}
+// for uniform square tiles.
+//
+// kind: "pdf" | "docx" | "xlsx" | "pptx" | "image"
+//     | "tiff" | "csv" | "markdown" | "html" | "text"
 
 export function ImageThumbnail() {
   return (

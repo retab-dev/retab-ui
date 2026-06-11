@@ -176,10 +176,7 @@ export function replaceNodeJson(
   return updateNode(doc, id, (node) => ({
     ...converted,
     id: node.id,
-    rest: {
-      ...converted.rest,
-      __order: node.rest.__order ?? converted.rest.__order,
-    },
+    order: node.order ?? converted.order,
   }))
 }
 
@@ -539,7 +536,8 @@ export function addDefinition(
 ): { doc: SchemaDocument; defId: string } {
   const entry: DefinitionEntry = {
     id: init.id ?? createId("def"),
-    name: init.name ?? uniqueDefName(doc, "Definition"),
+    // Always uniquify — a duplicate def name would clobber on export.
+    name: uniqueDefName(doc, init.name ?? "Definition"),
     node: init.node ?? createNode("object"),
   }
   return { doc: { ...doc, defs: [...doc.defs, entry] }, defId: entry.id }
@@ -550,9 +548,20 @@ export function renameDefinition(
   defId: string,
   name: string
 ): SchemaDocument {
-  // No ref rewriting needed — refs point at `defId`, not the name.
+  // Uniquify against the OTHER definitions so a rename can't clobber one on
+  // export (the bag is keyed by name). No ref rewriting needed — refs point at
+  // `defId`, not the name.
+  const taken = new Set(
+    doc.defs.filter((d) => d.id !== defId).map((d) => d.name)
+  )
+  let finalName = name
+  if (taken.has(finalName)) {
+    let i = 2
+    while (taken.has(`${name}${i}`)) i += 1
+    finalName = `${name}${i}`
+  }
   const defs = mapPreserve(doc.defs, (def) =>
-    def.id === defId ? { ...def, name } : def
+    def.id === defId ? { ...def, name: finalName } : def
   )
   return defs === doc.defs ? doc : { ...doc, defs }
 }

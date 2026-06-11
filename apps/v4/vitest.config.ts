@@ -8,7 +8,13 @@ export default defineConfig({
     },
   },
   test: {
+    // Default to node; React/DOM tests opt into jsdom via a per-file
+    // `// @vitest-environment jsdom` directive.
     environment: "node",
-    include: ["tests/**/*.test.ts", "registry/**/*.test.ts"],
+    include: [
+      "tests/**/*.test.ts",
+      "tests/**/*.test.tsx",
+      "registry/**/*.test.ts",
+    ],
   },
 })

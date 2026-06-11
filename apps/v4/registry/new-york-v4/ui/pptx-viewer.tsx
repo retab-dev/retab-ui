@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
-import { Spinner } from "@/components/ui/spinner"
+import { Skeleton } from "@/components/ui/skeleton"
 
 // pptxviewjs renders each slide to a <canvas> — the same model pdf.js uses — with
 // zero runtime deps of its own beyond jszip. Imported lazily on the client only.
@@ -315,7 +315,11 @@ function PptxViewerInner({
     if (!el) return
     setContainerWidth(el.clientWidth)
     const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) setContainerWidth(entry.contentRect.width)
+      // clientWidth (content + padding), matching the init read above, so the
+      // `- 32` in fitScale subtracts the p-4 padding exactly once (contentRect
+      // already excludes it, which would double-subtract and shrink slides).
+      for (const entry of entries)
+        setContainerWidth((entry.target as HTMLElement).clientWidth)
     })
     observer.observe(el)
     return () => observer.disconnect()
@@ -520,9 +524,9 @@ function PptxSlide({
             activity={activity}
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center bg-white">
-            <Spinner className="size-4 text-muted-foreground" />
-          </div>
+          // A plain gray block fills the slide box (already sized to the slide),
+          // so the skeleton is exactly the size of the slide it stands in for.
+          <Skeleton className="size-full rounded-none" />
         )}
       </div>
       {renderOverlay ? (
@@ -608,9 +612,7 @@ function SlideCanvas({
         className="block h-full w-full bg-white"
       />
       {!rendered ? (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-white">
-          <Spinner className="size-4 text-muted-foreground" />
-        </div>
+        <Skeleton className="pointer-events-none absolute inset-0 rounded-none" />
       ) : null}
     </>
   )
@@ -645,12 +647,12 @@ function PptxViewerFallback({
   return (
     <div
       className={cn(
-        "flex items-center justify-center",
+        "flex p-4",
         bare ? "h-full bg-muted/20" : "min-h-64 rounded-xl border bg-muted/30",
         className
       )}
     >
-      <Spinner className="size-5 text-muted-foreground" />
+      <Skeleton className="min-h-48 w-full flex-1 rounded-md" />
     </div>
   )
 }
