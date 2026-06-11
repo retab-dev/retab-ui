@@ -105,7 +105,6 @@ export function EditViewer({
   const [hoverKey, setHoverKey] = React.useState<string | null>(null);
   const [query, setQuery] = React.useState("");
   const [filter, setFilter] = React.useState<Filter>("all");
-  const [currentPage, setCurrentPage] = React.useState(1);
 
   // Hover previews the highlight; the pinned selection persists underneath it.
   const effectiveKey = hoverKey ?? activeKey;
@@ -135,11 +134,6 @@ export function EditViewer({
       });
     },
     [fieldByKey],
-  );
-
-  const onVisiblePageChange = React.useCallback(
-    (page: number) => setCurrentPage(page),
-    [],
   );
 
   // One overlay layer per page: paint every field box on that page, lift the
@@ -213,7 +207,6 @@ export function EditViewer({
     view,
     viewerRef,
     renderPageOverlay,
-    onVisiblePageChange,
   };
 
   return (
@@ -251,7 +244,6 @@ export function EditViewer({
             view={view}
             onViewChange={setView}
             filledCount={filledCount}
-            currentPage={currentPage}
             effectiveKey={effectiveKey}
             activeKey={activeKey}
             query={query}
@@ -292,7 +284,6 @@ function FieldPanel({
   view: EditViewMode;
   onViewChange: (v: EditViewMode) => void;
   filledCount: number;
-  currentPage: number;
   effectiveKey: string | null;
   activeKey: string | null;
   query: string;
