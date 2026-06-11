@@ -28,14 +28,6 @@ const TOP_LEVEL_SECTIONS = [
     name: "Viewers",
     href: "/docs/viewers",
   },
-  {
-    name: "Workflows",
-    href: "/docs/workflows",
-  },
-  {
-    name: "Consensus",
-    href: "/docs/consensus",
-  },
 ]
 const EXCLUDED_SECTIONS: string[] = []
 const EXCLUDED_PAGES = ["/docs"]

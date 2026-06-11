@@ -432,11 +432,9 @@ export function PlusMergedCell({
 interface DataCellProps {
   keyValue: string;
   rowIdx: number;
-  colIdx: number;
   pathInfo?: PathInfo;
   schema: JSONSchema7;
   row: RowLike;
-  index: number;
   docId: string;
   cellColorState: "none" | "consensus" | "similarity" | "mismatch";
   columnWidth: ColumnWidth;

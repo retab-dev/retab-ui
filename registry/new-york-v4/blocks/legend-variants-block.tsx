@@ -164,7 +164,11 @@ function Cell({
       </div>
       <div
         ref={panelRef}
-        className="h-[340px] overflow-hidden rounded-lg border bg-card"
+        // A definite pixel height (inline, not a Tailwind arbitrary class) so the
+        // viewer never falls back to content-height — which would let the page
+        // grow the cell and collapse the `h-full` rails (legend + ribbon).
+        style={{ height: 380 }}
+        className="overflow-hidden rounded-lg border bg-card"
       >
         <PdfViewer
           src={PDF_URL}
