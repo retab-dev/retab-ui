@@ -13,6 +13,24 @@ import { CreateDefinitionDialog } from "@/components/schema-editor/create-defini
 import { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types";
 import { templateObjects } from "@/components/schema-editor/template-objects";
 import { getTypeIcon, getTemplateIcon } from "@/components/schema-editor/type-icons";
+import type { JSONSchema7 } from "json-schema";
+
+/**
+ * Returns the meaningful (non-null) branch of a node: for a nullable
+ * `anyOf: [X, { type: "null" }]` it returns X, otherwise the node itself.
+ * Enum values live on this branch.
+ */
+function getEnumBranch(node: ExtendedJSONSchema7): ExtendedJSONSchema7 {
+  if (Array.isArray(node.anyOf)) {
+    const nonNull = node.anyOf.find(
+      (b): b is JSONSchema7 =>
+        typeof b === "object" &&
+        (b.type !== "null" || Boolean(b.$ref) || Boolean(b.enum)),
+    );
+    if (nonNull) return nonNull;
+  }
+  return node;
+}
 
 // Modify the ItemTypeSelector component to use SchemaNodeEditor for arrays
 export function ItemTypeSelector({
@@ -78,15 +96,7 @@ export function ItemTypeSelector({
               <span>
                 {(() => {
                   if (effectiveType.type === "$ref") {
-                    const direct = (value as any).$ref as string | undefined;
-                    const fromAnyOf = Array.isArray((value as any).anyOf)
-                      ? (
-                          (value as any).anyOf.find(
-                            (b: any) => typeof b === "object" && b.$ref,
-                          ) as any
-                        )?.$ref
-                      : undefined;
-                    const ref = direct || fromAnyOf;
+                    const ref = value.$ref ?? getEnumBranch(value).$ref;
                     return ref ? ref.replace("#/$defs/", "") : "$ref";
                   }
                   if (effectiveType.type === "date") return "date";

@@ -51,9 +51,9 @@ const PopoverDialog = ({
 }: {
   isDialog?: boolean;
 } & React.ComponentProps<typeof Popover>) => {
-  const [isBigEnough, setIsBigEnough] = useState<boolean>(
-    typeof window !== "undefined" ? window.innerHeight >= 900 : false,
-  );
+  // Always start `false` (the server value) to avoid an SSR/client hydration
+  // mismatch; the mount effect below re-measures immediately after hydration.
+  const [isBigEnough, setIsBigEnough] = useState<boolean>(false);
 
   useMountEffect(() => {
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
@@ -930,7 +930,7 @@ export function ColumnsFromSchema(
         dragImage.style.left = "-1000px";
         dragImage.style.padding = "4px 8px";
         dragImage.style.backgroundColor = "rgba(200, 200, 200, 0.7)"; // Light background
-        dragImage.style.border = "1px solid #ccc";
+        dragImage.style.border = "1px solid var(--color-border)";
         dragImage.style.borderRadius = "4px";
         dragImage.style.fontSize = "12px"; // Match header font size if desired
         dragImage.style.fontFamily = "sans-serif"; // Or your app's font
@@ -1220,11 +1220,11 @@ export function ColumnsFromSchema(
                     <div
                       className={`flex h-full grow items-center justify-start rounded-none px-1 ${
                         isReviewBasedCriterion
-                          ? "bg-emerald-50 text-emerald-900"
+                          ? "bg-success/10 text-success-foreground"
                           : isComputed
-                            ? "bg-[#E0F2FE] text-[#1E3A8A]"
+                            ? "bg-primary/10 text-primary"
                             : hasReasoning
-                              ? "bg-blue-50 text-blue-700"
+                              ? "bg-primary/10 text-primary"
                               : `${theme.headerText} ${theme.headerBg}`
                       }`}
                     >
@@ -1249,11 +1249,11 @@ export function ColumnsFromSchema(
                           size="sm"
                           className={`h-full grow justify-start rounded-none px-1 ${
                             isReviewBasedCriterion
-                              ? "bg-emerald-50 text-emerald-900 hover:bg-emerald-100 hover:text-emerald-950"
+                              ? "bg-success/10 text-success-foreground hover:bg-success/20 hover:text-success-foreground"
                               : isComputed
-                                ? "bg-[#E0F2FE] text-[#1E3A8A] hover:bg-blue-100 hover:text-blue-900"
+                                ? "bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary"
                                 : hasReasoning
-                                  ? "bg-blue-50 text-blue-700 hover:bg-blue-100 hover:text-blue-700"
+                                  ? "bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary"
                                   : `${theme.headerText} ${theme.headerBg}`
                           }`}
                         >
@@ -1279,7 +1279,7 @@ export function ColumnsFromSchema(
                             <PopoverDialogTitle className="leading-none font-medium">
                               {displayName}
                               {/* Optional check - depends if array itself can be required */}
-                              {/* {!isOptional && <span className="text-red-500 ml-1">*</span>} */}
+                              {/* {!isOptional && <span className="text-destructive ml-1">*</span>} */}
                             </PopoverDialogTitle>
                           </div>
                           {!is_published && editMode !== "readOnly" && (
@@ -1302,7 +1302,7 @@ export function ColumnsFromSchema(
                                 }
                               }}
                             >
-                              <Trash2 className="h-4 w-4 text-red-500 hover:text-red-600" />
+                              <Trash2 className="h-4 w-4 text-destructive hover:text-destructive" />
                             </Button>
                           )}
                         </div>
@@ -1333,13 +1333,13 @@ export function ColumnsFromSchema(
                       size="icon"
                       className={`flex h-full w-9 items-center justify-center rounded-none ${
                         isReviewBasedCriterion
-                          ? "bg-emerald-50 text-emerald-900 hover:bg-emerald-100 hover:text-emerald-950"
+                          ? "bg-success/10 text-success-foreground hover:bg-success/20 hover:text-success-foreground"
                           : isComputed
-                            ? "bg-[#E0F2FE] text-[#1E3A8A] hover:bg-blue-100 hover:text-blue-900"
+                            ? "bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary"
                             : isFunction
-                              ? "bg-emerald-50 text-emerald-900 hover:bg-emerald-100 hover:text-emerald-950"
+                              ? "bg-success/10 text-success-foreground hover:bg-success/20 hover:text-success-foreground"
                               : hasReasoning
-                                ? "bg-blue-50 text-blue-700 hover:bg-blue-100 hover:text-blue-700"
+                                ? "bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary"
                                 : `${theme.headerText} ${theme.headerBg}`
                       }`}
                       onClick={() => {
@@ -1451,13 +1451,13 @@ export function ColumnsFromSchema(
                   <div
                     className={`flex h-full grow items-center justify-start rounded-none px-1 ${
                       isReviewBasedCriterion
-                        ? "bg-emerald-50 text-emerald-900"
+                        ? "bg-success/10 text-success-foreground"
                         : isComputed
-                          ? "bg-[#E0F2FE] text-[#1E3A8A]"
+                          ? "bg-primary/10 text-primary"
                           : hasReasoning
-                            ? "bg-blue-50 text-blue-700"
+                            ? "bg-primary/10 text-primary"
                             : isFunction
-                              ? "bg-emerald-50 text-emerald-900"
+                              ? "bg-success/10 text-success-foreground"
                               : `${theme.headerText} ${theme.headerBg}`
                     }`}
                   >
@@ -1483,13 +1483,13 @@ export function ColumnsFromSchema(
                         size="sm"
                         className={`h-full grow justify-start rounded-none px-1 ${
                           isReviewBasedCriterion
-                            ? "bg-emerald-50 text-emerald-900 hover:bg-emerald-100 hover:text-emerald-950"
+                            ? "bg-success/10 text-success-foreground hover:bg-success/20 hover:text-success-foreground"
                             : isComputed
-                              ? "bg-[#E0F2FE] text-[#1E3A8A] hover:bg-blue-100 hover:text-blue-900"
+                              ? "bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary"
                               : hasReasoning
-                                ? "bg-blue-50 text-blue-700 hover:bg-blue-100 hover:text-blue-700"
+                                ? "bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary"
                                 : isFunction
-                                  ? "bg-emerald-50 text-emerald-900 hover:bg-emerald-100 hover:text-emerald-950"
+                                  ? "bg-success/10 text-success-foreground hover:bg-success/20 hover:text-success-foreground"
                                   : `${theme.headerText} ${theme.headerBg}`
                         }`}
                       >
@@ -1539,7 +1539,7 @@ export function ColumnsFromSchema(
                                 }
                               }}
                             >
-                              <Trash2 className="h-4 w-4 text-red-500 hover:text-red-600" />
+                              <Trash2 className="h-4 w-4 text-destructive hover:text-destructive" />
                             </Button>
                           )}
                         </div>
@@ -1569,13 +1569,13 @@ export function ColumnsFromSchema(
                     size="icon"
                     className={`h-full w-6 rounded-none ${
                       isReviewBasedCriterion
-                        ? "bg-emerald-50 text-emerald-900 hover:bg-emerald-100 hover:text-emerald-950"
+                        ? "bg-success/10 text-success-foreground hover:bg-success/20 hover:text-success-foreground"
                         : isComputed
-                          ? "bg-[#E0F2FE] text-[#1E3A8A] hover:bg-blue-100 hover:text-blue-900"
+                          ? "bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary"
                           : isFunction
-                            ? "bg-emerald-50 text-emerald-900 hover:bg-emerald-100 hover:text-emerald-950"
+                            ? "bg-success/10 text-success-foreground hover:bg-success/20 hover:text-success-foreground"
                             : hasReasoning
-                              ? "bg-blue-50 text-blue-700 hover:bg-blue-100 hover:text-blue-700"
+                              ? "bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary"
                               : `${theme.headerText} ${theme.headerBg}`
                     }`}
                     onClick={() => {

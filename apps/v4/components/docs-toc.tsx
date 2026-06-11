@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { IconMenu3 } from "@tabler/icons-react"
+import { Menu } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -80,7 +80,7 @@ export function DocsTableOfContents({
             size="sm"
             className={cn("h-8 md:h-7", className)}
           >
-            <IconMenu3 /> On This Page
+            <Menu /> On This Page
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent

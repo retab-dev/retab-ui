@@ -2,8 +2,7 @@
 
 import type React from "react"
 import { Autocomplete as AutocompletePrimitive } from "@base-ui/react/autocomplete"
-import { ArrowUpDownIcon, Cancel01Icon } from "@hugeicons/core-free-icons"
-import { HugeiconsIcon } from "@hugeicons/react"
+import { ChevronsUpDown, X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
@@ -68,7 +67,7 @@ export function AutocompleteInput({
           {...triggerProps}
         >
           <AutocompletePrimitive.Icon data-slot="autocomplete-icon">
-            <HugeiconsIcon icon={ArrowUpDownIcon} />
+            <ChevronsUpDown />
           </AutocompletePrimitive.Icon>
         </AutocompleteTrigger>
       )}
@@ -80,7 +79,7 @@ export function AutocompleteInput({
           )}
           {...clearProps}
         >
-          <HugeiconsIcon icon={Cancel01Icon} />
+          <X />
         </AutocompleteClear>
       )}
     </AutocompletePrimitive.InputGroup>
@@ -264,7 +263,7 @@ export function AutocompleteClear({
       data-slot="autocomplete-clear"
       {...props}
     >
-      <HugeiconsIcon icon={Cancel01Icon} />
+      <X />
     </AutocompletePrimitive.Clear>
   )
 }

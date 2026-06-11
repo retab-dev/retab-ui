@@ -24,6 +24,9 @@ interface SingleFileFormRowProps {
   rowIdx: number;
   /** Absolute-positioning style from the virtualizer (translateY/height). */
   style?: React.CSSProperties;
+  /** Which object/array cell's inline editor popover is open (by field key). */
+  openPopover: string | null;
+  setOpenPopover: (key: string | null) => void;
   onUpdateDocument?: (patch: any) => Promise<void>;
   editMode: "promptOnly" | "editable" | "readOnly";
   allowEditing?: boolean;
@@ -49,6 +52,8 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
     rowCount,
     rowIdx,
     style,
+    openPopover,
+    setOpenPopover,
     onUpdateDocument,
     editMode,
     allowEditing = true,
@@ -142,8 +147,8 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
               docId={documentId}
               cellColorState={cellColorState}
               columnWidth={columnWidth}
-              setOpenPopover={() => {}}
-              openPopover={null}
+              setOpenPopover={setOpenPopover}
+              openPopover={openPopover}
               onGroundTruthDataChange={handleDataChange}
               currentIterationId="single-file"
               similarityType="aligned"

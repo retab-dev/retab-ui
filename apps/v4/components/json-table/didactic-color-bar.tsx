@@ -171,7 +171,7 @@ export const DidacticColorBar: React.FC<DidacticColorBarProps> = ({
         </span>
         <span
           className={cn(
-            "text-muted-foreground rounded-md border p-1 font-medium ring ring-gray-100",
+            "text-muted-foreground rounded-md border p-1 font-medium ring ring-border",
             sizeTokens[size].text,
           )}
           style={{ borderColor: getColor(map, value || 0, reverse) }}

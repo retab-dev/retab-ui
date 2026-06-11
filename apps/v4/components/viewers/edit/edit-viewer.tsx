@@ -43,10 +43,10 @@ export function EditViewer({
   return (
     <div className="relative flex min-h-0 w-full flex-1 flex-col overflow-hidden">
       {(isDetecting || isProcessing) && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/80">
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80">
           <div className="flex flex-col items-center gap-2">
-            <Loader2 className="h-6 w-6 animate-spin text-gray-500" />
-            <span className="text-sm text-gray-500">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">
               {isDetecting ? "Detecting form fields..." : "Filling document..."}
             </span>
           </div>
@@ -54,12 +54,12 @@ export function EditViewer({
       )}
 
       {!hasOutput ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-4 bg-gray-50 px-8 text-gray-400">
-          <Pencil className="h-16 w-16 text-gray-200" />
-          <p className="text-center text-base text-gray-500">
+        <div className="flex flex-1 flex-col items-center justify-center gap-4 bg-muted px-8 text-muted-foreground">
+          <Pencil className="h-16 w-16 text-muted-foreground" />
+          <p className="text-center text-base text-muted-foreground">
             Run edit to see output
           </p>
-          <p className="max-w-sm text-center text-sm text-gray-400">
+          <p className="max-w-sm text-center text-sm text-muted-foreground">
             Upload a document, add filling instructions, and click Run Edit
           </p>
         </div>
@@ -67,7 +67,7 @@ export function EditViewer({
         <div className="flex min-h-0 flex-1 flex-col">
           {views.length > 0 && renderDocument ? (
             <>
-              <div className="flex shrink-0 items-center gap-1 border-b border-gray-200 bg-white px-2 py-1.5">
+              <div className="flex shrink-0 items-center gap-1 border-b border-border bg-background px-2 py-1.5">
                 {views.map((view) => (
                   <button
                     key={view}
@@ -76,8 +76,8 @@ export function EditViewer({
                     className={cn(
                       "rounded-md px-2.5 py-1 text-xs font-medium capitalize transition-colors",
                       viewMode === view
-                        ? "bg-emerald-50 text-emerald-700"
-                        : "text-gray-500 hover:bg-gray-100",
+                        ? "bg-success/10 text-success-foreground"
+                        : "text-muted-foreground hover:bg-muted",
                     )}
                   >
                     {view}
@@ -91,9 +91,9 @@ export function EditViewer({
           ) : null}
 
           {detectedFields.length > 0 ? (
-            <div className="max-h-[45%] shrink-0 overflow-auto border-t border-gray-200">
+            <div className="max-h-[45%] shrink-0 overflow-auto border-t border-border">
               <table className="w-full text-sm">
-                <thead className="sticky top-0 bg-gray-50 text-xs text-gray-500">
+                <thead className="sticky top-0 bg-muted text-xs text-muted-foreground">
                   <tr>
                     <th className="px-3 py-2 text-left font-medium">Field</th>
                     <th className="px-3 py-2 text-left font-medium">Value</th>
@@ -106,14 +106,14 @@ export function EditViewer({
                       <td className="px-3 py-2 align-top">
                         <div className="font-medium">{field.key}</div>
                         {field.description ? (
-                          <div className="text-xs text-gray-500">
+                          <div className="text-xs text-muted-foreground">
                             {field.description}
                           </div>
                         ) : null}
                       </td>
                       <td className="px-3 py-2 align-top">
                         {field.type === "checkbox" ? (
-                          <span className="text-gray-600">
+                          <span className="text-muted-foreground">
                             {field.value === "true" || field.value === "checked"
                               ? "Checked"
                               : "Unchecked"}
@@ -121,10 +121,10 @@ export function EditViewer({
                         ) : field.value ? (
                           field.value
                         ) : (
-                          <span className="text-gray-400 italic">empty</span>
+                          <span className="text-muted-foreground italic">empty</span>
                         )}
                       </td>
-                      <td className="px-3 py-2 align-top tabular-nums text-gray-500">
+                      <td className="px-3 py-2 align-top tabular-nums text-muted-foreground">
                         {field.bbox.page}
                       </td>
                     </tr>

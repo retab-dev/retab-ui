@@ -40,8 +40,7 @@
       "description": "A vertically stacked set of expandable content panels.",
       "dependencies": [
         "@base-ui/react@^1.4.1",
-        "@hugeicons/core-free-icons@^4.2.0",
-        "@hugeicons/react@^1.1.6"
+        "lucide-react"
       ],
       "registryDependencies": [
         "utils"
@@ -93,8 +92,7 @@
       "description": "An autocomplete input built on Base UI primitives.",
       "dependencies": [
         "@base-ui/react@^1.4.1",
-        "@hugeicons/core-free-icons@^4.2.0",
-        "@hugeicons/react@^1.1.6"
+        "lucide-react"
       ],
       "registryDependencies": [
         "input",
@@ -136,8 +134,7 @@
       "description": "Navigation breadcrumbs for page hierarchy.",
       "dependencies": [
         "@base-ui/react@^1.4.1",
-        "@hugeicons/core-free-icons@^4.2.0",
-        "@hugeicons/react@^1.1.6"
+        "lucide-react"
       ],
       "registryDependencies": [
         "utils"
@@ -215,9 +212,8 @@
       "title": "Command",
       "description": "A command menu surface powered by cmdk.",
       "dependencies": [
-        "@hugeicons/core-free-icons@^4.2.0",
-        "@hugeicons/react@^1.1.6",
-        "cmdk@^1.1.1"
+        "cmdk@^1.1.1",
+        "lucide-react"
       ],
       "registryDependencies": [
         "dialog",
@@ -238,8 +234,7 @@
       "description": "An accessible modal dialog built on Base UI.",
       "dependencies": [
         "@base-ui/react@^1.4.1",
-        "@hugeicons/core-free-icons@^4.2.0",
-        "@hugeicons/react@^1.1.6"
+        "lucide-react"
       ],
       "registryDependencies": [
         "button",
@@ -261,8 +256,7 @@
       "description": "A dropdown menu built on Base UI menu primitives.",
       "dependencies": [
         "@base-ui/react@^1.4.1",
-        "@hugeicons/core-free-icons@^4.2.0",
-        "@hugeicons/react@^1.1.6"
+        "lucide-react"
       ],
       "registryDependencies": [
         "utils"
@@ -376,9 +370,8 @@
       "description": "A select control built on Base UI.",
       "dependencies": [
         "@base-ui/react@^1.4.1",
-        "@hugeicons/core-free-icons@^4.2.0",
-        "@hugeicons/react@^1.1.6",
-        "class-variance-authority@^0.7.1"
+        "class-variance-authority@^0.7.1",
+        "lucide-react"
       ],
       "registryDependencies": [
         "utils"
@@ -417,8 +410,7 @@
       "description": "A side sheet built on Base UI dialog primitives.",
       "dependencies": [
         "@base-ui/react@^1.4.1",
-        "@hugeicons/core-free-icons@^4.2.0",
-        "@hugeicons/react@^1.1.6"
+        "lucide-react"
       ],
       "registryDependencies": [
         "button",
@@ -440,9 +432,8 @@
       "description": "A responsive application sidebar with menu, rail, and provider primitives.",
       "dependencies": [
         "@base-ui/react@^1.4.1",
-        "@hugeicons/core-free-icons@^4.2.0",
-        "@hugeicons/react@^1.1.6",
-        "class-variance-authority@^0.7.1"
+        "class-variance-authority@^0.7.1",
+        "lucide-react"
       ],
       "registryDependencies": [
         "button",
@@ -483,8 +474,7 @@
       "title": "Sonner",
       "description": "A themed toast provider for Sonner.",
       "dependencies": [
-        "@hugeicons/core-free-icons@^4.2.0",
-        "@hugeicons/react@^1.1.6",
+        "lucide-react",
         "next-themes@0.4.6",
         "sonner@^2.0.0"
       ],
@@ -502,8 +492,7 @@
       "title": "Spinner",
       "description": "A compact loading spinner using Hugeicons.",
       "dependencies": [
-        "@hugeicons/core-free-icons@^4.2.0",
-        "@hugeicons/react@^1.1.6"
+        "lucide-react"
       ],
       "registryDependencies": [
         "utils"
@@ -560,8 +549,7 @@
       "title": "Resizable",
       "description": "Resizable panel primitives using react-resizable-panels.",
       "dependencies": [
-        "@hugeicons/core-free-icons@^4.2.0",
-        "@hugeicons/react@^1.1.6",
+        "lucide-react",
         "react-resizable-panels@^4.11.2"
       ],
       "registryDependencies": [
@@ -595,7 +583,8 @@
       "description": "A virtualized CSV/TSV table built on TanStack Table and TanStack Virtual: sortable columns, sticky header, row numbers, horizontal scroll.",
       "dependencies": [
         "@tanstack/react-table@^8.21.3",
-        "@tanstack/react-virtual@^3.13.12"
+        "@tanstack/react-virtual@^3.13.12",
+        "lucide-react"
       ],
       "registryDependencies": [
         "csv",
@@ -615,6 +604,7 @@
       "title": "PDF Viewer",
       "description": "A pdfjs-backed PDF viewer: continuous scroll, zoom, rotate, fit-to-width, download, and a per-page overlay slot for bounding-box citations. No useEffect.",
       "dependencies": [
+        "lucide-react",
         "pdfjs-dist@5.4.296"
       ],
       "registryDependencies": [
@@ -629,6 +619,30 @@
           "path": "registry/new-york-v4/ui/pdf-viewer.tsx",
           "type": "registry:ui",
           "target": "@ui/pdf-viewer.tsx"
+        }
+      ]
+    },
+    {
+      "name": "image-viewer",
+      "type": "registry:ui",
+      "title": "Image Viewer",
+      "description": "A performant image viewer with native off-thread decode (createImageBitmap), continuous scroll, zoom, rotate, fit-to-width, download, and a per-frame overlay slot. Renders multi-page TIFF scans efficiently: frames decode lazily near the viewport and decoded bitmaps are capped. No useEffect.",
+      "dependencies": [
+        "lucide-react",
+        "utif@3.1.0"
+      ],
+      "registryDependencies": [
+        "utils",
+        "button",
+        "scroll-area",
+        "separator",
+        "spinner"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/image-viewer.tsx",
+          "type": "registry:ui",
+          "target": "@ui/image-viewer.tsx"
         }
       ]
     },
@@ -731,6 +745,22 @@
           "path": "registry/new-york-v4/ui/page-ribbon.tsx",
           "type": "registry:ui",
           "target": "@ui/page-ribbon.tsx"
+        }
+      ]
+    },
+    {
+      "name": "schema-builder",
+      "type": "registry:ui",
+      "title": "Schema Builder",
+      "description": "Controlled JSON Schema editor for building Retab extraction schemas — fields, types, nested objects, arrays, enums, and required flags.",
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/schema-builder.tsx",
+          "type": "registry:ui",
+          "target": "@ui/schema-builder.tsx"
         }
       ]
     }

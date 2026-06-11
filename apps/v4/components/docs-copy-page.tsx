@@ -1,8 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { ChevronDown } from "@hugeicons/core-free-icons"
-import { HugeiconsIcon } from "@hugeicons/react"
+import { ChevronDown } from "lucide-react"
 
 import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard"
 import { Button } from "@/components/ui/button"
@@ -169,10 +168,7 @@ export function DocsCopyPage({ page, url }: { page: string; url: string }) {
       className="size-8 px-0 shadow-none md:size-7 md:text-[0.8rem]"
       aria-label="Copy page options"
     >
-      <HugeiconsIcon
-        icon={ChevronDown}
-        className={mobile ? "rotate-180" : undefined}
-      />
+      <ChevronDown className={mobile ? "rotate-180" : undefined} />
     </Button>
   )
 

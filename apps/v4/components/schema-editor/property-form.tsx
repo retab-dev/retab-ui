@@ -336,7 +336,7 @@ export function PropertyForm({
             {editMode === "editable" &&
               getEffectiveType(editedProperty).type === "object" &&
               !editedProperty.$ref && (
-                <div className="rounded-md border bg-muted/30 p-3">
+                <div className="rounded-md border p-3">
                   <SchemaNodeEditor
                     name={editedName}
                     node={editedProperty as ExtendedJSONSchema7}
@@ -354,7 +354,7 @@ export function PropertyForm({
               )}
             {editMode === "editable" &&
               getEffectiveType(editedProperty).type === "array" && (
-                <div className="space-y-2 rounded-md border bg-muted/30 p-3">
+                <div className="space-y-2 rounded-md border p-3">
                   <Label className="text-xs text-muted-foreground">
                     List item type
                   </Label>

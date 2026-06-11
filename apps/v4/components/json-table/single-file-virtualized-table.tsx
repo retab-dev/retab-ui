@@ -272,6 +272,10 @@ export const SingleFileVirtualizedTable =
       // Add hover info state for DataCell hover functionality
       const [hoverInfo, setHoverInfo] = useState<HoverInfo | null>(null);
 
+      // Which object/array cell has its inline editor popover open (by field
+      // key). Held at the table level so it survives row virtualization.
+      const [openPopover, setOpenPopover] = useState<string | null>(null);
+
       // Hover card state and refs
       const hoverCardRef = useRef<HTMLDivElement>(null);
       const [hoverCardPos, setHoverCardPos] = useState<{
@@ -514,6 +518,8 @@ export const SingleFileVirtualizedTable =
                           schema={schema}
                           visibleKeys={visibleKeys}
                           rowCount={rowCount}
+                          openPopover={openPopover}
+                          setOpenPopover={setOpenPopover}
                           onUpdateDocument={onUpdateDocument}
                           editMode={editMode}
                           allowEditing={allowEditing}

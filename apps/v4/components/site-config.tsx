@@ -1,8 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { LayoutTwoColumnIcon } from "@hugeicons/core-free-icons"
-import { HugeiconsIcon } from "@hugeicons/react"
+import { Columns2 } from "lucide-react"
 
 import { trackEvent } from "@/lib/events"
 import { cn } from "@/lib/utils"
@@ -28,7 +27,7 @@ export function SiteConfig({ className }: React.ComponentProps<typeof Button>) {
       title="Toggle layout"
     >
       <span className="sr-only">Toggle layout</span>
-      <HugeiconsIcon icon={LayoutTwoColumnIcon} />
+      <Columns2 />
     </Button>
   )
 }

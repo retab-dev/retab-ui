@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { IconTerminal } from "@tabler/icons-react"
+import { Terminal } from "lucide-react"
 
 import { useConfig } from "@/hooks/use-config"
 import {
@@ -78,7 +78,7 @@ export function CodeBlockCommand({
         <div className="flex min-h-10 items-center justify-between gap-3 border-b border-border/50 px-3 py-1">
           <div className="flex min-w-0 items-center gap-2">
             <div className="flex size-4 shrink-0 items-center justify-center rounded-[1px] bg-foreground opacity-70">
-              <IconTerminal className="size-3 text-code" />
+              <Terminal className="size-3 text-code" />
             </div>
             <TabsList className="min-w-0 rounded-none bg-transparent p-0">
               {Object.entries(tabs).map(([key]) => {

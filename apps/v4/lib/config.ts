@@ -3,7 +3,7 @@ const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://retab.com/ui"
 export const siteConfig = {
   name: "Retab UI",
   url: appUrl,
-  ogImage: `${appUrl}/opengraph-image.png`,
+  ogImage: `${appUrl}/og`,
   description:
     "Open source UI primitives for document AI products — viewers for Retab parses, extractions, edits, classifications, partitions, and splits.",
   links: {

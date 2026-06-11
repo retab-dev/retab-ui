@@ -50,7 +50,7 @@ export function ParseViewer({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       {hasOutput ? (
-        <div className="flex shrink-0 items-center gap-1 border-b border-gray-200 bg-white px-2 py-1.5">
+        <div className="flex shrink-0 items-center gap-1 border-b border-border bg-background px-2 py-1.5">
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -59,8 +59,8 @@ export function ParseViewer({
               className={cn(
                 "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
                 activeTab === tab.id
-                  ? "bg-cyan-50 text-cyan-700"
-                  : "text-gray-500 hover:bg-gray-100",
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:bg-muted",
               )}
             >
               {tab.label}
@@ -74,7 +74,7 @@ export function ParseViewer({
             <Button
               variant="outline"
               size="icon"
-              className="h-8 w-8 bg-white"
+              className="h-8 w-8 bg-background"
               onClick={() => setCurrentPage(currentPage - 1)}
               disabled={currentPage === 0}
               aria-label="Previous page"
@@ -84,7 +84,7 @@ export function ParseViewer({
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8 bg-white px-3">
+                <Button variant="outline" size="sm" className="h-8 bg-background px-3">
                   Page {currentPage + 1} / {resolvedPages.length}
                 </Button>
               </DropdownMenuTrigger>
@@ -93,7 +93,7 @@ export function ParseViewer({
                   <DropdownMenuItem
                     key={index}
                     onClick={() => setCurrentPage(index)}
-                    className={currentPage === index ? "bg-gray-100" : ""}
+                    className={currentPage === index ? "bg-muted" : ""}
                   >
                     Page {index + 1}
                   </DropdownMenuItem>
@@ -104,7 +104,7 @@ export function ParseViewer({
             <Button
               variant="outline"
               size="icon"
-              className="h-8 w-8 bg-white"
+              className="h-8 w-8 bg-background"
               onClick={() => setCurrentPage(currentPage + 1)}
               disabled={currentPage === resolvedPages.length - 1}
               aria-label="Next page"
@@ -114,19 +114,19 @@ export function ParseViewer({
           </div>
         )}
         {!hasOutput ? (
-          <div className="flex flex-1 flex-col items-center justify-center gap-4 bg-gray-50 px-8 text-gray-400">
+          <div className="flex flex-1 flex-col items-center justify-center gap-4 bg-muted px-8 text-muted-foreground">
             {isProcessing ? (
               <>
-                <Loader2 className="h-12 w-12 animate-spin text-cyan-500" />
-                <p className="text-center text-base text-gray-500">Parsing...</p>
+                <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                <p className="text-center text-base text-muted-foreground">Parsing...</p>
               </>
             ) : (
               <>
-                <ScanText className="h-16 w-16 text-gray-200" />
-                <p className="text-center text-base text-gray-500">
+                <ScanText className="h-16 w-16 text-muted-foreground" />
+                <p className="text-center text-base text-muted-foreground">
                   Run parse to see output
                 </p>
-                <p className="max-w-sm text-center text-sm text-gray-400">
+                <p className="max-w-sm text-center text-sm text-muted-foreground">
                   Upload a document and click Run Parse
                 </p>
               </>
@@ -135,13 +135,13 @@ export function ParseViewer({
         ) : (
           <>
             {activeTab === "text" && (
-              <div className="flex min-h-0 flex-1 overflow-auto bg-white p-5 text-xs whitespace-pre-wrap">
+              <div className="flex min-h-0 flex-1 overflow-auto bg-background p-5 text-xs whitespace-pre-wrap">
                 {resolvedPages[currentPage]}
               </div>
             )}
 
             {activeTab === "rendered" && (
-              <div className="flex min-h-0 flex-1 overflow-auto bg-white p-5">
+              <div className="flex min-h-0 flex-1 overflow-auto bg-background p-5">
                 <div className="prose prose-sm w-full max-w-none">
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
@@ -166,10 +166,10 @@ export function ParseViewer({
                         <h6 className="text-base font-light" {...props} />
                       ),
                       td: ({ ...props }) => (
-                        <td className="border bg-gray-50 px-2 py-1" {...props} />
+                        <td className="border bg-muted px-2 py-1" {...props} />
                       ),
                       th: ({ ...props }) => (
-                        <td className="border bg-gray-200 px-2 py-1" {...props} />
+                        <td className="border bg-muted px-2 py-1" {...props} />
                       ),
                     }}
                   >
@@ -180,7 +180,7 @@ export function ParseViewer({
             )}
 
             {activeTab === "file" && renderDocument && (
-              <div className="flex min-h-0 flex-1 overflow-auto bg-gray-50">
+              <div className="flex min-h-0 flex-1 overflow-auto bg-muted">
                 {renderDocument()}
               </div>
             )}

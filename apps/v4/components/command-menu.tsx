@@ -2,12 +2,7 @@
 
 import * as React from "react"
 import { usePathname, useRouter } from "next/navigation"
-import {
-  ArrowDownLeft01Icon,
-  ArrowRight01Icon,
-  DashedLineIcon,
-} from "@hugeicons/core-free-icons"
-import { HugeiconsIcon } from "@hugeicons/react"
+import { ChevronRight, CornerDownLeft, Minus } from "lucide-react"
 import { useDocsSearch } from "fumadocs-core/search/client"
 
 import { type ColorPalette } from "@/lib/colors"
@@ -213,7 +208,7 @@ export function CommandMenu({
               runCommand(() => router.push(item.href))
             }}
           >
-            <HugeiconsIcon icon={ArrowRight01Icon} />
+            <ChevronRight />
             {item.label}
           </CommandMenuItem>
         ))}
@@ -263,7 +258,7 @@ export function CommandMenu({
                 {isComponent ? (
                   <div className="aspect-square size-4 rounded-full border border-dashed border-muted-foreground" />
                 ) : (
-                  <HugeiconsIcon icon={ArrowRight01Icon} />
+                  <ChevronRight />
                 )}
                 {item.name}
               </CommandMenuItem>
@@ -303,7 +298,7 @@ export function CommandMenu({
               )
             }}
           >
-            <HugeiconsIcon icon={DashedLineIcon} />
+            <Minus />
             {block.description}
             <span className="ml-auto font-mono text-xs font-normal text-muted-foreground tabular-nums">
               {block.name}
@@ -409,7 +404,7 @@ export function CommandMenu({
         <div className="absolute inset-x-0 bottom-0 z-20 flex h-10 items-center gap-2 rounded-b-xl border-t border-t-border bg-muted px-4 text-xs font-medium text-muted-foreground">
           <div className="flex items-center gap-2">
             <CommandMenuKbd>
-              <HugeiconsIcon icon={ArrowDownLeft01Icon} />
+              <CornerDownLeft />
             </CommandMenuKbd>{" "}
             {selectedType === "page" || selectedType === "component"
               ? "Go to Page"

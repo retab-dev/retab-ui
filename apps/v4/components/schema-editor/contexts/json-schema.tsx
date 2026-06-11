@@ -9,7 +9,6 @@ import React, {
   useMemo,
   useRef,
 } from "react";
-import { convertSchemaToLayout } from "@/components/schema-editor/lib/layout";
 import {
   errorsText,
   getJsonSchemaValidationErrors,
@@ -28,8 +27,6 @@ interface JsonSchemaContextType {
   computedSchema: ExtendedJSONSchema7;
   isValidSchema: boolean;
   validationErrors?: string;
-  layoutSchema: any;
-  setLayoutSchema: React.Dispatch<React.SetStateAction<any>>;
 }
 
 const JsonSchemaContext = createContext<JsonSchemaContextType | undefined>(
@@ -40,7 +37,6 @@ interface JsonSchemaEditorProviderProps {
   jsonSchema?: ExtendedJSONSchema7;
   setJsonSchema?: React.Dispatch<React.SetStateAction<ExtendedJSONSchema7>>;
   computedSchema?: ExtendedJSONSchema7;
-  layoutSchema?: any;
   persistJsonSchemaCallback?: (newSchema: ExtendedJSONSchema7) => Promise<void>;
   children: ReactNode;
 }
@@ -50,14 +46,12 @@ function JsonSchemaValidationRunner({
   countSchemaProperties,
   processValidationErrors,
   setValidationErrors,
-  setLayoutSchema,
   setIsValidSchema,
 }: {
   jsonSchema: ExtendedJSONSchema7;
   countSchemaProperties: (schema?: ExtendedJSONSchema7) => number;
   processValidationErrors: (errors: any[] | null | undefined) => any[];
   setValidationErrors: React.Dispatch<React.SetStateAction<string | undefined>>;
-  setLayoutSchema: React.Dispatch<React.SetStateAction<any>>;
   setIsValidSchema: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
   useMountEffect(() => {
@@ -67,12 +61,10 @@ function JsonSchemaValidationRunner({
 
     if (isValid) {
       setValidationErrors(undefined);
-      setLayoutSchema(convertSchemaToLayout(jsonSchema));
     } else if (propertiesOverflow) {
       setValidationErrors(
         `Schema has too many properties: ${propertiesCount}. Maximum accepted is 500. Please reduce the number of properties.`,
       );
-      setLayoutSchema(convertSchemaToLayout(jsonSchema));
     } else {
       setValidationErrors(
         errorsText(processValidationErrors(getJsonSchemaValidationErrors()), {
@@ -91,7 +83,6 @@ function JsonSchemaEditorProviderRaw({
   jsonSchema: initialJsonSchema,
   setJsonSchema: externalSetJsonSchema,
   computedSchema: providedComputedSchema,
-  layoutSchema: initialLayoutSchema,
   persistJsonSchemaCallback: persistJsonSchemaCallback,
   children,
 }: JsonSchemaEditorProviderProps) {
@@ -102,9 +93,6 @@ function JsonSchemaEditorProviderRaw({
 
   const [validationErrors, setValidationErrors] = useState<string>();
   const [isValidSchema, setIsValidSchema] = useState(true);
-  const [internalLayoutSchema, setInternalLayoutSchema] = useState<any>(
-    initialLayoutSchema || convertSchemaToLayout(jsonSchema),
-  );
 
   // Use ref to track current schema value for comparisons in setJsonSchema
   const jsonSchemaRef = useRef(jsonSchema);
@@ -113,16 +101,11 @@ function JsonSchemaEditorProviderRaw({
   // Helper to check if property order has changed (recursively)
   const hasPropertyOrderChanged = useCallback(
     (oldSchema: any, newSchema: any): boolean => {
-      //console.log("[SCHEMA] hasPropertyOrderChanged CALLED");
-      //console.log("[SCHEMA] oldSchema keys:", Object.keys(oldSchema?.properties || {}));
-      //console.log("[SCHEMA] newSchema keys:", Object.keys(newSchema?.properties || {}));
 
       if (!oldSchema || !newSchema) {
-        //console.log("[SCHEMA] Early return: schema is null");
         return false;
       }
       if (typeof oldSchema !== "object" || typeof newSchema !== "object") {
-        //console.log("[SCHEMA] Early return: not an object");
         return false;
       }
 
@@ -130,22 +113,15 @@ function JsonSchemaEditorProviderRaw({
       if (oldSchema.properties && newSchema.properties) {
         const oldKeys = Object.keys(oldSchema.properties);
         const newKeys = Object.keys(newSchema.properties);
-        //console.log("[SCHEMA] Checking property order at root level");
-        //console.log("[SCHEMA] Old keys:", oldKeys);
-        //console.log("[SCHEMA] New keys:", newKeys);
 
         // If keys are in different order, property order changed
         if (oldKeys.length === newKeys.length) {
-          //console.log("[SCHEMA] Same number of keys, comparing order...");
           for (let i = 0; i < oldKeys.length; i++) {
             if (oldKeys[i] !== newKeys[i]) {
-              //console.log(`[SCHEMA] Property order CHANGED at index ${i}: old="${oldKeys[i]}" vs new="${newKeys[i]}"`);
               return true;
             }
           }
-          //console.log("[SCHEMA] All keys in same order");
         } else {
-          //console.log("[SCHEMA] Different number of keys");
         }
 
         // Recursively check nested objects and definitions
@@ -161,7 +137,6 @@ function JsonSchemaEditorProviderRaw({
           }
         }
       } else {
-        //console.log("[SCHEMA] No properties to compare");
       }
 
       // Check $defs as well
@@ -180,7 +155,6 @@ function JsonSchemaEditorProviderRaw({
         }
       }
 
-      //console.log("[SCHEMA] hasPropertyOrderChanged returning FALSE - no changes detected");
       return false;
     },
     [],
@@ -192,15 +166,12 @@ function JsonSchemaEditorProviderRaw({
       value: React.SetStateAction<ExtendedJSONSchema7>,
       persist?: boolean,
     ): Promise<void> => {
-      //console.log("[SCHEMA] setJsonSchema called with persist=", persist);
       if (process.env.NODE_ENV !== "production") {
-        //console.log("[SCHEMA] value", value);
       }
 
       // Resolve value once
       const newValue =
         typeof value === "function" ? value(jsonSchemaRef.current) : value;
-      //console.log("[SCHEMA] Resolved value properties:", Object.keys(newValue?.properties || {}));
 
       // Check if anything changed (values or property order)
       const orderChanged = hasPropertyOrderChanged(
@@ -209,41 +180,30 @@ function JsonSchemaEditorProviderRaw({
       );
       const valuesChanged = !isEqual(jsonSchemaRef.current, newValue);
 
-      //console.log("[SCHEMA] orderChanged:", orderChanged, "valuesChanged:", valuesChanged);
 
       // Skip if nothing changed
       if (!valuesChanged && !orderChanged) {
-        //console.log("[SCHEMA] No changes detected, skipping");
         // Still persist if explicitly requested (e.g., final chunk in streaming)
         if ((persist ?? true) && persistJsonSchemaCallback) {
-          //console.log("[SCHEMA] Persisting unchanged value");
           await persistJsonSchemaCallback(newValue);
         }
         return;
       }
 
-      //console.log("[SCHEMA] Changes detected. Old properties:", Object.keys(jsonSchemaRef.current?.properties || {}), "New properties:", Object.keys(newValue?.properties || {}));
 
       // For controlled mode: call external setter if provided
       if (externalSetJsonSchema) {
-        //console.log("[SCHEMA] Using external setJsonSchema (controlled mode)");
         externalSetJsonSchema(newValue);
       }
 
       // Always persist (triggers optimistic update in parent)
       if ((persist ?? true) && persistJsonSchemaCallback) {
-        //console.log("[SCHEMA] Persisting new value");
         await persistJsonSchemaCallback(newValue);
       }
 
-      //console.log("[SCHEMA] setJsonSchema completed");
     },
     [externalSetJsonSchema, persistJsonSchemaCallback, hasPropertyOrderChanged],
   );
-
-  // Same for layout
-  const layoutSchema = internalLayoutSchema;
-  const setLayoutSchema = setInternalLayoutSchema;
 
   // Enhanced function to count total properties in the schema (including nested, $ref and $defs)
   const countSchemaProperties = useCallback(
@@ -453,15 +413,12 @@ function JsonSchemaEditorProviderRaw({
 
   // Memoize context value
   const contextValue = useMemo<JsonSchemaContextType>(() => {
-    //console.log("[SCHEMA] Context value recomputed. computedSchema keys:", Object.keys(computedSchema?.properties || {}));
     return {
       jsonSchema,
       setJsonSchema,
       computedSchema,
       isValidSchema,
       validationErrors,
-      layoutSchema,
-      setLayoutSchema,
     };
   }, [
     jsonSchema,
@@ -469,8 +426,6 @@ function JsonSchemaEditorProviderRaw({
     computedSchema,
     isValidSchema,
     validationErrors,
-    layoutSchema,
-    setLayoutSchema,
   ]);
 
   return (
@@ -481,7 +436,6 @@ function JsonSchemaEditorProviderRaw({
         countSchemaProperties={countSchemaProperties}
         processValidationErrors={processValidationErrors}
         setValidationErrors={setValidationErrors}
-        setLayoutSchema={setLayoutSchema}
         setIsValidSchema={setIsValidSchema}
       />
       {children}
@@ -527,7 +481,6 @@ export const JsonSchemaEditorProvider = React.memo(
     jsonSchema,
     setJsonSchema,
     computedSchema,
-    layoutSchema,
     persistJsonSchemaCallback,
     children,
   }: JsonSchemaEditorProviderProps) {
@@ -546,7 +499,6 @@ export const JsonSchemaEditorProvider = React.memo(
         jsonSchema={jsonSchema}
         setJsonSchema={setJsonSchema}
         computedSchema={computedSchema}
-        layoutSchema={layoutSchema}
         persistJsonSchemaCallback={persistJsonSchemaCallback}
       >
         {children}

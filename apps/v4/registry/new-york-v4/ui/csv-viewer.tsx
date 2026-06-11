@@ -1,8 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { ArrowDown01Icon, ArrowUp01Icon } from "@hugeicons/core-free-icons"
-import { HugeiconsIcon } from "@hugeicons/react"
+import { ChevronDown, ChevronUp } from "lucide-react"
 import {
   type ColumnDef,
   type Header,
@@ -404,11 +403,17 @@ function HeaderCell({
           {flexRender(header.column.columnDef.header, header.getContext())}
         </span>
         {sorted ? (
-          <HugeiconsIcon
-            icon={sorted === "asc" ? ArrowUp01Icon : ArrowDown01Icon}
-            className="size-3.5 shrink-0 text-muted-foreground"
-            aria-hidden
-          />
+          sorted === "asc" ? (
+            <ChevronUp
+              className="size-3.5 shrink-0 text-muted-foreground"
+              aria-hidden
+            />
+          ) : (
+            <ChevronDown
+              className="size-3.5 shrink-0 text-muted-foreground"
+              aria-hidden
+            />
+          )
         ) : null}
       </button>
     </div>

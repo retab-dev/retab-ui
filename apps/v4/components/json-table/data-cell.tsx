@@ -432,7 +432,7 @@ export function SimpleFakeTextarea({
         "cursor-default overflow-hidden text-inherit",
         isEditing &&
           !disabled &&
-          "cursor-text outline-none focus:outline-1 focus:outline-blue-500",
+          "cursor-text outline-none focus:outline-1 focus:outline-primary",
         "cursor-pointer hover:bg-muted",
         className,
       )}
@@ -550,7 +550,7 @@ export function EditableTextRadix({
           }}
           className={cn(
             // stripped-down, no animation classes
-            "bg-popover text-popover-foreground z-50 m-0 w-auto rounded-none border border-blue-500 p-0 shadow-md outline-none",
+            "bg-popover text-popover-foreground z-50 m-0 w-auto rounded-none border border-primary p-0 shadow-md outline-none",
           )}
           style={{
             width: `${Math.max(cellWidth ?? 200, 200)}px`,
@@ -670,7 +670,7 @@ export function EditableText({
           }}
           className={cn(
             // stripped-down, no animation classes
-            "bg-popover text-popover-foreground z-50 m-0 w-auto rounded-none border border-blue-500 p-0 shadow-md outline-none",
+            "bg-popover text-popover-foreground z-50 m-0 w-auto rounded-none border border-primary p-0 shadow-md outline-none",
           )}
           style={{
             width: `${Math.max(cellWidth ?? 200, 200)}px`,
@@ -823,7 +823,7 @@ export function PlusMergedCell({
         }}
       >
         <div
-          className={`${!isDisabled ? "hover:border hover:border-blue-500" : ""} flex h-full w-full items-center justify-center`}
+          className={`${!isDisabled ? "hover:border hover:border-primary" : ""} flex h-full w-full items-center justify-center`}
         >
           {" "}
           {
@@ -1339,11 +1339,11 @@ const DataCellContent = (
   // Function field styling based on validation value
   const getFunctionFieldStyling = () => {
     if (!isFunctionField) return "";
-    if (effectiveValue === true) return "border-green-500 border bg-green-50";
-    if (effectiveValue === false) return "border-red-500 border bg-red-50";
+    if (effectiveValue === true) return "border-success border bg-success/10";
+    if (effectiveValue === false) return "border-destructive border bg-destructive/10";
     if (effectiveValue === null || effectiveValue === undefined)
-      return "border-yellow-500 border bg-yellow-50";
-    return "border-green-500 border bg-green-50"; // default to green for other truthy values
+      return "border-warning border bg-warning/10";
+    return "border-success border bg-success/10"; // default to green for other truthy values
   };
 
   // Computed field styling - special handling for boolean computed fields
@@ -1351,14 +1351,14 @@ const DataCellContent = (
     if (!isComputedField) return "";
     // If computed field is boolean type, apply color coding like function fields
     if (isBoolean) {
-      if (effectiveValue === true) return "border-green-500 border bg-green-50";
-      if (effectiveValue === false) return "border-red-500 border bg-red-50";
+      if (effectiveValue === true) return "border-success border bg-success/10";
+      if (effectiveValue === false) return "border-destructive border bg-destructive/10";
       if (effectiveValue === null || effectiveValue === undefined)
-        return "border-yellow-500 border bg-yellow-50";
-      return "border-green-500 border bg-green-50"; // default to green for other truthy values
+        return "border-warning border bg-warning/10";
+      return "border-success border bg-success/10"; // default to green for other truthy values
     }
     // Non-boolean computed fields get the standard blue background
-    return "bg-blue-50";
+    return "bg-primary/10";
   };
 
   // Only show green verified styling in dataset view
@@ -1401,15 +1401,15 @@ const DataCellContent = (
         className={cn(
           "h-full w-full focus-within:overflow-visible",
           showVerifiedStyling
-            ? "border border-green-500 bg-green-50"
+            ? "border border-success bg-success/10"
             : showFunctionStyling
               ? getFunctionFieldStyling()
               : showComputedStyling
                 ? getComputedFieldStyling()
                 : "",
           showReviewHighlightedStyling &&
-            "bg-amber-100 ring-1 ring-amber-300 ring-inset",
-          isHovering && "border border-blue-500",
+            "bg-warning/20 ring-1 ring-warning ring-inset",
+          isHovering && "border border-primary",
         )}
       >
         {isObject ? (
@@ -1895,7 +1895,7 @@ const DataCellContent = (
                 "!text-3xs h-full w-full rounded-none px-2 py-2 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0",
                 !effectiveValue && "text-muted-foreground",
                 focusedField === `${docId}:${actualKey}`
-                  ? "absolute top-[1px] left-[1px] z-10 h-64 min-w-[200px] bg-background shadow-md outline-1 outline-blue-500"
+                  ? "absolute top-[1px] left-[1px] z-10 h-64 min-w-[200px] bg-background shadow-md outline-1 outline-primary"
                   : "", //min-w-[200px]
               )}
               style={{

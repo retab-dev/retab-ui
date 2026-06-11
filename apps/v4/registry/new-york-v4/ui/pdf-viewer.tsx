@@ -1,15 +1,9 @@
 "use client"
 
 import * as React from "react"
-import {
-  Download01Icon,
-  MinusSignIcon,
-  PlusSignIcon,
-  RotateClockwiseIcon,
-  SquareArrowExpand01Icon,
-} from "@hugeicons/core-free-icons"
-import { HugeiconsIcon } from "@hugeicons/react"
-// Type-only import — erased at compile time, so pdfjs never loads on the server.
+import { Download, Maximize, Minus, Plus, RotateCw } from "lucide-react"
+// Type-only imports — erased at compile time, so pdfjs never loads on the server.
+import type * as Pdfjs from "pdfjs-dist"
 import type { PDFDocumentProxy, PDFPageProxy } from "pdfjs-dist"
 
 import { cn } from "@/lib/utils"
@@ -21,7 +15,7 @@ import { Spinner } from "@/components/ui/spinner"
 // pdfjs touches browser-only globals (DOMMatrix) at module eval, so it must be
 // imported lazily on the client. The worker is resolved by the bundler from the
 // installed package — no runtime CDN call.
-let pdfjsPromise: Promise<typeof import("pdfjs-dist")> | null = null
+let pdfjsPromise: Promise<typeof Pdfjs> | null = null
 function loadPdfjs() {
   if (!pdfjsPromise) {
     pdfjsPromise = import("pdfjs-dist").then((pdfjs) => {
@@ -138,10 +132,12 @@ function PdfViewerInner({
 }: PdfViewerProps) {
   const doc = React.use(getDocumentResource(src))
   const firstPage = React.use(getPageResource(doc, 1))
-  const baseWidth = React.useMemo(
-    () => firstPage.getViewport({ scale: 1 }).width,
-    [firstPage]
-  )
+  // First page stands in for every page's intrinsic size: most documents are
+  // uniform, so this is enough to reserve scroll space before a page renders.
+  const { width: baseWidth, height: baseHeight } = React.useMemo(() => {
+    const vp = firstPage.getViewport({ scale: 1 })
+    return { width: vp.width, height: vp.height }
+  }, [firstPage])
 
   const [manualScale, setManualScale] = React.useState<number | null>(
     fixedScale ?? null
@@ -150,22 +146,45 @@ function PdfViewerInner({
   const [containerWidth, setContainerWidth] = React.useState<number | null>(null)
 
   // Measure the container with a ResizeObserver attached in the ref callback.
+  // Coalesce to one update per frame so dragging a resize handle doesn't trigger
+  // a fit-width recompute (and a re-render of every visible canvas) per pixel.
   const containerRef = React.useCallback((el: HTMLDivElement | null) => {
     if (!el) return
     setContainerWidth(el.clientWidth)
+    let frame = 0
+    let latest = el.clientWidth
     const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) setContainerWidth(entry.contentRect.width)
+      for (const entry of entries) latest = entry.contentRect.width
+      if (frame) return
+      frame = requestAnimationFrame(() => {
+        frame = 0
+        setContainerWidth(latest)
+      })
     })
     observer.observe(el)
-    return () => observer.disconnect()
+    return () => {
+      if (frame) cancelAnimationFrame(frame)
+      observer.disconnect()
+    }
   }, [])
 
   // Report the page nearest the top of the scroll viewport as the user scrolls.
   // We watch the actual scroll container (not the browser viewport) so the
   // current-page cursor stays in sync even when the viewer is embedded.
   const scrollViewportRef = React.useRef<HTMLDivElement | null>(null)
+  // Mirror the viewport element into state so the IntersectionObserver below can
+  // root itself on the internal scroller (pages scroll inside it, not the window).
+  const [viewportEl, setViewportEl] = React.useState<HTMLDivElement | null>(null)
+  const setScrollViewport = React.useCallback((el: HTMLDivElement | null) => {
+    scrollViewportRef.current = el
+    setViewportEl(el)
+  }, [])
   const lastReported = React.useRef(0)
-  const handleScroll = React.useCallback(() => {
+  // Coalesce scroll work to one frame: the layout reads below (getBoundingClientRect
+  // over every page slot) shouldn't run on every scroll event.
+  const scrollFrame = React.useRef(0)
+  const measureScroll = React.useCallback(() => {
+    scrollFrame.current = 0
     const viewport = scrollViewportRef.current
     if (!viewport) return
     const scrollable = viewport.scrollHeight - viewport.clientHeight
@@ -186,9 +205,80 @@ function PdfViewerInner({
       onVisiblePageChange?.(current)
     }
   }, [onVisiblePageChange, onScrollProgressChange])
+  const handleScroll = React.useCallback(() => {
+    if (scrollFrame.current) return
+    scrollFrame.current = requestAnimationFrame(measureScroll)
+  }, [measureScroll])
+  React.useEffect(
+    () => () => {
+      if (scrollFrame.current) cancelAnimationFrame(scrollFrame.current)
+    },
+    []
+  )
+
+  // --- viewport virtualization ------------------------------------------------
+  // Only pages near the viewport hold a live canvas; the rest stay as sized
+  // placeholders so a long PDF doesn't rasterize every page (and every re-zoom)
+  // at once. Slots are always mounted so scroll height — and external
+  // `scrollIntoView([data-page-number])` — stay correct.
+  const [visiblePages, setVisiblePages] = React.useState<ReadonlySet<number>>(
+    () => new Set([1])
+  )
+  const observerRef = React.useRef<IntersectionObserver | null>(null)
+  const slotEls = React.useRef<Set<HTMLElement>>(new Set())
+
+  React.useEffect(() => {
+    if (!viewportEl) return
+    const observer = new IntersectionObserver(
+      (entries) => {
+        setVisiblePages((prev) => {
+          const next = new Set(prev)
+          let changed = false
+          for (const entry of entries) {
+            const n = Number((entry.target as HTMLElement).dataset.pageNumber)
+            if (!n) continue
+            if (entry.isIntersecting) {
+              if (!next.has(n)) {
+                next.add(n)
+                changed = true
+              }
+            } else if (next.delete(n)) {
+              changed = true
+            }
+          }
+          return changed ? next : prev
+        })
+      },
+      // One viewport of pre-render buffer above and below keeps scrolling smooth.
+      { root: viewportEl, rootMargin: "100% 0px" }
+    )
+    observerRef.current = observer
+    for (const el of slotEls.current) observer.observe(el)
+    return () => {
+      observer.disconnect()
+      observerRef.current = null
+    }
+  }, [viewportEl])
+
+  // Slots mount before the observer exists (refs run before effects), so both
+  // this callback and the effect above observe whatever the other hasn't yet.
+  const registerSlot = React.useCallback((el: HTMLElement | null) => {
+    if (!el) return
+    slotEls.current.add(el)
+    observerRef.current?.observe(el)
+    return () => {
+      slotEls.current.delete(el)
+      observerRef.current?.unobserve(el)
+    }
+  }, [])
 
   const fitScale = containerWidth ? (containerWidth - 32) / baseWidth : 1
   const scale = manualScale ?? fitScale
+
+  // Estimated rendered size of an un-rendered page at the current scale/rotation.
+  const rotated = rotation % 180 !== 0
+  const estWidth = Math.round((rotated ? baseHeight : baseWidth) * scale)
+  const estHeight = Math.round((rotated ? baseWidth : baseHeight) * scale)
 
   const zoom = (factor: number) =>
     setManualScale(clamp(scale * factor, 0.25, 5))
@@ -211,22 +301,22 @@ function PdfViewerInner({
           </span>
           <div className="ml-auto flex items-center gap-1">
             <IconButton label="Zoom out" onClick={() => zoom(1 / 1.2)}>
-              <HugeiconsIcon icon={MinusSignIcon} />
+              <Minus />
             </IconButton>
             <span className="w-12 text-center text-xs tabular-nums text-muted-foreground">
               {Math.round(scale * 100)}%
             </span>
             <IconButton label="Zoom in" onClick={() => zoom(1.2)}>
-              <HugeiconsIcon icon={PlusSignIcon} />
+              <Plus />
             </IconButton>
             <IconButton label="Fit width" onClick={() => setManualScale(null)}>
-              <HugeiconsIcon icon={SquareArrowExpand01Icon} />
+              <Maximize />
             </IconButton>
             <IconButton
               label="Rotate"
               onClick={() => setRotation((r) => (r + 90) % 360)}
             >
-              <HugeiconsIcon icon={RotateClockwiseIcon} />
+              <RotateCw />
             </IconButton>
             <Separator orientation="vertical" className="mx-1 h-4" />
             <Button
@@ -244,7 +334,7 @@ function PdfViewerInner({
                 />
               }
             >
-              <HugeiconsIcon icon={Download01Icon} />
+              <Download />
             </Button>
           </div>
         </div>
@@ -260,7 +350,7 @@ function PdfViewerInner({
           {header ? <div data-slot="pdf-viewer-header">{header}</div> : null}
           <ScrollArea
             className="min-h-0 flex-1"
-            viewportRef={scrollViewportRef}
+            viewportRef={setScrollViewport}
             viewportProps={
               onVisiblePageChange || onScrollProgressChange
                 ? { onScroll: handleScroll }
@@ -268,17 +358,31 @@ function PdfViewerInner({
             }
           >
             <div ref={containerRef} className="flex flex-col items-center gap-4 p-4">
-              {Array.from({ length: doc.numPages }, (_, i) => (
-                <React.Suspense key={i} fallback={<PageSkeleton />}>
-                  <PdfPage
-                    doc={doc}
-                    pageNumber={i + 1}
-                    scale={scale}
-                    rotation={rotation}
-                    renderOverlay={renderPageOverlay}
-                  />
-                </React.Suspense>
-              ))}
+              {Array.from({ length: doc.numPages }, (_, i) => {
+                const pageNumber = i + 1
+                return (
+                  <div
+                    key={pageNumber}
+                    ref={registerSlot}
+                    data-slot="pdf-page-slot"
+                    data-page-number={pageNumber}
+                    className="flex items-center justify-center"
+                    style={{ width: estWidth, minHeight: estHeight }}
+                  >
+                    {visiblePages.has(pageNumber) ? (
+                      <React.Suspense fallback={<PageSkeleton />}>
+                        <PdfPage
+                          doc={doc}
+                          pageNumber={pageNumber}
+                          scale={scale}
+                          rotation={rotation}
+                          renderOverlay={renderPageOverlay}
+                        />
+                      </React.Suspense>
+                    ) : null}
+                  </div>
+                )
+              })}
             </div>
           </ScrollArea>
         </div>
@@ -338,7 +442,6 @@ function PdfPage({
       style={{ width: viewport.width, height: viewport.height }}
       data-slot="pdf-page"
       data-page={pageNumber}
-      data-page-number={pageNumber}
     >
       <canvas
         ref={canvasRef}
@@ -400,8 +503,9 @@ function PdfViewerFallback({
 }
 
 function PageSkeleton() {
+  // Fills the parent slot, which already reserves the page's estimated size.
   return (
-    <div className="flex aspect-[3/4] w-full max-w-2xl items-center justify-center rounded-md bg-muted">
+    <div className="flex size-full min-h-32 flex-1 items-center justify-center self-stretch rounded-md bg-muted">
       <Spinner className="size-4 text-muted-foreground" />
     </div>
   )

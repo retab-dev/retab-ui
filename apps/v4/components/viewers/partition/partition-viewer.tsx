@@ -66,7 +66,7 @@ export function PartitionViewer({
       id: c.key,
       label: c.key,
       pages: [...c.pages].sort((a, b) => a - b),
-      color: colors.get(c.key) ?? "#888888",
+      color: colors.get(c.key) ?? "var(--color-muted-foreground)",
       index: 0,
     });
     const legendByKey = new Map<string, Segment>();
@@ -96,19 +96,19 @@ export function PartitionViewer({
 
   if (!hasOutput) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-4 bg-gray-50 px-8 text-gray-400">
+      <div className="flex flex-1 flex-col items-center justify-center gap-4 bg-muted px-8 text-muted-foreground">
         {isProcessing ? (
           <>
-            <Loader2 className="h-12 w-12 animate-spin text-indigo-500" />
-            <p className="text-center text-base text-gray-500">Partitioning...</p>
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            <p className="text-center text-base text-muted-foreground">Partitioning...</p>
           </>
         ) : (
           <>
-            <Key className="h-16 w-16 text-gray-200" />
-            <p className="text-center text-base text-gray-500">
+            <Key className="h-16 w-16 text-muted-foreground" />
+            <p className="text-center text-base text-muted-foreground">
               Run partition to see output
             </p>
-            <p className="max-w-sm text-center text-sm text-gray-400">
+            <p className="max-w-sm text-center text-sm text-muted-foreground">
               Upload a document, set a key and instructions, then click Run
               Partition
             </p>
@@ -119,7 +119,7 @@ export function PartitionViewer({
   }
 
   const header = (
-    <div className="space-y-2 border-b border-gray-200 bg-white px-3 py-2">
+    <div className="space-y-2 border-b border-border bg-background px-3 py-2">
       <SegmentLegend
         segments={legendSegments}
         currentPage={currentPageInt}
@@ -145,7 +145,7 @@ export function PartitionViewer({
   );
 
   return (
-    <div ref={previewPanelRef} className="flex min-h-0 flex-1 flex-col bg-white">
+    <div ref={previewPanelRef} className="flex min-h-0 flex-1 flex-col bg-background">
       {renderDocument ? (
         renderDocument({
           onCurrentPageChange: setCurrentPdfPage,
@@ -154,7 +154,7 @@ export function PartitionViewer({
         })
       ) : (
         <div className="flex h-full items-center justify-center">
-          <span className="text-sm text-zinc-500">No document available</span>
+          <span className="text-sm text-muted-foreground">No document available</span>
         </div>
       )}
     </div>

@@ -71,10 +71,8 @@ import {
 } from "@/components/schema-editor/lib/json-schema-utils";
 import { toast } from "sonner";
 import { ValidationErrorDisplay } from "./validation-error-display";
-import { useTabStateStore } from "@/components/schema-editor/lib/tab-state-store";
 import { TopLevelEditor } from "./json-schema-top-level-editor";
 import { SchemaNodeEditor } from "./json-schema-node-editor";
-import { useMountEffect } from "@/components/schema-editor/lib/use-mount-effect";
 import {
   defaultSchemaForType,
   formatTitle,
@@ -98,65 +96,6 @@ export {
   updateSchemaProperty,
   updateType,
 } from "./json-schema-builder-utils";
-
-function shouldOpenDefsAccordionForSelection(
-  schema: any,
-  selectedFieldPath?: string | null,
-) {
-  if (!selectedFieldPath) return false;
-
-  try {
-    const unwrapNullableAnyOf = (node: any) => {
-      if (node && Array.isArray(node.anyOf)) {
-        const nonNull = node.anyOf.find(
-          (branch: any) =>
-            typeof branch === "object" &&
-            (branch.type !== "null" || branch.$ref || branch.enum),
-        );
-        return nonNull && typeof nonNull === "object" ? nonNull : node;
-      }
-      return node;
-    };
-
-    const segments = selectedFieldPath.split(".");
-    const first = segments[0];
-    const base = unwrapNullableAnyOf(schema);
-    const firstNode = base?.properties?.[first];
-    const effectiveNode = unwrapNullableAnyOf(firstNode);
-
-    if (!effectiveNode || typeof effectiveNode !== "object") {
-      return false;
-    }
-
-    if (effectiveNode.$ref) {
-      return true;
-    }
-
-    if (effectiveNode.type !== "array") {
-      return false;
-    }
-
-    const items = Array.isArray(effectiveNode.items)
-      ? effectiveNode.items[0]
-      : effectiveNode.items;
-    const effectiveItems = unwrapNullableAnyOf(items || {});
-    return Boolean(effectiveItems && effectiveItems.$ref);
-  } catch {
-    return false;
-  }
-}
-
-function DefsAccordionSelectionRunner({
-  setDefsAccordionOpen,
-}: {
-  setDefsAccordionOpen: (open: boolean) => void;
-}) {
-  useMountEffect(() => {
-    setDefsAccordionOpen(true);
-  });
-
-  return null;
-}
 
 function DefsEditor({
   schema,
@@ -403,11 +342,6 @@ function JsonSchemaEditorRaw({
   const [, setOpenLayoutDialog] = React.useState(false);
   const draggedParentRef = React.useRef<string | null>(null);
   const draggedPropertyRef = React.useRef<string | null>(null);
-  // Ensure the Definitions accordion is open when selection targets a $ref field
-  const { selectedFieldPath } = useTabStateStore();
-  const shouldOpenDefsAccordion =
-    !defsAccordionOpen &&
-    shouldOpenDefsAccordionForSelection(schema, selectedFieldPath);
 
   const handleDefsAccordionChange = (open: boolean) => {
     setDefsAccordionOpen(open);
@@ -415,11 +349,6 @@ function JsonSchemaEditorRaw({
 
   return (
     <div className="flex min-h-0 w-full flex-1 flex-col overflow-y-auto">
-      {shouldOpenDefsAccordion && (
-        <DefsAccordionSelectionRunner
-          setDefsAccordionOpen={setDefsAccordionOpen}
-        />
-      )}
       {/* Topbar */}
       <div
         className={`group flex w-full flex-col ${fullCodeMode ? "h-full" : ""}`}

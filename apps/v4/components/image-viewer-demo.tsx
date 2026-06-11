@@ -2,18 +2,19 @@
 
 import * as React from "react"
 
-import { PdfViewer } from "@/components/ui/pdf-viewer"
+import { ImageViewer } from "@/components/ui/image-viewer"
 
-// A normalized bounding box (0..1) to demonstrate the per-page overlay slot —
-// the same shape Retab's edit fields and extraction sources use.
-const sampleBox = { page: 1, left: 0.12, top: 0.16, width: 0.4, height: 0.035 }
+// A normalized bounding box (0..1) to demonstrate the per-frame overlay slot —
+// the same shape Retab's edit fields and extraction sources use. Anchored to the
+// header bar drawn on the first page of the sample scan.
+const sampleBox = { page: 1, left: 0.06, top: 0.049, width: 0.875, height: 0.045 }
 
-export function PdfViewerDemo() {
+export function ImageViewerDemo() {
   return (
     <div className="not-prose my-6 h-[600px]">
-      <PdfViewer
-        src="/samples/loan-application.pdf"
-        downloadFileName="loan-application.pdf"
+      <ImageViewer
+        src="/samples/multi-page-scan.tiff"
+        downloadFileName="multi-page-scan.tiff"
         className="h-full"
         renderPageOverlay={({ pageNumber }) =>
           pageNumber === sampleBox.page ? (

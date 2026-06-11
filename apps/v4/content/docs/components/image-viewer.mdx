@@ -1,0 +1,103 @@
+---
+title: Image Viewer
+description: A performant image viewer with native off-thread decode, zoom, rotate, fit-to-width, download, and a per-frame overlay slot — including efficient multi-page TIFF scans.
+---
+
+The Image Viewer renders images the way the browser is fastest at: every frame is
+decoded off the main thread with
+[`createImageBitmap`](https://developer.mozilla.org/en-US/docs/Web/API/createImageBitmap)
+and drawn straight to a DPR-aware canvas, so scrolling never blocks on decode. It
+does continuous-scroll rendering, zoom, rotate, fit-to-width, and download, and
+exposes a per-frame overlay slot so you can draw bounding-box citations (edit
+fields, extraction sources) on top of the rendered image.
+
+It treats a **multi-page TIFF as N frames** — rendered exactly like N PDF pages.
+Browsers can't decode TIFF natively, so the viewer decodes it with
+[UTIF.js](https://github.com/photopea/UTIF.js), but only the frames near the
+viewport, and it caps how many decoded bitmaps it keeps in memory — so a
+hundred-page scan stays smooth and bounded.
+
+It is built without `useEffect`: the image source loads with React's `use()` and
+Suspense, frames mount lazily via an `IntersectionObserver`, and each canvas
+draws from a ref callback (releasing its bitmap on cleanup).
+
+<ImageViewerDemo />
+
+## Installation
+
+```bash
+npx shadcn@latest add @retab/image-viewer
+```
+
+This pulls in `utif` for the TIFF path. Plain images (PNG, JPEG, WebP, GIF, AVIF)
+use only the browser's native decoders — `utif` is loaded lazily and only when a
+TIFF is actually opened.
+
+## Usage
+
+```tsx
+import { ImageViewer } from "@/components/ui/image-viewer"
+
+export function Example() {
+  return <ImageViewer src="/scan.tiff" className="h-[600px]" />
+}
+```
+
+Pass any image URL — a single `.png`/`.jpg`/`.webp` renders as one frame, a
+multi-page `.tiff` renders as a scrollable stack of frames.
+
+### Bounding-box overlays
+
+`renderPageOverlay` runs per frame and receives the rendered frame size, so
+normalized boxes map with simple percentages:
+
+```tsx
+<ImageViewer
+  src={url}
+  renderPageOverlay={({ pageNumber }) =>
+    fieldsOnFrame(pageNumber).map((f) => (
+      <div
+        key={f.key}
+        className="absolute outline outline-2 outline-indigo-500"
+        style={{
+          left: `${f.bbox.left * 100}%`,
+          top: `${f.bbox.top * 100}%`,
+          width: `${f.bbox.width * 100}%`,
+          height: `${f.bbox.height * 100}%`,
+        }}
+      />
+    ))
+  }
+/>
+```
+
+## How it performs
+
+- **Native decode.** `createImageBitmap` decodes off the main thread and returns
+  a GPU-friendly bitmap that draws to canvas with no further decode cost — used
+  for both plain images (from a `Blob`) and decoded TIFF frames (from `ImageData`).
+- **Lazy frames.** Each frame reserves its box from the TIFF's IFD dimensions up
+  front, so scroll height is correct without decoding anything. Pixels decode
+  only when a frame nears the viewport.
+- **Bounded memory.** Decoded bitmaps past a small cap are closed and re-decoded
+  on scroll-back (cheap — the source bytes stay cached), so a many-page TIFF
+  never holds every full-resolution bitmap at once.
+
+## Props
+
+The API mirrors the [PDF Viewer](/docs/components/pdf-viewer) — `pageNumber` is a
+1-based frame index (a TIFF page; always `1` for a single image).
+
+| Prop | Type | Description |
+| --- | --- | --- |
+| `src` | `string` | URL of the image (same-origin or CORS-enabled). PNG/JPEG/WebP/GIF/AVIF or TIFF. |
+| `scale` | `number` | Optional fixed scale; omit to fit frame width to the container. |
+| `toolbar` | `boolean` | Show the zoom/rotate/download toolbar. Defaults to `true`. |
+| `downloadFileName` | `string` | Filename for the download button. |
+| `renderPageOverlay` | `(props) => ReactNode` | Per-frame overlay; receives `{ pageNumber, width, height, scale, rotation }`. |
+| `onVisiblePageChange` | `(page: number) => void` | Fires with the frame nearest the top of the viewport on scroll. |
+| `onScrollProgressChange` | `(progress: number) => void` | Fires with scroll progress in `[0, 1]`. |
+| `header` | `ReactNode` | Full-width strip below the toolbar (e.g. a legend). |
+| `aside` | `ReactNode` | Left rail alongside the scrolling frames (e.g. a page ribbon). |
+| `bare` | `boolean` | Drop the outer border/background so the viewer fills its container. |
+| `className` | `string` | Optional class on the viewer shell. |

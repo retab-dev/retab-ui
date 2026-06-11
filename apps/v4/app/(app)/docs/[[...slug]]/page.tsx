@@ -1,8 +1,7 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { mdxComponents } from "@/mdx-components"
-import { ArrowLeft01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons"
-import { HugeiconsIcon } from "@hugeicons/react"
+import { ChevronLeft, ChevronRight } from "lucide-react"
 import { findNeighbour } from "fumadocs-core/page-tree"
 
 import { source } from "@/lib/source"
@@ -106,7 +105,7 @@ export default async function Page(props: {
                         className="extend-touch-target size-8 shadow-none md:size-7"
                         render={<Link href={neighbours.previous.url} />}
                       >
-                        <HugeiconsIcon icon={ArrowLeft01Icon} />
+                        <ChevronLeft />
                         <span className="sr-only">Previous</span>
                       </Button>
                     )}
@@ -118,7 +117,7 @@ export default async function Page(props: {
                         render={<Link href={neighbours.next.url} />}
                       >
                         <span className="sr-only">Next</span>
-                        <HugeiconsIcon icon={ArrowRight01Icon} />
+                        <ChevronRight />
                       </Button>
                     )}
                   </div>
@@ -147,7 +146,7 @@ export default async function Page(props: {
                   />
                 }
               >
-                <HugeiconsIcon icon={ArrowLeft01Icon} className="shrink-0" />
+                <ChevronLeft className="shrink-0" />
                 <span className="truncate">{neighbours.previous.name}</span>
               </Button>
             )}
@@ -164,7 +163,7 @@ export default async function Page(props: {
                 }
               >
                 <span className="truncate">{neighbours.next.name}</span>
-                <HugeiconsIcon icon={ArrowRight01Icon} className="shrink-0" />
+                <ChevronRight className="shrink-0" />
               </Button>
             )}
           </div>

@@ -2,8 +2,7 @@
 
 import * as React from "react"
 import type { ReactNode } from "react"
-import { DragDropVerticalIcon } from "@hugeicons/core-free-icons"
-import { HugeiconsIcon } from "@hugeicons/react"
+import { GripVertical } from "lucide-react"
 import * as ResizablePrimitive from "react-resizable-panels"
 
 import { cn } from "@/lib/utils"
@@ -61,7 +60,7 @@ function ResizableHandle({
       {withHandle &&
         (typeof withHandle === "boolean" ? (
           <div className="relative z-30 flex h-4 w-3 items-center justify-center rounded-xs border bg-background text-foreground opacity-100 shadow-sm">
-            <HugeiconsIcon icon={DragDropVerticalIcon} className="size-2.5" />
+            <GripVertical className="size-2.5" />
           </div>
         ) : (
           withHandle

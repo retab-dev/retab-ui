@@ -1,5 +1,4 @@
-import { File01Icon } from "@hugeicons/core-free-icons"
-import { HugeiconsIcon } from "@hugeicons/react"
+import { File } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { withUiBasePath } from "@/lib/zone-path"
@@ -7,20 +6,19 @@ import { withUiBasePath } from "@/lib/zone-path"
 type IconProps = React.HTMLAttributes<SVGElement>
 type LogoProps = React.HTMLAttributes<HTMLSpanElement>
 
-const logoMaskUrl = `url('${withUiBasePath("/retab.svg")}') center / contain no-repeat`
+const logoSrc = withUiBasePath("/favicon-official.svg")
 
 export const Icons = {
   logo: ({ className, style, ...props }: LogoProps) => (
     <span
       aria-hidden="true"
-      className={cn("inline-block bg-foreground", className)}
-      style={{
-        mask: logoMaskUrl,
-        WebkitMask: logoMaskUrl,
-        ...style,
-      }}
+      className={cn("inline-flex items-center justify-center", className)}
+      style={style}
       {...props}
-    />
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={logoSrc} alt="" className="size-full rounded-[20%]" />
+    </span>
   ),
   twitter: (props: IconProps) => (
     <svg
@@ -194,6 +192,6 @@ export function getIconForLanguageExtension(language: string) {
     case "typescript":
       return <Icons.ts className="fill-foreground" />
     default:
-      return <HugeiconsIcon icon={File01Icon} />
+      return <File />
   }
 }

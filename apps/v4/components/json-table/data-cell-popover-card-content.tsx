@@ -1119,8 +1119,8 @@ const DataCellPopoverCardContentInner = ({
             {/* <h2 className="text-xs font-medium text-foreground truncate flex items-center gap-1">
                <Tooltip>
                 <TooltipTrigger asChild>
-                  <div className="bg-[#969696] shrink-0 rounded-full w-3 h-3 flex items-center justify-center group" onClick={() => setShowInfoPanel(!showInfoPanel)}>
-                    <div className="h-[2px] w-[6px] group-hover:bg-[#4D4D4D]" />
+                  <div className="bg-muted-foreground shrink-0 rounded-full w-3 h-3 flex items-center justify-center group" onClick={() => setShowInfoPanel(!showInfoPanel)}>
+                    <div className="h-[2px] w-[6px] group-hover:bg-foreground" />
                   </div>
                 </TooltipTrigger>
                 <TooltipContent side="left" className="max-w-xs break-words">
@@ -1145,10 +1145,10 @@ const DataCellPopoverCardContentInner = ({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div
-                    className="group flex h-3 w-3 shrink-0 items-center justify-center rounded-full bg-[#969696] opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                    className="group flex h-3 w-3 shrink-0 items-center justify-center rounded-full bg-muted-foreground opacity-0 transition-opacity duration-300 group-hover:opacity-100"
                     onClick={() => setShowInfoPanel(!showInfoPanel)}
                   >
-                    <div className="h-[2px] w-[6px] group-hover:bg-[#4D4D4D]" />
+                    <div className="h-[2px] w-[6px] group-hover:bg-foreground" />
                   </div>
                 </TooltipTrigger>
                 <TooltipContent side="top" className="max-w-xs break-words">
@@ -1174,12 +1174,12 @@ const DataCellPopoverCardContentInner = ({
       </div>
       {/* Indication text and reasoning banner for review */}
       {(indicationText || reasoningText) && (
-        <div className="border-b border-amber-200 bg-amber-50 px-2 py-2">
+        <div className="border-b border-warning bg-warning/10 px-2 py-2">
           <div className="flex flex-col gap-1.5">
             {indicationText && (
               <div className="flex items-start gap-2">
                 <svg
-                  className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-600"
+                  className="mt-0.5 h-4 w-4 flex-shrink-0 text-warning-foreground"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -1191,13 +1191,13 @@ const DataCellPopoverCardContentInner = ({
                     d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
                   />
                 </svg>
-                <p className="text-xs text-amber-800">{indicationText}</p>
+                <p className="text-xs text-warning-foreground">{indicationText}</p>
               </div>
             )}
             {reasoningText && (
               <div className="flex items-start gap-2">
-                <Atom className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-500" />
-                <p className="text-xs text-amber-700 italic">
+                <Atom className="mt-0.5 h-4 w-4 flex-shrink-0 text-warning-foreground" />
+                <p className="text-xs text-warning-foreground italic">
                   Reasoning: {reasoningText}
                 </p>
               </div>
@@ -1295,7 +1295,7 @@ const DataCellPopoverCardContentInner = ({
                         <div className="ml-auto flex items-center gap-2">
                           <button
                             disabled={isSavingDatasetValue}
-                            className="rounded-md bg-muted px-2 py-1 text-xs text-white disabled:opacity-50"
+                            className="rounded-md bg-muted px-2 py-1 text-xs text-primary-foreground disabled:opacity-50"
                             onClick={async () => {
                               setIsSavingDatasetValue(true);
                               try {

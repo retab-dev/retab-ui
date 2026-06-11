@@ -1,8 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Copy01Icon, Tick02Icon } from "@hugeicons/core-free-icons"
-import { HugeiconsIcon } from "@hugeicons/react"
+import { Check, Copy, type LucideIcon } from "lucide-react"
 
 import { trackEvent, type Event } from "@/lib/events"
 import { cn } from "@/lib/utils"
@@ -68,12 +67,13 @@ export async function copyToClipboardWithMeta(value: string, event?: Event) {
 export function CopyButtonIcon({
   copied,
   className,
-  icon = Copy01Icon,
+  icon = Copy,
 }: {
   copied: boolean
   className?: string
-  icon?: React.ComponentProps<typeof HugeiconsIcon>["icon"]
+  icon?: LucideIcon
 }) {
+  const Icon = icon
   return (
     <span
       aria-hidden="true"
@@ -90,7 +90,7 @@ export function CopyButtonIcon({
             : "scale-70 opacity-0 blur-[2px]"
         )}
       >
-        <HugeiconsIcon icon={Tick02Icon} className="size-4" />
+        <Check className="size-4" />
       </span>
       <span
         className={cn(
@@ -100,7 +100,7 @@ export function CopyButtonIcon({
             : "scale-100 opacity-100 blur-none"
         )}
       >
-        <HugeiconsIcon icon={icon} className="size-4" />
+        <Icon className="size-4" />
       </span>
     </span>
   )

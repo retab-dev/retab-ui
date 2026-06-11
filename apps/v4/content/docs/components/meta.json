@@ -9,6 +9,7 @@
     "property-form",
     "csv-viewer",
     "pdf-viewer",
+    "image-viewer",
     "parse-viewer",
     "classification-viewer",
     "edit-viewer",

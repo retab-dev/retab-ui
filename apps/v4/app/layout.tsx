@@ -40,7 +40,7 @@ export const metadata: Metadata = {
     siteName: siteConfig.name,
     images: [
       {
-        url: `${process.env.NEXT_PUBLIC_APP_URL ?? siteConfig.url}/opengraph-image.png`,
+        url: `/og?title=${encodeURIComponent(siteConfig.name)}&description=${encodeURIComponent(siteConfig.description)}`,
         width: 1200,
         height: 630,
         alt: siteConfig.name,
@@ -52,25 +52,16 @@ export const metadata: Metadata = {
     title: siteConfig.name,
     description: siteConfig.description,
     images: [
-      `${process.env.NEXT_PUBLIC_APP_URL ?? siteConfig.url}/opengraph-image.png`,
+      `/og?title=${encodeURIComponent(siteConfig.name)}&description=${encodeURIComponent(siteConfig.description)}`,
     ],
   },
   icons: {
     icon: [
-      { url: withUiBasePath("/retab.svg"), type: "image/svg+xml" },
-      {
-        url: withUiBasePath("/favicon-32x32.png"),
-        sizes: "32x32",
-        type: "image/png",
-      },
-      {
-        url: withUiBasePath("/favicon-16x16.png"),
-        sizes: "16x16",
-        type: "image/png",
-      },
+      { url: withUiBasePath("/favicon.ico"), sizes: "any" },
+      { url: withUiBasePath("/favicon-official.svg"), type: "image/svg+xml" },
     ],
     shortcut: withUiBasePath("/favicon.ico"),
-    apple: withUiBasePath("/apple-touch-icon.png"),
+    apple: withUiBasePath("/favicon.ico"),
   },
   manifest: withUiBasePath("/site.webmanifest"),
 }

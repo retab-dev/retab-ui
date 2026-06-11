@@ -52,9 +52,9 @@ export function ClassifierViewer({
                   <TooltipTrigger asChild>
                     <button
                       type="button"
-                      className="inline-flex max-w-full shrink-0 cursor-help items-center gap-2 rounded-full bg-teal-50/95 px-3 py-1 text-xs font-medium text-teal-700 shadow-sm ring-1 ring-teal-200 transition-colors ring-inset hover:bg-teal-100 focus-visible:ring-2 focus-visible:ring-teal-400/60 focus-visible:outline-none"
+                      className="inline-flex max-w-full shrink-0 cursor-help items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary shadow-sm ring-1 ring-primary transition-colors ring-inset hover:bg-primary/20 focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:outline-none"
                     >
-                      <Tags className="h-3.5 w-3.5 shrink-0 text-teal-600" />
+                      <Tags className="h-3.5 w-3.5 shrink-0 text-primary" />
                       <span className="truncate">{classification}</span>
                     </button>
                   </TooltipTrigger>
@@ -67,38 +67,38 @@ export function ClassifierViewer({
                   </TooltipContent>
                 </Tooltip>
               ) : (
-                <div className="inline-flex max-w-full shrink-0 items-center gap-2 rounded-full bg-teal-50/95 px-3 py-1 text-xs font-medium text-teal-700 shadow-sm ring-1 ring-teal-200 ring-inset">
-                  <Tags className="h-3.5 w-3.5 shrink-0 text-teal-600" />
+                <div className="inline-flex max-w-full shrink-0 items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary shadow-sm ring-1 ring-primary ring-inset">
+                  <Tags className="h-3.5 w-3.5 shrink-0 text-primary" />
                   <span className="truncate">{classification}</span>
                 </div>
               )}
             </div>
           ) : null}
           {isProcessing && (
-            <div className="absolute top-4 right-4 z-20 flex items-center gap-2 rounded-full bg-teal-50/95 px-3 py-1 shadow-sm ring-1 ring-teal-200 ring-inset">
-              <Loader2 className="h-3.5 w-3.5 animate-spin text-teal-600" />
-              <span className="text-xs font-medium text-teal-600">
+            <div className="absolute top-4 right-4 z-20 flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 shadow-sm ring-1 ring-primary ring-inset">
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+              <span className="text-xs font-medium text-primary">
                 Classifying...
               </span>
             </div>
           )}
           {!hasOutput ? (
-            <div className="flex flex-1 flex-col items-center justify-center gap-4 bg-gray-50 px-8 text-gray-400">
-              <Tags className="h-16 w-16 text-gray-200" />
-              <p className="text-center text-base text-gray-500">{emptyTitle}</p>
-              <p className="max-w-sm text-center text-sm text-gray-400">
+            <div className="flex flex-1 flex-col items-center justify-center gap-4 bg-muted px-8 text-muted-foreground">
+              <Tags className="h-16 w-16 text-muted-foreground" />
+              <p className="text-center text-base text-muted-foreground">{emptyTitle}</p>
+              <p className="max-w-sm text-center text-sm text-muted-foreground">
                 {emptyDescription}
               </p>
             </div>
           ) : (
             <div className="flex min-h-0 flex-1 flex-col">
-              <div className="flex-1 overflow-hidden bg-gray-100">
+              <div className="flex-1 overflow-hidden bg-muted">
                 {documentInput.type === "file" ? (
                   hasDocument && documentInput.fileBuffer && renderDocument ? (
                     renderDocument()
                   ) : (
                     <div className="flex h-full items-center justify-center">
-                      <span className="text-sm text-gray-500">
+                      <span className="text-sm text-muted-foreground">
                         No document available
                       </span>
                     </div>
@@ -109,8 +109,8 @@ export function ClassifierViewer({
                       className={cn(
                         "rounded-lg p-3 text-xs break-words whitespace-pre-wrap",
                         documentInput.type === "json"
-                          ? "bg-violet-50 font-mono text-violet-800"
-                          : "bg-cyan-50 text-cyan-800",
+                          ? "bg-primary/10 font-mono text-primary"
+                          : "bg-primary/10 text-primary",
                       )}
                     >
                       {documentInput.textValue || "No input provided"}
