@@ -11,6 +11,7 @@ export function XlsxViewerDemo() {
         src="/samples/nvidia-financials-fy2024.xlsx"
         downloadFileName="nvidia-financials-fy2024.xlsx"
         className="h-full"
+        isolateStyles
       />
     </div>
   )

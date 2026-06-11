@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { createPortal } from "react-dom"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import { Download, Maximize, Minus, Plus } from "lucide-react"
 
@@ -261,6 +262,151 @@ interface ColumnItem {
   size: number
 }
 
+// --- style isolation (shadow DOM) --------------------------------------------
+
+// useLayoutEffect on the server logs a warning; fall back to useEffect there. The
+// shadow root only exists on the client, so the effect is a no-op during SSR.
+const useIsomorphicLayoutEffect =
+  typeof window !== "undefined" ? React.useLayoutEffect : React.useEffect
+
+// Drop every `:has()` style rule from a constructed sheet (recursing into
+// @media/@supports/@layer blocks). The grid's own markup uses no `has-*`
+// variants, so these rules never style it — but Blink would still re-run their
+// invalidation against the grid's subtree on each per-scroll mutation. Removing
+// them is what takes the isolated grid from a few ms of residual recalc down to
+// ~nothing. Safe precisely because the grid doesn't depend on any `:has()` rule.
+function stripHasRules(owner: CSSStyleSheet | CSSGroupingRule) {
+  const rules = owner.cssRules
+  if (!rules) return
+  for (let i = rules.length - 1; i >= 0; i--) {
+    const r = rules[i]
+    if ((r as CSSStyleRule).selectorText?.includes(":has(")) {
+      try {
+        owner.deleteRule(i)
+      } catch {
+        // ignore a rule that can't be removed
+      }
+    } else if ((r as CSSGroupingRule).cssRules?.length) {
+      stripHasRules(r as CSSGroupingRule)
+    }
+  }
+}
+
+// The page's author CSS, mirrored into constructible stylesheets once and shared
+// (by reference) across every isolated instance — `adoptedStyleSheets` allows one
+// sheet object in many roots, so N grids cost one copy, not N. `:has()` rules are
+// stripped (see stripHasRules). Cross-origin sheets (e.g. a font CDN) can't be
+// read and are skipped; their declarations reach the grid through inheritance
+// where they apply to custom properties. Snapshotted at first use: later-added
+// stylesheets (route CSS, HMR) won't appear, which is fine for the grid's own
+// utilities, present from first paint.
+let sharedSheets: CSSStyleSheet[] | null = null
+function getSharedSheets(): CSSStyleSheet[] {
+  if (sharedSheets) return sharedSheets
+  const out: CSSStyleSheet[] = []
+  for (const ss of Array.from(document.styleSheets)) {
+    let rules: CSSRuleList
+    try {
+      rules = ss.cssRules
+    } catch {
+      continue // cross-origin: unreadable, skip
+    }
+    let text = ""
+    for (const rule of Array.from(rules)) text += rule.cssText + "\n"
+    try {
+      const sheet = new CSSStyleSheet()
+      // @import rules are dropped by replaceSync per spec — harmless here, since
+      // the imported sheet also appears separately in document.styleSheets.
+      sheet.replaceSync(text)
+      stripHasRules(sheet)
+      out.push(sheet)
+    } catch {
+      // skip any sheet that can't be reconstructed
+    }
+  }
+  sharedSheets = out
+  return out
+}
+
+/**
+ * Renders its children inside a shadow root so the host document's style rules —
+ * in particular `:has()` selectors, whose invalidation Blink does NOT scope by
+ * `contain` — can't match into them. Style recalc triggered by the grid's
+ * per-scroll mutations is then confined to the grid's own subtree instead of the
+ * whole document. The page's author CSS is copied in so utility classes still
+ * resolve; theme custom properties and font size inherit through the boundary.
+ *
+ * Renders nothing until mounted (no SSR markup — the grid is client-only anyway).
+ * The shadow root is attached in a layout effect, which re-renders the portal
+ * before the browser paints, so there's no flash of an empty box on the client.
+ */
+function ShadowScope({
+  className,
+  style,
+  children,
+}: {
+  className?: string
+  style?: React.CSSProperties
+  children: React.ReactNode
+}) {
+  const hostRef = React.useRef<HTMLDivElement>(null)
+  const [root, setRoot] = React.useState<ShadowRoot | null>(null)
+
+  useIsomorphicLayoutEffect(() => {
+    const host = hostRef.current
+    if (!host) return
+    const sr = host.shadowRoot ?? host.attachShadow({ mode: "open" })
+    try {
+      sr.adoptedStyleSheets = getSharedSheets()
+    } catch {
+      // adoptedStyleSheets / constructible sheets unsupported: clone the page's
+      // style source nodes in instead (heavier, but the same visual result).
+      for (const node of Array.from(
+        document.querySelectorAll('style, link[rel="stylesheet"]')
+      )) {
+        try {
+          sr.appendChild(node.cloneNode(true))
+        } catch {
+          // ignore a node that can't be cloned
+        }
+      }
+    }
+    setRoot(sr)
+  }, [])
+
+  return (
+    <div ref={hostRef} className={className} style={style}>
+      {root ? createPortal(children, root) : null}
+    </div>
+  )
+}
+
+/** The scroll container — optionally inside a shadow root for style isolation. */
+function ScrollerShell({
+  isolate,
+  className,
+  style,
+  children,
+}: {
+  isolate: boolean
+  className?: string
+  style?: React.CSSProperties
+  children: React.ReactNode
+}) {
+  if (isolate) {
+    return (
+      <ShadowScope className={className} style={style}>
+        {children}
+      </ShadowScope>
+    )
+  }
+  return (
+    <div className={className} style={style}>
+      {children}
+    </div>
+  )
+}
+
 // --- public API --------------------------------------------------------------
 
 export interface XlsxViewerProps {
@@ -281,6 +427,21 @@ export interface XlsxViewerProps {
   aside?: React.ReactNode
   /** A cell to highlight (0-based row + column on `sheet`), or null. */
   activeCell?: { sheet: number; row: number; col: number } | null
+  /**
+   * Render the scrolling grid inside a shadow root, isolating it from the host
+   * page's style rules — in particular `:has()` selectors, whose invalidation
+   * Blink does NOT scope by `contain`. On a page with a large `:has()` surface
+   * (e.g. a Tailwind `has-*`-heavy docs site) every per-scroll cell mutation
+   * otherwise forces a full-document `:has()` re-match, costing style recalc per
+   * frame and dropping the frame rate. Isolation scopes that work to the grid's
+   * own small subtree, collapsing recalc to ~nothing and keeping scroll at
+   * refresh rate. The page's author CSS is copied in (via `adoptedStyleSheets`,
+   * falling back to cloned `<style>`/`<link>` nodes) so utility classes still
+   * resolve; theme variables and font size inherit through the boundary. Defaults
+   * to false. When enabled, host CSS can no longer reach into the grid to style
+   * it. The grid is already client-rendered, so there's no SSR change.
+   */
+  isolateStyles?: boolean
 }
 
 /** Imperative handle for `XlsxViewer` — obtain it with a `ref`. */
@@ -336,6 +497,7 @@ function XlsxViewerInner({
   header,
   aside,
   activeCell,
+  isolateStyles = false,
   forwardedRef,
 }: XlsxViewerProps & {
   forwardedRef?: React.ForwardedRef<XlsxViewerHandle>
@@ -484,6 +646,7 @@ function XlsxViewerInner({
               onReport={handleReport}
               activeCell={activeCell}
               scrollReq={scrollReq}
+              isolateStyles={isolateStyles}
             />
           </React.Suspense>
         </div>
@@ -528,6 +691,7 @@ function XlsxSheet({
   onReport,
   activeCell,
   scrollReq,
+  isolateStyles,
 }: {
   src: string
   activeSheet: number
@@ -535,6 +699,7 @@ function XlsxSheet({
   onReport: (sheets: SheetMeta[]) => void
   activeCell?: { sheet: number; row: number; col: number } | null
   scrollReq?: XlsxScrollRequest | null
+  isolateStyles: boolean
 }) {
   const source = React.use(getXlsxSource(src))
 
@@ -570,6 +735,7 @@ function XlsxSheet({
       scale={scale}
       activeCell={cellInSheet}
       scrollReq={reqInSheet}
+      isolateStyles={isolateStyles}
     />
   )
 }
@@ -581,6 +747,7 @@ function SheetGrid({
   scale,
   activeCell,
   scrollReq,
+  isolateStyles,
 }: {
   rowCount: number
   colCount: number
@@ -588,6 +755,7 @@ function SheetGrid({
   scale: number
   activeCell?: { row: number; col: number } | null
   scrollReq?: XlsxScrollRequest | null
+  isolateStyles: boolean
 }) {
   const rowHeight = Math.round(BASE_ROW_HEIGHT * scale)
   const colWidth = Math.round(BASE_COL_WIDTH * scale)
@@ -679,10 +847,11 @@ function SheetGrid({
           the column letters stay locked to the cells during horizontal scroll
           (no JS sync). The header sticks to the top; the gutter sticks to the
           left. */}
-      <div className="relative min-h-0 flex-1">
-        <style href="xlsx-scrollbar" precedence="default">
-          {SCROLLBAR_CSS}
-        </style>
+      <ScrollerShell isolate={isolateStyles} className="relative min-h-0 flex-1">
+        {/* Plain (non-hoisted) <style> so it lands inside the shadow root when
+          isolated; the selector is attribute-scoped, so it's also harmless in the
+          light-DOM path. */}
+        <style>{SCROLLBAR_CSS}</style>
         <div
           ref={scrollRef}
           data-slot="xlsx-body"
@@ -750,7 +919,7 @@ function SheetGrid({
           </div>
         </div>
         <HeaderAwareScrollbar scrollRef={scrollRef} headerHeight={rowHeight} />
-      </div>
+      </ScrollerShell>
     </div>
   )
 }
