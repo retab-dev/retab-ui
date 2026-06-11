@@ -2,15 +2,17 @@
 
 import * as React from "react"
 
+import { type SegmentInteraction } from "@/lib/segment-interaction"
 import { segmentsPageCount, toSegments, type Segment } from "@/lib/segments"
+import { PageRibbon } from "@/components/ui/page-ribbon"
+import { PdfViewer, type PdfViewerSlots } from "@/components/ui/pdf-viewer"
 import {
   SegmentLegend,
   type SegmentLegendOrientation,
   type SegmentLegendSide,
   type SegmentLegendVariant,
 } from "@/components/ui/segment-legend"
-import { PageRibbon } from "@/components/ui/page-ribbon"
-import { PdfViewer, type PdfViewerSlots } from "@/components/ui/pdf-viewer"
+import { useSegmentInteraction } from "@/components/ui/use-segment-interaction"
 
 const PDF_URL = "/samples/attention.pdf"
 
@@ -38,8 +40,20 @@ type Preset = {
 // rail throughout; the legend takes the top, floats over the page, or runs down
 // the right edge — so each is independent of the ribbon.
 const PRESETS: Preset[] = [
-  { label: "Bar", variant: "bar", orientation: "horizontal", side: "top", slot: "top" },
-  { label: "Floating", variant: "floating", orientation: "horizontal", side: "top", slot: "overlay" },
+  {
+    label: "Bar",
+    variant: "bar",
+    orientation: "horizontal",
+    side: "top",
+    slot: "top",
+  },
+  {
+    label: "Floating",
+    variant: "floating",
+    orientation: "horizontal",
+    side: "top",
+    slot: "overlay",
+  },
   { label: "Rail", variant: "plain", orientation: "vertical", slot: "right" },
 ]
 
@@ -52,14 +66,17 @@ const PRESETS: Preset[] = [
 export function LegendVariantsBlock({ columns = 1 }: { columns?: 1 | 3 } = {}) {
   const segments = React.useMemo(() => toSegments(SPLIT_OUTPUT), [])
   const pageCount = React.useMemo(() => segmentsPageCount(segments), [segments])
-  const [activeId, setActiveId] = React.useState<string | null>(null)
+  const interaction = useSegmentInteraction()
 
   return (
     <div className="flex h-full min-h-[680px] flex-col bg-background">
       <div className="border-b px-6 py-3">
-        <h2 className="text-base font-semibold">Split viewer · legend variants</h2>
+        <h2 className="text-base font-semibold">
+          Split viewer · legend variants
+        </h2>
         <p className="mt-0.5 text-sm text-muted-foreground">
-          One split result, three legend placements — bar, floating, and a vertical rail.
+          One split result, three legend placements — bar, floating, and a
+          vertical rail.
         </p>
       </div>
       <div className="min-h-0 flex-1 overflow-auto p-4">
@@ -76,8 +93,7 @@ export function LegendVariantsBlock({ columns = 1 }: { columns?: 1 | 3 } = {}) {
               preset={preset}
               segments={segments}
               pageCount={pageCount}
-              activeId={activeId}
-              onActivate={setActiveId}
+              interaction={interaction}
             />
           ))}
         </div>
@@ -90,14 +106,12 @@ function Cell({
   preset,
   segments,
   pageCount,
-  activeId,
-  onActivate,
+  interaction,
 }: {
   preset: Preset
   segments: Segment[]
   pageCount: number
-  activeId: string | null
-  onActivate: (id: string | null) => void
+  interaction: SegmentInteraction
 }) {
   const [currentPage, setCurrentPage] = React.useState<number | null>(1)
   const panelRef = React.useRef<HTMLDivElement | null>(null)
@@ -108,9 +122,8 @@ function Cell({
       ?.scrollIntoView({ behavior: "smooth", block: "start" })
   }, [])
 
-  const onSelect = (id: string) => {
-    const seg = segments.find((s) => s.id === id)
-    if (seg?.pages.length) jumpToPage(seg.pages[0])
+  const onSelect = (segment: Segment) => {
+    if (segment.pages.length) jumpToPage(segment.pages[0])
   }
 
   const legend = (
@@ -121,8 +134,7 @@ function Cell({
       side={preset.side}
       density="compact"
       columns={preset.orientation === "horizontal" ? 2 : undefined}
-      activeId={activeId}
-      onActivate={onActivate}
+      interaction={interaction}
       currentPage={currentPage}
       onSelect={onSelect}
     />
@@ -135,8 +147,7 @@ function Cell({
         rows={[{ id: "split", segments }]}
         pageCount={pageCount}
         currentPage={currentPage}
-        activeId={activeId}
-        onActivate={onActivate}
+        interaction={interaction}
         onSelectPage={jumpToPage}
         showTicks
       />

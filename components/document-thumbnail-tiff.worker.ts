@@ -41,7 +41,9 @@ ctx.onmessage = async (event: MessageEvent<Req>) => {
 
     const dw = Math.min(width, targetWidth)
     const dh = Math.max(1, Math.round((dw / width) * height))
-    const source = new ImageData(new Uint8ClampedArray(rgba.buffer), width, height)
+    const pixels = new Uint8ClampedArray(rgba.length)
+    pixels.set(rgba)
+    const source = new ImageData(pixels, width, height)
     const bitmap = await createImageBitmap(source, {
       resizeWidth: dw,
       resizeHeight: dh,

@@ -5,9 +5,11 @@ export type {
   JsonValue,
   NodeId,
   PropertyEntry,
+  PropertyId,
   SchemaDocument,
   SchemaKind,
 } from "./types"
+export type { SchemaEditorType } from "./operations"
 
 export { createId } from "./id"
 export {
@@ -19,6 +21,7 @@ export {
 export {
   getEffectiveKind,
   getEnumBaseType,
+  isDefinitionReferenced,
   isDanglingRef,
   isNullable,
   resolveRef,
@@ -32,6 +35,7 @@ export {
   findNodeByPath,
   findOwningProperty,
   getChildNodeId,
+  getChildPropertyId,
   getEffectiveDocNode,
   getItemsNodeId,
   getNode,
@@ -42,14 +46,22 @@ export {
   normalizeNodeForType,
   removeDefinition,
   removeEnumValue,
+  removeEnumValueAtIndex,
   removeProperty,
   renameDefinition,
   renameProperty,
+  setNodeDescription,
+  setNodeEditorType,
+  setNodeTitle,
   setNodeType,
+  stripDescriptions,
+  setEnumValues,
   setNullable,
   setRef,
+  setRefByName,
   setRequired,
   updateEnumValue,
+  updateEnumValueAtIndex,
   updateNode,
   updateNodeRest,
 } from "./operations"

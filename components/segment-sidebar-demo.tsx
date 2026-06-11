@@ -5,6 +5,7 @@ import * as React from "react"
 import { meanConfidence, toSegments } from "@/lib/segments"
 import { SegmentSidebar } from "@/components/ui/segment-sidebar"
 import { SegmentedDocumentViewer } from "@/components/ui/segmented-document-viewer"
+import { useSegmentInteraction } from "@/components/ui/use-segment-interaction"
 
 // A split-style result (named subdocuments) with per-page likelihoods — the
 // same model also covers partition chunks; only the label differs.
@@ -25,16 +26,19 @@ const likelihoods = [
 
 export function SegmentSidebarDemo() {
   const segments = React.useMemo(
-    () => toSegments(output, likelihoods.map((l) => meanConfidence(l))),
+    () =>
+      toSegments(
+        output,
+        likelihoods.map((l) => meanConfidence(l))
+      ),
     []
   )
-  const [activeId, setActiveId] = React.useState<string | null>(null)
+  const interaction = useSegmentInteraction()
   return (
     <div className="not-prose my-6 max-w-xs">
       <SegmentSidebar
         segments={segments}
-        activeId={activeId}
-        onActivate={setActiveId}
+        interaction={interaction}
         unitLabel="subdocument"
         className="rounded-lg border"
       />
@@ -43,8 +47,8 @@ export function SegmentSidebarDemo() {
 }
 
 // The same split result, but mounted in a real split viewer: the sidebar is the
-// left rail beside attention.pdf, sharing hover/selection with the legend and
-// page timeline above the document.
+// left rail beside attention.pdf, sharing hover, focus, and selection with the
+// legend and page timeline above the document.
 const splitOutput = [
   { name: "Title & Abstract", pages: [1] },
   { name: "Introduction", pages: [2, 3] },

@@ -21,11 +21,14 @@ npx shadcn@latest add @retab/file-thumbnail
 
 `FileThumbnail` is just the preview shell — it tracks loading, fade-in, and
 fallback so every thumbnail in a list looks consistent regardless of which
-renderer produced it. Feed it a finished image with `previewImageUrl`, a flag
-with `isLoading`, custom React with `previewContent`, or nothing at all to get
-the muted fallback surface.
+renderer produced it. Feed it a finished image with `previewImageUrl`, custom
+React with `previewContent`, or set `state="loading"` / `state="error"` while
+your thumbnail pipeline is working.
 
 <FileThumbnailDemo />
+
+`FileThumbnailShimmer` is self-contained; it does not require global keyframes or
+a root style tag.
 
 ## Document Previews
 
@@ -59,27 +62,44 @@ import { DocumentThumbnail } from "@/components/document-thumbnail"
 <DocumentThumbnail kind="image" src="/page.png" name="page.png" type="image/png" />
 ```
 
+If a document renderer fails transiently and you want to retry the same `src`,
+change `retryKey`. `DocumentThumbnail` folds `kind`, `src`, `anchor`, and
+`retryKey` into one resource identity, so local first-unit renderers remount and
+use a fresh cache entry without changing the visible thumbnail API. PDF previews
+deliberately reuse the shared PDF viewer cache by `src`; `retryKey` still
+remounts the thumbnail surface and error boundary.
+
 ## Useful Behaviors
 
 - Accepts externally generated thumbnails as an image URL or custom React content.
 - Shows a shimmering file-preview state while your thumbnail generator is loading.
 - Fades the preview in after it loads.
-- Falls back to a blank muted preview surface when no preview image is available or image loading fails.
+- Falls back to a blank muted preview surface when no preview is available, the
+  explicit state is `error`, or image loading fails.
 
 ## API Reference
 
 ### FileThumbnail
 
-| Prop                 | Type                    | Default | Required |
-| -------------------- | ----------------------- | ------- | -------- |
-| `file`               | `ThumbnailFile \| File` | `-`     | Yes      |
-| `className`          | `string`                | `-`     | No       |
-| `previewAspectRatio` | `number`                | `3 / 4` | No       |
-| `previewClassName`   | `string`                | `-`     | No       |
-| `previewContent`     | `React.ReactNode`       | `-`     | No       |
-| `previewImageUrl`    | `string \| null`        | `-`     | No       |
-| `isLoading`          | `boolean`               | `false` | No       |
-| `hasError`           | `boolean`               | `false` | No       |
+| Prop                 | Type                               | Default | Required |
+| -------------------- | ---------------------------------- | ------- | -------- |
+| `file`               | `ThumbnailFile \| File`            | `-`     | Yes      |
+| `className`          | `string`                           | `-`     | No       |
+| `previewAspectRatio` | `number`                           | `3 / 4` | No       |
+| `previewClassName`   | `string`                           | `-`     | No       |
+| `previewContent`     | `React.ReactNode`                  | `-`     | No       |
+| `previewImageUrl`    | `string \| null`                   | `-`     | No       |
+| `state`              | `"loading" \| "loaded" \| "error"` | `-`     | No       |
+
+Use `state` when the thumbnail pipeline is still loading or has failed.
+
+`FileThumbnail` also forwards standard `div` props such as `aria-label`,
+`data-*`, event handlers, and `style`. Its internal `data-slot="file-thumbnail"`
+is kept stable for styling and tests.
+
+`previewContent` is treated as present for any renderable React node, including
+`0` and an empty string. `null`, `undefined`, and `false` are treated as absent,
+so the component can fall back to `previewImageUrl` or the muted fallback surface.
 
 ### ThumbnailFile
 

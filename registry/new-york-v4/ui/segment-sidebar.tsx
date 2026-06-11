@@ -2,16 +2,21 @@
 
 import * as React from "react"
 
-import { type Segment, formatPageRanges } from "@/lib/segments"
+import {
+  getSegmentSurfaceProps,
+  type SegmentInteraction,
+} from "@/lib/segment-interaction"
+import { formatPageRanges, type Segment } from "@/lib/segments"
 import { cn } from "@/lib/utils"
 
 export interface SegmentSidebarProps {
   segments: Segment[]
-  /** Highlighted segment (hover or selection). */
-  activeId?: string | null
-  onActivate?: (id: string | null) => void
-  /** Fired on click — e.g. to jump the document to the segment's first page. */
+  /** Shared hover/focus/selection state. */
+  interaction?: SegmentInteraction
+  /** Fired when a segment surface is clicked, after shared selection is requested. */
   onSelect?: (segment: Segment) => void
+  /** 1-based current page; owning segments receive current-page state. */
+  currentPage?: number | null
   /** Noun for a row, e.g. "chunk" (partition) or "subdocument" (split). */
   unitLabel?: string
   /** Show segments with zero pages too. */
@@ -22,14 +27,14 @@ export interface SegmentSidebarProps {
 /**
  * A selectable list of segments — the "sidebar" surface. Each row shows the
  * color swatch, label, page ranges, page count, and (when present) a confidence
- * bar. Hovering raises `activeId`; clicking fires `onSelect` so the host can
- * scroll the document to that segment.
+ * bar. Hovering and focusing highlight the segment; clicking requests shared
+ * selection and fires `onSelect` for host side effects like document scrolling.
  */
 export function SegmentSidebar({
   segments,
-  activeId,
-  onActivate,
+  interaction,
   onSelect,
+  currentPage,
   unitLabel = "segment",
   showUnused = true,
   className,
@@ -49,22 +54,27 @@ export function SegmentSidebar({
       </div>
       <ul className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-auto px-2 pb-2">
         {visible.map((segment) => {
-          const active = activeId === segment.id
-          const dimmed = activeId != null && !active
+          const { state, eventHandlers, ariaProps, dataProps } =
+            getSegmentSurfaceProps({
+              segment,
+              interaction,
+              currentPage,
+              onSelect,
+            })
           return (
             <li key={segment.id}>
               <button
                 type="button"
-                data-active={active}
-                onMouseEnter={() => onActivate?.(segment.id)}
-                onMouseLeave={() => onActivate?.(null)}
-                onClick={() => onSelect?.(segment)}
+                {...ariaProps}
+                {...dataProps}
+                {...eventHandlers}
+                aria-current={state.isCurrent ? "page" : undefined}
                 className={cn(
-                  "flex w-full items-start gap-2.5 rounded-md border px-2.5 py-2 text-left transition-colors",
-                  active
+                  "flex w-full items-start gap-2.5 rounded-md border px-2.5 py-2 text-left transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                  state.isHighlighted || state.isSelected || state.isCurrent
                     ? "border-border bg-muted"
                     : "border-transparent hover:bg-muted/50",
-                  dimmed && "opacity-60"
+                  state.isDimmed && "opacity-60"
                 )}
               >
                 <span
@@ -110,7 +120,7 @@ function ConfidenceBar({ value }: { value: number }) {
           style={{ width: `${pct}%` }}
         />
       </span>
-      <span className="text-[10px] tabular-nums text-muted-foreground">
+      <span className="text-[10px] text-muted-foreground tabular-nums">
         {pct}%
       </span>
     </span>

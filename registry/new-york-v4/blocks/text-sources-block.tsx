@@ -39,7 +39,11 @@ const SOURCES: SourceMap = Object.fromEntries(
 export function TextSourcesBlock() {
   const viewerRef = React.useRef<TextViewerHandle>(null)
   const target = useTextSourceTarget(viewerRef)
-  const link = useSourceLink({ sources: SOURCES, target, initialField: FIELDS[0]?.key })
+  const link = useSourceLink({
+    sources: SOURCES,
+    target,
+    initialField: FIELDS[0]?.key,
+  })
 
   return (
     <div className="flex h-full min-h-[680px] bg-background">
@@ -48,7 +52,7 @@ export function TextSourcesBlock() {
           ref={viewerRef}
           src={TEXT_URL}
           bare
-          downloadFileName="extraction-run.log"
+          downloadName="extraction-run.log"
           className="h-full"
           highlight={sourceToTextHighlight(link.activeSource)}
         />

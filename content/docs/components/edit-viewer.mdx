@@ -1,19 +1,21 @@
 ---
 title: Edit Viewer
-description: Renders a Retab edit result — original/filled document views and the detected form fields.
+description: Renders a Retab edit result — source, preview, filled output, and detected form fields.
 ---
 
 The edit viewer renders the output of a Retab **edit** beside its source
 document: each detected form field is drawn as a bbox overlay on the page, and a
 synced panel lists the fields with their inferred values. Hover or select a
-field to highlight its region and scroll it into view; toggle **Original /
-Filled** to stamp the filled values onto the form. The panel groups fields by
-page and supports search and filled/empty filtering.
+field to highlight its region and scroll it into view. **Preview** stamps the
+field values onto the source document as an overlay; **Filled** is reserved for
+the actual generated output file when one is supplied. The panel groups fields
+by page and supports search and filled/empty/type filtering.
 
 <EditViewerDemo />
 
-The document is supplied through a `renderDocument` render-prop, which receives
-an `EditDocumentContext` — a viewer `ref`, a `renderPageOverlay` callback, and an
-`onVisiblePageChange` handler — to spread onto a `PdfViewer`. The fields come
-from the edit result's `detectedFields` (each a `key`, `type`, `value`, and a
-normalized `bbox`).
+Pass the edit result plus any available documents directly:
+`result={{ fields }}`, `sourceDocument`, and `filledDocument`. The viewer
+derives valid `source`, `preview`, and `filled` modes from those artifacts,
+defaults to the generated filled document when it exists, and falls back safely
+as async artifacts load. Overlay rendering currently requires a PDF source
+document; non-PDF filled outputs still render through the universal file viewer.

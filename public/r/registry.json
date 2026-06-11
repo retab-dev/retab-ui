@@ -622,7 +622,7 @@
       "name": "pdf-viewer",
       "type": "registry:ui",
       "title": "PDF Viewer",
-      "description": "A pdfjs-backed PDF viewer: continuous scroll, zoom, rotate, fit-to-width, download, a per-page overlay slot for bounding-box citations, a PdfHighlight overlay, and an imperative scrollToPageArea handle for driving source highlights. No useEffect.",
+      "description": "A pdfjs-backed PDF viewer: continuous scroll, controlled or uncontrolled zoom, rotate, fit-to-width, download, a per-page overlay slot for bounding-box citations, a PdfHighlight overlay, and an imperative scrollToPageArea handle for driving source highlights.",
       "dependencies": [
         "lucide-react",
         "pdfjs-dist@5.4.296"
@@ -639,6 +639,56 @@
           "path": "registry/new-york-v4/ui/pdf-viewer.tsx",
           "type": "registry:ui",
           "target": "@ui/pdf-viewer.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/pdf-viewer-types.ts",
+          "type": "registry:ui",
+          "target": "@ui/pdf-viewer-types.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/pdf-viewer-resource.ts",
+          "type": "registry:ui",
+          "target": "@ui/pdf-viewer-resource.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/pdf-viewer-scale.ts",
+          "type": "registry:ui",
+          "target": "@ui/pdf-viewer-scale.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/pdf-viewer-scroll.ts",
+          "type": "registry:ui",
+          "target": "@ui/pdf-viewer-scroll.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/pdf-viewer-virtualization.ts",
+          "type": "registry:ui",
+          "target": "@ui/pdf-viewer-virtualization.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/pdf-viewer-page-sizes.ts",
+          "type": "registry:ui",
+          "target": "@ui/pdf-viewer-page-sizes.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/pdf-viewer-page.tsx",
+          "type": "registry:ui",
+          "target": "@ui/pdf-viewer-page.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/pdf-viewer-toolbar.tsx",
+          "type": "registry:ui",
+          "target": "@ui/pdf-viewer-toolbar.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/pdf-viewer-rail.tsx",
+          "type": "registry:ui",
+          "target": "@ui/pdf-viewer-rail.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/pdf-viewer-states.tsx",
+          "type": "registry:ui",
+          "target": "@ui/pdf-viewer-states.tsx"
         }
       ]
     },
@@ -689,6 +739,46 @@
           "target": "@ui/image-viewer.tsx"
         },
         {
+          "path": "registry/new-york-v4/ui/image-viewer-types.ts",
+          "type": "registry:ui",
+          "target": "@ui/image-viewer-types.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/image-viewer-content.tsx",
+          "type": "registry:ui",
+          "target": "@ui/image-viewer-content.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/image-viewer-frame.tsx",
+          "type": "registry:ui",
+          "target": "@ui/image-viewer-frame.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/image-viewer-chrome.tsx",
+          "type": "registry:ui",
+          "target": "@ui/image-viewer-chrome.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/lib/image-geometry.ts",
+          "type": "registry:lib",
+          "target": "@lib/image-geometry.ts"
+        },
+        {
+          "path": "registry/new-york-v4/lib/image-frame-source.ts",
+          "type": "registry:lib",
+          "target": "@lib/image-frame-source.ts"
+        },
+        {
+          "path": "registry/new-york-v4/lib/image-source-cache.ts",
+          "type": "registry:lib",
+          "target": "@lib/image-source-cache.ts"
+        },
+        {
+          "path": "registry/new-york-v4/lib/image-tiff-source.ts",
+          "type": "registry:lib",
+          "target": "@lib/image-tiff-source.ts"
+        },
+        {
           "path": "registry/new-york-v4/ui/image-viewer.worker.ts",
           "type": "registry:ui",
           "target": "@ui/image-viewer.worker.ts"
@@ -699,7 +789,7 @@
       "name": "pptx-viewer",
       "type": "registry:ui",
       "title": "PPTX Viewer",
-      "description": "A canvas-backed PowerPoint viewer rendered entirely client-side (no server conversion): continuous scroll, zoom, rotate, fit-to-width, download, and a per-slide overlay slot. Slides render lazily near the viewport and renders are serialized. No useEffect.",
+      "description": "A canvas-backed PowerPoint viewer rendered entirely client-side (no server conversion): continuous scroll, zoom, rotate, fit-to-width, download, and a per-slide overlay slot. Slides render lazily near the viewport and renders are serialized.",
       "dependencies": [
         "lucide-react",
         "pptxviewjs@1.1.9",
@@ -718,6 +808,119 @@
           "path": "registry/new-york-v4/ui/pptx-viewer.tsx",
           "type": "registry:ui",
           "target": "@ui/pptx-viewer.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/pptx-viewer-core.ts",
+          "type": "registry:ui",
+          "target": "@ui/pptx-viewer-core.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/pptx-viewer-presentation.ts",
+          "type": "registry:ui",
+          "target": "@ui/pptx-viewer-presentation.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/pptx-viewer-cache.ts",
+          "type": "registry:ui",
+          "target": "@ui/pptx-viewer-cache.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/pptx-viewer-hooks.ts",
+          "type": "registry:ui",
+          "target": "@ui/pptx-viewer-hooks.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/pptx-viewer-renderer.ts",
+          "type": "registry:ui",
+          "target": "@ui/pptx-viewer-renderer.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/pptx-viewer-scroll.ts",
+          "type": "registry:ui",
+          "target": "@ui/pptx-viewer-scroll.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/pptx-viewer-viewport.ts",
+          "type": "registry:ui",
+          "target": "@ui/pptx-viewer-viewport.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/pptx-viewer-visible-slide.ts",
+          "type": "registry:ui",
+          "target": "@ui/pptx-viewer-visible-slide.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/pptx-viewer-zoom.ts",
+          "type": "registry:ui",
+          "target": "@ui/pptx-viewer-zoom.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/pptx-viewer-source.ts",
+          "type": "registry:ui",
+          "target": "@ui/pptx-viewer-source.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/pptx-viewer-toolbar.tsx",
+          "type": "registry:ui",
+          "target": "@ui/pptx-viewer-toolbar.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/pptx-viewer-slide.tsx",
+          "type": "registry:ui",
+          "target": "@ui/pptx-viewer-slide.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/pptx-viewer-fallback.tsx",
+          "type": "registry:ui",
+          "target": "@ui/pptx-viewer-fallback.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/pptx-viewer-error-boundary.tsx",
+          "type": "registry:ui",
+          "target": "@ui/pptx-viewer-error-boundary.tsx"
+        }
+      ]
+    },
+    {
+      "name": "xlsx-worker-protocol",
+      "type": "registry:lib",
+      "title": "XLSX worker protocol",
+      "description": "Typed worker messages, parse limits, and error codes for the XLSX viewer.",
+      "files": [
+        {
+          "path": "registry/new-york-v4/lib/xlsx-worker-protocol.ts",
+          "type": "registry:lib",
+          "target": "@lib/xlsx-worker-protocol.ts"
+        }
+      ]
+    },
+    {
+      "name": "xlsx-workbook",
+      "type": "registry:lib",
+      "title": "XLSX workbook model",
+      "description": "Sparse compact workbook helpers for the XLSX viewer: cell lookup, metadata projection, column labels, and bounded source caching.",
+      "files": [
+        {
+          "path": "registry/new-york-v4/lib/xlsx-workbook.ts",
+          "type": "registry:lib",
+          "target": "@lib/xlsx-workbook.ts"
+        }
+      ]
+    },
+    {
+      "name": "xlsx-sheetjs-flattener",
+      "type": "registry:lib",
+      "title": "XLSX SheetJS flattener",
+      "description": "Pure SheetJS-to-compact-sheet flattening helpers for the XLSX viewer worker.",
+      "registryDependencies": [
+        "xlsx-worker-protocol",
+        "xlsx-workbook"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/lib/xlsx-sheetjs-flattener.ts",
+          "type": "registry:lib",
+          "target": "@lib/xlsx-sheetjs-flattener.ts"
         }
       ]
     },
@@ -725,13 +928,16 @@
       "name": "xlsx-viewer",
       "type": "registry:ui",
       "title": "XLSX Viewer",
-      "description": "A virtualized Excel/spreadsheet viewer rendered entirely client-side: sheet tabs, zoom, download, formatted values, numeric alignment, and row + column virtualization so huge sheets stay smooth. Sheets materialize lazily. No useEffect for data loading.",
+      "description": "A virtualized Excel/spreadsheet viewer rendered entirely client-side: sheet tabs, zoom, download, formatted values, numeric alignment, sparse workbook storage, and row + column virtualization so huge sheets stay smooth. No useEffect for data loading.",
       "dependencies": [
         "lucide-react",
         "@e965/xlsx@0.20.3",
         "@tanstack/react-virtual@^3.13.12"
       ],
       "registryDependencies": [
+        "xlsx-worker-protocol",
+        "xlsx-workbook",
+        "xlsx-sheetjs-flattener",
         "utils",
         "button",
         "separator",
@@ -742,6 +948,46 @@
           "path": "registry/new-york-v4/ui/xlsx-viewer.tsx",
           "type": "registry:ui",
           "target": "@ui/xlsx-viewer.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/xlsx-grid.tsx",
+          "type": "registry:ui",
+          "target": "@ui/xlsx-grid.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/xlsx-grid-constants.ts",
+          "type": "registry:ui",
+          "target": "@ui/xlsx-grid-constants.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/xlsx-grid-row.tsx",
+          "type": "registry:ui",
+          "target": "@ui/xlsx-grid-row.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/xlsx-grid-scrollbar.tsx",
+          "type": "registry:ui",
+          "target": "@ui/xlsx-grid-scrollbar.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/xlsx-grid-skeleton.tsx",
+          "type": "registry:ui",
+          "target": "@ui/xlsx-grid-skeleton.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/xlsx-toolbar.tsx",
+          "type": "registry:ui",
+          "target": "@ui/xlsx-toolbar.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/xlsx-sheet-tabs.tsx",
+          "type": "registry:ui",
+          "target": "@ui/xlsx-sheet-tabs.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/xlsx-shadow-scope.tsx",
+          "type": "registry:ui",
+          "target": "@ui/xlsx-shadow-scope.tsx"
         },
         {
           "path": "registry/new-york-v4/ui/xlsx-viewer.worker.ts",
@@ -777,6 +1023,51 @@
           "path": "registry/new-york-v4/ui/file-viewer.tsx",
           "type": "registry:ui",
           "target": "@ui/file-viewer.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-viewer-core.ts",
+          "type": "registry:ui",
+          "target": "@ui/file-viewer-core.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-viewer-chrome.tsx",
+          "type": "registry:ui",
+          "target": "@ui/file-viewer-chrome.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-viewer-resource-cache.ts",
+          "type": "registry:ui",
+          "target": "@ui/file-viewer-resource-cache.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-viewer-text-resource.ts",
+          "type": "registry:ui",
+          "target": "@ui/file-viewer-text-resource.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-viewer-text-loader.ts",
+          "type": "registry:ui",
+          "target": "@ui/file-viewer-text-loader.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-viewer-text-viewer.tsx",
+          "type": "registry:ui",
+          "target": "@ui/file-viewer-text-viewer.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-viewer-markdown-viewer.tsx",
+          "type": "registry:ui",
+          "target": "@ui/file-viewer-markdown-viewer.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-viewer-html-viewer.tsx",
+          "type": "registry:ui",
+          "target": "@ui/file-viewer-html-viewer.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-viewer-csv-viewer.tsx",
+          "type": "registry:ui",
+          "target": "@ui/file-viewer-csv-viewer.tsx"
         }
       ]
     },
@@ -813,7 +1104,7 @@
       "name": "pdf-source",
       "type": "registry:ui",
       "title": "PDF source adapter",
-      "description": "Bridges the document-source model to the PDF viewer: pdfAnchorToLocation (normalized bbox \u2192 page %), usePdfSourceTarget (a SourceTarget over a PdfViewer ref), and renderPdfSourceOverlay (draws a PdfHighlight on the active source's page).",
+      "description": "Bridges the document-source model to the PDF viewer: pdfAnchorToLocation (normalized bbox → page %), usePdfSourceTarget (a SourceTarget over a PdfViewer ref), and renderPdfSourceOverlay (draws a PdfHighlight on the active source's page).",
       "registryDependencies": [
         "pdf-viewer",
         "document-source",
@@ -841,12 +1132,45 @@
       ]
     },
     {
+      "name": "segment-interaction",
+      "type": "registry:lib",
+      "title": "Segment Interaction",
+      "description": "React-free hover, focus, selection, and current-page helpers for Segment[] surfaces.",
+      "registryDependencies": [
+        "segments"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/lib/segment-interaction.ts",
+          "type": "registry:lib",
+          "target": "@lib/segment-interaction.ts"
+        }
+      ]
+    },
+    {
+      "name": "use-segment-interaction",
+      "type": "registry:ui",
+      "title": "useSegmentInteraction",
+      "description": "Client hook that coordinates hover, focus, and persistent selection across Segment[] surfaces.",
+      "registryDependencies": [
+        "segment-interaction"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/use-segment-interaction.ts",
+          "type": "registry:ui",
+          "target": "@ui/use-segment-interaction.ts"
+        }
+      ]
+    },
+    {
       "name": "segment-legend",
       "type": "registry:ui",
       "title": "Segment Legend",
-      "description": "Compact color legend for a Segment[] with shared hover/selection state.",
+      "description": "Compact color legend for a Segment[] with shared hover, focus, and selection state.",
       "registryDependencies": [
         "segments",
+        "segment-interaction",
         "utils"
       ],
       "files": [
@@ -864,6 +1188,7 @@
       "description": "Selectable list of segments with page ranges and confidence bars.",
       "registryDependencies": [
         "segments",
+        "segment-interaction",
         "utils"
       ],
       "files": [
@@ -881,6 +1206,7 @@
       "description": "A colored page strip that ties a Segment[] to the document; hover/select syncing and click-to-jump.",
       "registryDependencies": [
         "segments",
+        "segment-interaction",
         "utils"
       ],
       "files": [
@@ -901,6 +1227,7 @@
         "utils",
         "segment-legend",
         "segment-sidebar",
+        "use-segment-interaction",
         "page-timeline",
         "pdf-viewer"
       ],
@@ -916,9 +1243,10 @@
       "name": "page-ribbon",
       "type": "registry:ui",
       "title": "Page Ribbon",
-      "description": "A page-axis ribbon: segments drawn as blocks spanning their pages. One vertical lane = a split sidebar; many horizontal rows (consensus + votes) = a partition waterfall. Shared hover/selection + click-to-jump.",
+      "description": "A page-axis ribbon: segments drawn as blocks spanning their pages. One vertical lane = a split sidebar; many horizontal rows (consensus + votes) = a partition waterfall. Shared hover/focus/selection + click-to-jump.",
       "registryDependencies": [
         "segments",
+        "segment-interaction",
         "utils"
       ],
       "files": [
@@ -933,7 +1261,7 @@
       "name": "schema-builder",
       "type": "registry:ui",
       "title": "Schema Builder",
-      "description": "Controlled JSON Schema editor for building Retab extraction schemas \u2014 fields, types, nested objects, arrays, enums, and required flags.",
+      "description": "Controlled JSON Schema editor for building Retab extraction schemas — fields, types, nested objects, arrays, enums, and required flags.",
       "registryDependencies": [
         "utils"
       ],
@@ -1070,9 +1398,12 @@
       "registryDependencies": [
         "pdf-viewer",
         "button",
+        "dropdown-menu",
         "scroll-area",
         "resizable",
-        "spinner"
+        "separator",
+        "spinner",
+        "tabs"
       ],
       "files": [
         {
@@ -1084,6 +1415,46 @@
           "path": "components/viewers/parse/parse-viewer.tsx",
           "type": "registry:component",
           "target": "@components/viewers/parse/parse-viewer.tsx"
+        },
+        {
+          "path": "components/viewers/page-markdown/page-markdown-viewer.tsx",
+          "type": "registry:component",
+          "target": "@components/viewers/page-markdown/page-markdown-viewer.tsx"
+        },
+        {
+          "path": "components/viewers/page-markdown/page-markdown-toolbar.tsx",
+          "type": "registry:component",
+          "target": "@components/viewers/page-markdown/page-markdown-toolbar.tsx"
+        },
+        {
+          "path": "components/viewers/page-markdown/page-markdown-actions.tsx",
+          "type": "registry:component",
+          "target": "@components/viewers/page-markdown/page-markdown-actions.tsx"
+        },
+        {
+          "path": "components/viewers/page-markdown/page-markdown-page.tsx",
+          "type": "registry:component",
+          "target": "@components/viewers/page-markdown/page-markdown-page.tsx"
+        },
+        {
+          "path": "components/viewers/page-markdown/page-markdown-hooks.ts",
+          "type": "registry:component",
+          "target": "@components/viewers/page-markdown/page-markdown-hooks.ts"
+        },
+        {
+          "path": "components/viewers/page-markdown/page-markdown-model.ts",
+          "type": "registry:lib",
+          "target": "@components/viewers/page-markdown/page-markdown-model.ts"
+        },
+        {
+          "path": "components/viewers/page-markdown/page-markdown-types.ts",
+          "type": "registry:lib",
+          "target": "@components/viewers/page-markdown/page-markdown-types.ts"
+        },
+        {
+          "path": "hooks/use-element-width.ts",
+          "type": "registry:hook",
+          "target": "@hooks/use-element-width.ts"
         },
         {
           "path": "components/viewers/lib/parse-types.ts",
@@ -1104,13 +1475,15 @@
       "name": "edit-viewer-block",
       "type": "registry:block",
       "title": "Edit Viewer",
-      "description": "Filled form fields beside the source document, linked by their bbox — hover or select a field to highlight its region on the page and scroll it into view; toggle Original/Filled to stamp each value into its box.",
+      "description": "Detected form fields beside a PDF source document, linked by their bbox — hover or select a field to highlight its region on the page; Preview stamps values over the source, and Filled renders a supplied output file.",
       "dependencies": [
         "lucide-react"
       ],
       "registryDependencies": [
         "pdf-viewer",
-        "scroll-area"
+        "file-viewer",
+        "scroll-area",
+        "tabs"
       ],
       "files": [
         {
@@ -1122,6 +1495,51 @@
           "path": "components/viewers/edit/edit-viewer.tsx",
           "type": "registry:component",
           "target": "@components/viewers/edit/edit-viewer.tsx"
+        },
+        {
+          "path": "components/viewers/edit/edit-viewer-types.ts",
+          "type": "registry:component",
+          "target": "@components/viewers/edit/edit-viewer-types.ts"
+        },
+        {
+          "path": "components/viewers/edit/edit-viewer-model.ts",
+          "type": "registry:component",
+          "target": "@components/viewers/edit/edit-viewer-model.ts"
+        },
+        {
+          "path": "components/viewers/edit/edit-viewer-field-style.ts",
+          "type": "registry:component",
+          "target": "@components/viewers/edit/edit-viewer-field-style.ts"
+        },
+        {
+          "path": "components/viewers/edit/use-edit-viewer-controller.ts",
+          "type": "registry:component",
+          "target": "@components/viewers/edit/use-edit-viewer-controller.ts"
+        },
+        {
+          "path": "components/viewers/edit/edit-viewer-states.tsx",
+          "type": "registry:component",
+          "target": "@components/viewers/edit/edit-viewer-states.tsx"
+        },
+        {
+          "path": "components/viewers/edit/edit-viewer-toolbar.tsx",
+          "type": "registry:component",
+          "target": "@components/viewers/edit/edit-viewer-toolbar.tsx"
+        },
+        {
+          "path": "components/viewers/edit/edit-viewer-overlays.tsx",
+          "type": "registry:component",
+          "target": "@components/viewers/edit/edit-viewer-overlays.tsx"
+        },
+        {
+          "path": "components/viewers/edit/edit-viewer-field-panel.tsx",
+          "type": "registry:component",
+          "target": "@components/viewers/edit/edit-viewer-field-panel.tsx"
+        },
+        {
+          "path": "components/viewers/edit/edit-viewer-document-pane.tsx",
+          "type": "registry:component",
+          "target": "@components/viewers/edit/edit-viewer-document-pane.tsx"
         },
         {
           "path": "components/viewers/lib/edit-types.ts",
@@ -1142,7 +1560,7 @@
       "name": "extract-viewer-block",
       "type": "registry:block",
       "title": "Extract Viewer",
-      "description": "Extracted data beside the source PDF, rendered as a JSON form and linked by sources \u2014 hover or select a field to highlight where its value came from and scroll the page to it.",
+      "description": "Extracted data beside the source PDF, rendered as a JSON form and linked by sources — hover or select a field to highlight where its value came from and scroll the page to it.",
       "registryDependencies": [
         "pdf-viewer",
         "pdf-source",
@@ -1175,7 +1593,7 @@
       "name": "extraction-viewer-block",
       "type": "registry:block",
       "title": "Extraction Viewer",
-      "description": "Every extraction format in one viewer \u2014 PDF, image, text, CSV, Excel, and Word \u2014 each shown as a JSON form beside its source document, linked by their sources. Tabs switch the file format; hovering a form field highlights where its value came from. One useSourceLink mediator drives every viewer; only the viewer + its source adapter differ per tab.",
+      "description": "Every extraction format in one viewer — PDF, image, text, CSV, Excel, and Word — each shown as a JSON form beside its source document, linked by their sources. Tabs switch the file format; hovering a form field highlights where its value came from. One useSourceLink mediator drives every viewer; only the viewer + its source adapter differ per tab.",
       "dependencies": [
         "react-hook-form",
         "json-schema",
@@ -1245,7 +1663,7 @@
       "name": "json-form-sources-block",
       "type": "registry:block",
       "title": "JSON Form Sources",
-      "description": "Extraction rendered as a JSON form beside the source PDF \u2014 hover a form field to highlight where its value came from. Composes json-form and the PDF viewer through useSourceLink; data is the Retab /v1/extractions/{id}/sources response.",
+      "description": "Extraction rendered as a JSON form beside the source PDF — hover a form field to highlight where its value came from. Composes json-form and the PDF viewer through useSourceLink; data is the Retab /v1/extractions/{id}/sources response.",
       "dependencies": [
         "react-hook-form"
       ],
@@ -1277,7 +1695,7 @@
       "name": "pdf-thumbnail-sidebar",
       "type": "registry:ui",
       "title": "PDF Thumbnail Sidebar",
-      "description": "A page-thumbnail rail for the PdfViewer aside slot: lazy pdfjs thumbnails, active-page highlight, click-to-jump. Reuses the viewer\u2019s cached document.",
+      "description": "A page-thumbnail rail for the PdfViewer aside slot: lazy pdfjs thumbnails, active-page highlight, click-to-jump. Reuses the viewer’s cached document.",
       "registryDependencies": [
         "pdf-viewer",
         "utils",
@@ -1295,7 +1713,7 @@
       "name": "primitive-cards-block",
       "type": "registry:block",
       "title": "Primitive Run Cards",
-      "description": "Each primitive's result framed as a run card \u2014 a document thumbnail with a status pill and the primitive's output in the body. Composes run-card with per-primitive result rendering; starts with classification and split.",
+      "description": "Each primitive's result framed as a run card — a document thumbnail with a status pill and the primitive's output in the body. Composes run-card with per-primitive result rendering; starts with classification and split.",
       "registryDependencies": [
         "run-card",
         "segments"
@@ -1330,11 +1748,12 @@
       "name": "legend-variants-block",
       "type": "registry:block",
       "title": "Legend Variants",
-      "description": "The split viewer shown with every legend placement \u2014 bar, floating, and a vertical rail \u2014 over one attention.pdf split result, all sharing one selection.",
+      "description": "The split viewer shown with every legend placement — bar, floating, and a vertical rail — over one attention.pdf split result, all sharing one interaction state.",
       "registryDependencies": [
         "pdf-viewer",
         "segment-legend",
         "page-ribbon",
+        "use-segment-interaction",
         "segments"
       ],
       "files": [
@@ -1409,6 +1828,11 @@
       ],
       "files": [
         {
+          "path": "registry/new-york-v4/lib/image-geometry.ts",
+          "type": "registry:lib",
+          "target": "@lib/image-geometry.ts"
+        },
+        {
           "path": "registry/new-york-v4/ui/image-source.tsx",
           "type": "registry:ui",
           "target": "@ui/image-source.tsx"
@@ -1419,7 +1843,7 @@
       "name": "text-viewer",
       "type": "registry:ui",
       "title": "Text Viewer",
-      "description": "A line-numbered text/log viewer with a line-range highlight and an imperative scrollToLines handle.",
+      "description": "A bounded line-numbered text viewer for source-linked line ranges, with local load errors, explicit retry, and an imperative scrollToLineRange handle.",
       "dependencies": [
         "lucide-react"
       ],
@@ -1434,6 +1858,21 @@
           "path": "registry/new-york-v4/ui/text-viewer.tsx",
           "type": "registry:ui",
           "target": "@ui/text-viewer.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/text-viewer-ranges.ts",
+          "type": "registry:ui",
+          "target": "@ui/text-viewer-ranges.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/text-viewer-resource.ts",
+          "type": "registry:ui",
+          "target": "@ui/text-viewer-resource.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/text-viewer-layout.ts",
+          "type": "registry:ui",
+          "target": "@ui/text-viewer-layout.ts"
         }
       ]
     },
@@ -1513,7 +1952,7 @@
       "name": "image-sources-block",
       "type": "registry:block",
       "title": "Image Sources",
-      "description": "Extracted fields linked to a scanned page image \u2014 hover to highlight the image_bbox region.",
+      "description": "Extracted fields linked to a scanned page image — hover to highlight the image_bbox region.",
       "registryDependencies": [
         "image-viewer",
         "image-source",
@@ -1542,7 +1981,7 @@
       "name": "text-sources-block",
       "type": "registry:block",
       "title": "Text Sources",
-      "description": "Values extracted from a log file linked to the lines they came from \u2014 hover to highlight a line range.",
+      "description": "Values extracted from a log file linked to the lines they came from — hover to highlight a line range.",
       "registryDependencies": [
         "text-viewer",
         "text-source",
@@ -1571,7 +2010,7 @@
       "name": "docx-sources-block",
       "type": "registry:block",
       "title": "DOCX Sources",
-      "description": "Values extracted from a Word document linked back to where they came from \u2014 hover to highlight the text and scroll to it.",
+      "description": "Values extracted from a Word document linked back to where they came from — hover to highlight the text and scroll to it.",
       "registryDependencies": [
         "docx-viewer",
         "docx-source",
@@ -1600,7 +2039,7 @@
       "name": "csv-sources-block",
       "type": "registry:block",
       "title": "CSV Sources",
-      "description": "Extracted values linked to spreadsheet cells \u2014 hover to highlight a cell and scroll to it.",
+      "description": "Extracted values linked to spreadsheet cells — hover to highlight a cell and scroll to it.",
       "registryDependencies": [
         "csv-viewer",
         "csv-source",
@@ -1629,7 +2068,7 @@
       "name": "xlsx-sources-block",
       "type": "registry:block",
       "title": "Excel Sources",
-      "description": "Extracted values linked to spreadsheet cells across sheets \u2014 hover to switch sheet, highlight the cell, and scroll to it.",
+      "description": "Extracted values linked to spreadsheet cells across sheets — hover to switch sheet, highlight the cell, and scroll to it.",
       "registryDependencies": [
         "xlsx-viewer",
         "xlsx-source",

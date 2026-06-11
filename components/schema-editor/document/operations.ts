@@ -6,6 +6,7 @@ import type {
   DefinitionEntry,
   DocumentNode,
   EnumValue,
+  JsonValue,
   PropertyEntry,
   SchemaDocument,
 } from "./types"
@@ -18,9 +19,9 @@ import type {
  * helper style of extend's schema-builder, but operates on the Document rather
  * than a parallel tree, so edits are inherently lossless.
  *
- * Identity is the addressing scheme throughout: callers pass a `NodeId`, never a
- * key or a path. Operations that act on the parent/child edge (rename, required,
- * move) locate the OWNING entry by its child node id.
+ * Identity is the addressing scheme throughout: node operations accept a
+ * `NodeId`; property-edge operations accept a `PropertyId`. Neither depends on a
+ * mutable key or positional path.
  */
 
 // ---------------------------------------------------------------------------
@@ -147,6 +148,66 @@ export function updateNodeRest(
   }))
 }
 
+export function setNodeDescription(
+  doc: SchemaDocument,
+  id: string,
+  description: string | undefined
+): SchemaDocument {
+  return updateNode(doc, id, (node) => {
+    const nextDescription = description?.trim() ? description : undefined
+    return node.description === nextDescription
+      ? node
+      : { ...node, description: nextDescription }
+  })
+}
+
+export function setNodeTitle(
+  doc: SchemaDocument,
+  id: string,
+  title: string | undefined
+): SchemaDocument {
+  return updateNode(doc, id, (node) => {
+    const nextTitle = title?.trim() ? title : undefined
+    return node.title === nextTitle ? node : { ...node, title: nextTitle }
+  })
+}
+
+export function stripDescriptions(doc: SchemaDocument): SchemaDocument {
+  const root = stripNodeDescription(doc.root)
+  const defs = mapPreserve(doc.defs, (definition) => {
+    const node = stripNodeDescription(definition.node)
+    return node === definition.node ? definition : { ...definition, node }
+  })
+  if (root === doc.root && defs === doc.defs) return doc
+  return { ...doc, root, defs }
+}
+
+function stripNodeDescription(node: DocumentNode): DocumentNode {
+  let next = node.description === undefined ? node : { ...node, description: undefined }
+
+  if (next.properties) {
+    const properties = mapPreserve(next.properties, (property) => {
+      const childNode = stripNodeDescription(property.node)
+      return childNode === property.node ? property : { ...property, node: childNode }
+    })
+    if (properties !== next.properties) next = { ...next, properties }
+  }
+
+  if (next.items) {
+    const items = stripNodeDescription(next.items)
+    if (items !== next.items) next = { ...next, items }
+  }
+
+  for (const key of ["anyOf", "oneOf", "allOf"] as const) {
+    const children = next[key]
+    if (!children) continue
+    const mapped = mapPreserve(children, stripNodeDescription)
+    if (mapped !== children) next = { ...next, [key]: mapped }
+  }
+
+  return next
+}
+
 // ---------------------------------------------------------------------------
 // JSON bridge — read/write a node's JSON Schema by id
 //
@@ -188,6 +249,17 @@ export function getEffectiveDocNode(node: DocumentNode): DocumentNode {
     if (nonNull) return nonNull
   }
   return node
+}
+
+/** Property edge id of an object's child property `key` (through the effective branch). */
+export function getChildPropertyId(
+  doc: SchemaDocument,
+  parentId: string,
+  key: string
+): string | undefined {
+  const parent = getNode(doc, parentId)
+  if (!parent) return undefined
+  return getEffectiveDocNode(parent).properties?.find((entry) => entry.key === key)?.id
 }
 
 /** Document id of an object's child property `key` (through the effective branch). */
@@ -256,7 +328,7 @@ function replaceInNode(
 }
 
 // ---------------------------------------------------------------------------
-// Property (object child) operations — addressed by the child node's id
+// Property (object child) operations — addressed by the property edge id
 // ---------------------------------------------------------------------------
 
 /** Update the object node whose `properties` array we want to edit, by parent id. */
@@ -271,16 +343,16 @@ function updateObjectProperties(
   }))
 }
 
-/** Find the parent object id + index of the entry owning `childId`. */
+/** Find the parent object id + index of the property edge. */
 export function findOwningProperty(
   doc: SchemaDocument,
-  childId: string
+  propertyId: string
 ): { parentId: string; index: number } | null {
   let result: { parentId: string; index: number } | null = null
   const visit = (node: DocumentNode) => {
     if (result) return
     if (node.properties) {
-      const index = node.properties.findIndex((p) => p.node.id === childId)
+      const index = node.properties.findIndex((p) => p.id === propertyId)
       if (index >= 0) {
         result = { parentId: node.id, index }
         return
@@ -299,6 +371,7 @@ export function addProperty(
   init: Partial<PropertyEntry> = {}
 ): SchemaDocument {
   const entry: PropertyEntry = {
+    id: init.id ?? createId("prop"),
     key: init.key ?? "",
     required: init.required ?? false,
     node: init.node ?? createNode("string"),
@@ -308,46 +381,44 @@ export function addProperty(
 
 export function removeProperty(
   doc: SchemaDocument,
-  childId: string
+  propertyId: string
 ): SchemaDocument {
-  const owner = findOwningProperty(doc, childId)
+  const owner = findOwningProperty(doc, propertyId)
   if (!owner) return doc
   return updateObjectProperties(doc, owner.parentId, (props) =>
-    props.filter((p) => p.node.id !== childId)
+    props.filter((p) => p.id !== propertyId)
   )
 }
 
 export function renameProperty(
   doc: SchemaDocument,
-  childId: string,
+  propertyId: string,
   key: string
 ): SchemaDocument {
-  return updateOwningEntry(doc, childId, (entry) =>
+  return updateOwningEntry(doc, propertyId, (entry) =>
     entry.key === key ? entry : { ...entry, key }
   )
 }
 
 export function setRequired(
   doc: SchemaDocument,
-  childId: string,
+  propertyId: string,
   required: boolean
 ): SchemaDocument {
-  return updateOwningEntry(doc, childId, (entry) =>
+  return updateOwningEntry(doc, propertyId, (entry) =>
     entry.required === required ? entry : { ...entry, required }
   )
 }
 
 function updateOwningEntry(
   doc: SchemaDocument,
-  childId: string,
+  propertyId: string,
   fn: (entry: PropertyEntry) => PropertyEntry
 ): SchemaDocument {
-  const owner = findOwningProperty(doc, childId)
+  const owner = findOwningProperty(doc, propertyId)
   if (!owner) return doc
   return updateObjectProperties(doc, owner.parentId, (props) =>
-    mapPreserve(props, (entry) =>
-      entry.node.id === childId ? fn(entry) : entry
-    )
+    mapPreserve(props, (entry) => (entry.id === propertyId ? fn(entry) : entry))
   )
 }
 
@@ -357,20 +428,21 @@ function updateOwningEntry(
  */
 export function moveProperty(
   doc: SchemaDocument,
-  childId: string,
+  propertyId: string,
   targetParentId: string,
   index: number
 ): SchemaDocument {
-  const owner = findOwningProperty(doc, childId)
+  const owner = findOwningProperty(doc, propertyId)
   if (!owner) return doc
-  if (isAncestor(doc, childId, targetParentId)) return doc
-
-  const moved = getOwningEntry(doc, childId)
+  const moved = getOwningEntry(doc, propertyId)
   if (!moved) return doc
+
+  const childId = moved.node.id
+  if (isAncestor(doc, childId, targetParentId)) return doc
 
   // Detach from the source.
   let next = updateObjectProperties(doc, owner.parentId, (props) =>
-    props.filter((p) => p.node.id !== childId)
+    props.filter((p) => p.id !== propertyId)
   )
   // Insert into the target.
   next = updateObjectProperties(next, targetParentId, (props) => {
@@ -384,9 +456,9 @@ export function moveProperty(
 
 function getOwningEntry(
   doc: SchemaDocument,
-  childId: string
+  propertyId: string
 ): PropertyEntry | null {
-  const owner = findOwningProperty(doc, childId)
+  const owner = findOwningProperty(doc, propertyId)
   if (!owner) return null
   const parent = getNode(doc, owner.parentId)
   return parent?.properties?.[owner.index] ?? null
@@ -424,6 +496,25 @@ export function setNodeType(
   return updateNode(doc, id, (node) => normalizeNodeForType(node, type))
 }
 
+export type SchemaEditorType =
+  | JSONSchema7TypeName
+  | "enum"
+  | "date"
+  | "time"
+  | "datetime"
+
+export function setNodeEditorType(
+  doc: SchemaDocument,
+  id: string,
+  type: SchemaEditorType
+): SchemaDocument {
+  return updateNode(doc, id, (node) =>
+    updateEffectiveNodeShape(node, (effective) =>
+      normalizeNodeForEditorType(effective, type)
+    )
+  )
+}
+
 export function normalizeNodeForType(
   node: DocumentNode,
   type: JSONSchema7TypeName | "enum"
@@ -447,7 +538,14 @@ export function normalizeNodeForType(
     base.type = "object"
     base.properties = node.properties?.length
       ? node.properties
-      : [{ key: "", required: false, node: createNode("string") }]
+      : [
+          {
+            id: createId("prop"),
+            key: "",
+            required: false,
+            node: createNode("string"),
+          },
+        ]
   } else if (type === "array") {
     base.type = "array"
     base.items = node.items ?? createNode("string")
@@ -456,6 +554,32 @@ export function normalizeNodeForType(
   }
 
   return nullable ? setNodeNullable(base, true) : base
+}
+
+function normalizeNodeForEditorType(
+  node: DocumentNode,
+  type: SchemaEditorType
+): DocumentNode {
+  const format =
+    type === "date"
+      ? "date"
+      : type === "time"
+        ? "time"
+        : type === "datetime"
+          ? "date-time"
+          : undefined
+  const schemaType: JSONSchema7TypeName | "enum" = format
+    ? "string"
+    : (type as JSONSchema7TypeName | "enum")
+  const normalized = normalizeNodeForType(node, schemaType)
+  const { format: _oldFormat, ...restWithoutFormat } = normalized.rest
+
+  return {
+    ...normalized,
+    rest: format
+      ? { ...restWithoutFormat, format }
+      : restWithoutFormat,
+  }
 }
 
 export function setNullable(
@@ -493,11 +617,17 @@ function isNodeNullable(node: DocumentNode): boolean {
 // Enum values
 // ---------------------------------------------------------------------------
 
-export function addEnumValue(doc: SchemaDocument, id: string): SchemaDocument {
-  return updateNode(doc, id, (node) => ({
-    ...node,
-    enum: [...(node.enum ?? []), createEnumValue()],
-  }))
+export function addEnumValue(
+  doc: SchemaDocument,
+  id: string,
+  value: JsonValue = ""
+): SchemaDocument {
+  return updateNode(doc, id, (node) =>
+    updateEffectiveNodeShape(node, (effective) => ({
+      ...effective,
+      enum: [...(effective.enum ?? []), { ...createEnumValue(), value }],
+    }))
+  )
 }
 
 export function updateEnumValue(
@@ -506,12 +636,14 @@ export function updateEnumValue(
   enumId: string,
   patch: Partial<Omit<EnumValue, "id">>
 ): SchemaDocument {
-  return updateNode(doc, id, (node) => ({
-    ...node,
-    enum: mapPreserve(node.enum ?? [], (value) =>
-      value.id === enumId ? { ...value, ...patch } : value
-    ),
-  }))
+  return updateNode(doc, id, (node) =>
+    updateEffectiveNodeShape(node, (effective) => ({
+      ...effective,
+      enum: mapPreserve(effective.enum ?? [], (value) =>
+        value.id === enumId ? { ...value, ...patch } : value
+      ),
+    }))
+  )
 }
 
 export function removeEnumValue(
@@ -519,10 +651,54 @@ export function removeEnumValue(
   id: string,
   enumId: string
 ): SchemaDocument {
-  return updateNode(doc, id, (node) => ({
-    ...node,
-    enum: (node.enum ?? []).filter((value) => value.id !== enumId),
-  }))
+  return updateNode(doc, id, (node) =>
+    updateEffectiveNodeShape(node, (effective) => ({
+      ...effective,
+      enum: (effective.enum ?? []).filter((value) => value.id !== enumId),
+    }))
+  )
+}
+
+export function setEnumValues(
+  doc: SchemaDocument,
+  id: string,
+  values: JsonValue[]
+): SchemaDocument {
+  return updateNode(doc, id, (node) =>
+    updateEffectiveNodeShape(node, (effective) => ({
+      ...effective,
+      type: "string",
+      enum: values.map((value, index) => ({
+        ...(effective.enum?.[index] ?? createEnumValue()),
+        value,
+      })),
+    }))
+  )
+}
+
+export function updateEnumValueAtIndex(
+  doc: SchemaDocument,
+  id: string,
+  index: number,
+  value: JsonValue
+): SchemaDocument {
+  const node = getNode(doc, id)
+  if (!node) return doc
+
+  const enumId = getEffectiveDocNode(node).enum?.[index]?.id
+  return enumId ? updateEnumValue(doc, id, enumId, { value }) : doc
+}
+
+export function removeEnumValueAtIndex(
+  doc: SchemaDocument,
+  id: string,
+  index: number
+): SchemaDocument {
+  const node = getNode(doc, id)
+  if (!node) return doc
+
+  const enumId = getEffectiveDocNode(node).enum?.[index]?.id
+  return enumId ? removeEnumValue(doc, id, enumId) : doc
 }
 
 // ---------------------------------------------------------------------------
@@ -591,6 +767,15 @@ export function setRef(
   }))
 }
 
+export function setRefByName(
+  doc: SchemaDocument,
+  id: string,
+  name: string
+): SchemaDocument {
+  const definition = doc.defs.find((def) => def.name === name)
+  return definition ? setRef(doc, id, definition.id) : doc
+}
+
 // ---------------------------------------------------------------------------
 // Factories
 // ---------------------------------------------------------------------------
@@ -601,6 +786,21 @@ export function createNode(type: JSONSchema7TypeName | "enum" = "string"): Docum
 
 export function createEnumValue(): EnumValue {
   return { id: createId("enum"), value: "" }
+}
+
+function updateEffectiveNodeShape(
+  node: DocumentNode,
+  fn: (node: DocumentNode) => DocumentNode
+): DocumentNode {
+  if (node.anyOf) {
+    return {
+      ...node,
+      anyOf: mapPreserve(node.anyOf, (branch) =>
+        branch.type === "null" && !branch.ref ? branch : fn(branch)
+      ),
+    }
+  }
+  return fn(node)
 }
 
 function uniqueDefName(doc: SchemaDocument, base: string): string {

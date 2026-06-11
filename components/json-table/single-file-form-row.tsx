@@ -19,9 +19,9 @@ interface SingleFileFormRowProps {
   visibleKeys: string[]
   /** Which sub-row of the document this renders (set by the row virtualizer). */
   rowIdx: number
-  /** Which object/array cell's inline editor popover is open (by field key). */
-  openPopover: string | null
-  setOpenPopover: (key: string | null) => void
+  /** Which object/array cell editor is open, keyed by materialized field path. */
+  openEditorPath: string | null
+  setOpenEditorPath: (key: string | null) => void
   onUpdateDocument?: (patch: Record<string, unknown>) => Promise<void>
   allowEditing?: boolean
   onCellHoverStart?: (info: {
@@ -39,8 +39,8 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
     projectedRows,
     visibleKeys,
     rowIdx,
-    openPopover,
-    setOpenPopover,
+    openEditorPath,
+    setOpenEditorPath,
     onUpdateDocument,
     allowEditing = true,
     onCellHoverStart,
@@ -95,15 +95,14 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
           return (
             <DataCell
               key={key}
-              keyValue={key}
-              rowIdx={rowIdx}
+              templateFieldPath={key}
               projectedCell={projectedCell}
               schema={schema}
               document={document}
               docId={documentId}
               columnWidth={columnWidth}
-              setOpenPopover={setOpenPopover}
-              openPopover={openPopover}
+              setOpenEditorPath={setOpenEditorPath}
+              openEditorPath={openEditorPath}
               onDocumentDataChange={handleDataChange}
               allowEditing={allowEditing}
               onCellHoverStart={onCellHoverStart}

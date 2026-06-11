@@ -126,6 +126,7 @@ function nodeFromSchema(
     const required = Array.isArray(schema.required) ? schema.required : []
     node.properties = Object.entries(schema.properties).map(
       ([key, child]): PropertyEntry => ({
+        id: createId("prop"),
         key,
         required: required.includes(key),
         node: nodeFromSchema(child, refMap),

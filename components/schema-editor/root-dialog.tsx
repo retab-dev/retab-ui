@@ -17,8 +17,11 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui-retab/tooltip";
-import { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types";
-import { updateNodeWithMetadata } from "@/components/schema-editor/json-schema-builder";
+
+type RootMetadataValues = {
+  title: string;
+  description: string;
+};
 
 interface RootDialogProps {
   isOpen: boolean;
@@ -26,13 +29,9 @@ interface RootDialogProps {
   path: string;
   schemaTitle: string;
   setSchemaTitle: (name: string) => void;
-  metadataValues: {
-    title: string;
-    description: string;
-  };
-  setMetadataValues: (values: any) => void;
-  onChange: (newNode: ExtendedJSONSchema7) => void;
-  node: ExtendedJSONSchema7;
+  metadataValues: RootMetadataValues;
+  setMetadataValues: (values: RootMetadataValues) => void;
+  onSave: (values: RootMetadataValues) => void;
   editMode?: "descriptionOnly" | "readOnly" | "editable";
 }
 
@@ -44,8 +43,7 @@ export function RootDialog({
   setSchemaTitle,
   metadataValues,
   setMetadataValues,
-  onChange,
-  node,
+  onSave,
   editMode = "editable",
 }: RootDialogProps) {
   return (
@@ -108,12 +106,10 @@ export function RootDialog({
           <Button
             type="button"
             onClick={() => {
-              onChange(
-                updateNodeWithMetadata(node, {
-                  ...metadataValues,
-                  title: schemaTitle,
-                }),
-              );
+              onSave({
+                ...metadataValues,
+                title: schemaTitle,
+              });
               onClose();
             }}
             disabled={editMode === "readOnly"}

@@ -1,12 +1,13 @@
-"use client";
+"use client"
 
-import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
-import { Loader2, Tags } from "lucide-react";
+import { useCallback, useMemo, useRef, type ReactNode } from "react"
+import { Loader2, Tags } from "lucide-react"
 
-import { type Segment, buildColorMap } from "@/lib/segments";
-import { SegmentLegend } from "@/components/ui/segment-legend";
-import { type PdfViewerSlots } from "@/components/ui/pdf-viewer";
-import type { ClassifyResult } from "@/components/viewers/lib/classify-types";
+import { buildColorMap, type Segment } from "@/lib/segments"
+import { type PdfViewerSlots } from "@/components/ui/pdf-viewer"
+import { SegmentLegend } from "@/components/ui/segment-legend"
+import { useSegmentInteraction } from "@/components/ui/use-segment-interaction"
+import type { ClassifyResult } from "@/components/viewers/lib/classify-types"
 
 /**
  * Slots a document surface receives. The category legend mounts in `top` — the
@@ -14,15 +15,15 @@ import type { ClassifyResult } from "@/components/viewers/lib/classify-types";
  * partition viewers.
  */
 export interface ClassifierDocumentHandlers {
-  slots: PdfViewerSlots;
+  slots: PdfViewerSlots
 }
 
 export interface ClassifierViewerProps {
-  result: ClassifyResult | null;
-  isProcessing?: boolean;
-  emptyTitle?: string;
-  emptyDescription?: string;
-  renderDocument?: (handlers: ClassifierDocumentHandlers) => ReactNode;
+  result: ClassifyResult | null
+  isProcessing?: boolean
+  emptyTitle?: string
+  emptyDescription?: string
+  renderDocument?: (handlers: ClassifierDocumentHandlers) => ReactNode
 }
 
 /**
@@ -37,15 +38,15 @@ export function ClassifierViewer({
   emptyDescription = "Provide input, define categories, and click Run Classify",
   renderDocument,
 }: ClassifierViewerProps) {
-  const [activeId, setActiveId] = useState<string | null>(null);
-  const previewRef = useRef<HTMLDivElement | null>(null);
+  const interaction = useSegmentInteraction()
+  const previewRef = useRef<HTMLDivElement | null>(null)
 
-  const category = result?.category ?? null;
-  const reasoning = result?.reasoning?.trim() || null;
+  const category = result?.category ?? null
+  const reasoning = result?.reasoning?.trim() || null
 
   const segments = useMemo<Segment[]>(() => {
-    if (!category) return [];
-    const colors = buildColorMap([category]);
+    if (!category) return []
+    const colors = buildColorMap([category])
     return [
       {
         id: "classification",
@@ -54,14 +55,14 @@ export function ClassifierViewer({
         color: colors.get(category) ?? "#4E79A7",
         index: 0,
       },
-    ];
-  }, [category]);
+    ]
+  }, [category])
 
   const handleJumpToTop = useCallback(() => {
     previewRef.current
       ?.querySelector<HTMLElement>(`[data-page-number="1"]`)
-      ?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, []);
+      ?.scrollIntoView({ behavior: "smooth", block: "start" })
+  }, [])
 
   if (!category) {
     return (
@@ -69,19 +70,23 @@ export function ClassifierViewer({
         {isProcessing ? (
           <>
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
-            <p className="text-center text-base text-muted-foreground">Classifying...</p>
+            <p className="text-center text-base text-muted-foreground">
+              Classifying...
+            </p>
           </>
         ) : (
           <>
             <Tags className="h-16 w-16 text-muted-foreground" />
-            <p className="text-center text-base text-muted-foreground">{emptyTitle}</p>
+            <p className="text-center text-base text-muted-foreground">
+              {emptyTitle}
+            </p>
             <p className="max-w-sm text-center text-sm text-muted-foreground">
               {emptyDescription}
             </p>
           </>
         )}
       </div>
-    );
+    )
   }
 
   // The category legend mounts in the document's `top` slot. The reasoning rides
@@ -91,13 +96,14 @@ export function ClassifierViewer({
     top: (
       <SegmentLegend
         segments={segments}
-        activeId={activeId}
-        onActivate={setActiveId}
+        interaction={interaction}
         onSelect={handleJumpToTop}
-        caption={reasoning ? <span title={reasoning}>{reasoning}</span> : undefined}
+        caption={
+          reasoning ? <span title={reasoning}>{reasoning}</span> : undefined
+        }
       />
     ),
-  };
+  }
 
   return (
     <div ref={previewRef} className="flex min-h-0 flex-1 bg-background">
@@ -105,9 +111,11 @@ export function ClassifierViewer({
         renderDocument({ slots })
       ) : (
         <div className="flex h-full flex-1 items-center justify-center">
-          <span className="text-sm text-muted-foreground">No document available</span>
+          <span className="text-sm text-muted-foreground">
+            No document available
+          </span>
         </div>
       )}
     </div>
-  );
+  )
 }

@@ -8,6 +8,7 @@ import {
   findNodeByPath,
   fromJsonSchema,
   getChildNodeId,
+  getChildPropertyId,
   getEffectiveDocNode,
   getItemsNodeId,
   getNode,
@@ -54,25 +55,31 @@ describe("property operations", () => {
 
   it("renameProperty renames and keeps order + required", () => {
     let d = doc(base)
-    const aId = getChildNodeId(d, d.root.id, "a")!
-    d = renameProperty(d, aId, "alpha")
+    const aPropertyId = getChildPropertyId(d, d.root.id, "a")!
+    d = renameProperty(d, aPropertyId, "alpha")
     const out = json(d)
     expect(Object.keys(out.properties!)).toEqual(["alpha", "b", "c"])
     expect(out.required).toEqual(["alpha"])
   })
 
+  it("property edge operations are not addressed by child node id", () => {
+    const d = doc(base)
+    const aNodeId = getChildNodeId(d, d.root.id, "a")!
+    expect(renameProperty(d, aNodeId, "alpha")).toBe(d)
+  })
+
   it("renameProperty to an empty key drops it on export but keeps it in the doc", () => {
     let d = doc(base)
-    const bId = getChildNodeId(d, d.root.id, "b")!
-    d = renameProperty(d, bId, "")
+    const bPropertyId = getChildPropertyId(d, d.root.id, "b")!
+    d = renameProperty(d, bPropertyId, "")
     expect(getNode(d, d.root.id)!.properties).toHaveLength(3) // still in doc
     expect(Object.keys(json(d).properties!)).toEqual(["a", "c"]) // b dropped
   })
 
   it("duplicate key keeps the first on export", () => {
     let d = doc(base)
-    const bId = getChildNodeId(d, d.root.id, "b")!
-    d = renameProperty(d, bId, "a") // now two 'a'
+    const bPropertyId = getChildPropertyId(d, d.root.id, "b")!
+    d = renameProperty(d, bPropertyId, "a") // now two 'a'
     const out = json(d)
     expect(Object.keys(out.properties!)).toEqual(["a", "c"])
     expect(out.properties!.a).toEqual({ type: "string" }) // first 'a' wins
@@ -80,8 +87,8 @@ describe("property operations", () => {
 
   it("removeProperty removes from object and required", () => {
     let d = doc(base)
-    const aId = getChildNodeId(d, d.root.id, "a")!
-    d = removeProperty(d, aId)
+    const aPropertyId = getChildPropertyId(d, d.root.id, "a")!
+    d = removeProperty(d, aPropertyId)
     const out = json(d)
     expect(Object.keys(out.properties!)).toEqual(["b", "c"])
     // matches the editor's `.filter()` — an existing `required` key stays as []
@@ -90,10 +97,10 @@ describe("property operations", () => {
 
   it("setRequired toggles membership", () => {
     let d = doc(base)
-    const bId = getChildNodeId(d, d.root.id, "b")!
-    d = setRequired(d, bId, true)
+    const bPropertyId = getChildPropertyId(d, d.root.id, "b")!
+    d = setRequired(d, bPropertyId, true)
     expect(json(d).required).toEqual(["a", "b"])
-    d = setRequired(d, bId, false)
+    d = setRequired(d, bPropertyId, false)
     expect(json(d).required).toEqual(["a"])
   })
 })
@@ -101,16 +108,16 @@ describe("property operations", () => {
 describe("moveProperty", () => {
   it("reorders within the same container", () => {
     let d = doc(base)
-    const aId = getChildNodeId(d, d.root.id, "a")!
-    d = moveProperty(d, aId, d.root.id, 2)
+    const aPropertyId = getChildPropertyId(d, d.root.id, "a")!
+    d = moveProperty(d, aPropertyId, d.root.id, 2)
     expect(Object.keys(json(d).properties!)).toEqual(["b", "c", "a"])
   })
 
   it("reparents into a nested object", () => {
     let d = doc(base)
-    const aId = getChildNodeId(d, d.root.id, "a")!
+    const aPropertyId = getChildPropertyId(d, d.root.id, "a")!
     const cId = getChildNodeId(d, d.root.id, "c")!
-    d = moveProperty(d, aId, cId, 0)
+    d = moveProperty(d, aPropertyId, cId, 0)
     const out = json(d)
     expect(Object.keys(out.properties!)).toEqual(["b", "c"])
     expect(Object.keys((out.properties!.c as JSONSchema7).properties!)).toEqual(["a", "x"])
@@ -118,18 +125,19 @@ describe("moveProperty", () => {
 
   it("refuses to move a node into its own descendant", () => {
     let d = doc(base)
+    const cPropertyId = getChildPropertyId(d, d.root.id, "c")!
     const cId = getChildNodeId(d, d.root.id, "c")!
     const xId = getChildNodeId(d, cId, "x")!
     // x is a child of c; moving c into x must be a no-op
     const before = json(d)
-    d = moveProperty(d, cId, xId, 0)
+    d = moveProperty(d, cPropertyId, xId, 0)
     expect(json(d)).toEqual(before)
   })
 
   it("clamps an out-of-range index", () => {
     let d = doc(base)
-    const aId = getChildNodeId(d, d.root.id, "a")!
-    d = moveProperty(d, aId, d.root.id, 99)
+    const aPropertyId = getChildPropertyId(d, d.root.id, "a")!
+    d = moveProperty(d, aPropertyId, d.root.id, 99)
     expect(Object.keys(json(d).properties!)).toEqual(["b", "c", "a"])
   })
 })

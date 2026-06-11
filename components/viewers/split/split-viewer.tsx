@@ -1,19 +1,14 @@
-"use client";
+"use client"
 
-import {
-  useCallback,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
-import { Loader2, Scissors } from "lucide-react";
+import { useCallback, useMemo, useRef, useState, type ReactNode } from "react"
+import { Loader2, Scissors } from "lucide-react"
 
-import { type SplitView } from "@/components/viewers/lib/split-types";
-import { segmentsPageCount, toSegments } from "@/lib/segments";
-import { SegmentLegend } from "@/components/ui/segment-legend";
-import { PageRibbon } from "@/components/ui/page-ribbon";
-import { type PdfViewerSlots } from "@/components/ui/pdf-viewer";
+import { segmentsPageCount, toSegments } from "@/lib/segments"
+import { PageRibbon } from "@/components/ui/page-ribbon"
+import { type PdfViewerSlots } from "@/components/ui/pdf-viewer"
+import { SegmentLegend } from "@/components/ui/segment-legend"
+import { useSegmentInteraction } from "@/components/ui/use-segment-interaction"
+import { type SplitView } from "@/components/viewers/lib/split-types"
 
 /**
  * Slots a document surface receives: the legend in `top`, the page ribbon as a
@@ -21,15 +16,15 @@ import { type PdfViewerSlots } from "@/components/ui/pdf-viewer";
  * independent regions, so neither disturbs the other.
  */
 export interface SplitDocumentHandlers {
-  onCurrentPageChange: (page: number) => void;
-  onScrollProgressChange: (progress: number) => void;
-  slots: PdfViewerSlots;
+  onCurrentPageChange: (page: number) => void
+  onScrollProgressChange: (progress: number) => void
+  slots: PdfViewerSlots
 }
 
 export interface SplitViewerProps {
-  result: SplitView | null;
-  isProcessing?: boolean;
-  renderDocument?: (handlers: SplitDocumentHandlers) => ReactNode;
+  result: SplitView | null
+  isProcessing?: boolean
+  renderDocument?: (handlers: SplitDocumentHandlers) => ReactNode
 }
 
 export function SplitViewer({
@@ -37,23 +32,23 @@ export function SplitViewer({
   isProcessing = false,
   renderDocument,
 }: SplitViewerProps) {
-  const [currentPage, setCurrentPage] = useState(1);
-  const [scrollProgress, setScrollProgress] = useState(0);
-  const [activeId, setActiveId] = useState<string | null>(null);
-  const previewRef = useRef<HTMLDivElement | null>(null);
-  const hasOutput = !!result && result.output.length > 0;
+  const [currentPage, setCurrentPage] = useState(1)
+  const [scrollProgress, setScrollProgress] = useState(0)
+  const interaction = useSegmentInteraction()
+  const previewRef = useRef<HTMLDivElement | null>(null)
+  const hasOutput = !!result && result.output.length > 0
 
   const segments = useMemo(
     () => toSegments(result?.output ?? []),
-    [result?.output],
-  );
-  const pageCount = useMemo(() => segmentsPageCount(segments), [segments]);
+    [result?.output]
+  )
+  const pageCount = useMemo(() => segmentsPageCount(segments), [segments])
 
   const handleJumpToPage = useCallback((page: number) => {
     previewRef.current
       ?.querySelector<HTMLElement>(`[data-page-number="${page}"]`)
-      ?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, []);
+      ?.scrollIntoView({ behavior: "smooth", block: "start" })
+  }, [])
 
   if (!hasOutput) {
     return (
@@ -61,7 +56,9 @@ export function SplitViewer({
         {isProcessing ? (
           <>
             <Loader2 className="h-12 w-12 animate-spin text-warning-foreground" />
-            <p className="text-center text-base text-muted-foreground">Splitting...</p>
+            <p className="text-center text-base text-muted-foreground">
+              Splitting...
+            </p>
           </>
         ) : (
           <>
@@ -75,7 +72,7 @@ export function SplitViewer({
           </>
         )}
       </div>
-    );
+    )
   }
 
   // The legend mounts in the document's `top` slot; the ribbon is a `left` rail.
@@ -84,11 +81,9 @@ export function SplitViewer({
       <SegmentLegend
         segments={segments}
         currentPage={currentPage}
-        activeId={activeId}
-        onActivate={setActiveId}
-        onSelect={(id) => {
-          const seg = segments.find((s) => s.id === id);
-          if (seg?.pages.length) handleJumpToPage(seg.pages[0]);
+        interaction={interaction}
+        onSelect={(segment) => {
+          if (segment.pages.length) handleJumpToPage(segment.pages[0])
         }}
         columns={4}
         showUnusedToggle
@@ -103,14 +98,13 @@ export function SplitViewer({
             pageCount={pageCount}
             currentPage={currentPage}
             scrollProgress={scrollProgress}
-            activeId={activeId}
-            onActivate={setActiveId}
+            interaction={interaction}
             onSelectPage={handleJumpToPage}
             showTicks
           />
         </div>
       ) : undefined,
-  };
+  }
 
   return (
     <div ref={previewRef} className="flex min-h-0 flex-1 bg-background">
@@ -122,9 +116,11 @@ export function SplitViewer({
         })
       ) : (
         <div className="flex h-full flex-1 items-center justify-center">
-          <span className="text-sm text-muted-foreground">No document available</span>
+          <span className="text-sm text-muted-foreground">
+            No document available
+          </span>
         </div>
       )}
     </div>
-  );
+  )
 }

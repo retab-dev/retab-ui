@@ -1,15 +1,15 @@
-import { materializeFieldPath } from "@/components/json-table/lib/document-patches"
+import {
+  materializeFieldPath,
+  type FieldPath,
+  type MaterializedFieldPath,
+} from "@/components/json-table/lib/document-paths"
 import type { TableDocument } from "@/components/json-table/lib/projects-types"
-import type {
-  FieldPath,
-  MaterializedFieldPath,
-} from "@/components/json-table/lib/schema-inspection"
 
 export interface ProjectedCell {
   key: FieldPath
   value: unknown
-  templatePath: FieldPath
-  materializedPath: MaterializedFieldPath
+  templateFieldPath: FieldPath
+  materializedFieldPath: MaterializedFieldPath
   arrayIndexes: number[]
   addArrayItemAtIndex?: number
 }
@@ -19,8 +19,8 @@ export interface ProjectedRow {
   cells: Array<ProjectedCell | undefined>
 }
 
-function joinPath(path: string[]) {
-  return path.filter(Boolean).join(".")
+function joinTemplateFieldPath(templateFieldPathParts: string[]) {
+  return templateFieldPathParts.filter(Boolean).join(".")
 }
 
 export function projectDocumentRows({
@@ -33,7 +33,9 @@ export function projectDocumentRows({
   includeArrayAddRows?: boolean
 }): ProjectedRow[] {
   const rows: ProjectedRow[] = []
-  const templates = visiblePaths.map((path) => path.split("."))
+  const templates = visiblePaths.map((visibleFieldPath) =>
+    visibleFieldPath.split(".")
+  )
 
   function ensureRow(rowIndex: number): ProjectedRow {
     if (!rows[rowIndex]) {
@@ -57,12 +59,15 @@ export function projectDocumentRows({
     templateParts = templateParts.filter((template) => {
       if (template.length !== depth) return true
 
-      const templatePath = joinPath(template)
+      const templateFieldPath = joinTemplateFieldPath(template)
       ensureRow(rowOffset).cells[colOffset + colSpan] = {
-        key: templatePath,
+        key: templateFieldPath,
         value: node,
-        templatePath,
-        materializedPath: materializeFieldPath(templatePath, arrayIndexes),
+        templateFieldPath,
+        materializedFieldPath: materializeFieldPath(
+          templateFieldPath,
+          arrayIndexes
+        ),
         arrayIndexes,
         addArrayItemAtIndex,
       }

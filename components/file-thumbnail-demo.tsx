@@ -24,7 +24,7 @@ const pagePreview =
 
 export function FileThumbnailDemo() {
   return (
-    <div className="bg-card rounded-xl border p-6 sm:p-8">
+    <div className="rounded-xl border bg-card p-6 sm:p-8">
       <div className="grid grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-4 sm:gap-x-8">
         <Cell label="Loaded" hint="previewImageUrl">
           <FileThumbnail
@@ -35,10 +35,13 @@ export function FileThumbnailDemo() {
             previewClassName="object-top"
           />
         </Cell>
-        <Cell label="Loading" hint="isLoading">
+        <Cell label="Loading" hint='state="loading"'>
           <FileThumbnail
-            file={{ name: "report.docx", type: "application/vnd.openxmlformats" }}
-            isLoading
+            file={{
+              name: "report.docx",
+              type: "application/vnd.openxmlformats",
+            }}
+            state="loading"
             previewAspectRatio={1}
             className="w-full"
           />
@@ -79,10 +82,10 @@ function Cell({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-0.5">
-        <span className="text-foreground text-base font-semibold tracking-tight">
+        <span className="text-base font-semibold tracking-tight text-foreground">
           {label}
         </span>
-        <code className="text-muted-foreground text-xs">{hint}</code>
+        <code className="text-xs text-muted-foreground">{hint}</code>
       </div>
       {children}
     </div>

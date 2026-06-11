@@ -1,6 +1,38 @@
 import { describe, expect, it } from "vitest"
 
-import { createCsvParser, parseCsv } from "@/registry/new-york-v4/lib/csv"
+import {
+  createCsvNormalizer,
+  createCsvParser,
+  parseCsv,
+  streamCsv,
+  type ParsedCsv,
+} from "@/registry/new-york-v4/lib/csv"
+
+async function collectStream(
+  source: string | AsyncIterable<string>,
+  options?: Parameters<typeof streamCsv>[2]
+): Promise<ParsedCsv> {
+  let columns: string[] = []
+  const rows: string[][] = []
+  await streamCsv(
+    source,
+    {
+      onColumns: (next) => {
+        columns = next
+        for (const row of rows) {
+          while (row.length < next.length) row.push("")
+        }
+      },
+      onRows: (batch) => rows.push(...batch),
+    },
+    options
+  )
+  return { columns, rows }
+}
+
+async function* chunks(parts: string[]) {
+  for (const part of parts) yield part
+}
 
 describe("createCsvParser (incremental, across chunk boundaries)", () => {
   function feed(chunks: string[]) {
@@ -34,12 +66,28 @@ describe("createCsvParser (incremental, across chunk boundaries)", () => {
     // Mirrors what the inline worker does: eval the stringified factory in a
     // fresh scope with no closure access. Throws if the bundler injected any
     // helper references.
-    const factory = new Function(`return (${createCsvParser.toString()})`)() as typeof createCsvParser
+    const factory = new Function(
+      `return (${createCsvParser.toString()})`
+    )() as typeof createCsvParser
     const parser = factory({ delimiter: "," })
     const records = parser.push('a,b\n"x,y",2').concat(parser.flush())
     expect(records).toEqual([
       ["a", "b"],
       ["x,y", "2"],
+    ])
+  })
+
+  it("keeps the normalizer self-contained when serialized (worker-safe)", () => {
+    const factory = new Function(
+      `return (${createCsvNormalizer.toString()})`
+    )() as typeof createCsvNormalizer
+    const normalizer = factory({ hasHeader: true })
+    expect(normalizer.accept(["a", "b"])).toEqual([
+      { type: "columns", columns: ["a", "b"] },
+    ])
+    expect(normalizer.accept(["1", "2", "3"])).toEqual([
+      { type: "columns", columns: ["a", "b", ""] },
+      { type: "row", row: ["1", "2", "3"] },
     ])
   })
 })
@@ -101,5 +149,21 @@ describe("parseCsv", () => {
   it("ignores a trailing newline", () => {
     const { rows } = parseCsv("a,b\n1,2\n")
     expect(rows).toEqual([["1", "2"]])
+  })
+})
+
+describe("streamCsv", () => {
+  it("matches parseCsv when later rows widen the table", async () => {
+    const input = "a,b\n1,2\n3,4,5"
+    await expect(
+      collectStream(chunks(["a,b\n1", ",2\n3,4", ",5"]))
+    ).resolves.toEqual(parseCsv(input))
+  })
+
+  it("matches parseCsv for TSV without a header", async () => {
+    const input = "1\t2\n3\t4\t5"
+    await expect(
+      collectStream(input, { delimiter: "\t", hasHeader: false })
+    ).resolves.toEqual(parseCsv(input, { delimiter: "\t", hasHeader: false }))
   })
 })

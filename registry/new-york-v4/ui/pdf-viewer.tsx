@@ -1,91 +1,43 @@
 "use client"
 
 import * as React from "react"
-import {
-  Download,
-  Maximize,
-  Minus,
-  PanelLeftClose,
-  PanelLeftOpen,
-  Plus,
-  RotateCw,
-} from "lucide-react"
-// Type-only imports — erased at compile time, so pdfjs never loads on the server.
-import type * as Pdfjs from "pdfjs-dist"
-import type { PDFDocumentProxy, PDFPageProxy } from "pdfjs-dist"
 
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Separator } from "@/components/ui/separator"
-import { Skeleton } from "@/components/ui/skeleton"
 
-// pdfjs touches browser-only globals (DOMMatrix) at module eval, so it must be
-// imported lazily on the client. The worker is resolved by the bundler from the
-// installed package — no runtime CDN call.
-let pdfjsPromise: Promise<typeof Pdfjs> | null = null
-function loadPdfjs() {
-  if (!pdfjsPromise) {
-    pdfjsPromise = import("pdfjs-dist").then((pdfjs) => {
-      if (!pdfjs.GlobalWorkerOptions.workerSrc) {
-        pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-          "pdfjs-dist/build/pdf.worker.min.mjs",
-          import.meta.url
-        ).toString()
-      }
-      return pdfjs
-    })
-  }
-  return pdfjsPromise
-}
+import { PdfPage } from "./pdf-viewer-page"
+import { usePdfPageSizes } from "./pdf-viewer-page-sizes"
+import { PdfViewerRail } from "./pdf-viewer-rail"
+import {
+  getDocumentResource,
+  getPageResource,
+  releaseDocumentResource,
+  retainDocumentResource,
+} from "./pdf-viewer-resource"
+import { useMeasuredElementWidth, usePdfScale } from "./pdf-viewer-scale"
+import { usePdfScroll } from "./pdf-viewer-scroll"
+import {
+  PageSkeleton,
+  PdfErrorBoundary,
+  PdfViewerFallback,
+} from "./pdf-viewer-states"
+import { PdfViewerToolbar } from "./pdf-viewer-toolbar"
+import type {
+  PageOverlayProps,
+  PdfPageSize,
+  PdfViewerHandle,
+  PdfViewerSlots,
+} from "./pdf-viewer-types"
+import { usePdfPageVirtualization } from "./pdf-viewer-virtualization"
 
-// --- resource caches: stable promises so React `use()` can read them ---------
+export { getDocumentResource, getPageResource } from "./pdf-viewer-resource"
+export type {
+  PageOverlayProps,
+  PdfPageArea,
+  PdfViewerHandle,
+  PdfViewerSlots,
+} from "./pdf-viewer-types"
 
-// Bound the document cache so a long session (or signed URLs, whose query string
-// changes every re-sign and so never hits) doesn't accumulate documents — and
-// release each evicted one's pdfjs worker resources. The least-recently-used is
-// evicted; this assumes you don't display more than PDF_CACHE_MAX documents at
-// once, since the active document is always most-recently-used (never evicted).
-const PDF_CACHE_MAX = 6
-const documentCache = new Map<string, Promise<PDFDocumentProxy>>()
-// Keyed by the document, so a page set is GC'd once its (evicted/destroyed)
-// document is no longer referenced — no manual cleanup needed here.
-const pageCache = new WeakMap<PDFDocumentProxy, Map<number, Promise<PDFPageProxy>>>()
-
-export function getDocumentResource(src: string): Promise<PDFDocumentProxy> {
-  const cached = documentCache.get(src)
-  if (cached) {
-    // Refresh recency: re-insert so this src is now the most-recently-used.
-    documentCache.delete(src)
-    documentCache.set(src, cached)
-    return cached
-  }
-  const promise = loadPdfjs().then((pdfjs) => pdfjs.getDocument(src).promise)
-  documentCache.set(src, promise)
-  while (documentCache.size > PDF_CACHE_MAX) {
-    const oldest = documentCache.keys().next().value as string
-    const evicted = documentCache.get(oldest)
-    documentCache.delete(oldest)
-    void evicted?.then((doc) => doc.destroy()).catch(() => {})
-  }
-  return promise
-}
-
-export function getPageResource(doc: PDFDocumentProxy, pageNumber: number) {
-  let pages = pageCache.get(doc)
-  if (!pages) {
-    pages = new Map()
-    pageCache.set(doc, pages)
-  }
-  let promise = pages.get(pageNumber)
-  if (!promise) {
-    promise = doc.getPage(pageNumber)
-    pages.set(pageNumber, promise)
-  }
-  return promise
-}
-
-/** Client gate without an effect — false during SSR, true after hydration. */
 function useIsClient() {
   return React.useSyncExternalStore(
     () => () => {},
@@ -94,50 +46,11 @@ function useIsClient() {
   )
 }
 
-// --- public API --------------------------------------------------------------
-
-export interface PageOverlayProps {
-  pageNumber: number
-  /** Rendered page size in CSS pixels (post-scale, post-rotation). */
-  width: number
-  height: number
-  scale: number
-  rotation: number
-}
-
-/**
- * Imperative handle for driving the viewer from outside (e.g. scroll to the
- * source of a clicked field). Obtain it with a `ref` on `<PdfViewer>`.
- */
-export interface PdfViewerHandle {
-  /**
-   * Scroll a page's normalized area into view. `area` fields are percentages
-   * [0, 100] of the rendered page; only `top` is required (the viewer scrolls
-   * vertically). Pass `behavior: "auto"` for an instant jump (e.g. on hover).
-   */
-  scrollToPageArea: (
-    pageNumber: number,
-    area: { top: number; left?: number; width?: number; height?: number },
-    options?: ScrollToOptions
-  ) => void
-  /** The scrolling viewport element, or null before the document loads. */
-  getViewportElement: () => HTMLDivElement | null
-}
-
-/** Headroom left above a scrolled-to area so it doesn't sit flush under the toolbar. */
-const SCROLL_HEADROOM = 48
-
-export interface PdfHighlightProps
-  extends React.ComponentProps<"div"> {
+export interface PdfHighlightProps extends React.ComponentProps<"div"> {
   /** Normalized box, each field a percentage [0, 100] of the page. */
   area: { left: number; top: number; width: number; height: number }
 }
 
-/**
- * A percentage-positioned highlight box for use inside `renderPageOverlay` (the
- * overlay layer is already `position: absolute`, so this just places itself in
- * %). Style it via `className`/`style`.
- */
 export function PdfHighlight({
   area,
   className,
@@ -167,8 +80,12 @@ export interface PdfViewerProps {
   /** URL of the PDF (same-origin or CORS-enabled). */
   src: string
   className?: string
-  /** Fixed scale; when omitted the viewer fits page width to the container. */
+  /** Controlled rendered scale; when omitted the viewer fits page width until manually zoomed. */
   scale?: number
+  /** Initial uncontrolled scale. Leave unset for fit-to-width. */
+  defaultScale?: number
+  /** Called when toolbar controls request a scale change. `null` means fit width. */
+  onScaleChange?: (scale: number | null) => void
   toolbar?: boolean
   downloadFileName?: string
   /** Render absolutely-positioned overlays (e.g. bbox citations) on each page. */
@@ -180,54 +97,45 @@ export interface PdfViewerProps {
   /** Drop the outer border/rounded/background so the viewer fills its container. */
   bare?: boolean
   /**
-   * Chrome mounted around the document — one node per edge, plus a floating
-   * overlay. Drop a legend, a page ribbon, a waterfall, etc. into whichever
-   * region you want; they're independent, so moving one never disturbs another.
-   * `left`/`right` are collapsible rails (toggled together); `top`/`bottom` are
-   * full-width strips; `overlay` floats over the pages.
+   * Chrome mounted around the document. `top`/`bottom` are document-column
+   * strips, `left`/`right` are rails, and `overlay` floats over the scroller.
    */
   slots?: PdfViewerSlots
-  /** Shorthand for `slots.top` — a full-width strip directly below the toolbar. */
+  /** Compatibility alias for `slots.top`. */
   header?: React.ReactNode
-  /** Shorthand for `slots.left` — a collapsible rail alongside the pages. */
+  /** Compatibility alias for `slots.left`. */
   aside?: React.ReactNode
-  /** Show a toolbar button that collapses/expands the `left`/`right` rails. Default true when a rail is set. */
+  /** Show the toolbar button that collapses/expands rails. */
+  railToggle?: boolean
+  /** Compatibility alias for `railToggle`. */
   asideToggle?: boolean
   /** Initial open state of the rails. */
+  defaultRailsOpen?: boolean
+  /** Compatibility alias for `defaultRailsOpen`. */
   defaultAsideOpen?: boolean
-}
-
-export interface PdfViewerSlots {
-  /** Full-width strip directly below the toolbar (e.g. a legend). */
-  top?: React.ReactNode
-  /** Full-width strip at the bottom of the document column (e.g. a waterfall). */
-  bottom?: React.ReactNode
-  /** Collapsible rail to the left of the pages (e.g. a vertical page ribbon). */
-  left?: React.ReactNode
-  /** Collapsible rail to the right of the pages. */
-  right?: React.ReactNode
-  /** Absolutely-positioned layer over the scrolling pages (e.g. a floating legend). */
-  overlay?: React.ReactNode
 }
 
 export const PdfViewer = React.forwardRef<PdfViewerHandle, PdfViewerProps>(
   function PdfViewer(props, ref) {
     const isClient = useIsClient()
-    // Mirror whether the live toolbar will carry a rail toggle, so the
-    // skeleton toolbar has the exact same leading control (and width).
     const hasRail = Boolean(
       props.slots?.left ?? props.aside ?? props.slots?.right
     )
-    const showAsideToggle = Boolean(hasRail && (props.asideToggle ?? true))
+    const showRailToggle = Boolean(
+      hasRail && (props.railToggle ?? props.asideToggle ?? true)
+    )
+
     if (!isClient) {
       return (
         <PdfViewerFallback
           className={props.className}
           bare={props.bare}
-          asideToggle={showAsideToggle}
+          toolbar={props.toolbar}
+          showRailToggle={showRailToggle}
         />
       )
     }
+
     return (
       <PdfErrorBoundary className={props.className} resetKey={props.src}>
         <React.Suspense
@@ -235,7 +143,8 @@ export const PdfViewer = React.forwardRef<PdfViewerHandle, PdfViewerProps>(
             <PdfViewerFallback
               className={props.className}
               bare={props.bare}
-              asideToggle={showAsideToggle}
+              toolbar={props.toolbar}
+              showRailToggle={showRailToggle}
             />
           }
         >
@@ -249,7 +158,9 @@ export const PdfViewer = React.forwardRef<PdfViewerHandle, PdfViewerProps>(
 function PdfViewerInner({
   src,
   className,
-  scale: fixedScale,
+  scale: controlledScale,
+  defaultScale,
+  onScaleChange,
   toolbar = true,
   downloadFileName,
   renderPageOverlay,
@@ -259,207 +170,87 @@ function PdfViewerInner({
   slots,
   header,
   aside,
-  asideToggle = true,
-  defaultAsideOpen = true,
+  railToggle,
+  asideToggle,
+  defaultRailsOpen,
+  defaultAsideOpen,
   forwardedRef,
 }: PdfViewerProps & {
   forwardedRef?: React.ForwardedRef<PdfViewerHandle>
 }) {
-  // Resolve the mountable regions; `header`/`aside` are shorthands for top/left.
   const topSlot = slots?.top ?? header
   const bottomSlot = slots?.bottom
-  const leftSlot = slots?.left ?? aside
-  const rightSlot = slots?.right
+  const leftRailSlot = slots?.left ?? aside
+  const rightRailSlot = slots?.right
   const overlaySlot = slots?.overlay
-  const doc = React.use(getDocumentResource(src))
-  const firstPage = React.use(getPageResource(doc, 1))
-  // First page stands in for every page's intrinsic size: most documents are
-  // uniform, so this is enough to reserve scroll space before a page renders.
-  const { width: baseWidth, height: baseHeight } = React.useMemo(() => {
-    const vp = firstPage.getViewport({ scale: 1 })
-    return { width: vp.width, height: vp.height }
+  const showRailToggle = Boolean(
+    (leftRailSlot || rightRailSlot) && (railToggle ?? asideToggle ?? true)
+  )
+  const [railsOpen, setRailsOpen] = React.useState(
+    defaultRailsOpen ?? defaultAsideOpen ?? true
+  )
+
+  const document = React.use(getDocumentResource(src))
+  React.useEffect(() => {
+    retainDocumentResource(src, document)
+    return () => releaseDocumentResource(src, document)
+  }, [src, document])
+
+  const firstPage = React.use(getPageResource(document, 1))
+  const firstPageSize = React.useMemo<PdfPageSize>(() => {
+    const viewport = firstPage.getViewport({ scale: 1 })
+    return { width: viewport.width, height: viewport.height }
   }, [firstPage])
 
-  const [manualScale, setManualScale] = React.useState<number | null>(
-    fixedScale ?? null
-  )
+  const { ref: containerRef, width: containerWidth } = useMeasuredElementWidth()
+  const { resolvedScale, zoomIn, zoomOut, fitWidth } = usePdfScale({
+    controlledScale,
+    defaultScale,
+    onScaleChange,
+    containerWidth,
+    pageWidth: firstPageSize.width,
+  })
+
   const [rotation, setRotation] = React.useState(0)
-  const [containerWidth, setContainerWidth] = React.useState<number | null>(null)
-  const [asideOpen, setAsideOpen] = React.useState(defaultAsideOpen)
-  const showAsideToggle = Boolean((leftSlot || rightSlot) && asideToggle)
+  const {
+    currentPage,
+    viewportElement,
+    setViewportElement,
+    measureScroll,
+    handleScroll,
+    scrollToPageArea,
+    getViewportElement,
+  } = usePdfScroll({
+    pageCount: document.numPages,
+    onVisiblePageChange,
+    onScrollProgressChange,
+  })
+  const { visiblePages, registerPageSlot } = usePdfPageVirtualization({
+    pageCount: document.numPages,
+    viewportElement,
+  })
 
-  // Measure the container with a ResizeObserver attached in the ref callback.
-  // Coalesce to one update per frame so dragging a resize handle doesn't trigger
-  // a fit-width recompute (and a re-render of every visible canvas) per pixel.
-  const containerRef = React.useCallback((el: HTMLDivElement | null) => {
-    if (!el) return
-    setContainerWidth(el.clientWidth)
-    let frame = 0
-    let latest = el.clientWidth
-    const observer = new ResizeObserver((entries) => {
-      // clientWidth (content + padding), matching the init read above, so the
-      // `- 32` in fitScale subtracts the p-4 padding exactly once. contentRect
-      // already excludes padding, so using it here would double-subtract and
-      // render pages 32px below the full content width.
-      for (const entry of entries) latest = (entry.target as HTMLElement).clientWidth
-      if (frame) return
-      frame = requestAnimationFrame(() => {
-        frame = 0
-        setContainerWidth(latest)
-      })
-    })
-    observer.observe(el)
-    return () => {
-      if (frame) cancelAnimationFrame(frame)
-      observer.disconnect()
-    }
-  }, [])
+  const { pageSizeByNumber, setPageSize } = usePdfPageSizes(document)
 
-  // Report the page nearest the top of the scroll viewport as the user scrolls.
-  // We watch the actual scroll container (not the browser viewport) so the
-  // current-page cursor stays in sync even when the viewer is embedded.
-  const scrollViewportRef = React.useRef<HTMLDivElement | null>(null)
-  // Mirror the viewport element into state so the IntersectionObserver below can
-  // root itself on the internal scroller (pages scroll inside it, not the window).
-  const [viewportEl, setViewportEl] = React.useState<HTMLDivElement | null>(null)
-  const setScrollViewport = React.useCallback((el: HTMLDivElement | null) => {
-    scrollViewportRef.current = el
-    setViewportEl(el)
-  }, [])
-  const lastReported = React.useRef(0)
-  // The page nearest the top of the viewport, shown as "Page N of M" in the toolbar.
-  const [currentPage, setCurrentPage] = React.useState(1)
-  // Coalesce scroll work to one frame: the layout reads below (getBoundingClientRect
-  // over every page slot) shouldn't run on every scroll event.
-  const scrollFrame = React.useRef(0)
-  const measureScroll = React.useCallback(() => {
-    scrollFrame.current = 0
-    const viewport = scrollViewportRef.current
-    if (!viewport) return
-    const scrollable = viewport.scrollHeight - viewport.clientHeight
-    onScrollProgressChange?.(scrollable > 0 ? viewport.scrollTop / scrollable : 0)
-    const rect = viewport.getBoundingClientRect()
-    const marker = rect.top + rect.height * 0.2
-    const pages = viewport.querySelectorAll<HTMLElement>("[data-page-number]")
-    let current = 1
-    for (const el of pages) {
-      if (el.getBoundingClientRect().top <= marker) {
-        current = Number(el.dataset.pageNumber)
-      } else {
-        break
-      }
-    }
-    if (current && current !== lastReported.current) {
-      lastReported.current = current
-      setCurrentPage(current)
-      onVisiblePageChange?.(current)
-    }
-  }, [onVisiblePageChange, onScrollProgressChange])
-  const handleScroll = React.useCallback(() => {
-    if (scrollFrame.current) return
-    scrollFrame.current = requestAnimationFrame(measureScroll)
-  }, [measureScroll])
-  React.useEffect(
-    () => () => {
-      if (scrollFrame.current) cancelAnimationFrame(scrollFrame.current)
-    },
-    []
-  )
-
-  // --- viewport virtualization ------------------------------------------------
-  // Only pages near the viewport hold a live canvas; the rest stay as sized
-  // placeholders so a long PDF doesn't rasterize every page (and every re-zoom)
-  // at once. Slots are always mounted so scroll height — and external
-  // `scrollIntoView([data-page-number])` — stay correct.
-  const [visiblePages, setVisiblePages] = React.useState<ReadonlySet<number>>(
-    () => new Set([1])
-  )
-  const observerRef = React.useRef<IntersectionObserver | null>(null)
-  const slotEls = React.useRef<Set<HTMLElement>>(new Set())
+  const isRotated = rotation % 180 !== 0
 
   React.useEffect(() => {
-    if (!viewportEl) return
-    const observer = new IntersectionObserver(
-      (entries) => {
-        setVisiblePages((prev) => {
-          const next = new Set(prev)
-          let changed = false
-          for (const entry of entries) {
-            const n = Number((entry.target as HTMLElement).dataset.pageNumber)
-            if (!n) continue
-            if (entry.isIntersecting) {
-              if (!next.has(n)) {
-                next.add(n)
-                changed = true
-              }
-            } else if (next.delete(n)) {
-              changed = true
-            }
-          }
-          return changed ? next : prev
-        })
-      },
-      // One viewport of pre-render buffer above and below keeps scrolling smooth.
-      { root: viewportEl, rootMargin: "100% 0px" }
-    )
-    observerRef.current = observer
-    for (const el of slotEls.current) observer.observe(el)
-    return () => {
-      observer.disconnect()
-      observerRef.current = null
-    }
-  }, [viewportEl])
+    measureScroll()
+  }, [
+    document.numPages,
+    measureScroll,
+    rotation,
+    resolvedScale,
+    viewportElement,
+  ])
 
-  // Slots mount before the observer exists (refs run before effects), so both
-  // this callback and the effect above observe whatever the other hasn't yet.
-  const registerSlot = React.useCallback((el: HTMLElement | null) => {
-    if (!el) return
-    slotEls.current.add(el)
-    observerRef.current?.observe(el)
-    return () => {
-      slotEls.current.delete(el)
-      observerRef.current?.unobserve(el)
-    }
-  }, [])
-
-  const fitScale = containerWidth ? (containerWidth - 32) / baseWidth : 1
-  const scale = manualScale ?? fitScale
-
-  // Estimated rendered size of an un-rendered page at the current scale/rotation.
-  const rotated = rotation % 180 !== 0
-  const estWidth = Math.round((rotated ? baseHeight : baseWidth) * scale)
-  const estHeight = Math.round((rotated ? baseWidth : baseHeight) * scale)
-
-  const zoom = (factor: number) =>
-    setManualScale(clamp(scale * factor, 0.25, 5))
-
-  // Imperative handle: scroll a page's normalized area into view. We read the
-  // page slot's live rect (always mounted, even when virtualized) rather than
-  // recomputing offsets, so it stays correct across zoom, rotation, and the
-  // aside collapse. `area.top` is a % of the rendered page height.
   React.useImperativeHandle(
     forwardedRef,
     () => ({
-      scrollToPageArea: (pageNumber, area, options) => {
-        const viewport = scrollViewportRef.current
-        const slot = viewport?.querySelector<HTMLElement>(
-          `[data-page-number="${pageNumber}"]`
-        )
-        if (!viewport || !slot) return
-        const slotRect = slot.getBoundingClientRect()
-        const viewportRect = viewport.getBoundingClientRect()
-        const pageTop = slotRect.top - viewportRect.top + viewport.scrollTop
-        const targetTop =
-          pageTop + (area.top / 100) * slotRect.height - SCROLL_HEADROOM
-        viewport.scrollTo({
-          top: Math.max(0, targetTop),
-          behavior: "smooth",
-          ...options,
-        })
-      },
-      getViewportElement: () => scrollViewportRef.current,
+      scrollToPageArea,
+      getViewportElement,
     }),
-    []
+    [getViewportElement, scrollToPageArea]
   )
 
   return (
@@ -471,101 +262,77 @@ function PdfViewerInner({
       )}
       data-slot="pdf-viewer"
     >
-      {/* Pecking order: toolbar spans the full width; below it the sidebar
-          claims the full height and the header (legend) spans the main column. */}
       {toolbar ? (
-        <div className="flex h-10 flex-shrink-0 items-center gap-1 border-b bg-card px-2">
-          {showAsideToggle ? (
-            <IconButton
-              label={asideOpen ? "Hide sidebar" : "Show sidebar"}
-              aria-pressed={asideOpen}
-              onClick={() => setAsideOpen((open) => !open)}
-            >
-              {asideOpen ? <PanelLeftClose /> : <PanelLeftOpen />}
-            </IconButton>
-          ) : null}
-          <span className="px-1 text-xs text-muted-foreground tabular-nums">
-            Page {Math.min(currentPage, doc.numPages)} of {doc.numPages}
-          </span>
-          <div className="ml-auto flex items-center gap-1">
-            <IconButton label="Zoom out" onClick={() => zoom(1 / 1.2)}>
-              <Minus />
-            </IconButton>
-            <span className="w-12 text-center text-xs tabular-nums text-muted-foreground">
-              {Math.round(scale * 100)}%
-            </span>
-            <IconButton label="Zoom in" onClick={() => zoom(1.2)}>
-              <Plus />
-            </IconButton>
-            <IconButton label="Fit width" onClick={() => setManualScale(null)}>
-              <Maximize />
-            </IconButton>
-            <IconButton
-              label="Rotate"
-              onClick={() => setRotation((r) => (r + 90) % 360)}
-            >
-              <RotateCw />
-            </IconButton>
-            <Separator orientation="vertical" className="mx-1 h-4" />
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              className="size-7"
-              aria-label="Download"
-              title="Download"
-              render={
-                <a
-                  href={src}
-                  download={downloadFileName}
-                  target="_blank"
-                  rel="noreferrer"
-                />
-              }
-            >
-              <Download />
-            </Button>
-          </div>
-        </div>
+        <PdfViewerToolbar
+          currentPage={currentPage}
+          pageCount={document.numPages}
+          scale={resolvedScale}
+          src={src}
+          downloadFileName={downloadFileName}
+          showRailToggle={showRailToggle}
+          railsOpen={railsOpen}
+          onToggleRails={() => setRailsOpen((open) => !open)}
+          onZoomOut={zoomOut}
+          onZoomIn={zoomIn}
+          onFitWidth={fitWidth}
+          onRotate={() => setRotation((value) => (value + 90) % 360)}
+        />
       ) : null}
 
       <div className="flex min-h-0 flex-1">
-        {leftSlot ? (
-          <CollapsibleRail side="left" open={asideOpen} animate={showAsideToggle}>
-            {leftSlot}
-          </CollapsibleRail>
+        {leftRailSlot ? (
+          <PdfViewerRail side="left" open={railsOpen} animate={showRailToggle}>
+            {leftRailSlot}
+          </PdfViewerRail>
         ) : null}
         <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
           {topSlot ? <div data-slot="pdf-viewer-header">{topSlot}</div> : null}
-          {/* The document region. `relative` so an `overlay` slot floats over
-              the pages — but not over the top/bottom strips. */}
           <div className="relative flex min-h-0 flex-1 flex-col">
             <ScrollArea
               className="min-h-0 flex-1"
-              viewportRef={setScrollViewport}
-              // Always track scroll so the toolbar's "Page N of M" updates, even
-              // when no external page/scroll callbacks are wired up.
+              viewportRef={setViewportElement}
               viewportProps={{ onScroll: handleScroll }}
             >
-              <div ref={containerRef} className="flex flex-col items-center gap-4 p-4">
-                {Array.from({ length: doc.numPages }, (_, i) => {
-                  const pageNumber = i + 1
+              <div
+                ref={containerRef}
+                className="flex flex-col items-center gap-4 p-4"
+              >
+                {Array.from({ length: document.numPages }, (_, index) => {
+                  const pageNumber = index + 1
+                  const pageSize = pageSizeByNumber.get(pageNumber) ?? {
+                    width: firstPageSize.width,
+                    height: firstPageSize.height,
+                  }
+                  const estimatedWidth = Math.round(
+                    (isRotated ? pageSize.height : pageSize.width) *
+                      resolvedScale
+                  )
+                  const estimatedHeight = Math.round(
+                    (isRotated ? pageSize.width : pageSize.height) *
+                      resolvedScale
+                  )
+
                   return (
                     <div
                       key={pageNumber}
-                      ref={registerSlot}
+                      ref={registerPageSlot}
                       data-slot="pdf-page-slot"
                       data-page-number={pageNumber}
                       className="flex items-center justify-center"
-                      style={{ width: estWidth, minHeight: estHeight }}
+                      style={{
+                        width: estimatedWidth,
+                        minHeight: estimatedHeight,
+                      }}
                     >
                       {visiblePages.has(pageNumber) ? (
                         <React.Suspense fallback={<PageSkeleton />}>
                           <PdfPage
-                            doc={doc}
+                            document={document}
                             pageNumber={pageNumber}
-                            scale={scale}
+                            scale={resolvedScale}
                             rotation={rotation}
                             renderOverlay={renderPageOverlay}
+                            onSize={setPageSize}
                           />
                         </React.Suspense>
                       ) : null}
@@ -575,8 +342,6 @@ function PdfViewerInner({
               </div>
             </ScrollArea>
             {overlaySlot ? (
-              // The layer itself ignores pointer events so the pages stay
-              // scrollable; its content opts back in.
               <div
                 data-slot="pdf-viewer-overlay"
                 className="pointer-events-none absolute inset-0 z-10 [&>*]:pointer-events-auto"
@@ -589,288 +354,12 @@ function PdfViewerInner({
             <div data-slot="pdf-viewer-footer">{bottomSlot}</div>
           ) : null}
         </div>
-        {rightSlot ? (
-          <CollapsibleRail side="right" open={asideOpen} animate={showAsideToggle}>
-            {rightSlot}
-          </CollapsibleRail>
+        {rightRailSlot ? (
+          <PdfViewerRail side="right" open={railsOpen} animate={showRailToggle}>
+            {rightRailSlot}
+          </PdfViewerRail>
         ) : null}
       </div>
     </div>
   )
-}
-
-/**
- * A document-edge rail that collapses by animating its measured width → 0. The
- * inner `w-max` holds the content at its natural size while the wrapper clips
- * it, so the width stays stable even while collapsed and reopens to the same
- * size. (A grid 1fr→0fr trick doesn't collapse a max-content flex item.)
- */
-function CollapsibleRail({
-  side,
-  open,
-  animate,
-  children,
-}: {
-  side: "left" | "right"
-  open: boolean
-  animate: boolean
-  children: React.ReactNode
-}) {
-  const [width, setWidth] = React.useState<number | null>(null)
-  const measureRef = React.useCallback((el: HTMLDivElement | null) => {
-    if (!el) return
-    setWidth(Math.round(el.offsetWidth))
-    const observer = new ResizeObserver(() => setWidth(Math.round(el.offsetWidth)))
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [])
-  return (
-    <div
-      data-slot="pdf-viewer-rail"
-      data-side={side}
-      data-state={open ? "open" : "closed"}
-      className={cn(
-        "h-full flex-shrink-0 overflow-hidden",
-        animate && "transition-[width] duration-200 ease-out"
-      )}
-      style={animate ? { width: open ? (width ?? undefined) : 0 } : undefined}
-    >
-      <div ref={measureRef} className="h-full w-max">
-        {children}
-      </div>
-    </div>
-  )
-}
-
-function PdfPage({
-  doc,
-  pageNumber,
-  scale,
-  rotation,
-  renderOverlay,
-}: {
-  doc: PDFDocumentProxy
-  pageNumber: number
-  scale: number
-  rotation: number
-  renderOverlay?: (props: PageOverlayProps) => React.ReactNode
-}) {
-  const page = React.use(getPageResource(doc, pageNumber))
-  const viewport = React.useMemo(
-    // Add the user rotation to the page's intrinsic /Rotate so pages authored
-    // with a rotation (common in form bundles) display in their true orientation.
-    () => page.getViewport({ scale, rotation: ((page.rotate ?? 0) + rotation) % 360 }),
-    [page, scale, rotation]
-  )
-  const dpr =
-    (typeof window !== "undefined" ? window.devicePixelRatio : 1) || 1
-
-  // Render into the canvas from a ref callback; cancel on cleanup (React 19).
-  const canvasRef = React.useCallback(
-    (canvas: HTMLCanvasElement | null) => {
-      if (!canvas) return
-      const context = canvas.getContext("2d")
-      if (!context) return
-      canvas.width = Math.floor(viewport.width * dpr)
-      canvas.height = Math.floor(viewport.height * dpr)
-      const renderTask = page.render({
-        canvas,
-        canvasContext: context,
-        viewport,
-        transform: dpr !== 1 ? [dpr, 0, 0, dpr, 0, 0] : undefined,
-      })
-      renderTask.promise.catch(() => {
-        /* cancelled or failed render — ignore */
-      })
-      return () => renderTask.cancel()
-    },
-    [page, viewport, dpr]
-  )
-
-  return (
-    <div
-      className="relative shadow-sm ring-1 ring-border"
-      style={{ width: viewport.width, height: viewport.height }}
-      data-slot="pdf-page"
-      data-page={pageNumber}
-    >
-      <canvas
-        ref={canvasRef}
-        style={{ width: viewport.width, height: viewport.height }}
-        className="block bg-white"
-      />
-      {renderOverlay ? (
-        <div className="pointer-events-none absolute inset-0">
-          {renderOverlay({
-            pageNumber,
-            width: viewport.width,
-            height: viewport.height,
-            scale,
-            rotation,
-          })}
-        </div>
-      ) : null}
-    </div>
-  )
-}
-
-function IconButton({
-  label,
-  children,
-  ...props
-}: React.ComponentProps<typeof Button> & { label: string }) {
-  return (
-    <Button
-      variant="ghost"
-      size="icon-sm"
-      className="size-7"
-      aria-label={label}
-      title={label}
-      {...props}
-    >
-      {children}
-    </Button>
-  )
-}
-
-// Shown before the client component mounts (SSR/pre-hydration). Same chrome as
-// the loaded viewer — a toolbar with skeletoned values plus a page-shaped
-// skeleton — so the top bar is always present and nothing jumps when the real
-// document fades in.
-function PdfViewerFallback({
-  className,
-  bare = false,
-  asideToggle = false,
-}: {
-  className?: string
-  bare?: boolean
-  asideToggle?: boolean
-}) {
-  return (
-    <div
-      className={cn(
-        "flex min-h-0 flex-col overflow-hidden",
-        bare ? "h-full bg-muted/20" : "rounded-xl border bg-muted/30",
-        className
-      )}
-      data-slot="pdf-viewer"
-    >
-      <PdfToolbarSkeleton asideToggle={asideToggle} />
-      <div className="min-h-0 flex-1 overflow-auto">
-        <div className="flex flex-col items-center p-4">
-          <PageAspectSkeleton />
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// A static mirror of the real toolbar: the two undetermined values (page count,
-// zoom %) are skeletons; the controls are present but inert.
-function PdfToolbarSkeleton({ asideToggle = false }: { asideToggle?: boolean }) {
-  return (
-    <div className="flex h-10 flex-shrink-0 items-center gap-1 border-b bg-card px-2">
-      {asideToggle ? (
-        <ToolbarIconPlaceholder>
-          <PanelLeftClose />
-        </ToolbarIconPlaceholder>
-      ) : null}
-      <span className="px-1">
-        <Skeleton className="inline-block h-3 w-12 align-middle" />
-      </span>
-      <div className="ml-auto flex items-center gap-1">
-        <ToolbarIconPlaceholder>
-          <Minus />
-        </ToolbarIconPlaceholder>
-        <span className="w-12 text-center">
-          <Skeleton className="inline-block h-3 w-8 align-middle" />
-        </span>
-        <ToolbarIconPlaceholder>
-          <Plus />
-        </ToolbarIconPlaceholder>
-        <ToolbarIconPlaceholder>
-          <Maximize />
-        </ToolbarIconPlaceholder>
-        <ToolbarIconPlaceholder>
-          <RotateCw />
-        </ToolbarIconPlaceholder>
-        <Separator orientation="vertical" className="mx-1 h-4" />
-        <ToolbarIconPlaceholder>
-          <Download />
-        </ToolbarIconPlaceholder>
-      </div>
-    </div>
-  )
-}
-
-function ToolbarIconPlaceholder({ children }: { children: React.ReactNode }) {
-  return (
-    <Button
-      variant="ghost"
-      size="icon-sm"
-      className="size-7"
-      disabled
-      tabIndex={-1}
-      aria-hidden
-    >
-      {children}
-    </Button>
-  )
-}
-
-// A page-shaped skeleton stands in for the document before any page is measured
-// (the SSR fallback and the document-load suspense). US Letter aspect (8.5 × 11)
-// is the most common page and close enough to A4 (210 × 297) that the swap is
-// barely perceptible; `w-full` inside the p-4 container equals the fit-width
-// page width, so the block matches the page that replaces it.
-function PageAspectSkeleton() {
-  return (
-    <Skeleton
-      aria-hidden
-      className="w-full rounded-md"
-      style={{ aspectRatio: "8.5 / 11" }}
-    />
-  )
-}
-
-function PageSkeleton() {
-  // Fills the slot, which already reserves the page's estimated size — so the
-  // skeleton is exactly the size of the page it stands in for.
-  return <Skeleton className="size-full rounded-md" />
-}
-
-function clamp(value: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, value))
-}
-
-class PdfErrorBoundary extends React.Component<
-  { children: React.ReactNode; className?: string; resetKey?: unknown },
-  { error: boolean }
-> {
-  state = { error: false }
-  // Recover when the source changes: a new file gets a fresh attempt instead
-  // of staying stuck on the previous file's error.
-  componentDidUpdate(prev: { resetKey?: unknown }) {
-    if (prev.resetKey !== this.props.resetKey && this.state.error) {
-      this.setState({ error: false })
-    }
-  }
-  static getDerivedStateFromError() {
-    return { error: true }
-  }
-  render() {
-    if (this.state.error) {
-      return (
-        <div
-          className={cn(
-            "flex min-h-64 items-center justify-center rounded-xl border bg-muted/30 p-6 text-center text-sm text-muted-foreground",
-            this.props.className
-          )}
-        >
-          Couldn&apos;t load this PDF.
-        </div>
-      )
-    }
-    return this.props.children
-  }
 }

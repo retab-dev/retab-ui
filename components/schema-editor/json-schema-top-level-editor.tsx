@@ -2,19 +2,13 @@
 
 import * as React from "react";
 import { useState } from "react";
-import type { JSONSchema7Definition } from "json-schema";
 import {
-  CloudUpload,
-  Copy,
-  Download,
   EllipsisVertical,
   Eye,
-  GalleryVerticalEnd,
   MessageCircleOff,
   Pencil,
   Trash2,
 } from "lucide-react";
-import { toast } from "sonner";
 
 import { Button } from "@/components/ui-retab/button";
 import {
@@ -41,51 +35,47 @@ import {
   TooltipTrigger,
 } from "@/components/ui-retab/tooltip";
 import { RootDialog } from "@/components/schema-editor/root-dialog";
-import { TemplatesDialog } from "@/components/schema-editor/templates-dialog";
 import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types";
 
-import { updateNodeWithMetadata } from "./json-schema-builder-utils";
-import { useJsonSchemaOptional } from "@/components/schema-editor/contexts/json-schema";
-import { replaceNodeJson } from "@/components/schema-editor/document";
+const LazyImportExportMenuItems = React.lazy(() =>
+  import(
+    "@/components/schema-editor/optional/import-export/import-export-menu-items"
+  ).then((module) => ({
+    default: module.ImportExportMenuItems,
+  })),
+);
 
 type SchemaEditorMode = "descriptionOnly" | "readOnly" | "editable";
 
 type TopLevelEditorProps = {
-  onChange: (newNode: ExtendedJSONSchema7) => void | Promise<void>;
   node: ExtendedJSONSchema7;
   editMode: SchemaEditorMode;
-  setOpenLayoutDialog: (open: boolean) => void;
-  showTemplatesButton?: boolean;
+  showImportExportActions?: boolean;
+  onTitleChange: (title: string) => void;
+  onDescriptionChange: (description: string) => void;
+  onEraseAll: () => void;
+  onEraseDescriptions: () => void;
+  onReplaceRoot: (node: ExtendedJSONSchema7) => void;
 };
 
 export function buildTopLevelMetadataValues(node: ExtendedJSONSchema7) {
   return {
     title: node.title || "",
     description: node.description || "",
-    maxLength: node.maxLength || undefined,
   };
 }
 
 export function TopLevelEditor({
-  onChange,
   node,
   editMode,
-  setOpenLayoutDialog: _setOpenLayoutDialog,
-  showTemplatesButton = false,
+  showImportExportActions = true,
+  onTitleChange,
+  onDescriptionChange,
+  onEraseAll,
+  onEraseDescriptions,
+  onReplaceRoot,
 }: TopLevelEditorProps) {
-  const topCtx = useJsonSchemaOptional();
-  // Route a root-level (whole-node) update through the Document when possible, so
-  // child node ids stay stable; fall back to the bubbling onChange otherwise.
-  const applyRootNode = (newNode: ExtendedJSONSchema7) => {
-    if (topCtx?.applyDocOp) {
-      topCtx.applyDocOp((d) => replaceNodeJson(d, d.root.id, newNode));
-    } else {
-      void onChange(newNode);
-    }
-  };
-
   const [metadataDialogOpen, setMetadataDialogOpen] = useState(false);
-  const [templatesDialogOpen, setTemplatesDialogOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<
     "eraseAll" | "eraseDescriptions" | null
   >(null);
@@ -108,11 +98,7 @@ export function TopLevelEditor({
 
   const handleNameSubmit = () => {
     if (effectiveEditedName !== (node.title || "")) {
-      const updatedMetadata = {
-        ...buildTopLevelMetadataValues(node),
-        title: effectiveEditedName || "",
-      };
-      applyRootNode(updateNodeWithMetadata(node, updatedMetadata));
+      onTitleChange(effectiveEditedName || "");
     }
     setIsNameDirty(false);
     setEditedName(node.title || "");
@@ -120,11 +106,7 @@ export function TopLevelEditor({
 
   const handleDescriptionSubmit = () => {
     if (effectiveEditedDescription !== (node.description || "")) {
-      const updatedMetadata = {
-        ...buildTopLevelMetadataValues(node),
-        description: effectiveEditedDescription,
-      };
-      applyRootNode(updateNodeWithMetadata(node, updatedMetadata));
+      onDescriptionChange(effectiveEditedDescription);
     }
     setIsDescriptionDirty(false);
     setEditedDescription(node.description || "");
@@ -137,287 +119,11 @@ export function TopLevelEditor({
   };
 
   const handleEraseAll = async () => {
-    await onChange({
-      title: "",
-      type: "object",
-      properties: {},
-    });
-  };
-
-  const stripFieldEverywhere = (
-    schema: JSONSchema7Definition,
-    field: "description",
-  ): JSONSchema7Definition => {
-    if (typeof schema !== "object" || schema === null) return schema;
-
-    const cloned: Record<string, unknown> = { ...schema };
-
-    if (field in cloned) delete cloned[field];
-
-    if (cloned.properties && typeof cloned.properties === "object") {
-      const newProps: Record<string, JSONSchema7Definition> = {};
-      for (const key of Object.keys(cloned.properties)) {
-        newProps[key] = stripFieldEverywhere(
-          (cloned.properties as Record<string, JSONSchema7Definition>)[key],
-          field,
-        );
-      }
-      cloned.properties = newProps;
-    }
-
-    if (
-      cloned.patternProperties &&
-      typeof cloned.patternProperties === "object"
-    ) {
-      const newPatternProps: Record<string, JSONSchema7Definition> = {};
-      for (const key of Object.keys(cloned.patternProperties)) {
-        newPatternProps[key] = stripFieldEverywhere(
-          (cloned.patternProperties as Record<string, JSONSchema7Definition>)[
-            key
-          ],
-          field,
-        );
-      }
-      cloned.patternProperties = newPatternProps;
-    }
-
-    if ("additionalProperties" in cloned) {
-      const additionalProperties = cloned.additionalProperties;
-      if (
-        typeof additionalProperties === "object" &&
-        additionalProperties !== null
-      ) {
-        cloned.additionalProperties = stripFieldEverywhere(
-          additionalProperties as JSONSchema7Definition,
-          field,
-        );
-      }
-    }
-
-    if ("items" in cloned && cloned.items) {
-      if (Array.isArray(cloned.items)) {
-        cloned.items = cloned.items.map((item) =>
-          stripFieldEverywhere(item as JSONSchema7Definition, field),
-        );
-      } else if (typeof cloned.items === "object") {
-        cloned.items = stripFieldEverywhere(
-          cloned.items as JSONSchema7Definition,
-          field,
-        );
-      }
-    }
-
-    const arrayCombinerKeys = ["anyOf", "oneOf", "allOf"] as const;
-    for (const key of arrayCombinerKeys) {
-      if (Array.isArray(cloned[key])) {
-        cloned[key] = cloned[key].map((definition) =>
-          stripFieldEverywhere(definition as JSONSchema7Definition, field),
-        );
-      }
-    }
-
-    if (cloned.not && typeof cloned.not === "object") {
-      cloned.not = stripFieldEverywhere(
-        cloned.not as JSONSchema7Definition,
-        field,
-      );
-    }
-    if (cloned.if && typeof cloned.if === "object") {
-      cloned.if = stripFieldEverywhere(
-        cloned.if as JSONSchema7Definition,
-        field,
-      );
-    }
-    if (cloned.then && typeof cloned.then === "object") {
-      cloned.then = stripFieldEverywhere(
-        cloned.then as JSONSchema7Definition,
-        field,
-      );
-    }
-    if (cloned.else && typeof cloned.else === "object") {
-      cloned.else = stripFieldEverywhere(
-        cloned.else as JSONSchema7Definition,
-        field,
-      );
-    }
-    if (cloned.propertyNames && typeof cloned.propertyNames === "object") {
-      cloned.propertyNames = stripFieldEverywhere(
-        cloned.propertyNames as JSONSchema7Definition,
-        field,
-      );
-    }
-    if (cloned.contains && typeof cloned.contains === "object") {
-      cloned.contains = stripFieldEverywhere(
-        cloned.contains as JSONSchema7Definition,
-        field,
-      );
-    }
-
-    if (
-      cloned.dependentSchemas &&
-      typeof cloned.dependentSchemas === "object"
-    ) {
-      const newDependentSchemas: Record<string, JSONSchema7Definition> = {};
-      for (const key of Object.keys(cloned.dependentSchemas)) {
-        newDependentSchemas[key] = stripFieldEverywhere(
-          (cloned.dependentSchemas as Record<string, JSONSchema7Definition>)[
-            key
-          ],
-          field,
-        );
-      }
-      cloned.dependentSchemas = newDependentSchemas;
-    }
-
-    if (cloned.$defs && typeof cloned.$defs === "object") {
-      const newDefs: Record<string, JSONSchema7Definition> = {};
-      for (const key of Object.keys(cloned.$defs)) {
-        newDefs[key] = stripFieldEverywhere(
-          (cloned.$defs as Record<string, JSONSchema7Definition>)[key],
-          field,
-        );
-      }
-      cloned.$defs = newDefs;
-    }
-
-    if (cloned.definitions && typeof cloned.definitions === "object") {
-      const newDefinitions: Record<string, JSONSchema7Definition> = {};
-      for (const key of Object.keys(cloned.definitions)) {
-        newDefinitions[key] = stripFieldEverywhere(
-          (cloned.definitions as Record<string, JSONSchema7Definition>)[key],
-          field,
-        );
-      }
-      cloned.definitions = newDefinitions;
-    }
-
-    return cloned as JSONSchema7Definition;
+    onEraseAll();
   };
 
   const handleEraseAllDescriptions = async () => {
-    await onChange(
-      stripFieldEverywhere(
-        node as JSONSchema7Definition,
-        "description",
-      ) as ExtendedJSONSchema7,
-    );
-  };
-
-  const handleDownloadSchema = () => {
-    try {
-      const schemaBlob = new Blob([JSON.stringify(node, null, 2)], {
-        type: "application/json",
-      });
-      const url = URL.createObjectURL(schemaBlob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = node.title
-        ? `${node.title.toLowerCase().replace(/\s+/g, "-")}.json`
-        : "schema.json";
-
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-
-      toast.success("Download Started", {
-        description: "Your schema has been downloaded successfully.",
-      });
-    } catch (error) {
-      console.error("Error downloading schema:", error);
-      toast.error("Download Failed", {
-        description: "There was an error downloading your schema.",
-      });
-    }
-  };
-
-  const handleUploadSchema = () => {
-    try {
-      const fileInput = document.createElement("input");
-      fileInput.type = "file";
-      fileInput.accept = ".json";
-      fileInput.style.display = "none";
-
-      fileInput.addEventListener("change", (event) => {
-        const target = event.target as HTMLInputElement;
-        if (target.files && target.files.length > 0) {
-          const file = target.files[0];
-          const reader = new FileReader();
-
-          reader.onload = async (loadEvent) => {
-            try {
-              const content = loadEvent.target?.result as string;
-              await onChange(JSON.parse(content));
-              toast.success("Schema Uploaded", {
-                description:
-                  "Your schema has been uploaded and applied successfully.",
-              });
-            } catch (error) {
-              console.error("Error parsing uploaded schema:", error);
-              toast.error("Upload Failed", {
-                description: "The uploaded file is not a valid JSON schema.",
-              });
-            }
-          };
-
-          reader.readAsText(file);
-        }
-
-        document.body.removeChild(fileInput);
-      });
-
-      document.body.appendChild(fileInput);
-      fileInput.click();
-    } catch (error) {
-      console.error("Error uploading schema:", error);
-      toast.error("Upload Failed", {
-        description: "There was an error uploading your schema.",
-      });
-    }
-  };
-
-  const handleCopy = () => {
-    try {
-      const formattedSchema = JSON.stringify(node, null, 2);
-      navigator.clipboard
-        .writeText(formattedSchema)
-        .then(() => {
-          toast.success("Copied to Clipboard", {
-            description: "Your schema has been copied to the clipboard.",
-          });
-        })
-        .catch((error) => {
-          console.error("Error copying to clipboard:", error);
-          const textArea = document.createElement("textarea");
-          textArea.value = formattedSchema;
-          textArea.style.position = "fixed";
-          textArea.style.left = "-999999px";
-          textArea.style.top = "-999999px";
-          document.body.appendChild(textArea);
-          textArea.focus();
-          textArea.select();
-
-          try {
-            document.execCommand("copy");
-            textArea.remove();
-            toast.success("Copied to Clipboard", {
-              description: "Your schema has been copied to the clipboard.",
-            });
-          } catch (fallbackError) {
-            console.error("Fallback: Oops, unable to copy", fallbackError);
-            toast.error("Copy Failed", {
-              description:
-                "There was an error copying your schema to the clipboard.",
-            });
-            textArea.remove();
-          }
-        });
-    } catch (error) {
-      console.error("Error preparing schema for copy:", error);
-      toast.error("Copy Failed", {
-        description: "There was an error preparing your schema for copying.",
-      });
-    }
+    onEraseDescriptions();
   };
 
   return (
@@ -441,18 +147,6 @@ export function TopLevelEditor({
         </div>
 
         <div className="flex items-center gap-2">
-          {showTemplatesButton && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground text-xs opacity-0 transition-opacity group-hover:opacity-100"
-              onClick={() => setTemplatesDialogOpen(true)}
-            >
-              <GalleryVerticalEnd className="mr-2 h-4 w-4" />
-              Templates
-            </Button>
-          )}
-
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -481,20 +175,14 @@ export function TopLevelEditor({
                 </DropdownMenuItem>
               )}
 
-              <DropdownMenuItem onClick={handleDownloadSchema}>
-                <Download className="mr-2 h-4 w-4" />
-                Download
-              </DropdownMenuItem>
-
-              <DropdownMenuItem onClick={handleUploadSchema}>
-                <CloudUpload className="mr-2 h-4 w-4" />
-                Upload
-              </DropdownMenuItem>
-
-              <DropdownMenuItem onClick={handleCopy}>
-                <Copy className="mr-2 h-4 w-4" />
-                Copy to clipboard
-              </DropdownMenuItem>
+              {showImportExportActions && (
+                <React.Suspense fallback={null}>
+                  <LazyImportExportMenuItems
+                    node={node}
+                    onReplaceRoot={onReplaceRoot}
+                  />
+                </React.Suspense>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -554,14 +242,11 @@ export function TopLevelEditor({
         setSchemaTitle={setDialogPropertyName}
         metadataValues={metadataValues}
         setMetadataValues={setMetadataValues}
-        onChange={onChange}
-        node={node}
+        onSave={(metadata) => {
+          onTitleChange(metadata.title);
+          onDescriptionChange(metadata.description);
+        }}
         editMode={editMode}
-      />
-
-      <TemplatesDialog
-        open={templatesDialogOpen}
-        onOpenChange={setTemplatesDialogOpen}
       />
 
       <AlertDialog

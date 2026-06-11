@@ -4,10 +4,9 @@ description: The edit form for a single schema property — the content of the S
 ---
 
 `PropertyForm` is the body of the Schema Builder's **Edit Property** dialog: name,
-data type, type-specific options (enum values, array item type, `$ref`), required
-and nullable toggles, description, and the reasoning controls. It's a controlled
-form — you own the property state and the form reports changes back through
-setters and `onSubmit`.
+data type, type-specific options (enum values, array item type, `$ref`),
+nullable controls, and description. It edits a local draft and emits a single
+validated commit through `onCommitPropertyDraft`.
 
 It renders just the form (no dialog chrome), so you can drop it into a dialog
 (`<DialogContent>`), a popover, or an inline panel.
@@ -16,60 +15,52 @@ It renders just the form (no dialog chrome), so you can drop it into a dialog
 
 ## Usage
 
-`PropertyForm` reads the root schema from `useJsonSchema()`, so it must be
-rendered inside a `JsonSchemaEditorProvider`.
+`PropertyForm` does not own the parent schema. Pass the current property draft
+through `propertyDraft`, parent-local schema context through `schemaContext`, and
+persist changes in `onCommitPropertyDraft`.
 
 ```tsx
 import { useState } from "react"
-import { PropertyForm } from "@/components/schema-editor/property-form"
-import { JsonSchemaEditorProvider } from "@/components/schema-editor/contexts/json-schema"
+
 import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
+import { PropertyForm } from "@/components/schema-editor/property-form"
 
 export function Example() {
-  const [property, setProperty] = useState<ExtendedJSONSchema7>({ type: "string" })
-  const [name, setName] = useState("currency")
-  const [schema, setSchema] = useState<ExtendedJSONSchema7>({
-    type: "object",
-    properties: {},
-    $defs: {},
+  const [property, setProperty] = useState<ExtendedJSONSchema7>({
+    type: "string",
   })
-
+  const [name, setName] = useState("currency")
   return (
-    <JsonSchemaEditorProvider jsonSchema={schema} setJsonSchema={setSchema}>
-      <PropertyForm
-        editedProperty={property}
-        setEditedProperty={setProperty}
-        setJsonSchema={setSchema}
-        editedJsonSchema={schema}
-        setEditedJsonSchema={setSchema}
-        editedName={name}
-        setEditedName={setName}
-        submitLabel="Save"
-        onSubmit={(values) => console.log(values)}
-        onCancel={() => {}}
-        onDelete={() => {}}
-      />
-    </JsonSchemaEditorProvider>
+    <PropertyForm
+      propertyDraft={{ name, schemaNode: property }}
+      schemaContext={{
+        siblingNames: [],
+        originalName: name,
+        schemaDefinitions: {},
+      }}
+      submitLabel="Save"
+      onCommitPropertyDraft={(next) => {
+        setName(next.name)
+        setProperty(next.schemaNode)
+      }}
+      onCancel={() => {}}
+      onDelete={() => {}}
+    />
   )
 }
 ```
 
 ## Props
 
-| Prop | Type | Description |
-| --- | --- | --- |
-| `editedProperty` | `ExtendedJSONSchema7` | The property schema being edited. |
-| `setEditedProperty` | `Dispatch<SetStateAction<ExtendedJSONSchema7>>` | Updates the property schema. |
-| `editedName` | `string` | The property's field name. |
-| `setEditedName` | `(name: string) => void` | Updates the field name. |
-| `editedJsonSchema` / `setEditedJsonSchema` | `ExtendedJSONSchema7` / setter | The root schema, used to resolve and manage `$defs`. |
-| `setJsonSchema` | `Dispatch<SetStateAction<ExtendedJSONSchema7>>` | Setter for the root schema (required). |
-| `onSubmit` | `(values?: { name; property }) => void` | Called on Save. |
-| `onCancel` | `() => void` | Called on Cancel. |
-| `onDelete` | `() => void` | Optional. Shows the Delete Property action. |
-| `submitLabel` | `string` | Submit button label. Defaults to `"Save Changes"`. |
-| `editMode` | `"editable" \| "readOnly" \| "descriptionOnly"` | Defaults to `"editable"`. |
-| `wrapCancelInDialogClose` / `wrapSubmitInDialogClose` | `boolean` | Wrap the Cancel/Save buttons in `DialogClose` when used inside a dialog. |
+| Prop                    | Type                                                        | Description                                                                                               |
+| ----------------------- | ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `propertyDraft`         | `{ name; schemaNode }`                                      | The property draft to edit.                                                                               |
+| `schemaContext`         | `PropertyFormSchemaContext`                                 | Parent-local validation names, original name, `$defs`, and optional command handler for definitions/templates. |
+| `onCommitPropertyDraft` | `(next: { name; schemaNode }) => void \| Promise<void>`     | Called only after validation passes.                                                                      |
+| `onCancel`              | `() => void`                                                | Called on Cancel.                                                                                         |
+| `onDelete`              | `() => void`                                                | Optional. Shows the Delete Property action.                                                               |
+| `submitLabel`           | `string`                                                    | Submit button label. Defaults to `"Save Changes"`.                                                        |
+| `mode`                  | `"editable" \| "readOnly" \| "descriptionOnly"`             | Defaults to `"editable"`.                                                                                 |
 
 The Schema Builder uses `PropertyForm` inside a dialog — see
 [Schema Builder](/docs/components/schema-builder).

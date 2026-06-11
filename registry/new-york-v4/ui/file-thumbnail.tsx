@@ -9,10 +9,12 @@ export interface ThumbnailFile {
   type: string
 }
 
-export interface FileThumbnailProps {
+export type FileThumbnailState = "loading" | "loaded" | "error"
+
+export interface FileThumbnailProps
+  extends Omit<React.ComponentPropsWithoutRef<"div">, "children"> {
   /** The file being previewed. A browser `File` works too. */
   file: ThumbnailFile | File
-  className?: string
   /** Aspect ratio of the preview frame (width / height). Defaults to 3 / 4. */
   previewAspectRatio?: number
   previewClassName?: string
@@ -20,10 +22,8 @@ export interface FileThumbnailProps {
   previewContent?: React.ReactNode
   /** Externally generated thumbnail image URL. */
   previewImageUrl?: string | null
-  /** Your thumbnail generator is still producing the preview. */
-  isLoading?: boolean
-  /** Your thumbnail generator failed; show the fallback surface. */
-  hasError?: boolean
+  /** Explicit preview lifecycle. */
+  state?: FileThumbnailState
 }
 
 /**
@@ -42,27 +42,39 @@ export function FileThumbnail({
   previewClassName,
   previewContent,
   previewImageUrl,
-  isLoading = false,
-  hasError = false,
+  state,
+  style,
+  ...props
 }: FileThumbnailProps) {
   const extension = getExtension(file)
+  const hasRenderableContent = hasRenderablePreviewContent(previewContent)
+  const resolvedState = resolveFileThumbnailState({
+    explicitState: state,
+    hasPreview: hasRenderableContent || Boolean(previewImageUrl),
+  })
 
   return (
     <div
+      {...props}
       data-slot="file-thumbnail"
       className={cn(
-        "bg-muted text-muted-foreground relative overflow-hidden rounded-md border",
+        "relative overflow-hidden rounded-md border bg-muted text-muted-foreground",
         className
       )}
-      style={{ aspectRatio: String(previewAspectRatio ?? 3 / 4) }}
+      style={{
+        ...style,
+        aspectRatio: style?.aspectRatio ?? String(previewAspectRatio ?? 3 / 4),
+      }}
     >
-      {isLoading ? (
-        <Shimmer />
-      ) : previewContent ? (
+      {resolvedState === "loading" ? (
+        <FileThumbnailShimmer />
+      ) : resolvedState === "error" ? (
+        <Fallback extension={extension} />
+      ) : hasRenderableContent ? (
         <div className={cn("absolute inset-0", previewClassName)}>
           {previewContent}
         </div>
-      ) : previewImageUrl && !hasError ? (
+      ) : previewImageUrl ? (
         // Keying by URL remounts the image when the source changes, which
         // restarts the loading/fade state without an effect.
         <ThumbnailImage
@@ -77,6 +89,23 @@ export function FileThumbnail({
       )}
     </div>
   )
+}
+
+export function resolveFileThumbnailState({
+  explicitState,
+  hasPreview,
+}: {
+  explicitState?: FileThumbnailState
+  hasPreview: boolean
+}): FileThumbnailState {
+  if (explicitState) return explicitState
+  return hasPreview ? "loaded" : "error"
+}
+
+export function hasRenderablePreviewContent(
+  value: React.ReactNode
+): boolean {
+  return value !== null && value !== undefined && value !== false
 }
 
 function ThumbnailImage({
@@ -123,34 +152,78 @@ function ThumbnailImage({
           className
         )}
       />
-      {loaded ? null : <Shimmer />}
+      {loaded ? null : <FileThumbnailShimmer />}
     </>
   )
 }
 
-function Shimmer() {
+export function FileThumbnailShimmer() {
+  const highlightRef = React.useRef<HTMLDivElement | null>(null)
+  const prefersReducedMotion = usePrefersReducedMotion()
+
+  React.useEffect(() => {
+    const highlight = highlightRef.current
+    if (!highlight || prefersReducedMotion || !highlight.animate) return
+
+    const animation = highlight.animate(
+      [
+        { backgroundPosition: "200% 0" },
+        { backgroundPosition: "-200% 0" },
+      ],
+      {
+        duration: 1600,
+        iterations: Infinity,
+        easing: "linear",
+      }
+    )
+
+    return () => animation.cancel()
+  }, [prefersReducedMotion])
+
   // A diagonal highlight sweeps across the muted surface. The animation and
-  // keyframes are inline (not Tailwind utilities) so the shimmer works in any
-  // app, with or without a Tailwind `animate-*` theme token defined.
+  // timing are local to this element so the component never needs global CSS.
   return (
     <div
       aria-hidden
       data-slot="file-thumbnail-shimmer"
-      className="bg-muted absolute inset-0 overflow-hidden"
+      className="absolute inset-0 overflow-hidden bg-muted"
     >
       <div
+        ref={highlightRef}
+        data-slot="file-thumbnail-shimmer-highlight"
         className="absolute inset-0"
         style={{
           backgroundImage:
             "linear-gradient(120deg, transparent 35%, var(--skeleton-highlight, color-mix(in oklab, var(--background) 85%, transparent)) 50%, transparent 65%)",
           backgroundSize: "200% 100%",
           backgroundRepeat: "no-repeat",
-          animation: "file-thumbnail-shimmer 1.6s linear infinite",
+          backgroundPosition: prefersReducedMotion ? "50% 0" : "200% 0",
         }}
       />
-      <style>{`@keyframes file-thumbnail-shimmer{from{background-position:200% 0}to{background-position:-200% 0}}`}</style>
     </div>
   )
+}
+
+function usePrefersReducedMotion(): boolean {
+  return React.useSyncExternalStore(
+    subscribeToReducedMotion,
+    getReducedMotionSnapshot,
+    () => false
+  )
+}
+
+function subscribeToReducedMotion(onChange: () => void) {
+  if (typeof window === "undefined" || !window.matchMedia) return () => {}
+
+  const query = window.matchMedia("(prefers-reduced-motion: reduce)")
+  query.addEventListener("change", onChange)
+  return () => query.removeEventListener("change", onChange)
+}
+
+function getReducedMotionSnapshot() {
+  if (typeof window === "undefined" || !window.matchMedia) return false
+
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches
 }
 
 function Fallback({ extension }: { extension: string | null }) {
@@ -171,7 +244,7 @@ function Fallback({ extension }: { extension: string | null }) {
         <path d="M14 2.5V7h5" />
       </svg>
       {extension ? (
-        <span className="text-[0.625rem] font-medium tracking-wide uppercase opacity-70">
+        <span className="max-w-[80%] truncate text-[0.625rem] font-medium tracking-wide uppercase opacity-70">
           {extension}
         </span>
       ) : null}
@@ -181,9 +254,35 @@ function Fallback({ extension }: { extension: string | null }) {
 
 function getExtension(file: ThumbnailFile | File): string | null {
   const fromName = file.name?.includes(".")
-    ? file.name.split(".").pop() ?? null
+    ? (file.name.split(".").pop() ?? null)
     : null
   if (fromName) return fromName.toLowerCase()
-  const subtype = file.type?.split("/").pop()
+  const subtype = mimeSubtypeToExtension(file.type)
   return subtype ? subtype.toLowerCase() : null
+}
+
+function mimeSubtypeToExtension(type: string | undefined): string | null {
+  if (!type) return null
+  const normalized = type.toLowerCase()
+  if (normalized in MIME_EXTENSION) return MIME_EXTENSION[normalized]
+  const subtype = normalized.split("/").pop()
+  return subtype || null
+}
+
+const MIME_EXTENSION: Record<string, string> = {
+  "application/pdf": "pdf",
+  "application/vnd.ms-excel": "xls",
+  "application/vnd.ms-powerpoint": "ppt",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation":
+    "pptx",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+    "docx",
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/tiff": "tiff",
+  "text/csv": "csv",
+  "text/html": "html",
+  "text/markdown": "md",
+  "text/plain": "txt",
 }

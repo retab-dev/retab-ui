@@ -4,8 +4,7 @@ import { cleanup, fireEvent, render, screen, within } from "@testing-library/rea
 import { afterEach, describe, expect, it, vi } from "vitest"
 import type { JSONSchema7 } from "json-schema"
 
-import { JsonSchemaEditorProvider } from "@/components/schema-editor/contexts/json-schema"
-import { SchemaBuilderContent } from "@/components/schema-editor/json-schema-builder"
+import { SchemaBuilder } from "@/components/schema-editor/schema-builder"
 
 afterEach(cleanup)
 
@@ -15,15 +14,13 @@ function renderEditor(initial: JSONSchema7) {
   function Harness() {
     const [schema, setSchema] = React.useState(initial)
     return (
-      <JsonSchemaEditorProvider
-        jsonSchema={schema}
-        setJsonSchema={(s) => {
+      <SchemaBuilder
+        value={schema}
+        onValueChange={(s) => {
           emits.push(s as JSONSchema7)
           setSchema(s as JSONSchema7)
         }}
-      >
-        <SchemaBuilderContent />
-      </JsonSchemaEditorProvider>
+      />
     )
   }
   const utils = render(<Harness />)
@@ -40,7 +37,7 @@ const sample: JSONSchema7 = {
   required: ["invoice_number"],
 }
 
-describe("SchemaBuilderContent renders (integration smoke)", () => {
+describe("SchemaBuilder renders (integration smoke)", () => {
   it("mounts the full editor and shows the property names", () => {
     renderEditor(sample)
     expect(screen.getByText("invoice_number")).toBeTruthy()
@@ -63,7 +60,7 @@ describe("SchemaBuilderContent renders (integration smoke)", () => {
   })
 })
 
-describe("SchemaBuilderContent interactions (doc-routed)", () => {
+describe("SchemaBuilder interactions (doc-routed)", () => {
   it("adds a property via the inline input and emits an updated schema", () => {
     const { emits, last } = renderEditor(sample)
     const input = screen.getAllByPlaceholderText("New property name")[0]

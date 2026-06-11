@@ -163,9 +163,9 @@ export const SingleFileVirtualizedTable =
         useSheetOptionsStore()
       const columnWidth = propColumnWidth ?? storeColumnWidth
 
-      // Which object/array cell has its inline editor popover open (by field
-      // key). Held at the table level so it survives row virtualization.
-      const [openPopover, setOpenPopover] = useState<string | null>(null)
+      // Which object/array cell editor is open. Held at the table level so it
+      // survives row virtualization.
+      const [openEditorPath, setOpenEditorPath] = useState<string | null>(null)
 
       const totalWidth = visibleKeys.length * getColumnWidthPx(columnWidth)
 
@@ -257,8 +257,8 @@ export const SingleFileVirtualizedTable =
                           projectedRows={projectedRows}
                           schema={schema}
                           visibleKeys={visibleKeys}
-                          openPopover={openPopover}
-                          setOpenPopover={setOpenPopover}
+                          openEditorPath={openEditorPath}
+                          setOpenEditorPath={setOpenEditorPath}
                           onUpdateDocument={onUpdateDocument}
                           allowEditing={allowEditing}
                           onCellHoverStart={onCellHoverStart}

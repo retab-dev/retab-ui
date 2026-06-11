@@ -76,17 +76,37 @@ shorthands for `slots.top` and `slots.left`.
 <PdfViewer
   src={url}
   slots={{
-    top: <Legend />,        // full-width strip below the toolbar
-    left: <PageRibbon />,   // collapsible rail (toggled with right)
-    right: <Outline />,     // collapsible rail
-    bottom: <Waterfall />,  // full-width strip under the document column
+    top: <Legend />, // full-width strip below the toolbar
+    left: <PageRibbon />, // collapsible rail (toggled with right)
+    right: <Outline />, // collapsible rail
+    bottom: <Waterfall />, // full-width strip under the document column
     overlay: <FloatingLegend />, // floats over the scrolling pages
   }}
 />
 ```
 
 The `left`/`right` rails collapse together via a toolbar button (shown by
-default when a rail is set; control with `asideToggle` / `defaultAsideOpen`).
+default when a rail is set; control with `railToggle` / `defaultRailsOpen`).
+`asideToggle` and `defaultAsideOpen` remain compatibility aliases.
+
+## Scale control
+
+When `scale` is omitted, the viewer fits the page width to its container until
+the user manually zooms. Use `defaultScale` to seed that uncontrolled zoom state,
+or pass `scale` with `onScaleChange` to control zoom from a parent.
+
+```tsx
+const [scale, setScale] = React.useState<number | null>(1)
+
+<PdfViewer
+  src={url}
+  scale={scale ?? undefined}
+  onScaleChange={setScale}
+/>
+```
+
+Toolbar zoom buttons call `onScaleChange` in controlled mode. The fit-width
+button reports `null`.
 
 ## Imperative handle
 
@@ -96,19 +116,23 @@ into view, and `getViewportElement()` returns the scrolling viewport.
 
 ## Props
 
-| Prop | Type | Description |
-| --- | --- | --- |
-| `src` | `string` | URL of the PDF (same-origin or CORS-enabled). |
-| `scale` | `number` | Optional fixed scale; omit to fit page width to the container. |
-| `toolbar` | `boolean` | Show the zoom/rotate/download toolbar. Defaults to `true`. |
-| `downloadFileName` | `string` | Filename for the download button. |
-| `renderPageOverlay` | `(props: PageOverlayProps) => ReactNode` | Per-page overlay; receives `{ pageNumber, width, height, scale, rotation }`. |
-| `onVisiblePageChange` | `(page: number) => void` | Fired with the 1-based page nearest the top of the viewport. |
-| `onScrollProgressChange` | `(progress: number) => void` | Fired with scroll progress in `[0, 1]`. |
-| `slots` | `PdfViewerSlots` | Chrome around the document: `top` / `bottom` strips, `left` / `right` collapsible rails, and a floating `overlay`. |
-| `header` | `ReactNode` | Shorthand for `slots.top`. |
-| `aside` | `ReactNode` | Shorthand for `slots.left`. |
-| `asideToggle` | `boolean` | Show a toolbar button that collapses/expands the rails. Defaults to `true` when a rail is set. |
-| `defaultAsideOpen` | `boolean` | Initial open state of the rails. Defaults to `true`. |
-| `bare` | `boolean` | Drop the outer border/background so the viewer fills its container. |
-| `className` | `string` | Optional class on the viewer shell. |
+| Prop                     | Type                                     | Description                                                                                                        |
+| ------------------------ | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `src`                    | `string`                                 | URL of the PDF (same-origin or CORS-enabled).                                                                      |
+| `scale`                  | `number`                                 | Controlled rendered scale. Omit for fit-to-width/uncontrolled zoom.                                                |
+| `defaultScale`           | `number`                                 | Initial uncontrolled scale. Omit for fit-to-width.                                                                 |
+| `onScaleChange`          | `(scale: number \| null) => void`        | Fired when toolbar zoom controls request a scale change; `null` means fit width.                                   |
+| `toolbar`                | `boolean`                                | Show the zoom/rotate/download toolbar. Defaults to `true`.                                                         |
+| `downloadFileName`       | `string`                                 | Filename for the download button.                                                                                  |
+| `renderPageOverlay`      | `(props: PageOverlayProps) => ReactNode` | Per-page overlay; receives `{ pageNumber, width, height, scale, rotation }`.                                       |
+| `onVisiblePageChange`    | `(page: number) => void`                 | Fired with the 1-based page nearest the top of the viewport.                                                       |
+| `onScrollProgressChange` | `(progress: number) => void`             | Fired with scroll progress in `[0, 1]`.                                                                            |
+| `slots`                  | `PdfViewerSlots`                         | Chrome around the document: `top` / `bottom` strips, `left` / `right` collapsible rails, and a floating `overlay`. |
+| `header`                 | `ReactNode`                              | Shorthand for `slots.top`.                                                                                         |
+| `aside`                  | `ReactNode`                              | Shorthand for `slots.left`.                                                                                        |
+| `railToggle`             | `boolean`                                | Show a toolbar button that collapses/expands the rails. Defaults to `true` when a rail is set.                     |
+| `defaultRailsOpen`       | `boolean`                                | Initial open state of the rails. Defaults to `true`.                                                               |
+| `asideToggle`            | `boolean`                                | Compatibility alias for `railToggle`.                                                                              |
+| `defaultAsideOpen`       | `boolean`                                | Compatibility alias for `defaultRailsOpen`.                                                                        |
+| `bare`                   | `boolean`                                | Drop the outer border/background so the viewer fills its container.                                                |
+| `className`              | `string`                                 | Optional class on the viewer shell.                                                                                |

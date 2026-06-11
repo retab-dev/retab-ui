@@ -9,6 +9,7 @@ import type { JSONSchema7TypeName } from "json-schema"
  * place.
  */
 export type NodeId = string
+export type PropertyId = string
 
 /** A JSON Schema literal (enum entries, const, default, …). */
 export type JsonValue =
@@ -101,6 +102,7 @@ export interface DocumentNode {
  * rebuild on export).
  */
 export interface PropertyEntry {
+  id: PropertyId
   key: string
   required: boolean
   node: DocumentNode

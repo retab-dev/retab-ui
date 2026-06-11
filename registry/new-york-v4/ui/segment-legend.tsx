@@ -2,6 +2,10 @@
 
 import * as React from "react"
 
+import {
+  getSegmentSurfaceProps,
+  type SegmentInteraction,
+} from "@/lib/segment-interaction"
 import { type Segment } from "@/lib/segments"
 import { cn } from "@/lib/utils"
 
@@ -27,18 +31,21 @@ export interface SegmentLegendProps {
   side?: SegmentLegendSide
   /** Swatch + label scale. @default "comfortable" */
   density?: SegmentLegendDensity
-  /** Highlighted segment id (shared hover/selection). Dims the others. */
-  activeId?: string | null
-  onActivate?: (id: string | null) => void
-  onSelect?: (id: string) => void
-  /** 1-based current page; segments that own it render bold ("active"). */
+  /** Shared hover/focus/selection state. */
+  interaction?: SegmentInteraction
+  /** Fired when a segment surface is clicked, after shared selection is requested. */
+  onSelect?: (segment: Segment) => void
+  /** 1-based current page; owning segments receive current-page styling. */
   currentPage?: number | null
   /** Lay entries out on a grid of N columns instead of wrapping inline (horizontal only). */
   columns?: number
   /** Render a "Show all / Hide unused" toggle when some segments own no pages. */
   showUnusedToggle?: boolean
-  /** Initial/forced visibility of zero-page segments. */
+  /** Controlled visibility of zero-page segments. */
   showUnused?: boolean
+  /** Initial visibility of zero-page segments when `showUnused` is uncontrolled. */
+  defaultShowUnused?: boolean
+  onShowUnusedChange?: (showUnused: boolean) => void
   /** A muted caption rendered under the entries (e.g. a classification's reasoning). */
   caption?: React.ReactNode
   className?: string
@@ -64,8 +71,9 @@ const FLOAT_ANCHOR: Record<SegmentLegendSide, string> = {
 }
 
 /**
- * Compact color legend: one swatch + label per segment. Hovering raises
- * `activeId` (dims the others); segments containing `currentPage` render bold.
+ * Compact color legend: one swatch + label per segment. Hovering, focusing, or
+ * selecting highlights that segment and dims the others. Segments containing
+ * `currentPage` receive separate current-page styling.
  * Zero-page segments are hidden unless shown via the toggle.
  *
  * `variant` controls how it sits on the document surface (flush bar, floating
@@ -78,18 +86,20 @@ export function SegmentLegend({
   orientation = "horizontal",
   side,
   density = "comfortable",
-  activeId,
-  onActivate,
+  interaction,
   onSelect,
   currentPage,
   columns,
   showUnusedToggle = false,
-  showUnused = false,
+  showUnused,
+  defaultShowUnused = false,
+  onShowUnusedChange,
   caption,
   className,
 }: SegmentLegendProps) {
-  const [showAll, setShowAll] = React.useState(showUnused)
-  const reveal = showUnused || showAll
+  const [uncontrolledShowUnused, setUncontrolledShowUnused] =
+    React.useState(defaultShowUnused)
+  const reveal = showUnused ?? uncontrolledShowUnused
   const visible = reveal ? segments : segments.filter((s) => s.pages.length > 0)
   const hasHidden = segments.some((s) => s.pages.length === 0)
 
@@ -108,11 +118,20 @@ export function SegmentLegend({
     plain: "",
   }[variant]
 
-  const containsCurrent = (s: Segment) =>
-    currentPage != null && s.pages.includes(currentPage)
+  const toggleUnused = () => {
+    const next = !reveal
+    if (showUnused === undefined) {
+      setUncontrolledShowUnused(next)
+    }
+    onShowUnusedChange?.(next)
+  }
 
   return (
-    <div data-slot="segment-legend" data-variant={variant} className={cn(chrome, className)}>
+    <div
+      data-slot="segment-legend"
+      data-variant={variant}
+      className={cn(chrome, className)}
+    >
       <div
         className={cn(
           d.gap,
@@ -129,22 +148,25 @@ export function SegmentLegend({
         }
       >
         {visible.map((segment) => {
-          const active = activeId === segment.id
-          const dimmed = activeId != null && !active
-          const current = containsCurrent(segment)
+          const { state, eventHandlers, ariaProps, dataProps } =
+            getSegmentSurfaceProps({
+              segment,
+              interaction,
+              currentPage,
+              onSelect,
+            })
           return (
             <button
               key={segment.id}
               type="button"
-              data-active={active}
+              {...ariaProps}
+              {...dataProps}
+              {...eventHandlers}
               title={segment.label}
-              onMouseEnter={() => onActivate?.(segment.id)}
-              onMouseLeave={() => onActivate?.(null)}
-              onClick={() => onSelect?.(segment.id)}
               className={cn(
-                "flex min-w-0 items-center gap-2 transition-opacity",
+                "flex min-w-0 items-center gap-2 rounded-[3px] transition-opacity focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
                 d.text,
-                dimmed ? "opacity-40" : "opacity-100"
+                state.isDimmed ? "opacity-40" : "opacity-100"
               )}
             >
               <span
@@ -154,7 +176,7 @@ export function SegmentLegend({
               />
               {/* Reserve the bold width up front: an always-semibold but
                   invisible copy sizes the slot, and the visible label overlays
-                  it — so toggling bold on the active item can't shift the layout. */}
+                  it so highlighted/current labels cannot shift the layout. */}
               <span className="grid min-w-0">
                 <span
                   aria-hidden
@@ -165,7 +187,7 @@ export function SegmentLegend({
                 <span
                   className={cn(
                     "col-start-1 row-start-1 truncate",
-                    active || current
+                    state.isHighlighted || state.isCurrent || state.isSelected
                       ? "font-semibold text-foreground"
                       : "font-normal text-muted-foreground"
                   )}
@@ -180,7 +202,12 @@ export function SegmentLegend({
       {showUnusedToggle && hasHidden ? (
         <button
           type="button"
-          onClick={() => setShowAll((v) => !v)}
+          aria-label={
+            reveal
+              ? "Hide unused segments"
+              : `Show ${segments.length - visible.length} unused segments`
+          }
+          onClick={toggleUnused}
           className="mt-2 text-[10px] font-medium text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
         >
           {reveal ? "Hide unused" : "Show all"}

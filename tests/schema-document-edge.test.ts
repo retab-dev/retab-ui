@@ -4,6 +4,7 @@ import type { JSONSchema7 } from "json-schema"
 import {
   fromJsonSchema,
   getChildNodeId,
+  getChildPropertyId,
   getNode,
   moveProperty,
   renameDefinition,
@@ -11,7 +12,7 @@ import {
   toJsonSchema,
   type SchemaDocument,
 } from "@/components/schema-editor/document"
-import { requireAllProperties } from "@/components/schema-editor/json-schema-builder-utils"
+import { requireAllProperties } from "@/components/schema-editor/schema-required-policy"
 
 function rt(schema: JSONSchema7) {
   return toJsonSchema(fromJsonSchema(schema))
@@ -114,9 +115,9 @@ describe("moveProperty edge cases", () => {
       properties: { a: { type: "string" }, b: { type: "string" } },
     }
     const d = fromJsonSchema(base)
-    const aId = getChildNodeId(d, d.root.id, "a")!
+    const aPropertyId = getChildPropertyId(d, d.root.id, "a")!
     const before = json(d)
-    const d2 = moveProperty(d, aId, d.root.id, 0)
+    const d2 = moveProperty(d, aPropertyId, d.root.id, 0)
     expect(json(d2)).toEqual(before)
   })
 })

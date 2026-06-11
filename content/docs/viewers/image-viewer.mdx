@@ -24,6 +24,10 @@ It is built without `useEffect`: the image source loads with React's `use()` and
 Suspense, frames mount lazily via an `IntersectionObserver`, and each canvas
 draws from a ref callback (releasing its bitmap on cleanup).
 
+The no-effect lifecycle uses React 19 callback-ref cleanup semantics. Use this
+viewer in React 19 apps, or port the observer/canvas cleanup paths to effects
+before installing it in a React 18 app.
+
 <ImageViewerDemo />
 
 ## Installation
@@ -52,7 +56,9 @@ multi-page `.tiff` renders as a scrollable stack of frames.
 ### Bounding-box overlays
 
 `renderPageOverlay` runs per frame and receives the rendered frame size, so
-normalized boxes map with simple percentages:
+normalized boxes map with simple percentages. The props include both
+`frameNumber` and `pageNumber`; they are the same value in `ImageViewer`.
+`pageNumber` is kept for compatibility with the PDF viewer API.
 
 ```tsx
 <ImageViewer
@@ -90,19 +96,20 @@ normalized boxes map with simple percentages:
 
 ## Props
 
-The API mirrors the [PDF Viewer](/docs/viewers/pdf-viewer) — `pageNumber` is a
-1-based frame index (a TIFF page; always `1` for a single image).
+The API mirrors the [PDF Viewer](/docs/viewers/pdf-viewer). `frameNumber` is the
+native image-viewer term. `pageNumber` is the same 1-based frame index and is
+kept for PDF-viewer compatibility (a TIFF page; always `1` for a single image).
 
-| Prop | Type | Description |
-| --- | --- | --- |
-| `src` | `string` | URL of the image (same-origin or CORS-enabled). PNG/JPEG/WebP/GIF/AVIF or TIFF. |
-| `scale` | `number` | Optional fixed scale; omit to fit frame width to the container. |
-| `toolbar` | `boolean` | Show the zoom/rotate/download toolbar. Defaults to `true`. |
-| `downloadFileName` | `string` | Filename for the download button. |
-| `renderPageOverlay` | `(props) => ReactNode` | Per-frame overlay; receives `{ pageNumber, width, height, scale, rotation }`. |
-| `onVisiblePageChange` | `(page: number) => void` | Fires with the frame nearest the top of the viewport on scroll. |
-| `onScrollProgressChange` | `(progress: number) => void` | Fires with scroll progress in `[0, 1]`. |
-| `header` | `ReactNode` | Full-width strip below the toolbar (e.g. a legend). |
-| `aside` | `ReactNode` | Left rail alongside the scrolling frames (e.g. a page ribbon). |
-| `bare` | `boolean` | Drop the outer border/background so the viewer fills its container. |
-| `className` | `string` | Optional class on the viewer shell. |
+| Prop                     | Type                         | Description                                                                                |
+| ------------------------ | ---------------------------- | ------------------------------------------------------------------------------------------ |
+| `src`                    | `string`                     | URL of the image (same-origin or CORS-enabled). PNG/JPEG/WebP/GIF/AVIF or TIFF.            |
+| `scale`                  | `number`                     | Optional fixed scale; omit to fit frame width to the container.                            |
+| `toolbar`                | `boolean`                    | Show the zoom/rotate/download toolbar. Defaults to `true`.                                 |
+| `downloadFileName`       | `string`                     | Filename for the download button.                                                          |
+| `renderPageOverlay`      | `(props) => ReactNode`       | Per-frame overlay; receives `{ frameNumber, pageNumber, width, height, scale, rotation }`. |
+| `onVisiblePageChange`    | `(page: number) => void`     | Fires with the frame nearest the top of the viewport on scroll.                            |
+| `onScrollProgressChange` | `(progress: number) => void` | Fires with scroll progress in `[0, 1]`.                                                    |
+| `header`                 | `ReactNode`                  | Full-width strip below the toolbar (e.g. a legend).                                        |
+| `aside`                  | `ReactNode`                  | Left rail alongside the scrolling frames (e.g. a page ribbon).                             |
+| `bare`                   | `boolean`                    | Drop the outer border/background so the viewer fills its container.                        |
+| `className`              | `string`                     | Optional class on the viewer shell.                                                        |

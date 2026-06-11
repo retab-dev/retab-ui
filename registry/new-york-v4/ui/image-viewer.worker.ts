@@ -1,11 +1,13 @@
-// Web Worker that owns the TIFF decode (UTIF) so it never blocks the UI thread.
-// The main thread transfers the file bytes in once; we parse the IFD list, then
-// decode frames on demand, hand back GPU-ready ImageBitmaps (transferred, so the
-// pixels never cross onto the main heap), and free UTIF's per-frame decode buffer
-// as we go — otherwise UTIF retains every decoded frame's pixels on its IFD and
-// memory grows with each page visited.
-// @ts-expect-error utif ships no type declarations; typed via the local Ifd shape.
+// Web Worker that owns TIFF decode (UTIF) so it never blocks the UI thread.
+// The main thread transfers file bytes in once; the worker parses frame metadata
+// up front, decodes requested frames on demand, and transfers ImageBitmaps back.
+// @ts-expect-error utif ships no type declarations; typed via the local shape.
 import UTIF from "utif"
+
+import type {
+  TiffWorkerRequest,
+  TiffWorkerResponse,
+} from "@/lib/image-tiff-source"
 
 interface Ifd {
   t256?: number[]
@@ -20,56 +22,89 @@ interface Utif {
   decodeImage(buf: ArrayBuffer, ifd: Ifd): void
   toRGBA8(ifd: Ifd): Uint8Array
 }
+
 const utif = UTIF as Utif
-
-type Req =
-  | { type: "init"; buffer: ArrayBuffer }
-  | { type: "decode"; id: number; index: number }
-
-// Cast the worker global to `Worker` so onmessage/postMessage type-check under
-// the DOM lib without pulling in the conflicting "webworker" lib.
 const ctx = self as unknown as Worker
 
-let buf: ArrayBuffer | null = null
+let buffer: ArrayBuffer | null = null
 let ifds: Ifd[] = []
 
-ctx.onmessage = async (event: MessageEvent<Req>) => {
-  const msg = event.data
+ctx.onmessage = async (event: MessageEvent<TiffWorkerRequest>) => {
+  const message = event.data
 
-  if (msg.type === "init") {
-    try {
-      buf = msg.buffer
-      ifds = utif.decode(buf)
-      if (ifds.length === 0) throw new Error("TIFF has no frames")
-      const frames = ifds.map((ifd) => ({
-        width: ifd.t256?.[0] ?? ifd.width ?? 0,
-        height: ifd.t257?.[0] ?? ifd.height ?? 0,
-      }))
-      ctx.postMessage({ type: "init", ok: true, frames })
-    } catch (err) {
-      ctx.postMessage({ type: "init", ok: false, error: errorMessage(err) })
-    }
+  if (message.type === "init") {
+    initialize(message.buffer)
     return
   }
 
-  // decode
+  await decodeFrame(message.requestId, message.frameIndex)
+}
+
+function initialize(nextBuffer: ArrayBuffer) {
   try {
-    if (!buf) throw new Error("worker not initialized")
-    const ifd = ifds[msg.index]
-    utif.decodeImage(buf, ifd)
-    const rgba = utif.toRGBA8(ifd)
-    const w = ifd.width ?? ifd.t256?.[0] ?? 0
-    const h = ifd.height ?? ifd.t257?.[0] ?? 0
-    const image = new ImageData(new Uint8ClampedArray(rgba), w, h)
-    const bitmap = await createImageBitmap(image)
-    // Free UTIF's retained decode buffer; the frame re-decodes cheaply if revisited.
-    delete ifd.data
-    ctx.postMessage({ type: "decoded", id: msg.id, bitmap }, [bitmap])
-  } catch (err) {
-    ctx.postMessage({ type: "error", id: msg.id, message: errorMessage(err) })
+    buffer = nextBuffer
+    ifds = utif.decode(buffer)
+    if (ifds.length === 0) throw new Error("TIFF has no frames")
+    post({
+      type: "initOk",
+      frames: ifds.map((ifd, frameIndex) => {
+        const width = frameWidth(ifd)
+        const height = frameHeight(ifd)
+        if (!width || !height) {
+          throw new Error(`TIFF frame ${frameIndex + 1} has no dimensions`)
+        }
+        return { intrinsicSize: { width, height } }
+      }),
+    })
+  } catch (error) {
+    post({ type: "initError", message: errorMessage(error) })
   }
 }
 
-function errorMessage(err: unknown): string {
-  return err instanceof Error ? err.message : "TIFF decode failed"
+async function decodeFrame(requestId: number, frameIndex: number) {
+  let didDecode = false
+  let ifd: Ifd | undefined
+  try {
+    if (!buffer) throw new Error("worker not initialized")
+    if (frameIndex < 0 || frameIndex >= ifds.length) {
+      throw new Error(`TIFF frame ${frameIndex + 1} is out of range`)
+    }
+    ifd = ifds[frameIndex]
+    const width = frameWidth(ifd)
+    const height = frameHeight(ifd)
+    if (!width || !height) {
+      throw new Error(`TIFF frame ${frameIndex + 1} has no dimensions`)
+    }
+
+    utif.decodeImage(buffer, ifd)
+    didDecode = true
+    const rgba = utif.toRGBA8(ifd)
+    const image = new ImageData(new Uint8ClampedArray(rgba), width, height)
+    const bitmap = await createImageBitmap(image)
+    post({ type: "decodeFrameOk", requestId, bitmap }, [bitmap])
+  } catch (error) {
+    post({
+      type: "decodeFrameError",
+      requestId,
+      message: `TIFF frame ${frameIndex + 1}: ${errorMessage(error)}`,
+    })
+  } finally {
+    if (didDecode && ifd) delete ifd.data
+  }
+}
+
+function post(message: TiffWorkerResponse, transfer?: Transferable[]): void {
+  ctx.postMessage(message, transfer ?? [])
+}
+
+function frameWidth(ifd: Ifd): number {
+  return ifd.width ?? ifd.t256?.[0] ?? 0
+}
+
+function frameHeight(ifd: Ifd): number {
+  return ifd.height ?? ifd.t257?.[0] ?? 0
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : "TIFF decode failed"
 }

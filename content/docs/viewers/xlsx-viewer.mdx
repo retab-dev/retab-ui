@@ -12,15 +12,15 @@ renders a document: a familiar toolbar shell around the content. It parses the
 
 Each sheet renders as a **virtualized grid**: only the rows and columns inside the
 scroll window are ever in the DOM, so a workbook with tens of thousands of rows
-stays smooth. Cells show the workbook's *formatted* values (numbers, dates,
+stays smooth. Cells show the workbook's _formatted_ values (numbers, dates,
 currencies as Excel displays them), numbers are right-aligned, and the column
 letters / row numbers match real spreadsheet cell references.
 
 It is built without `useEffect` for data loading: the workbook loads with React's
 `use()` and Suspense. The parse runs in a **Web Worker**, which flattens each
-sheet into a compact form (one text blob plus typed arrays) and hands that back —
-so even a 60k-row workbook never freezes the UI thread. Cells are then read
-synchronously off that compact form (a typed-array index + a string slice).
+sheet into a sparse compact form (non-empty cell indexes, one text blob, and
+typed arrays) and hands that back — so even a 60k-row workbook never freezes the
+UI thread. Cells are then read synchronously off that compact form.
 
 <XlsxViewerDemo />
 
@@ -49,35 +49,35 @@ Switch sheets with the tab strip along the bottom; zoom scales the whole grid
 ## How it performs
 
 - **Off-thread parse.** The workbook is parsed in a Web Worker — no conversion
-  service, and no UI freeze. The worker flattens each sheet to a text blob +
-  transferable typed arrays, so crossing the worker boundary costs a string clone
-  rather than a clone of every cell object.
+  service, and no UI freeze. The worker flattens each sheet to sorted non-empty
+  cell indexes, a text blob, and transferable typed arrays, so crossing the worker
+  boundary avoids cloning every cell object.
 - **Row + column virtualization.** Built on `@tanstack/react-virtual`: only the
   visible window of cells is rendered, with a 30-cell overscan to avoid blank
   flashes while scrolling, and rows that stay in view are skipped on re-render.
-- **Synchronous cell reads.** Each cell is a typed-array index plus a string
-  slice off the compact sheet — no per-cell objects — so switching sheets is
-  instant and memory stays flat no matter how large the sheet.
+- **Synchronous cell reads.** Each visible cell is resolved against the sparse
+  index and then read as a string slice off the compact sheet — no per-cell
+  objects and no dense `rows * columns` text matrix.
 
 ## Fidelity
 
-Values render as the workbook *formats* them (so `1234.5` may show as `1,234.50`
+Values render as the workbook _formats_ them (so `1234.5` may show as `1,234.50`
 and date serials as dates). Cell **styling** — fills, fonts, borders, conditional
 formatting — and **charts** are not rendered; this is a data viewer, not a
 pixel-exact Excel clone. Merged cells show their value in the top-left cell.
 
 ## Props
 
-| Prop | Type | Description |
-| --- | --- | --- |
-| `src` | `string` | URL of the `.xlsx`/`.xls` (same-origin or CORS-enabled). |
-| `toolbar` | `boolean` | Show the zoom/download toolbar. Defaults to `true`. |
-| `downloadFileName` | `string` | Filename for the download button. |
-| `defaultSheetIndex` | `number` | Sheet shown first. Defaults to `0`. |
-| `onSheetChange` | `(index: number) => void` | Fires with the active sheet index on tab switch. |
-| `activeCell` | `{ sheet: number; row: number; col: number } \| null` | A cell to highlight (0-based row + column on `sheet`). |
-| `header` | `ReactNode` | Full-width strip below the toolbar (e.g. a legend). |
-| `aside` | `ReactNode` | Left rail alongside the grid. |
-| `bare` | `boolean` | Drop the outer border/background so the viewer fills its container. |
-| `isolateStyles` | `boolean` | Render the scrolling grid inside a shadow root so the host page's CSS — especially `:has()` selectors, whose invalidation Blink doesn't scope by `contain` — can't reach it. On `:has()`-heavy pages this collapses per-scroll style recalc and keeps scrolling at refresh rate. The page's author CSS is copied in so utilities resolve and theme variables inherit through the boundary. Defaults to `false`. When on, host CSS can't style the grid's internals. |
-| `className` | `string` | Optional class on the viewer shell. |
+| Prop                | Type                                                  | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| ------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src`               | `string`                                              | URL of the `.xlsx`/`.xls` (same-origin or CORS-enabled).                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `toolbar`           | `boolean`                                             | Show the zoom/download toolbar. Defaults to `true`.                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `downloadFileName`  | `string`                                              | Filename for the download button.                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `defaultSheetIndex` | `number`                                              | Sheet shown first. Defaults to `0`.                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `onSheetChange`     | `(index: number) => void`                             | Fires with the active sheet index on tab switch and imperative sheet changes.                                                                                                                                                                                                                                                                                                                                                                                       |
+| `activeCell`        | `{ sheet: number; row: number; col: number } \| null` | A cell to highlight (0-based row + column on `sheet`).                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `header`            | `ReactNode`                                           | Full-width strip below the toolbar (e.g. a legend).                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `aside`             | `ReactNode`                                           | Left rail alongside the grid.                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `bare`              | `boolean`                                             | Drop the outer border/background so the viewer fills its container.                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `isolateStyles`     | `boolean`                                             | Render the scrolling grid inside a shadow root so the host page's CSS — especially `:has()` selectors, whose invalidation Blink doesn't scope by `contain` — can't reach it. On `:has()`-heavy pages this collapses per-scroll style recalc and keeps scrolling at refresh rate. The page's author CSS is copied in so utilities resolve and theme variables inherit through the boundary. Defaults to `false`. When on, host CSS can't style the grid's internals. |
+| `className`         | `string`                                              | Optional class on the viewer shell.                                                                                                                                                                                                                                                                                                                                                                                                                                 |

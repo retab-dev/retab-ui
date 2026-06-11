@@ -1,11 +1,16 @@
 ---
 title: Parse Viewer
-description: Renders a Retab parse result — extracted per-page markdown with a Rendered/Text toggle and page controls.
+description: Renders page-by-page markdown while preserving the original document structure.
 ---
 
-The parse viewer renders the extracted markdown from a Retab **parse**: toggle
-each page between **Rendered** and **Text**, and page through the result. Below
-is the raw renderer on its own.
+When a document is converted to markdown page by page, it should usually be
+rendered page by page too. Keeping page boundaries visible preserves the
+document's original structure: headers, tables, footers, repeated sections, and
+page-local context stay attached to the page they came from.
+
+The parse viewer is made for that shape of output. It renders each markdown page
+as its own document page, with a **Rendered/Text** toggle, page position, zoom
+controls, copy, and download actions. Below is the raw renderer on its own.
 
 <ParseViewerDemo />
 
@@ -15,15 +20,18 @@ composition is the [Parse Viewer block](/blocks#parse).
 
 ## Usage
 
-The parse result is passed as a prop; the source document is supplied through a
-`renderDocument` render-prop — here a `<PdfViewer />` — so the viewer carries no
-document-rendering dependency of its own. The document is expected to tag its
-pages with `data-page-number` (the bundled `PdfViewer` does) so the panes can
-scroll to each other.
+Pass page-by-page markdown through `result.output.pages`. When you also want to
+show the source document, supply it through the `renderDocument` render-prop —
+here a `<PdfViewer />` — so the markdown renderer does not need to own any
+specific document-rendering dependency.
+
+The source document should tag its pages with `data-page-number` (the bundled
+`PdfViewer` does) so the original document and rendered markdown can stay synced
+as the user scrolls.
 
 ```tsx
-import { ParseViewer } from "@/components/viewers/parse/parse-viewer"
 import { PdfViewer } from "@/components/ui/pdf-viewer"
+import { ParseViewer } from "@/components/viewers/parse/parse-viewer"
 
 export function Example({ result }) {
   return (
@@ -42,13 +50,13 @@ export function Example({ result }) {
 }
 ```
 
-Omit `renderDocument` to show the extracted markdown full-width.
+Omit `renderDocument` to show the page-by-page markdown full-width.
 
 ## Props
 
-| Prop | Type | Description |
-| --- | --- | --- |
-| `result` | `ParseResponse \| null` | The parse result; `output.pages` is an array of per-page markdown. |
-| `renderDocument` | `(handlers) => ReactNode` | Renders the source document beside the markdown. Receives `{ onCurrentPageChange, onScrollProgressChange }`. Omit to show markdown full-width. |
-| `isProcessing` | `boolean` | Show the parsing state while a result is pending. |
-| `onVisiblePageChange` | `(page: number) => void` | Fired with the 1-based page nearest the top of the markdown viewport as it scrolls. |
+| Prop                  | Type                      | Description                                                                                                                                    |
+| --------------------- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `result`              | `ParseResponse \| null`   | The parsed document output; `output.pages` is an array of per-page markdown.                                                                   |
+| `renderDocument`      | `(handlers) => ReactNode` | Renders the source document beside the markdown. Receives `{ onCurrentPageChange, onScrollProgressChange }`. Omit to show markdown full-width. |
+| `isProcessing`        | `boolean`                 | Show the parsing state while a result is pending.                                                                                              |
+| `onVisiblePageChange` | `(page: number) => void`  | Fired with the 1-based page nearest the top of the markdown viewport as it scrolls.                                                            |

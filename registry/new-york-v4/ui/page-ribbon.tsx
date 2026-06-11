@@ -2,7 +2,11 @@
 
 import * as React from "react"
 
-import { type Segment, buildPageRuns } from "@/lib/segments"
+import {
+  getSegmentSurfaceProps,
+  type SegmentInteraction,
+} from "@/lib/segment-interaction"
+import { buildPageRuns, type Segment } from "@/lib/segments"
 import { cn } from "@/lib/utils"
 
 /** One lane of the ribbon: segments positioned by their page ranges. */
@@ -21,11 +25,12 @@ export interface PageRibbonProps {
   currentPage?: number | null
   /** 0..1 fine-grained scroll cursor (horizontal only); overrides the page line. */
   scrollProgress?: number | null
-  /** Highlighted segment id (shared hover/selection). */
-  activeId?: string | null
-  onActivate?: (id: string | null) => void
+  /** Shared hover/focus/selection state. */
+  interaction?: SegmentInteraction
   /** Click a segment → jump the document to its first page. */
   onSelectPage?: (page: number) => void
+  /** Fired when a segment surface is clicked, after shared selection is requested. */
+  onSelect?: (segment: Segment) => void
   showTicks?: boolean
   /** Thickness of each row: column width (vertical) or row height (horizontal), px. */
   rowThickness?: number
@@ -36,8 +41,8 @@ export interface PageRibbonProps {
  * A page-axis ribbon: every segment is drawn as a block spanning its pages.
  * One vertical row with tiled segments is the split sidebar; many horizontal
  * rows (consensus + votes) is the partition waterfall — same component, same
- * `Segment[]` model. Driven by a shared `activeId` so hovering a segment here
- * dims the others in the legend too.
+ * `Segment[]` model. Driven by shared interaction state so hovering, focusing,
+ * or selecting a segment here dims the others in the legend too.
  */
 export function PageRibbon({
   rows,
@@ -45,9 +50,9 @@ export function PageRibbon({
   orientation = "horizontal",
   currentPage,
   scrollProgress,
-  activeId,
-  onActivate,
+  interaction,
   onSelectPage,
+  onSelect,
   showTicks = false,
   rowThickness,
   className,
@@ -86,30 +91,60 @@ export function PageRibbon({
             buildPageRuns(segment.pages).map(([start, end], i) => {
               const offsetPct = ((start - 1) / pageCount) * 100
               const sizePct = ((end - start + 1) / pageCount) * 100
-              const active = activeId === segment.id
-              const dimmed = activeId != null && !active
               const isCurrent =
-                currentPage != null && currentPage >= start && currentPage <= end
+                currentPage != null &&
+                currentPage >= start &&
+                currentPage <= end
+              const { state, eventHandlers, ariaProps, dataProps } =
+                getSegmentSurfaceProps({
+                  segment,
+                  interaction,
+                  isCurrent,
+                  onSelect,
+                })
               const style: React.CSSProperties = vertical
-                ? { top: `${offsetPct}%`, height: `max(${sizePct}%, 2px)`, left: 0, right: 0 }
-                : { left: `${offsetPct}%`, width: `${sizePct}%`, top: 0, bottom: 0 }
+                ? {
+                    top: `${offsetPct}%`,
+                    height: `max(${sizePct}%, 2px)`,
+                    left: 0,
+                    right: 0,
+                  }
+                : {
+                    left: `${offsetPct}%`,
+                    width: `${sizePct}%`,
+                    top: 0,
+                    bottom: 0,
+                  }
               return (
                 <button
                   key={`${segment.id}-${i}`}
                   type="button"
+                  {...ariaProps}
+                  {...dataProps}
                   title={`${segment.label} · pages ${start}${end > start ? `–${end}` : ""}`}
-                  onMouseEnter={() => onActivate?.(segment.id)}
-                  onMouseLeave={() => onActivate?.(null)}
-                  onClick={() => onSelectPage?.(start)}
+                  onClick={() => {
+                    eventHandlers.onClick()
+                    onSelectPage?.(start)
+                  }}
+                  onMouseEnter={eventHandlers.onMouseEnter}
+                  onMouseLeave={eventHandlers.onMouseLeave}
+                  onFocus={eventHandlers.onFocus}
+                  onBlur={eventHandlers.onBlur}
                   className={cn(
-                    "absolute cursor-pointer transition-opacity hover:brightness-110 focus-visible:outline-none",
-                    dimmed ? "opacity-30" : isCurrent ? "opacity-100" : "opacity-85"
+                    "absolute cursor-pointer transition-opacity before:absolute before:-inset-1 before:content-[''] hover:brightness-110 focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                    state.isDimmed
+                      ? "opacity-30"
+                      : isCurrent
+                        ? "opacity-100"
+                        : "opacity-85"
                   )}
                   style={{
                     ...style,
                     backgroundColor: segment.color,
                     boxShadow:
-                      active || isCurrent ? "inset 0 0 0 1.5px rgb(24 24 27)" : undefined,
+                      state.isHighlighted || state.isSelected || isCurrent
+                        ? "inset 0 0 0 1.5px rgb(24 24 27)"
+                        : undefined,
                   }}
                   aria-label={`${segment.label} pages ${start} to ${end}`}
                 />
@@ -126,7 +161,9 @@ export function PageRibbon({
             "pointer-events-none absolute bg-foreground",
             vertical ? "inset-x-0 h-px" : "inset-y-0 w-px"
           )}
-          style={vertical ? { top: `${cursorPct}%` } : { left: `${cursorPct}%` }}
+          style={
+            vertical ? { top: `${cursorPct}%` } : { left: `${cursorPct}%` }
+          }
         >
           <span
             className={cn(

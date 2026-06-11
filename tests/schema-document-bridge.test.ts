@@ -13,11 +13,11 @@ import {
   type SchemaDocument,
 } from "@/components/schema-editor/document"
 import {
+  setNullable,
   updateEffectiveNode,
   updateSchemaProperty,
   updateType,
-  setNullable,
-} from "@/components/schema-editor/json-schema-builder-utils"
+} from "@/components/schema-editor/draft/draft-node-edits"
 
 function json(d: SchemaDocument) {
   return toJsonSchema(d) as JSONSchema7 & Record<string, unknown>

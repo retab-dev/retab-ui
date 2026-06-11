@@ -1,6 +1,6 @@
 import type { JSONSchema7, JSONSchema7Definition } from "json-schema"
 
-import { resolveSchema } from "@/components/json-table/lib/schema-inspection"
+import { resolveSchema } from "@/components/json-table/lib/schema-references"
 
 function cloneSchema(schema: JSONSchema7): JSONSchema7 {
   return JSON.parse(JSON.stringify(schema)) as JSONSchema7
@@ -116,15 +116,15 @@ export function reorderSchemaProperty({
 
 export function deleteSchemaProperty({
   schema,
-  path,
+  schemaPropertyPath,
 }: {
   schema: JSONSchema7
-  path: string
+  schemaPropertyPath: string
 }): JSONSchema7 {
   const schemaCopy = cloneSchema(schema)
-  if (!path) return schemaCopy
+  if (!schemaPropertyPath) return schemaCopy
 
-  const pathSegments = path.split(".")
+  const pathSegments = schemaPropertyPath.split(".")
   const propertyName = pathSegments.pop()
   if (!propertyName) return schemaCopy
 

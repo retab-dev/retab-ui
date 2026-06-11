@@ -2,9 +2,8 @@
 
 import * as React from "react"
 
-import { PropertyForm } from "@/components/schema-editor/property-form"
-import { JsonSchemaEditorProvider } from "@/components/schema-editor/contexts/json-schema"
 import { type ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
+import { PropertyForm } from "@/components/schema-editor/property-form"
 
 export function PropertyFormDemo() {
   const [property, setProperty] = React.useState<ExtendedJSONSchema7>({
@@ -17,29 +16,24 @@ export function PropertyFormDemo() {
     required: ["street"],
   })
   const [name, setName] = React.useState("address")
-  const [schema, setSchema] = React.useState<ExtendedJSONSchema7>({
-    type: "object",
-    properties: {},
-    $defs: {},
-  })
 
   return (
     <div className="not-prose max-w-xl overflow-hidden rounded-xl border bg-card">
-      <JsonSchemaEditorProvider jsonSchema={schema} setJsonSchema={setSchema}>
-        <PropertyForm
-          editedProperty={property}
-          setEditedProperty={setProperty}
-          setJsonSchema={setSchema}
-          editedJsonSchema={schema}
-          setEditedJsonSchema={setSchema}
-          editedName={name}
-          setEditedName={setName}
-          submitLabel="Save"
-          onSubmit={() => {}}
-          onCancel={() => {}}
-          onDelete={() => {}}
-        />
-      </JsonSchemaEditorProvider>
+      <PropertyForm
+        propertyDraft={{ name, schemaNode: property }}
+        schemaContext={{
+          siblingNames: [],
+          originalName: name,
+          schemaDefinitions: {},
+        }}
+        submitLabel="Save"
+        onCommitPropertyDraft={(next) => {
+          setName(next.name)
+          setProperty(next.schemaNode)
+        }}
+        onCancel={() => {}}
+        onDelete={() => {}}
+      />
     </div>
   )
 }

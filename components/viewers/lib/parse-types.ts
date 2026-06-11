@@ -5,5 +5,3 @@ export interface ParseResponse {
   output?: { pages: string[]; text: string } | null
   usage?: { credits: number } | null
 }
-
-export type ParseViewMode = "text" | "rendered" | "file"

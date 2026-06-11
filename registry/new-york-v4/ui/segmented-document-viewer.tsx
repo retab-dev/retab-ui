@@ -2,12 +2,14 @@
 
 import * as React from "react"
 
-import { type Segment, segmentsPageCount } from "@/lib/segments"
+import { type SegmentInteraction } from "@/lib/segment-interaction"
+import { segmentsPageCount, type Segment } from "@/lib/segments"
 import { cn } from "@/lib/utils"
 import { PageTimeline } from "@/components/ui/page-timeline"
 import { PdfViewer } from "@/components/ui/pdf-viewer"
 import { SegmentLegend } from "@/components/ui/segment-legend"
 import { SegmentSidebar } from "@/components/ui/segment-sidebar"
+import { useSegmentInteraction } from "@/components/ui/use-segment-interaction"
 
 export interface SegmentedDocumentViewerProps {
   segments: Segment[]
@@ -16,6 +18,7 @@ export interface SegmentedDocumentViewerProps {
   src?: string
   title?: React.ReactNode
   unitLabel?: string
+  interaction?: SegmentInteraction
   className?: string
 }
 
@@ -26,8 +29,9 @@ export interface SegmentedDocumentViewerProps {
  *   - SegmentLegend   (color key, top)
  *   - PageTimeline    (page strip) + an optional source PDF
  *
- * Hover/selection is shared: hovering a segment anywhere dims the others
- * everywhere, and clicking a segment scrolls the document to its first page.
+ * Hover, focus, and persistent selection are shared: a segment highlighted in
+ * one surface is reflected everywhere, and clicking a segment scrolls the
+ * document to its first page.
  */
 export function SegmentedDocumentViewer({
   segments,
@@ -35,11 +39,13 @@ export function SegmentedDocumentViewer({
   src,
   title,
   unitLabel = "segment",
+  interaction: controlledInteraction,
   className,
 }: SegmentedDocumentViewerProps) {
   const total = pageCount ?? segmentsPageCount(segments)
-  const [activeId, setActiveId] = React.useState<string | null>(null)
   const [currentPage, setCurrentPage] = React.useState<number | null>(null)
+  const internalInteraction = useSegmentInteraction()
+  const interaction = controlledInteraction ?? internalInteraction
 
   // Scroll the rendered PDF to a page from a click handler (no effect needed).
   const documentRef = React.useRef<HTMLDivElement | null>(null)
@@ -64,11 +70,9 @@ export function SegmentedDocumentViewer({
             variant="plain"
             segments={segments}
             currentPage={currentPage}
-            activeId={activeId}
-            onActivate={setActiveId}
-            onSelect={(id) => {
-              const seg = segments.find((s) => s.id === id)
-              if (seg?.pages.length) jumpToPage(seg.pages[0])
+            interaction={interaction}
+            onSelect={(segment) => {
+              if (segment.pages.length) jumpToPage(segment.pages[0])
             }}
             columns={4}
             showUnusedToggle
@@ -78,10 +82,12 @@ export function SegmentedDocumentViewer({
           <aside className="h-full w-64 flex-shrink-0 overflow-auto border-r">
             <SegmentSidebar
               segments={segments}
-              activeId={activeId}
-              onActivate={setActiveId}
+              interaction={interaction}
+              currentPage={currentPage}
               unitLabel={unitLabel}
-              onSelect={(seg) => seg.pages.length && jumpToPage(seg.pages[0])}
+              onSelect={(segment) =>
+                segment.pages.length && jumpToPage(segment.pages[0])
+              }
               className="h-full"
             />
           </aside>
@@ -96,8 +102,7 @@ export function SegmentedDocumentViewer({
               <PageTimeline
                 segments={segments}
                 pageCount={total}
-                activeId={activeId}
-                onActivate={setActiveId}
+                interaction={interaction}
                 currentPage={currentPage}
                 onSelectPage={jumpToPage}
               />

@@ -1,12 +1,29 @@
-/**
- * A small, dependency-free CSV/TSV parser (RFC 4180-ish).
- *
- * The core is an incremental, resumable state machine (`createCsvParser`) so the
- * same logic powers the synchronous `parseCsv`, the main-thread streaming
- * reader (`streamCsv`), and the off-thread worker. It handles quoted fields,
- * escaped quotes (`""`), and delimiters/newlines inside quotes, across chunk
- * boundaries.
- */
+import { createCsvNormalizer, padRowsToColumnCount } from "./csv-normalizer"
+import { createCsvParser } from "./csv-parser"
+
+export {
+  DEFAULT_CSV_DIALECT,
+  extensionOfDelimitedName,
+  inferCsvDialect,
+  isTabDelimited,
+  normalizeCsvDelimiter,
+  resolveCsvDialect,
+  type CsvDialect,
+  type CsvDialectDescriptor,
+} from "./csv-dialect"
+export {
+  createCsvNormalizer,
+  padRowsToColumnCount,
+  type CsvNormalizer,
+  type CsvNormalizerOptions,
+  type CsvTable,
+  type CsvTableEvent,
+} from "./csv-normalizer"
+export {
+  createCsvParser,
+  type CsvParser,
+  type CsvParserOptions,
+} from "./csv-parser"
 
 export interface ParsedCsv {
   columns: string[]
@@ -14,139 +31,41 @@ export interface ParsedCsv {
 }
 
 export interface ParseCsvOptions {
-  /** Field delimiter. Defaults to "," (use "\t" for TSV). */
+  /** Field delimiter. Defaults to ",". */
   delimiter?: string
   /** Treat the first record as a header row. Defaults to true. */
   hasHeader?: boolean
 }
 
-export interface CsvParser {
-  /** Feed a chunk of text; returns any records completed by it. */
-  push(text: string): string[][]
-  /** Emit the trailing record (call once at end of input). */
-  flush(): string[][]
-}
-
-/**
- * Incremental CSV parser. Written in a deliberately plain, closure-free style
- * (no external references) so `createCsvParser.toString()` can be shipped into
- * a Web Worker verbatim.
- */
-export function createCsvParser(options?: ParseCsvOptions): CsvParser {
-  var delimiter = (options && options.delimiter) || ","
-  var record: string[] = []
-  var field = ""
-  var inQuotes = false
-  var pendingQuote = false // just saw a `"` while inside quotes
-  var pendingCR = false // just saw a `\r` while outside quotes
-
-  function push(text: string): string[][] {
-    var out: string[][] = []
-    for (var i = 0; i < text.length; i++) {
-      var c = text.charAt(i)
-
-      if (pendingCR) {
-        pendingCR = false
-        record.push(field)
-        field = ""
-        out.push(record)
-        record = []
-        if (c === "\n") continue // CRLF — newline consumed
-        // else: lone CR ended the record; fall through to process c
-      }
-
-      if (pendingQuote) {
-        pendingQuote = false
-        if (c === '"') {
-          field += '"'
-          continue
-        }
-        inQuotes = false
-        // fall through to process c outside quotes
-      }
-
-      if (inQuotes) {
-        if (c === '"') {
-          pendingQuote = true
-        } else {
-          field += c
-        }
-        continue
-      }
-
-      if (c === '"') {
-        inQuotes = true
-      } else if (c === delimiter) {
-        record.push(field)
-        field = ""
-      } else if (c === "\r") {
-        pendingCR = true
-      } else if (c === "\n") {
-        record.push(field)
-        field = ""
-        out.push(record)
-        record = []
-      } else {
-        field += c
-      }
-    }
-    return out
-  }
-
-  function flush(): string[][] {
-    var out: string[][] = []
-    if (pendingQuote) {
-      pendingQuote = false
-      inQuotes = false
-    }
-    if (pendingCR) {
-      pendingCR = false
-      if (field.length > 0 || record.length > 0) {
-        record.push(field)
-        field = ""
-        out.push(record)
-        record = []
-      }
-      return out
-    }
-    if (field.length > 0 || record.length > 0) {
-      record.push(field)
-      field = ""
-      out.push(record)
-      record = []
-    }
-    return out
-  }
-
-  return { push: push, flush: flush }
-}
-
-export function parseCsv(input: string, options: ParseCsvOptions = {}): ParsedCsv {
-  const hasHeader = options.hasHeader ?? true
+export function parseCsv(
+  input: string,
+  options: ParseCsvOptions = {}
+): ParsedCsv {
   const parser = createCsvParser({ delimiter: options.delimiter })
+  const normalizer = createCsvNormalizer({ hasHeader: options.hasHeader })
   const records = parser.push(input).concat(parser.flush())
+  const rows: string[][] = []
+  let columns: string[] = []
 
-  if (records.length === 0) {
-    return { columns: [], rows: [] }
+  for (const record of records) {
+    for (const event of normalizer.accept(record)) {
+      if (event.type === "columns") {
+        columns = event.columns
+        padRowsToColumnCount(rows, columns.length)
+      } else {
+        rows.push(event.row)
+      }
+    }
   }
 
-  const width = records.reduce((max, r) => Math.max(max, r.length), 0)
-  const pad = (r: string[]) =>
-    r.length === width ? r : [...r, ...Array(width - r.length).fill("")]
-
-  if (hasHeader) {
-    return { columns: pad(records[0]), rows: records.slice(1).map(pad) }
-  }
-
-  const columns = Array.from({ length: width }, (_, i) => `Column ${i + 1}`)
-  return { columns, rows: records.map(pad) }
+  return { columns, rows }
 }
 
-/** Pad or truncate a record to a fixed width (used by the streaming readers). */
+/** Pad a record to a fixed width. */
 export function fitRow(row: string[], width: number): string[] {
   if (row.length === width) return row
   if (row.length < width) return [...row, ...Array(width - row.length).fill("")]
-  return row.slice(0, width)
+  return row
 }
 
 export interface CsvStreamHandlers {
@@ -162,39 +81,33 @@ export interface CsvStreamOptions extends ParseCsvOptions {
   signal?: AbortSignal
 }
 
-/**
- * Stream a Blob/File/string on the main thread, yielding to the event loop so
- * the UI stays responsive. Rows arrive progressively via `onRows`.
- */
+export type CsvStreamSource =
+  | Blob
+  | string
+  | ReadableStream<Uint8Array>
+  | AsyncIterable<string>
+
 export async function streamCsv(
-  source: Blob | string,
+  source: CsvStreamSource,
   handlers: CsvStreamHandlers,
   options: CsvStreamOptions = {}
 ): Promise<void> {
-  const hasHeader = options.hasHeader ?? true
   const batchSize = options.batchSize ?? 2000
   const signal = options.signal
   const parser = createCsvParser({ delimiter: options.delimiter })
-
-  let columns: string[] | null = null
-  let width = 0
+  const normalizer = createCsvNormalizer({ hasHeader: options.hasHeader })
   let batch: string[][] = []
 
   const handleRecords = (records: string[][]) => {
-    for (const rec of records) {
-      if (!columns) {
-        if (hasHeader) {
-          columns = rec
-          width = rec.length
-          handlers.onColumns(rec)
-          continue
+    for (const record of records) {
+      for (const event of normalizer.accept(record)) {
+        if (event.type === "columns") {
+          handlers.onColumns(event.columns)
+          padRowsToColumnCount(batch, event.columns.length)
+        } else {
+          batch.push(event.row)
         }
-        width = rec.length
-        columns = Array.from({ length: width }, (_, i) => `Column ${i + 1}`)
-        handlers.onColumns(columns)
-        // fall through — this record is data
       }
-      batch.push(fitRow(rec, width))
       if (batch.length >= batchSize) {
         handlers.onRows(batch)
         batch = []
@@ -221,24 +134,46 @@ export async function streamCsv(
   }
 }
 
-async function* readTextChunks(source: Blob | string): AsyncGenerator<string> {
+async function* readTextChunks(
+  source: CsvStreamSource
+): AsyncGenerator<string> {
   if (typeof source === "string") {
-    const SIZE = 1 << 20 // 1 MB slices
-    for (let i = 0; i < source.length; i += SIZE) {
-      yield source.slice(i, i + SIZE)
+    const size = 1 << 20
+    for (let offset = 0; offset < source.length; offset += size) {
+      yield source.slice(offset, offset + size)
     }
     return
   }
-  const reader = source
-    .stream()
-    .pipeThrough(new TextDecoderStream())
-    .getReader()
+  if (
+    typeof ReadableStream !== "undefined" &&
+    source instanceof ReadableStream
+  ) {
+    yield* decodeByteStream(source)
+    return
+  }
+  if (Symbol.asyncIterator in Object(source)) {
+    for await (const chunk of source as AsyncIterable<string>) yield chunk
+    return
+  }
+  yield* decodeByteStream((source as Blob).stream())
+}
+
+async function* decodeByteStream(
+  stream: ReadableStream<Uint8Array>
+): AsyncGenerator<string> {
+  const reader = stream.getReader()
+  const decoder = new TextDecoder()
   try {
     while (true) {
       const { done, value } = await reader.read()
       if (done) break
-      if (value) yield value
+      if (value) {
+        const text = decoder.decode(value, { stream: true })
+        if (text) yield text
+      }
     }
+    const rest = decoder.decode()
+    if (rest) yield rest
   } finally {
     reader.releaseLock()
   }

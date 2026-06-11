@@ -10,22 +10,25 @@ import {
   type SourceMap,
 } from "@/lib/document-source"
 import { cn } from "@/lib/utils"
-import { useSourceLink, type UseSourceLinkResult } from "@/hooks/use-source-link"
-import { CsvViewer, type CsvViewerHandle } from "@/components/ui/csv-viewer"
+import {
+  useSourceLink,
+  type UseSourceLinkResult,
+} from "@/hooks/use-source-link"
 import { sourceToCsvCell, useCsvSourceTarget } from "@/components/ui/csv-source"
-import { DocxViewer, type DocxViewerHandle } from "@/components/ui/docx-viewer"
+import { CsvViewer, type CsvViewerHandle } from "@/components/ui/csv-viewer"
 import {
   sourceToDocxHighlight,
   useDocxSourceTarget,
 } from "@/components/ui/docx-source"
-import {
-  ImageViewer,
-  type ImageViewerHandle,
-} from "@/components/ui/image-viewer"
+import { DocxViewer, type DocxViewerHandle } from "@/components/ui/docx-viewer"
 import {
   renderImageSourceOverlay,
   useImageSourceTarget,
 } from "@/components/ui/image-source"
+import {
+  ImageViewer,
+  type ImageViewerHandle,
+} from "@/components/ui/image-viewer"
 import {
   renderPdfSourceOverlay,
   usePdfSourceTarget,
@@ -33,16 +36,16 @@ import {
 import { PdfViewer, type PdfViewerHandle } from "@/components/ui/pdf-viewer"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { SourceIndicator } from "@/components/ui/source-indicator"
-import { TextViewer, type TextViewerHandle } from "@/components/ui/text-viewer"
 import {
   sourceToTextHighlight,
   useTextSourceTarget,
 } from "@/components/ui/text-source"
-import { XlsxViewer, type XlsxViewerHandle } from "@/components/ui/xlsx-viewer"
+import { TextViewer, type TextViewerHandle } from "@/components/ui/text-viewer"
 import {
   sourceToXlsxCell,
   useXlsxSourceTarget,
 } from "@/components/ui/xlsx-source"
+import { XlsxViewer, type XlsxViewerHandle } from "@/components/ui/xlsx-viewer"
 import { JsonForm } from "@/components/json-form/json-form"
 import csvSample from "@/components/viewers/sample-data/csv-sources.json"
 import docxSample from "@/components/viewers/sample-data/docx-sources.json"
@@ -85,11 +88,16 @@ function flatExtraction(fields: FlatField[]): Extraction {
     schema: {
       type: "object",
       properties: Object.fromEntries(
-        fields.map((field) => [field.key, { type: "string", title: field.label }])
+        fields.map((field) => [
+          field.key,
+          { type: "string", title: field.label },
+        ])
       ),
     },
     values: Object.fromEntries(fields.map((field) => [field.key, field.value])),
-    sources: Object.fromEntries(fields.map((field) => [field.key, field.source])),
+    sources: Object.fromEntries(
+      fields.map((field) => [field.key, field.source])
+    ),
   }
 }
 
@@ -213,7 +221,7 @@ function TextTab() {
         ref={viewerRef}
         src={TEXT_URL}
         bare
-        downloadFileName="extraction-run.log"
+        downloadName="extraction-run.log"
         className="h-full"
         highlight={sourceToTextHighlight(link.activeSource)}
       />

@@ -3,11 +3,12 @@
 import * as React from "react"
 
 import type { Source, SourceAnchor, SourceArea } from "@/lib/document-source"
+import { normalizeRotation, rotateNormalizedBox } from "@/lib/image-geometry"
 import type { SourceTarget } from "@/hooks/use-source-link"
 import {
-  type PageOverlayProps,
   type ImageViewerHandle,
-} from "@/components/ui/image-viewer"
+  type PageOverlayProps,
+} from "@/components/ui/image-viewer-types"
 
 const HIGHLIGHT_CLASS =
   "pointer-events-none absolute z-10 rounded-[2px] border border-primary/70 bg-primary/12 shadow-[0_4px_16px_rgb(0_0_0_/_8%)]"
@@ -38,6 +39,31 @@ export function imageAnchorToFrame(anchor: SourceAnchor): number | undefined {
   return undefined
 }
 
+export function rotateImageArea(
+  area: SourceArea,
+  rotation: number
+): SourceArea {
+  const rotated = rotateNormalizedBox(
+    {
+      left: area.left / 100,
+      top: area.top / 100,
+      width: area.width / 100,
+      height: area.height / 100,
+    },
+    normalizeRotation(rotation)
+  )
+  return {
+    left: toPercent(rotated.left),
+    top: toPercent(rotated.top),
+    width: toPercent(rotated.width),
+    height: toPercent(rotated.height),
+  }
+}
+
+function toPercent(value: number): number {
+  return Math.round(value * 100 * 1e10) / 1e10
+}
+
 /** A stable `SourceTarget` over an `ImageViewer` ref — pass to `useSourceLink`. */
 export function useImageSourceTarget(
   viewerRef: React.RefObject<ImageViewerHandle | null>
@@ -64,16 +90,20 @@ export function renderImageSourceOverlay(
 ): (props: PageOverlayProps) => React.ReactNode {
   const area = source ? imageAnchorToArea(source.anchor) : undefined
   const frame = source ? imageAnchorToFrame(source.anchor) : undefined
-  return function ImageSourceOverlay({ pageNumber }: PageOverlayProps) {
+  return function ImageSourceOverlay({
+    pageNumber,
+    rotation,
+  }: PageOverlayProps) {
     if (!area || pageNumber !== frame) return null
+    const renderedArea = rotateImageArea(area, rotation)
     return (
       <div
         className={HIGHLIGHT_CLASS}
         style={{
-          left: `${area.left}%`,
-          top: `${area.top}%`,
-          width: `${area.width}%`,
-          height: `${area.height}%`,
+          left: `${renderedArea.left}%`,
+          top: `${renderedArea.top}%`,
+          width: `${renderedArea.width}%`,
+          height: `${renderedArea.height}%`,
         }}
       />
     )

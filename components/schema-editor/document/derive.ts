@@ -56,3 +56,40 @@ export function resolveRef(
 export function isDanglingRef(doc: SchemaDocument, node: DocumentNode): boolean {
   return Boolean(node.ref) && !resolveRef(doc, node)
 }
+
+export function isDefinitionReferenced(
+  doc: SchemaDocument,
+  defId: string,
+  options: { exceptDefId?: string } = {}
+): boolean {
+  if (nodeReferencesDefinition(doc.root, defId)) return true
+
+  for (const definition of doc.defs) {
+    if (definition.id === options.exceptDefId) continue
+    if (nodeReferencesDefinition(definition.node, defId)) return true
+  }
+
+  return false
+}
+
+function nodeReferencesDefinition(node: DocumentNode, defId: string): boolean {
+  if (node.ref === defId) return true
+
+  if (node.properties) {
+    for (const property of node.properties) {
+      if (nodeReferencesDefinition(property.node, defId)) return true
+    }
+  }
+
+  if (node.items && nodeReferencesDefinition(node.items, defId)) return true
+
+  for (const key of ["anyOf", "oneOf", "allOf"] as const) {
+    const children = node[key]
+    if (!children) continue
+    for (const child of children) {
+      if (nodeReferencesDefinition(child, defId)) return true
+    }
+  }
+
+  return false
+}

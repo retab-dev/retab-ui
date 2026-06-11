@@ -4,6 +4,7 @@ import type { JSONSchema7 } from "json-schema"
 import {
   fromJsonSchema,
   getChildNodeId,
+  getChildPropertyId,
   moveProperty,
   toJsonSchema,
 } from "@/components/schema-editor/document"
@@ -129,7 +130,6 @@ describe("fuzz: round-trip over many random schemas", () => {
       if (JSON.stringify(normalize(out)) !== JSON.stringify(normalize(schema))) {
         failures.push(seed)
         if (failures.length <= 3) {
-          // eslint-disable-next-line no-console
           console.error(
             `seed ${seed}\n in : ${JSON.stringify(schema)}\n out: ${JSON.stringify(out)}`,
           )
@@ -147,7 +147,6 @@ describe("fuzz: round-trip over many random schemas", () => {
       if (JSON.stringify(out) !== JSON.stringify(schema)) {
         failures.push(seed)
         if (failures.length <= 3) {
-          // eslint-disable-next-line no-console
           console.error(
             `seed ${seed}\n in : ${JSON.stringify(schema)}\n out: ${JSON.stringify(out)}`,
           )
@@ -207,9 +206,9 @@ describe("moveProperty preserves required across containers", () => {
       },
       required: ["a"],
     })
-    const aId = getChildNodeId(d0, d0.root.id, "a")!
+    const aPropertyId = getChildPropertyId(d0, d0.root.id, "a")!
     const targetId = getChildNodeId(d0, d0.root.id, "target")!
-    const out = toJsonSchema(moveProperty(d0, aId, targetId, 0)) as JSONSchema7
+    const out = toJsonSchema(moveProperty(d0, aPropertyId, targetId, 0)) as JSONSchema7
     // 'a' left the root → root.required no longer has it
     expect(out.required).toEqual([])
     // 'a' was required in its old parent → stays required in the new parent

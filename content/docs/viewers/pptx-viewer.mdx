@@ -3,8 +3,8 @@ title: PPTX Viewer
 description: A canvas-backed PowerPoint viewer with zoom, rotate, fit-to-width, download, and a per-slide overlay slot — rendered entirely client-side, no server conversion.
 ---
 
-The PPTX Viewer renders a PowerPoint deck the same way the [PDF Viewer](/docs/viewers/pdf-viewer)
-renders pages: each slide is drawn to its own `<canvas>`. It parses the `.pptx`
+The PPTX Viewer renders a PowerPoint deck as continuous slides: each slide is
+drawn to its own `<canvas>`. It parses the `.pptx`
 (an Office Open XML zip) entirely in the browser with
 [pptxviewjs](https://www.npmjs.com/package/pptxviewjs) — a dependency-light,
 canvas-rendering library — so there is **no server, no upload, and no LibreOffice
@@ -14,9 +14,9 @@ It does continuous-scroll rendering, zoom, rotate, fit-to-width, and download, a
 exposes a per-slide overlay slot so you can draw bounding-box citations on top of
 the rendered slide.
 
-It is built without `useEffect`: the deck loads with React's `use()` and Suspense,
-slides render lazily via an `IntersectionObserver` (only slides near the viewport
-hit the canvas), and renders are serialized so they never race.
+The deck loads with React's `use()` and Suspense, slides render lazily via an
+`IntersectionObserver` (only slides near the viewport hit the canvas), and
+renders are serialized so they never race.
 
 <PptxViewerDemo />
 
@@ -42,14 +42,14 @@ export function Example() {
 
 ### Bounding-box overlays
 
-`renderPageOverlay` runs per slide and receives the rendered slide size, so
+`renderSlideOverlay` runs per slide and receives the rendered slide size, so
 normalized boxes map with simple percentages:
 
 ```tsx
 <PptxViewer
   src={url}
-  renderPageOverlay={({ pageNumber }) =>
-    citationsOnSlide(pageNumber).map((c) => (
+  renderSlideOverlay={({ slideNumber }) =>
+    citationsOnSlide(slideNumber).map((c) => (
       <div
         key={c.key}
         className="absolute outline outline-2 outline-indigo-500"
@@ -84,6 +84,9 @@ normalized boxes map with simple percentages:
   at frame rate instead of competing with on-the-fly renders. The initial paint, a
   settled scroll, and already-cached slides all render immediately. Pass `eager`
   to render slides the moment they near the viewport instead.
+- **Bounded source ownership.** Parsed deck sources and rendered bitmaps are
+  kept in a small LRU and disposed when evicted, so browsing many presentations
+  does not leave old decks resident indefinitely.
 
 ## Fidelity
 
@@ -94,20 +97,25 @@ convert to PDF server-side and use the [PDF Viewer](/docs/viewers/pdf-viewer).
 
 ## Props
 
-The API mirrors the [PDF Viewer](/docs/viewers/pdf-viewer) — `pageNumber` is a
-1-based slide index.
+The canonical PPTX overlay field is `slideNumber`, a 1-based slide index.
+`pageNumber`, `renderPageOverlay`, and `onVisiblePageChange` remain available as
+deprecated compatibility aliases for code shared with the PDF Viewer.
 
-| Prop | Type | Description |
-| --- | --- | --- |
-| `src` | `string` | URL of the `.pptx` (same-origin or CORS-enabled). |
-| `scale` | `number` | Optional fixed scale; omit to fit slide width to the container. |
-| `toolbar` | `boolean` | Show the zoom/rotate/download toolbar. Defaults to `true`. |
-| `downloadFileName` | `string` | Filename for the download button. |
-| `renderPageOverlay` | `(props) => ReactNode` | Per-slide overlay; receives `{ pageNumber, width, height, scale, rotation }`. |
-| `onVisiblePageChange` | `(page: number) => void` | Fires with the slide nearest the top of the viewport on scroll. |
-| `onScrollProgressChange` | `(progress: number) => void` | Fires with scroll progress in `[0, 1]`. |
-| `header` | `ReactNode` | Full-width strip below the toolbar (e.g. a legend). |
-| `aside` | `ReactNode` | Left rail alongside the scrolling slides (e.g. a thumbnail rail). |
-| `eager` | `boolean` | Render slides the moment they near the viewport, even mid-scroll, instead of deferring until scrolling settles. Defaults to `false`. |
-| `bare` | `boolean` | Drop the outer border/background so the viewer fills its container. |
-| `className` | `string` | Optional class on the viewer shell. |
+| Prop                     | Type                              | Description                                                                                                                          |
+| ------------------------ | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `src`                    | `string`                          | URL of the `.pptx` (same-origin or CORS-enabled).                                                                                    |
+| `scale`                  | `number`                          | Controlled scale; omit to let the viewer own fit-width and zoom state.                                                               |
+| `defaultScale`           | `number`                          | Initial uncontrolled scale; omit to start in fit-width mode.                                                                         |
+| `onScaleChange`          | `(scale: number \| null) => void` | Called by zoom controls in controlled mode. `null` means fit width.                                                                  |
+| `toolbar`                | `boolean`                         | Show the zoom/rotate/download toolbar. Defaults to `true`.                                                                           |
+| `downloadFileName`       | `string`                          | Filename for the download button.                                                                                                    |
+| `renderSlideOverlay`     | `(props) => ReactNode`            | Per-slide overlay; receives `{ slideNumber, pageNumber, width, height, scale, rotation }`. `pageNumber` is deprecated.               |
+| `renderPageOverlay`      | `(props) => ReactNode`            | Deprecated alias for `renderSlideOverlay`.                                                                                           |
+| `onVisibleSlideChange`   | `(slide: number) => void`         | Fires with the slide nearest the top of the viewport on scroll.                                                                      |
+| `onVisiblePageChange`    | `(page: number) => void`          | Deprecated alias for `onVisibleSlideChange`.                                                                                         |
+| `onScrollProgressChange` | `(progress: number) => void`      | Fires with scroll progress in `[0, 1]`.                                                                                              |
+| `header`                 | `ReactNode`                       | Full-width strip below the toolbar (e.g. a legend).                                                                                  |
+| `aside`                  | `ReactNode`                       | Left rail alongside the scrolling slides (e.g. a thumbnail rail).                                                                    |
+| `eager`                  | `boolean`                         | Render slides the moment they near the viewport, even mid-scroll, instead of deferring until scrolling settles. Defaults to `false`. |
+| `bare`                   | `boolean`                         | Drop the outer border/background so the viewer fills its container.                                                                  |
+| `className`              | `string`                          | Optional class on the viewer shell.                                                                                                  |

@@ -82,10 +82,10 @@ who want JSON Schema get it via a derived `onSchemaChange(toJsonSchema(doc))`.
 - Nullable is normalized to the `type: [..., "null"]` encoding on export, even if
   the source used `anyOf: [..., { type: "null" }]`.
 
-## The layer above (built in `../editor/`)
+## The layer above
 
-- `use-schema-document.ts` — the controlled/uncontrolled hook that bridges the
-  public vanilla-`JSONSchema7` surface to this Document (holds the Document as the
+- `use-schema-builder-state.ts` — the controlled hook that bridges the public
+  vanilla-`JSONSchema7` surface to this Document (holds the Document as the
   truth; re-imports only on a genuine external change, not on its own echo).
 - `schema-builder.tsx` — the editor UI: object tables, nested object/array/enum
   editors, nullable/required toggles, native-DnD reorder, and an editable `$defs`
@@ -94,10 +94,10 @@ who want JSON Schema get it via a derived `onSchemaChange(toJsonSchema(doc))`.
 - Wired into `registry/new-york-v4/ui/schema-builder.tsx` (`SchemaBuilder`) and the
   `RetabSchemaBuilderDemo`.
 
-## Still pending: retiring `contexts/json-schema.tsx`
+## Context Retirement
 
-The legacy per-property `PropertyEditor` (→ `PropertyForm` → `SchemaNodeEditor` →
-the context) is embedded in `json-form.tsx` and `json-table/header-from-schema.tsx`.
-Those consumers must be migrated onto a Document-based property dialog before the
-context and the old builder stack can be deleted. The new editor does not use the
-context; the old stack is left intact so those consumers keep working.
+The old `contexts/json-schema.tsx` provider layer has been retired. Public
+`SchemaBuilder` usage now enters through `useSchemaBuilderState`, while
+document-backed editors receive explicit `doc` and `dispatch` props. Draft
+property editing uses `PropertyForm` with local drafts and commit callbacks
+instead of reaching into builder context.

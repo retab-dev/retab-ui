@@ -1,31 +1,17 @@
-import type {
-  FieldPath,
-  MaterializedFieldPath,
-} from "@/components/json-table/lib/schema-inspection"
+import type { MaterializedFieldPath } from "@/components/json-table/lib/document-paths"
+
+export { materializeFieldPath } from "@/components/json-table/lib/document-paths"
 
 export interface DocumentPatch {
   data: Record<string, unknown>
 }
 
-export function materializeFieldPath(
-  templatePath: FieldPath,
-  arrayIndexes: number[]
-): MaterializedFieldPath {
-  let materializedPath = templatePath
-  for (const index of arrayIndexes) {
-    if (materializedPath.includes("*")) {
-      materializedPath = materializedPath.replace("*", index.toString())
-    }
-  }
-  return materializedPath
-}
-
 export function setValueAtMaterializedPath(
   root: unknown,
-  path: MaterializedFieldPath,
+  materializedFieldPath: MaterializedFieldPath,
   value: unknown | ((previousValue: unknown) => unknown)
 ): Record<string, unknown> {
-  const segments = path ? path.split(".") : []
+  const segments = materializedFieldPath ? materializedFieldPath.split(".") : []
   return setValueAtSegments(root, segments, value) as Record<string, unknown>
 }
 
@@ -65,10 +51,10 @@ function setValueAtSegments(
 
 export function buildDocumentDataPatch(
   currentData: unknown,
-  path: MaterializedFieldPath,
+  materializedFieldPath: MaterializedFieldPath,
   value: unknown
 ): DocumentPatch {
   return {
-    data: setValueAtMaterializedPath(currentData, path, value),
+    data: setValueAtMaterializedPath(currentData, materializedFieldPath, value),
   }
 }

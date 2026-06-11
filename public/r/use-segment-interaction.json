@@ -1,0 +1,18 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "use-segment-interaction",
+  "title": "useSegmentInteraction",
+  "description": "Client hook that coordinates hover, focus, and persistent selection across Segment[] surfaces.",
+  "registryDependencies": [
+    "segment-interaction"
+  ],
+  "files": [
+    {
+      "path": "registry/new-york-v4/ui/use-segment-interaction.ts",
+      "content": "\"use client\"\n\nimport * as React from \"react\"\n\nimport { type SegmentInteraction } from \"@/lib/segment-interaction\"\nimport { type Segment } from \"@/lib/segments\"\n\nexport interface ControlledSegmentInteractionOptions {\n  hoveredId: string | null\n  focusedId: string | null\n  selectedId: string | null\n  setHoveredId: (id: string | null) => void\n  setFocusedId: (id: string | null) => void\n  setSelectedId: (id: string | null) => void\n}\n\nexport function useSegmentInteraction(): SegmentInteraction {\n  const [hoveredId, setHoveredId] = React.useState<string | null>(null)\n  const [focusedId, setFocusedId] = React.useState<string | null>(null)\n  const [selectedId, setSelectedId] = React.useState<string | null>(null)\n\n  return useSegmentInteractionObject({\n    hoveredId,\n    focusedId,\n    selectedId,\n    setHoveredId,\n    setFocusedId,\n    setSelectedId,\n  })\n}\n\nexport function useControlledSegmentInteraction(\n  options: ControlledSegmentInteractionOptions\n): SegmentInteraction {\n  return useSegmentInteractionObject(options)\n}\n\nfunction useSegmentInteractionObject({\n  hoveredId,\n  focusedId,\n  selectedId,\n  setHoveredId,\n  setFocusedId,\n  setSelectedId,\n}: ControlledSegmentInteractionOptions): SegmentInteraction {\n  const selectSegment = React.useCallback(\n    (segment: Segment) => {\n      setSelectedId(segment.id)\n    },\n    [setSelectedId]\n  )\n\n  const clearSelection = React.useCallback(() => {\n    setSelectedId(null)\n  }, [setSelectedId])\n\n  return React.useMemo(\n    () => ({\n      hoveredId,\n      focusedId,\n      selectedId,\n      setHoveredId,\n      setFocusedId,\n      setSelectedId,\n      selectSegment,\n      clearSelection,\n    }),\n    [\n      clearSelection,\n      focusedId,\n      hoveredId,\n      selectedId,\n      selectSegment,\n      setFocusedId,\n      setHoveredId,\n      setSelectedId,\n    ]\n  )\n}\n",
+      "type": "registry:ui",
+      "target": "@ui/use-segment-interaction.ts"
+    }
+  ],
+  "type": "registry:ui"
+}

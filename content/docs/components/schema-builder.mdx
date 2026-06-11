@@ -4,7 +4,7 @@ description: Build the JSON Schema that drives a Retab extraction — the same e
 ---
 
 The Schema Builder is the JSON Schema editor from the Retab dashboard: recursive
-fields, a type picker, enums, `$defs` / references, object-template shortcuts,
+fields, a type picker, enums, optional `$defs` / references, optional JSON mode,
 and live validation. It is a controlled component that edits the `json_schema`
 an extraction runs against and emits standard JSON Schema. The editor normalizes
 object properties as required; use nullable field types when a required field may
@@ -41,3 +41,11 @@ export function Example() {
 | `value` | `ExtendedJSONSchema7` | The schema state. |
 | `onValueChange` | `(schema: ExtendedJSONSchema7) => void` | Called with the next schema whenever the user edits it. |
 | `className` | `string` | Optional wrapper class name. |
+| `readOnly` | `boolean` | Renders the current schema without allowing edits. |
+| `view` | `"fields" \| "json"` | Controls the active view when JSON mode is enabled. |
+| `onViewChange` | `(view: "fields" \| "json") => void` | Called when the user switches between fields and JSON mode. |
+| `features` | `SchemaBuilderFeatures` | Enables optional surfaces: `definitions`, `objectTemplates`, `jsonMode`, and `importExport`. |
+
+Optional feature defaults are intentionally small: `definitions` is enabled,
+while `objectTemplates`, `jsonMode`, and `importExport` are disabled unless you
+turn them on.

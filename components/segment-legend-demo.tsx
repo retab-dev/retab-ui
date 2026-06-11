@@ -3,14 +3,15 @@
 import * as React from "react"
 
 import { toSegments } from "@/lib/segments"
+import { cn } from "@/lib/utils"
 import {
   SegmentLegend,
   type SegmentLegendOrientation,
   type SegmentLegendSide,
   type SegmentLegendVariant,
 } from "@/components/ui/segment-legend"
+import { useSegmentInteraction } from "@/components/ui/use-segment-interaction"
 import { LegendVariantsBlock } from "@/registry/new-york-v4/blocks/legend-variants-block"
-import { cn } from "@/lib/utils"
 
 // One split-style result drives every variant — only the chrome changes.
 const segments = toSegments([
@@ -30,14 +31,32 @@ type Preset = {
 }
 
 const PRESETS: Preset[] = [
-  { id: "bar", label: "Bar", variant: "bar", orientation: "horizontal", side: "top" },
-  { id: "floating", label: "Floating", variant: "floating", orientation: "horizontal", side: "top" },
-  { id: "rail", label: "Rail", variant: "bar", orientation: "vertical", side: "left" },
+  {
+    id: "bar",
+    label: "Bar",
+    variant: "bar",
+    orientation: "horizontal",
+    side: "top",
+  },
+  {
+    id: "floating",
+    label: "Floating",
+    variant: "floating",
+    orientation: "horizontal",
+    side: "top",
+  },
+  {
+    id: "rail",
+    label: "Rail",
+    variant: "bar",
+    orientation: "vertical",
+    side: "left",
+  },
 ]
 
 export function SegmentLegendDemo() {
   const [presetId, setPresetId] = React.useState("bar")
-  const [activeId, setActiveId] = React.useState<string | null>(null)
+  const interaction = useSegmentInteraction()
   const preset = PRESETS.find((p) => p.id === presetId) ?? PRESETS[0]
   const isRail = preset.orientation === "vertical"
 
@@ -48,8 +67,7 @@ export function SegmentLegendDemo() {
       orientation={preset.orientation}
       side={preset.side}
       columns={preset.orientation === "horizontal" ? 4 : undefined}
-      activeId={activeId}
-      onActivate={setActiveId}
+      interaction={interaction}
       currentPage={1}
     />
   )

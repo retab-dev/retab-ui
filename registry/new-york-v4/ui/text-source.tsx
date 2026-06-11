@@ -4,12 +4,15 @@ import * as React from "react"
 
 import type { Source, SourceAnchor } from "@/lib/document-source"
 import type { SourceTarget } from "@/hooks/use-source-link"
-import type { TextViewerHandle } from "@/components/ui/text-viewer"
+import type {
+  TextLineRange,
+  TextViewerHandle,
+} from "@/components/ui/text-viewer"
 
 /** A text_span anchor → a 1-based inclusive line range. */
 export function textAnchorToLines(
   anchor: SourceAnchor
-): { start: number; end: number } | undefined {
+): TextLineRange | undefined {
   if (anchor.kind === "text_span") {
     return { start: anchor.line_start, end: anchor.line_end }
   }
@@ -24,8 +27,7 @@ export function useTextSourceTarget(
     () => ({
       scrollTo: (source: Source, options) => {
         const range = textAnchorToLines(source.anchor)
-        if (range)
-          viewerRef.current?.scrollToLines(range.start, range.end, options)
+        if (range) viewerRef.current?.scrollToLineRange(range, options)
       },
     }),
     [viewerRef]
@@ -38,6 +40,6 @@ export function useTextSourceTarget(
  */
 export function sourceToTextHighlight(
   source: Source | undefined
-): { start: number; end: number } | null {
+): TextLineRange | null {
   return (source && textAnchorToLines(source.anchor)) || null
 }

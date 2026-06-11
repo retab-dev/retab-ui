@@ -1,108 +1,128 @@
-"use client";
+"use client"
 
-import { useState } from "react";
-import { JSONSchema7 } from "json-schema";
-import { renamePropertyAtPath, formatTitle } from "@/components/schema-editor/json-schema-builder";
-import { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types";
-import { ResetOnMountRunner } from "@/components/schema-editor/reset-on-mount-runner";
-import { PropertyForm } from "@/components/schema-editor/property-form";
+import { useState } from "react"
+import type { JSONSchema7 } from "json-schema"
+
+import { renamePropertyAtPath } from "@/components/json-table/schema-property-operations"
+import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
+import { getEffectiveNode } from "@/components/schema-editor/lib/json-schema-utils"
+import { PropertyForm } from "@/components/schema-editor/property-form"
+import type {
+  PropertyDraft,
+  PropertyFormCommand,
+} from "@/components/schema-editor/property-form-types"
+import { ResetOnMountRunner } from "@/components/schema-editor/reset-on-mount-runner"
+import { formatTitle } from "@/components/schema-editor/schema-title"
 
 export const defaultNewProperty: ExtendedJSONSchema7 = {
   type: "string",
   description: "",
-};
+}
 
-// In PropertyEditor, use the builder functions for property updates and React Hook Form
+function getSiblingNamesAtPath(
+  schema: ExtendedJSONSchema7,
+  propertyPath: string
+): string[] {
+  const segments = propertyPath.split(".").filter(Boolean)
+  segments.pop()
+
+  let current: ExtendedJSONSchema7 = schema
+  for (const segment of segments) {
+    current = getEffectiveNode(current)
+    if (current.type === "object" && current.properties?.[segment]) {
+      current = current.properties[segment] as ExtendedJSONSchema7
+      continue
+    }
+    if (current.type === "array" && !Array.isArray(current.items)) {
+      current = current.items as ExtendedJSONSchema7
+      continue
+    }
+    return []
+  }
+
+  const parent = getEffectiveNode(current)
+  return Object.keys(parent.properties || {})
+}
+
 export function PropertyEditor({
   property,
   propertyKey,
   setDropdownOpen,
-  jsonSchema,
-  setJsonSchema,
+  schema,
+  replaceSchema,
   editMode = "editable",
 }: {
-  property: any;
-  propertyKey: string;
-  setDropdownOpen: (open: boolean) => void;
-  jsonSchema: JSONSchema7;
-  setJsonSchema: (schema: JSONSchema7) => void;
-  editMode?: "descriptionOnly" | "readOnly" | "editable";
+  property: ExtendedJSONSchema7
+  propertyKey: string
+  setDropdownOpen: (open: boolean) => void
+  schema: JSONSchema7
+  replaceSchema: (schema: JSONSchema7) => void
+  editMode?: "descriptionOnly" | "readOnly" | "editable"
 }) {
-  // Use state for local values, not tied to the form
-  const [editedName, setEditedName] = useState(
-    () => propertyKey.split(".")?.pop() || propertyKey,
-  );
-  const [editedProperty, setEditedProperty] = useState(
-    property || defaultNewProperty,
-  );
+  const initialName = propertyKey.split(".")?.pop() || propertyKey
+  const initialProperty = property || defaultNewProperty
   const [editedSchema, setEditedSchema] = useState<ExtendedJSONSchema7>({
-    ...jsonSchema,
-  });
+    ...(schema as ExtendedJSONSchema7),
+  })
 
-  // State for semantic validation errors
-  const [nameError, setNameError] = useState<string | null>(null);
-
-  // This is called after validation passes
-  const handleFormSubmit = () => {
-    // Don't proceed if there are semantic errors
-    if (nameError) {
-      return;
-    }
-
-    // Automatically set the title to match the name
+  const handleCommit = (next: PropertyDraft) => {
     const updatedProperty = {
-      ...editedProperty,
-      title: formatTitle(editedName),
-    };
+      ...next.schemaNode,
+      title: formatTitle(next.name),
+    }
 
     const updatedSchema = renamePropertyAtPath(
       editedSchema,
       propertyKey,
-      editedName,
-      updatedProperty,
-    );
+      next.name,
+      updatedProperty
+    )
 
-    setJsonSchema(updatedSchema);
+    replaceSchema(updatedSchema)
+    setDropdownOpen(false)
+  }
 
-    setDropdownOpen(false);
-  };
+  const handleCommand = async (command: PropertyFormCommand) => {
+    if (command.type !== "installObjectTemplate") return
 
-  // Handle cancel
-  const handleCancel = () => {
-    setDropdownOpen(false);
-  };
+    const { applyObjectTemplateReference } = await import(
+      "@/components/schema-editor/optional/object-templates/object-template-reference"
+    )
+    setEditedSchema((currentSchema) =>
+      applyObjectTemplateReference(
+        currentSchema,
+        initialProperty,
+        command.templateName
+      ).schema
+    )
+  }
 
   return (
     <>
       <ResetOnMountRunner
-        key={JSON.stringify(jsonSchema)}
+        key={JSON.stringify(schema)}
         onReset={() => {
-          setEditedSchema({ ...jsonSchema });
+          setEditedSchema({ ...(schema as ExtendedJSONSchema7) })
         }}
       />
       <PropertyForm
-        editedProperty={editedProperty}
-        setEditedProperty={setEditedProperty}
-        setJsonSchema={(newSchema) => {
-          setJsonSchema(
-            typeof newSchema === "function"
-              ? newSchema(jsonSchema as ExtendedJSONSchema7)
-              : newSchema,
-          );
+        propertyDraft={{
+          name: initialName,
+          schemaNode: initialProperty,
         }}
-        editedJsonSchema={editedSchema}
-        setEditedJsonSchema={setEditedSchema}
-        editedName={editedName}
-        setEditedName={setEditedName}
-        onSubmit={handleFormSubmit}
-        onCancel={handleCancel}
+        schemaContext={{
+          siblingNames: getSiblingNamesAtPath(editedSchema, propertyKey),
+          originalName: initialName,
+          schemaDefinitions: editedSchema.$defs || {},
+          fieldPath: propertyKey,
+          objectTemplatesEnabled: true,
+          onCommand: handleCommand,
+        }}
+        onCommitPropertyDraft={handleCommit}
+        onCancel={() => setDropdownOpen(false)}
         submitLabel="Save Changes"
-        onNameError={setNameError}
-        editMode={editMode}
-        fieldPathOverride={propertyKey}
-        wrapCancelInDialogClose
-        wrapSubmitInDialogClose
+        mode={editMode}
       />
     </>
-  );
+  )
 }

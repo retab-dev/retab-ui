@@ -1,21 +1,21 @@
 import * as React from "react"
 
 import { buildDocumentDataPatch } from "@/components/json-table/lib/document-patches"
-import { getValueAtPath } from "@/components/json-table/lib/json-schema-utils"
+import { getValueAtPath } from "@/components/json-table/lib/document-paths"
 import type { TableDocument } from "@/components/json-table/lib/projects-types"
 import { useRefCallback } from "@/components/json-table/path-utils"
 
 export function useCellController({
   document,
   docId,
-  fieldPath,
+  materializedFieldPath,
   value,
   isEditable,
   onDocumentDataChange,
 }: {
   document: TableDocument
   docId: string
-  fieldPath: string | undefined
+  materializedFieldPath: string | undefined
   value: unknown
   isEditable: boolean | undefined
   onDocumentDataChange: (docId: string, value: unknown) => void
@@ -36,16 +36,16 @@ export function useCellController({
   )
 
   const effectiveValue = optimisticValue !== undefined ? optimisticValue : value
-  const cleanStringValue =
+  const committedTextValue =
     effectiveValue !== null && effectiveValue !== undefined
       ? String(effectiveValue)
       : ""
 
   const commitValueChange = useRefCallback(function (validatedValue: unknown) {
-    if (!fieldPath || !isEditable) return
+    if (!materializedFieldPath || !isEditable) return
 
     const previousRoot = document.data
-    const previousValue = getValueAtPath(previousRoot, fieldPath)
+    const previousValue = getValueAtPath(previousRoot, materializedFieldPath)
     const previousNormalized = normalize(previousValue)
     const nextNormalized = normalize(validatedValue)
     const uiNormalized = normalize(value)
@@ -58,7 +58,7 @@ export function useCellController({
 
     const patch = buildDocumentDataPatch(
       previousRoot,
-      fieldPath,
+      materializedFieldPath,
       validatedValue
     )
     onDocumentDataChange(docId, patch.data)
@@ -67,7 +67,7 @@ export function useCellController({
 
   return {
     effectiveValue,
-    cleanStringValue,
+    committedTextValue,
     commitValueChange,
   }
 }

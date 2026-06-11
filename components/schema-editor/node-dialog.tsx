@@ -1,87 +1,57 @@
-import * as React from "react";
+import * as React from "react"
+
+import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
+import { PropertyForm } from "@/components/schema-editor/property-form"
+import type {
+  PropertyDraft,
+  PropertyFormSchemaContext,
+  PropertyFormMode,
+} from "@/components/schema-editor/property-form-types"
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
-} from "@/components/ui-retab/dialog";
-import { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types";
-import { PropertyForm } from "@/components/schema-editor/property-form";
-import { useState } from "react";
+} from "@/components/ui-retab/dialog"
 
 interface NodeDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
-  validateName: (name: string) => string | null;
-  onChange: (newNode: ExtendedJSONSchema7) => void;
-  onNameChange: (newName: string, updatedNode?: ExtendedJSONSchema7) => void;
-  onDelete?: () => void;
-  node: ExtendedJSONSchema7;
-  name: string;
-  editMode: "descriptionOnly" | "readOnly" | "editable";
-  isRequired?: boolean;
-  onRequiredChange?: (required: boolean) => void;
+  isOpen: boolean
+  onClose: () => void
+  onChange: (newNode: ExtendedJSONSchema7) => void
+  onNameChange?: (newName: string, updatedNode?: ExtendedJSONSchema7) => void
+  onDelete?: () => void
+  node: ExtendedJSONSchema7
+  name: string
+  editMode: PropertyFormMode
+  siblingNames: string[]
+  formContext: Omit<
+    PropertyFormSchemaContext,
+    "siblingNames" | "originalName"
+  >
 }
 
 export function NodeDialog({
   isOpen,
   onClose,
-  validateName,
   onChange,
   onNameChange,
   onDelete,
   node,
   name,
   editMode,
-  isRequired,
-  onRequiredChange,
+  siblingNames,
+  formContext,
 }: NodeDialogProps) {
-  // State for PropertyForm
-  const [editedProperty, setEditedProperty] =
-    useState<ExtendedJSONSchema7>(node);
-  const [editedName, setEditedName] = useState(name);
-  const [editedJsonSchema, setEditedJsonSchema] = useState<ExtendedJSONSchema7>(
-    {
-      type: "object",
-      properties: {},
-      $defs: {},
-    },
-  );
-
-  // Handle form submission from PropertyForm
-  const handleFormSubmit = (values?: {
-    name: string;
-    property: ExtendedJSONSchema7;
-  }) => {
-    const nextName = values?.name ?? editedName;
-    const nextProperty = values?.property ?? editedProperty;
-
-    // Validate one more time before saving
-    const error = validateName(nextName);
-    if (error) {
-      return;
-    }
-
-    // Check if name changed
-    if (nextName !== name) {
-      // Handle the name change
-      onNameChange(nextName, nextProperty);
+  const handleCommit = async (next: PropertyDraft) => {
+    if (next.name !== name && onNameChange) {
+      onNameChange(next.name, next.schemaNode)
     } else {
-      // Just update the node with new property values
-      onChange(nextProperty);
+      onChange(next.schemaNode)
     }
 
-    onClose();
-  };
-
-  // Handle cancel
-  const handleCancel = () => {
-    onClose();
-  };
-
-  // Handle name error from PropertyForm
-  const handleNameError = (_error: string | null) => {};
+    onClose()
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -98,24 +68,19 @@ export function NodeDialog({
         </DialogHeader>
 
         <PropertyForm
-          editedProperty={editedProperty}
-          setEditedProperty={setEditedProperty}
-          setJsonSchema={() => {}} // Not needed for this use case
-          editedJsonSchema={editedJsonSchema}
-          setEditedJsonSchema={setEditedJsonSchema}
-          editedName={editedName}
-          setEditedName={setEditedName}
-          onSubmit={handleFormSubmit}
-          onCancel={handleCancel}
+          propertyDraft={{ name, schemaNode: node }}
+          schemaContext={{
+            ...formContext,
+            siblingNames,
+            originalName: name,
+          }}
+          onCommitPropertyDraft={handleCommit}
+          onCancel={onClose}
           onDelete={onDelete}
           submitLabel="Save"
-          onNameError={handleNameError}
-          editMode={editMode}
-          isRequired={isRequired}
-          onRequiredChange={onRequiredChange}
-          wrapCancelInDialogClose
+          mode={editMode}
         />
       </DialogContent>
     </Dialog>
-  );
+  )
 }
