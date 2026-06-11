@@ -1,0 +1,84 @@
+---
+title: File Viewer
+description: One viewer for everything — detects the file type and renders the right component, from PDFs and spreadsheets to images, code, Markdown, and HTML.
+---
+
+The File Viewer is a single entry point for previewing any file. It detects the
+type from the file name (then the MIME type) and **lazy-loads only the matching
+viewer**, so the heavy parser for a format you never open is never downloaded.
+
+It composes the rest of the family — the [PDF](/docs/components/pdf-viewer),
+[DOCX](/docs/components/docx-viewer), [Image](/docs/components/image-viewer),
+[PPTX](/docs/components/pptx-viewer), [XLSX](/docs/components/xlsx-viewer), and
+[CSV](/docs/components/csv-viewer) viewers — and adds inline, client-side
+rendering for **text, code, JSON, Markdown, and HTML**.
+
+<FileViewerDemo />
+
+## Installation
+
+```bash
+npx shadcn@latest add @retab/file-viewer
+```
+
+This pulls in the format-specific viewers it delegates to, plus `marked` for
+Markdown rendering and `@tanstack/react-virtual` for the text viewer.
+
+## Usage
+
+```tsx
+import { FileViewer } from "@/components/ui/file-viewer"
+
+export function Example() {
+  return <FileViewer src="/report.pdf" fileName="report.pdf" />
+}
+```
+
+`fileName` drives type detection and the download button. If you only have a URL,
+it's used for both; pass `mimeType` when the extension is missing or ambiguous,
+or `as` to force a category.
+
+## Supported types
+
+| Category | Extensions | Rendered by |
+| --- | --- | --- |
+| PDF | `pdf` | PDF Viewer |
+| Word | `docx` | DOCX Viewer |
+| Spreadsheet | `xlsx`, `xls`, `xlsm` | XLSX Viewer |
+| Presentation | `pptx` | PPTX Viewer |
+| Tabular | `csv`, `tsv` | CSV Viewer |
+| Image | `png`, `jpg`, `gif`, `webp`, `avif`, `svg`, `bmp`, `tif`, `tiff` | Image Viewer |
+| Markdown | `md`, `markdown`, `mdx` | `marked` → sanitized, inline |
+| HTML | `html`, `htm` | sandboxed iframe |
+| Text & code | `txt`, `log`, `json`, `xml`, `yaml`, `ts`, `py`, `go`, … | virtualized text viewer |
+
+Anything unrecognized falls back to a download card.
+
+## How it performs
+
+- **Code-split delegation.** Each format-specific viewer is a `React.lazy`
+  import — opening a PDF never loads SheetJS, pptxviewjs, or the others.
+- **Virtualized text.** Plain text, code, and JSON render through a windowed
+  line list (`@tanstack/react-virtual`) with a sticky line-number gutter, so a
+  large log file stays smooth. JSON is pretty-printed automatically.
+- **Markdown, themed.** Markdown is parsed with `marked`, sanitized with
+  `DOMPurify`, and rendered inline with a stylesheet built on the app's own theme
+  tokens — so it matches the surrounding UI and follows light/dark automatically.
+  Links open in a new tab with `rel="noopener noreferrer"`.
+- **Safe HTML.** Standalone `.html` files render inside a `<iframe sandbox>` with
+  no script execution and no same-origin access, so untrusted documents preview
+  without running code or reaching the app.
+
+## Props
+
+| Prop | Type | Description |
+| --- | --- | --- |
+| `src` | `string` | URL of the file (same-origin or CORS-enabled). |
+| `fileName` | `string` | Name for type detection + download. Falls back to `src`. |
+| `mimeType` | `string` | MIME hint used when the extension is missing/ambiguous. |
+| `as` | `FileCategory` | Force a category, bypassing detection. |
+| `bare` | `boolean` | Drop the outer border/background so the viewer fills its container. |
+| `className` | `string` | Optional class on the viewer shell. |
+
+The `detectCategory(fileName, mimeType?)` helper is also exported if you need to
+branch on the resolved category yourself.

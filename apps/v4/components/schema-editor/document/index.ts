@@ -10,7 +10,12 @@ export type {
 } from "./types"
 
 export { createId } from "./id"
-export { fromJsonSchema, toJsonSchema } from "./convert"
+export {
+  fromJsonSchema,
+  nodeFromJson,
+  projectNode,
+  toJsonSchema,
+} from "./convert"
 export {
   getEffectiveKind,
   getEnumBaseType,
@@ -24,8 +29,15 @@ export {
   addProperty,
   createEnumValue,
   createNode,
+  findNodeByPath,
   findOwningProperty,
+  getChildNodeId,
+  getEffectiveDocNode,
+  getItemsNodeId,
   getNode,
+  getNodeJson,
+  replaceNodeJson,
+  updateNodeJson,
   moveProperty,
   normalizeNodeForType,
   removeDefinition,

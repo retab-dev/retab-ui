@@ -32,11 +32,27 @@ export function SiteHeader() {
             className="hidden size-8 lg:flex"
             render={<Link href="/" />}
           >
-            <Icons.logo className="size-5" />
+            <Icons.logo className="size-5 text-foreground" />
             <span className="sr-only">{siteConfig.name}</span>
           </Button>
           <MainNav items={siteConfig.navItems} className="hidden lg:flex" />
           <div className="ml-auto flex items-center gap-2 md:flex-1 md:justify-end">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="hidden h-8 shadow-none md:flex"
+              render={
+                <Link href="https://retab.com" target="_blank" rel="noreferrer" />
+              }
+            >
+              <span className="whitespace-nowrap text-xs text-muted-foreground">
+                Built by Retab
+              </span>
+            </Button>
+            <Separator
+              orientation="vertical"
+              className="mr-2 hidden h-4 self-center md:block"
+            />
             <div className="hidden w-full flex-1 md:flex md:w-auto md:flex-none">
               <CommandMenu
                 tree={pageTree}

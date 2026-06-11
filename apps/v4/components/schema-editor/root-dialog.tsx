@@ -11,6 +11,12 @@ import { Button } from "@/components/ui-retab/button";
 import { Input } from "@/components/ui-retab/input";
 import { Label } from "@/components/ui-retab/label";
 import { Textarea } from "@/components/ui-retab/textarea";
+import { Info } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui-retab/tooltip";
 import { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types";
 import { updateNodeWithMetadata } from "@/components/schema-editor/json-schema-builder";
 
@@ -58,7 +64,18 @@ export function RootDialog({
 
         <div className="grid gap-4">
           <div className="grid gap-2">
-            <Label htmlFor={`${path}-title`}>Schema Title</Label>
+            <div className="flex items-center gap-2">
+              <Label htmlFor={`${path}-title`}>Schema Title</Label>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="size-4 text-muted-foreground" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  This title is used by the model to understand what is being
+                  extracted.
+                </TooltipContent>
+              </Tooltip>
+            </div>
             <Input
               id={`${path}-title`}
               value={schemaTitle}

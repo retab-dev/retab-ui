@@ -73,6 +73,12 @@ import {
   updateSchemaProperty,
   updateType,
 } from "./json-schema-builder-utils";
+import { useJsonSchemaOptional } from "@/components/schema-editor/contexts/json-schema";
+import {
+  getChildNodeId,
+  getItemsNodeId,
+  replaceNodeJson,
+} from "@/components/schema-editor/document";
 
 const getTemplateIcon = (templateName: string) => {
   switch (templateName) {
@@ -100,7 +106,8 @@ function isJSONSchema(
 export function SchemaNodeEditor({
   name,
   node,
-  onChange,
+  onChange: onChangeProp,
+  nodeId,
   jsonSchema,
   setJsonSchema,
   path,
@@ -119,6 +126,9 @@ export function SchemaNodeEditor({
   name: string;
   node: ExtendedJSONSchema7;
   onChange: (newNode: ExtendedJSONSchema7) => void;
+  /** Document id of this node. When present (and inside a provider), edits route
+   *  through the Document by id; otherwise they fall back to `onChange`. */
+  nodeId?: string;
   jsonSchema: ExtendedJSONSchema7;
   setJsonSchema: (
     newSchema: React.SetStateAction<ExtendedJSONSchema7>,
@@ -139,6 +149,32 @@ export function SchemaNodeEditor({
   onRequiredChange?: (required: boolean) => void;
 }) {
   const parentPath = path;
+
+  // Document routing: when this node has an id and a provider is present, every
+  // edit (which is always `onChange(updateEffectiveNode(node, …))`) is spliced
+  // back into the Document by id — node-local, id-stable, serialization-faithful.
+  // Without a nodeId (e.g. inside the standalone PropertyForm) we fall back to the
+  // original bubbling `onChange`, so that path is unchanged.
+  const schemaCtx = useJsonSchemaOptional();
+  const onChange = React.useCallback(
+    (newNode: ExtendedJSONSchema7) => {
+      if (schemaCtx?.applyDocOp && nodeId) {
+        schemaCtx.applyDocOp((d) => replaceNodeJson(d, nodeId, newNode));
+      } else {
+        onChangeProp(newNode);
+      }
+    },
+    [schemaCtx, nodeId, onChangeProp],
+  );
+  const childNodeId = (propName: string): string | undefined =>
+    schemaCtx?.doc && nodeId
+      ? getChildNodeId(schemaCtx.doc, nodeId, propName)
+      : undefined;
+  const itemsNodeId: string | undefined =
+    schemaCtx?.doc && nodeId
+      ? getItemsNodeId(schemaCtx.doc, nodeId)
+      : undefined;
+
   const { type: localType, isNullable: localNullable } = getEffectiveType(node);
   const isEditable = editMode === "editable";
   const _isPromptOnly = editMode === "promptOnly";
@@ -519,7 +555,7 @@ export function SchemaNodeEditor({
             ) : (
               <div className="flex items-center">
                 <span
-                  className="mr-1 cursor-pointer text-sm font-medium whitespace-nowrap text-foreground"
+                  className="mr-1 cursor-pointer font-medium whitespace-nowrap text-foreground"
                   onClick={() => {
                     if (onNameChange) {
                       setEditedPropertyName(name);
@@ -966,6 +1002,7 @@ export function SchemaNodeEditor({
                                     );
                                   }}
                                   name={propName}
+                                  nodeId={childNodeId(propName)}
                                   node={propValue as ExtendedJSONSchema7}
                                   jsonSchema={jsonSchema}
                                   setJsonSchema={setJsonSchema}
@@ -1040,7 +1077,7 @@ export function SchemaNodeEditor({
                         <div className="flex items-center gap-3">
                           <Input
                             placeholder="New property name"
-                            className={`h-8 w-40 text-sm ${newPropErr ? "border-destructive" : ""}`}
+                            className={`w-40 ${newPropErr ? "border-destructive" : ""}`}
                             value={newPropName}
                             onChange={(e) => {
                               const val = e.target.value;
@@ -1166,6 +1203,7 @@ export function SchemaNodeEditor({
                         <SchemaNodeEditor
                           draggedParentRef={draggedParentRef}
                           name={propName}
+                          nodeId={childNodeId(propName)}
                           draggedPropertyRef={draggedPropertyRef}
                           editMode={editMode}
                           node={propValue as ExtendedJSONSchema7}
@@ -1230,7 +1268,7 @@ export function SchemaNodeEditor({
                 <div className="mt-2 ml-4 flex items-center gap-3 border-l border-border pl-4">
                   <Input
                     placeholder="New property name"
-                    className="h-8 w-40 text-sm"
+                    className="w-40"
                     value={newPropName}
                     onChange={(e) => setNewPropName(e.target.value)}
                     onKeyDown={(e) => {
@@ -1306,6 +1344,7 @@ export function SchemaNodeEditor({
                     draggedPropertyRef={draggedPropertyRef}
                     editMode={editMode}
                     name="items"
+                    nodeId={itemsNodeId}
                     node={items as ExtendedJSONSchema7}
                     onChange={(newItems) =>
                       onChange(
@@ -1371,7 +1410,7 @@ export function SchemaNodeEditor({
             <Input
               ref={newEnumInputRef}
               placeholder="New choice"
-              className="h-8 w-40 text-sm"
+              className="w-40"
               value={newEnumValue}
               onChange={(e) => setNewEnumValue(e.target.value)}
               onKeyDown={(e) => {

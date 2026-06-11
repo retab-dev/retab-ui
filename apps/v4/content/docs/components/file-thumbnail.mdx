@@ -1,0 +1,89 @@
+---
+title: File Thumbnail
+description: Render compact file preview images with a skeleton, fade transition, and fallback state.
+component: true
+---
+
+File Thumbnail gives document lists, upload queues, and attachment trays a
+consistent preview shell. Pass an image URL or renderer output from your PDF,
+DOCX, XLSX, or image pipeline; the component handles the thumbnail frame, loading
+shimmer, fade-in, and fallback state.
+
+<FileThumbnailFormatsDemo />
+
+## Installation
+
+```bash
+npx shadcn@latest add @retab/file-thumbnail
+```
+
+## States
+
+`FileThumbnail` is just the preview shell — it tracks loading, fade-in, and
+fallback so every thumbnail in a list looks consistent regardless of which
+renderer produced it. Feed it a finished image with `previewImageUrl`, a flag
+with `isLoading`, custom React with `previewContent`, or nothing at all to get
+the muted fallback surface.
+
+<FileThumbnailDemo />
+
+## Document Previews
+
+File Thumbnail does not parse documents or install renderer packages. The
+registry item has no npm dependencies; generate the preview with whichever viewer
+stack you already use, then pass the result through `previewImageUrl` or
+`previewContent`.
+
+The hero above feeds each format's Retab viewer into `previewContent` — each
+renderer wraps a standard React library (`pdfjs-dist`, `@e965/xlsx`,
+`pptxviewjs`, `docx-preview`). Each renders **only the first unit** — page 1, the
+first sheet, or the first slide — never the whole document, so there is no
+scrolling, no sheet tabs, and no toolbar. A raster image needs no renderer at all.
+
+`DocumentThumbnail` wraps `FileThumbnail` and does the first-unit render per
+format; it suspends (showing the shimmer) while the library parses, and falls back
+to the muted surface if a parse fails.
+
+```tsx
+import { DocumentThumbnail } from "@/components/document-thumbnail"
+
+// PDF / DOCX / XLSX / PPTX: first page, first sheet, or first slide only.
+<DocumentThumbnail
+  kind="pdf"
+  src="/attention.pdf"
+  name="attention.pdf"
+  type="application/pdf"
+/>
+
+// Images need no renderer.
+<DocumentThumbnail kind="image" src="/page.png" name="page.png" type="image/png" />
+```
+
+## Useful Behaviors
+
+- Accepts externally generated thumbnails as an image URL or custom React content.
+- Shows a shimmering file-preview state while your thumbnail generator is loading.
+- Fades the preview in after it loads.
+- Falls back to a blank muted preview surface when no preview image is available or image loading fails.
+
+## API Reference
+
+### FileThumbnail
+
+| Prop                 | Type                    | Default | Required |
+| -------------------- | ----------------------- | ------- | -------- |
+| `file`               | `ThumbnailFile \| File` | `-`     | Yes      |
+| `className`          | `string`                | `-`     | No       |
+| `previewAspectRatio` | `number`                | `3 / 4` | No       |
+| `previewClassName`   | `string`                | `-`     | No       |
+| `previewContent`     | `React.ReactNode`       | `-`     | No       |
+| `previewImageUrl`    | `string \| null`        | `-`     | No       |
+| `isLoading`          | `boolean`               | `false` | No       |
+| `hasError`           | `boolean`               | `false` | No       |
+
+### ThumbnailFile
+
+| Prop   | Type     | Default | Required |
+| ------ | -------- | ------- | -------- |
+| `name` | `string` | `-`     | Yes      |
+| `type` | `string` | `-`     | Yes      |

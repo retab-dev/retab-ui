@@ -636,7 +636,8 @@
         "button",
         "scroll-area",
         "separator",
-        "spinner"
+        "spinner",
+        "skeleton"
       ],
       "files": [
         {
@@ -693,6 +694,64 @@
           "path": "registry/new-york-v4/ui/pptx-viewer.tsx",
           "type": "registry:ui",
           "target": "@ui/pptx-viewer.tsx"
+        }
+      ]
+    },
+    {
+      "name": "xlsx-viewer",
+      "type": "registry:ui",
+      "title": "XLSX Viewer",
+      "description": "A virtualized Excel/spreadsheet viewer rendered entirely client-side: sheet tabs, zoom, download, formatted values, numeric alignment, and row + column virtualization so huge sheets stay smooth. Sheets materialize lazily. No useEffect for data loading.",
+      "dependencies": [
+        "lucide-react",
+        "@e965/xlsx@0.20.3",
+        "@tanstack/react-virtual@^3.13.12"
+      ],
+      "registryDependencies": [
+        "utils",
+        "button",
+        "separator",
+        "spinner"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/xlsx-viewer.tsx",
+          "type": "registry:ui",
+          "target": "@ui/xlsx-viewer.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/xlsx-viewer.worker.ts",
+          "type": "registry:ui",
+          "target": "@ui/xlsx-viewer.worker.ts"
+        }
+      ]
+    },
+    {
+      "name": "file-viewer",
+      "type": "registry:ui",
+      "title": "File Viewer",
+      "description": "One viewer for any file: detects the type and lazy-loads the matching renderer (PDF, DOCX, XLSX, PPTX, CSV, images) plus inline, virtualized text/code/JSON, Markdown (sandboxed), and HTML (sandboxed). Only the needed parser is ever downloaded.",
+      "dependencies": [
+        "lucide-react",
+        "marked@18.0.5",
+        "@tanstack/react-virtual@^3.13.12"
+      ],
+      "registryDependencies": [
+        "utils",
+        "button",
+        "spinner",
+        "pdf-viewer",
+        "docx-viewer",
+        "image-viewer",
+        "pptx-viewer",
+        "xlsx-viewer",
+        "csv-viewer"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/file-viewer.tsx",
+          "type": "registry:ui",
+          "target": "@ui/file-viewer.tsx"
         }
       ]
     },
@@ -811,6 +870,219 @@
           "path": "registry/new-york-v4/ui/schema-builder.tsx",
           "type": "registry:ui",
           "target": "@ui/schema-builder.tsx"
+        }
+      ]
+    },
+    {
+      "name": "file-thumbnail",
+      "type": "registry:ui",
+      "title": "File Thumbnail",
+      "description": "Compact file preview shell with a loading shimmer, fade-in, and muted fallback surface. No renderer dependencies.",
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/file-thumbnail.tsx",
+          "type": "registry:ui",
+          "target": "@ui/file-thumbnail.tsx"
+        }
+      ]
+    },
+    {
+      "name": "split-viewer-block",
+      "type": "registry:block",
+      "title": "Split Viewer",
+      "description": "Named subdocuments over a PDF: a legend header and a vertical page-ribbon sidebar, from the shared segment primitives.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "pdf-viewer",
+        "segment-legend",
+        "page-ribbon",
+        "segments"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/blocks/split-viewer-block.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/split-viewer-block.tsx"
+        },
+        {
+          "path": "components/viewers/split/split-viewer.tsx",
+          "type": "registry:component",
+          "target": "@components/viewers/split/split-viewer.tsx"
+        },
+        {
+          "path": "components/viewers/lib/split-types.ts",
+          "type": "registry:lib",
+          "target": "@components/viewers/lib/split-types.ts"
+        },
+        {
+          "path": "components/viewers/lib/partition-types.ts",
+          "type": "registry:lib",
+          "target": "@components/viewers/lib/partition-types.ts"
+        }
+      ],
+      "categories": [
+        "primitives"
+      ]
+    },
+    {
+      "name": "partition-viewer-block",
+      "type": "registry:block",
+      "title": "Partition Viewer",
+      "description": "Keyed chunks over a PDF: a legend plus a horizontal page-ribbon waterfall, from the shared segment primitives.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "pdf-viewer",
+        "segment-legend",
+        "page-ribbon",
+        "segments"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/blocks/partition-viewer-block.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/partition-viewer-block.tsx"
+        },
+        {
+          "path": "components/viewers/partition/partition-viewer.tsx",
+          "type": "registry:component",
+          "target": "@components/viewers/partition/partition-viewer.tsx"
+        },
+        {
+          "path": "components/viewers/lib/partition-types.ts",
+          "type": "registry:lib",
+          "target": "@components/viewers/lib/partition-types.ts"
+        }
+      ],
+      "categories": [
+        "primitives"
+      ]
+    },
+    {
+      "name": "parse-viewer-block",
+      "type": "registry:block",
+      "title": "Parse Viewer",
+      "description": "The source document beside its extracted markdown, synced by page, with a Rendered/Text toggle.",
+      "dependencies": [
+        "lucide-react",
+        "react-markdown",
+        "remark-gfm",
+        "rehype-raw"
+      ],
+      "registryDependencies": [
+        "pdf-viewer",
+        "button",
+        "scroll-area",
+        "resizable",
+        "spinner"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/blocks/parse-viewer-block.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/parse-viewer-block.tsx"
+        },
+        {
+          "path": "components/viewers/parse/parse-viewer.tsx",
+          "type": "registry:component",
+          "target": "@components/viewers/parse/parse-viewer.tsx"
+        },
+        {
+          "path": "components/viewers/lib/parse-types.ts",
+          "type": "registry:lib",
+          "target": "@components/viewers/lib/parse-types.ts"
+        },
+        {
+          "path": "components/viewers/sample-data/parse.json",
+          "type": "registry:file",
+          "target": "@components/viewers/sample-data/parse.json"
+        }
+      ],
+      "categories": [
+        "primitives"
+      ]
+    },
+    {
+      "name": "classification-viewer-block",
+      "type": "registry:block",
+      "title": "Classification Viewer",
+      "description": "A single category over a PDF, shown as one segment in the legend: the same file + legend system with a single segment.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "pdf-viewer",
+        "segment-legend",
+        "segments"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/blocks/classification-viewer-block.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/classification-viewer-block.tsx"
+        },
+        {
+          "path": "components/viewers/classify/classifier-viewer.tsx",
+          "type": "registry:component",
+          "target": "@components/viewers/classify/classifier-viewer.tsx"
+        },
+        {
+          "path": "components/viewers/lib/classify-types.ts",
+          "type": "registry:lib",
+          "target": "@components/viewers/lib/classify-types.ts"
+        }
+      ],
+      "categories": [
+        "primitives"
+      ]
+    },
+    {
+      "name": "pdf-thumbnail-sidebar",
+      "type": "registry:ui",
+      "title": "PDF Thumbnail Sidebar",
+      "description": "A page-thumbnail rail for the PdfViewer aside slot: lazy pdfjs thumbnails, active-page highlight, click-to-jump. Reuses the viewer’s cached document.",
+      "registryDependencies": [
+        "pdf-viewer",
+        "utils",
+        "spinner"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/pdf-thumbnail-sidebar.tsx",
+          "type": "registry:ui",
+          "target": "@ui/pdf-thumbnail-sidebar.tsx"
+        }
+      ]
+    },
+    {
+      "name": "pdf-thumbnails-block",
+      "type": "registry:block",
+      "title": "PDF Thumbnails",
+      "description": "A PDF viewer with a toggleable page-thumbnail sidebar in the aside slot.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "pdf-viewer",
+        "pdf-thumbnail-sidebar",
+        "button"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/blocks/pdf-thumbnails-block.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/pdf-thumbnails-block.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/pdf-thumbnail-sidebar.tsx",
+          "type": "registry:ui",
+          "target": "@ui/pdf-thumbnail-sidebar.tsx"
         }
       ]
     }

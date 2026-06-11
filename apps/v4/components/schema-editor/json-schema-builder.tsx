@@ -45,7 +45,17 @@ import {
   AccordionTrigger,
   AccordionContent,
 } from "@/components/ui-retab/accordion";
-import { useJsonSchema } from "@/components/schema-editor/contexts/json-schema";
+import {
+  useJsonSchema,
+  useJsonSchemaOptional,
+} from "@/components/schema-editor/contexts/json-schema";
+import {
+  addDefinition,
+  nodeFromJson,
+  removeDefinition,
+  renameDefinition,
+  replaceNodeJson,
+} from "@/components/schema-editor/document";
 import {
   Tooltip,
   TooltipContent,
@@ -106,8 +116,8 @@ function DefsEditor({
   draggedPropertyRef,
   editMode = "editable",
 }: {
-  schema: ExtendedJSONSchema7;
-  onChange: (newSchema: ExtendedJSONSchema7) => void;
+  schema: any;
+  onChange: (newSchema: any) => void;
   accordionOpen: boolean;
   setAccordionOpen: (open: boolean) => void;
   draggedParentRef: React.RefObject<string | null>;
@@ -118,14 +128,33 @@ function DefsEditor({
   const [newDefName, setNewDefName] = useState("");
   const [showAccordion, setShowAccordion] = useState(false);
   const isEditable = editMode === "editable";
+  const defsCtx = useJsonSchemaOptional();
+  const defNodeId = (defName: string): string | undefined =>
+    defsCtx?.doc?.defs.find((d) => d.name === defName)?.node.id;
+  const defEntryId = (defName: string): string | undefined =>
+    defsCtx?.doc?.defs.find((d) => d.name === defName)?.id;
 
   const handleAddDef = () => {
     if (!newDefName.trim()) return;
-    const newDefs: Record<string, JSONSchema7Definition> = {
-      ...defs,
-      [newDefName]: { type: "object", properties: {}, required: [] },
-    };
-    onChange({ ...schema, $defs: newDefs });
+    if (defsCtx?.applyDocOp) {
+      const name = newDefName;
+      defsCtx.applyDocOp(
+        (d) =>
+          addDefinition(d, {
+            name,
+            node: nodeFromJson(
+              { type: "object", properties: {}, required: [] },
+              d,
+            ),
+          }).doc,
+      );
+    } else {
+      const newDefs = {
+        ...defs,
+        [newDefName]: { type: "object", properties: {}, required: [] },
+      };
+      onChange({ ...schema, $defs: newDefs });
+    }
     setNewDefName("");
   };
 
@@ -133,7 +162,7 @@ function DefsEditor({
   const isDefReferenced = (targetName: string): boolean => {
     const targetRef = `#/$defs/${targetName}`;
 
-    const traverse = (node: unknown): boolean => {
+    const traverse = (node: any): boolean => {
       if (node === null || typeof node !== "object") return false;
 
       if (Array.isArray(node)) {
@@ -143,22 +172,26 @@ function DefsEditor({
         return false;
       }
 
-      if ((node as { $ref?: unknown }).$ref === targetRef) return true;
+      if ((node as any).$ref === targetRef) return true;
 
       // Special handling at the schema root: iterate $defs entries but skip the target def subtree
-      if (node === schema && schema.$defs && typeof schema.$defs === "object") {
-        for (const [name, defSchema] of Object.entries(schema.$defs)) {
+      if (
+        node === schema &&
+        (schema as any).$defs &&
+        typeof (schema as any).$defs === "object"
+      ) {
+        for (const [name, defSchema] of Object.entries((schema as any).$defs)) {
           if (name === targetName) continue;
           if (traverse(defSchema)) return true;
         }
         // Continue traversing the rest of the schema excluding $defs
-        const { $defs: _omit, ...rest } = schema;
+        const { $defs: _omit, ...rest } = schema as any;
         return traverse(rest);
       }
 
       for (const key of Object.keys(node)) {
         if (key === "$defs") continue;
-        if (traverse((node as Record<string, unknown>)[key])) return true;
+        if (traverse((node as any)[key])) return true;
       }
       return false;
     };
@@ -173,10 +206,15 @@ function DefsEditor({
       );
       return;
     }
-    const newDefs = { ...defs };
-    delete newDefs[defName];
-    onChange({ ...schema, $defs: newDefs });
-    if (Object.keys(newDefs).length === 0) {
+    const entryId = defEntryId(defName);
+    if (defsCtx?.applyDocOp && entryId) {
+      defsCtx.applyDocOp((d) => removeDefinition(d, entryId));
+    } else {
+      const newDefs = { ...defs };
+      delete newDefs[defName];
+      onChange({ ...schema, $defs: newDefs });
+    }
+    if (Object.keys(defs).length <= 1) {
       setShowAccordion(false);
     }
   };
@@ -234,6 +272,7 @@ function DefsEditor({
                   draggedPropertyRef={draggedPropertyRef}
                   editMode={editMode}
                   name={defName}
+                  nodeId={defNodeId(defName)}
                   node={defSchema}
                   onChange={(newDef) => {
                     const newDefs = { ...defs, [defName]: newDef };
@@ -241,17 +280,32 @@ function DefsEditor({
                   }}
                   onNameChange={(newName, updatedDef) => {
                     if (newName !== defName) {
-                      // Create new defs object with renamed definition
+                      // Document path: rename by id, so every $ref follows
+                      // automatically (refs point at the definition's id).
+                      const entryId = defEntryId(defName);
+                      const nid = defNodeId(defName);
+                      if (defsCtx?.applyDocOp && entryId) {
+                        defsCtx.applyDocOp((d) => {
+                          let next = renameDefinition(d, entryId, newName);
+                          if (updatedDef && nid) {
+                            next = replaceNodeJson(next, nid, updatedDef);
+                          }
+                          return next;
+                        });
+                        return;
+                      }
+
+                      // Fallback: manual ref rewrite (no provider).
                       const newDefs = { ...defs };
                       newDefs[newName] = updatedDef || defSchema;
                       delete newDefs[defName];
 
                       // Update all $ref references in the schema
-                      const updateRefs = (obj: unknown): unknown => {
+                      const updateRefs = (obj: any): any => {
                         if (typeof obj !== "object" || obj === null) return obj;
                         if (Array.isArray(obj)) return obj.map(updateRefs);
 
-                        const updated = { ...obj } as Record<string, unknown>;
+                        const updated = { ...obj };
                         if (updated.$ref === `#/$defs/${defName}`) {
                           updated.$ref = `#/$defs/${newName}`;
                         }
@@ -269,16 +323,12 @@ function DefsEditor({
                       const updatedSchema = updateRefs({
                         ...schema,
                         $defs: newDefs,
-                      }) as ExtendedJSONSchema7;
+                      });
                       onChange(updatedSchema);
                     }
                   }}
                   jsonSchema={schema}
-                  setJsonSchema={(updater) =>
-                    onChange(
-                      typeof updater === "function" ? updater(schema) : updater,
-                    )
-                  }
+                  setJsonSchema={onChange}
                   path={`#/$defs/${defName}`}
                   defs={defs}
                   canDelete={!isDefReferenced(defName)}
@@ -337,6 +387,7 @@ function JsonSchemaEditorRaw({
     jsonSchema: schema,
     setJsonSchema: setSchema,
     validationErrors,
+    doc,
   } = useJsonSchema();
   const [defsAccordionOpen, setDefsAccordionOpen] = useState(false);
   const [, setOpenLayoutDialog] = React.useState(false);
@@ -389,6 +440,7 @@ function JsonSchemaEditorRaw({
         <div className="flex min-h-0 flex-1 flex-col pb-20">
           <SchemaNodeEditor
             name="root"
+            nodeId={doc.root.id}
             node={schema}
             onChange={setSchema}
             jsonSchema={schema}

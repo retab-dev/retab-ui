@@ -6,11 +6,12 @@ import { DocxViewer } from "@/components/ui/docx-viewer"
 
 export function DocxViewerDemo() {
   return (
-    // A ~50-page multi-section document so off-screen page skipping shows at scale.
+    // A 25-page report (explicit page breaks; the rendered count matches the
+    // document's own page count) so off-screen page skipping shows at scale.
     <div className="not-prose my-6 h-[600px]">
       <DocxViewer
-        src="/samples/sample-large-50pages.docx"
-        downloadFileName="sample-large-50pages.docx"
+        src="/samples/quarterly-business-review.docx"
+        downloadFileName="quarterly-business-review.docx"
         className="h-full"
       />
     </div>

@@ -6,6 +6,7 @@ import React, {
   useState,
   ReactNode,
   useCallback,
+  useEffect,
   useMemo,
   useRef,
 } from "react";
@@ -17,6 +18,27 @@ import {
 import { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types";
 import { isEqual } from "lodash";
 import { useMountEffect } from "@/components/schema-editor/lib/use-mount-effect";
+import {
+  fromJsonSchema,
+  toJsonSchema,
+  type SchemaDocument,
+} from "@/components/schema-editor/document";
+
+/** Order-insensitive structural signature, to tell our own echo from a genuine
+ *  external change to the controlled `jsonSchema` prop. */
+function schemaSignature(value: unknown): string {
+  const norm = (v: unknown): unknown =>
+    Array.isArray(v)
+      ? v.map(norm)
+      : v && typeof v === "object"
+        ? Object.fromEntries(
+            Object.keys(v as Record<string, unknown>)
+              .sort()
+              .map((k) => [k, norm((v as Record<string, unknown>)[k])]),
+          )
+        : v;
+  return JSON.stringify(norm(value));
+}
 
 interface JsonSchemaContextType {
   jsonSchema: ExtendedJSONSchema7;
@@ -27,6 +49,20 @@ interface JsonSchemaContextType {
   computedSchema: ExtendedJSONSchema7;
   isValidSchema: boolean;
   validationErrors?: string;
+  /**
+   * The editor's Document — the lossless, identity-bearing source of truth for
+   * the migrated components (see `components/schema-editor/document`). Kept in
+   * sync with `jsonSchema`; mutate it through `applyDocOp`.
+   */
+  doc: SchemaDocument;
+  /**
+   * Apply an immutable Document operation (from `document/operations`). Updates
+   * the Document and projects it back out to `setJsonSchema` byte-faithfully.
+   */
+  applyDocOp: (
+    op: (doc: SchemaDocument) => SchemaDocument,
+    persist?: boolean,
+  ) => void;
 }
 
 const JsonSchemaContext = createContext<JsonSchemaContextType | undefined>(
@@ -88,15 +124,59 @@ function JsonSchemaEditorProviderRaw({
 }: JsonSchemaEditorProviderProps) {
   // SIMPLIFIED: No more dual state management!
   // jsonSchema is the single source of truth from props
-  const jsonSchema = initialJsonSchema!;
-  const computedSchema = providedComputedSchema ?? initialJsonSchema!;
+  const jsonSchemaProp = initialJsonSchema!;
 
   const [validationErrors, setValidationErrors] = useState<string>();
   const [isValidSchema, setIsValidSchema] = useState(true);
 
-  // Use ref to track current schema value for comparisons in setJsonSchema
+  // --- Document is the source of truth; jsonSchema is its byte-faithful projection ---
+  const [doc, setDoc] = useState<SchemaDocument>(() =>
+    fromJsonSchema(jsonSchemaProp),
+  );
+  const syncedSignatureRef = useRef(schemaSignature(jsonSchemaProp));
+
+  // Re-import only when the controlled prop changes from OUTSIDE (not our own
+  // echo), so node ids stay stable across edits routed through applyDocOp.
+  useEffect(() => {
+    const sig = schemaSignature(jsonSchemaProp);
+    if (sig !== syncedSignatureRef.current) {
+      setDoc(fromJsonSchema(jsonSchemaProp));
+      syncedSignatureRef.current = sig;
+    }
+  }, [jsonSchemaProp]);
+
+  // Stage 0 guarantees toJsonSchema(fromJsonSchema(x)) === x byte-for-byte, so
+  // exposing the projection is transparent to every existing reader.
+  const jsonSchema = useMemo(
+    () => toJsonSchema(doc) as ExtendedJSONSchema7,
+    [doc],
+  );
+  const computedSchema = providedComputedSchema ?? jsonSchema;
+
+  // Track current schema value for comparisons in the legacy setJsonSchema.
   const jsonSchemaRef = useRef(jsonSchema);
   jsonSchemaRef.current = jsonSchema;
+
+  // Latest document, for side-effect-free reads inside applyDocOp.
+  const docRef = useRef(doc);
+  docRef.current = doc;
+
+  const applyDocOp = useCallback(
+    (op: (d: SchemaDocument) => SchemaDocument, persist?: boolean) => {
+      const prev = docRef.current;
+      const next = op(prev);
+      if (next === prev) return;
+      docRef.current = next; // keep ref current for sequential calls in one tick
+      setDoc(next);
+      const schema = toJsonSchema(next) as ExtendedJSONSchema7;
+      syncedSignatureRef.current = schemaSignature(schema);
+      if (externalSetJsonSchema) externalSetJsonSchema(schema);
+      if ((persist ?? true) && persistJsonSchemaCallback) {
+        void persistJsonSchemaCallback(schema);
+      }
+    },
+    [externalSetJsonSchema, persistJsonSchemaCallback],
+  );
 
   // Helper to check if property order has changed (recursively)
   const hasPropertyOrderChanged = useCallback(
@@ -419,6 +499,8 @@ function JsonSchemaEditorProviderRaw({
       computedSchema,
       isValidSchema,
       validationErrors,
+      doc,
+      applyDocOp,
     };
   }, [
     jsonSchema,
@@ -426,6 +508,8 @@ function JsonSchemaEditorProviderRaw({
     computedSchema,
     isValidSchema,
     validationErrors,
+    doc,
+    applyDocOp,
   ]);
 
   return (
@@ -450,6 +534,12 @@ export function useJsonSchema() {
     throw new Error("useJsonSchema must be used within a JsonSchemaProvider");
   }
   return context;
+}
+
+/** Non-throwing context access — returns undefined outside a provider. Used by
+ *  components that opt into Document-routing only when a provider is present. */
+export function useJsonSchemaOptional() {
+  return useContext(JsonSchemaContext);
 }
 
 // Uncontrolled wrapper for backwards compatibility (no props required)

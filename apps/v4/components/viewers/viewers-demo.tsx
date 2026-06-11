@@ -12,6 +12,7 @@ import { EditViewer } from "@/components/viewers/edit/edit-viewer";
 import { PdfViewer } from "@/components/ui/pdf-viewer";
 import splitSample from "@/components/viewers/sample-data/split.json";
 import partitionSample from "@/components/viewers/sample-data/partition.json";
+import parseSample from "@/components/viewers/sample-data/parse.json";
 
 // ── Sample data ─────────────────────────────────────────────────────────────
 
@@ -36,15 +37,10 @@ const splitResult: SplitView = {
   usage: null,
 };
 
+/** Real Retab parse: tapstone.pdf run through `retab parses create` (retab-large). */
 const parseResult: ParseResponse = {
-  output: {
-    pages: [
-      "# Invoice — Acme Corp\n\n**Invoice** #INV-1024\nDate: 2026-05-01\n\n| Item | Qty | Price |\n| --- | --- | --- |\n| Widget | 3 | $1,280.50 |",
-      "## Terms\n\nNet 30. Thank you for your business.",
-    ],
-    text: "Invoice — Acme Corp ...",
-  },
-  usage: null,
+  output: parseSample.output as ParseResponse["output"],
+  usage: parseSample.usage as ParseResponse["usage"],
 };
 
 const editFields: FormField[] = [
@@ -152,8 +148,10 @@ export function SplitViewerDemo() {
 }
 
 export function ParseViewerDemo() {
+  // The raw parse renderer on its own — extracted markdown (Rendered/Text), no
+  // source document. The side-by-side composition lives on /blocks (Primitives).
   return (
-    <div className="not-prose flex flex-col overflow-hidden rounded-xl border" style={{ height: 420 }}>
+    <div className="not-prose flex flex-col overflow-hidden rounded-xl border" style={{ height: 480 }}>
       <ParseViewer result={parseResult} />
     </div>
   );

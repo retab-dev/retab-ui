@@ -21,6 +21,9 @@ importers:
       '@base-ui/react':
         specifier: ^1.4.1
         version: 1.4.1(@date-fns/tz@1.5.0)(@types/react@19.2.2)(date-fns@4.4.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      '@e965/xlsx':
+        specifier: 0.20.3
+        version: 0.20.3
       '@hookform/resolvers':
         specifier: ^3.10.0
         version: 3.10.0(react-hook-form@7.78.0(react@19.2.3))
@@ -93,6 +96,9 @@ importers:
       docx-preview:
         specifier: ^0.3.7
         version: 0.3.7
+      dompurify:
+        specifier: 3.4.9
+        version: 3.4.9
       fumadocs-core:
         specifier: 16.0.5
         version: 16.0.5(@types/react@19.2.2)(lucide-react@0.460.0(react@19.2.3))(next@16.2.9(@babel/core@7.28.0)(@opentelemetry/api@1.9.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -114,6 +120,9 @@ importers:
       lucide-react:
         specifier: ^0.460.0
         version: 0.460.0(react@19.2.3)
+      marked:
+        specifier: 18.0.5
+        version: 18.0.5
       next:
         specifier: 16.2.9
         version: 16.2.9(@babel/core@7.28.0)(@opentelemetry/api@1.9.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -473,6 +482,11 @@ packages:
 
   '@dotenvx/dotenvx@1.69.1':
     resolution: {integrity: sha512-kwQB5KcAegxw/+NGUgXAo5ovyOSjlMhoXSSnSEpDhoHJwzMcMO0HE1U0VCYZ7jbAeCMGamed9XdWzOA5ixtTNg==}
+    hasBin: true
+
+  '@e965/xlsx@0.20.3':
+    resolution: {integrity: sha512-703RN/3OdsRD5mtse2HBX7Um7xwaP9tlswEG6svOtjqokXoX7rJdQj7DyabD2I+xk22RgaIIU+R6BHgkpZGB/w==}
+    engines: {node: '>=0.8'}
     hasBin: true
 
   '@ecies/ciphers@0.2.6':
@@ -2387,6 +2401,9 @@ packages:
   '@types/statuses@2.0.6':
     resolution: {integrity: sha512-xMAgYwceFhRA2zY+XbEA7mxYbA093wdiW8Vu6gZPGWy9cmOyU9XesH1tNcEWsKFd5Vzrqx5T3D38PWx1FIIXkA==}
 
+  '@types/trusted-types@2.0.7':
+    resolution: {integrity: sha512-ScaPdn1dQczgbl0QFTeTOmVHFULt394XJgOQNoyVhZ6r2vLnMLJfBPd53SB52T/3G36VI1/g2MZaX0cwDuXsfw==}
+
   '@types/unist@2.0.11':
     resolution: {integrity: sha512-CmBKiL6NNo/OqgmMn95Fk9Whlp2mtvIv+KNpQKN2F4SjvrEesubTRWGYSg+BnWZOnlCaSTU1sMpsBOzgbYhnsA==}
 
@@ -3069,6 +3086,9 @@ packages:
 
   docx-preview@0.3.7:
     resolution: {integrity: sha512-Lav69CTA/IYZPJTsKH7oYeoZjyg96N0wEJMNslGJnZJ+dMUZK85Lt5ASC79yUlD48ecWjuv+rkcmFt6EVPV0Xg==}
+
+  dompurify@3.4.9:
+    resolution: {integrity: sha512-4dPSRMRDqHvs0V4YDFCsaIZo4if5u0xM+llyxiM2fwuZFdKArUBAF3VtI2+n8NKg9P870WMdYk0UhqQNoWXbfQ==}
 
   dotenv@17.4.2:
     resolution: {integrity: sha512-nI4U3TottKAcAD9LLud4Cb7b2QztQMUEfHbvhTH09bqXTxnSie8WnjPALV/WMCrJZ6UV/qHJ6L03OqO3LcdYZw==}
@@ -4184,6 +4204,11 @@ packages:
 
   markdown-table@3.0.4:
     resolution: {integrity: sha512-wiYz4+JrLyb/DqW2hkFJxP7Vd7JuTDm77fvbM8VfEQdmSMqcImWeeRbHwZjBjIFki/VaMK2BhFi7oUUZeM5bqw==}
+
+  marked@18.0.5:
+    resolution: {integrity: sha512-S6GcvALHg6K4ohtu4E7x0a1AqhAjp6cV8KhLSyN9qVapnzJkusVBxZRcIU9AeYsbe6P1hKDusSbEOzGyyuce6w==}
+    engines: {node: '>= 20'}
+    hasBin: true
 
   math-intrinsics@1.1.0:
     resolution: {integrity: sha512-/IXtbwEk5HTPyEwyKX6hGkYXxM9nbj64B+ilVJnC/R6B0pH5G4V3b0pVbL7DBj4tkhBAppbQUlf6F6Xl9LHu1g==}
@@ -6045,6 +6070,8 @@ snapshots:
       which: 4.0.0
       yocto-spinner: 1.2.0
 
+  '@e965/xlsx@0.20.3': {}
+
   '@ecies/ciphers@0.2.6(@noble/ciphers@1.3.0)':
     dependencies:
       '@noble/ciphers': 1.3.0
@@ -7771,6 +7798,9 @@ snapshots:
 
   '@types/statuses@2.0.6': {}
 
+  '@types/trusted-types@2.0.7':
+    optional: true
+
   '@types/unist@2.0.11': {}
 
   '@types/unist@3.0.3': {}
@@ -8404,6 +8434,10 @@ snapshots:
   docx-preview@0.3.7:
     dependencies:
       jszip: 3.10.1
+
+  dompurify@3.4.9:
+    optionalDependencies:
+      '@types/trusted-types': 2.0.7
 
   dotenv@17.4.2: {}
 
@@ -9769,6 +9803,8 @@ snapshots:
   markdown-extensions@2.0.0: {}
 
   markdown-table@3.0.4: {}
+
+  marked@18.0.5: {}
 
   math-intrinsics@1.1.0: {}
 

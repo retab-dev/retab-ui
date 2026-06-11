@@ -44,7 +44,7 @@ function loadPdfjs() {
 const documentCache = new Map<string, Promise<PDFDocumentProxy>>()
 const pageCache = new WeakMap<PDFDocumentProxy, Map<number, Promise<PDFPageProxy>>>()
 
-function getDocumentResource(src: string): Promise<PDFDocumentProxy> {
+export function getDocumentResource(src: string): Promise<PDFDocumentProxy> {
   let promise = documentCache.get(src)
   if (!promise) {
     promise = loadPdfjs().then((pdfjs) => pdfjs.getDocument(src).promise)
@@ -53,7 +53,7 @@ function getDocumentResource(src: string): Promise<PDFDocumentProxy> {
   return promise
 }
 
-function getPageResource(doc: PDFDocumentProxy, pageNumber: number) {
+export function getPageResource(doc: PDFDocumentProxy, pageNumber: number) {
   let pages = pageCache.get(doc)
   if (!pages) {
     pages = new Map()

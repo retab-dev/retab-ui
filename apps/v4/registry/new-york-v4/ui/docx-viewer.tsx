@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 
 // docx-preview is browser-only, so it is imported lazily on the client. jszip
@@ -48,16 +49,21 @@ const SCOPED_STYLES = `
 
 // --- resource cache: stable promises so React `use()` can read them -----------
 
-const blobCache = new Map<string, Promise<Blob>>()
+// Cache an ArrayBuffer, not a Blob. docx-preview forwards its input straight to
+// JSZip; a Blob makes JSZip convert it via `new FileReader().readAsArrayBuffer`,
+// which is flaky under dev/HMR (a transient FileReader without that method throws
+// intermittently). An ArrayBuffer skips that path entirely — JSZip reads it
+// directly — so the render is deterministic.
+const bufferCache = new Map<string, Promise<ArrayBuffer>>()
 
-function getDocxResource(src: string): Promise<Blob> {
-  let promise = blobCache.get(src)
+function getDocxResource(src: string): Promise<ArrayBuffer> {
+  let promise = bufferCache.get(src)
   if (!promise) {
     promise = fetch(src).then((res) => {
       if (!res.ok) throw new Error(`Failed to load DOCX: ${res.status}`)
-      return res.blob()
+      return res.arrayBuffer()
     })
-    blobCache.set(src, promise)
+    bufferCache.set(src, promise)
   }
   return promise
 }
@@ -121,7 +127,7 @@ function DocxViewerInner({
   header,
   aside,
 }: DocxViewerProps) {
-  const blob = React.use(getDocxResource(src))
+  const buffer = React.use(getDocxResource(src))
 
   const [manualScale, setManualScale] = React.useState<number | null>(
     fixedScale ?? null
@@ -220,7 +226,7 @@ function DocxViewerInner({
       .then(({ renderAsync }) => {
         if (cancelled) return
         host.replaceChildren()
-        return renderAsync(blob, host, undefined, RENDER_OPTIONS)
+        return renderAsync(buffer, host, undefined, RENDER_OPTIONS)
       })
       .then(() => {
         if (cancelled || !hostRef.current) return
@@ -228,18 +234,24 @@ function DocxViewerInner({
         // via `content-visibility` — a long document then only lays out and
         // paints the pages near the viewport. Intrinsic sizes (measured in the
         // page's own, un-zoomed units) keep the scrollbar stable.
-        const pages = host.querySelectorAll<HTMLElement>(".docx-wrapper > section.docx")
+        const pages = Array.from(
+          host.querySelectorAll<HTMLElement>(".docx-wrapper > section.docx")
+        )
         const z = scaleRef.current || 1
-        pages.forEach((el, i) => {
+        // Two passes so we never interleave reads with writes: measure everything
+        // first (one layout), then style everything. Interleaving would force a
+        // synchronous reflow per page — O(n) layout thrash on long documents.
+        const sizes = pages.map((el) => {
           const r = el.getBoundingClientRect()
+          return [Math.round(r.width / z), Math.round(r.height / z)] as const
+        })
+        pages.forEach((el, i) => {
           el.dataset.pageNumber = String(i + 1)
           el.style.contentVisibility = "auto"
-          el.style.containIntrinsicSize = `${Math.round(r.width / z)}px ${Math.round(
-            r.height / z
-          )}px`
+          el.style.containIntrinsicSize = `${sizes[i][0]}px ${sizes[i][1]}px`
         })
         setNumPages(pages.length)
-        setPageWidth(pages.length ? pages[0].getBoundingClientRect().width / z : null)
+        setPageWidth(pages.length ? sizes[0][0] : null)
         setReady(true)
       })
       .catch((err) => {
@@ -250,7 +262,7 @@ function DocxViewerInner({
     return () => {
       cancelled = true
     }
-  }, [blob])
+  }, [buffer])
 
   const zoom = (factor: number) => setManualScale(clamp(scale * factor, 0.25, 5))
 
@@ -272,7 +284,8 @@ function DocxViewerInner({
                 {numPages} page{numPages === 1 ? "" : "s"}
               </>
             ) : (
-              "Loading…"
+              // Page count is unknown until docx-preview lays out — skeleton it.
+              <Skeleton className="inline-block h-3 w-12 align-middle" />
             )}
           </span>
           <div className="ml-auto flex items-center gap-1">
@@ -280,7 +293,12 @@ function DocxViewerInner({
               <Minus />
             </IconButton>
             <span className="w-12 text-center text-xs tabular-nums text-muted-foreground">
-              {Math.round(scale * 100)}%
+              {ready ? (
+                `${Math.round(scale * 100)}%`
+              ) : (
+                // Fit-width % depends on the measured page width — skeleton it.
+                <Skeleton className="inline-block h-3 w-8 align-middle" />
+              )}
             </span>
             <IconButton label="Zoom in" onClick={() => zoom(1.2)}>
               <Plus />
@@ -329,8 +347,19 @@ function DocxViewerInner({
           >
             <div ref={containerRef} className="relative flex flex-col items-center p-4">
               {/* docx-preview renders the .docx-wrapper into this host; `zoom`
-                  scales the laid-out pages (and scroll height) cheaply. */}
-              <div ref={hostRef} className="w-full" style={{ zoom: scale }} />
+                  scales the laid-out pages (and scroll height) cheaply. Kept
+                  invisible (not display:none — it must stay measurable) until
+                  `ready`, so the first frame the user sees is already at the
+                  measured fit-width zoom. Otherwise the page paints at zoom 1,
+                  then snaps to fit once measured — the load flicker/resize. */}
+              <div
+                ref={hostRef}
+                className={cn(
+                  "w-full transition-opacity duration-200",
+                  ready ? "opacity-100" : "opacity-0"
+                )}
+                style={{ zoom: scale }}
+              />
               {!ready ? (
                 <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
                   <Spinner className="size-5 text-muted-foreground" />

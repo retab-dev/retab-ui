@@ -102,6 +102,10 @@ function nodeFromSchema(
 
   const node: DocumentNode = { id: createId(), rest: {} }
 
+  // Record the source key order so the projection can replay it exactly,
+  // keeping round-trips byte-faithful (no $defs/keyword reshuffling on edit).
+  node.rest.__order = Object.keys(schema)
+
   if (typeof schema.$ref === "string") {
     const defId = refMap.get(schema.$ref)
     if (defId) node.ref = defId
@@ -188,7 +192,44 @@ export function toJsonSchema(doc: SchemaDocument): JSONSchema7 {
     ;(out as Record<string, unknown>)[defsKeyword] = bag
   }
 
-  return out
+  // Replay the root key order (so $defs lands back where the source had it).
+  return applyKeyOrder(
+    out as Record<string, unknown>,
+    doc.root.rest.__order
+  ) as JSONSchema7
+}
+
+/**
+ * Project a single node to JSON Schema (using the document's definition names for
+ * any `$ref`s). The inverse of `nodeFromJson` — together they let a component read
+ * and rewrite one node's JSON by id while the Document stays the source of truth.
+ */
+export function projectNode(
+  doc: SchemaDocument,
+  node: DocumentNode
+): JSONSchema7Definition {
+  const defsKeyword =
+    doc.rest.defsKeyword === "definitions" ? "definitions" : "$defs"
+  const defNameById = new Map<string, string>()
+  for (const def of doc.defs) defNameById.set(def.id, def.name)
+  return nodeToSchema(node, defNameById, defsKeyword)
+}
+
+/** Convert a JSON Schema subtree into a Document node, resolving `$ref`s against
+ *  the document's existing definitions (so refs survive the round-trip). */
+export function nodeFromJson(
+  schema: JSONSchema7Definition,
+  doc: SchemaDocument
+): DocumentNode {
+  const refMap: RefMap = new Map()
+  for (const def of doc.defs) {
+    refMap.set(`#/$defs/${def.name}`, def.id)
+    refMap.set(`#/definitions/${def.name}`, def.id)
+  }
+  // Strip `$defs`/`definitions` — definitions live at the document level, not on
+  // a node; this keeps a root-level edit (whose JSON still carries `$defs`) from
+  // duplicating them into the root node's `rest`.
+  return nodeFromSchema(schema, refMap, /* stripDefs */ true)
 }
 
 function nodeToSchema(
@@ -255,10 +296,30 @@ function nodeToSchema(
 
   // Trailing unmodeled keywords (const, default, format, pattern, x-*, …).
   for (const [key, value] of Object.entries(node.rest)) {
-    if (key === "__booleanSchema") continue
+    if (key === "__booleanSchema" || key === "__order") continue
     if (key in out) continue // modeled field already won this key
     out[key] = value
   }
 
-  return out as JSONSchema7
+  return applyKeyOrder(out, node.rest.__order) as JSONSchema7
+}
+
+/**
+ * Reorder an object's keys to match a recorded source order. Keys present in
+ * `order` come first (in that order); any keys not in it (newly added by edits)
+ * are appended in their current order. Returns a new object.
+ */
+function applyKeyOrder(
+  obj: Record<string, unknown>,
+  order: unknown
+): Record<string, unknown> {
+  if (!Array.isArray(order)) return obj
+  const result: Record<string, unknown> = {}
+  for (const key of order as string[]) {
+    if (key in obj) result[key] = obj[key]
+  }
+  for (const key of Object.keys(obj)) {
+    if (!(key in result)) result[key] = obj[key]
+  }
+  return result
 }

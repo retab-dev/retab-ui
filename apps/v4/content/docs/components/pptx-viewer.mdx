@@ -70,10 +70,20 @@ normalized boxes map with simple percentages:
 - **Canvas rendering, client-side.** Slides parse and rasterize in the browser —
   no conversion service. The slide size is read straight from `presentation.xml`,
   so every slide reserves its box before anything is drawn.
-- **Lazy slides.** Only slides near the viewport render; off-screen slides drop
-  their canvas and re-render on scroll-back, keeping a long deck bounded.
-- **Serialized renders.** The underlying viewer holds one drawing context, so
-  renders are queued — never overlapping, never racing.
+- **Lazy slides.** Only slides near the viewport render; off-screen canvases are
+  dropped, keeping a long deck bounded.
+- **Bitmap cache.** Each rendered slide is cached as an `ImageBitmap` (a capped
+  LRU keyed by slide + zoom), so scroll-back and revisited zoom levels redraw
+  instantly instead of re-running the renderer.
+- **Serialized, cancellable renders.** The underlying viewer holds one drawing
+  context, so heavy renders are queued — never overlapping, never racing — and a
+  queued render is skipped if its slide has already scrolled away, so
+  fast-scrolling never wastes the queue on stale slides.
+- **Scroll-aware deferral.** While the user is actively scrolling, a slide's
+  (expensive) first render is held until scrolling settles, so a fast fling stays
+  at frame rate instead of competing with on-the-fly renders. The initial paint, a
+  settled scroll, and already-cached slides all render immediately. Pass `eager`
+  to render slides the moment they near the viewport instead.
 
 ## Fidelity
 
@@ -98,5 +108,6 @@ The API mirrors the [PDF Viewer](/docs/components/pdf-viewer) — `pageNumber` i
 | `onScrollProgressChange` | `(progress: number) => void` | Fires with scroll progress in `[0, 1]`. |
 | `header` | `ReactNode` | Full-width strip below the toolbar (e.g. a legend). |
 | `aside` | `ReactNode` | Left rail alongside the scrolling slides (e.g. a thumbnail rail). |
+| `eager` | `boolean` | Render slides the moment they near the viewport, even mid-scroll, instead of deferring until scrolling settles. Defaults to `false`. |
 | `bare` | `boolean` | Drop the outer border/background so the viewer fills its container. |
 | `className` | `string` | Optional class on the viewer shell. |

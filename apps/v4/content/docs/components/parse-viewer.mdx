@@ -1,14 +1,53 @@
 ---
 title: Parse Viewer
-description: Renders a Retab parse result — per-page text, rendered markdown, and the source document.
+description: Renders a Retab parse result — extracted per-page markdown with a Rendered/Text toggle and page controls.
 ---
 
-The parse viewer renders the output of a Retab **parse**: extracted per-page
-text, a rendered-markdown view, and an optional document tab. Ported verbatim
-from the Retab dashboard playground.
+The parse viewer renders the extracted markdown from a Retab **parse**: toggle
+each page between **Rendered** and **Text**, and page through the result. Below
+is the raw renderer on its own.
 
 <ParseViewerDemo />
 
-It takes the parse result as a prop; the source document is supplied through a
-`renderDocument` render-prop, so the viewer carries no document-rendering
-dependency of its own.
+Pair it with a source document through `renderDocument` to get the standard
+side-by-side parse layout (document ↔ markdown, synced by page) — that
+composition is the [Parse Viewer block](/blocks#parse).
+
+## Usage
+
+The parse result is passed as a prop; the source document is supplied through a
+`renderDocument` render-prop — here a `<PdfViewer />` — so the viewer carries no
+document-rendering dependency of its own. The document is expected to tag its
+pages with `data-page-number` (the bundled `PdfViewer` does) so the panes can
+scroll to each other.
+
+```tsx
+import { ParseViewer } from "@/components/viewers/parse/parse-viewer"
+import { PdfViewer } from "@/components/ui/pdf-viewer"
+
+export function Example({ result }) {
+  return (
+    <ParseViewer
+      result={result}
+      renderDocument={(handlers) => (
+        <PdfViewer
+          src="/document.pdf"
+          bare
+          onVisiblePageChange={handlers.onCurrentPageChange}
+          className="h-full"
+        />
+      )}
+    />
+  )
+}
+```
+
+Omit `renderDocument` to show the extracted markdown full-width.
+
+## Props
+
+| Prop | Type | Description |
+| --- | --- | --- |
+| `result` | `ParseResponse \| null` | The parse result; `output.pages` is an array of per-page markdown. |
+| `renderDocument` | `(handlers) => ReactNode` | Renders the source document beside the markdown. Receives `{ onCurrentPageChange, onScrollProgressChange }`. Omit to show markdown full-width. |
+| `isProcessing` | `boolean` | Show the parsing state while a result is pending. |

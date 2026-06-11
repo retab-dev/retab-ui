@@ -319,29 +319,64 @@ export function ItemTypeSelector({
       </DropdownMenu>
 
 
-      {/* Multiple choice options */}
-      {Array.isArray(getEnumBranch(value).enum) && (
+      {/* Multiple choice options - keep as before */}
+      {(() => {
+        const effective =
+          value.anyOf && Array.isArray(value.anyOf)
+            ? (value.anyOf.find(
+                (b: any) =>
+                  typeof b === "object" &&
+                  (b.type !== "null" || b.$ref || b.enum),
+              ) as any) || value
+            : value;
+        return Array.isArray((effective as any).enum);
+      })() && (
         <div className="mt-3">
-          <Label className="mb-2">Enabled options</Label>
+          <Label className="mb-2">
+            Enabled options
+          </Label>
           <div className="mb-2 flex flex-wrap gap-2">
-            {(getEnumBranch(value).enum ?? []).map((enumValue, index) => (
+            {(value.anyOf && Array.isArray(value.anyOf)
+              ? (
+                  value.anyOf.find(
+                    (b: any) =>
+                      typeof b === "object" &&
+                      (b.type !== "null" || b.$ref || b.enum),
+                  ) as any
+                )?.enum || []
+              : value.enum || []
+            ).map((enumValue: any, index: number) => (
               <div
                 key={index}
                 className="flex items-center space-x-2 rounded-md border border-border bg-muted px-2 py-1"
               >
                 <Input
                   disabled={disabled}
-                  value={String(enumValue ?? "")}
+                  value={
+                    typeof enumValue === "string"
+                      ? enumValue
+                      : String(enumValue)
+                  }
                   onChange={(e) => {
-                    const base = getEnumBranch(value);
-                    const newEnum = [...(base.enum ?? [])];
+                    const base =
+                      value.anyOf && Array.isArray(value.anyOf)
+                        ? (value.anyOf.find(
+                            (b: any) =>
+                              typeof b === "object" &&
+                              (b.type !== "null" || b.$ref || b.enum),
+                          ) as any) || {}
+                        : value;
+                    const newEnum = [...(((base as any).enum as any[]) || [])];
                     newEnum[index] = e.target.value;
-                    onChange(
-                      updateEffectiveNode(value, {
-                        ...base,
-                        enum: newEnum.filter((v) => v !== null && v !== ""),
-                      }),
+                    const updatedEffective = {
+                      ...base,
+                      enum: newEnum.filter((v) => v && v !== ""),
+                    } as any;
+                    const updatedFull = updateEffectiveNode(
+                      value as any,
+                      updatedEffective,
                     );
+                    onChange(updatedFull as any);
                   }}
                   className="h-6 w-24 border-0 bg-transparent px-1 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
                 />
@@ -352,12 +387,25 @@ export function ItemTypeSelector({
                   size="icon"
                   className="h-4 w-4 p-0"
                   onClick={() => {
-                    const base = getEnumBranch(value);
-                    const newEnum = [...(base.enum ?? [])];
+                    const base =
+                      value.anyOf && Array.isArray(value.anyOf)
+                        ? (value.anyOf.find(
+                            (b: any) =>
+                              typeof b === "object" &&
+                              (b.type !== "null" || b.$ref || b.enum),
+                          ) as any) || {}
+                        : value;
+                    const newEnum = [...(((base as any).enum as any[]) || [])];
                     newEnum.splice(index, 1);
-                    onChange(
-                      updateEffectiveNode(value, { ...base, enum: newEnum }),
+                    const updatedEffective = {
+                      ...base,
+                      enum: newEnum,
+                    } as any;
+                    const updatedFull = updateEffectiveNode(
+                      value as any,
+                      updatedEffective,
                     );
+                    onChange(updatedFull as any);
                   }}
                 >
                   <X className="h-3 w-3" />
@@ -371,13 +419,26 @@ export function ItemTypeSelector({
               placeholder="Add new value"
               onKeyDown={(e) => {
                 if (e.key === "Enter" && e.currentTarget.value) {
-                  const base = getEnumBranch(value);
-                  onChange(
-                    updateEffectiveNode(value, {
-                      ...base,
-                      enum: [...(base.enum ?? []), e.currentTarget.value],
-                    }),
+                  const base =
+                    value.anyOf && Array.isArray(value.anyOf)
+                      ? (value.anyOf.find(
+                          (b: any) =>
+                            typeof b === "object" &&
+                            (b.type !== "null" || b.$ref || b.enum),
+                        ) as any) || {}
+                      : value;
+                  const updatedEffective = {
+                    ...base,
+                    enum: [
+                      ...(((base as any).enum as any[]) || []),
+                      e.currentTarget.value,
+                    ],
+                  } as any;
+                  const updatedFull = updateEffectiveNode(
+                    value as any,
+                    updatedEffective,
                   );
+                  onChange(updatedFull as any);
                   e.currentTarget.value = "";
                 }
               }}
@@ -392,13 +453,26 @@ export function ItemTypeSelector({
                 const input = e.currentTarget
                   .previousElementSibling as HTMLInputElement;
                 if (input.value) {
-                  const base = getEnumBranch(value);
-                  onChange(
-                    updateEffectiveNode(value, {
-                      ...base,
-                      enum: [...(base.enum ?? []), input.value],
-                    }),
+                  const base =
+                    value.anyOf && Array.isArray(value.anyOf)
+                      ? (value.anyOf.find(
+                          (b: any) =>
+                            typeof b === "object" &&
+                            (b.type !== "null" || b.$ref || b.enum),
+                        ) as any) || {}
+                      : value;
+                  const updatedEffective = {
+                    ...base,
+                    enum: [
+                      ...(((base as any).enum as any[]) || []),
+                      input.value,
+                    ],
+                  } as any;
+                  const updatedFull = updateEffectiveNode(
+                    value as any,
+                    updatedEffective,
                   );
+                  onChange(updatedFull as any);
                   input.value = "";
                 }
               }}

@@ -1,5 +1,6 @@
-import type { JSONSchema7TypeName } from "json-schema"
+import type { JSONSchema7Definition, JSONSchema7TypeName } from "json-schema"
 
+import { nodeFromJson, projectNode } from "./convert"
 import { createId } from "./id"
 import type {
   DefinitionEntry,
@@ -63,6 +64,47 @@ function findInNode(node: DocumentNode, id: string): DocumentNode | null {
   return null
 }
 
+/**
+ * Resolve a dotted property path (e.g. `vendor.address.city`, or
+ * `line_items.description` through an array) to a node id. Follows `$ref` into
+ * definitions and descends array `items` between segments. Returns null if any
+ * segment can't be resolved.
+ */
+export function findNodeByPath(
+  doc: SchemaDocument,
+  path: string
+): string | null {
+  const segments = path.split(".").filter(Boolean)
+  let node: DocumentNode | undefined = doc.root
+  for (const segment of segments) {
+    node = unwrapContainer(doc, node)
+    const entry = node?.properties?.find((p) => p.key === segment)
+    if (!entry) return null
+    node = entry.node
+  }
+  return node?.id ?? null
+}
+
+/** Follow refs and descend array items until we reach a property-bearing node. */
+function unwrapContainer(
+  doc: SchemaDocument,
+  node: DocumentNode | undefined
+): DocumentNode | undefined {
+  let current = node
+  while (current) {
+    if (current.ref) {
+      current = doc.defs.find((d) => d.id === current!.ref)?.node
+      continue
+    }
+    if (current.items && !current.properties) {
+      current = current.items
+      continue
+    }
+    break
+  }
+  return current
+}
+
 /** All descendant nodes one level down — the single place child shape is known. */
 function childNodes(node: DocumentNode): DocumentNode[] {
   const out: DocumentNode[] = []
@@ -103,6 +145,85 @@ export function updateNodeRest(
     ...node,
     rest: { ...node.rest, ...patch },
   }))
+}
+
+// ---------------------------------------------------------------------------
+// JSON bridge — read/write a node's JSON Schema by id
+//
+// These let existing components keep their JSON-Schema leaf utils (updateType,
+// setNullable, updateEffectiveNode, …) unchanged: read the node's JSON with
+// `getNodeJson`, transform it with the util, and splice the result back through
+// the Document with `updateNodeJson`, preserving the node's stable id.
+// ---------------------------------------------------------------------------
+
+/** Project the node with `id` to JSON Schema (null if not found). */
+export function getNodeJson(
+  doc: SchemaDocument,
+  id: string
+): JSONSchema7Definition | null {
+  const node = getNode(doc, id)
+  return node ? projectNode(doc, node) : null
+}
+
+/** Replace the node with `id` from a JSON Schema subtree, keeping its id and its
+ *  original key order (so e.g. a top-level edit doesn't move `$defs`). */
+export function replaceNodeJson(
+  doc: SchemaDocument,
+  id: string,
+  jsonNode: JSONSchema7Definition
+): SchemaDocument {
+  const converted = nodeFromJson(jsonNode, doc)
+  return updateNode(doc, id, (node) => ({
+    ...converted,
+    id: node.id,
+    rest: {
+      ...converted.rest,
+      __order: node.rest.__order ?? converted.rest.__order,
+    },
+  }))
+}
+
+/** Unwrap an `anyOf:[X, {type:null}]` nullable node to its effective branch X
+ *  (mirrors the editor's `getEffectiveNode`). Returns the node itself otherwise. */
+export function getEffectiveDocNode(node: DocumentNode): DocumentNode {
+  if (node.anyOf) {
+    const nonNull = node.anyOf.find((b) => b.type !== "null" || b.ref)
+    if (nonNull) return nonNull
+  }
+  return node
+}
+
+/** Document id of an object's child property `key` (through the effective branch). */
+export function getChildNodeId(
+  doc: SchemaDocument,
+  parentId: string,
+  key: string
+): string | undefined {
+  const parent = getNode(doc, parentId)
+  if (!parent) return undefined
+  return getEffectiveDocNode(parent).properties?.find((e) => e.key === key)?.node
+    .id
+}
+
+/** Document id of an array's items node (through the effective branch). */
+export function getItemsNodeId(
+  doc: SchemaDocument,
+  parentId: string
+): string | undefined {
+  const parent = getNode(doc, parentId)
+  if (!parent) return undefined
+  return getEffectiveDocNode(parent).items?.id
+}
+
+/** Read a node's JSON, transform it with a JSON→JSON function, splice it back. */
+export function updateNodeJson(
+  doc: SchemaDocument,
+  id: string,
+  transform: (json: JSONSchema7Definition) => JSONSchema7Definition
+): SchemaDocument {
+  const json = getNodeJson(doc, id)
+  if (json === null) return doc
+  return replaceNodeJson(doc, id, transform(json))
 }
 
 function replaceInNode(

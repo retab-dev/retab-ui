@@ -31,6 +31,8 @@ import { PdfViewerDemo } from "@/components/pdf-viewer-demo"
 import { DocxViewerDemo } from "@/components/docx-viewer-demo"
 import { ImageViewerDemo } from "@/components/image-viewer-demo"
 import { PptxViewerDemo } from "@/components/pptx-viewer-demo"
+import { XlsxViewerDemo } from "@/components/xlsx-viewer-demo"
+import { FileViewerDemo } from "@/components/file-viewer-demo"
 import { JsonFormDemo } from "@/components/json-form-demo"
 import { JsonFormFieldDemo } from "@/components/json-form-field-demo"
 import { JsonTableDemo } from "@/components/json-table/json-table-demo"
@@ -42,6 +44,9 @@ import {
   SplitViewerDemo,
 } from "@/components/viewers/viewers-demo"
 import { SegmentedViewerDemo } from "@/components/segmented-viewer-demo"
+import { FileThumbnailDemo } from "@/components/file-thumbnail-demo"
+import { FileThumbnailFormatsDemo } from "@/components/file-thumbnail-formats-demo"
+import { ComponentSource } from "@/components/component-source"
 
 export const mdxComponents = {
   h1: ({ className, ...props }: React.ComponentProps<"h1">) => (
@@ -342,6 +347,7 @@ export const mdxComponents = {
   CodeTabs,
   CodeCollapsibleWrapper,
   DocsMdxCodeBlock,
+  ComponentSource,
   RetabSchemaBuilderDemo,
   PropertyFormDemo,
   CsvViewerDemo,
@@ -350,6 +356,8 @@ export const mdxComponents = {
   DocxViewerDemo,
   ImageViewerDemo,
   PptxViewerDemo,
+  XlsxViewerDemo,
+  FileViewerDemo,
   JsonFormDemo,
   JsonFormFieldDemo,
   JsonTableDemo,
@@ -359,6 +367,8 @@ export const mdxComponents = {
   SplitViewerDemo,
   EditViewerDemo,
   SegmentedViewerDemo,
+  FileThumbnailDemo,
+  FileThumbnailFormatsDemo,
   Link: ({ className, ...props }: React.ComponentProps<typeof Link>) => (
     <Link
       className={cn("font-medium underline underline-offset-4", className)}

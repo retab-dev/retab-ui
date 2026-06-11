@@ -43,6 +43,41 @@ function loadJSZip(): Promise<JSZipLike> {
 const EMU_PER_PX = 9525
 const DEFAULT_SLIDE = { width: 960, height: 720 } // 4:3 fallback
 
+// Idle gap after the last scroll event before deferred renders are released.
+const SCROLL_IDLE_MS = 120
+
+/**
+ * Tracks whether the scroll viewport is actively scrolling. While scrolling, an
+ * uncached slide's (expensive) render is held; once scrolling settles for
+ * SCROLL_IDLE_MS, waiters fire. This keeps a fast fling at frame rate without
+ * penalizing the initial paint or a settled scroll (which render immediately).
+ */
+function createScrollActivity() {
+  let scrolling = false
+  let timer = 0
+  const waiters = new Set<() => void>()
+  return {
+    handleScroll() {
+      scrolling = true
+      clearTimeout(timer)
+      timer = window.setTimeout(() => {
+        scrolling = false
+        const pending = [...waiters]
+        waiters.clear()
+        for (const fn of pending) fn()
+      }, SCROLL_IDLE_MS)
+    },
+    isScrolling: () => scrolling,
+    /** Run `cb` once scrolling settles; returns an unsubscribe. */
+    onIdle(cb: () => void) {
+      waiters.add(cb)
+      return () => waiters.delete(cb)
+    },
+  }
+}
+
+type ScrollActivity = ReturnType<typeof createScrollActivity>
+
 interface PptxSource {
   slideCount: number
   /** Native slide size in CSS px (uniform across the deck in OOXML). */
@@ -50,10 +85,19 @@ interface PptxSource {
   baseHeight: number
   /**
    * Render slide `index` into `canvas` at `scale` (multiplier on native size).
-   * Calls are serialized: the underlying viewer holds one drawing context, so
-   * concurrent renders to different canvases would race.
+   * Heavy renders are serialized (the viewer holds one drawing context) and their
+   * output is cached as an ImageBitmap, so scroll-back and revisited zoom levels
+   * redraw instantly. `isLive` lets a queued render bail if its slide has since
+   * scrolled away — so fast-scrolling never wastes the queue on stale slides.
    */
-  render(index: number, canvas: HTMLCanvasElement, scale: number): Promise<void>
+  render(
+    index: number,
+    canvas: HTMLCanvasElement,
+    scale: number,
+    isLive?: () => boolean
+  ): Promise<void>
+  /** Is this slide already rendered at this scale? (cheap redraw, no heavy work) */
+  hasCached(index: number, scale: number): boolean
 }
 
 async function readSlideSize(buf: ArrayBuffer) {
@@ -89,17 +133,80 @@ async function buildPptxSource(src: string): Promise<PptxSource> {
   await viewer.loadFile(buf)
   const slideCount = viewer.getSlideCount()
 
-  // Serialize renders through a promise chain (single shared drawing context).
+  // Cache rendered slides as ImageBitmaps (keyed by slide + zoom level) so a
+  // capped few survive off-screen — scroll-back and revisited zoom redraw from
+  // the bitmap instead of re-running the renderer. Bounded so a long deck at
+  // retina never holds every full-res slide at once.
+  const MAX_CACHED = 8
+  const cache = new Map<string, ImageBitmap>()
+  const recency: string[] = []
+  const touch = (key: string) => {
+    const i = recency.indexOf(key)
+    if (i >= 0) recency.splice(i, 1)
+    recency.push(key)
+  }
+  const evict = () => {
+    while (cache.size > MAX_CACHED) {
+      const key = recency.shift()
+      if (key == null) break
+      cache.get(key)?.close()
+      cache.delete(key)
+    }
+  }
+  const drawCached = (canvas: HTMLCanvasElement, bmp: ImageBitmap) => {
+    canvas.width = bmp.width
+    canvas.height = bmp.height
+    canvas.getContext("2d")?.drawImage(bmp, 0, 0)
+  }
+
+  const cacheKey = (index: number, scale: number) =>
+    `${index}@${Math.round(scale * 100)}`
+
+  // Serialize the heavy renders through a promise chain (single drawing context).
   let queue: Promise<unknown> = Promise.resolve()
-  const render = (index: number, canvas: HTMLCanvasElement, scale: number) => {
+  const render = (
+    index: number,
+    canvas: HTMLCanvasElement,
+    scale: number,
+    isLive?: () => boolean
+  ) => {
+    const key = cacheKey(index, scale)
+    const hit = cache.get(key)
+    if (hit) {
+      // Fast path: redraw the cached bitmap, no queue, no re-render.
+      drawCached(canvas, hit)
+      touch(key)
+      return Promise.resolve()
+    }
     const run = queue
       .catch(() => {})
-      .then(() => viewer.renderSlide(index, canvas, { scale, quality: "high" }))
+      .then(async () => {
+        // Skip if the slide scrolled away (or zoom changed) while queued.
+        if (isLive && !isLive()) return
+        await viewer.renderSlide(index, canvas, { scale, quality: "high" })
+        try {
+          const bmp = await createImageBitmap(canvas)
+          cache.set(key, bmp)
+          touch(key)
+          evict()
+        } catch {
+          /* snapshot unsupported — fine, just no cache for this slide */
+        }
+      })
     queue = run.catch(() => {})
     return run.then(() => undefined)
   }
 
-  return { slideCount, baseWidth: size.width, baseHeight: size.height, render }
+  const hasCached = (index: number, scale: number) =>
+    cache.has(cacheKey(index, scale))
+
+  return {
+    slideCount,
+    baseWidth: size.width,
+    baseHeight: size.height,
+    render,
+    hasCached,
+  }
 }
 
 // --- resource cache: stable promises so React `use()` can read them ----------
@@ -155,6 +262,13 @@ export interface PptxViewerProps {
   header?: React.ReactNode
   /** Rendered as a left rail alongside the scrolling slides (e.g. a thumbnail rail). */
   aside?: React.ReactNode
+  /**
+   * Render slides as soon as they near the viewport, even mid-scroll. Defaults to
+   * `false`: a slide's (expensive) render is deferred a beat after it settles, so
+   * a fast fling stays at 60fps instead of competing with on-the-fly renders.
+   * Already-rendered slides always redraw instantly regardless of this flag.
+   */
+  eager?: boolean
 }
 
 export function PptxViewer(props: PptxViewerProps) {
@@ -185,6 +299,7 @@ function PptxViewerInner({
   bare = false,
   header,
   aside,
+  eager = false,
 }: PptxViewerProps) {
   const source = React.use(getPptxSource(src))
   const baseWidth = source.baseWidth || 1
@@ -205,6 +320,10 @@ function PptxViewerInner({
     observer.observe(el)
     return () => observer.disconnect()
   }, [])
+
+  // One activity tracker per viewer; SlideCanvas reads it to defer renders while
+  // the user is actively scrolling.
+  const scrollActivity = React.useMemo(() => createScrollActivity(), [])
 
   // Report the slide nearest the top of the scroll viewport as the user scrolls.
   const scrollViewportRef = React.useRef<HTMLDivElement | null>(null)
@@ -230,6 +349,13 @@ function PptxViewerInner({
       onVisiblePageChange?.(current)
     }
   }, [onVisiblePageChange, onScrollProgressChange])
+
+  // Always-attached scroll handler: mark scroll activity (cheap) and, only when
+  // someone is listening, run the page-tracking work (which queries the DOM).
+  const onViewportScroll = React.useCallback(() => {
+    if (!eager) scrollActivity.handleScroll()
+    if (onVisiblePageChange || onScrollProgressChange) handleScroll()
+  }, [eager, scrollActivity, handleScroll, onVisiblePageChange, onScrollProgressChange])
 
   const fitScale = containerWidth ? (containerWidth - 32) / baseWidth : 1
   const scale = manualScale ?? fitScale
@@ -304,11 +430,7 @@ function PptxViewerInner({
           <ScrollArea
             className="min-h-0 flex-1"
             viewportRef={scrollViewportRef}
-            viewportProps={
-              onVisiblePageChange || onScrollProgressChange
-                ? { onScroll: handleScroll }
-                : undefined
-            }
+            viewportProps={{ onScroll: onViewportScroll }}
           >
             <div ref={containerRef} className="flex flex-col items-center gap-4 p-4">
               {Array.from({ length: slideCount }, (_, i) => (
@@ -318,6 +440,8 @@ function PptxViewerInner({
                   index={i}
                   scale={scale}
                   rotation={rotation}
+                  eager={eager}
+                  activity={scrollActivity}
                   renderOverlay={renderPageOverlay}
                 />
               ))}
@@ -334,12 +458,16 @@ function PptxSlide({
   index,
   scale,
   rotation,
+  eager,
+  activity,
   renderOverlay,
 }: {
   source: PptxSource
   index: number
   scale: number
   rotation: number
+  eager: boolean
+  activity: ScrollActivity
   renderOverlay?: (props: PptxPageOverlayProps) => React.ReactNode
 }) {
   const [inView, setInView] = React.useState(false)
@@ -384,7 +512,13 @@ function PptxSlide({
         }}
       >
         {inView ? (
-          <SlideCanvas source={source} index={index} scale={scale} />
+          <SlideCanvas
+            source={source}
+            index={index}
+            scale={scale}
+            eager={eager}
+            activity={activity}
+          />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-white">
             <Spinner className="size-4 text-muted-foreground" />
@@ -410,10 +544,14 @@ function SlideCanvas({
   source,
   index,
   scale,
+  eager,
+  activity,
 }: {
   source: PptxSource
   index: number
   scale: number
+  eager: boolean
+  activity: ScrollActivity
 }) {
   const dpr = (typeof window !== "undefined" ? window.devicePixelRatio : 1) || 1
   const cssW = source.baseWidth * scale
@@ -425,20 +563,41 @@ function SlideCanvas({
       if (!canvas) return
       let cancelled = false
       setRendered(false)
+      const effScale = scale * dpr
+
       // Render at DPR-scaled resolution for crispness; CSS keeps logical size.
-      source
-        .render(index, canvas, scale * dpr)
-        .then(() => {
-          if (!cancelled) setRendered(true)
-        })
-        .catch(() => {
-          /* a single slide failing shouldn't break the deck */
-        })
+      // isLive lets the queue drop this render if the slide unmounts first.
+      const start = () => {
+        source
+          .render(index, canvas, effScale, () => !cancelled)
+          .then(() => {
+            if (!cancelled) setRendered(true)
+          })
+          .catch(() => {
+            /* a single slide failing shouldn't break the deck */
+          })
+      }
+
+      // Render now for the initial paint, a settled scroll, an already-cached
+      // slide (cheap redraw), or eager mode. Only while the user is actively
+      // scrolling do we hold the heavy render until scrolling settles — so a fast
+      // fling doesn't compete with scroll frames. If the slide scrolls out first,
+      // cleanup unsubscribes and the render never runs.
+      if (eager || source.hasCached(index, effScale) || !activity.isScrolling()) {
+        start()
+        return () => {
+          cancelled = true
+        }
+      }
+      const off = activity.onIdle(() => {
+        if (!cancelled) start()
+      })
       return () => {
         cancelled = true
+        off()
       }
     },
-    [source, index, scale, dpr]
+    [source, index, scale, dpr, eager, activity]
   )
 
   return (

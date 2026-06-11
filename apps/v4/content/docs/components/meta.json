@@ -12,11 +12,11 @@
     "docx-viewer",
     "image-viewer",
     "pptx-viewer",
+    "xlsx-viewer",
+    "file-viewer",
     "parse-viewer",
-    "classification-viewer",
     "edit-viewer",
-    "partition-viewer",
-    "split-viewer",
-    "segmented-viewer"
+    "segmented-viewer",
+    "file-thumbnail"
   ]
 }

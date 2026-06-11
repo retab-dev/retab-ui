@@ -1,0 +1,6 @@
+2026-06-11T08:00:01Z INFO  file-viewer: detected category=pdf for report.pdf
+2026-06-11T08:00:01Z DEBUG loader: code-split chunk pdf-viewer loaded in 142ms
+2026-06-11T08:00:02Z INFO  pdf-viewer: rendered page 1/96
+2026-06-11T08:00:02Z WARN  cache: bitmap LRU at capacity (8), evicting slide@45
+2026-06-11T08:00:03Z INFO  file-viewer: detected category=text for app-config.json
+2026-06-11T08:00:03Z ERROR fetch: 404 for /samples/missing.bin (showing fallback)

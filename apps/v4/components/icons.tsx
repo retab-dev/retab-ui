@@ -1,24 +1,22 @@
 import { File } from "lucide-react"
 
-import { cn } from "@/lib/utils"
-import { withUiBasePath } from "@/lib/zone-path"
-
 type IconProps = React.HTMLAttributes<SVGElement>
-type LogoProps = React.HTMLAttributes<HTMLSpanElement>
-
-const logoSrc = withUiBasePath("/favicon-official.svg")
 
 export const Icons = {
-  logo: ({ className, style, ...props }: LogoProps) => (
-    <span
+  logo: ({ className, ...props }: IconProps) => (
+    <svg
+      viewBox="0 0 48 48"
+      fill="currentColor"
+      xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"
-      className={cn("inline-flex items-center justify-center", className)}
-      style={style}
+      className={className}
       {...props}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={logoSrc} alt="" className="size-full rounded-[20%]" />
-    </span>
+      <rect x="11" y="23.5303" width="7.26572" height="6.76463" />
+      <rect x="11" y="10" width="7.26572" height="6.76463" />
+      <rect x="18.2656" y="16.7651" width="19.0412" height="6.76463" />
+      <rect x="18.2656" y="30.2944" width="19.0412" height="6.76463" />
+    </svg>
   ),
   twitter: (props: IconProps) => (
     <svg
