@@ -8,6 +8,7 @@ import {
   toSegments,
   type Segment,
 } from "@/lib/segments"
+import { cn } from "@/lib/utils"
 import { FileThumbnail } from "@/components/ui/file-thumbnail"
 import { PageRibbon, type RibbonRow } from "@/components/ui/page-ribbon"
 import { RunCard } from "@/components/ui/run-card"
@@ -207,6 +208,7 @@ function SubdocumentThumbnail({ segment }: { segment: Segment }) {
           className="relative w-full rounded-[4px] shadow-sm"
         />
         <LegendBadge
+          wrap
           label={segment.label}
           color={segment.color}
           className="inset-x-0.5 top-0.5"
@@ -368,20 +370,33 @@ function FillThumbnail({ src, fileName }: { src: string; fileName: string }) {
   )
 }
 
-/** A color-keyed legend badge, overlaid on a thumbnail. */
+/**
+ * A color-keyed legend badge, overlaid on a thumbnail. By default it truncates;
+ * `wrap` lets the label flow onto balanced lines (`text-wrap: balance`) so a
+ * full subdocument name reads inside a narrow chip instead of being clipped.
+ */
 function LegendBadge({
   label,
   color,
   className,
+  wrap = false,
 }: {
   label: string
   color: string
   className?: string
+  wrap?: boolean
 }) {
   return (
     <span
-      className={`absolute inline-flex max-w-[calc(100%-1rem)] items-center truncate rounded px-1.5 py-0.5 text-center text-[9px] font-semibold shadow-sm ${className ?? ""}`}
+      className={cn(
+        "absolute rounded px-1.5 py-0.5 text-center text-[9px] font-semibold shadow-sm",
+        wrap
+          ? "block text-balance leading-[1.15] hyphens-auto"
+          : "inline-flex max-w-[calc(100%-1rem)] items-center truncate",
+        className
+      )}
       style={{ backgroundColor: color, color: readableTextColor(color) }}
+      lang="en"
       title={label}
     >
       {label}
