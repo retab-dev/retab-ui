@@ -42,7 +42,6 @@ interface SingleFileFormRowProps {
   }) => void;
   onCellHoverEnd?: () => void;
   fieldIndicationMap?: Map<string, string>;
-  fieldReasoningMap?: Map<string, string>;
 }
 
 export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
@@ -62,7 +61,6 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
     onCellHoverStart,
     onCellHoverEnd,
     fieldIndicationMap,
-    fieldReasoningMap,
   }) => {
     const { rowHeight, columnWidth } = useSheetOptionsStore();
     const theme = getTheme("single-file");
@@ -131,7 +129,6 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
               onCellHoverStart={onCellHoverStart}
               onCellHoverEnd={onCellHoverEnd}
               fieldIndicationMap={fieldIndicationMap}
-              fieldReasoningMap={fieldReasoningMap}
             />
           );
         })}

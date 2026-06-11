@@ -343,6 +343,8 @@ function ImageViewerInner({
   // current-page cursor stays in sync even when the viewer is embedded.
   const scrollViewportRef = React.useRef<HTMLDivElement | null>(null)
   const lastReported = React.useRef(0)
+  // The frame (TIFF page) nearest the top of the viewport, shown as "Page N of M".
+  const [currentFrame, setCurrentFrame] = React.useState(1)
   const handleScroll = React.useCallback(() => {
     const viewport = scrollViewportRef.current
     if (!viewport) return
@@ -363,6 +365,7 @@ function ImageViewerInner({
     }
     if (current && current !== lastReported.current) {
       lastReported.current = current
+      setCurrentFrame(current)
       onVisiblePageChange?.(current)
     }
   }, [onVisiblePageChange, onScrollProgressChange])
@@ -404,7 +407,7 @@ function ImageViewerInner({
   const frameCount = source.frames.length
   const countLabel =
     source.kind === "tiff"
-      ? `${frameCount} page${frameCount === 1 ? "" : "s"}`
+      ? `Page ${Math.min(currentFrame, frameCount)} of ${frameCount}`
       : `${frameCount} image${frameCount === 1 ? "" : "s"}`
 
   return (
@@ -475,11 +478,8 @@ function ImageViewerInner({
           <ScrollArea
             className="min-h-0 flex-1"
             viewportRef={scrollViewportRef}
-            viewportProps={
-              onVisiblePageChange || onScrollProgressChange
-                ? { onScroll: handleScroll }
-                : undefined
-            }
+            // Always track scroll so the toolbar's "Page N of M" updates (TIFFs).
+            viewportProps={{ onScroll: handleScroll }}
           >
             <div
               ref={containerRef}

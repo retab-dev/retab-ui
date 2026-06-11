@@ -1,0 +1,379 @@
+[
+  {
+    "bbox": {
+      "height": 0.023118317127227783,
+      "left": 0.22526241838932037,
+      "page": 1,
+      "top": 0.5017300844192505,
+      "width": 0.6918964236974716
+    },
+    "description": "Name of the primary account owner",
+    "key": "name",
+    "type": "text",
+    "value": "David Alan Whitmore"
+  },
+  {
+    "bbox": {
+      "height": 0.023118317127227783,
+      "left": 0.2212209850549698,
+      "page": 1,
+      "top": 0.5357827544212341,
+      "width": 0.6959378570318222
+    },
+    "description": "Name of the additional owner or authorized individual",
+    "key": "additional_owner/authorized_individual_name",
+    "type": "text",
+    "value": "Elena Marie Whitmore"
+  },
+  {
+    "bbox": {
+      "height": 0.024680376052856445,
+      "left": 0.22182722389698029,
+      "page": 1,
+      "top": 0.6305991411209106,
+      "width": 0.19601033627986908
+    },
+    "description": "First Fidelity Account Number",
+    "key": "fidelity_account_number",
+    "type": "text",
+    "value": "X41-872034"
+  },
+  {
+    "bbox": {
+      "height": 0.024687528610229492,
+      "left": 0.43983685970306396,
+      "page": 1,
+      "top": 0.6307812333106995,
+      "width": 0.19727981090545654
+    },
+    "description": "Second Fidelity Account Number",
+    "key": "fidelity_account_number_2",
+    "type": "text",
+    "value": "X41-872035"
+  },
+  {
+    "bbox": {
+      "height": 0.024062514305114746,
+      "left": 0.6593510508537292,
+      "page": 1,
+      "top": 0.6310938000679016,
+      "width": 0.19647127389907837
+    },
+    "description": "Third Fidelity Account Number",
+    "key": "fidelity_account_number_3",
+    "type": "text",
+    "value": null
+  },
+  {
+    "bbox": {
+      "height": 0.024771258234977722,
+      "left": 0.22348324954509735,
+      "page": 2,
+      "top": 0.14343103766441345,
+      "width": 0.19443847239017487
+    },
+    "description": "Bank Routing or ABA Number for the wire recipient",
+    "key": "recipient_routing_aba_number",
+    "type": "text",
+    "value": "121000248"
+  },
+  {
+    "bbox": {
+      "height": 0.02391168475151062,
+      "left": 0.4227624833583832,
+      "page": 2,
+      "top": 0.14331382513046265,
+      "width": 0.49134036898612976
+    },
+    "description": "Name of the recipient's bank",
+    "key": "recipient_bank_name",
+    "type": "text",
+    "value": "Wells Fargo Bank, N.A."
+  },
+  {
+    "bbox": {
+      "height": 0.024067968130111694,
+      "left": 0.22328156232833862,
+      "page": 2,
+      "top": 0.17847806215286255,
+      "width": 0.19403502345085144
+    },
+    "description": "Account number of the wire recipient",
+    "key": "recipient_account_number",
+    "type": "text",
+    "value": "4872019365"
+  },
+  {
+    "bbox": {
+      "height": 0.024067983031272888,
+      "left": 0.4223591089248657,
+      "page": 2,
+      "top": 0.17785291373729706,
+      "width": 0.4913403391838074
+    },
+    "description": "Name(s) of the account owner",
+    "key": "recipient_account_owner_name",
+    "type": "text",
+    "value": "David Alan Whitmore & Elena Marie Whitmore"
+  },
+  {
+    "bbox": {
+      "height": 0.023130252957344055,
+      "left": 0.22429005801677704,
+      "page": 2,
+      "top": 0.2133297324180603,
+      "width": 0.689006045460701
+    },
+    "description": "Full address of the wire recipient",
+    "key": "recipient_address",
+    "type": "text",
+    "value": "1450 Montgomery Street, Suite 700"
+  },
+  {
+    "bbox": {
+      "height": 0.02422425150871277,
+      "left": 0.22429005801677704,
+      "page": 2,
+      "top": 0.24732184410095215,
+      "width": 0.21541519463062286
+    },
+    "description": "City of the wire recipient",
+    "key": "recipient_city",
+    "type": "text",
+    "value": "San Francisco"
+  },
+  {
+    "bbox": {
+      "height": 0.02391168475151062,
+      "left": 0.4449494481086731,
+      "page": 2,
+      "top": 0.24685296416282654,
+      "width": 0.11133825778961182
+    },
+    "description": "State or Province of the wire recipient",
+    "key": "recipient_state_province",
+    "type": "text",
+    "value": "CA"
+  },
+  {
+    "bbox": {
+      "height": 0.02391168475151062,
+      "left": 0.5607250928878784,
+      "page": 2,
+      "top": 0.2471655309200287,
+      "width": 0.11214500665664673
+    },
+    "description": "ZIP or Postal Code of the wire recipient",
+    "key": "recipient_zip_postal_code",
+    "type": "text",
+    "value": "94104"
+  },
+  {
+    "bbox": {
+      "height": 0.02422425150871277,
+      "left": 0.6769040822982788,
+      "page": 2,
+      "top": 0.24732184410095215,
+      "width": 0.23760223388671875
+    },
+    "description": "Country of the wire recipient",
+    "key": "recipient_country",
+    "type": "text",
+    "value": "United States"
+  },
+  {
+    "bbox": {
+      "height": 0.022505104541778564,
+      "left": 0.22429005801677704,
+      "page": 2,
+      "top": 0.2831893563270569,
+      "width": 0.6898127943277359
+    },
+    "description": "For Further Credit details",
+    "key": "recipient_for_further_credit",
+    "type": "text",
+    "value": "For Further Credit to Whitmore Family Trust, Acc #88210456"
+  },
+  {
+    "bbox": {
+      "height": 0.023442834615707397,
+      "left": 0.22590361535549164,
+      "page": 2,
+      "top": 0.3164781928062439,
+      "width": 0.689006045460701
+    },
+    "description": "Additional details or instructions to be included with the wire transfer",
+    "key": "wire_additional_details",
+    "type": "text",
+    "value": null
+  },
+  {
+    "bbox": {
+      "height": 0.023755401372909546,
+      "left": 0.2240883708000183,
+      "page": 2,
+      "top": 0.37414753437042236,
+      "width": 0.1972622275352478
+    },
+    "description": "Correspondent Bank Routing or ABA Number",
+    "key": "correspondent_routing_aba_number",
+    "type": "text",
+    "value": "N/A"
+  },
+  {
+    "bbox": {
+      "height": 0.024067968130111694,
+      "left": 0.42619138956069946,
+      "page": 2,
+      "top": 0.37367868423461914,
+      "width": 0.48851650953292847
+    },
+    "description": "Name of the Correspondent Bank",
+    "key": "correspondent_bank_name",
+    "type": "text",
+    "value": "N/A"
+  },
+  {
+    "bbox": {
+      "height": 0.011559247970581055,
+      "left": 0.22135350108146667,
+      "page": 2,
+      "top": 0.41847583651542664,
+      "width": 0.015321388840675354
+    },
+    "description": "Indicate if the recipient bank is outside the United States",
+    "key": "is_recipient_outside_us",
+    "type": "checkbox",
+    "value": "unchecked"
+  },
+  {
+    "bbox": {
+      "height": 0.023442834615707397,
+      "left": 0.22610536217689514,
+      "page": 2,
+      "top": 0.4465077221393585,
+      "width": 0.3497471511363983
+    },
+    "description": "SWIFT Code for international wire recipient",
+    "key": "recipient_swift_code",
+    "type": "text",
+    "value": "N/A"
+  },
+  {
+    "bbox": {
+      "height": 0.02375534176826477,
+      "left": 0.5812984108924866,
+      "page": 2,
+      "top": 0.44572630524635315,
+      "width": 0.33361124992370605
+    },
+    "description": "Name of the country for the international bank",
+    "key": "recipient_bank_country",
+    "type": "text",
+    "value": "N/A"
+  },
+  {
+    "bbox": {
+      "height": 0.04469764232635498,
+      "left": 0.22731555998325348,
+      "page": 2,
+      "top": 0.5659098625183105,
+      "width": 0.6877957433462143
+    },
+    "description": "Reason for standing instructions requested for a country different from the country of tax residence",
+    "key": "w8_standing_instructions_reason",
+    "type": "text",
+    "value": "N/A - domestic transfer to a U.S. financial institution matching country of tax residence"
+  },
+  {
+    "bbox": {
+      "height": 0.0234375,
+      "left": 0.10474555939435959,
+      "page": 3,
+      "top": 0.15593750774860382,
+      "width": 0.453628845512867
+    },
+    "description": "Print Name of Owner/Authorized Individual",
+    "key": "print_owner_name_1",
+    "type": "text",
+    "value": "DAVID ALAN WHITMORE"
+  },
+  {
+    "bbox": {
+      "height": 0.12656249105930328,
+      "left": 0.5779135227203369,
+      "page": 3,
+      "top": 0.16343750059604645,
+      "width": 0.35895490646362305
+    },
+    "description": "Medallion Signature Guarantee stamp area",
+    "key": "medallion_signature_guarantee",
+    "type": "text",
+    "value": null
+  },
+  {
+    "bbox": {
+      "height": 0.029069527983665466,
+      "left": 0.15744520723819733,
+      "page": 3,
+      "top": 0.20239263772964478,
+      "width": 0.39974115788936615
+    },
+    "description": "Signature of Owner/Authorized Individual",
+    "key": "owner_signature_1",
+    "type": "text",
+    "value": "David Alan Whitmore"
+  },
+  {
+    "bbox": {
+      "height": 0.03609374165534973,
+      "left": 0.15319037437438965,
+      "page": 3,
+      "top": 0.2547656297683716,
+      "width": 0.4018603563308716
+    },
+    "description": "Date of signature (MM/DD/YYYY)",
+    "key": "date_1",
+    "type": "text",
+    "value": "06/11/2026"
+  },
+  {
+    "bbox": {
+      "height": 0.02406829595565796,
+      "left": 0.1074775755405426,
+      "page": 3,
+      "top": 0.3105437457561493,
+      "width": 0.451320618391037
+    },
+    "description": "Print Name of second Owner/Authorized Individual",
+    "key": "print_owner_name_2",
+    "type": "text",
+    "value": "ELENA MARIE WHITMORE"
+  },
+  {
+    "bbox": {
+      "height": 0.03282040357589722,
+      "left": 0.16066893935203552,
+      "page": 3,
+      "top": 0.35492947697639465,
+      "width": 0.397323340177536
+    },
+    "description": "Signature of second Owner/Authorized Individual",
+    "key": "owner_signature_2",
+    "type": "text",
+    "value": "Elena Marie Whitmore"
+  },
+  {
+    "bbox": {
+      "height": 0.03094497323036194,
+      "left": 0.15986301004886627,
+      "page": 3,
+      "top": 0.41275593638420105,
+      "width": 0.3965173810720444
+    },
+    "description": "Date of second signature (MM/DD/YYYY)",
+    "key": "date_2",
+    "type": "text",
+    "value": "06/11/2026"
+  }
+]

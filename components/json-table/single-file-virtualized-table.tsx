@@ -49,8 +49,6 @@ interface SingleFileVirtualizedTableProps {
   onGroundTruthChange?: (fieldPath: string, newValue: any) => void;
   /** Map from field paths to indication texts (for review) */
   fieldIndicationMap?: Map<string, string>;
-  /** Map from field paths to reasoning texts extracted from data (for review) */
-  fieldReasoningMap?: Map<string, string>;
   /** Rows to render beyond the viewport on each side (virtualization buffer). Default 12. */
   overscan?: number;
 }
@@ -133,7 +131,6 @@ export const SingleFileVirtualizedTable =
       onCellHoverStart,
       onGroundTruthChange,
       fieldIndicationMap,
-      fieldReasoningMap,
       overscan = 12,
     }) => {
 
@@ -246,7 +243,6 @@ export const SingleFileVirtualizedTable =
                           allowEditing={allowEditing}
                           onCellHoverStart={onCellHoverStart}
                           fieldIndicationMap={fieldIndicationMap}
-                          fieldReasoningMap={fieldReasoningMap}
                         />
                         );
                       })

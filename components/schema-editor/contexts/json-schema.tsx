@@ -299,24 +299,12 @@ function JsonSchemaEditorProviderRaw({
     (schema?: ExtendedJSONSchema7): number => {
       if (!schema || typeof schema !== "object") return 0;
 
-      // Track processed paths to avoid infinite recursion from circular references
-      // but still count each reference occurrence
-      // const processedPaths = new Set<string>(); <-- REMOVED
-
       // Function to count properties in a schema node
       const countProperties = (
         node: ExtendedJSONSchema7,
         path: string = "",
       ): number => {
         if (!node || typeof node !== "object") return 0;
-
-        // Prevent infinite recursion by tracking unique paths
-        // if (processedPaths.has(path) && path !== '') { <-- REMOVED
-        //   return 0;
-        // }
-        // if (path !== '') {
-        //  processedPaths.add(path); <-- REMOVED
-        // }
 
         let count = 0;
 
@@ -346,21 +334,15 @@ function JsonSchemaEditorProviderRaw({
               );
             }
           }
-          // DO NOT return here anymore, continue processing the current node
-          // return count; <-- REMOVED
         }
 
         // Count immediate properties in the current object
         if (node.properties && typeof node.properties === "object") {
           count += Object.keys(node.properties).length;
 
-          // Recursively count in nested properties, but DO NOT count special props here anymore
+          // Recursively count properties in nested objects
           Object.entries(node.properties).forEach(([propName, propSchema]) => {
             const propSchemaObj = propSchema as ExtendedJSONSchema7;
-            // REMOVED special property counting from here
-            // if (propSchemaObj["X-ReasoningPrompt"] !== undefined && ...)
-
-            // Recursively count properties in nested objects
             count += countProperties(
               propSchemaObj,
               `${path}/properties/${propName}`,
@@ -402,10 +384,7 @@ function JsonSchemaEditorProviderRaw({
       };
 
       // Start counting from the main schema
-      const totalCount = countProperties(schema);
-
-      ////console.log("Total properties count:", totalCount);
-      return totalCount;
+      return countProperties(schema);
     },
     [],
   );

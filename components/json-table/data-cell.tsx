@@ -428,7 +428,6 @@ interface DataCellProps {
   validationFlags?: any;
   allowEditing?: boolean; // Controls whether cell values can be edited
   fieldIndicationMap?: Map<string, string>;
-  fieldReasoningMap?: Map<string, string>;
 }
 
 function calculateVariables(props: DataCellProps & {}) {
@@ -646,15 +645,13 @@ const DataCellContent = (props: DataCellProps) => {
     ? getPropertyInfoCached(schema, actualKey)
     : undefined;
   const property = propInfo?.rawProperty;
-  const isComputedField = !!(property && (property as any)["X-ComputedField"]);
   const isFunctionField = !!(property && (property as any)["X-FunctionField"]);
   // Allow editing if either the allowEditing prop is true OR it's a dataset/review iteration
-  // But always block editing for computed and function fields
+  // But always block editing for function fields
   const isEditableReference =
     (props.allowEditing ||
       currentIterationId.includes("dataset") ||
       currentIterationId.includes("review")) &&
-    !isComputedField &&
     !isFunctionField;
   const optional = !!propInfo?.nullable;
   const isValidProp = !!propInfo?.isValidProp;
@@ -728,7 +725,6 @@ const DataCellContent = (props: DataCellProps) => {
     : undefined;
   const showVerifiedStyling =
     currentIterationId.includes("dataset") && !!validationFlag;
-  const showComputedStyling = isComputedField;
   const showFunctionStyling = isFunctionField;
   const reviewHighlightedPattern = React.useMemo(() => {
     if (!actualKey) return null;
@@ -737,13 +733,10 @@ const DataCellContent = (props: DataCellProps) => {
     props.fieldIndicationMap?.forEach((_, pattern) => {
       highlightedPatterns.add(pattern);
     });
-    props.fieldReasoningMap?.forEach((_, pattern) => {
-      highlightedPatterns.add(pattern);
-    });
 
     if (highlightedPatterns.size === 0) return null;
     return findMatchingHighlightedFieldPattern(actualKey, highlightedPatterns);
-  }, [actualKey, props.fieldIndicationMap, props.fieldReasoningMap]);
+  }, [actualKey, props.fieldIndicationMap]);
   const showReviewHighlightedStyling = Boolean(reviewHighlightedPattern);
 
   // Function field styling based on validation value
@@ -754,21 +747,6 @@ const DataCellContent = (props: DataCellProps) => {
     if (effectiveValue === null || effectiveValue === undefined)
       return "border-warning border bg-warning/10";
     return "border-success border bg-success/10"; // default to green for other truthy values
-  };
-
-  // Computed field styling - special handling for boolean computed fields
-  const getComputedFieldStyling = () => {
-    if (!isComputedField) return "";
-    // If computed field is boolean type, apply color coding like function fields
-    if (isBoolean) {
-      if (effectiveValue === true) return "border-success border bg-success/10";
-      if (effectiveValue === false) return "border-destructive border bg-destructive/10";
-      if (effectiveValue === null || effectiveValue === undefined)
-        return "border-warning border bg-warning/10";
-      return "border-success border bg-success/10"; // default to green for other truthy values
-    }
-    // Non-boolean computed fields get the standard blue background
-    return "bg-primary/10";
   };
 
   // Only show green verified styling in dataset view
@@ -815,9 +793,7 @@ const DataCellContent = (props: DataCellProps) => {
             ? "border border-success bg-success/10"
             : showFunctionStyling
               ? getFunctionFieldStyling()
-              : showComputedStyling
-                ? getComputedFieldStyling()
-                : "",
+              : "",
           showReviewHighlightedStyling &&
             "bg-warning/20 ring-1 ring-warning ring-inset",
           isHovering && "border border-primary",
