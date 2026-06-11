@@ -216,6 +216,7 @@ function scalarObjectColumns(itemSchema: Schema): Column[] | null {
 export interface FieldSourceLink {
   activePath: string | null
   onFieldHover: (path: string | null) => void
+  selectField?: (path: string) => void
 }
 
 const FieldSourceLinkContext = React.createContext<FieldSourceLink | null>(null)
@@ -241,6 +242,7 @@ function SourceFieldShell({
       onMouseLeave={() => sourceLink.onFieldHover(null)}
       onFocus={() => sourceLink.onFieldHover(name)}
       onBlur={() => sourceLink.onFieldHover(null)}
+      onClick={() => sourceLink.selectField?.(name)}
       className={cn(
         "rounded-md border px-3 py-2 transition-colors",
         active
@@ -866,6 +868,7 @@ const ArrayTableRow = React.memo(function ArrayTableRow({
               onMouseLeave: () => sourceLink.onFieldHover(null),
               onFocus: () => sourceLink.onFieldHover(path),
               onBlur: () => sourceLink.onFieldHover(null),
+              onClick: () => sourceLink.selectField?.(path),
             }
           : undefined
         return (
