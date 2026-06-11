@@ -361,8 +361,9 @@ function PptxViewerInner({
   // someone is listening, run the page-tracking work (which queries the DOM).
   const onViewportScroll = React.useCallback(() => {
     if (!eager) scrollActivity.handleScroll()
-    if (onVisiblePageChange || onScrollProgressChange) handleScroll()
-  }, [eager, scrollActivity, handleScroll, onVisiblePageChange, onScrollProgressChange])
+    // Always run so the toolbar's "Slide N of M" tracks the current slide.
+    handleScroll()
+  }, [eager, scrollActivity, handleScroll])
 
   const fitScale = containerWidth ? (containerWidth - 32) / baseWidth : 1
   const scale = manualScale ?? fitScale
