@@ -3,12 +3,14 @@ title: Classification Viewer
 description: Renders a Retab classification result — the predicted category and reasoning over the document.
 ---
 
-The classification viewer renders the output of a Retab **classification**: the
-predicted category as a pill with the reasoning in a tooltip, overlaid on the
-source document (or input text). Ported verbatim from the Retab dashboard
-playground.
+The classification viewer renders the output of a Retab **classification**.
+A classification is a single category over the whole document, so it reduces to
+one segment — shown as a swatch + label in the **legend** over the source
+**file**. It's the same file + legend system the split and partition viewers
+use, with a single segment rather than bespoke chrome.
 
 <ClassificationViewerDemo />
 
-For text inputs it renders the text directly; for file inputs the source
-document is supplied through a `renderDocument` render-prop.
+The source document is supplied through a `renderDocument` render-prop, which
+receives the `header` (category legend + reasoning) to render below the document
+toolbar — typically a [`PdfViewer`](/docs/components/pdf-viewer).

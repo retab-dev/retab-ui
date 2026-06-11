@@ -46,6 +46,19 @@ export default function IndexPage() {
   return (
     <div className="flex flex-1 flex-col">
       <PageHeader>
+        <svg
+          viewBox="0 0 210 216"
+          role="img"
+          aria-label="Retab"
+          className="mb-1 h-8 w-auto text-foreground"
+          fill="currentColor"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <rect y="108" width="58" height="54" />
+          <rect width="58" height="54" />
+          <rect x="58" y="54" width="152" height="54" />
+          <rect x="58" y="162" width="152" height="54" />
+        </svg>
         <PageHeaderHeading className="mt-2 max-w-4xl sm:mt-3">
           {title}
         </PageHeaderHeading>

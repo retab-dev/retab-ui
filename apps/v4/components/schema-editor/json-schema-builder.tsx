@@ -106,8 +106,8 @@ function DefsEditor({
   draggedPropertyRef,
   editMode = "editable",
 }: {
-  schema: any;
-  onChange: (newSchema: any) => void;
+  schema: ExtendedJSONSchema7;
+  onChange: (newSchema: ExtendedJSONSchema7) => void;
   accordionOpen: boolean;
   setAccordionOpen: (open: boolean) => void;
   draggedParentRef: React.RefObject<string | null>;
@@ -121,7 +121,7 @@ function DefsEditor({
 
   const handleAddDef = () => {
     if (!newDefName.trim()) return;
-    const newDefs = {
+    const newDefs: Record<string, JSONSchema7Definition> = {
       ...defs,
       [newDefName]: { type: "object", properties: {}, required: [] },
     };
@@ -133,7 +133,7 @@ function DefsEditor({
   const isDefReferenced = (targetName: string): boolean => {
     const targetRef = `#/$defs/${targetName}`;
 
-    const traverse = (node: any): boolean => {
+    const traverse = (node: unknown): boolean => {
       if (node === null || typeof node !== "object") return false;
 
       if (Array.isArray(node)) {
@@ -143,26 +143,22 @@ function DefsEditor({
         return false;
       }
 
-      if ((node as any).$ref === targetRef) return true;
+      if ((node as { $ref?: unknown }).$ref === targetRef) return true;
 
       // Special handling at the schema root: iterate $defs entries but skip the target def subtree
-      if (
-        node === schema &&
-        (schema as any).$defs &&
-        typeof (schema as any).$defs === "object"
-      ) {
-        for (const [name, defSchema] of Object.entries((schema as any).$defs)) {
+      if (node === schema && schema.$defs && typeof schema.$defs === "object") {
+        for (const [name, defSchema] of Object.entries(schema.$defs)) {
           if (name === targetName) continue;
           if (traverse(defSchema)) return true;
         }
         // Continue traversing the rest of the schema excluding $defs
-        const { $defs: _omit, ...rest } = schema as any;
+        const { $defs: _omit, ...rest } = schema;
         return traverse(rest);
       }
 
       for (const key of Object.keys(node)) {
         if (key === "$defs") continue;
-        if (traverse((node as any)[key])) return true;
+        if (traverse((node as Record<string, unknown>)[key])) return true;
       }
       return false;
     };
@@ -251,11 +247,11 @@ function DefsEditor({
                       delete newDefs[defName];
 
                       // Update all $ref references in the schema
-                      const updateRefs = (obj: any): any => {
+                      const updateRefs = (obj: unknown): unknown => {
                         if (typeof obj !== "object" || obj === null) return obj;
                         if (Array.isArray(obj)) return obj.map(updateRefs);
 
-                        const updated = { ...obj };
+                        const updated = { ...obj } as Record<string, unknown>;
                         if (updated.$ref === `#/$defs/${defName}`) {
                           updated.$ref = `#/$defs/${newName}`;
                         }
@@ -273,12 +269,16 @@ function DefsEditor({
                       const updatedSchema = updateRefs({
                         ...schema,
                         $defs: newDefs,
-                      });
+                      }) as ExtendedJSONSchema7;
                       onChange(updatedSchema);
                     }
                   }}
                   jsonSchema={schema}
-                  setJsonSchema={onChange}
+                  setJsonSchema={(updater) =>
+                    onChange(
+                      typeof updater === "function" ? updater(schema) : updater,
+                    )
+                  }
                   path={`#/$defs/${defName}`}
                   defs={defs}
                   canDelete={!isDefReferenced(defName)}

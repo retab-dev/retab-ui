@@ -2,19 +2,19 @@
 
 import * as React from "react"
 
-import { PdfViewer } from "@/components/ui/pdf-viewer"
+import { PptxViewer } from "@/components/ui/pptx-viewer"
 
-// A normalized bounding box (0..1) to demonstrate the per-page overlay slot —
-// the same shape Retab's edit fields and extraction sources use.
-const sampleBox = { page: 1, left: 0.12, top: 0.2, width: 0.5, height: 0.05 }
+// A normalized bounding box (0..1) to demonstrate the per-slide overlay slot —
+// the same shape Retab's edit fields and extraction sources use. Anchored to the
+// title bar on the first slide of the sample deck.
+const sampleBox = { page: 1, left: 0.0, top: 0.0, width: 1.0, height: 0.187 }
 
-export function PdfViewerDemo() {
+export function PptxViewerDemo() {
   return (
-    // A 96-page NVIDIA 10-K so the continuous-scroll virtualization shows at scale.
     <div className="not-prose my-6 h-[600px]">
-      <PdfViewer
-        src="/samples/nvidia-10k-fy2024.pdf"
-        downloadFileName="nvidia-10k-fy2024.pdf"
+      <PptxViewer
+        src="/samples/sample-deck.pptx"
+        downloadFileName="sample-deck.pptx"
         className="h-full"
         renderPageOverlay={({ pageNumber }) =>
           pageNumber === sampleBox.page ? (

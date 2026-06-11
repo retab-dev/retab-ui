@@ -108,21 +108,22 @@ export function PartitionViewerDemo() {
 
 export function ClassificationViewerDemo() {
   return (
-    <div className="not-prose flex flex-col overflow-hidden rounded-xl border" style={{ height: 360 }}>
+    <div className="not-prose flex flex-col overflow-hidden rounded-xl border" style={{ height: 520 }}>
       <ClassifierViewer
         result={{
-          category: "Invoice",
+          category: "Loan Application",
           reasoning:
-            "The document contains an invoice number, line items, and a total due, which matches the Invoice category.",
+            "The document is a Uniform Residential Loan Application (Form 1003): it collects borrower, employment, and property details for a mortgage request, which matches the Loan Application category.",
         }}
-        documentInput={{
-          type: "text",
-          fileBuffer: null,
-          fileName: null,
-          fileMimeType: "",
-          textValue:
-            "Invoice #INV-1024\nVendor: Acme Corp\nWidget x 3 — $1,280.50\nNet 30.",
-        }}
+        renderDocument={(handlers) => (
+          <PdfViewer
+            src="/samples/loan-application.pdf"
+            bare
+            downloadFileName="loan-application.pdf"
+            header={handlers.header}
+            className="h-full"
+          />
+        )}
       />
     </div>
   );

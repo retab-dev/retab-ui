@@ -1,0 +1,413 @@
+"use client"
+
+import * as React from "react"
+import { Download, Maximize, Minus, Plus } from "lucide-react"
+// Type-only import — erased at compile time, so docx-preview never loads on the
+// server (it touches the DOM at call time).
+import type * as DocxPreview from "docx-preview"
+
+import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Separator } from "@/components/ui/separator"
+import { Spinner } from "@/components/ui/spinner"
+
+// docx-preview is browser-only, so it is imported lazily on the client. jszip
+// (its single dependency) is resolved by the bundler from the installed package.
+let docxPromise: Promise<typeof DocxPreview> | null = null
+function loadDocxPreview() {
+  if (!docxPromise) {
+    docxPromise = import("docx-preview")
+  }
+  return docxPromise
+}
+
+// We render faithful, paginated pages and override docx-preview's built-in
+// chrome (gray backdrop, drop shadow) so pages match the rest of the viewers.
+const RENDER_OPTIONS: Partial<DocxPreview.Options> = {
+  inWrapper: true,
+  breakPages: true,
+  ignoreLastRenderedPageBreak: false,
+  experimental: true,
+  renderHeaders: true,
+  renderFooters: true,
+  renderFootnotes: true,
+}
+
+// Scoped overrides for docx-preview's default wrapper/section styling.
+const SCOPED_STYLES = `
+[data-slot="docx-viewer"] .docx-wrapper {
+  background: transparent;
+  padding: 0;
+  gap: 1rem;
+}
+[data-slot="docx-viewer"] .docx-wrapper > section.docx {
+  margin-bottom: 0;
+  box-shadow: 0 0 0 1px var(--border), 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}`
+
+// --- resource cache: stable promises so React `use()` can read them -----------
+
+const blobCache = new Map<string, Promise<Blob>>()
+
+function getDocxResource(src: string): Promise<Blob> {
+  let promise = blobCache.get(src)
+  if (!promise) {
+    promise = fetch(src).then((res) => {
+      if (!res.ok) throw new Error(`Failed to load DOCX: ${res.status}`)
+      return res.blob()
+    })
+    blobCache.set(src, promise)
+  }
+  return promise
+}
+
+/** Client gate without an effect — false during SSR, true after hydration. */
+function useIsClient() {
+  return React.useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  )
+}
+
+// --- public API --------------------------------------------------------------
+
+export interface DocxViewerProps {
+  /** URL of the .docx (same-origin or CORS-enabled). */
+  src: string
+  className?: string
+  /** Fixed zoom; when omitted the viewer fits page width to the container. */
+  scale?: number
+  toolbar?: boolean
+  downloadFileName?: string
+  /** Fired with the 1-based page nearest the top of the viewport as you scroll. */
+  onVisiblePageChange?: (page: number) => void
+  /** Fired with scroll progress in [0, 1] (for a fine-grained scroll cursor). */
+  onScrollProgressChange?: (progress: number) => void
+  /** Drop the outer border/rounded/background so the viewer fills its container. */
+  bare?: boolean
+  /** Rendered as a full-width strip directly below the toolbar (e.g. a legend). */
+  header?: React.ReactNode
+  /** Rendered as a left rail alongside the scrolling pages (e.g. a page ribbon). */
+  aside?: React.ReactNode
+}
+
+export function DocxViewer(props: DocxViewerProps) {
+  const isClient = useIsClient()
+  if (!isClient) {
+    return <DocxViewerFallback className={props.className} bare={props.bare} />
+  }
+  return (
+    <DocxErrorBoundary className={props.className}>
+      <React.Suspense
+        fallback={<DocxViewerFallback className={props.className} bare={props.bare} />}
+      >
+        <DocxViewerInner {...props} />
+      </React.Suspense>
+    </DocxErrorBoundary>
+  )
+}
+
+function DocxViewerInner({
+  src,
+  className,
+  scale: fixedScale,
+  toolbar = true,
+  downloadFileName,
+  onVisiblePageChange,
+  onScrollProgressChange,
+  bare = false,
+  header,
+  aside,
+}: DocxViewerProps) {
+  const blob = React.use(getDocxResource(src))
+
+  const [manualScale, setManualScale] = React.useState<number | null>(
+    fixedScale ?? null
+  )
+  const [containerWidth, setContainerWidth] = React.useState<number | null>(null)
+  // Known only after docx-preview lays the document out.
+  const [numPages, setNumPages] = React.useState(0)
+  const [pageWidth, setPageWidth] = React.useState<number | null>(null)
+  const [ready, setReady] = React.useState(false)
+  const [renderError, setRenderError] = React.useState<Error | null>(null)
+  if (renderError) throw renderError
+
+  // Measure the container with a ResizeObserver attached in the ref callback.
+  // Coalesce to one update per frame so dragging a resize handle doesn't trigger
+  // a fit-width recompute per pixel.
+  const containerRef = React.useCallback((el: HTMLDivElement | null) => {
+    if (!el) return
+    setContainerWidth(el.clientWidth)
+    let frame = 0
+    let latest = el.clientWidth
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) latest = entry.contentRect.width
+      if (frame) return
+      frame = requestAnimationFrame(() => {
+        frame = 0
+        setContainerWidth(latest)
+      })
+    })
+    observer.observe(el)
+    return () => {
+      if (frame) cancelAnimationFrame(frame)
+      observer.disconnect()
+    }
+  }, [])
+
+  // Report the page nearest the top of the scroll viewport as the user scrolls.
+  // We watch the actual scroll container (not the browser viewport) so the
+  // current-page cursor stays in sync even when the viewer is embedded.
+  const scrollViewportRef = React.useRef<HTMLDivElement | null>(null)
+  const lastReported = React.useRef(0)
+  // Coalesce scroll work to one frame: the layout reads below (getBoundingClientRect
+  // over every page) shouldn't run on every scroll event.
+  const scrollFrame = React.useRef(0)
+  const measureScroll = React.useCallback(() => {
+    scrollFrame.current = 0
+    const viewport = scrollViewportRef.current
+    if (!viewport) return
+    const scrollable = viewport.scrollHeight - viewport.clientHeight
+    onScrollProgressChange?.(scrollable > 0 ? viewport.scrollTop / scrollable : 0)
+    const rect = viewport.getBoundingClientRect()
+    const marker = rect.top + rect.height * 0.2
+    const pages = viewport.querySelectorAll<HTMLElement>("[data-page-number]")
+    let current = 1
+    for (const el of pages) {
+      if (el.getBoundingClientRect().top <= marker) {
+        current = Number(el.dataset.pageNumber)
+      } else {
+        break
+      }
+    }
+    if (current && current !== lastReported.current) {
+      lastReported.current = current
+      onVisiblePageChange?.(current)
+    }
+  }, [onVisiblePageChange, onScrollProgressChange])
+  const handleScroll = React.useCallback(() => {
+    if (scrollFrame.current) return
+    scrollFrame.current = requestAnimationFrame(measureScroll)
+  }, [measureScroll])
+  React.useEffect(
+    () => () => {
+      if (scrollFrame.current) cancelAnimationFrame(scrollFrame.current)
+    },
+    []
+  )
+
+  const fitScale = containerWidth && pageWidth ? (containerWidth - 32) / pageWidth : 1
+  const scale = manualScale ?? fitScale
+  // Mirror the live scale into a ref so the render effect can divide measured
+  // (zoomed) page sizes back to natural units without re-running on every zoom.
+  const scaleRef = React.useRef(scale)
+  React.useEffect(() => {
+    scaleRef.current = scale
+  })
+
+  // Render the document once per source. docx-preview writes imperatively into
+  // `host`, which React keeps empty, so the two never fight over the subtree.
+  const hostRef = React.useRef<HTMLDivElement | null>(null)
+  React.useEffect(() => {
+    const host = hostRef.current
+    if (!host) return
+    let cancelled = false
+    setReady(false)
+    setNumPages(0)
+    loadDocxPreview()
+      .then(({ renderAsync }) => {
+        if (cancelled) return
+        host.replaceChildren()
+        return renderAsync(blob, host, undefined, RENDER_OPTIONS)
+      })
+      .then(() => {
+        if (cancelled || !hostRef.current) return
+        // Tag pages for scroll tracking and hand off-screen pages to the browser
+        // via `content-visibility` — a long document then only lays out and
+        // paints the pages near the viewport. Intrinsic sizes (measured in the
+        // page's own, un-zoomed units) keep the scrollbar stable.
+        const pages = host.querySelectorAll<HTMLElement>(".docx-wrapper > section.docx")
+        const z = scaleRef.current || 1
+        pages.forEach((el, i) => {
+          const r = el.getBoundingClientRect()
+          el.dataset.pageNumber = String(i + 1)
+          el.style.contentVisibility = "auto"
+          el.style.containIntrinsicSize = `${Math.round(r.width / z)}px ${Math.round(
+            r.height / z
+          )}px`
+        })
+        setNumPages(pages.length)
+        setPageWidth(pages.length ? pages[0].getBoundingClientRect().width / z : null)
+        setReady(true)
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setRenderError(err instanceof Error ? err : new Error("Failed to render DOCX"))
+        }
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [blob])
+
+  const zoom = (factor: number) => setManualScale(clamp(scale * factor, 0.25, 5))
+
+  return (
+    <div
+      className={cn(
+        "flex min-h-0 flex-col overflow-hidden",
+        bare ? "h-full bg-muted/20" : "rounded-xl border bg-muted/30",
+        className
+      )}
+      data-slot="docx-viewer"
+    >
+      <style>{SCOPED_STYLES}</style>
+      {toolbar ? (
+        <div className="flex h-10 flex-shrink-0 items-center gap-1 border-b bg-card px-2">
+          <span className="px-1 text-xs text-muted-foreground tabular-nums">
+            {ready ? (
+              <>
+                {numPages} page{numPages === 1 ? "" : "s"}
+              </>
+            ) : (
+              "Loading…"
+            )}
+          </span>
+          <div className="ml-auto flex items-center gap-1">
+            <IconButton label="Zoom out" onClick={() => zoom(1 / 1.2)}>
+              <Minus />
+            </IconButton>
+            <span className="w-12 text-center text-xs tabular-nums text-muted-foreground">
+              {Math.round(scale * 100)}%
+            </span>
+            <IconButton label="Zoom in" onClick={() => zoom(1.2)}>
+              <Plus />
+            </IconButton>
+            <IconButton label="Fit width" onClick={() => setManualScale(null)}>
+              <Maximize />
+            </IconButton>
+            <Separator orientation="vertical" className="mx-1 h-4" />
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="size-7"
+              aria-label="Download"
+              title="Download"
+              render={
+                <a
+                  href={src}
+                  download={downloadFileName}
+                  target="_blank"
+                  rel="noreferrer"
+                />
+              }
+            >
+              <Download />
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="flex min-h-0 flex-1">
+        {aside ? (
+          <div data-slot="docx-viewer-aside" className="flex-shrink-0">
+            {aside}
+          </div>
+        ) : null}
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          {header ? <div data-slot="docx-viewer-header">{header}</div> : null}
+          <ScrollArea
+            className="min-h-0 flex-1"
+            viewportRef={scrollViewportRef}
+            viewportProps={
+              onVisiblePageChange || onScrollProgressChange
+                ? { onScroll: handleScroll }
+                : undefined
+            }
+          >
+            <div ref={containerRef} className="relative flex flex-col items-center p-4">
+              {/* docx-preview renders the .docx-wrapper into this host; `zoom`
+                  scales the laid-out pages (and scroll height) cheaply. */}
+              <div ref={hostRef} className="w-full" style={{ zoom: scale }} />
+              {!ready ? (
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                  <Spinner className="size-5 text-muted-foreground" />
+                </div>
+              ) : null}
+            </div>
+          </ScrollArea>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function IconButton({
+  label,
+  children,
+  ...props
+}: React.ComponentProps<typeof Button> & { label: string }) {
+  return (
+    <Button
+      variant="ghost"
+      size="icon-sm"
+      className="size-7"
+      aria-label={label}
+      title={label}
+      {...props}
+    >
+      {children}
+    </Button>
+  )
+}
+
+function DocxViewerFallback({
+  className,
+  bare = false,
+}: {
+  className?: string
+  bare?: boolean
+}) {
+  return (
+    <div
+      className={cn(
+        "flex items-center justify-center",
+        bare ? "h-full bg-muted/20" : "min-h-64 rounded-xl border bg-muted/30",
+        className
+      )}
+    >
+      <Spinner className="size-5 text-muted-foreground" />
+    </div>
+  )
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value))
+}
+
+class DocxErrorBoundary extends React.Component<
+  { children: React.ReactNode; className?: string },
+  { error: boolean }
+> {
+  state = { error: false }
+  static getDerivedStateFromError() {
+    return { error: true }
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div
+          className={cn(
+            "flex min-h-64 items-center justify-center rounded-xl border bg-muted/30 p-6 text-center text-sm text-muted-foreground",
+            this.props.className
+          )}
+        >
+          Couldn&apos;t load this document.
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}

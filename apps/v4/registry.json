@@ -623,6 +623,30 @@
       ]
     },
     {
+      "name": "docx-viewer",
+      "type": "registry:ui",
+      "title": "DOCX Viewer",
+      "description": "A docx-preview-backed Word viewer: faithful paginated pages, continuous scroll, zoom, fit-to-width, and download. Off-screen pages are skipped via CSS content-visibility.",
+      "dependencies": [
+        "lucide-react",
+        "docx-preview"
+      ],
+      "registryDependencies": [
+        "utils",
+        "button",
+        "scroll-area",
+        "separator",
+        "spinner"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/docx-viewer.tsx",
+          "type": "registry:ui",
+          "target": "@ui/docx-viewer.tsx"
+        }
+      ]
+    },
+    {
       "name": "image-viewer",
       "type": "registry:ui",
       "title": "Image Viewer",
@@ -643,6 +667,32 @@
           "path": "registry/new-york-v4/ui/image-viewer.tsx",
           "type": "registry:ui",
           "target": "@ui/image-viewer.tsx"
+        }
+      ]
+    },
+    {
+      "name": "pptx-viewer",
+      "type": "registry:ui",
+      "title": "PPTX Viewer",
+      "description": "A canvas-backed PowerPoint viewer rendered entirely client-side (no server conversion): continuous scroll, zoom, rotate, fit-to-width, download, and a per-slide overlay slot. Slides render lazily near the viewport and renders are serialized. No useEffect.",
+      "dependencies": [
+        "lucide-react",
+        "pptxviewjs@1.1.9",
+        "jszip",
+        "chart.js"
+      ],
+      "registryDependencies": [
+        "utils",
+        "button",
+        "scroll-area",
+        "separator",
+        "spinner"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/pptx-viewer.tsx",
+          "type": "registry:ui",
+          "target": "@ui/pptx-viewer.tsx"
         }
       ]
     },

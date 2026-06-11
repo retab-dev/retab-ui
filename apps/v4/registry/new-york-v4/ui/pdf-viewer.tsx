@@ -1,7 +1,15 @@
 "use client"
 
 import * as React from "react"
-import { Download, Maximize, Minus, Plus, RotateCw } from "lucide-react"
+import {
+  Download,
+  Maximize,
+  Minus,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Plus,
+  RotateCw,
+} from "lucide-react"
 // Type-only imports — erased at compile time, so pdfjs never loads on the server.
 import type * as Pdfjs from "pdfjs-dist"
 import type { PDFDocumentProxy, PDFPageProxy } from "pdfjs-dist"
@@ -99,6 +107,10 @@ export interface PdfViewerProps {
   header?: React.ReactNode
   /** Rendered as a left rail alongside the scrolling pages (e.g. a page ribbon). */
   aside?: React.ReactNode
+  /** Show a toolbar button that collapses/expands the `aside` rail. Default true when `aside` is set. */
+  asideToggle?: boolean
+  /** Initial open state of the `aside` rail. */
+  defaultAsideOpen?: boolean
 }
 
 export function PdfViewer(props: PdfViewerProps) {
@@ -129,6 +141,8 @@ function PdfViewerInner({
   bare = false,
   header,
   aside,
+  asideToggle = true,
+  defaultAsideOpen = true,
 }: PdfViewerProps) {
   const doc = React.use(getDocumentResource(src))
   const firstPage = React.use(getPageResource(doc, 1))
@@ -144,6 +158,25 @@ function PdfViewerInner({
   )
   const [rotation, setRotation] = React.useState(0)
   const [containerWidth, setContainerWidth] = React.useState<number | null>(null)
+  const [asideOpen, setAsideOpen] = React.useState(defaultAsideOpen)
+  const showAsideToggle = Boolean(aside && asideToggle)
+
+  // Measure the aside's natural width so we can collapse it by animating an
+  // explicit pixel width → 0. (A grid 1fr→0fr trick doesn't collapse here: the
+  // wrapper is a flex-shrink-0 flex item sized to its max-content, and grid
+  // intrinsic sizing ignores fr.) The inner w-max keeps the content at its
+  // natural width while the wrapper clips it, so the measurement stays stable
+  // even while collapsed — reopening animates back to the same width.
+  const [asideWidth, setAsideWidth] = React.useState<number | null>(null)
+  const asideMeasureRef = React.useCallback((el: HTMLDivElement | null) => {
+    if (!el) return
+    setAsideWidth(Math.round(el.offsetWidth))
+    const observer = new ResizeObserver(() =>
+      setAsideWidth(Math.round(el.offsetWidth))
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
 
   // Measure the container with a ResizeObserver attached in the ref callback.
   // Coalesce to one update per frame so dragging a resize handle doesn't trigger
@@ -296,6 +329,15 @@ function PdfViewerInner({
           claims the full height and the header (legend) spans the main column. */}
       {toolbar ? (
         <div className="flex h-10 flex-shrink-0 items-center gap-1 border-b bg-card px-2">
+          {showAsideToggle ? (
+            <IconButton
+              label={asideOpen ? "Hide sidebar" : "Show sidebar"}
+              aria-pressed={asideOpen}
+              onClick={() => setAsideOpen((open) => !open)}
+            >
+              {asideOpen ? <PanelLeftClose /> : <PanelLeftOpen />}
+            </IconButton>
+          ) : null}
           <span className="px-1 text-xs text-muted-foreground tabular-nums">
             {doc.numPages} page{doc.numPages === 1 ? "" : "s"}
           </span>
@@ -342,8 +384,26 @@ function PdfViewerInner({
 
       <div className="flex min-h-0 flex-1">
         {aside ? (
-          <div data-slot="pdf-viewer-aside" className="flex-shrink-0">
-            {aside}
+          // Collapse by animating an explicit width → 0 (width-agnostic: the
+          // natural width is measured, so any-width rail slides away cleanly).
+          // The inner w-max holds the content at its natural size while the
+          // wrapper clips it. No toggle (asideToggle=false) → always open.
+          <div
+            data-slot="pdf-viewer-aside"
+            data-state={asideOpen ? "open" : "closed"}
+            className={cn(
+              "h-full flex-shrink-0 overflow-hidden",
+              showAsideToggle && "transition-[width] duration-200 ease-out"
+            )}
+            style={
+              showAsideToggle
+                ? { width: asideOpen ? (asideWidth ?? undefined) : 0 }
+                : undefined
+            }
+          >
+            <div ref={asideMeasureRef} className="h-full w-max">
+              {aside}
+            </div>
           </div>
         ) : null}
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">

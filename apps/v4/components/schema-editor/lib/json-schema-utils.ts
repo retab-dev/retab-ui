@@ -193,18 +193,18 @@ export function formatValidationErrors(errors: ErrorObject[] | null): string {
     .join("\n\n");
 }
 
-export function emptyFromSchema(schema: any): any {
+export function emptyFromSchema(schema: JSONSchema7Definition): unknown {
+  if (typeof schema !== "object" || schema === null) return null;
   if (schema.type === "object" && schema.properties) {
-    const result: Record<string, any> = {};
+    const result: Record<string, unknown> = {};
     for (const [key, propSchema] of Object.entries(schema.properties)) {
       result[key] = emptyFromSchema(propSchema);
     }
     return result;
   } else if (schema.type === "array") {
     return [];
-  } else {
-    return null;
   }
+  return null;
 }
 
 export function isValidProperty(
@@ -235,9 +235,12 @@ export function resolveSchemaReference(
   }
 
   const path = ref.substring(2).split("/");
-  let resolved: any = schema;
+  let resolved: unknown = schema;
   for (const part of path) {
-    resolved = resolved[part];
+    if (typeof resolved !== "object" || resolved === null) {
+      throw new Error(`Unable to resolve schema reference: ${ref}`);
+    }
+    resolved = (resolved as Record<string, unknown>)[part];
     if (resolved === undefined) {
       throw new Error(`Unable to resolve schema reference: ${ref}`);
     }

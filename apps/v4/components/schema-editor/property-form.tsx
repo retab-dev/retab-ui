@@ -17,6 +17,7 @@ import { useJsonSchema } from "@/components/schema-editor/contexts/json-schema";
 import { setNullable, getEffectiveType, formatTitle } from "@/components/schema-editor/json-schema-builder";
 import { SchemaNodeEditor } from "@/components/schema-editor/json-schema-node-editor";
 import { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types";
+import type { JSONSchema7, JSONSchema7Type } from "json-schema";
 import { validateName } from "@/components/schema-editor/lib/json-schema-utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -252,17 +253,17 @@ export function PropertyForm({
 
   // Disable submit when enum is selected but no options are enabled
   const isEnumSelected = getEffectiveType(editedProperty).type === "enum";
-  const getEffectiveEnumValues = () => {
-    if (Array.isArray((editedProperty as any).enum))
-      return (editedProperty as any).enum as any[];
-    if (Array.isArray((editedProperty as any).anyOf)) {
-      const nonNull = (editedProperty as any).anyOf.find(
-        (b: any) =>
-          typeof b === "object" && (b.type !== "null" || b.$ref || b.enum),
+  const getEffectiveEnumValues = (): JSONSchema7Type[] => {
+    if (Array.isArray(editedProperty.enum)) return editedProperty.enum;
+    if (Array.isArray(editedProperty.anyOf)) {
+      const nonNull = editedProperty.anyOf.find(
+        (b): b is JSONSchema7 =>
+          typeof b === "object" &&
+          (b.type !== "null" || Boolean(b.$ref) || Boolean(b.enum)),
       );
-      if (nonNull && Array.isArray(nonNull.enum)) return nonNull.enum as any[];
+      if (nonNull && Array.isArray(nonNull.enum)) return nonNull.enum;
     }
-    return [] as any[];
+    return [];
   };
   const isEnumWithoutOptions =
     isEnumSelected && getEffectiveEnumValues().length === 0;
@@ -318,9 +319,43 @@ export function PropertyForm({
             />
 
             <div>
-              <Label htmlFor="type">
-                Data type
-              </Label>
+              <div className="flex items-center justify-between gap-2">
+                <Label htmlFor="type">Data type</Label>
+                <FormField
+                  control={form.control}
+                  name="nullable"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center space-y-0 space-x-2">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Label htmlFor="nullable" className="cursor-pointer">
+                            Nullable
+                          </Label>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs">
+                          <p>
+                            Nullable fields allow <code>null</code> as a value
+                            (the type is widened to include <code>null</code>).
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                      <FormControl>
+                        <Switch
+                          id="nullable"
+                          disabled={editMode !== "editable"}
+                          checked={field.value}
+                          onCheckedChange={handleNullableChange}
+                          className={
+                            editMode !== "editable"
+                              ? "disabled:opacity-100"
+                              : ""
+                          }
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
               <ItemTypeSelector
                 name={editedName}
                 editMode={editMode}
@@ -422,41 +457,6 @@ export function PropertyForm({
                   )}
                 />
               ) : null}
-              <FormField
-                control={form.control}
-                name="nullable"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center space-y-0 space-x-2">
-                    <FormControl>
-                      <Switch
-                        id="nullable"
-                        disabled={editMode !== "editable"}
-                        checked={field.value}
-                        onCheckedChange={handleNullableChange}
-                        className={
-                          editMode !== "editable" ? "disabled:opacity-100" : ""
-                        }
-                      />
-                    </FormControl>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Label
-                          htmlFor="nullable"
-                          className="cursor-pointer"
-                        >
-                          Nullable
-                        </Label>
-                      </TooltipTrigger>
-                      <TooltipContent className="max-w-xs">
-                        <p>
-                          Nullable fields allow <code>null</code> as a value (the
-                          type is widened to include <code>null</code>).
-                        </p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </FormItem>
-                )}
-              />
             </div>
           </div>
           <div className="space-y-4 p-4">

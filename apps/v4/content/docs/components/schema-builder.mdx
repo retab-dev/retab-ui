@@ -4,50 +4,58 @@ description: Build the JSON Schema that drives a Retab extraction — the same e
 ---
 
 The Schema Builder is the JSON Schema editor from the Retab dashboard: recursive
-fields, a type picker, required and nullable toggles, enums, `$defs` /
-references, reusable templates, a full-code (Monaco) mode, and live validation.
-It is controlled via a provider that owns the `json_schema` an extraction runs
-against, and emits standard JSON Schema.
+fields, a type picker, required and nullable toggles, enums, and editable `$defs`
+/ references. It speaks plain **vanilla `JSONSchema7`** in and out, and is
+lossless — keywords it doesn't surface in the UI (`pattern`, `format`, `x-*`, …)
+ride through untouched.
+
+Internally the editor's source of truth is a **Document model** rather than the
+JSON Schema string, which is what makes editing identity-stable (renaming a key
+never loses focus) and round-trips lossless. JSON Schema is imported once and
+projected back out on every change.
 
 <RetabSchemaBuilderDemo />
 
 ## Usage
 
-Wrap the editor in `JsonSchemaEditorProvider` and give it your schema state:
+It composes like any other form field — controlled via `value` / `onValueChange`,
+or uncontrolled via `defaultValue`:
 
 ```tsx
 import { useState } from "react"
-import { JsonSchemaEditor } from "@/components/schema-editor/json-schema-builder"
-import { JsonSchemaEditorProvider } from "@/components/schema-editor/contexts/json-schema"
-import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
+import type { JSONSchema7 } from "json-schema"
+import { SchemaBuilder } from "@/registry/new-york-v4/ui/schema-builder"
 
 export function Example() {
-  const [schema, setSchema] = useState<ExtendedJSONSchema7>({
+  const [schema, setSchema] = useState<JSONSchema7>({
     type: "object",
     properties: {},
     required: [],
   })
-  return (
-    <JsonSchemaEditorProvider jsonSchema={schema} setJsonSchema={setSchema}>
-      <JsonSchemaEditor />
-    </JsonSchemaEditorProvider>
-  )
+  return <SchemaBuilder value={schema} onValueChange={setSchema} />
 }
 ```
 
-## Provider props
+## Props
 
-| Prop | Type | Description |
-| --- | --- | --- |
-| `jsonSchema` | `ExtendedJSONSchema7` | The schema state. |
-| `setJsonSchema` | `Dispatch<SetStateAction<ExtendedJSONSchema7>>` | State setter the editor calls on every edit. |
-| `persistJsonSchemaCallback` | `(schema) => Promise<void>` | Optional. Called to persist changes. |
+| Prop            | Type                            | Description                                                  |
+| --------------- | ------------------------------- | ----------------------------------------------------------- |
+| `value`         | `JSONSchema7`                   | Controlled schema value.                                    |
+| `defaultValue`  | `JSONSchema7`                   | Initial schema for the uncontrolled case.                   |
+| `onValueChange` | `(schema: JSONSchema7) => void` | Called with the projected vanilla JSON Schema on each edit. |
+| `className`     | `string`                        | Optional wrapper class.                                     |
 
-## Editor props
+## Design
 
-| Prop | Type | Description |
-| --- | --- | --- |
-| `editMode` | `"editable" \| "readOnly" \| "promptOnly"` | Defaults to `"editable"`. |
-| `showTemplatesButton` | `boolean` | Show the reusable-template picker. |
-| `fullCodeModeState` | `[boolean, (v: boolean) => void]` | Control the Monaco full-code toggle. |
-| `onSchemaFixWithAI` | `(errors: string) => Promise<void>` | Optional. Wire up an AI "fix validation errors" action. |
+See `components/schema-editor/document/DESIGN.md` for the full rationale. The short
+version:
+
+- **The value is a Document, JSON Schema is a projection** — the same move
+  ProseMirror/Slate make, so round-trips can't be lossy.
+- **Identity is intrinsic** (`node.id`) — renaming a property key never remounts
+  its input.
+- **References are by id, not name** — renaming a `$defs` definition cannot break
+  a `$ref`.
+- **Transient-invalid lives in the Document, cleanup at the boundary** — empty /
+  duplicate keys are valid mid-edit and dropped on export, which is what lets the
+  component be fully controlled.

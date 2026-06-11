@@ -297,7 +297,7 @@ function ImageViewerInner({
   const scale = manualScale ?? fitScale
 
   const zoom = (factor: number) =>
-    setManualScale(clamp(scale * factor, 0.25, 8))
+    setManualScale(clamp(scale * factor, 0.25, 5))
 
   const frameCount = source.frames.length
   const countLabel =
@@ -388,7 +388,6 @@ function ImageViewerInner({
                   frame={frame}
                   scale={scale}
                   rotation={rotation}
-                  scrollViewportRef={scrollViewportRef}
                   renderOverlay={renderPageOverlay}
                 />
               ))}
@@ -406,7 +405,6 @@ function ImageFrame({
   frame,
   scale,
   rotation,
-  scrollViewportRef,
   renderOverlay,
 }: {
   source: ImageSource
@@ -414,7 +412,6 @@ function ImageFrame({
   frame: FrameMeta
   scale: number
   rotation: number
-  scrollViewportRef: React.RefObject<HTMLDivElement | null>
   renderOverlay?: (props: ImagePageOverlayProps) => React.ReactNode
 }) {
   const [inView, setInView] = React.useState(false)
@@ -422,23 +419,23 @@ function ImageFrame({
   // Lazily mount the canvas only when the frame nears the viewport. The wrapper
   // is always sized from the frame's intrinsic dimensions, so scroll height and
   // overlay coordinates are correct whether or not the pixels are decoded yet.
-  const wrapperRef = React.useCallback(
-    (el: HTMLDivElement | null) => {
-      if (!el) return
-      const root = scrollViewportRef.current ?? null
-      const observer = new IntersectionObserver(
-        (entries) => {
-          for (const entry of entries) setInView(entry.isIntersecting)
-        },
-        // Generous margin: decode a screen ahead/behind so scrolling stays ahead
-        // of the decode, but no further (keeps the decoded-bitmap set small).
-        { root, rootMargin: "150% 0px" }
-      )
-      observer.observe(el)
-      return () => observer.disconnect()
-    },
-    [scrollViewportRef]
-  )
+  const wrapperRef = React.useCallback((el: HTMLDivElement | null) => {
+    if (!el) return
+    // Derive the scroll container from the DOM rather than a React ref: ref
+    // callbacks fire children-first, so a parent ref isn't populated yet on the
+    // first mount. closest() reads the live DOM and is always correct.
+    const root = el.closest<HTMLElement>('[data-slot="scroll-area-viewport"]')
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) setInView(entry.isIntersecting)
+      },
+      // Generous margin: decode a screen ahead/behind so scrolling stays ahead
+      // of the decode, but no further (keeps the decoded-bitmap set small).
+      { root, rootMargin: "150% 0px" }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
 
   // Rotation swaps the box for 90°/270°.
   const rotated = rotation === 90 || rotation === 270
