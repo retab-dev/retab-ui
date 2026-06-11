@@ -189,7 +189,7 @@ export function EditViewerDemo() {
         detectedFields={editFields}
         hasFilled
         hasOriginal
-        renderDocument={({ viewerRef, renderPageOverlay, onVisiblePageChange }) => (
+        renderDocument={({ viewerRef, renderPageOverlay }) => (
           <PdfViewer
             ref={viewerRef}
             src={EDIT_PDF_URL}
@@ -197,7 +197,6 @@ export function EditViewerDemo() {
             downloadFileName="fidelity-bank-wire-authorization.pdf"
             className="h-full"
             renderPageOverlay={renderPageOverlay}
-            onVisiblePageChange={onVisiblePageChange}
           />
         )}
       />
