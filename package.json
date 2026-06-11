@@ -33,7 +33,8 @@
     "overrides": {
       "@types/react": "19.2.2",
       "@types/react-dom": "19.2.2",
-      "@shikijs/themes": "3.14.0"
+      "@shikijs/themes": "3.14.0",
+      "@pierre/diffs": "1.2.7"
     }
   }
 }
