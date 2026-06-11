@@ -87,6 +87,18 @@ export const VIEWER_BLOCKS = [
     categories: ["primitives"],
   },
   {
+    id: "extract",
+    registryName: "extract-viewer-block",
+    title: "Extract Viewer",
+    description:
+      "Extracted fields beside the source PDF, linked by their sources — hover or select a field to highlight where its value came from and scroll the page to it. Built on the document-source model and the PDF viewer's scrollToPageArea handle.",
+    command: getRegistryAddCommand("extract-viewer-block"),
+    docsHref: "/docs/components/pdf-viewer",
+    viewHref: "/view/blocks/extract",
+    featured: true,
+    categories: ["primitives"],
+  },
+  {
     id: "pdf-thumbnails",
     registryName: "pdf-thumbnails-block",
     title: "PDF Thumbnails",

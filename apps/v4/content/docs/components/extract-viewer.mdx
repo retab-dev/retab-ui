@@ -1,0 +1,129 @@
+---
+title: Extract Viewer
+description: Extracted fields linked to their sources — hover or select a field to highlight where its value came from in the document and scroll the page to it.
+---
+
+The extract viewer puts structured data beside the document it came from and
+links the two by their **sources**: every field carries a citation — a region on
+a page — so hovering or selecting a field highlights exactly where its value was
+found and scrolls the page to it.
+
+<ExtractViewerDemo />
+
+It composes three source primitives over the [PDF Viewer](/docs/components/pdf-viewer):
+the `document-source` model (normalize a citation to a page-relative box), the
+viewer's `renderPageOverlay` slot (draw the highlight), and the viewer's
+imperative `scrollToPageArea` handle (bring it into view). The same primitives
+work for any field-to-region linking — extraction review, citations, redaction.
+
+## How sources work
+
+A **source** is a citation: a polygon on one page, in the page's own pixel
+coordinates, carrying the page size so it's self-describing.
+
+```ts
+import type { SourceCitation } from "@/lib/document-source"
+
+const citation: SourceCitation = {
+  page: 1,
+  pageWidth: 792,
+  pageHeight: 612,
+  polygon: [
+    { x: 282, y: 103 },
+    { x: 369, y: 103 },
+    { x: 369, y: 112 },
+    { x: 282, y: 112 },
+  ],
+}
+```
+
+`citationToLocation` reduces the polygon to its bounding box and expresses it as
+**percentages** of the page, so the highlight is independent of zoom, scale, and
+device resolution — the viewer never needs the original pixel dimensions.
+
+```ts
+import { citationToLocation } from "@/lib/document-source"
+
+const location = citationToLocation(citation)
+// → { page: 1, area: { left: 35.6%, top: 16.8%, width: 11%, height: 1.5% } }
+```
+
+## Usage
+
+Hold the active field in state, draw a `PdfHighlight` on the matching page
+through `renderPageOverlay`, and call `scrollToPageArea` on the viewer's ref when
+the selection changes. Hover with `behavior: "auto"` for an instant preview;
+click with `"smooth"` to commit.
+
+```tsx
+import * as React from "react"
+import { citationToLocation } from "@/lib/document-source"
+import {
+  PdfViewer,
+  PdfHighlight,
+  type PdfViewerHandle,
+} from "@/components/ui/pdf-viewer"
+
+export function Example({ fields }) {
+  const viewerRef = React.useRef<PdfViewerHandle>(null)
+  const [activeKey, setActiveKey] = React.useState(fields[0]?.key)
+
+  const active = fields.find((f) => f.key === activeKey)
+  const location = active ? citationToLocation(active.citation) : undefined
+
+  return (
+    <div className="flex h-full">
+      <PdfViewer
+        ref={viewerRef}
+        src="/document.pdf"
+        bare
+        className="min-w-0 flex-1"
+        renderPageOverlay={({ pageNumber }) =>
+          location?.page === pageNumber ? (
+            <PdfHighlight area={location.area} />
+          ) : null
+        }
+      />
+      <ul className="w-[360px] shrink-0 border-l">
+        {fields.map((field) => (
+          <li key={field.key}>
+            <button
+              onClick={() => {
+                setActiveKey(field.key)
+                const loc = citationToLocation(field.citation)
+                if (loc) viewerRef.current?.scrollToPageArea(loc.page, loc.area)
+              }}
+            >
+              {field.label}: {field.value}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+```
+
+## API
+
+### `document-source`
+
+| Export | Signature | Description |
+| --- | --- | --- |
+| `SourceCitation` | `{ page, polygon?, pageWidth, pageHeight }` | A raw citation in the page's own pixel coordinates. |
+| `SourceLocation` | `{ page, area }` | A normalized, viewer-ready location. |
+| `SourceArea` | `{ left, top, width, height }` | A box, each field a percentage `[0, 100]` of the page. |
+| `citationToLocation` | `(citation) => SourceLocation \| undefined` | Reduce a polygon to its bounding box and normalize to percentages. Returns `undefined` when there's nothing to place. |
+| `sourceLocationKey` | `(location) => string \| null` | Stable key for a location — dedupe repeated hover/select events. |
+
+### PDF viewer source props
+
+| Member | Type | Description |
+| --- | --- | --- |
+| `renderPageOverlay` | `({ pageNumber, width, height, scale, rotation }) => ReactNode` | Render absolutely-positioned overlays on each page. The overlay layer is already positioned, so a `PdfHighlight` just places itself in `%`. |
+| `PdfHighlight` | `({ area, ...divProps })` | A percentage-positioned highlight box for use inside `renderPageOverlay`. Style via `className` / `style`. |
+| `ref` → `scrollToPageArea` | `(page, area, options?) => void` | Scroll a page's normalized area into view. Only `area.top` is required; pass `behavior: "auto"` for an instant jump (e.g. on hover). |
+| `ref` → `getViewportElement` | `() => HTMLDivElement \| null` | The scrolling viewport element, or `null` before the document loads. |
+
+The side-by-side composition above ships as the
+[Extract Viewer block](/blocks#extract).

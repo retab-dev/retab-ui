@@ -1,0 +1,282 @@
+[
+  {
+    "key": "checkNumber",
+    "label": "Check number",
+    "value": "337138",
+    "citation": {
+      "page": 1,
+      "pageWidth": 792.0,
+      "pageHeight": 612.0,
+      "polygon": [
+        {
+          "x": 742.5,
+          "y": 93.1
+        },
+        {
+          "x": 769.4,
+          "y": 93.1
+        },
+        {
+          "x": 769.4,
+          "y": 104.1
+        },
+        {
+          "x": 742.5,
+          "y": 104.1
+        }
+      ]
+    }
+  },
+  {
+    "key": "checkDate",
+    "label": "Check date",
+    "value": "March 31, 2021",
+    "citation": {
+      "page": 1,
+      "pageWidth": 792.0,
+      "pageHeight": 612.0,
+      "polygon": [
+        {
+          "x": 716.5,
+          "y": 117.1
+        },
+        {
+          "x": 769.2,
+          "y": 117.1
+        },
+        {
+          "x": 769.2,
+          "y": 128.1
+        },
+        {
+          "x": 716.5,
+          "y": 128.1
+        }
+      ]
+    }
+  },
+  {
+    "key": "checkAmount",
+    "label": "Check amount",
+    "value": "$113.11",
+    "citation": {
+      "page": 1,
+      "pageWidth": 792.0,
+      "pageHeight": 612.0,
+      "polygon": [
+        {
+          "x": 745.6,
+          "y": 105.1
+        },
+        {
+          "x": 769.4,
+          "y": 105.1
+        },
+        {
+          "x": 769.4,
+          "y": 116.1
+        },
+        {
+          "x": 745.6,
+          "y": 116.1
+        }
+      ]
+    }
+  },
+  {
+    "key": "ownerName",
+    "label": "Owner",
+    "value": "L3 RESOURCES LLC",
+    "citation": {
+      "page": 1,
+      "pageWidth": 792.0,
+      "pageHeight": 612.0,
+      "polygon": [
+        {
+          "x": 22.5,
+          "y": 102.3
+        },
+        {
+          "x": 95.8,
+          "y": 102.3
+        },
+        {
+          "x": 95.8,
+          "y": 113.3
+        },
+        {
+          "x": 22.5,
+          "y": 113.3
+        }
+      ]
+    }
+  },
+  {
+    "key": "ownerNumber",
+    "label": "Owner number",
+    "value": "33076",
+    "citation": {
+      "page": 1,
+      "pageWidth": 792.0,
+      "pageHeight": 612.0,
+      "polygon": [
+        {
+          "x": 22.5,
+          "y": 93.1
+        },
+        {
+          "x": 45.4,
+          "y": 93.1
+        },
+        {
+          "x": 45.4,
+          "y": 104.1
+        },
+        {
+          "x": 22.5,
+          "y": 104.1
+        }
+      ]
+    }
+  },
+  {
+    "key": "operatorName",
+    "label": "Operator",
+    "value": "TAPSTONE ENERGY, LLC",
+    "citation": {
+      "page": 1,
+      "pageWidth": 792.0,
+      "pageHeight": 612.0,
+      "polygon": [
+        {
+          "x": 280.5,
+          "y": 102.3
+        },
+        {
+          "x": 370.5,
+          "y": 102.3
+        },
+        {
+          "x": 370.5,
+          "y": 113.3
+        },
+        {
+          "x": 280.5,
+          "y": 113.3
+        }
+      ]
+    }
+  },
+  {
+    "key": "operatorAddress",
+    "label": "Operator address",
+    "value": "P.O. BOX 1608",
+    "citation": {
+      "page": 1,
+      "pageWidth": 792.0,
+      "pageHeight": 612.0,
+      "polygon": [
+        {
+          "x": 280.5,
+          "y": 111.6
+        },
+        {
+          "x": 332.8,
+          "y": 111.6
+        },
+        {
+          "x": 332.8,
+          "y": 122.6
+        },
+        {
+          "x": 280.5,
+          "y": 122.6
+        }
+      ]
+    }
+  },
+  {
+    "key": "propertyName",
+    "label": "Property",
+    "value": "DARLENE 28-18-6 1H OK KINGFISHER",
+    "citation": {
+      "page": 2,
+      "pageWidth": 792.0,
+      "pageHeight": 612.0,
+      "polygon": [
+        {
+          "x": 239.3,
+          "y": 268.8
+        },
+        {
+          "x": 369.7,
+          "y": 268.8
+        },
+        {
+          "x": 369.7,
+          "y": 279.6
+        },
+        {
+          "x": 239.3,
+          "y": 279.6
+        }
+      ]
+    }
+  },
+  {
+    "key": "propertyId",
+    "label": "Property ID",
+    "value": "10*315811",
+    "citation": {
+      "page": 2,
+      "pageWidth": 792.0,
+      "pageHeight": 612.0,
+      "polygon": [
+        {
+          "x": 82.5,
+          "y": 268.8
+        },
+        {
+          "x": 118.8,
+          "y": 268.8
+        },
+        {
+          "x": 118.8,
+          "y": 279.6
+        },
+        {
+          "x": 82.5,
+          "y": 279.6
+        }
+      ]
+    }
+  },
+  {
+    "key": "gasVolume",
+    "label": "Gas volume (Jan 21)",
+    "value": "6,778.03",
+    "citation": {
+      "page": 2,
+      "pageWidth": 792.0,
+      "pageHeight": 612.0,
+      "polygon": [
+        {
+          "x": 517.5,
+          "y": 297.0
+        },
+        {
+          "x": 548.3,
+          "y": 297.0
+        },
+        {
+          "x": 548.3,
+          "y": 308.0
+        },
+        {
+          "x": 517.5,
+          "y": 308.0
+        }
+      ]
+    }
+  }
+]

@@ -87,6 +87,64 @@ export interface PdfPageOverlayProps {
   rotation: number
 }
 
+/**
+ * Imperative handle for driving the viewer from outside (e.g. scroll to the
+ * source of a clicked field). Obtain it with a `ref` on `<PdfViewer>`.
+ */
+export interface PdfViewerHandle {
+  /**
+   * Scroll a page's normalized area into view. `area` fields are percentages
+   * [0, 100] of the rendered page; only `top` is required (the viewer scrolls
+   * vertically). Pass `behavior: "auto"` for an instant jump (e.g. on hover).
+   */
+  scrollToPageArea: (
+    pageNumber: number,
+    area: { top: number; left?: number; width?: number; height?: number },
+    options?: ScrollToOptions
+  ) => void
+  /** The scrolling viewport element, or null before the document loads. */
+  getViewportElement: () => HTMLDivElement | null
+}
+
+/** Headroom left above a scrolled-to area so it doesn't sit flush under the toolbar. */
+const SCROLL_HEADROOM = 48
+
+export interface PdfHighlightProps
+  extends React.ComponentProps<"div"> {
+  /** Normalized box, each field a percentage [0, 100] of the page. */
+  area: { left: number; top: number; width: number; height: number }
+}
+
+/**
+ * A percentage-positioned highlight box for use inside `renderPageOverlay` (the
+ * overlay layer is already `position: absolute`, so this just places itself in
+ * %). Style it via `className`/`style`.
+ */
+export function PdfHighlight({
+  area,
+  className,
+  style,
+  ...props
+}: PdfHighlightProps) {
+  return (
+    <div
+      data-slot="pdf-highlight"
+      className={cn(
+        "pointer-events-none absolute z-10 rounded-[2px] border border-primary/70 bg-primary/12 shadow-[0_4px_16px_rgb(0_0_0_/_8%)]",
+        className
+      )}
+      style={{
+        left: `${area.left}%`,
+        top: `${area.top}%`,
+        width: `${area.width}%`,
+        height: `${area.height}%`,
+        ...style,
+      }}
+      {...props}
+    />
+  )
+}
+
 export interface PdfViewerProps {
   /** URL of the PDF (same-origin or CORS-enabled). */
   src: string
@@ -113,21 +171,25 @@ export interface PdfViewerProps {
   defaultAsideOpen?: boolean
 }
 
-export function PdfViewer(props: PdfViewerProps) {
-  const isClient = useIsClient()
-  if (!isClient) {
-    return <PdfViewerFallback className={props.className} bare={props.bare} />
+export const PdfViewer = React.forwardRef<PdfViewerHandle, PdfViewerProps>(
+  function PdfViewer(props, ref) {
+    const isClient = useIsClient()
+    if (!isClient) {
+      return <PdfViewerFallback className={props.className} bare={props.bare} />
+    }
+    return (
+      <PdfErrorBoundary className={props.className}>
+        <React.Suspense
+          fallback={
+            <PdfViewerFallback className={props.className} bare={props.bare} />
+          }
+        >
+          <PdfViewerInner {...props} forwardedRef={ref} />
+        </React.Suspense>
+      </PdfErrorBoundary>
+    )
   }
-  return (
-    <PdfErrorBoundary className={props.className}>
-      <React.Suspense
-        fallback={<PdfViewerFallback className={props.className} bare={props.bare} />}
-      >
-        <PdfViewerInner {...props} />
-      </React.Suspense>
-    </PdfErrorBoundary>
-  )
-}
+)
 
 function PdfViewerInner({
   src,
@@ -143,7 +205,10 @@ function PdfViewerInner({
   aside,
   asideToggle = true,
   defaultAsideOpen = true,
-}: PdfViewerProps) {
+  forwardedRef,
+}: PdfViewerProps & {
+  forwardedRef?: React.ForwardedRef<PdfViewerHandle>
+}) {
   const doc = React.use(getDocumentResource(src))
   const firstPage = React.use(getPageResource(doc, 1))
   // First page stands in for every page's intrinsic size: most documents are
@@ -315,6 +380,35 @@ function PdfViewerInner({
 
   const zoom = (factor: number) =>
     setManualScale(clamp(scale * factor, 0.25, 5))
+
+  // Imperative handle: scroll a page's normalized area into view. We read the
+  // page slot's live rect (always mounted, even when virtualized) rather than
+  // recomputing offsets, so it stays correct across zoom, rotation, and the
+  // aside collapse. `area.top` is a % of the rendered page height.
+  React.useImperativeHandle(
+    forwardedRef,
+    () => ({
+      scrollToPageArea: (pageNumber, area, options) => {
+        const viewport = scrollViewportRef.current
+        const slot = viewport?.querySelector<HTMLElement>(
+          `[data-page-number="${pageNumber}"]`
+        )
+        if (!viewport || !slot) return
+        const slotRect = slot.getBoundingClientRect()
+        const viewportRect = viewport.getBoundingClientRect()
+        const pageTop = slotRect.top - viewportRect.top + viewport.scrollTop
+        const targetTop =
+          pageTop + (area.top / 100) * slotRect.height - SCROLL_HEADROOM
+        viewport.scrollTo({
+          top: Math.max(0, targetTop),
+          behavior: "smooth",
+          ...options,
+        })
+      },
+      getViewportElement: () => scrollViewportRef.current,
+    }),
+    []
+  )
 
   return (
     <div

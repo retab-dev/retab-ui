@@ -602,7 +602,7 @@
       "name": "pdf-viewer",
       "type": "registry:ui",
       "title": "PDF Viewer",
-      "description": "A pdfjs-backed PDF viewer: continuous scroll, zoom, rotate, fit-to-width, download, and a per-page overlay slot for bounding-box citations. No useEffect.",
+      "description": "A pdfjs-backed PDF viewer: continuous scroll, zoom, rotate, fit-to-width, download, a per-page overlay slot for bounding-box citations, a PdfHighlight overlay, and an imperative scrollToPageArea handle for driving source highlights. No useEffect.",
       "dependencies": [
         "lucide-react",
         "pdfjs-dist@5.4.296"
@@ -636,7 +636,6 @@
         "button",
         "scroll-area",
         "separator",
-        "spinner",
         "skeleton"
       ],
       "files": [
@@ -668,6 +667,11 @@
           "path": "registry/new-york-v4/ui/image-viewer.tsx",
           "type": "registry:ui",
           "target": "@ui/image-viewer.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/image-viewer.worker.ts",
+          "type": "registry:ui",
+          "target": "@ui/image-viewer.worker.ts"
         }
       ]
     },
@@ -752,6 +756,19 @@
           "path": "registry/new-york-v4/ui/file-viewer.tsx",
           "type": "registry:ui",
           "target": "@ui/file-viewer.tsx"
+        }
+      ]
+    },
+    {
+      "name": "document-source",
+      "type": "registry:lib",
+      "title": "Document source model",
+      "description": "Viewer-agnostic model for source citations (provenance of extracted values): SourceCitation/SourceArea/SourceLocation types + polygon→percentage normalization shared across viewers.",
+      "files": [
+        {
+          "path": "registry/new-york-v4/lib/document-source.ts",
+          "type": "registry:lib",
+          "target": "@lib/document-source.ts"
         }
       ]
     },
@@ -1002,6 +1019,36 @@
           "path": "components/viewers/sample-data/parse.json",
           "type": "registry:file",
           "target": "@components/viewers/sample-data/parse.json"
+        }
+      ],
+      "categories": [
+        "primitives"
+      ]
+    },
+    {
+      "name": "extract-viewer-block",
+      "type": "registry:block",
+      "title": "Extract Viewer",
+      "description": "Extracted fields beside the source PDF, linked by their sources — hover or select a field to highlight where its value came from and scroll the page to it.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "pdf-viewer",
+        "document-source",
+        "scroll-area",
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/blocks/extract-viewer-block.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/extract-viewer-block.tsx"
+        },
+        {
+          "path": "components/viewers/sample-data/extract.json",
+          "type": "registry:file",
+          "target": "@components/viewers/sample-data/extract.json"
         }
       ],
       "categories": [

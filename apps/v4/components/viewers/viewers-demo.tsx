@@ -9,6 +9,7 @@ import type { ParseResponse } from "@/components/viewers/lib/parse-types";
 import { ParseViewer } from "@/components/viewers/parse/parse-viewer";
 import type { FormField } from "@/components/viewers/lib/edit-types";
 import { EditViewer } from "@/components/viewers/edit/edit-viewer";
+import { ExtractViewerBlock } from "@/registry/new-york-v4/blocks/extract-viewer-block";
 import { PdfViewer } from "@/components/ui/pdf-viewer";
 import splitSample from "@/components/viewers/sample-data/split.json";
 import partitionSample from "@/components/viewers/sample-data/partition.json";
@@ -153,6 +154,16 @@ export function ParseViewerDemo() {
   return (
     <div className="not-prose flex flex-col overflow-hidden rounded-xl border" style={{ height: 480 }}>
       <ParseViewer result={parseResult} />
+    </div>
+  );
+}
+
+export function ExtractViewerDemo() {
+  // Extracted fields linked to their sources in the PDF — hover/select a field
+  // to highlight where its value came from and scroll the page to it.
+  return (
+    <div className="not-prose flex flex-col overflow-hidden rounded-xl border" style={{ height: 680 }}>
+      <ExtractViewerBlock />
     </div>
   );
 }

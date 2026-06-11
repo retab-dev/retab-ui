@@ -15,6 +15,7 @@
     "xlsx-viewer",
     "file-viewer",
     "parse-viewer",
+    "extract-viewer",
     "edit-viewer",
     "segmented-viewer",
     "file-thumbnail"

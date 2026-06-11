@@ -39,6 +39,7 @@ import { JsonTableDemo } from "@/components/json-table/json-table-demo"
 import {
   ClassificationViewerDemo,
   EditViewerDemo,
+  ExtractViewerDemo,
   ParseViewerDemo,
   PartitionViewerDemo,
   SplitViewerDemo,
@@ -362,6 +363,7 @@ export const mdxComponents = {
   JsonFormFieldDemo,
   JsonTableDemo,
   ParseViewerDemo,
+  ExtractViewerDemo,
   ClassificationViewerDemo,
   PartitionViewerDemo,
   SplitViewerDemo,
