@@ -140,11 +140,15 @@ export function PageRibbon({
       ) : null}
 
       {ticks.length > 0 ? (
+        // Vertical: an in-flow column so the ribbon's width includes the labels
+        // (the aside sizes to fit, no overflow). Horizontal: a strip below.
         <div
           aria-hidden
           className={cn(
-            "pointer-events-none absolute font-mono text-[9px] text-muted-foreground tabular-nums",
-            vertical ? "top-0 left-full ml-1 h-full" : "top-full left-0 mt-0.5 w-full"
+            "font-mono text-[9px] text-muted-foreground tabular-nums",
+            vertical
+              ? "relative w-4 flex-shrink-0"
+              : "pointer-events-none absolute top-full left-0 mt-0.5 w-full"
           )}
         >
           {ticks.map((page) => {
@@ -152,7 +156,7 @@ export function PageRibbon({
             return (
               <span
                 key={page}
-                className="absolute leading-none"
+                className={cn("absolute leading-none", vertical && "left-0")}
                 style={
                   vertical
                     ? { top: `${pct}%`, transform: "translateY(-50%)" }
