@@ -45,7 +45,8 @@ import {
   PartitionViewerDemo,
   SplitViewerDemo,
 } from "@/components/viewers/viewers-demo"
-import { SegmentedViewerDemo } from "@/components/segmented-viewer-demo"
+import { SegmentSidebarDemo } from "@/components/segment-sidebar-demo"
+import { SegmentLegendDemo } from "@/components/segment-legend-demo"
 import { FileThumbnailDemo } from "@/components/file-thumbnail-demo"
 import { FileThumbnailFormatsDemo } from "@/components/file-thumbnail-formats-demo"
 import { ApiCallDemo } from "@/components/api-call-demo"
@@ -377,7 +378,8 @@ export const mdxComponents = {
   PartitionViewerDemo,
   SplitViewerDemo,
   EditViewerDemo,
-  SegmentedViewerDemo,
+  SegmentSidebarDemo,
+  SegmentLegendDemo,
   FileThumbnailDemo,
   FileThumbnailFormatsDemo,
   ApiCallDemo,

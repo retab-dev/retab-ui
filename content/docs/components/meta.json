@@ -10,7 +10,8 @@
     "parse-viewer",
     "extract-viewer",
     "edit-viewer",
-    "segmented-viewer",
+    "sidebar",
+    "legend",
     "file-thumbnail"
   ]
 }

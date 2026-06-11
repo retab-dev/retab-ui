@@ -1,0 +1,70 @@
+---
+title: Segment Legend
+description: A compact color key for page-segmented document results, with bar, floating, inset, and rail variants.
+---
+
+`SegmentLegend` is the "key" surface over a page-segmented result (partition
+chunks or split subdocuments) — a compact map from color to label. It docks to a
+document surface in four flavors: a flush **bar**, a **floating** overlay card, a
+gapped **inset** panel, or a vertical **rail**.
+
+Hovering an entry raises `activeId` (dimming the others); segments that own the
+`currentPage` render bold. Wire it to the same shared state as a
+[sidebar](/docs/components/sidebar) for a coordinated layout.
+
+<SegmentLegendDemo />
+
+## Installation
+
+```bash
+npx shadcn@latest add @retab/segment-legend
+```
+
+## Usage
+
+Reduce a partition or split result to `Segment[]` with `toSegments`, then render
+the legend against your own `activeId` state:
+
+```tsx
+import { useState } from "react"
+import { toSegments } from "@/lib/segments"
+import { SegmentLegend } from "@/components/ui/segment-legend"
+
+// partition: [{ key, pages }]   split: [{ name, pages }]
+const segments = toSegments(result.output)
+
+export function Example() {
+  const [activeId, setActiveId] = useState<string | null>(null)
+  return (
+    <SegmentLegend
+      segments={segments}
+      variant="bar"
+      activeId={activeId}
+      onActivate={setActiveId}
+      currentPage={1}
+    />
+  )
+}
+```
+
+The `floating` variant needs a `relative` parent to anchor against; `side`
+controls which edge it docks to.
+
+## Props
+
+| Prop | Type | Description |
+| --- | --- | --- |
+| `segments` | `Segment[]` | Labels + pages + colors (use `toSegments`). |
+| `variant` | `"bar" \| "floating" \| "inset" \| "plain"` | How the legend attaches to the surface. Defaults to `"bar"`. |
+| `orientation` | `"horizontal" \| "vertical"` | Wrap/grid vs. rail layout. Defaults to `"horizontal"`. |
+| `side` | `"top" \| "bottom" \| "left" \| "right"` | Edge the legend docks to — drives the border (`bar`) or anchor (`floating`). |
+| `density` | `"comfortable" \| "compact"` | Swatch + label scale. Defaults to `"comfortable"`. |
+| `activeId` | `string \| null` | Highlighted segment (shared hover/selection); dims the others. |
+| `onActivate` | `(id: string \| null) => void` | Fired on hover in/out. |
+| `onSelect` | `(id: string) => void` | Fired on click. |
+| `currentPage` | `number \| null` | 1-based current page; segments that own it render bold. |
+| `columns` | `number` | Lay entries out on a grid of N columns (horizontal only). |
+| `showUnusedToggle` | `boolean` | Render a "Show all / Hide unused" toggle when some segments own no pages. |
+| `showUnused` | `boolean` | Initial/forced visibility of zero-page segments. |
+| `caption` | `ReactNode` | A muted caption rendered under the entries. |
+| `className` | `string` | Container class. |
