@@ -187,9 +187,39 @@ function baseName(src: string): string {
 
 // --- resource caches: stable promises so React `use()` can read them ---------
 
+// Caches are bounded (least-recently-used) so a long session — or signed URLs,
+// whose query string changes every re-sign and so never hits — doesn't grow
+// without limit. `lruGet` refreshes recency on a hit; `lruSet` inserts and
+// evicts the oldest past the cap, handing each dropped entry to `onEvict` so a
+// paired resource (e.g. the streaming text loader) can be released alongside it.
+const RESOURCE_CACHE_MAX = 12
+function lruGet<K, V>(map: Map<K, V>, key: K): V | undefined {
+  const v = map.get(key)
+  if (v !== undefined) {
+    map.delete(key)
+    map.set(key, v)
+  }
+  return v
+}
+function lruSet<K, V>(
+  map: Map<K, V>,
+  key: K,
+  value: V,
+  onEvict?: (key: K, value: V) => void
+) {
+  map.delete(key)
+  map.set(key, value)
+  while (map.size > RESOURCE_CACHE_MAX) {
+    const oldest = map.keys().next().value as K
+    const dropped = map.get(oldest) as V
+    map.delete(oldest)
+    onEvict?.(oldest, dropped)
+  }
+}
+
 const textCache = new Map<string, Promise<string>>()
 function getText(src: string): Promise<string> {
-  let p = textCache.get(src)
+  let p = lruGet(textCache, src)
   if (!p) {
     p = timed(`text:fetch ${baseName(src)}`, () =>
       fetch(src).then((r) => {
@@ -197,7 +227,7 @@ function getText(src: string): Promise<string> {
         return r.text()
       })
     )
-    textCache.set(src, p)
+    lruSet(textCache, src, p)
   }
   return p
 }
@@ -224,7 +254,7 @@ function loadSanitizer() {
 
 const markdownCache = new Map<string, Promise<string>>()
 function getMarkdownHtml(src: string): Promise<string> {
-  let p = markdownCache.get(src)
+  let p = lruGet(markdownCache, src)
   if (!p) {
     p = timed(`markdown:render ${baseName(src)}`, () =>
       Promise.all([getText(src), import("marked"), loadSanitizer()]).then(
@@ -234,7 +264,7 @@ function getMarkdownHtml(src: string): Promise<string> {
         }
       )
     )
-    markdownCache.set(src, p)
+    lruSet(markdownCache, src, p)
   }
   return p
 }
@@ -286,7 +316,7 @@ export function FileViewer(props: FileViewerProps) {
     return fallback
   }
   return (
-    <FileErrorBoundary className={props.className}>
+    <FileErrorBoundary className={props.className} resetKey={props.src}>
       <React.Suspense fallback={fallback}>
         <FileViewerInner {...props} />
       </React.Suspense>
@@ -338,6 +368,16 @@ function FileViewerInner({
 }
 
 // --- text / code / JSON viewer (streamed + virtualized) ----------------------
+//
+// This is intentionally NOT the standalone `text-viewer.tsx` (`TextViewer`), and
+// the two should not be merged. They optimize for opposite goals:
+//   • This one byte-range *streams* + virtualizes, so it can open a 200 MB log
+//     without holding it all in memory — but it can't guarantee an arbitrary
+//     line is present, so it has no line highlight / scroll-to-line.
+//   • `TextViewer` fetches the *whole* file and renders every line, because the
+//     source-linking system (`text-source.tsx`) needs every line addressable to
+//     highlight + scroll to an extraction's source span.
+// Merging would force one design to sabotage the other.
 
 const TEXT_FONT = 12.5
 const TEXT_LINE_HEIGHT = 20
@@ -520,7 +560,7 @@ function snapshotOf(loader: TextLoaderState): TextSnapshot {
  */
 const firstChunkCache = new Map<string, Promise<TextSnapshot>>()
 function loadFirstChunk(src: string, loadAll: boolean): Promise<TextSnapshot> {
-  let p = firstChunkCache.get(src)
+  let p = lruGet(firstChunkCache, src)
   if (!p) {
     p = timed(`text:first-chunk ${baseName(src)}`, async () => {
       const decoder = new TextDecoder()
@@ -555,7 +595,9 @@ function loadFirstChunk(src: string, loadAll: boolean): Promise<TextSnapshot> {
       textLoaderCache.set(src, loader)
       return snapshotOf(loader)
     })
-    firstChunkCache.set(src, p)
+    // Evict the paired streaming loader alongside the first-chunk entry, so the
+    // two caches stay in lockstep (both keyed by src).
+    lruSet(firstChunkCache, src, p, (key) => textLoaderCache.delete(key))
   }
   return p
 }
@@ -1299,6 +1341,13 @@ class FileErrorBoundary extends React.Component<
   { error: boolean }
 > {
   state = { error: false }
+  // Recover when the source changes: a new file gets a fresh attempt instead
+  // of staying stuck on the previous file's error.
+  componentDidUpdate(prev: { resetKey?: unknown }) {
+    if (prev.resetKey !== this.props.resetKey && this.state.error) {
+      this.setState({ error: false })
+    }
+  }
   static getDerivedStateFromError() {
     return { error: true }
   }

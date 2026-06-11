@@ -9,10 +9,10 @@
   "type": "module",
   "packageManager": "pnpm@9.15.9",
   "scripts": {
-    "dev": "next dev --turbopack --port 4000",
+    "dev": "next dev --port 3100",
     "build": "pnpm registry:build && next build",
-    "start": "next start --port 4000",
-    "preview": "next build && next start --port 4000",
+    "start": "next start --port 3100",
+    "preview": "next build && next start --port 3100",
     "lint": "eslint . --cache --cache-location .eslintcache",
     "lint:fix": "eslint --fix . --cache --cache-location .eslintcache",
     "typecheck": "tsc --noEmit",
@@ -39,7 +39,7 @@
     "@radix-ui/react-slot": "^1.1.1",
     "@radix-ui/react-switch": "^1.1.2",
     "@radix-ui/react-tooltip": "^1.1.6",
-    "@shikijs/themes": "3.14.0",
+    "@shikijs/themes": "3.23.0",
     "@tanstack/react-virtual": "^3.13.12",
     "@vercel/analytics": "^2.0.1",
     "ajv": "^8.17.1",
@@ -150,7 +150,7 @@
     "overrides": {
       "@types/react": "19.2.2",
       "@types/react-dom": "19.2.2",
-      "@shikijs/themes": "3.14.0",
+      "@shikijs/themes": "3.23.0",
       "@pierre/diffs": "1.2.7"
     }
   }

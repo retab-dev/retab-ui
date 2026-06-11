@@ -104,7 +104,7 @@ export function DocxViewer(props: DocxViewerProps) {
     return <DocxViewerFallback className={props.className} bare={props.bare} />
   }
   return (
-    <DocxErrorBoundary className={props.className}>
+    <DocxErrorBoundary className={props.className} resetKey={props.src}>
       <React.Suspense
         fallback={<DocxViewerFallback className={props.className} bare={props.bare} />}
       >

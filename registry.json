@@ -1375,7 +1375,7 @@
       "name": "run-timeline-block",
       "type": "registry:block",
       "title": "Run Timeline",
-      "description": "A workflow run viewed two ways — a Steps tab with a step list beside the selected step's inspector, and a Timing tab with a waterfall of the same steps. Composes the API Call, Function, If / Else and Step Waterfall blocks.",
+      "description": "A workflow run viewed two ways — a Steps tab with a step list beside the selected step's inspector, and a Timing tab with a waterfall of the same steps. Composes the Extract, API Call, Function, If / Else and Step Waterfall blocks.",
       "dependencies": [
         "lucide-react"
       ],
@@ -1383,6 +1383,7 @@
         "tabs",
         "scroll-area",
         "utils",
+        "extract-block",
         "api-call-block",
         "function-block",
         "conditional-block",
@@ -1417,6 +1418,31 @@
           "path": "registry/new-york-v4/blocks/step-waterfall-block.tsx",
           "type": "registry:component",
           "target": "@components/blocks/step-waterfall-block.tsx"
+        }
+      ],
+      "categories": [
+        "workflows"
+      ]
+    },
+    {
+      "name": "extract-block",
+      "type": "registry:block",
+      "title": "Extract",
+      "description": "Inspect a single LLM extraction — the model, token usage and duration up top, then the extracted fields with per-field confidence, the raw JSON, and the model's reasoning.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "tabs",
+        "scroll-area",
+        "json-inspector",
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/blocks/extract-block.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/extract-block.tsx"
         }
       ],
       "categories": [

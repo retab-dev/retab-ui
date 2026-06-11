@@ -7,6 +7,7 @@ import {
   DocumentThumbnail,
   type DocumentKind,
 } from "@/components/document-thumbnail"
+import { cn } from "@/lib/utils"
 
 /**
  * The hero showcase: one bordered card with a large, labeled, *square* preview
@@ -112,26 +113,38 @@ const SAMPLES: FormatSample[] = [
   },
 ]
 
+/** The bare grid of real, labeled format previews — 3 rows of 4 (grid-cols-4).
+ *  Reused by the docs demo (below) and the home showcase. */
+export function FileThumbnailFormatsGrid({
+  className,
+}: {
+  className?: string
+}) {
+  return (
+    <div className={cn("bg-background grid grid-cols-4 gap-3 p-6", className)}>
+      {SAMPLES.map((sample) => (
+        <div key={sample.label} className="space-y-1.5">
+          <div className="truncate text-xs font-medium">{sample.label}</div>
+          <DocumentThumbnail
+            kind={sample.kind}
+            src={sample.src}
+            name={sample.name}
+            type={sample.type}
+            previewAspectRatio={1}
+          />
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export function FileThumbnailFormatsDemo() {
   return (
     <div
       data-slot="component-preview"
       className="group relative mt-4 mb-2 flex flex-col overflow-hidden rounded-xl border"
     >
-      <div className="bg-background grid grid-cols-6 gap-3 p-6">
-        {SAMPLES.map((sample) => (
-          <div key={sample.label} className="space-y-1.5">
-            <div className="truncate text-xs font-medium">{sample.label}</div>
-            <DocumentThumbnail
-              kind={sample.kind}
-              src={sample.src}
-              name={sample.name}
-              type={sample.type}
-              previewAspectRatio={1}
-            />
-          </div>
-        ))}
-      </div>
+      <FileThumbnailFormatsGrid />
       <DocsViewCodeBlock code={formatsDemoCode} />
     </div>
   )

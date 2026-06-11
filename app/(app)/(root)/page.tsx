@@ -8,6 +8,7 @@ import {
   PageHeaderDescription,
   PageHeaderHeading,
 } from "@/components/page-header"
+import { HomeShowcase } from "./showcase"
 
 const title = "UI primitives for document workflows"
 const description =
@@ -79,6 +80,7 @@ export default function IndexPage() {
           </Button>
         </PageActions>
       </PageHeader>
+      <HomeShowcase />
     </div>
   )
 }

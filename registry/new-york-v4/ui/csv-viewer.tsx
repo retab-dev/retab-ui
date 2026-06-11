@@ -122,16 +122,26 @@ function HeaderAwareScrollbar({
 }
 
 // Fetched blobs are cached per URL so a remount (or re-render) reuses the bytes
-// already downloaded instead of re-fetching the file.
+// already downloaded instead of re-fetching the file. Bounded (least-recently-
+// used eviction) so a long session — or signed URLs, whose query string changes
+// every re-sign and so never hits — doesn't accumulate blobs without limit.
+const CSV_CACHE_MAX = 8
 const csvBlobCache = new Map<string, Promise<Blob>>()
 function fetchCsvBlob(src: string): Promise<Blob> {
-  let p = csvBlobCache.get(src)
-  if (!p) {
-    p = fetch(src).then((r) => {
-      if (!r.ok) throw new Error(`Failed to load file: ${r.status}`)
-      return r.blob()
-    })
-    csvBlobCache.set(src, p)
+  const cached = csvBlobCache.get(src)
+  if (cached) {
+    csvBlobCache.delete(src)
+    csvBlobCache.set(src, cached)
+    return cached
+  }
+  const p = fetch(src).then((r) => {
+    if (!r.ok) throw new Error(`Failed to load file: ${r.status}`)
+    return r.blob()
+  })
+  csvBlobCache.set(src, p)
+  while (csvBlobCache.size > CSV_CACHE_MAX) {
+    const oldest = csvBlobCache.keys().next().value as string
+    csvBlobCache.delete(oldest)
   }
   return p
 }

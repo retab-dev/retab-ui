@@ -37,6 +37,10 @@ import {
   type ConditionalRun,
 } from "@/registry/new-york-v4/blocks/conditional-block"
 import {
+  ExtractInspector,
+  type ExtractRun,
+} from "@/registry/new-york-v4/blocks/extract-block"
+import {
   FunctionInspector,
   type FunctionRun,
 } from "@/registry/new-york-v4/blocks/function-block"
@@ -405,24 +409,30 @@ export function RunTimeline({ run }: { run: WorkflowRun }) {
 
 // ── Block (self-contained demo with sample data) ─────────────────────────────
 
-const API_CALL: ApiCall = {
-  url: "https://api.retab.com/v1/documents/extract",
-  method: "POST",
-  requestHeaders: {
-    "Content-Type": "application/json",
-    Authorization: "Bearer sk_live_••••8f3a",
-  },
-  requestBody: {
-    model: "retab-large",
-    document: { url: "https://files.retab.com/uploads/invoice_8842.pdf" },
-  },
-  responseStatusCode: 200,
+const EXTRACT_RUN: ExtractRun = {
+  model: "retab-large",
+  status: "completed",
   durationMs: 1842,
-  responseHeaders: { "x-request-id": "req_9f2b7c41a8" },
-  responseBody: JSON.stringify({
-    id: "extr_2Kd9aZ",
-    output: { invoice_number: "INV-8842", total_amount: 12480.5, currency: "USD" },
-  }),
+  nConsensus: 3,
+  usage: {
+    promptTokens: 4210,
+    completionTokens: 388,
+    totalTokens: 4598,
+    credits: 3,
+  },
+  output: {
+    invoice_number: "INV-8842",
+    vendor: { name: "Acme Corp", vat_id: "FR12345678901" },
+    currency: "USD",
+    total_amount: 12480.5,
+  },
+  likelihoods: {
+    invoice_number: 0.99,
+    "vendor.name": 0.97,
+    "vendor.vat_id": 0.62,
+    currency: 0.99,
+    total_amount: 0.98,
+  },
 }
 
 const FUNCTION_RUN: FunctionRun = {
@@ -494,12 +504,12 @@ const SAMPLE_RUN: WorkflowRun = {
     },
     {
       id: "extract",
-      blockType: "api_call",
+      blockType: "extract",
       label: "Extract fields",
       status: "completed",
       startOffsetMs: 8,
       durationMs: 1842,
-      inspector: <ApiCallInspector call={API_CALL} />,
+      inspector: <ExtractInspector run={EXTRACT_RUN} />,
     },
     {
       id: "totals",

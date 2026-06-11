@@ -54,6 +54,7 @@ import { FunctionBlockDemo } from "@/components/function-block-demo"
 import { ConditionalBlockDemo } from "@/components/conditional-block-demo"
 import { RunTimelineDemo } from "@/components/run-timeline-demo"
 import { StepWaterfallDemo } from "@/components/step-waterfall-demo"
+import { ExtractBlockDemo } from "@/components/extract-block-demo"
 import { SplitConsensusDemo } from "@/components/split-consensus-demo"
 import { ComponentSource } from "@/components/component-source"
 
@@ -386,6 +387,7 @@ export const mdxComponents = {
   ConditionalBlockDemo,
   RunTimelineDemo,
   StepWaterfallDemo,
+  ExtractBlockDemo,
   SplitConsensusDemo,
   Link: ({ className, ...props }: React.ComponentProps<typeof Link>) => (
     <Link

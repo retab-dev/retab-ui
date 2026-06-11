@@ -312,7 +312,7 @@ export const XlsxViewer = React.forwardRef<XlsxViewerHandle, XlsxViewerProps>(
       )
     }
     return (
-      <XlsxErrorBoundary className={props.className}>
+      <XlsxErrorBoundary className={props.className} resetKey={props.src}>
         <React.Suspense
           fallback={
             <XlsxViewerFallback className={props.className} bare={props.bare} />

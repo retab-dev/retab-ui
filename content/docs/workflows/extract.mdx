@@ -1,0 +1,85 @@
+---
+title: Extract
+description: Inspect a single LLM extraction — the model, token usage and duration up top, then the extracted fields with per-field confidence, the raw JSON, and the model's reasoning.
+---
+
+The extract block runs an LLM to pull structured data out of a document. The
+Extract component renders one result the way you'd review it: the **model**, token
+usage and duration along the top, then tabs for the extracted **Fields** (each with
+a confidence tablet), the raw **JSON**, and the model's **Reasoning**.
+
+<ExtractBlockDemo />
+
+Confidence is colored by level — green at or above 90%, amber at or above 70%,
+red below — so low-confidence values stand out at a glance. The JSON tab reuses
+the shared [JSON inspector](/docs/components) viewer.
+
+## Usage
+
+Pass an `output` object and, optionally, a `likelihoods` map keyed by **dotted
+path** (e.g. `vendor.vat_id`, `line_items[1].amount`) to drive the per-field
+confidence. Everything is presentation only.
+
+```tsx
+import { ExtractInspector } from "@/registry/new-york-v4/blocks/extract-block"
+
+export function Example() {
+  return (
+    <div className="h-[480px] overflow-hidden rounded-xl border">
+      <ExtractInspector
+        run={{
+          model: "retab-large",
+          durationMs: 1842,
+          usage: { promptTokens: 4210, completionTokens: 388, totalTokens: 4598, credits: 3 },
+          output: {
+            invoice_number: "INV-8842",
+            vendor: { name: "Acme Corp", vat_id: "FR12345678901" },
+            total_amount: 12480.5,
+          },
+          likelihoods: {
+            invoice_number: 0.99,
+            "vendor.name": 0.97,
+            "vendor.vat_id": 0.62,
+            total_amount: 0.98,
+          },
+        }}
+      />
+    </div>
+  )
+}
+```
+
+The `ExtractBlock` export wraps the inspector with a sample extraction so it
+renders on its own with no props.
+
+## API
+
+### `ExtractRun`
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `model` | `string` | Model that produced the extraction — shown as a badge. |
+| `status` | `"completed" \| "running" \| "error"` | Drives the status pill. Defaults to `completed`. |
+| `durationMs` | `number \| null` | Wall-clock time, shown next to the clock icon (auto `ms`/`s`). |
+| `usage` | `TokenUsage` | Token counts and/or credits, shown as header chips. |
+| `nConsensus` | `number` | Number of consensus votes; shown as `×N` when greater than 1. |
+| `reasoning` | `string \| null` | Chain of thought; adds a Reasoning tab when present. |
+| `output` | `Record<string, unknown>` | The structured extraction, shown in the Fields and JSON tabs. |
+| `likelihoods` | `Record<string, number> \| null` | Per-field confidence in `[0,1]`, keyed by dotted path. |
+| `error` | `string \| null` | When set, shows an error banner and a red status pill. |
+
+### `TokenUsage`
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `promptTokens` | `number \| null` | Input tokens. |
+| `completionTokens` | `number \| null` | Output tokens. |
+| `totalTokens` | `number \| null` | Total tokens. |
+| `credits` | `number \| null` | Retab credits consumed. |
+
+### Components
+
+| Export | Props | Description |
+| --- | --- | --- |
+| `ExtractInspector` | `{ run: ExtractRun }` | The full extraction inspector. |
+| `ExtractBlock` | `{ run?: ExtractRun }` | The inspector preloaded with a sample extraction; pass `run` to override. |

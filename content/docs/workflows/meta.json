@@ -4,6 +4,7 @@
     "index",
     "run-timeline",
     "step-waterfall",
+    "extract",
     "api-call",
     "function",
     "conditional"

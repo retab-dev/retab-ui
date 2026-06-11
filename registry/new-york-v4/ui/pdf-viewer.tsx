@@ -41,14 +41,32 @@ function loadPdfjs() {
 
 // --- resource caches: stable promises so React `use()` can read them ---------
 
+// Bound the document cache so a long session (or signed URLs, whose query string
+// changes every re-sign and so never hits) doesn't accumulate documents — and
+// release each evicted one's pdfjs worker resources. The least-recently-used is
+// evicted; this assumes you don't display more than PDF_CACHE_MAX documents at
+// once, since the active document is always most-recently-used (never evicted).
+const PDF_CACHE_MAX = 6
 const documentCache = new Map<string, Promise<PDFDocumentProxy>>()
+// Keyed by the document, so a page set is GC'd once its (evicted/destroyed)
+// document is no longer referenced — no manual cleanup needed here.
 const pageCache = new WeakMap<PDFDocumentProxy, Map<number, Promise<PDFPageProxy>>>()
 
 export function getDocumentResource(src: string): Promise<PDFDocumentProxy> {
-  let promise = documentCache.get(src)
-  if (!promise) {
-    promise = loadPdfjs().then((pdfjs) => pdfjs.getDocument(src).promise)
-    documentCache.set(src, promise)
+  const cached = documentCache.get(src)
+  if (cached) {
+    // Refresh recency: re-insert so this src is now the most-recently-used.
+    documentCache.delete(src)
+    documentCache.set(src, cached)
+    return cached
+  }
+  const promise = loadPdfjs().then((pdfjs) => pdfjs.getDocument(src).promise)
+  documentCache.set(src, promise)
+  while (documentCache.size > PDF_CACHE_MAX) {
+    const oldest = documentCache.keys().next().value as string
+    const evicted = documentCache.get(oldest)
+    documentCache.delete(oldest)
+    void evicted?.then((doc) => doc.destroy()).catch(() => {})
   }
   return promise
 }
@@ -187,7 +205,7 @@ export const PdfViewer = React.forwardRef<PdfViewerHandle, PdfViewerProps>(
       )
     }
     return (
-      <PdfErrorBoundary className={props.className}>
+      <PdfErrorBoundary className={props.className} resetKey={props.src}>
         <React.Suspense
           fallback={
             <PdfViewerFallback

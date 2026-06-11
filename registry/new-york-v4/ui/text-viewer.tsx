@@ -1,5 +1,12 @@
 "use client"
 
+// A whole-file text viewer that renders every line, so any line is addressable
+// for highlighting + scroll-to-line — the basis for source-linking (see
+// `text-source.tsx`, which drives `highlight` and `scrollToLines`). For opening
+// arbitrarily large files (logs), `file-viewer.tsx` has a separate byte-range
+// *streaming* + virtualized text viewer instead; the two are deliberately not
+// merged (streaming can't guarantee a target line is loaded). See the note there.
+
 import * as React from "react"
 import { Download, Maximize, Minus, Plus } from "lucide-react"
 

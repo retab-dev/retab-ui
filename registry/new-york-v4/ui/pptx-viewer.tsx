@@ -277,7 +277,7 @@ export function PptxViewer(props: PptxViewerProps) {
     return <PptxViewerFallback className={props.className} bare={props.bare} />
   }
   return (
-    <PptxErrorBoundary className={props.className}>
+    <PptxErrorBoundary className={props.className} resetKey={props.src}>
       <React.Suspense
         fallback={<PptxViewerFallback className={props.className} bare={props.bare} />}
       >

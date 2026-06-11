@@ -284,7 +284,7 @@ export const ImageViewer = React.forwardRef<
     return <ImageViewerFallback className={props.className} bare={props.bare} />
   }
   return (
-    <ImageErrorBoundary className={props.className}>
+    <ImageErrorBoundary className={props.className} resetKey={props.src}>
       <React.Suspense
         fallback={
           <ImageViewerFallback className={props.className} bare={props.bare} />
