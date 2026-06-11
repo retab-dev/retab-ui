@@ -5,43 +5,32 @@ import type { JSONSchema7, JSONSchema7Definition } from "json-schema"
 import { CalendarIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
-import { useMountEffect } from "@/hooks/useMountEffect"
 import {
-  getSchemaPropertyType,
-  unwrapSchema,
-} from "@/components/json-table/header-from-schema"
-import type { HoverInfo } from "@/components/json-table/hover-info-context"
-import { useHoverInfo } from "@/components/json-table/hover-info-context"
+  DoubleClickInput,
+  DoubleClickTextarea,
+} from "@/components/json-table/cell-editors/primitive-editor"
 import {
-  autoFormatDateTimeFields,
   dateStringToFormat,
   dateToHTMLDateTimeString,
   dateToHTMLTimeString,
+  formatValueForCommit,
   getLocalDateString,
   parseDateStringAsLocal,
 } from "@/components/json-table/lib/date-utils"
-import {
-  get_value_from_row_array_and_dot_notation_path,
-  isValidProperty,
-} from "@/components/json-table/lib/json-schema-utils"
+import type { ProjectedCell } from "@/components/json-table/lib/document-projection"
 import type { TableDocument } from "@/components/json-table/lib/projects-types"
+import { getFieldMetadata } from "@/components/json-table/lib/schema-inspection"
 import {
   ArrayEditor,
   ObjectEditor,
 } from "@/components/json-table/object-editor"
-import {
-  assignObjectKey,
-  cmp,
-  materialize,
-  useRefCallback,
-} from "@/components/json-table/path-utils"
-import type { PathInfo } from "@/components/json-table/path-utils"
+import { cmp, useRefCallback } from "@/components/json-table/path-utils"
 import { getColumnWidthPx } from "@/components/json-table/table-options-store"
 import type { ColumnWidth } from "@/components/json-table/table-options-store"
+import { useCellController } from "@/components/json-table/use-cell-controller"
 import { Button } from "@/components/ui-retab/button"
 import { Calendar } from "@/components/ui-retab/calendar"
 import { Checkbox } from "@/components/ui-retab/checkbox"
-import { Input, InputArea } from "@/components/ui-retab/input"
 import {
   Popover,
   PopoverContent,
@@ -72,186 +61,6 @@ const objectCellButtonClass =
 
 type SchemaWithDefs = JSONSchema7 & {
   $defs?: Record<string, JSONSchema7Definition>
-}
-
-type OptimisticUpdateDetail = {
-  docId?: string
-  fieldPath?: string
-  value: unknown
-}
-
-// Cache schema property lookups by (schema object, dot path)
-type PropertyInfo = {
-  rawProperty: JSONSchema7
-  nullable: boolean
-  isValidProp: boolean
-  isObject: boolean
-  isArray: boolean
-  isText: boolean
-  isEnum: boolean
-  isNumber: boolean
-  isFloat: boolean
-  isInteger: boolean
-  isDate: boolean
-  isDateTime: boolean
-  isIsoTime: boolean
-  isBoolean: boolean
-  propertyEnumVals: unknown[]
-}
-
-const schemaPropertyCache = new WeakMap<object, Map<string, PropertyInfo>>()
-
-function getPropertyInfoCached(
-  schema: JSONSchema7,
-  path: string
-): PropertyInfo | undefined {
-  if (!schema || !path) return undefined
-  let cache = schemaPropertyCache.get(schema)
-  if (!cache) {
-    cache = new Map<string, PropertyInfo>()
-    schemaPropertyCache.set(schema, cache)
-  }
-  const existing = cache.get(path)
-  if (existing) return existing
-
-  // Resolve the final node once (getSchemaPropertyType internally resolves $ref for traversal
-  // and returns a resolved node at the end). Avoid full unwrapSchema here.
-  const node = getSchemaPropertyType(schema, path)
-  if (!node) return undefined
-
-  const isValidProp = !!(node && isValidProperty(node))
-
-  // Resolve nullable unions and $ref targets on the final node so flags (like enum)
-  // reflect the effective, non-null schema.
-  const unwrapped = unwrapSchema(node, schema)
-  const nullable = !!unwrapped.nullable
-  const effective = unwrapped.schema
-  const effectiveType = effective.type as string | string[] | undefined
-
-  const info: PropertyInfo = {
-    rawProperty: node,
-    nullable,
-    isValidProp,
-    isObject: effectiveType === "object",
-    isArray: effectiveType === "array",
-    isText: effectiveType === "string",
-    isEnum: !!effective?.enum,
-    isNumber: effectiveType === "number",
-    isFloat: effectiveType === "float",
-    isInteger: effectiveType === "integer",
-    isDate: effective?.format === "date",
-    isDateTime: effective?.format === "date-time",
-    isIsoTime: effective?.format === "iso-time",
-    isBoolean: effective?.type === "boolean",
-    propertyEnumVals: effective?.enum ?? [],
-  }
-  cache.set(path, info)
-  return info
-}
-
-export function DoubleClickInput({
-  className,
-  disabled = false,
-  isReferenceSheet: _isReferenceSheet = false,
-  ...props
-}: React.ComponentProps<typeof Input> & { isReferenceSheet?: boolean }) {
-  const inputRef = useRef<HTMLInputElement>(null)
-
-  // Let the browser handle native caret positioning
-  const handleMouseDown = (_e: React.MouseEvent) => {
-    // Nothing to do — we want the default behaviour here
-    // so the caret lands exactly where the user clicked.
-  }
-
-  // Handle double click to focus the input
-  const handleDoubleClick = () => {
-    if (!disabled) {
-      inputRef.current?.focus()
-    }
-  }
-
-  // Handle key down events for Enter and Escape keys
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" || e.key === "Escape") {
-      inputRef.current?.blur()
-      e.preventDefault()
-    }
-  }
-
-  return (
-    <Input
-      {...props}
-      className={cn(
-        "cursor-default border-0 focus:cursor-text disabled:text-inherit disabled:opacity-100",
-        className
-      )}
-      onKeyDown={handleKeyDown}
-      onSubmit={() => inputRef.current?.blur()}
-      ref={inputRef}
-      onMouseDown={handleMouseDown}
-      onClick={(e) => {
-        // Prevent propagation when already focused to maintain focus
-        if (document.activeElement === inputRef.current) {
-          e.stopPropagation()
-        }
-        // Call the original onClick if provided
-        props.onClick?.(e)
-      }}
-      onDoubleClick={handleDoubleClick}
-      disabled={disabled}
-    />
-  )
-}
-
-export function DoubleClickTextarea({
-  className,
-  disabled = false,
-  isReferenceSheet: _isReferenceSheet = false,
-  ...props
-}: React.ComponentProps<typeof InputArea> & { isReferenceSheet?: boolean }) {
-  const inputRef = useRef<HTMLTextAreaElement>(null)
-
-  // Let the browser handle native caret positioning
-  const handleMouseDown = (_e: React.MouseEvent) => {
-    // Nothing to do — we want the default behaviour here
-    // so the caret lands exactly where the user clicked.
-  }
-
-  // Handle double click to focus the input
-  const handleDoubleClick = () => {
-    if (!disabled) {
-      inputRef.current?.focus()
-    }
-  }
-
-  // Handle key down events for Enter and Escape keys
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" || e.key === "Escape") {
-      inputRef.current?.blur()
-      e.preventDefault()
-    }
-  }
-
-  return (
-    <InputArea
-      {...props}
-      className={cn("cursor-default focus:cursor-text", className)}
-      onKeyDown={handleKeyDown}
-      onSubmit={() => inputRef.current?.blur()}
-      ref={inputRef}
-      onMouseDown={handleMouseDown}
-      onClick={(e) => {
-        // Prevent propagation when already focused to maintain focus
-        if (document.activeElement === inputRef.current) {
-          e.stopPropagation()
-        }
-        // Call the original onClick if provided
-        props.onClick?.(e)
-      }}
-      onDoubleClick={handleDoubleClick}
-      readOnly={disabled}
-    />
-  )
 }
 
 function stripProperties(value: unknown): unknown {
@@ -295,26 +104,27 @@ function transferContext(type: JSONSchema7, context: JSONSchema7): JSONSchema7 {
 interface DataCellProps {
   keyValue: string
   rowIdx: number
-  pathInfo?: PathInfo
+  projectedCell?: ProjectedCell
   schema: JSONSchema7
   document: TableDocument
   docId: string
   columnWidth: ColumnWidth
   setOpenPopover: (key: string | null) => void
   openPopover: string | null
-  onGroundTruthDataChange: (docId: string, value: unknown) => void
-  onCellHoverStart?: (info: HoverInfo) => void
+  onDocumentDataChange: (docId: string, value: unknown) => void
+  onCellHoverStart?: (info: {
+    docId: string
+    fieldPath: string
+    rect: DOMRect
+  }) => void
   onCellHoverEnd?: () => void
   allowEditing?: boolean // Controls whether cell values can be edited
 }
 
 function calculateVariables(props: DataCellProps) {
   const { document, ...rest } = props
-  const { pathInfo, keyValue } = props
-
-  const actualKey = pathInfo?.idx
-    ? materialize(keyValue, pathInfo?.idx)
-    : undefined
+  const { projectedCell } = props
+  const actualKey = projectedCell?.materializedPath
 
   return {
     ...rest,
@@ -324,15 +134,13 @@ function calculateVariables(props: DataCellProps) {
 }
 
 const DataCellContent = (props: DataCellProps) => {
-  const { hoverInfo, setHoverInfo } = useHoverInfo()
-
   const {
     actualKey,
     schema,
     docId,
     setOpenPopover,
     openPopover,
-    onGroundTruthDataChange,
+    onDocumentDataChange,
     document,
   } = calculateVariables(props)
 
@@ -341,6 +149,7 @@ const DataCellContent = (props: DataCellProps) => {
   const [isInputFocused, setIsInputFocused] = useState(false)
   const [isSelectOpen, setIsSelectOpen] = useState(false)
   const [isDatePopoverOpen, setIsDatePopoverOpen] = useState(false)
+  const [isPointerOver, setIsPointerOver] = useState(false)
   // Text cells render a plain <div> for display/hover and only mount the
   // <textarea> editor once the user clicks to edit. A <textarea> is a scroll
   // container, so leaving one under the pointer (as the old always-mounted
@@ -363,64 +172,18 @@ const DataCellContent = (props: DataCellProps) => {
     }
   }, [isInputFocused, isSelectOpen, isDatePopoverOpen])
 
-  // Use the value from the PathInfo
-  const value = props.pathInfo?.value
+  // Use the value from the projected document cell.
+  const value = props.projectedCell?.value
 
-  // Optimistic local value to reflect changes immediately in the UI
-  const [optimisticValue, setOptimisticValue] = useState<unknown>(undefined)
-
-  // Helpers shared with commit/cleanup comparisons
-  const safeStringify = React.useCallback((v: unknown) => {
-    try {
-      return JSON.stringify(v)
-    } catch {
-      return String(v)
-    }
-  }, [])
-  const normalize = React.useCallback(
-    (v: unknown) => (v == null || v === "" ? null : v),
-    []
-  )
-
-  // Prefer optimistic value for rendering until server/parent state catches up
-  const effectiveValue = optimisticValue !== undefined ? optimisticValue : value
-  const cleanStringValue =
-    effectiveValue !== null && effectiveValue !== undefined
-      ? String(effectiveValue)
-      : ""
-
-  // Listen for external optimistic updates.
-  // Ref mirrors keep the mount-only listener reading the latest cell identity.
-  const docIdRef = useRef(docId)
-  const actualKeyRef = useRef(actualKey)
-
-  React.useEffect(() => {
-    docIdRef.current = docId
-    actualKeyRef.current = actualKey
-  }, [docId, actualKey])
-
-  useMountEffect(() => {
-    const handleOptimisticUpdate = (event: Event) => {
-      const detail = (event as CustomEvent<OptimisticUpdateDetail>).detail
-      if (!detail) return
-      if (
-        detail.docId === docIdRef.current &&
-        detail.fieldPath === actualKeyRef.current
-      ) {
-        setOptimisticValue(detail.value)
-      }
-    }
-    window.addEventListener(
-      "retab:optimistic-update",
-      handleOptimisticUpdate as EventListener
-    )
-    return () => {
-      window.removeEventListener(
-        "retab:optimistic-update",
-        handleOptimisticUpdate as EventListener
-      )
-    }
-  })
+  const { effectiveValue, cleanStringValue, commitValueChange } =
+    useCellController({
+      document,
+      docId,
+      fieldPath: actualKey,
+      value,
+      isEditable: props.allowEditing,
+      onDocumentDataChange,
+    })
 
   const [stringValue, setStringValue] = useState<string>(() => cleanStringValue)
   const liveStringValue =
@@ -431,88 +194,29 @@ const DataCellContent = (props: DataCellProps) => {
     cellWidth = 50
   }
 
-  const isHovering =
-    hoverInfo?.docId === props.docId && hoverInfo?.fieldPath === actualKey
-
-  // Cached schema property lookup for performance
-  const propInfo = actualKey
-    ? getPropertyInfoCached(schema, actualKey)
+  const fieldMetadata = actualKey
+    ? getFieldMetadata(schema, actualKey)
     : undefined
-  const property = propInfo?.rawProperty
+  const property = fieldMetadata?.rawSchema
   // Cells are editable when the parent opts in via `allowEditing`.
   const isEditableReference = props.allowEditing
-  const optional = !!propInfo?.nullable
-  const isValidProp = !!propInfo?.isValidProp
-  const isObject = !!propInfo?.isObject
-  const isArray = !!propInfo?.isArray
-  const isEnum = !!propInfo?.isEnum
-  const isNumber = !!propInfo?.isNumber
-  const isText = !!propInfo?.isText
-  const isFloat = !!propInfo?.isFloat
-  const isInteger = !!propInfo?.isInteger
-  const isDate = !!propInfo?.isDate
-  const isDateTime = !!propInfo?.isDateTime
-  const isIsoTime = !!propInfo?.isIsoTime
-  const isBoolean = !!propInfo?.isBoolean
-
-  // --- Debounce Logic Start ---
-  const commitValueChange = useRefCallback(function (validatedValue: unknown) {
-    if (!actualKey) return
-    if (!isEditableReference) return
-
-    const previousRoot = document.prediction_data?.prediction ?? {}
-    const previousValue = get_value_from_row_array_and_dot_notation_path(
-      previousRoot,
-      actualKey
-    )
-
-    const prevNorm = normalize(previousValue)
-    const nextNorm = normalize(validatedValue)
-    const uiNorm = normalize(value)
-
-    const isNoOp =
-      previousValue === validatedValue ||
-      safeStringify(prevNorm) === safeStringify(nextNorm) ||
-      safeStringify(uiNorm) === safeStringify(nextNorm)
-    if (isNoOp) return
-
-    const newRoot = assignObjectKey(
-      previousRoot,
-      actualKey.split("."),
-      validatedValue
-    )
-    onGroundTruthDataChange(docId, newRoot)
-    // Optimistically reflect the new value in the cell UI
-    setOptimisticValue(validatedValue)
-  })
+  const optional = !!fieldMetadata?.isNullable
+  const isValidProp = !!fieldMetadata
+  const isObject = fieldMetadata?.kind === "object"
+  const isArray = fieldMetadata?.kind === "array"
+  const isEnum = fieldMetadata?.kind === "enum"
+  const isNumber = fieldMetadata?.kind === "number"
+  const isText = fieldMetadata?.kind === "string"
+  const isFloat = isNumber
+  const isInteger = fieldMetadata?.kind === "integer"
+  const isDate = fieldMetadata?.kind === "date"
+  const isDateTime = fieldMetadata?.kind === "date-time"
+  const isIsoTime = fieldMetadata?.kind === "iso-time"
+  const isBoolean = fieldMetadata?.kind === "boolean"
 
   const onChange = useRefCallback(function (newValue: unknown) {
     if (actualKey) {
-      // Apply autoFormatDateTimeFields validation to the new value
-      let validatedValue = newValue
-      if (property && property.format && typeof newValue === "string") {
-        try {
-          // Create a temporary schema object for this specific field
-          const fieldSchema: JSONSchema7 = {
-            type: "object",
-            properties: {
-              [actualKey.split(".").pop()!]: property,
-            },
-          }
-
-          // Apply validation to the field value
-          const validatedData = autoFormatDateTimeFields(
-            { [actualKey.split(".").pop()!]: newValue },
-            fieldSchema
-          )
-          validatedValue = validatedData[actualKey.split(".").pop()!]
-        } catch (error) {
-          console.warn(
-            `autoFormatDateTimeFields validation failed for ${actualKey}:`,
-            error
-          )
-        }
-      }
+      const validatedValue = formatValueForCommit(newValue, property)
       commitValueChange(validatedValue)
     }
   })
@@ -541,19 +245,7 @@ const DataCellContent = (props: DataCellProps) => {
   // Update the handlers to use actualKey
   const handleObjectFormSubmitLocal = (values: unknown) => {
     if (actualKey) {
-      // Apply autoFormatDateTimeFields validation to object values
-      let validatedValues = values
-      if (property && property.type === "object" && property.properties) {
-        try {
-          validatedValues = autoFormatDateTimeFields(values, property)
-        } catch (error) {
-          console.warn(
-            `autoFormatDateTimeFields validation failed for object ${actualKey}:`,
-            error
-          )
-        }
-      }
-
+      const validatedValues = formatValueForCommit(values, property)
       commitValueChange(validatedValues)
       setOpenPopover(null)
     }
@@ -561,19 +253,7 @@ const DataCellContent = (props: DataCellProps) => {
 
   const handleArrayFormSubmitLocal = (values: unknown) => {
     if (actualKey) {
-      // Apply autoFormatDateTimeFields validation to array values
-      let validatedValues = values
-      if (property && property.type === "array" && property.items) {
-        try {
-          validatedValues = autoFormatDateTimeFields(values, property)
-        } catch (error) {
-          console.warn(
-            `autoFormatDateTimeFields validation failed for array ${actualKey}:`,
-            error
-          )
-        }
-      }
-
+      const validatedValues = formatValueForCommit(values, property)
       commitValueChange(validatedValues)
       setOpenPopover(null)
     }
@@ -583,7 +263,7 @@ const DataCellContent = (props: DataCellProps) => {
 
   const date = safeParseISO(liveStringValue)
   const showInput =
-    (isHovering || isInputFocused || isSelectOpen || isDatePopoverOpen) &&
+    (isPointerOver || isInputFocused || isSelectOpen || isDatePopoverOpen) &&
     isEditableReference
 
   if (!isValidProp) {
@@ -606,25 +286,21 @@ const DataCellContent = (props: DataCellProps) => {
       data-field-path={actualKey}
       className="relative m-0 border-t-0 border-r border-b border-l-0 p-0 select-none"
       onMouseLeave={() => {
+        setIsPointerOver(false)
         if (isSelectOpen || isDatePopoverOpen || isInputFocused) return
         props.onCellHoverEnd?.()
       }}
       onMouseEnter={(e) => {
+        setIsPointerOver(true)
         handleCellHover(e as unknown as React.MouseEvent)
       }}
-      // onMouseDown={handleMouseDown}
-      // onMouseEnter={(e) => {
-      //     handleCellHover(e as unknown as React.MouseEvent);
-      // }}
-      // onClick={handleClick}
       style={cellStyle}
     >
       <div
         ref={cellRootRef}
-        //className="focus-within:overflow-visible w-full h-full"//
         className={cn(
           "h-full w-full focus-within:overflow-visible",
-          isHovering && "border border-primary"
+          isPointerOver && "border border-primary"
         )}
       >
         {isObject ? (
@@ -661,36 +337,12 @@ const DataCellContent = (props: DataCellProps) => {
               {openPopover === actualKey && property && (
                 <ObjectEditor
                   disabled={!isEditableReference}
-                  isOpen={openPopover === actualKey}
                   property={{
                     ...transferContext(property, schema),
                     additionalProperties: true,
                   }}
                   currentValue={effectiveValue}
                   onSubmit={handleObjectFormSubmitLocal}
-                  setSourcesFieldPath={(path) => {
-                    if (!path) {
-                      setHoverInfo(null)
-                      return
-                    }
-                    if (actualKey) {
-                      const fullPath =
-                        path === actualKey || path.startsWith(actualKey + ".")
-                          ? path
-                          : `${actualKey}.${path}`
-                      setHoverInfo({
-                        docId: props.docId,
-                        fieldPath: fullPath,
-                        rect: new DOMRect(),
-                      })
-                    } else {
-                      setHoverInfo({
-                        docId: props.docId,
-                        fieldPath: path,
-                        rect: new DOMRect(),
-                      })
-                    }
-                  }}
                 />
               )}
             </PopoverContent>
@@ -735,17 +387,6 @@ const DataCellContent = (props: DataCellProps) => {
                   property={transferContext(property, schema)}
                   currentValue={effectiveValue}
                   onSubmit={handleArrayFormSubmitLocal}
-                  setSourcesFieldPath={(path) => {
-                    if (!path) {
-                      setHoverInfo(null)
-                      return
-                    }
-                    setHoverInfo({
-                      docId: props.docId,
-                      fieldPath: path,
-                      rect: new DOMRect(),
-                    })
-                  }}
                 />
               )}
             </PopoverContent>
@@ -835,7 +476,7 @@ const DataCellContent = (props: DataCellProps) => {
                     <em>No selection</em>
                   </SelectItem>
                 )}
-                {(propInfo?.propertyEnumVals ?? [])
+                {(fieldMetadata?.enumValues ?? [])
                   .filter(
                     (enumVal) =>
                       enumVal !== undefined &&
@@ -1140,7 +781,9 @@ export const DataCell = React.memo(
     const prevVars = calculateVariables(prev)
     const nextVars = calculateVariables(next)
 
-    const res = cmp(prevVars, nextVars, { deep: ["pathInfo.idx"] })
+    const res = cmp(prevVars, nextVars, {
+      deep: ["projectedCell.arrayIndexes"],
+    })
     return res
   }
 )

@@ -4,8 +4,8 @@ import React from "react"
 import type { JSONSchema7 } from "json-schema"
 
 import { DataCell } from "@/components/json-table/data-cell"
+import type { ProjectedRow } from "@/components/json-table/lib/document-projection"
 import type { TableDocument } from "@/components/json-table/lib/projects-types"
-import type { PathInfo } from "@/components/json-table/path-utils"
 import {
   getRowHeightPx,
   useSheetOptionsStore,
@@ -15,7 +15,7 @@ import { TableRow } from "@/components/ui-retab/table"
 interface SingleFileFormRowProps {
   document: TableDocument
   schema: JSONSchema7
-  paths: (PathInfo | undefined)[][]
+  projectedRows: ProjectedRow[]
   visibleKeys: string[]
   /** Which sub-row of the document this renders (set by the row virtualizer). */
   rowIdx: number
@@ -36,7 +36,7 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
   ({
     document,
     schema,
-    paths,
+    projectedRows,
     visibleKeys,
     rowIdx,
     openPopover,
@@ -55,7 +55,7 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
     const handleDataChange = React.useCallback(
       async (_docId: string, value: unknown) => {
         if (onUpdateDocument) {
-          await onUpdateDocument({ prediction_data: { prediction: value } })
+          await onUpdateDocument({ data: value })
         }
       },
       [onUpdateDocument]
@@ -90,21 +90,21 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
       >
         {/* Data cells */}
         {visibleKeys.map((key, colIdx) => {
-          const pathInfo = paths[rowIdx]?.[colIdx]
+          const projectedCell = projectedRows[rowIdx]?.cells[colIdx]
 
           return (
             <DataCell
               key={key}
               keyValue={key}
               rowIdx={rowIdx}
-              pathInfo={pathInfo}
+              projectedCell={projectedCell}
               schema={schema}
               document={document}
               docId={documentId}
               columnWidth={columnWidth}
               setOpenPopover={setOpenPopover}
               openPopover={openPopover}
-              onGroundTruthDataChange={handleDataChange}
+              onDocumentDataChange={handleDataChange}
               allowEditing={allowEditing}
               onCellHoverStart={onCellHoverStart}
               onCellHoverEnd={onCellHoverEnd}

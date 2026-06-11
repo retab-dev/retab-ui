@@ -33,11 +33,11 @@ export function Example() {
 
 ## Key props
 
-| Prop | Type | Description |
-| --- | --- | --- |
-| `document` | `TableDocument` | The document whose `prediction_data.prediction` holds the extracted values. |
-| `schema` | `JSONSchema7` | The schema describing the table's columns. |
-| `setSchema` | `(schema) => void` | Optional — enables editing field descriptions / reasoning from the header. |
-| `editMode` | `"readOnly" \| "editable" \| "descriptionOnly"` | Controls whether cells can be edited. |
-| `cellColorState` | `"none" \| "consensus" \| "similarity" \| "mismatch"` | Per-cell background coloring. |
-| `showHoverCard` | `boolean` | Show the source-citation popover on cell hover. |
+| Prop             | Type                                                  | Description                                                                |
+| ---------------- | ----------------------------------------------------- | -------------------------------------------------------------------------- |
+| `document`       | `TableDocument`                                       | The document whose `data` object holds the extracted values.               |
+| `schema`         | `JSONSchema7`                                         | The schema describing the table's columns.                                 |
+| `setSchema`      | `(schema) => void`                                    | Optional — enables editing field descriptions / reasoning from the header. |
+| `editMode`       | `"readOnly" \| "editable" \| "descriptionOnly"`       | Controls whether cells can be edited.                                      |
+| `cellColorState` | `"none" \| "consensus" \| "similarity" \| "mismatch"` | Per-cell background coloring.                                              |
+| `showHoverCard`  | `boolean`                                             | Show the source-citation popover on cell hover.                            |

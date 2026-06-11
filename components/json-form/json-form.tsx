@@ -1,41 +1,52 @@
 "use client"
 
 import * as React from "react"
+import { useVirtualizer } from "@tanstack/react-virtual"
+import type { JSONSchema7Definition } from "json-schema"
+import { ChevronRight, Plus, Trash2 } from "lucide-react"
 import {
-  type SubmitHandler,
-  type UseFormReturn,
   useFieldArray,
   useFormContext,
+  type SubmitHandler,
+  type UseFormReturn,
 } from "react-hook-form"
-import { useVirtualizer } from "@tanstack/react-virtual"
-import type { JSONSchema7, JSONSchema7Definition } from "json-schema"
-import { ChevronRight, Plus, Trash2 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/uiform/ui/button"
-import { Checkbox } from "@/components/uiform/ui/checkbox"
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/uiform/ui/form"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/uiform/ui/tooltip"
-import { Input } from "@/components/uiform/ui/input"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/uiform/ui/select"
-import { Textarea } from "@/components/uiform/ui/textarea"
+} from "@/components/ui/select"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import {
+  Checkbox,
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+  Textarea,
+} from "@/components/json-form/form-primitives"
+import {
+  emptyValueFor,
+  expandRefs,
+  fieldKind,
+  labelFor,
+  scalarObjectColumns,
+  unwrapNullable,
+  type Column,
+  type FieldKind,
+  type Schema,
+} from "@/components/json-form/schema-utils"
 
 /**
  * A JSON-Schema-driven form built entirely on shadcn's `FormField` abstraction.
@@ -61,17 +72,6 @@ import { Textarea } from "@/components/uiform/ui/textarea"
  *    keystroke in one item never re-renders its siblings.
  */
 
-type Schema = JSONSchema7
-
-type FieldKind =
-  | "string"
-  | "number"
-  | "integer"
-  | "boolean"
-  | "enum"
-  | "object"
-  | "array"
-
 // Tunables -------------------------------------------------------------------
 
 /** Objects/arrays at or beyond this nesting depth start collapsed. */
@@ -82,125 +82,6 @@ const CARD_VIRTUALIZE_THRESHOLD = 30
 const TABLE_VIRTUALIZE_THRESHOLD = 30
 /** Arrays longer than this start collapsed regardless of depth. */
 const LONG_ARRAY_THRESHOLD = 8
-
-// ---------------------------------------------------------------------------
-// Schema helpers (small + local, so the component is self-contained)
-// ---------------------------------------------------------------------------
-
-/** Resolve `["string","null"]` / `anyOf:[…,{type:"null"}]` to the inner schema. */
-function unwrapNullable(schema: Schema): { schema: Schema; nullable: boolean } {
-  if (Array.isArray(schema.type)) {
-    const nonNull = schema.type.filter((t) => t !== "null")
-    return {
-      schema: { ...schema, type: nonNull.length === 1 ? nonNull[0] : nonNull },
-      nullable: schema.type.includes("null"),
-    }
-  }
-  if (schema.anyOf) {
-    const branches = schema.anyOf.filter(
-      (b): b is Schema => typeof b === "object" && b !== null
-    )
-    const nullable = branches.some((b) => b.type === "null")
-    const main = branches.find((b) => b.type !== "null")
-    if (main) {
-      return {
-        schema: {
-          ...main,
-          title: schema.title ?? main.title,
-          description: schema.description ?? main.description,
-        },
-        nullable,
-      }
-    }
-  }
-  return { schema, nullable: false }
-}
-
-function fieldKind(schema: Schema): FieldKind {
-  if (Array.isArray(schema.enum)) return "enum"
-  const type = Array.isArray(schema.type)
-    ? schema.type.find((t) => t !== "null")
-    : schema.type
-  switch (type) {
-    case "number":
-      return "number"
-    case "integer":
-      return "integer"
-    case "boolean":
-      return "boolean"
-    case "object":
-      return "object"
-    case "array":
-      return "array"
-    default:
-      return "string"
-  }
-}
-
-function isScalarKind(kind: FieldKind): boolean {
-  return kind !== "object" && kind !== "array"
-}
-
-function humanize(key: string): string {
-  return key
-    .replace(/[_-]+/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase())
-    .trim()
-}
-
-function labelFor(name: string, schema: Schema, explicit?: string): string {
-  if (explicit) return explicit
-  if (schema.title) return schema.title
-  const leaf = name.split(".").pop() ?? name
-  return humanize(leaf)
-}
-
-function emptyValueFor(schema: Schema): unknown {
-  const { schema: inner } = unwrapNullable(schema)
-  switch (fieldKind(inner)) {
-    case "boolean":
-      return false
-    case "object":
-      return {}
-    case "array":
-      return []
-    case "number":
-    case "integer":
-      return undefined
-    default:
-      return ""
-  }
-}
-
-interface Column {
-  key: string
-  schema: Schema
-  kind: FieldKind
-  required: boolean
-}
-
-/**
- * If `itemSchema` is an object whose every property is a scalar, return its
- * columns (so the array can render as a table). Otherwise `null`.
- */
-function scalarObjectColumns(itemSchema: Schema): Column[] | null {
-  const { schema } = unwrapNullable(itemSchema)
-  if (fieldKind(schema) !== "object") return null
-  const properties = (schema.properties ?? {}) as Record<
-    string,
-    JSONSchema7Definition
-  >
-  const required = new Set(schema.required ?? [])
-  const columns: Column[] = []
-  for (const [key, child] of Object.entries(properties)) {
-    if (typeof child !== "object" || child === null) return null
-    const { schema: inner } = unwrapNullable(child as Schema)
-    const kind = fieldKind(inner)
-    if (!isScalarKind(kind)) return null
-    columns.push({ key, schema: child as Schema, kind, required: required.has(key) })
-  }
-  return columns.length > 0 ? columns : null
-}
 
 // ---------------------------------------------------------------------------
 // Source linking — opt-in field-level hover/highlight
@@ -279,7 +160,14 @@ export function JsonFormField({
   className,
   depth = 0,
 }: JsonFormFieldProps) {
-  const { schema } = unwrapNullable(rawSchema)
+  const expandedSchema = React.useMemo(
+    () =>
+      rawSchema.$ref || rawSchema.$defs || rawSchema.definitions
+        ? expandRefs(rawSchema)
+        : rawSchema,
+    [rawSchema]
+  )
+  const { schema, nullable } = unwrapNullable(expandedSchema)
   const kind = fieldKind(schema)
   const heading = labelFor(name, schema, label)
 
@@ -322,7 +210,7 @@ export function JsonFormField({
               <FormControl>
                 <Checkbox
                   checked={Boolean(field.value)}
-                  onCheckedChange={field.onChange}
+                  onCheckedChange={(value) => field.onChange(value === true)}
                 />
               </FormControl>
               <div className="leading-none">
@@ -347,13 +235,16 @@ export function JsonFormField({
             <WithDescription text={schema.description}>
               <FormLabel>
                 {heading}
-                {required ? (
-                  <span className="text-destructive"> *</span>
-                ) : null}
+                {required ? <span className="text-destructive"> *</span> : null}
               </FormLabel>
             </WithDescription>
             <FormControl>
-              <ScalarControl kind={kind} schema={schema} field={field} />
+              <ScalarControl
+                kind={kind}
+                schema={schema}
+                field={field}
+                nullable={nullable}
+              />
             </FormControl>
             <FormMessage />
           </FormItem>
@@ -384,7 +275,7 @@ function WithDescription({
   return (
     <Tooltip>
       <TooltipTrigger asChild>{children}</TooltipTrigger>
-      <TooltipContent className="max-w-xs whitespace-pre-line text-left">
+      <TooltipContent className="max-w-xs text-left whitespace-pre-line">
         {text}
       </TooltipContent>
     </Tooltip>
@@ -403,34 +294,72 @@ interface ControlFieldApi {
   ref?: React.Ref<HTMLElement>
 }
 
+const NULL_SELECT_VALUE = "__json-form-null__"
+
+function enumOptionValue(index: number): string {
+  return `enum:${index}`
+}
+
+function enumLabel(value: unknown): string {
+  if (value === null) return "No value"
+  if (typeof value === "string") return value
+  return JSON.stringify(value)
+}
+
 function ScalarControl({
   kind,
   schema,
   field,
   compact = false,
+  nullable = false,
 }: {
   kind: FieldKind
   schema: Schema
   field: ControlFieldApi
   /** Dense, single-line variant for table cells. */
   compact?: boolean
+  nullable?: boolean
 }) {
   const sizing = compact ? "h-8 text-sm" : undefined
 
   if (kind === "enum") {
-    const options = (schema.enum ?? []).map((v) => String(v))
+    const enumValues = schema.enum ?? []
+    const currentIndex = enumValues.findIndex((value) =>
+      Object.is(value, field.value)
+    )
+    const selectValue =
+      field.value === null && nullable
+        ? NULL_SELECT_VALUE
+        : currentIndex >= 0
+          ? enumOptionValue(currentIndex)
+          : undefined
+
     return (
       <Select
-        value={field.value == null ? undefined : String(field.value)}
-        onValueChange={field.onChange}
+        value={selectValue}
+        onValueChange={(value) => {
+          if (typeof value !== "string") return
+          if (value === NULL_SELECT_VALUE) {
+            field.onChange(null)
+            return
+          }
+          const index = Number(value.replace("enum:", ""))
+          field.onChange(enumValues[index])
+        }}
       >
         <SelectTrigger className={sizing}>
           <SelectValue placeholder="Select…" />
         </SelectTrigger>
         <SelectContent>
-          {options.map((option) => (
-            <SelectItem key={option} value={option}>
-              {option}
+          {nullable ? (
+            <SelectItem value={NULL_SELECT_VALUE}>No value</SelectItem>
+          ) : null}
+          {enumValues.map((option, index) => (
+            <SelectItem
+              key={enumOptionValue(index)}
+              value={enumOptionValue(index)}
+            >
+              {enumLabel(option)}
             </SelectItem>
           ))}
         </SelectContent>
@@ -446,7 +375,13 @@ function ScalarControl({
         className={sizing}
         value={field.value == null ? "" : (field.value as number)}
         onChange={(e) =>
-          field.onChange(e.target.value === "" ? undefined : e.target.valueAsNumber)
+          field.onChange(
+            e.target.value === ""
+              ? nullable
+                ? null
+                : undefined
+              : e.target.valueAsNumber
+          )
         }
         onBlur={field.onBlur}
         name={field.name}
@@ -462,18 +397,29 @@ function ScalarControl({
         type={schema.format === "date" ? "date" : "datetime-local"}
         className={sizing}
         value={value}
-        onChange={(e) => field.onChange(e.target.value)}
+        onChange={(e) =>
+          field.onChange(
+            e.target.value === "" && nullable ? null : e.target.value
+          )
+        }
         onBlur={field.onBlur}
         name={field.name}
       />
     )
   }
   // Textareas would break table-row heights, so compact cells stay single-line.
-  if (!compact && (schema.format === "textarea" || (schema.maxLength ?? 0) > 120)) {
+  if (
+    !compact &&
+    (schema.format === "textarea" || (schema.maxLength ?? 0) > 120)
+  ) {
     return (
       <Textarea
         value={value}
-        onChange={(e) => field.onChange(e.target.value)}
+        onChange={(e) =>
+          field.onChange(
+            e.target.value === "" && nullable ? null : e.target.value
+          )
+        }
         onBlur={field.onBlur}
         name={field.name}
       />
@@ -483,7 +429,11 @@ function ScalarControl({
     <Input
       className={sizing}
       value={value}
-      onChange={(e) => field.onChange(e.target.value)}
+      onChange={(e) =>
+        field.onChange(
+          e.target.value === "" && nullable ? null : e.target.value
+        )
+      }
       onBlur={field.onBlur}
       name={field.name}
     />
@@ -653,7 +603,6 @@ function JsonFormArray({
               fields={fields}
               remove={remove}
               columns={columns}
-              itemSchema={itemSchema}
             />
           ) : (
             <ArrayCards
@@ -772,10 +721,13 @@ function ArrayTable({
   fields,
   remove,
   columns,
-}: ArrayBodyProps & { columns: Column[] }) {
-  const template = `${columns
-    .map(() => "minmax(120px, 1fr)")
-    .join(" ")} 40px`
+}: {
+  name: string
+  fields: { id: string }[]
+  remove: (index: number) => void
+  columns: Column[]
+}) {
+  const template = `${columns.map(() => "minmax(120px, 1fr)").join(" ")} 40px`
   const minWidth = columns.length * 140 + 40
 
   const renderRow = React.useCallback(
@@ -807,7 +759,9 @@ function ArrayTable({
               className="flex min-w-0 items-center gap-1 text-xs font-medium text-muted-foreground"
             >
               <WithDescription text={col.schema.description}>
-                <span className="truncate">{labelFor(col.key, col.schema)}</span>
+                <span className="truncate">
+                  {labelFor(col.key, col.schema)}
+                </span>
               </WithDescription>
               {col.required ? (
                 <span className="text-destructive">*</span>
@@ -827,9 +781,7 @@ function ArrayTable({
         ) : (
           <div>
             {fields.map((entry, index) => (
-              <React.Fragment key={entry.id}>
-                {renderRow(index)}
-              </React.Fragment>
+              <React.Fragment key={entry.id}>{renderRow(index)}</React.Fragment>
             ))}
           </div>
         )}
@@ -885,22 +837,35 @@ const ArrayTableRow = React.memo(function ArrayTableRow({
               <FormField
                 name={path}
                 render={({ field }) => (
-                  <Checkbox
-                    checked={Boolean(field.value)}
-                    onCheckedChange={field.onChange}
-                  />
+                  <FormItem className="space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={Boolean(field.value)}
+                        onCheckedChange={(value) =>
+                          field.onChange(value === true)
+                        }
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
                 )}
               />
             ) : (
               <FormField
                 name={path}
                 render={({ field }) => (
-                  <ScalarControl
-                    kind={col.kind}
-                    schema={col.schema}
-                    field={field}
-                    compact
-                  />
+                  <FormItem className="space-y-1">
+                    <FormControl>
+                      <ScalarControl
+                        kind={col.kind}
+                        schema={col.schema}
+                        field={field}
+                        compact
+                        nullable={col.nullable}
+                      />
+                    </FormControl>
+                    <FormMessage className="text-xs" />
+                  </FormItem>
                 )}
               />
             )}
@@ -948,9 +913,7 @@ function VirtualList({
 
   return (
     <div ref={parentRef} style={{ maxHeight }} className="overflow-y-auto">
-      <div
-        style={{ height: virtualizer.getTotalSize(), position: "relative" }}
-      >
+      <div style={{ height: virtualizer.getTotalSize(), position: "relative" }}>
         {virtualizer.getVirtualItems().map((virtualRow) => (
           <div
             key={fields[virtualRow.index].id}
@@ -1000,20 +963,19 @@ export function JsonForm({
   sourceLink,
   children,
 }: JsonFormProps) {
-  const properties = (schema.properties ?? {}) as Record<
+  const expandedSchema = React.useMemo(() => expandRefs(schema), [schema])
+  const properties = (expandedSchema.properties ?? {}) as Record<
     string,
     JSONSchema7Definition
   >
-  const required = new Set(schema.required ?? [])
+  const required = new Set(expandedSchema.required ?? [])
 
   return (
     <FieldSourceLinkContext.Provider value={sourceLink ?? null}>
       <Form {...form}>
         <form
           onSubmit={
-            onSubmit
-              ? form.handleSubmit(onSubmit)
-              : (e) => e.preventDefault()
+            onSubmit ? form.handleSubmit(onSubmit) : (e) => e.preventDefault()
           }
           className={cn("space-y-4", className)}
         >

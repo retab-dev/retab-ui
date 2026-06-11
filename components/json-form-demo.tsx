@@ -1,14 +1,14 @@
 "use client"
 
 import * as React from "react"
-import { useForm } from "react-hook-form"
 import type { JSONSchema7 } from "json-schema"
+import { useForm } from "react-hook-form"
 
-import { JsonForm } from "@/components/json-form/json-form"
-import { Button } from "@/components/uiform/ui/button"
+import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import sampleSchema from "@/components/json-form/sample/schema.json"
+import { JsonForm } from "@/components/json-form/json-form"
 import sampleData from "@/components/json-form/sample/data.json"
+import sampleSchema from "@/components/json-form/sample/schema.json"
 
 // A real extraction: an oil & gas revenue statement nested three arrays deep
 // (`properties[] → production[] → line_items[]`) — a few thousand leaf fields.

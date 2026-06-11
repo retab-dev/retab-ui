@@ -2,7 +2,7 @@
 
 import * as React from "react"
 
-import { JsonSchemaEditor } from "@/components/schema-editor/json-schema-builder"
+import { SchemaBuilderContent } from "@/components/schema-editor/json-schema-builder"
 import { JsonSchemaEditorProvider } from "@/components/schema-editor/contexts/json-schema"
 import { type ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
 import { cn } from "@/lib/utils"
@@ -29,7 +29,10 @@ export function SchemaBuilder({
   className,
 }: SchemaBuilderProps) {
   const valueRef = React.useRef(value)
-  valueRef.current = value
+
+  React.useLayoutEffect(() => {
+    valueRef.current = value
+  }, [value])
 
   const setJsonSchema = React.useCallback(
     (next: React.SetStateAction<ExtendedJSONSchema7>) => {
@@ -39,6 +42,7 @@ export function SchemaBuilder({
               valueRef.current
             )
           : next
+      valueRef.current = resolved
       onValueChange(resolved)
     },
     [onValueChange]
@@ -47,7 +51,7 @@ export function SchemaBuilder({
   return (
     <div data-slot="schema-builder" className={cn("w-full", className)}>
       <JsonSchemaEditorProvider jsonSchema={value} setJsonSchema={setJsonSchema}>
-        <JsonSchemaEditor />
+        <SchemaBuilderContent />
       </JsonSchemaEditorProvider>
     </div>
   )

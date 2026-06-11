@@ -4,22 +4,25 @@ description: Build the JSON Schema that drives a Retab extraction — the same e
 ---
 
 The Schema Builder is the JSON Schema editor from the Retab dashboard: recursive
-fields, a type picker, required and nullable toggles, enums, `$defs` /
-references, reusable templates, a full-code (Monaco) mode, and live validation.
-It is controlled via a provider that owns the `json_schema` an extraction runs
-against, and emits standard JSON Schema.
+fields, a type picker, enums, `$defs` / references, object-template shortcuts,
+and live validation. It is a controlled component that edits the `json_schema`
+an extraction runs against and emits standard JSON Schema. The editor normalizes
+object properties as required; use nullable field types when a required field may
+return `null`.
 
 <RetabSchemaBuilderDemo />
 
 ## Usage
 
-Wrap the editor in `JsonSchemaEditorProvider` and give it your schema state:
+Give the component your schema state and handle every edit through
+`onValueChange`:
 
 ```tsx
 import { useState } from "react"
-import { JsonSchemaEditor } from "@/components/schema-editor/json-schema-builder"
-import { JsonSchemaEditorProvider } from "@/components/schema-editor/contexts/json-schema"
-import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
+import {
+  SchemaBuilder,
+  type ExtendedJSONSchema7,
+} from "@/components/ui/schema-builder"
 
 export function Example() {
   const [schema, setSchema] = useState<ExtendedJSONSchema7>({
@@ -27,26 +30,14 @@ export function Example() {
     properties: {},
     required: [],
   })
-  return (
-    <JsonSchemaEditorProvider jsonSchema={schema} setJsonSchema={setSchema}>
-      <JsonSchemaEditor />
-    </JsonSchemaEditorProvider>
-  )
+  return <SchemaBuilder value={schema} onValueChange={setSchema} />
 }
 ```
 
-## Provider props
+## Props
 
 | Prop | Type | Description |
 | --- | --- | --- |
-| `jsonSchema` | `ExtendedJSONSchema7` | The schema state. |
-| `setJsonSchema` | `Dispatch<SetStateAction<ExtendedJSONSchema7>>` | State setter the editor calls on every edit. |
-| `persistJsonSchemaCallback` | `(schema) => Promise<void>` | Optional. Called to persist changes. |
-
-## Editor props
-
-| Prop | Type | Description |
-| --- | --- | --- |
-| `editMode` | `"editable" \| "readOnly" \| "descriptionOnly"` | Defaults to `"editable"`. |
-| `showTemplatesButton` | `boolean` | Show the reusable-template picker. |
-| `fullCodeModeState` | `[boolean, (v: boolean) => void]` | Control the Monaco full-code toggle. |
+| `value` | `ExtendedJSONSchema7` | The schema state. |
+| `onValueChange` | `(schema: ExtendedJSONSchema7) => void` | Called with the next schema whenever the user edits it. |
+| `className` | `string` | Optional wrapper class name. |

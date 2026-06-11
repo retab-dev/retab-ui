@@ -366,7 +366,7 @@ function DefsEditor({
 
 /* ------------------- Main JSON Schema Editor ------------------- */
 
-function JsonSchemaEditorRaw({
+function SchemaBuilderContentRaw({
   fullCodeModeState,
   showTemplatesButton = false,
   editMode = "editable",
@@ -468,4 +468,4 @@ function JsonSchemaEditorRaw({
   );
 }
 
-export const JsonSchemaEditor = React.memo(JsonSchemaEditorRaw);
+export const SchemaBuilderContent = React.memo(SchemaBuilderContentRaw);

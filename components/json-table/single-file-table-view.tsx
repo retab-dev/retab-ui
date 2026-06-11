@@ -3,10 +3,10 @@
 import React, { useMemo, useState } from "react"
 import type { JSONSchema7 } from "json-schema"
 
-import { buildHeaderNodesFromSchema } from "@/components/json-table/header-from-schema"
+import { projectDocumentRows } from "@/components/json-table/lib/document-projection"
 import { flattenHeaderNodes } from "@/components/json-table/lib/header-nodes"
 import type { TableDocument } from "@/components/json-table/lib/projects-types"
-import { objectToTable2D } from "@/components/json-table/path-utils"
+import { buildHeaderNodesFromSchema } from "@/components/json-table/lib/schema-inspection"
 import { SingleFileVirtualizedTable } from "@/components/json-table/single-file-virtualized-table"
 import { useSheetOptionsStore } from "@/components/json-table/table-options-store"
 import type { ColumnWidth } from "@/components/json-table/table-options-store"
@@ -59,23 +59,20 @@ export const SingleFileTableView = React.memo<SingleFileTableViewProps>(
       return flattenHeaderNodes(headerNodes).map((node) => node.key)
     }, [headerNodes])
 
-    // Convert document to 2D table format
-    const tableAndPaths = useMemo(() => {
-      if (!document) return { table: [], paths: [] }
-      return objectToTable2D(document, visibleKeys, {
+    const projectedRows = useMemo(() => {
+      if (!document) return []
+      return projectDocumentRows({
+        document,
+        visiblePaths: visibleKeys,
         includeArrayAddRows: editMode !== "readOnly",
       })
     }, [document, visibleKeys, editMode])
 
-    const rowCount = Math.max(tableAndPaths.paths.length, 1)
+    const rowCount = Math.max(projectedRows.length, 1)
 
     return (
       <div className="relative flex min-h-0 w-full flex-1 flex-col">
-        <div
-          className="absolute inset-0 flex origin-top-left flex-col"
-          //style={{ transform: 'scale(0.8)', width: '125%', height: '125%' }}
-          //  style={{ transform: 'scale(0.85)', width: '117.64705882352942%', height: '117.64705882352942%' }}
-        >
+        <div className="absolute inset-0 flex origin-top-left flex-col">
           <SingleFileVirtualizedTable
             headerNodes={headerNodes}
             document={document}
@@ -87,7 +84,7 @@ export const SingleFileTableView = React.memo<SingleFileTableViewProps>(
             draggedItemKeyRef={draggedItemKeyRef}
             draggedItemParentPathRef={draggedItemParentPathRef}
             editMode={editMode}
-            tableAndPaths={tableAndPaths}
+            projectedRows={projectedRows}
             visibleKeys={visibleKeys}
             rowCount={rowCount}
             onUpdateDocument={onUpdateDocument}

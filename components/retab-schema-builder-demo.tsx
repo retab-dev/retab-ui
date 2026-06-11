@@ -2,10 +2,9 @@
 
 import * as React from "react"
 
-import { JsonSchemaEditor } from "@/components/schema-editor/json-schema-builder"
-import { JsonSchemaEditorProvider } from "@/components/schema-editor/contexts/json-schema"
 import { type ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { SchemaBuilder } from "@/components/ui/schema-builder"
 
 const initialSchema: ExtendedJSONSchema7 = {
   type: "object",
@@ -40,9 +39,7 @@ export function RetabSchemaBuilderDemo({
 
   const editor = (
     <div className="rounded-xl border bg-card p-3 shadow-sm">
-      <JsonSchemaEditorProvider jsonSchema={schema} setJsonSchema={setSchema}>
-        <JsonSchemaEditor />
-      </JsonSchemaEditorProvider>
+      <SchemaBuilder value={schema} onValueChange={setSchema} />
     </div>
   )
 

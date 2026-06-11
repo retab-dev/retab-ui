@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import type { JSONSchema7 } from "json-schema"
 
 import { JsonSchemaEditorProvider } from "@/components/schema-editor/contexts/json-schema"
-import { JsonSchemaEditor } from "@/components/schema-editor/json-schema-builder"
+import { SchemaBuilderContent } from "@/components/schema-editor/json-schema-builder"
 
 afterEach(cleanup)
 
@@ -22,7 +22,7 @@ function renderEditor(initial: JSONSchema7) {
           setSchema(s as JSONSchema7)
         }}
       >
-        <JsonSchemaEditor />
+        <SchemaBuilderContent />
       </JsonSchemaEditorProvider>
     )
   }
@@ -40,7 +40,7 @@ const sample: JSONSchema7 = {
   required: ["invoice_number"],
 }
 
-describe("JsonSchemaEditor renders (integration smoke)", () => {
+describe("SchemaBuilderContent renders (integration smoke)", () => {
   it("mounts the full editor and shows the property names", () => {
     renderEditor(sample)
     expect(screen.getByText("invoice_number")).toBeTruthy()
@@ -63,7 +63,7 @@ describe("JsonSchemaEditor renders (integration smoke)", () => {
   })
 })
 
-describe("JsonSchemaEditor interactions (doc-routed)", () => {
+describe("SchemaBuilderContent interactions (doc-routed)", () => {
   it("adds a property via the inline input and emits an updated schema", () => {
     const { emits, last } = renderEditor(sample)
     const input = screen.getAllByPlaceholderText("New property name")[0]

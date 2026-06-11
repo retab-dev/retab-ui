@@ -14,19 +14,15 @@ function objectValue(value: unknown): FormValues {
     : {}
 }
 
-// Editor for an object cell: renders the property's schema as a form. Edits are
-// persisted as they change (the popover has no explicit submit button).
 export function ObjectEditor({
   property,
   currentValue,
   onSubmit,
   disabled = false,
 }: {
-  isOpen?: boolean
   property: JSONSchema7
   currentValue: unknown
   onSubmit: (values: unknown) => void
-  setSourcesFieldPath?: (fieldPath: string | null) => void
   disabled?: boolean
 }) {
   const form = useForm<FormValues>({
@@ -56,8 +52,6 @@ export function ObjectEditor({
   )
 }
 
-// Editor for an array cell: wraps the array under a single named property so the
-// form renders an array field, then unwraps it on submit.
 export function ArrayEditor({
   name,
   property,
@@ -69,7 +63,6 @@ export function ArrayEditor({
   property: JSONSchema7
   currentValue: unknown
   onSubmit: (values: unknown) => void
-  setSourcesFieldPath?: (fieldPath: string | null) => void
   disabled?: boolean
 }) {
   const { $defs, ...restProperty } = property

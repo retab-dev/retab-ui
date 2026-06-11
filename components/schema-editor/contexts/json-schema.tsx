@@ -4,17 +4,17 @@ import React, {
   createContext,
   useContext,
   useState,
-  ReactNode,
   useCallback,
   useMemo,
   useRef,
 } from "react";
+import type { ErrorObject } from "ajv";
 import {
   errorsText,
   getJsonSchemaValidationErrors,
   validateJsonSchema,
 } from "@/components/schema-editor/schema-validation";
-import { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types";
+import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types";
 import { isEqual } from "lodash";
 import { useMountEffect } from "@/components/schema-editor/lib/use-mount-effect";
 import {
@@ -23,6 +23,7 @@ import {
   type SchemaDocument,
 } from "@/components/schema-editor/document";
 import { requireAllProperties } from "@/components/schema-editor/json-schema-builder-utils";
+import type { ReactNode } from "react";
 
 /** Order-insensitive structural signature, to tell our own echo from a genuine
  *  external change to the controlled `jsonSchema` prop. */
@@ -38,6 +39,54 @@ function schemaSignature(value: unknown): string {
           )
         : v;
   return JSON.stringify(norm(value));
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function hasPropertyOrderChanged(
+  oldSchema: unknown,
+  newSchema: unknown,
+): boolean {
+  if (!isRecord(oldSchema) || !isRecord(newSchema)) return false;
+
+  const oldProperties = oldSchema.properties;
+  const newProperties = newSchema.properties;
+  if (isRecord(oldProperties) && isRecord(newProperties)) {
+    const oldKeys = Object.keys(oldProperties);
+    const newKeys = Object.keys(newProperties);
+
+    if (oldKeys.length === newKeys.length) {
+      for (let i = 0; i < oldKeys.length; i++) {
+        if (oldKeys[i] !== newKeys[i]) return true;
+      }
+    }
+
+    for (const key of oldKeys) {
+      if (
+        key in newProperties &&
+        hasPropertyOrderChanged(oldProperties[key], newProperties[key])
+      ) {
+        return true;
+      }
+    }
+  }
+
+  const oldDefs = oldSchema.$defs;
+  const newDefs = newSchema.$defs;
+  if (isRecord(oldDefs) && isRecord(newDefs)) {
+    for (const key of Object.keys(oldDefs)) {
+      if (
+        key in newDefs &&
+        hasPropertyOrderChanged(oldDefs[key], newDefs[key])
+      ) {
+        return true;
+      }
+    }
+  }
+
+  return false;
 }
 
 interface JsonSchemaContextType {
@@ -86,7 +135,9 @@ function JsonSchemaValidationRunner({
 }: {
   jsonSchema: ExtendedJSONSchema7;
   countSchemaProperties: (schema?: ExtendedJSONSchema7) => number;
-  processValidationErrors: (errors: any[] | null | undefined) => any[];
+  processValidationErrors: (
+    errors: ErrorObject[] | null | undefined,
+  ) => ErrorObject[];
   setValidationErrors: React.Dispatch<React.SetStateAction<string | undefined>>;
   setIsValidSchema: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
@@ -137,18 +188,18 @@ function JsonSchemaEditorProviderRaw({
 
   // Re-import only when the controlled prop changes from OUTSIDE (not our own
   // echo), so node ids stay stable across edits routed through applyDocOp.
-  // Adjusting state during render (rather than in an effect) means the new doc
-  // is used in this same pass — no extra render with the stale projection. The
-  // signature is memoized so the recursive normalize runs only when the prop
-  // reference actually changes, matching the old effect's dependency behavior.
+  // The signature is memoized so the recursive normalize runs only when the prop
+  // reference actually changes.
   const propSignature = useMemo(
     () => schemaSignature(jsonSchemaProp),
     [jsonSchemaProp],
   );
-  if (propSignature !== syncedSignatureRef.current) {
-    syncedSignatureRef.current = propSignature;
-    setDoc(fromJsonSchema(jsonSchemaProp));
-  }
+  React.useLayoutEffect(() => {
+    if (propSignature !== syncedSignatureRef.current) {
+      syncedSignatureRef.current = propSignature;
+      setDoc(fromJsonSchema(jsonSchemaProp));
+    }
+  }, [jsonSchemaProp, propSignature]);
 
   // Editor policy: every property is required. The projection (and every emit
   // below) forces all-required, so the toggle is gone and the output is always
@@ -161,11 +212,15 @@ function JsonSchemaEditorProviderRaw({
 
   // Track current schema value for comparisons in the legacy setJsonSchema.
   const jsonSchemaRef = useRef(jsonSchema);
-  jsonSchemaRef.current = jsonSchema;
+  React.useLayoutEffect(() => {
+    jsonSchemaRef.current = jsonSchema;
+  }, [jsonSchema]);
 
   // Latest document, for side-effect-free reads inside applyDocOp.
   const docRef = useRef(doc);
-  docRef.current = doc;
+  React.useLayoutEffect(() => {
+    docRef.current = doc;
+  }, [doc]);
 
   const applyDocOp = useCallback(
     (op: (d: SchemaDocument) => SchemaDocument, persist?: boolean) => {
@@ -186,77 +241,12 @@ function JsonSchemaEditorProviderRaw({
     [externalSetJsonSchema, persistJsonSchemaCallback],
   );
 
-  // Helper to check if property order has changed (recursively)
-  const hasPropertyOrderChanged = useCallback(
-    (oldSchema: any, newSchema: any): boolean => {
-
-      if (!oldSchema || !newSchema) {
-        return false;
-      }
-      if (typeof oldSchema !== "object" || typeof newSchema !== "object") {
-        return false;
-      }
-
-      // Check if properties object exists and if the order of keys is different
-      if (oldSchema.properties && newSchema.properties) {
-        const oldKeys = Object.keys(oldSchema.properties);
-        const newKeys = Object.keys(newSchema.properties);
-
-        // If keys are in different order, property order changed
-        if (oldKeys.length === newKeys.length) {
-          for (let i = 0; i < oldKeys.length; i++) {
-            if (oldKeys[i] !== newKeys[i]) {
-              return true;
-            }
-          }
-        } else {
-        }
-
-        // Recursively check nested objects and definitions
-        for (const key of oldKeys) {
-          if (
-            newSchema.properties[key] &&
-            hasPropertyOrderChanged(
-              oldSchema.properties[key],
-              newSchema.properties[key],
-            )
-          ) {
-            return true;
-          }
-        }
-      } else {
-      }
-
-      // Check $defs as well
-      if (oldSchema.$defs && newSchema.$defs) {
-        const oldDefKeys = Object.keys(oldSchema.$defs);
-        for (const defKey of oldDefKeys) {
-          if (
-            newSchema.$defs[defKey] &&
-            hasPropertyOrderChanged(
-              oldSchema.$defs[defKey],
-              newSchema.$defs[defKey],
-            )
-          ) {
-            return true;
-          }
-        }
-      }
-
-      return false;
-    },
-    [],
-  );
-
   // SIMPLIFIED: Single-pass setJsonSchema for controlled mode
   const setJsonSchema = useCallback(
     async (
       value: React.SetStateAction<ExtendedJSONSchema7>,
       persist?: boolean,
     ): Promise<void> => {
-      if (process.env.NODE_ENV !== "production") {
-      }
-
       // Resolve value once
       const newValue = requireAllProperties(
         typeof value === "function" ? value(jsonSchemaRef.current) : value,
@@ -269,7 +259,6 @@ function JsonSchemaEditorProviderRaw({
       );
       const valuesChanged = !isEqual(jsonSchemaRef.current, newValue);
 
-
       // Skip if nothing changed
       if (!valuesChanged && !orderChanged) {
         // Still persist if explicitly requested (e.g., final chunk in streaming)
@@ -278,7 +267,6 @@ function JsonSchemaEditorProviderRaw({
         }
         return;
       }
-
 
       // For controlled mode: call external setter if provided
       if (externalSetJsonSchema) {
@@ -289,9 +277,8 @@ function JsonSchemaEditorProviderRaw({
       if ((persist ?? true) && persistJsonSchemaCallback) {
         await persistJsonSchemaCallback(newValue);
       }
-
     },
-    [externalSetJsonSchema, persistJsonSchemaCallback, hasPropertyOrderChanged],
+    [externalSetJsonSchema, persistJsonSchemaCallback],
   );
 
   // Enhanced function to count total properties in the schema (including nested, $ref and $defs)
@@ -315,10 +302,10 @@ function JsonSchemaEditorProviderRaw({
             const refPath = node.$ref.substring(2).split("/");
 
             // Navigate to the referenced schema
-            let refSchema: any = schema; // Start search from root schema
+            let refSchema: unknown = schema; // Start search from root schema
             for (const segment of refPath) {
               if (refSchema && typeof refSchema === "object") {
-                refSchema = (refSchema as Record<string, any>)[segment];
+                refSchema = (refSchema as Record<string, unknown>)[segment];
               } else {
                 refSchema = undefined;
                 break;
@@ -369,9 +356,9 @@ function JsonSchemaEditorProviderRaw({
 
         // Handle composition keywords (allOf, anyOf, oneOf)
         ["allOf", "anyOf", "oneOf"].forEach((keyword) => {
-          const compositionArray = (node as Record<string, any>)[keyword];
+          const compositionArray = (node as Record<string, unknown>)[keyword];
           if (Array.isArray(compositionArray)) {
-            compositionArray.forEach((subSchema: any, index: number) => {
+            compositionArray.forEach((subSchema, index) => {
               count += countProperties(
                 subSchema as ExtendedJSONSchema7,
                 `${path}/${keyword}/${index}`,
@@ -391,10 +378,10 @@ function JsonSchemaEditorProviderRaw({
 
   // Custom error processing function that creates new ErrorObjects
   const processValidationErrors = useCallback(
-    (errors: any[] | null | undefined): any[] => {
+    (errors: ErrorObject[] | null | undefined): ErrorObject[] => {
       if (!errors || errors.length === 0) return [];
 
-      const processedErrors: any[] = [];
+      const processedErrors: ErrorObject[] = [];
       const processedPropertyNames = new Set<string>();
 
       for (const error of errors) {

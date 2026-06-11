@@ -3,7 +3,8 @@
 import React, { useRef, useState } from "react"
 import type { JSONSchema7 } from "json-schema"
 
-import { JsonTableHeaderCell } from "@/components/json-table/header-from-schema"
+import { JsonTableHeaderCell } from "@/components/json-table/header-cell"
+import type { ProjectedRow } from "@/components/json-table/lib/document-projection"
 import {
   buildHeaderGridRows,
   getLeafHeaderNodes,
@@ -18,10 +19,7 @@ import {
   TableRow,
 } from "@/components/ui-retab/table"
 
-import { HoverInfoContext } from "./hover-info-context"
-import type { HoverInfo } from "./hover-info-context"
 import { useFixedRowWindow } from "./lib/use-fixed-row-window"
-import type { PathInfo } from "./path-utils"
 import { SingleFileFormRow } from "./single-file-form-row"
 import {
   getColumnWidthPx,
@@ -41,7 +39,7 @@ interface SingleFileVirtualizedTableProps {
   draggedItemKeyRef: React.RefObject<string | null>
   draggedItemParentPathRef: React.RefObject<string | null>
   editMode: "descriptionOnly" | "editable" | "readOnly"
-  tableAndPaths: { table: unknown[][]; paths: (PathInfo | undefined)[][] }
+  projectedRows: ProjectedRow[]
   visibleKeys: string[]
   rowCount: number
   onUpdateDocument?: (patch: Record<string, unknown>) => Promise<void>
@@ -152,7 +150,7 @@ export const SingleFileVirtualizedTable =
       draggedItemKeyRef,
       draggedItemParentPathRef,
       editMode,
-      tableAndPaths,
+      projectedRows,
       visibleKeys,
       rowCount,
       onUpdateDocument,
@@ -164,9 +162,6 @@ export const SingleFileVirtualizedTable =
       const { rowHeight, columnWidth: storeColumnWidth } =
         useSheetOptionsStore()
       const columnWidth = propColumnWidth ?? storeColumnWidth
-
-      // Add hover info state for DataCell hover functionality
-      const [hoverInfo, setHoverInfo] = useState<HoverInfo | null>(null)
 
       // Which object/array cell has its inline editor popover open (by field
       // key). Held at the table level so it survives row virtualization.
@@ -195,89 +190,86 @@ export const SingleFileVirtualizedTable =
       })
 
       return (
-        <HoverInfoContext.Provider value={{ hoverInfo, setHoverInfo }}>
-          <div className="relative flex min-h-0 min-w-0 flex-1 flex-col bg-background">
-            {/* Header: a fixed, opaque bar outside the vertical scroll. It
+        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col bg-background">
+          {/* Header: a fixed, opaque bar outside the vertical scroll. It
                 scrolls horizontally in sync with the body so fields stay
                 aligned, while rows scroll underneath it. A sticky header
                 inside the transformed/virtualized body shows rows through it
                 (transforms break sticky) — the CSV viewer uses the same
                 separated-header approach. */}
-            <div
-              ref={headerScrollRef}
-              className="w-full shrink-0 overflow-x-hidden bg-muted/30"
+          <div
+            ref={headerScrollRef}
+            className="w-full shrink-0 overflow-x-hidden bg-muted/30"
+          >
+            <Table
+              className="relative flex w-full flex-col rounded-none bg-muted/30"
+              style={{ minWidth: `${totalWidth}px` }}
             >
-              <Table
-                className="relative flex w-full flex-col rounded-none bg-muted/30"
-                style={{ minWidth: `${totalWidth}px` }}
-              >
-                <SingleFileTableHeader
-                  columnWidth={columnWidth}
-                  headerNodes={headerNodes}
-                  schema={schema}
-                  setSchema={setSchema}
-                  isPublished={isPublished}
-                  stopAt={stopAt}
-                  setStopAt={setStopAt}
-                  draggedItemKeyRef={draggedItemKeyRef}
-                  draggedItemParentPathRef={draggedItemParentPathRef}
-                  editMode={editMode}
-                />
-              </Table>
-            </div>
-            <div
-              ref={scrollRef}
-              className="w-full flex-1 overflow-auto"
-              onScroll={(e) => {
-                if (headerScrollRef.current) {
-                  headerScrollRef.current.scrollLeft =
-                    e.currentTarget.scrollLeft
-                }
+              <SingleFileTableHeader
+                columnWidth={columnWidth}
+                headerNodes={headerNodes}
+                schema={schema}
+                setSchema={setSchema}
+                isPublished={isPublished}
+                stopAt={stopAt}
+                setStopAt={setStopAt}
+                draggedItemKeyRef={draggedItemKeyRef}
+                draggedItemParentPathRef={draggedItemParentPathRef}
+                editMode={editMode}
+              />
+            </Table>
+          </div>
+          <div
+            ref={scrollRef}
+            className="w-full flex-1 overflow-auto"
+            onScroll={(e) => {
+              if (headerScrollRef.current) {
+                headerScrollRef.current.scrollLeft = e.currentTarget.scrollLeft
+              }
+            }}
+          >
+            <Table
+              className="relative flex w-full flex-col rounded-none bg-background"
+              style={{
+                minWidth: `${totalWidth}px`,
               }}
             >
-              <Table
-                className="relative flex w-full flex-col rounded-none bg-background"
+              <TableBody
+                ref={bodyRef}
+                className="relative w-full bg-background"
                 style={{
-                  minWidth: `${totalWidth}px`,
+                  height: `${totalHeight}px`,
+                  minWidth: "100%",
                 }}
               >
-                <TableBody
-                  ref={bodyRef}
-                  className="relative w-full bg-background"
-                  style={{
-                    height: `${totalHeight}px`,
-                    minWidth: "100%",
-                  }}
-                >
-                  {ready
-                    ? Array.from({ length: end - start }, (_, i) => {
-                        // One DOM row per row in the visible window, keyed by row
-                        // index: rows mount/unmount as they enter/leave. Each row's
-                        // props are memoized on primitives, so rows that stay put
-                        // are skipped by React.memo.
-                        const rowIdx = start + i
-                        return (
-                          <SingleFileFormRow
-                            key={rowIdx}
-                            rowIdx={rowIdx}
-                            document={document}
-                            paths={tableAndPaths.paths}
-                            schema={schema}
-                            visibleKeys={visibleKeys}
-                            openPopover={openPopover}
-                            setOpenPopover={setOpenPopover}
-                            onUpdateDocument={onUpdateDocument}
-                            allowEditing={allowEditing}
-                            onCellHoverStart={onCellHoverStart}
-                          />
-                        )
-                      })
-                    : null}
-                </TableBody>
-              </Table>
-            </div>
+                {ready
+                  ? Array.from({ length: end - start }, (_, i) => {
+                      // One DOM row per row in the visible window, keyed by row
+                      // index: rows mount/unmount as they enter/leave. Each row's
+                      // props are memoized on primitives, so rows that stay put
+                      // are skipped by React.memo.
+                      const rowIdx = start + i
+                      return (
+                        <SingleFileFormRow
+                          key={rowIdx}
+                          rowIdx={rowIdx}
+                          document={document}
+                          projectedRows={projectedRows}
+                          schema={schema}
+                          visibleKeys={visibleKeys}
+                          openPopover={openPopover}
+                          setOpenPopover={setOpenPopover}
+                          onUpdateDocument={onUpdateDocument}
+                          allowEditing={allowEditing}
+                          onCellHoverStart={onCellHoverStart}
+                        />
+                      )
+                    })
+                  : null}
+              </TableBody>
+            </Table>
           </div>
-        </HoverInfoContext.Provider>
+        </div>
       )
     }
   )
