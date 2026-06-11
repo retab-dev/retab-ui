@@ -25,12 +25,9 @@
     "format:check": "turbo run format:check",
     "check": "turbo run lint typecheck format:check"
   },
-  "packageManager": "pnpm@9.0.6",
+  "packageManager": "pnpm@9.15.9",
   "devDependencies": {
     "turbo": "^1.9.9"
-  },
-  "overrides": {
-    "@shikijs/themes": "3.14.0"
   },
   "pnpm": {
     "overrides": {
