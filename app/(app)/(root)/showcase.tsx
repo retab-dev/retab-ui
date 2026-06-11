@@ -74,8 +74,12 @@ export function HomeShowcase() {
           >
             <JsonFormFieldDemo />
           </ShowcaseItem>
+        </div>
 
+        {/* Row 3 — JSON Table (2/5) · Sources (3/5) */}
+        <div className="mt-8 grid items-start gap-8 md:grid-cols-5">
           <ShowcaseItem
+            className="md:col-span-2"
             title="JSON Table"
             description="Virtualized data table that renders only what's on screen — smooth at thousands of rows."
           >
@@ -83,6 +87,7 @@ export function HomeShowcase() {
           </ShowcaseItem>
 
           <ShowcaseItem
+            className="md:col-span-3"
             title="Sources"
             description="Field-to-source linking: hover a value to highlight where it came from in the document."
           >

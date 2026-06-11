@@ -127,13 +127,37 @@ function HeaderAwareScrollbar({
 const useIsomorphicLayoutEffect =
   typeof window !== "undefined" ? React.useLayoutEffect : React.useEffect
 
+// Drop every `:has()` style rule from a constructed sheet (recursing into
+// @media/@supports/@layer blocks). The table's own markup uses no `has-*`
+// variants, so these rules never style it — but Blink would still re-run their
+// invalidation against the table's subtree on each per-scroll mutation. Removing
+// them is what takes the isolated table from a few ms of residual recalc down to
+// ~nothing. Safe precisely because the table doesn't depend on any `:has()` rule.
+function stripHasRules(owner: CSSStyleSheet | CSSGroupingRule) {
+  const rules = owner.cssRules
+  if (!rules) return
+  for (let i = rules.length - 1; i >= 0; i--) {
+    const r = rules[i]
+    if ((r as CSSStyleRule).selectorText?.includes(":has(")) {
+      try {
+        owner.deleteRule(i)
+      } catch {
+        // ignore a rule that can't be removed
+      }
+    } else if ((r as CSSGroupingRule).cssRules?.length) {
+      stripHasRules(r as CSSGroupingRule)
+    }
+  }
+}
+
 // The page's author CSS, mirrored into constructible stylesheets once and shared
 // (by reference) across every isolated instance — `adoptedStyleSheets` allows one
-// sheet object in many roots, so N tables cost one copy, not N. Cross-origin
-// sheets (e.g. a font CDN) can't be read and are skipped; their declarations reach
-// the table through inheritance where they apply to custom properties. Snapshotted
-// at first use: later-added stylesheets (route CSS, HMR) won't appear, which is
-// fine for the table's own utilities, present from first paint.
+// sheet object in many roots, so N tables cost one copy, not N. `:has()` rules are
+// stripped (see stripHasRules). Cross-origin sheets (e.g. a font CDN) can't be
+// read and are skipped; their declarations reach the table through inheritance
+// where they apply to custom properties. Snapshotted at first use: later-added
+// stylesheets (route CSS, HMR) won't appear, which is fine for the table's own
+// utilities, present from first paint.
 let sharedSheets: CSSStyleSheet[] | null = null
 function getSharedSheets(): CSSStyleSheet[] {
   if (sharedSheets) return sharedSheets
@@ -152,6 +176,7 @@ function getSharedSheets(): CSSStyleSheet[] {
       // @import rules are dropped by replaceSync per spec — harmless here, since
       // the imported sheet also appears separately in document.styleSheets.
       sheet.replaceSync(text)
+      stripHasRules(sheet)
       out.push(sheet)
     } catch {
       // skip any sheet that can't be reconstructed
@@ -366,7 +391,7 @@ export interface CsvViewerHandle {
     col: number,
     options?: { behavior?: ScrollBehavior }
   ) => void
-  getScrollElement: () => HTMLDivElement | null
+  getViewportElement: () => HTMLDivElement | null
 }
 
 export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
@@ -556,7 +581,7 @@ export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
           rowVirtualizer.scrollToIndex(row, { align: "center", behavior })
           columnVirtualizer.scrollToIndex(col, { align: "center", behavior })
         },
-        getScrollElement: () => scrollRef.current,
+        getViewportElement: () => scrollRef.current,
       }),
       [rowVirtualizer, columnVirtualizer]
     )

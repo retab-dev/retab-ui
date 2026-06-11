@@ -179,22 +179,46 @@ export interface PdfViewerProps {
   onScrollProgressChange?: (progress: number) => void
   /** Drop the outer border/rounded/background so the viewer fills its container. */
   bare?: boolean
-  /** Rendered as a full-width strip directly below the toolbar (e.g. a legend). */
+  /**
+   * Chrome mounted around the document — one node per edge, plus a floating
+   * overlay. Drop a legend, a page ribbon, a waterfall, etc. into whichever
+   * region you want; they're independent, so moving one never disturbs another.
+   * `left`/`right` are collapsible rails (toggled together); `top`/`bottom` are
+   * full-width strips; `overlay` floats over the pages.
+   */
+  slots?: PdfViewerSlots
+  /** Shorthand for `slots.top` — a full-width strip directly below the toolbar. */
   header?: React.ReactNode
-  /** Rendered as a left rail alongside the scrolling pages (e.g. a page ribbon). */
+  /** Shorthand for `slots.left` — a collapsible rail alongside the pages. */
   aside?: React.ReactNode
-  /** Show a toolbar button that collapses/expands the `aside` rail. Default true when `aside` is set. */
+  /** Show a toolbar button that collapses/expands the `left`/`right` rails. Default true when a rail is set. */
   asideToggle?: boolean
-  /** Initial open state of the `aside` rail. */
+  /** Initial open state of the rails. */
   defaultAsideOpen?: boolean
+}
+
+export interface PdfViewerSlots {
+  /** Full-width strip directly below the toolbar (e.g. a legend). */
+  top?: React.ReactNode
+  /** Full-width strip at the bottom of the document column (e.g. a waterfall). */
+  bottom?: React.ReactNode
+  /** Collapsible rail to the left of the pages (e.g. a vertical page ribbon). */
+  left?: React.ReactNode
+  /** Collapsible rail to the right of the pages. */
+  right?: React.ReactNode
+  /** Absolutely-positioned layer over the scrolling pages (e.g. a floating legend). */
+  overlay?: React.ReactNode
 }
 
 export const PdfViewer = React.forwardRef<PdfViewerHandle, PdfViewerProps>(
   function PdfViewer(props, ref) {
     const isClient = useIsClient()
-    // Mirror whether the live toolbar will carry an aside toggle, so the
+    // Mirror whether the live toolbar will carry a rail toggle, so the
     // skeleton toolbar has the exact same leading control (and width).
-    const showAsideToggle = Boolean(props.aside && (props.asideToggle ?? true))
+    const hasRail = Boolean(
+      props.slots?.left ?? props.aside ?? props.slots?.right
+    )
+    const showAsideToggle = Boolean(hasRail && (props.asideToggle ?? true))
     if (!isClient) {
       return (
         <PdfViewerFallback
@@ -232,6 +256,7 @@ function PdfViewerInner({
   onVisiblePageChange,
   onScrollProgressChange,
   bare = false,
+  slots,
   header,
   aside,
   asideToggle = true,
@@ -240,6 +265,12 @@ function PdfViewerInner({
 }: PdfViewerProps & {
   forwardedRef?: React.ForwardedRef<PdfViewerHandle>
 }) {
+  // Resolve the mountable regions; `header`/`aside` are shorthands for top/left.
+  const topSlot = slots?.top ?? header
+  const bottomSlot = slots?.bottom
+  const leftSlot = slots?.left ?? aside
+  const rightSlot = slots?.right
+  const overlaySlot = slots?.overlay
   const doc = React.use(getDocumentResource(src))
   const firstPage = React.use(getPageResource(doc, 1))
   // First page stands in for every page's intrinsic size: most documents are
@@ -255,24 +286,7 @@ function PdfViewerInner({
   const [rotation, setRotation] = React.useState(0)
   const [containerWidth, setContainerWidth] = React.useState<number | null>(null)
   const [asideOpen, setAsideOpen] = React.useState(defaultAsideOpen)
-  const showAsideToggle = Boolean(aside && asideToggle)
-
-  // Measure the aside's natural width so we can collapse it by animating an
-  // explicit pixel width → 0. (A grid 1fr→0fr trick doesn't collapse here: the
-  // wrapper is a flex-shrink-0 flex item sized to its max-content, and grid
-  // intrinsic sizing ignores fr.) The inner w-max keeps the content at its
-  // natural width while the wrapper clips it, so the measurement stays stable
-  // even while collapsed — reopening animates back to the same width.
-  const [asideWidth, setAsideWidth] = React.useState<number | null>(null)
-  const asideMeasureRef = React.useCallback((el: HTMLDivElement | null) => {
-    if (!el) return
-    setAsideWidth(Math.round(el.offsetWidth))
-    const observer = new ResizeObserver(() =>
-      setAsideWidth(Math.round(el.offsetWidth))
-    )
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [])
+  const showAsideToggle = Boolean((leftSlot || rightSlot) && asideToggle)
 
   // Measure the container with a ResizeObserver attached in the ref callback.
   // Coalesce to one update per frame so dragging a resize handle doesn't trigger
@@ -512,69 +526,116 @@ function PdfViewerInner({
       ) : null}
 
       <div className="flex min-h-0 flex-1">
-        {aside ? (
-          // Collapse by animating an explicit width → 0 (width-agnostic: the
-          // natural width is measured, so any-width rail slides away cleanly).
-          // The inner w-max holds the content at its natural size while the
-          // wrapper clips it. No toggle (asideToggle=false) → always open.
-          <div
-            data-slot="pdf-viewer-aside"
-            data-state={asideOpen ? "open" : "closed"}
-            className={cn(
-              "h-full flex-shrink-0 overflow-hidden",
-              showAsideToggle && "transition-[width] duration-200 ease-out"
-            )}
-            style={
-              showAsideToggle
-                ? { width: asideOpen ? (asideWidth ?? undefined) : 0 }
-                : undefined
-            }
-          >
-            <div ref={asideMeasureRef} className="h-full w-max">
-              {aside}
-            </div>
-          </div>
+        {leftSlot ? (
+          <CollapsibleRail side="left" open={asideOpen} animate={showAsideToggle}>
+            {leftSlot}
+          </CollapsibleRail>
         ) : null}
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          {header ? <div data-slot="pdf-viewer-header">{header}</div> : null}
-          <ScrollArea
-            className="min-h-0 flex-1"
-            viewportRef={setScrollViewport}
-            viewportProps={
-              onVisiblePageChange || onScrollProgressChange
-                ? { onScroll: handleScroll }
-                : undefined
-            }
-          >
-            <div ref={containerRef} className="flex flex-col items-center gap-4 p-4">
-              {Array.from({ length: doc.numPages }, (_, i) => {
-                const pageNumber = i + 1
-                return (
-                  <div
-                    key={pageNumber}
-                    ref={registerSlot}
-                    data-slot="pdf-page-slot"
-                    data-page-number={pageNumber}
-                    className="flex items-center justify-center"
-                    style={{ width: estWidth, minHeight: estHeight }}
-                  >
-                    {visiblePages.has(pageNumber) ? (
-                      <React.Suspense fallback={<PageSkeleton />}>
-                        <PdfPage
-                          doc={doc}
-                          pageNumber={pageNumber}
-                          scale={scale}
-                          rotation={rotation}
-                          renderOverlay={renderPageOverlay}
-                        />
-                      </React.Suspense>
-                    ) : null}
-                  </div>
-                )
-              })}
-            </div>
-          </ScrollArea>
+        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+          {topSlot ? <div data-slot="pdf-viewer-header">{topSlot}</div> : null}
+          {/* The document region. `relative` so an `overlay` slot floats over
+              the pages — but not over the top/bottom strips. */}
+          <div className="relative flex min-h-0 flex-1 flex-col">
+            <ScrollArea
+              className="min-h-0 flex-1"
+              viewportRef={setScrollViewport}
+              viewportProps={
+                onVisiblePageChange || onScrollProgressChange
+                  ? { onScroll: handleScroll }
+                  : undefined
+              }
+            >
+              <div ref={containerRef} className="flex flex-col items-center gap-4 p-4">
+                {Array.from({ length: doc.numPages }, (_, i) => {
+                  const pageNumber = i + 1
+                  return (
+                    <div
+                      key={pageNumber}
+                      ref={registerSlot}
+                      data-slot="pdf-page-slot"
+                      data-page-number={pageNumber}
+                      className="flex items-center justify-center"
+                      style={{ width: estWidth, minHeight: estHeight }}
+                    >
+                      {visiblePages.has(pageNumber) ? (
+                        <React.Suspense fallback={<PageSkeleton />}>
+                          <PdfPage
+                            doc={doc}
+                            pageNumber={pageNumber}
+                            scale={scale}
+                            rotation={rotation}
+                            renderOverlay={renderPageOverlay}
+                          />
+                        </React.Suspense>
+                      ) : null}
+                    </div>
+                  )
+                })}
+              </div>
+            </ScrollArea>
+            {overlaySlot ? (
+              // The layer itself ignores pointer events so the pages stay
+              // scrollable; its content opts back in.
+              <div
+                data-slot="pdf-viewer-overlay"
+                className="pointer-events-none absolute inset-0 z-10 [&>*]:pointer-events-auto"
+              >
+                {overlaySlot}
+              </div>
+            ) : null}
+          </div>
+          {bottomSlot ? (
+            <div data-slot="pdf-viewer-footer">{bottomSlot}</div>
+          ) : null}
         </div>
+        {rightSlot ? (
+          <CollapsibleRail side="right" open={asideOpen} animate={showAsideToggle}>
+            {rightSlot}
+          </CollapsibleRail>
+        ) : null}
+      </div>
+    </div>
+  )
+}
+
+/**
+ * A document-edge rail that collapses by animating its measured width → 0. The
+ * inner `w-max` holds the content at its natural size while the wrapper clips
+ * it, so the width stays stable even while collapsed and reopens to the same
+ * size. (A grid 1fr→0fr trick doesn't collapse a max-content flex item.)
+ */
+function CollapsibleRail({
+  side,
+  open,
+  animate,
+  children,
+}: {
+  side: "left" | "right"
+  open: boolean
+  animate: boolean
+  children: React.ReactNode
+}) {
+  const [width, setWidth] = React.useState<number | null>(null)
+  const measureRef = React.useCallback((el: HTMLDivElement | null) => {
+    if (!el) return
+    setWidth(Math.round(el.offsetWidth))
+    const observer = new ResizeObserver(() => setWidth(Math.round(el.offsetWidth)))
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+  return (
+    <div
+      data-slot="pdf-viewer-rail"
+      data-side={side}
+      data-state={open ? "open" : "closed"}
+      className={cn(
+        "h-full flex-shrink-0 overflow-hidden",
+        animate && "transition-[width] duration-200 ease-out"
+      )}
+      style={animate ? { width: open ? (width ?? undefined) : 0 } : undefined}
+    >
+      <div ref={measureRef} className="h-full w-max">
+        {children}
       </div>
     </div>
   )

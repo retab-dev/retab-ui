@@ -4,6 +4,7 @@ import * as React from "react"
 
 import {
   pageOwners as buildPageOwners,
+  segmentsPageCount,
   toSegments,
   type Segment,
 } from "@/lib/segments"
@@ -13,7 +14,8 @@ import {
   type SegmentLegendSide,
   type SegmentLegendVariant,
 } from "@/components/ui/segment-legend"
-import { PdfViewer } from "@/components/ui/pdf-viewer"
+import { PageRibbon, type RibbonRow } from "@/components/ui/page-ribbon"
+import { PdfViewer, type PdfViewerSlots } from "@/components/ui/pdf-viewer"
 import { cn } from "@/lib/utils"
 
 const PDF_URL = "/samples/attention.pdf"
@@ -39,8 +41,40 @@ const PARTITION_OUTPUT = [
 
 type ExampleId = "split" | "partition"
 
-/** Where the legend renders relative to the document surface. */
-type Placement = "header" | "aside" | "overlay"
+// Each example reduces to the same shared model — a `Segment[]` for the legend
+// and overlays, plus ribbon "lanes". Split is one vertical lane (subdocuments
+// tile the pages); partition is a horizontal waterfall, one lane per chunk.
+type ExampleConfig = {
+  id: ExampleId
+  segments: Segment[]
+  ribbonRows: RibbonRow[]
+  ribbonOrientation: "vertical" | "horizontal"
+  pageCount: number
+}
+
+function buildExample(id: ExampleId): ExampleConfig {
+  if (id === "split") {
+    const segments = toSegments(SPLIT_OUTPUT)
+    return {
+      id,
+      segments,
+      ribbonRows: [{ id: "split", segments }],
+      ribbonOrientation: "vertical",
+      pageCount: segmentsPageCount(segments),
+    }
+  }
+  const segments = toSegments(PARTITION_OUTPUT)
+  return {
+    id,
+    segments,
+    // One lane per chunk → the consensus waterfall (overlap shows as stacked rows).
+    ribbonRows: segments.map((s) => ({ id: s.id, segments: [s] })),
+    ribbonOrientation: "horizontal",
+    pageCount: segmentsPageCount(segments),
+  }
+}
+
+type Placement = "top" | "overlay" | "left"
 
 type VariantPreset = {
   label: string
@@ -51,30 +85,25 @@ type VariantPreset = {
 }
 
 const PRESETS: VariantPreset[] = [
-  { label: "Bar", variant: "bar", orientation: "horizontal", side: "top", placement: "header" },
+  { label: "Bar", variant: "bar", orientation: "horizontal", side: "top", placement: "top" },
   { label: "Floating", variant: "floating", orientation: "horizontal", side: "top", placement: "overlay" },
-  { label: "Inset", variant: "inset", orientation: "horizontal", placement: "header" },
-  { label: "Rail", variant: "bar", orientation: "vertical", side: "left", placement: "aside" },
+  { label: "Inset", variant: "inset", orientation: "horizontal", placement: "top" },
+  { label: "Rail", variant: "bar", orientation: "vertical", side: "left", placement: "left" },
 ]
 
 /**
  * Every legend placement — bar, floating, inset, and a vertical rail — shown on
- * the real split/partition document. One `SegmentLegend` drives each panel and
- * the page color overlays; only `variant`/`orientation`/`side` differ. Hover a
- * label and the matching pages dim across all four panels at once, since they
- * share one selection.
+ * the real split/partition document. The legend, the page ribbon/waterfall, and
+ * the page color overlays are independent surfaces mounted into separate
+ * `PdfViewer` slots, so moving the legend never drags the ribbon along: that's
+ * the whole point. They share one selection, so hovering a label dims the
+ * matching pages across all four panels at once.
  */
 export function LegendVariantsBlock() {
   const [exampleId, setExampleId] = React.useState<ExampleId>("split")
   const [activeId, setActiveId] = React.useState<string | null>(null)
 
-  const segments = React.useMemo<Segment[]>(
-    () =>
-      exampleId === "split"
-        ? toSegments(SPLIT_OUTPUT)
-        : toSegments(PARTITION_OUTPUT),
-    [exampleId]
-  )
+  const example = React.useMemo(() => buildExample(exampleId), [exampleId])
 
   return (
     <div className="flex h-full min-h-[680px] flex-col bg-background">
@@ -83,7 +112,8 @@ export function LegendVariantsBlock() {
           <h2 className="text-base font-semibold">Legend variants</h2>
           <p className="mt-0.5 text-sm text-muted-foreground">
             One <code className="text-xs">SegmentLegend</code>, four placements, on the real{" "}
-            {exampleId} document.
+            {exampleId} document — the {exampleId === "split" ? "page ribbon" : "consensus waterfall"}{" "}
+            stays put in its own slot.
           </p>
         </div>
         <ExampleToggle
@@ -100,7 +130,7 @@ export function LegendVariantsBlock() {
             <VariantPanel
               key={preset.label}
               preset={preset}
-              segments={segments}
+              example={example}
               activeId={activeId}
               onActivate={setActiveId}
             />
@@ -113,16 +143,18 @@ export function LegendVariantsBlock() {
 
 function VariantPanel({
   preset,
-  segments,
+  example,
   activeId,
   onActivate,
 }: {
   preset: VariantPreset
-  segments: Segment[]
+  example: ExampleConfig
   activeId: string | null
   onActivate: (id: string | null) => void
 }) {
+  const { segments, ribbonRows, ribbonOrientation, pageCount } = example
   const [currentPage, setCurrentPage] = React.useState<number | null>(null)
+  const [scrollProgress, setScrollProgress] = React.useState<number | null>(null)
   const panelRef = React.useRef<HTMLDivElement | null>(null)
 
   const owners = React.useMemo(() => buildPageOwners(segments), [segments])
@@ -159,6 +191,47 @@ function VariantPanel({
     />
   )
 
+  // The legend mounts where the variant dictates; the ribbon/waterfall mounts in
+  // its own slot and only steps aside (left → right) when the legend takes the
+  // left rail. The two never share a slot, so placement stays independent.
+  const ribbonSide: "left" | "right" | "bottom" =
+    ribbonOrientation === "horizontal"
+      ? "bottom"
+      : preset.placement === "left"
+        ? "right"
+        : "left"
+
+  const ribbon = (
+    <PageRibbon
+      orientation={ribbonOrientation}
+      rows={ribbonRows}
+      pageCount={pageCount}
+      currentPage={currentPage}
+      scrollProgress={ribbonOrientation === "horizontal" ? scrollProgress : null}
+      activeId={activeId}
+      onActivate={onActivate}
+      onSelectPage={jumpToPage}
+      showTicks={ribbonOrientation === "vertical"}
+    />
+  )
+
+  const slots: PdfViewerSlots = {
+    [preset.placement]: legend,
+    [ribbonSide]:
+      ribbonSide === "bottom" ? (
+        <div className="border-t border-border bg-background px-3 py-2">{ribbon}</div>
+      ) : (
+        <div
+          className={cn(
+            "h-full overflow-auto bg-background px-3 py-4",
+            ribbonSide === "left" ? "border-r" : "border-l"
+          )}
+        >
+          {ribbon}
+        </div>
+      ),
+  }
+
   return (
     <div className="space-y-1.5">
       <div className="flex flex-wrap items-baseline gap-x-2">
@@ -166,28 +239,23 @@ function VariantPanel({
           {preset.label}
         </span>
         <code className="text-[11px] text-muted-foreground">
-          variant=&quot;{preset.variant}&quot;
-          {preset.orientation === "vertical" ? ' · orientation="vertical"' : ""}
+          slots.{preset.placement}
+          {preset.orientation === "vertical" ? " · vertical" : ""}
         </code>
       </div>
-      {/* `relative` so the floating variant anchors over this panel's document. */}
       <div
         ref={panelRef}
-        className="relative h-[420px] overflow-hidden rounded-lg border bg-card"
+        className="h-[420px] overflow-hidden rounded-lg border bg-card"
       >
         <PdfViewer
           src={PDF_URL}
           bare
           toolbar={false}
-          downloadFileName="attention.pdf"
-          header={preset.placement === "header" ? legend : undefined}
-          aside={
-            preset.placement === "aside" ? (
-              <div className="h-full overflow-auto px-2 py-3">{legend}</div>
-            ) : undefined
-          }
           asideToggle={false}
+          downloadFileName="attention.pdf"
+          slots={slots}
           onVisiblePageChange={setCurrentPage}
+          onScrollProgressChange={setScrollProgress}
           renderPageOverlay={({ pageNumber }) => {
             const ownerIdx = owners.get(pageNumber) ?? []
             if (ownerIdx.length === 0) return null
@@ -208,7 +276,6 @@ function VariantPanel({
           }}
           className="h-full"
         />
-        {preset.placement === "overlay" ? legend : null}
       </div>
     </div>
   )

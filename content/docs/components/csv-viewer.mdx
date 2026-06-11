@@ -96,6 +96,7 @@ memory at once during parsing.
 | `scale` | `number` | Baseline zoom multiplier on row height, column width, and font size. Defaults to `1`. The footer controls multiply on top of this. |
 | `showZoom` | `boolean` | Show the footer zoom controls. Defaults to `true`. Set `false` when a host drives zoom through `scale`. |
 | `label` | `string` | Accessible label for the table (`aria-label`). Defaults to `"CSV data"`. |
+| `isolateStyles` | `boolean` | Render the scrolling table inside a shadow root so the host page's CSS — especially `:has()` selectors, whose invalidation Blink doesn't scope by `contain` — can't reach it. On `:has()`-heavy pages this collapses per-scroll style recalc (~33ms → ~0.4ms) and keeps scrolling at refresh rate. The page's author CSS is copied in so utilities resolve and theme variables inherit through the boundary. Defaults to `false`. When on, the table is client-rendered only and host CSS can't style its internals. |
 | `className` | `string` | Optional class on the viewer container. |
 
 ## Accessibility

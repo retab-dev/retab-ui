@@ -115,7 +115,7 @@ function subdocumentThumbnail(segment: Segment): string {
  * - Split: a bundle of per-subdocument thumbnails, name-badged and color-keyed.
  * - Partition: the page, with a keyed-chunk legend and an overlap waterfall (one
  *   ribbon lane per chunk) in the footer.
- * - Parse: the page beside the markdown it parsed to.
+ * - Parse: the parsed markdown the document was turned into.
  * - Extract: the page with each field's source box drawn where its value came
  *   from; the extracted values are listed in the footer.
  */
@@ -153,7 +153,7 @@ function ClassificationCard() {
       }
     >
       {result.reasoning ? (
-        <p className="text-muted-foreground line-clamp-3 text-xs leading-relaxed">
+        <p className="text-muted-foreground line-clamp-3 text-[10px] leading-relaxed">
           {result.reasoning}
         </p>
       ) : null}
@@ -209,6 +209,7 @@ function SubdocumentThumbnail({ segment }: { segment: Segment }) {
         />
         <LegendBadge
           wrap
+          textColor="#ffffff"
           label={segment.label}
           color={segment.color}
           className="inset-x-0.5 top-0.5"
@@ -252,7 +253,6 @@ function PartitionCard() {
             rows={rows}
             pageCount={pageCount}
             rowThickness={7}
-            showTicks
           />
         }
       />
@@ -263,25 +263,17 @@ function PartitionCard() {
 // ── Parse ─────────────────────────────────────────────────────────────────────
 
 function ParseCard() {
-  const { file, thumbnail, markdown } = PARSE
+  const { file, markdown } = PARSE
 
   return (
     <RunCard
       file={file}
       status="completed"
       media={
-        <div className="flex size-full">
-          <div className="relative w-1/2 border-r">
-            <FillThumbnail src={thumbnail} fileName={file.name} />
-          </div>
-          <div className="bg-muted/40 relative w-1/2 overflow-hidden p-2">
-            <span className="bg-background/80 text-muted-foreground absolute top-1 right-1 rounded px-1 py-0.5 text-[8px] font-medium uppercase">
-              Markdown
-            </span>
-            <pre className="text-muted-foreground font-mono text-[7px] leading-[1.5] break-words whitespace-pre-wrap">
-              {markdown}
-            </pre>
-          </div>
+        <div className="bg-card size-full overflow-hidden p-3">
+          <pre className="text-foreground/75 font-mono text-[8px] leading-[1.6] whitespace-pre">
+            {markdown}
+          </pre>
         </div>
       }
     />
@@ -380,11 +372,14 @@ function LegendBadge({
   color,
   className,
   wrap = false,
+  textColor,
 }: {
   label: string
   color: string
   className?: string
   wrap?: boolean
+  /** Override the auto black/white label color (e.g. always white). */
+  textColor?: string
 }) {
   return (
     <span
@@ -395,7 +390,7 @@ function LegendBadge({
           : "inline-flex max-w-[calc(100%-1rem)] items-center truncate",
         className
       )}
-      style={{ backgroundColor: color, color: readableTextColor(color) }}
+      style={{ backgroundColor: color, color: textColor ?? readableTextColor(color) }}
       lang="en"
       title={label}
     >
