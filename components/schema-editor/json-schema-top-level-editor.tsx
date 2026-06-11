@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useState } from "react";
-import { JSONSchema7Definition } from "json-schema";
+import type { JSONSchema7Definition } from "json-schema";
 import {
   CloudUpload,
   Copy,
@@ -42,13 +42,13 @@ import {
 } from "@/components/ui-retab/tooltip";
 import { RootDialog } from "@/components/schema-editor/root-dialog";
 import { TemplatesDialog } from "@/components/schema-editor/templates-dialog";
-import { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types";
+import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types";
 
 import { updateNodeWithMetadata } from "./json-schema-builder-utils";
 import { useJsonSchemaOptional } from "@/components/schema-editor/contexts/json-schema";
 import { replaceNodeJson } from "@/components/schema-editor/document";
 
-type SchemaEditorMode = "promptOnly" | "readOnly" | "editable";
+type SchemaEditorMode = "descriptionOnly" | "readOnly" | "editable";
 
 type TopLevelEditorProps = {
   onChange: (newNode: ExtendedJSONSchema7) => void | Promise<void>;
@@ -436,8 +436,7 @@ export function TopLevelEditor({
             onKeyDown={(event) => {
               if (event.key === "Enter") handleNameSubmit();
             }}
-            autoFocus
-            disabled={editMode === "readOnly" || editMode === "promptOnly"}
+            disabled={editMode === "readOnly" || editMode === "descriptionOnly"}
           />
         </div>
 
@@ -473,7 +472,7 @@ export function TopLevelEditor({
                 </DropdownMenuItem>
               )}
 
-              {(editMode === "editable" || editMode === "promptOnly") && (
+              {(editMode === "editable" || editMode === "descriptionOnly") && (
                 <DropdownMenuItem
                   onClick={() => setConfirmAction("eraseDescriptions")}
                 >
@@ -517,7 +516,6 @@ export function TopLevelEditor({
                 handleDescriptionSubmit();
               }
             }}
-            autoFocus
             disabled={editMode === "readOnly"}
           />
 

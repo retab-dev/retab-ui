@@ -1,37 +1,31 @@
-"use client";
+"use client"
 
-import React, { useMemo, useState } from "react";
-import { JSONSchema7 } from "json-schema";
-import { TableDocument } from "@/components/json-table/lib/projects-types";
-import {
-  objectToTable2D,
-} from "@/components/json-table/path-utils";
-import {
-  ColumnsFromSchema,
-  flattenColumns,
-} from "@/components/json-table/header-from-schema";
-import { SingleFileVirtualizedTable } from "@/components/json-table/single-file-virtualized-table";
-import {
-  ColumnWidth,
-  useSheetOptionsStore,
-} from "@/components/json-table/table-options-store";
+import React, { useMemo, useState } from "react"
+import type { JSONSchema7 } from "json-schema"
+
+import { buildHeaderNodesFromSchema } from "@/components/json-table/header-from-schema"
+import { flattenHeaderNodes } from "@/components/json-table/lib/header-nodes"
+import type { TableDocument } from "@/components/json-table/lib/projects-types"
+import { objectToTable2D } from "@/components/json-table/path-utils"
+import { SingleFileVirtualizedTable } from "@/components/json-table/single-file-virtualized-table"
+import { useSheetOptionsStore } from "@/components/json-table/table-options-store"
+import type { ColumnWidth } from "@/components/json-table/table-options-store"
+
 interface SingleFileTableViewProps {
-  document: TableDocument;
-  schema: JSONSchema7;
-  setSchema?: (schema: JSONSchema7) => void; // Optional setter to enable schema editing (descriptions)
-  columnWidth?: ColumnWidth;
-  onUpdateDocument?: (patch: any) => Promise<void>;
-  editMode?: "promptOnly" | "editable" | "readOnly";
-  allowEditing?: boolean; // Controls whether cells can be edited
+  document: TableDocument
+  schema: JSONSchema7
+  setSchema?: (schema: JSONSchema7) => void // Optional setter to enable schema editing (descriptions)
+  columnWidth?: ColumnWidth
+  onUpdateDocument?: (patch: Record<string, unknown>) => Promise<void>
+  editMode?: "descriptionOnly" | "editable" | "readOnly"
+  allowEditing?: boolean // Controls whether cells can be edited
   onCellHoverStart?: (info: {
-    docId: string;
-    fieldPath: string;
-    rect: DOMRect;
-  }) => void;
-  /** Direct callback for ground truth changes (used in reconciliation mode) */
-  onGroundTruthChange?: (fieldPath: string, newValue: any) => void;
-  /** Rows to render beyond the viewport on each side (virtualization buffer). Default 12. */
-  overscan?: number;
+    docId: string
+    fieldPath: string
+    rect: DOMRect
+  }) => void
+  /** Rows to render beyond the viewport on each side (virtualization buffer). Default 30. */
+  overscan?: number
 }
 
 export const SingleFileTableView = React.memo<SingleFileTableViewProps>(
@@ -44,52 +38,36 @@ export const SingleFileTableView = React.memo<SingleFileTableViewProps>(
     editMode = "editable",
     allowEditing = true,
     onCellHoverStart,
-    onGroundTruthChange,
     overscan,
   }) => {
-    const { columnWidth: storeColumnWidth } = useSheetOptionsStore();
-    const columnWidth = propColumnWidth ?? storeColumnWidth;
+    const { columnWidth: storeColumnWidth } = useSheetOptionsStore()
+    const columnWidth = propColumnWidth ?? storeColumnWidth
 
-    const [stopAt, setStopAt] = useState<string[]>([]);
-    const [foldAllSignal, setFoldAllSignal] = useState(0);
+    const [stopAt, setStopAt] = useState<string[]>([])
 
-    // Create refs for drag and drop (needed by ColumnsFromSchema)
-    const draggedItemKeyRef = React.useRef<string | null>(null);
-    const draggedItemParentPathRef = React.useRef<string | null>(null);
+    // Create refs for drag and drop across header cells.
+    const draggedItemKeyRef = React.useRef<string | null>(null)
+    const draggedItemParentPathRef = React.useRef<string | null>(null)
 
-    // Generate columns from schema
-    const [columns] = useMemo(() => {
-      return ColumnsFromSchema(
-        schema as any,
-        setSchema ?? (() => {}), // Use provided setSchema or no-op
-        stopAt,
-        setStopAt,
-        columnWidth,
-        !setSchema, // is_published = true only if no setSchema (disables schema editing)
-        draggedItemKeyRef,
-        draggedItemParentPathRef,
-        editMode,
-      );
-    }, [schema, setSchema, stopAt, columnWidth, editMode]);
+    // Generate header nodes from schema
+    const [headerNodes] = useMemo(() => {
+      return buildHeaderNodesFromSchema(schema, stopAt)
+    }, [schema, stopAt])
 
     // Calculate visible keys
     const visibleKeys = useMemo(() => {
-      return flattenColumns(columns)
-        .map((c) =>
-          "accessorKey" in c ? (c.accessorKey as string) : undefined,
-        )
-        .filter(Boolean) as string[];
-    }, [columns]);
+      return flattenHeaderNodes(headerNodes).map((node) => node.key)
+    }, [headerNodes])
 
     // Convert document to 2D table format
     const tableAndPaths = useMemo(() => {
-      if (!document) return { table: [], paths: [] };
+      if (!document) return { table: [], paths: [] }
       return objectToTable2D(document, visibleKeys, {
         includeArrayAddRows: editMode !== "readOnly",
-      });
-    }, [document, visibleKeys, editMode]);
+      })
+    }, [document, visibleKeys, editMode])
 
-    const rowCount = Math.max(tableAndPaths.paths.length, 1);
+    const rowCount = Math.max(tableAndPaths.paths.length, 1)
 
     return (
       <div className="relative flex min-h-0 w-full flex-1 flex-col">
@@ -99,26 +77,28 @@ export const SingleFileTableView = React.memo<SingleFileTableViewProps>(
           //  style={{ transform: 'scale(0.85)', width: '117.64705882352942%', height: '117.64705882352942%' }}
         >
           <SingleFileVirtualizedTable
-            stopAt={stopAt}
-            setStopAt={setStopAt}
-            foldAllSignal={foldAllSignal}
-            setFoldAllSignal={setFoldAllSignal}
-            columns={columns}
+            headerNodes={headerNodes}
             document={document}
             schema={schema}
+            setSchema={setSchema ?? (() => {})}
+            isPublished={!setSchema}
+            stopAt={stopAt}
+            setStopAt={setStopAt}
+            draggedItemKeyRef={draggedItemKeyRef}
+            draggedItemParentPathRef={draggedItemParentPathRef}
+            editMode={editMode}
             tableAndPaths={tableAndPaths}
             visibleKeys={visibleKeys}
             rowCount={rowCount}
             onUpdateDocument={onUpdateDocument}
-            editMode={editMode}
+            columnWidth={columnWidth}
             allowEditing={allowEditing}
             onCellHoverStart={onCellHoverStart}
-            onGroundTruthChange={onGroundTruthChange}
             overscan={overscan}
           />
         </div>
       </div>
-    );
-  },
-);
-SingleFileTableView.displayName = "SingleFileTableView";
+    )
+  }
+)
+SingleFileTableView.displayName = "SingleFileTableView"

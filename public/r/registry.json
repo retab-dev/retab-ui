@@ -1142,7 +1142,7 @@
       "name": "extract-viewer-block",
       "type": "registry:block",
       "title": "Extract Viewer",
-      "description": "Extracted fields beside the source PDF, linked by their sources \u2014 hover or select a field to highlight where its value came from and scroll the page to it. Built on useSourceLink + the PDF source adapter.",
+      "description": "Extracted data beside the source PDF, rendered as a JSON form and linked by sources \u2014 hover or select a field to highlight where its value came from and scroll the page to it.",
       "registryDependencies": [
         "pdf-viewer",
         "pdf-source",
@@ -1166,6 +1166,9 @@
       ],
       "categories": [
         "primitives"
+      ],
+      "dependencies": [
+        "react-hook-form"
       ]
     },
     {

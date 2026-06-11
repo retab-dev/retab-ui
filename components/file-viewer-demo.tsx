@@ -19,40 +19,77 @@ const FILES = [
   { label: "Log", file: "server.log" },
 ]
 
+function FileTabs({
+  active,
+  onChange,
+  className,
+}: {
+  active: number
+  onChange: (i: number) => void
+  className?: string
+}) {
+  return (
+    <div className={cn("flex flex-wrap gap-px", className)}>
+      {FILES.map((f, i) => (
+        <button
+          key={f.file}
+          type="button"
+          onClick={() => onChange(i)}
+          className={cn(
+            "rounded-md border px-2.5 py-1 text-xs transition-colors",
+            i === active
+              ? "border-primary bg-primary text-primary-foreground"
+              : "bg-background text-muted-foreground hover:bg-muted"
+          )}
+        >
+          {f.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function FileCanvas({ file }: { file: string }) {
+  return (
+    <div className="aspect-[210/297] w-full rounded-xl shadow-sm">
+      {/* A4 portrait — frames a single document page without awkward dead space.
+          key forces a fresh viewer per file so state (zoom, sheet, scroll) resets */}
+      <FileViewer
+        key={file}
+        src={`/samples/${file}`}
+        fileName={file}
+        className="h-full"
+        isolateStyles
+      />
+    </div>
+  )
+}
+
+/** Standalone demo (docs): format tabs stacked above the viewer. */
 export function FileViewerDemo() {
   const [active, setActive] = React.useState(0)
-  const current = FILES[active]
-
   return (
     <div className="not-prose my-6 flex flex-col gap-3">
-      <div className="flex flex-wrap gap-1.5">
-        {FILES.map((f, i) => (
-          <button
-            key={f.file}
-            type="button"
-            onClick={() => setActive(i)}
-            className={cn(
-              "rounded-md border px-2.5 py-1 text-xs transition-colors",
-              i === active
-                ? "border-primary bg-primary text-primary-foreground"
-                : "bg-background text-muted-foreground hover:bg-muted"
-            )}
-          >
-            {f.label}
-          </button>
-        ))}
+      <FileTabs active={active} onChange={setActive} />
+      <FileCanvas file={FILES[active].file} />
+    </div>
+  )
+}
+
+/**
+ * Homepage showcase variant: the format tabs live in the header (where a
+ * description would sit), so the viewer box top-aligns with the neighbouring
+ * Schema Builder card. The header is given a fixed height shared with that card.
+ */
+export function FileViewerShowcase() {
+  const [active, setActive] = React.useState(0)
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex min-h-(--showcase-header-h) flex-col gap-1.5">
+        <h3 className="text-sm font-medium text-foreground">File Viewer</h3>
+        <FileTabs active={active} onChange={setActive} />
       </div>
-      <div className="aspect-[210/297] w-full rounded-xl shadow-sm">
-        {/* A4 portrait — frames a single document page without awkward dead space.
-            key forces a fresh viewer per file so state (zoom, sheet, scroll) resets */}
-        <FileViewer
-          key={current.file}
-          src={`/samples/${current.file}`}
-          fileName={current.file}
-          className="h-full"
-          isolateStyles
-        />
-      </div>
+      <FileCanvas file={FILES[active].file} />
     </div>
   )
 }

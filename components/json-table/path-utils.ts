@@ -1,28 +1,29 @@
-import { useCallback, useRef } from "react";
-import { BuilderDocument } from "@/components/json-table/lib/projects-types";
+import { useCallback, useEffect, useRef } from "react"
+
+import type { BuilderDocument } from "@/components/json-table/lib/projects-types"
 
 /* --------------------------------------------------------------------
  *  PathInfo – metadata we keep per cell
  * ------------------------------------------------------------------*/
 export interface PathInfo {
-  value: unknown; // leaf value
-  tpl: string; // e.g. "items.*.name"
-  idx: number[]; // all array indices on the path   [outer , inner , …]
-  plusPathIdx?: number; // at which index of the idx array to add an element when the plus is clicked
+  value: unknown // leaf value
+  tpl: string // e.g. "items.*.name"
+  idx: number[] // all array indices on the path   [outer , inner , …]
+  plusPathIdx?: number // at which index of the idx array to add an element when the plus is clicked
 }
 
 /* Replace every "*" in the template with the recorded indices */
 export function materialize(tpl: string, idx: number[]): string {
   for (const id of idx) {
     if (tpl.includes("*")) {
-      tpl = tpl.replace("*", id.toString());
+      tpl = tpl.replace("*", id.toString())
     }
   }
-  return tpl;
+  return tpl
 }
 
 function joinPath(path: (string | "*")[]) {
-  return path.filter(Boolean).join(".");
+  return path.filter(Boolean).join(".")
 }
 
 /* --------------------------------------------------------------------
@@ -33,11 +34,11 @@ function joinPath(path: (string | "*")[]) {
 export function objectToTable2D(
   data: BuilderDocument,
   tplOrder: string[] = [],
-  options: { includeArrayAddRows?: boolean } = {},
+  options: { includeArrayAddRows?: boolean } = {}
 ): { table: unknown[][]; paths: (PathInfo | undefined)[][] } {
-  const table: unknown[][] = [];
-  const paths: (PathInfo | undefined)[][] = [];
-  const includeArrayAddRows = options.includeArrayAddRows ?? true;
+  const table: unknown[][] = []
+  const paths: (PathInfo | undefined)[][] = []
+  const includeArrayAddRows = options.includeArrayAddRows ?? true
 
   function compileTable(
     obj: unknown,
@@ -46,41 +47,41 @@ export function objectToTable2D(
     depth: number,
     rowOffset: number,
     colOffset: number,
-    plusIdx: number | undefined,
+    plusIdx: number | undefined
   ): [number, number] /* [rows, cols] taken by the compiled table */ {
-    let rows = 0;
-    let cols = 0;
+    let rows = 0
+    let cols = 0
     tpl = tpl.filter((t) => {
-      if (t.length !== depth) return true;
+      if (t.length !== depth) return true
       if (!table[rowOffset]) {
-        table[rowOffset] = [];
+        table[rowOffset] = []
       }
       if (!paths[rowOffset]) {
-        paths[rowOffset] = [];
+        paths[rowOffset] = []
       }
-      table[rowOffset][colOffset + cols] = obj;
+      table[rowOffset][colOffset + cols] = obj
       paths[rowOffset][colOffset + cols] = {
         value: obj,
         tpl: joinPath(t),
         idx,
         plusPathIdx: plusIdx,
-      };
-      cols++;
-      rows = 1;
-      return false;
-    });
+      }
+      cols++
+      rows = 1
+      return false
+    })
 
     if (tpl.length === 0) {
-      return [rows, cols];
+      return [rows, cols]
     }
 
     const topProperties = new Set(
-      tpl.filter((t) => t.length > depth).map((t) => t[depth]),
-    );
+      tpl.filter((t) => t.length > depth).map((t) => t[depth])
+    )
     if (topProperties.has("*") && topProperties.size === 1) {
-      const arr = (Array.isArray(obj) ? obj : []) as unknown[];
+      const arr = (Array.isArray(obj) ? obj : []) as unknown[]
       for (let i = 0; i < arr.length; i++) {
-        const e = arr[i];
+        const e = arr[i]
         const [subRows, subCols] = compileTable(
           e,
           tpl,
@@ -88,13 +89,13 @@ export function objectToTable2D(
           depth + 1,
           rowOffset + rows,
           colOffset,
-          plusIdx,
-        );
-        rows += subRows;
-        cols = Math.max(cols, subCols);
+          plusIdx
+        )
+        rows += subRows
+        cols = Math.max(cols, subCols)
       }
       if (!includeArrayAddRows) {
-        return [rows, cols];
+        return [rows, cols]
       }
 
       const [plusRows, plusCols] = compileTable(
@@ -104,17 +105,17 @@ export function objectToTable2D(
         depth + 1,
         rowOffset + rows,
         colOffset,
-        plusIdx ?? idx.length,
-      );
+        plusIdx ?? idx.length
+      )
 
-      return [rows + plusRows, Math.max(cols, plusCols)];
+      return [rows + plusRows, Math.max(cols, plusCols)]
     }
     if (topProperties.has("*")) {
-      throw new Error("Wildcard '*' used along with other properties");
+      throw new Error("Wildcard '*' used along with other properties")
     }
     for (const prop of topProperties) {
-      const newTpl = tpl.filter((t) => t[depth] === prop);
-      const newObj = (obj as Record<string, unknown> | undefined)?.[prop];
+      const newTpl = tpl.filter((t) => t[depth] === prop)
+      const newObj = (obj as Record<string, unknown> | undefined)?.[prop]
       const [subRows, subCols] = compileTable(
         newObj,
         newTpl,
@@ -122,18 +123,18 @@ export function objectToTable2D(
         depth + 1,
         rowOffset,
         colOffset + cols,
-        plusIdx,
-      );
-      rows = Math.max(rows, subRows);
-      cols += subCols;
+        plusIdx
+      )
+      rows = Math.max(rows, subRows)
+      cols += subCols
     }
-    return [rows, cols];
+    return [rows, cols]
   }
 
   const root =
     data && typeof data === "object" && "prediction_data" in data
       ? ((data as BuilderDocument).prediction_data?.prediction ?? {})
-      : {};
+      : {}
 
   compileTable(
     root,
@@ -142,86 +143,90 @@ export function objectToTable2D(
     0,
     0,
     0,
-    undefined,
-  );
+    undefined
+  )
 
-  return { table, paths };
+  return { table, paths }
 }
 
-export function useRefCallback<T extends (...args: any[]) => any>(
-  callback: T,
-): T {
-  const ref = useRef(callback);
-  ref.current = callback;
-  return useCallback((...args: Parameters<T>) => ref.current(...args), []) as T;
+export function useRefCallback<TArgs extends unknown[], TResult>(
+  callback: (...args: TArgs) => TResult
+): (...args: TArgs) => TResult {
+  const ref = useRef(callback)
+  useEffect(() => {
+    ref.current = callback
+  }, [callback])
+  return useCallback((...args: TArgs) => ref.current(...args), [])
 }
 
 export function cmp<T>(
   a: T,
   b: T,
   options?: {
-    deep?: string[];
-    shallow?: string[];
+    deep?: string[]
+    shallow?: string[]
   },
-  curKey: string = "",
+  curKey: string = ""
 ): boolean {
-  if (a === b) return true;
-  if (typeof a !== typeof b) return false;
-  if (typeof a !== "object" || a == null || b == null) return false;
-  if (Array.isArray(a) !== Array.isArray(b)) return false;
+  if (a === b) return true
+  if (typeof a !== typeof b) return false
+  if (typeof a !== "object" || a == null || b == null) return false
+  if (Array.isArray(a) !== Array.isArray(b)) return false
   if (
     options?.shallow?.includes(curKey) ||
     (!options?.shallow?.length &&
       options?.deep?.length &&
       !options?.deep?.find((k) => k.startsWith(curKey)))
   ) {
-    return Object.is(a, b);
+    return Object.is(a, b)
   }
 
-  const keysA = Object.keys(a);
-  const keysB = Object.keys(b);
-  if (keysA.length !== keysB.length) return false;
+  const objA = a as Record<string, unknown>
+  const objB = b as Record<string, unknown>
+  const keysA = Object.keys(objA)
+  const keysB = Object.keys(objB)
+  if (keysA.length !== keysB.length) return false
   for (const key of keysA) {
-    // @ts-ignore
-    if (!cmp(a[key], b[key], curKey ? curKey + "." + key : key)) return false;
+    if (!Object.prototype.hasOwnProperty.call(objB, key)) return false
+    const nextKey = curKey ? curKey + "." + key : key
+    if (!cmp(objA[key], objB[key], options, nextKey)) return false
   }
-  return true;
+  return true
 }
 
 export function assignObjectKey(
-  obj: any,
+  obj: unknown,
   key: string[],
-  value: any | ((arg0: any) => any),
-): any {
+  value: unknown | ((arg0: unknown) => unknown)
+): unknown {
   if (key.length === 0) {
-    return typeof value === "function" ? value(obj) : value;
+    return typeof value === "function" ? value(obj) : value
   }
 
-  const [rawSeg, ...rest] = key;
-  const isIndex = /^\d+$/.test(rawSeg);
-  const seg: any = isIndex ? parseInt(rawSeg, 10) : rawSeg;
+  const [rawSeg, ...rest] = key
+  const isIndex = /^\d+$/.test(rawSeg)
 
   // Ensure we always have a valid container to work with at this depth
-  const current = obj == null ? (isIndex ? [] : {}) : obj;
+  const current = obj == null ? (isIndex ? [] : {}) : obj
 
   if (isIndex) {
-    const baseArr: any[] = Array.isArray(current) ? (current as any[]) : [];
-    const existingChild = Array.isArray(current)
-      ? (current as any[])[seg]
-      : undefined;
-    const updatedChild = assignObjectKey(existingChild, rest, value);
-    const newArr = baseArr.slice();
-    newArr[seg] = updatedChild;
-    return newArr;
+    const index = parseInt(rawSeg, 10)
+    const baseArr: unknown[] = Array.isArray(current) ? current : []
+    const existingChild = Array.isArray(current) ? current[index] : undefined
+    const updatedChild = assignObjectKey(existingChild, rest, value)
+    const newArr = baseArr.slice()
+    newArr[index] = updatedChild
+    return newArr
   }
 
-  const baseObj: Record<string, any> =
+  const seg = rawSeg
+  const baseObj: Record<string, unknown> =
     current && typeof current === "object" && !Array.isArray(current)
-      ? (current as Record<string, any>)
-      : {};
-  const existingChild = (baseObj as any)?.[seg];
+      ? (current as Record<string, unknown>)
+      : {}
+  const existingChild = baseObj[seg]
   return {
     ...baseObj,
     [seg]: assignObjectKey(existingChild, rest, value),
-  };
+  }
 }

@@ -366,7 +366,7 @@ export interface CsvViewerProps {
   /**
    * Number of rows to render beyond the visible window when virtualizing, and
    * the default for columns. Higher values reduce blank flashes while
-   * fast-scrolling at the cost of more DOM nodes. Defaults to 8. Ignored when
+   * fast-scrolling at the cost of more DOM nodes. Defaults to 30. Ignored when
    * `virtualized` is false.
    */
   overscan?: number
@@ -449,7 +449,7 @@ export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
       hasHeader,
       showRowNumbers = true,
       virtualized = true,
-      overscan = 8,
+      overscan = 30,
       columnOverscan,
       rowHeight = 33,
       columnWidth = 180,

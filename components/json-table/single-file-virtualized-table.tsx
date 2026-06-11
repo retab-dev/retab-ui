@@ -1,143 +1,178 @@
-"use client";
+"use client"
 
-import React, { useMemo, useState, useRef } from "react";
-import { JSONSchema7 } from "json-schema";
+import React, { useRef, useState } from "react"
+import type { JSONSchema7 } from "json-schema"
+
+import { JsonTableHeaderCell } from "@/components/json-table/header-from-schema"
+import {
+  buildHeaderGridRows,
+  getLeafHeaderNodes,
+} from "@/components/json-table/lib/header-nodes"
+import type { JsonTableHeaderNode } from "@/components/json-table/lib/header-nodes"
+import type { TableDocument } from "@/components/json-table/lib/projects-types"
 import {
   Table,
   TableBody,
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui-retab/table";
-import {
-  buildHeaderRows,
-  getLeafColumns,
-  type TableColumn,
-} from "@/components/json-table/lib/column-types";
-import { TableDocument } from "@/components/json-table/lib/projects-types";
-import { PathInfo } from "./path-utils";
-import { SingleFileFormRow } from "./single-file-form-row";
+} from "@/components/ui-retab/table"
+
+import { HoverInfoContext } from "./hover-info-context"
+import type { HoverInfo } from "./hover-info-context"
+import { useFixedRowWindow } from "./lib/use-fixed-row-window"
+import type { PathInfo } from "./path-utils"
+import { SingleFileFormRow } from "./single-file-form-row"
 import {
   getColumnWidthPx,
   getRowHeightPx,
   useSheetOptionsStore,
-} from "./table-options-store";
-import { HoverInfoContext, HoverInfo } from "./hover-info-context";
-import { useFixedRowWindow } from "./lib/use-fixed-row-window";
+  type ColumnWidth,
+} from "./table-options-store"
 
 interface SingleFileVirtualizedTableProps {
-  stopAt: string[];
-  setStopAt: React.Dispatch<React.SetStateAction<string[]>>;
-  foldAllSignal: number;
-  setFoldAllSignal: React.Dispatch<React.SetStateAction<number>>;
-  columns: TableColumn[];
-  document: TableDocument;
-  schema: JSONSchema7;
-  tableAndPaths: { table: unknown[][]; paths: (PathInfo | undefined)[][] };
-  visibleKeys: string[];
-  rowCount: number;
-  onUpdateDocument?: (patch: any) => Promise<void>;
-  editMode: "promptOnly" | "editable" | "readOnly";
-  allowEditing?: boolean;
+  headerNodes: JsonTableHeaderNode[]
+  document: TableDocument
+  schema: JSONSchema7
+  setSchema: (schema: JSONSchema7) => void
+  isPublished: boolean
+  stopAt: string[]
+  setStopAt: (stopAt: string[]) => void
+  draggedItemKeyRef: React.RefObject<string | null>
+  draggedItemParentPathRef: React.RefObject<string | null>
+  editMode: "descriptionOnly" | "editable" | "readOnly"
+  tableAndPaths: { table: unknown[][]; paths: (PathInfo | undefined)[][] }
+  visibleKeys: string[]
+  rowCount: number
+  onUpdateDocument?: (patch: Record<string, unknown>) => Promise<void>
+  columnWidth?: ColumnWidth
+  allowEditing?: boolean
   onCellHoverStart?: (info: {
-    docId: string;
-    fieldPath: string;
-    rect: DOMRect;
-  }) => void;
-  /** Direct callback for ground truth changes (used in reconciliation mode) */
-  onGroundTruthChange?: (fieldPath: string, newValue: any) => void;
-  /** Rows to render beyond the viewport on each side (virtualization buffer). Default 12. */
-  overscan?: number;
+    docId: string
+    fieldPath: string
+    rect: DOMRect
+  }) => void
+  /** Rows to render beyond the viewport on each side (virtualization buffer). Default 30. */
+  overscan?: number
 }
 
 const SingleFileTableHeader = React.memo(
   ({
-    columns,
+    headerNodes,
     columnWidth,
+    schema,
+    setSchema,
+    isPublished,
+    stopAt,
+    setStopAt,
+    draggedItemKeyRef,
+    draggedItemParentPathRef,
+    editMode,
   }: {
-    columns: TableColumn[];
-    columnWidth: any;
+    headerNodes: JsonTableHeaderNode[]
+    columnWidth: ColumnWidth
+    schema: JSONSchema7
+    setSchema: (schema: JSONSchema7) => void
+    isPublished: boolean
+    stopAt: string[]
+    setStopAt: (stopAt: string[]) => void
+    draggedItemKeyRef: React.RefObject<string | null>
+    draggedItemParentPathRef: React.RefObject<string | null>
+    editMode: "descriptionOnly" | "editable" | "readOnly"
   }) => {
-    // Header rows derived straight from the column tree: each group spans its
-    // leaves; leaves leave empty placeholder cells in the rows beneath them so
-    // columns stay aligned. (This is what TanStack's getHeaderGroups produced.)
-    const headerRows = buildHeaderRows(columns);
+    // Header rows derived straight from the schema header tree: each group spans
+    // its leaves; shallower leaves get continuation cells so the grid stays
+    // aligned.
+    const headerRows = buildHeaderGridRows(headerNodes)
 
     return (
-      <TableHeader className="sticky top-0 z-10 bg-muted hover:bg-muted/80">
+      <TableHeader className="sticky top-0 z-10 bg-muted/30">
         {headerRows.map((cells, rowIdx) => (
           <TableRow
             key={rowIdx}
-            className="flex w-max min-w-full bg-muted border-b border-border"
+            className="flex w-max min-w-full border-b bg-muted/30"
           >
             {cells.map((cell, cellIdx) => {
-              const width = cell.leafCount * getColumnWidthPx(columnWidth);
+              const width = cell.leafCount * getColumnWidthPx(columnWidth)
 
-              if (cell.placeholder) {
+              if (cell.isContinuation) {
                 return (
                   <th
                     key={cellIdx}
-                    className="shrink-0 bg-muted text-3xs text-muted-foreground border-r last:border-r-0 border-border"
+                    className="shrink-0 border-r bg-muted/30 text-xs text-foreground last:border-r-0"
                     style={{ width: `${width}px`, minWidth: `${width}px` }}
                   />
-                );
+                )
               }
 
               return (
                 <TableHead
                   key={cellIdx}
-                  className="shrink-0 bg-muted hover:bg-muted/80 text-muted-foreground m-0 border-r p-0 last:border-r-0 border-border"
+                  className="m-0 h-9 shrink-0 border-r bg-muted/30 p-0 text-foreground last:border-r-0"
                   style={{
                     width: `${width}px`,
                     minWidth: `${width}px`,
-                    height: "38px",
                   }}
                   colSpan={cell.colSpan}
                 >
-                  {cell.col.header?.({
-                    column: { getLeafColumns: () => getLeafColumns(cell.col) },
-                  })}
+                  <JsonTableHeaderCell
+                    node={cell.node}
+                    leafCount={getLeafHeaderNodes(cell.node).length}
+                    schema={schema}
+                    setSchema={setSchema}
+                    stopAt={stopAt}
+                    setStopAt={setStopAt}
+                    columnWidth={columnWidth}
+                    isPublished={isPublished}
+                    draggedItemKeyRef={draggedItemKeyRef}
+                    draggedItemParentPathRef={draggedItemParentPathRef}
+                    editMode={editMode}
+                  />
                 </TableHead>
-              );
+              )
             })}
           </TableRow>
         ))}
       </TableHeader>
-    );
-  },
-);
-SingleFileTableHeader.displayName = "SingleFileTableHeader";
+    )
+  }
+)
+SingleFileTableHeader.displayName = "SingleFileTableHeader"
 
 export const SingleFileVirtualizedTable =
   React.memo<SingleFileVirtualizedTableProps>(
     ({
-      columns,
+      headerNodes,
       document,
       schema,
+      setSchema,
+      isPublished,
+      stopAt,
+      setStopAt,
+      draggedItemKeyRef,
+      draggedItemParentPathRef,
+      editMode,
       tableAndPaths,
       visibleKeys,
       rowCount,
       onUpdateDocument,
-      editMode,
+      columnWidth: propColumnWidth,
       allowEditing = true,
       onCellHoverStart,
-      overscan = 12,
+      overscan = 30,
     }) => {
-
-      const { rowHeight, columnWidth } = useSheetOptionsStore();
+      const { rowHeight, columnWidth: storeColumnWidth } =
+        useSheetOptionsStore()
+      const columnWidth = propColumnWidth ?? storeColumnWidth
 
       // Add hover info state for DataCell hover functionality
-      const [hoverInfo, setHoverInfo] = useState<HoverInfo | null>(null);
+      const [hoverInfo, setHoverInfo] = useState<HoverInfo | null>(null)
 
       // Which object/array cell has its inline editor popover open (by field
       // key). Held at the table level so it survives row virtualization.
-      const [openPopover, setOpenPopover] = useState<string | null>(null);
+      const [openPopover, setOpenPopover] = useState<string | null>(null)
 
-      // Cells read the document via `row.original` — that's all the old
-      // TanStack row gave them, so a one-field wrapper is the whole "row model".
-      const docRow = useMemo(() => ({ original: document }), [document]);
-
-      const totalWidth = visibleKeys.length * getColumnWidthPx(columnWidth);
+      const totalWidth = visibleKeys.length * getColumnWidthPx(columnWidth)
 
       // ── Row virtualization ──────────────────────────────────────────────
       // Rows are a fixed height, so the visible window is plain arithmetic — no
@@ -145,10 +180,10 @@ export const SingleFileVirtualizedTable =
       // *outside* this scroll container (so `top` is just `index * rowHeight`,
       // no scroll-margin offset to correct for), and each mounted row is
       // absolutely positioned inside a spacer of the full list height.
-      const rowHeightPx = getRowHeightPx(rowHeight);
-      const scrollRef = useRef<HTMLDivElement>(null);
-      const headerScrollRef = useRef<HTMLDivElement>(null);
-      const bodyRef = useRef<HTMLTableSectionElement>(null);
+      const rowHeightPx = getRowHeightPx(rowHeight)
+      const scrollRef = useRef<HTMLDivElement>(null)
+      const headerScrollRef = useRef<HTMLDivElement>(null)
+      const bodyRef = useRef<HTMLTableSectionElement>(null)
       // `ready` gates the first paint: the window is unknown until the viewport
       // is measured in a layout effect, which keeps SSR (zero rows) and the
       // first client render in sync, then fills in before the browser paints.
@@ -157,30 +192,36 @@ export const SingleFileVirtualizedTable =
         rowCount,
         rowHeight: rowHeightPx,
         overscan,
-      });
+      })
 
       return (
         <HoverInfoContext.Provider value={{ hoverInfo, setHoverInfo }}>
-          <div
-            className="relative flex min-h-0 min-w-0 flex-1 flex-col bg-background"
-          >
+          <div className="relative flex min-h-0 min-w-0 flex-1 flex-col bg-background">
             {/* Header: a fixed, opaque bar outside the vertical scroll. It
-                scrolls horizontally in sync with the body so columns stay
+                scrolls horizontally in sync with the body so fields stay
                 aligned, while rows scroll underneath it. A sticky header
                 inside the transformed/virtualized body shows rows through it
                 (transforms break sticky) — the CSV viewer uses the same
                 separated-header approach. */}
             <div
               ref={headerScrollRef}
-              className="w-full shrink-0 overflow-x-hidden bg-muted hover:bg-muted/80"
+              className="w-full shrink-0 overflow-x-hidden bg-muted/30"
             >
               <Table
-                className="relative flex w-full flex-col rounded-none bg-muted hover:bg-muted/80"
+                className="relative flex w-full flex-col rounded-none bg-muted/30"
                 style={{ minWidth: `${totalWidth}px` }}
               >
                 <SingleFileTableHeader
                   columnWidth={columnWidth}
-                  columns={columns}
+                  headerNodes={headerNodes}
+                  schema={schema}
+                  setSchema={setSchema}
+                  isPublished={isPublished}
+                  stopAt={stopAt}
+                  setStopAt={setStopAt}
+                  draggedItemKeyRef={draggedItemKeyRef}
+                  draggedItemParentPathRef={draggedItemParentPathRef}
+                  editMode={editMode}
                 />
               </Table>
             </div>
@@ -190,7 +231,7 @@ export const SingleFileVirtualizedTable =
               onScroll={(e) => {
                 if (headerScrollRef.current) {
                   headerScrollRef.current.scrollLeft =
-                    e.currentTarget.scrollLeft;
+                    e.currentTarget.scrollLeft
                 }
               }}
             >
@@ -208,31 +249,28 @@ export const SingleFileVirtualizedTable =
                     minWidth: "100%",
                   }}
                 >
-                  {ready && docRow
+                  {ready
                     ? Array.from({ length: end - start }, (_, i) => {
                         // One DOM row per row in the visible window, keyed by row
                         // index: rows mount/unmount as they enter/leave. Each row's
                         // props are memoized on primitives, so rows that stay put
                         // are skipped by React.memo.
-                        const rowIdx = start + i;
+                        const rowIdx = start + i
                         return (
-                        <SingleFileFormRow
-                          key={rowIdx}
-                          rowIdx={rowIdx}
-                          row={docRow}
-                          tableAndPaths={tableAndPaths}
-                          columns={columns}
-                          schema={schema}
-                          visibleKeys={visibleKeys}
-                          rowCount={rowCount}
-                          openPopover={openPopover}
-                          setOpenPopover={setOpenPopover}
-                          onUpdateDocument={onUpdateDocument}
-                          editMode={editMode}
-                          allowEditing={allowEditing}
-                          onCellHoverStart={onCellHoverStart}
-                        />
-                        );
+                          <SingleFileFormRow
+                            key={rowIdx}
+                            rowIdx={rowIdx}
+                            document={document}
+                            paths={tableAndPaths.paths}
+                            schema={schema}
+                            visibleKeys={visibleKeys}
+                            openPopover={openPopover}
+                            setOpenPopover={setOpenPopover}
+                            onUpdateDocument={onUpdateDocument}
+                            allowEditing={allowEditing}
+                            onCellHoverStart={onCellHoverStart}
+                          />
+                        )
                       })
                     : null}
                 </TableBody>
@@ -240,7 +278,7 @@ export const SingleFileVirtualizedTable =
             </div>
           </div>
         </HoverInfoContext.Provider>
-      );
-    },
-  );
-SingleFileVirtualizedTable.displayName = "SingleFileVirtualizedTable";
+      )
+    }
+  )
+SingleFileVirtualizedTable.displayName = "SingleFileVirtualizedTable"

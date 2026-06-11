@@ -140,7 +140,7 @@ export function SchemaNodeEditor({
   setDefsAccordionOpen: (open: boolean) => void;
   draggedParentRef: React.RefObject<string | null>;
   draggedPropertyRef: React.RefObject<string | null>;
-  editMode?: "promptOnly" | "readOnly" | "editable";
+  editMode?: "descriptionOnly" | "readOnly" | "editable";
   hidePencilButton?: boolean;
   /** Whether this field is in its parent object's `required` array. */
   isRequired?: boolean;

@@ -26,7 +26,7 @@ export function PropertyEditor({
   setDropdownOpen: (open: boolean) => void;
   jsonSchema: JSONSchema7;
   setJsonSchema: (schema: JSONSchema7) => void;
-  editMode?: "promptOnly" | "readOnly" | "editable";
+  editMode?: "descriptionOnly" | "readOnly" | "editable";
 }) {
   // Use state for local values, not tied to the form
   const [editedName, setEditedName] = useState(

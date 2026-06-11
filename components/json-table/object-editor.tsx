@@ -1,9 +1,18 @@
-import { useEffect } from "react";
-import { JSONSchemaType } from "ajv";
-import { ajvResolver } from "@hookform/resolvers/ajv";
-import { JSONSchema7 } from "json-schema";
-import { useForm, type UseFormReturn } from "react-hook-form";
-import { JsonForm } from "@/components/json-form/json-form";
+import { useEffect } from "react"
+import { ajvResolver } from "@hookform/resolvers/ajv"
+import type { JSONSchemaType } from "ajv"
+import type { JSONSchema7 } from "json-schema"
+import { useForm, type UseFormReturn } from "react-hook-form"
+
+import { JsonForm } from "@/components/json-form/json-form"
+
+type FormValues = Record<string, unknown>
+
+function objectValue(value: unknown): FormValues {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as FormValues)
+    : {}
+}
 
 // Editor for an object cell: renders the property's schema as a form. Edits are
 // persisted as they change (the popover has no explicit submit button).
@@ -13,26 +22,25 @@ export function ObjectEditor({
   onSubmit,
   disabled = false,
 }: {
-  isOpen?: boolean;
-  property: JSONSchema7;
-  currentValue: any;
-  onSubmit: (values: any) => void;
-  setSourcesFieldPath?: (fieldPath: string | null) => void;
-  disabled?: boolean;
+  isOpen?: boolean
+  property: JSONSchema7
+  currentValue: unknown
+  onSubmit: (values: unknown) => void
+  setSourcesFieldPath?: (fieldPath: string | null) => void
+  disabled?: boolean
 }) {
-  const form = useForm({
-    defaultValues: currentValue,
-    resolver: ajvResolver(property as JSONSchemaType<any>, {
+  const form = useForm<FormValues>({
+    defaultValues: objectValue(currentValue),
+    resolver: ajvResolver(property as JSONSchemaType<FormValues>, {
       strictSchema: false,
       allErrors: true,
     }),
-  });
+  })
 
   useEffect(() => {
-    const sub = form.watch((values) => onSubmit(values));
-    return () => sub.unsubscribe();
-  }, [form, onSubmit]);
-
+    const sub = form.watch((values) => onSubmit(values))
+    return () => sub.unsubscribe()
+  }, [form, onSubmit])
 
   return (
     <div className="flex max-h-[60vh] flex-col space-y-4 overflow-y-auto">
@@ -40,12 +48,12 @@ export function ObjectEditor({
         <JsonForm
           form={form as UseFormReturn<Record<string, unknown>>}
           schema={property}
-          onSubmit={onSubmit}
-          className="border border-border rounded-sm text-xs bg-background text-muted-foreground"
+          onSubmit={(values) => onSubmit(values)}
+          className="rounded-sm border border-border bg-background text-xs text-muted-foreground"
         />
       </fieldset>
     </div>
-  );
+  )
 }
 
 // Editor for an array cell: wraps the array under a single named property so the
@@ -57,14 +65,14 @@ export function ArrayEditor({
   onSubmit,
   disabled = false,
 }: {
-  name: string;
-  property: JSONSchema7;
-  currentValue: any;
-  onSubmit: (values: any) => void;
-  setSourcesFieldPath?: (fieldPath: string | null) => void;
-  disabled?: boolean;
+  name: string
+  property: JSONSchema7
+  currentValue: unknown
+  onSubmit: (values: unknown) => void
+  setSourcesFieldPath?: (fieldPath: string | null) => void
+  disabled?: boolean
 }) {
-  const { $defs, ...restProperty } = property;
+  const { $defs, ...restProperty } = property
   const wrapperSchema: JSONSchema7 = {
     type: "object",
     $defs,
@@ -72,23 +80,22 @@ export function ArrayEditor({
       [name]: restProperty,
     },
     required: [name],
-  };
+  }
 
-  const form = useForm({
+  const form = useForm<FormValues>({
     defaultValues: {
       [name]: Array.isArray(currentValue) ? currentValue : [],
     },
-    resolver: ajvResolver(wrapperSchema as JSONSchemaType<any>, {
+    resolver: ajvResolver(wrapperSchema as JSONSchemaType<FormValues>, {
       strictSchema: false,
       allErrors: true,
     }),
-  });
+  })
 
   useEffect(() => {
-    const sub = form.watch((values) => onSubmit(values[name]));
-    return () => sub.unsubscribe();
-  }, [form, onSubmit, name]);
-
+    const sub = form.watch((values) => onSubmit(values[name]))
+    return () => sub.unsubscribe()
+  }, [form, onSubmit, name])
 
   return (
     <div className="flex max-h-[60vh] flex-col space-y-4 overflow-y-auto">
@@ -96,10 +103,10 @@ export function ArrayEditor({
         <JsonForm
           form={form as UseFormReturn<Record<string, unknown>>}
           schema={wrapperSchema}
-          onSubmit={(values: any) => onSubmit(values[name])}
-          className="border border-border rounded-sm text-xs bg-background text-muted-foreground"
+          onSubmit={(values) => onSubmit(values[name])}
+          className="rounded-sm border border-border bg-background text-xs text-muted-foreground"
         />
       </fieldset>
     </div>
-  );
+  )
 }

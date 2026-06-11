@@ -794,14 +794,14 @@ function SheetGrid({
     count: rowCount,
     getScrollElement: () => scrollRef.current,
     estimateSize: () => rowHeight,
-    overscan: 8,
+    overscan: 30,
   })
   const columnVirtualizer = useVirtualizer({
     horizontal: true,
     count: colCount,
     getScrollElement: () => scrollRef.current,
     estimateSize: () => colWidth,
-    overscan: 4,
+    overscan: 30,
   })
 
   // Re-measure when zoom changes the track sizes.

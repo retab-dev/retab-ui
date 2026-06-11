@@ -72,7 +72,7 @@ export function PropertyForm({
   onDelete?: () => void;
   submitLabel?: string;
   onNameError?: (error: string | null) => void;
-  editMode?: "promptOnly" | "readOnly" | "editable";
+  editMode?: "descriptionOnly" | "readOnly" | "editable";
   wrapCancelInDialogClose?: boolean;
   wrapSubmitInDialogClose?: boolean;
   fieldPathOverride?: string;

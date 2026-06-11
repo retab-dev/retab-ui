@@ -19,7 +19,7 @@ interface NodeDialogProps {
   onDelete?: () => void;
   node: ExtendedJSONSchema7;
   name: string;
-  editMode: "promptOnly" | "readOnly" | "editable";
+  editMode: "descriptionOnly" | "readOnly" | "editable";
   isRequired?: boolean;
   onRequiredChange?: (required: boolean) => void;
 }

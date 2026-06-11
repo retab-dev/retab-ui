@@ -53,7 +53,7 @@ Switch sheets with the tab strip along the bottom; zoom scales the whole grid
   transferable typed arrays, so crossing the worker boundary costs a string clone
   rather than a clone of every cell object.
 - **Row + column virtualization.** Built on `@tanstack/react-virtual`: only the
-  visible window of cells is rendered, with a small overscan to avoid blank
+  visible window of cells is rendered, with a 30-cell overscan to avoid blank
   flashes while scrolling, and rows that stay in view are skipped on re-render.
 - **Synchronous cell reads.** Each cell is a typed-array index plus a string
   slice off the compact sheet — no per-cell objects — so switching sheets is

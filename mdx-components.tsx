@@ -18,23 +18,34 @@ import { Callout } from "@/components/callout"
 import { CodeBlockCommand } from "@/components/code-block-command"
 import { CodeCollapsibleWrapper } from "@/components/code-collapsible-wrapper"
 import { CodeTabs } from "@/components/code-tabs"
+import { ComponentSource } from "@/components/component-source"
 import { CopyButton } from "@/components/copy-button"
-import { DocsMdxCodeBlock } from "@/components/docs-code-block"
-import { getIconForLanguageExtension } from "@/components/icons"
-import { RetabSchemaBuilderDemo } from "@/components/retab-schema-builder-demo"
-import { PropertyFormDemo } from "@/components/property-form-demo"
 import {
   CsvViewerDemo,
   CsvViewerStreamingDemo,
 } from "@/components/csv-viewer-demo"
-import { PdfViewerDemo } from "@/components/pdf-viewer-demo"
+import { DocsMdxCodeBlock } from "@/components/docs-code-block"
 import { DocxViewerDemo } from "@/components/docx-viewer-demo"
-import { ImageViewerDemo } from "@/components/image-viewer-demo"
-import { PptxViewerDemo } from "@/components/pptx-viewer-demo"
-import { XlsxViewerDemo } from "@/components/xlsx-viewer-demo"
+import { FileThumbnailDemo } from "@/components/file-thumbnail-demo"
+import { FileThumbnailFormatsDemo } from "@/components/file-thumbnail-formats-demo"
 import { FileViewerDemo } from "@/components/file-viewer-demo"
+import { getIconForLanguageExtension } from "@/components/icons"
+import { ImageViewerDemo } from "@/components/image-viewer-demo"
 import { JsonFormDemo } from "@/components/json-form-demo"
 import { JsonTableDemo } from "@/components/json-table/json-table-demo"
+import { MermaidDiagram } from "@/components/mermaid-diagram"
+import { PdfViewerDemo } from "@/components/pdf-viewer-demo"
+import { PptxViewerDemo } from "@/components/pptx-viewer-demo"
+import { PropertyFormDemo } from "@/components/property-form-demo"
+import { RetabSchemaBuilderDemo } from "@/components/retab-schema-builder-demo"
+import {
+  SegmentLegendDemo,
+  SegmentLegendSplitDemo,
+} from "@/components/segment-legend-demo"
+import {
+  SegmentSidebarDemo,
+  SegmentSidebarSplitDemo,
+} from "@/components/segment-sidebar-demo"
 import {
   ClassificationViewerDemo,
   EditViewerDemo,
@@ -44,11 +55,7 @@ import {
   PartitionViewerDemo,
   SplitViewerDemo,
 } from "@/components/viewers/viewers-demo"
-import { SegmentSidebarDemo, SegmentSidebarSplitDemo } from "@/components/segment-sidebar-demo"
-import { SegmentLegendDemo, SegmentLegendSplitDemo } from "@/components/segment-legend-demo"
-import { FileThumbnailDemo } from "@/components/file-thumbnail-demo"
-import { FileThumbnailFormatsDemo } from "@/components/file-thumbnail-formats-demo"
-import { ComponentSource } from "@/components/component-source"
+import { XlsxViewerDemo } from "@/components/xlsx-viewer-demo"
 
 export const mdxComponents = {
   h1: ({ className, ...props }: React.ComponentProps<"h1">) => (
@@ -350,6 +357,7 @@ export const mdxComponents = {
   CodeCollapsibleWrapper,
   DocsMdxCodeBlock,
   ComponentSource,
+  MermaidDiagram,
   RetabSchemaBuilderDemo,
   PropertyFormDemo,
   CsvViewerDemo,

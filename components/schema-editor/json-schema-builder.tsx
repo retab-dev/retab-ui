@@ -122,7 +122,7 @@ function DefsEditor({
   setAccordionOpen: (open: boolean) => void;
   draggedParentRef: React.RefObject<string | null>;
   draggedPropertyRef: React.RefObject<string | null>;
-  editMode?: "promptOnly" | "readOnly" | "editable";
+  editMode?: "descriptionOnly" | "readOnly" | "editable";
 }) {
   const defs = schema.$defs || {};
   const [newDefName, setNewDefName] = useState("");
@@ -221,7 +221,7 @@ function DefsEditor({
 
   // If there are no definitions and accordion isn't shown, show just a button
   if (Object.keys(defs).length === 0 && !showAccordion) {
-    return editMode === "promptOnly" ? null : (
+    return editMode === "descriptionOnly" ? null : (
       <div className="mt-6 flex pb-4">
         <div className="rounded-md" id="definitions-section">
           <Button
@@ -373,7 +373,7 @@ function JsonSchemaEditorRaw({
 }: {
   fullCodeModeState?: [boolean, (value: boolean) => void];
   showTemplatesButton?: boolean;
-  editMode?: "promptOnly" | "readOnly" | "editable";
+  editMode?: "descriptionOnly" | "readOnly" | "editable";
 }) {
   const [internalFullCodeMode, setInternalFullCodeMode] = useState(false);
 

@@ -17,17 +17,37 @@ Hover or select a field; its source highlights in the PDF and scrolls into view.
 Three decoupled pieces. The field component and the viewer never import each
 other — they're joined by a **field path** and a tiny mediator.
 
-| Piece | Role |
-| --- | --- |
-| `document-source` | the data model + `extractionSourcesToSourceMap` |
-| `useSourceLink` | the mediator: hover/pin state, drives the viewer |
-| `pdf-source` | the PDF adapter (`usePdfSourceTarget`, `renderPdfSourceOverlay`) |
+| Piece             | Role                                                             |
+| ----------------- | ---------------------------------------------------------------- |
+| `document-source` | the data model + `extractionSourcesToSourceMap`                  |
+| `useSourceLink`   | the mediator: hover/pin state, drives the viewer                 |
+| `pdf-source`      | the PDF adapter (`usePdfSourceTarget`, `renderPdfSourceOverlay`) |
 
-```
- emitter (fields) ──hover path──► useSourceLink ──location──► viewer (highlight + scroll)
-                                       ▲
-                                  SourceMap: path → source
-```
+<MermaidDiagram
+  chart={`
+flowchart LR
+  field["Field component<br/>json-form or custom list"]
+  path["Field path<br/>owner.name"]
+  link["useSourceLink<br/>hover + pinned state"]
+  map[("SourceMap<br/>path to source")]
+  adapter["PDF source adapter<br/>scroll target + overlay"]
+  viewer["Viewer<br/>highlight + scroll"]
+
+field -->|"hover or select"| path
+path --> link
+map -->|"lookup active path"| link
+link -->|"active source"| adapter
+adapter --> viewer
+
+classDef input fill:#f8fafc,stroke:#94a3b8,color:#0f172a
+classDef state fill:#ecfeff,stroke:#0891b2,color:#164e63
+classDef output fill:#f0fdf4,stroke:#16a34a,color:#14532d
+
+class field,path input
+class link,map state
+class adapter,viewer output
+`}
+/>
 
 The flow is **unidirectional**: fields drive the viewer, never the reverse.
 

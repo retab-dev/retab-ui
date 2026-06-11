@@ -1,47 +1,42 @@
-"use client";
+"use client"
 
-import React from "react";
-import { JSONSchema7 } from "json-schema";
-import { TableRow } from "@/components/ui-retab/table";
-import type {
-  RowLike,
-  TableColumn,
-} from "@/components/json-table/lib/column-types";
-import { PathInfo } from "@/components/json-table/path-utils";
-import { DataCell } from "@/components/json-table/data-cell";
+import React from "react"
+import type { JSONSchema7 } from "json-schema"
+
+import { DataCell } from "@/components/json-table/data-cell"
+import type { TableDocument } from "@/components/json-table/lib/projects-types"
+import type { PathInfo } from "@/components/json-table/path-utils"
 import {
   getRowHeightPx,
   useSheetOptionsStore,
-} from "@/components/json-table/table-options-store";
+} from "@/components/json-table/table-options-store"
+import { TableRow } from "@/components/ui-retab/table"
 
 interface SingleFileFormRowProps {
-  row: RowLike;
-  columns: TableColumn[];
-  schema: JSONSchema7;
-  tableAndPaths: { table: unknown[][]; paths: (PathInfo | undefined)[][] };
-  visibleKeys: string[];
-  rowCount: number;
+  document: TableDocument
+  schema: JSONSchema7
+  paths: (PathInfo | undefined)[][]
+  visibleKeys: string[]
   /** Which sub-row of the document this renders (set by the row virtualizer). */
-  rowIdx: number;
+  rowIdx: number
   /** Which object/array cell's inline editor popover is open (by field key). */
-  openPopover: string | null;
-  setOpenPopover: (key: string | null) => void;
-  onUpdateDocument?: (patch: any) => Promise<void>;
-  editMode: "promptOnly" | "editable" | "readOnly";
-  allowEditing?: boolean;
+  openPopover: string | null
+  setOpenPopover: (key: string | null) => void
+  onUpdateDocument?: (patch: Record<string, unknown>) => Promise<void>
+  allowEditing?: boolean
   onCellHoverStart?: (info: {
-    docId: string;
-    fieldPath: string;
-    rect: DOMRect;
-  }) => void;
-  onCellHoverEnd?: () => void;
+    docId: string
+    fieldPath: string
+    rect: DOMRect
+  }) => void
+  onCellHoverEnd?: () => void
 }
 
 export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
   ({
-    row,
+    document,
     schema,
-    tableAndPaths,
+    paths,
     visibleKeys,
     rowIdx,
     openPopover,
@@ -51,25 +46,24 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
     onCellHoverStart,
     onCellHoverEnd,
   }) => {
-    const { rowHeight, columnWidth } = useSheetOptionsStore();
+    const { rowHeight, columnWidth } = useSheetOptionsStore()
 
-    const { table: _table, paths } = tableAndPaths;
-    const documentId = row.original.id;
+    const documentId = document.id
 
     // Stable callback identity so DataCell's React.memo holds across the
     // parent's per-scroll re-renders.
     const handleDataChange = React.useCallback(
-      async (_docId: string, value: any) => {
+      async (_docId: string, value: unknown) => {
         if (onUpdateDocument) {
-          await onUpdateDocument({ prediction_data: { prediction: value } });
+          await onUpdateDocument({ prediction_data: { prediction: value } })
         }
       },
-      [onUpdateDocument],
-    );
+      [onUpdateDocument]
+    )
 
     // Render a single sub-row (one of the document's `rowCount` rows). Which
     // rows are mounted is decided by the row virtualizer in the parent.
-    const rowHeightPx = getRowHeightPx(rowHeight);
+    const rowHeightPx = getRowHeightPx(rowHeight)
     // Compute the absolute-positioning style here (not in the parent) and
     // memoize it on the only inputs that matter. Passing a fresh `style` object
     // down on every scroll frame was breaking this row's React.memo, forcing
@@ -86,17 +80,17 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
         minWidth: "100%",
         contain: "layout style",
       }),
-      [rowIdx, rowHeightPx],
-    );
+      [rowIdx, rowHeightPx]
+    )
     return (
       <TableRow
         data-index={rowIdx}
-        className="flex border-b-0 border-border bg-transparent hover:bg-muted/50 w-full"
+        className="flex w-full border-b-0 border-border bg-transparent hover:bg-muted/50"
         style={rowStyle}
       >
         {/* Data cells */}
         {visibleKeys.map((key, colIdx) => {
-          const pathInfo = paths[rowIdx]?.[colIdx];
+          const pathInfo = paths[rowIdx]?.[colIdx]
 
           return (
             <DataCell
@@ -105,7 +99,7 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
               rowIdx={rowIdx}
               pathInfo={pathInfo}
               schema={schema}
-              row={row}
+              document={document}
               docId={documentId}
               columnWidth={columnWidth}
               setOpenPopover={setOpenPopover}
@@ -115,10 +109,10 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
               onCellHoverStart={onCellHoverStart}
               onCellHoverEnd={onCellHoverEnd}
             />
-          );
+          )
         })}
       </TableRow>
-    );
-  },
-);
-SingleFileFormRow.displayName = "SingleFileFormRow";
+    )
+  }
+)
+SingleFileFormRow.displayName = "SingleFileFormRow"

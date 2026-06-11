@@ -30,7 +30,7 @@ export function useFixedRowWindow({
   scrollRef,
   rowCount,
   rowHeight,
-  overscan = 12,
+  overscan = 30,
 }: {
   scrollRef: React.RefObject<HTMLElement | null>;
   rowCount: number;

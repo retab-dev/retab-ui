@@ -53,14 +53,18 @@ const SOURCES: SourceMap = Object.fromEntries(
  * their sources. Hovering or selecting a field highlights where its value came
  * from in the PDF and scrolls it into view; selection persists, hover previews.
  *
- * A thin composition over the source-link abstraction: `SourceFieldList` is the
+ * A thin composition over the source-link abstraction: `JsonForm` is the
  * emitter, `useSourceLink` is the mediator, and the PDF adapter
  * (`usePdfSourceTarget` + `renderPdfSourceOverlay`) is the target.
  */
 export function ExtractViewerBlock() {
   const viewerRef = React.useRef<PdfViewerHandle>(null)
   const target = usePdfSourceTarget(viewerRef)
-  const link = useSourceLink({ sources: SOURCES, target, initialField: FIELDS[0]?.key })
+  const link = useSourceLink({
+    sources: SOURCES,
+    target,
+    initialField: FIELDS[0]?.key,
+  })
   const form = useForm<Record<string, unknown>>({ defaultValues })
 
   return (
@@ -76,7 +80,7 @@ export function ExtractViewerBlock() {
         />
         <SourceIndicator path={link.activePath} found={!!link.activeSource} />
       </div>
-      <aside className="flex w-[420px] flex-shrink-0 flex-col border-l">
+      <aside className="flex w-[240px] flex-shrink-0 flex-col border-l">
         <div className="flex h-10 flex-shrink-0 items-center gap-2 border-b px-4">
           <h2 className="text-sm font-medium">Extracted data</h2>
           <span className="ml-auto text-xs text-muted-foreground">

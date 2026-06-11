@@ -50,7 +50,7 @@ export function ItemTypeSelector({
   setJsonSchema: (schema: ExtendedJSONSchema7) => void;
   label?: string;
   isRoot?: boolean;
-  editMode?: "promptOnly" | "readOnly" | "editable";
+  editMode?: "descriptionOnly" | "readOnly" | "editable";
   disabled?: boolean;
   focusPath?: string;
 }) {

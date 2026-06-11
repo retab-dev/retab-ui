@@ -322,8 +322,14 @@ function FieldPanel({
     <aside
       className={cn(
         "flex flex-shrink-0 flex-col border-l bg-background",
-        standalone ? "min-w-0 flex-1" : "w-[280px]",
+        standalone && "min-w-0 flex-1",
       )}
+      // Set the width inline rather than via an arbitrary Tailwind utility: it's
+      // the load-bearing constraint, so it must not depend on a generated class
+      // surviving. `maxWidth: 50%` keeps the document at least half the width;
+      // without an enforced width the aside would shrink-wrap to its content and
+      // starve the flex-1 document column down to a sliver.
+      style={standalone ? undefined : { width: 280, maxWidth: "50%" }}
     >
       <div className="flex h-10 flex-shrink-0 items-center gap-2 border-b px-3">
         {views.length > 1 ? (

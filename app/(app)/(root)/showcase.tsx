@@ -1,5 +1,5 @@
 import { FileThumbnailFormatsGrid } from "@/components/file-thumbnail-formats-demo"
-import { FileViewerDemo } from "@/components/file-viewer-demo"
+import { FileViewerShowcase } from "@/components/file-viewer-demo"
 import { JsonFormDemo } from "@/components/json-form-demo"
 import { JsonTableDemo } from "@/components/json-table/json-table-demo"
 import { RetabSchemaBuilderDemo } from "@/components/retab-schema-builder-demo"
@@ -9,16 +9,19 @@ function ShowcaseItem({
   title,
   description,
   className,
+  headerClassName,
   children,
 }: {
   title: string
   description: string
   className?: string
+  /** Extra classes on the title/description header block (e.g. a fixed height). */
+  headerClassName?: string
   children: React.ReactNode
 }) {
   return (
     <div className={`flex flex-col gap-3 ${className ?? ""}`}>
-      <div className="space-y-1">
+      <div className={`space-y-1 ${headerClassName ?? ""}`}>
         <h3 className="text-sm font-medium text-foreground">{title}</h3>
         <p className="text-sm text-pretty text-muted-foreground">
           {description}
@@ -47,20 +50,19 @@ export function HomeShowcase() {
         {/* Floating island — the demos fade into the page. */}
         <div className="relative isolate overflow-hidden rounded-3xl px-4 py-10 sm:px-8 md:p-12">
           <div className="relative z-10 flex flex-col gap-8">
-            <div className="grid items-start gap-8 md:grid-cols-2">
+            <div
+              className="grid items-start gap-8 md:grid-cols-2"
+              style={{ "--showcase-header-h": "4rem" } as React.CSSProperties}
+            >
               <ShowcaseItem
                 title="Schema Builder"
                 description="Visual JSON Schema editor for shaping the structure your extractions follow."
+                headerClassName="min-h-(--showcase-header-h)"
               >
                 <RetabSchemaBuilderDemo showJsonTab={false} />
               </ShowcaseItem>
 
-              <ShowcaseItem
-                title="File Viewer"
-                description="One viewer for PDFs, images, and Office files — paged, zoomable, downloadable."
-              >
-                <FileViewerDemo />
-              </ShowcaseItem>
+              <FileViewerShowcase />
 
               <ShowcaseItem
                 title="File Thumbnail"

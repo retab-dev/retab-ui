@@ -33,7 +33,7 @@ interface RootDialogProps {
   setMetadataValues: (values: any) => void;
   onChange: (newNode: ExtendedJSONSchema7) => void;
   node: ExtendedJSONSchema7;
-  editMode?: "promptOnly" | "readOnly" | "editable";
+  editMode?: "descriptionOnly" | "readOnly" | "editable";
 }
 
 export function RootDialog({
@@ -81,7 +81,7 @@ export function RootDialog({
               value={schemaTitle}
               onChange={(e) => setSchemaTitle(e.target.value)}
               placeholder="Enter schema title"
-              disabled={editMode === "readOnly" || editMode === "promptOnly"}
+              disabled={editMode === "readOnly" || editMode === "descriptionOnly"}
             />
           </div>
           <div className="grid gap-2">

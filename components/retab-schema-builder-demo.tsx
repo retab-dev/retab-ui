@@ -15,15 +15,6 @@ const initialSchema: ExtendedJSONSchema7 = {
     total: { type: "number", description: "Total amount due" },
     currency: { type: "string", enum: ["USD", "EUR", "GBP"] },
     paid: { type: "boolean" },
-    vendor: {
-      type: "object",
-      description: "Who issued the invoice",
-      properties: {
-        name: { type: "string" },
-        country: { anyOf: [{ type: "string" }, { type: "null" }] },
-      },
-      required: ["name"],
-    },
     line_items: {
       type: "array",
       items: {
