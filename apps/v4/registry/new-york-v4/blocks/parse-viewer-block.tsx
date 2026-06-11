@@ -5,10 +5,10 @@ import { ParseViewer } from "@/components/viewers/parse/parse-viewer"
 import { PdfViewer } from "@/components/ui/pdf-viewer"
 import parseSample from "@/components/viewers/sample-data/parse.json"
 
-const PDF_URL = "/samples/tapstone.pdf"
+const PDF_URL = "/samples/bank-statement-x4uhhi7t.pdf"
 
-// A real Retab parse of tapstone.pdf (`retab parses create`, retab-large):
-// per-page LLM-ready markdown with reconstructed tables.
+// A parse of the bank-statement sample: per-page, LLM-ready markdown with the
+// transactions reconstructed as a table.
 const PARSE_RESULT: ParseResponse = {
   output: parseSample.output as ParseResponse["output"],
   usage: parseSample.usage as ParseResponse["usage"],
@@ -30,7 +30,7 @@ export function ParseViewerBlock() {
           <PdfViewer
             src={PDF_URL}
             bare
-            downloadFileName="tapstone.pdf"
+            downloadFileName="bank-statement.pdf"
             onVisiblePageChange={handlers.onCurrentPageChange}
             onScrollProgressChange={handlers.onScrollProgressChange}
             className="h-full"

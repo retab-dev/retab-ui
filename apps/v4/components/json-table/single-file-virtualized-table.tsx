@@ -1,14 +1,7 @@
 "use client";
 
-import React, {
-  useMemo,
-  useState,
-  useRef,
-  useCallback,
-  useLayoutEffect,
-} from "react";
+import React, { useMemo, useState, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { useVirtualizer } from "@tanstack/react-virtual";
 import { JSONSchema7 } from "json-schema";
 import { ColumnDef } from "@tanstack/react-table";
 import {
@@ -35,6 +28,7 @@ import { getTheme } from "@/components/json-table/lib/themes";
 import { HoverInfoContext, HoverInfo } from "./hover-info-context";
 import { HoverCardPortalContext } from "./hover-card-context";
 import { DataCellPopoverCardContent } from "./data-cell-popover-card-content";
+import { useFixedRowWindow } from "./lib/use-fixed-row-window";
 import { useMountEffect } from "@/hooks/useMountEffect";
 
 interface SingleFileVirtualizedTableProps {
@@ -350,30 +344,24 @@ export const SingleFileVirtualizedTable =
       const totalWidth = visibleKeys.length * getColumnWidthPx(columnWidth);
 
       // ── Row virtualization ──────────────────────────────────────────────
-      // Rows are fixed height, so a simple fixed-size virtualizer only mounts
-      // the rows in (and just past) the viewport. The scroll element is the
-      // outer overflow-auto container; `scrollMargin` accounts for the sticky
-      // header that precedes the list inside it.
+      // Rows are a fixed height, so the visible window is plain arithmetic — no
+      // per-row measurement, no library. The header lives in its own bar
+      // *outside* this scroll container (so `top` is just `index * rowHeight`,
+      // no scroll-margin offset to correct for), and each mounted row is
+      // absolutely positioned inside a spacer of the full list height.
       const rowHeightPx = getRowHeightPx(rowHeight);
       const scrollRef = useRef<HTMLDivElement>(null);
       const headerScrollRef = useRef<HTMLDivElement>(null);
       const bodyRef = useRef<HTMLTableSectionElement>(null);
-      // Render virtualized rows only after mount: on the server the scroll
-      // element and header offset aren't known, so deferring avoids a
-      // hydration mismatch and lets the virtualizer read the laid-out
-      // `offsetTop` (header height) for scrollMargin.
-      const [mounted, setMounted] = useState(false);
-      useLayoutEffect(() => {
-        setMounted(true);
-      }, [visibleKeys.length, rowHeightPx]);
-      const rowVirtualizer = useVirtualizer({
-        count: rowCount,
-        getScrollElement: () => scrollRef.current,
-        estimateSize: () => rowHeightPx,
+      // `ready` gates the first paint: the window is unknown until the viewport
+      // is measured in a layout effect, which keeps SSR (zero rows) and the
+      // first client render in sync, then fills in before the browser paints.
+      const { start, end, totalHeight, ready } = useFixedRowWindow({
+        scrollRef,
+        rowCount,
+        rowHeight: rowHeightPx,
         overscan,
-        scrollMargin: bodyRef.current?.offsetTop ?? 0,
       });
-      const virtualRows = rowVirtualizer.getVirtualItems();
       const docRow = table.getRowModel().rows[0];
       const hoverCardPositionRunner =
         showHoverCard && hoverInfo ? (
@@ -498,22 +486,22 @@ export const SingleFileVirtualizedTable =
                   ref={bodyRef}
                   className={`relative w-full ${theme.tableContainerBg}`}
                   style={{
-                    height: `${rowVirtualizer.getTotalSize()}px`,
+                    height: `${totalHeight}px`,
                     minWidth: "100%",
                   }}
                 >
-                  {mounted && docRow
-                    ? virtualRows.map((vrow) => (
+                  {ready && docRow
+                    ? Array.from({ length: Math.max(0, end - start) }, (_, i) => {
+                        const rowIdx = start + i;
+                        return (
                         <SingleFileFormRow
-                          key={vrow.key}
-                          rowIdx={vrow.index}
+                          key={rowIdx}
+                          rowIdx={rowIdx}
                           style={{
                             position: "absolute",
                             top: 0,
                             left: 0,
-                            transform: `translateY(${
-                              vrow.start - rowVirtualizer.options.scrollMargin
-                            }px)`,
+                            transform: `translateY(${rowIdx * rowHeightPx}px)`,
                           }}
                           row={docRow}
                           tableAndPaths={tableAndPaths}
@@ -539,7 +527,8 @@ export const SingleFileVirtualizedTable =
                           fieldIndicationMap={fieldIndicationMap}
                           fieldReasoningMap={fieldReasoningMap}
                         />
-                      ))
+                        );
+                      })
                     : null}
                 </TableBody>
               </Table>

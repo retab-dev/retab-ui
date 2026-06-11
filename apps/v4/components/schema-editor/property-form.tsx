@@ -314,9 +314,41 @@ export function PropertyForm({
             />
 
             <div>
-              <Label htmlFor="type">
-                Data type
-              </Label>
+              <div className="mb-1.5 flex items-center justify-between">
+                <Label htmlFor="type">Data type</Label>
+                <FormField
+                  control={form.control}
+                  name="nullable"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center space-y-0 space-x-2">
+                      <FormControl>
+                        <Switch
+                          id="nullable"
+                          disabled={editMode !== "editable"}
+                          checked={field.value}
+                          onCheckedChange={handleNullableChange}
+                          className={
+                            editMode !== "editable" ? "disabled:opacity-100" : ""
+                          }
+                        />
+                      </FormControl>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Label htmlFor="nullable" className="cursor-pointer">
+                            Nullable
+                          </Label>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs">
+                          <p>
+                            Nullable fields allow <code>null</code> as a value
+                            (the type is widened to include <code>null</code>).
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </FormItem>
+                  )}
+                />
+              </div>
               <ItemTypeSelector
                 name={editedName}
                 editMode={editMode}
@@ -379,43 +411,6 @@ export function PropertyForm({
                   />
                 </div>
               )}
-            <div className="flex flex-row items-center gap-6">
-              <FormField
-                control={form.control}
-                name="nullable"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center space-y-0 space-x-2">
-                    <FormControl>
-                      <Switch
-                        id="nullable"
-                        disabled={editMode !== "editable"}
-                        checked={field.value}
-                        onCheckedChange={handleNullableChange}
-                        className={
-                          editMode !== "editable" ? "disabled:opacity-100" : ""
-                        }
-                      />
-                    </FormControl>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Label
-                          htmlFor="nullable"
-                          className="cursor-pointer"
-                        >
-                          Nullable
-                        </Label>
-                      </TooltipTrigger>
-                      <TooltipContent className="max-w-xs">
-                        <p>
-                          Nullable fields allow <code>null</code> as a value (the
-                          type is widened to include <code>null</code>).
-                        </p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </FormItem>
-                )}
-              />
-            </div>
           </div>
           <div className="space-y-4 p-4">
             <FormField

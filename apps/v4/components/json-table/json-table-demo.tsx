@@ -24,14 +24,15 @@ function stripSchemaReasoning(node: unknown): unknown {
   return node;
 }
 
-// Real extraction: an oil & gas revenue statement (nested check + properties →
-// production → line items). `prediction` is the extracted output object.
+// Real extraction: a 60-day business checking statement with 1,500 transaction
+// rows — a long flat array that exercises the table's virtualization.
+// `prediction` is the extracted output object.
 const document = {
   id: "doc_1",
   project_id: "proj_1",
   mime_data: {
     id: "file_1",
-    filename: "revenue-statement.pdf",
+    filename: "bank-statement.pdf",
     mime_type: "application/pdf",
   },
   prediction_data: {
@@ -44,14 +45,27 @@ const schema = stripSchemaReasoning(sampleSchema) as unknown as JSONSchema7;
 
 export function JsonTableDemo() {
   const [currentSchema, setSchema] = React.useState<JSONSchema7>(schema);
+  const [editable, setEditable] = React.useState(false);
   return (
-    <div className="not-prose flex h-[480px] flex-col overflow-hidden rounded-xl border bg-background">
-      <SingleFileTableView
-        document={document}
-        schema={currentSchema}
-        setSchema={setSchema}
-        editMode="readOnly"
-      />
+    <div className="not-prose my-6 flex flex-col gap-2">
+      <label className="flex items-center gap-2 text-sm text-muted-foreground">
+        <input
+          type="checkbox"
+          checked={editable}
+          onChange={(e) => setEditable(e.target.checked)}
+          className="size-4 accent-primary"
+        />
+        Editable {editable ? "(double-click a cell to edit)" : "(read-only)"}
+      </label>
+      <div className="flex h-[480px] flex-col overflow-hidden rounded-xl border bg-background">
+        <SingleFileTableView
+          document={document}
+          schema={currentSchema}
+          setSchema={setSchema}
+          editMode={editable ? "editable" : "readOnly"}
+          allowEditing={editable}
+        />
+      </div>
     </div>
   );
 }

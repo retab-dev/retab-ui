@@ -25,31 +25,36 @@ const pagePreview =
 export function FileThumbnailDemo() {
   return (
     <div className="bg-card rounded-xl border p-6 sm:p-8">
-      <div className="grid grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-4 sm:gap-x-8">
         <Cell label="Loaded" hint="previewImageUrl">
           <FileThumbnail
             file={{ name: "invoice.pdf", type: "application/pdf" }}
             previewImageUrl={pagePreview}
-            className="w-full bg-white shadow-sm ring-1 ring-black/[0.06]"
+            previewAspectRatio={1}
+            className="w-full bg-white shadow-sm ring-1 ring-black/5"
+            previewClassName="object-top"
           />
         </Cell>
         <Cell label="Loading" hint="isLoading">
           <FileThumbnail
             file={{ name: "report.docx", type: "application/vnd.openxmlformats" }}
             isLoading
+            previewAspectRatio={1}
             className="w-full"
           />
         </Cell>
         <Cell label="Fallback" hint="no preview">
           <FileThumbnail
             file={{ name: "data.xlsx", type: "application/vnd.ms-excel" }}
+            previewAspectRatio={1}
             className="w-full"
           />
         </Cell>
         <Cell label="Custom content" hint="previewContent">
           <FileThumbnail
             file={{ name: "photo.png", type: "image/png" }}
-            className="w-full shadow-sm ring-1 ring-black/[0.06]"
+            previewAspectRatio={1}
+            className="w-full shadow-sm ring-1 ring-black/5"
             previewContent={
               <div className="flex size-full items-center justify-center bg-gradient-to-br from-sky-400 to-indigo-500 text-xs font-medium text-white">
                 640 × 480
@@ -77,7 +82,7 @@ function Cell({
         <span className="text-foreground text-base font-semibold tracking-tight">
           {label}
         </span>
-        <code className="text-muted-foreground text-[0.6875rem]">{hint}</code>
+        <code className="text-muted-foreground text-xs">{hint}</code>
       </div>
       {children}
     </div>

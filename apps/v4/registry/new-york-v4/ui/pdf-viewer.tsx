@@ -174,14 +174,27 @@ export interface PdfViewerProps {
 export const PdfViewer = React.forwardRef<PdfViewerHandle, PdfViewerProps>(
   function PdfViewer(props, ref) {
     const isClient = useIsClient()
+    // Mirror whether the live toolbar will carry an aside toggle, so the
+    // skeleton toolbar has the exact same leading control (and width).
+    const showAsideToggle = Boolean(props.aside && (props.asideToggle ?? true))
     if (!isClient) {
-      return <PdfViewerFallback className={props.className} bare={props.bare} />
+      return (
+        <PdfViewerFallback
+          className={props.className}
+          bare={props.bare}
+          asideToggle={showAsideToggle}
+        />
+      )
     }
     return (
       <PdfErrorBoundary className={props.className}>
         <React.Suspense
           fallback={
-            <PdfViewerFallback className={props.className} bare={props.bare} />
+            <PdfViewerFallback
+              className={props.className}
+              bare={props.bare}
+              asideToggle={showAsideToggle}
+            />
           }
         >
           <PdfViewerInner {...props} forwardedRef={ref} />
@@ -640,30 +653,110 @@ function IconButton({
   )
 }
 
+// Shown before the client component mounts (SSR/pre-hydration). Same chrome as
+// the loaded viewer — a toolbar with skeletoned values plus a page-shaped
+// skeleton — so the top bar is always present and nothing jumps when the real
+// document fades in.
 function PdfViewerFallback({
   className,
   bare = false,
+  asideToggle = false,
 }: {
   className?: string
   bare?: boolean
+  asideToggle?: boolean
 }) {
   return (
     <div
       className={cn(
-        "flex p-4",
-        bare ? "h-full bg-muted/20" : "min-h-64 rounded-xl border bg-muted/30",
+        "flex min-h-0 flex-col overflow-hidden",
+        bare ? "h-full bg-muted/20" : "rounded-xl border bg-muted/30",
         className
       )}
+      data-slot="pdf-viewer"
     >
-      <Skeleton className="min-h-48 w-full flex-1 rounded-md" />
+      <PdfToolbarSkeleton asideToggle={asideToggle} />
+      <div className="min-h-0 flex-1 overflow-auto">
+        <div className="flex flex-col items-center p-4">
+          <PageAspectSkeleton />
+        </div>
+      </div>
     </div>
   )
 }
 
+// A static mirror of the real toolbar: the two undetermined values (page count,
+// zoom %) are skeletons; the controls are present but inert.
+function PdfToolbarSkeleton({ asideToggle = false }: { asideToggle?: boolean }) {
+  return (
+    <div className="flex h-10 flex-shrink-0 items-center gap-1 border-b bg-card px-2">
+      {asideToggle ? (
+        <ToolbarIconPlaceholder>
+          <PanelLeftClose />
+        </ToolbarIconPlaceholder>
+      ) : null}
+      <span className="px-1">
+        <Skeleton className="inline-block h-3 w-12 align-middle" />
+      </span>
+      <div className="ml-auto flex items-center gap-1">
+        <ToolbarIconPlaceholder>
+          <Minus />
+        </ToolbarIconPlaceholder>
+        <span className="w-12 text-center">
+          <Skeleton className="inline-block h-3 w-8 align-middle" />
+        </span>
+        <ToolbarIconPlaceholder>
+          <Plus />
+        </ToolbarIconPlaceholder>
+        <ToolbarIconPlaceholder>
+          <Maximize />
+        </ToolbarIconPlaceholder>
+        <ToolbarIconPlaceholder>
+          <RotateCw />
+        </ToolbarIconPlaceholder>
+        <Separator orientation="vertical" className="mx-1 h-4" />
+        <ToolbarIconPlaceholder>
+          <Download />
+        </ToolbarIconPlaceholder>
+      </div>
+    </div>
+  )
+}
+
+function ToolbarIconPlaceholder({ children }: { children: React.ReactNode }) {
+  return (
+    <Button
+      variant="ghost"
+      size="icon-sm"
+      className="size-7"
+      disabled
+      tabIndex={-1}
+      aria-hidden
+    >
+      {children}
+    </Button>
+  )
+}
+
+// A page-shaped skeleton stands in for the document before any page is measured
+// (the SSR fallback and the document-load suspense). US Letter aspect (8.5 × 11)
+// is the most common page and close enough to A4 (210 × 297) that the swap is
+// barely perceptible; `w-full` inside the p-4 container equals the fit-width
+// page width, so the block matches the page that replaces it.
+function PageAspectSkeleton() {
+  return (
+    <Skeleton
+      aria-hidden
+      className="w-full rounded-md"
+      style={{ aspectRatio: "8.5 / 11" }}
+    />
+  )
+}
+
 function PageSkeleton() {
-  // A plain gray block fills the parent slot, which already reserves the page's
-  // estimated size — so the skeleton is exactly the size of the page it stands in for.
-  return <Skeleton className="size-full min-h-32 flex-1 self-stretch rounded-md" />
+  // Fills the slot, which already reserves the page's estimated size — so the
+  // skeleton is exactly the size of the page it stands in for.
+  return <Skeleton className="size-full rounded-md" />
 }
 
 function clamp(value: number, min: number, max: number) {

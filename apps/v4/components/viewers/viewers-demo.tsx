@@ -10,6 +10,7 @@ import { ParseViewer } from "@/components/viewers/parse/parse-viewer";
 import type { FormField } from "@/components/viewers/lib/edit-types";
 import { EditViewer } from "@/components/viewers/edit/edit-viewer";
 import { ExtractViewerBlock } from "@/registry/new-york-v4/blocks/extract-viewer-block";
+import { JsonFormSourcesBlock } from "@/registry/new-york-v4/blocks/json-form-sources-block";
 import { PdfViewer } from "@/components/ui/pdf-viewer";
 import splitSample from "@/components/viewers/sample-data/split.json";
 import partitionSample from "@/components/viewers/sample-data/partition.json";
@@ -19,8 +20,8 @@ import parseSample from "@/components/viewers/sample-data/parse.json";
 
 /** Real split result: Harris 2023 federal + state tax returns (51 subdocuments). */
 const SPLIT_PDF_URL = "/samples/harris_2023_federal_state_returns.pdf";
-/** Real partition result: tapstone (6 keyed chunks over 4 pages). */
-const PARTITION_PDF_URL = "/samples/tapstone.pdf";
+/** Real partition result: "Attention Is All You Need" partitioned by section (10 keyed chunks over 15 pages). */
+const PARTITION_PDF_URL = "/samples/attention.pdf";
 
 const partitionResult: PartitionResult = {
   output: partitionSample.output as PartitionResult["output"],
@@ -38,7 +39,7 @@ const splitResult: SplitView = {
   usage: null,
 };
 
-/** Real Retab parse: tapstone.pdf run through `retab parses create` (retab-large). */
+/** Parse result: the bank-statement sample as per-page markdown (transactions reconstructed as a table). */
 const parseResult: ParseResponse = {
   output: parseSample.output as ParseResponse["output"],
   usage: parseSample.usage as ParseResponse["usage"],
@@ -91,7 +92,7 @@ export function PartitionViewerDemo() {
           <PdfViewer
             src={PARTITION_PDF_URL}
             bare
-            downloadFileName="tapstone.pdf"
+            downloadFileName="attention.pdf"
             header={handlers.header}
             onVisiblePageChange={handlers.onCurrentPageChange}
             onScrollProgressChange={handlers.onScrollProgressChange}
@@ -164,6 +165,16 @@ export function ExtractViewerDemo() {
   return (
     <div className="not-prose flex flex-col overflow-hidden rounded-xl border" style={{ height: 680 }}>
       <ExtractViewerBlock />
+    </div>
+  );
+}
+
+export function JsonFormSourcesDemo() {
+  // Extraction rendered as a JSON form beside the source PDF — hover a form field
+  // to highlight where its value came from. json-form ⨯ pdf-viewer via useSourceLink.
+  return (
+    <div className="not-prose flex flex-col overflow-hidden rounded-xl border" style={{ height: 680 }}>
+      <JsonFormSourcesBlock />
     </div>
   );
 }

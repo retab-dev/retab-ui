@@ -1,14 +1,16 @@
 "use client"
 
 import * as React from "react"
-import { Download } from "lucide-react"
+import { Download, Maximize, Minus, Plus } from "lucide-react"
 import { useVirtualizer } from "@tanstack/react-virtual"
+import Prism from "prismjs"
 // Type-only — erased at compile time; the sanitizer loads lazily at runtime.
 import type * as DOMPurifyNS from "dompurify"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { Spinner } from "@/components/ui/spinner"
+import { Separator } from "@/components/ui/separator"
+import { Skeleton } from "@/components/ui/skeleton"
 
 // Heavy, format-specific viewers are code-split: only the one matching the file
 // is ever fetched. Each is a thin client component that lazy-loads its own parser
@@ -279,14 +281,28 @@ export interface FileViewerProps {
 
 export function FileViewer(props: FileViewerProps) {
   const isClient = useIsClient()
+  // Detect the category up front (from the props we already have) so the fallback
+  // can mirror the chrome of whichever viewer is about to mount — both before
+  // hydration and while that viewer's code-split chunk downloads. The download
+  // name matches what FileViewerInner passes through.
+  const name = props.fileName ?? props.src
+  const category = props.as ?? detectCategory(name, props.mimeType)
+  const download = props.fileName ?? extractName(props.src)
+  const fallback = (
+    <ViewerFallback
+      category={category}
+      fileName={download}
+      src={props.src}
+      className={props.className}
+      bare={props.bare}
+    />
+  )
   if (!isClient) {
-    return <ViewerFallback className={props.className} bare={props.bare} />
+    return fallback
   }
   return (
     <FileErrorBoundary className={props.className}>
-      <React.Suspense
-        fallback={<ViewerFallback className={props.className} bare={props.bare} />}
-      >
+      <React.Suspense fallback={fallback}>
         <FileViewerInner {...props} />
       </React.Suspense>
     </FileErrorBoundary>
@@ -317,7 +333,14 @@ function FileViewerInner({
     case "xlsx":
       return <XlsxViewer src={src} className={className} bare={bare} downloadFileName={download} />
     case "csv":
-      return <CsvFromUrl src={src} className={className} />
+      return (
+        <CsvFromUrl
+          src={src}
+          fileName={download}
+          className={className}
+          bare={bare}
+        />
+      )
     case "markdown":
       return <MarkdownDocViewer src={src} fileName={download} className={className} bare={bare} />
     case "html":
@@ -334,6 +357,117 @@ function FileViewerInner({
 const TEXT_FONT = 12.5
 const TEXT_LINE_HEIGHT = 20
 const TEXT_CHAR_WIDTH = TEXT_FONT * 0.6 // monospace approximation
+
+// --- JSON syntax highlighting ------------------------------------------------
+// Only JSON is highlighted; log/text/code/unknown render as plain mono (cheaper,
+// and avoids carrying a grammar per format). JSON has no multi-line tokens —
+// strings can't hold raw newlines and standard JSON has no comments — so each
+// line tokenizes independently with no carried state. We exploit that: tokenize
+// only the *visible* lines, cached, so cost is bounded by the viewport, not the
+// file size. No whole-file ceiling needed; one giant minified/invalid line is
+// the only pathological case, guarded by JSON_LINE_MAX below.
+
+// We never auto-scan the DOM — this component tokenizes explicitly.
+Prism.manual = true
+
+/** Longest line we'll tokenize; longer lines (minified/invalid JSON) stay plain. */
+const JSON_LINE_MAX = 2000
+
+/**
+ * Inlined JSON grammar so the component depends only on Prism's `tokenize` core,
+ * registers nothing on the global Prism, and stays self-contained.
+ */
+const JSON_GRAMMAR: Prism.Grammar = {
+  property: {
+    pattern: /"(?:\\.|[^\\"\r\n])*"(?=\s*:)/,
+    greedy: true,
+  },
+  string: {
+    pattern: /"(?:\\.|[^\\"\r\n])*"(?!\s*:)/,
+    greedy: true,
+  },
+  number: /-?\b\d+(?:\.\d+)?(?:[eE][+-]?\d+)?\b/,
+  punctuation: /[{}[\],]/,
+  operator: /:/,
+  boolean: /\b(?:false|true)\b/,
+  null: { pattern: /\bnull\b/, alias: "keyword" },
+}
+
+/** json/json5 → the grammar; everything else → null (plain mono). */
+function highlightGrammar(fileName: string): Prism.Grammar | null {
+  return /\.(json|json5)$/i.test(fileName) ? JSON_GRAMMAR : null
+}
+
+interface Leaf {
+  /** Prism token type, or "" for plain text (whitespace, structure). */
+  type: string
+  text: string
+}
+
+/** Flatten Prism's (possibly nested) token stream into typed leaf spans. */
+function flattenTokens(
+  tokens: (string | Prism.Token)[],
+  parentType = "",
+  out: Leaf[] = []
+): Leaf[] {
+  for (const tok of tokens) {
+    if (typeof tok === "string") {
+      out.push({ type: parentType, text: tok })
+    } else if (Array.isArray(tok.content)) {
+      flattenTokens(tok.content as (string | Prism.Token)[], tok.type, out)
+    } else if (typeof tok.content === "string") {
+      out.push({ type: tok.type, text: tok.content })
+    } else {
+      flattenTokens([tok.content as Prism.Token], tok.type, out)
+    }
+  }
+  return out
+}
+
+/** Token type → CSS class; classes are themed via the variables in SYNTAX_STYLE. */
+const TOKEN_CLASS: Record<string, string> = {
+  property: "fv-tok-key",
+  string: "fv-tok-string",
+  number: "fv-tok-number",
+  boolean: "fv-tok-keyword",
+  null: "fv-tok-keyword",
+  keyword: "fv-tok-keyword",
+  punctuation: "fv-tok-punct",
+  operator: "fv-tok-punct",
+}
+
+/** Token colors as CSS variables so light/dark comes from the theme, not a fixed
+ *  palette. Defaults are GitHub-ish; override the vars to retheme. */
+const SYNTAX_STYLE = `
+.fv-tok-key { color: var(--fv-syntax-key, #0550ae); }
+.fv-tok-string { color: var(--fv-syntax-string, #0a7d33); }
+.fv-tok-number { color: var(--fv-syntax-number, #b5690c); }
+.fv-tok-keyword { color: var(--fv-syntax-keyword, #8250df); }
+.fv-tok-punct { color: var(--fv-syntax-punct, color-mix(in oklab, var(--foreground) 55%, transparent)); }
+.dark .fv-tok-key { color: var(--fv-syntax-key, #6cb6ff); }
+.dark .fv-tok-string { color: var(--fv-syntax-string, #8ddb8c); }
+.dark .fv-tok-number { color: var(--fv-syntax-number, #e3b341); }
+.dark .fv-tok-keyword { color: var(--fv-syntax-keyword, #dcbdfb); }
+`
+
+/** One rendered line: plain text on the fast path, token spans when highlighted. */
+function LineContent({ line, leaves }: { line: string; leaves: Leaf[] | null }) {
+  if (line === "") return <>{" "}</>
+  if (!leaves) return <>{line}</>
+  return (
+    <>
+      {leaves.map((leaf, i) =>
+        leaf.type && TOKEN_CLASS[leaf.type] ? (
+          <span key={i} className={TOKEN_CLASS[leaf.type]}>
+            {leaf.text}
+          </span>
+        ) : (
+          <React.Fragment key={i}>{leaf.text}</React.Fragment>
+        )
+      )}
+    </>
+  )
+}
 // How much of the file to reveal per step. The first frame paints after one
 // chunk instead of waiting for (and splitting) the whole file, and a 200 MB log
 // only ever holds what's been scrolled to in memory + the bytes not yet read.
@@ -489,11 +623,30 @@ function TextDocViewer({
   // Reset state during render when the source changes (no effect needed). `use`
   // above re-suspends on a new src, so `initial` is already the new file here.
   const [renderedSrc, setRenderedSrc] = React.useState(src)
+  const grammar = React.useMemo(() => highlightGrammar(fileName), [fileName])
+  // Per-line token cache keyed by line text: identical lines and re-scrolls reuse
+  // work, so only newly revealed lines ever tokenize. Reset when the file changes.
+  const tokenCacheRef = React.useRef<Map<string, Leaf[]>>(new Map())
   if (renderedSrc !== src) {
     setRenderedSrc(src)
     setSnap(initial)
     setLoadingMore(false)
+    tokenCacheRef.current = new Map()
   }
+
+  const lineLeaves = React.useCallback(
+    (line: string): Leaf[] | null => {
+      if (!grammar || line.length === 0 || line.length > JSON_LINE_MAX) return null
+      const cache = tokenCacheRef.current
+      let leaves = cache.get(line)
+      if (!leaves) {
+        leaves = flattenTokens(Prism.tokenize(line, grammar))
+        cache.set(line, leaves)
+      }
+      return leaves
+    },
+    [grammar]
+  )
 
   const loadMore = React.useCallback(() => {
     setLoadingMore((busy) => {
@@ -560,6 +713,12 @@ function TextDocViewer({
         className="relative min-h-0 flex-1 overflow-hidden bg-card font-mono"
         style={{ fontSize: TEXT_FONT, lineHeight: `${TEXT_LINE_HEIGHT}px` }}
       >
+        {/* React 19 hoists + dedupes this by `href`, so it's injected once. */}
+        {grammar ? (
+          <style href="fv-syntax" precedence="default">
+            {SYNTAX_STYLE}
+          </style>
+        ) : null}
         {/* Full-height line-number rail behind the scroller, pinned at the left so
             it survives horizontal scroll and runs to the bottom of the viewer. Its
             tinted fill against the white content is the boundary — no border line,
@@ -601,7 +760,10 @@ function TextDocViewer({
                   {item.index + 1}
                 </div>
                 <div className="flex items-center whitespace-pre px-3 text-foreground">
-                  {lines[item.index] === "" ? " " : lines[item.index]}
+                  <LineContent
+                    line={lines[item.index]}
+                    leaves={lineLeaves(lines[item.index])}
+                  />
                 </div>
               </div>
             ))}
@@ -677,26 +839,53 @@ function SandboxedDoc({ html, title }: { html: string; title: string }) {
 
 // --- CSV (delegates to CsvViewer, which wants content rather than a URL) ------
 
-function CsvFromUrl({ src, className }: { src: string; className?: string }) {
+function CsvFromUrl({
+  src,
+  fileName,
+  className,
+  bare,
+}: {
+  src: string
+  fileName: string
+  className?: string
+  bare?: boolean
+}) {
   const blob = React.use(getBlob(src))
-  const [height, setHeight] = React.useState(0)
-
-  const ref = React.useCallback((el: HTMLDivElement | null) => {
-    if (!el) return
-    setHeight(el.clientHeight)
-    const observer = new ResizeObserver((entries) => {
-      for (const e of entries) setHeight(e.contentRect.height)
-    })
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [])
-
+  const [scale, setScale] = React.useState(1)
+  const zoom = (factor: number) => setScale((s) => clamp(s * factor, 0.5, 4))
+  const actions = (
+    <>
+      <IconButton label="Zoom out" onClick={() => zoom(1 / 1.2)}>
+        <Minus />
+      </IconButton>
+      <span className="w-12 text-center text-xs tabular-nums text-muted-foreground">
+        {Math.round(scale * 100)}%
+      </span>
+      <IconButton label="Zoom in" onClick={() => zoom(1.2)}>
+        <Plus />
+      </IconButton>
+      <IconButton label="Actual size" onClick={() => setScale(1)}>
+        <Maximize />
+      </IconButton>
+    </>
+  )
   return (
-    <div ref={ref} className={cn("min-h-0", className)}>
-      {height > 0 ? (
-        <CsvViewer source={blob} height={height} className="h-full" />
-      ) : null}
-    </div>
+    <DocShell
+      fileName={fileName}
+      src={src}
+      actions={actions}
+      className={className}
+      bare={bare}
+    >
+      {/* Borderless + fillHeight so the table sits flush inside DocShell's body,
+          flexing to fill the space below the toolbar (no manual measuring). */}
+      <CsvViewer
+        source={blob}
+        fillHeight
+        scale={scale}
+        className="rounded-none border-0 bg-transparent"
+      />
+    </DocShell>
   )
 }
 
@@ -706,6 +895,7 @@ function DocShell({
   fileName,
   src,
   meta,
+  actions,
   className,
   bare,
   children,
@@ -713,6 +903,8 @@ function DocShell({
   fileName: string
   src: string
   meta?: string
+  /** Toolbar controls (e.g. zoom) shown to the left of the download button. */
+  actions?: React.ReactNode
   className?: string
   bare?: boolean
   children: React.ReactNode
@@ -735,20 +927,47 @@ function DocShell({
             {meta}
           </span>
         ) : null}
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          className="ml-auto size-7"
-          aria-label="Download"
-          title="Download"
-          render={<a href={src} download={fileName} target="_blank" rel="noreferrer" />}
-        >
-          <Download />
-        </Button>
+        <div className="ml-auto flex items-center gap-1">
+          {actions}
+          {actions ? <Separator orientation="vertical" className="mx-1 h-4" /> : null}
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="size-7"
+            aria-label="Download"
+            title="Download"
+            render={<a href={src} download={fileName} target="_blank" rel="noreferrer" />}
+          >
+            <Download />
+          </Button>
+        </div>
       </div>
       <div className="flex min-h-0 flex-1 flex-col">{children}</div>
     </div>
   )
+}
+
+function IconButton({
+  label,
+  children,
+  ...props
+}: React.ComponentProps<typeof Button> & { label: string }) {
+  return (
+    <Button
+      variant="ghost"
+      size="icon-sm"
+      className="size-7"
+      aria-label={label}
+      title={label}
+      {...props}
+    >
+      {children}
+    </Button>
+  )
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value))
 }
 
 function UnsupportedCard({
@@ -787,22 +1006,193 @@ function UnsupportedCard({
   )
 }
 
+// Shown before hydration and while the chosen format viewer's code-split chunk
+// downloads. It mirrors the chrome of whatever is coming — a toolbar plus a
+// body skeleton shaped to the category — so the top bar is always present and
+// nothing jumps when the real viewer (or its own fallback) fades in.
 function ViewerFallback({
+  category,
+  fileName,
+  src,
   className,
   bare = false,
 }: {
+  category?: FileCategory
+  fileName?: string
+  src?: string
   className?: string
   bare?: boolean
 }) {
+  // Formats that render through DocShell, whose toolbar (filename + download)
+  // needs no fetched data — show it for real, with a skeleton body, so the only
+  // thing that fills in is the content itself.
+  if (
+    src != null &&
+    fileName != null &&
+    (category === "text" ||
+      category === "markdown" ||
+      category === "html" ||
+      category === "csv")
+  ) {
+    return (
+      <DocShell fileName={fileName} src={src} className={className} bare={bare}>
+        {category === "csv" ? (
+          <TableBodySkeleton />
+        ) : category === "text" ? (
+          <TextBodySkeleton />
+        ) : (
+          // markdown / html render prose or a sandboxed document — a plain block.
+          <div className="min-h-0 flex-1 bg-card p-4">
+            <Skeleton className="size-full rounded-md" />
+          </div>
+        )}
+      </DocShell>
+    )
+  }
+
+  // Leaf viewers (pdf/docx/image/pptx/xlsx) and unknowns: a shell with a generic
+  // toolbar (same height/structure as every real toolbar) plus a body skeleton —
+  // page-shaped for paged formats, grid-shaped for tabular ones.
+  const tabular = category === "xlsx"
+  const pageAspect =
+    category === "pptx" || category === "image" ? "4 / 3" : "8.5 / 11"
+
   return (
     <div
+      data-slot="file-viewer"
       className={cn(
-        "flex items-center justify-center",
-        bare ? "h-full bg-muted/20" : "min-h-64 rounded-xl border bg-muted/30",
+        "flex min-h-0 flex-col overflow-hidden",
+        bare ? "h-full bg-muted/20" : "rounded-xl border bg-muted/30",
         className
       )}
     >
-      <Spinner className="size-5 text-muted-foreground" />
+      <div className="flex h-10 flex-shrink-0 items-center gap-2 border-b bg-card px-2">
+        <span className="px-1">
+          <Skeleton className="inline-block h-3 w-16 align-middle" />
+        </span>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="ml-auto size-7"
+          disabled
+          tabIndex={-1}
+          aria-hidden
+        >
+          <Download />
+        </Button>
+      </div>
+      {tabular ? (
+        <TableBodySkeleton />
+      ) : (
+        <div className="min-h-0 flex-1 overflow-hidden">
+          <div className="flex flex-col items-center p-4">
+            <Skeleton
+              aria-hidden
+              className="w-full rounded-md"
+              style={{ aspectRatio: pageAspect }}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// A line-numbered skeleton matching TextDocViewer's body: a gutter rail with
+// faux line numbers and monospace text bars of varying width — so the loading
+// shape reads like the text/log/JSON it stands in for.
+function TextBodySkeleton() {
+  const gutter = 44
+  // Deterministic widths so the lines look like real output (no Math.random).
+  const widths = [
+    82, 64, 91, 48, 73, 88, 56, 79, 95, 61, 70, 85, 52, 77, 90, 67, 83, 59, 74,
+    86, 63, 80,
+  ]
+  return (
+    <div
+      aria-hidden
+      className="relative min-h-0 flex-1 overflow-hidden bg-card font-mono"
+      style={{ fontSize: TEXT_FONT, lineHeight: `${TEXT_LINE_HEIGHT}px` }}
+    >
+      <div
+        className="pointer-events-none absolute inset-y-0 left-0 bg-[color-mix(in_oklab,var(--card)_96%,var(--foreground))]"
+        style={{ width: gutter }}
+      />
+      <div className="relative">
+        {widths.map((w, i) => (
+          <div
+            key={i}
+            className="grid items-center"
+            style={{
+              gridTemplateColumns: `${gutter}px 1fr`,
+              height: TEXT_LINE_HEIGHT,
+            }}
+          >
+            <div className="flex justify-end pr-2">
+              <Skeleton className="h-2.5 w-3" />
+            </div>
+            <div className="px-3">
+              <Skeleton className="h-2.5" style={{ width: `${w}%` }} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// A grid skeleton matching the csv/xlsx table: a header row, a row-number
+// gutter, and cell bars — so the loading shape matches the final spreadsheet.
+function TableBodySkeleton() {
+  const gutter = 52
+  const colWidth = 150
+  const cols = 6
+  const rows = 14
+  const widths = [70, 45, 88, 56, 62, 78]
+  return (
+    <div
+      aria-hidden
+      className="flex min-h-0 flex-1 flex-col overflow-hidden bg-card text-sm"
+    >
+      <div className="flex border-b bg-muted/60">
+        <div
+          className="shrink-0 border-r"
+          style={{ width: gutter, height: 33 }}
+        />
+        {Array.from({ length: cols }, (_, c) => (
+          <div
+            key={c}
+            className="flex shrink-0 items-center border-r px-3"
+            style={{ width: colWidth, height: 33 }}
+          >
+            <Skeleton className="h-3 w-16" />
+          </div>
+        ))}
+      </div>
+      <div className="min-h-0 flex-1 overflow-hidden">
+        {Array.from({ length: rows }, (_, r) => (
+          <div key={r} className="flex border-b" style={{ height: 33 }}>
+            <div
+              className="flex shrink-0 items-center justify-end border-r px-2"
+              style={{ width: gutter }}
+            >
+              <Skeleton className="h-3 w-4" />
+            </div>
+            {Array.from({ length: cols }, (_, c) => (
+              <div
+                key={c}
+                className="flex shrink-0 items-center border-r px-3"
+                style={{ width: colWidth }}
+              >
+                <Skeleton
+                  className="h-3"
+                  style={{ width: `${widths[(r + c) % widths.length]}%` }}
+                />
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

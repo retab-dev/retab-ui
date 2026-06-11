@@ -1,0 +1,77 @@
+[
+  {
+    "key": "title",
+    "label": "Title",
+    "value": "Attention Is All You Need",
+    "source": {
+      "content": "Attention Is All You Need",
+      "anchor": {
+        "kind": "image_bbox",
+        "left": 0.3423,
+        "top": 0.1854,
+        "width": 0.3144,
+        "height": 0.0268
+      }
+    }
+  },
+  {
+    "key": "firstAuthor",
+    "label": "First author",
+    "value": "Ashish Vaswani",
+    "source": {
+      "content": "Ashish Vaswani",
+      "anchor": {
+        "kind": "image_bbox",
+        "left": 0.2139,
+        "top": 0.2943,
+        "width": 0.1158,
+        "height": 0.0176
+      }
+    }
+  },
+  {
+    "key": "affiliation",
+    "label": "Affiliation",
+    "value": "Google Brain",
+    "source": {
+      "content": "Google Brain",
+      "anchor": {
+        "kind": "image_bbox",
+        "left": 0.2245,
+        "top": 0.3081,
+        "width": 0.0947,
+        "height": 0.0176
+      }
+    }
+  },
+  {
+    "key": "model",
+    "label": "Proposed model",
+    "value": "Transformer",
+    "source": {
+      "content": "Transformer",
+      "anchor": {
+        "kind": "image_bbox",
+        "left": 0.6778,
+        "top": 0.5607,
+        "width": 0.089,
+        "height": 0.0178
+      }
+    }
+  },
+  {
+    "key": "bleuScore",
+    "label": "EN-DE BLEU",
+    "value": "28.4",
+    "source": {
+      "content": "28.4",
+      "anchor": {
+        "kind": "image_bbox",
+        "left": 0.4952,
+        "top": 0.6158,
+        "width": 0.0356,
+        "height": 0.0178
+      }
+    }
+  }
+]

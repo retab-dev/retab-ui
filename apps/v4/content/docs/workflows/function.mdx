@@ -1,0 +1,71 @@
+---
+title: Function
+description: Inspect a single function execution — a success/error badge and duration up top, with tabs for the input it received, the output it returned, the console (stdout, stderr, traceback) and the code that ran.
+---
+
+A function block runs sandboxed code to transform data between workflow steps.
+The Function component renders one execution the way you'd want to read it when
+debugging a run: a success/error badge and duration along the top, then tabs for
+the **Input** it received, the **Output** it returned, the **Console** (stdout,
+stderr and traceback) and the **Code** that ran.
+
+<FunctionBlockDemo />
+
+JSON in the Input and Output tabs gets light syntax highlighting, console
+streams are collapsible with line counts, and every panel has a hover button to
+copy its contents. When a run fails, the inspector opens on the Console tab.
+
+## Usage
+
+Pass a single `run` object describing the execution. Everything is presentation
+only — wire it to whatever your run data looks like.
+
+```tsx
+import { FunctionInspector } from "@/registry/new-york-v4/blocks/function-block"
+
+export function Example() {
+  return (
+    <div className="h-[520px] overflow-hidden rounded-xl border">
+      <FunctionInspector
+        run={{
+          isSuccess: true,
+          message: "Returned Output",
+          executionTimeMs: 214,
+          inputData: { invoice_number: "INV-8842", amount: 12480.5 },
+          outputData: { invoice_number: "INV-8842", total: 13541.34 },
+          stdout: "Computed tax 1060.84 on subtotal 12480.5",
+          code: "def transform(input: Input) -> Output: ...",
+        }}
+      />
+    </div>
+  )
+}
+```
+
+The `FunctionBlock` export wraps the inspector with a sample run so it renders on
+its own with no props.
+
+## API
+
+### `FunctionRun`
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `isSuccess` | `boolean` | Drives the status badge and which tab opens first. |
+| `message` | `string` | Optional one-line status shown next to the badge. |
+| `executionTimeMs` | `number \| null` | Wall-clock time, rendered next to the clock icon (auto `ms`/`s`). |
+| `inputData` | `Record<string, unknown> \| null` | Input passed to the function. The Input tab only appears when set. |
+| `outputData` | `Record<string, unknown> \| null` | Value the function returned, shown as highlighted JSON. |
+| `stdout` | `string \| null` | Captured standard output — a collapsible Console section. |
+| `stderr` | `string \| null` | Captured standard error — a collapsible Console section. |
+| `error` | `string \| null` | Error summary, shown as a banner atop the Console tab. |
+| `traceback` | `string \| null` | Full traceback, shown expanded in the Console tab. |
+| `code` | `string \| null` | Source that ran. The Code tab only appears when set. |
+| `language` | `string` | Language label for the Code tab (default `"python"`). |
+
+### Components
+
+| Export | Props | Description |
+| --- | --- | --- |
+| `FunctionInspector` | `{ run: FunctionRun }` | The full execution inspector. |
+| `FunctionBlock` | `{ run?: FunctionRun }` | The inspector preloaded with a sample run; pass `run` to override. |

@@ -637,6 +637,10 @@ function IconButton({
   )
 }
 
+// Shown before the client component mounts (SSR/pre-hydration). Same chrome as
+// the loaded viewer — a toolbar with skeletoned values plus a slide-shaped
+// skeleton — so the top bar is always present and nothing jumps when the real
+// deck fades in.
 function PptxViewerFallback({
   className,
   bare = false,
@@ -647,13 +651,77 @@ function PptxViewerFallback({
   return (
     <div
       className={cn(
-        "flex p-4",
-        bare ? "h-full bg-muted/20" : "min-h-64 rounded-xl border bg-muted/30",
+        "flex min-h-0 flex-col overflow-hidden",
+        bare ? "h-full bg-muted/20" : "rounded-xl border bg-muted/30",
         className
       )}
+      data-slot="pptx-viewer"
     >
-      <Skeleton className="min-h-48 w-full flex-1 rounded-md" />
+      <PptxToolbarSkeleton />
+      <div className="min-h-0 flex-1 overflow-auto">
+        <div className="flex flex-col items-center p-4">
+          <PptxSlideSkeleton />
+        </div>
+      </div>
     </div>
+  )
+}
+
+// A static mirror of the real toolbar: the two undetermined values (slide count,
+// zoom %) are skeletons; the controls are present but inert.
+function PptxToolbarSkeleton() {
+  return (
+    <div className="flex h-10 flex-shrink-0 items-center gap-1 border-b bg-card px-2">
+      <span className="px-1">
+        <Skeleton className="inline-block h-3 w-12 align-middle" />
+      </span>
+      <div className="ml-auto flex items-center gap-1">
+        <ToolbarIconPlaceholder>
+          <Minus />
+        </ToolbarIconPlaceholder>
+        <span className="w-12 text-center">
+          <Skeleton className="inline-block h-3 w-8 align-middle" />
+        </span>
+        <ToolbarIconPlaceholder>
+          <Plus />
+        </ToolbarIconPlaceholder>
+        <ToolbarIconPlaceholder>
+          <Maximize />
+        </ToolbarIconPlaceholder>
+        <ToolbarIconPlaceholder>
+          <RotateCw />
+        </ToolbarIconPlaceholder>
+        <Separator orientation="vertical" className="mx-1 h-4" />
+        <ToolbarIconPlaceholder>
+          <Download />
+        </ToolbarIconPlaceholder>
+      </div>
+    </div>
+  )
+}
+
+function ToolbarIconPlaceholder({ children }: { children: React.ReactNode }) {
+  return (
+    <Button
+      variant="ghost"
+      size="icon-sm"
+      className="size-7"
+      disabled
+      tabIndex={-1}
+      aria-hidden
+    >
+      {children}
+    </Button>
+  )
+}
+
+// A slide-shaped skeleton stands in for the deck before any slide is measured
+// (the SSR fallback and the deck-load suspense). 4:3 is OOXML's default slide
+// (DEFAULT_SLIDE); `w-full` inside the p-4 container equals the fit-width slide
+// width, so the block matches the slide that replaces it.
+function PptxSlideSkeleton() {
+  return (
+    <Skeleton aria-hidden className="w-full" style={{ aspectRatio: "4 / 3" }} />
   )
 }
 

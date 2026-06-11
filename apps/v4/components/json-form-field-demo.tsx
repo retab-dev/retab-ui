@@ -7,8 +7,8 @@ import type { JSONSchema7 } from "json-schema"
 import { JsonForm } from "@/components/json-form-field/json-form-field"
 import { Button } from "@/components/uiform/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import sampleSchema from "@/components/json-table/sample/schema.json"
-import sampleData from "@/components/json-table/sample/data.json"
+import sampleSchema from "@/components/json-form-field/sample/schema.json"
+import sampleData from "@/components/json-form-field/sample/data.json"
 
 /** Drop Retab's `X-*` schema extensions so the form renders no extra controls. */
 function stripExtensions(node: unknown): unknown {

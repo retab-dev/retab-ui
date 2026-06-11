@@ -1,0 +1,100 @@
+---
+title: Step Waterfall
+description: A run's per-step timing as a horizontal waterfall — each step a bar positioned by its start offset and sized by its duration along a shared time axis, with expandable loop containers and a slowest-step callout.
+---
+
+Where the [Run Timeline](/docs/workflows/run-timeline) answers "what ran and what
+did it return," the Step Waterfall answers "where did the time go." Each step is a
+horizontal bar positioned by its **start offset** and sized by its **duration**
+along a shared time axis, so you can see at a glance which steps ran when and
+which one dominated the run.
+
+<StepWaterfallDemo />
+
+Loop blocks (`for_each`, `while_loop`) render as expandable container rows with
+their iterations nested beneath; hover a bar to see its type, duration, offset and
+status; the footer calls out the slowest step.
+
+## Usage
+
+Pass a `run` with each step's `startOffsetMs` and `durationMs` (offsets relative
+to the start of the run). `totalDurationMs` is computed from the steps when
+omitted. Everything is presentation only.
+
+```tsx
+import { StepWaterfall } from "@/registry/new-york-v4/blocks/step-waterfall-block"
+
+export function Example() {
+  return (
+    <div className="h-[420px] overflow-hidden rounded-xl border">
+      <StepWaterfall
+        run={{
+          steps: [
+            { id: "parse", label: "Parse PDF", blockType: "parse", status: "completed", startOffsetMs: 0, durationMs: 920 },
+            {
+              id: "pages",
+              label: "For each page",
+              blockType: "for_each",
+              status: "completed",
+              startOffsetMs: 930,
+              durationMs: 3800,
+              container: true,
+              children: [
+                { id: "p1", label: "Extract · page 1", blockType: "extract", status: "completed", startOffsetMs: 930, durationMs: 1800 },
+                { id: "p2", label: "Extract · page 2", blockType: "extract", status: "completed", startOffsetMs: 2730, durationMs: 2000 },
+              ],
+            },
+          ],
+        }}
+      />
+    </div>
+  )
+}
+```
+
+### Deriving offsets from timestamps
+
+If your steps carry `started_at` / `completed_at`, compute the inputs against the
+earliest start:
+
+```ts
+const runStart = Math.min(...steps.map((s) => +new Date(s.started_at)))
+
+const waterfallSteps = steps.map((s) => ({
+  id: s.id,
+  label: s.label,
+  blockType: s.block_type,
+  status: s.status,
+  startOffsetMs: +new Date(s.started_at) - runStart,
+  durationMs: +new Date(s.completed_at) - +new Date(s.started_at),
+}))
+```
+
+## API
+
+### `WaterfallRun`
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `steps` | `WaterfallStep[]` | The steps, in display order. |
+| `totalDurationMs` | `number` | The time axis span. Computed from the latest step end when omitted. |
+
+### `WaterfallStep`
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `id` | `string` | Stable key. |
+| `label` | `string` | The step's name, shown in the label column and tooltip. |
+| `blockType` | `string` | Drives the row icon (`parse`, `extract`, `api_call`, `for_each`, …). |
+| `status` | `"completed" \| "running" \| "error" \| "skipped" \| "pending" \| "awaiting_review"` | Drives the bar color. |
+| `startOffsetMs` | `number` | Offset from the start of the run. |
+| `durationMs` | `number` | Length of the bar. A 0.5% minimum keeps tiny steps visible. |
+| `container` | `boolean` | Render as an expandable loop row. |
+| `children` | `WaterfallStep[]` | Nested iterations / sub-steps, shown indented when expanded. |
+
+### Components
+
+| Export | Props | Description |
+| --- | --- | --- |
+| `StepWaterfall` | `{ run: WaterfallRun }` | The full waterfall with time axis and slowest-step footer. |
+| `StepWaterfallBlock` | `{ run?: WaterfallRun }` | The waterfall preloaded with a sample run; pass `run` to override. |

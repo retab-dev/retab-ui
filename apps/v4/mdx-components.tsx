@@ -40,6 +40,7 @@ import {
   ClassificationViewerDemo,
   EditViewerDemo,
   ExtractViewerDemo,
+  JsonFormSourcesDemo,
   ParseViewerDemo,
   PartitionViewerDemo,
   SplitViewerDemo,
@@ -47,6 +48,12 @@ import {
 import { SegmentedViewerDemo } from "@/components/segmented-viewer-demo"
 import { FileThumbnailDemo } from "@/components/file-thumbnail-demo"
 import { FileThumbnailFormatsDemo } from "@/components/file-thumbnail-formats-demo"
+import { ApiCallDemo } from "@/components/api-call-demo"
+import { FunctionBlockDemo } from "@/components/function-block-demo"
+import { ConditionalBlockDemo } from "@/components/conditional-block-demo"
+import { RunTimelineDemo } from "@/components/run-timeline-demo"
+import { StepWaterfallDemo } from "@/components/step-waterfall-demo"
+import { SplitConsensusDemo } from "@/components/split-consensus-demo"
 import { ComponentSource } from "@/components/component-source"
 
 export const mdxComponents = {
@@ -364,6 +371,7 @@ export const mdxComponents = {
   JsonTableDemo,
   ParseViewerDemo,
   ExtractViewerDemo,
+  JsonFormSourcesDemo,
   ClassificationViewerDemo,
   PartitionViewerDemo,
   SplitViewerDemo,
@@ -371,6 +379,12 @@ export const mdxComponents = {
   SegmentedViewerDemo,
   FileThumbnailDemo,
   FileThumbnailFormatsDemo,
+  ApiCallDemo,
+  FunctionBlockDemo,
+  ConditionalBlockDemo,
+  RunTimelineDemo,
+  StepWaterfallDemo,
+  SplitConsensusDemo,
   Link: ({ className, ...props }: React.ComponentProps<typeof Link>) => (
     <Link
       className={cn("font-medium underline underline-offset-4", className)}

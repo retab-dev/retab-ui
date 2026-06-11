@@ -1,0 +1,65 @@
+[
+  {
+    "key": "runId",
+    "label": "Run ID",
+    "value": "run_3xK9b2QvT7",
+    "source": {
+      "content": "run_id=run_3xK9b2QvT7",
+      "anchor": { "kind": "text_span", "line_start": 2, "line_end": 2 }
+    }
+  },
+  {
+    "key": "documentType",
+    "label": "Document type",
+    "value": "bank_statement",
+    "source": {
+      "content": "detected document_type=bank_statement",
+      "anchor": { "kind": "text_span", "line_start": 7, "line_end": 7 }
+    }
+  },
+  {
+    "key": "pageCount",
+    "label": "Page count",
+    "value": "4",
+    "source": {
+      "content": "page_count=4",
+      "anchor": { "kind": "text_span", "line_start": 9, "line_end": 9 }
+    }
+  },
+  {
+    "key": "model",
+    "label": "Extraction model",
+    "value": "retab-large",
+    "source": {
+      "content": "model=retab-large n_consensus=3",
+      "anchor": { "kind": "text_span", "line_start": 16, "line_end": 16 }
+    }
+  },
+  {
+    "key": "meanLikelihood",
+    "label": "Mean likelihood",
+    "value": "0.91",
+    "source": {
+      "content": "merged 3 runs, mean_likelihood=0.91",
+      "anchor": { "kind": "text_span", "line_start": 21, "line_end": 21 }
+    }
+  },
+  {
+    "key": "totalTokens",
+    "label": "Total tokens",
+    "value": "16,930",
+    "source": {
+      "content": "total_tokens=16930",
+      "anchor": { "kind": "text_span", "line_start": 32, "line_end": 32 }
+    }
+  },
+  {
+    "key": "durationMs",
+    "label": "Duration",
+    "value": "11,842 ms",
+    "source": {
+      "content": "duration_ms=11842",
+      "anchor": { "kind": "text_span", "line_start": 34, "line_end": 34 }
+    }
+  }
+]

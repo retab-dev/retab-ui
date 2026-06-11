@@ -1,69 +1,94 @@
 {
-    "_id": {
-      "$oid": "69ebbb14c2400812bf56bb3c"
-    },
-    "organization_id": "org_01JH30M17Y8EZVXE8ABXXG0G3J",
-    "id": "prtn_2PuXc0rnprsWxJyhEFXqM",
+    "id": "prtn_8Qd2rXmpLkVwt0aZcN4bJ",
     "consensus": {
       "choices": [],
       "likelihoods": []
     },
-    "created_at": {
-      "$date": "2026-04-24T18:48:26.490Z"
-    },
     "file": {
-      "id": "file_K0D3fCGtzChgGS1-rk7lD",
-      "filename": "tapstone.pdf",
+      "id": "file_attention_is_all_you_need",
+      "filename": "attention.pdf",
       "mime_type": "application/pdf"
     },
-    "instructions": "unique identifier of a property",
-    "key": "property id",
+    "instructions": "top-level section of the paper",
+    "key": "section",
     "model": "retab-micro",
     "n_consensus": 1,
     "output": [
       {
-        "key": "10*310365",
-        "pages": [
-          1,
-          2
-        ]
-      },
-      {
-        "key": "10*310146",
+        "key": "abstract",
         "pages": [
           1
         ]
       },
       {
-        "key": "10*315811",
+        "key": "introduction",
         "pages": [
           2
         ]
       },
       {
-        "key": "10*315944",
+        "key": "background",
+        "pages": [
+          2
+        ]
+      },
+      {
+        "key": "model_architecture",
         "pages": [
           2,
-          3
-        ]
-      },
-      {
-        "key": "10*315945",
-        "pages": [
-          3
-        ]
-      },
-      {
-        "key": "10*SB1048",
-        "pages": [
           3,
-          4
+          4,
+          5,
+          6
+        ]
+      },
+      {
+        "key": "why_self_attention",
+        "pages": [
+          6,
+          7
+        ]
+      },
+      {
+        "key": "training",
+        "pages": [
+          7,
+          8
+        ]
+      },
+      {
+        "key": "results",
+        "pages": [
+          8,
+          9,
+          10
+        ]
+      },
+      {
+        "key": "conclusion",
+        "pages": [
+          10
+        ]
+      },
+      {
+        "key": "references",
+        "pages": [
+          10,
+          11,
+          12
+        ]
+      },
+      {
+        "key": "attention_visualizations",
+        "pages": [
+          13,
+          14,
+          15
         ]
       }
     ],
     "usage": {
-      "credits": 4
+      "credits": 6
     },
-    "environment_id": "env_1NsPAkHUQgh0lFO3sJH9R",
     "status": "completed"
-  }
+}

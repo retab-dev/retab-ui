@@ -262,10 +262,16 @@ const ParsePage = React.memo(function ParsePage({
       ref={wrapperRef}
       data-slot="parse-page"
       data-page-number={index + 1}
-      className="relative w-full max-w-3xl bg-card px-12 py-9 shadow-sm ring-1 ring-border"
-      // Reserve the page's footprint only while its content is unmounted, so the
-      // scrollbar is right and re-entry doesn't jump.
-      style={inView ? undefined : { height: reserved }}
+      className="relative w-full max-w-3xl bg-card shadow-sm ring-1 ring-border"
+      // Padding is set inline (not via a Tailwind class) so it always applies,
+      // even if the utility wasn't emitted into the stylesheet. Reserve the
+      // page's footprint only while its content is unmounted, so the scrollbar
+      // is right and re-entry doesn't jump.
+      style={{
+        paddingInline: "2.25rem",
+        paddingBlock: "1.75rem",
+        ...(inView ? null : { height: reserved }),
+      }}
     >
       {inView ? (
         mode === "rendered" ? (

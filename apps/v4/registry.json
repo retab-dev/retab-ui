@@ -490,7 +490,7 @@
       "name": "spinner",
       "type": "registry:ui",
       "title": "Spinner",
-      "description": "A compact loading spinner using Hugeicons.",
+      "description": "A compact loading spinner using Lucide.",
       "dependencies": [
         "lucide-react"
       ],
@@ -714,7 +714,7 @@
         "utils",
         "button",
         "separator",
-        "spinner"
+        "skeleton"
       ],
       "files": [
         {
@@ -737,18 +737,19 @@
       "dependencies": [
         "lucide-react",
         "marked@18.0.5",
-        "@tanstack/react-virtual@^3.13.12"
+        "@tanstack/react-virtual@^3.13.12",
+        "prismjs@^1.30.0"
       ],
       "registryDependencies": [
         "utils",
         "button",
-        "spinner",
         "pdf-viewer",
         "docx-viewer",
         "image-viewer",
         "pptx-viewer",
         "xlsx-viewer",
-        "csv-viewer"
+        "csv-viewer",
+        "skeleton"
       ],
       "files": [
         {
@@ -762,12 +763,46 @@
       "name": "document-source",
       "type": "registry:lib",
       "title": "Document source model",
-      "description": "Viewer-agnostic model for source citations (provenance of extracted values): SourceCitation/SourceArea/SourceLocation types + polygon→percentage normalization shared across viewers.",
+      "description": "Viewer-agnostic model for extraction sources (the Retab /v1/extractions/{id}/sources shape): SourceAnchor union (pdf_bbox, image_bbox, spreadsheet/csv cell, docx/text span), Source, ExtractionSourcesResponse, and extractionSourcesToSourceMap to flatten the sources tree into a path-keyed SourceMap.",
       "files": [
         {
           "path": "registry/new-york-v4/lib/document-source.ts",
           "type": "registry:lib",
           "target": "@lib/document-source.ts"
+        }
+      ]
+    },
+    {
+      "name": "use-source-link",
+      "type": "registry:hook",
+      "title": "useSourceLink",
+      "description": "Generic, viewer-agnostic mediator linking a field emitter (json-form, a field list) to a document viewer: owns the hover-vs-pin state machine, resolves the active field to a location via an injected SourceTarget, and drives the viewer's scroll. Unidirectional.",
+      "registryDependencies": [
+        "document-source"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/hooks/use-source-link.ts",
+          "type": "registry:hook",
+          "target": "@hooks/use-source-link.ts"
+        }
+      ]
+    },
+    {
+      "name": "pdf-source",
+      "type": "registry:ui",
+      "title": "PDF source adapter",
+      "description": "Bridges the document-source model to the PDF viewer: pdfAnchorToLocation (normalized bbox → page %), usePdfSourceTarget (a SourceTarget over a PdfViewer ref), and renderPdfSourceOverlay (draws a PdfHighlight on the active source's page).",
+      "registryDependencies": [
+        "pdf-viewer",
+        "document-source",
+        "use-source-link"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/pdf-source.tsx",
+          "type": "registry:ui",
+          "target": "@ui/pdf-source.tsx"
         }
       ]
     },
@@ -1028,12 +1063,11 @@
       "name": "extract-viewer-block",
       "type": "registry:block",
       "title": "Extract Viewer",
-      "description": "Extracted fields beside the source PDF, linked by their sources — hover or select a field to highlight where its value came from and scroll the page to it.",
-      "dependencies": [
-        "lucide-react"
-      ],
+      "description": "Extracted fields beside the source PDF, linked by their sources — hover or select a field to highlight where its value came from and scroll the page to it. Built on useSourceLink + the PDF source adapter.",
       "registryDependencies": [
         "pdf-viewer",
+        "pdf-source",
+        "use-source-link",
         "document-source",
         "scroll-area",
         "utils"
@@ -1048,6 +1082,37 @@
           "path": "components/viewers/sample-data/extract.json",
           "type": "registry:file",
           "target": "@components/viewers/sample-data/extract.json"
+        }
+      ],
+      "categories": [
+        "primitives"
+      ]
+    },
+    {
+      "name": "json-form-sources-block",
+      "type": "registry:block",
+      "title": "JSON Form Sources",
+      "description": "Extraction rendered as a JSON form beside the source PDF — hover a form field to highlight where its value came from. Composes json-form and the PDF viewer through useSourceLink; data is the Retab /v1/extractions/{id}/sources response.",
+      "dependencies": [
+        "react-hook-form"
+      ],
+      "registryDependencies": [
+        "pdf-viewer",
+        "pdf-source",
+        "use-source-link",
+        "document-source",
+        "scroll-area"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/blocks/json-form-sources-block.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/json-form-sources-block.tsx"
+        },
+        {
+          "path": "components/viewers/sample-data/json-form-sources.json",
+          "type": "registry:file",
+          "target": "@components/viewers/sample-data/json-form-sources.json"
         }
       ],
       "categories": [
@@ -1130,6 +1195,146 @@
           "type": "registry:ui",
           "target": "@ui/pdf-thumbnail-sidebar.tsx"
         }
+      ]
+    },
+    {
+      "name": "api-call-block",
+      "type": "registry:block",
+      "title": "API Call",
+      "description": "Inspect a single HTTP exchange — method, URL and status up top, with the request and response shown side by side, each with a Body and Headers tab.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "tabs",
+        "scroll-area",
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/blocks/api-call-block.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/api-call-block.tsx"
+        }
+      ],
+      "categories": [
+        "workflows"
+      ]
+    },
+    {
+      "name": "function-block",
+      "type": "registry:block",
+      "title": "Function",
+      "description": "Inspect a single function execution — a success/error badge and duration up top, with tabs for the input it received, the output it returned, the console (stdout, stderr, traceback) and the code that ran.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "tabs",
+        "scroll-area",
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/blocks/function-block.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/function-block.tsx"
+        }
+      ],
+      "categories": [
+        "workflows"
+      ]
+    },
+    {
+      "name": "conditional-block",
+      "type": "registry:block",
+      "title": "If / Else",
+      "description": "A breakdown table for a conditional routing step — every branch and its verdict up top, then a per-branch breakdown of each comparison (field, operator, expected, actual, result) with the taken branch highlighted.",
+      "registryDependencies": [
+        "scroll-area",
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/blocks/conditional-block.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/conditional-block.tsx"
+        }
+      ],
+      "categories": [
+        "workflows"
+      ]
+    },
+    {
+      "name": "run-timeline-block",
+      "type": "registry:block",
+      "title": "Run Timeline",
+      "description": "A workflow run rendered as a vertical list of its steps — block type, status and duration — beside a detail panel that shows the selected step's inspector. Composes the API Call, Function and If / Else inspectors.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "scroll-area",
+        "utils",
+        "api-call-block",
+        "function-block",
+        "conditional-block"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/blocks/run-timeline-block.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/run-timeline-block.tsx"
+        }
+      ],
+      "categories": [
+        "workflows"
+      ]
+    },
+    {
+      "name": "step-waterfall-block",
+      "type": "registry:block",
+      "title": "Step Waterfall",
+      "description": "A run's per-step timing as a horizontal waterfall — each step a bar positioned by its start offset and sized by its duration along a shared time axis, with expandable loop containers and a slowest-step callout.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "scroll-area",
+        "tooltip",
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/blocks/step-waterfall-block.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/step-waterfall-block.tsx"
+        }
+      ],
+      "categories": [
+        "workflows"
+      ]
+    },
+    {
+      "name": "split-consensus-block",
+      "type": "registry:block",
+      "title": "Split Consensus",
+      "description": "A page-axis waterfall comparing how several voters split a document into typed subdocuments against the reconciled consensus — boundary and type disagreements line up across lanes, with a per-page agreement heat strip and the contested ranges called out as chips.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/blocks/split-consensus-block.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/split-consensus-block.tsx"
+        }
+      ],
+      "categories": [
+        "consensus"
       ]
     }
   ]

@@ -1,282 +1,98 @@
 [
   {
-    "key": "checkNumber",
-    "label": "Check number",
-    "value": "337138",
-    "citation": {
-      "page": 1,
-      "pageWidth": 792.0,
-      "pageHeight": 612.0,
-      "polygon": [
-        {
-          "x": 742.5,
-          "y": 93.1
-        },
-        {
-          "x": 769.4,
-          "y": 93.1
-        },
-        {
-          "x": 769.4,
-          "y": 104.1
-        },
-        {
-          "x": 742.5,
-          "y": 104.1
-        }
-      ]
+    "key": "accountNumber",
+    "label": "Account number",
+    "value": "000000710753986",
+    "source": {
+      "content": "000000710753986",
+      "anchor": {
+        "kind": "pdf_bbox",
+        "page": 1,
+        "left": 0.7026,
+        "top": 0.073,
+        "width": 0.1412,
+        "height": 0.0164
+      }
     }
   },
   {
-    "key": "checkDate",
-    "label": "Check date",
-    "value": "March 31, 2021",
-    "citation": {
-      "page": 1,
-      "pageWidth": 792.0,
-      "pageHeight": 612.0,
-      "polygon": [
-        {
-          "x": 716.5,
-          "y": 117.1
-        },
-        {
-          "x": 769.2,
-          "y": 117.1
-        },
-        {
-          "x": 769.2,
-          "y": 128.1
-        },
-        {
-          "x": 716.5,
-          "y": 128.1
-        }
-      ]
+    "key": "statementPeriod",
+    "label": "Statement period",
+    "value": "Oct 1 \u2013 Oct 31, 2021",
+    "source": {
+      "content": "October 01, 2021 through October 31, 2021",
+      "anchor": {
+        "kind": "pdf_bbox",
+        "page": 1,
+        "left": 0.5902,
+        "top": 0.0589,
+        "width": 0.2509,
+        "height": 0.0136
+      }
     }
   },
   {
-    "key": "checkAmount",
-    "label": "Check amount",
-    "value": "$113.11",
-    "citation": {
-      "page": 1,
-      "pageWidth": 792.0,
-      "pageHeight": 612.0,
-      "polygon": [
-        {
-          "x": 745.6,
-          "y": 105.1
-        },
-        {
-          "x": 769.4,
-          "y": 105.1
-        },
-        {
-          "x": 769.4,
-          "y": 116.1
-        },
-        {
-          "x": 745.6,
-          "y": 116.1
-        }
-      ]
+    "key": "magicjack",
+    "label": "Magicjack purchase",
+    "value": "$20.91",
+    "source": {
+      "content": "$20.91",
+      "anchor": {
+        "kind": "pdf_bbox",
+        "page": 1,
+        "left": 0.8217,
+        "top": 0.1657,
+        "width": 0.0499,
+        "height": 0.0152
+      }
     }
   },
   {
-    "key": "ownerName",
-    "label": "Owner",
-    "value": "L3 RESOURCES LLC",
-    "citation": {
-      "page": 1,
-      "pageWidth": 792.0,
-      "pageHeight": 612.0,
-      "polygon": [
-        {
-          "x": 22.5,
-          "y": 102.3
-        },
-        {
-          "x": 95.8,
-          "y": 102.3
-        },
-        {
-          "x": 95.8,
-          "y": 113.3
-        },
-        {
-          "x": 22.5,
-          "y": 113.3
-        }
-      ]
+    "key": "sprint",
+    "label": "Sprint Wireless",
+    "value": "$453.46",
+    "source": {
+      "content": "453.46",
+      "anchor": {
+        "kind": "pdf_bbox",
+        "page": 1,
+        "left": 0.8217,
+        "top": 0.1991,
+        "width": 0.0499,
+        "height": 0.0152
+      }
     }
   },
   {
-    "key": "ownerNumber",
-    "label": "Owner number",
-    "value": "33076",
-    "citation": {
-      "page": 1,
-      "pageWidth": 792.0,
-      "pageHeight": 612.0,
-      "polygon": [
-        {
-          "x": 22.5,
-          "y": 93.1
-        },
-        {
-          "x": 45.4,
-          "y": 93.1
-        },
-        {
-          "x": 45.4,
-          "y": 104.1
-        },
-        {
-          "x": 22.5,
-          "y": 104.1
-        }
-      ]
+    "key": "atmWithdrawal",
+    "label": "Non-Chase ATM withdrawal",
+    "value": "$303.00",
+    "source": {
+      "content": "303.00",
+      "anchor": {
+        "kind": "pdf_bbox",
+        "page": 1,
+        "left": 0.8217,
+        "top": 0.2324,
+        "width": 0.0499,
+        "height": 0.0152
+      }
     }
   },
   {
-    "key": "operatorName",
-    "label": "Operator",
-    "value": "TAPSTONE ENERGY, LLC",
-    "citation": {
-      "page": 1,
-      "pageWidth": 792.0,
-      "pageHeight": 612.0,
-      "polygon": [
-        {
-          "x": 280.5,
-          "y": 102.3
-        },
-        {
-          "x": 370.5,
-          "y": 102.3
-        },
-        {
-          "x": 370.5,
-          "y": 113.3
-        },
-        {
-          "x": 280.5,
-          "y": 113.3
-        }
-      ]
-    }
-  },
-  {
-    "key": "operatorAddress",
-    "label": "Operator address",
-    "value": "P.O. BOX 1608",
-    "citation": {
-      "page": 1,
-      "pageWidth": 792.0,
-      "pageHeight": 612.0,
-      "polygon": [
-        {
-          "x": 280.5,
-          "y": 111.6
-        },
-        {
-          "x": 332.8,
-          "y": 111.6
-        },
-        {
-          "x": 332.8,
-          "y": 122.6
-        },
-        {
-          "x": 280.5,
-          "y": 122.6
-        }
-      ]
-    }
-  },
-  {
-    "key": "propertyName",
-    "label": "Property",
-    "value": "DARLENE 28-18-6 1H OK KINGFISHER",
-    "citation": {
-      "page": 2,
-      "pageWidth": 792.0,
-      "pageHeight": 612.0,
-      "polygon": [
-        {
-          "x": 239.3,
-          "y": 268.8
-        },
-        {
-          "x": 369.7,
-          "y": 268.8
-        },
-        {
-          "x": 369.7,
-          "y": 279.6
-        },
-        {
-          "x": 239.3,
-          "y": 279.6
-        }
-      ]
-    }
-  },
-  {
-    "key": "propertyId",
-    "label": "Property ID",
-    "value": "10*315811",
-    "citation": {
-      "page": 2,
-      "pageWidth": 792.0,
-      "pageHeight": 612.0,
-      "polygon": [
-        {
-          "x": 82.5,
-          "y": 268.8
-        },
-        {
-          "x": 118.8,
-          "y": 268.8
-        },
-        {
-          "x": 118.8,
-          "y": 279.6
-        },
-        {
-          "x": 82.5,
-          "y": 279.6
-        }
-      ]
-    }
-  },
-  {
-    "key": "gasVolume",
-    "label": "Gas volume (Jan 21)",
-    "value": "6,778.03",
-    "citation": {
-      "page": 2,
-      "pageWidth": 792.0,
-      "pageHeight": 612.0,
-      "polygon": [
-        {
-          "x": 517.5,
-          "y": 297.0
-        },
-        {
-          "x": 548.3,
-          "y": 297.0
-        },
-        {
-          "x": 548.3,
-          "y": 308.0
-        },
-        {
-          "x": 517.5,
-          "y": 308.0
-        }
-      ]
+    "key": "hostgator",
+    "label": "Hostgator.com",
+    "value": "$97.50",
+    "source": {
+      "content": "97.50",
+      "anchor": {
+        "kind": "pdf_bbox",
+        "page": 1,
+        "left": 0.8301,
+        "top": 0.2491,
+        "width": 0.0417,
+        "height": 0.0152
+      }
     }
   }
 ]

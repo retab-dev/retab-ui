@@ -1,0 +1,328 @@
+{
+  "object": "extraction.sources",
+  "document_type": "pdf",
+  "file": {
+    "id": "file_bank_statement_oct_2021",
+    "filename": "bank-statement.pdf",
+    "mime_type": "application/pdf"
+  },
+  "schema": {
+    "type": "object",
+    "title": "Bank statement",
+    "properties": {
+      "account_number": {
+        "type": "string",
+        "description": "Account number"
+      },
+      "statement_period": {
+        "type": "string",
+        "description": "Statement period"
+      },
+      "transactions": {
+        "type": "array",
+        "title": "Transactions",
+        "items": {
+          "type": "object",
+          "properties": {
+            "date": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "amount": {
+              "type": "number"
+            }
+          }
+        }
+      }
+    },
+    "required": [
+      "account_number",
+      "statement_period"
+    ]
+  },
+  "extraction": {
+    "account_number": "000000710753986",
+    "statement_period": "October 01, 2021 through October 31, 2021",
+    "transactions": [
+      {
+        "date": "10/01",
+        "description": "Sprint Wireless",
+        "amount": 453.46
+      },
+      {
+        "date": "10/04",
+        "description": "Buchwald Jewelers",
+        "amount": 2000.0
+      },
+      {
+        "date": "10/05",
+        "description": "Costco Wholesale",
+        "amount": 275.0
+      },
+      {
+        "date": "10/06",
+        "description": "Padron Cigars",
+        "amount": 419.01
+      },
+      {
+        "date": "10/06",
+        "description": "Bass Pro Shops",
+        "amount": 331.57
+      }
+    ]
+  },
+  "sources": {
+    "account_number": {
+      "value": "000000710753986",
+      "source": {
+        "content": "000000710753986",
+        "anchor": {
+          "kind": "pdf_bbox",
+          "page": 1,
+          "left": 0.7051,
+          "top": 0.0749,
+          "width": 0.1363,
+          "height": 0.0126
+        }
+      }
+    },
+    "statement_period": {
+      "value": "October 01, 2021 through October 31, 2021",
+      "source": {
+        "content": "October 01, 2021 through October 31, 2021",
+        "anchor": {
+          "kind": "pdf_bbox",
+          "page": 1,
+          "left": 0.5926,
+          "top": 0.0608,
+          "width": 0.246,
+          "height": 0.0098
+        }
+      }
+    },
+    "transactions": [
+      {
+        "date": {
+          "value": "10/01",
+          "source": {
+            "content": "10 01",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.0549,
+              "top": 0.201,
+              "width": 0.0368,
+              "height": 0.0114
+            }
+          }
+        },
+        "description": {
+          "value": "Sprint Wireless",
+          "source": {
+            "content": "Sprint",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.3334,
+              "top": 0.201,
+              "width": 0.0384,
+              "height": 0.0114
+            }
+          }
+        },
+        "amount": {
+          "value": 453.46,
+          "source": {
+            "content": "453.46",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.8242,
+              "top": 0.201,
+              "width": 0.045,
+              "height": 0.0114
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "10/04",
+          "source": {
+            "content": "10 04",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.0549,
+              "top": 0.451,
+              "width": 0.0368,
+              "height": 0.0114
+            }
+          }
+        },
+        "description": {
+          "value": "Buchwald Jewelers",
+          "source": {
+            "content": "Buchwald",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.3204,
+              "top": 0.451,
+              "width": 0.0638,
+              "height": 0.0114
+            }
+          }
+        },
+        "amount": {
+          "value": 2000.0,
+          "source": {
+            "content": "2,000.00",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.8118,
+              "top": 0.451,
+              "width": 0.0572,
+              "height": 0.0114
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "10/05",
+          "source": {
+            "content": "10 05",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.0549,
+              "top": 0.6676,
+              "width": 0.0368,
+              "height": 0.0114
+            }
+          }
+        },
+        "description": {
+          "value": "Costco Wholesale",
+          "source": {
+            "content": "Costco",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.3204,
+              "top": 0.6676,
+              "width": 0.0458,
+              "height": 0.0114
+            }
+          }
+        },
+        "amount": {
+          "value": 275.0,
+          "source": {
+            "content": "275.00",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.8242,
+              "top": 0.6676,
+              "width": 0.045,
+              "height": 0.0114
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "10/06",
+          "source": {
+            "content": "10 06",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.0549,
+              "top": 0.6843,
+              "width": 0.0368,
+              "height": 0.0114
+            }
+          }
+        },
+        "description": {
+          "value": "Padron Cigars",
+          "source": {
+            "content": "Padron",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.3334,
+              "top": 0.6843,
+              "width": 0.0474,
+              "height": 0.0114
+            }
+          }
+        },
+        "amount": {
+          "value": 419.01,
+          "source": {
+            "content": "419.01",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.8242,
+              "top": 0.6843,
+              "width": 0.045,
+              "height": 0.0114
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "10/06",
+          "source": {
+            "content": "10 06",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.0549,
+              "top": 0.751,
+              "width": 0.0368,
+              "height": 0.0114
+            }
+          }
+        },
+        "description": {
+          "value": "Bass Pro Shops",
+          "source": {
+            "content": "Bass",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.2983,
+              "top": 0.751,
+              "width": 0.0327,
+              "height": 0.0114
+            }
+          }
+        },
+        "amount": {
+          "value": 331.57,
+          "source": {
+            "content": "331.57",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.8242,
+              "top": 0.751,
+              "width": 0.045,
+              "height": 0.0114
+            }
+          }
+        }
+      }
+    ]
+  }
+}

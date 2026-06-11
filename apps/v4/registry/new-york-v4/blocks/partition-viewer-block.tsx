@@ -4,16 +4,17 @@ import type { PartitionResult } from "@/components/viewers/lib/partition-types"
 import { PartitionViewer } from "@/components/viewers/partition/partition-viewer"
 import { PdfViewer } from "@/components/ui/pdf-viewer"
 
-const PDF_URL = "/samples/tapstone.pdf"
+const PDF_URL = "/samples/attention.pdf"
 
 // A partition result: keyed chunks, each owning a set of 1-indexed pages.
 const PARTITION_RESULT: PartitionResult = {
   output: [
-    { key: "header", pages: [1] },
-    { key: "owner_operator", pages: [1] },
-    { key: "production_table", pages: [1, 2, 3] },
-    { key: "totals", pages: [3, 4] },
-    { key: "footer", pages: [4] },
+    { key: "abstract", pages: [1] },
+    { key: "introduction", pages: [2] },
+    { key: "model_architecture", pages: [2, 3, 4, 5, 6] },
+    { key: "training", pages: [7, 8] },
+    { key: "results", pages: [8, 9, 10] },
+    { key: "references", pages: [10, 11, 12] },
   ],
   consensus: { choices: [], likelihoods: null },
   usage: null,
@@ -33,7 +34,7 @@ export function PartitionViewerBlock() {
           <PdfViewer
             src={PDF_URL}
             bare
-            downloadFileName="tapstone.pdf"
+            downloadFileName="attention.pdf"
             header={handlers.header}
             onVisiblePageChange={handlers.onCurrentPageChange}
             onScrollProgressChange={handlers.onScrollProgressChange}

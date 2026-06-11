@@ -9,7 +9,7 @@ import {
 } from "react-hook-form"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import type { JSONSchema7, JSONSchema7Definition } from "json-schema"
-import { ChevronRight, Info, Plus, Trash2 } from "lucide-react"
+import { ChevronRight, Plus, Trash2 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/uiform/ui/button"
@@ -271,9 +271,10 @@ export function JsonFormField({
                 onCheckedChange={field.onChange}
               />
             </FormControl>
-            <div className="flex items-center gap-1.5 leading-none">
-              <FormLabel>{heading}</FormLabel>
-              <DescriptionHint text={schema.description} />
+            <div className="leading-none">
+              <WithDescription text={schema.description}>
+                <FormLabel>{heading}</FormLabel>
+              </WithDescription>
             </div>
             <FormMessage />
           </FormItem>
@@ -287,15 +288,14 @@ export function JsonFormField({
       name={name}
       render={({ field }) => (
         <FormItem className={className}>
-          <div className="flex items-center gap-1.5">
+          <WithDescription text={schema.description}>
             <FormLabel>
               {heading}
               {required ? (
                 <span className="text-destructive"> *</span>
               ) : null}
             </FormLabel>
-            <DescriptionHint text={schema.description} />
-          </div>
+          </WithDescription>
           <FormControl>
             <ScalarControl kind={kind} schema={schema} field={field} />
           </FormControl>
@@ -307,28 +307,26 @@ export function JsonFormField({
 }
 
 // ---------------------------------------------------------------------------
-// Description hint — keeps long field descriptions out of the layout flow
+// Description tooltip — keeps long field descriptions out of the layout flow
 // ---------------------------------------------------------------------------
 
 /**
- * Renders a field's `description` as a hover tooltip on a small info icon rather
- * than a block of body text, so long guidance (e.g. multi-sentence extraction
- * prompts) doesn't blow up row height in deep documents.
+ * Wraps a label element so a field's `description` shows as a hover tooltip on
+ * the label itself, rather than a block of body text — so long guidance (e.g.
+ * multi-sentence extraction prompts) doesn't blow up row height in deep
+ * documents. The label looks unchanged; with no description it renders untouched.
  */
-function DescriptionHint({ text }: { text?: string }) {
-  if (!text) return null
+function WithDescription({
+  text,
+  children,
+}: {
+  text?: string
+  children: React.ReactElement
+}) {
+  if (!text) return children
   return (
     <Tooltip>
-      <TooltipTrigger asChild>
-        <button
-          type="button"
-          tabIndex={-1}
-          aria-label="Field description"
-          className="text-muted-foreground/60 transition-colors hover:text-foreground"
-        >
-          <Info className="size-3.5" />
-        </button>
-      </TooltipTrigger>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
       <TooltipContent className="max-w-xs whitespace-pre-line text-left">
         {text}
       </TooltipContent>
@@ -468,14 +466,15 @@ function DisclosureHeader({
             open && "rotate-90"
           )}
         />
-        <span className="truncate text-sm font-medium">{title}</span>
+        <WithDescription text={description}>
+          <span className="truncate text-sm font-medium">{title}</span>
+        </WithDescription>
         {summary ? (
           <span className="shrink-0 text-xs text-muted-foreground">
             {summary}
           </span>
         ) : null}
       </button>
-      <DescriptionHint text={description} />
       {actions}
     </div>
   )
@@ -750,13 +749,12 @@ function ArrayTable({
               key={col.key}
               className="flex min-w-0 items-center gap-1 text-xs font-medium text-muted-foreground"
             >
-              <span className="truncate" title={labelFor(col.key, col.schema)}>
-                {labelFor(col.key, col.schema)}
-              </span>
+              <WithDescription text={col.schema.description}>
+                <span className="truncate">{labelFor(col.key, col.schema)}</span>
+              </WithDescription>
               {col.required ? (
                 <span className="text-destructive">*</span>
               ) : null}
-              <DescriptionHint text={col.schema.description} />
             </div>
           ))}
           <span className="sr-only">Actions</span>

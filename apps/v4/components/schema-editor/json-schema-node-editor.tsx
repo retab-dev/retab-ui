@@ -536,7 +536,7 @@ export function SchemaNodeEditor({
           <div className="flex min-w-0 flex-1 items-center space-x-2">
             {isEditingPropertyName && isEditable ? (
               <Input
-                className={`m-0 h-6 w-40 border-none p-0 px-1 shadow-none outline-none focus-visible:ring-0 ${propInlineErr ? "border-destructive" : ""}`}
+                className={`m-0 h-6 w-40 border-none p-0 px-1 text-sm font-medium shadow-none outline-none focus-visible:ring-0 ${propInlineErr ? "border-destructive" : ""}`}
                 value={editedPropertyName}
                 onChange={(e) => {
                   const val = e.target.value;
@@ -554,7 +554,7 @@ export function SchemaNodeEditor({
             ) : (
               <div className="flex items-center">
                 <span
-                  className="mr-1 cursor-pointer font-medium whitespace-nowrap text-foreground"
+                  className="mr-1 cursor-pointer text-sm font-medium whitespace-nowrap text-foreground"
                   onClick={() => {
                     if (onNameChange) {
                       setEditedPropertyName(name);
@@ -1058,7 +1058,7 @@ export function SchemaNodeEditor({
                         <div className="flex items-center gap-3">
                           <Input
                             placeholder="New property name"
-                            className={`w-40 ${newPropErr ? "border-destructive" : ""}`}
+                            className={`h-8 w-40 ${newPropErr ? "border-destructive" : ""}`}
                             value={newPropName}
                             onChange={(e) => {
                               const val = e.target.value;
@@ -1249,7 +1249,7 @@ export function SchemaNodeEditor({
                 <div className="mt-2 ml-4 flex items-center gap-3 border-l border-border pl-4">
                   <Input
                     placeholder="New property name"
-                    className="w-40"
+                    className="h-8 w-40"
                     value={newPropName}
                     onChange={(e) => setNewPropName(e.target.value)}
                     onKeyDown={(e) => {
@@ -1391,7 +1391,7 @@ export function SchemaNodeEditor({
             <Input
               ref={newEnumInputRef}
               placeholder="New choice"
-              className="w-40"
+              className="h-8 w-40"
               value={newEnumValue}
               onChange={(e) => setNewEnumValue(e.target.value)}
               onKeyDown={(e) => {

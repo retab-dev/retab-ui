@@ -129,14 +129,26 @@ function ThumbnailImage({
 }
 
 function Shimmer() {
+  // A diagonal highlight sweeps across the muted surface. The animation and
+  // keyframes are inline (not Tailwind utilities) so the shimmer works in any
+  // app, with or without a Tailwind `animate-*` theme token defined.
   return (
     <div
       aria-hidden
       data-slot="file-thumbnail-shimmer"
-      className="bg-muted absolute inset-0 animate-pulse"
+      className="bg-muted absolute inset-0 overflow-hidden"
     >
-      <div className="from-muted via-muted-foreground/10 to-muted absolute inset-0 -translate-x-full animate-[file-thumbnail-shimmer_1.5s_infinite] bg-gradient-to-r" />
-      <style>{`@keyframes file-thumbnail-shimmer{100%{transform:translateX(100%)}}`}</style>
+      <div
+        className="absolute inset-0"
+        style={{
+          backgroundImage:
+            "linear-gradient(120deg, transparent 35%, var(--skeleton-highlight, color-mix(in oklab, var(--background) 85%, transparent)) 50%, transparent 65%)",
+          backgroundSize: "200% 100%",
+          backgroundRepeat: "no-repeat",
+          animation: "file-thumbnail-shimmer 1.6s linear infinite",
+        }}
+      />
+      <style>{`@keyframes file-thumbnail-shimmer{from{background-position:200% 0}to{background-position:-200% 0}}`}</style>
     </div>
   )
 }

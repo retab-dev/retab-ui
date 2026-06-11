@@ -3,7 +3,11 @@
 // registry item named `<id>-viewer-block` (see registry.json), whose source
 // files feed the Code view.
 
-type ViewerBlockCategoryId = "documents" | "primitives" | "workflows"
+type ViewerBlockCategoryId =
+  | "documents"
+  | "primitives"
+  | "sources"
+  | "workflows"
 
 type ViewerBlockConfig = {
   id: string
@@ -26,6 +30,7 @@ type ViewerBlockConfig = {
 export const VIEWER_BLOCK_CATEGORIES = [
   { id: "featured", label: "Featured" },
   { id: "documents", label: "Documents" },
+  { id: "sources", label: "Sources" },
   { id: "primitives", label: "Primitives" },
   { id: "workflows", label: "Workflows" },
 ] as const
@@ -79,7 +84,7 @@ export const VIEWER_BLOCKS = [
     registryName: "parse-viewer-block",
     title: "Parse Viewer",
     description:
-      "A parsed document the standard way — the source PDF beside its extracted markdown, synced by page, with a Rendered/Text toggle. Real Retab parse output of tapstone.pdf.",
+      "A parsed document the standard way — the source PDF beside its extracted markdown, synced by page, with a Rendered/Text toggle. Parsed markdown of the bank-statement sample.",
     command: getRegistryAddCommand("parse-viewer-block"),
     docsHref: "/docs/components/parse-viewer",
     viewHref: "/view/blocks/parse",
@@ -93,10 +98,22 @@ export const VIEWER_BLOCKS = [
     description:
       "Extracted fields beside the source PDF, linked by their sources — hover or select a field to highlight where its value came from and scroll the page to it. Built on the document-source model and the PDF viewer's scrollToPageArea handle.",
     command: getRegistryAddCommand("extract-viewer-block"),
-    docsHref: "/docs/components/pdf-viewer",
+    docsHref: "/docs/components/extract-viewer",
     viewHref: "/view/blocks/extract",
     featured: true,
-    categories: ["primitives"],
+    categories: ["sources"],
+  },
+  {
+    id: "json-form-sources",
+    registryName: "json-form-sources-block",
+    title: "JSON Form Sources",
+    description:
+      "Extraction rendered as a JSON form beside the source PDF — hover a form field to highlight where its value came from. Composes json-form and the PDF viewer through useSourceLink; source data is the Retab /v1/extractions/{id}/sources response.",
+    command: getRegistryAddCommand("json-form-sources-block"),
+    docsHref: "/docs/components/extract-viewer",
+    viewHref: "/view/blocks/json-form-sources",
+    featured: true,
+    categories: ["sources"],
   },
   {
     id: "pdf-thumbnails",

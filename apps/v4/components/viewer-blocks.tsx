@@ -38,6 +38,7 @@ import {
 import { HighlightedCodeBlock } from "@/components/highlighted-code-block"
 import { ClassificationViewerBlock } from "@/registry/new-york-v4/blocks/classification-viewer-block"
 import { ExtractViewerBlock } from "@/registry/new-york-v4/blocks/extract-viewer-block"
+import { JsonFormSourcesBlock } from "@/registry/new-york-v4/blocks/json-form-sources-block"
 import { ParseViewerBlock } from "@/registry/new-york-v4/blocks/parse-viewer-block"
 import { PartitionViewerBlock } from "@/registry/new-york-v4/blocks/partition-viewer-block"
 import { PdfThumbnailsBlock } from "@/registry/new-york-v4/blocks/pdf-thumbnails-block"
@@ -76,6 +77,7 @@ const blockComponents = {
   classification: ClassificationViewerBlock,
   parse: ParseViewerBlock,
   extract: ExtractViewerBlock,
+  "json-form-sources": JsonFormSourcesBlock,
   "pdf-thumbnails": PdfThumbnailsBlock,
 } satisfies Record<ViewerBlockId, React.ComponentType>
 

@@ -21,6 +21,8 @@ interface ColumnItem {
 }
 
 const ROW_NUMBER_WIDTH = 56
+// Base font size at 100% zoom; scales linearly with `scale`.
+const BASE_FONT = 13
 
 export interface CsvViewerProps {
   /** Raw CSV/TSV text. Provide this or `data`. */
@@ -68,31 +70,60 @@ export interface CsvViewerProps {
   rowHeight?: number
   /** Column width in pixels. Defaults to 180. */
   columnWidth?: number
-  /** Scroll viewport height in pixels. Defaults to 480. */
+  /** Zoom multiplier on row height, column width, and font size. Defaults to 1. */
+  scale?: number
+  /** Scroll viewport height in pixels. Defaults to 480. Ignored when `fillHeight`. */
   height?: number
+  /**
+   * Fill the parent's height instead of using a fixed `height`: the body flexes
+   * to fill the space between the header and footer. The parent must give the
+   * component a definite height (e.g. a flex column with `min-h-0`). Defaults to
+   * false.
+   */
+  fillHeight?: boolean
   /** Accessible label for the table. Defaults to "CSV data". */
   label?: string
+  /** A cell to highlight (0-based row + column among data columns), or null. */
+  activeCell?: { row: number; col: number } | null
   className?: string
 }
 
-export function CsvViewer({
-  value,
-  data,
-  source,
-  worker = true,
-  batchSize = 5000,
-  delimiter,
-  hasHeader,
-  showRowNumbers = true,
-  virtualized = true,
-  overscan = 8,
-  columnOverscan,
-  rowHeight = 33,
-  columnWidth = 180,
-  height = 480,
-  label = "CSV data",
-  className,
-}: CsvViewerProps) {
+/** Imperative handle for `CsvViewer` — obtain it with a `ref`. */
+export interface CsvViewerHandle {
+  /** Scroll a 0-based (row, col) cell into view. */
+  scrollToCell: (
+    row: number,
+    col: number,
+    options?: { behavior?: ScrollBehavior }
+  ) => void
+  getScrollElement: () => HTMLDivElement | null
+}
+
+export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
+  function CsvViewer(
+    {
+      value,
+      data,
+      source,
+      worker = true,
+      batchSize = 5000,
+      delimiter,
+      hasHeader,
+      showRowNumbers = true,
+      virtualized = true,
+      overscan = 8,
+      columnOverscan,
+      rowHeight = 33,
+      columnWidth = 180,
+      scale = 1,
+      height = 480,
+      fillHeight = false,
+      label = "CSV data",
+      activeCell,
+      className,
+    }: CsvViewerProps,
+    ref: React.ForwardedRef<CsvViewerHandle>
+  ) {
   const {
     columns: parsedColumns,
     rows: parsedRows,
@@ -133,24 +164,20 @@ export function CsvViewer({
   )
 
   const scrollRef = React.useRef<HTMLDivElement>(null)
-  const headerScrollRef = React.useRef<HTMLDivElement>(null)
-
-  // Mirror the body's horizontal scroll by *scrolling* the header (not
-  // transforming it), so the header's sticky row-number cell pins exactly like
-  // the body's — transforms break sticky positioning.
-  const handleBodyScroll = (event: React.UIEvent<HTMLDivElement>) => {
-    if (headerScrollRef.current) {
-      headerScrollRef.current.scrollLeft = event.currentTarget.scrollLeft
-    }
-  }
 
   const colCount = parsedColumns.length
   const colOffset = showRowNumbers ? 1 : 0
 
+  // Zoom scales the track sizes and font; everything below derives from these.
+  const effRowHeight = Math.max(1, Math.round(rowHeight * scale))
+  const effColumnWidth = Math.max(1, Math.round(columnWidth * scale))
+  const effRowNumberWidth = Math.round(ROW_NUMBER_WIDTH * scale)
+  const fontSize = BASE_FONT * scale
+
   const rowVirtualizer = useVirtualizer({
     count: parsedRows.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => rowHeight,
+    estimateSize: () => effRowHeight,
     overscan,
   })
 
@@ -158,7 +185,7 @@ export function CsvViewer({
     horizontal: true,
     count: colCount,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => columnWidth,
+    estimateSize: () => effColumnWidth,
     overscan: columnOverscan ?? overscan,
   })
 
@@ -173,7 +200,7 @@ export function CsvViewer({
       return {
         columnItems: parsedColumns.map((_, index) => ({
           index,
-          size: columnWidth,
+          size: effColumnWidth,
         })),
         leftPad: 0,
         rightPad: 0,
@@ -192,22 +219,50 @@ export function CsvViewer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     virtualized,
-    columnWidth,
+    effColumnWidth,
     parsedColumns,
     columnVirtualizer.getVirtualItems(),
     columnVirtualizer.getTotalSize(),
   ])
+
+  // Re-measure when zoom changes the track sizes.
+  React.useEffect(() => {
+    rowVirtualizer.measure()
+    columnVirtualizer.measure()
+  }, [effRowHeight, effColumnWidth, rowVirtualizer, columnVirtualizer])
+
+  // Imperative handle: scroll a (row, col) cell into view. `col` is 0-based
+  // among data columns (the row-number column isn't in the column virtualizer).
+  React.useImperativeHandle(
+    ref,
+    () => ({
+      scrollToCell: (row, col, options) => {
+        const behavior = options?.behavior ?? "smooth"
+        rowVirtualizer.scrollToIndex(row, { align: "center", behavior })
+        columnVirtualizer.scrollToIndex(col, { align: "center", behavior })
+      },
+      getScrollElement: () => scrollRef.current,
+    }),
+    [rowVirtualizer, columnVirtualizer]
+  )
 
   // Memoize so its identity is stable across vertical scroll (columnItems only
   // changes on horizontal scroll/resize). A stable gridTemplate keeps CsvRow's
   // props stable, so React.memo skips the rows that stay put and only the rows
   // entering the window re-render.
   const gridTemplate = React.useMemo(
-    () => buildGridTemplate({ showRowNumbers, leftPad, columnItems, rightPad }),
-    [showRowNumbers, leftPad, columnItems, rightPad]
+    () =>
+      buildGridTemplate({
+        showRowNumbers,
+        rowNumberWidth: effRowNumberWidth,
+        leftPad,
+        columnItems,
+        rightPad,
+      }),
+    [showRowNumbers, effRowNumberWidth, leftPad, columnItems, rightPad]
   )
   const totalWidth =
-    (showRowNumbers ? ROW_NUMBER_WIDTH : 0) + colCount * columnWidth
+    (showRowNumbers ? effRowNumberWidth : 0) + colCount * effColumnWidth
   const virtualRows = rowVirtualizer.getVirtualItems()
 
   return (
@@ -218,108 +273,113 @@ export function CsvViewer({
       aria-rowcount={parsedRows.length + 1}
       aria-colcount={colCount + colOffset}
       className={cn(
-        "flex flex-col overflow-hidden rounded-xl border bg-card text-sm",
+        "flex flex-col overflow-hidden rounded-xl border bg-card",
+        fillHeight && "min-h-0 flex-1",
         className
       )}
+      style={{ fontSize }}
     >
-      {/* Header — a separate element above the body, synced to the body's
-          horizontal scroll. The body's vertical scrollbar can't paint over it. */}
-      <div
-        ref={headerScrollRef}
-        role="rowgroup"
-        data-slot="csv-header"
-        className="overflow-hidden border-b bg-muted/60"
-      >
-        <div
-          role="row"
-          aria-rowindex={1}
-          className="grid"
-          style={{
-            gridTemplateColumns: gridTemplate,
-            width: totalWidth,
-            minWidth: "100%",
-          }}
-        >
-          {showRowNumbers ? (
-            <div
-              role="columnheader"
-              aria-colindex={1}
-              aria-label="Row number"
-              className="sticky left-0 z-10 flex items-center justify-end border-r bg-[color-mix(in_oklab,var(--card)_97%,var(--foreground))] px-2 text-xs font-medium text-muted-foreground"
-            >
-              #
-            </div>
-          ) : null}
-          <Spacer width={leftPad} />
-          {columnItems.map((item) => (
-            <HeaderCell
-              key={item.index}
-              name={parsedColumns[item.index] || `Column ${item.index + 1}`}
-              colIndex={colOffset + item.index + 1}
-              sorted={
-                sort?.index === item.index ? (sort.desc ? "desc" : "asc") : false
-              }
-              onToggle={() => toggleSort(item.index)}
-            />
-          ))}
-          <Spacer width={rightPad} />
-        </div>
-      </div>
-
-      {/* Body — owns both scrollbars; the vertical one sits below the header. */}
+      {/* One scroll container: the header row and the data rows live in the same
+          scroller, so they scroll together natively — no JS sync, so the columns
+          stay locked to the header during horizontal scroll. The header sticks to
+          the top during vertical scroll; the row-number column sticks to the
+          left during horizontal scroll. */}
       <div
         ref={scrollRef}
-        role="rowgroup"
         data-slot="csv-body"
-        className="overflow-auto"
-        style={{ height, maxHeight: "100%" }}
-        onScroll={handleBodyScroll}
+        className={cn("overflow-auto", fillHeight && "min-h-0 flex-1")}
+        style={fillHeight ? undefined : { height, maxHeight: "100%" }}
       >
-        {parsedRows.length === 0 ? (
-          <div className="flex h-24 items-center justify-center text-xs text-muted-foreground">
-            No rows
-          </div>
-        ) : (
+        <div style={{ width: totalWidth, minWidth: "100%", position: "relative" }}>
+          {/* Header row — sticky to the top; same scroller as the rows below. */}
           <div
+            role="row"
+            aria-rowindex={1}
+            data-slot="csv-header"
+            className="sticky top-0 z-20 grid border-b"
             style={{
-              width: totalWidth,
-              minWidth: "100%",
-              position: "relative",
-              height: virtualized ? rowVirtualizer.getTotalSize() : undefined,
+              gridTemplateColumns: gridTemplate,
+              backgroundColor: "var(--muted)",
             }}
           >
-            {virtualized
-              ? virtualRows.map((virtualRow) => (
-                  <CsvRow
-                    key={virtualRow.index}
-                    cells={rowAt(virtualRow.index)}
-                    index={virtualRow.index}
-                    gridTemplate={gridTemplate}
-                    rowHeight={rowHeight}
-                    showRowNumbers={showRowNumbers}
-                    colOffset={colOffset}
-                    columnItems={columnItems}
-                    leftPad={leftPad}
-                    rightPad={rightPad}
-                    start={virtualRow.start}
-                  />
-                ))
-              : parsedRows.map((_, index) => (
-                  <CsvRow
-                    key={index}
-                    cells={rowAt(index)}
-                    index={index}
-                    gridTemplate={gridTemplate}
-                    rowHeight={rowHeight}
-                    showRowNumbers={showRowNumbers}
-                    colOffset={colOffset}
-                    columnItems={columnItems}
-                    leftPad={leftPad}
-                    rightPad={rightPad}
-                  />
-                ))}
+            {showRowNumbers ? (
+              <div
+                role="columnheader"
+                aria-colindex={1}
+                aria-label="Row number"
+                className="sticky left-0 z-10 flex items-center justify-end border-r bg-[color-mix(in_oklab,var(--card)_97%,var(--foreground))] px-2 font-medium text-muted-foreground"
+                style={{ height: effRowHeight }}
+              >
+                #
+              </div>
+            ) : null}
+            <Spacer width={leftPad} />
+            {columnItems.map((item) => (
+              <HeaderCell
+                key={item.index}
+                name={parsedColumns[item.index] || `Column ${item.index + 1}`}
+                colIndex={colOffset + item.index + 1}
+                height={effRowHeight}
+                sorted={
+                  sort?.index === item.index ? (sort.desc ? "desc" : "asc") : false
+                }
+                onToggle={() => toggleSort(item.index)}
+              />
+            ))}
+            <Spacer width={rightPad} />
           </div>
-        )}
+
+          {parsedRows.length === 0 ? (
+            <div className="flex h-24 items-center justify-center text-xs text-muted-foreground">
+              No rows
+            </div>
+          ) : virtualized ? (
+            // Absolutely-positioned rows in a spacer of the full virtual height.
+            // The header above takes one row's height, so the virtualizer is off
+            // by one row at the edges — the overscan window covers it.
+            <div
+              role="rowgroup"
+              style={{ position: "relative", height: rowVirtualizer.getTotalSize() }}
+            >
+              {virtualRows.map((virtualRow) => (
+                <CsvRow
+                  key={virtualRow.index}
+                  cells={rowAt(virtualRow.index)}
+                  index={virtualRow.index}
+                  gridTemplate={gridTemplate}
+                  rowHeight={effRowHeight}
+                  showRowNumbers={showRowNumbers}
+                  colOffset={colOffset}
+                  columnItems={columnItems}
+                  leftPad={leftPad}
+                  rightPad={rightPad}
+                  start={virtualRow.start}
+                  activeCol={
+                    activeCell?.row === virtualRow.index ? activeCell.col : null
+                  }
+                />
+              ))}
+            </div>
+          ) : (
+            <div role="rowgroup">
+              {parsedRows.map((_, index) => (
+                <CsvRow
+                  key={index}
+                  cells={rowAt(index)}
+                  index={index}
+                  gridTemplate={gridTemplate}
+                  rowHeight={effRowHeight}
+                  showRowNumbers={showRowNumbers}
+                  colOffset={colOffset}
+                  columnItems={columnItems}
+                  leftPad={leftPad}
+                  rightPad={rightPad}
+                  activeCol={activeCell?.row === index ? activeCell.col : null}
+                />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="flex shrink-0 items-center justify-between border-t px-3 py-1.5 text-xs text-muted-foreground">
@@ -340,22 +400,25 @@ export function CsvViewer({
       </div>
     </div>
   )
-}
+  }
+)
 
 function buildGridTemplate({
   showRowNumbers,
+  rowNumberWidth,
   leftPad,
   columnItems,
   rightPad,
 }: {
   showRowNumbers: boolean
+  rowNumberWidth: number
   leftPad: number
   columnItems: ColumnItem[]
   rightPad: number
 }) {
   const cols = columnItems.map((c) => `${c.size}px`).join(" ")
   return [
-    showRowNumbers ? `${ROW_NUMBER_WIDTH}px` : null,
+    showRowNumbers ? `${rowNumberWidth}px` : null,
     `${leftPad}px`,
     cols,
     `${rightPad}px`,
@@ -372,11 +435,13 @@ function Spacer({ width }: { width: number }) {
 function HeaderCell({
   name,
   colIndex,
+  height,
   sorted,
   onToggle,
 }: {
   name: string
   colIndex: number
+  height: number
   sorted: "asc" | "desc" | false
   onToggle: () => void
 }) {
@@ -397,7 +462,8 @@ function HeaderCell({
       <button
         type="button"
         onClick={onToggle}
-        className="flex h-9 w-full items-center gap-1 px-3 text-left text-xs font-semibold hover:bg-muted focus-visible:bg-muted focus-visible:outline-none"
+        className="flex w-full items-center gap-1 px-3 text-left font-semibold hover:bg-muted focus-visible:bg-muted focus-visible:outline-none"
+        style={{ height }}
         title={`Sort by ${name}`}
       >
         <span className="truncate">{name}</span>
@@ -440,6 +506,7 @@ const CsvRow = React.memo(function CsvRow({
   leftPad,
   rightPad,
   start,
+  activeCol,
 }: {
   cells: Row | undefined
   index: number
@@ -452,6 +519,8 @@ const CsvRow = React.memo(function CsvRow({
   rightPad: number
   /** Absolute Y offset when virtualized; undefined renders in normal flow. */
   start?: number
+  /** Data-column index to highlight in this row, or null. */
+  activeCol?: number | null
 }) {
   // Built from primitive props so a row that stays in the window keeps a stable
   // identity and React.memo skips it — only rows entering the window re-render.
@@ -480,7 +549,7 @@ const CsvRow = React.memo(function CsvRow({
           role="rowheader"
           aria-colindex={1}
           data-slot="csv-row-number"
-          className="sticky left-0 z-[1] flex items-center justify-end border-r bg-card px-2 text-xs tabular-nums text-muted-foreground group-hover:bg-[color-mix(in_oklab,var(--card)_97%,var(--foreground))]"
+          className="sticky left-0 z-[1] flex items-center justify-end border-r bg-card px-2 tabular-nums text-muted-foreground group-hover:bg-[color-mix(in_oklab,var(--card)_97%,var(--foreground))]"
         >
           {index + 1}
         </div>
@@ -488,13 +557,18 @@ const CsvRow = React.memo(function CsvRow({
       <Spacer width={leftPad} />
       {columnItems.map((item) => {
         const text = cells?.[item.index] ?? ""
+        const lit = activeCol === item.index
         return (
           <div
             key={item.index}
             role="cell"
             aria-colindex={colOffset + item.index + 1}
             data-slot="csv-cell"
-            className="flex items-center truncate border-r px-3 last:border-r-0"
+            className={cn(
+              "flex items-center truncate border-r px-3 last:border-r-0",
+              lit &&
+                "bg-primary/12 ring-1 ring-inset ring-primary/50 ring-offset-0"
+            )}
             title={text}
           >
             <span className="truncate">{text}</span>

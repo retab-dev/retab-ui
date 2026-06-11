@@ -11,6 +11,7 @@ import {
   toJsonSchema,
   type SchemaDocument,
 } from "@/components/schema-editor/document"
+import { requireAllProperties } from "@/components/schema-editor/json-schema-builder-utils"
 
 function rt(schema: JSONSchema7) {
   return toJsonSchema(fromJsonSchema(schema))
@@ -141,6 +142,77 @@ describe("definition rename collisions", () => {
     expect(shapes).toContain(JSON.stringify({ x: { type: "string" } }))
     expect(shapes).toContain(JSON.stringify({ y: { type: "number" } }))
     expect(names.length).toBe(2)
+  })
+})
+
+describe("requireAllProperties (every field required policy)", () => {
+  const req = (s: JSONSchema7) => requireAllProperties(s) as JSONSchema7
+
+  it("sets required to all keys for a flat object, overriding partial required", () => {
+    expect(
+      req({
+        type: "object",
+        properties: { a: { type: "string" }, b: { type: "number" } },
+        required: ["a"],
+      }).required,
+    ).toEqual(["a", "b"])
+  })
+
+  it("recurses into nested objects, array items and $defs", () => {
+    const out = req({
+      type: "object",
+      $defs: { D: { type: "object", properties: { d1: { type: "string" } } } },
+      properties: {
+        obj: { type: "object", properties: { x: { type: "string" }, y: { type: "number" } } },
+        rows: {
+          type: "array",
+          items: { type: "object", properties: { sku: { type: "string" } } },
+        },
+      },
+    })
+    expect(out.required).toEqual(["obj", "rows"])
+    expect((out.properties!.obj as JSONSchema7).required).toEqual(["x", "y"])
+    expect(((out.properties!.rows as JSONSchema7).items as JSONSchema7).required).toEqual(["sku"])
+    expect((out.$defs!.D as JSONSchema7).required).toEqual(["d1"])
+  })
+
+  it("recurses into anyOf branches and leaves nullability untouched", () => {
+    const out = req({
+      type: "object",
+      properties: {
+        v: {
+          anyOf: [
+            { type: "object", properties: { x: { type: "string" } } },
+            { type: "null" },
+          ],
+        },
+      },
+    })
+    const v = out.properties!.v as JSONSchema7
+    // still nullable via anyOf
+    expect(v.anyOf).toHaveLength(2)
+    expect((v.anyOf![1] as JSONSchema7).type).toBe("null")
+    // the object branch's child is now required
+    expect((v.anyOf![0] as JSONSchema7).required).toEqual(["x"])
+    // the field stays required at the parent level
+    expect(out.required).toEqual(["v"])
+  })
+
+  it("does not add `required` to objects without properties or to scalars", () => {
+    const out = req({
+      type: "object",
+      properties: { s: { type: "string" }, bag: { type: "object" } },
+    })
+    expect((out.properties!.s as JSONSchema7).required).toBeUndefined()
+    expect((out.properties!.bag as JSONSchema7).required).toBeUndefined()
+  })
+
+  it("is idempotent", () => {
+    const schema: JSONSchema7 = {
+      type: "object",
+      properties: { o: { type: "object", properties: { a: { type: "string" } } } },
+    }
+    expect(req(req(schema))).toEqual(req(schema))
   })
 })
 

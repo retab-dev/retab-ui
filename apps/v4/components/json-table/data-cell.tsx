@@ -1026,6 +1026,22 @@ const DataCellContent = (
   const [isSelectOpen, setIsSelectOpen] = useState(false);
   const [isDatePopoverOpen, setIsDatePopoverOpen] = useState(false);
 
+  // While a cell editor is open it overflows its cell. The virtualizer puts
+  // every row in its own stacking context (via `transform`), so the editor's
+  // own z-index can't lift it above *other* rows — later rows paint over it and
+  // it looks transparent. Elevate the whole row's stacking context while editing
+  // so the (opaque) editor overlay covers its neighbours, then reset on close.
+  const cellRootRef = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    const editing = isInputFocused || isSelectOpen || isDatePopoverOpen;
+    const rowEl = cellRootRef.current?.closest<HTMLElement>("[data-index]");
+    if (!rowEl) return;
+    rowEl.style.zIndex = editing ? "20" : "";
+    return () => {
+      rowEl.style.zIndex = "";
+    };
+  }, [isInputFocused, isSelectOpen, isDatePopoverOpen]);
+
   // Use the value from the PathInfo
   const value = props.pathInfo?.value;
 
@@ -1397,6 +1413,7 @@ const DataCellContent = (
       style={cellStyle}
     >
       <div
+        ref={cellRootRef}
         //className={`focus-within:overflow-visible w-full h-full`}//
         className={cn(
           "h-full w-full focus-within:overflow-visible",

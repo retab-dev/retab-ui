@@ -33,6 +33,29 @@ export type DocumentKind =
   | "html"
   | "text"
 
+/**
+ * Which corner of the document stays pinned when its preview is larger than the
+ * (usually square) frame. The content always covers the frame — it fills the
+ * shorter side and the longer side overflows away from the anchor and is
+ * clipped. Default `top-left`: a wide doc clips on the right, a tall doc clips
+ * on the bottom, so you always see the document's top-left corner.
+ */
+export type ThumbnailAnchor = "top-left" | "top-right" | "bottom-left"
+
+/** Absolute-position classes that pin a covered element to its anchor corner. */
+const ANCHOR_CORNER: Record<ThumbnailAnchor, string> = {
+  "top-left": "top-0 left-0",
+  "top-right": "top-0 right-0",
+  "bottom-left": "bottom-0 left-0",
+}
+
+/** `object-position` classes for the <img> cover path (raster images). */
+const ANCHOR_OBJECT_POSITION: Record<ThumbnailAnchor, string> = {
+  "top-left": "object-left-top",
+  "top-right": "object-right-top",
+  "bottom-left": "object-left-bottom",
+}
+
 export interface DocumentThumbnailProps {
   src: string
   name: string
@@ -40,6 +63,8 @@ export interface DocumentThumbnailProps {
   kind: DocumentKind
   className?: string
   previewAspectRatio?: number
+  /** Corner of the document to keep visible when it overflows. Default top-left. */
+  anchor?: ThumbnailAnchor
 }
 
 export function DocumentThumbnail({
@@ -49,6 +74,7 @@ export function DocumentThumbnail({
   kind,
   className,
   previewAspectRatio = 3 / 4,
+  anchor = "top-left",
 }: DocumentThumbnailProps) {
   if (kind === "image") {
     return (
@@ -57,9 +83,8 @@ export function DocumentThumbnail({
         previewImageUrl={src}
         previewAspectRatio={previewAspectRatio}
         className={className}
-        // Fill the frame top-aligned (like a rendered page) instead of cropping
-        // to the middle, matching the document renderers below.
-        previewClassName="object-top"
+        // Cover the frame, pinned to the anchor corner (default top-left).
+        previewClassName={ANCHOR_OBJECT_POSITION[anchor]}
       />
     )
   }
@@ -69,7 +94,7 @@ export function DocumentThumbnail({
       file={{ name, type }}
       previewAspectRatio={previewAspectRatio}
       className={className}
-      previewContent={<ClientPreview src={src} kind={kind} />}
+      previewContent={<ClientPreview src={src} kind={kind} anchor={anchor} />}
     />
   )
 }
@@ -79,7 +104,15 @@ export function DocumentThumbnail({
  * `document` (and the xlsx parse uses a Worker), none of which exist during SSR.
  * On the server we render the shimmer; the real renderer mounts after hydration.
  */
-function ClientPreview({ src, kind }: { src: string; kind: DocumentKind }) {
+function ClientPreview({
+  src,
+  kind,
+  anchor,
+}: {
+  src: string
+  kind: DocumentKind
+  anchor: ThumbnailAnchor
+}) {
   const isClient = useIsClient()
   const inView = useInView()
 
@@ -88,7 +121,7 @@ function ClientPreview({ src, kind }: { src: string; kind: DocumentKind }) {
       {isClient && inView.seen ? (
         <ThumbnailErrorBoundary fallback={null}>
           <React.Suspense fallback={<ShimmerLayer />}>
-            <FirstUnit src={src} kind={kind} />
+            <FirstUnit src={src} kind={kind} anchor={anchor} />
           </React.Suspense>
         </ThumbnailErrorBoundary>
       ) : (
@@ -138,12 +171,22 @@ function useIsClient() {
   )
 }
 
-function FirstUnit({ src, kind }: { src: string; kind: DocumentKind }) {
-  if (kind === "pdf") return <PdfFirstPage src={src} />
+function FirstUnit({
+  src,
+  kind,
+  anchor,
+}: {
+  src: string
+  kind: DocumentKind
+  anchor: ThumbnailAnchor
+}) {
+  // Single-visual renderers (page / slide / scan) cover the frame and honor the
+  // anchor. The text-grid renderers below always read from the top-left.
+  if (kind === "pdf") return <PdfFirstPage src={src} anchor={anchor} />
   if (kind === "xlsx") return <XlsxFirstSheet src={src} />
-  if (kind === "pptx") return <PptxFirstSlide src={src} />
+  if (kind === "pptx") return <PptxFirstSlide src={src} anchor={anchor} />
   if (kind === "docx") return <DocxFirstPage src={src} />
-  if (kind === "tiff") return <TiffFirstPage src={src} />
+  if (kind === "tiff") return <TiffFirstPage src={src} anchor={anchor} />
   if (kind === "csv") return <CsvFirstRows src={src} />
   if (kind === "markdown") return <MarkdownFirstPage src={src} />
   if (kind === "html") return <HtmlFirstPage src={src} />
@@ -248,14 +291,30 @@ function Surface({ children }: { children: React.ReactNode }) {
 }
 
 function ShimmerLayer() {
-  return <div aria-hidden className="bg-muted absolute inset-0 animate-pulse" />
+  // Matches FileThumbnail's loading shimmer (inline animation so it never
+  // depends on a Tailwind `animate-*` token being generated).
+  return (
+    <div aria-hidden className="bg-muted absolute inset-0 overflow-hidden">
+      <div
+        className="absolute inset-0"
+        style={{
+          backgroundImage:
+            "linear-gradient(120deg, transparent 35%, var(--skeleton-highlight, color-mix(in oklab, var(--background) 85%, transparent)) 50%, transparent 65%)",
+          backgroundSize: "200% 100%",
+          backgroundRepeat: "no-repeat",
+          animation: "file-thumbnail-shimmer 1.6s linear infinite",
+        }}
+      />
+      <style>{`@keyframes file-thumbnail-shimmer{from{background-position:200% 0}to{background-position:-200% 0}}`}</style>
+    </div>
+  )
 }
 
 // ---------------------------------------------------------------------------
 // PDF — page 1 via pdfjs (reuses the PdfViewer's cached document)
 // ---------------------------------------------------------------------------
 
-function PdfFirstPage({ src }: { src: string }) {
+function PdfFirstPage({ src, anchor }: { src: string; anchor: ThumbnailAnchor }) {
   const doc = React.use(getDocumentResource(src)) as PDFDocumentProxy
   const page = React.use(getPageResource(doc, 1))
 
@@ -286,11 +345,11 @@ function PdfFirstPage({ src }: { src: string }) {
     [page, viewport, dpr]
   )
 
-  // Fill the frame width and top-align; the bottom of the page is clipped by
-  // the square frame (object-top behavior), so the preview is full-bleed.
+  // Fill the frame width; the page's extra height overflows past the anchor edge
+  // (default top → clipped at the bottom), so the preview is full-bleed.
   return (
     <div className="absolute inset-0 overflow-hidden bg-white">
-      <canvas ref={canvasRef} className="block w-full" />
+      <canvas ref={canvasRef} className={cn("absolute block w-full", ANCHOR_CORNER[anchor])} />
     </div>
   )
 }
@@ -444,10 +503,15 @@ interface JSZipLike {
   file(path: string): { async(type: "string"): Promise<string> } | null
 }
 
-function PptxFirstSlide({ src }: { src: string }) {
+function PptxFirstSlide({ src, anchor }: { src: string; anchor: ThumbnailAnchor }) {
   const source = React.use(getPptxFirstSlide(src))
-  const RENDER_W = 640
-  const scale = RENDER_W / (source.baseWidth || 960)
+  const baseW = source.baseWidth || 960
+  const baseH = source.baseHeight || 720
+  // Cover scales the *smaller* side up to fill the square, so render that side
+  // at a high pixel count — otherwise a 640px-wide render gets upscaled and
+  // looks blurry. The overflowing side renders proportionally larger.
+  const FILL_PX = 1024
+  const scale = FILL_PX / Math.min(baseW, baseH)
 
   const canvasRef = React.useCallback(
     (canvas: HTMLCanvasElement | null) => {
@@ -462,14 +526,24 @@ function PptxFirstSlide({ src }: { src: string }) {
     [source, scale]
   )
 
+  // Cover the square frame instead of letterboxing: fill the *smaller* side so
+  // the larger one overflows past the anchor edge and is clipped. A landscape
+  // slide fills the height and overflows horizontally; a portrait one fills the
+  // width and overflows vertically. Anchored top-left by default, so the slide's
+  // top-left corner is always the part you see.
+  const landscape = baseW >= baseH
   return (
-    <Surface>
+    <div className="absolute inset-0 overflow-hidden bg-white">
       <canvas
         ref={canvasRef}
-        className="block max-h-full max-w-full shadow-sm"
-        style={{ aspectRatio: `${source.baseWidth} / ${source.baseHeight}` }}
+        className={cn(
+          "absolute block",
+          ANCHOR_CORNER[anchor],
+          landscape ? "h-full w-auto max-w-none" : "h-auto w-full"
+        )}
+        style={{ aspectRatio: `${baseW} / ${baseH}` }}
       />
-    </Surface>
+    </div>
   )
 }
 
@@ -635,12 +709,12 @@ function getTiffFirstPage(src: string): Promise<string> {
   return p
 }
 
-function TiffFirstPage({ src }: { src: string }) {
+function TiffFirstPage({ src, anchor }: { src: string; anchor: ThumbnailAnchor }) {
   const url = React.use(getTiffFirstPage(src))
   return (
     <div className="absolute inset-0 overflow-hidden bg-white">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={url} alt="" className="block w-full" />
+      <img src={url} alt="" className={cn("absolute block w-full", ANCHOR_CORNER[anchor])} />
     </div>
   )
 }
@@ -663,12 +737,21 @@ function CsvFirstRows({ src }: { src: string }) {
   return <GridTable rows={rows} headerRow />
 }
 
+// Fixed column width so cells are readable instead of being crammed into the
+// tile and truncated to two characters. The grid renders wider than the frame
+// and overflows past the top-left anchor (clipped on the right), like a real
+// spreadsheet whose columns continue off-screen.
+const GRID_COL_W = 46
+
 /** Internal-gridline table shared by the XLSX and CSV previews. */
 function GridTable({ rows, headerRow }: { rows: string[][]; headerRow?: boolean }) {
   const colCount = Math.max(1, ...rows.map((r) => r.length))
   return (
     <div className="absolute inset-0 overflow-hidden bg-white">
-      <table className="w-full border-collapse text-[7px] leading-tight">
+      <table
+        className="border-collapse leading-tight"
+        style={{ width: colCount * GRID_COL_W, tableLayout: "fixed", fontSize: 7 }}
+      >
         <tbody>
           {rows.map((row, r) => (
             <tr key={r}>
@@ -676,7 +759,7 @@ function GridTable({ rows, headerRow }: { rows: string[][]; headerRow?: boolean 
                 <td
                   key={c}
                   className={cn(
-                    "max-w-[64px] truncate border-r border-b border-slate-200 px-1 py-[2px] last:border-r-0",
+                    "truncate border-r border-b border-slate-200 px-1 py-0.5 last:border-r-0",
                     headerRow && r === 0
                       ? "text-foreground bg-slate-50 font-semibold"
                       : "text-foreground/80"
@@ -807,19 +890,24 @@ function TextFirstLines({ src }: { src: string }) {
   }, [raw, src])
 
   const lines = React.useMemo(
-    () => text.replace(/\n$/, "").split("\n").slice(0, 34),
+    () => text.replace(/\n$/, "").split("\n").slice(0, 60),
     [text]
   )
 
   return (
     <div className="bg-card absolute inset-0 overflow-hidden">
-      <div className="font-mono text-[6px] leading-[1.7]">
+      {/* Full-height gutter rail behind the lines, so the tint runs to the
+          bottom of the tile even when the file has only a few lines. */}
+      <div aria-hidden className="absolute inset-y-0 left-0 w-2.5 bg-slate-50" />
+      {/* Font size inline: arbitrary `text-[Npx]` utilities are dropped
+          unreliably by this project's Turbopack dev scan; inline always wins. */}
+      <div className="relative font-mono" style={{ fontSize: 5, lineHeight: 1.5 }}>
         {lines.map((line, i) => (
           <div key={i} className="flex">
-            <span className="w-[16px] shrink-0 bg-slate-50 pr-[3px] text-right text-slate-300 select-none">
+            <span className="w-2.5 shrink-0 pr-px text-right text-slate-300 select-none">
               {i + 1}
             </span>
-            <span className="text-foreground/80 whitespace-pre pl-[5px]">
+            <span className="text-foreground/80 whitespace-pre pl-0.5">
               {line || " "}
             </span>
           </div>

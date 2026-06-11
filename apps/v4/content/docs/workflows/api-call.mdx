@@ -1,0 +1,69 @@
+---
+title: API Call
+description: Inspect a single HTTP exchange — method, URL and status up top, with the request and response shown side by side, each with a Body and Headers tab.
+---
+
+The API Call component renders one HTTP exchange the way you'd want to read it
+when debugging a workflow run: the method, URL, status code and duration along
+the top, and the request and response side by side below — each with its own
+**Body** and **Headers** tab.
+
+<ApiCallDemo />
+
+The status pill is color-coded by class (`2xx` green, `3xx` blue, `4xx` amber,
+`5xx`/error red), JSON bodies get light syntax highlighting, and both the URL and
+either body can be copied with a hover button.
+
+## Usage
+
+Pass a single `call` object describing the exchange. Everything is presentation
+only — wire it to whatever your run data looks like.
+
+```tsx
+import { ApiCallInspector } from "@/registry/new-york-v4/blocks/api-call-block"
+
+export function Example() {
+  return (
+    <div className="h-[520px] overflow-hidden rounded-xl border">
+      <ApiCallInspector
+        call={{
+          url: "https://api.retab.com/v1/documents/extract",
+          method: "POST",
+          requestHeaders: { "Content-Type": "application/json" },
+          requestBody: { model: "retab-large" },
+          responseStatusCode: 200,
+          durationMs: 1842,
+          responseHeaders: { "x-request-id": "req_9f2b7c41a8" },
+          responseBody: JSON.stringify({ id: "extr_2Kd9aZ" }),
+        }}
+      />
+    </div>
+  )
+}
+```
+
+The `ApiCallBlock` export wraps the inspector with a sample call so it renders on
+its own with no props.
+
+## API
+
+### `ApiCall`
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `url` | `string` | The request URL, shown in the top bar and copyable. |
+| `method` | `string` | HTTP method — drives the colored method badge. |
+| `requestHeaders` | `Record<string, string>` | Headers sent with the request. |
+| `requestBody` | `unknown` | Request payload. Objects render as highlighted JSON; strings render as-is. |
+| `responseStatusCode` | `number \| null` | Status code — drives the color-coded status pill. |
+| `responseBody` | `string \| null` | Raw response body. Parsed as JSON when possible, otherwise shown as text. |
+| `responseHeaders` | `Record<string, string> \| null` | Headers returned with the response. |
+| `durationMs` | `number \| null` | Round-trip time, rendered next to the clock icon. |
+| `error` | `string \| null` | When set, shows an error banner and forces the status pill red. |
+
+### Components
+
+| Export | Props | Description |
+| --- | --- | --- |
+| `ApiCallInspector` | `{ call: ApiCall }` | The full request/response inspector. |
+| `ApiCallBlock` | `{ call?: ApiCall }` | The inspector preloaded with a sample call; pass `call` to override. |

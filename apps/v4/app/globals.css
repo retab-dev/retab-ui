@@ -1,4 +1,13 @@
 @import "tailwindcss";
+
+/* Explicitly register source paths so Tailwind's content scan tracks them as
+   watched dependencies — helps `next dev --turbopack` re-scan on .tsx edits,
+   which automatic detection alone did not reliably trigger. */
+@source "../app";
+@source "../components";
+@source "../registry/new-york-v4";
+@source "../mdx-components.tsx";
+
 @import "tw-animate-css";
 @import "./shadcn-tailwind.css";
 @import "./legacy-themes.css";

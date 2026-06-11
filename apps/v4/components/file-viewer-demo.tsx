@@ -11,7 +11,7 @@ const FILES = [
   { label: "TIFF", file: "nvidia-10q-scan.tiff" },
   { label: "XLSX", file: "nvidia-financials-fy2024.xlsx" },
   { label: "PPTX", file: "sample-deck.pptx" },
-  { label: "DOCX", file: "demo.docx" },
+  { label: "DOCX", file: "quarterly-business-review.docx" },
   { label: "CSV", file: "sales.csv" },
   { label: "Markdown", file: "release-notes.md" },
   { label: "HTML", file: "welcome.html" },

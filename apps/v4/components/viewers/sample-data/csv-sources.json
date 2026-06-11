@@ -1,0 +1,56 @@
+[
+  {
+    "key": "naQ1Revenue",
+    "label": "North America Q1 revenue",
+    "value": "$1,240,000",
+    "source": {
+      "content": "1240000",
+      "anchor": { "kind": "csv_cell", "row": 1, "column": "C", "coordinate": "C2" }
+    }
+  },
+  {
+    "key": "naQ2Customers",
+    "label": "North America Q2 customers",
+    "value": "61",
+    "source": {
+      "content": "61",
+      "anchor": { "kind": "csv_cell", "row": 2, "column": "D", "coordinate": "D3" }
+    }
+  },
+  {
+    "key": "emeaQ1Revenue",
+    "label": "EMEA Q1 revenue",
+    "value": "$820,000",
+    "source": {
+      "content": "820000",
+      "anchor": { "kind": "csv_cell", "row": 3, "column": "C", "coordinate": "C4" }
+    }
+  },
+  {
+    "key": "emeaQ2Nrr",
+    "label": "EMEA Q2 net revenue retention",
+    "value": "1.15",
+    "source": {
+      "content": "1.15",
+      "anchor": { "kind": "csv_cell", "row": 4, "column": "E", "coordinate": "E5" }
+    }
+  },
+  {
+    "key": "apacQ1Revenue",
+    "label": "APAC Q1 revenue",
+    "value": "$430,000",
+    "source": {
+      "content": "430000",
+      "anchor": { "kind": "csv_cell", "row": 5, "column": "C", "coordinate": "C6" }
+    }
+  },
+  {
+    "key": "apacQ2Customers",
+    "label": "APAC Q2 customers",
+    "value": "24",
+    "source": {
+      "content": "24",
+      "anchor": { "kind": "csv_cell", "row": 6, "column": "D", "coordinate": "D7" }
+    }
+  }
+]

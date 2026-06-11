@@ -231,6 +231,28 @@ export interface ImagePageOverlayProps {
   rotation: number
 }
 
+/**
+ * Imperative handle for driving the viewer from outside (e.g. scroll to the
+ * source of a hovered field). Obtain it with a `ref` on `<ImageViewer>`.
+ */
+export interface ImageViewerHandle {
+  /**
+   * Scroll a frame's normalized area into view. `area` fields are percentages
+   * [0, 100] of the rendered frame; only `top` is required. Pass
+   * `behavior: "auto"` for an instant jump (e.g. on hover).
+   */
+  scrollToFrameArea: (
+    frameNumber: number,
+    area: { top: number; left?: number; width?: number; height?: number },
+    options?: ScrollToOptions
+  ) => void
+  /** The scrolling viewport element, or null before the image loads. */
+  getViewportElement: () => HTMLDivElement | null
+}
+
+/** Headroom left above a scrolled-to area so it doesn't sit flush under the toolbar. */
+const IMAGE_SCROLL_HEADROOM = 48
+
 export interface ImageViewerProps {
   /** URL of the image (same-origin or CORS-enabled). PNG/JPEG/WebP/GIF/AVIF or TIFF. */
   src: string
@@ -253,7 +275,10 @@ export interface ImageViewerProps {
   aside?: React.ReactNode
 }
 
-export function ImageViewer(props: ImageViewerProps) {
+export const ImageViewer = React.forwardRef<
+  ImageViewerHandle,
+  ImageViewerProps
+>(function ImageViewer(props, ref) {
   const isClient = useIsClient()
   if (!isClient) {
     return <ImageViewerFallback className={props.className} bare={props.bare} />
@@ -263,11 +288,11 @@ export function ImageViewer(props: ImageViewerProps) {
       <React.Suspense
         fallback={<ImageViewerFallback className={props.className} bare={props.bare} />}
       >
-        <ImageViewerInner {...props} />
+        <ImageViewerInner {...props} forwardedRef={ref} />
       </React.Suspense>
     </ImageErrorBoundary>
   )
-}
+})
 
 function ImageViewerInner({
   src,
@@ -281,7 +306,10 @@ function ImageViewerInner({
   bare = false,
   header,
   aside,
-}: ImageViewerProps) {
+  forwardedRef,
+}: ImageViewerProps & {
+  forwardedRef?: React.ForwardedRef<ImageViewerHandle>
+}) {
   const source = React.use(getImageSource(src))
   const baseWidth = source.frames[0]?.width || 1
 
@@ -338,6 +366,34 @@ function ImageViewerInner({
 
   const zoom = (factor: number) =>
     setManualScale(clamp(scale * factor, 0.25, 5))
+
+  // Imperative handle: scroll a frame's normalized area into view. Reads the
+  // always-mounted frame slot's live rect, so it stays correct across zoom and
+  // rotation. `area.top` is a % of the rendered frame height.
+  React.useImperativeHandle(
+    forwardedRef,
+    () => ({
+      scrollToFrameArea: (frameNumber, area, options) => {
+        const viewport = scrollViewportRef.current
+        const slot = viewport?.querySelector<HTMLElement>(
+          `[data-page-number="${frameNumber}"]`
+        )
+        if (!viewport || !slot) return
+        const slotRect = slot.getBoundingClientRect()
+        const viewportRect = viewport.getBoundingClientRect()
+        const frameTop = slotRect.top - viewportRect.top + viewport.scrollTop
+        const targetTop =
+          frameTop + (area.top / 100) * slotRect.height - IMAGE_SCROLL_HEADROOM
+        viewport.scrollTo({
+          top: Math.max(0, targetTop),
+          behavior: "smooth",
+          ...options,
+        })
+      },
+      getViewportElement: () => scrollViewportRef.current,
+    }),
+    []
+  )
 
   const frameCount = source.frames.length
   const countLabel =
@@ -597,6 +653,10 @@ function IconButton({
   )
 }
 
+// Shown before the client component mounts (SSR/pre-hydration). Same chrome as
+// the loaded viewer — a toolbar with skeletoned values plus a frame-shaped
+// skeleton — so the top bar is always present and nothing jumps when the real
+// image fades in.
 function ImageViewerFallback({
   className,
   bare = false,
@@ -607,13 +667,77 @@ function ImageViewerFallback({
   return (
     <div
       className={cn(
-        "flex p-4",
-        bare ? "h-full bg-muted/20" : "min-h-64 rounded-xl border bg-muted/30",
+        "flex min-h-0 flex-col overflow-hidden",
+        bare ? "h-full bg-muted/20" : "rounded-xl border bg-muted/30",
         className
       )}
+      data-slot="image-viewer"
     >
-      <Skeleton className="min-h-48 w-full flex-1 rounded-md" />
+      <ImageToolbarSkeleton />
+      <div className="min-h-0 flex-1 overflow-auto">
+        <div className="flex flex-col items-center p-4">
+          <ImageFrameSkeleton />
+        </div>
+      </div>
     </div>
+  )
+}
+
+// A static mirror of the real toolbar: the two undetermined values (frame count,
+// zoom %) are skeletons; the controls are present but inert.
+function ImageToolbarSkeleton() {
+  return (
+    <div className="flex h-10 flex-shrink-0 items-center gap-1 border-b bg-card px-2">
+      <span className="px-1">
+        <Skeleton className="inline-block h-3 w-12 align-middle" />
+      </span>
+      <div className="ml-auto flex items-center gap-1">
+        <ToolbarIconPlaceholder>
+          <Minus />
+        </ToolbarIconPlaceholder>
+        <span className="w-12 text-center">
+          <Skeleton className="inline-block h-3 w-8 align-middle" />
+        </span>
+        <ToolbarIconPlaceholder>
+          <Plus />
+        </ToolbarIconPlaceholder>
+        <ToolbarIconPlaceholder>
+          <Maximize />
+        </ToolbarIconPlaceholder>
+        <ToolbarIconPlaceholder>
+          <RotateCw />
+        </ToolbarIconPlaceholder>
+        <Separator orientation="vertical" className="mx-1 h-4" />
+        <ToolbarIconPlaceholder>
+          <Download />
+        </ToolbarIconPlaceholder>
+      </div>
+    </div>
+  )
+}
+
+function ToolbarIconPlaceholder({ children }: { children: React.ReactNode }) {
+  return (
+    <Button
+      variant="ghost"
+      size="icon-sm"
+      className="size-7"
+      disabled
+      tabIndex={-1}
+      aria-hidden
+    >
+      {children}
+    </Button>
+  )
+}
+
+// An image-shaped skeleton stands in for the frame before it is measured (the
+// SSR fallback and the image-load suspense). The real frame's aspect is unknown
+// until it loads, so a neutral 4:3 placeholder fills the container width; the
+// measured frame replaces it once decoded.
+function ImageFrameSkeleton() {
+  return (
+    <Skeleton aria-hidden className="w-full" style={{ aspectRatio: "4 / 3" }} />
   )
 }
 

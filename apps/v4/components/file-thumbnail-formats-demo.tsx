@@ -43,8 +43,8 @@ const SAMPLES: FormatSample[] = [
   {
     label: "DOCX",
     kind: "docx",
-    src: "/samples/demo.docx",
-    name: "demo.docx",
+    src: "/samples/quarterly-business-review.docx",
+    name: "quarterly-business-review.docx",
     type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   },
   {
@@ -179,8 +179,8 @@ export function DocxThumbnail() {
   return (
     <DocumentThumbnail
       kind="docx"
-      src="/demo.docx"
-      name="demo.docx"
+      src="/quarterly-business-review.docx"
+      name="quarterly-business-review.docx"
       type="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
       previewAspectRatio={1}
     />

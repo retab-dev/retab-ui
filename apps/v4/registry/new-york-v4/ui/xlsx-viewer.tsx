@@ -7,7 +7,7 @@ import { useVirtualizer } from "@tanstack/react-virtual"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { Spinner } from "@/components/ui/spinner"
+import { Skeleton } from "@/components/ui/skeleton"
 
 // The heavy SheetJS parse runs in a Web Worker (see ./xlsx-viewer.worker), so a
 // large workbook never freezes the UI thread. The worker owns @e965/xlsx and
@@ -206,13 +206,34 @@ function XlsxViewerInner({
   header,
   aside,
 }: XlsxViewerProps) {
-  const source = React.use(getXlsxSource(src))
-  const sheetCount = source.sheets.length
-
-  const [activeSheet, setActiveSheet] = React.useState(() =>
-    clamp(defaultSheetIndex, 0, Math.max(0, sheetCount - 1))
+  const [activeSheet, setActiveSheet] = React.useState(
+    Math.max(0, defaultSheetIndex)
   )
   const [scale, setScale] = React.useState(1)
+
+  // The grid body (<XlsxSheet>) reads the workbook and reports its sheet metadata
+  // up here, so the shell, toolbar (name/size), and bottom tab bar paint
+  // immediately and only the grid suspends while the worker parses the file. The
+  // zoom controls need no source. `null` = not parsed yet.
+  const [sheets, setSheets] = React.useState<SheetMeta[] | null>(null)
+  const sheetCount = sheets?.length ?? 0
+  const ready = sheets != null
+  const handleReport = React.useCallback((next: SheetMeta[]) => {
+    setSheets(next)
+    // Pull the active index back in range if the new workbook has fewer sheets.
+    setActiveSheet((a) => clamp(a, 0, Math.max(0, next.length - 1)))
+  }, [])
+  // Re-skeleton the chrome when the source changes — during render, not in an
+  // effect. A parent reset effect runs *after* the body's report effect when a
+  // cached workbook mounts in the same commit (child effects fire before parent
+  // effects), which would clobber the report back to null and wedge the toolbar
+  // and tab bar at skeleton forever. This render-phase reset only fires on an
+  // actual src change and lands before any child effect.
+  const [metaSrc, setMetaSrc] = React.useState(src)
+  if (metaSrc !== src) {
+    setMetaSrc(src)
+    setSheets(null)
+  }
 
   const selectSheet = (index: number) => {
     setActiveSheet(index)
@@ -220,11 +241,7 @@ function XlsxViewerInner({
   }
   const zoom = (factor: number) => setScale((s) => clamp(s * factor, 0.5, 4))
 
-  const sheet = source.sheets[activeSheet]
-  const getCell = React.useCallback(
-    (row: number, col: number) => source.getCell(activeSheet, row, col),
-    [source, activeSheet]
-  )
+  const sheet = sheets?.[activeSheet]
 
   return (
     <div
@@ -238,10 +255,23 @@ function XlsxViewerInner({
       {toolbar ? (
         <div className="flex h-10 flex-shrink-0 items-center gap-2 border-b bg-card px-2">
           <span className="truncate px-1 text-xs font-medium">
-            {sheet?.name ?? "—"}
+            {ready ? (
+              (sheet?.name ?? "—")
+            ) : (
+              // Sheet name is unknown until the workbook parses — skeleton it.
+              <Skeleton className="inline-block h-3 w-24 align-middle" />
+            )}
           </span>
           <span className="hidden px-1 text-xs text-muted-foreground tabular-nums sm:inline">
-            {sheet ? `${sheet.rowCount.toLocaleString()} × ${sheet.colCount}` : ""}
+            {ready ? (
+              sheet ? (
+                `${sheet.rowCount.toLocaleString()} × ${sheet.colCount}`
+              ) : (
+                ""
+              )
+            ) : (
+              <Skeleton className="inline-block h-3 w-16 align-middle" />
+            )}
           </span>
           <div className="ml-auto flex items-center gap-1">
             <IconButton label="Zoom out" onClick={() => zoom(1 / 1.2)}>
@@ -286,23 +316,25 @@ function XlsxViewerInner({
         ) : null}
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           {header ? <div data-slot="xlsx-viewer-header">{header}</div> : null}
-          {/* key on the sheet so the virtualizer resets cleanly per sheet. */}
-          <SheetGrid
-            key={activeSheet}
-            rowCount={sheet?.rowCount ?? 0}
-            colCount={sheet?.colCount ?? 0}
-            getCell={getCell}
-            scale={scale}
-          />
+          {/* Only the grid suspends while the workbook parses; a grid-shaped
+              skeleton stands in so the shell never changes size. */}
+          <React.Suspense fallback={<XlsxGridSkeleton />}>
+            <XlsxSheet
+              src={src}
+              activeSheet={activeSheet}
+              scale={scale}
+              onReport={handleReport}
+            />
+          </React.Suspense>
         </div>
       </div>
 
-      {sheetCount > 1 ? (
+      {sheets && sheets.length > 1 ? (
         <div
           data-slot="xlsx-viewer-tabs"
           className="flex flex-shrink-0 items-stretch gap-0.5 overflow-x-auto border-t bg-card px-1.5 py-1"
         >
-          {source.sheets.map((s, i) => (
+          {sheets.map((s, i) => (
             <button
               key={i}
               type="button"
@@ -325,6 +357,50 @@ function XlsxViewerInner({
   )
 }
 
+// The grid body. This is the only part that reads the workbook, so it is the
+// only part that suspends while the worker parses the file — the shell, toolbar,
+// and tab bar above/below it have already painted. It reports the sheet metadata
+// up to the chrome, then renders the active sheet's virtualized grid.
+function XlsxSheet({
+  src,
+  activeSheet,
+  scale,
+  onReport,
+}: {
+  src: string
+  activeSheet: number
+  scale: number
+  onReport: (sheets: SheetMeta[]) => void
+}) {
+  const source = React.use(getXlsxSource(src))
+
+  // Hand the sheet metadata up so the toolbar (name/size) and tab bar can render
+  // from it. Fires once per workbook.
+  React.useEffect(() => {
+    onReport(source.sheets)
+  }, [source, onReport])
+
+  // Guard the index: the parent may still hold a stale (out-of-range) active
+  // sheet for the frame before its clamping report lands.
+  const safeIndex = clamp(activeSheet, 0, Math.max(0, source.sheets.length - 1))
+  const sheet = source.sheets[safeIndex]
+  const getCell = React.useCallback(
+    (row: number, col: number) => source.getCell(safeIndex, row, col),
+    [source, safeIndex]
+  )
+
+  return (
+    // key on the sheet so the virtualizer resets cleanly per sheet.
+    <SheetGrid
+      key={safeIndex}
+      rowCount={sheet?.rowCount ?? 0}
+      colCount={sheet?.colCount ?? 0}
+      getCell={getCell}
+      scale={scale}
+    />
+  )
+}
+
 function SheetGrid({
   rowCount,
   colCount,
@@ -342,15 +418,6 @@ function SheetGrid({
   const fontSize = BASE_FONT * scale
 
   const scrollRef = React.useRef<HTMLDivElement>(null)
-  const headerScrollRef = React.useRef<HTMLDivElement>(null)
-
-  // Mirror the body's horizontal scroll into the header (scroll, not transform,
-  // so the sticky corner pins exactly like the body's gutter).
-  const handleBodyScroll = (event: React.UIEvent<HTMLDivElement>) => {
-    if (headerScrollRef.current) {
-      headerScrollRef.current.scrollLeft = event.currentTarget.scrollLeft
-    }
-  }
 
   const rowVirtualizer = useVirtualizer({
     count: rowCount,
@@ -408,60 +475,58 @@ function SheetGrid({
       style={{ fontSize }}
       data-slot="xlsx-grid"
     >
-      {/* Header — column letters; synced to the body's horizontal scroll. */}
-      <div
-        ref={headerScrollRef}
-        className="overflow-hidden border-b bg-muted/60"
-        aria-hidden
-      >
-        <div
-          className="grid"
-          style={{ gridTemplateColumns: gridTemplate, width: totalWidth, minWidth: "100%", height: rowHeight }}
-        >
+      {/* One scroll container: the header and rows scroll together natively, so
+          the column letters stay locked to the cells during horizontal scroll
+          (no JS sync). The header sticks to the top; the gutter sticks to the
+          left. */}
+      <div ref={scrollRef} className="min-h-0 flex-1 overflow-auto">
+        <div style={{ width: totalWidth, minWidth: "100%", position: "relative" }}>
+          {/* Header row (column letters) — sticky to the top. */}
           <div
-            className="sticky left-0 z-20 border-r bg-[color-mix(in_oklab,var(--card)_94%,var(--foreground))]"
-            style={{ height: rowHeight }}
-          />
-          <Spacer width={leftPad} />
-          {columnItems.map((item) => (
+            className="sticky top-0 z-20 grid border-b"
+            style={{
+              gridTemplateColumns: gridTemplate,
+              height: rowHeight,
+              backgroundColor: "var(--muted)",
+            }}
+            aria-hidden
+          >
             <div
-              key={item.index}
-              className="flex items-center justify-center border-r font-medium text-muted-foreground last:border-r-0"
-            >
-              {colLabel(item.index)}
-            </div>
-          ))}
-          <Spacer width={rightPad} />
-        </div>
-      </div>
-
-      {/* Body — owns both scrollbars. */}
-      <div
-        ref={scrollRef}
-        className="min-h-0 flex-1 overflow-auto"
-        onScroll={handleBodyScroll}
-      >
-        <div
-          style={{
-            width: totalWidth,
-            minWidth: "100%",
-            position: "relative",
-            height: rowVirtualizer.getTotalSize(),
-          }}
-        >
-          {virtualRows.map((virtualRow) => (
-            <SheetRow
-              key={virtualRow.index}
-              rowIndex={virtualRow.index}
-              getCell={getCell}
-              gridTemplate={gridTemplate}
-              rowHeight={rowHeight}
-              columnItems={columnItems}
-              leftPad={leftPad}
-              rightPad={rightPad}
-              start={virtualRow.start}
+              className="sticky left-0 z-10 border-r bg-[color-mix(in_oklab,var(--card)_94%,var(--foreground))]"
+              style={{ height: rowHeight }}
             />
-          ))}
+            <Spacer width={leftPad} />
+            {columnItems.map((item) => (
+              <div
+                key={item.index}
+                className="flex items-center justify-center border-r font-medium text-muted-foreground last:border-r-0"
+              >
+                {colLabel(item.index)}
+              </div>
+            ))}
+            <Spacer width={rightPad} />
+          </div>
+
+          {/* Absolutely-positioned rows; the sticky header above takes one row's
+              height, so the virtualizer is off by one row at the edges — the
+              overscan window covers it. */}
+          <div
+            style={{ position: "relative", height: rowVirtualizer.getTotalSize() }}
+          >
+            {virtualRows.map((virtualRow) => (
+              <SheetRow
+                key={virtualRow.index}
+                rowIndex={virtualRow.index}
+                getCell={getCell}
+                gridTemplate={gridTemplate}
+                rowHeight={rowHeight}
+                columnItems={columnItems}
+                leftPad={leftPad}
+                rightPad={rightPad}
+                start={virtualRow.start}
+              />
+            ))}
+          </div>
         </div>
       </div>
     </div>
@@ -570,6 +635,10 @@ function IconButton({
   )
 }
 
+// Shown before the client component mounts (SSR/pre-hydration). Same chrome as
+// the loaded viewer — a toolbar with skeletoned values plus a grid-shaped
+// skeleton — so the top bar is always present and nothing jumps when the real
+// spreadsheet fades in.
 function XlsxViewerFallback({
   className,
   bare = false,
@@ -580,12 +649,122 @@ function XlsxViewerFallback({
   return (
     <div
       className={cn(
-        "flex items-center justify-center",
-        bare ? "h-full bg-muted/20" : "min-h-64 rounded-xl border bg-muted/30",
+        "flex min-h-0 flex-col overflow-hidden",
+        bare ? "h-full bg-muted/20" : "rounded-xl border bg-muted/30",
         className
       )}
+      data-slot="xlsx-viewer"
     >
-      <Spinner className="size-5 text-muted-foreground" />
+      <XlsxToolbarSkeleton />
+      <div className="flex min-h-0 flex-1">
+        <XlsxGridSkeleton />
+      </div>
+    </div>
+  )
+}
+
+// A static mirror of the real toolbar: the undetermined values (sheet name, size,
+// zoom %) are skeletons; the controls are present but inert.
+function XlsxToolbarSkeleton() {
+  return (
+    <div className="flex h-10 flex-shrink-0 items-center gap-2 border-b bg-card px-2">
+      <span className="truncate px-1">
+        <Skeleton className="inline-block h-3 w-24 align-middle" />
+      </span>
+      <span className="hidden px-1 sm:inline">
+        <Skeleton className="inline-block h-3 w-16 align-middle" />
+      </span>
+      <div className="ml-auto flex items-center gap-1">
+        <ToolbarIconPlaceholder>
+          <Minus />
+        </ToolbarIconPlaceholder>
+        <span className="w-12 text-center">
+          <Skeleton className="inline-block h-3 w-8 align-middle" />
+        </span>
+        <ToolbarIconPlaceholder>
+          <Plus />
+        </ToolbarIconPlaceholder>
+        <ToolbarIconPlaceholder>
+          <Maximize />
+        </ToolbarIconPlaceholder>
+        <Separator orientation="vertical" className="mx-1 h-4" />
+        <ToolbarIconPlaceholder>
+          <Download />
+        </ToolbarIconPlaceholder>
+      </div>
+    </div>
+  )
+}
+
+function ToolbarIconPlaceholder({ children }: { children: React.ReactNode }) {
+  return (
+    <Button
+      variant="ghost"
+      size="icon-sm"
+      className="size-7"
+      disabled
+      tabIndex={-1}
+      aria-hidden
+    >
+      {children}
+    </Button>
+  )
+}
+
+// A grid skeleton fills the body while the workbook parses (the SSR fallback and
+// the grid-load suspense): a header row, a row-number gutter, and cell bars —
+// the same shape as the real sheet, so nothing changes when the grid arrives.
+function XlsxGridSkeleton() {
+  const cols = 6
+  const rows = 18
+  const widths = [70, 45, 88, 56, 62, 78]
+  return (
+    <div
+      className="flex min-h-0 flex-1 flex-col overflow-hidden bg-card"
+      data-slot="xlsx-grid"
+      aria-hidden
+    >
+      {/* Header (column letters) */}
+      <div className="flex border-b bg-muted/60">
+        <div
+          className="shrink-0 border-r"
+          style={{ width: BASE_GUTTER, height: BASE_ROW_HEIGHT }}
+        />
+        {Array.from({ length: cols }, (_, c) => (
+          <div
+            key={c}
+            className="flex shrink-0 items-center justify-center border-r"
+            style={{ width: BASE_COL_WIDTH, height: BASE_ROW_HEIGHT }}
+          >
+            <Skeleton className="h-3 w-6" />
+          </div>
+        ))}
+      </div>
+      {/* Rows */}
+      <div className="min-h-0 flex-1 overflow-hidden">
+        {Array.from({ length: rows }, (_, r) => (
+          <div key={r} className="flex border-b" style={{ height: BASE_ROW_HEIGHT }}>
+            <div
+              className="flex shrink-0 items-center justify-end border-r px-2"
+              style={{ width: BASE_GUTTER }}
+            >
+              <Skeleton className="h-3 w-4" />
+            </div>
+            {Array.from({ length: cols }, (_, c) => (
+              <div
+                key={c}
+                className="flex shrink-0 items-center border-r px-2"
+                style={{ width: BASE_COL_WIDTH }}
+              >
+                <Skeleton
+                  className="h-3"
+                  style={{ width: `${widths[(r + c) % widths.length]}%` }}
+                />
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

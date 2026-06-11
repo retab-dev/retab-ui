@@ -1,0 +1,101 @@
+---
+title: Split Consensus
+description: A page-axis waterfall comparing how several voters split a document into typed subdocuments against the reconciled consensus — boundary and type disagreements line up at a glance, with a per-page agreement strip and contested ranges called out.
+---
+
+When a split runs more than once, each voter proposes its own carve-up of the
+document into typed subdocuments, and Retab reconciles them into a consensus. The
+Split Consensus component lays those side by side as a **waterfall**: the
+consensus lane on top, each voter lane below, all aligned to the same page axis.
+Boundary shifts and type disagreements line up vertically, so they read at a
+glance.
+
+<SplitConsensusDemo />
+
+A heat strip under the lanes shows per-page agreement (green = every voter
+agrees, red = a clean split), and each contested page range is listed as a chip.
+Hover a chip — or any segment — to dim everything outside that range and isolate
+the disagreement.
+
+## Usage
+
+Pass a single `doc` describing the page count, the reconciled `consensus`, and
+the `voters`. Everything is presentation only — wire it to whatever your run data
+looks like.
+
+```tsx
+import { SplitConsensusView } from "@/registry/new-york-v4/blocks/split-consensus-block"
+
+export function Example() {
+  return (
+    <div className="h-[520px] overflow-hidden rounded-xl border">
+      <SplitConsensusView
+        doc={{
+          filename: "claims-packet-2417.pdf",
+          pageCount: 8,
+          consensus: [
+            { type: "invoice", startPage: 0, endPage: 2 },
+            { type: "remittance", startPage: 3, endPage: 5 },
+            { type: "claim_form", startPage: 6, endPage: 7 },
+          ],
+          voters: [
+            {
+              label: "gpt-4o",
+              segments: [
+                { type: "invoice", startPage: 0, endPage: 2 },
+                { type: "remittance", startPage: 3, endPage: 5 },
+                { type: "claim_form", startPage: 6, endPage: 7 },
+              ],
+            },
+            {
+              label: "sonnet",
+              segments: [
+                { type: "invoice", startPage: 0, endPage: 2 },
+                { type: "remittance", startPage: 3, endPage: 4 },
+                { type: "claim_form", startPage: 5, endPage: 7 },
+              ],
+            },
+          ],
+        }}
+      />
+    </div>
+  )
+}
+```
+
+The `SplitConsensusBlock` export wraps the view with a sample document so it
+renders on its own with no props.
+
+## API
+
+### `SplitConsensusDoc`
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `pageCount` | `number` | Total pages in the document — sets the shared page axis. |
+| `consensus` | `SplitSegment[]` | The reconciled split every voter is compared against; drawn as the top, emphasized lane. |
+| `voters` | `SplitVoter[]` | The individual voter splits, one lane each. |
+| `filename` | `string` | Optional document name shown in the header. |
+
+### `SplitSegment`
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `type` | `string` | Subdocument type, e.g. `invoice`, `remittance`. Drives the color. |
+| `startPage` | `number` | First page of the run (0-indexed, inclusive). |
+| `endPage` | `number` | Last page of the run (0-indexed, inclusive). |
+
+### `SplitVoter`
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `segments` | `SplitSegment[]` | The voter's proposed split. |
+| `label` | `string` | Optional display label, e.g. a model name. Defaults to `voter N`. |
+
+### Components
+
+| Export | Props | Description |
+| --- | --- | --- |
+| `SplitConsensusView` | `{ doc: SplitConsensusDoc }` | The full waterfall, agreement strip and contested ranges. |
+| `SplitConsensusBlock` | `{ doc?: SplitConsensusDoc }` | The view preloaded with a sample document; pass `doc` to override. |
+| `splitAgreementScore` | `(doc) => number` | Helper returning the mean per-page agreement (0–1). |
