@@ -116,6 +116,50 @@ export const VIEWER_BLOCKS = [
     categories: ["sources"],
   },
   {
+    id: "image-sources",
+    registryName: "image-sources-block",
+    title: "Image Sources",
+    description:
+      "Extracted fields linked to a scanned page image — hover a field to highlight its image_bbox region. The source-link abstraction over the image viewer.",
+    command: getRegistryAddCommand("image-sources-block"),
+    docsHref: "/docs/components/extract-viewer",
+    viewHref: "/view/blocks/image-sources",
+    categories: ["sources"],
+  },
+  {
+    id: "text-sources",
+    registryName: "text-sources-block",
+    title: "Text Sources",
+    description:
+      "Values extracted from a log file linked to the lines they came from — hover a field to highlight its line range. The source-link abstraction over a line-based text viewer.",
+    command: getRegistryAddCommand("text-sources-block"),
+    docsHref: "/docs/components/extract-viewer",
+    viewHref: "/view/blocks/text-sources",
+    categories: ["sources"],
+  },
+  {
+    id: "csv-sources",
+    registryName: "csv-sources-block",
+    title: "CSV Sources",
+    description:
+      "Extracted values linked to spreadsheet cells — hover a field to highlight its cell and scroll to it. The source-link abstraction over the CSV viewer's cell handle.",
+    command: getRegistryAddCommand("csv-sources-block"),
+    docsHref: "/docs/components/extract-viewer",
+    viewHref: "/view/blocks/csv-sources",
+    categories: ["sources"],
+  },
+  {
+    id: "xlsx-sources",
+    registryName: "xlsx-sources-block",
+    title: "Excel Sources",
+    description:
+      "Extracted values linked to spreadsheet cells across sheets — hover a field to switch to its sheet, highlight the cell, and scroll to it. The source-link abstraction over the xlsx viewer.",
+    command: getRegistryAddCommand("xlsx-sources-block"),
+    docsHref: "/docs/components/extract-viewer",
+    viewHref: "/view/blocks/xlsx-sources",
+    categories: ["sources"],
+  },
+  {
     id: "pdf-thumbnails",
     registryName: "pdf-thumbnails-block",
     title: "PDF Thumbnails",

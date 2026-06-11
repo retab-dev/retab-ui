@@ -1336,6 +1336,230 @@
       "categories": [
         "consensus"
       ]
+    },
+    {
+      "name": "source-field-list",
+      "type": "registry:ui",
+      "title": "Source field list",
+      "description": "A field list that drives useSourceLink: hover previews a field's source in the viewer, click pins it. The emitter side of a source block.",
+      "registryDependencies": [
+        "use-source-link",
+        "scroll-area",
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/source-field-list.tsx",
+          "type": "registry:ui",
+          "target": "@ui/source-field-list.tsx"
+        }
+      ]
+    },
+    {
+      "name": "image-source",
+      "type": "registry:ui",
+      "title": "Image source adapter",
+      "description": "Bridges the document-source model to the image viewer: imageAnchorToArea, useImageSourceTarget, and renderImageSourceOverlay for image_bbox anchors.",
+      "registryDependencies": [
+        "image-viewer",
+        "document-source",
+        "use-source-link"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/image-source.tsx",
+          "type": "registry:ui",
+          "target": "@ui/image-source.tsx"
+        }
+      ]
+    },
+    {
+      "name": "text-viewer",
+      "type": "registry:ui",
+      "title": "Text Viewer",
+      "description": "A line-numbered text/log viewer with a line-range highlight and an imperative scrollToLines handle.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "button",
+        "scroll-area",
+        "skeleton",
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/text-viewer.tsx",
+          "type": "registry:ui",
+          "target": "@ui/text-viewer.tsx"
+        }
+      ]
+    },
+    {
+      "name": "text-source",
+      "type": "registry:ui",
+      "title": "Text source adapter",
+      "description": "Bridges the document-source model to the text viewer: textAnchorToLines, useTextSourceTarget, and sourceToTextHighlight for text_span anchors.",
+      "registryDependencies": [
+        "text-viewer",
+        "document-source",
+        "use-source-link"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/text-source.tsx",
+          "type": "registry:ui",
+          "target": "@ui/text-source.tsx"
+        }
+      ]
+    },
+    {
+      "name": "csv-source",
+      "type": "registry:ui",
+      "title": "CSV source adapter",
+      "description": "Bridges the document-source model to the CSV viewer: csvAnchorToCell, useCsvSourceTarget, and sourceToCsvCell for csv_cell anchors.",
+      "registryDependencies": [
+        "csv-viewer",
+        "document-source",
+        "use-source-link"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/csv-source.tsx",
+          "type": "registry:ui",
+          "target": "@ui/csv-source.tsx"
+        }
+      ]
+    },
+    {
+      "name": "xlsx-source",
+      "type": "registry:ui",
+      "title": "Excel source adapter",
+      "description": "Bridges the document-source model to the xlsx viewer: spreadsheetAnchorToCell, useXlsxSourceTarget, and sourceToXlsxCell for spreadsheet_cell anchors (sheet-aware).",
+      "registryDependencies": [
+        "xlsx-viewer",
+        "document-source",
+        "use-source-link"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/xlsx-source.tsx",
+          "type": "registry:ui",
+          "target": "@ui/xlsx-source.tsx"
+        }
+      ]
+    },
+    {
+      "name": "image-sources-block",
+      "type": "registry:block",
+      "title": "Image Sources",
+      "description": "Extracted fields linked to a scanned page image — hover to highlight the image_bbox region.",
+      "registryDependencies": [
+        "image-viewer",
+        "image-source",
+        "use-source-link",
+        "document-source",
+        "source-field-list"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/blocks/image-sources-block.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/image-sources-block.tsx"
+        },
+        {
+          "path": "components/viewers/sample-data/image-sources.json",
+          "type": "registry:file",
+          "target": "@components/viewers/sample-data/image-sources.json"
+        }
+      ],
+      "categories": [
+        "primitives"
+      ]
+    },
+    {
+      "name": "text-sources-block",
+      "type": "registry:block",
+      "title": "Text Sources",
+      "description": "Values extracted from a log file linked to the lines they came from — hover to highlight a line range.",
+      "registryDependencies": [
+        "text-viewer",
+        "text-source",
+        "use-source-link",
+        "document-source",
+        "source-field-list"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/blocks/text-sources-block.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/text-sources-block.tsx"
+        },
+        {
+          "path": "components/viewers/sample-data/text-sources.json",
+          "type": "registry:file",
+          "target": "@components/viewers/sample-data/text-sources.json"
+        }
+      ],
+      "categories": [
+        "primitives"
+      ]
+    },
+    {
+      "name": "csv-sources-block",
+      "type": "registry:block",
+      "title": "CSV Sources",
+      "description": "Extracted values linked to spreadsheet cells — hover to highlight a cell and scroll to it.",
+      "registryDependencies": [
+        "csv-viewer",
+        "csv-source",
+        "use-source-link",
+        "document-source",
+        "source-field-list"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/blocks/csv-sources-block.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/csv-sources-block.tsx"
+        },
+        {
+          "path": "components/viewers/sample-data/csv-sources.json",
+          "type": "registry:file",
+          "target": "@components/viewers/sample-data/csv-sources.json"
+        }
+      ],
+      "categories": [
+        "primitives"
+      ]
+    },
+    {
+      "name": "xlsx-sources-block",
+      "type": "registry:block",
+      "title": "Excel Sources",
+      "description": "Extracted values linked to spreadsheet cells across sheets — hover to switch sheet, highlight the cell, and scroll to it.",
+      "registryDependencies": [
+        "xlsx-viewer",
+        "xlsx-source",
+        "use-source-link",
+        "document-source",
+        "source-field-list"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/blocks/xlsx-sources-block.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/xlsx-sources-block.tsx"
+        },
+        {
+          "path": "components/viewers/sample-data/xlsx-sources.json",
+          "type": "registry:file",
+          "target": "@components/viewers/sample-data/xlsx-sources.json"
+        }
+      ],
+      "categories": [
+        "primitives"
+      ]
     }
   ]
 }

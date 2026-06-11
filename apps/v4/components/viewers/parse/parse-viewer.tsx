@@ -315,10 +315,10 @@ function ModeToggle({
   return (
     <Tabs value={mode} onValueChange={(value) => onChange(value as ParseViewMode)}>
       <TabsList variant="underline" className="py-0">
-        <TabsTrigger value="rendered" className="h-8 text-xs">
+        <TabsTrigger value="rendered" className="h-8 text-xs sm:text-xs">
           Rendered
         </TabsTrigger>
-        <TabsTrigger value="text" className="h-8 text-xs">
+        <TabsTrigger value="text" className="h-8 text-xs sm:text-xs">
           Text
         </TabsTrigger>
       </TabsList>

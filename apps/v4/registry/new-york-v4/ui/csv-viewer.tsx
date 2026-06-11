@@ -299,7 +299,11 @@ export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
             className="sticky top-0 z-20 grid border-b"
             style={{
               gridTemplateColumns: gridTemplate,
-              backgroundColor: "var(--muted)",
+              // `--muted` is a 4%-alpha tint (translucent by design), so it lets
+              // scrolling rows show through. Blend two OPAQUE tokens instead — the
+              // same pattern the gutter cells use — for a solid header.
+              backgroundColor:
+                "color-mix(in oklab, var(--card) 92%, var(--foreground))",
             }}
           >
             {showRowNumbers ? (

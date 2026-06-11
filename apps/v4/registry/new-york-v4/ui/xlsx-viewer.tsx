@@ -177,23 +177,49 @@ export interface XlsxViewerProps {
   header?: React.ReactNode
   /** Rendered as a left rail alongside the grid. */
   aside?: React.ReactNode
+  /** A cell to highlight (0-based row + column on `sheet`), or null. */
+  activeCell?: { sheet: number; row: number; col: number } | null
 }
 
-export function XlsxViewer(props: XlsxViewerProps) {
-  const isClient = useIsClient()
-  if (!isClient) {
-    return <XlsxViewerFallback className={props.className} bare={props.bare} />
-  }
-  return (
-    <XlsxErrorBoundary className={props.className}>
-      <React.Suspense
-        fallback={<XlsxViewerFallback className={props.className} bare={props.bare} />}
-      >
-        <XlsxViewerInner {...props} />
-      </React.Suspense>
-    </XlsxErrorBoundary>
-  )
+/** Imperative handle for `XlsxViewer` — obtain it with a `ref`. */
+export interface XlsxViewerHandle {
+  /** Switch to `sheet` and scroll a 0-based (row, col) cell into view. */
+  scrollToCell: (
+    sheet: number,
+    row: number,
+    col: number,
+    options?: { behavior?: ScrollBehavior }
+  ) => void
 }
+
+/** A pending scroll request for the active sheet's grid. */
+type XlsxScrollRequest = {
+  sheet: number
+  row: number
+  col: number
+  behavior: ScrollBehavior
+  nonce: number
+}
+
+export const XlsxViewer = React.forwardRef<XlsxViewerHandle, XlsxViewerProps>(
+  function XlsxViewer(props, ref) {
+    const isClient = useIsClient()
+    if (!isClient) {
+      return <XlsxViewerFallback className={props.className} bare={props.bare} />
+    }
+    return (
+      <XlsxErrorBoundary className={props.className}>
+        <React.Suspense
+          fallback={
+            <XlsxViewerFallback className={props.className} bare={props.bare} />
+          }
+        >
+          <XlsxViewerInner {...props} forwardedRef={ref} />
+        </React.Suspense>
+      </XlsxErrorBoundary>
+    )
+  }
+)
 
 function XlsxViewerInner({
   src,
@@ -205,11 +231,19 @@ function XlsxViewerInner({
   bare = false,
   header,
   aside,
-}: XlsxViewerProps) {
+  activeCell,
+  forwardedRef,
+}: XlsxViewerProps & {
+  forwardedRef?: React.ForwardedRef<XlsxViewerHandle>
+}) {
   const [activeSheet, setActiveSheet] = React.useState(
     Math.max(0, defaultSheetIndex)
   )
   const [scale, setScale] = React.useState(1)
+  const [scrollReq, setScrollReq] = React.useState<XlsxScrollRequest | null>(
+    null
+  )
+  const scrollNonce = React.useRef(0)
 
   // The grid body (<XlsxSheet>) reads the workbook and reports its sheet metadata
   // up here, so the shell, toolbar (name/size), and bottom tab bar paint
@@ -240,6 +274,26 @@ function XlsxViewerInner({
     onSheetChange?.(index)
   }
   const zoom = (factor: number) => setScale((s) => clamp(s * factor, 0.5, 4))
+
+  // Imperative handle: switch sheet + queue a scroll. The target sheet's grid is
+  // keyed per sheet, so it (re)mounts with the request and scrolls on commit.
+  React.useImperativeHandle(
+    forwardedRef,
+    () => ({
+      scrollToCell: (sheet, row, col, options) => {
+        setActiveSheet(sheet)
+        scrollNonce.current += 1
+        setScrollReq({
+          sheet,
+          row,
+          col,
+          behavior: options?.behavior ?? "smooth",
+          nonce: scrollNonce.current,
+        })
+      },
+    }),
+    []
+  )
 
   const sheet = sheets?.[activeSheet]
 
@@ -324,6 +378,8 @@ function XlsxViewerInner({
               activeSheet={activeSheet}
               scale={scale}
               onReport={handleReport}
+              activeCell={activeCell}
+              scrollReq={scrollReq}
             />
           </React.Suspense>
         </div>
@@ -366,11 +422,15 @@ function XlsxSheet({
   activeSheet,
   scale,
   onReport,
+  activeCell,
+  scrollReq,
 }: {
   src: string
   activeSheet: number
   scale: number
   onReport: (sheets: SheetMeta[]) => void
+  activeCell?: { sheet: number; row: number; col: number } | null
+  scrollReq?: XlsxScrollRequest | null
 }) {
   const source = React.use(getXlsxSource(src))
 
@@ -389,6 +449,13 @@ function XlsxSheet({
     [source, safeIndex]
   )
 
+  const cellInSheet =
+    activeCell && activeCell.sheet === safeIndex
+      ? { row: activeCell.row, col: activeCell.col }
+      : null
+  const reqInSheet =
+    scrollReq && scrollReq.sheet === safeIndex ? scrollReq : null
+
   return (
     // key on the sheet so the virtualizer resets cleanly per sheet.
     <SheetGrid
@@ -397,6 +464,8 @@ function XlsxSheet({
       colCount={sheet?.colCount ?? 0}
       getCell={getCell}
       scale={scale}
+      activeCell={cellInSheet}
+      scrollReq={reqInSheet}
     />
   )
 }
@@ -406,11 +475,15 @@ function SheetGrid({
   colCount,
   getCell,
   scale,
+  activeCell,
+  scrollReq,
 }: {
   rowCount: number
   colCount: number
   getCell: (row: number, col: number) => Cell
   scale: number
+  activeCell?: { row: number; col: number } | null
+  scrollReq?: XlsxScrollRequest | null
 }) {
   const rowHeight = Math.round(BASE_ROW_HEIGHT * scale)
   const colWidth = Math.round(BASE_COL_WIDTH * scale)
@@ -438,6 +511,22 @@ function SheetGrid({
     rowVirtualizer.measure()
     columnVirtualizer.measure()
   }, [rowHeight, colWidth, rowVirtualizer, columnVirtualizer])
+
+  // Scroll to a requested cell. Keyed on the request nonce so the same cell can
+  // be re-requested (e.g. after switching away and back).
+  const reqNonce = scrollReq?.nonce
+  React.useEffect(() => {
+    if (!scrollReq) return
+    rowVirtualizer.scrollToIndex(scrollReq.row, {
+      align: "center",
+      behavior: scrollReq.behavior,
+    })
+    columnVirtualizer.scrollToIndex(scrollReq.col, {
+      align: "center",
+      behavior: scrollReq.behavior,
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reqNonce])
 
   const { columnItems, leftPad, rightPad } = React.useMemo(() => {
     const items = columnVirtualizer.getVirtualItems()
@@ -487,7 +576,11 @@ function SheetGrid({
             style={{
               gridTemplateColumns: gridTemplate,
               height: rowHeight,
-              backgroundColor: "var(--muted)",
+              // `--muted` is a 4%-alpha tint (translucent by design), so it lets
+              // scrolling rows show through. Blend two OPAQUE tokens instead — the
+              // same pattern the gutter cells use — for a solid header.
+              backgroundColor:
+                "color-mix(in oklab, var(--card) 92%, var(--foreground))",
             }}
             aria-hidden
           >
@@ -524,6 +617,9 @@ function SheetGrid({
                 leftPad={leftPad}
                 rightPad={rightPad}
                 start={virtualRow.start}
+                activeCol={
+                  activeCell?.row === virtualRow.index ? activeCell.col : null
+                }
               />
             ))}
           </div>
@@ -544,6 +640,7 @@ const SheetRow = React.memo(function SheetRow({
   leftPad,
   rightPad,
   start,
+  activeCol,
 }: {
   rowIndex: number
   getCell: (row: number, col: number) => Cell
@@ -554,6 +651,8 @@ const SheetRow = React.memo(function SheetRow({
   rightPad: number
   /** Absolute Y offset of the virtualized row. */
   start: number
+  /** Column index to highlight in this row, or null. */
+  activeCol?: number | null
 }) {
   // Built from primitive props so a stationary row keeps a stable identity and
   // React.memo skips it — only rows entering the window re-render.
@@ -577,12 +676,14 @@ const SheetRow = React.memo(function SheetRow({
       <Spacer width={leftPad} />
       {columnItems.map((item) => {
         const cell = getCell(rowIndex, item.index)
+        const lit = activeCol === item.index
         return (
           <div
             key={item.index}
             className={cn(
               "flex items-center truncate border-r px-2 last:border-r-0",
-              cell.numeric ? "justify-end tabular-nums" : "justify-start"
+              cell.numeric ? "justify-end tabular-nums" : "justify-start",
+              lit && "bg-primary/12 ring-1 ring-inset ring-primary/50"
             )}
             title={cell.text}
           >

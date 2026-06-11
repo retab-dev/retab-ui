@@ -1,0 +1,130 @@
+[
+  {
+    "key": "registrantName",
+    "label": "Registrant name",
+    "value": "NVIDIA CORP",
+    "source": {
+      "content": "NVIDIA CORP",
+      "anchor": {
+        "kind": "spreadsheet_cell",
+        "row": 10,
+        "column": "B",
+        "sheet_index": 0,
+        "sheet_name": "Cover Page",
+        "coordinate": "B10"
+      }
+    }
+  },
+  {
+    "key": "documentType",
+    "label": "Document type",
+    "value": "10-K",
+    "source": {
+      "content": "10-K",
+      "anchor": {
+        "kind": "spreadsheet_cell",
+        "row": 4,
+        "column": "B",
+        "sheet_index": 0,
+        "sheet_name": "Cover Page",
+        "coordinate": "B4"
+      }
+    }
+  },
+  {
+    "key": "periodEnd",
+    "label": "Period end date",
+    "value": "Jan. 28,  2024",
+    "source": {
+      "content": "Jan. 28,  2024",
+      "anchor": {
+        "kind": "spreadsheet_cell",
+        "row": 6,
+        "column": "B",
+        "sheet_index": 0,
+        "sheet_name": "Cover Page",
+        "coordinate": "B6"
+      }
+    }
+  },
+  {
+    "key": "taxId",
+    "label": "Tax ID",
+    "value": "94-3177549",
+    "source": {
+      "content": "94-3177549",
+      "anchor": {
+        "kind": "spreadsheet_cell",
+        "row": 12,
+        "column": "B",
+        "sheet_index": 0,
+        "sheet_name": "Cover Page",
+        "coordinate": "B12"
+      }
+    }
+  },
+  {
+    "key": "address",
+    "label": "Address",
+    "value": "2788 San Tomas Expressway",
+    "source": {
+      "content": "2788 San Tomas Expressway",
+      "anchor": {
+        "kind": "spreadsheet_cell",
+        "row": 13,
+        "column": "B",
+        "sheet_index": 0,
+        "sheet_name": "Cover Page",
+        "coordinate": "B13"
+      }
+    }
+  },
+  {
+    "key": "auditorName",
+    "label": "Auditor",
+    "value": "PricewaterhouseCoopers LLP",
+    "source": {
+      "content": "PricewaterhouseCoopers LLP",
+      "anchor": {
+        "kind": "spreadsheet_cell",
+        "row": 5,
+        "column": "B",
+        "sheet_index": 1,
+        "sheet_name": "Audit Information",
+        "coordinate": "B5"
+      }
+    }
+  },
+  {
+    "key": "auditorLocation",
+    "label": "Auditor location",
+    "value": "San Jose, California",
+    "source": {
+      "content": "San Jose, California",
+      "anchor": {
+        "kind": "spreadsheet_cell",
+        "row": 6,
+        "column": "B",
+        "sheet_index": 1,
+        "sheet_name": "Audit Information",
+        "coordinate": "B6"
+      }
+    }
+  },
+  {
+    "key": "auditorFirmId",
+    "label": "Auditor firm ID",
+    "value": "238",
+    "source": {
+      "content": "238",
+      "anchor": {
+        "kind": "spreadsheet_cell",
+        "row": 4,
+        "column": "B",
+        "sheet_index": 1,
+        "sheet_name": "Audit Information",
+        "coordinate": "B4"
+      }
+    }
+  }
+]

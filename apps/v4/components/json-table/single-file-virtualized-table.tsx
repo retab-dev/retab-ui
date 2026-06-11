@@ -3,12 +3,6 @@
 import React, { useMemo, useState, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { JSONSchema7 } from "json-schema";
-import { ColumnDef } from "@tanstack/react-table";
-import {
-  useReactTable,
-  getCoreRowModel,
-  flexRender,
-} from "@tanstack/react-table";
 import {
   Table,
   TableBody,
@@ -16,6 +10,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui-retab/table";
+import {
+  buildHeaderRows,
+  getLeafColumns,
+  type TableColumn,
+} from "@/components/json-table/lib/column-types";
 import { TableDocument } from "@/components/json-table/lib/projects-types";
 import { PathInfo } from "./path-utils";
 import { SingleFileFormRow } from "./single-file-form-row";
@@ -36,7 +35,7 @@ interface SingleFileVirtualizedTableProps {
   setStopAt: React.Dispatch<React.SetStateAction<string[]>>;
   foldAllSignal: number;
   setFoldAllSignal: React.Dispatch<React.SetStateAction<number>>;
-  columns: ColumnDef<TableDocument>[];
+  columns: TableColumn[];
   document: TableDocument;
   schema: JSONSchema7;
   tableAndPaths: { table: unknown[][]; paths: (PathInfo | undefined)[][] };
@@ -66,76 +65,57 @@ interface SingleFileVirtualizedTableProps {
 
 const SingleFileTableHeader = React.memo(
   ({
-    table,
+    columns,
     columnWidth,
-    stopAt: _stopAt,
-    setStopAt: _setStopAt,
-    columns: _columns,
-    foldAllSignal: _foldAllSignal,
-    setFoldAllSignal: _setFoldAllSignal,
   }: {
-    table: any;
-    stopAt: string[];
-    setStopAt: React.Dispatch<React.SetStateAction<string[]>>;
-    columns: ColumnDef<TableDocument>[];
+    columns: TableColumn[];
     columnWidth: any;
-    foldAllSignal: number;
-    setFoldAllSignal: React.Dispatch<React.SetStateAction<number>>;
   }) => {
     const theme = getTheme("single-extraction");
-    // Track rendered keys to avoid duplicates ACROSS ALL HEADER ROWS
-    const keysRendered: Set<string> = new Set();
+    // Header rows derived straight from the column tree: each group spans its
+    // leaves; leaves leave empty placeholder cells in the rows beneath them so
+    // columns stay aligned. (This is what TanStack's getHeaderGroups produced.)
+    const headerRows = buildHeaderRows(columns);
 
     return (
       <TableHeader className={`sticky top-0 z-10 ${theme.headerBg}`}>
-        {table
-          .getHeaderGroups()
-          .map((headerGroup: any, headerRowId: number) => (
-            <TableRow
-              key={headerRowId}
-              className={`flex w-max min-w-full ${theme.subHeaderBg} border-b ${theme.border}`}
-            >
-              {/* Column headers */}
-              {headerGroup.headers.map((header: any, headerId: number) => {
-                const rendered = keysRendered.has(header.column.id);
-                keysRendered.add(header.column.id);
+        {headerRows.map((cells, rowIdx) => (
+          <TableRow
+            key={rowIdx}
+            className={`flex w-max min-w-full ${theme.subHeaderBg} border-b ${theme.border}`}
+          >
+            {cells.map((cell, cellIdx) => {
+              const width = cell.leafCount * getColumnWidthPx(columnWidth);
 
-                function getWidth(column: any): number {
-                  if (column.columns && column.columns.length > 0) {
-                    return column.columns
-                      .map(getWidth)
-                      .reduce((a: number, b: number) => a + b, 0);
-                  }
-                  return getColumnWidthPx(columnWidth);
-                }
-                const width = getWidth(header.column);
-
-                return !rendered ? (
-                  <TableHead
-                    key={headerId}
-                    className={`shrink-0 ${theme.headerBg} ${theme.headerText} m-0 border-r p-0 last:border-r-0 ${theme.border}`}
-                    style={{
-                      width: `${width}px`,
-                      minWidth: `${width}px`,
-                      height: "38px",
-                    }}
-                    colSpan={header.colSpan}
-                  >
-                    {flexRender(
-                      header.column.columnDef.header,
-                      header.getContext(),
-                    )}
-                  </TableHead>
-                ) : (
+              if (cell.placeholder) {
+                return (
                   <th
-                    key={headerId}
+                    key={cellIdx}
                     className={`shrink-0 ${theme.subHeaderBg} text-3xs ${theme.headerText} border-r last:border-r-0 ${theme.border}`}
                     style={{ width: `${width}px`, minWidth: `${width}px` }}
                   />
                 );
-              })}
-            </TableRow>
-          ))}
+              }
+
+              return (
+                <TableHead
+                  key={cellIdx}
+                  className={`shrink-0 ${theme.headerBg} ${theme.headerText} m-0 border-r p-0 last:border-r-0 ${theme.border}`}
+                  style={{
+                    width: `${width}px`,
+                    minWidth: `${width}px`,
+                    height: "38px",
+                  }}
+                  colSpan={cell.colSpan}
+                >
+                  {cell.col.header?.({
+                    column: { getLeafColumns: () => getLeafColumns(cell.col) },
+                  })}
+                </TableHead>
+              );
+            })}
+          </TableRow>
+        ))}
       </TableHeader>
     );
   },
@@ -332,14 +312,9 @@ export const SingleFileVirtualizedTable =
       //     });
       // }, [rowCount, visibleKeys, document, columns, tableAndPaths, schema, onUpdateDocument]);
 
-      const table = useReactTable<TableDocument>({
-        data: useMemo(() => {
-          //console.log('[SingleFileVirtualizedTable] data array recomputing', { documentRef: document });
-          return [document];
-        }, [document]),
-        columns,
-        getCoreRowModel: getCoreRowModel(),
-      });
+      // Cells read the document via `row.original` — that's all the old
+      // TanStack row gave them, so a one-field wrapper is the whole "row model".
+      const docRow = useMemo(() => ({ original: document }), [document]);
 
       const totalWidth = visibleKeys.length * getColumnWidthPx(columnWidth);
 
@@ -362,7 +337,6 @@ export const SingleFileVirtualizedTable =
         rowHeight: rowHeightPx,
         overscan,
       });
-      const docRow = table.getRowModel().rows[0];
       const hoverCardPositionRunner =
         showHoverCard && hoverInfo ? (
           <HoverCardPositionRunner
@@ -456,13 +430,8 @@ export const SingleFileVirtualizedTable =
                 style={{ minWidth: `${totalWidth}px` }}
               >
                 <SingleFileTableHeader
-                  table={table}
                   columnWidth={columnWidth}
-                  stopAt={stopAt}
-                  setStopAt={setStopAt}
                   columns={columns}
-                  foldAllSignal={foldAllSignal}
-                  setFoldAllSignal={setFoldAllSignal}
                 />
               </Table>
             </div>

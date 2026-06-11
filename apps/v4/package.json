@@ -34,6 +34,7 @@
     "@radix-ui/react-slot": "^1.1.1",
     "@radix-ui/react-switch": "^1.1.2",
     "@radix-ui/react-tooltip": "^1.1.6",
+    "@shikijs/themes": "3.14.0",
     "@tanstack/react-table": "^8.20.6",
     "@tanstack/react-virtual": "^3.13.12",
     "@vercel/analytics": "^2.0.1",

@@ -2,8 +2,11 @@
 
 import React from "react";
 import { JSONSchema7 } from "json-schema";
-import { Row, ColumnDef } from "@tanstack/react-table";
 import { TableRow } from "@/components/ui-retab/table";
+import type {
+  RowLike,
+  TableColumn,
+} from "@/components/json-table/lib/column-types";
 import { TableDocument } from "@/components/json-table/lib/projects-types";
 import { PathInfo } from "@/components/json-table/path-utils";
 import { DataCell } from "@/components/json-table/data-cell";
@@ -14,8 +17,8 @@ import {
 import { getTheme } from "@/components/json-table/lib/themes";
 
 interface SingleFileFormRowProps {
-  row: Row<TableDocument>;
-  columns: ColumnDef<TableDocument>[];
+  row: RowLike;
+  columns: TableColumn[];
   schema: JSONSchema7;
   tableAndPaths: { table: unknown[][]; paths: (PathInfo | undefined)[][] };
   visibleKeys: string[];

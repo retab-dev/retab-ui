@@ -6,8 +6,10 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui-retab/popover";
-import { Column, ColumnDef } from "@tanstack/react-table";
-import { BuilderDocument } from "@/components/json-table/lib/projects-types";
+import type {
+  HeaderColumnApi,
+  TableColumn,
+} from "@/components/json-table/lib/column-types";
 import {
   ChevronDown,
   ChevronUp,
@@ -598,16 +600,16 @@ export const FormatHeaderName = (name: string) => {
 };
 
 export function flattenColumns(
-  columns: ColumnDef<BuilderDocument>[],
-): ColumnDef<BuilderDocument>[] {
+  columns: TableColumn[],
+): TableColumn[] {
   return columns.reduce((acc, col) => {
     if ("columns" in col && Array.isArray(col.columns)) {
       return acc.concat(
-        flattenColumns(col.columns as ColumnDef<BuilderDocument>[]),
+        flattenColumns(col.columns as TableColumn[]),
       );
     }
     return acc.concat([col]);
-  }, [] as ColumnDef<BuilderDocument>[]);
+  }, [] as TableColumn[]);
 }
 
 function getTopProperties(
@@ -878,7 +880,7 @@ export function ColumnsFromSchema(
   currentIterationId: string,
   editMode: "promptOnly" | "editable" | "readOnly",
   disableHeaderInteractions: boolean = false,
-): [ColumnDef<BuilderDocument>[], number] {
+): [TableColumn[], number] {
   // console.log("Rendering ColumnsFromSchema");
   // console.log("Current date and time:", new Date().toISOString());
 
@@ -890,7 +892,7 @@ export function ColumnsFromSchema(
   function buildColumns(
     properties: { key: string }[],
     depth: number,
-  ): ColumnDef<BuilderDocument>[] {
+  ): TableColumn[] {
     function keyStartsWith(key: string, prop: string) {
       return key.split(".")[depth] === prop;
     }
@@ -1094,7 +1096,7 @@ export function ColumnsFromSchema(
                   header: ({
                     column: _column,
                   }: {
-                    column: Column<BuilderDocument>;
+                    column: HeaderColumnApi;
                   }) => {
                     const headerWidth = getColumnWidthPx(columnWidth) - 20;
                     // Determine the array item type to show its icon in the placeholder header
@@ -1152,7 +1154,7 @@ export function ColumnsFromSchema(
           accessorKey: key,
           foldable: showFoldUnfoldButton,
           ...(nextColumns.length > 0 ? { columns: nextColumns } : {}),
-          header: ({ column }: { column: Column<BuilderDocument> }) => {
+          header: ({ column }: { column: HeaderColumnApi }) => {
             const HeaderContent = () => {
               const [dropdownOpen, setDropdownOpen] = useState(false);
               const lastKeySegment =
@@ -1362,16 +1364,6 @@ export function ColumnsFromSchema(
             };
             return <HeaderContent />;
           },
-          // Cell rendering for the array column itself - simple placeholder
-          cell: ({ row }: { row: any }) => {
-            const value = row.getValue(key);
-            // Display based on value type, or just placeholder
-            return (
-              <div className="text-3xs text-muted-foreground truncate px-1">
-                {Array.isArray(value) ? `[${value.length} items]` : "[Array]"}
-              </div>
-            );
-          },
         };
       }
 
@@ -1384,7 +1376,7 @@ export function ColumnsFromSchema(
         accessorKey: key,
         foldable: showFoldUnfold,
         ...(nextColumns.length > 0 ? { columns: nextColumns } : undefined),
-        header: ({ column }: { column: Column<BuilderDocument> }) => {
+        header: ({ column }: { column: HeaderColumnApi }) => {
           const HeaderContent = () => {
             const [dropdownOpen, setDropdownOpen] = useState(false);
             const lastKeySegment =
@@ -1599,64 +1591,6 @@ export function ColumnsFromSchema(
 
           return <HeaderContent />;
         },
-        cell: ({ row }: { row: any }) => {
-          const value = row.getValue(key);
-          const property = schema.properties?.[key];
-
-          if (!isValidProperty(property)) {
-            return <div>{String(value)}</div>;
-          }
-
-          if (isObject) {
-            return (
-              <div className="text-3xs text-muted-foreground">
-                {value ? (
-                  <div className="max-w-[80px] truncate">
-                    {JSON.stringify(value).substring(0, 15)}
-                    {JSON.stringify(value).length > 15 ? "..." : ""}
-                  </div>
-                ) : (
-                  <span>[Object]</span>
-                )}
-              </div>
-            );
-          }
-
-          // Handle date, time, and datetime formats
-          if (property.type === "string" && property.format) {
-            if (property.format === "date" && value) {
-              const parsedDate = parseDisplayDate(value);
-              return (
-                <div>
-                  {parsedDate ? parsedDate.toLocaleDateString() : value}
-                </div>
-              );
-            }
-            if (property.format === "iso-time" && value) {
-              return <div>{value}</div>; // Display time as is (HH:MM format)
-            }
-            if (property.format === "date-time" && value) {
-              const parsedDate = parseDisplayDate(value);
-              return (
-                <div>{parsedDate ? parsedDate.toLocaleString() : value}</div>
-              );
-            }
-          }
-
-          if (property.type === "number") {
-            return <div className="text-right">{value}</div>;
-          }
-
-          if (property.type === "boolean") {
-            return <div>{value ? "Yes" : "No"}</div>;
-          }
-
-          if (property.enum) {
-            return <div className="capitalize">{value}</div>;
-          }
-
-          return <div>{String(value)}</div>;
-        },
       };
     });
   }
@@ -1669,7 +1603,7 @@ export function ColumnsFromSchema(
       } catch (e) {
         console.error("[ColumnsFromSchema] Failed to flatten schema:", e);
         // Fallback: no columns rather than crashing the view
-        return [] as ColumnDef<BuilderDocument>[];
+        return [] as TableColumn[];
       }
     })(),
     maxDepth,

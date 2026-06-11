@@ -72,7 +72,7 @@ import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import * as PopoverPrimitive from "@radix-ui/react-popover";
 import { TableDocument } from "@/components/json-table/lib/projects-types";
-import { Row } from "@tanstack/react-table";
+import type { RowLike } from "@/components/json-table/lib/column-types";
 // Dataset hooks removed; validation handled via drilled props
 
 import { parseDateStringAsLocal } from "@/components/json-table/lib/date-utils";
@@ -743,7 +743,7 @@ interface PlusCellProps {
   colIdxEnd: number;
   pathInfo?: PathInfo;
   schema: JSONSchema7;
-  row: Row<TableDocument>;
+  row: RowLike;
   docId: string;
   columnWidth: ColumnWidth;
   actionColumnsCount: number;
@@ -844,7 +844,7 @@ interface DataCellProps {
   colIdx: number;
   pathInfo?: PathInfo;
   schema: JSONSchema7;
-  row: Row<TableDocument>;
+  row: RowLike;
   index: number;
   docId: string;
   cellColorState: "none" | "consensus" | "similarity" | "mismatch";
