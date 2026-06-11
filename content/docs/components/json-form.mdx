@@ -1,15 +1,17 @@
 ---
 title: JSON Form
-description: Render and edit structured data as a schema-driven, accordion-grouped form.
+description: A JSON-Schema-driven form built entirely on shadcn's FormField abstraction.
 ---
 
-`JsonForm` renders a JSON Schema and a data object as an editable, accordion-grouped
-form: nested objects collapse into sections, arrays expand into repeatable rows,
-and each field is typed (text, number, date/time, enum, checkbox) with optional
-per-field confidence visualization. It's the accordion-layout sibling of
-the legacy UiForm, restyled to follow your theme via shadcn tokens.
+`JsonForm` renders a whole JSON Schema as an editable form: nested objects
+collapse into sections, arrays expand into repeatable rows, and each scalar is
+typed (text, number, date, enum, checkbox). It's built entirely on shadcn's
+`FormField`, so it inherits your theme, and form state is owned by a
+`react-hook-form` instance you pass in.
 
-Form state is owned by a `react-hook-form` instance you pass in.
+`JsonFormField` is the unit of composition — render a single schema property by
+its field path — and `JsonForm` is the thin convenience wrapper that renders a
+whole schema and owns the `<form>`.
 
 <JsonFormDemo />
 
@@ -17,44 +19,46 @@ Form state is owned by a `react-hook-form` instance you pass in.
 
 ```tsx
 import { useForm } from "react-hook-form"
-import { UiForm, UiFormContent } from "@/components/json-form/json-form"
+import { JsonForm } from "@/components/json-form/json-form"
 
 export function Example() {
-  const form = useForm({ defaultValues: { invoice_number: "INV-1024", total: 1280.5 } })
+  const form = useForm({
+    defaultValues: { invoice_number: "INV-1024", total: 1280.5 },
+  })
   return (
-    <UiForm
-      schema={schema}
-      form={form}
-      onSubmit={(data) => console.log(data)}
-      variant="normal"
-      size="lg"
-      isStreaming={false}
-      isProcessing={false}
-      scalarValueDisplay="none"
-      scalarValueType="none"
-      likelihoods={{}}
-      setLikelihoods={() => {}}
-      titlePosition="object"
-      propertyEditorMode="readOnly"
-      showPropertyEditorPencil={false}
-      validationFlags={{}}
-      setValidationFlags={() => {}}
-    >
-      <UiFormContent />
-    </UiForm>
+    <JsonForm form={form} schema={schema} onSubmit={(data) => console.log(data)}>
+      <button type="submit">Submit</button>
+    </JsonForm>
   )
 }
 ```
 
-## Key props
+Render a single field on its own:
+
+```tsx
+import { JsonFormField } from "@/components/json-form/json-form"
+
+<JsonFormField name="vendor.name" schema={{ type: "string" }} required />
+```
+
+## Props
+
+### `JsonForm`
 
 | Prop | Type | Description |
 | --- | --- | --- |
-| `schema` | `JSONSchema7` | The schema describing the form's structure. |
 | `form` | `UseFormReturn` | A `react-hook-form` instance holding the data values. |
-| `titlePosition` | `"row" \| "object" \| "none"` | `"object"` groups nested objects into accordion sections. |
-| `variant` / `size` | enums | Layout variant and field sizing. |
-| `scalarValueDisplay` / `scalarValueType` | enums | Per-field confidence / consensus visualization. |
-| `isStreaming` / `isProcessing` | `boolean` | UI state flags (skeleton while processing). |
+| `schema` | `JSONSchema7` | The schema describing the form's structure. |
+| `onSubmit` | `SubmitHandler` | Optional submit handler for the underlying `<form>`. |
+| `sourceLink` | `FieldSourceLink` | Opt into field-level source linking — every scalar becomes a hoverable card that reports its path and highlights when active (wire it straight from a `useSourceLink` result). |
+| `children` | `ReactNode` | Rendered after the fields, e.g. a submit button. |
+| `className` | `string` | Class names for the form container. |
 
-`UiForm` is a context provider; render `<UiFormContent />` inside it.
+### `JsonFormField`
+
+| Prop | Type | Description |
+| --- | --- | --- |
+| `name` | `string` | The `react-hook-form` field path, e.g. `vendor.name` or `items.0`. |
+| `schema` | `JSONSchema7` | The schema for this property. |
+| `required` | `boolean` | Marks the field required. |
+| `label` | `string` | Override the derived label. |

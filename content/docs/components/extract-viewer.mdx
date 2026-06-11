@@ -63,7 +63,7 @@ between them — no per-field glue.
 import * as React from "react"
 import { extractionSourcesToSourceMap } from "@/lib/document-source"
 import { useSourceLink } from "@/hooks/use-source-link"
-import { UiForm, UiFormContent } from "@/components/json-form/json-form"
+import { JsonForm } from "@/components/json-form/json-form"
 import { PdfViewer, type PdfViewerHandle } from "@/components/ui/pdf-viewer"
 import {
   usePdfSourceTarget,
@@ -88,14 +88,7 @@ export function Example({ response, form }) {
         className="min-w-0 flex-1"
         renderPageOverlay={renderPdfSourceOverlay(link.activeSource)}
       />
-      <UiForm
-        form={form}
-        schema={response.schema}
-        setSourcesFieldPath={link.onFieldHover}
-        /* …other UiForm props… */
-      >
-        <UiFormContent />
-      </UiForm>
+      <JsonForm form={form} schema={response.schema} sourceLink={link} />
     </div>
   )
 }

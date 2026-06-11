@@ -1,6 +1,6 @@
 import { FileThumbnailFormatsGrid } from "@/components/file-thumbnail-formats-demo"
 import { FileViewerDemo } from "@/components/file-viewer-demo"
-import { JsonFormFieldDemo } from "@/components/json-form-field-demo"
+import { JsonFormDemo } from "@/components/json-form-demo"
 import { JsonTableDemo } from "@/components/json-table/json-table-demo"
 import { RetabSchemaBuilderDemo } from "@/components/retab-schema-builder-demo"
 import { JsonFormSourcesBlock } from "@/registry/new-york-v4/blocks/json-form-sources-block"
@@ -75,7 +75,7 @@ export function HomeShowcase() {
                 title="JSON Form Field"
                 description="Schema-driven, virtualized form fields that stay responsive across thousands of fields."
               >
-                <JsonFormFieldDemo showJsonTab={false} />
+                <JsonFormDemo showJsonTab={false} />
               </ShowcaseItem>
             </div>
 

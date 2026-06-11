@@ -1,104 +1,80 @@
+import { useEffect } from "react";
 import { JSONSchemaType } from "ajv";
 import { ajvResolver } from "@hookform/resolvers/ajv";
 import { JSONSchema7, JSONSchema7Definition } from "json-schema";
-import { useForm } from "react-hook-form";
-import { scalarValueType, UiForm, UiFormContent } from "@/components/json-form/json-form";
+import { useForm, type UseFormReturn } from "react-hook-form";
+import { JsonForm } from "@/components/json-form/json-form";
 import { resolveSchemaReference } from "@/components/json-table/lib/json-schema-utils";
 import { getTheme } from "@/components/json-table/lib/themes";
 
-// New component for editing object properties
+// Kept for caller compatibility; the lightweight JsonForm renders no scalar
+// value / consensus coloring, so this is unused beyond typing the prop.
+export type ScalarValueType = "similarity" | "consensus" | "mismatch" | "none";
+
+// Editor for an object cell: renders the property's schema as a form. Edits are
+// persisted as they change (the popover has no explicit submit button).
 export function ObjectEditor({
   property,
   currentValue,
   onSubmit,
-  likelihoods = {},
-  scalarValueType,
-  setSourcesFieldPath,
-  currentIterationId,
   disabled = false,
 }: {
-  isOpen: boolean;
+  isOpen?: boolean;
   property: JSONSchema7;
   currentValue: any;
   onSubmit: (values: any) => void;
-  likelihoods: Record<string, any>;
-  scalarValueType: scalarValueType;
+  likelihoods?: Record<string, any>;
+  scalarValueType?: ScalarValueType;
   setSourcesFieldPath?: (fieldPath: string | null) => void;
-  currentIterationId: string;
+  currentIterationId?: string;
   disabled?: boolean;
 }) {
-  // This useForm hook is now correctly called inside a component
   const form = useForm({
     defaultValues: currentValue,
-    // Add resolver for schema validation using ajvResolver
     resolver: ajvResolver(property as JSONSchemaType<any>, {
       strictSchema: false,
       allErrors: true,
     }),
   });
 
-  const propertyEditorMode =
-    currentIterationId !== "dataset" && currentIterationId !== "playground"
-      ? "promptOnly"
-      : "editable";
+  useEffect(() => {
+    const sub = form.watch((values) => onSubmit(values));
+    return () => sub.unsubscribe();
+  }, [form, onSubmit]);
 
   const theme = getTheme("gray");
 
   return (
     <div className="flex max-h-[60vh] flex-col space-y-4 overflow-y-auto">
-      {/*<h4 className="font-medium text-sm">{title}</h4>*/}
-      <UiForm
-        form={form}
-        schema={property}
-        variant="normal"
-        config={{}}
-        size="sm"
-        className="w-full"
-        disabled={disabled}
-        isStreaming={false}
-        isProcessing={false}
-        scalarValueDisplay="outline-large"
-        scalarValueType={scalarValueType}
-        likelihoods={likelihoods}
-        setLikelihoods={() => {}}
-        onSubmit={onSubmit}
-        titlePosition="object"
-        setSourcesFieldPath={setSourcesFieldPath}
-        propertyEditorMode={propertyEditorMode}
-        showPropertyEditorPencil={
-          currentIterationId === "dataset" ||
-          currentIterationId === "playground"
-        }
-        validationFlags={{}}
-        setValidationFlags={() => {}}
-      >
-        <UiFormContent
-          className={`border ${theme.border} rounded-sm !text-xs ${theme.tableContainerBg} ${theme.headerText} disabled:opacity-100`}
+      <fieldset disabled={disabled} className="min-w-0">
+        <JsonForm
+          form={form as UseFormReturn<Record<string, unknown>>}
+          schema={property}
+          onSubmit={onSubmit}
+          className={`border ${theme.border} rounded-sm text-xs ${theme.tableContainerBg} ${theme.headerText}`}
         />
-      </UiForm>
+      </fieldset>
     </div>
   );
 }
 
+// Editor for an array cell: wraps the array under a single named property so the
+// form renders an array field, then unwraps it on submit.
 export function ArrayEditor({
   name,
   property,
   currentValue,
   onSubmit,
-  likelihoods = {},
-  scalarValueType,
-  setSourcesFieldPath,
-  currentIterationId,
   disabled = false,
 }: {
   name: string;
   property: JSONSchema7;
   currentValue: any;
   onSubmit: (values: any) => void;
-  likelihoods: Record<string, any>;
-  scalarValueType: scalarValueType;
+  likelihoods?: Record<string, any>;
+  scalarValueType?: ScalarValueType;
   setSourcesFieldPath?: (fieldPath: string | null) => void;
-  currentIterationId: string;
+  currentIterationId?: string;
   disabled?: boolean;
 }) {
   const { $defs, ...restProperty } = property;
@@ -111,60 +87,33 @@ export function ArrayEditor({
     required: [name],
   };
 
-  // Use the dynamic name instead of hardcoding "name"
   const form = useForm({
     defaultValues: {
       [name]: Array.isArray(currentValue) ? currentValue : [],
     },
-    // Add resolver for schema validation using ajvResolver correctly
     resolver: ajvResolver(wrapperSchema as JSONSchemaType<any>, {
       strictSchema: false,
       allErrors: true,
     }),
   });
 
-  const handleSubmit = (values: any) => {
-    onSubmit(values[name]);
-  };
-
-  const propertyEditorMode =
-    currentIterationId !== "dataset" && currentIterationId !== "playground"
-      ? "promptOnly"
-      : "editable";
+  useEffect(() => {
+    const sub = form.watch((values) => onSubmit(values[name]));
+    return () => sub.unsubscribe();
+  }, [form, onSubmit, name]);
 
   const theme = getTheme("gray");
 
   return (
     <div className="flex max-h-[60vh] flex-col space-y-4 overflow-y-auto">
-      <UiForm
-        form={form}
-        schema={wrapperSchema}
-        variant="normal"
-        config={{}}
-        size="sm"
-        className="w-full"
-        disabled={disabled}
-        isStreaming={false}
-        isProcessing={false}
-        scalarValueDisplay="outline-large"
-        scalarValueType={scalarValueType}
-        likelihoods={likelihoods}
-        setLikelihoods={() => {}}
-        onSubmit={handleSubmit}
-        titlePosition="object"
-        setSourcesFieldPath={setSourcesFieldPath}
-        propertyEditorMode={propertyEditorMode}
-        showPropertyEditorPencil={
-          currentIterationId === "dataset" ||
-          currentIterationId === "playground"
-        }
-        validationFlags={{}}
-        setValidationFlags={() => {}}
-      >
-        <UiFormContent
-          className={`border ${theme.border} rounded-sm !text-xs ${theme.tableContainerBg} ${theme.headerText} disabled:opacity-100`}
+      <fieldset disabled={disabled} className="min-w-0">
+        <JsonForm
+          form={form as UseFormReturn<Record<string, unknown>>}
+          schema={wrapperSchema}
+          onSubmit={(values: any) => onSubmit(values[name])}
+          className={`border ${theme.border} rounded-sm text-xs ${theme.tableContainerBg} ${theme.headerText}`}
         />
-      </UiForm>
+      </fieldset>
     </div>
   );
 }

@@ -40,7 +40,6 @@ type Preset = {
 const PRESETS: Preset[] = [
   { label: "Bar", variant: "bar", orientation: "horizontal", side: "top", slot: "top" },
   { label: "Floating", variant: "floating", orientation: "horizontal", side: "top", slot: "overlay" },
-  { label: "Inset", variant: "inset", orientation: "horizontal", slot: "top" },
   { label: "Rail", variant: "plain", orientation: "vertical", slot: "right" },
 ]
 
@@ -60,7 +59,7 @@ export function LegendVariantsBlock() {
       <div className="border-b px-6 py-3">
         <h2 className="text-base font-semibold">Split viewer · legend variants</h2>
         <p className="mt-0.5 text-sm text-muted-foreground">
-          One split result, four legend placements — bar, floating, inset, and a vertical rail.
+          One split result, three legend placements — bar, floating, and a vertical rail.
         </p>
       </div>
       <div className="min-h-0 flex-1 overflow-auto p-4">
@@ -164,7 +163,11 @@ function Cell({
       </div>
       <div
         ref={panelRef}
-        className="h-[340px] overflow-hidden rounded-lg border bg-card"
+        // Definite inline height (not a Tailwind arbitrary class, which can be
+        // missing at first paint) so the viewer is never content-sized — that's
+        // what lets the page grow the cell and collapse the `h-full` rails.
+        style={{ height: 380 }}
+        className="overflow-hidden rounded-lg border bg-card"
       >
         <PdfViewer
           src={PDF_URL}

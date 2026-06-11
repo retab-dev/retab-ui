@@ -34,7 +34,6 @@ import { PptxViewerDemo } from "@/components/pptx-viewer-demo"
 import { XlsxViewerDemo } from "@/components/xlsx-viewer-demo"
 import { FileViewerDemo } from "@/components/file-viewer-demo"
 import { JsonFormDemo } from "@/components/json-form-demo"
-import { JsonFormFieldDemo } from "@/components/json-form-field-demo"
 import { JsonTableDemo } from "@/components/json-table/json-table-demo"
 import {
   ClassificationViewerDemo,
@@ -369,7 +368,6 @@ export const mdxComponents = {
   XlsxViewerDemo,
   FileViewerDemo,
   JsonFormDemo,
-  JsonFormFieldDemo,
   JsonTableDemo,
   ParseViewerDemo,
   ExtractViewerDemo,

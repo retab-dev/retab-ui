@@ -49,10 +49,7 @@ interface SingleFileVirtualizedTableProps {
     fieldPath: string;
     rect: DOMRect;
   }) => void;
-  cellColorState?: "none" | "consensus" | "similarity" | "mismatch";
-  distanceData?: any;
   showHoverCard?: boolean;
-  similarityType?: "unaligned" | "aligned";
   /** Direct callback for ground truth changes (used in reconciliation mode) */
   onGroundTruthChange?: (fieldPath: string, newValue: any) => void;
   /** Map from field paths to indication texts (for review) */
@@ -174,10 +171,7 @@ export const SingleFileVirtualizedTable =
       editMode,
       allowEditing = true,
       onCellHoverStart,
-      cellColorState = "none",
-      distanceData,
       showHoverCard = false,
-      similarityType = "aligned",
       onGroundTruthChange,
       fieldIndicationMap,
       fieldReasoningMap,
@@ -315,17 +309,11 @@ export const SingleFileVirtualizedTable =
                     className="overflow-hidden rounded-md border border-border bg-background p-0 shadow-lg"
                   >
                     <DataCellPopoverCardContent
-                      similarityType={similarityType}
                       document={document}
                       selectedFieldPath={hoverInfo.fieldPath}
-                      currentIterationId={
-                        cellColorState === "similarity"
-                          ? "iteration-single-file"
-                          : "single-file"
-                      }
+                      currentIterationId="single-file"
                       updateDocument={noopUpdateDocument}
                       jsonSchema={schema}
-                      rowDistanceData={distanceData}
                       onGroundTruthChange={onGroundTruthChange}
                       fieldIndicationMap={fieldIndicationMap}
                       fieldReasoningMap={fieldReasoningMap}
@@ -420,8 +408,6 @@ export const SingleFileVirtualizedTable =
                           onCellHoverEnd={
                             showHoverCard ? handleCellHoverEnd : undefined
                           }
-                          cellColorState={cellColorState}
-                          distanceData={distanceData}
                           fieldIndicationMap={fieldIndicationMap}
                           fieldReasoningMap={fieldReasoningMap}
                         />

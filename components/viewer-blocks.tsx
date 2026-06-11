@@ -159,7 +159,7 @@ function BlockCategoryTabs({
               aria-selected={isActive}
               onClick={() => onChange(category.id)}
               className={cn(
-                "text-lg font-medium tracking-tight transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                "text-base font-medium tracking-tight transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 isActive
                   ? "text-foreground"
                   : "text-muted-foreground hover:text-foreground"

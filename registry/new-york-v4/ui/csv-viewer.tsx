@@ -548,12 +548,16 @@ export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
     const colCount = parsedColumns.length
     const colOffset = showRowNumbers ? 1 : 0
 
-    // Download the currently-parsed data as a CSV file. Serializing the parsed
-    // columns + rows (rather than re-fetching `src`) means the download works for
-    // every input mode and always matches what's on screen.
-    const handleDownload = React.useCallback(() => {
-      const csv = serializeCsv(parsedColumns, parsedRows)
-      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" })
+    // Download the data as a CSV file. With a `src` URL we hand back the original
+    // file byte-for-byte (the blob is already cached from the fetch that fed the
+    // viewer, so this is free); otherwise — `value` / `data` / local `source` —
+    // we serialize the parsed columns + rows, which matches what's on screen.
+    const handleDownload = React.useCallback(async () => {
+      const blob = src
+        ? await fetchCsvBlob(src)
+        : new Blob([serializeCsv(parsedColumns, parsedRows)], {
+            type: "text/csv;charset=utf-8",
+          })
       const url = URL.createObjectURL(blob)
       const a = document.createElement("a")
       a.href = url

@@ -47,17 +47,6 @@ import { Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRef, useState } from "react";
 import { useMountEffect } from "@/hooks/useMountEffect";
-import {
-  CONSENSUS_COLORMAP,
-  CONSENSUS_COLORMAP_OPACITY,
-  CONSENSUS_INVERSE,
-  DISTANCES_COLORMAP,
-  DISTANCES_COLORMAP_OPACITY,
-  DISTANCES_INVERSE,
-  getColor,
-  getColorFast,
-  getMismatchColor,
-} from "@/components/json-table/lib/colors";
 import { useTabStateStore } from "@/components/json-table/tab-state-store";
 import {
   dateStringToFormat,
@@ -90,7 +79,6 @@ import {
   HoverInfo,
   useHoverInfo,
 } from "@/components/json-table/hover-info-context";
-import { getPredictionLikelihoods } from "@/components/json-table/lib/consensus-metadata";
 import { findMatchingHighlightedFieldPattern } from "@/components/json-table/lib/review-highlight-utils";
 // Removed project/spec-based computed detection in favor of schema X-ComputedField tagging
 
@@ -432,20 +420,15 @@ export function PlusMergedCell({
 interface DataCellProps {
   keyValue: string;
   rowIdx: number;
-  colIdx: number;
   pathInfo?: PathInfo;
   schema: JSONSchema7;
   row: RowLike;
-  index: number;
   docId: string;
-  cellColorState: "none" | "consensus" | "similarity" | "mismatch";
   columnWidth: ColumnWidth;
   setOpenPopover: (key: string | null) => void;
   openPopover: string | null;
   onGroundTruthDataChange: (docId: string, value: any) => void;
   currentIterationId: string;
-  similarityType: "unaligned" | "aligned";
-  rowDistanceData?: any; // Make rowDistanceData optional
   onCellHoverStart?: (info: HoverInfo) => void;
   onCellHoverEnd?: () => void;
   validationFlags?: any;
@@ -455,122 +438,17 @@ interface DataCellProps {
 }
 
 function calculateVariables(props: DataCellProps & {}) {
-  const { row, rowDistanceData, ...rest } = props;
-  const { pathInfo, similarityType, keyValue, cellColorState } = props;
+  const { row, ...rest } = props;
+  const { pathInfo, keyValue } = props;
 
   const actualKey = pathInfo?.idx
     ? materialize(keyValue, pathInfo?.idx)
     : undefined;
 
-  let cellScore: number | undefined = undefined;
-
-  const getAverageNumericValue = (node: unknown): number | undefined => {
-    const values: number[] = [];
-    const walk = (value: unknown) => {
-      if (typeof value === "number" && Number.isFinite(value)) {
-        values.push(value);
-        return;
-      }
-      if (Array.isArray(value)) {
-        value.forEach(walk);
-        return;
-      }
-      if (value && typeof value === "object") {
-        Object.values(value as Record<string, unknown>).forEach(walk);
-      }
-    };
-    walk(node);
-    if (values.length === 0) return undefined;
-    return values.reduce((sum, item) => sum + item, 0) / values.length;
-  };
-
-  const toWildcardIndexPath = (path: string): string => {
-    return path
-      .split(".")
-      .map((segment) => (/^\d+$/.test(segment) ? "*" : segment))
-      .join(".");
-  };
-
-  const resolveConsensusScore = (
-    likelihoods: unknown,
-    fieldPath: string,
-  ): number | undefined => {
-    if (!likelihoods || typeof likelihoods !== "object") return undefined;
-
-    const wildcardPath = toWildcardIndexPath(fieldPath);
-    const candidatePaths = Array.from(
-      new Set([
-        fieldPath,
-        wildcardPath,
-        fieldPath.startsWith("data.")
-          ? fieldPath.slice(5)
-          : `data.${fieldPath}`,
-        wildcardPath.startsWith("data.")
-          ? wildcardPath.slice(5)
-          : `data.${wildcardPath}`,
-        fieldPath.startsWith("prediction.")
-          ? fieldPath.slice(11)
-          : `prediction.${fieldPath}`,
-        wildcardPath.startsWith("prediction.")
-          ? wildcardPath.slice(11)
-          : `prediction.${wildcardPath}`,
-      ]),
-    );
-
-    for (const candidatePath of candidatePaths) {
-      const nestedValue = get_value_from_row_array_and_dot_notation_path(
-        likelihoods,
-        candidatePath,
-      );
-      if (nestedValue !== undefined) {
-        const score = compute_score_from_likelihood_and_dot_notation_path(
-          likelihoods,
-          candidatePath,
-        );
-        return Number.isFinite(score) ? score : undefined;
-      }
-
-      const flatValue = (likelihoods as Record<string, unknown>)[candidatePath];
-      if (flatValue !== undefined) {
-        if (typeof flatValue === "number" && Number.isFinite(flatValue)) {
-          return flatValue;
-        }
-        const aggregated = getAverageNumericValue(flatValue);
-        if (aggregated !== undefined) {
-          return aggregated;
-        }
-      }
-    }
-
-    return undefined;
-  };
-
-  if (cellColorState === "consensus") {
-    // Consensus mode: use likelihoods from prediction_metadata
-    const likelihoods = getPredictionLikelihoods(
-      row.original?.prediction_data?.metadata,
-    );
-    if (likelihoods && actualKey) {
-      cellScore = resolveConsensusScore(likelihoods, actualKey);
-    }
-  } else if (cellColorState === "similarity" || cellColorState === "mismatch") {
-    // Similarity/Mismatch mode: use distance data from rowDistanceData
-    // Both modes use the same nested data structure
-    if (actualKey && rowDistanceData) {
-      // Use fresh distance data from React Query
-      if (similarityType === "aligned") {
-        cellScore = rowDistanceData.aligned_path_similarity?.[actualKey];
-      } else {
-        cellScore = rowDistanceData.unaligned_path_similarity?.[actualKey];
-      }
-    }
-  }
-
   return {
     ...rest,
     actualKey,
     row,
-    cellScore,
   };
 }
 
@@ -585,12 +463,10 @@ const DataCellContent = (
     actualKey,
     schema,
     docId,
-    cellColorState,
     setOpenPopover,
     openPopover,
     onGroundTruthDataChange,
     currentIterationId,
-    cellScore,
     row,
   } = calculateVariables(props);
 
@@ -766,42 +642,9 @@ const DataCellContent = (
     }
   });
 
-  // Get background color based on cell color state
-  const getCellBackgroundColor = () => {
-    // No coloring if cellColorState is "none" or undefined, or if no score
-    if (
-      props.cellColorState === "none" ||
-      !props.cellColorState ||
-      cellScore === undefined
-    ) {
-      return "transparent";
-    }
-    if (props.cellColorState === "consensus") {
-      return getColorFast(
-        CONSENSUS_COLORMAP,
-        cellScore,
-        CONSENSUS_INVERSE,
-        CONSENSUS_COLORMAP_OPACITY,
-      );
-    }
-    if (props.cellColorState === "mismatch") {
-      return getMismatchColor(cellScore);
-    }
-    // Default to similarity
-    return getColorFast(
-      DISTANCES_COLORMAP,
-      cellScore,
-      DISTANCES_INVERSE,
-      DISTANCES_COLORMAP_OPACITY,
-    );
-  };
-
-  const cellBgColor = getCellBackgroundColor();
   const cellStyle = {
     width: `${cellWidth}px`,
     minWidth: `${cellWidth}px`,
-    backgroundColorHover: cellBgColor,
-    backgroundColor: cellBgColor,
     userSelect: "none" as const,
   };
 
@@ -882,16 +725,6 @@ const DataCellContent = (
       setOpenPopover(null);
     }
   };
-
-  const scalarValueType =
-    cellColorState === "similarity"
-      ? "similarity"
-      : cellColorState === "consensus"
-        ? "consensus"
-        : cellColorState === "mismatch"
-          ? "mismatch"
-          : "none";
-  // Check if there's a reasoning field for this field
 
   // Mouse enter/leave handlers removed - now using click to show floating content
 
@@ -1044,7 +877,6 @@ const DataCellContent = (
                   currentValue={effectiveValue}
                   onSubmit={handleObjectFormSubmitLocal}
                   likelihoods={{}} //arrayLikelihoods}
-                  scalarValueType={scalarValueType}
                   setSourcesFieldPath={(path) => {
                     if (!path) {
                       setHoverInfo(null);
@@ -1116,7 +948,6 @@ const DataCellContent = (
                   currentValue={effectiveValue}
                   onSubmit={handleArrayFormSubmitLocal}
                   likelihoods={{}} //arrayLikelihoods}
-                  scalarValueType={scalarValueType}
                   setSourcesFieldPath={(path) => {
                     if (!path) {
                       setHoverInfo(null);

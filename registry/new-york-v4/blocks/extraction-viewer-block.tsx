@@ -43,7 +43,7 @@ import {
   sourceToXlsxCell,
   useXlsxSourceTarget,
 } from "@/components/ui/xlsx-source"
-import { JsonForm } from "@/components/json-form-field/json-form-field"
+import { JsonForm } from "@/components/json-form/json-form"
 import csvSample from "@/components/viewers/sample-data/csv-sources.json"
 import docxSample from "@/components/viewers/sample-data/docx-sources.json"
 import imageSample from "@/components/viewers/sample-data/image-sources.json"
@@ -145,7 +145,7 @@ function ExtractionForm({
     defaultValues: extraction.values,
   })
 
-  // `json-form-field` is source-link-aware: pass the link and every field
+  // `json-form` is source-link-aware: pass the link and every field
   // becomes a hoverable card that reports its path (an RHF dot-path matching the
   // source-map keys) and highlights when active. No per-field wiring needed.
   return (

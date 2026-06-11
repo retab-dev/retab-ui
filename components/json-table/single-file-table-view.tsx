@@ -29,10 +29,7 @@ interface SingleFileTableViewProps {
     fieldPath: string;
     rect: DOMRect;
   }) => void;
-  cellColorState?: "none" | "consensus" | "similarity" | "mismatch"; // Controls cell background coloring
-  distanceData?: any; // Distance/similarity data for coloring cells
   showHoverCard?: boolean; // Show hover card popover on cell hover
-  similarityType?: "unaligned" | "aligned"; // Type of similarity for hover card
   /** Direct callback for ground truth changes (used in reconciliation mode) */
   onGroundTruthChange?: (fieldPath: string, newValue: any) => void;
   /** Map from field paths to indication texts (for review) */
@@ -53,10 +50,7 @@ export const SingleFileTableView = React.memo<SingleFileTableViewProps>(
     editMode = "editable",
     allowEditing = true,
     onCellHoverStart,
-    cellColorState = "none",
-    distanceData,
     showHoverCard = false,
-    similarityType = "aligned",
     onGroundTruthChange,
     fieldIndicationMap,
     fieldReasoningMap,
@@ -129,10 +123,7 @@ export const SingleFileTableView = React.memo<SingleFileTableViewProps>(
             editMode={editMode}
             allowEditing={allowEditing}
             onCellHoverStart={onCellHoverStart}
-            cellColorState={cellColorState}
-            distanceData={distanceData}
             showHoverCard={showHoverCard}
-            similarityType={similarityType}
             onGroundTruthChange={onGroundTruthChange}
             fieldIndicationMap={fieldIndicationMap}
             fieldReasoningMap={fieldReasoningMap}

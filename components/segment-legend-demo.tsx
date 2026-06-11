@@ -31,7 +31,6 @@ type Preset = {
 const PRESETS: Preset[] = [
   { id: "bar", label: "Bar", variant: "bar", orientation: "horizontal", side: "top" },
   { id: "floating", label: "Floating", variant: "floating", orientation: "horizontal", side: "top" },
-  { id: "inset", label: "Inset", variant: "inset", orientation: "horizontal" },
   { id: "rail", label: "Rail", variant: "bar", orientation: "vertical", side: "left" },
 ]
 

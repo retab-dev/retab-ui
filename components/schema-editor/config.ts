@@ -26,14 +26,6 @@ export interface TemplateCategory {
   templates: Template[];
 }
 
-export const getTemplateIdFromPath = (path: string): string => {
-  return path.split("/").pop() || "";
-};
-
-export const getTemplatePath = (id: string): string => {
-  return `/dashboard/templates/default/${id}`;
-};
-
 // Import all template JSON files statically
 import tplt_tz9Ib2B_A62qDjo_SxeVR from "./templates/tplt_tz9Ib2B_A62qDjo-SxeVR.json";
 import tplt_Ipi2YlRWGsYui_Q8wlzl3 from "./templates/tplt_Ipi2YlRWGsYui_Q8wlzl3.json";

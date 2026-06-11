@@ -8,7 +8,6 @@ type ViewerBlockCategoryId =
   | "sources"
   | "legends"
   | "run-cards"
-  | "workflows"
 
 type ViewerBlockConfig = {
   id: string
@@ -34,7 +33,6 @@ export const VIEWER_BLOCK_CATEGORIES = [
   { id: "primitives", label: "Primitives" },
   { id: "legends", label: "Legends" },
   { id: "run-cards", label: "Run Cards" },
-  { id: "workflows", label: "Workflows" },
 ] as const
 
 export type ViewerBlockCategoryTabId =

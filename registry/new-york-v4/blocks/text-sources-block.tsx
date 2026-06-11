@@ -39,12 +39,7 @@ const SOURCES: SourceMap = Object.fromEntries(
 export function TextSourcesBlock() {
   const viewerRef = React.useRef<TextViewerHandle>(null)
   const target = useTextSourceTarget(viewerRef)
-  const link = useSourceLink({ sources: SOURCES, target })
-
-  React.useEffect(() => {
-    if (FIELDS[0]) link.selectField(FIELDS[0].key)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  const link = useSourceLink({ sources: SOURCES, target, initialField: FIELDS[0]?.key })
 
   return (
     <div className="flex h-full min-h-[680px] bg-background">

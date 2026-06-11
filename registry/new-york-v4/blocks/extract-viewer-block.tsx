@@ -50,14 +50,7 @@ const SOURCES: SourceMap = Object.fromEntries(
 export function ExtractViewerBlock() {
   const viewerRef = React.useRef<PdfViewerHandle>(null)
   const target = usePdfSourceTarget(viewerRef)
-  const link = useSourceLink({ sources: SOURCES, target })
-
-  // Default the pinned field to the first one so a highlight shows on load.
-  React.useEffect(() => {
-    if (FIELDS[0]) link.selectField(FIELDS[0].key)
-    // run once on mount
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  const link = useSourceLink({ sources: SOURCES, target, initialField: FIELDS[0]?.key })
 
   return (
     <div className="flex h-full min-h-[680px] bg-background">

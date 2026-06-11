@@ -41,8 +41,6 @@ interface SingleFileFormRowProps {
     rect: DOMRect;
   }) => void;
   onCellHoverEnd?: () => void;
-  cellColorState?: "none" | "consensus" | "similarity" | "mismatch";
-  distanceData?: any;
   fieldIndicationMap?: Map<string, string>;
   fieldReasoningMap?: Map<string, string>;
 }
@@ -63,8 +61,6 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
     allowEditing = true,
     onCellHoverStart,
     onCellHoverEnd,
-    cellColorState = "none",
-    distanceData,
     fieldIndicationMap,
     fieldReasoningMap,
   }) => {
@@ -121,24 +117,19 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
               key={key}
               keyValue={key}
               rowIdx={rowIdx}
-              colIdx={colIdx}
               pathInfo={pathInfo}
               schema={schema}
               row={row}
-              index={0}
               docId={documentId}
-              cellColorState={cellColorState}
               columnWidth={columnWidth}
               setOpenPopover={setOpenPopover}
               openPopover={openPopover}
               onGroundTruthDataChange={handleDataChange}
               currentIterationId="single-file"
-              similarityType="aligned"
               validationFlags={EMPTY_VALIDATION_FLAGS}
               allowEditing={allowEditing}
               onCellHoverStart={onCellHoverStart}
               onCellHoverEnd={onCellHoverEnd}
-              rowDistanceData={distanceData}
               fieldIndicationMap={fieldIndicationMap}
               fieldReasoningMap={fieldReasoningMap}
             />

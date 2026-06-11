@@ -712,8 +712,12 @@ function XlsxSheet({
 }) {
   const source = React.use(getXlsxSource(src))
 
-  // Hand the sheet metadata up so the toolbar (name/size) and tab bar can render
-  // from it. Fires once per workbook.
+  // Intentional cross-Suspense bridge, not a data-pipe smell: this component
+  // sits inside the Suspense boundary (it `use()`s the workbook), while the
+  // toolbar/tab bar render in the parent OUTSIDE the boundary so their shell
+  // shows during load. The effect hands sheet metadata back up across that
+  // boundary. Idempotent — `source` is cached per src, so re-runs report the
+  // same array and the parent's setState bails out. Fires once per workbook.
   React.useEffect(() => {
     onReport(source.sheets)
   }, [source, onReport])

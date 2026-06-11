@@ -1,12 +1,12 @@
 ---
 title: Segment Legend
-description: A compact color key for page-segmented document results, with bar, floating, inset, and rail variants.
+description: A compact color key for page-segmented document results, with bar, floating, and rail variants.
 ---
 
 `SegmentLegend` is the "key" surface over a page-segmented result (partition
 chunks or split subdocuments) — a compact map from color to label. It docks to a
-document surface in four flavors: a flush **bar**, a **floating** overlay card, a
-gapped **inset** panel, or a vertical **rail**.
+document surface in three flavors: a flush **bar**, a **floating** overlay card,
+or a vertical **rail**.
 
 Hovering an entry raises `activeId` (dimming the others); segments that own the
 `currentPage` render bold. Wire it to the same shared state as a
@@ -55,7 +55,7 @@ controls which edge it docks to.
 | Prop | Type | Description |
 | --- | --- | --- |
 | `segments` | `Segment[]` | Labels + pages + colors (use `toSegments`). |
-| `variant` | `"bar" \| "floating" \| "inset" \| "plain"` | How the legend attaches to the surface. Defaults to `"bar"`. |
+| `variant` | `"bar" \| "floating" \| "plain"` | How the legend attaches to the surface. Defaults to `"bar"`. |
 | `orientation` | `"horizontal" \| "vertical"` | Wrap/grid vs. rail layout. Defaults to `"horizontal"`. |
 | `side` | `"top" \| "bottom" \| "left" \| "right"` | Edge the legend docks to — drives the border (`bar`) or anchor (`floating`). |
 | `density` | `"comfortable" \| "compact"` | Swatch + label scale. Defaults to `"comfortable"`. |

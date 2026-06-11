@@ -50,12 +50,18 @@ export interface UseSourceLinkResult {
 export function useSourceLink({
   sources,
   target,
+  initialField = null,
 }: {
   sources: SourceMap
   target?: SourceTarget
+  /**
+   * Field path to pin on first render so a highlight shows on load. Set during
+   * render (not in an effect) — the initial viewer position already reveals it.
+   */
+  initialField?: string | null
 }): UseSourceLinkResult {
   const [hoverPath, setHoverPath] = React.useState<string | null>(null)
-  const [pinnedPath, setPinnedPath] = React.useState<string | null>(null)
+  const [pinnedPath, setPinnedPath] = React.useState<string | null>(initialField)
 
   const activePath = hoverPath ?? pinnedPath
   const activeSource = activePath ? sources[activePath] : undefined

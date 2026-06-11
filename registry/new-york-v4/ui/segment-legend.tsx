@@ -6,7 +6,7 @@ import { type Segment } from "@/lib/segments"
 import { cn } from "@/lib/utils"
 
 /** How the legend attaches to the document surface. */
-export type SegmentLegendVariant = "bar" | "floating" | "inset" | "plain"
+export type SegmentLegendVariant = "bar" | "floating" | "plain"
 export type SegmentLegendOrientation = "horizontal" | "vertical"
 export type SegmentLegendSide = "top" | "bottom" | "left" | "right"
 export type SegmentLegendDensity = "comfortable" | "compact"
@@ -17,7 +17,6 @@ export interface SegmentLegendProps {
    * How the legend attaches to the document surface:
    * - `bar` — flush, full-width, bordered on its docking side (default).
    * - `floating` — an overlay card pinned to a corner; needs a `relative` parent.
-   * - `inset` — a gapped, rounded panel set in from the edges.
    * - `plain` — raw entries, no chrome (compose your own container).
    * @default "bar"
    */
@@ -70,8 +69,8 @@ const FLOAT_ANCHOR: Record<SegmentLegendSide, string> = {
  * Zero-page segments are hidden unless shown via the toggle.
  *
  * `variant` controls how it sits on the document surface (flush bar, floating
- * overlay, inset panel, or unstyled) so the same legend works for the classify,
- * split, and partition viewers without each one re-building its own chrome.
+ * overlay, or unstyled) so the same legend works for the classify, split, and
+ * partition viewers without each one re-building its own chrome.
  */
 export function SegmentLegend({
   segments,
@@ -102,7 +101,6 @@ export function SegmentLegend({
 
   const chrome = {
     bar: cn("bg-background px-3 py-2", DOCK_BORDER[dockSide]),
-    inset: "m-2 rounded-lg border bg-muted/40 px-3 py-2",
     floating: cn(
       "z-10 rounded-lg border bg-background/90 px-3 py-2 shadow-md backdrop-blur",
       FLOAT_ANCHOR[dockSide]
@@ -154,15 +152,26 @@ export function SegmentLegend({
                 className={cn("shrink-0 rounded-[2px]", d.swatch)}
                 style={{ backgroundColor: segment.color }}
               />
-              <span
-                className={cn(
-                  "truncate",
-                  active || current
-                    ? "font-semibold text-foreground"
-                    : "font-normal text-muted-foreground"
-                )}
-              >
-                {segment.label}
+              {/* Reserve the bold width up front: an always-semibold but
+                  invisible copy sizes the slot, and the visible label overlays
+                  it — so toggling bold on the active item can't shift the layout. */}
+              <span className="grid min-w-0">
+                <span
+                  aria-hidden
+                  className="invisible col-start-1 row-start-1 truncate font-semibold"
+                >
+                  {segment.label}
+                </span>
+                <span
+                  className={cn(
+                    "col-start-1 row-start-1 truncate",
+                    active || current
+                      ? "font-semibold text-foreground"
+                      : "font-normal text-muted-foreground"
+                  )}
+                >
+                  {segment.label}
+                </span>
               </span>
             </button>
           )

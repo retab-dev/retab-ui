@@ -3,7 +3,6 @@
   "pages": [
     "index",
     "json-form",
-    "json-form-field",
     "json-table",
     "schema-builder",
     "property-form",

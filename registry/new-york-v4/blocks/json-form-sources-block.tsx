@@ -13,7 +13,7 @@ import {
 import { PdfViewer, type PdfViewerHandle } from "@/components/ui/pdf-viewer"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { SourceIndicator } from "@/components/ui/source-indicator"
-import { UiForm, UiFormContent } from "@/components/json-form/json-form"
+import { JsonForm } from "@/components/json-form/json-form"
 import sourcesSample from "@/components/viewers/sample-data/json-form-sources.json"
 
 const PDF_URL = "/samples/bank-statement-x4uhhi7t.pdf"
@@ -31,9 +31,10 @@ const SOURCES = extractionSourcesToSourceMap(sourcesSample.sources)
  * value came from in the PDF and scrolls to it.
  *
  * This is the abstraction working across components that don't know about each
- * other: json-form already emits the hovered field path via `setSourcesFieldPath`
- * (dotted, matching the flattened `SourceMap` keys), `useSourceLink` mediates,
- * and the PDF adapter is the target. No bespoke wiring between form and viewer.
+ * other: `json-form` is source-link-aware — pass the `useSourceLink` result as
+ * `sourceLink` and every field reports its path (a dotted RHF path matching the
+ * flattened `SourceMap` keys) on hover; the PDF adapter is the target. No
+ * bespoke wiring between form and viewer.
  */
 export function JsonFormSourcesBlock() {
   const viewerRef = React.useRef<PdfViewerHandle>(null)
@@ -41,12 +42,6 @@ export function JsonFormSourcesBlock() {
   const link = useSourceLink({ sources: SOURCES, target })
 
   const form = useForm<Record<string, unknown>>({ defaultValues: extraction })
-  const [likelihoods, setLikelihoods] = React.useState<Record<string, unknown>>(
-    {}
-  )
-  const [validationFlags, setValidationFlags] = React.useState<
-    Record<string, unknown>
-  >({})
 
   return (
     <div className="flex h-full min-h-[680px] bg-background">
@@ -70,27 +65,7 @@ export function JsonFormSourcesBlock() {
         </div>
         <ScrollArea className="min-h-0 flex-1">
           <div className="p-4">
-            <UiForm
-              schema={schema}
-              form={form}
-              onSubmit={() => undefined}
-              variant="normal"
-              size="lg"
-              isStreaming={false}
-              isProcessing={false}
-              scalarValueDisplay="none"
-              scalarValueType="none"
-              likelihoods={likelihoods}
-              setLikelihoods={setLikelihoods}
-              setSourcesFieldPath={link.onFieldHover}
-              titlePosition="object"
-              propertyEditorMode="readOnly"
-              showPropertyEditorPencil={false}
-              validationFlags={validationFlags}
-              setValidationFlags={setValidationFlags}
-            >
-              <UiFormContent />
-            </UiForm>
+            <JsonForm form={form} schema={schema} sourceLink={link} />
           </div>
         </ScrollArea>
       </aside>

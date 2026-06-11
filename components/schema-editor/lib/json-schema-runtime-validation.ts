@@ -65,20 +65,3 @@ export function validateRuntimeSchema(
     };
   }
 }
-
-export function summarizeRuntimeSchemaErrors(
-  errors: ErrorObject[] | null,
-  limit: number = 3,
-): string {
-  if (!errors || errors.length === 0) {
-    return "";
-  }
-
-  return errors
-    .slice(0, limit)
-    .map((error) => {
-      const path = error.instancePath || "root";
-      return `${path}: ${error.message}`;
-    })
-    .join("; ");
-}

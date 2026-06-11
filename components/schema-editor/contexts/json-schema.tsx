@@ -6,7 +6,6 @@ import React, {
   useState,
   ReactNode,
   useCallback,
-  useEffect,
   useMemo,
   useRef,
 } from "react";
@@ -138,13 +137,18 @@ function JsonSchemaEditorProviderRaw({
 
   // Re-import only when the controlled prop changes from OUTSIDE (not our own
   // echo), so node ids stay stable across edits routed through applyDocOp.
-  useEffect(() => {
-    const sig = schemaSignature(jsonSchemaProp);
-    if (sig !== syncedSignatureRef.current) {
-      setDoc(fromJsonSchema(jsonSchemaProp));
-      syncedSignatureRef.current = sig;
-    }
-  }, [jsonSchemaProp]);
+  // Adjusting state during render (rather than in an effect) means the new doc
+  // is used in this same pass — no extra render with the stale projection. The
+  // signature is memoized so the recursive normalize runs only when the prop
+  // reference actually changes, matching the old effect's dependency behavior.
+  const propSignature = useMemo(
+    () => schemaSignature(jsonSchemaProp),
+    [jsonSchemaProp],
+  );
+  if (propSignature !== syncedSignatureRef.current) {
+    syncedSignatureRef.current = propSignature;
+    setDoc(fromJsonSchema(jsonSchemaProp));
+  }
 
   // Editor policy: every property is required. The projection (and every emit
   // below) forces all-required, so the toggle is gone and the output is always
