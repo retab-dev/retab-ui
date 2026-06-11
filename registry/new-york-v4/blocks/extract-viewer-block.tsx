@@ -1,6 +1,8 @@
 "use client"
 
 import * as React from "react"
+import type { JSONSchema7 } from "json-schema"
+import { useForm } from "react-hook-form"
 
 import type { Source, SourceMap } from "@/lib/document-source"
 import { useSourceLink } from "@/hooks/use-source-link"
@@ -9,31 +11,39 @@ import {
   usePdfSourceTarget,
 } from "@/components/ui/pdf-source"
 import { PdfViewer, type PdfViewerHandle } from "@/components/ui/pdf-viewer"
-import {
-  SourceFieldList,
-  type SourceField,
-} from "@/components/ui/source-field-list"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { SourceIndicator } from "@/components/ui/source-indicator"
+import { JsonForm } from "@/components/json-form/json-form"
 import extractSample from "@/components/viewers/sample-data/extract.json"
 
 const PDF_URL = "/samples/bank-statement-x4uhhi7t.pdf"
 
-type ExtractField = SourceField & {
+type ExtractField = {
+  key: string
+  label: string
+  value: string
   /** Where this value was found in the document (its source). */
   source: Source
 }
 
 // Extracted values from the bank-statement sample with true text coordinates
 // (normalized pdf_bbox anchors), so each field's source highlight lands on the page.
-const FIELDS: ExtractField[] = (extractSample as ExtractField[]).map(
-  (field) => ({
-    ...field,
-    hint:
-      field.source.anchor.kind === "pdf_bbox"
-        ? `Page ${field.source.anchor.page}`
-        : undefined,
-  })
-)
+const FIELDS = extractSample as ExtractField[]
+const schema: JSONSchema7 = {
+  type: "object",
+  properties: Object.fromEntries(
+    FIELDS.map((field) => [
+      field.key,
+      {
+        type: "string",
+        title: field.label,
+      },
+    ])
+  ),
+}
+const defaultValues = Object.fromEntries(
+  FIELDS.map((field) => [field.key, field.value])
+) as Record<string, unknown>
 const SOURCES: SourceMap = Object.fromEntries(
   FIELDS.map((field) => [field.key, field.source])
 )
@@ -51,6 +61,7 @@ export function ExtractViewerBlock() {
   const viewerRef = React.useRef<PdfViewerHandle>(null)
   const target = usePdfSourceTarget(viewerRef)
   const link = useSourceLink({ sources: SOURCES, target, initialField: FIELDS[0]?.key })
+  const form = useForm<Record<string, unknown>>({ defaultValues })
 
   return (
     <div className="flex h-full min-h-[680px] bg-background">
@@ -65,7 +76,19 @@ export function ExtractViewerBlock() {
         />
         <SourceIndicator path={link.activePath} found={!!link.activeSource} />
       </div>
-      <SourceFieldList fields={FIELDS} link={link} />
+      <aside className="flex w-[420px] flex-shrink-0 flex-col border-l">
+        <div className="flex h-10 flex-shrink-0 items-center gap-2 border-b px-4">
+          <h2 className="text-sm font-medium">Extracted data</h2>
+          <span className="ml-auto text-xs text-muted-foreground">
+            {FIELDS.length} fields
+          </span>
+        </div>
+        <ScrollArea className="min-h-0 flex-1">
+          <div className="p-4">
+            <JsonForm form={form} schema={schema} sourceLink={link} />
+          </div>
+        </ScrollArea>
+      </aside>
     </div>
   )
 }

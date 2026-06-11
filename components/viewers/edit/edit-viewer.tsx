@@ -268,7 +268,6 @@ function FieldPanel({
   view,
   onViewChange,
   filledCount,
-  currentPage,
   effectiveKey,
   activeKey,
   query,
@@ -326,9 +325,28 @@ function FieldPanel({
         standalone ? "min-w-0 flex-1" : "w-[280px]",
       )}
     >
-      <div className="flex h-10 flex-shrink-0 items-center gap-2 border-b px-4">
-        <h2 className="text-sm font-medium">Form fields</h2>
-        <span className="ml-auto text-xs text-muted-foreground tabular-nums">
+      <div className="flex h-10 flex-shrink-0 items-center gap-2 border-b px-3">
+        {views.length > 1 ? (
+          <Tabs
+            value={view}
+            onValueChange={(v) => onViewChange(v as EditViewMode)}
+          >
+            <TabsList variant="underline" className="py-0">
+              {views.map((v) => (
+                <TabsTrigger
+                  key={v}
+                  value={v}
+                  className="h-9 text-xs capitalize sm:text-xs"
+                >
+                  {v}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+        ) : (
+          <h2 className="px-1 text-sm font-medium">Form fields</h2>
+        )}
+        <span className="ml-auto pr-1 text-xs text-muted-foreground tabular-nums">
           <span className="text-success-foreground">{filledCount}</span>
           {" / "}
           {fields.length} filled
@@ -336,19 +354,6 @@ function FieldPanel({
       </div>
 
       <div className="flex flex-shrink-0 flex-col gap-2 border-b px-3 py-2.5">
-        {views.length > 1 ? (
-          <div className="flex items-center justify-between gap-2">
-            <Segmented
-              options={views}
-              value={view}
-              onChange={onViewChange}
-            />
-            <span className="text-[11px] text-muted-foreground tabular-nums">
-              page {currentPage}
-            </span>
-          </div>
-        ) : null}
-
         <div className="relative">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
           <input
@@ -474,32 +479,3 @@ function FieldRow({
   );
 }
 
-function Segmented<T extends string>({
-  options,
-  value,
-  onChange,
-}: {
-  options: readonly T[];
-  value: T;
-  onChange: (v: T) => void;
-}) {
-  return (
-    <div className="inline-flex items-center rounded-md border bg-muted/40 p-0.5">
-      {options.map((opt) => (
-        <button
-          key={opt}
-          type="button"
-          onClick={() => onChange(opt)}
-          className={cn(
-            "rounded px-2.5 py-0.5 text-[11px] font-medium capitalize transition-colors",
-            value === opt
-              ? "bg-background text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          {opt}
-        </button>
-      ))}
-    </div>
-  );
-}
