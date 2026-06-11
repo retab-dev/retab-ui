@@ -13,6 +13,7 @@ import {
   SourceFieldList,
   type SourceField,
 } from "@/components/ui/source-field-list"
+import { SourceIndicator } from "@/components/ui/source-indicator"
 import extractSample from "@/components/viewers/sample-data/extract.json"
 
 const PDF_URL = "/samples/bank-statement-x4uhhi7t.pdf"
@@ -60,7 +61,7 @@ export function ExtractViewerBlock() {
 
   return (
     <div className="flex h-full min-h-[680px] bg-background">
-      <div className="min-w-0 flex-1">
+      <div className="relative min-w-0 flex-1">
         <PdfViewer
           ref={viewerRef}
           src={PDF_URL}
@@ -69,6 +70,7 @@ export function ExtractViewerBlock() {
           className="h-full"
           renderPageOverlay={renderPdfSourceOverlay(link.activeSource)}
         />
+        <SourceIndicator path={link.activePath} found={!!link.activeSource} />
       </div>
       <SourceFieldList fields={FIELDS} link={link} />
     </div>

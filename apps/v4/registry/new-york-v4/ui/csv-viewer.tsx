@@ -19,7 +19,130 @@ const ROW_NUMBER_WIDTH = 56
 // Base font size at 100% zoom; scales linearly with `scale`.
 const BASE_FONT = 13
 
+// A native vertical scrollbar spans the full scroller height and paints on top
+// of everything (z-index can't cover it), so it overlaps the sticky header. Hide
+// the vertical bar (WebKit) and draw a custom thumb below the header instead;
+// keep the native horizontal bar, styled to match.
+const SCROLLBAR_CSS = `
+[data-slot="csv-body"]::-webkit-scrollbar { width: 10px; height: 10px; }
+[data-slot="csv-body"]::-webkit-scrollbar:vertical { display: none; }
+[data-slot="csv-body"]::-webkit-scrollbar-track { background: transparent; }
+[data-slot="csv-body"]::-webkit-scrollbar-thumb {
+  background-color: color-mix(in oklab, var(--foreground) 22%, transparent);
+  border-radius: 9999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+[data-slot="csv-body"]::-webkit-scrollbar-thumb:hover {
+  background-color: color-mix(in oklab, var(--foreground) 38%, transparent);
+}
+`
+
+// Custom vertical scroll indicator that sits BELOW a sticky header (the native
+// vertical bar is hidden by SCROLLBAR_CSS). Tracks the scroller's scrollTop and
+// is draggable.
+function HeaderAwareScrollbar({
+  scrollRef,
+  headerHeight,
+}: {
+  scrollRef: React.RefObject<HTMLDivElement | null>
+  headerHeight: number
+}) {
+  const [thumb, setThumb] = React.useState({ height: 0, top: 0, show: false })
+  const drag = React.useRef<{ y: number; scroll: number } | null>(null)
+
+  const measure = React.useCallback(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const { scrollHeight, clientHeight, scrollTop } = el
+    const track = clientHeight - headerHeight
+    if (scrollHeight <= clientHeight + 1 || track <= 0) {
+      setThumb((t) => (t.show ? { ...t, show: false } : t))
+      return
+    }
+    const height = Math.max(28, (clientHeight / scrollHeight) * track)
+    const max = scrollHeight - clientHeight
+    const top = max > 0 ? (scrollTop / max) * (track - height) : 0
+    setThumb({ height, top, show: true })
+  }, [scrollRef, headerHeight])
+
+  React.useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    measure()
+    el.addEventListener("scroll", measure, { passive: true })
+    const observer = new ResizeObserver(measure)
+    observer.observe(el)
+    return () => {
+      el.removeEventListener("scroll", measure)
+      observer.disconnect()
+    }
+  }, [scrollRef, measure])
+
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    const el = scrollRef.current
+    if (!el) return
+    e.preventDefault()
+    drag.current = { y: e.clientY, scroll: el.scrollTop }
+    e.currentTarget.setPointerCapture(e.pointerId)
+  }
+  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const el = scrollRef.current
+    const d = drag.current
+    if (!el || !d) return
+    const track = el.clientHeight - headerHeight
+    const height = Math.max(28, (el.clientHeight / el.scrollHeight) * track)
+    const denom = track - height
+    if (denom <= 0) return
+    const max = el.scrollHeight - el.clientHeight
+    el.scrollTop = d.scroll + ((e.clientY - d.y) / denom) * max
+  }
+  const endDrag = (e: React.PointerEvent<HTMLDivElement>) => {
+    drag.current = null
+    e.currentTarget.releasePointerCapture?.(e.pointerId)
+  }
+
+  if (!thumb.show) return null
+  return (
+    <div
+      aria-hidden
+      className="pointer-events-none absolute right-0 z-30 w-2.5"
+      style={{ top: headerHeight, bottom: 0 }}
+    >
+      <div
+        className="pointer-events-auto absolute right-0.5 w-1.5 rounded-full bg-foreground/25 transition-colors hover:bg-foreground/40"
+        style={{ height: thumb.height, top: thumb.top }}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
+      />
+    </div>
+  )
+}
+
+// Fetched blobs are cached per URL so a remount (or re-render) reuses the bytes
+// already downloaded instead of re-fetching the file.
+const csvBlobCache = new Map<string, Promise<Blob>>()
+function fetchCsvBlob(src: string): Promise<Blob> {
+  let p = csvBlobCache.get(src)
+  if (!p) {
+    p = fetch(src).then((r) => {
+      if (!r.ok) throw new Error(`Failed to load file: ${r.status}`)
+      return r.blob()
+    })
+    csvBlobCache.set(src, p)
+  }
+  return p
+}
+
 export interface CsvViewerProps {
+  /**
+   * URL of a CSV/TSV file (same-origin or CORS-enabled). Fetched, then streamed
+   * like `source` — so this is the URL-first entry point that matches every
+   * other viewer. Takes precedence over `value`/`data`/`source` when set.
+   */
+  src?: string
   /** Raw CSV/TSV text. Provide this or `data`. */
   value?: string
   /** Pre-parsed data, if you already have columns + rows. */
@@ -27,7 +150,8 @@ export interface CsvViewerProps {
   /**
    * A large CSV source to parse off the render path — a `File`/`Blob`, or a raw
    * CSV string. Rows stream in progressively, keeping the main thread
-   * responsive. Prefer this over `value` for big inputs.
+   * responsive. Prefer this over `value` for big inputs. For a remote file,
+   * pass `src` instead and it's fetched then streamed the same way.
    */
   source?: Blob | string
   /**
@@ -67,6 +191,12 @@ export interface CsvViewerProps {
   columnWidth?: number
   /** Zoom multiplier on row height, column width, and font size. Defaults to 1. */
   scale?: number
+  /**
+   * Show the zoom controls in the footer. Defaults to true. Set false when a
+   * host drives zoom through `scale` (e.g. file-viewer's toolbar), so there's
+   * one zoom control rather than two.
+   */
+  showZoom?: boolean
   /** Scroll viewport height in pixels. Defaults to 480. Ignored when `fillHeight`. */
   height?: number
   /**
@@ -97,6 +227,7 @@ export interface CsvViewerHandle {
 export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
   function CsvViewer(
     {
+      src,
       value,
       data,
       source,
@@ -111,6 +242,7 @@ export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
       rowHeight = 33,
       columnWidth = 180,
       scale = 1,
+      showZoom = true,
       height = 480,
       fillHeight = false,
       label = "CSV data",
@@ -119,19 +251,47 @@ export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
     }: CsvViewerProps,
     ref: React.ForwardedRef<CsvViewerHandle>
   ) {
+    // A remote `src` is fetched to a Blob (cached per URL), then handed to the
+    // same streaming path as a local `source` — so the URL entry point shares
+    // all the worker/progressive-parse machinery rather than duplicating it.
+    const [urlBlob, setUrlBlob] = React.useState<Blob | null>(null)
+    const [urlError, setUrlError] = React.useState(false)
+    React.useEffect(() => {
+      if (!src) {
+        setUrlBlob(null)
+        setUrlError(false)
+        return
+      }
+      let cancelled = false
+      setUrlBlob(null)
+      setUrlError(false)
+      fetchCsvBlob(src).then(
+        (blob) => !cancelled && setUrlBlob(blob),
+        () => !cancelled && setUrlError(true)
+      )
+      return () => {
+        cancelled = true
+      }
+    }, [src])
+    // Fetching the blob is part of "loading"; until it lands there's no source,
+    // so the stream stays empty without flashing the empty-state.
+    const fetching = Boolean(src) && !urlBlob && !urlError
+    const effectiveSource = src ? (urlBlob ?? undefined) : source
+
     const {
       columns: parsedColumns,
       rows: parsedRows,
-      loading,
+      loading: dataLoading,
     } = useCsvData({
-      data,
-      value,
-      source,
+      data: src ? undefined : data,
+      value: src ? undefined : value,
+      source: effectiveSource,
       delimiter,
       hasHeader,
       worker,
       batchSize,
     })
+    const loading = dataLoading || fetching
 
     // Sort is a single column + direction. We render straight from the raw
     // `string[][]` and, when sorted, keep only a lightweight array of row indices —
@@ -294,18 +454,24 @@ export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
           the top during vertical scroll; the row-number column sticks to the
           left during horizontal scroll. */}
         <div
-          ref={scrollRef}
-          data-slot="csv-body"
-          className={cn("overflow-auto", fillHeight && "min-h-0 flex-1")}
+          className={cn("relative", fillHeight && "min-h-0 flex-1")}
           style={fillHeight ? undefined : { height, maxHeight: "100%" }}
         >
+          <style href="csv-scrollbar" precedence="default">
+            {SCROLLBAR_CSS}
+          </style>
           <div
-            style={{
-              width: totalWidth,
-              minWidth: "100%",
-              position: "relative",
-            }}
+            ref={scrollRef}
+            data-slot="csv-body"
+            className="absolute inset-0 overflow-auto"
           >
+            <div
+              style={{
+                width: totalWidth,
+                minWidth: "100%",
+                position: "relative",
+              }}
+            >
             {/* Header row — sticky to the top; same scroller as the rows below. */}
             <div
               role="row"
@@ -326,11 +492,9 @@ export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
                   role="columnheader"
                   aria-colindex={1}
                   aria-label="Row number"
-                  className="sticky left-0 z-10 flex items-center justify-end border-r bg-[color-mix(in_oklab,var(--card)_97%,var(--foreground))] px-2 font-medium text-muted-foreground"
+                  className="sticky left-0 z-10 border-r bg-[color-mix(in_oklab,var(--card)_94%,var(--foreground))]"
                   style={{ height: effRowHeight }}
-                >
-                  #
-                </div>
+                />
               ) : null}
               <Spacer width={leftPad} />
               {columnItems.map((item) => (
@@ -352,10 +516,18 @@ export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
               <Spacer width={rightPad} />
             </div>
 
-            {parsedRows.length === 0 ? (
+            {urlError ? (
               <div className="flex h-24 items-center justify-center text-xs text-muted-foreground">
-                No rows
+                Couldn&apos;t load this file.
               </div>
+            ) : parsedRows.length === 0 ? (
+              // Stay blank while a source is still loading — only call it empty
+              // once we know there are genuinely no rows.
+              loading ? null : (
+                <div className="flex h-24 items-center justify-center text-xs text-muted-foreground">
+                  No rows
+                </div>
+              )
             ) : virtualized ? (
               // Absolutely-positioned rows in a spacer of the full virtual height.
               // The header above takes one row's height, so the virtualizer is off
@@ -409,7 +581,12 @@ export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
                 ))}
               </div>
             )}
+            </div>
           </div>
+          <HeaderAwareScrollbar
+            scrollRef={scrollRef}
+            headerHeight={effRowHeight}
+          />
         </div>
 
         <div className="flex shrink-0 items-center justify-between border-t px-3 py-1.5 text-xs text-muted-foreground">
@@ -428,42 +605,44 @@ export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
             <span>
               {colCount} column{colCount === 1 ? "" : "s"}
             </span>
-            <span className="flex items-center gap-0.5">
-              <button
-                type="button"
-                aria-label="Zoom out"
-                title="Zoom out"
-                onClick={() =>
-                  setZoom((z) => Math.max(0.5, Math.min(3, z / 1.2)))
-                }
-                className="inline-flex size-6 items-center justify-center rounded hover:bg-muted hover:text-foreground"
-              >
-                <Minus className="size-3.5" />
-              </button>
-              <span className="w-10 text-center tabular-nums">
-                {Math.round(zoom * 100)}%
+            {showZoom ? (
+              <span className="flex items-center gap-0.5">
+                <button
+                  type="button"
+                  aria-label="Zoom out"
+                  title="Zoom out"
+                  onClick={() =>
+                    setZoom((z) => Math.max(0.5, Math.min(3, z / 1.2)))
+                  }
+                  className="inline-flex size-6 items-center justify-center rounded hover:bg-muted hover:text-foreground"
+                >
+                  <Minus className="size-3.5" />
+                </button>
+                <span className="w-10 text-center tabular-nums">
+                  {Math.round(zoom * 100)}%
+                </span>
+                <button
+                  type="button"
+                  aria-label="Zoom in"
+                  title="Zoom in"
+                  onClick={() =>
+                    setZoom((z) => Math.max(0.5, Math.min(3, z * 1.2)))
+                  }
+                  className="inline-flex size-6 items-center justify-center rounded hover:bg-muted hover:text-foreground"
+                >
+                  <Plus className="size-3.5" />
+                </button>
+                <button
+                  type="button"
+                  aria-label="Reset zoom"
+                  title="Reset zoom"
+                  onClick={() => setZoom(1)}
+                  className="inline-flex size-6 items-center justify-center rounded hover:bg-muted hover:text-foreground"
+                >
+                  <Maximize className="size-3.5" />
+                </button>
               </span>
-              <button
-                type="button"
-                aria-label="Zoom in"
-                title="Zoom in"
-                onClick={() =>
-                  setZoom((z) => Math.max(0.5, Math.min(3, z * 1.2)))
-                }
-                className="inline-flex size-6 items-center justify-center rounded hover:bg-muted hover:text-foreground"
-              >
-                <Plus className="size-3.5" />
-              </button>
-              <button
-                type="button"
-                aria-label="Reset zoom"
-                title="Reset zoom"
-                onClick={() => setZoom(1)}
-                className="inline-flex size-6 items-center justify-center rounded hover:bg-muted hover:text-foreground"
-              >
-                <Maximize className="size-3.5" />
-              </button>
-            </span>
+            ) : null}
           </span>
         </div>
       </div>
@@ -530,7 +709,7 @@ function HeaderCell({
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full items-center gap-1 px-3 text-left font-semibold hover:bg-muted focus-visible:bg-muted focus-visible:outline-none"
+        className="flex w-full items-center gap-1 px-3 text-left font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:outline-none"
         style={{ height }}
         title={`Sort by ${name}`}
       >

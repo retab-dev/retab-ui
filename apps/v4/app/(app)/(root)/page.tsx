@@ -9,11 +9,9 @@ import {
   PageHeaderHeading,
 } from "@/components/page-header"
 
-const title = "Headless UI components for Retab document primitives"
+const title = "UI primitives for document workflows"
 const description =
-  "Drop-in, unstyled React viewers for Retab parses, extractions, edits, classifications, partitions, and splits."
-const tagline =
-  "Installed as source through the shadcn registry — own the code, theme it your way."
+  "Lightweight, virtualized React viewers for documents and structured data. Fast by default, built for scale, copy and paste into your apps."
 
 export const dynamic = "force-static"
 export const revalidate = false
@@ -63,7 +61,6 @@ export default function IndexPage() {
           {title}
         </PageHeaderHeading>
         <PageHeaderDescription>{description}</PageHeaderDescription>
-        <PageHeaderDescription>{tagline}</PageHeaderDescription>
         <PageActions>
           <Button
             size="sm"

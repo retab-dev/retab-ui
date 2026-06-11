@@ -78,6 +78,7 @@ memory at once during parsing.
 
 | Prop | Type | Description |
 | --- | --- | --- |
+| `src` | `string` | URL of a CSV/TSV file (same-origin or CORS-enabled). Fetched, then streamed like `source`. Takes precedence over `value`/`data`/`source`. |
 | `value` | `string` | Raw CSV/TSV text, parsed synchronously. Provide this, `data`, or `source`. |
 | `data` | `ParsedCsv` | Pre-parsed `{ columns, rows }`. |
 | `source` | `Blob \| File \| string` | A large source parsed off the render path, streamed in progressively. |
@@ -92,6 +93,7 @@ memory at once during parsing.
 | `rowHeight` | `number` | Row height in pixels. Defaults to `33`. |
 | `columnWidth` | `number` | Column width in pixels. Defaults to `180`. |
 | `height` | `number` | Scroll viewport height in pixels. Defaults to `480`. |
+| `showZoom` | `boolean` | Show the footer zoom controls. Defaults to `true`. Set `false` when a host drives zoom through `scale`. |
 | `label` | `string` | Accessible label for the table (`aria-label`). Defaults to `"CSV data"`. |
 | `className` | `string` | Optional class on the viewer container. |
 

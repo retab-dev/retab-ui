@@ -84,25 +84,16 @@ export function ClassifierViewer({
   }
 
   // The category legend sits below the document toolbar. The reasoning rides
-  // along as a muted caption — the only classify-specific detail, kept inside
-  // the legend chrome rather than a component of its own.
+  // along as a muted caption — the only classify-specific detail, passed to the
+  // legend's `caption` slot rather than wrapped in chrome of its own.
   const header = (
-    <div className="space-y-1.5 border-b border-border bg-background px-3 py-2">
-      <SegmentLegend
-        segments={segments}
-        activeId={activeId}
-        onActivate={setActiveId}
-        onSelect={handleJumpToTop}
-      />
-      {reasoning ? (
-        <p
-          title={reasoning}
-          className="line-clamp-2 text-xs leading-relaxed text-muted-foreground"
-        >
-          {reasoning}
-        </p>
-      ) : null}
-    </div>
+    <SegmentLegend
+      segments={segments}
+      activeId={activeId}
+      onActivate={setActiveId}
+      onSelect={handleJumpToTop}
+      caption={reasoning ? <span title={reasoning}>{reasoning}</span> : undefined}
+    />
   );
 
   return (

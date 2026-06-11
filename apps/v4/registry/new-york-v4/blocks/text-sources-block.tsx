@@ -8,6 +8,7 @@ import {
   SourceFieldList,
   type SourceField,
 } from "@/components/ui/source-field-list"
+import { SourceIndicator } from "@/components/ui/source-indicator"
 import {
   sourceToTextHighlight,
   useTextSourceTarget,
@@ -47,7 +48,7 @@ export function TextSourcesBlock() {
 
   return (
     <div className="flex h-full min-h-[680px] bg-background">
-      <div className="min-w-0 flex-1">
+      <div className="relative min-w-0 flex-1">
         <TextViewer
           ref={viewerRef}
           src={TEXT_URL}
@@ -56,6 +57,7 @@ export function TextSourcesBlock() {
           className="h-full"
           highlight={sourceToTextHighlight(link.activeSource)}
         />
+        <SourceIndicator path={link.activePath} found={!!link.activeSource} />
       </div>
       <SourceFieldList fields={FIELDS} link={link} />
     </div>

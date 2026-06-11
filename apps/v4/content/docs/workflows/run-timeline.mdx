@@ -1,12 +1,17 @@
 ---
 title: Run Timeline
-description: A workflow run as a vertical list of its steps — block type, status and duration — beside a detail panel that shows the selected step's inspector. The connective view that ties the block inspectors together.
+description: A workflow run viewed two ways — a Steps tab with a step list beside the selected step's inspector, and a Timing tab with a waterfall of the same steps. The connective view that ties the block inspectors together.
 ---
 
-A run is a sequence of steps. The Run Timeline renders that sequence as a vertical
-list — each step's block icon, label, status and duration — beside a detail panel
-that shows the **selected step's inspector**. Click a step to inspect it; the
-panel swaps in whatever view that block provides.
+A run is a sequence of steps, and there are two things you usually want from one:
+*what each step did* and *where the time went*. The Run Timeline puts both behind
+a tab toggle over the same run.
+
+- **Steps** — a vertical list (block icon, label, status, duration) beside a
+  detail panel showing the **selected step's inspector**. Click a step to inspect
+  it; the panel swaps in whatever view that block provides.
+- **Timing** — a [Step Waterfall](/docs/workflows/step-waterfall) of the same
+  steps, so you can see the run's latency profile at a glance.
 
 <RunTimelineDemo />
 
@@ -83,7 +88,8 @@ icon and label.
 | `blockType` | `string` | Drives the icon and color (see Block types). |
 | `label` | `string` | The step's name. |
 | `status` | `"completed" \| "running" \| "error" \| "skipped" \| "pending" \| "awaiting_review"` | Drives the status icon and color. |
-| `durationMs` | `number \| null` | Execution time, shown on the row and in the header (auto `ms`/`s`). |
+| `durationMs` | `number \| null` | Execution time, shown on the row and in the header (auto `ms`/`s`), and the bar length in the Timing tab. |
+| `startOffsetMs` | `number \| null` | Offset from the start of the run, used to place the bar in the Timing tab. Defaults to a sequential layout (each step starts where the previous ended). |
 | `detail` | `string` | Secondary line — error message, skip reason, filename, model, etc. |
 | `inspector` | `React.ReactNode` | Rendered in the detail panel when the step is selected. Falls back to a generic status view. |
 
@@ -91,5 +97,5 @@ icon and label.
 
 | Export | Props | Description |
 | --- | --- | --- |
-| `RunTimeline` | `{ run: WorkflowRun }` | The step list plus detail panel. |
-| `RunTimelineBlock` | `{ run?: WorkflowRun }` | The timeline preloaded with a sample run; pass `run` to override. |
+| `RunTimeline` | `{ run: WorkflowRun }` | The tabbed run view — Steps (list + inspector) and Timing (waterfall). |
+| `RunTimelineBlock` | `{ run?: WorkflowRun }` | The run view preloaded with a sample run; pass `run` to override. |

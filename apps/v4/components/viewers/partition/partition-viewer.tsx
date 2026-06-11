@@ -119,29 +119,29 @@ export function PartitionViewer({
   }
 
   const header = (
-    <div className="space-y-2 border-b border-border bg-background px-3 py-2">
-      <SegmentLegend
-        segments={legendSegments}
-        currentPage={currentPageInt}
-        activeId={activeId}
-        onActivate={setActiveId}
-        onSelect={(id) => {
-          const seg = legendSegments.find((s) => s.id === id);
-          if (seg?.pages.length) handleJumpToPage(seg.pages[0]);
-        }}
-        columns={4}
-      />
-      <PageRibbon
-        orientation="horizontal"
-        rows={rows}
-        pageCount={pageCount}
-        currentPage={currentPageInt}
-        scrollProgress={scrollProgress}
-        activeId={activeId}
-        onActivate={setActiveId}
-        onSelectPage={handleJumpToPage}
-      />
-    </div>
+    <SegmentLegend
+      segments={legendSegments}
+      currentPage={currentPageInt}
+      activeId={activeId}
+      onActivate={setActiveId}
+      onSelect={(id) => {
+        const seg = legendSegments.find((s) => s.id === id);
+        if (seg?.pages.length) handleJumpToPage(seg.pages[0]);
+      }}
+      columns={4}
+      accessory={
+        <PageRibbon
+          orientation="horizontal"
+          rows={rows}
+          pageCount={pageCount}
+          currentPage={currentPageInt}
+          scrollProgress={scrollProgress}
+          activeId={activeId}
+          onActivate={setActiveId}
+          onSelectPage={handleJumpToPage}
+        />
+      }
+    />
   );
 
   return (

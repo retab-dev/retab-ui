@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/pdf-source"
 import { PdfViewer, type PdfViewerHandle } from "@/components/ui/pdf-viewer"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { SourceIndicator } from "@/components/ui/source-indicator"
 import { UiForm, UiFormContent } from "@/components/json-form/json-form"
 import sourcesSample from "@/components/viewers/sample-data/json-form-sources.json"
 
@@ -49,7 +50,7 @@ export function JsonFormSourcesBlock() {
 
   return (
     <div className="flex h-full min-h-[680px] bg-background">
-      <div className="min-w-0 flex-1">
+      <div className="relative min-w-0 flex-1">
         <PdfViewer
           ref={viewerRef}
           src={PDF_URL}
@@ -58,6 +59,7 @@ export function JsonFormSourcesBlock() {
           className="h-full"
           renderPageOverlay={renderPdfSourceOverlay(link.activeSource)}
         />
+        <SourceIndicator path={link.activePath} found={!!link.activeSource} />
       </div>
       <aside className="flex w-[420px] flex-shrink-0 flex-col border-l">
         <div className="flex h-10 flex-shrink-0 items-center gap-2 border-b px-4">
@@ -86,7 +88,6 @@ export function JsonFormSourcesBlock() {
               showPropertyEditorPencil={false}
               validationFlags={validationFlags}
               setValidationFlags={setValidationFlags}
-              config={{ showSources: true }}
             >
               <UiFormContent />
             </UiForm>

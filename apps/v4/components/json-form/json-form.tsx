@@ -3221,16 +3221,12 @@ const PrimitiveRenderer: React.FC<PrimitiveRendererProps> = ({
                     )}
                   />
                 </TooltipTrigger>
-                <TooltipContent
-                  side="top"
-                  className="w-[200px] max-w-[80vw] p-0"
-                >
+                <TooltipContent side="top" className="max-w-[80vw] p-0">
                   <TooltipArrow />
                   <div
                     className={cn(
-                      "border border-foreground",
                       className,
-                      "focus-ring-0 flex max-h-[60vh] overflow-y-auto rounded-md p-3 text-xs break-words whitespace-normal shadow-none outline-transparent outline-none",
+                      "block max-h-[60vh] max-w-[260px] overflow-y-auto rounded-md p-3 text-xs break-words whitespace-normal outline-none",
                     )}
                   >
                     {subschema.description}

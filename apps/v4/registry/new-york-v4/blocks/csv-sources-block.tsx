@@ -10,6 +10,7 @@ import {
   SourceFieldList,
   type SourceField,
 } from "@/components/ui/source-field-list"
+import { SourceIndicator } from "@/components/ui/source-indicator"
 import csvSample from "@/components/viewers/sample-data/csv-sources.json"
 
 const CSV_TEXT = `region,quarter,revenue,customers,nrr
@@ -50,13 +51,18 @@ export function CsvSourcesBlock() {
 
   return (
     <div className="flex h-full min-h-[680px] bg-background">
-      <div className="min-w-0 flex-1">
+      <div className="relative min-w-0 flex-1">
         <CsvViewer
           ref={viewerRef}
           value={CSV_TEXT}
           fillHeight
           className="h-full rounded-none border-0"
           activeCell={sourceToCsvCell(link.activeSource)}
+        />
+        <SourceIndicator
+          path={link.activePath}
+          found={!!link.activeSource}
+          className="top-2"
         />
       </div>
       <SourceFieldList fields={FIELDS} link={link} />

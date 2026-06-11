@@ -262,6 +262,27 @@ function TextViewerFallback({
       )}
       data-slot="text-viewer"
     >
+      {/* Same toolbar chrome as the loaded viewer — with inert zoom controls — so
+          nothing shifts when the real content fades in. */}
+      <div className="flex h-10 flex-shrink-0 items-center gap-1 border-b bg-card px-2">
+        <span className="px-1">
+          <Skeleton className="inline-block h-3 w-16 align-middle" />
+        </span>
+        <div className="ml-auto flex items-center gap-1">
+          <IconButton label="Zoom out" disabled tabIndex={-1} aria-hidden>
+            <Minus />
+          </IconButton>
+          <span className="w-12 text-center text-xs tabular-nums text-muted-foreground">
+            100%
+          </span>
+          <IconButton label="Zoom in" disabled tabIndex={-1} aria-hidden>
+            <Plus />
+          </IconButton>
+          <IconButton label="Reset zoom" disabled tabIndex={-1} aria-hidden>
+            <Maximize />
+          </IconButton>
+        </div>
+      </div>
       <div className="space-y-2 p-4">
         {Array.from({ length: 12 }, (_, i) => (
           <Skeleton

@@ -154,6 +154,108 @@ const BASE_COL_WIDTH = 128
 const BASE_GUTTER = 52
 const BASE_FONT = 13
 
+// A native vertical scrollbar spans the full scroller height and paints on top
+// of everything (z-index can't cover it), so it overlaps the sticky header. Hide
+// the vertical bar (WebKit) and draw a custom thumb below the header instead;
+// keep the native horizontal bar, styled to match.
+const SCROLLBAR_CSS = `
+[data-slot="xlsx-body"]::-webkit-scrollbar { width: 10px; height: 10px; }
+[data-slot="xlsx-body"]::-webkit-scrollbar:vertical { display: none; }
+[data-slot="xlsx-body"]::-webkit-scrollbar-track { background: transparent; }
+[data-slot="xlsx-body"]::-webkit-scrollbar-thumb {
+  background-color: color-mix(in oklab, var(--foreground) 22%, transparent);
+  border-radius: 9999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+[data-slot="xlsx-body"]::-webkit-scrollbar-thumb:hover {
+  background-color: color-mix(in oklab, var(--foreground) 38%, transparent);
+}
+`
+
+// Custom vertical scroll indicator that sits BELOW a sticky header (the native
+// vertical bar is hidden by SCROLLBAR_CSS). Tracks the scroller's scrollTop and
+// is draggable.
+function HeaderAwareScrollbar({
+  scrollRef,
+  headerHeight,
+}: {
+  scrollRef: React.RefObject<HTMLDivElement | null>
+  headerHeight: number
+}) {
+  const [thumb, setThumb] = React.useState({ height: 0, top: 0, show: false })
+  const drag = React.useRef<{ y: number; scroll: number } | null>(null)
+
+  const measure = React.useCallback(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const { scrollHeight, clientHeight, scrollTop } = el
+    const track = clientHeight - headerHeight
+    if (scrollHeight <= clientHeight + 1 || track <= 0) {
+      setThumb((t) => (t.show ? { ...t, show: false } : t))
+      return
+    }
+    const height = Math.max(28, (clientHeight / scrollHeight) * track)
+    const max = scrollHeight - clientHeight
+    const top = max > 0 ? (scrollTop / max) * (track - height) : 0
+    setThumb({ height, top, show: true })
+  }, [scrollRef, headerHeight])
+
+  React.useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    measure()
+    el.addEventListener("scroll", measure, { passive: true })
+    const observer = new ResizeObserver(measure)
+    observer.observe(el)
+    return () => {
+      el.removeEventListener("scroll", measure)
+      observer.disconnect()
+    }
+  }, [scrollRef, measure])
+
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    const el = scrollRef.current
+    if (!el) return
+    e.preventDefault()
+    drag.current = { y: e.clientY, scroll: el.scrollTop }
+    e.currentTarget.setPointerCapture(e.pointerId)
+  }
+  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const el = scrollRef.current
+    const d = drag.current
+    if (!el || !d) return
+    const track = el.clientHeight - headerHeight
+    const height = Math.max(28, (el.clientHeight / el.scrollHeight) * track)
+    const denom = track - height
+    if (denom <= 0) return
+    const max = el.scrollHeight - el.clientHeight
+    el.scrollTop = d.scroll + ((e.clientY - d.y) / denom) * max
+  }
+  const endDrag = (e: React.PointerEvent<HTMLDivElement>) => {
+    drag.current = null
+    e.currentTarget.releasePointerCapture?.(e.pointerId)
+  }
+
+  if (!thumb.show) return null
+  return (
+    <div
+      aria-hidden
+      className="pointer-events-none absolute right-0 z-30 w-2.5"
+      style={{ top: headerHeight, bottom: 0 }}
+    >
+      <div
+        className="pointer-events-auto absolute right-0.5 w-1.5 rounded-full bg-foreground/25 transition-colors hover:bg-foreground/40"
+        style={{ height: thumb.height, top: thumb.top }}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
+      />
+    </div>
+  )
+}
+
 interface ColumnItem {
   index: number
   size: number
@@ -309,7 +411,7 @@ function XlsxViewerInner({
       data-slot="xlsx-viewer"
     >
       {toolbar ? (
-        <div className="flex h-10 flex-shrink-0 items-center gap-2 border-b bg-card px-2">
+        <div className="flex h-10 flex-shrink-0 items-center gap-1 border-b bg-card px-2">
           <span className="truncate px-1 text-xs font-medium">
             {ready ? (
               (sheet?.name ?? "—")
@@ -577,11 +679,19 @@ function SheetGrid({
           the column letters stay locked to the cells during horizontal scroll
           (no JS sync). The header sticks to the top; the gutter sticks to the
           left. */}
-      <div ref={scrollRef} className="min-h-0 flex-1 overflow-auto">
+      <div className="relative min-h-0 flex-1">
+        <style href="xlsx-scrollbar" precedence="default">
+          {SCROLLBAR_CSS}
+        </style>
         <div
-          style={{ width: totalWidth, minWidth: "100%", position: "relative" }}
+          ref={scrollRef}
+          data-slot="xlsx-body"
+          className="absolute inset-0 overflow-auto"
         >
-          {/* Header row (column letters) — sticky to the top. */}
+          <div
+            style={{ width: totalWidth, minWidth: "100%", position: "relative" }}
+          >
+            {/* Header row (column letters) — sticky to the top. */}
           <div
             className="sticky top-0 z-20 grid border-b"
             style={{
@@ -637,7 +747,9 @@ function SheetGrid({
               />
             ))}
           </div>
+          </div>
         </div>
+        <HeaderAwareScrollbar scrollRef={scrollRef} headerHeight={rowHeight} />
       </div>
     </div>
   )
@@ -779,7 +891,7 @@ function XlsxViewerFallback({
 // zoom %) are skeletons; the controls are present but inert.
 function XlsxToolbarSkeleton() {
   return (
-    <div className="flex h-10 flex-shrink-0 items-center gap-2 border-b bg-card px-2">
+    <div className="flex h-10 flex-shrink-0 items-center gap-1 border-b bg-card px-2">
       <span className="truncate px-1">
         <Skeleton className="inline-block h-3 w-24 align-middle" />
       </span>

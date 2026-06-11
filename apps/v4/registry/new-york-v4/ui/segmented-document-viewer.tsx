@@ -76,6 +76,7 @@ export function SegmentedDocumentViewer({
       {(() => {
         const legend = (
           <SegmentLegend
+            variant="plain"
             segments={segments}
             currentPage={currentPage}
             activeId={activeId}

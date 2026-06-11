@@ -7,6 +7,8 @@ type ViewerBlockCategoryId =
   | "documents"
   | "primitives"
   | "sources"
+  | "legends"
+  | "run-cards"
   | "workflows"
 
 type ViewerBlockConfig = {
@@ -32,6 +34,8 @@ export const VIEWER_BLOCK_CATEGORIES = [
   { id: "documents", label: "Documents" },
   { id: "sources", label: "Sources" },
   { id: "primitives", label: "Primitives" },
+  { id: "legends", label: "Legends" },
+  { id: "run-cards", label: "Run Cards" },
   { id: "workflows", label: "Workflows" },
 ] as const
 
@@ -158,6 +162,29 @@ export const VIEWER_BLOCKS = [
     docsHref: "/docs/components/extract-viewer",
     viewHref: "/view/blocks/xlsx-sources",
     categories: ["sources"],
+  },
+  {
+    id: "primitive-cards",
+    registryName: "primitive-cards-block",
+    title: "Primitive Run Cards",
+    description:
+      "Each primitive's result framed as a run card — a document thumbnail with a status pill and the primitive's output in the body. Classification shows one thumbnail; a split swaps it for a bundle of much smaller per-subdocument FileThumbnails, color-keyed to the legend. Composes the RunCard shell with per-primitive rendering.",
+    command: getRegistryAddCommand("primitive-cards-block"),
+    docsHref: "/docs/components/file-thumbnail",
+    viewHref: "/view/blocks/primitive-cards",
+    featured: true,
+    categories: ["run-cards"],
+  },
+  {
+    id: "legend-variants",
+    registryName: "legend-variants-block",
+    title: "Legend Variants",
+    description:
+      "Every legend placement — bar, floating, inset, and a vertical rail — shown on the real split and partition document with page color overlays. One SegmentLegend drives each panel; only variant/orientation/side differ, and a shared selection dims the matching pages across all four at once.",
+    command: getRegistryAddCommand("legend-variants-block"),
+    docsHref: "/docs/components/segmented-viewer",
+    viewHref: "/view/blocks/legend-variants",
+    categories: ["legends", "primitives"],
   },
   {
     id: "pdf-thumbnails",

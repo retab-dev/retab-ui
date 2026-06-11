@@ -983,20 +983,6 @@ function calculateVariables(props: DataCellProps & {}) {
   };
 }
 
-function getDataCellRenderKey(
-  docId: string | undefined,
-  actualKey: string | null | undefined,
-  value: unknown,
-) {
-  let serializedValue = "";
-  try {
-    serializedValue = JSON.stringify(value);
-  } catch {
-    serializedValue = String(value);
-  }
-  return `${docId ?? "__no-doc__"}:${actualKey ?? "__no-field__"}:${serializedValue}`;
-}
-
 const DataCellContent = (
   props: DataCellProps & {
     onCellClick?: (cellData: PopoverCellData) => void;
@@ -1025,6 +1011,24 @@ const DataCellContent = (
   const [isInputFocused, setIsInputFocused] = useState(false);
   const [isSelectOpen, setIsSelectOpen] = useState(false);
   const [isDatePopoverOpen, setIsDatePopoverOpen] = useState(false);
+  // Text cells render a plain <div> for display/hover and only mount the
+  // <textarea> editor once the user clicks to edit. A <textarea> is a scroll
+  // container, so leaving one under the pointer (as the old always-mounted
+  // version did) swallows wheel events and blocks scrolling over text cells.
+  const [isTextEditing, setIsTextEditing] = useState(false);
+
+  // This component instance is recycled: a fixed pool of row slots is reused as
+  // you scroll, so the same DataCell can be reassigned to a different row. When
+  // that happens (rowIdx changes), drop any transient edit state so it can't
+  // leak onto the newly shown row. Setting already-default state is a no-op, so
+  // this is free for the common (non-editing) case.
+  React.useEffect(() => {
+    setIsTextEditing(false);
+    setIsInputFocused(false);
+    setIsSelectOpen(false);
+    setIsDatePopoverOpen(false);
+    setFocusedField(null);
+  }, [props.rowIdx]);
 
   // While a cell editor is open it overflows its cell. The virtualizer puts
   // every row in its own stacking context (via `transform`), so the editor's
@@ -1888,10 +1892,10 @@ const DataCellContent = (
             </div>
           )
         ) : isText ? (
-          //showInput ? (
-          true ? (
+          isTextEditing ? (
             <DoubleClickTextarea
               type="text"
+              autoFocus
               value={liveStringValue ?? null}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                 setStringValue(e.target.value);
@@ -1901,6 +1905,7 @@ const DataCellContent = (
                 onChange(newVal);
                 setFocusedField(null);
                 setIsInputFocused(false);
+                setIsTextEditing(false);
               }}
               onFocus={() => {
                 setStringValue(cleanStringValue);
@@ -1920,7 +1925,15 @@ const DataCellContent = (
               }}
             />
           ) : (
-            <div className="text-3xs flex h-full w-full items-start truncate px-2 py-2">
+            <div
+              className={cn(
+                "text-3xs flex h-full w-full items-start truncate px-2 py-2",
+                isEditableReference && "cursor-text",
+              )}
+              onClick={() => {
+                if (isEditableReference) setIsTextEditing(true);
+              }}
+            >
               {effectiveValue !== null && effectiveValue !== undefined
                 ? String(effectiveValue)
                 : ""}
@@ -1946,14 +1959,11 @@ export const DataCell = React.memo(
       onCellClick?: (cellData: PopoverCellData) => void;
     },
   ) => {
-    const { actualKey, docId } = calculateVariables(props);
-    const renderKey = getDataCellRenderKey(
-      docId,
-      actualKey,
-      props.pathInfo?.value,
-    );
-
-    return <DataCellContent key={renderKey} {...props} />;
+    // No `key` here: this cell is recycled across rows, so DataCellContent must
+    // persist and update in place (keying by value would remount the whole cell
+    // subtree on every recycle — the DOM churn we're eliminating). Transient
+    // edit state is reset inside DataCellContent when its rowIdx changes.
+    return <DataCellContent {...props} />;
   },
   (prev: DataCellProps, next: DataCellProps) => {
     let prevVars = calculateVariables(prev);

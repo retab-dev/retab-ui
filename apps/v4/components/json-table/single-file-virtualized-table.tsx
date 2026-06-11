@@ -331,7 +331,7 @@ export const SingleFileVirtualizedTable =
       // `ready` gates the first paint: the window is unknown until the viewport
       // is measured in a layout effect, which keeps SSR (zero rows) and the
       // first client render in sync, then fills in before the browser paints.
-      const { start, end, totalHeight, ready } = useFixedRowWindow({
+      const { start, end, totalHeight, poolSize, ready } = useFixedRowWindow({
         scrollRef,
         rowCount,
         rowHeight: rowHeightPx,
@@ -459,19 +459,22 @@ export const SingleFileVirtualizedTable =
                     minWidth: "100%",
                   }}
                 >
-                  {ready && docRow
-                    ? Array.from({ length: Math.max(0, end - start) }, (_, i) => {
-                        const rowIdx = start + i;
+                  {ready && docRow && poolSize > 0
+                    ? Array.from({ length: poolSize }, (_, slot) => {
+                        // Recycling: each slot is a permanent DOM node (keyed by
+                        // `slot`). It shows the one windowed row whose index ≡
+                        // slot (mod poolSize). On each scroll step only the slot
+                        // that wraps changes its rowIdx — every other slot keeps
+                        // identical props, so React.memo skips it and no row is
+                        // ever inserted or removed (the costly part).
+                        const rel = (((slot - start) % poolSize) + poolSize) % poolSize;
+                        const rowIdx = start + rel;
+                        const active = rowIdx < end && rowIdx < rowCount;
                         return (
                         <SingleFileFormRow
-                          key={rowIdx}
+                          key={slot}
                           rowIdx={rowIdx}
-                          style={{
-                            position: "absolute",
-                            top: 0,
-                            left: 0,
-                            transform: `translateY(${rowIdx * rowHeightPx}px)`,
-                          }}
+                          active={active}
                           row={docRow}
                           tableAndPaths={tableAndPaths}
                           columns={columns}

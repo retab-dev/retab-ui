@@ -5,30 +5,82 @@ import * as React from "react"
 import { type Segment } from "@/lib/segments"
 import { cn } from "@/lib/utils"
 
+/** How the legend attaches to the document surface. */
+export type SegmentLegendVariant = "bar" | "floating" | "inset" | "plain"
+export type SegmentLegendOrientation = "horizontal" | "vertical"
+export type SegmentLegendSide = "top" | "bottom" | "left" | "right"
+export type SegmentLegendDensity = "comfortable" | "compact"
+
 export interface SegmentLegendProps {
   segments: Segment[]
+  /**
+   * How the legend attaches to the document surface:
+   * - `bar` — flush, full-width, bordered on its docking side (default).
+   * - `floating` — an overlay card pinned to a corner; needs a `relative` parent.
+   * - `inset` — a gapped, rounded panel set in from the edges.
+   * - `plain` — raw entries, no chrome (compose your own container).
+   * @default "bar"
+   */
+  variant?: SegmentLegendVariant
+  /** Lay entries out horizontally (wrap/grid) or vertically (rail). @default "horizontal" */
+  orientation?: SegmentLegendOrientation
+  /** Edge the legend docks to — drives the border (`bar`) or anchor (`floating`). */
+  side?: SegmentLegendSide
+  /** Swatch + label scale. @default "comfortable" */
+  density?: SegmentLegendDensity
   /** Highlighted segment id (shared hover/selection). Dims the others. */
   activeId?: string | null
   onActivate?: (id: string | null) => void
   onSelect?: (id: string) => void
   /** 1-based current page; segments that own it render bold ("active"). */
   currentPage?: number | null
-  /** Lay entries out on a grid of N columns instead of wrapping inline. */
+  /** Lay entries out on a grid of N columns instead of wrapping inline (horizontal only). */
   columns?: number
   /** Render a "Show all / Hide unused" toggle when some segments own no pages. */
   showUnusedToggle?: boolean
   /** Initial/forced visibility of zero-page segments. */
   showUnused?: boolean
+  /** A muted caption rendered under the entries (e.g. a classification's reasoning). */
+  caption?: React.ReactNode
+  /** Extra content rendered after the entries inside the same chrome (e.g. a page ribbon). */
+  accessory?: React.ReactNode
   className?: string
+}
+
+const DENSITY = {
+  comfortable: { swatch: "h-3 w-5", text: "text-xs", gap: "gap-x-4 gap-y-1.5" },
+  compact: { swatch: "h-2.5 w-4", text: "text-[11px]", gap: "gap-x-3 gap-y-1" },
+} as const
+
+const DOCK_BORDER: Record<SegmentLegendSide, string> = {
+  top: "border-b",
+  bottom: "border-t",
+  left: "border-r",
+  right: "border-l",
+}
+
+const FLOAT_ANCHOR: Record<SegmentLegendSide, string> = {
+  top: "absolute left-3 top-3",
+  bottom: "absolute bottom-3 left-3",
+  left: "absolute left-3 top-3",
+  right: "absolute right-3 top-3",
 }
 
 /**
  * Compact color legend: one swatch + label per segment. Hovering raises
  * `activeId` (dims the others); segments containing `currentPage` render bold.
  * Zero-page segments are hidden unless shown via the toggle.
+ *
+ * `variant` controls how it sits on the document surface (flush bar, floating
+ * overlay, inset panel, or unstyled) so the same legend works for the classify,
+ * split, and partition viewers without each one re-building its own chrome.
  */
 export function SegmentLegend({
   segments,
+  variant = "bar",
+  orientation = "horizontal",
+  side,
+  density = "comfortable",
   activeId,
   onActivate,
   onSelect,
@@ -36,6 +88,8 @@ export function SegmentLegend({
   columns,
   showUnusedToggle = false,
   showUnused = false,
+  caption,
+  accessory,
   className,
 }: SegmentLegendProps) {
   const [showAll, setShowAll] = React.useState(showUnused)
@@ -45,18 +99,39 @@ export function SegmentLegend({
 
   if (visible.length === 0) return null
 
+  const d = DENSITY[density]
+  const dockSide = side ?? (orientation === "vertical" ? "left" : "top")
+  const isVertical = orientation === "vertical"
+
+  const chrome = {
+    bar: cn("bg-background px-3 py-2", DOCK_BORDER[dockSide]),
+    inset: "m-2 rounded-lg border bg-muted/40 px-3 py-2",
+    floating: cn(
+      "z-10 rounded-lg border bg-background/90 px-3 py-2 shadow-md backdrop-blur",
+      FLOAT_ANCHOR[dockSide]
+    ),
+    plain: "",
+  }[variant]
+
   const containsCurrent = (s: Segment) =>
     currentPage != null && s.pages.includes(currentPage)
 
   return (
-    <div data-slot="segment-legend" className={className}>
+    <div data-slot="segment-legend" data-variant={variant} className={cn(chrome, className)}>
       <div
         className={cn(
-          columns
-            ? "grid gap-x-4 gap-y-1.5"
-            : "flex flex-wrap items-center gap-x-4 gap-y-1.5"
+          d.gap,
+          isVertical
+            ? "flex flex-col"
+            : columns
+              ? "grid"
+              : "flex flex-wrap items-center"
         )}
-        style={columns ? { gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` } : undefined}
+        style={
+          !isVertical && columns
+            ? { gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }
+            : undefined
+        }
       >
         {visible.map((segment) => {
           const active = activeId === segment.id
@@ -72,13 +147,14 @@ export function SegmentLegend({
               onMouseLeave={() => onActivate?.(null)}
               onClick={() => onSelect?.(segment.id)}
               className={cn(
-                "flex min-w-0 items-center gap-2 text-xs transition-opacity",
+                "flex min-w-0 items-center gap-2 transition-opacity",
+                d.text,
                 dimmed ? "opacity-40" : "opacity-100"
               )}
             >
               <span
                 aria-hidden
-                className="h-3 w-5 shrink-0 rounded-[2px] ring-1 ring-black/20"
+                className={cn("shrink-0 rounded-[2px] ring-1 ring-black/20", d.swatch)}
                 style={{ backgroundColor: segment.color }}
               />
               <span
@@ -103,6 +179,12 @@ export function SegmentLegend({
         >
           {reveal ? "Hide unused" : "Show all"}
         </button>
+      ) : null}
+      {accessory ? <div className="mt-2">{accessory}</div> : null}
+      {caption ? (
+        <div className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+          {caption}
+        </div>
       ) : null}
     </div>
   )

@@ -310,6 +310,26 @@
       ]
     },
     {
+      "name": "json-inspector",
+      "type": "registry:ui",
+      "title": "JSON Inspector",
+      "description": "A read-only JSON viewer with theme-aware syntax highlighting and a hover copy button, plus a standalone CopyButton.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "scroll-area",
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/json-inspector.tsx",
+          "type": "registry:ui",
+          "target": "@ui/json-inspector.tsx"
+        }
+      ]
+    },
+    {
       "name": "kbd",
       "type": "registry:ui",
       "title": "Kbd",
@@ -941,6 +961,26 @@
       ]
     },
     {
+      "name": "run-card",
+      "type": "registry:ui",
+      "title": "Run Card",
+      "description": "A document run card: a file thumbnail with a status pill, a heading, and a result slot. Composes file-thumbnail; the result rendering is left to its children.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "utils",
+        "file-thumbnail"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/run-card.tsx",
+          "type": "registry:ui",
+          "target": "@ui/run-card.tsx"
+        }
+      ]
+    },
+    {
       "name": "split-viewer-block",
       "type": "registry:block",
       "title": "Split Viewer",
@@ -1070,7 +1110,8 @@
         "use-source-link",
         "document-source",
         "scroll-area",
-        "utils"
+        "utils",
+        "source-indicator"
       ],
       "files": [
         {
@@ -1101,7 +1142,8 @@
         "pdf-source",
         "use-source-link",
         "document-source",
-        "scroll-area"
+        "scroll-area",
+        "source-indicator"
       ],
       "files": [
         {
@@ -1169,6 +1211,68 @@
           "type": "registry:ui",
           "target": "@ui/pdf-thumbnail-sidebar.tsx"
         }
+      ]
+    },
+    {
+      "name": "primitive-cards-block",
+      "type": "registry:block",
+      "title": "Primitive Run Cards",
+      "description": "Each primitive's result framed as a run card — a document thumbnail with a status pill and the primitive's output in the body. Composes run-card with per-primitive result rendering; starts with classification and split.",
+      "registryDependencies": [
+        "run-card",
+        "segments"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/blocks/primitive-cards-block.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/primitive-cards-block.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/run-card.tsx",
+          "type": "registry:ui",
+          "target": "@ui/run-card.tsx"
+        },
+        {
+          "path": "components/viewers/lib/classify-types.ts",
+          "type": "registry:lib",
+          "target": "@components/viewers/lib/classify-types.ts"
+        },
+        {
+          "path": "components/viewers/lib/split-types.ts",
+          "type": "registry:lib",
+          "target": "@components/viewers/lib/split-types.ts"
+        }
+      ],
+      "categories": [
+        "primitives"
+      ]
+    },
+    {
+      "name": "legend-variants-block",
+      "type": "registry:block",
+      "title": "Legend Variants",
+      "description": "Every legend placement — bar, floating, inset, and a vertical rail — shown on the real split and partition document with page color overlays. One SegmentLegend drives each panel; only variant/orientation/side differ, and a shared selection dims the matching pages across all four at once.",
+      "registryDependencies": [
+        "pdf-viewer",
+        "segment-legend",
+        "segments"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/blocks/legend-variants-block.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/legend-variants-block.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/segment-legend.tsx",
+          "type": "registry:ui",
+          "target": "@ui/segment-legend.tsx"
+        }
+      ],
+      "categories": [
+        "legends",
+        "primitives"
       ]
     },
     {
@@ -1269,16 +1373,18 @@
       "name": "run-timeline-block",
       "type": "registry:block",
       "title": "Run Timeline",
-      "description": "A workflow run rendered as a vertical list of its steps — block type, status and duration — beside a detail panel that shows the selected step's inspector. Composes the API Call, Function and If / Else inspectors.",
+      "description": "A workflow run viewed two ways — a Steps tab with a step list beside the selected step's inspector, and a Timing tab with a waterfall of the same steps. Composes the API Call, Function, If / Else and Step Waterfall blocks.",
       "dependencies": [
         "lucide-react"
       ],
       "registryDependencies": [
+        "tabs",
         "scroll-area",
         "utils",
         "api-call-block",
         "function-block",
-        "conditional-block"
+        "conditional-block",
+        "step-waterfall-block"
       ],
       "files": [
         {
@@ -1459,7 +1565,8 @@
         "image-source",
         "use-source-link",
         "document-source",
-        "source-field-list"
+        "source-field-list",
+        "source-indicator"
       ],
       "files": [
         {
@@ -1487,7 +1594,8 @@
         "text-source",
         "use-source-link",
         "document-source",
-        "source-field-list"
+        "source-field-list",
+        "source-indicator"
       ],
       "files": [
         {
@@ -1515,7 +1623,8 @@
         "csv-source",
         "use-source-link",
         "document-source",
-        "source-field-list"
+        "source-field-list",
+        "source-indicator"
       ],
       "files": [
         {
@@ -1543,7 +1652,8 @@
         "xlsx-source",
         "use-source-link",
         "document-source",
-        "source-field-list"
+        "source-field-list",
+        "source-indicator"
       ],
       "files": [
         {
@@ -1559,6 +1669,22 @@
       ],
       "categories": [
         "primitives"
+      ]
+    },
+    {
+      "name": "source-indicator",
+      "type": "registry:ui",
+      "title": "Source indicator",
+      "description": "A floating pill that reports the active field's source over a viewer: nothing selected, a located field (its path with a search icon), or a field with no source. Mount inside a relative viewer pane; feed from useSourceLink.",
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/source-indicator.tsx",
+          "type": "registry:ui",
+          "target": "@ui/source-indicator.tsx"
+        }
       ]
     }
   ]

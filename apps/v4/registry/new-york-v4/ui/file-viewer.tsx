@@ -202,21 +202,6 @@ function getText(src: string): Promise<string> {
   return p
 }
 
-const blobCache = new Map<string, Promise<Blob>>()
-function getBlob(src: string): Promise<Blob> {
-  let p = blobCache.get(src)
-  if (!p) {
-    p = timed(`blob:fetch ${baseName(src)}`, () =>
-      fetch(src).then((r) => {
-        if (!r.ok) throw new Error(`Failed to load file: ${r.status}`)
-        return r.blob()
-      })
-    )
-    blobCache.set(src, p)
-  }
-  return p
-}
-
 // DOMPurify, loaded once and configured to send links to a new tab. Markdown is
 // rendered inline (for theme-perfect typography), so the HTML must be sanitized.
 type Sanitizer = typeof DOMPurifyNS.default
@@ -676,13 +661,23 @@ function TextDocViewer({
     [lines]
   )
 
+  // Zoom scales the font and every pixel metric derived from it.
+  const { scale, zoom, reset } = useZoom()
+  const fontSize = TEXT_FONT * scale
+  const lineHeight = Math.round(TEXT_LINE_HEIGHT * scale)
+  const charWidth = TEXT_CHAR_WIDTH * scale
+
   const scrollRef = React.useRef<HTMLDivElement>(null)
   const virtualizer = useVirtualizer({
     count: lines.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => TEXT_LINE_HEIGHT,
+    estimateSize: () => lineHeight,
     overscan: 16,
   })
+  // Row height changes with zoom — re-measure so the total size stays correct.
+  React.useLayoutEffect(() => {
+    virtualizer.measure()
+  }, [lineHeight, virtualizer])
 
   // Pull the next page as the viewport nears the end of what's loaded.
   const handleScroll = React.useCallback(
@@ -697,8 +692,8 @@ function TextDocViewer({
   )
 
   const digits = String(Math.max(lines.length, 1)).length
-  const gutterWidth = Math.max(40, 12 + digits * 8)
-  const contentWidth = Math.ceil(maxChars * TEXT_CHAR_WIDTH) + 24
+  const gutterWidth = Math.round(Math.max(40, 12 + digits * 8) * scale)
+  const contentWidth = Math.ceil(maxChars * charWidth) + 24
   const totalWidth = gutterWidth + contentWidth
 
   const meta = snap.done
@@ -708,10 +703,17 @@ function TextDocViewer({
       } loaded`
 
   return (
-    <DocShell fileName={fileName} src={src} className={className} bare={bare} meta={meta}>
+    <DocShell
+      fileName={fileName}
+      src={src}
+      className={className}
+      bare={bare}
+      meta={meta}
+      actions={<ZoomActions scale={scale} zoom={zoom} reset={reset} />}
+    >
       <div
         className="relative min-h-0 flex-1 overflow-hidden bg-card font-mono"
-        style={{ fontSize: TEXT_FONT, lineHeight: `${TEXT_LINE_HEIGHT}px` }}
+        style={{ fontSize, lineHeight: `${lineHeight}px` }}
       >
         {/* React 19 hoists + dedupes this by `href`, so it's injected once. */}
         {grammar ? (
@@ -750,13 +752,16 @@ function TextDocViewer({
                   top: 0,
                   left: 0,
                   width: "100%",
-                  height: TEXT_LINE_HEIGHT,
+                  height: lineHeight,
                   transform: `translateY(${item.start}px)`,
                   gridTemplateColumns: `${gutterWidth}px 1fr`,
                 }}
               >
                 {/* Opaque (matches the rail) so long lines can't show through it. */}
-                <div className="sticky left-0 z-[1] flex items-center justify-end bg-[color-mix(in_oklab,var(--card)_96%,var(--foreground))] pr-2 text-[0.6875rem] tabular-nums text-muted-foreground select-none">
+                <div
+                  className="sticky left-0 z-[1] flex items-center justify-end bg-[color-mix(in_oklab,var(--card)_96%,var(--foreground))] pr-2 tabular-nums text-muted-foreground select-none"
+                  style={{ fontSize: Math.round(fontSize * 0.85) }}
+                >
                   {item.index + 1}
                 </div>
                 <div className="flex items-center whitespace-pre px-3 text-foreground">
@@ -789,8 +794,15 @@ function MarkdownDocViewer({
 }) {
   // Sanitized upstream in getMarkdownHtml (marked → DOMPurify).
   const html = React.use(getMarkdownHtml(src))
+  const { scale, zoom, reset } = useZoom()
   return (
-    <DocShell fileName={fileName} src={src} className={className} bare={bare}>
+    <DocShell
+      fileName={fileName}
+      src={src}
+      className={className}
+      bare={bare}
+      actions={<ZoomActions scale={scale} zoom={zoom} reset={reset} />}
+    >
       {/* React 19 hoists + dedupes this by `href`, so it's injected once. */}
       <style href="fv-markdown" precedence="default">
         {MARKDOWN_STYLE}
@@ -798,6 +810,7 @@ function MarkdownDocViewer({
       <div className="min-h-0 flex-1 overflow-auto bg-card">
         <div
           className="fv-markdown mx-auto max-w-3xl px-6 py-5"
+          style={{ zoom: scale }}
           dangerouslySetInnerHTML={{ __html: html }}
         />
       </div>
@@ -817,27 +830,46 @@ function HtmlDocViewer({
   bare?: boolean
 }) {
   const html = React.use(getText(src))
+  const { scale, zoom, reset } = useZoom()
   return (
-    <DocShell fileName={fileName} src={src} className={className} bare={bare}>
-      <SandboxedDoc html={html} title={fileName} />
+    <DocShell
+      fileName={fileName}
+      src={src}
+      className={className}
+      bare={bare}
+      actions={<ZoomActions scale={scale} zoom={zoom} reset={reset} />}
+    >
+      <SandboxedDoc html={html} title={fileName} scale={scale} />
     </DocShell>
   )
 }
 
 /** Render arbitrary HTML safely: a sandbox with no scripts and no same-origin
  *  access, so untrusted markup can display but cannot run code or reach the app. */
-function SandboxedDoc({ html, title }: { html: string; title: string }) {
+function SandboxedDoc({
+  html,
+  title,
+  scale = 1,
+}: {
+  html: string
+  title: string
+  scale?: number
+}) {
+  // `zoom` grows the iframe's layout box past the wrapper, so it scrolls.
   return (
-    <iframe
-      sandbox=""
-      srcDoc={html}
-      title={title}
-      className="h-full w-full border-0 bg-white"
-    />
+    <div className="min-h-0 flex-1 overflow-auto bg-white">
+      <iframe
+        sandbox=""
+        srcDoc={html}
+        title={title}
+        className="h-full w-full border-0 bg-white"
+        style={{ zoom: scale }}
+      />
+    </div>
   )
 }
 
-// --- CSV (delegates to CsvViewer, which wants content rather than a URL) ------
+// --- CSV (delegates to CsvViewer, which fetches + streams the URL itself) -----
 
 function CsvFromUrl({
   src,
@@ -850,39 +882,24 @@ function CsvFromUrl({
   className?: string
   bare?: boolean
 }) {
-  const blob = React.use(getBlob(src))
-  const [scale, setScale] = React.useState(1)
-  const zoom = (factor: number) => setScale((s) => clamp(s * factor, 0.5, 4))
-  const actions = (
-    <>
-      <IconButton label="Zoom out" onClick={() => zoom(1 / 1.2)}>
-        <Minus />
-      </IconButton>
-      <span className="w-12 text-center text-xs tabular-nums text-muted-foreground">
-        {Math.round(scale * 100)}%
-      </span>
-      <IconButton label="Zoom in" onClick={() => zoom(1.2)}>
-        <Plus />
-      </IconButton>
-      <IconButton label="Actual size" onClick={() => setScale(1)}>
-        <Maximize />
-      </IconButton>
-    </>
-  )
+  const { scale, zoom, reset } = useZoom()
   return (
     <DocShell
       fileName={fileName}
       src={src}
-      actions={actions}
+      actions={<ZoomActions scale={scale} zoom={zoom} reset={reset} />}
       className={className}
       bare={bare}
     >
       {/* Borderless + fillHeight so the table sits flush inside DocShell's body,
-          flexing to fill the space below the toolbar (no manual measuring). */}
+          flexing to fill the space below the toolbar (no manual measuring).
+          The toolbar drives zoom via `scale`, so the footer's own zoom is off —
+          one zoom control, matching the other DocShell formats. */}
       <CsvViewer
-        source={blob}
+        src={src}
         fillHeight
         scale={scale}
+        showZoom={false}
         className="rounded-none border-0 bg-transparent"
       />
     </DocShell>
@@ -918,8 +935,8 @@ function DocShell({
         className
       )}
     >
-      <div className="flex h-10 flex-shrink-0 items-center gap-2 border-b bg-card px-3">
-        <span className="truncate text-xs font-medium" title={fileName}>
+      <div className="flex h-10 flex-shrink-0 items-center gap-1 border-b bg-card px-2">
+        <span className="truncate px-1 text-xs font-medium" title={fileName}>
           {fileName}
         </span>
         {meta ? (
@@ -968,6 +985,67 @@ function IconButton({
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value))
+}
+
+/** Shared zoom state for the content viewers (0.5×–4×). */
+function useZoom() {
+  const [scale, setScale] = React.useState(1)
+  const zoom = React.useCallback(
+    (factor: number) => setScale((s) => clamp(s * factor, 0.5, 4)),
+    []
+  )
+  const reset = React.useCallback(() => setScale(1), [])
+  return { scale, zoom, reset }
+}
+
+/** The Zoom out / % / Zoom in / Actual-size toolbar cluster (DocShell `actions`). */
+function ZoomActions({
+  scale,
+  zoom,
+  reset,
+}: {
+  scale: number
+  zoom: (factor: number) => void
+  reset: () => void
+}) {
+  return (
+    <>
+      <IconButton label="Zoom out" onClick={() => zoom(1 / 1.2)}>
+        <Minus />
+      </IconButton>
+      <span className="w-12 text-center text-xs tabular-nums text-muted-foreground">
+        {Math.round(scale * 100)}%
+      </span>
+      <IconButton label="Zoom in" onClick={() => zoom(1.2)}>
+        <Plus />
+      </IconButton>
+      <IconButton label="Actual size" onClick={reset}>
+        <Maximize />
+      </IconButton>
+    </>
+  )
+}
+
+/** Inert mirror of {@link ZoomActions} for skeletons, so the toolbar never jumps
+ *  when the real (interactive) controls fade in. */
+function ZoomActionsSkeleton() {
+  const inert = { disabled: true, tabIndex: -1, "aria-hidden": true } as const
+  return (
+    <>
+      <IconButton label="Zoom out" {...inert}>
+        <Minus />
+      </IconButton>
+      <span className="w-12 text-center text-xs tabular-nums text-muted-foreground">
+        100%
+      </span>
+      <IconButton label="Zoom in" {...inert}>
+        <Plus />
+      </IconButton>
+      <IconButton label="Actual size" {...inert}>
+        <Maximize />
+      </IconButton>
+    </>
+  )
 }
 
 function UnsupportedCard({
@@ -1035,7 +1113,13 @@ function ViewerFallback({
       category === "csv")
   ) {
     return (
-      <DocShell fileName={fileName} src={src} className={className} bare={bare}>
+      <DocShell
+        fileName={fileName}
+        src={src}
+        className={className}
+        bare={bare}
+        actions={<ZoomActionsSkeleton />}
+      >
         {category === "csv" ? (
           <TableBodySkeleton />
         ) : category === "text" ? (
@@ -1066,20 +1150,28 @@ function ViewerFallback({
         className
       )}
     >
-      <div className="flex h-10 flex-shrink-0 items-center gap-2 border-b bg-card px-2">
+      <div className="flex h-10 flex-shrink-0 items-center gap-1 border-b bg-card px-2">
         <span className="px-1">
           <Skeleton className="inline-block h-3 w-16 align-middle" />
         </span>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          className="ml-auto size-7"
-          disabled
-          tabIndex={-1}
-          aria-hidden
-        >
-          <Download />
-        </Button>
+        <div className="ml-auto flex items-center gap-1">
+          {category !== "unsupported" ? (
+            <>
+              <ZoomActionsSkeleton />
+              <Separator orientation="vertical" className="mx-1 h-4" />
+            </>
+          ) : null}
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="size-7"
+            disabled
+            tabIndex={-1}
+            aria-hidden
+          >
+            <Download />
+          </Button>
+        </div>
       </div>
       {tabular ? (
         <TableBodySkeleton />

@@ -80,20 +80,18 @@ export function SplitViewer({
 
   // The legend sits below the document toolbar; the ribbon is the left rail.
   const header = (
-    <div className="border-b border-border bg-background px-3 py-2">
-      <SegmentLegend
-        segments={segments}
-        currentPage={currentPage}
-        activeId={activeId}
-        onActivate={setActiveId}
-        onSelect={(id) => {
-          const seg = segments.find((s) => s.id === id);
-          if (seg?.pages.length) handleJumpToPage(seg.pages[0]);
-        }}
-        columns={4}
-        showUnusedToggle
-      />
-    </div>
+    <SegmentLegend
+      segments={segments}
+      currentPage={currentPage}
+      activeId={activeId}
+      onActivate={setActiveId}
+      onSelect={(id) => {
+        const seg = segments.find((s) => s.id === id);
+        if (seg?.pages.length) handleJumpToPage(seg.pages[0]);
+      }}
+      columns={4}
+      showUnusedToggle
+    />
   );
 
   const aside =

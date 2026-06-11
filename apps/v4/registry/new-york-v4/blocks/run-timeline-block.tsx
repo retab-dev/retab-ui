@@ -27,6 +27,7 @@ import {
 
 import { cn } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   ApiCallInspector,
   type ApiCall,
@@ -39,6 +40,10 @@ import {
   FunctionInspector,
   type FunctionRun,
 } from "@/registry/new-york-v4/blocks/function-block"
+import {
+  StepWaterfall,
+  type WaterfallRun,
+} from "@/registry/new-york-v4/blocks/step-waterfall-block"
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -59,6 +64,8 @@ export type RunStep = {
   status: StepStatus
   /** Execution time in milliseconds. */
   durationMs?: number | null
+  /** Offset from the start of the run, in ms. Defaults to a sequential layout in the Timing view. */
+  startOffsetMs?: number | null
   /** Secondary line — error message, skip reason, model name, etc. */
   detail?: string
   /** What to render in the detail panel when the step is selected. */
@@ -289,16 +296,16 @@ function DetailPanel({ step }: { step: RunStep }) {
 
 // ── Timeline ─────────────────────────────────────────────────────────────────
 
-/**
- * Workflow run timeline — a vertical list of the steps in a run (block icon,
- * label, status and duration) beside a detail panel that shows the selected
- * step's inspector. Pass a {@link WorkflowRun}; each step's `inspector` is
- * rendered as-is, so any block-type view composes here.
- */
-export function RunTimeline({ run }: { run: WorkflowRun }) {
-  const { steps } = run
+/** The master–detail step list: pick a step, inspect it. */
+function StepsView({
+  steps,
+  defaultStepId,
+}: {
+  steps: RunStep[]
+  defaultStepId?: string
+}) {
   const [selectedId, setSelectedId] = React.useState(
-    run.defaultStepId ?? steps[0]?.id
+    defaultStepId ?? steps[0]?.id
   )
   const selected = steps.find((s) => s.id === selectedId) ?? steps[0]
 
@@ -306,14 +313,6 @@ export function RunTimeline({ run }: { run: WorkflowRun }) {
     <div className="flex h-full min-h-0 bg-background">
       {/* Rail */}
       <aside className="flex w-[260px] flex-shrink-0 flex-col border-r">
-        <div className="flex h-10 flex-shrink-0 items-center border-b px-4">
-          <h2 className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-            Run steps
-          </h2>
-          <span className="ml-auto text-[11px] text-muted-foreground tabular-nums">
-            {steps.length}
-          </span>
-        </div>
         <ScrollArea className="min-h-0 flex-1">
           <div className="py-1">
             {steps.map((step, i) => (
@@ -341,6 +340,66 @@ export function RunTimeline({ run }: { run: WorkflowRun }) {
         )}
       </div>
     </div>
+  )
+}
+
+/** Map the run's steps onto the waterfall model, laying them out sequentially
+ * when a step doesn't carry an explicit `startOffsetMs`. */
+function toWaterfallRun(steps: RunStep[]): WaterfallRun {
+  let cursor = 0
+  return {
+    steps: steps.map((step) => {
+      const durationMs = step.durationMs ?? 0
+      const startOffsetMs = step.startOffsetMs ?? cursor
+      cursor = startOffsetMs + durationMs
+      return {
+        id: step.id,
+        label: step.label,
+        blockType: step.blockType,
+        status: step.status,
+        startOffsetMs,
+        durationMs,
+      }
+    }),
+  }
+}
+
+/**
+ * Workflow run view — one run, two ways. The **Steps** tab is a vertical step
+ * list beside a detail panel that shows the selected step's inspector; the
+ * **Timing** tab is a waterfall of the same steps. Pass a {@link WorkflowRun};
+ * each step's `inspector` is rendered as-is, so any block-type view composes here.
+ */
+export function RunTimeline({ run }: { run: WorkflowRun }) {
+  const { steps } = run
+  const waterfallRun = React.useMemo(() => toWaterfallRun(steps), [steps])
+
+  return (
+    <Tabs
+      defaultValue="steps"
+      className="flex h-full min-h-0 flex-col gap-0 bg-background"
+    >
+      <TabsList
+        variant="underline"
+        className="flex-shrink-0 justify-start rounded-none border-b bg-transparent px-2"
+      >
+        <TabsTrigger value="steps" className="text-xs">
+          Steps
+          <span className="ml-1.5 text-muted-foreground tabular-nums">
+            {steps.length}
+          </span>
+        </TabsTrigger>
+        <TabsTrigger value="timing" className="text-xs">
+          Timing
+        </TabsTrigger>
+      </TabsList>
+      <TabsContent value="steps" className="m-0 min-h-0 flex-1 overflow-hidden">
+        <StepsView steps={steps} defaultStepId={run.defaultStepId} />
+      </TabsContent>
+      <TabsContent value="timing" className="m-0 min-h-0 flex-1 overflow-hidden">
+        <StepWaterfall run={waterfallRun} />
+      </TabsContent>
+    </Tabs>
   )
 }
 
@@ -429,6 +488,7 @@ const SAMPLE_RUN: WorkflowRun = {
       blockType: "start_document",
       label: "Upload invoice",
       status: "completed",
+      startOffsetMs: 0,
       durationMs: 8,
       detail: "invoice_8842.pdf",
     },
@@ -437,6 +497,7 @@ const SAMPLE_RUN: WorkflowRun = {
       blockType: "api_call",
       label: "Extract fields",
       status: "completed",
+      startOffsetMs: 8,
       durationMs: 1842,
       inspector: <ApiCallInspector call={API_CALL} />,
     },
@@ -445,6 +506,7 @@ const SAMPLE_RUN: WorkflowRun = {
       blockType: "function",
       label: "Compute totals",
       status: "completed",
+      startOffsetMs: 1850,
       durationMs: 214,
       inspector: <FunctionInspector run={FUNCTION_RUN} />,
     },
@@ -453,6 +515,7 @@ const SAMPLE_RUN: WorkflowRun = {
       blockType: "conditional",
       label: "Route by amount",
       status: "completed",
+      startOffsetMs: 2064,
       durationMs: 3,
       inspector: <ConditionalBreakdownTable run={CONDITIONAL_RUN} />,
     },
@@ -461,6 +524,7 @@ const SAMPLE_RUN: WorkflowRun = {
       blockType: "api_call",
       label: "Post to ERP",
       status: "error",
+      startOffsetMs: 2067,
       durationMs: 4120,
       detail: "503 Service Unavailable",
       inspector: <ApiCallInspector call={FAILED_CALL} />,
@@ -470,6 +534,8 @@ const SAMPLE_RUN: WorkflowRun = {
       blockType: "function",
       label: "Send notification",
       status: "skipped",
+      startOffsetMs: 6187,
+      durationMs: 0,
       detail: "Upstream step failed",
     },
   ],
