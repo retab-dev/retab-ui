@@ -42,8 +42,6 @@ export interface SegmentLegendProps {
   showUnused?: boolean
   /** A muted caption rendered under the entries (e.g. a classification's reasoning). */
   caption?: React.ReactNode
-  /** Extra content rendered after the entries inside the same chrome (e.g. a page ribbon). */
-  accessory?: React.ReactNode
   className?: string
 }
 
@@ -89,7 +87,6 @@ export function SegmentLegend({
   showUnusedToggle = false,
   showUnused = false,
   caption,
-  accessory,
   className,
 }: SegmentLegendProps) {
   const [showAll, setShowAll] = React.useState(showUnused)
@@ -154,7 +151,7 @@ export function SegmentLegend({
             >
               <span
                 aria-hidden
-                className={cn("shrink-0 rounded-[2px] ring-1 ring-black/20", d.swatch)}
+                className={cn("shrink-0 rounded-[2px]", d.swatch)}
                 style={{ backgroundColor: segment.color }}
               />
               <span
@@ -180,7 +177,6 @@ export function SegmentLegend({
           {reveal ? "Hide unused" : "Show all"}
         </button>
       ) : null}
-      {accessory ? <div className="mt-2">{accessory}</div> : null}
       {caption ? (
         <div className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
           {caption}

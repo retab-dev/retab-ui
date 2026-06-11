@@ -93,7 +93,7 @@ export function PartitionViewerDemo() {
             src={PARTITION_PDF_URL}
             bare
             downloadFileName="attention.pdf"
-            header={handlers.header}
+            slots={handlers.slots}
             onVisiblePageChange={handlers.onCurrentPageChange}
             onScrollProgressChange={handlers.onScrollProgressChange}
             className="h-full"
@@ -118,7 +118,7 @@ export function ClassificationViewerDemo() {
             src="/samples/loan-application.pdf"
             bare
             downloadFileName="loan-application.pdf"
-            header={handlers.header}
+            slots={handlers.slots}
             className="h-full"
           />
         )}
@@ -137,8 +137,7 @@ export function SplitViewerDemo() {
             src={SPLIT_PDF_URL}
             bare
             downloadFileName="harris_2023_federal_state_returns.pdf"
-            header={handlers.header}
-            aside={handlers.aside}
+            slots={handlers.slots}
             onVisiblePageChange={handlers.onCurrentPageChange}
             onScrollProgressChange={handlers.onScrollProgressChange}
             className="h-full"

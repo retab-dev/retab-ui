@@ -51,3 +51,4 @@ Omit `renderDocument` to show the extracted markdown full-width.
 | `result` | `ParseResponse \| null` | The parse result; `output.pages` is an array of per-page markdown. |
 | `renderDocument` | `(handlers) => ReactNode` | Renders the source document beside the markdown. Receives `{ onCurrentPageChange, onScrollProgressChange }`. Omit to show markdown full-width. |
 | `isProcessing` | `boolean` | Show the parsing state while a result is pending. |
+| `onVisiblePageChange` | `(page: number) => void` | Fired with the 1-based page nearest the top of the markdown viewport as it scrolls. |

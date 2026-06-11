@@ -9,12 +9,75 @@
     }
   },
   {
+    "key": "tenant",
+    "label": "Tenant",
+    "value": "acme-corp",
+    "source": {
+      "content": "tenant=acme-corp environment=prod",
+      "anchor": { "kind": "text_span", "line_start": 3, "line_end": 3 }
+    }
+  },
+  {
+    "key": "environment",
+    "label": "Environment",
+    "value": "prod",
+    "source": {
+      "content": "tenant=acme-corp environment=prod",
+      "anchor": { "kind": "text_span", "line_start": 3, "line_end": 3 }
+    }
+  },
+  {
+    "key": "fileName",
+    "label": "File name",
+    "value": "bank-statement.pdf",
+    "source": {
+      "content": "received file bank-statement.pdf (80.1 KB)",
+      "anchor": { "kind": "text_span", "line_start": 4, "line_end": 4 }
+    }
+  },
+  {
+    "key": "fileSize",
+    "label": "File size",
+    "value": "80.1 KB",
+    "source": {
+      "content": "received file bank-statement.pdf (80.1 KB)",
+      "anchor": { "kind": "text_span", "line_start": 4, "line_end": 4 }
+    }
+  },
+  {
+    "key": "sha256",
+    "label": "SHA-256",
+    "value": "4f1a…c0de",
+    "source": {
+      "content": "sha256=4f1a...c0de",
+      "anchor": { "kind": "text_span", "line_start": 5, "line_end": 5 }
+    }
+  },
+  {
+    "key": "mimeType",
+    "label": "MIME type",
+    "value": "application/pdf",
+    "source": {
+      "content": "mime=application/pdf",
+      "anchor": { "kind": "text_span", "line_start": 6, "line_end": 6 }
+    }
+  },
+  {
     "key": "documentType",
     "label": "Document type",
     "value": "bank_statement",
     "source": {
       "content": "detected document_type=bank_statement",
       "anchor": { "kind": "text_span", "line_start": 7, "line_end": 7 }
+    }
+  },
+  {
+    "key": "classifierConfidence",
+    "label": "Classifier confidence",
+    "value": "0.984",
+    "source": {
+      "content": "confidence=0.984",
+      "anchor": { "kind": "text_span", "line_start": 8, "line_end": 8 }
     }
   },
   {
@@ -27,12 +90,48 @@
     }
   },
   {
+    "key": "ocrDpi",
+    "label": "OCR resolution",
+    "value": "192 dpi",
+    "source": {
+      "content": "rasterizing pages at 192 dpi",
+      "anchor": { "kind": "text_span", "line_start": 11, "line_end": 11 }
+    }
+  },
+  {
     "key": "model",
     "label": "Extraction model",
     "value": "retab-large",
     "source": {
       "content": "model=retab-large n_consensus=3",
       "anchor": { "kind": "text_span", "line_start": 16, "line_end": 16 }
+    }
+  },
+  {
+    "key": "consensusRuns",
+    "label": "Consensus runs",
+    "value": "3",
+    "source": {
+      "content": "model=retab-large n_consensus=3",
+      "anchor": { "kind": "text_span", "line_start": 16, "line_end": 16 }
+    }
+  },
+  {
+    "key": "schema",
+    "label": "Schema",
+    "value": "bank_statement_v2",
+    "source": {
+      "content": "schema=bank_statement_v2 fields=18",
+      "anchor": { "kind": "text_span", "line_start": 17, "line_end": 17 }
+    }
+  },
+  {
+    "key": "schemaFields",
+    "label": "Schema fields",
+    "value": "18",
+    "source": {
+      "content": "schema=bank_statement_v2 fields=18",
+      "anchor": { "kind": "text_span", "line_start": 17, "line_end": 17 }
     }
   },
   {
@@ -45,11 +144,65 @@
     }
   },
   {
+    "key": "lowAgreementField",
+    "label": "Low-agreement field",
+    "value": "transactions.7.amount",
+    "source": {
+      "content": "field transactions.7.amount low agreement (0.58)",
+      "anchor": { "kind": "text_span", "line_start": 22, "line_end": 22 }
+    }
+  },
+  {
+    "key": "fieldsGrounded",
+    "label": "Fields grounded",
+    "value": "16 / 18",
+    "source": {
+      "content": "16/18 fields grounded",
+      "anchor": { "kind": "text_span", "line_start": 26, "line_end": 26 }
+    }
+  },
+  {
+    "key": "reviewQueue",
+    "label": "Review queue",
+    "value": "finance-ops",
+    "source": {
+      "content": "assigned to queue=finance-ops",
+      "anchor": { "kind": "text_span", "line_start": 29, "line_end": 29 }
+    }
+  },
+  {
+    "key": "promptTokens",
+    "label": "Prompt tokens",
+    "value": "14,820",
+    "source": {
+      "content": "prompt_tokens=14820 completion_tokens=2110",
+      "anchor": { "kind": "text_span", "line_start": 30, "line_end": 30 }
+    }
+  },
+  {
+    "key": "completionTokens",
+    "label": "Completion tokens",
+    "value": "2,110",
+    "source": {
+      "content": "prompt_tokens=14820 completion_tokens=2110",
+      "anchor": { "kind": "text_span", "line_start": 30, "line_end": 30 }
+    }
+  },
+  {
     "key": "totalTokens",
     "label": "Total tokens",
     "value": "16,930",
     "source": {
       "content": "total_tokens=16930",
+      "anchor": { "kind": "text_span", "line_start": 31, "line_end": 31 }
+    }
+  },
+  {
+    "key": "status",
+    "label": "Run status",
+    "value": "completed",
+    "source": {
+      "content": "run status=completed",
       "anchor": { "kind": "text_span", "line_start": 32, "line_end": 32 }
     }
   },
@@ -59,7 +212,7 @@
     "value": "11,842 ms",
     "source": {
       "content": "duration_ms=11842",
-      "anchor": { "kind": "text_span", "line_start": 34, "line_end": 34 }
+      "anchor": { "kind": "text_span", "line_start": 33, "line_end": 33 }
     }
   }
 ]

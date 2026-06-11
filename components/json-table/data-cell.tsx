@@ -43,7 +43,7 @@ import {
   get_value_from_row_array_and_dot_notation_path,
   isValidProperty,
 } from "@/components/json-table/lib/json-schema-utils";
-import { CheckIcon, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRef, useState } from "react";
 import { useMountEffect } from "@/hooks/useMountEffect";
@@ -289,415 +289,6 @@ export function DoubleClickTextarea({
       onDoubleClick={handleDoubleClick}
       readOnly={disabled}
     />
-  );
-}
-
-export function SimpleFakeTextarea({
-  value,
-  onChange,
-  className,
-  disabled = false,
-  isReferenceSheet: _isReferenceSheet = false,
-  ...props
-}: {
-  value: any;
-  onChange?: (value: string) => void;
-  className?: string;
-  onClick?: (e: React.MouseEvent) => void;
-  onBlur?: () => void;
-  disabled?: boolean;
-  isReferenceSheet?: boolean;
-  [key: string]: any;
-}) {
-  const divRef = useRef<HTMLDivElement>(null);
-  const [isEditing, setIsEditing] = useState(false);
-  const pendingFocusRef = useRef(false);
-
-  const setEditableDivRef = React.useCallback(
-    (node: HTMLDivElement | null) => {
-      divRef.current = node;
-      if (!node || !isEditing) return;
-
-      if (value !== undefined && value !== null && node.innerText !== value) {
-        node.innerText = value;
-      }
-
-      if (!pendingFocusRef.current) return;
-      pendingFocusRef.current = false;
-
-      node.focus();
-
-      const selection = window.getSelection();
-      const range = document.createRange();
-
-      if (node.childNodes.length > 0) {
-        const lastNode = node.childNodes[node.childNodes.length - 1];
-
-        if (lastNode.nodeType === Node.TEXT_NODE) {
-          range.setStart(lastNode, (lastNode as Text).length);
-        } else {
-          range.setStartAfter(lastNode);
-        }
-      } else {
-        range.setStart(node, 0);
-      }
-
-      range.collapse(true);
-      selection?.removeAllRanges();
-      selection?.addRange(range);
-    },
-    [isEditing, value],
-  );
-
-  // Handle double click to enable editing if not already in edit mode
-  const handleDoubleClick = () => {
-    if (!isEditing && !disabled) {
-      pendingFocusRef.current = true;
-      setIsEditing(true);
-    }
-  };
-
-  // Handle single click - maintain focus if already editing
-  const handleClick = (e: React.MouseEvent) => {
-    if (isEditing) {
-      e.stopPropagation();
-    } else if (props.onClick) {
-      props.onClick(e);
-    }
-  };
-
-  // Handle mouse down to prevent default behavior when not editing
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (!isEditing) {
-      // Only prevent default if the div is not in editing mode
-      e.preventDefault();
-    } else {
-      // Allow normal text selection when in editing mode
-      e.stopPropagation();
-    }
-  };
-
-  // Handle blur to commit changes but only leave editing mode when clicking outside
-  const handleBlur = (e: React.FocusEvent) => {
-    //console.log("HandleBlur", e);
-    // Only exit editing mode if clicking outside this component
-    if (!divRef.current?.contains(e.relatedTarget as Node)) {
-      //console.log("HandleBlur", "outside");
-      setIsEditing(false);
-      //console.log("HandleBlur", "stopped editing");
-
-      // When exiting edit mode, commit the changes
-      if (divRef.current) {
-        const text = divRef.current.innerText;
-        //console.log("HandleBlur", "text", text);
-        onChange?.(text as any);
-        //console.log("HandleBlur", "onChange", text);
-      }
-    }
-  };
-
-  // Handle key events (Enter and Escape)
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      // Submit changes on Enter without shift
-      e.preventDefault();
-      setIsEditing(false);
-      // Make sure to trigger onBlur's behavior
-      if (divRef.current) {
-        const text = divRef.current.innerText;
-        //console.log("HandleKeyDown", text);
-        onChange?.(text as any); // hand back the primitive string
-      }
-      // Call parent's onBlur if provided
-      props.onBlur?.();
-    } else if (e.key === "Escape") {
-      // Cancel editing and revert to original value
-      e.preventDefault();
-      setIsEditing(false);
-      // Restore original value
-      if (divRef.current) {
-        divRef.current.innerText = value;
-      }
-      // Call parent's onBlur if provided
-      props.onBlur?.();
-    }
-  };
-
-  // Critical: Don't update the DOM content when component re-renders during editing
-  return (
-    <div
-      ref={setEditableDivRef}
-      contentEditable={isEditing && !disabled}
-      className={cn(
-        "cursor-default overflow-hidden text-inherit",
-        isEditing &&
-          !disabled &&
-          "cursor-text outline-none focus:outline-1 focus:outline-primary",
-        "cursor-pointer hover:bg-muted",
-        className,
-      )}
-      onDoubleClick={handleDoubleClick}
-      onClick={handleClick}
-      onMouseDown={handleMouseDown}
-      onBlur={handleBlur}
-      onKeyDown={handleKeyDown}
-      tabIndex={disabled ? -1 : 0}
-      suppressContentEditableWarning={true}
-      {...props}
-    >
-      {/* Only show the value when not editing - React won't update the children during editing */}
-      {!isEditing ? value : null}
-    </div>
-  );
-}
-
-interface EditableTextProps {
-  value: string | null | undefined;
-  onChange?: (v: string | null) => void;
-  disabled?: boolean;
-  className?: string;
-  isReferenceSheet?: boolean;
-  growOnFocus?: boolean;
-  cellWidth?: number;
-  cellHeight?: number;
-}
-export function EditableTextRadix({
-  value,
-  onChange,
-  disabled = false,
-  className,
-  isReferenceSheet = false,
-  cellWidth,
-  cellHeight: _cellHeight,
-}: EditableTextProps) {
-  const [open, setOpen] = React.useState(false);
-  const [draft, setDraft] = React.useState<string>(value ?? "");
-  const taRef = React.useRef<HTMLTextAreaElement>(null);
-  const cancelledRef = React.useRef(false);
-
-  const autoResize = React.useCallback(() => {
-    const el = taRef.current;
-    if (!el) return;
-    el.style.height = "auto";
-    el.style.height = `${el.scrollHeight}px`;
-  }, []);
-
-  const commit = React.useCallback(() => {
-    onChange?.(draft === "" ? null : draft);
-  }, [draft, onChange]);
-
-  const cancel = React.useCallback(() => {
-    cancelledRef.current = true;
-    setDraft(value ?? "");
-    setOpen(false);
-  }, [value]);
-
-  const handleOpenChange = (next: boolean) => {
-    if (disabled || !isReferenceSheet) return;
-    if (!next) {
-      // closing
-      if (!cancelledRef.current) {
-        commit();
-      } else {
-        cancelledRef.current = false;
-      }
-    } else {
-      // opening
-      setDraft(value ?? "");
-      requestAnimationFrame(autoResize);
-    }
-    setOpen(next);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-      e.preventDefault();
-      commit();
-      setOpen(false);
-    } else if (e.key === "Escape") {
-      e.preventDefault();
-      cancel();
-    }
-  };
-
-  const preview = (value ?? "").toString();
-
-  return (
-    <PopoverPrimitive.Root open={open} onOpenChange={handleOpenChange}>
-      <PopoverPrimitive.Trigger asChild>
-        <button
-          type="button"
-          disabled={disabled || !isReferenceSheet}
-          className={cn(
-            "!text-3xs h-full w-full truncate overflow-hidden border-0 bg-transparent px-2 py-0 text-left text-inherit",
-            "cursor-text disabled:text-inherit disabled:opacity-100",
-            className,
-          )}
-        >
-          {preview || <span className="text-muted-foreground">—</span>}
-        </button>
-      </PopoverPrimitive.Trigger>
-
-      <PopoverPrimitive.Portal>
-        <PopoverPrimitive.Content
-          side="bottom"
-          avoidCollisions={false}
-          align="start"
-          updatePositionStrategy="always"
-          sideOffset={0}
-          onInteractOutside={() => {
-            // Radix will close, handleOpenChange(false) will commit
-          }}
-          className={cn(
-            // stripped-down, no animation classes
-            "bg-popover text-popover-foreground z-50 m-0 w-auto rounded-none border border-primary p-0 shadow-md outline-none",
-          )}
-          style={{
-            width: `${Math.max(cellWidth ?? 200, 200)}px`,
-            translate: `0 calc(-1 * var(--radix-popover-trigger-height))`,
-          }}
-        >
-          <Textarea
-            ref={taRef}
-            value={draft}
-            onChange={(e) => {
-              setDraft(e.target.value);
-              requestAnimationFrame(autoResize);
-            }}
-            onKeyDown={handleKeyDown}
-            onMouseDown={(e) => {
-              // Prevent bubbling to parent handlers
-              e.stopPropagation();
-            }}
-            rows={1}
-            autoFocus
-            className={cn(
-              "!text-3xs max-h-[60vh] min-h-[120px] resize-none rounded-none border-none focus-visible:ring-0 focus-visible:ring-offset-0",
-            )}
-          />
-        </PopoverPrimitive.Content>
-      </PopoverPrimitive.Portal>
-    </PopoverPrimitive.Root>
-  );
-}
-
-export function EditableText({
-  value,
-  onChange,
-  disabled = false,
-  className,
-  isReferenceSheet = false,
-  cellWidth,
-  cellHeight: _cellHeight,
-}: EditableTextProps) {
-  const [open, setOpen] = React.useState(false);
-  const [draft, setDraft] = React.useState<string>(value ?? "");
-  const taRef = React.useRef<HTMLTextAreaElement>(null);
-  const cancelledRef = React.useRef(false);
-
-  const autoResize = React.useCallback(() => {
-    const el = taRef.current;
-    if (!el) return;
-    el.style.height = "auto";
-    el.style.height = `${el.scrollHeight}px`;
-  }, []);
-
-  const commit = React.useCallback(() => {
-    onChange?.(draft === "" ? null : draft);
-  }, [draft, onChange]);
-
-  const cancel = React.useCallback(() => {
-    cancelledRef.current = true;
-    setDraft(value ?? "");
-    setOpen(false);
-  }, [value]);
-
-  const handleOpenChange = (next: boolean) => {
-    if (disabled || !isReferenceSheet) return;
-    if (!next) {
-      // closing
-      if (!cancelledRef.current) {
-        commit();
-      } else {
-        cancelledRef.current = false;
-      }
-    } else {
-      // opening
-      setDraft(value ?? "");
-      requestAnimationFrame(autoResize);
-    }
-    setOpen(next);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-      e.preventDefault();
-      commit();
-      setOpen(false);
-    } else if (e.key === "Escape") {
-      e.preventDefault();
-      cancel();
-    }
-  };
-
-  const preview = (value ?? "").toString();
-
-  return (
-    <PopoverPrimitive.Root open={open} onOpenChange={handleOpenChange}>
-      <PopoverPrimitive.Trigger asChild>
-        <button
-          type="button"
-          disabled={disabled || !isReferenceSheet}
-          className={cn(
-            "!text-3xs h-full w-full truncate overflow-hidden border-0 bg-transparent px-2 py-0 text-left text-inherit",
-            "cursor-text disabled:text-inherit disabled:opacity-100",
-            className,
-          )}
-        >
-          {preview || <span className="text-muted-foreground">—</span>}
-        </button>
-      </PopoverPrimitive.Trigger>
-
-      <PopoverPrimitive.Portal>
-        <PopoverPrimitive.Content
-          side="bottom"
-          avoidCollisions={false}
-          align="start"
-          updatePositionStrategy="always"
-          sideOffset={0}
-          onInteractOutside={() => {
-            // Radix will close, handleOpenChange(false) will commit
-          }}
-          className={cn(
-            // stripped-down, no animation classes
-            "bg-popover text-popover-foreground z-50 m-0 w-auto rounded-none border border-primary p-0 shadow-md outline-none",
-          )}
-          style={{
-            width: `${Math.max(cellWidth ?? 200, 200)}px`,
-            translate: `0 calc(-1 * var(--radix-popover-trigger-height))`,
-          }}
-        >
-          <Textarea
-            ref={taRef}
-            value={draft}
-            onChange={(e) => {
-              setDraft(e.target.value);
-              requestAnimationFrame(autoResize);
-            }}
-            onKeyDown={handleKeyDown}
-            onMouseDown={(e) => {
-              // Prevent bubbling to parent handlers
-              e.stopPropagation();
-            }}
-            rows={1}
-            autoFocus
-            className={cn(
-              "!text-3xs max-h-[60vh] min-h-[120px] resize-none rounded-none border-none focus-visible:ring-0 focus-visible:ring-offset-0",
-            )}
-          />
-        </PopoverPrimitive.Content>
-      </PopoverPrimitive.Portal>
-    </PopoverPrimitive.Root>
   );
 }
 
@@ -1017,19 +608,6 @@ const DataCellContent = (
   // version did) swallows wheel events and blocks scrolling over text cells.
   const [isTextEditing, setIsTextEditing] = useState(false);
 
-  // This component instance is recycled: a fixed pool of row slots is reused as
-  // you scroll, so the same DataCell can be reassigned to a different row. When
-  // that happens (rowIdx changes), drop any transient edit state so it can't
-  // leak onto the newly shown row. Setting already-default state is a no-op, so
-  // this is free for the common (non-editing) case.
-  React.useEffect(() => {
-    setIsTextEditing(false);
-    setIsInputFocused(false);
-    setIsSelectOpen(false);
-    setIsDatePopoverOpen(false);
-    setFocusedField(null);
-  }, [props.rowIdx]);
-
   // While a cell editor is open it overflows its cell. The virtualizer puts
   // every row in its own stacking context (via `transform`), so the editor's
   // own z-index can't lift it above *other* rows — later rows paint over it and
@@ -1048,17 +626,6 @@ const DataCellContent = (
 
   // Use the value from the PathInfo
   const value = props.pathInfo?.value;
-
-  // Debug logging for computed fields
-  if (actualKey === "sum_amounts") {
-    console.log("[DATA CELL] sum_amounts debug:", {
-      actualKey,
-      value,
-      pathInfo: props.pathInfo,
-      docId,
-      rawRowData: row.original,
-    });
-  }
 
   // Optimistic local value to reflect changes immediately in the UI
   const [optimisticValue, setOptimisticValue] = useState<any>(undefined);
@@ -1437,11 +1004,6 @@ const DataCellContent = (
           <Popover
             open={openPopover === actualKey}
             onOpenChange={(open) => {
-              console.log("[Object Popover] onOpenChange:", {
-                open,
-                actualKey,
-                isEditableReference,
-              });
               if (!open) {
                 setOpenPopover(null);
               } else if (actualKey) {
@@ -1788,11 +1350,9 @@ const DataCellContent = (
               type="time"
               value={dateToHTMLTimeString(liveStringValue || "")}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                //  console.log("OnChange for time", e.target.value);
                 setStringValue(e.target.value);
               }}
               onBlur={(_e: React.ChangeEvent<HTMLInputElement>) => {
-                //console.log("OnBlur for time", stringValue);
                 let finalValue = stringValue;
                 if (stringValue && /^\d{1,2}:\d{2}$/.test(stringValue)) {
                   finalValue = stringValue + ":00";
@@ -1829,7 +1389,6 @@ const DataCellContent = (
               type="datetime-local"
               value={dateToHTMLDateTimeString(liveStringValue || "")}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                //console.log("OnChange for datetime", e.target.value);
                 setStringValue(e.target.value);
               }}
               onFocus={() => {
@@ -1838,7 +1397,6 @@ const DataCellContent = (
                 setIsInputFocused(true);
               }}
               onBlur={() => {
-                //console.log("OnBlur for datetime", stringValue);
                 const convertedDate = dateStringToFormat(
                   stringValue,
                   "2000-01-01T00:00:00",
@@ -1864,7 +1422,6 @@ const DataCellContent = (
                 const numValue = isInteger
                   ? parseInt(e.target.value)
                   : parseFloat(e.target.value);
-                //console.log("OnChange for numbers", numValue);
                 setStringValue(isNaN(numValue) ? "" : numValue.toString());
               }}
               onFocus={() => {
@@ -1873,7 +1430,6 @@ const DataCellContent = (
                 setIsInputFocused(true);
               }}
               onBlur={() => {
-                //console.log("OnBlur for numbers", stringValue);
                 const numValue = isInteger
                   ? parseInt(stringValue)
                   : parseFloat(stringValue);
@@ -1959,10 +1515,6 @@ export const DataCell = React.memo(
       onCellClick?: (cellData: PopoverCellData) => void;
     },
   ) => {
-    // No `key` here: this cell is recycled across rows, so DataCellContent must
-    // persist and update in place (keying by value would remount the whole cell
-    // subtree on every recycle — the DOM churn we're eliminating). Transient
-    // edit state is reset inside DataCellContent when its rowIdx changes.
     return <DataCellContent {...props} />;
   },
   (prev: DataCellProps, next: DataCellProps) => {

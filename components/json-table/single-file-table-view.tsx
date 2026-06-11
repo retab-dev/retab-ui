@@ -62,43 +62,6 @@ export const SingleFileTableView = React.memo<SingleFileTableViewProps>(
     fieldReasoningMap,
     overscan,
   }) => {
-    const renderCount = React.useRef(0);
-    const prevPropsRef = React.useRef<any>(null);
-    renderCount.current++;
-
-    // Log what changed
-    if (prevPropsRef.current) {
-      const changes: string[] = [];
-      if (prevPropsRef.current.document !== document) changes.push("document");
-      if (prevPropsRef.current.schema !== schema) changes.push("schema");
-      if (prevPropsRef.current.columnWidth !== propColumnWidth)
-        changes.push("columnWidth");
-      if (prevPropsRef.current.onUpdateDocument !== onUpdateDocument)
-        changes.push("onUpdateDocument");
-      if (prevPropsRef.current.editMode !== editMode) changes.push("editMode");
-      if (prevPropsRef.current.allowEditing !== allowEditing)
-        changes.push("allowEditing");
-
-      // console.log(`[SingleFileTableView] Rendering #${renderCount.current} - Props that changed:`, changes);
-    } else {
-      // console.log(`[SingleFileTableView] Rendering #${renderCount.current} - Initial render`);
-    }
-
-    prevPropsRef.current = {
-      document,
-      schema,
-      columnWidth: propColumnWidth,
-      onUpdateDocument,
-      editMode,
-      allowEditing,
-    };
-
-    // console.log(`[SingleFileTableView] Rendering #${renderCount.current}`, {
-    //     documentId: document.id,
-    //     documentRef: document,
-    //     schemaRef: schema,
-    // });
-
     const { columnWidth: storeColumnWidth } = useSheetOptionsStore();
     const columnWidth = propColumnWidth ?? storeColumnWidth;
 
@@ -111,13 +74,6 @@ export const SingleFileTableView = React.memo<SingleFileTableViewProps>(
 
     // Generate columns from schema
     const [columns] = useMemo(() => {
-      // console.log('[SingleFileTableView] columns memo recomputing', {
-      //     schemaRef: schema,
-      //     stopAt,
-      //     columnWidth,
-      //     editMode,
-      // });
-
       return ColumnsFromSchema(
         schema as any,
         setSchema ?? (() => {}), // Use provided setSchema or no-op
@@ -134,7 +90,6 @@ export const SingleFileTableView = React.memo<SingleFileTableViewProps>(
 
     // Calculate visible keys
     const visibleKeys = useMemo(() => {
-      // console.log('[SingleFileTableView] visibleKeys memo recomputing', { columnsRef: columns });
       return flattenColumns(columns)
         .map((c) =>
           "accessorKey" in c ? (c.accessorKey as string) : undefined,
@@ -144,10 +99,6 @@ export const SingleFileTableView = React.memo<SingleFileTableViewProps>(
 
     // Convert document to 2D table format
     const tableAndPaths = useMemo(() => {
-      // console.log('[SingleFileTableView] tableAndPaths memo recomputing', {
-      //     documentRef: document,
-      //     visibleKeysRef: visibleKeys,
-      // });
       if (!document) return { table: [], paths: [] };
       return objectToTable2D(document, visibleKeys, {
         includeArrayAddRows: editMode !== "readOnly",

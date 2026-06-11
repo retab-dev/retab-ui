@@ -7,10 +7,10 @@ The File Viewer is a single entry point for previewing any file. It detects the
 type from the file name (then the MIME type) and **lazy-loads only the matching
 viewer**, so the heavy parser for a format you never open is never downloaded.
 
-It composes the rest of the family — the [PDF](/docs/components/pdf-viewer),
-[DOCX](/docs/components/docx-viewer), [Image](/docs/components/image-viewer),
-[PPTX](/docs/components/pptx-viewer), [XLSX](/docs/components/xlsx-viewer), and
-[CSV](/docs/components/csv-viewer) viewers — and adds inline, client-side
+It composes the rest of the family — the [PDF](/docs/viewers/pdf-viewer),
+[DOCX](/docs/viewers/docx-viewer), [Image](/docs/viewers/image-viewer),
+[PPTX](/docs/viewers/pptx-viewer), [XLSX](/docs/viewers/xlsx-viewer), and
+[CSV](/docs/viewers/csv-viewer) viewers — and adds inline, client-side
 rendering for **text, code, JSON, Markdown, and HTML**.
 
 <FileViewerDemo />
@@ -22,7 +22,9 @@ npx shadcn@latest add @retab/file-viewer
 ```
 
 This pulls in the format-specific viewers it delegates to, plus `marked` for
-Markdown rendering and `@tanstack/react-virtual` for the text viewer.
+Markdown rendering, `@tanstack/react-virtual` for the text viewer, and `prismjs`
+for JSON syntax highlighting. `DOMPurify` (Markdown sanitizing) is loaded lazily
+at runtime, only when a Markdown file is opened.
 
 ## Usage
 
@@ -47,7 +49,7 @@ or `as` to force a category.
 | Spreadsheet | `xlsx`, `xls`, `xlsm` | XLSX Viewer |
 | Presentation | `pptx` | PPTX Viewer |
 | Tabular | `csv`, `tsv` | CSV Viewer |
-| Image | `png`, `jpg`, `gif`, `webp`, `avif`, `svg`, `bmp`, `tif`, `tiff` | Image Viewer |
+| Image | `png`, `jpg`, `jpeg`, `gif`, `webp`, `avif`, `svg`, `bmp`, `ico`, `tif`, `tiff` | Image Viewer |
 | Markdown | `md`, `markdown`, `mdx` | `marked` → sanitized, inline |
 | HTML | `html`, `htm` | sandboxed iframe |
 | Text & code | `txt`, `log`, `json`, `xml`, `yaml`, `ts`, `py`, `go`, … | virtualized text viewer |
@@ -59,8 +61,11 @@ Anything unrecognized falls back to a download card.
 - **Code-split delegation.** Each format-specific viewer is a `React.lazy`
   import — opening a PDF never loads SheetJS, pptxviewjs, or the others.
 - **Virtualized text.** Plain text, code, and JSON render through a windowed
-  line list (`@tanstack/react-virtual`) with a sticky line-number gutter, so a
-  large log file stays smooth. JSON is pretty-printed automatically.
+  line list (`@tanstack/react-virtual`) with a sticky line-number gutter, and
+  large files are byte-range streamed (the next page loads as you near the end),
+  so a 200 MB log stays smooth and never sits whole in memory. JSON is
+  pretty-printed automatically, and syntax-highlighted with `prismjs` — only the
+  visible lines are tokenized, so cost is bounded by the viewport, not file size.
 - **Markdown, themed.** Markdown is parsed with `marked`, sanitized with
   `DOMPurify`, and rendered inline with a stylesheet built on the app's own theme
   tokens — so it matches the surrounding UI and follows light/dark automatically.

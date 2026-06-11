@@ -5,12 +5,34 @@
     "value": "$1,240,000",
     "source": {
       "content": "1240000",
-      "anchor": {
-        "kind": "csv_cell",
-        "row": 1,
-        "column": "C",
-        "coordinate": "C2"
-      }
+      "anchor": { "kind": "csv_cell", "row": 1, "column": "C", "coordinate": "C2" }
+    }
+  },
+  {
+    "key": "naQ1Customers",
+    "label": "North America Q1 customers",
+    "value": "48",
+    "source": {
+      "content": "48",
+      "anchor": { "kind": "csv_cell", "row": 1, "column": "D", "coordinate": "D2" }
+    }
+  },
+  {
+    "key": "naQ1Nrr",
+    "label": "North America Q1 net revenue retention",
+    "value": "1.12",
+    "source": {
+      "content": "1.12",
+      "anchor": { "kind": "csv_cell", "row": 1, "column": "E", "coordinate": "E2" }
+    }
+  },
+  {
+    "key": "naQ2Revenue",
+    "label": "North America Q2 revenue",
+    "value": "$1,510,000",
+    "source": {
+      "content": "1510000",
+      "anchor": { "kind": "csv_cell", "row": 2, "column": "C", "coordinate": "C3" }
     }
   },
   {
@@ -19,12 +41,16 @@
     "value": "61",
     "source": {
       "content": "61",
-      "anchor": {
-        "kind": "csv_cell",
-        "row": 2,
-        "column": "D",
-        "coordinate": "D3"
-      }
+      "anchor": { "kind": "csv_cell", "row": 2, "column": "D", "coordinate": "D3" }
+    }
+  },
+  {
+    "key": "naQ2Nrr",
+    "label": "North America Q2 net revenue retention",
+    "value": "1.21",
+    "source": {
+      "content": "1.21",
+      "anchor": { "kind": "csv_cell", "row": 2, "column": "E", "coordinate": "E3" }
     }
   },
   {
@@ -33,12 +59,34 @@
     "value": "$820,000",
     "source": {
       "content": "820000",
-      "anchor": {
-        "kind": "csv_cell",
-        "row": 3,
-        "column": "C",
-        "coordinate": "C4"
-      }
+      "anchor": { "kind": "csv_cell", "row": 3, "column": "C", "coordinate": "C4" }
+    }
+  },
+  {
+    "key": "emeaQ1Customers",
+    "label": "EMEA Q1 customers",
+    "value": "33",
+    "source": {
+      "content": "33",
+      "anchor": { "kind": "csv_cell", "row": 3, "column": "D", "coordinate": "D4" }
+    }
+  },
+  {
+    "key": "emeaQ2Revenue",
+    "label": "EMEA Q2 revenue",
+    "value": "$910,000",
+    "source": {
+      "content": "910000",
+      "anchor": { "kind": "csv_cell", "row": 4, "column": "C", "coordinate": "C5" }
+    }
+  },
+  {
+    "key": "emeaQ2Customers",
+    "label": "EMEA Q2 customers",
+    "value": "39",
+    "source": {
+      "content": "39",
+      "anchor": { "kind": "csv_cell", "row": 4, "column": "D", "coordinate": "D5" }
     }
   },
   {
@@ -47,12 +95,7 @@
     "value": "1.15",
     "source": {
       "content": "1.15",
-      "anchor": {
-        "kind": "csv_cell",
-        "row": 4,
-        "column": "E",
-        "coordinate": "E5"
-      }
+      "anchor": { "kind": "csv_cell", "row": 4, "column": "E", "coordinate": "E5" }
     }
   },
   {
@@ -61,12 +104,25 @@
     "value": "$430,000",
     "source": {
       "content": "430000",
-      "anchor": {
-        "kind": "csv_cell",
-        "row": 5,
-        "column": "C",
-        "coordinate": "C6"
-      }
+      "anchor": { "kind": "csv_cell", "row": 5, "column": "C", "coordinate": "C6" }
+    }
+  },
+  {
+    "key": "apacQ1Nrr",
+    "label": "APAC Q1 net revenue retention",
+    "value": "1.04",
+    "source": {
+      "content": "1.04",
+      "anchor": { "kind": "csv_cell", "row": 5, "column": "E", "coordinate": "E6" }
+    }
+  },
+  {
+    "key": "apacQ2Revenue",
+    "label": "APAC Q2 revenue",
+    "value": "$560,000",
+    "source": {
+      "content": "560000",
+      "anchor": { "kind": "csv_cell", "row": 6, "column": "C", "coordinate": "C7" }
     }
   },
   {
@@ -75,12 +131,16 @@
     "value": "24",
     "source": {
       "content": "24",
-      "anchor": {
-        "kind": "csv_cell",
-        "row": 6,
-        "column": "D",
-        "coordinate": "D7"
-      }
+      "anchor": { "kind": "csv_cell", "row": 6, "column": "D", "coordinate": "D7" }
+    }
+  },
+  {
+    "key": "apacQ2Nrr",
+    "label": "APAC Q2 net revenue retention",
+    "value": "1.11",
+    "source": {
+      "content": "1.11",
+      "anchor": { "kind": "csv_cell", "row": 6, "column": "E", "coordinate": "E7" }
     }
   }
 ]

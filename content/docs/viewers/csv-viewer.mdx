@@ -1,13 +1,13 @@
 ---
 title: CSV Viewer
-description: A virtualized CSV/TSV table built on TanStack Table and TanStack Virtual.
+description: A virtualized CSV/TSV table with sortable columns, built on TanStack Virtual.
 ---
 
-The CSV Viewer renders CSV or TSV text as a sortable, virtualized table. It uses
-[TanStack Table](https://tanstack.com/table) for the table model and
-[TanStack Virtual](https://tanstack.com/virtual) for row and column virtualization, so it
-stays smooth with tens of thousands of rows. Parsing is handled by a small,
-dependency-free RFC 4180 parser.
+The CSV Viewer renders CSV or TSV text as a sortable, virtualized table. It renders
+straight from the raw rows — the table model and sorting are hand-rolled, with no
+table library — and uses [TanStack Virtual](https://tanstack.com/virtual) for row and
+column virtualization, so it stays smooth with tens of thousands of rows. Parsing is
+handled by a small, dependency-free RFC 4180 parser.
 
 <CsvViewerDemo />
 
@@ -40,7 +40,7 @@ const data = parseCsv(text, { delimiter: "\t" }) // { columns, rows }
 ## Features
 
 - **Virtualized rows _and_ columns** — only the visible window of cells is rendered (`@tanstack/react-virtual`), so wide and tall tables stay fast. Toggle with the `virtualized` prop.
-- **Sortable columns** — click a header to sort (`@tanstack/react-table`).
+- **Sortable columns** — click a header to sort. Sorting keeps only a lightweight array of row indices, so the raw rows are never copied.
 - **Sticky header and row numbers**, horizontal scroll for wide tables.
 - **Self-contained, incremental parser** — handles quoted fields, escaped quotes, and delimiters/newlines inside quotes, across chunk boundaries.
 - **Off-thread streaming** — pass a `File`/`Blob` as `source` to parse in a Web Worker (or a time-sliced main-thread fallback) with rows arriving progressively.
@@ -81,7 +81,7 @@ memory at once during parsing.
 | `src` | `string` | URL of a CSV/TSV file (same-origin or CORS-enabled). Fetched, then streamed like `source`. Takes precedence over `value`/`data`/`source`. |
 | `value` | `string` | Raw CSV/TSV text, parsed synchronously. Provide this, `data`, or `source`. |
 | `data` | `ParsedCsv` | Pre-parsed `{ columns, rows }`. |
-| `source` | `Blob \| File \| string` | A large source parsed off the render path, streamed in progressively. |
+| `source` | `Blob \| string` | A large source (a `File`/`Blob`, or a raw CSV string) parsed off the render path, streamed in progressively. |
 | `worker` | `boolean` | Parse `source` in a Web Worker when available (falls back to main thread). Defaults to `true`. |
 | `batchSize` | `number` | Rows per progressive batch when streaming a `source`. Defaults to `5000`. |
 | `delimiter` | `string` | Field delimiter for `value`/`source` (defaults to `,`; use `\t` for TSV). |
@@ -92,10 +92,12 @@ memory at once during parsing.
 | `columnOverscan` | `number` | Columns rendered beyond the visible window. Defaults to `overscan`. |
 | `rowHeight` | `number` | Row height in pixels. Defaults to `33`. |
 | `columnWidth` | `number` | Column width in pixels. Defaults to `180`. |
-| `height` | `number` | Scroll viewport height in pixels. Defaults to `480`. |
+| `height` | `number` | Scroll viewport height in pixels. Defaults to `480`. Ignored when `fillHeight`. |
+| `fillHeight` | `boolean` | Flex the body to fill the parent's height instead of a fixed `height` (the parent must give a definite height). Defaults to `false`. |
 | `scale` | `number` | Baseline zoom multiplier on row height, column width, and font size. Defaults to `1`. The footer controls multiply on top of this. |
 | `showZoom` | `boolean` | Show the footer zoom controls. Defaults to `true`. Set `false` when a host drives zoom through `scale`. |
 | `label` | `string` | Accessible label for the table (`aria-label`). Defaults to `"CSV data"`. |
+| `activeCell` | `{ row: number; col: number } \| null` | A cell to highlight (0-based row + column among data columns). |
 | `isolateStyles` | `boolean` | Render the scrolling table inside a shadow root so the host page's CSS — especially `:has()` selectors, whose invalidation Blink doesn't scope by `contain` — can't reach it. On `:has()`-heavy pages this collapses per-scroll style recalc (~33ms → ~0.4ms) and keeps scrolling at refresh rate. The page's author CSS is copied in so utilities resolve and theme variables inherit through the boundary. Defaults to `false`. When on, the table is client-rendered only and host CSS can't style its internals. |
 | `className` | `string` | Optional class on the viewer container. |
 

@@ -16,9 +16,13 @@ It renders just the form (no dialog chrome), so you can drop it into a dialog
 
 ## Usage
 
+`PropertyForm` reads the root schema from `useJsonSchema()`, so it must be
+rendered inside a `JsonSchemaEditorProvider`.
+
 ```tsx
 import { useState } from "react"
 import { PropertyForm } from "@/components/schema-editor/property-form"
+import { JsonSchemaEditorProvider } from "@/components/schema-editor/contexts/json-schema"
 import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
 
 export function Example() {
@@ -31,19 +35,21 @@ export function Example() {
   })
 
   return (
-    <PropertyForm
-      editedProperty={property}
-      setEditedProperty={setProperty}
-      setJsonSchema={setSchema}
-      editedJsonSchema={schema}
-      setEditedJsonSchema={setSchema}
-      editedName={name}
-      setEditedName={setName}
-      submitLabel="Save"
-      onSubmit={(values) => console.log(values)}
-      onCancel={() => {}}
-      onDelete={() => {}}
-    />
+    <JsonSchemaEditorProvider jsonSchema={schema} setJsonSchema={setSchema}>
+      <PropertyForm
+        editedProperty={property}
+        setEditedProperty={setProperty}
+        setJsonSchema={setSchema}
+        editedJsonSchema={schema}
+        setEditedJsonSchema={setSchema}
+        editedName={name}
+        setEditedName={setName}
+        submitLabel="Save"
+        onSubmit={(values) => console.log(values)}
+        onCancel={() => {}}
+        onDelete={() => {}}
+      />
+    </JsonSchemaEditorProvider>
   )
 }
 ```
@@ -57,6 +63,7 @@ export function Example() {
 | `editedName` | `string` | The property's field name. |
 | `setEditedName` | `(name: string) => void` | Updates the field name. |
 | `editedJsonSchema` / `setEditedJsonSchema` | `ExtendedJSONSchema7` / setter | The root schema, used to resolve and manage `$defs`. |
+| `setJsonSchema` | `Dispatch<SetStateAction<ExtendedJSONSchema7>>` | Setter for the root schema (required). |
 | `onSubmit` | `(values?: { name; property }) => void` | Called on Save. |
 | `onCancel` | `() => void` | Called on Cancel. |
 | `onDelete` | `() => void` | Optional. Shows the Delete Property action. |

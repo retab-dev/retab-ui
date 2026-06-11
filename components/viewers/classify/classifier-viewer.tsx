@@ -5,15 +5,16 @@ import { Loader2, Tags } from "lucide-react";
 
 import { type Segment, buildColorMap } from "@/lib/segments";
 import { SegmentLegend } from "@/components/ui/segment-legend";
+import { type PdfViewerSlots } from "@/components/ui/pdf-viewer";
 import type { ClassifyResult } from "@/components/viewers/lib/classify-types";
 
 /**
- * Handlers a document surface receives. `header` (the category legend) is the
- * viewer's chrome — the surface renders it below the document toolbar, exactly
- * like the partition viewer.
+ * Slots a document surface receives. The category legend mounts in `top` — the
+ * surface spreads them onto its `PdfViewer`, exactly like the split and
+ * partition viewers.
  */
 export interface ClassifierDocumentHandlers {
-  header: ReactNode;
+  slots: PdfViewerSlots;
 }
 
 export interface ClassifierViewerProps {
@@ -83,23 +84,25 @@ export function ClassifierViewer({
     );
   }
 
-  // The category legend sits below the document toolbar. The reasoning rides
+  // The category legend mounts in the document's `top` slot. The reasoning rides
   // along as a muted caption — the only classify-specific detail, passed to the
   // legend's `caption` slot rather than wrapped in chrome of its own.
-  const header = (
-    <SegmentLegend
-      segments={segments}
-      activeId={activeId}
-      onActivate={setActiveId}
-      onSelect={handleJumpToTop}
-      caption={reasoning ? <span title={reasoning}>{reasoning}</span> : undefined}
-    />
-  );
+  const slots = {
+    top: (
+      <SegmentLegend
+        segments={segments}
+        activeId={activeId}
+        onActivate={setActiveId}
+        onSelect={handleJumpToTop}
+        caption={reasoning ? <span title={reasoning}>{reasoning}</span> : undefined}
+      />
+    ),
+  };
 
   return (
     <div ref={previewRef} className="flex min-h-0 flex-1 bg-background">
       {renderDocument ? (
-        renderDocument({ header })
+        renderDocument({ slots })
       ) : (
         <div className="flex h-full flex-1 items-center justify-center">
           <span className="text-sm text-muted-foreground">No document available</span>

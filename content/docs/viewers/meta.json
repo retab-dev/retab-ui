@@ -1,0 +1,13 @@
+{
+  "title": "Viewers",
+  "pages": [
+    "index",
+    "pdf-viewer",
+    "image-viewer",
+    "csv-viewer",
+    "xlsx-viewer",
+    "docx-viewer",
+    "pptx-viewer",
+    "file-viewer"
+  ]
+}

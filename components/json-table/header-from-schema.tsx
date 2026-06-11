@@ -305,7 +305,6 @@ function resolveSchema(
   context: any,
 ): JSONSchema7 {
   if (schemaDef == null || typeof schemaDef !== "object") {
-    // console.warn('resolveSchema: missing or invalid schema, falling back to context');
     return context as JSONSchema7;
   }
   let current = schemaDef as JSONSchema7;
@@ -762,9 +761,6 @@ function reorderPropertiesInSchema(
   const [movedItemKey] = reorderedKeys.splice(sourceIndex, 1);
   reorderedKeys.splice(targetIndex, 0, movedItemKey);
 
-  // console.log('[REORDER] Original keys:', keys);
-  // console.log('[REORDER] Reordered keys:', reorderedKeys);
-  // console.log('[REORDER] Source:', sourcePropName, 'Target:', targetPropName);
 
   const newProperties: Record<string, JSONSchema7Definition> = {};
   reorderedKeys.forEach((key) => {
@@ -773,8 +769,6 @@ function reorderPropertiesInSchema(
 
   parentNode.properties = newProperties;
 
-  // console.log('[REORDER] Updated parentNode.properties keys:', Object.keys(parentNode.properties));
-  // console.log('[REORDER] Updated schemaCopy.properties keys:', Object.keys(schemaCopy.properties || {}));
 
   setSchemaCallback(schemaCopy);
 }
@@ -881,8 +875,6 @@ export function ColumnsFromSchema(
   editMode: "promptOnly" | "editable" | "readOnly",
   disableHeaderInteractions: boolean = false,
 ): [TableColumn[], number] {
-  // console.log("Rendering ColumnsFromSchema");
-  // console.log("Current date and time:", new Date().toISOString());
 
   var maxDepth = 0;
   if (!schema.properties || Object.keys(schema.properties).length === 0)

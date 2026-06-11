@@ -6,7 +6,7 @@ description: A docx-preview-backed Word viewer with paginated rendering, zoom, f
 The DOCX Viewer renders a Word document with
 [docx-preview](https://github.com/VolodymyrBaydalka/docxjs) directly — faithful,
 paginated pages (page size, margins, headers and footers), continuous scroll,
-zoom, fit-to-width, and download. It mirrors the [PDF Viewer](/docs/components/pdf-viewer)
+zoom, fit-to-width, and download. It mirrors the [PDF Viewer](/docs/viewers/pdf-viewer)
 so the two are drop-in siblings.
 
 It is built without manual page bookkeeping: the document blob loads through
@@ -53,6 +53,7 @@ document.
 | `scale` | `number` | Optional fixed zoom; omit to fit page width to the container. |
 | `toolbar` | `boolean` | Show the zoom/download toolbar. Defaults to `true`. |
 | `downloadFileName` | `string` | Filename for the download button. |
+| `highlight` | `Source \| null` | A source to highlight in the document (its `docx_text_span` / `docx_table_cell` anchor), tinted via the CSS Custom Highlight API. |
 | `onVisiblePageChange` | `(page: number) => void` | Fired with the 1-based page nearest the top of the viewport. |
 | `onScrollProgressChange` | `(progress: number) => void` | Fired with scroll progress in `[0, 1]`. |
 | `header` | `ReactNode` | Strip rendered directly below the toolbar. |

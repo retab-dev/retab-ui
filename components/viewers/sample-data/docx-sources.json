@@ -1,0 +1,137 @@
+[
+  {
+    "key": "title",
+    "label": "Report title",
+    "value": "Quarterly Business Review",
+    "source": {
+      "content": "Quarterly Business Review",
+      "anchor": { "kind": "docx_text_span", "paragraph": 0 }
+    }
+  },
+  {
+    "key": "fiscalYear",
+    "label": "Fiscal year",
+    "value": "FY2026",
+    "source": {
+      "content": "Fiscal Year 2026 — Consolidated Report",
+      "anchor": { "kind": "docx_text_span", "paragraph": 1 }
+    }
+  },
+  {
+    "key": "totalPages",
+    "label": "Total pages",
+    "value": "25",
+    "source": {
+      "content": "Total pages: 25",
+      "anchor": { "kind": "docx_text_span", "paragraph": 3 }
+    }
+  },
+  {
+    "key": "execSummarySection",
+    "label": "Executive summary section",
+    "value": "Executive Summary",
+    "source": {
+      "content": "1. Executive Summary",
+      "anchor": { "kind": "docx_text_span", "paragraph": 5 }
+    }
+  },
+  {
+    "key": "marketOverviewSection",
+    "label": "Market overview section",
+    "value": "Market Overview",
+    "source": {
+      "content": "2. Market Overview",
+      "anchor": { "kind": "docx_text_span", "paragraph": 12 }
+    }
+  },
+  {
+    "key": "revenueSection",
+    "label": "Revenue section",
+    "value": "Revenue Analysis",
+    "source": {
+      "content": "3. Revenue Analysis",
+      "anchor": { "kind": "docx_text_span", "paragraph": 19 }
+    }
+  },
+  {
+    "key": "costStructureSection",
+    "label": "Cost structure section",
+    "value": "Cost Structure",
+    "source": {
+      "content": "4. Cost Structure",
+      "anchor": { "kind": "docx_text_span", "paragraph": 26 }
+    }
+  },
+  {
+    "key": "operatingMarginsSection",
+    "label": "Operating margins section",
+    "value": "Operating Margins",
+    "source": {
+      "content": "5. Operating Margins",
+      "anchor": { "kind": "docx_text_span", "paragraph": 33 }
+    }
+  },
+  {
+    "key": "segmentPerformanceSection",
+    "label": "Segment performance section",
+    "value": "Segment Performance",
+    "source": {
+      "content": "6. Segment Performance",
+      "anchor": { "kind": "docx_text_span", "paragraph": 40 }
+    }
+  },
+  {
+    "key": "cashFlowSection",
+    "label": "Cash flow section",
+    "value": "Cash Flow",
+    "source": {
+      "content": "11. Cash Flow",
+      "anchor": { "kind": "docx_text_span", "paragraph": 75 }
+    }
+  },
+  {
+    "key": "balanceSheetSection",
+    "label": "Balance sheet section",
+    "value": "Balance Sheet Review",
+    "source": {
+      "content": "12. Balance Sheet Review",
+      "anchor": { "kind": "docx_text_span", "paragraph": 82 }
+    }
+  },
+  {
+    "key": "riskSection",
+    "label": "Risk section",
+    "value": "Risk Factors",
+    "source": {
+      "content": "14. Risk Factors",
+      "anchor": { "kind": "docx_text_span", "paragraph": 96 }
+    }
+  },
+  {
+    "key": "governanceSection",
+    "label": "Governance section",
+    "value": "Governance",
+    "source": {
+      "content": "19. Governance",
+      "anchor": { "kind": "docx_text_span", "paragraph": 131 }
+    }
+  },
+  {
+    "key": "outlookSection",
+    "label": "Outlook section",
+    "value": "Outlook & Guidance",
+    "source": {
+      "content": "20. Outlook & Guidance",
+      "anchor": { "kind": "docx_text_span", "paragraph": 138 }
+    }
+  },
+  {
+    "key": "methodologyAppendix",
+    "label": "Methodology appendix",
+    "value": "Appendix A: Methodology",
+    "source": {
+      "content": "23. Appendix A: Methodology",
+      "anchor": { "kind": "docx_text_span", "paragraph": 159 }
+    }
+  }
+]

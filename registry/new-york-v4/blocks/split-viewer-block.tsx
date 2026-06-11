@@ -12,15 +12,17 @@ const SPLIT_RESULT: SplitView = {
     { name: "Title & Abstract", pages: [1] },
     { name: "Introduction", pages: [2, 3] },
     { name: "Model Architecture", pages: [4, 5, 6] },
-    { name: "Results", pages: [7, 8] },
-    { name: "References", pages: [9, 10, 11] },
+    { name: "Results", pages: [7, 8, 9] },
+    { name: "References", pages: [10, 11] },
+    { name: "Attention Visualizations", pages: [12, 13, 14, 15] },
   ],
 }
 
 /**
  * Split viewer block — the file + sidebar + legend system over a split result.
- * `SplitViewer` owns the chrome (legend header + page-ribbon aside) and hands it
- * to whatever document surface you render; here that's the `PdfViewer`.
+ * `SplitViewer` hands the document surface its chrome as `slots` (legend in
+ * `top`, page ribbon as a `left` rail); the surface spreads them onto the
+ * `PdfViewer`.
  */
 export function SplitViewerBlock() {
   return (
@@ -32,8 +34,7 @@ export function SplitViewerBlock() {
             src={PDF_URL}
             bare
             downloadFileName="attention.pdf"
-            header={handlers.header}
-            aside={handlers.aside}
+            slots={handlers.slots}
             onVisiblePageChange={handlers.onCurrentPageChange}
             onScrollProgressChange={handlers.onScrollProgressChange}
             className="h-full"

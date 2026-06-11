@@ -1,0 +1,114 @@
+---
+title: PDF Viewer
+description: A pdfjs-backed PDF viewer with zoom, rotate, fit-to-width, download, and a per-page overlay slot for bounding-box citations.
+---
+
+The PDF Viewer renders a document with [pdf.js](https://mozilla.github.io/pdf.js/)
+directly — no `react-pdf` wrapper. It does continuous-scroll rendering, zoom,
+rotate, fit-to-width, and download, and exposes a per-page overlay slot so you
+can draw bounding-box citations (edit fields, extraction sources) on top of the
+rendered page.
+
+Document and page loading use React's `use()` with Suspense, and each page
+renders into its canvas from a ref callback (with a cleanup that cancels the
+in-flight render). Only pages near the viewport hold a live canvas — the rest
+stay as sized placeholders (tracked by an `IntersectionObserver`) so a long PDF
+doesn't rasterize every page at once, while scroll height stays correct.
+
+<PdfViewerDemo />
+
+## Installation
+
+```bash
+npx shadcn@latest add @retab/pdf-viewer
+```
+
+This pulls in `pdfjs-dist`. The worker is resolved from the installed package by
+your bundler (Vite, webpack, or Turbopack) — there is no runtime CDN call.
+
+## Usage
+
+```tsx
+import { PdfViewer } from "@/components/ui/pdf-viewer"
+
+export function Example() {
+  return <PdfViewer src="/document.pdf" className="h-[600px]" />
+}
+```
+
+### Bounding-box overlays
+
+`renderPageOverlay` runs per page and receives the rendered page size, so
+normalized boxes map with simple percentages:
+
+```tsx
+<PdfViewer
+  src={url}
+  renderPageOverlay={({ pageNumber }) =>
+    fieldsOnPage(pageNumber).map((f) => (
+      <div
+        key={f.key}
+        className="absolute outline outline-2 outline-indigo-500"
+        style={{
+          left: `${f.bbox.left * 100}%`,
+          top: `${f.bbox.top * 100}%`,
+          width: `${f.bbox.width * 100}%`,
+          height: `${f.bbox.height * 100}%`,
+        }}
+      />
+    ))
+  }
+/>
+```
+
+The exported `PdfHighlight` component is a percentage-positioned box for use
+inside `renderPageOverlay` (the overlay layer is already `position: absolute`):
+`<PdfHighlight area={{ left, top, width, height }} />`, each field a percentage
+`[0, 100]` of the page. Style it via `className`/`style`.
+
+## Chrome slots
+
+Beyond the overlay, the viewer mounts chrome around the document — one node per
+edge plus a floating overlay. Pass them through `slots`; `header` and `aside` are
+shorthands for `slots.top` and `slots.left`.
+
+```tsx
+<PdfViewer
+  src={url}
+  slots={{
+    top: <Legend />,        // full-width strip below the toolbar
+    left: <PageRibbon />,   // collapsible rail (toggled with right)
+    right: <Outline />,     // collapsible rail
+    bottom: <Waterfall />,  // full-width strip under the document column
+    overlay: <FloatingLegend />, // floats over the scrolling pages
+  }}
+/>
+```
+
+The `left`/`right` rails collapse together via a toolbar button (shown by
+default when a rail is set; control with `asideToggle` / `defaultAsideOpen`).
+
+## Imperative handle
+
+A `ref` exposes `PdfViewerHandle`: `scrollToPageArea(pageNumber, area, options)`
+scrolls a page's normalized area (percentages `[0, 100]`; only `top` is required)
+into view, and `getViewportElement()` returns the scrolling viewport.
+
+## Props
+
+| Prop | Type | Description |
+| --- | --- | --- |
+| `src` | `string` | URL of the PDF (same-origin or CORS-enabled). |
+| `scale` | `number` | Optional fixed scale; omit to fit page width to the container. |
+| `toolbar` | `boolean` | Show the zoom/rotate/download toolbar. Defaults to `true`. |
+| `downloadFileName` | `string` | Filename for the download button. |
+| `renderPageOverlay` | `(props: PageOverlayProps) => ReactNode` | Per-page overlay; receives `{ pageNumber, width, height, scale, rotation }`. |
+| `onVisiblePageChange` | `(page: number) => void` | Fired with the 1-based page nearest the top of the viewport. |
+| `onScrollProgressChange` | `(progress: number) => void` | Fired with scroll progress in `[0, 1]`. |
+| `slots` | `PdfViewerSlots` | Chrome around the document: `top` / `bottom` strips, `left` / `right` collapsible rails, and a floating `overlay`. |
+| `header` | `ReactNode` | Shorthand for `slots.top`. |
+| `aside` | `ReactNode` | Shorthand for `slots.left`. |
+| `asideToggle` | `boolean` | Show a toolbar button that collapses/expands the rails. Defaults to `true` when a rail is set. |
+| `defaultAsideOpen` | `boolean` | Initial open state of the rails. Defaults to `true`. |
+| `bare` | `boolean` | Drop the outer border/background so the viewer fills its container. |
+| `className` | `string` | Optional class on the viewer shell. |

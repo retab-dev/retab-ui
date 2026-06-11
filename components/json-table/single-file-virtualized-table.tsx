@@ -183,65 +183,6 @@ export const SingleFileVirtualizedTable =
       fieldReasoningMap,
       overscan = 12,
     }) => {
-      // DEBUG: Log showHoverCard prop value
-      //console.log('[SingleFileVirtualizedTable] showHoverCard prop:', showHoverCard);
-      const renderCount = React.useRef(0);
-      const prevPropsRef = React.useRef<any>(null);
-      renderCount.current++;
-
-      // Log what changed
-      if (prevPropsRef.current) {
-        const changes: string[] = [];
-        if (prevPropsRef.current.stopAt !== stopAt) changes.push("stopAt");
-        if (prevPropsRef.current.setStopAt !== setStopAt)
-          changes.push("setStopAt");
-        if (prevPropsRef.current.foldAllSignal !== foldAllSignal)
-          changes.push("foldAllSignal");
-        if (prevPropsRef.current.setFoldAllSignal !== setFoldAllSignal)
-          changes.push("setFoldAllSignal");
-        if (prevPropsRef.current.columns !== columns) changes.push("columns");
-        if (prevPropsRef.current.document !== document)
-          changes.push("document");
-        if (prevPropsRef.current.schema !== schema) changes.push("schema");
-        if (prevPropsRef.current.tableAndPaths !== tableAndPaths)
-          changes.push("tableAndPaths");
-        if (prevPropsRef.current.visibleKeys !== visibleKeys)
-          changes.push("visibleKeys");
-        if (prevPropsRef.current.rowCount !== rowCount)
-          changes.push("rowCount");
-        if (prevPropsRef.current.onUpdateDocument !== onUpdateDocument)
-          changes.push("onUpdateDocument");
-        if (prevPropsRef.current.editMode !== editMode)
-          changes.push("editMode");
-
-        //console.log(`[SingleFileVirtualizedTable] Rendering #${renderCount.current} - Props that changed:`, changes);
-      } else {
-        //console.log(`[SingleFileVirtualizedTable] Rendering #${renderCount.current} - Initial render`);
-      }
-
-      prevPropsRef.current = {
-        stopAt,
-        setStopAt,
-        foldAllSignal,
-        setFoldAllSignal,
-        columns,
-        document,
-        schema,
-        tableAndPaths,
-        visibleKeys,
-        rowCount,
-        onUpdateDocument,
-        editMode,
-      };
-
-      //console.log(`[SingleFileVirtualizedTable] Rendering #${renderCount.current}`, {
-      //    columnsRef: columns,
-      //    columnsLength: columns.length,
-      //    documentRef: document,
-      //    tableAndPathsRef: tableAndPaths,
-      //    visibleKeysRef: visibleKeys,
-      //    visibleKeysLength: visibleKeys.length,
-      //});
 
       const { rowHeight, columnWidth } = useSheetOptionsStore();
       const theme = getTheme("single-file");
@@ -266,22 +207,14 @@ export const SingleFileVirtualizedTable =
       // Handle cell hover start
       const handleCellHoverStart = useCallback(
         (info: { docId: string; fieldPath: string; rect: DOMRect }) => {
-          // console.log('[SingleFileVirtualizedTable] handleCellHoverStart called:', {
-          //     info,
-          //     showHoverCard,
-          //     isPointerInCardRef: isPointerInCardRef.current,
-          //     clearHoverTimeoutRef: clearHoverTimeoutRef.current,
-          // });
           if (clearHoverTimeoutRef.current) {
             clearTimeout(clearHoverTimeoutRef.current);
             clearHoverTimeoutRef.current = null;
           }
           // Do not change the displayed field while the pointer is over the card
           if (isPointerInCardRef.current) {
-            // console.log('[SingleFileVirtualizedTable] Skipping setHoverInfo - pointer is in card');
             return;
           }
-          // console.log('[SingleFileVirtualizedTable] Setting hoverInfo:', info);
           setHoverInfo(info);
           onCellHoverStart?.(info);
         },
@@ -331,7 +264,7 @@ export const SingleFileVirtualizedTable =
       // `ready` gates the first paint: the window is unknown until the viewport
       // is measured in a layout effect, which keeps SSR (zero rows) and the
       // first client render in sync, then fills in before the browser paints.
-      const { start, end, totalHeight, poolSize, ready } = useFixedRowWindow({
+      const { start, end, totalHeight, ready } = useFixedRowWindow({
         scrollRef,
         rowCount,
         rowHeight: rowHeightPx,
@@ -360,7 +293,6 @@ export const SingleFileVirtualizedTable =
                   pointerEvents: "auto",
                 }}
                 onMouseEnter={() => {
-                  //console.log('[SingleFileVirtualizedTable] HoverCard onMouseEnter');
                   isPointerInCardRef.current = true;
                   if (clearHoverTimeoutRef.current) {
                     clearTimeout(clearHoverTimeoutRef.current);
@@ -368,7 +300,6 @@ export const SingleFileVirtualizedTable =
                   }
                 }}
                 onMouseLeave={() => {
-                  //console.log('[SingleFileVirtualizedTable] HoverCard onMouseLeave');
                   isPointerInCardRef.current = false;
                   if (!clearHoverTimeoutRef.current && !portalOpen) {
                     clearHoverTimeoutRef.current = window.setTimeout(() => {
@@ -459,22 +390,17 @@ export const SingleFileVirtualizedTable =
                     minWidth: "100%",
                   }}
                 >
-                  {ready && docRow && poolSize > 0
-                    ? Array.from({ length: poolSize }, (_, slot) => {
-                        // Recycling: each slot is a permanent DOM node (keyed by
-                        // `slot`). It shows the one windowed row whose index ≡
-                        // slot (mod poolSize). On each scroll step only the slot
-                        // that wraps changes its rowIdx — every other slot keeps
-                        // identical props, so React.memo skips it and no row is
-                        // ever inserted or removed (the costly part).
-                        const rel = (((slot - start) % poolSize) + poolSize) % poolSize;
-                        const rowIdx = start + rel;
-                        const active = rowIdx < end && rowIdx < rowCount;
+                  {ready && docRow
+                    ? Array.from({ length: end - start }, (_, i) => {
+                        // One DOM row per row in the visible window, keyed by row
+                        // index: rows mount/unmount as they enter/leave. Each row's
+                        // props are memoized on primitives, so rows that stay put
+                        // are skipped by React.memo.
+                        const rowIdx = start + i;
                         return (
                         <SingleFileFormRow
-                          key={slot}
+                          key={rowIdx}
                           rowIdx={rowIdx}
-                          active={active}
                           row={docRow}
                           tableAndPaths={tableAndPaths}
                           columns={columns}

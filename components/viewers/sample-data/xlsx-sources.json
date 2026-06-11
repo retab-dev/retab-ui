@@ -5,14 +5,7 @@
     "value": "NVIDIA CORP",
     "source": {
       "content": "NVIDIA CORP",
-      "anchor": {
-        "kind": "spreadsheet_cell",
-        "row": 10,
-        "column": "B",
-        "sheet_index": 0,
-        "sheet_name": "Cover Page",
-        "coordinate": "B10"
-      }
+      "anchor": { "kind": "spreadsheet_cell", "row": 10, "column": "B", "sheet_index": 0, "sheet_name": "Cover Page", "coordinate": "B10" }
     }
   },
   {
@@ -21,30 +14,43 @@
     "value": "10-K",
     "source": {
       "content": "10-K",
-      "anchor": {
-        "kind": "spreadsheet_cell",
-        "row": 4,
-        "column": "B",
-        "sheet_index": 0,
-        "sheet_name": "Cover Page",
-        "coordinate": "B4"
-      }
+      "anchor": { "kind": "spreadsheet_cell", "row": 4, "column": "B", "sheet_index": 0, "sheet_name": "Cover Page", "coordinate": "B4" }
     }
   },
   {
     "key": "periodEnd",
     "label": "Period end date",
-    "value": "Jan. 28,  2024",
+    "value": "Jan. 28, 2024",
     "source": {
       "content": "Jan. 28,  2024",
-      "anchor": {
-        "kind": "spreadsheet_cell",
-        "row": 6,
-        "column": "B",
-        "sheet_index": 0,
-        "sheet_name": "Cover Page",
-        "coordinate": "B6"
-      }
+      "anchor": { "kind": "spreadsheet_cell", "row": 6, "column": "B", "sheet_index": 0, "sheet_name": "Cover Page", "coordinate": "B6" }
+    }
+  },
+  {
+    "key": "fiscalYearEnd",
+    "label": "Fiscal year end",
+    "value": "--01-28",
+    "source": {
+      "content": "--01-28",
+      "anchor": { "kind": "spreadsheet_cell", "row": 7, "column": "B", "sheet_index": 0, "sheet_name": "Cover Page", "coordinate": "B7" }
+    }
+  },
+  {
+    "key": "fileNumber",
+    "label": "Entity file number",
+    "value": "0-23985",
+    "source": {
+      "content": "0-23985",
+      "anchor": { "kind": "spreadsheet_cell", "row": 9, "column": "B", "sheet_index": 0, "sheet_name": "Cover Page", "coordinate": "B9" }
+    }
+  },
+  {
+    "key": "incorporationState",
+    "label": "Incorporation state",
+    "value": "DE",
+    "source": {
+      "content": "DE",
+      "anchor": { "kind": "spreadsheet_cell", "row": 11, "column": "B", "sheet_index": 0, "sheet_name": "Cover Page", "coordinate": "B11" }
     }
   },
   {
@@ -53,14 +59,7 @@
     "value": "94-3177549",
     "source": {
       "content": "94-3177549",
-      "anchor": {
-        "kind": "spreadsheet_cell",
-        "row": 12,
-        "column": "B",
-        "sheet_index": 0,
-        "sheet_name": "Cover Page",
-        "coordinate": "B12"
-      }
+      "anchor": { "kind": "spreadsheet_cell", "row": 12, "column": "B", "sheet_index": 0, "sheet_name": "Cover Page", "coordinate": "B12" }
     }
   },
   {
@@ -69,14 +68,61 @@
     "value": "2788 San Tomas Expressway",
     "source": {
       "content": "2788 San Tomas Expressway",
-      "anchor": {
-        "kind": "spreadsheet_cell",
-        "row": 13,
-        "column": "B",
-        "sheet_index": 0,
-        "sheet_name": "Cover Page",
-        "coordinate": "B13"
-      }
+      "anchor": { "kind": "spreadsheet_cell", "row": 13, "column": "B", "sheet_index": 0, "sheet_name": "Cover Page", "coordinate": "B13" }
+    }
+  },
+  {
+    "key": "city",
+    "label": "City",
+    "value": "Santa Clara",
+    "source": {
+      "content": "Santa Clara",
+      "anchor": { "kind": "spreadsheet_cell", "row": 14, "column": "B", "sheet_index": 0, "sheet_name": "Cover Page", "coordinate": "B14" }
+    }
+  },
+  {
+    "key": "state",
+    "label": "State",
+    "value": "CA",
+    "source": {
+      "content": "CA",
+      "anchor": { "kind": "spreadsheet_cell", "row": 15, "column": "B", "sheet_index": 0, "sheet_name": "Cover Page", "coordinate": "B15" }
+    }
+  },
+  {
+    "key": "zip",
+    "label": "ZIP code",
+    "value": "95051",
+    "source": {
+      "content": "95051",
+      "anchor": { "kind": "spreadsheet_cell", "row": 16, "column": "B", "sheet_index": 0, "sheet_name": "Cover Page", "coordinate": "B16" }
+    }
+  },
+  {
+    "key": "phone",
+    "label": "Phone",
+    "value": "(408) 486-2000",
+    "source": {
+      "content": "486-2000",
+      "anchor": { "kind": "spreadsheet_cell", "row": 18, "column": "B", "sheet_index": 0, "sheet_name": "Cover Page", "coordinate": "B18" }
+    }
+  },
+  {
+    "key": "securityTitle",
+    "label": "Security title",
+    "value": "Common Stock, $0.001 par value",
+    "source": {
+      "content": "Common Stock, $0.001 par value per share",
+      "anchor": { "kind": "spreadsheet_cell", "row": 19, "column": "B", "sheet_index": 0, "sheet_name": "Cover Page", "coordinate": "B19" }
+    }
+  },
+  {
+    "key": "tradingSymbol",
+    "label": "Trading symbol",
+    "value": "NVDA",
+    "source": {
+      "content": "NVDA",
+      "anchor": { "kind": "spreadsheet_cell", "row": 20, "column": "B", "sheet_index": 0, "sheet_name": "Cover Page", "coordinate": "B20" }
     }
   },
   {
@@ -85,14 +131,7 @@
     "value": "PricewaterhouseCoopers LLP",
     "source": {
       "content": "PricewaterhouseCoopers LLP",
-      "anchor": {
-        "kind": "spreadsheet_cell",
-        "row": 5,
-        "column": "B",
-        "sheet_index": 1,
-        "sheet_name": "Audit Information",
-        "coordinate": "B5"
-      }
+      "anchor": { "kind": "spreadsheet_cell", "row": 5, "column": "B", "sheet_index": 1, "sheet_name": "Audit Information", "coordinate": "B5" }
     }
   },
   {
@@ -101,14 +140,7 @@
     "value": "San Jose, California",
     "source": {
       "content": "San Jose, California",
-      "anchor": {
-        "kind": "spreadsheet_cell",
-        "row": 6,
-        "column": "B",
-        "sheet_index": 1,
-        "sheet_name": "Audit Information",
-        "coordinate": "B6"
-      }
+      "anchor": { "kind": "spreadsheet_cell", "row": 6, "column": "B", "sheet_index": 1, "sheet_name": "Audit Information", "coordinate": "B6" }
     }
   },
   {
@@ -117,14 +149,7 @@
     "value": "238",
     "source": {
       "content": "238",
-      "anchor": {
-        "kind": "spreadsheet_cell",
-        "row": 4,
-        "column": "B",
-        "sheet_index": 1,
-        "sheet_name": "Audit Information",
-        "coordinate": "B4"
-      }
+      "anchor": { "kind": "spreadsheet_cell", "row": 4, "column": "B", "sheet_index": 1, "sheet_name": "Audit Information", "coordinate": "B4" }
     }
   }
 ]

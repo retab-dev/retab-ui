@@ -24,6 +24,11 @@ export interface PdfBboxAnchor {
 /** A region on an image, normalized to the image box (each value in [0, 1]). */
 export interface ImageBboxAnchor {
   kind: "image_bbox"
+  /**
+   * 1-based frame index for multi-page rasters — a multi-frame TIFF page, or a
+   * rasterized slide in a deck. Omitted (or 1) for a single-frame image.
+   */
+  page?: number
   left: number
   top: number
   width: number

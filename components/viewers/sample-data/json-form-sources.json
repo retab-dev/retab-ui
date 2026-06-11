@@ -67,6 +67,21 @@
         "date": "10/06",
         "description": "Bass Pro Shops",
         "amount": 331.57
+      },
+      {
+        "date": "10/07",
+        "description": "Magicjack",
+        "amount": 20.91
+      },
+      {
+        "date": "10/08",
+        "description": "Non-Chase ATM Withdrawal",
+        "amount": 303.0
+      },
+      {
+        "date": "10/09",
+        "description": "Hostgator.com",
+        "amount": 97.5
       }
     ]
   },
@@ -316,6 +331,138 @@
               "top": 0.751,
               "width": 0.045,
               "height": 0.0114
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "10/07",
+          "source": {
+            "content": "10 07",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.0549,
+              "top": 0.1657,
+              "width": 0.0368,
+              "height": 0.0114
+            }
+          }
+        },
+        "description": {
+          "value": "Magicjack",
+          "source": {
+            "content": "Magicjack",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.3334,
+              "top": 0.1657,
+              "width": 0.063,
+              "height": 0.0114
+            }
+          }
+        },
+        "amount": {
+          "value": 20.91,
+          "source": {
+            "content": "20.91",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.8217,
+              "top": 0.1657,
+              "width": 0.0499,
+              "height": 0.0152
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "10/08",
+          "source": {
+            "content": "10 08",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.0549,
+              "top": 0.2324,
+              "width": 0.0368,
+              "height": 0.0114
+            }
+          }
+        },
+        "description": {
+          "value": "Non-Chase ATM Withdrawal",
+          "source": {
+            "content": "Non-Chase",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.2983,
+              "top": 0.2324,
+              "width": 0.085,
+              "height": 0.0114
+            }
+          }
+        },
+        "amount": {
+          "value": 303.0,
+          "source": {
+            "content": "303.00",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.8217,
+              "top": 0.2324,
+              "width": 0.0499,
+              "height": 0.0152
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "10/09",
+          "source": {
+            "content": "10 09",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.0549,
+              "top": 0.2491,
+              "width": 0.0368,
+              "height": 0.0114
+            }
+          }
+        },
+        "description": {
+          "value": "Hostgator.com",
+          "source": {
+            "content": "Hostgator",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.3334,
+              "top": 0.2491,
+              "width": 0.075,
+              "height": 0.0114
+            }
+          }
+        },
+        "amount": {
+          "value": 97.5,
+          "source": {
+            "content": "97.50",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.8301,
+              "top": 0.2491,
+              "width": 0.0417,
+              "height": 0.0152
             }
           }
         }

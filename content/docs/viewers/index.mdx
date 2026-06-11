@@ -1,0 +1,17 @@
+---
+title: Viewers
+description: Client-side file viewers for Retab document AI products — PDF, image, spreadsheet, Word, PowerPoint, and a universal viewer that detects the format for you.
+---
+
+Drop-in React viewers for every file type Retab handles. Each renders entirely
+client-side with zoom, fit-to-width, and download, and exposes a per-page (or
+per-frame) overlay slot for bounding-box citations. Install each as source with
+the shadcn CLI and theme it to match your product.
+
+- [PDF Viewer](/docs/viewers/pdf-viewer) — a pdfjs-backed PDF viewer with zoom, rotate, fit-to-width, download, and a per-page overlay slot for bounding-box citations.
+- [Image Viewer](/docs/viewers/image-viewer) — a performant image viewer with native off-thread decode, zoom, rotate, fit-to-width, download, and a per-frame overlay slot.
+- [CSV Viewer](/docs/viewers/csv-viewer) — a virtualized CSV/TSV table with sortable columns, built on TanStack Virtual.
+- [XLSX Viewer](/docs/viewers/xlsx-viewer) — a virtualized spreadsheet viewer with sheet tabs, zoom, and download, parsed entirely client-side.
+- [DOCX Viewer](/docs/viewers/docx-viewer) — a docx-preview-backed Word viewer with paginated rendering, zoom, fit-to-width, and download.
+- [PPTX Viewer](/docs/viewers/pptx-viewer) — a canvas-backed PowerPoint viewer with zoom, rotate, fit-to-width, download, and a per-slide overlay slot, rendered entirely client-side.
+- [File Viewer](/docs/viewers/file-viewer) — one viewer for everything: detects the file type and renders the right component.

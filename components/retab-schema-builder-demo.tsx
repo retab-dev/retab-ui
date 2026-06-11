@@ -39,23 +39,35 @@ const initialSchema: ExtendedJSONSchema7 = {
   required: ["invoice_number", "total"],
 }
 
-export function RetabSchemaBuilderDemo() {
+export function RetabSchemaBuilderDemo({
+  showJsonTab = true,
+}: {
+  /** Hide the Schema/JSON toggle and render the editor on its own. */
+  showJsonTab?: boolean
+}) {
   const [schema, setSchema] = React.useState<ExtendedJSONSchema7>(initialSchema)
+
+  const editor = (
+    <div className="rounded-xl border bg-card p-3 shadow-sm">
+      <JsonSchemaEditorProvider jsonSchema={schema} setJsonSchema={setSchema}>
+        <JsonSchemaEditor />
+      </JsonSchemaEditorProvider>
+    </div>
+  )
+
+  if (!showJsonTab) {
+    return <div className="not-prose w-full">{editor}</div>
+  }
+
   return (
     <Tabs defaultValue="schema" className="not-prose w-full gap-3">
       <TabsList>
         <TabsTrigger value="schema">Schema</TabsTrigger>
         <TabsTrigger value="json">JSON</TabsTrigger>
       </TabsList>
-      <TabsContent value="schema">
-        <div className="rounded-xl border bg-card p-3">
-          <JsonSchemaEditorProvider jsonSchema={schema} setJsonSchema={setSchema}>
-            <JsonSchemaEditor />
-          </JsonSchemaEditorProvider>
-        </div>
-      </TabsContent>
+      <TabsContent value="schema">{editor}</TabsContent>
       <TabsContent value="json">
-        <pre className="max-h-[560px] overflow-auto rounded-xl border bg-muted/40 p-4 font-mono text-xs">
+        <pre className="max-h-[560px] overflow-auto rounded-xl border bg-muted/40 p-4 font-mono text-xs shadow-sm">
           {JSON.stringify(schema, null, 2)}
         </pre>
       </TabsContent>

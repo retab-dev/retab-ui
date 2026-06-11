@@ -5,13 +5,7 @@
     "value": "Attention Is All You Need",
     "source": {
       "content": "Attention Is All You Need",
-      "anchor": {
-        "kind": "image_bbox",
-        "left": 0.3423,
-        "top": 0.1854,
-        "width": 0.3144,
-        "height": 0.0268
-      }
+      "anchor": { "kind": "image_bbox", "left": 0.3423, "top": 0.1854, "width": 0.3144, "height": 0.0268 }
     }
   },
   {
@@ -20,13 +14,7 @@
     "value": "Ashish Vaswani",
     "source": {
       "content": "Ashish Vaswani",
-      "anchor": {
-        "kind": "image_bbox",
-        "left": 0.2139,
-        "top": 0.2943,
-        "width": 0.1158,
-        "height": 0.0176
-      }
+      "anchor": { "kind": "image_bbox", "left": 0.2139, "top": 0.2943, "width": 0.1158, "height": 0.0176 }
     }
   },
   {
@@ -35,13 +23,25 @@
     "value": "Google Brain",
     "source": {
       "content": "Google Brain",
-      "anchor": {
-        "kind": "image_bbox",
-        "left": 0.2245,
-        "top": 0.3081,
-        "width": 0.0947,
-        "height": 0.0176
-      }
+      "anchor": { "kind": "image_bbox", "left": 0.2245, "top": 0.3081, "width": 0.0947, "height": 0.0176 }
+    }
+  },
+  {
+    "key": "firstAuthorEmail",
+    "label": "First author email",
+    "value": "avaswani@google.com",
+    "source": {
+      "content": "avaswani@google.com",
+      "anchor": { "kind": "image_bbox", "left": 0.2046, "top": 0.3262, "width": 0.1554, "height": 0.0166 }
+    }
+  },
+  {
+    "key": "secondAuthor",
+    "label": "Second author",
+    "value": "Noam Shazeer",
+    "source": {
+      "content": "Noam Shazeer",
+      "anchor": { "kind": "image_bbox", "left": 0.4018, "top": 0.2943, "width": 0.1124, "height": 0.0176 }
     }
   },
   {
@@ -50,13 +50,7 @@
     "value": "Transformer",
     "source": {
       "content": "Transformer",
-      "anchor": {
-        "kind": "image_bbox",
-        "left": 0.6778,
-        "top": 0.5607,
-        "width": 0.089,
-        "height": 0.0178
-      }
+      "anchor": { "kind": "image_bbox", "left": 0.6778, "top": 0.5607, "width": 0.089, "height": 0.0178 }
     }
   },
   {
@@ -65,13 +59,16 @@
     "value": "28.4",
     "source": {
       "content": "28.4",
-      "anchor": {
-        "kind": "image_bbox",
-        "left": 0.4952,
-        "top": 0.6158,
-        "width": 0.0356,
-        "height": 0.0178
-      }
+      "anchor": { "kind": "image_bbox", "left": 0.4952, "top": 0.6158, "width": 0.0356, "height": 0.0178 }
+    }
+  },
+  {
+    "key": "venue",
+    "label": "Venue",
+    "value": "NIPS 2017",
+    "source": {
+      "content": "31st Conference on Neural Information Processing Systems (NIPS 2017), Long Beach, CA, USA.",
+      "anchor": { "kind": "image_bbox", "left": 0.1815, "top": 0.9356, "width": 0.6378, "height": 0.0166 }
     }
   }
 ]

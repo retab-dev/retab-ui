@@ -3,7 +3,7 @@ title: PPTX Viewer
 description: A canvas-backed PowerPoint viewer with zoom, rotate, fit-to-width, download, and a per-slide overlay slot — rendered entirely client-side, no server conversion.
 ---
 
-The PPTX Viewer renders a PowerPoint deck the same way the [PDF Viewer](/docs/components/pdf-viewer)
+The PPTX Viewer renders a PowerPoint deck the same way the [PDF Viewer](/docs/viewers/pdf-viewer)
 renders pages: each slide is drawn to its own `<canvas>`. It parses the `.pptx`
 (an Office Open XML zip) entirely in the browser with
 [pptxviewjs](https://www.npmjs.com/package/pptxviewjs) — a dependency-light,
@@ -90,11 +90,11 @@ normalized boxes map with simple percentages:
 `pptxviewjs` covers the common deck — text, shapes, tables, images, and charts —
 but it is not a pixel-perfect PowerPoint clone. Exotic SmartArt, transitions, and
 embedded media may render approximately or be omitted. For pixel-exact output,
-convert to PDF server-side and use the [PDF Viewer](/docs/components/pdf-viewer).
+convert to PDF server-side and use the [PDF Viewer](/docs/viewers/pdf-viewer).
 
 ## Props
 
-The API mirrors the [PDF Viewer](/docs/components/pdf-viewer) — `pageNumber` is a
+The API mirrors the [PDF Viewer](/docs/viewers/pdf-viewer) — `pageNumber` is a
 1-based slide index.
 
 | Prop | Type | Description |

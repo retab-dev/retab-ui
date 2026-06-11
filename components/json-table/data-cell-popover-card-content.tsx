@@ -481,7 +481,6 @@ function getFieldSchema(
     else if (segment === "*" || !isNaN(parseInt(segment))) {
       i += 1; // Skip index not preceded by array
     } else {
-      console.log("ERROR", { schema, path, currentSchema, segment });
       return null; // Field not found
     }
   }
@@ -548,8 +547,6 @@ const DataCellPopoverCardContentInner = ({
           ?.candidate_to_reference_paths?.[selectedFieldPath] ??
           selectedFieldPath) as string;
 
-        console.log("mappedDatasetPath", mappedDatasetPath);
-
         // For iteration documents, find and update the corresponding dataset document
         const iterationDoc = document as any;
         const datasetDocId = iterationDoc.dataset_document_id;
@@ -578,9 +575,6 @@ const DataCellPopoverCardContentInner = ({
           mappedDatasetPath.split("."),
           newValue,
         );
-
-        console.log("currentAnnotation", currentAnnotation);
-        console.log("updatedAnnotation", updatedAnnotation);
 
         await datasetContext.updateDatasetDocument(datasetDocId, {
           prediction_data: {
@@ -849,13 +843,6 @@ const DataCellPopoverCardContentInner = ({
             extractedValue,
           );
 
-          console.log(
-            "Reference value before",
-            currentRowDistanceData?.aligned_reference_values?.[
-              currentSelectedFieldPath
-            ],
-          );
-
           await currentDatasetContext.updateDatasetDocument(datasetDocId, {
             prediction_data: {
               prediction: updatedAnnotation,
@@ -867,32 +854,6 @@ const DataCellPopoverCardContentInner = ({
           if (currentDatasetContext.invalidateDistances && currentDocument.id) {
             currentDatasetContext.invalidateDistances(currentDocument.id);
           }
-
-          console.log("mappedDatasetPath for {selectedFieldPath}", {
-            selectedFieldPath: currentSelectedFieldPath,
-            mappedDatasetPath,
-          });
-
-          console.log(
-            "Current annotation value",
-            get_value_from_row_array_and_dot_notation_path(
-              currentAnnotation,
-              mappedDatasetPath,
-            ),
-          );
-          console.log(
-            "Updated annotation value",
-            get_value_from_row_array_and_dot_notation_path(
-              updatedAnnotation,
-              mappedDatasetPath,
-            ),
-          );
-          console.log(
-            "Reference value after",
-            currentRowDistanceData?.aligned_reference_values?.[
-              currentSelectedFieldPath
-            ],
-          );
 
           toast.success("Replaced with extracted value");
         } catch (err) {

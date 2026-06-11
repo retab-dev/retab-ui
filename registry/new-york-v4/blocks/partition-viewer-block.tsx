@@ -22,8 +22,9 @@ const PARTITION_RESULT: PartitionResult = {
 
 /**
  * Partition viewer block — the file + legend + waterfall ribbon over keyed
- * chunks. `PartitionViewer` owns the chrome (legend + horizontal page ribbon)
- * and renders it below the `PdfViewer` toolbar.
+ * chunks. `PartitionViewer` hands the document surface its chrome as `slots`
+ * (the color key in `top`, the consensus waterfall in `bottom`); the surface
+ * spreads them onto the `PdfViewer`.
  */
 export function PartitionViewerBlock() {
   return (
@@ -35,7 +36,7 @@ export function PartitionViewerBlock() {
             src={PDF_URL}
             bare
             downloadFileName="attention.pdf"
-            header={handlers.header}
+            slots={handlers.slots}
             onVisiblePageChange={handlers.onCurrentPageChange}
             onScrollProgressChange={handlers.onScrollProgressChange}
             className="h-full"

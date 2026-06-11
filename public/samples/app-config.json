@@ -1,34 +1,276 @@
 {
-  "service": "retab-file-viewer",
-  "version": "1.4.0",
+  "$schema": "https://retab.com/schemas/app-config.json",
+  "version": "3.9.0",
+  "environment": "production",
+  "region": "us-east-1",
   "features": {
-    "pdf": true,
-    "docx": true,
-    "pptx": true,
-    "xlsx": true,
-    "images": [
-      "png",
-      "jpg",
-      "webp",
-      "tiff",
-      "svg"
-    ],
-    "text": true,
-    "markdown": true,
-    "html": true
+    "pdf_viewer": {
+      "enabled": true,
+      "rollout": 25,
+      "owners": [
+        "viewers"
+      ]
+    },
+    "xlsx_viewer": {
+      "enabled": false,
+      "rollout": 25,
+      "owners": [
+        "viewers"
+      ]
+    },
+    "docx_viewer": {
+      "enabled": false,
+      "rollout": 0,
+      "owners": [
+        "platform"
+      ]
+    },
+    "pptx_viewer": {
+      "enabled": false,
+      "rollout": 25,
+      "owners": [
+        "infra"
+      ]
+    },
+    "csv_viewer": {
+      "enabled": true,
+      "rollout": 0,
+      "owners": [
+        "platform"
+      ]
+    },
+    "image_viewer": {
+      "enabled": true,
+      "rollout": 10,
+      "owners": [
+        "infra"
+      ]
+    },
+    "schema_builder": {
+      "enabled": true,
+      "rollout": 25,
+      "owners": [
+        "viewers"
+      ]
+    },
+    "json_form": {
+      "enabled": true,
+      "rollout": 50,
+      "owners": [
+        "viewers"
+      ]
+    },
+    "json_table": {
+      "enabled": false,
+      "rollout": 25,
+      "owners": [
+        "core"
+      ]
+    },
+    "segmented_viewer": {
+      "enabled": false,
+      "rollout": 100,
+      "owners": [
+        "viewers"
+      ]
+    },
+    "source_linking": {
+      "enabled": true,
+      "rollout": 50,
+      "owners": [
+        "infra"
+      ]
+    },
+    "consensus": {
+      "enabled": true,
+      "rollout": 100,
+      "owners": [
+        "viewers"
+      ]
+    },
+    "run_timeline": {
+      "enabled": false,
+      "rollout": 0,
+      "owners": [
+        "viewers"
+      ]
+    },
+    "step_waterfall": {
+      "enabled": true,
+      "rollout": 100,
+      "owners": [
+        "viewers"
+      ]
+    },
+    "edit_viewer": {
+      "enabled": false,
+      "rollout": 0,
+      "owners": [
+        "core"
+      ]
+    },
+    "extract_viewer": {
+      "enabled": true,
+      "rollout": 50,
+      "owners": [
+        "infra"
+      ]
+    }
+  },
+  "viewers": {
+    "pdf": {
+      "virtualize": true,
+      "overscan": 7,
+      "maxLiveCanvases": 9,
+      "worker": true,
+      "intrinsicSize": [
+        612,
+        792
+      ]
+    },
+    "xlsx": {
+      "virtualize": true,
+      "overscan": 4,
+      "maxLiveCanvases": 7,
+      "worker": true,
+      "intrinsicSize": [
+        960,
+        1280
+      ]
+    },
+    "docx": {
+      "virtualize": true,
+      "overscan": 7,
+      "maxLiveCanvases": 11,
+      "worker": true,
+      "intrinsicSize": [
+        816,
+        1280
+      ]
+    },
+    "pptx": {
+      "virtualize": true,
+      "overscan": 7,
+      "maxLiveCanvases": 10,
+      "worker": false,
+      "intrinsicSize": [
+        816,
+        1056
+      ]
+    },
+    "csv": {
+      "virtualize": true,
+      "overscan": 3,
+      "maxLiveCanvases": 5,
+      "worker": true,
+      "intrinsicSize": [
+        612,
+        1056
+      ]
+    },
+    "image": {
+      "virtualize": true,
+      "overscan": 2,
+      "maxLiveCanvases": 9,
+      "worker": false,
+      "intrinsicSize": [
+        612,
+        1280
+      ]
+    },
+    "text": {
+      "virtualize": true,
+      "overscan": 8,
+      "maxLiveCanvases": 7,
+      "worker": false,
+      "intrinsicSize": [
+        816,
+        1056
+      ]
+    }
   },
   "limits": {
-    "maxFileMB": 50,
-    "virtualizeRowsOver": 200
+    "maxFileBytes": 52428800,
+    "maxPages": 2000,
+    "maxSheetRows": 1000000,
+    "requestTimeoutMs": 30000,
+    "bitmapLruSize": 8
   },
-  "owners": [
+  "services": [
     {
-      "name": "Platform",
-      "email": "platform@retab.com"
+      "name": "parse",
+      "url": "https://parse.retab.internal",
+      "timeoutMs": 8085,
+      "retries": 0,
+      "healthy": true
     },
     {
-      "name": "Docs",
-      "email": "docs@retab.com"
+      "name": "extract",
+      "url": "https://extract.retab.internal",
+      "timeoutMs": 1807,
+      "retries": 5,
+      "healthy": true
+    },
+    {
+      "name": "split",
+      "url": "https://split.retab.internal",
+      "timeoutMs": 8757,
+      "retries": 1,
+      "healthy": true
+    },
+    {
+      "name": "classify",
+      "url": "https://classify.retab.internal",
+      "timeoutMs": 7106,
+      "retries": 4,
+      "healthy": true
+    },
+    {
+      "name": "consensus",
+      "url": "https://consensus.retab.internal",
+      "timeoutMs": 8312,
+      "retries": 1,
+      "healthy": true
+    },
+    {
+      "name": "storage",
+      "url": "https://storage.retab.internal",
+      "timeoutMs": 6297,
+      "retries": 2,
+      "healthy": true
+    },
+    {
+      "name": "auth",
+      "url": "https://auth.retab.internal",
+      "timeoutMs": 8774,
+      "retries": 0,
+      "healthy": true
+    },
+    {
+      "name": "metrics",
+      "url": "https://metrics.retab.internal",
+      "timeoutMs": 7730,
+      "retries": 1,
+      "healthy": true
+    },
+    {
+      "name": "router",
+      "url": "https://router.retab.internal",
+      "timeoutMs": 7631,
+      "retries": 0,
+      "healthy": true
     }
-  ]
+  ],
+  "telemetry": {
+    "enabled": true,
+    "sampleRate": 0.25,
+    "endpoints": [
+      "https://t0.retab.internal",
+      "https://t1.retab.internal",
+      "https://t2.retab.internal",
+      "https://t3.retab.internal",
+      "https://t4.retab.internal",
+      "https://t5.retab.internal"
+    ]
+  }
 }

@@ -18,8 +18,8 @@ import { Skeleton } from "@/components/ui/skeleton"
 /** Base font metrics (Tailwind `text-xs`/`leading-5`) the zoom scales from. */
 const BASE_FONT_PX = 12
 const BASE_LINE_PX = 20
-const MIN_SCALE = 0.5
-const MAX_SCALE = 3
+const MIN_SCALE = 0.25
+const MAX_SCALE = 5
 
 const clamp = (n: number, lo: number, hi: number) =>
   Math.min(hi, Math.max(lo, n))

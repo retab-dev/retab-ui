@@ -45,36 +45,6 @@ export function Example() {
 }
 ```
 
-## Legend variants
-
-`SegmentLegend` owns how it attaches to the document surface, so the classify,
-split, and partition viewers all share one legend instead of each re-building its
-own chrome. The `variant` prop is the placement; `orientation` + `side` decide
-which edge it lives on.
-
-<SegmentLegendVariantsDemo />
-
-```tsx
-import { SegmentLegend } from "@/components/ui/segment-legend"
-
-// flush bordered bar (default)            floating overlay card
-<SegmentLegend segments={segments} />
-<SegmentLegend segments={segments} variant="floating" />
-
-// gapped rounded panel                    vertical rail on the left
-<SegmentLegend segments={segments} variant="inset" />
-<SegmentLegend segments={segments} orientation="vertical" side="left" />
-```
-
-| Prop | Type | Description |
-| --- | --- | --- |
-| `variant` | `"bar" \| "floating" \| "inset" \| "plain"` | How it attaches to the surface. `floating`/`inset` need a `relative` parent. Defaults to `bar`. |
-| `orientation` | `"horizontal" \| "vertical"` | Wrap/grid of entries, or a vertical rail. |
-| `side` | `"top" \| "bottom" \| "left" \| "right"` | Edge it docks to (border for `bar`, anchor for `floating`). |
-| `density` | `"comfortable" \| "compact"` | Swatch + label scale. |
-| `caption` | `ReactNode` | Muted line under the entries (e.g. a classification's reasoning). |
-| `accessory` | `ReactNode` | Extra content inside the same chrome (e.g. a page ribbon). |
-
 ## Composing the surfaces yourself
 
 The three surfaces are independent primitives — wire them to your own shared

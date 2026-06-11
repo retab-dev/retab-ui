@@ -10,15 +10,17 @@ import type {
 import { type Segment, buildColorMap } from "@/lib/segments";
 import { SegmentLegend } from "@/components/ui/segment-legend";
 import { PageRibbon, type RibbonRow } from "@/components/ui/page-ribbon";
+import { type PdfViewerSlots } from "@/components/ui/pdf-viewer";
 
 /**
- * Handlers a document surface receives. `header` (legend + waterfall) is the
- * viewer's chrome — the surface renders it below the document toolbar.
+ * Slots a document surface receives: the color key in `top`, the consensus
+ * waterfall in `bottom`. They're independent regions — the key and the
+ * page-axis waterfall never share a slot, so either can be placed on its own.
  */
 export interface PartitionDocumentHandlers {
   onCurrentPageChange: (page: number) => void;
   onScrollProgressChange: (progress: number) => void;
-  header: ReactNode;
+  slots: PdfViewerSlots;
 }
 
 export interface PartitionViewerProps {
@@ -118,18 +120,23 @@ export function PartitionViewer({
     );
   }
 
-  const header = (
-    <SegmentLegend
-      segments={legendSegments}
-      currentPage={currentPageInt}
-      activeId={activeId}
-      onActivate={setActiveId}
-      onSelect={(id) => {
-        const seg = legendSegments.find((s) => s.id === id);
-        if (seg?.pages.length) handleJumpToPage(seg.pages[0]);
-      }}
-      columns={4}
-      accessory={
+  // The color key and the consensus waterfall stack in the `top` slot — two
+  // independent surfaces the viewer composes, not one nested in the other.
+  const slots: PdfViewerSlots = {
+    top: (
+      <div className="space-y-2 border-b border-border bg-background px-3 py-2">
+        <SegmentLegend
+          variant="plain"
+          segments={legendSegments}
+          currentPage={currentPageInt}
+          activeId={activeId}
+          onActivate={setActiveId}
+          onSelect={(id) => {
+            const seg = legendSegments.find((s) => s.id === id);
+            if (seg?.pages.length) handleJumpToPage(seg.pages[0]);
+          }}
+          columns={4}
+        />
         <PageRibbon
           orientation="horizontal"
           rows={rows}
@@ -140,9 +147,9 @@ export function PartitionViewer({
           onActivate={setActiveId}
           onSelectPage={handleJumpToPage}
         />
-      }
-    />
-  );
+      </div>
+    ),
+  };
 
   return (
     <div ref={previewPanelRef} className="flex min-h-0 flex-1 flex-col bg-background">
@@ -150,7 +157,7 @@ export function PartitionViewer({
         renderDocument({
           onCurrentPageChange: setCurrentPdfPage,
           onScrollProgressChange: setScrollProgress,
-          header,
+          slots,
         })
       ) : (
         <div className="flex h-full items-center justify-center">

@@ -619,6 +619,64 @@ export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
         )}
         style={{ fontSize }}
       >
+        {/* Toolbar: row/column counts + zoom. Top-aligned to match the other file
+            viewers' chrome (this was previously a bottom footer). */}
+        <div className="flex shrink-0 items-center justify-between border-b px-3 py-1.5 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1.5">
+            {loading ? (
+              <span
+                aria-hidden
+                className="size-2 animate-pulse rounded-full bg-primary"
+              />
+            ) : null}
+            {parsedRows.length.toLocaleString()} row
+            {parsedRows.length === 1 ? "" : "s"}
+            {loading ? " · loading…" : ""}
+          </span>
+          <span className="flex items-center gap-2">
+            <span>
+              {colCount} column{colCount === 1 ? "" : "s"}
+            </span>
+            {showZoom ? (
+              <span className="flex items-center gap-0.5">
+                <button
+                  type="button"
+                  aria-label="Zoom out"
+                  title="Zoom out"
+                  onClick={() =>
+                    setZoom((z) => Math.max(0.25, Math.min(5, z / 1.2)))
+                  }
+                  className="inline-flex size-6 items-center justify-center rounded hover:bg-muted hover:text-foreground"
+                >
+                  <Minus className="size-3.5" />
+                </button>
+                <span className="w-10 text-center tabular-nums">
+                  {Math.round(zoom * 100)}%
+                </span>
+                <button
+                  type="button"
+                  aria-label="Zoom in"
+                  title="Zoom in"
+                  onClick={() =>
+                    setZoom((z) => Math.max(0.25, Math.min(5, z * 1.2)))
+                  }
+                  className="inline-flex size-6 items-center justify-center rounded hover:bg-muted hover:text-foreground"
+                >
+                  <Plus className="size-3.5" />
+                </button>
+                <button
+                  type="button"
+                  aria-label="Reset zoom"
+                  title="Reset zoom"
+                  onClick={() => setZoom(1)}
+                  className="inline-flex size-6 items-center justify-center rounded hover:bg-muted hover:text-foreground"
+                >
+                  <Maximize className="size-3.5" />
+                </button>
+              </span>
+            ) : null}
+          </span>
+        </div>
         {/* One scroll container: the header row and the data rows live in the same
           scroller, so they scroll together natively — no JS sync, so the columns
           stay locked to the header during horizontal scroll. The header sticks to
@@ -761,63 +819,6 @@ export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
             headerHeight={effRowHeight}
           />
         </ScrollerShell>
-
-        <div className="flex shrink-0 items-center justify-between border-t px-3 py-1.5 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1.5">
-            {loading ? (
-              <span
-                aria-hidden
-                className="size-2 animate-pulse rounded-full bg-primary"
-              />
-            ) : null}
-            {parsedRows.length.toLocaleString()} row
-            {parsedRows.length === 1 ? "" : "s"}
-            {loading ? " · loading…" : ""}
-          </span>
-          <span className="flex items-center gap-2">
-            <span>
-              {colCount} column{colCount === 1 ? "" : "s"}
-            </span>
-            {showZoom ? (
-              <span className="flex items-center gap-0.5">
-                <button
-                  type="button"
-                  aria-label="Zoom out"
-                  title="Zoom out"
-                  onClick={() =>
-                    setZoom((z) => Math.max(0.5, Math.min(3, z / 1.2)))
-                  }
-                  className="inline-flex size-6 items-center justify-center rounded hover:bg-muted hover:text-foreground"
-                >
-                  <Minus className="size-3.5" />
-                </button>
-                <span className="w-10 text-center tabular-nums">
-                  {Math.round(zoom * 100)}%
-                </span>
-                <button
-                  type="button"
-                  aria-label="Zoom in"
-                  title="Zoom in"
-                  onClick={() =>
-                    setZoom((z) => Math.max(0.5, Math.min(3, z * 1.2)))
-                  }
-                  className="inline-flex size-6 items-center justify-center rounded hover:bg-muted hover:text-foreground"
-                >
-                  <Plus className="size-3.5" />
-                </button>
-                <button
-                  type="button"
-                  aria-label="Reset zoom"
-                  title="Reset zoom"
-                  onClick={() => setZoom(1)}
-                  className="inline-flex size-6 items-center justify-center rounded hover:bg-muted hover:text-foreground"
-                >
-                  <Maximize className="size-3.5" />
-                </button>
-              </span>
-            ) : null}
-          </span>
-        </div>
       </div>
     )
   }

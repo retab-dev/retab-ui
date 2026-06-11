@@ -81,11 +81,6 @@ export const useTabStateStore = create<TabState>((set, get) => ({
   getDocumentStatus: (documentId, iterationId) => {
     const key = iterationId ? `${iterationId}-${documentId}` : `${documentId}`;
     const status = get().documentExtractionStatus[key];
-    // console.log("status", status);
-    // console.log("iterationId", iterationId);
-    // console.log("documentId", documentId);
-    // console.log("key", key);
-    // console.log("documentExtractionStatus", get().documentExtractionStatus);
     // Return "completed" if the key doesn't exist (meaning it finished and was cleaned up)
     return status || "completed";
   },

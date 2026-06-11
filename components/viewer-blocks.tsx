@@ -2,17 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import {
-  Code,
-  FileCode,
-  Laptop,
-  Maximize2,
-  RotateCw,
-  Smartphone,
-  Tablet,
-  Terminal,
-} from "lucide-react"
-import type { PanelImperativeHandle } from "react-resizable-panels"
+import { Code, FileCode, Terminal } from "lucide-react"
 
 import {
   VIEWER_BLOCK_CATEGORIES,
@@ -26,24 +16,19 @@ import { useMediaQuery } from "@/hooks/use-media-query"
 import { useMounted } from "@/hooks/use-mounted"
 import { Button } from "@/components/ui/button"
 import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "@/components/ui/resizable"
-import {
   CodeHeaderCopyButton,
   CopyButtonIcon,
   copyToClipboardWithMeta,
 } from "@/components/copy-button"
 import { HighlightedCodeBlock } from "@/components/highlighted-code-block"
-import { ClassificationViewerBlock } from "@/registry/new-york-v4/blocks/classification-viewer-block"
 import { ExtractViewerBlock } from "@/registry/new-york-v4/blocks/extract-viewer-block"
+import { ExtractionViewerBlock } from "@/registry/new-york-v4/blocks/extraction-viewer-block"
 import { JsonFormSourcesBlock } from "@/registry/new-york-v4/blocks/json-form-sources-block"
-import { LegendVariantsBlock } from "@/registry/new-york-v4/blocks/legend-variants-block"
 import { ImageSourcesBlock } from "@/registry/new-york-v4/blocks/image-sources-block"
 import { TextSourcesBlock } from "@/registry/new-york-v4/blocks/text-sources-block"
 import { CsvSourcesBlock } from "@/registry/new-york-v4/blocks/csv-sources-block"
 import { XlsxSourcesBlock } from "@/registry/new-york-v4/blocks/xlsx-sources-block"
+import { DocxSourcesBlock } from "@/registry/new-york-v4/blocks/docx-sources-block"
 import { ParseViewerBlock } from "@/registry/new-york-v4/blocks/parse-viewer-block"
 import { PartitionViewerBlock } from "@/registry/new-york-v4/blocks/partition-viewer-block"
 import { PdfThumbnailsBlock } from "@/registry/new-york-v4/blocks/pdf-thumbnails-block"
@@ -60,19 +45,7 @@ type BlockCodeSample = {
 
 type ViewerBlock = ViewerBlockMetadata & { component: React.ComponentType }
 
-type BlockViewportSize = "desktop" | "tablet" | "mobile"
 type BlockView = "preview" | "code"
-
-const blockViewportSizes: Array<{
-  id: BlockViewportSize
-  label: string
-  panelSize: number
-  icon: typeof Laptop
-}> = [
-  { id: "desktop", label: "Desktop", panelSize: 100, icon: Laptop },
-  { id: "tablet", label: "Tablet", panelSize: 62, icon: Tablet },
-  { id: "mobile", label: "Mobile", panelSize: 34, icon: Smartphone },
-]
 
 const BLOCK_VIEWPORT_HEIGHT_CLASS = "h-[680px]"
 const BLOCK_PREVIEW_LAZY_ROOT_MARGIN = "900px 0px"
@@ -80,16 +53,16 @@ const BLOCK_PREVIEW_LAZY_ROOT_MARGIN = "900px 0px"
 const blockComponents = {
   split: SplitViewerBlock,
   partition: PartitionViewerBlock,
-  classification: ClassificationViewerBlock,
   parse: ParseViewerBlock,
+  "extraction-viewer": ExtractionViewerBlock,
   extract: ExtractViewerBlock,
   "json-form-sources": JsonFormSourcesBlock,
   "image-sources": ImageSourcesBlock,
   "text-sources": TextSourcesBlock,
   "csv-sources": CsvSourcesBlock,
   "xlsx-sources": XlsxSourcesBlock,
+  "docx-sources": DocxSourcesBlock,
   "primitive-cards": PrimitiveCardsBlock,
-  "legend-variants": LegendVariantsBlock,
   "pdf-thumbnails": PdfThumbnailsBlock,
 } satisfies Record<ViewerBlockId, React.ComponentType>
 
@@ -97,6 +70,15 @@ const viewerBlocks: ViewerBlock[] = VIEWER_BLOCKS.map((block) => ({
   ...block,
   component: blockComponents[block.id],
 }))
+
+// Some tabs lead with two viewers sharing a single 50/50 row instead of
+// stacking full-width; the rest stay full-width below it. Keyed by tab.
+const PAIRED_BLOCK_IDS: Partial<
+  Record<ViewerBlockCategoryTabId, ViewerBlockId[]>
+> = {
+  featured: ["split", "pdf-thumbnails"],
+  primitives: ["split", "partition"],
+}
 
 export function ViewerBlocks({
   codeSamples,
@@ -112,18 +94,36 @@ export function ViewerBlocks({
       : block.categories.includes(activeCategory)
   )
 
+  const renderBlock = (block: ViewerBlock) => (
+    <ViewerBlockPreview
+      key={block.id}
+      block={block}
+      codeSamples={codeSamples[block.id] ?? []}
+    />
+  )
+
+  // Lead with this tab's paired viewers in a shared 50/50 row (in the configured
+  // order), then stack the remaining blocks full-width beneath it.
+  const pairedIds = PAIRED_BLOCK_IDS[activeCategory] ?? []
+  const pairedBlocks = pairedIds
+    .map((id) => visibleBlocks.find((block) => block.id === id))
+    .filter((block): block is ViewerBlock => Boolean(block))
+  const showPaired = pairedBlocks.length === 2
+  const stackedBlocks = showPaired
+    ? visibleBlocks.filter((block) => !pairedIds.includes(block.id))
+    : visibleBlocks
+
   return (
     <section className="space-y-8">
       <BlockCategoryTabs active={activeCategory} onChange={setActiveCategory} />
       {visibleBlocks.length ? (
         <div className="space-y-12">
-          {visibleBlocks.map((block) => (
-            <ViewerBlockPreview
-              key={block.id}
-              block={block}
-              codeSamples={codeSamples[block.id] ?? []}
-            />
-          ))}
+          {showPaired ? (
+            <div className="grid grid-cols-1 gap-12 lg:grid-cols-2">
+              {pairedBlocks.map(renderBlock)}
+            </div>
+          ) : null}
+          {stackedBlocks.map(renderBlock)}
         </div>
       ) : (
         <div className="rounded-xl border border-dashed py-24 text-center text-sm text-muted-foreground">
@@ -142,7 +142,7 @@ function BlockCategoryTabs({
   onChange: (category: ViewerBlockCategoryTabId) => void
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-x-6 gap-y-3 border-b pb-3">
+    <div className="flex flex-wrap items-center gap-x-6 gap-y-3 pb-3">
       <div
         role="tablist"
         aria-label="Block categories"
@@ -189,19 +189,16 @@ function ViewerBlockPreview({
   block: ViewerBlock
   codeSamples: BlockCodeSample[]
 }) {
-  const [previewKey, setPreviewKey] = React.useState(0)
+  const [previewKey] = React.useState(0)
   const [view, setView] = React.useState<BlockView>("preview")
   const [hasOpenedCode, setHasOpenedCode] = React.useState(false)
   const [codeScrollResetKey, setCodeScrollResetKey] = React.useState(0)
-  const [activeViewport, setActiveViewport] =
-    React.useState<BlockViewportSize>("desktop")
   const [isCommandCopied, setIsCommandCopied] = React.useState(false)
   const [activeFile, setActiveFile] = React.useState<string | null>(
     codeSamples[0]?.targetPath ?? null
   )
   const [articleRef, shouldMountPreview] = useLazyBlockPreview()
   const isMounted = useMounted()
-  const previewPanelRef = React.useRef<PanelImperativeHandle>(null)
   const Preview = block.component
   const isDesktopViewport = useMediaQuery("(min-width: 768px)")
   const previewHeightClassName =
@@ -213,12 +210,6 @@ function ViewerBlockPreview({
       setCodeScrollResetKey((key) => key + 1)
     }
     setView(nextView)
-  }
-
-  function resizeViewport(viewport: (typeof blockViewportSizes)[number]) {
-    setView("preview")
-    setActiveViewport(viewport.id)
-    previewPanelRef.current?.resize(`${viewport.panelSize}%`)
   }
 
   React.useEffect(() => {
@@ -264,47 +255,6 @@ function ViewerBlockPreview({
             ) : null}
           </div>
           <div className="ml-auto flex min-w-0 items-center gap-2">
-            <div className="hidden items-center gap-1 rounded-md border bg-background p-0.5 sm:flex">
-              {blockViewportSizes.map((viewport) => {
-                const Icon = viewport.icon
-                return (
-                  <Button
-                    key={viewport.id}
-                    type="button"
-                    variant={activeViewport === viewport.id ? "secondary" : "ghost"}
-                    size="icon-sm"
-                    className="size-7"
-                    title={viewport.label}
-                    aria-label={`${viewport.label} viewport`}
-                    onClick={() => resizeViewport(viewport)}
-                  >
-                    <Icon className="size-4" />
-                  </Button>
-                )
-              })}
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                className="size-7"
-                title="Open fullscreen preview"
-                aria-label={`Open ${block.title} fullscreen preview`}
-                render={<Link href={block.viewHref} target="_blank" />}
-              >
-                <Maximize2 className="size-4" />
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                className="size-7"
-                title="Refresh preview"
-                aria-label={`Refresh ${block.title} preview`}
-                onClick={() => setPreviewKey((value) => value + 1)}
-              >
-                <RotateCw className="size-4" />
-              </Button>
-            </div>
             <Button
               type="button"
               variant="outline"
@@ -329,23 +279,14 @@ function ViewerBlockPreview({
             )}
           >
             <div className="absolute inset-0 right-4 bg-[radial-gradient(var(--border)_1px,transparent_1px)] bg-[size:20px_20px]" />
-            <ResizablePanelGroup orientation="horizontal" className="relative z-10 h-full">
-              <ResizablePanel
-                ref={previewPanelRef}
-                defaultSize="100%"
-                minSize="30%"
-                className="min-w-0 overflow-hidden rounded-xl bg-background"
-              >
-                <BlockPreviewSurface
-                  Preview={Preview}
-                  isMounted={isMounted}
-                  previewKey={previewKey}
-                  shouldRenderPreview={isDesktopViewport && shouldMountPreview}
-                />
-              </ResizablePanel>
-              <ResizableHandle className="relative w-3 bg-transparent p-0 after:absolute after:top-1/2 after:right-0 after:h-8 after:w-1.5 after:-translate-y-1/2 after:rounded-full after:bg-background after:shadow-sm after:ring-1 after:ring-border after:transition-all after:hover:h-10" />
-              <ResizablePanel defaultSize="0%" minSize="0%" />
-            </ResizablePanelGroup>
+            <div className="relative z-10 h-full min-w-0 overflow-hidden rounded-xl bg-background">
+              <BlockPreviewSurface
+                Preview={Preview}
+                isMounted={isMounted}
+                previewKey={previewKey}
+                shouldRenderPreview={isDesktopViewport && shouldMountPreview}
+              />
+            </div>
           </div>
           <div className="overflow-hidden rounded-xl border bg-background md:hidden">
             <BlockPreviewSurface

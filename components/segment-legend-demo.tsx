@@ -35,10 +35,11 @@ const PRESETS: Preset[] = [
   { id: "rail", label: "Rail", variant: "bar", orientation: "vertical", side: "left" },
 ]
 
-export function SegmentLegendVariantsDemo() {
+export function SegmentLegendDemo() {
   const [presetId, setPresetId] = React.useState("bar")
   const [activeId, setActiveId] = React.useState<string | null>(null)
   const preset = PRESETS.find((p) => p.id === presetId) ?? PRESETS[0]
+  const isRail = preset.orientation === "vertical"
 
   const legend = (
     <SegmentLegend
@@ -53,8 +54,6 @@ export function SegmentLegendVariantsDemo() {
     />
   )
 
-  const isRail = preset.orientation === "vertical"
-
   return (
     <div className="not-prose my-6 space-y-3">
       <div className="flex flex-wrap gap-1.5">
@@ -67,45 +66,20 @@ export function SegmentLegendVariantsDemo() {
               "rounded-md border px-2.5 py-1 text-xs font-medium transition-colors",
               p.id === presetId
                 ? "border-foreground bg-foreground text-background"
-                : "bg-background text-muted-foreground hover:text-foreground"
+                : "text-muted-foreground hover:bg-muted"
             )}
           >
             {p.label}
           </button>
         ))}
       </div>
-
-      {/* The document surface. `relative` so the floating variant can anchor. */}
       <div
         className={cn(
-          "relative h-[360px] overflow-hidden rounded-xl border bg-card",
-          isRail ? "flex" : "flex flex-col"
+          "relative flex overflow-hidden rounded-lg border bg-muted/30",
+          isRail ? "h-48" : "h-32 flex-col"
         )}
       >
-        {/* In-flow variants render before the document; floating overlays it. */}
-        {preset.variant !== "floating" ? legend : null}
-        <FauxDocument />
-        {preset.variant === "floating" ? legend : null}
-      </div>
-    </div>
-  )
-}
-
-/** A page-shaped placeholder so the legend has a document to sit on. */
-function FauxDocument() {
-  return (
-    <div className="min-h-0 flex-1 overflow-hidden bg-muted/30 p-6">
-      <div className="mx-auto h-full w-full max-w-xs rounded-md border bg-background p-5 shadow-sm">
-        <div className="mb-4 h-3 w-2/3 rounded bg-muted-foreground/25" />
-        <div className="space-y-2">
-          {Array.from({ length: 9 }).map((_, i) => (
-            <div
-              key={i}
-              className="h-2 rounded bg-muted-foreground/15"
-              style={{ width: `${70 + ((i * 37) % 30)}%` }}
-            />
-          ))}
-        </div>
+        {legend}
       </div>
     </div>
   )

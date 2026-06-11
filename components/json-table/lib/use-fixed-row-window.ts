@@ -9,13 +9,6 @@ export interface FixedRowWindow {
   end: number;
   /** Pixel height of the full list — used as the scroll spacer height. */
   totalHeight: number;
-  /**
-   * Number of recycled row slots to render. Stable (grows-only) so the caller
-   * can key slots by index and reuse their DOM across scrolls. Large enough to
-   * cover the window (`visible + 2·overscan`) plus a small buffer, so every
-   * windowed row maps to a distinct slot via `rowIdx % poolSize`.
-   */
-  poolSize: number;
   /** True once the viewport has been measured at least once. */
   ready: boolean;
 }
@@ -48,8 +41,6 @@ export function useFixedRowWindow({
     start: 0,
     end: 0,
   });
-  // Grows-only: keys stay stable so row slots are reused, never remounted.
-  const [poolSize, setPoolSize] = useState(0);
   const readyRef = useRef(false);
   const [ready, setReady] = useState(false);
   const rafRef = useRef<number | null>(null);
@@ -65,11 +56,6 @@ export function useFixedRowWindow({
     const visible = Math.ceil(viewport / rowHeight);
     const start = Math.max(0, first - overscan);
     const end = Math.min(rowCount, first + visible + overscan);
-
-    // +2 buffer keeps poolSize strictly greater than any window length, so the
-    // `rowIdx % poolSize` mapping never collides two visible rows onto a slot.
-    const needed = visible + overscan * 2 + 2;
-    setPoolSize((prev) => (needed > prev ? needed : prev));
 
     if (!readyRef.current) {
       readyRef.current = true;
@@ -116,7 +102,6 @@ export function useFixedRowWindow({
     start: range.start,
     end: range.end,
     totalHeight: rowCount * rowHeight,
-    poolSize,
     ready,
   };
 }

@@ -46,7 +46,6 @@ import {
   SplitViewerDemo,
 } from "@/components/viewers/viewers-demo"
 import { SegmentedViewerDemo } from "@/components/segmented-viewer-demo"
-import { SegmentLegendVariantsDemo } from "@/components/segment-legend-variants-demo"
 import { FileThumbnailDemo } from "@/components/file-thumbnail-demo"
 import { FileThumbnailFormatsDemo } from "@/components/file-thumbnail-formats-demo"
 import { ApiCallDemo } from "@/components/api-call-demo"
@@ -379,7 +378,6 @@ export const mdxComponents = {
   SplitViewerDemo,
   EditViewerDemo,
   SegmentedViewerDemo,
-  SegmentLegendVariantsDemo,
   FileThumbnailDemo,
   FileThumbnailFormatsDemo,
   ApiCallDemo,

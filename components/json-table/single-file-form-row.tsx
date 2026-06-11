@@ -29,8 +29,6 @@ interface SingleFileFormRowProps {
   rowCount: number;
   /** Which sub-row of the document this renders (set by the row virtualizer). */
   rowIdx: number;
-  /** False when this recycled slot has no row in the current window (hidden). */
-  active: boolean;
   /** Which object/array cell's inline editor popover is open (by field key). */
   openPopover: string | null;
   setOpenPopover: (key: string | null) => void;
@@ -58,7 +56,6 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
     visibleKeys,
     rowCount,
     rowIdx,
-    active,
     openPopover,
     setOpenPopover,
     onUpdateDocument,
@@ -71,41 +68,6 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
     fieldIndicationMap,
     fieldReasoningMap,
   }) => {
-    const prevPropsRef = React.useRef<any>(null);
-
-    // Log what changed
-    if (prevPropsRef.current) {
-      const changes: string[] = [];
-      if (prevPropsRef.current.row !== row) changes.push("row");
-      if (prevPropsRef.current.columns !== columns) changes.push("columns");
-      if (prevPropsRef.current.schema !== schema) changes.push("schema");
-      if (prevPropsRef.current.tableAndPaths !== tableAndPaths)
-        changes.push("tableAndPaths");
-      if (prevPropsRef.current.visibleKeys !== visibleKeys)
-        changes.push("visibleKeys");
-      if (prevPropsRef.current.rowCount !== rowCount) changes.push("rowCount");
-      if (prevPropsRef.current.onUpdateDocument !== onUpdateDocument)
-        changes.push("onUpdateDocument");
-      if (prevPropsRef.current.editMode !== editMode) changes.push("editMode");
-
-      // console.log('[SingleFileFormRow] Rendering - Props that changed:', changes, { documentId: row.original.id, rowCount });
-    } else {
-      // console.log('[SingleFileFormRow] Rendering - Initial render', { documentId: row.original.id, rowCount });
-    }
-
-    prevPropsRef.current = {
-      row,
-      columns,
-      schema,
-      tableAndPaths,
-      visibleKeys,
-      rowCount,
-      onUpdateDocument,
-      editMode,
-    };
-
-    // console.log('[SingleFileFormRow] Rendering', { documentId: row.original.id, rowCount });
-
     const { rowHeight, columnWidth } = useSheetOptionsStore();
     const theme = getTheme("single-file");
 
@@ -141,11 +103,8 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
         minHeight: `${rowHeightPx}px`,
         minWidth: "100%",
         contain: "layout style",
-        // Recycled slot with no row in the current window: keep the node (and
-        // its cell subtree) mounted for reuse, just don't paint or lay it out.
-        display: active ? undefined : "none",
       }),
-      [rowIdx, rowHeightPx, active],
+      [rowIdx, rowHeightPx],
     );
     return (
       <TableRow

@@ -50,10 +50,8 @@ export function objectToTable2D(
   ): [number, number] /* [rows, cols] taken by the compiled table */ {
     let rows = 0;
     let cols = 0;
-    // console.log("depth", depth)
     tpl = tpl.filter((t) => {
       if (t.length !== depth) return true;
-      //  console.log("tpl start adding something to table", tpl)
       if (!table[rowOffset]) {
         table[rowOffset] = [];
       }
@@ -137,16 +135,6 @@ export function objectToTable2D(
       ? ((data as BuilderDocument).prediction_data?.prediction ?? {})
       : {};
 
-  // Debug: Check if sum_amounts is in the root data
-  if (tplOrder.includes("sum_amounts") && "sum_amounts" in root) {
-    console.log(
-      "[PATH-UTILS] sum_amounts found in root:",
-      (root as any).sum_amounts,
-      "tplOrder:",
-      tplOrder,
-    );
-  }
-
   compileTable(
     root,
     tplOrder.map((t) => t.split(".")),
@@ -156,12 +144,6 @@ export function objectToTable2D(
     0,
     undefined,
   );
-
-  // Debug: Check if sum_amounts was extracted into paths
-  if (tplOrder.includes("sum_amounts")) {
-    const sumAmountsPath = paths[0]?.find((p) => p?.tpl === "sum_amounts");
-    console.log("[PATH-UTILS] sum_amounts pathInfo:", sumAmountsPath);
-  }
 
   return { table, paths };
 }

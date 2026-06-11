@@ -6,11 +6,11 @@ import { cn } from "@/lib/utils"
 import { FileViewer } from "@/components/ui/file-viewer"
 
 const FILES = [
-  { label: "PDF", file: "loan-application.pdf" },
+  { label: "PDF", file: "big-911-report.pdf" },
   { label: "Image", file: "attention-page-1.png" },
   { label: "TIFF", file: "nvidia-10q-scan.tiff" },
   { label: "XLSX", file: "nvidia-financials-fy2024.xlsx" },
-  { label: "PPTX", file: "sample-deck.pptx" },
+  { label: "PPTX", file: "sample-presentation.pptx" },
   { label: "DOCX", file: "quarterly-business-review.docx" },
   { label: "CSV", file: "sales.csv" },
   { label: "Markdown", file: "release-notes.md" },
@@ -42,7 +42,7 @@ export function FileViewerDemo() {
           </button>
         ))}
       </div>
-      <div className="aspect-[210/297] w-full">
+      <div className="aspect-[210/297] w-full rounded-xl shadow-sm">
         {/* A4 portrait — frames a single document page without awkward dead space.
             key forces a fresh viewer per file so state (zoom, sheet, scroll) resets */}
         <FileViewer

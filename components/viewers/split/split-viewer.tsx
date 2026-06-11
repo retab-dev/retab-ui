@@ -13,17 +13,17 @@ import { type SplitView } from "@/components/viewers/lib/split-types";
 import { segmentsPageCount, toSegments } from "@/lib/segments";
 import { SegmentLegend } from "@/components/ui/segment-legend";
 import { PageRibbon } from "@/components/ui/page-ribbon";
+import { type PdfViewerSlots } from "@/components/ui/pdf-viewer";
 
 /**
- * Handlers a document surface receives. `header` (the legend) and `aside` (the
- * page ribbon) are the viewer's chrome — the surface renders them around the
- * document so the document's own controls stay on top.
+ * Slots a document surface receives: the legend in `top`, the page ribbon as a
+ * `left` rail. The surface spreads them onto its `PdfViewer`; the two are
+ * independent regions, so neither disturbs the other.
  */
 export interface SplitDocumentHandlers {
   onCurrentPageChange: (page: number) => void;
   onScrollProgressChange: (progress: number) => void;
-  header: ReactNode;
-  aside: ReactNode;
+  slots: PdfViewerSlots;
 }
 
 export interface SplitViewerProps {
@@ -78,38 +78,39 @@ export function SplitViewer({
     );
   }
 
-  // The legend sits below the document toolbar; the ribbon is the left rail.
-  const header = (
-    <SegmentLegend
-      segments={segments}
-      currentPage={currentPage}
-      activeId={activeId}
-      onActivate={setActiveId}
-      onSelect={(id) => {
-        const seg = segments.find((s) => s.id === id);
-        if (seg?.pages.length) handleJumpToPage(seg.pages[0]);
-      }}
-      columns={4}
-      showUnusedToggle
-    />
-  );
-
-  const aside =
-    pageCount > 0 ? (
-      <div className="h-full overflow-auto border-r border-border bg-background px-3 py-6">
-        <PageRibbon
-          orientation="vertical"
-          rows={[{ id: "split", segments }]}
-          pageCount={pageCount}
-          currentPage={currentPage}
-          scrollProgress={scrollProgress}
-          activeId={activeId}
-          onActivate={setActiveId}
-          onSelectPage={handleJumpToPage}
-          showTicks
-        />
-      </div>
-    ) : null;
+  // The legend mounts in the document's `top` slot; the ribbon is a `left` rail.
+  const slots: PdfViewerSlots = {
+    top: (
+      <SegmentLegend
+        segments={segments}
+        currentPage={currentPage}
+        activeId={activeId}
+        onActivate={setActiveId}
+        onSelect={(id) => {
+          const seg = segments.find((s) => s.id === id);
+          if (seg?.pages.length) handleJumpToPage(seg.pages[0]);
+        }}
+        columns={4}
+        showUnusedToggle
+      />
+    ),
+    left:
+      pageCount > 0 ? (
+        <div className="h-full overflow-auto border-r border-border bg-background px-3 py-6">
+          <PageRibbon
+            orientation="vertical"
+            rows={[{ id: "split", segments }]}
+            pageCount={pageCount}
+            currentPage={currentPage}
+            scrollProgress={scrollProgress}
+            activeId={activeId}
+            onActivate={setActiveId}
+            onSelectPage={handleJumpToPage}
+            showTicks
+          />
+        </div>
+      ) : undefined,
+  };
 
   return (
     <div ref={previewRef} className="flex min-h-0 flex-1 bg-background">
@@ -117,8 +118,7 @@ export function SplitViewer({
         renderDocument({
           onCurrentPageChange: setCurrentPage,
           onScrollProgressChange: setScrollProgress,
-          header,
-          aside,
+          slots,
         })
       ) : (
         <div className="flex h-full flex-1 items-center justify-center">

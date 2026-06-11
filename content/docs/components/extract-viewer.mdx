@@ -86,7 +86,7 @@ export function Example({ response, form }) {
         src="/document.pdf"
         bare
         className="min-w-0 flex-1"
-        renderPageOverlay={renderPdfSourceOverlay(link.activeLocation)}
+        renderPageOverlay={renderPdfSourceOverlay(link.activeSource)}
       />
       <UiForm
         form={form}
@@ -104,7 +104,7 @@ export function Example({ response, form }) {
 To link a different field component, point its hover at `link.onFieldHover` and
 its click at `link.selectField` (that's all `extract-viewer-block` does with its
 own field list). To support a different viewer, write one adapter — a
-`SourceTarget` (`resolve` + `scrollTo`) and an overlay renderer.
+`SourceTarget` (a `scrollTo`) and an overlay renderer.
 
 ## API
 
@@ -128,15 +128,17 @@ own field list). To support a different viewer, write one adapter — a
 | --- | --- |
 | `onFieldHover(path \| null)` | report the hovered field — wire to `setSourcesFieldPath`. |
 | `selectField(path)` | pin a field (e.g. on click). |
-| `activeLocation` | the location to highlight — feed to the overlay. |
-| `activePath` / `activeSource` | the active field and its source. |
+| `clear()` | clear hover and pin. |
+| `activeSource` | the active field's source — feed to the overlay. |
+| `activePath` | the effective active path (hover wins over pin). |
+| `hoverPath` / `pinnedPath` | the transient hovered and persisted pinned paths. |
 
 ### `pdf-source`
 
 | Export | Description |
 | --- | --- |
 | `usePdfSourceTarget(ref)` | a stable `SourceTarget` over a `PdfViewer` ref. |
-| `renderPdfSourceOverlay(location)` | a `renderPageOverlay` drawing the highlight on its page. |
+| `renderPdfSourceOverlay(source)` | a `renderPageOverlay` drawing the highlight on its page — pass `activeSource`. |
 | `pdfAnchorToLocation(anchor)` | normalized bbox → page `%` location. |
 
 Both compositions ship as blocks: the [Extract Viewer](/blocks#extract) (a field

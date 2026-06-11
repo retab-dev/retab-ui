@@ -453,6 +453,8 @@ export interface XlsxViewerHandle {
     col: number,
     options?: { behavior?: ScrollBehavior }
   ) => void
+  /** The active sheet's scrolling viewport element, or null before it mounts. */
+  getViewportElement: () => HTMLDivElement | null
 }
 
 /** A pending scroll request for the active sheet's grid. */
@@ -510,6 +512,9 @@ function XlsxViewerInner({
     null
   )
   const scrollNonce = React.useRef(0)
+  // The active sheet's scroll element, mirrored up from the (per-sheet keyed)
+  // grid via a callback ref so the imperative handle can expose it.
+  const viewportRef = React.useRef<HTMLDivElement | null>(null)
 
   // The grid body (<XlsxSheet>) reads the workbook and reports its sheet metadata
   // up here, so the shell, toolbar (name/size), and bottom tab bar paint
@@ -539,7 +544,7 @@ function XlsxViewerInner({
     setActiveSheet(index)
     onSheetChange?.(index)
   }
-  const zoom = (factor: number) => setScale((s) => clamp(s * factor, 0.5, 4))
+  const zoom = (factor: number) => setScale((s) => clamp(s * factor, 0.25, 5))
 
   // Imperative handle: switch sheet + queue a scroll. The target sheet's grid is
   // keyed per sheet, so it (re)mounts with the request and scrolls on commit.
@@ -557,6 +562,7 @@ function XlsxViewerInner({
           nonce: scrollNonce.current,
         })
       },
+      getViewportElement: () => viewportRef.current,
     }),
     []
   )
@@ -647,6 +653,7 @@ function XlsxViewerInner({
               activeCell={activeCell}
               scrollReq={scrollReq}
               isolateStyles={isolateStyles}
+              viewportRef={viewportRef}
             />
           </React.Suspense>
         </div>
@@ -692,6 +699,7 @@ function XlsxSheet({
   activeCell,
   scrollReq,
   isolateStyles,
+  viewportRef,
 }: {
   src: string
   activeSheet: number
@@ -700,6 +708,7 @@ function XlsxSheet({
   activeCell?: { sheet: number; row: number; col: number } | null
   scrollReq?: XlsxScrollRequest | null
   isolateStyles: boolean
+  viewportRef?: React.RefObject<HTMLDivElement | null>
 }) {
   const source = React.use(getXlsxSource(src))
 
@@ -736,6 +745,7 @@ function XlsxSheet({
       activeCell={cellInSheet}
       scrollReq={reqInSheet}
       isolateStyles={isolateStyles}
+      viewportRef={viewportRef}
     />
   )
 }
@@ -748,6 +758,7 @@ function SheetGrid({
   activeCell,
   scrollReq,
   isolateStyles,
+  viewportRef,
 }: {
   rowCount: number
   colCount: number
@@ -756,6 +767,8 @@ function SheetGrid({
   activeCell?: { row: number; col: number } | null
   scrollReq?: XlsxScrollRequest | null
   isolateStyles: boolean
+  /** Mirrors this sheet's scroll element up to the viewer's imperative handle. */
+  viewportRef?: React.RefObject<HTMLDivElement | null>
 }) {
   const rowHeight = Math.round(BASE_ROW_HEIGHT * scale)
   const colWidth = Math.round(BASE_COL_WIDTH * scale)
@@ -763,6 +776,15 @@ function SheetGrid({
   const fontSize = BASE_FONT * scale
 
   const scrollRef = React.useRef<HTMLDivElement>(null)
+  // Set scrollRef (for the virtualizers) and mirror the element into the parent's
+  // viewportRef so the handle's getViewportElement tracks the active sheet.
+  const setScrollEl = React.useCallback(
+    (el: HTMLDivElement | null) => {
+      scrollRef.current = el
+      if (viewportRef) viewportRef.current = el
+    },
+    [viewportRef]
+  )
 
   const rowVirtualizer = useVirtualizer({
     count: rowCount,
@@ -853,7 +875,7 @@ function SheetGrid({
           light-DOM path. */}
         <style>{SCROLLBAR_CSS}</style>
         <div
-          ref={scrollRef}
+          ref={setScrollEl}
           data-slot="xlsx-body"
           className="absolute inset-0 overflow-auto"
         >

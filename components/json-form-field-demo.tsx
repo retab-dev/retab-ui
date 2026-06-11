@@ -29,7 +29,12 @@ function stripExtensions(node: unknown): unknown {
 const schema = stripExtensions(sampleSchema) as JSONSchema7
 const defaultValues = sampleData as Record<string, unknown>
 
-export function JsonFormFieldDemo() {
+export function JsonFormFieldDemo({
+  showJsonTab = true,
+}: {
+  /** Hide the Form/JSON toggle and render the form on its own. */
+  showJsonTab?: boolean
+}) {
   const form = useForm<Record<string, unknown>>({
     defaultValues,
     // Validate on blur, not on every keystroke, so deep trees stay responsive.
@@ -37,6 +42,24 @@ export function JsonFormFieldDemo() {
   })
   const [submitted, setSubmitted] = React.useState<unknown>(null)
   const [json, setJson] = React.useState("")
+
+  if (!showJsonTab) {
+    return (
+      <div className="not-prose w-full">
+        <div className="max-h-[640px] overflow-auto rounded-xl border bg-card p-4 shadow-sm">
+          <JsonForm
+            form={form}
+            schema={schema}
+            onSubmit={(data) => setSubmitted(data)}
+          >
+            <Button type="submit" size="sm">
+              Submit
+            </Button>
+          </JsonForm>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <Tabs
@@ -55,7 +78,7 @@ export function JsonFormFieldDemo() {
         <TabsTrigger value="json">JSON</TabsTrigger>
       </TabsList>
       <TabsContent value="form">
-        <div className="max-h-[640px] overflow-auto rounded-xl border bg-card p-4">
+        <div className="max-h-[640px] overflow-auto rounded-xl border bg-card p-4 shadow-sm">
           <JsonForm
             form={form}
             schema={schema}
@@ -68,7 +91,7 @@ export function JsonFormFieldDemo() {
         </div>
       </TabsContent>
       <TabsContent value="json">
-        <pre className="max-h-[640px] overflow-auto rounded-xl border bg-muted/40 p-4 font-mono text-xs">
+        <pre className="max-h-[640px] overflow-auto rounded-xl border bg-muted/40 p-4 font-mono text-xs shadow-sm">
           {json}
         </pre>
       </TabsContent>

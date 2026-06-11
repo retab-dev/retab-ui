@@ -45,25 +45,15 @@ const schema = stripSchemaReasoning(sampleSchema) as unknown as JSONSchema7;
 
 export function JsonTableDemo() {
   const [currentSchema, setSchema] = React.useState<JSONSchema7>(schema);
-  const [editable, setEditable] = React.useState(false);
   return (
-    <div className="not-prose my-6 flex flex-col gap-2">
-      <label className="flex items-center gap-2 text-sm text-muted-foreground">
-        <input
-          type="checkbox"
-          checked={editable}
-          onChange={(e) => setEditable(e.target.checked)}
-          className="size-4 accent-primary"
-        />
-        Editable {editable ? "(double-click a cell to edit)" : "(read-only)"}
-      </label>
-      <div className="flex h-[480px] flex-col overflow-hidden rounded-xl border bg-background">
+    <div className="not-prose flex flex-col gap-2">
+      <div className="flex h-[480px] flex-col overflow-hidden rounded-xl border bg-background shadow-sm">
         <SingleFileTableView
           document={document}
           schema={currentSchema}
           setSchema={setSchema}
-          editMode={editable ? "editable" : "readOnly"}
-          allowEditing={editable}
+          editMode="readOnly"
+          allowEditing={false}
         />
       </div>
     </div>

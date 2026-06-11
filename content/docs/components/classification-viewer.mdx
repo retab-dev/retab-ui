@@ -12,5 +12,7 @@ use, with a single segment rather than bespoke chrome.
 <ClassificationViewerDemo />
 
 The source document is supplied through a `renderDocument` render-prop, which
-receives the `header` (category legend + reasoning) to render below the document
-toolbar — typically a [`PdfViewer`](/docs/components/pdf-viewer).
+receives `{ slots }` — a [`PdfViewerSlots`](/docs/viewers/pdf-viewer) you
+spread onto your document surface, typically a
+[`PdfViewer`](/docs/viewers/pdf-viewer). The category legend mounts in the
+`top` slot, with the classification's reasoning as the legend's `caption`.

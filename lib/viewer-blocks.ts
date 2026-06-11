@@ -4,10 +4,8 @@
 // files feed the Code view.
 
 type ViewerBlockCategoryId =
-  | "documents"
   | "primitives"
   | "sources"
-  | "legends"
   | "run-cards"
   | "workflows"
 
@@ -31,10 +29,8 @@ type ViewerBlockConfig = {
 /** The filter tabs shown above the blocks (shadcn-style). */
 export const VIEWER_BLOCK_CATEGORIES = [
   { id: "featured", label: "Featured" },
-  { id: "documents", label: "Documents" },
   { id: "sources", label: "Sources" },
   { id: "primitives", label: "Primitives" },
-  { id: "legends", label: "Legends" },
   { id: "run-cards", label: "Run Cards" },
   { id: "workflows", label: "Workflows" },
 ] as const
@@ -68,19 +64,6 @@ export const VIEWER_BLOCKS = [
     command: getRegistryAddCommand("partition-viewer-block"),
     docsHref: "/docs/components/partition-viewer",
     viewHref: "/view/blocks/partition",
-    featured: true,
-    categories: ["primitives"],
-  },
-  {
-    id: "classification",
-    registryName: "classification-viewer-block",
-    title: "Classification Viewer",
-    description:
-      "A single category over a PDF, shown as one segment in the legend — the same file + legend system with a single segment.",
-    command: getRegistryAddCommand("classification-viewer-block"),
-    docsHref: "/docs/components/classification-viewer",
-    viewHref: "/view/blocks/classification",
-    featured: true,
     categories: ["primitives"],
   },
   {
@@ -96,6 +79,19 @@ export const VIEWER_BLOCKS = [
     categories: ["primitives"],
   },
   {
+    id: "extraction-viewer",
+    registryName: "extraction-viewer-block",
+    title: "Extraction Viewer",
+    description:
+      "Every extraction format in one viewer — PDF, image, text, CSV, Excel, and Word — each shown as a JSON form beside its source document, linked by their sources. Tabs switch the file format; hovering a form field highlights where its value came from. One useSourceLink mediator drives every viewer; only the viewer + its source adapter differ per tab.",
+    command: getRegistryAddCommand("extraction-viewer-block"),
+    docsHref: "/docs/components/extract-viewer",
+    viewHref: "/view/blocks/extraction-viewer",
+    featured: true,
+    previewHeightClassName: "h-[724px]",
+    categories: ["sources"],
+  },
+  {
     id: "extract",
     registryName: "extract-viewer-block",
     title: "Extract Viewer",
@@ -104,8 +100,7 @@ export const VIEWER_BLOCKS = [
     command: getRegistryAddCommand("extract-viewer-block"),
     docsHref: "/docs/components/extract-viewer",
     viewHref: "/view/blocks/extract",
-    featured: true,
-    categories: ["sources"],
+    categories: [],
   },
   {
     id: "json-form-sources",
@@ -128,7 +123,7 @@ export const VIEWER_BLOCKS = [
     command: getRegistryAddCommand("image-sources-block"),
     docsHref: "/docs/components/extract-viewer",
     viewHref: "/view/blocks/image-sources",
-    categories: ["sources"],
+    categories: [],
   },
   {
     id: "text-sources",
@@ -139,7 +134,7 @@ export const VIEWER_BLOCKS = [
     command: getRegistryAddCommand("text-sources-block"),
     docsHref: "/docs/components/extract-viewer",
     viewHref: "/view/blocks/text-sources",
-    categories: ["sources"],
+    categories: [],
   },
   {
     id: "csv-sources",
@@ -150,7 +145,7 @@ export const VIEWER_BLOCKS = [
     command: getRegistryAddCommand("csv-sources-block"),
     docsHref: "/docs/components/extract-viewer",
     viewHref: "/view/blocks/csv-sources",
-    categories: ["sources"],
+    categories: [],
   },
   {
     id: "xlsx-sources",
@@ -161,7 +156,18 @@ export const VIEWER_BLOCKS = [
     command: getRegistryAddCommand("xlsx-sources-block"),
     docsHref: "/docs/components/extract-viewer",
     viewHref: "/view/blocks/xlsx-sources",
-    categories: ["sources"],
+    categories: [],
+  },
+  {
+    id: "docx-sources",
+    registryName: "docx-sources-block",
+    title: "DOCX Sources",
+    description:
+      "Extracted values linked back into a Word document — hover a field to highlight its text and scroll to it. The source-link abstraction over the docx viewer, locating text spans by content match and table cells by index.",
+    command: getRegistryAddCommand("docx-sources-block"),
+    docsHref: "/docs/components/extract-viewer",
+    viewHref: "/view/blocks/docx-sources",
+    categories: [],
   },
   {
     id: "primitive-cards",
@@ -176,24 +182,13 @@ export const VIEWER_BLOCKS = [
     categories: ["run-cards"],
   },
   {
-    id: "legend-variants",
-    registryName: "legend-variants-block",
-    title: "Legend Variants",
-    description:
-      "Every legend placement — bar, floating, inset, and a vertical rail — shown on the real split and partition document with page color overlays. One SegmentLegend drives each panel; only variant/orientation/side differ, and a shared selection dims the matching pages across all four at once.",
-    command: getRegistryAddCommand("legend-variants-block"),
-    docsHref: "/docs/components/segmented-viewer",
-    viewHref: "/view/blocks/legend-variants",
-    categories: ["legends", "primitives"],
-  },
-  {
     id: "pdf-thumbnails",
     registryName: "pdf-thumbnails-block",
     title: "PDF Thumbnails",
     description:
       "A PDF viewer with a toggleable page-thumbnail sidebar in the aside slot. Thumbnails render lazily as they scroll into view, highlight the current page, and jump on click.",
     command: getRegistryAddCommand("pdf-thumbnails-block"),
-    docsHref: "/docs/components/pdf-viewer",
+    docsHref: "/docs/viewers/pdf-viewer",
     viewHref: "/view/blocks/pdf-thumbnails",
     featured: true,
     categories: ["primitives"],

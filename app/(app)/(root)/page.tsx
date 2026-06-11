@@ -10,7 +10,7 @@ import {
 } from "@/components/page-header"
 import { HomeShowcase } from "./showcase"
 
-const title = "UI primitives for document workflows"
+const title = "The Foundation for your Document Workflows"
 const description =
   "Lightweight, virtualized React viewers for documents and structured data. Fast by default, built for scale, copy and paste into your apps."
 
@@ -58,7 +58,7 @@ export default function IndexPage() {
           <rect x="58" y="54" width="152" height="54" />
           <rect x="58" y="162" width="152" height="54" />
         </svg>
-        <PageHeaderHeading className="mt-2 max-w-4xl sm:mt-3">
+        <PageHeaderHeading className="mt-2 max-w-none sm:mt-3 lg:text-nowrap">
           {title}
         </PageHeaderHeading>
         <PageHeaderDescription>{description}</PageHeaderDescription>

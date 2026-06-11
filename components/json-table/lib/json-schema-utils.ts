@@ -455,7 +455,6 @@ export function get_value_from_row_array_and_dot_notation_path(
 
   const segments = path.split(".");
 
-  //console.log("Getting value from row array and dot notation path", path)
 
   /**
    * Depth‑first traversal that respects "*" wildcards.

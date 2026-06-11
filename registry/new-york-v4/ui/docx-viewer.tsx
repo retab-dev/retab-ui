@@ -78,6 +78,31 @@ function useIsClient() {
 
 // --- public API --------------------------------------------------------------
 
+/**
+ * Imperative handle for driving the viewer from outside (e.g. scroll to the
+ * source of a hovered field). Obtain it with a `ref` on `<DocxViewer>`.
+ */
+/**
+ * A resolved, viewer-ready locator for a docx source — what the `docx-source`
+ * adapter produces from an anchor (mirroring how the PDF adapter produces a page
+ * `{ page, area }`). The viewer does the DOM resolution, since only it holds the
+ * rendered document: a cell by index, or text by content match.
+ */
+export type DocxTarget =
+  | { kind: "text"; text: string }
+  | { kind: "cell"; table: number; row: number; column: number }
+
+export interface DocxViewerHandle {
+  /**
+   * Scroll the element backing a resolved target into view. No-op if it can't be
+   * located. Like the other viewers, this takes resolved coordinates (the adapter
+   * turns an anchor into a `DocxTarget`), not a raw source.
+   */
+  scrollToTarget: (target: DocxTarget, options?: ScrollToOptions) => void
+  /** The scrolling viewport element, or null before the document renders. */
+  getViewportElement: () => HTMLDivElement | null
+}
+
 export interface DocxViewerProps {
   /** URL of the .docx (same-origin or CORS-enabled). */
   src: string
@@ -86,6 +111,12 @@ export interface DocxViewerProps {
   scale?: number
   toolbar?: boolean
   downloadFileName?: string
+  /**
+   * A resolved target to highlight in the document. Feed
+   * `useSourceLink(...).activeSource` through the `docx-source` adapter's
+   * `sourceToDocxHighlight`.
+   */
+  highlight?: DocxTarget | null
   /** Fired with the 1-based page nearest the top of the viewport as you scroll. */
   onVisiblePageChange?: (page: number) => void
   /** Fired with scroll progress in [0, 1] (for a fine-grained scroll cursor). */
@@ -98,21 +129,100 @@ export interface DocxViewerProps {
   aside?: React.ReactNode
 }
 
-export function DocxViewer(props: DocxViewerProps) {
-  const isClient = useIsClient()
-  if (!isClient) {
-    return <DocxViewerFallback className={props.className} bare={props.bare} />
-  }
-  return (
-    <DocxErrorBoundary className={props.className} resetKey={props.src}>
-      <React.Suspense
-        fallback={<DocxViewerFallback className={props.className} bare={props.bare} />}
-      >
-        <DocxViewerInner {...props} />
-      </React.Suspense>
-    </DocxErrorBoundary>
-  )
+// --- source locating ---------------------------------------------------------
+// docx-preview renders flowed, paginated HTML with no anchor indices, so a source
+// is located in the rendered DOM: table cells by their structural index (reliable
+// — docx-preview preserves table/row/cell order), text spans by matching the
+// source's quoted `content` (robust to paragraph-index drift between the backend's
+// docx parser and the renderer). Both yield a Range the viewer scrolls/highlights.
+
+/** A Range over the contents of the (table, row, column)-indexed cell, or null. */
+function tableCellRange(
+  root: HTMLElement,
+  table: number,
+  row: number,
+  column: number
+): Range | null {
+  const t = root.querySelectorAll("table")[table] as
+    | HTMLTableElement
+    | undefined
+  const cell = t?.rows[row]?.cells[column]
+  if (!cell) return null
+  const range = document.createRange()
+  range.selectNodeContents(cell)
+  return range
 }
+
+/** A Range over the first whitespace-insensitive match of `query` in `root`, or null. */
+function textContentRange(root: HTMLElement, query: string): Range | null {
+  const needle = query.replace(/\s+/g, " ").trim()
+  if (!needle) return null
+  // Concatenate the visible text, collapsing whitespace runs to a single space,
+  // and remember each normalized character's source (text node + offset) so a
+  // match maps back to a DOM Range — even when it spans multiple run <span>s.
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
+  let normalized = ""
+  const at: { node: Text; offset: number }[] = []
+  let prevSpace = false
+  for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+    const data = (n as Text).data
+    for (let i = 0; i < data.length; i++) {
+      if (/\s/.test(data[i])) {
+        if (prevSpace) continue
+        prevSpace = true
+        normalized += " "
+      } else {
+        prevSpace = false
+        normalized += data[i]
+      }
+      at.push({ node: n as Text, offset: i })
+    }
+  }
+  const idx = normalized.indexOf(needle)
+  if (idx === -1) return null
+  const start = at[idx]
+  const end = at[idx + needle.length - 1]
+  if (!start || !end) return null
+  const range = document.createRange()
+  range.setStart(start.node, start.offset)
+  range.setEnd(end.node, end.offset + 1)
+  return range
+}
+
+/** Resolve a target to a DOM Range in the rendered document, or null. */
+function targetRange(root: HTMLElement, target: DocxTarget): Range | null {
+  return target.kind === "cell"
+    ? tableCellRange(root, target.table, target.row, target.column)
+    : textContentRange(root, target.text)
+}
+
+/** Stable value key for a target, so the highlight effect re-runs on change only. */
+function targetKey(target: DocxTarget | null | undefined): string | null {
+  if (!target) return null
+  return target.kind === "cell"
+    ? `cell:${target.table}:${target.row}:${target.column}`
+    : `text:${target.text}`
+}
+
+export const DocxViewer = React.forwardRef<DocxViewerHandle, DocxViewerProps>(
+  function DocxViewer(props, ref) {
+    const isClient = useIsClient()
+    if (!isClient) {
+      return <DocxViewerFallback className={props.className} bare={props.bare} />
+    }
+    return (
+      <DocxErrorBoundary className={props.className} resetKey={props.src}>
+        <React.Suspense
+          fallback={
+            <DocxViewerFallback className={props.className} bare={props.bare} />
+          }
+        >
+          <DocxViewerInner {...props} forwardedRef={ref} />
+        </React.Suspense>
+      </DocxErrorBoundary>
+    )
+  }
+)
 
 function DocxViewerInner({
   src,
@@ -125,7 +235,11 @@ function DocxViewerInner({
   bare = false,
   header,
   aside,
-}: DocxViewerProps) {
+  highlight,
+  forwardedRef,
+}: DocxViewerProps & {
+  forwardedRef?: React.ForwardedRef<DocxViewerHandle>
+}) {
   const buffer = React.use(getDocxResource(src))
 
   const [manualScale, setManualScale] = React.useState<number | null>(
@@ -270,6 +384,59 @@ function DocxViewerInner({
 
   const zoom = (factor: number) => setManualScale(clamp(scale * factor, 0.25, 5))
 
+  // CSS Custom Highlight API: mark the active source's Range without mutating
+  // docx-preview's DOM (wrapping nodes would disturb its layout). The registry is
+  // global and keyed by name, so each instance uses a unique name + its own
+  // `::highlight()` rule (injected in the JSX) to avoid cross-instance collisions.
+  const highlightName = "docx-src-" + React.useId().replace(/:/g, "")
+  // Keyed on the target's value, not its identity: the adapter builds a fresh
+  // DocxTarget object each render, so an identity dep would re-run every render.
+  const highlightKey = targetKey(highlight)
+  React.useEffect(() => {
+    const host = hostRef.current
+    const registry =
+      typeof CSS !== "undefined" && "highlights" in CSS ? CSS.highlights : null
+    if (!registry || typeof Highlight === "undefined" || !host) return
+    // Re-runs when the doc becomes `ready`, so a highlight set before render lands.
+    if (!highlight || !ready) {
+      registry.delete(highlightName)
+      return
+    }
+    const range = targetRange(host, highlight)
+    if (range) registry.set(highlightName, new Highlight(range))
+    else registry.delete(highlightName)
+    return () => {
+      registry.delete(highlightName)
+    }
+    // highlight is read but the value-key gates re-runs; identity would thrash.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [highlightKey, ready, highlightName])
+
+  // Imperative handle: scroll the element backing a resolved target into view.
+  // `scrollIntoView` (not manual math) so it also reveals content on
+  // `content-visibility: auto` pages, whose off-screen geometry isn't measurable.
+  React.useImperativeHandle(
+    forwardedRef,
+    () => ({
+      scrollToTarget: (target, options) => {
+        const host = hostRef.current
+        if (!host) return
+        const node = targetRange(host, target)?.startContainer
+        const el =
+          node?.nodeType === Node.ELEMENT_NODE
+            ? (node as HTMLElement)
+            : (node?.parentElement ?? null)
+        el?.scrollIntoView({
+          block: "center",
+          inline: "nearest",
+          behavior: options?.behavior ?? "smooth",
+        })
+      },
+      getViewportElement: () => scrollViewportRef.current,
+    }),
+    []
+  )
+
   return (
     <div
       className={cn(
@@ -280,6 +447,8 @@ function DocxViewerInner({
       data-slot="docx-viewer"
     >
       <style>{SCOPED_STYLES}</style>
+      {/* Per-instance source-highlight tint (CSS Custom Highlight API). */}
+      <style>{`::highlight(${highlightName}){background-color:color-mix(in oklab, var(--primary) 22%, transparent);}`}</style>
       {toolbar ? (
         <div className="flex h-10 flex-shrink-0 items-center gap-1 border-b bg-card px-2">
           <span className="px-1 text-xs text-muted-foreground tabular-nums">
