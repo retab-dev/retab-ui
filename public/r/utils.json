@@ -1,0 +1,19 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "utils",
+  "title": "Utils",
+  "description": "Shared class name helper used by Retab UI registry components.",
+  "dependencies": [
+    "clsx@^2.1.1",
+    "tailwind-merge@^3.3.1"
+  ],
+  "files": [
+    {
+      "path": "registry/new-york-v4/lib/utils.ts",
+      "content": "import { clsx, type ClassValue } from \"clsx\"\nimport { twMerge } from \"tailwind-merge\"\n\nexport function cn(...inputs: ClassValue[]) {\n  return twMerge(clsx(inputs))\n}\n",
+      "type": "registry:lib",
+      "target": "@lib/utils.ts"
+    }
+  ],
+  "type": "registry:lib"
+}

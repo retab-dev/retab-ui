@@ -1,0 +1,22 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "resizable",
+  "title": "Resizable",
+  "description": "Resizable panel primitives using react-resizable-panels.",
+  "dependencies": [
+    "lucide-react",
+    "react-resizable-panels@^4.11.2"
+  ],
+  "registryDependencies": [
+    "utils"
+  ],
+  "files": [
+    {
+      "path": "components/ui/resizable.tsx",
+      "content": "\"use client\"\n\nimport * as React from \"react\"\nimport type { ReactNode } from \"react\"\nimport { GripVertical } from \"lucide-react\"\nimport * as ResizablePrimitive from \"react-resizable-panels\"\n\nimport { cn } from \"@/lib/utils\"\n\nfunction ResizablePanelGroup({\n  className,\n  ...props\n}: ResizablePrimitive.GroupProps) {\n  return (\n    <ResizablePrimitive.Group\n      data-slot=\"resizable-panel-group\"\n      className={cn(\n        \"flex h-full w-full aria-[orientation=vertical]:flex-col\",\n        className\n      )}\n      {...props}\n    />\n  )\n}\n\nconst ResizablePanel = React.forwardRef<\n  ResizablePrimitive.PanelImperativeHandle,\n  ResizablePrimitive.PanelProps\n>(function ResizablePanel(props, ref) {\n  return (\n    <ResizablePrimitive.Panel\n      data-slot=\"resizable-panel\"\n      panelRef={ref}\n      {...props}\n    />\n  )\n})\n\nfunction ResizableHandle({\n  withHandle,\n  className,\n  ...props\n}: ResizablePrimitive.SeparatorProps & {\n  withHandle?: boolean | ReactNode\n}) {\n  return (\n    <ResizablePrimitive.Separator\n      data-slot=\"resizable-handle\"\n      className={cn(\n        \"flex items-center justify-center\",\n        \"relative isolate w-px bg-border\",\n        \"after:absolute after:inset-y-0 after:left-1/2 after:z-20 after:w-3 after:-translate-x-1/2\",\n        \"focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:outline-hidden\",\n        \"aria-[orientation=horizontal]:h-px aria-[orientation=horizontal]:w-full [&[aria-orientation=horizontal]>div]:rotate-90\",\n        \"aria-[orientation=horizontal]:after:left-0 aria-[orientation=horizontal]:after:h-3 aria-[orientation=horizontal]:after:w-full aria-[orientation=horizontal]:after:translate-x-0 aria-[orientation=horizontal]:after:-translate-y-1/2\",\n        className\n      )}\n      {...props}\n    >\n      {withHandle &&\n        (typeof withHandle === \"boolean\" ? (\n          <div className=\"relative z-30 flex h-4 w-3 items-center justify-center rounded-xs border bg-background text-foreground opacity-100 shadow-sm\">\n            <GripVertical className=\"size-2.5\" />\n          </div>\n        ) : (\n          withHandle\n        ))}\n    </ResizablePrimitive.Separator>\n  )\n}\n\nexport { ResizableHandle, ResizablePanel, ResizablePanelGroup }\n",
+      "type": "registry:ui",
+      "target": "@ui/resizable.tsx"
+    }
+  ],
+  "type": "registry:ui"
+}

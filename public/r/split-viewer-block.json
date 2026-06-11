@@ -1,0 +1,45 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "split-viewer-block",
+  "title": "Split Viewer",
+  "description": "Named subdocuments over a PDF: a legend header and a vertical page-ribbon sidebar, from the shared segment primitives.",
+  "dependencies": [
+    "lucide-react"
+  ],
+  "registryDependencies": [
+    "pdf-viewer",
+    "segment-legend",
+    "page-ribbon",
+    "segments"
+  ],
+  "files": [
+    {
+      "path": "registry/new-york-v4/blocks/split-viewer-block.tsx",
+      "content": "\"use client\"\n\nimport type { SplitView } from \"@/components/viewers/lib/split-types\"\nimport { SplitViewer } from \"@/components/viewers/split/split-viewer\"\nimport { PdfViewer } from \"@/components/ui/pdf-viewer\"\n\nconst PDF_URL = \"/samples/attention.pdf\"\n\n// A split result: named subdocuments, each owning a 1-indexed page range.\nconst SPLIT_RESULT: SplitView = {\n  output: [\n    { name: \"Title & Abstract\", pages: [1] },\n    { name: \"Introduction\", pages: [2, 3] },\n    { name: \"Model Architecture\", pages: [4, 5, 6] },\n    { name: \"Results\", pages: [7, 8] },\n    { name: \"References\", pages: [9, 10, 11] },\n  ],\n}\n\n/**\n * Split viewer block — the file + sidebar + legend system over a split result.\n * `SplitViewer` owns the chrome (legend header + page-ribbon aside) and hands it\n * to whatever document surface you render; here that's the `PdfViewer`.\n */\nexport function SplitViewerBlock() {\n  return (\n    <div className=\"flex h-full min-h-[680px] flex-col bg-background\">\n      <SplitViewer\n        result={SPLIT_RESULT}\n        renderDocument={(handlers) => (\n          <PdfViewer\n            src={PDF_URL}\n            bare\n            downloadFileName=\"attention.pdf\"\n            header={handlers.header}\n            aside={handlers.aside}\n            onVisiblePageChange={handlers.onCurrentPageChange}\n            onScrollProgressChange={handlers.onScrollProgressChange}\n            className=\"h-full\"\n          />\n        )}\n      />\n    </div>\n  )\n}\n",
+      "type": "registry:component",
+      "target": "@components/blocks/split-viewer-block.tsx"
+    },
+    {
+      "path": "components/viewers/split/split-viewer.tsx",
+      "content": "\"use client\";\n\nimport {\n  useCallback,\n  useMemo,\n  useRef,\n  useState,\n  type ReactNode,\n} from \"react\";\nimport { Loader2, Scissors } from \"lucide-react\";\n\nimport { type SplitView } from \"@/components/viewers/lib/split-types\";\nimport { segmentsPageCount, toSegments } from \"@/lib/segments\";\nimport { SegmentLegend } from \"@/components/ui/segment-legend\";\nimport { PageRibbon } from \"@/components/ui/page-ribbon\";\n\n/**\n * Handlers a document surface receives. `header` (the legend) and `aside` (the\n * page ribbon) are the viewer's chrome — the surface renders them around the\n * document so the document's own controls stay on top.\n */\nexport interface SplitDocumentHandlers {\n  onCurrentPageChange: (page: number) => void;\n  onScrollProgressChange: (progress: number) => void;\n  header: ReactNode;\n  aside: ReactNode;\n}\n\nexport interface SplitViewerProps {\n  result: SplitView | null;\n  isProcessing?: boolean;\n  renderDocument?: (handlers: SplitDocumentHandlers) => ReactNode;\n}\n\nexport function SplitViewer({\n  result,\n  isProcessing = false,\n  renderDocument,\n}: SplitViewerProps) {\n  const [currentPage, setCurrentPage] = useState(1);\n  const [scrollProgress, setScrollProgress] = useState(0);\n  const [activeId, setActiveId] = useState<string | null>(null);\n  const previewRef = useRef<HTMLDivElement | null>(null);\n  const hasOutput = !!result && result.output.length > 0;\n\n  const segments = useMemo(\n    () => toSegments(result?.output ?? []),\n    [result?.output],\n  );\n  const pageCount = useMemo(() => segmentsPageCount(segments), [segments]);\n\n  const handleJumpToPage = useCallback((page: number) => {\n    previewRef.current\n      ?.querySelector<HTMLElement>(`[data-page-number=\"${page}\"]`)\n      ?.scrollIntoView({ behavior: \"smooth\", block: \"start\" });\n  }, []);\n\n  if (!hasOutput) {\n    return (\n      <div className=\"flex h-full flex-1 flex-col items-center justify-center gap-4 bg-muted px-8 text-muted-foreground\">\n        {isProcessing ? (\n          <>\n            <Loader2 className=\"h-12 w-12 animate-spin text-warning-foreground\" />\n            <p className=\"text-center text-base text-muted-foreground\">Splitting...</p>\n          </>\n        ) : (\n          <>\n            <Scissors className=\"h-16 w-16 text-muted-foreground\" />\n            <p className=\"text-center text-base text-muted-foreground\">\n              Run split to see output\n            </p>\n            <p className=\"max-w-sm text-center text-sm text-muted-foreground\">\n              Upload a document, define subdocuments, then click Run Split\n            </p>\n          </>\n        )}\n      </div>\n    );\n  }\n\n  // The legend sits below the document toolbar; the ribbon is the left rail.\n  const header = (\n    <SegmentLegend\n      segments={segments}\n      currentPage={currentPage}\n      activeId={activeId}\n      onActivate={setActiveId}\n      onSelect={(id) => {\n        const seg = segments.find((s) => s.id === id);\n        if (seg?.pages.length) handleJumpToPage(seg.pages[0]);\n      }}\n      columns={4}\n      showUnusedToggle\n    />\n  );\n\n  const aside =\n    pageCount > 0 ? (\n      <div className=\"h-full overflow-auto border-r border-border bg-background px-3 py-6\">\n        <PageRibbon\n          orientation=\"vertical\"\n          rows={[{ id: \"split\", segments }]}\n          pageCount={pageCount}\n          currentPage={currentPage}\n          scrollProgress={scrollProgress}\n          activeId={activeId}\n          onActivate={setActiveId}\n          onSelectPage={handleJumpToPage}\n          showTicks\n        />\n      </div>\n    ) : null;\n\n  return (\n    <div ref={previewRef} className=\"flex min-h-0 flex-1 bg-background\">\n      {renderDocument ? (\n        renderDocument({\n          onCurrentPageChange: setCurrentPage,\n          onScrollProgressChange: setScrollProgress,\n          header,\n          aside,\n        })\n      ) : (\n        <div className=\"flex h-full flex-1 items-center justify-center\">\n          <span className=\"text-sm text-muted-foreground\">No document available</span>\n        </div>\n      )}\n    </div>\n  );\n}\n",
+      "type": "registry:component",
+      "target": "@components/viewers/split/split-viewer.tsx"
+    },
+    {
+      "path": "components/viewers/lib/split-types.ts",
+      "content": "// Split result shapes (the structural subset the viewer needs), mirrored from\n// the Retab dashboard's SplitView.\n\nimport type { PartitionChunk } from \"@/components/viewers/lib/partition-types\"\n\nexport interface SplitResult {\n  name: string\n  /** 1-indexed pages assigned to this subdocument. */\n  pages: number[]\n  /** Frontend-only overlay carried through by the split viewer. */\n  partitions?: PartitionChunk[]\n}\n\nexport interface SplitViewConsensus {\n  choices?: SplitResult[][]\n  likelihoods?: unknown[] | null\n}\n\nexport interface SplitView {\n  output: SplitResult[]\n  consensus?: SplitViewConsensus | null\n  usage?: { credits: number } | null\n}\n\nexport function asSplitView(\n  payload: { output?: unknown; consensus?: unknown; usage?: unknown } | null | undefined,\n): SplitView | null {\n  if (!payload || !Array.isArray(payload.output)) return null\n  return {\n    output: payload.output as SplitResult[],\n    consensus: (payload.consensus ?? null) as SplitViewConsensus | null,\n    usage: (payload.usage ?? null) as SplitView[\"usage\"],\n  }\n}\n\nexport function getSplitVotes(\n  splitView: SplitView | null | undefined,\n  splitIndex: number,\n): SplitResult[] {\n  const choices = splitView?.consensus?.choices\n  if (!choices?.length) return []\n  return choices.flatMap((choice) => {\n    const split = choice[splitIndex]\n    return split ? [split] : []\n  })\n}\n",
+      "type": "registry:lib",
+      "target": "@components/viewers/lib/split-types.ts"
+    },
+    {
+      "path": "components/viewers/lib/partition-types.ts",
+      "content": "// Partition result shapes, mirrored from the Retab API / dashboard.\n\nexport interface PartitionChunk {\n  key: string\n  /** 1-indexed pages assigned to this chunk. */\n  pages: number[]\n}\n\nexport interface PartitionChunkLikelihood {\n  key: number | null\n  pages: number[]\n}\n\nexport interface PartitionConsensus {\n  choices: PartitionChunk[][]\n  likelihoods: PartitionChunkLikelihood[] | null\n}\n\nexport interface PartitionUsage {\n  credits: number\n}\n\nexport interface PartitionResult {\n  output: PartitionChunk[]\n  consensus: PartitionConsensus\n  usage: PartitionUsage | null\n}\n",
+      "type": "registry:lib",
+      "target": "@components/viewers/lib/partition-types.ts"
+    }
+  ],
+  "categories": [
+    "primitives"
+  ],
+  "type": "registry:block"
+}

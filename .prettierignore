@@ -3,6 +3,6 @@ node_modules
 .next
 build
 .contentlayer
-**/fixtures
-deprecated
-apps/v4/registry/styles/**/*.css
+registry/__index__.tsx
+content/docs/components/calendar.mdx
+registry/styles/**/*.css

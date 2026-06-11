@@ -1,0 +1,20 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "image-source",
+  "title": "Image source adapter",
+  "description": "Bridges the document-source model to the image viewer: imageAnchorToArea, useImageSourceTarget, and renderImageSourceOverlay for image_bbox anchors.",
+  "registryDependencies": [
+    "image-viewer",
+    "document-source",
+    "use-source-link"
+  ],
+  "files": [
+    {
+      "path": "registry/new-york-v4/ui/image-source.tsx",
+      "content": "\"use client\"\n\nimport * as React from \"react\"\n\nimport type { Source, SourceAnchor, SourceArea } from \"@/lib/document-source\"\nimport type { SourceTarget } from \"@/hooks/use-source-link\"\nimport {\n  type ImagePageOverlayProps,\n  type ImageViewerHandle,\n} from \"@/components/ui/image-viewer\"\n\nconst HIGHLIGHT_CLASS =\n  \"pointer-events-none absolute z-10 rounded-[2px] border border-primary/70 bg-primary/12 shadow-[0_4px_16px_rgb(0_0_0_/_8%)]\"\n\n/** A normalized image/pdf bbox anchor → a percentage box on the frame. */\nexport function imageAnchorToArea(\n  anchor: SourceAnchor\n): SourceArea | undefined {\n  if (anchor.kind === \"image_bbox\" || anchor.kind === \"pdf_bbox\") {\n    return {\n      left: anchor.left * 100,\n      top: anchor.top * 100,\n      width: anchor.width * 100,\n      height: anchor.height * 100,\n    }\n  }\n  return undefined\n}\n\n/** A stable `SourceTarget` over an `ImageViewer` ref — pass to `useSourceLink`. */\nexport function useImageSourceTarget(\n  viewerRef: React.RefObject<ImageViewerHandle | null>\n): SourceTarget {\n  return React.useMemo<SourceTarget>(\n    () => ({\n      scrollTo: (source: Source, options) => {\n        const area = imageAnchorToArea(source.anchor)\n        if (area) viewerRef.current?.scrollToFrameArea(1, area, options)\n      },\n    }),\n    [viewerRef]\n  )\n}\n\n/**\n * Build a `renderPageOverlay` callback that draws the active source highlight on\n * the image. Pass `useSourceLink(...).activeSource` straight in.\n */\nexport function renderImageSourceOverlay(\n  source: Source | undefined\n): (props: ImagePageOverlayProps) => React.ReactNode {\n  const area = source ? imageAnchorToArea(source.anchor) : undefined\n  return function ImageSourceOverlay({ pageNumber }: ImagePageOverlayProps) {\n    if (!area || pageNumber !== 1) return null\n    return (\n      <div\n        className={HIGHLIGHT_CLASS}\n        style={{\n          left: `${area.left}%`,\n          top: `${area.top}%`,\n          width: `${area.width}%`,\n          height: `${area.height}%`,\n        }}\n      />\n    )\n  }\n}\n",
+      "type": "registry:ui",
+      "target": "@ui/image-source.tsx"
+    }
+  ],
+  "type": "registry:ui"
+}

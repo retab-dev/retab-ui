@@ -1,0 +1,20 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "sonner",
+  "title": "Sonner",
+  "description": "A themed toast provider for Sonner.",
+  "dependencies": [
+    "lucide-react",
+    "next-themes@0.4.6",
+    "sonner@^2.0.0"
+  ],
+  "files": [
+    {
+      "path": "registry/new-york-v4/ui/sonner.tsx",
+      "content": "\"use client\"\n\nimport { CircleCheck, CircleX, Info, Loader2, TriangleAlert } from \"lucide-react\"\nimport { useTheme } from \"next-themes\"\nimport { Toaster as Sonner, type ToasterProps } from \"sonner\"\n\nconst Toaster = ({ ...props }: ToasterProps) => {\n  const { theme = \"system\" } = useTheme()\n\n  return (\n    <Sonner\n      theme={theme as ToasterProps[\"theme\"]}\n      className=\"toaster group\"\n      icons={{\n        success: <CircleCheck className=\"size-4\" />,\n        info: <Info className=\"size-4\" />,\n        warning: <TriangleAlert className=\"size-4\" />,\n        error: <CircleX className=\"size-4\" />,\n        loading: <Loader2 className=\"size-4 animate-spin\" />,\n      }}\n      style={\n        {\n          \"--normal-bg\": \"var(--popover)\",\n          \"--normal-text\": \"var(--popover-foreground)\",\n          \"--normal-border\": \"var(--border)\",\n          \"--border-radius\": \"var(--radius)\",\n        } as React.CSSProperties\n      }\n      {...props}\n    />\n  )\n}\n\nexport { Toaster }\n",
+      "type": "registry:ui",
+      "target": "@ui/sonner.tsx"
+    }
+  ],
+  "type": "registry:ui"
+}

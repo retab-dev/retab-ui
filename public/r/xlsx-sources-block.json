@@ -1,0 +1,32 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "xlsx-sources-block",
+  "title": "Excel Sources",
+  "description": "Extracted values linked to spreadsheet cells across sheets — hover to switch sheet, highlight the cell, and scroll to it.",
+  "registryDependencies": [
+    "xlsx-viewer",
+    "xlsx-source",
+    "use-source-link",
+    "document-source",
+    "source-field-list",
+    "source-indicator"
+  ],
+  "files": [
+    {
+      "path": "registry/new-york-v4/blocks/xlsx-sources-block.tsx",
+      "content": "\"use client\"\n\nimport * as React from \"react\"\n\nimport type { Source, SourceMap } from \"@/lib/document-source\"\nimport { useSourceLink } from \"@/hooks/use-source-link\"\nimport {\n  SourceFieldList,\n  type SourceField,\n} from \"@/components/ui/source-field-list\"\nimport { SourceIndicator } from \"@/components/ui/source-indicator\"\nimport {\n  sourceToXlsxCell,\n  useXlsxSourceTarget,\n} from \"@/components/ui/xlsx-source\"\nimport { XlsxViewer, type XlsxViewerHandle } from \"@/components/ui/xlsx-viewer\"\nimport xlsxSample from \"@/components/viewers/sample-data/xlsx-sources.json\"\n\nconst XLSX_URL = \"/samples/nvidia-financials-fy2024.xlsx\"\n\ntype XlsxField = SourceField & { source: Source }\n\nconst FIELDS = (xlsxSample as XlsxField[]).map((field) => ({\n  ...field,\n  hint:\n    field.source.anchor.kind === \"spreadsheet_cell\"\n      ? `${field.source.anchor.sheet_name ?? `Sheet ${field.source.anchor.sheet_index + 1}`} · ${field.source.anchor.coordinate ?? \"\"}`\n      : undefined,\n}))\nconst SOURCES: SourceMap = Object.fromEntries(\n  FIELDS.map((field) => [field.key, field.source])\n)\n\n/**\n * Excel sources block — extracted values linked to the spreadsheet cells they\n * came from, across sheets. Hovering a field switches to its sheet, highlights\n * the cell, and scrolls to it. Same source-link abstraction, with the xlsx\n * viewer's sheet-aware cell handle + the spreadsheet_cell adapter.\n */\nexport function XlsxSourcesBlock() {\n  const viewerRef = React.useRef<XlsxViewerHandle>(null)\n  const target = useXlsxSourceTarget(viewerRef)\n  const link = useSourceLink({ sources: SOURCES, target })\n\n  React.useEffect(() => {\n    if (FIELDS[0]) link.selectField(FIELDS[0].key)\n    // eslint-disable-next-line react-hooks/exhaustive-deps\n  }, [])\n\n  return (\n    <div className=\"flex h-full min-h-[680px] bg-background\">\n      <div className=\"relative min-w-0 flex-1\">\n        <XlsxViewer\n          ref={viewerRef}\n          src={XLSX_URL}\n          bare\n          downloadFileName=\"nvidia-financials-fy2024.xlsx\"\n          className=\"h-full\"\n          activeCell={sourceToXlsxCell(link.activeSource)}\n        />\n        <SourceIndicator path={link.activePath} found={!!link.activeSource} />\n      </div>\n      <SourceFieldList fields={FIELDS} link={link} />\n    </div>\n  )\n}\n",
+      "type": "registry:component",
+      "target": "@components/blocks/xlsx-sources-block.tsx"
+    },
+    {
+      "path": "components/viewers/sample-data/xlsx-sources.json",
+      "content": "[\n  {\n    \"key\": \"registrantName\",\n    \"label\": \"Registrant name\",\n    \"value\": \"NVIDIA CORP\",\n    \"source\": {\n      \"content\": \"NVIDIA CORP\",\n      \"anchor\": {\n        \"kind\": \"spreadsheet_cell\",\n        \"row\": 10,\n        \"column\": \"B\",\n        \"sheet_index\": 0,\n        \"sheet_name\": \"Cover Page\",\n        \"coordinate\": \"B10\"\n      }\n    }\n  },\n  {\n    \"key\": \"documentType\",\n    \"label\": \"Document type\",\n    \"value\": \"10-K\",\n    \"source\": {\n      \"content\": \"10-K\",\n      \"anchor\": {\n        \"kind\": \"spreadsheet_cell\",\n        \"row\": 4,\n        \"column\": \"B\",\n        \"sheet_index\": 0,\n        \"sheet_name\": \"Cover Page\",\n        \"coordinate\": \"B4\"\n      }\n    }\n  },\n  {\n    \"key\": \"periodEnd\",\n    \"label\": \"Period end date\",\n    \"value\": \"Jan. 28,  2024\",\n    \"source\": {\n      \"content\": \"Jan. 28,  2024\",\n      \"anchor\": {\n        \"kind\": \"spreadsheet_cell\",\n        \"row\": 6,\n        \"column\": \"B\",\n        \"sheet_index\": 0,\n        \"sheet_name\": \"Cover Page\",\n        \"coordinate\": \"B6\"\n      }\n    }\n  },\n  {\n    \"key\": \"taxId\",\n    \"label\": \"Tax ID\",\n    \"value\": \"94-3177549\",\n    \"source\": {\n      \"content\": \"94-3177549\",\n      \"anchor\": {\n        \"kind\": \"spreadsheet_cell\",\n        \"row\": 12,\n        \"column\": \"B\",\n        \"sheet_index\": 0,\n        \"sheet_name\": \"Cover Page\",\n        \"coordinate\": \"B12\"\n      }\n    }\n  },\n  {\n    \"key\": \"address\",\n    \"label\": \"Address\",\n    \"value\": \"2788 San Tomas Expressway\",\n    \"source\": {\n      \"content\": \"2788 San Tomas Expressway\",\n      \"anchor\": {\n        \"kind\": \"spreadsheet_cell\",\n        \"row\": 13,\n        \"column\": \"B\",\n        \"sheet_index\": 0,\n        \"sheet_name\": \"Cover Page\",\n        \"coordinate\": \"B13\"\n      }\n    }\n  },\n  {\n    \"key\": \"auditorName\",\n    \"label\": \"Auditor\",\n    \"value\": \"PricewaterhouseCoopers LLP\",\n    \"source\": {\n      \"content\": \"PricewaterhouseCoopers LLP\",\n      \"anchor\": {\n        \"kind\": \"spreadsheet_cell\",\n        \"row\": 5,\n        \"column\": \"B\",\n        \"sheet_index\": 1,\n        \"sheet_name\": \"Audit Information\",\n        \"coordinate\": \"B5\"\n      }\n    }\n  },\n  {\n    \"key\": \"auditorLocation\",\n    \"label\": \"Auditor location\",\n    \"value\": \"San Jose, California\",\n    \"source\": {\n      \"content\": \"San Jose, California\",\n      \"anchor\": {\n        \"kind\": \"spreadsheet_cell\",\n        \"row\": 6,\n        \"column\": \"B\",\n        \"sheet_index\": 1,\n        \"sheet_name\": \"Audit Information\",\n        \"coordinate\": \"B6\"\n      }\n    }\n  },\n  {\n    \"key\": \"auditorFirmId\",\n    \"label\": \"Auditor firm ID\",\n    \"value\": \"238\",\n    \"source\": {\n      \"content\": \"238\",\n      \"anchor\": {\n        \"kind\": \"spreadsheet_cell\",\n        \"row\": 4,\n        \"column\": \"B\",\n        \"sheet_index\": 1,\n        \"sheet_name\": \"Audit Information\",\n        \"coordinate\": \"B4\"\n      }\n    }\n  }\n]\n",
+      "type": "registry:file",
+      "target": "@components/viewers/sample-data/xlsx-sources.json"
+    }
+  ],
+  "categories": [
+    "primitives"
+  ],
+  "type": "registry:block"
+}

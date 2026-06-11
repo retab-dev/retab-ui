@@ -1,0 +1,21 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "retab-source-preview",
+  "title": "Retab Source Preview",
+  "description": "Resolves a source document through a ViewerAdapter and renders it via the document surface.",
+  "registryDependencies": [
+    "retab",
+    "utils",
+    "use-retab",
+    "document-surface"
+  ],
+  "files": [
+    {
+      "path": "registry/new-york-v4/ui/retab-source-preview.tsx",
+      "content": "\"use client\"\n\nimport * as React from \"react\"\n\nimport { type FileRef, type ViewerAdapter } from \"@/lib/retab\"\nimport { cn } from \"@/lib/utils\"\nimport { useDocumentUrl } from \"@/hooks/use-retab\"\nimport { DocumentSurface } from \"@/components/ui/document-surface\"\n\nexport interface RetabSourcePreviewProps {\n  adapter?: ViewerAdapter\n  file?: FileRef\n  className?: string\n}\n\n/**\n * Resolves a source document through the adapter and renders it. Shows nothing\n * if the adapter can't resolve a URL, so it's safe to drop into any viewer.\n */\nexport function RetabSourcePreview({\n  adapter,\n  file,\n  className,\n}: RetabSourcePreviewProps) {\n  const { data: url, loading, error } = useDocumentUrl(adapter, file)\n\n  if (!adapter?.getDocumentUrl || !file) return null\n\n  if (loading) {\n    return (\n      <div\n        className={cn(\n          \"flex min-h-24 items-center justify-center rounded-md border bg-muted text-xs text-muted-foreground\",\n          className\n        )}\n      >\n        Loading source…\n      </div>\n    )\n  }\n\n  if (error || !url) {\n    return (\n      <div\n        className={cn(\n          \"flex min-h-24 items-center justify-center rounded-md border bg-muted text-xs text-muted-foreground\",\n          className\n        )}\n      >\n        {error ? \"Couldn't load source document.\" : \"No source available.\"}\n      </div>\n    )\n  }\n\n  return (\n    <DocumentSurface\n      url={url}\n      mimeType={file.mime_type}\n      title={file.filename}\n      className={cn(\"h-80\", className)}\n    />\n  )\n}\n",
+      "type": "registry:ui",
+      "target": "@ui/retab-source-preview.tsx"
+    }
+  ],
+  "type": "registry:ui"
+}

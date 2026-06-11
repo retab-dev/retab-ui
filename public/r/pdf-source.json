@@ -1,0 +1,20 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "pdf-source",
+  "title": "PDF source adapter",
+  "description": "Bridges the document-source model to the PDF viewer: pdfAnchorToLocation (normalized bbox → page %), usePdfSourceTarget (a SourceTarget over a PdfViewer ref), and renderPdfSourceOverlay (draws a PdfHighlight on the active source's page).",
+  "registryDependencies": [
+    "pdf-viewer",
+    "document-source",
+    "use-source-link"
+  ],
+  "files": [
+    {
+      "path": "registry/new-york-v4/ui/pdf-source.tsx",
+      "content": "\"use client\"\n\nimport * as React from \"react\"\n\nimport type {\n  Source,\n  SourceAnchor,\n  SourceLocation,\n} from \"@/lib/document-source\"\nimport type { SourceTarget } from \"@/hooks/use-source-link\"\nimport {\n  PdfHighlight,\n  type PdfPageOverlayProps,\n  type PdfViewerHandle,\n} from \"@/components/ui/pdf-viewer\"\n\n/**\n * Turn a source anchor into a PDF location, or `undefined` when the anchor isn't\n * a page region (a spreadsheet cell, a text span, …). PDF/image bbox anchors are\n * normalized [0, 1]; the viewer wants percentages, so scale by 100. An image\n * lands on the single page 1.\n */\nexport function pdfAnchorToLocation(\n  anchor: SourceAnchor\n): SourceLocation | undefined {\n  if (anchor.kind === \"pdf_bbox\") {\n    return {\n      page: anchor.page,\n      area: {\n        left: anchor.left * 100,\n        top: anchor.top * 100,\n        width: anchor.width * 100,\n        height: anchor.height * 100,\n      },\n    }\n  }\n  if (anchor.kind === \"image_bbox\") {\n    return {\n      page: 1,\n      area: {\n        left: anchor.left * 100,\n        top: anchor.top * 100,\n        width: anchor.width * 100,\n        height: anchor.height * 100,\n      },\n    }\n  }\n  return undefined\n}\n\n/**\n * A stable `SourceTarget` over a `PdfViewer` ref — pass to `useSourceLink`. The\n * ref is read lazily (only when scrolling), so this is just the bridge from the\n * generic source contract to the viewer's imperative handle.\n */\nexport function usePdfSourceTarget(\n  viewerRef: React.RefObject<PdfViewerHandle | null>\n): SourceTarget {\n  return React.useMemo<SourceTarget>(\n    () => ({\n      scrollTo: (source: Source, options) => {\n        const location = pdfAnchorToLocation(source.anchor)\n        if (location) {\n          viewerRef.current?.scrollToPageArea(\n            location.page,\n            location.area,\n            options\n          )\n        }\n      },\n    }),\n    [viewerRef]\n  )\n}\n\n/**\n * Build a `renderPageOverlay` callback that draws the active source highlight on\n * its page. Pass `useSourceLink(...).activeSource` straight in.\n */\nexport function renderPdfSourceOverlay(\n  source: Source | undefined\n): (props: PdfPageOverlayProps) => React.ReactNode {\n  const location = source ? pdfAnchorToLocation(source.anchor) : undefined\n  return function PdfSourceOverlay({ pageNumber }: PdfPageOverlayProps) {\n    return location && location.page === pageNumber ? (\n      <PdfHighlight area={location.area} />\n    ) : null\n  }\n}\n",
+      "type": "registry:ui",
+      "target": "@ui/pdf-source.tsx"
+    }
+  ],
+  "type": "registry:ui"
+}

@@ -1,0 +1,21 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "split-viewer",
+  "title": "Split Viewer",
+  "description": "Renders a Retab split result: named subdocuments by page range over a page timeline.",
+  "registryDependencies": [
+    "retab",
+    "retab-viewer-shell",
+    "page-group-viewer",
+    "retab-source-preview"
+  ],
+  "files": [
+    {
+      "path": "registry/new-york-v4/ui/split-viewer.tsx",
+      "content": "\"use client\"\n\nimport * as React from \"react\"\n\nimport { type Split, type ViewerAdapter, toPageGroups } from \"@/lib/retab\"\nimport { meanLikelihood } from \"@/hooks/use-retab\"\nimport {\n  RetabViewerShell,\n  useViewerPhase,\n} from \"@/components/ui/retab-viewer-shell\"\nimport { PageGroupViewer } from \"@/components/ui/page-group-viewer\"\nimport { RetabSourcePreview } from \"@/components/ui/retab-source-preview\"\n\nexport interface SplitViewerProps {\n  split: Split\n  /** Optional adapter; when it resolves a document URL a source preview is shown. */\n  adapter?: ViewerAdapter\n  className?: string\n}\n\nexport function SplitViewer({ split, adapter, className }: SplitViewerProps) {\n  const results = split.output ?? []\n  const phase = useViewerPhase({\n    status: split.status,\n    error: split.error,\n    hasOutput: results.length > 0,\n  })\n  const groups = React.useMemo(() => toPageGroups(results), [results])\n  const confidences = split.consensus?.likelihoods?.map((l) =>\n    meanLikelihood(l.pages)\n  )\n\n  return (\n    <RetabViewerShell\n      title={split.file?.filename ?? \"Split\"}\n      status={split.status}\n      error={split.error}\n      phase={phase}\n      emptyMessage=\"No subdocuments were produced.\"\n      className={className}\n    >\n      <PageGroupViewer\n        groups={groups}\n        unitLabel=\"subdocument\"\n        confidences={confidences}\n      />\n      {adapter ? (\n        <div className=\"px-4 pb-4\">\n          <RetabSourcePreview adapter={adapter} file={split.file} />\n        </div>\n      ) : null}\n    </RetabViewerShell>\n  )\n}\n\nexport { type Split }\n",
+      "type": "registry:ui",
+      "target": "@ui/split-viewer.tsx"
+    }
+  ],
+  "type": "registry:ui"
+}

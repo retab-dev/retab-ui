@@ -1,0 +1,18 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "source-indicator",
+  "title": "Source indicator",
+  "description": "A floating pill that reports the active field's source over a viewer: nothing selected, a located field (its path with a search icon), or a field with no source. Mount inside a relative viewer pane; feed from useSourceLink.",
+  "registryDependencies": [
+    "utils"
+  ],
+  "files": [
+    {
+      "path": "registry/new-york-v4/ui/source-indicator.tsx",
+      "content": "\"use client\"\n\nimport * as React from \"react\"\nimport { Search, X } from \"lucide-react\"\n\nimport { cn } from \"@/lib/utils\"\n\n/**\n * A floating pill that reports the active field's source state over a viewer:\n * nothing selected, a located field (its path), or a field with no source.\n * Mount it inside a `relative` viewer pane. Feed it from `useSourceLink`:\n * `path={link.activePath} found={!!link.activeSource}`.\n */\nexport function SourceIndicator({\n  path,\n  found,\n  label = \"Extraction\",\n  emptyHint = \"Hover a field to view its source\",\n  className,\n}: {\n  /** The active field path, or null when nothing is selected. */\n  path: string | null\n  /** Whether the active field has a resolvable source. */\n  found: boolean\n  /** Leading label shown before the path. */\n  label?: string\n  /** Text shown when no field is active. */\n  emptyHint?: string\n  className?: string\n}) {\n  return (\n    <div\n      className={cn(\n        \"pointer-events-none absolute top-12 left-3 z-20 max-w-[calc(100%-1.5rem)]\",\n        className\n      )}\n    >\n      <div className=\"flex h-7 items-center gap-1.5 overflow-hidden rounded-lg border bg-background/85 px-2.5 text-xs shadow-sm backdrop-blur-sm\">\n        {path == null ? (\n          <span className=\"flex items-center gap-1.5 text-muted-foreground\">\n            <Search className=\"size-3.5 shrink-0\" />\n            {emptyHint}\n          </span>\n        ) : found ? (\n          <span className=\"flex min-w-0 items-center gap-1.5 text-primary\">\n            <Search className=\"size-3.5 shrink-0\" />\n            <span className=\"shrink-0 font-medium\">{label}</span>\n            <span className=\"text-muted-foreground/50\">·</span>\n            <span className=\"truncate font-mono text-foreground\">{path}</span>\n          </span>\n        ) : (\n          <span className=\"flex min-w-0 items-center gap-1.5 text-destructive\">\n            <X className=\"size-3.5 shrink-0\" />\n            <span className=\"truncate font-mono\">{path}</span>\n            <span className=\"shrink-0 text-muted-foreground\">· no source</span>\n          </span>\n        )}\n      </div>\n    </div>\n  )\n}\n",
+      "type": "registry:ui",
+      "target": "@ui/source-indicator.tsx"
+    }
+  ],
+  "type": "registry:ui"
+}

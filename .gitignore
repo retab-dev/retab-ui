@@ -50,3 +50,10 @@ test-results/
 shadcn-workspace
 .codex-artifacts
 .claude/
+
+# app (flattened from apps/v4)
+.source/
+.vercel
+*.tsbuildinfo
+.content-collections
+.registry

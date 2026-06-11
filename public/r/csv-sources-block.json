@@ -1,0 +1,32 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "csv-sources-block",
+  "title": "CSV Sources",
+  "description": "Extracted values linked to spreadsheet cells — hover to highlight a cell and scroll to it.",
+  "registryDependencies": [
+    "csv-viewer",
+    "csv-source",
+    "use-source-link",
+    "document-source",
+    "source-field-list",
+    "source-indicator"
+  ],
+  "files": [
+    {
+      "path": "registry/new-york-v4/blocks/csv-sources-block.tsx",
+      "content": "\"use client\"\n\nimport * as React from \"react\"\n\nimport type { Source, SourceMap } from \"@/lib/document-source\"\nimport { useSourceLink } from \"@/hooks/use-source-link\"\nimport { sourceToCsvCell, useCsvSourceTarget } from \"@/components/ui/csv-source\"\nimport { CsvViewer, type CsvViewerHandle } from \"@/components/ui/csv-viewer\"\nimport {\n  SourceFieldList,\n  type SourceField,\n} from \"@/components/ui/source-field-list\"\nimport { SourceIndicator } from \"@/components/ui/source-indicator\"\nimport csvSample from \"@/components/viewers/sample-data/csv-sources.json\"\n\nconst CSV_TEXT = `region,quarter,revenue,customers,nrr\nNorth America,Q1,1240000,48,1.12\nNorth America,Q2,1510000,61,1.21\nEMEA,Q1,820000,33,1.08\nEMEA,Q2,910000,39,1.15\nAPAC,Q1,430000,18,1.04\nAPAC,Q2,560000,24,1.11`\n\ntype CsvField = SourceField & { source: Source }\n\nconst FIELDS = (csvSample as CsvField[]).map((field) => ({\n  ...field,\n  hint:\n    field.source.anchor.kind === \"csv_cell\"\n      ? `Cell ${field.source.anchor.coordinate ?? field.source.anchor.column}`\n      : undefined,\n}))\nconst SOURCES: SourceMap = Object.fromEntries(\n  FIELDS.map((field) => [field.key, field.source])\n)\n\n/**\n * CSV sources block — extracted values linked to the spreadsheet cells they came\n * from. Hovering a field highlights its cell and scrolls to it. Same source-link\n * abstraction, with the CSV viewer's cell handle + the csv_cell adapter.\n */\nexport function CsvSourcesBlock() {\n  const viewerRef = React.useRef<CsvViewerHandle>(null)\n  const target = useCsvSourceTarget(viewerRef)\n  const link = useSourceLink({ sources: SOURCES, target })\n\n  React.useEffect(() => {\n    if (FIELDS[0]) link.selectField(FIELDS[0].key)\n    // eslint-disable-next-line react-hooks/exhaustive-deps\n  }, [])\n\n  return (\n    <div className=\"flex h-full min-h-[680px] bg-background\">\n      <div className=\"relative min-w-0 flex-1\">\n        <CsvViewer\n          ref={viewerRef}\n          value={CSV_TEXT}\n          fillHeight\n          className=\"h-full rounded-none border-0\"\n          activeCell={sourceToCsvCell(link.activeSource)}\n        />\n        <SourceIndicator\n          path={link.activePath}\n          found={!!link.activeSource}\n          className=\"top-2\"\n        />\n      </div>\n      <SourceFieldList fields={FIELDS} link={link} />\n    </div>\n  )\n}\n",
+      "type": "registry:component",
+      "target": "@components/blocks/csv-sources-block.tsx"
+    },
+    {
+      "path": "components/viewers/sample-data/csv-sources.json",
+      "content": "[\n  {\n    \"key\": \"naQ1Revenue\",\n    \"label\": \"North America Q1 revenue\",\n    \"value\": \"$1,240,000\",\n    \"source\": {\n      \"content\": \"1240000\",\n      \"anchor\": {\n        \"kind\": \"csv_cell\",\n        \"row\": 1,\n        \"column\": \"C\",\n        \"coordinate\": \"C2\"\n      }\n    }\n  },\n  {\n    \"key\": \"naQ2Customers\",\n    \"label\": \"North America Q2 customers\",\n    \"value\": \"61\",\n    \"source\": {\n      \"content\": \"61\",\n      \"anchor\": {\n        \"kind\": \"csv_cell\",\n        \"row\": 2,\n        \"column\": \"D\",\n        \"coordinate\": \"D3\"\n      }\n    }\n  },\n  {\n    \"key\": \"emeaQ1Revenue\",\n    \"label\": \"EMEA Q1 revenue\",\n    \"value\": \"$820,000\",\n    \"source\": {\n      \"content\": \"820000\",\n      \"anchor\": {\n        \"kind\": \"csv_cell\",\n        \"row\": 3,\n        \"column\": \"C\",\n        \"coordinate\": \"C4\"\n      }\n    }\n  },\n  {\n    \"key\": \"emeaQ2Nrr\",\n    \"label\": \"EMEA Q2 net revenue retention\",\n    \"value\": \"1.15\",\n    \"source\": {\n      \"content\": \"1.15\",\n      \"anchor\": {\n        \"kind\": \"csv_cell\",\n        \"row\": 4,\n        \"column\": \"E\",\n        \"coordinate\": \"E5\"\n      }\n    }\n  },\n  {\n    \"key\": \"apacQ1Revenue\",\n    \"label\": \"APAC Q1 revenue\",\n    \"value\": \"$430,000\",\n    \"source\": {\n      \"content\": \"430000\",\n      \"anchor\": {\n        \"kind\": \"csv_cell\",\n        \"row\": 5,\n        \"column\": \"C\",\n        \"coordinate\": \"C6\"\n      }\n    }\n  },\n  {\n    \"key\": \"apacQ2Customers\",\n    \"label\": \"APAC Q2 customers\",\n    \"value\": \"24\",\n    \"source\": {\n      \"content\": \"24\",\n      \"anchor\": {\n        \"kind\": \"csv_cell\",\n        \"row\": 6,\n        \"column\": \"D\",\n        \"coordinate\": \"D7\"\n      }\n    }\n  }\n]\n",
+      "type": "registry:file",
+      "target": "@components/viewers/sample-data/csv-sources.json"
+    }
+  ],
+  "categories": [
+    "primitives"
+  ],
+  "type": "registry:block"
+}
