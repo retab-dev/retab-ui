@@ -50,6 +50,7 @@ export function FileViewerDemo() {
           src={`/samples/${current.file}`}
           fileName={current.file}
           className="h-full"
+          isolateStyles
         />
       </div>
     </div>

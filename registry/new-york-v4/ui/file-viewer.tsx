@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { createPortal } from "react-dom"
 import { Download, Maximize, Minus, Plus } from "lucide-react"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import Prism from "prismjs"
@@ -292,6 +293,18 @@ export interface FileViewerProps {
   className?: string
   /** Drop the outer border/background so the viewer fills its container. */
   bare?: boolean
+  /**
+   * Render the scrolling content inside a shadow root, isolating it from the host
+   * page's style rules — in particular `:has()` selectors, whose invalidation
+   * Blink does NOT scope by `contain`. On a page with a large `:has()` surface,
+   * the virtualized viewers (text/log/JSON, CSV, XLSX) otherwise pay a full
+   * document `:has()` re-match on every per-scroll row mutation; isolation scopes
+   * that to the grid's own subtree and keeps scrolling at refresh rate. Only
+   * affects the categories that virtualize a dense grid; pages/slides/images are
+   * unaffected either way. Defaults to false. When on, host CSS can't reach into
+   * the grid to style it.
+   */
+  isolateStyles?: boolean
 }
 
 export function FileViewer(props: FileViewerProps) {
@@ -331,6 +344,7 @@ function FileViewerInner({
   as,
   className,
   bare = false,
+  isolateStyles = false,
 }: FileViewerProps) {
   const name = fileName ?? src
   const category = as ?? detectCategory(name, mimeType)
@@ -346,7 +360,7 @@ function FileViewerInner({
     case "pptx":
       return <PptxViewer src={src} className={className} bare={bare} downloadFileName={download} />
     case "xlsx":
-      return <XlsxViewer src={src} className={className} bare={bare} downloadFileName={download} />
+      return <XlsxViewer src={src} className={className} bare={bare} downloadFileName={download} isolateStyles={isolateStyles} />
     case "csv":
       return (
         <CsvFromUrl
@@ -354,6 +368,7 @@ function FileViewerInner({
           fileName={download}
           className={className}
           bare={bare}
+          isolateStyles={isolateStyles}
         />
       )
     case "markdown":
@@ -361,7 +376,7 @@ function FileViewerInner({
     case "html":
       return <HtmlDocViewer src={src} fileName={download} className={className} bare={bare} />
     case "text":
-      return <TextDocViewer src={src} fileName={download} className={className} bare={bare} />
+      return <TextDocViewer src={src} fileName={download} className={className} bare={bare} isolateStyles={isolateStyles} />
     default:
       return <UnsupportedCard src={src} fileName={download} className={className} bare={bare} />
   }
@@ -629,16 +644,164 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
+// --- style isolation (shadow DOM) --------------------------------------------
+
+// useLayoutEffect on the server logs a warning; fall back to useEffect there. The
+// shadow root only exists on the client, so the effect is a no-op during SSR.
+const useIsomorphicLayoutEffect =
+  typeof window !== "undefined" ? React.useLayoutEffect : React.useEffect
+
+// Drop every `:has()` style rule from a constructed sheet (recursing into
+// @media/@supports/@layer blocks). The text grid's own markup uses no `has-*`
+// variants, so these rules never style it — but Blink would still re-run their
+// invalidation against the grid's subtree on each per-scroll mutation. Removing
+// them is what takes the isolated grid from a few ms of residual recalc down to
+// ~nothing. Safe precisely because the grid doesn't depend on any `:has()` rule.
+function stripHasRules(owner: CSSStyleSheet | CSSGroupingRule) {
+  const rules = owner.cssRules
+  if (!rules) return
+  for (let i = rules.length - 1; i >= 0; i--) {
+    const r = rules[i]
+    if ((r as CSSStyleRule).selectorText?.includes(":has(")) {
+      try {
+        owner.deleteRule(i)
+      } catch {
+        // ignore a rule that can't be removed
+      }
+    } else if ((r as CSSGroupingRule).cssRules?.length) {
+      stripHasRules(r as CSSGroupingRule)
+    }
+  }
+}
+
+// The page's author CSS, mirrored into constructible stylesheets once and shared
+// (by reference) across every isolated instance — `adoptedStyleSheets` allows one
+// sheet object in many roots. `:has()` rules are stripped (see stripHasRules).
+// Cross-origin sheets (e.g. a font CDN) can't be read and are skipped; their
+// declarations reach the grid through inheritance where they apply to custom
+// properties. Snapshotted at first use: later-added stylesheets (route CSS, HMR)
+// won't appear, which is fine for the grid's own utilities, present from first
+// paint.
+let sharedSheets: CSSStyleSheet[] | null = null
+function getSharedSheets(): CSSStyleSheet[] {
+  if (sharedSheets) return sharedSheets
+  const out: CSSStyleSheet[] = []
+  for (const ss of Array.from(document.styleSheets)) {
+    let rules: CSSRuleList
+    try {
+      rules = ss.cssRules
+    } catch {
+      continue // cross-origin: unreadable, skip
+    }
+    let text = ""
+    for (const rule of Array.from(rules)) text += rule.cssText + "\n"
+    try {
+      const sheet = new CSSStyleSheet()
+      // @import rules are dropped by replaceSync per spec — harmless here, since
+      // the imported sheet also appears separately in document.styleSheets.
+      sheet.replaceSync(text)
+      stripHasRules(sheet)
+      out.push(sheet)
+    } catch {
+      // skip any sheet that can't be reconstructed
+    }
+  }
+  sharedSheets = out
+  return out
+}
+
+/**
+ * Renders its children inside a shadow root so the host document's style rules —
+ * in particular `:has()` selectors, whose invalidation Blink does NOT scope by
+ * `contain` — can't match into them. Style recalc triggered by the grid's
+ * per-scroll mutations is then confined to the grid's own subtree instead of the
+ * whole document. The page's author CSS is copied in so utility classes still
+ * resolve; theme custom properties, font size, and line height inherit through
+ * the boundary.
+ *
+ * Renders nothing until mounted (no SSR markup — the viewer is client-only
+ * anyway). The shadow root is attached in a layout effect, which re-renders the
+ * portal before the browser paints, so there's no flash of an empty box.
+ */
+function ShadowScope({
+  className,
+  style,
+  children,
+}: {
+  className?: string
+  style?: React.CSSProperties
+  children: React.ReactNode
+}) {
+  const hostRef = React.useRef<HTMLDivElement>(null)
+  const [root, setRoot] = React.useState<ShadowRoot | null>(null)
+
+  useIsomorphicLayoutEffect(() => {
+    const host = hostRef.current
+    if (!host) return
+    const sr = host.shadowRoot ?? host.attachShadow({ mode: "open" })
+    try {
+      sr.adoptedStyleSheets = getSharedSheets()
+    } catch {
+      // adoptedStyleSheets / constructible sheets unsupported: clone the page's
+      // style source nodes in instead (heavier, but the same visual result).
+      for (const node of Array.from(
+        document.querySelectorAll('style, link[rel="stylesheet"]')
+      )) {
+        try {
+          sr.appendChild(node.cloneNode(true))
+        } catch {
+          // ignore a node that can't be cloned
+        }
+      }
+    }
+    setRoot(sr)
+  }, [])
+
+  return (
+    <div ref={hostRef} className={className} style={style}>
+      {root ? createPortal(children, root) : null}
+    </div>
+  )
+}
+
+/** The scroll container — optionally inside a shadow root for style isolation. */
+function ScrollerShell({
+  isolate,
+  className,
+  style,
+  children,
+}: {
+  isolate: boolean
+  className?: string
+  style?: React.CSSProperties
+  children: React.ReactNode
+}) {
+  if (isolate) {
+    return (
+      <ShadowScope className={className} style={style}>
+        {children}
+      </ShadowScope>
+    )
+  }
+  return (
+    <div className={className} style={style}>
+      {children}
+    </div>
+  )
+}
+
 function TextDocViewer({
   src,
   fileName,
   className,
   bare,
+  isolateStyles,
 }: {
   src: string
   fileName: string
   className?: string
   bare?: boolean
+  isolateStyles?: boolean
 }) {
   // JSON must be fully present before it can be parsed + pretty-printed.
   const isJson = /\.(json|json5)$/i.test(fileName)
@@ -753,16 +916,14 @@ function TextDocViewer({
       meta={meta}
       actions={<ZoomActions scale={scale} zoom={zoom} reset={reset} />}
     >
-      <div
+      <ScrollerShell
+        isolate={!!isolateStyles}
         className="relative min-h-0 flex-1 overflow-hidden bg-card font-mono"
         style={{ fontSize, lineHeight: `${lineHeight}px` }}
       >
-        {/* React 19 hoists + dedupes this by `href`, so it's injected once. */}
-        {grammar ? (
-          <style href="fv-syntax" precedence="default">
-            {SYNTAX_STYLE}
-          </style>
-        ) : null}
+        {/* Plain (non-hoisted) <style> so it lands inside the shadow root when
+          isolated; the token classes it targets live inside the scroller. */}
+        {grammar ? <style>{SYNTAX_STYLE}</style> : null}
         {/* Full-height line-number rail behind the scroller, pinned at the left so
             it survives horizontal scroll and runs to the bottom of the viewer. Its
             tinted fill against the white content is the boundary — no border line,
@@ -816,7 +977,7 @@ function TextDocViewer({
             ))}
           </div>
         </div>
-      </div>
+      </ScrollerShell>
     </DocShell>
   )
 }
@@ -918,11 +1079,13 @@ function CsvFromUrl({
   fileName,
   className,
   bare,
+  isolateStyles,
 }: {
   src: string
   fileName: string
   className?: string
   bare?: boolean
+  isolateStyles?: boolean
 }) {
   const { scale, zoom, reset } = useZoom()
   return (
@@ -943,6 +1106,7 @@ function CsvFromUrl({
         scale={scale}
         showZoom={false}
         className="rounded-none border-0 bg-transparent"
+        isolateStyles={isolateStyles}
       />
     </DocShell>
   )
@@ -1029,11 +1193,11 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value))
 }
 
-/** Shared zoom state for the content viewers (0.5×–4×). */
+/** Shared zoom state for the content viewers (0.25×–5×, matching every viewer). */
 function useZoom() {
   const [scale, setScale] = React.useState(1)
   const zoom = React.useCallback(
-    (factor: number) => setScale((s) => clamp(s * factor, 0.5, 4)),
+    (factor: number) => setScale((s) => clamp(s * factor, 0.25, 5)),
     []
   )
   const reset = React.useCallback(() => setScale(1), [])
