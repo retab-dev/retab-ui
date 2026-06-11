@@ -19,8 +19,6 @@ import {
   ACTION_COLUMN_WIDTH,
   ColumnWidth,
   getColumnWidthPx,
-  getRowHeightPx,
-  useSheetOptionsStore,
 } from "@/components/json-table/table-options-store";
 import {
   cmp,
@@ -39,7 +37,6 @@ import {
   ArrayEditor,
 } from "@/components/json-table/object-editor";
 import {
-  compute_score_from_likelihood_and_dot_notation_path,
   get_value_from_row_array_and_dot_notation_path,
   isValidProperty,
 } from "@/components/json-table/lib/json-schema-utils";
@@ -47,7 +44,6 @@ import { Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRef, useState } from "react";
 import { useMountEffect } from "@/hooks/useMountEffect";
-import { useTabStateStore } from "@/components/json-table/tab-state-store";
 import {
   dateStringToFormat,
   dateToHTMLDateTimeString,
@@ -59,10 +55,7 @@ import { Calendar } from "@/components/ui-retab/calendar";
 import { Button } from "@/components/ui-retab/button";
 import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
-import * as PopoverPrimitive from "@radix-ui/react-popover";
-import { TableDocument } from "@/components/json-table/lib/projects-types";
 import type { RowLike } from "@/components/json-table/lib/column-types";
-// Dataset hooks removed; validation handled via drilled props
 
 import { parseDateStringAsLocal } from "@/components/json-table/lib/date-utils";
 
@@ -72,14 +65,10 @@ const safeParseISO = (
   return parseDateStringAsLocal(dateString) ?? undefined;
 };
 
-import { getTheme } from "@/components/json-table/lib/themes";
-import { Textarea } from "@/components/ui-retab/textarea";
-import { getFlagAtPath } from "@/components/json-table/validation-flags-utils";
 import {
   HoverInfo,
   useHoverInfo,
 } from "@/components/json-table/hover-info-context";
-import { findMatchingHighlightedFieldPattern } from "@/components/json-table/lib/review-highlight-utils";
 // Removed project/spec-based computed detection in favor of schema X-ComputedField tagging
 
 // Cache schema property lookups by (schema object, dot path)
@@ -321,7 +310,6 @@ interface PlusCellProps {
   columnWidth: ColumnWidth;
   actionColumnsCount: number;
   onGroundTruthDataChange: (docId: string, value: any) => void;
-  currentIterationId: string;
 }
 
 export function PlusMergedCell({
@@ -336,15 +324,9 @@ export function PlusMergedCell({
   columnWidth,
   onGroundTruthDataChange,
   actionColumnsCount,
-  currentIterationId,
 }: PlusCellProps) {
   const width = getColumnWidthPx(columnWidth);
-  const { isExtracting } = useTabStateStore();
-  const theme = getTheme(currentIterationId);
-  const isDisabled =
-    (!currentIterationId.includes("dataset") &&
-      !currentIterationId.includes("review")) ||
-    isExtracting[currentIterationId];
+  const isDisabled = false;
 
   if (pathInfo?.plusPathIdx !== undefined) {
     let actualKey = keyValue;
@@ -361,13 +343,13 @@ export function PlusMergedCell({
     return (
       <TableCell
         key={`${keyValue}-${rowIdx}-${colIdxStart}-empty`}
-        className={`group m-0 flex items-center justify-center border-r border-b p-0 last:border-b-0 ${theme.tableContainerBg} ${theme.border} ${isDisabled ? "cursor-not-allowed" : "cursor-pointer"}`}
+        className={`group m-0 flex items-center justify-center border-r border-b p-0 last:border-b-0 bg-background border-border ${isDisabled ? "cursor-not-allowed" : "cursor-pointer"}`}
         style={{
           width: `${width * (colIdxEnd - colIdxStart + 1 - actionColumnsCount) + ACTION_COLUMN_WIDTH * actionColumnsCount}px`,
           minWidth: `${width * (colIdxEnd - colIdxStart + 1 - actionColumnsCount) + ACTION_COLUMN_WIDTH * actionColumnsCount}px`,
         }}
         onClick={() => {
-          if (isDisabled) return; // Prevent adding rows when not on reference sheet or when extracting
+          if (isDisabled) return;
           const baseRoot =
             (row.original as any)?.prediction_data?.prediction ?? {};
           const createdValue = isArray
@@ -402,7 +384,7 @@ export function PlusMergedCell({
           {
             <Plus
               size={16}
-              className={`${theme.plusButtonIcon} ${isDisabled ? "opacity-50" : "opacity-100"}`}
+              className={`text-muted-foreground ${isDisabled ? "opacity-50" : "opacity-100"}`}
             />
           }
         </div>
@@ -422,12 +404,9 @@ interface DataCellProps {
   setOpenPopover: (key: string | null) => void;
   openPopover: string | null;
   onGroundTruthDataChange: (docId: string, value: any) => void;
-  currentIterationId: string;
   onCellHoverStart?: (info: HoverInfo) => void;
   onCellHoverEnd?: () => void;
-  validationFlags?: any;
   allowEditing?: boolean; // Controls whether cell values can be edited
-  fieldIndicationMap?: Map<string, string>;
 }
 
 function calculateVariables(props: DataCellProps & {}) {
@@ -455,12 +434,8 @@ const DataCellContent = (props: DataCellProps) => {
     setOpenPopover,
     openPopover,
     onGroundTruthDataChange,
-    currentIterationId,
     row,
   } = calculateVariables(props);
-
-  // Get theme classes based on sheet type
-  const theme = getTheme(currentIterationId);
 
   // ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL LOGIC OR EARLY RETURNS
   const [focusedField, setFocusedField] = useState<string | null>(null);
@@ -645,14 +620,8 @@ const DataCellContent = (props: DataCellProps) => {
     ? getPropertyInfoCached(schema, actualKey)
     : undefined;
   const property = propInfo?.rawProperty;
-  const isFunctionField = !!(property && (property as any)["X-FunctionField"]);
-  // Allow editing if either the allowEditing prop is true OR it's a dataset/review iteration
-  // But always block editing for function fields
-  const isEditableReference =
-    (props.allowEditing ||
-      currentIterationId.includes("dataset") ||
-      currentIterationId.includes("review")) &&
-    !isFunctionField;
+  // Cells are editable when the parent opts in via `allowEditing`.
+  const isEditableReference = props.allowEditing;
   const optional = !!propInfo?.nullable;
   const isValidProp = !!propInfo?.isValidProp;
   const isObject = !!propInfo?.isObject;
@@ -720,43 +689,12 @@ const DataCellContent = (props: DataCellProps) => {
     (isHovering || isInputFocused || isSelectOpen || isDatePopoverOpen) &&
     isEditableReference;
 
-  const validationFlag = actualKey
-    ? getFlagAtPath(props.validationFlags, actualKey)
-    : undefined;
-  const showVerifiedStyling =
-    currentIterationId.includes("dataset") && !!validationFlag;
-  const showFunctionStyling = isFunctionField;
-  const reviewHighlightedPattern = React.useMemo(() => {
-    if (!actualKey) return null;
-
-    const highlightedPatterns = new Set<string>();
-    props.fieldIndicationMap?.forEach((_, pattern) => {
-      highlightedPatterns.add(pattern);
-    });
-
-    if (highlightedPatterns.size === 0) return null;
-    return findMatchingHighlightedFieldPattern(actualKey, highlightedPatterns);
-  }, [actualKey, props.fieldIndicationMap]);
-  const showReviewHighlightedStyling = Boolean(reviewHighlightedPattern);
-
-  // Function field styling based on validation value
-  const getFunctionFieldStyling = () => {
-    if (!isFunctionField) return "";
-    if (effectiveValue === true) return "border-success border bg-success/10";
-    if (effectiveValue === false) return "border-destructive border bg-destructive/10";
-    if (effectiveValue === null || effectiveValue === undefined)
-      return "border-warning border bg-warning/10";
-    return "border-success border bg-success/10"; // default to green for other truthy values
-  };
-
-  // Only show green verified styling in dataset view
-
   if (!isValidProp) {
     return (
       <TableCell
         key={actualKey}
         data-field-path={actualKey}
-        className={`relative ${theme.verticalLine} cursor-not-allowed`}
+        className="relative bg-border cursor-not-allowed"
         style={{
           width: `${cellWidth}px`,
           minWidth: `${cellWidth}px`,
@@ -769,7 +707,7 @@ const DataCellContent = (props: DataCellProps) => {
     <TableCell
       key={actualKey}
       data-field-path={actualKey}
-      className={` ${theme.border} relative m-0 border-t-0 border-r border-b border-l-0 p-0 select-none`}
+      className=" border-border relative m-0 border-t-0 border-r border-b border-l-0 p-0 select-none"
       onMouseLeave={() => {
         if (isSelectOpen || isDatePopoverOpen || isInputFocused) return;
         props.onCellHoverEnd?.();
@@ -786,16 +724,9 @@ const DataCellContent = (props: DataCellProps) => {
     >
       <div
         ref={cellRootRef}
-        //className={`focus-within:overflow-visible w-full h-full`}//
+        //className="focus-within:overflow-visible w-full h-full"//
         className={cn(
           "h-full w-full focus-within:overflow-visible",
-          showVerifiedStyling
-            ? "border border-success bg-success/10"
-            : showFunctionStyling
-              ? getFunctionFieldStyling()
-              : "",
-          showReviewHighlightedStyling &&
-            "bg-warning/20 ring-1 ring-warning ring-inset",
           isHovering && "border border-primary",
         )}
       >
@@ -812,7 +743,7 @@ const DataCellContent = (props: DataCellProps) => {
           >
             <PopoverTrigger asChild>
               <button
-                className={`text-3xs h-full w-full justify-start overflow-hidden px-1 text-inherit select-none`}
+                className="text-3xs h-full w-full justify-start overflow-hidden px-1 text-inherit select-none"
               >
                 {effectiveValue ? (
                   <div className="max-w-[80px] truncate text-left">
@@ -842,7 +773,6 @@ const DataCellContent = (props: DataCellProps) => {
                   }}
                   currentValue={effectiveValue}
                   onSubmit={handleObjectFormSubmitLocal}
-                  likelihoods={{}} //arrayLikelihoods}
                   setSourcesFieldPath={(path) => {
                     if (!path) {
                       setHoverInfo(null);
@@ -866,7 +796,6 @@ const DataCellContent = (props: DataCellProps) => {
                       });
                     }
                   }}
-                  currentIterationId={currentIterationId}
                 />
               )}
             </PopoverContent>
@@ -884,7 +813,7 @@ const DataCellContent = (props: DataCellProps) => {
           >
             <PopoverTrigger asChild>
               <button
-                className={`text-3xs h-full w-full justify-start overflow-hidden px-1 text-inherit select-none`}
+                className="text-3xs h-full w-full justify-start overflow-hidden px-1 text-inherit select-none"
               >
                 {effectiveValue ? (
                   <div className="max-w-[80px] truncate text-left">
@@ -913,7 +842,6 @@ const DataCellContent = (props: DataCellProps) => {
                   property={transferContext(property, schema)}
                   currentValue={effectiveValue}
                   onSubmit={handleArrayFormSubmitLocal}
-                  likelihoods={{}} //arrayLikelihoods}
                   setSourcesFieldPath={(path) => {
                     if (!path) {
                       setHoverInfo(null);
@@ -925,7 +853,6 @@ const DataCellContent = (props: DataCellProps) => {
                       rect: new DOMRect(),
                     });
                   }}
-                  currentIterationId={currentIterationId}
                 />
               )}
             </PopoverContent>
@@ -989,7 +916,7 @@ const DataCellContent = (props: DataCellProps) => {
             >
               <SelectTrigger
                 className={cn(
-                  "text-3xs theme.headerText h-6 w-full rounded-none border-none px-2 text-inherit shadow-none",
+                  "text-3xs text-muted-foreground h-6 w-full rounded-none border-none px-2 text-inherit shadow-none",
                   "disabled:opacity-100",
                 )}
                 onFocus={() => {
@@ -1239,7 +1166,7 @@ const DataCellContent = (props: DataCellProps) => {
             />
           ) : (
             <div
-              className={`text-3xs flex h-full w-full items-center truncate px-2 py-2`}
+              className="text-3xs flex h-full w-full items-center truncate px-2 py-2"
             >
               {liveStringValue ?? "—"}
             </div>
@@ -1294,7 +1221,7 @@ const DataCellContent = (props: DataCellProps) => {
           )
         ) : (
           <div
-            className={`text-3xs flex h-full w-full items-start truncate px-2 py-2 ${theme.verticalLine}`}
+            className="text-3xs flex h-full w-full items-start truncate px-2 py-2 bg-border"
           >
             {effectiveValue !== null && effectiveValue !== undefined
               ? String(effectiveValue)

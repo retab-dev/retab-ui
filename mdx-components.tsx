@@ -44,17 +44,10 @@ import {
   PartitionViewerDemo,
   SplitViewerDemo,
 } from "@/components/viewers/viewers-demo"
-import { SegmentSidebarDemo } from "@/components/segment-sidebar-demo"
-import { SegmentLegendDemo } from "@/components/segment-legend-demo"
+import { SegmentSidebarDemo, SegmentSidebarSplitDemo } from "@/components/segment-sidebar-demo"
+import { SegmentLegendDemo, SegmentLegendSplitDemo } from "@/components/segment-legend-demo"
 import { FileThumbnailDemo } from "@/components/file-thumbnail-demo"
 import { FileThumbnailFormatsDemo } from "@/components/file-thumbnail-formats-demo"
-import { ApiCallDemo } from "@/components/api-call-demo"
-import { FunctionBlockDemo } from "@/components/function-block-demo"
-import { ConditionalBlockDemo } from "@/components/conditional-block-demo"
-import { RunTimelineDemo } from "@/components/run-timeline-demo"
-import { StepWaterfallDemo } from "@/components/step-waterfall-demo"
-import { ExtractBlockDemo } from "@/components/extract-block-demo"
-import { SplitConsensusDemo } from "@/components/split-consensus-demo"
 import { ComponentSource } from "@/components/component-source"
 
 export const mdxComponents = {
@@ -377,16 +370,11 @@ export const mdxComponents = {
   SplitViewerDemo,
   EditViewerDemo,
   SegmentSidebarDemo,
+  SegmentSidebarSplitDemo,
   SegmentLegendDemo,
+  SegmentLegendSplitDemo,
   FileThumbnailDemo,
   FileThumbnailFormatsDemo,
-  ApiCallDemo,
-  FunctionBlockDemo,
-  ConditionalBlockDemo,
-  RunTimelineDemo,
-  StepWaterfallDemo,
-  ExtractBlockDemo,
-  SplitConsensusDemo,
   Link: ({ className, ...props }: React.ComponentProps<typeof Link>) => (
     <Link
       className={cn("font-medium underline underline-offset-4", className)}

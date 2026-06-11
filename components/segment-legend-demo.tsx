@@ -9,6 +9,7 @@ import {
   type SegmentLegendSide,
   type SegmentLegendVariant,
 } from "@/components/ui/segment-legend"
+import { LegendVariantsBlock } from "@/registry/new-york-v4/blocks/legend-variants-block"
 import { cn } from "@/lib/utils"
 
 // One split-style result drives every variant — only the chrome changes.
@@ -80,6 +81,17 @@ export function SegmentLegendDemo() {
       >
         {legend}
       </div>
+    </div>
+  )
+}
+
+// The legend on a real split viewer: one attention.pdf split result rendered
+// with all three placements — bar, floating, and a vertical rail — sharing one
+// selection across every cell.
+export function SegmentLegendSplitDemo() {
+  return (
+    <div className="not-prose my-6 overflow-hidden rounded-xl border">
+      <LegendVariantsBlock />
     </div>
   )
 }

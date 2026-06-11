@@ -23,15 +23,14 @@ import {
   Box,
   Table,
   Trash2,
-  AlertTriangle,
 } from "lucide-react";
 import { Separator } from "@/components/ui-retab/separator";
 import { ExtendedJSONSchema7 } from "@/components/json-table/lib/json-schema-types";
 import { getEffectiveType } from "@/components/schema-editor/json-schema-builder";
 import { PropertyEditor } from "@/components/schema-editor/property-dialog";
+import { JsonSchemaEditorProvider } from "@/components/schema-editor/contexts/json-schema";
 import {
   isObjectProperty,
-  isValidProperty,
 } from "@/components/json-table/lib/json-schema-utils";
 import {
   ColumnWidth,
@@ -43,7 +42,6 @@ import {
   DialogTrigger,
   DialogTitle,
 } from "@/components/ui-retab/dialog";
-import { getTheme } from "@/components/json-table/lib/themes";
 import { useMountEffect } from "@/hooks/useMountEffect";
 
 const PopoverDialogContext = React.createContext<boolean>(false);
@@ -148,53 +146,6 @@ const PopoverDialogTitle = ({
   );
 };
 
-// Date utility functions for proper date display
-const parseDisplayDate = (dateString: string): Date | null => {
-  if (!dateString) return null;
-
-  // Handle various date formats commonly found in documents
-  // Pattern: dd mm yyyy (with spaces)
-  const ddmmyyyySpaceMatch = dateString.match(
-    /^(\d{1,2})\s+(\d{1,2})\s+(\d{4})$/,
-  );
-  if (ddmmyyyySpaceMatch) {
-    const [, day, month, year] = ddmmyyyySpaceMatch;
-    return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-  }
-
-  // Pattern: dd/mm/yyyy
-  const ddmmyyyySlashMatch = dateString.match(
-    /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/,
-  );
-  if (ddmmyyyySlashMatch) {
-    const [, day, month, year] = ddmmyyyySlashMatch;
-    return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-  }
-
-  // Pattern: dd-mm-yyyy
-  const ddmmyyyyDashMatch = dateString.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
-  if (ddmmyyyyDashMatch) {
-    const [, day, month, year] = ddmmyyyyDashMatch;
-    return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-  }
-
-  // Pattern: dd.mm.yyyy
-  const ddmmyyyyDotMatch = dateString.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
-  if (ddmmyyyyDotMatch) {
-    const [, day, month, year] = ddmmyyyyDotMatch;
-    return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-  }
-
-  // If already in yyyy-mm-dd format, parse as local time (not UTC)
-  const isoMatch = dateString.match(/^\d{4}-\d{2}-\d{2}$/);
-  if (isoMatch) {
-    return new Date(dateString + "T00:00:00");
-  }
-
-  // Fallback to standard Date parsing
-  const fallbackDate = new Date(dateString);
-  return isNaN(fallbackDate.getTime()) ? null : fallbackDate;
-};
 
 const getIconFromEffectiveType = (
   type: string,
@@ -224,80 +175,6 @@ const getIconFromEffectiveType = (
     default:
       return Type;
   }
-};
-
-// Function to detect if a field has reasoning capabilities
-export const hasReasoningField = (schema: ExtendedJSONSchema7): boolean => {
-  if (!schema || typeof schema !== "object") return false;
-
-  // Check for X-ReasoningPrompt
-  if (
-    schema["X-ReasoningPrompt"] &&
-    schema["X-ReasoningPrompt"] !== "" &&
-    schema["X-ReasoningPrompt"] !== null &&
-    schema["X-ReasoningPrompt"] !== undefined
-  ) {
-    return true;
-  }
-
-  // Check for other reasoning-related fields
-  for (const key in schema) {
-    if (
-      (key === "X-Reasoning" ||
-        key === "X-ReasoningSteps" ||
-        key.startsWith("X-Reasoning")) &&
-      (schema as any)[key] !== "" &&
-      (schema as any)[key] !== null &&
-      (schema as any)[key] !== undefined
-    ) {
-      return true;
-    }
-  }
-
-  return false;
-};
-
-// Function to check if a field name indicates it's a reasoning field
-export const isReasoningFieldName = (fieldName: string): boolean => {
-  return (
-    fieldName.includes("reasoning___") || fieldName.includes("reasoning__")
-  );
-};
-
-// Function to detect if a field is a computed field
-export const isComputedField = (schema: ExtendedJSONSchema7): boolean => {
-  if (!schema || typeof schema !== "object") return false;
-
-  // Check for X-ComputedField tag
-  if ((schema as any)["X-ComputedField"] === true) {
-    return true;
-  }
-
-  return false;
-};
-
-// Function to detect if a field is a function field
-export const isFunctionField = (schema: ExtendedJSONSchema7): boolean => {
-  if (!schema || typeof schema !== "object") return false;
-  if ((schema as any)["X-FunctionField"] === true) {
-    return true;
-  }
-  return false;
-};
-
-// Function to detect if a field is a review-based criterion
-export const isReviewCriterion = (schema: ExtendedJSONSchema7): boolean => {
-  if (!schema || typeof schema !== "object") return false;
-
-  const legacyReviewCriterionKey = "X-Human" + "InTheLoopCriterion";
-  if (
-    (schema as any)["X-ReviewCriterion"] === true ||
-    (schema as any)[legacyReviewCriterionKey] === true
-  ) {
-    return true;
-  }
-
-  return false;
 };
 
 function resolveSchema(
@@ -871,7 +748,6 @@ export function ColumnsFromSchema(
   is_published: boolean,
   draggedItemKeyRef: React.RefObject<string | null>,
   draggedItemParentPathRef: React.RefObject<string | null>,
-  currentIterationId: string,
   editMode: "promptOnly" | "editable" | "readOnly",
   disableHeaderInteractions: boolean = false,
 ): [TableColumn[], number] {
@@ -880,7 +756,6 @@ export function ColumnsFromSchema(
   if (!schema.properties || Object.keys(schema.properties).length === 0)
     return [[], 0];
 
-  const theme = getTheme(currentIterationId);
   function buildColumns(
     properties: { key: string }[],
     depth: number,
@@ -1170,26 +1045,6 @@ export function ColumnsFromSchema(
                 parentSchema &&
                 parentSchema.type === "object";
 
-              // Check if this field has reasoning
-              const hasReasoning =
-                hasReasoningField(rawType as ExtendedJSONSchema7) ||
-                hasReasoningField(type as ExtendedJSONSchema7) ||
-                isReasoningFieldName(key);
-
-              // Check if this field is computed
-              const isComputed =
-                isComputedField(rawType as ExtendedJSONSchema7) ||
-                isComputedField(type as ExtendedJSONSchema7);
-
-              // Check if this field is a function field
-              const isFunction =
-                isFunctionField(rawType as ExtendedJSONSchema7) ||
-                isFunctionField(type as ExtendedJSONSchema7);
-
-              // Check if this field is a review-based criterion
-              const isReviewBasedCriterion =
-                isReviewCriterion(rawType as ExtendedJSONSchema7) ||
-                isReviewCriterion(type as ExtendedJSONSchema7);
 
               return (
                 <div
@@ -1212,15 +1067,7 @@ export function ColumnsFromSchema(
                 >
                   {disableHeaderInteractions ? (
                     <div
-                      className={`flex h-full grow items-center justify-start rounded-none px-1 ${
-                        isReviewBasedCriterion
-                          ? "bg-success/10 text-success-foreground"
-                          : isComputed
-                            ? "bg-primary/10 text-primary"
-                            : hasReasoning
-                              ? "bg-primary/10 text-primary"
-                              : `${theme.headerText} ${theme.headerBg}`
-                      }`}
+                      className="flex h-full grow items-center justify-start rounded-none px-1 text-muted-foreground bg-muted hover:bg-muted/80"
                     >
                       <div
                         className="text-3xs flex flex-row items-center gap-2 truncate overflow-hidden"
@@ -1241,15 +1088,7 @@ export function ColumnsFromSchema(
                         <Button
                           variant="ghost"
                           size="sm"
-                          className={`h-full grow justify-start rounded-none px-1 ${
-                            isReviewBasedCriterion
-                              ? "bg-success/10 text-success-foreground hover:bg-success/20 hover:text-success-foreground"
-                              : isComputed
-                                ? "bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary"
-                                : hasReasoning
-                                  ? "bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary"
-                                  : `${theme.headerText} ${theme.headerBg}`
-                          }`}
+                          className="h-full grow justify-start rounded-none px-1 text-muted-foreground bg-muted hover:bg-muted/80"
                         >
                           <div
                             className="text-3xs flex flex-row items-center gap-2 truncate overflow-hidden"
@@ -1310,11 +1149,7 @@ export function ColumnsFromSchema(
                           setDropdownOpen={setDropdownOpen}
                           jsonSchema={schema}
                           setJsonSchema={setSchema}
-                          editMode={
-                            isReviewBasedCriterion || isFunction
-                              ? "readOnly"
-                              : editMode
-                          }
+                          editMode={editMode}
                           // Use full dotted path for AI so fields inside $defs via $ref are addressable
                         />
                       </PopoverDialogContent>
@@ -1325,17 +1160,7 @@ export function ColumnsFromSchema(
                     <Button
                       variant="ghost"
                       size="icon"
-                      className={`flex h-full w-9 items-center justify-center rounded-none ${
-                        isReviewBasedCriterion
-                          ? "bg-success/10 text-success-foreground hover:bg-success/20 hover:text-success-foreground"
-                          : isComputed
-                            ? "bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary"
-                            : isFunction
-                              ? "bg-success/10 text-success-foreground hover:bg-success/20 hover:text-success-foreground"
-                              : hasReasoning
-                                ? "bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary"
-                                : `${theme.headerText} ${theme.headerBg}`
-                      }`}
+                      className="flex h-full w-9 items-center justify-center rounded-none text-muted-foreground bg-muted hover:bg-muted/80"
                       onClick={() => {
                         if (stopAt.includes(key)) {
                           setStopAt(stopAt.filter((s) => s !== key));
@@ -1391,27 +1216,6 @@ export function ColumnsFromSchema(
               parentSchema &&
               parentSchema.type === "object";
 
-            // Check if this field has reasoning
-            const hasReasoning =
-              hasReasoningField(rawType as ExtendedJSONSchema7) ||
-              hasReasoningField(type as ExtendedJSONSchema7) ||
-              isReasoningFieldName(key);
-
-            // Check if this field is computed
-            const isComputed =
-              isComputedField(rawType as ExtendedJSONSchema7) ||
-              isComputedField(type as ExtendedJSONSchema7);
-
-            // Check if this field is a function field
-            const isFunction =
-              isFunctionField(rawType as ExtendedJSONSchema7) ||
-              isFunctionField(type as ExtendedJSONSchema7);
-
-            // Check if this field is a review-based criterion
-            const isReviewBasedCriterion =
-              isReviewCriterion(rawType as ExtendedJSONSchema7) ||
-              isReviewCriterion(type as ExtendedJSONSchema7);
-
             return (
               <div
                 className="group flex h-full w-full"
@@ -1433,17 +1237,7 @@ export function ColumnsFromSchema(
               >
                 {disableHeaderInteractions ? (
                   <div
-                    className={`flex h-full grow items-center justify-start rounded-none px-1 ${
-                      isReviewBasedCriterion
-                        ? "bg-success/10 text-success-foreground"
-                        : isComputed
-                          ? "bg-primary/10 text-primary"
-                          : hasReasoning
-                            ? "bg-primary/10 text-primary"
-                            : isFunction
-                              ? "bg-success/10 text-success-foreground"
-                              : `${theme.headerText} ${theme.headerBg}`
-                    }`}
+                    className="flex h-full grow items-center justify-start rounded-none px-1 text-muted-foreground bg-muted hover:bg-muted/80"
                   >
                     <div
                       className="text-3xs flex flex-row items-center gap-2 truncate overflow-hidden"
@@ -1465,17 +1259,7 @@ export function ColumnsFromSchema(
                       <Button
                         variant="ghost"
                         size="sm"
-                        className={`h-full grow justify-start rounded-none px-1 ${
-                          isReviewBasedCriterion
-                            ? "bg-success/10 text-success-foreground hover:bg-success/20 hover:text-success-foreground"
-                            : isComputed
-                              ? "bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary"
-                              : hasReasoning
-                                ? "bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary"
-                                : isFunction
-                                  ? "bg-success/10 text-success-foreground hover:bg-success/20 hover:text-success-foreground"
-                                  : `${theme.headerText} ${theme.headerBg}`
-                        }`}
+                        className="h-full grow justify-start rounded-none px-1 text-muted-foreground bg-muted hover:bg-muted/80"
                       >
                         <div
                           className="text-3xs flex flex-row items-center gap-2 truncate overflow-hidden"
@@ -1532,18 +1316,25 @@ export function ColumnsFromSchema(
                       <Separator />
 
                       {/* Property editor */}
-                      <PropertyEditor
-                        property={rawType}
-                        propertyKey={key}
-                        setDropdownOpen={setDropdownOpen}
+                      <JsonSchemaEditorProvider
                         jsonSchema={schema}
-                        setJsonSchema={setSchema}
-                        editMode={
-                          isReviewBasedCriterion || isFunction
-                            ? "readOnly"
-                            : editMode
+                        setJsonSchema={(action) =>
+                          setSchema(
+                            typeof action === "function"
+                              ? action(schema)
+                              : action,
+                          )
                         }
-                      />
+                      >
+                        <PropertyEditor
+                          property={rawType}
+                          propertyKey={key}
+                          setDropdownOpen={setDropdownOpen}
+                          jsonSchema={schema}
+                          setJsonSchema={setSchema}
+                          editMode={editMode}
+                        />
+                      </JsonSchemaEditorProvider>
                     </PopoverDialogContent>
                   </PopoverDialog>
                 )}
@@ -1551,17 +1342,7 @@ export function ColumnsFromSchema(
                   <Button
                     variant="ghost"
                     size="icon"
-                    className={`h-full w-6 rounded-none ${
-                      isReviewBasedCriterion
-                        ? "bg-success/10 text-success-foreground hover:bg-success/20 hover:text-success-foreground"
-                        : isComputed
-                          ? "bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary"
-                          : isFunction
-                            ? "bg-success/10 text-success-foreground hover:bg-success/20 hover:text-success-foreground"
-                            : hasReasoning
-                              ? "bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary"
-                              : `${theme.headerText} ${theme.headerBg}`
-                    }`}
+                    className="h-full w-6 rounded-none text-muted-foreground bg-muted hover:bg-muted/80"
                     onClick={() => {
                       if (stopAt.includes(key)) {
                         setStopAt(stopAt.filter((s) => s !== key));

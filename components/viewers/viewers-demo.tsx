@@ -15,6 +15,7 @@ import { PdfViewer } from "@/components/ui/pdf-viewer";
 import splitSample from "@/components/viewers/sample-data/split.json";
 import partitionSample from "@/components/viewers/sample-data/partition.json";
 import parseSample from "@/components/viewers/sample-data/parse.json";
+import editSample from "@/components/viewers/sample-data/edit.json";
 
 // ── Sample data ─────────────────────────────────────────────────────────────
 
@@ -45,11 +46,12 @@ const parseResult: ParseResponse = {
   usage: parseSample.usage as ParseResponse["usage"],
 };
 
-const editFields: FormField[] = [
-  { key: "full_name", bbox: { left: 0.1, top: 0.12, width: 0.32, height: 0.04, page: 1 }, type: "text", description: "Full name", value: "Jane Doe" },
-  { key: "email", bbox: { left: 0.1, top: 0.2, width: 0.4, height: 0.04, page: 1 }, type: "text", description: "Email address", value: "jane@acme.com" },
-  { key: "agree", bbox: { left: 0.1, top: 0.3, width: 0.04, height: 0.03, page: 1 }, type: "checkbox", description: "Accept terms", value: "true" },
-];
+/**
+ * Real edit result: a Fidelity "Bank Wire Authorization" form filled from a
+ * saved template (29 detected fields across 3 pages, normalized bbox anchors).
+ */
+const EDIT_PDF_URL = "/samples/fidelity-edit/fidelity_original.pdf";
+const editFields = editSample as FormField[];
 
 function FakeDocument({
   onCurrentPageChange,
@@ -179,16 +181,24 @@ export function JsonFormSourcesDemo() {
 }
 
 export function EditViewerDemo() {
+  // Filled form fields beside the source document — select or hover a field to
+  // highlight its region on the page; toggle Original/Filled to stamp the values.
   return (
-    <div className="not-prose flex flex-col overflow-hidden rounded-xl border" style={{ height: 520 }}>
+    <div className="not-prose flex flex-col overflow-hidden rounded-xl border" style={{ height: 680 }}>
       <EditViewer
         detectedFields={editFields}
         hasFilled
         hasOriginal
-        renderDocument={(view) => (
-          <div className="flex h-full items-center justify-center bg-muted text-sm text-muted-foreground capitalize">
-            {view} document
-          </div>
+        renderDocument={({ viewerRef, renderPageOverlay, onVisiblePageChange }) => (
+          <PdfViewer
+            ref={viewerRef}
+            src={EDIT_PDF_URL}
+            bare
+            downloadFileName="fidelity-bank-wire-authorization.pdf"
+            className="h-full"
+            renderPageOverlay={renderPageOverlay}
+            onVisiblePageChange={onVisiblePageChange}
+          />
         )}
       />
     </div>

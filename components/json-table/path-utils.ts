@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useRef } from "react";
 import { BuilderDocument } from "@/components/json-table/lib/projects-types";
 
 /* --------------------------------------------------------------------

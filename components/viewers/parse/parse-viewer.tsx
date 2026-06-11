@@ -7,9 +7,9 @@ import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import { Check, ChevronLeft, ChevronRight, Copy, ScanText } from "lucide-react";
 
-import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -142,39 +142,37 @@ export function ParseViewer({
 
   const output = (
     <div className="flex h-full min-h-0 min-w-0 flex-col bg-muted/20">
-      <div className="flex h-10 shrink-0 items-center gap-2 border-b bg-card px-3">
-        <span className="hidden text-xs font-medium text-muted-foreground sm:inline">
-          {renderDocument ? "Extracted" : "Parsed output"}
-        </span>
-        {pages.length > 1 ? (
-          <div className="ml-auto flex items-center gap-0.5">
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              className="size-7"
-              aria-label="Previous page"
-              disabled={currentPage <= 1}
-              onClick={() => goToPage(currentPage - 1)}
-            >
-              <ChevronLeft />
-            </Button>
-            <span className="px-1 text-xs tabular-nums text-muted-foreground">
-              {currentPage} / {pages.length}
-            </span>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              className="size-7"
-              aria-label="Next page"
-              disabled={currentPage >= pages.length}
-              onClick={() => goToPage(currentPage + 1)}
-            >
-              <ChevronRight />
-            </Button>
-          </div>
-        ) : null}
-        <div className={cn("flex items-center gap-2.5", pages.length > 1 ? "" : "ml-auto")}>
-          <ModeToggle mode={mode} onChange={setMode} />
+      <div className="flex h-10 shrink-0 items-center gap-1 border-b bg-card px-2">
+        <ModeToggle mode={mode} onChange={setMode} />
+        <div className="ml-auto flex items-center gap-1">
+          {pages.length > 1 ? (
+            <>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="size-7"
+                aria-label="Previous page"
+                disabled={currentPage <= 1}
+                onClick={() => goToPage(currentPage - 1)}
+              >
+                <ChevronLeft />
+              </Button>
+              <span className="px-1 text-xs tabular-nums text-muted-foreground">
+                {currentPage} / {pages.length}
+              </span>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="size-7"
+                aria-label="Next page"
+                disabled={currentPage >= pages.length}
+                onClick={() => goToPage(currentPage + 1)}
+              >
+                <ChevronRight />
+              </Button>
+              <Separator orientation="vertical" className="mx-1 h-4" />
+            </>
+          ) : null}
           <CopyButton text={pages.join("\n\n")} />
         </div>
       </div>

@@ -28,6 +28,7 @@ import { TextSourcesBlock } from "@/registry/new-york-v4/blocks/text-sources-blo
 import { CsvSourcesBlock } from "@/registry/new-york-v4/blocks/csv-sources-block"
 import { XlsxSourcesBlock } from "@/registry/new-york-v4/blocks/xlsx-sources-block"
 import { DocxSourcesBlock } from "@/registry/new-york-v4/blocks/docx-sources-block"
+import { EditViewerBlock } from "@/registry/new-york-v4/blocks/edit-viewer-block"
 import { ParseViewerBlock } from "@/registry/new-york-v4/blocks/parse-viewer-block"
 import { PartitionViewerBlock } from "@/registry/new-york-v4/blocks/partition-viewer-block"
 import { LegendVariantsBlock } from "@/registry/new-york-v4/blocks/legend-variants-block"
@@ -54,6 +55,7 @@ const blockComponents = {
   split: SplitViewerBlock,
   partition: PartitionViewerBlock,
   parse: ParseViewerBlock,
+  edit: EditViewerBlock,
   "extraction-viewer": ExtractionViewerBlock,
   extract: ExtractViewerBlock,
   "image-sources": ImageSourcesBlock,
@@ -62,7 +64,7 @@ const blockComponents = {
   "xlsx-sources": XlsxSourcesBlock,
   "docx-sources": DocxSourcesBlock,
   "primitive-cards": PrimitiveCardsBlock,
-  "legend-variants": LegendVariantsBlock,
+  "legend-variants": () => <LegendVariantsBlock columns={3} />,
   "pdf-thumbnails": PdfThumbnailsBlock,
 } satisfies Record<ViewerBlockId, React.ComponentType>
 

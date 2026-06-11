@@ -22,7 +22,6 @@ import {
   getRowHeightPx,
   useSheetOptionsStore,
 } from "./table-options-store";
-import { getTheme } from "@/components/json-table/lib/themes";
 import { HoverInfoContext, HoverInfo } from "./hover-info-context";
 import { useFixedRowWindow } from "./lib/use-fixed-row-window";
 
@@ -47,8 +46,6 @@ interface SingleFileVirtualizedTableProps {
   }) => void;
   /** Direct callback for ground truth changes (used in reconciliation mode) */
   onGroundTruthChange?: (fieldPath: string, newValue: any) => void;
-  /** Map from field paths to indication texts (for review) */
-  fieldIndicationMap?: Map<string, string>;
   /** Rows to render beyond the viewport on each side (virtualization buffer). Default 12. */
   overscan?: number;
 }
@@ -61,18 +58,17 @@ const SingleFileTableHeader = React.memo(
     columns: TableColumn[];
     columnWidth: any;
   }) => {
-    const theme = getTheme("single-extraction");
     // Header rows derived straight from the column tree: each group spans its
     // leaves; leaves leave empty placeholder cells in the rows beneath them so
     // columns stay aligned. (This is what TanStack's getHeaderGroups produced.)
     const headerRows = buildHeaderRows(columns);
 
     return (
-      <TableHeader className={`sticky top-0 z-10 ${theme.headerBg}`}>
+      <TableHeader className="sticky top-0 z-10 bg-muted hover:bg-muted/80">
         {headerRows.map((cells, rowIdx) => (
           <TableRow
             key={rowIdx}
-            className={`flex w-max min-w-full ${theme.subHeaderBg} border-b ${theme.border}`}
+            className="flex w-max min-w-full bg-muted border-b border-border"
           >
             {cells.map((cell, cellIdx) => {
               const width = cell.leafCount * getColumnWidthPx(columnWidth);
@@ -81,7 +77,7 @@ const SingleFileTableHeader = React.memo(
                 return (
                   <th
                     key={cellIdx}
-                    className={`shrink-0 ${theme.subHeaderBg} text-3xs ${theme.headerText} border-r last:border-r-0 ${theme.border}`}
+                    className="shrink-0 bg-muted text-3xs text-muted-foreground border-r last:border-r-0 border-border"
                     style={{ width: `${width}px`, minWidth: `${width}px` }}
                   />
                 );
@@ -90,7 +86,7 @@ const SingleFileTableHeader = React.memo(
               return (
                 <TableHead
                   key={cellIdx}
-                  className={`shrink-0 ${theme.headerBg} ${theme.headerText} m-0 border-r p-0 last:border-r-0 ${theme.border}`}
+                  className="shrink-0 bg-muted hover:bg-muted/80 text-muted-foreground m-0 border-r p-0 last:border-r-0 border-border"
                   style={{
                     width: `${width}px`,
                     minWidth: `${width}px`,
@@ -115,10 +111,6 @@ SingleFileTableHeader.displayName = "SingleFileTableHeader";
 export const SingleFileVirtualizedTable =
   React.memo<SingleFileVirtualizedTableProps>(
     ({
-      stopAt,
-      setStopAt,
-      foldAllSignal,
-      setFoldAllSignal,
       columns,
       document,
       schema,
@@ -129,13 +121,10 @@ export const SingleFileVirtualizedTable =
       editMode,
       allowEditing = true,
       onCellHoverStart,
-      onGroundTruthChange,
-      fieldIndicationMap,
       overscan = 12,
     }) => {
 
       const { rowHeight, columnWidth } = useSheetOptionsStore();
-      const theme = getTheme("single-file");
 
       // Add hover info state for DataCell hover functionality
       const [hoverInfo, setHoverInfo] = useState<HoverInfo | null>(null);
@@ -173,7 +162,7 @@ export const SingleFileVirtualizedTable =
       return (
         <HoverInfoContext.Provider value={{ hoverInfo, setHoverInfo }}>
           <div
-            className={`relative flex min-h-0 min-w-0 flex-1 flex-col ${theme.tableContainerBg}`}
+            className="relative flex min-h-0 min-w-0 flex-1 flex-col bg-background"
           >
             {/* Header: a fixed, opaque bar outside the vertical scroll. It
                 scrolls horizontally in sync with the body so columns stay
@@ -183,10 +172,10 @@ export const SingleFileVirtualizedTable =
                 separated-header approach. */}
             <div
               ref={headerScrollRef}
-              className={`w-full shrink-0 overflow-x-hidden ${theme.headerBg}`}
+              className="w-full shrink-0 overflow-x-hidden bg-muted hover:bg-muted/80"
             >
               <Table
-                className={`relative flex w-full flex-col rounded-none ${theme.headerBg}`}
+                className="relative flex w-full flex-col rounded-none bg-muted hover:bg-muted/80"
                 style={{ minWidth: `${totalWidth}px` }}
               >
                 <SingleFileTableHeader
@@ -206,14 +195,14 @@ export const SingleFileVirtualizedTable =
               }}
             >
               <Table
-                className={`relative flex w-full flex-col rounded-none ${theme.tableContainerBg}`}
+                className="relative flex w-full flex-col rounded-none bg-background"
                 style={{
                   minWidth: `${totalWidth}px`,
                 }}
               >
                 <TableBody
                   ref={bodyRef}
-                  className={`relative w-full ${theme.tableContainerBg}`}
+                  className="relative w-full bg-background"
                   style={{
                     height: `${totalHeight}px`,
                     minWidth: "100%",
@@ -242,7 +231,6 @@ export const SingleFileVirtualizedTable =
                           editMode={editMode}
                           allowEditing={allowEditing}
                           onCellHoverStart={onCellHoverStart}
-                          fieldIndicationMap={fieldIndicationMap}
                         />
                         );
                       })

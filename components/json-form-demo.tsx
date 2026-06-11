@@ -10,23 +10,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import sampleSchema from "@/components/json-form/sample/schema.json"
 import sampleData from "@/components/json-form/sample/data.json"
 
-/** Drop Retab's `X-*` schema extensions so the form renders no extra controls. */
-function stripExtensions(node: unknown): unknown {
-  if (Array.isArray(node)) return node.map(stripExtensions)
-  if (node && typeof node === "object") {
-    const out: Record<string, unknown> = {}
-    for (const [key, value] of Object.entries(node)) {
-      if (key.startsWith("X-")) continue
-      out[key] = stripExtensions(value)
-    }
-    return out
-  }
-  return node
-}
-
 // A real extraction: an oil & gas revenue statement nested three arrays deep
 // (`properties[] → production[] → line_items[]`) — a few thousand leaf fields.
-const schema = stripExtensions(sampleSchema) as JSONSchema7
+const schema = sampleSchema as JSONSchema7
 const defaultValues = sampleData as Record<string, unknown>
 
 export function JsonFormDemo({

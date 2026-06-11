@@ -5,7 +5,6 @@ import { JSONSchema7 } from "json-schema";
 import { TableDocument } from "@/components/json-table/lib/projects-types";
 import {
   objectToTable2D,
-  PathInfo,
 } from "@/components/json-table/path-utils";
 import {
   ColumnsFromSchema,
@@ -19,7 +18,7 @@ import {
 interface SingleFileTableViewProps {
   document: TableDocument;
   schema: JSONSchema7;
-  setSchema?: (schema: JSONSchema7) => void; // Optional setter to enable schema editing (description, reasoning)
+  setSchema?: (schema: JSONSchema7) => void; // Optional setter to enable schema editing (descriptions)
   columnWidth?: ColumnWidth;
   onUpdateDocument?: (patch: any) => Promise<void>;
   editMode?: "promptOnly" | "editable" | "readOnly";
@@ -31,8 +30,6 @@ interface SingleFileTableViewProps {
   }) => void;
   /** Direct callback for ground truth changes (used in reconciliation mode) */
   onGroundTruthChange?: (fieldPath: string, newValue: any) => void;
-  /** Map from field paths to indication texts (for review) */
-  fieldIndicationMap?: Map<string, string>;
   /** Rows to render beyond the viewport on each side (virtualization buffer). Default 12. */
   overscan?: number;
 }
@@ -48,7 +45,6 @@ export const SingleFileTableView = React.memo<SingleFileTableViewProps>(
     allowEditing = true,
     onCellHoverStart,
     onGroundTruthChange,
-    fieldIndicationMap,
     overscan,
   }) => {
     const { columnWidth: storeColumnWidth } = useSheetOptionsStore();
@@ -72,7 +68,6 @@ export const SingleFileTableView = React.memo<SingleFileTableViewProps>(
         !setSchema, // is_published = true only if no setSchema (disables schema editing)
         draggedItemKeyRef,
         draggedItemParentPathRef,
-        "single-file", // currentIterationId
         editMode,
       );
     }, [schema, setSchema, stopAt, columnWidth, editMode]);
@@ -119,7 +114,6 @@ export const SingleFileTableView = React.memo<SingleFileTableViewProps>(
             allowEditing={allowEditing}
             onCellHoverStart={onCellHoverStart}
             onGroundTruthChange={onGroundTruthChange}
-            fieldIndicationMap={fieldIndicationMap}
             overscan={overscan}
           />
         </div>

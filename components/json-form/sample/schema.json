@@ -1,293 +1,286 @@
 {
-    "title": "Oil and Gas Revenue Statement Extraction Schema (Transactions)",
-    "type": "object",
-    "X-SchemaType": "generic",
-    "description": "Schema for structured extraction of key data from oil and gas revenue statements as a list of transactions, normalized with controlled vocabularies and reconciliation-ready amounts.\n\nHere as some acronyms you might encounter: \nSEV = Severance Tax\nRI = Royalty Interest\nTRT = Treating\nCMP = Compression\nGTH = Gathering Fee\nORRI = Overriding Royalty Interest\nNRI = Net Revenue Interest\nUWI = Unit Working Interest\nWI = Working Interest\nMKTR = Marketing Fee\nPROC = Processing Fee\nACCT = Accounting Fee\nADMIN = Administrative Fee\nDHR = Dehydration\nELCT = Electricity\nENV = Environmental Fee\nFRT = Freight\nFS = Fuel / Shrink\nGASL = Gas Lift\nHAND = Handling Fee\nHAUL = Hauling\nINS = Insurance\nLOE = Lease Operating Expense\nMAIN = Maintenance\nPIPE = Pipeline Fee\nPLUG = Plugging Fee\nSWD = Salt Water Disposal\nTSP = Transportation\nMI = Mineral Interest\nNPRI = Non-Participating Royalty Interest\n101 = Oil\n201 = Gas\n301 = Condensate\n400 = Natural Gas Liquids (NGL)\n999 = Miscellaneous\nADVAL = Ad Valorem Tax\nCON = Conservation Tax\nFED = Federal Tax\nOTH = Other Tax\nSCH = School Tax\nSTATE = State Tax\nTRN = Transportation\nCOM = Compression\nGAT = Gathering Deduction\nPRO = Production\nDEH = Dehydration Deduction\nFLB = Field Losses Benefit Deduction\nTRANS = Transportation\nAD = Ad Valorem Tax\nR = Royalty Interest\nW = Working Interest\nGPT = Gross Production Tax\nD = Deduct\nTRT = Transportation Tax\nADT = Ad Valorem Tax\nPPT = Private Production Tax\nENV = Environmental Tax\nT = Tax\nAD = Additional Deduction\nEM05 = External Transportation/MF\nRI01 = Royalty Interest 01\nRI02 = Royalty Interest 02\nEM01 = External Compression\nEM04 = External Gathering\nTX05 = Tax Code 05\nTX08 = Tax Code 08\nTRAN = Transportation\nNPR = Non Participating Royalty\nGTH = Gathering Tax\nT = Transportation\nGTO = Gas Transport\nST = Sales Tax\nO = Overriding Royalty Interest\nEM10 = External Other\nEM03 = External Treating\nGTP = Gross Production Tax\nTX = Tax Code\nEM = External Compression\nRT = Royalty Interest\nSV = Severance Tax\nFPR = Processing Fuel\nFGT = Gathering Fuel\nFUEL = Fuel\nMKT = Marketing\nEXC = Excise and Marginal\nCL = Gas Lift\nOWI = Overriding Royalty Interest\nROI = Royalty Interest\nROYALTY = Royalty Interest\nENVIRONMENTAL = Environmental Tax - Purchaser Pays\nPR = Production Tax\nFE = Environmental Tax\nREG = Regulatory Tax\nRT = Regulatory Tax\nOTH = Other Deduction\nTRN = Transportation Tax",
-    "properties": {
-      "check": {
-        "type": "object",
-        "properties": {
-          "payor": {
-            "type": "string",
-            "title": "Payor",
-            "description": "Operating company/payor name as printed "
-          },
-          "payee": {
-            "type": "object",
-            "properties": {
-              "name": {
-                "type": "string",
-                "title": "Name",
-                "description": "full name of the one receiving the check (the property owner)."
-              },
-              "ID": {
-                "type": "string",
-                "title": "Id",
-                "description": "Owner account number assigned by the remitter/payor to the interest owner"
-              }
-            },
-            "required": [
-              "name",
-              "ID"
-            ],
-            "title": "Payee"
-          },
-          "check_date": {
-            "type": "string",
-            "format": "date",
-            "title": "CheckDate",
-            "description": "Check date in ISO-8601 format (YYYY-MM-DD)."
-          },
-          "deposit_date": {
-            "type": "string",
-            "format": "date",
-            "title": "DepositDate",
-            "description": "Deposit date in ISO-8601 format (YYYY-MM-DD)."
-          },
-          "amount": {
-            "type": "number",
-            "title": "Amount",
-            "description": "Total check amount, 2-decimal rounding."
-          },
-          "ID": {
-            "type": "string",
-            "title": "Id",
-            "description": "Check or ACH reference identifier (free-text)."
-          }
-        },
-        "required": [
-          "payor",
-          "payee",
-          "check_date",
-          "deposit_date",
-          "amount",
-          "ID"
-        ],
-        "title": "Check"
-      },
+  "title": "Oil and Gas Revenue Statement Extraction Schema (Transactions)",
+  "type": "object",
+  "description": "Schema for structured extraction of key data from oil and gas revenue statements as a list of transactions, normalized with controlled vocabularies and reconciliation-ready amounts.\n\nHere as some acronyms you might encounter: \nSEV = Severance Tax\nRI = Royalty Interest\nTRT = Treating\nCMP = Compression\nGTH = Gathering Fee\nORRI = Overriding Royalty Interest\nNRI = Net Revenue Interest\nUWI = Unit Working Interest\nWI = Working Interest\nMKTR = Marketing Fee\nPROC = Processing Fee\nACCT = Accounting Fee\nADMIN = Administrative Fee\nDHR = Dehydration\nELCT = Electricity\nENV = Environmental Fee\nFRT = Freight\nFS = Fuel / Shrink\nGASL = Gas Lift\nHAND = Handling Fee\nHAUL = Hauling\nINS = Insurance\nLOE = Lease Operating Expense\nMAIN = Maintenance\nPIPE = Pipeline Fee\nPLUG = Plugging Fee\nSWD = Salt Water Disposal\nTSP = Transportation\nMI = Mineral Interest\nNPRI = Non-Participating Royalty Interest\n101 = Oil\n201 = Gas\n301 = Condensate\n400 = Natural Gas Liquids (NGL)\n999 = Miscellaneous\nADVAL = Ad Valorem Tax\nCON = Conservation Tax\nFED = Federal Tax\nOTH = Other Tax\nSCH = School Tax\nSTATE = State Tax\nTRN = Transportation\nCOM = Compression\nGAT = Gathering Deduction\nPRO = Production\nDEH = Dehydration Deduction\nFLB = Field Losses Benefit Deduction\nTRANS = Transportation\nAD = Ad Valorem Tax\nR = Royalty Interest\nW = Working Interest\nGPT = Gross Production Tax\nD = Deduct\nTRT = Transportation Tax\nADT = Ad Valorem Tax\nPPT = Private Production Tax\nENV = Environmental Tax\nT = Tax\nAD = Additional Deduction\nEM05 = External Transportation/MF\nRI01 = Royalty Interest 01\nRI02 = Royalty Interest 02\nEM01 = External Compression\nEM04 = External Gathering\nTX05 = Tax Code 05\nTX08 = Tax Code 08\nTRAN = Transportation\nNPR = Non Participating Royalty\nGTH = Gathering Tax\nT = Transportation\nGTO = Gas Transport\nST = Sales Tax\nO = Overriding Royalty Interest\nEM10 = External Other\nEM03 = External Treating\nGTP = Gross Production Tax\nTX = Tax Code\nEM = External Compression\nRT = Royalty Interest\nSV = Severance Tax\nFPR = Processing Fuel\nFGT = Gathering Fuel\nFUEL = Fuel\nMKT = Marketing\nEXC = Excise and Marginal\nCL = Gas Lift\nOWI = Overriding Royalty Interest\nROI = Royalty Interest\nROYALTY = Royalty Interest\nENVIRONMENTAL = Environmental Tax - Purchaser Pays\nPR = Production Tax\nFE = Environmental Tax\nREG = Regulatory Tax\nRT = Regulatory Tax\nOTH = Other Deduction\nTRN = Transportation Tax",
+  "properties": {
+    "check": {
+      "type": "object",
       "properties": {
-        "type": "array",
-        "description": "List of properties",
-        "items": {
+        "payor": {
+          "type": "string",
+          "title": "Payor",
+          "description": "Operating company/payor name as printed "
+        },
+        "payee": {
           "type": "object",
           "properties": {
-            "property_id": {
+            "name": {
               "type": "string",
-              "title": "PropertyId",
-              "description": "operator's property identifier as printed.",
-              "X-ReasoningPrompt": "Your task is to extract information from a single property record that spans multiple pages.\n\nInstructions:\n\nFind the Context: First, scan the top of the very first page to find the Property ID. This ID is the unique identifier for the entire document.\n\nScan All Pages: This document is one continuous record. You must scan all pages provided.\n\nFind the Final Value: Go to the very bottom of the last page to find the final \"Total Property\" value.\n\nConnect the Data: The Property ID from Step 1 must be associated with the Total Property value from Step 3.\n\nCRITICAL: Do NOT assume the \"Total Property\" is missing just because it is not on the same page as the \"Property ID\". The Property ID on Page 1 is the header for all data that follows, including the Total Property on the final page.\n\nI you find no information for this property, this is a strong cue that you are mislead and that the information is on next pages. Dont worry about \"check number\" annotations if you find some, they are not related to the property id. "
+              "title": "Name",
+              "description": "full name of the one receiving the check (the property owner)."
             },
-            "description": {
+            "ID": {
               "type": "string",
-              "title": "Description",
-              "description": "well/lease name or description as printed "
-            },
-            "state": {
-              "type": "string",
-              "title": "State",
-              "description": "state as a 2 letter abbreviation (e.g. CA, TN, ...)"
-            },
-            "county": {
-              "type": "string",
-              "title": "County",
-              "description": "county name (not state)"
-            },
-            "production": {
-              "type": "array",
-              "description": "List of Production objects for this property.",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "type": {
-                    "type": "string",
-                    "enum": [
-                      "OIL",
-                      "GAS",
-                      "NGL",
-                      "CONDENSATE",
-                      "SKIM",
-                      "WITHHOLDING"
-                    ],
-                    "title": "Type",
-                    "description": "Normalized Product Type\n\nThis field standardizes product type labels found on oil and gas revenue statements to make them consistent across operators and states.\n\nAliases:\n\t•\t\"O\", \"OIL SALES\" → OIL\n\t•\t\"NG\", \"GAS SALES\" → GAS\n\t•\t\"PP\", \"PLANT\", \"NGLS\", \"PLANT PRODUCTS\" → NGL\n\t•\t\"COND\" → CONDENSATE\n\t•\t\"SKIM\" → SKIM (represents balancing or adjustment entries for small volume or revenue discrepancies between measured and allocated production, often due to rounding, shrinkage, or metering differences. Not a separate production stream.)\n\t•\t\"WITHHOLDING\" → State withholding tax\n"
-                  },
-                  "line_items": {
-                    "type": "array",
-                    "description": "Extract each of the line items. A line item can either be: \n- a revenue event (e.g. royalty interest)\n- a deduction\n- a state witholding\n\nDo not merge line items. If there is an RI line item and a deduct line item, treat them as separate lines. ",
-                    "items": {
-                      "type": "object",
-                      "properties": {
-                        "type": {
-                          "type": "string",
-                          "title": "Type",
-                          "description": "The type, as reported.\n\nIf it is ROYALTY INTEREST, ROYALTY, or similar, return: RI\nIf it is WORKING INTEREST, return WI\nIf it is ORRI INTEREST, return ORRI\nIf it is NPRI INTEREST, return NPRI\nIf it is UWI INTEREST, return UWI\nIf the raw value is UWI but clearly denotes working interest, normalize to WI.\n\nIf it is a deduction or tax (e.g. Severance tax, processing, treating, production tax, witholding tax, marketing expense, ...), return it exactly as it is in the document",
-                          "X-ReasoningPrompt": ""
-                        },
-                        "production_date": {
-                          "type": "string",
-                          "format": "date",
-                          "title": "ProductionDate",
-                          "description": "Production period end date in ISO-8601 format (YYYY-MM-DD)."
-                        },
-                        "btu": {
-                          "anyOf": [
-                            {
-                              "type": "number",
-                              "title": "Btu"
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ],
-                          "title": "Btu",
-                          "description": "BTU, if mentioned, as written"
-                        },
-                        "property_volume": {
-                          "anyOf": [
-                            {
-                              "type": "number",
-                              "title": "PropertyVolume"
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ],
-                          "title": "PropertyVolume",
-                          "description": "Property gross volume produced, exactly as reported (with as many decimal places as in the reported value). "
-                        },
-                        "volume_unit": {
-                          "anyOf": [
-                            {
-                              "type": "string",
-                              "title": "VolumeUnit"
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ],
-                          "title": "VolumeUnit",
-                          "description": "Unit for the volume\n\nif OIL: return BBL\n\nif GAS: return MCF or MMBtu\n\nif NGL: return GAL\n\nif CONDENSATE: return BBL\n\nif Plant products: return BBL"
-                        },
-                        "price": {
-                          "type": "number",
-                          "title": "Price",
-                          "description": "Price as reported, 4-decimal rounding.",
-                          "X-ReasoningPrompt": ""
-                        },
-                        "property_value": {
-                          "type": "number",
-                          "title": "PropertyValue",
-                          "description": "Gross property value, as reported. 2-decimal rounding. \n\nIf it is written as (X), return -X\nIf it is written as X, return X"
-                        },
-                        "owner_interest": {
-                          "type": "number",
-                          "title": "OwnerInterest",
-                          "description": "Owner interest decimal between 0 and 1, rounded to 6 decimals."
-                        },
-                        "distribution_interest": {
-                          "type": "number",
-                          "title": "DistributionInterest",
-                          "description": "Settlement decimal (percent of the gross property revenue the owner is owed) between 0 and 1, rounded to 6 decimals."
-                        },
-                        "owner_volume": {
-                          "type": "number",
-                          "title": "OwnerVolume",
-                          "description": "Owner share volume as reported"
-                        },
-                        "owner_value": {
-                          "type": "number",
-                          "title": "OwnerValue",
-                          "description": "The owner's share of the gross revenue as reported. DO NOT COMPUTE"
-                        }
-                      },
-                      "required": [
-                        "production_date",
-                        "property_volume",
-                        "price",
-                        "property_value",
-                        "volume_unit",
-                        "owner_value",
-                        "owner_volume",
-                        "type",
-                        "owner_interest",
-                        "distribution_interest",
-                        "btu"
-                      ],
-                      "title": "LineItem"
-                    },
-                    "title": "LineItems",
-                    "X-ReasoningPrompt": ""
-                  },
-                  "total_owner_volume": {
-                    "anyOf": [
-                      {
-                        "type": "number",
-                        "title": "TotalOwnerVolume"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ],
-                    "title": "TotalOwnerVolume",
-                    "description": "The total owner share volume, in bold, as written. Right next to \"Total\" followed by the type of production (e.g. Total GAS, Total OIL, ...). \n\nDo not do computations, write it only if explicitly mentioned in the document."
-                  },
-                  "total_owner_value": {
-                    "anyOf": [
-                      {
-                        "type": "number",
-                        "title": "TotalOwnerValue"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ],
-                    "title": "TotalOwnerValue",
-                    "description": "The total owner share value, in bold, as written. Right next to \"Total\" followed by the type of production (e.g. Total GAS, Total OIL, ...) and the owner_share_volume. \n\nDo not do computations, write it only if explicitly mentioned in the document. This is not the property total, but the total for the individual production type. "
-                  }
-                },
-                "required": [
-                  "type",
-                  "line_items",
-                  "total_owner_volume",
-                  "total_owner_value"
-                ],
-                "title": "Production"
-              },
-              "title": "ProductionList",
-              "X-ReasoningPrompt": ""
-            },
-            "total_property_value": {
-              "anyOf": [
-                {
-                  "type": "number",
-                  "title": "TotalPropertyValue"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "TotalPropertyValue",
-              "description": "owner's total balance for this property. Will be next to Total Property after all its production line items. \n\nDo not do computations, write it only if explicitly mentioned in the document."
+              "title": "Id",
+              "description": "Owner account number assigned by the remitter/payor to the interest owner"
             }
           },
           "required": [
-            "description",
-            "property_id",
-            "county",
-            "state",
-            "production",
-            "total_property_value"
+            "name",
+            "ID"
           ],
-          "additionalProperties": false
+          "title": "Payee"
         },
-        "title": "Properties"
-      }
+        "check_date": {
+          "type": "string",
+          "format": "date",
+          "title": "CheckDate",
+          "description": "Check date in ISO-8601 format (YYYY-MM-DD)."
+        },
+        "deposit_date": {
+          "type": "string",
+          "format": "date",
+          "title": "DepositDate",
+          "description": "Deposit date in ISO-8601 format (YYYY-MM-DD)."
+        },
+        "amount": {
+          "type": "number",
+          "title": "Amount",
+          "description": "Total check amount, 2-decimal rounding."
+        },
+        "ID": {
+          "type": "string",
+          "title": "Id",
+          "description": "Check or ACH reference identifier (free-text)."
+        }
+      },
+      "required": [
+        "payor",
+        "payee",
+        "check_date",
+        "deposit_date",
+        "amount",
+        "ID"
+      ],
+      "title": "Check"
     },
-    "required": [
-      "properties",
-      "check"
-    ],
-    "additionalProperties": false,
-    "X-ReasoningPrompt": "",
-    "$defs": {}
-  }
+    "properties": {
+      "type": "array",
+      "description": "List of properties",
+      "items": {
+        "type": "object",
+        "properties": {
+          "property_id": {
+            "type": "string",
+            "title": "PropertyId",
+            "description": "operator's property identifier as printed."
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "description": "well/lease name or description as printed "
+          },
+          "state": {
+            "type": "string",
+            "title": "State",
+            "description": "state as a 2 letter abbreviation (e.g. CA, TN, ...)"
+          },
+          "county": {
+            "type": "string",
+            "title": "County",
+            "description": "county name (not state)"
+          },
+          "production": {
+            "type": "array",
+            "description": "List of Production objects for this property.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "OIL",
+                    "GAS",
+                    "NGL",
+                    "CONDENSATE",
+                    "SKIM",
+                    "WITHHOLDING"
+                  ],
+                  "title": "Type",
+                  "description": "Normalized Product Type\n\nThis field standardizes product type labels found on oil and gas revenue statements to make them consistent across operators and states.\n\nAliases:\n\t•\t\"O\", \"OIL SALES\" → OIL\n\t•\t\"NG\", \"GAS SALES\" → GAS\n\t•\t\"PP\", \"PLANT\", \"NGLS\", \"PLANT PRODUCTS\" → NGL\n\t•\t\"COND\" → CONDENSATE\n\t•\t\"SKIM\" → SKIM (represents balancing or adjustment entries for small volume or revenue discrepancies between measured and allocated production, often due to rounding, shrinkage, or metering differences. Not a separate production stream.)\n\t•\t\"WITHHOLDING\" → State withholding tax\n"
+                },
+                "line_items": {
+                  "type": "array",
+                  "description": "Extract each of the line items. A line item can either be: \n- a revenue event (e.g. royalty interest)\n- a deduction\n- a state witholding\n\nDo not merge line items. If there is an RI line item and a deduct line item, treat them as separate lines. ",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "title": "Type",
+                        "description": "The type, as reported.\n\nIf it is ROYALTY INTEREST, ROYALTY, or similar, return: RI\nIf it is WORKING INTEREST, return WI\nIf it is ORRI INTEREST, return ORRI\nIf it is NPRI INTEREST, return NPRI\nIf it is UWI INTEREST, return UWI\nIf the raw value is UWI but clearly denotes working interest, normalize to WI.\n\nIf it is a deduction or tax (e.g. Severance tax, processing, treating, production tax, witholding tax, marketing expense, ...), return it exactly as it is in the document"
+                      },
+                      "production_date": {
+                        "type": "string",
+                        "format": "date",
+                        "title": "ProductionDate",
+                        "description": "Production period end date in ISO-8601 format (YYYY-MM-DD)."
+                      },
+                      "btu": {
+                        "anyOf": [
+                          {
+                            "type": "number",
+                            "title": "Btu"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "title": "Btu",
+                        "description": "BTU, if mentioned, as written"
+                      },
+                      "property_volume": {
+                        "anyOf": [
+                          {
+                            "type": "number",
+                            "title": "PropertyVolume"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "title": "PropertyVolume",
+                        "description": "Property gross volume produced, exactly as reported (with as many decimal places as in the reported value). "
+                      },
+                      "volume_unit": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "title": "VolumeUnit"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "title": "VolumeUnit",
+                        "description": "Unit for the volume\n\nif OIL: return BBL\n\nif GAS: return MCF or MMBtu\n\nif NGL: return GAL\n\nif CONDENSATE: return BBL\n\nif Plant products: return BBL"
+                      },
+                      "price": {
+                        "type": "number",
+                        "title": "Price",
+                        "description": "Price as reported, 4-decimal rounding."
+                      },
+                      "property_value": {
+                        "type": "number",
+                        "title": "PropertyValue",
+                        "description": "Gross property value, as reported. 2-decimal rounding. \n\nIf it is written as (X), return -X\nIf it is written as X, return X"
+                      },
+                      "owner_interest": {
+                        "type": "number",
+                        "title": "OwnerInterest",
+                        "description": "Owner interest decimal between 0 and 1, rounded to 6 decimals."
+                      },
+                      "distribution_interest": {
+                        "type": "number",
+                        "title": "DistributionInterest",
+                        "description": "Settlement decimal (percent of the gross property revenue the owner is owed) between 0 and 1, rounded to 6 decimals."
+                      },
+                      "owner_volume": {
+                        "type": "number",
+                        "title": "OwnerVolume",
+                        "description": "Owner share volume as reported"
+                      },
+                      "owner_value": {
+                        "type": "number",
+                        "title": "OwnerValue",
+                        "description": "The owner's share of the gross revenue as reported. DO NOT COMPUTE"
+                      }
+                    },
+                    "required": [
+                      "production_date",
+                      "property_volume",
+                      "price",
+                      "property_value",
+                      "volume_unit",
+                      "owner_value",
+                      "owner_volume",
+                      "type",
+                      "owner_interest",
+                      "distribution_interest",
+                      "btu"
+                    ],
+                    "title": "LineItem"
+                  },
+                  "title": "LineItems"
+                },
+                "total_owner_volume": {
+                  "anyOf": [
+                    {
+                      "type": "number",
+                      "title": "TotalOwnerVolume"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "TotalOwnerVolume",
+                  "description": "The total owner share volume, in bold, as written. Right next to \"Total\" followed by the type of production (e.g. Total GAS, Total OIL, ...). \n\nDo not do computations, write it only if explicitly mentioned in the document."
+                },
+                "total_owner_value": {
+                  "anyOf": [
+                    {
+                      "type": "number",
+                      "title": "TotalOwnerValue"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "TotalOwnerValue",
+                  "description": "The total owner share value, in bold, as written. Right next to \"Total\" followed by the type of production (e.g. Total GAS, Total OIL, ...) and the owner_share_volume. \n\nDo not do computations, write it only if explicitly mentioned in the document. This is not the property total, but the total for the individual production type. "
+                }
+              },
+              "required": [
+                "type",
+                "line_items",
+                "total_owner_volume",
+                "total_owner_value"
+              ],
+              "title": "Production"
+            },
+            "title": "ProductionList"
+          },
+          "total_property_value": {
+            "anyOf": [
+              {
+                "type": "number",
+                "title": "TotalPropertyValue"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "TotalPropertyValue",
+            "description": "owner's total balance for this property. Will be next to Total Property after all its production line items. \n\nDo not do computations, write it only if explicitly mentioned in the document."
+          }
+        },
+        "required": [
+          "description",
+          "property_id",
+          "county",
+          "state",
+          "production",
+          "total_property_value"
+        ],
+        "additionalProperties": false
+      },
+      "title": "Properties"
+    }
+  },
+  "required": [
+    "properties",
+    "check"
+  ],
+  "additionalProperties": false,
+  "$defs": {}
+}

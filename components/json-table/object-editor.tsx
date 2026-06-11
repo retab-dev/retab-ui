@@ -4,11 +4,6 @@ import { ajvResolver } from "@hookform/resolvers/ajv";
 import { JSONSchema7 } from "json-schema";
 import { useForm, type UseFormReturn } from "react-hook-form";
 import { JsonForm } from "@/components/json-form/json-form";
-import { getTheme } from "@/components/json-table/lib/themes";
-
-// Kept for caller compatibility; the lightweight JsonForm renders no scalar
-// value / consensus coloring, so this is unused beyond typing the prop.
-export type ScalarValueType = "similarity" | "consensus" | "mismatch" | "none";
 
 // Editor for an object cell: renders the property's schema as a form. Edits are
 // persisted as they change (the popover has no explicit submit button).
@@ -22,10 +17,7 @@ export function ObjectEditor({
   property: JSONSchema7;
   currentValue: any;
   onSubmit: (values: any) => void;
-  likelihoods?: Record<string, any>;
-  scalarValueType?: ScalarValueType;
   setSourcesFieldPath?: (fieldPath: string | null) => void;
-  currentIterationId?: string;
   disabled?: boolean;
 }) {
   const form = useForm({
@@ -41,7 +33,6 @@ export function ObjectEditor({
     return () => sub.unsubscribe();
   }, [form, onSubmit]);
 
-  const theme = getTheme("gray");
 
   return (
     <div className="flex max-h-[60vh] flex-col space-y-4 overflow-y-auto">
@@ -50,7 +41,7 @@ export function ObjectEditor({
           form={form as UseFormReturn<Record<string, unknown>>}
           schema={property}
           onSubmit={onSubmit}
-          className={`border ${theme.border} rounded-sm text-xs ${theme.tableContainerBg} ${theme.headerText}`}
+          className="border border-border rounded-sm text-xs bg-background text-muted-foreground"
         />
       </fieldset>
     </div>
@@ -70,10 +61,7 @@ export function ArrayEditor({
   property: JSONSchema7;
   currentValue: any;
   onSubmit: (values: any) => void;
-  likelihoods?: Record<string, any>;
-  scalarValueType?: ScalarValueType;
   setSourcesFieldPath?: (fieldPath: string | null) => void;
-  currentIterationId?: string;
   disabled?: boolean;
 }) {
   const { $defs, ...restProperty } = property;
@@ -101,7 +89,6 @@ export function ArrayEditor({
     return () => sub.unsubscribe();
   }, [form, onSubmit, name]);
 
-  const theme = getTheme("gray");
 
   return (
     <div className="flex max-h-[60vh] flex-col space-y-4 overflow-y-auto">
@@ -110,7 +97,7 @@ export function ArrayEditor({
           form={form as UseFormReturn<Record<string, unknown>>}
           schema={wrapperSchema}
           onSubmit={(values: any) => onSubmit(values[name])}
-          className={`border ${theme.border} rounded-sm text-xs ${theme.tableContainerBg} ${theme.headerText}`}
+          className="border border-border rounded-sm text-xs bg-background text-muted-foreground"
         />
       </fieldset>
     </div>

@@ -5,7 +5,6 @@
 
 type ViewerBlockCategoryId =
   | "primitives"
-  | "sources"
   | "legends"
   | "run-cards"
 
@@ -29,7 +28,6 @@ type ViewerBlockConfig = {
 /** The filter tabs shown above the blocks (shadcn-style). */
 export const VIEWER_BLOCK_CATEGORIES = [
   { id: "featured", label: "Featured" },
-  { id: "sources", label: "Sources" },
   { id: "primitives", label: "Primitives" },
   { id: "legends", label: "Legends" },
   { id: "run-cards", label: "Run Cards" },
@@ -79,6 +77,17 @@ export const VIEWER_BLOCKS = [
     categories: ["primitives"],
   },
   {
+    id: "edit",
+    registryName: "edit-viewer-block",
+    title: "Edit Viewer",
+    description:
+      "Filled form fields beside the source document, linked by their bbox — hover or select a field to highlight its region on the page and scroll it into view, toggle Original/Filled to stamp each value into its box. A template-fill of the Fidelity bank-wire form (29 fields over 3 pages), built on the PDF viewer's renderPageOverlay and scrollToPageArea handle.",
+    command: getRegistryAddCommand("edit-viewer-block"),
+    docsHref: "/docs/components/edit-viewer",
+    viewHref: "/view/blocks/edit",
+    categories: ["primitives"],
+  },
+  {
     id: "extraction-viewer",
     registryName: "extraction-viewer-block",
     title: "Extraction Viewer",
@@ -89,7 +98,7 @@ export const VIEWER_BLOCKS = [
     viewHref: "/view/blocks/extraction-viewer",
     featured: true,
     previewHeightClassName: "h-[724px]",
-    categories: ["sources"],
+    categories: ["primitives"],
   },
   {
     id: "extract",
@@ -190,7 +199,7 @@ export const VIEWER_BLOCKS = [
     docsHref: "/docs/viewers/pdf-viewer",
     viewHref: "/view/blocks/pdf-thumbnails",
     featured: true,
-    categories: ["primitives"],
+    categories: [],
   },
 ] as const satisfies readonly ViewerBlockConfig[]
 

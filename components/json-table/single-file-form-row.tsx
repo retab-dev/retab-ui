@@ -7,18 +7,12 @@ import type {
   RowLike,
   TableColumn,
 } from "@/components/json-table/lib/column-types";
-import { TableDocument } from "@/components/json-table/lib/projects-types";
 import { PathInfo } from "@/components/json-table/path-utils";
 import { DataCell } from "@/components/json-table/data-cell";
 import {
   getRowHeightPx,
   useSheetOptionsStore,
 } from "@/components/json-table/table-options-store";
-import { getTheme } from "@/components/json-table/lib/themes";
-
-// Stable reference so DataCell's React.memo isn't broken by a fresh `{}` each
-// render. There are no per-cell validation flags in the single-file table.
-const EMPTY_VALIDATION_FLAGS: Record<string, never> = {};
 
 interface SingleFileFormRowProps {
   row: RowLike;
@@ -41,29 +35,23 @@ interface SingleFileFormRowProps {
     rect: DOMRect;
   }) => void;
   onCellHoverEnd?: () => void;
-  fieldIndicationMap?: Map<string, string>;
 }
 
 export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
   ({
     row,
-    columns,
     schema,
     tableAndPaths,
     visibleKeys,
-    rowCount,
     rowIdx,
     openPopover,
     setOpenPopover,
     onUpdateDocument,
-    editMode,
     allowEditing = true,
     onCellHoverStart,
     onCellHoverEnd,
-    fieldIndicationMap,
   }) => {
     const { rowHeight, columnWidth } = useSheetOptionsStore();
-    const theme = getTheme("single-file");
 
     const { table: _table, paths } = tableAndPaths;
     const documentId = row.original.id;
@@ -103,7 +91,7 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
     return (
       <TableRow
         data-index={rowIdx}
-        className={`flex border-b-0 ${theme.border} ${theme.tableRowBg} w-full`}
+        className="flex border-b-0 border-border bg-transparent hover:bg-muted/50 w-full"
         style={rowStyle}
       >
         {/* Data cells */}
@@ -123,12 +111,9 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
               setOpenPopover={setOpenPopover}
               openPopover={openPopover}
               onGroundTruthDataChange={handleDataChange}
-              currentIterationId="single-file"
-              validationFlags={EMPTY_VALIDATION_FLAGS}
               allowEditing={allowEditing}
               onCellHoverStart={onCellHoverStart}
               onCellHoverEnd={onCellHoverEnd}
-              fieldIndicationMap={fieldIndicationMap}
             />
           );
         })}

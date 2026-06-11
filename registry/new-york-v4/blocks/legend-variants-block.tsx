@@ -49,7 +49,7 @@ const PRESETS: Preset[] = [
  * ribbon as a left rail and the `SegmentLegend` placed a different way; one
  * shared selection dims the matching pages across all four at once.
  */
-export function LegendVariantsBlock() {
+export function LegendVariantsBlock({ columns = 1 }: { columns?: 1 | 3 } = {}) {
   const segments = React.useMemo(() => toSegments(SPLIT_OUTPUT), [])
   const pageCount = React.useMemo(() => segmentsPageCount(segments), [segments])
   const [activeId, setActiveId] = React.useState<string | null>(null)
@@ -63,7 +63,13 @@ export function LegendVariantsBlock() {
         </p>
       </div>
       <div className="min-h-0 flex-1 overflow-auto p-4">
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div
+          className={
+            columns === 3
+              ? "flex h-full min-h-0 flex-col gap-4 lg:flex-row"
+              : "flex h-full min-h-0 flex-col gap-4"
+          }
+        >
           {PRESETS.map((preset) => (
             <Cell
               key={preset.label}
@@ -151,7 +157,7 @@ function Cell({
   }
 
   return (
-    <div className="space-y-1.5">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col space-y-1.5">
       <div className="flex flex-wrap items-baseline gap-x-2">
         <span className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
           {preset.label}
@@ -161,24 +167,26 @@ function Cell({
           {preset.orientation === "vertical" ? " · vertical" : ""}
         </code>
       </div>
-      <div
-        ref={panelRef}
-        // Definite inline height (not a Tailwind arbitrary class, which can be
-        // missing at first paint) so the viewer is never content-sized — that's
-        // what lets the page grow the cell and collapse the `h-full` rails.
-        style={{ height: 380 }}
-        className="overflow-hidden rounded-lg border bg-card"
-      >
-        <PdfViewer
-          src={PDF_URL}
-          bare
-          toolbar={false}
-          asideToggle={false}
-          downloadFileName="attention.pdf"
-          slots={slots}
-          onVisiblePageChange={setCurrentPage}
-          className="h-full"
-        />
+      {/* The panel fills the remaining height (flex-1) and the page itself is
+          held at A4 portrait (21/29.7), so its width is derived from that height
+          and centered — never content-sized, which is what lets the `h-full`
+          rails inside resolve. */}
+      <div className="flex min-h-0 flex-1 justify-center">
+        <div
+          ref={panelRef}
+          className="aspect-[21/29.7] h-full max-w-full overflow-hidden rounded-lg border bg-card"
+        >
+          <PdfViewer
+            src={PDF_URL}
+            bare
+            toolbar={false}
+            asideToggle={false}
+            downloadFileName="attention.pdf"
+            slots={slots}
+            onVisiblePageChange={setCurrentPage}
+            className="h-full"
+          />
+        </div>
       </div>
     </div>
   )
