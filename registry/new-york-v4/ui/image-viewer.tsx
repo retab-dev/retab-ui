@@ -221,7 +221,7 @@ function useIsClient() {
 
 // --- public API --------------------------------------------------------------
 
-export interface ImagePageOverlayProps {
+export interface PageOverlayProps {
   /** 1-based frame index (a TIFF page; always 1 for single images). */
   pageNumber: number
   /** Rendered frame size in CSS pixels (post-scale, post-rotation). */
@@ -262,7 +262,7 @@ export interface ImageViewerProps {
   toolbar?: boolean
   downloadFileName?: string
   /** Render absolutely-positioned overlays (e.g. bbox citations) on each frame. */
-  renderPageOverlay?: (props: ImagePageOverlayProps) => React.ReactNode
+  renderPageOverlay?: (props: PageOverlayProps) => React.ReactNode
   /** Fired with the 1-based frame nearest the top of the viewport as you scroll. */
   onVisiblePageChange?: (page: number) => void
   /** Fired with scroll progress in [0, 1] (for a fine-grained scroll cursor). */
@@ -517,7 +517,7 @@ function ImageFrame({
   frame: FrameMeta
   scale: number
   rotation: number
-  renderOverlay?: (props: ImagePageOverlayProps) => React.ReactNode
+  renderOverlay?: (props: PageOverlayProps) => React.ReactNode
 }) {
   const [inView, setInView] = React.useState(false)
 

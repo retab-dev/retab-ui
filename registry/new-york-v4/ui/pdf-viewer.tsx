@@ -96,7 +96,7 @@ function useIsClient() {
 
 // --- public API --------------------------------------------------------------
 
-export interface PdfPageOverlayProps {
+export interface PageOverlayProps {
   pageNumber: number
   /** Rendered page size in CSS pixels (post-scale, post-rotation). */
   width: number
@@ -172,7 +172,7 @@ export interface PdfViewerProps {
   toolbar?: boolean
   downloadFileName?: string
   /** Render absolutely-positioned overlays (e.g. bbox citations) on each page. */
-  renderPageOverlay?: (props: PdfPageOverlayProps) => React.ReactNode
+  renderPageOverlay?: (props: PageOverlayProps) => React.ReactNode
   /** Fired with the 1-based page nearest the top of the viewport as you scroll. */
   onVisiblePageChange?: (page: number) => void
   /** Fired with scroll progress in [0, 1] (for a fine-grained scroll cursor). */
@@ -652,7 +652,7 @@ function PdfPage({
   pageNumber: number
   scale: number
   rotation: number
-  renderOverlay?: (props: PdfPageOverlayProps) => React.ReactNode
+  renderOverlay?: (props: PageOverlayProps) => React.ReactNode
 }) {
   const page = React.use(getPageResource(doc, pageNumber))
   const viewport = React.useMemo(

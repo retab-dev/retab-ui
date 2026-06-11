@@ -10,7 +10,7 @@ import type {
 import type { SourceTarget } from "@/hooks/use-source-link"
 import {
   PdfHighlight,
-  type PdfPageOverlayProps,
+  type PageOverlayProps,
   type PdfViewerHandle,
 } from "@/components/ui/pdf-viewer"
 
@@ -79,9 +79,9 @@ export function usePdfSourceTarget(
  */
 export function renderPdfSourceOverlay(
   source: Source | undefined
-): (props: PdfPageOverlayProps) => React.ReactNode {
+): (props: PageOverlayProps) => React.ReactNode {
   const location = source ? pdfAnchorToLocation(source.anchor) : undefined
-  return function PdfSourceOverlay({ pageNumber }: PdfPageOverlayProps) {
+  return function PdfSourceOverlay({ pageNumber }: PageOverlayProps) {
     return location && location.page === pageNumber ? (
       <PdfHighlight area={location.area} />
     ) : null

@@ -5,7 +5,7 @@ import * as React from "react"
 import type { Source, SourceAnchor, SourceArea } from "@/lib/document-source"
 import type { SourceTarget } from "@/hooks/use-source-link"
 import {
-  type ImagePageOverlayProps,
+  type PageOverlayProps,
   type ImageViewerHandle,
 } from "@/components/ui/image-viewer"
 
@@ -48,9 +48,9 @@ export function useImageSourceTarget(
  */
 export function renderImageSourceOverlay(
   source: Source | undefined
-): (props: ImagePageOverlayProps) => React.ReactNode {
+): (props: PageOverlayProps) => React.ReactNode {
   const area = source ? imageAnchorToArea(source.anchor) : undefined
-  return function ImageSourceOverlay({ pageNumber }: ImagePageOverlayProps) {
+  return function ImageSourceOverlay({ pageNumber }: PageOverlayProps) {
     if (!area || pageNumber !== 1) return null
     return (
       <div

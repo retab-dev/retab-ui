@@ -232,7 +232,7 @@ function useIsClient() {
 
 // --- public API --------------------------------------------------------------
 
-export interface PptxPageOverlayProps {
+export interface PageOverlayProps {
   /** 1-based slide index. */
   pageNumber: number
   /** Rendered slide size in CSS pixels (post-scale, post-rotation). */
@@ -251,7 +251,7 @@ export interface PptxViewerProps {
   toolbar?: boolean
   downloadFileName?: string
   /** Render absolutely-positioned overlays (e.g. bbox citations) on each slide. */
-  renderPageOverlay?: (props: PptxPageOverlayProps) => React.ReactNode
+  renderPageOverlay?: (props: PageOverlayProps) => React.ReactNode
   /** Fired with the 1-based slide nearest the top of the viewport as you scroll. */
   onVisiblePageChange?: (page: number) => void
   /** Fired with scroll progress in [0, 1] (for a fine-grained scroll cursor). */
@@ -472,7 +472,7 @@ function PptxSlide({
   rotation: number
   eager: boolean
   activity: ScrollActivity
-  renderOverlay?: (props: PptxPageOverlayProps) => React.ReactNode
+  renderOverlay?: (props: PageOverlayProps) => React.ReactNode
 }) {
   const [inView, setInView] = React.useState(false)
 

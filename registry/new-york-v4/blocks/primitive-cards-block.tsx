@@ -1,5 +1,8 @@
 "use client"
 
+import ReactMarkdown, { type Components } from "react-markdown"
+import remarkGfm from "remark-gfm"
+
 import {
   SEGMENT_PALETTE,
   buildColorMap,
@@ -262,6 +265,25 @@ function PartitionCard() {
 
 // ── Parse ─────────────────────────────────────────────────────────────────────
 
+// Card-sized renderers for the parsed markdown — headings and a GFM table,
+// scaled down to read inside the thumbnail frame.
+const PARSE_MARKDOWN_COMPONENTS: Components = {
+  h1: (props) => <h1 className="text-foreground mb-1 text-[11px] font-bold" {...props} />,
+  h2: (props) => (
+    <h2 className="text-foreground mt-2 mb-1 text-[10px] font-semibold" {...props} />
+  ),
+  p: (props) => <p className="text-muted-foreground mb-1 text-[9px]" {...props} />,
+  table: (props) => (
+    <table className="mb-1 w-full border-collapse text-[8px]" {...props} />
+  ),
+  th: (props) => (
+    <th className="border-border bg-muted/50 border px-1 py-0.5 text-left font-medium" {...props} />
+  ),
+  td: (props) => (
+    <td className="border-border text-muted-foreground border px-1 py-0.5" {...props} />
+  ),
+}
+
 function ParseCard() {
   const { file, markdown } = PARSE
 
@@ -270,10 +292,13 @@ function ParseCard() {
       file={file}
       status="completed"
       media={
-        <div className="bg-card size-full overflow-hidden p-3">
-          <pre className="text-foreground/75 font-mono text-[8px] leading-[1.6] whitespace-pre">
+        <div className="bg-card size-full overflow-hidden p-3 leading-snug">
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={PARSE_MARKDOWN_COMPONENTS}
+          >
             {markdown}
-          </pre>
+          </ReactMarkdown>
         </div>
       }
     />
