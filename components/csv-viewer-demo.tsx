@@ -57,7 +57,12 @@ export function CsvViewerDemo() {
         />
         Virtualized ({"5,000"} rows × {6 + EXTRA_COLS} columns)
       </label>
-      <CsvViewer value={csv} height={420} virtualized={virtualized} />
+      <CsvViewer
+        value={csv}
+        height={420}
+        virtualized={virtualized}
+        isolateStyles
+      />
     </div>
   )
 }
@@ -89,6 +94,7 @@ export function CsvViewerStreamingDemo() {
         source={source}
         worker={useWorker}
         height={420}
+        isolateStyles
       />
     </div>
   )

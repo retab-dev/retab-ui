@@ -42,8 +42,9 @@ export function FileViewerDemo() {
           </button>
         ))}
       </div>
-      <div className="h-[600px]">
-        {/* key forces a fresh viewer per file so state (zoom, sheet, scroll) resets */}
+      <div className="aspect-[210/297] w-full">
+        {/* A4 portrait — frames a single document page without awkward dead space.
+            key forces a fresh viewer per file so state (zoom, sheet, scroll) resets */}
         <FileViewer
           key={current.file}
           src={`/samples/${current.file}`}

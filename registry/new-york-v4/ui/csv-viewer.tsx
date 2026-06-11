@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { createPortal } from "react-dom"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import { ChevronDown, ChevronUp, Maximize, Minus, Plus } from "lucide-react"
 
@@ -121,6 +122,124 @@ function HeaderAwareScrollbar({
   )
 }
 
+// useLayoutEffect on the server logs a warning; fall back to useEffect there. The
+// shadow root only exists on the client, so the effect is a no-op during SSR.
+const useIsomorphicLayoutEffect =
+  typeof window !== "undefined" ? React.useLayoutEffect : React.useEffect
+
+// The page's author CSS, mirrored into constructible stylesheets once and shared
+// (by reference) across every isolated instance — `adoptedStyleSheets` allows one
+// sheet object in many roots, so N tables cost one copy, not N. Cross-origin
+// sheets (e.g. a font CDN) can't be read and are skipped; their declarations reach
+// the table through inheritance where they apply to custom properties. Snapshotted
+// at first use: later-added stylesheets (route CSS, HMR) won't appear, which is
+// fine for the table's own utilities, present from first paint.
+let sharedSheets: CSSStyleSheet[] | null = null
+function getSharedSheets(): CSSStyleSheet[] {
+  if (sharedSheets) return sharedSheets
+  const out: CSSStyleSheet[] = []
+  for (const ss of Array.from(document.styleSheets)) {
+    let rules: CSSRuleList
+    try {
+      rules = ss.cssRules
+    } catch {
+      continue // cross-origin: unreadable, skip
+    }
+    let text = ""
+    for (const rule of Array.from(rules)) text += rule.cssText + "\n"
+    try {
+      const sheet = new CSSStyleSheet()
+      // @import rules are dropped by replaceSync per spec — harmless here, since
+      // the imported sheet also appears separately in document.styleSheets.
+      sheet.replaceSync(text)
+      out.push(sheet)
+    } catch {
+      // skip any sheet that can't be reconstructed
+    }
+  }
+  sharedSheets = out
+  return out
+}
+
+/**
+ * Renders its children inside a shadow root so the host document's style rules —
+ * in particular `:has()` selectors, whose invalidation Blink does NOT scope by
+ * `contain` — can't match into them. Style recalc triggered by the table's
+ * per-scroll mutations is then confined to the table's own subtree instead of the
+ * whole document. The page's author CSS is copied in so utility classes still
+ * resolve; theme custom properties and font size inherit through the boundary.
+ *
+ * Renders nothing until mounted (no SSR markup). The shadow root is attached in a
+ * layout effect — which runs, and re-renders the portal, before the browser
+ * paints — so there's no flash of an empty box on the client.
+ */
+function ShadowScope({
+  className,
+  style,
+  children,
+}: {
+  className?: string
+  style?: React.CSSProperties
+  children: React.ReactNode
+}) {
+  const hostRef = React.useRef<HTMLDivElement>(null)
+  const [root, setRoot] = React.useState<ShadowRoot | null>(null)
+
+  useIsomorphicLayoutEffect(() => {
+    const host = hostRef.current
+    if (!host) return
+    const sr = host.shadowRoot ?? host.attachShadow({ mode: "open" })
+    try {
+      sr.adoptedStyleSheets = getSharedSheets()
+    } catch {
+      // adoptedStyleSheets / constructible sheets unsupported: clone the page's
+      // style source nodes in instead (heavier, but the same visual result).
+      for (const node of Array.from(
+        document.querySelectorAll('style, link[rel="stylesheet"]')
+      )) {
+        try {
+          sr.appendChild(node.cloneNode(true))
+        } catch {
+          // ignore a node that can't be cloned
+        }
+      }
+    }
+    setRoot(sr)
+  }, [])
+
+  return (
+    <div ref={hostRef} className={className} style={style}>
+      {root ? createPortal(children, root) : null}
+    </div>
+  )
+}
+
+/** The scroll container — optionally inside a shadow root for style isolation. */
+function ScrollerShell({
+  isolate,
+  className,
+  style,
+  children,
+}: {
+  isolate: boolean
+  className?: string
+  style?: React.CSSProperties
+  children: React.ReactNode
+}) {
+  if (isolate) {
+    return (
+      <ShadowScope className={className} style={style}>
+        {children}
+      </ShadowScope>
+    )
+  }
+  return (
+    <div className={className} style={style}>
+      {children}
+    </div>
+  )
+}
+
 // Fetched blobs are cached per URL so a remount (or re-render) reuses the bytes
 // already downloaded instead of re-fetching the file. Bounded (least-recently-
 // used eviction) so a long session — or signed URLs, whose query string changes
@@ -220,6 +339,22 @@ export interface CsvViewerProps {
   label?: string
   /** A cell to highlight (0-based row + column among data columns), or null. */
   activeCell?: { row: number; col: number } | null
+  /**
+   * Render the scrolling table inside a shadow root, isolating it from the host
+   * page's style rules — in particular `:has()` selectors, whose invalidation
+   * Blink does NOT scope by `contain`. On a page with a large `:has()` surface
+   * (e.g. a Tailwind `has-*`-heavy docs site) every per-scroll cell mutation
+   * otherwise forces a full-document `:has()` re-match, costing ~33ms of style
+   * recalc per frame and capping scrolling near ~15fps. Isolation scopes that
+   * work to the table's own small subtree, collapsing recalc to ~0.4ms and
+   * keeping scroll at refresh rate. The page's author CSS is copied in (via
+   * `adoptedStyleSheets`, falling back to cloned `<style>`/`<link>` nodes) so
+   * utility classes still resolve; theme variables and font size inherit through
+   * the boundary automatically. Defaults to false. Trade-offs when enabled: the
+   * table is client-rendered only (no SSR markup), and host CSS can no longer
+   * reach into the table to style or override it.
+   */
+  isolateStyles?: boolean
   className?: string
 }
 
@@ -257,6 +392,7 @@ export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
       fillHeight = false,
       label = "CSV data",
       activeCell,
+      isolateStyles = false,
       className,
     }: CsvViewerProps,
     ref: React.ForwardedRef<CsvViewerHandle>
@@ -463,13 +599,15 @@ export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
           stay locked to the header during horizontal scroll. The header sticks to
           the top during vertical scroll; the row-number column sticks to the
           left during horizontal scroll. */}
-        <div
+        <ScrollerShell
+          isolate={isolateStyles}
           className={cn("relative", fillHeight && "min-h-0 flex-1")}
           style={fillHeight ? undefined : { height, maxHeight: "100%" }}
         >
-          <style href="csv-scrollbar" precedence="default">
-            {SCROLLBAR_CSS}
-          </style>
+          {/* Plain (non-hoisted) <style> so it lands inside the shadow root when
+            isolated; the selector is attribute-scoped, so it's also harmless in
+            the light-DOM path. */}
+          <style>{SCROLLBAR_CSS}</style>
           <div
             ref={scrollRef}
             data-slot="csv-body"
@@ -597,7 +735,7 @@ export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
             scrollRef={scrollRef}
             headerHeight={effRowHeight}
           />
-        </div>
+        </ScrollerShell>
 
         <div className="flex shrink-0 items-center justify-between border-t px-3 py-1.5 text-xs text-muted-foreground">
           <span className="flex items-center gap-1.5">

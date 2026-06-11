@@ -1,16 +1,17 @@
 "use client"
 
-import { type ReactNode } from "react"
-
 import {
   SEGMENT_PALETTE,
   buildColorMap,
   formatPageRanges,
+  segmentsPageCount,
   toSegments,
   type Segment,
 } from "@/lib/segments"
 import { FileThumbnail } from "@/components/ui/file-thumbnail"
+import { PageRibbon, type RibbonRow } from "@/components/ui/page-ribbon"
 import { RunCard } from "@/components/ui/run-card"
+import { SegmentLegend } from "@/components/ui/segment-legend"
 import type { ClassifyResult } from "@/components/viewers/lib/classify-types"
 import type { SplitView } from "@/components/viewers/lib/split-types"
 import type { PartitionResult } from "@/components/viewers/lib/partition-types"
@@ -109,12 +110,13 @@ function subdocumentThumbnail(segment: Segment): string {
  * composing the `RunCard` shell (a `FileThumbnail` + status + overlays) with a
  * per-primitive rendering of the output, all over the source document's page.
  *
- * - Classification: one category badge + the reasoning, over one page.
+ * - Classification: the page with its category badge; reasoning in the footer.
  * - Split: a bundle of per-subdocument thumbnails, name-badged and color-keyed.
- * - Partition: the page under a keyed-chunk legend and a proportion bar.
+ * - Partition: the page, with a keyed-chunk legend and an overlap waterfall (one
+ *   ribbon lane per chunk) in the footer.
  * - Parse: the page beside the markdown it parsed to.
  * - Extract: the page with each field's source box drawn where its value came
- *   from, plus the extracted values.
+ *   from; the extracted values are listed in the footer.
  */
 export function PrimitiveCardsBlock() {
   return (
@@ -143,43 +145,18 @@ function ClassificationCard() {
       file={file}
       status="completed"
       media={
-        <ClassifiedThumbnail
-          thumbnail={thumbnail}
-          fileName={file.name}
-          category={result.category}
-          reasoning={result.reasoning}
-          color={color}
-        />
+        <div className="relative size-full">
+          <FillThumbnail src={thumbnail} fileName={file.name} />
+          <LegendBadge label={result.category} color={color} className="top-2 left-2" />
+        </div>
       }
-    />
-  )
-}
-
-function ClassifiedThumbnail({
-  thumbnail,
-  fileName,
-  category,
-  reasoning,
-  color,
-}: {
-  thumbnail: string
-  fileName: string
-  category: string
-  reasoning?: string
-  color: string
-}) {
-  return (
-    <div className="relative size-full">
-      <FillThumbnail src={thumbnail} fileName={fileName} />
-      <LegendBadge label={category} color={color} className="top-2 left-2" />
-      {reasoning ? (
-        <BottomScrim>
-          <p className="line-clamp-3 text-[11px] leading-snug text-white/95">
-            {reasoning}
-          </p>
-        </BottomScrim>
+    >
+      {result.reasoning ? (
+        <p className="text-muted-foreground line-clamp-3 text-xs leading-relaxed">
+          {result.reasoning}
+        </p>
       ) : null}
-    </div>
+    </RunCard>
   )
 }
 
@@ -247,45 +224,37 @@ function SubdocumentThumbnail({ segment }: { segment: Segment }) {
 function PartitionCard() {
   const { file, thumbnail, result } = PARTITION
   const segments = toSegments(result.output)
+  const pageCount = segmentsPageCount(segments)
+  // One ribbon lane per chunk over a shared page axis, so chunks that share a
+  // page (e.g. introduction + model_architecture on page 2) read as an overlap.
+  const rows: RibbonRow[] = segments.map((segment) => ({
+    id: segment.id,
+    label: segment.label,
+    segments: [segment],
+  }))
 
   return (
     <RunCard
       file={file}
       status="completed"
-      media={
-        <div className="relative size-full">
-          <FillThumbnail src={thumbnail} fileName={file.name} />
-          <BottomScrim className="space-y-1.5">
-            {/* A proportion bar — each keyed chunk sized by its page count. */}
-            <div className="flex h-1.5 overflow-hidden rounded-full">
-              {segments.map((segment) => (
-                <span
-                  key={segment.id}
-                  style={{
-                    flexGrow: segment.pages.length,
-                    backgroundColor: segment.color,
-                  }}
-                />
-              ))}
-            </div>
-            <div className="flex flex-wrap gap-x-2 gap-y-1">
-              {segments.map((segment) => (
-                <span
-                  key={segment.id}
-                  className="inline-flex items-center gap-1 text-[9px] text-white/95"
-                >
-                  <span
-                    className="size-1.5 shrink-0 rounded-[2px]"
-                    style={{ backgroundColor: segment.color }}
-                  />
-                  {segment.label}
-                </span>
-              ))}
-            </div>
-          </BottomScrim>
-        </div>
-      }
-    />
+      media={<FillThumbnail src={thumbnail} fileName={file.name} />}
+    >
+      <SegmentLegend
+        variant="plain"
+        density="compact"
+        columns={2}
+        segments={segments}
+        accessory={
+          <PageRibbon
+            orientation="horizontal"
+            rows={rows}
+            pageCount={pageCount}
+            rowThickness={7}
+            showTicks
+          />
+        }
+      />
+    </RunCard>
   )
 }
 
@@ -359,33 +328,29 @@ function ExtractCard() {
               />
             ))}
           </div>
-          <BottomScrim>
-            <div className="flex flex-col gap-1">
-              {shown.map((field) => (
-                <span
-                  key={field.key}
-                  className="flex items-center gap-1.5 text-[10px] text-white/95"
-                >
-                  <span
-                    className="size-2 shrink-0 rounded-[2px]"
-                    style={{ backgroundColor: field.color }}
-                  />
-                  <span className="shrink-0 text-white/70">{field.label}</span>
-                  <span className="truncate font-medium tabular-nums">
-                    {field.value}
-                  </span>
-                </span>
-              ))}
-              {rest > 0 ? (
-                <span className="text-[9px] text-white/60">
-                  +{rest} more fields
-                </span>
-              ) : null}
-            </div>
-          </BottomScrim>
         </div>
       }
-    />
+    >
+      <div className="flex flex-col gap-1">
+        {shown.map((field) => (
+          <span key={field.key} className="flex items-center gap-1.5 text-[11px]">
+            <span
+              className="size-2 shrink-0 rounded-[2px]"
+              style={{ backgroundColor: field.color }}
+            />
+            <span className="text-muted-foreground shrink-0">{field.label}</span>
+            <span className="ml-auto truncate font-medium tabular-nums">
+              {field.value}
+            </span>
+          </span>
+        ))}
+        {rest > 0 ? (
+          <span className="text-muted-foreground text-[10px]">
+            +{rest} more fields
+          </span>
+        ) : null}
+      </div>
+    </RunCard>
   )
 }
 
@@ -421,23 +386,6 @@ function LegendBadge({
     >
       {label}
     </span>
-  )
-}
-
-/** A bottom gradient scrim for captioning a thumbnail. */
-function BottomScrim({
-  children,
-  className,
-}: {
-  children: ReactNode
-  className?: string
-}) {
-  return (
-    <div
-      className={`absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/45 to-transparent px-3 pt-10 pb-2.5 ${className ?? ""}`}
-    >
-      {children}
-    </div>
   )
 }
 

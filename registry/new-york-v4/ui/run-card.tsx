@@ -150,16 +150,18 @@ export function RunCard({
 
       {hasFooter ? (
         <div className="flex flex-col gap-2 p-3">
-          <div className="flex min-w-0 items-center gap-2">
-            <span className="min-w-0 flex-1 truncate text-sm font-medium">
-              {title ?? file.name}
-            </span>
-            {meta ? (
-              <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
-                {meta}
+          {title != null || meta != null ? (
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                {title ?? file.name}
               </span>
-            ) : null}
-          </div>
+              {meta ? (
+                <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
+                  {meta}
+                </span>
+              ) : null}
+            </div>
+          ) : null}
           {children}
         </div>
       ) : null}
