@@ -3,10 +3,18 @@
 import * as React from "react"
 import { createPortal } from "react-dom"
 import { useVirtualizer } from "@tanstack/react-virtual"
-import { ChevronDown, ChevronUp, Maximize, Minus, Plus } from "lucide-react"
+import {
+  ChevronDown,
+  ChevronUp,
+  Download,
+  Maximize,
+  Minus,
+  Plus,
+} from "lucide-react"
 
 import { createCsvParser, parseCsv, streamCsv, type ParsedCsv } from "@/lib/csv"
 import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
 
 type Row = string[]
 
@@ -290,6 +298,34 @@ function fetchCsvBlob(src: string): Promise<Blob> {
   return p
 }
 
+// Quote a field for CSV output: wrap in double quotes (doubling any inner
+// quotes) when it contains a comma, quote, or newline; otherwise emit it as-is.
+function escapeCsvField(value: string): string {
+  const s = value ?? ""
+  return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+}
+
+// Serialize the currently-parsed columns + rows back to CSV text (CRLF line
+// endings, per RFC 4180) so the toolbar's download always reflects what's shown,
+// regardless of how the data was supplied (`src` / `value` / `data` / `source`).
+function serializeCsv(columns: string[], rows: string[][]): string {
+  const lines = [columns.map(escapeCsvField).join(",")]
+  for (const row of rows) lines.push(row.map(escapeCsvField).join(","))
+  return lines.join("\r\n")
+}
+
+// Derive a download filename from a `src` URL's last path segment, falling back
+// to "data.csv".
+function csvFileNameFromSrc(src?: string): string {
+  if (!src) return "data.csv"
+  try {
+    const name = new URL(src, "http://_").pathname.split("/").pop()
+    return name ? decodeURIComponent(name) : "data.csv"
+  } catch {
+    return "data.csv"
+  }
+}
+
 export interface CsvViewerProps {
   /**
    * URL of a CSV/TSV file (same-origin or CORS-enabled). Fetched, then streamed
@@ -351,6 +387,12 @@ export interface CsvViewerProps {
    * one zoom control rather than two.
    */
   showZoom?: boolean
+  /**
+   * Show the download button in the toolbar. Defaults to true. Set false when a
+   * host wraps the viewer in its own chrome that already provides a download
+   * action (e.g. file-viewer's DocShell), so there's one button rather than two.
+   */
+  showDownload?: boolean
   /** Scroll viewport height in pixels. Defaults to 480. Ignored when `fillHeight`. */
   height?: number
   /**
@@ -413,6 +455,7 @@ export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
       columnWidth = 180,
       scale = 1,
       showZoom = true,
+      showDownload = true,
       height = 480,
       fillHeight = false,
       label = "CSV data",
@@ -504,6 +547,23 @@ export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
 
     const colCount = parsedColumns.length
     const colOffset = showRowNumbers ? 1 : 0
+
+    // Download the currently-parsed data as a CSV file. Serializing the parsed
+    // columns + rows (rather than re-fetching `src`) means the download works for
+    // every input mode and always matches what's on screen.
+    const handleDownload = React.useCallback(() => {
+      const csv = serializeCsv(parsedColumns, parsedRows)
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = csvFileNameFromSrc(src)
+      a.rel = "noreferrer"
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    }, [parsedColumns, parsedRows, src])
 
     // Zoom scales the track sizes and font; everything below derives from these.
     // The `scale` prop sets the baseline; the in-viewer +/- controls multiply it.
@@ -674,6 +734,18 @@ export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
                   <Maximize className="size-3.5" />
                 </button>
               </span>
+            ) : null}
+            {showDownload ? (
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="size-7"
+                aria-label="Download"
+                title="Download"
+                onClick={handleDownload}
+              >
+                <Download />
+              </Button>
             ) : null}
           </span>
         </div>

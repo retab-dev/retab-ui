@@ -25,6 +25,10 @@ const TOP_LEVEL_SECTIONS = [
     href: "/docs/components",
   },
   {
+    name: "Viewers",
+    href: "/docs/viewers",
+  },
+  {
     name: "Workflows",
     href: "/docs/workflows",
   },

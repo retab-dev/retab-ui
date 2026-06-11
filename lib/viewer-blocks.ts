@@ -6,6 +6,7 @@
 type ViewerBlockCategoryId =
   | "primitives"
   | "sources"
+  | "legends"
   | "run-cards"
   | "workflows"
 
@@ -31,6 +32,7 @@ export const VIEWER_BLOCK_CATEGORIES = [
   { id: "featured", label: "Featured" },
   { id: "sources", label: "Sources" },
   { id: "primitives", label: "Primitives" },
+  { id: "legends", label: "Legends" },
   { id: "run-cards", label: "Run Cards" },
   { id: "workflows", label: "Workflows" },
 ] as const
@@ -73,7 +75,7 @@ export const VIEWER_BLOCKS = [
     description:
       "A parsed document the standard way — the source PDF beside its extracted markdown, synced by page, with a Rendered/Text toggle. Parsed markdown of the bank-statement sample.",
     command: getRegistryAddCommand("parse-viewer-block"),
-    docsHref: "/docs/components/parse-viewer",
+    docsHref: "/docs/viewers/parse-viewer",
     viewHref: "/view/blocks/parse",
     featured: true,
     categories: ["primitives"],
@@ -101,18 +103,6 @@ export const VIEWER_BLOCKS = [
     docsHref: "/docs/components/extract-viewer",
     viewHref: "/view/blocks/extract",
     categories: [],
-  },
-  {
-    id: "json-form-sources",
-    registryName: "json-form-sources-block",
-    title: "JSON Form Sources",
-    description:
-      "Extraction rendered as a JSON form beside the source PDF — hover a form field to highlight where its value came from. Composes json-form and the PDF viewer through useSourceLink; source data is the Retab /v1/extractions/{id}/sources response.",
-    command: getRegistryAddCommand("json-form-sources-block"),
-    docsHref: "/docs/components/extract-viewer",
-    viewHref: "/view/blocks/json-form-sources",
-    featured: true,
-    categories: ["sources"],
   },
   {
     id: "image-sources",
@@ -180,6 +170,17 @@ export const VIEWER_BLOCKS = [
     viewHref: "/view/blocks/primitive-cards",
     featured: true,
     categories: ["run-cards"],
+  },
+  {
+    id: "legend-variants",
+    registryName: "legend-variants-block",
+    title: "Legend Variants",
+    description:
+      "The split viewer shown with every legend placement — a 2×2 gallery over one attention.pdf split result: bar, floating, inset, and a vertical rail, all sharing one selection.",
+    command: getRegistryAddCommand("legend-variants-block"),
+    docsHref: "/docs/components/split-viewer",
+    viewHref: "/view/blocks/legend-variants",
+    categories: ["legends"],
   },
   {
     id: "pdf-thumbnails",

@@ -203,6 +203,57 @@ function scalarObjectColumns(itemSchema: Schema): Column[] | null {
 }
 
 // ---------------------------------------------------------------------------
+// Source linking — opt-in field-level hover/highlight
+// ---------------------------------------------------------------------------
+
+/**
+ * Optional source linking. When a form is given a `sourceLink`, every scalar
+ * field (including array-table cells) becomes a hoverable card à la
+ * `SourceFieldList`: hovering or focusing it reports the field's path, and the
+ * field whose path matches `activePath` gets the highlighted-card treatment.
+ * Wire `onFieldHover` + `activePath` straight from a `useSourceLink` result.
+ */
+export interface FieldSourceLink {
+  activePath: string | null
+  onFieldHover: (path: string | null) => void
+}
+
+const FieldSourceLinkContext = React.createContext<FieldSourceLink | null>(null)
+
+/**
+ * Wraps a scalar leaf so it reports its path on hover/focus and lights up as a
+ * card when active. A no-op (renders children untouched) outside a source-linked
+ * form, so other `JsonFormField` usages are unaffected.
+ */
+function SourceFieldShell({
+  name,
+  children,
+}: {
+  name: string
+  children: React.ReactNode
+}) {
+  const sourceLink = React.useContext(FieldSourceLinkContext)
+  if (!sourceLink) return <>{children}</>
+  const active = sourceLink.activePath === name
+  return (
+    <div
+      onMouseEnter={() => sourceLink.onFieldHover(name)}
+      onMouseLeave={() => sourceLink.onFieldHover(null)}
+      onFocus={() => sourceLink.onFieldHover(name)}
+      onBlur={() => sourceLink.onFieldHover(null)}
+      className={cn(
+        "rounded-md border px-3 py-2 transition-colors",
+        active
+          ? "border-primary/40 bg-primary/5"
+          : "border-transparent hover:bg-muted/60"
+      )}
+    >
+      {children}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // JsonFormField — the unit of composition
 // ---------------------------------------------------------------------------
 
@@ -256,53 +307,57 @@ export function JsonFormField({
 
   if (kind === "boolean") {
     return (
-      <FormField
-        name={name}
-        render={({ field }) => (
-          <FormItem
-            className={cn(
-              "flex flex-row items-center gap-2 space-y-0",
-              className
-            )}
-          >
-            <FormControl>
-              <Checkbox
-                checked={Boolean(field.value)}
-                onCheckedChange={field.onChange}
-              />
-            </FormControl>
-            <div className="leading-none">
-              <WithDescription text={schema.description}>
-                <FormLabel>{heading}</FormLabel>
-              </WithDescription>
-            </div>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
+      <SourceFieldShell name={name}>
+        <FormField
+          name={name}
+          render={({ field }) => (
+            <FormItem
+              className={cn(
+                "flex flex-row items-center gap-2 space-y-0",
+                className
+              )}
+            >
+              <FormControl>
+                <Checkbox
+                  checked={Boolean(field.value)}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
+              <div className="leading-none">
+                <WithDescription text={schema.description}>
+                  <FormLabel>{heading}</FormLabel>
+                </WithDescription>
+              </div>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </SourceFieldShell>
     )
   }
 
   return (
-    <FormField
-      name={name}
-      render={({ field }) => (
-        <FormItem className={className}>
-          <WithDescription text={schema.description}>
-            <FormLabel>
-              {heading}
-              {required ? (
-                <span className="text-destructive"> *</span>
-              ) : null}
-            </FormLabel>
-          </WithDescription>
-          <FormControl>
-            <ScalarControl kind={kind} schema={schema} field={field} />
-          </FormControl>
-          <FormMessage />
-        </FormItem>
-      )}
-    />
+    <SourceFieldShell name={name}>
+      <FormField
+        name={name}
+        render={({ field }) => (
+          <FormItem className={className}>
+            <WithDescription text={schema.description}>
+              <FormLabel>
+                {heading}
+                {required ? (
+                  <span className="text-destructive"> *</span>
+                ) : null}
+              </FormLabel>
+            </WithDescription>
+            <FormControl>
+              <ScalarControl kind={kind} schema={schema} field={field} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+    </SourceFieldShell>
   )
 }
 
@@ -794,38 +849,61 @@ const ArrayTableRow = React.memo(function ArrayTableRow({
   remove: (index: number) => void
   template: string
 }) {
+  const sourceLink = React.useContext(FieldSourceLinkContext)
   return (
     <div
       className="grid items-center gap-2 border-b px-2 py-1 last:border-b-0"
       style={{ gridTemplateColumns: template }}
     >
-      {columns.map((col) => (
-        <div key={col.key} className="min-w-0">
-          {col.kind === "boolean" ? (
-            <FormField
-              name={`${name}.${index}.${col.key}`}
-              render={({ field }) => (
-                <Checkbox
-                  checked={Boolean(field.value)}
-                  onCheckedChange={field.onChange}
-                />
-              )}
-            />
-          ) : (
-            <FormField
-              name={`${name}.${index}.${col.key}`}
-              render={({ field }) => (
-                <ScalarControl
-                  kind={col.kind}
-                  schema={col.schema}
-                  field={field}
-                  compact
-                />
-              )}
-            />
-          )}
-        </div>
-      ))}
+      {columns.map((col) => {
+        const path = `${name}.${index}.${col.key}`
+        const active = sourceLink?.activePath === path
+        // Same source-link affordance as scalar fields, sized for a table cell:
+        // hovering the cell reports its leaf path; the active cell tints.
+        const cellHandlers = sourceLink
+          ? {
+              onMouseEnter: () => sourceLink.onFieldHover(path),
+              onMouseLeave: () => sourceLink.onFieldHover(null),
+              onFocus: () => sourceLink.onFieldHover(path),
+              onBlur: () => sourceLink.onFieldHover(null),
+            }
+          : undefined
+        return (
+          <div
+            key={col.key}
+            {...cellHandlers}
+            className={cn(
+              "-mx-1 min-w-0 rounded px-1 transition-colors",
+              sourceLink && "hover:bg-muted/60",
+              active && "bg-primary/5 ring-1 ring-primary/30"
+            )}
+          >
+            {col.kind === "boolean" ? (
+              <FormField
+                name={path}
+                render={({ field }) => (
+                  <Checkbox
+                    checked={Boolean(field.value)}
+                    onCheckedChange={field.onChange}
+                  />
+                )}
+              />
+            ) : (
+              <FormField
+                name={path}
+                render={({ field }) => (
+                  <ScalarControl
+                    kind={col.kind}
+                    schema={col.schema}
+                    field={field}
+                    compact
+                  />
+                )}
+              />
+            )}
+          </div>
+        )
+      })}
       <Button
         type="button"
         size="icon"
@@ -901,6 +979,12 @@ export interface JsonFormProps {
   schema: Schema
   onSubmit?: SubmitHandler<Record<string, unknown>>
   className?: string
+  /**
+   * Opt into field-level source linking. When set, every scalar field becomes a
+   * hoverable card that reports its path and highlights when active — wire it
+   * straight from a `useSourceLink` result.
+   */
+  sourceLink?: FieldSourceLink
   /** Rendered after the fields, e.g. a submit button. */
   children?: React.ReactNode
 }
@@ -910,6 +994,7 @@ export function JsonForm({
   schema,
   onSubmit,
   className,
+  sourceLink,
   children,
 }: JsonFormProps) {
   const properties = (schema.properties ?? {}) as Record<
@@ -919,28 +1004,30 @@ export function JsonForm({
   const required = new Set(schema.required ?? [])
 
   return (
-    <Form {...form}>
-      <form
-        onSubmit={
-          onSubmit
-            ? form.handleSubmit(onSubmit)
-            : (e) => e.preventDefault()
-        }
-        className={cn("space-y-4", className)}
-      >
-        {Object.entries(properties).map(([key, child]) =>
-          typeof child === "object" ? (
-            <JsonFormField
-              key={key}
-              name={key}
-              schema={child}
-              required={required.has(key)}
-              depth={0}
-            />
-          ) : null
-        )}
-        {children}
-      </form>
-    </Form>
+    <FieldSourceLinkContext.Provider value={sourceLink ?? null}>
+      <Form {...form}>
+        <form
+          onSubmit={
+            onSubmit
+              ? form.handleSubmit(onSubmit)
+              : (e) => e.preventDefault()
+          }
+          className={cn("space-y-4", className)}
+        >
+          {Object.entries(properties).map(([key, child]) =>
+            typeof child === "object" ? (
+              <JsonFormField
+                key={key}
+                name={key}
+                schema={child}
+                required={required.has(key)}
+                depth={0}
+              />
+            ) : null
+          )}
+          {children}
+        </form>
+      </Form>
+    </FieldSourceLinkContext.Provider>
   )
 }

@@ -15,6 +15,7 @@ const PARTITION_RESULT: PartitionResult = {
     { key: "training", pages: [7, 8] },
     { key: "results", pages: [8, 9, 10] },
     { key: "references", pages: [10, 11, 12] },
+    { key: "attention_visualizations", pages: [13, 14, 15] },
   ],
   consensus: { choices: [], likelihoods: null },
   usage: null,

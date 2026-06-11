@@ -5,13 +5,13 @@ import * as React from "react"
 import { getViewerBlock, type ViewerBlockId } from "@/lib/viewer-blocks"
 import { ExtractViewerBlock } from "@/registry/new-york-v4/blocks/extract-viewer-block"
 import { ExtractionViewerBlock } from "@/registry/new-york-v4/blocks/extraction-viewer-block"
-import { JsonFormSourcesBlock } from "@/registry/new-york-v4/blocks/json-form-sources-block"
 import { ImageSourcesBlock } from "@/registry/new-york-v4/blocks/image-sources-block"
 import { TextSourcesBlock } from "@/registry/new-york-v4/blocks/text-sources-block"
 import { CsvSourcesBlock } from "@/registry/new-york-v4/blocks/csv-sources-block"
 import { XlsxSourcesBlock } from "@/registry/new-york-v4/blocks/xlsx-sources-block"
 import { DocxSourcesBlock } from "@/registry/new-york-v4/blocks/docx-sources-block"
 import { ParseViewerBlock } from "@/registry/new-york-v4/blocks/parse-viewer-block"
+import { LegendVariantsBlock } from "@/registry/new-york-v4/blocks/legend-variants-block"
 import { PartitionViewerBlock } from "@/registry/new-york-v4/blocks/partition-viewer-block"
 import { PdfThumbnailsBlock } from "@/registry/new-york-v4/blocks/pdf-thumbnails-block"
 import { PrimitiveCardsBlock } from "@/registry/new-york-v4/blocks/primitive-cards-block"
@@ -23,13 +23,13 @@ const blockComponents = {
   parse: ParseViewerBlock,
   "extraction-viewer": ExtractionViewerBlock,
   extract: ExtractViewerBlock,
-  "json-form-sources": JsonFormSourcesBlock,
   "image-sources": ImageSourcesBlock,
   "text-sources": TextSourcesBlock,
   "csv-sources": CsvSourcesBlock,
   "xlsx-sources": XlsxSourcesBlock,
   "docx-sources": DocxSourcesBlock,
   "primitive-cards": PrimitiveCardsBlock,
+  "legend-variants": LegendVariantsBlock,
   "pdf-thumbnails": PdfThumbnailsBlock,
 } satisfies Record<ViewerBlockId, React.ComponentType>
 

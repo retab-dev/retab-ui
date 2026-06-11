@@ -1105,6 +1105,7 @@ function CsvFromUrl({
         fillHeight
         scale={scale}
         showZoom={false}
+        showDownload={false}
         className="rounded-none border-0 bg-transparent"
         isolateStyles={isolateStyles}
       />

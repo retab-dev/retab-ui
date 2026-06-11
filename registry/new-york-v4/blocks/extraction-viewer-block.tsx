@@ -43,7 +43,7 @@ import {
   sourceToXlsxCell,
   useXlsxSourceTarget,
 } from "@/components/ui/xlsx-source"
-import { UiForm, UiFormContent } from "@/components/json-form/json-form"
+import { JsonForm } from "@/components/json-form-field/json-form-field"
 import csvSample from "@/components/viewers/sample-data/csv-sources.json"
 import docxSample from "@/components/viewers/sample-data/docx-sources.json"
 import imageSample from "@/components/viewers/sample-data/image-sources.json"
@@ -129,28 +129,25 @@ function ExtractionShell({
         {children}
         <SourceIndicator path={link.activePath} found={!!link.activeSource} />
       </div>
-      <ExtractionForm extraction={extraction} onFieldHover={link.onFieldHover} />
+      <ExtractionForm extraction={extraction} link={link} />
     </div>
   )
 }
 
 function ExtractionForm({
   extraction,
-  onFieldHover,
+  link,
 }: {
   extraction: Extraction
-  onFieldHover: (path: string | null) => void
+  link: UseSourceLinkResult
 }) {
   const form = useForm<Record<string, unknown>>({
     defaultValues: extraction.values,
   })
-  const [likelihoods, setLikelihoods] = React.useState<Record<string, unknown>>(
-    {}
-  )
-  const [validationFlags, setValidationFlags] = React.useState<
-    Record<string, unknown>
-  >({})
 
+  // `json-form-field` is source-link-aware: pass the link and every field
+  // becomes a hoverable card that reports its path (an RHF dot-path matching the
+  // source-map keys) and highlights when active. No per-field wiring needed.
   return (
     <aside className="flex w-[420px] flex-shrink-0 flex-col border-l">
       <div className="flex h-10 flex-shrink-0 items-center gap-2 border-b px-4">
@@ -161,27 +158,7 @@ function ExtractionForm({
       </div>
       <ScrollArea className="min-h-0 flex-1">
         <div className="p-4">
-          <UiForm
-            schema={extraction.schema}
-            form={form}
-            onSubmit={() => undefined}
-            variant="normal"
-            size="lg"
-            isStreaming={false}
-            isProcessing={false}
-            scalarValueDisplay="none"
-            scalarValueType="none"
-            likelihoods={likelihoods}
-            setLikelihoods={setLikelihoods}
-            setSourcesFieldPath={onFieldHover}
-            titlePosition="object"
-            propertyEditorMode="readOnly"
-            showPropertyEditorPencil={false}
-            validationFlags={validationFlags}
-            setValidationFlags={setValidationFlags}
-          >
-            <UiFormContent />
-          </UiForm>
+          <JsonForm form={form} schema={extraction.schema} sourceLink={link} />
         </div>
       </ScrollArea>
     </aside>

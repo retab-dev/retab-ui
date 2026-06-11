@@ -607,7 +607,8 @@
       ],
       "registryDependencies": [
         "csv",
-        "utils"
+        "utils",
+        "button"
       ],
       "files": [
         {
@@ -1136,7 +1137,8 @@
       "description": "Every extraction format in one viewer — PDF, image, text, CSV, Excel, and Word — each shown as a JSON form beside its source document, linked by their sources. Tabs switch the file format; hovering a form field highlights where its value came from. One useSourceLink mediator drives every viewer; only the viewer + its source adapter differ per tab.",
       "dependencies": [
         "react-hook-form",
-        "json-schema"
+        "json-schema",
+        "@tanstack/react-virtual"
       ],
       "registryDependencies": [
         "pdf-viewer",
@@ -1281,6 +1283,33 @@
       ],
       "categories": [
         "primitives"
+      ]
+    },
+    {
+      "name": "legend-variants-block",
+      "type": "registry:block",
+      "title": "Legend Variants",
+      "description": "The split viewer shown with every legend placement — a 2×2 gallery over one attention.pdf split result: bar, floating, inset, and a vertical rail, all sharing one selection.",
+      "registryDependencies": [
+        "pdf-viewer",
+        "segment-legend",
+        "page-ribbon",
+        "segments"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/blocks/legend-variants-block.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/legend-variants-block.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/segment-legend.tsx",
+          "type": "registry:ui",
+          "target": "@ui/segment-legend.tsx"
+        }
+      ],
+      "categories": [
+        "legends"
       ]
     },
     {

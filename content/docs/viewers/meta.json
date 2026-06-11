@@ -8,6 +8,7 @@
     "xlsx-viewer",
     "docx-viewer",
     "pptx-viewer",
-    "file-viewer"
+    "file-viewer",
+    "parse-viewer"
   ]
 }

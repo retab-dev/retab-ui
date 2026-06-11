@@ -50,10 +50,16 @@ export function getPagesFromFolder(
     )
   }
 
-  // For other folders, return direct page children.
-  return folder.children.filter(
+  // For other folders, return direct page children, excluding the folder's own
+  // index page (the section root). That page is already linked from the
+  // top-level Sections list, so listing it here would duplicate the group label.
+  const directPages = folder.children.filter(
     (child): child is PageTreePage =>
       child.type === "page" && !child.url.endsWith("/components")
+  )
+
+  return directPages.filter(
+    (page) => !directPages.some((other) => other.url.startsWith(`${page.url}/`))
   )
 }
 

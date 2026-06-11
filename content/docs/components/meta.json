@@ -7,7 +7,6 @@
     "json-table",
     "schema-builder",
     "property-form",
-    "parse-viewer",
     "extract-viewer",
     "edit-viewer",
     "sidebar",
