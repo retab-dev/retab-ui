@@ -1,12 +1,40 @@
 "use client"
 
 import * as React from "react"
-import { Download } from "lucide-react"
+import { Download, Maximize, Minus, Plus } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Skeleton } from "@/components/ui/skeleton"
+
+/** Base font metrics (Tailwind `text-xs`/`leading-5`) the zoom scales from. */
+const BASE_FONT_PX = 12
+const BASE_LINE_PX = 20
+const MIN_SCALE = 0.5
+const MAX_SCALE = 3
+
+const clamp = (n: number, lo: number, hi: number) =>
+  Math.min(hi, Math.max(lo, n))
+
+function IconButton({
+  label,
+  children,
+  ...props
+}: React.ComponentProps<typeof Button> & { label: string }) {
+  return (
+    <Button
+      variant="ghost"
+      size="icon-sm"
+      className="size-7"
+      aria-label={label}
+      title={label}
+      {...props}
+    >
+      {children}
+    </Button>
+  )
+}
 
 // --- resource cache: stable promises so React `use()` can read them -----------
 
@@ -67,11 +95,15 @@ export const TextViewer = React.forwardRef<TextViewerHandle, TextViewerProps>(
     // `value` renders immediately on both sides.
     const isClient = useIsClient()
     if (props.value === undefined && props.src && !isClient) {
-      return <TextViewerFallback className={props.className} bare={props.bare} />
+      return (
+        <TextViewerFallback className={props.className} bare={props.bare} />
+      )
     }
     return (
       <React.Suspense
-        fallback={<TextViewerFallback className={props.className} bare={props.bare} />}
+        fallback={
+          <TextViewerFallback className={props.className} bare={props.bare} />
+        }
       >
         <TextViewerInner {...props} forwardedRef={ref} />
       </React.Suspense>
@@ -95,6 +127,10 @@ function TextViewerInner({
     value !== undefined ? value : src ? React.use(getTextResource(src)) : ""
   const lines = React.useMemo(() => text.split("\n"), [text])
 
+  const [fontScale, setFontScale] = React.useState(1)
+  const zoom = (factor: number) =>
+    setFontScale((s) => clamp(s * factor, MIN_SCALE, MAX_SCALE))
+
   const scrollViewportRef = React.useRef<HTMLDivElement | null>(null)
 
   React.useImperativeHandle(
@@ -109,7 +145,10 @@ function TextViewerInner({
         const rowRect = row.getBoundingClientRect()
         const viewportRect = viewport.getBoundingClientRect()
         const top =
-          rowRect.top - viewportRect.top + viewport.scrollTop - LINE_SCROLL_HEADROOM
+          rowRect.top -
+          viewportRect.top +
+          viewport.scrollTop -
+          LINE_SCROLL_HEADROOM
         viewport.scrollTo({
           top: Math.max(0, top),
           behavior: "smooth",
@@ -137,26 +176,47 @@ function TextViewerInner({
           <span className="px-1 text-xs text-muted-foreground tabular-nums">
             {lines.length} line{lines.length === 1 ? "" : "s"}
           </span>
-          {src ? (
-            <div className="ml-auto">
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                className="size-7"
-                aria-label="Download"
-                title="Download"
-                render={
-                  <a href={src} download={downloadFileName ?? true}>
-                    <Download />
-                  </a>
-                }
-              />
-            </div>
-          ) : null}
+          <div className="ml-auto flex items-center gap-1">
+            <IconButton label="Zoom out" onClick={() => zoom(1 / 1.2)}>
+              <Minus />
+            </IconButton>
+            <span className="w-12 text-center text-xs tabular-nums text-muted-foreground">
+              {Math.round(fontScale * 100)}%
+            </span>
+            <IconButton label="Zoom in" onClick={() => zoom(1.2)}>
+              <Plus />
+            </IconButton>
+            <IconButton label="Reset zoom" onClick={() => setFontScale(1)}>
+              <Maximize />
+            </IconButton>
+            {src ? (
+              <>
+                <div className="mx-1 h-4 w-px bg-border" />
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  className="size-7"
+                  aria-label="Download"
+                  title="Download"
+                  render={
+                    <a href={src} download={downloadFileName ?? true}>
+                      <Download />
+                    </a>
+                  }
+                />
+              </>
+            ) : null}
+          </div>
         </div>
       ) : null}
       <ScrollArea className="min-h-0 flex-1" viewportRef={scrollViewportRef}>
-        <pre className="w-max min-w-full py-2 font-mono text-xs leading-5">
+        <pre
+          className="w-max min-w-full py-2 font-mono"
+          style={{
+            fontSize: `${BASE_FONT_PX * fontScale}px`,
+            lineHeight: `${BASE_LINE_PX * fontScale}px`,
+          }}
+        >
           {lines.map((line, i) => {
             const n = i + 1
             const lit =
@@ -167,11 +227,11 @@ function TextViewerInner({
                 data-line={n}
                 className={cn(
                   "flex px-2",
-                  lit && "bg-primary/12 ring-1 ring-inset ring-primary/30"
+                  lit && "bg-primary/12 ring-1 ring-primary/30 ring-inset"
                 )}
               >
                 <span
-                  className="flex-shrink-0 select-none pr-3 text-right text-muted-foreground/60"
+                  className="flex-shrink-0 pr-3 text-right text-muted-foreground/60 select-none"
                   style={{ width: gutterWidth }}
                 >
                   {n}
@@ -204,7 +264,11 @@ function TextViewerFallback({
     >
       <div className="space-y-2 p-4">
         {Array.from({ length: 12 }, (_, i) => (
-          <Skeleton key={i} className="h-4" style={{ width: `${40 + ((i * 13) % 55)}%` }} />
+          <Skeleton
+            key={i}
+            className="h-4"
+            style={{ width: `${40 + ((i * 13) % 55)}%` }}
+          />
         ))}
       </div>
     </div>

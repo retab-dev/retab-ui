@@ -5,17 +5,14 @@ import * as React from "react"
 import type { Source, SourceMap } from "@/lib/document-source"
 import { useSourceLink } from "@/hooks/use-source-link"
 import {
-  XlsxViewer,
-  type XlsxViewerHandle,
-} from "@/components/ui/xlsx-viewer"
-import {
-  useXlsxSourceTarget,
-  sourceToXlsxCell,
-} from "@/components/ui/xlsx-source"
-import {
   SourceFieldList,
   type SourceField,
 } from "@/components/ui/source-field-list"
+import {
+  sourceToXlsxCell,
+  useXlsxSourceTarget,
+} from "@/components/ui/xlsx-source"
+import { XlsxViewer, type XlsxViewerHandle } from "@/components/ui/xlsx-viewer"
 import xlsxSample from "@/components/viewers/sample-data/xlsx-sources.json"
 
 const XLSX_URL = "/samples/nvidia-financials-fy2024.xlsx"

@@ -39,7 +39,12 @@ export function useXlsxSourceTarget(
       scrollTo: (source: Source, options) => {
         const cell = spreadsheetAnchorToCell(source.anchor)
         if (cell) {
-          viewerRef.current?.scrollToCell(cell.sheet, cell.row, cell.col, options)
+          viewerRef.current?.scrollToCell(
+            cell.sheet,
+            cell.row,
+            cell.col,
+            options
+          )
         }
       },
     }),

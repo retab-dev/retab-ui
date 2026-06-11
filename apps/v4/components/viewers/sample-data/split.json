@@ -1,541 +1,493 @@
 {
-    "_id": {
-      "$oid": "6a0750b5adc6f5480a3de4db"
+  "_id": {
+    "$oid": "6a0750b5adc6f5480a3de4db"
+  },
+  "id": "splt_tFutp2CJELOblsmqKy2-u",
+  "organization_id": "org_01JH30M17Y8EZVXE8ABXXG0G3J",
+  "consensus": {
+    "likelihoods": [],
+    "choices": []
+  },
+  "created_at": {
+    "$date": "2026-05-15T16:53:45.796Z"
+  },
+  "file": {
+    "id": "file_cab43c84f3c62749",
+    "filename": "harris_2023_federal_state_returns.pdf",
+    "mime_type": "application/pdf"
+  },
+  "instructions": null,
+  "model": "retab-large",
+  "n_consensus": 1,
+  "output": [
+    {
+      "name": "Form 1040",
+      "pages": [1, 2]
     },
-    "id": "splt_tFutp2CJELOblsmqKy2-u",
-    "organization_id": "org_01JH30M17Y8EZVXE8ABXXG0G3J",
-    "consensus": {
-      "likelihoods": [],
-      "choices": []
+    {
+      "name": "Schedule 1 (Form 1040)",
+      "pages": [3, 4]
     },
-    "created_at": {
-      "$date": "2026-05-15T16:53:45.796Z"
+    {
+      "name": "Schedule 2 (Form 1040)",
+      "pages": [5, 6]
     },
-    "file": {
-      "id": "file_cab43c84f3c62749",
-      "filename": "harris_2023_federal_state_returns.pdf",
-      "mime_type": "application/pdf"
+    {
+      "name": "Schedule A (Form 1040)",
+      "pages": [7]
     },
-    "instructions": null,
-    "model": "retab-large",
-    "n_consensus": 1,
-    "output": [
-      {
-        "name": "Form 1040",
-        "pages": [
-          1,
-          2
-        ]
-      },
-      {
-        "name": "Schedule 1 (Form 1040)",
-        "pages": [
-          3,
-          4
-        ]
-      },
-      {
-        "name": "Schedule 2 (Form 1040)",
-        "pages": [
-          5,
-          6
-        ]
-      },
-      {
-        "name": "Schedule A (Form 1040)",
-        "pages": [
-          7
-        ]
-      },
-      {
-        "name": "Schedule B (Form 1040)",
-        "pages": [
-          8
-        ]
-      },
-      {
-        "name": "Schedule C (Form 1040)",
-        "pages": [
-          9
-        ]
-      },
-      {
-        "name": "Schedule SE (Form 1040)",
-        "pages": [
-          10
-        ]
-      },
-      {
-        "name": "Schedule H (Form 1040)",
-        "pages": [
-          11,
-          12
-        ]
-      },
-      {
-        "name": "misc_form",
-        "pages": [
-          13,
-          21,
-          22,
-          23,
-          24,
-          25,
-          26,
-          27,
-          28,
-          29,
-          30,
-          31,
-          32,
-          33,
-          34,
-          35,
-          36,
-          37,
-          38,
-          39
-        ]
-      },
-      {
-        "name": "Form 8960",
-        "pages": [
-          14
-        ]
-      },
-      {
-        "name": "supplement",
-        "pages": [
-          15,
-          16,
-          17,
-          18,
-          19,
-          20,
-          40
-        ]
-      },
-      {
-        "name": "Form 4797",
-        "pages": []
-      },
-      {
-        "name": "Form 5471",
-        "pages": []
-      },
-      {
-        "name": "Form 6251",
-        "pages": []
-      },
-      {
-        "name": "Form 709",
-        "pages": []
-      },
-      {
-        "name": "Form 8283",
-        "pages": []
-      },
-      {
-        "name": "Form 8453",
-        "pages": []
-      },
-      {
-        "name": "Form 8582",
-        "pages": []
-      },
-      {
-        "name": "Form 8858",
-        "pages": []
-      },
-      {
-        "name": "Form 8865",
-        "pages": []
-      },
-      {
-        "name": "Form 8886",
-        "pages": []
-      },
-      {
-        "name": "Form 8938",
-        "pages": []
-      },
-      {
-        "name": "Form 8949",
-        "pages": []
-      },
-      {
-        "name": "Form 1040-NR",
-        "pages": []
-      },
-      {
-        "name": "Form 1065",
-        "pages": []
-      },
-      {
-        "name": "Form 1120",
-        "pages": []
-      },
-      {
-        "name": "Schedule 3 (Form 1040)",
-        "pages": []
-      },
-      {
-        "name": "Schedule 4 (Form 1040)",
-        "pages": []
-      },
-      {
-        "name": "Schedule 5 (Form 1040)",
-        "pages": []
-      },
-      {
-        "name": "Schedule 6 (Form 1040)",
-        "pages": []
-      },
-      {
-        "name": "Form 1120-S",
-        "pages": []
-      },
-      {
-        "name": "Form 2106",
-        "pages": []
-      },
-      {
-        "name": "Form 2210",
-        "pages": []
-      },
-      {
-        "name": "Schedule D (Form 1040)",
-        "pages": []
-      },
-      {
-        "name": "Schedule E (Form 1040)",
-        "pages": []
-      },
-      {
-        "name": "Schedule F (Form 1040)",
-        "pages": []
-      },
-      {
-        "name": "Form 2441",
-        "pages": []
-      },
-      {
-        "name": "Schedule K (Form 1065)",
-        "pages": []
-      },
-      {
-        "name": "Schedule K-1 (Form 1065)",
-        "pages": []
-      },
-      {
-        "name": "Schedule K-1 (Form 1120-S)",
-        "pages": []
-      },
-      {
-        "name": "Schedule L (Form 1065)",
-        "pages": []
-      },
-      {
-        "name": "Schedule M (Form 1040)",
-        "pages": []
-      },
-      {
-        "name": "Schedule M-1 (Form 1065)",
-        "pages": []
-      },
-      {
-        "name": "Schedule M-2 (Form 1065)",
-        "pages": []
-      },
-      {
-        "name": "Schedule M-3 (Form 1120/1065)",
-        "pages": []
-      },
-      {
-        "name": "Form 3520",
-        "pages": []
-      },
-      {
-        "name": "Form IL-1040",
-        "pages": []
-      },
-      {
-        "name": "Form IL-2210",
-        "pages": []
-      },
-      {
-        "name": "Form 4136",
-        "pages": []
-      },
-      {
-        "name": "Form 4562",
-        "pages": []
-      },
-      {
-        "name": "other",
-        "pages": []
-      }
-    ],
-    "subdocuments": [
-      {
-        "name": "Form 1040",
-        "description": "U.S. Individual Income Tax Return. The primary two-page federal income tax return. Top of page 1 shows 'Form 1040' prominently with tax year, taxpayer name, address, filing status checkboxes, and income/deduction summary lines. Do not group schedule forms under a single Form 1040 subdocument, they should be labeled and grouped as their own specific type if available.",
-        "allow_multiple_instances": false
-      },
-      {
-        "name": "Form 1040-NR",
-        "description": "U.S. Nonresident Alien Income Tax Return. Header reads 'Form 1040-NR' with '(Nonresident Alien)' subtitle. Filed by foreign nationals with U.S.-source income; appears in Trump 2018 returns.",
-        "allow_multiple_instances": false
-      },
-      {
-        "name": "Form 1065",
-        "description": "U.S. Return of Partnership Income. Header reads 'Form 1065' and 'U.S. Return of Partnership Income.' The annual informational return filed by partnerships (general, limited, LLCs taxed as partnerships); shows total income, deductions, and partners' shares. The Form 1065 subdocument generally includes the entire core return packet: the two main pages plus the internal schedules commonly printed as part of the form (Schedule B, Schedule K, Schedule L, Schedule M-1, and Schedule M-2) when they appear as the continuation pages of the same Form 1065. Only split these schedules into their own subdocuments when they are clearly presented as standalone schedule packets outside the core Form 1065 page sequence (e.g., a separately collated 'Schedule K (Form 1065)' or 'Schedule L (Form 1065)' section that is not part of the primary Form 1065 pagination). Do not include software-generated 'Additional Data' or supporting statement pages in the Form 1065 subdocument; those are supplements.",
-        "allow_multiple_instances": false
-      },
-      {
-        "name": "Form 1120",
-        "description": "U.S. Corporation Income Tax Return. Header reads 'Form 1120' and 'U.S. Corporation Income Tax Return.' Annual return for C-corporations; reports gross income, deductions, taxable income, and tax liability.",
-        "allow_multiple_instances": false
-      },
-      {
-        "name": "Form 1120-S",
-        "description": "U.S. Income Tax Return for an S Corporation. Header reads 'Form 1120-S.' Informational return for S-corporations; income passes through to shareholders. Includes Schedules K, K-1, L, M-1, M-2 similar to Form 1065.",
-        "allow_multiple_instances": false
-      },
-      {
-        "name": "Form 2106",
-        "description": "Employee Business Expenses. Header reads 'Form 2106' and 'Employee Business Expenses.' Reports unreimbursed business expenses for employees; largely eliminated for most employees after 2017 TCJA, but retained for certain categories.",
-        "allow_multiple_instances": false
-      },
-      {
-        "name": "Form 2210",
-        "description": "Underpayment of Estimated Tax by Individuals, Estates, and Trusts. Header reads 'Form 2210' and 'Underpayment of Estimated Tax by Individuals, Estates, and Trusts.' Calculates the underpayment penalty when quarterly estimated payments fall short.",
-        "allow_multiple_instances": false
-      },
-      {
-        "name": "Form 2441",
-        "description": "Child and Dependent Care Expenses. Header reads 'Form 2441' and 'Child and Dependent Care Expenses.' Calculates the credit for childcare costs when both spouses work; also used to report employer-provided dependent care benefits.",
-        "allow_multiple_instances": false
-      },
-      {
-        "name": "Form 3520",
-        "description": "Annual Return to Report Transactions With Foreign Trusts and Receipt of Certain Foreign Gifts. Header reads 'Form 3520.' Filed when a U.S. person is treated as owner of a foreign trust, transfers assets to it, or receives distributions from it.",
-        "allow_multiple_instances": false
-      },
-      {
-        "name": "Form 4136",
-        "description": "Credit for Federal Tax Paid on Fuels. Header reads 'Form 4136' and 'Credit for Federal Tax Paid on Fuels.' Allows a refundable credit for excise taxes paid on fuel used in off-highway business, farming, or other qualifying purposes.",
-        "allow_multiple_instances": false
-      },
-      {
-        "name": "Form 4562",
-        "description": "Depreciation and Amortization. Header reads 'Form 4562' and 'Depreciation and Amortization (Including Information on Listed Property).' Reports Section 179 expensing, bonus depreciation, MACRS depreciation on assets placed in service during the year.",
-        "allow_multiple_instances": false
-      },
-      {
-        "name": "Form 4797",
-        "description": "Sales of Business Property. Header reads 'Form 4797' and 'Sales of Business Property (Also Involuntary Conversions and Recapture Amounts Under Sections 179 and 280F(b)(2)).' Reports gains/losses on depreciable business property and Section 1231 assets.",
-        "allow_multiple_instances": false
-      },
-      {
-        "name": "Form 5471",
-        "description": "Information Return of U.S. Persons With Respect to Certain Foreign Corporations. Header reads 'Form 5471.' Required when a U.S. person owns 10%+ of a foreign corporation; discloses the corporation's income, balance sheet, and transactions with related parties.",
-        "allow_multiple_instances": false
-      },
-      {
-        "name": "Form 6251",
-        "description": "Alternative Minimum Tax — Individuals. Header reads 'Form 6251' and 'Alternative Minimum Tax — Individuals.' Calculates the AMT liability by adding back certain preferences and adjustments to regular taxable income; filed whenever AMT may apply.",
-        "allow_multiple_instances": false
-      },
-      {
-        "name": "Form 709",
-        "description": "United States Gift (and Generation-Skipping Transfer) Tax Return. Header reads 'Form 709' and 'United States Gift (and Generation-Skipping Transfer) Tax Return.' Filed when gifts exceed the annual exclusion ($15,000 per recipient in recent years).",
-        "allow_multiple_instances": false
-      },
-      {
-        "name": "Form 8283",
-        "description": "Noncash Charitable Contributions. Header reads 'Form 8283' and 'Noncash Charitable Contributions.' Reports donated property valued over $500; Section B (over $5,000) requires a qualified appraisal and appraiser signature.",
-        "allow_multiple_instances": false
-      },
-      {
-        "name": "Form 8453",
-        "description": "U.S. Individual Income Tax Transmittal for an IRS e-file Return. Header reads 'Form 8453.' Transmittal page used by paid preparers or EROs to submit paper attachments (e.g., signed Forms 1099-B, 8332) alongside an electronically filed return.",
-        "allow_multiple_instances": false
-      },
-      {
-        "name": "Form 8582",
-        "description": "Passive Activity Loss Limitations. Header reads 'Form 8582' and 'Passive Activity Loss Limitations.' Calculates how much of a taxpayer's passive losses (rental, limited partnership) can be deducted against non-passive income in the current year.",
-        "allow_multiple_instances": false
-      },
-      {
-        "name": "Form 8858",
-        "description": "Information Return of U.S. Persons With Respect to Foreign Disregarded Entities and Foreign Branches. Header reads 'Form 8858.' Filed by U.S. persons who directly or indirectly own a foreign disregarded entity or operate a foreign branch.",
-        "allow_multiple_instances": false
-      },
-      {
-        "name": "Form 8865",
-        "description": "Return of U.S. Persons With Respect to Certain Foreign Partnerships. Header reads 'Form 8865.' Filed when a U.S. person controls or has significant ownership in a foreign partnership; discloses income, balance sheet, and cross-border transactions.",
-        "allow_multiple_instances": false
-      },
-      {
-        "name": "Form 8886",
-        "description": "Reportable Transaction Disclosure Statement. Header reads 'Form 8886' and 'Reportable Transaction Disclosure Statement.' Discloses participation in IRS-designated 'listed' or 'reportable' transactions; must be attached to each affected return and filed separately with the OTSA.",
-        "allow_multiple_instances": false
-      },
-      {
-        "name": "Form 8938",
-        "description": "Statement of Specified Foreign Financial Assets (FATCA). Header reads 'Form 8938' and 'Statement of Specified Foreign Financial Assets.' Reports foreign financial accounts, securities, and interests in foreign entities when total value exceeds FATCA thresholds.",
-        "allow_multiple_instances": false
-      },
-      {
-        "name": "Form 8949",
-        "description": "Sales and Other Dispositions of Capital Assets. Header reads 'Form 8949' and 'Sales and Other Dispositions of Capital Assets.' Itemizes individual sale transactions (stocks, bonds, real estate) that feed into Schedule D; shows cost basis, proceeds, and gain/loss per transaction.",
-        "allow_multiple_instances": false
-      },
-      {
-        "name": "Form 8960",
-        "description": "Net Investment Income Tax — Individuals, Estates, and Trusts. Header reads 'Form 8960' and 'Net Investment Income Tax.' Calculates the 3.8% surtax on net investment income (interest, dividends, capital gains, rental income) for taxpayers above income thresholds.",
-        "allow_multiple_instances": false
-      },
-      {
-        "name": "Schedule 1 (Form 1040)",
-        "description": "Additional Income and Adjustments to Income (2018 redesign). Header reads 'Schedule 1 (Form 1040)' with title 'Additional Income and Adjustments.' Covers alimony, business income, capital gains adjustments, student loan interest, IRA deductions, etc.",
-        "allow_multiple_instances": false
-      },
-      {
-        "name": "Schedule 2 (Form 1040)",
-        "description": "Additional Taxes (2018+). Header reads 'Schedule 2 (Form 1040)' with title 'Tax' (2018) or 'Additional Taxes' (2019+). Includes AMT, self-employment tax, household employment taxes, and repayment amounts.",
-        "allow_multiple_instances": false
-      },
-      {
-        "name": "Schedule 3 (Form 1040)",
-        "description": "Nonrefundable Credits (2018) / Additional Credits and Payments (2019+). Header reads 'Schedule 3 (Form 1040).' Covers foreign tax credit, education credits, child/dependent care credit, residential energy credits.",
-        "allow_multiple_instances": false
-      },
-      {
-        "name": "Schedule 4 (Form 1040)",
-        "description": "Other Taxes (2018 only; merged into Schedule 2 in 2019). Header reads 'Schedule 4 (Form 1040) — Other Taxes.' Covers self-employment tax, household employment taxes, net investment income tax, NIIT.",
-        "allow_multiple_instances": false
-      },
-      {
-        "name": "Schedule 5 (Form 1040)",
-        "description": "Other Payments and Refundable Credits (2018 only; merged into Schedule 3 in 2019). Header reads 'Schedule 5 (Form 1040).' Covers estimated tax payments, amount from Form 8888, net premium tax credit.",
-        "allow_multiple_instances": false
-      },
-      {
-        "name": "Schedule 6 (Form 1040)",
-        "description": "Foreign Address and Third Party Designee (2018 only; merged back into Form 1040 in 2019). Short form; header reads 'Schedule 6 (Form 1040).' Contains mailing address for foreign addresses and designee authorization.",
-        "allow_multiple_instances": false
-      },
-      {
-        "name": "Schedule A (Form 1040)",
-        "description": "Itemized Deductions. Header reads 'SCHEDULE A (Form 1040)' and 'Itemized Deductions.' Lists medical expenses, state and local taxes (SALT), mortgage interest, charitable contributions, casualty losses, and other deductions.",
-        "allow_multiple_instances": false
-      },
-      {
-        "name": "Schedule B (Form 1040)",
-        "description": "Interest and Ordinary Dividends. Header reads 'SCHEDULE B (Form 1040).' Lists names of payers of interest/dividends exceeding $1,500 threshold; Part III covers foreign accounts/trusts.",
-        "allow_multiple_instances": false
-      },
-      {
-        "name": "Schedule C (Form 1040)",
-        "description": "Profit or Loss from Business (Sole Proprietorship). Header reads 'SCHEDULE C (Form 1040)' and 'Profit or Loss From Business.' Reports income, expenses, and net profit/loss from a sole proprietorship; includes business name and principal business code.",
-        "allow_multiple_instances": false
-      },
-      {
-        "name": "Schedule D (Form 1040)",
-        "description": "Capital Gains and Losses. Header reads 'SCHEDULE D (Form 1040)' and 'Capital Gains and Losses.' Summarizes short-term and long-term transactions from Form 8949; shows net capital gain/loss carried to Form 1040.",
-        "allow_multiple_instances": false
-      },
-      {
-        "name": "Schedule E (Form 1040)",
-        "description": "Supplemental Income and Loss. Header reads 'SCHEDULE E (Form 1040).' Reports rental income/loss, royalties, S-corporation income, partnership income, trust/estate income, and REMIC income.",
-        "allow_multiple_instances": false
-      },
-      {
-        "name": "Schedule F (Form 1040)",
-        "description": "Profit or Loss from Farming. Header reads 'SCHEDULE F (Form 1040)' and 'Profit or Loss From Farming.' Reports farm income and expenses including livestock, crops, and agricultural program payments.",
-        "allow_multiple_instances": false
-      },
-      {
-        "name": "Schedule H (Form 1040)",
-        "description": "Household Employment Taxes. Header reads 'SCHEDULE H (Form 1040)' and 'Household Employment Taxes.' Filed when a taxpayer pays household employees (e.g., nannies, housekeepers) more than the threshold wage amount.",
-        "allow_multiple_instances": false
-      },
-      {
-        "name": "Schedule K (Form 1065)",
-        "description": "Partners' Distributive Share Items. Labeled 'Schedule K' within a Form 1065 filing. Summarizes the total of all items of income, deduction, credit, and other information allocated among the partners; feeds into individual Schedule K-1s. Typically this schedule is part of the standard Form 1065 return packet and should be included in the Form 1065 subdocument. Only classify it separately when it is clearly a standalone schedule packet outside the core Form 1065 page sequence. Schedule K pages within a Form 8865 (foreign partnership) or Form 1120-S should remain part of that parent form's subdocument.",
-        "allow_multiple_instances": false
-      },
-      {
-        "name": "Schedule K-1 (Form 1065)",
-        "description": "Partner's Share of Income, Deductions, Credits, etc. Header reads 'Schedule K-1 (Form 1065).' Issued to each individual partner; reports that partner's share of partnership income, losses, deductions, and credits to be reported on the partner's own return.",
-        "allow_multiple_instances": false
-      },
-      {
-        "name": "Schedule K-1 (Form 1120-S)",
-        "description": "Shareholder's Share of Income, Deductions, Credits, etc. Header reads 'Schedule K-1 (Form 1120-S).' Issued to each shareholder; reports their pro-rata share of S-corporation income, loss, deductions, and credits for use on the shareholder's personal return.",
-        "allow_multiple_instances": false
-      },
-      {
-        "name": "Schedule L (Form 1065)",
-        "description": "Balance Sheets per Books. Labeled 'Schedule L' within a Form 1065 filing. Shows the partnership's assets, liabilities, and partners' capital accounts at beginning and end of year, drawn from the entity's books. Typically this schedule is part of the standard Form 1065 return packet and should be included in the Form 1065 subdocument. Only classify it separately when it is clearly a standalone schedule packet outside the core Form 1065 page sequence. Schedule L pages within a Form 8865 (foreign partnership) or Form 1120-S should remain part of that parent form's subdocument.",
-        "allow_multiple_instances": false
-      },
-      {
-        "name": "Schedule M (Form 1040)",
-        "description": "Making Work Pay Credit (2009-2010 only). Header reads 'SCHEDULE M (Form 1040).' One-time schedule issued as part of the American Recovery and Reinvestment Act; calculates a refundable credit of up to $400 ($800 MFJ) based on earned income.",
-        "allow_multiple_instances": false
-      },
-      {
-        "name": "Schedule M-1 (Form 1065)",
-        "description": "Reconciliation of Income (Loss) per Books With Income (Loss) per Return. Labeled 'Schedule M-1' within a Form 1065 filing. Reconciles book income to tax return income; shows items treated differently for book vs. tax purposes. Typically this schedule is part of the standard Form 1065 return packet and should be included in the Form 1065 subdocument. Only classify it separately when it is clearly a standalone schedule packet outside the core Form 1065 page sequence. Schedule M-1 pages within a Form 8865 (foreign partnership) or Form 1120-S should remain part of that parent form's subdocument.",
-        "allow_multiple_instances": false
-      },
-      {
-        "name": "Schedule M-2 (Form 1065)",
-        "description": "Analysis of Partners' Capital Accounts. Labeled 'Schedule M-2' within a Form 1065 filing. Reconciles beginning and ending balances in partners' capital accounts, showing contributions, current-year income, and distributions. Typically this schedule is part of the standard Form 1065 return packet and should be included in the Form 1065 subdocument. Only classify it separately when it is clearly a standalone schedule packet outside the core Form 1065 page sequence. Schedule M-2 pages within a Form 8865 (foreign partnership) or Form 1120-S should remain part of that parent form's subdocument.",
-        "allow_multiple_instances": false
-      },
-      {
-        "name": "Schedule M-3 (Form 1120/1065)",
-        "description": "Net Income (Loss) Reconciliation for Corporations/Large Partnerships With Total Assets of $10 Million or More. Header reads 'Schedule M-3.' A detailed three-part book-to-tax reconciliation required for larger entities; more granular than Schedule M-1.",
-        "allow_multiple_instances": false
-      },
-      {
-        "name": "Schedule SE (Form 1040)",
-        "description": "Self-Employment Tax. Header reads 'SCHEDULE SE (Form 1040)' and 'Self-Employment Tax.' Calculates Social Security and Medicare tax on net self-employment income; required when net SE income exceeds $400.",
-        "allow_multiple_instances": false
-      },
-      {
-        "name": "Form IL-1040",
-        "description": "Illinois Individual Income Tax Return. Header reads 'Form IL-1040' and 'Illinois Individual Income Tax Return.' The primary Illinois state income tax return for residents; reports Illinois base income, exemptions, tax credits, and balance due or refund. Appears in returns filed by Illinois residents (e.g., Obama 2009-2015).",
-        "allow_multiple_instances": false
-      },
-      {
-        "name": "Form IL-2210",
-        "description": "Illinois Underpayment of Estimated Tax Penalty. Header reads 'Form IL-2210' and 'Computation of Penalties for Individuals.' The Illinois state equivalent of federal Form 2210; calculates the penalty for underpayment of estimated Illinois income tax. Typically includes an annualized income installment worksheet.",
-        "allow_multiple_instances": false
-      },
-      {
-        "name": "supplement",
-        "description": "Any non-form supplementary pages associated with one or more forms or schedules in this document, or with the tax return as a whole. Use this type for continuation sheets, supporting statements, software-generated detail worksheets, appraisal summaries, annualized income installment worksheets, passthrough recap worksheets, general tax return summary or transmittal pages, software-generated metadata pages (e.g., 'Additional Data' pages, numbered 'Federal Supporting Statement' pages), and any other non-form pages that support the return or specific forms within it. Supplementary sheets should always be separated from other forms, do not group them into the same subdocument.\nThis also applies to the \"Additional Data\" pages following forms that have a software id field or any other indication that it is a programmatically generated supplement to the primary form.\n\nSplitting supplements: Group supplement pages into one subdocument when they share the same report type or title (e.g., all 'QBI Pass Through Entity Reporting' pages, all sequentially numbered 'Federal Supporting Statement' pages, all pages of the same computation worksheet). These should remain one supplement even if individual pages reference different entities or line items. Only split consecutive supplements into separate subdocuments when the overall document type or purpose fundamentally changes (e.g., a series of 'Supplemental Information Statements' for different LLCs each get their own subdocument, or a transition from supporting statements to a separate passthrough recap worksheet).\n\nDo not use this type for actual forms — any document with user-fillable fields issued by a government body for tax purposes should be classified as misc_form (or its specific type if listed). The type field must always be exactly \"supplement\" with no additional text or numbers.",
-        "allow_multiple_instances": false
-      },
-      {
-        "name": "misc_form",
-        "description": "Any document with user-fillable fields issued by a government body for tax-related purposes that does not match one of the specific classification types listed above. This includes forms that supplement other forms. If a page has a government-issued form identifier and user-fillable fields, it should always be classified as misc_form regardless of its role in the return. The type field must always be exactly \"misc_form\" with no additional text or numbers.",
-        "allow_multiple_instances": false
-      },
-      {
-        "name": "other",
-        "description": "RARELY USED. Any page or set of pages that does not clearly match any known form, schedule, or document type and is not supplementary documentation for the return. This includes ONLY cover pages, preparer transmittal letters, informational notices, redaction pages, or truly unrecognizable content. Blank pages should not be classified as 'other' — they should be grouped with the subdocument immediately preceding them. IMPORTANT: Before using 'other', verify the page is not: (1) a government-issued form (use 'misc_form' instead — if the page has a form number like 'Form XXXX' in the header, it is misc_form), (2) a supporting statement, worksheet, schedule detail, or software-generated page (use 'supplement' instead). The 'other' type should almost never be used in typical tax returns. The type field must always be exactly \"other\" with no additional text or numbers.",
-        "allow_multiple_instances": false
-      }
-    ],
-    "usage": {
-      "credits": 40
+    {
+      "name": "Schedule B (Form 1040)",
+      "pages": [8]
     },
-    "environment_id": "env_1NsPAkHUQgh0lFO3sJH9R",
-    "status": "completed"
-  }
+    {
+      "name": "Schedule C (Form 1040)",
+      "pages": [9]
+    },
+    {
+      "name": "Schedule SE (Form 1040)",
+      "pages": [10]
+    },
+    {
+      "name": "Schedule H (Form 1040)",
+      "pages": [11, 12]
+    },
+    {
+      "name": "misc_form",
+      "pages": [
+        13, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37,
+        38, 39
+      ]
+    },
+    {
+      "name": "Form 8960",
+      "pages": [14]
+    },
+    {
+      "name": "supplement",
+      "pages": [15, 16, 17, 18, 19, 20, 40]
+    },
+    {
+      "name": "Form 4797",
+      "pages": []
+    },
+    {
+      "name": "Form 5471",
+      "pages": []
+    },
+    {
+      "name": "Form 6251",
+      "pages": []
+    },
+    {
+      "name": "Form 709",
+      "pages": []
+    },
+    {
+      "name": "Form 8283",
+      "pages": []
+    },
+    {
+      "name": "Form 8453",
+      "pages": []
+    },
+    {
+      "name": "Form 8582",
+      "pages": []
+    },
+    {
+      "name": "Form 8858",
+      "pages": []
+    },
+    {
+      "name": "Form 8865",
+      "pages": []
+    },
+    {
+      "name": "Form 8886",
+      "pages": []
+    },
+    {
+      "name": "Form 8938",
+      "pages": []
+    },
+    {
+      "name": "Form 8949",
+      "pages": []
+    },
+    {
+      "name": "Form 1040-NR",
+      "pages": []
+    },
+    {
+      "name": "Form 1065",
+      "pages": []
+    },
+    {
+      "name": "Form 1120",
+      "pages": []
+    },
+    {
+      "name": "Schedule 3 (Form 1040)",
+      "pages": []
+    },
+    {
+      "name": "Schedule 4 (Form 1040)",
+      "pages": []
+    },
+    {
+      "name": "Schedule 5 (Form 1040)",
+      "pages": []
+    },
+    {
+      "name": "Schedule 6 (Form 1040)",
+      "pages": []
+    },
+    {
+      "name": "Form 1120-S",
+      "pages": []
+    },
+    {
+      "name": "Form 2106",
+      "pages": []
+    },
+    {
+      "name": "Form 2210",
+      "pages": []
+    },
+    {
+      "name": "Schedule D (Form 1040)",
+      "pages": []
+    },
+    {
+      "name": "Schedule E (Form 1040)",
+      "pages": []
+    },
+    {
+      "name": "Schedule F (Form 1040)",
+      "pages": []
+    },
+    {
+      "name": "Form 2441",
+      "pages": []
+    },
+    {
+      "name": "Schedule K (Form 1065)",
+      "pages": []
+    },
+    {
+      "name": "Schedule K-1 (Form 1065)",
+      "pages": []
+    },
+    {
+      "name": "Schedule K-1 (Form 1120-S)",
+      "pages": []
+    },
+    {
+      "name": "Schedule L (Form 1065)",
+      "pages": []
+    },
+    {
+      "name": "Schedule M (Form 1040)",
+      "pages": []
+    },
+    {
+      "name": "Schedule M-1 (Form 1065)",
+      "pages": []
+    },
+    {
+      "name": "Schedule M-2 (Form 1065)",
+      "pages": []
+    },
+    {
+      "name": "Schedule M-3 (Form 1120/1065)",
+      "pages": []
+    },
+    {
+      "name": "Form 3520",
+      "pages": []
+    },
+    {
+      "name": "Form IL-1040",
+      "pages": []
+    },
+    {
+      "name": "Form IL-2210",
+      "pages": []
+    },
+    {
+      "name": "Form 4136",
+      "pages": []
+    },
+    {
+      "name": "Form 4562",
+      "pages": []
+    },
+    {
+      "name": "other",
+      "pages": []
+    }
+  ],
+  "subdocuments": [
+    {
+      "name": "Form 1040",
+      "description": "U.S. Individual Income Tax Return. The primary two-page federal income tax return. Top of page 1 shows 'Form 1040' prominently with tax year, taxpayer name, address, filing status checkboxes, and income/deduction summary lines. Do not group schedule forms under a single Form 1040 subdocument, they should be labeled and grouped as their own specific type if available.",
+      "allow_multiple_instances": false
+    },
+    {
+      "name": "Form 1040-NR",
+      "description": "U.S. Nonresident Alien Income Tax Return. Header reads 'Form 1040-NR' with '(Nonresident Alien)' subtitle. Filed by foreign nationals with U.S.-source income; appears in Trump 2018 returns.",
+      "allow_multiple_instances": false
+    },
+    {
+      "name": "Form 1065",
+      "description": "U.S. Return of Partnership Income. Header reads 'Form 1065' and 'U.S. Return of Partnership Income.' The annual informational return filed by partnerships (general, limited, LLCs taxed as partnerships); shows total income, deductions, and partners' shares. The Form 1065 subdocument generally includes the entire core return packet: the two main pages plus the internal schedules commonly printed as part of the form (Schedule B, Schedule K, Schedule L, Schedule M-1, and Schedule M-2) when they appear as the continuation pages of the same Form 1065. Only split these schedules into their own subdocuments when they are clearly presented as standalone schedule packets outside the core Form 1065 page sequence (e.g., a separately collated 'Schedule K (Form 1065)' or 'Schedule L (Form 1065)' section that is not part of the primary Form 1065 pagination). Do not include software-generated 'Additional Data' or supporting statement pages in the Form 1065 subdocument; those are supplements.",
+      "allow_multiple_instances": false
+    },
+    {
+      "name": "Form 1120",
+      "description": "U.S. Corporation Income Tax Return. Header reads 'Form 1120' and 'U.S. Corporation Income Tax Return.' Annual return for C-corporations; reports gross income, deductions, taxable income, and tax liability.",
+      "allow_multiple_instances": false
+    },
+    {
+      "name": "Form 1120-S",
+      "description": "U.S. Income Tax Return for an S Corporation. Header reads 'Form 1120-S.' Informational return for S-corporations; income passes through to shareholders. Includes Schedules K, K-1, L, M-1, M-2 similar to Form 1065.",
+      "allow_multiple_instances": false
+    },
+    {
+      "name": "Form 2106",
+      "description": "Employee Business Expenses. Header reads 'Form 2106' and 'Employee Business Expenses.' Reports unreimbursed business expenses for employees; largely eliminated for most employees after 2017 TCJA, but retained for certain categories.",
+      "allow_multiple_instances": false
+    },
+    {
+      "name": "Form 2210",
+      "description": "Underpayment of Estimated Tax by Individuals, Estates, and Trusts. Header reads 'Form 2210' and 'Underpayment of Estimated Tax by Individuals, Estates, and Trusts.' Calculates the underpayment penalty when quarterly estimated payments fall short.",
+      "allow_multiple_instances": false
+    },
+    {
+      "name": "Form 2441",
+      "description": "Child and Dependent Care Expenses. Header reads 'Form 2441' and 'Child and Dependent Care Expenses.' Calculates the credit for childcare costs when both spouses work; also used to report employer-provided dependent care benefits.",
+      "allow_multiple_instances": false
+    },
+    {
+      "name": "Form 3520",
+      "description": "Annual Return to Report Transactions With Foreign Trusts and Receipt of Certain Foreign Gifts. Header reads 'Form 3520.' Filed when a U.S. person is treated as owner of a foreign trust, transfers assets to it, or receives distributions from it.",
+      "allow_multiple_instances": false
+    },
+    {
+      "name": "Form 4136",
+      "description": "Credit for Federal Tax Paid on Fuels. Header reads 'Form 4136' and 'Credit for Federal Tax Paid on Fuels.' Allows a refundable credit for excise taxes paid on fuel used in off-highway business, farming, or other qualifying purposes.",
+      "allow_multiple_instances": false
+    },
+    {
+      "name": "Form 4562",
+      "description": "Depreciation and Amortization. Header reads 'Form 4562' and 'Depreciation and Amortization (Including Information on Listed Property).' Reports Section 179 expensing, bonus depreciation, MACRS depreciation on assets placed in service during the year.",
+      "allow_multiple_instances": false
+    },
+    {
+      "name": "Form 4797",
+      "description": "Sales of Business Property. Header reads 'Form 4797' and 'Sales of Business Property (Also Involuntary Conversions and Recapture Amounts Under Sections 179 and 280F(b)(2)).' Reports gains/losses on depreciable business property and Section 1231 assets.",
+      "allow_multiple_instances": false
+    },
+    {
+      "name": "Form 5471",
+      "description": "Information Return of U.S. Persons With Respect to Certain Foreign Corporations. Header reads 'Form 5471.' Required when a U.S. person owns 10%+ of a foreign corporation; discloses the corporation's income, balance sheet, and transactions with related parties.",
+      "allow_multiple_instances": false
+    },
+    {
+      "name": "Form 6251",
+      "description": "Alternative Minimum Tax — Individuals. Header reads 'Form 6251' and 'Alternative Minimum Tax — Individuals.' Calculates the AMT liability by adding back certain preferences and adjustments to regular taxable income; filed whenever AMT may apply.",
+      "allow_multiple_instances": false
+    },
+    {
+      "name": "Form 709",
+      "description": "United States Gift (and Generation-Skipping Transfer) Tax Return. Header reads 'Form 709' and 'United States Gift (and Generation-Skipping Transfer) Tax Return.' Filed when gifts exceed the annual exclusion ($15,000 per recipient in recent years).",
+      "allow_multiple_instances": false
+    },
+    {
+      "name": "Form 8283",
+      "description": "Noncash Charitable Contributions. Header reads 'Form 8283' and 'Noncash Charitable Contributions.' Reports donated property valued over $500; Section B (over $5,000) requires a qualified appraisal and appraiser signature.",
+      "allow_multiple_instances": false
+    },
+    {
+      "name": "Form 8453",
+      "description": "U.S. Individual Income Tax Transmittal for an IRS e-file Return. Header reads 'Form 8453.' Transmittal page used by paid preparers or EROs to submit paper attachments (e.g., signed Forms 1099-B, 8332) alongside an electronically filed return.",
+      "allow_multiple_instances": false
+    },
+    {
+      "name": "Form 8582",
+      "description": "Passive Activity Loss Limitations. Header reads 'Form 8582' and 'Passive Activity Loss Limitations.' Calculates how much of a taxpayer's passive losses (rental, limited partnership) can be deducted against non-passive income in the current year.",
+      "allow_multiple_instances": false
+    },
+    {
+      "name": "Form 8858",
+      "description": "Information Return of U.S. Persons With Respect to Foreign Disregarded Entities and Foreign Branches. Header reads 'Form 8858.' Filed by U.S. persons who directly or indirectly own a foreign disregarded entity or operate a foreign branch.",
+      "allow_multiple_instances": false
+    },
+    {
+      "name": "Form 8865",
+      "description": "Return of U.S. Persons With Respect to Certain Foreign Partnerships. Header reads 'Form 8865.' Filed when a U.S. person controls or has significant ownership in a foreign partnership; discloses income, balance sheet, and cross-border transactions.",
+      "allow_multiple_instances": false
+    },
+    {
+      "name": "Form 8886",
+      "description": "Reportable Transaction Disclosure Statement. Header reads 'Form 8886' and 'Reportable Transaction Disclosure Statement.' Discloses participation in IRS-designated 'listed' or 'reportable' transactions; must be attached to each affected return and filed separately with the OTSA.",
+      "allow_multiple_instances": false
+    },
+    {
+      "name": "Form 8938",
+      "description": "Statement of Specified Foreign Financial Assets (FATCA). Header reads 'Form 8938' and 'Statement of Specified Foreign Financial Assets.' Reports foreign financial accounts, securities, and interests in foreign entities when total value exceeds FATCA thresholds.",
+      "allow_multiple_instances": false
+    },
+    {
+      "name": "Form 8949",
+      "description": "Sales and Other Dispositions of Capital Assets. Header reads 'Form 8949' and 'Sales and Other Dispositions of Capital Assets.' Itemizes individual sale transactions (stocks, bonds, real estate) that feed into Schedule D; shows cost basis, proceeds, and gain/loss per transaction.",
+      "allow_multiple_instances": false
+    },
+    {
+      "name": "Form 8960",
+      "description": "Net Investment Income Tax — Individuals, Estates, and Trusts. Header reads 'Form 8960' and 'Net Investment Income Tax.' Calculates the 3.8% surtax on net investment income (interest, dividends, capital gains, rental income) for taxpayers above income thresholds.",
+      "allow_multiple_instances": false
+    },
+    {
+      "name": "Schedule 1 (Form 1040)",
+      "description": "Additional Income and Adjustments to Income (2018 redesign). Header reads 'Schedule 1 (Form 1040)' with title 'Additional Income and Adjustments.' Covers alimony, business income, capital gains adjustments, student loan interest, IRA deductions, etc.",
+      "allow_multiple_instances": false
+    },
+    {
+      "name": "Schedule 2 (Form 1040)",
+      "description": "Additional Taxes (2018+). Header reads 'Schedule 2 (Form 1040)' with title 'Tax' (2018) or 'Additional Taxes' (2019+). Includes AMT, self-employment tax, household employment taxes, and repayment amounts.",
+      "allow_multiple_instances": false
+    },
+    {
+      "name": "Schedule 3 (Form 1040)",
+      "description": "Nonrefundable Credits (2018) / Additional Credits and Payments (2019+). Header reads 'Schedule 3 (Form 1040).' Covers foreign tax credit, education credits, child/dependent care credit, residential energy credits.",
+      "allow_multiple_instances": false
+    },
+    {
+      "name": "Schedule 4 (Form 1040)",
+      "description": "Other Taxes (2018 only; merged into Schedule 2 in 2019). Header reads 'Schedule 4 (Form 1040) — Other Taxes.' Covers self-employment tax, household employment taxes, net investment income tax, NIIT.",
+      "allow_multiple_instances": false
+    },
+    {
+      "name": "Schedule 5 (Form 1040)",
+      "description": "Other Payments and Refundable Credits (2018 only; merged into Schedule 3 in 2019). Header reads 'Schedule 5 (Form 1040).' Covers estimated tax payments, amount from Form 8888, net premium tax credit.",
+      "allow_multiple_instances": false
+    },
+    {
+      "name": "Schedule 6 (Form 1040)",
+      "description": "Foreign Address and Third Party Designee (2018 only; merged back into Form 1040 in 2019). Short form; header reads 'Schedule 6 (Form 1040).' Contains mailing address for foreign addresses and designee authorization.",
+      "allow_multiple_instances": false
+    },
+    {
+      "name": "Schedule A (Form 1040)",
+      "description": "Itemized Deductions. Header reads 'SCHEDULE A (Form 1040)' and 'Itemized Deductions.' Lists medical expenses, state and local taxes (SALT), mortgage interest, charitable contributions, casualty losses, and other deductions.",
+      "allow_multiple_instances": false
+    },
+    {
+      "name": "Schedule B (Form 1040)",
+      "description": "Interest and Ordinary Dividends. Header reads 'SCHEDULE B (Form 1040).' Lists names of payers of interest/dividends exceeding $1,500 threshold; Part III covers foreign accounts/trusts.",
+      "allow_multiple_instances": false
+    },
+    {
+      "name": "Schedule C (Form 1040)",
+      "description": "Profit or Loss from Business (Sole Proprietorship). Header reads 'SCHEDULE C (Form 1040)' and 'Profit or Loss From Business.' Reports income, expenses, and net profit/loss from a sole proprietorship; includes business name and principal business code.",
+      "allow_multiple_instances": false
+    },
+    {
+      "name": "Schedule D (Form 1040)",
+      "description": "Capital Gains and Losses. Header reads 'SCHEDULE D (Form 1040)' and 'Capital Gains and Losses.' Summarizes short-term and long-term transactions from Form 8949; shows net capital gain/loss carried to Form 1040.",
+      "allow_multiple_instances": false
+    },
+    {
+      "name": "Schedule E (Form 1040)",
+      "description": "Supplemental Income and Loss. Header reads 'SCHEDULE E (Form 1040).' Reports rental income/loss, royalties, S-corporation income, partnership income, trust/estate income, and REMIC income.",
+      "allow_multiple_instances": false
+    },
+    {
+      "name": "Schedule F (Form 1040)",
+      "description": "Profit or Loss from Farming. Header reads 'SCHEDULE F (Form 1040)' and 'Profit or Loss From Farming.' Reports farm income and expenses including livestock, crops, and agricultural program payments.",
+      "allow_multiple_instances": false
+    },
+    {
+      "name": "Schedule H (Form 1040)",
+      "description": "Household Employment Taxes. Header reads 'SCHEDULE H (Form 1040)' and 'Household Employment Taxes.' Filed when a taxpayer pays household employees (e.g., nannies, housekeepers) more than the threshold wage amount.",
+      "allow_multiple_instances": false
+    },
+    {
+      "name": "Schedule K (Form 1065)",
+      "description": "Partners' Distributive Share Items. Labeled 'Schedule K' within a Form 1065 filing. Summarizes the total of all items of income, deduction, credit, and other information allocated among the partners; feeds into individual Schedule K-1s. Typically this schedule is part of the standard Form 1065 return packet and should be included in the Form 1065 subdocument. Only classify it separately when it is clearly a standalone schedule packet outside the core Form 1065 page sequence. Schedule K pages within a Form 8865 (foreign partnership) or Form 1120-S should remain part of that parent form's subdocument.",
+      "allow_multiple_instances": false
+    },
+    {
+      "name": "Schedule K-1 (Form 1065)",
+      "description": "Partner's Share of Income, Deductions, Credits, etc. Header reads 'Schedule K-1 (Form 1065).' Issued to each individual partner; reports that partner's share of partnership income, losses, deductions, and credits to be reported on the partner's own return.",
+      "allow_multiple_instances": false
+    },
+    {
+      "name": "Schedule K-1 (Form 1120-S)",
+      "description": "Shareholder's Share of Income, Deductions, Credits, etc. Header reads 'Schedule K-1 (Form 1120-S).' Issued to each shareholder; reports their pro-rata share of S-corporation income, loss, deductions, and credits for use on the shareholder's personal return.",
+      "allow_multiple_instances": false
+    },
+    {
+      "name": "Schedule L (Form 1065)",
+      "description": "Balance Sheets per Books. Labeled 'Schedule L' within a Form 1065 filing. Shows the partnership's assets, liabilities, and partners' capital accounts at beginning and end of year, drawn from the entity's books. Typically this schedule is part of the standard Form 1065 return packet and should be included in the Form 1065 subdocument. Only classify it separately when it is clearly a standalone schedule packet outside the core Form 1065 page sequence. Schedule L pages within a Form 8865 (foreign partnership) or Form 1120-S should remain part of that parent form's subdocument.",
+      "allow_multiple_instances": false
+    },
+    {
+      "name": "Schedule M (Form 1040)",
+      "description": "Making Work Pay Credit (2009-2010 only). Header reads 'SCHEDULE M (Form 1040).' One-time schedule issued as part of the American Recovery and Reinvestment Act; calculates a refundable credit of up to $400 ($800 MFJ) based on earned income.",
+      "allow_multiple_instances": false
+    },
+    {
+      "name": "Schedule M-1 (Form 1065)",
+      "description": "Reconciliation of Income (Loss) per Books With Income (Loss) per Return. Labeled 'Schedule M-1' within a Form 1065 filing. Reconciles book income to tax return income; shows items treated differently for book vs. tax purposes. Typically this schedule is part of the standard Form 1065 return packet and should be included in the Form 1065 subdocument. Only classify it separately when it is clearly a standalone schedule packet outside the core Form 1065 page sequence. Schedule M-1 pages within a Form 8865 (foreign partnership) or Form 1120-S should remain part of that parent form's subdocument.",
+      "allow_multiple_instances": false
+    },
+    {
+      "name": "Schedule M-2 (Form 1065)",
+      "description": "Analysis of Partners' Capital Accounts. Labeled 'Schedule M-2' within a Form 1065 filing. Reconciles beginning and ending balances in partners' capital accounts, showing contributions, current-year income, and distributions. Typically this schedule is part of the standard Form 1065 return packet and should be included in the Form 1065 subdocument. Only classify it separately when it is clearly a standalone schedule packet outside the core Form 1065 page sequence. Schedule M-2 pages within a Form 8865 (foreign partnership) or Form 1120-S should remain part of that parent form's subdocument.",
+      "allow_multiple_instances": false
+    },
+    {
+      "name": "Schedule M-3 (Form 1120/1065)",
+      "description": "Net Income (Loss) Reconciliation for Corporations/Large Partnerships With Total Assets of $10 Million or More. Header reads 'Schedule M-3.' A detailed three-part book-to-tax reconciliation required for larger entities; more granular than Schedule M-1.",
+      "allow_multiple_instances": false
+    },
+    {
+      "name": "Schedule SE (Form 1040)",
+      "description": "Self-Employment Tax. Header reads 'SCHEDULE SE (Form 1040)' and 'Self-Employment Tax.' Calculates Social Security and Medicare tax on net self-employment income; required when net SE income exceeds $400.",
+      "allow_multiple_instances": false
+    },
+    {
+      "name": "Form IL-1040",
+      "description": "Illinois Individual Income Tax Return. Header reads 'Form IL-1040' and 'Illinois Individual Income Tax Return.' The primary Illinois state income tax return for residents; reports Illinois base income, exemptions, tax credits, and balance due or refund. Appears in returns filed by Illinois residents (e.g., Obama 2009-2015).",
+      "allow_multiple_instances": false
+    },
+    {
+      "name": "Form IL-2210",
+      "description": "Illinois Underpayment of Estimated Tax Penalty. Header reads 'Form IL-2210' and 'Computation of Penalties for Individuals.' The Illinois state equivalent of federal Form 2210; calculates the penalty for underpayment of estimated Illinois income tax. Typically includes an annualized income installment worksheet.",
+      "allow_multiple_instances": false
+    },
+    {
+      "name": "supplement",
+      "description": "Any non-form supplementary pages associated with one or more forms or schedules in this document, or with the tax return as a whole. Use this type for continuation sheets, supporting statements, software-generated detail worksheets, appraisal summaries, annualized income installment worksheets, passthrough recap worksheets, general tax return summary or transmittal pages, software-generated metadata pages (e.g., 'Additional Data' pages, numbered 'Federal Supporting Statement' pages), and any other non-form pages that support the return or specific forms within it. Supplementary sheets should always be separated from other forms, do not group them into the same subdocument.\nThis also applies to the \"Additional Data\" pages following forms that have a software id field or any other indication that it is a programmatically generated supplement to the primary form.\n\nSplitting supplements: Group supplement pages into one subdocument when they share the same report type or title (e.g., all 'QBI Pass Through Entity Reporting' pages, all sequentially numbered 'Federal Supporting Statement' pages, all pages of the same computation worksheet). These should remain one supplement even if individual pages reference different entities or line items. Only split consecutive supplements into separate subdocuments when the overall document type or purpose fundamentally changes (e.g., a series of 'Supplemental Information Statements' for different LLCs each get their own subdocument, or a transition from supporting statements to a separate passthrough recap worksheet).\n\nDo not use this type for actual forms — any document with user-fillable fields issued by a government body for tax purposes should be classified as misc_form (or its specific type if listed). The type field must always be exactly \"supplement\" with no additional text or numbers.",
+      "allow_multiple_instances": false
+    },
+    {
+      "name": "misc_form",
+      "description": "Any document with user-fillable fields issued by a government body for tax-related purposes that does not match one of the specific classification types listed above. This includes forms that supplement other forms. If a page has a government-issued form identifier and user-fillable fields, it should always be classified as misc_form regardless of its role in the return. The type field must always be exactly \"misc_form\" with no additional text or numbers.",
+      "allow_multiple_instances": false
+    },
+    {
+      "name": "other",
+      "description": "RARELY USED. Any page or set of pages that does not clearly match any known form, schedule, or document type and is not supplementary documentation for the return. This includes ONLY cover pages, preparer transmittal letters, informational notices, redaction pages, or truly unrecognizable content. Blank pages should not be classified as 'other' — they should be grouped with the subdocument immediately preceding them. IMPORTANT: Before using 'other', verify the page is not: (1) a government-issued form (use 'misc_form' instead — if the page has a form number like 'Form XXXX' in the header, it is misc_form), (2) a supporting statement, worksheet, schedule detail, or software-generated page (use 'supplement' instead). The 'other' type should almost never be used in typical tax returns. The type field must always be exactly \"other\" with no additional text or numbers.",
+      "allow_multiple_instances": false
+    }
+  ],
+  "usage": {
+    "credits": 40
+  },
+  "environment_id": "env_1NsPAkHUQgh0lFO3sJH9R",
+  "status": "completed"
+}

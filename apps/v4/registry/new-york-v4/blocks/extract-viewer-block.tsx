@@ -4,11 +4,11 @@ import * as React from "react"
 
 import type { Source, SourceMap } from "@/lib/document-source"
 import { useSourceLink } from "@/hooks/use-source-link"
-import { PdfViewer, type PdfViewerHandle } from "@/components/ui/pdf-viewer"
 import {
-  usePdfSourceTarget,
   renderPdfSourceOverlay,
+  usePdfSourceTarget,
 } from "@/components/ui/pdf-source"
+import { PdfViewer, type PdfViewerHandle } from "@/components/ui/pdf-viewer"
 import {
   SourceFieldList,
   type SourceField,

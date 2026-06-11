@@ -27,10 +27,7 @@ export function SourceFieldList({
   className,
 }: {
   fields: SourceField[]
-  link: Pick<
-    UseSourceLinkResult,
-    "activePath" | "onFieldHover" | "selectField"
-  >
+  link: Pick<UseSourceLinkResult, "activePath" | "onFieldHover" | "selectField">
   title?: string
   className?: string
 }) {

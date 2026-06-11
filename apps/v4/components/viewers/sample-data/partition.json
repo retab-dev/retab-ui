@@ -1,94 +1,62 @@
 {
-    "id": "prtn_8Qd2rXmpLkVwt0aZcN4bJ",
-    "consensus": {
-      "choices": [],
-      "likelihoods": []
+  "id": "prtn_8Qd2rXmpLkVwt0aZcN4bJ",
+  "consensus": {
+    "choices": [],
+    "likelihoods": []
+  },
+  "file": {
+    "id": "file_attention_is_all_you_need",
+    "filename": "attention.pdf",
+    "mime_type": "application/pdf"
+  },
+  "instructions": "top-level section of the paper",
+  "key": "section",
+  "model": "retab-micro",
+  "n_consensus": 1,
+  "output": [
+    {
+      "key": "abstract",
+      "pages": [1]
     },
-    "file": {
-      "id": "file_attention_is_all_you_need",
-      "filename": "attention.pdf",
-      "mime_type": "application/pdf"
+    {
+      "key": "introduction",
+      "pages": [2]
     },
-    "instructions": "top-level section of the paper",
-    "key": "section",
-    "model": "retab-micro",
-    "n_consensus": 1,
-    "output": [
-      {
-        "key": "abstract",
-        "pages": [
-          1
-        ]
-      },
-      {
-        "key": "introduction",
-        "pages": [
-          2
-        ]
-      },
-      {
-        "key": "background",
-        "pages": [
-          2
-        ]
-      },
-      {
-        "key": "model_architecture",
-        "pages": [
-          2,
-          3,
-          4,
-          5,
-          6
-        ]
-      },
-      {
-        "key": "why_self_attention",
-        "pages": [
-          6,
-          7
-        ]
-      },
-      {
-        "key": "training",
-        "pages": [
-          7,
-          8
-        ]
-      },
-      {
-        "key": "results",
-        "pages": [
-          8,
-          9,
-          10
-        ]
-      },
-      {
-        "key": "conclusion",
-        "pages": [
-          10
-        ]
-      },
-      {
-        "key": "references",
-        "pages": [
-          10,
-          11,
-          12
-        ]
-      },
-      {
-        "key": "attention_visualizations",
-        "pages": [
-          13,
-          14,
-          15
-        ]
-      }
-    ],
-    "usage": {
-      "credits": 6
+    {
+      "key": "background",
+      "pages": [2]
     },
-    "status": "completed"
+    {
+      "key": "model_architecture",
+      "pages": [2, 3, 4, 5, 6]
+    },
+    {
+      "key": "why_self_attention",
+      "pages": [6, 7]
+    },
+    {
+      "key": "training",
+      "pages": [7, 8]
+    },
+    {
+      "key": "results",
+      "pages": [8, 9, 10]
+    },
+    {
+      "key": "conclusion",
+      "pages": [10]
+    },
+    {
+      "key": "references",
+      "pages": [10, 11, 12]
+    },
+    {
+      "key": "attention_visualizations",
+      "pages": [13, 14, 15]
+    }
+  ],
+  "usage": {
+    "credits": 6
+  },
+  "status": "completed"
 }

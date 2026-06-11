@@ -5,13 +5,13 @@ import * as React from "react"
 import type { Source, SourceMap } from "@/lib/document-source"
 import { useSourceLink } from "@/hooks/use-source-link"
 import {
+  renderImageSourceOverlay,
+  useImageSourceTarget,
+} from "@/components/ui/image-source"
+import {
   ImageViewer,
   type ImageViewerHandle,
 } from "@/components/ui/image-viewer"
-import {
-  useImageSourceTarget,
-  renderImageSourceOverlay,
-} from "@/components/ui/image-source"
 import {
   SourceFieldList,
   type SourceField,

@@ -24,7 +24,8 @@ export function useTextSourceTarget(
     () => ({
       scrollTo: (source: Source, options) => {
         const range = textAnchorToLines(source.anchor)
-        if (range) viewerRef.current?.scrollToLines(range.start, range.end, options)
+        if (range)
+          viewerRef.current?.scrollToLines(range.start, range.end, options)
       },
     }),
     [viewerRef]

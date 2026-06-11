@@ -286,7 +286,9 @@ export const ImageViewer = React.forwardRef<
   return (
     <ImageErrorBoundary className={props.className}>
       <React.Suspense
-        fallback={<ImageViewerFallback className={props.className} bare={props.bare} />}
+        fallback={
+          <ImageViewerFallback className={props.className} bare={props.bare} />
+        }
       >
         <ImageViewerInner {...props} forwardedRef={ref} />
       </React.Suspense>
@@ -317,7 +319,9 @@ function ImageViewerInner({
     fixedScale ?? null
   )
   const [rotation, setRotation] = React.useState(0)
-  const [containerWidth, setContainerWidth] = React.useState<number | null>(null)
+  const [containerWidth, setContainerWidth] = React.useState<number | null>(
+    null
+  )
 
   // Measure the container with a ResizeObserver attached in the ref callback.
   const containerRef = React.useCallback((el: HTMLDivElement | null) => {
@@ -343,7 +347,9 @@ function ImageViewerInner({
     const viewport = scrollViewportRef.current
     if (!viewport) return
     const scrollable = viewport.scrollHeight - viewport.clientHeight
-    onScrollProgressChange?.(scrollable > 0 ? viewport.scrollTop / scrollable : 0)
+    onScrollProgressChange?.(
+      scrollable > 0 ? viewport.scrollTop / scrollable : 0
+    )
     const rect = viewport.getBoundingClientRect()
     const marker = rect.top + rect.height * 0.2
     const pages = viewport.querySelectorAll<HTMLElement>("[data-page-number]")
@@ -421,7 +427,7 @@ function ImageViewerInner({
             <IconButton label="Zoom out" onClick={() => zoom(1 / 1.2)}>
               <Minus />
             </IconButton>
-            <span className="w-12 text-center text-xs tabular-nums text-muted-foreground">
+            <span className="w-12 text-center text-xs text-muted-foreground tabular-nums">
               {Math.round(scale * 100)}%
             </span>
             <IconButton label="Zoom in" onClick={() => zoom(1.2)}>
@@ -475,7 +481,10 @@ function ImageViewerInner({
                 : undefined
             }
           >
-            <div ref={containerRef} className="flex flex-col items-center gap-4 p-4">
+            <div
+              ref={containerRef}
+              className="flex flex-col items-center gap-4 p-4"
+            >
               {source.frames.map((frame, i) => (
                 <ImageFrame
                   key={i}
@@ -588,8 +597,7 @@ function FrameCanvas({
   scale: number
   rotation: number
 }) {
-  const dpr =
-    (typeof window !== "undefined" ? window.devicePixelRatio : 1) || 1
+  const dpr = (typeof window !== "undefined" ? window.devicePixelRatio : 1) || 1
   const rotated = rotation === 90 || rotation === 270
   const cssW = (rotated ? frame.height : frame.width) * scale
   const cssH = (rotated ? frame.width : frame.height) * scale

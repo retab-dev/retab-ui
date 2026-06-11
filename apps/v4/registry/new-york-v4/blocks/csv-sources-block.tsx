@@ -4,11 +4,8 @@ import * as React from "react"
 
 import type { Source, SourceMap } from "@/lib/document-source"
 import { useSourceLink } from "@/hooks/use-source-link"
+import { sourceToCsvCell, useCsvSourceTarget } from "@/components/ui/csv-source"
 import { CsvViewer, type CsvViewerHandle } from "@/components/ui/csv-viewer"
-import {
-  useCsvSourceTarget,
-  sourceToCsvCell,
-} from "@/components/ui/csv-source"
 import {
   SourceFieldList,
   type SourceField,

@@ -37,10 +37,7 @@
         }
       }
     },
-    "required": [
-      "account_number",
-      "statement_period"
-    ]
+    "required": ["account_number", "statement_period"]
   },
   "extraction": {
     "account_number": "000000710753986",

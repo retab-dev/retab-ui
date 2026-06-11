@@ -1,8 +1,8 @@
 "use client"
 
 import * as React from "react"
-import { Download, Maximize, Minus, Plus } from "lucide-react"
 import { useVirtualizer } from "@tanstack/react-virtual"
+import { Download, Maximize, Minus, Plus } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -205,7 +205,9 @@ export const XlsxViewer = React.forwardRef<XlsxViewerHandle, XlsxViewerProps>(
   function XlsxViewer(props, ref) {
     const isClient = useIsClient()
     if (!isClient) {
-      return <XlsxViewerFallback className={props.className} bare={props.bare} />
+      return (
+        <XlsxViewerFallback className={props.className} bare={props.bare} />
+      )
     }
     return (
       <XlsxErrorBoundary className={props.className}>
@@ -331,7 +333,7 @@ function XlsxViewerInner({
             <IconButton label="Zoom out" onClick={() => zoom(1 / 1.2)}>
               <Minus />
             </IconButton>
-            <span className="w-12 text-center text-xs tabular-nums text-muted-foreground">
+            <span className="w-12 text-center text-xs text-muted-foreground tabular-nums">
               {Math.round(scale * 100)}%
             </span>
             <IconButton label="Zoom in" onClick={() => zoom(1.2)}>
@@ -534,12 +536,19 @@ function SheetGrid({
     const left = items.length ? items[0].start : 0
     const right = items.length ? total - items[items.length - 1].end : 0
     return {
-      columnItems: items.map((it) => ({ index: it.index, size: it.size })) as ColumnItem[],
+      columnItems: items.map((it) => ({
+        index: it.index,
+        size: it.size,
+      })) as ColumnItem[],
       leftPad: left,
       rightPad: right,
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [colWidth, columnVirtualizer.getVirtualItems(), columnVirtualizer.getTotalSize()])
+  }, [
+    colWidth,
+    columnVirtualizer.getVirtualItems(),
+    columnVirtualizer.getTotalSize(),
+  ])
 
   // Memoized so its identity is stable across vertical scroll, keeping SheetRow's
   // props stable so React.memo can skip rows that stay in the window.
@@ -569,7 +578,9 @@ function SheetGrid({
           (no JS sync). The header sticks to the top; the gutter sticks to the
           left. */}
       <div ref={scrollRef} className="min-h-0 flex-1 overflow-auto">
-        <div style={{ width: totalWidth, minWidth: "100%", position: "relative" }}>
+        <div
+          style={{ width: totalWidth, minWidth: "100%", position: "relative" }}
+        >
           {/* Header row (column letters) — sticky to the top. */}
           <div
             className="sticky top-0 z-20 grid border-b"
@@ -604,7 +615,10 @@ function SheetGrid({
               height, so the virtualizer is off by one row at the edges — the
               overscan window covers it. */}
           <div
-            style={{ position: "relative", height: rowVirtualizer.getTotalSize() }}
+            style={{
+              position: "relative",
+              height: rowVirtualizer.getTotalSize(),
+            }}
           >
             {virtualRows.map((virtualRow) => (
               <SheetRow
@@ -666,11 +680,8 @@ const SheetRow = React.memo(function SheetRow({
     transform: `translateY(${start}px)`,
   }
   return (
-    <div
-      className="group grid border-b hover:bg-muted/40"
-      style={style}
-    >
-      <div className="sticky left-0 z-[1] flex items-center justify-end border-r bg-card px-2 tabular-nums text-muted-foreground group-hover:bg-[color-mix(in_oklab,var(--card)_97%,var(--foreground))]">
+    <div className="group grid border-b hover:bg-muted/40" style={style}>
+      <div className="sticky left-0 z-[1] flex items-center justify-end border-r bg-card px-2 text-muted-foreground tabular-nums group-hover:bg-[color-mix(in_oklab,var(--card)_97%,var(--foreground))]">
         {rowIndex + 1}
       </div>
       <Spacer width={leftPad} />
@@ -683,7 +694,7 @@ const SheetRow = React.memo(function SheetRow({
             className={cn(
               "flex items-center truncate border-r px-2 last:border-r-0",
               cell.numeric ? "justify-end tabular-nums" : "justify-start",
-              lit && "bg-primary/12 ring-1 ring-inset ring-primary/50"
+              lit && "bg-primary/12 ring-1 ring-primary/50 ring-inset"
             )}
             title={cell.text}
           >
@@ -844,7 +855,11 @@ function XlsxGridSkeleton() {
       {/* Rows */}
       <div className="min-h-0 flex-1 overflow-hidden">
         {Array.from({ length: rows }, (_, r) => (
-          <div key={r} className="flex border-b" style={{ height: BASE_ROW_HEIGHT }}>
+          <div
+            key={r}
+            className="flex border-b"
+            style={{ height: BASE_ROW_HEIGHT }}
+          >
             <div
               className="flex shrink-0 items-center justify-end border-r px-2"
               style={{ width: BASE_GUTTER }}

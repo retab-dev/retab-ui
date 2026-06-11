@@ -5,7 +5,12 @@
     "value": "$1,240,000",
     "source": {
       "content": "1240000",
-      "anchor": { "kind": "csv_cell", "row": 1, "column": "C", "coordinate": "C2" }
+      "anchor": {
+        "kind": "csv_cell",
+        "row": 1,
+        "column": "C",
+        "coordinate": "C2"
+      }
     }
   },
   {
@@ -14,7 +19,12 @@
     "value": "61",
     "source": {
       "content": "61",
-      "anchor": { "kind": "csv_cell", "row": 2, "column": "D", "coordinate": "D3" }
+      "anchor": {
+        "kind": "csv_cell",
+        "row": 2,
+        "column": "D",
+        "coordinate": "D3"
+      }
     }
   },
   {
@@ -23,7 +33,12 @@
     "value": "$820,000",
     "source": {
       "content": "820000",
-      "anchor": { "kind": "csv_cell", "row": 3, "column": "C", "coordinate": "C4" }
+      "anchor": {
+        "kind": "csv_cell",
+        "row": 3,
+        "column": "C",
+        "coordinate": "C4"
+      }
     }
   },
   {
@@ -32,7 +47,12 @@
     "value": "1.15",
     "source": {
       "content": "1.15",
-      "anchor": { "kind": "csv_cell", "row": 4, "column": "E", "coordinate": "E5" }
+      "anchor": {
+        "kind": "csv_cell",
+        "row": 4,
+        "column": "E",
+        "coordinate": "E5"
+      }
     }
   },
   {
@@ -41,7 +61,12 @@
     "value": "$430,000",
     "source": {
       "content": "430000",
-      "anchor": { "kind": "csv_cell", "row": 5, "column": "C", "coordinate": "C6" }
+      "anchor": {
+        "kind": "csv_cell",
+        "row": 5,
+        "column": "C",
+        "coordinate": "C6"
+      }
     }
   },
   {
@@ -50,7 +75,12 @@
     "value": "24",
     "source": {
       "content": "24",
-      "anchor": { "kind": "csv_cell", "row": 6, "column": "D", "coordinate": "D7" }
+      "anchor": {
+        "kind": "csv_cell",
+        "row": 6,
+        "column": "D",
+        "coordinate": "D7"
+      }
     }
   }
 ]

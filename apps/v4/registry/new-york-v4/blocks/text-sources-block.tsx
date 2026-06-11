@@ -5,17 +5,14 @@ import * as React from "react"
 import type { Source, SourceMap } from "@/lib/document-source"
 import { useSourceLink } from "@/hooks/use-source-link"
 import {
-  TextViewer,
-  type TextViewerHandle,
-} from "@/components/ui/text-viewer"
-import {
-  useTextSourceTarget,
-  sourceToTextHighlight,
-} from "@/components/ui/text-source"
-import {
   SourceFieldList,
   type SourceField,
 } from "@/components/ui/source-field-list"
+import {
+  sourceToTextHighlight,
+  useTextSourceTarget,
+} from "@/components/ui/text-source"
+import { TextViewer, type TextViewerHandle } from "@/components/ui/text-viewer"
 import textSample from "@/components/viewers/sample-data/text-sources.json"
 
 const TEXT_URL = "/samples/extraction-run.log"

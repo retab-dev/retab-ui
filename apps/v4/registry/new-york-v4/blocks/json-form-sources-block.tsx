@@ -1,21 +1,18 @@
 "use client"
 
 import * as React from "react"
-import { useForm } from "react-hook-form"
 import type { JSONSchema7 } from "json-schema"
+import { useForm } from "react-hook-form"
 
 import { extractionSourcesToSourceMap } from "@/lib/document-source"
 import { useSourceLink } from "@/hooks/use-source-link"
+import {
+  renderPdfSourceOverlay,
+  usePdfSourceTarget,
+} from "@/components/ui/pdf-source"
+import { PdfViewer, type PdfViewerHandle } from "@/components/ui/pdf-viewer"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { UiForm, UiFormContent } from "@/components/json-form/json-form"
-import {
-  PdfViewer,
-  type PdfViewerHandle,
-} from "@/components/ui/pdf-viewer"
-import {
-  usePdfSourceTarget,
-  renderPdfSourceOverlay,
-} from "@/components/ui/pdf-source"
 import sourcesSample from "@/components/viewers/sample-data/json-form-sources.json"
 
 const PDF_URL = "/samples/bank-statement-x4uhhi7t.pdf"
