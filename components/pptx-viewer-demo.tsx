@@ -13,7 +13,11 @@ export function PptxViewerDemo() {
   return (
     <div className="not-prose my-6 h-[600px]">
       <PptxViewer
-        src="/samples/sample-deck.pptx"
+        source={{
+          kind: "url",
+          url: "/samples/sample-deck.pptx",
+          fileName: "sample-deck.pptx",
+        }}
         downloadFileName="sample-deck.pptx"
         className="h-full"
         renderSlideOverlay={({ slideNumber }) =>
