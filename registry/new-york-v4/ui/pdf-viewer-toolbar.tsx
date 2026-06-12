@@ -9,15 +9,16 @@ import {
   RotateCw,
 } from "lucide-react"
 
+import { type DownloadCapability } from "@/lib/viewer-resource"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
+import { ViewerDownloadAnchor } from "@/components/ui/viewer-download"
 
 export function PdfViewerToolbar({
   currentPage,
   pageCount,
   scale,
-  src,
-  downloadFileName,
+  download,
   showRailToggle,
   railsOpen,
   onToggleRails,
@@ -29,8 +30,7 @@ export function PdfViewerToolbar({
   currentPage: number
   pageCount: number
   scale: number
-  src: string
-  downloadFileName?: string
+  download: DownloadCapability
   showRailToggle: boolean
   railsOpen: boolean
   onToggleRails: () => void
@@ -76,14 +76,7 @@ export function PdfViewerToolbar({
           className="size-7"
           aria-label="Download"
           title="Download"
-          render={
-            <a
-              href={src}
-              download={downloadFileName}
-              target="_blank"
-              rel="noreferrer"
-            />
-          }
+          render={<ViewerDownloadAnchor download={download} />}
         >
           <Download />
         </Button>

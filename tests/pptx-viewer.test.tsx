@@ -11,11 +11,12 @@ import {
 } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { PptxViewer } from "@/registry/new-york-v4/ui/pptx-viewer"
 import {
   blobSource,
+  clearViewerResourceRegistryForTests,
   createViewerResource,
 } from "@/registry/new-york-v4/lib/viewer-resource"
+import { PptxViewer } from "@/registry/new-york-v4/ui/pptx-viewer"
 import {
   getPptxFitScale,
   getPptxResetKey,
@@ -173,6 +174,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup()
   resetPptxViewerForTests()
+  clearViewerResourceRegistryForTests()
   if (originalGetAnimations) {
     Object.defineProperty(HTMLElement.prototype, "getAnimations", {
       configurable: true,
@@ -229,15 +231,39 @@ describe("PptxViewer helpers", () => {
   })
 
   it("builds reset keys from render-affecting inputs", () => {
-    expect(getPptxResetKey({ identityKey: "url:/a.pptx" })).not.toBe(
-      getPptxResetKey({ identityKey: "url:/a.pptx", scale: 2 })
+    expect(getPptxResetKey({ cacheKey: "url:/a.pptx" })).not.toBe(
+      getPptxResetKey({ cacheKey: "url:/a.pptx", scale: 2 })
     )
-    expect(getPptxResetKey({ identityKey: "url:/a.pptx" })).not.toBe(
-      getPptxResetKey({ identityKey: "url:/a.pptx", defaultScale: 2 })
+    expect(getPptxResetKey({ cacheKey: "url:/a.pptx" })).not.toBe(
+      getPptxResetKey({ cacheKey: "url:/a.pptx", defaultScale: 2 })
     )
-    expect(getPptxResetKey({ identityKey: "url:/a.pptx" })).not.toBe(
-      getPptxResetKey({ identityKey: "url:/a.pptx", eager: true })
+    expect(getPptxResetKey({ cacheKey: "url:/a.pptx" })).not.toBe(
+      getPptxResetKey({ cacheKey: "url:/a.pptx", eager: true })
     )
+  })
+
+  it("does not reuse a loaded presentation when a new Blob reuses the same identity", async () => {
+    const first = createViewerResource(
+      blobSource(new Uint8Array([1, 2, 3]), {
+        fileName: "same.pptx",
+        identityKey: "blob:reused-pptx",
+      })
+    )
+    const second = createViewerResource(
+      blobSource(new Uint8Array([4, 5, 6]), {
+        fileName: "same.pptx",
+        identityKey: "blob:reused-pptx",
+      })
+    )
+
+    await expect(getPptxSource(first)).resolves.toMatchObject({ slideCount: 1 })
+    await expect(getPptxSource(second)).resolves.toMatchObject({
+      slideCount: 1,
+    })
+
+    expect(second).not.toBe(first)
+    expect(second.cacheKey).not.toBe(first.cacheKey)
+    expect(pptxMock.loadFile).toHaveBeenCalledTimes(2)
   })
 })
 
@@ -254,7 +280,7 @@ describe("PptxViewer", () => {
     })
   })
 
-  it("shares one loaded source across viewers with the same src", async () => {
+  it("shares one loaded source across viewers with the same source identity", async () => {
     const fetchMock = vi.fn(okPptxResponse)
     vi.stubGlobal("fetch", fetchMock)
 

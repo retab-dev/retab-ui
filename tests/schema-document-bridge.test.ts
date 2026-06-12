@@ -1,17 +1,21 @@
-import { describe, expect, it } from "vitest"
 import type { JSONSchema7 } from "json-schema"
+import { describe, expect, it } from "vitest"
 
 import {
   fromJsonSchema,
-  getChildNodeId,
-  getItemsNodeId,
-  getNode,
+  toJsonSchema,
+} from "@/components/schema-editor/document/convert"
+import {
   getNodeJson,
   replaceNodeJson,
-  toJsonSchema,
   updateNodeJson,
-  type SchemaDocument,
-} from "@/components/schema-editor/document"
+} from "@/components/schema-editor/document/json-node"
+import {
+  getChildNodeId,
+  getItemsNodeId,
+} from "@/components/schema-editor/document/node-selectors"
+import { getNode } from "@/components/schema-editor/document/traversal"
+import type { SchemaDocument } from "@/components/schema-editor/document/types"
 import {
   setNullable,
   updateEffectiveNode,
@@ -35,7 +39,10 @@ describe("JSON bridge: getNodeJson / replaceNodeJson", () => {
   })
 
   it("replaceNodeJson preserves the node id", () => {
-    const d = fromJsonSchema({ type: "object", properties: { a: { type: "string" } } })
+    const d = fromJsonSchema({
+      type: "object",
+      properties: { a: { type: "string" } },
+    })
     const id = getChildNodeId(d, d.root.id, "a")!
     const d2 = replaceNodeJson(d, id, { type: "number" })
     expect(getNode(d2, id)).toBeTruthy()
@@ -70,7 +77,9 @@ describe("JSON bridge: getNodeJson / replaceNodeJson", () => {
     })
     const out = json(replaceNodeJson(d, d.root.id, next))
     expect(JSON.stringify(out).match(/"\$defs"/g)).toHaveLength(1)
-    expect(out.$defs).toEqual({ M: { type: "object", properties: { a: { type: "number" } } } })
+    expect(out.$defs).toEqual({
+      M: { type: "object", properties: { a: { type: "number" } } },
+    })
     expect(Object.keys(out.properties!)).toEqual(["x", "y"])
   })
 
@@ -97,12 +106,19 @@ describe("editor-path simulation (their leaf utils through the Document)", () =>
     const d = fromJsonSchema({
       type: "object",
       properties: {
-        v: { type: "object", properties: { name: { type: "string" }, age: { type: "number" } } },
+        v: {
+          type: "object",
+          properties: { name: { type: "string" }, age: { type: "number" } },
+        },
       },
     })
     const vId = getChildNodeId(d, d.root.id, "v")!
     const nameId = getChildNodeId(d, vId, "name")!
-    const next = updateType("integer", false, getNodeJson(d, nameId) as JSONSchema7)
+    const next = updateType(
+      "integer",
+      false,
+      getNodeJson(d, nameId) as JSONSchema7
+    )
     const out = json(replaceNodeJson(d, nameId, next))
     const v = out.properties!.v as JSONSchema7
     expect((v.properties!.name as JSONSchema7).type).toBe("integer")
@@ -133,18 +149,26 @@ describe("editor-path simulation (their leaf utils through the Document)", () =>
     // the parent stays nullable; the child got its description
     expect(out.properties!.v).toEqual({
       anyOf: [
-        { type: "object", properties: { x: { type: "string", description: "the x" } } },
+        {
+          type: "object",
+          properties: { x: { type: "string", description: "the x" } },
+        },
         { type: "null" },
       ],
     })
   })
 
   it("makes a field nullable via their setNullable util (anyOf), routed by id", () => {
-    const d = fromJsonSchema({ type: "object", properties: { a: { type: "string" } } })
+    const d = fromJsonSchema({
+      type: "object",
+      properties: { a: { type: "string" } },
+    })
     const aId = getChildNodeId(d, d.root.id, "a")!
     const next = setNullable(getNodeJson(d, aId) as JSONSchema7, true)
     const out = json(replaceNodeJson(d, aId, next))
-    expect(out.properties!.a).toEqual({ anyOf: [{ type: "string" }, { type: "null" }] })
+    expect(out.properties!.a).toEqual({
+      anyOf: [{ type: "string" }, { type: "null" }],
+    })
   })
 
   it("renames a property (parent-level op routed by parent id)", () => {
@@ -156,7 +180,12 @@ describe("editor-path simulation (their leaf utils through the Document)", () =>
     const rootJson = getNodeJson(d, d.root.id) as JSONSchema7
     const renamed = updateEffectiveNode(
       rootJson,
-      updateSchemaProperty(rootJson, "old", "renamed", rootJson.properties!.old as JSONSchema7),
+      updateSchemaProperty(
+        rootJson,
+        "old",
+        "renamed",
+        rootJson.properties!.old as JSONSchema7
+      )
     )
     const out = json(replaceNodeJson(d, d.root.id, renamed))
     expect(Object.keys(out.properties!)).toEqual(["renamed", "keep"])
@@ -167,7 +196,10 @@ describe("editor-path simulation (their leaf utils through the Document)", () =>
     const d = fromJsonSchema({
       type: "object",
       properties: {
-        rows: { type: "array", items: { type: "object", properties: { sku: { type: "string" } } } },
+        rows: {
+          type: "array",
+          items: { type: "object", properties: { sku: { type: "string" } } },
+        },
       },
     })
     const rowsId = getChildNodeId(d, d.root.id, "rows")!
@@ -185,21 +217,36 @@ describe("editor-path simulation (their leaf utils through the Document)", () =>
   it("edits a nested property inside a $def (routed by id in doc.defs)", () => {
     const d = fromJsonSchema({
       type: "object",
-      $defs: { M: { type: "object", properties: { amount: { type: "number" } } } },
+      $defs: {
+        M: { type: "object", properties: { amount: { type: "number" } } },
+      },
       properties: { total: { $ref: "#/$defs/M" } },
     })
     const defNode = d.defs.find((x) => x.name === "M")!.node
     const amountId = getChildNodeId(d, defNode.id, "amount")!
-    const next = updateType("integer", false, getNodeJson(d, amountId) as JSONSchema7)
+    const next = updateType(
+      "integer",
+      false,
+      getNodeJson(d, amountId) as JSONSchema7
+    )
     const out = json(replaceNodeJson(d, amountId, next))
-    expect((out.$defs!.M as JSONSchema7).properties!.amount).toEqual({ type: "integer" })
+    expect((out.$defs!.M as JSONSchema7).properties!.amount).toEqual({
+      type: "integer",
+    })
     expect((out.properties!.total as JSONSchema7).$ref).toBe("#/$defs/M")
   })
 
   it("updateNodeJson composes read+transform+write", () => {
-    const d = fromJsonSchema({ type: "object", properties: { a: { type: "string" } } })
+    const d = fromJsonSchema({
+      type: "object",
+      properties: { a: { type: "string" } },
+    })
     const aId = getChildNodeId(d, d.root.id, "a")!
-    const d2 = updateNodeJson(d, aId, (j) => ({ ...(j as object), description: "hi" }) as JSONSchema7)
+    const d2 = updateNodeJson(
+      d,
+      aId,
+      (j) => ({ ...(j as object), description: "hi" }) as JSONSchema7
+    )
     expect((json(d2).properties!.a as JSONSchema7).description).toBe("hi")
   })
 })

@@ -351,7 +351,7 @@ function textViewerErrorMessage({
 }
 
 type TextViewerResetToken = {
-  identityKey: string
+  cacheKey: string
   retryVersion: number
   maxBytes: number | undefined
   maxLines: number | undefined
@@ -363,7 +363,7 @@ function textViewerResetToken(
   retryVersion: number
 ): TextViewerResetToken {
   return {
-    identityKey: resource.identityKey,
+    cacheKey: resource.cacheKey,
     retryVersion,
     maxBytes: props.maxBytes,
     maxLines: props.maxLines,
@@ -374,7 +374,7 @@ function textViewerResetTokenChanged(
   previous: TextViewerResetToken,
   next: TextViewerResetToken
 ) {
-  if (previous.identityKey !== next.identityKey) return true
+  if (previous.cacheKey !== next.cacheKey) return true
   if (previous.retryVersion !== next.retryVersion) return true
   if (previous.maxBytes !== next.maxBytes) return true
   if (previous.maxLines !== next.maxLines) return true

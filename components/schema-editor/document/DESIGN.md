@@ -49,7 +49,7 @@ ride along untouched.
 
 4. **Transient-invalid lives in the Document, cleanup lives at the boundary.**
    Empty or duplicate property keys are valid mid-edit and held in the Document;
-   `toJsonSchema` drops them. This is what lets the component be fully *controlled*
+   `toJsonSchema` drops them. This is what lets the component be fully _controlled_
    over the Document — there's no private editing state to hide.
 
 ## What "controlled" means here
@@ -62,14 +62,22 @@ who want JSON Schema get it via a derived `onSchemaChange(toJsonSchema(doc))`.
 
 ## File map
 
-| File            | Responsibility                                                  |
-| --------------- | --------------------------------------------------------------- |
-| `types.ts`      | The Document model (`SchemaDocument`, `DocumentNode`, …).        |
-| `id.ts`         | Intrinsic id minting.                                            |
-| `convert.ts`    | `fromJsonSchema` (total import) / `toJsonSchema` (projection).   |
-| `operations.ts` | Immutable, identity-keyed edits (add/remove/move/required/type). |
-| `derive.ts`     | Pure render-time projections (`getEffectiveKind`, `isNullable`). |
-| `index.ts`      | Public barrel.                                                   |
+| File                       | Responsibility                                                       |
+| -------------------------- | -------------------------------------------------------------------- |
+| `types.ts`                 | The Document model (`SchemaDocument`, `DocumentNode`, …).            |
+| `id.ts`                    | Intrinsic id minting.                                                |
+| `convert.ts`               | `fromJsonSchema` (total import) / `toJsonSchema` (projection).       |
+| `array.ts`                 | Reference-preserving array mapping.                                  |
+| `traversal.ts`             | Recursive child traversal, id lookup, and path lookup.               |
+| `node-update.ts`           | Immutable node replacement and `rest` patching.                      |
+| `node-metadata.ts`         | Title/description edits and bulk description removal.                |
+| `json-node.ts`             | JSON Schema subtree read/replace/update bridge.                      |
+| `node-selectors.ts`        | Effective-node, child-node, child-property, and item selectors.      |
+| `property-operations.ts`   | Property-edge edits (`add`, `remove`, `rename`, `required`, `move`). |
+| `type-operations.ts`       | Type, nullability, editor-type, and factory operations.              |
+| `enum-operations.ts`       | Enum row edits.                                                      |
+| `definition-operations.ts` | `$defs` and `$ref` edits.                                            |
+| `derive.ts`                | Pure render-time projections (`getEffectiveKind`, `isNullable`).     |
 
 ## Known v1 simplifications
 

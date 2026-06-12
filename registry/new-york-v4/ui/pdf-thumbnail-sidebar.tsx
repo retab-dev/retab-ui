@@ -4,6 +4,7 @@ import * as React from "react"
 import type { PDFDocumentProxy } from "pdfjs-dist"
 
 import { cn } from "@/lib/utils"
+import { createViewerResource } from "@/lib/viewer-resource"
 import {
   getDocumentResource,
   getPageResource,
@@ -43,7 +44,11 @@ function PdfThumbnailSidebarInner({
   width = 120,
   className,
 }: PdfThumbnailSidebarProps) {
-  const doc = React.use(getDocumentResource(src))
+  const resource = React.useMemo(
+    () => createViewerResource({ kind: "url", url: src }),
+    [src]
+  )
+  const doc = React.use(getDocumentResource(resource))
   return (
     <div
       data-slot="pdf-thumbnail-sidebar"

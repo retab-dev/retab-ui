@@ -50,7 +50,7 @@ function textViewerResourceKey({
   retryVersion: number
   bounds: Required<TextViewerBounds>
 }) {
-  return `${resource.identityKey}\0${retryVersion}\0${bounds.maxBytes}\0${bounds.maxLines}`
+  return `${resource.cacheKey}\0${retryVersion}\0${bounds.maxBytes}\0${bounds.maxLines}`
 }
 
 export function clearTextViewerResourceCacheForTests() {

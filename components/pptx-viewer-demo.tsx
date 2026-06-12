@@ -18,7 +18,6 @@ export function PptxViewerDemo() {
           url: "/samples/sample-deck.pptx",
           fileName: "sample-deck.pptx",
         }}
-        downloadFileName="sample-deck.pptx"
         className="h-full"
         renderSlideOverlay={({ slideNumber }) =>
           slideNumber === sampleBox.slide ? (

@@ -188,11 +188,14 @@ function Cell({
           className="aspect-[21/29.7] h-full max-w-full overflow-hidden rounded-lg border bg-card"
         >
           <PdfViewer
-            src={PDF_URL}
+            source={{
+              kind: "url",
+              url: PDF_URL,
+              fileName: "attention.pdf",
+            }}
             bare
             toolbar={false}
             railToggle={false}
-            downloadFileName="attention.pdf"
             slots={slots}
             onVisiblePageChange={setCurrentPage}
             className="h-full"

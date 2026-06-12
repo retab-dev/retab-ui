@@ -1,6 +1,8 @@
 import type * as Pdfjs from "pdfjs-dist"
 import type { PDFDocumentProxy, PDFPageProxy } from "pdfjs-dist"
 
+import { type ViewerResource } from "@/lib/viewer-resource"
+
 const PDF_CACHE_MAX = 6
 
 type DocumentCacheEntry = {
@@ -63,8 +65,11 @@ function pruneDocumentCache() {
   }
 }
 
-export function getDocumentResource(src: string): Promise<PDFDocumentProxy> {
-  const cachedDocumentEntry = documentCache.get(src)
+export function getDocumentResource(
+  resource: ViewerResource
+): Promise<PDFDocumentProxy> {
+  const resourceKey = resource.cacheKey
+  const cachedDocumentEntry = documentCache.get(resourceKey)
   if (cachedDocumentEntry) {
     cachedDocumentEntry.lastUsedAt = Date.now()
     return cachedDocumentEntry.promise
@@ -77,7 +82,7 @@ export function getDocumentResource(src: string): Promise<PDFDocumentProxy> {
     status: "pending",
   }
   documentEntry.promise = loadPdfjs()
-    .then((pdfjs) => pdfjs.getDocument(src).promise)
+    .then((pdfjs) => getPdfDocument(resource, pdfjs))
     .then(
       (document) => {
         documentEntry.status = "fulfilled"
@@ -87,31 +92,33 @@ export function getDocumentResource(src: string): Promise<PDFDocumentProxy> {
       },
       (error) => {
         documentEntry.status = "rejected"
-        if (documentCache.get(src) === documentEntry) documentCache.delete(src)
+        if (documentCache.get(resourceKey) === documentEntry) {
+          documentCache.delete(resourceKey)
+        }
         throw error
       }
     )
 
-  documentCache.set(src, documentEntry)
+  documentCache.set(resourceKey, documentEntry)
   scheduleDocumentPrune()
   return documentEntry.promise
 }
 
 export function retainDocumentResource(
-  src: string,
+  resource: ViewerResource,
   document: PDFDocumentProxy
 ) {
-  const documentEntry = documentCache.get(src)
+  const documentEntry = documentCache.get(resource.cacheKey)
   if (!documentEntry || documentEntry.document !== document) return
   documentEntry.consumers += 1
   documentEntry.lastUsedAt = Date.now()
 }
 
 export function releaseDocumentResource(
-  src: string,
+  resource: ViewerResource,
   document: PDFDocumentProxy
 ) {
-  const documentEntry = documentCache.get(src)
+  const documentEntry = documentCache.get(resource.cacheKey)
   if (!documentEntry || documentEntry.document !== document) return
   documentEntry.consumers = Math.max(0, documentEntry.consumers - 1)
   documentEntry.lastUsedAt = Date.now()
@@ -146,4 +153,16 @@ export function getPageResource(
     pages.set(pageNumber, pagePromise)
   }
   return pagePromise
+}
+
+async function getPdfDocument(
+  resource: ViewerResource,
+  pdfjs: typeof Pdfjs
+): Promise<PDFDocumentProxy> {
+  if (resource.source.kind === "url" && resource.descriptor.loadUrl) {
+    return pdfjs.getDocument(resource.descriptor.loadUrl).promise
+  }
+
+  const buffer = await resource.readArrayBuffer()
+  return pdfjs.getDocument({ data: new Uint8Array(buffer) }).promise
 }

@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import type { JSONSchema7 } from "json-schema"
 
 import { cn } from "@/lib/utils"
 import { CsvViewer, type CsvViewerHandle } from "@/components/ui/csv-viewer"
@@ -13,21 +14,29 @@ import { PdfViewer, type PdfViewerHandle } from "@/components/ui/pdf-viewer"
 import { PptxViewer } from "@/components/ui/pptx-viewer"
 import { TextViewer, type TextViewerHandle } from "@/components/ui/text-viewer"
 import { XlsxViewer, type XlsxViewerHandle } from "@/components/ui/xlsx-viewer"
+import type { TableDocument } from "@/components/json-table/lib/projects-types"
+import sampleData from "@/components/json-table/sample/data.json"
+import sampleSchema from "@/components/json-table/sample/schema.json"
+import { SingleFileTableView } from "@/components/json-table/single-file-table-view"
 
 import {
-  buildScrollTargets,
-  getScenarioStepPx,
-  measuredScrollDistance,
   normalizeViewerId,
   resolveScenario,
+  resolveViewer,
   SCENARIOS,
-  summarizeFrameDurations,
   VIEWERS,
   type ScenarioDefinition,
   type ScenarioResult,
   type ScrollBenchResult,
   type ViewerId,
 } from "./scrollbench-core"
+import {
+  findScrollableViewport,
+  isAbortError,
+  measureScenario,
+  viewportMetrics,
+  waitForScroller,
+} from "./scrollbench-runner"
 
 type ViewportHandle =
   | PdfViewerHandle
@@ -39,7 +48,11 @@ type ViewportHandle =
 
 type RunStatus = "idle" | "running" | "done" | "failed"
 
-const VIEWER_READY_TIMEOUT_MS = 30_000
+const jsonTableDocument = {
+  id: "scrollbench-json",
+  data: sampleData as Record<string, unknown>,
+} satisfies TableDocument
+const jsonTableSchema = sampleSchema as unknown as JSONSchema7
 
 interface ScrollBenchController {
   getScroller: () => HTMLElement | null
@@ -82,9 +95,12 @@ export function ScrollBenchClient({
   const getScroller = React.useCallback(() => {
     return (
       viewportHandleRef.current?.getViewportElement() ??
-      findScrollableViewport(rootRef.current)
+      findScrollableViewport(
+        rootRef.current,
+        resolveViewer(viewer).scrollerSelector
+      )
     )
-  }, [])
+  }, [viewer])
 
   const runScenario = React.useCallback(
     async (scenarioId: ScenarioDefinition["id"]) => {
@@ -255,8 +271,11 @@ function renderViewer({
       return (
         <PdfViewer
           ref={setViewportHandle as React.Ref<PdfViewerHandle>}
-          src="/samples/big-911-report.pdf"
-          downloadFileName="big-911-report.pdf"
+          source={{
+            kind: "url",
+            url: "/samples/big-911-report.pdf",
+            fileName: "big-911-report.pdf",
+          }}
           className={viewerClassName}
           toolbar={false}
           bare
@@ -273,6 +292,17 @@ function renderViewer({
           fillHeight
           isolateStyles={false}
         />
+      )
+    case "json":
+      return (
+        <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background">
+          <SingleFileTableView
+            document={jsonTableDocument}
+            schema={jsonTableSchema}
+            editMode="readOnly"
+            allowEditing={false}
+          />
+        </div>
       )
     case "xlsx":
       return (
@@ -322,7 +352,6 @@ function renderViewer({
             url: "/samples/sample-presentation.pptx",
             fileName: "sample-presentation.pptx",
           }}
-          downloadFileName="sample-presentation.pptx"
           className={viewerClassName}
           toolbar={false}
           bare
@@ -333,8 +362,11 @@ function renderViewer({
       return (
         <ImageViewer
           ref={setViewportHandle as React.Ref<ImageViewerHandle>}
-          src="/samples/attention-page-1.png"
-          downloadFileName="attention-page-1.png"
+          source={{
+            kind: "url",
+            url: "/samples/attention-page-1.png",
+            fileName: "attention-page-1.png",
+          }}
           className={viewerClassName}
           scale={2}
           toolbar={false}
@@ -430,177 +462,6 @@ function Metric({ label, value }: { label: string; value: string }) {
       <dd className="text-right font-medium tabular-nums">{value}</dd>
     </>
   )
-}
-
-async function measureScenario(
-  scroller: HTMLElement,
-  scenario: ScenarioDefinition,
-  { signal }: { signal?: AbortSignal }
-): Promise<ScenarioResult> {
-  throwIfAborted(signal)
-
-  const maxScrollTop = scroller.scrollHeight - scroller.clientHeight
-  if (maxScrollTop <= 0) {
-    throw new Error("The selected viewer does not have a scrollable viewport.")
-  }
-
-  const stepPx = getScenarioStepPx({
-    clientHeight: scroller.clientHeight,
-    scenario,
-  })
-  const targets = buildScrollTargets({ maxScrollTop, stepPx })
-  const frameDurations: number[] = []
-
-  scroller.scrollTop = 0
-  await nextFrame(signal)
-  await nextFrame(signal)
-
-  let previous = performance.now()
-
-  for (const target of targets) {
-    throwIfAborted(signal)
-    scroller.scrollTop = target
-    scroller.dispatchEvent(new Event("scroll", { bubbles: true }))
-
-    await nextFrame(signal)
-    const now = performance.now()
-    frameDurations.push(now - previous)
-    previous = now
-  }
-
-  await nextFrame(signal)
-
-  return summarizeFrameDurations({
-    scenario,
-    frameDurations,
-    stepPx,
-    distancePx: measuredScrollDistance(targets),
-  })
-}
-
-function findScrollableViewport(root: HTMLElement | null) {
-  if (!root) return null
-
-  const candidates = root.querySelectorAll<HTMLElement>(
-    [
-      '[data-slot="csv-body"]',
-      '[data-slot="xlsx-body"]',
-      '[data-slot="scroll-area-viewport"]',
-      '[data-slot="pdf-viewer"] [data-slot="scroll-area-viewport"]',
-      '[data-slot="text-viewer"] [data-slot="scroll-area-viewport"]',
-      '[data-slot="docx-viewer"] [data-slot="scroll-area-viewport"]',
-      '[data-slot="pptx-viewer"] [data-slot="scroll-area-viewport"]',
-      '[data-slot="image-viewer"] [data-slot="scroll-area-viewport"]',
-    ].join(",")
-  )
-
-  for (const candidate of candidates) {
-    if (candidate.scrollHeight > candidate.clientHeight) return candidate
-  }
-
-  const allElements = root.querySelectorAll<HTMLElement>("*")
-  for (const element of allElements) {
-    const style = window.getComputedStyle(element)
-    const canScrollY = /(auto|scroll)/.test(style.overflowY)
-    if (canScrollY && element.scrollHeight > element.clientHeight) {
-      return element
-    }
-  }
-
-  return null
-}
-
-async function waitForScroller(
-  getScroller: () => HTMLElement | null,
-  {
-    signal,
-    timeoutMs = VIEWER_READY_TIMEOUT_MS,
-  }: {
-    signal?: AbortSignal
-    timeoutMs?: number
-  } = {}
-) {
-  const start = performance.now()
-  let scroller = getScroller()
-
-  while (
-    (!scroller || scroller.scrollHeight <= scroller.clientHeight) &&
-    performance.now() - start < timeoutMs
-  ) {
-    throwIfAborted(signal)
-    await delay(100, signal)
-    scroller = getScroller()
-  }
-
-  if (!scroller) {
-    throw new Error("Could not find a viewer scrollport.")
-  }
-
-  if (scroller.scrollHeight <= scroller.clientHeight) {
-    throw new Error("The viewer scrollport is not scrollable yet.")
-  }
-
-  return scroller
-}
-
-function viewportMetrics(scroller: HTMLElement) {
-  return {
-    clientHeight: scroller.clientHeight,
-    scrollHeight: scroller.scrollHeight,
-    maxScrollTop: Math.max(0, scroller.scrollHeight - scroller.clientHeight),
-  }
-}
-
-function nextFrame(signal?: AbortSignal) {
-  return new Promise<void>((resolve, reject) => {
-    if (signal?.aborted) {
-      reject(abortError())
-      return
-    }
-
-    const frame = requestAnimationFrame(() => {
-      signal?.removeEventListener("abort", handleAbort)
-      resolve()
-    })
-    const handleAbort = () => {
-      cancelAnimationFrame(frame)
-      reject(abortError())
-    }
-
-    signal?.addEventListener("abort", handleAbort, { once: true })
-  })
-}
-
-function delay(ms: number, signal?: AbortSignal) {
-  return new Promise<void>((resolve, reject) => {
-    if (signal?.aborted) {
-      reject(abortError())
-      return
-    }
-
-    const timeout = window.setTimeout(() => {
-      signal?.removeEventListener("abort", handleAbort)
-      resolve()
-    }, ms)
-    const handleAbort = () => {
-      window.clearTimeout(timeout)
-      reject(abortError())
-    }
-
-    signal?.addEventListener("abort", handleAbort, { once: true })
-  })
-}
-
-function throwIfAborted(signal?: AbortSignal) {
-  if (signal?.aborted) throw abortError()
-}
-
-function abortError() {
-  return new DOMException("Scrollbench run was cancelled.", "AbortError")
-}
-
-function isAbortError(caught: unknown) {
-  return caught instanceof DOMException && caught.name === "AbortError"
 }
 
 function formatNumber(value: number) {

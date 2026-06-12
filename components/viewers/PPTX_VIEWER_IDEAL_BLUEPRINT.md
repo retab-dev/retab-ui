@@ -14,7 +14,10 @@ separates those concerns until each module has a single reason to exist.
 `PptxViewer` should be a small React shell around a presentation source:
 
 ```tsx
-<PptxViewer src="/samples/deck.pptx" className="h-[600px]" />
+<PptxViewer
+  source={{ kind: "url", url: "/samples/deck.pptx", fileName: "deck.pptx" }}
+  className="h-[600px]"
+/>
 ```
 
 The component should make these guarantees:
@@ -33,7 +36,7 @@ Keep the API boring and explicit:
 
 ```ts
 export interface PptxViewerProps {
-  src: string
+  source: PptxDocumentSource
   className?: string
   scale?: number
   defaultScale?: number

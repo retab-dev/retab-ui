@@ -36,7 +36,12 @@ it statically; it is only exercised when a deck actually contains charts.
 import { PptxViewer } from "@/components/ui/pptx-viewer"
 
 export function Example() {
-  return <PptxViewer src="/deck.pptx" className="h-[600px]" />
+  return (
+    <PptxViewer
+      source={{ kind: "url", url: "/deck.pptx", fileName: "deck.pptx" }}
+      className="h-[600px]"
+    />
+  )
 }
 ```
 
@@ -47,7 +52,7 @@ normalized boxes map with simple percentages:
 
 ```tsx
 <PptxViewer
-  src={url}
+  source={{ kind: "url", url, fileName: "deck.pptx" }}
   renderSlideOverlay={({ slideNumber }) =>
     citationsOnSlide(slideNumber).map((c) => (
       <div
@@ -101,7 +106,7 @@ The PPTX overlay field is `slideNumber`, a 1-based slide index.
 
 | Prop                     | Type                              | Description                                                                                                                          |
 | ------------------------ | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `src`                    | `string`                          | URL of the `.pptx` (same-origin or CORS-enabled).                                                                                    |
+| `source`                 | `UrlViewerSource \| BlobViewerSource` | Canonical presentation source.                                                                                                    |
 | `scale`                  | `number`                          | Controlled scale; omit to let the viewer own fit-width and zoom state.                                                               |
 | `defaultScale`           | `number`                          | Initial uncontrolled scale; omit to start in fit-width mode.                                                                         |
 | `onScaleChange`          | `(scale: number \| null) => void` | Called by zoom controls in controlled mode. `null` means fit width.                                                                  |

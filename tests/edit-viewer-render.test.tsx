@@ -13,7 +13,7 @@ const viewerMocks = vi.hoisted(() => ({
 vi.mock("@/components/ui/pdf-viewer", () => ({
   PdfViewer: React.forwardRef(function PdfViewerMock(
     props: {
-      src: string
+      source: { kind: "url"; url: string; fileName?: string }
       renderPageOverlay?: (props: {
         pageNumber: number
         width: number
@@ -32,7 +32,7 @@ vi.mock("@/components/ui/pdf-viewer", () => ({
       getViewportElement: () => null,
     }))
     return (
-      <div data-testid="pdf-viewer" data-src={props.src}>
+      <div data-testid="pdf-viewer" data-src={props.source.url}>
         {props.renderPageOverlay?.({
           pageNumber: 1,
           width: 100,

@@ -12,7 +12,10 @@ lifecycle ownership, retry behavior, source overlays, and verification.
 through one frame model.
 
 ```tsx
-<ImageViewer src="/samples/scan.tiff" className="h-[600px]" />
+<ImageViewer
+  source={{ kind: "url", url: "/samples/scan.tiff", fileName: "scan.tiff" }}
+  className="h-[600px]"
+/>
 ```
 
 Rules:
@@ -56,7 +59,7 @@ Remaining concerns:
   callback-ref cleanup path; this relies on React 19 semantics.
 - `renderImageSourceOverlay` maps normalized boxes as raw percentages and does
   not account for rotation.
-- The cache key is only `src`; that is probably correct today, but the cache
+- The cache key is resource identity; that is correct today, but the cache
   policy is implicit rather than documented and bounded.
 - There are no focused tests for TIFF source lifecycle, worker failure, retry, or
   rotated overlay geometry.
@@ -73,7 +76,7 @@ These rules should be true after hardening:
 4. A failed frame decode must not poison future attempts for that frame.
 5. A source cache entry must be bounded by an explicit eviction policy.
 6. Evicting a source must close all cached bitmaps and terminate its worker.
-7. Switching `src` must never draw a bitmap from the previous file.
+7. Switching resource identity must never draw a bitmap from the previous file.
 8. Overlay boxes must remain correct across zoom and rotation.
 9. Lazy frame mounting must not depend on implementation details that break for
    registry consumers unless the component explicitly requires React 19.
@@ -113,7 +116,7 @@ that owns eviction.
 
 Target behavior:
 
-- Cache by `src`.
+- Cache by resource identity.
 - Keep a small number of loaded sources, for example 4.
 - Touch a source when it is read.
 - Evict least-recently-used sources past the cap.
@@ -133,7 +136,7 @@ interface SourceCacheEntry {
 
 Rules:
 
-- `getImageSource(src)` may return a stable promise while the entry is cached.
+- `getImageSource(resource)` may return a stable promise while the entry is cached.
 - Once the promise resolves, attach the source to the entry.
 - On rejection, delete the cache entry.
 - When eviction removes a resolved entry, call `source.dispose()`.
@@ -282,7 +285,7 @@ Keep the public API stable for now:
 
 ```ts
 export interface ImageViewerProps {
-  src: string
+  source: ImageDocumentSource
   className?: string
   scale?: number
   toolbar?: boolean
@@ -299,7 +302,7 @@ export interface ImageViewerProps {
 Possible internal-only additions:
 
 - `dispose()` on `ImageSource`.
-- `sourceCacheKey(src)`.
+- `sourceCacheKey(resource)`.
 - `clearImageSourceCacheForTests()`.
 - Pure helper exports for tests:
   - `looksLikeTiff`
@@ -340,11 +343,11 @@ tests:
 
 Add React tests for:
 
-- switching `src` while a decode is pending does not draw the old bitmap.
+- switching resource identity while a decode is pending does not draw the old bitmap.
 - unmounting a visible frame releases the frame.
 - unmounting the viewer disposes the source when it is no longer cached.
 - rotated source overlay remains aligned.
-- error boundary recovers after changing `src`.
+- error boundary recovers after changing resource identity.
 
 ### Browser Verification
 
@@ -370,7 +373,7 @@ Use docs/demo samples to verify:
 8. Add rotation-aware bbox transform helpers.
 9. Wire `renderImageSourceOverlay` through the rotation-aware transform.
 10. Add pure lifecycle and geometry tests.
-11. Add component tests for src switching, error recovery, and release behavior.
+11. Add component tests for resource switching, error recovery, and release behavior.
 12. Run browser verification on the image viewer docs demo and sample TIFF.
 13. Rebuild the registry output after source changes.
 

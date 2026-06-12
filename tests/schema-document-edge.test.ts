@@ -1,17 +1,19 @@
-import { describe, expect, it } from "vitest"
 import type { JSONSchema7 } from "json-schema"
+import { describe, expect, it } from "vitest"
 
 import {
   fromJsonSchema,
+  toJsonSchema,
+} from "@/components/schema-editor/document/convert"
+import { renameDefinition } from "@/components/schema-editor/document/definition-operations"
+import {
   getChildNodeId,
   getChildPropertyId,
-  getNode,
-  moveProperty,
-  renameDefinition,
-  setNodeType,
-  toJsonSchema,
-  type SchemaDocument,
-} from "@/components/schema-editor/document"
+} from "@/components/schema-editor/document/node-selectors"
+import { moveProperty } from "@/components/schema-editor/document/property-operations"
+import { getNode } from "@/components/schema-editor/document/traversal"
+import { setNodeType } from "@/components/schema-editor/document/type-operations"
+import type { SchemaDocument } from "@/components/schema-editor/document/types"
 import { requireAllProperties } from "@/components/schema-editor/schema-required-policy"
 
 function rt(schema: JSONSchema7) {
@@ -36,7 +38,13 @@ describe("adversarial round-trip", () => {
     const schema: JSONSchema7 = {
       type: "object",
       $defs: { M: { type: "string" } },
-      properties: { x: { $ref: "#/$defs/M", description: "money", title: "Money" } as JSONSchema7 },
+      properties: {
+        x: {
+          $ref: "#/$defs/M",
+          description: "money",
+          title: "Money",
+        } as JSONSchema7,
+      },
     }
     expect(rt(schema)).toEqual(schema)
   })
@@ -81,7 +89,12 @@ describe("adversarial round-trip", () => {
   it("array of arrays round-trips", () => {
     const schema: JSONSchema7 = {
       type: "object",
-      properties: { matrix: { type: "array", items: { type: "array", items: { type: "number" } } } },
+      properties: {
+        matrix: {
+          type: "array",
+          items: { type: "array", items: { type: "number" } },
+        },
+      },
     }
     expect(rt(schema)).toEqual(schema)
   })
@@ -89,16 +102,24 @@ describe("adversarial round-trip", () => {
 
 describe("type changes preserve nullability + metadata", () => {
   it("setNodeType keeps a type-array nullable field nullable", () => {
-    let d = fromJsonSchema({ type: "object", properties: { a: { type: ["string", "null"] } } })
+    let d = fromJsonSchema({
+      type: "object",
+      properties: { a: { type: ["string", "null"] } },
+    })
     const aId = getChildNodeId(d, d.root.id, "a")!
     d = setNodeType(d, aId, "number")
-    expect((json(d).properties!.a as JSONSchema7).type).toEqual(["number", "null"])
+    expect((json(d).properties!.a as JSONSchema7).type).toEqual([
+      "number",
+      "null",
+    ])
   })
 
   it("setNodeType preserves title and description", () => {
     let d = fromJsonSchema({
       type: "object",
-      properties: { a: { type: "string", title: "A", description: "desc" } as JSONSchema7 },
+      properties: {
+        a: { type: "string", title: "A", description: "desc" } as JSONSchema7,
+      },
     })
     const aId = getChildNodeId(d, d.root.id, "a")!
     d = setNodeType(d, aId, "object")
@@ -155,7 +176,7 @@ describe("requireAllProperties (every field required policy)", () => {
         type: "object",
         properties: { a: { type: "string" }, b: { type: "number" } },
         required: ["a"],
-      }).required,
+      }).required
     ).toEqual(["a", "b"])
   })
 
@@ -164,7 +185,10 @@ describe("requireAllProperties (every field required policy)", () => {
       type: "object",
       $defs: { D: { type: "object", properties: { d1: { type: "string" } } } },
       properties: {
-        obj: { type: "object", properties: { x: { type: "string" }, y: { type: "number" } } },
+        obj: {
+          type: "object",
+          properties: { x: { type: "string" }, y: { type: "number" } },
+        },
         rows: {
           type: "array",
           items: { type: "object", properties: { sku: { type: "string" } } },
@@ -173,7 +197,9 @@ describe("requireAllProperties (every field required policy)", () => {
     })
     expect(out.required).toEqual(["obj", "rows"])
     expect((out.properties!.obj as JSONSchema7).required).toEqual(["x", "y"])
-    expect(((out.properties!.rows as JSONSchema7).items as JSONSchema7).required).toEqual(["sku"])
+    expect(
+      ((out.properties!.rows as JSONSchema7).items as JSONSchema7).required
+    ).toEqual(["sku"])
     expect((out.$defs!.D as JSONSchema7).required).toEqual(["d1"])
   })
 
@@ -211,7 +237,9 @@ describe("requireAllProperties (every field required policy)", () => {
   it("is idempotent", () => {
     const schema: JSONSchema7 = {
       type: "object",
-      properties: { o: { type: "object", properties: { a: { type: "string" } } } },
+      properties: {
+        o: { type: "object", properties: { a: { type: "string" } } },
+      },
     }
     expect(req(req(schema))).toEqual(req(schema))
   })
@@ -221,7 +249,9 @@ describe("ref integrity through node identity", () => {
   it("getNode finds nodes nested inside definitions", () => {
     const d = fromJsonSchema({
       type: "object",
-      $defs: { M: { type: "object", properties: { amount: { type: "number" } } } },
+      $defs: {
+        M: { type: "object", properties: { amount: { type: "number" } } },
+      },
       properties: { total: { $ref: "#/$defs/M" } },
     })
     const defNode = d.defs.find((x) => x.name === "M")!.node

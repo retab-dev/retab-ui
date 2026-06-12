@@ -3,14 +3,12 @@
 import type * as React from "react"
 
 import type {
-  DocumentNodeView,
-  SchemaDocument,
-} from "@/components/schema-editor/document"
-import type {
   DocumentSchemaNodeEditorProps,
   RenderDocumentNodeEditor,
   SchemaEditorMode,
 } from "@/components/schema-editor/document-node-editor-types"
+import type { SchemaDocument } from "@/components/schema-editor/document/types"
+import type { DocumentNodeView } from "@/components/schema-editor/document/view-model"
 import type { ResolvedSchemaBuilderFeatures } from "@/components/schema-editor/schema-builder-types"
 
 interface DocumentPropertyRowProps {

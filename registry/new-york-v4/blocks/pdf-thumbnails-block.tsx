@@ -29,9 +29,12 @@ export function PdfThumbnailsBlock() {
   return (
     <div ref={previewRef} className="h-full min-h-[680px] bg-background">
       <PdfViewer
-        src={PDF_URL}
+        source={{
+          kind: "url",
+          url: PDF_URL,
+          fileName: "nvidia-10k-fy2024.pdf",
+        }}
         bare
-        downloadFileName="nvidia-10k-fy2024.pdf"
         onVisiblePageChange={setCurrentPage}
         slots={{
           left: (

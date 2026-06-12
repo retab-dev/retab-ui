@@ -16,7 +16,7 @@ const FILES = [
   { label: "Markdown", file: "release-notes.md" },
   { label: "HTML", file: "welcome.html" },
   { label: "JSON", file: "app-config.json" },
-  { label: "Log", file: "server.log" },
+  { label: "Text", file: "server.log" },
 ]
 
 function FileTabs({

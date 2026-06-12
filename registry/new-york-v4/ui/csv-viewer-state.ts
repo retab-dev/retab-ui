@@ -13,13 +13,11 @@ import {
   type CsvResourceInput,
 } from "./csv-viewer-resource"
 import { parseCsvInWorker } from "./csv-viewer-worker"
+import type { GridCellCoordinate } from "./fixed-grid-selection"
 
 const CSV_STREAM_BATCH_SIZE = 5000
 
-export interface CsvCellAddress {
-  rowIndex: number
-  columnIndex: number
-}
+export type CsvCellAddress = GridCellCoordinate
 
 export type CsvViewerError =
   | { kind: "fetch"; status?: number }

@@ -48,9 +48,12 @@ export function ImageSourcesBlock() {
       <div className="relative min-w-0 flex-1">
         <ImageViewer
           ref={viewerRef}
-          src={IMAGE_URL}
+          source={{
+            kind: "url",
+            url: IMAGE_URL,
+            fileName: "attention-page-1.png",
+          }}
           bare
-          downloadFileName="attention-page-1.png"
           className="h-full"
           renderFrameOverlay={renderImageSourceOverlay(link.activeSource)}
         />

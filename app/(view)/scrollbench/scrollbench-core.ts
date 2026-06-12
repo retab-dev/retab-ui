@@ -1,16 +1,17 @@
+import type { FixedGridBenchmarkViewer } from "@/components/ui/fixed-grid-benchmark"
+
 export type ViewerId =
   | "pdf"
   | "csv"
+  | "json"
   | "xlsx"
   | "text"
   | "docx"
   | "pptx"
   | "image"
 
-export interface ViewerOption {
+export interface ViewerOption extends Omit<FixedGridBenchmarkViewer, "id"> {
   id: ViewerId
-  label: string
-  sample: string
 }
 
 export interface ScenarioDefinition {
@@ -46,13 +47,58 @@ export interface ScrollBenchResult {
 }
 
 export const VIEWERS: readonly ViewerOption[] = [
-  { id: "pdf", label: "PDF", sample: "big-911-report.pdf" },
-  { id: "csv", label: "CSV", sample: "generated 20k row table" },
-  { id: "xlsx", label: "XLSX", sample: "nvidia-financials-fy2024.xlsx" },
-  { id: "text", label: "Text", sample: "generated 30k line log" },
-  { id: "docx", label: "DOCX", sample: "quarterly-business-review.docx" },
-  { id: "pptx", label: "PPTX", sample: "sample-presentation.pptx" },
-  { id: "image", label: "Image", sample: "attention-page-1.png at 2x" },
+  {
+    id: "pdf",
+    label: "PDF",
+    sample: "big-911-report.pdf",
+    scrollerSelector: '[data-slot="pdf-viewer"] [data-slot="scroll-area-viewport"]',
+  },
+  {
+    id: "csv",
+    label: "CSV",
+    sample: "generated 20k row table",
+    scrollerSelector: '[data-slot="csv-body"]',
+  },
+  {
+    id: "json",
+    label: "JSON table",
+    sample: "1.5k projected JSON rows",
+    scrollerSelector: '[data-slot="json-table-scroll"]',
+  },
+  {
+    id: "xlsx",
+    label: "XLSX",
+    sample: "nvidia-financials-fy2024.xlsx",
+    scrollerSelector: '[data-slot="xlsx-body"]',
+  },
+  {
+    id: "text",
+    label: "Text",
+    sample: "generated 30k line log",
+    scrollerSelector:
+      '[data-slot="text-viewer"] [data-slot="scroll-area-viewport"]',
+  },
+  {
+    id: "docx",
+    label: "DOCX",
+    sample: "quarterly-business-review.docx",
+    scrollerSelector:
+      '[data-slot="docx-viewer"] [data-slot="scroll-area-viewport"]',
+  },
+  {
+    id: "pptx",
+    label: "PPTX",
+    sample: "sample-presentation.pptx",
+    scrollerSelector:
+      '[data-slot="pptx-viewer"] [data-slot="scroll-area-viewport"]',
+  },
+  {
+    id: "image",
+    label: "Image",
+    sample: "attention-page-1.png at 2x",
+    scrollerSelector:
+      '[data-slot="image-viewer"] [data-slot="scroll-area-viewport"]',
+  },
 ]
 
 export const SCENARIOS: readonly ScenarioDefinition[] = [
@@ -71,6 +117,10 @@ export function normalizeViewerId(value: string | null | undefined): ViewerId {
 
 export function resolveScenario(id: ScenarioDefinition["id"]) {
   return SCENARIOS.find((scenario) => scenario.id === id) ?? null
+}
+
+export function resolveViewer(id: ViewerId) {
+  return VIEWERS.find((viewer) => viewer.id === id) ?? VIEWERS[0]
 }
 
 export function getScenarioStepPx({

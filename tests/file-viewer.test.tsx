@@ -417,6 +417,32 @@ describe("FileViewer text resources", () => {
 })
 
 describe("FileViewer text rendering", () => {
+  it("loads and renders text content under React StrictMode", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {})
+    try {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(() =>
+          Promise.resolve(
+            response("first log line\nsecond log line\n", { status: 206 })
+          )
+        )
+      )
+
+      render(
+        <React.StrictMode>
+          <FileViewer source={urlSource("/strict.log", "strict.log")} />
+        </React.StrictMode>
+      )
+
+      expect(await screen.findByText("first log line")).toBeTruthy()
+      expect(screen.getByText("second log line")).toBeTruthy()
+      expect(screen.getByText("2 lines")).toBeTruthy()
+    } finally {
+      consoleError.mockRestore()
+    }
+  })
+
   it("keeps the download action in the toolbar for long filenames", async () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {})
     try {
@@ -426,9 +452,7 @@ describe("FileViewer text rendering", () => {
       )
 
       const longName = "very-long-file-name-that-should-truncate-in-toolbar.log"
-      render(
-        <FileViewer source={urlSource("/long-name.log", longName)} />
-      )
+      render(<FileViewer source={urlSource("/long-name.log", longName)} />)
 
       expect((await screen.findByTitle(longName)).className).toContain(
         "truncate"

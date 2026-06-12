@@ -2,18 +2,16 @@
 
 import * as React from "react"
 
-import {
-  replaceNodeJson,
-  type SchemaDocument,
-} from "@/components/schema-editor/document"
 import { DocumentArrayNodeEditor } from "@/components/schema-editor/document-array-node-editor"
 import { DocumentEnumNodeEditor } from "@/components/schema-editor/document-enum-node-editor"
-import { DocumentNodeHeader } from "@/components/schema-editor/document-node-header"
 import type {
   DocumentSchemaNodeEditorProps,
   RenderDocumentNodeEditor,
 } from "@/components/schema-editor/document-node-editor-types"
+import { DocumentNodeHeader } from "@/components/schema-editor/document-node-header"
 import { DocumentObjectNodeEditor } from "@/components/schema-editor/document-object-node-editor"
+import { replaceNodeJson } from "@/components/schema-editor/document/json-node"
+import type { SchemaDocument } from "@/components/schema-editor/document/types"
 import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
 import { resolveSchemaBuilderFeatures } from "@/components/schema-editor/schema-builder-types"
 

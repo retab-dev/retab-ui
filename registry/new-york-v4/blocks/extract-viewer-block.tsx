@@ -72,9 +72,12 @@ export function ExtractViewerBlock() {
       <div className="relative min-w-0 flex-1">
         <PdfViewer
           ref={viewerRef}
-          src={PDF_URL}
+          source={{
+            kind: "url",
+            url: PDF_URL,
+            fileName: "bank-statement.pdf",
+          }}
           bare
-          downloadFileName="bank-statement.pdf"
           className="h-full"
           renderPageOverlay={renderPdfSourceOverlay(link.activeSource)}
         />

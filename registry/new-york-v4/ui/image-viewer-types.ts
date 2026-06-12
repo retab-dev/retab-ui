@@ -1,5 +1,7 @@
 import type * as React from "react"
 
+import type { BlobViewerSource, UrlViewerSource } from "@/lib/viewer-source"
+
 export interface ImageFrameOverlayProps {
   /** 1-based frame index (a TIFF page; always 1 for single images). */
   frameNumber: number
@@ -29,9 +31,11 @@ export interface ImageViewerHandle {
   getViewportElement: () => HTMLDivElement | null
 }
 
+export type ImageDocumentSource = UrlViewerSource | BlobViewerSource
+
 export interface ImageViewerProps {
-  /** URL of the image (same-origin or CORS-enabled). PNG/JPEG/WebP/GIF/AVIF or TIFF. */
-  src: string
+  /** Canonical image source. PNG/JPEG/WebP/GIF/AVIF/BMP/ICO or TIFF. */
+  source: ImageDocumentSource
   className?: string
   /** Fixed scale; when omitted the viewer fits frame width to the container. */
   scale?: number

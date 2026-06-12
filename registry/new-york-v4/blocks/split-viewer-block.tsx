@@ -1,8 +1,8 @@
 "use client"
 
+import { PdfViewer } from "@/components/ui/pdf-viewer"
 import type { SplitView } from "@/components/viewers/lib/split-types"
 import { SplitViewer } from "@/components/viewers/split/split-viewer"
-import { PdfViewer } from "@/components/ui/pdf-viewer"
 
 const PDF_URL = "/samples/attention.pdf"
 
@@ -31,9 +31,12 @@ export function SplitViewerBlock() {
         result={SPLIT_RESULT}
         renderDocument={(handlers) => (
           <PdfViewer
-            src={PDF_URL}
+            source={{
+              kind: "url",
+              url: PDF_URL,
+              fileName: "attention.pdf",
+            }}
             bare
-            downloadFileName="attention.pdf"
             slots={handlers.slots}
             onVisiblePageChange={handlers.onCurrentPageChange}
             onScrollProgressChange={handlers.onScrollProgressChange}

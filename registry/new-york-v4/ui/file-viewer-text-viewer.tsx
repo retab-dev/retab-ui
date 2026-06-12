@@ -22,6 +22,8 @@ const TEXT_FONT = 12.5
 const TEXT_LINE_HEIGHT = 20
 const TEXT_CHAR_WIDTH = TEXT_FONT * 0.6
 const TEXT_LOAD_AHEAD_PX = 600
+const TEXT_OVERSCAN = 16
+const TEXT_INITIAL_VIEWPORT_HEIGHT = 600
 const JSON_LINE_MAX = 2000
 
 Prism.manual = true
@@ -49,6 +51,12 @@ function highlightGrammar(fileName: string): Prism.Grammar | null {
 interface Leaf {
   type: string
   text: string
+}
+
+interface TextVirtualLine {
+  index: number
+  size: number
+  start: number
 }
 
 function flattenTokens(
@@ -373,7 +381,8 @@ export function TextDocViewer({
     count: lines.length,
     getScrollElement: () => scrollRef.current,
     estimateSize: () => lineHeight,
-    overscan: 16,
+    overscan: TEXT_OVERSCAN,
+    initialRect: { width: 800, height: TEXT_INITIAL_VIEWPORT_HEIGHT },
   })
 
   React.useLayoutEffect(() => {
@@ -398,6 +407,11 @@ export function TextDocViewer({
   const gutterWidth = Math.round(Math.max(40, 12 + digits * 8) * scale)
   const contentWidth = Math.ceil(maxChars * charWidth) + 24
   const totalWidth = gutterWidth + contentWidth
+  const measuredVirtualLines = virtualizer.getVirtualItems()
+  const virtualLines =
+    measuredVirtualLines.length > 0
+      ? measuredVirtualLines
+      : createInitialTextVirtualLines(lines.length, lineHeight)
 
   const meta = !snap
     ? "Loading"
@@ -440,7 +454,7 @@ export function TextDocViewer({
               position: "relative",
             }}
           >
-            {virtualizer.getVirtualItems().map((item) => (
+            {virtualLines.map((item) => (
               <div
                 key={item.index}
                 className="grid"
@@ -473,4 +487,20 @@ export function TextDocViewer({
       </ScrollerShell>
     </DocShell>
   )
+}
+
+function createInitialTextVirtualLines(
+  lineCount: number,
+  lineHeight: number
+): TextVirtualLine[] {
+  const windowLineCount = Math.min(
+    lineCount,
+    Math.ceil(TEXT_INITIAL_VIEWPORT_HEIGHT / lineHeight) + TEXT_OVERSCAN * 2
+  )
+
+  return Array.from({ length: windowLineCount }, (_, index) => ({
+    index,
+    size: lineHeight,
+    start: index * lineHeight,
+  }))
 }

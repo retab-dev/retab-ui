@@ -1,15 +1,17 @@
 // @vitest-environment jsdom
 import * as React from "react"
 import { act, cleanup, render } from "@testing-library/react"
-import { afterEach, describe, expect, it, vi } from "vitest"
 import type { JSONSchema7 } from "json-schema"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
 import {
-  addProperty,
   getChildNodeId,
   getChildPropertyId,
+} from "@/components/schema-editor/document/node-selectors"
+import {
+  addProperty,
   renameProperty,
-} from "@/components/schema-editor/document"
+} from "@/components/schema-editor/document/property-operations"
 import { requireAllProperties } from "@/components/schema-editor/schema-required-policy"
 import { useSchemaBuilderState } from "@/components/schema-editor/use-schema-builder-state"
 
@@ -125,7 +127,10 @@ describe("useSchemaBuilderState wiring", () => {
     }
     const { rerender } = render(<Harness schema={sample} />)
     expect(Object.keys(apiRef.current!.schema.properties!)).toEqual(["a", "b"])
-    const next: JSONSchema7 = { type: "object", properties: { x: { type: "boolean" } } }
+    const next: JSONSchema7 = {
+      type: "object",
+      properties: { x: { type: "boolean" } },
+    }
     act(() => rerender(<Harness schema={next} />))
     expect(apiRef.current!.schema).toEqual(requireAllProperties(next))
   })

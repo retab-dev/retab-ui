@@ -12,7 +12,10 @@ async renders, memory, and props explicit enough to trust in long sessions.
 viewer:
 
 ```tsx
-<PptxViewer src="/samples/deck.pptx" className="h-[600px]" />
+<PptxViewer
+  source={{ kind: "url", url: "/samples/deck.pptx", fileName: "deck.pptx" }}
+  className="h-[600px]"
+/>
 ```
 
 It should reserve correct slide boxes before rendering, render lazily without
@@ -56,8 +59,7 @@ Remaining concerns:
 - Fit-width scale can become zero or negative in very narrow containers.
 - Slide render failures are swallowed, leaving the slide skeleton visible
   indefinitely.
-- The error boundary resets on `src` only, even though other inputs can affect
-  the visible state.
+- The error boundary resets on source identity plus render-affecting inputs.
 - There are no focused regression tests for `PptxViewer`.
 
 ## Invariants
@@ -88,7 +90,7 @@ Keep the API narrow and slide-native:
 
 ```ts
 export interface PptxViewerProps {
-  src: string
+  source: PptxDocumentSource
   className?: string
   scale?: number
   toolbar?: boolean
@@ -105,7 +107,7 @@ export interface PptxViewerProps {
 
 Rules:
 
-- `src` is the deck identity.
+- `source.identityKey` is the deck identity.
 - `scale` should be either a controlled scale or renamed to `initialScale`.
 - `renderSlideOverlay` receives final rendered slide-box dimensions, including
   rotation.
@@ -276,7 +278,7 @@ Use mocked `pptxviewjs` and `jszip` modules.
 Test:
 
 - the viewer lazy-loads and renders slide chrome after Suspense
-- `src` changes recover from a previous error
+- Source identity changes recover from a previous error
 - prop scale behavior matches the chosen controlled or initial-only design
 - a single slide render failure shows per-slide error UI
 - unmounted slides do not set rendered state after cancellation

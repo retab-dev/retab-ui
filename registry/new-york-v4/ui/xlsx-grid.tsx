@@ -3,7 +3,18 @@
 import * as React from "react"
 
 import { xlsxColumnLabel, type XlsxCell } from "@/lib/xlsx-workbook"
+import {
+  fixedGridColumnWidths,
+} from "@/components/ui/fixed-grid-columns"
+import {
+  getFixedGridCanvasStyle,
+  getFixedGridRowWindowStyle,
+} from "@/components/ui/fixed-grid-layout"
+import { buildVirtualGridTemplate } from "@/components/ui/fixed-grid-template"
 import { useFixedGridVirtualization } from "@/components/ui/fixed-grid-virtualization"
+import type { GridCellCoordinate } from "@/components/ui/fixed-grid-selection"
+import { FixedGridViewport } from "@/components/ui/fixed-grid-viewport"
+import { HeaderAwareScrollbar } from "@/components/ui/header-aware-scrollbar"
 import {
   XLSX_BASE_COLUMN_WIDTH,
   XLSX_BASE_FONT_SIZE,
@@ -15,10 +26,7 @@ import {
   XlsxGridRow,
   type XlsxGridColumnItem,
 } from "@/components/ui/xlsx-grid-row"
-import {
-  HeaderAwareScrollbar,
-  XLSX_SCROLLBAR_CSS,
-} from "@/components/ui/xlsx-grid-scrollbar"
+import { XLSX_SCROLLBAR_CSS } from "@/components/ui/xlsx-grid-scrollbar"
 import { ScrollerShell } from "@/components/ui/xlsx-shadow-scope"
 
 export { XlsxGridSkeleton } from "@/components/ui/xlsx-grid-skeleton"
@@ -31,10 +39,7 @@ export interface XlsxScrollRequest {
   nonce: number
 }
 
-interface XlsxGridCellRef {
-  rowIndex: number
-  columnIndex: number
-}
+type XlsxGridCellRef = GridCellCoordinate
 
 export function XlsxGrid({
   rowCount,
@@ -104,14 +109,21 @@ export function XlsxGrid({
   const columnItems = React.useMemo(
     () =>
       virtualColumnItems.map((item) => ({
-        columnIndex: item.index,
-        size: item.size,
-      })) as XlsxGridColumnItem[],
+        key: String(item.index),
+        widthPx: item.widthPx,
+        metadata: { columnIndex: item.index },
+      })) satisfies XlsxGridColumnItem[],
     [virtualColumnItems]
   )
 
   const gridTemplate = React.useMemo(
-    () => buildGridTemplate({ gutterWidth, leftPad, columnItems, rightPad }),
+    () =>
+        buildVirtualGridTemplate({
+          leadingWidth: gutterWidth,
+          leftPad,
+          columnWidths: fixedGridColumnWidths(columnItems),
+          rightPad,
+        }),
     [gutterWidth, leftPad, columnItems, rightPad]
   )
   const totalWidth = gutterWidth + totalColumnSize
@@ -139,22 +151,19 @@ export function XlsxGrid({
         className="relative min-h-0 flex-1"
       >
         <style>{XLSX_SCROLLBAR_CSS}</style>
-        <div
-          ref={setScrollElement}
-          data-slot="xlsx-body"
+        <FixedGridViewport
+          scrollRef={setScrollElement}
+          dataSlot="xlsx-body"
           role="grid"
           aria-label={sheetName}
           aria-rowcount={rowCount}
           aria-colcount={columnCount}
           tabIndex={0}
-          className="absolute inset-0 overflow-auto"
         >
           <div
-            style={{
+            style={getFixedGridCanvasStyle({
               width: totalWidth,
-              minWidth: "100%",
-              position: "relative",
-            }}
+            })}
           >
             <div
               className="sticky top-0 z-20 grid border-b"
@@ -173,20 +182,17 @@ export function XlsxGrid({
               <Spacer width={leftPad} />
               {columnItems.map((item) => (
                 <div
-                  key={item.columnIndex}
+                  key={item.key}
                   className="flex items-center justify-center border-r font-medium text-muted-foreground last:border-r-0"
                 >
-                  {xlsxColumnLabel(item.columnIndex)}
+                  {xlsxColumnLabel(item.metadata.columnIndex)}
                 </div>
               ))}
               <Spacer width={rightPad} />
             </div>
 
             <div
-              style={{
-                position: "relative",
-                height: totalRowSize,
-              }}
+              style={getFixedGridRowWindowStyle({ height: totalRowSize })}
             >
               {virtualRows.map((virtualRow) => (
                 <XlsxGridRow
@@ -208,28 +214,9 @@ export function XlsxGrid({
               ))}
             </div>
           </div>
-        </div>
+        </FixedGridViewport>
         <HeaderAwareScrollbar scrollRef={scrollRef} headerHeight={rowHeight} />
       </ScrollerShell>
     </div>
   )
-}
-
-function buildGridTemplate({
-  gutterWidth,
-  leftPad,
-  columnItems,
-  rightPad,
-}: {
-  gutterWidth: number
-  leftPad: number
-  columnItems: XlsxGridColumnItem[]
-  rightPad: number
-}) {
-  const visibleColumns = columnItems
-    .map((column) => `${column.size}px`)
-    .join(" ")
-  return [`${gutterWidth}px`, `${leftPad}px`, visibleColumns, `${rightPad}px`]
-    .filter(Boolean)
-    .join(" ")
 }

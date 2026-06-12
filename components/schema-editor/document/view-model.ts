@@ -1,18 +1,18 @@
 import type { JSONSchema7Definition } from "json-schema"
 
+import { projectNode } from "@/components/schema-editor/document/convert"
 import {
   getEffectiveKind,
   isNullable,
   resolveRef,
 } from "@/components/schema-editor/document/derive"
-import { projectNode } from "@/components/schema-editor/document/convert"
+import type { SchemaEditorType } from "@/components/schema-editor/document/type-operations"
 import type {
   DocumentNode,
   EnumValue,
   PropertyEntry,
   SchemaDocument,
 } from "@/components/schema-editor/document/types"
-import type { SchemaEditorType } from "@/components/schema-editor/document/operations"
 
 export interface DocumentDefinitionView {
   definitionId: string
@@ -95,7 +95,9 @@ function getDocumentPropertyView(
 
 function getViewEffectiveNode(node: DocumentNode): DocumentNode {
   if (node.anyOf) {
-    return node.anyOf.find((branch) => branch.type !== "null" || branch.ref) ?? node
+    return (
+      node.anyOf.find((branch) => branch.type !== "null" || branch.ref) ?? node
+    )
   }
   return node
 }

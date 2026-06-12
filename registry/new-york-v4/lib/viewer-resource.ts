@@ -40,6 +40,7 @@ export type DownloadCapability =
 export interface ViewerResource {
   readonly source: ViewerSource
   readonly descriptor: ViewerDescriptor
+  readonly cacheKey: string
   readonly identityKey: string
   readonly fileName: string
   readonly mimeType?: string
@@ -98,19 +99,133 @@ export interface DescriptorOptions {
   mimeType?: string
 }
 
+const URL_RESOURCE_REGISTRY_MAX = 128
+
+const urlViewerResourceRegistry = new Map<string, ViewerResource>()
+let blobViewerResourceRegistry = new WeakMap<
+  Blob,
+  Map<string, ViewerResource>
+>()
+const blobObjectKeys = new WeakMap<Blob, string>()
+let nextBlobObjectKey = 0
+
 export function createViewerResource(
   source: ViewerSource,
   options: DescriptorOptions = {}
 ): ViewerResource {
   const descriptor = resolveViewerDescriptor({ source, ...options })
+  const cacheKey = viewerResourceCacheKey(source, descriptor)
+
+  if (source.kind === "url") {
+    return internUrlResource(source, descriptor, cacheKey)
+  }
+  if (source.kind === "blob") {
+    return internBlobResource(source, descriptor, cacheKey)
+  }
+  return createUncachedViewerResource(source, descriptor, cacheKey)
+}
+
+export function clearViewerResourceRegistryForTests() {
+  urlViewerResourceRegistry.clear()
+  blobViewerResourceRegistry = new WeakMap()
+}
+
+function createUncachedViewerResource(
+  source: ViewerSource,
+  descriptor: ViewerDescriptor,
+  cacheKey: string
+): ViewerResource {
   switch (source.kind) {
     case "url":
-      return createUrlResource(source, descriptor)
+      return createUrlResource(source, descriptor, cacheKey)
     case "blob":
-      return createBlobResource(source, descriptor)
+      return createBlobResource(source, descriptor, cacheKey)
     case "text":
-      return createTextResource(source, descriptor)
+      return createTextResource(source, descriptor, cacheKey)
   }
+}
+
+function internUrlResource(
+  source: UrlViewerSource,
+  descriptor: ViewerDescriptor,
+  cacheKey: string
+): ViewerResource {
+  const cached = urlViewerResourceRegistry.get(cacheKey)
+  if (cached) return cached
+
+  const resource = createUrlResource(source, descriptor, cacheKey)
+  urlViewerResourceRegistry.set(cacheKey, resource)
+  pruneUrlResourceRegistry()
+  return resource
+}
+
+function internBlobResource(
+  source: BlobViewerSource,
+  descriptor: ViewerDescriptor,
+  cacheKey: string
+): ViewerResource {
+  let resources = blobViewerResourceRegistry.get(source.blob)
+  if (!resources) {
+    resources = new Map()
+    blobViewerResourceRegistry.set(source.blob, resources)
+  }
+
+  const cached = resources.get(cacheKey)
+  if (cached) return cached
+
+  const resource = createBlobResource(source, descriptor, cacheKey)
+  resources.set(cacheKey, resource)
+  return resource
+}
+
+function pruneUrlResourceRegistry() {
+  while (urlViewerResourceRegistry.size > URL_RESOURCE_REGISTRY_MAX) {
+    const firstKey = urlViewerResourceRegistry.keys().next().value
+    if (!firstKey) return
+    urlViewerResourceRegistry.delete(firstKey)
+  }
+}
+
+function viewerResourceCacheKey(
+  source: ViewerSource,
+  descriptor: ViewerDescriptor
+) {
+  return [
+    source.kind,
+    descriptor.identityKey,
+    descriptor.category,
+    descriptor.displayName,
+    descriptor.downloadFileName,
+    descriptor.downloadHref ?? "",
+    descriptor.loadUrl ?? "",
+    descriptor.mimeType ?? "",
+    payloadCacheKey(source),
+  ].join("\u0000")
+}
+
+function payloadCacheKey(source: ViewerSource) {
+  if (source.kind === "url") return ""
+  if (source.kind === "blob") return blobObjectKey(source.blob)
+  return `text:${source.text.length}:${hashString(source.text)}`
+}
+
+function blobObjectKey(blob: Blob) {
+  let key = blobObjectKeys.get(blob)
+  if (!key) {
+    nextBlobObjectKey += 1
+    key = `blob-object:${nextBlobObjectKey}`
+    blobObjectKeys.set(blob, key)
+  }
+  return key
+}
+
+function hashString(text: string) {
+  let hash = 0x811c9dc5
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= text.charCodeAt(index)
+    hash = Math.imul(hash, 0x01000193)
+  }
+  return (hash >>> 0).toString(36)
 }
 
 export function blobSource(
@@ -125,9 +240,12 @@ export function blobSource(
   const blob =
     bytes instanceof Blob
       ? bytes
-      : new Blob([bytes instanceof ArrayBuffer ? bytes : new Uint8Array(bytes)], {
-          type: metadata.mimeType ?? "",
-        })
+      : new Blob(
+          [bytes instanceof ArrayBuffer ? bytes : new Uint8Array(bytes)],
+          {
+            type: metadata.mimeType ?? "",
+          }
+        )
   return {
     kind: "blob",
     blob,
@@ -140,9 +258,10 @@ export function blobSource(
 
 function createUrlResource(
   source: UrlViewerSource,
-  descriptor: ViewerDescriptor
+  descriptor: ViewerDescriptor,
+  cacheKey: string
 ): ViewerResource {
-  return resourceBase(source, descriptor, {
+  return resourceBase(source, descriptor, cacheKey, {
     getDownload: () => ({
       kind: "href",
       href: source.downloadUrl ?? source.url,
@@ -187,10 +306,11 @@ function createUrlResource(
 
 function createBlobResource(
   source: BlobViewerSource,
-  descriptor: ViewerDescriptor
+  descriptor: ViewerDescriptor,
+  cacheKey: string
 ): ViewerResource {
   const blob = source.blob
-  return resourceBase(source, descriptor, {
+  return resourceBase(source, descriptor, cacheKey, {
     getDownload: () =>
       source.downloadUrl
         ? {
@@ -225,9 +345,10 @@ function createBlobResource(
 
 function createTextResource(
   source: TextSource,
-  descriptor: ViewerDescriptor
+  descriptor: ViewerDescriptor,
+  cacheKey: string
 ): ViewerResource {
-  return resourceBase(source, descriptor, {
+  return resourceBase(source, descriptor, cacheKey, {
     getDownload: () => ({
       kind: "text",
       text: source.text,
@@ -261,6 +382,7 @@ function createTextResource(
 function resourceBase(
   source: ViewerSource,
   descriptor: ViewerDescriptor,
+  cacheKey: string,
   methods: Pick<
     ViewerResource,
     | "getDownload"
@@ -271,14 +393,15 @@ function resourceBase(
     | "readRange"
   >
 ): ViewerResource {
-  return {
+  return Object.freeze({
     source,
     descriptor,
+    cacheKey,
     identityKey: descriptor.identityKey,
     fileName: descriptor.downloadFileName,
     mimeType: descriptor.mimeType,
     ...methods,
-  }
+  })
 }
 
 async function fetchResource(

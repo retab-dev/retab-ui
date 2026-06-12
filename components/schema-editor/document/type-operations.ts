@@ -1,12 +1,13 @@
 import type { JSONSchema7TypeName } from "json-schema"
 
+import { mapPreserve } from "@/components/schema-editor/document/array"
 import { createId } from "@/components/schema-editor/document/id"
+import { updateNode } from "@/components/schema-editor/document/node-update"
 import type {
   DocumentNode,
   EnumValue,
   SchemaDocument,
 } from "@/components/schema-editor/document/types"
-import { mapPreserve, updateNode } from "@/components/schema-editor/document/tree"
 
 export type SchemaEditorType =
   | JSONSchema7TypeName

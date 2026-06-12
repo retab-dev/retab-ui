@@ -127,8 +127,8 @@ Implemented changes:
   height and column width from the virtualized table.
 - Added a true read-only cell path that renders display cells without cell
   editing hooks or the editor dispatcher.
-- Kept row virtualization fixed-height and moved the viewport windowing onto
-  TanStack Virtual, matching the CSV/XLSX viewer primitive.
+- Kept row virtualization fixed-height and moved viewport windowing onto the
+  shared fixed-row virtualizer used by dense grid viewers.
 - Reused `HeaderGridCell.leafCount` instead of recomputing leaf descendants
   while rendering headers.
 
@@ -419,7 +419,7 @@ Executed result:
 
 ### Scroll Updates Still Trigger Too Much React Work
 
-The row virtualizer correctly uses a fixed-height estimate, but every window
+The row virtualizer correctly uses fixed-height arithmetic, but every window
 shift still causes React reconciliation for many cells.
 
 Target:

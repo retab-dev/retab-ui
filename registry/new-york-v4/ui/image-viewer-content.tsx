@@ -8,6 +8,7 @@ import {
   type FrameSourceLease,
 } from "@/lib/image-source-cache"
 import { cn } from "@/lib/utils"
+import { type ViewerResource } from "@/lib/viewer-resource"
 import { ImageViewerToolbar } from "@/components/ui/image-viewer-chrome"
 import { ImageFrame } from "@/components/ui/image-viewer-frame"
 import {
@@ -23,11 +24,10 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area"
 
 export function ImageViewerContent({
-  src,
+  resource,
   className,
   scale: controlledScale,
   toolbar = true,
-  downloadFileName,
   renderFrameOverlay,
   onVisibleFrameChange,
   onScrollProgressChange,
@@ -37,9 +37,10 @@ export function ImageViewerContent({
   forwardedRef,
 }: ImageViewerProps & {
   forwardedRef?: React.ForwardedRef<ImageViewerHandle>
+  resource: ViewerResource
 }) {
-  const source = React.use(getImageSource(src))
-  const sourceLeaseRef = useFrameSourceLease(src, source)
+  const frameSource = React.use(getImageSource(resource))
+  const sourceLeaseRef = useFrameSourceLease(resource, frameSource)
   const { frameListRef, frameListWidth } = useFrameListWidth()
   const {
     isScaleControlled,
@@ -47,14 +48,14 @@ export function ImageViewerContent({
     rotation,
     scale,
     setViewerScale,
-  } = useImageViewerScale(source, controlledScale, frameListWidth)
+  } = useImageViewerScale(frameSource, controlledScale, frameListWidth)
   const { currentFrameNumber, handleScroll, scrollViewportRef } =
     useVisibleFrame(onScrollProgressChange, onVisibleFrameChange)
   useImageViewerHandle(forwardedRef, scrollViewportRef)
 
-  const frameCount = source.frames.length
+  const frameCount = frameSource.frames.length
   const countLabel =
-    source.kind === "tiff"
+    frameSource.kind === "tiff"
       ? `Page ${Math.min(currentFrameNumber, frameCount)} of ${frameCount}`
       : `${frameCount} image${frameCount === 1 ? "" : "s"}`
 
@@ -72,8 +73,7 @@ export function ImageViewerContent({
         <ImageViewerToolbar
           countLabel={countLabel}
           scale={scale}
-          src={src}
-          downloadFileName={downloadFileName}
+          download={resource.getDownload()}
           isScaleControlled={isScaleControlled}
           onZoomOut={() => setViewerScale(clamp(scale / 1.2, 0.25, 5))}
           onZoomIn={() => setViewerScale(clamp(scale * 1.2, 0.25, 5))}
@@ -99,10 +99,10 @@ export function ImageViewerContent({
               ref={frameListRef}
               className="flex flex-col items-center gap-4 p-4"
             >
-              {source.frames.map((_, frameIndex) => (
+              {frameSource.frames.map((_, frameIndex) => (
                 <ImageFrame
                   key={frameIndex}
-                  source={source}
+                  source={frameSource}
                   frameIndex={frameIndex}
                   scale={scale}
                   rotation={rotation}
@@ -128,8 +128,8 @@ export function ImageViewerContent({
   )
 }
 
-export function getImageSource(src: string): Promise<FrameSource> {
-  return imageFrameSourceManager.load(src, createTiffWorker)
+export function getImageSource(resource: ViewerResource): Promise<FrameSource> {
+  return imageFrameSourceManager.load(resource, createTiffWorker)
 }
 
 export function clearImageSourceCacheForTests() {
@@ -137,24 +137,24 @@ export function clearImageSourceCacheForTests() {
 }
 
 function useFrameSourceLease(
-  src: string,
+  resource: ViewerResource,
   source: FrameSource
 ): React.RefCallback<HTMLDivElement> {
   return React.useCallback(
     (element: HTMLDivElement | null) => {
       if (!element) return
-      const lease = retainImageSource(src, source)
+      const lease = retainImageSource(resource, source)
       return () => lease?.release()
     },
-    [src, source]
+    [resource, source]
   )
 }
 
 function retainImageSource(
-  src: string,
+  resource: ViewerResource,
   source: FrameSource
 ): FrameSourceLease | null {
-  return imageFrameSourceManager.retain(src, source)
+  return imageFrameSourceManager.retain(resource, source)
 }
 
 function createTiffWorker() {

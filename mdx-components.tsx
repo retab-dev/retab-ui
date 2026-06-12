@@ -46,6 +46,7 @@ import {
   SegmentSidebarDemo,
   SegmentSidebarSplitDemo,
 } from "@/components/segment-sidebar-demo"
+import { TextViewerDemo } from "@/components/text-viewer-demo"
 import {
   ClassificationViewerDemo,
   EditViewerDemo,
@@ -383,6 +384,7 @@ export const mdxComponents = {
   SegmentLegendSplitDemo,
   FileThumbnailDemo,
   FileThumbnailFormatsDemo,
+  TextViewerDemo,
   Link: ({ className, ...props }: React.ComponentProps<typeof Link>) => (
     <Link
       className={cn("font-medium underline underline-offset-4", className)}

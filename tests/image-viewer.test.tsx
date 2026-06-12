@@ -27,6 +27,11 @@ import {
   type TiffWorkerResponse,
 } from "@/registry/new-york-v4/lib/image-tiff-source"
 import {
+  blobSource,
+  clearViewerResourceRegistryForTests,
+  createViewerResource,
+} from "@/registry/new-york-v4/lib/viewer-resource"
+import {
   renderImageSourceOverlay,
   rotateImageArea,
 } from "@/registry/new-york-v4/ui/image-source"
@@ -43,8 +48,77 @@ afterEach(() => {
   vi.useRealTimers()
   cleanup()
   clearImageSourceCacheForTests()
+  clearViewerResourceRegistryForTests()
   vi.restoreAllMocks()
   vi.unstubAllGlobals()
+})
+
+function imageUrlSource(url: string, fileName?: string, mimeType?: string) {
+  return { kind: "url" as const, url, fileName, mimeType }
+}
+
+function imageUrlResource(url: string, fileName?: string, mimeType?: string) {
+  return createViewerResource(imageUrlSource(url, fileName, mimeType))
+}
+
+describe("ViewerResource registry", () => {
+  it("interns URL resources by resolved descriptor identity", () => {
+    const first = imageUrlResource("/same.png", "same.png")
+    const second = imageUrlResource("/same.png", "same.png")
+    const renamed = imageUrlResource("/same.png", "renamed.png")
+
+    expect(second).toBe(first)
+    expect(Object.isFrozen(first)).toBe(true)
+    expect(renamed).not.toBe(first)
+  })
+
+  it("interns Blob resources only for the same Blob object and descriptor", async () => {
+    const blob = new Blob(["first"], { type: "image/png" })
+    const first = createViewerResource(
+      blobSource(blob, {
+        identityKey: "blob:same",
+        fileName: "same.png",
+      })
+    )
+    const second = createViewerResource(
+      blobSource(blob, {
+        identityKey: "blob:same",
+        fileName: "same.png",
+      })
+    )
+    const changedBytes = createViewerResource(
+      blobSource(new Blob(["second"], { type: "image/png" }), {
+        identityKey: "blob:same",
+        fileName: "same.png",
+      })
+    )
+
+    expect(second).toBe(first)
+    expect(changedBytes).not.toBe(first)
+    expect(changedBytes.cacheKey).not.toBe(first.cacheKey)
+    await expect(first.readText()).resolves.toBe("first")
+    await expect(changedBytes.readText()).resolves.toBe("second")
+  })
+
+  it("does not globally intern inline text payloads", async () => {
+    const first = createViewerResource({
+      kind: "text",
+      text: "first",
+      fileName: "same.txt",
+      identityKey: "text:same",
+    })
+    const second = createViewerResource({
+      kind: "text",
+      text: "second",
+      fileName: "same.txt",
+      identityKey: "text:same",
+    })
+
+    expect(second).not.toBe(first)
+    expect(second.cacheKey).not.toBe(first.cacheKey)
+    await expect(first.readText()).resolves.toBe("first")
+    await expect(second.readText()).resolves.toBe("second")
+  })
 })
 
 function bitmap(width = 10, height = 10) {
@@ -390,10 +464,12 @@ describe("ImageSource lifecycle", () => {
       vi.fn(() => Promise.resolve(bitmap()))
     )
 
-    await expect(getImageSource("/retry.png")).rejects.toThrow(
-      "Failed to load image: 500"
-    )
-    await expect(getImageSource("/retry.png")).resolves.toMatchObject({
+    await expect(
+      getImageSource(imageUrlResource("/retry.png"))
+    ).rejects.toThrow("Failed to load resource: 500")
+    await expect(
+      getImageSource(imageUrlResource("/retry.png"))
+    ).resolves.toMatchObject({
       kind: "native-image",
       frames: [{ intrinsicSize: { width: 10, height: 10 } }],
     })
@@ -402,12 +478,18 @@ describe("ImageSource lifecycle", () => {
 })
 
 describe("FrameSourceManager lifecycle", () => {
-  it("shares in-flight loads for the same src", async () => {
+  it("shares in-flight loads for the same resource identity", async () => {
     const manager = new FrameSourceManager()
     stubImageLoading()
 
-    const first = manager.load("/shared.png", () => new Worker(""))
-    const second = manager.load("/shared.png", () => new Worker(""))
+    const first = manager.load(
+      imageUrlResource("/shared.png"),
+      () => new Worker("")
+    )
+    const second = manager.load(
+      imageUrlResource("/shared.png"),
+      () => new Worker("")
+    )
 
     expect(first).toBe(second)
     await expect(first).resolves.toMatchObject({ kind: "native-image" })
@@ -431,10 +513,10 @@ describe("FrameSourceManager lifecycle", () => {
     )
 
     await expect(
-      manager.load("/retry.png", () => new Worker(""))
-    ).rejects.toThrow("Failed to load image: 500")
+      manager.load(imageUrlResource("/retry.png"), () => new Worker(""))
+    ).rejects.toThrow("Failed to load resource: 500")
     await expect(
-      manager.load("/retry.png", () => new Worker(""))
+      manager.load(imageUrlResource("/retry.png"), () => new Worker(""))
     ).resolves.toMatchObject({ kind: "native-image" })
     expect(fetch).toHaveBeenCalledTimes(2)
   })
@@ -448,18 +530,21 @@ describe("FrameSourceManager lifecycle", () => {
         signal = init?.signal ?? undefined
         return new Promise((_resolve, reject) => {
           signal?.addEventListener("abort", () => {
-            reject(signal?.reason ?? new Error("aborted"))
+            reject(new DOMException("Aborted", "AbortError"))
           })
         })
       })
     )
 
-    const load = manager.load("/abort.png", () => new Worker(""))
+    const load = manager.load(
+      imageUrlResource("/abort.png"),
+      () => new Worker("")
+    )
     await Promise.resolve()
     manager.clear()
 
     expect(signal?.aborted).toBe(true)
-    await expect(load).rejects.toThrow("Image source disposed")
+    await expect(load).rejects.toThrow("Loading was cancelled.")
   })
 
   it("loads declared native images from a blob without materializing an ArrayBuffer", async () => {
@@ -481,7 +566,10 @@ describe("FrameSourceManager lifecycle", () => {
     )
 
     await expect(
-      manager.load("/declared-native.png", () => new Worker(""))
+      manager.load(
+        imageUrlResource("/declared-native.png"),
+        () => new Worker("")
+      )
     ).resolves.toMatchObject({ kind: "native-image" })
 
     expect(response.blob).toHaveBeenCalledTimes(1)
@@ -503,7 +591,7 @@ describe("FrameSourceManager lifecycle", () => {
     )
 
     const load = manager.load(
-      "/declared.tiff",
+      imageUrlResource("/declared.tiff"),
       () => worker as unknown as Worker
     )
     await waitForWorkerPost(worker)
@@ -523,7 +611,9 @@ describe("FrameSourceManager lifecycle", () => {
     const response = {
       ok: true,
       headers: { get: vi.fn(() => null) },
-      blob: vi.fn(() => Promise.resolve(new Blob())),
+      blob: vi.fn(() =>
+        Promise.resolve(new Blob([Uint8Array.of(0x49, 0x49, 0x2a, 0)]))
+      ),
       arrayBuffer: vi.fn(() =>
         Promise.resolve(Uint8Array.of(0x49, 0x49, 0x2a, 0).buffer)
       ),
@@ -533,11 +623,14 @@ describe("FrameSourceManager lifecycle", () => {
       vi.fn(() => Promise.resolve(response))
     )
 
-    const load = manager.load("/unknown", () => worker as unknown as Worker)
+    const load = manager.load(
+      imageUrlResource("/unknown"),
+      () => worker as unknown as Worker
+    )
     await waitForWorkerPost(worker)
 
-    expect(response.arrayBuffer).toHaveBeenCalledTimes(1)
-    expect(response.blob).not.toHaveBeenCalled()
+    expect(response.blob).toHaveBeenCalledTimes(1)
+    expect(response.arrayBuffer).not.toHaveBeenCalled()
     worker.emit({
       type: "initOk",
       frames: [{ intrinsicSize: { width: 10, height: 10 } }],
@@ -545,13 +638,13 @@ describe("FrameSourceManager lifecycle", () => {
     await expect(load).resolves.toMatchObject({ kind: "tiff" })
   })
 
-  it("streams unknown native responses into a blob without full ArrayBuffer buffering", async () => {
+  it("loads unknown native responses as a blob without full ArrayBuffer buffering", async () => {
     const manager = new FrameSourceManager()
-    const clonedBlob = new Blob([Uint8Array.of(1, 2, 3, 4)], {
+    const responseBlob = new Blob([Uint8Array.of(1, 2, 3, 4)], {
       type: "image/png",
     })
     const clone = {
-      blob: vi.fn(() => Promise.resolve(clonedBlob)),
+      blob: vi.fn(() => Promise.resolve(responseBlob)),
     }
     const response = {
       ok: true,
@@ -563,7 +656,7 @@ describe("FrameSourceManager lifecycle", () => {
           controller.close()
         },
       }),
-      blob: vi.fn(() => Promise.resolve(new Blob())),
+      blob: vi.fn(() => Promise.resolve(responseBlob)),
       arrayBuffer: vi.fn(() => Promise.resolve(new ArrayBuffer(4))),
       clone: vi.fn(() => clone),
     } as unknown as Response
@@ -577,24 +670,27 @@ describe("FrameSourceManager lifecycle", () => {
     )
 
     await expect(
-      manager.load("/unknown-native", () => new Worker(""))
+      manager.load(imageUrlResource("/unknown-native"), () => new Worker(""))
     ).resolves.toMatchObject({ kind: "native-image" })
 
     expect(response.arrayBuffer).not.toHaveBeenCalled()
-    expect(response.blob).not.toHaveBeenCalled()
-    expect(response.clone).toHaveBeenCalledTimes(1)
-    expect(clone.blob).toHaveBeenCalledTimes(1)
+    expect(response.blob).toHaveBeenCalledTimes(1)
+    expect(response.clone).not.toHaveBeenCalled()
+    expect(clone.blob).not.toHaveBeenCalled()
   })
 
   it("disposes the source after the last lease release settles", async () => {
     vi.useFakeTimers()
     const manager = new FrameSourceManager()
     stubImageLoading()
-    const source = await manager.load("/lease.png", () => new Worker(""))
+    const source = await manager.load(
+      imageUrlResource("/lease.png"),
+      () => new Worker("")
+    )
     const dispose = vi.spyOn(source, "dispose")
 
-    const firstLease = manager.retain("/lease.png", source)
-    const secondLease = manager.retain("/lease.png", source)
+    const firstLease = manager.retain(imageUrlResource("/lease.png"), source)
+    const secondLease = manager.retain(imageUrlResource("/lease.png"), source)
 
     firstLease?.release()
     expect(dispose).not.toHaveBeenCalled()
@@ -610,12 +706,21 @@ describe("FrameSourceManager lifecycle", () => {
     vi.useFakeTimers()
     const manager = new FrameSourceManager()
     stubImageLoading()
-    const source = await manager.load("/lease-again.png", () => new Worker(""))
+    const source = await manager.load(
+      imageUrlResource("/lease-again.png"),
+      () => new Worker("")
+    )
     const dispose = vi.spyOn(source, "dispose")
 
-    const firstLease = manager.retain("/lease-again.png", source)
+    const firstLease = manager.retain(
+      imageUrlResource("/lease-again.png"),
+      source
+    )
     firstLease?.release()
-    const secondLease = manager.retain("/lease-again.png", source)
+    const secondLease = manager.retain(
+      imageUrlResource("/lease-again.png"),
+      source
+    )
 
     await vi.advanceTimersByTimeAsync(0)
     expect(dispose).not.toHaveBeenCalled()
@@ -631,11 +736,14 @@ describe("FrameSourceManager lifecycle", () => {
     const manager = new FrameSourceManager()
     stubImageLoading()
     const source = await manager.load(
-      "/duplicate-release.png",
+      imageUrlResource("/duplicate-release.png"),
       () => new Worker("")
     )
     const dispose = vi.spyOn(source, "dispose")
-    const lease = manager.retain("/duplicate-release.png", source)
+    const lease = manager.retain(
+      imageUrlResource("/duplicate-release.png"),
+      source
+    )
 
     lease?.release()
     lease?.release()
@@ -663,7 +771,10 @@ describe("FrameSourceManager lifecycle", () => {
       vi.fn(() => pendingBitmap.promise)
     )
 
-    const load = manager.load("/pending.png", () => new Worker(""))
+    const load = manager.load(
+      imageUrlResource("/pending.png"),
+      () => new Worker("")
+    )
     await Promise.resolve()
     manager.clear()
     pendingBitmap.resolve(bitmap())
@@ -675,7 +786,10 @@ describe("FrameSourceManager lifecycle", () => {
     vi.useFakeTimers()
     const manager = new FrameSourceManager({ unclaimedSourceTimeoutMs: 50 })
     stubImageLoading()
-    const source = await manager.load("/unclaimed.png", () => new Worker(""))
+    const source = await manager.load(
+      imageUrlResource("/unclaimed.png"),
+      () => new Worker("")
+    )
     const dispose = vi.spyOn(source, "dispose")
 
     await vi.advanceTimersByTimeAsync(49)
@@ -683,7 +797,10 @@ describe("FrameSourceManager lifecycle", () => {
     await vi.advanceTimersByTimeAsync(1)
 
     expect(dispose).toHaveBeenCalledTimes(1)
-    const retry = manager.load("/unclaimed.png", () => new Worker(""))
+    const retry = manager.load(
+      imageUrlResource("/unclaimed.png"),
+      () => new Worker("")
+    )
     await expect(retry).resolves.toMatchObject({ kind: "native-image" })
     expect(fetch).toHaveBeenCalledTimes(2)
     vi.useRealTimers()
@@ -693,9 +810,12 @@ describe("FrameSourceManager lifecycle", () => {
     vi.useFakeTimers()
     const manager = new FrameSourceManager({ unclaimedSourceTimeoutMs: 50 })
     stubImageLoading()
-    const source = await manager.load("/claimed.png", () => new Worker(""))
+    const source = await manager.load(
+      imageUrlResource("/claimed.png"),
+      () => new Worker("")
+    )
     const dispose = vi.spyOn(source, "dispose")
-    const lease = manager.retain("/claimed.png", source)
+    const lease = manager.retain(imageUrlResource("/claimed.png"), source)
 
     await vi.advanceTimersByTimeAsync(50)
     expect(dispose).not.toHaveBeenCalled()
@@ -710,7 +830,7 @@ describe("FrameSourceManager lifecycle", () => {
     const manager = new FrameSourceManager({ unclaimedSourceTimeoutMs: 50 })
     stubImageLoading()
     const source = await manager.load(
-      "/clear-unclaimed.png",
+      imageUrlResource("/clear-unclaimed.png"),
       () => new Worker("")
     )
     const dispose = vi.spyOn(source, "dispose")
@@ -882,7 +1002,9 @@ describe("ImageViewer scale semantics", () => {
 
     let view!: RenderResult
     await act(async () => {
-      view = render(<ImageViewer src="/scale.png" scale={2} />)
+      view = render(
+        <ImageViewer source={imageUrlSource("/scale.png")} scale={2} />
+      )
     })
 
     expect(
@@ -903,7 +1025,9 @@ describe("ImageViewer scale semantics", () => {
     ).toBe(true)
 
     await act(async () => {
-      view.rerender(<ImageViewer src="/scale.png" scale={3} />)
+      view.rerender(
+        <ImageViewer source={imageUrlSource("/scale.png")} scale={3} />
+      )
     })
 
     expect(
@@ -920,7 +1044,7 @@ describe("ImageViewer scale semantics", () => {
     stubViewerLayout()
 
     await act(async () => {
-      render(<ImageViewer src="/uncontrolled-scale.png" />)
+      render(<ImageViewer source={imageUrlSource("/uncontrolled-scale.png")} />)
     })
 
     expect(
@@ -970,7 +1094,7 @@ describe("ImageViewer scale semantics", () => {
     vi.stubGlobal("Worker", MetadataWorker)
 
     await act(async () => {
-      render(<ImageViewer src="/mixed.tiff" />)
+      render(<ImageViewer source={imageUrlSource("/mixed.tiff")} />)
     })
 
     expect(

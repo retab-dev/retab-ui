@@ -1,8 +1,8 @@
 "use client"
 
+import { PdfViewer } from "@/components/ui/pdf-viewer"
 import type { PartitionResult } from "@/components/viewers/lib/partition-types"
 import { PartitionViewer } from "@/components/viewers/partition/partition-viewer"
-import { PdfViewer } from "@/components/ui/pdf-viewer"
 
 const PDF_URL = "/samples/attention.pdf"
 
@@ -34,9 +34,12 @@ export function PartitionViewerBlock() {
         result={PARTITION_RESULT}
         renderDocument={(handlers) => (
           <PdfViewer
-            src={PDF_URL}
+            source={{
+              kind: "url",
+              url: PDF_URL,
+              fileName: "attention.pdf",
+            }}
             bare
-            downloadFileName="attention.pdf"
             slots={handlers.slots}
             onVisiblePageChange={handlers.onCurrentPageChange}
             onScrollProgressChange={handlers.onScrollProgressChange}

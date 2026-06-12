@@ -1,17 +1,17 @@
+import { mapPreserve } from "@/components/schema-editor/document/array"
+import { createId } from "@/components/schema-editor/document/id"
+import { getOwnProperty } from "@/components/schema-editor/document/node-selectors"
+import { updateNode } from "@/components/schema-editor/document/node-update"
+import {
+  childNodes,
+  getNode,
+} from "@/components/schema-editor/document/traversal"
 import { createNode } from "@/components/schema-editor/document/type-operations"
 import type {
   DocumentNode,
   PropertyEntry,
   SchemaDocument,
 } from "@/components/schema-editor/document/types"
-import {
-  childNodes,
-  getNode,
-  getOwnProperty,
-  mapPreserve,
-  updateNode,
-} from "@/components/schema-editor/document/tree"
-import { createId } from "@/components/schema-editor/document/id"
 
 function updateObjectProperties(
   doc: SchemaDocument,
@@ -32,7 +32,9 @@ export function findOwningProperty(
   const visit = (node: DocumentNode) => {
     if (result) return
     if (node.properties) {
-      const index = node.properties.findIndex((property) => property.id === propertyId)
+      const index = node.properties.findIndex(
+        (property) => property.id === propertyId
+      )
       if (index >= 0) {
         result = { parentId: node.id, index }
         return
@@ -56,7 +58,10 @@ export function addProperty(
     required: init.required ?? false,
     node: init.node ?? createNode("string"),
   }
-  return updateObjectProperties(doc, parentId, (properties) => [...properties, entry])
+  return updateObjectProperties(doc, parentId, (properties) => [
+    ...properties,
+    entry,
+  ])
 }
 
 export function removeProperty(

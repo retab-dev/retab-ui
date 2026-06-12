@@ -183,9 +183,12 @@ function PdfTab() {
     <ExtractionShell link={link} extraction={PDF_EXTRACTION}>
       <PdfViewer
         ref={viewerRef}
-        src={PDF_URL}
+        source={{
+          kind: "url",
+          url: PDF_URL,
+          fileName: "bank-statement.pdf",
+        }}
         bare
-        downloadFileName="bank-statement.pdf"
         className="h-full"
         renderPageOverlay={renderPdfSourceOverlay(link.activeSource)}
       />
@@ -201,9 +204,12 @@ function ImageTab() {
     <ExtractionShell link={link} extraction={IMAGE_EXTRACTION}>
       <ImageViewer
         ref={viewerRef}
-        src={IMAGE_URL}
+        source={{
+          kind: "url",
+          url: IMAGE_URL,
+          fileName: "attention-page-1.png",
+        }}
         bare
-        downloadFileName="attention-page-1.png"
         className="h-full"
         renderFrameOverlay={renderImageSourceOverlay(link.activeSource)}
       />

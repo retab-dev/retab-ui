@@ -4,15 +4,16 @@ import * as React from "react"
 import { Download, Maximize, Minus, Plus, RotateCw } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { type DownloadCapability } from "@/lib/viewer-resource"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
+import { ViewerDownloadAnchor } from "@/components/ui/viewer-download"
 
 export interface ImageViewerToolbarProps {
   countLabel: string
   scale: number
-  src: string
-  downloadFileName?: string
+  download: DownloadCapability
   isScaleControlled?: boolean
   onZoomOut(): void
   onZoomIn(): void
@@ -23,8 +24,7 @@ export interface ImageViewerToolbarProps {
 export function ImageViewerToolbar({
   countLabel,
   scale,
-  src,
-  downloadFileName,
+  download,
   isScaleControlled = false,
   onZoomOut,
   onZoomIn,
@@ -71,14 +71,7 @@ export function ImageViewerToolbar({
           className="size-7"
           aria-label="Download"
           title="Download"
-          render={
-            <a
-              href={src}
-              download={downloadFileName}
-              target="_blank"
-              rel="noreferrer"
-            />
-          }
+          render={<ViewerDownloadAnchor download={download} />}
         >
           <Download />
         </Button>

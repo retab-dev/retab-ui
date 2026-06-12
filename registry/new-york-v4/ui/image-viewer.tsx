@@ -8,6 +8,7 @@ import {
   type FrameDescriptor,
   type FrameSource,
 } from "@/lib/image-frame-source"
+import { createViewerResource } from "@/lib/viewer-resource"
 import {
   ImageViewerErrorBoundary,
   ImageViewerFallback,
@@ -23,6 +24,7 @@ import type {
 } from "@/components/ui/image-viewer-types"
 
 export type {
+  ImageDocumentSource,
   ImageFrameOverlayProps,
   ImageViewerHandle,
   ImageViewerProps,
@@ -35,17 +37,27 @@ export const ImageViewer = React.forwardRef<
   ImageViewerProps
 >(function ImageViewer(props, ref) {
   const isClient = useIsClient()
+  const resource = React.useMemo(
+    () =>
+      createViewerResource(props.source, {
+        fileName: props.downloadFileName,
+      }),
+    [props.downloadFileName, props.source]
+  )
   if (!isClient) {
     return <ImageViewerFallback className={props.className} bare={props.bare} />
   }
   return (
-    <ImageViewerErrorBoundary className={props.className} resetKey={props.src}>
+    <ImageViewerErrorBoundary
+      className={props.className}
+      resetKey={resource.cacheKey}
+    >
       <React.Suspense
         fallback={
           <ImageViewerFallback className={props.className} bare={props.bare} />
         }
       >
-        <ImageViewerContent {...props} forwardedRef={ref} />
+        <ImageViewerContent {...props} forwardedRef={ref} resource={resource} />
       </React.Suspense>
     </ImageViewerErrorBoundary>
   )

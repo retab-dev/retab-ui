@@ -1,8 +1,8 @@
 "use client"
 
+import { PdfViewer } from "@/components/ui/pdf-viewer"
 import type { ParseResponse } from "@/components/viewers/lib/parse-types"
 import { ParseViewer } from "@/components/viewers/parse/parse-viewer"
-import { PdfViewer } from "@/components/ui/pdf-viewer"
 import parseSample from "@/components/viewers/sample-data/parse.json"
 
 const PDF_URL = "/samples/bank-statement-x4uhhi7t.pdf"
@@ -28,9 +28,12 @@ export function ParseViewerBlock() {
         result={PARSE_RESULT}
         renderDocument={(handlers) => (
           <PdfViewer
-            src={PDF_URL}
+            source={{
+              kind: "url",
+              url: PDF_URL,
+              fileName: "bank-statement.pdf",
+            }}
             bare
-            downloadFileName="bank-statement.pdf"
             onVisiblePageChange={handlers.onCurrentPageChange}
             onScrollProgressChange={handlers.onScrollProgressChange}
             className="h-full"

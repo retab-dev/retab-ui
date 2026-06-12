@@ -1,11 +1,11 @@
-import { describe, expect, it } from "vitest"
 import type { JSONSchema7 } from "json-schema"
+import { describe, expect, it } from "vitest"
 
+import { fromJsonSchema } from "@/components/schema-editor/document/convert"
 import {
-  fromJsonSchema,
   getDocumentNodeView,
   getSchemaDocumentView,
-} from "@/components/schema-editor/document"
+} from "@/components/schema-editor/document/view-model"
 
 describe("schema document view model", () => {
   it("projects object properties with stable property ids", () => {
@@ -86,12 +86,13 @@ describe("schema document view model", () => {
   })
 
   it("builds a large object view within an interactive budget", () => {
-    const properties: NonNullable<JSONSchema7["properties"]> = Object.fromEntries(
-      Array.from({ length: 750 }, (_, index) => [
-        `field_${index}`,
-        { type: index % 2 === 0 ? "string" : "number" } satisfies JSONSchema7,
-      ])
-    )
+    const properties: NonNullable<JSONSchema7["properties"]> =
+      Object.fromEntries(
+        Array.from({ length: 750 }, (_, index) => [
+          `field_${index}`,
+          { type: index % 2 === 0 ? "string" : "number" } satisfies JSONSchema7,
+        ])
+      )
     const doc = fromJsonSchema({ type: "object", properties })
 
     const startedAt = performance.now()

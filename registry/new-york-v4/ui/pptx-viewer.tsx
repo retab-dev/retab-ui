@@ -2,12 +2,12 @@
 
 import * as React from "react"
 
-import type { BlobViewerSource, UrlViewerSource } from "@/lib/viewer-source"
 import { cn } from "@/lib/utils"
 import {
   createViewerResource,
   type ViewerResource,
 } from "@/lib/viewer-resource"
+import type { BlobViewerSource, UrlViewerSource } from "@/lib/viewer-source"
 
 import {
   getPptxFitScale,
@@ -83,7 +83,7 @@ export function PptxViewer(props: PptxViewerProps) {
       bare={props.bare}
       download={resource.getDownload()}
       resetKey={getPptxResetKey({
-        identityKey: resource.identityKey,
+        cacheKey: resource.cacheKey,
         scale: props.scale,
         defaultScale: props.defaultScale,
         eager: props.eager,

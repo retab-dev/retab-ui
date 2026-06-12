@@ -165,7 +165,7 @@ const sourceCache = new DisposableLruCache<string, SourceCacheEntry>(
 )
 
 export function getPptxSource(resource: ViewerResource): Promise<PptxSource> {
-  const cacheKey = resource.identityKey
+  const cacheKey = resource.cacheKey
   const cached = sourceCache.get(cacheKey)
   if (cached) return cached.promise
 

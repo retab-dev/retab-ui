@@ -3,6 +3,11 @@
 import * as React from "react"
 
 import { cn } from "@/lib/utils"
+import {
+  createViewerResource,
+  type ViewerResource,
+} from "@/lib/viewer-resource"
+import type { BlobViewerSource, UrlViewerSource } from "@/lib/viewer-source"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
 import { createPdfPageLayout, getPdfPageLayout } from "./pdf-viewer-layout"
@@ -38,6 +43,8 @@ export type {
   PdfViewerHandle,
   PdfViewerSlots,
 } from "./pdf-viewer-types"
+
+export type PdfDocumentSource = UrlViewerSource | BlobViewerSource
 
 function useIsClient() {
   return React.useSyncExternalStore(
@@ -78,8 +85,8 @@ export function PdfHighlight({
 }
 
 export interface PdfViewerProps {
-  /** URL of the PDF (same-origin or CORS-enabled). */
-  src: string
+  /** Canonical PDF source. URL sources preserve PDF.js range-loading behavior. */
+  source: PdfDocumentSource
   className?: string
   /** Controlled rendered scale; when omitted the viewer fits page width until manually zoomed. */
   scale?: number
@@ -111,6 +118,13 @@ export interface PdfViewerProps {
 export const PdfViewer = React.forwardRef<PdfViewerHandle, PdfViewerProps>(
   function PdfViewer(props, ref) {
     const isClient = useIsClient()
+    const resource = React.useMemo(
+      () =>
+        createViewerResource(props.source, {
+          fileName: props.downloadFileName,
+        }),
+      [props.downloadFileName, props.source]
+    )
     const hasRail = Boolean(props.slots?.left ?? props.slots?.right)
     const showRailToggle = Boolean(hasRail && (props.railToggle ?? true))
 
@@ -126,7 +140,10 @@ export const PdfViewer = React.forwardRef<PdfViewerHandle, PdfViewerProps>(
     }
 
     return (
-      <PdfErrorBoundary className={props.className} resetKey={props.src}>
+      <PdfErrorBoundary
+        className={props.className}
+        resetKey={resource.cacheKey}
+      >
         <React.Suspense
           fallback={
             <PdfViewerFallback
@@ -137,7 +154,7 @@ export const PdfViewer = React.forwardRef<PdfViewerHandle, PdfViewerProps>(
             />
           }
         >
-          <PdfViewerInner {...props} forwardedRef={ref} />
+          <PdfViewerInner {...props} forwardedRef={ref} resource={resource} />
         </React.Suspense>
       </PdfErrorBoundary>
     )
@@ -145,7 +162,7 @@ export const PdfViewer = React.forwardRef<PdfViewerHandle, PdfViewerProps>(
 )
 
 function PdfViewerInner({
-  src,
+  resource,
   className,
   scale: controlledScale,
   defaultScale,
@@ -162,6 +179,7 @@ function PdfViewerInner({
   forwardedRef,
 }: PdfViewerProps & {
   forwardedRef?: React.ForwardedRef<PdfViewerHandle>
+  resource: ViewerResource
 }) {
   const topSlot = slots?.top
   const bottomSlot = slots?.bottom
@@ -173,11 +191,11 @@ function PdfViewerInner({
   )
   const [railsOpen, setRailsOpen] = React.useState(defaultRailsOpen ?? true)
 
-  const document = React.use(getDocumentResource(src))
+  const document = React.use(getDocumentResource(resource))
   React.useEffect(() => {
-    retainDocumentResource(src, document)
-    return () => releaseDocumentResource(src, document)
-  }, [src, document])
+    retainDocumentResource(resource, document)
+    return () => releaseDocumentResource(resource, document)
+  }, [resource, document])
 
   const firstPage = React.use(getPageResource(document, 1))
   const firstPageSize = React.useMemo<PdfPageSize>(() => {
@@ -270,8 +288,7 @@ function PdfViewerInner({
           currentPage={currentPage}
           pageCount={document.numPages}
           scale={resolvedScale}
-          src={src}
-          downloadFileName={downloadFileName}
+          download={resource.getDownload()}
           showRailToggle={showRailToggle}
           railsOpen={railsOpen}
           onToggleRails={() => setRailsOpen((open) => !open)}

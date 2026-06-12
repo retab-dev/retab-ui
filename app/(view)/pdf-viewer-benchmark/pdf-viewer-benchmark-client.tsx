@@ -55,8 +55,11 @@ export function PdfViewerBenchmarkClient() {
     <main className="h-svh min-h-0" data-testid="pdf-viewer-benchmark">
       <PdfViewer
         ref={viewerRef}
-        src={BENCHMARK_PDF_SRC}
-        downloadFileName="big-911-report.pdf"
+        source={{
+          kind: "url",
+          url: BENCHMARK_PDF_SRC,
+          fileName: "big-911-report.pdf",
+        }}
         className="h-full"
         bare
       />

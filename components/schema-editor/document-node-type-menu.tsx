@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import type { JSONSchema7Definition } from "json-schema"
 import {
   Braces,
   Brackets,
@@ -15,14 +16,13 @@ import {
   ToggleLeft,
   Type,
 } from "lucide-react"
-import type { JSONSchema7Definition } from "json-schema"
 
-import type { SchemaEditorType } from "@/components/schema-editor/document"
+import type { SchemaEditorType } from "@/components/schema-editor/document/type-operations"
+import type { ResolvedSchemaBuilderFeatures } from "@/components/schema-editor/schema-builder-types"
 import {
   getTemplateIcon,
   getTypeIcon,
 } from "@/components/schema-editor/type-icons"
-import type { ResolvedSchemaBuilderFeatures } from "@/components/schema-editor/schema-builder-types"
 import { Button } from "@/components/ui-retab/button"
 import {
   DropdownMenu,
@@ -168,7 +168,9 @@ export function DocumentNodeTypeMenu({
         )}
         {features.objectTemplates && (
           <React.Suspense fallback={null}>
-            <LazyObjectTemplateSubmenu onSelectTemplate={onSelectObjectTemplate} />
+            <LazyObjectTemplateSubmenu
+              onSelectTemplate={onSelectObjectTemplate}
+            />
           </React.Suspense>
         )}
       </DropdownMenuContent>

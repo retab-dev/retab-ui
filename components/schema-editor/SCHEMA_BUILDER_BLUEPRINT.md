@@ -118,10 +118,8 @@ Forbidden executable vocabulary:
 - `childId` when the value identifies a property edge
 - `replaceSchemaNodeByReference`
 - `legacy-json-tree-replacement`
-- `propertyDraft=` as a `PropertyForm` prop
-- `schemaContext=` as a `PropertyForm` prop
-- `onPropertyDraftChange`
-- `onCommitPropertyDraft`
+- legacy `draft=` / `context=` `PropertyForm` props
+- legacy `onDraftChange` / `onCommit` `PropertyForm` callbacks
 - compatibility aliases whose only job is old-name support
 
 ## Target Module Shape
@@ -130,31 +128,49 @@ Forbidden executable vocabulary:
 components/schema-editor/
   schema-builder.tsx
   schema-builder-types.ts
+  schema-editor-mode.ts
   use-schema-builder-state.ts
   schema-title.ts
   schema-required-policy.ts
   schema-validation.ts
+  lib/configure-ajv.ts
 
   document/
+    array.ts
     convert.ts
+    definition-operations.ts
     derive.ts
+    enum-operations.ts
     id.ts
-    operations.ts
+    json-node.ts
+    node-metadata.ts
+    node-selectors.ts
+    node-update.ts
+    property-operations.ts
+    traversal.ts
+    type-operations.ts
     types.ts
     view-model.ts
 
   top-level-editor.tsx
+  top-level-editor-controller.ts
+  document-definitions-editor.tsx
+  document-definitions-editor-controller.ts
+  document-schema-editor-controller.ts
   document-schema-editor.tsx
   document-schema-node-editor.tsx
+  document-node-header-controller.ts
   document-node-header.tsx
+  document-node-reveal.ts
+  document-object-node-editor-controller.ts
   document-object-node-editor.tsx
+  document-property-drag.ts
   document-property-row.tsx
   document-property-add-row.tsx
   document-property-reorder.ts
   document-array-node-editor.tsx
   document-enum-node-editor.tsx
 
-  property-form.tsx
   property-form/
     property-form.tsx
     property-form-controller.ts
@@ -177,6 +193,11 @@ Deleted forever:
 - root `property-form-types.ts`
 - root `property-form-reducer.ts`
 - root `property-form-validation.ts`
+- root `property-form.tsx`
+- `property-form/index.ts`
+- `document/index.ts`
+- `document/operations.ts`
+- `document/tree.ts`
 - `json-schema-top-level-editor.tsx`
 - `schema-property-operations.ts` inside `schema-editor`
 - legacy context/provider files
@@ -236,26 +257,14 @@ Path-string schema operations live in
 `components/json-table/schema-property-operations.ts`. The schema-editor core
 does not own those adapters.
 
-## Remaining Perfection Gates
-
-These are the last gates before calling the component perfect:
-
-- Add bundle/build-manifest tests proving optional template data, JSON mode, and
-  import/export code are absent from the disabled default path.
-- Add keyboard accessibility tests for property reorder, enum editing, ref
-  selection, and dialog focus restoration.
-- Eliminate or centralize the AJV plugin type compatibility casts.
-- Add a narrow schema-builder typecheck command if full repo `tsc` remains
-  polluted by unrelated `reference/frontend` files.
-
 ## Proof Gate
 
 Run:
 
 ```sh
-bunx eslint components/schema-editor components/json-table/schema-property-operations.ts components/property-form-demo.tsx tests/schema-builder-architecture.test.ts tests/property-form.test.tsx tests/schema-document-view-model.test.ts
+bun x eslint components/schema-editor components/json-table/schema-property-operations.ts components/property-form-demo.tsx tests/schema-builder-architecture.test.ts tests/property-form.test.tsx tests/schema-document-view-model.test.ts
 bun run test tests/schema-builder-architecture.test.ts tests/schema-document-view-model.test.ts tests/schema-editor-context.test.tsx tests/schema-editor-render.test.tsx tests/schema-document-bridge.test.ts tests/schema-document-edge.test.ts tests/schema-document-operations.test.ts tests/schema-document-fuzz.test.ts tests/property-form.test.tsx tests/schema-builder-public.test.tsx tests/schema-property-reorder.test.ts tests/schema-property-operations.test.ts tests/schema-property-add-row.test.tsx
-bunx tsc --noEmit --pretty false --incremental false
+bun x tsc --noEmit --pretty false --incremental false
 git diff --check
 curl -I --max-time 10 http://localhost:3100/docs/components/schema-builder
 ```
@@ -266,8 +275,11 @@ Required negative greps:
 rg "applyDocOp|replaceSchemaNodeByReference|legacy-json-tree-replacement" components/schema-editor
 rg "json-schema-top-level-editor|property-form-reducer|property-form-types|property-form-validation" components/schema-editor
 rg "key=\\{propName\\}|key=\\{propertyName\\}|\\bpropName\\b" components/schema-editor
-rg "propertyDraft=|onPropertyDraftChange|onCommitPropertyDraft|PropertyFormLegacyProps|props\\.propertyDraft|props\\.schemaContext" components/schema-editor components/property-form-demo.tsx tests/property-form.test.tsx
+rg "draft=|context=|onDraftChange|onCommit=|PropertyFormLegacyProps|props\\.draft|props\\.context" components/schema-editor components/property-form-demo.tsx tests/property-form.test.tsx
+rg "from\\s+[\"']@/components/schema-editor/document[\"']|document/operations|document/tree|lastExternalVersion" components/schema-editor tests
+rg "as unknown as" components/schema-editor --glob '!components/schema-editor/lib/configure-ajv.ts'
 rg "projectNode|getEffectiveNode|getEffectiveDocNode" components/schema-editor/document-schema-node-editor.tsx components/schema-editor/document-object-node-editor.tsx components/schema-editor/document-array-node-editor.tsx components/schema-editor/document-enum-node-editor.tsx
+rg "document\\.|window\\.|setTimeout|requestAnimationFrame" components/schema-editor --glob '!components/schema-editor/document-node-reveal.ts' --glob '!components/schema-editor/document-property-drag.ts' --glob '!components/schema-editor/optional/import-export/import-export-menu-items.tsx'
 ```
 
 Required architecture assertions:
@@ -278,6 +290,9 @@ Required architecture assertions:
 - property form public boundary uses `propertyDraft`, `schemaContext`,
   `onPropertyDraftChange`, `onCommitPropertyDraft`
 - top-level editor uses final naming and accessible icon buttons
+- high-level editor views do not call `dispatch` directly
+- DOM side effects stay confined to named browser helper modules
+- high-level editor views stay below line budgets
 - optional features are absent from default imports
 - JSON-table path operations stay outside schema-editor
 - object-template code has no JSON replacement fallback
@@ -289,5 +304,5 @@ The component is ideal only when every layer has one language:
 - public boundary: OpenAPI-compatible JSON Schema
 - committed state: `SchemaDocument`
 - recursive rendering: `DocumentNodeView`
-- property-form boundary: `draft` and `context`
+- property-form boundary: `propertyDraft` and `schemaContext`
 - property identity: `propertyId`

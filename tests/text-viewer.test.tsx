@@ -14,6 +14,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
   blobSource,
+  clearViewerResourceRegistryForTests,
   createViewerResource,
 } from "@/registry/new-york-v4/lib/viewer-resource"
 import {
@@ -94,6 +95,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup()
   clearTextViewerResourceCacheForTests()
+  clearViewerResourceRegistryForTests()
   vi.restoreAllMocks()
   vi.unstubAllGlobals()
 })
@@ -316,6 +318,29 @@ describe("text-viewer-resource", () => {
       })
     ).resolves.toBe("same-size-b")
   })
+
+  it("does not reuse cached blob text when a new Blob reuses the same identity", async () => {
+    const bounds = resolvedTextViewerBounds()
+
+    await expect(
+      readResourceAfterSuspense({
+        resource: createViewerResource(
+          textBlobSource("first blob", "same.txt", "blob:reused")
+        ),
+        retryVersion: 0,
+        bounds,
+      })
+    ).resolves.toBe("first blob")
+    await expect(
+      readResourceAfterSuspense({
+        resource: createViewerResource(
+          textBlobSource("second blob", "same.txt", "blob:reused")
+        ),
+        retryVersion: 0,
+        bounds,
+      })
+    ).resolves.toBe("second blob")
+  })
 })
 
 describe("TextViewer", () => {
@@ -434,6 +459,44 @@ describe("TextViewer", () => {
     expect(
       container.querySelectorAll("[data-line-number]").length
     ).toBeLessThan(200)
+  })
+
+  it("scrolls to a virtualized line that is not currently mounted", () => {
+    const viewerRef = React.createRef<TextViewerHandle>()
+    const { container } = render(
+      <TextViewer
+        ref={viewerRef}
+        source={textSource(
+          Array.from(
+            { length: 10_000 },
+            (_, index) => `line ${index + 1}`
+          ).join("\n")
+        )}
+        toolbar={false}
+      />
+    )
+
+    expect(container.querySelector('[data-line-number="5000"]')).toBeNull()
+
+    const viewportElement = viewerRef.current?.getViewportElement()
+    expect(viewportElement).not.toBeNull()
+    if (!viewportElement) return
+
+    Object.defineProperty(viewportElement, "clientHeight", {
+      configurable: true,
+      value: 100,
+    })
+    const scrollTo = vi.fn()
+    viewportElement.scrollTo = scrollTo
+
+    act(() => {
+      viewerRef.current?.scrollToLineRange(
+        { start: 5000, end: 5000 },
+        { behavior: "auto" }
+      )
+    })
+
+    expect(scrollTo).toHaveBeenCalledWith({ top: 99948, behavior: "auto" })
   })
 
   it("renders a local error and retries the same URL source", async () => {

@@ -16,7 +16,7 @@ pages, and can optionally synchronize with a source-document pane.
   text={text}
   renderDocument={({ onCurrentPageChange }) => (
     <PdfViewer
-      src="/document.pdf"
+      source={{ kind: "url", url: "/document.pdf" }}
       bare
       onVisiblePageChange={onCurrentPageChange}
     />

@@ -4,10 +4,12 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 import type { XlsxCell } from "@/lib/xlsx-workbook"
+import type { FixedGridColumn } from "@/components/ui/fixed-grid-columns"
+import { getFixedGridRowStyle } from "@/components/ui/fixed-grid-row-style"
+import type { GridCellCoordinate } from "@/components/ui/fixed-grid-selection"
 
-export interface XlsxGridColumnItem {
-  columnIndex: number
-  size: number
+export type XlsxGridColumnItem = FixedGridColumn<{ columnIndex: number }> & {
+  metadata: { columnIndex: number }
 }
 
 export const XlsxGridRow = React.memo(function XlsxGridRow({
@@ -29,17 +31,13 @@ export const XlsxGridRow = React.memo(function XlsxGridRow({
   leftPad: number
   rightPad: number
   start: number
-  activeColumnIndex?: number | null
+  activeColumnIndex?: GridCellCoordinate["columnIndex"] | null
 }) {
-  const style: React.CSSProperties = {
-    gridTemplateColumns: gridTemplate,
-    height: rowHeight,
-    position: "absolute",
-    top: 0,
-    left: 0,
-    width: "100%",
-    transform: `translateY(${start}px)`,
-  }
+  const style = getFixedGridRowStyle({
+    gridTemplate,
+    rowHeight,
+    top: start,
+  })
   return (
     <div
       className="group grid border-b hover:bg-muted/40"
@@ -55,14 +53,15 @@ export const XlsxGridRow = React.memo(function XlsxGridRow({
       </div>
       <Spacer width={leftPad} />
       {columnItems.map((item) => {
-        const cell = getCell(rowIndex, item.columnIndex)
-        const isActive = activeColumnIndex === item.columnIndex
+        const columnIndex = item.metadata.columnIndex
+        const cell = getCell(rowIndex, columnIndex)
+        const isActive = activeColumnIndex === columnIndex
         return (
           <div
-            key={item.columnIndex}
+            key={item.key}
             role="gridcell"
             aria-rowindex={rowIndex + 1}
-            aria-colindex={item.columnIndex + 1}
+            aria-colindex={columnIndex + 1}
             className={cn(
               "flex items-center truncate border-r px-2 last:border-r-0",
               cell.numeric ? "justify-end tabular-nums" : "justify-start",

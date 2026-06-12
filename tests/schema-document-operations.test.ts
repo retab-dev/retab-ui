@@ -1,32 +1,44 @@
-import { describe, expect, it } from "vitest"
 import type { JSONSchema7 } from "json-schema"
+import { describe, expect, it } from "vitest"
 
 import {
-  addDefinition,
-  addEnumValue,
-  addProperty,
-  findNodeByPath,
   fromJsonSchema,
+  toJsonSchema,
+} from "@/components/schema-editor/document/convert"
+import {
+  addDefinition,
+  removeDefinition,
+  renameDefinition,
+  setRef,
+} from "@/components/schema-editor/document/definition-operations"
+import {
+  addEnumValue,
+  removeEnumValue,
+  updateEnumValue,
+} from "@/components/schema-editor/document/enum-operations"
+import {
   getChildNodeId,
   getChildPropertyId,
   getEffectiveDocNode,
   getItemsNodeId,
-  getNode,
+} from "@/components/schema-editor/document/node-selectors"
+import { updateNode } from "@/components/schema-editor/document/node-update"
+import {
+  addProperty,
   moveProperty,
-  removeDefinition,
-  removeEnumValue,
   removeProperty,
-  renameDefinition,
   renameProperty,
+  setRequired,
+} from "@/components/schema-editor/document/property-operations"
+import {
+  findNodeByPath,
+  getNode,
+} from "@/components/schema-editor/document/traversal"
+import {
   setNodeType,
   setNullable,
-  setRef,
-  setRequired,
-  toJsonSchema,
-  updateEnumValue,
-  updateNode,
-  type SchemaDocument,
-} from "@/components/schema-editor/document"
+} from "@/components/schema-editor/document/type-operations"
+import type { SchemaDocument } from "@/components/schema-editor/document/types"
 
 function doc(schema: JSONSchema7): SchemaDocument {
   return fromJsonSchema(schema)
@@ -120,7 +132,9 @@ describe("moveProperty", () => {
     d = moveProperty(d, aPropertyId, cId, 0)
     const out = json(d)
     expect(Object.keys(out.properties!)).toEqual(["b", "c"])
-    expect(Object.keys((out.properties!.c as JSONSchema7).properties!)).toEqual(["a", "x"])
+    expect(Object.keys((out.properties!.c as JSONSchema7).properties!)).toEqual(
+      ["a", "x"]
+    )
   })
 
   it("refuses to move a node into its own descendant", () => {
@@ -176,7 +190,10 @@ describe("setNullable (document canonical: type-union)", () => {
     let d = doc({ type: "object", properties: { a: { type: "string" } } })
     const aId = getChildNodeId(d, d.root.id, "a")!
     d = setNullable(d, aId, true)
-    expect((json(d).properties!.a as JSONSchema7).type).toEqual(["string", "null"])
+    expect((json(d).properties!.a as JSONSchema7).type).toEqual([
+      "string",
+      "null",
+    ])
     d = setNullable(d, aId, false)
     expect((json(d).properties!.a as JSONSchema7).type).toBe("string")
   })
@@ -186,20 +203,28 @@ describe("setNullable (document canonical: type-union)", () => {
     const aId = getChildNodeId(d, d.root.id, "a")!
     d = setNullable(d, aId, true)
     d = setNullable(d, aId, true)
-    expect((json(d).properties!.a as JSONSchema7).type).toEqual(["string", "null"])
+    expect((json(d).properties!.a as JSONSchema7).type).toEqual([
+      "string",
+      "null",
+    ])
   })
 })
 
 describe("enum operations", () => {
   it("add / update / remove values", () => {
-    let d = doc({ type: "object", properties: { c: { type: "string", enum: ["a"] } } })
+    let d = doc({
+      type: "object",
+      properties: { c: { type: "string", enum: ["a"] } },
+    })
     const cId = getChildNodeId(d, d.root.id, "c")!
     d = addEnumValue(d, cId)
     const newId = getNode(d, cId)!.enum![1].id
     d = updateEnumValue(d, cId, newId, { value: "b", description: "bee" })
     let out = json(d)
     expect((out.properties!.c as JSONSchema7).enum).toEqual(["a", "b"])
-    expect((out.properties!.c as Record<string, unknown>)["x-enumDescriptions"]).toEqual({ b: "bee" })
+    expect(
+      (out.properties!.c as Record<string, unknown>)["x-enumDescriptions"]
+    ).toEqual({ b: "bee" })
     d = removeEnumValue(d, cId, newId)
     out = json(d)
     expect((out.properties!.c as JSONSchema7).enum).toEqual(["a"])
@@ -209,8 +234,13 @@ describe("enum operations", () => {
 describe("definition operations", () => {
   const withDefs: JSONSchema7 = {
     type: "object",
-    $defs: { Money: { type: "object", properties: { amount: { type: "number" } } } },
-    properties: { total: { $ref: "#/$defs/Money" }, sub: { $ref: "#/$defs/Money" } },
+    $defs: {
+      Money: { type: "object", properties: { amount: { type: "number" } } },
+    },
+    properties: {
+      total: { $ref: "#/$defs/Money" },
+      sub: { $ref: "#/$defs/Money" },
+    },
   }
 
   it("renameDefinition makes every $ref follow by id", () => {
@@ -252,10 +282,15 @@ describe("lookups", () => {
   it("findNodeByPath resolves through objects, arrays and refs", () => {
     const d = doc({
       type: "object",
-      $defs: { V: { type: "object", properties: { name: { type: "string" } } } },
+      $defs: {
+        V: { type: "object", properties: { name: { type: "string" } } },
+      },
       properties: {
         vendor: { $ref: "#/$defs/V" },
-        rows: { type: "array", items: { type: "object", properties: { sku: { type: "string" } } } },
+        rows: {
+          type: "array",
+          items: { type: "object", properties: { sku: { type: "string" } } },
+        },
       },
     })
     expect(findNodeByPath(d, "vendor.name")).toBeTruthy()
@@ -267,7 +302,12 @@ describe("lookups", () => {
     const d = doc({
       type: "object",
       properties: {
-        v: { anyOf: [{ type: "object", properties: { x: { type: "string" } } }, { type: "null" }] },
+        v: {
+          anyOf: [
+            { type: "object", properties: { x: { type: "string" } } },
+            { type: "null" },
+          ],
+        },
       },
     })
     const vId = getChildNodeId(d, d.root.id, "v")!
@@ -280,7 +320,12 @@ describe("lookups", () => {
     const d = doc({
       type: "object",
       properties: {
-        v: { anyOf: [{ type: "object", properties: { x: { type: "string" } } }, { type: "null" }] },
+        v: {
+          anyOf: [
+            { type: "object", properties: { x: { type: "string" } } },
+            { type: "null" },
+          ],
+        },
       },
     })
     const vId = getChildNodeId(d, d.root.id, "v")!
@@ -290,7 +335,9 @@ describe("lookups", () => {
   it("getItemsNodeId returns the array's item node", () => {
     const d = doc({
       type: "object",
-      properties: { rows: { type: "array", items: { type: "object", properties: {} } } },
+      properties: {
+        rows: { type: "array", items: { type: "object", properties: {} } },
+      },
     })
     const rowsId = getChildNodeId(d, d.root.id, "rows")!
     expect(getItemsNodeId(d, rowsId)).toBeTruthy()

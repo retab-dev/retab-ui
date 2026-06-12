@@ -11,6 +11,10 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
+  clearViewerResourceRegistryForTests,
+  createViewerResource,
+} from "@/registry/new-york-v4/lib/viewer-resource"
+import {
   getDocumentResource,
   PdfViewer,
   type PdfViewerHandle,
@@ -189,14 +193,25 @@ beforeEach(() => {
 afterEach(() => {
   cleanup()
   __resetPdfDocumentCacheForTests()
+  clearViewerResourceRegistryForTests()
   vi.restoreAllMocks()
   vi.unstubAllGlobals()
 })
 
+function pdfUrlSource(url: string, fileName?: string) {
+  return { kind: "url" as const, url, fileName }
+}
+
+function pdfUrlResource(url: string, fileName?: string) {
+  return createViewerResource(pdfUrlSource(url, fileName))
+}
+
 describe("PdfViewer", () => {
   it("does not render toolbar chrome in the fallback when toolbar is false", async () => {
     await act(async () => {
-      render(<PdfViewer src="/pending.pdf" toolbar={false} />)
+      render(
+        <PdfViewer source={pdfUrlSource("/pending.pdf")} toolbar={false} />
+      )
       await Promise.resolve()
     })
 
@@ -217,7 +232,7 @@ describe("PdfViewer", () => {
     await act(async () => {
       view = render(
         <PdfViewer
-          src="/controlled.pdf"
+          source={pdfUrlSource("/controlled.pdf")}
           scale={2}
           onScaleChange={onScaleChange}
         />
@@ -233,7 +248,7 @@ describe("PdfViewer", () => {
 
     view.rerender(
       <PdfViewer
-        src="/controlled.pdf"
+        source={pdfUrlSource("/controlled.pdf")}
         scale={3}
         onScaleChange={onScaleChange}
       />
@@ -245,7 +260,7 @@ describe("PdfViewer", () => {
     pdfjsMock.docs.set("/fit-clamp.pdf", makeDoc([[100, 200]]))
 
     await act(async () => {
-      render(<PdfViewer src="/fit-clamp.pdf" />)
+      render(<PdfViewer source={pdfUrlSource("/fit-clamp.pdf")} />)
     })
 
     expect(await screen.findByText("500%")).toBeTruthy()
@@ -264,7 +279,7 @@ describe("PdfViewer", () => {
     await act(async () => {
       render(
         <PdfViewer
-          src="/initial-page.pdf"
+          source={pdfUrlSource("/initial-page.pdf")}
           onVisiblePageChange={onVisiblePageChange}
         />
       )
@@ -281,7 +296,9 @@ describe("PdfViewer", () => {
     pdfjsMock.docs.set("/no-intersection-observer.pdf", doc)
 
     await act(async () => {
-      render(<PdfViewer src="/no-intersection-observer.pdf" />)
+      render(
+        <PdfViewer source={pdfUrlSource("/no-intersection-observer.pdf")} />
+      )
     })
 
     await waitFor(() => {
@@ -297,14 +314,16 @@ describe("PdfViewer", () => {
   it("does not keep rejected document loads cached for the same src", async () => {
     pdfjsMock.docs.set("/retry.pdf", new Error("load failed"))
 
-    await expect(getDocumentResource("/retry.pdf")).rejects.toThrow(
-      "load failed"
-    )
+    await expect(
+      getDocumentResource(pdfUrlResource("/retry.pdf"))
+    ).rejects.toThrow("load failed")
 
     const doc = makeDoc([[100, 200]])
     pdfjsMock.docs.set("/retry.pdf", doc)
 
-    await expect(getDocumentResource("/retry.pdf")).resolves.toBe(doc)
+    await expect(
+      getDocumentResource(pdfUrlResource("/retry.pdf"))
+    ).resolves.toBe(doc)
     expect(pdfjsMock.getDocument).toHaveBeenCalledTimes(2)
   })
 
@@ -333,7 +352,7 @@ describe("PdfViewer", () => {
           >
             Jump
           </button>
-          <PdfViewer ref={ref} src="/scroll.pdf" />
+          <PdfViewer ref={ref} source={pdfUrlSource("/scroll.pdf")} />
         </>
       )
     }
@@ -394,7 +413,7 @@ describe("PdfViewer", () => {
           >
             Jump past page
           </button>
-          <PdfViewer ref={ref} src="/scroll-clamp.pdf" />
+          <PdfViewer ref={ref} source={pdfUrlSource("/scroll-clamp.pdf")} />
         </>
       )
     }
@@ -455,7 +474,10 @@ describe("PdfViewer", () => {
           >
             Jump before page
           </button>
-          <PdfViewer ref={ref} src="/scroll-negative-clamp.pdf" />
+          <PdfViewer
+            ref={ref}
+            source={pdfUrlSource("/scroll-negative-clamp.pdf")}
+          />
         </>
       )
     }
@@ -510,7 +532,7 @@ describe("PdfViewer", () => {
           >
             Invalid jump
           </button>
-          <PdfViewer ref={ref} src="/invalid-scroll.pdf" />
+          <PdfViewer ref={ref} source={pdfUrlSource("/invalid-scroll.pdf")} />
         </>
       )
     }
@@ -539,7 +561,7 @@ describe("PdfViewer", () => {
     await act(async () => {
       render(
         <PdfViewer
-          src="/no-scroll-progress.pdf"
+          source={pdfUrlSource("/no-scroll-progress.pdf")}
           onScrollProgressChange={onScrollProgressChange}
         />
       )
@@ -582,7 +604,7 @@ describe("PdfViewer", () => {
       await act(async () => {
         render(
           <PdfViewer
-            src="/progress-clamp.pdf"
+            source={pdfUrlSource("/progress-clamp.pdf")}
             onScrollProgressChange={onScrollProgressChange}
           />
         )
@@ -632,7 +654,7 @@ describe("PdfViewer", () => {
     await act(async () => {
       render(
         <PdfViewer
-          src="/scroll-marker.pdf"
+          source={pdfUrlSource("/scroll-marker.pdf")}
           onVisiblePageChange={onVisiblePageChange}
         />
       )

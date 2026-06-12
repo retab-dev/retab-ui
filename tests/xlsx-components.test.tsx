@@ -100,8 +100,8 @@ describe("XlsxGrid", () => {
         gridTemplate="52px 0px 128px 128px 0px"
         rowHeight={28}
         columnItems={[
-          { columnIndex: 0, size: 128 },
-          { columnIndex: 1, size: 128 },
+          { key: "0", widthPx: 128, metadata: { columnIndex: 0 } },
+          { key: "1", widthPx: 128, metadata: { columnIndex: 1 } },
         ]}
         leftPad={0}
         rightPad={0}

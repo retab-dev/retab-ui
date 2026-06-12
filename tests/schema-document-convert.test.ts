@@ -1,10 +1,10 @@
-import { describe, expect, it } from "vitest"
 import type { JSONSchema7 } from "json-schema"
+import { describe, expect, it } from "vitest"
 
 import {
   fromJsonSchema,
   toJsonSchema,
-} from "@/components/schema-editor/document"
+} from "@/components/schema-editor/document/convert"
 
 /** Semantic round-trip: content is preserved (key order ignored). */
 function semantic(schema: JSONSchema7) {
@@ -38,7 +38,9 @@ describe("convert: semantic round-trip", () => {
         type: "object",
         title: "T",
         description: "D",
-        properties: { a: { type: "string", title: "A", description: "field a" } },
+        properties: {
+          a: { type: "string", title: "A", description: "field a" },
+        },
       },
     ],
     [
@@ -77,7 +79,10 @@ describe("convert: semantic round-trip", () => {
     ],
     [
       "enum of numbers",
-      { type: "object", properties: { c: { type: "number", enum: [1, 2, 3] } } },
+      {
+        type: "object",
+        properties: { c: { type: "number", enum: [1, 2, 3] } },
+      },
     ],
     [
       "nested objects",
@@ -86,7 +91,12 @@ describe("convert: semantic round-trip", () => {
         properties: {
           o: {
             type: "object",
-            properties: { inner: { type: "object", properties: { deep: { type: "string" } } } },
+            properties: {
+              inner: {
+                type: "object",
+                properties: { deep: { type: "string" } },
+              },
+            },
             required: ["inner"],
           },
         },
@@ -94,7 +104,10 @@ describe("convert: semantic round-trip", () => {
     ],
     [
       "array of scalars",
-      { type: "object", properties: { a: { type: "array", items: { type: "string" } } } },
+      {
+        type: "object",
+        properties: { a: { type: "array", items: { type: "string" } } },
+      },
     ],
     [
       "array of objects",
@@ -103,7 +116,11 @@ describe("convert: semantic round-trip", () => {
         properties: {
           rows: {
             type: "array",
-            items: { type: "object", properties: { x: { type: "string" } }, required: ["x"] },
+            items: {
+              type: "object",
+              properties: { x: { type: "string" } },
+              required: ["x"],
+            },
           },
         },
       },
@@ -112,7 +129,9 @@ describe("convert: semantic round-trip", () => {
       "$defs + $ref",
       {
         type: "object",
-        $defs: { Money: { type: "object", properties: { amount: { type: "number" } } } },
+        $defs: {
+          Money: { type: "object", properties: { amount: { type: "number" } } },
+        },
         properties: { total: { $ref: "#/$defs/Money" } },
       },
     ],
@@ -120,7 +139,9 @@ describe("convert: semantic round-trip", () => {
       "legacy definitions keyword",
       {
         type: "object",
-        definitions: { Foo: { type: "object", properties: { a: { type: "string" } } } },
+        definitions: {
+          Foo: { type: "object", properties: { a: { type: "string" } } },
+        },
         properties: { f: { $ref: "#/definitions/Foo" } },
       } as JSONSchema7,
     ],
@@ -157,13 +178,21 @@ describe("convert: semantic round-trip", () => {
         type: "object",
         properties: {
           a: { oneOf: [{ type: "string" }, { type: "number" }] },
-          b: { allOf: [{ type: "object" }, { properties: { x: { type: "string" } } }] },
+          b: {
+            allOf: [
+              { type: "object" },
+              { properties: { x: { type: "string" } } },
+            ],
+          },
         },
       },
     ],
     [
       "boolean schema as property value",
-      { type: "object", properties: { anything: true, never: false } } as JSONSchema7,
+      {
+        type: "object",
+        properties: { anything: true, never: false },
+      } as JSONSchema7,
     ],
     [
       "additionalProperties false + object",
@@ -178,7 +207,10 @@ describe("convert: semantic round-trip", () => {
       {
         type: "object",
         properties: {
-          pair: { type: "array", items: [{ type: "string" }, { type: "number" }] } as JSONSchema7,
+          pair: {
+            type: "array",
+            items: [{ type: "string" }, { type: "number" }],
+          } as JSONSchema7,
         },
       },
     ],
@@ -210,7 +242,9 @@ describe("convert: semantic round-trip", () => {
       "deeply nested mixed",
       {
         type: "object",
-        $defs: { Addr: { type: "object", properties: { city: { type: "string" } } } },
+        $defs: {
+          Addr: { type: "object", properties: { city: { type: "string" } } },
+        },
         properties: {
           person: {
             type: "object",
@@ -261,7 +295,12 @@ describe("convert: byte-exact round-trip (key order preserved)", () => {
       {
         type: "object",
         properties: {
-          x: { description: "d", type: "string", pattern: "^x", title: "X" } as JSONSchema7,
+          x: {
+            description: "d",
+            type: "string",
+            pattern: "^x",
+            title: "X",
+          } as JSONSchema7,
         },
       },
     ],

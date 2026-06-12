@@ -60,16 +60,16 @@ right abstraction is "one source contract, many loaders."
 
 The existing implementation already proves that loading is format-specific.
 
-| Viewer | Current input | Loading model | Cache/retention model | Why it cannot be generic |
-| --- | --- | --- | --- | --- |
-| `PdfViewer` | `src: string` | `pdfjs.getDocument(src)` returns a `PDFDocumentProxy`; pages are loaded lazily with `document.getPage(pageNumber)` | document cache keyed by `src`, consumer counts, LRU pruning, `PDFDocumentProxy.destroy()` on eviction | PDF has a document object, page objects, and library-owned worker state |
-| `ImageViewer` | `src: string` | fetch bytes, sniff TIFF/native image, create `ImageBitmap`s | frame source manager, leases, decoded bitmap cache, disposal timers | image performance is about decoded frame retention, not just fetched bytes |
-| `DocxViewer` | `src: string` | fetch full ArrayBuffer, pass to `docx-preview`, render imperatively into DOM | ArrayBuffer promise cache keyed by `src`; DOM render is owned by an effect | DOCX rendering is full-file, DOM-producing, and not streamable in this implementation |
-| `XlsxViewer` | `src: string` | fetch full ArrayBuffer, parse workbook in a worker | `XlsxSourceCache` keyed by `src`; viewer stores active sheet and scroll requests | spreadsheet performance is parsed workbook structure plus virtualized grid cells |
-| `PptxViewer` | `src: string` | fetch full ArrayBuffer, create renderer, render slides to canvas | retained `PptxSource`, queued slide renders, slide bitmap cache, disposable renderer | PPTX performance is renderer lifetime plus canvas bitmap caching |
-| `CsvViewer` | `src`, `Blob`, inline `value`, or parsed `data` | stream CSV rows in batches for URL/Blob; parse inline value synchronously; accept already parsed table | effect-owned abort controller; worker fallback for Blob parsing | CSV has real streaming semantics and parsed-data semantics |
-| `TextViewer` | source descriptor with URL or inline text | bounded full text load for URL; direct bounded read for inline text | resource cache keyed by URL, retry version, and bounds | source-linked text needs all lines addressable, not FileViewer's incremental text strategy |
-| `FileViewer` text route | URL descriptor | byte range loading with stream/full modes | mode-aware text loader cache, abortable shared requests | large text/log preview requires incremental rendering; JSON may need full mode |
+| Viewer                  | Current input                                   | Loading model                                                                                                                                                | Cache/retention model                                                                                               | Why it cannot be generic                                                                           |
+| ----------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `PdfViewer`             | `source: UrlViewerSource \| BlobViewerSource`   | URL resources pass the load URL to `pdfjs.getDocument`; Blob resources read bytes and pass `{ data }`; pages load lazily with `document.getPage(pageNumber)` | document cache keyed by `resource.cacheKey`, consumer counts, LRU pruning, `PDFDocumentProxy.destroy()` on eviction | PDF has a document object, page objects, range-capable URL loading, and library-owned worker state |
+| `ImageViewer`           | `source: UrlViewerSource \| BlobViewerSource`   | read Blob/bytes through `ViewerResource`, sniff TIFF/native image, create `ImageBitmap`s                                                                     | frame source manager keyed by `resource.cacheKey`, leases, decoded bitmap cache, disposal timers                    | image performance is about decoded frame retention, not just fetched bytes                         |
+| `DocxViewer`            | `src: string`                                   | fetch full ArrayBuffer, pass to `docx-preview`, render imperatively into DOM                                                                                 | ArrayBuffer promise cache keyed by `src`; DOM render is owned by an effect                                          | DOCX rendering is full-file, DOM-producing, and not streamable in this implementation              |
+| `XlsxViewer`            | `src: string`                                   | fetch full ArrayBuffer, parse workbook in a worker                                                                                                           | `XlsxSourceCache` keyed by `src`; viewer stores active sheet and scroll requests                                    | spreadsheet performance is parsed workbook structure plus virtualized grid cells                   |
+| `PptxViewer`            | `source: UrlViewerSource \| BlobViewerSource`   | read full ArrayBuffer from `ViewerResource`, create renderer, render slides to canvas                                                                        | retained `PptxSource`, queued slide renders, slide bitmap cache, disposable renderer keyed by `cacheKey`            | PPTX performance is renderer lifetime plus canvas bitmap caching                                   |
+| `CsvViewer`             | `src`, `Blob`, inline `value`, or parsed `data` | stream CSV rows in batches for URL/Blob; parse inline value synchronously; accept already parsed table                                                       | effect-owned abort controller; worker fallback for Blob parsing                                                     | CSV has real streaming semantics and parsed-data semantics                                         |
+| `TextViewer`            | source descriptor with URL or inline text       | bounded full text load for URL; direct bounded read for inline text                                                                                          | resource cache keyed by URL, retry version, and bounds                                                              | source-linked text needs all lines addressable, not FileViewer's incremental text strategy         |
+| `FileViewer` text route | URL descriptor                                  | byte range loading with stream/full modes                                                                                                                    | mode-aware text loader cache, abortable shared requests                                                             | large text/log preview requires incremental rendering; JSON may need full mode                     |
 
 The conclusion is mechanical: the source boundary can be shared, but the loader
 must stay per format.
@@ -78,16 +78,17 @@ must stay per format.
 
 Use these words precisely.
 
-| Term | Meaning |
-| --- | --- |
-| `source` | Public declaration from the caller. It says where the bytes or text come from and what metadata the caller knows. |
-| `descriptor` | Synchronous normalized metadata used for routing, display, reset keys, and default download naming. |
-| `resource` | Runtime capability object derived from a source. It can read Blob, bytes, text, stream, range, or create object URLs when supported. |
-| `loader` | Format-specific module that transforms a resource into viewer-ready data. |
-| `viewer state` | Component state needed to render and interact with the loaded document. |
-| `asset` | A decoded or parsed object that must be retained or disposed, such as `PDFDocumentProxy`, `ImageBitmap`, `PptxSource`, or parsed workbook data. |
-| `identityKey` | Stable key for caches, reset boundaries, and stale result rejection. |
-| `download` | User-facing file export behavior. It may be a URL, object URL, generated Blob, or disabled state. |
+| Term           | Meaning                                                                                                                                         |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `source`       | Public declaration from the caller. It says where the bytes or text come from and what metadata the caller knows.                               |
+| `descriptor`   | Synchronous normalized metadata used for routing, display, reset keys, and default download naming.                                             |
+| `resource`     | Runtime capability object derived from a source. It can read Blob, bytes, text, stream, range, or create object URLs when supported.            |
+| `loader`       | Format-specific module that transforms a resource into viewer-ready data.                                                                       |
+| `viewer state` | Component state needed to render and interact with the loaded document.                                                                         |
+| `asset`        | A decoded or parsed object that must be retained or disposed, such as `PDFDocumentProxy`, `ImageBitmap`, `PptxSource`, or parsed workbook data. |
+| `identityKey`  | Caller/content identity for source-linked behavior and high-level equality.                                                                     |
+| `cacheKey`     | Loaded-resource lifecycle key. It includes descriptor inputs plus payload identity needed to prevent stale bytes.                               |
+| `download`     | User-facing file export behavior. It may be a URL, object URL, generated Blob, or disabled state.                                               |
 
 ## Non-Negotiables
 
@@ -115,10 +116,7 @@ Use these words precisely.
 The canonical source should have three variants.
 
 ```ts
-export type ViewerSource =
-  | UrlViewerSource
-  | BlobViewerSource
-  | TextSource
+export type ViewerSource = UrlViewerSource | BlobViewerSource | TextSource
 
 export interface UrlViewerSource {
   kind: "url"
@@ -186,7 +184,12 @@ const blob =
 The public type remains simple:
 
 ```ts
-{ kind: "blob"; blob; fileName; mimeType }
+{
+  kind: "blob"
+  blob
+  fileName
+  mimeType
+}
 ```
 
 ### Why Parsed Data Is Not A `ViewerSource`
@@ -237,12 +240,13 @@ Rules:
 
 - `descriptor.source` is the original source declaration.
 - `descriptor.category` is detected from `fileName`, MIME type, or override.
-- `descriptor.identityKey` is used for reset and cache identity.
+- `descriptor.identityKey` is caller/content identity.
 - `descriptor.displayName` is what the viewer header shows.
 - `descriptor.downloadFileName` is the `download` filename.
 - `descriptor.downloadHref` exists only when there is a stable URL already
   known synchronously.
-- `descriptor` does not expose `loadUrl`; loading is a resource capability.
+- `descriptor.loadUrl` exists only for URL resources that can be loaded directly
+  by format libraries. It is not a download URL.
 
 ### Default Names
 
@@ -271,7 +275,8 @@ downloadFileName = source.fileName ?? "text.txt"
 
 ### Identity Keys
 
-Identity must be stable enough for React reset keys and cache keys.
+Identity must be stable enough for source-linked behavior and high-level
+equality. Loaded caches use `resource.cacheKey`, not `identityKey` alone.
 
 Defaults:
 
@@ -292,7 +297,12 @@ BlobViewerSource.identityKey is required.
 
 Tests should document that callers must pass an explicit identity key for Blob
 sources. Convenience helpers may normalize `ArrayBuffer` and `Uint8Array` into
-`Blob`, but they should not invent weak Blob identity.
+`Blob`, but they should not invent content identity from weak signals such as
+size/type.
+
+The resource layer may still include Blob object identity in `cacheKey`. That is
+not content identity; it is a lifecycle guard so a caller who accidentally reuses
+an `identityKey` for different Blob objects cannot receive stale loaded bytes.
 
 ## Resource Capability Model
 
@@ -304,6 +314,7 @@ It should not parse file formats.
 export interface ViewerResource {
   readonly source: ViewerSource
   readonly descriptor: ViewerDescriptor
+  readonly cacheKey: string
   readonly identityKey: string
   readonly fileName: string
   readonly mimeType?: string
@@ -431,7 +442,6 @@ Do not let each viewer invent different error shapes for source access.
 export type ResourceErrorKind =
   | "fetch_failed"
   | "http_error"
-  | "decode_failed"
   | "aborted"
   | "too_large"
   | "unsupported_capability"
@@ -451,9 +461,13 @@ Examples:
 
 ```ts
 PdfLoadError("document_failed", { cause: ResourceError("http_error") })
-ImageLoadError("decode_failed", { cause: ResourceError("decode_failed") })
+ImageDecodeError("decode_failed", { cause: Error("bad image bytes") })
 TextViewerTooLargeError("bytes", { cause: ResourceError("too_large") })
 ```
+
+Decode, parse, render, and worker-protocol failures are format errors, not
+resource errors. The resource layer owns transport, bounds, abort, and capability
+failures only.
 
 ## Download Model
 
@@ -524,16 +538,16 @@ Target shape:
 ```ts
 getPdfDocument(resource: ViewerResource): Promise<PDFDocumentProxy>
 getPdfPage(document: PDFDocumentProxy, pageNumber: number): Promise<PDFPageProxy>
-retainPdfDocument(resource.identityKey, document)
-releasePdfDocument(resource.identityKey, document)
+retainPdfDocument(resource.cacheKey, document)
+releasePdfDocument(resource.cacheKey, document)
 ```
 
 Implementation notes:
 
-- URL resource can pass `url` directly to PDF.js if that remains faster and
-  supports range loading.
-- Blob resource may need object URL or ArrayBuffer depending on PDF.js support.
-- Cache key must include `resource.identityKey`.
+- URL resource passes `descriptor.loadUrl` directly to PDF.js to preserve native
+  URL/range/worker behavior.
+- Blob resource reads bytes and passes `{ data: Uint8Array }` to PDF.js.
+- Cache key must include `resource.cacheKey`.
 - Page cache stays a WeakMap by document.
 - Document eviction must call `destroy()`.
 
@@ -547,7 +561,7 @@ Target shape:
 
 ```ts
 getImageFrameSource(resource: ViewerResource): Promise<FrameSource>
-retainImageFrameSource(resource.identityKey, source)
+retainImageFrameSource(resource.cacheKey, source)
 ```
 
 Implementation notes:
@@ -571,7 +585,7 @@ Implementation notes:
 
 - DOCX currently fetches full ArrayBuffer.
 - `docx-preview` receives ArrayBuffer for deterministic JSZip behavior.
-- Cache key is `resource.identityKey`.
+- Cache key is `resource.cacheKey`.
 - Rendering remains effect-owned because `docx-preview` mutates the DOM.
 
 ### XLSX Loader
@@ -586,7 +600,7 @@ Implementation notes:
 
 - Reads full ArrayBuffer.
 - Parses in worker.
-- Cache key is `resource.identityKey`.
+- Cache key is `resource.cacheKey`.
 - Worker transfer should transfer the buffer.
 - Parsed workbook cache stays XLSX-specific.
 
@@ -689,10 +703,7 @@ They should not be forced into the same UI component.
 `TextViewer` should be the pilot implementation for the canonical source model.
 
 ```ts
-export type TextDocumentSource =
-  | UrlViewerSource
-  | BlobViewerSource
-  | TextSource
+export type TextDocumentSource = UrlViewerSource | BlobViewerSource | TextSource
 
 export interface TextViewerProps extends TextViewerBounds {
   source: TextDocumentSource
@@ -802,7 +813,7 @@ The cache key must include every input that changes loaded text.
 
 ```ts
 resourceKey = [
-  resource.identityKey,
+  resource.cacheKey,
   retryVersion,
   bounds.maxBytes,
   bounds.maxLines,
@@ -1118,23 +1129,23 @@ The next TextViewer pass is complete only when these behaviors are tested.
 
 Use one vocabulary.
 
-| Concept | Canonical name |
-| --- | --- |
-| Public input | `source` |
-| Runtime capability | `resource` |
-| Synchronous metadata | `descriptor` |
-| Stable identity | `identityKey` |
-| User-visible name | `displayName` |
-| Download filename | `downloadFileName` |
-| Download behavior | `download` |
-| Network URL | `url` |
-| Generated object URL | `objectUrl` |
-| Text content | `text` |
-| Text lines array | `textLines` |
-| Scroll container | `viewportElement` |
-| Retry nonce | `retryVersion` |
-| Bounds object | `bounds` |
-| Cache identity | `resourceKey` |
+| Concept              | Canonical name     |
+| -------------------- | ------------------ |
+| Public input         | `source`           |
+| Runtime capability   | `resource`         |
+| Synchronous metadata | `descriptor`       |
+| Stable identity      | `identityKey`      |
+| User-visible name    | `displayName`      |
+| Download filename    | `downloadFileName` |
+| Download behavior    | `download`         |
+| Network URL          | `url`              |
+| Generated object URL | `objectUrl`        |
+| Text content         | `text`             |
+| Text lines array     | `textLines`        |
+| Scroll container     | `viewportElement`  |
+| Retry nonce          | `retryVersion`     |
+| Bounds object        | `bounds`           |
+| Resource lifecycle   | `cacheKey`         |
 
 Forbidden aliases in canonical files:
 
@@ -1144,7 +1155,7 @@ Forbidden aliases in canonical files:
 - `fileName` as a top-level viewer prop
 - `bytes` as a source kind
 - `data` as a universal source
-- `cacheKey` when the concept is already called `resourceKey`
+- `resourceKey` when the concept is already called `cacheKey`
 
 Internal leaf viewers may still use `src` until migrated. Canonical public
 components should not.

@@ -53,7 +53,10 @@ export function resolveRef(
 }
 
 /** True when a `$ref` points at a definition that no longer exists. */
-export function isDanglingRef(doc: SchemaDocument, node: DocumentNode): boolean {
+export function isDanglingRef(
+  doc: SchemaDocument,
+  node: DocumentNode
+): boolean {
   return Boolean(node.ref) && !resolveRef(doc, node)
 }
 

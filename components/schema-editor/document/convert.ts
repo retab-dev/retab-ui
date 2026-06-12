@@ -269,7 +269,8 @@ function nodeToSchema(
     out.enum = node.enum.map((entry) => entry.value)
     const descriptions: Record<string, string> = {}
     for (const entry of node.enum) {
-      if (entry.description) descriptions[enumKey(entry.value)] = entry.description
+      if (entry.description)
+        descriptions[enumKey(entry.value)] = entry.description
     }
     if (Object.keys(descriptions).length > 0) {
       out[ENUM_DESCRIPTIONS_KEY] = descriptions

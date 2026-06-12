@@ -1,9 +1,15 @@
 "use client"
 
-import React, { useEffect, useRef, useState } from "react"
-import { useVirtualizer } from "@tanstack/react-virtual"
+import React, { useRef, useState } from "react"
 import type { JSONSchema7 } from "json-schema"
 
+import { fixedGridColumnWidths } from "@/components/ui/fixed-grid-columns"
+import {
+  getFixedGridCanvasStyle,
+  getFixedGridRowWindowStyle,
+} from "@/components/ui/fixed-grid-layout"
+import { useFixedRowVirtualization } from "@/components/ui/fixed-grid-virtualization"
+import { FixedGridViewport } from "@/components/ui/fixed-grid-viewport"
 import type { VisibleColumn } from "@/components/json-table/data-cell-types"
 import { JsonTableHeaderCell } from "@/components/json-table/header-cell"
 import type { ProjectedRow } from "@/components/json-table/lib/document-projection"
@@ -168,26 +174,20 @@ export const SingleFileVirtualizedTable =
       // survives row virtualization.
       const [openEditorPath, setOpenEditorPath] = useState<string | null>(null)
 
-      const totalWidth = visibleColumns.reduce(
-        (total, column) => total + column.widthPx,
+      const totalWidth = fixedGridColumnWidths(visibleColumns).reduce(
+        (total, widthPx) => total + widthPx,
         0
       )
 
       const rowHeightPx = getRowHeightPx(rowHeight)
       const scrollRef = useRef<HTMLDivElement>(null)
       const headerScrollRef = useRef<HTMLDivElement>(null)
-      const rowVirtualizer = useVirtualizer({
-        count: rowCount,
-        getScrollElement: () => scrollRef.current,
-        estimateSize: () => rowHeightPx,
-        overscan,
+      const { virtualRows, totalRowSize } = useFixedRowVirtualization({
+        rowCount,
+        rowSize: rowHeightPx,
+        rowOverscan: overscan,
+        scrollRef,
       })
-      const virtualRows = rowVirtualizer.getVirtualItems()
-      const totalHeight = rowVirtualizer.getTotalSize()
-
-      useEffect(() => {
-        rowVirtualizer.measure()
-      }, [rowHeightPx, rowVirtualizer])
 
       return (
         <div className="relative flex min-h-0 min-w-0 flex-1 flex-col bg-background">
@@ -203,7 +203,7 @@ export const SingleFileVirtualizedTable =
           >
             <Table
               className="relative flex w-full flex-col rounded-none bg-muted/30"
-              style={{ minWidth: `${totalWidth}px` }}
+              style={getFixedGridCanvasStyle({ minWidth: totalWidth })}
             >
               <SingleFileTableHeader
                 columnWidth={columnWidth}
@@ -219,8 +219,9 @@ export const SingleFileVirtualizedTable =
               />
             </Table>
           </div>
-          <div
-            ref={scrollRef}
+          <FixedGridViewport
+            scrollRef={scrollRef}
+            dataSlot="json-table-scroll"
             className="w-full flex-1 overflow-auto"
             onScroll={(e) => {
               if (headerScrollRef.current) {
@@ -230,16 +231,14 @@ export const SingleFileVirtualizedTable =
           >
             <Table
               className="relative flex w-full flex-col rounded-none bg-background"
-              style={{
-                minWidth: `${totalWidth}px`,
-              }}
+              style={getFixedGridCanvasStyle({ minWidth: totalWidth })}
             >
               <TableBody
                 className="relative w-full bg-background"
-                style={{
-                  height: `${totalHeight}px`,
+                style={getFixedGridRowWindowStyle({
+                  height: totalRowSize,
                   minWidth: "100%",
-                }}
+                })}
               >
                 {virtualRows.map((virtualRow, slotIndex) => {
                   // Editable mode keeps row identity so focused editor state
@@ -270,7 +269,7 @@ export const SingleFileVirtualizedTable =
                 })}
               </TableBody>
             </Table>
-          </div>
+          </FixedGridViewport>
         </div>
       )
     }

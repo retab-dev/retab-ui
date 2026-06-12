@@ -23,7 +23,7 @@ persist changes in `onCommitPropertyDraft`.
 import { useState } from "react"
 
 import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
-import { PropertyForm } from "@/components/schema-editor/property-form"
+import { PropertyForm } from "@/components/schema-editor/property-form/property-form"
 
 export function Example() {
   const [property, setProperty] = useState<ExtendedJSONSchema7>({
@@ -52,15 +52,15 @@ export function Example() {
 
 ## Props
 
-| Prop                    | Type                                                        | Description                                                                                               |
-| ----------------------- | ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `propertyDraft`         | `{ name; schemaNode }`                                      | The property draft to edit.                                                                               |
-| `schemaContext`         | `PropertyFormSchemaContext`                                 | Parent-local validation names, original name, `$defs`, and optional command handler for definitions/templates. |
-| `onCommitPropertyDraft` | `(next: { name; schemaNode }) => void \| Promise<void>`     | Called only after validation passes.                                                                      |
-| `onCancel`              | `() => void`                                                | Called on Cancel.                                                                                         |
-| `onDelete`              | `() => void`                                                | Optional. Shows the Delete Property action.                                                               |
-| `submitLabel`           | `string`                                                    | Submit button label. Defaults to `"Save Changes"`.                                                        |
-| `mode`                  | `"editable" \| "readOnly" \| "descriptionOnly"`             | Defaults to `"editable"`.                                                                                 |
+| Prop                    | Type                                                    | Description                                                                                                    |
+| ----------------------- | ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `propertyDraft`         | `{ name; schemaNode }`                                  | The property draft to edit.                                                                                    |
+| `schemaContext`         | `PropertyFormSchemaContext`                             | Parent-local validation names, original name, `$defs`, and optional command handler for definitions/templates. |
+| `onCommitPropertyDraft` | `(next: { name; schemaNode }) => void \| Promise<void>` | Called only after validation passes.                                                                           |
+| `onCancel`              | `() => void`                                            | Called on Cancel.                                                                                              |
+| `onDelete`              | `() => void`                                            | Optional. Shows the Delete Property action.                                                                    |
+| `submitLabel`           | `string`                                                | Submit button label. Defaults to `"Save Changes"`.                                                             |
+| `mode`                  | `"editable" \| "readOnly" \| "descriptionOnly"`         | Defaults to `"editable"`.                                                                                      |
 
 The Schema Builder uses `PropertyForm` inside a dialog — see
 [Schema Builder](/docs/components/schema-builder).

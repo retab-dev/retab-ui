@@ -80,9 +80,8 @@ function SourceDocumentRenderer({
     return (
       <PdfViewer
         ref={viewerRef}
-        src={src}
+        source={{ kind: "url", url: src, fileName: filename }}
         bare
-        downloadFileName={filename}
         className="h-full"
         renderPageOverlay={showPreview ? renderPageOverlay : undefined}
       />

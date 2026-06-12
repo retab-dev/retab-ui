@@ -96,9 +96,12 @@ export function PartitionViewerDemo() {
         result={partitionResult}
         renderDocument={(handlers) => (
           <PdfViewer
-            src={PARTITION_PDF_URL}
+            source={{
+              kind: "url",
+              url: PARTITION_PDF_URL,
+              fileName: "attention.pdf",
+            }}
             bare
-            downloadFileName="attention.pdf"
             slots={handlers.slots}
             onVisiblePageChange={handlers.onCurrentPageChange}
             onScrollProgressChange={handlers.onScrollProgressChange}
@@ -124,9 +127,12 @@ export function ClassificationViewerDemo() {
         }}
         renderDocument={(handlers) => (
           <PdfViewer
-            src="/samples/loan-application.pdf"
+            source={{
+              kind: "url",
+              url: "/samples/loan-application.pdf",
+              fileName: "loan-application.pdf",
+            }}
             bare
-            downloadFileName="loan-application.pdf"
             slots={handlers.slots}
             className="h-full"
           />
@@ -146,9 +152,12 @@ export function SplitViewerDemo() {
         result={splitResult}
         renderDocument={(handlers) => (
           <PdfViewer
-            src={SPLIT_PDF_URL}
+            source={{
+              kind: "url",
+              url: SPLIT_PDF_URL,
+              fileName: "harris_2023_federal_state_returns.pdf",
+            }}
             bare
-            downloadFileName="harris_2023_federal_state_returns.pdf"
             slots={handlers.slots}
             onVisiblePageChange={handlers.onCurrentPageChange}
             onScrollProgressChange={handlers.onScrollProgressChange}

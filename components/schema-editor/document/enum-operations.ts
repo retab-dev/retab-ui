@@ -1,3 +1,7 @@
+import { mapPreserve } from "@/components/schema-editor/document/array"
+import { getEffectiveDocNode } from "@/components/schema-editor/document/node-selectors"
+import { updateNode } from "@/components/schema-editor/document/node-update"
+import { getNode } from "@/components/schema-editor/document/traversal"
 import {
   createEnumValue,
   updateEffectiveNodeShape,
@@ -7,12 +11,6 @@ import type {
   JsonValue,
   SchemaDocument,
 } from "@/components/schema-editor/document/types"
-import {
-  getEffectiveDocNode,
-  getNode,
-  mapPreserve,
-  updateNode,
-} from "@/components/schema-editor/document/tree"
 
 export function addEnumValue(
   doc: SchemaDocument,

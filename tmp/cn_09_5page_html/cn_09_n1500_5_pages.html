@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>cn_09_n1500 - selected 5 pages</title>
+    <style>
+      @page {
+        size: letter;
+        margin: 0;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: #e5e5e5;
+      }
+
+      .page {
+        width: 8.5in;
+        height: 11in;
+        margin: 0 auto 24px;
+        background: #fff;
+        overflow: hidden;
+        page-break-after: always;
+        break-after: page;
+      }
+
+      .page:last-child {
+        page-break-after: auto;
+        break-after: auto;
+      }
+
+      img {
+        display: block;
+        width: 8.5in;
+        height: 11in;
+      }
+
+      @media print {
+        html,
+        body {
+          background: #fff;
+        }
+
+        .page {
+          margin: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main aria-label="Selected pages from cn_09_n1500.pdf">
+      <section class="page" aria-label="Original page 1">
+        <img src="page-01.png" alt="Original page 1" />
+      </section>
+      <section class="page" aria-label="Original page 2">
+        <img src="page-02.png" alt="Original page 2" />
+      </section>
+      <section class="page" aria-label="Original page 3">
+        <img src="page-03.png" alt="Original page 3" />
+      </section>
+      <section class="page" aria-label="Original page 64">
+        <img src="page-64.png" alt="Original page 64" />
+      </section>
+      <section class="page" aria-label="Original page 65">
+        <img src="page-65.png" alt="Original page 65" />
+      </section>
+    </main>
+  </body>
+</html>

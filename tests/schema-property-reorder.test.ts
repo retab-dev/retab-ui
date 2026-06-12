@@ -1,5 +1,10 @@
+// @vitest-environment jsdom
 import { describe, expect, it } from "vitest"
 
+import {
+  resolvePropertyDrop,
+  type PropertyDropEvent,
+} from "@/components/schema-editor/document-property-drag"
 import {
   getPropertyDropClasses,
   getPropertyDropIndicator,
@@ -74,5 +79,32 @@ describe("document property reorder helpers", () => {
         targetPropertyId: "prop_b",
       })
     ).toBe(1)
+  })
+
+  it("resolves a valid DOM drop and clears target classes", () => {
+    const target = document.createElement("div")
+    target.classList.add("border-t-2")
+    const event = {
+      stopPropagation: () => undefined,
+      preventDefault: () => undefined,
+      currentTarget: target,
+      dataTransfer: {
+        getData: () => "prop_a",
+      },
+    } satisfies PropertyDropEvent
+
+    expect(
+      resolvePropertyDrop({
+        event,
+        path: "#",
+        targetPropertyId: "prop_c",
+        propertyIds,
+        draggedParentRef: { current: "#" },
+      })
+    ).toEqual({
+      sourcePropertyId: "prop_a",
+      targetIndex: 2,
+    })
+    expect(target.classList.contains("border-t-2")).toBe(false)
   })
 })

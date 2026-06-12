@@ -130,7 +130,7 @@ export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
         data-slot="csv-viewer"
         className={cn(
           "flex flex-col overflow-hidden rounded-xl border bg-card",
-          fillHeight && "min-h-0 flex-1",
+          fillHeight && "h-full min-h-0 flex-1",
           className
         )}
         style={{ fontSize: BASE_FONT_SIZE * zoom }}

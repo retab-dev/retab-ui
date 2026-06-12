@@ -232,8 +232,11 @@ Preferred final shape:
 
 ```ts
 export class FrameSourceManager {
-  load(src: string, createTiffWorker: TiffWorkerFactory): Promise<FrameSource>
-  retain(src: string, source: FrameSource): FrameSourceLease | null
+  load(
+    resource: ViewerResource,
+    createTiffWorker: TiffWorkerFactory
+  ): Promise<FrameSource>
+  retain(resource: ViewerResource, source: FrameSource): FrameSourceLease | null
   clear(): void
 }
 ```

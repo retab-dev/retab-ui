@@ -59,7 +59,7 @@ It already handles:
 - bundled worker setup
 - stable Suspense resources
 - ownership-aware document cache
-- same-src retry after failed loads
+- same-source retry after failed loads
 - page cache keyed by document identity
 - page canvas virtualization
 - lazy mixed-page-size correction
@@ -87,7 +87,7 @@ Keep these unchanged:
 - Every page keeps a mounted slot.
 - Offscreen pages do not keep live canvases.
 - Cache pruning cannot destroy a retained document.
-- Failed document loads are retryable for the same `src`.
+- Failed document loads are retryable for the same `source`.
 - Fit width, manual zoom, and controlled zoom share one scale policy.
 - Fallback and loaded states honor the same shell props.
 - Registry consumers receive every module required by the component.
@@ -297,7 +297,7 @@ Add `tests/pdf-viewer-page-sizes.test.ts`:
 
 Extend direct resource tests:
 
-- same `src` deduplicates document loads
+- same `source` deduplicates document loads
 - retained documents are not evicted when the cache exceeds max size
 - unretained fulfilled documents are destroyed on eviction
 - rejected entries are removed and retried

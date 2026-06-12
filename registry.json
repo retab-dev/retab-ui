@@ -502,8 +502,8 @@
       "name": "csv-viewer",
       "type": "registry:ui",
       "title": "CSV Viewer",
-      "description": "A virtualized CSV/TSV table on TanStack Virtual: sortable columns, sticky header, row numbers, horizontal scroll. Renders straight from raw rows (no table row model) so it stays flat in memory on huge files.",
-      "dependencies": ["@tanstack/react-virtual@^3.13.12", "lucide-react"],
+      "description": "A fixed-window virtualized CSV/TSV table: sortable columns, sticky header, row numbers, horizontal scroll. Renders straight from raw rows (no table row model) so it stays flat in memory on huge files.",
+      "dependencies": ["lucide-react"],
       "registryDependencies": ["csv", "utils", "button"],
       "files": [
         {
@@ -525,6 +525,46 @@
           "path": "registry/new-york-v4/ui/fixed-grid-virtualization.ts",
           "type": "registry:ui",
           "target": "@ui/fixed-grid-virtualization.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/fixed-grid-row-style.ts",
+          "type": "registry:ui",
+          "target": "@ui/fixed-grid-row-style.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/fixed-grid-template.ts",
+          "type": "registry:ui",
+          "target": "@ui/fixed-grid-template.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/fixed-grid-columns.ts",
+          "type": "registry:ui",
+          "target": "@ui/fixed-grid-columns.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/fixed-grid-layout.ts",
+          "type": "registry:ui",
+          "target": "@ui/fixed-grid-layout.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/fixed-grid-selection.ts",
+          "type": "registry:ui",
+          "target": "@ui/fixed-grid-selection.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/fixed-grid-viewport.tsx",
+          "type": "registry:ui",
+          "target": "@ui/fixed-grid-viewport.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/header-aware-scrollbar.tsx",
+          "type": "registry:ui",
+          "target": "@ui/header-aware-scrollbar.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/viewer-scrollbar-css.ts",
+          "type": "registry:ui",
+          "target": "@ui/viewer-scrollbar-css.ts"
         },
         {
           "path": "registry/new-york-v4/ui/csv-viewer-scrollbar.tsx",
@@ -881,12 +921,8 @@
       "name": "xlsx-viewer",
       "type": "registry:ui",
       "title": "XLSX Viewer",
-      "description": "A virtualized Excel/spreadsheet viewer rendered entirely client-side: sheet tabs, zoom, download, formatted values, numeric alignment, sparse workbook storage, and row + column virtualization so huge sheets stay smooth. No useEffect for data loading.",
-      "dependencies": [
-        "lucide-react",
-        "@e965/xlsx@0.20.3",
-        "@tanstack/react-virtual@^3.13.12"
-      ],
+      "description": "A fixed-window virtualized Excel/spreadsheet viewer rendered entirely client-side: sheet tabs, zoom, download, formatted values, numeric alignment, sparse workbook storage, and row + column virtualization so huge sheets stay smooth. No useEffect for data loading.",
+      "dependencies": ["lucide-react", "@e965/xlsx@0.20.3"],
       "registryDependencies": [
         "xlsx-worker-protocol",
         "xlsx-workbook",
@@ -911,6 +947,46 @@
           "path": "registry/new-york-v4/ui/fixed-grid-virtualization.ts",
           "type": "registry:ui",
           "target": "@ui/fixed-grid-virtualization.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/fixed-grid-row-style.ts",
+          "type": "registry:ui",
+          "target": "@ui/fixed-grid-row-style.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/fixed-grid-template.ts",
+          "type": "registry:ui",
+          "target": "@ui/fixed-grid-template.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/fixed-grid-columns.ts",
+          "type": "registry:ui",
+          "target": "@ui/fixed-grid-columns.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/fixed-grid-layout.ts",
+          "type": "registry:ui",
+          "target": "@ui/fixed-grid-layout.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/fixed-grid-selection.ts",
+          "type": "registry:ui",
+          "target": "@ui/fixed-grid-selection.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/fixed-grid-viewport.tsx",
+          "type": "registry:ui",
+          "target": "@ui/fixed-grid-viewport.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/header-aware-scrollbar.tsx",
+          "type": "registry:ui",
+          "target": "@ui/header-aware-scrollbar.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/viewer-scrollbar-css.ts",
+          "type": "registry:ui",
+          "target": "@ui/viewer-scrollbar-css.ts"
         },
         {
           "path": "registry/new-york-v4/ui/xlsx-grid-constants.ts",

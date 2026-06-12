@@ -32,7 +32,16 @@ your bundler (Vite, webpack, or Turbopack) — there is no runtime CDN call.
 import { PdfViewer } from "@/components/ui/pdf-viewer"
 
 export function Example() {
-  return <PdfViewer src="/document.pdf" className="h-[600px]" />
+  return (
+    <PdfViewer
+      source={{
+        kind: "url",
+        url: "/document.pdf",
+        fileName: "document.pdf",
+      }}
+      className="h-[600px]"
+    />
+  )
 }
 ```
 
@@ -43,7 +52,7 @@ normalized boxes map with simple percentages:
 
 ```tsx
 <PdfViewer
-  src={url}
+  source={{ kind: "url", url, fileName: "document.pdf" }}
   renderPageOverlay={({ pageNumber }) =>
     fieldsOnPage(pageNumber).map((f) => (
       <div
@@ -73,7 +82,7 @@ edge plus a floating overlay. Pass them through `slots`.
 
 ```tsx
 <PdfViewer
-  src={url}
+  source={{ kind: "url", url, fileName: "document.pdf" }}
   slots={{
     top: <Legend />, // full-width strip below the toolbar
     left: <PageRibbon />, // collapsible rail (toggled with right)
@@ -97,7 +106,7 @@ or pass `scale` with `onScaleChange` to control zoom from a parent.
 const [scale, setScale] = React.useState<number | null>(1)
 
 <PdfViewer
-  src={url}
+  source={{ kind: "url", url, fileName: "document.pdf" }}
   scale={scale ?? undefined}
   onScaleChange={setScale}
 />
@@ -119,12 +128,12 @@ vertical target.
 
 | Prop                     | Type                                     | Description                                                                                                        |
 | ------------------------ | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `src`                    | `string`                                 | URL of the PDF (same-origin or CORS-enabled).                                                                      |
+| `source`                 | `UrlViewerSource \| BlobViewerSource`    | Canonical PDF source. URL sources preserve PDF.js range-loading behavior.                                          |
 | `scale`                  | `number`                                 | Controlled rendered scale. Omit for fit-to-width/uncontrolled zoom.                                                |
 | `defaultScale`           | `number`                                 | Initial uncontrolled scale. Omit for fit-to-width.                                                                 |
 | `onScaleChange`          | `(scale: number \| null) => void`        | Fired when toolbar zoom controls request a scale change; `null` means fit width.                                   |
 | `toolbar`                | `boolean`                                | Show the zoom/rotate/download toolbar. Defaults to `true`.                                                         |
-| `downloadFileName`       | `string`                                 | Filename for the download button.                                                                                  |
+| `downloadFileName`       | `string`                                 | Optional filename override for the download button.                                                                |
 | `renderPageOverlay`      | `(props: PageOverlayProps) => ReactNode` | Per-page overlay; receives `{ pageNumber, width, height, scale, rotation }`.                                       |
 | `onVisiblePageChange`    | `(page: number) => void`                 | Fired with the 1-based page nearest the top of the viewport.                                                       |
 | `onScrollProgressChange` | `(progress: number) => void`             | Fired with scroll progress in `[0, 1]`.                                                                            |

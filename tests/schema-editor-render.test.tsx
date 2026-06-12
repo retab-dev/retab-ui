@@ -1,8 +1,14 @@
 // @vitest-environment jsdom
 import * as React from "react"
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react"
-import { afterEach, describe, expect, it, vi } from "vitest"
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react"
 import type { JSONSchema7 } from "json-schema"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { SchemaBuilder } from "@/components/schema-editor/schema-builder"
 
@@ -47,7 +53,9 @@ describe("SchemaBuilder renders (integration smoke)", () => {
   it("renders nested objects and $defs without crashing", () => {
     renderEditor({
       type: "object",
-      $defs: { Money: { type: "object", properties: { amount: { type: "number" } } } },
+      $defs: {
+        Money: { type: "object", properties: { amount: { type: "number" } } },
+      },
       properties: {
         vendor: { type: "object", properties: { name: { type: "string" } } },
         cost: { $ref: "#/$defs/Money" },
@@ -72,7 +80,7 @@ describe("SchemaBuilder interactions (doc-routed)", () => {
     expect(Object.keys(out.properties!)).toContain("memo")
     // existing properties are preserved
     expect(Object.keys(out.properties!)).toEqual(
-      expect.arrayContaining(["invoice_number", "total", "memo"]),
+      expect.arrayContaining(["invoice_number", "total", "memo"])
     )
   })
 
@@ -80,14 +88,19 @@ describe("SchemaBuilder interactions (doc-routed)", () => {
     const { last } = renderEditor(sample)
     // total has no description → its row shows the "Add description" placeholder
     const totalRow = screen.getByText("total").closest("div")!
-    const placeholder = within(totalRow.parentElement as HTMLElement)
-      .getAllByText("Add description")[0]
+    const placeholder = within(
+      totalRow.parentElement as HTMLElement
+    ).getAllByText("Add description")[0]
     fireEvent.click(placeholder) // switch to edit mode
-    const input = screen.getByPlaceholderText("Add description") as HTMLInputElement
+    const input = screen.getByPlaceholderText(
+      "Add description"
+    ) as HTMLInputElement
     fireEvent.change(input, { target: { value: "amount due" } })
     fireEvent.blur(input)
     const out = last()!
-    expect((out.properties!.total as JSONSchema7).description).toBe("amount due")
+    expect((out.properties!.total as JSONSchema7).description).toBe(
+      "amount due"
+    )
   })
 
   it("has no per-property Required control (required is the default policy)", () => {
@@ -115,7 +128,7 @@ describe("SchemaBuilder interactions (doc-routed)", () => {
     const out = last()!
     // existing + new are all required
     expect(out.required).toEqual(
-      expect.arrayContaining(["invoice_number", "total", "memo"]),
+      expect.arrayContaining(["invoice_number", "total", "memo"])
     )
   })
 
@@ -161,9 +174,27 @@ describe("SchemaBuilder interactions (doc-routed)", () => {
     const out = last()!
     const vendor = out.properties!.vendor as JSONSchema7
     expect(Object.keys(vendor.properties!)).toEqual(
-      expect.arrayContaining(["name", "city", "zip"]),
+      expect.arrayContaining(["name", "city", "zip"])
     )
     // the edit was node-local to vendor — the root gained nothing
     expect(Object.keys(out.properties!)).toEqual(["vendor"])
+  })
+
+  it("keeps the new enum choice input focused after adding a choice", () => {
+    const { last } = renderEditor({
+      type: "object",
+      properties: {
+        status: { type: "string", enum: ["draft"] },
+      },
+    })
+
+    const input = screen.getByPlaceholderText("New choice") as HTMLInputElement
+    input.focus()
+    fireEvent.change(input, { target: { value: "paid" } })
+    fireEvent.keyDown(input, { key: "Enter" })
+
+    expect(document.activeElement).toBe(input)
+    const status = last()!.properties!.status as JSONSchema7
+    expect(status.enum).toEqual(["draft", "paid"])
   })
 })

@@ -3,6 +3,7 @@
 import React, { useMemo, useState } from "react"
 import type { JSONSchema7 } from "json-schema"
 
+import { buildFixedGridColumns } from "@/components/ui/fixed-grid-columns"
 import { projectDocumentRows } from "@/components/json-table/lib/document-projection"
 import { flattenHeaderNodes } from "@/components/json-table/lib/header-nodes"
 import type { TableDocument } from "@/components/json-table/lib/projects-types"
@@ -64,10 +65,14 @@ export const SingleFileTableView = React.memo<SingleFileTableViewProps>(
 
     const visibleColumns = useMemo(() => {
       const widthPx = getColumnWidthPx(columnWidth)
-      return visibleKeys.map((key) => ({
-        key,
-        fieldMetadata: getFieldMetadata(schema, key),
-        widthPx: key.endsWith("__delete") ? 50 : widthPx,
+      return buildFixedGridColumns({
+        items: visibleKeys,
+        getKey: (key) => key,
+        getWidthPx: (key) => (key.endsWith("__delete") ? 50 : widthPx),
+        getMetadata: (key) => getFieldMetadata(schema, key),
+      }).map((column) => ({
+        ...column,
+        fieldMetadata: column.metadata,
       }))
     }, [columnWidth, schema, visibleKeys])
 

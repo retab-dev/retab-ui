@@ -7,8 +7,11 @@ export function PdfViewerDemo() {
     // A 96-page NVIDIA 10-K so the continuous-scroll virtualization shows at scale.
     <div className="not-prose my-6 h-[600px]">
       <PdfViewer
-        src="/samples/nvidia-10k-fy2024.pdf"
-        downloadFileName="nvidia-10k-fy2024.pdf"
+        source={{
+          kind: "url",
+          url: "/samples/nvidia-10k-fy2024.pdf",
+          fileName: "nvidia-10k-fy2024.pdf",
+        }}
         className="h-full"
       />
     </div>

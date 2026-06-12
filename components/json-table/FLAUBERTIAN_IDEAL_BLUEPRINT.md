@@ -20,7 +20,7 @@ The component has reached the intended structural ideal for its current product
 requirements.
 
 - No TanStack Table runtime model remains.
-- TanStack Virtual is the deliberate row viewport primitive.
+- Fixed-size shared row virtualization is the deliberate viewport primitive.
 - No `row.original`, header-group placeholders, fake leaf columns, or old
   library-shaped concepts remain.
 - `schema-inspection.ts`, `json-schema-utils.ts`, `date-utils.ts`, and

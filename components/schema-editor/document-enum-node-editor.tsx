@@ -4,13 +4,13 @@ import * as React from "react"
 import { useState } from "react"
 import { PlusIcon, X } from "lucide-react"
 
+import type { DocumentSchemaNodeEditorProps } from "@/components/schema-editor/document-node-editor-types"
 import {
   addEnumValue,
-  type EnumValue,
   removeEnumValueAtIndex,
   updateEnumValueAtIndex,
-} from "@/components/schema-editor/document"
-import type { DocumentSchemaNodeEditorProps } from "@/components/schema-editor/document-node-editor-types"
+} from "@/components/schema-editor/document/enum-operations"
+import type { EnumValue } from "@/components/schema-editor/document/types"
 import { Button } from "@/components/ui-retab/button"
 import { Input } from "@/components/ui-retab/input"
 

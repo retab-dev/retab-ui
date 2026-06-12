@@ -81,14 +81,15 @@ between them — no per-field glue.
 
 ```tsx
 import * as React from "react"
+
 import { extractionSourcesToSourceMap } from "@/lib/document-source"
 import { useSourceLink } from "@/hooks/use-source-link"
-import { JsonForm } from "@/components/json-form/json-form"
-import { PdfViewer, type PdfViewerHandle } from "@/components/ui/pdf-viewer"
 import {
-  usePdfSourceTarget,
   renderPdfSourceOverlay,
+  usePdfSourceTarget,
 } from "@/components/ui/pdf-source"
+import { PdfViewer, type PdfViewerHandle } from "@/components/ui/pdf-viewer"
+import { JsonForm } from "@/components/json-form/json-form"
 
 export function Example({ response, form }) {
   const viewerRef = React.useRef<PdfViewerHandle>(null)
@@ -103,7 +104,7 @@ export function Example({ response, form }) {
     <div className="flex h-full">
       <PdfViewer
         ref={viewerRef}
-        src="/document.pdf"
+        source={{ kind: "url", url: "/document.pdf" }}
         bare
         className="min-w-0 flex-1"
         renderPageOverlay={renderPdfSourceOverlay(link.activeSource)}
@@ -123,36 +124,36 @@ own field list). To support a different viewer, write one adapter — a
 
 ### `document-source`
 
-| Export | Description |
-| --- | --- |
-| `Source` | `{ content, anchor }` — a value's provenance. |
-| `SourceAnchor` | discriminated union on `kind`: `pdf_bbox`, `image_bbox`, `csv_cell`, `spreadsheet_cell`, `docx_text_span`, `docx_table_cell`, `text_span`. |
-| `ExtractionSourcesResponse` | the `/v1/extractions/{id}/sources` shape. |
-| `SourceMap` | `Record<path, Source>` — flat, dotted-path keyed. |
-| `extractionSourcesToSourceMap` | `(sources) => SourceMap` — flatten the sources tree. |
-| `SourceLocation` / `SourceArea` | a normalized page region (`page` + `%` box). |
-| `sourceLocationKey` | stable key for dedupe. |
+| Export                          | Description                                                                                                                                |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `Source`                        | `{ content, anchor }` — a value's provenance.                                                                                              |
+| `SourceAnchor`                  | discriminated union on `kind`: `pdf_bbox`, `image_bbox`, `csv_cell`, `spreadsheet_cell`, `docx_text_span`, `docx_table_cell`, `text_span`. |
+| `ExtractionSourcesResponse`     | the `/v1/extractions/{id}/sources` shape.                                                                                                  |
+| `SourceMap`                     | `Record<path, Source>` — flat, dotted-path keyed.                                                                                          |
+| `extractionSourcesToSourceMap`  | `(sources) => SourceMap` — flatten the sources tree.                                                                                       |
+| `SourceLocation` / `SourceArea` | a normalized page region (`page` + `%` box).                                                                                               |
+| `sourceLocationKey`             | stable key for dedupe.                                                                                                                     |
 
 ### `useSourceLink`
 
 `useSourceLink({ sources, target })` →
 
-| Member | Description |
-| --- | --- |
+| Member                       | Description                                               |
+| ---------------------------- | --------------------------------------------------------- |
 | `onFieldHover(path \| null)` | report the hovered field — wire to `setSourcesFieldPath`. |
-| `selectField(path)` | pin a field (e.g. on click). |
-| `clear()` | clear hover and pin. |
-| `activeSource` | the active field's source — feed to the overlay. |
-| `activePath` | the effective active path (hover wins over pin). |
-| `hoverPath` / `pinnedPath` | the transient hovered and persisted pinned paths. |
+| `selectField(path)`          | pin a field (e.g. on click).                              |
+| `clear()`                    | clear hover and pin.                                      |
+| `activeSource`               | the active field's source — feed to the overlay.          |
+| `activePath`                 | the effective active path (hover wins over pin).          |
+| `hoverPath` / `pinnedPath`   | the transient hovered and persisted pinned paths.         |
 
 ### `pdf-source`
 
-| Export | Description |
-| --- | --- |
-| `usePdfSourceTarget(ref)` | a stable `SourceTarget` over a `PdfViewer` ref. |
+| Export                           | Description                                                                    |
+| -------------------------------- | ------------------------------------------------------------------------------ |
+| `usePdfSourceTarget(ref)`        | a stable `SourceTarget` over a `PdfViewer` ref.                                |
 | `renderPdfSourceOverlay(source)` | a `renderPageOverlay` drawing the highlight on its page — pass `activeSource`. |
-| `pdfAnchorToLocation(anchor)` | normalized bbox → page `%` location. |
+| `pdfAnchorToLocation(anchor)`    | normalized bbox → page `%` location.                                           |
 
 Both compositions ship as blocks: the [Extract Viewer](/blocks#extract) (a field
 list) and [JSON Form Sources](/blocks#json-form-sources) (json-form).

@@ -39,7 +39,7 @@ export function Example({ result }) {
       result={result}
       renderDocument={(handlers) => (
         <PdfViewer
-          src="/document.pdf"
+          source={{ kind: "url", url: "/document.pdf" }}
           bare
           onVisiblePageChange={handlers.onCurrentPageChange}
           className="h-full"

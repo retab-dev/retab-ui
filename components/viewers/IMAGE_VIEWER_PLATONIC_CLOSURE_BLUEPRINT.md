@@ -54,15 +54,16 @@ Do not add:
 - Annotation APIs.
 - Any shared abstraction with PDF/PPTX.
 
-Do not rename public props unless a compatibility alias preserves the old API.
+Do not add a compatibility alias for the old file API.
 
 ## 1. Abandoned Load Ownership
 
 Problem:
 
-`React.use(getImageSource(src))` can start source loading during render. If the
-render is abandoned before `ImageViewerContent` commits, the current callback ref
-never retains the source, so the manager may keep a resolved source indefinitely.
+`React.use(getImageSource(resource))` can start source loading during render. If
+the render is abandoned before `ImageViewerContent` commits, the current callback
+ref never retains the source, so the manager may keep a resolved source
+indefinitely.
 
 Target invariant:
 
@@ -87,7 +88,7 @@ Behavior:
 
 - New entries start with `leaseCount = 0`.
 - When a source resolves with `leaseCount = 0`, schedule disposal.
-- `retain(src, source)` cancels the unclaimed disposal timer.
+- `retain(resource, source)` cancels the unclaimed disposal timer.
 - Last `release()` disposes immediately.
 - `clear()` cancels timers and disposes/marks every entry.
 - Rejected loads still delete the entry immediately.
@@ -124,7 +125,10 @@ Target shape:
 Create a tiny local hook:
 
 ```ts
-function useFrameSourceLease(src: string, source: FrameSource): void
+function useFrameSourceLease(
+  resource: ViewerResource,
+  source: FrameSource
+): void
 ```
 
 Implementation may still use callback-ref cleanup or `useEffectEvent`-style

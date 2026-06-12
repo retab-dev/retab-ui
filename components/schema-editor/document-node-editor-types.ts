@@ -1,16 +1,15 @@
 import type * as React from "react"
 
-import type {
-  DocumentNodeView,
-  SchemaDocument,
-} from "@/components/schema-editor/document"
+import type { SchemaDocument } from "@/components/schema-editor/document/types"
+import type { DocumentNodeView } from "@/components/schema-editor/document/view-model"
 import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
 import type {
   ResolvedSchemaBuilderFeatures,
   SchemaDispatch,
 } from "@/components/schema-editor/schema-builder-types"
+import type { SchemaEditorMode } from "@/components/schema-editor/schema-editor-mode"
 
-export type SchemaEditorMode = "descriptionOnly" | "readOnly" | "editable"
+export type { SchemaEditorMode }
 
 export interface DocumentSchemaNodeEditorProps {
   dispatch: SchemaDispatch

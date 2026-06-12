@@ -1,5 +1,4 @@
 import {
-  createNativeImageFrameSource,
   createNativeImageFrameSourceFromBlob,
   ImageLoadError,
   ImageSourceDisposedError,
@@ -12,6 +11,7 @@ import {
   createTiffFrameSource,
   type TiffWorkerFactory,
 } from "@/lib/image-tiff-source"
+import { type ViewerResource } from "@/lib/viewer-resource"
 
 const DEFAULT_MAX_DECODED_FRAMES = 16
 const DEFAULT_UNCLAIMED_SOURCE_TIMEOUT_MS = 30_000
@@ -26,7 +26,7 @@ export interface FrameSourceLease {
 type FrameSourceEntryState = "loading" | "ready" | "released" | "disposed"
 
 interface FrameSourceEntry {
-  src: string
+  resource: ViewerResource
   abortController: AbortController
   promise: Promise<FrameSource>
   source?: FrameSource
@@ -57,15 +57,19 @@ export class FrameSourceManager {
       options.unclaimedSourceTimeoutMs ?? DEFAULT_UNCLAIMED_SOURCE_TIMEOUT_MS
   }
 
-  load(src: string, createTiffWorker: TiffWorkerFactory): Promise<FrameSource> {
-    let entry = this.entries.get(src)
+  load(
+    resource: ViewerResource,
+    createTiffWorker: TiffWorkerFactory
+  ): Promise<FrameSource> {
+    const resourceKey = resource.cacheKey
+    let entry = this.entries.get(resourceKey)
     if (!entry) {
       const abortController = new AbortController()
       const newEntry: FrameSourceEntry = {
-        src,
+        resource,
         abortController,
         promise: Promise.resolve().then(() =>
-          this.createSource(src, createTiffWorker, abortController.signal)
+          this.createSource(resource, createTiffWorker, abortController.signal)
         ),
         leaseCount: 0,
         state: "loading",
@@ -77,7 +81,7 @@ export class FrameSourceManager {
             source.dispose(
               newEntry.disposeReason ?? new ImageSourceDisposedError()
             )
-            this.entries.delete(src)
+            this.entries.delete(resourceKey)
             newEntry.state = "disposed"
             throw new ImageLoadError("Image source was disposed before use")
           }
@@ -94,17 +98,22 @@ export class FrameSourceManager {
           return source
         })
         .catch((error) => {
-          if (this.entries.get(src) === newEntry) this.entries.delete(src)
+          if (this.entries.get(resourceKey) === newEntry) {
+            this.entries.delete(resourceKey)
+          }
           throw error
         })
       entry = newEntry
-      this.entries.set(src, entry)
+      this.entries.set(resourceKey, entry)
     }
     return entry.promise
   }
 
-  retain(src: string, source: FrameSource): FrameSourceLease | null {
-    const entry = this.entries.get(src)
+  retain(
+    resource: ViewerResource,
+    source: FrameSource
+  ): FrameSourceLease | null {
+    const entry = this.entries.get(resource.cacheKey)
     if (!entry || entry.source !== source || entry.state === "disposed") {
       return null
     }
@@ -117,7 +126,7 @@ export class FrameSourceManager {
       release: () => {
         if (released) return
         released = true
-        const current = this.entries.get(src)
+        const current = this.entries.get(resource.cacheKey)
         if (!current || current.source !== source) return
         current.leaseCount = Math.max(0, current.leaseCount - 1)
         if (current.leaseCount === 0) {
@@ -139,37 +148,30 @@ export class FrameSourceManager {
   }
 
   private async createSource(
-    src: string,
+    resource: ViewerResource,
     createTiffWorker: TiffWorkerFactory,
     signal: AbortSignal
   ): Promise<FrameSource> {
-    const response = await fetch(src, { signal })
-    if (!response.ok) {
-      throw new ImageLoadError(`Failed to load image: ${response.status}`)
-    }
-    const contentType = response.headers.get("content-type")
+    const sourceName = imageSourceName(resource)
+    const declaredContentType = resource.mimeType ?? null
 
-    if (isDeclaredTiff(src, contentType)) {
+    if (isDeclaredTiff(sourceName, declaredContentType)) {
       return createTiffFrameSource(
-        await response.arrayBuffer(),
+        await resource.readArrayBuffer({ signal }),
         createTiffWorker,
         this.maxDecodedFrames
       )
     }
 
-    if (isDeclaredNativeImage(src, contentType)) {
+    if (isDeclaredNativeImage(sourceName, declaredContentType)) {
       return createNativeImageFrameSourceFromBlob(
-        await response.blob(),
+        await resource.readBlob({ signal }),
         this.maxDecodedFrames
       )
     }
 
-    return this.createSourceFromUnknownResponse(
-      src,
-      response,
-      contentType,
-      createTiffWorker
-    )
+    const blob = await resource.readBlob({ signal })
+    return this.createSourceFromUnknownBlob(sourceName, blob, createTiffWorker)
   }
 
   private disposeEntry(entry: FrameSourceEntry, reason: Error) {
@@ -179,7 +181,9 @@ export class FrameSourceManager {
     this.cancelDispose(entry)
     entry.abortController.abort(reason)
     entry.source?.dispose(reason)
-    if (this.entries.get(entry.src) === entry) this.entries.delete(entry.src)
+    if (this.entries.get(entry.resource.cacheKey) === entry) {
+      this.entries.delete(entry.resource.cacheKey)
+    }
   }
 
   private scheduleDispose(
@@ -190,7 +194,7 @@ export class FrameSourceManager {
     this.cancelDispose(entry)
     entry.disposeReason = reason
     entry.disposeTimer = setTimeout(() => {
-      const current = this.entries.get(entry.src)
+      const current = this.entries.get(entry.resource.cacheKey)
       if (!current || current !== entry || current.leaseCount > 0) return
       this.disposeEntry(current, reason)
     }, delayMs)
@@ -202,140 +206,27 @@ export class FrameSourceManager {
     entry.disposeTimer = undefined
   }
 
-  private async createSourceFromUnknownResponse(
-    src: string,
-    response: Response,
-    contentType: string | null,
+  private async createSourceFromUnknownBlob(
+    sourceName: string,
+    blob: Blob,
     createTiffWorker: TiffWorkerFactory
   ): Promise<FrameSource> {
-    const nativeResponse = canCloneResponse(response) ? response.clone() : null
-    if (!response.body) {
-      const bytes = await response.arrayBuffer()
-      return this.createSourceFromBytes(
-        src,
-        contentType,
-        bytes,
-        createTiffWorker
-      )
-    }
-
-    const { reader, chunks, prefix } = await readResponsePrefix(
-      response.body,
-      TIFF_SIGNATURE_BYTE_COUNT
-    )
-    if (isTiffBytes(src, contentType, prefix)) {
+    const contentType = blob.type || null
+    const prefix = await blob.slice(0, TIFF_SIGNATURE_BYTE_COUNT).arrayBuffer()
+    if (isTiffBytes(sourceName, contentType, prefix)) {
       return createTiffFrameSource(
-        await readRemainingAsArrayBuffer(reader, chunks),
+        await blob.arrayBuffer(),
         createTiffWorker,
         this.maxDecodedFrames
       )
     }
 
-    if (nativeResponse) {
-      await reader.cancel()
-    }
-    return createNativeImageFrameSourceFromBlob(
-      nativeResponse
-        ? await nativeResponse.blob()
-        : await readRemainingAsBlob(reader, chunks, contentType),
-      this.maxDecodedFrames
-    )
-  }
-
-  private createSourceFromBytes(
-    src: string,
-    contentType: string | null,
-    bytes: ArrayBuffer,
-    createTiffWorker: TiffWorkerFactory
-  ): Promise<FrameSource> {
-    if (isTiffBytes(src, contentType, bytes)) {
-      return createTiffFrameSource(
-        bytes,
-        createTiffWorker,
-        this.maxDecodedFrames
-      )
-    }
-    return createNativeImageFrameSource(
-      bytes,
-      contentType,
-      this.maxDecodedFrames
-    )
+    return createNativeImageFrameSourceFromBlob(blob, this.maxDecodedFrames)
   }
 }
 
 export const imageFrameSourceManager = new FrameSourceManager()
 
-async function readResponsePrefix(
-  body: ReadableStream<Uint8Array>,
-  byteCount: number
-) {
-  const reader = body.getReader()
-  const chunks: Uint8Array[] = []
-  let byteLength = 0
-
-  while (byteLength < byteCount) {
-    const { done, value } = await reader.read()
-    if (done) break
-    chunks.push(value)
-    byteLength += value.byteLength
-  }
-
-  return {
-    reader,
-    chunks,
-    prefix: concatChunks(chunks, Math.min(byteLength, byteCount)),
-  }
-}
-
-async function readRemainingAsArrayBuffer(
-  reader: ReadableStreamDefaultReader<Uint8Array>,
-  chunks: Uint8Array[]
-): Promise<ArrayBuffer> {
-  let byteLength = totalByteLength(chunks)
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) break
-    chunks.push(value)
-    byteLength += value.byteLength
-  }
-  return concatChunks(chunks, byteLength)
-}
-
-async function readRemainingAsBlob(
-  reader: ReadableStreamDefaultReader<Uint8Array>,
-  chunks: Uint8Array[],
-  contentType: string | null
-): Promise<Blob> {
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) break
-    chunks.push(value)
-  }
-  return new Blob(chunks.map(chunkToArrayBuffer), { type: contentType ?? "" })
-}
-
-function concatChunks(chunks: readonly Uint8Array[], byteLength: number) {
-  const bytes = new Uint8Array(byteLength)
-  let offset = 0
-  for (const chunk of chunks) {
-    const available = Math.min(chunk.byteLength, byteLength - offset)
-    if (available <= 0) break
-    bytes.set(chunk.subarray(0, available), offset)
-    offset += available
-  }
-  return bytes.buffer
-}
-
-function totalByteLength(chunks: readonly Uint8Array[]) {
-  return chunks.reduce((sum, chunk) => sum + chunk.byteLength, 0)
-}
-
-function chunkToArrayBuffer(chunk: Uint8Array): ArrayBuffer {
-  const bytes = new Uint8Array(chunk.byteLength)
-  bytes.set(chunk)
-  return bytes.buffer
-}
-
-function canCloneResponse(response: Response): boolean {
-  return typeof response.clone === "function"
+function imageSourceName(resource: ViewerResource): string {
+  return resource.descriptor.loadUrl ?? resource.fileName
 }

@@ -8,6 +8,14 @@ import { cn } from "@/lib/utils"
 import { CSV_SCROLLBAR_CSS, HeaderAwareScrollbar } from "./csv-viewer-scrollbar"
 import type { CsvCellAddress } from "./csv-viewer-state"
 import { CsvStyleScope } from "./csv-viewer-style-scope"
+import { fixedGridColumnWidths } from "./fixed-grid-columns"
+import {
+  getFixedGridCanvasStyle,
+  getFixedGridRowWindowStyle,
+} from "./fixed-grid-layout"
+import { getFixedGridRowStyle } from "./fixed-grid-row-style"
+import { buildVirtualGridTemplate } from "./fixed-grid-template"
+import { FixedGridViewport } from "./fixed-grid-viewport"
 import {
   useFixedGridVirtualization,
   type FixedGridColumnItem,
@@ -36,12 +44,12 @@ export interface CsvGridProps {
 
 const CSV_TABLE_LABEL = "CSV data"
 const COLUMN_WIDTH = 180
-const COLUMN_OVERSCAN = 3
-const JUMP_COLUMN_OVERSCAN = 1
+const COLUMN_OVERSCAN = 2
+const JUMP_COLUMN_OVERSCAN = 0
 const ROW_HEIGHT = 33
 const ROW_NUMBER_WIDTH = 56
-const ROW_OVERSCAN = 8
-const JUMP_ROW_OVERSCAN = 2
+const ROW_OVERSCAN = 4
+const JUMP_ROW_OVERSCAN = 0
 const SMALL_TABLE_ROW_LIMIT = 200
 const SMALL_TABLE_COLUMN_LIMIT = 8
 
@@ -113,6 +121,12 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
     )
 
     const viewportRef = React.useRef<HTMLDivElement>(null)
+    const [viewportElement, setViewportElement] =
+      React.useState<HTMLDivElement | null>(null)
+    const setViewportRef = React.useCallback((node: HTMLDivElement | null) => {
+      viewportRef.current = node
+      setViewportElement((current) => (current === node ? current : node))
+    }, [])
     const columnCount = columns.length
     const columnOffset = 1
     const shouldVirtualizeRows = sourceRows.length > SMALL_TABLE_ROW_LIMIT
@@ -139,6 +153,7 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
       jumpRowOverscan: JUMP_ROW_OVERSCAN,
       jumpColumnOverscan: JUMP_COLUMN_OVERSCAN,
       scrollRef: viewportRef,
+      scrollElement: viewportElement,
       virtualizeColumns: shouldVirtualizeColumns,
     })
 
@@ -164,10 +179,10 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
 
     const gridTemplate = React.useMemo(
       () =>
-        buildGridTemplate({
-          rowNumberWidth: effectiveRowNumberWidth,
+        buildVirtualGridTemplate({
+          leadingWidth: effectiveRowNumberWidth,
           leftPad,
-          columnItems,
+          columnWidths: fixedGridColumnWidths(columnItems),
           rightPad,
         }),
       [effectiveRowNumberWidth, leftPad, columnItems, rightPad]
@@ -189,18 +204,12 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
           style={fillHeight ? undefined : { height, maxHeight: "100%" }}
         >
           <style>{CSV_SCROLLBAR_CSS}</style>
-          <div
-            ref={viewportRef}
-            data-slot="csv-body"
-            className="absolute inset-0 overflow-auto"
-          >
+          <FixedGridViewport scrollRef={setViewportRef} dataSlot="csv-body">
             <div
-              style={{
+              style={getFixedGridCanvasStyle({
                 width: totalWidth,
-                minWidth: "100%",
-                position: "relative",
-                contain: "layout paint style",
-              }}
+                contain: true,
+              })}
             >
               <div
                 role="row"
@@ -245,10 +254,7 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
               ) : shouldVirtualizeRows ? (
                 <div
                   role="rowgroup"
-                  style={{
-                    position: "relative",
-                    height: totalRowSize,
-                  }}
+                  style={getFixedGridRowWindowStyle({ height: totalRowSize })}
                 >
                   {virtualRows.map((virtualRow) => (
                     <CsvRow
@@ -295,9 +301,9 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
                 </div>
               )}
             </div>
-          </div>
+          </FixedGridViewport>
           <HeaderAwareScrollbar
-            viewportRef={viewportRef}
+            scrollRef={viewportRef}
             headerHeight={effectiveRowHeight}
           />
         </CsvStyleScope>
@@ -305,23 +311,6 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
     )
   }
 )
-
-function buildGridTemplate({
-  rowNumberWidth,
-  leftPad,
-  columnItems,
-  rightPad,
-}: {
-  rowNumberWidth: number
-  leftPad: number
-  columnItems: FixedGridColumnItem[]
-  rightPad: number
-}) {
-  const columns = columnItems.map((column) => `${column.size}px`).join(" ")
-  return [`${rowNumberWidth}px`, `${leftPad}px`, columns, `${rightPad}px`]
-    .filter(Boolean)
-    .join(" ")
-}
 
 function Spacer({ width }: { width: number }) {
   return <div role="presentation" aria-hidden style={{ width }} />
@@ -414,32 +403,34 @@ const CsvRow = React.memo(function CsvRow({
   start?: number
   activeColumnIndex?: number | null
 }) {
-  const style: React.CSSProperties =
-    start === undefined
-      ? { gridTemplateColumns: gridTemplate, height: rowHeight }
-      : {
-          gridTemplateColumns: gridTemplate,
-          height: rowHeight,
-          position: "absolute",
-          top: 0,
-          left: 0,
-          width: "100%",
-          contain: "layout paint style",
-          transform: `translate3d(0, ${start}px, 0)`,
-        }
+  const isVirtualized = start !== undefined
+  const style: React.CSSProperties = !isVirtualized
+    ? { gridTemplateColumns: gridTemplate, height: rowHeight }
+    : getFixedGridRowStyle({
+        gridTemplate,
+        rowHeight,
+        top: start,
+      })
   return (
     <div
       role="row"
       aria-rowindex={displayRowIndex + 2}
       data-slot="csv-row"
-      className="group grid border-b hover:bg-muted/40"
+      className={cn(
+        "grid border-b",
+        !isVirtualized && "group hover:bg-muted/40"
+      )}
       style={style}
     >
       <div
         role="rowheader"
         aria-colindex={1}
         data-slot="csv-row-number"
-        className="sticky left-0 z-[1] flex items-center justify-end border-r bg-card px-2 text-muted-foreground tabular-nums group-hover:bg-[color-mix(in_oklab,var(--card)_97%,var(--foreground))]"
+        className={cn(
+          "sticky left-0 z-[1] flex items-center justify-end border-r bg-card px-2 text-muted-foreground tabular-nums",
+          !isVirtualized &&
+            "group-hover:bg-[color-mix(in_oklab,var(--card)_97%,var(--foreground))]"
+        )}
       >
         {rowIndex + 1}
       </div>
@@ -458,7 +449,7 @@ const CsvRow = React.memo(function CsvRow({
               isActive &&
                 "bg-primary/12 ring-1 ring-primary/50 ring-offset-0 ring-inset"
             )}
-            title={text}
+            title={isVirtualized ? undefined : text}
           >
             <span className="truncate">{text}</span>
           </div>

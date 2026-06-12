@@ -127,7 +127,7 @@ export function SegmentedDocumentViewer({
         return (
           <div ref={documentRef} className="min-h-0 flex-1">
             <PdfViewer
-              src={src}
+              source={{ kind: "url", url: src }}
               bare
               className="h-full"
               slots={{ top: header, left: sidebar }}

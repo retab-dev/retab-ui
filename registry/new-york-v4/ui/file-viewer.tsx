@@ -58,9 +58,31 @@ function useDescriptorSignal(descriptorKey: string): AbortSignal {
     void descriptorKey
     return new AbortController()
   }, [descriptorKey])
+  const abortTimerRef = React.useRef<{
+    controller: AbortController
+    timer: ReturnType<typeof setTimeout>
+  } | null>(null)
+
   useIsomorphicLayoutEffect(() => {
-    return () => controller.abort()
+    if (abortTimerRef.current?.controller === controller) {
+      clearTimeout(abortTimerRef.current.timer)
+      abortTimerRef.current = null
+    }
+
+    return () => {
+      const abortTimer = {
+        controller,
+        timer: setTimeout(() => {
+          controller.abort()
+          if (abortTimerRef.current === abortTimer) {
+            abortTimerRef.current = null
+          }
+        }, 0),
+      }
+      abortTimerRef.current = abortTimer
+    }
   }, [controller])
+
   return controller.signal
 }
 
@@ -130,6 +152,26 @@ function FileViewerRoute({
   }
 
   if (!loadUrl) {
+    if (category === "pdf" && descriptor.source.kind === "blob") {
+      return (
+        <PdfViewer
+          source={descriptor.source}
+          className={className}
+          bare={bare}
+          downloadFileName={downloadFileName}
+        />
+      )
+    }
+    if (category === "image" && descriptor.source.kind === "blob") {
+      return (
+        <ImageViewer
+          source={descriptor.source}
+          className={className}
+          bare={bare}
+          downloadFileName={downloadFileName}
+        />
+      )
+    }
     if (category === "pptx" && descriptor.source.kind === "blob") {
       return (
         <PptxViewer
@@ -154,7 +196,7 @@ function FileViewerRoute({
     case "pdf":
       return (
         <PdfViewer
-          src={loadUrl}
+          source={descriptor.source}
           className={className}
           bare={bare}
           downloadFileName={downloadFileName}
@@ -165,7 +207,7 @@ function FileViewerRoute({
     case "image":
       return (
         <ImageViewer
-          src={loadUrl}
+          source={descriptor.source}
           className={className}
           bare={bare}
           downloadFileName={downloadFileName}

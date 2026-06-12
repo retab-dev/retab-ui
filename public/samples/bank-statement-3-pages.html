@@ -1,0 +1,439 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Bank Statement - 3 Transaction Pages</title>
+    <style>
+      @page {
+        size: Letter;
+        margin: 0;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: #f1f1f1;
+      }
+
+      body {
+        font-family: Arial, Helvetica, sans-serif;
+        color: #000;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      .page {
+        width: 8.5in;
+        height: 11in;
+        box-sizing: border-box;
+        padding: 0.28in 0.98in 0.4in 1.08in;
+        background: #fff;
+        page-break-after: always;
+        position: relative;
+        font-size: 11px;
+        line-height: 1.08;
+      }
+
+      .page:last-child {
+        page-break-after: auto;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        margin-left: -0.42in;
+        margin-bottom: 7px;
+      }
+
+      .globe {
+        width: 33px;
+        height: 33px;
+        border-radius: 50%;
+        background: #000;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .globe::before {
+        content: "";
+        position: absolute;
+        inset: 4px 7px;
+        border-left: 1.5px solid #fff;
+        border-right: 1.5px solid #fff;
+        border-radius: 50%;
+      }
+
+      .globe::after {
+        content: "";
+        position: absolute;
+        left: -3px;
+        right: -3px;
+        top: 8px;
+        height: 14px;
+        border-top: 1.5px solid #fff;
+        border-bottom: 1.5px solid #fff;
+      }
+
+      .brand-name {
+        font-family: "Times New Roman", Times, serif;
+        font-weight: 700;
+        font-size: 25px;
+        letter-spacing: -0.2px;
+      }
+
+      .member {
+        font-size: 5px;
+        text-align: right;
+        margin-top: -5px;
+        font-weight: 700;
+      }
+
+      .bank-address,
+      .customer {
+        font-size: 13px;
+        margin-bottom: 15px;
+      }
+
+      .customer {
+        font-weight: 700;
+        line-height: 1.18;
+        margin-bottom: 28px;
+      }
+
+      .statement-header {
+        display: grid;
+        grid-template-columns: 1fr 1.08fr;
+        align-items: end;
+        border-bottom: 5px double #000;
+        padding-bottom: 4px;
+        margin-bottom: 12px;
+      }
+
+      .continuation .statement-header {
+        margin-top: 1.55in;
+      }
+
+      .title {
+        font-size: 18px;
+        font-weight: 400;
+        margin-bottom: 1px;
+      }
+
+      .help {
+        font-family: "Times New Roman", Times, serif;
+        font-style: italic;
+        font-size: 14px;
+        line-height: 1.05;
+      }
+
+      .meta {
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .meta-row {
+        display: grid;
+        grid-template-columns: 1.35fr 0.75fr;
+        gap: 8px;
+        margin: 4px 0;
+      }
+
+      .meta-row div:last-child {
+        text-align: right;
+      }
+
+      .account-line {
+        font-size: 12px;
+        margin: 7px 0 10px;
+      }
+
+      .account-line strong {
+        font-size: 13px;
+        margin-right: 7px;
+      }
+
+      .section-title {
+        font-weight: 700;
+        margin: 10px 0 6px;
+      }
+
+      .section-title .account {
+        font-weight: 400;
+        margin-left: 5px;
+      }
+
+      .short-rule {
+        width: 306px;
+        border-top: 2px solid #000;
+        margin: 2px 0 8px;
+      }
+
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        table-layout: fixed;
+      }
+
+      th,
+      td {
+        padding: 2px 3px;
+        vertical-align: top;
+      }
+
+      th {
+        font-weight: 700;
+        text-align: left;
+      }
+
+      .num {
+        text-align: right;
+        white-space: nowrap;
+      }
+
+      .summary {
+        margin-bottom: 12px;
+      }
+
+      .summary td:first-child {
+        width: 70%;
+      }
+
+      .summary .ending-label {
+        text-align: center;
+        padding-top: 7px;
+      }
+
+      .summary .total-line td:last-child {
+        border-top: 1px solid #000;
+        padding-top: 7px;
+        font-weight: 700;
+      }
+
+      .activity thead th {
+        border-bottom: 1px solid #000;
+        padding-bottom: 5px;
+      }
+
+      .activity tbody td {
+        border-bottom: 1px solid #000;
+        padding-top: 3px;
+        padding-bottom: 3px;
+      }
+
+      .activity .date {
+        width: 0.52in;
+      }
+
+      .activity .description {
+        width: 2.72in;
+      }
+
+      .activity .reference {
+        width: 1.05in;
+      }
+
+      .activity .money {
+        width: 0.84in;
+      }
+
+      .continued {
+        font-size: 11px;
+        font-weight: 700;
+        margin: -2px 0 8px;
+      }
+
+      .footer-note {
+        position: absolute;
+        left: 1.08in;
+        right: 0.98in;
+        bottom: 0.34in;
+        font-size: 9px;
+        color: #000;
+        display: flex;
+        justify-content: space-between;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="statement"></div>
+
+    <script>
+      const startBalance = 7126.11;
+      const transactions = [
+        ["05-05", "CHECKCARD PURCHASE - GROCER'S MARKET 0042, SMALL TOWN MO", "00082461105", 42.18, 0],
+        ["05-05", "AUTOMATIC PAYMENT - TELEPHONE SERVICE", "00082461118", 68.44, 0],
+        ["05-06", "DEPOSIT - PAYROLL DIRECT DEP", "130012001", 0, 1875.24],
+        ["05-06", "CHECKCARD PURCHASE - FUEL STOP 1187, KANSAS CITY MO", "00082461209", 31.70, 0],
+        ["05-07", "CHECK 1001", "00012576589", 75.00, 0],
+        ["05-07", "ATM WITHDRAWAL - 1000 WALNUT ST M119", "00005678001", 40.00, 0],
+        ["05-08", "CHECKCARD PURCHASE - MAIN STREET PHARMACY", "00082461372", 18.26, 0],
+        ["05-08", "BILL PAYMENT - CITY UTILITIES", "00098432170", 83.14, 0],
+        ["05-09", "CHECKCARD PURCHASE - BOOKS AND NEWS", "00082461446", 24.95, 0],
+        ["05-09", "ONLINE TRANSFER TO SAVINGS", "00098432212", 125.00, 0],
+        ["05-10", "CHECKCARD PURCHASE - GARDEN CENTER", "00082461492", 33.18, 0],
+        ["05-10", "CHECKCARD PURCHASE - GROCERS MARKET 0042", "00082461498", 46.31, 0],
+        ["05-11", "CHECKCARD PURCHASE - SERVICE STATION", "00082461499", 28.40, 0],
+        ["05-11", "ACH CREDIT - CUSTOMER REFUND", "00044120041", 0, 54.19],
+        ["05-12", "CHECK 1002", "00036547854", 30.00, 0],
+        ["05-12", "CHECKCARD PURCHASE - COFFEE HOUSE 013", "00082461502", 9.84, 0],
+        ["05-13", "CHECKCARD PURCHASE - OFFICE SUPPLY 3301", "00082461611", 62.40, 0],
+        ["05-13", "ATM WITHDRAWAL - SMALL TOWN BRANCH", "00005678144", 60.00, 0],
+        ["05-14", "DEPOSIT - COUNTER CREDIT", "130012145", 0, 640.00],
+        ["05-14", "CHECKCARD PURCHASE - FUEL STOP 1187, KANSAS CITY MO", "00082461708", 36.57, 0],
+        ["05-14", "CHECKCARD PURCHASE - PETROLEUM MART", "00082461711", 22.18, 0],
+        ["05-14", "CHECKCARD PURCHASE - PRINT SHOP", "00082461719", 19.76, 0],
+        ["05-15", "DEPOSIT - REF NBR 130012345", "130012345", 0, 3615.08],
+        ["05-15", "CHECKCARD PURCHASE - HARDWARE STORE", "00082461791", 47.29, 0],
+        ["05-15", "CHECKCARD PURCHASE - CAFETERIA", "00082461799", 11.64, 0],
+        ["05-15", "ATM DEPOSIT - SMALL TOWN BRANCH", "130012349", 0, 225.00],
+        ["05-16", "CHECKCARD PURCHASE - SUPERMARKET 054", "00082461833", 86.13, 0],
+        ["05-16", "AUTOMATIC PAYMENT - INSURANCE PREMIUM", "00098432281", 145.62, 0],
+        ["05-17", "CHECKCARD PURCHASE - DRY CLEANERS", "00082461890", 22.00, 0],
+        ["05-17", "CHECKCARD PURCHASE - GROCERS MARKET 0042", "00082461898", 39.08, 0],
+        ["05-17", "BILL PAYMENT - MOBILE SERVICE", "00098432296", 54.11, 0],
+        ["05-18", "ATM WITHDRAWAL - 1000 WALNUT ST M119", "00005678002", 20.00, 0],
+        ["05-18", "CHECK 1003", "00094613547", 200.00, 0],
+        ["05-18", "CHECKCARD PURCHASE - CAR WASH", "00082461909", 10.00, 0],
+        ["05-18", "CHECKCARD PURCHASE - PHARMACY", "00082461918", 16.93, 0],
+        ["05-19", "CHECKCARD PURCHASE - FAMILY RESTAURANT", "00082461977", 38.45, 0],
+        ["05-19", "BILL PAYMENT - ELECTRIC COMPANY", "00098432312", 119.36, 0],
+        ["05-20", "CHECKCARD PURCHASE - PARKING AUTHORITY", "00082462021", 12.00, 0],
+        ["05-20", "ACH CREDIT - REIMBURSEMENT", "00044120088", 0, 125.00],
+        ["05-20", "CHECKCARD PURCHASE - LUNCH COUNTER", "00082462037", 14.62, 0],
+        ["05-20", "CHECKCARD PURCHASE - OFFICE PARKING", "00082462044", 8.00, 0],
+        ["05-21", "CHECKCARD PURCHASE - GROCERS MARKET 0042", "00082462106", 51.67, 0],
+        ["05-21", "CHECKCARD PURCHASE - POSTAL CENTER", "00082462118", 13.20, 0],
+        ["05-22", "CHECK 1004", "00087345621", 120.00, 0],
+        ["05-22", "CHECKCARD PURCHASE - OFFICE SUPPLY 3301", "00082462241", 79.92, 0],
+        ["05-23", "CHECKCARD PURCHASE - FUEL STOP 1187", "00082462309", 34.08, 0],
+        ["05-23", "ONLINE TRANSFER TO SAVINGS", "00098432376", 200.00, 0],
+        ["05-24", "CHECKCARD PURCHASE - MOVIE THEATER", "00082462422", 27.50, 0],
+        ["05-24", "CHECKCARD PURCHASE - GROCERS MARKET 0042", "00082462454", 63.11, 0],
+        ["05-27", "CHECK 1005", "00098456133", 60.00, 0],
+        ["05-27", "ATM WITHDRAWAL - COMMERCE BANK ATM", "00005678209", 80.00, 0],
+        ["05-27", "CHECKCARD PURCHASE - GROCERS MARKET 0042", "00082462531", 43.27, 0],
+        ["05-27", "ACH CREDIT - EXPENSE REIMBURSEMENT", "00044120099", 0, 96.50],
+        ["05-27", "CHECKCARD PURCHASE - NEWS STAND", "00082462542", 7.95, 0],
+        ["05-28", "BILL PAYMENT - WATER SERVICE", "00098432433", 48.17, 0],
+        ["05-28", "CHECKCARD PURCHASE - AUTO PARTS", "00082462580", 41.39, 0],
+        ["05-29", "DEPOSIT - MOBILE DEPOSIT", "130012470", 0, 410.00],
+        ["05-29", "CHECKCARD PURCHASE - GROCERS MARKET 0042", "00082462611", 58.76, 0],
+        ["05-30", "CHECKCARD PURCHASE - PHARMACY", "00082462694", 17.82, 0],
+        ["05-30", "AUTOMATIC PAYMENT - CABLE SERVICE", "00098432479", 72.95, 0],
+        ["05-30", "CHECKCARD PURCHASE - DINER", "00082462704", 31.28, 0],
+        ["05-30", "ATM WITHDRAWAL - 1000 WALNUT ST M119", "00005678276", 40.00, 0],
+        ["05-30", "CHECKCARD PURCHASE - GIFT SHOP", "00082462722", 26.44, 0],
+        ["06-02", "CHECK 1006", "00054687902", 115.00, 0],
+        ["06-02", "CHECKCARD PURCHASE - FUEL STOP 1187", "00082462763", 35.42, 0],
+        ["06-02", "ACH CREDIT - INTEREST ADJUSTMENT", "00044120120", 0, 3.28],
+        ["06-03", "MONTHLY SERVICE CHARGE", "00000000001", 5.00, 0],
+        ["06-03", "CHECKCARD PURCHASE - HARDWARE STORE", "00082462830", 28.64, 0],
+        ["06-04", "BILL PAYMENT - CITY UTILITIES", "00098432514", 75.00, 0],
+        ["06-04", "CHECKCARD PURCHASE - GROCERS MARKET 0042", "00082462903", 49.55, 0],
+        ["06-05", "CHECKCARD PURCHASE - OFFICE SUPPLY 3301", "00082462991", 21.87, 0],
+        ["06-05", "ATM WITHDRAWAL - SMALL TOWN BRANCH", "00005678315", 60.00, 0]
+      ];
+
+      const currency = (value) => value ? `$${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "";
+      let balance = startBalance;
+      let debits = 0;
+      let credits = 0;
+      const rows = transactions.map((transaction) => {
+        const [date, description, reference, debit, credit] = transaction;
+        balance += credit - debit;
+        debits += debit;
+        credits += credit;
+        return { date, description, reference, debit, credit, balance };
+      });
+
+      function header(pageNumber) {
+        return `
+          <div class="statement-header">
+            <div>
+              <div class="title">Bank Statement</div>
+              <div class="help">If you have any questions about your statement,<br />please call us at 816-234-2265</div>
+            </div>
+            <div class="meta">
+              <div class="meta-row"><div>Primary Account Number:</div><div>000009752</div></div>
+              <div class="meta-row"><div>Statement Date:</div><div>June 5, 2003</div></div>
+              <div class="meta-row"><div>Page Number:</div><div>${pageNumber}</div></div>
+            </div>
+          </div>
+          <div class="account-line"><strong>CONNECTIONS CHECKING</strong> Account # 000009752</div>
+        `;
+      }
+
+      function activityTable(pageRows) {
+        return `
+          <table class="activity">
+            <thead>
+              <tr>
+                <th class="date">Date</th>
+                <th class="description">Description</th>
+                <th class="reference">Reference Number</th>
+                <th class="money num">Debits</th>
+                <th class="money num">Credits</th>
+                <th class="money num">Balance</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${pageRows.map((row) => `
+                <tr>
+                  <td>${row.date}</td>
+                  <td>${row.description}</td>
+                  <td>${row.reference}</td>
+                  <td class="num">${currency(row.debit)}</td>
+                  <td class="num">${currency(row.credit)}</td>
+                  <td class="num">${currency(row.balance)}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        `;
+      }
+
+      const rowChunks = [rows.slice(0, 18), rows.slice(18, 46), rows.slice(46)];
+      const endingBalance = startBalance + credits - debits;
+      const pages = rowChunks.map((chunk, index) => {
+        const pageNumber = index + 1;
+        const isFirst = pageNumber === 1;
+        return `
+          <section class="page ${isFirst ? "" : "continuation"}">
+            ${isFirst ? `
+              <div class="brand">
+                <div class="globe"></div>
+                <div>
+                  <div class="brand-name">Commerce Bank</div>
+                  <div class="member">Member FDIC</div>
+                </div>
+              </div>
+              <div class="bank-address">1000 Walnut<br />Kansas City MO 64106-3686</div>
+              <div class="customer">Jane Doe<br />1234 Anywhere Dr.<br />Small Town, MO 12345-6789</div>
+            ` : ""}
+            ${header(pageNumber)}
+            ${isFirst ? `
+              <div class="section-title">Account Summary <span class="account">Account # 000009752</span></div>
+              <div class="short-rule"></div>
+              <table class="summary">
+                <tbody>
+                  <tr><td>Beginning Balance on May 3, 2003</td><td class="num">${currency(startBalance)}</td></tr>
+                  <tr><td>Deposits &amp; Other Credits</td><td class="num">+${credits.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td></tr>
+                  <tr><td>Withdrawals, Purchases, Checks &amp; Other Debits</td><td class="num">-${debits.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td></tr>
+                  <tr class="total-line"><td class="ending-label">Ending Balance on June 5, 2003</td><td class="num">${currency(endingBalance)}</td></tr>
+                </tbody>
+              </table>
+            ` : `<div class="continued">Account Activity continued</div>`}
+            <div class="section-title">Account Activity <span class="account">Account # 000009752</span></div>
+            <div class="short-rule"></div>
+            ${activityTable(chunk)}
+            <div class="footer-note"><span>Statement_Sample_Three_Page.PDF</span><span>Page ${pageNumber} of 3</span></div>
+          </section>
+        `;
+      });
+
+      document.getElementById("statement").innerHTML = pages.join("");
+    </script>
+  </body>
+</html>

@@ -46,7 +46,12 @@ GIF, AVIF) use only the browser's native decoders and never load `utif`.
 import { ImageViewer } from "@/components/ui/image-viewer"
 
 export function Example() {
-  return <ImageViewer src="/scan.tiff" className="h-[600px]" />
+  return (
+    <ImageViewer
+      source={{ kind: "url", url: "/scan.tiff", fileName: "scan.tiff" }}
+      className="h-[600px]"
+    />
+  )
 }
 ```
 
@@ -60,7 +65,7 @@ normalized boxes map with simple percentages.
 
 ```tsx
 <ImageViewer
-  src={url}
+  source={{ kind: "url", url, fileName: "scan.tiff" }}
   renderFrameOverlay={({ frameNumber }) =>
     fieldsOnFrame(frameNumber).map((f) => (
       <div
@@ -97,16 +102,16 @@ normalized boxes map with simple percentages.
 The Image Viewer uses frame vocabulary throughout: a single image has one frame,
 and a multi-page TIFF has one frame per TIFF page.
 
-| Prop                     | Type                         | Description                                                                     |
-| ------------------------ | ---------------------------- | ------------------------------------------------------------------------------- |
-| `src`                    | `string`                     | URL of the image (same-origin or CORS-enabled). PNG/JPEG/WebP/GIF/AVIF or TIFF. |
-| `scale`                  | `number`                     | Optional fixed scale; omit to fit frame width to the container.                 |
-| `toolbar`                | `boolean`                    | Show the zoom/rotate/download toolbar. Defaults to `true`.                      |
-| `downloadFileName`       | `string`                     | Filename for the download button.                                               |
-| `renderFrameOverlay`     | `(props) => ReactNode`       | Per-frame overlay; receives `{ frameNumber, width, height, scale, rotation }`.  |
-| `onVisibleFrameChange`   | `(frame: number) => void`    | Fires with the frame nearest the top of the viewport on scroll.                 |
-| `onScrollProgressChange` | `(progress: number) => void` | Fires with scroll progress in `[0, 1]`.                                         |
-| `header`                 | `ReactNode`                  | Full-width strip below the toolbar (e.g. a legend).                             |
-| `aside`                  | `ReactNode`                  | Left rail alongside the scrolling frames (e.g. a page ribbon).                  |
-| `bare`                   | `boolean`                    | Drop the outer border/background so the viewer fills its container.             |
-| `className`              | `string`                     | Optional class on the viewer shell.                                             |
+| Prop                     | Type                                  | Description                                                                    |
+| ------------------------ | ------------------------------------- | ------------------------------------------------------------------------------ |
+| `source`                 | `UrlViewerSource \| BlobViewerSource` | Canonical image source. PNG/JPEG/WebP/GIF/AVIF/BMP/ICO or TIFF.                |
+| `scale`                  | `number`                              | Optional fixed scale; omit to fit frame width to the container.                |
+| `toolbar`                | `boolean`                             | Show the zoom/rotate/download toolbar. Defaults to `true`.                     |
+| `downloadFileName`       | `string`                              | Optional filename override for the download button.                            |
+| `renderFrameOverlay`     | `(props) => ReactNode`                | Per-frame overlay; receives `{ frameNumber, width, height, scale, rotation }`. |
+| `onVisibleFrameChange`   | `(frame: number) => void`             | Fires with the frame nearest the top of the viewport on scroll.                |
+| `onScrollProgressChange` | `(progress: number) => void`          | Fires with scroll progress in `[0, 1]`.                                        |
+| `header`                 | `ReactNode`                           | Full-width strip below the toolbar (e.g. a legend).                            |
+| `aside`                  | `ReactNode`                           | Left rail alongside the scrolling frames (e.g. a page ribbon).                 |
+| `bare`                   | `boolean`                             | Drop the outer border/background so the viewer fills its container.            |
+| `className`              | `string`                              | Optional class on the viewer shell.                                            |

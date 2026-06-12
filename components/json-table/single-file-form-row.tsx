@@ -3,6 +3,7 @@
 import React from "react"
 import type { JSONSchema7 } from "json-schema"
 
+import { getFixedGridRowStyle } from "@/components/ui/fixed-grid-row-style"
 import { DataCell } from "@/components/json-table/data-cell"
 import type { VisibleColumn } from "@/components/json-table/data-cell-types"
 import type { ProjectedRow } from "@/components/json-table/lib/document-projection"
@@ -68,16 +69,11 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
     // every mounted row to re-render. `contain` scopes style/layout recalc to
     // the row so a single row entering/leaving can't invalidate its siblings.
     const rowStyle = React.useMemo<React.CSSProperties>(
-      () => ({
-        position: "absolute",
-        top: 0,
-        left: 0,
-        transform: `translateY(${rowTopPx}px)`,
-        height: `${rowHeightPx}px`,
-        minHeight: `${rowHeightPx}px`,
-        minWidth: "100%",
-        contain: "layout style",
-      }),
+      () =>
+        getFixedGridRowStyle({
+          rowHeight: rowHeightPx,
+          top: rowTopPx,
+        }),
       [rowTopPx, rowHeightPx]
     )
     return (

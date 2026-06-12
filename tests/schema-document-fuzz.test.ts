@@ -1,13 +1,15 @@
-import { describe, expect, it } from "vitest"
 import type { JSONSchema7 } from "json-schema"
+import { describe, expect, it } from "vitest"
 
 import {
   fromJsonSchema,
+  toJsonSchema,
+} from "@/components/schema-editor/document/convert"
+import {
   getChildNodeId,
   getChildPropertyId,
-  moveProperty,
-  toJsonSchema,
-} from "@/components/schema-editor/document"
+} from "@/components/schema-editor/document/node-selectors"
+import { moveProperty } from "@/components/schema-editor/document/property-operations"
 
 // ---------------------------------------------------------------------------
 // A small deterministic PRNG so failures are reproducible from the seed.
@@ -39,7 +41,11 @@ const UNKNOWN_KEYWORDS: Array<[string, unknown]> = [
   ["x-reasoning", { hint: "think" }],
 ]
 
-function genSchema(rand: () => number, depth: number, defNames: string[]): JSONSchema7 {
+function genSchema(
+  rand: () => number,
+  depth: number,
+  defNames: string[]
+): JSONSchema7 {
   const r = rand()
   // leaf bias grows with depth
   if (depth <= 0 || r < 0.35) {
@@ -77,7 +83,11 @@ function genSchema(rand: () => number, depth: number, defNames: string[]): JSONS
   return genObject(rand, depth - 1, defNames)
 }
 
-function genObject(rand: () => number, depth: number, defNames: string[]): JSONSchema7 {
+function genObject(
+  rand: () => number,
+  depth: number,
+  defNames: string[]
+): JSONSchema7 {
   const count = Math.floor(rand() * 4)
   const properties: Record<string, JSONSchema7> = {}
   const keys: string[] = []
@@ -101,7 +111,8 @@ function maybeMeta(rand: () => number, node: Record<string, unknown>) {
 }
 function maybeUnknown(rand: () => number, node: Record<string, unknown>) {
   if (rand() < 0.5) {
-    const [k, v] = UNKNOWN_KEYWORDS[Math.floor(rand() * UNKNOWN_KEYWORDS.length)]
+    const [k, v] =
+      UNKNOWN_KEYWORDS[Math.floor(rand() * UNKNOWN_KEYWORDS.length)]
     node[k] = v
   }
 }
@@ -127,11 +138,13 @@ describe("fuzz: round-trip over many random schemas", () => {
     for (let seed = 1; seed <= 1000; seed++) {
       const schema = genRoot(seed)
       const out = toJsonSchema(fromJsonSchema(schema))
-      if (JSON.stringify(normalize(out)) !== JSON.stringify(normalize(schema))) {
+      if (
+        JSON.stringify(normalize(out)) !== JSON.stringify(normalize(schema))
+      ) {
         failures.push(seed)
         if (failures.length <= 3) {
           console.error(
-            `seed ${seed}\n in : ${JSON.stringify(schema)}\n out: ${JSON.stringify(out)}`,
+            `seed ${seed}\n in : ${JSON.stringify(schema)}\n out: ${JSON.stringify(out)}`
           )
         }
       }
@@ -148,7 +161,7 @@ describe("fuzz: round-trip over many random schemas", () => {
         failures.push(seed)
         if (failures.length <= 3) {
           console.error(
-            `seed ${seed}\n in : ${JSON.stringify(schema)}\n out: ${JSON.stringify(out)}`,
+            `seed ${seed}\n in : ${JSON.stringify(schema)}\n out: ${JSON.stringify(out)}`
           )
         }
       }
@@ -176,7 +189,9 @@ describe("definitions keyword edge cases", () => {
 
   it("a root-level $ref round-trips", () => {
     const schema = {
-      $defs: { Root: { type: "object", properties: { a: { type: "string" } } } },
+      $defs: {
+        Root: { type: "object", properties: { a: { type: "string" } } },
+      },
       $ref: "#/$defs/Root",
     } as unknown as JSONSchema7
     expect(toJsonSchema(fromJsonSchema(schema))).toEqual(schema)
@@ -190,7 +205,7 @@ function normalize(v: unknown): unknown {
     return Object.fromEntries(
       Object.keys(v as Record<string, unknown>)
         .sort()
-        .map((k) => [k, normalize((v as Record<string, unknown>)[k])]),
+        .map((k) => [k, normalize((v as Record<string, unknown>)[k])])
     )
   }
   return v
@@ -202,13 +217,19 @@ describe("moveProperty preserves required across containers", () => {
       type: "object",
       properties: {
         a: { type: "string" },
-        target: { type: "object", properties: { z: { type: "string" } }, required: ["z"] },
+        target: {
+          type: "object",
+          properties: { z: { type: "string" } },
+          required: ["z"],
+        },
       },
       required: ["a"],
     })
     const aPropertyId = getChildPropertyId(d0, d0.root.id, "a")!
     const targetId = getChildNodeId(d0, d0.root.id, "target")!
-    const out = toJsonSchema(moveProperty(d0, aPropertyId, targetId, 0)) as JSONSchema7
+    const out = toJsonSchema(
+      moveProperty(d0, aPropertyId, targetId, 0)
+    ) as JSONSchema7
     // 'a' left the root → root.required no longer has it
     expect(out.required).toEqual([])
     // 'a' was required in its old parent → stays required in the new parent

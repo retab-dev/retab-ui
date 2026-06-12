@@ -13,10 +13,13 @@ drawing, toolbar UI, and source-overlay geometry in too few files.
 `ImageViewer` is a frame viewer.
 
 ```tsx
-<ImageViewer src="/samples/scan.tiff" className="h-[600px]" />
+<ImageViewer
+  source={{ kind: "url", url: "/samples/scan.tiff", fileName: "scan.tiff" }}
+  className="h-[600px]"
+/>
 ```
 
-It accepts an image URL and renders one or more raster frames:
+It accepts a canonical image source and renders one or more raster frames:
 
 - PNG/JPEG/WebP/GIF/AVIF: one frame, browser-native decode.
 - TIFF: one frame per IFD, worker-backed decode.
@@ -32,7 +35,10 @@ export const ImageViewer = React.forwardRef<
 >(function ImageViewer(props, ref) {
   return (
     <ClientOnly fallback={<ImageViewerFallback {...props} />}>
-      <ImageViewerBoundary resetKey={props.src} className={props.className}>
+      <ImageViewerBoundary
+        resetKey={resource.cacheKey}
+        className={props.className}
+      >
         <React.Suspense fallback={<ImageViewerFallback {...props} />}>
           <ImageViewerContent {...props} forwardedRef={ref} />
         </React.Suspense>
@@ -68,7 +74,7 @@ Responsibilities:
 - `image-viewer-chrome.tsx`: toolbar, skeletons, error fallback.
 - `image-frame-source.ts`: source interface, bitmap cache, acquire/release,
   disposal.
-- `image-source-cache.ts`: URL-scoped source manager and retention lifecycle.
+- `image-source-cache.ts`: resource-scoped source manager and retention lifecycle.
 - `image-tiff-source.ts`: TIFF worker client protocol only.
 - `image-geometry.ts`: dimensions, rotation, normalized box transforms.
 - `image-viewer.worker.ts`: worker-side UTIF decode.
@@ -106,7 +112,7 @@ Keep the public API stable:
 
 ```ts
 export interface ImageViewerProps {
-  src: string
+  source: ImageDocumentSource
   className?: string
   scale?: number
   toolbar?: boolean
@@ -120,7 +126,7 @@ export interface ImageViewerProps {
 }
 ```
 
-Do not add props until internals are ideal.
+Do not add alternate file entrypoints. `source` is the only public file input.
 
 The internal API should be more precise:
 
@@ -206,8 +212,8 @@ interface FrameSourceLease {
 }
 
 interface FrameSourceManager {
-  load(src: string): Promise<FrameSource>
-  retain(src: string, source: FrameSource): FrameSourceLease
+  load(resource: ViewerResource): Promise<FrameSource>
+  retain(resource: ViewerResource, source: FrameSource): FrameSourceLease
   clear(): void
 }
 ```
