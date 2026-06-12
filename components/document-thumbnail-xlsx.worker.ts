@@ -4,6 +4,8 @@
 // the parser early so a 100k-row workbook costs the same as a 16-row one.
 import * as XLSX from "@e965/xlsx"
 
+import { isSpreadsheetContainer } from "@/registry/new-york-v4/lib/xlsx-worker-protocol"
+
 interface Req {
   id: number
   buffer: ArrayBuffer
@@ -16,6 +18,11 @@ const ctx = self as unknown as Worker
 ctx.onmessage = (event: MessageEvent<Req>) => {
   const { id, buffer, maxRows, maxCols } = event.data
   try {
+    // SheetJS sniffs arbitrary bytes into a stub sheet; reject non-spreadsheet
+    // input so a mislabeled file yields no thumbnail rather than junk cells.
+    if (!isSpreadsheetContainer(buffer)) {
+      throw new Error("File is not a recognized spreadsheet (.xlsx or .xls).")
+    }
     const wb = XLSX.read(new Uint8Array(buffer), {
       type: "array",
       sheetRows: maxRows,
