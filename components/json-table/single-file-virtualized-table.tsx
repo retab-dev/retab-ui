@@ -27,6 +27,10 @@ import { setValueAtMaterializedPath } from "@/components/json-table/lib/document
 import { buildHeaderGridRows } from "@/components/json-table/lib/header-nodes"
 import type { JsonTableHeaderNode } from "@/components/json-table/lib/header-nodes"
 import type { TableDocument } from "@/components/json-table/lib/projects-types"
+import {
+  markJsonTableProfile,
+  recordJsonTableRender,
+} from "@/components/json-table/json-table-profiler"
 
 import { SingleFileFormRow } from "./single-file-form-row"
 import {
@@ -210,6 +214,14 @@ export const SingleFileVirtualizedTable =
         scrollRef,
       })
       const isJsonEditable = jsonEditMode === "editable"
+      recordJsonTableRender("SingleFileVirtualizedTable", document.id, {
+        activeCellPath,
+        columnCount: visibleColumns.length,
+        isJsonEditable,
+        openEditorPath,
+        rowCount,
+        virtualRows: virtualRows.length,
+      })
       const handleDocumentDataChange = React.useCallback(
         (
           _docId: string,
@@ -218,6 +230,9 @@ export const SingleFileVirtualizedTable =
         ) => {
           if (!onUpdateDocument) return
 
+          markJsonTableProfile("document-patch-start", {
+            fieldPath: materializedFieldPath,
+          })
           const baseData =
             pendingDocumentDataRef.current ?? documentDataRef.current
           const nextData = setValueAtMaterializedPath(
@@ -227,6 +242,9 @@ export const SingleFileVirtualizedTable =
           )
           pendingDocumentDataRef.current = nextData
           onUpdateDocument({ data: nextData })
+          markJsonTableProfile("document-patch-end", {
+            fieldPath: materializedFieldPath,
+          })
         },
         [onUpdateDocument]
       )
@@ -237,6 +255,10 @@ export const SingleFileVirtualizedTable =
 
           if (activeCellPathRef.current === fieldPath) return
 
+          markJsonTableProfile("active-cell-change", {
+            previousFieldPath: activeCellPathRef.current,
+            nextFieldPath: fieldPath,
+          })
           activeCellPathRef.current = fieldPath
           setActiveCellPath(fieldPath)
 
@@ -264,6 +286,10 @@ export const SingleFileVirtualizedTable =
               ? cell
               : null
 
+          const fieldPath = editableCell?.dataset.fieldPath ?? null
+          if (fieldPath && fieldPath !== activeCellPathRef.current) {
+            markJsonTableProfile("pointer-enter-cell", { fieldPath })
+          }
           hoveredCellElementRef.current = editableCell
 
           if (lockedCellPathRef.current) return

@@ -147,7 +147,7 @@ export function TypeField({
           aria-label={`Data type${fieldPath ? ` for ${fieldPath}` : ""}`}
           disabled={isDisabled}
           variant="outline"
-          className={`mt-2 w-full justify-between pl-2 pr-1 ${isDisabled ? "disabled:opacity-100" : ""}`}
+          className={`mt-2 w-full justify-between pr-1 pl-2 ${isDisabled ? "disabled:opacity-100" : ""}`}
         >
           <div className="flex items-center gap-2">
             {effectiveType.type === "$ref" && effectiveSchemaNode.$ref
@@ -163,7 +163,7 @@ export function TypeField({
           <DropdownMenuItem
             key={type}
             disabled={isDisabled}
-            onSelect={() => setType(type)}
+            onClick={() => setType(type)}
           >
             <div className="flex items-center gap-2">
               {getTypeIcon(type)}
@@ -185,7 +185,7 @@ export function TypeField({
                 <DropdownMenuItem
                   key={definitionName}
                   disabled={isDisabled}
-                  onSelect={() => setDefinition(definitionName)}
+                  onClick={() => setDefinition(definitionName)}
                 >
                   <div className="flex items-center gap-2">
                     {getTemplateIcon(definitionName)}
@@ -196,7 +196,7 @@ export function TypeField({
               {definitionNames.length > 0 ? <DropdownMenuSeparator /> : null}
               <DropdownMenuItem
                 disabled={isDisabled}
-                onSelect={() => {
+                onClick={() => {
                   void schemaContext.onCommand?.({ type: "createDefinition" })
                 }}
               >

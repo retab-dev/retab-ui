@@ -163,12 +163,14 @@ const SOURCE_ANCHOR_KINDS = new Set<string>([
 ])
 
 function isSourcedLeaf(node: unknown): node is SourcedLeaf {
-  return (
-    typeof node === "object" &&
-    node !== null &&
-    "value" in node &&
-    "source" in node
-  )
+  if (typeof node !== "object" || node === null) return false
+  if (!("value" in node) || !("source" in node)) return false
+  const sourceSlot = (node as Record<string, unknown>).source
+
+  // A schema may legitimately have sibling fields named `value` and `source`.
+  // In the source tree those field values are sourced leaves themselves, while
+  // a wrapper's `source` slot is either null or a source-shaped payload.
+  return !isSourcedLeaf(sourceSlot)
 }
 
 function isSource(source: unknown): source is Source {

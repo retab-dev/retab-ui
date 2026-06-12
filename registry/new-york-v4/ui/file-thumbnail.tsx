@@ -156,7 +156,6 @@ function ThumbnailImage({
 
   return (
     <>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         ref={imgRef}
         src={url}
@@ -235,8 +234,17 @@ function subscribeToReducedMotion(onChange: () => void) {
   if (typeof window === "undefined" || !window.matchMedia) return () => {}
 
   const query = window.matchMedia("(prefers-reduced-motion: reduce)")
-  query.addEventListener("change", onChange)
-  return () => query.removeEventListener("change", onChange)
+  if (query.addEventListener) {
+    query.addEventListener("change", onChange)
+    return () => query.removeEventListener("change", onChange)
+  }
+
+  const legacyQuery = query as MediaQueryList & {
+    addListener?: (listener: () => void) => void
+    removeListener?: (listener: () => void) => void
+  }
+  legacyQuery.addListener?.(onChange)
+  return () => legacyQuery.removeListener?.(onChange)
 }
 
 function getReducedMotionSnapshot() {
@@ -272,12 +280,18 @@ function Fallback({ extension }: { extension: string | null }) {
 }
 
 function getExtension(file: ThumbnailFile | File): string | null {
-  const fromName = file.name?.includes(".")
-    ? (file.name.split(".").pop() ?? null)
-    : null
+  const fromName = extensionFromName(file.name)
   if (fromName) return fromName.toLowerCase()
   const subtype = mimeSubtypeToExtension(file.type)
   return subtype ? subtype.toLowerCase() : null
+}
+
+function extensionFromName(name: string | undefined): string | null {
+  if (!name) return null
+  const clean = name.split(/[?#]/)[0]
+  const base = clean.split(/[\\/]/).pop() ?? clean
+  if (!base.includes(".")) return null
+  return base.split(".").pop() || null
 }
 
 function mimeSubtypeToExtension(type: string | undefined): string | null {

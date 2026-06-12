@@ -12,6 +12,7 @@ import type {
 } from "@/components/json-table/json-table-cell-types"
 import type { ProjectedRow } from "@/components/json-table/lib/document-projection"
 import type { TableDocument } from "@/components/json-table/lib/projects-types"
+import { recordJsonTableRender } from "@/components/json-table/json-table-profiler"
 import { ReadOnlyJsonTableCell } from "@/components/json-table/read-only-json-table-cell"
 
 const EditableJsonTableCell = dynamic(
@@ -106,6 +107,14 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
     isJsonEditable,
   }) => {
     const documentId = document.id
+    recordJsonTableRender("SingleFileFormRow", String(rowIdx), {
+      activeCellPath,
+      cellCount: projectedRow?.cells.length ?? 0,
+      isJsonEditable,
+      openEditorPath,
+      rowIdx,
+      rowTopPx,
+    })
 
     // Stable callback identity so projected-cell memoization holds across the
     // parent's per-scroll re-renders.

@@ -3272,6 +3272,58 @@ describe("PptxViewer", () => {
     expect(screen.queryByText("Couldn't render slide 1.")).toBeNull()
   })
 
+  it("ignores stale successful render results after a newer render fails", async () => {
+    const source = createFakePptxSource()
+    const firstRender = deferred<PptxRenderResult>()
+    source.renderSlide
+      .mockReturnValueOnce(firstRender.promise)
+      .mockResolvedValueOnce({
+        status: "failed",
+        error: new PptxRendererError("render_failed", "new failure"),
+      })
+    const activity = createManualPptxActivity(false).activity
+
+    const view = render(
+      <PptxSlideScroller
+        source={source}
+        zoomScale={1}
+        rotation={0}
+        eager={false}
+        activity={activity}
+        containerRef={vi.fn()}
+        viewportRef={vi.fn()}
+        onScroll={vi.fn()}
+      />
+    )
+
+    await waitFor(() => {
+      expect(source.renderSlide).toHaveBeenCalledTimes(1)
+    })
+
+    await act(async () => {
+      view.rerender(
+        <PptxSlideScroller
+          source={source}
+          zoomScale={2}
+          rotation={0}
+          eager={false}
+          activity={activity}
+          containerRef={vi.fn()}
+          viewportRef={vi.fn()}
+          onScroll={vi.fn()}
+        />
+      )
+    })
+
+    expect(await screen.findByText("Couldn't render slide 1.")).toBeTruthy()
+
+    await act(async () => {
+      firstRender.resolve({ status: "rendered" })
+    })
+
+    expect(screen.getByText("Couldn't render slide 1.")).toBeTruthy()
+  })
+
   it("keeps a mounted viewer source alive across cache eviction", async () => {
     const view = await renderPptx(
       <PptxViewer source={pptxUrlSource("/mounted-retained.pptx")} />
@@ -3414,6 +3466,27 @@ describe("PptxViewer", () => {
         slideIndex: 0,
       })
     ).resolves.toMatchObject({ status: "failed" })
+  })
+
+  it("defers direct eviction of a retained loaded source until release", async () => {
+    const resource = pptxUrlResource("/retained-direct-evict.pptx")
+    const source = await getPptxSource(resource)
+    const release = source.retain()
+
+    evictPptxSource(resource)
+
+    expect(pptxMock.destroy).not.toHaveBeenCalled()
+    await expect(
+      source.renderSlide({
+        canvas: document.createElement("canvas"),
+        renderScale: 1,
+        slideIndex: 0,
+      })
+    ).resolves.toEqual({ status: "rendered" })
+
+    release()
+
+    expect(pptxMock.destroy).toHaveBeenCalledTimes(1)
   })
 
   it("cancels queued renders before they touch a stale canvas", async () => {

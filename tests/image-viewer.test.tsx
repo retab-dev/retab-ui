@@ -101,6 +101,23 @@ describe("ViewerResource registry", () => {
     expect(second.keys.resource).not.toBe(first.keys.resource)
   })
 
+  it("keeps URL load identity separate when MIME metadata changes", () => {
+    const png = createViewerResource({
+      kind: "url",
+      url: "/same-extensionless-image",
+      mimeType: "image/png",
+    })
+    const tiff = createViewerResource({
+      kind: "url",
+      url: "/same-extensionless-image",
+      mimeType: "image/tiff",
+    })
+
+    expect(tiff).not.toBe(png)
+    expect(tiff.content).not.toBe(png.content)
+    expect(tiff.keys.load).not.toBe(png.keys.load)
+  })
+
   it("interns Blob resources only for the same Blob object and descriptor", async () => {
     const blob = new Blob(["first"], { type: "image/png" })
     const first = createViewerResource(
@@ -1239,6 +1256,38 @@ describe("FrameSourceManager lifecycle", () => {
 
     expect(response.arrayBuffer).toHaveBeenCalledTimes(1)
     expect(response.blob).not.toHaveBeenCalled()
+    worker.emit({
+      type: "initOk",
+      frames: [{ intrinsicSize: { width: 10, height: 10 } }],
+    })
+    await expect(load).resolves.toMatchObject({ kind: "tiff" })
+  })
+
+  it("honors URL source MIME metadata when the response omits content type", async () => {
+    const manager = new FrameSourceManager()
+    const worker = new FakeTiffWorker()
+    const response = {
+      ok: true,
+      headers: { get: vi.fn(() => null) },
+      blob: vi.fn(() => Promise.resolve(new Blob([Uint8Array.of(1, 2, 3, 4)]))),
+      arrayBuffer: vi.fn(() => Promise.resolve(new ArrayBuffer(4))),
+    } as unknown as Response
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(response))
+    )
+    const createImageBitmap = vi.fn(() => Promise.resolve(bitmap()))
+    vi.stubGlobal("createImageBitmap", createImageBitmap)
+
+    const load = manager.load(
+      imageUrlResource("/metadata-only", undefined, "image/tiff").content,
+      () => worker as unknown as Worker
+    )
+    await waitForWorkerPost(worker)
+
+    expect(response.arrayBuffer).toHaveBeenCalledTimes(1)
+    expect(response.blob).not.toHaveBeenCalled()
+    expect(createImageBitmap).not.toHaveBeenCalled()
     worker.emit({
       type: "initOk",
       frames: [{ intrinsicSize: { width: 10, height: 10 } }],

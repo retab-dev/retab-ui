@@ -85,7 +85,7 @@ export function DocumentNodeTypeMenu({
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className="w-40 justify-between pl-2 pr-1 text-xs font-normal text-muted-foreground"
+          className="w-40 justify-between pr-1 pl-2 text-xs font-normal text-muted-foreground"
         >
           <div className="flex items-center gap-1">
             {localType === "$ref" && refName
@@ -97,43 +97,43 @@ export function DocumentNodeTypeMenu({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent>
-        <DropdownMenuItem onSelect={() => onSelectType("string")}>
+        <DropdownMenuItem onClick={() => onSelectType("string")}>
           <Type className="h-4 w-4" />
           string
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => onSelectType("number")}>
+        <DropdownMenuItem onClick={() => onSelectType("number")}>
           <Hash className="h-4 w-4" />
           number
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => onSelectType("integer")}>
+        <DropdownMenuItem onClick={() => onSelectType("integer")}>
           <Hash className="h-4 w-4" />
           integer
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => onSelectType("boolean")}>
+        <DropdownMenuItem onClick={() => onSelectType("boolean")}>
           <ToggleLeft className="h-4 w-4" />
           true/false
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => onSelectType("enum")}>
+        <DropdownMenuItem onClick={() => onSelectType("enum")}>
           <List className="h-4 w-4" />
           multiple choice
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => onSelectType("object")}>
+        <DropdownMenuItem onClick={() => onSelectType("object")}>
           <Braces className="h-4 w-4" />
           object
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => onSelectType("array")}>
+        <DropdownMenuItem onClick={() => onSelectType("array")}>
           <Brackets className="h-4 w-4" />
           list
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => onSelectType("date")}>
+        <DropdownMenuItem onClick={() => onSelectType("date")}>
           <Calendar className="h-4 w-4" />
           date
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => onSelectType("time")}>
+        <DropdownMenuItem onClick={() => onSelectType("time")}>
           <Clock className="h-4 w-4" />
           time
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => onSelectType("datetime")}>
+        <DropdownMenuItem onClick={() => onSelectType("datetime")}>
           <CalendarClock className="h-4 w-4" />
           datetime
         </DropdownMenuItem>
@@ -147,7 +147,7 @@ export function DocumentNodeTypeMenu({
             <DropdownMenuPortal>
               <DropdownMenuSubContent>
                 {Object.keys(defs).length === 0 ? (
-                  <DropdownMenuItem onSelect={onCreateDefinition}>
+                  <DropdownMenuItem onClick={onCreateDefinition}>
                     <PlusIcon className="h-4 w-4" />
                     Create a new definition to get started
                   </DropdownMenuItem>
@@ -155,7 +155,7 @@ export function DocumentNodeTypeMenu({
                   Object.keys(defs).map((definitionName) => (
                     <DropdownMenuItem
                       key={definitionName}
-                      onSelect={() => onSelectDefinition(definitionName)}
+                      onClick={() => onSelectDefinition(definitionName)}
                     >
                       {getTemplateIcon(definitionName)}
                       {definitionName}

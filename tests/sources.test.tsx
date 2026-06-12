@@ -5,6 +5,12 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import type { Source, SourceAnchor, SourceMap } from "@/lib/document-source"
+import csvSample from "@/components/viewers/sample-data/csv-sources.json"
+import docxSample from "@/components/viewers/sample-data/docx-sources.json"
+import imageSample from "@/components/viewers/sample-data/image-sources.json"
+import jsonFormSourcesSample from "@/components/viewers/sample-data/json-form-sources.json"
+import textSample from "@/components/viewers/sample-data/text-sources.json"
+import xlsxSample from "@/components/viewers/sample-data/xlsx-sources.json"
 import { useSourceLink } from "@/registry/new-york-v4/hooks/use-source-link"
 import {
   extractionSourcesToSourceMap,
@@ -16,6 +22,7 @@ import {
   sourceToCsvCell,
   useCsvSourceTarget,
 } from "@/registry/new-york-v4/ui/csv-source"
+import type { CsvViewerHandle } from "@/registry/new-york-v4/ui/csv-viewer"
 import {
   docxSourceToTarget,
   sourceToDocxHighlight,
@@ -29,6 +36,7 @@ import {
   rotateImageArea,
   useImageSourceTarget,
 } from "@/registry/new-york-v4/ui/image-source"
+import type { ImageViewerHandle } from "@/registry/new-york-v4/ui/image-viewer-types"
 import {
   pdfAnchorToLocation,
   renderPdfSourceOverlay,
@@ -42,22 +50,14 @@ import {
   textAnchorToLines,
   useTextSourceTarget,
 } from "@/registry/new-york-v4/ui/text-source"
+import type { TextViewerHandle } from "@/registry/new-york-v4/ui/text-viewer"
 import {
   sourceToXlsxCell,
   spreadsheetAnchorToCell,
   spreadsheetColumnToIndex,
   useXlsxSourceTarget,
 } from "@/registry/new-york-v4/ui/xlsx-source"
-import type { CsvViewerHandle } from "@/registry/new-york-v4/ui/csv-viewer"
-import type { ImageViewerHandle } from "@/registry/new-york-v4/ui/image-viewer-types"
-import type { TextViewerHandle } from "@/registry/new-york-v4/ui/text-viewer"
 import type { XlsxViewerHandle } from "@/registry/new-york-v4/ui/xlsx-viewer"
-import csvSample from "@/components/viewers/sample-data/csv-sources.json"
-import docxSample from "@/components/viewers/sample-data/docx-sources.json"
-import imageSample from "@/components/viewers/sample-data/image-sources.json"
-import jsonFormSourcesSample from "@/components/viewers/sample-data/json-form-sources.json"
-import textSample from "@/components/viewers/sample-data/text-sources.json"
-import xlsxSample from "@/components/viewers/sample-data/xlsx-sources.json"
 
 vi.mock("@/components/ui/pdf-viewer", () => ({
   PdfHighlight: ({
@@ -236,6 +236,24 @@ describe("document source model", () => {
     })
   })
 
+  it("does not mistake schema fields named value and source for a source wrapper", () => {
+    expect(
+      extractionSourcesToSourceMap({
+        value: { value: "display value", source: pdfSource },
+        source: { value: "upstream system", source: csvSource },
+        metadata: {
+          value: { value: "nested value", source: textSource },
+          source: { value: "nested system", source: docxTextSource },
+        },
+      })
+    ).toEqual({
+      value: pdfSource,
+      source: csvSource,
+      "metadata.value": textSource,
+      "metadata.source": docxTextSource,
+    })
+  })
+
   it("skips malformed source leaves instead of leaking invalid runtime sources", () => {
     expect(
       extractionSourcesToSourceMap({
@@ -350,6 +368,71 @@ describe("document source model", () => {
       })
     ).toBe("2:10:20:30:40")
     expect(sourceLocationKey(undefined)).toBeNull()
+  })
+})
+
+describe("source sample fixtures", () => {
+  it("keeps every source-block sample keyed uniquely and adapter-resolvable", () => {
+    for (const sample of sourceFieldSamples) {
+      const keys = sample.fields.map((field) => field.key)
+      expect(new Set(keys).size, `${sample.name} duplicate keys`).toBe(
+        keys.length
+      )
+
+      for (const field of sample.fields) {
+        expect(field.key, `${sample.name} empty key`).not.toBe("")
+        expect(
+          field.label,
+          `${sample.name}.${field.key} missing label`
+        ).not.toBe("")
+        expect(
+          field.source.content,
+          `${sample.name}.${field.key} missing source content`
+        ).not.toBe("")
+        expect(
+          extractionSourcesToSourceMap({
+            [field.key]: { value: field.value, source: field.source },
+          }),
+          `${sample.name}.${field.key} invalid source shape`
+        ).toEqual({ [field.key]: field.source })
+        expectSourceToResolve(field.source)
+      }
+    }
+  })
+
+  it("keeps the JSON-form sample flattened to resolvable PDF sources", () => {
+    const response = jsonFormSourcesSample as {
+      document_type: string
+      file: { filename?: string }
+      sources: unknown
+    }
+
+    expect(response.document_type).toBe("pdf")
+    expect(response.file.filename).toBe("jane-doe-bank-statement-5-pages.pdf")
+
+    const sourceMap = extractionSourcesToSourceMap(response.sources)
+    const paths = Object.keys(sourceMap)
+    expect(paths).toHaveLength(392)
+    expect(paths.slice(0, 5)).toEqual([
+      "account_number",
+      "statement_date",
+      "transactions.0.date",
+      "transactions.0.description",
+      "transactions.0.amount",
+    ])
+    expect(paths.slice(-3)).toEqual([
+      "transactions.129.date",
+      "transactions.129.description",
+      "transactions.129.amount",
+    ])
+
+    for (const [path, mappedSource] of Object.entries(sourceMap)) {
+      expect(
+        mappedSource.anchor.kind,
+        `${path} should stay backed by a PDF bbox`
+      ).toBe("pdf_bbox")
+      expectSourceToResolve(mappedSource)
+    }
   })
 })
 
@@ -874,9 +957,7 @@ describe("source adapters", () => {
       />
     )
 
-    fireEvent.click(
-      screen.getByRole("button", { name: "scroll image source" })
-    )
+    fireEvent.click(screen.getByRole("button", { name: "scroll image source" }))
     expect(scrollToFrameArea).toHaveBeenCalledWith(
       2,
       { left: 15, top: 25, width: 35, height: 45 },
@@ -889,9 +970,7 @@ describe("source adapters", () => {
         onScroll={scrollToFrameArea}
       />
     )
-    fireEvent.click(
-      screen.getByRole("button", { name: "scroll image source" })
-    )
+    fireEvent.click(screen.getByRole("button", { name: "scroll image source" }))
     expect(scrollToFrameArea).toHaveBeenLastCalledWith(
       3,
       { left: 10, top: 20, width: 30, height: 40 },
@@ -905,9 +984,7 @@ describe("source adapters", () => {
         onScroll={scrollToFrameArea}
       />
     )
-    fireEvent.click(
-      screen.getByRole("button", { name: "scroll image source" })
-    )
+    fireEvent.click(screen.getByRole("button", { name: "scroll image source" }))
     expect(scrollToFrameArea).not.toHaveBeenCalled()
   })
 
@@ -945,10 +1022,7 @@ describe("source adapters", () => {
 
     scrollToXlsxCell.mockClear()
     rerenderXlsx(
-      <XlsxSourceTargetHarness
-        source={csvSource}
-        onScroll={scrollToXlsxCell}
-      />
+      <XlsxSourceTargetHarness source={csvSource} onScroll={scrollToXlsxCell} />
     )
     fireEvent.click(screen.getByRole("button", { name: "scroll xlsx source" }))
     expect(scrollToXlsxCell).not.toHaveBeenCalled()

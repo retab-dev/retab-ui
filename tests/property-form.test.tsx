@@ -87,10 +87,7 @@ function editableCapabilities(
 
 async function selectDataType(label: string, triggerIndex = 0) {
   const triggers = screen.getAllByRole("button", { name: /^Data type/ })
-  fireEvent.pointerDown(triggers[triggerIndex], {
-    button: 0,
-    ctrlKey: false,
-  })
+  fireEvent.click(triggers[triggerIndex])
   fireEvent.click(await screen.findByText(label))
 }
 
@@ -166,8 +163,9 @@ describe("property form models", () => {
       newName: "__proto__",
     })
 
-    expect(Object.prototype.hasOwnProperty.call(renamed.properties, "__proto__"))
-      .toBe(true)
+    expect(
+      Object.prototype.hasOwnProperty.call(renamed.properties, "__proto__")
+    ).toBe(true)
     expect(Object.keys(renamed.properties || {})).toEqual(["__proto__"])
     expect(renamed.required).toEqual(["__proto__"])
   })
@@ -688,10 +686,7 @@ describe("PropertyForm", () => {
       />
     )
 
-    fireEvent.pointerDown(screen.getByRole("button", { name: "Data type" }), {
-      button: 0,
-      ctrlKey: false,
-    })
+    fireEvent.click(screen.getByRole("button", { name: "Data type" }))
     const definitionTrigger = await screen.findByText("definition")
     fireEvent.focus(definitionTrigger)
     fireEvent.keyDown(definitionTrigger, { key: "ArrowRight" })
@@ -745,10 +740,7 @@ describe("PropertyForm", () => {
       />
     )
 
-    fireEvent.pointerDown(screen.getByRole("button", { name: "Data type" }), {
-      button: 0,
-      ctrlKey: false,
-    })
+    fireEvent.click(screen.getByRole("button", { name: "Data type" }))
     const definitionTrigger = await screen.findByText("definition")
     fireEvent.focus(definitionTrigger)
     fireEvent.keyDown(definitionTrigger, { key: "ArrowRight" })
@@ -1395,8 +1387,9 @@ describe("PropertyForm", () => {
 
     await waitFor(() => expect(onCommitPropertyDraft).toHaveBeenCalledTimes(1))
     const schemaNode = onCommitPropertyDraft.mock.calls[0][0].schemaNode
-    expect(Object.prototype.hasOwnProperty.call(schemaNode.properties, "__proto__"))
-      .toBe(true)
+    expect(
+      Object.prototype.hasOwnProperty.call(schemaNode.properties, "__proto__")
+    ).toBe(true)
     expect(Object.keys(schemaNode.properties)).toEqual([
       "constructor",
       "__proto__",
@@ -1819,7 +1812,7 @@ describe("PropertyForm", () => {
     )
 
     const trigger = screen.getByRole("button", { name: "Data type" })
-    fireEvent.pointerDown(trigger, { button: 0, ctrlKey: false })
+    fireEvent.click(trigger)
     const definitionTrigger = await screen.findByText("definition")
     fireEvent.focus(definitionTrigger)
     fireEvent.keyDown(definitionTrigger, { key: "ArrowRight" })
@@ -1862,10 +1855,7 @@ describe("PropertyForm", () => {
       />
     )
 
-    fireEvent.pointerDown(screen.getByRole("button", { name: "Data type" }), {
-      button: 0,
-      ctrlKey: false,
-    })
+    fireEvent.click(screen.getByRole("button", { name: "Data type" }))
     const definitionTrigger = await screen.findByText("definition")
     fireEvent.focus(definitionTrigger)
     fireEvent.keyDown(definitionTrigger, { key: "ArrowRight" })
@@ -1962,7 +1952,7 @@ describe("PropertyForm", () => {
     )
 
     const trigger = screen.getByRole("button", { name: "Data type" })
-    fireEvent.pointerDown(trigger, { button: 0, ctrlKey: false })
+    fireEvent.click(trigger)
     const definitionTrigger = await screen.findByText("definition")
     fireEvent.focus(definitionTrigger)
     fireEvent.keyDown(definitionTrigger, { key: "ArrowRight" })
@@ -2013,7 +2003,7 @@ describe("PropertyForm", () => {
     )
 
     const trigger = screen.getByRole("button", { name: "Data type" })
-    fireEvent.pointerDown(trigger, { button: 0, ctrlKey: false })
+    fireEvent.click(trigger)
     const definitionTrigger = await screen.findByText("definition")
     fireEvent.focus(definitionTrigger)
     fireEvent.keyDown(definitionTrigger, { key: "ArrowRight" })
@@ -2050,10 +2040,7 @@ describe("PropertyForm", () => {
       />
     )
 
-    fireEvent.pointerDown(screen.getByRole("button", { name: "Data type" }), {
-      button: 0,
-      ctrlKey: false,
-    })
+    fireEvent.click(screen.getByRole("button", { name: "Data type" }))
     const definitionTrigger = await screen.findByText("definition")
     fireEvent.focus(definitionTrigger)
     fireEvent.keyDown(definitionTrigger, { key: "ArrowRight" })
@@ -2090,10 +2077,7 @@ describe("PropertyForm", () => {
       />
     )
 
-    fireEvent.pointerDown(screen.getByRole("button", { name: "Data type" }), {
-      button: 0,
-      ctrlKey: false,
-    })
+    fireEvent.click(screen.getByRole("button", { name: "Data type" }))
     const definitionTrigger = await screen.findByText("definition")
     fireEvent.focus(definitionTrigger)
     fireEvent.keyDown(definitionTrigger, { key: "ArrowRight" })

@@ -908,6 +908,44 @@ describe("SegmentLegend — robustness", () => {
     expect(screen.getAllByRole("button", { name: "Same" }).length).toBe(2)
   })
 
+  it("renders malformed missing labels as unnamed instead of crashing", () => {
+    render(
+      <SegmentLegend
+        segments={[
+          segment({
+            id: "missing-label",
+            index: 0,
+            label: undefined as unknown as string,
+            pages: [1],
+          }),
+        ]}
+      />
+    )
+
+    expect(screen.getByRole("button", { name: "unnamed" })).toBeTruthy()
+  })
+
+  it("treats malformed non-array pages as unused instead of crashing", () => {
+    render(
+      <SegmentLegend
+        segments={[
+          segment({
+            id: "bad-pages",
+            index: 0,
+            label: "Bad pages",
+            pages: "1,2" as unknown as number[],
+          }),
+        ]}
+        showUnusedToggle
+      />
+    )
+
+    expect(screen.queryByRole("button", { name: "Bad pages" })).toBeNull()
+    expect(
+      screen.getByRole("button", { name: "Show 1 unused segments" })
+    ).toBeTruthy()
+  })
+
   it("renders a large segment list without error", () => {
     const many = Array.from({ length: 200 }, (_, i) =>
       segment({ id: `s#${i}`, index: i, label: `S${i}`, pages: [i + 1] })

@@ -29,7 +29,10 @@ function getOwnObjectValue(node: unknown, property: string): unknown {
   return (node as Record<string, unknown>)[property]
 }
 
-function countTemplateColumns(templateParts: string[][], depth: number): number {
+function countTemplateColumns(
+  templateParts: string[][],
+  depth: number
+): number {
   let colSpan = 0
   const remainingTemplates = templateParts.filter((template) => {
     if (template.length !== depth) return true
@@ -144,7 +147,10 @@ export function projectDocumentRows({
 
       if (!includeArrayAddRows) {
         if (rowSpan === 0) {
-          colSpan = Math.max(colSpan, countTemplateColumns(templateParts, depth + 1))
+          colSpan = Math.max(
+            colSpan,
+            countTemplateColumns(templateParts, depth + 1)
+          )
         }
         return [rowSpan, colSpan]
       }

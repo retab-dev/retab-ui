@@ -645,6 +645,169 @@ describe("sidebar bug-hunt coverage", () => {
     expect(cookieSet).not.toHaveBeenCalled()
   })
 
+  it("does not toggle from a disabled rendered trigger link", () => {
+    const onClick = vi.fn((event: React.MouseEvent<HTMLButtonElement>) => {
+      event.preventDefault()
+    })
+
+    const { container } = render(
+      <SidebarProvider defaultOpen>
+        <SidebarTrigger
+          disabled
+          onClick={onClick}
+          render={<a href="#disabled-trigger" />}
+        />
+        <ContextProbe />
+      </SidebarProvider>
+    )
+
+    const trigger = getTrigger(container)
+    expect(trigger.tagName).toBe("A")
+    expect(trigger.getAttribute("disabled")).toBe("")
+    expect(trigger.getAttribute("aria-disabled")).toBe("true")
+
+    fireEvent.click(trigger)
+
+    expect(onClick).not.toHaveBeenCalled()
+    expect(container.querySelector("output")?.getAttribute("data-state")).toBe(
+      "expanded"
+    )
+    expect(cookieSet).not.toHaveBeenCalled()
+  })
+
+  it("does not toggle from a loading rendered trigger link", () => {
+    const onClick = vi.fn()
+
+    const { container } = render(
+      <SidebarProvider defaultOpen>
+        <SidebarTrigger
+          loading
+          onClick={onClick}
+          render={<a href="#loading-trigger" />}
+        />
+        <ContextProbe />
+      </SidebarProvider>
+    )
+
+    const trigger = getTrigger(container)
+    expect(trigger.tagName).toBe("A")
+    expect(trigger.getAttribute("aria-disabled")).toBe("true")
+    expect(trigger.getAttribute("data-loading")).toBe("")
+
+    fireEvent.click(trigger)
+
+    expect(onClick).not.toHaveBeenCalled()
+    expect(container.querySelector("output")?.getAttribute("data-state")).toBe(
+      "expanded"
+    )
+    expect(cookieSet).not.toHaveBeenCalled()
+  })
+
+  it("does not toggle from an aria-disabled trigger", () => {
+    const onClick = vi.fn()
+
+    const { container } = render(
+      <SidebarProvider defaultOpen>
+        <SidebarTrigger aria-disabled="true" onClick={onClick} />
+        <ContextProbe />
+      </SidebarProvider>
+    )
+
+    fireEvent.click(getTrigger(container))
+
+    expect(onClick).not.toHaveBeenCalled()
+    expect(container.querySelector("output")?.getAttribute("data-state")).toBe(
+      "expanded"
+    )
+    expect(cookieSet).not.toHaveBeenCalled()
+  })
+
+  it("does not toggle from an aria-disabled rendered trigger link", () => {
+    const onClick = vi.fn()
+
+    const { container } = render(
+      <SidebarProvider defaultOpen>
+        <SidebarTrigger
+          aria-disabled="true"
+          onClick={onClick}
+          render={<a href="#aria-disabled-trigger" />}
+        />
+        <ContextProbe />
+      </SidebarProvider>
+    )
+
+    fireEvent.click(getTrigger(container))
+
+    expect(onClick).not.toHaveBeenCalled()
+    expect(container.querySelector("output")?.getAttribute("data-state")).toBe(
+      "expanded"
+    )
+    expect(cookieSet).not.toHaveBeenCalled()
+  })
+
+  it("does not toggle from an aria-disabled rail", () => {
+    const onClick = vi.fn()
+
+    const { container } = render(
+      <SidebarProvider defaultOpen>
+        <Sidebar collapsible="icon">
+          <SidebarRail aria-disabled="true" onClick={onClick} />
+        </Sidebar>
+        <ContextProbe />
+      </SidebarProvider>
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "Toggle Sidebar" }))
+
+    expect(onClick).not.toHaveBeenCalled()
+    expect(container.querySelector("output")?.getAttribute("data-state")).toBe(
+      "expanded"
+    )
+    expect(cookieSet).not.toHaveBeenCalled()
+  })
+
+  it("still toggles when aria-disabled is explicitly false", async () => {
+    const { container } = render(
+      <SidebarProvider defaultOpen>
+        <SidebarTrigger aria-disabled="false" />
+        <ContextProbe />
+      </SidebarProvider>
+    )
+
+    fireEvent.click(getTrigger(container))
+
+    await waitFor(() => {
+      expect(
+        container.querySelector("output")?.getAttribute("data-state")
+      ).toBe("collapsed")
+    })
+    expect(cookieSet).toHaveBeenLastCalledWith(
+      expect.objectContaining({ value: "false" })
+    )
+  })
+
+  it("still toggles the rail when aria-disabled is explicitly false", async () => {
+    const { container } = render(
+      <SidebarProvider defaultOpen>
+        <Sidebar collapsible="icon">
+          <SidebarRail aria-disabled="false" />
+        </Sidebar>
+        <ContextProbe />
+      </SidebarProvider>
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "Toggle Sidebar" }))
+
+    await waitFor(() => {
+      expect(
+        container.querySelector("output")?.getAttribute("data-state")
+      ).toBe("collapsed")
+    })
+    expect(cookieSet).toHaveBeenLastCalledWith(
+      expect.objectContaining({ value: "false" })
+    )
+  })
+
   it("toggles from a rendered trigger link and keeps link semantics", async () => {
     const onClick = vi.fn((event: React.MouseEvent<HTMLButtonElement>) => {
       event.preventDefault()
@@ -765,6 +928,36 @@ describe("sidebar bug-hunt coverage", () => {
     expect(mediaListeners.size).toBe(0)
   })
 
+  it("does not let one keyboard shortcut toggle every mounted provider", async () => {
+    function StateMirror({ id }: { id: string }) {
+      const { state } = useSidebar()
+      return <output data-testid={id}>{state}</output>
+    }
+
+    render(
+      <>
+        <SidebarProvider defaultOpen>
+          <StateMirror id="first-sidebar-state" />
+        </SidebarProvider>
+        <SidebarProvider defaultOpen>
+          <StateMirror id="second-sidebar-state" />
+        </SidebarProvider>
+      </>
+    )
+
+    fireEvent.keyDown(window, { ctrlKey: true, key: "b" })
+
+    await waitFor(() => {
+      expect(screen.getByTestId("first-sidebar-state").textContent).toBe(
+        "collapsed"
+      )
+    })
+    expect(screen.getByTestId("second-sidebar-state").textContent).toBe(
+      "expanded"
+    )
+    expect(cookieSet).toHaveBeenCalledTimes(1)
+  })
+
   it("does not reset uncontrolled state when defaultOpen changes after mount", async () => {
     function Harness({ defaultOpen }: { defaultOpen: boolean }) {
       return (
@@ -838,6 +1031,46 @@ describe("sidebar bug-hunt coverage", () => {
       altKey: true,
       key: "b",
       metaKey: true,
+    })
+
+    expect(handled).toBe(true)
+    expect(container.querySelector("output")?.getAttribute("data-state")).toBe(
+      "expanded"
+    )
+    expect(cookieSet).not.toHaveBeenCalled()
+  })
+
+  it("does not treat ctrl+shift+b as the sidebar shortcut", () => {
+    const { container } = render(
+      <SidebarProvider defaultOpen>
+        <ContextProbe />
+      </SidebarProvider>
+    )
+
+    const handled = fireEvent.keyDown(window, {
+      ctrlKey: true,
+      key: "B",
+      shiftKey: true,
+    })
+
+    expect(handled).toBe(true)
+    expect(container.querySelector("output")?.getAttribute("data-state")).toBe(
+      "expanded"
+    )
+    expect(cookieSet).not.toHaveBeenCalled()
+  })
+
+  it("does not treat meta+shift+b as the sidebar shortcut", () => {
+    const { container } = render(
+      <SidebarProvider defaultOpen>
+        <ContextProbe />
+      </SidebarProvider>
+    )
+
+    const handled = fireEvent.keyDown(window, {
+      key: "B",
+      metaKey: true,
+      shiftKey: true,
     })
 
     expect(handled).toBe(true)

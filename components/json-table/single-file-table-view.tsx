@@ -13,6 +13,11 @@ import { flattenHeaderNodes } from "@/components/json-table/lib/header-nodes"
 import type { TableDocument } from "@/components/json-table/lib/projects-types"
 import { getFieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
 import { buildHeaderNodesFromSchema } from "@/components/json-table/lib/schema-header-nodes"
+import {
+  markJsonTableProfile,
+  recordJsonTableReactCommit,
+  recordJsonTableRender,
+} from "@/components/json-table/json-table-profiler"
 import { SingleFileVirtualizedTable } from "@/components/json-table/single-file-virtualized-table"
 import {
   getColumnWidthPx,
@@ -56,6 +61,14 @@ export const SingleFileTableView = React.memo<SingleFileTableViewProps>(
     onCellHoverEnd,
     overscan,
   }) => {
+    recordJsonTableRender("SingleFileTableView", document.id, {
+      columnWidth: propColumnWidth ?? null,
+      jsonEditMode,
+      schemaEditMode,
+      hasUpdate: Boolean(onUpdateDocument),
+      overscan: overscan ?? null,
+    })
+
     const { columnWidth: storeColumnWidth } = useSheetOptionsStore()
     const columnWidth = propColumnWidth ?? storeColumnWidth
 
@@ -90,11 +103,19 @@ export const SingleFileTableView = React.memo<SingleFileTableViewProps>(
 
     const projectedRows = useMemo(() => {
       if (!document) return []
-      return projectDocumentRows({
+      markJsonTableProfile("project-rows-start", {
+        visiblePaths: visibleKeys.length,
+        isJsonEditable,
+      })
+      const rows = projectDocumentRows({
         document,
         visiblePaths: visibleKeys,
         includeArrayAddRows: isJsonEditable,
       })
+      markJsonTableProfile("project-rows-end", {
+        rowCount: rows.length,
+      })
+      return rows
     }, [document, visibleKeys, isJsonEditable])
 
     const rowCount = Math.max(projectedRows.length, 1)
@@ -102,27 +123,32 @@ export const SingleFileTableView = React.memo<SingleFileTableViewProps>(
     return (
       <div className="relative flex min-h-0 w-full flex-1 flex-col">
         <div className="absolute inset-0 flex origin-top-left flex-col">
-          <SingleFileVirtualizedTable
-            headerNodes={headerNodes}
-            document={document}
-            schema={schema}
-            setSchema={setSchema ?? (() => {})}
-            isPublished={!setSchema}
-            stopAt={stopAt}
-            setStopAt={setStopAt}
-            draggedItemKeyRef={draggedItemKeyRef}
-            draggedItemParentPathRef={draggedItemParentPathRef}
-            jsonEditMode={jsonEditMode}
-            schemaEditMode={schemaEditMode}
-            projectedRows={projectedRows}
-            visibleColumns={visibleColumns}
-            rowCount={rowCount}
-            onUpdateDocument={onUpdateDocument}
-            columnWidth={columnWidth}
-            onCellHoverStart={onCellHoverStart}
-            onCellHoverEnd={onCellHoverEnd}
-            overscan={overscan}
-          />
+          <React.Profiler
+            id="JsonTable"
+            onRender={recordJsonTableReactCommit}
+          >
+            <SingleFileVirtualizedTable
+              headerNodes={headerNodes}
+              document={document}
+              schema={schema}
+              setSchema={setSchema ?? (() => {})}
+              isPublished={!setSchema}
+              stopAt={stopAt}
+              setStopAt={setStopAt}
+              draggedItemKeyRef={draggedItemKeyRef}
+              draggedItemParentPathRef={draggedItemParentPathRef}
+              jsonEditMode={jsonEditMode}
+              schemaEditMode={schemaEditMode}
+              projectedRows={projectedRows}
+              visibleColumns={visibleColumns}
+              rowCount={rowCount}
+              onUpdateDocument={onUpdateDocument}
+              columnWidth={columnWidth}
+              onCellHoverStart={onCellHoverStart}
+              onCellHoverEnd={onCellHoverEnd}
+              overscan={overscan}
+            />
+          </React.Profiler>
         </div>
       </div>
     )

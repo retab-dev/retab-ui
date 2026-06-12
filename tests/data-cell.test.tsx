@@ -59,9 +59,9 @@ describe("DataCell", () => {
     expect(screen.getByText("-108,3")).toBeTruthy()
     expect(screen.getByText("42")).toBeTruthy()
     expect(
-      screen.getByRole("checkbox", { name: "true" }).getAttribute(
-        "aria-checked"
-      )
+      screen
+        .getByRole("checkbox", { name: "true" })
+        .getAttribute("aria-checked")
     ).toBe("true")
     const falseCheckbox = screen.getByRole("checkbox", { name: "false" })
     expect(falseCheckbox.getAttribute("aria-checked")).toBe("false")
@@ -164,6 +164,22 @@ describe("DataCell", () => {
     expect(formatValue).toHaveBeenCalledWith(12.5, { kind: "number" })
   })
 
+  it("forwards display props without leaking form-only props to the DOM", () => {
+    render(
+      <DataCell
+        kind="text"
+        value="Vendor"
+        name="vendor"
+        data-testid="vendor-cell"
+        aria-label="Vendor name"
+      />
+    )
+
+    const cell = screen.getByTestId("vendor-cell")
+    expect(cell.getAttribute("aria-label")).toBe("Vendor name")
+    expect(cell.getAttribute("name")).toBeNull()
+  })
+
   it("commits number edits from native number inputs", () => {
     const onCommit = vi.fn()
     render(
@@ -225,9 +241,7 @@ describe("DataCell", () => {
 
   it("trims number parser input without losing raw edit metadata", () => {
     const onCommit = vi.fn()
-    render(
-      <DataCell kind="number" mode="edit" value="1" onCommit={onCommit} />
-    )
+    render(<DataCell kind="number" mode="edit" value="1" onCommit={onCommit} />)
 
     const input = screen.getByRole("spinbutton") as HTMLInputElement
     fireEvent.change(input, { target: { value: "2.5" } })
@@ -241,9 +255,9 @@ describe("DataCell", () => {
         isValid: true,
       })
     )
-    expect(parseDataCellNumberInput({ kind: "number", value: " 2.5 " })).toEqual(
-      { value: 2.5, isEmpty: false, isValid: true }
-    )
+    expect(
+      parseDataCellNumberInput({ kind: "number", value: " 2.5 " })
+    ).toEqual({ value: 2.5, isEmpty: false, isValid: true })
   })
 
   it("accepts common native number spellings at commit time", () => {
@@ -257,9 +271,11 @@ describe("DataCell", () => {
       isEmpty: false,
       isValid: true,
     })
-    expect(parseDataCellNumberInput({ kind: "number", value: "1e3" })).toEqual(
-      { value: 1000, isEmpty: false, isValid: true }
-    )
+    expect(parseDataCellNumberInput({ kind: "number", value: "1e3" })).toEqual({
+      value: 1000,
+      isEmpty: false,
+      isValid: true,
+    })
   })
 
   it("uses Enter and Escape to end editing through the native blur path", () => {
@@ -331,6 +347,29 @@ describe("DataCell", () => {
     )
   })
 
+  it("keeps boolean aria props on the checkbox control instead of the shell", () => {
+    render(
+      <DataCell
+        kind="boolean"
+        mode="edit"
+        value={true}
+        id="approved"
+        aria-label="Approved"
+        aria-describedby="approved-help"
+        aria-invalid
+        data-testid="boolean-shell"
+      />
+    )
+
+    const shell = screen.getByTestId("boolean-shell")
+    const checkbox = screen.getByRole("checkbox", { name: "Approved" })
+
+    expect(shell.getAttribute("id")).toBeNull()
+    expect(checkbox.getAttribute("id")).toBe("approved")
+    expect(checkbox.getAttribute("aria-describedby")).toBe("approved-help")
+    expect(checkbox.getAttribute("aria-invalid")).toBe("true")
+  })
+
   it("keeps forced display cells inert on hover", () => {
     render(<DataCell kind="number" value={42} mode="display" editable />)
 
@@ -378,11 +417,28 @@ describe("DataCell", () => {
 
   it("suppresses disabled auto-cell activation callbacks", () => {
     const onClick = vi.fn()
-    render(<DataCell kind="text" value="Vendor" editable disabled onClick={onClick} />)
+    const onMouseEnter = vi.fn()
+    const onMouseLeave = vi.fn()
+    render(
+      <DataCell
+        kind="text"
+        value="Vendor"
+        editable
+        disabled
+        onClick={onClick}
+        onMouseEnter={onMouseEnter}
+        onMouseLeave={onMouseLeave}
+      />
+    )
 
-    fireEvent.click(getDataCell(screen.getByText("Vendor")))
+    const cell = getDataCell(screen.getByText("Vendor"))
+    fireEvent.mouseEnter(cell)
+    fireEvent.mouseLeave(cell)
+    fireEvent.click(cell)
 
     expect(onClick).not.toHaveBeenCalled()
+    expect(onMouseEnter).not.toHaveBeenCalled()
+    expect(onMouseLeave).not.toHaveBeenCalled()
     expect(screen.queryByRole("textbox")).toBeNull()
   })
 
@@ -495,6 +551,30 @@ describe("DataCell", () => {
     )
 
     expect(inputValue("textbox")).toBe("draft")
+  })
+
+  it("does not overwrite controlled picker drafts when the committed value changes", () => {
+    const { rerender } = render(
+      <DataCell
+        kind="date-time"
+        mode="edit"
+        value="2026-06-12T13:25:37Z"
+        draftValue="2026-06-13T08:15:30"
+      />
+    )
+
+    expect(getPickerTrigger().textContent).toContain("13/06/2026, 08:15")
+
+    rerender(
+      <DataCell
+        kind="date-time"
+        mode="edit"
+        value="2026-06-14T10:20:30Z"
+        draftValue="2026-06-13T08:15:30"
+      />
+    )
+
+    expect(getPickerTrigger().textContent).toContain("13/06/2026, 08:15")
   })
 
   it("keeps raw invalid number drafts and reports parse metadata", () => {
@@ -621,7 +701,12 @@ describe("DataCell", () => {
   it("commits date picker day selections and closes the date picker", () => {
     const onCommit = vi.fn()
     render(
-      <DataCell kind="date" mode="edit" value="2026-06-12" onCommit={onCommit} />
+      <DataCell
+        kind="date"
+        mode="edit"
+        value="2026-06-12"
+        onCommit={onCommit}
+      />
     )
 
     fireEvent.click(getPickerTrigger())
@@ -639,7 +724,146 @@ describe("DataCell", () => {
         isValid: true,
       })
     )
-    expect(document.querySelector('[data-slot="popover-popup"]')).toBeNull()
+    expect(
+      document.querySelector('[data-slot="data-cell-picker-popup"]')
+    ).toBeNull()
+  })
+
+  it("exposes picker popup state to assistive technology", () => {
+    render(<DataCell kind="date" mode="edit" value="2026-06-12" />)
+
+    const trigger = getPickerTrigger()
+    expect(trigger.getAttribute("aria-haspopup")).toBe("dialog")
+    expect(trigger.getAttribute("aria-expanded")).toBe("false")
+    expect(trigger.getAttribute("aria-controls")).toBeNull()
+
+    fireEvent.click(trigger)
+
+    const popup = document.querySelector<HTMLElement>(
+      '[data-slot="data-cell-picker-popup"]'
+    )
+    expect(popup).toBeTruthy()
+    expect(popup?.getAttribute("role")).toBe("dialog")
+    expect(trigger.getAttribute("aria-expanded")).toBe("true")
+    expect(trigger.getAttribute("aria-controls")).toBe(popup?.id)
+  })
+
+  it("opens picker popups immediately when auto-focused", () => {
+    render(<DataCell kind="date" mode="edit" value="2026-06-12" autoFocus />)
+
+    const trigger = getPickerTrigger()
+    const popup = document.querySelector<HTMLElement>(
+      '[data-slot="data-cell-picker-popup"]'
+    )
+
+    expect(popup).toBeTruthy()
+    expect(trigger.getAttribute("aria-expanded")).toBe("true")
+    expect(trigger.getAttribute("aria-controls")).toBe(popup?.id)
+  })
+
+  it("toggles picker popups from the trigger without committing", () => {
+    const onCommit = vi.fn()
+    render(
+      <DataCell
+        kind="date"
+        mode="edit"
+        value="2026-06-12"
+        onCommit={onCommit}
+      />
+    )
+
+    const trigger = getPickerTrigger()
+    fireEvent.click(trigger)
+    expect(
+      document.querySelector('[data-slot="data-cell-picker-popup"]')
+    ).toBeTruthy()
+
+    fireEvent.click(trigger)
+
+    expect(
+      document.querySelector('[data-slot="data-cell-picker-popup"]')
+    ).toBeNull()
+    expect(onCommit).not.toHaveBeenCalled()
+  })
+
+  it("closes picker popups on outside pointer down and Escape", () => {
+    const { unmount } = render(
+      <div>
+        <DataCell kind="date" mode="edit" value="2026-06-12" />
+        <button type="button">Outside</button>
+      </div>
+    )
+
+    fireEvent.click(getPickerTrigger())
+    expect(
+      document.querySelector('[data-slot="data-cell-picker-popup"]')
+    ).toBeTruthy()
+
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Outside" }))
+    expect(
+      document.querySelector('[data-slot="data-cell-picker-popup"]')
+    ).toBeNull()
+
+    unmount()
+    render(<DataCell kind="date" mode="edit" value="2026-06-12" />)
+
+    fireEvent.click(getPickerTrigger())
+    expect(
+      document.querySelector('[data-slot="data-cell-picker-popup"]')
+    ).toBeTruthy()
+
+    fireEvent.keyDown(document, { key: "Escape" })
+    expect(
+      document.querySelector('[data-slot="data-cell-picker-popup"]')
+    ).toBeNull()
+  })
+
+  it("commits empty time picker edits as null and cleared date-time time as midnight", () => {
+    const onTimeCommit = vi.fn()
+    const onDateTimeCommit = vi.fn()
+    const { unmount } = render(
+      <DataCell
+        kind="time"
+        mode="edit"
+        value="13:25:37"
+        onCommit={onTimeCommit}
+      />
+    )
+
+    fireEvent.click(getPickerTrigger())
+    fireEvent.change(screen.getByDisplayValue("13:25:37"), {
+      target: { value: "" },
+    })
+
+    expect(onTimeCommit).toHaveBeenCalledWith(
+      null,
+      expect.objectContaining({ kind: "time", rawValue: "", isEmpty: true })
+    )
+
+    unmount()
+    render(
+      <DataCell
+        kind="date-time"
+        mode="edit"
+        value="2026-06-12T13:25:37Z"
+        onCommit={onDateTimeCommit}
+      />
+    )
+
+    fireEvent.click(getPickerTrigger())
+    fireEvent.change(screen.getByDisplayValue("13:25:37"), {
+      target: { value: "" },
+    })
+
+    expect(onDateTimeCommit).toHaveBeenCalledWith(
+      "2026-06-12T00:00",
+      expect.objectContaining({
+        kind: "date-time",
+        rawValue: "2026-06-12T00:00",
+        isEmpty: false,
+        isValid: true,
+      })
+    )
   })
 
   it("keeps the time portion when selecting a date-time picker day", () => {
@@ -669,14 +893,74 @@ describe("DataCell", () => {
         isValid: true,
       })
     )
-    expect(document.querySelector('[data-slot="popover-popup"]')).toBeTruthy()
+  })
+
+  it("keeps fractional seconds when selecting a date-time picker day", () => {
+    const onCommit = vi.fn()
+    render(
+      <DataCell
+        kind="date-time"
+        mode="edit"
+        value="2026-06-12T13:25:37.123Z"
+        dateTimeZone="preserve"
+        onCommit={onCommit}
+      />
+    )
+
+    fireEvent.click(getPickerTrigger())
+    expect(screen.getByDisplayValue("13:25:37.123")).toBeTruthy()
+    const nextDay = document.querySelector<HTMLButtonElement>(
+      'button[data-day="6/15/2026"]'
+    )
+    expect(nextDay).toBeTruthy()
+    fireEvent.click(nextDay as HTMLButtonElement)
+
+    expect(onCommit).toHaveBeenCalledWith(
+      "2026-06-15T13:25:37.123Z",
+      expect.objectContaining({
+        kind: "date-time",
+        rawValue: "2026-06-15T13:25:37.123",
+        isValid: true,
+      })
+    )
+  })
+
+  it("preserves date-time fractional seconds and offsets when editing the time", () => {
+    const onCommit = vi.fn()
+    render(
+      <DataCell
+        kind="date-time"
+        mode="edit"
+        value="2026-06-12T13:25:37.123+02:00"
+        dateTimeZone="preserve"
+        onCommit={onCommit}
+      />
+    )
+
+    fireEvent.click(getPickerTrigger())
+    fireEvent.change(screen.getByDisplayValue("13:25:37.123"), {
+      target: { value: "09:10:11.456" },
+    })
+
+    expect(onCommit).toHaveBeenCalledWith(
+      "2026-06-12T09:10:11.456+02:00",
+      expect.objectContaining({
+        rawValue: "2026-06-12T09:10:11.456",
+        isValid: true,
+      })
+    )
   })
 
   it("commits time picker edits and closes date pickers without extra commits", () => {
     const onTimeCommit = vi.fn()
     const onDateCommit = vi.fn()
     const { unmount } = render(
-      <DataCell kind="time" mode="edit" value="13:25:37" onCommit={onTimeCommit} />
+      <DataCell
+        kind="time"
+        mode="edit"
+        value="13:25:37"
+        onCommit={onTimeCommit}
+      />
     )
 
     fireEvent.click(screen.getByRole("button"))
@@ -691,7 +975,12 @@ describe("DataCell", () => {
 
     unmount()
     render(
-      <DataCell kind="date" mode="edit" value="2026-06-12" onCommit={onDateCommit} />
+      <DataCell
+        kind="date"
+        mode="edit"
+        value="2026-06-12"
+        onCommit={onDateCommit}
+      />
     )
 
     const dateTrigger = getPickerTrigger()
@@ -699,6 +988,14 @@ describe("DataCell", () => {
     fireEvent.keyDown(dateTrigger, { key: "Escape" })
 
     expect(onDateCommit).not.toHaveBeenCalled()
+  })
+
+  it("preserves fractional seconds in time picker edit values", () => {
+    render(<DataCell kind="time" mode="edit" value="13:25:37.123" />)
+
+    fireEvent.click(getPickerTrigger())
+
+    expect(screen.getByDisplayValue("13:25:37.123")).toBeTruthy()
   })
 
   it("mounts date and time picker triggers in edit mode", () => {
@@ -804,11 +1101,11 @@ describe("DataCell", () => {
       isEmpty: true,
       isValid: true,
     })
-    expect(parseDataCellNumberInput({ kind: "integer", value: " 12 " })).toEqual(
-      { value: 12, isEmpty: false, isValid: true }
-    )
-    expect(parseDataCellNumberInput({ kind: "integer", value: "12e0" })).toEqual(
-      { value: null, isEmpty: false, isValid: false }
-    )
+    expect(
+      parseDataCellNumberInput({ kind: "integer", value: " 12 " })
+    ).toEqual({ value: 12, isEmpty: false, isValid: true })
+    expect(
+      parseDataCellNumberInput({ kind: "integer", value: "12e0" })
+    ).toEqual({ value: null, isEmpty: false, isValid: false })
   })
 })

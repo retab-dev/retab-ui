@@ -2,6 +2,7 @@ import * as React from "react"
 
 import { getValueAtPath } from "@/components/json-table/lib/document-paths"
 import type { TableDocument } from "@/components/json-table/lib/projects-types"
+import { markJsonTableProfile } from "@/components/json-table/json-table-profiler"
 import { useRefCallback } from "@/components/json-table/path-utils"
 
 export function useCellController({
@@ -63,10 +64,22 @@ export function useCellController({
       safeStringify(previousNormalized) === safeStringify(nextNormalized)
     if (isNoOp) return
 
+    markJsonTableProfile("cell-commit-local-start", {
+      fieldPath: materializedFieldPath,
+    })
     setOptimisticValue(validatedValue)
+    markJsonTableProfile("cell-commit-local-end", {
+      fieldPath: materializedFieldPath,
+    })
 
     React.startTransition(() => {
+      markJsonTableProfile("cell-commit-transition-start", {
+        fieldPath: materializedFieldPath,
+      })
       onDocumentDataChange(docId, materializedFieldPath, validatedValue)
+      markJsonTableProfile("cell-commit-transition-end", {
+        fieldPath: materializedFieldPath,
+      })
     })
   })
 

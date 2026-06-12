@@ -1,7 +1,14 @@
 // @vitest-environment jsdom
 
 import * as React from "react"
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react"
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react"
 import { renderToString } from "react-dom/server"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
@@ -335,5 +342,85 @@ describe("text viewer resource bug hunt", () => {
     })
 
     expect(scrollTo).not.toHaveBeenCalled()
+  })
+
+  it("does not auto-scroll again for equivalent highlight coordinates", async () => {
+    const viewerRef = React.createRef<TextViewerHandle>()
+    const { rerender } = render(
+      <TextViewer ref={viewerRef} source={textSource(manyLines(100))} />
+    )
+
+    const viewportElement = viewerRef.current?.getViewportElement()
+    expect(viewportElement).toBeInstanceOf(HTMLElement)
+    if (!viewportElement) return
+
+    Object.defineProperty(viewportElement, "clientHeight", {
+      configurable: true,
+      value: 100,
+    })
+    const scrollTo = vi.fn()
+    viewportElement.scrollTo = scrollTo
+
+    await act(async () => {
+      rerender(
+        <TextViewer
+          ref={viewerRef}
+          source={textSource(manyLines(100))}
+          highlight={{ start: 10, end: 10 }}
+        />
+      )
+    })
+    expect(scrollTo).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      rerender(
+        <TextViewer
+          ref={viewerRef}
+          source={textSource(manyLines(100))}
+          highlight={{ start: 10, end: 10 }}
+        />
+      )
+    })
+
+    expect(scrollTo).toHaveBeenCalledTimes(1)
+  })
+
+  it("uses the current zoom level when keeping a highlight in view", async () => {
+    const viewerRef = React.createRef<TextViewerHandle>()
+    const { rerender } = render(
+      <TextViewer ref={viewerRef} source={textSource(manyLines(100))} />
+    )
+
+    const viewportElement = viewerRef.current?.getViewportElement()
+    expect(viewportElement).toBeInstanceOf(HTMLElement)
+    if (!viewportElement) return
+
+    Object.defineProperty(viewportElement, "clientHeight", {
+      configurable: true,
+      value: 100,
+    })
+    const scrollTo = vi.fn()
+    viewportElement.scrollTo = scrollTo
+
+    await act(async () => {
+      rerender(
+        <TextViewer
+          ref={viewerRef}
+          source={textSource(manyLines(100))}
+          highlight={{ start: 10, end: 10 }}
+        />
+      )
+    })
+    expect(scrollTo).toHaveBeenLastCalledWith({
+      top: 148,
+      behavior: "smooth",
+    })
+
+    fireEvent.click(screen.getByLabelText("Zoom in"))
+
+    expect(scrollTo).toHaveBeenLastCalledWith({
+      top: 186,
+      behavior: "smooth",
+    })
   })
 })

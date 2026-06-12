@@ -29,6 +29,8 @@ const TEXT_LOAD_AHEAD_PX = 600
 const TEXT_OVERSCAN = 16
 const TEXT_INITIAL_VIEWPORT_HEIGHT = 600
 const JSON_LINE_MAX = 2000
+const TEXT_LINE_BREAK_PATTERN = /\r\n|[\n\r\u2028\u2029]/g
+const TRAILING_TEXT_LINE_BREAK_PATTERN = /\r\n$|[\n\r\u2028\u2029]$/
 
 Prism.manual = true
 
@@ -254,6 +256,12 @@ function makeTextSubscription(
   }
 }
 
+function splitLoadedTextLines(text: string): string[] {
+  return text
+    .replace(TRAILING_TEXT_LINE_BREAK_PATTERN, "")
+    .split(TEXT_LINE_BREAK_PATTERN)
+}
+
 export function TextDocViewer({
   resource,
   className,
@@ -379,7 +387,7 @@ export function TextDocViewer({
     return snap.text
   }, [snap, isJson])
 
-  const lines = React.useMemo(() => text.replace(/\n$/, "").split("\n"), [text])
+  const lines = React.useMemo(() => splitLoadedTextLines(text), [text])
   const maxChars = React.useMemo(
     () => lines.reduce((m, l) => Math.max(m, l.length), 0),
     [lines]

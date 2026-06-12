@@ -189,6 +189,9 @@ export function SegmentLegend({
                 onSelect,
               })
             const label = segmentDisplayLabel(segment.label)
+            const hasExplicitLabel =
+              typeof segment.label === "string" &&
+              segment.label.trim().length > 0
             return (
               <button
                 key={`${segment.id}-${segmentPosition}`}
@@ -221,7 +224,7 @@ export function SegmentLegend({
                   <span
                     className={cn(
                       "col-start-1 row-start-1 truncate",
-                      !segment.label.trim() && "italic",
+                      !hasExplicitLabel && "italic",
                       state.isHighlighted || state.isCurrent || state.isSelected
                         ? "font-semibold text-foreground"
                         : "font-normal text-muted-foreground"

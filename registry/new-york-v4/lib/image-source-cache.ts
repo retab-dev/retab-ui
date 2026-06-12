@@ -17,6 +17,7 @@ import type {
   ViewerContentBytes,
   ViewerContentDirectUrl,
   ViewerContentIdentity,
+  ViewerContentMime,
   ViewerContentPayload,
 } from "@/lib/viewer-resource"
 
@@ -32,6 +33,7 @@ export interface FrameSourceLease {
 
 export type ImageSourceContent = ViewerContentIdentity &
   ViewerContentDirectUrl &
+  ViewerContentMime &
   ViewerContentPayload &
   ViewerContentBlob &
   ViewerContentBytes
@@ -258,7 +260,10 @@ function imageSourceName(content: ViewerContentDirectUrl): string {
   return content.directUrl ?? ""
 }
 
-function imageContentType(content: ViewerContentPayload): string | null {
+function imageContentType(
+  content: ViewerContentPayload & ViewerContentMime
+): string | null {
+  if (content.mimeType) return content.mimeType
   if (content.payload.kind === "blob") return content.payload.blob.type || null
   return null
 }

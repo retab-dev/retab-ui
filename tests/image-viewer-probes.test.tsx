@@ -1010,4 +1010,35 @@ describe("document swap page indicator", () => {
 
     expect(screen.getByTestId("rot").getAttribute("data-rotation")).toBe("0")
   })
+
+  it("resets uncontrolled zoom when swapping documents", async () => {
+    stubImageLoading(bitmap(100, 100))
+    stubObservableLayout(132) // fit-width scale = 100%
+
+    let view!: RenderResult
+    await act(async () => {
+      view = render(
+        <ImageViewer source={{ kind: "url", url: "/zoom-a.png" }} />
+      )
+    })
+
+    expect(await screen.findByText("100%")).toBeTruthy()
+
+    await act(async () => {
+      fireEvent.click(screen.getByLabelText("Zoom in"))
+    })
+    expect(screen.getByText("120%")).toBeTruthy()
+
+    await act(async () => {
+      view.rerender(
+        <ImageViewer source={{ kind: "url", url: "/zoom-b.png" }} />
+      )
+    })
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    expect(screen.getByText("100%")).toBeTruthy()
+    expect(screen.queryByText("120%")).toBeNull()
+  })
 })

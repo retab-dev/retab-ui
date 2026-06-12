@@ -9,8 +9,16 @@ import { ObjectCellEditor } from "@/components/json-table/cell-editors/object-ed
 import { TextEditor } from "@/components/json-table/cell-editors/text-editor"
 import { TimeEditor } from "@/components/json-table/cell-editors/time-editor"
 import { JsonTableScalarCell } from "@/components/json-table/json-table-scalar-cell"
+import { recordJsonTableRender } from "@/components/json-table/json-table-profiler"
 
 export function CellEditor(props: CellEditorProps) {
+  recordJsonTableRender("CellEditor", props.identity.fieldPath, {
+    fieldKind: props.field.fieldMetadata.kind,
+    isEditable: props.field.isEditable,
+    isSelectOpen: props.overlays.isSelectOpen,
+    openEditorPath: props.overlays.openEditorPath,
+  })
+
   switch (props.field.fieldMetadata.kind) {
     case "object":
       return <ObjectCellEditor {...props} />

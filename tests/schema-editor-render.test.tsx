@@ -5,6 +5,7 @@ import {
   fireEvent,
   render,
   screen,
+  waitFor,
   within,
 } from "@testing-library/react"
 import type { JSONSchema7 } from "json-schema"
@@ -17,7 +18,10 @@ afterEach(cleanup)
 /** Controlled editor harness that records every emitted schema. */
 function renderEditor(
   initial: JSONSchema7,
-  options: { readOnly?: boolean } = {}
+  options: {
+    readOnly?: boolean
+    features?: React.ComponentProps<typeof SchemaBuilder>["features"]
+  } = {}
 ) {
   const emits: JSONSchema7[] = []
   function Harness() {
@@ -26,6 +30,7 @@ function renderEditor(
       <SchemaBuilder
         value={schema}
         readOnly={options.readOnly}
+        features={options.features}
         onValueChange={(s) => {
           emits.push(s as JSONSchema7)
           setSchema(s as JSONSchema7)
@@ -38,13 +43,11 @@ function renderEditor(
 }
 
 function openSchemaActionsMenu() {
-  fireEvent.pointerDown(
-    screen.getByRole("button", { name: "Open schema actions" }),
-    {
-      button: 0,
-      ctrlKey: false,
-    }
-  )
+  fireEvent.click(screen.getByRole("button", { name: "Open schema actions" }))
+}
+
+function openTypeMenu(label: string) {
+  fireEvent.click(screen.getByRole("button", { name: label }))
 }
 
 const sample: JSONSchema7 = {
@@ -239,13 +242,69 @@ describe("SchemaBuilder interactions (doc-routed)", () => {
       },
     })
 
-    fireEvent.pointerDown(screen.getByRole("button", { name: "datetime" }), {
-      button: 0,
-      ctrlKey: false,
-    })
+    openTypeMenu("datetime")
     fireEvent.click(await screen.findByRole("menuitem", { name: "number" }))
 
     expect(last()!.properties!.issued_at).toEqual({ type: "number" })
+  })
+
+  it("selects an existing definition from the property type menu", async () => {
+    const { last } = renderEditor({
+      type: "object",
+      $defs: {
+        Address: {
+          type: "object",
+          properties: {},
+          required: [],
+        },
+      },
+      properties: {
+        billing_address: { type: "string" },
+      },
+    })
+
+    openTypeMenu("string")
+    const definitionTrigger = await screen.findByText("definition")
+    fireEvent.focus(definitionTrigger)
+    fireEvent.keyDown(definitionTrigger, { key: "ArrowRight" })
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Address" }))
+
+    expect(last()!.properties!.billing_address).toEqual({
+      $ref: "#/$defs/Address",
+    })
+    expect(last()!.$defs!.Address).toEqual({
+      type: "object",
+      properties: {},
+      required: [],
+    })
+  })
+
+  it("installs an object template from the property type menu", async () => {
+    const { last } = renderEditor(
+      {
+        type: "object",
+        properties: {
+          vendor: { type: "string" },
+        },
+      },
+      { features: { objectTemplates: true } }
+    )
+
+    openTypeMenu("string")
+    const templateTrigger = await screen.findByText("object template")
+    fireEvent.focus(templateTrigger)
+    fireEvent.keyDown(templateTrigger, { key: "ArrowRight" })
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Company" }))
+
+    await waitFor(() => {
+      expect(last()!.properties!.vendor).toEqual({
+        $ref: "#/$defs/Company",
+      })
+    })
+    expect(Object.keys(last()!.$defs!)).toEqual(["Address", "Company"])
+    expect((last()!.$defs!.Company as JSONSchema7).properties!.address).toEqual(
+      { $ref: "#/$defs/Address" }
+    )
   })
 
   it("deletes all descriptions through the schema actions menu", async () => {
@@ -304,8 +363,10 @@ describe("SchemaBuilder interactions (doc-routed)", () => {
     ).toBeUndefined()
     expect((out.properties!.rows as JSONSchema7).description).toBeUndefined()
     expect(
-      (((out.properties!.rows as JSONSchema7).items as JSONSchema7).properties!
-        .sku as JSONSchema7).description
+      (
+        ((out.properties!.rows as JSONSchema7).items as JSONSchema7).properties!
+          .sku as JSONSchema7
+      ).description
     ).toBeUndefined()
     expect((out.$defs!.Money as JSONSchema7).description).toBeUndefined()
     expect(

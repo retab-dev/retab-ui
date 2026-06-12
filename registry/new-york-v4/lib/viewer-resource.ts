@@ -12,6 +12,7 @@ import {
 import {
   resolveViewerDescriptor,
   type BlobViewerSource,
+  type FileCategory,
   type TextSource,
   type UrlViewerSource,
   type ViewerDescriptor,
@@ -57,6 +58,7 @@ export interface ViewerResourceContent {
   readonly key: string
   readonly sourceKind: ViewerSource["kind"]
   readonly directUrl: string | null
+  readonly mimeType?: string
   readonly payload: ViewerResourcePayload
   readBlob(options?: ResourceReadOptions): Promise<Blob>
   readBytes(options?: ResourceReadOptions): Promise<ArrayBuffer>
@@ -78,6 +80,9 @@ export type ViewerContentDirectUrl = ViewerContentIdentity &
 
 export type ViewerContentPayload = ViewerContentIdentity &
   Pick<ViewerResourceContent, "payload">
+
+export type ViewerContentMime = ViewerContentIdentity &
+  Pick<ViewerResourceContent, "mimeType">
 
 export type ViewerContentBlob = ViewerContentIdentity &
   Pick<ViewerResourceContent, "readBlob">
@@ -133,8 +138,11 @@ let blobViewerResourceContentRegistry = new WeakMap<
 const blobObjectKeys = new WeakMap<Blob, string>()
 let nextBlobObjectKey = 0
 
-export function createViewerResource(source: ViewerSource): ViewerResource {
-  const descriptor = resolveViewerDescriptor({ source })
+export function createViewerResource(
+  source: ViewerSource,
+  category?: FileCategory
+): ViewerResource {
+  const descriptor = resolveViewerDescriptor({ source, category })
   const keys = viewerResourceKeys(source, descriptor)
 
   if (source.kind === "url") {
@@ -251,6 +259,7 @@ function viewerResourceLoadKey(source: ViewerSource) {
   return [
     source.kind,
     source.identityKey ?? "",
+    sourceMimeType(source) ?? "",
     directLoadCacheKey(source),
     payloadCacheKey(source),
   ].join("\u0000")
@@ -282,6 +291,11 @@ function payloadCacheKey(source: ViewerSource) {
   if (source.kind === "url") return ""
   if (source.kind === "blob") return blobObjectKey(source.blob)
   return `text:${source.text.length}:${hashString(source.text)}`
+}
+
+function sourceMimeType(source: ViewerSource) {
+  if (source.kind === "blob") return source.mimeType ?? source.blob.type
+  return source.mimeType
 }
 
 function blobObjectKey(blob: Blob) {
@@ -576,11 +590,12 @@ function resourceBase(
 function resourceContentBase(
   source: ViewerSource,
   keys: ViewerResourceKeys,
-  methods: Omit<ViewerResourceContent, "key" | "sourceKind">
+  methods: Omit<ViewerResourceContent, "key" | "sourceKind" | "mimeType">
 ): ViewerResourceContent {
   return Object.freeze({
     key: keys.load,
     sourceKind: source.kind,
+    mimeType: sourceMimeType(source),
     ...methods,
   })
 }

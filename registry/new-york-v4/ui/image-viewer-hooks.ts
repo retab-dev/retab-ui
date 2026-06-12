@@ -48,6 +48,7 @@ export function useImageViewerScale(
 
   React.useLayoutEffect(() => {
     setRawRotation(0)
+    setUncontrolledScale(null)
   }, [source])
 
   const rotation = normalizeRotation(rawRotation)

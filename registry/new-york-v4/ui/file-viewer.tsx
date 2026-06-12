@@ -99,8 +99,8 @@ function useDescriptorSignal(descriptorKey: string): AbortSignal {
 export function FileViewer(props: FileViewerProps) {
   const isClient = useIsClient()
   const resource = React.useMemo(
-    () => createViewerResource(props.source),
-    [props.source]
+    () => createViewerResource(props.source, props.as),
+    [props.source, props.as]
   )
   const descriptor = resolveFileDescriptor(props)
   const descriptorKey = descriptorResetKey(descriptor)

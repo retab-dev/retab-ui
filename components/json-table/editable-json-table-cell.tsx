@@ -15,6 +15,10 @@ import { getFieldMetadata } from "@/components/json-table/lib/schema-field-metad
 import type { FieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
 import { formatValueForCommit } from "@/components/json-table/lib/value-normalization"
 import { cmp, useRefCallback } from "@/components/json-table/path-utils"
+import {
+  markJsonTableProfile,
+  recordJsonTableRender,
+} from "@/components/json-table/json-table-profiler"
 import { useCellController } from "@/components/json-table/use-cell-controller"
 import { useElevatedVirtualRow } from "@/components/json-table/use-elevated-virtual-row"
 
@@ -47,6 +51,12 @@ function ActiveEditableJsonTableCell({
   onActivityLockChange: (locked: boolean) => void
   onDocumentDataChange: JsonTableCellProps["onDocumentDataChange"]
 }) {
+  recordJsonTableRender("ActiveEditableJsonTableCell", materializedFieldPath, {
+    fieldKind: fieldMetadata.kind,
+    openEditorPath,
+    valueType: value === null ? "null" : typeof value,
+  })
+
   const { effectiveValue, committedTextValue, commitValueChange } =
     useCellController({
       document,
@@ -76,8 +86,19 @@ function ActiveEditableJsonTableCell({
   })
 
   React.useEffect(() => {
+    markJsonTableProfile("active-editor-mounted", {
+      fieldPath: materializedFieldPath,
+      fieldKind: fieldMetadata.kind,
+    })
+  }, [fieldMetadata.kind, materializedFieldPath])
+
+  React.useEffect(() => {
+    markJsonTableProfile("cell-activity-lock-change", {
+      fieldPath: materializedFieldPath,
+      locked: isActivityLocked,
+    })
     onActivityLockChange(isActivityLocked)
-  }, [isActivityLocked, onActivityLockChange])
+  }, [isActivityLocked, materializedFieldPath, onActivityLockChange])
 
   React.useEffect(
     () => () => {
@@ -153,6 +174,19 @@ function EditableJsonTableCellContent(props: JsonTableCellProps) {
   const isNestedEditorOpen =
     Boolean(materializedFieldPath) && openEditorPath === materializedFieldPath
   const isActive = isEditable && (isCellActive || isNestedEditorOpen)
+  recordJsonTableRender(
+    "EditableJsonTableCell",
+    materializedFieldPath ?? props.column.key,
+    {
+      fieldKind: fieldMetadata?.kind ?? null,
+      isActive,
+      isCellActive,
+      isEditable,
+      isNestedEditorOpen,
+      openEditorPath,
+      valueType: value === null ? "null" : typeof value,
+    }
+  )
   const handleActivityLockChange = useRefCallback((locked: boolean) => {
     if (materializedFieldPath) {
       onCellActivityLockChange?.(materializedFieldPath, locked)

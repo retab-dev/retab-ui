@@ -212,6 +212,14 @@ describe("parsePptxSlideSize edge cases", () => {
     ).toEqual({ width: 1, height: 1 })
   })
 
+  it("falls back when positive EMU values round to an unusable zero-pixel size", () => {
+    expect(
+      parsePptxSlideSize(
+        `<p:presentation ${P_NS}><p:sldSz cx="1" cy="1"/></p:presentation>`
+      )
+    ).toEqual(DEFAULT_PPTX_SLIDE_SIZE)
+  })
+
   it("falls back for empty, whitespace, and null input", () => {
     expect(parsePptxSlideSize("")).toEqual(DEFAULT_PPTX_SLIDE_SIZE)
     expect(parsePptxSlideSize(null)).toEqual(DEFAULT_PPTX_SLIDE_SIZE)

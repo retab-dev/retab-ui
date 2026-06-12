@@ -31,6 +31,25 @@ import { isAbortError } from "@/registry/new-york-v4/ui/viewer-abortable-request
 const docxRouteMock = vi.hoisted(() => ({
   props: [] as Array<Record<string, unknown>>,
 }))
+const pdfRouteMock = vi.hoisted(() => ({
+  props: [] as Array<Record<string, unknown>>,
+}))
+const imageRouteMock = vi.hoisted(() => ({
+  props: [] as Array<Record<string, unknown>>,
+}))
+const pptxRouteMock = vi.hoisted(() => ({
+  props: [] as Array<Record<string, unknown>>,
+}))
+const xlsxRouteMock = vi.hoisted(() => ({
+  props: [] as Array<Record<string, unknown>>,
+}))
+
+vi.mock("@/components/ui/pdf-viewer", () => ({
+  PdfResourceViewer: (props: Record<string, unknown>) => {
+    pdfRouteMock.props.push(props)
+    return "Mock PDF viewer"
+  },
+}))
 
 vi.mock("@/components/ui/docx-viewer", () => ({
   DocxResourceViewer: (props: Record<string, unknown>) => {
@@ -39,9 +58,34 @@ vi.mock("@/components/ui/docx-viewer", () => ({
   },
 }))
 
+vi.mock("@/components/ui/image-viewer", () => ({
+  ImageResourceViewer: (props: Record<string, unknown>) => {
+    imageRouteMock.props.push(props)
+    return "Mock image viewer"
+  },
+}))
+
+vi.mock("@/components/ui/pptx-viewer", () => ({
+  PptxResourceViewer: (props: Record<string, unknown>) => {
+    pptxRouteMock.props.push(props)
+    return "Mock PPTX viewer"
+  },
+}))
+
+vi.mock("@/components/ui/xlsx-viewer", () => ({
+  XlsxResourceViewer: (props: Record<string, unknown>) => {
+    xlsxRouteMock.props.push(props)
+    return "Mock XLSX viewer"
+  },
+}))
+
 afterEach(() => {
   cleanup()
   docxRouteMock.props.length = 0
+  pdfRouteMock.props.length = 0
+  imageRouteMock.props.length = 0
+  pptxRouteMock.props.length = 0
+  xlsxRouteMock.props.length = 0
   vi.restoreAllMocks()
   vi.unstubAllGlobals()
 })
@@ -52,6 +96,20 @@ function response(body: string, init: ResponseInit = {}) {
 
 function urlSource(url: string, fileName?: string, mimeType?: string) {
   return { kind: "url" as const, url, fileName, mimeType }
+}
+
+function blobFileSource(
+  fileName: string,
+  mimeType: string,
+  identityKey = `blob:${fileName}`
+) {
+  return {
+    kind: "blob" as const,
+    blob: new Blob(["file bytes"], { type: mimeType }),
+    fileName,
+    mimeType,
+    identityKey,
+  }
 }
 
 function textSubscription(url: string, mode: "stream" | "full" = "stream") {
@@ -512,6 +570,134 @@ describe("FileViewer text resources", () => {
 })
 
 describe("FileViewer text rendering", () => {
+  it.each([
+    {
+      label: "PDF",
+      source: urlSource("/files/report", "report.pdf", "text/plain"),
+      text: "Mock PDF viewer",
+      props: pdfRouteMock.props,
+    },
+    {
+      label: "image",
+      source: urlSource("/files/diagram", "diagram.png"),
+      text: "Mock image viewer",
+      props: imageRouteMock.props,
+    },
+    {
+      label: "PPTX",
+      source: urlSource(
+        "/files/deck",
+        undefined,
+        "application/vnd.ms-powerpoint"
+      ),
+      text: "Mock PPTX viewer",
+      props: pptxRouteMock.props,
+    },
+    {
+      label: "XLSX",
+      source: urlSource("/files/sheet", "sheet.xlsm"),
+      text: "Mock XLSX viewer",
+      props: xlsxRouteMock.props,
+    },
+  ])(
+    "routes URL $label files to the matching resource viewer",
+    async ({ source, text, props }) => {
+      render(<FileViewer source={source} className="viewer-frame" bare />)
+
+      expect(await screen.findByText(text)).toBeTruthy()
+      expect(props).toHaveLength(1)
+      expect(props[0]).toMatchObject({
+        className: "viewer-frame",
+        bare: true,
+      })
+      expect(
+        (props[0]?.resource as { content: { directUrl: string | null } })
+          .content.directUrl
+      ).toBe(source.url)
+      expect("source" in props[0]!).toBe(false)
+    }
+  )
+
+  it.each([
+    {
+      label: "PDF",
+      source: blobFileSource("scan.pdf", "application/pdf"),
+      text: "Mock PDF viewer",
+      props: pdfRouteMock.props,
+    },
+    {
+      label: "image",
+      source: blobFileSource("photo.webp", "image/webp"),
+      text: "Mock image viewer",
+      props: imageRouteMock.props,
+    },
+    {
+      label: "PPTX",
+      source: blobFileSource(
+        "deck.pptx",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+      ),
+      text: "Mock PPTX viewer",
+      props: pptxRouteMock.props,
+    },
+    {
+      label: "DOCX",
+      source: blobFileSource(
+        "doc.docx",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      ),
+      text: "Mock DOCX viewer",
+      props: docxRouteMock.props,
+    },
+    {
+      label: "XLSX",
+      source: blobFileSource(
+        "book.xlsx",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      ),
+      text: "Mock XLSX viewer",
+      props: xlsxRouteMock.props,
+    },
+  ])(
+    "routes Blob $label files without object URLs",
+    async ({ source, text, props }) => {
+      render(<FileViewer source={source} isolateStyles />)
+
+      expect(await screen.findByText(text)).toBeTruthy()
+      expect(props).toHaveLength(1)
+      if (source.fileName.endsWith(".xlsx")) {
+        expect(props[0]).toMatchObject({ isolateStyles: true })
+      } else {
+        expect("isolateStyles" in props[0]!).toBe(false)
+      }
+      expect(
+        (props[0]?.resource as { content: { directUrl: string | null } })
+          .content.directUrl
+      ).toBeNull()
+      expect("source" in props[0]!).toBe(false)
+    }
+  )
+
+  it("routes extensionless URL files through the explicit viewer category", async () => {
+    render(
+      <FileViewer
+        source={urlSource("/signed/file?id=1", "download")}
+        as="pdf"
+      />
+    )
+
+    expect(await screen.findByText("Mock PDF viewer")).toBeTruthy()
+    expect(pdfRouteMock.props).toHaveLength(1)
+    const resource = pdfRouteMock.props[0]?.resource as {
+      content: { directUrl: string | null }
+      descriptor: { category: string }
+      fileName: string
+    }
+    expect(resource.content.directUrl).toBe("/signed/file?id=1")
+    expect(resource.fileName).toBe("download")
+    expect(resource.descriptor.category).toBe("pdf")
+  })
+
   it("renders DOCX files through the lazy resource viewer", async () => {
     render(<FileViewer source={urlSource("/report.docx", "report.docx")} />)
 
@@ -596,6 +782,32 @@ describe("FileViewer text rendering", () => {
     } finally {
       consoleError.mockRestore()
     }
+  })
+
+  it.each([
+    {
+      name: "lone CR",
+      url: "/mixed-cr-lines.log",
+      text: "first line\rsecond line",
+      expectedMeta: "2 lines",
+    },
+    {
+      name: "Unicode line and paragraph separators",
+      url: "/mixed-unicode-lines.log",
+      text: "first line\u2028second line\u2029third line",
+      expectedMeta: "3 lines",
+    },
+  ])("splits streamed text on $name", async ({ url, text, expectedMeta }) => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(response(text, { status: 200 })))
+    )
+
+    render(<FileViewer source={urlSource(url, "mixed.log")} />)
+
+    expect(await screen.findByText("first line")).toBeTruthy()
+    expect(screen.getByText("second line")).toBeTruthy()
+    expect(screen.getByText(expectedMeta)).toBeTruthy()
   })
 
   it("keeps the download action in the toolbar for long filenames", async () => {

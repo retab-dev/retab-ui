@@ -83,9 +83,7 @@ describe("pdfAnchorToLocation", () => {
   })
 
   it("rejects non-finite box coordinates", () => {
-    expect(
-      pdfAnchorToLocation(pdfBbox({ left: Number.NaN }))
-    ).toBeUndefined()
+    expect(pdfAnchorToLocation(pdfBbox({ left: Number.NaN }))).toBeUndefined()
     expect(
       pdfAnchorToLocation(pdfBbox({ width: Number.POSITIVE_INFINITY }))
     ).toBeUndefined()
@@ -141,7 +139,7 @@ describe("usePdfSourceTarget", () => {
       getViewportElement: () => null,
     })
 
-    target.scrollTo(makeSource(pdfBbox({ page: 3, top: 0.25 })), {
+    target.scrollTo?.(makeSource(pdfBbox({ page: 3, top: 0.25 })), {
       behavior: "auto",
     })
 
@@ -159,14 +157,16 @@ describe("usePdfSourceTarget", () => {
       getViewportElement: () => null,
     })
 
-    target.scrollTo(makeSource({ kind: "csv_cell", row: 1, column: "A" }))
+    target.scrollTo?.(makeSource({ kind: "csv_cell", row: 1, column: "A" }), {
+      behavior: "auto",
+    })
     expect(scrollToPageTarget).not.toHaveBeenCalled()
   })
 
   it("is a no-op when the viewer ref is empty", () => {
     const target = renderTarget(null)
     expect(() =>
-      target.scrollTo(makeSource(pdfBbox()))
+      target.scrollTo?.(makeSource(pdfBbox()), { behavior: "auto" })
     ).not.toThrow()
   })
 })

@@ -463,6 +463,71 @@ describe("json table schema inspection", () => {
     ])
   })
 
+  it("builds value placeholder leaves for primitive arrays", () => {
+    const primitiveArraySchema: JSONSchema7 = {
+      type: "object",
+      properties: {
+        tags: {
+          type: "array",
+          items: { type: "string" },
+        },
+      },
+    }
+
+    const [nodes] = buildHeaderNodesFromSchema(primitiveArraySchema, [])
+    expect(nodes[0].key).toBe("tags")
+    expect(nodes[0].isArray).toBe(true)
+    expect(nodes[0].children?.[0]).toMatchObject({
+      key: "tags.*",
+      label: "Value",
+      isArrayValuePlaceholder: true,
+      effectiveType: "string",
+    })
+    expect(flattenHeaderNodes(nodes).map((node) => node.key)).toEqual([
+      "tags.*",
+    ])
+    expect(getFieldMetadata(primitiveArraySchema, "tags.*")?.kind).toBe(
+      "string"
+    )
+  })
+
+  it("folds object and array headers to parent value columns", () => {
+    const collapsibleSchema: JSONSchema7 = {
+      type: "object",
+      properties: {
+        vendor: {
+          type: "object",
+          properties: {
+            name: { type: "string" },
+            rating: { type: "number" },
+          },
+        },
+        lines: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              sku: { type: "string" },
+              quantity: { type: "integer" },
+            },
+          },
+        },
+      },
+    }
+
+    const [nodes] = buildHeaderNodesFromSchema(collapsibleSchema, [
+      "vendor",
+      "lines",
+    ])
+
+    expect(flattenHeaderNodes(nodes).map((node) => node.key)).toEqual([
+      "vendor",
+      "lines",
+    ])
+    expect(getFieldMetadata(collapsibleSchema, "vendor")?.kind).toBe("object")
+    expect(getFieldMetadata(collapsibleSchema, "lines")?.kind).toBe("array")
+  })
+
   it("builds aligned header grid rows with continuation cells", () => {
     const gridSchema: JSONSchema7 = {
       type: "object",
@@ -910,6 +975,26 @@ describe("json table document projection and patches", () => {
     expect(rows[0].cells[2]?.value).toBe("ACME")
   })
 
+  it("reserves read-only columns when array-shaped data is invalid", () => {
+    const rows = projectDocumentRows({
+      document: {
+        id: "doc_1",
+        data: {
+          lines: null,
+          charges: [{ amount: 5 }],
+        },
+      },
+      visiblePaths: ["lines.*.sku", "lines.*.quantity", "charges.*.amount"],
+      includeArrayAddRows: false,
+    })
+
+    expect(rows).toHaveLength(1)
+    expect(rows[0].cells[0]).toBeUndefined()
+    expect(rows[0].cells[1]).toBeUndefined()
+    expect(rows[0].cells[2]?.materializedFieldPath).toBe("charges.0.amount")
+    expect(rows[0].cells[2]?.value).toBe(5)
+  })
+
   it("reserves every nested read-only column for empty nested arrays", () => {
     const rows = projectDocumentRows({
       document: {
@@ -941,6 +1026,59 @@ describe("json table document projection and patches", () => {
       "sections.0.charges.0.amount"
     )
     expect(rows[0].cells[3]?.value).toBe(12)
+  })
+
+  it("projects primitive arrays and their editable add row", () => {
+    const rows = projectDocumentRows({
+      document: {
+        id: "doc_1",
+        data: {
+          tags: ["paid", "urgent"],
+          vendor: "ACME",
+        },
+      },
+      visiblePaths: ["tags.*", "vendor"],
+    })
+
+    expect(rows.map((row) => row.cells[0]?.materializedFieldPath)).toEqual([
+      "tags.0",
+      "tags.1",
+      "tags.2",
+    ])
+    expect(rows.map((row) => row.cells[0]?.value)).toEqual([
+      "paid",
+      "urgent",
+      undefined,
+    ])
+    expect(rows.map((row) => row.cells[0]?.addArrayItemAtIndex)).toEqual([
+      undefined,
+      undefined,
+      0,
+    ])
+    expect(rows[0].cells[1]?.materializedFieldPath).toBe("vendor")
+    expect(rows[0].cells[1]?.value).toBe("ACME")
+    expect(rows[1].cells[1]).toBeUndefined()
+    expect(rows[2].cells[1]).toBeUndefined()
+  })
+
+  it("projects folded object and array columns as their parent values", () => {
+    const rows = projectDocumentRows({
+      document: {
+        id: "doc_1",
+        data: {
+          vendor: { name: "ACME", rating: 4 },
+          lines: [{ sku: "A-1" }, { sku: "B-2" }],
+        },
+      },
+      visiblePaths: ["vendor", "lines"],
+      includeArrayAddRows: false,
+    })
+
+    expect(rows).toHaveLength(1)
+    expect(rows[0].cells[0]?.materializedFieldPath).toBe("vendor")
+    expect(rows[0].cells[0]?.value).toEqual({ name: "ACME", rating: 4 })
+    expect(rows[0].cells[1]?.materializedFieldPath).toBe("lines")
+    expect(rows[0].cells[1]?.value).toEqual([{ sku: "A-1" }, { sku: "B-2" }])
   })
 
   it("aligns independent arrays by visible row index and keeps add rows sparse", () => {

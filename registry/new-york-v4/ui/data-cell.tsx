@@ -2,15 +2,11 @@
 
 import * as React from "react"
 import { CalendarIcon, CheckIcon, ClockIcon, XIcon } from "lucide-react"
+import { createPortal } from "react-dom"
 
 import { cn } from "@/lib/utils"
 import { Calendar } from "@/components/ui/calendar"
 import { Input } from "@/components/ui/input"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
 
 export type DataCellKind =
   | "text"
@@ -578,6 +574,10 @@ function DataCellPickerEdit({
   const [uncontrolledDraftValue, setUncontrolledDraftValue] =
     React.useState(initialPickerValue)
   const [open, setOpen] = React.useState(Boolean(autoFocus))
+  const triggerRef = React.useRef<HTMLButtonElement>(null)
+  const popupRef = React.useRef<HTMLDivElement>(null)
+  const [popupStyle, setPopupStyle] = React.useState<React.CSSProperties>()
+  const popupId = React.useId()
   const pickerValue = draftValue ?? uncontrolledDraftValue
   const selectedDate = dateFromPickerValue(kind, pickerValue)
   const timeValue = timeFromPickerValue(kind, pickerValue)
@@ -588,6 +588,69 @@ function DataCellPickerEdit({
     if (draftValue !== undefined) return
     setUncontrolledDraftValue(formatDataCellEditValue(kind, value))
   }, [draftValue, kind, value])
+
+  const closePopup = React.useCallback(() => {
+    setOpen(false)
+    onInputFocusChange?.(false)
+    onInputEditingEnd?.()
+  }, [onInputEditingEnd, onInputFocusChange])
+
+  const updatePopupPosition = React.useCallback(() => {
+    const trigger = triggerRef.current
+    if (!trigger) return
+
+    const rect = trigger.getBoundingClientRect()
+    const margin = 8
+    const estimatedWidth = kind === "time" ? 220 : 330
+    const estimatedHeight = kind === "time" ? 80 : kind === "date" ? 330 : 390
+    const left = Math.min(
+      Math.max(margin, rect.left),
+      Math.max(margin, window.innerWidth - estimatedWidth - margin)
+    )
+    const top =
+      rect.bottom + margin + estimatedHeight > window.innerHeight
+        ? Math.max(margin, rect.top - estimatedHeight - 4)
+        : rect.bottom + 4
+
+    setPopupStyle({ position: "fixed", top, left, zIndex: 50 })
+  }, [kind])
+
+  const openPopup = React.useCallback(() => {
+    updatePopupPosition()
+    setOpen(true)
+    onInputFocusChange?.(true)
+  }, [onInputFocusChange, updatePopupPosition])
+
+  React.useLayoutEffect(() => {
+    if (open) updatePopupPosition()
+  }, [open, updatePopupPosition])
+
+  React.useEffect(() => {
+    if (!open) return
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target
+      if (!(target instanceof Node)) return
+      if (triggerRef.current?.contains(target)) return
+      if (popupRef.current?.contains(target)) return
+      closePopup()
+    }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closePopup()
+    }
+    const handleViewportChange = () => updatePopupPosition()
+
+    globalThis.document.addEventListener("pointerdown", handlePointerDown)
+    globalThis.document.addEventListener("keydown", handleKeyDown)
+    window.addEventListener("resize", handleViewportChange)
+    window.addEventListener("scroll", handleViewportChange, true)
+    return () => {
+      globalThis.document.removeEventListener("pointerdown", handlePointerDown)
+      globalThis.document.removeEventListener("keydown", handleKeyDown)
+      window.removeEventListener("resize", handleViewportChange)
+      window.removeEventListener("scroll", handleViewportChange, true)
+    }
+  }, [closePopup, open, updatePopupPosition])
 
   const updatePickerValue = (nextValue: string, commit = false) => {
     if (draftValue === undefined) setUncontrolledDraftValue(nextValue)
@@ -606,83 +669,128 @@ function DataCellPickerEdit({
     }
   }
 
-  return (
-    <Popover
-      open={open}
-      onOpenChange={(nextOpen) => {
-        setOpen(nextOpen)
-        onInputFocusChange?.(nextOpen)
-        if (!nextOpen) onInputEditingEnd?.()
-      }}
-    >
-      <PopoverTrigger asChild>
-        <button
-          {...props}
-          type="button"
-          data-slot="data-cell"
-          data-kind={kind}
-          data-mode="edit"
-          data-empty={isEmpty || undefined}
-          disabled={disabled}
-          autoFocus={autoFocus}
-          className={cn(dataCellPickerTriggerClass, className)}
-          onFocus={(event) => {
-            onInputFocusChange?.(true)
-            onFocus?.(event)
-          }}
-          onBlur={(event) => {
-            if (!open) onInputFocusChange?.(false)
-            onBlur?.(event)
-          }}
-          onKeyDown={onKeyDown}
-          onClick={onClick}
-          onDoubleClick={onDoubleClick}
-        >
-          <span className={cn("truncate", isEmpty && "text-muted-foreground")}>
-            {isEmpty ? (placeholder ?? "—") : content}
-          </span>
-          <DataCellPickerIcon kind={kind} />
-        </button>
-      </PopoverTrigger>
-      <PopoverContent
-        align="start"
-        className="w-auto rounded-xl p-2 before:rounded-[calc(var(--radius-xl)-1px)]"
-        initialFocus={false}
-        viewportClassName="p-2"
-      >
-        {(kind === "date" || kind === "date-time") && (
-          <Calendar
-            mode="single"
-            selected={selectedDate}
-            onSelect={(nextDate) => {
-              if (!nextDate) return
-              const nextValue = pickerValueWithDate(kind, pickerValue, nextDate)
-              updatePickerValue(nextValue, true)
-              if (kind === "date") setOpen(false)
-            }}
-          />
-        )}
-        {(kind === "time" || kind === "date-time") && (
-          <div className="border-t p-2 first:border-t-0">
-            <Input
-              type="time"
-              nativeInput
-              value={timeValue}
-              onChange={(event) => {
+  const pickerPopup =
+    open && typeof globalThis.document !== "undefined"
+      ? createPortal(
+          <div
+            ref={popupRef}
+            id={popupId}
+            role="dialog"
+            data-slot="data-cell-picker-popup"
+            className="fixed rounded-xl border bg-popover p-2 text-popover-foreground shadow-lg/5 outline-none not-dark:bg-clip-padding"
+            style={popupStyle}
+          >
+            <DataCellPickerPopupContent
+              kind={kind}
+              selectedDate={selectedDate}
+              timeValue={timeValue}
+              onDateSelect={(nextDate) => {
+                if (kind === "time") return
+                if (!nextDate) return
+                const nextValue = pickerValueWithDate(
+                  kind,
+                  pickerValue,
+                  nextDate
+                )
+                updatePickerValue(nextValue, true)
+                if (kind === "date") closePopup()
+              }}
+              onTimeChange={(nextTime) => {
+                if (kind === "date") return
                 updatePickerValue(
-                  pickerValueWithTime(
-                    kind,
-                    pickerValue,
-                    event.currentTarget.value
-                  ),
+                  pickerValueWithTime(kind, pickerValue, nextTime),
                   true
                 )
               }}
             />
-          </div>
-        )}
-      </PopoverContent>
-    </Popover>
+          </div>,
+          globalThis.document.body
+        )
+      : null
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        {...props}
+        type="button"
+        data-slot="data-cell"
+        data-kind={kind}
+        data-mode="edit"
+        data-empty={isEmpty || undefined}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-controls={open ? popupId : undefined}
+        disabled={disabled}
+        autoFocus={autoFocus}
+        className={cn(dataCellPickerTriggerClass, className)}
+        onFocus={(event) => {
+          onInputFocusChange?.(true)
+          onFocus?.(event)
+        }}
+        onBlur={(event) => {
+          const relatedTarget = event.relatedTarget
+          if (
+            relatedTarget instanceof Node &&
+            popupRef.current?.contains(relatedTarget)
+          ) {
+            return
+          }
+          if (!open) onInputFocusChange?.(false)
+          onBlur?.(event)
+        }}
+        onKeyDown={onKeyDown}
+        onClick={(event) => {
+          onClick?.(event)
+          if (event.defaultPrevented || disabled) return
+          if (open) closePopup()
+          else openPopup()
+        }}
+        onDoubleClick={onDoubleClick}
+      >
+        <span className={cn("truncate", isEmpty && "text-muted-foreground")}>
+          {isEmpty ? (placeholder ?? "—") : content}
+        </span>
+        <DataCellPickerIcon kind={kind} />
+      </button>
+      {pickerPopup}
+    </>
+  )
+}
+
+function DataCellPickerPopupContent({
+  kind,
+  selectedDate,
+  timeValue,
+  onDateSelect,
+  onTimeChange,
+}: {
+  kind: "date" | "time" | "date-time"
+  selectedDate: Date | undefined
+  timeValue: string
+  onDateSelect: (date: Date | undefined) => void
+  onTimeChange: (time: string) => void
+}) {
+  return (
+    <>
+      {(kind === "date" || kind === "date-time") && (
+        <Calendar
+          mode="single"
+          selected={selectedDate}
+          onSelect={onDateSelect}
+        />
+      )}
+      {(kind === "time" || kind === "date-time") && (
+        <div className="border-t p-2 first:border-t-0">
+          <Input
+            type="time"
+            nativeInput
+            value={timeValue}
+            onChange={(event) => onTimeChange(event.currentTarget.value)}
+          />
+        </div>
+      )}
+    </>
   )
 }
 
@@ -748,7 +856,7 @@ function formatDateTimeDisplayValue(value: string): string {
 }
 
 function formatTimeDisplayValue(value: string): string {
-  const match = value.match(/^(\d{2}):(\d{2})(?::(\d{2}))?/)
+  const match = value.match(/^(\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?/)
   if (!match) return value
   return [match[1], match[2], match[3]].filter(Boolean).join(":")
 }
@@ -795,7 +903,7 @@ function timeFromPickerValue(
   value: string
 ): string {
   if (kind === "date") return ""
-  return value.match(/\d{2}:\d{2}(?::\d{2})?/)?.[0] ?? ""
+  return value.match(/\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?/)?.[0] ?? ""
 }
 
 function pickerValueWithDate(
@@ -874,15 +982,18 @@ function formatDataCellEditValue(kind: DataCellKind, value: DataCellValue) {
   const text = String(value)
   if (kind === "date-time") return dateTimeInputValue(text)
   if (kind === "date") return text.match(/^\d{4}-\d{2}-\d{2}/)?.[0] ?? text
-  if (kind === "time") return text.match(/^\d{2}:\d{2}(?::\d{2})?/)?.[0] ?? text
+  if (kind === "time") {
+    return text.match(/^\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?/)?.[0] ?? text
+  }
   return text
 }
 
 function dateTimeInputValue(value: string): string {
   const withoutTimezone = value.trim().replace(/(?:Z|[+-]\d{2}:\d{2})$/, "")
   return (
-    withoutTimezone.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?/)?.[0] ??
-    value
+    withoutTimezone.match(
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?/
+    )?.[0] ?? value
   )
 }
 

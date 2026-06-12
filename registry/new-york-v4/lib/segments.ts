@@ -53,7 +53,7 @@ export interface SegmentChunk {
 }
 
 export function segmentDisplayLabel(label: string): string {
-  const trimmed = label.trim()
+  const trimmed = typeof label === "string" ? label.trim() : ""
   return trimmed || "unnamed"
 }
 
@@ -74,8 +74,9 @@ export function buildColorMap(labels: string[]): Map<string, string> {
 }
 
 function normalizePages(pages: number[]): number[] {
+  const rawPages = Array.isArray(pages) ? pages : []
   return Array.from(
-    new Set((pages ?? []).filter((p) => Number.isInteger(p) && p > 0))
+    new Set(rawPages.filter((p) => Number.isInteger(p) && p > 0))
   ).sort((a, b) => a - b)
 }
 

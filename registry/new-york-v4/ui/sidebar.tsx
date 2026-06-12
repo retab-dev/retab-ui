@@ -73,6 +73,10 @@ function isEditableShortcutTarget(target: EventTarget | null): boolean {
   )
 }
 
+function isAriaDisabled(value: unknown): boolean {
+  return value === true || value === "true"
+}
+
 function getSidebarButtonType({
   defaultElement = "button",
   render,
@@ -221,6 +225,7 @@ export function SidebarProvider({
         event.key.toLowerCase() === SIDEBAR_KEYBOARD_SHORTCUT &&
         (event.metaKey || event.ctrlKey) &&
         !event.altKey &&
+        !event.shiftKey &&
         !event.defaultPrevented &&
         !event.repeat &&
         !isEditableShortcutTarget(event.target)
@@ -387,18 +392,31 @@ export function Sidebar({
 
 export function SidebarTrigger({
   className,
+  disabled,
+  loading,
   onClick,
   render,
   ...props
 }: React.ComponentProps<typeof Button>): React.ReactElement {
   const { toggleSidebar } = useSidebar()
+  const ariaDisabled = props["aria-disabled"]
+  const isDisabled = Boolean(disabled || loading || isAriaDisabled(ariaDisabled))
+  const triggerAriaDisabled = isDisabled ? true : ariaDisabled
 
   return (
     <Button
+      aria-disabled={triggerAriaDisabled}
       className={cn("size-7", className)}
       data-sidebar="trigger"
       data-slot="sidebar-trigger"
+      disabled={disabled}
+      loading={loading}
       onClick={(event: React.MouseEvent<HTMLButtonElement>) => {
+        if (isDisabled) {
+          event.preventDefault()
+          return
+        }
+
         onClick?.(event)
         if (!event.defaultPrevented) {
           toggleSidebar()
@@ -417,14 +435,17 @@ export function SidebarTrigger({
 }
 
 export function SidebarRail({
+  "aria-disabled": ariaDisabled,
   className,
   onClick,
   ...props
 }: React.ComponentProps<"button">): React.ReactElement {
   const { toggleSidebar } = useSidebar()
+  const isDisabled = Boolean(props.disabled || isAriaDisabled(ariaDisabled))
 
   return (
     <button
+      aria-disabled={ariaDisabled}
       aria-label="Toggle Sidebar"
       className={cn(
         "absolute inset-y-0 z-20 hidden w-4 -translate-x-1/2 transition-all ease-linear group-data-[side=left]:-right-4 group-data-[side=right]:left-0 after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] hover:after:bg-sidebar-border sm:flex",
@@ -438,6 +459,11 @@ export function SidebarRail({
       data-sidebar="rail"
       data-slot="sidebar-rail"
       onClick={(event) => {
+        if (isDisabled) {
+          event.preventDefault()
+          return
+        }
+
         onClick?.(event)
         if (!event.defaultPrevented) {
           toggleSidebar()

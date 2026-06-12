@@ -46,8 +46,9 @@ export function parsePptxSlideSize(
     return DEFAULT_PPTX_SLIDE_SIZE
   }
 
-  return {
-    width: Math.round(widthEmu / EMU_PER_PX),
-    height: Math.round(heightEmu / EMU_PER_PX),
-  }
+  const width = Math.round(widthEmu / EMU_PER_PX)
+  const height = Math.round(heightEmu / EMU_PER_PX)
+  if (width <= 0 || height <= 0) return DEFAULT_PPTX_SLIDE_SIZE
+
+  return { width, height }
 }

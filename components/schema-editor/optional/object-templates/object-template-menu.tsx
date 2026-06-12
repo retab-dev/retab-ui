@@ -1,4 +1,5 @@
-import { getTemplateIcon } from "@/components/schema-editor/type-icons"
+import { Shapes } from "lucide-react"
+
 import {
   DropdownMenuItem,
   DropdownMenuPortal,
@@ -6,7 +7,7 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Shapes } from "lucide-react"
+import { getTemplateIcon } from "@/components/schema-editor/type-icons"
 
 import { templateObjects } from "./template-objects"
 
@@ -27,7 +28,7 @@ export function ObjectTemplateSubmenu({
             <DropdownMenuItem
               key={name}
               className="flex items-center gap-2"
-              onSelect={() => onSelectTemplate(name)}
+              onClick={() => onSelectTemplate(name)}
             >
               {getTemplateIcon(name)}
               {name}

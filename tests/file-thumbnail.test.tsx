@@ -608,6 +608,20 @@ describe("FileThumbnail", () => {
     expect(screen.queryByText("plain; charset=utf-8")).toBeNull()
   })
 
+  it("strips URL paths, query strings, and fragments before deriving extensions", () => {
+    render(
+      <FileThumbnail
+        file={{
+          name: "https://example.com/files/invoice.PDF?download=1#page=1",
+          type: "",
+        }}
+      />
+    )
+
+    expect(screen.getByText("pdf")).toBeTruthy()
+    expect(screen.queryByText("pdf?download=1#page=1")).toBeNull()
+  })
+
   it("passes wrapper props through and preserves explicit style aspect ratio", () => {
     const { container } = render(
       <FileThumbnail
@@ -645,6 +659,33 @@ describe("FileThumbnail", () => {
       container.querySelector('[data-slot="file-thumbnail-fallback"]')
     ).not.toBeNull()
     expect(onPreviewError).toHaveBeenCalledTimes(1)
+  })
+
+  it("reports a fresh image failure after the preview URL changes", () => {
+    const onPreviewError = vi.fn()
+    const view = render(
+      <FileThumbnail
+        file={file}
+        previewImageUrl="/first-broken.png"
+        onPreviewError={onPreviewError}
+      />
+    )
+
+    fireEvent.error(view.container.querySelector("img") as HTMLImageElement)
+    expect(onPreviewError).toHaveBeenCalledTimes(1)
+
+    view.rerender(
+      <FileThumbnail
+        file={file}
+        previewImageUrl="/second-broken.png"
+        onPreviewError={onPreviewError}
+      />
+    )
+
+    const secondImage = view.container.querySelector("img") as HTMLImageElement
+    expect(secondImage.getAttribute("src")).toBe("/second-broken.png")
+    fireEvent.error(secondImage)
+    expect(onPreviewError).toHaveBeenCalledTimes(2)
   })
 
   it("reports cached broken image previews once from the ref path", async () => {
@@ -777,6 +818,22 @@ describe("FileThumbnail", () => {
 
     expect(animate).not.toHaveBeenCalled()
     expect(highlight.style.backgroundPosition).toBe("50% 0px")
+  })
+
+  it("supports legacy reduced-motion media query listeners", () => {
+    const addListener = vi.fn()
+    const removeListener = vi.fn()
+    vi.stubGlobal("matchMedia", () => ({
+      matches: false,
+      addListener,
+      removeListener,
+    }))
+
+    const view = render(<FileThumbnail file={file} state="loading" />)
+
+    expect(addListener).toHaveBeenCalledTimes(1)
+    view.unmount()
+    expect(removeListener).toHaveBeenCalledTimes(1)
   })
 })
 
@@ -988,6 +1045,58 @@ describe("DocumentThumbnail", () => {
       kind: "load_failed",
       userMessage: "Couldn't load this image.",
     })
+  })
+
+  it("clears direct URL image error state when retryKey changes", async () => {
+    const onError = vi.fn()
+    const view = render(
+      <DocumentThumbnail
+        source={{
+          kind: "url",
+          url: "/retry-image.png",
+          fileName: "retry-image.png",
+          mimeType: "image/png",
+        }}
+        retryKey={0}
+        onError={onError}
+      />
+    )
+
+    fireEvent.error(view.container.querySelector("img") as HTMLImageElement)
+
+    await waitFor(() => {
+      expect(
+        view.container.querySelector('[data-slot="file-thumbnail-fallback"]')
+      ).not.toBeNull()
+    })
+    expect(
+      view.container
+        .querySelector('[data-slot="file-thumbnail"]')
+        ?.getAttribute("data-error-kind")
+    ).toBe("load_failed")
+
+    view.rerender(
+      <DocumentThumbnail
+        source={{
+          kind: "url",
+          url: "/retry-image.png",
+          fileName: "retry-image.png",
+          mimeType: "image/png",
+        }}
+        retryKey={1}
+        onError={onError}
+      />
+    )
+
+    const thumbnail = view.container.querySelector(
+      '[data-slot="file-thumbnail"]'
+    )
+    expect(view.container.querySelector("img")?.getAttribute("src")).toBe(
+      "/retry-image.png"
+    )
+    expect(thumbnail?.getAttribute("data-error-kind")).toBeNull()
+    expect(thumbnail?.getAttribute("aria-label")).toBeNull()
+    expect(onError).toHaveBeenCalledTimes(1)
   })
 
   it("renders homepage CSV thumbnails when the server returns an invalid range response", async () => {
@@ -1310,6 +1419,48 @@ describe("DocumentThumbnail", () => {
     ).toBeNull()
     expect(fetchMock).toHaveBeenCalledWith(
       "/working-reset.txt",
+      expect.any(Object)
+    )
+  })
+
+  it("disconnects stale viewport observers when an unseen source changes", async () => {
+    const intersection = installIntersectionObserver()
+    const fetchMock = vi.fn(async (input: string) => {
+      return new Response(`Loaded ${input}`, { status: 200 })
+    })
+    vi.stubGlobal("fetch", fetchMock)
+
+    const view = render(
+      <DocumentThumbnail
+        source={urlTextSource("/first-lazy.txt", "first.txt")}
+      />
+    )
+
+    await waitFor(() => {
+      expect(intersection.observers).toHaveLength(1)
+    })
+
+    view.rerender(
+      <DocumentThumbnail
+        source={urlTextSource("/second-lazy.txt", "second.txt")}
+      />
+    )
+
+    await waitFor(() => {
+      expect(intersection.observers).toHaveLength(2)
+    })
+
+    expect(intersection.observers[0]?.disconnect).toHaveBeenCalledTimes(1)
+    expect(fetchMock).not.toHaveBeenCalled()
+
+    await intersection.trigger(1, true)
+
+    await waitFor(() => {
+      expect(screen.getByText("Loaded /second-lazy.txt")).toBeTruthy()
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/second-lazy.txt",
       expect.any(Object)
     )
   })
