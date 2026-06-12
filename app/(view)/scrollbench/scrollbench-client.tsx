@@ -39,6 +39,8 @@ type ViewportHandle =
 
 type RunStatus = "idle" | "running" | "done" | "failed"
 
+const VIEWER_READY_TIMEOUT_MS = 30_000
+
 interface ScrollBenchController {
   getScroller: () => HTMLElement | null
   run: () => Promise<ScrollBenchResult>
@@ -315,7 +317,11 @@ function renderViewer({
     case "pptx":
       return (
         <PptxViewer
-          src="/samples/sample-presentation.pptx"
+          source={{
+            kind: "url",
+            url: "/samples/sample-presentation.pptx",
+            fileName: "sample-presentation.pptx",
+          }}
           downloadFileName="sample-presentation.pptx"
           className={viewerClassName}
           toolbar={false}
@@ -481,7 +487,9 @@ function findScrollableViewport(root: HTMLElement | null) {
       '[data-slot="xlsx-body"]',
       '[data-slot="scroll-area-viewport"]',
       '[data-slot="pdf-viewer"] [data-slot="scroll-area-viewport"]',
+      '[data-slot="text-viewer"] [data-slot="scroll-area-viewport"]',
       '[data-slot="docx-viewer"] [data-slot="scroll-area-viewport"]',
+      '[data-slot="pptx-viewer"] [data-slot="scroll-area-viewport"]',
       '[data-slot="image-viewer"] [data-slot="scroll-area-viewport"]',
     ].join(",")
   )
@@ -506,7 +514,7 @@ async function waitForScroller(
   getScroller: () => HTMLElement | null,
   {
     signal,
-    timeoutMs = 12_000,
+    timeoutMs = VIEWER_READY_TIMEOUT_MS,
   }: {
     signal?: AbortSignal
     timeoutMs?: number

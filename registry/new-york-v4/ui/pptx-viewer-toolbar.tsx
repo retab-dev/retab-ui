@@ -6,14 +6,15 @@ import { Download, Maximize, Minus, Plus, RotateCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
+import { ViewerDownloadAnchor } from "@/components/ui/viewer-download"
+import { type DownloadCapability } from "@/lib/viewer-resource"
 
 export interface PptxToolbarProps {
   currentSlide: number
   slideCount: number
   zoomScale: number
   scaleControlsDisabled: boolean
-  src: string
-  downloadFileName?: string
+  download: DownloadCapability
   onZoom: (factor: number) => void
   onFitWidth: () => void
   onRotate: () => void
@@ -24,8 +25,7 @@ export function PptxToolbar({
   slideCount,
   zoomScale,
   scaleControlsDisabled,
-  src,
-  downloadFileName,
+  download,
   onZoom,
   onFitWidth,
   onRotate,
@@ -70,14 +70,7 @@ export function PptxToolbar({
           className="size-7"
           aria-label="Download"
           title="Download"
-          render={
-            <a
-              href={src}
-              download={downloadFileName}
-              target="_blank"
-              rel="noreferrer"
-            />
-          }
+          render={<ViewerDownloadAnchor download={download} />}
         >
           <Download />
         </Button>

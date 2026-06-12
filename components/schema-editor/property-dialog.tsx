@@ -5,7 +5,7 @@ import type { JSONSchema7 } from "json-schema"
 
 import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
 import { getEffectiveNode } from "@/components/schema-editor/lib/json-schema-utils"
-import { PropertyForm } from "@/components/schema-editor/property-form"
+import { PropertyForm } from "@/components/schema-editor/property-form/property-form"
 import type {
   PropertyDraft,
   PropertyFormCommand,

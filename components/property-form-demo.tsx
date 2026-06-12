@@ -3,7 +3,7 @@
 import * as React from "react"
 
 import { type ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
-import { PropertyForm } from "@/components/schema-editor/property-form"
+import { PropertyForm } from "@/components/schema-editor/property-form/property-form"
 
 export function PropertyFormDemo() {
   const [property, setProperty] = React.useState<ExtendedJSONSchema7>({

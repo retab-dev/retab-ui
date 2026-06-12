@@ -36,12 +36,14 @@ export interface CsvGridProps {
 
 const CSV_TABLE_LABEL = "CSV data"
 const COLUMN_WIDTH = 180
-const COLUMN_OVERSCAN = 30
+const COLUMN_OVERSCAN = 3
+const JUMP_COLUMN_OVERSCAN = 1
 const ROW_HEIGHT = 33
 const ROW_NUMBER_WIDTH = 56
-const ROW_OVERSCAN = 30
+const ROW_OVERSCAN = 8
+const JUMP_ROW_OVERSCAN = 2
 const SMALL_TABLE_ROW_LIMIT = 200
-const SMALL_TABLE_COLUMN_LIMIT = 20
+const SMALL_TABLE_COLUMN_LIMIT = 8
 
 export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
   function CsvGrid(
@@ -134,6 +136,8 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
       columnSize: effectiveColumnWidth,
       rowOverscan: ROW_OVERSCAN,
       columnOverscan: COLUMN_OVERSCAN,
+      jumpRowOverscan: JUMP_ROW_OVERSCAN,
+      jumpColumnOverscan: JUMP_COLUMN_OVERSCAN,
       scrollRef: viewportRef,
       virtualizeColumns: shouldVirtualizeColumns,
     })
@@ -195,6 +199,7 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
                 width: totalWidth,
                 minWidth: "100%",
                 position: "relative",
+                contain: "layout paint style",
               }}
             >
               <div
@@ -419,7 +424,8 @@ const CsvRow = React.memo(function CsvRow({
           top: 0,
           left: 0,
           width: "100%",
-          transform: `translateY(${start}px)`,
+          contain: "layout paint style",
+          transform: `translate3d(0, ${start}px, 0)`,
         }
   return (
     <div

@@ -13,13 +13,13 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
-  TextViewer,
-  type TextViewerHandle,
-} from "@/registry/new-york-v4/ui/text-viewer"
-import {
   blobSource,
   createViewerResource,
 } from "@/registry/new-york-v4/lib/viewer-resource"
+import {
+  TextViewer,
+  type TextViewerHandle,
+} from "@/registry/new-york-v4/ui/text-viewer"
 import { scrollTopForLineRange } from "@/registry/new-york-v4/ui/text-viewer-layout"
 import {
   isLineInRange,
@@ -384,10 +384,9 @@ describe("TextViewer", () => {
       <TextViewer
         ref={viewerRef}
         source={textSource(
-          Array.from(
-            { length: 20 },
-            (_, index) => `line ${index + 1}`
-          ).join("\n")
+          Array.from({ length: 20 }, (_, index) => `line ${index + 1}`).join(
+            "\n"
+          )
         )}
       />
     )
@@ -409,19 +408,6 @@ describe("TextViewer", () => {
     const scrollTo = vi.fn()
     viewportElement.scrollTo = scrollTo
 
-    const startLineElement = viewportElement.querySelector<HTMLElement>(
-      '[data-line-number="10"]'
-    )
-    const endLineElement = viewportElement.querySelector<HTMLElement>(
-      '[data-line-number="11"]'
-    )
-    expect(startLineElement).not.toBeNull()
-    expect(endLineElement).not.toBeNull()
-    if (!startLineElement || !endLineElement) return
-
-    startLineElement.getBoundingClientRect = () => rect(200, 220)
-    endLineElement.getBoundingClientRect = () => rect(220, 240)
-
     act(() => {
       viewerRef.current?.scrollToLineRange(
         { start: 10, end: 11 },
@@ -429,7 +415,25 @@ describe("TextViewer", () => {
       )
     })
 
-    expect(scrollTo).toHaveBeenCalledWith({ top: 170, behavior: "auto" })
+    expect(scrollTo).toHaveBeenCalledWith({ top: 158, behavior: "auto" })
+  })
+
+  it("does not mount every line in a large text file", () => {
+    const { container } = render(
+      <TextViewer
+        source={textSource(
+          Array.from(
+            { length: 10_000 },
+            (_, index) => `line ${index + 1}`
+          ).join("\n")
+        )}
+        toolbar={false}
+      />
+    )
+
+    expect(
+      container.querySelectorAll("[data-line-number]").length
+    ).toBeLessThan(200)
   })
 
   it("renders a local error and retries the same URL source", async () => {

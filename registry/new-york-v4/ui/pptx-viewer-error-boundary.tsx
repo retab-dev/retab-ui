@@ -5,14 +5,15 @@ import { Download } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import { ViewerDownloadAnchor } from "@/components/ui/viewer-download"
+import { type DownloadCapability } from "@/lib/viewer-resource"
 
 export class PptxErrorBoundary extends React.Component<
   {
     children: React.ReactNode
     className?: string
-    src: string
     bare?: boolean
-    downloadFileName?: string
+    download: DownloadCapability
     resetKey?: unknown
   },
   { error: boolean }
@@ -43,14 +44,7 @@ export class PptxErrorBoundary extends React.Component<
           <Button
             variant="outline"
             size="sm"
-            render={
-              <a
-                href={this.props.src}
-                download={this.props.downloadFileName}
-                target="_blank"
-                rel="noreferrer"
-              />
-            }
+            render={<ViewerDownloadAnchor download={this.props.download} />}
           >
             <Download />
             Download

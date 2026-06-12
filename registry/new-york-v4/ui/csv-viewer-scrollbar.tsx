@@ -26,8 +26,10 @@ export function HeaderAwareScrollbar({
 }) {
   const [thumb, setThumb] = React.useState({ height: 0, top: 0, show: false })
   const drag = React.useRef<{ y: number; scroll: number } | null>(null)
+  const frame = React.useRef(0)
 
   const measure = React.useCallback(() => {
+    frame.current = 0
     const viewportElement = viewportRef.current
     if (!viewportElement) return
     const { scrollHeight, clientHeight, scrollTop } = viewportElement
@@ -41,21 +43,32 @@ export function HeaderAwareScrollbar({
     const height = Math.max(28, (clientHeight / scrollHeight) * track)
     const max = scrollHeight - clientHeight
     const top = max > 0 ? (scrollTop / max) * (track - height) : 0
-    setThumb({ height, top, show: true })
+    setThumb((current) => {
+      const next = { height, top, show: true }
+      return thumbEqual(current, next) ? current : next
+    })
   }, [viewportRef, headerHeight])
+
+  const scheduleMeasure = React.useCallback(() => {
+    if (frame.current) return
+    frame.current = requestAnimationFrame(measure)
+  }, [measure])
 
   React.useEffect(() => {
     const viewportElement = viewportRef.current
     if (!viewportElement) return
     measure()
-    viewportElement.addEventListener("scroll", measure, { passive: true })
-    const observer = new ResizeObserver(measure)
+    viewportElement.addEventListener("scroll", scheduleMeasure, {
+      passive: true,
+    })
+    const observer = new ResizeObserver(scheduleMeasure)
     observer.observe(viewportElement)
     return () => {
-      viewportElement.removeEventListener("scroll", measure)
+      if (frame.current) cancelAnimationFrame(frame.current)
+      viewportElement.removeEventListener("scroll", scheduleMeasure)
       observer.disconnect()
     }
-  }, [viewportRef, measure])
+  }, [viewportRef, measure, scheduleMeasure])
 
   const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     const viewportElement = viewportRef.current
@@ -102,5 +115,16 @@ export function HeaderAwareScrollbar({
         onPointerCancel={endDrag}
       />
     </div>
+  )
+}
+
+function thumbEqual(
+  left: { height: number; top: number; show: boolean },
+  right: { height: number; top: number; show: boolean }
+) {
+  return (
+    left.show === right.show &&
+    Math.abs(left.height - right.height) < 0.5 &&
+    Math.abs(left.top - right.top) < 0.5
   )
 }

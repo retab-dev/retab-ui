@@ -18,6 +18,7 @@ const deletedFiles = [
   "components/schema-editor/property-form-reducer.ts",
   "components/schema-editor/property-form-types.ts",
   "components/schema-editor/property-form-validation.ts",
+  "components/schema-editor/property-form.tsx",
   "components/schema-editor/item-type-selector.tsx",
   "components/schema-editor/draft-schema-node-field.tsx",
   "components/schema-editor/create-definition-dialog.tsx",

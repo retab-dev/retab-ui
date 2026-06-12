@@ -1,6 +1,7 @@
 "use client"
 
-import React, { useRef, useState } from "react"
+import React, { useEffect, useRef, useState } from "react"
+import { useVirtualizer } from "@tanstack/react-virtual"
 import type { JSONSchema7 } from "json-schema"
 
 import type { VisibleColumn } from "@/components/json-table/data-cell-types"
@@ -17,7 +18,6 @@ import {
   TableRow,
 } from "@/components/ui-retab/table"
 
-import { useFixedRowWindow } from "./lib/use-fixed-row-window"
 import { SingleFileFormRow } from "./single-file-form-row"
 import {
   getColumnWidthPx,
@@ -173,25 +173,21 @@ export const SingleFileVirtualizedTable =
         0
       )
 
-      // ── Row virtualization ──────────────────────────────────────────────
-      // Rows are a fixed height, so the visible window is plain arithmetic — no
-      // per-row measurement, no library. The header lives in its own bar
-      // *outside* this scroll container (so `top` is just `index * rowHeight`,
-      // no scroll-margin offset to correct for), and each mounted row is
-      // absolutely positioned inside a spacer of the full list height.
       const rowHeightPx = getRowHeightPx(rowHeight)
       const scrollRef = useRef<HTMLDivElement>(null)
       const headerScrollRef = useRef<HTMLDivElement>(null)
-      const bodyRef = useRef<HTMLTableSectionElement>(null)
-      // `ready` gates the first paint: the window is unknown until the viewport
-      // is measured in a layout effect, which keeps SSR (zero rows) and the
-      // first client render in sync, then fills in before the browser paints.
-      const { start, end, totalHeight, ready } = useFixedRowWindow({
-        scrollRef,
-        rowCount,
-        rowHeight: rowHeightPx,
+      const rowVirtualizer = useVirtualizer({
+        count: rowCount,
+        getScrollElement: () => scrollRef.current,
+        estimateSize: () => rowHeightPx,
         overscan,
       })
+      const virtualRows = rowVirtualizer.getVirtualItems()
+      const totalHeight = rowVirtualizer.getTotalSize()
+
+      useEffect(() => {
+        rowVirtualizer.measure()
+      }, [rowHeightPx, rowVirtualizer])
 
       return (
         <div className="relative flex min-h-0 min-w-0 flex-1 flex-col bg-background">
@@ -239,42 +235,39 @@ export const SingleFileVirtualizedTable =
               }}
             >
               <TableBody
-                ref={bodyRef}
                 className="relative w-full bg-background"
                 style={{
                   height: `${totalHeight}px`,
                   minWidth: "100%",
                 }}
               >
-                {ready
-                  ? Array.from({ length: end - start }, (_, i) => {
-                      // One DOM row per row in the visible window, keyed by row
-                      // slot in read-only mode so small window shifts update
-                      // existing row shells instead of mounting replacements.
-                      // Editable mode keeps row identity so focused editor state
-                      // cannot move to another document row.
-                      const rowIdx = start + i
-                      const rowKey = allowEditing
-                        ? `row-${rowIdx}`
-                        : `slot-${i}`
-                      return (
-                        <SingleFileFormRow
-                          key={rowKey}
-                          rowIdx={rowIdx}
-                          document={document}
-                          projectedRow={projectedRows[rowIdx]}
-                          schema={schema}
-                          visibleColumns={visibleColumns}
-                          rowHeightPx={rowHeightPx}
-                          openEditorPath={openEditorPath}
-                          setOpenEditorPath={setOpenEditorPath}
-                          onUpdateDocument={onUpdateDocument}
-                          allowEditing={allowEditing}
-                          onCellHoverStart={onCellHoverStart}
-                        />
-                      )
-                    })
-                  : null}
+                {virtualRows.map((virtualRow, slotIndex) => {
+                  // Editable mode keeps row identity so focused editor state
+                  // cannot move to another document row. Read-only mode reuses
+                  // visible row shells to avoid replacement spikes while
+                  // scrolling through large tables.
+                  const rowIdx = virtualRow.index
+                  const rowKey = allowEditing
+                    ? `row-${rowIdx}`
+                    : `slot-${slotIndex}`
+                  return (
+                    <SingleFileFormRow
+                      key={rowKey}
+                      rowIdx={rowIdx}
+                      rowTopPx={virtualRow.start}
+                      document={document}
+                      projectedRow={projectedRows[rowIdx]}
+                      schema={schema}
+                      visibleColumns={visibleColumns}
+                      rowHeightPx={rowHeightPx}
+                      openEditorPath={openEditorPath}
+                      setOpenEditorPath={setOpenEditorPath}
+                      onUpdateDocument={onUpdateDocument}
+                      allowEditing={allowEditing}
+                      onCellHoverStart={onCellHoverStart}
+                    />
+                  )
+                })}
               </TableBody>
             </Table>
           </div>

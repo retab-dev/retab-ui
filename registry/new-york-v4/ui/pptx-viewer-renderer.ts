@@ -1,5 +1,7 @@
 import type * as PptxNS from "pptxviewjs"
 
+import { ResourceError, type ViewerResource } from "@/lib/viewer-resource"
+
 import { DEFAULT_PPTX_SLIDE_SIZE, type PptxSize } from "./pptx-viewer-core"
 import { parsePptxSlideSize } from "./pptx-viewer-presentation"
 
@@ -70,28 +72,29 @@ async function readSlideSize(buffer: ArrayBuffer): Promise<PptxSize> {
   }
 }
 
-async function fetchPptx(src: string) {
-  let response: Response
+async function readPptxResource(resource: ViewerResource) {
   try {
-    response = await fetch(src)
+    return await resource.readArrayBuffer()
   } catch (error) {
+    if (error instanceof ResourceError && error.kind === "http_error") {
+      throw new PptxRendererError(
+        "fetch_failed",
+        `Failed to load presentation: ${error.status}`,
+        error
+      )
+    }
     throw new PptxRendererError(
       "fetch_failed",
       "Failed to fetch presentation.",
       error
     )
   }
-  if (!response.ok) {
-    throw new PptxRendererError(
-      "fetch_failed",
-      `Failed to load presentation: ${response.status}`
-    )
-  }
-  return response.arrayBuffer()
 }
 
-export async function createPptxRenderer(src: string): Promise<PptxRenderer> {
-  const buffer = await fetchPptx(src)
+export async function createPptxRenderer(
+  resource: ViewerResource
+): Promise<PptxRenderer> {
+  const buffer = await readPptxResource(resource)
   const [pptx, baseSize] = await Promise.all([
     loadPptx(),
     readSlideSize(buffer),

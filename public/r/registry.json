@@ -751,6 +751,21 @@
           "target": "@ui/pptx-viewer.tsx"
         },
         {
+          "path": "registry/new-york-v4/lib/viewer-source.ts",
+          "type": "registry:lib",
+          "target": "@lib/viewer-source.ts"
+        },
+        {
+          "path": "registry/new-york-v4/lib/viewer-resource.ts",
+          "type": "registry:lib",
+          "target": "@lib/viewer-resource.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/viewer-download.tsx",
+          "type": "registry:ui",
+          "target": "@ui/viewer-download.tsx"
+        },
+        {
           "path": "registry/new-york-v4/ui/pptx-viewer-core.ts",
           "type": "registry:ui",
           "target": "@ui/pptx-viewer-core.ts"

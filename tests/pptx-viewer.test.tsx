@@ -13,6 +13,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { PptxViewer } from "@/registry/new-york-v4/ui/pptx-viewer"
 import {
+  blobSource,
+  createViewerResource,
+} from "@/registry/new-york-v4/lib/viewer-resource"
+import {
   getPptxFitScale,
   getPptxResetKey,
   type PptxSlideOverlayProps,
@@ -89,6 +93,28 @@ function okPptxResponse() {
   return Promise.resolve(new Response(new Uint8Array([1, 2, 3]).buffer))
 }
 
+function pptxUrlSource(url: string, fileName?: string) {
+  return { kind: "url" as const, url, fileName }
+}
+
+function pptxUrlResource(url: string, fileName?: string) {
+  return createViewerResource(pptxUrlSource(url, fileName))
+}
+
+function mockObjectUrls(url = "blob:pptx-download") {
+  const createObjectURL = vi.fn(() => url)
+  const revokeObjectURL = vi.fn()
+  Object.defineProperty(URL, "createObjectURL", {
+    configurable: true,
+    value: createObjectURL,
+  })
+  Object.defineProperty(URL, "revokeObjectURL", {
+    configurable: true,
+    value: revokeObjectURL,
+  })
+  return { createObjectURL, revokeObjectURL }
+}
+
 async function renderPptx(ui: React.ReactElement) {
   let view!: ReturnType<typeof render>
   await act(async () => {
@@ -126,6 +152,7 @@ beforeEach(() => {
     value: vi.fn(() => []),
   })
   vi.stubGlobal("fetch", vi.fn(okPptxResponse))
+  mockObjectUrls()
   vi.stubGlobal(
     "createImageBitmap",
     vi.fn(async () => {
@@ -202,14 +229,14 @@ describe("PptxViewer helpers", () => {
   })
 
   it("builds reset keys from render-affecting inputs", () => {
-    expect(getPptxResetKey({ src: "/a.pptx" })).not.toBe(
-      getPptxResetKey({ src: "/a.pptx", scale: 2 })
+    expect(getPptxResetKey({ identityKey: "url:/a.pptx" })).not.toBe(
+      getPptxResetKey({ identityKey: "url:/a.pptx", scale: 2 })
     )
-    expect(getPptxResetKey({ src: "/a.pptx" })).not.toBe(
-      getPptxResetKey({ src: "/a.pptx", defaultScale: 2 })
+    expect(getPptxResetKey({ identityKey: "url:/a.pptx" })).not.toBe(
+      getPptxResetKey({ identityKey: "url:/a.pptx", defaultScale: 2 })
     )
-    expect(getPptxResetKey({ src: "/a.pptx" })).not.toBe(
-      getPptxResetKey({ src: "/a.pptx", eager: true })
+    expect(getPptxResetKey({ identityKey: "url:/a.pptx" })).not.toBe(
+      getPptxResetKey({ identityKey: "url:/a.pptx", eager: true })
     )
   })
 })
@@ -218,7 +245,7 @@ describe("PptxViewer", () => {
   it("loads the deck lazily and disables pptxviewjs delayed chart rerenders", async () => {
     pptxMock.getSlideCount.mockReturnValue(2)
 
-    await renderPptx(<PptxViewer src="/deck.pptx" />)
+    await renderPptx(<PptxViewer source={pptxUrlSource("/deck.pptx")} />)
 
     expect(await screen.findByText("Slide 1 of 2")).toBeTruthy()
     expect(pptxMock.viewerOptions[0]).toMatchObject({
@@ -233,8 +260,8 @@ describe("PptxViewer", () => {
 
     await renderPptx(
       <div>
-        <PptxViewer src="/shared-deck.pptx" />
-        <PptxViewer src="/shared-deck.pptx" />
+        <PptxViewer source={pptxUrlSource("/shared-deck.pptx")} />
+        <PptxViewer source={pptxUrlSource("/shared-deck.pptx")} />
       </div>
     )
 
@@ -244,40 +271,78 @@ describe("PptxViewer", () => {
     expect(pptxMock.viewerOptions).toHaveLength(1)
   })
 
+  it("loads a canonical Blob source without fetching", async () => {
+    const { createObjectURL } = mockObjectUrls()
+    const fetchMock = vi.fn(okPptxResponse)
+    vi.stubGlobal("fetch", fetchMock)
+
+    await renderPptx(
+      <PptxViewer
+        source={blobSource(new Uint8Array([1, 2, 3]), {
+          fileName: "local.pptx",
+          identityKey: "blob:local-pptx",
+          mimeType:
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        })}
+      />
+    )
+
+    expect(await screen.findByText("Slide 1 of 1")).toBeTruthy()
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(pptxMock.loadFile).toHaveBeenCalledTimes(1)
+
+    const link = screen.getByRole("link", { name: "Download" })
+    await waitFor(() => {
+      expect(link.getAttribute("href")).toBe("blob:pptx-download")
+    })
+    expect(link.getAttribute("download")).toBe("local.pptx")
+    expect(createObjectURL).toHaveBeenCalled()
+  })
+
   it("reacts to controlled scale prop changes", async () => {
-    const view = await renderPptx(<PptxViewer src="/deck.pptx" scale={1} />)
+    const view = await renderPptx(
+      <PptxViewer source={pptxUrlSource("/deck.pptx")} scale={1} />
+    )
 
     expect(await screen.findByText("100%")).toBeTruthy()
 
     await act(async () => {
-      view.rerender(<PptxViewer src="/deck.pptx" scale={2} />)
+      view.rerender(
+        <PptxViewer source={pptxUrlSource("/deck.pptx")} scale={2} />
+      )
     })
 
     expect(await screen.findByText("200%")).toBeTruthy()
   })
 
   it("uses an uncontrolled default scale before user zoom changes", async () => {
-    await renderPptx(<PptxViewer src="/deck.pptx" defaultScale={1.5} />)
+    await renderPptx(
+      <PptxViewer source={pptxUrlSource("/deck.pptx")} defaultScale={1.5} />
+    )
 
     expect(await screen.findByText("150%")).toBeTruthy()
   })
 
   it("ignores default scale changes after the uncontrolled initial mount", async () => {
     const view = await renderPptx(
-      <PptxViewer src="/deck.pptx" defaultScale={1.5} />
+      <PptxViewer source={pptxUrlSource("/deck.pptx")} defaultScale={1.5} />
     )
 
     expect(await screen.findByText("150%")).toBeTruthy()
 
     await act(async () => {
-      view.rerender(<PptxViewer src="/deck.pptx" defaultScale={2} />)
+      view.rerender(
+        <PptxViewer source={pptxUrlSource("/deck.pptx")} defaultScale={2} />
+      )
     })
 
     expect(screen.getByText("150%")).toBeTruthy()
   })
 
   it("disables zoom controls for controlled scale without a change handler", async () => {
-    await renderPptx(<PptxViewer src="/deck.pptx" scale={1} />)
+    await renderPptx(
+      <PptxViewer source={pptxUrlSource("/deck.pptx")} scale={1} />
+    )
 
     await screen.findByText("100%")
 
@@ -290,7 +355,11 @@ describe("PptxViewer", () => {
     const onScaleChange = vi.fn()
 
     await renderPptx(
-      <PptxViewer src="/deck.pptx" scale={1} onScaleChange={onScaleChange} />
+      <PptxViewer
+        source={pptxUrlSource("/deck.pptx")}
+        scale={1}
+        onScaleChange={onScaleChange}
+      />
     )
 
     await screen.findByText("100%")
@@ -308,7 +377,7 @@ describe("PptxViewer", () => {
 
     await renderPptx(
       <PptxViewer
-        src="/deck.pptx"
+        source={pptxUrlSource("/deck.pptx")}
         scale={1}
         renderSlideOverlay={renderSlideOverlay}
       />
@@ -338,7 +407,7 @@ describe("PptxViewer", () => {
 
     await renderPptx(
       <PptxViewer
-        src="/deck.pptx"
+        source={pptxUrlSource("/deck.pptx")}
         onVisibleSlideChange={onVisibleSlideChange}
       />
     )
@@ -361,7 +430,7 @@ describe("PptxViewer", () => {
 
     await renderPptx(
       <PptxViewer
-        src="/deck.pptx"
+        source={pptxUrlSource("/deck.pptx")}
         scale={1}
         renderSlideOverlay={renderSlideOverlay}
       />
@@ -384,7 +453,9 @@ describe("PptxViewer", () => {
   it("shows a per-slide error when one slide render fails", async () => {
     pptxMock.renderSlide.mockRejectedValueOnce(new Error("render failed"))
 
-    await renderPptx(<PptxViewer src="/broken-slide.pptx" />)
+    await renderPptx(
+      <PptxViewer source={pptxUrlSource("/broken-slide.pptx")} />
+    )
 
     expect(await screen.findByText("Couldn't render slide 1.")).toBeTruthy()
     expect(screen.getByText("Slide 1 of 1")).toBeTruthy()
@@ -392,7 +463,9 @@ describe("PptxViewer", () => {
 
   it("evicts old deck sources and closes their cached bitmaps", async () => {
     for (let i = 0; i < 5; i += 1) {
-      const view = await renderPptx(<PptxViewer src={`/deck-${i}.pptx`} />)
+      const view = await renderPptx(
+        <PptxViewer source={pptxUrlSource(`/deck-${i}.pptx`)} />
+      )
       await screen.findByText("Slide 1 of 1")
       await waitFor(() => {
         expect(bitmapMocks.length).toBeGreaterThan(i)
@@ -407,11 +480,11 @@ describe("PptxViewer", () => {
   })
 
   it("keeps retained deck sources alive until release after cache eviction", async () => {
-    const source = await getPptxSource("/retained.pptx")
+    const source = await getPptxSource(pptxUrlResource("/retained.pptx"))
     const release = source.retain()
 
     for (let i = 0; i < 4; i += 1) {
-      await getPptxSource(`/evict-${i}.pptx`)
+      await getPptxSource(pptxUrlResource(`/evict-${i}.pptx`))
     }
 
     expect(pptxMock.destroy).not.toHaveBeenCalled()
@@ -427,7 +500,7 @@ describe("PptxViewer", () => {
     const firstRender = deferred<undefined>()
     pptxMock.renderSlide.mockImplementationOnce(() => firstRender.promise)
 
-    const source = await getPptxSource("/queued-cancel.pptx")
+    const source = await getPptxSource(pptxUrlResource("/queued-cancel.pptx"))
     const first = source.renderSlide({
       canvas: document.createElement("canvas"),
       isLive: () => true,

@@ -130,6 +130,16 @@ function FileViewerRoute({
   }
 
   if (!loadUrl) {
+    if (category === "pptx" && descriptor.source.kind === "blob") {
+      return (
+        <PptxViewer
+          source={descriptor.source}
+          className={className}
+          bare={bare}
+          downloadFileName={downloadFileName}
+        />
+      )
+    }
     return (
       <UnsupportedCard
         fileName={downloadFileName}
@@ -164,7 +174,7 @@ function FileViewerRoute({
     case "pptx":
       return (
         <PptxViewer
-          src={loadUrl}
+          source={descriptor.source}
           className={className}
           bare={bare}
           downloadFileName={downloadFileName}

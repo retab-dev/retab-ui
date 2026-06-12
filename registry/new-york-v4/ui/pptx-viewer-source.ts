@@ -1,3 +1,5 @@
+import { type ViewerResource } from "@/lib/viewer-resource"
+
 import {
   DisposableLruCache,
   PptxBitmapEntry,
@@ -162,26 +164,27 @@ const sourceCache = new DisposableLruCache<string, SourceCacheEntry>(
   PPTX_SOURCE_CACHE_MAX
 )
 
-export function getPptxSource(src: string): Promise<PptxSource> {
-  const cached = sourceCache.get(src)
+export function getPptxSource(resource: ViewerResource): Promise<PptxSource> {
+  const cacheKey = resource.identityKey
+  const cached = sourceCache.get(cacheKey)
   if (cached) return cached.promise
 
   const pendingEntry: { current?: SourceCacheEntry } = {}
-  const promise = createPptxRenderer(src).then(
+  const promise = createPptxRenderer(resource).then(
     (renderer) => new RendererSource(renderer),
     (error) => {
       if (
         pendingEntry.current &&
-        sourceCache.get(src) === pendingEntry.current
+        sourceCache.get(cacheKey) === pendingEntry.current
       ) {
-        sourceCache.delete(src)
+        sourceCache.delete(cacheKey)
       }
       throw error
     }
   )
   const entry = new SourceCacheEntry(promise)
   pendingEntry.current = entry
-  sourceCache.set(src, entry)
+  sourceCache.set(cacheKey, entry)
   return entry.promise
 }
 

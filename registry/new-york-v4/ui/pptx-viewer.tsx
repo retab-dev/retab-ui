@@ -2,7 +2,12 @@
 
 import * as React from "react"
 
+import type { BlobViewerSource, UrlViewerSource } from "@/lib/viewer-source"
 import { cn } from "@/lib/utils"
+import {
+  createViewerResource,
+  type ViewerResource,
+} from "@/lib/viewer-resource"
 
 import {
   getPptxFitScale,
@@ -20,6 +25,7 @@ import { usePptxVisibleSlide } from "./pptx-viewer-visible-slide"
 import { usePptxZoom } from "./pptx-viewer-zoom"
 
 export type { PptxSlideOverlayProps }
+export type PptxDocumentSource = UrlViewerSource | BlobViewerSource
 
 /** Client gate without an effect: false during SSR, true after hydration. */
 function useIsClient() {
@@ -31,8 +37,8 @@ function useIsClient() {
 }
 
 export interface PptxViewerProps {
-  /** URL of the .pptx (same-origin or CORS-enabled). */
-  src: string
+  /** Canonical presentation source. */
+  source: PptxDocumentSource
   className?: string
   /** Controlled scale. When omitted, the viewer owns zoom state. */
   scale?: number
@@ -63,36 +69,44 @@ export interface PptxViewerProps {
 
 export function PptxViewer(props: PptxViewerProps) {
   const isClient = useIsClient()
+  const { downloadFileName, source } = props
+  const resource = React.useMemo(
+    () => createViewerResource(source, { fileName: downloadFileName }),
+    [downloadFileName, source]
+  )
   if (!isClient) {
     return <PptxViewerFallback className={props.className} bare={props.bare} />
   }
   return (
     <PptxErrorBoundary
       className={props.className}
-      src={props.src}
       bare={props.bare}
-      downloadFileName={props.downloadFileName}
-      resetKey={getPptxResetKey(props)}
+      download={resource.getDownload()}
+      resetKey={getPptxResetKey({
+        identityKey: resource.identityKey,
+        scale: props.scale,
+        defaultScale: props.defaultScale,
+        eager: props.eager,
+      })}
     >
       <React.Suspense
         fallback={
           <PptxViewerFallback className={props.className} bare={props.bare} />
         }
       >
-        <PptxViewerContent {...props} />
+        <PptxViewerContent {...props} resource={resource} />
       </React.Suspense>
     </PptxErrorBoundary>
   )
 }
 
 function PptxViewerContent({
-  src,
+  resource,
   className,
   scale: controlledScale,
   defaultScale,
   onScaleChange,
   toolbar = true,
-  downloadFileName,
   renderSlideOverlay,
   onVisibleSlideChange,
   onScrollProgressChange,
@@ -100,8 +114,9 @@ function PptxViewerContent({
   header,
   aside,
   eager = false,
-}: PptxViewerProps) {
-  const source = useRetainedPptxSource(src)
+}: PptxViewerProps & { resource: ViewerResource }) {
+  const source = useRetainedPptxSource(resource)
+  const download = React.useMemo(() => resource.getDownload(), [resource])
 
   const [rotation, setRotation] = React.useState(0)
   const scrollActivity = React.useMemo(() => createPptxScrollActivity(), [])
@@ -141,8 +156,7 @@ function PptxViewerContent({
           slideCount={source.slideCount}
           zoomScale={zoomScale}
           scaleControlsDisabled={scaleControlsDisabled}
-          src={src}
-          downloadFileName={downloadFileName}
+          download={download}
           onZoom={(factor) => setViewerScale(zoomScale * factor)}
           onFitWidth={() => setViewerScale(null)}
           onRotate={() => setRotation((value) => (value + 90) % 360)}

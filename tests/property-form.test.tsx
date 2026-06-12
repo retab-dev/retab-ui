@@ -18,7 +18,7 @@ import {
 } from "vitest"
 
 import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
-import { PropertyForm } from "@/components/schema-editor/property-form"
+import { PropertyForm } from "@/components/schema-editor/property-form/property-form"
 import {
   formatEnumValueInput,
   parseEnumValueInput,

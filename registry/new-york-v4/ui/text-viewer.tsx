@@ -1,20 +1,20 @@
 "use client"
 
-// Whole-file text viewer for source linking. It intentionally stays separate
-// from FileViewer's streamed text path: every line is rendered so text anchors
-// can highlight and scroll to any 1-based line range.
+// Whole-file text viewer for source linking. It loads bounded text up front so
+// every line is addressable, then virtualizes fixed-height rows for scrolling.
 import * as React from "react"
+import { useVirtualizer } from "@tanstack/react-virtual"
 
+import { cn } from "@/lib/utils"
+import {
+  createViewerResource,
+  type ViewerResource,
+} from "@/lib/viewer-resource"
 import type {
   BlobViewerSource,
   TextSource,
   UrlViewerSource,
 } from "@/lib/viewer-source"
-import {
-  createViewerResource,
-  type ViewerResource,
-} from "@/lib/viewer-resource"
-import { cn } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   TextViewerErrorState,
@@ -22,7 +22,7 @@ import {
   TextViewerFrame,
   TextViewerToolbar,
 } from "@/components/ui/text-viewer-chrome"
-import { scrollLineRangeIntoView } from "@/components/ui/text-viewer-layout"
+import { scrollLineRangeMetricsIntoView } from "@/components/ui/text-viewer-layout"
 import {
   isLineInRange,
   normalizeTextLineRange,
@@ -40,21 +40,28 @@ const BASE_FONT_PX = 12
 const BASE_LINE_PX = 20
 const MIN_SCALE = 0.25
 const MAX_SCALE = 5
+const TEXT_VIEWER_OVERSCAN = 24
+const TEXT_VIEWER_BLOCK_PADDING = 8
+const TEXT_VIEWER_INITIAL_VIEWPORT_HEIGHT = 600
 
 const clamp = (value: number, min: number, max: number) =>
   Math.min(max, Math.max(min, value))
 
 export type { TextLineRange }
 
+interface TextVirtualLine {
+  index: number
+  key: React.Key
+  size: number
+  start: number
+}
+
 export interface TextViewerHandle {
   scrollToLineRange: (range: TextLineRange, options?: ScrollToOptions) => void
   getViewportElement: () => HTMLDivElement | null
 }
 
-export type TextDocumentSource =
-  | UrlViewerSource
-  | BlobViewerSource
-  | TextSource
+export type TextDocumentSource = UrlViewerSource | BlobViewerSource | TextSource
 
 export interface TextViewerProps extends TextViewerBounds {
   source: TextDocumentSource
@@ -136,26 +143,47 @@ function TextViewerInner({
 
   const [fontScale, setFontScale] = React.useState(1)
   const viewportElementRef = React.useRef<HTMLDivElement | null>(null)
+  const lineHeight = BASE_LINE_PX * fontScale
+  const lineVirtualizer = useVirtualizer({
+    count: textLines.length,
+    getScrollElement: () => viewportElementRef.current,
+    estimateSize: () => lineHeight,
+    overscan: TEXT_VIEWER_OVERSCAN,
+    paddingStart: TEXT_VIEWER_BLOCK_PADDING,
+    paddingEnd: TEXT_VIEWER_BLOCK_PADDING,
+    initialRect: { width: 800, height: TEXT_VIEWER_INITIAL_VIEWPORT_HEIGHT },
+  })
 
   const zoom = (factor: number) =>
     setFontScale((scale) => clamp(scale * factor, MIN_SCALE, MAX_SCALE))
+
+  React.useEffect(() => {
+    lineVirtualizer.measure()
+  }, [lineHeight, lineVirtualizer])
 
   React.useImperativeHandle(
     forwardedRef,
     () => ({
       scrollToLineRange: (range, options) => {
-        scrollLineRangeIntoView({
+        scrollLineRangeMetricsIntoView({
           viewportElement: viewportElementRef.current,
           range: normalizeTextLineRange(range, textLines.length),
+          lineHeight,
+          paddingStart: TEXT_VIEWER_BLOCK_PADDING,
           options,
         })
       },
       getViewportElement: () => viewportElementRef.current,
     }),
-    [textLines.length]
+    [lineHeight, textLines.length]
   )
 
   const gutterWidth = `${String(textLines.length).length + 1}ch`
+  const measuredVirtualLines = lineVirtualizer.getVirtualItems()
+  const virtualLines =
+    measuredVirtualLines.length > 0
+      ? measuredVirtualLines
+      : createInitialTextVirtualLines(textLines.length, lineHeight)
 
   return (
     <TextViewerFrame className={className} bare={bare}>
@@ -171,21 +199,26 @@ function TextViewerInner({
       ) : null}
       <ScrollArea className="min-h-0 flex-1" viewportRef={viewportElementRef}>
         <pre
-          className="w-max min-w-full py-2 font-mono"
+          className="relative w-max min-w-full font-mono"
           style={{
             fontSize: `${BASE_FONT_PX * fontScale}px`,
-            lineHeight: `${BASE_LINE_PX * fontScale}px`,
+            lineHeight: `${lineHeight}px`,
+            height: lineVirtualizer.getTotalSize(),
           }}
         >
-          {textLines.map((textLine, index) => {
-            const lineNumber = index + 1
+          {virtualLines.map((virtualLine) => {
+            const lineNumber = virtualLine.index + 1
             return (
               <TextLine
-                key={lineNumber}
+                key={virtualLine.key}
                 gutterWidth={gutterWidth}
                 isHighlighted={isLineInRange(lineNumber, highlightRange)}
                 lineNumber={lineNumber}
-                text={textLine}
+                text={textLines[virtualLine.index] ?? ""}
+                style={{
+                  height: virtualLine.size,
+                  transform: `translateY(${virtualLine.start}px)`,
+                }}
               />
             )
           })}
@@ -195,24 +228,45 @@ function TextViewerInner({
   )
 }
 
+function createInitialTextVirtualLines(
+  lineCount: number,
+  lineHeight: number
+): TextVirtualLine[] {
+  const windowLineCount = Math.min(
+    lineCount,
+    Math.ceil(TEXT_VIEWER_INITIAL_VIEWPORT_HEIGHT / lineHeight) +
+      TEXT_VIEWER_OVERSCAN * 2
+  )
+
+  return Array.from({ length: windowLineCount }, (_, index) => ({
+    index,
+    key: index,
+    size: lineHeight,
+    start: TEXT_VIEWER_BLOCK_PADDING + index * lineHeight,
+  }))
+}
+
 function TextLine({
   gutterWidth,
   isHighlighted,
   lineNumber,
+  style,
   text,
 }: {
   gutterWidth: string
   isHighlighted: boolean
   lineNumber: number
+  style: React.CSSProperties
   text: string
 }) {
   return (
     <div
       data-line-number={lineNumber}
       className={cn(
-        "flex px-2",
+        "absolute top-0 left-0 flex min-w-full px-2",
         isHighlighted && "bg-primary/12 ring-1 ring-primary/30 ring-inset"
       )}
+      style={style}
     >
       <span
         className="flex-shrink-0 pr-3 text-right text-muted-foreground/60 select-none"
@@ -261,8 +315,8 @@ class TextViewerErrorBoundary extends React.Component<
         this.state.error instanceof TextViewerInvalidBoundsError
       const isRetryable = Boolean(
         this.props.resource.source.kind === "url" &&
-          !tooLargeReason &&
-          !isInvalidBounds
+        !tooLargeReason &&
+        !isInvalidBounds
       )
       return (
         <TextViewerErrorState

@@ -19,7 +19,8 @@ Perfection here means:
 The component has reached the intended structural ideal for its current product
 requirements.
 
-- No TanStack runtime model remains.
+- No TanStack Table runtime model remains.
+- TanStack Virtual is the deliberate row viewport primitive.
 - No `row.original`, header-group placeholders, fake leaf columns, or old
   library-shaped concepts remain.
 - `schema-inspection.ts`, `json-schema-utils.ts`, `date-utils.ts`, and
@@ -70,7 +71,7 @@ The component is ideal only while all of these remain true:
 
 These are not missing features. They are intentionally absent.
 
-- No TanStack compatibility vocabulary.
+- No TanStack Table compatibility vocabulary.
 - No generic JSON table utility barrel.
 - No catch-all `utils.ts`.
 - No schema/document/value/UI mixed module.
@@ -148,7 +149,6 @@ patterns. It is the version where every remaining pattern pays rent.
 - `lib/date-display-formatting.ts`: HTML input date/time formatting.
 - `lib/schema-date-detection.ts`: schema date/time detection.
 - `lib/value-normalization.ts`: commit-time value normalization.
-- `lib/use-fixed-row-window.ts`: fixed-height viewport windowing.
 
 Anything outside this map needs a concrete reason.
 

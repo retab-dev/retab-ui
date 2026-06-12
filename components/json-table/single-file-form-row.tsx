@@ -16,6 +16,7 @@ interface SingleFileFormRowProps {
   visibleColumns: VisibleColumn[]
   /** Which sub-row of the document this renders (set by the row virtualizer). */
   rowIdx: number
+  rowTopPx: number
   rowHeightPx: number
   /** Which object/array cell editor is open, keyed by materialized field path. */
   openEditorPath: string | null
@@ -37,6 +38,7 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
     projectedRow,
     visibleColumns,
     rowIdx,
+    rowTopPx,
     rowHeightPx,
     openEditorPath,
     setOpenEditorPath,
@@ -70,13 +72,13 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
         position: "absolute",
         top: 0,
         left: 0,
-        transform: `translateY(${rowIdx * rowHeightPx}px)`,
+        transform: `translateY(${rowTopPx}px)`,
         height: `${rowHeightPx}px`,
         minHeight: `${rowHeightPx}px`,
         minWidth: "100%",
         contain: "layout style",
       }),
-      [rowIdx, rowHeightPx]
+      [rowTopPx, rowHeightPx]
     )
     return (
       <TableRow
