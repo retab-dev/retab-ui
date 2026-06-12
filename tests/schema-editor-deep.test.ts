@@ -33,11 +33,17 @@ import {
   renameProperty,
   setRequired,
 } from "@/components/schema-editor/document/property-operations"
+import {
+  setNodeDescription,
+  setNodeTitle,
+  stripDescriptions,
+} from "@/components/schema-editor/document/node-metadata"
 import { childNodes, findNodeByPath, getNode } from "@/components/schema-editor/document/traversal"
 import {
   setNodeType,
   setNullable,
 } from "@/components/schema-editor/document/type-operations"
+import { requireAllProperties } from "@/components/schema-editor/schema-required-policy"
 import type {
   DocumentNode,
   SchemaDocument,
@@ -804,5 +810,111 @@ describe("object-template install: dependency refs are id-linked", () => {
     }
     expect(out.$defs.Company.properties.address.$ref).toBe("#/$defs/Address")
     expect(out.$defs.Address).toBeDefined()
+  })
+})
+
+// ===========================================================================
+// 13. stripDescriptions — must reach descriptions in every position, including
+//     those buried in unmodeled (rest) composition/map keywords.
+// ===========================================================================
+function anyDescription(value: unknown): boolean {
+  if (Array.isArray(value)) return value.some(anyDescription)
+  if (value && typeof value === "object") {
+    return Object.entries(value as Record<string, unknown>).some(
+      ([key, child]) => key === "description" || anyDescription(child)
+    )
+  }
+  return false
+}
+
+describe("stripDescriptions", () => {
+  it("removes every description, including ones inside rest keywords", () => {
+    const schema = {
+      type: "object",
+      description: "root",
+      $defs: { D: { type: "string", description: "def" } },
+      properties: {
+        a: { type: "string", description: "a" },
+        arr: {
+          type: "array",
+          items: {
+            type: "object",
+            description: "item",
+            properties: { z: { type: "string", description: "z" } },
+          },
+        },
+        u: { anyOf: [{ type: "string", description: "branch" }, { type: "null" }] },
+      },
+      required: ["a"],
+      additionalProperties: { type: "string", description: "addl" },
+      patternProperties: { "^x": { type: "string", description: "pat" } },
+      allOf: [{ type: "object", description: "allof" }],
+    } as unknown as JSONSchema7
+    const out = toJsonSchema(stripDescriptions(fromJsonSchema(schema)))
+    expect(anyDescription(out)).toBe(false)
+  })
+
+  it("is a no-op (same reference) when there is nothing to strip", () => {
+    const doc = fromJsonSchema({
+      type: "object",
+      properties: { a: { type: "string" } },
+    } as JSONSchema7)
+    expect(stripDescriptions(doc)).toBe(doc)
+  })
+})
+
+// ===========================================================================
+// 14. Metadata setters — blank-trimming and referential stability.
+// ===========================================================================
+describe("metadata setters", () => {
+  it("whitespace-only title/description are dropped on export", () => {
+    const d0 = fromJsonSchema({ type: "string" } as JSONSchema7)
+    const withBlank = setNodeDescription(
+      setNodeTitle(d0, d0.root.id, "   "),
+      d0.root.id,
+      "  "
+    )
+    const out = toJsonSchema(withBlank) as JSONSchema7
+    expect(out.title).toBeUndefined()
+    expect(out.description).toBeUndefined()
+  })
+
+  it("setting an unchanged value returns the same document reference", () => {
+    const d0 = fromJsonSchema({ type: "string", title: "X" } as JSONSchema7)
+    expect(setNodeTitle(d0, d0.root.id, "X")).toBe(d0)
+  })
+})
+
+// ===========================================================================
+// 15. requireAllProperties policy — recurses into defs, array items and
+//     composition; never duplicates a pre-existing required name.
+// ===========================================================================
+describe("requireAllProperties", () => {
+  it("marks every object's properties required, recursively", () => {
+    const out = requireAllProperties({
+      type: "object",
+      $defs: {
+        D: { type: "object", properties: { d1: { type: "string" }, d2: { type: "number" } } },
+      },
+      properties: {
+        a: { type: "string" },
+        nested: { type: "object", properties: { x: { type: "string" }, y: { type: "number" } } },
+        arr: { type: "array", items: { type: "object", properties: { i: { type: "string" } } } },
+      },
+    } as unknown as JSONSchema7) as Record<string, any>
+
+    expect(new Set(out.required)).toEqual(new Set(["a", "nested", "arr"]))
+    expect(new Set(out.properties.nested.required)).toEqual(new Set(["x", "y"]))
+    expect(new Set(out.properties.arr.items.required)).toEqual(new Set(["i"]))
+    expect(new Set(out.$defs.D.required)).toEqual(new Set(["d1", "d2"]))
+  })
+
+  it("keeps existing required entries first and does not duplicate", () => {
+    const out = requireAllProperties({
+      type: "object",
+      properties: { a: { type: "string" }, b: { type: "number" } },
+      required: ["a"],
+    } as JSONSchema7) as JSONSchema7
+    expect(out.required).toEqual(["a", "b"])
   })
 })

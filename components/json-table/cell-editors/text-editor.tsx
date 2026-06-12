@@ -8,6 +8,7 @@ export function TextEditor({
   field,
   textDraft,
   focus,
+  overlays,
   commit,
 }: CellEditorProps) {
   const focusId = fieldFocusId(identity)
@@ -16,6 +17,11 @@ export function TextEditor({
     <JsonTableDataCell
       kind="text"
       editable={field.isEditable}
+      mode={
+        overlays.forceEditMode && overlays.showInput && field.isEditable
+          ? "edit"
+          : undefined
+      }
       value={textDraft.activeTextValue ?? null}
       formatValue={() =>
         field.effectiveValue === null || field.effectiveValue === undefined

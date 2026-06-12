@@ -9,6 +9,7 @@ export function TimeEditor({
   field,
   textDraft,
   focus,
+  overlays,
   commit,
 }: CellEditorProps) {
   const focusId = fieldFocusId(identity)
@@ -17,6 +18,11 @@ export function TimeEditor({
     <JsonTableDataCell
       kind="time"
       editable={field.isEditable}
+      mode={
+        overlays.forceEditMode && overlays.showInput && field.isEditable
+          ? "edit"
+          : undefined
+      }
       value={textDraft.activeTextValue ?? null}
       draftValue={textDraft.activeTextValue}
       onDraftValueChange={textDraft.setDraftTextValue}

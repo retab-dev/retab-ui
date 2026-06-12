@@ -41,6 +41,23 @@ describe("getEffectiveType", () => {
       getEffectiveType({ anyOf: [{ enum: ["a"] }, { type: "null" }] })
     ).toEqual({ type: "enum", isNullable: true })
   })
+
+  it("treats a type union ['string','null'] as a nullable scalar", () => {
+    expect(getEffectiveType({ type: ["string", "null"] })).toEqual({
+      type: "string",
+      isNullable: true,
+    })
+    expect(getEffectiveType({ type: ["integer", "null"] })).toEqual({
+      type: "integer",
+      isNullable: true,
+    })
+  })
+
+  it("reads date formats off a nullable type union", () => {
+    expect(
+      getEffectiveType({ type: ["string", "null"], format: "date" })
+    ).toEqual({ type: "date", isNullable: true })
+  })
 })
 
 describe("updateType", () => {

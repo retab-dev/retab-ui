@@ -6,12 +6,18 @@ export function BooleanEditor({
   identity,
   field,
   focus,
+  overlays,
   commit,
 }: CellEditorProps) {
   return (
     <JsonTableDataCell
       kind="boolean"
       editable={field.isEditable}
+      mode={
+        overlays.forceEditMode && overlays.showInput && field.isEditable
+          ? "edit"
+          : undefined
+      }
       value={Boolean(field.effectiveValue)}
       disabled={!field.isEditable}
       onCommit={(value) => {

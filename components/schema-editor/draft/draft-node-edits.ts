@@ -35,18 +35,30 @@ export function getEffectiveType(node: ExtendedJSONSchema7): {
     }
     return { type: "string", isNullable }
   }
-  if (node.enum) return { type: "enum", isNullable: false }
-  if (node.$ref) return { type: "$ref", isNullable: false }
-  if (node.type === "string" && node.format === "date") {
-    return { type: "date", isNullable: false }
+  // A nullable scalar can also be encoded as a type union `["string", "null"]`
+  // (the standard JSON Schema form, and what the document-model builder emits).
+  // Treat that `null` member as nullability, not as part of the type name.
+  const isTypeArrayNullable =
+    Array.isArray(node.type) && node.type.includes("null")
+  const effectiveTypeName = isTypeArrayNullable
+    ? (node.type as string[]).find((member) => member !== "null")
+    : node.type
+
+  if (node.enum) return { type: "enum", isNullable: isTypeArrayNullable }
+  if (node.$ref) return { type: "$ref", isNullable: isTypeArrayNullable }
+  if (effectiveTypeName === "string" && node.format === "date") {
+    return { type: "date", isNullable: isTypeArrayNullable }
   }
-  if (node.type === "string" && node.format === "time") {
-    return { type: "time", isNullable: false }
+  if (effectiveTypeName === "string" && node.format === "time") {
+    return { type: "time", isNullable: isTypeArrayNullable }
   }
-  if (node.type === "string" && node.format === "date-time") {
-    return { type: "datetime", isNullable: false }
+  if (effectiveTypeName === "string" && node.format === "date-time") {
+    return { type: "datetime", isNullable: isTypeArrayNullable }
   }
-  return { type: node.type?.toString() || "string", isNullable: false }
+  return {
+    type: effectiveTypeName?.toString() || "string",
+    isNullable: isTypeArrayNullable,
+  }
 }
 
 export function defaultSchemaForType(type: string): ExtendedJSONSchema7 {
@@ -137,8 +149,10 @@ export function setNullable(
       }
     }
 
+    // Strip any pre-existing `null` from a type union so the wrapped branch
+    // isn't doubly-nullable (e.g. `["string","null"]` -> `"string"`).
     return {
-      anyOf: [{ ...rest }, { type: "null" }],
+      anyOf: [stripNullType({ ...rest }), { type: "null" }],
       ...(title ? { title } : {}),
       ...(description ? { description } : {}),
     }
@@ -158,7 +172,23 @@ export function setNullable(
     }
   }
 
-  return node
+  // Plain node: also handle the type-union nullable form `["string","null"]`,
+  // which carries no `anyOf` — drop the `null` member to make it non-nullable.
+  return stripNullType(node)
+}
+
+/** Remove a `null` member from a `type` union, collapsing to a single name. */
+function stripNullType(node: ExtendedJSONSchema7): ExtendedJSONSchema7 {
+  if (!Array.isArray(node.type)) return node
+  const nonNull = node.type.filter((member) => member !== "null")
+  return {
+    ...node,
+    type: (nonNull.length === 0
+      ? undefined
+      : nonNull.length === 1
+        ? nonNull[0]
+        : nonNull) as ExtendedJSONSchema7["type"],
+  }
 }
 
 export function updateEffectiveNode(

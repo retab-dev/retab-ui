@@ -15,6 +15,7 @@ export function DateEditor({
   field,
   textDraft,
   focus,
+  overlays,
   commit,
 }: CellEditorProps) {
   const focusId = fieldFocusId(identity)
@@ -24,6 +25,11 @@ export function DateEditor({
     <JsonTableDataCell
       kind="date"
       editable={field.isEditable}
+      mode={
+        overlays.forceEditMode && overlays.showInput && field.isEditable
+          ? "edit"
+          : undefined
+      }
       value={textDraft.activeTextValue ?? null}
       draftValue={textDraft.activeTextValue}
       formatValue={() => (date ? format(date, "PP") : "")}

@@ -8,6 +8,7 @@ export function NumberEditor({
   field,
   textDraft,
   focus,
+  overlays,
   commit,
 }: CellEditorProps) {
   const focusId = fieldFocusId(identity)
@@ -17,6 +18,11 @@ export function NumberEditor({
     <JsonTableDataCell
       kind={isInteger ? "integer" : "number"}
       editable={field.isEditable}
+      mode={
+        overlays.forceEditMode && overlays.showInput && field.isEditable
+          ? "edit"
+          : undefined
+      }
       value={textDraft.activeTextValue ?? null}
       draftValue={textDraft.activeTextValue}
       onDraftValueChange={textDraft.setDraftTextValue}

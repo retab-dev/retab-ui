@@ -121,6 +121,19 @@ try {
 
     const activeRects = await getCellRects(client, label)
     const activePng = await captureClip(client, activeRects.edit)
+    if (label === "Text") {
+      const textMovement = await compareTextInkBounds(shellPng, activePng)
+      if (!textMovement.matches) {
+        failures.push(
+          [
+            "Text: trompe l'oeil string moved on hover",
+            `display ${formatInkBounds(textMovement.before)}`,
+            `hover ${formatInkBounds(textMovement.after)}`,
+            `delta ${formatInkDelta(textMovement.delta)}`,
+          ].join(" ")
+        )
+      }
+    }
     const hoverDiff = await comparePng(shellPng, activePng, {
       ignoreRightPx: nativeAffordanceWidth(label),
     })
@@ -149,7 +162,7 @@ try {
 
   didComplete = true
   console.log(
-    `Data Cell parity verified for ${labels.length} rows. Native input rows use geometry/style/editability checks for the real input glyphs.`
+    `Data Cell parity verified for ${labels.length} rows. The text row uses zero-tolerance hover ink bounds; other native input rows use geometry/style/editability checks for the real input glyphs.`
   )
   client.close()
 } finally {
@@ -643,6 +656,65 @@ async function comparePng(left, right, options = {}) {
   }
 }
 
+async function compareTextInkBounds(left, right) {
+  const before = await getTextInkBounds(left)
+  const after = await getTextInkBounds(right)
+  if (!before || !after) {
+    return {
+      matches: false,
+      before,
+      after,
+      delta: null,
+    }
+  }
+
+  const delta = {
+    minX: after.minX - before.minX,
+    minY: after.minY - before.minY,
+    maxX: after.maxX - before.maxX,
+    maxY: after.maxY - before.maxY,
+  }
+  return {
+    matches: Object.values(delta).every((value) => value === 0),
+    before,
+    after,
+    delta,
+  }
+}
+
+async function getTextInkBounds(png) {
+  const image = sharp(png)
+  const metadata = await image.metadata()
+  const buffer = await image.ensureAlpha().raw().toBuffer()
+  let minX = Infinity
+  let minY = Infinity
+  let maxX = -1
+  let maxY = -1
+  let pixels = 0
+
+  for (let index = 0; index < buffer.length; index += 4) {
+    const pixelIndex = index / 4
+    const x = pixelIndex % metadata.width
+    const y = Math.floor(pixelIndex / metadata.width)
+    const alpha = buffer[index + 3]
+    const isInk =
+      alpha > 0 &&
+      (buffer[index] < 245 ||
+        buffer[index + 1] < 245 ||
+        buffer[index + 2] < 245)
+    if (!isInk) continue
+
+    minX = Math.min(minX, x)
+    minY = Math.min(minY, y)
+    maxX = Math.max(maxX, x)
+    maxY = Math.max(maxY, y)
+    pixels += 1
+  }
+
+  if (pixels === 0) return null
+  return { minX, minY, maxX, maxY, pixels }
+}
+
 function isStrictMatch(diff) {
   return diff.maxChannelDelta <= 2 && diff.changedPixels <= 4
 }
@@ -657,6 +729,16 @@ function formatDiff(diff) {
     ? `${(diff.changedRatio * 100).toFixed(4)}%`
     : "Infinity%"
   return `${diff.changedPixels}/${diff.comparedPixels} changed pixels (${percent}), max delta ${diff.maxChannelDelta}`
+}
+
+function formatInkBounds(bounds) {
+  if (!bounds) return "no ink"
+  return `x:${bounds.minX}-${bounds.maxX} y:${bounds.minY}-${bounds.maxY} pixels:${bounds.pixels}`
+}
+
+function formatInkDelta(delta) {
+  if (!delta) return "unavailable"
+  return `minX:${delta.minX} minY:${delta.minY} maxX:${delta.maxX} maxY:${delta.maxY}`
 }
 
 function nativeAffordanceWidth(label) {

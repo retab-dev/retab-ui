@@ -8,25 +8,24 @@ import {
   getFixedGridCanvasStyle,
   getFixedGridRowWindowStyle,
 } from "@/components/ui/fixed-grid-layout"
-import { useFixedRowVirtualization } from "@/components/ui/fixed-grid-virtualization"
 import { FixedGridViewport } from "@/components/ui/fixed-grid-viewport"
-import type {
-  JsonTableJsonEditMode,
-  JsonTableSchemaEditMode,
-} from "@/components/json-table/json-table-edit-modes"
-import type { VisibleColumn } from "@/components/json-table/json-table-cell-types"
-import { JsonTableHeaderCell } from "@/components/json-table/header-cell"
-import type { ProjectedRow } from "@/components/json-table/lib/document-projection"
-import { buildHeaderGridRows } from "@/components/json-table/lib/header-nodes"
-import type { JsonTableHeaderNode } from "@/components/json-table/lib/header-nodes"
-import type { TableDocument } from "@/components/json-table/lib/projects-types"
+import { useFixedRowVirtualization } from "@/components/ui/fixed-grid-virtualization"
 import {
-  Table,
   TableBody,
   TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { JsonTableHeaderCell } from "@/components/json-table/header-cell"
+import type { VisibleColumn } from "@/components/json-table/json-table-cell-types"
+import type {
+  JsonTableJsonEditMode,
+  JsonTableSchemaEditMode,
+} from "@/components/json-table/json-table-edit-modes"
+import type { ProjectedRow } from "@/components/json-table/lib/document-projection"
+import { buildHeaderGridRows } from "@/components/json-table/lib/header-nodes"
+import type { JsonTableHeaderNode } from "@/components/json-table/lib/header-nodes"
+import type { TableDocument } from "@/components/json-table/lib/projects-types"
 
 import { SingleFileFormRow } from "./single-file-form-row"
 import {
@@ -179,6 +178,11 @@ export const SingleFileVirtualizedTable =
       // Which object/array cell editor is open. Held at the table level so it
       // survives row virtualization.
       const [openEditorPath, setOpenEditorPath] = useState<string | null>(null)
+      const [activeCellPath, setActiveCellPath] = useState<string | null>(null)
+      const [lockedCellPath, setLockedCellPath] = useState<string | null>(null)
+      const activeCellPathRef = useRef<string | null>(null)
+      const lockedCellPathRef = useRef<string | null>(null)
+      const hoveredCellElementRef = useRef<HTMLElement | null>(null)
 
       const totalWidth = fixedGridColumnWidths(visibleColumns).reduce(
         (total, widthPx) => total + widthPx,
@@ -195,6 +199,79 @@ export const SingleFileVirtualizedTable =
         scrollRef,
       })
       const isJsonEditable = jsonEditMode === "editable"
+      const setActiveCellElement = React.useCallback(
+        (cell: HTMLElement | null) => {
+          const activeElement = cell?.isConnected ? cell : null
+          const fieldPath = activeElement?.dataset.fieldPath ?? null
+
+          if (activeCellPathRef.current === fieldPath) return
+
+          activeCellPathRef.current = fieldPath
+          setActiveCellPath(fieldPath)
+
+          if (fieldPath && activeElement) {
+            onCellHoverStart?.({
+              docId: document.id,
+              fieldPath,
+              rect: activeElement.getBoundingClientRect(),
+            })
+          } else {
+            onCellHoverEnd?.()
+          }
+        },
+        [document.id, onCellHoverEnd, onCellHoverStart]
+      )
+
+      const handleBodyPointerMove = React.useCallback(
+        (event: React.PointerEvent<HTMLDivElement>) => {
+          if (!isJsonEditable) return
+
+          const target = event.target instanceof Element ? event.target : null
+          const cell = target?.closest('[data-json-table-editable-cell="true"]')
+          const editableCell =
+            cell instanceof HTMLElement && event.currentTarget.contains(cell)
+              ? cell
+              : null
+
+          hoveredCellElementRef.current = editableCell
+
+          if (lockedCellPathRef.current) return
+
+          setActiveCellElement(editableCell)
+        },
+        [isJsonEditable, setActiveCellElement]
+      )
+
+      const handleBodyPointerLeave = React.useCallback(() => {
+        hoveredCellElementRef.current = null
+
+        if (lockedCellPathRef.current) return
+
+        setActiveCellElement(null)
+      }, [setActiveCellElement])
+
+      const handleCellActivityLockChange = React.useCallback(
+        (fieldPath: string, locked: boolean) => {
+          if (locked) {
+            lockedCellPathRef.current = fieldPath
+            setLockedCellPath(fieldPath)
+
+            if (activeCellPathRef.current !== fieldPath) {
+              activeCellPathRef.current = fieldPath
+              setActiveCellPath(fieldPath)
+            }
+
+            return
+          }
+
+          if (lockedCellPathRef.current !== fieldPath) return
+
+          lockedCellPathRef.current = null
+          setLockedCellPath(null)
+          setActiveCellElement(hoveredCellElementRef.current)
+        },
+        [setActiveCellElement]
+      )
 
       return (
         <div className="relative flex min-h-0 min-w-0 flex-1 flex-col bg-background">
@@ -208,7 +285,8 @@ export const SingleFileVirtualizedTable =
             ref={headerScrollRef}
             className="w-full shrink-0 overflow-x-hidden bg-muted/30"
           >
-            <Table
+            <table
+              data-slot="table"
               className="relative flex w-full flex-col rounded-none bg-muted/30"
               style={getFixedGridCanvasStyle({ minWidth: totalWidth })}
             >
@@ -224,19 +302,26 @@ export const SingleFileVirtualizedTable =
                 draggedItemParentPathRef={draggedItemParentPathRef}
                 schemaEditMode={schemaEditMode}
               />
-            </Table>
+            </table>
           </div>
           <FixedGridViewport
             scrollRef={scrollRef}
             dataSlot="json-table-scroll"
             className="w-full flex-1 overflow-auto"
+            onPointerMove={handleBodyPointerMove}
+            onPointerLeave={handleBodyPointerLeave}
             onScroll={(e) => {
               if (headerScrollRef.current) {
                 headerScrollRef.current.scrollLeft = e.currentTarget.scrollLeft
               }
+              if (!lockedCellPathRef.current) {
+                hoveredCellElementRef.current = null
+                setActiveCellElement(null)
+              }
             }}
           >
-            <Table
+            <table
+              data-slot="table"
               className="relative flex w-full flex-col rounded-none bg-background"
               style={getFixedGridCanvasStyle({ minWidth: totalWidth })}
             >
@@ -268,15 +353,16 @@ export const SingleFileVirtualizedTable =
                       rowHeightPx={rowHeightPx}
                       openEditorPath={openEditorPath}
                       setOpenEditorPath={setOpenEditorPath}
+                      activeCellPath={activeCellPath}
+                      lockedCellPath={lockedCellPath}
+                      onCellActivityLockChange={handleCellActivityLockChange}
                       onUpdateDocument={onUpdateDocument}
                       isJsonEditable={isJsonEditable}
-                      onCellHoverStart={onCellHoverStart}
-                      onCellHoverEnd={onCellHoverEnd}
                     />
                   )
                 })}
               </TableBody>
-            </Table>
+            </table>
           </FixedGridViewport>
         </div>
       )

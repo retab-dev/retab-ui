@@ -30,6 +30,7 @@ describe("DataCell", () => {
         <DataCell kind="number" value={-108.3} />
         <DataCell kind="integer" value={42} />
         <DataCell kind="boolean" value={true} />
+        <DataCell kind="boolean" value={false} />
         <DataCell kind="date" value="2026-06-12T13:25:37Z" />
         <DataCell kind="time" value="13:25:37" />
         <DataCell kind="date-time" value="2026-06-12T13:25:37Z" />
@@ -39,9 +40,16 @@ describe("DataCell", () => {
     expect(screen.getByText("CHECKCARD PURCHASE")).toBeTruthy()
     expect(screen.getByText("-108,3")).toBeTruthy()
     expect(screen.getByText("42")).toBeTruthy()
-    expect(screen.getByRole("checkbox").getAttribute("aria-checked")).toBe(
-      "true"
-    )
+    expect(
+      screen.getByRole("checkbox", { name: "true" }).getAttribute(
+        "aria-checked"
+      )
+    ).toBe("true")
+    const falseCheckbox = screen.getByRole("checkbox", { name: "false" })
+    expect(falseCheckbox.getAttribute("aria-checked")).toBe("false")
+    expect(
+      falseCheckbox.querySelector('[data-slot="checkbox-indicator"]')
+    ).toBeTruthy()
     expect(screen.getByText("12/06/2026")).toBeTruthy()
     expect(screen.getByText("13:25:37")).toBeTruthy()
     expect(screen.getByText("12/06/2026, 13:25")).toBeTruthy()

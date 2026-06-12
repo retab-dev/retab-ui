@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { CalendarIcon, CheckIcon, ClockIcon } from "lucide-react"
+import { CalendarIcon, CheckIcon, ClockIcon, XIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Calendar } from "@/components/ui/calendar"
@@ -91,6 +91,24 @@ const dataCellBooleanDisplayClass =
 
 const dataCellCheckboxDisplayClass =
   "peer bg-transparent data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground dark:data-[state=checked]:bg-primary focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 size-4 shrink-0 rounded-[4px] transition-shadow outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50"
+
+function DataCellBooleanIndicator({ checked }: { checked: boolean }) {
+  return (
+    <span
+      data-slot="checkbox-indicator"
+      className={cn(
+        "flex items-center justify-center transition-none",
+        checked ? "text-current" : "text-muted-foreground/72"
+      )}
+    >
+      {checked ? (
+        <CheckIcon className="size-3.5" />
+      ) : (
+        <XIcon className="size-3.5" />
+      )}
+    </span>
+  )
+}
 
 export function DataCell({ mode, editable = false, ...props }: DataCellProps) {
   const resolvedMode = mode ?? (editable ? "auto" : "display")
@@ -267,14 +285,7 @@ function DataCellEdit({
           onKeyDown={onKeyDown}
           onDoubleClick={onDoubleClick}
         >
-          {checked ? (
-            <span
-              data-slot="checkbox-indicator"
-              className="flex items-center justify-center text-current transition-none"
-            >
-              <CheckIcon className="size-3.5" />
-            </span>
-          ) : null}
+          <DataCellBooleanIndicator checked={checked} />
         </button>
       </div>
     )
@@ -430,14 +441,7 @@ function DataCellDisplay({
             "pointer-events-none flex items-center justify-center"
           )}
         >
-          {Boolean(value) ? (
-            <span
-              data-slot="checkbox-indicator"
-              className="flex items-center justify-center text-current transition-none"
-            >
-              <CheckIcon className="size-3.5" />
-            </span>
-          ) : null}
+          <DataCellBooleanIndicator checked={Boolean(value)} />
         </span>
       </div>
     )

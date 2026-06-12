@@ -30,6 +30,7 @@ export interface CellFocusState {
 
 export interface CellOverlayState {
   showInput: boolean
+  forceEditMode?: boolean
   isSelectOpen: boolean
   setIsSelectOpen: (value: boolean) => void
   openEditorPath: string | null
