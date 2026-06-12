@@ -32,7 +32,7 @@ export function SchemaNodeField({
   onChange: (schemaNode: ExtendedJSONSchema7) => void
 }) {
   const effectiveSchemaNode = getEffectiveNode(schemaNode)
-  const replaceEffectiveSchemaNode = (nextSchemaNode: ExtendedJSONSchema7) => {
+  const updateEffectiveSchemaNode = (nextSchemaNode: ExtendedJSONSchema7) => {
     onChange(updateEffectiveNode(schemaNode, nextSchemaNode))
   }
 
@@ -53,7 +53,7 @@ export function SchemaNodeField({
           values={effectiveSchemaNode.enum}
           disabled={disabled}
           onChange={(values) => {
-            replaceEffectiveSchemaNode({ ...effectiveSchemaNode, enum: values })
+            updateEffectiveSchemaNode({ ...effectiveSchemaNode, enum: values })
           }}
         />
       )}
@@ -62,7 +62,7 @@ export function SchemaNodeField({
           schemaNode={effectiveSchemaNode}
           schemaContext={schemaContext}
           disabled={disabled}
-          onChange={replaceEffectiveSchemaNode}
+          onChange={updateEffectiveSchemaNode}
           renderPropertyEditor={({
             propertyName,
             propertySchema,
@@ -89,7 +89,7 @@ export function SchemaNodeField({
             mode={mode}
             disabled={disabled}
             onChange={(items) => {
-              replaceEffectiveSchemaNode({ ...effectiveSchemaNode, items })
+              updateEffectiveSchemaNode({ ...effectiveSchemaNode, items })
             }}
           />
         </ArrayItemsField>

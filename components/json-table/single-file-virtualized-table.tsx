@@ -248,16 +248,20 @@ export const SingleFileVirtualizedTable =
                 {ready
                   ? Array.from({ length: end - start }, (_, i) => {
                       // One DOM row per row in the visible window, keyed by row
-                      // index: rows mount/unmount as they enter/leave. Each row's
-                      // props are memoized on primitives, so rows that stay put
-                      // are skipped by React.memo.
+                      // slot in read-only mode so small window shifts update
+                      // existing row shells instead of mounting replacements.
+                      // Editable mode keeps row identity so focused editor state
+                      // cannot move to another document row.
                       const rowIdx = start + i
+                      const rowKey = allowEditing
+                        ? `row-${rowIdx}`
+                        : `slot-${i}`
                       return (
                         <SingleFileFormRow
-                          key={rowIdx}
+                          key={rowKey}
                           rowIdx={rowIdx}
                           document={document}
-                          projectedRows={projectedRows}
+                          projectedRow={projectedRows[rowIdx]}
                           schema={schema}
                           visibleKeys={visibleKeys}
                           fieldMetadataByKey={fieldMetadataByKey}

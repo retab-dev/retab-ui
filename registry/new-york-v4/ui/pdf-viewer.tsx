@@ -5,6 +5,7 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
+import { createPdfPageLayout } from "./pdf-viewer-layout"
 import { PdfPage } from "./pdf-viewer-page"
 import { usePdfPageSizes } from "./pdf-viewer-page-sizes"
 import { PdfViewerRail } from "./pdf-viewer-rail"
@@ -194,6 +195,24 @@ function PdfViewerInner({
   })
 
   const [rotation, setRotation] = React.useState(0)
+  const { pageSizeByNumber, setPageSize } = usePdfPageSizes(document)
+  const pageLayout = React.useMemo(
+    () =>
+      createPdfPageLayout({
+        pageCount: document.numPages,
+        defaultPageSize: firstPageSize,
+        pageSizeByNumber,
+        scale: resolvedScale,
+        rotation,
+      }),
+    [
+      document.numPages,
+      firstPageSize,
+      pageSizeByNumber,
+      resolvedScale,
+      rotation,
+    ]
+  )
   const {
     currentPage,
     viewportElement,
@@ -204,17 +223,14 @@ function PdfViewerInner({
     getViewportElement,
   } = usePdfScroll({
     pageCount: document.numPages,
+    layout: pageLayout,
     onVisiblePageChange,
     onScrollProgressChange,
   })
-  const { visiblePages, registerPageSlot } = usePdfPageVirtualization({
-    pageCount: document.numPages,
+  const { visiblePageNumbers, measureVisiblePages } = usePdfPageVirtualization({
+    layout: pageLayout,
     viewportElement,
   })
-
-  const { pageSizeByNumber, setPageSize } = usePdfPageSizes(document)
-
-  const isRotated = rotation % 180 !== 0
 
   React.useEffect(() => {
     measureScroll()
@@ -225,6 +241,11 @@ function PdfViewerInner({
     resolvedScale,
     viewportElement,
   ])
+
+  const handleViewportScroll = React.useCallback(() => {
+    handleScroll()
+    measureVisiblePages()
+  }, [handleScroll, measureVisiblePages])
 
   React.useImperativeHandle(
     forwardedRef,
@@ -273,51 +294,42 @@ function PdfViewerInner({
             <ScrollArea
               className="min-h-0 flex-1"
               viewportRef={setViewportElement}
-              viewportProps={{ onScroll: handleScroll }}
+              viewportProps={{ onScroll: handleViewportScroll }}
             >
               <div
                 ref={containerRef}
-                className="flex flex-col items-center gap-4 p-4"
+                className="relative mx-auto"
+                style={{
+                  height: pageLayout.totalHeight,
+                  minWidth: pageLayout.maxPageWidth,
+                }}
               >
-                {Array.from({ length: document.numPages }, (_, index) => {
-                  const pageNumber = index + 1
-                  const pageSize = pageSizeByNumber.get(pageNumber) ?? {
-                    width: firstPageSize.width,
-                    height: firstPageSize.height,
-                  }
-                  const estimatedWidth = Math.round(
-                    (isRotated ? pageSize.height : pageSize.width) *
-                      resolvedScale
-                  )
-                  const estimatedHeight = Math.round(
-                    (isRotated ? pageSize.width : pageSize.height) *
-                      resolvedScale
-                  )
+                {visiblePageNumbers.map((pageNumber) => {
+                  const page = pageLayout.pages[pageNumber - 1]
+                  if (!page) return null
 
                   return (
                     <div
                       key={pageNumber}
-                      ref={registerPageSlot}
                       data-slot="pdf-page-slot"
                       data-page-number={pageNumber}
-                      className="flex items-center justify-center"
+                      className="absolute left-1/2 flex -translate-x-1/2 items-center justify-center"
                       style={{
-                        width: estimatedWidth,
-                        minHeight: estimatedHeight,
+                        top: page.offsetTop,
+                        width: page.width,
+                        minHeight: page.height,
                       }}
                     >
-                      {visiblePages.has(pageNumber) ? (
-                        <React.Suspense fallback={<PageSkeleton />}>
-                          <PdfPage
-                            document={document}
-                            pageNumber={pageNumber}
-                            scale={resolvedScale}
-                            rotation={rotation}
-                            renderOverlay={renderPageOverlay}
-                            onSize={setPageSize}
-                          />
-                        </React.Suspense>
-                      ) : null}
+                      <React.Suspense fallback={<PageSkeleton />}>
+                        <PdfPage
+                          document={document}
+                          pageNumber={pageNumber}
+                          scale={resolvedScale}
+                          rotation={rotation}
+                          renderOverlay={renderPageOverlay}
+                          onSize={setPageSize}
+                        />
+                      </React.Suspense>
                     </div>
                   )
                 })}

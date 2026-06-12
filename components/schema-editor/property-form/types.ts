@@ -1,5 +1,5 @@
 import type * as React from "react"
-import type { JSONSchema7Definition, JSONSchema7Type } from "json-schema"
+import type { JSONSchema7Definition } from "json-schema"
 
 import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
 
@@ -81,14 +81,10 @@ export type PropertySchemaNodeType =
   | "$ref"
 
 export type PropertyDraftOperation =
-  | { type: "resetPropertyDraft"; propertyDraft: PropertyDraft }
   | { type: "renameProperty"; name: string }
   | { type: "setPropertyDescription"; description: string }
   | { type: "setPropertyNullable"; isNullable: boolean }
   | { type: "setPropertyType"; schemaNodeType: PropertySchemaNodeType }
-  | { type: "setEnumValues"; values: JSONSchema7Type[] }
-  | { type: "setArrayItemSchemaNode"; schemaNode: ExtendedJSONSchema7 }
-  | { type: "replaceEffectiveSchemaNode"; schemaNode: ExtendedJSONSchema7 }
   | { type: "replacePropertySchemaNode"; schemaNode: ExtendedJSONSchema7 }
 
 export interface PropertyFormFooterModel {

@@ -1,7 +1,10 @@
 import {
   createNativeImageFrameSource,
+  createNativeImageFrameSourceFromBlob,
   ImageLoadError,
   ImageSourceDisposedError,
+  isDeclaredNativeImage,
+  isDeclaredTiff,
   isTiffBytes,
   type FrameSource,
 } from "@/lib/image-frame-source"
@@ -19,13 +22,17 @@ export interface FrameSourceLease {
   release(): void
 }
 
+type FrameSourceEntryState = "loading" | "ready" | "released" | "disposed"
+
 interface FrameSourceEntry {
+  src: string
   promise: Promise<FrameSource>
   source?: FrameSource
   leaseCount: number
+  state: FrameSourceEntryState
   disposeWhenResolved: boolean
-  releasedDisposeTimer?: ReturnType<typeof setTimeout>
-  unclaimedDisposeTimer?: ReturnType<typeof setTimeout>
+  disposeReason?: Error
+  disposeTimer?: ReturnType<typeof setTimeout>
 }
 
 interface FrameSourceManagerOptions {
@@ -53,27 +60,39 @@ export class FrameSourceManager {
     let entry = this.entries.get(src)
     if (!entry) {
       const newEntry: FrameSourceEntry = {
+        src,
         promise: Promise.resolve().then(() =>
           this.createSource(src, createTiffWorker)
         ),
         leaseCount: 0,
+        state: "loading",
         disposeWhenResolved: false,
       }
       newEntry.promise = newEntry.promise
         .then((source) => {
           newEntry.source = source
           if (newEntry.disposeWhenResolved) {
-            source.dispose()
+            source.dispose(
+              newEntry.disposeReason ?? new ImageSourceDisposedError()
+            )
             this.entries.delete(src)
+            newEntry.state = "disposed"
             throw new ImageLoadError("Image source was disposed before use")
           }
           if (newEntry.leaseCount === 0) {
-            this.scheduleUnclaimedDispose(src, newEntry)
+            newEntry.state = "released"
+            this.scheduleDispose(
+              newEntry,
+              this.unclaimedSourceTimeoutMs,
+              new ImageSourceDisposedError()
+            )
+          } else {
+            newEntry.state = "ready"
           }
           return source
         })
         .catch((error) => {
-          this.entries.delete(src)
+          if (this.entries.get(src) === newEntry) this.entries.delete(src)
           throw error
         })
       entry = newEntry
@@ -84,9 +103,11 @@ export class FrameSourceManager {
 
   retain(src: string, source: FrameSource): FrameSourceLease | null {
     const entry = this.entries.get(src)
-    if (!entry || entry.source !== source) return null
-    this.cancelReleasedDispose(entry)
-    this.cancelUnclaimedDispose(entry)
+    if (!entry || entry.source !== source || entry.state === "disposed") {
+      return null
+    }
+    this.cancelDispose(entry)
+    entry.state = "ready"
     entry.leaseCount += 1
     let released = false
     return {
@@ -98,20 +119,21 @@ export class FrameSourceManager {
         if (!current || current.source !== source) return
         current.leaseCount = Math.max(0, current.leaseCount - 1)
         if (current.leaseCount === 0) {
-          this.scheduleReleasedDispose(src, current)
+          current.state = "released"
+          this.scheduleDispose(
+            current,
+            this.releasedSourceTimeoutMs,
+            new ImageSourceDisposedError()
+          )
         }
       },
     }
   }
 
   clear() {
-    for (const entry of this.entries.values()) {
-      entry.disposeWhenResolved = true
-      this.cancelReleasedDispose(entry)
-      this.cancelUnclaimedDispose(entry)
-      entry.source?.dispose()
+    for (const entry of [...this.entries.values()]) {
+      this.disposeEntry(entry, new ImageSourceDisposedError())
     }
-    this.entries.clear()
   }
 
   private async createSource(
@@ -122,8 +144,24 @@ export class FrameSourceManager {
     if (!response.ok) {
       throw new ImageLoadError(`Failed to load image: ${response.status}`)
     }
-    const bytes = await response.arrayBuffer()
     const contentType = response.headers.get("content-type")
+
+    if (isDeclaredTiff(src, contentType)) {
+      return createTiffFrameSource(
+        await response.arrayBuffer(),
+        createTiffWorker,
+        this.maxDecodedFrames
+      )
+    }
+
+    if (isDeclaredNativeImage(src, contentType)) {
+      return createNativeImageFrameSourceFromBlob(
+        await response.blob(),
+        this.maxDecodedFrames
+      )
+    }
+
+    const bytes = await response.arrayBuffer()
     if (isTiffBytes(src, contentType, bytes)) {
       return createTiffFrameSource(
         bytes,
@@ -131,6 +169,7 @@ export class FrameSourceManager {
         this.maxDecodedFrames
       )
     }
+
     return createNativeImageFrameSource(
       bytes,
       contentType,
@@ -138,42 +177,34 @@ export class FrameSourceManager {
     )
   }
 
-  private disposeEntry(src: string, entry: FrameSourceEntry) {
+  private disposeEntry(entry: FrameSourceEntry, reason: Error) {
+    if (entry.state === "disposed") return
+    entry.state = "disposed"
     entry.disposeWhenResolved = true
-    this.cancelReleasedDispose(entry)
-    this.cancelUnclaimedDispose(entry)
-    entry.source?.dispose(new ImageSourceDisposedError())
-    this.entries.delete(src)
+    entry.disposeReason = reason
+    this.cancelDispose(entry)
+    entry.source?.dispose(reason)
+    if (this.entries.get(entry.src) === entry) this.entries.delete(entry.src)
   }
 
-  private scheduleReleasedDispose(src: string, entry: FrameSourceEntry) {
-    this.cancelReleasedDispose(entry)
-    entry.releasedDisposeTimer = setTimeout(() => {
-      const current = this.entries.get(src)
+  private scheduleDispose(
+    entry: FrameSourceEntry,
+    delayMs: number,
+    reason: Error
+  ) {
+    this.cancelDispose(entry)
+    entry.disposeReason = reason
+    entry.disposeTimer = setTimeout(() => {
+      const current = this.entries.get(entry.src)
       if (!current || current !== entry || current.leaseCount > 0) return
-      this.disposeEntry(src, current)
-    }, this.releasedSourceTimeoutMs)
+      this.disposeEntry(current, reason)
+    }, delayMs)
   }
 
-  private cancelReleasedDispose(entry: FrameSourceEntry) {
-    if (!entry.releasedDisposeTimer) return
-    clearTimeout(entry.releasedDisposeTimer)
-    entry.releasedDisposeTimer = undefined
-  }
-
-  private scheduleUnclaimedDispose(src: string, entry: FrameSourceEntry) {
-    this.cancelUnclaimedDispose(entry)
-    entry.unclaimedDisposeTimer = setTimeout(() => {
-      const current = this.entries.get(src)
-      if (!current || current !== entry || current.leaseCount > 0) return
-      this.disposeEntry(src, current)
-    }, this.unclaimedSourceTimeoutMs)
-  }
-
-  private cancelUnclaimedDispose(entry: FrameSourceEntry) {
-    if (!entry.unclaimedDisposeTimer) return
-    clearTimeout(entry.unclaimedDisposeTimer)
-    entry.unclaimedDisposeTimer = undefined
+  private cancelDispose(entry: FrameSourceEntry) {
+    if (!entry.disposeTimer) return
+    clearTimeout(entry.disposeTimer)
+    entry.disposeTimer = undefined
   }
 }
 

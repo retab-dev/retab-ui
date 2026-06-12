@@ -11,7 +11,8 @@ vocabulary, no historical scaffolding.
 - One committed editing model: `SchemaDocument`.
 - One recursive render model: `DocumentNodeView`.
 - One mutation path: named document operations.
-- One property-form API: `draft`, `context`, `onDraftChange`, `onCommit`.
+- One property-form API: `propertyDraft`, `schemaContext`,
+  `onPropertyDraftChange`, `onCommitPropertyDraft`.
 - Optional features are physically optional.
 - JSON-table path editing lives outside `components/schema-editor`.
 - Compatibility code does not exist in the core.
@@ -209,12 +210,12 @@ Core `PropertyForm` accepts only:
 
 ```tsx
 <PropertyForm
-  draft={draft}
-  context={context}
+  propertyDraft={propertyDraft}
+  schemaContext={schemaContext}
   capabilities={capabilities}
   validation={validation}
-  onDraftChange={setDraft}
-  onCommit={commitDraft}
+  onPropertyDraftChange={setPropertyDraft}
+  onCommitPropertyDraft={commitPropertyDraft}
   onCancel={close}
   onDelete={deleteProperty}
 />
@@ -274,8 +275,8 @@ Required architecture assertions:
 - deleted compatibility files stay deleted
 - recursive editors consume `DocumentNodeView`
 - row identity is `propertyId`
-- property form public boundary uses `draft`, `context`, `onDraftChange`,
-  `onCommit`
+- property form public boundary uses `propertyDraft`, `schemaContext`,
+  `onPropertyDraftChange`, `onCommitPropertyDraft`
 - top-level editor uses final naming and accessible icon buttons
 - optional features are absent from default imports
 - JSON-table path operations stay outside schema-editor

@@ -1,76 +1,49 @@
 import * as React from "react"
 
+import {
+  getPdfVisiblePageNumbers,
+  type PdfPageLayoutModel,
+} from "./pdf-viewer-layout"
+
 export function usePdfPageVirtualization({
-  pageCount,
+  layout,
   viewportElement,
 }: {
-  pageCount: number
+  layout: PdfPageLayoutModel
   viewportElement: HTMLDivElement | null
 }) {
-  const [visiblePages, setVisiblePages] = React.useState<ReadonlySet<number>>(
-    () => new Set([1])
-  )
-  const observerRef = React.useRef<IntersectionObserver | null>(null)
-  const slotElementsRef = React.useRef<Set<HTMLElement>>(new Set())
+  const [visiblePageNumbers, setVisiblePageNumbers] = React.useState<
+    readonly number[]
+  >(() => [1])
 
-  React.useEffect(() => {
-    setVisiblePages(new Set([1]))
-  }, [pageCount])
-
-  React.useEffect(() => {
-    if (!viewportElement) return
-    if (typeof IntersectionObserver === "undefined") {
-      setVisiblePages(
-        new Set(Array.from({ length: pageCount }, (_, index) => index + 1))
-      )
-      return
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        setVisiblePages((previousVisiblePages) => {
-          const nextVisiblePages = new Set(previousVisiblePages)
-          let changed = false
-          for (const entry of entries) {
-            const pageNumber = Number(
-              (entry.target as HTMLElement).dataset.pageNumber
-            )
-            if (!pageNumber) continue
-            if (entry.isIntersecting) {
-              if (!nextVisiblePages.has(pageNumber)) {
-                nextVisiblePages.add(pageNumber)
-                changed = true
-              }
-            } else if (nextVisiblePages.delete(pageNumber)) {
-              changed = true
-            }
-          }
-          return changed ? nextVisiblePages : previousVisiblePages
-        })
-      },
-      { root: viewportElement, rootMargin: "100% 0px" }
+  const measureVisiblePages = React.useCallback(() => {
+    const scrollTop = viewportElement?.scrollTop ?? 0
+    const viewportHeight = viewportElement?.clientHeight ?? 0
+    const nextPageNumbers = getPdfVisiblePageNumbers({
+      layout,
+      scrollTop,
+      viewportHeight,
+    })
+    setVisiblePageNumbers((previousPageNumbers) =>
+      arePageNumbersEqual(previousPageNumbers, nextPageNumbers)
+        ? previousPageNumbers
+        : nextPageNumbers
     )
+  }, [layout, viewportElement])
 
-    observerRef.current = observer
-    for (const slotElement of slotElementsRef.current) {
-      observer.observe(slotElement)
-    }
+  React.useEffect(() => {
+    measureVisiblePages()
+  }, [measureVisiblePages])
 
-    return () => {
-      observer.disconnect()
-      observerRef.current = null
-    }
-  }, [pageCount, viewportElement])
+  return { visiblePageNumbers, measureVisiblePages }
+}
 
-  const registerPageSlot = React.useCallback((element: HTMLElement | null) => {
-    if (!element) return
-    slotElementsRef.current.add(element)
-    observerRef.current?.observe(element)
-    return () => {
-      slotElementsRef.current.delete(element)
-      observerRef.current?.unobserve(element)
-    }
-  }, [])
-
-  return { visiblePages, registerPageSlot }
+function arePageNumbersEqual(
+  previousPageNumbers: readonly number[],
+  nextPageNumbers: readonly number[]
+) {
+  if (previousPageNumbers.length !== nextPageNumbers.length) return false
+  return previousPageNumbers.every(
+    (pageNumber, index) => pageNumber === nextPageNumbers[index]
+  )
 }

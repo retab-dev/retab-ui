@@ -273,13 +273,11 @@ describe("PdfViewer", () => {
     await waitFor(() => expect(onVisiblePageChange).toHaveBeenCalledWith(1))
   })
 
-  it("renders all page canvases when IntersectionObserver is unavailable", async () => {
+  it("renders a bounded initial page window without IntersectionObserver", async () => {
     vi.stubGlobal("IntersectionObserver", undefined)
-    const doc = makeDoc([
-      [100, 200],
-      [100, 200],
-      [100, 200],
-    ])
+    const doc = makeDoc(
+      Array.from({ length: 100 }, () => [100, 200] as [number, number])
+    )
     pdfjsMock.docs.set("/no-intersection-observer.pdf", doc)
 
     await act(async () => {
@@ -289,8 +287,11 @@ describe("PdfViewer", () => {
     await waitFor(() => {
       expect(doc.getPage).toHaveBeenCalledWith(1)
       expect(doc.getPage).toHaveBeenCalledWith(2)
-      expect(doc.getPage).toHaveBeenCalledWith(3)
     })
+    expect(document.querySelectorAll("[data-page-number]").length).toBeLessThan(
+      100
+    )
+    expect(document.querySelectorAll("canvas").length).toBeLessThan(100)
   })
 
   it("does not keep rejected document loads cached for the same src", async () => {
@@ -363,7 +364,7 @@ describe("PdfViewer", () => {
     fireEvent.click(screen.getByRole("button", { name: "Jump" }))
 
     expect(scrollTo).toHaveBeenCalledWith({
-      top: 502,
+      top: 1234,
       behavior: "auto",
     })
   })
@@ -424,7 +425,7 @@ describe("PdfViewer", () => {
     fireEvent.click(screen.getByRole("button", { name: "Jump past page" }))
 
     expect(scrollTo).toHaveBeenCalledWith({
-      top: 1252,
+      top: 1984,
       behavior: "auto",
     })
   })
@@ -485,7 +486,7 @@ describe("PdfViewer", () => {
     fireEvent.click(screen.getByRole("button", { name: "Jump before page" }))
 
     expect(scrollTo).toHaveBeenCalledWith({
-      top: 252,
+      top: 984,
       behavior: "auto",
     })
   })
@@ -641,27 +642,14 @@ describe("PdfViewer", () => {
     const viewport = document.querySelector<HTMLElement>(
       "[data-slot='scroll-area-viewport']"
     )
-    const firstSlot = document.querySelector<HTMLElement>(
-      "[data-page-number='1']"
-    )
-    const secondSlot = document.querySelector<HTMLElement>(
-      "[data-page-number='2']"
-    )
-    const thirdSlot = document.querySelector<HTMLElement>(
-      "[data-page-number='3']"
-    )
     expect(viewport).toBeTruthy()
-    expect(firstSlot).toBeTruthy()
-    expect(secondSlot).toBeTruthy()
-    expect(thirdSlot).toBeTruthy()
 
+    Object.defineProperty(viewport, "scrollTop", {
+      configurable: true,
+      value: 950,
+      writable: true,
+    })
     viewport!.getBoundingClientRect = () => ({ top: 0, height: 500 }) as DOMRect
-    firstSlot!.getBoundingClientRect = () =>
-      ({ top: -950, height: 1000 }) as DOMRect
-    secondSlot!.getBoundingClientRect = () =>
-      ({ top: 90, height: 1000 }) as DOMRect
-    thirdSlot!.getBoundingClientRect = () =>
-      ({ top: 110, height: 1000 }) as DOMRect
 
     fireEvent.scroll(viewport!)
 

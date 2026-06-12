@@ -21,6 +21,15 @@ export class ImageSourceDisposedError extends Error {
   }
 }
 
+export class ImageFrameIndexError extends Error {
+  constructor(frameIndex: number, frameCount: number) {
+    super(
+      `Invalid image frame index ${frameIndex}; expected 0-${Math.max(0, frameCount - 1)}`
+    )
+    this.name = "ImageFrameIndexError"
+  }
+}
+
 export interface FrameDescriptor {
   intrinsicSize: Size
 }
@@ -119,6 +128,11 @@ export function createFrameSource({
     frames,
     acquire(frameIndex) {
       if (disposed) return Promise.reject(new ImageSourceDisposedError())
+      if (!isValidFrameIndex(frameIndex, frames.length)) {
+        return Promise.reject(
+          new ImageFrameIndexError(frameIndex, frames.length)
+        )
+      }
       bitmapCache.pin(frameIndex)
       const bitmap = bitmapCache.get(frameIndex)
       if (bitmap) return Promise.resolve(bitmap)
@@ -152,6 +166,7 @@ export function createFrameSource({
       return inflight.promise
     },
     release(frameIndex) {
+      if (!isValidFrameIndex(frameIndex, frames.length)) return
       if (!disposed) bitmapCache.unpin(frameIndex)
     },
     dispose(reason = new ImageSourceDisposedError()) {
@@ -171,6 +186,13 @@ export async function createNativeImageFrameSource(
   maxDecodedFrames: number
 ): Promise<FrameSource> {
   const blob = new Blob([bytes], { type: contentType ?? "" })
+  return createNativeImageFrameSourceFromBlob(blob, maxDecodedFrames)
+}
+
+export async function createNativeImageFrameSourceFromBlob(
+  blob: Blob,
+  maxDecodedFrames: number
+): Promise<FrameSource> {
   let probe: ImageBitmap
   try {
     probe = await createImageBitmap(blob)
@@ -189,13 +211,31 @@ export async function createNativeImageFrameSource(
   })
 }
 
+export function isDeclaredTiff(
+  src: string,
+  contentType: string | null
+): boolean {
+  return /\.tiff?($|\?)/i.test(src) || isTiffContentType(contentType)
+}
+
+export function isDeclaredNativeImage(
+  src: string,
+  contentType: string | null
+): boolean {
+  if (isDeclaredTiff(src, contentType)) return false
+  if (!contentType)
+    return /\.(png|jpe?g|webp|gif|avif|bmp|ico)($|\?)/i.test(src)
+  return /^image\/(png|jpe?g|webp|gif|avif|bmp|x-icon|vnd\.microsoft\.icon)(;|$)/i.test(
+    contentType
+  )
+}
+
 export function isTiffBytes(
   src: string,
   contentType: string | null,
   bytes: ArrayBuffer
 ): boolean {
-  if (/\.tiff?($|\?)/i.test(src)) return true
-  if (contentType && /image\/tiff/i.test(contentType)) return true
+  if (isDeclaredTiff(src, contentType)) return true
   const b = new Uint8Array(bytes, 0, Math.min(4, bytes.byteLength))
   return (
     (b[0] === 0x49 && b[1] === 0x49 && b[2] === 0x2a && b[3] === 0x00) ||
@@ -215,4 +255,14 @@ function toImageDecodeError(error: unknown): ImageDecodeError {
   return error instanceof ImageDecodeError
     ? error
     : new ImageDecodeError("Image decode failed", { cause: error })
+}
+
+function isValidFrameIndex(frameIndex: number, frameCount: number) {
+  return (
+    Number.isInteger(frameIndex) && frameIndex >= 0 && frameIndex < frameCount
+  )
+}
+
+function isTiffContentType(contentType: string | null): boolean {
+  return contentType ? /^image\/(tiff|tif)(;|$)/i.test(contentType) : false
 }

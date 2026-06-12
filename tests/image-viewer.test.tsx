@@ -13,7 +13,10 @@ import UTIF from "utif"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import type { Source } from "@/registry/new-york-v4/lib/document-source"
-import { createFrameSource } from "@/registry/new-york-v4/lib/image-frame-source"
+import {
+  createFrameSource,
+  ImageFrameIndexError,
+} from "@/registry/new-york-v4/lib/image-frame-source"
 import { FrameSourceManager } from "@/registry/new-york-v4/lib/image-source-cache"
 import {
   createTiffFrameSource,
@@ -139,6 +142,18 @@ function stubViewerLayout() {
       disconnect() {}
     }
   )
+}
+
+function stubElementClientWidth(width: number) {
+  vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(width)
+}
+
+async function waitForWorkerPost(worker: FakeTiffWorker) {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    if (worker.posts.length > 0) return
+    await Promise.resolve()
+  }
+  throw new Error("TIFF worker did not receive a message")
 }
 
 describe("ImageViewer TIFF detection", () => {
@@ -285,6 +300,21 @@ describe("ImageSource lifecycle", () => {
     source.dispose()
   })
 
+  it("rejects invalid frame indexes before decode", async () => {
+    const decode = vi.fn(() => Promise.resolve(bitmap()))
+    const source = createImageSourceForTests("tiff", frameCount(1), decode)
+
+    await expect(source.acquire(-1)).rejects.toBeInstanceOf(
+      ImageFrameIndexError
+    )
+    await expect(source.acquire(1)).rejects.toBeInstanceOf(ImageFrameIndexError)
+    await expect(source.acquire(0.5)).rejects.toBeInstanceOf(
+      ImageFrameIndexError
+    )
+    expect(() => source.release(-1)).not.toThrow()
+    expect(decode).not.toHaveBeenCalled()
+  })
+
   it("removes rejected source loads from the cache so later loads retry", async () => {
     const fetch = vi.fn()
     fetch
@@ -349,6 +379,89 @@ describe("FrameSourceManager lifecycle", () => {
     expect(fetch).toHaveBeenCalledTimes(2)
   })
 
+  it("loads declared native images from a blob without materializing an ArrayBuffer", async () => {
+    const manager = new FrameSourceManager()
+    const blob = new Blob([Uint8Array.of(1, 2, 3, 4)], { type: "image/png" })
+    const response = {
+      ok: true,
+      headers: { get: vi.fn(() => "image/png") },
+      blob: vi.fn(() => Promise.resolve(blob)),
+      arrayBuffer: vi.fn(() => Promise.resolve(new ArrayBuffer(4))),
+    } as unknown as Response
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(response))
+    )
+    vi.stubGlobal(
+      "createImageBitmap",
+      vi.fn(() => Promise.resolve(bitmap()))
+    )
+
+    await expect(
+      manager.load("/declared-native.png", () => new Worker(""))
+    ).resolves.toMatchObject({ kind: "native-image" })
+
+    expect(response.blob).toHaveBeenCalledTimes(1)
+    expect(response.arrayBuffer).not.toHaveBeenCalled()
+  })
+
+  it("loads declared TIFF images from an ArrayBuffer", async () => {
+    const manager = new FrameSourceManager()
+    const worker = new FakeTiffWorker()
+    const response = {
+      ok: true,
+      headers: { get: vi.fn(() => "image/tiff") },
+      blob: vi.fn(() => Promise.resolve(new Blob())),
+      arrayBuffer: vi.fn(() => Promise.resolve(new ArrayBuffer(4))),
+    } as unknown as Response
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(response))
+    )
+
+    const load = manager.load(
+      "/declared.tiff",
+      () => worker as unknown as Worker
+    )
+    await waitForWorkerPost(worker)
+
+    expect(response.arrayBuffer).toHaveBeenCalledTimes(1)
+    expect(response.blob).not.toHaveBeenCalled()
+    worker.emit({
+      type: "initOk",
+      frames: [{ intrinsicSize: { width: 10, height: 10 } }],
+    })
+    await expect(load).resolves.toMatchObject({ kind: "tiff" })
+  })
+
+  it("sniffs unknown TIFF responses from bytes", async () => {
+    const manager = new FrameSourceManager()
+    const worker = new FakeTiffWorker()
+    const response = {
+      ok: true,
+      headers: { get: vi.fn(() => null) },
+      blob: vi.fn(() => Promise.resolve(new Blob())),
+      arrayBuffer: vi.fn(() =>
+        Promise.resolve(Uint8Array.of(0x49, 0x49, 0x2a, 0).buffer)
+      ),
+    } as unknown as Response
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(response))
+    )
+
+    const load = manager.load("/unknown", () => worker as unknown as Worker)
+    await waitForWorkerPost(worker)
+
+    expect(response.arrayBuffer).toHaveBeenCalledTimes(1)
+    expect(response.blob).not.toHaveBeenCalled()
+    worker.emit({
+      type: "initOk",
+      frames: [{ intrinsicSize: { width: 10, height: 10 } }],
+    })
+    await expect(load).resolves.toMatchObject({ kind: "tiff" })
+  })
+
   it("disposes the source after the last lease release settles", async () => {
     vi.useFakeTimers()
     const manager = new FrameSourceManager()
@@ -383,6 +496,25 @@ describe("FrameSourceManager lifecycle", () => {
     await vi.advanceTimersByTimeAsync(0)
     expect(dispose).not.toHaveBeenCalled()
     secondLease?.release()
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(dispose).toHaveBeenCalledTimes(1)
+    vi.useRealTimers()
+  })
+
+  it("ignores duplicate lease releases", async () => {
+    vi.useFakeTimers()
+    const manager = new FrameSourceManager()
+    stubImageLoading()
+    const source = await manager.load(
+      "/duplicate-release.png",
+      () => new Worker("")
+    )
+    const dispose = vi.spyOn(source, "dispose")
+    const lease = manager.retain("/duplicate-release.png", source)
+
+    lease?.release()
+    lease?.release()
     await vi.advanceTimersByTimeAsync(0)
 
     expect(dispose).toHaveBeenCalledTimes(1)
@@ -659,6 +791,54 @@ describe("ImageViewer scale semantics", () => {
     expect(
       (screen.getByLabelText("Fit width") as HTMLButtonElement).disabled
     ).toBe(false)
+  })
+
+  it("fits mixed-size TIFF frames by the widest rendered frame", async () => {
+    class MetadataWorker extends FakeTiffWorker {
+      override postMessage(
+        message: TiffWorkerRequest,
+        transfer?: readonly Transferable[]
+      ): void {
+        super.postMessage(message, transfer)
+        if (message.type === "init") {
+          queueMicrotask(() => {
+            this.emit({
+              type: "initOk",
+              frames: [
+                { intrinsicSize: { width: 100, height: 20 } },
+                { intrinsicSize: { width: 200, height: 20 } },
+              ],
+            })
+          })
+        }
+      }
+    }
+
+    stubViewerLayout()
+    stubElementClientWidth(1032)
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve(
+          new Response(new ArrayBuffer(4), {
+            headers: { "content-type": "image/tiff" },
+          })
+        )
+      )
+    )
+    vi.stubGlobal("Worker", MetadataWorker)
+
+    await act(async () => {
+      render(<ImageViewer src="/mixed.tiff" />)
+    })
+
+    expect(
+      await screen.findByText(
+        (_, element) =>
+          element?.tagName.toLowerCase() === "span" &&
+          element.textContent === "500%"
+      )
+    ).toBeTruthy()
   })
 })
 

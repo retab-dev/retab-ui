@@ -13,7 +13,7 @@ import { TableRow } from "@/components/ui-retab/table"
 interface SingleFileFormRowProps {
   document: TableDocument
   schema: JSONSchema7
-  projectedRows: ProjectedRow[]
+  projectedRow?: ProjectedRow
   visibleKeys: string[]
   fieldMetadataByKey: Record<string, FieldMetadata | undefined>
   /** Which sub-row of the document this renders (set by the row virtualizer). */
@@ -37,7 +37,7 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
   ({
     document,
     schema,
-    projectedRows,
+    projectedRow,
     visibleKeys,
     fieldMetadataByKey,
     rowIdx,
@@ -91,7 +91,7 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
       >
         {/* Data cells */}
         {visibleKeys.map((key, colIdx) => {
-          const projectedCell = projectedRows[rowIdx]?.cells[colIdx]
+          const projectedCell = projectedRow?.cells[colIdx]
 
           return (
             <DataCell

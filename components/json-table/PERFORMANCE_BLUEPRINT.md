@@ -205,6 +205,46 @@ Third-pass verdict:
 - The remaining performance ceiling is still row-window replacement, not
   editor code on the read-only route.
 
+## Fourth Executed Pass
+
+Implemented changes:
+
+- Reused mounted row slots in read-only mode:
+  - read-only rows are keyed by virtual slot
+  - editable rows stay keyed by document row index to keep editor state tied to
+    the correct row
+- Passed each `SingleFileFormRow` its `projectedRow` instead of the full
+  `projectedRows` array.
+
+Current post-pass profile on `json-table-profile` with overscan `12`:
+
+| Metric                        | Value    |
+| ----------------------------- | -------- |
+| Initial mounted rows          | 27       |
+| Initial mounted data cells    | 168      |
+| Initial DOM nodes             | 661      |
+| Small-scroll p50 frame        | ~8.3 ms  |
+| Small-scroll p95 frame        | ~22.9 ms |
+| Small-scroll max frame        | ~48.5 ms |
+| Small-scroll long tasks       | 0        |
+| Large-jump p50 frame          | ~10.6 ms |
+| Large-jump p95 frame          | ~27 ms   |
+| Large-jump long tasks         | 0        |
+| EventDispatch total, small    | ~88 ms   |
+| UpdateLayoutTree total, small | ~66 ms   |
+| EventDispatch total, large    | ~804 ms  |
+| UpdateLayoutTree total, large | ~714 ms  |
+
+Fourth-pass verdict:
+
+- Slot reuse reduced React/style replacement work without changing editable row
+  identity.
+- Large-jump p50 and p95 improved materially.
+- Small-scroll p95 improved; one dev-run raster outlier kept max high, but it
+  was not a JavaScript long task.
+- The remaining spike source is mostly browser raster/compositing variance and
+  the unavoidable prop update burst when a reused slot points at a new row.
+
 ## Performance Ideal
 
 The table should feel boring under load.

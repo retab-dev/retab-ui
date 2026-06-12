@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import type { JSONSchema7 } from "json-schema"
 
 import {
   fromJsonSchema,
@@ -85,10 +86,10 @@ describe("schema document view model", () => {
   })
 
   it("builds a large object view within an interactive budget", () => {
-    const properties = Object.fromEntries(
+    const properties: NonNullable<JSONSchema7["properties"]> = Object.fromEntries(
       Array.from({ length: 750 }, (_, index) => [
         `field_${index}`,
-        { type: index % 2 === 0 ? "string" : "number" },
+        { type: index % 2 === 0 ? "string" : "number" } satisfies JSONSchema7,
       ])
     )
     const doc = fromJsonSchema({ type: "object", properties })

@@ -61,10 +61,9 @@ const forbiddenExecutablePatterns = [
   "applyDocOp",
   "replaceSchemaNodeByReference",
   "PropertyFormLegacyProps",
-  "props.propertyDraft",
-  "props.schemaContext",
-  "onPropertyDraftChange",
-  "onCommitPropertyDraft",
+  "props.draft",
+  "props.context",
+  "onDraftChange",
 ]
 
 describe("schema builder architecture", () => {
@@ -105,13 +104,13 @@ describe("schema builder architecture", () => {
       "tests/property-form.test.tsx",
     ]
     const forbiddenPatterns = [
-      "propertyDraft=",
-      "schemaContext=",
-      "onPropertyDraftChange",
-      "onCommitPropertyDraft",
+      "draft=",
+      "context=",
+      "onDraftChange",
+      "onCommit=",
       "PropertyFormLegacyProps",
-      "props.propertyDraft",
-      "props.schemaContext",
+      "props.draft",
+      "props.context",
     ]
 
     for (const file of files) {

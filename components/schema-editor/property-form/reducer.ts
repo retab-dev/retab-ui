@@ -1,7 +1,4 @@
 import {
-  replaceDraftEffectiveNode,
-  setDraftArrayItems,
-  setDraftEnumValues,
   setDraftNullable,
   setDraftType,
 } from "@/components/schema-editor/property-form/model/effective-node-edits"
@@ -15,8 +12,6 @@ export function propertyDraftReducer(
   operation: PropertyDraftOperation
 ): PropertyDraft {
   switch (operation.type) {
-    case "resetPropertyDraft":
-      return operation.propertyDraft
     case "renameProperty":
       return { ...propertyDraft, name: operation.name }
     case "setPropertyDescription":
@@ -31,16 +26,10 @@ export function propertyDraftReducer(
       return setDraftNullable(propertyDraft, operation.isNullable)
     case "setPropertyType":
       return setDraftType(propertyDraft, operation.schemaNodeType)
-    case "setEnumValues":
-      return setDraftEnumValues(propertyDraft, operation.values)
     case "replacePropertySchemaNode":
       return {
         ...propertyDraft,
         schemaNode: operation.schemaNode,
       }
-    case "replaceEffectiveSchemaNode":
-      return replaceDraftEffectiveNode(propertyDraft, operation.schemaNode)
-    case "setArrayItemSchemaNode":
-      return setDraftArrayItems(propertyDraft, operation.schemaNode)
   }
 }

@@ -1,5 +1,10 @@
 import * as React from "react"
 
+import {
+  findPdfPageByOffset,
+  getPdfPageLayout,
+  type PdfPageLayoutModel,
+} from "./pdf-viewer-layout"
 import { clamp } from "./pdf-viewer-scale"
 import type { PdfPageScrollTarget } from "./pdf-viewer-types"
 
@@ -7,10 +12,12 @@ const PDF_SCROLL_TARGET_HEADROOM = 48
 
 export function usePdfScroll({
   pageCount,
+  layout,
   onVisiblePageChange,
   onScrollProgressChange,
 }: {
   pageCount: number
+  layout: PdfPageLayoutModel
   onVisiblePageChange?: (page: number) => void
   onScrollProgressChange?: (progress: number) => void
 }) {
@@ -41,17 +48,8 @@ export function usePdfScroll({
     onScrollProgressChange?.(progress)
 
     const viewportRect = viewportElement.getBoundingClientRect()
-    const marker = viewportRect.top + viewportRect.height * 0.2
-    const pageSlots =
-      viewportElement.querySelectorAll<HTMLElement>("[data-page-number]")
-    let visiblePage = 1
-    for (const pageSlot of pageSlots) {
-      if (pageSlot.getBoundingClientRect().top <= marker) {
-        visiblePage = Number(pageSlot.dataset.pageNumber)
-      } else {
-        break
-      }
-    }
+    const markerOffset = viewportElement.scrollTop + viewportRect.height * 0.2
+    const visiblePage = findPdfPageByOffset(layout, markerOffset)
 
     if (
       visiblePage >= 1 &&
@@ -62,7 +60,7 @@ export function usePdfScroll({
       setCurrentPage(visiblePage)
       onVisiblePageChange?.(visiblePage)
     }
-  }, [onScrollProgressChange, onVisiblePageChange, pageCount])
+  }, [layout, onScrollProgressChange, onVisiblePageChange, pageCount])
 
   const handleScroll = React.useCallback(() => {
     if (scrollFrameRef.current) return
@@ -78,19 +76,13 @@ export function usePdfScroll({
       const viewportElement = viewportElementRef.current
       if (!viewportElement || pageNumber < 1 || pageNumber > pageCount) return
 
-      const pageSlot = viewportElement.querySelector<HTMLElement>(
-        `[data-page-number="${pageNumber}"]`
-      )
-      if (!pageSlot) return
+      const pageLayout = getPdfPageLayout(layout, pageNumber)
+      if (!pageLayout) return
 
-      const pageSlotRect = pageSlot.getBoundingClientRect()
-      const viewportRect = viewportElement.getBoundingClientRect()
-      const pageTop =
-        pageSlotRect.top - viewportRect.top + viewportElement.scrollTop
       const targetTopPercent = clamp(target.top, 0, 100)
       const targetTop =
-        pageTop +
-        (targetTopPercent / 100) * pageSlotRect.height -
+        pageLayout.offsetTop +
+        (targetTopPercent / 100) * pageLayout.height -
         PDF_SCROLL_TARGET_HEADROOM
 
       viewportElement.scrollTo({
@@ -99,7 +91,7 @@ export function usePdfScroll({
         ...options,
       })
     },
-    [pageCount]
+    [layout, pageCount]
   )
   const getViewportElement = React.useCallback(
     () => viewportElementRef.current,

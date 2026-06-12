@@ -3,7 +3,7 @@
 import * as React from "react"
 
 import { type FrameSource } from "@/lib/image-frame-source"
-import { normalizeRotation } from "@/lib/image-geometry"
+import { normalizeRotation, rotatedSize } from "@/lib/image-geometry"
 import {
   imageFrameSourceManager,
   type FrameSourceLease,
@@ -18,6 +18,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area"
 
 const IMAGE_SCROLL_HEADROOM = 48
+const IMAGE_VIEWER_HORIZONTAL_PADDING = 32
 
 export function ImageViewerContent({
   src,
@@ -36,7 +37,6 @@ export function ImageViewerContent({
   forwardedRef?: React.ForwardedRef<ImageViewerHandle>
 }) {
   const source = React.use(getImageSource(src))
-  const firstFrameWidth = source.frames[0]?.intrinsicSize.width || 1
   const isScaleControlled = controlledScale !== undefined
   const [uncontrolledScale, setUncontrolledScale] = React.useState<
     number | null
@@ -61,12 +61,18 @@ export function ImageViewerContent({
     return () => observer.disconnect()
   }, [])
 
+  const rotationQuarterTurn = normalizeRotation(rotation)
+  const widestFrameWidth = Math.max(
+    1,
+    ...source.frames.map(
+      (frame) => rotatedSize(frame.intrinsicSize, rotationQuarterTurn).width
+    )
+  )
   const fitWidthScale = frameListWidth
-    ? (frameListWidth - 32) / firstFrameWidth
+    ? (frameListWidth - IMAGE_VIEWER_HORIZONTAL_PADDING) / widestFrameWidth
     : 1
   const scale =
     controlledScale ?? uncontrolledScale ?? Math.max(0.25, fitWidthScale)
-  const rotationQuarterTurn = normalizeRotation(rotation)
   const frameCount = source.frames.length
   const countLabel =
     source.kind === "tiff"

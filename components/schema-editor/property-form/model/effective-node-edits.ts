@@ -1,9 +1,8 @@
-import type { JSONSchema7Definition, JSONSchema7Type } from "json-schema"
+import type { JSONSchema7Definition } from "json-schema"
 
 import {
   defaultSchemaForType,
   setNullable,
-  updateEffectiveNode,
   updateType,
 } from "@/components/schema-editor/draft/draft-node-edits"
 import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
@@ -27,41 +26,6 @@ export function setDraftNullable(
     ...propertyDraft,
     schemaNode: setNullable(propertyDraft.schemaNode, isNullable),
   }
-}
-
-export function replaceDraftEffectiveNode(
-  propertyDraft: PropertyDraft,
-  schemaNode: ExtendedJSONSchema7
-): PropertyDraft {
-  return {
-    ...propertyDraft,
-    schemaNode: updateEffectiveNode(propertyDraft.schemaNode, schemaNode),
-  }
-}
-
-export function setDraftArrayItems(
-  propertyDraft: PropertyDraft,
-  schemaNode: ExtendedJSONSchema7
-): PropertyDraft {
-  const effectiveSchemaNode = getEffectiveNode(propertyDraft.schemaNode)
-  return {
-    ...propertyDraft,
-    schemaNode: updateEffectiveNode(propertyDraft.schemaNode, {
-      ...effectiveSchemaNode,
-      items: schemaNode,
-    }),
-  }
-}
-
-export function setDraftEnumValues(
-  propertyDraft: PropertyDraft,
-  values: JSONSchema7Type[]
-): PropertyDraft {
-  const effectiveSchemaNode = getEffectiveNode(propertyDraft.schemaNode)
-  return replaceDraftEffectiveNode(propertyDraft, {
-    ...effectiveSchemaNode,
-    enum: values,
-  })
 }
 
 export function getArrayItemsForDraft(

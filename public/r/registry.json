@@ -598,6 +598,11 @@
           "target": "@ui/pdf-viewer-scroll.ts"
         },
         {
+          "path": "registry/new-york-v4/ui/pdf-viewer-layout.ts",
+          "type": "registry:ui",
+          "target": "@ui/pdf-viewer-layout.ts"
+        },
+        {
           "path": "registry/new-york-v4/ui/pdf-viewer-virtualization.ts",
           "type": "registry:ui",
           "target": "@ui/pdf-viewer-virtualization.ts"

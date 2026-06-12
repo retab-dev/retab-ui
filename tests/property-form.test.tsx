@@ -28,7 +28,6 @@ import {
   renameObjectProperty,
   replaceObjectProperty,
 } from "@/components/schema-editor/property-form/model/object-property-edits"
-import { propertyDraftReducer } from "@/components/schema-editor/property-form/reducer"
 import { validatePropertyFormName } from "@/components/schema-editor/property-form/validation"
 
 const originalResizeObserver = globalThis.ResizeObserver
@@ -55,74 +54,6 @@ function baseSchemaContext(overrides = {}) {
     ...overrides,
   }
 }
-
-describe("propertyDraftReducer", () => {
-  it("writes nullable array item edits into the non-null branch", () => {
-    const draft = {
-      name: "items",
-      schemaNode: {
-        anyOf: [{ type: "array", items: { type: "number" } }, { type: "null" }],
-      } as ExtendedJSONSchema7,
-    }
-
-    const next = propertyDraftReducer(draft, {
-      type: "setArrayItemSchemaNode",
-      schemaNode: { type: "boolean" },
-    })
-
-    expect(next.schemaNode).toEqual({
-      anyOf: [{ type: "array", items: { type: "boolean" } }, { type: "null" }],
-    })
-  })
-
-  it("keeps nullable wrappers when replacing the effective node", () => {
-    const draft = {
-      name: "address",
-      schemaNode: {
-        anyOf: [
-          { type: "object", properties: { city: { type: "string" } } },
-          { type: "null" },
-        ],
-      } as ExtendedJSONSchema7,
-    }
-
-    const next = propertyDraftReducer(draft, {
-      type: "replaceEffectiveSchemaNode",
-      schemaNode: {
-        type: "object",
-        properties: {
-          city: { type: "string" },
-          zip: { type: "string" },
-        },
-      },
-    })
-
-    const anyOf = next.schemaNode.anyOf as ExtendedJSONSchema7[]
-    expect(anyOf[0].properties).toEqual({
-      city: { type: "string" },
-      zip: { type: "string" },
-    })
-    expect(anyOf[1]).toEqual({ type: "null" })
-  })
-
-  it("writes nullable enum edits into the non-null branch", () => {
-    const draft = {
-      name: "status",
-      schemaNode: {
-        anyOf: [{ type: "string", enum: ["draft"] }, { type: "null" }],
-      } as ExtendedJSONSchema7,
-    }
-
-    const next = propertyDraftReducer(draft, {
-      type: "setEnumValues",
-      values: ["draft", "paid"],
-    })
-
-    expect(next.schemaNode).toEqual({
-      anyOf: [{ type: "string", enum: ["draft", "paid"] }, { type: "null" }],
-    })
-  })
-})
 
 describe("property form models", () => {
   it("parses enum input as JSON when possible and as strings otherwise", () => {
