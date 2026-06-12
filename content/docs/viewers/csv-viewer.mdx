@@ -30,8 +30,8 @@ export function Example({ csv }: { csv: string }) {
 You can also pass already-parsed data:
 
 ```tsx
-import { CsvViewer } from "@/components/ui/csv-viewer"
 import { parseCsv } from "@/lib/csv"
+import { CsvViewer } from "@/components/ui/csv-viewer"
 
 const data = parseCsv(text, { delimiter: "\t" }) // { columns, rows }
 ;<CsvViewer data={data} />
@@ -39,27 +39,17 @@ const data = parseCsv(text, { delimiter: "\t" }) // { columns, rows }
 
 ## Features
 
-- **Virtualized rows _and_ columns** — only the visible window of cells is rendered (`@tanstack/react-virtual`), so wide and tall tables stay fast. Toggle with the `virtualized` prop.
+- **Virtualized rows _and_ columns** — only the visible window of cells is rendered (`@tanstack/react-virtual`), so wide and tall tables stay fast.
 - **Sortable columns** — click a header to sort. Sorting keeps only a lightweight array of row indices, so the raw rows are never copied.
 - **Sticky header and row numbers**, horizontal scroll for wide tables.
 - **Self-contained, incremental parser** — handles quoted fields, escaped quotes, and delimiters/newlines inside quotes, across chunk boundaries.
 - **Off-thread streaming** — pass a `File`/`Blob` as `source` to parse in a Web Worker (or a time-sliced main-thread fallback) with rows arriving progressively.
 
-## Virtualization
-
-Virtualization is on by default and keeps the table fast with large datasets —
-only the visible window of rows and columns is rendered. For small tables you can
-render every cell instead:
-
-```tsx
-<CsvViewer value={csv} virtualized={false} />
-```
-
 ## Streaming large files
 
 `value` parses synchronously, which is fine for small inputs but blocks the main
-thread for large ones. For big files, pass a `File`/`Blob` (or a string) as
-`source` instead: it's parsed **off the render path** — in a Web Worker when
+thread for large ones. For big files, pass a `File`/`Blob` as `source`
+instead: it's parsed **off the render path** — in a Web Worker when
 available, falling back to a time-sliced main-thread reader — and rows stream in
 progressively. The parser is incremental, so it never needs the whole file in
 memory at once during parsing.
@@ -69,37 +59,24 @@ memory at once during parsing.
 ```tsx
 // e.g. straight from a file input
 <CsvViewer source={file} />
-
-// opt out of the worker (time-sliced main thread instead)
-<CsvViewer source={file} worker={false} />
 ```
 
 ## Props
 
-| Prop | Type | Description |
-| --- | --- | --- |
-| `src` | `string` | URL of a CSV/TSV file (same-origin or CORS-enabled). Fetched, then streamed like `source`. Takes precedence over `value`/`data`/`source`. |
-| `value` | `string` | Raw CSV/TSV text, parsed synchronously. Provide this, `data`, or `source`. |
-| `data` | `ParsedCsv` | Pre-parsed `{ columns, rows }`. |
-| `source` | `Blob \| string` | A large source (a `File`/`Blob`, or a raw CSV string) parsed off the render path, streamed in progressively. |
-| `worker` | `boolean` | Parse `source` in a Web Worker when available (falls back to main thread). Defaults to `true`. |
-| `batchSize` | `number` | Rows per progressive batch when streaming a `source`. Defaults to `5000`. |
-| `delimiter` | `string` | Field delimiter for `value`/`source` (defaults to `,`; use `\t` for TSV). |
-| `hasHeader` | `boolean` | Treat the first record as a header. Defaults to `true`. |
-| `showRowNumbers` | `boolean` | Show the leading row-number column. Defaults to `true`. |
-| `virtualized` | `boolean` | Virtualize rows and columns with TanStack Virtual. Defaults to `true`. |
-| `overscan` | `number` | Rows rendered beyond the visible window when virtualizing (and the default for columns). Defaults to `30`. |
-| `columnOverscan` | `number` | Columns rendered beyond the visible window. Defaults to `overscan`. |
-| `rowHeight` | `number` | Row height in pixels. Defaults to `33`. |
-| `columnWidth` | `number` | Column width in pixels. Defaults to `180`. |
-| `height` | `number` | Scroll viewport height in pixels. Defaults to `480`. Ignored when `fillHeight`. |
-| `fillHeight` | `boolean` | Flex the body to fill the parent's height instead of a fixed `height` (the parent must give a definite height). Defaults to `false`. |
-| `scale` | `number` | Baseline zoom multiplier on row height, column width, and font size. Defaults to `1`. The footer controls multiply on top of this. |
-| `showZoom` | `boolean` | Show the footer zoom controls. Defaults to `true`. Set `false` when a host drives zoom through `scale`. |
-| `label` | `string` | Accessible label for the table (`aria-label`). Defaults to `"CSV data"`. |
-| `activeCell` | `{ row: number; col: number } \| null` | A cell to highlight (0-based row + column among data columns). |
-| `isolateStyles` | `boolean` | Render the scrolling table inside a shadow root so the host page's CSS — especially `:has()` selectors, whose invalidation Blink doesn't scope by `contain` — can't reach it. On `:has()`-heavy pages this collapses per-scroll style recalc (~33ms → ~0.4ms) and keeps scrolling at refresh rate. The page's author CSS is copied in so utilities resolve and theme variables inherit through the boundary. Defaults to `false`. When on, the table is client-rendered only and host CSS can't style its internals. |
-| `className` | `string` | Optional class on the viewer container. |
+| Prop            | Type                                                | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| --------------- | --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src`           | `string`                                            | URL of a CSV/TSV file (same-origin or CORS-enabled). Fetched from the response stream when possible. If multiple sources are passed, precedence is `src`, `source`, `value`, then `data`.                                                                                                                                                                                                                                                                                                                            |
+| `value`         | `string`                                            | Raw CSV/TSV text, parsed synchronously. Use this for raw strings.                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `source`        | `Blob`                                              | A large `File`/`Blob` parsed off the render path, streamed in progressively.                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `data`          | `CsvTable`                                          | Pre-parsed `{ columns, rows }`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `dialect`       | `CsvDialect`                                        | Delimiter and header semantics. Defaults are inferred from `src`/`downloadName` when possible, otherwise CSV with a header row.                                                                                                                                                                                                                                                                                                                                                                                      |
+| `className`     | `string`                                            | Optional class on the viewer container.                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `toolbar`       | `boolean`                                           | Show the row/column count, zoom controls, and download action. Defaults to `true`.                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `downloadName`  | `string`                                            | Output filename for downloads and a hint for dialect inference.                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `height`        | `number`                                            | Scroll viewport height in pixels. Defaults to `480`. Ignored when `fillHeight`.                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `fillHeight`    | `boolean`                                           | Flex the body to fill the parent's height instead of a fixed `height` (the parent must give a definite height). Defaults to `false`.                                                                                                                                                                                                                                                                                                                                                                                 |
+| `activeCell`    | `{ rowIndex: number; columnIndex: number } \| null` | A cell to highlight (0-based source row + source column among data columns).                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `isolateStyles` | `boolean`                                           | Render the scrolling table inside a shadow root so the host page's CSS — especially `:has()` selectors, whose invalidation Blink doesn't scope by `contain` — can't reach it. On `:has()`-heavy pages this collapses per-scroll style recalc (~33ms → ~0.4ms) and keeps scrolling at refresh rate. The page's author CSS is copied in so utilities resolve and theme variables inherit through the boundary. Defaults to `false`. When on, the table is client-rendered only and host CSS can't style its internals. |
 
 ## Accessibility
 

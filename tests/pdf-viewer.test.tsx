@@ -307,7 +307,7 @@ describe("PdfViewer", () => {
     expect(pdfjsMock.getDocument).toHaveBeenCalledTimes(2)
   })
 
-  it("scrolls a normalized page area through the imperative handle", async () => {
+  it("scrolls a normalized page target through the imperative handle", async () => {
     pdfjsMock.docs.set(
       "/scroll.pdf",
       makeDoc([
@@ -323,9 +323,9 @@ describe("PdfViewer", () => {
           <button
             type="button"
             onClick={() =>
-              ref.current?.scrollToPageArea(
+              ref.current?.scrollToPageTarget(
                 2,
-                { top: 25, left: 0, width: 10, height: 10 },
+                { top: 25 },
                 { behavior: "auto" }
               )
             }
@@ -368,7 +368,7 @@ describe("PdfViewer", () => {
     })
   })
 
-  it("clamps normalized area top before imperative scrolling", async () => {
+  it("clamps normalized target top before imperative scrolling", async () => {
     pdfjsMock.docs.set(
       "/scroll-clamp.pdf",
       makeDoc([
@@ -384,7 +384,7 @@ describe("PdfViewer", () => {
           <button
             type="button"
             onClick={() =>
-              ref.current?.scrollToPageArea(
+              ref.current?.scrollToPageTarget(
                 2,
                 { top: 200 },
                 { behavior: "auto" }
@@ -429,7 +429,7 @@ describe("PdfViewer", () => {
     })
   })
 
-  it("clamps negative normalized area top before imperative scrolling", async () => {
+  it("clamps negative normalized target top before imperative scrolling", async () => {
     pdfjsMock.docs.set(
       "/scroll-negative-clamp.pdf",
       makeDoc([
@@ -445,7 +445,7 @@ describe("PdfViewer", () => {
           <button
             type="button"
             onClick={() =>
-              ref.current?.scrollToPageArea(
+              ref.current?.scrollToPageTarget(
                 2,
                 { top: -25 },
                 { behavior: "auto" }
@@ -500,7 +500,7 @@ describe("PdfViewer", () => {
           <button
             type="button"
             onClick={() =>
-              ref.current?.scrollToPageArea(
+              ref.current?.scrollToPageTarget(
                 2,
                 { top: 25 },
                 { behavior: "auto" }
@@ -569,6 +569,54 @@ describe("PdfViewer", () => {
     expect(onScrollProgressChange).toHaveBeenLastCalledWith(0)
   })
 
+  it.each([
+    ["negative", -50, 0],
+    ["overlarge", 2400, 1],
+  ])(
+    "clamps %s scroll progress to the valid range",
+    async (_label, scrollTop, expectedProgress) => {
+      pdfjsMock.docs.set("/progress-clamp.pdf", makeDoc([[100, 200]]))
+      const onScrollProgressChange = vi.fn()
+
+      await act(async () => {
+        render(
+          <PdfViewer
+            src="/progress-clamp.pdf"
+            onScrollProgressChange={onScrollProgressChange}
+          />
+        )
+      })
+      await findByTextContent("Page 1 of 1")
+
+      const viewport = document.querySelector<HTMLElement>(
+        "[data-slot='scroll-area-viewport']"
+      )
+      expect(viewport).toBeTruthy()
+
+      Object.defineProperty(viewport, "clientHeight", {
+        configurable: true,
+        value: 600,
+      })
+      Object.defineProperty(viewport, "scrollHeight", {
+        configurable: true,
+        value: 1800,
+      })
+      Object.defineProperty(viewport, "scrollTop", {
+        configurable: true,
+        value: scrollTop,
+        writable: true,
+      })
+
+      onScrollProgressChange.mockClear()
+      fireEvent.scroll(viewport!)
+      await waitFor(() =>
+        expect(onScrollProgressChange).toHaveBeenLastCalledWith(
+          expectedProgress
+        )
+      )
+    }
+  )
+
   it("selects the current page using the 20 percent viewport marker", async () => {
     pdfjsMock.docs.set(
       "/scroll-marker.pdf",
@@ -607,8 +655,7 @@ describe("PdfViewer", () => {
     expect(secondSlot).toBeTruthy()
     expect(thirdSlot).toBeTruthy()
 
-    viewport!.getBoundingClientRect = () =>
-      ({ top: 0, height: 500 }) as DOMRect
+    viewport!.getBoundingClientRect = () => ({ top: 0, height: 500 }) as DOMRect
     firstSlot!.getBoundingClientRect = () =>
       ({ top: -950, height: 1000 }) as DOMRect
     secondSlot!.getBoundingClientRect = () =>
@@ -618,9 +665,7 @@ describe("PdfViewer", () => {
 
     fireEvent.scroll(viewport!)
 
-    await waitFor(() =>
-      expect(onVisiblePageChange).toHaveBeenLastCalledWith(2)
-    )
+    await waitFor(() => expect(onVisiblePageChange).toHaveBeenLastCalledWith(2))
     expect(await findByTextContent("Page 2 of 3")).toBeTruthy()
   })
 })

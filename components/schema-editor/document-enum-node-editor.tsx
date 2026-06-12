@@ -15,13 +15,13 @@ import { Button } from "@/components/ui-retab/button"
 import { Input } from "@/components/ui-retab/input"
 
 interface DocumentEnumNodeEditorProps {
-  applyDocOp: DocumentSchemaNodeEditorProps["applyDocOp"]
+  dispatch: DocumentSchemaNodeEditorProps["dispatch"]
   nodeId: string
   enumEntries: EnumValue[]
 }
 
 export function DocumentEnumNodeEditor({
-  applyDocOp,
+  dispatch,
   nodeId,
   enumEntries,
 }: DocumentEnumNodeEditorProps) {
@@ -31,17 +31,17 @@ export function DocumentEnumNodeEditor({
 
   const handleAddEnum = () => {
     if (!newEnumValue.trim()) return
-    applyDocOp((current) => addEnumValue(current, nodeId, newEnumValue.trim()))
+    dispatch((current) => addEnumValue(current, nodeId, newEnumValue.trim()))
     setNewEnumValue("")
     newEnumInputRef.current?.focus()
   }
 
   const handleRemoveEnum = (index: number) => {
-    applyDocOp((current) => removeEnumValueAtIndex(current, nodeId, index))
+    dispatch((current) => removeEnumValueAtIndex(current, nodeId, index))
   }
 
   const handleEditEnum = (index: number, newValue: string) => {
-    applyDocOp((current) =>
+    dispatch((current) =>
       updateEnumValueAtIndex(current, nodeId, index, newValue)
     )
   }

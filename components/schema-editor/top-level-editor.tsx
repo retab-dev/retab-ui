@@ -1,22 +1,22 @@
-"use client";
+"use client"
 
-import * as React from "react";
-import { useState } from "react";
+import * as React from "react"
+import { useState } from "react"
 import {
   EllipsisVertical,
   Eye,
   MessageCircleOff,
   Pencil,
   Trash2,
-} from "lucide-react";
+} from "lucide-react"
 
-import { Button } from "@/components/ui-retab/button";
+import { Button } from "@/components/ui-retab/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui-retab/dropdown-menu";
+} from "@/components/ui-retab/dropdown-menu"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,43 +26,43 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui-retab/alert-dialog";
-import { Input } from "@/components/ui-retab/input";
-import { Textarea } from "@/components/ui-retab/textarea";
+} from "@/components/ui-retab/alert-dialog"
+import { Input } from "@/components/ui-retab/input"
+import { Textarea } from "@/components/ui-retab/textarea"
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui-retab/tooltip";
-import { RootDialog } from "@/components/schema-editor/root-dialog";
-import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types";
+} from "@/components/ui-retab/tooltip"
+import { RootDialog } from "@/components/schema-editor/root-dialog"
+import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
 
 const LazyImportExportMenuItems = React.lazy(() =>
   import(
     "@/components/schema-editor/optional/import-export/import-export-menu-items"
   ).then((module) => ({
     default: module.ImportExportMenuItems,
-  })),
-);
+  }))
+)
 
-type SchemaEditorMode = "descriptionOnly" | "readOnly" | "editable";
+type SchemaEditorMode = "descriptionOnly" | "readOnly" | "editable"
 
 type TopLevelEditorProps = {
-  node: ExtendedJSONSchema7;
-  editMode: SchemaEditorMode;
-  showImportExportActions?: boolean;
-  onTitleChange: (title: string) => void;
-  onDescriptionChange: (description: string) => void;
-  onEraseAll: () => void;
-  onEraseDescriptions: () => void;
-  onReplaceRoot: (node: ExtendedJSONSchema7) => void;
-};
+  node: ExtendedJSONSchema7
+  editMode: SchemaEditorMode
+  showImportExportActions?: boolean
+  onTitleChange: (title: string) => void
+  onDescriptionChange: (description: string) => void
+  onEraseAll: () => void
+  onEraseDescriptions: () => void
+  onReplaceRoot: (node: ExtendedJSONSchema7) => void
+}
 
 export function buildTopLevelMetadataValues(node: ExtendedJSONSchema7) {
   return {
     title: node.title || "",
     description: node.description || "",
-  };
+  }
 }
 
 export function TopLevelEditor({
@@ -75,56 +75,54 @@ export function TopLevelEditor({
   onEraseDescriptions,
   onReplaceRoot,
 }: TopLevelEditorProps) {
-  const [metadataDialogOpen, setMetadataDialogOpen] = useState(false);
+  const [metadataDialogOpen, setMetadataDialogOpen] = useState(false)
   const [confirmAction, setConfirmAction] = useState<
     "eraseAll" | "eraseDescriptions" | null
-  >(null);
+  >(null)
   const [metadataValues, setMetadataValues] = useState(() =>
-    buildTopLevelMetadataValues(node),
-  );
-  const [editedName, setEditedName] = useState(node.title || "");
-  const [isNameDirty, setIsNameDirty] = useState(false);
-  const [editedDescription, setEditedDescription] = useState(
-    node.description || "",
-  );
-  const [isDescriptionDirty, setIsDescriptionDirty] = useState(false);
+    buildTopLevelMetadataValues(node)
+  )
+  const [draftTitle, setDraftTitle] = useState(node.title || "")
+  const [isTitleDirty, setIsTitleDirty] = useState(false)
+  const [draftDescription, setDraftDescription] = useState(
+    node.description || ""
+  )
+  const [isDescriptionDirty, setIsDescriptionDirty] = useState(false)
   const [dialogPropertyName, setDialogPropertyName] = useState(
-    node.title || "",
-  );
-  const effectiveEditedName = isNameDirty ? editedName : node.title || "";
-  const effectiveEditedDescription = isDescriptionDirty
-    ? editedDescription
-    : node.description || "";
+    node.title || ""
+  )
+  const currentTitle = isTitleDirty ? draftTitle : node.title || ""
+  const currentDescription = isDescriptionDirty
+    ? draftDescription
+    : node.description || ""
 
-  const handleNameSubmit = () => {
-    if (effectiveEditedName !== (node.title || "")) {
-      onTitleChange(effectiveEditedName || "");
+  const commitTitle = () => {
+    if (currentTitle !== (node.title || "")) {
+      onTitleChange(currentTitle || "")
     }
-    setIsNameDirty(false);
-    setEditedName(node.title || "");
-  };
+    setIsTitleDirty(false)
+    setDraftTitle(node.title || "")
+  }
 
-  const handleDescriptionSubmit = () => {
-    if (effectiveEditedDescription !== (node.description || "")) {
-      onDescriptionChange(effectiveEditedDescription);
+  const commitDescription = () => {
+    if (currentDescription !== (node.description || "")) {
+      onDescriptionChange(currentDescription)
     }
-    setIsDescriptionDirty(false);
-    setEditedDescription(node.description || "");
-  };
+    setIsDescriptionDirty(false)
+    setDraftDescription(node.description || "")
+  }
 
   const openMetadataDialog = () => {
-    setMetadataValues(buildTopLevelMetadataValues(node));
-    setDialogPropertyName(node.title || "");
-    setMetadataDialogOpen(true);
-  };
+    setMetadataValues(buildTopLevelMetadataValues(node))
+    setDialogPropertyName(node.title || "")
+    setMetadataDialogOpen(true)
+  }
 
-  const handleEraseAll = async () => {
-    onEraseAll();
-  };
-
-  const handleEraseAllDescriptions = async () => {
-    onEraseDescriptions();
-  };
+  const confirmDestructiveAction = () => {
+    if (confirmAction === "eraseAll") onEraseAll()
+    if (confirmAction === "eraseDescriptions") onEraseDescriptions()
+    setConfirmAction(null)
+  }
 
   return (
     <div className="pb-4">
@@ -132,15 +130,15 @@ export function TopLevelEditor({
         <div className="flex min-w-0 flex-1 items-center space-x-2">
           <Input
             className="m-0 h-5 rounded-none border-none p-0 text-lg font-medium text-foreground shadow-none outline-none focus-visible:ring-0 md:text-lg"
-            value={effectiveEditedName}
+            value={currentTitle}
             placeholder="Add a title to your schema"
             onChange={(event) => {
-              setEditedName(event.target.value);
-              setIsNameDirty(true);
+              setDraftTitle(event.target.value)
+              setIsTitleDirty(true)
             }}
-            onBlur={handleNameSubmit}
+            onBlur={commitTitle}
             onKeyDown={(event) => {
-              if (event.key === "Enter") handleNameSubmit();
+              if (event.key === "Enter") commitTitle()
             }}
             disabled={editMode === "readOnly" || editMode === "descriptionOnly"}
           />
@@ -153,6 +151,7 @@ export function TopLevelEditor({
                 type="button"
                 variant="ghost"
                 size="iconSm"
+                aria-label="Open schema actions"
                 className="flex items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100"
               >
                 <EllipsisVertical className="h-4 w-4" />
@@ -192,16 +191,16 @@ export function TopLevelEditor({
         <div className="flex items-start justify-between">
           <Textarea
             className="m-0 max-h-64 min-h-6 resize-none rounded-none border-none p-0 text-sm font-normal text-muted-foreground shadow-none outline-none focus-visible:ring-0 md:text-sm"
-            value={effectiveEditedDescription}
+            value={currentDescription}
             placeholder="Add a description to your schema"
             onChange={(event) => {
-              setEditedDescription(event.target.value);
-              setIsDescriptionDirty(true);
+              setDraftDescription(event.target.value)
+              setIsDescriptionDirty(true)
             }}
-            onBlur={handleDescriptionSubmit}
+            onBlur={commitDescription}
             onKeyDown={(event) => {
               if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
-                handleDescriptionSubmit();
+                commitDescription()
               }
             }}
             disabled={editMode === "readOnly"}
@@ -213,6 +212,11 @@ export function TopLevelEditor({
                 type="button"
                 variant="ghost"
                 size="icon"
+                aria-label={
+                  editMode === "readOnly"
+                    ? "View schema properties"
+                    : "Edit schema properties"
+                }
                 className="m-0 p-0"
                 onClick={openMetadataDialog}
               >
@@ -243,8 +247,8 @@ export function TopLevelEditor({
         metadataValues={metadataValues}
         setMetadataValues={setMetadataValues}
         onSave={(metadata) => {
-          onTitleChange(metadata.title);
-          onDescriptionChange(metadata.description);
+          onTitleChange(metadata.title)
+          onDescriptionChange(metadata.description)
         }}
         editMode={editMode}
       />
@@ -268,19 +272,12 @@ export function TopLevelEditor({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (confirmAction === "eraseAll") void handleEraseAll();
-                else if (confirmAction === "eraseDescriptions")
-                  void handleEraseAllDescriptions();
-                setConfirmAction(null);
-              }}
-            >
+            <AlertDialogAction onClick={confirmDestructiveAction}>
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </div>
-  );
+  )
 }

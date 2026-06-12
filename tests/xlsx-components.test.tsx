@@ -7,6 +7,11 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import { XlsxGrid } from "@/registry/new-york-v4/ui/xlsx-grid"
 import { XlsxGridRow } from "@/registry/new-york-v4/ui/xlsx-grid-row"
 import { XlsxSheetTabs } from "@/registry/new-york-v4/ui/xlsx-sheet-tabs"
+import {
+  resolveLoadedScrollTarget,
+  toInternalCellRef,
+  type PendingXlsxScrollTarget,
+} from "@/registry/new-york-v4/ui/xlsx-viewer-scroll"
 
 afterEach(() => {
   cleanup()
@@ -110,5 +115,57 @@ describe("XlsxGrid", () => {
     expect(cells[0].getAttribute("aria-colindex")).toBe("1")
     expect(cells[1].getAttribute("aria-colindex")).toBe("2")
     expect(cells[1].className).toContain("ring-primary")
+  })
+})
+
+describe("XlsxViewer scroll model", () => {
+  const sheets = [
+    { name: "Summary", rowCount: 3, columnCount: 2, nonEmptyCellCount: 1 },
+    { name: "Detail", rowCount: 4, columnCount: 5, nonEmptyCellCount: 1 },
+  ]
+
+  it("converts public compatibility cells to internal coordinates", () => {
+    expect(toInternalCellRef({ sheet: 1, row: 2, col: 3 })).toEqual({
+      sheetIndex: 1,
+      rowIndex: 2,
+      columnIndex: 3,
+    })
+    expect(toInternalCellRef({ sheet: -1, row: 0, col: 0 })).toBeNull()
+  })
+
+  it("replays a pending pre-load scroll target after sheets are known", () => {
+    const pendingTarget: PendingXlsxScrollTarget = {
+      sheetIndex: 1,
+      rowIndex: 2,
+      columnIndex: 3,
+      behavior: "auto",
+    }
+
+    expect(
+      resolveLoadedScrollTarget({
+        activeSheetIndex: 0,
+        target: pendingTarget,
+        sheets,
+      })
+    ).toEqual({
+      sheetIndex: 1,
+      request: pendingTarget,
+      changed: true,
+    })
+  })
+
+  it("drops an out-of-bounds pending pre-load scroll target", () => {
+    expect(
+      resolveLoadedScrollTarget({
+        activeSheetIndex: 0,
+        target: {
+          sheetIndex: 1,
+          rowIndex: 9,
+          columnIndex: 3,
+          behavior: "auto",
+        },
+        sheets,
+      })
+    ).toBeNull()
   })
 })

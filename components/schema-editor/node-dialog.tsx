@@ -4,9 +4,9 @@ import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-sc
 import { PropertyForm } from "@/components/schema-editor/property-form"
 import type {
   PropertyDraft,
-  PropertyFormSchemaContext,
   PropertyFormMode,
-} from "@/components/schema-editor/property-form-types"
+  PropertyFormSchemaContext,
+} from "@/components/schema-editor/property-form/types"
 import {
   Dialog,
   DialogContent,
@@ -25,10 +25,7 @@ interface NodeDialogProps {
   name: string
   editMode: PropertyFormMode
   siblingNames: string[]
-  formContext: Omit<
-    PropertyFormSchemaContext,
-    "siblingNames" | "originalName"
-  >
+  formContext: Omit<PropertyFormSchemaContext, "siblingNames" | "originalName">
 }
 
 export function NodeDialog({

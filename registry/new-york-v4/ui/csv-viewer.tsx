@@ -2,27 +2,17 @@
 
 import * as React from "react"
 
-import {
-  resolveCsvDialect,
-  type CsvDialect,
-  type CsvTable,
-  type ParsedCsv,
-} from "@/lib/csv"
+import { resolveCsvDialect, type CsvDialect, type CsvTable } from "@/lib/csv"
 import { cn } from "@/lib/utils"
 
-import {
-  downloadCsvTable,
-  downloadNameFromCsvSource,
-} from "./csv-viewer-download"
+import { defaultCsvDownloadName, downloadCsvTable } from "./csv-viewer-download"
 import { CsvGrid, type CsvGridHandle } from "./csv-viewer-grid"
 import {
   getCsvErrorMessage,
-  normalizeCellAddress,
   useCsvResourceState,
   type CsvCellAddress,
-  type LegacyCsvCellAddress,
 } from "./csv-viewer-state"
-import { CsvViewerToolbar } from "./csv-viewer-toolbar"
+import { CsvViewerToolbar, useCsvViewerZoom } from "./csv-viewer-toolbar"
 
 const BASE_FONT_SIZE = 13
 
@@ -31,11 +21,7 @@ export interface CsvScrollOptions {
 }
 
 export interface CsvViewerHandle {
-  scrollToCell: {
-    (rowIndex: number, columnIndex: number, options?: CsvScrollOptions): void
-    (cellAddress: CsvCellAddress, options?: CsvScrollOptions): void
-  }
-  scrollToCellAddress: (
+  scrollToCell: (
     cellAddress: CsvCellAddress,
     options?: CsvScrollOptions
   ) => void
@@ -45,30 +31,16 @@ export interface CsvViewerHandle {
 export interface CsvViewerProps {
   src?: string
   value?: string
-  data?: ParsedCsv | CsvTable
-  source?: Blob | string
+  source?: Blob
+  data?: CsvTable
   dialect?: CsvDialect
-  worker?: boolean
-  batchSize?: number
-  delimiter?: string
-  hasHeader?: boolean
-  showRowNumbers?: boolean
-  virtualized?: boolean
-  overscan?: number
-  columnOverscan?: number
-  rowHeight?: number
-  columnWidth?: number
-  scale?: number
+  className?: string
   toolbar?: boolean
-  showZoom?: boolean
-  showDownload?: boolean
   downloadName?: string
   height?: number
   fillHeight?: boolean
-  label?: string
-  activeCell?: CsvCellAddress | LegacyCsvCellAddress | null
+  activeCell?: CsvCellAddress | null
   isolateStyles?: boolean
-  className?: string
 }
 
 export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
@@ -79,27 +51,13 @@ export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
       data,
       source,
       dialect: dialectProp,
-      worker = true,
-      batchSize = 5000,
-      delimiter,
-      hasHeader,
-      showRowNumbers = true,
-      virtualized = true,
-      overscan = 30,
-      columnOverscan,
-      rowHeight = 33,
-      columnWidth = 180,
-      scale = 1,
+      className,
       toolbar = true,
-      showZoom = true,
-      showDownload = true,
       downloadName,
       height = 480,
       fillHeight = false,
-      label = "CSV data",
       activeCell,
       isolateStyles = false,
-      className,
     },
     ref
   ) {
@@ -107,11 +65,9 @@ export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
       () =>
         resolveCsvDialect({
           dialect: dialectProp,
-          delimiter,
-          hasHeader,
           descriptor: { src, fileName: downloadName },
         }),
-      [delimiter, dialectProp, downloadName, hasHeader, src]
+      [dialectProp, downloadName, src]
     )
     const resourceState = useCsvResourceState({
       src,
@@ -119,41 +75,17 @@ export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
       source,
       data,
       dialect,
-      worker,
-      batchSize,
     })
     const gridRef = React.useRef<CsvGridHandle>(null)
-    const [zoom, setZoom] = React.useState(1)
-    const effectiveScale = scale * zoom
+    const { zoom, setZoom } = useCsvViewerZoom()
     const columns = resourceState.columns
-    const rows = resourceState.rows
-    const normalizedActiveCell = normalizeCellAddress(activeCell)
+    const sourceRows = resourceState.sourceRows
+    const resolvedDownloadName = downloadName ?? defaultCsvDownloadName(dialect)
 
     React.useImperativeHandle(
       ref,
       () => ({
-        scrollToCell: (
-          rowIndexOrAddress: number | CsvCellAddress,
-          columnIndexOrOptions?: number | CsvScrollOptions,
-          options?: CsvScrollOptions
-        ) => {
-          const cellAddress =
-            typeof rowIndexOrAddress === "number"
-              ? {
-                  rowIndex: rowIndexOrAddress,
-                  columnIndex:
-                    typeof columnIndexOrOptions === "number"
-                      ? columnIndexOrOptions
-                      : 0,
-                }
-              : rowIndexOrAddress
-          const scrollOptions =
-            typeof rowIndexOrAddress === "number"
-              ? options
-              : (columnIndexOrOptions as CsvScrollOptions | undefined)
-          gridRef.current?.scrollToCell(cellAddress, scrollOptions)
-        },
-        scrollToCellAddress: (cellAddress, options) => {
+        scrollToCell: (cellAddress, options) => {
           gridRef.current?.scrollToCell(cellAddress, options)
         },
         getViewportElement: () => gridRef.current?.getViewportElement() ?? null,
@@ -165,15 +97,11 @@ export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
       void downloadCsvTable({
         src,
         columns,
-        rows,
+        sourceRows,
         dialect,
-        downloadName: downloadNameFromCsvSource({
-          src,
-          downloadName,
-          dialect,
-        }),
+        downloadName: resolvedDownloadName,
       })
-    }, [columns, dialect, downloadName, rows, src])
+    }, [columns, dialect, resolvedDownloadName, sourceRows, src])
 
     const statusNode = React.useMemo(() => {
       if (resourceState.status === "error") {
@@ -187,7 +115,7 @@ export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
           </div>
         )
       }
-      if (rows.length === 0 && resourceState.status !== "loading") {
+      if (sourceRows.length === 0 && resourceState.status !== "loading") {
         return (
           <div className="flex h-24 items-center justify-center text-xs text-muted-foreground">
             No rows
@@ -195,7 +123,7 @@ export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
         )
       }
       return null
-    }, [resourceState, rows.length])
+    }, [resourceState, sourceRows.length])
 
     return (
       <div
@@ -205,15 +133,13 @@ export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
           fillHeight && "min-h-0 flex-1",
           className
         )}
-        style={{ fontSize: BASE_FONT_SIZE * effectiveScale }}
+        style={{ fontSize: BASE_FONT_SIZE * zoom }}
       >
         {toolbar ? (
           <CsvViewerToolbar
-            rowCount={rows.length}
+            rowCount={sourceRows.length}
             columnCount={columns.length}
             isLoading={resourceState.status === "loading"}
-            showZoom={showZoom}
-            showDownload={showDownload}
             zoom={zoom}
             onZoomChange={setZoom}
             onDownload={handleDownload}
@@ -222,19 +148,12 @@ export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
         <CsvGrid
           ref={gridRef}
           columns={columns}
-          rows={rows}
-          activeCell={normalizedActiveCell}
-          label={label}
+          sourceRows={sourceRows}
+          activeCell={activeCell ?? null}
           height={height}
           fillHeight={fillHeight}
           isolateStyles={isolateStyles}
-          showRowNumbers={showRowNumbers}
-          virtualized={virtualized}
-          overscan={overscan}
-          columnOverscan={columnOverscan}
-          rowHeight={rowHeight}
-          columnWidth={columnWidth}
-          scale={effectiveScale}
+          scale={zoom}
           statusNode={statusNode}
         />
       </div>
@@ -242,4 +161,4 @@ export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
   }
 )
 
-export { type CsvCellAddress, type CsvDialect, type CsvTable, type ParsedCsv }
+export { type CsvCellAddress, type CsvDialect, type CsvTable }

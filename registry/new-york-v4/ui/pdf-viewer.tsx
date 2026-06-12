@@ -33,7 +33,7 @@ import { usePdfPageVirtualization } from "./pdf-viewer-virtualization"
 export { getDocumentResource, getPageResource } from "./pdf-viewer-resource"
 export type {
   PageOverlayProps,
-  PdfPageArea,
+  PdfPageScrollTarget,
   PdfViewerHandle,
   PdfViewerSlots,
 } from "./pdf-viewer-types"
@@ -101,29 +101,17 @@ export interface PdfViewerProps {
    * strips, `left`/`right` are rails, and `overlay` floats over the scroller.
    */
   slots?: PdfViewerSlots
-  /** Compatibility alias for `slots.top`. */
-  header?: React.ReactNode
-  /** Compatibility alias for `slots.left`. */
-  aside?: React.ReactNode
   /** Show the toolbar button that collapses/expands rails. */
   railToggle?: boolean
-  /** Compatibility alias for `railToggle`. */
-  asideToggle?: boolean
   /** Initial open state of the rails. */
   defaultRailsOpen?: boolean
-  /** Compatibility alias for `defaultRailsOpen`. */
-  defaultAsideOpen?: boolean
 }
 
 export const PdfViewer = React.forwardRef<PdfViewerHandle, PdfViewerProps>(
   function PdfViewer(props, ref) {
     const isClient = useIsClient()
-    const hasRail = Boolean(
-      props.slots?.left ?? props.aside ?? props.slots?.right
-    )
-    const showRailToggle = Boolean(
-      hasRail && (props.railToggle ?? props.asideToggle ?? true)
-    )
+    const hasRail = Boolean(props.slots?.left ?? props.slots?.right)
+    const showRailToggle = Boolean(hasRail && (props.railToggle ?? true))
 
     if (!isClient) {
       return (
@@ -168,27 +156,21 @@ function PdfViewerInner({
   onScrollProgressChange,
   bare = false,
   slots,
-  header,
-  aside,
   railToggle,
-  asideToggle,
   defaultRailsOpen,
-  defaultAsideOpen,
   forwardedRef,
 }: PdfViewerProps & {
   forwardedRef?: React.ForwardedRef<PdfViewerHandle>
 }) {
-  const topSlot = slots?.top ?? header
+  const topSlot = slots?.top
   const bottomSlot = slots?.bottom
-  const leftRailSlot = slots?.left ?? aside
+  const leftRailSlot = slots?.left
   const rightRailSlot = slots?.right
   const overlaySlot = slots?.overlay
   const showRailToggle = Boolean(
-    (leftRailSlot || rightRailSlot) && (railToggle ?? asideToggle ?? true)
+    (leftRailSlot || rightRailSlot) && (railToggle ?? true)
   )
-  const [railsOpen, setRailsOpen] = React.useState(
-    defaultRailsOpen ?? defaultAsideOpen ?? true
-  )
+  const [railsOpen, setRailsOpen] = React.useState(defaultRailsOpen ?? true)
 
   const document = React.use(getDocumentResource(src))
   React.useEffect(() => {
@@ -218,7 +200,7 @@ function PdfViewerInner({
     setViewportElement,
     measureScroll,
     handleScroll,
-    scrollToPageArea,
+    scrollToPageTarget,
     getViewportElement,
   } = usePdfScroll({
     pageCount: document.numPages,
@@ -247,10 +229,10 @@ function PdfViewerInner({
   React.useImperativeHandle(
     forwardedRef,
     () => ({
-      scrollToPageArea,
+      scrollToPageTarget,
       getViewportElement,
     }),
-    [getViewportElement, scrollToPageArea]
+    [getViewportElement, scrollToPageTarget]
   )
 
   return (
@@ -286,7 +268,7 @@ function PdfViewerInner({
           </PdfViewerRail>
         ) : null}
         <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
-          {topSlot ? <div data-slot="pdf-viewer-header">{topSlot}</div> : null}
+          {topSlot ? <div data-slot="pdf-viewer-top">{topSlot}</div> : null}
           <div className="relative flex min-h-0 flex-1 flex-col">
             <ScrollArea
               className="min-h-0 flex-1"
@@ -351,7 +333,7 @@ function PdfViewerInner({
             ) : null}
           </div>
           {bottomSlot ? (
-            <div data-slot="pdf-viewer-footer">{bottomSlot}</div>
+            <div data-slot="pdf-viewer-bottom">{bottomSlot}</div>
           ) : null}
         </div>
         {rightRailSlot ? (

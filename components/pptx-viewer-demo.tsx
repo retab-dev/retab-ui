@@ -7,7 +7,7 @@ import { PptxViewer } from "@/components/ui/pptx-viewer"
 // A normalized bounding box (0..1) to demonstrate the per-slide overlay slot —
 // the same shape Retab's edit fields and extraction sources use. Anchored to the
 // title bar on the first slide of the sample deck.
-const sampleBox = { page: 1, left: 0.0, top: 0.0, width: 1.0, height: 0.187 }
+const sampleBox = { slide: 1, left: 0.0, top: 0.0, width: 1.0, height: 0.187 }
 
 export function PptxViewerDemo() {
   return (
@@ -16,8 +16,8 @@ export function PptxViewerDemo() {
         src="/samples/sample-deck.pptx"
         downloadFileName="sample-deck.pptx"
         className="h-full"
-        renderPageOverlay={({ pageNumber }) =>
-          pageNumber === sampleBox.page ? (
+        renderSlideOverlay={({ slideNumber }) =>
+          slideNumber === sampleBox.slide ? (
             <div
               className="absolute rounded-[2px] outline outline-2 outline-primary"
               style={{

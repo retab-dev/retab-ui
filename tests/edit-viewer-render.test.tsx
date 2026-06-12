@@ -7,7 +7,7 @@ import { EditViewer } from "@/components/viewers/edit/edit-viewer"
 import type { EditViewerField } from "@/components/viewers/edit/edit-viewer-types"
 
 const viewerMocks = vi.hoisted(() => ({
-  scrollToPageArea: vi.fn(),
+  scrollToPageTarget: vi.fn(),
 }))
 
 vi.mock("@/components/ui/pdf-viewer", () => ({
@@ -23,12 +23,12 @@ vi.mock("@/components/ui/pdf-viewer", () => ({
       }) => React.ReactNode
     },
     ref: React.ForwardedRef<{
-      scrollToPageArea: typeof viewerMocks.scrollToPageArea
+      scrollToPageTarget: typeof viewerMocks.scrollToPageTarget
       getViewportElement: () => HTMLDivElement | null
     }>
   ) {
     React.useImperativeHandle(ref, () => ({
-      scrollToPageArea: viewerMocks.scrollToPageArea,
+      scrollToPageTarget: viewerMocks.scrollToPageTarget,
       getViewportElement: () => null,
     }))
     return (
@@ -46,16 +46,18 @@ vi.mock("@/components/ui/pdf-viewer", () => ({
 }))
 
 vi.mock("@/components/ui/file-viewer", () => ({
-  FileViewer: (props: { src: string; fileName?: string }) => (
-    <div data-testid="file-viewer" data-src={props.src}>
-      {props.fileName}
+  FileViewer: (props: {
+    source: { kind: "url"; url: string; fileName?: string }
+  }) => (
+    <div data-testid="file-viewer" data-src={props.source.url}>
+      {props.source.fileName}
     </div>
   ),
 }))
 
 afterEach(() => {
   cleanup()
-  viewerMocks.scrollToPageArea.mockClear()
+  viewerMocks.scrollToPageTarget.mockClear()
 })
 
 const fields: EditViewerField[] = [
@@ -93,6 +95,12 @@ const filledDocument = {
   filename: "filled.pdf",
 }
 
+const filledTextDocument = {
+  src: "/filled.txt",
+  mimeType: "text/plain",
+  filename: "filled.txt",
+}
+
 describe("EditViewer", () => {
   it("defaults to the actual filled document when it exists", () => {
     render(
@@ -106,6 +114,19 @@ describe("EditViewer", () => {
     expect(screen.getByTestId("file-viewer").dataset.src).toBe("/filled.pdf")
     expect(screen.getByRole("tab", { name: "Filled view" })).toBeTruthy()
     expect(screen.getByRole("tab", { name: "Preview view" })).toBeTruthy()
+  })
+
+  it("renders non-PDF filled output through the file viewer", () => {
+    render(
+      <EditViewer
+        result={{ fields }}
+        sourceDocument={sourceDocument}
+        filledDocument={filledTextDocument}
+      />
+    )
+
+    expect(screen.getByTestId("file-viewer").dataset.src).toBe("/filled.txt")
+    expect(screen.getByText("filled.txt")).toBeTruthy()
   })
 
   it("uses preview instead of filled when only source overlay data exists", () => {
@@ -157,17 +178,43 @@ describe("EditViewer", () => {
     expect(screen.queryByText("name")).toBeNull()
   })
 
+  it("applies constrained viewer options", () => {
+    render(
+      <EditViewer
+        result={{ fields }}
+        sourceDocument={sourceDocument}
+        options={{ preview: false, search: false, filters: false }}
+      />
+    )
+
+    expect(screen.queryByRole("tab", { name: "Preview view" })).toBeNull()
+    expect(screen.queryByLabelText("Search form fields")).toBeNull()
+    expect(screen.queryByRole("button", { name: "Empty" })).toBeNull()
+  })
+
   it("scrolls to a selected field with normalized percentages", () => {
     render(<EditViewer result={{ fields }} sourceDocument={sourceDocument} />)
 
     fireEvent.click(screen.getByText("name"))
 
-    expect(viewerMocks.scrollToPageArea).toHaveBeenCalledWith(1, {
+    expect(viewerMocks.scrollToPageTarget).toHaveBeenCalledWith(1, {
       top: 20,
-      left: 10,
-      width: 30,
-      height: 4,
     })
+  })
+
+  it("clears a stale controlled selected field", () => {
+    const onSelectedFieldKeyChange = vi.fn()
+
+    render(
+      <EditViewer
+        result={{ fields }}
+        sourceDocument={sourceDocument}
+        selectedFieldKey="missing"
+        onSelectedFieldKeyChange={onSelectedFieldKeyChange}
+      />
+    )
+
+    expect(onSelectedFieldKeyChange).toHaveBeenCalledWith(null)
   })
 
   it("shows status messages without changing mode semantics", () => {
@@ -234,6 +281,6 @@ describe("EditViewer", () => {
 
     expect(screen.queryByLabelText("bad_location, text, Ignored")).toBeNull()
     fireEvent.click(screen.getByText("bad_location"))
-    expect(viewerMocks.scrollToPageArea).not.toHaveBeenCalled()
+    expect(viewerMocks.scrollToPageTarget).not.toHaveBeenCalled()
   })
 })

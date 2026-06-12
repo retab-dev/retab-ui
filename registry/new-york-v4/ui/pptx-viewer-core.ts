@@ -6,19 +6,12 @@ export interface PptxSize {
 export interface PptxSlideOverlayProps {
   /** 1-based slide index. */
   slideNumber: number
-  /** @deprecated Use `slideNumber`. */
-  pageNumber: number
   /** Rendered slide size in CSS pixels, after scale and rotation. */
   width: number
   height: number
   scale: number
   rotation: number
 }
-
-/** @deprecated Use `PptxSlideOverlayProps`. */
-export type PptxPageOverlayProps = PptxSlideOverlayProps
-/** @deprecated Use `PptxSlideOverlayProps`. */
-export type PageOverlayProps = PptxSlideOverlayProps
 
 export interface PptxResetInput {
   src: string

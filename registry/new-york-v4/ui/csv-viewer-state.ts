@@ -6,19 +6,19 @@ import {
   streamCsv,
   type CsvDialect,
   type CsvStreamSource,
-  type CsvTable,
 } from "@/lib/csv"
 
+import {
+  resolveCsvResource,
+  type CsvResourceInput,
+} from "./csv-viewer-resource"
 import { parseCsvInWorker } from "./csv-viewer-worker"
+
+const CSV_STREAM_BATCH_SIZE = 5000
 
 export interface CsvCellAddress {
   rowIndex: number
   columnIndex: number
-}
-
-export interface LegacyCsvCellAddress {
-  row: number
-  col: number
 }
 
 export type CsvViewerError =
@@ -29,24 +29,16 @@ export type CsvViewerError =
   | { kind: "unknown"; message?: string }
 
 export type CsvResourceState =
-  | { status: "idle"; columns: string[]; rows: string[][] }
-  | { status: "loading"; columns: string[]; rows: string[][] }
-  | { status: "ready"; columns: string[]; rows: string[][] }
-  | { status: "empty"; columns: string[]; rows: string[][] }
+  | { status: "idle"; columns: string[]; sourceRows: string[][] }
+  | { status: "loading"; columns: string[]; sourceRows: string[][] }
+  | { status: "ready"; columns: string[]; sourceRows: string[][] }
+  | { status: "empty"; columns: string[]; sourceRows: string[][] }
   | {
       status: "error"
       columns: string[]
-      rows: string[][]
+      sourceRows: string[][]
       error: CsvViewerError
     }
-
-export function normalizeCellAddress(
-  cell: CsvCellAddress | LegacyCsvCellAddress | null | undefined
-): CsvCellAddress | null {
-  if (!cell) return null
-  if ("rowIndex" in cell) return cell
-  return { rowIndex: cell.row, columnIndex: cell.col }
-}
 
 export function getCsvErrorMessage(error: CsvViewerError): string {
   if (error.kind === "fetch") {
@@ -70,11 +62,11 @@ export function unknownToCsvError(error: unknown): CsvViewerError {
 
 export function readyCsvState(
   columns: string[],
-  rows: string[][]
+  sourceRows: string[][]
 ): CsvResourceState {
-  return rows.length === 0
-    ? { status: "empty", columns, rows }
-    : { status: "ready", columns, rows }
+  return sourceRows.length === 0
+    ? { status: "empty", columns, sourceRows }
+    : { status: "ready", columns, sourceRows }
 }
 
 export function useCsvResourceState({
@@ -83,58 +75,61 @@ export function useCsvResourceState({
   source,
   data,
   dialect,
-  worker,
-  batchSize,
-}: {
-  src?: string
-  value?: string
-  source?: Blob | string
-  data?: CsvTable
+}: CsvResourceInput & {
   dialect: CsvDialect
-  worker: boolean
-  batchSize: number
 }): CsvResourceState {
+  const csvResource = React.useMemo(
+    () => resolveCsvResource({ src, source, value, data }),
+    [data, source, src, value]
+  )
   const syncState = React.useMemo<CsvResourceState | null>(() => {
-    if (src || source) return null
-    if (data) return readyCsvState(data.columns, data.rows)
-    if (value != null) {
-      const table = parseCsv(value, dialect)
+    if (csvResource.kind === "data") {
+      return readyCsvState(
+        csvResource.csvTable.columns,
+        csvResource.csvTable.rows
+      )
+    }
+    if (csvResource.kind === "value") {
+      const table = parseCsv(csvResource.value, dialect)
       return readyCsvState(table.columns, table.rows)
     }
-    return { status: "idle", columns: [], rows: [] }
-  }, [data, dialect, source, src, value])
+    if (csvResource.kind === "empty") {
+      return { status: "idle", columns: [], sourceRows: [] }
+    }
+    return null
+  }, [csvResource, dialect])
 
   const [state, setState] = React.useState<CsvResourceState>({
     status: "idle",
     columns: [],
-    rows: [],
+    sourceRows: [],
   })
 
   React.useEffect(() => {
-    if (!src && !source) return
+    if (csvResource.kind !== "src" && csvResource.kind !== "source") return
 
     const controller = new AbortController()
-    const rows: string[][] = []
+    const sourceRows: string[][] = []
     let columns: string[] = []
     let cancelled = false
-    setState({ status: "loading", columns: [], rows: [] })
+    setState({ status: "loading", columns: [], sourceRows: [] })
 
     const onColumns = (next: string[]) => {
       if (cancelled) return
       columns = next
-      padRowsToColumnCount(rows, columns.length)
-      setState({ status: "loading", columns, rows: rows.slice() })
+      padRowsToColumnCount(sourceRows, columns.length)
+      setState({ status: "loading", columns, sourceRows: sourceRows.slice() })
     }
 
-    const onRows = (batch: string[][]) => {
+    const onSourceRows = (sourceRowBatch: string[][]) => {
       if (cancelled) return
-      rows.push(...batch)
-      setState({ status: "loading", columns, rows: rows.slice() })
+      sourceRows.push(...sourceRowBatch)
+      setState({ status: "loading", columns, sourceRows: sourceRows.slice() })
     }
 
     const onDone = () => {
       if (cancelled) return
-      setState(readyCsvState(columns, rows.slice()))
+      setState(readyCsvState(columns, sourceRows.slice()))
     }
 
     const onError = (error: unknown) => {
@@ -142,7 +137,7 @@ export function useCsvResourceState({
       setState({
         status: "error",
         columns,
-        rows: rows.slice(),
+        sourceRows: sourceRows.slice(),
         error: unknownToCsvError(error),
       })
     }
@@ -150,25 +145,27 @@ export function useCsvResourceState({
     const runMainThread = (input: CsvStreamSource) => {
       void streamCsv(
         input,
-        { onColumns, onRows, onDone, onError },
+        { onColumns, onRows: onSourceRows, onDone, onError },
         {
           delimiter: dialect.delimiter,
           hasHeader: dialect.hasHeader,
-          batchSize,
+          batchSize: CSV_STREAM_BATCH_SIZE,
           signal: controller.signal,
         }
       )
     }
 
     const runSrc = async () => {
-      if (!src) return
+      if (csvResource.kind !== "src") return
       try {
-        const response = await fetch(src, { signal: controller.signal })
+        const response = await fetch(csvResource.src, {
+          signal: controller.signal,
+        })
         if (!response.ok) {
           setState({
             status: "error",
             columns,
-            rows: rows.slice(),
+            sourceRows: sourceRows.slice(),
             error: { kind: "fetch", status: response.status },
           })
           return
@@ -180,32 +177,32 @@ export function useCsvResourceState({
       }
     }
 
-    if (src) {
+    if (csvResource.kind === "src") {
       void runSrc()
-    } else if (source && worker && typeof Worker !== "undefined") {
+    } else if (typeof Worker !== "undefined") {
       void parseCsvInWorker({
-        source,
+        source: csvResource.source,
         dialect,
-        batchSize,
+        batchSize: CSV_STREAM_BATCH_SIZE,
         onColumns,
-        onRows,
+        onSourceRows,
         signal: controller.signal,
       }).then(onDone, (error) => {
         if (error instanceof Error && error.message === "worker-unavailable") {
-          runMainThread(source)
+          runMainThread(csvResource.source)
         } else {
           onError(error)
         }
       })
-    } else if (source) {
-      runMainThread(source)
+    } else {
+      runMainThread(csvResource.source)
     }
 
     return () => {
       cancelled = true
       controller.abort()
     }
-  }, [batchSize, dialect, source, src, worker])
+  }, [csvResource, dialect])
 
   return syncState ?? state
 }

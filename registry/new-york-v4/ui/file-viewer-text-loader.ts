@@ -1,11 +1,10 @@
-import { baseName, timed } from "./file-viewer-core"
 import {
   isAbortError,
-  lruGet,
-  lruSet,
   subscribeToAbortableRequest,
   type SharedAbortableRequest,
-} from "./file-viewer-resource-cache"
+} from "./file-viewer-async"
+import { baseName, timed } from "./file-viewer-core"
+import { lruGet, lruSet } from "./file-viewer-resource-cache"
 
 const TEXT_PAGE_BYTES = 512 * 1024
 

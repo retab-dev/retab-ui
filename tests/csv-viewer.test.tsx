@@ -6,6 +6,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { inferCsvDialect } from "@/lib/csv"
 import { CsvViewer } from "@/components/ui/csv-viewer"
+import { defaultCsvDownloadName } from "@/registry/new-york-v4/ui/csv-viewer-download"
+import { resolveCsvResource } from "@/registry/new-york-v4/ui/csv-viewer-resource"
 
 class ResizeObserverMock {
   observe() {}
@@ -32,10 +34,8 @@ describe("CsvViewer", () => {
     render(
       <CsvViewer
         value={"a\tb\n1\t2"}
-        delimiter="\t"
-        virtualized={false}
-        showZoom={false}
-        showDownload={false}
+        dialect={{ delimiter: "\t", hasHeader: true }}
+        toolbar={false}
       />
     )
 
@@ -54,10 +54,8 @@ describe("CsvViewer", () => {
             ["1", "a"],
           ],
         }}
-        activeCell={{ row: 0, col: 1 }}
-        virtualized={false}
-        showZoom={false}
-        showDownload={false}
+        activeCell={{ rowIndex: 0, columnIndex: 1 }}
+        toolbar={false}
       />
     )
 
@@ -104,16 +102,38 @@ describe("CsvViewer src loading", () => {
       vi.fn(() => Promise.resolve(new Response("a\tb\n1\t2", { status: 200 })))
     )
 
-    render(
-      <CsvViewer
-        src="/data.tsv"
-        virtualized={false}
-        showZoom={false}
-        showDownload={false}
-      />
-    )
+    render(<CsvViewer src="/data.tsv" toolbar={false} />)
 
     expect(await screen.findByText("b")).toBeTruthy()
     expect(screen.queryByText("a\tb")).toBeNull()
+  })
+})
+
+describe("CsvViewer resource precedence", () => {
+  it("resolves src, source, value, data, then empty", () => {
+    const source = new Blob(["source"])
+    const data = { columns: ["a"], rows: [["data"]] }
+
+    expect(
+      resolveCsvResource({ src: "/file.csv", source, value: "value", data })
+        .kind
+    ).toBe("src")
+    expect(resolveCsvResource({ source, value: "value", data }).kind).toBe(
+      "source"
+    )
+    expect(resolveCsvResource({ value: "value", data }).kind).toBe("value")
+    expect(resolveCsvResource({ data }).kind).toBe("data")
+    expect(resolveCsvResource({}).kind).toBe("empty")
+  })
+})
+
+describe("CsvViewer download names", () => {
+  it("uses dialect-only generated names when no downloadName is provided", () => {
+    expect(defaultCsvDownloadName({ delimiter: ",", hasHeader: true })).toBe(
+      "data.csv"
+    )
+    expect(defaultCsvDownloadName({ delimiter: "\t", hasHeader: true })).toBe(
+      "data.tsv"
+    )
   })
 })

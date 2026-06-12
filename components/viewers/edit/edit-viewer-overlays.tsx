@@ -8,20 +8,20 @@ import { displayEditFieldValue, isEditFieldFilled } from "./edit-viewer-model"
 import type { EditViewerField, EditViewerMode } from "./edit-viewer-types"
 
 export function EditFieldOverlayLayer({
-  fields,
+  fieldsByPage,
   pageNumber,
   mode,
   effectiveFieldKey,
   onFieldHover,
   onFieldSelect,
 }: Pick<PageOverlayProps, "pageNumber"> & {
-  fields: EditViewerField[]
+  fieldsByPage: ReadonlyMap<number, readonly EditViewerField[]>
   mode: EditViewerMode | null
   effectiveFieldKey: string | null
   onFieldHover: (key: string | null) => void
   onFieldSelect: (key: string) => void
 }) {
-  const pageFields = fields.filter((field) => field.bbox?.page === pageNumber)
+  const pageFields = fieldsByPage.get(pageNumber) ?? []
   if (pageFields.length === 0) return null
 
   return (

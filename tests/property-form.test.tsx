@@ -19,8 +19,17 @@ import {
 
 import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
 import { PropertyForm } from "@/components/schema-editor/property-form"
-import { propertyDraftReducer } from "@/components/schema-editor/property-form-reducer"
-import { validatePropertyFormName } from "@/components/schema-editor/property-form-validation"
+import {
+  formatEnumValueInput,
+  parseEnumValueInput,
+} from "@/components/schema-editor/property-form/model/enum-values"
+import {
+  removeObjectProperty,
+  renameObjectProperty,
+  replaceObjectProperty,
+} from "@/components/schema-editor/property-form/model/object-property-edits"
+import { propertyDraftReducer } from "@/components/schema-editor/property-form/reducer"
+import { validatePropertyFormName } from "@/components/schema-editor/property-form/validation"
 
 const originalResizeObserver = globalThis.ResizeObserver
 
@@ -110,11 +119,65 @@ describe("propertyDraftReducer", () => {
     })
 
     expect(next.schemaNode).toEqual({
-      anyOf: [
-        { type: "string", enum: ["draft", "paid"] },
-        { type: "null" },
-      ],
+      anyOf: [{ type: "string", enum: ["draft", "paid"] }, { type: "null" }],
     })
+  })
+})
+
+describe("property form models", () => {
+  it("parses enum input as JSON when possible and as strings otherwise", () => {
+    expect(parseEnumValueInput("paid")).toBe("paid")
+    expect(parseEnumValueInput('"paid"')).toBe("paid")
+    expect(parseEnumValueInput("42")).toBe(42)
+    expect(parseEnumValueInput("true")).toBe(true)
+    expect(parseEnumValueInput("null")).toBeNull()
+    expect(parseEnumValueInput('{"code":"paid"}')).toEqual({ code: "paid" })
+    expect(formatEnumValueInput({ code: "paid" })).toBe('{"code":"paid"}')
+  })
+
+  it("keeps object property order and required flags during edits", () => {
+    const schemaNode: ExtendedJSONSchema7 = {
+      type: "object",
+      properties: {
+        city: { type: "string" },
+        zip: { type: "string" },
+      },
+      required: ["city"],
+    }
+
+    const renamed = renameObjectProperty({
+      schemaNode,
+      oldName: "city",
+      newName: "town",
+    })
+    expect(Object.keys(renamed.properties || {})).toEqual(["town", "zip"])
+    expect(renamed.required).toEqual(["town"])
+
+    const duplicate = renameObjectProperty({
+      schemaNode: renamed,
+      oldName: "town",
+      newName: "zip",
+    })
+    expect(duplicate).toBe(renamed)
+
+    const replaced = replaceObjectProperty({
+      schemaNode: renamed,
+      propertyName: "country",
+      propertySchema: { type: "string" },
+    })
+    expect(Object.keys(replaced.properties || {})).toEqual([
+      "town",
+      "zip",
+      "country",
+    ])
+    expect(replaced.required).toEqual(["town", "country"])
+
+    const removed = removeObjectProperty({
+      schemaNode: replaced,
+      propertyName: "town",
+    })
+    expect(Object.keys(removed.properties || {})).toEqual(["zip", "country"])
+    expect(removed.required).toEqual(["country"])
   })
 })
 
@@ -140,7 +203,7 @@ describe("PropertyForm validation", () => {
 
 describe("PropertyForm", () => {
   it("commits a valid edited draft", async () => {
-    const onCommit = vi.fn()
+    const onCommitPropertyDraft = vi.fn()
     render(
       <PropertyForm
         propertyDraft={{
@@ -148,7 +211,7 @@ describe("PropertyForm", () => {
           schemaNode: { type: "string", description: "old" },
         }}
         schemaContext={baseSchemaContext()}
-        onCommitPropertyDraft={onCommit}
+        onCommitPropertyDraft={onCommitPropertyDraft}
       />
     )
 
@@ -160,8 +223,8 @@ describe("PropertyForm", () => {
     })
     fireEvent.click(screen.getByRole("button", { name: "Save Changes" }))
 
-    await waitFor(() => expect(onCommit).toHaveBeenCalledTimes(1))
-    expect(onCommit).toHaveBeenCalledWith({
+    await waitFor(() => expect(onCommitPropertyDraft).toHaveBeenCalledTimes(1))
+    expect(onCommitPropertyDraft).toHaveBeenCalledWith({
       name: "invoice_id",
       schemaNode: {
         type: "string",
@@ -171,8 +234,13 @@ describe("PropertyForm", () => {
     })
   })
 
-  it("does not commit duplicate sibling names", async () => {
-    const onCommit = vi.fn()
+  it("does not start a second commit while submit is pending", async () => {
+    let resolveCommit: () => void = () => {}
+    const commitPromise = new Promise<void>((resolve) => {
+      resolveCommit = resolve
+    })
+    const onCommitPropertyDraft = vi.fn(() => commitPromise)
+
     render(
       <PropertyForm
         propertyDraft={{
@@ -180,7 +248,32 @@ describe("PropertyForm", () => {
           schemaNode: { type: "string" },
         }}
         schemaContext={baseSchemaContext()}
-        onCommitPropertyDraft={onCommit}
+        onCommitPropertyDraft={onCommitPropertyDraft}
+      />
+    )
+
+    const saveButton = screen.getByRole("button", { name: "Save Changes" })
+    fireEvent.click(saveButton)
+    fireEvent.click(saveButton)
+
+    expect(onCommitPropertyDraft).toHaveBeenCalledTimes(1)
+    await waitFor(() => expect(saveButton).toHaveProperty("disabled", true))
+
+    resolveCommit()
+
+    await waitFor(() => expect(saveButton).toHaveProperty("disabled", false))
+  })
+
+  it("does not commit duplicate sibling names", async () => {
+    const onCommitPropertyDraft = vi.fn()
+    render(
+      <PropertyForm
+        propertyDraft={{
+          name: "invoice_number",
+          schemaNode: { type: "string" },
+        }}
+        schemaContext={baseSchemaContext()}
+        onCommitPropertyDraft={onCommitPropertyDraft}
       />
     )
 
@@ -190,7 +283,7 @@ describe("PropertyForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "Save Changes" }))
 
     expect(await screen.findByText(/already exists/)).toBeTruthy()
-    expect(onCommit).not.toHaveBeenCalled()
+    expect(onCommitPropertyDraft).not.toHaveBeenCalled()
   })
 
   it("renders no save or delete actions in read-only mode", () => {
@@ -211,6 +304,31 @@ describe("PropertyForm", () => {
     expect(screen.queryByRole("button", { name: "Delete Property" })).toBeNull()
   })
 
+  it("keeps enum value input focus while editing the value", () => {
+    render(
+      <PropertyForm
+        propertyDraft={{
+          name: "status",
+          schemaNode: { type: "string", enum: ["draft"] },
+        }}
+        schemaContext={baseSchemaContext({
+          siblingNames: ["status"],
+          originalName: "status",
+        })}
+        onCommitPropertyDraft={() => {}}
+      />
+    )
+
+    const enumValueInput = screen.getByDisplayValue("draft")
+    enumValueInput.focus()
+
+    fireEvent.change(enumValueInput, {
+      target: { value: "paid" },
+    })
+
+    expect(document.activeElement).toBe(enumValueInput)
+  })
+
   it("renders nullable array item editors without a schema provider", () => {
     render(
       <PropertyForm
@@ -228,7 +346,7 @@ describe("PropertyForm", () => {
           originalName: "amounts",
         })}
         onCommitPropertyDraft={() => {}}
-      />,
+      />
     )
 
     expect(screen.getByText("List item type")).toBeTruthy()

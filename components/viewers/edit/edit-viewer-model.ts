@@ -1,10 +1,12 @@
-import type { BBox, FormField } from "@/components/viewers/lib/edit-types"
+import type { BBox } from "@/components/viewers/lib/edit-types"
 
 import type {
   EditViewerDocument,
-  EditViewerFeatures,
   EditViewerField,
+  EditViewerInputField,
+  EditViewerInputResult,
   EditViewerMode,
+  EditViewerOptions,
   EditViewerResult,
 } from "./edit-viewer-types"
 
@@ -16,20 +18,14 @@ export type EditViewerFilter =
   | "checkbox"
   | "no_location"
 
-type BoundaryEditViewerField =
-  | EditViewerField
-  | FormField
-  | (Omit<EditViewerField, "maxLength"> & { max_length?: number })
-
 export interface EditViewerModeInput {
-  result?: EditViewerResult | null
-  fields?: readonly BoundaryEditViewerField[]
+  fields: readonly EditViewerField[]
   sourceDocument?: EditViewerDocument | null
   filledDocument?: EditViewerDocument | null
-  features?: EditViewerFeatures
+  options: Required<EditViewerOptions>
 }
 
-const DEFAULT_FEATURES: Required<EditViewerFeatures> = {
+const DEFAULT_OPTIONS: Required<EditViewerOptions> = {
   fieldPanel: true,
   search: true,
   filters: true,
@@ -41,25 +37,36 @@ const MODE_FALLBACK_ORDER: EditViewerMode[] = ["filled", "preview", "source"]
 
 const MODE_DISPLAY_ORDER: EditViewerMode[] = ["source", "preview", "filled"]
 
-export function resolveEditViewerFeatures(
-  features: EditViewerFeatures | undefined
-): Required<EditViewerFeatures> {
-  return { ...DEFAULT_FEATURES, ...features }
+export function resolveEditViewerOptions(
+  options: EditViewerOptions | undefined
+): Required<EditViewerOptions> {
+  return { ...DEFAULT_OPTIONS, ...options }
 }
 
-export function normalizeEditViewerFields(
-  fields: readonly BoundaryEditViewerField[] | null | undefined
-): EditViewerField[] {
-  if (!fields) return []
-  return fields.map((field, index) => ({
-    key: field.key || `field_${index}`,
-    description: field.description || field.key || `Field ${index + 1}`,
+export function normalizeEditViewerResult(
+  result: EditViewerInputResult | null | undefined
+): EditViewerResult {
+  const fields = result?.fields ?? []
+  return {
+    fields: fields.map(normalizeEditViewerField),
+    editType: result?.editType,
+  }
+}
+
+function normalizeEditViewerField(
+  field: EditViewerInputField,
+  index: number
+): EditViewerField {
+  const key = field.key || `field_${index}`
+  return {
+    key,
+    description: field.description || key || `Field ${index + 1}`,
     type: field.type === "checkbox" ? "checkbox" : "text",
     value: normalizeFieldValue(field.value),
     bbox: field.bbox ? normalizeBBox(field.bbox) : undefined,
     combing: field.combing,
     maxLength: normalizeMaxLength(field),
-  }))
+  }
 }
 
 function normalizeFieldValue(value: string | boolean | null | undefined) {
@@ -68,7 +75,7 @@ function normalizeFieldValue(value: string | boolean | null | undefined) {
   return String(value)
 }
 
-function normalizeMaxLength(field: BoundaryEditViewerField) {
+function normalizeMaxLength(field: EditViewerInputField) {
   if ("maxLength" in field && typeof field.maxLength === "number") {
     return field.maxLength
   }
@@ -146,9 +153,7 @@ export function displayEditFieldValue(field: EditViewerField): string {
 }
 
 export function deriveEditViewerModes(input: EditViewerModeInput) {
-  const features = resolveEditViewerFeatures(input.features)
-  const fields = normalizeEditViewerFields(input.result?.fields ?? input.fields)
-  const hasLocatedFields = fields.some((field) => Boolean(field.bbox))
+  const hasLocatedFields = input.fields.some((field) => Boolean(field.bbox))
   const hasSource = Boolean(input.sourceDocument)
   const filledOutputAvailable = Boolean(input.filledDocument)
   const modes: EditViewerMode[] = []
@@ -158,7 +163,7 @@ export function deriveEditViewerModes(input: EditViewerModeInput) {
   }
 
   if (
-    features.preview &&
+    input.options.preview &&
     hasSource &&
     hasLocatedFields &&
     input.sourceDocument &&
@@ -167,7 +172,7 @@ export function deriveEditViewerModes(input: EditViewerModeInput) {
     modes.push("preview")
   }
 
-  if (features.filledOutput && filledOutputAvailable) {
+  if (input.options.filledOutput && filledOutputAvailable) {
     modes.push("filled")
   }
 
@@ -240,17 +245,13 @@ export interface EditViewerFieldGroup {
 export function groupEditViewerFieldsByPage(
   fields: readonly EditViewerField[]
 ): EditViewerFieldGroup[] {
-  const pageGroups = new Map<number, EditViewerField[]>()
+  const pageGroups = groupLocatedEditViewerFieldsByPage(fields)
   const unlocatedFields: EditViewerField[] = []
 
   for (const field of fields) {
     if (!field.bbox) {
       unlocatedFields.push(field)
-      continue
     }
-    const pageFields = pageGroups.get(field.bbox.page) ?? []
-    pageFields.push(field)
-    pageGroups.set(field.bbox.page, pageFields)
   }
 
   const groups: EditViewerFieldGroup[] = Array.from(pageGroups.entries())
@@ -272,6 +273,21 @@ export function groupEditViewerFieldsByPage(
   }
 
   return groups
+}
+
+export function groupLocatedEditViewerFieldsByPage(
+  fields: readonly EditViewerField[]
+): Map<number, EditViewerField[]> {
+  const pageGroups = new Map<number, EditViewerField[]>()
+
+  for (const field of fields) {
+    if (!field.bbox) continue
+    const pageFields = pageGroups.get(field.bbox.page) ?? []
+    pageFields.push(field)
+    pageGroups.set(field.bbox.page, pageFields)
+  }
+
+  return pageGroups
 }
 
 export function canPreviewEditViewerDocument(document: EditViewerDocument) {

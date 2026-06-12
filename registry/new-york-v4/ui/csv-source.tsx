@@ -4,7 +4,10 @@ import * as React from "react"
 
 import type { Source, SourceAnchor } from "@/lib/document-source"
 import type { SourceTarget } from "@/hooks/use-source-link"
-import type { CsvViewerHandle } from "@/components/ui/csv-viewer"
+import type {
+  CsvCellAddress,
+  CsvViewerHandle,
+} from "@/components/ui/csv-viewer"
 
 /** Spreadsheet column letter → 0-based index ("A" → 0, "C" → 2, "AA" → 26). */
 export function columnLetterToIndex(letter: string): number {
@@ -17,16 +20,17 @@ export function columnLetterToIndex(letter: string): number {
 }
 
 /**
- * A `csv_cell` anchor → 0-based `{ row, col }` data coordinates. `row` is the
- * 1-based data row (the header is not a data row); `column` is a letter.
+ * A `csv_cell` anchor → 0-based data coordinates. `row` is the 1-based data
+ * row (the header is not a data row); `column` is a letter.
  */
-export function csvAnchorToCell(
-  anchor: SourceAnchor
-): { row: number; col: number } | undefined {
+export function csvAnchorToCell(anchor: SourceAnchor): CsvCellAddress | null {
   if (anchor.kind === "csv_cell") {
-    return { row: anchor.row - 1, col: columnLetterToIndex(anchor.column) }
+    return {
+      rowIndex: anchor.row - 1,
+      columnIndex: columnLetterToIndex(anchor.column),
+    }
   }
-  return undefined
+  return null
 }
 
 /** A stable `SourceTarget` over a `CsvViewer` ref — pass to `useSourceLink`. */
@@ -37,7 +41,7 @@ export function useCsvSourceTarget(
     () => ({
       scrollTo: (source: Source, options) => {
         const cell = csvAnchorToCell(source.anchor)
-        if (cell) viewerRef.current?.scrollToCell(cell.row, cell.col, options)
+        if (cell) viewerRef.current?.scrollToCell(cell, options)
       },
     }),
     [viewerRef]
@@ -50,6 +54,6 @@ export function useCsvSourceTarget(
  */
 export function sourceToCsvCell(
   source: Source | undefined
-): { row: number; col: number } | null {
+): CsvCellAddress | null {
   return (source && csvAnchorToCell(source.anchor)) || null
 }

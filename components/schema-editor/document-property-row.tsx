@@ -2,24 +2,25 @@
 
 import type * as React from "react"
 
-import type { SchemaDocument } from "@/components/schema-editor/document"
+import type {
+  DocumentNodeView,
+  SchemaDocument,
+} from "@/components/schema-editor/document"
 import type {
   DocumentSchemaNodeEditorProps,
   RenderDocumentNodeEditor,
   SchemaEditorMode,
 } from "@/components/schema-editor/document-node-editor-types"
-import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
 import type { ResolvedSchemaBuilderFeatures } from "@/components/schema-editor/schema-builder-types"
 
 interface DocumentPropertyRowProps {
-  applyDocOp: DocumentSchemaNodeEditorProps["applyDocOp"]
+  propertyId: string
+  dispatch: DocumentSchemaNodeEditorProps["dispatch"]
   doc: SchemaDocument
   propertyName: string
-  propertyNode: ExtendedJSONSchema7
-  propertyNodeId: string
+  nodeView: DocumentNodeView
   rootLayout: boolean
   path: string
-  defs: DocumentSchemaNodeEditorProps["defs"]
   setDefsAccordionOpen: (open: boolean) => void
   draggedParentRef: DocumentSchemaNodeEditorProps["draggedParentRef"]
   draggedPropertyRef: DocumentSchemaNodeEditorProps["draggedPropertyRef"]
@@ -30,10 +31,7 @@ interface DocumentPropertyRowProps {
   siblingNames: string[]
   renderNode: RenderDocumentNodeEditor
   onRequiredChange: (required: boolean) => void
-  onNameChange: (
-    newName: string,
-    updatedNode?: ExtendedJSONSchema7
-  ) => void
+  onNameChange: DocumentSchemaNodeEditorProps["onNameChange"]
   onDelete: () => void
   onDragStart: React.DragEventHandler<HTMLDivElement>
   onDragOver: React.DragEventHandler<HTMLDivElement>
@@ -42,14 +40,13 @@ interface DocumentPropertyRowProps {
 }
 
 export function DocumentPropertyRow({
-  applyDocOp,
+  propertyId,
+  dispatch,
   doc,
   propertyName,
-  propertyNode,
-  propertyNodeId,
+  nodeView,
   rootLayout,
   path,
-  defs,
   setDefsAccordionOpen,
   draggedParentRef,
   draggedPropertyRef,
@@ -75,10 +72,11 @@ export function DocumentPropertyRow({
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
       onDrop={onDrop}
-      data-prop-key={propertyName}
+      data-property-id={propertyId}
+      data-property-name={propertyName}
     >
       {renderNode({
-        applyDocOp,
+        dispatch,
         doc,
         draggedParentRef,
         draggedPropertyRef,
@@ -88,11 +86,10 @@ export function DocumentPropertyRow({
         siblingNames,
         onRequiredChange,
         name: propertyName,
-        nodeId: propertyNodeId,
-        node: propertyNode,
+        nodeId: nodeView.nodeId,
+        nodeView,
         onNameChange,
         path: `${path}.${propertyName}`,
-        defs,
         canDelete: true,
         onDelete,
         setDefsAccordionOpen,

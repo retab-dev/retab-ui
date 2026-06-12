@@ -95,9 +95,12 @@ function SourceDocumentRenderer({
 
   return (
     <FileViewer
-      src={src}
-      fileName={filename}
-      mimeType={document.mimeType}
+      source={{
+        kind: "url",
+        url: src,
+        fileName: filename,
+        mimeType: document.mimeType,
+      }}
       bare
       className="h-full"
     />
@@ -116,9 +119,12 @@ function FilledDocumentRenderer({
 
   return (
     <FileViewer
-      src={src}
-      fileName={document.filename ?? "document"}
-      mimeType={document.mimeType}
+      source={{
+        kind: "url",
+        url: src,
+        fileName: document.filename ?? "document",
+        mimeType: document.mimeType,
+      }}
       bare
       className="h-full"
     />
@@ -126,13 +132,19 @@ function FilledDocumentRenderer({
 }
 
 function useDocumentSrc(document: EditViewerDocument) {
-  const stableSrc = document.src ?? null
-  const buffer = document.buffer ?? null
-  const mimeType = document.mimeType
+  const objectUrl = useObjectUrl(
+    document.src ? null : (document.buffer ?? null),
+    document.mimeType
+  )
+
+  return document.src ?? objectUrl
+}
+
+function useObjectUrl(buffer: ArrayBuffer | null, mimeType: string) {
   const [objectUrl, setObjectUrl] = React.useState<string | null>(null)
 
   React.useEffect(() => {
-    if (stableSrc || !buffer) {
+    if (!buffer) {
       setObjectUrl(null)
       return
     }
@@ -140,7 +152,7 @@ function useDocumentSrc(document: EditViewerDocument) {
     const url = URL.createObjectURL(new Blob([buffer], { type: mimeType }))
     setObjectUrl(url)
     return () => URL.revokeObjectURL(url)
-  }, [buffer, mimeType, stableSrc])
+  }, [buffer, mimeType])
 
-  return stableSrc ?? objectUrl
+  return objectUrl
 }

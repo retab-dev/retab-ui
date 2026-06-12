@@ -6,10 +6,8 @@ import type { JSONSchema7 } from "json-schema"
 import { DataCell } from "@/components/json-table/data-cell"
 import type { ProjectedRow } from "@/components/json-table/lib/document-projection"
 import type { TableDocument } from "@/components/json-table/lib/projects-types"
-import {
-  getRowHeightPx,
-  useSheetOptionsStore,
-} from "@/components/json-table/table-options-store"
+import type { FieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
+import type { ColumnWidth } from "@/components/json-table/table-options-store"
 import { TableRow } from "@/components/ui-retab/table"
 
 interface SingleFileFormRowProps {
@@ -17,8 +15,11 @@ interface SingleFileFormRowProps {
   schema: JSONSchema7
   projectedRows: ProjectedRow[]
   visibleKeys: string[]
+  fieldMetadataByKey: Record<string, FieldMetadata | undefined>
   /** Which sub-row of the document this renders (set by the row virtualizer). */
   rowIdx: number
+  rowHeightPx: number
+  columnWidth: ColumnWidth
   /** Which object/array cell editor is open, keyed by materialized field path. */
   openEditorPath: string | null
   setOpenEditorPath: (key: string | null) => void
@@ -38,7 +39,10 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
     schema,
     projectedRows,
     visibleKeys,
+    fieldMetadataByKey,
     rowIdx,
+    rowHeightPx,
+    columnWidth,
     openEditorPath,
     setOpenEditorPath,
     onUpdateDocument,
@@ -46,8 +50,6 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
     onCellHoverStart,
     onCellHoverEnd,
   }) => {
-    const { rowHeight, columnWidth } = useSheetOptionsStore()
-
     const documentId = document.id
 
     // Stable callback identity so DataCell's React.memo holds across the
@@ -63,7 +65,6 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
 
     // Render a single sub-row (one of the document's `rowCount` rows). Which
     // rows are mounted is decided by the row virtualizer in the parent.
-    const rowHeightPx = getRowHeightPx(rowHeight)
     // Compute the absolute-positioning style here (not in the parent) and
     // memoize it on the only inputs that matter. Passing a fresh `style` object
     // down on every scroll frame was breaking this row's React.memo, forcing
@@ -97,6 +98,7 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
               key={key}
               templateFieldPath={key}
               projectedCell={projectedCell}
+              fieldMetadata={fieldMetadataByKey[key]}
               schema={schema}
               document={document}
               docId={documentId}

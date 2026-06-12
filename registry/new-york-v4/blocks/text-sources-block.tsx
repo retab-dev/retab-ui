@@ -50,9 +50,12 @@ export function TextSourcesBlock() {
       <div className="relative min-w-0 flex-1">
         <TextViewer
           ref={viewerRef}
-          src={TEXT_URL}
+          source={{
+            kind: "url",
+            url: TEXT_URL,
+            fileName: "extraction-run.log",
+          }}
           bare
-          downloadName="extraction-run.log"
           className="h-full"
           highlight={sourceToTextHighlight(link.activeSource)}
         />

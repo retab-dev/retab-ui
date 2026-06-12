@@ -3,15 +3,18 @@
 import { useState } from "react"
 import type { JSONSchema7 } from "json-schema"
 
-import { renamePropertyAtPath } from "@/components/json-table/schema-property-operations"
 import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
 import { getEffectiveNode } from "@/components/schema-editor/lib/json-schema-utils"
 import { PropertyForm } from "@/components/schema-editor/property-form"
 import type {
   PropertyDraft,
   PropertyFormCommand,
-} from "@/components/schema-editor/property-form-types"
+} from "@/components/schema-editor/property-form/types"
 import { ResetOnMountRunner } from "@/components/schema-editor/reset-on-mount-runner"
+import {
+  applyTemplateToTableSchemaProperty,
+  renamePropertyAtPath,
+} from "@/components/json-table/schema-property-operations"
 import { formatTitle } from "@/components/schema-editor/schema-title"
 
 export const defaultNewProperty: ExtendedJSONSchema7 = {
@@ -85,16 +88,12 @@ export function PropertyEditor({
   const handleCommand = async (command: PropertyFormCommand) => {
     if (command.type !== "installObjectTemplate") return
 
-    const { applyObjectTemplateReference } = await import(
-      "@/components/schema-editor/optional/object-templates/object-template-reference"
+    const nextSchema = await applyTemplateToTableSchemaProperty(
+      editedSchema,
+      propertyKey,
+      command.templateName
     )
-    setEditedSchema((currentSchema) =>
-      applyObjectTemplateReference(
-        currentSchema,
-        initialProperty,
-        command.templateName
-      ).schema
-    )
+    setEditedSchema(nextSchema)
   }
 
   return (

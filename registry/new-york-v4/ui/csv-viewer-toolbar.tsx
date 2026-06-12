@@ -5,12 +5,15 @@ import { Download, Maximize, Minus, Plus } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 
+export function useCsvViewerZoom() {
+  const [zoom, setZoom] = React.useState(1)
+  return { zoom, setZoom }
+}
+
 export function CsvViewerToolbar({
   rowCount,
   columnCount,
   isLoading,
-  showZoom,
-  showDownload,
   zoom,
   onZoomChange,
   onDownload,
@@ -18,8 +21,6 @@ export function CsvViewerToolbar({
   rowCount: number
   columnCount: number
   isLoading: boolean
-  showZoom: boolean
-  showDownload: boolean
   zoom: number
   onZoomChange: (zoom: number) => void
   onDownload: () => void
@@ -40,56 +41,52 @@ export function CsvViewerToolbar({
         <span>
           {columnCount} column{columnCount === 1 ? "" : "s"}
         </span>
-        {showZoom ? (
-          <span className="flex items-center gap-0.5">
-            <button
-              type="button"
-              aria-label="Zoom out"
-              title="Zoom out"
-              onClick={() =>
-                onZoomChange(Math.max(0.25, Math.min(5, zoom / 1.2)))
-              }
-              className="inline-flex size-6 items-center justify-center rounded hover:bg-muted hover:text-foreground"
-            >
-              <Minus className="size-3.5" />
-            </button>
-            <span className="w-10 text-center tabular-nums">
-              {Math.round(zoom * 100)}%
-            </span>
-            <button
-              type="button"
-              aria-label="Zoom in"
-              title="Zoom in"
-              onClick={() =>
-                onZoomChange(Math.max(0.25, Math.min(5, zoom * 1.2)))
-              }
-              className="inline-flex size-6 items-center justify-center rounded hover:bg-muted hover:text-foreground"
-            >
-              <Plus className="size-3.5" />
-            </button>
-            <button
-              type="button"
-              aria-label="Reset zoom"
-              title="Reset zoom"
-              onClick={() => onZoomChange(1)}
-              className="inline-flex size-6 items-center justify-center rounded hover:bg-muted hover:text-foreground"
-            >
-              <Maximize className="size-3.5" />
-            </button>
-          </span>
-        ) : null}
-        {showDownload ? (
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            className="size-7"
-            aria-label="Download"
-            title="Download"
-            onClick={onDownload}
+        <span className="flex items-center gap-0.5">
+          <button
+            type="button"
+            aria-label="Zoom out"
+            title="Zoom out"
+            onClick={() =>
+              onZoomChange(Math.max(0.25, Math.min(5, zoom / 1.2)))
+            }
+            className="inline-flex size-6 items-center justify-center rounded hover:bg-muted hover:text-foreground"
           >
-            <Download />
-          </Button>
-        ) : null}
+            <Minus className="size-3.5" />
+          </button>
+          <span className="w-10 text-center tabular-nums">
+            {Math.round(zoom * 100)}%
+          </span>
+          <button
+            type="button"
+            aria-label="Zoom in"
+            title="Zoom in"
+            onClick={() =>
+              onZoomChange(Math.max(0.25, Math.min(5, zoom * 1.2)))
+            }
+            className="inline-flex size-6 items-center justify-center rounded hover:bg-muted hover:text-foreground"
+          >
+            <Plus className="size-3.5" />
+          </button>
+          <button
+            type="button"
+            aria-label="Reset zoom"
+            title="Reset zoom"
+            onClick={() => onZoomChange(1)}
+            className="inline-flex size-6 items-center justify-center rounded hover:bg-muted hover:text-foreground"
+          >
+            <Maximize className="size-3.5" />
+          </button>
+        </span>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="size-7"
+          aria-label="Download"
+          title="Download"
+          onClick={onDownload}
+        >
+          <Download />
+        </Button>
       </span>
     </div>
   )

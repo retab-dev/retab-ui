@@ -37,7 +37,8 @@ components/viewers/page-markdown/
   page-markdown-viewer.tsx     shell, pane layout, page sync wiring
   page-markdown-toolbar.tsx    page label, mode tabs, zoom controls, actions
   page-markdown-actions.tsx    copy/download behavior and compact action menu
-  page-markdown-page.tsx       page frame, lazy render, rendered/text content
+  page-markdown-page-frame.tsx page frame, lazy render, reserved height
+  page-markdown-content.tsx    rendered/text markdown content
   page-markdown-hooks.ts       page measurement and pane sync hooks
   page-markdown-model.ts       pure scale, height, page-sync transitions
   page-markdown-types.ts       public primitive types

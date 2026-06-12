@@ -5,53 +5,47 @@ import * as React from "react"
 import { getEffectiveType } from "@/components/schema-editor/draft/draft-node-edits"
 import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
 import { getEffectiveNode } from "@/components/schema-editor/lib/json-schema-utils"
-import { buildCommittedDraft } from "@/components/schema-editor/property-form/model/property-draft-commit"
 import { resolvePropertyCapabilities } from "@/components/schema-editor/property-form/model/property-capabilities"
-import { getArrayItemsForDraft } from "@/components/schema-editor/property-form/model/effective-node-edits"
-import {
-  propertyDraftReducer,
-} from "@/components/schema-editor/property-form/reducer"
+import { buildCommittedDraft } from "@/components/schema-editor/property-form/model/property-draft-commit"
+import { propertyDraftReducer } from "@/components/schema-editor/property-form/reducer"
 import type {
-  PropertyCapabilities,
-  PropertyDraft,
   PropertyDraftOperation,
   PropertyFormMode,
-  PropertyFormSchemaContext,
+  PropertyFormProps,
   PropertyFormViewModel,
-  PropertyValidation,
 } from "@/components/schema-editor/property-form/types"
 import { validatePropertyDraft } from "@/components/schema-editor/property-form/validation"
 
+type PropertyFormControllerInput = Omit<
+  PropertyFormProps,
+  "mode" | "submitLabel"
+> & {
+  mode: PropertyFormMode
+  submitLabel: string
+  canDelete: boolean
+}
+
 export function usePropertyFormController({
-  draft: initialDraft,
-  context,
+  propertyDraft: initialPropertyDraft,
+  schemaContext,
   capabilities: capabilitiesProp,
   validation: validationProp,
   mode,
   submitLabel,
   canDelete,
-  onDraftChange,
-  onCommit,
+  onPropertyDraftChange,
+  onCommitPropertyDraft,
   onCancel,
   onDelete,
-}: {
-  draft: PropertyDraft
-  context: PropertyFormSchemaContext
-  capabilities?: PropertyCapabilities
-  validation?: PropertyValidation
-  mode: PropertyFormMode
-  submitLabel: string
-  canDelete: boolean
-  onDraftChange?: (draft: PropertyDraft) => void
-  onCommit: (draft: PropertyDraft) => void | Promise<void>
-  onCancel?: () => void
-  onDelete?: () => void
-}): PropertyFormViewModel {
-  const [propertyDraft, setPropertyDraft] = React.useState(initialDraft)
+}: PropertyFormControllerInput): PropertyFormViewModel {
+  const [propertyDraft, setPropertyDraft] =
+    React.useState(initialPropertyDraft)
+  const [isSubmitting, setIsSubmitting] = React.useState(false)
+  const isSubmittingRef = React.useRef(false)
 
   React.useEffect(() => {
-    setPropertyDraft(initialDraft)
-  }, [initialDraft])
+    setPropertyDraft(initialPropertyDraft)
+  }, [initialPropertyDraft])
 
   const capabilities = React.useMemo(
     () =>
@@ -67,11 +61,10 @@ export function usePropertyFormController({
     validationProp ??
     validatePropertyDraft({
       propertyDraft,
-      schemaContext: context,
+      schemaContext,
     })
   const effectiveSchemaNode = getEffectiveNode(propertyDraft.schemaNode)
   const effectiveType = getEffectiveType(propertyDraft.schemaNode)
-  const arrayItemSchemaNode = getArrayItemsForDraft(propertyDraft.schemaNode)
 
   const updatePropertyDraft = React.useCallback(
     (operation: PropertyDraftOperation) => {
@@ -80,23 +73,33 @@ export function usePropertyFormController({
           currentPropertyDraft,
           operation
         )
-        onDraftChange?.(nextPropertyDraft)
+        onPropertyDraftChange?.(nextPropertyDraft)
         return nextPropertyDraft
       })
     },
-    [onDraftChange]
+    [onPropertyDraftChange]
   )
 
   const commitPropertyDraft = React.useCallback(async () => {
+    if (isSubmittingRef.current) return false
+
     const currentValidation = validatePropertyDraft({
       propertyDraft,
-      schemaContext: context,
+      schemaContext,
     })
     if (!currentValidation.canCommit) return false
 
-    await onCommit(buildCommittedDraft(propertyDraft))
-    return true
-  }, [onCommit, propertyDraft, context])
+    isSubmittingRef.current = true
+    setIsSubmitting(true)
+
+    try {
+      await onCommitPropertyDraft(buildCommittedDraft(propertyDraft))
+      return true
+    } finally {
+      isSubmittingRef.current = false
+      setIsSubmitting(false)
+    }
+  }, [onCommitPropertyDraft, propertyDraft, schemaContext])
 
   const keyDown = React.useCallback(
     (event: React.KeyboardEvent) => {
@@ -121,13 +124,13 @@ export function usePropertyFormController({
     !effectiveSchemaNode.$ref
   const showArrayItems =
     capabilities.canEditArrayItems && effectiveType.type === "array"
-  const enumValues = Array.isArray(effectiveSchemaNode.enum)
-    ? effectiveSchemaNode.enum
-    : []
+  const showEnumValues =
+    capabilities.canEditEnumValues && effectiveType.type === "enum"
+  const showSchemaNodeDetails =
+    showEnumValues || showObjectFields || showArrayItems
 
   return {
     propertyDraft,
-    effectiveSchemaNode,
     validation,
     capabilities,
     fields: {
@@ -144,7 +147,7 @@ export function usePropertyFormController({
       type: {
         name: propertyDraft.name,
         schemaNode: propertyDraft.schemaNode,
-        schemaContext: context,
+        schemaContext,
         mode: editMode,
         disabled: !capabilities.canEditType,
         onChange: (schemaNode: ExtendedJSONSchema7) =>
@@ -171,37 +174,19 @@ export function usePropertyFormController({
             description,
           }),
       },
-      enumValues:
-        capabilities.canEditEnumValues && effectiveType.type === "enum"
-          ? {
-              values: enumValues,
-              disabled: !capabilities.canEditEnumValues,
-              onChange: (values) =>
-                updatePropertyDraft({
-                  type: "setEnumValues",
-                  values,
-                }),
-            }
-          : undefined,
-      objectFields: showObjectFields
-          ? {
+      schemaNodeDetails: showSchemaNodeDetails
+        ? {
             name: propertyDraft.name,
-            schemaNode: effectiveSchemaNode,
-            schemaContext: context,
+            schemaNode: propertyDraft.schemaNode,
+            schemaContext,
+            mode: editMode,
+            disabled:
+              !capabilities.canEditEnumValues &&
+              !capabilities.canEditNestedObject &&
+              !capabilities.canEditArrayItems,
             onChange: (schemaNode) =>
               updatePropertyDraft({
-                type: "replaceEffectiveSchemaNode",
-                schemaNode,
-              }),
-          }
-        : undefined,
-      arrayItems: showArrayItems
-          ? {
-            schemaNode: arrayItemSchemaNode,
-            schemaContext: context,
-            onChange: (schemaNode) =>
-              updatePropertyDraft({
-                type: "setArrayItemSchemaNode",
+                type: "replacePropertySchemaNode",
                 schemaNode,
               }),
           }
@@ -209,6 +194,7 @@ export function usePropertyFormController({
     },
     footer: {
       canDelete: capabilities.canDelete,
+      isSubmitting,
       isSubmitDisabled: !validation.canCommit,
       submitLabel,
       onCancel,

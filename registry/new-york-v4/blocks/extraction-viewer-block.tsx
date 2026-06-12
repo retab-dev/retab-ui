@@ -205,7 +205,7 @@ function ImageTab() {
         bare
         downloadFileName="attention-page-1.png"
         className="h-full"
-        renderPageOverlay={renderImageSourceOverlay(link.activeSource)}
+        renderFrameOverlay={renderImageSourceOverlay(link.activeSource)}
       />
     </ExtractionShell>
   )
@@ -219,9 +219,12 @@ function TextTab() {
     <ExtractionShell link={link} extraction={TEXT_EXTRACTION}>
       <TextViewer
         ref={viewerRef}
-        src={TEXT_URL}
+        source={{
+          kind: "url",
+          url: TEXT_URL,
+          fileName: "extraction-run.log",
+        }}
         bare
-        downloadName="extraction-run.log"
         className="h-full"
         highlight={sourceToTextHighlight(link.activeSource)}
       />

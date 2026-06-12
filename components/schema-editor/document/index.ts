@@ -1,4 +1,10 @@
 export type {
+  DocumentDefinitionView,
+  DocumentNodeView,
+  DocumentPropertyView,
+  SchemaDocumentView,
+} from "./view-model"
+export type {
   DefinitionEntry,
   DocumentNode,
   EnumValue,
@@ -12,6 +18,10 @@ export type {
 export type { SchemaEditorType } from "./operations"
 
 export { createId } from "./id"
+export {
+  getDocumentNodeView,
+  getSchemaDocumentView,
+} from "./view-model"
 export {
   fromJsonSchema,
   nodeFromJson,

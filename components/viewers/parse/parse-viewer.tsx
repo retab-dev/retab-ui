@@ -33,6 +33,7 @@ export function ParseViewer({
       renderDocument={renderDocument}
       onVisiblePageChange={onVisiblePageChange}
       downloadFileName="parse-output.md"
+      processingLabel="Parsing document..."
     />
   )
 }

@@ -15,6 +15,7 @@ import { PptxViewer } from "@/registry/new-york-v4/ui/pptx-viewer"
 import {
   getPptxFitScale,
   getPptxResetKey,
+  type PptxSlideOverlayProps,
 } from "@/registry/new-york-v4/ui/pptx-viewer-core"
 import { parsePptxSlideSize } from "@/registry/new-york-v4/ui/pptx-viewer-presentation"
 import { getPptxSource } from "@/registry/new-york-v4/ui/pptx-viewer-source"
@@ -283,34 +284,8 @@ describe("PptxViewer", () => {
     expect(onScaleChange).toHaveBeenCalledWith(null)
   })
 
-  it("keeps the deprecated public page overlay prop mapped to slide overlay geometry", async () => {
-    const renderPageOverlay = vi.fn(() => (
-      <div data-testid="pptx-overlay-marker" />
-    ))
-
-    await renderPptx(
-      <PptxViewer
-        src="/deck.pptx"
-        scale={1}
-        renderPageOverlay={renderPageOverlay}
-      />
-    )
-
-    expect(await screen.findByTestId("pptx-overlay-marker")).toBeTruthy()
-    expect(renderPageOverlay).toHaveBeenCalledWith(
-      expect.objectContaining({
-        height: 720,
-        pageNumber: 1,
-        rotation: 0,
-        scale: 1,
-        slideNumber: 1,
-        width: 960,
-      })
-    )
-  })
-
-  it("uses the preferred slide overlay prop", async () => {
-    const renderSlideOverlay = vi.fn(() => (
+  it("passes slide overlay geometry with slide-native naming", async () => {
+    const renderSlideOverlay = vi.fn((_props: PptxSlideOverlayProps) => (
       <div data-testid="pptx-slide-overlay-marker" />
     ))
 
@@ -326,23 +301,27 @@ describe("PptxViewer", () => {
     expect(renderSlideOverlay).toHaveBeenCalledWith(
       expect.objectContaining({
         height: 720,
-        pageNumber: 1,
         rotation: 0,
         scale: 1,
         slideNumber: 1,
         width: 960,
       })
     )
+    expect(Object.keys(renderSlideOverlay.mock.calls[0]?.[0] ?? {})).toEqual([
+      "slideNumber",
+      "width",
+      "height",
+      "scale",
+      "rotation",
+    ])
   })
 
-  it("reports visible slides through the slide-native and deprecated callbacks", async () => {
+  it("reports visible slides through the slide-native callback", async () => {
     const onVisibleSlideChange = vi.fn()
-    const onVisiblePageChange = vi.fn()
 
     await renderPptx(
       <PptxViewer
         src="/deck.pptx"
-        onVisiblePageChange={onVisiblePageChange}
         onVisibleSlideChange={onVisibleSlideChange}
       />
     )
@@ -357,28 +336,7 @@ describe("PptxViewer", () => {
 
     await waitFor(() => {
       expect(onVisibleSlideChange).toHaveBeenCalledWith(1)
-      expect(onVisiblePageChange).toHaveBeenCalledWith(1)
     })
-  })
-
-  it("prefers slide overlay over deprecated page overlay when both are present", async () => {
-    const renderSlideOverlay = vi.fn(() => (
-      <div data-testid="pptx-slide-overlay-marker" />
-    ))
-    const renderPageOverlay = vi.fn(() => null)
-
-    await renderPptx(
-      <PptxViewer
-        src="/deck.pptx"
-        scale={1}
-        renderPageOverlay={renderPageOverlay}
-        renderSlideOverlay={renderSlideOverlay}
-      />
-    )
-
-    expect(await screen.findByTestId("pptx-slide-overlay-marker")).toBeTruthy()
-    expect(renderSlideOverlay).toHaveBeenCalled()
-    expect(renderPageOverlay).not.toHaveBeenCalled()
   })
 
   it("passes rotated visible slide size to the public overlay prop", async () => {

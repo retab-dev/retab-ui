@@ -4,10 +4,11 @@ import type { PdfViewerHandle } from "@/components/ui/pdf-viewer"
 
 import {
   deriveEditViewerModes,
+  groupLocatedEditViewerFieldsByPage,
   isEditFieldFilled,
-  normalizeEditViewerFields,
-  resolveEditViewerFeatures,
+  normalizeEditViewerResult,
   resolveEditViewerMode,
+  resolveEditViewerOptions,
   type EditViewerFilter,
 } from "./edit-viewer-model"
 import type {
@@ -25,7 +26,7 @@ export function useEditViewerController({
   selectedFieldKey,
   onSelectedFieldKeyChange,
   status,
-  features,
+  options,
 }: Pick<
   EditViewerProps,
   | "result"
@@ -35,29 +36,33 @@ export function useEditViewerController({
   | "onModeChange"
   | "selectedFieldKey"
   | "onSelectedFieldKeyChange"
-  | "features"
+  | "options"
 > & {
   status: NonNullable<EditViewerProps["status"]>
 }) {
   const viewerRef = React.useRef<PdfViewerHandle>(null)
-  const resolvedFeatures = React.useMemo(
-    () => resolveEditViewerFeatures(features),
-    [features]
+  const resolvedOptions = React.useMemo(
+    () => resolveEditViewerOptions(options),
+    [options]
   )
-  const fields = React.useMemo(
-    () => normalizeEditViewerFields(result?.fields ?? []),
-    [result?.fields]
+  const editResult = React.useMemo(
+    () => normalizeEditViewerResult(result),
+    [result]
+  )
+  const fields = editResult.fields
+  const fieldsByPage = React.useMemo(
+    () => groupLocatedEditViewerFieldsByPage(fields),
+    [fields]
   )
   const availableModes = React.useMemo(
     () =>
       deriveEditViewerModes({
-        result: result ? { ...result, fields } : undefined,
         fields,
         sourceDocument,
         filledDocument,
-        features: resolvedFeatures,
+        options: resolvedOptions,
       }),
-    [fields, filledDocument, resolvedFeatures, result, sourceDocument]
+    [fields, filledDocument, resolvedOptions, sourceDocument]
   )
 
   const [uncontrolledMode, setUncontrolledMode] =
@@ -114,11 +119,8 @@ export function useEditViewerController({
       setSelectedFieldKey(nextSelectedFieldKey)
       const field = fieldByKey.get(nextSelectedFieldKey)
       if (!field?.bbox) return
-      viewerRef.current?.scrollToPageArea(field.bbox.page, {
+      viewerRef.current?.scrollToPageTarget(field.bbox.page, {
         top: field.bbox.top * 100,
-        left: field.bbox.left * 100,
-        width: field.bbox.width * 100,
-        height: field.bbox.height * 100,
       })
     },
     [fieldByKey, setSelectedFieldKey]
@@ -139,6 +141,7 @@ export function useEditViewerController({
     changeMode,
     effectiveFieldKey,
     fields,
+    fieldsByPage,
     filledCount,
     filter,
     hasOutput:
@@ -146,7 +149,7 @@ export function useEditViewerController({
       availableModes.length > 0 ||
       fields.length > 0,
     query,
-    resolvedFeatures,
+    resolvedOptions,
     selectedFieldKey: selectedFieldKeyValue,
     selectField,
     setFilter,

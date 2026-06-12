@@ -2,14 +2,14 @@ import type { CsvDialect } from "@/lib/csv"
 
 export interface CsvWorkerRequest {
   parseRequestId: string
-  source: Blob | string
+  source: Blob
   dialect: CsvDialect
   batchSize: number
 }
 
 export type CsvWorkerResponse =
   | { type: "columns"; parseRequestId: string; columns: string[] }
-  | { type: "rows"; parseRequestId: string; rows: string[][] }
+  | { type: "sourceRows"; parseRequestId: string; sourceRows: string[][] }
   | { type: "done"; parseRequestId: string }
   | { type: "error"; parseRequestId: string; message: string }
 
@@ -24,14 +24,14 @@ export function parseCsvInWorker({
   dialect,
   batchSize,
   onColumns,
-  onRows,
+  onSourceRows,
   signal,
 }: {
-  source: Blob | string
+  source: Blob
   dialect: CsvDialect
   batchSize: number
   onColumns: (columns: string[]) => void
-  onRows: (rows: string[][]) => void
+  onSourceRows: (sourceRows: string[][]) => void
   signal: AbortSignal
 }): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -62,7 +62,7 @@ export function parseCsvInWorker({
       const message = event.data
       if (message.parseRequestId !== parseRequestId) return
       if (message.type === "columns") onColumns(message.columns)
-      else if (message.type === "rows") onRows(message.rows)
+      else if (message.type === "sourceRows") onSourceRows(message.sourceRows)
       else if (message.type === "done") {
         cleanup()
         resolve()

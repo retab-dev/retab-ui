@@ -96,6 +96,17 @@ describe("SchemaBuilder interactions (doc-routed)", () => {
     expect(screen.queryAllByRole("checkbox")).toHaveLength(0)
   })
 
+  it("names icon-only property action buttons", () => {
+    renderEditor(sample)
+
+    expect(
+      screen.getAllByRole("button", { name: "Edit field properties" }).length
+    ).toBeGreaterThan(0)
+    expect(
+      screen.getAllByRole("button", { name: "Delete field" }).length
+    ).toBeGreaterThan(0)
+  })
+
   it("every property — new and existing — is emitted as required", () => {
     const { last } = renderEditor(sample)
     const input = screen.getAllByPlaceholderText("New property name")[0]

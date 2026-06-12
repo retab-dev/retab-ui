@@ -16,7 +16,7 @@ viewer:
 ```
 
 It should reserve correct slide boxes before rendering, render lazily without
-blocking scroll, expose page-level overlays for citations, and recover cleanly
+blocking scroll, expose slide-level overlays for citations, and recover cleanly
 when the source or viewer inputs change.
 
 It should not promise pixel-perfect PowerPoint fidelity. If a caller needs exact
@@ -38,8 +38,8 @@ foundations:
 - Recent rendered slides are cached as `ImageBitmap`s.
 - Scroll-aware deferral keeps fast flings from competing with uncached renders.
 - The toolbar supports slide count, zoom, fit width, rotate, and download.
-- The API matches the PDF viewer conceptually through `renderPageOverlay`,
-  `onVisiblePageChange`, and `onScrollProgressChange`.
+- The API is slide-native through `renderSlideOverlay`,
+  `onVisibleSlideChange`, and `onScrollProgressChange`.
 
 It is not yet the final design.
 
@@ -84,7 +84,7 @@ These rules should be true after hardening:
 
 ## Public API
 
-Keep the API narrow and aligned with the PDF viewer:
+Keep the API narrow and slide-native:
 
 ```ts
 export interface PptxViewerProps {
@@ -93,8 +93,8 @@ export interface PptxViewerProps {
   scale?: number
   toolbar?: boolean
   downloadFileName?: string
-  renderPageOverlay?: (props: PageOverlayProps) => React.ReactNode
-  onVisiblePageChange?: (page: number) => void
+  renderSlideOverlay?: (props: PptxSlideOverlayProps) => React.ReactNode
+  onVisibleSlideChange?: (slide: number) => void
   onScrollProgressChange?: (progress: number) => void
   bare?: boolean
   header?: React.ReactNode
@@ -107,7 +107,7 @@ Rules:
 
 - `src` is the deck identity.
 - `scale` should be either a controlled scale or renamed to `initialScale`.
-- `renderPageOverlay` receives final rendered slide-box dimensions, including
+- `renderSlideOverlay` receives final rendered slide-box dimensions, including
   rotation.
 - `header` and `aside` are layout slots only; they should not change parsing or
   render semantics.
@@ -234,11 +234,11 @@ scrollable.
 
 ## Overlay Semantics
 
-`renderPageOverlay` should continue to receive the visible slide box:
+`renderSlideOverlay` receives the visible slide box:
 
 ```ts
-export interface PageOverlayProps {
-  pageNumber: number
+export interface PptxSlideOverlayProps {
+  slideNumber: number
   width: number
   height: number
   scale: number
@@ -280,7 +280,7 @@ Test:
 - prop scale behavior matches the chosen controlled or initial-only design
 - a single slide render failure shows per-slide error UI
 - unmounted slides do not set rendered state after cancellation
-- `onVisiblePageChange` and `onScrollProgressChange` fire from scroll events
+- `onVisibleSlideChange` and `onScrollProgressChange` fire from scroll events
 - download uses `downloadFileName`
 
 ### Browser Verification

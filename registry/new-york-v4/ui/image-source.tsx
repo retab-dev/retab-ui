@@ -6,8 +6,8 @@ import type { Source, SourceAnchor, SourceArea } from "@/lib/document-source"
 import { normalizeRotation, rotateNormalizedBox } from "@/lib/image-geometry"
 import type { SourceTarget } from "@/hooks/use-source-link"
 import {
+  type ImageFrameOverlayProps,
   type ImageViewerHandle,
-  type PageOverlayProps,
 } from "@/components/ui/image-viewer-types"
 
 const HIGHLIGHT_CLASS =
@@ -82,19 +82,19 @@ export function useImageSourceTarget(
 }
 
 /**
- * Build a `renderPageOverlay` callback that draws the active source highlight on
- * the image. Pass `useSourceLink(...).activeSource` straight in.
+ * Build a `renderFrameOverlay` callback that draws the active source highlight
+ * on the image. Pass `useSourceLink(...).activeSource` straight in.
  */
 export function renderImageSourceOverlay(
   source: Source | undefined
-): (props: PageOverlayProps) => React.ReactNode {
+): (props: ImageFrameOverlayProps) => React.ReactNode {
   const area = source ? imageAnchorToArea(source.anchor) : undefined
   const frame = source ? imageAnchorToFrame(source.anchor) : undefined
   return function ImageSourceOverlay({
-    pageNumber,
+    frameNumber,
     rotation,
-  }: PageOverlayProps) {
-    if (!area || pageNumber !== frame) return null
+  }: ImageFrameOverlayProps) {
+    if (!area || frameNumber !== frame) return null
     const renderedArea = rotateImageArea(area, rotation)
     return (
       <div

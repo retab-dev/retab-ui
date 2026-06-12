@@ -38,6 +38,9 @@ const PptxViewer = React.lazy(() =>
 const XlsxViewer = React.lazy(() =>
   import("@/components/ui/xlsx-viewer").then((m) => ({ default: m.XlsxViewer }))
 )
+const TextViewer = React.lazy(() =>
+  import("@/components/ui/text-viewer").then((m) => ({ default: m.TextViewer }))
+)
 
 function useIsClient() {
   return React.useSyncExternalStore(
@@ -51,7 +54,10 @@ const useIsomorphicLayoutEffect =
   typeof window !== "undefined" ? React.useLayoutEffect : React.useEffect
 
 function useDescriptorSignal(descriptorKey: string): AbortSignal {
-  const controller = React.useMemo(() => new AbortController(), [descriptorKey])
+  const controller = React.useMemo(() => {
+    void descriptorKey
+    return new AbortController()
+  }, [descriptorKey])
   useIsomorphicLayoutEffect(() => {
     return () => controller.abort()
   }, [controller])
@@ -66,8 +72,8 @@ export function FileViewer(props: FileViewerProps) {
   const fallback = (
     <ViewerFallback
       category={descriptor.category}
-      fileName={descriptor.downloadName}
-      src={descriptor.src}
+      fileName={descriptor.downloadFileName}
+      src={descriptor.loadUrl}
       className={props.className}
       bare={props.bare}
     />
@@ -95,7 +101,6 @@ export function FileViewer(props: FileViewerProps) {
 
 function FileViewerRoute({
   descriptor,
-  src,
   className,
   bare = false,
   isolateStyles = false,
@@ -104,53 +109,82 @@ function FileViewerRoute({
   descriptor: FileDescriptor
   descriptorSignal: AbortSignal
 }) {
-  const { category, downloadName } = descriptor
+  const { category, downloadFileName, loadUrl } = descriptor
+  if (descriptor.source.kind === "text") {
+    if (category === "text") {
+      return (
+        <TextViewer
+          source={descriptor.source}
+          className={className}
+          bare={bare}
+        />
+      )
+    }
+    return (
+      <UnsupportedCard
+        fileName={downloadFileName}
+        className={className}
+        bare={bare}
+      />
+    )
+  }
+
+  if (!loadUrl) {
+    return (
+      <UnsupportedCard
+        fileName={downloadFileName}
+        downloadHref={descriptor.downloadHref}
+        className={className}
+        bare={bare}
+      />
+    )
+  }
 
   switch (category) {
     case "pdf":
       return (
         <PdfViewer
-          src={src}
+          src={loadUrl}
           className={className}
           bare={bare}
-          downloadFileName={downloadName}
+          downloadFileName={downloadFileName}
         />
       )
     case "docx":
-      return <DocxViewer src={src} className={className} bare={bare} />
+      return <DocxViewer src={loadUrl} className={className} bare={bare} />
     case "image":
       return (
         <ImageViewer
-          src={src}
+          src={loadUrl}
           className={className}
           bare={bare}
-          downloadFileName={downloadName}
+          downloadFileName={downloadFileName}
         />
       )
     case "pptx":
       return (
         <PptxViewer
-          src={src}
+          src={loadUrl}
           className={className}
           bare={bare}
-          downloadFileName={downloadName}
+          downloadFileName={downloadFileName}
         />
       )
     case "xlsx":
       return (
         <XlsxViewer
-          src={src}
+          src={loadUrl}
           className={className}
           bare={bare}
-          downloadFileName={downloadName}
+          downloadFileName={downloadFileName}
           isolateStyles={isolateStyles}
         />
       )
     case "csv":
       return (
         <CsvDocViewer
-          src={src}
-          fileName={downloadName}
+          src={loadUrl}
+          fileName={downloadFileName}
           mimeType={descriptor.mimeType}
           className={className}
           bare={bare}
@@ -160,8 +194,8 @@ function FileViewerRoute({
     case "markdown":
       return (
         <MarkdownDocViewer
-          src={src}
-          fileName={downloadName}
+          src={loadUrl}
+          fileName={downloadFileName}
           className={className}
           bare={bare}
           descriptorSignal={descriptorSignal}
@@ -170,8 +204,8 @@ function FileViewerRoute({
     case "html":
       return (
         <HtmlDocViewer
-          src={src}
-          fileName={downloadName}
+          src={loadUrl}
+          fileName={downloadFileName}
           className={className}
           bare={bare}
           descriptorSignal={descriptorSignal}
@@ -180,8 +214,8 @@ function FileViewerRoute({
     case "text":
       return (
         <TextDocViewer
-          src={src}
-          fileName={downloadName}
+          src={loadUrl}
+          fileName={downloadFileName}
           className={className}
           bare={bare}
           isolateStyles={isolateStyles}
@@ -191,8 +225,8 @@ function FileViewerRoute({
     default:
       return (
         <UnsupportedCard
-          src={src}
-          fileName={downloadName}
+          src={loadUrl}
+          fileName={downloadFileName}
           className={className}
           bare={bare}
         />

@@ -1,7 +1,9 @@
 import type * as React from "react"
-import type { JSONSchema7Definition } from "json-schema"
 
-import type { SchemaDocument } from "@/components/schema-editor/document"
+import type {
+  DocumentNodeView,
+  SchemaDocument,
+} from "@/components/schema-editor/document"
 import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
 import type {
   ResolvedSchemaBuilderFeatures,
@@ -11,13 +13,12 @@ import type {
 export type SchemaEditorMode = "descriptionOnly" | "readOnly" | "editable"
 
 export interface DocumentSchemaNodeEditorProps {
-  applyDocOp: SchemaDispatch
+  dispatch: SchemaDispatch
   doc: SchemaDocument
   name: string
-  node: ExtendedJSONSchema7
   nodeId: string
+  nodeView: DocumentNodeView
   path: string
-  defs?: Record<string, JSONSchema7Definition>
   canDelete?: boolean
   onDelete?: () => void
   onNameChange?: (newName: string, updatedNode?: ExtendedJSONSchema7) => void

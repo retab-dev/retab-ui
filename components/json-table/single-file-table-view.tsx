@@ -6,6 +6,10 @@ import type { JSONSchema7 } from "json-schema"
 import { projectDocumentRows } from "@/components/json-table/lib/document-projection"
 import { flattenHeaderNodes } from "@/components/json-table/lib/header-nodes"
 import type { TableDocument } from "@/components/json-table/lib/projects-types"
+import {
+  getFieldMetadata,
+  type FieldMetadata,
+} from "@/components/json-table/lib/schema-field-metadata"
 import { buildHeaderNodesFromSchema } from "@/components/json-table/lib/schema-header-nodes"
 import { SingleFileVirtualizedTable } from "@/components/json-table/single-file-virtualized-table"
 import { useSheetOptionsStore } from "@/components/json-table/table-options-store"
@@ -59,6 +63,16 @@ export const SingleFileTableView = React.memo<SingleFileTableViewProps>(
       return flattenHeaderNodes(headerNodes).map((node) => node.key)
     }, [headerNodes])
 
+    const fieldMetadataByKey = useMemo<
+      Record<string, FieldMetadata | undefined>
+    >(
+      () =>
+        Object.fromEntries(
+          visibleKeys.map((key) => [key, getFieldMetadata(schema, key)])
+        ),
+      [schema, visibleKeys]
+    )
+
     const projectedRows = useMemo(() => {
       if (!document) return []
       return projectDocumentRows({
@@ -86,6 +100,7 @@ export const SingleFileTableView = React.memo<SingleFileTableViewProps>(
             editMode={editMode}
             projectedRows={projectedRows}
             visibleKeys={visibleKeys}
+            fieldMetadataByKey={fieldMetadataByKey}
             rowCount={rowCount}
             onUpdateDocument={onUpdateDocument}
             columnWidth={columnWidth}

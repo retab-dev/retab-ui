@@ -23,9 +23,9 @@ import type {
 } from "@/components/ui/image-viewer-types"
 
 export type {
+  ImageFrameOverlayProps,
   ImageViewerHandle,
   ImageViewerProps,
-  PageOverlayProps,
 } from "@/components/ui/image-viewer-types"
 export type { FrameDescriptor, FrameSource }
 export { clearImageSourceCacheForTests, getImageSource }

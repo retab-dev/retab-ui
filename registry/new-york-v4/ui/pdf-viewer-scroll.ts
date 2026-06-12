@@ -1,18 +1,9 @@
 import * as React from "react"
 
 import { clamp } from "./pdf-viewer-scale"
-import type { PdfPageArea } from "./pdf-viewer-types"
+import type { PdfPageScrollTarget } from "./pdf-viewer-types"
 
-export type PdfScrollHandle = {
-  scrollToPageArea: (
-    pageNumber: number,
-    area: PdfPageArea,
-    options?: ScrollToOptions
-  ) => void
-  getViewportElement: () => HTMLDivElement | null
-}
-
-const SCROLL_HEADROOM = 48
+const PDF_SCROLL_TARGET_HEADROOM = 48
 
 export function usePdfScroll({
   pageCount,
@@ -45,9 +36,9 @@ export function usePdfScroll({
 
     const scrollable =
       viewportElement.scrollHeight - viewportElement.clientHeight
-    onScrollProgressChange?.(
-      scrollable > 0 ? viewportElement.scrollTop / scrollable : 0
-    )
+    const progress =
+      scrollable > 0 ? clamp(viewportElement.scrollTop / scrollable, 0, 1) : 0
+    onScrollProgressChange?.(progress)
 
     const viewportRect = viewportElement.getBoundingClientRect()
     const marker = viewportRect.top + viewportRect.height * 0.2
@@ -78,8 +69,12 @@ export function usePdfScroll({
     scrollFrameRef.current = requestAnimationFrame(measureScroll)
   }, [measureScroll])
 
-  const scrollToPageArea = React.useCallback(
-    (pageNumber: number, area: PdfPageArea, options?: ScrollToOptions) => {
+  const scrollToPageTarget = React.useCallback(
+    (
+      pageNumber: number,
+      target: PdfPageScrollTarget,
+      options?: ScrollToOptions
+    ) => {
       const viewportElement = viewportElementRef.current
       if (!viewportElement || pageNumber < 1 || pageNumber > pageCount) return
 
@@ -92,9 +87,11 @@ export function usePdfScroll({
       const viewportRect = viewportElement.getBoundingClientRect()
       const pageTop =
         pageSlotRect.top - viewportRect.top + viewportElement.scrollTop
-      const areaTop = clamp(area.top, 0, 100)
+      const targetTopPercent = clamp(target.top, 0, 100)
       const targetTop =
-        pageTop + (areaTop / 100) * pageSlotRect.height - SCROLL_HEADROOM
+        pageTop +
+        (targetTopPercent / 100) * pageSlotRect.height -
+        PDF_SCROLL_TARGET_HEADROOM
 
       viewportElement.scrollTo({
         top: Math.max(0, targetTop),
@@ -119,11 +116,10 @@ export function usePdfScroll({
   return {
     currentPage,
     viewportElement,
-    viewportElementRef,
     setViewportElement,
     measureScroll,
     handleScroll,
-    scrollToPageArea,
+    scrollToPageTarget,
     getViewportElement,
   }
 }

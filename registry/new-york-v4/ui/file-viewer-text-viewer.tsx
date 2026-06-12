@@ -5,8 +5,8 @@ import { useVirtualizer } from "@tanstack/react-virtual"
 import Prism from "prismjs"
 import { createPortal } from "react-dom"
 
+import { isAbortError } from "./file-viewer-async"
 import { DocShell, useZoom, ZoomActions } from "./file-viewer-chrome"
-import { isAbortError } from "./file-viewer-resource-cache"
 import {
   formatBytes,
   isSameTextView,

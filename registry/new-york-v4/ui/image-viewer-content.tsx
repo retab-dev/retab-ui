@@ -25,8 +25,8 @@ export function ImageViewerContent({
   scale: controlledScale,
   toolbar = true,
   downloadFileName,
-  renderPageOverlay,
-  onVisiblePageChange,
+  renderFrameOverlay,
+  onVisibleFrameChange,
   onScrollProgressChange,
   bare = false,
   header,
@@ -79,7 +79,7 @@ export function ImageViewerContent({
       scrollToFrameArea: (frameNumber, area, options) => {
         const viewport = scrollViewportRef.current
         const frame = viewport?.querySelector<HTMLElement>(
-          `[data-page-number="${frameNumber}"]`
+          `[data-frame-number="${frameNumber}"]`
         )
         if (!viewport || !frame) return
         const frameRect = frame.getBoundingClientRect()
@@ -110,11 +110,11 @@ export function ImageViewerContent({
 
     const viewportRect = viewport.getBoundingClientRect()
     const marker = viewportRect.top + viewportRect.height * 0.2
-    const frames = viewport.querySelectorAll<HTMLElement>("[data-page-number]")
+    const frames = viewport.querySelectorAll<HTMLElement>("[data-frame-number]")
     let frameNumber = 1
     for (const frame of frames) {
       if (frame.getBoundingClientRect().top <= marker) {
-        frameNumber = Number(frame.dataset.pageNumber)
+        frameNumber = Number(frame.dataset.frameNumber)
       } else {
         break
       }
@@ -122,9 +122,9 @@ export function ImageViewerContent({
     if (frameNumber && frameNumber !== lastReportedFrameNumber.current) {
       lastReportedFrameNumber.current = frameNumber
       setCurrentFrameNumber(frameNumber)
-      onVisiblePageChange?.(frameNumber)
+      onVisibleFrameChange?.(frameNumber)
     }
-  }, [onScrollProgressChange, onVisiblePageChange])
+  }, [onScrollProgressChange, onVisibleFrameChange])
 
   const setViewerScale = React.useCallback(
     (nextScale: number | null) => {
@@ -183,11 +183,10 @@ export function ImageViewerContent({
                   scale={scale}
                   rotation={rotationQuarterTurn}
                   renderOverlay={
-                    renderPageOverlay
+                    renderFrameOverlay
                       ? ({ frameNumber, frameRect, scale, rotation }) =>
-                          renderPageOverlay({
+                          renderFrameOverlay({
                             frameNumber,
-                            pageNumber: frameNumber,
                             width: frameRect.width,
                             height: frameRect.height,
                             scale,

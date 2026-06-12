@@ -39,6 +39,14 @@ function response(body: string, init: ResponseInit = {}) {
   return new Response(body, init)
 }
 
+function textSource(text: string, fileName?: string) {
+  return { kind: "text" as const, text, fileName }
+}
+
+function urlSource(url: string, fileName?: string) {
+  return { kind: "url" as const, url, fileName }
+}
+
 function rect(top: number, bottom: number): DOMRect {
   return {
     top,
@@ -234,7 +242,7 @@ describe("text-viewer-resource", () => {
 
 describe("TextViewer", () => {
   it("renders inline value with line numbers", () => {
-    render(<TextViewer value={"alpha\nbeta"} />)
+    render(<TextViewer source={textSource("alpha\nbeta")} />)
 
     expect(screen.getByText("2 lines")).toBeTruthy()
     expect(screen.getByText("alpha")).toBeTruthy()
@@ -242,7 +250,7 @@ describe("TextViewer", () => {
   })
 
   it("hides toolbar chrome when toolbar is false", () => {
-    render(<TextViewer value="alpha" toolbar={false} />)
+    render(<TextViewer source={textSource("alpha")} toolbar={false} />)
 
     expect(screen.queryByText("1 line")).toBeNull()
     expect(screen.queryByLabelText("Zoom in")).toBeNull()
@@ -254,7 +262,7 @@ describe("TextViewer", () => {
       vi.fn(() => new Promise<Response>(() => {}))
     )
 
-    render(<TextViewer src="/pending.txt" toolbar={false} />)
+    render(<TextViewer source={urlSource("/pending.txt")} toolbar={false} />)
 
     expect(screen.queryByLabelText("Zoom in")).toBeNull()
   })
@@ -262,7 +270,7 @@ describe("TextViewer", () => {
   it("highlights every line in a normalized multi-line range", () => {
     const { container } = render(
       <TextViewer
-        value={"one\ntwo\nthree\nfour"}
+        source={textSource("one\ntwo\nthree\nfour")}
         highlight={{ start: 3, end: 2 }}
       />
     )
@@ -283,7 +291,10 @@ describe("TextViewer", () => {
 
   it("does not highlight invalid ranges", () => {
     const { container } = render(
-      <TextViewer value={"one\ntwo"} highlight={{ start: 10, end: 20 }} />
+      <TextViewer
+        source={textSource("one\ntwo")}
+        highlight={{ start: 10, end: 20 }}
+      />
     )
 
     expect(container.querySelector(".bg-primary\\/12")).toBeNull()
@@ -294,10 +305,12 @@ describe("TextViewer", () => {
     render(
       <TextViewer
         ref={viewerRef}
-        value={Array.from(
-          { length: 20 },
-          (_, index) => `line ${index + 1}`
-        ).join("\n")}
+        source={textSource(
+          Array.from(
+            { length: 20 },
+            (_, index) => `line ${index + 1}`
+          ).join("\n")
+        )}
       />
     )
 
@@ -341,7 +354,7 @@ describe("TextViewer", () => {
     expect(scrollTo).toHaveBeenCalledWith({ top: 170, behavior: "auto" })
   })
 
-  it("renders a local error and retries the same src", async () => {
+  it("renders a local error and retries the same URL source", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {})
     const fetchMock = vi
       .fn()
@@ -349,7 +362,7 @@ describe("TextViewer", () => {
       .mockResolvedValueOnce(response("loaded text", { status: 200 }))
     vi.stubGlobal("fetch", fetchMock)
 
-    render(<TextViewer src="/same.txt" />)
+    render(<TextViewer source={urlSource("/same.txt")} />)
     expect(
       await screen.findByText("Could not load this text file.")
     ).toBeTruthy()
@@ -362,7 +375,7 @@ describe("TextViewer", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
-  it("recovers from a fetch error when src changes", async () => {
+  it("recovers from a fetch error when the URL source changes", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {})
     const fetchMock = vi
       .fn()
@@ -370,12 +383,14 @@ describe("TextViewer", () => {
       .mockResolvedValueOnce(response("next file", { status: 200 }))
     vi.stubGlobal("fetch", fetchMock)
 
-    const { rerender } = render(<TextViewer src="/broken.txt" />)
+    const { rerender } = render(
+      <TextViewer source={urlSource("/broken.txt")} />
+    )
     expect(
       await screen.findByText("Could not load this text file.")
     ).toBeTruthy()
 
-    rerender(<TextViewer src="/next.txt" />)
+    rerender(<TextViewer source={urlSource("/next.txt")} />)
 
     await waitFor(() => {
       expect(screen.getByText("next file")).toBeTruthy()
@@ -386,7 +401,7 @@ describe("TextViewer", () => {
   it("renders a too-large state locally", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {})
 
-    render(<TextViewer value={"one\ntwo\nthree"} maxLines={2} />)
+    render(<TextViewer source={textSource("one\ntwo\nthree")} maxLines={2} />)
 
     expect(
       await screen.findByText(
@@ -399,7 +414,7 @@ describe("TextViewer", () => {
     vi.spyOn(console, "error").mockImplementation(() => {})
 
     const { rerender } = render(
-      <TextViewer value={"one\ntwo\nthree"} maxLines={2} />
+      <TextViewer source={textSource("one\ntwo\nthree")} maxLines={2} />
     )
 
     expect(
@@ -408,7 +423,7 @@ describe("TextViewer", () => {
       )
     ).toBeTruthy()
 
-    rerender(<TextViewer value={"one\ntwo"} maxLines={2} />)
+    rerender(<TextViewer source={textSource("one\ntwo")} maxLines={2} />)
 
     await waitFor(() => {
       expect(screen.getByText("2 lines")).toBeTruthy()
@@ -425,14 +440,16 @@ describe("TextViewer", () => {
   it("recovers when bounds become valid after a local error", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {})
 
-    const { rerender } = render(<TextViewer value="one" maxLines={0} />)
+    const { rerender } = render(
+      <TextViewer source={textSource("one")} maxLines={0} />
+    )
 
     expect(
       await screen.findByText("Text viewer bounds are invalid.")
     ).toBeTruthy()
     expect(screen.queryByRole("button", { name: "Retry" })).toBeNull()
 
-    rerender(<TextViewer value="one" maxLines={1} />)
+    rerender(<TextViewer source={textSource("one")} maxLines={1} />)
 
     await waitFor(() => {
       expect(screen.getByText("1 line")).toBeTruthy()
@@ -441,15 +458,15 @@ describe("TextViewer", () => {
     expect(screen.queryByText("Text viewer bounds are invalid.")).toBeNull()
   })
 
-  it("shows download only for src", () => {
-    const { rerender } = render(<TextViewer value="alpha" />)
+  it("shows download only for URL sources", () => {
+    const { rerender } = render(<TextViewer source={textSource("alpha")} />)
     expect(screen.queryByRole("link", { name: "Download" })).toBeNull()
 
     vi.stubGlobal(
       "fetch",
       vi.fn(() => Promise.resolve(response("alpha")))
     )
-    rerender(<TextViewer src="/alpha.txt" downloadName="alpha.txt" />)
+    rerender(<TextViewer source={urlSource("/alpha.txt", "alpha.txt")} />)
 
     return waitFor(() => {
       expect(
@@ -457,17 +474,46 @@ describe("TextViewer", () => {
       ).toBe("alpha.txt")
     })
   })
+
+  it("supports explicit text and URL source descriptors", async () => {
+    const { rerender } = render(
+      <TextViewer source={{ kind: "text", text: "descriptor text" }} />
+    )
+    expect(screen.getByText("descriptor text")).toBeTruthy()
+    expect(screen.queryByRole("link", { name: "Download" })).toBeNull()
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(response("descriptor url")))
+    )
+    rerender(
+      <TextViewer
+        source={{
+          kind: "url",
+          url: "/descriptor.txt",
+          fileName: "descriptor.txt",
+        }}
+      />
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText("descriptor url")).toBeTruthy()
+    })
+    expect(
+      screen.getByRole("link", { name: "Download" }).getAttribute("download")
+    ).toBe("descriptor.txt")
+  })
 })
 
 describe("text-viewer implementation boundaries", () => {
   it("keeps resource cache keys private to the resource module", () => {
-    const textViewerSource = readRegistryFile(
+    const viewerModuleSource = readRegistryFile(
       "registry/new-york-v4/ui/text-viewer.tsx"
     )
     const testSource = readRegistryFile("tests/text-viewer.test.tsx")
     const resourceKeyName = ["textViewer", "Resource", "Key"].join("")
 
-    expect(textViewerSource).not.toContain(resourceKeyName)
+    expect(viewerModuleSource).not.toContain(resourceKeyName)
     expect(testSource).not.toContain(resourceKeyName)
   })
 
@@ -483,12 +529,12 @@ describe("text-viewer implementation boundaries", () => {
   })
 
   it("uses exact reset tokens instead of fingerprints", () => {
-    const textViewerSource = readRegistryFile(
+    const viewerModuleSource = readRegistryFile(
       "registry/new-york-v4/ui/text-viewer.tsx"
     )
 
-    expect(textViewerSource).toContain("TextViewerResetToken")
-    expect(textViewerSource).not.toContain("fingerprint")
-    expect(textViewerSource).not.toContain("resourceVersion")
+    expect(viewerModuleSource).toContain("TextViewerResetToken")
+    expect(viewerModuleSource).not.toContain("fingerprint")
+    expect(viewerModuleSource).not.toContain("resourceVersion")
   })
 })

@@ -18,9 +18,11 @@ import { useEditViewerController } from "./use-edit-viewer-controller"
 
 export type {
   EditViewerDocument,
-  EditViewerFeatures,
   EditViewerField,
+  EditViewerInputField,
+  EditViewerInputResult,
   EditViewerMode,
+  EditViewerOptions,
   EditViewerProps,
   EditViewerResult,
   EditViewerStatus,
@@ -36,7 +38,7 @@ export function EditViewer({
   onSelectedFieldKeyChange,
   status = { state: "idle" },
   className,
-  features,
+  options,
 }: EditViewerProps) {
   const controller = useEditViewerController({
     result,
@@ -47,13 +49,13 @@ export function EditViewer({
     selectedFieldKey,
     onSelectedFieldKeyChange,
     status,
-    features,
+    options,
   })
 
   const renderPageOverlay = React.useCallback(
     ({ pageNumber }: PageOverlayProps) => (
       <EditFieldOverlayLayer
-        fields={controller.fields}
+        fieldsByPage={controller.fieldsByPage}
         pageNumber={pageNumber}
         mode={controller.activeMode}
         effectiveFieldKey={controller.effectiveFieldKey}
@@ -64,7 +66,7 @@ export function EditViewer({
     [
       controller.activeMode,
       controller.effectiveFieldKey,
-      controller.fields,
+      controller.fieldsByPage,
       controller.selectField,
       controller.setHoveredFieldKey,
     ]
@@ -107,7 +109,7 @@ export function EditViewer({
             </div>
           </div>
 
-          {controller.resolvedFeatures.fieldPanel ? (
+          {controller.resolvedOptions.fieldPanel ? (
             <EditViewerFieldPanel
               fields={controller.fields}
               filledCount={controller.filledCount}
@@ -119,8 +121,8 @@ export function EditViewer({
               onFilterChange={controller.setFilter}
               onFieldHover={controller.setHoveredFieldKey}
               onFieldSelect={controller.selectField}
-              showSearch={controller.resolvedFeatures.search}
-              showFilters={controller.resolvedFeatures.filters}
+              showSearch={controller.resolvedOptions.search}
+              showFilters={controller.resolvedOptions.filters}
             />
           ) : null}
         </>

@@ -5,14 +5,15 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { inferCsvDialect } from "@/lib/csv"
+import * as FileViewerModule from "@/registry/new-york-v4/ui/file-viewer"
 import { FileViewer } from "@/registry/new-york-v4/ui/file-viewer"
+import { isAbortError } from "@/registry/new-york-v4/ui/file-viewer-async"
 import {
   descriptorResetKey,
   detectCategory,
   resolveFileDescriptor,
 } from "@/registry/new-york-v4/ui/file-viewer-core"
 import { createMarkdownHtmlCache } from "@/registry/new-york-v4/ui/file-viewer-markdown-viewer"
-import { isAbortError } from "@/registry/new-york-v4/ui/file-viewer-resource-cache"
 import {
   createTextLoader,
   isSameTextView,
@@ -28,6 +29,10 @@ afterEach(() => {
 
 function response(body: string, init: ResponseInit = {}) {
   return new Response(body, init)
+}
+
+function urlSource(url: string, fileName?: string, mimeType?: string) {
+  return { kind: "url" as const, url, fileName, mimeType }
 }
 
 function textSubscription(src: string, mode: "stream" | "full" = "stream") {
@@ -64,33 +69,57 @@ describe("FileViewer detection helpers", () => {
 
   it("resolves one descriptor for routing, fallback, and downloads", () => {
     const descriptor = resolveFileDescriptor({
-      src: "/files/signed?id=1",
-      fileName: "report.pdf",
-      mimeType: "text/plain",
+      source: urlSource("/files/signed?id=1", "report.pdf", "text/plain"),
     })
 
     expect(descriptor).toEqual({
-      src: "/files/signed?id=1",
+      source: {
+        kind: "url",
+        url: "/files/signed?id=1",
+        fileName: "report.pdf",
+        mimeType: "text/plain",
+      },
+      loadUrl: "/files/signed?id=1",
+      downloadHref: "/files/signed?id=1",
       displayName: "report.pdf",
-      downloadName: "report.pdf",
+      downloadFileName: "report.pdf",
+      identityKey: "url:/files/signed?id=1",
       mimeType: "text/plain",
       category: "pdf",
     })
     expect(descriptorResetKey(descriptor)).toBe(
-      "/files/signed?id=1\u0000report.pdf\u0000text/plain\u0000pdf"
+      "url:/files/signed?id=1\u0000report.pdf\u0000text/plain\u0000pdf"
     )
 
     expect(
       resolveFileDescriptor({
-        src: "/files/export",
-        mimeType: "text/csv",
+        source: urlSource("/files/export", undefined, "text/csv"),
         as: "text",
       })
     ).toMatchObject({
       displayName: "/files/export",
-      downloadName: "export",
+      downloadFileName: "export",
       category: "text",
     })
+  })
+
+  it("resolves non-url text sources without inventing a load URL", () => {
+    const descriptor = resolveFileDescriptor({
+      source: {
+        kind: "text",
+        text: "inline content",
+        fileName: "inline.log",
+      },
+    })
+
+    expect(descriptor).toMatchObject({
+      category: "text",
+      displayName: "inline.log",
+      downloadFileName: "inline.log",
+      downloadHref: undefined,
+      loadUrl: undefined,
+    })
+    expect(descriptor.identityKey).toBe("text:inline content")
   })
 
   it("separates text cache entries by loading mode", () => {
@@ -128,7 +157,19 @@ describe("FileViewer detection helpers", () => {
     expect(source).not.toContain("./file-viewer-markdown-viewer")
   })
 
-  it("keeps abort subscriptions in the neutral resource cache", () => {
+  it("keeps public runtime exports minimal", () => {
+    expect(Object.keys(FileViewerModule)).toEqual(["FileViewer"])
+  })
+
+  it("keeps abort subscriptions in the neutral async module", () => {
+    const asyncSource = readFileSync(
+      "registry/new-york-v4/ui/file-viewer-async.ts",
+      "utf8"
+    )
+    const resourceCacheSource = readFileSync(
+      "registry/new-york-v4/ui/file-viewer-resource-cache.ts",
+      "utf8"
+    )
     const textResourceSource = readFileSync(
       "registry/new-york-v4/ui/file-viewer-text-resource.ts",
       "utf8"
@@ -138,6 +179,9 @@ describe("FileViewer detection helpers", () => {
       "utf8"
     )
 
+    expect(asyncSource).toContain("subscribeToAbortableRequest")
+    expect(resourceCacheSource).not.toContain("AbortController")
+    expect(resourceCacheSource).not.toContain("subscribeToAbortableRequest")
     expect(textResourceSource).not.toContain("./file-viewer-text-loader")
     expect(textResourceSource).toContain("subscribeToAbortableRequest")
     expect(textLoaderSource).toContain("subscribeToAbortableRequest")
@@ -293,6 +337,54 @@ describe("FileViewer text resources", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
+  it("returns a stable Markdown promise for the same source and signal", async () => {
+    const markdownCache = createMarkdownHtmlCache({
+      textCache: {
+        load: vi.fn(async () => "# Title\n"),
+        clear() {},
+        size() {
+          return 0
+        },
+      },
+    })
+    const request = textSubscription("/same.md")
+
+    const firstPromise = markdownCache.load(request)
+    const secondPromise = markdownCache.load(request)
+
+    expect(secondPromise).toBe(firstPromise)
+    await expect(firstPromise).resolves.toContain("<h1>Title</h1>")
+  })
+
+  it("drops Markdown subscriber state when a source is evicted", async () => {
+    const markdownCache = createMarkdownHtmlCache({
+      maxEntries: 1,
+      textCache: {
+        load: vi.fn(async ({ src }) => `# ${src}\n`),
+        clear() {},
+        size() {
+          return 0
+        },
+      },
+    })
+    const first = textSubscription("/first.md")
+    const second = textSubscription("/second.md")
+
+    const firstPromise = markdownCache.load(first)
+    await expect(firstPromise).resolves.toContain("<h1>/first.md</h1>")
+    expect(markdownCache.size()).toBe(1)
+
+    await expect(markdownCache.load(second)).resolves.toContain(
+      "<h1>/second.md</h1>"
+    )
+    expect(markdownCache.size()).toBe(1)
+
+    const firstAfterEviction = markdownCache.load(first)
+    expect(firstAfterEviction).not.toBe(firstPromise)
+    await expect(firstAfterEviction).resolves.toContain("<h1>/first.md</h1>")
+    expect(markdownCache.size()).toBe(1)
+  })
+
   it("aborts a shared text resource fetch only after every subscriber aborts", async () => {
     const cache = createTextResourceCache()
     const pending = deferred<Response>()
@@ -334,7 +426,9 @@ describe("FileViewer text rendering", () => {
       )
 
       const longName = "very-long-file-name-that-should-truncate-in-toolbar.log"
-      render(<FileViewer src="/long-name.log" fileName={longName} />)
+      render(
+        <FileViewer source={urlSource("/long-name.log", longName)} />
+      )
 
       expect((await screen.findByTitle(longName)).className).toContain(
         "truncate"
@@ -356,11 +450,11 @@ describe("FileViewer text rendering", () => {
       vi.stubGlobal("fetch", fetchMock)
 
       const { rerender } = render(
-        <FileViewer src="/old.log" fileName="old.log" />
+        <FileViewer source={urlSource("/old.log", "old.log")} />
       )
 
       await waitFor(() => expect(fetchMock).toHaveBeenCalled())
-      rerender(<FileViewer src="/new.log" fileName="new.log" />)
+      rerender(<FileViewer source={urlSource("/new.log", "new.log")} />)
 
       await screen.findByTitle("new.log")
 
@@ -406,12 +500,12 @@ describe("FileViewer text rendering", () => {
         )
 
         const { rerender } = render(
-          <FileViewer src={`/${fileName}`} fileName={fileName} />
+          <FileViewer source={urlSource(`/${fileName}`, fileName)} />
         )
 
         await waitFor(() => expect(oldSignal).toBeTruthy())
         rerender(
-          <FileViewer src={`/${nextFileName}`} fileName={nextFileName} />
+          <FileViewer source={urlSource(`/${nextFileName}`, nextFileName)} />
         )
 
         await waitFor(() => expect(oldSignal?.aborted).toBe(true))
@@ -431,7 +525,7 @@ describe("FileViewer text rendering", () => {
       vi.stubGlobal("fetch", fetchMock)
 
       const { rerender } = render(
-        <FileViewer src="/bad.log" fileName="bad.log" />
+        <FileViewer source={urlSource("/bad.log", "bad.log")} />
       )
 
       expect(await screen.findByText(/Could not load/)).toBeTruthy()
@@ -439,7 +533,7 @@ describe("FileViewer text rendering", () => {
         screen.getByRole("link", { name: "Download" }).getAttribute("download")
       ).toBe("bad.log")
 
-      rerender(<FileViewer src="/good.log" fileName="good.log" />)
+      rerender(<FileViewer source={urlSource("/good.log", "good.log")} />)
 
       expect(await screen.findByTitle("good.log")).toBeTruthy()
       expect(screen.queryByText(/Could not load/)).toBeNull()
@@ -449,7 +543,7 @@ describe("FileViewer text rendering", () => {
   })
 
   it("renders an unsupported fallback with a download link", () => {
-    render(<FileViewer src="/archive.zip" fileName="archive.zip" />)
+    render(<FileViewer source={urlSource("/archive.zip", "archive.zip")} />)
 
     expect(screen.getByText(/No preview for/)).toBeTruthy()
     expect(

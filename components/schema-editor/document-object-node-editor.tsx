@@ -1,50 +1,48 @@
 "use client"
 
 import * as React from "react"
-import { useMemo, useState } from "react"
-import { AlertCircle, PlusIcon } from "lucide-react"
 
 import {
   addProperty,
   createNode,
-  getChildNodeId,
-  getChildPropertyId,
-  getEffectiveDocNode,
-  getNode,
   moveProperty,
   removeProperty,
   renameProperty,
   replaceNodeJson,
   setRequired,
+  type DocumentNodeView,
+  type DocumentPropertyView,
   type SchemaDocument,
 } from "@/components/schema-editor/document"
-import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
-import { validateName } from "@/components/schema-editor/lib/json-schema-utils"
 import type {
   DocumentSchemaNodeEditorProps,
   RenderDocumentNodeEditor,
   SchemaEditorMode,
 } from "@/components/schema-editor/document-node-editor-types"
-import type { ResolvedSchemaBuilderFeatures } from "@/components/schema-editor/schema-builder-types"
+import { DocumentPropertyAddRow } from "@/components/schema-editor/document-property-add-row"
+import {
+  applyPropertyDropClasses,
+  clearPropertyDropClasses,
+  getPropertyDropIndicator,
+  getPropertyDropTargetIndex,
+} from "@/components/schema-editor/document-property-reorder"
 import { DocumentPropertyRow } from "@/components/schema-editor/document-property-row"
+import type { ResolvedSchemaBuilderFeatures } from "@/components/schema-editor/schema-builder-types"
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui-retab/accordion"
-import { Button } from "@/components/ui-retab/button"
-import { Input } from "@/components/ui-retab/input"
 
 import { formatTitle } from "./schema-title"
 
 interface DocumentObjectNodeEditorProps {
-  applyDocOp: DocumentSchemaNodeEditorProps["applyDocOp"]
+  dispatch: DocumentSchemaNodeEditorProps["dispatch"]
   doc: SchemaDocument
   nodeId: string
-  effective: ExtendedJSONSchema7
+  nodeView: DocumentNodeView
   path: string
-  defs: DocumentSchemaNodeEditorProps["defs"]
   setDefsAccordionOpen: (open: boolean) => void
   draggedParentRef: DocumentSchemaNodeEditorProps["draggedParentRef"]
   draggedPropertyRef: DocumentSchemaNodeEditorProps["draggedPropertyRef"]
@@ -53,17 +51,12 @@ interface DocumentObjectNodeEditorProps {
   renderNode: RenderDocumentNodeEditor
 }
 
-function isJSONSchema(value: unknown): value is ExtendedJSONSchema7 {
-  return typeof value === "object" && value !== null
-}
-
 export function DocumentObjectNodeEditor({
-  applyDocOp,
+  dispatch,
   doc,
   nodeId,
-  effective,
+  nodeView,
   path,
-  defs,
   setDefsAccordionOpen,
   draggedParentRef,
   draggedPropertyRef,
@@ -72,62 +65,27 @@ export function DocumentObjectNodeEditor({
   renderNode,
 }: DocumentObjectNodeEditorProps) {
   const isEditable = editMode === "editable"
-  const [newPropName, setNewPropName] = useState("")
-  const [newPropErr, setNewPropErr] = useState<string | null>(null)
-  const propertyNames = useMemo(
-    () => Object.keys(effective.properties || {}),
-    [effective.properties]
-  )
-  const objectNodeId = useMemo(() => {
-    const docNode = getNode(doc, nodeId)
-    return docNode ? getEffectiveDocNode(docNode).id : nodeId
-  }, [doc, nodeId])
+  const objectNodeId = nodeView.effectiveNode.id ?? nodeId
+  const properties = nodeView.properties
+  const propertyNames = properties.map((property) => property.propertyName)
+  const propertyIds = properties.map((property) => property.propertyId)
 
-  const childNodeId = (propName: string): string => {
-    const childId = getChildNodeId(doc, nodeId, propName)
-    if (!childId) {
-      throw new Error(`Missing document node id for property "${propName}"`)
-    }
-    return childId
-  }
-
-  const childPropertyId = (propName: string): string => {
-    const propertyId = getChildPropertyId(doc, nodeId, propName)
-    if (!propertyId) {
-      throw new Error(`Missing document property id for property "${propName}"`)
-    }
-    return propertyId
-  }
-
-  const validateNewPropertyName = (value: string) =>
-    validateName(value, propertyNames, undefined, "property")
-
-  const addNewProperty = () => {
-    const key = newPropName.trim()
-    const err = validateNewPropertyName(key)
-    if (err) {
-      setNewPropErr(err)
-      return
-    }
-    if (!key) return
-
-    applyDocOp((current) =>
+  const addNewProperty = (propertyName: string) => {
+    dispatch((current) =>
       addProperty(current, objectNodeId, {
-        key,
+        key: propertyName,
         required: true,
-        node: { ...createNode("string"), title: formatTitle(key) },
+        node: { ...createNode("string"), title: formatTitle(propertyName) },
       })
     )
-    setNewPropName("")
-    setNewPropErr(null)
   }
 
   const handleDragStart = (
     event: React.DragEvent<HTMLDivElement>,
-    propName: string
+    propertyId: string,
+    propertyName: string
   ) => {
     event.stopPropagation()
-    const propertyId = childPropertyId(propName)
     event.dataTransfer.setData("text/plain", propertyId)
     event.dataTransfer.effectAllowed = "move"
     draggedParentRef.current = path
@@ -146,7 +104,7 @@ export function DocumentObjectNodeEditor({
     dragElement.style.position = "fixed"
     dragElement.style.zIndex = "9999"
     dragElement.style.pointerEvents = "none"
-    dragElement.innerHTML = `<span style="font-weight: medium">${propName}</span>`
+    dragElement.innerHTML = `<span style="font-weight: medium">${propertyName}</span>`
     document.body.appendChild(dragElement)
 
     event.dataTransfer.setDragImage(dragElement, 10, 10)
@@ -157,52 +115,35 @@ export function DocumentObjectNodeEditor({
 
   const handleDragOver = (
     event: React.DragEvent<HTMLDivElement>,
-    targetPropName: string
+    targetPropertyId: string
   ) => {
     event.preventDefault()
-    const draggedPropertyId = draggedPropertyRef.current
-    const sourceIndex = propertyNames.findIndex(
-      (name) => childPropertyId(name) === draggedPropertyId
-    )
-    const targetIndex = propertyNames.indexOf(targetPropName)
-    const targetPropertyId = childPropertyId(targetPropName)
+    const indicator = getPropertyDropIndicator({
+      propertyIds,
+      sourcePropertyId: draggedPropertyRef.current,
+      targetPropertyId,
+    })
 
     event.dataTransfer.dropEffect = "move"
-
-    if (
-      draggedParentRef.current === path &&
-      targetPropertyId !== draggedPropertyId
-    ) {
-      event.currentTarget.classList.add(
-        sourceIndex > targetIndex ? "border-t-2" : "border-b-2"
-      )
-      event.currentTarget.classList.add("border-grey-700")
-      event.currentTarget.classList.add("border-dashed")
-    }
+    applyPropertyDropClasses(
+      event.currentTarget,
+      draggedParentRef.current === path ? indicator : null
+    )
   }
 
   const handleDragLeave = (event: React.DragEvent<HTMLDivElement>) => {
     event.stopPropagation()
-    event.currentTarget.classList.remove("border-t-2")
-    event.currentTarget.classList.remove("border-b-2")
-    event.currentTarget.classList.remove("border-grey-700")
-    event.currentTarget.classList.remove("border-dashed")
+    clearPropertyDropClasses(event.currentTarget)
   }
 
   const handleDrop = (
     event: React.DragEvent<HTMLDivElement>,
-    targetPropName: string
+    targetPropertyId: string
   ) => {
     event.stopPropagation()
     event.preventDefault()
     const sourcePropertyId = event.dataTransfer.getData("text/plain")
-
-    event.currentTarget.classList.remove("border-t-2")
-    event.currentTarget.classList.remove("border-b-2")
-    event.currentTarget.classList.remove("border-grey-700")
-    event.currentTarget.classList.remove("border-dashed")
-
-    const targetPropertyId = childPropertyId(targetPropName)
+    clearPropertyDropClasses(event.currentTarget)
 
     if (
       !sourcePropertyId ||
@@ -212,114 +153,79 @@ export function DocumentObjectNodeEditor({
       return
     }
 
-    const targetIndex = propertyNames.indexOf(targetPropName)
-    applyDocOp((current) =>
+    const targetIndex = getPropertyDropTargetIndex({
+      propertyIds,
+      targetPropertyId,
+    })
+    dispatch((current) =>
       moveProperty(current, sourcePropertyId, objectNodeId, targetIndex)
     )
   }
 
-  const renderProperty = (propName: string, rootLayout: boolean) => {
-    const propValue = effective.properties?.[propName]
-    if (!isJSONSchema(propValue)) return null
-
-    const childId = childNodeId(propName)
-    const propertyId = childPropertyId(propName)
+  const renderProperty = (
+    property: DocumentPropertyView,
+    rootLayout: boolean
+  ) => {
     return (
       <DocumentPropertyRow
-        key={propName}
-        applyDocOp={applyDocOp}
+        key={property.propertyId}
+        propertyId={property.propertyId}
+        dispatch={dispatch}
         doc={doc}
-        propertyName={propName}
-        propertyNode={propValue}
-        propertyNodeId={childId}
+        propertyName={property.propertyName}
+        nodeView={property.nodeView}
         rootLayout={rootLayout}
         path={path}
-        defs={defs}
         setDefsAccordionOpen={setDefsAccordionOpen}
         draggedParentRef={draggedParentRef}
         draggedPropertyRef={draggedPropertyRef}
         editMode={editMode}
         features={features}
         isEditable={isEditable}
-        isRequired={
-          Array.isArray(effective.required)
-            ? effective.required.includes(propName)
-            : false
-        }
+        isRequired={property.isRequired}
         siblingNames={propertyNames}
         renderNode={renderNode}
         onRequiredChange={(required) => {
-          applyDocOp((current) => setRequired(current, propertyId, required))
+          dispatch((current) =>
+            setRequired(current, property.propertyId, required)
+          )
         }}
         onNameChange={(newName, updatedNode) => {
-          applyDocOp((current) => {
+          dispatch((current) => {
             let next = current
-            if (newName !== propName) {
-              next = renameProperty(next, propertyId, newName)
+            if (newName !== property.propertyName) {
+              next = renameProperty(next, property.propertyId, newName)
             }
             if (updatedNode) {
-              next = replaceNodeJson(next, childId, updatedNode)
+              next = replaceNodeJson(next, property.nodeView.nodeId, updatedNode)
             }
             return next
           })
         }}
         onDelete={() => {
-          applyDocOp((current) => removeProperty(current, propertyId))
+          dispatch((current) => removeProperty(current, property.propertyId))
         }}
-        onDragStart={(event) => handleDragStart(event, propName)}
-        onDragOver={(event) => handleDragOver(event, propName)}
+        onDragStart={(event) =>
+          handleDragStart(
+            event,
+            property.propertyId,
+            property.propertyName
+          )
+        }
+        onDragOver={(event) => handleDragOver(event, property.propertyId)}
         onDragLeave={handleDragLeave}
-        onDrop={(event) => handleDrop(event, propName)}
+        onDrop={(event) => handleDrop(event, property.propertyId)}
       />
     )
   }
 
   const addPropertyControl = (rootLayout: boolean) =>
     isEditable ? (
-      <div
-        className={
-          rootLayout
-            ? "mt-3 ml-4 flex flex-col gap-1"
-            : "mt-2 ml-4 flex items-center gap-3 border-l border-border pl-4"
-        }
-      >
-        <div className="flex items-center gap-3">
-          <Input
-            placeholder="New property name"
-            className={`h-8 w-40 ${newPropErr ? "border-destructive" : ""}`}
-            value={newPropName}
-            onChange={(event) => {
-              const value = event.target.value
-              setNewPropName(value)
-              setNewPropErr(value ? validateNewPropertyName(value) : null)
-            }}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" && newPropName.trim()) {
-                addNewProperty()
-              }
-            }}
-          />
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={!!newPropErr || !newPropName.trim()}
-            className={
-              !!newPropErr || !newPropName.trim() ? "cursor-not-allowed" : ""
-            }
-            onClick={addNewProperty}
-          >
-            <PlusIcon className="h-4 w-4" />
-            <span>Add</span>
-          </Button>
-        </div>
-
-        {newPropErr && (
-          <p className="flex items-center gap-1 text-xs text-destructive">
-            <AlertCircle className="h-3 w-3" /> {newPropErr}
-          </p>
-        )}
-      </div>
+      <DocumentPropertyAddRow
+        rootLayout={rootLayout}
+        siblingNames={propertyNames}
+        onAddProperty={addNewProperty}
+      />
     ) : null
 
   if (path === "#") {
@@ -333,16 +239,16 @@ export function DocumentObjectNodeEditor({
         >
           <AccordionItem value="properties" className="border-none">
             <AccordionTrigger className="text-sm font-medium text-muted-foreground">
-              Properties ({propertyNames.length})
+              Properties ({properties.length})
             </AccordionTrigger>
             <AccordionContent>
               <div>
-                {propertyNames.length === 0 && (
+                {properties.length === 0 && (
                   <p className="ml-4 py-2 text-sm text-muted-foreground">
                     Define the data structure for this object.
                   </p>
                 )}
-                {propertyNames.map((propName) => renderProperty(propName, true))}
+                {properties.map((property) => renderProperty(property, true))}
                 {addPropertyControl(true)}
               </div>
             </AccordionContent>
@@ -355,7 +261,7 @@ export function DocumentObjectNodeEditor({
   return (
     <div className="pl-2">
       <div>
-        {propertyNames.map((propName) => renderProperty(propName, false))}
+        {properties.map((property) => renderProperty(property, false))}
         {addPropertyControl(false)}
       </div>
     </div>

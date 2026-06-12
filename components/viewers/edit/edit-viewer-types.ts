@@ -8,7 +8,7 @@ export type EditViewerStatus =
   | { state: "filling"; message?: string }
   | { state: "error"; message: string }
 
-export interface EditViewerFeatures {
+export interface EditViewerOptions {
   fieldPanel?: boolean
   search?: boolean
   filters?: boolean
@@ -31,6 +31,22 @@ export interface EditViewerResult {
   editType?: "agent" | "template"
 }
 
+export interface EditViewerInputField {
+  key?: string
+  description?: string
+  type?: "text" | "checkbox"
+  value?: string | boolean | null
+  bbox?: BBox
+  combing?: boolean
+  maxLength?: number
+  max_length?: number
+}
+
+export interface EditViewerInputResult {
+  fields?: readonly EditViewerInputField[] | null
+  editType?: "agent" | "template"
+}
+
 export interface EditViewerDocument {
   buffer?: ArrayBuffer | null
   src?: string | null
@@ -39,7 +55,7 @@ export interface EditViewerDocument {
 }
 
 export interface EditViewerProps {
-  result: EditViewerResult | null
+  result: EditViewerInputResult | null
   sourceDocument?: EditViewerDocument | null
   filledDocument?: EditViewerDocument | null
   mode?: EditViewerMode
@@ -48,5 +64,5 @@ export interface EditViewerProps {
   onSelectedFieldKeyChange?: (key: string | null) => void
   status?: EditViewerStatus
   className?: string
-  features?: EditViewerFeatures
+  options?: EditViewerOptions
 }

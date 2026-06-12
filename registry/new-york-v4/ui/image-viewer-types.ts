@@ -1,6 +1,6 @@
 import type * as React from "react"
 
-export interface FrameOverlayPublicProps {
+export interface ImageFrameOverlayProps {
   /** 1-based frame index (a TIFF page; always 1 for single images). */
   frameNumber: number
   /** Rendered frame size in CSS pixels (post-scale, post-rotation). */
@@ -8,14 +8,6 @@ export interface FrameOverlayPublicProps {
   height: number
   scale: number
   rotation: number
-}
-
-/**
- * Public compatibility shape for the PDF viewer vocabulary. In `ImageViewer`,
- * `pageNumber` is the same 1-based value as `frameNumber`.
- */
-export type PageOverlayProps = FrameOverlayPublicProps & {
-  pageNumber: number
 }
 
 /**
@@ -46,9 +38,9 @@ export interface ImageViewerProps {
   toolbar?: boolean
   downloadFileName?: string
   /** Render absolutely-positioned overlays (e.g. bbox citations) on each frame. */
-  renderPageOverlay?: (props: PageOverlayProps) => React.ReactNode
+  renderFrameOverlay?: (props: ImageFrameOverlayProps) => React.ReactNode
   /** Fired with the 1-based frame nearest the top of the viewport as you scroll. */
-  onVisiblePageChange?: (page: number) => void
+  onVisibleFrameChange?: (frameNumber: number) => void
   /** Fired with scroll progress in [0, 1] (for a fine-grained scroll cursor). */
   onScrollProgressChange?: (progress: number) => void
   /** Drop the outer border/rounded/background so the viewer fills its container. */

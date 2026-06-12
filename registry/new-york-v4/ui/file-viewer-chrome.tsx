@@ -162,17 +162,20 @@ export function ZoomActionsSkeleton() {
 
 export function UnsupportedCard({
   src,
+  downloadHref,
   fileName,
   className,
   bare,
   message = "No preview for",
 }: {
-  src: string
+  src?: string
+  downloadHref?: string
   fileName: string
   className?: string
   bare?: boolean
   message?: string
 }) {
+  const href = downloadHref ?? src
   return (
     <div
       className={cn(
@@ -186,16 +189,23 @@ export function UnsupportedCard({
         {message}{" "}
         <span className="font-medium text-foreground">{fileName}</span>.
       </p>
-      <Button
-        variant="outline"
-        size="sm"
-        render={
-          <a href={src} download={fileName} target="_blank" rel="noreferrer" />
-        }
-      >
-        <Download className="mr-1.5 size-4" />
-        Download
-      </Button>
+      {href ? (
+        <Button
+          variant="outline"
+          size="sm"
+          render={
+            <a
+              href={href}
+              download={fileName}
+              target="_blank"
+              rel="noreferrer"
+            />
+          }
+        >
+          <Download className="mr-1.5 size-4" />
+          Download
+        </Button>
+      ) : null}
     </div>
   )
 }
@@ -416,8 +426,9 @@ export class FileErrorBoundary extends React.Component<
     if (this.state.error) {
       return (
         <UnsupportedCard
-          src={this.props.descriptor.src}
-          fileName={this.props.descriptor.downloadName}
+          src={this.props.descriptor.loadUrl}
+          downloadHref={this.props.descriptor.downloadHref}
+          fileName={this.props.descriptor.downloadFileName}
           className={this.props.className}
           message="Could not load"
         />

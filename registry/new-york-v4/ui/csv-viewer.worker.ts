@@ -11,17 +11,7 @@ function post(message: CsvWorkerResponse) {
   self.postMessage(message)
 }
 
-async function* readWorkerTextChunks(
-  source: Blob | string
-): AsyncGenerator<string> {
-  if (typeof source === "string") {
-    const size = 1 << 20
-    for (let offset = 0; offset < source.length; offset += size) {
-      yield source.slice(offset, offset + size)
-    }
-    return
-  }
-
+async function* readWorkerTextChunks(source: Blob): AsyncGenerator<string> {
   const reader = source.stream().getReader()
   const decoder = new TextDecoder()
   try {
@@ -48,21 +38,25 @@ async function parseInWorker({
 }: CsvWorkerRequest) {
   const parser = createCsvParser({ delimiter: dialect.delimiter })
   const normalizer = createCsvNormalizer({ hasHeader: dialect.hasHeader })
-  let batch: string[][] = []
+  let sourceRowBatch: string[][] = []
 
   const handleRecords = (records: string[][]) => {
     for (const record of records) {
       for (const event of normalizer.accept(record)) {
         if (event.type === "columns") {
-          padRowsToColumnCount(batch, event.columns.length)
+          padRowsToColumnCount(sourceRowBatch, event.columns.length)
           post({ type: "columns", parseRequestId, columns: event.columns })
         } else {
-          batch.push(event.row)
+          sourceRowBatch.push(event.row)
         }
       }
-      if (batch.length >= batchSize) {
-        post({ type: "rows", parseRequestId, rows: batch })
-        batch = []
+      if (sourceRowBatch.length >= batchSize) {
+        post({
+          type: "sourceRows",
+          parseRequestId,
+          sourceRows: sourceRowBatch,
+        })
+        sourceRowBatch = []
       }
     }
   }
@@ -71,7 +65,13 @@ async function parseInWorker({
     handleRecords(parser.push(chunk))
   }
   handleRecords(parser.flush())
-  if (batch.length) post({ type: "rows", parseRequestId, rows: batch })
+  if (sourceRowBatch.length) {
+    post({
+      type: "sourceRows",
+      parseRequestId,
+      sourceRows: sourceRowBatch,
+    })
+  }
   post({ type: "done", parseRequestId })
 }
 

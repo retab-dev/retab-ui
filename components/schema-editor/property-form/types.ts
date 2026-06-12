@@ -54,20 +54,7 @@ export interface PropertyFormSchemaContext {
   onCommand?: (command: PropertyFormCommand) => void | Promise<void>
 }
 
-export interface PropertyFormFinalProps {
-  draft: PropertyDraft
-  context: PropertyFormSchemaContext
-  capabilities?: PropertyCapabilities
-  validation?: PropertyValidation
-  mode?: PropertyFormMode
-  submitLabel?: string
-  onDraftChange?: (draft: PropertyDraft) => void
-  onCommit: (draft: PropertyDraft) => void | Promise<void>
-  onCancel?: () => void
-  onDelete?: () => void
-}
-
-export interface PropertyFormLegacyProps {
+export interface PropertyFormProps {
   propertyDraft: PropertyDraft
   schemaContext: PropertyFormSchemaContext
   capabilities?: PropertyCapabilities
@@ -79,10 +66,6 @@ export interface PropertyFormLegacyProps {
   onCancel?: () => void
   onDelete?: () => void
 }
-
-export type PropertyFormProps = PropertyFormFinalProps | PropertyFormLegacyProps
-
-export type PropertyFormContext = PropertyFormSchemaContext
 
 export type PropertySchemaNodeType =
   | "string"
@@ -110,6 +93,7 @@ export type PropertyDraftOperation =
 
 export interface PropertyFormFooterModel {
   canDelete: boolean
+  isSubmitting: boolean
   isSubmitDisabled: boolean
   submitLabel: string
   onCancel?: () => void
@@ -118,7 +102,6 @@ export interface PropertyFormFooterModel {
 
 export interface PropertyFormViewModel {
   propertyDraft: PropertyDraft
-  effectiveSchemaNode: ExtendedJSONSchema7
   validation: PropertyValidation
   capabilities: PropertyCapabilities
   fields: {
@@ -136,11 +119,6 @@ export interface PropertyFormViewModel {
       disabled: boolean
       onChange: (schemaNode: ExtendedJSONSchema7) => void
     }
-    enumValues?: {
-      values: JSONSchema7Type[]
-      disabled: boolean
-      onChange: (values: JSONSchema7Type[]) => void
-    }
     nullable: {
       isNullable: boolean
       disabled: boolean
@@ -151,15 +129,12 @@ export interface PropertyFormViewModel {
       disabled: boolean
       onChange: (description: string) => void
     }
-    objectFields?: {
+    schemaNodeDetails?: {
       name: string
       schemaNode: ExtendedJSONSchema7
       schemaContext: PropertyFormSchemaContext
-      onChange: (schemaNode: ExtendedJSONSchema7) => void
-    }
-    arrayItems?: {
-      schemaNode: ExtendedJSONSchema7
-      schemaContext: PropertyFormSchemaContext
+      mode: PropertyFormMode
+      disabled: boolean
       onChange: (schemaNode: ExtendedJSONSchema7) => void
     }
   }

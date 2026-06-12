@@ -48,8 +48,7 @@ export interface RunCardProps
     | "previewImageUrl"
     | "previewAspectRatio"
     | "previewClassName"
-    | "isLoading"
-    | "hasError"
+    | "state"
   > {
   /**
    * Replaces the single `FileThumbnail` with custom media in the same framed,
@@ -84,8 +83,7 @@ export function RunCard({
   previewImageUrl,
   previewAspectRatio,
   previewClassName,
-  isLoading,
-  hasError,
+  state,
   media,
   status,
   title,
@@ -136,8 +134,7 @@ export function RunCard({
             previewImageUrl={previewImageUrl}
             previewClassName={previewClassName}
             previewAspectRatio={previewAspectRatio ?? 16 / 10}
-            isLoading={isLoading}
-            hasError={hasError}
+            state={state}
             className={cn("rounded-none border-0", hasFooter && "border-b")}
           />
         )}

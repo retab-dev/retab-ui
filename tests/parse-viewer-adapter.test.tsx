@@ -11,15 +11,18 @@ vi.mock("@/components/viewers/page-markdown/page-markdown-viewer", () => ({
     pages,
     text,
     downloadFileName,
+    processingLabel,
   }: {
     pages: string[]
     text?: string
     downloadFileName?: string
+    processingLabel?: string
   }) => (
     <div>
       <span data-testid="pages">{pages.join("|")}</span>
       <span data-testid="text">{text}</span>
       <span data-testid="download">{downloadFileName}</span>
+      <span data-testid="processing">{processingLabel}</span>
     </div>
   ),
 }))
@@ -45,5 +48,8 @@ describe("ParseViewer adapter", () => {
     expect(screen.getByTestId("pages").textContent).toBe("# One|# Two")
     expect(screen.getByTestId("text").textContent).toBe("# One\n\n# Two")
     expect(screen.getByTestId("download").textContent).toBe("parse-output.md")
+    expect(screen.getByTestId("processing").textContent).toBe(
+      "Parsing document..."
+    )
   })
 })

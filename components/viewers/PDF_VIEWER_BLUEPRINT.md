@@ -22,10 +22,20 @@ Implemented in this pass:
 - implementation modules no longer import from `pdf-viewer.tsx`
 - the public shell no longer re-exports the internal test reset helper
 - resource, scale, page-size, and scroll invariants have focused tests
+- scroll tests cover invalid pages, negative and over-100 area clamping,
+  non-scrollable progress, and the 20% current-page marker
 - registry output includes every extracted PDF viewer module
+- breaking-ideal API is selected: `header`, `aside`, `asideToggle`, and
+  `defaultAsideOpen` are removed
+- `PdfPageScrollTarget` now reflects actual behavior: vertical page targeting
+  only
+- `usePdfScale` returns only the shell-facing scale controls
+- `pdf-viewer-scroll.ts` no longer exports a duplicate handle type
 
-Remaining verification debt: real browser canvas verification still needs a
-working Browser or Playwright runtime.
+Browser verification status: the docs route loaded in the in-app Browser, the
+viewer rendered real canvases, and a screenshot crop of the visible canvas was
+nonblank. Full toolbar interaction verification is still blocked by unrelated
+dev-server compile errors outside the PDF viewer surface.
 
 ## Current State
 
@@ -100,8 +110,8 @@ Final responsibility map:
   retain/release, internal test reset.
 - `pdf-viewer-scale.ts`: scale constants, clamping, fit-width math,
   controlled/uncontrolled scale hook.
-- `pdf-viewer-scroll.ts`: viewport state, current-page measurement, scroll
-  progress, `scrollToPageArea`.
+- `pdf-viewer-scroll.ts`: viewport state, current-page measurement, clamped
+  scroll progress, `scrollToPageTarget`.
 - `pdf-viewer-virtualization.ts`: visible page set and slot observation.
 - `pdf-viewer-page-sizes.ts`: learned page-size map.
 - `pdf-viewer-page.tsx`: one page, one canvas, one overlay layer.
@@ -126,17 +136,14 @@ export interface PageOverlayProps {
   rotation: number
 }
 
-export type PdfPageArea = {
+export type PdfPageScrollTarget = {
   top: number
-  left?: number
-  width?: number
-  height?: number
 }
 
 export interface PdfViewerHandle {
-  scrollToPageArea: (
+  scrollToPageTarget: (
     pageNumber: number,
-    area: PdfPageArea,
+    target: PdfPageScrollTarget,
     options?: ScrollToOptions
   ) => void
   getViewportElement: () => HTMLDivElement | null
@@ -162,7 +169,8 @@ Then:
   `pdf-viewer-types.ts`.
 - `pdf-viewer-page.tsx` imports `PageOverlayProps` and `PdfPageSize` from
   `pdf-viewer-types.ts`.
-- `pdf-viewer-scroll.ts` imports `PdfPageArea` from `pdf-viewer-types.ts`.
+- `pdf-viewer-scroll.ts` imports `PdfPageScrollTarget` from
+  `pdf-viewer-types.ts`.
 - remove type back edges from implementation modules to `pdf-viewer.tsx`.
 
 Success condition: `rg 'from "./pdf-viewer"' registry/new-york-v4/ui/pdf-viewer-*`
@@ -243,30 +251,7 @@ rg "__resetPdfDocumentCacheForTests" registry/new-york-v4/ui/pdf-viewer.tsx
 
 returns nothing.
 
-## Step 4: Decide Alias Policy
-
-There are two acceptable end states. Pick one deliberately.
-
-### Option A: Compatibility Release
-
-Keep aliases:
-
-- `header`
-- `aside`
-- `asideToggle`
-- `defaultAsideOpen`
-
-But make them obviously secondary:
-
-- docs label them "compatibility aliases".
-- implementation resolves them once at the shell boundary.
-- internal names remain `topSlot`, `leftRailSlot`, `showRailToggle`,
-  `railsOpen`.
-- no new code should use the aliases.
-
-This is the right choice if registry consumers may already depend on them.
-
-### Option B: Breaking Ideal
+## Step 4: Breaking-Ideal Alias Policy
 
 Remove aliases:
 
@@ -282,10 +267,8 @@ Keep only:
 - `railToggle`
 - `defaultRailsOpen`
 
-This is the purest API. Only do it if the registry version can break.
-
-Default recommendation: choose Option A now, document Option B as the next
-breaking cleanup. Compatibility is not Platonic, but silent breakage is worse.
+This is the selected end state. Registry consumers must use `slots` for chrome
+and `railToggle` / `defaultRailsOpen` for rail collapse behavior.
 
 ## Step 5: Tighten Tests
 
@@ -325,9 +308,10 @@ Extend direct resource tests:
 Extend scroll tests:
 
 - invalid page does nothing
-- negative `area.top` clamps to page top
-- `area.top > 100` clamps to page bottom
+- negative `target.top` clamps to page top
+- `target.top > 100` clamps to page bottom
 - progress is `0` when content is not scrollable
+- progress clamps to `[0, 1]`
 - current page selection uses the 20% marker
 
 Keep jsdom component tests for integration behavior:
@@ -364,7 +348,7 @@ Checks:
 - controlled scale does not drift
 - overlays stay aligned after zoom and rotation
 - current-page callback tracks scroll
-- `scrollToPageArea` lands with headroom
+- `scrollToPageTarget` lands with headroom
 - narrow viewport toolbar does not overlap
 
 Use the Browser plugin or Playwright. Do not declare the component finished
@@ -380,10 +364,11 @@ to include:
 
 Docs must state:
 
-- `railToggle` and `defaultRailsOpen` are preferred.
-- `asideToggle` and `defaultAsideOpen` are compatibility aliases.
-- `header` and `aside` are compatibility aliases for `slots.top` and
-  `slots.left`.
+- `slots.top`, `slots.bottom`, `slots.left`, `slots.right`, and
+  `slots.overlay` are the only chrome extension points.
+- `railToggle` and `defaultRailsOpen` control rail collapse behavior.
+- `header`, `aside`, `asideToggle`, and `defaultAsideOpen` are not part of the
+  public API.
 - `scale` is controlled when supplied.
 - `null` from `onScaleChange` means fit width.
 
@@ -412,7 +397,10 @@ This final pass is done when:
 - shared types live in `pdf-viewer-types.ts`.
 - page-size map mechanics live in `pdf-viewer-page-sizes.ts`.
 - `__resetPdfDocumentCacheForTests` is no longer re-exported by the public shell.
-- alias policy is explicit in docs and implementation.
+- compatibility aliases are gone from docs and implementation.
+- `PdfPageScrollTarget` exposes only fields that `scrollToPageTarget` uses.
+- support modules do not export duplicate handle types or unused hook return
+  fields.
 - tests cover page-size state, scale clamping, retry, invalid scroll, and
   observer fallback.
 - registry output includes every new module.

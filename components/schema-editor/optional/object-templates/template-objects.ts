@@ -1,4 +1,4 @@
-import { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types";
+import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types";
 
 export const templateObjects: Record<
   string,

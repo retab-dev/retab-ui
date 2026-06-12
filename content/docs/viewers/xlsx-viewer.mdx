@@ -81,3 +81,18 @@ pixel-exact Excel clone. Merged cells show their value in the top-left cell.
 | `bare`              | `boolean`                                             | Drop the outer border/background so the viewer fills its container.                                                                                                                                                                                                                                                                                                                                                                                                 |
 | `isolateStyles`     | `boolean`                                             | Render the scrolling grid inside a shadow root so the host page's CSS — especially `:has()` selectors, whose invalidation Blink doesn't scope by `contain` — can't reach it. On `:has()`-heavy pages this collapses per-scroll style recalc and keeps scrolling at refresh rate. The page's author CSS is copied in so utilities resolve and theme variables inherit through the boundary. Defaults to `false`. When on, host CSS can't style the grid's internals. |
 | `className`         | `string`                                              | Optional class on the viewer shell.                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+
+## Imperative handle
+
+Attach a ref when source-link UI needs to drive the viewer:
+
+```tsx
+const ref = React.useRef<XlsxViewerHandle>(null)
+
+ref.current?.scrollToCell(0, 4, 2, { behavior: "auto" })
+```
+
+| Method                 | Description                                                                                                                                                                 |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `scrollToCell`         | Scrolls to public compatibility coordinates `(sheet, row, col)`, all 0-based. Calls made before workbook metadata loads are replayed after load if the target is in bounds. |
+| `getViewportElement()` | Returns the scrolling grid viewport after load, or `null` before the viewport is mounted.                                                                                   |

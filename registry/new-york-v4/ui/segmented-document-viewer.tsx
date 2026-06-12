@@ -130,8 +130,7 @@ export function SegmentedDocumentViewer({
               src={src}
               bare
               className="h-full"
-              header={header}
-              aside={sidebar}
+              slots={{ top: header, left: sidebar }}
               onVisiblePageChange={setCurrentPage}
             />
           </div>

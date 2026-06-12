@@ -1,12 +1,10 @@
-import { baseName, timed } from "./file-viewer-core"
 import {
-  cachedPromise,
   isAbortError,
-  lruGet,
-  lruSet,
   subscribeToAbortableRequest,
   type SharedAbortableRequest,
-} from "./file-viewer-resource-cache"
+} from "./file-viewer-async"
+import { baseName, timed } from "./file-viewer-core"
+import { cachedPromise, lruGet, lruSet } from "./file-viewer-resource-cache"
 
 export interface TextResourceSubscription {
   src: string

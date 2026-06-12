@@ -83,10 +83,10 @@ export function countSchemaProperties(schema?: ExtendedJSONSchema7): number {
 
     if (node.properties && typeof node.properties === "object") {
       count += Object.keys(node.properties).length;
-      Object.entries(node.properties).forEach(([propName, propSchema]) => {
+      Object.entries(node.properties).forEach(([propertyName, propSchema]) => {
         count += countProperties(
           propSchema as ExtendedJSONSchema7,
-          `${path}/properties/${propName}`,
+          `${path}/properties/${propertyName}`,
         );
       });
     }

@@ -27,40 +27,33 @@ export interface CsvGridHandle {
 
 export interface CsvGridProps {
   columns: string[]
-  rows: string[][]
+  sourceRows: string[][]
   activeCell: CsvCellAddress | null
-  label: string
   height: number
   fillHeight: boolean
   isolateStyles: boolean
-  showRowNumbers: boolean
-  virtualized: boolean
-  overscan: number
-  columnOverscan?: number
-  rowHeight: number
-  columnWidth: number
   scale: number
   statusNode: React.ReactNode
 }
 
+const CSV_TABLE_LABEL = "CSV data"
+const COLUMN_WIDTH = 180
+const COLUMN_OVERSCAN = 30
+const ROW_HEIGHT = 33
 const ROW_NUMBER_WIDTH = 56
+const ROW_OVERSCAN = 30
+const SMALL_TABLE_ROW_LIMIT = 200
+const SMALL_TABLE_COLUMN_LIMIT = 20
 
 export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
   function CsvGrid(
     {
       columns,
-      rows,
+      sourceRows,
       activeCell,
-      label,
       height,
       fillHeight,
       isolateStyles,
-      showRowNumbers,
-      virtualized,
-      overscan,
-      columnOverscan,
-      rowHeight,
-      columnWidth,
       scale,
       statusNode,
     },
@@ -83,14 +76,17 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
 
     const rowOrder = React.useMemo<number[] | null>(() => {
       if (!sort) return null
-      const order = rows.map((_, rowIndex) => rowIndex)
+      const order = sourceRows.map((_, rowIndex) => rowIndex)
       const { columnIndex } = sort
       order.sort((a, b) =>
-        compareCells(rows[a][columnIndex] ?? "", rows[b][columnIndex] ?? "")
+        compareCells(
+          sourceRows[a][columnIndex] ?? "",
+          sourceRows[b][columnIndex] ?? ""
+        )
       )
       if (sort.descending) order.reverse()
       return order
-    }, [rows, sort])
+    }, [sourceRows, sort])
 
     const displayIndexByRowIndex = React.useMemo<Map<
       number,
@@ -106,8 +102,8 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
 
     const rowAt = React.useCallback(
       (displayRowIndex: number): Row =>
-        rows[rowOrder ? rowOrder[displayRowIndex] : displayRowIndex],
-      [rows, rowOrder]
+        sourceRows[rowOrder ? rowOrder[displayRowIndex] : displayRowIndex],
+      [sourceRows, rowOrder]
     )
 
     const rowIndexAt = React.useCallback(
@@ -118,16 +114,18 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
 
     const viewportRef = React.useRef<HTMLDivElement>(null)
     const columnCount = columns.length
-    const columnOffset = showRowNumbers ? 1 : 0
-    const effectiveRowHeight = Math.max(1, Math.round(rowHeight * scale))
-    const effectiveColumnWidth = Math.max(1, Math.round(columnWidth * scale))
+    const columnOffset = 1
+    const shouldVirtualizeRows = sourceRows.length > SMALL_TABLE_ROW_LIMIT
+    const shouldVirtualizeColumns = columnCount > SMALL_TABLE_COLUMN_LIMIT
+    const effectiveRowHeight = Math.max(1, Math.round(ROW_HEIGHT * scale))
+    const effectiveColumnWidth = Math.max(1, Math.round(COLUMN_WIDTH * scale))
     const effectiveRowNumberWidth = Math.round(ROW_NUMBER_WIDTH * scale)
 
     const rowVirtualizer = useVirtualizer({
-      count: rows.length,
+      count: sourceRows.length,
       getScrollElement: () => viewportRef.current,
       estimateSize: () => effectiveRowHeight,
-      overscan,
+      overscan: ROW_OVERSCAN,
     })
 
     const columnVirtualizer = useVirtualizer({
@@ -135,7 +133,7 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
       count: columnCount,
       getScrollElement: () => viewportRef.current,
       estimateSize: () => effectiveColumnWidth,
-      overscan: columnOverscan ?? overscan,
+      overscan: COLUMN_OVERSCAN,
     })
 
     const { columnItems, leftPad, rightPad } = React.useMemo<{
@@ -143,7 +141,7 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
       leftPad: number
       rightPad: number
     }>(() => {
-      if (!virtualized) {
+      if (!shouldVirtualizeColumns) {
         return {
           columnItems: columns.map((_, index) => ({
             index,
@@ -156,7 +154,7 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
       const items = columnVirtualizer.getVirtualItems()
       const total = columnVirtualizer.getTotalSize()
       if (items.length === 0 && columnCount > 0) {
-        const count = Math.min(columnCount, columnOverscan ?? overscan)
+        const count = Math.min(columnCount, COLUMN_OVERSCAN)
         return {
           columnItems: Array.from({ length: count }, (_, index) => ({
             index,
@@ -177,12 +175,10 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
       // getVirtualItems is recomputed on scroll/resize; depend on its value.
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [
-      virtualized,
+      shouldVirtualizeColumns,
       columns,
       effectiveColumnWidth,
       columnCount,
-      columnOverscan,
-      overscan,
       columnVirtualizer.getVirtualItems(),
       columnVirtualizer.getTotalSize(),
     ])
@@ -222,25 +218,23 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
     const gridTemplate = React.useMemo(
       () =>
         buildGridTemplate({
-          showRowNumbers,
           rowNumberWidth: effectiveRowNumberWidth,
           leftPad,
           columnItems,
           rightPad,
         }),
-      [showRowNumbers, effectiveRowNumberWidth, leftPad, columnItems, rightPad]
+      [effectiveRowNumberWidth, leftPad, columnItems, rightPad]
     )
     const totalWidth =
-      (showRowNumbers ? effectiveRowNumberWidth : 0) +
-      columnCount * effectiveColumnWidth
+      effectiveRowNumberWidth + columnCount * effectiveColumnWidth
     const virtualRows = rowVirtualizer.getVirtualItems()
 
     return (
       <div
         data-slot="csv-grid"
         role="table"
-        aria-label={label}
-        aria-rowcount={rows.length + 1}
+        aria-label={CSV_TABLE_LABEL}
+        aria-rowcount={sourceRows.length + 1}
         aria-colcount={columnCount + columnOffset}
         className={cn("relative", fillHeight && "min-h-0 flex-1")}
       >
@@ -273,15 +267,13 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
                     "color-mix(in oklab, var(--card) 92%, var(--foreground))",
                 }}
               >
-                {showRowNumbers ? (
-                  <div
-                    role="columnheader"
-                    aria-colindex={1}
-                    aria-label="Row number"
-                    className="sticky left-0 z-10 border-r bg-[color-mix(in_oklab,var(--card)_94%,var(--foreground))]"
-                    style={{ height: effectiveRowHeight }}
-                  />
-                ) : null}
+                <div
+                  role="columnheader"
+                  aria-colindex={1}
+                  aria-label="Row number"
+                  className="sticky left-0 z-10 border-r bg-[color-mix(in_oklab,var(--card)_94%,var(--foreground))]"
+                  style={{ height: effectiveRowHeight }}
+                />
                 <Spacer width={leftPad} />
                 {columnItems.map((item) => (
                   <HeaderCell
@@ -304,7 +296,7 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
 
               {statusNode ? (
                 statusNode
-              ) : virtualized ? (
+              ) : shouldVirtualizeRows ? (
                 <div
                   role="rowgroup"
                   style={{
@@ -320,7 +312,6 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
                       rowIndex={rowIndexAt(virtualRow.index)}
                       gridTemplate={gridTemplate}
                       rowHeight={effectiveRowHeight}
-                      showRowNumbers={showRowNumbers}
                       columnOffset={columnOffset}
                       columnItems={columnItems}
                       leftPad={leftPad}
@@ -336,7 +327,7 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
                 </div>
               ) : (
                 <div role="rowgroup">
-                  {rows.map((_, displayRowIndex) => (
+                  {sourceRows.map((_, displayRowIndex) => (
                     <CsvRow
                       key={displayRowIndex}
                       cells={rowAt(displayRowIndex)}
@@ -344,7 +335,6 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
                       rowIndex={rowIndexAt(displayRowIndex)}
                       gridTemplate={gridTemplate}
                       rowHeight={effectiveRowHeight}
-                      showRowNumbers={showRowNumbers}
                       columnOffset={columnOffset}
                       columnItems={columnItems}
                       leftPad={leftPad}
@@ -371,25 +361,18 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
 )
 
 function buildGridTemplate({
-  showRowNumbers,
   rowNumberWidth,
   leftPad,
   columnItems,
   rightPad,
 }: {
-  showRowNumbers: boolean
   rowNumberWidth: number
   leftPad: number
   columnItems: ColumnItem[]
   rightPad: number
 }) {
   const columns = columnItems.map((column) => `${column.size}px`).join(" ")
-  return [
-    showRowNumbers ? `${rowNumberWidth}px` : null,
-    `${leftPad}px`,
-    columns,
-    `${rightPad}px`,
-  ]
+  return [`${rowNumberWidth}px`, `${leftPad}px`, columns, `${rightPad}px`]
     .filter(Boolean)
     .join(" ")
 }
@@ -466,7 +449,6 @@ const CsvRow = React.memo(function CsvRow({
   rowIndex,
   gridTemplate,
   rowHeight,
-  showRowNumbers,
   columnOffset,
   columnItems,
   leftPad,
@@ -479,7 +461,6 @@ const CsvRow = React.memo(function CsvRow({
   rowIndex: number
   gridTemplate: string
   rowHeight: number
-  showRowNumbers: boolean
   columnOffset: number
   columnItems: ColumnItem[]
   leftPad: number
@@ -507,16 +488,14 @@ const CsvRow = React.memo(function CsvRow({
       className="group grid border-b hover:bg-muted/40"
       style={style}
     >
-      {showRowNumbers ? (
-        <div
-          role="rowheader"
-          aria-colindex={1}
-          data-slot="csv-row-number"
-          className="sticky left-0 z-[1] flex items-center justify-end border-r bg-card px-2 text-muted-foreground tabular-nums group-hover:bg-[color-mix(in_oklab,var(--card)_97%,var(--foreground))]"
-        >
-          {rowIndex + 1}
-        </div>
-      ) : null}
+      <div
+        role="rowheader"
+        aria-colindex={1}
+        data-slot="csv-row-number"
+        className="sticky left-0 z-[1] flex items-center justify-end border-r bg-card px-2 text-muted-foreground tabular-nums group-hover:bg-[color-mix(in_oklab,var(--card)_97%,var(--foreground))]"
+      >
+        {rowIndex + 1}
+      </div>
       <Spacer width={leftPad} />
       {columnItems.map((item) => {
         const text = cells?.[item.index] ?? ""

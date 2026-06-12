@@ -4,14 +4,11 @@ import * as React from "react"
 
 export interface PptxVisibleSlideInput {
   onVisibleSlideChange?: (slide: number) => void
-  /** @deprecated Use `onVisibleSlideChange`. */
-  onVisiblePageChange?: (page: number) => void
   onScrollProgressChange?: (progress: number) => void
 }
 
 export function usePptxVisibleSlide({
   onVisibleSlideChange,
-  onVisiblePageChange,
   onScrollProgressChange,
 }: PptxVisibleSlideInput) {
   const [currentSlide, setCurrentSlide] = React.useState(1)
@@ -29,9 +26,7 @@ export function usePptxVisibleSlide({
 
     const rect = viewport.getBoundingClientRect()
     const marker = rect.top + rect.height * 0.2
-    const slides = viewport.querySelectorAll<HTMLElement>(
-      "[data-slide-number]"
-    )
+    const slides = viewport.querySelectorAll<HTMLElement>("[data-slide-number]")
     let visibleSlide = 1
     for (const slide of slides) {
       if (slide.getBoundingClientRect().top <= marker) {
@@ -45,9 +40,8 @@ export function usePptxVisibleSlide({
       lastReportedSlide.current = visibleSlide
       setCurrentSlide(visibleSlide)
       onVisibleSlideChange?.(visibleSlide)
-      onVisiblePageChange?.(visibleSlide)
     }
-  }, [onScrollProgressChange, onVisiblePageChange, onVisibleSlideChange])
+  }, [onScrollProgressChange, onVisibleSlideChange])
 
   return { currentSlide, handleScroll, scrollViewportRef }
 }

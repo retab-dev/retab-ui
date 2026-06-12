@@ -53,8 +53,8 @@ export function ImageFrame({
       className="relative shadow-sm ring-1 ring-border"
       style={{ width: frameRect.width, height: frameRect.height }}
       data-slot="image-frame"
-      data-page={frameNumber}
-      data-page-number={frameNumber}
+      data-frame={frameNumber}
+      data-frame-number={frameNumber}
     >
       {isNearViewport ? (
         <ImageFrameCanvas

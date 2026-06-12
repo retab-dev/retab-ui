@@ -4,153 +4,97 @@ import * as React from "react"
 import { PlusIcon, Trash2 } from "lucide-react"
 
 import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
-import { getEffectiveNode } from "@/components/schema-editor/lib/json-schema-utils"
+import {
+  createObjectPropertySchema,
+  isSchemaNode,
+  listObjectPropertyNames,
+  removeObjectProperty,
+  renameObjectProperty,
+  replaceObjectProperty,
+} from "@/components/schema-editor/property-form/model/object-property-edits"
 import type { PropertyFormSchemaContext } from "@/components/schema-editor/property-form/types"
-import { formatTitle } from "@/components/schema-editor/schema-title"
+import { validatePropertyFormName } from "@/components/schema-editor/property-form/validation"
 import { Button } from "@/components/ui-retab/button"
 import { Input } from "@/components/ui-retab/input"
 import { Label } from "@/components/ui-retab/label"
 
-import { ArrayItemsField } from "./array-items-field"
-import { EnumValuesField } from "./enum-values-field"
-import { TypeField } from "./type-field"
-
-function isSchemaNode(value: unknown): value is ExtendedJSONSchema7 {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
-}
-
-function propertyNames(schemaNode: ExtendedJSONSchema7) {
-  return Object.keys(schemaNode.properties || {})
-}
-
-function replaceProperty(
-  schemaNode: ExtendedJSONSchema7,
-  propertyName: string,
-  propertySchema: ExtendedJSONSchema7
-): ExtendedJSONSchema7 {
-  return {
-    ...schemaNode,
-    properties: {
-      ...(schemaNode.properties || {}),
-      [propertyName]: propertySchema,
-    },
-    required: propertyNames(schemaNode).includes(propertyName)
-      ? schemaNode.required
-      : [...(schemaNode.required || []), propertyName],
-  }
-}
-
-function renameProperty(
-  schemaNode: ExtendedJSONSchema7,
-  oldName: string,
-  newName: string
-): ExtendedJSONSchema7 {
-  if (!newName || oldName === newName) return schemaNode
-
-  const properties = schemaNode.properties || {}
-  const nextProperties: NonNullable<ExtendedJSONSchema7["properties"]> = {}
-  for (const [currentName, propertySchema] of Object.entries(properties)) {
-    nextProperties[currentName === oldName ? newName : currentName] =
-      propertySchema
-  }
-
-  return {
-    ...schemaNode,
-    properties: nextProperties,
-    required: (schemaNode.required || []).map((name) =>
-      name === oldName ? newName : name
-    ),
-  }
-}
-
-function removeProperty(
-  schemaNode: ExtendedJSONSchema7,
-  propertyName: string
-): ExtendedJSONSchema7 {
-  const { [propertyName]: _removed, ...nextProperties } =
-    schemaNode.properties || {}
-  return {
-    ...schemaNode,
-    properties: nextProperties,
-    required: (schemaNode.required || []).filter((name) => name !== propertyName),
-  }
-}
-
-function NestedDraftFields({
-  name,
-  schemaNode,
-  schemaContext,
-  onChange,
-}: {
-  name: string
-  schemaNode: ExtendedJSONSchema7
-  schemaContext: PropertyFormSchemaContext
-  onChange: (schemaNode: ExtendedJSONSchema7) => void
-}) {
-  const effectiveSchemaNode = getEffectiveNode(schemaNode)
-
-  return (
-    <div className="space-y-3">
-      <TypeField
-        name={name}
-        schemaNode={schemaNode}
-        schemaContext={schemaContext}
-        mode="editable"
-        disabled={false}
-        onChange={onChange}
-      />
-      {Array.isArray(effectiveSchemaNode.enum) && (
-        <EnumValuesField
-          values={effectiveSchemaNode.enum}
-          disabled={false}
-          onChange={(values) => {
-            onChange({ ...effectiveSchemaNode, enum: values })
-          }}
-        />
-      )}
-      {effectiveSchemaNode.type === "object" && !effectiveSchemaNode.$ref && (
-        <ObjectPropertiesField
-          name={name}
-          schemaNode={effectiveSchemaNode}
-          schemaContext={schemaContext}
-          onChange={onChange}
-        />
-      )}
-      {effectiveSchemaNode.type === "array" && (
-        <ArrayItemsField
-          schemaNode={
-            isSchemaNode(effectiveSchemaNode.items)
-              ? effectiveSchemaNode.items
-              : { type: "string" }
-          }
-          schemaContext={schemaContext}
-          onChange={(items) => onChange({ ...effectiveSchemaNode, items })}
-        />
-      )}
-    </div>
-  )
-}
-
 export function ObjectPropertiesField({
   schemaNode,
   schemaContext,
+  disabled,
   onChange,
+  renderPropertyEditor,
 }: {
-  name: string
   schemaNode: ExtendedJSONSchema7
   schemaContext: PropertyFormSchemaContext
+  disabled: boolean
   onChange: (schemaNode: ExtendedJSONSchema7) => void
+  renderPropertyEditor: (props: {
+    propertyName: string
+    propertySchema: ExtendedJSONSchema7
+    propertySchemaContext: PropertyFormSchemaContext
+    onPropertySchemaChange: (schemaNode: ExtendedJSONSchema7) => void
+  }) => React.ReactNode
 }) {
   const [newPropertyName, setNewPropertyName] = React.useState("")
-  const names = propertyNames(schemaNode)
+  const propertyNames = listObjectPropertyNames(schemaNode)
+  const [draftPropertyIdsByName, setDraftPropertyIdsByName] = React.useState(
+    () =>
+      Object.fromEntries(
+        propertyNames.map((propertyName, index) => [
+          propertyName,
+          `draft-property-${index}`,
+        ])
+      )
+  )
+  const nextDraftPropertyIdRef = React.useRef(propertyNames.length)
+  const trimmedNewPropertyName = newPropertyName.trim()
+  const newPropertyNameError = trimmedNewPropertyName
+    ? validatePropertyFormName({
+        name: trimmedNewPropertyName,
+        siblingNames: propertyNames,
+        originalName: "",
+      })
+    : null
+
+  const createDraftPropertyId = () => {
+    const propertyId = `draft-property-${nextDraftPropertyIdRef.current}`
+    nextDraftPropertyIdRef.current += 1
+    return propertyId
+  }
+
+  const renameDraftPropertyId = (
+    oldPropertyName: string,
+    propertyName: string
+  ) => {
+    setDraftPropertyIdsByName((current) => {
+      const propertyId = current[oldPropertyName] ?? createDraftPropertyId()
+      const next = { ...current }
+      delete next[oldPropertyName]
+      next[propertyName] = propertyId
+      return next
+    })
+  }
+
+  const removeDraftPropertyId = (propertyName: string) => {
+    setDraftPropertyIdsByName((current) => {
+      const next = { ...current }
+      delete next[propertyName]
+      return next
+    })
+  }
 
   const addProperty = () => {
-    const name = newPropertyName.trim()
-    if (!name || names.includes(name)) return
+    if (!trimmedNewPropertyName || newPropertyNameError) return
+    setDraftPropertyIdsByName((current) => ({
+      ...current,
+      [trimmedNewPropertyName]: createDraftPropertyId(),
+    }))
     onChange(
-      replaceProperty(schemaNode, name, {
-        type: "string",
-        title: formatTitle(name),
+      replaceObjectProperty({
+        schemaNode,
+        propertyName: trimmedNewPropertyName,
+        propertySchema: createObjectPropertySchema(trimmedNewPropertyName),
       })
     )
     setNewPropertyName("")
@@ -160,19 +104,40 @@ export function ObjectPropertiesField({
     <div className="space-y-3 rounded-md border p-3">
       <Label className="text-xs text-muted-foreground">Object fields</Label>
 
-      {names.map((propertyName) => {
+      {propertyNames.map((propertyName) => {
+        const propertyId =
+          draftPropertyIdsByName[propertyName] ??
+          `external-property-${propertyName}`
         const propertySchema = schemaNode.properties?.[propertyName]
         if (!isSchemaNode(propertySchema)) return null
+        const propertySchemaContext = {
+          ...schemaContext,
+          siblingNames: propertyNames,
+          originalName: propertyName,
+        }
 
         return (
-          <div key={propertyName} className="space-y-2 rounded-md border p-2">
+          <div key={propertyId} className="space-y-2 rounded-md border p-2">
             <div className="flex items-center gap-2">
               <Input
                 aria-label={`Field name ${propertyName}`}
+                disabled={disabled}
                 value={propertyName}
                 onChange={(event) => {
+                  const nextName = event.target.value
+                  const nameError = validatePropertyFormName({
+                    name: nextName,
+                    siblingNames: propertyNames,
+                    originalName: propertyName,
+                  })
+                  if (nameError) return
+                  renameDraftPropertyId(propertyName, nextName)
                   onChange(
-                    renameProperty(schemaNode, propertyName, event.target.value)
+                    renameObjectProperty({
+                      schemaNode,
+                      oldName: propertyName,
+                      newName: nextName,
+                    })
                   )
                 }}
                 className="h-8"
@@ -181,30 +146,29 @@ export function ObjectPropertiesField({
                 type="button"
                 variant="ghost"
                 size="icon"
+                disabled={disabled}
                 aria-label={`Remove field ${propertyName}`}
-                onClick={() => onChange(removeProperty(schemaNode, propertyName))}
+                onClick={() => {
+                  removeDraftPropertyId(propertyName)
+                  onChange(removeObjectProperty({ schemaNode, propertyName }))
+                }}
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
             </div>
-            <NestedDraftFields
-              name={propertyName}
-              schemaNode={propertySchema}
-              schemaContext={{
-                ...schemaContext,
-                siblingNames: names,
-                originalName: propertyName,
-              }}
-              onChange={(nextPropertySchema) =>
+            {renderPropertyEditor({
+              propertyName,
+              propertySchema,
+              propertySchemaContext,
+              onPropertySchemaChange: (nextPropertySchema) =>
                 onChange(
-                  replaceProperty(
+                  replaceObjectProperty({
                     schemaNode,
                     propertyName,
-                    nextPropertySchema
-                  )
-                )
-              }
-            />
+                    propertySchema: nextPropertySchema,
+                  })
+                ),
+            })}
           </div>
         )
       })}
@@ -213,6 +177,7 @@ export function ObjectPropertiesField({
         <Input
           aria-label="New object field"
           placeholder="New field name"
+          disabled={disabled}
           value={newPropertyName}
           onChange={(event) => setNewPropertyName(event.target.value)}
           onKeyDown={(event) => {
@@ -227,7 +192,9 @@ export function ObjectPropertiesField({
           type="button"
           variant="outline"
           size="sm"
-          disabled={!newPropertyName.trim() || names.includes(newPropertyName)}
+          disabled={
+            disabled || !trimmedNewPropertyName || Boolean(newPropertyNameError)
+          }
           onClick={addProperty}
         >
           <PlusIcon className="h-4 w-4" />

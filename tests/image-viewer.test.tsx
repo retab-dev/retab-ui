@@ -33,6 +33,7 @@ import {
   ImageViewer,
   looksLikeTiff,
 } from "@/registry/new-york-v4/ui/image-viewer"
+import { ImageViewerErrorBoundary } from "@/registry/new-york-v4/ui/image-viewer-chrome"
 
 afterEach(() => {
   vi.useRealTimers()
@@ -348,7 +349,8 @@ describe("FrameSourceManager lifecycle", () => {
     expect(fetch).toHaveBeenCalledTimes(2)
   })
 
-  it("disposes the source when the last lease is released", async () => {
+  it("disposes the source after the last lease release settles", async () => {
+    vi.useFakeTimers()
     const manager = new FrameSourceManager()
     stubImageLoading()
     const source = await manager.load("/lease.png", () => new Worker(""))
@@ -360,7 +362,31 @@ describe("FrameSourceManager lifecycle", () => {
     firstLease?.release()
     expect(dispose).not.toHaveBeenCalled()
     secondLease?.release()
+    expect(dispose).not.toHaveBeenCalled()
+    await vi.advanceTimersByTimeAsync(0)
+
     expect(dispose).toHaveBeenCalledTimes(1)
+    vi.useRealTimers()
+  })
+
+  it("cancels last-release disposal when the source is retained again", async () => {
+    vi.useFakeTimers()
+    const manager = new FrameSourceManager()
+    stubImageLoading()
+    const source = await manager.load("/lease-again.png", () => new Worker(""))
+    const dispose = vi.spyOn(source, "dispose")
+
+    const firstLease = manager.retain("/lease-again.png", source)
+    firstLease?.release()
+    const secondLease = manager.retain("/lease-again.png", source)
+
+    await vi.advanceTimersByTimeAsync(0)
+    expect(dispose).not.toHaveBeenCalled()
+    secondLease?.release()
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(dispose).toHaveBeenCalledTimes(1)
+    vi.useRealTimers()
   })
 
   it("marks pending loads for disposal when cleared", async () => {
@@ -418,6 +444,7 @@ describe("FrameSourceManager lifecycle", () => {
     await vi.advanceTimersByTimeAsync(50)
     expect(dispose).not.toHaveBeenCalled()
     lease?.release()
+    await vi.advanceTimersByTimeAsync(0)
     expect(dispose).toHaveBeenCalledTimes(1)
     vi.useRealTimers()
   })
@@ -635,6 +662,31 @@ describe("ImageViewer scale semantics", () => {
   })
 })
 
+describe("ImageViewer error fallback", () => {
+  it("keeps the user-facing fallback terse while exposing diagnostics", () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {})
+
+    function BrokenFrame() {
+      throw new Error("decode exploded")
+      return null
+    }
+
+    render(
+      <ImageViewerErrorBoundary>
+        <BrokenFrame />
+      </ImageViewerErrorBoundary>
+    )
+
+    const fallback = screen.getByText("Couldn't load this image.")
+    expect(fallback.getAttribute("data-slot")).toBe("image-viewer-error")
+    expect(fallback.getAttribute("data-error-message")).toBe("decode exploded")
+    expect(consoleError).toHaveBeenCalledWith(
+      "ImageViewer failed to render.",
+      expect.any(Error)
+    )
+  })
+})
+
 describe("image source overlay geometry", () => {
   it("rotates percentage areas for every right-angle rotation", () => {
     const area = { left: 10, top: 20, width: 30, height: 40 }
@@ -677,7 +729,6 @@ describe("image source overlay geometry", () => {
       <>
         {overlay({
           frameNumber: 1,
-          pageNumber: 1,
           width: 100,
           height: 100,
           scale: 1,

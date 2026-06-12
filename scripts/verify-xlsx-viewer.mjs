@@ -85,8 +85,13 @@ try {
   )
   await client.close()
 } finally {
-  chrome.kill("SIGTERM")
-  await rm(userDataDir, { recursive: true, force: true })
+  await stopChrome(chrome)
+  await rm(userDataDir, {
+    recursive: true,
+    force: true,
+    maxRetries: 5,
+    retryDelay: 100,
+  })
 }
 
 async function assertDevServer(url) {
@@ -261,6 +266,16 @@ async function waitForGridMetadata(client, ms) {
 
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+async function stopChrome(chromeProcess) {
+  if (chromeProcess.exitCode != null) return
+  const exited = new Promise((resolve) => {
+    chromeProcess.once("exit", resolve)
+  })
+  chromeProcess.kill("SIGTERM")
+  await Promise.race([exited, delay(2_000)])
+  if (chromeProcess.exitCode == null) chromeProcess.kill("SIGKILL")
 }
 
 function fail(message) {

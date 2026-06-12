@@ -40,10 +40,8 @@ export interface PptxViewerProps {
   onScaleChange?: (scale: number | null) => void
   toolbar?: boolean
   downloadFileName?: string
-  renderSlideOverlay?: (props: PptxPageOverlayProps) => React.ReactNode
-  /** @deprecated Use `renderSlideOverlay`. */
-  renderPageOverlay?: (props: PptxPageOverlayProps) => React.ReactNode
-  onVisiblePageChange?: (page: number) => void
+  renderSlideOverlay?: (props: PptxSlideOverlayProps) => React.ReactNode
+  onVisibleSlideChange?: (slide: number) => void
   onScrollProgressChange?: (progress: number) => void
   bare?: boolean
   header?: React.ReactNode
@@ -59,9 +57,9 @@ Rules:
 - `scale={undefined}` means use internal state; internal `null` means fit width.
 - `onScaleChange(null)` means fit width.
 - Zoom controls are enabled when uncontrolled or when `onScaleChange` exists.
-- `renderSlideOverlay` receives the visible rotated slide box.
-- `renderPageOverlay` is a deprecated compatibility alias.
-- If both overlay props are present, `renderSlideOverlay` wins.
+- `renderSlideOverlay` receives the visible rotated slide box with
+  `slideNumber` as the 1-based index.
+- `onVisibleSlideChange` reports the visible 1-based slide index.
 - No prop exposes implementation details of `pptxviewjs`.
 
 ## File Layout
@@ -117,7 +115,7 @@ Preferred names:
 
 - `source`: parsed deck plus render methods.
 - `slideIndex`: zero-based index.
-- `pageNumber`: one-based public display number.
+- `slideNumber`: one-based public display number.
 - `baseSize`: intrinsic slide size in CSS pixels.
 - `visibleSize`: rotated slide box in CSS pixels.
 - `renderScale`: effective canvas render scale, including DPR.
@@ -338,7 +336,7 @@ PptxViewer
         PptxSlideScroller
           PptxSlideFrame
             PptxSlideCanvas
-            PptxPageOverlay
+            PptxSlideOverlay
 ```
 
 Responsibilities:
@@ -346,10 +344,10 @@ Responsibilities:
 - `PptxViewer`: client gate, Suspense, error boundary.
 - `PptxViewerContent`: source lookup and high-level state.
 - `PptxToolbar`: all toolbar rendering and events.
-- `PptxSlideScroller`: scroll handling and visible-page reporting.
+- `PptxSlideScroller`: scroll handling and visible-slide reporting.
 - `PptxSlideFrame`: size, rotation, and lazy in-view state.
 - `PptxSlideCanvas`: canvas ref, render status, slide error UI.
-- `PptxPageOverlay`: overlay coordinate contract.
+- `PptxSlideOverlay`: overlay coordinate contract.
 
 ## Error UI
 
@@ -410,7 +408,7 @@ For `pptx-viewer.tsx`:
 - fit width action
 - per-slide error UI
 - source error recovery on reset key change
-- visible page callback
+- visible slide callback
 - scroll progress callback
 - download link
 

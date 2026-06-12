@@ -15,7 +15,7 @@ perfection here means:
 
 ## Current Profile Baseline
 
-Measured with headless Google Chrome through CDP on:
+Original profile measured with headless Google Chrome through CDP on:
 
 ```text
 http://localhost:3100/viewers-preview
@@ -35,7 +35,7 @@ Important caveats:
   the JSON table bundle even when the table is read-only.
 - Production profiling must be the final judge.
 
-Observed baseline:
+Original observed baseline:
 
 | Metric                     | Value     |
 | -------------------------- | --------- |
@@ -61,6 +61,149 @@ Verdict:
 - Layout and paint are not the primary bottlenecks.
 - Scroll is dominated by React event work and style recalculation.
 - The performance ideal has not been reached yet.
+
+## Executed Pass
+
+Implemented changes:
+
+- Added an isolated profile route:
+  `http://localhost:3100/json-table-profile`.
+- Added repeatable profiler script: `scripts/profile-json-table.mjs`.
+- Removed eager schema-editor loading from read-only header rendering by
+  lazy-loading `HeaderSchemaMenu` only when schema editing can open.
+- Moved misplaced schema-editor property operations out of
+  `components/json-table`.
+- Tuned default overscan from `30` to `12`.
+
+Measured candidates:
+
+| Overscan | Initial cells | Small p50 | Small p95 | Large p95 | Long tasks |
+| -------- | ------------- | --------- | --------- | --------- | ---------- |
+| 8        | 140           | ~22 ms    | ~29 ms    | ~67 ms    | 0          |
+| 12       | 168           | ~22 ms    | ~26 ms    | ~55 ms    | 0          |
+| 16       | 196           | ~25 ms    | ~28 ms    | ~59 ms    | 0          |
+
+Decision:
+
+- Keep `12`.
+- `8` saves DOM but worsens scroll.
+- `16` adds DOM and worsens scroll.
+- `12` is the best measured dev-build tradeoff.
+
+Current post-pass profile on `json-table-profile` with overscan `12`:
+
+| Metric                     | Value    |
+| -------------------------- | -------- |
+| First contentful paint     | ~136 ms  |
+| Load event                 | ~208 ms  |
+| Initial mounted rows       | 27       |
+| Initial mounted data cells | 168      |
+| Small-scroll p50 frame     | ~22 ms   |
+| Small-scroll p95 frame     | ~25.5 ms |
+| Small-scroll max frame     | ~29 ms   |
+| Small-scroll long tasks    | 0        |
+| Large-jump p95 frame       | ~45.5 ms |
+| Layout total, small scroll | ~11.5 ms |
+| Paint total, small scroll  | ~12.5 ms |
+| EventDispatch total        | ~1.42 s  |
+| UpdateLayoutTree total     | ~1.39 s  |
+
+Post-pass verdict:
+
+- DOM budget now passes comfortably.
+- Long-task budget now passes.
+- Small-scroll p95 budget now passes.
+- Small-scroll p50 is still slightly above the strict ideal.
+- Large-jump p95 now passes the strict target.
+- Remaining work is style recalculation and React scroll dispatch, not DOM size.
+
+## Second Executed Pass
+
+Implemented changes:
+
+- Precomputed field metadata once per visible column instead of walking the
+  schema from every mounted cell.
+- Removed per-row sheet option store subscriptions; rows now receive fixed row
+  height and column width from the virtualized table.
+- Added a true read-only cell path that renders display cells without cell
+  editing hooks or the editor dispatcher.
+- Added range hysteresis to the fixed-row virtualizer so small scrolls keep the
+  mounted window stable while the viewport remains inside the overscan buffer.
+- Reused `HeaderGridCell.leafCount` instead of recomputing leaf descendants
+  while rendering headers.
+
+Current post-pass profile on `json-table-profile` with overscan `12`:
+
+| Metric                        | Value    |
+| ----------------------------- | -------- |
+| Initial mounted rows          | 27       |
+| Initial mounted data cells    | 168      |
+| Initial DOM nodes             | 668      |
+| Small-scroll p50 frame        | ~8.3 ms  |
+| Small-scroll p95 frame        | ~24.4 ms |
+| Small-scroll max frame        | ~28.6 ms |
+| Small-scroll long tasks       | 0        |
+| Large-jump p50 frame          | ~20.8 ms |
+| Large-jump p95 frame          | ~30.6 ms |
+| Large-jump long tasks         | 0        |
+| Layout total, small scroll    | ~3.2 ms  |
+| Paint total, small scroll     | ~5.9 ms  |
+| EventDispatch total, small    | ~176 ms  |
+| UpdateLayoutTree total, small | ~161 ms  |
+| EventDispatch total, large    | ~1.77 s  |
+| UpdateLayoutTree total, large | ~1.70 s  |
+
+Second-pass verdict:
+
+- Small-scroll median is now comfortably inside one 60 FPS frame.
+- Small-scroll p95 still has occasional batch-update spikes, but no long tasks.
+- Large-jump p95 now passes the stricter 33 ms target.
+- The remaining bottleneck is the browser's React/style work during row-window
+  replacement, not steady-state scrolling.
+
+## Third Executed Pass
+
+Implemented changes:
+
+- Split cell rendering by responsibility:
+  - `read-only-data-cell.tsx` renders display-only cells.
+  - `editable-data-cell.tsx` owns editor hooks and editor dispatch.
+  - `data-cell.tsx` is now a small switch.
+- Kept the editable cell behind a dynamic import so read-only rendering does not
+  statically import `CellEditor`, editor hooks, object editors, popovers, or
+  select/date editor modules.
+- Added `data-cell-types.ts` so both paths share props without sharing runtime
+  code.
+
+Current post-pass profile on `json-table-profile` with overscan `12`:
+
+| Metric                        | Value    |
+| ----------------------------- | -------- |
+| Initial mounted rows          | 27       |
+| Initial mounted data cells    | 168      |
+| Initial DOM nodes             | 661      |
+| Small-scroll p50 frame        | ~8.3 ms  |
+| Small-scroll p95 frame        | ~26.1 ms |
+| Small-scroll max frame        | ~28.5 ms |
+| Small-scroll long tasks       | 0        |
+| Large-jump p50 frame          | ~20.5 ms |
+| Large-jump p95 frame          | ~29.7 ms |
+| Large-jump long tasks         | 0        |
+| Layout total, small scroll    | ~3.3 ms  |
+| Paint total, small scroll     | ~5.8 ms  |
+| EventDispatch total, small    | ~182 ms  |
+| UpdateLayoutTree total, small | ~166 ms  |
+| EventDispatch total, large    | ~1.75 s  |
+| UpdateLayoutTree total, large | ~1.69 s  |
+
+Third-pass verdict:
+
+- The main win is architectural: read-only cells no longer sit in the editor
+  module graph.
+- Runtime scroll remains in the same band as the second pass, with slightly
+  better large-jump p95 and fewer initial DOM nodes.
+- The remaining performance ceiling is still row-window replacement, not
+  editor code on the read-only route.
 
 ## Performance Ideal
 
@@ -120,7 +263,7 @@ During scroll:
 
 ### Overscan Is Probably Too High
 
-Current default:
+Previous default:
 
 ```ts
 overscan = 30
@@ -134,13 +277,13 @@ visible rows (~12) + overscan before (30) + overscan after (30)
 
 That explains the 75-row / 504-cell peaks.
 
-Target:
+Executed result:
 
-- Default overscan should be measured, not inherited.
-- Try `8`, `12`, and `16`.
-- Keep keyboard/page-scroll behavior acceptable.
-- Prefer adaptive overscan only if fixed overscan cannot satisfy both smoothness
-  and blank-free scrolling.
+- `8`, `12`, and `16` were measured in dev mode.
+- `12` is the retained default.
+- `12` reduced initial mounted cells from 294 to 168.
+- `12` removed scroll long tasks in the measured pass.
+- Further scroll gains must come from event/style work, not lower overscan.
 
 ### Scroll Updates Still Trigger Too Much React Work
 
@@ -324,8 +467,14 @@ Preferred future route:
 http://localhost:3100/json-table-profile
 ```
 
-The preferred route should render only `JsonTableDemo`, avoiding unrelated
-viewer and docs code.
+This route now exists and renders only `JsonTableDemo`, avoiding unrelated viewer
+and docs code.
+
+Profiler:
+
+```bash
+PROFILE_URL=http://localhost:3100/json-table-profile node scripts/profile-json-table.mjs
+```
 
 Profile scenarios:
 

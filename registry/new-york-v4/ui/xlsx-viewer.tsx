@@ -18,6 +18,14 @@ import {
 import { XlsxGrid, XlsxGridSkeleton } from "@/components/ui/xlsx-grid"
 import { XlsxSheetTabs } from "@/components/ui/xlsx-sheet-tabs"
 import { XlsxToolbar, XlsxToolbarSkeleton } from "@/components/ui/xlsx-toolbar"
+import {
+  resolveLoadedScrollTarget,
+  toInternalCellRef,
+  type InternalXlsxCellRef,
+  type PendingXlsxScrollTarget,
+  type PublicXlsxCellRef,
+  type XlsxScrollRequest,
+} from "@/components/ui/xlsx-viewer-scroll"
 
 const sourceCache = new XlsxSourceCache({ maxEntries: 4 })
 
@@ -87,7 +95,7 @@ export interface XlsxViewerProps {
   header?: React.ReactNode
   /** Rendered as a left rail alongside the grid. */
   aside?: React.ReactNode
-  /** A cell to highlight (0-based row + column on `sheet`), or null. */
+  /** Public compatibility coordinates: 0-based row + column on `sheet`. */
   activeCell?: XlsxCellRef | null
   /**
    * Render the scrolling grid inside a shadow root, isolating it from host page
@@ -96,11 +104,7 @@ export interface XlsxViewerProps {
   isolateStyles?: boolean
 }
 
-export interface XlsxCellRef {
-  sheet: number
-  row: number
-  col: number
-}
+export type XlsxCellRef = PublicXlsxCellRef
 
 export interface XlsxViewerHandle {
   scrollToCell: (
@@ -110,20 +114,6 @@ export interface XlsxViewerHandle {
     options?: { behavior?: ScrollBehavior }
   ) => void
   getViewportElement: () => HTMLDivElement | null
-}
-
-type XlsxScrollRequest = {
-  sheetIndex: number
-  rowIndex: number
-  columnIndex: number
-  behavior: ScrollBehavior
-  nonce: number
-}
-
-type InternalCellRef = {
-  sheetIndex: number
-  rowIndex: number
-  columnIndex: number
 }
 
 export const XlsxViewer = React.forwardRef<XlsxViewerHandle, XlsxViewerProps>(
@@ -141,14 +131,14 @@ export const XlsxViewer = React.forwardRef<XlsxViewerHandle, XlsxViewerProps>(
             <XlsxViewerFallback className={props.className} bare={props.bare} />
           }
         >
-          <XlsxViewerInner {...props} forwardedRef={ref} />
+          <XlsxViewerSession key={props.src} {...props} forwardedRef={ref} />
         </React.Suspense>
       </XlsxErrorBoundary>
     )
   }
 )
 
-function XlsxViewerInner({
+function XlsxViewerSession({
   src,
   className,
   toolbar = true,
@@ -170,17 +160,11 @@ function XlsxViewerInner({
   const [scale, setScale] = React.useState(1)
   const [scrollRequest, setScrollRequest] =
     React.useState<XlsxScrollRequest | null>(null)
+  const [pendingScrollTarget, setPendingScrollTarget] =
+    React.useState<PendingXlsxScrollTarget | null>(null)
   const scrollNonce = React.useRef(0)
   const viewportElementRef = React.useRef<HTMLDivElement | null>(null)
   const [sheets, setSheets] = React.useState<XlsxSheetMeta[] | null>(null)
-  const [metaSrc, setMetaSrc] = React.useState(src)
-
-  if (metaSrc !== src) {
-    setMetaSrc(src)
-    setSheets(null)
-    setActiveSheetIndex(Math.max(0, defaultSheetIndex))
-    setScrollRequest(null)
-  }
 
   const reportSource = React.useCallback((source: XlsxSource) => {
     setSheets(source.sheets)
@@ -189,7 +173,7 @@ function XlsxViewerInner({
     )
   }, [])
 
-  const requestSheetChange = React.useCallback(
+  const setLoadedSheetIndex = React.useCallback(
     (sheetIndex: number) => {
       const change = resolveXlsxSheetChange({
         activeSheet: activeSheetIndex,
@@ -206,25 +190,59 @@ function XlsxViewerInner({
     [activeSheetIndex, onSheetChange, sheets]
   )
 
+  const issueLoadedScrollTarget = React.useCallback(
+    (target: PendingXlsxScrollTarget) => {
+      if (!sheets) return false
+
+      const resolved = resolveLoadedScrollTarget({
+        activeSheetIndex,
+        target,
+        sheets,
+      })
+      if (!resolved) return false
+
+      if (resolved.changed) {
+        setActiveSheetIndex(resolved.sheetIndex)
+        onSheetChange?.(resolved.sheetIndex)
+      }
+
+      scrollNonce.current += 1
+      setScrollRequest({
+        ...resolved.request,
+        nonce: scrollNonce.current,
+      })
+      return true
+    },
+    [activeSheetIndex, onSheetChange, sheets]
+  )
+
+  React.useEffect(() => {
+    if (!pendingScrollTarget || !sheets) return
+    setPendingScrollTarget(null)
+    issueLoadedScrollTarget(pendingScrollTarget)
+  }, [issueLoadedScrollTarget, pendingScrollTarget, sheets])
+
   React.useImperativeHandle(
     forwardedRef,
     () => ({
       scrollToCell: (sheet, row, col, options) => {
         const target = toInternalCellRef({ sheet, row, col })
-        if (!target || !isValidScrollTarget(target, sheets)) return
-        if (!requestSheetChange(target.sheetIndex)) return
-        scrollNonce.current += 1
-        setScrollRequest({
-          sheetIndex: target.sheetIndex,
-          rowIndex: target.rowIndex,
-          columnIndex: target.columnIndex,
+        if (!target) return
+
+        const pendingTarget = {
+          ...target,
           behavior: options?.behavior ?? "smooth",
-          nonce: scrollNonce.current,
-        })
+        }
+        if (!sheets) {
+          setPendingScrollTarget(pendingTarget)
+          return
+        }
+
+        issueLoadedScrollTarget(pendingTarget)
       },
       getViewportElement: () => viewportElementRef.current,
     }),
-    [requestSheetChange, sheets]
+    [issueLoadedScrollTarget, sheets]
   )
 
   const isReady = sheets != null
@@ -282,7 +300,7 @@ function XlsxViewerInner({
         <XlsxSheetTabs
           sheets={sheets}
           activeSheetIndex={activeSheetIndex}
-          onSelectSheet={requestSheetChange}
+          onSelectSheet={setLoadedSheetIndex}
         />
       ) : null}
     </div>
@@ -303,7 +321,7 @@ function XlsxSheet({
   activeSheetIndex: number
   scale: number
   onReportSource: (source: XlsxSource) => void
-  activeCell?: InternalCellRef | null
+  activeCell?: InternalXlsxCellRef | null
   scrollRequest?: XlsxScrollRequest | null
   isolateStyles: boolean
   viewportRef?: React.RefObject<HTMLDivElement | null>
@@ -371,42 +389,6 @@ function XlsxViewerFallback({
         <XlsxGridSkeleton />
       </div>
     </div>
-  )
-}
-
-function toInternalCellRef(
-  cellRef: XlsxCellRef | null | undefined
-): InternalCellRef | null {
-  if (!isValidPublicCellRef(cellRef)) return null
-  return {
-    sheetIndex: cellRef.sheet,
-    rowIndex: cellRef.row,
-    columnIndex: cellRef.col,
-  }
-}
-
-function isValidPublicCellRef(
-  cellRef: XlsxCellRef | null | undefined
-): cellRef is XlsxCellRef {
-  return (
-    cellRef != null &&
-    Number.isInteger(cellRef.sheet) &&
-    Number.isInteger(cellRef.row) &&
-    Number.isInteger(cellRef.col) &&
-    cellRef.sheet >= 0 &&
-    cellRef.row >= 0 &&
-    cellRef.col >= 0
-  )
-}
-
-function isValidScrollTarget(
-  target: InternalCellRef,
-  sheets: XlsxSheetMeta[] | null
-) {
-  const sheet = sheets?.[target.sheetIndex]
-  if (!sheet) return true
-  return (
-    target.rowIndex < sheet.rowCount && target.columnIndex < sheet.columnCount
   )
 }
 

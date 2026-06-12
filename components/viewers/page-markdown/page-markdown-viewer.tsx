@@ -1,18 +1,17 @@
 "use client"
 
 import * as React from "react"
-import { ScanText } from "lucide-react"
 
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable"
-import { Spinner } from "@/components/ui/spinner"
 import {
   PageMarkdownDocumentPane,
   type PageMarkdownDocumentPaneHandle,
 } from "@/components/viewers/page-markdown/page-markdown-document-pane"
+import { PageMarkdownEmptyState } from "@/components/viewers/page-markdown/page-markdown-empty-state"
 import { usePagePaneSync } from "@/components/viewers/page-markdown/page-markdown-hooks"
 import {
   fitPageScale,
@@ -35,6 +34,7 @@ export function PageMarkdownViewer({
   renderDocument,
   onVisiblePageChange,
   downloadFileName = "document.md",
+  processingLabel = "Preparing document...",
 }: PageMarkdownViewerProps) {
   const hasPages = pages.length > 0
   const [mode, setMode] = React.useState<PageMarkdownViewMode>("rendered")
@@ -79,7 +79,12 @@ export function PageMarkdownViewer({
   const scale = manualScale ?? fitScale
 
   if (!hasPages) {
-    return <PageMarkdownEmptyState isProcessing={isProcessing} />
+    return (
+      <PageMarkdownEmptyState
+        isProcessing={isProcessing}
+        processingLabel={processingLabel}
+      />
+    )
   }
 
   const markdownPane = (
@@ -117,30 +122,5 @@ export function PageMarkdownViewer({
         {markdownPane}
       </ResizablePanel>
     </ResizablePanelGroup>
-  )
-}
-
-function PageMarkdownEmptyState({ isProcessing }: { isProcessing: boolean }) {
-  return (
-    <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 bg-muted/30 px-8 text-muted-foreground">
-      {isProcessing ? (
-        <>
-          <Spinner className="size-8 text-primary" />
-          <p className="text-sm">Parsing document...</p>
-        </>
-      ) : (
-        <>
-          <ScanText className="size-12 opacity-60" />
-          <div className="space-y-1 text-center">
-            <p className="text-sm font-medium text-foreground">
-              No markdown pages yet
-            </p>
-            <p className="max-w-xs text-xs">
-              Provide page-by-page markdown to see the rendered document here.
-            </p>
-          </div>
-        </>
-      )}
-    </div>
   )
 }

@@ -1,5 +1,5 @@
-import { JSONSchema7Definition } from "json-schema";
-import { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types";
+import type { JSONSchema7Definition } from "json-schema";
+import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types";
 
 // Pydantic reserved names that actually break model creation
 const PYDANTIC_RESERVED = [

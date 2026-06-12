@@ -115,18 +115,22 @@ export function ImageViewerFallback({
 
 export class ImageViewerErrorBoundary extends React.Component<
   { children: React.ReactNode; className?: string; resetKey?: unknown },
-  { error: boolean }
+  { error: Error | null }
 > {
-  state = { error: false }
+  state: { error: Error | null } = { error: null }
 
   componentDidUpdate(prev: { resetKey?: unknown }) {
     if (prev.resetKey !== this.props.resetKey && this.state.error) {
-      this.setState({ error: false })
+      this.setState({ error: null })
     }
   }
 
-  static getDerivedStateFromError() {
-    return { error: true }
+  static getDerivedStateFromError(error: Error) {
+    return { error }
+  }
+
+  componentDidCatch(error: Error) {
+    console.error("ImageViewer failed to render.", error)
   }
 
   render() {
@@ -137,6 +141,8 @@ export class ImageViewerErrorBoundary extends React.Component<
             "flex min-h-64 items-center justify-center rounded-xl border bg-muted/30 p-6 text-center text-sm text-muted-foreground",
             this.props.className
           )}
+          data-error-message={this.state.error.message}
+          data-slot="image-viewer-error"
         >
           Couldn&apos;t load this image.
         </div>

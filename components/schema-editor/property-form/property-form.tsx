@@ -6,24 +6,17 @@ import type { PropertyFormProps } from "@/components/schema-editor/property-form
 
 export function PropertyForm(props: PropertyFormProps) {
   const mode = props.mode ?? "editable"
-  const isFinalProps = "draft" in props
-  const draft = isFinalProps ? props.draft : props.propertyDraft
-  const context = isFinalProps ? props.context : props.schemaContext
-  const onDraftChange = isFinalProps
-    ? props.onDraftChange
-    : props.onPropertyDraftChange
-  const onCommit = isFinalProps ? props.onCommit : props.onCommitPropertyDraft
 
   const viewModel = usePropertyFormController({
-    draft,
-    context,
+    propertyDraft: props.propertyDraft,
+    schemaContext: props.schemaContext,
     capabilities: props.capabilities,
     validation: props.validation,
     mode,
     submitLabel: props.submitLabel ?? "Save Changes",
     canDelete: Boolean(props.onDelete),
-    onDraftChange,
-    onCommit,
+    onPropertyDraftChange: props.onPropertyDraftChange,
+    onCommitPropertyDraft: props.onCommitPropertyDraft,
     onCancel: props.onCancel,
     onDelete: props.onDelete,
   })

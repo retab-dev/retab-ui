@@ -107,12 +107,6 @@ export function usePdfScale({
 
   return {
     resolvedScale,
-    requestedScale: isControlledScale
-      ? controlledScale == null
-        ? null
-        : clampPdfScale(controlledScale)
-      : uncontrolledRequestedScale,
-    setRequestedScale,
     zoomIn,
     zoomOut,
     fitWidth,

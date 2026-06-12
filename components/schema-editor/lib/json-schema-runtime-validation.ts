@@ -1,10 +1,12 @@
 "use client";
 
-import Ajv, { AnySchema, ErrorObject, ValidateFunction } from "ajv";
+import Ajv from "ajv";
+import type { AnySchema, ErrorObject, ValidateFunction } from "ajv";
 import addFormats from "ajv-formats";
 
 let ajvSingleton: Ajv | null = null;
 const validatorCache = new WeakMap<object, ValidateFunction>();
+type AjvFormatsInstance = Parameters<typeof addFormats>[0];
 
 export interface RuntimeSchemaValidationResult {
   isValid: boolean;
@@ -14,7 +16,7 @@ export interface RuntimeSchemaValidationResult {
 function getAjv(): Ajv {
   if (!ajvSingleton) {
     ajvSingleton = new Ajv({ allErrors: true, strict: false });
-    addFormats(ajvSingleton);
+    addFormats(ajvSingleton as unknown as AjvFormatsInstance);
   }
 
   return ajvSingleton;

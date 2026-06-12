@@ -191,7 +191,7 @@ function Cell({
             src={PDF_URL}
             bare
             toolbar={false}
-            asideToggle={false}
+            railToggle={false}
             downloadFileName="attention.pdf"
             slots={slots}
             onVisiblePageChange={setCurrentPage}

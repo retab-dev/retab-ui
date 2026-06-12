@@ -14,4 +14,5 @@ export interface PageMarkdownViewerProps {
   renderDocument?: (handlers: PageMarkdownDocumentHandlers) => ReactNode
   onVisiblePageChange?: (page: number) => void
   downloadFileName?: string
+  processingLabel?: string
 }

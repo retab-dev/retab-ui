@@ -4,6 +4,7 @@ import * as React from "react"
 
 import { useElementWidth } from "@/hooks/use-element-width"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { scrollPageIntoView } from "@/components/viewers/page-markdown/page-markdown-dom"
 import { PageMarkdownPageFrame } from "@/components/viewers/page-markdown/page-markdown-page-frame"
 import { PageMarkdownToolbar } from "@/components/viewers/page-markdown/page-markdown-toolbar"
 import { type PageMarkdownViewMode } from "@/components/viewers/page-markdown/page-markdown-types"
@@ -57,7 +58,7 @@ export const PageMarkdownPane = React.forwardRef<
     ref,
     () => ({
       scrollToPage(page) {
-        scrollViewportToPage(viewportRef.current, page)
+        scrollPageIntoView(viewportRef.current, page)
       },
     }),
     []
@@ -123,12 +124,3 @@ export const PageMarkdownPane = React.forwardRef<
     </div>
   )
 })
-
-export function scrollViewportToPage(
-  viewport: HTMLElement | null,
-  page: number
-) {
-  viewport
-    ?.querySelector<HTMLElement>(`[data-page-number="${page}"]`)
-    ?.scrollIntoView({ behavior: "smooth", block: "start" })
-}

@@ -2,7 +2,7 @@
 
 import * as React from "react"
 
-import { scrollViewportToPage } from "@/components/viewers/page-markdown/page-markdown-pane"
+import { scrollPageIntoView } from "@/components/viewers/page-markdown/page-markdown-dom"
 import {
   type PageMarkdownDocumentHandlers,
   type PageMarkdownViewerProps,
@@ -28,7 +28,7 @@ export const PageMarkdownDocumentPane = React.forwardRef<
     ref,
     () => ({
       scrollToPage(page) {
-        scrollViewportToPage(documentPaneRef.current, page)
+        scrollPageIntoView(documentPaneRef.current, page)
       },
     }),
     []

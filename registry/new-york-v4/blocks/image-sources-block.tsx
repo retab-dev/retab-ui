@@ -37,7 +37,11 @@ const SOURCES: SourceMap = Object.fromEntries(
 export function ImageSourcesBlock() {
   const viewerRef = React.useRef<ImageViewerHandle>(null)
   const target = useImageSourceTarget(viewerRef)
-  const link = useSourceLink({ sources: SOURCES, target, initialField: FIELDS[0]?.key })
+  const link = useSourceLink({
+    sources: SOURCES,
+    target,
+    initialField: FIELDS[0]?.key,
+  })
 
   return (
     <div className="flex h-full min-h-[680px] bg-background">
@@ -48,7 +52,7 @@ export function ImageSourcesBlock() {
           bare
           downloadFileName="attention-page-1.png"
           className="h-full"
-          renderPageOverlay={renderImageSourceOverlay(link.activeSource)}
+          renderFrameOverlay={renderImageSourceOverlay(link.activeSource)}
         />
         <SourceIndicator path={link.activePath} found={!!link.activeSource} />
       </div>

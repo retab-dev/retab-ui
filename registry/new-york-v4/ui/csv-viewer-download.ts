@@ -9,11 +9,11 @@ export function escapeDelimitedField(value: string, delimiter: string): string {
 
 export function serializeCsvTable({
   columns,
-  rows,
+  sourceRows,
   dialect,
 }: {
   columns: string[]
-  rows: string[][]
+  sourceRows: string[][]
   dialect: CsvDialect
 }): string {
   const lines = [
@@ -21,9 +21,9 @@ export function serializeCsvTable({
       .map((value) => escapeDelimitedField(value, dialect.delimiter))
       .join(dialect.delimiter),
   ]
-  for (const row of rows) {
+  for (const sourceRow of sourceRows) {
     lines.push(
-      row
+      sourceRow
         .map((value) => escapeDelimitedField(value, dialect.delimiter))
         .join(dialect.delimiter)
     )
@@ -31,38 +31,22 @@ export function serializeCsvTable({
   return lines.join("\r\n")
 }
 
-export function downloadNameFromCsvSource({
-  src,
-  downloadName,
-  dialect,
-}: {
-  src?: string
-  downloadName?: string
-  dialect: CsvDialect
-}): string {
-  if (downloadName) return downloadName
-  if (!src) return isTabDelimited(dialect) ? "data.tsv" : "data.csv"
-  try {
-    const name = new URL(src, "http://_").pathname.split("/").pop()
-    if (name) return decodeURIComponent(name)
-  } catch {
-    // Fall through to generated default.
-  }
+export function defaultCsvDownloadName(dialect: CsvDialect): string {
   return isTabDelimited(dialect) ? "data.tsv" : "data.csv"
 }
 
 export async function downloadCsvTable({
   src,
   columns,
-  rows,
+  sourceRows,
   dialect,
   downloadName,
 }: {
   src?: string
   columns: string[]
-  rows: string[][]
+  sourceRows: string[][]
   dialect: CsvDialect
-  downloadName?: string
+  downloadName: string
 }): Promise<void> {
   const blob = src
     ? await fetch(src).then((response) => {
@@ -71,7 +55,7 @@ export async function downloadCsvTable({
         }
         return response.blob()
       })
-    : new Blob([serializeCsvTable({ columns, rows, dialect })], {
+    : new Blob([serializeCsvTable({ columns, sourceRows, dialect })], {
         type: isTabDelimited(dialect)
           ? "text/tab-separated-values;charset=utf-8"
           : "text/csv;charset=utf-8",
@@ -79,7 +63,7 @@ export async function downloadCsvTable({
   const url = URL.createObjectURL(blob)
   const anchor = document.createElement("a")
   anchor.href = url
-  anchor.download = downloadNameFromCsvSource({ src, downloadName, dialect })
+  anchor.download = downloadName
   anchor.rel = "noreferrer"
   document.body.appendChild(anchor)
   anchor.click()

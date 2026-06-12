@@ -1,9 +1,9 @@
-import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
-import { getEffectiveNode } from "@/components/schema-editor/lib/json-schema-utils"
 import {
   updateEffectiveNode,
   updateSchemaProperty,
 } from "@/components/schema-editor/draft/draft-node-edits"
+import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
+import { getEffectiveNode } from "@/components/schema-editor/lib/json-schema-utils"
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null
@@ -107,7 +107,9 @@ function resolvePropertyPath(
     } else if (currentNode.type === "array" && currentNode.items) {
       if (Array.isArray(currentNode.items)) {
         propertyPath.push(segment)
-        currentNode = currentNode.items[parseInt(segment)] as ExtendedJSONSchema7
+        currentNode = currentNode.items[
+          parseInt(segment)
+        ] as ExtendedJSONSchema7
       } else if (segment === "*" || segment === parseInt(segment).toString()) {
         propertyPath.push("*")
         currentNode = currentNode.items as ExtendedJSONSchema7
@@ -118,6 +120,57 @@ function resolvePropertyPath(
   }
 
   return [basePath, propertyPath]
+}
+
+function updatePropertyAtPath(
+  schemaNode: ExtendedJSONSchema7,
+  propertyPath: string,
+  updateProperty: (property: ExtendedJSONSchema7) => ExtendedJSONSchema7
+): ExtendedJSONSchema7 {
+  const [basePath, resolvedPropertyPath] = resolvePropertyPath(
+    schemaNode,
+    propertyPath
+  )
+
+  function updateInNode(
+    node: ExtendedJSONSchema7,
+    segments: string[]
+  ): ExtendedJSONSchema7 {
+    if (segments.length === 0) return node
+    const [segment, ...rest] = segments
+    if (rest.length === 0) {
+      return assignSchemaProperty(
+        node,
+        segment,
+        updateProperty(traverseSchemaProperty(node, segment))
+      )
+    }
+    return assignSchemaProperty(
+      node,
+      segment,
+      updateInNode(traverseSchemaProperty(node, segment), rest)
+    )
+  }
+
+  function updateInBase(
+    node: ExtendedJSONSchema7,
+    segments: string[]
+  ): ExtendedJSONSchema7 {
+    if (segments.length === 0) {
+      const baseNode = getPathValue(schemaNode, basePath)
+      return updateInNode(baseNode as ExtendedJSONSchema7, resolvedPropertyPath)
+    }
+    const [segment, ...rest] = segments
+    return {
+      ...node,
+      [segment]: updateInBase(
+        (isRecord(node) ? node[segment] : undefined) as ExtendedJSONSchema7,
+        rest
+      ),
+    }
+  }
+
+  return updateInBase(schemaNode, basePath)
 }
 
 export function renamePropertyAtPath(
@@ -174,4 +227,35 @@ export function renamePropertyAtPath(
   }
 
   return renameInBase(schemaNode, basePath)
+}
+
+export async function applyTemplateToTableSchemaProperty(
+  schemaNode: ExtendedJSONSchema7,
+  propertyPath: string,
+  templateName: string
+): Promise<ExtendedJSONSchema7> {
+  const { templateObjects } =
+    await import("@/components/schema-editor/optional/object-templates/template-objects")
+  const template = templateObjects[templateName]
+  if (!template) return schemaNode
+
+  const defsToAdd = [templateName, ...(template.deps ?? [])]
+  const nextDefs = { ...(schemaNode.$defs || {}) }
+  for (const definitionName of defsToAdd) {
+    if (!nextDefs[definitionName]) {
+      nextDefs[definitionName] = templateObjects[definitionName]
+    }
+  }
+
+  return updatePropertyAtPath(
+    {
+      ...schemaNode,
+      $defs: nextDefs,
+    },
+    propertyPath,
+    (property) =>
+      updateEffectiveNode(property, {
+        $ref: `#/$defs/${templateName}`,
+      })
+  )
 }

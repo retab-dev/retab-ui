@@ -8,8 +8,8 @@ import { Skeleton } from "@/components/ui/skeleton"
 import {
   getScaledSlideSize,
   getVisibleSlideSize,
-  type PptxSlideOverlayProps,
   type PptxSize,
+  type PptxSlideOverlayProps,
 } from "./pptx-viewer-core"
 import { type PptxScrollActivity } from "./pptx-viewer-scroll"
 import { type PptxSource } from "./pptx-viewer-source"
@@ -107,8 +107,6 @@ function PptxSlideFrame({
       style={{ width: visibleSize.width, height: visibleSize.height }}
       data-slot="pptx-slide"
       data-slide-number={slideIndex + 1}
-      data-page={slideIndex + 1}
-      data-page-number={slideIndex + 1}
     >
       <div
         className="absolute top-1/2 left-1/2"
@@ -240,7 +238,6 @@ function PptxSlideOverlay({
     <div className="pointer-events-none absolute inset-0">
       {renderSlideOverlay({
         slideNumber,
-        pageNumber: slideNumber,
         width: visibleSize.width,
         height: visibleSize.height,
         scale: zoomScale,

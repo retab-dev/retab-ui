@@ -97,9 +97,7 @@ convert to PDF server-side and use the [PDF Viewer](/docs/viewers/pdf-viewer).
 
 ## Props
 
-The canonical PPTX overlay field is `slideNumber`, a 1-based slide index.
-`pageNumber`, `renderPageOverlay`, and `onVisiblePageChange` remain available as
-deprecated compatibility aliases for code shared with the PDF Viewer.
+The PPTX overlay field is `slideNumber`, a 1-based slide index.
 
 | Prop                     | Type                              | Description                                                                                                                          |
 | ------------------------ | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
@@ -109,10 +107,8 @@ deprecated compatibility aliases for code shared with the PDF Viewer.
 | `onScaleChange`          | `(scale: number \| null) => void` | Called by zoom controls in controlled mode. `null` means fit width.                                                                  |
 | `toolbar`                | `boolean`                         | Show the zoom/rotate/download toolbar. Defaults to `true`.                                                                           |
 | `downloadFileName`       | `string`                          | Filename for the download button.                                                                                                    |
-| `renderSlideOverlay`     | `(props) => ReactNode`            | Per-slide overlay; receives `{ slideNumber, pageNumber, width, height, scale, rotation }`. `pageNumber` is deprecated.               |
-| `renderPageOverlay`      | `(props) => ReactNode`            | Deprecated alias for `renderSlideOverlay`.                                                                                           |
+| `renderSlideOverlay`     | `(props) => ReactNode`            | Per-slide overlay; receives `{ slideNumber, width, height, scale, rotation }`.                                                       |
 | `onVisibleSlideChange`   | `(slide: number) => void`         | Fires with the slide nearest the top of the viewport on scroll.                                                                      |
-| `onVisiblePageChange`    | `(page: number) => void`          | Deprecated alias for `onVisibleSlideChange`.                                                                                         |
 | `onScrollProgressChange` | `(progress: number) => void`      | Fires with scroll progress in `[0, 1]`.                                                                                              |
 | `header`                 | `ReactNode`                       | Full-width strip below the toolbar (e.g. a legend).                                                                                  |
 | `aside`                  | `ReactNode`                       | Left rail alongside the scrolling slides (e.g. a thumbnail rail).                                                                    |

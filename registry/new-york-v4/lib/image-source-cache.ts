@@ -12,6 +12,7 @@ import {
 
 const DEFAULT_MAX_DECODED_FRAMES = 16
 const DEFAULT_UNCLAIMED_SOURCE_TIMEOUT_MS = 30_000
+const DEFAULT_RELEASED_SOURCE_TIMEOUT_MS = 0
 
 export interface FrameSourceLease {
   source: FrameSource
@@ -23,22 +24,27 @@ interface FrameSourceEntry {
   source?: FrameSource
   leaseCount: number
   disposeWhenResolved: boolean
+  releasedDisposeTimer?: ReturnType<typeof setTimeout>
   unclaimedDisposeTimer?: ReturnType<typeof setTimeout>
 }
 
 interface FrameSourceManagerOptions {
   maxDecodedFrames?: number
+  releasedSourceTimeoutMs?: number
   unclaimedSourceTimeoutMs?: number
 }
 
 export class FrameSourceManager {
   private readonly entries = new Map<string, FrameSourceEntry>()
   private readonly maxDecodedFrames: number
+  private readonly releasedSourceTimeoutMs: number
   private readonly unclaimedSourceTimeoutMs: number
 
   constructor(options: FrameSourceManagerOptions = {}) {
     this.maxDecodedFrames =
       options.maxDecodedFrames ?? DEFAULT_MAX_DECODED_FRAMES
+    this.releasedSourceTimeoutMs =
+      options.releasedSourceTimeoutMs ?? DEFAULT_RELEASED_SOURCE_TIMEOUT_MS
     this.unclaimedSourceTimeoutMs =
       options.unclaimedSourceTimeoutMs ?? DEFAULT_UNCLAIMED_SOURCE_TIMEOUT_MS
   }
@@ -79,6 +85,7 @@ export class FrameSourceManager {
   retain(src: string, source: FrameSource): FrameSourceLease | null {
     const entry = this.entries.get(src)
     if (!entry || entry.source !== source) return null
+    this.cancelReleasedDispose(entry)
     this.cancelUnclaimedDispose(entry)
     entry.leaseCount += 1
     let released = false
@@ -91,8 +98,7 @@ export class FrameSourceManager {
         if (!current || current.source !== source) return
         current.leaseCount = Math.max(0, current.leaseCount - 1)
         if (current.leaseCount === 0) {
-          this.disposeEntry(src, current)
-          return
+          this.scheduleReleasedDispose(src, current)
         }
       },
     }
@@ -101,6 +107,7 @@ export class FrameSourceManager {
   clear() {
     for (const entry of this.entries.values()) {
       entry.disposeWhenResolved = true
+      this.cancelReleasedDispose(entry)
       this.cancelUnclaimedDispose(entry)
       entry.source?.dispose()
     }
@@ -133,9 +140,25 @@ export class FrameSourceManager {
 
   private disposeEntry(src: string, entry: FrameSourceEntry) {
     entry.disposeWhenResolved = true
+    this.cancelReleasedDispose(entry)
     this.cancelUnclaimedDispose(entry)
     entry.source?.dispose(new ImageSourceDisposedError())
     this.entries.delete(src)
+  }
+
+  private scheduleReleasedDispose(src: string, entry: FrameSourceEntry) {
+    this.cancelReleasedDispose(entry)
+    entry.releasedDisposeTimer = setTimeout(() => {
+      const current = this.entries.get(src)
+      if (!current || current !== entry || current.leaseCount > 0) return
+      this.disposeEntry(src, current)
+    }, this.releasedSourceTimeoutMs)
+  }
+
+  private cancelReleasedDispose(entry: FrameSourceEntry) {
+    if (!entry.releasedDisposeTimer) return
+    clearTimeout(entry.releasedDisposeTimer)
+    entry.releasedDisposeTimer = undefined
   }
 
   private scheduleUnclaimedDispose(src: string, entry: FrameSourceEntry) {

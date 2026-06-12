@@ -1,16 +1,22 @@
-"use client";
+"use client"
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react"
 
 export interface FixedRowWindow {
   /** First row index to mount (inclusive). */
-  start: number;
+  start: number
   /** One past the last row index to mount (exclusive). */
-  end: number;
+  end: number
   /** Pixel height of the full list — used as the scroll spacer height. */
-  totalHeight: number;
+  totalHeight: number
   /** True once the viewport has been measured at least once. */
-  ready: boolean;
+  ready: boolean
 }
 
 /**
@@ -30,78 +36,107 @@ export function useFixedRowWindow({
   scrollRef,
   rowCount,
   rowHeight,
-  overscan = 30,
+  overscan = 12,
 }: {
-  scrollRef: React.RefObject<HTMLElement | null>;
-  rowCount: number;
-  rowHeight: number;
-  overscan?: number;
+  scrollRef: React.RefObject<HTMLElement | null>
+  rowCount: number
+  rowHeight: number
+  overscan?: number
 }): FixedRowWindow {
   const [range, setRange] = useState<{ start: number; end: number }>({
     start: 0,
     end: 0,
-  });
-  const readyRef = useRef(false);
-  const [ready, setReady] = useState(false);
-  const rafRef = useRef<number | null>(null);
+  })
+  const rangeRef = useRef(range)
+  const readyRef = useRef(false)
+  const [ready, setReady] = useState(false)
+  const rafRef = useRef<number | null>(null)
+
+  const setMeasuredRange = useCallback(
+    (next: { start: number; end: number }) => {
+      const prev = rangeRef.current
+      if (prev.start === next.start && prev.end === next.end) return
+      rangeRef.current = next
+      setRange(next)
+    },
+    []
+  )
 
   const measure = useCallback(() => {
-    const el = scrollRef.current;
-    if (!el) return;
+    const el = scrollRef.current
+    if (!el) return
 
-    const scrollTop = el.scrollTop;
-    const viewport = el.clientHeight;
+    const scrollTop = el.scrollTop
+    const viewport = el.clientHeight
 
-    const first = Math.floor(scrollTop / rowHeight);
-    const visible = Math.ceil(viewport / rowHeight);
-    const start = Math.max(0, first - overscan);
-    const end = Math.min(rowCount, first + visible + overscan);
+    const first = Math.floor(scrollTop / rowHeight)
+    const visible = Math.ceil(viewport / rowHeight)
+    const start = Math.max(0, first - overscan)
+    const end = Math.min(rowCount, first + visible + overscan)
+    const next = { start, end }
 
     if (!readyRef.current) {
-      readyRef.current = true;
-      setReady(true);
+      readyRef.current = true
+      setReady(true)
+      setMeasuredRange(next)
+      return
     }
-    setRange((prev) =>
-      prev.start === start && prev.end === end ? prev : { start, end },
-    );
-  }, [scrollRef, rowCount, rowHeight, overscan]);
+
+    const prev = rangeRef.current
+    if (prev.end > rowCount || prev.start >= rowCount) {
+      setMeasuredRange(next)
+      return
+    }
+
+    const bufferRows = Math.max(1, Math.floor(overscan / 2))
+    const visibleStart = first
+    const visibleEnd = Math.min(rowCount, first + visible)
+    const hasBeforeBuffer =
+      prev.start === 0 || visibleStart >= prev.start + bufferRows
+    const hasAfterBuffer =
+      prev.end === rowCount || visibleEnd <= prev.end - bufferRows
+
+    if (hasBeforeBuffer && hasAfterBuffer) return
+
+    setMeasuredRange(next)
+  }, [scrollRef, rowCount, rowHeight, overscan, setMeasuredRange])
 
   // Establish the initial window before the browser paints, and re-measure
   // whenever the row geometry or count changes.
   useLayoutEffect(() => {
-    measure();
-  }, [measure]);
+    measure()
+  }, [measure])
 
   // Track scroll and viewport resize. The scroll handler is rAF-throttled so we
   // recompute at most once per frame; `measure` itself bails when the window is
   // unchanged, so most scroll frames cost a comparison and nothing more.
   useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
+    const el = scrollRef.current
+    if (!el) return
 
     const onScroll = () => {
-      if (rafRef.current != null) return;
+      if (rafRef.current != null) return
       rafRef.current = requestAnimationFrame(() => {
-        rafRef.current = null;
-        measure();
-      });
-    };
+        rafRef.current = null
+        measure()
+      })
+    }
 
-    el.addEventListener("scroll", onScroll, { passive: true });
-    const ro = new ResizeObserver(() => measure());
-    ro.observe(el);
+    el.addEventListener("scroll", onScroll, { passive: true })
+    const ro = new ResizeObserver(() => measure())
+    ro.observe(el)
 
     return () => {
-      el.removeEventListener("scroll", onScroll);
-      ro.disconnect();
-      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
-    };
-  }, [scrollRef, measure]);
+      el.removeEventListener("scroll", onScroll)
+      ro.disconnect()
+      if (rafRef.current != null) cancelAnimationFrame(rafRef.current)
+    }
+  }, [scrollRef, measure])
 
   return {
     start: range.start,
     end: range.end,
     totalHeight: rowCount * rowHeight,
     ready,
-  };
+  }
 }

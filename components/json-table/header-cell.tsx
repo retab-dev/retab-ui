@@ -1,14 +1,22 @@
 import React, { useState } from "react"
+import dynamic from "next/dynamic"
 import type { JSONSchema7 } from "json-schema"
 import { ChevronDown, ChevronUp } from "lucide-react"
 
 import { HeaderLabel } from "@/components/json-table/header-label"
-import { HeaderSchemaMenu } from "@/components/json-table/header-schema-menu"
 import type { JsonTableHeaderNode } from "@/components/json-table/lib/header-nodes"
 import { getColumnWidthPx } from "@/components/json-table/table-options-store"
 import type { ColumnWidth } from "@/components/json-table/table-options-store"
 import { useHeaderController } from "@/components/json-table/use-header-controller"
 import { Button } from "@/components/ui-retab/button"
+
+const EditableHeaderSchemaMenu = dynamic(
+  () =>
+    import("@/components/json-table/header-schema-menu").then((module) => ({
+      default: module.HeaderSchemaMenu,
+    })),
+  { ssr: false }
+)
 
 interface JsonTableHeaderCellProps {
   node: JsonTableHeaderNode
@@ -85,6 +93,8 @@ export function JsonTableHeaderCell({
       }
     />
   )
+  const canOpenSchemaMenu =
+    !disableHeaderInteractions && editMode !== "readOnly"
 
   return (
     <div
@@ -96,12 +106,12 @@ export function JsonTableHeaderCell({
       onDrop={isDraggable ? handleDrop : undefined}
       onDragEnd={handleDragEnd}
     >
-      {disableHeaderInteractions ? (
+      {!canOpenSchemaMenu ? (
         <div className="flex h-full grow items-center justify-start rounded-none bg-transparent px-1 text-foreground">
           {label}
         </div>
       ) : (
-        <HeaderSchemaMenu
+        <EditableHeaderSchemaMenu
           node={node}
           schema={schema}
           setSchema={setSchema}
@@ -117,7 +127,7 @@ export function JsonTableHeaderCell({
           >
             {label}
           </Button>
-        </HeaderSchemaMenu>
+        </EditableHeaderSchemaMenu>
       )}
 
       {node.canFold && (

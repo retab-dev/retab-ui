@@ -130,4 +130,10 @@ describe("PageMarkdownViewer", () => {
       )
     ).toBeTruthy()
   })
+
+  it("uses generic processing copy by default", () => {
+    render(<PageMarkdownViewer pages={[]} isProcessing />)
+
+    expect(screen.getByText("Preparing document...")).toBeTruthy()
+  })
 })

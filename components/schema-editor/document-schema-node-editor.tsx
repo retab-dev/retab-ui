@@ -3,8 +3,6 @@
 import * as React from "react"
 
 import {
-  getEffectiveDocNode,
-  getNode,
   replaceNodeJson,
   type SchemaDocument,
 } from "@/components/schema-editor/document"
@@ -17,10 +15,7 @@ import type {
 } from "@/components/schema-editor/document-node-editor-types"
 import { DocumentObjectNodeEditor } from "@/components/schema-editor/document-object-node-editor"
 import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
-import { getEffectiveNode } from "@/components/schema-editor/lib/json-schema-utils"
 import { resolveSchemaBuilderFeatures } from "@/components/schema-editor/schema-builder-types"
-
-import { getEffectiveType } from "./draft/draft-node-edits"
 
 function changeNodeJson(
   doc: SchemaDocument,
@@ -31,13 +26,12 @@ function changeNodeJson(
 }
 
 export function DocumentSchemaNodeEditor({
-  applyDocOp,
+  dispatch,
   doc,
   name,
-  node,
   nodeId,
+  nodeView,
   path,
-  defs,
   canDelete = false,
   onDelete,
   onNameChange,
@@ -59,12 +53,6 @@ export function DocumentSchemaNodeEditor({
       jsonMode: true,
       importExport: true,
     })
-  const dispatch = applyDocOp
-  const effective = getEffectiveNode(node)
-  const docNode = getNode(doc, nodeId)
-  const effectiveDocNode = docNode ? getEffectiveDocNode(docNode) : undefined
-  const { type: localType } = getEffectiveType(node)
-
   const onChange = React.useCallback(
     (newNode: ExtendedJSONSchema7) => {
       dispatch((current) => changeNodeJson(current, nodeId, newNode))
@@ -77,15 +65,17 @@ export function DocumentSchemaNodeEditor({
     []
   )
 
+  const localType = nodeView.type
+
   return (
     <div>
       <DocumentNodeHeader
-        applyDocOp={dispatch}
+        dispatch={dispatch}
+        doc={doc}
         name={name}
-        node={node}
+        nodeView={nodeView}
         nodeId={nodeId}
         path={path}
-        defs={defs}
         canDelete={canDelete}
         onDelete={onDelete}
         onNameChange={onNameChange}
@@ -96,19 +86,16 @@ export function DocumentSchemaNodeEditor({
         onRequiredChange={onRequiredChange}
         siblingNames={siblingNames}
         features={features}
-        effective={effective}
-        localType={localType}
         onChange={onChange}
       />
 
       {localType === "object" && (
         <DocumentObjectNodeEditor
-          applyDocOp={dispatch}
+          dispatch={dispatch}
           doc={doc}
           nodeId={nodeId}
-          effective={effective}
+          nodeView={nodeView}
           path={path}
-          defs={defs}
           setDefsAccordionOpen={setDefsAccordionOpen}
           draggedParentRef={draggedParentRef}
           draggedPropertyRef={draggedPropertyRef}
@@ -120,12 +107,11 @@ export function DocumentSchemaNodeEditor({
 
       {localType === "array" && (
         <DocumentArrayNodeEditor
-          applyDocOp={dispatch}
+          dispatch={dispatch}
           doc={doc}
           nodeId={nodeId}
-          items={effective.items}
+          nodeView={nodeView}
           path={path}
-          defs={defs}
           setDefsAccordionOpen={setDefsAccordionOpen}
           draggedParentRef={draggedParentRef}
           draggedPropertyRef={draggedPropertyRef}
@@ -137,9 +123,9 @@ export function DocumentSchemaNodeEditor({
 
       {localType === "enum" && (
         <DocumentEnumNodeEditor
-          applyDocOp={dispatch}
+          dispatch={dispatch}
           nodeId={nodeId}
-          enumEntries={effectiveDocNode?.enum ?? []}
+          enumEntries={nodeView.enumEntries}
         />
       )}
     </div>

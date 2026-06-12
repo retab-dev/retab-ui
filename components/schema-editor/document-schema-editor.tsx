@@ -5,9 +5,9 @@ import { toast } from "sonner";
 
 import {
   addDefinition,
+  getDocumentNodeView,
   isDefinitionReferenced,
   nodeFromJson,
-  projectNode,
   removeDefinition,
   renameDefinition,
   replaceNodeJson,
@@ -17,7 +17,7 @@ import {
   type SchemaDocument,
 } from "@/components/schema-editor/document";
 import { DocumentSchemaNodeEditor } from "@/components/schema-editor/document-schema-node-editor";
-import { TopLevelEditor } from "@/components/schema-editor/json-schema-top-level-editor";
+import { TopLevelEditor } from "@/components/schema-editor/top-level-editor";
 import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types";
 import type {
   ResolvedSchemaBuilderFeatures,
@@ -105,13 +105,12 @@ export function DocumentSchemaEditor({
 
       <div className="flex min-h-0 flex-1 flex-col">
         <DocumentSchemaNodeEditor
-          applyDocOp={dispatch}
+          dispatch={dispatch}
           doc={doc}
           name="root"
           nodeId={doc.root.id}
-          node={schema}
+          nodeView={getDocumentNodeView(doc, doc.root)}
           path="#"
-          defs={schema.$defs || {}}
           editMode={editMode}
           features={features}
           canDelete={false}
@@ -122,7 +121,6 @@ export function DocumentSchemaEditor({
         <DocumentDefinitionsEditor
           dispatch={dispatch}
           doc={doc}
-          schema={schema}
           editMode={editMode}
           definitionsEnabled={features.definitions}
           features={features}
@@ -139,7 +137,6 @@ export function DocumentSchemaEditor({
 function DocumentDefinitionsEditor({
   dispatch,
   doc,
-  schema,
   editMode,
   definitionsEnabled,
   features,
@@ -150,7 +147,6 @@ function DocumentDefinitionsEditor({
 }: {
   dispatch: SchemaDispatch;
   doc: SchemaDocument;
-  schema: ExtendedJSONSchema7;
   editMode: SchemaEditorMode;
   definitionsEnabled: boolean;
   features: ResolvedSchemaBuilderFeatures;
@@ -230,12 +226,6 @@ function DocumentDefinitionsEditor({
               </p>
             )}
             {doc.defs.map((definition) => {
-              const projected = projectNode(doc, definition.node);
-              const node =
-                typeof projected === "object" && projected !== null
-                  ? (projected as ExtendedJSONSchema7)
-                  : ({} as ExtendedJSONSchema7);
-
               return (
                 <div
                   key={definition.id}
@@ -243,7 +233,7 @@ function DocumentDefinitionsEditor({
                   id={`def-${definition.name}`}
                 >
                   <DocumentSchemaNodeEditor
-                    applyDocOp={dispatch}
+                    dispatch={dispatch}
                     doc={doc}
                     draggedParentRef={draggedParentRef}
                     draggedPropertyRef={draggedPropertyRef}
@@ -251,7 +241,7 @@ function DocumentDefinitionsEditor({
                     features={features}
                     name={definition.name}
                     nodeId={definition.node.id}
-                    node={node}
+                    nodeView={getDocumentNodeView(doc, definition.node)}
                     onNameChange={(newName, updatedDef) => {
                       if (newName !== definition.name) {
                         dispatch((current) => {
@@ -272,7 +262,6 @@ function DocumentDefinitionsEditor({
                       }
                     }}
                     path={`#/$defs/${definition.name}`}
-                    defs={schema.$defs || {}}
                     canDelete={
                       !isDefinitionReferenced(doc, definition.id, {
                         exceptDefId: definition.id,

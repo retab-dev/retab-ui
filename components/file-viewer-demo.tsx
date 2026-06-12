@@ -51,13 +51,12 @@ function FileTabs({
 
 function FileCanvas({ file }: { file: string }) {
   return (
-    <div className="aspect-[210/297] w-full rounded-xl shadow-sm">
-      {/* A4 portrait — frames a single document page without awkward dead space.
+    <div className="h-[min(680px,calc(100svh-10rem))] min-h-[420px] w-full rounded-xl shadow-sm">
+      {/* Bounded viewport keeps long documents scrolling inside the viewer.
           key forces a fresh viewer per file so state (zoom, sheet, scroll) resets */}
       <FileViewer
         key={file}
-        src={`/samples/${file}`}
-        fileName={file}
+        source={{ kind: "url", url: `/samples/${file}`, fileName: file }}
         className="h-full"
         isolateStyles
       />

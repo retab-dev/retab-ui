@@ -16,7 +16,10 @@ export function spreadsheetColumnToIndex(letter: string): number {
   return n - 1
 }
 
-/** A `spreadsheet_cell` anchor → 0-based `{ sheet, row, col }` grid coordinates. */
+/**
+ * A `spreadsheet_cell` anchor to the viewer's public compatibility coordinates.
+ * Internals convert this shape to `{ sheetIndex, rowIndex, columnIndex }`.
+ */
 export function spreadsheetAnchorToCell(
   anchor: SourceAnchor
 ): { sheet: number; row: number; col: number } | undefined {
@@ -53,8 +56,8 @@ export function useXlsxSourceTarget(
 }
 
 /**
- * The `activeCell` prop for `XlsxViewer` derived from the active source. Pass
- * `useSourceLink(...).activeSource` straight in.
+ * The public compatibility `activeCell` prop for `XlsxViewer` derived from the
+ * active source. Pass `useSourceLink(...).activeSource` straight in.
  */
 export function sourceToXlsxCell(
   source: Source | undefined

@@ -6,7 +6,6 @@ export type {
   PropertyDraft,
   PropertyDraftOperation,
   PropertyFormCommand,
-  PropertyFormContext,
   PropertyFormMode,
   PropertyFormProps,
   PropertyFormSchemaContext,

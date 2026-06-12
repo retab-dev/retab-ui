@@ -1,10 +1,9 @@
 "use client"
 
-import {
-  getItemsNodeId,
-  type SchemaDocument,
+import type {
+  DocumentNodeView,
+  SchemaDocument,
 } from "@/components/schema-editor/document"
-import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
 import type {
   DocumentSchemaNodeEditorProps,
   RenderDocumentNodeEditor,
@@ -15,29 +14,23 @@ import type { ResolvedSchemaBuilderFeatures } from "@/components/schema-editor/s
 interface DocumentArrayNodeEditorProps {
   doc: SchemaDocument
   nodeId: string
-  items: unknown
+  nodeView: DocumentNodeView
   path: string
-  defs: DocumentSchemaNodeEditorProps["defs"]
   setDefsAccordionOpen: (open: boolean) => void
   draggedParentRef: DocumentSchemaNodeEditorProps["draggedParentRef"]
   draggedPropertyRef: DocumentSchemaNodeEditorProps["draggedPropertyRef"]
   editMode: SchemaEditorMode
   features: ResolvedSchemaBuilderFeatures
   renderNode: RenderDocumentNodeEditor
-  applyDocOp: DocumentSchemaNodeEditorProps["applyDocOp"]
-}
-
-function isJSONSchema(value: unknown): value is ExtendedJSONSchema7 {
-  return typeof value === "object" && value !== null
+  dispatch: DocumentSchemaNodeEditorProps["dispatch"]
 }
 
 export function DocumentArrayNodeEditor({
-  applyDocOp,
+  dispatch,
   doc,
   nodeId,
-  items,
+  nodeView,
   path,
-  defs,
   setDefsAccordionOpen,
   draggedParentRef,
   draggedPropertyRef,
@@ -45,12 +38,8 @@ export function DocumentArrayNodeEditor({
   features,
   renderNode,
 }: DocumentArrayNodeEditorProps) {
-  if (items === undefined || Array.isArray(items) || !isJSONSchema(items)) {
-    return null
-  }
-
-  const itemNodeId = getItemsNodeId(doc, nodeId)
-  if (!itemNodeId) {
+  const itemView = nodeView.items
+  if (!itemView) {
     throw new Error(`Missing document node id for array items at "${path}"`)
   }
 
@@ -58,17 +47,16 @@ export function DocumentArrayNodeEditor({
     <div className="ml-4">
       <div className="ml-4 border-l border-border">
         {renderNode({
-          applyDocOp,
+          dispatch,
           doc,
           draggedParentRef,
           draggedPropertyRef,
           editMode,
           features,
           name: "items",
-          nodeId: itemNodeId,
-          node: items,
+          nodeId: itemView.nodeId,
+          nodeView: itemView,
           path: `${path}.items`,
-          defs,
           canDelete: false,
           hidePencilButton: true,
           setDefsAccordionOpen,

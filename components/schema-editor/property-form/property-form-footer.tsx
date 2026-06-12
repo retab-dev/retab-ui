@@ -26,6 +26,7 @@ export function PropertyFormFooter({
             type="button"
             variant="destructive"
             size="sm"
+            disabled={isSubmitting}
             onClick={onDelete}
           >
             Delete Property
@@ -35,7 +36,13 @@ export function PropertyFormFooter({
 
       <div className="flex space-x-2">
         {onCancel && (
-          <Button type="button" variant="outline" size="sm" onClick={onCancel}>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={isSubmitting}
+            onClick={onCancel}
+          >
             Cancel
           </Button>
         )}

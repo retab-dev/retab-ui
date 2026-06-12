@@ -7,8 +7,6 @@ import { cn } from "@/lib/utils"
 import {
   getPptxFitScale,
   getPptxResetKey,
-  type PageOverlayProps,
-  type PptxPageOverlayProps,
   type PptxSlideOverlayProps,
 } from "./pptx-viewer-core"
 import { PptxErrorBoundary } from "./pptx-viewer-error-boundary"
@@ -21,11 +19,7 @@ import { usePptxViewportWidth } from "./pptx-viewer-viewport"
 import { usePptxVisibleSlide } from "./pptx-viewer-visible-slide"
 import { usePptxZoom } from "./pptx-viewer-zoom"
 
-export type {
-  PageOverlayProps,
-  PptxPageOverlayProps,
-  PptxSlideOverlayProps,
-}
+export type { PptxSlideOverlayProps }
 
 /** Client gate without an effect: false during SSR, true after hydration. */
 function useIsClient() {
@@ -50,12 +44,8 @@ export interface PptxViewerProps {
   downloadFileName?: string
   /** Render absolutely-positioned overlays, such as bbox citations, on each slide. */
   renderSlideOverlay?: (props: PptxSlideOverlayProps) => React.ReactNode
-  /** @deprecated Use `renderSlideOverlay`. */
-  renderPageOverlay?: (props: PptxPageOverlayProps) => React.ReactNode
   /** Fired with the 1-based slide nearest the top of the viewport as you scroll. */
   onVisibleSlideChange?: (slide: number) => void
-  /** @deprecated Use `onVisibleSlideChange`. */
-  onVisiblePageChange?: (page: number) => void
   /** Fired with scroll progress in [0, 1]. */
   onScrollProgressChange?: (progress: number) => void
   /** Drop the outer border/rounded/background so the viewer fills its container. */
@@ -104,9 +94,7 @@ function PptxViewerContent({
   toolbar = true,
   downloadFileName,
   renderSlideOverlay,
-  renderPageOverlay,
   onVisibleSlideChange,
-  onVisiblePageChange,
   onScrollProgressChange,
   bare = false,
   header,
@@ -114,7 +102,6 @@ function PptxViewerContent({
   eager = false,
 }: PptxViewerProps) {
   const source = useRetainedPptxSource(src)
-  const activeRenderSlideOverlay = renderSlideOverlay ?? renderPageOverlay
 
   const [rotation, setRotation] = React.useState(0)
   const scrollActivity = React.useMemo(() => createPptxScrollActivity(), [])
@@ -123,7 +110,6 @@ function PptxViewerContent({
     {
       onScrollProgressChange,
       onVisibleSlideChange,
-      onVisiblePageChange,
     }
   )
 
@@ -177,7 +163,7 @@ function PptxViewerContent({
             rotation={rotation}
             eager={eager}
             activity={scrollActivity}
-            renderSlideOverlay={activeRenderSlideOverlay}
+            renderSlideOverlay={renderSlideOverlay}
             containerRef={containerRef}
             viewportRef={scrollViewportRef}
             onScroll={handleViewportScroll}

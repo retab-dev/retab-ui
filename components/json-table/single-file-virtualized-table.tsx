@@ -5,12 +5,10 @@ import type { JSONSchema7 } from "json-schema"
 
 import { JsonTableHeaderCell } from "@/components/json-table/header-cell"
 import type { ProjectedRow } from "@/components/json-table/lib/document-projection"
-import {
-  buildHeaderGridRows,
-  getLeafHeaderNodes,
-} from "@/components/json-table/lib/header-nodes"
+import { buildHeaderGridRows } from "@/components/json-table/lib/header-nodes"
 import type { JsonTableHeaderNode } from "@/components/json-table/lib/header-nodes"
 import type { TableDocument } from "@/components/json-table/lib/projects-types"
+import type { FieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
 import {
   Table,
   TableBody,
@@ -41,6 +39,7 @@ interface SingleFileVirtualizedTableProps {
   editMode: "descriptionOnly" | "editable" | "readOnly"
   projectedRows: ProjectedRow[]
   visibleKeys: string[]
+  fieldMetadataByKey: Record<string, FieldMetadata | undefined>
   rowCount: number
   onUpdateDocument?: (patch: Record<string, unknown>) => Promise<void>
   columnWidth?: ColumnWidth
@@ -50,7 +49,7 @@ interface SingleFileVirtualizedTableProps {
     fieldPath: string
     rect: DOMRect
   }) => void
-  /** Rows to render beyond the viewport on each side (virtualization buffer). Default 30. */
+  /** Rows to render beyond the viewport on each side (virtualization buffer). Default 12. */
   overscan?: number
 }
 
@@ -81,7 +80,10 @@ const SingleFileTableHeader = React.memo(
     // Header rows derived straight from the schema header tree: each group spans
     // its leaves; shallower leaves get continuation cells so the grid stays
     // aligned.
-    const headerRows = buildHeaderGridRows(headerNodes)
+    const headerRows = React.useMemo(
+      () => buildHeaderGridRows(headerNodes),
+      [headerNodes]
+    )
 
     return (
       <TableHeader className="sticky top-0 z-10 bg-muted/30">
@@ -115,7 +117,7 @@ const SingleFileTableHeader = React.memo(
                 >
                   <JsonTableHeaderCell
                     node={cell.node}
-                    leafCount={getLeafHeaderNodes(cell.node).length}
+                    leafCount={cell.leafCount}
                     schema={schema}
                     setSchema={setSchema}
                     stopAt={stopAt}
@@ -152,12 +154,13 @@ export const SingleFileVirtualizedTable =
       editMode,
       projectedRows,
       visibleKeys,
+      fieldMetadataByKey,
       rowCount,
       onUpdateDocument,
       columnWidth: propColumnWidth,
       allowEditing = true,
       onCellHoverStart,
-      overscan = 30,
+      overscan = 12,
     }) => {
       const { rowHeight, columnWidth: storeColumnWidth } =
         useSheetOptionsStore()
@@ -257,6 +260,9 @@ export const SingleFileVirtualizedTable =
                           projectedRows={projectedRows}
                           schema={schema}
                           visibleKeys={visibleKeys}
+                          fieldMetadataByKey={fieldMetadataByKey}
+                          rowHeightPx={rowHeightPx}
+                          columnWidth={columnWidth}
                           openEditorPath={openEditorPath}
                           setOpenEditorPath={setOpenEditorPath}
                           onUpdateDocument={onUpdateDocument}

@@ -79,7 +79,7 @@ describe("useSchemaBuilderState wiring", () => {
     expect(api().schema.required).toEqual(["a", "b"])
   })
 
-  it("applyDocOp emits the projected schema and updates the document", () => {
+  it("dispatch emits the projected schema and updates the document", () => {
     const { api, onEmit } = renderProvider(sample)
     const aPropertyId = getChildPropertyId(api().doc, api().doc.root.id, "a")!
     act(() => {
@@ -106,7 +106,7 @@ describe("useSchemaBuilderState wiring", () => {
     expect(Object.keys(api().schema.properties!)).toEqual(["alpha", "b"])
   })
 
-  it("applyDocOp is a no-op when the operation changes nothing", () => {
+  it("dispatch is a no-op when the operation changes nothing", () => {
     const { api, onEmit } = renderProvider(sample)
     const before = api().schema
     act(() => {

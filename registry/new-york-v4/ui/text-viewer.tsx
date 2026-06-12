@@ -7,6 +7,10 @@ import * as React from "react"
 import { Download, Maximize, Minus, Plus, RotateCcw } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import type {
+  TextViewerSource as InlineTextViewerSource,
+  UrlViewerSource,
+} from "@/lib/viewer-source"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -40,14 +44,12 @@ export interface TextViewerHandle {
   getViewportElement: () => HTMLDivElement | null
 }
 
+export type TextViewerSource = UrlViewerSource | InlineTextViewerSource
+
 export interface TextViewerProps extends TextViewerBounds {
-  /** URL of the text file (same-origin or CORS-enabled). */
-  src?: string
-  /** Inline text, as an alternative to `src`. */
-  value?: string
+  source: TextViewerSource
   className?: string
   toolbar?: boolean
-  downloadName?: string
   /** 1-based inclusive line range to highlight, or null. */
   highlight?: TextLineRange | null
   /** Drop the outer border/rounded/background so the viewer fills its container. */
@@ -58,9 +60,10 @@ export const TextViewer = React.forwardRef<TextViewerHandle, TextViewerProps>(
   function TextViewer(props, ref) {
     const [retryVersion, setRetryVersion] = React.useState(0)
     const isClient = useIsClient()
-    const resetToken = textViewerResetToken(props, retryVersion)
+    const { source } = props
+    const resetToken = textViewerResetToken(source, props, retryVersion)
 
-    if (props.value === undefined && props.src && !isClient) {
+    if (source.kind === "url" && !isClient) {
       return (
         <TextViewerFallback
           className={props.className}
@@ -74,9 +77,8 @@ export const TextViewer = React.forwardRef<TextViewerHandle, TextViewerProps>(
       <TextViewerErrorBoundary
         bare={props.bare}
         className={props.className}
-        downloadName={props.downloadName}
         resetToken={resetToken}
-        src={props.src}
+        source={source}
         onRetry={() => setRetryVersion((version) => version + 1)}
       >
         <React.Suspense
@@ -92,6 +94,7 @@ export const TextViewer = React.forwardRef<TextViewerHandle, TextViewerProps>(
             {...props}
             forwardedRef={ref}
             retryVersion={retryVersion}
+            source={source}
           />
         </React.Suspense>
       </TextViewerErrorBoundary>
@@ -100,11 +103,9 @@ export const TextViewer = React.forwardRef<TextViewerHandle, TextViewerProps>(
 )
 
 function TextViewerInner({
-  src,
-  value,
+  source,
   className,
   toolbar = true,
-  downloadName,
   highlight,
   bare = false,
   maxBytes,
@@ -112,16 +113,15 @@ function TextViewerInner({
   retryVersion,
   forwardedRef,
 }: TextViewerProps & {
+  source: TextViewerSource
   retryVersion: number
   forwardedRef?: React.ForwardedRef<TextViewerHandle>
 }) {
   const bounds = resolvedTextViewerBounds({ maxBytes, maxLines })
   const text =
-    value !== undefined
-      ? readInlineText(value, bounds)
-      : src
-        ? readTextResource({ src, retryVersion, bounds })
-        : ""
+    source.kind === "text"
+      ? readInlineText(source.text, bounds)
+      : readTextResource({ src: source.url, retryVersion, bounds })
   const textLines = React.useMemo(() => text.split("\n"), [text])
   const highlightRange = normalizeTextLineRange(highlight, textLines.length)
 
@@ -154,8 +154,7 @@ function TextViewerInner({
         <TextViewerToolbar
           lineCount={textLines.length}
           fontScale={fontScale}
-          src={src}
-          downloadName={downloadName}
+          source={source}
           onZoomOut={() => zoom(1 / 1.2)}
           onZoomIn={() => zoom(1.2)}
           onResetZoom={() => setFontScale(1)}
@@ -220,16 +219,14 @@ function TextLine({
 function TextViewerToolbar({
   lineCount,
   fontScale,
-  src,
-  downloadName,
+  source,
   onZoomOut,
   onZoomIn,
   onResetZoom,
 }: {
   lineCount: number
   fontScale: number
-  src?: string
-  downloadName?: string
+  source: TextViewerSource
   onZoomOut: () => void
   onZoomIn: () => void
   onResetZoom: () => void
@@ -245,10 +242,13 @@ function TextViewerToolbar({
             onZoomIn={onZoomIn}
             onResetZoom={onResetZoom}
           />
-          {src ? (
+          {source.kind === "url" ? (
             <>
               <div className="mx-1 h-4 w-px bg-border" />
-              <DownloadButton src={src} downloadName={downloadName} />
+              <DownloadButton
+                href={source.downloadUrl ?? source.url}
+                downloadFileName={source.fileName}
+              />
             </>
           ) : null}
         </>
@@ -292,8 +292,7 @@ class TextViewerErrorBoundary extends React.Component<
     children: React.ReactNode
     className?: string
     bare?: boolean
-    src?: string
-    downloadName?: string
+    source: TextViewerSource
     resetToken: TextViewerResetToken
     onRetry: () => void
   },
@@ -323,8 +322,12 @@ class TextViewerErrorBoundary extends React.Component<
       const isInvalidBounds =
         this.state.error instanceof TextViewerInvalidBoundsError
       const isRetryable = Boolean(
-        this.props.src && !tooLargeReason && !isInvalidBounds
+        this.props.source.kind === "url" && !tooLargeReason && !isInvalidBounds
       )
+      const downloadHref =
+        this.props.source.kind === "url"
+          ? (this.props.source.downloadUrl ?? this.props.source.url)
+          : null
       return (
         <TextViewerFrame
           className={this.props.className}
@@ -343,14 +346,14 @@ class TextViewerErrorBoundary extends React.Component<
                   Retry
                 </Button>
               ) : null}
-              {this.props.src ? (
+              {downloadHref ? (
                 <Button
                   variant={tooLargeReason ? "outline" : "ghost"}
                   size="sm"
                   render={
                     <a
-                      href={this.props.src}
-                      download={this.props.downloadName}
+                      href={downloadHref}
+                      download={this.props.source.fileName}
                     />
                   }
                 >
@@ -456,11 +459,11 @@ function TextViewerFrame({
 }
 
 function DownloadButton({
-  src,
-  downloadName,
+  href,
+  downloadFileName,
 }: {
-  src: string
-  downloadName?: string
+  href: string
+  downloadFileName?: string
 }) {
   return (
     <Button
@@ -469,7 +472,7 @@ function DownloadButton({
       className="size-7"
       aria-label="Download"
       title="Download"
-      render={<a href={src} download={downloadName} />}
+      render={<a href={href} download={downloadFileName} />}
     >
       <Download />
     </Button>
@@ -521,34 +524,35 @@ function textViewerErrorMessage({
 
 type TextViewerResetToken =
   | {
-      kind: "value"
-      value: string
+      kind: "text"
+      text: string
       maxBytes: number | undefined
       maxLines: number | undefined
     }
   | {
-      kind: "src"
-      src: string | undefined
+      kind: "url"
+      url: string
       retryVersion: number
       maxBytes: number | undefined
       maxLines: number | undefined
     }
 
 function textViewerResetToken(
-  props: Pick<TextViewerProps, "src" | "value" | "maxBytes" | "maxLines">,
+  source: TextViewerSource,
+  props: Pick<TextViewerProps, "maxBytes" | "maxLines">,
   retryVersion: number
 ): TextViewerResetToken {
-  if (props.value !== undefined) {
+  if (source.kind === "text") {
     return {
-      kind: "value",
-      value: props.value,
+      kind: "text",
+      text: source.text,
       maxBytes: props.maxBytes,
       maxLines: props.maxLines,
     }
   }
   return {
-    kind: "src",
-    src: props.src,
+    kind: "url",
+    url: source.url,
     retryVersion,
     maxBytes: props.maxBytes,
     maxLines: props.maxLines,
@@ -562,12 +566,12 @@ function textViewerResetTokenChanged(
   if (previous.kind !== next.kind) return true
   if (previous.maxBytes !== next.maxBytes) return true
   if (previous.maxLines !== next.maxLines) return true
-  if (previous.kind === "value" && next.kind === "value") {
-    return previous.value !== next.value
+  if (previous.kind === "text" && next.kind === "text") {
+    return previous.text !== next.text
   }
-  if (previous.kind === "src" && next.kind === "src") {
+  if (previous.kind === "url" && next.kind === "url") {
     return (
-      previous.src !== next.src || previous.retryVersion !== next.retryVersion
+      previous.url !== next.url || previous.retryVersion !== next.retryVersion
     )
   }
   return true

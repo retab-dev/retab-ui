@@ -28,16 +28,17 @@ import {
 } from "@/components/ui-retab/dropdown-menu"
 
 const LazyObjectTemplateSubmenu = React.lazy(() =>
-  import(
-    "@/components/schema-editor/optional/object-templates/object-template-menu"
-  ).then((module) => ({
-    default: module.ObjectTemplateSubmenu,
-  }))
+  import("@/components/schema-editor/optional/object-templates/object-template-menu").then(
+    (module) => ({
+      default: module.ObjectTemplateSubmenu,
+    })
+  )
 )
 
 const primitiveTypes = [
   ["string", "string"],
   ["number", "number"],
+  ["integer", "integer"],
   ["boolean", "true/false"],
   ["enum", "multiple choice"],
   ["date", "date"],

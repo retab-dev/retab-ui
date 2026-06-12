@@ -69,8 +69,7 @@ inside `renderPageOverlay` (the overlay layer is already `position: absolute`):
 ## Chrome slots
 
 Beyond the overlay, the viewer mounts chrome around the document — one node per
-edge plus a floating overlay. Pass them through `slots`; `header` and `aside` are
-shorthands for `slots.top` and `slots.left`.
+edge plus a floating overlay. Pass them through `slots`.
 
 ```tsx
 <PdfViewer
@@ -87,7 +86,6 @@ shorthands for `slots.top` and `slots.left`.
 
 The `left`/`right` rails collapse together via a toolbar button (shown by
 default when a rail is set; control with `railToggle` / `defaultRailsOpen`).
-`asideToggle` and `defaultAsideOpen` remain compatibility aliases.
 
 ## Scale control
 
@@ -110,9 +108,12 @@ button reports `null`.
 
 ## Imperative handle
 
-A `ref` exposes `PdfViewerHandle`: `scrollToPageArea(pageNumber, area, options)`
-scrolls a page's normalized area (percentages `[0, 100]`; only `top` is required)
-into view, and `getViewportElement()` returns the scrolling viewport.
+A `ref` exposes `PdfViewerHandle`:
+`scrollToPageTarget(pageNumber, target, options)` scrolls a page's normalized
+vertical position (`target.top`, a percentage `[0, 100]`) into view, and
+`getViewportElement()` returns the scrolling viewport. Overlay boxes still use
+full `{ left, top, width, height }` geometry; imperative scrolling only needs the
+vertical target.
 
 ## Props
 
@@ -128,11 +129,7 @@ into view, and `getViewportElement()` returns the scrolling viewport.
 | `onVisiblePageChange`    | `(page: number) => void`                 | Fired with the 1-based page nearest the top of the viewport.                                                       |
 | `onScrollProgressChange` | `(progress: number) => void`             | Fired with scroll progress in `[0, 1]`.                                                                            |
 | `slots`                  | `PdfViewerSlots`                         | Chrome around the document: `top` / `bottom` strips, `left` / `right` collapsible rails, and a floating `overlay`. |
-| `header`                 | `ReactNode`                              | Shorthand for `slots.top`.                                                                                         |
-| `aside`                  | `ReactNode`                              | Shorthand for `slots.left`.                                                                                        |
 | `railToggle`             | `boolean`                                | Show a toolbar button that collapses/expands the rails. Defaults to `true` when a rail is set.                     |
 | `defaultRailsOpen`       | `boolean`                                | Initial open state of the rails. Defaults to `true`.                                                               |
-| `asideToggle`            | `boolean`                                | Compatibility alias for `railToggle`.                                                                              |
-| `defaultAsideOpen`       | `boolean`                                | Compatibility alias for `defaultRailsOpen`.                                                                        |
 | `bare`                   | `boolean`                                | Drop the outer border/background so the viewer fills its container.                                                |
 | `className`              | `string`                                 | Optional class on the viewer shell.                                                                                |

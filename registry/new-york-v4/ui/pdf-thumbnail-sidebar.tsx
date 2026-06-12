@@ -4,8 +4,11 @@ import * as React from "react"
 import type { PDFDocumentProxy } from "pdfjs-dist"
 
 import { cn } from "@/lib/utils"
+import {
+  getDocumentResource,
+  getPageResource,
+} from "@/components/ui/pdf-viewer"
 import { Spinner } from "@/components/ui/spinner"
-import { getDocumentResource, getPageResource } from "@/components/ui/pdf-viewer"
 
 export interface PdfThumbnailSidebarProps {
   /** Same URL as the PdfViewer — the document load is shared (cached by src). */
@@ -20,7 +23,7 @@ export interface PdfThumbnailSidebarProps {
 }
 
 /**
- * A page-thumbnail rail for the PdfViewer `aside` slot. Each thumbnail is a
+ * A page-thumbnail rail for the PdfViewer `slots.left` rail. Each thumbnail is a
  * small pdfjs render of the page, rendered lazily as it scrolls into view (no
  * `useEffect` — an IntersectionObserver in a ref callback gates rendering), so
  * it scales to large documents. Reuses the PdfViewer's cached document.

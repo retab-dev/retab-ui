@@ -3,9 +3,10 @@
 import * as React from "react"
 import type * as DOMPurifyNS from "dompurify"
 
+import { abortError, isAbortError, promiseForSignal } from "./file-viewer-async"
 import { DocShell, useZoom, ZoomActions } from "./file-viewer-chrome"
 import { baseName, timed } from "./file-viewer-core"
-import { abortError, cachedPromise } from "./file-viewer-resource-cache"
+import { lruGet, lruSet } from "./file-viewer-resource-cache"
 import {
   textResource,
   type TextResourceCache,
@@ -37,6 +38,12 @@ export interface MarkdownHtmlCache {
   size(): number
 }
 
+interface MarkdownHtmlEntry {
+  html?: Promise<string>
+  subscriberPromises: WeakMap<AbortSignal, Promise<string>>
+  subscribers: Set<AbortSignal>
+}
+
 export function createMarkdownHtmlCache({
   maxEntries = 12,
   textCache = textResource,
@@ -44,69 +51,97 @@ export function createMarkdownHtmlCache({
   maxEntries?: number
   textCache?: TextResourceCache
 } = {}): MarkdownHtmlCache {
-  const htmlBySrc = new Map<string, Promise<string>>()
-  const subscriberPromises = new Map<
-    string,
-    WeakMap<AbortSignal, Promise<string>>
-  >()
+  const entries = new Map<string, MarkdownHtmlEntry>()
 
-  function subscriberMapFor(src: string) {
-    let map = subscriberPromises.get(src)
-    if (!map) {
-      map = new WeakMap()
-      subscriberPromises.set(src, map)
+  function remove(src: string) {
+    entries.delete(src)
+  }
+
+  function entryFor(src: string) {
+    let entry = lruGet(entries, src)
+    if (!entry) {
+      entry = {
+        subscriberPromises: new WeakMap(),
+        subscribers: new Set(),
+      }
+      lruSet(entries, src, entry, undefined, maxEntries)
     }
-    return map
+    return entry
+  }
+
+  function renderHtml(src: string, text: string) {
+    return timed(`markdown:render ${baseName(src)}`, () =>
+      Promise.all([import("marked"), loadSanitizer()]).then(
+        async ([{ marked }, DOMPurify]) => {
+          const dirty = String(await marked.parse(text, { gfm: true }))
+          return DOMPurify.sanitize(dirty)
+        }
+      )
+    ).catch((error: unknown) => {
+      remove(src)
+      throw error
+    })
   }
 
   return {
     load({ src, signal }) {
       if (signal.aborted) return Promise.reject(abortError())
 
-      const map = subscriberMapFor(src)
-      const existingPromise = map.get(signal)
-      if (existingPromise) return existingPromise
+      const entry = entryFor(src)
 
-      const promise = textCache
-        .load({ src, signal })
-        .then((text) => {
-          if (signal.aborted) throw abortError()
-          return cachedPromise(
-            htmlBySrc,
-            src,
-            () =>
-              timed(`markdown:render ${baseName(src)}`, () =>
-                Promise.all([import("marked"), loadSanitizer()]).then(
-                  async ([{ marked }, DOMPurify]) => {
-                    const dirty = String(
-                      await marked.parse(text, { gfm: true })
-                    )
-                    return DOMPurify.sanitize(dirty)
-                  }
-                )
-              ),
-            {
-              max: maxEntries,
-              onReject(key) {
-                subscriberPromises.delete(key)
-              },
+      return promiseForSignal(entry.subscriberPromises, signal, () => {
+        entry.subscribers.add(signal)
+
+        return new Promise<string>((resolve, reject) => {
+          let done = false
+
+          const cleanup = () => {
+            signal.removeEventListener("abort", onAbort)
+            entry.subscribers.delete(signal)
+          }
+
+          const onAbort = () => {
+            if (done) return
+            done = true
+            cleanup()
+            if (!entry.html && entry.subscribers.size === 0) {
+              remove(src)
             }
-          )
-        })
-        .catch((error: unknown) => {
-          map.delete(signal)
-          throw error
-        })
+            reject(abortError())
+          }
 
-      map.set(signal, promise)
-      return promise
+          signal.addEventListener("abort", onAbort, { once: true })
+
+          textCache
+            .load({ src, signal })
+            .then((text) => {
+              if (signal.aborted) throw abortError()
+              entry.html ??= renderHtml(src, text)
+              return entry.html
+            })
+            .then(
+              (html) => {
+                if (done) return
+                done = true
+                cleanup()
+                resolve(html)
+              },
+              (error: unknown) => {
+                if (done) return
+                done = true
+                cleanup()
+                if (!entry.html && !isAbortError(error)) remove(src)
+                reject(error)
+              }
+            )
+        })
+      })
     },
     clear() {
-      htmlBySrc.clear()
-      subscriberPromises.clear()
+      entries.clear()
     },
     size() {
-      return htmlBySrc.size
+      return entries.size
     },
   }
 }
