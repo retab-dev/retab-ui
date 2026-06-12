@@ -67,24 +67,10 @@ export interface PropertyFormProps {
   onDelete?: () => void
 }
 
-export type PropertySchemaNodeType =
-  | "string"
-  | "number"
-  | "integer"
-  | "boolean"
-  | "enum"
-  | "object"
-  | "array"
-  | "date"
-  | "time"
-  | "datetime"
-  | "$ref"
-
 export type PropertyDraftOperation =
   | { type: "renameProperty"; name: string }
   | { type: "setPropertyDescription"; description: string }
   | { type: "setPropertyNullable"; isNullable: boolean }
-  | { type: "setPropertyType"; schemaNodeType: PropertySchemaNodeType }
   | { type: "replacePropertySchemaNode"; schemaNode: ExtendedJSONSchema7 }
 
 export interface PropertyFormFooterModel {
@@ -97,7 +83,6 @@ export interface PropertyFormFooterModel {
 }
 
 export interface PropertyFormViewModel {
-  propertyDraft: PropertyDraft
   validation: PropertyValidation
   capabilities: PropertyCapabilities
   fields: {
@@ -108,7 +93,6 @@ export interface PropertyFormViewModel {
       onChange: (name: string) => void
     }
     type: {
-      name: string
       schemaNode: ExtendedJSONSchema7
       schemaContext: PropertyFormSchemaContext
       mode: PropertyFormMode
@@ -126,7 +110,6 @@ export interface PropertyFormViewModel {
       onChange: (description: string) => void
     }
     schemaNodeDetails?: {
-      name: string
       schemaNode: ExtendedJSONSchema7
       schemaContext: PropertyFormSchemaContext
       mode: PropertyFormMode

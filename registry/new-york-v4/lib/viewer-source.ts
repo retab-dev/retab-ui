@@ -12,8 +12,8 @@ export type FileCategory =
 
 export type ViewerSource =
   | UrlViewerSource
-  | TextViewerSource
-  | BytesViewerSource
+  | TextSource
+  | BlobViewerSource
 
 export interface UrlViewerSource {
   kind: "url"
@@ -24,7 +24,7 @@ export interface UrlViewerSource {
   identityKey?: string
 }
 
-export interface TextViewerSource {
+export interface TextSource {
   kind: "text"
   text: string
   fileName?: string
@@ -32,13 +32,13 @@ export interface TextViewerSource {
   identityKey?: string
 }
 
-export interface BytesViewerSource {
-  kind: "bytes"
-  bytes: ArrayBuffer | Uint8Array | Blob
+export interface BlobViewerSource {
+  kind: "blob"
+  blob: Blob
+  identityKey: string
   fileName?: string
   mimeType?: string
   downloadUrl?: string
-  identityKey?: string
 }
 
 export interface ViewerDescriptor {
@@ -162,7 +162,10 @@ export function resolveViewerDescriptor({
   mimeType?: string
   category?: FileCategory
 }): ViewerDescriptor {
-  const resolvedMimeType = mimeType ?? source.mimeType
+  const resolvedMimeType =
+    mimeType ??
+    source.mimeType ??
+    (source.kind === "blob" && source.blob.type ? source.blob.type : undefined)
   const displayName = fileName ?? source.fileName ?? defaultDisplayName(source)
   const downloadFileName =
     fileName ?? source.fileName ?? defaultDownloadFileName(source)
@@ -213,19 +216,11 @@ function defaultDownloadFileName(source: ViewerSource) {
 function defaultIdentityKey(source: ViewerSource) {
   if (source.kind === "url") return `url:${source.url}`
   if (source.kind === "text") return `text:${source.text}`
-  return `bytes:${byteLengthOf(source.bytes)}:${source.fileName ?? ""}:${
-    source.mimeType ?? ""
-  }`
+  return source.identityKey
 }
 
 function downloadHrefOf(source: ViewerSource) {
   if (source.kind === "url") return source.downloadUrl ?? source.url
-  if (source.kind === "bytes") return source.downloadUrl
+  if (source.kind === "blob") return source.downloadUrl
   return undefined
-}
-
-function byteLengthOf(bytes: BytesViewerSource["bytes"]) {
-  if (bytes instanceof ArrayBuffer) return bytes.byteLength
-  if ("byteLength" in bytes) return bytes.byteLength
-  return bytes.size
 }

@@ -10,10 +10,22 @@ export type PdfPageLayout = {
   offsetTop: number
 }
 
+export type PdfMeasuredPageLayout = {
+  pageNumber: number
+  width: number
+  height: number
+  heightDelta: number
+}
+
 export type PdfPageLayoutModel = {
-  pages: PdfPageLayout[]
+  pageCount: number
   totalHeight: number
   maxPageWidth: number
+  estimatedWidth: number
+  estimatedHeight: number
+  measuredPages: readonly PdfMeasuredPageLayout[]
+  measuredPageByNumber: ReadonlyMap<number, PdfMeasuredPageLayout>
+  prefixHeightDeltas: readonly number[]
 }
 
 export function createPdfPageLayout({
@@ -29,54 +41,84 @@ export function createPdfPageLayout({
   scale: number
   rotation: number
 }): PdfPageLayoutModel {
-  const pages: PdfPageLayout[] = []
-  const isRotated = rotation % 180 !== 0
-  let offsetTop = PDF_PAGE_PADDING
-  let maxPageWidth = 0
-
-  for (let pageNumber = 1; pageNumber <= pageCount; pageNumber += 1) {
-    const pageSize = pageSizeByNumber.get(pageNumber) ?? defaultPageSize
-    const width = Math.round(
-      (isRotated ? pageSize.height : pageSize.width) * scale
+  const estimatedSize = getRenderedPageSize(defaultPageSize, scale, rotation)
+  const measuredPages = Array.from(pageSizeByNumber.entries())
+    .filter(([pageNumber]) => pageNumber >= 1 && pageNumber <= pageCount)
+    .map(([pageNumber, pageSize]) => {
+      const renderedSize = getRenderedPageSize(pageSize, scale, rotation)
+      return {
+        pageNumber,
+        width: renderedSize.width,
+        height: renderedSize.height,
+        heightDelta: renderedSize.height - estimatedSize.height,
+      }
+    })
+    .filter(
+      (page) =>
+        page.width !== estimatedSize.width ||
+        page.height !== estimatedSize.height
     )
-    const height = Math.round(
-      (isRotated ? pageSize.width : pageSize.height) * scale
-    )
+    .sort((a, b) => a.pageNumber - b.pageNumber)
 
-    pages.push({ pageNumber, width, height, offsetTop })
-    maxPageWidth = Math.max(maxPageWidth, width)
-    offsetTop += height + PDF_PAGE_GAP
+  const measuredPageByNumber = new Map(
+    measuredPages.map((page) => [page.pageNumber, page])
+  )
+  const prefixHeightDeltas: number[] = []
+  let totalHeightDelta = 0
+  let maxPageWidth = pageCount === 0 ? 0 : estimatedSize.width
+
+  for (const page of measuredPages) {
+    totalHeightDelta += page.heightDelta
+    prefixHeightDeltas.push(totalHeightDelta)
+    maxPageWidth = Math.max(maxPageWidth, page.width)
   }
 
   return {
-    pages,
+    pageCount,
     totalHeight:
-      pages.length === 0 ? 0 : offsetTop - PDF_PAGE_GAP + PDF_PAGE_PADDING,
+      pageCount === 0
+        ? 0
+        : PDF_PAGE_PADDING * 2 +
+          pageCount * estimatedSize.height +
+          (pageCount - 1) * PDF_PAGE_GAP +
+          totalHeightDelta,
     maxPageWidth,
+    estimatedWidth: estimatedSize.width,
+    estimatedHeight: estimatedSize.height,
+    measuredPages,
+    measuredPageByNumber,
+    prefixHeightDeltas,
   }
 }
 
 export function getPdfPageLayout(
   layout: PdfPageLayoutModel,
   pageNumber: number
-) {
-  return layout.pages[pageNumber - 1]
+): PdfPageLayout | undefined {
+  if (pageNumber < 1 || pageNumber > layout.pageCount) return undefined
+
+  const measuredPage = layout.measuredPageByNumber.get(pageNumber)
+  return {
+    pageNumber,
+    width: measuredPage?.width ?? layout.estimatedWidth,
+    height: measuredPage?.height ?? layout.estimatedHeight,
+    offsetTop: getPdfPageOffsetTop(layout, pageNumber),
+  }
 }
 
 export function findPdfPageByOffset(
   layout: PdfPageLayoutModel,
   offset: number
 ) {
-  if (layout.pages.length === 0) return 1
+  if (layout.pageCount === 0) return 1
 
-  let low = 0
-  let high = layout.pages.length - 1
-  let match = 0
+  let low = 1
+  let high = layout.pageCount
+  let match = 1
 
   while (low <= high) {
     const mid = Math.floor((low + high) / 2)
-    const page = layout.pages[mid]
-    if (page.offsetTop <= offset) {
+    if (getPdfPageOffsetTop(layout, mid) <= offset) {
       match = mid
       low = mid + 1
     } else {
@@ -84,7 +126,7 @@ export function findPdfPageByOffset(
     }
   }
 
-  return layout.pages[match].pageNumber
+  return match
 }
 
 export function getPdfVisiblePageNumbers({
@@ -98,20 +140,68 @@ export function getPdfVisiblePageNumbers({
   viewportHeight: number
   overscanPages?: number
 }) {
-  if (layout.pages.length === 0) return []
+  if (layout.pageCount === 0) return []
 
   const startOffset = Math.max(0, scrollTop - viewportHeight)
   const endOffset = scrollTop + viewportHeight * 2
   const firstVisiblePage = findPdfPageByOffset(layout, startOffset)
   const lastVisiblePage = findPdfPageByOffset(layout, endOffset)
   const firstPage = Math.max(1, firstVisiblePage - overscanPages)
-  const lastPage = Math.min(
-    layout.pages.length,
-    lastVisiblePage + overscanPages
-  )
+  const lastPage = Math.min(layout.pageCount, lastVisiblePage + overscanPages)
 
   return Array.from(
     { length: lastPage - firstPage + 1 },
     (_, index) => firstPage + index
   )
+}
+
+function getRenderedPageSize(
+  pageSize: PdfPageSize,
+  scale: number,
+  rotation: number
+) {
+  const isRotated = rotation % 180 !== 0
+  return {
+    width: Math.round((isRotated ? pageSize.height : pageSize.width) * scale),
+    height: Math.round((isRotated ? pageSize.width : pageSize.height) * scale),
+  }
+}
+
+function getPdfPageOffsetTop(layout: PdfPageLayoutModel, pageNumber: number) {
+  return (
+    PDF_PAGE_PADDING +
+    (pageNumber - 1) * (layout.estimatedHeight + PDF_PAGE_GAP) +
+    getHeightDeltaBeforePage(layout, pageNumber)
+  )
+}
+
+function getHeightDeltaBeforePage(
+  layout: PdfPageLayoutModel,
+  pageNumber: number
+) {
+  const measuredPageIndex = getLastMeasuredPageIndexBefore(layout, pageNumber)
+  return measuredPageIndex < 0
+    ? 0
+    : layout.prefixHeightDeltas[measuredPageIndex]
+}
+
+function getLastMeasuredPageIndexBefore(
+  layout: PdfPageLayoutModel,
+  pageNumber: number
+) {
+  let low = 0
+  let high = layout.measuredPages.length - 1
+  let match = -1
+
+  while (low <= high) {
+    const mid = Math.floor((low + high) / 2)
+    if (layout.measuredPages[mid].pageNumber < pageNumber) {
+      match = mid
+      low = mid + 1
+    } else {
+      high = mid - 1
+    }
+  }
+
+  return match
 }

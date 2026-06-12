@@ -48,7 +48,7 @@ interface BitmapCacheOptions {
 
 export class BitmapCache {
   private readonly bitmaps = new Map<number, ImageBitmap>()
-  private readonly pinnedFrameIndexes = new Set<number>()
+  private readonly pinnedFrameCounts = new Map<number, number>()
   private readonly frameRecency: number[] = []
 
   constructor(private readonly options: BitmapCacheOptions) {}
@@ -66,19 +66,35 @@ export class BitmapCache {
   }
 
   pin(frameIndex: number) {
-    this.pinnedFrameIndexes.add(frameIndex)
+    this.pinnedFrameCounts.set(
+      frameIndex,
+      (this.pinnedFrameCounts.get(frameIndex) ?? 0) + 1
+    )
     this.touch(frameIndex)
   }
 
   unpin(frameIndex: number) {
-    this.pinnedFrameIndexes.delete(frameIndex)
+    const pinCount = this.pinnedFrameCounts.get(frameIndex) ?? 0
+    if (pinCount <= 1) {
+      this.pinnedFrameCounts.delete(frameIndex)
+    } else {
+      this.pinnedFrameCounts.set(frameIndex, pinCount - 1)
+    }
     this.evict()
+  }
+
+  has(frameIndex: number): boolean {
+    return this.bitmaps.has(frameIndex)
+  }
+
+  isPinned(frameIndex: number): boolean {
+    return (this.pinnedFrameCounts.get(frameIndex) ?? 0) > 0
   }
 
   dispose() {
     for (const bitmap of this.bitmaps.values()) closeBitmap(bitmap)
     this.bitmaps.clear()
-    this.pinnedFrameIndexes.clear()
+    this.pinnedFrameCounts.clear()
     this.frameRecency.length = 0
   }
 
@@ -91,7 +107,7 @@ export class BitmapCache {
   private evict() {
     for (const frameIndex of [...this.frameRecency]) {
       if (this.bitmaps.size <= this.options.maxDecodedFrames) break
-      if (this.pinnedFrameIndexes.has(frameIndex)) continue
+      if (this.isPinned(frameIndex)) continue
       closeBitmap(this.bitmaps.get(frameIndex))
       this.bitmaps.delete(frameIndex)
       this.frameRecency.splice(this.frameRecency.indexOf(frameIndex), 1)
@@ -103,8 +119,15 @@ interface CreateFrameSourceOptions {
   kind: FrameSource["kind"]
   frames: readonly FrameDescriptor[]
   decode(frameIndex: number): Promise<ImageBitmap>
+  cancelDecode?: (frameIndex: number, reason: Error) => void
   maxDecodedFrames: number
+  initialBitmaps?: readonly InitialBitmap[]
   onDispose?: (reason: Error) => void
+}
+
+interface InitialBitmap {
+  frameIndex: number
+  bitmap: ImageBitmap
 }
 
 interface InflightFrameDecode {
@@ -116,12 +139,22 @@ export function createFrameSource({
   kind,
   frames,
   decode,
+  cancelDecode,
   maxDecodedFrames,
+  initialBitmaps = [],
   onDispose,
 }: CreateFrameSourceOptions): FrameSource {
   const bitmapCache = new BitmapCache({ maxDecodedFrames })
   const inflightDecodes = new Map<number, InflightFrameDecode>()
   let disposed = false
+
+  for (const { frameIndex, bitmap } of initialBitmaps) {
+    if (isValidFrameIndex(frameIndex, frames.length)) {
+      bitmapCache.set(frameIndex, bitmap)
+    } else {
+      closeBitmap(bitmap)
+    }
+  }
 
   return {
     kind,
@@ -144,6 +177,13 @@ export function createFrameSource({
           rejectInflight = reject
           decode(frameIndex)
             .then((decodedBitmap) => {
+              if (!inflightDecodes.has(frameIndex)) {
+                closeBitmap(decodedBitmap)
+                reject(
+                  new ImageSourceDisposedError("Image frame decode canceled")
+                )
+                return
+              }
               inflightDecodes.delete(frameIndex)
               if (disposed) {
                 closeBitmap(decodedBitmap)
@@ -167,7 +207,21 @@ export function createFrameSource({
     },
     release(frameIndex) {
       if (!isValidFrameIndex(frameIndex, frames.length)) return
-      if (!disposed) bitmapCache.unpin(frameIndex)
+      if (disposed) return
+      bitmapCache.unpin(frameIndex)
+      const inflight = inflightDecodes.get(frameIndex)
+      if (
+        inflight &&
+        !bitmapCache.isPinned(frameIndex) &&
+        !bitmapCache.has(frameIndex)
+      ) {
+        const reason = new ImageSourceDisposedError(
+          "Image frame decode canceled"
+        )
+        inflight.reject(reason)
+        inflightDecodes.delete(frameIndex)
+        cancelDecode?.(frameIndex, reason)
+      }
     },
     dispose(reason = new ImageSourceDisposedError()) {
       if (disposed) return
@@ -202,11 +256,11 @@ export async function createNativeImageFrameSourceFromBlob(
   const frames: FrameDescriptor[] = [
     { intrinsicSize: { width: probe.width, height: probe.height } },
   ]
-  probe.close()
   return createFrameSource({
     kind: "native-image",
     frames,
     maxDecodedFrames,
+    initialBitmaps: [{ frameIndex: 0, bitmap: probe }],
     decode: () => createImageBitmap(blob),
   })
 }

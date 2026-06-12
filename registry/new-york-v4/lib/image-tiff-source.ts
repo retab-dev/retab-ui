@@ -16,6 +16,7 @@ export class TiffWorkerError extends Error {
 export type TiffWorkerRequest =
   | { type: "init"; buffer: ArrayBuffer }
   | { type: "decodeFrame"; requestId: number; frameIndex: number }
+  | { type: "cancelDecode"; requestId: number }
 
 export type TiffWorkerResponse =
   | { type: "initOk"; frames: FrameDescriptor[] }
@@ -26,6 +27,7 @@ export type TiffWorkerResponse =
 export type TiffWorkerFactory = () => Worker
 
 interface PendingDecode {
+  frameIndex: number
   resolve(bitmap: ImageBitmap): void
   reject(error: Error): void
 }
@@ -79,7 +81,7 @@ export class TiffWorkerClient {
     }
     return new Promise((resolve, reject) => {
       const requestId = this.nextRequestId++
-      this.pendingDecodes.set(requestId, { resolve, reject })
+      this.pendingDecodes.set(requestId, { frameIndex, resolve, reject })
       try {
         this.worker.postMessage({ type: "decodeFrame", requestId, frameIndex })
       } catch (error) {
@@ -91,6 +93,22 @@ export class TiffWorkerClient {
         )
       }
     })
+  }
+
+  cancelDecode(
+    frameIndex: number,
+    reason = new TiffWorkerError("TIFF decode canceled")
+  ) {
+    for (const [requestId, pending] of this.pendingDecodes) {
+      if (pending.frameIndex !== frameIndex) continue
+      this.pendingDecodes.delete(requestId)
+      pending.reject(reason)
+      try {
+        this.worker.postMessage({ type: "cancelDecode", requestId })
+      } catch {
+        // The local promise is already rejected; worker transport may be gone.
+      }
+    }
   }
 
   dispose(reason = new TiffWorkerError("TIFF worker disposed")) {
@@ -157,6 +175,8 @@ export async function createTiffFrameSource(
     frames,
     maxDecodedFrames,
     decode: (frameIndex) => client.decode(frameIndex),
+    cancelDecode: (frameIndex, reason) =>
+      client.cancelDecode(frameIndex, reason),
     onDispose: (reason) => client.dispose(reason),
   })
 }

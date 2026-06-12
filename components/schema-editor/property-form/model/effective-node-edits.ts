@@ -1,16 +1,9 @@
 import type { JSONSchema7Definition } from "json-schema"
 
-import {
-  defaultSchemaForType,
-  setNullable,
-  updateType,
-} from "@/components/schema-editor/draft/draft-node-edits"
+import { setNullable } from "@/components/schema-editor/draft/draft-node-edits"
 import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
 import { getEffectiveNode } from "@/components/schema-editor/lib/json-schema-utils"
-import type {
-  PropertyDraft,
-  PropertySchemaNodeType,
-} from "@/components/schema-editor/property-form/types"
+import type { PropertyDraft } from "@/components/schema-editor/property-form/types"
 
 export function isObjectSchema(
   value: JSONSchema7Definition | undefined
@@ -36,28 +29,4 @@ export function getArrayItemsForDraft(
     ? undefined
     : effectiveSchemaNode.items
   return isObjectSchema(effectiveItems) ? effectiveItems : { type: "string" }
-}
-
-export function setDraftType(
-  propertyDraft: PropertyDraft,
-  schemaNodeType: PropertySchemaNodeType
-): PropertyDraft {
-  if (schemaNodeType === "$ref") return propertyDraft
-  if (schemaNodeType === "enum") {
-    return {
-      ...propertyDraft,
-      schemaNode: updateType("enum", false, {
-        ...defaultSchemaForType("enum"),
-        enum: [],
-      } as ExtendedJSONSchema7),
-    }
-  }
-  return {
-    ...propertyDraft,
-    schemaNode: updateType(
-      schemaNodeType,
-      false,
-      propertyDraft.schemaNode
-    ) as ExtendedJSONSchema7,
-  }
 }

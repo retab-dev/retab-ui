@@ -1,7 +1,4 @@
-import {
-  setDraftNullable,
-  setDraftType,
-} from "@/components/schema-editor/property-form/model/effective-node-edits"
+import { setDraftNullable } from "@/components/schema-editor/property-form/model/effective-node-edits"
 import type {
   PropertyDraft,
   PropertyDraftOperation,
@@ -24,8 +21,6 @@ export function propertyDraftReducer(
       }
     case "setPropertyNullable":
       return setDraftNullable(propertyDraft, operation.isNullable)
-    case "setPropertyType":
-      return setDraftType(propertyDraft, operation.schemaNodeType)
     case "replacePropertySchemaNode":
       return {
         ...propertyDraft,

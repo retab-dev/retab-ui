@@ -1,8 +1,6 @@
 import type { Metadata } from "next"
 
-import { PdfViewer } from "@/components/ui/pdf-viewer"
-
-const BENCHMARK_PDF_SRC = "/samples/big-911-report.pdf"
+import { PdfViewerBenchmarkClient } from "./pdf-viewer-benchmark-client"
 
 export const metadata: Metadata = {
   title: "PDF Viewer Benchmark",
@@ -10,14 +8,5 @@ export const metadata: Metadata = {
 }
 
 export default function PdfViewerBenchmarkPage() {
-  return (
-    <main className="h-svh min-h-0" data-testid="pdf-viewer-benchmark">
-      <PdfViewer
-        src={BENCHMARK_PDF_SRC}
-        downloadFileName="big-911-report.pdf"
-        className="h-full"
-        bare
-      />
-    </main>
-  )
+  return <PdfViewerBenchmarkClient />
 }

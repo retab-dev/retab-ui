@@ -3,11 +3,14 @@ import { useState } from "react"
 
 import { cn } from "@/lib/utils"
 import { CellEditor } from "@/components/json-table/cell-editors/cell-editor"
+import {
+  getCellWidthStyle,
+  getSelectableCellWidthStyle,
+} from "@/components/json-table/cell-style"
 import type { DataCellProps } from "@/components/json-table/data-cell-types"
 import { getFieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
 import { formatValueForCommit } from "@/components/json-table/lib/value-normalization"
 import { useRefCallback } from "@/components/json-table/path-utils"
-import { getColumnWidthPx } from "@/components/json-table/table-options-store"
 import { useCellController } from "@/components/json-table/use-cell-controller"
 import { useElevatedVirtualRow } from "@/components/json-table/use-elevated-virtual-row"
 import { TableCell } from "@/components/ui-retab/table"
@@ -54,13 +57,10 @@ export function EditableDataCell(props: DataCellProps) {
   const activeTextValue =
     isInputFocused || isDatePopoverOpen ? draftTextValue : committedTextValue
 
-  let cellWidth = getColumnWidthPx(props.columnWidth)
-  if (props.templateFieldPath.endsWith("__delete")) {
-    cellWidth = 50
-  }
+  const cellWidth = props.column.widthPx
 
   const fieldMetadata =
-    props.fieldMetadata ??
+    props.column.fieldMetadata ??
     (materializedFieldPath
       ? getFieldMetadata(schema, materializedFieldPath)
       : undefined)
@@ -85,10 +85,7 @@ export function EditableDataCell(props: DataCellProps) {
       <TableCell
         data-field-path={materializedFieldPath}
         className="relative cursor-not-allowed bg-muted/60"
-        style={{
-          width: `${cellWidth}px`,
-          minWidth: `${cellWidth}px`,
-        }}
+        style={getCellWidthStyle(cellWidth)}
       />
     )
   }
@@ -106,11 +103,7 @@ export function EditableDataCell(props: DataCellProps) {
         setIsPointerOver(true)
         handleCellHover(event)
       }}
-      style={{
-        width: `${cellWidth}px`,
-        minWidth: `${cellWidth}px`,
-        userSelect: "none",
-      }}
+      style={getSelectableCellWidthStyle(cellWidth)}
     >
       <div
         ref={cellRootRef}

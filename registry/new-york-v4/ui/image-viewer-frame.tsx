@@ -2,7 +2,11 @@
 
 import * as React from "react"
 
-import { ImageDecodeError, type FrameSource } from "@/lib/image-frame-source"
+import {
+  ImageDecodeError,
+  ImageSourceDisposedError,
+  type FrameSource,
+} from "@/lib/image-frame-source"
 import {
   frameCssSize,
   frameIndexToNumber,
@@ -129,6 +133,7 @@ function ImageFrameCanvas({
           ctx.restore()
         })
         .catch((error) => {
+          if (error instanceof ImageSourceDisposedError) return
           if (!cancelled) {
             setDrawError(
               error instanceof Error

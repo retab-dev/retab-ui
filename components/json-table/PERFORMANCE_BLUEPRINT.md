@@ -245,6 +245,98 @@ Fourth-pass verdict:
 - The remaining spike source is mostly browser raster/compositing variance and
   the unavoidable prop update burst when a reused slot points at a new row.
 
+## Fifth Executed Pass
+
+Implemented changes:
+
+- Replaced the row contract:
+  - before: `visibleKeys`, `fieldMetadataByKey`, `columnWidth`
+  - after: `visibleColumns`
+- `visibleColumns` carries the facts each cell needs:
+
+```ts
+Array<{
+  key: string
+  fieldMetadata?: FieldMetadata
+  widthPx: number
+}>
+```
+
+- Kept `visibleKeys` only as a local projection input so column-width changes do
+  not rebuild projected document rows.
+- Removed per-cell width derivation from read-only and editable cells.
+
+Current post-pass profile on `json-table-profile` with overscan `12`:
+
+| Metric                        | Run 1    | Run 2    |
+| ----------------------------- | -------- | -------- |
+| Initial mounted rows          | 27       | 27       |
+| Initial mounted data cells    | 168      | 168      |
+| Initial DOM nodes             | 661      | 661      |
+| Small-scroll p50 frame        | ~8.3 ms  | ~8.3 ms  |
+| Small-scroll p95 frame        | ~24.1 ms | ~24.9 ms |
+| Small-scroll long tasks       | 0        | 0        |
+| Large-jump p50 frame          | ~9.9 ms  | ~9.9 ms  |
+| Large-jump p95 frame          | ~31.3 ms | ~30.6 ms |
+| Large-jump long tasks         | 0        | 0        |
+| EventDispatch total, small    | ~87 ms   | ~88 ms   |
+| UpdateLayoutTree total, small | ~68 ms   | ~68 ms   |
+| EventDispatch total, large    | ~826 ms  | ~828 ms  |
+| UpdateLayoutTree total, large | ~740 ms  | ~741 ms  |
+
+Fifth-pass verdict:
+
+- This is a code-shape win more than a speed win.
+- The row API is simpler and higher-signal.
+- Small-scroll p50 and dispatch/layout totals remain excellent.
+- Large-jump p95 is slightly noisier than the best fourth-pass profile but still
+  has no long tasks and stays inside the regression budget.
+
+## Sixth Executed Pass
+
+Implemented changes:
+
+- Memoized `ReadOnlyDataCell` with a read-only-specific comparator:
+  - column key
+  - column width
+  - column metadata
+  - materialized field path
+  - projected value
+  - schema fallback identity
+- Added shared width style helpers:
+  - `getCellWidthStyle(widthPx)`
+  - `getSelectableCellWidthStyle(widthPx)`
+- Removed repeated inline cell width style objects from read-only and editable
+  cells.
+
+Current post-pass profile on `json-table-profile` with overscan `12`:
+
+| Metric                        | Value    |
+| ----------------------------- | -------- |
+| Initial mounted rows          | 27       |
+| Initial mounted data cells    | 168      |
+| Initial DOM nodes             | 661      |
+| Small-scroll p50 frame        | ~8.3 ms  |
+| Small-scroll p95 frame        | ~21.6 ms |
+| Small-scroll max frame        | ~44.7 ms |
+| Small-scroll long tasks       | 0        |
+| Large-jump p50 frame          | ~9.8 ms  |
+| Large-jump p95 frame          | ~31.1 ms |
+| Large-jump long tasks         | 0        |
+| EventDispatch total, small    | ~85 ms   |
+| UpdateLayoutTree total, small | ~67 ms   |
+| EventDispatch total, large    | ~821 ms  |
+| UpdateLayoutTree total, large | ~736 ms  |
+
+Sixth-pass verdict:
+
+- Small-scroll p95 improved again.
+- Read-only cell rerender logic is now explicit and local.
+- Shared cell style objects removed one more repeated allocation path.
+- Large-jump p95 remains in the same noisy dev-build band; the next meaningful
+  experiment is replacing the virtual body table semantics with a div grid, but
+  that is a larger measured experiment rather than a quick win.
+
 ## Performance Ideal
 
 The table should feel boring under load.

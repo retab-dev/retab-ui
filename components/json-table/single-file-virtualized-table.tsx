@@ -3,12 +3,12 @@
 import React, { useRef, useState } from "react"
 import type { JSONSchema7 } from "json-schema"
 
+import type { VisibleColumn } from "@/components/json-table/data-cell-types"
 import { JsonTableHeaderCell } from "@/components/json-table/header-cell"
 import type { ProjectedRow } from "@/components/json-table/lib/document-projection"
 import { buildHeaderGridRows } from "@/components/json-table/lib/header-nodes"
 import type { JsonTableHeaderNode } from "@/components/json-table/lib/header-nodes"
 import type { TableDocument } from "@/components/json-table/lib/projects-types"
-import type { FieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
 import {
   Table,
   TableBody,
@@ -38,8 +38,7 @@ interface SingleFileVirtualizedTableProps {
   draggedItemParentPathRef: React.RefObject<string | null>
   editMode: "descriptionOnly" | "editable" | "readOnly"
   projectedRows: ProjectedRow[]
-  visibleKeys: string[]
-  fieldMetadataByKey: Record<string, FieldMetadata | undefined>
+  visibleColumns: VisibleColumn[]
   rowCount: number
   onUpdateDocument?: (patch: Record<string, unknown>) => Promise<void>
   columnWidth?: ColumnWidth
@@ -153,8 +152,7 @@ export const SingleFileVirtualizedTable =
       draggedItemParentPathRef,
       editMode,
       projectedRows,
-      visibleKeys,
-      fieldMetadataByKey,
+      visibleColumns,
       rowCount,
       onUpdateDocument,
       columnWidth: propColumnWidth,
@@ -170,7 +168,10 @@ export const SingleFileVirtualizedTable =
       // survives row virtualization.
       const [openEditorPath, setOpenEditorPath] = useState<string | null>(null)
 
-      const totalWidth = visibleKeys.length * getColumnWidthPx(columnWidth)
+      const totalWidth = visibleColumns.reduce(
+        (total, column) => total + column.widthPx,
+        0
+      )
 
       // ── Row virtualization ──────────────────────────────────────────────
       // Rows are a fixed height, so the visible window is plain arithmetic — no
@@ -263,10 +264,8 @@ export const SingleFileVirtualizedTable =
                           document={document}
                           projectedRow={projectedRows[rowIdx]}
                           schema={schema}
-                          visibleKeys={visibleKeys}
-                          fieldMetadataByKey={fieldMetadataByKey}
+                          visibleColumns={visibleColumns}
                           rowHeightPx={rowHeightPx}
-                          columnWidth={columnWidth}
                           openEditorPath={openEditorPath}
                           setOpenEditorPath={setOpenEditorPath}
                           onUpdateDocument={onUpdateDocument}

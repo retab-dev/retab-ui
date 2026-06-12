@@ -522,6 +522,11 @@
           "target": "@ui/csv-viewer-grid.tsx"
         },
         {
+          "path": "registry/new-york-v4/ui/fixed-grid-virtualization.ts",
+          "type": "registry:ui",
+          "target": "@ui/fixed-grid-virtualization.ts"
+        },
+        {
           "path": "registry/new-york-v4/ui/csv-viewer-scrollbar.tsx",
           "type": "registry:ui",
           "target": "@ui/csv-viewer-scrollbar.tsx"
@@ -683,6 +688,11 @@
           "path": "registry/new-york-v4/ui/image-viewer-content.tsx",
           "type": "registry:ui",
           "target": "@ui/image-viewer-content.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/image-viewer-hooks.ts",
+          "type": "registry:ui",
+          "target": "@ui/image-viewer-hooks.ts"
         },
         {
           "path": "registry/new-york-v4/ui/image-viewer-frame.tsx",
@@ -883,6 +893,11 @@
           "target": "@ui/xlsx-grid.tsx"
         },
         {
+          "path": "registry/new-york-v4/ui/fixed-grid-virtualization.ts",
+          "type": "registry:ui",
+          "target": "@ui/fixed-grid-virtualization.ts"
+        },
+        {
           "path": "registry/new-york-v4/ui/xlsx-grid-constants.ts",
           "type": "registry:ui",
           "target": "@ui/xlsx-grid-constants.ts"
@@ -949,6 +964,7 @@
         "pptx-viewer",
         "xlsx-viewer",
         "csv-viewer",
+        "text-viewer",
         "skeleton"
       ],
       "files": [
@@ -1755,6 +1771,16 @@
           "target": "@ui/text-viewer.tsx"
         },
         {
+          "path": "registry/new-york-v4/ui/text-viewer-chrome.tsx",
+          "type": "registry:ui",
+          "target": "@ui/text-viewer-chrome.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/viewer-download.tsx",
+          "type": "registry:ui",
+          "target": "@ui/viewer-download.tsx"
+        },
+        {
           "path": "registry/new-york-v4/ui/text-viewer-ranges.ts",
           "type": "registry:ui",
           "target": "@ui/text-viewer-ranges.ts"
@@ -1773,6 +1799,11 @@
           "path": "registry/new-york-v4/lib/viewer-source.ts",
           "type": "registry:lib",
           "target": "@lib/viewer-source.ts"
+        },
+        {
+          "path": "registry/new-york-v4/lib/viewer-resource.ts",
+          "type": "registry:lib",
+          "target": "@lib/viewer-resource.ts"
         }
       ]
     },

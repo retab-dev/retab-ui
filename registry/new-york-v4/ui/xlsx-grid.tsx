@@ -1,9 +1,9 @@
 "use client"
 
 import * as React from "react"
-import { useVirtualizer } from "@tanstack/react-virtual"
 
 import { xlsxColumnLabel, type XlsxCell } from "@/lib/xlsx-workbook"
+import { useFixedGridVirtualization } from "@/components/ui/fixed-grid-virtualization"
 import {
   XLSX_BASE_COLUMN_WIDTH,
   XLSX_BASE_FONT_SIZE,
@@ -71,62 +71,50 @@ export function XlsxGrid({
     [viewportRef]
   )
 
-  const rowVirtualizer = useVirtualizer({
-    count: rowCount,
-    getScrollElement: () => scrollRef.current,
-    estimateSize: () => rowHeight,
-    overscan: 30,
+  const {
+    virtualRows,
+    totalRowSize,
+    totalColumnSize,
+    columnItems: virtualColumnItems,
+    leftPad,
+    rightPad,
+    scrollToCell,
+  } = useFixedGridVirtualization({
+    rowCount,
+    columnCount,
+    rowSize: rowHeight,
+    columnSize: columnWidth,
+    rowOverscan: 30,
+    columnOverscan: 30,
+    scrollRef,
   })
-  const columnVirtualizer = useVirtualizer({
-    horizontal: true,
-    count: columnCount,
-    getScrollElement: () => scrollRef.current,
-    estimateSize: () => columnWidth,
-    overscan: 30,
-  })
-
-  React.useEffect(() => {
-    rowVirtualizer.measure()
-    columnVirtualizer.measure()
-  }, [rowHeight, columnWidth, rowVirtualizer, columnVirtualizer])
 
   const requestNonce = scrollRequest?.nonce
   React.useEffect(() => {
     if (!scrollRequest) return
-    rowVirtualizer.scrollToIndex(scrollRequest.rowIndex, {
-      align: "center",
+    scrollToCell({
+      rowIndex: scrollRequest.rowIndex,
+      columnIndex: scrollRequest.columnIndex,
       behavior: scrollRequest.behavior,
-    })
-    columnVirtualizer.scrollToIndex(scrollRequest.columnIndex, {
       align: "center",
-      behavior: scrollRequest.behavior,
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [requestNonce])
 
-  const virtualColumns = columnVirtualizer.getVirtualItems()
-  const totalColumnSize = columnVirtualizer.getTotalSize()
-  const { columnItems, leftPad, rightPad } = React.useMemo(() => {
-    const left = virtualColumns.length ? virtualColumns[0].start : 0
-    const right = virtualColumns.length
-      ? totalColumnSize - virtualColumns[virtualColumns.length - 1].end
-      : 0
-    return {
-      columnItems: virtualColumns.map((item) => ({
+  const columnItems = React.useMemo(
+    () =>
+      virtualColumnItems.map((item) => ({
         columnIndex: item.index,
         size: item.size,
       })) as XlsxGridColumnItem[],
-      leftPad: left,
-      rightPad: right,
-    }
-  }, [virtualColumns, totalColumnSize])
+    [virtualColumnItems]
+  )
 
   const gridTemplate = React.useMemo(
     () => buildGridTemplate({ gutterWidth, leftPad, columnItems, rightPad }),
     [gutterWidth, leftPad, columnItems, rightPad]
   )
-  const totalWidth = gutterWidth + columnCount * columnWidth
-  const virtualRows = rowVirtualizer.getVirtualItems()
+  const totalWidth = gutterWidth + totalColumnSize
 
   if (rowCount === 0 || columnCount === 0) {
     return (
@@ -197,7 +185,7 @@ export function XlsxGrid({
             <div
               style={{
                 position: "relative",
-                height: rowVirtualizer.getTotalSize(),
+                height: totalRowSize,
               }}
             >
               {virtualRows.map((virtualRow) => (

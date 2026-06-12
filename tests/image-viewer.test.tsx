@@ -15,6 +15,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import type { Source } from "@/registry/new-york-v4/lib/document-source"
 import {
   createFrameSource,
+  createNativeImageFrameSourceFromBlob,
   ImageFrameIndexError,
 } from "@/registry/new-york-v4/lib/image-frame-source"
 import { FrameSourceManager } from "@/registry/new-york-v4/lib/image-source-cache"
@@ -300,6 +301,65 @@ describe("ImageSource lifecycle", () => {
     source.dispose()
   })
 
+  it("tracks multiple pins for the same decoded frame", async () => {
+    const bitmaps = [bitmap(), bitmap()]
+    const source = createFrameSource({
+      kind: "tiff",
+      frames: frameCount(2).map((frame) => ({
+        intrinsicSize: { width: frame.width, height: frame.height },
+      })),
+      maxDecodedFrames: 1,
+      decode: async (frameIndex) => bitmaps[frameIndex],
+    })
+
+    await source.acquire(0)
+    await source.acquire(0)
+    source.release(0)
+    await source.acquire(1)
+
+    expect(bitmaps[0].close).not.toHaveBeenCalled()
+    source.release(0)
+    expect(bitmaps[0].close).toHaveBeenCalledTimes(1)
+    source.dispose()
+  })
+
+  it("cancels an unpinned in-flight frame decode", async () => {
+    const pending = deferred<ImageBitmap>()
+    const lateBitmap = bitmap()
+    const cancelDecode = vi.fn()
+    const source = createFrameSource({
+      kind: "tiff",
+      frames: frameCount(1).map((frame) => ({
+        intrinsicSize: { width: frame.width, height: frame.height },
+      })),
+      maxDecodedFrames: 1,
+      decode: () => pending.promise,
+      cancelDecode,
+    })
+
+    const acquired = source.acquire(0)
+    source.release(0)
+    pending.resolve(lateBitmap)
+
+    await expect(acquired).rejects.toThrow("Image frame decode canceled")
+    expect(cancelDecode).toHaveBeenCalledTimes(1)
+    expect(lateBitmap.close).toHaveBeenCalledTimes(1)
+  })
+
+  it("reuses the native image probe bitmap for the first acquire", async () => {
+    const probeBitmap = bitmap(30, 40)
+    const createImageBitmap = vi.fn(() => Promise.resolve(probeBitmap))
+    vi.stubGlobal("createImageBitmap", createImageBitmap)
+
+    const source = await createNativeImageFrameSourceFromBlob(new Blob(), 16)
+    await expect(source.acquire(0)).resolves.toBe(probeBitmap)
+
+    expect(createImageBitmap).toHaveBeenCalledTimes(1)
+    source.release(0)
+    source.dispose()
+    expect(probeBitmap.close).toHaveBeenCalledTimes(1)
+  })
+
   it("rejects invalid frame indexes before decode", async () => {
     const decode = vi.fn(() => Promise.resolve(bitmap()))
     const source = createImageSourceForTests("tiff", frameCount(1), decode)
@@ -377,6 +437,29 @@ describe("FrameSourceManager lifecycle", () => {
       manager.load("/retry.png", () => new Worker(""))
     ).resolves.toMatchObject({ kind: "native-image" })
     expect(fetch).toHaveBeenCalledTimes(2)
+  })
+
+  it("aborts pending fetches when cleared", async () => {
+    const manager = new FrameSourceManager()
+    let signal: AbortSignal | undefined
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((_src: string, init?: RequestInit) => {
+        signal = init?.signal ?? undefined
+        return new Promise((_resolve, reject) => {
+          signal?.addEventListener("abort", () => {
+            reject(signal?.reason ?? new Error("aborted"))
+          })
+        })
+      })
+    )
+
+    const load = manager.load("/abort.png", () => new Worker(""))
+    await Promise.resolve()
+    manager.clear()
+
+    expect(signal?.aborted).toBe(true)
+    await expect(load).rejects.toThrow("Image source disposed")
   })
 
   it("loads declared native images from a blob without materializing an ArrayBuffer", async () => {
@@ -460,6 +543,47 @@ describe("FrameSourceManager lifecycle", () => {
       frames: [{ intrinsicSize: { width: 10, height: 10 } }],
     })
     await expect(load).resolves.toMatchObject({ kind: "tiff" })
+  })
+
+  it("streams unknown native responses into a blob without full ArrayBuffer buffering", async () => {
+    const manager = new FrameSourceManager()
+    const clonedBlob = new Blob([Uint8Array.of(1, 2, 3, 4)], {
+      type: "image/png",
+    })
+    const clone = {
+      blob: vi.fn(() => Promise.resolve(clonedBlob)),
+    }
+    const response = {
+      ok: true,
+      headers: { get: vi.fn(() => null) },
+      body: new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(Uint8Array.of(1, 2))
+          controller.enqueue(Uint8Array.of(3, 4))
+          controller.close()
+        },
+      }),
+      blob: vi.fn(() => Promise.resolve(new Blob())),
+      arrayBuffer: vi.fn(() => Promise.resolve(new ArrayBuffer(4))),
+      clone: vi.fn(() => clone),
+    } as unknown as Response
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(response))
+    )
+    vi.stubGlobal(
+      "createImageBitmap",
+      vi.fn(() => Promise.resolve(bitmap()))
+    )
+
+    await expect(
+      manager.load("/unknown-native", () => new Worker(""))
+    ).resolves.toMatchObject({ kind: "native-image" })
+
+    expect(response.arrayBuffer).not.toHaveBeenCalled()
+    expect(response.blob).not.toHaveBeenCalled()
+    expect(response.clone).toHaveBeenCalledTimes(1)
+    expect(clone.blob).toHaveBeenCalledTimes(1)
   })
 
   it("disposes the source after the last lease release settles", async () => {
@@ -664,6 +788,23 @@ describe("TiffWorkerClient", () => {
 
     await expect(first).rejects.toThrow("frame failed")
     await expect(second).resolves.toBe(secondBitmap)
+  })
+
+  it("cancels pending decode requests and closes late worker bitmaps", async () => {
+    const { worker, client } = createFakeWorkerClient()
+    const decoded = client.decode(2)
+
+    client.cancelDecode(2, new Error("not visible"))
+
+    expect(worker.posts.map((post) => post.message)).toEqual([
+      { type: "decodeFrame", requestId: 0, frameIndex: 2 },
+      { type: "cancelDecode", requestId: 0 },
+    ])
+    await expect(decoded).rejects.toThrow("not visible")
+
+    const lateBitmap = bitmap()
+    worker.emit({ type: "decodeFrameOk", requestId: 0, bitmap: lateBitmap })
+    expect(lateBitmap.close).toHaveBeenCalledTimes(1)
   })
 
   it("rejects init and pending decodes on worker errors", async () => {

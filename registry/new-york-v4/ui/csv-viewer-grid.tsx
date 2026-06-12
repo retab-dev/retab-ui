@@ -1,7 +1,6 @@
 "use client"
 
 import * as React from "react"
-import { useVirtualizer } from "@tanstack/react-virtual"
 import { ChevronDown, ChevronUp } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -9,13 +8,12 @@ import { cn } from "@/lib/utils"
 import { CSV_SCROLLBAR_CSS, HeaderAwareScrollbar } from "./csv-viewer-scrollbar"
 import type { CsvCellAddress } from "./csv-viewer-state"
 import { CsvStyleScope } from "./csv-viewer-style-scope"
+import {
+  useFixedGridVirtualization,
+  type FixedGridColumnItem,
+} from "./fixed-grid-virtualization"
 
 type Row = string[]
-
-interface ColumnItem {
-  index: number
-  size: number
-}
 
 export interface CsvGridHandle {
   scrollToCell: (
@@ -121,77 +119,24 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
     const effectiveColumnWidth = Math.max(1, Math.round(COLUMN_WIDTH * scale))
     const effectiveRowNumberWidth = Math.round(ROW_NUMBER_WIDTH * scale)
 
-    const rowVirtualizer = useVirtualizer({
-      count: sourceRows.length,
-      getScrollElement: () => viewportRef.current,
-      estimateSize: () => effectiveRowHeight,
-      overscan: ROW_OVERSCAN,
-    })
-
-    const columnVirtualizer = useVirtualizer({
-      horizontal: true,
-      count: columnCount,
-      getScrollElement: () => viewportRef.current,
-      estimateSize: () => effectiveColumnWidth,
-      overscan: COLUMN_OVERSCAN,
-    })
-
-    const { columnItems, leftPad, rightPad } = React.useMemo<{
-      columnItems: ColumnItem[]
-      leftPad: number
-      rightPad: number
-    }>(() => {
-      if (!shouldVirtualizeColumns) {
-        return {
-          columnItems: columns.map((_, index) => ({
-            index,
-            size: effectiveColumnWidth,
-          })),
-          leftPad: 0,
-          rightPad: 0,
-        }
-      }
-      const items = columnVirtualizer.getVirtualItems()
-      const total = columnVirtualizer.getTotalSize()
-      if (items.length === 0 && columnCount > 0) {
-        const count = Math.min(columnCount, COLUMN_OVERSCAN)
-        return {
-          columnItems: Array.from({ length: count }, (_, index) => ({
-            index,
-            size: effectiveColumnWidth,
-          })),
-          leftPad: 0,
-          rightPad: Math.max(0, total - count * effectiveColumnWidth),
-        }
-      }
-      return {
-        columnItems: items.map((item) => ({
-          index: item.index,
-          size: item.size,
-        })),
-        leftPad: items.length ? items[0].start : 0,
-        rightPad: items.length ? total - items[items.length - 1].end : 0,
-      }
-      // getVirtualItems is recomputed on scroll/resize; depend on its value.
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [
-      shouldVirtualizeColumns,
-      columns,
-      effectiveColumnWidth,
+    const {
+      virtualRows,
+      totalRowSize,
+      totalColumnSize,
+      columnItems,
+      leftPad,
+      rightPad,
+      scrollToCell,
+    } = useFixedGridVirtualization({
+      rowCount: sourceRows.length,
       columnCount,
-      columnVirtualizer.getVirtualItems(),
-      columnVirtualizer.getTotalSize(),
-    ])
-
-    React.useEffect(() => {
-      rowVirtualizer.measure()
-      columnVirtualizer.measure()
-    }, [
-      effectiveRowHeight,
-      effectiveColumnWidth,
-      rowVirtualizer,
-      columnVirtualizer,
-    ])
+      rowSize: effectiveRowHeight,
+      columnSize: effectiveColumnWidth,
+      rowOverscan: ROW_OVERSCAN,
+      columnOverscan: COLUMN_OVERSCAN,
+      scrollRef: viewportRef,
+      virtualizeColumns: shouldVirtualizeColumns,
+    })
 
     React.useImperativeHandle(
       ref,
@@ -201,18 +146,16 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
           const displayRowIndex =
             displayIndexByRowIndex?.get(cellAddress.rowIndex) ??
             cellAddress.rowIndex
-          rowVirtualizer.scrollToIndex(displayRowIndex, {
-            align: "center",
+          scrollToCell({
+            rowIndex: displayRowIndex,
+            columnIndex: cellAddress.columnIndex,
             behavior,
-          })
-          columnVirtualizer.scrollToIndex(cellAddress.columnIndex, {
             align: "center",
-            behavior,
           })
         },
         getViewportElement: () => viewportRef.current,
       }),
-      [columnVirtualizer, displayIndexByRowIndex, rowVirtualizer]
+      [displayIndexByRowIndex, scrollToCell]
     )
 
     const gridTemplate = React.useMemo(
@@ -225,9 +168,7 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
         }),
       [effectiveRowNumberWidth, leftPad, columnItems, rightPad]
     )
-    const totalWidth =
-      effectiveRowNumberWidth + columnCount * effectiveColumnWidth
-    const virtualRows = rowVirtualizer.getVirtualItems()
+    const totalWidth = effectiveRowNumberWidth + totalColumnSize
 
     return (
       <div
@@ -240,7 +181,7 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
       >
         <CsvStyleScope
           isolate={isolateStyles}
-          className={cn("relative", fillHeight && "min-h-0 flex-1")}
+          className={cn("relative", fillHeight && "h-full min-h-0")}
           style={fillHeight ? undefined : { height, maxHeight: "100%" }}
         >
           <style>{CSV_SCROLLBAR_CSS}</style>
@@ -301,7 +242,7 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
                   role="rowgroup"
                   style={{
                     position: "relative",
-                    height: rowVirtualizer.getTotalSize(),
+                    height: totalRowSize,
                   }}
                 >
                   {virtualRows.map((virtualRow) => (
@@ -368,7 +309,7 @@ function buildGridTemplate({
 }: {
   rowNumberWidth: number
   leftPad: number
-  columnItems: ColumnItem[]
+  columnItems: FixedGridColumnItem[]
   rightPad: number
 }) {
   const columns = columnItems.map((column) => `${column.size}px`).join(" ")
@@ -462,7 +403,7 @@ const CsvRow = React.memo(function CsvRow({
   gridTemplate: string
   rowHeight: number
   columnOffset: number
-  columnItems: ColumnItem[]
+  columnItems: FixedGridColumnItem[]
   leftPad: number
   rightPad: number
   start?: number

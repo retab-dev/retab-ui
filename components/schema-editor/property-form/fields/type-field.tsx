@@ -68,7 +68,6 @@ export function TypeField({
   disabled,
   onChange,
 }: {
-  name: string
   schemaNode: ExtendedJSONSchema7
   schemaContext: PropertyFormSchemaContext
   fieldPath?: string

@@ -12,11 +12,13 @@ export function usePdfPageVirtualization({
   layout: PdfPageLayoutModel
   viewportElement: HTMLDivElement | null
 }) {
+  const measureFrameRef = React.useRef(0)
   const [visiblePageNumbers, setVisiblePageNumbers] = React.useState<
     readonly number[]
   >(() => [1])
 
-  const measureVisiblePages = React.useCallback(() => {
+  const measureVisiblePagesNow = React.useCallback(() => {
+    measureFrameRef.current = 0
     const scrollTop = viewportElement?.scrollTop ?? 0
     const viewportHeight = viewportElement?.clientHeight ?? 0
     const nextPageNumbers = getPdfVisiblePageNumbers({
@@ -31,9 +33,23 @@ export function usePdfPageVirtualization({
     )
   }, [layout, viewportElement])
 
+  const measureVisiblePages = React.useCallback(() => {
+    if (measureFrameRef.current) return
+    measureFrameRef.current = requestAnimationFrame(measureVisiblePagesNow)
+  }, [measureVisiblePagesNow])
+
   React.useEffect(() => {
-    measureVisiblePages()
-  }, [measureVisiblePages])
+    measureVisiblePagesNow()
+  }, [measureVisiblePagesNow])
+
+  React.useEffect(
+    () => () => {
+      if (measureFrameRef.current) {
+        cancelAnimationFrame(measureFrameRef.current)
+      }
+    },
+    []
+  )
 
   return { visiblePageNumbers, measureVisiblePages }
 }

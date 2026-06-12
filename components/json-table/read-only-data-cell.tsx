@@ -2,6 +2,10 @@ import * as React from "react"
 import { format } from "date-fns"
 
 import { CellDisplay } from "@/components/json-table/cell-display"
+import {
+  getCellWidthStyle,
+  getSelectableCellWidthStyle,
+} from "@/components/json-table/cell-style"
 import type { DataCellProps } from "@/components/json-table/data-cell-types"
 import {
   dateToHTMLDateTimeString,
@@ -10,7 +14,6 @@ import {
 import { parseDateStringAsLocal } from "@/components/json-table/lib/date-parsing"
 import { getFieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
 import type { FieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
-import { getColumnWidthPx } from "@/components/json-table/table-options-store"
 import { TableCell } from "@/components/ui-retab/table"
 
 function formatNestedValue(value: unknown): string {
@@ -54,28 +57,22 @@ function getReadOnlyDisplayValue(
   }
 }
 
-export function ReadOnlyDataCell(props: DataCellProps) {
+function ReadOnlyDataCellContent(props: DataCellProps) {
   const materializedFieldPath = props.projectedCell?.materializedFieldPath
   const fieldMetadata =
-    props.fieldMetadata ??
+    props.column.fieldMetadata ??
     (materializedFieldPath
       ? getFieldMetadata(props.schema, materializedFieldPath)
       : undefined)
   const value = props.projectedCell?.value
-  let cellWidth = getColumnWidthPx(props.columnWidth)
-  if (props.templateFieldPath.endsWith("__delete")) {
-    cellWidth = 50
-  }
+  const cellWidth = props.column.widthPx
 
   if (!materializedFieldPath || !fieldMetadata) {
     return (
       <TableCell
         data-field-path={materializedFieldPath}
         className="relative cursor-not-allowed bg-muted/60"
-        style={{
-          width: `${cellWidth}px`,
-          minWidth: `${cellWidth}px`,
-        }}
+        style={getCellWidthStyle(cellWidth)}
       />
     )
   }
@@ -84,11 +81,7 @@ export function ReadOnlyDataCell(props: DataCellProps) {
     <TableCell
       data-field-path={materializedFieldPath}
       className="relative m-0 border-t-0 border-r border-b border-l-0 p-0 select-none"
-      style={{
-        width: `${cellWidth}px`,
-        minWidth: `${cellWidth}px`,
-        userSelect: "none",
-      }}
+      style={getSelectableCellWidthStyle(cellWidth)}
     >
       <CellDisplay className="items-start py-2">
         {getReadOnlyDisplayValue(fieldMetadata, value)}
@@ -96,3 +89,16 @@ export function ReadOnlyDataCell(props: DataCellProps) {
     </TableCell>
   )
 }
+
+export const ReadOnlyDataCell = React.memo(
+  ReadOnlyDataCellContent,
+  (prev, next) =>
+    prev.column.key === next.column.key &&
+    prev.column.widthPx === next.column.widthPx &&
+    prev.column.fieldMetadata === next.column.fieldMetadata &&
+    prev.projectedCell?.materializedFieldPath ===
+      next.projectedCell?.materializedFieldPath &&
+    Object.is(prev.projectedCell?.value, next.projectedCell?.value) &&
+    prev.schema === next.schema
+)
+ReadOnlyDataCell.displayName = "ReadOnlyDataCell"

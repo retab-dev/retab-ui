@@ -4,22 +4,19 @@ import React from "react"
 import type { JSONSchema7 } from "json-schema"
 
 import { DataCell } from "@/components/json-table/data-cell"
+import type { VisibleColumn } from "@/components/json-table/data-cell-types"
 import type { ProjectedRow } from "@/components/json-table/lib/document-projection"
 import type { TableDocument } from "@/components/json-table/lib/projects-types"
-import type { FieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
-import type { ColumnWidth } from "@/components/json-table/table-options-store"
 import { TableRow } from "@/components/ui-retab/table"
 
 interface SingleFileFormRowProps {
   document: TableDocument
   schema: JSONSchema7
   projectedRow?: ProjectedRow
-  visibleKeys: string[]
-  fieldMetadataByKey: Record<string, FieldMetadata | undefined>
+  visibleColumns: VisibleColumn[]
   /** Which sub-row of the document this renders (set by the row virtualizer). */
   rowIdx: number
   rowHeightPx: number
-  columnWidth: ColumnWidth
   /** Which object/array cell editor is open, keyed by materialized field path. */
   openEditorPath: string | null
   setOpenEditorPath: (key: string | null) => void
@@ -38,11 +35,9 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
     document,
     schema,
     projectedRow,
-    visibleKeys,
-    fieldMetadataByKey,
+    visibleColumns,
     rowIdx,
     rowHeightPx,
-    columnWidth,
     openEditorPath,
     setOpenEditorPath,
     onUpdateDocument,
@@ -90,19 +85,17 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
         style={rowStyle}
       >
         {/* Data cells */}
-        {visibleKeys.map((key, colIdx) => {
+        {visibleColumns.map((column, colIdx) => {
           const projectedCell = projectedRow?.cells[colIdx]
 
           return (
             <DataCell
-              key={key}
-              templateFieldPath={key}
+              key={column.key}
+              column={column}
               projectedCell={projectedCell}
-              fieldMetadata={fieldMetadataByKey[key]}
               schema={schema}
               document={document}
               docId={documentId}
-              columnWidth={columnWidth}
               setOpenEditorPath={setOpenEditorPath}
               openEditorPath={openEditorPath}
               onDocumentDataChange={handleDataChange}

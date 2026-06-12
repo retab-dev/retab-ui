@@ -165,6 +165,67 @@ describe("PropertyForm", () => {
     })
   })
 
+  it("emits property draft changes outside the state updater", async () => {
+    const onPropertyDraftChange = vi.fn()
+    render(
+      <PropertyForm
+        propertyDraft={{
+          name: "invoice_number",
+          schemaNode: { type: "string" },
+        }}
+        schemaContext={baseSchemaContext()}
+        onPropertyDraftChange={onPropertyDraftChange}
+        onCommitPropertyDraft={() => {}}
+      />
+    )
+
+    fireEvent.change(screen.getByLabelText("Name"), {
+      target: { value: "invoice_id" },
+    })
+
+    await waitFor(() =>
+      expect(onPropertyDraftChange).toHaveBeenCalledWith({
+        name: "invoice_id",
+        schemaNode: { type: "string" },
+      })
+    )
+  })
+
+  it("commits the latest draft when submit happens during draft change", async () => {
+    let saveButton: HTMLElement | null = null
+    const onCommitPropertyDraft = vi.fn()
+    const onPropertyDraftChange = vi.fn(() => {
+      if (saveButton) fireEvent.click(saveButton)
+    })
+
+    render(
+      <PropertyForm
+        propertyDraft={{
+          name: "invoice_number",
+          schemaNode: { type: "string" },
+        }}
+        schemaContext={baseSchemaContext()}
+        onPropertyDraftChange={onPropertyDraftChange}
+        onCommitPropertyDraft={onCommitPropertyDraft}
+      />
+    )
+
+    saveButton = screen.getByRole("button", { name: "Save Changes" })
+
+    fireEvent.change(screen.getByLabelText("Name"), {
+      target: { value: "invoice_id" },
+    })
+
+    await waitFor(() => expect(onCommitPropertyDraft).toHaveBeenCalledTimes(1))
+    expect(onCommitPropertyDraft).toHaveBeenCalledWith({
+      name: "invoice_id",
+      schemaNode: {
+        type: "string",
+        title: "InvoiceId",
+      },
+    })
+  })
+
   it("does not start a second commit while submit is pending", async () => {
     let resolveCommit: () => void = () => {}
     const commitPromise = new Promise<void>((resolve) => {

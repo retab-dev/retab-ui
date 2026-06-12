@@ -5,7 +5,7 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
-import { createPdfPageLayout } from "./pdf-viewer-layout"
+import { createPdfPageLayout, getPdfPageLayout } from "./pdf-viewer-layout"
 import { PdfPage } from "./pdf-viewer-page"
 import { usePdfPageSizes } from "./pdf-viewer-page-sizes"
 import { PdfViewerRail } from "./pdf-viewer-rail"
@@ -305,7 +305,7 @@ function PdfViewerInner({
                 }}
               >
                 {visiblePageNumbers.map((pageNumber) => {
-                  const page = pageLayout.pages[pageNumber - 1]
+                  const page = getPdfPageLayout(pageLayout, pageNumber)
                   if (!page) return null
 
                   return (

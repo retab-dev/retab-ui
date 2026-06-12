@@ -1,3 +1,5 @@
+import { ResourceError, type ViewerResource } from "@/lib/viewer-resource"
+
 export const DEFAULT_MAX_BYTES = 1_000_000
 export const DEFAULT_MAX_LINES = 10_000
 export const MAX_TEXT_RESOURCE_CACHE_ENTRIES = 64
@@ -40,15 +42,15 @@ interface TextResource {
 const textResourceCache = new Map<string, TextResource>()
 
 function textViewerResourceKey({
-  src,
+  resource,
   retryVersion,
   bounds,
 }: {
-  src: string
+  resource: ViewerResource
   retryVersion: number
   bounds: Required<TextViewerBounds>
 }) {
-  return `${src}\0${retryVersion}\0${bounds.maxBytes}\0${bounds.maxLines}`
+  return `${resource.identityKey}\0${retryVersion}\0${bounds.maxBytes}\0${bounds.maxLines}`
 }
 
 export function clearTextViewerResourceCacheForTests() {
@@ -78,37 +80,42 @@ export function assertTextWithinBounds(
 }
 
 export function readTextResource({
-  src,
+  resource,
   retryVersion,
   bounds,
 }: {
-  src: string
+  resource: ViewerResource
   retryVersion: number
   bounds: Required<TextViewerBounds>
 }) {
-  const resourceKey = textViewerResourceKey({ src, retryVersion, bounds })
-  const resource = getTextResource({ src, resourceKey, bounds })
+  if (resource.source.kind === "text") {
+    assertTextWithinBounds(resource.source.text, bounds)
+    return resource.source.text
+  }
 
-  if (resource.status === "fulfilled") return resource.value ?? ""
-  if (resource.status === "rejected") throw resource.error
+  const resourceKey = textViewerResourceKey({ resource, retryVersion, bounds })
+  const textResource = getTextResource({ resource, resourceKey, bounds })
 
-  throw resource.promise
+  if (textResource.status === "fulfilled") return textResource.value ?? ""
+  if (textResource.status === "rejected") throw textResource.error
+
+  throw textResource.promise
 }
 
 function getTextResource({
-  src,
+  resource,
   resourceKey,
   bounds,
 }: {
-  src: string
+  resource: ViewerResource
   resourceKey: string
   bounds: Required<TextViewerBounds>
 }) {
-  let resource = textResourceCache.get(resourceKey)
-  if (!resource) {
+  let textResource = textResourceCache.get(resourceKey)
+  if (!textResource) {
     const nextResource: TextResource = {
       status: "pending",
-      promise: fetchBoundedText(src, bounds),
+      promise: readBoundedTextResource(resource, bounds),
     }
     nextResource.promise.then(
       (value) => {
@@ -120,61 +127,25 @@ function getTextResource({
         nextResource.error = error
       }
     )
-    resource = nextResource
-    textResourceCache.set(resourceKey, resource)
+    textResource = nextResource
+    textResourceCache.set(resourceKey, textResource)
     trimTextResourceCache()
   }
-  return resource
+  return textResource
 }
 
-async function fetchBoundedText(
-  src: string,
+async function readBoundedTextResource(
+  resource: ViewerResource,
   bounds: Required<TextViewerBounds>
 ) {
-  const response = await fetch(src)
-  if (!response.ok) throw new Error(`Failed to load ${src}: ${response.status}`)
-
-  const contentLength = response.headers.get("content-length")
-  const contentByteLength = contentLength ? Number(contentLength) : null
-  if (
-    contentByteLength != null &&
-    Number.isFinite(contentByteLength) &&
-    contentByteLength > bounds.maxBytes
-  ) {
-    throw new TextViewerTooLargeError("bytes")
-  }
-
-  const text = await readBoundedResponseText(response, bounds.maxBytes)
-  assertTextWithinBounds(text, bounds)
-  return text
-}
-
-async function readBoundedResponseText(response: Response, maxBytes: number) {
-  const body = response.body
-  if (!body) {
-    const buffer = await response.arrayBuffer()
-    if (buffer.byteLength > maxBytes) throw new TextViewerTooLargeError("bytes")
-    return new TextDecoder().decode(buffer)
-  }
-
-  const reader = body.getReader()
-  const decoder = new TextDecoder()
-  let receivedBytes = 0
-  let text = ""
-
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) break
-    receivedBytes += value.byteLength
-    if (receivedBytes > maxBytes) {
-      await reader.cancel()
-      throw new TextViewerTooLargeError("bytes")
+  try {
+    return await resource.readText(bounds)
+  } catch (error) {
+    if (error instanceof ResourceError && error.kind === "too_large") {
+      throw new TextViewerTooLargeError(error.tooLargeReason ?? "bytes")
     }
-    text += decoder.decode(value, { stream: true })
+    throw error
   }
-
-  text += decoder.decode()
-  return text
 }
 
 function lineCountOf(text: string) {

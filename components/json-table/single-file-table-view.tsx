@@ -6,13 +6,13 @@ import type { JSONSchema7 } from "json-schema"
 import { projectDocumentRows } from "@/components/json-table/lib/document-projection"
 import { flattenHeaderNodes } from "@/components/json-table/lib/header-nodes"
 import type { TableDocument } from "@/components/json-table/lib/projects-types"
-import {
-  getFieldMetadata,
-  type FieldMetadata,
-} from "@/components/json-table/lib/schema-field-metadata"
+import { getFieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
 import { buildHeaderNodesFromSchema } from "@/components/json-table/lib/schema-header-nodes"
 import { SingleFileVirtualizedTable } from "@/components/json-table/single-file-virtualized-table"
-import { useSheetOptionsStore } from "@/components/json-table/table-options-store"
+import {
+  getColumnWidthPx,
+  useSheetOptionsStore,
+} from "@/components/json-table/table-options-store"
 import type { ColumnWidth } from "@/components/json-table/table-options-store"
 
 interface SingleFileTableViewProps {
@@ -58,20 +58,18 @@ export const SingleFileTableView = React.memo<SingleFileTableViewProps>(
       return buildHeaderNodesFromSchema(schema, stopAt)
     }, [schema, stopAt])
 
-    // Calculate visible keys
     const visibleKeys = useMemo(() => {
       return flattenHeaderNodes(headerNodes).map((node) => node.key)
     }, [headerNodes])
 
-    const fieldMetadataByKey = useMemo<
-      Record<string, FieldMetadata | undefined>
-    >(
-      () =>
-        Object.fromEntries(
-          visibleKeys.map((key) => [key, getFieldMetadata(schema, key)])
-        ),
-      [schema, visibleKeys]
-    )
+    const visibleColumns = useMemo(() => {
+      const widthPx = getColumnWidthPx(columnWidth)
+      return visibleKeys.map((key) => ({
+        key,
+        fieldMetadata: getFieldMetadata(schema, key),
+        widthPx: key.endsWith("__delete") ? 50 : widthPx,
+      }))
+    }, [columnWidth, schema, visibleKeys])
 
     const projectedRows = useMemo(() => {
       if (!document) return []
@@ -99,8 +97,7 @@ export const SingleFileTableView = React.memo<SingleFileTableViewProps>(
             draggedItemParentPathRef={draggedItemParentPathRef}
             editMode={editMode}
             projectedRows={projectedRows}
-            visibleKeys={visibleKeys}
-            fieldMetadataByKey={fieldMetadataByKey}
+            visibleColumns={visibleColumns}
             rowCount={rowCount}
             onUpdateDocument={onUpdateDocument}
             columnWidth={columnWidth}

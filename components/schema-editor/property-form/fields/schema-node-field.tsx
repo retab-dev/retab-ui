@@ -15,7 +15,6 @@ import { ObjectPropertiesField } from "./object-properties-field"
 import { TypeField } from "./type-field"
 
 export function SchemaNodeField({
-  name,
   schemaNode,
   schemaContext,
   mode,
@@ -23,7 +22,6 @@ export function SchemaNodeField({
   showTypeSelector = true,
   onChange,
 }: {
-  name: string
   schemaNode: ExtendedJSONSchema7
   schemaContext: PropertyFormSchemaContext
   mode: PropertyFormMode
@@ -40,7 +38,6 @@ export function SchemaNodeField({
     <div className="space-y-3">
       {showTypeSelector && (
         <TypeField
-          name={name}
           schemaNode={schemaNode}
           schemaContext={schemaContext}
           mode={mode}
@@ -64,13 +61,11 @@ export function SchemaNodeField({
           disabled={disabled}
           onChange={updateEffectiveSchemaNode}
           renderPropertyEditor={({
-            propertyName,
             propertySchema,
             propertySchemaContext,
             onPropertySchemaChange,
           }) => (
             <SchemaNodeField
-              name={propertyName}
               schemaNode={propertySchema}
               schemaContext={propertySchemaContext}
               mode={mode}
@@ -83,7 +78,6 @@ export function SchemaNodeField({
       {effectiveSchemaNode.type === "array" && (
         <ArrayItemsField>
           <SchemaNodeField
-            name="items"
             schemaNode={getArrayItemsForDraft(schemaNode)}
             schemaContext={schemaContext}
             mode={mode}

@@ -42,7 +42,6 @@ export function PropertyFormShell({
               />
             </div>
             <TypeField
-              name={fields.type.name}
               mode={fields.type.mode}
               disabled={fields.type.disabled}
               schemaNode={fields.type.schemaNode}
@@ -60,7 +59,6 @@ export function PropertyFormShell({
 
           {fields.schemaNodeDetails && (
             <SchemaNodeField
-              name={fields.schemaNodeDetails.name}
               schemaNode={fields.schemaNodeDetails.schemaNode}
               schemaContext={fields.schemaNodeDetails.schemaContext}
               mode={fields.schemaNodeDetails.mode}

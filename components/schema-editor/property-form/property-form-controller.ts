@@ -40,10 +40,12 @@ export function usePropertyFormController({
 }: PropertyFormControllerInput): PropertyFormViewModel {
   const [propertyDraft, setPropertyDraft] =
     React.useState(initialPropertyDraft)
+  const propertyDraftRef = React.useRef(initialPropertyDraft)
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const isSubmittingRef = React.useRef(false)
 
   React.useEffect(() => {
+    propertyDraftRef.current = initialPropertyDraft
     setPropertyDraft(initialPropertyDraft)
   }, [initialPropertyDraft])
 
@@ -68,14 +70,13 @@ export function usePropertyFormController({
 
   const updatePropertyDraft = React.useCallback(
     (operation: PropertyDraftOperation) => {
-      setPropertyDraft((currentPropertyDraft) => {
-        const nextPropertyDraft = propertyDraftReducer(
-          currentPropertyDraft,
-          operation
-        )
-        onPropertyDraftChange?.(nextPropertyDraft)
-        return nextPropertyDraft
-      })
+      const nextPropertyDraft = propertyDraftReducer(
+        propertyDraftRef.current,
+        operation
+      )
+      propertyDraftRef.current = nextPropertyDraft
+      setPropertyDraft(nextPropertyDraft)
+      onPropertyDraftChange?.(nextPropertyDraft)
     },
     [onPropertyDraftChange]
   )
@@ -83,8 +84,9 @@ export function usePropertyFormController({
   const commitPropertyDraft = React.useCallback(async () => {
     if (isSubmittingRef.current) return false
 
+    const currentPropertyDraft = propertyDraftRef.current
     const currentValidation = validatePropertyDraft({
-      propertyDraft,
+      propertyDraft: currentPropertyDraft,
       schemaContext,
     })
     if (!currentValidation.canCommit) return false
@@ -93,13 +95,13 @@ export function usePropertyFormController({
     setIsSubmitting(true)
 
     try {
-      await onCommitPropertyDraft(buildCommittedDraft(propertyDraft))
+      await onCommitPropertyDraft(buildCommittedDraft(currentPropertyDraft))
       return true
     } finally {
       isSubmittingRef.current = false
       setIsSubmitting(false)
     }
-  }, [onCommitPropertyDraft, propertyDraft, schemaContext])
+  }, [onCommitPropertyDraft, schemaContext])
 
   const keyDown = React.useCallback(
     (event: React.KeyboardEvent) => {
@@ -130,7 +132,6 @@ export function usePropertyFormController({
     showEnumValues || showObjectFields || showArrayItems
 
   return {
-    propertyDraft,
     validation,
     capabilities,
     fields: {
@@ -145,7 +146,6 @@ export function usePropertyFormController({
           }),
       },
       type: {
-        name: propertyDraft.name,
         schemaNode: propertyDraft.schemaNode,
         schemaContext,
         mode: editMode,
@@ -176,7 +176,6 @@ export function usePropertyFormController({
       },
       schemaNodeDetails: showSchemaNodeDetails
         ? {
-            name: propertyDraft.name,
             schemaNode: propertyDraft.schemaNode,
             schemaContext,
             mode: editMode,

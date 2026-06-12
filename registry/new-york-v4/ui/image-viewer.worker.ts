@@ -28,6 +28,9 @@ const ctx = self as unknown as Worker
 
 let buffer: ArrayBuffer | null = null
 let ifds: Ifd[] = []
+const canceledDecodeRequestIds = new Set<number>()
+const decodeQueue: { requestId: number; frameIndex: number }[] = []
+let isDecoding = false
 
 ctx.onmessage = async (event: MessageEvent<TiffWorkerRequest>) => {
   const message = event.data
@@ -37,7 +40,38 @@ ctx.onmessage = async (event: MessageEvent<TiffWorkerRequest>) => {
     return
   }
 
-  await decodeFrame(message.requestId, message.frameIndex)
+  if (message.type === "cancelDecode") {
+    canceledDecodeRequestIds.add(message.requestId)
+    return
+  }
+
+  decodeQueue.push({
+    requestId: message.requestId,
+    frameIndex: message.frameIndex,
+  })
+  scheduleDecodeQueue()
+}
+
+function scheduleDecodeQueue() {
+  if (isDecoding) return
+  setTimeout(processDecodeQueue, 0)
+}
+
+async function processDecodeQueue() {
+  if (isDecoding) return
+  const next = decodeQueue.shift()
+  if (!next) return
+  if (canceledDecodeRequestIds.delete(next.requestId)) {
+    scheduleDecodeQueue()
+    return
+  }
+  isDecoding = true
+  try {
+    await decodeFrame(next.requestId, next.frameIndex)
+  } finally {
+    isDecoding = false
+    if (decodeQueue.length > 0) scheduleDecodeQueue()
+  }
 }
 
 function initialize(nextBuffer: ArrayBuffer) {
@@ -66,6 +100,7 @@ async function decodeFrame(requestId: number, frameIndex: number) {
   let ifd: Ifd | undefined
   try {
     if (!buffer) throw new Error("worker not initialized")
+    if (canceledDecodeRequestIds.delete(requestId)) return
     if (frameIndex < 0 || frameIndex >= ifds.length) {
       throw new Error(`TIFF frame ${frameIndex + 1} is out of range`)
     }
@@ -81,6 +116,10 @@ async function decodeFrame(requestId: number, frameIndex: number) {
     const rgba = utif.toRGBA8(ifd)
     const image = new ImageData(new Uint8ClampedArray(rgba), width, height)
     const bitmap = await createImageBitmap(image)
+    if (canceledDecodeRequestIds.delete(requestId)) {
+      bitmap.close()
+      return
+    }
     post({ type: "decodeFrameOk", requestId, bitmap }, [bitmap])
   } catch (error) {
     post({
@@ -89,6 +128,7 @@ async function decodeFrame(requestId: number, frameIndex: number) {
       message: `TIFF frame ${frameIndex + 1}: ${errorMessage(error)}`,
     })
   } finally {
+    canceledDecodeRequestIds.delete(requestId)
     if (didDecode && ifd) delete ifd.data
   }
 }

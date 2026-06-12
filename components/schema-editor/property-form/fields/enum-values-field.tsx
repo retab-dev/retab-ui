@@ -12,11 +12,6 @@ import { Button } from "@/components/ui-retab/button"
 import { Input } from "@/components/ui-retab/input"
 import { Label } from "@/components/ui-retab/label"
 
-interface EnumValueRow {
-  id: string
-  valueText: string
-}
-
 export function EnumValuesField({
   values,
   disabled,
@@ -26,61 +21,31 @@ export function EnumValuesField({
   disabled: boolean
   onChange: (values: JSONSchema7Type[]) => void
 }) {
-  const nextRowId = React.useRef(0)
-  const [rows, setRows] = React.useState<EnumValueRow[]>(() =>
-    values.map((value, index) => ({
-      id: `initial-enum-value-${index}`,
-      valueText: formatEnumValueInput(value),
-    }))
-  )
   const [nextValue, setNextValue] = React.useState("")
-
-  React.useEffect(() => {
-    setRows((currentRows) =>
-      values.map((value, index) => ({
-        id: currentRows[index]?.id ?? `enum-value-${nextRowId.current++}`,
-        valueText: formatEnumValueInput(value),
-      }))
-    )
-  }, [values])
-
-  const commitRows = (nextRows: EnumValueRow[]) => {
-    setRows(nextRows)
-    onChange(nextRows.map((row) => parseEnumValueInput(row.valueText)))
-  }
 
   const addValue = () => {
     if (!nextValue.trim()) return
-    commitRows([
-      ...rows,
-      {
-        id: `enum-value-${nextRowId.current++}`,
-        valueText: nextValue,
-      },
-    ])
+    onChange([...values, parseEnumValueInput(nextValue)])
     setNextValue("")
   }
 
   return (
     <div className="space-y-2">
       <Label className="text-xs text-muted-foreground">Enabled options</Label>
-      {rows.length > 0 ? (
+      {values.length > 0 ? (
         <div className="mb-2 flex flex-wrap gap-2">
-          {rows.map((row, index) => (
+          {values.map((value, index) => (
             <div
-              key={row.id}
+              key={`enum-value-${index}`}
               className="flex items-center space-x-2 rounded-md border border-border bg-muted px-2 py-1"
             >
               <Input
                 disabled={disabled}
-                value={row.valueText}
+                value={formatEnumValueInput(value)}
                 onChange={(event) => {
-                  const nextRows = rows.slice()
-                  nextRows[index] = {
-                    ...row,
-                    valueText: event.target.value,
-                  }
-                  commitRows(nextRows)
+                  const nextValues = values.slice()
+                  nextValues[index] = parseEnumValueInput(event.target.value)
+                  onChange(nextValues)
                 }}
                 className="h-6 w-24 border-0 bg-transparent px-1 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
               />
@@ -90,9 +55,9 @@ export function EnumValuesField({
                 variant="ghost"
                 size="icon"
                 className="h-4 w-4 p-0"
-                aria-label={`Remove option ${row.valueText}`}
+                aria-label={`Remove option ${formatEnumValueInput(value)}`}
                 onClick={() => {
-                  commitRows(rows.filter((currentRow) => currentRow !== row))
+                  onChange(values.filter((_value, current) => current !== index))
                 }}
               >
                 <X className="h-3 w-3" />

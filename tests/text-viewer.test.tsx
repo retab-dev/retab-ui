@@ -10,12 +10,16 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react"
-import { afterEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
   TextViewer,
   type TextViewerHandle,
 } from "@/registry/new-york-v4/ui/text-viewer"
+import {
+  blobSource,
+  createViewerResource,
+} from "@/registry/new-york-v4/lib/viewer-resource"
 import { scrollTopForLineRange } from "@/registry/new-york-v4/ui/text-viewer-layout"
 import {
   isLineInRange,
@@ -28,13 +32,6 @@ import {
   resolvedTextViewerBounds,
 } from "@/registry/new-york-v4/ui/text-viewer-resource"
 
-afterEach(() => {
-  cleanup()
-  clearTextViewerResourceCacheForTests()
-  vi.restoreAllMocks()
-  vi.unstubAllGlobals()
-})
-
 function response(body: string, init: ResponseInit = {}) {
   return new Response(body, init)
 }
@@ -45,6 +42,17 @@ function textSource(text: string, fileName?: string) {
 
 function urlSource(url: string, fileName?: string) {
   return { kind: "url" as const, url, fileName }
+}
+
+function textBlobSource(text: string, fileName: string, identityKey: string) {
+  return blobSource(new Blob([text], { type: "text/plain" }), {
+    fileName,
+    identityKey,
+  })
+}
+
+function textResource(url: string, fileName?: string) {
+  return createViewerResource(urlSource(url, fileName))
 }
 
 function rect(top: number, bottom: number): DOMRect {
@@ -64,6 +72,31 @@ function rect(top: number, bottom: number): DOMRect {
 function readRegistryFile(path: string) {
   return readFileSync(path, "utf8")
 }
+
+function mockObjectUrls(url = "blob:download") {
+  const createObjectURL = vi.fn(() => url)
+  const revokeObjectURL = vi.fn()
+  Object.defineProperty(URL, "createObjectURL", {
+    configurable: true,
+    value: createObjectURL,
+  })
+  Object.defineProperty(URL, "revokeObjectURL", {
+    configurable: true,
+    value: revokeObjectURL,
+  })
+  return { createObjectURL, revokeObjectURL }
+}
+
+beforeEach(() => {
+  mockObjectUrls()
+})
+
+afterEach(() => {
+  cleanup()
+  clearTextViewerResourceCacheForTests()
+  vi.restoreAllMocks()
+  vi.unstubAllGlobals()
+})
 
 async function readResourceAfterSuspense(
   args: Parameters<typeof readTextResource>[0]
@@ -142,13 +175,17 @@ describe("text-viewer-resource", () => {
 
     await expect(
       readResourceAfterSuspense({
-        src: "/cached.txt",
+        resource: textResource("/cached.txt"),
         retryVersion: 0,
         bounds,
       })
     ).resolves.toBe("cached text")
     expect(
-      readTextResource({ src: "/cached.txt", retryVersion: 0, bounds })
+      readTextResource({
+        resource: textResource("/cached.txt"),
+        retryVersion: 0,
+        bounds,
+      })
     ).toBe("cached text")
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
@@ -163,14 +200,14 @@ describe("text-viewer-resource", () => {
 
     await expect(
       readResourceAfterSuspense({
-        src: "/retry.txt",
+        resource: textResource("/retry.txt"),
         retryVersion: 0,
         bounds,
       })
     ).rejects.toThrow("Failed to load")
     await expect(
       readResourceAfterSuspense({
-        src: "/retry.txt",
+        resource: textResource("/retry.txt"),
         retryVersion: 1,
         bounds,
       })
@@ -193,7 +230,7 @@ describe("text-viewer-resource", () => {
     const byteBounds = resolvedTextViewerBounds({ maxBytes: 4 })
     await expect(
       readResourceAfterSuspense({
-        src: "/too-large-bytes.txt",
+        resource: textResource("/too-large-bytes.txt"),
         retryVersion: 0,
         bounds: byteBounds,
       })
@@ -202,7 +239,7 @@ describe("text-viewer-resource", () => {
     const lineBounds = resolvedTextViewerBounds({ maxLines: 2 })
     await expect(
       readResourceAfterSuspense({
-        src: "/too-large-lines.txt",
+        resource: textResource("/too-large-lines.txt"),
         retryVersion: 0,
         bounds: lineBounds,
       })
@@ -224,19 +261,60 @@ describe("text-viewer-resource", () => {
     for (let index = 0; index < MAX_TEXT_RESOURCE_CACHE_ENTRIES + 2; index++) {
       const src = `/cached-${index}.txt`
       await expect(
-        readResourceAfterSuspense({ src, retryVersion: 0, bounds })
+        readResourceAfterSuspense({
+          resource: textResource(src),
+          retryVersion: 0,
+          bounds,
+        })
       ).resolves.toBe(src)
     }
 
     const firstSrc = "/cached-0.txt"
     await expect(
       readResourceAfterSuspense({
-        src: firstSrc,
+        resource: textResource(firstSrc),
         retryVersion: 0,
         bounds,
       })
     ).resolves.toBe(firstSrc)
     expect(fetchMock).toHaveBeenCalledTimes(MAX_TEXT_RESOURCE_CACHE_ENTRIES + 3)
+  })
+
+  it("loads blob text through the same resource cache", async () => {
+    const bounds = resolvedTextViewerBounds()
+
+    await expect(
+      readResourceAfterSuspense({
+        resource: createViewerResource(
+          textBlobSource("blob text", "blob.txt", "blob:one")
+        ),
+        retryVersion: 0,
+        bounds,
+      })
+    ).resolves.toBe("blob text")
+  })
+
+  it("keys blob text by identity instead of size and MIME only", async () => {
+    const bounds = resolvedTextViewerBounds()
+
+    await expect(
+      readResourceAfterSuspense({
+        resource: createViewerResource(
+          textBlobSource("same-size-a", "same.txt", "blob:a")
+        ),
+        retryVersion: 0,
+        bounds,
+      })
+    ).resolves.toBe("same-size-a")
+    await expect(
+      readResourceAfterSuspense({
+        resource: createViewerResource(
+          textBlobSource("same-size-b", "same.txt", "blob:b")
+        ),
+        retryVersion: 0,
+        bounds,
+      })
+    ).resolves.toBe("same-size-b")
   })
 })
 
@@ -458,29 +536,80 @@ describe("TextViewer", () => {
     expect(screen.queryByText("Text viewer bounds are invalid.")).toBeNull()
   })
 
-  it("shows download only for URL sources", () => {
-    const { rerender } = render(<TextViewer source={textSource("alpha")} />)
-    expect(screen.queryByRole("link", { name: "Download" })).toBeNull()
-
+  it("downloads URL, Blob, and inline text sources", async () => {
+    const { createObjectURL, revokeObjectURL } = mockObjectUrls()
     vi.stubGlobal(
       "fetch",
       vi.fn(() => Promise.resolve(response("alpha")))
     )
+
+    const { rerender } = render(
+      <TextViewer source={textSource("inline text", "inline.txt")} />
+    )
+
+    await waitFor(() => {
+      const link = screen.getByRole("link", { name: "Download" })
+      expect(link.getAttribute("href")).toBe("blob:download")
+      expect(link.getAttribute("download")).toBe("inline.txt")
+    })
+
+    rerender(
+      <TextViewer
+        source={textBlobSource("blob text", "blob.txt", "blob:download")}
+      />
+    )
+
+    await waitFor(() => {
+      const link = screen.getByRole("link", { name: "Download" })
+      expect(link.getAttribute("href")).toBe("blob:download")
+      expect(link.getAttribute("download")).toBe("blob.txt")
+    })
+
     rerender(<TextViewer source={urlSource("/alpha.txt", "alpha.txt")} />)
 
-    return waitFor(() => {
-      expect(
-        screen.getByRole("link", { name: "Download" }).getAttribute("download")
-      ).toBe("alpha.txt")
+    await waitFor(() => {
+      const link = screen.getByRole("link", { name: "Download" })
+      expect(link.getAttribute("href")).toBe("/alpha.txt")
+      expect(link.getAttribute("download")).toBe("alpha.txt")
     })
+    expect(createObjectURL).toHaveBeenCalled()
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:download")
+  })
+
+  it("renders Blob sources and treats bounds errors as local non-retryable states", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {})
+    render(
+      <TextViewer
+        source={textBlobSource("one\ntwo\nthree", "blob.txt", "blob:bounds")}
+        maxLines={2}
+      />
+    )
+
+    expect(
+      await screen.findByText(
+        "This text file is too large to preview (lines limit)."
+      )
+    ).toBeTruthy()
+    expect(screen.queryByRole("button", { name: "Retry" })).toBeNull()
   })
 
   it("supports explicit text and URL source descriptors", async () => {
+    mockObjectUrls("blob:descriptor")
     const { rerender } = render(
-      <TextViewer source={{ kind: "text", text: "descriptor text" }} />
+      <TextViewer
+        source={{
+          kind: "text",
+          text: "descriptor text",
+          fileName: "descriptor.txt",
+        }}
+      />
     )
     expect(screen.getByText("descriptor text")).toBeTruthy()
-    expect(screen.queryByRole("link", { name: "Download" })).toBeNull()
+    await waitFor(() => {
+      expect(
+        screen.getByRole("link", { name: "Download" }).getAttribute("download")
+      ).toBe("descriptor.txt")
+    })
 
     vi.stubGlobal(
       "fetch",
@@ -536,5 +665,53 @@ describe("text-viewer implementation boundaries", () => {
     expect(viewerModuleSource).toContain("TextViewerResetToken")
     expect(viewerModuleSource).not.toContain("fingerprint")
     expect(viewerModuleSource).not.toContain("resourceVersion")
+  })
+
+  it("keeps source IO out of the component module", () => {
+    const viewerModuleSource = readRegistryFile(
+      "registry/new-york-v4/ui/text-viewer.tsx"
+    )
+
+    expect(viewerModuleSource).not.toContain("fetch(")
+    expect(viewerModuleSource).not.toContain("createObjectURL")
+  })
+
+  it("keeps the shared resource layer independent from viewer components", () => {
+    const resourceModuleSource = readRegistryFile(
+      "registry/new-york-v4/lib/viewer-resource.ts"
+    )
+
+    expect(resourceModuleSource).not.toContain("React")
+    expect(resourceModuleSource).not.toContain("useDownloadHref")
+    expect(resourceModuleSource).not.toContain("createObjectURL")
+    expect(resourceModuleSource).not.toContain("@/components/ui/text-viewer")
+    expect(resourceModuleSource).not.toContain("@/components/ui/pdf-viewer")
+    expect(resourceModuleSource).not.toContain("@/components/ui/image-viewer")
+  })
+
+  it("uses structured resource errors instead of parsing messages", () => {
+    const resourceModuleSource = readRegistryFile(
+      "registry/new-york-v4/lib/viewer-resource.ts"
+    )
+    const textResourceSource = readRegistryFile(
+      "registry/new-york-v4/ui/text-viewer-resource.ts"
+    )
+
+    expect(resourceModuleSource).toContain("tooLargeReason")
+    expect(textResourceSource).toContain("tooLargeReason")
+    expect(textResourceSource).not.toContain('includes("lines")')
+  })
+
+  it("keeps Blob source identity explicit", () => {
+    const sourceModuleSource = readRegistryFile(
+      "registry/new-york-v4/lib/viewer-source.ts"
+    )
+    const resourceModuleSource = readRegistryFile(
+      "registry/new-york-v4/lib/viewer-resource.ts"
+    )
+
+    expect(sourceModuleSource).toContain("identityKey: string")
+    expect(sourceModuleSource).not.toContain("blob:${")
+    expect(resourceModuleSource).toContain("identityKey: string")
   })
 })
