@@ -29,9 +29,14 @@ export function addObjectTemplateDefinitionsToDocument(
   const template = templateObjects[templateName]
   if (!template) return doc
 
+  // Dependencies must be added BEFORE the template that references them, so
+  // `nodeFromJson` can resolve the template's `$ref`s to a real definition id.
+  // Otherwise the reference is kept as a raw, unlinked `$ref` in `rest` and the
+  // field renders as "any" in the editor (the exported JSON stays correct, but
+  // the in-editor model is broken).
   const defsToAdd = [
-    templateName,
     ...(objectTemplateDependencies[templateName] ?? []),
+    templateName,
   ]
 
   let next = doc

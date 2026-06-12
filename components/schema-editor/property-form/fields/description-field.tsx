@@ -1,8 +1,8 @@
 "use client"
 
-import { FormItem } from "@/components/ui-retab/form"
-import { Label } from "@/components/ui-retab/label"
-import { Textarea } from "@/components/ui-retab/textarea"
+import { FormItem } from "@/components/ui/form"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 
 export function DescriptionField({
   value,

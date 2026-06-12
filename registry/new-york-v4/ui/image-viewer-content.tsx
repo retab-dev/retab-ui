@@ -16,6 +16,8 @@ import {
 import { ImageViewerToolbar } from "@/components/ui/image-viewer-chrome"
 import { ImageFrame } from "@/components/ui/image-viewer-frame"
 import {
+  MAX_VIEWER_SCALE,
+  MIN_VIEWER_SCALE,
   useFrameListWidth,
   useImageViewerHandle,
   useImageViewerScale,
@@ -79,8 +81,16 @@ export function ImageViewerContent({
           scale={scale}
           downloadAction={resource.originalDownload}
           isScaleControlled={isScaleControlled}
-          onZoomOut={() => setViewerScale(clamp(scale / 1.2, 0.25, 5))}
-          onZoomIn={() => setViewerScale(clamp(scale * 1.2, 0.25, 5))}
+          onZoomOut={() =>
+            setViewerScale(
+              clamp(scale / 1.2, MIN_VIEWER_SCALE, MAX_VIEWER_SCALE)
+            )
+          }
+          onZoomIn={() =>
+            setViewerScale(
+              clamp(scale * 1.2, MIN_VIEWER_SCALE, MAX_VIEWER_SCALE)
+            )
+          }
           onFitWidth={() => setViewerScale(null)}
           onRotate={rotateClockwise}
         />

@@ -14,6 +14,7 @@ export function XlsxViewerDemo() {
           fileName: "nvidia-financials-fy2024.xlsx",
         }}
         className="h-full"
+        fallbackSheetTabs
         isolateStyles
       />
     </div>

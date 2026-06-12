@@ -99,8 +99,7 @@ class RendererSource implements PptxSource {
     const cached = this.bitmaps.get(bitmapKey)
     if (cached) {
       if (!isRenderLive(input)) return Promise.resolve({ status: "cancelled" })
-      drawBitmap(input.canvas, cached.bitmap)
-      return Promise.resolve({ status: "rendered" })
+      return Promise.resolve(drawCachedBitmap(input.canvas, cached.bitmap))
     }
 
     const run = this.queue
@@ -111,14 +110,14 @@ class RendererSource implements PptxSource {
 
         const queuedCached = this.bitmaps.get(bitmapKey)
         if (queuedCached) {
-          drawBitmap(input.canvas, queuedCached.bitmap)
-          return { status: "rendered" }
+          return drawCachedBitmap(input.canvas, queuedCached.bitmap)
         }
 
         try {
           await this.renderer.renderSlide(input)
         } catch (error) {
           if (this.disposed) return { status: "cancelled" }
+          if (!isRenderLive(input)) return { status: "cancelled" }
           return {
             status: "failed",
             error: normalizeRendererError(error),
@@ -355,6 +354,25 @@ function isValidSlideIndex(slideIndex: number, slideCount: number) {
 
 function isValidRenderScale(renderScale: number) {
   return Number.isFinite(renderScale) && renderScale > 0
+}
+
+function drawCachedBitmap(
+  canvas: HTMLCanvasElement,
+  bitmap: ImageBitmap
+): PptxRenderResult {
+  try {
+    drawBitmap(canvas, bitmap)
+    return { status: "rendered" }
+  } catch (error) {
+    return {
+      status: "failed",
+      error: new PptxRendererError(
+        "render_failed",
+        "Failed to draw cached slide bitmap.",
+        error
+      ),
+    }
+  }
 }
 
 function drawBitmap(canvas: HTMLCanvasElement, bitmap: ImageBitmap) {

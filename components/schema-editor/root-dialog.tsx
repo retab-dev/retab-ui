@@ -6,17 +6,17 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from "@/components/ui-retab/dialog";
-import { Button } from "@/components/ui-retab/button";
-import { Input } from "@/components/ui-retab/input";
-import { Label } from "@/components/ui-retab/label";
-import { Textarea } from "@/components/ui-retab/textarea";
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Info } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui-retab/tooltip";
+} from "@/components/ui/tooltip";
 
 type RootMetadataValues = {
   title: string;

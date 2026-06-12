@@ -3,7 +3,7 @@
 import * as React from "react"
 
 import type { ExtendedJSONSchema7 } from "@/components/schema-editor/schema-builder-types"
-import { Button } from "@/components/ui-retab/button"
+import { Button } from "@/components/ui/button"
 
 type JsonModeState =
   | { status: "synced"; text: string }

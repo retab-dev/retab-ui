@@ -9,10 +9,12 @@ import { PptxToolbarSkeleton } from "./pptx-viewer-toolbar"
 export function PptxViewerFallback({
   className,
   bare = false,
+  fallbackSlideSize = DEFAULT_PPTX_SLIDE_SIZE,
   toolbar = true,
 }: {
   className?: string
   bare?: boolean
+  fallbackSlideSize?: { width: number; height: number }
   toolbar?: boolean
 }) {
   return (
@@ -27,20 +29,25 @@ export function PptxViewerFallback({
       {toolbar ? <PptxToolbarSkeleton /> : null}
       <div className="min-h-0 flex-1 overflow-auto">
         <div className="flex flex-col items-center p-4">
-          <PptxSlideSkeleton />
+          <PptxSlideSkeleton slideSize={fallbackSlideSize} />
         </div>
       </div>
     </div>
   )
 }
 
-function PptxSlideSkeleton() {
+function PptxSlideSkeleton({
+  slideSize,
+}: {
+  slideSize: { width: number; height: number }
+}) {
   return (
     <Skeleton
       aria-hidden
       className="w-full"
+      data-slot="pptx-slide-skeleton"
       style={{
-        aspectRatio: `${DEFAULT_PPTX_SLIDE_SIZE.width} / ${DEFAULT_PPTX_SLIDE_SIZE.height}`,
+        aspectRatio: `${slideSize.width} / ${slideSize.height}`,
       }}
     />
   )

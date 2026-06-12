@@ -16,7 +16,8 @@
       },
       "statement_date": {
         "type": "string",
-        "description": "Statement date"
+        "description": "Statement date",
+        "format": "date"
       },
       "transactions": {
         "type": "array",
@@ -25,7 +26,8 @@
           "type": "object",
           "properties": {
             "date": {
-              "type": "string"
+              "type": "string",
+              "format": "date"
             },
             "description": {
               "type": "string"
@@ -44,655 +46,655 @@
   },
   "extraction": {
     "account_number": "000009752",
-    "statement_date": "July 8, 2003",
+    "statement_date": "2003-07-08",
     "transactions": [
       {
-        "date": "06-06",
+        "date": "2003-06-06",
         "description": "CHECKCARD PURCHASE - GROCER'S MARKET 0042, SMALL TOWN MO",
         "amount": -85.34
       },
       {
-        "date": "06-06",
+        "date": "2003-06-06",
         "description": "AUTOMATIC PAYMENT - TELEPHONE SERVICE",
         "amount": -81.23
       },
       {
-        "date": "06-06",
+        "date": "2003-06-06",
         "description": "DEPOSIT - PAYROLL DIRECT DEP",
         "amount": 1875.24
       },
       {
-        "date": "06-06",
+        "date": "2003-06-06",
         "description": "ATM WITHDRAWAL - 1000 WALNUT ST M119",
         "amount": -69.01
       },
       {
-        "date": "06-07",
+        "date": "2003-06-07",
         "description": "CHECKCARD PURCHASE - MAIN STREET PHARMACY",
         "amount": -30.79
       },
       {
-        "date": "06-07",
+        "date": "2003-06-07",
         "description": "BILL PAYMENT - CITY UTILITIES",
         "amount": -108.3
       },
       {
-        "date": "06-07",
+        "date": "2003-06-07",
         "description": "CHECKCARD PURCHASE - BOOKS AND NEWS",
         "amount": -41.2
       },
       {
-        "date": "06-07",
+        "date": "2003-06-07",
         "description": "ONLINE TRANSFER TO SAVINGS",
         "amount": -213.49
       },
       {
-        "date": "06-08",
+        "date": "2003-06-08",
         "description": "CHECKCARD PURCHASE - GARDEN CENTER",
         "amount": -35.52
       },
       {
-        "date": "06-08",
+        "date": "2003-06-08",
         "description": "CHECKCARD PURCHASE - COFFEE HOUSE 013",
         "amount": -7.95
       },
       {
-        "date": "06-08",
+        "date": "2003-06-08",
         "description": "CHECKCARD PURCHASE - OFFICE SUPPLY 3301",
         "amount": -19.24
       },
       {
-        "date": "06-08",
+        "date": "2003-06-08",
         "description": "CHECKCARD PURCHASE - HARDWARE STORE",
         "amount": -41.72
       },
       {
-        "date": "06-09",
+        "date": "2003-06-09",
         "description": "AUTOMATIC PAYMENT - INSURANCE PREMIUM",
         "amount": -174.12
       },
       {
-        "date": "06-09",
+        "date": "2003-06-09",
         "description": "CHECKCARD PURCHASE - DRY CLEANERS",
         "amount": -27.77
       },
       {
-        "date": "06-09",
+        "date": "2003-06-09",
         "description": "BILL PAYMENT - MOBILE SERVICE",
         "amount": -48.75
       },
       {
-        "date": "06-09",
+        "date": "2003-06-09",
         "description": "CHECKCARD PURCHASE - FAMILY RESTAURANT",
         "amount": -58.01
       },
       {
-        "date": "06-10",
+        "date": "2003-06-10",
         "description": "CHECK 1007",
         "amount": -123.1
       },
       {
-        "date": "06-10",
+        "date": "2003-06-10",
         "description": "CHECKCARD PURCHASE - MOVIE THEATER",
         "amount": -26.65
       },
       {
-        "date": "06-10",
+        "date": "2003-06-10",
         "description": "CHECKCARD PURCHASE - AUTO PARTS",
         "amount": -74.08
       },
       {
-        "date": "06-10",
+        "date": "2003-06-10",
         "description": "AUTOMATIC PAYMENT - CABLE SERVICE",
         "amount": -87.17
       },
       {
-        "date": "06-11",
+        "date": "2003-06-11",
         "description": "MONTHLY SERVICE CHARGE",
         "amount": -5
       },
       {
-        "date": "06-11",
+        "date": "2003-06-11",
         "description": "CHECKCARD PURCHASE - DINER",
         "amount": -38.07
       },
       {
-        "date": "06-11",
+        "date": "2003-06-11",
         "description": "CHECKCARD PURCHASE - GROCER'S MARKET 0042, SMALL TOWN MO",
         "amount": -73.25
       },
       {
-        "date": "06-11",
+        "date": "2003-06-11",
         "description": "AUTOMATIC PAYMENT - TELEPHONE SERVICE",
         "amount": -77.9
       },
       {
-        "date": "06-12",
+        "date": "2003-06-12",
         "description": "CHECKCARD PURCHASE - FUEL STOP 1187, KANSAS CITY MO",
         "amount": -31.14
       },
       {
-        "date": "06-12",
+        "date": "2003-06-12",
         "description": "ATM WITHDRAWAL - 1000 WALNUT ST M119",
         "amount": -58.72
       },
       {
-        "date": "06-12",
+        "date": "2003-06-12",
         "description": "CHECKCARD PURCHASE - MAIN STREET PHARMACY",
         "amount": -41.2
       },
       {
-        "date": "06-12",
+        "date": "2003-06-12",
         "description": "BILL PAYMENT - CITY UTILITIES",
         "amount": -129.74
       },
       {
-        "date": "06-13",
+        "date": "2003-06-13",
         "description": "CHECKCARD PURCHASE - BOOKS AND NEWS",
         "amount": -34.84
       },
       {
-        "date": "06-13",
+        "date": "2003-06-13",
         "description": "DEPOSIT - MOBILE DEPOSIT",
         "amount": 420
       },
       {
-        "date": "06-13",
+        "date": "2003-06-13",
         "description": "CHECKCARD PURCHASE - GARDEN CENTER",
         "amount": -71.14
       },
       {
-        "date": "06-13",
+        "date": "2003-06-13",
         "description": "CHECKCARD PURCHASE - COFFEE HOUSE 013",
         "amount": -8.67
       },
       {
-        "date": "06-14",
+        "date": "2003-06-14",
         "description": "CHECKCARD PURCHASE - OFFICE SUPPLY 3301",
         "amount": -41.37
       },
       {
-        "date": "06-14",
+        "date": "2003-06-14",
         "description": "CHECKCARD PURCHASE - HARDWARE STORE",
         "amount": -41.86
       },
       {
-        "date": "06-14",
+        "date": "2003-06-14",
         "description": "AUTOMATIC PAYMENT - INSURANCE PREMIUM",
         "amount": -132.11
       },
       {
-        "date": "06-14",
+        "date": "2003-06-14",
         "description": "CHECKCARD PURCHASE - DRY CLEANERS",
         "amount": -31.5
       },
       {
-        "date": "06-15",
+        "date": "2003-06-15",
         "description": "BILL PAYMENT - MOBILE SERVICE",
         "amount": -72.18
       },
       {
-        "date": "06-15",
+        "date": "2003-06-15",
         "description": "CHECKCARD PURCHASE - FAMILY RESTAURANT",
         "amount": -52.41
       },
       {
-        "date": "06-15",
+        "date": "2003-06-15",
         "description": "CHECKCARD PURCHASE - POSTAL CENTER",
         "amount": -15.84
       },
       {
-        "date": "06-15",
+        "date": "2003-06-15",
         "description": "CHECKCARD PURCHASE - MOVIE THEATER",
         "amount": -31.59
       },
       {
-        "date": "06-16",
+        "date": "2003-06-16",
         "description": "CHECKCARD PURCHASE - AUTO PARTS",
         "amount": -47.27
       },
       {
-        "date": "06-16",
+        "date": "2003-06-16",
         "description": "AUTOMATIC PAYMENT - CABLE SERVICE",
         "amount": -93.98
       },
       {
-        "date": "06-16",
+        "date": "2003-06-16",
         "description": "MONTHLY SERVICE CHARGE",
         "amount": -5
       },
       {
-        "date": "06-16",
+        "date": "2003-06-16",
         "description": "CHECK 1008",
         "amount": -89
       },
       {
-        "date": "06-17",
+        "date": "2003-06-17",
         "description": "CHECKCARD PURCHASE - GROCER'S MARKET 0042, SMALL TOWN MO",
         "amount": -71.51
       },
       {
-        "date": "06-17",
+        "date": "2003-06-17",
         "description": "AUTOMATIC PAYMENT - TELEPHONE SERVICE",
         "amount": -73.43
       },
       {
-        "date": "06-17",
+        "date": "2003-06-17",
         "description": "CHECKCARD PURCHASE - FUEL STOP 1187, KANSAS CITY MO",
         "amount": -41.87
       },
       {
-        "date": "06-17",
+        "date": "2003-06-17",
         "description": "ATM WITHDRAWAL - 1000 WALNUT ST M119",
         "amount": -77.2
       },
       {
-        "date": "06-18",
+        "date": "2003-06-18",
         "description": "CHECKCARD PURCHASE - MAIN STREET PHARMACY",
         "amount": -46.3
       },
       {
-        "date": "06-18",
+        "date": "2003-06-18",
         "description": "BILL PAYMENT - CITY UTILITIES",
         "amount": -120.45
       },
       {
-        "date": "06-18",
+        "date": "2003-06-18",
         "description": "CHECKCARD PURCHASE - BOOKS AND NEWS",
         "amount": -35
       },
       {
-        "date": "06-18",
+        "date": "2003-06-18",
         "description": "ONLINE TRANSFER TO SAVINGS",
         "amount": -106.83
       },
       {
-        "date": "06-19",
+        "date": "2003-06-19",
         "description": "CHECKCARD PURCHASE - GARDEN CENTER",
         "amount": -52.55
       },
       {
-        "date": "06-19",
+        "date": "2003-06-19",
         "description": "CHECKCARD PURCHASE - COFFEE HOUSE 013",
         "amount": -15.42
       },
       {
-        "date": "06-19",
+        "date": "2003-06-19",
         "description": "CHECKCARD PURCHASE - OFFICE SUPPLY 3301",
         "amount": -31.46
       },
       {
-        "date": "06-19",
+        "date": "2003-06-19",
         "description": "CHECKCARD PURCHASE - HARDWARE STORE",
         "amount": -47.3
       },
       {
-        "date": "06-20",
+        "date": "2003-06-20",
         "description": "AUTOMATIC PAYMENT - INSURANCE PREMIUM",
         "amount": -155.05
       },
       {
-        "date": "06-20",
+        "date": "2003-06-20",
         "description": "CHECKCARD PURCHASE - DRY CLEANERS",
         "amount": -35.57
       },
       {
-        "date": "06-20",
+        "date": "2003-06-20",
         "description": "ACH CREDIT - CUSTOMER REFUND",
         "amount": 54.19
       },
       {
-        "date": "06-20",
+        "date": "2003-06-20",
         "description": "CHECKCARD PURCHASE - FAMILY RESTAURANT",
         "amount": -55.86
       },
       {
-        "date": "06-21",
+        "date": "2003-06-21",
         "description": "CHECKCARD PURCHASE - POSTAL CENTER",
         "amount": -23.97
       },
       {
-        "date": "06-21",
+        "date": "2003-06-21",
         "description": "CHECKCARD PURCHASE - MOVIE THEATER",
         "amount": -35.78
       },
       {
-        "date": "06-21",
+        "date": "2003-06-21",
         "description": "CHECKCARD PURCHASE - AUTO PARTS",
         "amount": -64.3
       },
       {
-        "date": "06-21",
+        "date": "2003-06-21",
         "description": "AUTOMATIC PAYMENT - CABLE SERVICE",
         "amount": -73.81
       },
       {
-        "date": "06-22",
+        "date": "2003-06-22",
         "description": "MONTHLY SERVICE CHARGE",
         "amount": -5
       },
       {
-        "date": "06-22",
+        "date": "2003-06-22",
         "description": "CHECKCARD PURCHASE - DINER",
         "amount": -44.13
       },
       {
-        "date": "06-22",
+        "date": "2003-06-22",
         "description": "CHECKCARD PURCHASE - GROCER'S MARKET 0042, SMALL TOWN MO",
         "amount": -48.6
       },
       {
-        "date": "06-22",
+        "date": "2003-06-22",
         "description": "AUTOMATIC PAYMENT - TELEPHONE SERVICE",
         "amount": -77.82
       },
       {
-        "date": "06-23",
+        "date": "2003-06-23",
         "description": "CHECKCARD PURCHASE - FUEL STOP 1187, KANSAS CITY MO",
         "amount": -58.48
       },
       {
-        "date": "06-23",
+        "date": "2003-06-23",
         "description": "ATM WITHDRAWAL - 1000 WALNUT ST M119",
         "amount": -28.91
       },
       {
-        "date": "06-23",
+        "date": "2003-06-23",
         "description": "CHECKCARD PURCHASE - MAIN STREET PHARMACY",
         "amount": -27.12
       },
       {
-        "date": "06-23",
+        "date": "2003-06-23",
         "description": "BILL PAYMENT - CITY UTILITIES",
         "amount": -125.07
       },
       {
-        "date": "06-24",
+        "date": "2003-06-24",
         "description": "CHECKCARD PURCHASE - BOOKS AND NEWS",
         "amount": -42.1
       },
       {
-        "date": "06-24",
+        "date": "2003-06-24",
         "description": "ONLINE TRANSFER TO SAVINGS",
         "amount": -222.37
       },
       {
-        "date": "06-24",
+        "date": "2003-06-24",
         "description": "CHECKCARD PURCHASE - GARDEN CENTER",
         "amount": -31.59
       },
       {
-        "date": "06-24",
+        "date": "2003-06-24",
         "description": "CHECK 1009",
         "amount": -69.65
       },
       {
-        "date": "06-25",
+        "date": "2003-06-25",
         "description": "CHECKCARD PURCHASE - OFFICE SUPPLY 3301",
         "amount": -54.55
       },
       {
-        "date": "06-25",
+        "date": "2003-06-25",
         "description": "CHECKCARD PURCHASE - HARDWARE STORE",
         "amount": -48.03
       },
       {
-        "date": "06-25",
+        "date": "2003-06-25",
         "description": "AUTOMATIC PAYMENT - INSURANCE PREMIUM",
         "amount": -147.09
       },
       {
-        "date": "06-25",
+        "date": "2003-06-25",
         "description": "CHECKCARD PURCHASE - DRY CLEANERS",
         "amount": -25.3
       },
       {
-        "date": "06-26",
+        "date": "2003-06-26",
         "description": "BILL PAYMENT - MOBILE SERVICE",
         "amount": -62.79
       },
       {
-        "date": "06-26",
+        "date": "2003-06-26",
         "description": "CHECKCARD PURCHASE - FAMILY RESTAURANT",
         "amount": -66.49
       },
       {
-        "date": "06-26",
+        "date": "2003-06-26",
         "description": "CHECKCARD PURCHASE - POSTAL CENTER",
         "amount": -26.59
       },
       {
-        "date": "06-26",
+        "date": "2003-06-26",
         "description": "CHECKCARD PURCHASE - MOVIE THEATER",
         "amount": -28.02
       },
       {
-        "date": "06-27",
+        "date": "2003-06-27",
         "description": "CHECKCARD PURCHASE - AUTO PARTS",
         "amount": -30.23
       },
       {
-        "date": "06-27",
+        "date": "2003-06-27",
         "description": "AUTOMATIC PAYMENT - CABLE SERVICE",
         "amount": -70.26
       },
       {
-        "date": "06-27",
+        "date": "2003-06-27",
         "description": "MONTHLY SERVICE CHARGE",
         "amount": -5
       },
       {
-        "date": "06-27",
+        "date": "2003-06-27",
         "description": "CHECKCARD PURCHASE - DINER",
         "amount": -22.66
       },
       {
-        "date": "06-28",
+        "date": "2003-06-28",
         "description": "ACH CREDIT - EXPENSE REIMBURSEMENT",
         "amount": 96.5
       },
       {
-        "date": "06-28",
+        "date": "2003-06-28",
         "description": "AUTOMATIC PAYMENT - TELEPHONE SERVICE",
         "amount": -88.25
       },
       {
-        "date": "06-28",
+        "date": "2003-06-28",
         "description": "CHECKCARD PURCHASE - FUEL STOP 1187, KANSAS CITY MO",
         "amount": -38.13
       },
       {
-        "date": "06-28",
+        "date": "2003-06-28",
         "description": "ATM WITHDRAWAL - 1000 WALNUT ST M119",
         "amount": -49.3
       },
       {
-        "date": "06-29",
+        "date": "2003-06-29",
         "description": "CHECKCARD PURCHASE - MAIN STREET PHARMACY",
         "amount": -32.73
       },
       {
-        "date": "06-29",
+        "date": "2003-06-29",
         "description": "BILL PAYMENT - CITY UTILITIES",
         "amount": -87.98
       },
       {
-        "date": "06-29",
+        "date": "2003-06-29",
         "description": "CHECKCARD PURCHASE - BOOKS AND NEWS",
         "amount": -27.12
       },
       {
-        "date": "06-29",
+        "date": "2003-06-29",
         "description": "ONLINE TRANSFER TO SAVINGS",
         "amount": -173.65
       },
       {
-        "date": "06-30",
+        "date": "2003-06-30",
         "description": "CHECKCARD PURCHASE - GARDEN CENTER",
         "amount": -51.97
       },
       {
-        "date": "06-30",
+        "date": "2003-06-30",
         "description": "CHECKCARD PURCHASE - COFFEE HOUSE 013",
         "amount": -17.91
       },
       {
-        "date": "06-30",
+        "date": "2003-06-30",
         "description": "CHECKCARD PURCHASE - OFFICE SUPPLY 3301",
         "amount": -74.91
       },
       {
-        "date": "06-30",
+        "date": "2003-06-30",
         "description": "CHECKCARD PURCHASE - HARDWARE STORE",
         "amount": -33.34
       },
       {
-        "date": "07-01",
+        "date": "2003-07-01",
         "description": "AUTOMATIC PAYMENT - INSURANCE PREMIUM",
         "amount": -167.63
       },
       {
-        "date": "07-01",
+        "date": "2003-07-01",
         "description": "CHECKCARD PURCHASE - DRY CLEANERS",
         "amount": -18.94
       },
       {
-        "date": "07-01",
+        "date": "2003-07-01",
         "description": "BILL PAYMENT - MOBILE SERVICE",
         "amount": -59.37
       },
       {
-        "date": "07-01",
+        "date": "2003-07-01",
         "description": "CHECKCARD PURCHASE - FAMILY RESTAURANT",
         "amount": -43.76
       },
       {
-        "date": "07-02",
+        "date": "2003-07-02",
         "description": "CHECK 1010",
         "amount": -115.17
       },
       {
-        "date": "07-02",
+        "date": "2003-07-02",
         "description": "CHECKCARD PURCHASE - MOVIE THEATER",
         "amount": -20.21
       },
       {
-        "date": "07-02",
+        "date": "2003-07-02",
         "description": "CHECKCARD PURCHASE - AUTO PARTS",
         "amount": -75.17
       },
       {
-        "date": "07-02",
+        "date": "2003-07-02",
         "description": "AUTOMATIC PAYMENT - CABLE SERVICE",
         "amount": -93.9
       },
       {
-        "date": "07-03",
+        "date": "2003-07-03",
         "description": "MONTHLY SERVICE CHARGE",
         "amount": -5
       },
       {
-        "date": "07-03",
+        "date": "2003-07-03",
         "description": "CHECKCARD PURCHASE - DINER",
         "amount": -21.27
       },
       {
-        "date": "07-03",
+        "date": "2003-07-03",
         "description": "CHECKCARD PURCHASE - GROCER'S MARKET 0042, SMALL TOWN MO",
         "amount": -52.88
       },
       {
-        "date": "07-03",
+        "date": "2003-07-03",
         "description": "AUTOMATIC PAYMENT - TELEPHONE SERVICE",
         "amount": -88.93
       },
       {
-        "date": "07-04",
+        "date": "2003-07-04",
         "description": "CHECKCARD PURCHASE - FUEL STOP 1187, KANSAS CITY MO",
         "amount": -45.92
       },
       {
-        "date": "07-04",
+        "date": "2003-07-04",
         "description": "ATM WITHDRAWAL - 1000 WALNUT ST M119",
         "amount": -42.9
       },
       {
-        "date": "07-04",
+        "date": "2003-07-04",
         "description": "CHECKCARD PURCHASE - MAIN STREET PHARMACY",
         "amount": -35.54
       },
       {
-        "date": "07-04",
+        "date": "2003-07-04",
         "description": "BILL PAYMENT - CITY UTILITIES",
         "amount": -81.24
       },
       {
-        "date": "07-05",
+        "date": "2003-07-05",
         "description": "CHECKCARD PURCHASE - BOOKS AND NEWS",
         "amount": -39.69
       },
       {
-        "date": "07-05",
+        "date": "2003-07-05",
         "description": "ONLINE TRANSFER TO SAVINGS",
         "amount": -219.21
       },
       {
-        "date": "07-05",
+        "date": "2003-07-05",
         "description": "ATM DEPOSIT - SMALL TOWN BRANCH",
         "amount": 225
       },
       {
-        "date": "07-05",
+        "date": "2003-07-05",
         "description": "CHECKCARD PURCHASE - COFFEE HOUSE 013",
         "amount": -6.58
       },
       {
-        "date": "07-06",
+        "date": "2003-07-06",
         "description": "CHECKCARD PURCHASE - OFFICE SUPPLY 3301",
         "amount": -36.07
       },
       {
-        "date": "07-06",
+        "date": "2003-07-06",
         "description": "CHECKCARD PURCHASE - HARDWARE STORE",
         "amount": -51.25
       },
       {
-        "date": "07-06",
+        "date": "2003-07-06",
         "description": "AUTOMATIC PAYMENT - INSURANCE PREMIUM",
         "amount": -127.13
       },
       {
-        "date": "07-06",
+        "date": "2003-07-06",
         "description": "CHECKCARD PURCHASE - DRY CLEANERS",
         "amount": -25.2
       },
       {
-        "date": "07-07",
+        "date": "2003-07-07",
         "description": "BILL PAYMENT - MOBILE SERVICE",
         "amount": -76.42
       },
       {
-        "date": "07-07",
+        "date": "2003-07-07",
         "description": "CHECKCARD PURCHASE - FAMILY RESTAURANT",
         "amount": -33.72
       },
       {
-        "date": "07-07",
+        "date": "2003-07-07",
         "description": "CHECKCARD PURCHASE - POSTAL CENTER",
         "amount": -24.21
       },
       {
-        "date": "07-07",
+        "date": "2003-07-07",
         "description": "CHECKCARD PURCHASE - MOVIE THEATER",
         "amount": -45.25
       },
       {
-        "date": "07-08",
+        "date": "2003-07-08",
         "description": "CHECKCARD PURCHASE - AUTO PARTS",
         "amount": -70.6
       },
       {
-        "date": "07-08",
+        "date": "2003-07-08",
         "description": "AUTOMATIC PAYMENT - CABLE SERVICE",
         "amount": -76.67
       }
@@ -714,7 +716,7 @@
       }
     },
     "statement_date": {
-      "value": "July 8, 2003",
+      "value": "2003-07-08",
       "source": {
         "content": "July 8, 2003",
         "anchor": {
@@ -730,7 +732,7 @@
     "transactions": [
       {
         "date": {
-          "value": "06-06",
+          "value": "2003-06-06",
           "source": {
             "content": "06-06",
             "anchor": {
@@ -774,7 +776,7 @@
       },
       {
         "date": {
-          "value": "06-06",
+          "value": "2003-06-06",
           "source": {
             "content": "06-06",
             "anchor": {
@@ -818,7 +820,7 @@
       },
       {
         "date": {
-          "value": "06-06",
+          "value": "2003-06-06",
           "source": {
             "content": "06-06",
             "anchor": {
@@ -862,7 +864,7 @@
       },
       {
         "date": {
-          "value": "06-06",
+          "value": "2003-06-06",
           "source": {
             "content": "06-06",
             "anchor": {
@@ -906,7 +908,7 @@
       },
       {
         "date": {
-          "value": "06-07",
+          "value": "2003-06-07",
           "source": {
             "content": "06-07",
             "anchor": {
@@ -950,7 +952,7 @@
       },
       {
         "date": {
-          "value": "06-07",
+          "value": "2003-06-07",
           "source": {
             "content": "06-07",
             "anchor": {
@@ -994,7 +996,7 @@
       },
       {
         "date": {
-          "value": "06-07",
+          "value": "2003-06-07",
           "source": {
             "content": "06-07",
             "anchor": {
@@ -1038,7 +1040,7 @@
       },
       {
         "date": {
-          "value": "06-07",
+          "value": "2003-06-07",
           "source": {
             "content": "06-07",
             "anchor": {
@@ -1082,7 +1084,7 @@
       },
       {
         "date": {
-          "value": "06-08",
+          "value": "2003-06-08",
           "source": {
             "content": "06-08",
             "anchor": {
@@ -1126,7 +1128,7 @@
       },
       {
         "date": {
-          "value": "06-08",
+          "value": "2003-06-08",
           "source": {
             "content": "06-08",
             "anchor": {
@@ -1170,7 +1172,7 @@
       },
       {
         "date": {
-          "value": "06-08",
+          "value": "2003-06-08",
           "source": {
             "content": "06-08",
             "anchor": {
@@ -1214,7 +1216,7 @@
       },
       {
         "date": {
-          "value": "06-08",
+          "value": "2003-06-08",
           "source": {
             "content": "06-08",
             "anchor": {
@@ -1258,7 +1260,7 @@
       },
       {
         "date": {
-          "value": "06-09",
+          "value": "2003-06-09",
           "source": {
             "content": "06-09",
             "anchor": {
@@ -1302,7 +1304,7 @@
       },
       {
         "date": {
-          "value": "06-09",
+          "value": "2003-06-09",
           "source": {
             "content": "06-09",
             "anchor": {
@@ -1346,7 +1348,7 @@
       },
       {
         "date": {
-          "value": "06-09",
+          "value": "2003-06-09",
           "source": {
             "content": "06-09",
             "anchor": {
@@ -1390,7 +1392,7 @@
       },
       {
         "date": {
-          "value": "06-09",
+          "value": "2003-06-09",
           "source": {
             "content": "06-09",
             "anchor": {
@@ -1434,7 +1436,7 @@
       },
       {
         "date": {
-          "value": "06-10",
+          "value": "2003-06-10",
           "source": {
             "content": "06-10",
             "anchor": {
@@ -1478,7 +1480,7 @@
       },
       {
         "date": {
-          "value": "06-10",
+          "value": "2003-06-10",
           "source": {
             "content": "06-10",
             "anchor": {
@@ -1522,7 +1524,7 @@
       },
       {
         "date": {
-          "value": "06-10",
+          "value": "2003-06-10",
           "source": {
             "content": "06-10",
             "anchor": {
@@ -1566,7 +1568,7 @@
       },
       {
         "date": {
-          "value": "06-10",
+          "value": "2003-06-10",
           "source": {
             "content": "06-10",
             "anchor": {
@@ -1610,7 +1612,7 @@
       },
       {
         "date": {
-          "value": "06-11",
+          "value": "2003-06-11",
           "source": {
             "content": "06-11",
             "anchor": {
@@ -1654,7 +1656,7 @@
       },
       {
         "date": {
-          "value": "06-11",
+          "value": "2003-06-11",
           "source": {
             "content": "06-11",
             "anchor": {
@@ -1698,7 +1700,7 @@
       },
       {
         "date": {
-          "value": "06-11",
+          "value": "2003-06-11",
           "source": {
             "content": "06-11",
             "anchor": {
@@ -1742,7 +1744,7 @@
       },
       {
         "date": {
-          "value": "06-11",
+          "value": "2003-06-11",
           "source": {
             "content": "06-11",
             "anchor": {
@@ -1786,7 +1788,7 @@
       },
       {
         "date": {
-          "value": "06-12",
+          "value": "2003-06-12",
           "source": {
             "content": "06-12",
             "anchor": {
@@ -1830,7 +1832,7 @@
       },
       {
         "date": {
-          "value": "06-12",
+          "value": "2003-06-12",
           "source": {
             "content": "06-12",
             "anchor": {
@@ -1874,7 +1876,7 @@
       },
       {
         "date": {
-          "value": "06-12",
+          "value": "2003-06-12",
           "source": {
             "content": "06-12",
             "anchor": {
@@ -1918,7 +1920,7 @@
       },
       {
         "date": {
-          "value": "06-12",
+          "value": "2003-06-12",
           "source": {
             "content": "06-12",
             "anchor": {
@@ -1962,7 +1964,7 @@
       },
       {
         "date": {
-          "value": "06-13",
+          "value": "2003-06-13",
           "source": {
             "content": "06-13",
             "anchor": {
@@ -2006,7 +2008,7 @@
       },
       {
         "date": {
-          "value": "06-13",
+          "value": "2003-06-13",
           "source": {
             "content": "06-13",
             "anchor": {
@@ -2050,7 +2052,7 @@
       },
       {
         "date": {
-          "value": "06-13",
+          "value": "2003-06-13",
           "source": {
             "content": "06-13",
             "anchor": {
@@ -2094,7 +2096,7 @@
       },
       {
         "date": {
-          "value": "06-13",
+          "value": "2003-06-13",
           "source": {
             "content": "06-13",
             "anchor": {
@@ -2138,7 +2140,7 @@
       },
       {
         "date": {
-          "value": "06-14",
+          "value": "2003-06-14",
           "source": {
             "content": "06-14",
             "anchor": {
@@ -2182,7 +2184,7 @@
       },
       {
         "date": {
-          "value": "06-14",
+          "value": "2003-06-14",
           "source": {
             "content": "06-14",
             "anchor": {
@@ -2226,7 +2228,7 @@
       },
       {
         "date": {
-          "value": "06-14",
+          "value": "2003-06-14",
           "source": {
             "content": "06-14",
             "anchor": {
@@ -2270,7 +2272,7 @@
       },
       {
         "date": {
-          "value": "06-14",
+          "value": "2003-06-14",
           "source": {
             "content": "06-14",
             "anchor": {
@@ -2314,7 +2316,7 @@
       },
       {
         "date": {
-          "value": "06-15",
+          "value": "2003-06-15",
           "source": {
             "content": "06-15",
             "anchor": {
@@ -2358,7 +2360,7 @@
       },
       {
         "date": {
-          "value": "06-15",
+          "value": "2003-06-15",
           "source": {
             "content": "06-15",
             "anchor": {
@@ -2402,7 +2404,7 @@
       },
       {
         "date": {
-          "value": "06-15",
+          "value": "2003-06-15",
           "source": {
             "content": "06-15",
             "anchor": {
@@ -2446,7 +2448,7 @@
       },
       {
         "date": {
-          "value": "06-15",
+          "value": "2003-06-15",
           "source": {
             "content": "06-15",
             "anchor": {
@@ -2490,7 +2492,7 @@
       },
       {
         "date": {
-          "value": "06-16",
+          "value": "2003-06-16",
           "source": {
             "content": "06-16",
             "anchor": {
@@ -2534,7 +2536,7 @@
       },
       {
         "date": {
-          "value": "06-16",
+          "value": "2003-06-16",
           "source": {
             "content": "06-16",
             "anchor": {
@@ -2578,7 +2580,7 @@
       },
       {
         "date": {
-          "value": "06-16",
+          "value": "2003-06-16",
           "source": {
             "content": "06-16",
             "anchor": {
@@ -2622,7 +2624,7 @@
       },
       {
         "date": {
-          "value": "06-16",
+          "value": "2003-06-16",
           "source": {
             "content": "06-16",
             "anchor": {
@@ -2666,7 +2668,7 @@
       },
       {
         "date": {
-          "value": "06-17",
+          "value": "2003-06-17",
           "source": {
             "content": "06-17",
             "anchor": {
@@ -2710,7 +2712,7 @@
       },
       {
         "date": {
-          "value": "06-17",
+          "value": "2003-06-17",
           "source": {
             "content": "06-17",
             "anchor": {
@@ -2754,7 +2756,7 @@
       },
       {
         "date": {
-          "value": "06-17",
+          "value": "2003-06-17",
           "source": {
             "content": "06-17",
             "anchor": {
@@ -2798,7 +2800,7 @@
       },
       {
         "date": {
-          "value": "06-17",
+          "value": "2003-06-17",
           "source": {
             "content": "06-17",
             "anchor": {
@@ -2842,7 +2844,7 @@
       },
       {
         "date": {
-          "value": "06-18",
+          "value": "2003-06-18",
           "source": {
             "content": "06-18",
             "anchor": {
@@ -2886,7 +2888,7 @@
       },
       {
         "date": {
-          "value": "06-18",
+          "value": "2003-06-18",
           "source": {
             "content": "06-18",
             "anchor": {
@@ -2930,7 +2932,7 @@
       },
       {
         "date": {
-          "value": "06-18",
+          "value": "2003-06-18",
           "source": {
             "content": "06-18",
             "anchor": {
@@ -2974,7 +2976,7 @@
       },
       {
         "date": {
-          "value": "06-18",
+          "value": "2003-06-18",
           "source": {
             "content": "06-18",
             "anchor": {
@@ -3018,7 +3020,7 @@
       },
       {
         "date": {
-          "value": "06-19",
+          "value": "2003-06-19",
           "source": {
             "content": "06-19",
             "anchor": {
@@ -3062,7 +3064,7 @@
       },
       {
         "date": {
-          "value": "06-19",
+          "value": "2003-06-19",
           "source": {
             "content": "06-19",
             "anchor": {
@@ -3106,7 +3108,7 @@
       },
       {
         "date": {
-          "value": "06-19",
+          "value": "2003-06-19",
           "source": {
             "content": "06-19",
             "anchor": {
@@ -3150,7 +3152,7 @@
       },
       {
         "date": {
-          "value": "06-19",
+          "value": "2003-06-19",
           "source": {
             "content": "06-19",
             "anchor": {
@@ -3194,7 +3196,7 @@
       },
       {
         "date": {
-          "value": "06-20",
+          "value": "2003-06-20",
           "source": {
             "content": "06-20",
             "anchor": {
@@ -3238,7 +3240,7 @@
       },
       {
         "date": {
-          "value": "06-20",
+          "value": "2003-06-20",
           "source": {
             "content": "06-20",
             "anchor": {
@@ -3282,7 +3284,7 @@
       },
       {
         "date": {
-          "value": "06-20",
+          "value": "2003-06-20",
           "source": {
             "content": "06-20",
             "anchor": {
@@ -3326,7 +3328,7 @@
       },
       {
         "date": {
-          "value": "06-20",
+          "value": "2003-06-20",
           "source": {
             "content": "06-20",
             "anchor": {
@@ -3370,7 +3372,7 @@
       },
       {
         "date": {
-          "value": "06-21",
+          "value": "2003-06-21",
           "source": {
             "content": "06-21",
             "anchor": {
@@ -3414,7 +3416,7 @@
       },
       {
         "date": {
-          "value": "06-21",
+          "value": "2003-06-21",
           "source": {
             "content": "06-21",
             "anchor": {
@@ -3458,7 +3460,7 @@
       },
       {
         "date": {
-          "value": "06-21",
+          "value": "2003-06-21",
           "source": {
             "content": "06-21",
             "anchor": {
@@ -3502,7 +3504,7 @@
       },
       {
         "date": {
-          "value": "06-21",
+          "value": "2003-06-21",
           "source": {
             "content": "06-21",
             "anchor": {
@@ -3546,7 +3548,7 @@
       },
       {
         "date": {
-          "value": "06-22",
+          "value": "2003-06-22",
           "source": {
             "content": "06-22",
             "anchor": {
@@ -3590,7 +3592,7 @@
       },
       {
         "date": {
-          "value": "06-22",
+          "value": "2003-06-22",
           "source": {
             "content": "06-22",
             "anchor": {
@@ -3634,7 +3636,7 @@
       },
       {
         "date": {
-          "value": "06-22",
+          "value": "2003-06-22",
           "source": {
             "content": "06-22",
             "anchor": {
@@ -3678,7 +3680,7 @@
       },
       {
         "date": {
-          "value": "06-22",
+          "value": "2003-06-22",
           "source": {
             "content": "06-22",
             "anchor": {
@@ -3722,7 +3724,7 @@
       },
       {
         "date": {
-          "value": "06-23",
+          "value": "2003-06-23",
           "source": {
             "content": "06-23",
             "anchor": {
@@ -3766,7 +3768,7 @@
       },
       {
         "date": {
-          "value": "06-23",
+          "value": "2003-06-23",
           "source": {
             "content": "06-23",
             "anchor": {
@@ -3810,7 +3812,7 @@
       },
       {
         "date": {
-          "value": "06-23",
+          "value": "2003-06-23",
           "source": {
             "content": "06-23",
             "anchor": {
@@ -3854,7 +3856,7 @@
       },
       {
         "date": {
-          "value": "06-23",
+          "value": "2003-06-23",
           "source": {
             "content": "06-23",
             "anchor": {
@@ -3898,7 +3900,7 @@
       },
       {
         "date": {
-          "value": "06-24",
+          "value": "2003-06-24",
           "source": {
             "content": "06-24",
             "anchor": {
@@ -3942,7 +3944,7 @@
       },
       {
         "date": {
-          "value": "06-24",
+          "value": "2003-06-24",
           "source": {
             "content": "06-24",
             "anchor": {
@@ -3986,7 +3988,7 @@
       },
       {
         "date": {
-          "value": "06-24",
+          "value": "2003-06-24",
           "source": {
             "content": "06-24",
             "anchor": {
@@ -4030,7 +4032,7 @@
       },
       {
         "date": {
-          "value": "06-24",
+          "value": "2003-06-24",
           "source": {
             "content": "06-24",
             "anchor": {
@@ -4074,7 +4076,7 @@
       },
       {
         "date": {
-          "value": "06-25",
+          "value": "2003-06-25",
           "source": {
             "content": "06-25",
             "anchor": {
@@ -4118,7 +4120,7 @@
       },
       {
         "date": {
-          "value": "06-25",
+          "value": "2003-06-25",
           "source": {
             "content": "06-25",
             "anchor": {
@@ -4162,7 +4164,7 @@
       },
       {
         "date": {
-          "value": "06-25",
+          "value": "2003-06-25",
           "source": {
             "content": "06-25",
             "anchor": {
@@ -4206,7 +4208,7 @@
       },
       {
         "date": {
-          "value": "06-25",
+          "value": "2003-06-25",
           "source": {
             "content": "06-25",
             "anchor": {
@@ -4250,7 +4252,7 @@
       },
       {
         "date": {
-          "value": "06-26",
+          "value": "2003-06-26",
           "source": {
             "content": "06-26",
             "anchor": {
@@ -4294,7 +4296,7 @@
       },
       {
         "date": {
-          "value": "06-26",
+          "value": "2003-06-26",
           "source": {
             "content": "06-26",
             "anchor": {
@@ -4338,7 +4340,7 @@
       },
       {
         "date": {
-          "value": "06-26",
+          "value": "2003-06-26",
           "source": {
             "content": "06-26",
             "anchor": {
@@ -4382,7 +4384,7 @@
       },
       {
         "date": {
-          "value": "06-26",
+          "value": "2003-06-26",
           "source": {
             "content": "06-26",
             "anchor": {
@@ -4426,7 +4428,7 @@
       },
       {
         "date": {
-          "value": "06-27",
+          "value": "2003-06-27",
           "source": {
             "content": "06-27",
             "anchor": {
@@ -4470,7 +4472,7 @@
       },
       {
         "date": {
-          "value": "06-27",
+          "value": "2003-06-27",
           "source": {
             "content": "06-27",
             "anchor": {
@@ -4514,7 +4516,7 @@
       },
       {
         "date": {
-          "value": "06-27",
+          "value": "2003-06-27",
           "source": {
             "content": "06-27",
             "anchor": {
@@ -4558,7 +4560,7 @@
       },
       {
         "date": {
-          "value": "06-27",
+          "value": "2003-06-27",
           "source": {
             "content": "06-27",
             "anchor": {
@@ -4602,7 +4604,7 @@
       },
       {
         "date": {
-          "value": "06-28",
+          "value": "2003-06-28",
           "source": {
             "content": "06-28",
             "anchor": {
@@ -4646,7 +4648,7 @@
       },
       {
         "date": {
-          "value": "06-28",
+          "value": "2003-06-28",
           "source": {
             "content": "06-28",
             "anchor": {
@@ -4690,7 +4692,7 @@
       },
       {
         "date": {
-          "value": "06-28",
+          "value": "2003-06-28",
           "source": {
             "content": "06-28",
             "anchor": {
@@ -4734,7 +4736,7 @@
       },
       {
         "date": {
-          "value": "06-28",
+          "value": "2003-06-28",
           "source": {
             "content": "06-28",
             "anchor": {
@@ -4778,7 +4780,7 @@
       },
       {
         "date": {
-          "value": "06-29",
+          "value": "2003-06-29",
           "source": {
             "content": "06-29",
             "anchor": {
@@ -4822,7 +4824,7 @@
       },
       {
         "date": {
-          "value": "06-29",
+          "value": "2003-06-29",
           "source": {
             "content": "06-29",
             "anchor": {
@@ -4866,7 +4868,7 @@
       },
       {
         "date": {
-          "value": "06-29",
+          "value": "2003-06-29",
           "source": {
             "content": "06-29",
             "anchor": {
@@ -4910,7 +4912,7 @@
       },
       {
         "date": {
-          "value": "06-29",
+          "value": "2003-06-29",
           "source": {
             "content": "06-29",
             "anchor": {
@@ -4954,7 +4956,7 @@
       },
       {
         "date": {
-          "value": "06-30",
+          "value": "2003-06-30",
           "source": {
             "content": "06-30",
             "anchor": {
@@ -4998,7 +5000,7 @@
       },
       {
         "date": {
-          "value": "06-30",
+          "value": "2003-06-30",
           "source": {
             "content": "06-30",
             "anchor": {
@@ -5042,7 +5044,7 @@
       },
       {
         "date": {
-          "value": "06-30",
+          "value": "2003-06-30",
           "source": {
             "content": "06-30",
             "anchor": {
@@ -5086,7 +5088,7 @@
       },
       {
         "date": {
-          "value": "06-30",
+          "value": "2003-06-30",
           "source": {
             "content": "06-30",
             "anchor": {
@@ -5130,7 +5132,7 @@
       },
       {
         "date": {
-          "value": "07-01",
+          "value": "2003-07-01",
           "source": {
             "content": "07-01",
             "anchor": {
@@ -5174,7 +5176,7 @@
       },
       {
         "date": {
-          "value": "07-01",
+          "value": "2003-07-01",
           "source": {
             "content": "07-01",
             "anchor": {
@@ -5218,7 +5220,7 @@
       },
       {
         "date": {
-          "value": "07-01",
+          "value": "2003-07-01",
           "source": {
             "content": "07-01",
             "anchor": {
@@ -5262,7 +5264,7 @@
       },
       {
         "date": {
-          "value": "07-01",
+          "value": "2003-07-01",
           "source": {
             "content": "07-01",
             "anchor": {
@@ -5306,7 +5308,7 @@
       },
       {
         "date": {
-          "value": "07-02",
+          "value": "2003-07-02",
           "source": {
             "content": "07-02",
             "anchor": {
@@ -5350,7 +5352,7 @@
       },
       {
         "date": {
-          "value": "07-02",
+          "value": "2003-07-02",
           "source": {
             "content": "07-02",
             "anchor": {
@@ -5394,7 +5396,7 @@
       },
       {
         "date": {
-          "value": "07-02",
+          "value": "2003-07-02",
           "source": {
             "content": "07-02",
             "anchor": {
@@ -5438,7 +5440,7 @@
       },
       {
         "date": {
-          "value": "07-02",
+          "value": "2003-07-02",
           "source": {
             "content": "07-02",
             "anchor": {
@@ -5482,7 +5484,7 @@
       },
       {
         "date": {
-          "value": "07-03",
+          "value": "2003-07-03",
           "source": {
             "content": "07-03",
             "anchor": {
@@ -5526,7 +5528,7 @@
       },
       {
         "date": {
-          "value": "07-03",
+          "value": "2003-07-03",
           "source": {
             "content": "07-03",
             "anchor": {
@@ -5570,7 +5572,7 @@
       },
       {
         "date": {
-          "value": "07-03",
+          "value": "2003-07-03",
           "source": {
             "content": "07-03",
             "anchor": {
@@ -5614,7 +5616,7 @@
       },
       {
         "date": {
-          "value": "07-03",
+          "value": "2003-07-03",
           "source": {
             "content": "07-03",
             "anchor": {
@@ -5658,7 +5660,7 @@
       },
       {
         "date": {
-          "value": "07-04",
+          "value": "2003-07-04",
           "source": {
             "content": "07-04",
             "anchor": {
@@ -5702,7 +5704,7 @@
       },
       {
         "date": {
-          "value": "07-04",
+          "value": "2003-07-04",
           "source": {
             "content": "07-04",
             "anchor": {
@@ -5746,7 +5748,7 @@
       },
       {
         "date": {
-          "value": "07-04",
+          "value": "2003-07-04",
           "source": {
             "content": "07-04",
             "anchor": {
@@ -5790,7 +5792,7 @@
       },
       {
         "date": {
-          "value": "07-04",
+          "value": "2003-07-04",
           "source": {
             "content": "07-04",
             "anchor": {
@@ -5834,7 +5836,7 @@
       },
       {
         "date": {
-          "value": "07-05",
+          "value": "2003-07-05",
           "source": {
             "content": "07-05",
             "anchor": {
@@ -5878,7 +5880,7 @@
       },
       {
         "date": {
-          "value": "07-05",
+          "value": "2003-07-05",
           "source": {
             "content": "07-05",
             "anchor": {
@@ -5922,7 +5924,7 @@
       },
       {
         "date": {
-          "value": "07-05",
+          "value": "2003-07-05",
           "source": {
             "content": "07-05",
             "anchor": {
@@ -5966,7 +5968,7 @@
       },
       {
         "date": {
-          "value": "07-05",
+          "value": "2003-07-05",
           "source": {
             "content": "07-05",
             "anchor": {
@@ -6010,7 +6012,7 @@
       },
       {
         "date": {
-          "value": "07-06",
+          "value": "2003-07-06",
           "source": {
             "content": "07-06",
             "anchor": {
@@ -6054,7 +6056,7 @@
       },
       {
         "date": {
-          "value": "07-06",
+          "value": "2003-07-06",
           "source": {
             "content": "07-06",
             "anchor": {
@@ -6098,7 +6100,7 @@
       },
       {
         "date": {
-          "value": "07-06",
+          "value": "2003-07-06",
           "source": {
             "content": "07-06",
             "anchor": {
@@ -6142,7 +6144,7 @@
       },
       {
         "date": {
-          "value": "07-06",
+          "value": "2003-07-06",
           "source": {
             "content": "07-06",
             "anchor": {
@@ -6186,7 +6188,7 @@
       },
       {
         "date": {
-          "value": "07-07",
+          "value": "2003-07-07",
           "source": {
             "content": "07-07",
             "anchor": {
@@ -6230,7 +6232,7 @@
       },
       {
         "date": {
-          "value": "07-07",
+          "value": "2003-07-07",
           "source": {
             "content": "07-07",
             "anchor": {
@@ -6274,7 +6276,7 @@
       },
       {
         "date": {
-          "value": "07-07",
+          "value": "2003-07-07",
           "source": {
             "content": "07-07",
             "anchor": {
@@ -6318,7 +6320,7 @@
       },
       {
         "date": {
-          "value": "07-07",
+          "value": "2003-07-07",
           "source": {
             "content": "07-07",
             "anchor": {
@@ -6362,7 +6364,7 @@
       },
       {
         "date": {
-          "value": "07-08",
+          "value": "2003-07-08",
           "source": {
             "content": "07-08",
             "anchor": {
@@ -6406,7 +6408,7 @@
       },
       {
         "date": {
-          "value": "07-08",
+          "value": "2003-07-08",
           "source": {
             "content": "07-08",
             "anchor": {

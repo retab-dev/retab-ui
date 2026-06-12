@@ -20,6 +20,15 @@ function isArrayTraversalSchema(schema: JSONSchema7): boolean {
   return schema.type === "array" || !!schema.items
 }
 
+function getOwnSchemaProperty(
+  properties: Record<string, JSONSchema7Definition>,
+  segment: string
+): JSONSchema7Definition | undefined {
+  return Object.prototype.hasOwnProperty.call(properties, segment)
+    ? properties[segment]
+    : undefined
+}
+
 export function getSchemaPropertyType(
   schema: JSONSchema7,
   key: FieldPath
@@ -36,14 +45,18 @@ export function getSchemaPropertyType(
 
     if (isObjectTraversalSchema(traversal) && traversal.properties) {
       const nextSchema: JSONSchema7Definition | undefined =
-        traversal.properties[segment]
+        getOwnSchemaProperty(traversal.properties, segment)
       if (nextSchema === undefined) return undefined
       currentSchema = nextSchema
     } else if (isArrayTraversalSchema(traversal) && traversal.items) {
       if (Array.isArray(traversal.items)) {
         if (!isArrayIndexSegment(segment)) return undefined
+        const index = parseInt(segment, 10)
         const nextSchema: JSONSchema7Definition | undefined =
-          traversal.items[parseInt(segment, 10)]
+          traversal.items[index] ??
+          (traversal.additionalItems === false
+            ? undefined
+            : traversal.additionalItems)
         if (nextSchema === undefined) return undefined
         currentSchema = nextSchema
       } else if (
@@ -79,14 +92,18 @@ export function getSchemaPropertyTypeRaw(
 
     if (isObjectTraversalSchema(traversal) && traversal.properties) {
       const nextSchema: JSONSchema7Definition | undefined =
-        traversal.properties[segment]
+        getOwnSchemaProperty(traversal.properties, segment)
       if (nextSchema === undefined) return undefined
       currentSchema = nextSchema
     } else if (isArrayTraversalSchema(traversal) && traversal.items) {
       if (Array.isArray(traversal.items)) {
         if (!isArrayIndexSegment(segment)) return undefined
+        const index = parseInt(segment, 10)
         const nextSchema: JSONSchema7Definition | undefined =
-          traversal.items[parseInt(segment, 10)]
+          traversal.items[index] ??
+          (traversal.additionalItems === false
+            ? undefined
+            : traversal.additionalItems)
         if (nextSchema === undefined) return undefined
         currentSchema = nextSchema
       } else if (

@@ -372,8 +372,8 @@ function renderViewer({
           <SingleFileTableView
             document={jsonTableDocument}
             schema={jsonTableSchema}
-            editMode="readOnly"
-            allowEditing={false}
+            jsonEditMode="readOnly"
+            schemaEditMode="readOnly"
           />
         </div>
       )

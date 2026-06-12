@@ -21,7 +21,7 @@ import {
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "@/components/ui-retab/accordion"
+} from "@/components/ui/accordion"
 
 interface DocumentObjectNodeEditorProps {
   dispatch: DocumentSchemaNodeEditorProps["dispatch"]
@@ -113,9 +113,7 @@ export function DocumentObjectNodeEditor({
     return (
       <div className="px-0">
         <Accordion
-          defaultValue="properties"
-          type="single"
-          collapsible
+          defaultValue={["properties"]}
           className="w-full rounded-lg border border-border px-4 pb-0 shadow-sm"
         >
           <AccordionItem value="properties" className="border-none">

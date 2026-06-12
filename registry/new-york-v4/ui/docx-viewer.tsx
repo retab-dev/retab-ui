@@ -8,6 +8,7 @@ import { Download, Maximize, Minus, Plus } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import {
+  isAbortError,
   isResourceError,
   isViewerFormatError,
   ViewerFormatError,
@@ -351,23 +352,30 @@ function DocxViewerInner({
     if (typeof ResizeObserver === "undefined") return
     let frame = 0
     let latest = el.clientWidth
-    const observer = new ResizeObserver((entries) => {
-      // Use clientWidth (content + padding), matching the init read above, so
-      // the `- 32` in fitScale subtracts the p-4 padding exactly once. Using
-      // entry.contentRect.width here (which already excludes padding) would
-      // double-subtract it, shrinking the page 32px below the full content
-      // width — and below the w-full skeleton that stands in for it.
-      for (const entry of entries)
-        latest = (entry.target as HTMLElement).clientWidth
-      if (frame) return
-      frame = -1
-      const requestedFrame = requestAnimationFrame(() => {
-        frame = 0
-        setContainerWidth(latest)
+    let observer: ResizeObserver | null = null
+    try {
+      observer = new ResizeObserver((entries) => {
+        // Use clientWidth (content + padding), matching the init read above, so
+        // the `- 32` in fitScale subtracts the p-4 padding exactly once. Using
+        // entry.contentRect.width here (which already excludes padding) would
+        // double-subtract it, shrinking the page 32px below the full content
+        // width — and below the w-full skeleton that stands in for it.
+        for (const entry of entries)
+          latest = (entry.target as HTMLElement).clientWidth
+        if (frame) return
+        frame = -1
+        const requestedFrame = requestAnimationFrame(() => {
+          frame = 0
+          setContainerWidth(latest)
+        })
+        if (frame === -1) frame = requestedFrame
       })
-      if (frame === -1) frame = requestedFrame
-    })
-    observer.observe(el)
+      observer.observe(el)
+    } catch {
+      if (frame > 0) cancelAnimationFrame(frame)
+      observer?.disconnect()
+      return
+    }
     return () => {
       if (frame > 0) cancelAnimationFrame(frame)
       observer.disconnect()
@@ -502,7 +510,7 @@ function DocxViewerInner({
       .catch((err) => {
         if (!cancelled) {
           setRenderError(
-            isResourceError(err)
+            isResourceError(err) || isAbortError(err)
               ? err
               : toDocxFormatError(err, {
                   kind: "render_failed",
@@ -538,17 +546,26 @@ function DocxViewerInner({
     const registry =
       typeof CSS !== "undefined" && "highlights" in CSS ? CSS.highlights : null
     if (!registry || typeof Highlight === "undefined" || !host) return
+    const deleteHighlight = () => {
+      try {
+        registry.delete(highlightName)
+      } catch {
+        // Highlighting is an enhancement; registry failures must not hide the document.
+      }
+    }
     // Re-runs when the doc becomes `ready`, so a highlight set before render lands.
     if (!highlight || !ready) {
-      registry.delete(highlightName)
+      deleteHighlight()
       return
     }
-    const range = targetRange(host, highlight)
-    if (range) registry.set(highlightName, new Highlight(range))
-    else registry.delete(highlightName)
-    return () => {
-      registry.delete(highlightName)
+    try {
+      const range = targetRange(host, highlight)
+      if (range) registry.set(highlightName, new Highlight(range))
+      else deleteHighlight()
+    } catch {
+      deleteHighlight()
     }
+    return deleteHighlight
     // highlight is read but the value-key gates re-runs; identity would thrash.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [highlightKey, ready, highlightName])
@@ -802,6 +819,7 @@ function DocxSkeleton() {
     <Skeleton
       aria-hidden
       className="w-full rounded-sm"
+      data-slot="docx-page-skeleton"
       style={{ aspectRatio: "8.5 / 11" }}
     />
   )

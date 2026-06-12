@@ -20,6 +20,17 @@ export function normalizeCsvDelimiter(
   return delimiter === "\\t" ? "\t" : delimiter
 }
 
+/**
+ * Normalizes a delimiter and discards empty values. A CSV delimiter must be a
+ * non-empty string: an empty delimiter would make the parser fall back to a
+ * comma (`delimiter || ","`) while the exporter would quote every field and
+ * join with nothing, so callers must never let `""` through.
+ */
+function usableDelimiter(delimiter: string | undefined): string | undefined {
+  const normalized = normalizeCsvDelimiter(delimiter)
+  return normalized ? normalized : undefined
+}
+
 export function extensionOfDelimitedName(name: string): string | null {
   const clean = name.split(/[?#]/)[0]
   const base = clean.split("/").pop() ?? clean
@@ -58,9 +69,9 @@ export function resolveCsvDialect({
   const inferred = dialect ?? inferCsvDialect(descriptor)
   return {
     delimiter:
-      normalizeCsvDelimiter(delimiter) ??
-      normalizeCsvDelimiter(inferred.delimiter) ??
-      inferred.delimiter,
+      usableDelimiter(delimiter) ??
+      usableDelimiter(inferred.delimiter) ??
+      DEFAULT_CSV_DIALECT.delimiter,
     hasHeader: hasHeader ?? inferred.hasHeader,
   }
 }

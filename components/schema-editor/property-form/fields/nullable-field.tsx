@@ -1,13 +1,13 @@
 "use client"
 
-import { FormItem } from "@/components/ui-retab/form"
-import { Label } from "@/components/ui-retab/label"
-import { Switch } from "@/components/ui-retab/switch"
+import { FormItem } from "@/components/ui/form"
+import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui-retab/tooltip"
+} from "@/components/ui/tooltip"
 
 export function NullableField({
   checked,

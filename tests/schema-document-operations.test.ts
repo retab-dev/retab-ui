@@ -1604,6 +1604,61 @@ describe("lookups", () => {
     expect(findNodeByPath(d, "rows.sku")).toBeTruthy()
   })
 
+  it("findNodeByPath accepts exact path segments for keys containing separators", () => {
+    const d = doc({
+      type: "object",
+      properties: {
+        "a.b": {
+          type: "object",
+          properties: {
+            "": { type: "string" },
+          },
+        },
+      },
+    })
+
+    const id = findNodeByPath(d, ["a.b", ""])
+
+    expect(getNode(d, id!)!.type).toBe("string")
+    expect(findNodeByPath(d, "a.b")).toBeNull()
+  })
+
+  it("findNodeByPath stops unwrapping self-referential refs", () => {
+    const d = doc({
+      type: "object",
+      $defs: {
+        Loop: { $ref: "#/$defs/Loop" },
+      },
+      properties: {
+        loop: { $ref: "#/$defs/Loop" },
+      },
+    })
+
+    expect(findNodeByPath(d, "loop.child")).toBeNull()
+  })
+
+  it("findNodeByPath still resolves finite paths through recursive object refs", () => {
+    const d = doc({
+      type: "object",
+      $defs: {
+        Node: {
+          type: "object",
+          properties: {
+            name: { type: "string" },
+            next: { $ref: "#/$defs/Node" },
+          },
+        },
+      },
+      properties: {
+        node: { $ref: "#/$defs/Node" },
+      },
+    })
+
+    const id = findNodeByPath(d, "node.next.name")
+
+    expect(getNode(d, id!)!.type).toBe("string")
+  })
+
   it("getEffectiveDocNode unwraps an anyOf-nullable node", () => {
     const d = doc({
       type: "object",

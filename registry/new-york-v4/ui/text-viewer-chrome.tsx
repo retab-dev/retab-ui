@@ -83,7 +83,10 @@ export function TextViewerFallback({
           trailing={<TextViewerZoomControls disabled fontScale={1} />}
         />
       ) : null}
-      <div className="space-y-2 p-4">
+      <div
+        className="min-h-0 flex-1 space-y-2 overflow-hidden p-4"
+        data-slot="text-body-skeleton"
+      >
         {Array.from({ length: 12 }, (_, index) => (
           <Skeleton
             key={index}

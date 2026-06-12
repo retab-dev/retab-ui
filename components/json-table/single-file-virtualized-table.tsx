@@ -10,6 +10,10 @@ import {
 } from "@/components/ui/fixed-grid-layout"
 import { useFixedRowVirtualization } from "@/components/ui/fixed-grid-virtualization"
 import { FixedGridViewport } from "@/components/ui/fixed-grid-viewport"
+import type {
+  JsonTableJsonEditMode,
+  JsonTableSchemaEditMode,
+} from "@/components/json-table/json-table-edit-modes"
 import type { VisibleColumn } from "@/components/json-table/json-table-cell-types"
 import { JsonTableHeaderCell } from "@/components/json-table/header-cell"
 import type { ProjectedRow } from "@/components/json-table/lib/document-projection"
@@ -22,7 +26,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui-retab/table"
+} from "@/components/ui/table"
 
 import { SingleFileFormRow } from "./single-file-form-row"
 import {
@@ -42,18 +46,19 @@ interface SingleFileVirtualizedTableProps {
   setStopAt: (stopAt: string[]) => void
   draggedItemKeyRef: React.RefObject<string | null>
   draggedItemParentPathRef: React.RefObject<string | null>
-  editMode: "descriptionOnly" | "editable" | "readOnly"
+  jsonEditMode: JsonTableJsonEditMode
+  schemaEditMode: JsonTableSchemaEditMode
   projectedRows: ProjectedRow[]
   visibleColumns: VisibleColumn[]
   rowCount: number
   onUpdateDocument?: (patch: Record<string, unknown>) => Promise<void>
   columnWidth?: ColumnWidth
-  allowEditing?: boolean
   onCellHoverStart?: (info: {
     docId: string
     fieldPath: string
     rect: DOMRect
   }) => void
+  onCellHoverEnd?: () => void
   /** Rows to render beyond the viewport on each side (virtualization buffer). Default 12. */
   overscan?: number
 }
@@ -69,7 +74,7 @@ const SingleFileTableHeader = React.memo(
     setStopAt,
     draggedItemKeyRef,
     draggedItemParentPathRef,
-    editMode,
+    schemaEditMode,
   }: {
     headerNodes: JsonTableHeaderNode[]
     columnWidth: ColumnWidth
@@ -80,7 +85,7 @@ const SingleFileTableHeader = React.memo(
     setStopAt: (stopAt: string[]) => void
     draggedItemKeyRef: React.RefObject<string | null>
     draggedItemParentPathRef: React.RefObject<string | null>
-    editMode: "descriptionOnly" | "editable" | "readOnly"
+    schemaEditMode: JsonTableSchemaEditMode
   }) => {
     // Header rows derived straight from the schema header tree: each group spans
     // its leaves; shallower leaves get continuation cells so the grid stays
@@ -131,7 +136,7 @@ const SingleFileTableHeader = React.memo(
                     isPublished={isPublished}
                     draggedItemKeyRef={draggedItemKeyRef}
                     draggedItemParentPathRef={draggedItemParentPathRef}
-                    editMode={editMode}
+                    schemaEditMode={schemaEditMode}
                   />
                 </TableHead>
               )
@@ -156,14 +161,15 @@ export const SingleFileVirtualizedTable =
       setStopAt,
       draggedItemKeyRef,
       draggedItemParentPathRef,
-      editMode,
+      jsonEditMode,
+      schemaEditMode,
       projectedRows,
       visibleColumns,
       rowCount,
       onUpdateDocument,
       columnWidth: propColumnWidth,
-      allowEditing = true,
       onCellHoverStart,
+      onCellHoverEnd,
       overscan = 12,
     }) => {
       const { rowHeight, columnWidth: storeColumnWidth } =
@@ -188,6 +194,7 @@ export const SingleFileVirtualizedTable =
         rowOverscan: overscan,
         scrollRef,
       })
+      const isJsonEditable = jsonEditMode === "editable"
 
       return (
         <div className="relative flex min-h-0 min-w-0 flex-1 flex-col bg-background">
@@ -215,7 +222,7 @@ export const SingleFileVirtualizedTable =
                 setStopAt={setStopAt}
                 draggedItemKeyRef={draggedItemKeyRef}
                 draggedItemParentPathRef={draggedItemParentPathRef}
-                editMode={editMode}
+                schemaEditMode={schemaEditMode}
               />
             </Table>
           </div>
@@ -246,7 +253,7 @@ export const SingleFileVirtualizedTable =
                   // visible row shells to avoid replacement spikes while
                   // scrolling through large tables.
                   const rowIdx = virtualRow.index
-                  const rowKey = allowEditing
+                  const rowKey = isJsonEditable
                     ? `row-${rowIdx}`
                     : `slot-${slotIndex}`
                   return (
@@ -262,8 +269,9 @@ export const SingleFileVirtualizedTable =
                       openEditorPath={openEditorPath}
                       setOpenEditorPath={setOpenEditorPath}
                       onUpdateDocument={onUpdateDocument}
-                      allowEditing={allowEditing}
+                      isJsonEditable={isJsonEditable}
                       onCellHoverStart={onCellHoverStart}
+                      onCellHoverEnd={onCellHoverEnd}
                     />
                   )
                 })}

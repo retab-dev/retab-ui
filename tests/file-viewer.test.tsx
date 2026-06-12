@@ -19,13 +19,13 @@ import {
   resolveFileDescriptor,
 } from "@/registry/new-york-v4/ui/file-viewer-core"
 import { createMarkdownHtmlCache } from "@/registry/new-york-v4/ui/file-viewer-markdown-viewer"
+import { toFileViewerTextError } from "@/registry/new-york-v4/ui/file-viewer-text-errors"
 import {
   createTextLoader,
   isSameTextView,
   textKeyForContent,
 } from "@/registry/new-york-v4/ui/file-viewer-text-loader"
 import { createTextResourceCache } from "@/registry/new-york-v4/ui/file-viewer-text-resource"
-import { toFileViewerTextError } from "@/registry/new-york-v4/ui/file-viewer-text-errors"
 import { isAbortError } from "@/registry/new-york-v4/ui/viewer-abortable-request"
 
 const docxRouteMock = vi.hoisted(() => ({

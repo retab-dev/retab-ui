@@ -4,7 +4,7 @@ import { CloudUpload, Copy, Download } from "lucide-react"
 import { toast } from "sonner"
 
 import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
-import { DropdownMenuItem } from "@/components/ui-retab/dropdown-menu"
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
 
 export function ImportExportMenuItems({
   node,

@@ -1,19 +1,19 @@
 import * as React from "react"
 import { useState } from "react"
 
-import { cn } from "@/lib/utils"
 import { CellEditor } from "@/components/json-table/cell-editors/cell-editor"
 import {
   getCellWidthStyle,
   getSelectableCellWidthStyle,
 } from "@/components/json-table/cell-style"
 import type { JsonTableCellProps } from "@/components/json-table/json-table-cell-types"
+import { JsonTableDataCell } from "@/components/json-table/json-table-data-cell"
 import { getFieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
 import { formatValueForCommit } from "@/components/json-table/lib/value-normalization"
 import { cmp, useRefCallback } from "@/components/json-table/path-utils"
 import { useCellController } from "@/components/json-table/use-cell-controller"
 import { useElevatedVirtualRow } from "@/components/json-table/use-elevated-virtual-row"
-import { TableCell } from "@/components/ui-retab/table"
+import { TableCell } from "@/components/ui/table"
 
 function editableCellMemoVariables(props: JsonTableCellProps) {
   const { document, ...rest } = props
@@ -51,7 +51,7 @@ function EditableJsonTableCellContent(props: JsonTableCellProps) {
       docId,
       materializedFieldPath,
       value,
-      isEditable: props.allowEditing,
+      isEditable: props.isJsonEditable,
       onDocumentDataChange,
     })
   const [draftTextValue, setDraftTextValue] = useState<string>(
@@ -66,7 +66,7 @@ function EditableJsonTableCellContent(props: JsonTableCellProps) {
     (materializedFieldPath
       ? getFieldMetadata(schema, materializedFieldPath)
       : undefined)
-  const isEditable = props.allowEditing ?? false
+  const isEditable = props.isJsonEditable
   const showInput = (isPointerOver || isInputFocused || isSelectOpen) && isEditable
 
   const onCommit = useRefCallback((newValue: unknown) => {
@@ -84,9 +84,16 @@ function EditableJsonTableCellContent(props: JsonTableCellProps) {
     return (
       <TableCell
         data-field-path={materializedFieldPath}
-        className="relative cursor-not-allowed bg-muted/60"
+        className="relative cursor-not-allowed bg-muted/60 p-0"
         style={getCellWidthStyle(cellWidth)}
-      />
+      >
+        <JsonTableDataCell
+          kind="text"
+          value={null}
+          placeholder=""
+          className="bg-transparent"
+        />
+      </TableCell>
     )
   }
 
@@ -107,10 +114,7 @@ function EditableJsonTableCellContent(props: JsonTableCellProps) {
     >
       <div
         ref={cellRootRef}
-        className={cn(
-          "h-full w-full focus-within:overflow-visible",
-          isPointerOver && "border border-primary"
-        )}
+        className="h-full w-full border border-transparent hover:border-foreground focus-within:overflow-visible"
       >
         <CellEditor
           identity={{ docId, fieldPath: materializedFieldPath }}

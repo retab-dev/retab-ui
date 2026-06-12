@@ -305,7 +305,9 @@ describe("text-viewer-resource", () => {
   })
 
   it("preserves structurally equivalent resource too-large errors at the load boundary", async () => {
-    const resource = createViewerResource(urlSource("/structural-too-large.txt"))
+    const resource = createViewerResource(
+      urlSource("/structural-too-large.txt")
+    )
     const content = {
       ...resource.content,
       readText: vi.fn(() =>
@@ -761,6 +763,48 @@ describe("text-viewer-resource", () => {
     } satisfies Partial<ResourceError>)
   })
 
+  it("rejects partial-content URL responses for full byte reads", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve(
+          response("part", {
+            status: 206,
+            headers: { "content-range": "bytes 0-3/100" },
+          })
+        )
+      )
+    )
+
+    await expect(
+      textResource("/partial-bytes.txt").content.readBytes()
+    ).rejects.toMatchObject({
+      kind: "partial_content",
+      status: 206,
+    } satisfies Partial<ResourceError>)
+  })
+
+  it("rejects partial-content URL responses for full stream reads", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve(
+          response("part", {
+            status: 206,
+            headers: { "content-range": "bytes 0-3/100" },
+          })
+        )
+      )
+    )
+
+    await expect(
+      textResource("/partial-stream.txt").content.readStream()
+    ).rejects.toMatchObject({
+      kind: "partial_content",
+      status: 206,
+    } satisfies Partial<ResourceError>)
+  })
+
   it("does not refetch a rejected URL resource until retry version changes", async () => {
     const fetchMock = vi.fn(() =>
       Promise.resolve(response("", { status: 500 }))
@@ -842,6 +886,49 @@ describe("text-viewer-resource", () => {
     ).resolves.toBe("same-size-b")
   })
 
+  it("normalizes abort errors thrown while reading a URL byte range body", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve({
+          ok: true,
+          status: 206,
+          headers: new Headers({ "content-range": "bytes 0-1/10" }),
+          arrayBuffer: () =>
+            Promise.reject(new DOMException("Aborted", "AbortError")),
+        } as Response)
+      )
+    )
+
+    await expect(
+      textResource("/range-body-aborted.txt").content.readRange({
+        start: 0,
+        end: 1,
+      })
+    ).rejects.toMatchObject({
+      kind: "aborted",
+    } satisfies Partial<ResourceError>)
+  })
+
+  it("normalizes abort errors thrown while reading a URL blob body", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve({
+          ok: true,
+          status: 200,
+          blob: () => Promise.reject(new DOMException("Aborted", "AbortError")),
+        } as Response)
+      )
+    )
+
+    await expect(
+      textResource("/blob-body-aborted.txt").content.readBlob()
+    ).rejects.toMatchObject({
+      kind: "aborted",
+    } satisfies Partial<ResourceError>)
+  })
+
   it("marks URL byte ranges complete when a 206 response reaches EOF", async () => {
     const fetchMock = vi.fn(() =>
       Promise.resolve(
@@ -902,7 +989,10 @@ describe("text-viewer-resource", () => {
     )
 
     await expect(
-      textResource("/range-unknown-total.txt").content.readRange({ start: 0, end: 9 })
+      textResource("/range-unknown-total.txt").content.readRange({
+        start: 0,
+        end: 9,
+      })
     ).resolves.toMatchObject({
       contentRange: { start: 0, end: 1, total: null },
       isComplete: false,
@@ -923,7 +1013,10 @@ describe("text-viewer-resource", () => {
     )
 
     await expect(
-      textResource("/range-mismatch.txt").content.readRange({ start: 2, end: 4 })
+      textResource("/range-mismatch.txt").content.readRange({
+        start: 2,
+        end: 4,
+      })
     ).rejects.toMatchObject({
       kind: "invalid_range",
     } satisfies Partial<ResourceError>)
@@ -943,7 +1036,10 @@ describe("text-viewer-resource", () => {
     )
 
     await expect(
-      textResource("/range-length-mismatch.txt").content.readRange({ start: 0, end: 2 })
+      textResource("/range-length-mismatch.txt").content.readRange({
+        start: 0,
+        end: 2,
+      })
     ).rejects.toMatchObject({
       kind: "invalid_range",
     } satisfies Partial<ResourceError>)
@@ -1005,6 +1101,29 @@ describe("text-viewer-resource", () => {
       textResource("/range-junk-content-range.txt").content.readRange({
         start: 0,
         end: 2,
+      })
+    ).rejects.toMatchObject({
+      kind: "invalid_range",
+    } satisfies Partial<ResourceError>)
+  })
+
+  it("rejects partial URL byte ranges with unsafe Content-Range numbers", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve(
+          response("ab", {
+            status: 206,
+            headers: { "content-range": "bytes 0-1/9007199254740993" },
+          })
+        )
+      )
+    )
+
+    await expect(
+      textResource("/range-unsafe-content-range.txt").content.readRange({
+        start: 0,
+        end: 1,
       })
     ).rejects.toMatchObject({
       kind: "invalid_range",
@@ -1089,7 +1208,10 @@ describe("text-viewer-resource", () => {
 
   it("rejects invalid local byte ranges", async () => {
     await expect(
-      createViewerResource(textSource("abc")).content.readRange({ start: 2.5, end: 3 })
+      createViewerResource(textSource("abc")).content.readRange({
+        start: 2.5,
+        end: 3,
+      })
     ).rejects.toMatchObject({
       kind: "invalid_range",
     } satisfies Partial<ResourceError>)
@@ -1105,7 +1227,10 @@ describe("text-viewer-resource", () => {
 
   it("rejects local byte ranges that start past the available payload", async () => {
     await expect(
-      createViewerResource(textSource("abc")).content.readRange({ start: 3, end: 4 })
+      createViewerResource(textSource("abc")).content.readRange({
+        start: 3,
+        end: 4,
+      })
     ).rejects.toMatchObject({
       kind: "invalid_range",
     } satisfies Partial<ResourceError>)
@@ -1120,7 +1245,9 @@ describe("text-viewer-resource", () => {
   })
 
   it("returns a complete truncated range when a local byte range overreaches", async () => {
-    const result = await createViewerResource(textSource("abc")).content.readRange({
+    const result = await createViewerResource(
+      textSource("abc")
+    ).content.readRange({
       start: 1,
       end: 99,
     })
@@ -1132,7 +1259,10 @@ describe("text-viewer-resource", () => {
 
   it("returns a coherent empty range for empty local payloads", async () => {
     await expect(
-      createViewerResource(textSource("")).content.readRange({ start: 0, end: 0 })
+      createViewerResource(textSource("")).content.readRange({
+        start: 0,
+        end: 0,
+      })
     ).resolves.toMatchObject({
       contentRange: { start: 0, end: -1, total: 0 },
       isComplete: true,
@@ -1149,7 +1279,9 @@ describe("text-viewer-resource", () => {
   })
 
   it("reads text byte ranges over encoded UTF-8 bytes", async () => {
-    const result = await createViewerResource(textSource("éx")).content.readRange({
+    const result = await createViewerResource(
+      textSource("éx")
+    ).content.readRange({
       start: 0,
       end: 1,
     })

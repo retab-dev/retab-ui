@@ -54,6 +54,8 @@ export interface PptxViewerProps {
   scale?: number
   /** Initial uncontrolled scale. When omitted, uncontrolled mode starts fit-width. */
   defaultScale?: number
+  /** Intrinsic slide size used to reserve the first slide while metadata loads. */
+  fallbackSlideSize?: { width: number; height: number }
   /** Called by zoom controls. `null` means return to fit-width mode. */
   onScaleChange?: (scale: number | null) => void
   toolbar?: boolean
@@ -105,6 +107,7 @@ export function PptxResourceViewer(props: PptxResourceViewerProps) {
       <PptxViewerFallback
         className={props.className}
         bare={props.bare}
+        fallbackSlideSize={props.fallbackSlideSize}
         toolbar={props.toolbar}
       />
     )
@@ -129,6 +132,7 @@ export function PptxResourceViewer(props: PptxResourceViewerProps) {
           <PptxViewerFallback
             className={props.className}
             bare={props.bare}
+            fallbackSlideSize={props.fallbackSlideSize}
             toolbar={props.toolbar}
           />
         }

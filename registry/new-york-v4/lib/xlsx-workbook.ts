@@ -148,6 +148,15 @@ export function getCompactSheetCell(
 
   const start = sheet.textOffsets[sparseIndex]
   const end = sheet.textOffsets[sparseIndex + 1]
+  if (
+    !Number.isSafeInteger(start) ||
+    !Number.isSafeInteger(end) ||
+    start < 0 ||
+    end < start ||
+    end > sheet.text.length
+  ) {
+    return EMPTY_XLSX_CELL
+  }
   if (start === end) return EMPTY_XLSX_CELL
 
   return {
@@ -193,22 +202,31 @@ export function createCompactSheet(input: {
         entry.cellIndex < cellCapacity
     )
     .sort((a, b) => a.cellIndex - b.cellIndex)
+  const deduped: typeof sorted = []
+  for (const entry of sorted) {
+    const previous = deduped[deduped.length - 1]
+    if (previous?.cellIndex === entry.cellIndex) {
+      deduped[deduped.length - 1] = entry
+    } else {
+      deduped.push(entry)
+    }
+  }
 
-  const cellIndexes = new Uint32Array(sorted.length)
-  const textOffsets = new Uint32Array(sorted.length + 1)
-  const numericFlags = new Uint8Array(sorted.length)
+  const cellIndexes = new Uint32Array(deduped.length)
+  const textOffsets = new Uint32Array(deduped.length + 1)
+  const numericFlags = new Uint8Array(deduped.length)
   const parts: string[] = []
   let pos = 0
 
-  for (let i = 0; i < sorted.length; i++) {
-    const entry = sorted[i]
+  for (let i = 0; i < deduped.length; i++) {
+    const entry = deduped[i]
     cellIndexes[i] = entry.cellIndex
     textOffsets[i] = pos
     parts.push(entry.text)
     pos += entry.text.length
     if (entry.numeric) numericFlags[i] = 1
   }
-  textOffsets[sorted.length] = pos
+  textOffsets[deduped.length] = pos
 
   return {
     name: input.name,

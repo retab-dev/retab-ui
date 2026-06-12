@@ -146,6 +146,33 @@ describe("docx-viewer-resource", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
+  it("clears retained document bytes through a matching content identity", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(response(Uint8Array.of(), { status: 500 }))
+      .mockResolvedValueOnce(response(Uint8Array.of(3, 4, 5), { status: 200 }))
+    vi.stubGlobal("fetch", fetchMock)
+
+    const first = docxUrlResource("/shared-clear.docx", "first.docx")
+    const second = docxUrlResource("/shared-clear.docx", "second.docx")
+
+    expect(first.content).toBe(second.content)
+
+    await expect(
+      getDocxResource(first.content, { retainRejected: true })
+    ).rejects.toMatchObject({
+      kind: "http_error",
+      status: 500,
+    })
+
+    clearDocxResource(second.content)
+
+    await expect(
+      getDocxResource(second.content, { retainRejected: true })
+    ).resolves.toHaveProperty("byteLength", 3)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
   it("loads Blob sources through the resource without fetch", async () => {
     const fetchMock = vi.fn()
     vi.stubGlobal("fetch", fetchMock)

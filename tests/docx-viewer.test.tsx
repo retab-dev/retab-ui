@@ -9,6 +9,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react"
+import { renderToStaticMarkup } from "react-dom/server"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
@@ -91,6 +92,14 @@ function deferred<T>(): Deferred<T> {
 
 function response(bytes: Uint8Array, init: ResponseInit = {}) {
   return new Response(new Uint8Array(bytes), init)
+}
+
+function arrayBufferRejectingResponse(error: unknown): Response {
+  return {
+    ok: true,
+    status: 200,
+    arrayBuffer: vi.fn().mockRejectedValue(error),
+  } as unknown as Response
 }
 
 function docxUrlSource(url: string, fileName = "document.docx") {
@@ -490,6 +499,41 @@ function restoreWindowGlobal(key: string, value: unknown) {
 }
 
 describe("DocxViewer", () => {
+  it("renders server fallback markup without loading document bytes", () => {
+    const html = renderToStaticMarkup(
+      <DocxViewer
+        source={docxUrlSource("/server.docx")}
+        header={<div>Server header</div>}
+        aside={<div>Server aside</div>}
+      />
+    )
+
+    expect(html).toContain('data-slot="docx-viewer"')
+    expect(html).toContain('data-slot="docx-viewer-header"')
+    expect(html).toContain("Server header")
+    expect(html).toContain('data-slot="docx-viewer-aside"')
+    expect(html).toContain("Server aside")
+    expect(html).toContain('data-slot="docx-page-skeleton"')
+    expect(html).toContain("<button")
+    expect(fetch).not.toHaveBeenCalled()
+    expect(docxMock.renderAsync).not.toHaveBeenCalled()
+  })
+
+  it("does not render toolbar fallback chrome in toolbar-free server markup", () => {
+    const html = renderToStaticMarkup(
+      <DocxViewer
+        source={docxUrlSource("/server-toolbarless.docx")}
+        toolbar={false}
+      />
+    )
+
+    expect(html).toContain('data-slot="docx-viewer"')
+    expect(html).toContain('data-slot="docx-page-skeleton"')
+    expect(html).not.toContain("<button")
+    expect(fetch).not.toHaveBeenCalled()
+    expect(docxMock.renderAsync).not.toHaveBeenCalled()
+  })
+
   it("loads document bytes, renders with docx-preview, and tags rendered pages", async () => {
     await renderDocx(<DocxViewer source={docxUrlSource("/report.docx")} />)
 
@@ -847,6 +891,62 @@ describe("DocxViewer", () => {
     await waitForRenderedDocx()
     expect(screen.getByText("100%")).toBeTruthy()
     expect(screen.getByText("Target cell")).toBeTruthy()
+  })
+
+  it("renders with the initial container width when ResizeObserver construction throws", async () => {
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        constructor() {
+          throw new Error("resize observer unavailable")
+        }
+      }
+    )
+    const clientWidth = vi
+      .spyOn(HTMLElement.prototype, "clientWidth", "get")
+      .mockReturnValue(848)
+
+    await renderDocx(
+      <DocxViewer source={docxUrlSource("/throwing-resize-observer.docx")} />
+    )
+
+    await waitForRenderedDocx()
+    expect(screen.getByText("100%")).toBeTruthy()
+    expect(screen.getByText("Target cell")).toBeTruthy()
+    clientWidth.mockRestore()
+  })
+
+  it("renders with the initial container width when ResizeObserver observe throws", async () => {
+    class ObserveThrowingResizeObserver {
+      static instances: ObserveThrowingResizeObserver[] = []
+
+      disconnect = vi.fn()
+      observe = vi.fn(() => {
+        throw new Error("resize observer observe failed")
+      })
+
+      constructor() {
+        ObserveThrowingResizeObserver.instances.push(this)
+      }
+    }
+    vi.stubGlobal("ResizeObserver", ObserveThrowingResizeObserver)
+    const clientWidth = vi
+      .spyOn(HTMLElement.prototype, "clientWidth", "get")
+      .mockReturnValue(848)
+
+    await renderDocx(
+      <DocxViewer source={docxUrlSource("/throwing-resize-observe.docx")} />
+    )
+
+    await waitForRenderedDocx()
+    expect(screen.getByText("100%")).toBeTruthy()
+    expect(screen.getByText("Target cell")).toBeTruthy()
+    expect(
+      ObserveThrowingResizeObserver.instances.some(
+        (observer) => observer.disconnect.mock.calls.length > 0
+      )
+    ).toBe(true)
+    clientWidth.mockRestore()
   })
 
   it("recomputes fit-width zoom when the container is resized", async () => {
@@ -1643,6 +1743,36 @@ describe("DocxViewer", () => {
     expect(screen.getByText("Target cell")).toBeTruthy()
   })
 
+  it("renders safely when the CSS Highlight API throws", async () => {
+    const highlights = new Map<string, MockHighlight>()
+    installHighlightApi(highlights)
+    class ThrowingHighlight {
+      constructor() {
+        throw new Error("highlight construction failed")
+      }
+    }
+    Object.defineProperty(globalThis, "Highlight", {
+      configurable: true,
+      value: ThrowingHighlight,
+    })
+    Object.defineProperty(window, "Highlight", {
+      configurable: true,
+      value: ThrowingHighlight,
+    })
+
+    await renderDocx(
+      <DocxViewer
+        source={docxUrlSource("/throwing-highlight.docx")}
+        highlight={{ kind: "text", text: "Target cell" }}
+      />
+    )
+
+    await waitForRenderedDocx()
+    expect(screen.getByText("Target cell")).toBeTruthy()
+    expect(screen.queryByRole("alert")).toBeNull()
+    expect(highlights.size).toBe(0)
+  })
+
   it("highlights table cell targets by table row and column index", async () => {
     const highlights = new Map<string, MockHighlight>()
     installHighlightApi(highlights)
@@ -2251,10 +2381,69 @@ describe("DocxViewer", () => {
     expect(screen.queryByRole("button", { name: "Retry" })).toBeNull()
   })
 
+  it("does not offer retry when URL response body reading is aborted", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined)
+    vi.mocked(fetch).mockResolvedValueOnce(
+      arrayBufferRejectingResponse(new DOMException("aborted", "AbortError"))
+    )
+
+    await renderDocx(
+      <DocxViewer source={docxUrlSource("/aborted-body.docx")} />
+    )
+
+    expect(await screen.findByText("Loading was cancelled.")).toBeTruthy()
+    expect(screen.getByRole("alert").getAttribute("data-error-kind")).toBe(
+      "aborted"
+    )
+    expect(screen.queryByRole("button", { name: "Retry" })).toBeNull()
+  })
+
+  it("retries URL response body read failures", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined)
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(
+        arrayBufferRejectingResponse(new Error("body read failed"))
+      )
+      .mockResolvedValueOnce(response(Uint8Array.of(4, 5, 6), { status: 200 }))
+
+    await renderDocx(
+      <DocxViewer source={docxUrlSource("/retry-body-read.docx")} />
+    )
+
+    expect(await screen.findByText("Couldn't load this file.")).toBeTruthy()
+    expect(screen.getByRole("alert").getAttribute("data-error-kind")).toBe(
+      "fetch_failed"
+    )
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Retry" }))
+    })
+
+    expect(await screen.findByText("Page 1 of 2")).toBeTruthy()
+    expect(fetch).toHaveBeenCalledTimes(2)
+  })
+
   it("does not offer retry for aborted Blob loads", async () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined)
 
     await renderDocx(<DocxViewer source={abortingBlobSource()} />)
+
+    expect(await screen.findByText("Loading was cancelled.")).toBeTruthy()
+    expect(screen.getByRole("alert").getAttribute("data-error-kind")).toBe(
+      "aborted"
+    )
+    expect(screen.queryByRole("button", { name: "Retry" })).toBeNull()
+  })
+
+  it("does not offer retry when docx-preview aborts rendering", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined)
+    docxMock.renderAsync.mockRejectedValueOnce(
+      new DOMException("aborted", "AbortError")
+    )
+
+    await renderDocx(
+      <DocxViewer source={docxUrlSource("/aborted-render.docx")} />
+    )
 
     expect(await screen.findByText("Loading was cancelled.")).toBeTruthy()
     expect(screen.getByRole("alert").getAttribute("data-error-kind")).toBe(

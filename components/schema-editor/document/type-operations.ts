@@ -119,6 +119,10 @@ export function normalizeNodeForType(
           {
             id: createId("prop"),
             key: "",
+            // Starter row the user has yet to name: mark it transient so the
+            // empty key is dropped at the projection boundary (matching
+            // `addProperty`) instead of leaking as a property named "".
+            isTransient: true,
             required: false,
             node: createNode("string"),
           },

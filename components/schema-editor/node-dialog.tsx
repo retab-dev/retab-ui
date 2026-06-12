@@ -13,7 +13,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui-retab/dialog"
+} from "@/components/ui/dialog"
 
 interface NodeDialogProps {
   isOpen: boolean

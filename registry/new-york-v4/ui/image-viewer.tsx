@@ -55,7 +55,15 @@ export const ImageResourceViewer = React.forwardRef<
   const isClient = useIsClient()
   const resource = props.resource
   if (!isClient) {
-    return <ImageViewerFallback className={props.className} bare={props.bare} />
+    return (
+      <ImageViewerFallback
+        bare={props.bare}
+        className={props.className}
+        fallbackFrameSize={props.fallbackFrameSize}
+        scale={props.scale}
+        toolbar={props.toolbar}
+      />
+    )
   }
   return (
     <ViewerErrorBoundary
@@ -67,7 +75,13 @@ export const ImageResourceViewer = React.forwardRef<
     >
       <React.Suspense
         fallback={
-          <ImageViewerFallback className={props.className} bare={props.bare} />
+          <ImageViewerFallback
+            bare={props.bare}
+            className={props.className}
+            fallbackFrameSize={props.fallbackFrameSize}
+            scale={props.scale}
+            toolbar={props.toolbar}
+          />
         }
       >
         <ImageViewerContent {...props} forwardedRef={ref} resource={resource} />

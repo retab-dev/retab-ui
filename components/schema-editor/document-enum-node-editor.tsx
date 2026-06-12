@@ -14,8 +14,8 @@ import {
   updateEnumValueAtIndex,
 } from "@/components/schema-editor/document/enum-operations"
 import type { EnumValue } from "@/components/schema-editor/document/types"
-import { Button } from "@/components/ui-retab/button"
-import { Input } from "@/components/ui-retab/input"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 
 interface DocumentEnumNodeEditorProps {
   dispatch: DocumentSchemaNodeEditorProps["dispatch"]

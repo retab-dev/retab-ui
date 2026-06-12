@@ -11,33 +11,34 @@ import {
 } from "lucide-react"
 
 const headerLabelClass =
-  "flex min-w-0 flex-row items-center gap-2 overflow-hidden truncate text-xs leading-none"
+  "flex min-w-0 max-w-full flex-row items-center gap-2 overflow-hidden text-xs leading-none"
+const headerIconClass = "size-3 shrink-0"
 
 function renderHeaderIcon(type: string) {
   switch (type) {
     case "string":
-      return <Type className="size-3" />
+      return <Type className={headerIconClass} />
     case "boolean":
-      return <CheckSquare className="size-3" />
+      return <CheckSquare className={headerIconClass} />
     case "number":
     case "integer":
-      return <Hash className="size-3" />
+      return <Hash className={headerIconClass} />
     case "object":
-      return <Box className="size-3" />
+      return <Box className={headerIconClass} />
     case "array":
-      return <Table className="size-3" />
+      return <Table className={headerIconClass} />
     case "date":
-      return <Calendar className="size-3" />
+      return <Calendar className={headerIconClass} />
     case "time":
-      return <Clock className="size-3" />
+      return <Clock className={headerIconClass} />
     case "datetime":
-      return <CalendarClock className="size-3" />
+      return <CalendarClock className={headerIconClass} />
     case "enum":
-      return <List className="size-3" />
+      return <List className={headerIconClass} />
     case "$ref":
-      return <Box className="size-3" />
+      return <Box className={headerIconClass} />
     default:
-      return <Type className="size-3" />
+      return <Type className={headerIconClass} />
   }
 }
 
@@ -59,7 +60,7 @@ export function HeaderLabel({
       }}
     >
       {renderHeaderIcon(effectiveType)}
-      {label}
+      <span className="min-w-0 truncate">{label}</span>
     </div>
   )
 }

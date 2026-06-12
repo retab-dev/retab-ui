@@ -8,6 +8,7 @@ import { createViewerResource } from "@/lib/viewer-resource"
 import { Spinner } from "@/components/ui/spinner"
 
 import { getPdfCanvasPixelSize } from "./pdf-viewer-canvas"
+import { toPdfRenderFailedError } from "./pdf-viewer-render-error"
 import {
   clearDocumentResource,
   readDocumentResource,
@@ -188,24 +189,41 @@ function ThumbnailCanvas({
     return page.getViewport({ scale: width / base.width })
   }, [page, width])
   const dpr = (typeof window !== "undefined" ? window.devicePixelRatio : 1) || 1
+  const [renderError, setRenderError] = React.useState<unknown>(null)
+  if (renderError) throw renderError
 
   const canvasRef = React.useCallback(
     (canvas: HTMLCanvasElement | null) => {
       if (!canvas) return
       const context = canvas.getContext("2d")
-      if (!context) return
+      if (!context) {
+        setRenderError(
+          toPdfRenderFailedError(new Error("Canvas 2D context unavailable."))
+        )
+        return
+      }
       canvas.width = getPdfCanvasPixelSize(viewport.width, dpr)
       canvas.height = getPdfCanvasPixelSize(viewport.height, dpr)
-      const task = page.render({
-        canvas,
-        canvasContext: context,
-        viewport,
-        transform: dpr !== 1 ? [dpr, 0, 0, dpr, 0, 0] : undefined,
+      let task: ReturnType<typeof page.render>
+      try {
+        task = page.render({
+          canvas,
+          canvasContext: context,
+          viewport,
+          transform: dpr !== 1 ? [dpr, 0, 0, dpr, 0, 0] : undefined,
+        })
+      } catch (error) {
+        setRenderError(toPdfRenderFailedError(error))
+        return
+      }
+      let isActive = true
+      task.promise.catch((error) => {
+        if (isActive) setRenderError(toPdfRenderFailedError(error))
       })
-      task.promise.catch(() => {
-        /* cancelled or failed — ignore */
-      })
-      return () => task.cancel()
+      return () => {
+        isActive = false
+        task.cancel()
+      }
     },
     [page, viewport, dpr]
   )

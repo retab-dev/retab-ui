@@ -13,7 +13,7 @@ export function XlsxGridSkeleton() {
   const widths = [70, 45, 88, 56, 62, 78]
   return (
     <div
-      className="flex min-h-0 flex-1 flex-col overflow-hidden bg-card"
+      className="flex h-full max-h-full min-h-0 flex-1 flex-col overflow-hidden bg-card"
       data-slot="xlsx-grid"
       aria-hidden
     >

@@ -5,7 +5,7 @@ import {
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
-} from "@/components/ui-retab/dropdown-menu"
+} from "@/components/ui/dropdown-menu"
 import { Shapes } from "lucide-react"
 
 import { templateObjects } from "./template-objects"

@@ -1,0 +1,75 @@
+[
+  {
+    "id": "image",
+    "label": "Image Viewer",
+    "source": {
+      "url": "/samples/nvidia-10q-scan.tiff",
+      "fileName": "nvidia-10q-scan.tiff",
+      "mimeType": "image/tiff"
+    },
+    "pauseUrlIncludes": "nvidia-10q-scan.tiff",
+    "skeletonSelector": "[data-slot=\"image-frame-skeleton\"]",
+    "loadedSelector": "canvas",
+    "fallbackFrameSize": { "width": 1275, "height": 1650 }
+  },
+  {
+    "id": "pdf",
+    "label": "PDF Viewer",
+    "source": {
+      "url": "/samples/nvidia-10k-fy2024.pdf",
+      "fileName": "nvidia-10k-fy2024.pdf"
+    },
+    "pauseUrlIncludes": "nvidia-10k-fy2024.pdf",
+    "skeletonSelector": "[data-slot=\"pdf-page-skeleton\"]",
+    "loadedSelector": "[data-slot=\"pdf-page\"]"
+  },
+  {
+    "id": "docx",
+    "label": "DOCX Viewer",
+    "source": {
+      "url": "/samples/quarterly-business-review.docx",
+      "fileName": "quarterly-business-review.docx"
+    },
+    "pauseUrlIncludes": "quarterly-business-review.docx",
+    "skeletonSelector": "[data-slot=\"docx-page-skeleton\"]",
+    "loadedSelector": "[data-slot=\"docx-viewer\"] .docx-wrapper > section.docx"
+  },
+  {
+    "id": "pptx",
+    "label": "PPTX Viewer",
+    "source": {
+      "url": "/samples/sample-deck.pptx",
+      "fileName": "sample-deck.pptx"
+    },
+    "pauseUrlIncludes": "sample-deck.pptx",
+    "skeletonSelector": "[data-slot=\"pptx-slide-skeleton\"]",
+    "loadedSelector": "[data-slot=\"pptx-slide\"]",
+    "fallbackSlideSize": { "width": 960, "height": 540 }
+  },
+  {
+    "id": "xlsx",
+    "label": "XLSX Viewer",
+    "source": {
+      "url": "/samples/nvidia-financials-fy2024.xlsx",
+      "fileName": "nvidia-financials-fy2024.xlsx"
+    },
+    "pauseUrlIncludes": "nvidia-financials-fy2024.xlsx",
+    "skeletonSelector": "[data-slot=\"xlsx-grid\"]",
+    "loadedSelector": "[data-slot=\"xlsx-grid\"]",
+    "readySelector": "[role=\"grid\"]",
+    "fallbackSheetTabs": true,
+    "skeletonPersists": true
+  },
+  {
+    "id": "text",
+    "label": "Text Viewer",
+    "source": {
+      "url": "/samples/server.log",
+      "fileName": "server.log",
+      "mimeType": "text/plain"
+    },
+    "pauseUrlIncludes": "server.log",
+    "skeletonSelector": "[data-slot=\"text-body-skeleton\"]",
+    "loadedSelector": "[data-slot=\"scroll-area-viewport\"]"
+  }
+]

@@ -10,16 +10,19 @@ import { installJsonTableDom } from "./json-table-test-dom"
 
 let HeaderSchemaMenu: typeof HeaderSchemaMenuModule.HeaderSchemaMenu
 
-vi.mock("@/components/ui-retab/dialog", () => ({
+vi.mock("@/components/ui/dialog", () => ({
   Dialog: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   DialogContent: ({ children }: { children: ReactNode }) => (
     <div>{children}</div>
+  ),
+  DialogDescription: ({ children }: { children: ReactNode }) => (
+    <p>{children}</p>
   ),
   DialogTitle: ({ children }: { children: ReactNode }) => <h4>{children}</h4>,
   DialogTrigger: ({ children }: { children: ReactNode }) => <>{children}</>,
 }))
 
-vi.mock("@/components/ui-retab/popover", () => ({
+vi.mock("@/components/ui/popover", () => ({
   Popover: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   PopoverContent: ({ children }: { children: ReactNode }) => (
     <div>{children}</div>
@@ -28,7 +31,11 @@ vi.mock("@/components/ui-retab/popover", () => ({
 }))
 
 vi.mock("@/components/schema-editor/property-dialog", () => ({
-  PropertyEditor: () => <div>property editor</div>,
+  PropertyEditor: ({ onDelete }: { onDelete?: () => void }) => (
+    <button type="button" onClick={onDelete}>
+      Delete Property
+    </button>
+  ),
 }))
 
 beforeAll(async () => {
@@ -69,7 +76,7 @@ describe("json table header schema menu", () => {
         }}
         setSchema={setSchema}
         isPublished={false}
-        editMode="editable"
+        schemaEditMode="editable"
         open={true}
         onOpenChange={onOpenChange}
       >
@@ -77,7 +84,7 @@ describe("json table header schema menu", () => {
       </HeaderSchemaMenu>
     )
 
-    fireEvent.click(view.getAllByRole("button")[1])
+    fireEvent.click(view.getByRole("button", { name: "Delete Property" }))
 
     expect(Object.keys(setSchema.mock.calls[0][0].properties ?? {})).toEqual([
       "total",

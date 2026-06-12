@@ -80,6 +80,58 @@ describe("xlsx workbook helpers", () => {
     expect(getCompactSheetCell(sheet, 0, 0).text).toBe("")
   })
 
+  it("deduplicates compact entries by cell index", () => {
+    const sheet = createCompactSheet({
+      name: "Duplicates",
+      rowCount: 1,
+      columnCount: 1,
+      entries: [
+        { cellIndex: 0, text: "first" },
+        { cellIndex: 0, text: "last", numeric: true },
+      ],
+    })
+
+    expect(sheet.cellIndexes.length).toBe(1)
+    expect(getCompactSheetCell(sheet, 0, 0)).toEqual({
+      text: "last",
+      numeric: true,
+    })
+  })
+
+  it("treats malformed compact text offsets as empty cells", () => {
+    expect(
+      getCompactSheetCell(
+        {
+          name: "Malformed",
+          rowCount: 1,
+          columnCount: 1,
+          cellIndexes: new Uint32Array([0]),
+          textOffsets: new Uint32Array([0]),
+          numericFlags: new Uint8Array([0]),
+          text: "leaked",
+        },
+        0,
+        0
+      )
+    ).toEqual({ text: "", numeric: false })
+
+    expect(
+      getCompactSheetCell(
+        {
+          name: "Malformed",
+          rowCount: 1,
+          columnCount: 1,
+          cellIndexes: new Uint32Array([0]),
+          textOffsets: new Uint32Array([0, 99]),
+          numericFlags: new Uint8Array([0]),
+          text: "short",
+        },
+        0,
+        0
+      )
+    ).toEqual({ text: "", numeric: false })
+  })
+
   it("builds source metadata and clamps out-of-range reads to an empty cell", () => {
     const workbook = source("Data")
 

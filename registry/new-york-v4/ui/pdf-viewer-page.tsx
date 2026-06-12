@@ -2,6 +2,7 @@ import * as React from "react"
 import type { PDFDocumentProxy } from "pdfjs-dist"
 
 import { getPdfCanvasPixelSize } from "./pdf-viewer-canvas"
+import { toPdfRenderFailedError } from "./pdf-viewer-render-error"
 import { readPageResource } from "./pdf-viewer-resource"
 import type { PageOverlayProps, PdfPageSize } from "./pdf-viewer-types"
 
@@ -43,28 +44,45 @@ export function PdfPage({
   )
   const devicePixelRatio =
     (typeof window !== "undefined" ? window.devicePixelRatio : 1) || 1
+  const [renderError, setRenderError] = React.useState<unknown>(null)
+  if (renderError) throw renderError
 
   const canvasRef = React.useCallback(
     (canvas: HTMLCanvasElement | null) => {
       if (!canvas) return
       const context = canvas.getContext("2d")
-      if (!context) return
+      if (!context) {
+        setRenderError(
+          toPdfRenderFailedError(new Error("Canvas 2D context unavailable."))
+        )
+        return
+      }
 
       canvas.width = getPdfCanvasPixelSize(viewport.width, devicePixelRatio)
       canvas.height = getPdfCanvasPixelSize(viewport.height, devicePixelRatio)
-      const renderTask = page.render({
-        canvas,
-        canvasContext: context,
-        viewport,
-        transform:
-          devicePixelRatio !== 1
-            ? [devicePixelRatio, 0, 0, devicePixelRatio, 0, 0]
-            : undefined,
+      let renderTask: ReturnType<typeof page.render>
+      try {
+        renderTask = page.render({
+          canvas,
+          canvasContext: context,
+          viewport,
+          transform:
+            devicePixelRatio !== 1
+              ? [devicePixelRatio, 0, 0, devicePixelRatio, 0, 0]
+              : undefined,
+        })
+      } catch (error) {
+        setRenderError(toPdfRenderFailedError(error))
+        return
+      }
+      let isActive = true
+      renderTask.promise.catch((error) => {
+        if (isActive) setRenderError(toPdfRenderFailedError(error))
       })
-      renderTask.promise.catch(() => {
-        /* cancelled or failed render */
-      })
-      return () => renderTask.cancel()
+      return () => {
+        isActive = false
+        renderTask.cancel()
+      }
     },
     [devicePixelRatio, page, viewport]
   )

@@ -31,6 +31,8 @@ const SCHEMA_VALUE_KEYS = [
 ] as const;
 
 const SCHEMA_MAP_KEYS = [
+  "$defs",
+  "definitions",
   "dependentSchemas",
   "dependencies",
   "patternProperties",
@@ -96,12 +98,16 @@ export function countSchemaProperties(schema?: ExtendedJSONSchema7): number {
       : undefined;
   };
 
+  const countedSchemas = new Set<ExtendedJSONSchema7>();
+
   const countProperties = (
     node: ExtendedJSONSchema7,
     path: string = "",
     activeSchemas: Set<ExtendedJSONSchema7> = new Set(),
   ): number => {
     if (!node || typeof node !== "object") return 0;
+    if (countedSchemas.has(node)) return 0;
+    countedSchemas.add(node);
 
     let count = 0;
 

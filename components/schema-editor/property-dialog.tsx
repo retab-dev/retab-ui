@@ -54,6 +54,7 @@ export function PropertyEditor({
   schema,
   replaceSchema,
   editMode = "editable",
+  onDelete,
 }: {
   property: ExtendedJSONSchema7
   propertyKey: string
@@ -61,6 +62,7 @@ export function PropertyEditor({
   schema: JSONSchema7
   replaceSchema: (schema: JSONSchema7) => void
   editMode?: "descriptionOnly" | "readOnly" | "editable"
+  onDelete?: () => void
 }) {
   const initialName = propertyKey.split(".")?.pop() || propertyKey
   const initialProperty = property || defaultNewProperty
@@ -119,6 +121,7 @@ export function PropertyEditor({
         }}
         onCommitPropertyDraft={handleCommit}
         onCancel={() => setDropdownOpen(false)}
+        onDelete={onDelete}
         submitLabel="Save Changes"
         mode={editMode}
       />

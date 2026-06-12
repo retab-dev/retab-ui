@@ -35,6 +35,17 @@ async function* chunks(parts: string[]) {
   for (const part of parts) yield part
 }
 
+function byteStreamFromText(text: string, splitAt: number) {
+  const bytes = new TextEncoder().encode(text)
+  return new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(bytes.slice(0, splitAt))
+      controller.enqueue(bytes.slice(splitAt))
+      controller.close()
+    },
+  })
+}
+
 describe("createCsvParser (incremental, across chunk boundaries)", () => {
   function feed(chunks: string[]) {
     const parser = createCsvParser()
@@ -57,6 +68,20 @@ describe("createCsvParser (incremental, across chunk boundaries)", () => {
 
   it("handles an escaped quote split across chunks", () => {
     expect(feed(['"x""', 'y"'])).toEqual([['x"y']])
+  })
+
+  it("keeps quotes inside unquoted fields as literal characters", () => {
+    expect(feed(['ab"cd,ef\n', "1,2"])).toEqual([
+      ['ab"cd', "ef"],
+      ["1", "2"],
+    ])
+  })
+
+  it("does not let a mid-field quote consume delimiters or line breaks", () => {
+    expect(feed(['ab"cd,ef\nnext,row'])).toEqual([
+      ['ab"cd', "ef"],
+      ["next", "row"],
+    ])
   })
 
   it("strips only the leading UTF-8 BOM", () => {
@@ -140,6 +165,15 @@ describe("parseCsv", () => {
   it("handles escaped quotes", () => {
     const { rows } = parseCsv('h\n"she said ""hi"""')
     expect(rows).toEqual([['she said "hi"']])
+  })
+
+  it("keeps quotes inside unquoted cells literal", () => {
+    const { columns, rows } = parseCsv('note,other\nab"cd,ef\nnext,row')
+    expect(columns).toEqual(["note", "other"])
+    expect(rows).toEqual([
+      ['ab"cd', "ef"],
+      ["next", "row"],
+    ])
   })
 
   it("strips a leading UTF-8 BOM from the first header", () => {
@@ -247,5 +281,14 @@ describe("streamCsv", () => {
       columns: [],
       rows: [],
     })
+  })
+
+  it("preserves UTF-8 characters split across byte chunks", async () => {
+    const input = "name\ncaf\u00e9"
+    const splitAt = new TextEncoder().encode(input).length - 1
+
+    await expect(
+      collectStream(byteStreamFromText(input, splitAt))
+    ).resolves.toEqual(parseCsv(input))
   })
 })

@@ -1580,6 +1580,75 @@ describe("PdfViewer", () => {
     expect(canvas.style.height).toBe("0.25px")
   })
 
+  it("surfaces page render task failures through the viewer error state", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {})
+    const renderFailure = pdfjsMock.deferred<void>()
+    const page = makePage(100, 200)
+    page.render.mockImplementation(() => {
+      const task = {
+        promise: renderFailure.promise,
+        cancel: vi.fn(),
+      }
+      pdfjsMock.renderTasks.push(task)
+      return task
+    })
+    const doc = {
+      numPages: 1,
+      getPage: vi.fn(() => Promise.resolve(page)),
+      destroy: vi.fn(() => Promise.resolve()),
+    }
+    pdfjsMock.docs.set("/render-failed.pdf", doc)
+
+    await act(async () => {
+      render(<PdfViewer source={pdfUrlSource("/render-failed.pdf")} />)
+    })
+    await waitFor(() => expect(page.render).toHaveBeenCalled())
+
+    await act(async () => {
+      renderFailure.reject(new Error("render failed"))
+      await Promise.resolve()
+    })
+
+    const alert = await screen.findByRole("alert")
+    expect(alert.getAttribute("data-error-kind")).toBe("render_failed")
+  })
+
+  it("normalizes synchronous page render throws as render failures", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {})
+    const page = makePage(100, 200)
+    page.render.mockImplementationOnce(() => {
+      throw new Error("render threw")
+    })
+    const doc = {
+      numPages: 1,
+      getPage: vi.fn(() => Promise.resolve(page)),
+      destroy: vi.fn(() => Promise.resolve()),
+    }
+    pdfjsMock.docs.set("/render-throws.pdf", doc)
+
+    await act(async () => {
+      render(<PdfViewer source={pdfUrlSource("/render-throws.pdf")} />)
+    })
+
+    const alert = await screen.findByRole("alert")
+    expect(alert.getAttribute("data-error-kind")).toBe("render_failed")
+  })
+
+  it("surfaces a missing page canvas context as a render failure", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {})
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(
+      null as never
+    )
+    pdfjsMock.docs.set("/render-no-context.pdf", makeDoc([[100, 200]]))
+
+    await act(async () => {
+      render(<PdfViewer source={pdfUrlSource("/render-no-context.pdf")} />)
+    })
+
+    const alert = await screen.findByRole("alert")
+    expect(alert.getAttribute("data-error-kind")).toBe("render_failed")
+  })
+
   it("cancels stale page render tasks when scale changes and when unmounted", async () => {
     pdfjsMock.docs.set("/cancel-render.pdf", makeDoc([[100, 200]]))
 
@@ -2053,5 +2122,67 @@ describe("PdfViewer", () => {
     expect(canvas.height).toBe(1)
     expect(canvas.style.width).toBe("0.25px")
     expect(canvas.style.height).toBe("0.25px")
+  })
+
+  it("surfaces thumbnail render task failures through the sidebar error state", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {})
+    const page = makePage(100, 200)
+    page.render.mockImplementationOnce(() => {
+      const task = {
+        promise: Promise.reject(new Error("thumbnail render failed")),
+        cancel: vi.fn(),
+      }
+      pdfjsMock.renderTasks.push(task)
+      return task
+    })
+    const doc = {
+      numPages: 1,
+      getPage: vi.fn(() => Promise.resolve(page)),
+      destroy: vi.fn(() => Promise.resolve()),
+    }
+    pdfjsMock.docs.set("/thumbnail-render-failed.pdf", doc)
+
+    await act(async () => {
+      render(<PdfThumbnailSidebar src="/thumbnail-render-failed.pdf" />)
+    })
+
+    const alert = await screen.findByRole("alert")
+    expect(alert.getAttribute("data-error-kind")).toBe("render_failed")
+  })
+
+  it("normalizes synchronous thumbnail render throws as render failures", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {})
+    const page = makePage(100, 200)
+    page.render.mockImplementationOnce(() => {
+      throw new Error("thumbnail render threw")
+    })
+    const doc = {
+      numPages: 1,
+      getPage: vi.fn(() => Promise.resolve(page)),
+      destroy: vi.fn(() => Promise.resolve()),
+    }
+    pdfjsMock.docs.set("/thumbnail-render-throws.pdf", doc)
+
+    await act(async () => {
+      render(<PdfThumbnailSidebar src="/thumbnail-render-throws.pdf" />)
+    })
+
+    const alert = await screen.findByRole("alert")
+    expect(alert.getAttribute("data-error-kind")).toBe("render_failed")
+  })
+
+  it("surfaces a missing thumbnail canvas context as a render failure", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {})
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(
+      null as never
+    )
+    pdfjsMock.docs.set("/thumbnail-no-context.pdf", makeDoc([[100, 200]]))
+
+    await act(async () => {
+      render(<PdfThumbnailSidebar src="/thumbnail-no-context.pdf" />)
+    })
+
+    const alert = await screen.findByRole("alert")
+    expect(alert.getAttribute("data-error-kind")).toBe("render_failed")
   })
 })

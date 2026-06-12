@@ -8,7 +8,7 @@ import { NumberEditor } from "@/components/json-table/cell-editors/number-editor
 import { ObjectCellEditor } from "@/components/json-table/cell-editors/object-editor"
 import { TextEditor } from "@/components/json-table/cell-editors/text-editor"
 import { TimeEditor } from "@/components/json-table/cell-editors/time-editor"
-import { DataCell } from "@/components/ui/data-cell"
+import { JsonTableDataCell } from "@/components/json-table/json-table-data-cell"
 
 export function CellEditor(props: CellEditorProps) {
   switch (props.field.fieldMetadata.kind) {
@@ -33,7 +33,7 @@ export function CellEditor(props: CellEditorProps) {
       return <TextEditor {...props} />
     default:
       return (
-        <DataCell
+        <JsonTableDataCell
           kind="text"
           value={
             props.field.effectiveValue == null

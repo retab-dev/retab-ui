@@ -4,6 +4,10 @@ import React, { useMemo, useState } from "react"
 import type { JSONSchema7 } from "json-schema"
 
 import { buildFixedGridColumns } from "@/components/ui/fixed-grid-columns"
+import type {
+  JsonTableJsonEditMode,
+  JsonTableSchemaEditMode,
+} from "@/components/json-table/json-table-edit-modes"
 import { projectDocumentRows } from "@/components/json-table/lib/document-projection"
 import { flattenHeaderNodes } from "@/components/json-table/lib/header-nodes"
 import type { TableDocument } from "@/components/json-table/lib/projects-types"
@@ -16,19 +20,25 @@ import {
 } from "@/components/json-table/table-options-store"
 import type { ColumnWidth } from "@/components/json-table/table-options-store"
 
+export type {
+  JsonTableJsonEditMode,
+  JsonTableSchemaEditMode,
+} from "@/components/json-table/json-table-edit-modes"
+
 interface SingleFileTableViewProps {
   document: TableDocument
   schema: JSONSchema7
   setSchema?: (schema: JSONSchema7) => void // Optional setter to enable schema editing (descriptions)
   columnWidth?: ColumnWidth
   onUpdateDocument?: (patch: Record<string, unknown>) => Promise<void>
-  editMode?: "descriptionOnly" | "editable" | "readOnly"
-  allowEditing?: boolean // Controls whether cells can be edited
+  jsonEditMode: JsonTableJsonEditMode
+  schemaEditMode: JsonTableSchemaEditMode
   onCellHoverStart?: (info: {
     docId: string
     fieldPath: string
     rect: DOMRect
   }) => void
+  onCellHoverEnd?: () => void
   /** Rows to render beyond the viewport on each side (virtualization buffer). Default 30. */
   overscan?: number
 }
@@ -40,15 +50,17 @@ export const SingleFileTableView = React.memo<SingleFileTableViewProps>(
     setSchema,
     columnWidth: propColumnWidth,
     onUpdateDocument,
-    editMode = "editable",
-    allowEditing = true,
+    jsonEditMode,
+    schemaEditMode,
     onCellHoverStart,
+    onCellHoverEnd,
     overscan,
   }) => {
     const { columnWidth: storeColumnWidth } = useSheetOptionsStore()
     const columnWidth = propColumnWidth ?? storeColumnWidth
 
     const [stopAt, setStopAt] = useState<string[]>([])
+    const isJsonEditable = jsonEditMode === "editable"
 
     // Create refs for drag and drop across header cells.
     const draggedItemKeyRef = React.useRef<string | null>(null)
@@ -81,9 +93,9 @@ export const SingleFileTableView = React.memo<SingleFileTableViewProps>(
       return projectDocumentRows({
         document,
         visiblePaths: visibleKeys,
-        includeArrayAddRows: editMode !== "readOnly",
+        includeArrayAddRows: isJsonEditable,
       })
-    }, [document, visibleKeys, editMode])
+    }, [document, visibleKeys, isJsonEditable])
 
     const rowCount = Math.max(projectedRows.length, 1)
 
@@ -100,14 +112,15 @@ export const SingleFileTableView = React.memo<SingleFileTableViewProps>(
             setStopAt={setStopAt}
             draggedItemKeyRef={draggedItemKeyRef}
             draggedItemParentPathRef={draggedItemParentPathRef}
-            editMode={editMode}
+            jsonEditMode={jsonEditMode}
+            schemaEditMode={schemaEditMode}
             projectedRows={projectedRows}
             visibleColumns={visibleColumns}
             rowCount={rowCount}
             onUpdateDocument={onUpdateDocument}
             columnWidth={columnWidth}
-            allowEditing={allowEditing}
             onCellHoverStart={onCellHoverStart}
+            onCellHoverEnd={onCellHoverEnd}
             overscan={overscan}
           />
         </div>

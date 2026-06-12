@@ -1458,8 +1458,8 @@ function ExtractOutputRendererContent({
                 <SingleFileTableView
                   document={tableDocument}
                   schema={displaySchema as JSONSchema7}
-                  editMode="readOnly"
-                  allowEditing={false}
+                  jsonEditMode="readOnly"
+                  schemaEditMode="readOnly"
                   onUpdateDocument={async () => {}}
                   cellColorState={
                     scalarValueType === "consensus" ? "consensus" : "none"
@@ -1850,8 +1850,8 @@ export function ExtractOutputEditor({
                 <SingleFileTableView
                   document={tableDocument}
                   schema={displaySchema as JSONSchema7}
-                  editMode={canEdit ? "editable" : "readOnly"}
-                  allowEditing={canEdit}
+                  jsonEditMode={canEdit ? "editable" : "readOnly"}
+                  schemaEditMode={canEdit ? "editable" : "readOnly"}
                   onUpdateDocument={async () => {}}
                   cellColorState="none"
                   showHoverCard={false}

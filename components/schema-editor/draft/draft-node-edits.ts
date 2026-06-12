@@ -182,6 +182,17 @@ export function updateSchemaProperty(
   newPropertyName: string,
   updatedProperty: ExtendedJSONSchema7
 ): ExtendedJSONSchema7 {
+  // Refuse to rename onto an existing sibling: merging would drop the renamed
+  // property's schema and leave a duplicate in `required`. Callers validate
+  // name collisions upstream, so this is a defensive no-op.
+  if (
+    newPropertyName !== propertyKey &&
+    schemaNode.properties &&
+    Object.prototype.hasOwnProperty.call(schemaNode.properties, newPropertyName)
+  ) {
+    return schemaNode
+  }
+
   const effectiveNode = getEffectiveNode(updatedProperty)
   const cleanProperty = {
     ...effectiveNode,
@@ -196,15 +207,19 @@ export function updateSchemaProperty(
 
   Object.keys(oldProperties).forEach((key) => {
     if (key === propertyKey && newPropertyName !== propertyKey) {
-      newProperties[newPropertyName] = finalProperty
+      setRecordValue(newProperties, newPropertyName, finalProperty)
       found = true
     } else if (isJSONSchema(oldProperties[key])) {
-      newProperties[key] = oldProperties[key] as ExtendedJSONSchema7
+      setRecordValue(
+        newProperties,
+        key,
+        oldProperties[key] as ExtendedJSONSchema7
+      )
     }
   })
 
   if (!found && newPropertyName !== propertyKey) {
-    newProperties[newPropertyName] = finalProperty
+    setRecordValue(newProperties, newPropertyName, finalProperty)
     delete newProperties[propertyKey]
   }
 
@@ -235,4 +250,17 @@ function isJSONSchema(
   value: JSONSchema7Definition
 ): value is ExtendedJSONSchema7 {
   return typeof value === "object" && value !== null
+}
+
+function setRecordValue<T>(
+  record: Record<string, T>,
+  key: string,
+  value: T
+) {
+  Object.defineProperty(record, key, {
+    value,
+    enumerable: true,
+    configurable: true,
+    writable: true,
+  })
 }

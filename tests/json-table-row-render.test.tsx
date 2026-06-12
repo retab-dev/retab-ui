@@ -95,7 +95,7 @@ describe("json table row rendering", () => {
             openEditorPath={null}
             setOpenEditorPath={vi.fn()}
             onUpdateDocument={vi.fn()}
-            allowEditing={false}
+            isJsonEditable={false}
           />
         </tbody>
       </table>
@@ -108,6 +108,10 @@ describe("json table row rendering", () => {
 
     const cells = Array.from(view.container.querySelectorAll("td"))
     expect(cells).toHaveLength(7)
+    expect(view.container.querySelectorAll('[data-slot="data-cell"]')).toHaveLength(
+      5
+    )
+    expect(view.getAllByRole("button")).toHaveLength(2)
     expect(cells[4].textContent).toBe(String.fromCharCode(8212))
     expect(cells[5].textContent).toBe("__null__")
     expect(cells[6].textContent).toBe("")

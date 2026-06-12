@@ -1,13 +1,12 @@
 import type { JSONSchema7, JSONSchema7Definition } from "json-schema"
 
-import { objectCellButtonClass } from "@/components/json-table/cell-editors/editor-classes"
 import type { CellEditorProps } from "@/components/json-table/cell-editors/editor-types"
 import { ObjectEditor as JsonObjectEditor } from "@/components/json-table/object-editor"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui-retab/popover"
+} from "@/components/ui/popover"
 
 type SchemaWithDefs = JSONSchema7 & {
   $defs?: Record<string, JSONSchema7Definition>
@@ -33,6 +32,16 @@ function stripProperties(value: unknown): unknown {
     ...rest
   } = value as Record<string, unknown>
   return rest
+}
+
+function formatObjectSummary(value: unknown): string {
+  if (value === null || value === undefined) return ""
+  if (typeof value !== "object") return String(value)
+  try {
+    return JSON.stringify(stripProperties(value))
+  } catch {
+    return String(value)
+  }
 }
 
 export function transferContext(
@@ -67,10 +76,10 @@ export function ObjectCellEditor({
       }}
     >
       <PopoverTrigger asChild>
-        <button className={objectCellButtonClass}>
+        <button className="h-full w-full justify-start overflow-hidden px-1 text-xs leading-none text-inherit select-none hover:bg-accent/50 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none">
           {field.effectiveValue ? (
             <div className="max-w-[80px] truncate text-left">
-              {JSON.stringify(stripProperties(field.effectiveValue))}
+              {formatObjectSummary(field.effectiveValue)}
             </div>
           ) : (
             <div className="max-w-[80px] truncate text-left text-muted-foreground">

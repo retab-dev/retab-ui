@@ -37,9 +37,9 @@ function cloneJson(value: unknown): unknown {
 
 function getTableDataCell(name: string): HTMLElement {
   const cell =
-    Array.from(document.querySelectorAll<HTMLElement>("[data-table-cell]")).find(
-      (element) => element.getAttribute("aria-label") === name
-    ) ?? null
+    Array.from(
+      document.querySelectorAll<HTMLElement>("[data-table-cell]")
+    ).find((element) => element.getAttribute("aria-label") === name) ?? null
   expect(cell).toBeTruthy()
   expect(cell?.getAttribute("data-slot")).toBe("data-cell")
   return cell as HTMLElement
@@ -420,7 +420,7 @@ describe("JsonForm array edge cases", () => {
     await expect(submit()).resolves.toEqual({ rows: [{ price: null }] })
   })
 
-  it("edits a date-time table cell", async () => {
+  it("edits a date-time table cell through the picker", async () => {
     const { submit } = renderJsonForm({
       schema: {
         type: "object",
@@ -441,12 +441,17 @@ describe("JsonForm array edge cases", () => {
     })
 
     fireEvent.click(getTableDataCell("Due 2026-03-01T12:30:45Z"))
-    const input = screen.getByDisplayValue("2026-03-01T12:30") as HTMLInputElement
-    fireEvent.change(input, { target: { value: "2026-04-02T08:15" } })
-    fireEvent.blur(input)
+    const input = await waitFor(() => {
+      const timeInput =
+        document.querySelector<HTMLInputElement>('input[type="time"]')
+      expect(timeInput).toBeTruthy()
+      return timeInput!
+    })
+    expect(["12:30", "12:30:45"]).toContain(input.value)
+    fireEvent.change(input, { target: { value: "08:15" } })
 
     await expect(submit()).resolves.toEqual({
-      rows: [{ due: "2026-04-02T08:15" }],
+      rows: [{ due: "2026-03-01T08:15" }],
     })
   })
 
@@ -473,9 +478,9 @@ describe("JsonForm array edge cases", () => {
     // Open the editor and blur without changing anything. The stored value
     // should be untouched — matching how the non-table date-time control
     // preserves the original ISO string with its seconds and timezone.
-    fireEvent.click(getTableDataCell("Due 2026-03-01T12:30:45Z"))
-    const input = screen.getByDisplayValue("2026-03-01T12:30") as HTMLInputElement
-    fireEvent.blur(input)
+    const cell = getTableDataCell("Due 2026-03-01T12:30:45Z")
+    fireEvent.click(cell)
+    fireEvent.blur(cell)
 
     await expect(submit()).resolves.toEqual({
       rows: [{ due: "2026-03-01T12:30:45Z" }],

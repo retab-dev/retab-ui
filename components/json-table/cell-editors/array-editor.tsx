@@ -1,4 +1,3 @@
-import { objectCellButtonClass } from "@/components/json-table/cell-editors/editor-classes"
 import type { CellEditorProps } from "@/components/json-table/cell-editors/editor-types"
 import { transferContext } from "@/components/json-table/cell-editors/object-editor"
 import { ArrayEditor as JsonArrayEditor } from "@/components/json-table/object-editor"
@@ -6,7 +5,17 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui-retab/popover"
+} from "@/components/ui/popover"
+
+function formatArraySummary(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.length} items]`
+  if (value === null || value === undefined) return ""
+  try {
+    return JSON.stringify(value)
+  } catch {
+    return String(value)
+  }
+}
 
 export function ArrayCellEditor({
   identity,
@@ -24,12 +33,10 @@ export function ArrayCellEditor({
       }}
     >
       <PopoverTrigger asChild>
-        <button className={objectCellButtonClass}>
+        <button className="h-full w-full justify-start overflow-hidden px-1 text-xs leading-none text-inherit select-none hover:bg-accent/50 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none">
           {field.effectiveValue ? (
             <div className="max-w-[80px] truncate text-left">
-              {Array.isArray(field.effectiveValue)
-                ? `[${field.effectiveValue.length} items]`
-                : JSON.stringify(field.effectiveValue)}
+              {formatArraySummary(field.effectiveValue)}
             </div>
           ) : (
             <div className="max-w-[80px] truncate text-left text-muted-foreground">

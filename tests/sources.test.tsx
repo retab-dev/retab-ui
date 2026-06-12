@@ -18,7 +18,9 @@ import {
 import {
   docxSourceToTarget,
   sourceToDocxHighlight,
+  useDocxSourceTarget,
 } from "@/registry/new-york-v4/ui/docx-source"
+import type { DocxViewerHandle } from "@/registry/new-york-v4/ui/docx-viewer"
 import {
   imageAnchorToArea,
   imageAnchorToFrame,
@@ -711,6 +713,56 @@ describe("source adapters", () => {
       )
     ).toBeNull()
   })
+
+  it("bridges docx sources to the viewer imperative target", () => {
+    const scrollToTarget = vi.fn()
+    const { rerender } = render(
+      <DocxSourceTargetHarness
+        source={docxTextSource}
+        onScroll={scrollToTarget}
+      />
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "scroll docx source" }))
+    expect(scrollToTarget).toHaveBeenCalledWith(
+      { kind: "text", text: "ACME Corp" },
+      { behavior: "smooth" }
+    )
+
+    rerender(
+      <DocxSourceTargetHarness
+        source={docxCellSource}
+        onScroll={scrollToTarget}
+      />
+    )
+    fireEvent.click(screen.getByRole("button", { name: "scroll docx source" }))
+    expect(scrollToTarget).toHaveBeenLastCalledWith(
+      { kind: "cell", table: 1, row: 2, column: 3 },
+      { behavior: "smooth" }
+    )
+
+    scrollToTarget.mockClear()
+    rerender(
+      <DocxSourceTargetHarness source={csvSource} onScroll={scrollToTarget} />
+    )
+    fireEvent.click(screen.getByRole("button", { name: "scroll docx source" }))
+    expect(scrollToTarget).not.toHaveBeenCalled()
+
+    rerender(
+      <DocxSourceTargetHarness
+        source={source(
+          {
+            kind: "docx_text_span",
+            paragraph: -1,
+          },
+          "ACME"
+        )}
+        onScroll={scrollToTarget}
+      />
+    )
+    fireEvent.click(screen.getByRole("button", { name: "scroll docx source" }))
+    expect(scrollToTarget).not.toHaveBeenCalled()
+  })
 })
 
 function SourceLinkHarness({
@@ -763,29 +815,68 @@ function SourceLinkHarness({
   )
 }
 
+function DocxSourceTargetHarness({
+  source,
+  onScroll,
+}: {
+  source: Source
+  onScroll: DocxViewerHandle["scrollToTarget"]
+}) {
+  const handle = React.useMemo<DocxViewerHandle>(
+    () => ({
+      scrollToTarget: onScroll,
+      getViewportElement: () => null,
+    }),
+    [onScroll]
+  )
+  const viewerRef = React.useRef<DocxViewerHandle | null>(handle)
+  viewerRef.current = handle
+  const target = useDocxSourceTarget(viewerRef)
+
+  return (
+    <button
+      type="button"
+      onClick={() => target.scrollTo?.(source, { behavior: "smooth" })}
+    >
+      scroll docx source
+    </button>
+  )
+}
+
 function SourceFieldListHarness({
   sources,
   onScroll,
+  fields = [
+    { key: "total", label: "Total", value: "$120.00" },
+    { key: "date", label: "Date", value: "2026-06-12" },
+  ],
+  initialField = null,
+  hasTarget = true,
+  indicator = false,
 }: {
   sources: SourceMap
   onScroll: (source: Source, options: { behavior: ScrollBehavior }) => void
+  fields?: React.ComponentProps<typeof SourceFieldList>["fields"]
+  initialField?: string | null
+  hasTarget?: boolean
+  indicator?: boolean
 }) {
   const link = useSourceLink({
     sources,
-    target: { scrollTo: onScroll },
-    initialField: null,
+    target: hasTarget ? { scrollTo: onScroll } : undefined,
+    initialField,
   })
 
   return (
     <div>
       <output data-testid="active">{link.activePath ?? "(none)"}</output>
-      <SourceFieldList
-        fields={[
-          { key: "total", label: "Total", value: "$120.00" },
-          { key: "date", label: "Date", value: "2026-06-12" },
-        ]}
-        link={link}
-      />
+      <output data-testid="source">
+        {link.activeSource?.content ?? "(none)"}
+      </output>
+      {indicator ? (
+        <SourceIndicator path={link.activePath} found={!!link.activeSource} />
+      ) : null}
+      <SourceFieldList fields={fields} link={link} />
     </div>
   )
 }
@@ -1334,6 +1425,13 @@ describe("useSourceLink", () => {
 })
 
 describe("source UI components", () => {
+  const fields = [
+    { key: "total", label: "Total", value: "$120.00", hint: "Page 3" },
+    { key: "date", label: "Date", value: "2026-06-12", hint: "AA4" },
+    { key: "missing", label: "Approver", value: "Morgan Lee" },
+    { key: "", label: "Root value", value: "standalone" },
+  ]
+
   it("SourceFieldList and useSourceLink do not double-scroll when a hovered field is clicked then left", () => {
     const scrollTo = vi.fn()
     render(
@@ -1412,6 +1510,228 @@ describe("source UI components", () => {
     expect(link.selectField).toHaveBeenCalledWith("total")
   })
 
+  it("SourceFieldList marks only the exact active path", () => {
+    const link = {
+      activePath: "total.tax",
+      onFieldHover: vi.fn(),
+      selectField: vi.fn(),
+    }
+
+    const { rerender } = render(
+      <SourceFieldList
+        fields={[
+          { key: "total", label: "Total", value: "$120.00" },
+          { key: "total.tax", label: "Tax", value: "$8.00" },
+        ]}
+        link={link}
+      />
+    )
+
+    const total = screen.getByRole("button", { name: /total/i })
+    const tax = screen.getByRole("button", { name: /tax/i })
+    expect(total.className).not.toContain("border-primary/40")
+    expect(tax.className).toContain("border-primary/40")
+
+    rerender(
+      <SourceFieldList
+        fields={[
+          { key: "total", label: "Total", value: "$120.00" },
+          { key: "total.tax", label: "Tax", value: "$8.00" },
+        ]}
+        link={{ ...link, activePath: "total" }}
+      />
+    )
+
+    expect(screen.getByRole("button", { name: /total/i }).className).toContain(
+      "border-primary/40"
+    )
+    expect(
+      screen.getByRole("button", { name: /tax/i }).className
+    ).not.toContain("border-primary/40")
+  })
+
+  it("SourceFieldList renders an empty state without interactive rows", () => {
+    render(
+      <SourceFieldList
+        title="No fields"
+        className="custom-source-list"
+        fields={[]}
+        link={{
+          activePath: null,
+          onFieldHover: vi.fn(),
+          selectField: vi.fn(),
+        }}
+      />
+    )
+
+    expect(screen.getByRole("heading", { name: "No fields" })).toBeTruthy()
+    expect(screen.getByText("0 fields").textContent).toBe("0 fields")
+    expect(screen.queryAllByRole("button")).toHaveLength(0)
+    expect(screen.getByRole("complementary").className).toContain(
+      "custom-source-list"
+    )
+  })
+
+  it("SourceFieldList focus previews a field and blur restores the pinned source", () => {
+    const scrollTo = vi.fn()
+    render(
+      <SourceFieldListHarness
+        sources={{ total: pdfSource, date: csvSource }}
+        fields={fields}
+        initialField="total"
+        onScroll={scrollTo}
+      />
+    )
+
+    const date = screen.getByRole("button", { name: /date/i })
+    fireEvent.focus(date)
+    expect(screen.getByTestId("active").textContent).toBe("date")
+    expect(screen.getByTestId("source").textContent).toBe("quoted content")
+    expect(scrollTo).toHaveBeenLastCalledWith(csvSource, { behavior: "auto" })
+
+    fireEvent.blur(date)
+    expect(screen.getByTestId("active").textContent).toBe("total")
+    expect(scrollTo).toHaveBeenLastCalledWith(pdfSource, { behavior: "auto" })
+  })
+
+  it("SourceFieldList supports the root scalar source path", () => {
+    const scrollTo = vi.fn()
+    render(
+      <SourceFieldListHarness
+        sources={{ "": textSource }}
+        fields={fields}
+        onScroll={scrollTo}
+      />
+    )
+
+    fireEvent.mouseEnter(screen.getByRole("button", { name: /root value/i }))
+
+    expect(screen.getByTestId("active").textContent).toBe("")
+    expect(screen.getByTestId("source").textContent).toBe("quoted content")
+    expect(scrollTo).toHaveBeenCalledWith(textSource, { behavior: "auto" })
+  })
+
+  it("SourceFieldList and SourceIndicator report missing sources without scrolling", () => {
+    const scrollTo = vi.fn()
+    render(
+      <SourceFieldListHarness
+        sources={{ total: pdfSource, date: csvSource }}
+        fields={fields}
+        indicator
+        onScroll={scrollTo}
+      />
+    )
+
+    expect(
+      screen.getByText("Hover a field to view its source").textContent
+    ).toBe("Hover a field to view its source")
+
+    const missing = screen.getByRole("button", { name: /approver/i })
+    fireEvent.mouseEnter(missing)
+    expect(screen.getByTestId("active").textContent).toBe("missing")
+    expect(screen.getByTestId("source").textContent).toBe("(none)")
+    expect(screen.getAllByText("missing")).toHaveLength(2)
+    expect(screen.getByText("· no source").textContent).toBe("· no source")
+    expect(scrollTo).not.toHaveBeenCalled()
+
+    fireEvent.click(missing)
+    fireEvent.mouseLeave(missing)
+    expect(screen.getByTestId("active").textContent).toBe("missing")
+    expect(scrollTo).not.toHaveBeenCalled()
+  })
+
+  it("SourceFieldList scrolls a selected missing source once it arrives", () => {
+    const scrollTo = vi.fn()
+    const { rerender } = render(
+      <SourceFieldListHarness
+        sources={{ total: pdfSource }}
+        fields={fields}
+        onScroll={scrollTo}
+      />
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: /date/i }))
+    expect(screen.getByTestId("active").textContent).toBe("date")
+    expect(screen.getByTestId("source").textContent).toBe("(none)")
+    expect(scrollTo).not.toHaveBeenCalled()
+
+    rerender(
+      <SourceFieldListHarness
+        sources={{ total: pdfSource, date: csvSource }}
+        fields={fields}
+        onScroll={scrollTo}
+      />
+    )
+
+    expect(screen.getByTestId("source").textContent).toBe("quoted content")
+    expect(scrollTo).toHaveBeenCalledWith(csvSource, { behavior: "smooth" })
+  })
+
+  it("SourceFieldList keeps a pending hover reveal when the target mounts later", () => {
+    const scrollTo = vi.fn()
+    const { rerender } = render(
+      <SourceFieldListHarness
+        sources={{ total: pdfSource }}
+        fields={fields}
+        hasTarget={false}
+        onScroll={scrollTo}
+      />
+    )
+
+    fireEvent.mouseEnter(screen.getByRole("button", { name: /total/i }))
+    expect(screen.getByTestId("active").textContent).toBe("total")
+    expect(scrollTo).not.toHaveBeenCalled()
+
+    rerender(
+      <SourceFieldListHarness
+        sources={{ total: pdfSource }}
+        fields={fields}
+        hasTarget
+        onScroll={scrollTo}
+      />
+    )
+
+    expect(scrollTo).toHaveBeenCalledWith(pdfSource, { behavior: "auto" })
+  })
+
+  it("SourceFieldList handles dynamic field rows without keeping removed controls", () => {
+    const link = {
+      activePath: "date",
+      onFieldHover: vi.fn(),
+      selectField: vi.fn(),
+    }
+    const { rerender } = render(
+      <SourceFieldList
+        fields={[
+          { key: "total", label: "Total", value: "$120.00" },
+          { key: "date", label: "Date", value: "2026-06-12" },
+        ]}
+        link={link}
+      />
+    )
+
+    expect(screen.getByText("2 fields").textContent).toBe("2 fields")
+    expect(screen.getByRole("button", { name: /date/i }).className).toContain(
+      "border-primary/40"
+    )
+
+    rerender(
+      <SourceFieldList
+        fields={[
+          { key: "total", label: "Total", value: "$120.00" },
+          { key: "status", label: "Status", value: "Approved" },
+        ]}
+        link={link}
+      />
+    )
+
+    expect(screen.getByText("2 fields").textContent).toBe("2 fields")
+    expect(screen.queryByRole("button", { name: /date/i })).toBeNull()
+    expect(
+      screen.getByRole("button", { name: /status/i }).className
+    ).not.toContain("border-primary/40")
+  })
+
   it("SourceIndicator renders empty, found, and missing-source states", () => {
     const { rerender } = render(
       <SourceIndicator path={null} found={false} emptyHint="Pick a field" />
@@ -1424,6 +1744,19 @@ describe("source UI components", () => {
 
     rerender(<SourceIndicator path="owner.email" found={false} />)
     expect(screen.getByText("owner.email").textContent).toBe("owner.email")
+    expect(screen.getByText("· no source").textContent).toBe("· no source")
+  })
+
+  it("SourceIndicator treats an empty string path as an active root source", () => {
+    const { rerender } = render(
+      <SourceIndicator path="" found label="Root source" />
+    )
+
+    expect(screen.getByText("Root source").textContent).toBe("Root source")
+    expect(screen.queryByText("Hover a field to view its source")).toBeNull()
+    expect(screen.queryByText("· no source")).toBeNull()
+
+    rerender(<SourceIndicator path="" found={false} />)
     expect(screen.getByText("· no source").textContent).toBe("· no source")
   })
 })

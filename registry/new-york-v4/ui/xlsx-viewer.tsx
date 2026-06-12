@@ -27,6 +27,7 @@ import {
   type XlsxWorkerRequest,
   type XlsxWorkerResponse,
 } from "@/lib/xlsx-worker-protocol"
+import { Skeleton } from "@/components/ui/skeleton"
 import { ViewerErrorBoundary } from "@/components/ui/viewer-error"
 import { XlsxGrid, XlsxGridSkeleton } from "@/components/ui/xlsx-grid"
 import { XlsxSheetTabs } from "@/components/ui/xlsx-sheet-tabs"
@@ -91,15 +92,25 @@ function parseWorkbookInWorker(buffer: ArrayBuffer): Promise<CompactSheet[]> {
       new URL("./xlsx-viewer.worker", import.meta.url),
       { type: "module" }
     )
-    worker.onmessage = (event: MessageEvent<XlsxWorkerResponse>) => {
+    worker.onmessage = (event: MessageEvent<unknown>) => {
       worker.terminate()
-      if (event.data.type === "workbook") {
-        resolve(event.data.sheets)
+      const response = parseXlsxWorkerResponse(event.data)
+      if (!response) {
+        reject(
+          toXlsxFormatError(undefined, {
+            kind: "parse_failed",
+            message: "Spreadsheet worker returned an invalid response.",
+          })
+        )
+        return
+      }
+      if (response.type === "workbook") {
+        resolve(response.sheets)
       } else {
         reject(
           toXlsxFormatError(undefined, {
             kind: "parse_failed",
-            message: event.data.message || "Failed to parse spreadsheet.",
+            message: response.message || "Failed to parse spreadsheet.",
           })
         )
       }
@@ -116,6 +127,30 @@ function parseWorkbookInWorker(buffer: ArrayBuffer): Promise<CompactSheet[]> {
     const request: XlsxWorkerRequest = { type: "parse_workbook", buffer }
     worker.postMessage(request, [buffer])
   })
+}
+
+function parseXlsxWorkerResponse(value: unknown): XlsxWorkerResponse | null {
+  if (value == null || typeof value !== "object") return null
+  const response = value as Partial<XlsxWorkerResponse>
+  if (response.type === "workbook") {
+    return Array.isArray(response.sheets)
+      ? ({
+          type: "workbook",
+          sheets: response.sheets,
+        } satisfies XlsxWorkerResponse)
+      : null
+  }
+  if (response.type === "error") {
+    return {
+      type: "error",
+      code: "parse_failed",
+      message:
+        typeof response.message === "string"
+          ? response.message
+          : "Failed to parse spreadsheet.",
+    }
+  }
+  return null
 }
 
 function getXlsxSource(content: ViewerContentBytes): Promise<XlsxSource> {
@@ -142,6 +177,8 @@ export interface XlsxViewerProps {
   defaultSheetIndex?: number
   /** Fired with the active sheet index on tab switch and imperative sheet changes. */
   onSheetChange?: (index: number) => void
+  /** Reserve the workbook tab bar while metadata loads. Use for known multi-sheet files. */
+  fallbackSheetTabs?: boolean
   /** Drop the outer border/rounded/background so the viewer fills its container. */
   bare?: boolean
   /** Rendered as a full-width strip directly below the toolbar. */
@@ -193,6 +230,7 @@ export const XlsxResourceViewer = React.forwardRef<
     return (
       <XlsxViewerFallback
         className={props.className}
+        fallbackSheetTabs={props.fallbackSheetTabs}
         toolbar={props.toolbar}
         bare={props.bare}
       />
@@ -210,6 +248,7 @@ export const XlsxResourceViewer = React.forwardRef<
         fallback={
           <XlsxViewerFallback
             className={props.className}
+            fallbackSheetTabs={props.fallbackSheetTabs}
             toolbar={props.toolbar}
             bare={props.bare}
           />
@@ -232,6 +271,7 @@ function XlsxViewerSession({
   toolbar = true,
   defaultSheetIndex = 0,
   onSheetChange,
+  fallbackSheetTabs = false,
   bare = false,
   header,
   aside,
@@ -336,6 +376,7 @@ function XlsxViewerSession({
   )
 
   const isReady = sheets != null
+  const isReservingFallbackSheetTabs = fallbackSheetTabs && !sheets
   const activeSheet = sheets?.[activeSheetIndex]
   const activeCellTarget = toInternalCellRef(activeCell)
   const downloadActions = React.useMemo(() => {
@@ -388,7 +429,17 @@ function XlsxViewerSession({
         />
       ) : null}
 
-      <div className="flex min-h-0 flex-1">
+      <div
+        className={cn(
+          "flex min-h-0",
+          isReservingFallbackSheetTabs ? "flex-none" : "flex-1"
+        )}
+        style={
+          isReservingFallbackSheetTabs
+            ? { height: `calc(100% - ${toolbar ? 73 : 33}px)` }
+            : undefined
+        }
+      >
         {aside ? (
           <div data-slot="xlsx-viewer-aside" className="flex-shrink-0">
             {aside}
@@ -417,6 +468,8 @@ function XlsxViewerSession({
           activeSheetIndex={activeSheetIndex}
           onSelectSheet={setLoadedSheetIndex}
         />
+      ) : fallbackSheetTabs ? (
+        <XlsxSheetTabsSkeleton />
       ) : null}
     </div>
   )
@@ -481,10 +534,12 @@ function XlsxSheet({
 
 function XlsxViewerFallback({
   className,
+  fallbackSheetTabs = false,
   toolbar = true,
   bare = false,
 }: {
   className?: string
+  fallbackSheetTabs?: boolean
   toolbar?: boolean
   bare?: boolean
 }) {
@@ -498,9 +553,40 @@ function XlsxViewerFallback({
       data-slot="xlsx-viewer"
     >
       {toolbar ? <XlsxToolbarSkeleton /> : null}
-      <div className="flex min-h-0 flex-1">
+      <div
+        className={cn(
+          "flex min-h-0",
+          fallbackSheetTabs ? "flex-none" : "flex-1"
+        )}
+        style={
+          fallbackSheetTabs
+            ? { height: `calc(100% - ${toolbar ? 73 : 33}px)` }
+            : undefined
+        }
+      >
         <XlsxGridSkeleton />
       </div>
+      {fallbackSheetTabs ? <XlsxSheetTabsSkeleton /> : null}
+    </div>
+  )
+}
+
+function XlsxSheetTabsSkeleton() {
+  return (
+    <div
+      aria-hidden
+      className="flex flex-shrink-0 items-stretch gap-0.5 overflow-hidden border-t bg-card px-1.5 py-1"
+      data-slot="xlsx-viewer-tabs-skeleton"
+    >
+      {[96, 144, 136, 128].map((width, index) => (
+        <div
+          key={index}
+          className="flex h-[24px] flex-shrink-0 items-center rounded-md px-2.5"
+          style={{ width }}
+        >
+          <Skeleton className="h-3 w-full" />
+        </div>
+      ))}
     </div>
   )
 }

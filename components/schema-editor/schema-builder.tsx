@@ -10,7 +10,7 @@ import type {
 } from "@/components/schema-editor/schema-builder-types";
 import { resolveSchemaBuilderFeatures } from "@/components/schema-editor/schema-builder-types";
 import { useSchemaBuilderState } from "@/components/schema-editor/use-schema-builder-state";
-import { Button } from "@/components/ui-retab/button";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const LazyJsonModeEditor = React.lazy(() =>

@@ -14,9 +14,9 @@ import {
 } from "@/components/schema-editor/property-form/model/object-property-edits"
 import type { PropertyFormSchemaContext } from "@/components/schema-editor/property-form/types"
 import { validatePropertyFormName } from "@/components/schema-editor/property-form/validation"
-import { Button } from "@/components/ui-retab/button"
-import { Input } from "@/components/ui-retab/input"
-import { Label } from "@/components/ui-retab/label"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 
 function getPropertyNamesKey(propertyNames: string[]) {
   return propertyNames.join("\0")

@@ -462,7 +462,7 @@ Current issue:
 Target:
 
 - `HeaderSchemaMenu` should not be imported or rendered when
-  `editMode === "readOnly"` and schema editing is unavailable.
+  `schemaEditMode === "readOnly"` and schema editing is unavailable.
 - Schema-editor code should be dynamically imported only when the schema menu can
   open.
 - Read-only table startup should not depend on property-form or schema-builder

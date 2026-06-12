@@ -39,6 +39,8 @@ export interface ImageViewerProps {
   className?: string
   /** Fixed scale; when omitted the viewer fits frame width to the container. */
   scale?: number
+  /** Intrinsic size used to reserve the first frame while image metadata loads. */
+  fallbackFrameSize?: { width: number; height: number }
   toolbar?: boolean
   /** Render absolutely-positioned overlays (e.g. bbox citations) on each frame. */
   renderFrameOverlay?: (props: ImageFrameOverlayProps) => React.ReactNode

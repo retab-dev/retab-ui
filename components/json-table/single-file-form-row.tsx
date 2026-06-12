@@ -9,7 +9,7 @@ import type { VisibleColumn } from "@/components/json-table/json-table-cell-type
 import type { ProjectedRow } from "@/components/json-table/lib/document-projection"
 import type { TableDocument } from "@/components/json-table/lib/projects-types"
 import { ReadOnlyJsonTableCell } from "@/components/json-table/read-only-json-table-cell"
-import { TableRow } from "@/components/ui-retab/table"
+import { TableRow } from "@/components/ui/table"
 
 const EditableJsonTableCell = dynamic(
   () =>
@@ -34,7 +34,7 @@ interface SingleFileFormRowProps {
   openEditorPath: string | null
   setOpenEditorPath: (key: string | null) => void
   onUpdateDocument?: (patch: Record<string, unknown>) => Promise<void>
-  allowEditing?: boolean
+  isJsonEditable: boolean
   onCellHoverStart?: (info: {
     docId: string
     fieldPath: string
@@ -55,7 +55,7 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
     openEditorPath,
     setOpenEditorPath,
     onUpdateDocument,
-    allowEditing = true,
+    isJsonEditable,
     onCellHoverStart,
     onCellHoverEnd,
   }) => {
@@ -106,12 +106,12 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
             setOpenEditorPath,
             openEditorPath,
             onDocumentDataChange: handleDataChange,
-            allowEditing,
+            isJsonEditable,
             onCellHoverStart,
             onCellHoverEnd,
           }
 
-          return allowEditing ? (
+          return isJsonEditable ? (
             <EditableJsonTableCell key={column.key} {...cellProps} />
           ) : (
             <ReadOnlyJsonTableCell key={column.key} {...cellProps} />

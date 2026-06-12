@@ -207,6 +207,31 @@ describe("editor-path simulation (their leaf utils through the Document)", () =>
     expect(out.required).toEqual(["renamed"])
   })
 
+  it("renames a property to a prototype key through the parent edit bridge", () => {
+    const d = fromJsonSchema({
+      type: "object",
+      properties: { old: { type: "string" }, keep: { type: "number" } },
+      required: ["old"],
+    })
+    const rootJson = getNodeJson(d, d.root.id) as JSONSchema7
+    const renamed = updateEffectiveNode(
+      rootJson,
+      updateSchemaProperty(
+        rootJson,
+        "old",
+        "__proto__",
+        rootJson.properties!.old as JSONSchema7
+      )
+    )
+
+    const out = json(replaceNodeJson(d, d.root.id, renamed))
+
+    expect(Object.prototype.hasOwnProperty.call(out.properties, "__proto__"))
+      .toBe(true)
+    expect(Object.keys(out.properties!)).toEqual(["__proto__", "keep"])
+    expect(out.required).toEqual(["__proto__"])
+  })
+
   it("array item-object edits route by the items node id", () => {
     const d = fromJsonSchema({
       type: "object",

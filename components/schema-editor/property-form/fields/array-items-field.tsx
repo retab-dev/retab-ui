@@ -2,7 +2,7 @@
 
 import type * as React from "react"
 
-import { Label } from "@/components/ui-retab/label"
+import { Label } from "@/components/ui/label"
 
 export function ArrayItemsField({ children }: { children: React.ReactNode }) {
   return (

@@ -20,6 +20,8 @@
     "format:check": "prettier --check \"**/*.{ts,tsx,mdx}\" --cache",
     "registry:build": "shadcn build --output public/r",
     "registry:validate": "shadcn registry validate",
+    "verify:data-cell": "node scripts/verify-data-cell-parity.mjs",
+    "verify:viewer-skeletons": "node scripts/verify-viewer-skeletons.mjs",
     "verify:xlsx-viewer": "node scripts/verify-xlsx-viewer.mjs",
     "postinstall": "fumadocs-mdx",
     "test": "vitest run",

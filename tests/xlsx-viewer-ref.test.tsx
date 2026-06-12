@@ -877,6 +877,34 @@ describe("XlsxViewer imperative ref", () => {
     expect(worker.terminate).toHaveBeenCalledTimes(1)
   })
 
+  it("renders a spreadsheet parse error for malformed worker messages", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {})
+
+    await act(async () => {
+      render(
+        <XlsxViewer
+          source={{
+            kind: "url",
+            url: uniqueXlsxUrl("worker-malformed"),
+            fileName: "worker-malformed.xlsx",
+          }}
+        />
+      )
+    })
+
+    const worker = await waitForWorker()
+    await act(async () => {
+      worker.onmessage?.({ data: null } as MessageEvent)
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+
+    const alert = await screen.findByRole("alert")
+    expect(alert.textContent).toContain("Couldn't parse this spreadsheet.")
+    expect(alert.getAttribute("data-error-domain")).toBe("format")
+    expect(alert.getAttribute("data-error-kind")).toBe("parse_failed")
+    expect(worker.terminate).toHaveBeenCalledTimes(1)
+  })
+
   it("renders a spreadsheet worker error when the worker crashes", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {})
 

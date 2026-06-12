@@ -79,6 +79,47 @@ describe("schema validation property counting", () => {
     expect(() => validateProjectedSchema(schema)).not.toThrow()
   })
 
+  it("counts repeated refs to the same local schema once", () => {
+    const schema: JSONSchema7 = {
+      type: "object",
+      $defs: {
+        Shared: {
+          type: "object",
+          properties: { value: { type: "string" } },
+        },
+      },
+      properties: {
+        first: { $ref: "#/$defs/Shared" },
+        second: { $ref: "#/$defs/Shared" },
+      },
+    }
+
+    expect(countSchemaProperties(schema)).toBe(3)
+  })
+
+  it("counts properties inside unreferenced definitions", () => {
+    const schema: JSONSchema7 = {
+      type: "object",
+      $defs: {
+        Hidden: {
+          type: "object",
+          properties: { hidden: { type: "string" } },
+        },
+      },
+      definitions: {
+        LegacyHidden: {
+          type: "object",
+          properties: { legacy_hidden: { type: "string" } },
+        },
+      },
+      properties: {
+        visible: { type: "string" },
+      },
+    }
+
+    expect(countSchemaProperties(schema)).toBe(3)
+  })
+
   it("counts local refs with escaped JSON Pointer segments", () => {
     const schema: JSONSchema7 = {
       type: "object",
@@ -125,10 +166,7 @@ describe("schema validation property counting", () => {
           type: "object",
           properties: { slash: { type: "string" } },
         },
-        "A~1B": {
-          type: "object",
-          properties: { tilde_one: { type: "string" } },
-        },
+        "A~1B": { type: "string" },
       },
       properties: {
         item: { $ref: "#/$defs/A~1B" },

@@ -356,11 +356,13 @@ function internUrlResourceContent(
     payload: { kind: "url", url: source.url },
     readBlob: async ({ signal } = {}) => {
       const response = await fetchResource(source.url, { signal })
-      return response.blob()
+      validateFullContentResponse(response)
+      return readResponseBlob(response)
     },
     readBytes: async ({ signal } = {}) => {
       const response = await fetchResource(source.url, { signal })
-      return response.arrayBuffer()
+      validateFullContentResponse(response)
+      return readResponseArrayBuffer(response)
     },
     readText: async ({ signal, maxBytes, maxLines } = {}) => {
       const response = await fetchResource(source.url, { signal })
@@ -368,6 +370,7 @@ function internUrlResourceContent(
     },
     readStream: async ({ signal } = {}) => {
       const response = await fetchResource(source.url, { signal })
+      validateFullContentResponse(response)
       if (!response.body) {
         if (response.status === 204 || response.status === 205) {
           return emptyByteStream()
@@ -386,7 +389,7 @@ function internUrlResourceContent(
         signal,
         headers: { Range: `bytes=${start}-${end}` },
       })
-      const buffer = await response.arrayBuffer()
+      const buffer = await readResponseArrayBuffer(response)
       const contentRange = parseContentRange(
         response.headers.get("content-range")
       )
@@ -623,13 +626,7 @@ async function readBoundedResponseText(
   response: Response,
   bounds: { maxBytes?: number; maxLines?: number }
 ) {
-  if (response.status === 206) {
-    throw new ResourceError({
-      kind: "partial_content",
-      message: "Full text response returned partial content.",
-      status: response.status,
-    })
-  }
+  validateFullContentResponse(response)
 
   const maxBytes = bounds.maxBytes
   const contentLength = response.headers.get("content-length")
@@ -645,12 +642,7 @@ async function readBoundedResponseText(
 
   const body = response.body
   if (!body) {
-    let buffer: ArrayBuffer
-    try {
-      buffer = await response.arrayBuffer()
-    } catch (error) {
-      throw resourceReadError(error)
-    }
+    const buffer = await readResponseArrayBuffer(response)
     if (maxBytes != null && buffer.byteLength > maxBytes) {
       throw tooLarge("bytes")
     }
@@ -687,11 +679,37 @@ async function readBoundedResponseText(
   return readBoundedInlineText(text, bounds)
 }
 
+function validateFullContentResponse(response: Response) {
+  if (response.status === 206) {
+    throw new ResourceError({
+      kind: "partial_content",
+      message: "Full response returned partial content.",
+      status: response.status,
+    })
+  }
+}
+
 async function readResponseStreamChunk(
   reader: ReadableStreamDefaultReader<Uint8Array>
 ) {
   try {
     return await reader.read()
+  } catch (error) {
+    throw resourceReadError(error)
+  }
+}
+
+async function readResponseArrayBuffer(response: Response) {
+  try {
+    return await response.arrayBuffer()
+  } catch (error) {
+    throw resourceReadError(error)
+  }
+}
+
+async function readResponseBlob(response: Response) {
+  try {
+    return await response.blob()
   } catch (error) {
     throw resourceReadError(error)
   }
@@ -882,9 +900,19 @@ function parseContentRange(value: string | null) {
   if (!value) return undefined
   const match = value.match(/^bytes\s+(\d+)-(\d+)\/(\d+|\*)\s*$/i)
   if (!match) return undefined
+  const start = parseContentRangeNumber(match[1])
+  const end = parseContentRangeNumber(match[2])
+  const total =
+    match[3] === "*" ? null : parseContentRangeNumber(match[3] ?? "")
+  if (start == null || end == null || total === undefined) return undefined
   return {
-    start: Number(match[1]),
-    end: Number(match[2]),
-    total: match[3] === "*" ? null : Number(match[3]),
+    start,
+    end,
+    total,
   }
+}
+
+function parseContentRangeNumber(value: string) {
+  const number = Number(value)
+  return Number.isSafeInteger(number) ? number : undefined
 }

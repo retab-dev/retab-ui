@@ -1,8 +1,8 @@
 import { cn } from "@/lib/utils"
 import type { CellEditorProps } from "@/components/json-table/cell-editors/editor-types"
 import { fieldFocusId } from "@/components/json-table/cell-editors/editor-types"
+import { JsonTableDataCell } from "@/components/json-table/json-table-data-cell"
 import { dateStringToFormat } from "@/components/json-table/lib/date-display-formatting"
-import { DataCell } from "@/components/ui/data-cell"
 
 export function TimeEditor({
   identity,
@@ -14,13 +14,13 @@ export function TimeEditor({
   const focusId = fieldFocusId(identity)
 
   return (
-    <DataCell
+    <JsonTableDataCell
       kind="time"
       editable={field.isEditable}
       value={textDraft.activeTextValue ?? null}
       draftValue={textDraft.activeTextValue}
       onDraftValueChange={textDraft.setDraftTextValue}
-      onValueCommit={(value) => {
+      onCommit={(value) => {
         const rawValue = typeof value === "string" ? value : ""
         const finalValue =
           rawValue && /^\d{1,2}:\d{2}$/.test(rawValue)
@@ -41,7 +41,7 @@ export function TimeEditor({
       }}
       disabled={!field.isEditable}
       className={cn(
-        "h-full rounded-none border-0 text-xs data-[mode=display]:items-center data-[mode=display]:py-2",
+        "data-[mode=display]:items-center data-[mode=display]:py-2",
         "data-[mode=edit]:h-full data-[mode=edit]:rounded-none data-[mode=edit]:px-2 data-[mode=edit]:py-0 data-[mode=edit]:!text-xs data-[mode=edit]:leading-none data-[mode=edit]:shadow-none data-[mode=edit]:focus-visible:ring-0 data-[mode=edit]:focus-visible:ring-offset-0",
         !field.effectiveValue && "data-[mode=edit]:text-muted-foreground",
         focus.focusedField === focusId &&

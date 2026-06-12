@@ -41,9 +41,10 @@ function findInNode(node: DocumentNode, id: string): DocumentNode | null {
 
 export function findNodeByPath(
   doc: SchemaDocument,
-  path: string
+  path: string | readonly string[]
 ): string | null {
-  const segments = path.split(".").filter(Boolean)
+  const segments =
+    typeof path === "string" ? path.split(".").filter(Boolean) : path
   let node: DocumentNode | undefined = doc.root
   for (const segment of segments) {
     node = unwrapContainer(doc, node)
@@ -59,8 +60,11 @@ function unwrapContainer(
   node: DocumentNode | undefined
 ): DocumentNode | undefined {
   let current = node
+  const visited = new Set<string>()
   while (current) {
     current = getEffectiveContainerNode(current)
+    if (visited.has(current.id)) return undefined
+    visited.add(current.id)
     if (current.ref) {
       current = doc.defs.find(
         (definition) => definition.id === current!.ref

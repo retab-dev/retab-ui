@@ -19,7 +19,7 @@ import {
   getTemplateIcon,
   getTypeIcon,
 } from "@/components/schema-editor/type-icons"
-import { Button } from "@/components/ui-retab/button"
+import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,7 +30,7 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
-} from "@/components/ui-retab/dropdown-menu"
+} from "@/components/ui/dropdown-menu"
 
 const LazyObjectTemplateSubmenu = React.lazy(() =>
   import("@/components/schema-editor/optional/object-templates/object-template-menu").then(

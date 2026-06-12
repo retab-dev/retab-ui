@@ -16,7 +16,7 @@ import type { SchemaDocument } from "@/components/schema-editor/document/types"
 import type { DocumentNodeView } from "@/components/schema-editor/document/view-model"
 import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
 import { NodeDialog } from "@/components/schema-editor/node-dialog"
-import { Tooltip, TooltipTrigger } from "@/components/ui-retab/tooltip"
+import { Tooltip, TooltipTrigger } from "@/components/ui/tooltip"
 
 import { EnumCreationDialog } from "./enum-creation-dialog"
 

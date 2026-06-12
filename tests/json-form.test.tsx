@@ -49,9 +49,9 @@ function cloneJson(value: unknown): unknown {
 
 function queryTableDataCell(name: string): HTMLElement | null {
   return (
-    Array.from(document.querySelectorAll<HTMLElement>("[data-table-cell]")).find(
-      (cell) => cell.getAttribute("aria-label") === name
-    ) ?? null
+    Array.from(
+      document.querySelectorAll<HTMLElement>("[data-table-cell]")
+    ).find((cell) => cell.getAttribute("aria-label") === name) ?? null
   )
 }
 
@@ -60,6 +60,18 @@ function getTableDataCell(name: string): HTMLElement {
   expect(cell).toBeTruthy()
   expect(cell?.getAttribute("data-slot")).toBe("data-cell")
   return cell as HTMLElement
+}
+
+function findAncestorWithClass(
+  element: HTMLElement,
+  className: string
+): HTMLElement {
+  let current: HTMLElement | null = element
+  while (current) {
+    if (current.className.includes(className)) return current
+    current = current.parentElement
+  }
+  throw new Error(`ancestor with class ${className} was not found`)
 }
 
 function renderJsonForm({
@@ -181,7 +193,7 @@ describe("JsonForm scalar fields", () => {
     fireEvent.change(screen.getByLabelText("Notes"), {
       target: { value: "updated notes" },
     })
-    fireEvent.click(screen.getByRole("checkbox", { name: /Active\*/ }))
+    fireEvent.click(screen.getByRole("checkbox", { name: /Active\s*\*/ }))
 
     await expect(submit()).resolves.toEqual({
       name: "Janet",
@@ -310,7 +322,7 @@ describe("JsonForm scalar fields", () => {
     })
 
     expect(screen.getByText("*")).toBeTruthy()
-    expect(screen.getByRole("checkbox", { name: /Active\*/ })).toBeTruthy()
+    expect(screen.getByRole("checkbox", { name: /Active\s*\*/ })).toBeTruthy()
   })
 
   it("submits enum values, including nullable null choices", async () => {
@@ -818,7 +830,7 @@ describe("JsonForm arrays", () => {
       target: { value: "3" },
     })
     fireEvent.click(getTableDataCell("Taxable False"))
-    fireEvent.click(screen.getByRole("switch", { name: "false" }))
+    fireEvent.click(screen.getByRole("checkbox", { name: "Taxable False" }))
     fireEvent.click(screen.getAllByRole("button", { name: "Remove row" })[1])
     await waitFor(() =>
       expect(queryTableDataCell("Description Service")).toBeNull()
@@ -1403,8 +1415,8 @@ describe("JsonForm source linking", () => {
     })
 
     const input = screen.getByLabelText("Customer Name")
-    const shell = input.closest(".rounded-md")
-    expect(shell?.className).toContain("bg-primary/5")
+    const shell = findAncestorWithClass(input, "bg-primary/5")
+    expect(shell.className).toContain("bg-primary/5")
 
     fireEvent.focus(input)
     fireEvent.blur(input)

@@ -27,7 +27,7 @@ export function autoFormatDateTimeFields<T>(
     const items = effectiveSchema.items
     if (Array.isArray(items)) {
       return data.map((item, index) => {
-        const itemSchema = items[index]
+        const itemSchema = items[index] ?? effectiveSchema.additionalItems
         return itemSchema
           ? formatValueForCommit(item, itemSchema, contextSchema)
           : item
@@ -82,7 +82,12 @@ export function formatValueForCommit(
     }
   }
 
-  if (effectiveSchema.type === "object" || effectiveSchema.type === "array") {
+  if (
+    effectiveSchema.type === "object" ||
+    effectiveSchema.type === "array" ||
+    effectiveSchema.properties ||
+    effectiveSchema.items
+  ) {
     return autoFormatDateTimeFields(value, effectiveSchema, contextSchema)
   }
 

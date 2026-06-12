@@ -4,8 +4,8 @@ import * as React from "react"
 import { AlertCircle, PlusIcon } from "lucide-react"
 
 import { validateName } from "@/components/schema-editor/lib/json-schema-utils"
-import { Button } from "@/components/ui-retab/button"
-import { Input } from "@/components/ui-retab/input"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 
 interface DocumentPropertyAddRowProps {
   rootLayout: boolean

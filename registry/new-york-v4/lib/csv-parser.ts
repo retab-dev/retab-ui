@@ -59,7 +59,7 @@ export function createCsvParser(options?: CsvParserOptions): CsvParser {
         continue
       }
 
-      if (c === '"') {
+      if (c === '"' && !fieldStarted) {
         inQuotes = true
         fieldStarted = true
       } else if (c === delimiter) {

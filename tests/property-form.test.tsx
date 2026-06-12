@@ -221,7 +221,7 @@ describe("PropertyForm", () => {
       schemaNode: {
         type: "string",
         description: "new description",
-        title: "InvoiceId",
+        title: "Invoice Id",
       },
     })
   })
@@ -282,7 +282,7 @@ describe("PropertyForm", () => {
       name: "invoice_id",
       schemaNode: {
         type: "string",
-        title: "InvoiceId",
+        title: "Invoice Id",
       },
     })
   })
@@ -428,7 +428,7 @@ describe("PropertyForm", () => {
       schemaNode: {
         type: "string",
         description: "new description",
-        title: "InvoiceNumber",
+        title: "Invoice Number",
       },
     })
     expect(onDelete).not.toHaveBeenCalled()
@@ -470,7 +470,7 @@ describe("PropertyForm", () => {
       schemaNode: {
         type: "string",
         description: "new description",
-        title: "InvoiceNumber",
+        title: "Invoice Number",
       },
     })
     expect(onDelete).not.toHaveBeenCalled()
@@ -504,7 +504,7 @@ describe("PropertyForm", () => {
       schemaNode: {
         type: "string",
         description: "new description",
-        title: "1legacyName",
+        title: "1legacy Name",
       },
     })
   })
@@ -599,7 +599,7 @@ describe("PropertyForm", () => {
         },
         required: ["total"],
         description: "allowed description",
-        title: "InvoiceNumber",
+        title: "Invoice Number",
       },
     })
   })
@@ -721,7 +721,7 @@ describe("PropertyForm", () => {
       name: "billing_address",
       schemaNode: {
         type: "string",
-        title: "BillingAddress",
+        title: "Billing Address",
       },
     })
   })
@@ -799,7 +799,7 @@ describe("PropertyForm", () => {
       schemaNode: {
         type: "string",
         description: "new description",
-        title: "1legacyName",
+        title: "1legacy Name",
       },
     })
   })
@@ -1031,7 +1031,7 @@ describe("PropertyForm", () => {
       schemaNode: {
         anyOf: [{ type: "string", format: "date" }, { type: "null" }],
         description: "Invoice due date",
-        title: "DueDate",
+        title: "Due Date",
       },
     })
   })
@@ -1835,7 +1835,7 @@ describe("PropertyForm", () => {
       name: "billing_address",
       schemaNode: {
         $ref: "#/$defs/Address",
-        title: "BillingAddress",
+        title: "Billing Address",
       },
     })
   })
@@ -1877,7 +1877,7 @@ describe("PropertyForm", () => {
       name: "escaped_definition",
       schemaNode: {
         $ref: "#/$defs/A~1B~0C",
-        title: "EscapedDefinition",
+        title: "Escaped Definition",
       },
     })
   })
@@ -1975,7 +1975,7 @@ describe("PropertyForm", () => {
       schemaNode: {
         $ref: "#/$defs/Address",
         description: "Where invoices are sent",
-        title: "BillingAddress",
+        title: "Billing Address",
       },
     })
   })
@@ -2026,7 +2026,7 @@ describe("PropertyForm", () => {
       schemaNode: {
         anyOf: [{ $ref: "#/$defs/Address" }, { type: "null" }],
         description: "Optional invoice address",
-        title: "BillingAddress",
+        title: "Billing Address",
       },
     })
   })
@@ -2066,7 +2066,7 @@ describe("PropertyForm", () => {
       name: "billing_address",
       schemaNode: {
         type: "string",
-        title: "BillingAddress",
+        title: "Billing Address",
       },
     })
   })
@@ -2108,7 +2108,7 @@ describe("PropertyForm", () => {
       name: "billing_address",
       schemaNode: {
         type: "string",
-        title: "BillingAddress",
+        title: "Billing Address",
       },
     })
   })

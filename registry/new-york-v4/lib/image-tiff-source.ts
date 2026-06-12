@@ -180,6 +180,12 @@ export class TiffWorkerClient {
         )
         return
       }
+      try {
+        validateWorkerFrameDescriptors(message.frames)
+      } catch (error) {
+        this.fail(error instanceof Error ? error : new ImageDecodeError("Image decode failed"))
+        return
+      }
       this.initialized = true
       this.initResolve?.(message.frames)
       this.initResolve = null
@@ -205,7 +211,7 @@ export class TiffWorkerClient {
         !isWorkerRequestId(message.requestId) ||
         !isImageBitmap(message.bitmap)
       ) {
-        if (isImageBitmap(message.bitmap)) closeBitmap(message.bitmap)
+        closeBitmapLike(message.bitmap)
         this.fail(
           new TiffWorkerError("TIFF worker sent an invalid decode response")
         )
@@ -295,8 +301,20 @@ function isImageBitmap(value: unknown): value is ImageBitmap {
     value !== null &&
     typeof (value as Partial<ImageBitmap>).close === "function" &&
     Number.isFinite((value as Partial<ImageBitmap>).width) &&
-    Number.isFinite((value as Partial<ImageBitmap>).height)
+    Number.isFinite((value as Partial<ImageBitmap>).height) &&
+    (value as Partial<ImageBitmap>).width! > 0 &&
+    (value as Partial<ImageBitmap>).height! > 0
   )
+}
+
+function closeBitmapLike(value: unknown) {
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    typeof (value as Partial<ImageBitmap>).close === "function"
+  ) {
+    closeBitmap(value as ImageBitmap)
+  }
 }
 
 function isFrameDescriptorList(value: unknown): value is FrameDescriptor[] {
@@ -313,4 +331,23 @@ function isFrameDescriptorList(value: unknown): value is FrameDescriptor[] {
       )
     })
   )
+}
+
+function validateWorkerFrameDescriptors(frames: readonly FrameDescriptor[]) {
+  if (frames.length === 0) {
+    throw new ImageDecodeError("Image does not contain any frames")
+  }
+  for (const [frameIndex, frame] of frames.entries()) {
+    const { width, height } = frame.intrinsicSize
+    if (
+      !Number.isFinite(width) ||
+      !Number.isFinite(height) ||
+      width <= 0 ||
+      height <= 0
+    ) {
+      throw new ImageDecodeError(
+        `Image frame ${frameIndex + 1} has invalid dimensions`
+      )
+    }
+  }
 }

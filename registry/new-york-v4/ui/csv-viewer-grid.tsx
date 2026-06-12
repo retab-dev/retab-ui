@@ -6,6 +6,7 @@ import { ChevronDown, ChevronUp } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 import { CSV_SCROLLBAR_CSS, HeaderAwareScrollbar } from "./csv-viewer-scrollbar"
+import { sortedRowOrder } from "./csv-viewer-sort"
 import type { CsvCellAddress } from "./csv-viewer-state"
 import { CsvStyleScope } from "./csv-viewer-style-scope"
 import { fixedGridColumnWidths } from "./fixed-grid-columns"
@@ -78,7 +79,7 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
       [columns]
     )
 
-    React.useEffect(() => {
+    React.useLayoutEffect(() => {
       setSort(null)
     }, [columnShapeKey, sortResetKey])
 
@@ -94,16 +95,7 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
 
     const rowOrder = React.useMemo<number[] | null>(() => {
       if (!sort) return null
-      const order = sourceRows.map((_, rowIndex) => rowIndex)
-      const { columnIndex } = sort
-      order.sort((a, b) =>
-        compareCells(
-          sourceRows[a][columnIndex] ?? "",
-          sourceRows[b][columnIndex] ?? ""
-        )
-      )
-      if (sort.descending) order.reverse()
-      return order
+      return sortedRowOrder(sourceRows, sort.columnIndex, sort.descending)
     }, [sourceRows, sort])
 
     const displayIndexByRowIndex = React.useMemo<Map<
@@ -377,15 +369,6 @@ function HeaderCell({
       </button>
     </div>
   )
-}
-
-function compareCells(a: string, b: string): number {
-  const left = Number(a)
-  const right = Number(b)
-  if (a !== "" && b !== "" && !Number.isNaN(left) && !Number.isNaN(right)) {
-    return left - right
-  }
-  return a < b ? -1 : a > b ? 1 : 0
 }
 
 const CsvRow = React.memo(function CsvRow({

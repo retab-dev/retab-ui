@@ -17,6 +17,8 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
   DataCell,
+  parseDataCellNumberInput,
+  type DataCellCommitValue,
   type DataCellKind,
   type DataCellValue,
   type DataCellValueMeta,
@@ -41,8 +43,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import {
-  Checkbox,
   Form,
+  Checkbox,
   FormControl,
   FormField,
   FormItem,
@@ -241,7 +243,10 @@ export function JsonFormField({
                   </FormLabel>
                 </WithDescription>
                 <FormControl>
-                  <NullableBooleanControl field={field} />
+                  <NullableBooleanControl
+                    field={field}
+                    label={`${heading}${required ? " *" : ""}`}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -256,28 +261,23 @@ export function JsonFormField({
         <FormField
           name={name}
           render={({ field }) => (
-            <FormItem
-              className={cn(
-                "flex flex-row items-center gap-2 space-y-0",
-                className
-              )}
-            >
+            <FormItem className={className}>
+              <WithDescription text={schema.description}>
+                <FormLabel>
+                  {heading}
+                  {required ? (
+                    <span className="text-destructive"> *</span>
+                  ) : null}
+                </FormLabel>
+              </WithDescription>
               <FormControl>
                 <Checkbox
                   checked={Boolean(field.value)}
+                  aria-label={`${heading}${required ? " *" : ""}`}
                   onCheckedChange={(value) => field.onChange(value === true)}
+                  onBlur={field.onBlur}
                 />
               </FormControl>
-              <div className="leading-none">
-                <WithDescription text={schema.description}>
-                  <FormLabel>
-                    {heading}
-                    {required ? (
-                      <span className="text-destructive"> *</span>
-                    ) : null}
-                  </FormLabel>
-                </WithDescription>
-              </div>
               <FormMessage />
             </FormItem>
           )}
@@ -316,9 +316,11 @@ export function JsonFormField({
 
 function NullableBooleanControl({
   field,
+  label,
   ...controlProps
 }: {
   field: ControlFieldApi
+  label: string
 } & ScalarControlDomProps) {
   const selectValue =
     field.value === true
@@ -344,7 +346,7 @@ function NullableBooleanControl({
         field.onChange(null)
       }}
     >
-      <SelectTrigger {...controlProps}>
+      <SelectTrigger {...controlProps} aria-label={label}>
         <SelectValue placeholder="Select...">{displayValue}</SelectValue>
       </SelectTrigger>
       <SelectContent>
@@ -404,6 +406,12 @@ type ScalarControlDomProps = {
 }
 
 const NULL_SELECT_VALUE = "__json-form-null__"
+
+const compactJsonFormDataCellClass =
+  "h-8 rounded-md border-transparent bg-transparent px-2 text-sm shadow-none transition-colors hover:border-border hover:bg-background focus-visible:border-ring focus-visible:bg-background focus-visible:ring-1 focus-visible:ring-ring/30"
+
+const compactJsonFormSelectDataCellClass =
+  "h-8 rounded-md border-transparent bg-transparent px-2 text-sm shadow-none transition-colors hover:border-border hover:bg-background focus-visible:border-ring focus-visible:bg-background focus-visible:ring-1 focus-visible:ring-ring/30"
 
 function enumOptionValue(index: number): string {
   return `enum:${index}`
@@ -725,10 +733,6 @@ function ScalarControl({
   compact?: boolean
   nullable?: boolean
 } & ScalarControlDomProps) {
-  const sizing = compact
-    ? "h-8 rounded-md border-transparent bg-transparent px-2 text-sm shadow-none transition-colors hover:border-border hover:bg-background focus-visible:border-ring focus-visible:bg-background focus-visible:ring-1 focus-visible:ring-ring/30"
-    : undefined
-
   if (kind === "enum") {
     const enumValues = schema.enum ?? []
     const hasNullEnumValue = enumValues.some((value) => value === null)
@@ -761,7 +765,17 @@ function ScalarControl({
           field.onChange(enumValues[index])
         }}
       >
-        <SelectTrigger className={sizing} {...controlProps}>
+        <SelectTrigger
+          {...controlProps}
+          {...(compact
+            ? {
+                "data-slot": "data-cell",
+                "data-kind": "text",
+                "data-mode": "edit",
+              }
+            : {})}
+          className={compact ? compactJsonFormSelectDataCellClass : undefined}
+        >
           <SelectValue placeholder="Select…">{displayValue}</SelectValue>
         </SelectTrigger>
         <SelectContent>
@@ -782,22 +796,42 @@ function ScalarControl({
   }
 
   if (kind === "number" || kind === "integer") {
+    if (!compact) {
+      return (
+        <Input
+          {...controlProps}
+          nativeInput
+          type="number"
+          inputMode={kind === "integer" ? "numeric" : "decimal"}
+          step={kind === "integer" ? 1 : "any"}
+          value={field.value == null ? "" : String(field.value)}
+          onChange={(event) =>
+            updateScalarDataCellValue({
+              kind,
+              value: event.currentTarget.value,
+              nullable,
+              field,
+            })
+          }
+          onBlur={field.onBlur}
+          name={field.name}
+        />
+      )
+    }
+
     return (
-      <Input
-        nativeInput
-        type="number"
-        step={kind === "integer" ? 1 : "any"}
-        className={sizing}
+      <DataCell
         {...controlProps}
-        value={field.value == null ? "" : (field.value as number)}
-        onChange={(e) =>
-          field.onChange(
-            e.target.value === ""
-              ? nullable
-                ? null
-                : undefined
-              : e.target.valueAsNumber
-          )
+        kind={kind}
+        mode="edit"
+        value={dataCellNumberValue(field.value)}
+        draftValue={field.value == null ? "" : String(field.value)}
+        className={compactJsonFormDataCellClass}
+        onDraftValueChange={(value, meta) =>
+          updateScalarDataCellValue({ kind, value, meta, nullable, field })
+        }
+        onCommit={(value, meta) =>
+          updateScalarDataCellValue({ kind, value, meta, nullable, field })
         }
         onBlur={field.onBlur}
         name={field.name}
@@ -808,25 +842,49 @@ function ScalarControl({
   // string (+ formats)
   const value = field.value == null ? "" : String(field.value)
   if (schema.format === "date" || schema.format === "date-time") {
+    const dataCellKind = schema.format === "date" ? "date" : "date-time"
+    if (!compact) {
+      const inputValue =
+        schema.format === "date-time" ? datetimeLocalInputValue(value) : value
+      return (
+        <Input
+          {...controlProps}
+          nativeInput
+          type={schema.format === "date-time" ? "datetime-local" : "date"}
+          value={inputValue}
+          onChange={(event) => {
+            const nextValue = event.currentTarget.value
+            field.onChange(nextValue === "" && nullable ? null : nextValue)
+          }}
+          onBlur={field.onBlur}
+          name={field.name}
+        />
+      )
+    }
+
     return (
-      <Input
-        nativeInput
-        type={schema.format === "date" ? "date" : "datetime-local"}
-        className={sizing}
+      <DataCell
         {...controlProps}
-        value={
+        kind={dataCellKind}
+        mode="edit"
+        value={field.value == null ? null : value}
+        dateTimeZone={schema.format === "date-time" ? "preserve" : undefined}
+        draftValue={
           schema.format === "date-time" ? datetimeLocalInputValue(value) : value
         }
-        onChange={(e) =>
-          field.onChange(
-            e.target.value === "" && nullable ? null : e.target.value
-          )
+        className={compactJsonFormDataCellClass}
+        onDraftValueChange={(nextValue) =>
+          field.onChange(nextValue === "" && nullable ? null : nextValue)
+        }
+        onCommit={(nextValue) =>
+          field.onChange(nextValue === "" && nullable ? null : nextValue)
         }
         onBlur={field.onBlur}
         name={field.name}
       />
     )
   }
+
   // Textareas would break table-row heights, so compact cells stay single-line.
   if (
     !compact &&
@@ -846,21 +904,64 @@ function ScalarControl({
       />
     )
   }
+
+  if (!compact) {
+    return (
+      <Input
+        {...controlProps}
+        value={value}
+        onChange={(event) => {
+          const nextValue = event.currentTarget.value
+          field.onChange(nextValue === "" && nullable ? null : nextValue)
+        }}
+        onBlur={field.onBlur}
+        name={field.name}
+      />
+    )
+  }
+
   return (
-    <Input
-      nativeInput
-      className={sizing}
+    <DataCell
       {...controlProps}
-      value={value}
-      onChange={(e) =>
-        field.onChange(
-          e.target.value === "" && nullable ? null : e.target.value
-        )
+      kind="text"
+      mode="edit"
+      value={field.value == null ? null : value}
+      draftValue={value}
+      className={compactJsonFormDataCellClass}
+      onDraftValueChange={(nextValue) =>
+        field.onChange(nextValue === "" && nullable ? null : nextValue)
+      }
+      onCommit={(nextValue) =>
+        field.onChange(nextValue === "" && nullable ? null : nextValue)
       }
       onBlur={field.onBlur}
       name={field.name}
     />
   )
+}
+
+function updateScalarDataCellValue({
+  kind,
+  value,
+  meta,
+  nullable,
+  field,
+}: {
+  kind: "number" | "integer"
+  value: DataCellCommitValue | string
+  meta?: DataCellValueMeta
+  nullable: boolean
+  field: ControlFieldApi
+}) {
+  const rawValue = meta?.rawValue ?? (typeof value === "string" ? value : "")
+  const parsed = parseDataCellNumberInput({ kind, value: rawValue })
+
+  if (!parsed.isValid) return
+  if (parsed.isEmpty) {
+    field.onChange(nullable ? null : undefined)
+    return
+  }
+  field.onChange(parsed.value)
 }
 
 // ---------------------------------------------------------------------------
@@ -1556,10 +1657,10 @@ const ArrayTableRow = React.memo(function ArrayTableRow({
       rowTopPx === undefined
         ? { gridTemplateColumns: template }
         : getFixedGridRowStyle({
-          gridTemplate: template,
-          rowHeight: TABLE_ROW_HEIGHT,
-          top: rowTopPx,
-        }),
+            gridTemplate: template,
+            rowHeight: TABLE_ROW_HEIGHT,
+            top: rowTopPx,
+          }),
     [rowTopPx, template]
   )
 
@@ -1592,11 +1693,10 @@ const ArrayTableRow = React.memo(function ArrayTableRow({
           !isEditing && !isScalarEditing
             ? "hover:bg-background focus-visible:bg-background focus-visible:ring-1 focus-visible:ring-ring/30"
             : "px-1 py-0.5",
-          sourceLinked &&
-          (isEditing || isScalarEditing) &&
-          "hover:bg-muted/55"
+          sourceLinked && (isEditing || isScalarEditing) && "hover:bg-muted/55"
         )
         const cellProps = {
+          "data-slot": "data-cell",
           "data-table-cell": "",
           "data-source-path": sourceLinked ? logicalPath : undefined,
           className: cellClassName,
@@ -1650,7 +1750,7 @@ const ArrayTableRow = React.memo(function ArrayTableRow({
                 {...cellProps}
                 kind="text"
                 mode="display"
-                value={dataCellValue(value)}
+                value={dataCellTextValue(value)}
                 formatValue={() => displayText}
                 placeholder=""
                 role="button"
@@ -1660,31 +1760,68 @@ const ArrayTableRow = React.memo(function ArrayTableRow({
                 data-table-cell-path={path}
                 className={cn(cellClassName, "text-sm")}
               />
+            ) : dataCellKind === "number" || dataCellKind === "integer" ? (
+              <DataCell
+                {...cellProps}
+                kind={dataCellKind}
+                mode={isScalarEditing ? "edit" : "display"}
+                editable={isScalarEditing}
+                value={dataCellNumberValue(value)}
+                formatValue={() => displayText}
+                placeholder=""
+                role={!isScalarEditing ? "button" : undefined}
+                aria-label={`${displayLabel} ${displayText}`}
+                tabIndex={0}
+                data-table-cell-editable={!isScalarEditing ? "true" : undefined}
+                data-table-cell-path={!isScalarEditing ? path : undefined}
+                autoFocus={isScalarEditing}
+                name={path}
+                onCommit={commitDataCellValue}
+                data-table-cell-editor={isScalarEditing ? "true" : undefined}
+                onBlur={() => {
+                  if (isScalarEditing) setActiveEditorPath(null)
+                }}
+                className={cn(cellClassName, "text-sm")}
+              />
+            ) : dataCellKind === "boolean" ? (
+              <DataCell
+                {...cellProps}
+                kind="boolean"
+                mode={isScalarEditing ? "edit" : "display"}
+                editable={isScalarEditing}
+                value={Boolean(value)}
+                placeholder=""
+                role={!isScalarEditing ? "button" : undefined}
+                aria-label={`${displayLabel} ${displayText}`}
+                tabIndex={0}
+                data-table-cell-editable={!isScalarEditing ? "true" : undefined}
+                data-table-cell-path={!isScalarEditing ? path : undefined}
+                autoFocus={isScalarEditing}
+                name={path}
+                onCommit={commitDataCellValue}
+                data-table-cell-editor={isScalarEditing ? "true" : undefined}
+                onBlur={() => {
+                  if (isScalarEditing) setActiveEditorPath(null)
+                }}
+                className={cn(cellClassName, "text-sm")}
+              />
             ) : (
               <DataCell
                 {...cellProps}
                 kind={dataCellKind}
                 mode={isScalarEditing ? "edit" : "display"}
                 editable={isScalarEditing}
-                value={
-                  col.kind === "boolean" ? Boolean(value) : dataCellValue(value)
-                }
-                formatValue={
-                  col.kind === "boolean" ? undefined : () => displayText
-                }
+                value={dataCellTextValue(value)}
+                formatValue={() => displayText}
                 placeholder=""
                 role={!isScalarEditing ? "button" : undefined}
                 aria-label={`${displayLabel} ${displayText}`}
                 tabIndex={0}
-                data-table-cell-editable={
-                  !isScalarEditing ? "true" : undefined
-                }
-                data-table-cell-path={
-                  !isScalarEditing ? path : undefined
-                }
+                data-table-cell-editable={!isScalarEditing ? "true" : undefined}
+                data-table-cell-path={!isScalarEditing ? path : undefined}
                 autoFocus={isScalarEditing}
                 name={path}
-                onValueCommit={commitDataCellValue}
+                onCommit={commitDataCellValue}
                 data-table-cell-editor={isScalarEditing ? "true" : undefined}
                 onBlur={() => {
                   if (isScalarEditing) setActiveEditorPath(null)
@@ -1810,6 +1947,14 @@ function dataCellValue(value: unknown): DataCellValue {
     return value
   }
   return String(value)
+}
+
+function dataCellNumberValue(value: unknown): string | number | null {
+  return typeof value === "number" || typeof value === "string" ? value : null
+}
+
+function dataCellTextValue(value: unknown): string | null {
+  return value === null || value === undefined ? null : String(value)
 }
 
 function FixedArrayTableBody({
@@ -2004,9 +2149,9 @@ export function JsonForm({
       return form.handleSubmit((data, submitEvent) => {
         const decoded = usesEncodedPaths
           ? (decodeValueFromForm(expandedSchema, data) as Record<
-            string,
-            unknown
-          >)
+              string,
+              unknown
+            >)
           : data
         return onSubmit(decoded, submitEvent)
       })(event)

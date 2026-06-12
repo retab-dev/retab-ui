@@ -74,9 +74,15 @@ export function ImageViewerToolbar({
 export function ImageViewerFallback({
   className,
   bare = false,
+  fallbackFrameSize,
+  scale,
+  toolbar = true,
 }: {
   className?: string
   bare?: boolean
+  fallbackFrameSize?: { width: number; height: number }
+  scale?: number
+  toolbar?: boolean
 }) {
   return (
     <div
@@ -87,10 +93,10 @@ export function ImageViewerFallback({
       )}
       data-slot="image-viewer"
     >
-      <ImageToolbarSkeleton />
+      {toolbar ? <ImageToolbarSkeleton /> : null}
       <div className="min-h-0 flex-1 overflow-auto">
         <div className="flex flex-col items-center p-4">
-          <ImageFrameSkeleton />
+          <ImageFrameSkeleton frameSize={fallbackFrameSize} scale={scale} />
         </div>
       </div>
     </div>
@@ -162,8 +168,35 @@ function ToolbarIconPlaceholder({ children }: { children: React.ReactNode }) {
   )
 }
 
-function ImageFrameSkeleton() {
+function ImageFrameSkeleton({
+  frameSize,
+  scale,
+}: {
+  frameSize?: { width: number; height: number }
+  scale?: number
+}) {
+  const normalizedScale =
+    scale !== undefined && Number.isFinite(scale) && scale > 0
+      ? Math.max(0.25, scale)
+      : null
+  const style: React.CSSProperties | undefined = frameSize
+    ? normalizedScale !== null
+      ? {
+          width: frameSize.width * normalizedScale,
+          height: frameSize.height * normalizedScale,
+        }
+      : {
+          aspectRatio: `${frameSize.width} / ${frameSize.height}`,
+          minWidth: frameSize.width * 0.25,
+        }
+    : { aspectRatio: "4 / 3" }
+
   return (
-    <Skeleton aria-hidden className="w-full" style={{ aspectRatio: "4 / 3" }} />
+    <Skeleton
+      aria-hidden
+      className="w-full rounded-none shadow-sm ring-1 ring-border"
+      data-slot="image-frame-skeleton"
+      style={style}
+    />
   )
 }

@@ -1,20 +1,27 @@
 import * as React from "react"
 import { format } from "date-fns"
 
+import type { DataCellKind, DataCellValue } from "@/components/ui/data-cell"
 import {
   getCellWidthStyle,
   getSelectableCellWidthStyle,
 } from "@/components/json-table/cell-style"
 import type { JsonTableCellProps } from "@/components/json-table/json-table-cell-types"
+import { JsonTableDataCell } from "@/components/json-table/json-table-data-cell"
 import { parseDateStringAsLocal } from "@/components/json-table/lib/date-parsing"
 import { getFieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
 import type { FieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
 import {
-  DataCell,
-  type DataCellKind,
-  type DataCellValue,
-} from "@/components/ui/data-cell"
-import { TableCell } from "@/components/ui-retab/table"
+  ArrayEditor as JsonArrayEditor,
+  ObjectEditor as JsonObjectEditor,
+} from "@/components/json-table/object-editor"
+import { transferContext } from "@/components/json-table/cell-editors/object-editor"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { TableCell } from "@/components/ui/table"
 
 function formatNestedValue(value: unknown): string {
   if (Array.isArray(value)) return `[${value.length} items]`
@@ -27,7 +34,9 @@ function formatNestedValue(value: unknown): string {
   }
 }
 
-function dataCellKindForField(fieldMetadata: FieldMetadata): DataCellKind | null {
+function dataCellKindForField(
+  fieldMetadata: FieldMetadata
+): DataCellKind | null {
   switch (fieldMetadata.kind) {
     case "string":
     case "enum":
@@ -58,10 +67,79 @@ function dataCellValue(value: unknown): DataCellValue {
   return formatNestedValue(value)
 }
 
+function numberDataCellValue(value: unknown): string | number | null {
+  return typeof value === "number" || typeof value === "string" ? value : null
+}
+
+function textDataCellValue(value: unknown): string | null {
+  return value === null || value === undefined
+    ? null
+    : String(dataCellValue(value))
+}
+
 function dateDisplayValue(value: unknown): React.ReactNode | undefined {
   const date =
     typeof value === "string" ? parseDateStringAsLocal(value) : undefined
   return date ? format(date, "PP") : undefined
+}
+
+function ReadOnlyJsonFormCell({
+  fieldMetadata,
+  rootSchema,
+  value,
+}: {
+  fieldMetadata: FieldMetadata
+  rootSchema: JsonTableCellProps["schema"]
+  value: unknown
+}) {
+  const [open, setOpen] = React.useState(false)
+  const property = fieldMetadata.rawSchema
+  const title = property.title || fieldMetadata.fieldPath
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button className="h-full w-full justify-start overflow-hidden px-1 text-xs leading-none text-inherit select-none hover:bg-accent/50 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none">
+          {value ? (
+            <div className="max-w-[80px] truncate text-left">
+              {formatNestedValue(value)}
+            </div>
+          ) : (
+            <div className="max-w-[80px] truncate text-left text-muted-foreground">
+              {title}
+            </div>
+          )}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="m-0 w-96 p-4"
+        align="start"
+        side="top"
+        sideOffset={0}
+        alignOffset={-1}
+      >
+        {open && fieldMetadata.kind === "array" ? (
+          <JsonArrayEditor
+            name={fieldMetadata.fieldPath}
+            disabled
+            property={transferContext(property, rootSchema)}
+            currentValue={value}
+            onSubmit={() => {}}
+          />
+        ) : open ? (
+          <JsonObjectEditor
+            disabled
+            property={{
+              ...transferContext(property, rootSchema),
+              additionalProperties: true,
+            }}
+            currentValue={value}
+            onSubmit={() => {}}
+          />
+        ) : null}
+      </PopoverContent>
+    </Popover>
+  )
 }
 
 function ReadOnlyJsonTableCellContent(props: JsonTableCellProps) {
@@ -78,13 +156,22 @@ function ReadOnlyJsonTableCellContent(props: JsonTableCellProps) {
     return (
       <TableCell
         data-field-path={materializedFieldPath}
-        className="relative cursor-not-allowed bg-muted/60"
+        className="relative cursor-not-allowed bg-muted/60 p-0"
         style={getCellWidthStyle(cellWidth)}
-      />
+      >
+        <JsonTableDataCell
+          kind="text"
+          value={null}
+          placeholder=""
+          className="bg-transparent"
+        />
+      </TableCell>
     )
   }
 
   const dataCellKind = dataCellKindForField(fieldMetadata)
+  const isJsonFormCell =
+    fieldMetadata.kind === "object" || fieldMetadata.kind === "array"
 
   return (
     <TableCell
@@ -92,22 +179,40 @@ function ReadOnlyJsonTableCellContent(props: JsonTableCellProps) {
       className="relative m-0 border-t-0 border-r border-b border-l-0 p-0 select-none"
       style={getSelectableCellWidthStyle(cellWidth)}
     >
-      {dataCellKind ? (
-        <DataCell
+      {isJsonFormCell ? (
+        <ReadOnlyJsonFormCell
+          fieldMetadata={fieldMetadata}
+          rootSchema={props.schema}
+          value={value}
+        />
+      ) : dataCellKind === "number" || dataCellKind === "integer" ? (
+        <JsonTableDataCell
           kind={dataCellKind}
-          value={dataCellValue(value)}
+          value={numberDataCellValue(value)}
+          className="py-2"
+        />
+      ) : dataCellKind === "boolean" ? (
+        <JsonTableDataCell
+          kind="boolean"
+          value={typeof value === "boolean" ? value : null}
+          className="py-2"
+        />
+      ) : dataCellKind ? (
+        <JsonTableDataCell
+          kind={dataCellKind}
+          value={textDataCellValue(value)}
           formatValue={
             fieldMetadata.kind === "date"
               ? () => dateDisplayValue(value) ?? ""
               : undefined
           }
-          className="h-full rounded-none border-0 py-2 text-xs"
+          className="py-2"
         />
       ) : (
-        <DataCell
+        <JsonTableDataCell
           kind="text"
           value={formatNestedValue(value)}
-          className="h-full rounded-none border-0 py-2 text-xs"
+          className="py-2"
         />
       )}
     </TableCell>

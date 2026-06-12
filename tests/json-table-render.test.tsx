@@ -84,7 +84,7 @@ describe("json table cell editor dispatch", () => {
     view = renderEditor("boolean", {
       field: { ...baseField("boolean"), effectiveValue: true },
     })
-    expect(view.getByRole("switch").getAttribute("aria-checked")).toBe("true")
+    expect(view.getByRole("checkbox").getAttribute("aria-checked")).toBe("true")
     cleanup()
 
     view = renderEditor("enum", {
@@ -103,7 +103,10 @@ describe("json table cell editor dispatch", () => {
         },
       },
     })
-    expect(view.getByRole("combobox")).toBeTruthy()
+    const enumTrigger = view.getByRole("combobox")
+    expect(enumTrigger.getAttribute("data-slot")).toBe("data-cell")
+    expect(enumTrigger.getAttribute("data-mode")).toBe("edit")
+    expect(enumTrigger.getAttribute("data-kind")).toBe("text")
   })
 
   it("reports invalid integer inputs without lossy coercion", () => {
@@ -155,7 +158,11 @@ describe("json table cell editor dispatch", () => {
       },
     })
     activateDataCell(view.container)
-    expect(view.getByDisplayValue("2024-01-02T03:04")).toBeTruthy()
+    const dateTimeTrigger = view.getByRole("button")
+    expect(dateTimeTrigger.getAttribute("data-slot")).toBe("data-cell")
+    expect(dateTimeTrigger.getAttribute("data-mode")).toBe("edit")
+    expect(dateTimeTrigger.getAttribute("data-kind")).toBe("date-time")
+    expect(dateTimeTrigger.textContent).toContain("02/01/2024, 03:04")
     cleanup()
 
     view = renderEditor("time", {
@@ -163,7 +170,11 @@ describe("json table cell editor dispatch", () => {
       textDraft: { ...baseTextDraft(), activeTextValue: "03:04:00" },
     })
     activateDataCell(view.container)
-    expect(view.getByDisplayValue("03:04:00")).toBeTruthy()
+    const timeTrigger = view.getByRole("button")
+    expect(timeTrigger.getAttribute("data-slot")).toBe("data-cell")
+    expect(timeTrigger.getAttribute("data-mode")).toBe("edit")
+    expect(timeTrigger.getAttribute("data-kind")).toBe("time")
+    expect(timeTrigger.textContent).toContain("03:04:00")
   })
 
   it("renders object and array editor triggers", () => {
@@ -183,6 +194,7 @@ describe("json table cell editor dispatch", () => {
       },
     })
     expect(view.getByRole("button").textContent).toContain("ACME")
+    expect(view.container.querySelector('[data-slot="data-cell"]')).toBeNull()
     cleanup()
 
     view = renderEditor("array", {
@@ -209,5 +221,6 @@ describe("json table cell editor dispatch", () => {
       },
     })
     expect(view.getByRole("button").textContent).toContain("[2 items]")
+    expect(view.container.querySelector('[data-slot="data-cell"]')).toBeNull()
   })
 })

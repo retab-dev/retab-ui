@@ -443,9 +443,7 @@ describe("pdf-viewer-resource", () => {
   })
 
   it("destroys a pending document if the cache is reset before it resolves", async () => {
-    const pendingLoad = getDocumentResource(
-      pdfUrlContent("/reset-pending.pdf")
-    )
+    const pendingLoad = getDocumentResource(pdfUrlContent("/reset-pending.pdf"))
     await vi.waitFor(() =>
       expect(pdfjsMock.pending.has("/reset-pending.pdf")).toBe(true)
     )

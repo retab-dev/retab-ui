@@ -19,6 +19,7 @@ export function PptxViewerDemo() {
           fileName: "sample-deck.pptx",
         }}
         className="h-full"
+        fallbackSlideSize={{ width: 960, height: 540 }}
         renderSlideOverlay={({ slideNumber }) =>
           slideNumber === sampleBox.slide ? (
             <div

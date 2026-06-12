@@ -16,7 +16,10 @@ export function HeaderAwareScrollbar({
 
   const measure = React.useCallback(() => {
     frame.current = 0
-    if (!scrollElement) return
+    if (!scrollElement) {
+      hideThumb(setThumb)
+      return
+    }
     const { scrollHeight, clientHeight, scrollTop } = scrollElement
     if (
       !Number.isFinite(scrollHeight) ||
@@ -51,7 +54,10 @@ export function HeaderAwareScrollbar({
   }, [measure])
 
   React.useEffect(() => {
-    if (!scrollElement) return
+    if (!scrollElement) {
+      hideThumb(setThumb)
+      return
+    }
     measure()
     scrollElement.addEventListener("scroll", scheduleMeasure, {
       passive: true,

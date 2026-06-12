@@ -1,6 +1,6 @@
 import type { CellEditorProps } from "@/components/json-table/cell-editors/editor-types"
 import { fieldFocusId } from "@/components/json-table/cell-editors/editor-types"
-import { DataCell } from "@/components/ui/data-cell"
+import { JsonTableDataCell } from "@/components/json-table/json-table-data-cell"
 
 export function BooleanEditor({
   identity,
@@ -9,12 +9,12 @@ export function BooleanEditor({
   commit,
 }: CellEditorProps) {
   return (
-    <DataCell
+    <JsonTableDataCell
       kind="boolean"
       editable={field.isEditable}
       value={Boolean(field.effectiveValue)}
       disabled={!field.isEditable}
-      onValueCommit={(value) => {
+      onCommit={(value) => {
         if (field.isEditable) commit.onCommit(value)
       }}
       onFocus={() => {
@@ -25,7 +25,7 @@ export function BooleanEditor({
         focus.setFocusedField(null)
         focus.setIsInputFocused(false)
       }}
-      className="h-full rounded-none border-0 py-1"
+      className="py-1"
     />
   )
 }

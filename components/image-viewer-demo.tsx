@@ -11,6 +11,7 @@ export function ImageViewerDemo() {
           url: "/samples/nvidia-10q-scan.tiff",
           fileName: "nvidia-10q-scan.tiff",
         }}
+        fallbackFrameSize={{ width: 1275, height: 1650 }}
         className="h-full"
       />
     </div>

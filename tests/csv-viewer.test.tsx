@@ -107,6 +107,19 @@ function csvStreamResponse(parts: string[]) {
   )
 }
 
+function csvByteStreamResponse(text: string, splitAt: number) {
+  const bytes = new TextEncoder().encode(text)
+  return responseFromStream(
+    new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(bytes.slice(0, splitAt))
+        controller.enqueue(bytes.slice(splitAt))
+        controller.close()
+      },
+    })
+  )
+}
+
 function responseFromStream(body: ReadableStream<Uint8Array>) {
   return new Response(body, { status: 200 })
 }
@@ -167,6 +180,26 @@ describe("CsvViewer", () => {
     const rows = csvRows(container)
     expect(rows).toHaveLength(1)
     expect(csvCells(rows[0]!).map((cell) => cell.textContent)).toEqual([""])
+  })
+
+  it("keeps quotes inside unquoted fields without swallowing delimiters", () => {
+    const { container } = render(
+      <CsvViewer
+        source={{
+          kind: "text",
+          text: 'note,other\nab"cd,ef\nnext,row',
+          fileName: "literal-quotes.csv",
+        }}
+        toolbar={false}
+      />
+    )
+
+    expect(
+      csvCells(csvRows(container)[0]!).map((cell) => cell.textContent)
+    ).toEqual(['ab"cd', "ef"])
+    expect(
+      csvCells(csvRows(container)[1]!).map((cell) => cell.textContent)
+    ).toEqual(["next", "row"])
   })
 
   it("strips a leading UTF-8 BOM from the first header", () => {
@@ -336,6 +369,44 @@ describe("CsvViewer", () => {
 
     expect(screen.getByTitle("Sort by b")).toBeTruthy()
     expect(screen.getByText("2")).toBeTruthy()
+  })
+
+  it("clears sort state when a dialect change keeps the same column names", () => {
+    const source = {
+      kind: "text" as const,
+      text: "Column 1,Column 2\nb,2\na,1",
+      fileName: "stable.csv",
+    }
+    const { container, rerender } = render(
+      <CsvViewer
+        source={source}
+        dialect={{ delimiter: ",", hasHeader: true }}
+        toolbar={false}
+      />
+    )
+
+    fireEvent.click(screen.getByTitle("Sort by Column 1"))
+    expect(
+      csvCells(csvRows(container)[0]!).map((cell) => cell.textContent)
+    ).toEqual(["a", "1"])
+
+    rerender(
+      <CsvViewer
+        source={source}
+        dialect={{ delimiter: ",", hasHeader: false }}
+        toolbar={false}
+      />
+    )
+
+    expect(
+      screen
+        .getByTitle("Sort by Column 1")
+        .closest('[role="columnheader"]')
+        ?.getAttribute("aria-sort")
+    ).toBe("none")
+    expect(
+      csvCells(csvRows(container)[0]!).map((cell) => cell.textContent)
+    ).toEqual(["Column 1", "Column 2"])
   })
 
   it("renders empty parsed data with header counts and a no-rows state", () => {
@@ -802,6 +873,39 @@ describe("CsvViewer", () => {
     expect(csvRows(container)[0]?.textContent).toContain("1bnative-first")
   })
 
+  it("keeps sort state when only text source presentation metadata changes", () => {
+    const { container, rerender } = render(
+      <CsvViewer
+        source={{
+          kind: "text",
+          text: "name\nz\na",
+          fileName: "first.csv",
+        }}
+        toolbar={false}
+      />
+    )
+
+    fireEvent.click(screen.getByTitle("Sort by name"))
+    expect(
+      csvCells(csvRows(container)[0]!).map((cell) => cell.textContent)
+    ).toEqual(["a"])
+
+    rerender(
+      <CsvViewer
+        source={{
+          kind: "text",
+          text: "name\nz\na",
+          fileName: "second.csv",
+        }}
+        toolbar={false}
+      />
+    )
+
+    expect(
+      csvCells(csvRows(container)[0]!).map((cell) => cell.textContent)
+    ).toEqual(["a"])
+  })
+
   it("clears sort state when a new source has a different column shape", async () => {
     const { container, rerender } = render(
       <CsvViewer
@@ -1138,6 +1242,24 @@ describe("CsvViewer URL source loading", () => {
     expect(screen.queryByText("a\tb")).toBeNull()
   })
 
+  it("preserves UTF-8 characters split across URL byte chunks", async () => {
+    const text = "name\ncaf\u00e9"
+    const splitAt = new TextEncoder().encode(text).length - 1
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(csvByteStreamResponse(text, splitAt)))
+    )
+
+    render(
+      <CsvViewer
+        source={{ kind: "url", url: "/utf8.csv", fileName: "utf8.csv" }}
+        toolbar={false}
+      />
+    )
+
+    expect(await screen.findByText("caf\u00e9")).toBeTruthy()
+  })
+
   it("renders retryable URL errors and retries the same source", async () => {
     const fetchMock = vi
       .fn()
@@ -1294,6 +1416,82 @@ describe("CsvViewer URL source loading", () => {
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
     expect(screen.getByText("2")).toBeTruthy()
+  })
+
+  it("keeps URL sort state when only presentation metadata changes", async () => {
+    const fetchMock = vi.fn(() => Promise.resolve(response("name\nz\na")))
+    vi.stubGlobal("fetch", fetchMock)
+
+    const { container, rerender } = render(
+      <CsvViewer
+        source={{
+          kind: "url",
+          url: "/stable-sort.csv",
+          fileName: "first.csv",
+        }}
+      />
+    )
+
+    expect(await screen.findByText("z")).toBeTruthy()
+
+    fireEvent.click(screen.getByTitle("Sort by name"))
+    expect(
+      csvCells(csvRows(container)[0]!).map((cell) => cell.textContent)
+    ).toEqual(["a"])
+
+    rerender(
+      <CsvViewer
+        source={{
+          kind: "url",
+          url: "/stable-sort.csv",
+          fileName: "second.csv",
+        }}
+      />
+    )
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    expect(
+      csvCells(csvRows(container)[0]!).map((cell) => cell.textContent)
+    ).toEqual(["a"])
+  })
+
+  it("updates URL export filenames when only presentation metadata changes", async () => {
+    const { createObjectURL } = mockObjectUrls()
+    const clicks = captureAnchorClicks()
+    const fetchMock = vi.fn(() => Promise.resolve(response("a,b\n1,2")))
+    vi.stubGlobal("fetch", fetchMock)
+
+    const { rerender } = render(
+      <CsvViewer
+        source={{
+          kind: "url",
+          url: "/stable-name.csv",
+          fileName: "first.csv",
+        }}
+      />
+    )
+
+    expect(await screen.findByText("2")).toBeTruthy()
+
+    rerender(
+      <CsvViewer
+        source={{
+          kind: "url",
+          url: "/stable-name.csv",
+          fileName: "second.csv",
+        }}
+      />
+    )
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+
+    fireEvent.click(screen.getByRole("button", { name: "Download" }))
+    fireEvent.click(await screen.findByText("Export table"))
+
+    await waitFor(() => expect(createObjectURL).toHaveBeenCalledTimes(1))
+    expect(clicks).toEqual([
+      { href: "blob:csv-download", download: "second.csv" },
+    ])
   })
 
   it("ignores stale URL loads after the source changes", async () => {

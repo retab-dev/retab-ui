@@ -19,9 +19,9 @@ import {
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "@/components/ui-retab/accordion"
-import { Button } from "@/components/ui-retab/button"
-import { Input } from "@/components/ui-retab/input"
+} from "@/components/ui/accordion"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 
 interface DocumentDefinitionsEditorProps {
   dispatch: SchemaDispatch
@@ -81,9 +81,7 @@ export function DocumentDefinitionsEditor({
     <Accordion
       id={DEFINITIONS_SECTION_ID}
       className="mt-6 w-full rounded-lg border border-border px-4 pb-0 shadow-sm"
-      type="single"
-      collapsible={false}
-      value={controller.accordionValue}
+      value={[controller.accordionValue]}
     >
       <AccordionItem value="defs" className="border-none bg-transparent">
         <AccordionTrigger className="bg-transparent font-medium text-muted-foreground">

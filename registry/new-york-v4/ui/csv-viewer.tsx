@@ -96,8 +96,9 @@ export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
     const sourceRows = resourceState.sourceRows
     const canExportTable =
       resourceState.status === "ready" || resourceState.status === "empty"
+    const parseDialectKey = `${dialect.delimiter}\u0000${dialect.hasHeader}`
     const sortResetKey =
-      resource?.keys.resource ??
+      (resource ? `${resource.keys.load}\u0000${parseDialectKey}` : null) ??
       (source?.kind === "table"
         ? (source.identityKey ?? source.table)
         : "empty")

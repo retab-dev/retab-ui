@@ -372,6 +372,15 @@ interface FixedVirtualWindow {
   minimumVisibleCount?: number
 }
 
+const emptyFixedGridViewport: FixedGridViewport = {
+  scrollTop: 0,
+  scrollLeft: 0,
+  clientHeight: 0,
+  clientWidth: 0,
+  isJumpingRows: false,
+  isJumpingColumns: false,
+}
+
 function useResolvedScrollElement({
   scrollRef,
   scrollElement,
@@ -393,17 +402,19 @@ function useResolvedScrollElement({
 }
 
 function useFixedGridViewport(scrollElement: HTMLElement | null | undefined) {
-  const [viewport, setViewport] = React.useState<FixedGridViewport>({
-    scrollTop: 0,
-    scrollLeft: 0,
-    clientHeight: 0,
-    clientWidth: 0,
-    isJumpingRows: false,
-    isJumpingColumns: false,
-  })
+  const [viewport, setViewport] = React.useState<FixedGridViewport>(
+    emptyFixedGridViewport
+  )
 
   useIsomorphicLayoutEffect(() => {
-    if (!scrollElement) return
+    if (!scrollElement) {
+      setViewport((current) =>
+        fixedGridViewportEqual(current, emptyFixedGridViewport)
+          ? current
+          : emptyFixedGridViewport
+      )
+      return
+    }
 
     let frame = 0
     let lastScrollTop = scrollElement.scrollTop

@@ -1,14 +1,17 @@
 import { cn } from "@/lib/utils"
 import type { CellEditorProps } from "@/components/json-table/cell-editors/editor-types"
 import { fieldFocusId } from "@/components/json-table/cell-editors/editor-types"
-import { DataCell } from "@/components/ui/data-cell"
+import {
+  JsonTableDataCell,
+  jsonTableSelectDataCellClass,
+} from "@/components/json-table/json-table-data-cell"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui-retab/select"
+} from "@/components/ui/select"
 
 const NULL_SELECT_VALUE = "__json_table_null__"
 
@@ -72,7 +75,7 @@ export function EnumEditor({
 
   if (!overlays.showInput) {
     return (
-      <DataCell
+      <JsonTableDataCell
         kind="text"
         value={effectiveValue == null ? "" : String(effectiveValue)}
         className="items-start py-2"
@@ -91,6 +94,7 @@ export function EnumEditor({
       value={getEnumSelectValue(effectiveValue, fieldMetadata.enumValues)}
       disabled={!field.isEditable}
       onValueChange={(newValue) => {
+        if (newValue === null) return
         if (newValue === NULL_SELECT_VALUE && fieldMetadata.isNullable) {
           commit.onCommit(null)
           return
@@ -100,8 +104,12 @@ export function EnumEditor({
       }}
     >
       <SelectTrigger
+        data-slot="data-cell"
+        data-kind="text"
+        data-mode="edit"
         className={cn(
-          "h-6 w-full rounded-none border-none px-2 text-xs leading-none text-inherit shadow-none",
+          jsonTableSelectDataCellClass,
+          "h-full py-2 leading-none",
           "disabled:opacity-100"
         )}
         onFocus={() => {
@@ -119,7 +127,7 @@ export function EnumEditor({
           placeholder={fieldMetadata.isNullable ? "Select..." : undefined}
         />
       </SelectTrigger>
-      <SelectContent position="popper" className="z-[60]">
+      <SelectContent className="z-[60]">
         {fieldMetadata.isNullable && (
           <SelectItem
             key={NULL_SELECT_VALUE}

@@ -19,6 +19,13 @@ function isObjectSchema(
   return !!schema && (schema.type === "object" || !!schema.properties)
 }
 
+function hasOwnSchemaProperty(
+  properties: JSONSchema7["properties"],
+  propName: string
+): boolean {
+  return Object.prototype.hasOwnProperty.call(properties, propName)
+}
+
 function getParentSchemaForHeader(
   schema: JSONSchema7,
   parentPath: string
@@ -61,8 +68,8 @@ function getObjectPropertyKeysForDrop({
       ).schema
       if (!isObjectSchema(branchSchema) || !branchSchema.properties) continue
       if (
-        sourcePropName in branchSchema.properties &&
-        targetPropName in branchSchema.properties
+        hasOwnSchemaProperty(branchSchema.properties, sourcePropName) &&
+        hasOwnSchemaProperty(branchSchema.properties, targetPropName)
       ) {
         return Object.keys(branchSchema.properties)
       }

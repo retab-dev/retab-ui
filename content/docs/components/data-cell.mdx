@@ -35,7 +35,7 @@ import {
   kind="number"
   editable
   value="-108.3"
-  onValueCommit={(value, meta) => {
+  onCommit={(value, meta) => {
     // value is number | null for numeric cells
     // meta.isValid distinguishes invalid input from an empty nullable value
   }}
@@ -43,49 +43,53 @@ import {
 
 <DataCell
   kind="text"
-  mode="edit"
+  editable
   value="Committed"
   draftValue={draft}
   onDraftValueChange={setDraft}
-  onValueCommit={(value) => {
+  onCommit={(value) => {
     // value is string | null
   }}
 />
 
 const statusOptions = ["pending", "approved", "rejected"]
 
-<Select value={status} onValueChange={setStatus}>
-  <SelectTrigger className="h-8 min-h-8 w-full rounded-md border-transparent bg-transparent px-2 text-sm shadow-none">
-    <SelectValue placeholder="Select..." />
-  </SelectTrigger>
-  <SelectContent>
-    {statusOptions.map((option) => (
-      <SelectItem key={option} value={option}>
-        {option}
-      </SelectItem>
-    ))}
-  </SelectContent>
-</Select>
+{isEditing ? (
+  <Select value={status} onValueChange={setStatus}>
+    <SelectTrigger className="h-8 min-h-8 w-full rounded-md border-transparent bg-transparent px-2 text-sm shadow-none">
+      <SelectValue placeholder="Select..." />
+    </SelectTrigger>
+    <SelectContent>
+      {statusOptions.map((option) => (
+        <SelectItem key={option} value={option}>
+          {option}
+        </SelectItem>
+      ))}
+    </SelectContent>
+  </Select>
+) : (
+  <DataCell kind="text" value={status} editable />
+)}
 
 ```
 
 ## API Reference
 
-| Prop                 | Type                                                            | Default                                       |
-| -------------------- | --------------------------------------------------------------- | --------------------------------------------- |
-| `kind`               | `DataCellKind`                                                  | `-`                                           |
-| `value`              | `DataCellValue`                                                 | `undefined`                                   |
-| `mode`               | `"display" \| "edit" \| "auto"`                                 | `"auto"` when editable, otherwise `"display"` |
-| `editable`           | `boolean`                                                       | `false`                                       |
-| `disabled`           | `boolean`                                                       | `false`                                       |
-| `name`               | `string`                                                        | `undefined`                                   |
-| `placeholder`        | `string`                                                        | `"—"`                                         |
-| `dateTimeZone`       | `"local" \| "preserve" \| "utc"`                                | `"local"`                                     |
-| `formatValue`        | `(value, meta) => React.ReactNode`                              | `undefined`                                   |
-| `draftValue`         | `string`                                                        | `undefined`                                   |
-| `autoFocus`          | `boolean`                                                       | `false`                                       |
-| `onDraftValueChange` | `(value: string, meta: DataCellValueMeta) => void`              | `undefined`                                   |
-| `onValueCommit`      | `(value: DataCellCommitValue, meta: DataCellValueMeta) => void` | `undefined`                                   |
+| Prop                 | Type                                               | Default                                       |
+| -------------------- | -------------------------------------------------- | --------------------------------------------- |
+| `kind`               | `DataCellKind`                                     | `-`                                           |
+| `value`              | `DataCellValue`                                    | `undefined`                                   |
+| `mode`               | `"display" \| "edit" \| "auto"`                    | `"auto"` when editable, otherwise `"display"` |
+| `editable`           | `boolean`                                          | `false`                                       |
+| `disabled`           | `boolean`                                          | `false`                                       |
+| `name`               | `string`                                           | `undefined`                                   |
+| `placeholder`        | `string`                                           | `"—"`                                         |
+| `dateTimeZone`       | `"local" \| "preserve" \| "utc"`                   | `"local"`                                     |
+| `formatValue`        | `(value, meta) => React.ReactNode`                 | `undefined`                                   |
+| `draftValue`         | `string`                                           | `undefined`                                   |
+| `autoFocus`          | `boolean`                                          | `false`                                       |
+| `onDraftValueChange` | `(value: string, meta: DataCellValueMeta) => void` | `undefined`                                   |
+| `onCommit`           | `(value, meta) => void` typed by `kind`            | `undefined`                                   |
 
 `DataCell` forwards standard `data-*`, ARIA, event, and style props to the
 rendered cell. In auto mode, it renders the display cell first and only mounts
@@ -93,9 +97,14 @@ the edit control while hovered, focused, or explicitly activated. Number and
 integer edit cells intentionally use native `type="number"` inputs and keep the
 raw draft text separate from parsed commit metadata.
 
+`onCommit` is discriminated by `kind`: number and integer cells commit
+`number | null`, boolean cells commit `boolean`, and text/date/time/date-time
+cells commit `string | null`.
+
 `DataCell` only normalizes scalar input values. Schema policy belongs in the
 adapter: nullable fields can turn empty `null` commits into stored null,
 required numeric fields can ignore `meta.isValid === false`, and date-time
 fields can opt into explicit timezone preservation with `dateTimeZone`. Enum
 fields use the same scalar kind as their values, usually `text`, and keep option
-validation or select controls in the schema adapter.
+validation or select controls in the schema adapter. Keep the enum adapter as a
+display cell until hover, focus, or activation, then mount the real select.

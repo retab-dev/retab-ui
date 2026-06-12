@@ -61,6 +61,21 @@
       ]
     },
     {
+      "name": "alert-dialog",
+      "type": "registry:ui",
+      "title": "Alert Dialog",
+      "description": "A modal alert dialog for destructive confirmations and blocking decisions.",
+      "dependencies": ["radix-ui"],
+      "registryDependencies": ["button", "utils"],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/alert-dialog.tsx",
+          "type": "registry:ui",
+          "target": "@ui/alert-dialog.tsx"
+        }
+      ]
+    },
+    {
       "name": "aspect-ratio",
       "type": "registry:ui",
       "title": "Aspect Ratio",
@@ -230,16 +245,61 @@
       ]
     },
     {
+      "name": "label",
+      "type": "registry:ui",
+      "title": "Label",
+      "description": "An accessible label primitive.",
+      "dependencies": ["radix-ui"],
+      "registryDependencies": ["utils"],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/label.tsx",
+          "type": "registry:ui",
+          "target": "@ui/label.tsx"
+        }
+      ]
+    },
+    {
+      "name": "form",
+      "type": "registry:ui",
+      "title": "Form",
+      "description": "React Hook Form field primitives with accessible labels, descriptions, and messages.",
+      "dependencies": ["radix-ui", "react-hook-form"],
+      "registryDependencies": ["label", "utils"],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/form.tsx",
+          "type": "registry:ui",
+          "target": "@ui/form.tsx"
+        }
+      ]
+    },
+    {
       "name": "data-cell",
       "type": "registry:ui",
       "title": "Data Cell",
       "description": "A lightweight editable cell for scalar document data: text, numbers, booleans, dates, times, and date-times.",
-      "registryDependencies": ["utils"],
+      "registryDependencies": ["calendar", "input", "popover", "utils"],
       "files": [
         {
           "path": "registry/new-york-v4/ui/data-cell.tsx",
           "type": "registry:ui",
           "target": "@ui/data-cell.tsx"
+        }
+      ]
+    },
+    {
+      "name": "calendar",
+      "type": "registry:ui",
+      "title": "Calendar",
+      "description": "A calendar component built on React DayPicker.",
+      "dependencies": ["lucide-react", "react-day-picker@^9.4.4"],
+      "registryDependencies": ["button", "utils"],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/calendar.tsx",
+          "type": "registry:ui",
+          "target": "@ui/calendar.tsx"
         }
       ]
     },
@@ -351,6 +411,49 @@
           "path": "registry/new-york-v4/ui/separator.tsx",
           "type": "registry:ui",
           "target": "@ui/separator.tsx"
+        }
+      ]
+    },
+    {
+      "name": "switch",
+      "type": "registry:ui",
+      "title": "Switch",
+      "description": "A two-state toggle switch.",
+      "dependencies": ["radix-ui"],
+      "registryDependencies": ["utils"],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/switch.tsx",
+          "type": "registry:ui",
+          "target": "@ui/switch.tsx"
+        }
+      ]
+    },
+    {
+      "name": "table",
+      "type": "registry:ui",
+      "title": "Table",
+      "description": "Semantic table primitives for structured data.",
+      "registryDependencies": ["utils"],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/table.tsx",
+          "type": "registry:ui",
+          "target": "@ui/table.tsx"
+        }
+      ]
+    },
+    {
+      "name": "textarea",
+      "type": "registry:ui",
+      "title": "Textarea",
+      "description": "A styled multiline text input.",
+      "registryDependencies": ["utils"],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/textarea.tsx",
+          "type": "registry:ui",
+          "target": "@ui/textarea.tsx"
         }
       ]
     },
@@ -534,6 +637,11 @@
           "path": "registry/new-york-v4/ui/csv-viewer-grid.tsx",
           "type": "registry:ui",
           "target": "@ui/csv-viewer-grid.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/csv-viewer-sort.ts",
+          "type": "registry:ui",
+          "target": "@ui/csv-viewer-sort.ts"
         },
         {
           "path": "registry/new-york-v4/ui/fixed-grid-virtualization.ts",

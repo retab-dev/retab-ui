@@ -12,6 +12,10 @@ import {
 const IMAGE_SCROLL_HEADROOM = 48
 const IMAGE_VIEWER_HORIZONTAL_PADDING = 32
 
+/** Bounds for the viewer's zoom range, shared by fit-width and the toolbar. */
+export const MIN_VIEWER_SCALE = 0.25
+export const MAX_VIEWER_SCALE = 5
+
 export function useFrameListWidth() {
   const [frameListWidth, setFrameListWidth] = React.useState<number | null>(
     null
@@ -56,7 +60,10 @@ export function useImageViewerScale(
       ? normalizeViewerScale(controlledScale)
       : uncontrolledScale !== null
         ? normalizeViewerScale(uncontrolledScale)
-        : Math.max(0.25, fitWidthScale)
+        : Math.min(
+            MAX_VIEWER_SCALE,
+            Math.max(MIN_VIEWER_SCALE, fitWidthScale)
+          )
 
   const setViewerScale = React.useCallback(
     (nextScale: number | null) => {
@@ -79,7 +86,9 @@ export function useImageViewerScale(
 }
 
 function normalizeViewerScale(scale: number): number {
-  return Number.isFinite(scale) && scale > 0 ? Math.max(0.25, scale) : 0.25
+  return Number.isFinite(scale) && scale > 0
+    ? Math.max(MIN_VIEWER_SCALE, scale)
+    : MIN_VIEWER_SCALE
 }
 
 function clamp01(value: number): number {

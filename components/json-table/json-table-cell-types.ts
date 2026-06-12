@@ -24,5 +24,5 @@ export interface JsonTableCellProps {
     rect: DOMRect
   }) => void
   onCellHoverEnd?: () => void
-  allowEditing?: boolean
+  isJsonEditable: boolean
 }

@@ -22,12 +22,30 @@ function isArrayTraversalSchema(schema: JSONSchema7): boolean {
   return schema.type === "array" || !!schema.items
 }
 
+function hasOwnSchemaProperty(
+  properties: JSONSchema7["properties"] | undefined,
+  propName: string
+): boolean {
+  return (
+    !!properties && Object.prototype.hasOwnProperty.call(properties, propName)
+  )
+}
+
+function getOwnSchemaProperty(
+  properties: JSONSchema7["properties"] | undefined,
+  propName: string
+): JSONSchema7Definition | undefined {
+  return hasOwnSchemaProperty(properties, propName)
+    ? properties?.[propName]
+    : undefined
+}
+
 function hasAllTargetProperties(
   schema: JSONSchema7,
   targetPropNames: string[]
 ): boolean {
-  return targetPropNames.every(
-    (propName) => propName in (schema.properties ?? {})
+  return targetPropNames.every((propName) =>
+    hasOwnSchemaProperty(schema.properties, propName)
   )
 }
 
@@ -108,16 +126,26 @@ function schemaAtPath(
     if (
       isObjectTraversalSchema(currentSchemaRecord) &&
       currentSchemaRecord.properties &&
-      currentSchemaRecord.properties[segment]
+      getOwnSchemaProperty(currentSchemaRecord.properties, segment) !==
+        undefined
     ) {
-      currentNode = currentSchemaRecord.properties[segment]
+      currentNode = getOwnSchemaProperty(
+        currentSchemaRecord.properties,
+        segment
+      ) as JSONSchema7Definition
     } else if (
       isArrayTraversalSchema(currentSchemaRecord) &&
       currentSchemaRecord.items &&
       Array.isArray(currentSchemaRecord.items)
     ) {
       if (!isArrayIndexSegment(segment)) return undefined
-      currentNode = currentSchemaRecord.items[parseInt(segment, 10)]
+      const index = parseInt(segment, 10)
+      currentNode =
+        currentSchemaRecord.items[index] ??
+        (currentSchemaRecord.additionalItems === false
+          ? undefined
+          : currentSchemaRecord.additionalItems)
+      if (currentNode === undefined) return undefined
     } else if (
       isArrayTraversalSchema(currentSchemaRecord) &&
       currentSchemaRecord.items &&

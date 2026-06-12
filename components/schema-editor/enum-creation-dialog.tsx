@@ -2,7 +2,7 @@ import * as React from "react"
 import { useState } from "react"
 import { PlusIcon, X } from "lucide-react"
 
-import { Button } from "@/components/ui-retab/button"
+import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
@@ -10,9 +10,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui-retab/dialog"
-import { Input } from "@/components/ui-retab/input"
-import { Label } from "@/components/ui-retab/label"
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 
 interface EnumCreationDialogProps {
   isOpen: boolean

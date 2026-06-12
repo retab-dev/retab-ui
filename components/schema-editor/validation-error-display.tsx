@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { AlertCircle, ChevronDown, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui-retab/button";
+import { Button } from "@/components/ui/button";
 
 interface ValidationErrorDisplayProps {
   validationErrors?: string | null;

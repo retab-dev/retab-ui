@@ -8,9 +8,9 @@ import {
   formatEnumValueInput,
   parseEnumValueInput,
 } from "@/components/schema-editor/property-form/model/enum-values"
-import { Button } from "@/components/ui-retab/button"
-import { Input } from "@/components/ui-retab/input"
-import { Label } from "@/components/ui-retab/label"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 
 export function EnumValuesField({
   values,

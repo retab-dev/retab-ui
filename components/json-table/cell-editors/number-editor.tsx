@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils"
 import type { CellEditorProps } from "@/components/json-table/cell-editors/editor-types"
 import { fieldFocusId } from "@/components/json-table/cell-editors/editor-types"
-import { DataCell } from "@/components/ui/data-cell"
+import { JsonTableDataCell } from "@/components/json-table/json-table-data-cell"
 
 export function NumberEditor({
   identity,
@@ -14,13 +14,13 @@ export function NumberEditor({
   const isInteger = field.fieldMetadata.kind === "integer"
 
   return (
-    <DataCell
+    <JsonTableDataCell
       kind={isInteger ? "integer" : "number"}
       editable={field.isEditable}
       value={textDraft.activeTextValue ?? null}
       draftValue={textDraft.activeTextValue}
       onDraftValueChange={textDraft.setDraftTextValue}
-      onValueCommit={commit.onCommit}
+      onCommit={commit.onCommit}
       onFocus={() => {
         textDraft.setDraftTextValue(textDraft.committedTextValue)
         focus.setFocusedField(focusId)
@@ -32,7 +32,7 @@ export function NumberEditor({
       }}
       disabled={!field.isEditable}
       className={cn(
-        "h-full rounded-none border-0 text-xs data-[mode=display]:items-center data-[mode=display]:py-2",
+        "data-[mode=display]:items-center data-[mode=display]:py-2",
         "data-[mode=edit]:cursor-default data-[mode=edit]:border-0 data-[mode=edit]:focus:cursor-text data-[mode=edit]:disabled:text-inherit data-[mode=edit]:disabled:opacity-100",
         "data-[mode=edit]:h-full data-[mode=edit]:rounded-none data-[mode=edit]:px-2 data-[mode=edit]:py-0 data-[mode=edit]:!text-xs data-[mode=edit]:leading-none data-[mode=edit]:shadow-none data-[mode=edit]:focus-visible:ring-0 data-[mode=edit]:focus-visible:ring-offset-0",
         focus.focusedField === focusId &&

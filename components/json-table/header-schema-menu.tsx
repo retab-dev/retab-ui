@@ -1,24 +1,23 @@
 import React, { useContext, useState } from "react"
 import type { JSONSchema7 } from "json-schema"
-import { Trash2 } from "lucide-react"
 
 import { useMountEffect } from "@/hooks/useMountEffect"
+import type { JsonTableSchemaEditMode } from "@/components/json-table/json-table-edit-modes"
 import type { JsonTableHeaderNode } from "@/components/json-table/lib/header-nodes"
 import { deleteSchemaProperty } from "@/components/json-table/lib/schema-mutations"
 import { PropertyEditor } from "@/components/schema-editor/property-dialog"
-import { Button } from "@/components/ui-retab/button"
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui-retab/dialog"
+} from "@/components/ui/dialog"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui-retab/popover"
-import { Separator } from "@/components/ui-retab/separator"
+} from "@/components/ui/popover"
 
 const PopoverDialogContext = React.createContext<boolean>(false)
 
@@ -76,7 +75,7 @@ function PopoverDialog({
   return (
     <PopoverDialogContext.Provider value={actualIsDialog}>
       {actualIsDialog ? (
-        <Dialog {...props} />
+        <Dialog {...(props as React.ComponentProps<typeof Dialog>)} />
       ) : (
         <Popover {...props} modal={true} />
       )}
@@ -88,7 +87,11 @@ function PopoverDialogTrigger({
   ...props
 }: React.ComponentProps<typeof PopoverTrigger>) {
   const context = useContext(PopoverDialogContext)
-  return context ? <DialogTrigger {...props} /> : <PopoverTrigger {...props} />
+  return context ? (
+    <DialogTrigger {...(props as React.ComponentProps<typeof DialogTrigger>)} />
+  ) : (
+    <PopoverTrigger {...props} />
+  )
 }
 
 function PopoverDialogContent({
@@ -96,7 +99,10 @@ function PopoverDialogContent({
 }: React.ComponentProps<typeof PopoverContent>) {
   const context = useContext(PopoverDialogContext)
   return context ? (
-    <DialogContent showCloseButton={false} {...props} />
+    <DialogContent
+      showCloseButton={false}
+      {...(props as React.ComponentProps<typeof DialogContent>)}
+    />
   ) : (
     <PopoverContent {...props} />
   )
@@ -124,12 +130,34 @@ function PopoverDialogTitle({
   )
 }
 
+function PopoverDialogDescription({
+  className,
+  children,
+  ...props
+}: React.ComponentProps<"p">) {
+  const context = useContext(PopoverDialogContext)
+
+  if (context) {
+    return (
+      <DialogDescription className={className} {...props}>
+        {children}
+      </DialogDescription>
+    )
+  }
+
+  return (
+    <p className={className} {...props}>
+      {children}
+    </p>
+  )
+}
+
 export function HeaderSchemaMenu({
   node,
   schema,
   setSchema,
   isPublished,
-  editMode,
+  schemaEditMode,
   open,
   onOpenChange,
   children,
@@ -138,49 +166,43 @@ export function HeaderSchemaMenu({
   schema: JSONSchema7
   setSchema: (schema: JSONSchema7) => void
   isPublished: boolean
-  editMode: "descriptionOnly" | "editable" | "readOnly"
+  schemaEditMode: JsonTableSchemaEditMode
   open: boolean
   onOpenChange: (open: boolean) => void
   children: React.ReactNode
 }) {
+  const deleteProperty =
+    !isPublished && schemaEditMode === "editable"
+      ? () => {
+          if (
+            confirm(
+              `Are you sure you want to delete the property "${node.key}"? This action cannot be undone.`
+            )
+          ) {
+            setSchema(
+              deleteSchemaProperty({
+                schema,
+                schemaPropertyPath: node.key,
+              })
+            )
+            onOpenChange(false)
+          }
+        }
+      : undefined
+
   return (
     <PopoverDialog open={open} onOpenChange={onOpenChange}>
       <PopoverDialogTrigger asChild>{children}</PopoverDialogTrigger>
       <PopoverDialogContent
-        className="flex max-h-[80vh] w-[400px] flex-col gap-0 overflow-y-auto p-0"
+        className="flex max-h-[80vh] w-[min(720px,calc(100vw-2rem))] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl"
         align="start"
       >
-        <div className="flex items-center justify-between px-4 py-3">
-          <PopoverDialogTitle className="leading-none font-medium">
-            {node.label}
-          </PopoverDialogTitle>
-          {!isPublished && editMode !== "readOnly" && (
-            <Button
-              tabIndex={-1}
-              variant="ghost"
-              size="icon"
-              onClick={() => {
-                if (
-                  confirm(
-                    `Are you sure you want to delete the property "${node.key}"? This action cannot be undone.`
-                  )
-                ) {
-                  setSchema(
-                    deleteSchemaProperty({
-                      schema,
-                      schemaPropertyPath: node.key,
-                    })
-                  )
-                  onOpenChange(false)
-                }
-              }}
-            >
-              <Trash2 className="size-4 text-destructive hover:text-destructive" />
-            </Button>
-          )}
-        </div>
-
-        <Separator />
+        <PopoverDialogTitle className="sr-only">
+          Edit {node.label}
+        </PopoverDialogTitle>
+        <PopoverDialogDescription className="sr-only">
+          Edit property details.
+        </PopoverDialogDescription>
 
         <PropertyEditor
           property={schemaObject(node.rawSchema)}
@@ -188,7 +210,8 @@ export function HeaderSchemaMenu({
           setDropdownOpen={onOpenChange}
           schema={schema}
           replaceSchema={setSchema}
-          editMode={editMode}
+          editMode={schemaEditMode}
+          onDelete={deleteProperty}
         />
       </PopoverDialogContent>
     </PopoverDialog>

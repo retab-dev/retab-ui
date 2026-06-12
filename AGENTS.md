@@ -11,3 +11,4 @@
 - Write high-entropy code: every line should carry useful information. Remove filler, boilerplate drift, and repeated low-value patterns.
 - Variable names should be perfectly consistent. The same concept gets the same name everywhere; different concepts get clearly different names.
 - Seek Flaubertian perfection: choose the precise word, the precise boundary, the precise state shape, and the precise component API.
+- No legacy adapters, compatibility shims, or backward-compatible fallback paths. Make hard cutovers and update all call sites.

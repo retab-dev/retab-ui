@@ -4,11 +4,12 @@ import type { JSONSchema7 } from "json-schema"
 import { ChevronDown, ChevronUp } from "lucide-react"
 
 import { HeaderLabel } from "@/components/json-table/header-label"
+import type { JsonTableSchemaEditMode } from "@/components/json-table/json-table-edit-modes"
 import type { JsonTableHeaderNode } from "@/components/json-table/lib/header-nodes"
 import { getColumnWidthPx } from "@/components/json-table/table-options-store"
 import type { ColumnWidth } from "@/components/json-table/table-options-store"
 import { useHeaderController } from "@/components/json-table/use-header-controller"
-import { Button } from "@/components/ui-retab/button"
+import { Button } from "@/components/ui/button"
 
 const EditableHeaderSchemaMenu = dynamic(
   () =>
@@ -29,7 +30,7 @@ interface JsonTableHeaderCellProps {
   isPublished: boolean
   draggedItemKeyRef: React.RefObject<string | null>
   draggedItemParentPathRef: React.RefObject<string | null>
-  editMode: "descriptionOnly" | "editable" | "readOnly"
+  schemaEditMode: JsonTableSchemaEditMode
   disableHeaderInteractions?: boolean
 }
 
@@ -44,10 +45,12 @@ export function JsonTableHeaderCell({
   isPublished,
   draggedItemKeyRef,
   draggedItemParentPathRef,
-  editMode,
+  schemaEditMode,
   disableHeaderInteractions = false,
 }: JsonTableHeaderCellProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false)
+  const disableSchemaMutationInteractions =
+    disableHeaderInteractions || schemaEditMode !== "editable"
   const {
     isDraggable,
     clearDragClasses,
@@ -64,7 +67,7 @@ export function JsonTableHeaderCell({
     setStopAt,
     draggedItemKeyRef,
     draggedItemParentPathRef,
-    disableHeaderInteractions,
+    disableHeaderInteractions: disableSchemaMutationInteractions,
   })
 
   if (node.isArrayValuePlaceholder) {
@@ -94,7 +97,7 @@ export function JsonTableHeaderCell({
     />
   )
   const canOpenSchemaMenu =
-    !disableHeaderInteractions && editMode !== "readOnly"
+    !disableHeaderInteractions && schemaEditMode !== "readOnly"
 
   return (
     <div
@@ -116,7 +119,7 @@ export function JsonTableHeaderCell({
           schema={schema}
           setSchema={setSchema}
           isPublished={isPublished}
-          editMode={editMode}
+          schemaEditMode={schemaEditMode}
           open={dropdownOpen}
           onOpenChange={setDropdownOpen}
         >

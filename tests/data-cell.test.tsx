@@ -2,13 +2,25 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import {
-  DataCell,
-  parseDataCellNumberInput,
-} from "@/components/ui/data-cell"
+import { DataCell, parseDataCellNumberInput } from "@/components/ui/data-cell"
 import { DataCellDemo } from "@/components/data-cell-demo"
 
 afterEach(cleanup)
+
+function expectNoBorderOrShadow(element: Element | null | undefined) {
+  const className = element?.getAttribute("class") ?? ""
+  expect(className).not.toMatch(/(?:^|\s)border(?:\s|$|-)/)
+  expect(className).not.toMatch(/(?:^|\s)shadow(?:\s|$|-)/)
+  expect(className).not.toContain("before:shadow")
+}
+
+function expectTransparentBackground(element: Element | null | undefined) {
+  const className = element?.getAttribute("class") ?? ""
+  expect(className).toContain("bg-transparent")
+  expect(className).not.toContain("bg-background")
+  expect(className).not.toContain("bg-accent")
+  expect(className).not.toContain("bg-input")
+}
 
 describe("DataCell", () => {
   it("renders scalar display values", () => {
@@ -25,58 +37,102 @@ describe("DataCell", () => {
     )
 
     expect(screen.getByText("CHECKCARD PURCHASE")).toBeTruthy()
-    expect(screen.getByText("-108.3")).toBeTruthy()
+    expect(screen.getByText("-108,3")).toBeTruthy()
     expect(screen.getByText("42")).toBeTruthy()
-    expect(screen.getByRole("switch").getAttribute("aria-checked")).toBe(
+    expect(screen.getByRole("checkbox").getAttribute("aria-checked")).toBe(
       "true"
     )
-    expect(screen.getByText("2026-06-12")).toBeTruthy()
+    expect(screen.getByText("12/06/2026")).toBeTruthy()
     expect(screen.getByText("13:25:37")).toBeTruthy()
-    expect(screen.getByText("2026-06-12T13:25")).toBeTruthy()
+    expect(screen.getByText("12/06/2026, 13:25")).toBeTruthy()
+  })
+
+  it("does not render default data-cell borders or shadows", () => {
+    render(
+      <div>
+        <DataCell kind="text" value="Vendor" />
+        <DataCell kind="boolean" value={true} />
+        <DataCell kind="text" mode="edit" value="Editable" />
+        <DataCell kind="date" mode="edit" value="2026-06-12" />
+      </div>
+    )
+
+    for (const cell of document.querySelectorAll('[data-slot="data-cell"]')) {
+      expectNoBorderOrShadow(cell)
+      expectTransparentBackground(cell)
+    }
+
+    expectNoBorderOrShadow(screen.getByRole("checkbox"))
+    expectTransparentBackground(screen.getByRole("checkbox"))
+
+    const inputControl = screen
+      .getByRole("textbox")
+      .closest('[data-slot="input-control"]')
+    expectNoBorderOrShadow(inputControl)
+    expectTransparentBackground(inputControl)
+  })
+
+  it("keeps caller-provided data-cell borders and shadows", () => {
+    render(
+      <div>
+        <DataCell
+          kind="text"
+          value="Vendor"
+          className="border border-input shadow-sm"
+        />
+        <DataCell
+          kind="text"
+          mode="edit"
+          value="Editable"
+          className="border border-input shadow-sm"
+        />
+      </div>
+    )
+
+    const cell = screen.getByText("Vendor").closest('[data-slot="data-cell"]')
+    expect(cell?.getAttribute("class")).toContain("border")
+    expect(cell?.getAttribute("class")).toContain("border-input")
+    expect(cell?.getAttribute("class")).toContain("shadow-sm")
+
+    const inputControl = screen
+      .getByRole("textbox")
+      .closest('[data-slot="input-control"]')
+    expect(inputControl?.getAttribute("class")).toContain("border")
+    expect(inputControl?.getAttribute("class")).toContain("border-input")
+    expect(inputControl?.getAttribute("class")).toContain("shadow-sm")
   })
 
   it("commits number edits from native number inputs", () => {
-    const onValueCommit = vi.fn()
+    const onCommit = vi.fn()
     render(
-      <DataCell
-        kind="number"
-        mode="edit"
-        value="1.5"
-        onValueCommit={onValueCommit}
-      />
+      <DataCell kind="number" mode="edit" value="1.5" onCommit={onCommit} />
     )
 
     const input = screen.getByRole("spinbutton") as HTMLInputElement
     expect(input.type).toBe("number")
-    expect(input.className).toContain("text-right")
-    expect(input.className).toContain("tabular-nums")
+    expect(input.closest('[data-slot="input-control"]')).toBeTruthy()
     fireEvent.change(input, { target: { value: "2.25" } })
     fireEvent.blur(input)
 
-    expect(onValueCommit).toHaveBeenCalledWith(
+    expect(onCommit).toHaveBeenCalledWith(
       2.25,
       expect.objectContaining({ isValid: true })
     )
   })
 
   it("commits boolean edits", () => {
-    const onValueCommit = vi.fn()
+    const onCommit = vi.fn()
     render(
-      <DataCell
-        kind="boolean"
-        mode="edit"
-        value={false}
-        onValueCommit={onValueCommit}
-      />
+      <DataCell kind="boolean" mode="edit" value={false} onCommit={onCommit} />
     )
 
-    fireEvent.click(screen.getByRole("switch"))
+    fireEvent.click(screen.getByRole("checkbox"))
 
-    expect(onValueCommit).toHaveBeenCalledWith(
+    expect(onCommit).toHaveBeenCalledWith(
       true,
       expect.objectContaining({ kind: "boolean", rawValue: "true" })
     )
-    expect(screen.getByRole("switch").tagName).toBe("BUTTON")
+    expect(screen.getByRole("checkbox").tagName).toBe("BUTTON")
   })
 
   it("keeps forced display cells inert on hover", () => {
@@ -108,29 +164,10 @@ describe("DataCell", () => {
     expect(screen.getByRole("textbox")).toBeTruthy()
   })
 
-  it("toggles editable boolean display cells on click", () => {
-    const onValueCommit = vi.fn()
-    render(
-      <DataCell
-        kind="boolean"
-        value={false}
-        editable
-        onValueCommit={onValueCommit}
-      />
-    )
-
-    fireEvent.click(screen.getByRole("switch"))
-
-    expect(onValueCommit).toHaveBeenCalledWith(
-      true,
-      expect.objectContaining({ kind: "boolean", rawValue: "true" })
-    )
-  })
-
   it("keeps boolean display free of native inputs", () => {
     render(<DataCell kind="boolean" value={true} />)
 
-    expect(screen.getByRole("switch").tagName).toBe("SPAN")
+    expect(screen.getByRole("checkbox").tagName).toBe("SPAN")
     expect(document.querySelector('input[type="checkbox"]')).toBeNull()
   })
 
@@ -164,14 +201,14 @@ describe("DataCell", () => {
 
   it("keeps raw invalid number drafts and reports parse metadata", () => {
     const onDraftValueChange = vi.fn()
-    const onValueCommit = vi.fn()
+    const onCommit = vi.fn()
     render(
       <DataCell
         kind="integer"
         mode="edit"
         value="1"
         onDraftValueChange={onDraftValueChange}
-        onValueCommit={onValueCommit}
+        onCommit={onCommit}
       />
     )
 
@@ -183,63 +220,120 @@ describe("DataCell", () => {
       "1.5",
       expect.objectContaining({ isEmpty: false, isValid: false })
     )
-    expect(onValueCommit).toHaveBeenCalledWith(
+    expect(onCommit).toHaveBeenCalledWith(
       null,
       expect.objectContaining({ rawValue: "1.5", isValid: false })
     )
   })
 
   it("preserves date-time timezone suffixes when requested", () => {
-    const onValueCommit = vi.fn()
+    const onCommit = vi.fn()
     render(
       <DataCell
         kind="date-time"
         mode="edit"
         value="2026-06-12T13:25:37Z"
         dateTimeZone="preserve"
-        onValueCommit={onValueCommit}
+        onCommit={onCommit}
       />
     )
 
-    const input = screen.getByDisplayValue(
-      "2026-06-12T13:25"
-    ) as HTMLInputElement
-    fireEvent.change(input, { target: { value: "2026-06-13T09:10" } })
+    fireEvent.click(screen.getByRole("button"))
+
+    const input = screen.getByDisplayValue("13:25") as HTMLInputElement
+    fireEvent.change(input, { target: { value: "09:10" } })
     fireEvent.blur(input)
 
-    expect(onValueCommit).toHaveBeenCalledWith(
-      "2026-06-13T09:10Z",
+    expect(onCommit).toHaveBeenCalledWith(
+      "2026-06-12T09:10Z",
       expect.objectContaining({ isValid: true })
     )
   })
 
-  it("mounts date and time native inputs in edit mode", () => {
+  it("mounts date and time picker triggers in edit mode", () => {
     const { unmount } = render(
       <DataCell kind="date" mode="edit" value="2026-06-12" />
     )
 
-    expect((screen.getByDisplayValue("2026-06-12") as HTMLInputElement).type).toBe(
-      "date"
-    )
+    expect(screen.getByRole("button").textContent).toContain("12/06/2026")
+    expect(screen.queryByDisplayValue("2026-06-12")).toBeNull()
 
     unmount()
     render(<DataCell kind="time" mode="edit" value="13:25:37" />)
 
-    expect((screen.getByDisplayValue("13:25:37") as HTMLInputElement).type).toBe(
-      "time"
-    )
+    fireEvent.click(screen.getByRole("button"))
+
+    expect(
+      (screen.getByDisplayValue("13:25:37") as HTMLInputElement).type
+    ).toBe("time")
   })
 
   it("keeps demo display examples static on hover", () => {
     render(<DataCellDemo />)
 
-    const displayNumber = screen.getByText("-108.3")
-    const displayCell = displayNumber.closest('[data-slot="data-cell"]')
+    const numberRow = screen.getByText("Number").parentElement
+    const displayColumn = numberRow?.children[1] as HTMLElement
+    const displayCell = displayColumn.querySelector('[data-slot="data-cell"]')
     expect(displayCell?.getAttribute("data-mode")).toBe("display")
 
-    fireEvent.mouseEnter(displayNumber)
+    fireEvent.mouseEnter(displayCell as HTMLElement)
 
     expect(displayCell?.getAttribute("data-mode")).toBe("display")
+  })
+
+  it("keeps every demo edit cell as a display shell until hover", () => {
+    render(<DataCellDemo />)
+
+    for (const label of [
+      "Text",
+      "Number",
+      "Integer",
+      "Boolean",
+      "Date",
+      "Time",
+      "Date Time",
+      "Enum",
+    ]) {
+      const row = screen.getByText(label).parentElement
+      const editCell = row?.children[2] as HTMLElement
+      const displayCell = editCell.querySelector('[data-slot="data-cell"]')
+      expect(displayCell?.getAttribute("data-mode")).toBe("display")
+      expectNoBorderOrShadow(displayCell)
+      expectTransparentBackground(displayCell)
+      expect(editCell.querySelector("input")).toBeNull()
+      expect(editCell.querySelector('[data-slot="select-trigger"]')).toBeNull()
+    }
+  })
+
+  it("turns demo edit cells into real controls on hover", () => {
+    const { unmount } = render(<DataCellDemo />)
+
+    const numberRow = screen.getByText("Number").parentElement
+    const numberEditCell = numberRow?.children[2] as HTMLElement
+    fireEvent.mouseEnter(
+      numberEditCell.querySelector('[data-slot="data-cell"]') as HTMLElement
+    )
+
+    expect(numberEditCell.querySelector('[data-mode="edit"]')).toBeTruthy()
+    expect(numberEditCell.querySelector('input[type="number"]')).toBeTruthy()
+
+    unmount()
+    render(<DataCellDemo />)
+
+    const enumRow = screen.getByText("Enum").parentElement
+    const enumEditCell = enumRow?.children[2] as HTMLElement
+    fireEvent.mouseEnter(
+      enumEditCell.querySelector('[data-slot="data-cell"]') as HTMLElement
+    )
+
+    const enumTrigger = enumEditCell.querySelector(
+      '[data-slot="select-trigger"]'
+    )
+    expect(enumTrigger?.getAttribute("data-mode")).toBe("edit")
+    expect(enumTrigger?.getAttribute("data-kind")).toBe("enum")
+    expectNoBorderOrShadow(enumTrigger)
+    expectTransparentBackground(enumTrigger)
+    expect(screen.getByRole("combobox")).toBe(enumTrigger)
   })
 
   it("shares number parsing and draft formatting", () => {
@@ -249,8 +343,10 @@ describe("DataCell", () => {
     expect(
       parseDataCellNumberInput({ kind: "integer", value: "12.7" })
     ).toEqual({ value: null, isEmpty: false, isValid: false })
-    expect(parseDataCellNumberInput({ kind: "number", value: "abc" })).toEqual(
-      { value: null, isEmpty: false, isValid: false }
-    )
+    expect(parseDataCellNumberInput({ kind: "number", value: "abc" })).toEqual({
+      value: null,
+      isEmpty: false,
+      isValid: false,
+    })
   })
 })

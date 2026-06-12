@@ -1847,6 +1847,28 @@ describe("TiffWorkerClient", () => {
     expect(worker.terminate).toHaveBeenCalledTimes(1)
   })
 
+  it("rejects pending initialization on invalid frame descriptors", async () => {
+    const { worker, client } = createFakeWorkerClient()
+    const initialized = client.init(new ArrayBuffer(4))
+
+    worker.emit({
+      type: "initOk",
+      frames: [
+        { intrinsicSize: { width: 10, height: 20 } },
+        { intrinsicSize: { width: Number.NaN, height: 20 } },
+      ],
+    })
+
+    const result = await settledPromise(initialized)
+    expect(result).toMatchObject({
+      status: "rejected",
+      reason: expect.objectContaining({
+        message: "Image frame 2 has invalid dimensions",
+      }),
+    })
+    expect(worker.terminate).toHaveBeenCalledTimes(1)
+  })
+
   it("posts decode requests with unique ids and resolves the matching bitmap", async () => {
     const { worker, client } = createFakeWorkerClient()
     const first = client.decode(3)
@@ -1985,6 +2007,28 @@ describe("TiffWorkerClient", () => {
         message: "TIFF worker sent an invalid decode response",
       }),
     })
+    expect(worker.terminate).toHaveBeenCalledTimes(1)
+  })
+
+  it("rejects pending decodes on invalid decoded bitmap dimensions", async () => {
+    const { worker, client } = createFakeWorkerClient()
+    const decoded = client.decode(0)
+    const invalidBitmap = bitmap(0, 20)
+
+    worker.emit({
+      type: "decodeFrameOk",
+      requestId: 0,
+      bitmap: invalidBitmap,
+    })
+
+    const result = await settledPromise(decoded)
+    expect(result).toMatchObject({
+      status: "rejected",
+      reason: expect.objectContaining({
+        message: "TIFF worker sent an invalid decode response",
+      }),
+    })
+    expect(invalidBitmap.close).toHaveBeenCalledTimes(1)
     expect(worker.terminate).toHaveBeenCalledTimes(1)
   })
 

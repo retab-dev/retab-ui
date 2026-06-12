@@ -193,10 +193,12 @@ async function renderPptx(ui: React.ReactElement) {
 
 function deferred<T = void>() {
   let resolve!: (value: T | PromiseLike<T>) => void
-  const promise = new Promise<T>((next) => {
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((next, fail) => {
     resolve = next
+    reject = fail
   })
-  return { promise, resolve }
+  return { promise, reject, resolve }
 }
 
 async function waitForPptxSourceFailureEviction() {
@@ -629,6 +631,36 @@ describe("PptxViewer helpers", () => {
     expect(secondCanvas.height).toBe(720)
   })
 
+  it("reports cached bitmap draw failures without invoking pptxviewjs again", async () => {
+    const source = await getPptxSource(
+      pptxUrlResource("/cached-bitmap-draw-failure.pptx")
+    )
+
+    await expect(
+      source.renderSlide({
+        canvas: document.createElement("canvas"),
+        renderScale: 1,
+        slideIndex: 0,
+      })
+    ).resolves.toEqual({ status: "rendered" })
+
+    drawImageMock.mockImplementationOnce(() => {
+      throw new Error("draw failed")
+    })
+
+    await expect(
+      source.renderSlide({
+        canvas: document.createElement("canvas"),
+        renderScale: 1,
+        slideIndex: 0,
+      })
+    ).resolves.toMatchObject({
+      error: expect.objectContaining({ kind: "render_failed" }),
+      status: "failed",
+    })
+    expect(pptxMock.renderSlide).toHaveBeenCalledTimes(1)
+  })
+
   it("uses the bitmap cached by an earlier queued render for duplicate live requests", async () => {
     const firstRender = deferred<undefined>()
     pptxMock.renderSlide.mockImplementationOnce(() => firstRender.promise)
@@ -661,6 +693,41 @@ describe("PptxViewer helpers", () => {
     expect(drawImageMock).toHaveBeenCalledWith(bitmapMocks[0], 0, 0)
     expect(secondCanvas.width).toBe(960)
     expect(secondCanvas.height).toBe(720)
+  })
+
+  it("reports queued cached bitmap draw failures without rerendering", async () => {
+    const firstRender = deferred<undefined>()
+    pptxMock.renderSlide.mockImplementationOnce(() => firstRender.promise)
+
+    const source = await getPptxSource(
+      pptxUrlResource("/queued-cached-bitmap-draw-failure.pptx")
+    )
+    const first = source.renderSlide({
+      canvas: document.createElement("canvas"),
+      renderScale: 1,
+      slideIndex: 0,
+    })
+    const second = source.renderSlide({
+      canvas: document.createElement("canvas"),
+      renderScale: 1,
+      slideIndex: 0,
+    })
+
+    await waitFor(() => {
+      expect(pptxMock.renderSlide).toHaveBeenCalledTimes(1)
+    })
+
+    drawImageMock.mockImplementationOnce(() => {
+      throw new Error("queued draw failed")
+    })
+    firstRender.resolve(undefined)
+
+    await expect(first).resolves.toEqual({ status: "rendered" })
+    await expect(second).resolves.toMatchObject({
+      error: expect.objectContaining({ kind: "render_failed" }),
+      status: "failed",
+    })
+    expect(pptxMock.renderSlide).toHaveBeenCalledTimes(1)
   })
 
   it("does not cache bitmap snapshots after the source is disposed mid-render", async () => {
@@ -989,6 +1056,32 @@ describe("PptxViewer helpers", () => {
     ).resolves.toEqual({ status: "cancelled" })
 
     expect(pptxMock.renderSlide).not.toHaveBeenCalled()
+    expect(createImageBitmap).not.toHaveBeenCalled()
+  })
+
+  it("cancels late renderer failures after a render becomes stale", async () => {
+    const render = deferred<undefined>()
+    let isLive = true
+    pptxMock.renderSlide.mockReturnValueOnce(render.promise)
+    const source = await getPptxSource(
+      pptxUrlResource("/stale-renderer-failure.pptx")
+    )
+
+    const result = source.renderSlide({
+      canvas: document.createElement("canvas"),
+      isLive: () => isLive,
+      renderScale: 1,
+      slideIndex: 0,
+    })
+
+    await waitFor(() => {
+      expect(pptxMock.renderSlide).toHaveBeenCalledTimes(1)
+    })
+
+    isLive = false
+    render.reject(new Error("late render failure"))
+
+    await expect(result).resolves.toEqual({ status: "cancelled" })
     expect(createImageBitmap).not.toHaveBeenCalled()
   })
 

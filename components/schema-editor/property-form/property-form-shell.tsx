@@ -9,7 +9,7 @@ import { SchemaNodeField } from "@/components/schema-editor/property-form/fields
 import { TypeField } from "@/components/schema-editor/property-form/fields/type-field"
 import { PropertyFormFooter } from "@/components/schema-editor/property-form/property-form-footer"
 import type { PropertyFormViewModel } from "@/components/schema-editor/property-form/types"
-import { Label } from "@/components/ui-retab/label"
+import { Label } from "@/components/ui/label"
 
 export function PropertyFormShell({
   viewModel,

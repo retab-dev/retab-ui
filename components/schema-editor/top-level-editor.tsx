@@ -23,21 +23,21 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui-retab/alert-dialog"
-import { Button } from "@/components/ui-retab/button"
+} from "@/components/ui/alert-dialog"
+import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui-retab/dropdown-menu"
-import { Input } from "@/components/ui-retab/input"
-import { Textarea } from "@/components/ui-retab/textarea"
+} from "@/components/ui/dropdown-menu"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui-retab/tooltip"
+} from "@/components/ui/tooltip"
 
 const LazyImportExportMenuItems = React.lazy(() =>
   import("@/components/schema-editor/optional/import-export/import-export-menu-items").then(
@@ -91,7 +91,7 @@ export function TopLevelEditor({
               <Button
                 type="button"
                 variant="ghost"
-                size="iconSm"
+                size="icon-sm"
                 aria-label="Open schema actions"
                 className="flex items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100"
               >

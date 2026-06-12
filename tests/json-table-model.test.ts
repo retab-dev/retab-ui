@@ -91,9 +91,11 @@ describe("json table schema inspection", () => {
 
   it("returns no metadata for invalid object and array paths", () => {
     expect(getSchemaPropertyType(schema, "missing")).toBeUndefined()
+    expect(getSchemaPropertyType(schema, "constructor")).toBeUndefined()
     expect(getSchemaPropertyType(schema, "lines.name")).toBeUndefined()
     expect(getSchemaPropertyType(schema, "lines.*.missing")).toBeUndefined()
     expect(getFieldMetadata(schema, "missing")).toBeUndefined()
+    expect(getFieldMetadata(schema, "constructor")).toBeUndefined()
     expect(getFieldMetadata(schema, "lines.not_an_index")).toBeUndefined()
     expect(getFieldMetadata(schema, "lines.0abc.name")).toBeUndefined()
   })
@@ -105,14 +107,31 @@ describe("json table schema inspection", () => {
         tuple: {
           type: "array",
           items: [{ type: "string" }, { type: "integer" }],
+          additionalItems: { type: "boolean" },
         },
       },
     }
 
     expect(getSchemaPropertyType(tupleSchema, "tuple.0")?.type).toBe("string")
     expect(getSchemaPropertyType(tupleSchema, "tuple.1")?.type).toBe("integer")
-    expect(getSchemaPropertyType(tupleSchema, "tuple.2")).toBeUndefined()
+    expect(getSchemaPropertyType(tupleSchema, "tuple.2")?.type).toBe("boolean")
     expect(getSchemaPropertyType(tupleSchema, "tuple.1abc")).toBeUndefined()
+  })
+
+  it("does not resolve tuple overflow paths when additionalItems is false", () => {
+    const tupleSchema: JSONSchema7 = {
+      type: "object",
+      properties: {
+        tuple: {
+          type: "array",
+          items: [{ type: "string" }],
+          additionalItems: false,
+        },
+      },
+    }
+
+    expect(getSchemaPropertyType(tupleSchema, "tuple.0")?.type).toBe("string")
+    expect(getSchemaPropertyType(tupleSchema, "tuple.1")).toBeUndefined()
   })
 
   it("treats time string formats as time fields", () => {
@@ -772,6 +791,36 @@ describe("json table schema mutations", () => {
     expect(firstItem.required).toEqual(["name"])
   })
 
+  it("mutates tuple array additionalItems object schemas", () => {
+    const tupleSchema: JSONSchema7 = {
+      type: "object",
+      properties: {
+        tuple: {
+          type: "array",
+          items: [{ type: "string" }],
+          additionalItems: {
+            type: "object",
+            properties: {
+              name: { type: "string" },
+              note: { type: "string" },
+            },
+            required: ["name", "note"],
+          },
+        },
+      },
+    }
+
+    const deleted = deleteSchemaProperty({
+      schema: tupleSchema,
+      schemaPropertyPath: "tuple.2.note",
+    })
+    const tuple = deleted.properties?.tuple as JSONSchema7
+    const additionalItems = tuple.additionalItems as JSONSchema7
+
+    expect(Object.keys(additionalItems.properties ?? {})).toEqual(["name"])
+    expect(additionalItems.required).toEqual(["name"])
+  })
+
   it("mutates nested properties inside implicit object schemas", () => {
     const implicitObjectSchema: JSONSchema7 = {
       type: "object",
@@ -1033,6 +1082,25 @@ describe("json table value formatting", () => {
     ).toEqual({ shipped_at: "2024-01-02" })
   })
 
+  it("formats date values inside implicit object and array schemas", () => {
+    expect(
+      formatValueForCommit(
+        { shipped_at: "1/2/2024" },
+        {
+          properties: {
+            shipped_at: { type: "string", format: "date" },
+          },
+        }
+      )
+    ).toEqual({ shipped_at: "2024-01-02" })
+
+    expect(
+      formatValueForCommit(["1/2/2024"], {
+        items: { type: "string", format: "date" },
+      })
+    ).toEqual(["2024-01-02"])
+  })
+
   it("formats nullable date and time schemas before commit", () => {
     expect(
       formatValueForCommit("1/2/2024", {
@@ -1162,5 +1230,15 @@ describe("json table value formatting", () => {
         ],
       })
     ).toEqual([{ shipped_at: "2024-01-02" }, { note: "plain" }])
+  })
+
+  it("formats tuple array values using additionalItems schemas", () => {
+    expect(
+      formatValueForCommit(["plain", "1/2/2024"], {
+        type: "array",
+        items: [{ type: "string" }],
+        additionalItems: { type: "string", format: "date" },
+      })
+    ).toEqual(["plain", "2024-01-02"])
   })
 })

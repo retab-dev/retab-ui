@@ -1,7 +1,7 @@
 "use client"
 
-import { Button } from "@/components/ui-retab/button"
-import { DialogFooter } from "@/components/ui-retab/dialog"
+import { Button } from "@/components/ui/button"
+import { DialogFooter } from "@/components/ui/dialog"
 
 export function PropertyFormFooter({
   canDelete,

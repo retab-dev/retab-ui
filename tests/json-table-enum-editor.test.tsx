@@ -19,7 +19,7 @@ const selectContext = {
   value: "",
 }
 
-vi.mock("@/components/ui-retab/select", () => ({
+vi.mock("@/components/ui/select", () => ({
   Select: ({
     children,
     onValueChange,

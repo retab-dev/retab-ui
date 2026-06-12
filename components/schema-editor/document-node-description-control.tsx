@@ -2,12 +2,12 @@
 
 import * as React from "react"
 
-import { Input } from "@/components/ui-retab/input"
+import { Input } from "@/components/ui/input"
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui-retab/tooltip"
+} from "@/components/ui/tooltip"
 
 interface DocumentNodeDescriptionControlProps {
   description: string

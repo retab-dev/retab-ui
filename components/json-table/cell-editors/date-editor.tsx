@@ -2,9 +2,9 @@ import { format } from "date-fns"
 
 import type { CellEditorProps } from "@/components/json-table/cell-editors/editor-types"
 import { fieldFocusId } from "@/components/json-table/cell-editors/editor-types"
+import { JsonTableDataCell } from "@/components/json-table/json-table-data-cell"
 import { dateStringToFormat } from "@/components/json-table/lib/date-display-formatting"
 import { parseDateStringAsLocal } from "@/components/json-table/lib/date-parsing"
-import { DataCell } from "@/components/ui/data-cell"
 
 function safeParseISO(dateString: string | null | undefined): Date | undefined {
   return parseDateStringAsLocal(dateString) ?? undefined
@@ -21,7 +21,7 @@ export function DateEditor({
   const date = safeParseISO(textDraft.activeTextValue)
 
   return (
-    <DataCell
+    <JsonTableDataCell
       kind="date"
       editable={field.isEditable}
       value={textDraft.activeTextValue ?? null}
@@ -29,7 +29,7 @@ export function DateEditor({
       formatValue={() => (date ? format(date, "PP") : "")}
       placeholder="Pick a date"
       onDraftValueChange={textDraft.setDraftTextValue}
-      onValueCommit={(value) => {
+      onCommit={(value) => {
         const convertedDate = dateStringToFormat(
           typeof value === "string" ? value : "",
           "2000-01-01"
@@ -46,7 +46,7 @@ export function DateEditor({
         focus.setIsInputFocused(false)
       }}
       disabled={!field.isEditable}
-      className="h-full rounded-none border-0 px-2 text-xs data-[mode=display]:items-center data-[mode=display]:py-2 data-[mode=edit]:py-0 data-[mode=edit]:leading-none data-[mode=edit]:shadow-none data-[mode=edit]:focus-visible:ring-0 data-[mode=edit]:focus-visible:ring-offset-0"
+      className="px-2 data-[mode=display]:items-center data-[mode=display]:py-2 data-[mode=edit]:py-0 data-[mode=edit]:leading-none data-[mode=edit]:shadow-none data-[mode=edit]:focus-visible:ring-0 data-[mode=edit]:focus-visible:ring-offset-0"
     />
   )
 }
