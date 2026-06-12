@@ -26,6 +26,10 @@ import {
   splitTextLines,
 } from "@/registry/new-york-v4/ui/text-viewer-resource"
 
+const LS = String.fromCharCode(0x2028)
+const PS = String.fromCharCode(0x2029)
+const NEL = String.fromCharCode(0x0085)
+
 function textSource(text: string, fileName?: string) {
   return { kind: "text" as const, text, fileName }
 }
@@ -155,14 +159,31 @@ describe("line splitting and counting fidelity", () => {
     expect(lineNumbers(container)).toEqual([1, 2, 3])
   })
 
-  // Characterization: only CR/LF/CRLF are treated as line breaks. Unicode
-  // separators (LINE SEPARATOR U+2028, PARAGRAPH SEPARATOR U+2029, NEL U+0085)
-  // and form-feed / vertical-tab are NOT split. NOTE: CSS `white-space: pre`
-  // *does* force a visual break on U+2028/U+2029, so in a real browser the
-  // gutter line numbers would not line up with the visually wrapped lines —
-  // a latent source-linking inconsistency worth revisiting.
-  it("does not split on Unicode line/paragraph separators or form/vertical tabs", () => {
-    const text = "a b cd\fe\vf"
+  // CSS `white-space: pre` forces a visual break on LINE SEPARATOR (U+2028) and
+  // PARAGRAPH SEPARATOR (U+2029), so the gutter must split on them too to keep
+  // line numbers aligned with the rendered text. This is the ECMAScript
+  // LineTerminator set (LF, CR, LS, PS).
+  it("splits on Unicode LINE and PARAGRAPH separators like a pre block does", () => {
+    const text = "a" + LS + "b" + PS + "c"
+    const { container } = render(<TextViewer source={textSource(text)} />)
+
+    expect(splitTextLines(text)).toEqual(["a", "b", "c"])
+    expect(screen.getByText("3 lines")).toBeTruthy()
+    expect(lineNumbers(container)).toEqual([1, 2, 3])
+    expect(lineText(container, 1)).toBe("a")
+    expect(lineText(container, 2)).toBe("b")
+    expect(lineText(container, 3)).toBe("c")
+  })
+
+  it("treats CR followed by a Unicode separator as two distinct breaks", () => {
+    expect(splitTextLines("a\r" + LS + "b")).toEqual(["a", "", "b"])
+  })
+
+  // Form-feed, vertical-tab, and NEL are control characters that browsers do
+  // NOT break on in `white-space: pre`, and they are not ECMAScript line
+  // terminators — so the viewer must keep them on a single line.
+  it("does not split on form-feed, vertical-tab, or NEL", () => {
+    const text = "a\fb\vc" + NEL + "d"
     const { container } = render(<TextViewer source={textSource(text)} />)
 
     expect(splitTextLines(text)).toEqual([text])
@@ -454,5 +475,42 @@ describe("resource byte accounting counts wire bytes, not decode inflation", () 
         bounds: resolvedTextViewerBounds({ maxBytes: 3 }),
       })
     ).rejects.toThrow("bytes limit")
+  })
+})
+
+// The streamed line-limit tracker must agree with splitTextLines about what a
+// line break is, otherwise a URL load could pass the streaming check yet count
+// differently once rendered. Unicode separators count toward maxLines too.
+describe("streamed line-limit counts Unicode separators", () => {
+  it("rejects a separator-delimited URL body that exceeds maxLines", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(new Response("a" + LS + "b" + PS + "c")))
+    )
+
+    await expect(
+      readResourceAfterSuspense({
+        content: createViewerResource({ kind: "url", url: "/sep-too-many.txt" })
+          .content,
+        retryVersion: 0,
+        bounds: resolvedTextViewerBounds({ maxLines: 2 }),
+      })
+    ).rejects.toThrow("lines limit")
+  })
+
+  it("accepts the same body when the line budget covers every separator", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(new Response("a" + LS + "b" + PS + "c")))
+    )
+
+    await expect(
+      readResourceAfterSuspense({
+        content: createViewerResource({ kind: "url", url: "/sep-ok.txt" })
+          .content,
+        retryVersion: 0,
+        bounds: resolvedTextViewerBounds({ maxLines: 3 }),
+      })
+    ).resolves.toBe("a" + LS + "b" + PS + "c")
   })
 })
