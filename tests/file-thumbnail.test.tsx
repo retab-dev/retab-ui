@@ -594,6 +594,20 @@ describe("FileThumbnail", () => {
     expect(screen.getByText("docx")).toBeTruthy()
   })
 
+  it("strips MIME parameters before deriving fallback extensions", () => {
+    render(
+      <FileThumbnail
+        file={{
+          name: "uploaded-file",
+          type: "text/plain; charset=utf-8",
+        }}
+      />
+    )
+
+    expect(screen.getByText("txt")).toBeTruthy()
+    expect(screen.queryByText("plain; charset=utf-8")).toBeNull()
+  })
+
   it("passes wrapper props through and preserves explicit style aspect ratio", () => {
     const { container } = render(
       <FileThumbnail
@@ -633,6 +647,32 @@ describe("FileThumbnail", () => {
     expect(onPreviewError).toHaveBeenCalledTimes(1)
   })
 
+  it("reports cached broken image previews once from the ref path", async () => {
+    const onPreviewError = vi.fn()
+    vi.spyOn(HTMLImageElement.prototype, "complete", "get").mockReturnValue(
+      true
+    )
+    vi.spyOn(HTMLImageElement.prototype, "naturalWidth", "get").mockReturnValue(
+      0
+    )
+
+    const { container } = render(
+      <FileThumbnail
+        file={file}
+        previewImageUrl="/broken-cached.png"
+        onPreviewError={onPreviewError}
+      />
+    )
+
+    await waitFor(() => {
+      expect(
+        container.querySelector('[data-slot="file-thumbnail-fallback"]')
+      ).not.toBeNull()
+    })
+    expect(container.querySelector("img")).toBeNull()
+    expect(onPreviewError).toHaveBeenCalledTimes(1)
+  })
+
   it("marks cached images as loaded from the image ref path", async () => {
     vi.spyOn(HTMLImageElement.prototype, "complete", "get").mockReturnValue(
       true
@@ -651,6 +691,30 @@ describe("FileThumbnail", () => {
     expect(
       container.querySelector('[data-slot="file-thumbnail-shimmer"]')
     ).toBeNull()
+  })
+
+  it("remounts image previews and resets loading state when the URL changes", async () => {
+    const view = render(
+      <FileThumbnail file={file} previewImageUrl="/first.png" />
+    )
+
+    const firstImage = view.container.querySelector("img") as HTMLImageElement
+    expect(firstImage).not.toBeNull()
+    fireEvent.load(firstImage)
+
+    await waitFor(() => {
+      expect(firstImage.className).toContain("opacity-100")
+    })
+
+    view.rerender(<FileThumbnail file={file} previewImageUrl="/second.png" />)
+
+    const secondImage = view.container.querySelector("img") as HTMLImageElement
+    expect(secondImage).not.toBe(firstImage)
+    expect(secondImage.getAttribute("src")).toBe("/second.png")
+    expect(secondImage.className).toContain("opacity-0")
+    expect(
+      view.container.querySelector('[data-slot="file-thumbnail-shimmer"]')
+    ).not.toBeNull()
   })
 
   it("renders explicit loaded state", () => {
@@ -672,6 +736,47 @@ describe("FileThumbnail", () => {
     expect(
       container.querySelector('[data-slot="file-thumbnail-shimmer-highlight"]')
     ).not.toBeNull()
+  })
+
+  it("cancels shimmer animation on unmount", () => {
+    const cancel = vi.fn()
+    const animate = vi.fn(() => ({ cancel }))
+    Object.defineProperty(HTMLElement.prototype, "animate", {
+      configurable: true,
+      value: animate,
+    })
+    vi.stubGlobal("matchMedia", () => ({
+      matches: false,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }))
+
+    const view = render(<FileThumbnail file={file} state="loading" />)
+
+    expect(animate).toHaveBeenCalledTimes(1)
+    view.unmount()
+    expect(cancel).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not animate the shimmer when reduced motion is preferred", () => {
+    const animate = vi.fn(() => ({ cancel: vi.fn() }))
+    Object.defineProperty(HTMLElement.prototype, "animate", {
+      configurable: true,
+      value: animate,
+    })
+    vi.stubGlobal("matchMedia", () => ({
+      matches: true,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }))
+
+    const { container } = render(<FileThumbnail file={file} state="loading" />)
+    const highlight = container.querySelector(
+      '[data-slot="file-thumbnail-shimmer-highlight"]'
+    ) as HTMLElement
+
+    expect(animate).not.toHaveBeenCalled()
+    expect(highlight.style.backgroundPosition).toBe("50% 0px")
   })
 })
 
@@ -737,6 +842,51 @@ describe("DocumentThumbnail", () => {
     }
   }
 
+  function installIntersectionObserver() {
+    const observers: Array<{
+      callback: IntersectionObserverCallback
+      observe: ReturnType<typeof vi.fn>
+      disconnect: ReturnType<typeof vi.fn>
+      options?: IntersectionObserverInit
+    }> = []
+
+    class TestIntersectionObserver {
+      observe = vi.fn()
+      disconnect = vi.fn()
+      readonly callback: IntersectionObserverCallback
+      readonly options?: IntersectionObserverInit
+
+      constructor(
+        callback: IntersectionObserverCallback,
+        options?: IntersectionObserverInit
+      ) {
+        this.callback = callback
+        this.options = options
+        observers.push(this)
+      }
+    }
+
+    vi.stubGlobal("IntersectionObserver", TestIntersectionObserver)
+
+    return {
+      observers,
+      async trigger(index: number, isIntersecting: boolean) {
+        const observer = observers[index]
+        if (!observer) throw new Error(`Missing observer ${index}`)
+        await act(async () => {
+          observer.callback(
+            [
+              {
+                isIntersecting,
+              } as IntersectionObserverEntry,
+            ],
+            observer as unknown as IntersectionObserver
+          )
+        })
+      },
+    }
+  }
+
   it("renders direct URL images without fetching through a renderer", () => {
     const fetchMock = vi.fn()
     vi.stubGlobal("fetch", fetchMock)
@@ -756,6 +906,39 @@ describe("DocumentThumbnail", () => {
       "/page.png"
     )
     expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it("defers document renderer work until the thumbnail enters view", async () => {
+    const intersection = installIntersectionObserver()
+    const fetchMock = vi.fn(
+      async () => new Response("Visible line", { status: 200 })
+    )
+    vi.stubGlobal("fetch", fetchMock)
+
+    const view = render(
+      <DocumentThumbnail source={urlTextSource("/lazy.txt", "lazy.txt")} />
+    )
+
+    await waitFor(() => {
+      expect(intersection.observers).toHaveLength(1)
+    })
+
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(
+      view.container.querySelector('[data-slot="file-thumbnail-shimmer"]')
+    ).not.toBeNull()
+    expect(intersection.observers[0]?.options?.rootMargin).toBe("300px")
+
+    await intersection.trigger(0, false)
+    expect(fetchMock).not.toHaveBeenCalled()
+
+    await intersection.trigger(0, true)
+
+    await waitFor(() => {
+      expect(screen.getByText("Visible line")).toBeTruthy()
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(intersection.observers[0]?.disconnect).toHaveBeenCalledTimes(1)
   })
 
   it("surfaces direct URL image failures through canonical thumbnail errors", async () => {

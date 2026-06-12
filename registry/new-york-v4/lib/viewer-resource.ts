@@ -632,13 +632,8 @@ async function readBoundedResponseText(
   validateFullContentResponse(response)
 
   const maxBytes = bounds.maxBytes
-  const contentLength = response.headers.get("content-length")
-  const contentByteLength = contentLength ? Number(contentLength) : null
   if (
-    maxBytes != null &&
-    contentByteLength != null &&
-    Number.isFinite(contentByteLength) &&
-    contentByteLength > maxBytes
+    isContentLengthOverLimit(response.headers.get("content-length"), maxBytes)
   ) {
     throw tooLarge("bytes")
   }
@@ -683,6 +678,23 @@ async function readBoundedResponseText(
   text += finalText
   assertLineLimit(text, bounds.maxLines)
   return text
+}
+
+function isContentLengthOverLimit(
+  contentLength: string | null,
+  maxBytes: number | undefined
+) {
+  if (maxBytes == null || contentLength == null) return false
+
+  const normalizedLength = contentLength.trim().replace(/^0+(?=\d)/, "")
+  if (!/^\d+$/.test(normalizedLength)) return false
+
+  const maxLength = String(maxBytes)
+  return (
+    normalizedLength.length > maxLength.length ||
+    (normalizedLength.length === maxLength.length &&
+      normalizedLength > maxLength)
+  )
 }
 
 function validateFullContentResponse(response: Response) {

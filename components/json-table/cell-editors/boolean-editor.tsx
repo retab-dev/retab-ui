@@ -1,6 +1,6 @@
 import type { CellEditorProps } from "@/components/json-table/cell-editors/editor-types"
 import { fieldFocusId } from "@/components/json-table/cell-editors/editor-types"
-import { JsonTableDataCell } from "@/components/json-table/json-table-data-cell"
+import { JsonTableScalarCell } from "@/components/json-table/json-table-scalar-cell"
 
 export function BooleanEditor({
   identity,
@@ -10,7 +10,7 @@ export function BooleanEditor({
   commit,
 }: CellEditorProps) {
   return (
-    <JsonTableDataCell
+    <JsonTableScalarCell
       kind="boolean"
       editable={field.isEditable}
       mode={
@@ -31,7 +31,6 @@ export function BooleanEditor({
         focus.setFocusedField(null)
         focus.setIsInputFocused(false)
       }}
-      className="py-1"
     />
   )
 }

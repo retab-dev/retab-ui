@@ -702,6 +702,126 @@ describe("enum operations", () => {
     })
   })
 
+  it("updateEnumValue remaps x-enumDescriptions by row", () => {
+    let d = doc({
+      type: "object",
+      properties: {
+        status: {
+          type: "string",
+          enum: ["draft", "paid"],
+          "x-enumDescriptions": {
+            draft: "Draft status",
+            paid: "Paid status",
+          },
+        } as JSONSchema7,
+      },
+    })
+    const statusId = getChildNodeId(d, d.root.id, "status")!
+    const paidId = getNode(d, statusId)!.enum![1].id
+
+    d = updateEnumValue(d, statusId, paidId, { value: "complete" })
+
+    expect(json(d).properties!.status).toEqual({
+      type: "string",
+      enum: ["draft", "complete"],
+      "x-enumDescriptions": {
+        draft: "Draft status",
+        complete: "Paid status",
+      },
+    })
+  })
+
+  it("removeEnumValue drops the matching x-enumDescriptions entry", () => {
+    let d = doc({
+      type: "object",
+      properties: {
+        status: {
+          type: "string",
+          enum: ["draft", "paid"],
+          "x-enumDescriptions": {
+            draft: "Draft status",
+            paid: "Paid status",
+          },
+        } as JSONSchema7,
+      },
+    })
+    const statusId = getChildNodeId(d, d.root.id, "status")!
+    const draftId = getNode(d, statusId)!.enum![0].id
+
+    d = removeEnumValue(d, statusId, draftId)
+
+    expect(json(d).properties!.status).toEqual({
+      type: "string",
+      enum: ["paid"],
+      "x-enumDescriptions": { paid: "Paid status" },
+    })
+  })
+
+  it("setEnumValues remaps x-enumDescriptions by row", () => {
+    let d = doc({
+      type: "object",
+      properties: {
+        status: {
+          type: "string",
+          enum: ["draft", "paid"],
+          "x-enumDescriptions": {
+            draft: "Draft status",
+            paid: "Paid status",
+          },
+        } as JSONSchema7,
+      },
+    })
+    const statusId = getChildNodeId(d, d.root.id, "status")!
+
+    d = setEnumValues(d, statusId, ["new", "complete"])
+
+    expect(json(d).properties!.status).toEqual({
+      type: "string",
+      enum: ["new", "complete"],
+      "x-enumDescriptions": {
+        new: "Draft status",
+        complete: "Paid status",
+      },
+    })
+  })
+
+  it("setNodeType drops x-enumDescriptions when converting away from enum", () => {
+    let d = doc({
+      type: "object",
+      properties: {
+        status: {
+          type: "string",
+          enum: ["draft"],
+          "x-enumDescriptions": { draft: "Draft status" },
+        } as JSONSchema7,
+      },
+    })
+    const statusId = getChildNodeId(d, d.root.id, "status")!
+
+    d = setNodeType(d, statusId, "number")
+
+    expect(json(d).properties!.status).toEqual({ type: "number" })
+  })
+
+  it("setRef drops x-enumDescriptions when converting an enum to a ref", () => {
+    let d = doc({
+      type: "object",
+      $defs: { Status: { type: "string" } },
+      properties: {
+        status: {
+          type: "string",
+          enum: ["draft"],
+          "x-enumDescriptions": { draft: "Draft status" },
+        } as JSONSchema7,
+      },
+    })
+    const statusId = getChildNodeId(d, d.root.id, "status")!
+
+    d = setRef(d, statusId, d.defs[0].id)
+
+    expect(json(d).properties!.status).toEqual({ $ref: "#/$defs/Status" })
+  })
+
   it("setEnumValues on an existing type-array nullable enum does not leave enum on the wrapper", () => {
     let d = doc({
       type: "object",
@@ -757,6 +877,7 @@ describe("enum operations", () => {
         },
         { type: "null" },
       ],
+      "x-enumDescriptions": { complete: "Paid status" },
     })
   })
 

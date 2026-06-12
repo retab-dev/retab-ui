@@ -1,12 +1,6 @@
 // @vitest-environment jsdom
 import * as React from "react"
-import {
-  act,
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-} from "@testing-library/react"
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import {
@@ -25,6 +19,7 @@ import {
   rotateNormalizedBox,
   type NormalizedBox,
 } from "@/registry/new-york-v4/lib/image-geometry"
+import { clearViewerResourceRegistryForTests } from "@/registry/new-york-v4/lib/viewer-resource"
 import {
   imageAnchorToArea,
   imageAnchorToFrame,
@@ -34,7 +29,6 @@ import {
   ImageViewer,
   resetImageSourceCacheForTests,
 } from "@/registry/new-york-v4/ui/image-viewer"
-import { clearViewerResourceRegistryForTests } from "@/registry/new-york-v4/lib/viewer-resource"
 
 afterEach(() => {
   vi.useRealTimers()
@@ -137,12 +131,10 @@ describe("frameNumberToIndex / frameIndexToNumber", () => {
     expect(frameNumberToIndex(1.1)).toBe(0)
   })
 
-  it("currently forwards NaN for non-finite frame numbers (latent gap)", () => {
-    // Characterization test: `Math.max(0, NaN)` is `NaN`, so this clamping
-    // helper does NOT guarantee a valid array index for non-finite input.
-    // Today every caller passes a finite frame number, so this is latent —
-    // but if that ever changes it would index an array with NaN. Flagged.
-    expect(Number.isNaN(frameNumberToIndex(Number.NaN))).toBe(true)
+  it("clamps non-finite frame numbers to the first frame", () => {
+    expect(frameNumberToIndex(Number.NaN)).toBe(0)
+    expect(frameNumberToIndex(Number.POSITIVE_INFINITY)).toBe(0)
+    expect(frameNumberToIndex(Number.NEGATIVE_INFINITY)).toBe(0)
   })
 })
 
@@ -190,6 +182,25 @@ describe("rotateNormalizedBox", () => {
     }
     for (const rotation of [90, 180, 270] as const) {
       expect(rotateNormalizedBox(centered, rotation)).toEqual(centered)
+    }
+  })
+
+  it("keeps rotated valid boxes inside normalized bounds", () => {
+    const boxes: NormalizedBox[] = [
+      { left: 0, top: 0, width: 0.01, height: 0.01 },
+      { left: 0.99, top: 0.98, width: 0.01, height: 0.02 },
+      { left: 0.125, top: 0.25, width: 0.375, height: 0.5 },
+      { left: 0.333, top: 0.111, width: 0.222, height: 0.444 },
+    ]
+
+    for (const candidate of boxes) {
+      for (const rotation of [0, 90, 180, 270] as const) {
+        const rotated = rotateNormalizedBox(candidate, rotation)
+        expect(rotated.left).toBeGreaterThanOrEqual(0)
+        expect(rotated.top).toBeGreaterThanOrEqual(0)
+        expect(rotated.left + rotated.width).toBeLessThanOrEqual(1)
+        expect(rotated.top + rotated.height).toBeLessThanOrEqual(1)
+      }
     }
   })
 })
@@ -352,8 +363,11 @@ describe("isDeclaredTiff", () => {
     ["/scan.tiff", null],
     ["/scan.TIFF", null],
     ["/scan.tif?v=2", null],
+    ["/scan.tiff#page=1", null],
     ["/scan", "image/tiff"],
     ["/scan", "image/tiff; charset=binary"],
+    ["/scan", "image/tif"],
+    ["/scan", "image/x-tiff"],
   ])("accepts %s (%s)", (src, contentType) => {
     expect(isDeclaredTiff(src, contentType)).toBe(true)
   })
@@ -374,6 +388,7 @@ describe("isDeclaredNativeImage", () => {
     ["/photo.JPG", null],
     ["/photo.jpeg", null],
     ["/photo.webp?cache=1", null],
+    ["/photo.png#preview", null],
     ["/icon.ico", null],
     ["/x", "image/png"],
     ["/x", "image/jpeg; charset=binary"],
@@ -694,5 +709,27 @@ describe("ImageViewer toolbar edges", () => {
     })
 
     expect(await screen.findByText("1 image")).toBeTruthy()
+  })
+
+  it("caps a controlled scale at the viewer zoom ceiling", async () => {
+    stubImageLoading(bitmap(100, 100))
+    stubObservableLayout()
+
+    await act(async () => {
+      render(
+        <ImageViewer
+          source={{ kind: "url", url: "/controlled-huge.png" }}
+          scale={100}
+          renderFrameOverlay={({ scale }) => (
+            <div data-testid="overlay-scale" data-scale={scale} />
+          )}
+        />
+      )
+    })
+
+    expect(await screen.findByText("500%")).toBeTruthy()
+    expect(screen.getByTestId("overlay-scale").getAttribute("data-scale")).toBe(
+      "5"
+    )
   })
 })

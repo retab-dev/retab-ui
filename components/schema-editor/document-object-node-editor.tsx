@@ -2,6 +2,12 @@
 
 import * as React from "react"
 
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
 import type {
   DocumentSchemaNodeEditorProps,
   RenderDocumentNodeEditor,
@@ -16,12 +22,6 @@ import type {
   DocumentPropertyView,
 } from "@/components/schema-editor/document/view-model"
 import type { ResolvedSchemaBuilderFeatures } from "@/components/schema-editor/schema-builder-types"
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion"
 
 interface DocumentObjectNodeEditorProps {
   dispatch: DocumentSchemaNodeEditorProps["dispatch"]
@@ -111,19 +111,19 @@ export function DocumentObjectNodeEditor({
 
   if (path === "#") {
     return (
-      <div className="px-0">
+      <div>
         <Accordion
           defaultValue={["properties"]}
-          className="w-full rounded-lg border border-border px-4 pb-0 shadow-sm"
+          className="w-full rounded-lg border border-border px-4 pb-0"
         >
           <AccordionItem value="properties" className="border-none">
             <AccordionTrigger className="text-sm font-medium text-muted-foreground">
               Properties ({properties.length})
             </AccordionTrigger>
-            <AccordionContent>
+            <AccordionContent className="px-1 pt-2">
               <div>
                 {properties.length === 0 && (
-                  <p className="ml-4 py-2 text-sm text-muted-foreground">
+                  <p className="py-2 text-sm text-muted-foreground">
                     Define the data structure for this object.
                   </p>
                 )}

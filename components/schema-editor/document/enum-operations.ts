@@ -15,6 +15,8 @@ import type {
   SchemaDocument,
 } from "@/components/schema-editor/document/types"
 
+const ENUM_DESCRIPTIONS_KEY = "x-enumDescriptions"
+
 export function addEnumValue(
   doc: SchemaDocument,
   id: string,
@@ -22,16 +24,24 @@ export function addEnumValue(
 ): SchemaDocument {
   return updateNode(doc, id, (node) => {
     if (isTypeArrayNullable(node) && node.enum) {
-      return createNullableEnumWrapper(node, [
-        ...node.enum,
-        { ...createEnumValue(), value },
-      ])
+      const nextEnum = [...node.enum, { ...createEnumValue(), value }]
+      return createNullableEnumWrapper(
+        node,
+        nextEnum,
+        remapEnumDescriptions(node.rest, node.enum, nextEnum)
+      )
     }
 
-    return updateEffectiveNodeShape(node, (effective) => ({
-      ...effective,
-      enum: [...(effective.enum ?? []), { ...createEnumValue(), value }],
-    }))
+    return updateEffectiveNodeShape(node, (effective) => {
+      const previousEnum = effective.enum ?? []
+      const nextEnum = [...previousEnum, { ...createEnumValue(), value }]
+
+      return {
+        ...effective,
+        enum: nextEnum,
+        rest: remapEnumDescriptions(effective.rest, previousEnum, nextEnum),
+      }
+    })
   })
 }
 
@@ -43,20 +53,28 @@ export function updateEnumValue(
 ): SchemaDocument {
   return updateNode(doc, id, (node) => {
     if (isTypeArrayNullable(node) && node.enum) {
+      const nextEnum = mapPreserve(node.enum, (value) =>
+        value.id === enumId ? { ...value, ...patch } : value
+      )
       return createNullableEnumWrapper(
         node,
-        mapPreserve(node.enum, (value) =>
-          value.id === enumId ? { ...value, ...patch } : value
-        )
+        nextEnum,
+        remapEnumDescriptions(node.rest, node.enum, nextEnum)
       )
     }
 
-    return updateEffectiveNodeShape(node, (effective) => ({
-      ...effective,
-      enum: mapPreserve(effective.enum ?? [], (value) =>
+    return updateEffectiveNodeShape(node, (effective) => {
+      const previousEnum = effective.enum ?? []
+      const nextEnum = mapPreserve(previousEnum, (value) =>
         value.id === enumId ? { ...value, ...patch } : value
-      ),
-    }))
+      )
+
+      return {
+        ...effective,
+        enum: nextEnum,
+        rest: remapEnumDescriptions(effective.rest, previousEnum, nextEnum),
+      }
+    })
   })
 }
 
@@ -67,16 +85,24 @@ export function removeEnumValue(
 ): SchemaDocument {
   return updateNode(doc, id, (node) => {
     if (isTypeArrayNullable(node) && node.enum) {
+      const nextEnum = node.enum.filter((value) => value.id !== enumId)
       return createNullableEnumWrapper(
         node,
-        node.enum.filter((value) => value.id !== enumId)
+        nextEnum,
+        remapEnumDescriptions(node.rest, node.enum, nextEnum)
       )
     }
 
-    return updateEffectiveNodeShape(node, (effective) => ({
-      ...effective,
-      enum: (effective.enum ?? []).filter((value) => value.id !== enumId),
-    }))
+    return updateEffectiveNodeShape(node, (effective) => {
+      const previousEnum = effective.enum ?? []
+      const nextEnum = previousEnum.filter((value) => value.id !== enumId)
+
+      return {
+        ...effective,
+        enum: nextEnum,
+        rest: remapEnumDescriptions(effective.rest, previousEnum, nextEnum),
+      }
+    })
   })
 }
 
@@ -87,16 +113,27 @@ export function setEnumValues(
 ): SchemaDocument {
   return updateNode(doc, id, (node) => {
     if (isTypeArrayNullable(node)) {
-      return createNullableEnumWrapper(node, buildEnumValues(values, node.enum))
+      const nextEnum = buildEnumValues(values, node.enum)
+      return createNullableEnumWrapper(
+        node,
+        nextEnum,
+        remapEnumDescriptions(node.rest, node.enum, nextEnum)
+      )
     }
 
-    return updateEffectiveNodeShape(node, (effective) => ({
-      ...effective,
-      type: "string",
-      enum: buildEnumValues(values, effective.enum),
-      rest: stripSchemaTypeSpecificRest(effective.rest),
-      booleanSchema: undefined,
-    }))
+    return updateEffectiveNodeShape(node, (effective) => {
+      const nextEnum = buildEnumValues(values, effective.enum)
+      const rest = stripSchemaRestForEnum(
+        remapEnumDescriptions(effective.rest, effective.enum, nextEnum)
+      )
+      return {
+        ...effective,
+        type: "string",
+        enum: nextEnum,
+        rest,
+        booleanSchema: undefined,
+      }
+    })
   })
 }
 
@@ -157,7 +194,8 @@ function createEnumNodeFromEntries(enumEntries: EnumValue[]): DocumentNode {
 
 function createNullableEnumWrapper(
   node: DocumentNode,
-  enumEntries: EnumValue[]
+  enumEntries: EnumValue[],
+  rest: Record<string, unknown> = node.rest
 ): DocumentNode {
   return {
     ...node,
@@ -166,7 +204,7 @@ function createNullableEnumWrapper(
     items: undefined,
     enum: undefined,
     ref: undefined,
-    rest: stripSchemaTypeSpecificRest(node.rest),
+    rest: stripSchemaRestForEnum(rest),
     order: undefined,
     booleanSchema: undefined,
     anyOf: [
@@ -174,4 +212,57 @@ function createNullableEnumWrapper(
       { ...createNode("null") },
     ],
   }
+}
+
+function stripSchemaRestForEnum(
+  rest: Record<string, unknown>
+): Record<string, unknown> {
+  const descriptions = rest[ENUM_DESCRIPTIONS_KEY]
+  const next = { ...stripSchemaTypeSpecificRest(rest) }
+  if (isPlainRecord(descriptions)) {
+    next[ENUM_DESCRIPTIONS_KEY] = descriptions
+  }
+  return next
+}
+
+function remapEnumDescriptions(
+  rest: Record<string, unknown>,
+  previousEntries: EnumValue[] | undefined,
+  nextEntries: EnumValue[]
+): Record<string, unknown> {
+  const descriptions = rest[ENUM_DESCRIPTIONS_KEY]
+  if (!isPlainRecord(descriptions)) return rest
+
+  const previousById = new Map(
+    previousEntries?.map((entry) => [entry.id, entry]) ?? []
+  )
+  const nextDescriptions: Record<string, unknown> = {}
+  for (let index = 0; index < nextEntries.length; index += 1) {
+    const nextEntry = nextEntries[index]
+    const previous = previousById.get(nextEntry.id) ?? previousEntries?.[index]
+    if (!previous) continue
+    const previousKey = enumDescriptionKey(previous.value)
+    if (!hasOwn(descriptions, previousKey)) continue
+    nextDescriptions[enumDescriptionKey(nextEntry.value)] = descriptions[previousKey]
+  }
+
+  const next = { ...rest }
+  if (Object.keys(nextDescriptions).length > 0) {
+    next[ENUM_DESCRIPTIONS_KEY] = nextDescriptions
+  } else {
+    delete next[ENUM_DESCRIPTIONS_KEY]
+  }
+  return next
+}
+
+function enumDescriptionKey(value: JsonValue): string {
+  return String(value)
+}
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+}
+
+function hasOwn(record: Record<string, unknown>, key: string): boolean {
+  return Object.prototype.hasOwnProperty.call(record, key)
 }

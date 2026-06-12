@@ -1,7 +1,16 @@
 "use client"
 
 import * as React from "react"
+import { PlusIcon } from "lucide-react"
 
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { useDocumentDefinitionsEditorController } from "@/components/schema-editor/document-definitions-editor-controller"
 import type { SchemaEditorMode } from "@/components/schema-editor/document-node-editor-types"
 import {
@@ -14,14 +23,6 @@ import type {
   ResolvedSchemaBuilderFeatures,
   SchemaDispatch,
 } from "@/components/schema-editor/schema-builder-types"
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 
 interface DocumentDefinitionsEditorProps {
   dispatch: SchemaDispatch
@@ -66,10 +67,11 @@ export function DocumentDefinitionsEditor({
             <Button
               type="button"
               variant="outline"
+              size="sm"
               onClick={controller.openDefinitions}
-              className="rounded-md bg-transparent"
             >
-              Add definition
+              <PlusIcon className="h-4 w-4" />
+              <span>Add definition</span>
             </Button>
           ) : null}
         </div>
@@ -89,7 +91,7 @@ export function DocumentDefinitionsEditor({
             Definitions ({doc.defs.length})
           </div>
         </AccordionTrigger>
-        <AccordionContent className="bg-transparent pt-2">
+        <AccordionContent className="bg-transparent px-1 pt-2">
           <div className="space-y-4">
             {doc.defs.length === 0 && (
               <p className="text-sm text-muted-foreground">
@@ -144,10 +146,11 @@ export function DocumentDefinitionsEditor({
                   type="button"
                   variant="outline"
                   size="sm"
+                  disabled={!controller.newDefinitionName.trim()}
                   onClick={controller.addNewDefinition}
-                  className="p-1!"
                 >
-                  + Add
+                  <PlusIcon className="h-4 w-4" />
+                  <span>Add</span>
                 </Button>
               </div>
             )}

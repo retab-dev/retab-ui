@@ -17,7 +17,11 @@ export interface JsonTableCellProps {
   docId: string
   setOpenEditorPath: (key: string | null) => void
   openEditorPath: string | null
-  onDocumentDataChange: (docId: string, value: unknown) => void
+  onDocumentDataChange: (
+    docId: string,
+    materializedFieldPath: string,
+    value: unknown
+  ) => void
   isCellActive?: boolean
   onCellActivityLockChange?: (fieldPath: string, locked: boolean) => void
   isJsonEditable: boolean

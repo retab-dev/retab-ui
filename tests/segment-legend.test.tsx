@@ -373,6 +373,99 @@ describe("SegmentLegend — empty & unused", () => {
     fireEvent.click(screen.getByRole("button", { name: /show 1 unused/i }))
     expect(screen.getByRole("button", { name: "Bad" })).toBeTruthy()
   })
+
+  it("treats mixed valid and invalid pages as used", () => {
+    render(
+      <SegmentLegend
+        segments={[
+          segment({
+            id: "mixed",
+            index: 0,
+            label: "Mixed",
+            pages: [Number.NaN, 2, Infinity, 0, -1, 1.5],
+          }),
+        ]}
+        showUnusedToggle
+      />
+    )
+    expect(screen.getByRole("button", { name: "Mixed" })).toBeTruthy()
+    expect(screen.queryByRole("button", { name: /unused/i })).toBeNull()
+  })
+
+  it("updates the hidden count when the segment list changes", () => {
+    const { rerender } = render(
+      <SegmentLegend
+        segments={toSegments([
+          { name: "Intro", pages: [1] },
+          { name: "Unused", pages: [] },
+        ])}
+        showUnusedToggle
+      />
+    )
+    expect(
+      screen.getByRole("button", { name: "Show 1 unused segments" })
+    ).toBeTruthy()
+
+    rerender(
+      <SegmentLegend
+        segments={toSegments([
+          { name: "Intro", pages: [1] },
+          { name: "Unused", pages: [] },
+          { name: "Also unused", pages: [] },
+        ])}
+        showUnusedToggle
+      />
+    )
+
+    expect(
+      screen.getByRole("button", { name: "Show 2 unused segments" })
+    ).toBeTruthy()
+  })
+
+  it("lets controlled showUnused change from hidden to revealed and back", () => {
+    const { rerender } = render(
+      <SegmentLegend segments={segments} showUnused={false} showUnusedToggle />
+    )
+    expect(screen.queryByRole("button", { name: "Unused" })).toBeNull()
+
+    rerender(
+      <SegmentLegend segments={segments} showUnused showUnusedToggle />
+    )
+    expect(screen.getByRole("button", { name: "Unused" })).toBeTruthy()
+
+    rerender(
+      <SegmentLegend segments={segments} showUnused={false} showUnusedToggle />
+    )
+    expect(screen.queryByRole("button", { name: "Unused" })).toBeNull()
+  })
+
+  it("keeps uncontrolled reveal active for newly-added unused segments", () => {
+    const { rerender } = render(
+      <SegmentLegend
+        segments={toSegments([
+          { name: "Intro", pages: [1] },
+          { name: "Unused", pages: [] },
+        ])}
+        showUnusedToggle
+      />
+    )
+    fireEvent.click(screen.getByRole("button", { name: /show 1 unused/i }))
+
+    rerender(
+      <SegmentLegend
+        segments={toSegments([
+          { name: "Intro", pages: [1] },
+          { name: "Unused", pages: [] },
+          { name: "Also unused", pages: [] },
+        ])}
+        showUnusedToggle
+      />
+    )
+
+    expect(screen.getByRole("button", { name: "Unused" })).toBeTruthy()
+    expect(screen.getByRole("button", { name: "Also unused" })).toBeTruthy()
+    expect(screen.getByRole("button", { name: /hide unused/i })).toBeTruthy()
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -494,6 +587,125 @@ describe("SegmentLegend — interaction", () => {
     expect(intro.getAttribute("data-selected")).toBe("true")
     expect(legendButton("Results").getAttribute("aria-pressed")).toBe("false")
   })
+
+  it("gives hover precedence over focus and selection when dimming entries", () => {
+    render(
+      <SegmentLegend
+        segments={segments}
+        showUnused
+        interaction={createInteraction({
+          hoveredId: segments[1].id,
+          focusedId: segments[0].id,
+          selectedId: segments[2].id,
+        })}
+      />
+    )
+
+    expect(legendButton("Results").getAttribute("data-highlighted")).toBe(
+      "true"
+    )
+    expect(legendButton("Intro").getAttribute("data-highlighted")).toBe(
+      "false"
+    )
+    expect(legendButton("Unused").getAttribute("data-highlighted")).toBe(
+      "false"
+    )
+    expect(legendButton("Results").className).toContain("opacity-100")
+    expect(legendButton("Intro").className).toContain("opacity-40")
+    expect(legendButton("Unused").className).toContain("opacity-40")
+  })
+
+  it("gives focus precedence over selection when nothing is hovered", () => {
+    render(
+      <SegmentLegend
+        segments={segments}
+        showUnused
+        interaction={createInteraction({
+          focusedId: segments[1].id,
+          selectedId: segments[0].id,
+        })}
+      />
+    )
+
+    expect(legendButton("Results").getAttribute("data-highlighted")).toBe(
+      "true"
+    )
+    expect(legendButton("Intro").getAttribute("aria-pressed")).toBe("true")
+    expect(legendButton("Intro").getAttribute("data-highlighted")).toBe(
+      "false"
+    )
+    expect(legendButton("Intro").className).toContain("opacity-40")
+  })
+
+  it("preserves persistent selection after hover leaves", () => {
+    function Harness() {
+      const [hoveredId, setHoveredId] = React.useState<string | null>(null)
+      return (
+        <SegmentLegend
+          segments={segments}
+          interaction={createInteraction({
+            hoveredId,
+            selectedId: segments[0].id,
+            setHoveredId,
+          })}
+        />
+      )
+    }
+
+    render(<Harness />)
+    const results = legendButton("Results")
+
+    fireEvent.mouseEnter(results)
+    expect(results.getAttribute("data-highlighted")).toBe("true")
+    expect(legendButton("Intro").className).toContain("opacity-40")
+
+    fireEvent.mouseLeave(results)
+    expect(legendButton("Intro").getAttribute("data-highlighted")).toBe("true")
+    expect(legendButton("Intro").className).toContain("opacity-100")
+    expect(results.className).toContain("opacity-40")
+  })
+
+  it("re-scopes highlighted state after selected segments are removed", () => {
+    const { rerender } = render(
+      <SegmentLegend
+        segments={segments}
+        interaction={createInteraction({ selectedId: segments[0].id })}
+      />
+    )
+    expect(legendButton("Results").className).toContain("opacity-40")
+
+    rerender(
+      <SegmentLegend
+        segments={segments.slice(1, 2)}
+        interaction={createInteraction({ selectedId: segments[0].id })}
+      />
+    )
+
+    expect(legendButton("Results").className).toContain("opacity-100")
+    expect(legendButton("Results").getAttribute("aria-pressed")).toBe("false")
+  })
+
+  it("does not clear hover or focus owned by another segment from stale leave/blur events", () => {
+    const setHoveredId = vi.fn()
+    const setFocusedId = vi.fn()
+    render(
+      <SegmentLegend
+        segments={segments}
+        interaction={createInteraction({
+          hoveredId: segments[1].id,
+          focusedId: segments[1].id,
+          setHoveredId,
+          setFocusedId,
+        })}
+      />
+    )
+
+    fireEvent.mouseLeave(legendButton("Intro"))
+    fireEvent.blur(legendButton("Intro"))
+
+    expect(setHoveredId).not.toHaveBeenCalled()
+    expect(setFocusedId).not.toHaveBeenCalled()
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -540,6 +752,58 @@ describe("SegmentLegend — current page", () => {
     expect(legendButton("Intro").getAttribute("data-current")).toBe("false")
     expect(legendButton("Results").getAttribute("data-current")).toBe("false")
   })
+
+  it.each([0, -1, 1.5, Infinity, Number.NaN])(
+    "ignores invalid currentPage=%s even if it appears in raw segment pages",
+    (currentPage) => {
+      render(
+        <SegmentLegend
+          segments={[
+            segment({
+              id: "dirty",
+              index: 0,
+              label: "Dirty",
+              pages: [1, 0, -1, 1.5, Infinity, Number.NaN],
+            }),
+          ]}
+          currentPage={currentPage}
+        />
+      )
+      expect(legendButton("Dirty").getAttribute("data-current")).toBe("false")
+    }
+  )
+
+  it("does not mark a revealed invalid-page segment as current", () => {
+    render(
+      <SegmentLegend
+        segments={[
+          segment({
+            id: "invalid",
+            index: 0,
+            label: "Invalid",
+            pages: [Number.NaN],
+          }),
+        ]}
+        showUnused
+        currentPage={Number.NaN}
+      />
+    )
+    expect(legendButton("Invalid").getAttribute("data-current")).toBe("false")
+  })
+
+  it("does not crash when a revealed segment is missing its pages array", () => {
+    const broken = segment({
+      id: "broken",
+      index: 0,
+      label: "Broken",
+      pages: undefined as unknown as number[],
+    })
+
+    expect(() => {
+      render(<SegmentLegend segments={[broken]} showUnused currentPage={1} />)
+    }).not.toThrow()
+    expect(legendButton("Broken").getAttribute("data-current")).toBe("false")
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -568,6 +832,39 @@ describe("SegmentLegend — caption", () => {
   it("does not render a caption container when caption is omitted", () => {
     render(<SegmentLegend segments={segments} />)
     expect(screen.queryByText(/./, { selector: ".line-clamp-2" })).toBeNull()
+  })
+
+  it("does not render an empty caption container for an empty string", () => {
+    const { container } = render(<SegmentLegend segments={segments} caption="" />)
+    expect(container.querySelector(".line-clamp-2")).toBeNull()
+  })
+
+  it("does not render a caption container for boolean captions", () => {
+    const { container, rerender } = render(
+      <SegmentLegend segments={segments} caption={false} />
+    )
+    expect(container.querySelector(".line-clamp-2")).toBeNull()
+
+    rerender(<SegmentLegend segments={segments} caption />)
+    expect(container.querySelector(".line-clamp-2")).toBeNull()
+  })
+
+  it("renders numeric zero as a valid React caption", () => {
+    render(<SegmentLegend segments={segments} caption={0} />)
+    expect(screen.getByText("0", { selector: ".line-clamp-2" })).toBeTruthy()
+  })
+
+  it("renders caption content when entries are hidden but the toggle remains", () => {
+    render(
+      <SegmentLegend
+        segments={toSegments([{ name: "Only", pages: [] }])}
+        showUnused={false}
+        showUnusedToggle
+        caption={<strong>pending labels</strong>}
+      />
+    )
+    expect(screen.queryByRole("button", { name: "Only" })).toBeNull()
+    expect(screen.getByText("pending labels")).toBeTruthy()
   })
 })
 

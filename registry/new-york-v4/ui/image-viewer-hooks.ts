@@ -45,6 +45,11 @@ export function useImageViewerScale(
     number | null
   >(null)
   const [rawRotation, setRawRotation] = React.useState(0)
+
+  React.useLayoutEffect(() => {
+    setRawRotation(0)
+  }, [source])
+
   const rotation = normalizeRotation(rawRotation)
   const widestFrameWidth = Math.max(
     1,
@@ -60,10 +65,7 @@ export function useImageViewerScale(
       ? normalizeViewerScale(controlledScale)
       : uncontrolledScale !== null
         ? normalizeViewerScale(uncontrolledScale)
-        : Math.min(
-            MAX_VIEWER_SCALE,
-            Math.max(MIN_VIEWER_SCALE, fitWidthScale)
-          )
+        : Math.min(MAX_VIEWER_SCALE, Math.max(MIN_VIEWER_SCALE, fitWidthScale))
 
   const setViewerScale = React.useCallback(
     (nextScale: number | null) => {
@@ -87,7 +89,7 @@ export function useImageViewerScale(
 
 function normalizeViewerScale(scale: number): number {
   return Number.isFinite(scale) && scale > 0
-    ? Math.max(MIN_VIEWER_SCALE, scale)
+    ? Math.min(MAX_VIEWER_SCALE, Math.max(MIN_VIEWER_SCALE, scale))
     : MIN_VIEWER_SCALE
 }
 
@@ -101,12 +103,25 @@ function normalizeFrameAreaPercent(value: number): number | null {
 }
 
 export function useVisibleFrame(
+  resetKey: unknown,
   onScrollProgressChange: ImageViewerProps["onScrollProgressChange"],
   onVisibleFrameChange: ImageViewerProps["onVisibleFrameChange"]
 ) {
   const [currentFrameNumber, setCurrentFrameNumber] = React.useState(1)
   const scrollViewportRef = React.useRef<HTMLDivElement | null>(null)
   const lastReportedFrameNumber = React.useRef(0)
+
+  // Swapping the displayed document remounts the frame DOM and resets the
+  // scroll position, but this hook's state survives because the content
+  // component updates in place. Reset to the first frame when the source
+  // changes so the page indicator tracks the new document instead of carrying
+  // over a stale page number. (The "of N" clamp hid this when swapping to a
+  // shorter document.) A layout effect resets before paint, so the stale page
+  // never flashes.
+  React.useLayoutEffect(() => {
+    lastReportedFrameNumber.current = 0
+    setCurrentFrameNumber(1)
+  }, [resetKey])
 
   const handleScroll = React.useCallback(() => {
     const viewport = scrollViewportRef.current

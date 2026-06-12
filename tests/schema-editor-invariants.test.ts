@@ -273,11 +273,7 @@ describe("round-trip losslessness", () => {
     expect(rt(s)).toEqual(s)
   })
 
-  // KNOWN BUG: `x-enumDescriptions` is listed in MODELED_NODE_KEYS (so it is
-  // never carried into `rest`) yet nothing stores it structurally, so it is
-  // silently dropped on import — a losslessness violation. `it.fails` keeps the
-  // suite green while documenting the defect; remove `.fails` once it round-trips.
-  it.fails("preserves x-enumDescriptions alongside an enum", () => {
+  it("preserves x-enumDescriptions alongside an enum", () => {
     const s = {
       type: "string",
       enum: ["a", "b"],

@@ -30,6 +30,7 @@ import { PptxRendererError } from "@/registry/new-york-v4/ui/pptx-viewer-rendere
 import { createPptxScrollActivity } from "@/registry/new-york-v4/ui/pptx-viewer-scroll"
 import { PptxSlideScroller } from "@/registry/new-york-v4/ui/pptx-viewer-slide"
 import {
+  evictPptxSource,
   getPptxSource,
   subscribePptxSourceLoadTiming,
   type PptxRenderResult,
@@ -651,6 +652,34 @@ describe("PptxViewer helpers", () => {
     drawImageMock.mockImplementationOnce(() => {
       throw new Error("draw failed")
     })
+
+    await expect(
+      source.renderSlide({
+        canvas: document.createElement("canvas"),
+        renderScale: 1,
+        slideIndex: 0,
+      })
+    ).resolves.toMatchObject({
+      error: expect.objectContaining({ kind: "render_failed" }),
+      status: "failed",
+    })
+    expect(pptxMock.renderSlide).toHaveBeenCalledTimes(1)
+  })
+
+  it("reports cached bitmap draw failures when the canvas 2D context is unavailable", async () => {
+    const source = await getPptxSource(
+      pptxUrlResource("/cached-bitmap-no-context.pptx")
+    )
+
+    await expect(
+      source.renderSlide({
+        canvas: document.createElement("canvas"),
+        renderScale: 1,
+        slideIndex: 0,
+      })
+    ).resolves.toEqual({ status: "rendered" })
+
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null)
 
     await expect(
       source.renderSlide({
@@ -1490,6 +1519,27 @@ describe("PptxViewer", () => {
     vi.runOnlyPendingTimers()
     expect(replayTiming).not.toHaveBeenCalled()
     vi.useRealTimers()
+  })
+
+  it("evicts the oldest source load timing after the replay cache limit", async () => {
+    const first = pptxUrlResource("/timing-cache-limit-0.pptx")
+    const latest = pptxUrlResource("/timing-cache-limit-32.pptx")
+    const firstTiming = vi.fn()
+    const latestTiming = vi.fn()
+
+    await getPptxSource(first)
+    for (let i = 1; i <= 32; i += 1) {
+      await getPptxSource(pptxUrlResource(`/timing-cache-limit-${i}.pptx`))
+    }
+
+    subscribePptxSourceLoadTiming(first, firstTiming)
+    subscribePptxSourceLoadTiming(latest, latestTiming)
+    await new Promise((resolve) => window.setTimeout(resolve, 0))
+
+    expect(firstTiming).not.toHaveBeenCalled()
+    expect(latestTiming).toHaveBeenCalledWith(
+      expect.objectContaining({ slideCount: 1 })
+    )
   })
 
   it("isolates source load timing subscriber failures", async () => {
@@ -3339,6 +3389,33 @@ describe("PptxViewer", () => {
     ).resolves.toMatchObject({ status: "failed" })
   })
 
+  it("disposes pending loads that resolve after direct source eviction", async () => {
+    const load = deferred<undefined>()
+    pptxMock.loadFile.mockImplementationOnce(() => load.promise)
+    const resource = pptxUrlResource("/pending-direct-evict.pptx")
+
+    const sourcePromise = getPptxSource(resource)
+
+    await waitFor(() => {
+      expect(pptxMock.loadFile).toHaveBeenCalledTimes(1)
+    })
+
+    evictPptxSource(resource)
+    load.resolve(undefined)
+    const source = await sourcePromise
+
+    await waitFor(() => {
+      expect(pptxMock.destroy).toHaveBeenCalledTimes(1)
+    })
+    await expect(
+      source.renderSlide({
+        canvas: document.createElement("canvas"),
+        renderScale: 1,
+        slideIndex: 0,
+      })
+    ).resolves.toMatchObject({ status: "failed" })
+  })
+
   it("cancels queued renders before they touch a stale canvas", async () => {
     const firstRender = deferred<undefined>()
     pptxMock.renderSlide.mockImplementationOnce(() => firstRender.promise)
@@ -3368,56 +3445,62 @@ describe("PptxViewer", () => {
     expect(pptxMock.renderSlide).toHaveBeenCalledTimes(1)
   })
 
-  it("PROBE evicted-pending retained disposal", async () => {
+  it("pins a still-loading deck so concurrent loads cannot evict or duplicate it", async () => {
     const load = deferred<undefined>()
     pptxMock.loadFile.mockImplementationOnce(() => load.promise)
 
     const view = await renderPptx(
-      <PptxViewer source={pptxUrlSource("/probe-evicted-pending.pptx")} />
+      <PptxViewer source={pptxUrlSource("/pinned-pending.pptx")} />
     )
-    // eslint-disable-next-line no-console
-    console.log(`PROBE after-mount destroy=${pptxMock.destroy.mock.calls.length}`)
-    // Evict the still-pending entry from the size-4 source cache.
-    for (let i = 0; i < 4; i += 1) {
-      await getPptxSource(pptxUrlResource(`/probe-evictor-${i}.pptx`))
-    }
-    // eslint-disable-next-line no-console
-    console.log(`PROBE after-evict destroy=${pptxMock.destroy.mock.calls.length}`)
 
-    // eslint-disable-next-line no-console
-    console.log(
-      `PROBE after-evict created=${pptxMock.viewerOptions.length} loadFile=${pptxMock.loadFile.mock.calls.length}`
-    )
+    // Load enough other decks to overflow the size-4 source cache while the
+    // first deck is still loading.
+    for (let i = 0; i < 4; i += 1) {
+      await getPptxSource(pptxUrlResource(`/pin-evictor-${i}.pptx`))
+    }
+    // One pending deck + four evictors: the pending entry is pinned, so an old
+    // evictor is dropped instead of the still-loading deck.
+    expect(pptxMock.loadFile).toHaveBeenCalledTimes(5)
 
     load.resolve(undefined)
-    await screen.findByText("Slide 1 of 1")
-    // eslint-disable-next-line no-console
-    console.log(
-      `PROBE after-resolve destroy=${pptxMock.destroy.mock.calls.length} created=${pptxMock.viewerOptions.length} loadFile=${pptxMock.loadFile.mock.calls.length} renderError=${Boolean(screen.queryByText("Couldn't render slide 1."))}`
-    )
+    expect(await screen.findByText("Slide 1 of 1")).toBeTruthy()
 
-    const before = pptxMock.destroy.mock.calls.length
+    // The Suspense retry must reuse the pinned entry rather than start a second
+    // load and orphan the original renderer.
+    expect(pptxMock.loadFile).toHaveBeenCalledTimes(5)
+    expect(pptxMock.viewerOptions).toHaveLength(5)
+    expect(screen.queryByText("Couldn't render slide 1.")).toBeNull()
+
     view.unmount()
-    await new Promise((resolve) => window.setTimeout(resolve, 20))
-    const after = pptxMock.destroy.mock.calls.length
-    // eslint-disable-next-line no-console
-    console.log(`PROBE evicted-pending destroy before=${before} after=${after}`)
   })
 
-  it("PROBE control normally-cached retained disposal", async () => {
-    const view = await renderPptx(
-      <PptxViewer source={pptxUrlSource("/probe-cached.pptx")} />
-    )
-    await screen.findByText("Slide 1 of 1")
+  it("lets a pinned deck become evictable once its load settles", async () => {
+    const load = deferred<undefined>()
+    pptxMock.loadFile.mockImplementationOnce(() => load.promise)
+
+    const pinned = pptxUrlResource("/settles-then-evictable.pptx")
+    const pinnedPromise = getPptxSource(pinned)
+
     for (let i = 0; i < 4; i += 1) {
-      await getPptxSource(pptxUrlResource(`/probe-control-evictor-${i}.pptx`))
+      await getPptxSource(pptxUrlResource(`/settle-evictor-${i}.pptx`))
     }
-    const before = pptxMock.destroy.mock.calls.length
-    view.unmount()
-    await new Promise((resolve) => window.setTimeout(resolve, 20))
-    const after = pptxMock.destroy.mock.calls.length
-    // eslint-disable-next-line no-console
-    console.log(`PROBE control destroy before=${before} after=${after}`)
+
+    load.resolve(undefined)
+    const pinnedSource = await pinnedPromise
+
+    // After settling, the entry is evictable again: four more loads push it out
+    // and dispose it (no retainer holds it).
+    for (let i = 0; i < 4; i += 1) {
+      await getPptxSource(pptxUrlResource(`/post-settle-evictor-${i}.pptx`))
+    }
+
+    await expect(
+      pinnedSource.renderSlide({
+        canvas: document.createElement("canvas"),
+        renderScale: 1,
+        slideIndex: 0,
+      })
+    ).resolves.toMatchObject({ status: "failed" })
   })
 
   it("shows the suspense fallback with the requested slide aspect ratio while loading", async () => {

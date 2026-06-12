@@ -21,6 +21,32 @@ function activateDataCell(container: HTMLElement) {
 }
 
 describe("json table cell editor dispatch", () => {
+  it("keeps scalar layout owned by DataCell instead of editor overrides", () => {
+    const displayView = renderEditor("string", {
+      field: { ...baseField("string"), effectiveValue: "0628" },
+    })
+    const displayCell = displayView.container.querySelector(
+      '[data-slot="data-cell"]'
+    )
+    expect(displayCell?.getAttribute("class")).toContain("h-full")
+    expect(displayCell?.getAttribute("class")).not.toContain("py-2")
+    expect(displayCell?.getAttribute("class")).not.toContain("items-start")
+    expect(displayCell?.getAttribute("class")).not.toContain("leading-none")
+    cleanup()
+
+    const editView = renderEditor("string", {
+      overlays: { ...baseOverlays(), showInput: true, forceEditMode: true },
+      textDraft: { ...baseTextDraft(), activeTextValue: "0628" },
+    })
+    const inputControl = editView
+      .getByRole("textbox")
+      .closest('[data-slot="input-control"]')
+    expect(inputControl?.getAttribute("class")).toContain("h-full")
+    expect(inputControl?.getAttribute("class")).not.toContain("py-2")
+    expect(inputControl?.getAttribute("class")).not.toContain("items-start")
+    expect(inputControl?.getAttribute("class")).not.toContain("leading-none")
+  })
+
   it("renders string display and edit states", () => {
     let view = renderEditor("string", {
       field: { ...baseField("string"), effectiveValue: "hello" },

@@ -888,6 +888,61 @@ describe("json table document projection and patches", () => {
     ])
   })
 
+  it("reserves read-only columns for empty arrays before later siblings", () => {
+    const rows = projectDocumentRows({
+      document: {
+        id: "doc_1",
+        data: {
+          empty_lines: [],
+          charges: [{ amount: 5 }],
+          vendor: "ACME",
+        },
+      },
+      visiblePaths: ["empty_lines.*.name", "charges.*.amount", "vendor"],
+      includeArrayAddRows: false,
+    })
+
+    expect(rows).toHaveLength(1)
+    expect(rows[0].cells[0]).toBeUndefined()
+    expect(rows[0].cells[1]?.materializedFieldPath).toBe("charges.0.amount")
+    expect(rows[0].cells[1]?.value).toBe(5)
+    expect(rows[0].cells[2]?.materializedFieldPath).toBe("vendor")
+    expect(rows[0].cells[2]?.value).toBe("ACME")
+  })
+
+  it("reserves every nested read-only column for empty nested arrays", () => {
+    const rows = projectDocumentRows({
+      document: {
+        id: "doc_1",
+        data: {
+          sections: [
+            {
+              title: "First",
+              lines: [],
+              charges: [{ amount: 12 }],
+            },
+          ],
+        },
+      },
+      visiblePaths: [
+        "sections.*.title",
+        "sections.*.lines.*.sku",
+        "sections.*.lines.*.quantity",
+        "sections.*.charges.*.amount",
+      ],
+      includeArrayAddRows: false,
+    })
+
+    expect(rows).toHaveLength(1)
+    expect(rows[0].cells[0]?.materializedFieldPath).toBe("sections.0.title")
+    expect(rows[0].cells[1]).toBeUndefined()
+    expect(rows[0].cells[2]).toBeUndefined()
+    expect(rows[0].cells[3]?.materializedFieldPath).toBe(
+      "sections.0.charges.0.amount"
+    )
+    expect(rows[0].cells[3]?.value).toBe(12)
+  })
+
   it("aligns independent arrays by visible row index and keeps add rows sparse", () => {
     const rows = projectDocumentRows({
       document: {

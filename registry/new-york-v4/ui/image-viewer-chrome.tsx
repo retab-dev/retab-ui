@@ -177,7 +177,7 @@ function ImageFrameSkeleton({
 }) {
   const normalizedScale =
     scale !== undefined && Number.isFinite(scale) && scale > 0
-      ? Math.max(0.25, scale)
+      ? Math.min(5, Math.max(0.25, scale))
       : null
   const style: React.CSSProperties | undefined = frameSize
     ? normalizedScale !== null

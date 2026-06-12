@@ -29,6 +29,40 @@ function getOwnObjectValue(node: unknown, property: string): unknown {
   return (node as Record<string, unknown>)[property]
 }
 
+function countTemplateColumns(templateParts: string[][], depth: number): number {
+  let colSpan = 0
+  const remainingTemplates = templateParts.filter((template) => {
+    if (template.length !== depth) return true
+    colSpan++
+    return false
+  })
+
+  if (remainingTemplates.length === 0) return colSpan
+
+  const topProperties = new Set(
+    remainingTemplates
+      .filter((template) => template.length > depth)
+      .map((template) => template[depth])
+  )
+
+  if (topProperties.has("*") && topProperties.size === 1) {
+    return colSpan + countTemplateColumns(remainingTemplates, depth + 1)
+  }
+
+  if (topProperties.has("*")) {
+    throw new Error("Wildcard '*' used along with other properties")
+  }
+
+  for (const property of topProperties) {
+    colSpan += countTemplateColumns(
+      remainingTemplates.filter((template) => template[depth] === property),
+      depth + 1
+    )
+  }
+
+  return colSpan
+}
+
 export function projectDocumentRows({
   document,
   visiblePaths,
@@ -109,6 +143,9 @@ export function projectDocumentRows({
       }
 
       if (!includeArrayAddRows) {
+        if (rowSpan === 0) {
+          colSpan = Math.max(colSpan, countTemplateColumns(templateParts, depth + 1))
+        }
         return [rowSpan, colSpan]
       }
 

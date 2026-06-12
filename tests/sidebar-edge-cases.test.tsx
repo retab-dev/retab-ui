@@ -13,15 +13,25 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
+  SidebarGroupAction,
+  SidebarGroupContent,
   SidebarGroupLabel,
+  SidebarHeader,
   SidebarInput,
   SidebarMenu,
   SidebarMenuAction,
+  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSkeleton,
+  SidebarMenuSub,
   SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarProvider,
+  SidebarRail,
+  SidebarSeparator,
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar"
@@ -128,6 +138,7 @@ function ContextProbe() {
 
 afterEach(() => {
   cleanup()
+  vi.useRealTimers()
   vi.restoreAllMocks()
   vi.unstubAllGlobals()
   mediaListeners.clear()
@@ -584,5 +595,562 @@ describe("sidebar primitive defaults", () => {
     )
 
     expect(getTrigger(document.body).getAttribute("type")).toBe("submit")
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Additional bug-hunt coverage
+// ---------------------------------------------------------------------------
+
+describe("sidebar bug-hunt coverage", () => {
+  it("sets the cookie expiry to seven days from the toggle time", () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date("2026-06-12T12:00:00.000Z"))
+
+    const { container } = render(
+      <SidebarProvider defaultOpen>
+        <SidebarTrigger />
+        <ContextProbe />
+      </SidebarProvider>
+    )
+
+    fireEvent.click(getTrigger(container))
+
+    expect(cookieSet).toHaveBeenCalledTimes(1)
+    expect(cookieSet).toHaveBeenCalledWith({
+      expires: new Date("2026-06-19T12:00:00.000Z").getTime(),
+      name: "sidebar_state",
+      path: "/",
+      value: "false",
+    })
+  })
+
+  it("does not toggle from a loading trigger", () => {
+    const { container } = render(
+      <SidebarProvider defaultOpen>
+        <SidebarTrigger loading />
+        <ContextProbe />
+      </SidebarProvider>
+    )
+
+    const trigger = getTrigger(container)
+    expect(trigger).toHaveProperty("disabled", true)
+    expect(trigger.getAttribute("aria-disabled")).toBe("true")
+
+    fireEvent.click(trigger)
+
+    expect(container.querySelector("output")?.getAttribute("data-state")).toBe(
+      "expanded"
+    )
+    expect(cookieSet).not.toHaveBeenCalled()
+  })
+
+  it("toggles from a rendered trigger link and keeps link semantics", async () => {
+    const onClick = vi.fn((event: React.MouseEvent<HTMLButtonElement>) => {
+      event.preventDefault()
+    })
+
+    const { container } = render(
+      <SidebarProvider defaultOpen>
+        <SidebarTrigger
+          onClick={onClick}
+          render={<a href="#navigation" />}
+        />
+        <ContextProbe />
+      </SidebarProvider>
+    )
+
+    const trigger = getTrigger(container)
+    expect(trigger.tagName).toBe("A")
+    expect(trigger.getAttribute("href")).toBe("#navigation")
+    expect(trigger.getAttribute("type")).toBeNull()
+
+    fireEvent.click(trigger)
+
+    expect(onClick).toHaveBeenCalledTimes(1)
+    await waitFor(() => {
+      expect(
+        container.querySelector("output")?.getAttribute("data-state")
+      ).toBe("expanded")
+    })
+    expect(cookieSet).not.toHaveBeenCalled()
+  })
+
+  it("lets a rendered trigger link toggle when its handler does not prevent default", async () => {
+    const onClick = vi.fn()
+
+    const { container } = render(
+      <SidebarProvider defaultOpen>
+        <SidebarTrigger
+          onClick={onClick as React.MouseEventHandler<HTMLButtonElement>}
+          render={<span role="button" tabIndex={0} />}
+        />
+        <ContextProbe />
+      </SidebarProvider>
+    )
+
+    fireEvent.click(getTrigger(container))
+
+    await waitFor(() => {
+      expect(
+        container.querySelector("output")?.getAttribute("data-state")
+      ).toBe("collapsed")
+    })
+    expect(onClick).toHaveBeenCalledTimes(1)
+    expect(cookieSet).toHaveBeenLastCalledWith(
+      expect.objectContaining({ value: "false" })
+    )
+  })
+
+  it("closes the mobile sidebar through the sheet close button", async () => {
+    setMobileViewport(true)
+
+    const { container } = render(
+      <SidebarProvider defaultOpen>
+        <SidebarTrigger />
+        <Sidebar>
+          <SidebarHeader>Mobile navigation</SidebarHeader>
+        </Sidebar>
+        <ContextProbe />
+      </SidebarProvider>
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "Toggle Sidebar" }))
+    expect(await screen.findByText("Mobile navigation")).toBeTruthy()
+    expect(
+      container.querySelector("output")?.getAttribute("data-openmobile")
+    ).toBe("true")
+
+    fireEvent.click(screen.getByRole("button", { name: "Close" }))
+
+    await waitFor(() => {
+      expect(
+        container.querySelector("output")?.getAttribute("data-openmobile")
+      ).toBe("false")
+    })
+    expect(cookieSet).not.toHaveBeenCalled()
+  })
+
+  it("does not write a desktop cookie when mobile sheet close changes open state", async () => {
+    setMobileViewport(true)
+
+    render(
+      <SidebarProvider defaultOpen>
+        <SidebarTrigger />
+        <Sidebar>
+          <SidebarHeader>Mobile navigation</SidebarHeader>
+        </Sidebar>
+      </SidebarProvider>
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "Toggle Sidebar" }))
+    expect(await screen.findByText("Mobile navigation")).toBeTruthy()
+    fireEvent.click(screen.getByRole("button", { name: "Close" }))
+
+    await waitFor(() => {
+      expect(screen.queryByText("Mobile navigation")).toBeNull()
+    })
+    expect(cookieSet).not.toHaveBeenCalled()
+  })
+
+  it("removes the media query listener when the provider unmounts", () => {
+    const { unmount } = render(
+      <SidebarProvider>
+        <ContextProbe />
+      </SidebarProvider>
+    )
+
+    expect(mediaListeners.size).toBe(1)
+    unmount()
+    expect(mediaListeners.size).toBe(0)
+  })
+
+  it("does not reset uncontrolled state when defaultOpen changes after mount", async () => {
+    function Harness({ defaultOpen }: { defaultOpen: boolean }) {
+      return (
+        <SidebarProvider defaultOpen={defaultOpen}>
+          <SidebarTrigger />
+          <ContextProbe />
+        </SidebarProvider>
+      )
+    }
+
+    const { container, rerender } = render(<Harness defaultOpen />)
+    fireEvent.click(getTrigger(container))
+    await waitFor(() => {
+      expect(
+        container.querySelector("output")?.getAttribute("data-state")
+      ).toBe("collapsed")
+    })
+
+    rerender(<Harness defaultOpen={false} />)
+
+    expect(container.querySelector("output")?.getAttribute("data-state")).toBe(
+      "collapsed"
+    )
+  })
+
+  it("prevents the browser default for the handled shortcut", async () => {
+    const { container } = render(
+      <SidebarProvider defaultOpen>
+        <ContextProbe />
+      </SidebarProvider>
+    )
+
+    const handled = fireEvent.keyDown(window, { ctrlKey: true, key: "b" })
+
+    expect(handled).toBe(false)
+    await waitFor(() => {
+      expect(
+        container.querySelector("output")?.getAttribute("data-state")
+      ).toBe("collapsed")
+    })
+  })
+
+  it("does not treat ctrl+alt+b as the sidebar shortcut", () => {
+    const { container } = render(
+      <SidebarProvider defaultOpen>
+        <ContextProbe />
+      </SidebarProvider>
+    )
+
+    const handled = fireEvent.keyDown(window, {
+      altKey: true,
+      ctrlKey: true,
+      key: "b",
+    })
+
+    expect(handled).toBe(true)
+    expect(container.querySelector("output")?.getAttribute("data-state")).toBe(
+      "expanded"
+    )
+    expect(cookieSet).not.toHaveBeenCalled()
+  })
+
+  it("does not treat meta+alt+b as the sidebar shortcut", () => {
+    const { container } = render(
+      <SidebarProvider defaultOpen>
+        <ContextProbe />
+      </SidebarProvider>
+    )
+
+    const handled = fireEvent.keyDown(window, {
+      altKey: true,
+      key: "b",
+      metaKey: true,
+    })
+
+    expect(handled).toBe(true)
+    expect(container.querySelector("output")?.getAttribute("data-state")).toBe(
+      "expanded"
+    )
+    expect(cookieSet).not.toHaveBeenCalled()
+  })
+
+  it("routes the shortcut through the latest desktop/mobile mode", async () => {
+    const { container } = render(
+      <SidebarProvider defaultOpen>
+        <Sidebar>
+          <SidebarHeader>Mobile navigation</SidebarHeader>
+        </Sidebar>
+        <ContextProbe />
+      </SidebarProvider>
+    )
+
+    fireEvent.keyDown(window, { ctrlKey: true, key: "b" })
+    await waitFor(() => {
+      expect(
+        container.querySelector("output")?.getAttribute("data-state")
+      ).toBe("collapsed")
+    })
+    expect(cookieSet).toHaveBeenCalledTimes(1)
+
+    cookieSet.mockClear()
+    act(() => setMobileViewport(true))
+    fireEvent.keyDown(window, { ctrlKey: true, key: "b" })
+
+    await waitFor(() => {
+      expect(
+        container.querySelector("output")?.getAttribute("data-openmobile")
+      ).toBe("true")
+    })
+    expect(container.querySelector("output")?.getAttribute("data-state")).toBe(
+      "collapsed"
+    )
+    expect(cookieSet).not.toHaveBeenCalled()
+  })
+
+  it("clears openMobile if a consumer sets it while on desktop", async () => {
+    function OpenMobileFromDesktop() {
+      const { setOpenMobile } = useSidebar()
+      return (
+        <button onClick={() => setOpenMobile(true)} type="button">
+          Open mobile
+        </button>
+      )
+    }
+
+    const { container } = render(
+      <SidebarProvider defaultOpen>
+        <OpenMobileFromDesktop />
+        <ContextProbe />
+      </SidebarProvider>
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "Open mobile" }))
+
+    await waitFor(() => {
+      expect(
+        container.querySelector("output")?.getAttribute("data-openmobile")
+      ).toBe("false")
+    })
+    expect(cookieSet).not.toHaveBeenCalled()
+  })
+
+  it("uses the default mobile sidebar width unless the caller overrides it", async () => {
+    setMobileViewport(true)
+
+    render(
+      <SidebarProvider>
+        <SidebarTrigger />
+        <Sidebar data-testid="mobile-sidebar">Mobile nav</Sidebar>
+      </SidebarProvider>
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "Toggle Sidebar" }))
+
+    const mobileSidebar = await screen.findByTestId("mobile-sidebar")
+    expect(mobileSidebar.style.getPropertyValue("--sidebar-width")).toBe(
+      "18rem"
+    )
+  })
+
+  it("keeps sidebar DOM metadata stable for right offcanvas collapse", async () => {
+    const { container } = render(
+      <SidebarProvider defaultOpen>
+        <Sidebar collapsible="offcanvas" side="right" variant="sidebar">
+          <SidebarRail />
+          Right nav
+        </Sidebar>
+        <SidebarTrigger />
+      </SidebarProvider>
+    )
+
+    const shell = container.querySelector('[data-slot="sidebar"]')
+    const gap = container.querySelector('[data-slot="sidebar-gap"]')
+    const panel = container.querySelector('[data-slot="sidebar-container"]')
+    const inner = container.querySelector('[data-slot="sidebar-inner"]')
+    expect(shell?.getAttribute("data-side")).toBe("right")
+    expect(shell?.getAttribute("data-collapsible")).toBe("")
+    expect(gap?.className).toContain("group-data-[side=right]:rotate-180")
+    expect(panel?.className).toContain("right-0")
+    expect(inner?.textContent).toContain("Right nav")
+
+    fireEvent.click(getTrigger(container))
+
+    await waitFor(() => {
+      expect(shell?.getAttribute("data-state")).toBe("collapsed")
+    })
+    expect(shell?.getAttribute("data-collapsible")).toBe("offcanvas")
+  })
+
+  it("forwards props and structure through every layout primitive", () => {
+    const { container } = render(
+      <SidebarProvider>
+        <Sidebar collapsible="none" data-testid="static" style={{ color: "red" }}>
+          <SidebarHeader data-testid="header">Header</SidebarHeader>
+          <SidebarContent data-testid="content">Content</SidebarContent>
+          <SidebarFooter data-testid="footer">Footer</SidebarFooter>
+          <SidebarSeparator data-testid="separator" />
+        </Sidebar>
+      </SidebarProvider>
+    )
+
+    expect(screen.getByTestId("static").style.color).toBe("red")
+    expect(screen.getByTestId("header").getAttribute("data-sidebar")).toBe(
+      "header"
+    )
+    expect(screen.getByTestId("content").getAttribute("data-sidebar")).toBe(
+      "content"
+    )
+    expect(screen.getByTestId("footer").getAttribute("data-sidebar")).toBe(
+      "footer"
+    )
+    expect(
+      screen.getByTestId("separator").getAttribute("data-sidebar")
+    ).toBe("separator")
+    expect(container.querySelectorAll("[data-sidebar]").length).toBeGreaterThan(
+      4
+    )
+  })
+
+  it("does not put button-only attributes on rendered action links", () => {
+    render(
+      <SidebarProvider>
+        <SidebarGroup>
+          <SidebarGroupAction
+            aria-label="Group link"
+            render={<a href="/group" />}
+          />
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton render={<a href="/button-link" />}>
+                  Button link
+                </SidebarMenuButton>
+                <SidebarMenuAction
+                  aria-label="Menu action link"
+                  render={<a href="/action" />}
+                />
+                <SidebarMenuSub>
+                  <SidebarMenuSubItem>
+                    <SidebarMenuSubButton href="/sub-link">
+                      Sub link
+                    </SidebarMenuSubButton>
+                  </SidebarMenuSubItem>
+                </SidebarMenuSub>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarProvider>
+    )
+
+    for (const name of ["Group link", "Button link", "Menu action link"]) {
+      const link = screen.getByRole("link", { name })
+      expect(link.getAttribute("type")).toBeNull()
+    }
+    expect(screen.getByRole("link", { name: "Sub link" }).tagName).toBe("A")
+  })
+
+  it("preserves deliberate submit types on rendered sidebar buttons", () => {
+    const onSubmit = vi.fn((event: React.FormEvent<HTMLFormElement>) => {
+      event.preventDefault()
+    })
+
+    render(
+      <form onSubmit={onSubmit}>
+        <SidebarProvider>
+          <SidebarGroupAction
+            aria-label="Submit group"
+            render={<button type="submit" />}
+          />
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton render={<button type="submit" />}>
+                Submit menu
+              </SidebarMenuButton>
+              <SidebarMenuAction
+                aria-label="Submit action"
+                render={<button type="submit" />}
+              />
+              <SidebarMenuSub>
+                <SidebarMenuSubItem>
+                  <SidebarMenuSubButton render={<button type="submit" />}>
+                    Submit sub
+                  </SidebarMenuSubButton>
+                </SidebarMenuSubItem>
+              </SidebarMenuSub>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarProvider>
+      </form>
+    )
+
+    for (const name of [
+      "Submit group",
+      "Submit menu",
+      "Submit action",
+      "Submit sub",
+    ]) {
+      expect(screen.getByRole("button", { name }).getAttribute("type")).toBe(
+        "submit"
+      )
+    }
+
+    fireEvent.click(screen.getByRole("button", { name: "Submit group" }))
+    fireEvent.click(screen.getByRole("button", { name: "Submit menu" }))
+    fireEvent.click(screen.getByRole("button", { name: "Submit action" }))
+    fireEvent.click(screen.getByRole("button", { name: "Submit sub" }))
+
+    expect(onSubmit).toHaveBeenCalledTimes(4)
+  })
+
+  it("composes menu button child props when using asChild", () => {
+    const onClick = vi.fn((event: React.MouseEvent<HTMLAnchorElement>) => {
+      event.preventDefault()
+    })
+
+    render(
+      <SidebarProvider>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild className="outer-class" isActive>
+              <a className="inner-class" href="/inbox" onClick={onClick}>
+                Inbox
+              </a>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarProvider>
+    )
+
+    const link = screen.getByRole("link", { name: "Inbox" })
+    expect(link.className).toContain("outer-class")
+    expect(link.className).toContain("inner-class")
+    expect(link.getAttribute("data-active")).toBe("true")
+
+    fireEvent.click(link)
+    expect(onClick).toHaveBeenCalledTimes(1)
+  })
+
+  it("renders badges, labels, and skeletons with deterministic metadata", () => {
+    vi.spyOn(Math, "random").mockReturnValueOnce(0).mockReturnValueOnce(0.999)
+
+    const { container } = render(
+      <SidebarProvider>
+        <SidebarGroup>
+          <SidebarGroupLabel className="label-class">Group</SidebarGroupLabel>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton>Inbox</SidebarMenuButton>
+              <SidebarMenuBadge data-testid="badge">3</SidebarMenuBadge>
+              <SidebarMenuSkeleton data-testid="first-skeleton" showIcon />
+              <SidebarMenuSkeleton data-testid="second-skeleton" />
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroup>
+      </SidebarProvider>
+    )
+
+    expect(
+      container.querySelector('[data-sidebar="group-label"]')?.className
+    ).toContain("label-class")
+    expect(screen.getByTestId("badge").getAttribute("data-slot")).toBe(
+      "sidebar-menu-badge"
+    )
+    expect(
+      screen
+        .getByTestId("first-skeleton")
+        .querySelector('[data-sidebar="menu-skeleton-icon"]')
+    ).toBeTruthy()
+    expect(
+      (
+        screen
+          .getByTestId("first-skeleton")
+          .querySelector(
+            '[data-sidebar="menu-skeleton-text"]'
+          ) as HTMLElement
+      ).style.getPropertyValue("--skeleton-width")
+    ).toBe("50%")
+    expect(
+      (
+        screen
+          .getByTestId("second-skeleton")
+          .querySelector(
+            '[data-sidebar="menu-skeleton-text"]'
+          ) as HTMLElement
+      ).style.getPropertyValue("--skeleton-width")
+    ).toBe("89%")
   })
 })

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 
 import {
+  createCsvParser,
   parseCsv,
   resolveCsvDialect,
   streamCsv,
@@ -51,6 +52,91 @@ function collectStreamRepadding(): {
 async function* fromChunks(parts: string[]) {
   for (const part of parts) yield part
 }
+
+function parseAll(chunks: string[], delimiter?: string): string[][] {
+  const parser = createCsvParser(delimiter ? { delimiter } : undefined)
+  const out: string[][] = []
+  for (const chunk of chunks) out.push(...parser.push(chunk))
+  out.push(...parser.flush())
+  return out
+}
+
+// ---------------------------------------------------------------------------
+// createCsvParser: exhaustive chunk-boundary invariant
+//
+// The incremental parser carries state across push() calls (pendingCR,
+// pendingQuote, inQuotes, the first-char BOM check). The result must not depend
+// on WHERE the input is chopped. Rather than hand-pick split points, split each
+// tricky document at every index (and a sampling of three-way splits) and
+// require byte-for-byte agreement with a single-shot parse.
+// ---------------------------------------------------------------------------
+
+describe("createCsvParser chunk-boundary invariance", () => {
+  const TRICKY: Array<{ name: string; input: string; delimiter?: string }> = [
+    { name: "plain grid", input: "a,b,c\n1,2,3\n4,5,6" },
+    { name: "quoted commas and newlines", input: '"a,b","c\nd"\n"e""f",g' },
+    { name: "leading BOM", input: "﻿name,age\nAlice,30" },
+    { name: "mixed line endings", input: "a\r\nb\rc\nd" },
+    { name: "unterminated quote", input: '"unterminated,quote\nmore' },
+    { name: "empty quoted fields", input: 'x,"",y\n"",z,""' },
+    { name: "trailing LF", input: "a,b\n1,2\n" },
+    { name: "trailing CRLF", input: "a,b\n1,2\r\n" },
+    { name: "final quoted empty", input: 'col\n""' },
+    { name: "CR endings with trailing CR", input: "a\rb\rc\r" },
+    { name: "run of escaped quotes", input: '"a""""b","c"' },
+    { name: "blank line between records", input: "a\n\nb" },
+    { name: "ragged widening", input: "a\n1\n2,3,4\n5,6" },
+    { name: "BOM then immediate newline", input: "﻿\nx" },
+    { name: "quote then CR then LF", input: '"a"\r\n"b"' },
+    { name: "tabs", input: "a\tb\n1\t2\t3", delimiter: "\t" },
+    { name: "non-ascii cells", input: "name\ncafé\nrésumé" },
+  ]
+
+  it.each(TRICKY)(
+    "splits $name at every index identically to a single parse",
+    ({ input, delimiter }) => {
+      const whole = parseAll([input], delimiter)
+      for (let i = 0; i <= input.length; i++) {
+        const twoWay = parseAll([input.slice(0, i), input.slice(i)], delimiter)
+        expect(twoWay, `split at ${i}`).toEqual(whole)
+      }
+    }
+  )
+
+  it.each(TRICKY)(
+    "splits $name into three chunks identically to a single parse",
+    ({ input, delimiter }) => {
+      const whole = parseAll([input], delimiter)
+      for (let i = 0; i <= input.length; i++) {
+        for (let j = i; j <= input.length; j++) {
+          const threeWay = parseAll(
+            [input.slice(0, i), input.slice(i, j), input.slice(j)],
+            delimiter
+          )
+          expect(threeWay, `split at ${i},${j}`).toEqual(whole)
+        }
+      }
+    }
+  )
+
+  it("feeds one character at a time identically to a single parse", () => {
+    for (const { input, delimiter } of TRICKY) {
+      const whole = parseAll([input], delimiter)
+      const perChar = parseAll(Array.from(input), delimiter)
+      expect(perChar, input).toEqual(whole)
+    }
+  })
+
+  it("treats interspersed empty chunks as no-ops", () => {
+    for (const { input, delimiter } of TRICKY) {
+      const whole = parseAll([input], delimiter)
+      const padded: string[] = []
+      for (const ch of Array.from(input)) padded.push("", ch)
+      padded.push("")
+      expect(parseAll(padded, delimiter), input).toEqual(whole)
+    }
+  })
+})
 
 // ---------------------------------------------------------------------------
 // streamCsv: batching contract

@@ -349,7 +349,7 @@ export function isDeclaredTiff(
   src: string,
   contentType: string | null
 ): boolean {
-  return /\.tiff?($|\?)/i.test(src) || isTiffContentType(contentType)
+  return /\.tiff?($|[?#])/i.test(src) || isTiffContentType(contentType)
 }
 
 export function isDeclaredNativeImage(
@@ -358,7 +358,7 @@ export function isDeclaredNativeImage(
 ): boolean {
   if (isDeclaredTiff(src, contentType)) return false
   if (!contentType)
-    return /\.(png|jpe?g|webp|gif|avif|bmp|ico)($|\?)/i.test(src)
+    return /\.(png|jpe?g|webp|gif|avif|bmp|ico)($|[?#])/i.test(src)
   return /^image\/(png|jpe?g|webp|gif|avif|bmp|x-icon|vnd\.microsoft\.icon)(;|$)/i.test(
     contentType
   )
@@ -414,7 +414,7 @@ function isValidFrameIndex(frameIndex: number, frameCount: number) {
 }
 
 function isTiffContentType(contentType: string | null): boolean {
-  return contentType ? /^image\/(tiff|tif)(;|$)/i.test(contentType) : false
+  return contentType ? /^image\/(x-)?tiff?(;|$)/i.test(contentType) : false
 }
 
 function validateFrameDescriptors(frames: readonly FrameDescriptor[]) {

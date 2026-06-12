@@ -1,9 +1,8 @@
 import * as React from "react"
 import { format } from "date-fns"
 
-import { cn } from "@/lib/utils"
 import type { DataCellKind, DataCellValue } from "@/components/ui/data-cell"
-import { JsonTableDataCell } from "@/components/json-table/json-table-data-cell"
+import { JsonTableScalarCell } from "@/components/json-table/json-table-scalar-cell"
 import { parseDateStringAsLocal } from "@/components/json-table/lib/date-parsing"
 import type { FieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
 
@@ -70,37 +69,33 @@ function dateDisplayValue(value: unknown): React.ReactNode | undefined {
 export function JsonTableDisplayCell({
   fieldMetadata,
   value,
-  className,
 }: {
   fieldMetadata: FieldMetadata
   value: unknown
-  className?: string
 }) {
   const dataCellKind = dataCellKindForField(fieldMetadata)
 
   if (dataCellKind === "number" || dataCellKind === "integer") {
     return (
-      <JsonTableDataCell
+      <JsonTableScalarCell
         kind={dataCellKind}
         value={numberDataCellValue(value)}
-        className={cn("py-2", className)}
       />
     )
   }
 
   if (dataCellKind === "boolean") {
     return (
-      <JsonTableDataCell
+      <JsonTableScalarCell
         kind="boolean"
         value={typeof value === "boolean" ? value : null}
-        className={cn("py-2", className)}
       />
     )
   }
 
   if (dataCellKind) {
     return (
-      <JsonTableDataCell
+      <JsonTableScalarCell
         kind={dataCellKind}
         value={textDataCellValue(value)}
         formatValue={
@@ -108,21 +103,14 @@ export function JsonTableDisplayCell({
             ? () => dateDisplayValue(value) ?? ""
             : undefined
         }
-        className={cn(
-          fieldMetadata.kind === "string" || fieldMetadata.kind === "enum"
-            ? "items-start py-2"
-            : "py-2",
-          className
-        )}
       />
     )
   }
 
   return (
-    <JsonTableDataCell
+    <JsonTableScalarCell
       kind="text"
       value={formatJsonTableNestedValue(value)}
-      className={cn("items-start py-2", className)}
     />
   )
 }

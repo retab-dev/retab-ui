@@ -104,6 +104,11 @@ export function SegmentLegend({
 }: SegmentLegendProps) {
   const [uncontrolledShowUnused, setUncontrolledShowUnused] =
     React.useState(defaultShowUnused)
+  const hasCaption =
+    caption !== null &&
+    caption !== undefined &&
+    typeof caption !== "boolean" &&
+    caption !== ""
   const reveal = showUnused ?? uncontrolledShowUnused
   const visible = reveal
     ? segments
@@ -244,7 +249,7 @@ export function SegmentLegend({
           {reveal ? "Hide unused" : "Show all"}
         </button>
       ) : null}
-      {caption ? (
+      {hasCaption ? (
         <div className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
           {caption}
         </div>

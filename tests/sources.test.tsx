@@ -14,6 +14,7 @@ import {
   columnLetterToIndex,
   csvAnchorToCell,
   sourceToCsvCell,
+  useCsvSourceTarget,
 } from "@/registry/new-york-v4/ui/csv-source"
 import {
   docxSourceToTarget,
@@ -26,22 +27,37 @@ import {
   imageAnchorToFrame,
   renderImageSourceOverlay,
   rotateImageArea,
+  useImageSourceTarget,
 } from "@/registry/new-york-v4/ui/image-source"
 import {
   pdfAnchorToLocation,
   renderPdfSourceOverlay,
+  usePdfSourceTarget,
 } from "@/registry/new-york-v4/ui/pdf-source"
+import type { PdfViewerHandle } from "@/registry/new-york-v4/ui/pdf-viewer"
 import { SourceFieldList } from "@/registry/new-york-v4/ui/source-field-list"
 import { SourceIndicator } from "@/registry/new-york-v4/ui/source-indicator"
 import {
   sourceToTextHighlight,
   textAnchorToLines,
+  useTextSourceTarget,
 } from "@/registry/new-york-v4/ui/text-source"
 import {
   sourceToXlsxCell,
   spreadsheetAnchorToCell,
   spreadsheetColumnToIndex,
+  useXlsxSourceTarget,
 } from "@/registry/new-york-v4/ui/xlsx-source"
+import type { CsvViewerHandle } from "@/registry/new-york-v4/ui/csv-viewer"
+import type { ImageViewerHandle } from "@/registry/new-york-v4/ui/image-viewer-types"
+import type { TextViewerHandle } from "@/registry/new-york-v4/ui/text-viewer"
+import type { XlsxViewerHandle } from "@/registry/new-york-v4/ui/xlsx-viewer"
+import csvSample from "@/components/viewers/sample-data/csv-sources.json"
+import docxSample from "@/components/viewers/sample-data/docx-sources.json"
+import imageSample from "@/components/viewers/sample-data/image-sources.json"
+import jsonFormSourcesSample from "@/components/viewers/sample-data/json-form-sources.json"
+import textSample from "@/components/viewers/sample-data/text-sources.json"
+import xlsxSample from "@/components/viewers/sample-data/xlsx-sources.json"
 
 vi.mock("@/components/ui/pdf-viewer", () => ({
   PdfHighlight: ({
@@ -128,6 +144,48 @@ const docxCellSource = source({
 })
 
 const oversizedColumn = "A".repeat(1000)
+
+interface SampleSourceField {
+  key: string
+  label: string
+  value: unknown
+  source: Source
+}
+
+const sourceFieldSamples = [
+  { name: "csv", fields: csvSample as SampleSourceField[] },
+  { name: "docx", fields: docxSample as SampleSourceField[] },
+  { name: "image", fields: imageSample as SampleSourceField[] },
+  { name: "text", fields: textSample as SampleSourceField[] },
+  { name: "xlsx", fields: xlsxSample as SampleSourceField[] },
+]
+
+function expectSourceToResolve(source: Source) {
+  switch (source.anchor.kind) {
+    case "pdf_bbox":
+      expect(pdfAnchorToLocation(source.anchor)).toBeDefined()
+      expect(imageAnchorToArea(source.anchor)).toBeDefined()
+      expect(imageAnchorToFrame(source.anchor)).toBeDefined()
+      return
+    case "image_bbox":
+      expect(imageAnchorToArea(source.anchor)).toBeDefined()
+      expect(imageAnchorToFrame(source.anchor)).toBeDefined()
+      return
+    case "csv_cell":
+      expect(csvAnchorToCell(source.anchor)).not.toBeNull()
+      return
+    case "spreadsheet_cell":
+      expect(spreadsheetAnchorToCell(source.anchor)).toBeDefined()
+      return
+    case "docx_text_span":
+    case "docx_table_cell":
+      expect(docxSourceToTarget(source)).not.toBeNull()
+      return
+    case "text_span":
+      expect(textAnchorToLines(source.anchor)).toBeDefined()
+      return
+  }
+}
 
 describe("document source model", () => {
   it("flattens nested source trees into dotted and indexed field paths", () => {
@@ -763,6 +821,164 @@ describe("source adapters", () => {
     fireEvent.click(screen.getByRole("button", { name: "scroll docx source" }))
     expect(scrollToTarget).not.toHaveBeenCalled()
   })
+
+  it("bridges PDF sources to the viewer imperative target", () => {
+    const scrollToPageTarget = vi.fn()
+    const { rerender } = render(
+      <PdfSourceTargetHarness
+        source={pdfSource}
+        onScroll={scrollToPageTarget}
+      />
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "scroll pdf source" }))
+    expect(scrollToPageTarget).toHaveBeenCalledWith(
+      3,
+      { top: 20 },
+      { behavior: "smooth" }
+    )
+
+    scrollToPageTarget.mockClear()
+    rerender(
+      <PdfSourceTargetHarness
+        source={csvSource}
+        onScroll={scrollToPageTarget}
+      />
+    )
+    fireEvent.click(screen.getByRole("button", { name: "scroll pdf source" }))
+    expect(scrollToPageTarget).not.toHaveBeenCalled()
+
+    rerender(
+      <PdfSourceTargetHarness
+        source={source({
+          kind: "pdf_bbox",
+          page: 0,
+          left: 0.1,
+          top: 0.2,
+          width: 0.3,
+          height: 0.4,
+        })}
+        onScroll={scrollToPageTarget}
+      />
+    )
+    fireEvent.click(screen.getByRole("button", { name: "scroll pdf source" }))
+    expect(scrollToPageTarget).not.toHaveBeenCalled()
+  })
+
+  it("bridges image sources to the viewer imperative target", () => {
+    const scrollToFrameArea = vi.fn()
+    const { rerender } = render(
+      <ImageSourceTargetHarness
+        source={imageSource}
+        onScroll={scrollToFrameArea}
+      />
+    )
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "scroll image source" })
+    )
+    expect(scrollToFrameArea).toHaveBeenCalledWith(
+      2,
+      { left: 15, top: 25, width: 35, height: 45 },
+      { behavior: "smooth" }
+    )
+
+    rerender(
+      <ImageSourceTargetHarness
+        source={pdfSource}
+        onScroll={scrollToFrameArea}
+      />
+    )
+    fireEvent.click(
+      screen.getByRole("button", { name: "scroll image source" })
+    )
+    expect(scrollToFrameArea).toHaveBeenLastCalledWith(
+      3,
+      { left: 10, top: 20, width: 30, height: 40 },
+      { behavior: "smooth" }
+    )
+
+    scrollToFrameArea.mockClear()
+    rerender(
+      <ImageSourceTargetHarness
+        source={csvSource}
+        onScroll={scrollToFrameArea}
+      />
+    )
+    fireEvent.click(
+      screen.getByRole("button", { name: "scroll image source" })
+    )
+    expect(scrollToFrameArea).not.toHaveBeenCalled()
+  })
+
+  it("bridges CSV and XLSX sources to viewer imperative targets", () => {
+    const scrollToCsvCell = vi.fn()
+    const { rerender: rerenderCsv } = render(
+      <CsvSourceTargetHarness source={csvSource} onScroll={scrollToCsvCell} />
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "scroll csv source" }))
+    expect(scrollToCsvCell).toHaveBeenCalledWith(
+      { rowIndex: 3, columnIndex: 26 },
+      { behavior: "smooth" }
+    )
+
+    scrollToCsvCell.mockClear()
+    rerenderCsv(
+      <CsvSourceTargetHarness source={xlsxSource} onScroll={scrollToCsvCell} />
+    )
+    fireEvent.click(screen.getByRole("button", { name: "scroll csv source" }))
+    expect(scrollToCsvCell).not.toHaveBeenCalled()
+
+    const scrollToXlsxCell = vi.fn()
+    const { rerender: rerenderXlsx } = render(
+      <XlsxSourceTargetHarness
+        source={xlsxSource}
+        onScroll={scrollToXlsxCell}
+      />
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "scroll xlsx source" }))
+    expect(scrollToXlsxCell).toHaveBeenCalledWith(2, 7, 51, {
+      behavior: "smooth",
+    })
+
+    scrollToXlsxCell.mockClear()
+    rerenderXlsx(
+      <XlsxSourceTargetHarness
+        source={csvSource}
+        onScroll={scrollToXlsxCell}
+      />
+    )
+    fireEvent.click(screen.getByRole("button", { name: "scroll xlsx source" }))
+    expect(scrollToXlsxCell).not.toHaveBeenCalled()
+  })
+
+  it("bridges text sources to the viewer imperative target", () => {
+    const scrollToLineRange = vi.fn()
+    const { rerender } = render(
+      <TextSourceTargetHarness
+        source={textSource}
+        onScroll={scrollToLineRange}
+      />
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "scroll text source" }))
+    expect(scrollToLineRange).toHaveBeenCalledWith(
+      { start: 12, end: 14 },
+      { behavior: "smooth" }
+    )
+
+    scrollToLineRange.mockClear()
+    rerender(
+      <TextSourceTargetHarness
+        source={csvSource}
+        onScroll={scrollToLineRange}
+      />
+    )
+    fireEvent.click(screen.getByRole("button", { name: "scroll text source" }))
+    expect(scrollToLineRange).not.toHaveBeenCalled()
+  })
 })
 
 function SourceLinkHarness({
@@ -839,6 +1055,146 @@ function DocxSourceTargetHarness({
       onClick={() => target.scrollTo?.(source, { behavior: "smooth" })}
     >
       scroll docx source
+    </button>
+  )
+}
+
+function PdfSourceTargetHarness({
+  source,
+  onScroll,
+}: {
+  source: Source
+  onScroll: PdfViewerHandle["scrollToPageTarget"]
+}) {
+  const handle = React.useMemo<PdfViewerHandle>(
+    () => ({
+      scrollToPageTarget: onScroll,
+      getViewportElement: () => null,
+    }),
+    [onScroll]
+  )
+  const viewerRef = React.useRef<PdfViewerHandle | null>(handle)
+  viewerRef.current = handle
+  const target = usePdfSourceTarget(viewerRef)
+
+  return (
+    <button
+      type="button"
+      onClick={() => target.scrollTo?.(source, { behavior: "smooth" })}
+    >
+      scroll pdf source
+    </button>
+  )
+}
+
+function ImageSourceTargetHarness({
+  source,
+  onScroll,
+}: {
+  source: Source
+  onScroll: ImageViewerHandle["scrollToFrameArea"]
+}) {
+  const handle = React.useMemo<ImageViewerHandle>(
+    () => ({
+      scrollToFrameArea: onScroll,
+      getViewportElement: () => null,
+    }),
+    [onScroll]
+  )
+  const viewerRef = React.useRef<ImageViewerHandle | null>(handle)
+  viewerRef.current = handle
+  const target = useImageSourceTarget(viewerRef)
+
+  return (
+    <button
+      type="button"
+      onClick={() => target.scrollTo?.(source, { behavior: "smooth" })}
+    >
+      scroll image source
+    </button>
+  )
+}
+
+function CsvSourceTargetHarness({
+  source,
+  onScroll,
+}: {
+  source: Source
+  onScroll: CsvViewerHandle["scrollToCell"]
+}) {
+  const handle = React.useMemo<CsvViewerHandle>(
+    () => ({
+      scrollToCell: onScroll,
+      getViewportElement: () => null,
+    }),
+    [onScroll]
+  )
+  const viewerRef = React.useRef<CsvViewerHandle | null>(handle)
+  viewerRef.current = handle
+  const target = useCsvSourceTarget(viewerRef)
+
+  return (
+    <button
+      type="button"
+      onClick={() => target.scrollTo?.(source, { behavior: "smooth" })}
+    >
+      scroll csv source
+    </button>
+  )
+}
+
+function XlsxSourceTargetHarness({
+  source,
+  onScroll,
+}: {
+  source: Source
+  onScroll: XlsxViewerHandle["scrollToCell"]
+}) {
+  const handle = React.useMemo<XlsxViewerHandle>(
+    () => ({
+      scrollToCell: onScroll,
+      getViewportElement: () => null,
+    }),
+    [onScroll]
+  )
+  const viewerRef = React.useRef<XlsxViewerHandle | null>(handle)
+  viewerRef.current = handle
+  const target = useXlsxSourceTarget(viewerRef)
+
+  return (
+    <button
+      type="button"
+      onClick={() => target.scrollTo?.(source, { behavior: "smooth" })}
+    >
+      scroll xlsx source
+    </button>
+  )
+}
+
+function TextSourceTargetHarness({
+  source,
+  onScroll,
+}: {
+  source: Source
+  onScroll: TextViewerHandle["scrollToLineRange"]
+}) {
+  const handle = React.useMemo<TextViewerHandle>(
+    () => ({
+      scrollToLineRange: onScroll,
+      getViewportElement: () => null,
+    }),
+    [onScroll]
+  )
+  const viewerRef = React.useRef<TextViewerHandle | null>(handle)
+  viewerRef.current = handle
+  const target = useTextSourceTarget(viewerRef)
+
+  return (
+    <button
+      type="button"
+      onClick={() => target.scrollTo?.(source, { behavior: "smooth" })}
+    >
+      scroll text source
     </button>
   )
 }

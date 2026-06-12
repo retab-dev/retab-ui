@@ -7,10 +7,8 @@ import {
 } from "@/components/ui/select"
 import type { CellEditorProps } from "@/components/json-table/cell-editors/editor-types"
 import { fieldFocusId } from "@/components/json-table/cell-editors/editor-types"
-import {
-  JsonTableDataCell,
-  jsonTableSelectDataCellClass,
-} from "@/components/json-table/json-table-data-cell"
+import { jsonTableSelectDataCellClass } from "@/components/json-table/json-table-data-cell"
+import { JsonTableScalarCell } from "@/components/json-table/json-table-scalar-cell"
 
 const NULL_SELECT_VALUE = "__json_table_null__"
 
@@ -85,10 +83,9 @@ export function EnumEditor({
 
   if (!overlays.showInput) {
     return (
-      <JsonTableDataCell
+      <JsonTableScalarCell
         kind="text"
         value={effectiveValue == null ? "" : String(effectiveValue)}
-        className="items-start py-2"
       />
     )
   }
@@ -117,11 +114,7 @@ export function EnumEditor({
         data-slot="data-cell"
         data-kind="text"
         data-mode="edit"
-        className={cn(
-          jsonTableSelectDataCellClass,
-          "h-full py-2 leading-none",
-          "disabled:opacity-100"
-        )}
+        className={cn(jsonTableSelectDataCellClass, "disabled:opacity-100")}
         onFocus={() => {
           focus.setFocusedField(fieldFocusId(identity))
           focus.setIsInputFocused(true)

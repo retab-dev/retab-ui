@@ -174,10 +174,11 @@ describe("json table cell controller", () => {
 
     act(() => result.current.commitValueChange("Globex"))
 
-    expect(onDocumentDataChange).toHaveBeenCalledWith(document.id, {
-      vendor: "Globex",
-      total: 10,
-    })
+    expect(onDocumentDataChange).toHaveBeenCalledWith(
+      document.id,
+      "vendor",
+      "Globex"
+    )
     expect(result.current.effectiveValue).toBe("Globex")
     expect(result.current.committedTextValue).toBe("Globex")
   })
@@ -197,10 +198,11 @@ describe("json table cell controller", () => {
 
     act(() => result.current.commitValueChange("Globex"))
 
-    expect(onDocumentDataChange).toHaveBeenCalledWith(document.id, {
-      vendor: "Globex",
-      total: 10,
-    })
+    expect(onDocumentDataChange).toHaveBeenCalledWith(
+      document.id,
+      "vendor",
+      "Globex"
+    )
   })
 
   it("commits nested array values without replacing sibling data", () => {
@@ -225,11 +227,11 @@ describe("json table cell controller", () => {
 
     act(() => result.current.commitValueChange(2))
 
-    expect(onDocumentDataChange).toHaveBeenCalledWith(nestedDocument.id, {
-      vendor: "ACME",
-      total: 10,
-      lines: [{ name: "old", quantity: 2 }],
-    })
+    expect(onDocumentDataChange).toHaveBeenCalledWith(
+      nestedDocument.id,
+      "lines.0.quantity",
+      2
+    )
     expect(result.current.effectiveValue).toBe(2)
   })
 

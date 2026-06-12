@@ -9,8 +9,8 @@ import {
   interactiveCellOverlayClass,
 } from "@/components/json-table/cell-style"
 import type { JsonTableCellProps } from "@/components/json-table/json-table-cell-types"
-import { JsonTableDataCell } from "@/components/json-table/json-table-data-cell"
 import { JsonTableDisplayCell } from "@/components/json-table/json-table-display-cell"
+import { JsonTableScalarCell } from "@/components/json-table/json-table-scalar-cell"
 import { getFieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
 import type { FieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
 import { formatValueForCommit } from "@/components/json-table/lib/value-normalization"
@@ -166,12 +166,7 @@ function EditableJsonTableCellContent(props: JsonTableCellProps) {
         className="relative cursor-not-allowed bg-muted/60 p-0"
         style={getCellWidthStyle(cellWidth)}
       >
-        <JsonTableDataCell
-          kind="text"
-          value={null}
-          placeholder=""
-          className="bg-transparent"
-        />
+        <JsonTableScalarCell kind="text" value={null} placeholder="" />
       </TableCell>
     )
   }

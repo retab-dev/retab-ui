@@ -56,7 +56,7 @@ export function ImageViewerContent({
     setViewerScale,
   } = useImageViewerScale(frameSource, controlledScale, frameListWidth)
   const { currentFrameNumber, handleScroll, scrollViewportRef } =
-    useVisibleFrame(onScrollProgressChange, onVisibleFrameChange)
+    useVisibleFrame(frameSource, onScrollProgressChange, onVisibleFrameChange)
   useImageViewerHandle(forwardedRef, scrollViewportRef)
 
   const frameCount = frameSource.frames.length

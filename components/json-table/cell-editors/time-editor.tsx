@@ -1,7 +1,6 @@
-import { cn } from "@/lib/utils"
 import type { CellEditorProps } from "@/components/json-table/cell-editors/editor-types"
 import { fieldFocusId } from "@/components/json-table/cell-editors/editor-types"
-import { JsonTableDataCell } from "@/components/json-table/json-table-data-cell"
+import { JsonTableScalarCell } from "@/components/json-table/json-table-scalar-cell"
 import { dateStringToFormat } from "@/components/json-table/lib/date-display-formatting"
 
 export function TimeEditor({
@@ -15,7 +14,7 @@ export function TimeEditor({
   const focusId = fieldFocusId(identity)
 
   return (
-    <JsonTableDataCell
+    <JsonTableScalarCell
       kind="time"
       editable={field.isEditable}
       mode={
@@ -46,13 +45,6 @@ export function TimeEditor({
         focus.setIsInputFocused(true)
       }}
       disabled={!field.isEditable}
-      className={cn(
-        "data-[mode=display]:items-center data-[mode=display]:py-2",
-        "data-[mode=edit]:h-full data-[mode=edit]:rounded-none data-[mode=edit]:px-2 data-[mode=edit]:py-0 data-[mode=edit]:!text-xs data-[mode=edit]:leading-none data-[mode=edit]:shadow-none data-[mode=edit]:focus-visible:ring-0 data-[mode=edit]:focus-visible:ring-offset-0",
-        !field.effectiveValue && "data-[mode=edit]:text-muted-foreground",
-        focus.focusedField === focusId &&
-          "data-[mode=edit]:absolute data-[mode=edit]:top-0 data-[mode=edit]:left-0 data-[mode=edit]:z-10"
-      )}
     />
   )
 }

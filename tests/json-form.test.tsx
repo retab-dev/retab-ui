@@ -145,6 +145,15 @@ async function selectOption(label: string, option: string) {
   fireEvent.click(optionElement)
 }
 
+function selectCalendarDay(day: number) {
+  const calendar = document.querySelector<HTMLElement>('[data-slot="calendar"]')
+  expect(calendar).toBeTruthy()
+  const dayLabel = within(calendar!).getByText(String(day))
+  const dayButton = dayLabel.closest("button")
+  expect(dayButton).toBeTruthy()
+  fireEvent.click(dayButton!)
+}
+
 describe("JsonForm scalar fields", () => {
   it("renders and submits strings, numbers, dates, textareas, and booleans", async () => {
     const { submit } = renderJsonForm({
@@ -160,6 +169,11 @@ describe("JsonForm scalar fields", () => {
             format: "date",
             title: "Issued At",
           },
+          start_time: {
+            type: "string",
+            format: "time",
+            title: "Start Time",
+          },
           notes: {
             type: "string",
             title: "Notes",
@@ -173,6 +187,7 @@ describe("JsonForm scalar fields", () => {
         age: 41,
         amount: 12.5,
         issued_at: "2026-01-15",
+        start_time: "09:15",
         notes: "old notes",
         active: false,
       },
@@ -187,9 +202,15 @@ describe("JsonForm scalar fields", () => {
     fireEvent.change(screen.getByLabelText("Amount"), {
       target: { value: "18.75" },
     })
-    fireEvent.change(screen.getByLabelText("Issued At"), {
-      target: { value: "2026-02-20" },
-    })
+    fireEvent.click(screen.getByLabelText("Issued At"))
+    selectCalendarDay(20)
+    fireEvent.click(screen.getByLabelText("Start Time"))
+    fireEvent.change(
+      document.querySelector<HTMLInputElement>('input[type="time"]')!,
+      {
+        target: { value: "10:45" },
+      }
+    )
     fireEvent.change(screen.getByLabelText("Notes"), {
       target: { value: "updated notes" },
     })
@@ -199,7 +220,8 @@ describe("JsonForm scalar fields", () => {
       name: "Janet",
       age: 42,
       amount: 18.75,
-      issued_at: "2026-02-20",
+      issued_at: "2026-01-20",
+      start_time: "10:45",
       notes: "updated notes",
       active: true,
     })
@@ -227,9 +249,8 @@ describe("JsonForm scalar fields", () => {
 
     fireEvent.change(screen.getByLabelText("Name"), { target: { value: "" } })
     fireEvent.change(screen.getByLabelText("Amount"), { target: { value: "" } })
-    fireEvent.change(screen.getByLabelText("Paid At"), {
-      target: { value: "" },
-    })
+    fireEvent.click(screen.getByLabelText("Paid At"))
+    fireEvent.click(screen.getByRole("button", { name: "Clear" }))
 
     await expect(submit()).resolves.toEqual({
       name: null,
@@ -300,9 +321,13 @@ describe("JsonForm scalar fields", () => {
       defaultValues: { due_at: "2026-03-01T12:30:45Z" },
     })
 
-    expect((screen.getByLabelText("Due At") as HTMLInputElement).value).toBe(
-      "2026-03-01T12:30"
+    expect(screen.getByLabelText("Due At").textContent).toContain(
+      "01/03/2026, 12:30"
     )
+    fireEvent.click(screen.getByLabelText("Due At"))
+    expect(
+      document.querySelector<HTMLInputElement>('input[type="time"]')?.value
+    ).toBe("12:30")
 
     await expect(submit()).resolves.toEqual({
       due_at: "2026-03-01T12:30:45Z",

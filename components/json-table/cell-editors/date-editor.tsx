@@ -2,7 +2,7 @@ import { format } from "date-fns"
 
 import type { CellEditorProps } from "@/components/json-table/cell-editors/editor-types"
 import { fieldFocusId } from "@/components/json-table/cell-editors/editor-types"
-import { JsonTableDataCell } from "@/components/json-table/json-table-data-cell"
+import { JsonTableScalarCell } from "@/components/json-table/json-table-scalar-cell"
 import { dateStringToFormat } from "@/components/json-table/lib/date-display-formatting"
 import { parseDateStringAsLocal } from "@/components/json-table/lib/date-parsing"
 
@@ -22,7 +22,7 @@ export function DateEditor({
   const date = safeParseISO(textDraft.activeTextValue)
 
   return (
-    <JsonTableDataCell
+    <JsonTableScalarCell
       kind="date"
       editable={field.isEditable}
       mode={
@@ -52,7 +52,6 @@ export function DateEditor({
         focus.setIsInputFocused(false)
       }}
       disabled={!field.isEditable}
-      className="px-2 data-[mode=display]:items-center data-[mode=display]:py-2 data-[mode=edit]:py-0 data-[mode=edit]:leading-none data-[mode=edit]:shadow-none data-[mode=edit]:focus-visible:ring-0 data-[mode=edit]:focus-visible:ring-offset-0"
     />
   )
 }

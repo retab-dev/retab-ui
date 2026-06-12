@@ -6,7 +6,15 @@
 // accounting, disposal-vs-inflight races, frame-descriptor validation cleanup,
 // the composed source-overlay/source-target helpers, and fit-width clamping.
 import * as React from "react"
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react"
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  type RenderResult,
+} from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import type { Source } from "@/registry/new-york-v4/lib/document-source"
@@ -18,6 +26,7 @@ import {
   ImageSourceDisposedError,
   type FrameSource,
 } from "@/registry/new-york-v4/lib/image-frame-source"
+import { clearViewerResourceRegistryForTests } from "@/registry/new-york-v4/lib/viewer-resource"
 import {
   renderImageSourceOverlay,
   useImageSourceTarget,
@@ -29,7 +38,6 @@ import {
 } from "@/registry/new-york-v4/ui/image-viewer"
 import { ImageFrame } from "@/registry/new-york-v4/ui/image-viewer-frame"
 import { ViewerErrorBoundary } from "@/registry/new-york-v4/ui/viewer-error"
-import { clearViewerResourceRegistryForTests } from "@/registry/new-york-v4/lib/viewer-resource"
 
 afterEach(() => {
   vi.useRealTimers()
@@ -488,7 +496,13 @@ describe("renderImageSourceOverlay", () => {
     const overlay = renderImageSourceOverlay(undefined)
     const { container } = render(
       <>
-        {overlay({ frameNumber: 1, width: 100, height: 100, scale: 1, rotation: 0 })}
+        {overlay({
+          frameNumber: 1,
+          width: 100,
+          height: 100,
+          scale: 1,
+          rotation: 0,
+        })}
       </>
     )
     expect(container.firstElementChild).toBeNull()
@@ -500,14 +514,26 @@ describe("renderImageSourceOverlay", () => {
     )
     const off = render(
       <>
-        {overlay({ frameNumber: 1, width: 100, height: 100, scale: 1, rotation: 0 })}
+        {overlay({
+          frameNumber: 1,
+          width: 100,
+          height: 100,
+          scale: 1,
+          rotation: 0,
+        })}
       </>
     )
     expect(off.container.firstElementChild).toBeNull()
 
     const on = render(
       <>
-        {overlay({ frameNumber: 2, width: 100, height: 100, scale: 1, rotation: 0 })}
+        {overlay({
+          frameNumber: 2,
+          width: 100,
+          height: 100,
+          scale: 1,
+          rotation: 0,
+        })}
       </>
     )
     expect(on.container.firstElementChild).not.toBeNull()
@@ -520,7 +546,13 @@ describe("renderImageSourceOverlay", () => {
     )
     const { container } = render(
       <>
-        {overlay({ frameNumber: 1, width: 100, height: 100, scale: 1, rotation: 0 })}
+        {overlay({
+          frameNumber: 1,
+          width: 100,
+          height: 100,
+          scale: 1,
+          rotation: 0,
+        })}
       </>
     )
     expect(container.firstElementChild).toBeNull()
@@ -532,7 +564,13 @@ describe("renderImageSourceOverlay", () => {
     )
     const { container } = render(
       <>
-        {overlay({ frameNumber: 1, width: 100, height: 100, scale: 1, rotation: 180 })}
+        {overlay({
+          frameNumber: 1,
+          width: 100,
+          height: 100,
+          scale: 1,
+          rotation: 180,
+        })}
       </>
     )
     const highlight = container.firstElementChild as HTMLElement
@@ -704,7 +742,12 @@ function stubIntersectingCanvasLayout() {
       observe(element: Element) {
         queueMicrotask(() =>
           this.cb(
-            [{ target: element, isIntersecting: true } as IntersectionObserverEntry],
+            [
+              {
+                target: element,
+                isIntersecting: true,
+              } as IntersectionObserverEntry,
+            ],
             this as unknown as IntersectionObserver
           )
         )
@@ -786,5 +829,185 @@ describe("multi-frame decode failure", () => {
     expect(screen.queryByTestId("document")).toBeNull()
     expect(consoleError).toHaveBeenCalled()
     source.dispose()
+  })
+})
+
+// ──────────────────────────────────────────────────────────────────────────
+// Document swap — does the page indicator follow the newly loaded document?
+//
+// `useVisibleFrame` keeps `currentFrameNumber` in component state, and the
+// content component updates (rather than remounts) when `source` changes. If
+// that state survives a swap, the page indicator can read stale until the next
+// scroll. The `Math.min(current, frameCount)` clamp hides this when swapping to
+// a *shorter* document — but swapping to a *longer* one would surface a stale
+// "Page 3 of 5". This test pins down which way it actually behaves.
+// ──────────────────────────────────────────────────────────────────────────
+
+/** A TIFF worker whose reported frame count is the first byte of the buffer. */
+function installSwapTiffEnv() {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn((input: RequestInfo | URL) => {
+      const url = String(input)
+      const count = url.includes("five") ? 5 : 3
+      return Promise.resolve(
+        new Response(new Uint8Array([count]), {
+          headers: { "content-type": "image/tiff" },
+        })
+      )
+    })
+  )
+  vi.stubGlobal(
+    "Worker",
+    class SwapWorker extends FakeTiffWorker {
+      override postMessage(
+        message: { type: string; buffer?: ArrayBuffer; requestId?: number },
+        transfer?: readonly Transferable[]
+      ): void {
+        super.postMessage(message as never, transfer)
+        if (message.type === "init" && message.buffer) {
+          const count = new Uint8Array(message.buffer)[0] ?? 1
+          queueMicrotask(() =>
+            this.emit({
+              type: "initOk",
+              frames: Array.from({ length: count }, () => ({
+                intrinsicSize: { width: 100, height: 100 },
+              })),
+            })
+          )
+        }
+      }
+    }
+  )
+  vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(320)
+  vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(240)
+  if (!HTMLElement.prototype.getAnimations) {
+    Object.defineProperty(HTMLElement.prototype, "getAnimations", {
+      configurable: true,
+      value: () => [],
+    })
+  }
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      observe() {}
+      disconnect() {}
+    }
+  )
+  vi.stubGlobal(
+    "IntersectionObserver",
+    class {
+      observe() {}
+      disconnect() {}
+    }
+  )
+}
+
+// FakeTiffWorker mirrors the harness in image-viewer.test.tsx — the worker is
+// constructed via `new Worker(...)`, so only the message protocol matters here.
+class FakeTiffWorker {
+  onmessage: ((event: { data: unknown }) => void) | null = null
+  onerror: ((event: { message: string }) => void) | null = null
+  onmessageerror: ((event: unknown) => void) | null = null
+  readonly terminate = vi.fn()
+  postMessage(_message: unknown, _transfer?: readonly Transferable[]): void {}
+  emit(message: unknown) {
+    this.onmessage?.({ data: message })
+  }
+}
+
+describe("document swap page indicator", () => {
+  it("does not keep a stale page number after swapping to a longer document", async () => {
+    installSwapTiffEnv()
+
+    let view!: RenderResult
+    await act(async () => {
+      view = render(
+        <ImageViewer source={{ kind: "url", url: "/three.tiff" }} />
+      )
+    })
+    const { container } = view
+
+    expect(await screen.findByText("Page 1 of 3")).toBeTruthy()
+
+    // Scroll the 3-page document down to page 3.
+    const viewport = container.querySelector(
+      '[data-slot="scroll-area-viewport"]'
+    ) as HTMLElement
+    const thirdFrame = container.querySelector(
+      '[data-frame-number="3"]'
+    ) as HTMLElement
+    Object.defineProperty(viewport, "clientHeight", {
+      configurable: true,
+      value: 200,
+    })
+    Object.defineProperty(viewport, "scrollHeight", {
+      configurable: true,
+      value: 1000,
+    })
+    viewport.scrollTop = 800
+    Object.defineProperty(document, "elementsFromPoint", {
+      configurable: true,
+      value: vi.fn(() => [thirdFrame]),
+    })
+    await act(async () => {
+      fireEvent.scroll(viewport)
+    })
+    expect(screen.getByText("Page 3 of 3")).toBeTruthy()
+
+    // Swap to a different, longer (5-page) document.
+    await act(async () => {
+      view.rerender(<ImageViewer source={{ kind: "url", url: "/five.tiff" }} />)
+    })
+    await screen.findByText(/of 5/)
+
+    // The freshly loaded document presents its first page rather than inheriting
+    // the previous document's page 3. Before the useVisibleFrame reset fix this
+    // showed a stale "Page 3 of 5".
+    expect(screen.getByText("Page 1 of 5")).toBeTruthy()
+    expect(screen.queryByText("Page 3 of 5")).toBeNull()
+  })
+
+  it("resets rotation when swapping documents", async () => {
+    stubImageLoading(bitmap(100, 200))
+    stubObservableLayout(232)
+
+    const overlay = ({ rotation }: { rotation: number }) => (
+      <div data-testid="rot" data-rotation={rotation} />
+    )
+
+    let view!: RenderResult
+    await act(async () => {
+      view = render(
+        <ImageViewer
+          source={{ kind: "url", url: "/doc-a.png" }}
+          renderFrameOverlay={overlay}
+        />
+      )
+    })
+
+    const node = await screen.findByTestId("rot")
+    expect(node.getAttribute("data-rotation")).toBe("0")
+
+    // Rotate document A by 90°.
+    await act(async () => {
+      fireEvent.click(screen.getByLabelText("Rotate"))
+    })
+    expect(screen.getByTestId("rot").getAttribute("data-rotation")).toBe("90")
+
+    // Swap to a different document.
+    await act(async () => {
+      view.rerender(
+        <ImageViewer
+          source={{ kind: "url", url: "/doc-b.png" }}
+          renderFrameOverlay={overlay}
+        />
+      )
+    })
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    expect(screen.getByTestId("rot").getAttribute("data-rotation")).toBe("0")
   })
 })

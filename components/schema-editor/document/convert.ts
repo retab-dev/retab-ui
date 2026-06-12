@@ -47,10 +47,7 @@ const MODELED_NODE_KEYS = new Set<string>([
   "anyOf",
   "oneOf",
   "allOf",
-  "x-enumDescriptions",
 ])
-
-const ENUM_DESCRIPTIONS_KEY = "x-enumDescriptions"
 
 type RefMap = Map<string, string> // json-pointer string -> definition NodeId
 
@@ -369,7 +366,6 @@ function nodeToSchema(
   // Trailing unmodeled keywords (const, default, format, pattern, x-*, …).
   for (const [key, value] of Object.entries(node.rest)) {
     if (hasOwn(out, key)) continue // modeled field already won this key
-    if (key === ENUM_DESCRIPTIONS_KEY) continue
     setRecordValue(out, key, value)
   }
 

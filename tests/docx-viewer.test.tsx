@@ -3158,3 +3158,140 @@ describe("DocxViewer cross-boundary text resolution", () => {
     expect([...highlights.values()][0]?.ranges[0]?.toString()).toBe("foobar")
   })
 })
+
+// `tableCellRange` indexes tables via
+// `querySelectorAll(".docx-wrapper > section.docx table")[table]` — a *flat,
+// document-order* list. These tests pin that contract. The cross-section case
+// (tables on different pages numbered in document order) and the out-of-range
+// guards are unambiguous. The nested-table case is a *characterization* test: it
+// records that nested tables occupy an index slot. If the backend's docx parser
+// numbers only top-level tables, that test is the one to flip — it will fail
+// loudly and point at the exact line to change in the component.
+describe("DocxViewer table cell indexing", () => {
+  function section(pageIndex: number, build: (page: HTMLElement) => void) {
+    const page = document.createElement("section")
+    page.className = "docx"
+    page.getBoundingClientRect = vi.fn(() => rect(pageIndex * 1100))
+    build(page)
+    return page
+  }
+
+  function table(rows: string[][]) {
+    const el = document.createElement("table")
+    for (const cells of rows) {
+      const tr = el.insertRow()
+      for (const text of cells) tr.insertCell().textContent = text
+    }
+    return el
+  }
+
+  function installSections(host: HTMLElement, sections: HTMLElement[]) {
+    const wrapper = document.createElement("div")
+    wrapper.className = "docx-wrapper"
+    wrapper.append(...sections)
+    host.replaceChildren(wrapper)
+  }
+
+  it("indexes tables in document order across page/section boundaries", async () => {
+    const highlights = new Map<string, MockHighlight>()
+    installHighlightApi(highlights)
+    docxMock.renderAsync.mockImplementationOnce(async (_buffer, host) => {
+      installSections(host, [
+        section(0, (page) => page.append(table([["first table"]]))),
+        section(1, (page) => page.append(table([["second table"]]))),
+      ])
+    })
+
+    await renderDocx(
+      <DocxViewer
+        source={docxUrlSource("/cross-section-tables.docx")}
+        highlight={{ kind: "cell", table: 1, row: 0, column: 0 }}
+      />
+    )
+
+    await screen.findByText("Page 1 of 2")
+    await waitFor(() => {
+      expect(highlights.size).toBe(1)
+    })
+    expect([...highlights.values()][0]?.ranges[0]?.toString()).toBe(
+      "second table"
+    )
+  })
+
+  it("counts nested tables as their own index (current contract)", async () => {
+    const highlights = new Map<string, MockHighlight>()
+    installHighlightApi(highlights)
+    docxMock.renderAsync.mockImplementationOnce(async (_buffer, host) => {
+      installSections(host, [
+        section(0, (page) => {
+          const outer = document.createElement("table")
+          const tr = outer.insertRow()
+          tr.insertCell().textContent = "outer cell"
+          // A nested table lives inside the second cell of the outer table.
+          tr.insertCell().append(table([["nested cell"]]))
+          page.append(outer, table([["second top-level cell"]]))
+        }),
+      ])
+    })
+
+    await renderDocx(
+      <DocxViewer
+        source={docxUrlSource("/nested-tables.docx")}
+        // Index 1 is the NESTED table under the current flat-order contract; if
+        // the backend numbers top-level tables only, this should instead be the
+        // "second top-level cell" and this expectation must be updated.
+        highlight={{ kind: "cell", table: 1, row: 0, column: 0 }}
+      />
+    )
+
+    await screen.findByText("outer cell")
+    await waitFor(() => {
+      expect(highlights.size).toBe(1)
+    })
+    expect([...highlights.values()][0]?.ranges[0]?.toString()).toBe(
+      "nested cell"
+    )
+  })
+
+  it("does not resolve a cell target whose row is out of range", async () => {
+    const highlights = new Map<string, MockHighlight>()
+    installHighlightApi(highlights)
+    docxMock.renderAsync.mockImplementationOnce(async (_buffer, host) => {
+      installSections(host, [
+        section(0, (page) => page.append(table([["only row"]]))),
+      ])
+    })
+
+    await renderDocx(
+      <DocxViewer
+        source={docxUrlSource("/row-out-of-range.docx")}
+        highlight={{ kind: "cell", table: 0, row: 5, column: 0 }}
+      />
+    )
+
+    await screen.findByText("only row")
+    expect(highlights.size).toBe(0)
+    expect(screen.queryByRole("alert")).toBeNull()
+  })
+
+  it("does not resolve a cell target whose column is out of range", async () => {
+    const highlights = new Map<string, MockHighlight>()
+    installHighlightApi(highlights)
+    docxMock.renderAsync.mockImplementationOnce(async (_buffer, host) => {
+      installSections(host, [
+        section(0, (page) => page.append(table([["sole cell"]]))),
+      ])
+    })
+
+    await renderDocx(
+      <DocxViewer
+        source={docxUrlSource("/column-out-of-range.docx")}
+        highlight={{ kind: "cell", table: 0, row: 0, column: 5 }}
+      />
+    )
+
+    await screen.findByText("sole cell")
+    expect(highlights.size).toBe(0)
+    expect(screen.queryByRole("alert")).toBeNull()
+  })
+})

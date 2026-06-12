@@ -3,22 +3,6 @@
 import * as React from "react"
 import { ChevronDown, PlusIcon } from "lucide-react"
 
-import {
-  getEffectiveType,
-  updateEffectiveNode,
-  updateType,
-} from "@/components/schema-editor/draft/draft-node-edits"
-import {
-  definitionNameFromRef,
-  definitionRef,
-} from "@/components/schema-editor/document/json-pointer"
-import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
-import { getEffectiveNode } from "@/components/schema-editor/lib/json-schema-utils"
-import type { PropertyFormSchemaContext } from "@/components/schema-editor/property-form/types"
-import {
-  getTemplateIcon,
-  getTypeIcon,
-} from "@/components/schema-editor/type-icons"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -31,6 +15,22 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  definitionNameFromRef,
+  definitionRef,
+} from "@/components/schema-editor/document/json-pointer"
+import {
+  getEffectiveType,
+  updateEffectiveNode,
+  updateType,
+} from "@/components/schema-editor/draft/draft-node-edits"
+import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
+import { getEffectiveNode } from "@/components/schema-editor/lib/json-schema-utils"
+import type { PropertyFormSchemaContext } from "@/components/schema-editor/property-form/types"
+import {
+  getTemplateIcon,
+  getTypeIcon,
+} from "@/components/schema-editor/type-icons"
 
 const LazyObjectTemplateSubmenu = React.lazy(() =>
   import("@/components/schema-editor/optional/object-templates/object-template-menu").then(
@@ -147,17 +147,15 @@ export function TypeField({
           aria-label={`Data type${fieldPath ? ` for ${fieldPath}` : ""}`}
           disabled={isDisabled}
           variant="outline"
-          className={`mt-2 w-full justify-between ${isDisabled ? "disabled:opacity-100" : ""}`}
+          className={`mt-2 w-full justify-between pl-2 pr-1 ${isDisabled ? "disabled:opacity-100" : ""}`}
         >
           <div className="flex items-center gap-2">
             {effectiveType.type === "$ref" && effectiveSchemaNode.$ref
-              ? getTemplateIcon(
-                  definitionNameFromRef(effectiveSchemaNode.$ref)
-                )
+              ? getTemplateIcon(definitionNameFromRef(effectiveSchemaNode.$ref))
               : getTypeIcon(effectiveType.type)}
             <span>{typeLabel(effectiveType.type, effectiveSchemaNode)}</span>
           </div>
-          <ChevronDown className="ml-2 h-4 w-4" />
+          <ChevronDown className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-full">

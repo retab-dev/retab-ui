@@ -165,7 +165,18 @@ function TextViewerInner({
     bounds,
   })
   const textLines = React.useMemo(() => splitTextLines(text), [text])
-  const highlightRange = normalizeTextLineRange(highlight, textLines.length)
+  const highlightStart = highlight?.start
+  const highlightEnd = highlight?.end
+  const highlightRange = React.useMemo(
+    () =>
+      normalizeTextLineRange(
+        highlightStart == null || highlightEnd == null
+          ? null
+          : { start: highlightStart, end: highlightEnd },
+        textLines.length
+      ),
+    [highlightStart, highlightEnd, textLines.length]
+  )
   const downloadAction = React.useMemo(
     () => textViewerDownloadAction(resource),
     [resource]
@@ -207,6 +218,15 @@ function TextViewerInner({
     }),
     [lineHeight, textLines.length]
   )
+
+  React.useEffect(() => {
+    scrollLineRangeMetricsIntoView({
+      viewportElement: viewportElementRef.current,
+      range: highlightRange,
+      lineHeight,
+      paddingStart: TEXT_VIEWER_BLOCK_PADDING,
+    })
+  }, [highlightRange, lineHeight])
 
   const gutterWidth = `${String(textLines.length).length + 1}ch`
   const measuredVirtualLines = lineVirtualizer.getVirtualItems()

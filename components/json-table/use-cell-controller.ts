@@ -1,6 +1,5 @@
 import * as React from "react"
 
-import { buildDocumentDataPatch } from "@/components/json-table/lib/document-patches"
 import { getValueAtPath } from "@/components/json-table/lib/document-paths"
 import type { TableDocument } from "@/components/json-table/lib/projects-types"
 import { useRefCallback } from "@/components/json-table/path-utils"
@@ -18,7 +17,11 @@ export function useCellController({
   materializedFieldPath: string | undefined
   value: unknown
   isEditable: boolean | undefined
-  onDocumentDataChange: (docId: string, value: unknown) => void
+  onDocumentDataChange: (
+    docId: string,
+    materializedFieldPath: string,
+    value: unknown
+  ) => void
 }) {
   const [optimisticValue, setOptimisticValue] = React.useState<unknown>()
 
@@ -48,8 +51,10 @@ export function useCellController({
   const commitValueChange = useRefCallback(function (validatedValue: unknown) {
     if (!materializedFieldPath || !isEditable) return
 
-    const previousRoot = document.data
-    const previousValue = getValueAtPath(previousRoot, materializedFieldPath)
+    const previousValue =
+      optimisticValue !== undefined
+        ? optimisticValue
+        : getValueAtPath(document.data, materializedFieldPath)
     const previousNormalized = normalize(previousValue)
     const nextNormalized = normalize(validatedValue)
 
@@ -58,13 +63,11 @@ export function useCellController({
       safeStringify(previousNormalized) === safeStringify(nextNormalized)
     if (isNoOp) return
 
-    const patch = buildDocumentDataPatch(
-      previousRoot,
-      materializedFieldPath,
-      validatedValue
-    )
-    onDocumentDataChange(docId, patch.data)
     setOptimisticValue(validatedValue)
+
+    React.startTransition(() => {
+      onDocumentDataChange(docId, materializedFieldPath, validatedValue)
+    })
   })
 
   return {

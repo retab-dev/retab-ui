@@ -311,8 +311,8 @@ describe("convert: semantic round-trip", () => {
   }
 })
 
-describe("convert: dropped extensions", () => {
-  it("drops x-enumDescriptions on projection", () => {
+describe("convert: extension keywords", () => {
+  it("preserves x-enumDescriptions on projection", () => {
     const input: JSONSchema7 = {
       type: "object",
       properties: {
@@ -327,15 +327,7 @@ describe("convert: dropped extensions", () => {
       },
     }
 
-    expect(semantic(input)).toEqual({
-      type: "object",
-      properties: {
-        status: {
-          type: "string",
-          enum: ["draft", "paid"],
-        },
-      },
-    })
+    expect(semantic(input)).toEqual(input)
   })
 })
 

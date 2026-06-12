@@ -1,7 +1,14 @@
-import { lruGet, lruSet } from "./viewer-lru-cache"
+import { lruGet } from "./viewer-lru-cache"
 
 export interface Disposable {
   dispose(): void
+  /**
+   * Optional eviction guard. When it returns false the entry is "pinned" and the
+   * LRU will skip it when choosing a victim (evicting the next-oldest evictable
+   * entry instead, or temporarily exceeding the limit if every overflow entry is
+   * pinned). Undefined is treated as always-evictable.
+   */
+  isEvictable?(): boolean
 }
 
 export class DisposableLruCache<K, V extends Disposable> {
@@ -24,13 +31,30 @@ export class DisposableLruCache<K, V extends Disposable> {
   set(key: K, value: V) {
     const existing = this.values.get(key)
     if (existing) existing.dispose()
-    lruSet(
-      this.values,
-      key,
-      value,
-      (_droppedKey, droppedValue) => droppedValue.dispose(),
-      this.limit
-    )
+    this.values.delete(key)
+    this.values.set(key, value)
+    this.evictExcess()
+  }
+
+  private evictExcess() {
+    while (this.values.size > this.limit) {
+      const victim = this.oldestEvictableKey()
+      // Every overflow entry is pinned (e.g. still loading); keep them all and
+      // let the cache shrink back once they become evictable.
+      if (victim === undefined) break
+      const dropped = this.values.get(victim)
+      this.values.delete(victim)
+      dropped?.dispose()
+    }
+  }
+
+  private oldestEvictableKey(): K | undefined {
+    // Map iterates in LRU order (oldest first), so the first evictable entry is
+    // the least-recently-used one that is safe to drop.
+    for (const [key, value] of this.values) {
+      if (value.isEvictable === undefined || value.isEvictable()) return key
+    }
+    return undefined
   }
 
   delete(key: K) {

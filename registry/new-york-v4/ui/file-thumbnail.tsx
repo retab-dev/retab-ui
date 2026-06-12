@@ -282,7 +282,7 @@ function getExtension(file: ThumbnailFile | File): string | null {
 
 function mimeSubtypeToExtension(type: string | undefined): string | null {
   if (!type) return null
-  const normalized = type.toLowerCase()
+  const normalized = type.toLowerCase().split(";")[0].trim()
   if (normalized in MIME_EXTENSION) return MIME_EXTENSION[normalized]
   const subtype = normalized.split("/").pop()
   return subtype || null

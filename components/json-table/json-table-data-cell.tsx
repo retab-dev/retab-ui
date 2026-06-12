@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils"
-import { DataCell, type DataCellProps } from "@/components/ui/data-cell"
+import { jsonTableScalarDataCellClass } from "@/components/json-table/json-table-scalar-cell"
 
-export const jsonTableDataCellClass = "h-full rounded-none border-0 text-xs"
+export const jsonTableDataCellClass = jsonTableScalarDataCellClass
 
 export const jsonTableSelectDataCellClass = cn(
   jsonTableDataCellClass,
@@ -10,9 +10,3 @@ export const jsonTableSelectDataCellClass = cn(
   "focus-visible:border-ring focus-visible:bg-background focus-visible:ring-1 focus-visible:ring-ring/30",
   "data-[placeholder]:text-muted-foreground [&_svg]:size-3 [&_svg]:opacity-50"
 )
-
-export function JsonTableDataCell({ className, ...props }: DataCellProps) {
-  return (
-    <DataCell {...props} className={cn(jsonTableDataCellClass, className)} />
-  )
-}

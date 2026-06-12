@@ -59,11 +59,19 @@ const OBJECT_REST_KEYS = new Set([
   "unevaluatedProperties",
 ])
 
+const ENUM_REST_KEYS = new Set(["x-enumDescriptions"])
+
+const ENUM_ALLOWED_REST_KEYS = new Set([
+  ...STRING_REST_KEYS,
+  ...ENUM_REST_KEYS,
+])
+
 const TYPE_SPECIFIC_REST_KEYS = new Set([
   ...STRING_REST_KEYS,
   ...NUMBER_REST_KEYS,
   ...ARRAY_REST_KEYS,
   ...OBJECT_REST_KEYS,
+  ...ENUM_REST_KEYS,
 ])
 
 export function setNodeType(
@@ -186,7 +194,8 @@ function stripSchemaRestForType(
 function getRestKeysForType(
   type: JSONSchema7TypeName | "enum"
 ): Set<string> | undefined {
-  if (type === "string" || type === "enum") return STRING_REST_KEYS
+  if (type === "string") return STRING_REST_KEYS
+  if (type === "enum") return ENUM_ALLOWED_REST_KEYS
   if (type === "number" || type === "integer") return NUMBER_REST_KEYS
   if (type === "array") return ARRAY_REST_KEYS
   if (type === "object") return OBJECT_REST_KEYS

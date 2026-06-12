@@ -176,6 +176,7 @@ class SourceCacheEntry implements Disposable {
   source?: PptxSource
   loadTiming?: PptxSourceLoadTiming
   disposed = false
+  private settled = false
   private readonly loadTimingSubscribers = new Set<
     (timing: PptxSourceLoadTiming) => void
   >()
@@ -183,20 +184,31 @@ class SourceCacheEntry implements Disposable {
   constructor(readonly promise: Promise<PptxSource>) {
     promise.then(
       (source) => {
+        this.settled = true
         this.source = source
         if (this.disposed) source.dispose()
       },
       () => {
+        this.settled = true
         /* rejected entries are removed by getPptxSource */
       }
     )
   }
 
+  /**
+   * A still-loading entry must not be evicted: dispose() cannot act on a source
+   * that has not resolved yet, so an evicted-pending entry would leak its
+   * renderer once the load completes (and a Suspense retry would create a
+   * duplicate). Pin it until the load settles.
+   */
+  isEvictable() {
+    return this.settled || this.disposed
+  }
+
   dispose() {
     this.loadTimingSubscribers.clear()
-    if (!this.source) return
-    this.source?.dispose()
     this.disposed = true
+    this.source?.dispose()
   }
 
   disposeWhenResolved() {
@@ -378,7 +390,9 @@ function drawCachedBitmap(
 function drawBitmap(canvas: HTMLCanvasElement, bitmap: ImageBitmap) {
   canvas.width = bitmap.width
   canvas.height = bitmap.height
-  canvas.getContext("2d")?.drawImage(bitmap, 0, 0)
+  const context = canvas.getContext("2d")
+  if (!context) throw new Error("Canvas 2D context is unavailable.")
+  context.drawImage(bitmap, 0, 0)
 }
 
 function normalizeRendererError(error: unknown) {

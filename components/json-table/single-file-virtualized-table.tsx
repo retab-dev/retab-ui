@@ -23,6 +23,7 @@ import type {
   JsonTableSchemaEditMode,
 } from "@/components/json-table/json-table-edit-modes"
 import type { ProjectedRow } from "@/components/json-table/lib/document-projection"
+import { setValueAtMaterializedPath } from "@/components/json-table/lib/document-patches"
 import { buildHeaderGridRows } from "@/components/json-table/lib/header-nodes"
 import type { JsonTableHeaderNode } from "@/components/json-table/lib/header-nodes"
 import type { TableDocument } from "@/components/json-table/lib/projects-types"
@@ -179,10 +180,20 @@ export const SingleFileVirtualizedTable =
       // survives row virtualization.
       const [openEditorPath, setOpenEditorPath] = useState<string | null>(null)
       const [activeCellPath, setActiveCellPath] = useState<string | null>(null)
-      const [lockedCellPath, setLockedCellPath] = useState<string | null>(null)
       const activeCellPathRef = useRef<string | null>(null)
       const lockedCellPathRef = useRef<string | null>(null)
       const hoveredCellElementRef = useRef<HTMLElement | null>(null)
+      const documentDataRef = useRef(document.data)
+      const pendingDocumentDataRef = useRef<Record<string, unknown> | null>(
+        null
+      )
+
+      React.useEffect(() => {
+        documentDataRef.current = document.data
+        if (pendingDocumentDataRef.current === document.data) {
+          pendingDocumentDataRef.current = null
+        }
+      }, [document.data])
 
       const totalWidth = fixedGridColumnWidths(visibleColumns).reduce(
         (total, widthPx) => total + widthPx,
@@ -199,6 +210,26 @@ export const SingleFileVirtualizedTable =
         scrollRef,
       })
       const isJsonEditable = jsonEditMode === "editable"
+      const handleDocumentDataChange = React.useCallback(
+        (
+          _docId: string,
+          materializedFieldPath: string,
+          value: unknown
+        ) => {
+          if (!onUpdateDocument) return
+
+          const baseData =
+            pendingDocumentDataRef.current ?? documentDataRef.current
+          const nextData = setValueAtMaterializedPath(
+            baseData,
+            materializedFieldPath,
+            value
+          )
+          pendingDocumentDataRef.current = nextData
+          onUpdateDocument({ data: nextData })
+        },
+        [onUpdateDocument]
+      )
       const setActiveCellElement = React.useCallback(
         (cell: HTMLElement | null) => {
           const activeElement = cell?.isConnected ? cell : null
@@ -283,7 +314,6 @@ export const SingleFileVirtualizedTable =
         (fieldPath: string, locked: boolean) => {
           if (locked) {
             lockedCellPathRef.current = fieldPath
-            setLockedCellPath(fieldPath)
 
             if (activeCellPathRef.current !== fieldPath) {
               activeCellPathRef.current = fieldPath
@@ -296,7 +326,6 @@ export const SingleFileVirtualizedTable =
           if (lockedCellPathRef.current !== fieldPath) return
 
           lockedCellPathRef.current = null
-          setLockedCellPath(null)
           setActiveCellElement(hoveredCellElementRef.current)
         },
         [setActiveCellElement]
@@ -383,9 +412,8 @@ export const SingleFileVirtualizedTable =
                       openEditorPath={openEditorPath}
                       setOpenEditorPath={setOpenEditorPath}
                       activeCellPath={activeCellPath}
-                      lockedCellPath={lockedCellPath}
                       onCellActivityLockChange={handleCellActivityLockChange}
-                      onUpdateDocument={onUpdateDocument}
+                      onDocumentDataChange={handleDocumentDataChange}
                       isJsonEditable={isJsonEditable}
                     />
                   )

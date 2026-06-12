@@ -95,7 +95,7 @@ export function DocumentNodeHeader({
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 pr-1">
             <DocumentNodeActions
               canDelete={canDelete}
               editMode={editMode}

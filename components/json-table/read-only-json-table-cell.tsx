@@ -3,11 +3,18 @@ import { format } from "date-fns"
 
 import type { DataCellKind, DataCellValue } from "@/components/ui/data-cell"
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { TableCell } from "@/components/ui/table"
+import { transferContext } from "@/components/json-table/cell-editors/object-editor"
+import {
   getCellWidthStyle,
   getSelectableCellWidthStyle,
 } from "@/components/json-table/cell-style"
 import type { JsonTableCellProps } from "@/components/json-table/json-table-cell-types"
-import { JsonTableDataCell } from "@/components/json-table/json-table-data-cell"
+import { JsonTableScalarCell } from "@/components/json-table/json-table-scalar-cell"
 import { parseDateStringAsLocal } from "@/components/json-table/lib/date-parsing"
 import { getFieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
 import type { FieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
@@ -15,13 +22,6 @@ import {
   ArrayEditor as JsonArrayEditor,
   ObjectEditor as JsonObjectEditor,
 } from "@/components/json-table/object-editor"
-import { transferContext } from "@/components/json-table/cell-editors/object-editor"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import { TableCell } from "@/components/ui/table"
 
 function formatNestedValue(value: unknown): string {
   if (Array.isArray(value)) return `[${value.length} items]`
@@ -159,12 +159,7 @@ function ReadOnlyJsonTableCellContent(props: JsonTableCellProps) {
         className="relative cursor-not-allowed bg-muted/60 p-0"
         style={getCellWidthStyle(cellWidth)}
       >
-        <JsonTableDataCell
-          kind="text"
-          value={null}
-          placeholder=""
-          className="bg-transparent"
-        />
+        <JsonTableScalarCell kind="text" value={null} placeholder="" />
       </TableCell>
     )
   }
@@ -186,19 +181,17 @@ function ReadOnlyJsonTableCellContent(props: JsonTableCellProps) {
           value={value}
         />
       ) : dataCellKind === "number" || dataCellKind === "integer" ? (
-        <JsonTableDataCell
+        <JsonTableScalarCell
           kind={dataCellKind}
           value={numberDataCellValue(value)}
-          className="py-2"
         />
       ) : dataCellKind === "boolean" ? (
-        <JsonTableDataCell
+        <JsonTableScalarCell
           kind="boolean"
           value={typeof value === "boolean" ? value : null}
-          className="py-2"
         />
       ) : dataCellKind ? (
-        <JsonTableDataCell
+        <JsonTableScalarCell
           kind={dataCellKind}
           value={textDataCellValue(value)}
           formatValue={
@@ -206,14 +199,9 @@ function ReadOnlyJsonTableCellContent(props: JsonTableCellProps) {
               ? () => dateDisplayValue(value) ?? ""
               : undefined
           }
-          className="py-2"
         />
       ) : (
-        <JsonTableDataCell
-          kind="text"
-          value={formatNestedValue(value)}
-          className="py-2"
-        />
+        <JsonTableScalarCell kind="text" value={formatNestedValue(value)} />
       )}
     </TableCell>
   )

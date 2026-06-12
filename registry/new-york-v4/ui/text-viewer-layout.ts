@@ -110,6 +110,7 @@ export function scrollLineRangeMetricsIntoView({
   options?: ScrollToOptions
 }) {
   if (!viewportElement || !range) return
+  if (typeof viewportElement.scrollTo !== "function") return
 
   viewportElement.scrollTo({
     top: scrollTopForLineRangeMetrics({

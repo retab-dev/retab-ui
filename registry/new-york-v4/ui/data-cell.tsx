@@ -149,10 +149,12 @@ function InteractiveDataCell({
         disabled={disabled}
         editable={editable}
         onMouseEnter={(event) => {
+          if (disabled) return
           setIsPointerOver(true)
           onMouseEnter?.(event)
         }}
         onMouseLeave={(event) => {
+          if (disabled) return
           setIsPointerOver(false)
           onMouseLeave?.(event)
         }}
@@ -170,14 +172,17 @@ function InteractiveDataCell({
       disabled={disabled}
       editable={editable}
       onMouseEnter={(event) => {
+        if (disabled) return
         setIsPointerOver(true)
         onMouseEnter?.(event)
       }}
       onMouseLeave={(event) => {
+        if (disabled) return
         setIsPointerOver(false)
         onMouseLeave?.(event)
       }}
       onClick={(event) => {
+        if (disabled) return
         onClick?.(event)
         if (!event.defaultPrevented) setIsEditing(true)
       }}
@@ -403,7 +408,7 @@ function DataCellDisplay({
   kind,
   value,
   editable = false,
-  disabled: _disabled,
+  disabled = false,
   name: _name,
   placeholder,
   className,
@@ -422,11 +427,13 @@ function DataCellDisplay({
         data-slot="data-cell"
         data-kind={kind}
         data-mode="display"
+        aria-disabled={disabled || undefined}
         aria-readonly={!editable || undefined}
         className={cn(
           dataCellBooleanDisplayClass,
           "justify-center px-1",
-          editable && "cursor-pointer",
+          disabled && "pointer-events-none opacity-64",
+          editable && !disabled && "cursor-pointer",
           className
         )}
       >
@@ -454,6 +461,7 @@ function DataCellDisplay({
         kind={kind}
         value={value}
         editable={editable}
+        disabled={disabled}
         placeholder={placeholder}
         formatValue={formatValue as DataCellFormatValue | undefined}
         className={className}
@@ -472,8 +480,14 @@ function DataCellDisplay({
       data-slot="data-cell"
       data-kind={kind}
       data-mode="display"
+      aria-disabled={disabled || undefined}
       aria-readonly={!editable || undefined}
-      className={cn(dataCellDisplayClass, editable && "cursor-text", className)}
+      className={cn(
+        dataCellDisplayClass,
+        disabled && "pointer-events-none opacity-64",
+        editable && !disabled && "cursor-text",
+        className
+      )}
     >
       <span className={dataCellDisplayValueClass}>
         <span className={cn("truncate", isEmpty && "text-muted-foreground")}>
@@ -488,6 +502,7 @@ function DataCellPickerDisplay({
   kind,
   value,
   editable,
+  disabled,
   placeholder,
   formatValue,
   className,
@@ -496,6 +511,7 @@ function DataCellPickerDisplay({
   kind: "date" | "time" | "date-time"
   value: DataCellValue
   editable?: boolean
+  disabled?: boolean
   placeholder?: string
   formatValue?: DataCellFormatValue
 }) {
@@ -509,10 +525,12 @@ function DataCellPickerDisplay({
       data-slot="data-cell"
       data-kind={kind}
       data-mode="display"
+      aria-disabled={disabled || undefined}
       aria-readonly={!editable || undefined}
       className={cn(
         dataCellPickerTriggerClass,
-        editable && "cursor-pointer",
+        disabled && "pointer-events-none opacity-64",
+        editable && !disabled && "cursor-pointer",
         className
       )}
     >
@@ -608,8 +626,14 @@ function DataCellPickerEdit({
           disabled={disabled}
           autoFocus={autoFocus}
           className={cn(dataCellPickerTriggerClass, className)}
-          onFocus={onFocus}
-          onBlur={onBlur}
+          onFocus={(event) => {
+            onInputFocusChange?.(true)
+            onFocus?.(event)
+          }}
+          onBlur={(event) => {
+            if (!open) onInputFocusChange?.(false)
+            onBlur?.(event)
+          }}
           onKeyDown={onKeyDown}
           onClick={onClick}
           onDoubleClick={onDoubleClick}
@@ -620,7 +644,12 @@ function DataCellPickerEdit({
           <DataCellPickerIcon kind={kind} />
         </button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-auto p-2">
+      <PopoverContent
+        align="start"
+        className="w-auto rounded-xl p-2 before:rounded-[calc(var(--radius-xl)-1px)]"
+        initialFocus={false}
+        viewportClassName="p-2"
+      >
         {(kind === "date" || kind === "date-time") && (
           <Calendar
             mode="single"
@@ -676,7 +705,7 @@ export function parseDataCellNumberInput({
   }
   if (
     kind === "number" &&
-    !/^[+-]?(?:\d+|\d*\.\d+)(?:e[+-]?\d+)?$/i.test(rawValue)
+    !/^[+-]?(?:(?:\d+\.?\d*)|(?:\d*\.\d+))(?:e[+-]?\d+)?$/i.test(rawValue)
   ) {
     return { value: null, isEmpty: false, isValid: false }
   }
@@ -851,7 +880,10 @@ function formatDataCellEditValue(kind: DataCellKind, value: DataCellValue) {
 
 function dateTimeInputValue(value: string): string {
   const withoutTimezone = value.trim().replace(/(?:Z|[+-]\d{2}:\d{2})$/, "")
-  return withoutTimezone.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/)?.[0] ?? value
+  return (
+    withoutTimezone.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?/)?.[0] ??
+    value
+  )
 }
 
 function dateTimeSuffix(value: DataCellValue): string {

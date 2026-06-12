@@ -81,6 +81,7 @@ export function rotateNormalizedBox(
 }
 
 export function frameNumberToIndex(frameNumber: number): number {
+  if (!Number.isFinite(frameNumber)) return 0
   return Math.max(0, Math.floor(frameNumber) - 1)
 }
 

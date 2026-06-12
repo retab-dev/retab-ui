@@ -64,6 +64,33 @@ describe("SchemaBuilder renders (integration smoke)", () => {
     expect(screen.getByText("total")).toBeTruthy()
   })
 
+  it("keeps root properties padded inside the section shell", () => {
+    renderEditor(sample)
+
+    const propertiesTrigger = screen
+      .getByText("Properties (2)")
+      .closest("[data-slot='accordion-trigger']")
+    const propertiesSection = propertiesTrigger?.closest(
+      "[data-slot='accordion']"
+    )
+
+    expect(propertiesSection?.className).toContain("px-4")
+    expect(
+      screen.getByPlaceholderText("New property name").closest(".px-1")
+    ).toBeTruthy()
+  })
+
+  it("keeps property type controls evenly padded", () => {
+    renderEditor(sample)
+
+    const typeTrigger = screen.getAllByText("string")[0].closest("button")
+
+    expect(typeTrigger?.className).toContain("pl-2")
+    expect(typeTrigger?.className).toContain("pr-1")
+    expect(typeTrigger?.className).not.toContain("pr-0")
+    expect(typeTrigger?.parentElement?.className).toContain("pr-1")
+  })
+
   it("renders nested objects and $defs without crashing", () => {
     renderEditor({
       type: "object",

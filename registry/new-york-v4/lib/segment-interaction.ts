@@ -90,7 +90,13 @@ export function isSegmentCurrentPage(
   segment: Segment,
   currentPage?: number | null
 ): boolean {
-  return currentPage != null && segment.pages.includes(currentPage)
+  return (
+    currentPage != null &&
+    Number.isInteger(currentPage) &&
+    currentPage > 0 &&
+    Array.isArray(segment.pages) &&
+    segment.pages.includes(currentPage)
+  )
 }
 
 export function getSegmentInteractionState({
@@ -145,9 +151,23 @@ export function getSegmentSurfaceProps({
     state,
     eventHandlers: {
       onMouseEnter: () => interaction?.setHoveredId(segment.id),
-      onMouseLeave: () => interaction?.setHoveredId(null),
+      onMouseLeave: () => {
+        if (
+          interaction?.hoveredId === null ||
+          interaction?.hoveredId === segment.id
+        ) {
+          interaction.setHoveredId(null)
+        }
+      },
       onFocus: () => interaction?.setFocusedId(segment.id),
-      onBlur: () => interaction?.setFocusedId(null),
+      onBlur: () => {
+        if (
+          interaction?.focusedId === null ||
+          interaction?.focusedId === segment.id
+        ) {
+          interaction.setFocusedId(null)
+        }
+      },
       onClick: () => {
         interaction?.selectSegment(segment)
         onSelect?.(segment)

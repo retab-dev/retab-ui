@@ -94,7 +94,7 @@ describe("json table row rendering", () => {
             rowHeightPx={32}
             openEditorPath={null}
             setOpenEditorPath={vi.fn()}
-            onUpdateDocument={vi.fn()}
+            onDocumentDataChange={vi.fn()}
             isJsonEditable={false}
           />
         </tbody>
@@ -116,5 +116,49 @@ describe("json table row rendering", () => {
     expect(cells[5].textContent).toBe("__null__")
     expect(cells[6].textContent).toBe("")
     expect(cells[6].getAttribute("data-field-path")).toBe("missing")
+  })
+
+  it("keeps read-only cells aligned when an earlier array is empty", () => {
+    const visiblePaths = ["empty_lines.*.name", "lines.*.name", "vendor"]
+    const rows = projectDocumentRows({
+      document: {
+        id: "doc_1",
+        data: {
+          empty_lines: [],
+          lines: [{ name: "one" }],
+          vendor: "ACME",
+        },
+      },
+      visiblePaths,
+      includeArrayAddRows: false,
+    })
+
+    const view = render(
+      <table>
+        <tbody>
+          <SingleFileFormRow
+            document={document}
+            schema={schema}
+            projectedRow={rows[0]}
+            visibleColumns={visiblePaths.map(visibleColumn)}
+            rowIdx={0}
+            rowTopPx={0}
+            rowHeightPx={32}
+            openEditorPath={null}
+            setOpenEditorPath={vi.fn()}
+            onUpdateDocument={vi.fn()}
+            isJsonEditable={false}
+          />
+        </tbody>
+      </table>
+    )
+
+    const cells = Array.from(view.container.querySelectorAll("td"))
+    expect(cells).toHaveLength(3)
+    expect(cells[0].textContent).toBe("")
+    expect(cells[1].getAttribute("data-field-path")).toBe("lines.0.name")
+    expect(cells[1].textContent).toContain("one")
+    expect(cells[2].getAttribute("data-field-path")).toBe("vendor")
+    expect(cells[2].textContent).toContain("ACME")
   })
 })

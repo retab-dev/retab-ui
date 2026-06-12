@@ -17,12 +17,6 @@ import {
   Type,
 } from "lucide-react"
 
-import type { SchemaEditorType } from "@/components/schema-editor/document/type-operations"
-import type { ResolvedSchemaBuilderFeatures } from "@/components/schema-editor/schema-builder-types"
-import {
-  getTemplateIcon,
-  getTypeIcon,
-} from "@/components/schema-editor/type-icons"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -34,6 +28,12 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import type { SchemaEditorType } from "@/components/schema-editor/document/type-operations"
+import type { ResolvedSchemaBuilderFeatures } from "@/components/schema-editor/schema-builder-types"
+import {
+  getTemplateIcon,
+  getTypeIcon,
+} from "@/components/schema-editor/type-icons"
 
 const LazyObjectTemplateSubmenu = React.lazy(() =>
   import("./optional/object-templates/object-template-menu").then((module) => ({
@@ -85,7 +85,7 @@ export function DocumentNodeTypeMenu({
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className="w-40 justify-between pr-0 text-xs font-normal text-muted-foreground"
+          className="w-40 justify-between pl-2 pr-1 text-xs font-normal text-muted-foreground"
         >
           <div className="flex items-center gap-1">
             {localType === "$ref" && refName
@@ -93,62 +93,62 @@ export function DocumentNodeTypeMenu({
               : getTypeIcon(localType)}
             <span>{typeLabel(localType, refName)}</span>
           </div>
-          <ChevronDown className="mx-2 h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100" />
+          <ChevronDown className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent>
         <DropdownMenuItem onSelect={() => onSelectType("string")}>
-          <Type className="mr-2 h-4 w-4" />
+          <Type className="h-4 w-4" />
           string
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => onSelectType("number")}>
-          <Hash className="mr-2 h-4 w-4" />
+          <Hash className="h-4 w-4" />
           number
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => onSelectType("integer")}>
-          <Hash className="mr-2 h-4 w-4" />
+          <Hash className="h-4 w-4" />
           integer
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => onSelectType("boolean")}>
-          <ToggleLeft className="mr-2 h-4 w-4" />
+          <ToggleLeft className="h-4 w-4" />
           true/false
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => onSelectType("enum")}>
-          <List className="mr-2 h-4 w-4" />
+          <List className="h-4 w-4" />
           multiple choice
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => onSelectType("object")}>
-          <Braces className="mr-2 h-4 w-4" />
+          <Braces className="h-4 w-4" />
           object
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => onSelectType("array")}>
-          <Brackets className="mr-2 h-4 w-4" />
+          <Brackets className="h-4 w-4" />
           list
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => onSelectType("date")}>
-          <Calendar className="mr-2 h-4 w-4" />
+          <Calendar className="h-4 w-4" />
           date
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => onSelectType("time")}>
-          <Clock className="mr-2 h-4 w-4" />
+          <Clock className="h-4 w-4" />
           time
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => onSelectType("datetime")}>
-          <CalendarClock className="mr-2 h-4 w-4" />
+          <CalendarClock className="h-4 w-4" />
           datetime
         </DropdownMenuItem>
 
         {features.definitions && (
           <DropdownMenuSub>
             <DropdownMenuSubTrigger>
-              <Link className="mr-4 h-4 w-4" />
+              <Link className="h-4 w-4" />
               definition
             </DropdownMenuSubTrigger>
             <DropdownMenuPortal>
               <DropdownMenuSubContent>
                 {Object.keys(defs).length === 0 ? (
                   <DropdownMenuItem onSelect={onCreateDefinition}>
-                    <PlusIcon className="mr-2 h-4 w-4" />
+                    <PlusIcon className="h-4 w-4" />
                     Create a new definition to get started
                   </DropdownMenuItem>
                 ) : (

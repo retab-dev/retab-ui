@@ -220,6 +220,7 @@ export function SidebarProvider({
       if (
         event.key.toLowerCase() === SIDEBAR_KEYBOARD_SHORTCUT &&
         (event.metaKey || event.ctrlKey) &&
+        !event.altKey &&
         !event.defaultPrevented &&
         !event.repeat &&
         !isEditableShortcutTarget(event.target)

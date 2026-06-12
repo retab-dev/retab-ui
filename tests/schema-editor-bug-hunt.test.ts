@@ -522,10 +522,7 @@ describe("enum operations", () => {
     expect(f.enum).toEqual(["b", "c"])
   })
 
-  // Documents the KNOWN losslessness defect: `x-enumDescriptions` is in
-  // MODELED_NODE_KEYS but stored nowhere, so it is silently dropped. Tracked as
-  // `it.fails` in schema-editor-invariants.test.ts — flip both once it is fixed.
-  it("drops x-enumDescriptions (known losslessness gap)", () => {
+  it("preserves x-enumDescriptions", () => {
     const doc = fromJsonSchema({
       type: "object",
       properties: {
@@ -538,7 +535,7 @@ describe("enum operations", () => {
     })
     const out = toJsonSchema(doc) as JSONSchema7
     const f = out.properties!.f as Record<string, unknown>
-    expect(f["x-enumDescriptions"]).toBeUndefined()
+    expect(f["x-enumDescriptions"]).toEqual({ a: "first", b: "second" })
   })
 })
 
