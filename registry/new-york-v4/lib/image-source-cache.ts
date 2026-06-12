@@ -1,5 +1,6 @@
 import {
   createNativeImageFrameSourceFromBlob,
+  ImageDecodeError,
   ImageLoadError,
   ImageSourceDisposedError,
   isDeclaredNativeImage,
@@ -11,7 +12,13 @@ import {
   createTiffFrameSource,
   type TiffWorkerFactory,
 } from "@/lib/image-tiff-source"
-import { type ViewerResource } from "@/lib/viewer-resource"
+import type {
+  ViewerContentBlob,
+  ViewerContentBytes,
+  ViewerContentDirectUrl,
+  ViewerContentIdentity,
+  ViewerContentPayload,
+} from "@/lib/viewer-resource"
 
 const DEFAULT_MAX_DECODED_FRAMES = 16
 const DEFAULT_UNCLAIMED_SOURCE_TIMEOUT_MS = 30_000
@@ -23,10 +30,16 @@ export interface FrameSourceLease {
   release(): void
 }
 
-type FrameSourceEntryState = "loading" | "ready" | "released" | "disposed"
+export type ImageSourceContent = ViewerContentIdentity &
+  ViewerContentDirectUrl &
+  ViewerContentPayload &
+  ViewerContentBlob &
+  ViewerContentBytes
+
+type FrameSourceEntryState = "pending" | "resolved" | "evictable" | "disposed"
 
 interface FrameSourceEntry {
-  resource: ViewerResource
+  content: ImageSourceContent
   abortController: AbortController
   promise: Promise<FrameSource>
   source?: FrameSource
@@ -58,21 +71,21 @@ export class FrameSourceManager {
   }
 
   load(
-    resource: ViewerResource,
+    content: ImageSourceContent,
     createTiffWorker: TiffWorkerFactory
   ): Promise<FrameSource> {
-    const resourceKey = resource.keys.load
-    let entry = this.entries.get(resourceKey)
+    const loadKey = content.key
+    let entry = this.entries.get(loadKey)
     if (!entry) {
       const abortController = new AbortController()
       const newEntry: FrameSourceEntry = {
-        resource,
+        content,
         abortController,
         promise: Promise.resolve().then(() =>
-          this.createSource(resource, createTiffWorker, abortController.signal)
+          this.createSource(content, createTiffWorker, abortController.signal)
         ),
         leaseCount: 0,
-        state: "loading",
+        state: "pending",
       }
       newEntry.promise = newEntry.promise
         .then((source) => {
@@ -81,56 +94,62 @@ export class FrameSourceManager {
             source.dispose(
               newEntry.disposeReason ?? new ImageSourceDisposedError()
             )
-            this.entries.delete(resourceKey)
+            this.entries.delete(loadKey)
             newEntry.state = "disposed"
             throw new ImageLoadError("Image source was disposed before use")
           }
           if (newEntry.leaseCount === 0) {
-            newEntry.state = "released"
+            newEntry.state = "evictable"
             this.scheduleDispose(
               newEntry,
               this.unclaimedSourceTimeoutMs,
               new ImageSourceDisposedError()
             )
           } else {
-            newEntry.state = "ready"
+            newEntry.state = "resolved"
           }
           return source
         })
         .catch((error) => {
-          if (this.entries.get(resourceKey) === newEntry) {
-            this.entries.delete(resourceKey)
+          if (this.entries.get(loadKey) === newEntry) {
+            this.entries.delete(loadKey)
+          }
+          if (
+            newEntry.state === "disposed" &&
+            error instanceof ImageDecodeError
+          ) {
+            throw newEntry.disposeReason ?? new ImageSourceDisposedError()
           }
           throw error
         })
       entry = newEntry
-      this.entries.set(resourceKey, entry)
+      this.entries.set(loadKey, entry)
     }
     return entry.promise
   }
 
   retain(
-    resource: ViewerResource,
+    content: ViewerContentIdentity,
     source: FrameSource
   ): FrameSourceLease | null {
-    const entry = this.entries.get(resource.keys.load)
+    const entry = this.entries.get(content.key)
     if (!entry || entry.source !== source || entry.state === "disposed") {
       return null
     }
     this.cancelDispose(entry)
-    entry.state = "ready"
+    entry.state = "resolved"
     entry.leaseCount += 1
-    let released = false
+    let hasReleased = false
     return {
       source,
       release: () => {
-        if (released) return
-        released = true
-        const current = this.entries.get(resource.keys.load)
+        if (hasReleased) return
+        hasReleased = true
+        const current = this.entries.get(content.key)
         if (!current || current.source !== source) return
         current.leaseCount = Math.max(0, current.leaseCount - 1)
         if (current.leaseCount === 0) {
-          current.state = "released"
+          current.state = "evictable"
           this.scheduleDispose(
             current,
             this.releasedSourceTimeoutMs,
@@ -148,16 +167,16 @@ export class FrameSourceManager {
   }
 
   private async createSource(
-    resource: ViewerResource,
+    content: ImageSourceContent,
     createTiffWorker: TiffWorkerFactory,
     signal: AbortSignal
   ): Promise<FrameSource> {
-    const sourceName = imageSourceName(resource)
-    const declaredContentType = resource.mimeType ?? null
+    const sourceName = imageSourceName(content)
+    const declaredContentType = imageContentType(content)
 
     if (isDeclaredTiff(sourceName, declaredContentType)) {
       return createTiffFrameSource(
-        await resource.readArrayBuffer({ signal }),
+        await readContentBytes(content, { signal }),
         createTiffWorker,
         this.maxDecodedFrames,
         signal
@@ -166,12 +185,12 @@ export class FrameSourceManager {
 
     if (isDeclaredNativeImage(sourceName, declaredContentType)) {
       return createNativeImageFrameSourceFromBlob(
-        await resource.readBlob({ signal }),
+        await content.readBlob({ signal }),
         this.maxDecodedFrames
       )
     }
 
-    const blob = await resource.readBlob({ signal })
+    const blob = await content.readBlob({ signal })
     return this.createSourceFromUnknownBlob(
       sourceName,
       blob,
@@ -187,8 +206,8 @@ export class FrameSourceManager {
     this.cancelDispose(entry)
     entry.abortController.abort(reason)
     entry.source?.dispose(reason)
-    if (this.entries.get(entry.resource.keys.load) === entry) {
-      this.entries.delete(entry.resource.keys.load)
+    if (this.entries.get(entry.content.key) === entry) {
+      this.entries.delete(entry.content.key)
     }
   }
 
@@ -200,7 +219,7 @@ export class FrameSourceManager {
     this.cancelDispose(entry)
     entry.disposeReason = reason
     entry.disposeTimer = setTimeout(() => {
-      const current = this.entries.get(entry.resource.keys.load)
+      const current = this.entries.get(entry.content.key)
       if (!current || current !== entry || current.leaseCount > 0) return
       this.disposeEntry(current, reason)
     }, delayMs)
@@ -235,7 +254,18 @@ export class FrameSourceManager {
 
 export const imageFrameSourceManager = new FrameSourceManager()
 
-function imageSourceName(resource: ViewerResource): string {
-  const directLoad = resource.getDirectLoad()
-  return directLoad.kind === "url" ? directLoad.url : resource.fileName
+function imageSourceName(content: ViewerContentDirectUrl): string {
+  return content.directUrl ?? ""
+}
+
+function imageContentType(content: ViewerContentPayload): string | null {
+  if (content.payload.kind === "blob") return content.payload.blob.type || null
+  return null
+}
+
+function readContentBytes(
+  content: ViewerContentBytes,
+  options: { signal: AbortSignal }
+): Promise<ArrayBuffer> {
+  return content.readBytes(options)
 }

@@ -9,6 +9,7 @@ import {
   type SegmentInteraction,
 } from "@/lib/segment-interaction"
 import {
+  normalizePageCount,
   segmentDisplayLabel,
   segmentsPageCount,
   type Segment,
@@ -52,7 +53,7 @@ export function PageTimeline({
   onSelect,
   className,
 }: PageTimelineProps) {
-  const total = pageCount ?? segmentsPageCount(segments)
+  const total = normalizePageCount(pageCount ?? segmentsPageCount(segments))
   const segmentIndexesByPage = React.useMemo(
     () => buildPageSegmentIndexes(segments),
     [segments]
@@ -71,7 +72,9 @@ export function PageTimeline({
         interaction,
         segments
           .filter((segment) =>
-            segment.pages.some((page) => page >= 1 && page <= total)
+            segment.pages.some(
+              (page) => Number.isInteger(page) && page >= 1 && page <= total
+            )
           )
           .map((segment) => segment.id)
       ),
@@ -169,6 +172,7 @@ function buildPageSegmentIndexes(segments: Segment[]): Map<number, number[]> {
   const owners = new Map<number, number[]>()
   segments.forEach((segment, index) => {
     segment.pages.forEach((page) => {
+      if (!Number.isInteger(page) || page <= 0) return
       const list = owners.get(page) ?? []
       list.push(index)
       owners.set(page, list)

@@ -18,8 +18,10 @@ import type { Source } from "@/registry/new-york-v4/lib/document-source"
 import {
   createFrameSource,
   createNativeImageFrameSourceFromBlob,
+  ImageDecodeError,
   ImageFrameIndexError,
   ImageSourceDisposedError,
+  toImageFormatError,
 } from "@/registry/new-york-v4/lib/image-frame-source"
 import { FrameSourceManager } from "@/registry/new-york-v4/lib/image-source-cache"
 import {
@@ -40,11 +42,11 @@ import {
   rotateImageArea,
 } from "@/registry/new-york-v4/ui/image-source"
 import {
-  clearImageSourceCacheForTests,
   createImageSourceForTests,
   getImageSource,
   ImageViewer,
   looksLikeTiff,
+  resetImageSourceCacheForTests,
   type ImageViewerHandle,
 } from "@/registry/new-york-v4/ui/image-viewer"
 import { ImageFrame } from "@/registry/new-york-v4/ui/image-viewer-frame"
@@ -53,7 +55,7 @@ import { ViewerErrorBoundary } from "@/registry/new-york-v4/ui/viewer-error"
 afterEach(() => {
   vi.useRealTimers()
   cleanup()
-  clearImageSourceCacheForTests()
+  resetImageSourceCacheForTests()
   clearViewerResourceRegistryForTests()
   vi.restoreAllMocks()
   vi.unstubAllGlobals()
@@ -76,6 +78,27 @@ describe("ViewerResource registry", () => {
     expect(second).toBe(first)
     expect(Object.isFrozen(first)).toBe(true)
     expect(renamed).not.toBe(first)
+  })
+
+  it("keeps URL load identity separate from presentation identity", () => {
+    const first = createViewerResource({
+      kind: "url",
+      url: "/same-image.png",
+      fileName: "first-name.png",
+      downloadUrl: "/downloads/first-name.png",
+    })
+    const second = createViewerResource({
+      kind: "url",
+      url: "/same-image.png",
+      fileName: "second-name.png",
+      downloadUrl: "/downloads/second-name.png",
+    })
+
+    expect(second).not.toBe(first)
+    expect(second.content).toBe(first.content)
+    expect(second.keys.load).toBe(first.keys.load)
+    expect(second.keys.presentation).not.toBe(first.keys.presentation)
+    expect(second.keys.resource).not.toBe(first.keys.resource)
   })
 
   it("interns Blob resources only for the same Blob object and descriptor", async () => {
@@ -102,11 +125,17 @@ describe("ViewerResource registry", () => {
     expect(second).toBe(first)
     expect(changedBytes).not.toBe(first)
     expect(changedBytes.keys.load).not.toBe(first.keys.load)
-    await expect(first.readText()).resolves.toBe("first")
-    await expect(changedBytes.readText()).resolves.toBe("second")
+    await expect(first.content.readText()).resolves.toBe("first")
+    await expect(changedBytes.content.readText()).resolves.toBe("second")
   })
 
-  it("does not globally intern inline text payloads", async () => {
+  it("interns identical inline text resources without merging different payloads", async () => {
+    const repeated = createViewerResource({
+      kind: "text",
+      text: "first",
+      fileName: "same.txt",
+      identityKey: "text:same",
+    })
     const first = createViewerResource({
       kind: "text",
       text: "first",
@@ -120,10 +149,11 @@ describe("ViewerResource registry", () => {
       identityKey: "text:same",
     })
 
+    expect(repeated).toBe(first)
     expect(second).not.toBe(first)
     expect(second.keys.load).not.toBe(first.keys.load)
-    await expect(first.readText()).resolves.toBe("first")
-    await expect(second.readText()).resolves.toBe("second")
+    await expect(first.content.readText()).resolves.toBe("first")
+    await expect(second.content.readText()).resolves.toBe("second")
   })
 })
 
@@ -147,6 +177,36 @@ function deferred<T>() {
 
 function frameCount(count: number) {
   return Array.from({ length: count }, () => ({ width: 10, height: 10 }))
+}
+
+function expectConsoleErrorWithMessage(
+  consoleError: { mock: { calls: unknown[][] } },
+  message: string
+) {
+  expect(
+    consoleError.mock.calls.some((call) =>
+      call.some((argument) => {
+        return argument instanceof Error && argument.message === message
+      })
+    )
+  ).toBe(true)
+}
+
+async function settledPromise<T>(promise: Promise<T>) {
+  let result:
+    | { status: "resolved"; value: T }
+    | { status: "rejected"; reason: unknown }
+    | { status: "pending" } = { status: "pending" }
+  promise.then(
+    (value) => {
+      result = { status: "resolved", value }
+    },
+    (reason) => {
+      result = { status: "rejected", reason }
+    }
+  )
+  await Promise.resolve()
+  return result
 }
 
 class FakeTiffWorker {
@@ -367,6 +427,15 @@ async function waitForWorkerPost(worker: FakeTiffWorker) {
     await Promise.resolve()
   }
   throw new Error("TIFF worker did not receive a message")
+}
+
+async function waitForWorker(workers: FakeTiffWorker[], index: number) {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const worker = workers[index]
+    if (worker) return worker
+    await Promise.resolve()
+  }
+  throw new Error("TIFF worker was not created")
 }
 
 describe("ImageViewer TIFF detection", () => {
@@ -676,6 +745,99 @@ describe("ImageSource lifecycle", () => {
     source.dispose()
   })
 
+  it("closes replaced initial bitmaps for duplicate initial frame entries", async () => {
+    const staleBitmap = bitmap()
+    const currentBitmap = bitmap()
+    const decode = vi.fn(() => Promise.resolve(bitmap()))
+    const source = createFrameSource({
+      kind: "tiff",
+      frames: frameCount(1).map((frame) => ({
+        intrinsicSize: { width: frame.width, height: frame.height },
+      })),
+      maxDecodedFrames: 1,
+      initialBitmaps: [
+        { frameIndex: 0, bitmap: staleBitmap },
+        { frameIndex: 0, bitmap: currentBitmap },
+      ],
+      decode,
+    })
+
+    await expect(source.acquire(0)).resolves.toBe(currentBitmap)
+
+    expect(staleBitmap.close).toHaveBeenCalledTimes(1)
+    expect(currentBitmap.close).not.toHaveBeenCalled()
+    expect(decode).not.toHaveBeenCalled()
+    source.release(0)
+    source.dispose()
+    expect(currentBitmap.close).toHaveBeenCalledTimes(1)
+  })
+
+  it("closes initial bitmaps for invalid initial frame indexes", () => {
+    const invalidBitmap = bitmap()
+    const source = createFrameSource({
+      kind: "tiff",
+      frames: frameCount(1).map((frame) => ({
+        intrinsicSize: { width: frame.width, height: frame.height },
+      })),
+      maxDecodedFrames: 1,
+      initialBitmaps: [{ frameIndex: 1, bitmap: invalidBitmap }],
+      decode: vi.fn(() => Promise.resolve(bitmap())),
+    })
+
+    expect(invalidBitmap.close).toHaveBeenCalledTimes(1)
+    source.dispose()
+  })
+
+  it("rejects frame sources with no frames", () => {
+    expect(() =>
+      createFrameSource({
+        kind: "tiff",
+        frames: [],
+        maxDecodedFrames: 1,
+        decode: vi.fn(() => Promise.resolve(bitmap())),
+      })
+    ).toThrow("Image does not contain any frames")
+  })
+
+  it("rejects frame sources with non-positive frame dimensions", () => {
+    expect(() =>
+      createFrameSource({
+        kind: "native-image",
+        frames: [{ intrinsicSize: { width: 0, height: 10 } }],
+        maxDecodedFrames: 1,
+        decode: vi.fn(() => Promise.resolve(bitmap())),
+      })
+    ).toThrow("Image frame 1 has invalid dimensions")
+  })
+
+  it("closes initial bitmaps when frame source construction rejects metadata", () => {
+    const initialBitmap = bitmap()
+
+    expect(() =>
+      createFrameSource({
+        kind: "native-image",
+        frames: [{ intrinsicSize: { width: 10, height: 0 } }],
+        maxDecodedFrames: 1,
+        initialBitmaps: [{ frameIndex: 0, bitmap: initialBitmap }],
+        decode: vi.fn(() => Promise.resolve(bitmap())),
+      })
+    ).toThrow("Image frame 1 has invalid dimensions")
+    expect(initialBitmap.close).toHaveBeenCalledTimes(1)
+  })
+
+  it("closes the native probe bitmap when frame source construction rejects metadata", async () => {
+    const probeBitmap = bitmap(0, 20)
+    vi.stubGlobal(
+      "createImageBitmap",
+      vi.fn(() => Promise.resolve(probeBitmap))
+    )
+
+    await expect(
+      createNativeImageFrameSourceFromBlob(new Blob(), 16)
+    ).rejects.toThrow("Image frame 1 has invalid dimensions")
+    expect(probeBitmap.close).toHaveBeenCalledTimes(1)
+  })
+
   it("cancels an unpinned in-flight frame decode", async () => {
     const pending = deferred<ImageBitmap>()
     const lateBitmap = bitmap()
@@ -697,6 +859,68 @@ describe("ImageSource lifecycle", () => {
     await expect(acquired).rejects.toThrow("Image frame decode canceled")
     expect(cancelDecode).toHaveBeenCalledTimes(1)
     expect(lateBitmap.close).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not let a stale canceled decode replace a newer decode for the same frame", async () => {
+    const stalePending = deferred<ImageBitmap>()
+    const currentPending = deferred<ImageBitmap>()
+    const staleBitmap = bitmap()
+    const currentBitmap = bitmap()
+    const decode = vi
+      .fn<() => Promise<ImageBitmap>>()
+      .mockReturnValueOnce(stalePending.promise)
+      .mockReturnValueOnce(currentPending.promise)
+    const source = createFrameSource({
+      kind: "tiff",
+      frames: frameCount(1).map((frame) => ({
+        intrinsicSize: { width: frame.width, height: frame.height },
+      })),
+      maxDecodedFrames: 1,
+      decode,
+    })
+
+    const staleAcquire = source.acquire(0)
+    source.release(0)
+    const currentAcquire = source.acquire(0)
+    stalePending.resolve(staleBitmap)
+    currentPending.resolve(currentBitmap)
+
+    await expect(staleAcquire).rejects.toThrow("Image frame decode canceled")
+    await expect(currentAcquire).resolves.toBe(currentBitmap)
+    expect(staleBitmap.close).toHaveBeenCalledTimes(1)
+    expect(currentBitmap.close).not.toHaveBeenCalled()
+    source.release(0)
+    source.dispose()
+  })
+
+  it("does not let a stale canceled decode rejection clear a newer decode", async () => {
+    const stalePending = deferred<ImageBitmap>()
+    const currentPending = deferred<ImageBitmap>()
+    const currentBitmap = bitmap()
+    const decode = vi
+      .fn<() => Promise<ImageBitmap>>()
+      .mockReturnValueOnce(stalePending.promise)
+      .mockReturnValueOnce(currentPending.promise)
+    const source = createFrameSource({
+      kind: "tiff",
+      frames: frameCount(1).map((frame) => ({
+        intrinsicSize: { width: frame.width, height: frame.height },
+      })),
+      maxDecodedFrames: 1,
+      decode,
+    })
+
+    const staleAcquire = source.acquire(0)
+    source.release(0)
+    const currentAcquire = source.acquire(0)
+    stalePending.reject(new Error("old decode failed late"))
+    currentPending.resolve(currentBitmap)
+
+    await expect(staleAcquire).rejects.toThrow("Image frame decode canceled")
+    await expect(currentAcquire).resolves.toBe(currentBitmap)
+    expect(currentBitmap.close).not.toHaveBeenCalled()
+    source.release(0)
+    source.dispose()
   })
 
   it("does not throw from release when decode cancellation fails", async () => {
@@ -793,6 +1017,27 @@ describe("ImageSource lifecycle", () => {
     await expect(source.acquire(1)).rejects.toBeInstanceOf(ViewerFormatError)
   })
 
+  it("maps image boundary failures through the canonical image mapper", () => {
+    const decodeError = toImageFormatError(new Error("bad bitmap"), {
+      kind: "decode_failed",
+      message: "Image decode failed",
+    })
+
+    expect(decodeError).toBeInstanceOf(ImageDecodeError)
+    expect(decodeError).toMatchObject({
+      format: "image",
+      kind: "decode_failed",
+    })
+
+    const existing = new ImageFrameIndexError(2, 1)
+    expect(
+      toImageFormatError(existing, {
+        kind: "decode_failed",
+        message: "ignored",
+      })
+    ).toBe(existing)
+  })
+
   it("removes rejected source loads from the cache so later loads retry", async () => {
     const fetch = vi.fn()
     fetch
@@ -809,10 +1054,10 @@ describe("ImageSource lifecycle", () => {
     )
 
     await expect(
-      getImageSource(imageUrlResource("/retry.png"))
+      getImageSource(imageUrlResource("/retry.png").content)
     ).rejects.toThrow("Failed to load resource: 500")
     await expect(
-      getImageSource(imageUrlResource("/retry.png"))
+      getImageSource(imageUrlResource("/retry.png").content)
     ).resolves.toMatchObject({
       kind: "native-image",
       frames: [{ intrinsicSize: { width: 10, height: 10 } }],
@@ -827,17 +1072,69 @@ describe("FrameSourceManager lifecycle", () => {
     stubImageLoading()
 
     const first = manager.load(
-      imageUrlResource("/shared.png"),
+      imageUrlResource("/shared.png").content,
       () => new Worker("")
     )
     const second = manager.load(
-      imageUrlResource("/shared.png"),
+      imageUrlResource("/shared.png").content,
       () => new Worker("")
     )
 
     expect(first).toBe(second)
     await expect(first).resolves.toMatchObject({ kind: "native-image" })
     expect(fetch).toHaveBeenCalledTimes(1)
+  })
+
+  it("shares image loads across URL presentation variants", async () => {
+    const manager = new FrameSourceManager()
+    stubImageLoading()
+    const firstResource = createViewerResource({
+      kind: "url",
+      url: "/same-image.png",
+      fileName: "first-name.png",
+      downloadUrl: "/downloads/first-name.png",
+    })
+    const secondResource = createViewerResource({
+      kind: "url",
+      url: "/same-image.png",
+      fileName: "second-name.png",
+      downloadUrl: "/downloads/second-name.png",
+    })
+
+    const first = manager.load(firstResource.content, () => new Worker(""))
+    const second = manager.load(secondResource.content, () => new Worker(""))
+
+    expect(second).toBe(first)
+    const source = await first
+    expect(source).toMatchObject({ kind: "native-image" })
+    expect(fetch).toHaveBeenCalledTimes(1)
+    expect(manager.retain(secondResource.content, source)).not.toBeNull()
+  })
+
+  it("does not share image loads across different Blob objects", async () => {
+    const manager = new FrameSourceManager()
+    const createImageBitmap = vi.fn(() => Promise.resolve(bitmap()))
+    vi.stubGlobal("createImageBitmap", createImageBitmap)
+    const firstResource = createViewerResource(
+      blobSource(new Blob([Uint8Array.of(1, 2, 3, 4)], { type: "image/png" }), {
+        identityKey: "blob:same",
+        fileName: "same.png",
+      })
+    )
+    const secondResource = createViewerResource(
+      blobSource(new Blob([Uint8Array.of(1, 2, 3, 4)], { type: "image/png" }), {
+        identityKey: "blob:same",
+        fileName: "same.png",
+      })
+    )
+
+    const first = manager.load(firstResource.content, () => new Worker(""))
+    const second = manager.load(secondResource.content, () => new Worker(""))
+
+    expect(second).not.toBe(first)
+    await expect(first).resolves.toMatchObject({ kind: "native-image" })
+    await expect(second).resolves.toMatchObject({ kind: "native-image" })
+    expect(createImageBitmap).toHaveBeenCalledTimes(2)
   })
 
   it("removes rejected source loads from the cache so later loads retry", async () => {
@@ -857,10 +1154,10 @@ describe("FrameSourceManager lifecycle", () => {
     )
 
     await expect(
-      manager.load(imageUrlResource("/retry.png"), () => new Worker(""))
+      manager.load(imageUrlResource("/retry.png").content, () => new Worker(""))
     ).rejects.toThrow("Failed to load resource: 500")
     await expect(
-      manager.load(imageUrlResource("/retry.png"), () => new Worker(""))
+      manager.load(imageUrlResource("/retry.png").content, () => new Worker(""))
     ).resolves.toMatchObject({ kind: "native-image" })
     expect(fetch).toHaveBeenCalledTimes(2)
   })
@@ -881,7 +1178,7 @@ describe("FrameSourceManager lifecycle", () => {
     )
 
     const load = manager.load(
-      imageUrlResource("/abort.png"),
+      imageUrlResource("/abort.png").content,
       () => new Worker("")
     )
     await Promise.resolve()
@@ -911,7 +1208,7 @@ describe("FrameSourceManager lifecycle", () => {
 
     await expect(
       manager.load(
-        imageUrlResource("/declared-native.png"),
+        imageUrlResource("/declared-native.png").content,
         () => new Worker("")
       )
     ).resolves.toMatchObject({ kind: "native-image" })
@@ -935,7 +1232,7 @@ describe("FrameSourceManager lifecycle", () => {
     )
 
     const load = manager.load(
-      imageUrlResource("/declared.tiff"),
+      imageUrlResource("/declared.tiff").content,
       () => worker as unknown as Worker
     )
     await waitForWorkerPost(worker)
@@ -968,7 +1265,7 @@ describe("FrameSourceManager lifecycle", () => {
     )
 
     const load = manager.load(
-      imageUrlResource("/unknown"),
+      imageUrlResource("/unknown").content,
       () => worker as unknown as Worker
     )
     await waitForWorkerPost(worker)
@@ -1014,7 +1311,10 @@ describe("FrameSourceManager lifecycle", () => {
     )
 
     await expect(
-      manager.load(imageUrlResource("/unknown-native"), () => new Worker(""))
+      manager.load(
+        imageUrlResource("/unknown-native").content,
+        () => new Worker("")
+      )
     ).resolves.toMatchObject({ kind: "native-image" })
 
     expect(response.arrayBuffer).not.toHaveBeenCalled()
@@ -1023,18 +1323,170 @@ describe("FrameSourceManager lifecycle", () => {
     expect(clone.blob).not.toHaveBeenCalled()
   })
 
+  it("does not cache native image loads rejected by invalid probe metadata", async () => {
+    const manager = new FrameSourceManager()
+    const invalidProbe = bitmap(0, 20)
+    const validProbe = bitmap(30, 20)
+    const createImageBitmap = vi
+      .fn<() => Promise<ImageBitmap>>()
+      .mockResolvedValueOnce(invalidProbe)
+      .mockResolvedValueOnce(validProbe)
+    vi.stubGlobal("createImageBitmap", createImageBitmap)
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve(
+          new Response(new Uint8Array([1, 2, 3, 4]), {
+            headers: { "content-type": "image/png" },
+          })
+        )
+      )
+    )
+
+    await expect(
+      manager.load(
+        imageUrlResource("/invalid-probe.png").content,
+        () => new Worker("")
+      )
+    ).rejects.toThrow("Image frame 1 has invalid dimensions")
+    expect(invalidProbe.close).toHaveBeenCalledTimes(1)
+
+    await expect(
+      manager.load(
+        imageUrlResource("/invalid-probe.png").content,
+        () => new Worker("")
+      )
+    ).resolves.toMatchObject({
+      frames: [{ intrinsicSize: { width: 30, height: 20 } }],
+    })
+    expect(createImageBitmap).toHaveBeenCalledTimes(2)
+  })
+
+  it("does not cache TIFF loads rejected by invalid worker metadata", async () => {
+    const manager = new FrameSourceManager()
+    const workers: FakeTiffWorker[] = []
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve(
+          new Response(new ArrayBuffer(4), {
+            headers: { "content-type": "image/tiff" },
+          })
+        )
+      )
+    )
+
+    const firstLoad = manager.load(
+      imageUrlResource("/invalid-worker.tiff").content,
+      () => {
+        const worker = new FakeTiffWorker()
+        workers.push(worker)
+        return worker as unknown as Worker
+      }
+    )
+    const firstWorker = await waitForWorker(workers, 0)
+    await waitForWorkerPost(firstWorker)
+    firstWorker.emit({
+      type: "initOk",
+      frames: [{ intrinsicSize: { width: 10, height: 0 } }],
+    })
+
+    await expect(firstLoad).rejects.toThrow(
+      "Image frame 1 has invalid dimensions"
+    )
+    expect(firstWorker.terminate).toHaveBeenCalledTimes(1)
+
+    const secondLoad = manager.load(
+      imageUrlResource("/invalid-worker.tiff").content,
+      () => {
+        const worker = new FakeTiffWorker()
+        workers.push(worker)
+        return worker as unknown as Worker
+      }
+    )
+    const secondWorker = await waitForWorker(workers, 1)
+    await waitForWorkerPost(secondWorker)
+    secondWorker.emit({
+      type: "initOk",
+      frames: [{ intrinsicSize: { width: 30, height: 40 } }],
+    })
+
+    await expect(secondLoad).resolves.toMatchObject({
+      kind: "tiff",
+      frames: [{ intrinsicSize: { width: 30, height: 40 } }],
+    })
+  })
+
+  it("does not cache TIFF loads rejected by malformed worker initialization", async () => {
+    const manager = new FrameSourceManager()
+    const workers: FakeTiffWorker[] = []
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve(
+          new Response(new ArrayBuffer(4), {
+            headers: { "content-type": "image/tiff" },
+          })
+        )
+      )
+    )
+
+    const firstLoad = manager.load(
+      imageUrlResource("/malformed-worker-init.tiff").content,
+      () => {
+        const worker = new FakeTiffWorker()
+        workers.push(worker)
+        return worker as unknown as Worker
+      }
+    )
+    const firstWorker = await waitForWorker(workers, 0)
+    await waitForWorkerPost(firstWorker)
+    firstWorker.emit({ type: "initOk" } as TiffWorkerResponse)
+
+    await expect(firstLoad).rejects.toThrow(
+      "TIFF worker sent an invalid init response"
+    )
+    expect(firstWorker.terminate).toHaveBeenCalledTimes(1)
+
+    const secondLoad = manager.load(
+      imageUrlResource("/malformed-worker-init.tiff").content,
+      () => {
+        const worker = new FakeTiffWorker()
+        workers.push(worker)
+        return worker as unknown as Worker
+      }
+    )
+    const secondWorker = await waitForWorker(workers, 1)
+    await waitForWorkerPost(secondWorker)
+    secondWorker.emit({
+      type: "initOk",
+      frames: [{ intrinsicSize: { width: 30, height: 40 } }],
+    })
+
+    await expect(secondLoad).resolves.toMatchObject({
+      kind: "tiff",
+      frames: [{ intrinsicSize: { width: 30, height: 40 } }],
+    })
+  })
+
   it("disposes the source after the last lease release settles", async () => {
     vi.useFakeTimers()
     const manager = new FrameSourceManager()
     stubImageLoading()
     const source = await manager.load(
-      imageUrlResource("/lease.png"),
+      imageUrlResource("/lease.png").content,
       () => new Worker("")
     )
     const dispose = vi.spyOn(source, "dispose")
 
-    const firstLease = manager.retain(imageUrlResource("/lease.png"), source)
-    const secondLease = manager.retain(imageUrlResource("/lease.png"), source)
+    const firstLease = manager.retain(
+      imageUrlResource("/lease.png").content,
+      source
+    )
+    const secondLease = manager.retain(
+      imageUrlResource("/lease.png").content,
+      source
+    )
 
     firstLease?.release()
     expect(dispose).not.toHaveBeenCalled()
@@ -1051,18 +1503,18 @@ describe("FrameSourceManager lifecycle", () => {
     const manager = new FrameSourceManager()
     stubImageLoading()
     const source = await manager.load(
-      imageUrlResource("/lease-again.png"),
+      imageUrlResource("/lease-again.png").content,
       () => new Worker("")
     )
     const dispose = vi.spyOn(source, "dispose")
 
     const firstLease = manager.retain(
-      imageUrlResource("/lease-again.png"),
+      imageUrlResource("/lease-again.png").content,
       source
     )
     firstLease?.release()
     const secondLease = manager.retain(
-      imageUrlResource("/lease-again.png"),
+      imageUrlResource("/lease-again.png").content,
       source
     )
 
@@ -1080,12 +1532,12 @@ describe("FrameSourceManager lifecycle", () => {
     const manager = new FrameSourceManager()
     stubImageLoading()
     const source = await manager.load(
-      imageUrlResource("/duplicate-release.png"),
+      imageUrlResource("/duplicate-release.png").content,
       () => new Worker("")
     )
     const dispose = vi.spyOn(source, "dispose")
     const lease = manager.retain(
-      imageUrlResource("/duplicate-release.png"),
+      imageUrlResource("/duplicate-release.png").content,
       source
     )
 
@@ -1117,7 +1569,7 @@ describe("FrameSourceManager lifecycle", () => {
     )
 
     const load = manager.load(
-      imageUrlResource("/pending.png"),
+      imageUrlResource("/pending.png").content,
       () => new Worker("")
     )
     await Promise.resolve()
@@ -1126,6 +1578,35 @@ describe("FrameSourceManager lifecycle", () => {
 
     await expect(load).rejects.toThrow("Image source was disposed before use")
     expect(lateBitmap.close).toHaveBeenCalledTimes(1)
+  })
+
+  it("suppresses late native decode failures after being cleared", async () => {
+    const manager = new FrameSourceManager()
+    const pendingBitmap = deferred<ImageBitmap>()
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve(
+          new Response(new Uint8Array([1, 2, 3, 4]), {
+            headers: { "content-type": "image/png" },
+          })
+        )
+      )
+    )
+    vi.stubGlobal(
+      "createImageBitmap",
+      vi.fn(() => pendingBitmap.promise)
+    )
+
+    const load = manager.load(
+      imageUrlResource("/late-decode-failure.png").content,
+      () => new Worker("")
+    )
+    await Promise.resolve()
+    manager.clear()
+    pendingBitmap.reject(new Error("corrupt image"))
+
+    await expect(load).rejects.toBeInstanceOf(ImageSourceDisposedError)
   })
 
   it("cancels pending TIFF worker initialization when cleared", async () => {
@@ -1143,7 +1624,7 @@ describe("FrameSourceManager lifecycle", () => {
     )
 
     const load = manager.load(
-      imageUrlResource("/pending-init.tiff"),
+      imageUrlResource("/pending-init.tiff").content,
       () => worker as unknown as Worker
     )
     await waitForWorkerPost(worker)
@@ -1170,7 +1651,7 @@ describe("FrameSourceManager lifecycle", () => {
     )
 
     const load = manager.load(
-      imageUrlResource("/pending-sniffed"),
+      imageUrlResource("/pending-sniffed").content,
       () => worker as unknown as Worker
     )
     await waitForWorkerPost(worker)
@@ -1185,7 +1666,7 @@ describe("FrameSourceManager lifecycle", () => {
     const manager = new FrameSourceManager({ unclaimedSourceTimeoutMs: 50 })
     stubImageLoading()
     const source = await manager.load(
-      imageUrlResource("/unclaimed.png"),
+      imageUrlResource("/unclaimed.png").content,
       () => new Worker("")
     )
     const dispose = vi.spyOn(source, "dispose")
@@ -1196,7 +1677,7 @@ describe("FrameSourceManager lifecycle", () => {
 
     expect(dispose).toHaveBeenCalledTimes(1)
     const retry = manager.load(
-      imageUrlResource("/unclaimed.png"),
+      imageUrlResource("/unclaimed.png").content,
       () => new Worker("")
     )
     await expect(retry).resolves.toMatchObject({ kind: "native-image" })
@@ -1209,11 +1690,14 @@ describe("FrameSourceManager lifecycle", () => {
     const manager = new FrameSourceManager({ unclaimedSourceTimeoutMs: 50 })
     stubImageLoading()
     const source = await manager.load(
-      imageUrlResource("/claimed.png"),
+      imageUrlResource("/claimed.png").content,
       () => new Worker("")
     )
     const dispose = vi.spyOn(source, "dispose")
-    const lease = manager.retain(imageUrlResource("/claimed.png"), source)
+    const lease = manager.retain(
+      imageUrlResource("/claimed.png").content,
+      source
+    )
 
     await vi.advanceTimersByTimeAsync(50)
     expect(dispose).not.toHaveBeenCalled()
@@ -1228,7 +1712,7 @@ describe("FrameSourceManager lifecycle", () => {
     const manager = new FrameSourceManager({ unclaimedSourceTimeoutMs: 50 })
     stubImageLoading()
     const source = await manager.load(
-      imageUrlResource("/clear-unclaimed.png"),
+      imageUrlResource("/clear-unclaimed.png").content,
       () => new Worker("")
     )
     const dispose = vi.spyOn(source, "dispose")
@@ -1331,6 +1815,38 @@ describe("TiffWorkerClient", () => {
     expect(worker.posts.map((post) => post.message.type)).toEqual(["init"])
   })
 
+  it("rejects pending initialization on malformed init success messages", async () => {
+    const { worker, client } = createFakeWorkerClient()
+    const initialized = client.init(new ArrayBuffer(4))
+
+    worker.emit({ type: "initOk" } as TiffWorkerResponse)
+
+    const result = await settledPromise(initialized)
+    expect(result).toMatchObject({
+      status: "rejected",
+      reason: expect.objectContaining({
+        message: "TIFF worker sent an invalid init response",
+      }),
+    })
+    expect(worker.terminate).toHaveBeenCalledTimes(1)
+  })
+
+  it("rejects pending initialization on malformed init error messages", async () => {
+    const { worker, client } = createFakeWorkerClient()
+    const initialized = client.init(new ArrayBuffer(4))
+
+    worker.emit({ type: "initError" } as TiffWorkerResponse)
+
+    const result = await settledPromise(initialized)
+    expect(result).toMatchObject({
+      status: "rejected",
+      reason: expect.objectContaining({
+        message: "TIFF worker sent an invalid init response",
+      }),
+    })
+    expect(worker.terminate).toHaveBeenCalledTimes(1)
+  })
+
   it("posts decode requests with unique ids and resolves the matching bitmap", async () => {
     const { worker, client } = createFakeWorkerClient()
     const first = client.decode(3)
@@ -1424,6 +1940,73 @@ describe("TiffWorkerClient", () => {
     expect(worker.terminate).toHaveBeenCalledTimes(1)
   })
 
+  it("rejects pending initialization on unknown worker messages", async () => {
+    const { worker, client } = createFakeWorkerClient()
+    const initialized = client.init(new ArrayBuffer(4))
+
+    worker.emit({ type: "notARealMessage" } as unknown as TiffWorkerResponse)
+
+    const result = await settledPromise(initialized)
+    expect(result).toMatchObject({
+      status: "rejected",
+      reason: expect.objectContaining({
+        message: "TIFF worker sent an unknown message",
+      }),
+    })
+    expect(worker.terminate).toHaveBeenCalledTimes(1)
+  })
+
+  it("rejects pending decodes on unknown worker messages", async () => {
+    const { worker, client } = createFakeWorkerClient()
+    const decoded = client.decode(0)
+
+    worker.emit({ type: "notARealMessage" } as unknown as TiffWorkerResponse)
+
+    const result = await settledPromise(decoded)
+    expect(result).toMatchObject({
+      status: "rejected",
+      reason: expect.objectContaining({
+        message: "TIFF worker sent an unknown message",
+      }),
+    })
+    expect(worker.terminate).toHaveBeenCalledTimes(1)
+  })
+
+  it("rejects pending decodes on malformed decode success messages", async () => {
+    const { worker, client } = createFakeWorkerClient()
+    const decoded = client.decode(0)
+
+    worker.emit({ type: "decodeFrameOk", requestId: 0 } as TiffWorkerResponse)
+
+    const result = await settledPromise(decoded)
+    expect(result).toMatchObject({
+      status: "rejected",
+      reason: expect.objectContaining({
+        message: "TIFF worker sent an invalid decode response",
+      }),
+    })
+    expect(worker.terminate).toHaveBeenCalledTimes(1)
+  })
+
+  it("rejects pending decodes on malformed decode error messages", async () => {
+    const { worker, client } = createFakeWorkerClient()
+    const decoded = client.decode(0)
+
+    worker.emit({
+      type: "decodeFrameError",
+      message: "bad",
+    } as TiffWorkerResponse)
+
+    const result = await settledPromise(decoded)
+    expect(result).toMatchObject({
+      status: "rejected",
+      reason: expect.objectContaining({
+        message: "TIFF worker sent an invalid decode response",
+      }),
+    })
+    expect(worker.terminate).toHaveBeenCalledTimes(1)
+  })
+
   it("handles repeated worker failures idempotently", async () => {
     const { worker, client } = createFakeWorkerClient()
     const decoded = client.decode(0)
@@ -1477,6 +2060,41 @@ describe("TiffWorkerClient", () => {
 
     await expect(acquired).resolves.toBe(decodedBitmap)
     source.dispose()
+    expect(worker.terminate).toHaveBeenCalledTimes(1)
+  })
+
+  it("rejects TIFF sources with no worker-reported frames", async () => {
+    const worker = new FakeTiffWorker()
+    const sourcePromise = createTiffFrameSource(
+      new ArrayBuffer(4),
+      () => worker as unknown as Worker,
+      2
+    )
+
+    worker.emit({ type: "initOk", frames: [] })
+
+    await expect(sourcePromise).rejects.toThrow(
+      "Image does not contain any frames"
+    )
+    expect(worker.terminate).toHaveBeenCalledTimes(1)
+  })
+
+  it("rejects TIFF sources with invalid worker-reported frame dimensions", async () => {
+    const worker = new FakeTiffWorker()
+    const sourcePromise = createTiffFrameSource(
+      new ArrayBuffer(4),
+      () => worker as unknown as Worker,
+      2
+    )
+
+    worker.emit({
+      type: "initOk",
+      frames: [{ intrinsicSize: { width: 10, height: Number.NaN } }],
+    })
+
+    await expect(sourcePromise).rejects.toThrow(
+      "Image frame 1 has invalid dimensions"
+    )
     expect(worker.terminate).toHaveBeenCalledTimes(1)
   })
 })
@@ -1542,6 +2160,69 @@ describe("ImageFrame rendering lifecycle", () => {
     expect(release).toHaveBeenCalledWith(0)
   })
 
+  it("releases and closes a pending frame decode after unmount", async () => {
+    stubObservableLayout()
+    const context = stubCanvasContext()
+    const pending = deferred<ImageBitmap>()
+    const lateBitmap = bitmap(30, 20)
+    const source = createImageSourceForTests(
+      "image",
+      frameCount(1),
+      () => pending.promise
+    )
+    const release = vi.spyOn(source, "release")
+
+    const { unmount } = render(
+      <ImageFrame source={source} frameIndex={0} scale={1} rotation={0} />
+    )
+    await waitFor(() => expect(release).not.toHaveBeenCalled())
+
+    unmount()
+    pending.resolve(lateBitmap)
+
+    expect(release).toHaveBeenCalledWith(0)
+    await Promise.resolve()
+    expect(context.drawImage).not.toHaveBeenCalled()
+    expect(lateBitmap.close).toHaveBeenCalledTimes(1)
+  })
+
+  it("cancels stale pending frame decodes across canvas rerenders", async () => {
+    stubObservableLayout()
+    const context = stubCanvasContext()
+    const firstPending = deferred<ImageBitmap>()
+    const secondPending = deferred<ImageBitmap>()
+    const staleBitmap = bitmap(30, 20)
+    const currentBitmap = bitmap(30, 20)
+    const decode = vi
+      .fn<() => Promise<ImageBitmap>>()
+      .mockReturnValueOnce(firstPending.promise)
+      .mockReturnValueOnce(secondPending.promise)
+    const source = createImageSourceForTests("image", frameCount(1), decode)
+
+    const view = render(
+      <ImageFrame source={source} frameIndex={0} scale={1} rotation={0} />
+    )
+    await waitFor(() => expect(decode).toHaveBeenCalledTimes(1))
+
+    view.rerender(
+      <ImageFrame source={source} frameIndex={0} scale={2} rotation={0} />
+    )
+    await waitFor(() => expect(decode).toHaveBeenCalledTimes(2))
+    firstPending.resolve(staleBitmap)
+    secondPending.resolve(currentBitmap)
+
+    await waitFor(() => expect(context.drawImage).toHaveBeenCalledTimes(1))
+    expect(context.drawImage).toHaveBeenCalledWith(
+      currentBitmap,
+      -10,
+      -10,
+      20,
+      20
+    )
+    expect(staleBitmap.close).toHaveBeenCalledTimes(1)
+    expect(currentBitmap.close).not.toHaveBeenCalled()
+  })
+
   it("surfaces non-disposal decode failures through the image error boundary", async () => {
     stubObservableLayout()
     stubCanvasContext()
@@ -1563,10 +2244,7 @@ describe("ImageFrame rendering lifecycle", () => {
         "Image decode failed"
       )
     })
-    expect(consoleError).toHaveBeenCalledWith(
-      "Viewer failed to render.",
-      expect.any(Error)
-    )
+    expectConsoleErrorWithMessage(consoleError, "Image decode failed")
   })
 
   it("ignores source-disposal decode errors during frame teardown", async () => {
@@ -1616,10 +2294,7 @@ describe("ImageFrame rendering lifecycle", () => {
       )
     })
     expect(context.restore).toHaveBeenCalledTimes(1)
-    expect(consoleError).toHaveBeenCalledWith(
-      "Viewer failed to render.",
-      expect.any(Error)
-    )
+    expectConsoleErrorWithMessage(consoleError, "Image decode failed")
   })
 })
 
@@ -1665,6 +2340,66 @@ describe("ImageViewer scale semantics", () => {
           element.textContent === "300%"
       )
     ).toBeTruthy()
+  })
+
+  it("normalizes invalid controlled scale values before rendering frame geometry", async () => {
+    stubImageLoading(bitmap(100, 50))
+    stubObservableLayout({ frameListWidth: 432, isIntersecting: false })
+
+    await act(async () => {
+      render(
+        <ImageViewer
+          source={imageUrlSource("/invalid-controlled-scale.png")}
+          scale={Number.NaN}
+          renderFrameOverlay={({ width, height, scale }) => (
+            <div
+              data-testid="invalid-scale-overlay"
+              data-height={height}
+              data-scale={scale}
+              data-width={width}
+            />
+          )}
+        />
+      )
+    })
+
+    const overlay = await screen.findByTestId("invalid-scale-overlay")
+    expect(overlay.getAttribute("data-scale")).toBe("0.25")
+    expect(overlay.getAttribute("data-width")).toBe("25")
+    expect(overlay.getAttribute("data-height")).toBe("12.5")
+    expect(screen.getByText("25%")).toBeTruthy()
+  })
+
+  it.each([
+    ["zero", 0],
+    ["negative", -2],
+    ["infinite", Number.POSITIVE_INFINITY],
+  ])("normalizes %s controlled scale values", async (_label, scale) => {
+    stubImageLoading(bitmap(100, 50))
+    stubObservableLayout({ frameListWidth: 432, isIntersecting: false })
+
+    await act(async () => {
+      render(
+        <ImageViewer
+          source={imageUrlSource(`/invalid-${_label}-scale.png`)}
+          scale={scale}
+          renderFrameOverlay={({ width, height, scale }) => (
+            <div
+              data-testid="invalid-scale-overlay"
+              data-height={height}
+              data-scale={scale}
+              data-width={width}
+            />
+          )}
+        />
+      )
+    })
+
+    const overlay = await screen.findByTestId("invalid-scale-overlay")
+    expect(overlay.getAttribute("data-scale")).toBe("0.25")
+    expect(overlay.getAttribute("data-width")).toBe("25")
+    expect(overlay.getAttribute("data-height")).toBe("12.5")
+    expect(screen.getByText("25%")).toBeTruthy()
   })
 
   it("keeps scale uncontrolled when the prop is absent", async () => {
@@ -1740,7 +2475,7 @@ describe("ImageViewer interactions", () => {
     stubImageLoading(bitmap(20, 20))
     stubObservableLayout({ isIntersecting: false })
     const resource = imageUrlResource("/viewer-lease.png")
-    const source = await getImageSource(resource)
+    const source = await getImageSource(resource.content)
     const dispose = vi.spyOn(source, "dispose")
 
     let view!: RenderResult
@@ -1754,6 +2489,106 @@ describe("ImageViewer interactions", () => {
     view.unmount()
 
     await waitFor(() => expect(dispose).toHaveBeenCalledTimes(1))
+  })
+
+  it("keeps the retained source when only URL presentation metadata changes", async () => {
+    stubImageLoading(bitmap(20, 20))
+    stubObservableLayout({ isIntersecting: false })
+    const firstSource = {
+      kind: "url" as const,
+      url: "/same-viewer-image.png",
+      fileName: "first-name.png",
+      downloadUrl: "/downloads/first-name.png",
+    }
+    const secondSource = {
+      kind: "url" as const,
+      url: "/same-viewer-image.png",
+      fileName: "second-name.png",
+      downloadUrl: "/downloads/second-name.png",
+    }
+    const source = await getImageSource(
+      createViewerResource(firstSource).content
+    )
+    const dispose = vi.spyOn(source, "dispose")
+
+    let view!: RenderResult
+    await act(async () => {
+      view = render(<ImageViewer source={firstSource} />)
+    })
+    expect(await screen.findByText("1 image")).toBeTruthy()
+
+    await act(async () => {
+      view.rerender(<ImageViewer source={secondSource} />)
+    })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(dispose).not.toHaveBeenCalled()
+
+    view.unmount()
+    await waitFor(() => expect(dispose).toHaveBeenCalledTimes(1))
+  })
+
+  it("updates download metadata when URL presentation metadata changes", async () => {
+    stubImageLoading(bitmap(20, 20))
+    stubObservableLayout({ isIntersecting: false })
+    const firstSource = {
+      kind: "url" as const,
+      url: "/download-same-image.png",
+      fileName: "first-name.png",
+      downloadUrl: "/downloads/first-name.png",
+    }
+    const secondSource = {
+      kind: "url" as const,
+      url: "/download-same-image.png",
+      fileName: "second-name.png",
+      downloadUrl: "/downloads/second-name.png",
+    }
+
+    let view!: RenderResult
+    await act(async () => {
+      view = render(<ImageViewer source={firstSource} />)
+    })
+
+    let download = await screen.findByRole("link", { name: "Download" })
+    expect(download.getAttribute("href")).toBe("/downloads/first-name.png")
+    expect(download.getAttribute("download")).toBe("first-name.png")
+
+    await act(async () => {
+      view.rerender(<ImageViewer source={secondSource} />)
+    })
+
+    download = screen.getByRole("link", { name: "Download" })
+    expect(download.getAttribute("href")).toBe("/downloads/second-name.png")
+    expect(download.getAttribute("download")).toBe("second-name.png")
+  })
+
+  it("renders header and aside slots while allowing the toolbar to be hidden", async () => {
+    stubImageLoading(bitmap(20, 20))
+    stubObservableLayout({ isIntersecting: false })
+
+    let view!: RenderResult
+    await act(async () => {
+      view = render(
+        <ImageViewer
+          source={imageUrlSource("/slotted.png")}
+          toolbar={false}
+          header={<div>Image header</div>}
+          aside={<nav>Image rail</nav>}
+        />
+      )
+    })
+    const { container } = view
+
+    expect(await screen.findByText("Image header")).toBeTruthy()
+    expect(screen.getByText("Image rail")).toBeTruthy()
+    expect(screen.queryByLabelText("Zoom in")).toBeNull()
+    expect(
+      container.querySelector('[data-slot="image-viewer-header"]')?.textContent
+    ).toBe("Image header")
+    expect(
+      container.querySelector('[data-slot="image-viewer-aside"]')?.textContent
+    ).toBe("Image rail")
+    expect(container.querySelector('[data-frame-number="1"]')).toBeTruthy()
   })
 
   it("clamps uncontrolled zoom and restores fit-width scale", async () => {
@@ -1831,6 +2666,45 @@ describe("ImageViewer interactions", () => {
     expect(screen.getByText("100%")).toBeTruthy()
   })
 
+  it("keeps controlled scale fixed while rotating frame geometry", async () => {
+    stubImageLoading(bitmap(100, 200))
+    stubObservableLayout({ frameListWidth: 232, isIntersecting: false })
+
+    await act(async () => {
+      render(
+        <ImageViewer
+          source={imageUrlSource("/controlled-rotate-overlay.png")}
+          scale={2}
+          renderFrameOverlay={({ width, height, rotation, scale }) => (
+            <div
+              data-testid="controlled-image-overlay"
+              data-height={height}
+              data-rotation={rotation}
+              data-scale={scale}
+              data-width={width}
+            />
+          )}
+        />
+      )
+    })
+
+    const overlay = await screen.findByTestId("controlled-image-overlay")
+    expect(overlay.getAttribute("data-width")).toBe("200")
+    expect(overlay.getAttribute("data-height")).toBe("400")
+    expect(overlay.getAttribute("data-scale")).toBe("2")
+    expect(screen.getByText("200%")).toBeTruthy()
+
+    await act(async () => {
+      fireEvent.click(screen.getByLabelText("Rotate"))
+    })
+
+    expect(overlay.getAttribute("data-width")).toBe("400")
+    expect(overlay.getAttribute("data-height")).toBe("200")
+    expect(overlay.getAttribute("data-scale")).toBe("2")
+    expect(overlay.getAttribute("data-rotation")).toBe("90")
+    expect(screen.getByText("200%")).toBeTruthy()
+  })
+
   it("reports scroll progress and the frame under the viewport marker", async () => {
     stubObservableLayout({ isIntersecting: false })
     stubTiffMetadataLoading([
@@ -1881,6 +2755,150 @@ describe("ImageViewer interactions", () => {
     expect(onScrollProgressChange).toHaveBeenCalledWith(0.5)
     expect(onVisibleFrameChange).toHaveBeenCalledWith(2)
     await waitFor(() => expect(screen.getByText("Page 2 of 3")).toBeTruthy())
+  })
+
+  it("falls back to frame bounding boxes when elementsFromPoint is unavailable", async () => {
+    stubObservableLayout({ isIntersecting: false })
+    stubTiffMetadataLoading([
+      { width: 100, height: 100 },
+      { width: 100, height: 100 },
+      { width: 100, height: 100 },
+    ])
+    const onScrollProgressChange = vi.fn()
+    const onVisibleFrameChange = vi.fn()
+
+    let view!: RenderResult
+    await act(async () => {
+      view = render(
+        <ImageViewer
+          source={imageUrlSource("/fallback-visible-frame.tiff")}
+          onScrollProgressChange={onScrollProgressChange}
+          onVisibleFrameChange={onVisibleFrameChange}
+        />
+      )
+    })
+    const { container } = view
+
+    expect(await screen.findByText("Page 1 of 3")).toBeTruthy()
+    const viewport = container.querySelector(
+      '[data-slot="scroll-area-viewport"]'
+    ) as HTMLElement
+    const frames = Array.from(
+      container.querySelectorAll<HTMLElement>("[data-frame-number]")
+    )
+    viewport.getBoundingClientRect = vi.fn(
+      () =>
+        ({
+          top: 0,
+          left: 0,
+          width: 300,
+          height: 200,
+          right: 300,
+          bottom: 200,
+        }) as DOMRect
+    )
+    Object.defineProperty(viewport, "clientHeight", {
+      configurable: true,
+      value: 200,
+    })
+    Object.defineProperty(viewport, "scrollHeight", {
+      configurable: true,
+      value: 200,
+    })
+    Object.defineProperty(document, "elementsFromPoint", {
+      configurable: true,
+      value: undefined,
+    })
+    frames[0].getBoundingClientRect = vi.fn(() => ({ top: -80 }) as DOMRect)
+    frames[1].getBoundingClientRect = vi.fn(() => ({ top: 20 }) as DOMRect)
+    frames[2].getBoundingClientRect = vi.fn(() => ({ top: 140 }) as DOMRect)
+
+    await act(async () => {
+      fireEvent.scroll(viewport)
+    })
+
+    expect(onScrollProgressChange).toHaveBeenCalledWith(0)
+    expect(onVisibleFrameChange).toHaveBeenCalledWith(2)
+    await waitFor(() => expect(screen.getByText("Page 2 of 3")).toBeTruthy())
+  })
+
+  it("does not let overlay data attributes spoof visible frame detection", async () => {
+    stubObservableLayout({ isIntersecting: false })
+    stubTiffMetadataLoading([{ width: 100, height: 100 }])
+    const onVisibleFrameChange = vi.fn()
+
+    let view!: RenderResult
+    await act(async () => {
+      view = render(
+        <ImageViewer
+          source={imageUrlSource("/overlay-frame-spoof.tiff")}
+          onVisibleFrameChange={onVisibleFrameChange}
+          renderFrameOverlay={() => (
+            <div data-testid="spoof-overlay" data-frame-number="99" />
+          )}
+        />
+      )
+    })
+    const { container } = view
+
+    expect(await screen.findByText("Page 1 of 1")).toBeTruthy()
+    const viewport = container.querySelector(
+      '[data-slot="scroll-area-viewport"]'
+    ) as HTMLElement
+    const overlay = screen.getByTestId("spoof-overlay")
+    Object.defineProperty(document, "elementsFromPoint", {
+      configurable: true,
+      value: vi.fn(() => [overlay]),
+    })
+
+    await act(async () => {
+      fireEvent.scroll(viewport)
+    })
+
+    expect(onVisibleFrameChange).toHaveBeenCalledWith(1)
+    expect(onVisibleFrameChange).not.toHaveBeenCalledWith(99)
+  })
+
+  it("clamps reported scroll progress to the documented range", async () => {
+    stubObservableLayout({ isIntersecting: false })
+    stubTiffMetadataLoading([{ width: 100, height: 100 }])
+    const onScrollProgressChange = vi.fn()
+
+    let view!: RenderResult
+    await act(async () => {
+      view = render(
+        <ImageViewer
+          source={imageUrlSource("/scroll-progress-clamp.tiff")}
+          onScrollProgressChange={onScrollProgressChange}
+        />
+      )
+    })
+    const { container } = view
+
+    expect(await screen.findByText("Page 1 of 1")).toBeTruthy()
+    const viewport = container.querySelector(
+      '[data-slot="scroll-area-viewport"]'
+    ) as HTMLElement
+    Object.defineProperty(viewport, "clientHeight", {
+      configurable: true,
+      value: 100,
+    })
+    Object.defineProperty(viewport, "scrollHeight", {
+      configurable: true,
+      value: 300,
+    })
+
+    viewport.scrollTop = -20
+    await act(async () => {
+      fireEvent.scroll(viewport)
+    })
+    viewport.scrollTop = 250
+    await act(async () => {
+      fireEvent.scroll(viewport)
+    })
+
+    expect(onScrollProgressChange).toHaveBeenNthCalledWith(1, 0)
+    expect(onScrollProgressChange).toHaveBeenNthCalledWith(2, 1)
   })
 
   it("exposes the scroll viewport and scrolls to frame areas through its ref", async () => {
@@ -1945,6 +2963,181 @@ describe("ImageViewer interactions", () => {
     expect(scrollTo).toHaveBeenCalledWith({ top: 372, behavior: "auto" })
   })
 
+  it("clamps imperative frame-area scrolling and ignores missing frames", async () => {
+    stubObservableLayout({ isIntersecting: false })
+    stubTiffMetadataLoading([{ width: 100, height: 100 }])
+    const ref = React.createRef<ImageViewerHandle>()
+
+    let view!: RenderResult
+    await act(async () => {
+      view = render(
+        <ImageViewer
+          ref={ref}
+          source={imageUrlSource("/imperative-clamp.tiff")}
+        />
+      )
+    })
+    const { container } = view
+
+    expect(await screen.findByText("Page 1 of 1")).toBeTruthy()
+    const viewport = container.querySelector(
+      '[data-slot="scroll-area-viewport"]'
+    ) as HTMLElement
+    const firstFrame = container.querySelector(
+      '[data-frame-number="1"]'
+    ) as HTMLElement
+    const scrollTo = vi.fn()
+    viewport.scrollTop = 0
+    viewport.scrollTo = scrollTo
+    viewport.getBoundingClientRect = vi.fn(
+      () =>
+        ({
+          top: 100,
+          left: 0,
+          width: 300,
+          height: 250,
+          right: 300,
+          bottom: 350,
+        }) as DOMRect
+    )
+    firstFrame.getBoundingClientRect = vi.fn(
+      () =>
+        ({
+          top: 110,
+          left: 0,
+          width: 100,
+          height: 100,
+          right: 100,
+          bottom: 210,
+        }) as DOMRect
+    )
+
+    act(() => {
+      ref.current?.scrollToFrameArea(1, { top: 0 }, { behavior: "auto" })
+      ref.current?.scrollToFrameArea(99, { top: 0 }, { behavior: "auto" })
+    })
+
+    expect(scrollTo).toHaveBeenCalledTimes(1)
+    expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: "auto" })
+  })
+
+  it("normalizes imperative frame-area percentages before scrolling", async () => {
+    stubObservableLayout({ isIntersecting: false })
+    stubTiffMetadataLoading([{ width: 100, height: 100 }])
+    const ref = React.createRef<ImageViewerHandle>()
+
+    let view!: RenderResult
+    await act(async () => {
+      view = render(
+        <ImageViewer
+          ref={ref}
+          source={imageUrlSource("/imperative-normalize.tiff")}
+        />
+      )
+    })
+    const { container } = view
+
+    expect(await screen.findByText("Page 1 of 1")).toBeTruthy()
+    const viewport = container.querySelector(
+      '[data-slot="scroll-area-viewport"]'
+    ) as HTMLElement
+    const firstFrame = container.querySelector(
+      '[data-frame-number="1"]'
+    ) as HTMLElement
+    const scrollTo = vi.fn()
+    viewport.scrollTop = 0
+    viewport.scrollTo = scrollTo
+    viewport.getBoundingClientRect = vi.fn(
+      () =>
+        ({
+          top: 100,
+          left: 0,
+          width: 300,
+          height: 250,
+          right: 300,
+          bottom: 350,
+        }) as DOMRect
+    )
+    firstFrame.getBoundingClientRect = vi.fn(
+      () =>
+        ({
+          top: 110,
+          left: 0,
+          width: 100,
+          height: 100,
+          right: 100,
+          bottom: 210,
+        }) as DOMRect
+    )
+
+    act(() => {
+      ref.current?.scrollToFrameArea(1, { top: Number.NaN })
+      ref.current?.scrollToFrameArea(1, { top: 250 }, { behavior: "auto" })
+    })
+
+    expect(scrollTo).toHaveBeenCalledTimes(1)
+    expect(scrollTo).toHaveBeenCalledWith({ top: 62, behavior: "auto" })
+  })
+
+  it("does not let overlay data attributes spoof imperative frame targets", async () => {
+    stubObservableLayout({ isIntersecting: false })
+    stubTiffMetadataLoading([{ width: 100, height: 100 }])
+    const ref = React.createRef<ImageViewerHandle>()
+
+    let view!: RenderResult
+    await act(async () => {
+      view = render(
+        <ImageViewer
+          ref={ref}
+          source={imageUrlSource("/imperative-overlay-spoof.tiff")}
+          renderFrameOverlay={() => (
+            <div
+              data-testid="imperative-spoof-overlay"
+              data-frame-number="99"
+            />
+          )}
+        />
+      )
+    })
+    const { container } = view
+
+    expect(await screen.findByText("Page 1 of 1")).toBeTruthy()
+    const viewport = container.querySelector(
+      '[data-slot="scroll-area-viewport"]'
+    ) as HTMLElement
+    const overlay = screen.getByTestId("imperative-spoof-overlay")
+    const scrollTo = vi.fn()
+    viewport.scrollTo = scrollTo
+    viewport.getBoundingClientRect = vi.fn(
+      () =>
+        ({
+          top: 100,
+          left: 0,
+          width: 300,
+          height: 250,
+          right: 300,
+          bottom: 350,
+        }) as DOMRect
+    )
+    overlay.getBoundingClientRect = vi.fn(
+      () =>
+        ({
+          top: 120,
+          left: 0,
+          width: 20,
+          height: 20,
+          right: 20,
+          bottom: 140,
+        }) as DOMRect
+    )
+
+    act(() => {
+      ref.current?.scrollToFrameArea(99, { top: 50 }, { behavior: "auto" })
+    })
+
+    expect(scrollTo).not.toHaveBeenCalled()
+  })
+
   it("resets the image error boundary when the reset key changes", () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {})
 
@@ -1960,10 +3153,7 @@ describe("ImageViewer interactions", () => {
     )
 
     expect(screen.getByText("Couldn't load this image.")).toBeTruthy()
-    expect(consoleError).toHaveBeenCalledWith(
-      "Viewer failed to render.",
-      expect.any(Error)
-    )
+    expectConsoleErrorWithMessage(consoleError, "first source failed")
 
     view.rerender(
       <ViewerErrorBoundary format="image" resetKey="healthy">
@@ -1995,10 +3185,7 @@ describe("ImageViewer error fallback", () => {
     expect(fallback.textContent).toContain("Couldn't load this image.")
     expect(fallback.getAttribute("data-slot")).toBe("viewer-error")
     expect(fallback.getAttribute("data-error-message")).toBe("decode exploded")
-    expect(consoleError).toHaveBeenCalledWith(
-      "Viewer failed to render.",
-      expect.any(Error)
-    )
+    expectConsoleErrorWithMessage(consoleError, "decode exploded")
   })
 })
 

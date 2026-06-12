@@ -9,30 +9,41 @@ export function HeaderAwareScrollbar({
   scrollRef: React.RefObject<HTMLDivElement | null>
   headerHeight: number
 }) {
+  const scrollElement = useResolvedScrollbarElement(scrollRef)
   const [thumb, setThumb] = React.useState({ height: 0, top: 0, show: false })
   const drag = React.useRef<{ y: number; scroll: number } | null>(null)
   const frame = React.useRef(0)
 
   const measure = React.useCallback(() => {
     frame.current = 0
-    const scrollElement = scrollRef.current
     if (!scrollElement) return
     const { scrollHeight, clientHeight, scrollTop } = scrollElement
+    if (
+      !Number.isFinite(scrollHeight) ||
+      !Number.isFinite(clientHeight) ||
+      !Number.isFinite(scrollTop) ||
+      !Number.isFinite(headerHeight)
+    ) {
+      hideThumb(setThumb)
+      return
+    }
     const track = clientHeight - headerHeight
     if (scrollHeight <= clientHeight + 1 || track <= 0) {
-      setThumb((current) =>
-        current.show ? { ...current, show: false } : current
-      )
+      hideThumb(setThumb)
       return
     }
     const height = Math.max(28, (clientHeight / scrollHeight) * track)
     const maxScroll = scrollHeight - clientHeight
-    const top = maxScroll > 0 ? (scrollTop / maxScroll) * (track - height) : 0
+    const maxTop = track - height
+    const top =
+      maxScroll > 0
+        ? clampScrollTop((scrollTop / maxScroll) * maxTop, maxTop)
+        : 0
     setThumb((current) => {
       const next = { height, top, show: true }
       return thumbEqual(current, next) ? current : next
     })
-  }, [scrollRef, headerHeight])
+  }, [scrollElement, headerHeight])
 
   const scheduleMeasure = React.useCallback(() => {
     if (frame.current) return
@@ -40,31 +51,31 @@ export function HeaderAwareScrollbar({
   }, [measure])
 
   React.useEffect(() => {
-    const scrollElement = scrollRef.current
     if (!scrollElement) return
     measure()
     scrollElement.addEventListener("scroll", scheduleMeasure, {
       passive: true,
     })
-    const observer = new ResizeObserver(scheduleMeasure)
-    observer.observe(scrollElement)
+    const observer =
+      typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(scheduleMeasure)
+        : null
+    observer?.observe(scrollElement)
     return () => {
       if (frame.current) cancelAnimationFrame(frame.current)
       scrollElement.removeEventListener("scroll", scheduleMeasure)
-      observer.disconnect()
+      observer?.disconnect()
     }
-  }, [scrollRef, measure, scheduleMeasure])
+  }, [scrollElement, measure, scheduleMeasure])
 
   const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
-    const scrollElement = scrollRef.current
     if (!scrollElement) return
     event.preventDefault()
     drag.current = { y: event.clientY, scroll: scrollElement.scrollTop }
-    event.currentTarget.setPointerCapture(event.pointerId)
+    event.currentTarget.setPointerCapture?.(event.pointerId)
   }
 
   const onPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
-    const scrollElement = scrollRef.current
     const currentDrag = drag.current
     if (!scrollElement || !currentDrag) return
     const track = scrollElement.clientHeight - headerHeight
@@ -75,9 +86,11 @@ export function HeaderAwareScrollbar({
     const denominator = track - height
     if (denominator <= 0) return
     const maxScroll = scrollElement.scrollHeight - scrollElement.clientHeight
-    scrollElement.scrollTop =
+    scrollElement.scrollTop = clampScrollTop(
       currentDrag.scroll +
-      ((event.clientY - currentDrag.y) / denominator) * maxScroll
+        ((event.clientY - currentDrag.y) / denominator) * maxScroll,
+      maxScroll
+    )
   }
 
   const endDrag = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -102,6 +115,35 @@ export function HeaderAwareScrollbar({
       />
     </div>
   )
+}
+
+function useResolvedScrollbarElement(
+  scrollRef: React.RefObject<HTMLDivElement | null>
+) {
+  const [scrollElement, setScrollElement] = React.useState(scrollRef.current)
+
+  React.useLayoutEffect(() => {
+    const nextScrollElement = scrollRef.current
+    if (scrollElement !== nextScrollElement) {
+      setScrollElement(nextScrollElement)
+    }
+  })
+
+  return scrollElement
+}
+
+function hideThumb(
+  setThumb: React.Dispatch<
+    React.SetStateAction<{ height: number; top: number; show: boolean }>
+  >
+) {
+  setThumb((current) => (current.show ? { ...current, show: false } : current))
+}
+
+function clampScrollTop(value: number, maxScroll: number) {
+  if (!Number.isFinite(value)) return 0
+  if (!Number.isFinite(maxScroll) || maxScroll <= 0) return 0
+  return Math.min(maxScroll, Math.max(0, value))
 }
 
 function thumbEqual(

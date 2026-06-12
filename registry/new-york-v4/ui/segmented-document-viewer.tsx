@@ -3,7 +3,11 @@
 import * as React from "react"
 
 import { type SegmentInteraction } from "@/lib/segment-interaction"
-import { segmentsPageCount, type Segment } from "@/lib/segments"
+import {
+  firstSegmentPage,
+  segmentsPageCount,
+  type Segment,
+} from "@/lib/segments"
 import { cn } from "@/lib/utils"
 import { PageTimeline } from "@/components/ui/page-timeline"
 import { PdfViewer } from "@/components/ui/pdf-viewer"
@@ -72,7 +76,8 @@ export function SegmentedDocumentViewer({
             currentPage={currentPage}
             interaction={interaction}
             onSelect={(segment) => {
-              if (segment.pages.length) jumpToPage(segment.pages[0])
+              const page = firstSegmentPage(segment.pages)
+              if (page != null) jumpToPage(page)
             }}
             columns={4}
             showUnusedToggle
@@ -85,9 +90,10 @@ export function SegmentedDocumentViewer({
               interaction={interaction}
               currentPage={currentPage}
               unitLabel={unitLabel}
-              onSelect={(segment) =>
-                segment.pages.length && jumpToPage(segment.pages[0])
-              }
+              onSelect={(segment) => {
+                const page = firstSegmentPage(segment.pages)
+                if (page != null) jumpToPage(page)
+              }}
               className="h-full"
             />
           </aside>

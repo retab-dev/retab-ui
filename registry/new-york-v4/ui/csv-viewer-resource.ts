@@ -1,13 +1,19 @@
 import type { CsvDialect, CsvTable } from "@/lib/csv"
-import type { ViewerResource } from "@/lib/viewer-resource"
+import type {
+  ViewerContentPayload,
+  ViewerContentStream,
+  ViewerResource,
+} from "@/lib/viewer-resource"
 import type {
   BlobViewerSource,
   TextSource,
   UrlViewerSource,
 } from "@/lib/viewer-source"
 
+export type CsvContent = ViewerContentPayload & ViewerContentStream
+
 export type CsvResource =
-  | { kind: "resource"; resource: ViewerResource }
+  | { kind: "resource"; content: CsvContent }
   | { kind: "text"; text: string }
   | { kind: "table"; table: CsvTable; fileName?: string }
   | { kind: "empty" }
@@ -47,11 +53,10 @@ export function resolveCsvResource({
     }
   }
   if (resource) {
-    const inlineText = resource.getInlineText()
-    if (inlineText !== null) {
-      return { kind: "text", text: inlineText }
+    if (resource.content.payload.kind === "text") {
+      return { kind: "text", text: resource.content.payload.text }
     }
-    return { kind: "resource", resource }
+    return { kind: "resource", content: resource.content }
   }
   return { kind: "empty" }
 }

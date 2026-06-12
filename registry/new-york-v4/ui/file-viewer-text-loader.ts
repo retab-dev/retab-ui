@@ -1,10 +1,16 @@
+import type {
+  ViewerContentBytes,
+  ViewerContentIdentity,
+  ViewerContentRange,
+} from "@/lib/viewer-resource"
+
+import { timed } from "./file-viewer-core"
 import {
   isAbortError,
   subscribeToAbortableRequest,
   type SharedAbortableRequest,
-} from "./file-viewer-async"
-import { baseName, timed } from "./file-viewer-core"
-import { lruGet, lruSet } from "./file-viewer-resource-cache"
+} from "./viewer-abortable-request"
+import { lruGet, lruSet } from "./viewer-lru-cache"
 
 const TEXT_PAGE_BYTES = 512 * 1024
 
@@ -21,9 +27,14 @@ interface TextLoaderState extends TextSnapshot {
 
 export type TextLoadMode = "stream" | "full"
 
+export type TextLoaderContent = ViewerContentIdentity &
+  ViewerContentBytes &
+  ViewerContentRange
+
 export interface TextSubscription {
   textKey: string
-  src: string
+  content: TextLoaderContent
+  fileName: string
   mode: TextLoadMode
   signal: AbortSignal
 }
@@ -43,8 +54,11 @@ interface RangeResult {
   total: number | null
 }
 
-export function textKeyForFile(src: string, mode: TextLoadMode): string {
-  return `${mode}\u0000${src}`
+export function textKeyForContent(
+  content: ViewerContentIdentity,
+  mode: TextLoadMode
+): string {
+  return `${mode}\u0000${content.key}`
 }
 
 export function isSameTextView(
@@ -63,30 +77,18 @@ function snapshotOf(loader: TextLoaderState): TextSnapshot {
   }
 }
 
-async function fetchRange(
-  src: string,
+async function readRange(
+  content: ViewerContentRange,
   start: number,
   end: number,
   signal: AbortSignal
 ): Promise<RangeResult> {
-  const res = await fetch(src, {
-    headers: { Range: `bytes=${start}-${end}` },
-    signal,
-  })
-  if (res.status === 416)
-    return { buf: new ArrayBuffer(0), whole: false, total: null }
-  if (!res.ok) throw new Error(`Failed to load file: ${res.status}`)
-  const buf = await res.arrayBuffer()
-  let total: number | null = null
-  const contentRange = res.headers.get("content-range")
-  if (contentRange) {
-    const m = contentRange.match(/\/(\d+)\s*$/)
-    if (m) total = Number(m[1])
-  } else {
-    const len = Number(res.headers.get("content-length"))
-    if (Number.isFinite(len) && len > 0) total = len
+  const result = await content.readRange({ start, end }, { signal })
+  return {
+    buf: result.buffer,
+    whole: result.isComplete && start === 0,
+    total: result.contentRange?.total ?? null,
   }
-  return { buf, whole: res.status === 200, total }
 }
 
 export function createTextLoader(maxEntries = 12): TextLoader {
@@ -112,12 +114,12 @@ export function createTextLoader(maxEntries = 12): TextLoader {
       subscriberPromises: new WeakMap(),
       subscribers: new Set(),
       settled: false,
-      promise: timed(`text:first-chunk ${baseName(sub.src)}`, async () => {
+      promise: timed(`text:first-chunk ${sub.fileName}`, async () => {
         const decoder = new TextDecoder()
         if (sub.mode === "full") {
-          const res = await fetch(sub.src, { signal: controller.signal })
-          if (!res.ok) throw new Error(`Failed to load file: ${res.status}`)
-          const buf = await res.arrayBuffer()
+          const buf = await sub.content.readBytes({
+            signal: controller.signal,
+          })
           const text = decoder.decode(buf)
           const bytesLoaded = buf.byteLength
           const loader: TextLoaderState = {
@@ -131,8 +133,8 @@ export function createTextLoader(maxEntries = 12): TextLoader {
           return snapshotOf(loader)
         }
 
-        const { buf, whole, total } = await fetchRange(
-          sub.src,
+        const { buf, whole, total } = await readRange(
+          sub.content,
           0,
           TEXT_PAGE_BYTES - 1,
           controller.signal
@@ -197,8 +199,8 @@ export function createTextLoader(maxEntries = 12): TextLoader {
         }
 
         const start = loader.bytesLoaded
-        const { buf, total } = await fetchRange(
-          sub.src,
+        const { buf, total } = await readRange(
+          sub.content,
           start,
           start + TEXT_PAGE_BYTES - 1,
           controller.signal

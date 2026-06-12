@@ -2,11 +2,11 @@ import { mapPreserve } from "@/components/schema-editor/document/array"
 import { updateNode } from "@/components/schema-editor/document/node-update"
 import type {
   DocumentNode,
-  EnumValue,
   SchemaDocument,
 } from "@/components/schema-editor/document/types"
 
 const SCHEMA_VALUE_REST_KEYS = new Set([
+  "additionalItems",
   "additionalProperties",
   "allOf",
   "anyOf",
@@ -19,6 +19,7 @@ const SCHEMA_VALUE_REST_KEYS = new Set([
   "prefixItems",
   "propertyNames",
   "then",
+  "unevaluatedItems",
   "unevaluatedProperties",
 ])
 
@@ -26,6 +27,7 @@ const SCHEMA_MAP_REST_KEYS = new Set([
   "$defs",
   "definitions",
   "dependentSchemas",
+  "dependencies",
   "patternProperties",
   "properties",
 ])
@@ -78,11 +80,6 @@ function stripNodeDescription(node: DocumentNode): DocumentNode {
     if (properties !== next.properties) next = { ...next, properties }
   }
 
-  if (next.enum) {
-    const enumEntries = mapPreserve(next.enum, stripEnumValueDescription)
-    if (enumEntries !== next.enum) next = { ...next, enum: enumEntries }
-  }
-
   const rest = stripRestDescriptionKeywords(next.rest)
   if (rest !== next.rest) next = { ...next, rest }
 
@@ -101,12 +98,6 @@ function stripNodeDescription(node: DocumentNode): DocumentNode {
   return next
 }
 
-function stripEnumValueDescription(entry: EnumValue): EnumValue {
-  return entry.description === undefined
-    ? entry
-    : { ...entry, description: undefined }
-}
-
 function stripRestDescriptionKeywords(
   rest: Record<string, unknown>
 ): Record<string, unknown> {
@@ -121,7 +112,7 @@ function stripRestDescriptionKeywords(
 
     if (stripped !== value) {
       if (next === rest) next = { ...rest }
-      next[key] = stripped
+      setRecordValue(next, key, stripped)
     }
   }
 
@@ -136,7 +127,7 @@ function stripSchemaMapDescriptions(value: unknown): unknown {
     const stripped = stripSchemaDescription(child)
     if (stripped !== child) {
       if (next === value) next = { ...value }
-      next[key] = stripped
+      setRecordValue(next, key, stripped)
     }
   }
 
@@ -165,7 +156,7 @@ function stripSchemaDescription(value: unknown): unknown {
 
     if (stripped !== child) {
       if (next === value) next = { ...value }
-      next[key] = stripped
+      setRecordValue(next, key, stripped)
     }
   }
 
@@ -174,4 +165,17 @@ function stripSchemaDescription(value: unknown): unknown {
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)
+}
+
+function setRecordValue<T>(
+  record: Record<string, T>,
+  key: string,
+  value: T
+) {
+  Object.defineProperty(record, key, {
+    value,
+    enumerable: true,
+    configurable: true,
+    writable: true,
+  })
 }

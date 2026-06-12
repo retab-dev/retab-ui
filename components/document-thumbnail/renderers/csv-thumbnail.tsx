@@ -8,18 +8,25 @@ import {
   CSV_THUMBNAIL_MAX_COLUMNS,
   CSV_THUMBNAIL_MAX_ROWS,
   getThumbnailText,
+  thumbnailFileMeta,
   useThumbnailResource,
 } from "@/components/document-thumbnail/cache"
 import { GridTable } from "@/components/document-thumbnail/renderers/layout"
 
 export function CsvFirstRows({
   resource,
-  cacheKey,
+  thumbnailKey,
 }: {
   resource: ViewerResource
-  cacheKey: string
+  thumbnailKey: string
 }) {
-  const raw = useThumbnailResource(getThumbnailText(resource, cacheKey))
+  const raw = useThumbnailResource(
+    getThumbnailText(
+      thumbnailFileMeta(resource),
+      resource.content,
+      thumbnailKey
+    )
+  )
   const rows = React.useMemo(() => {
     const dialect = inferCsvDialect({
       fileName: resource.fileName,

@@ -17,9 +17,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
+export interface TriggerViewerDownloadOptions {
+  signal?: AbortSignal
+}
+
 export async function triggerViewerDownload(
   action: ViewerDownloadAction,
-  options?: { signal?: AbortSignal }
+  options?: TriggerViewerDownloadOptions
 ): Promise<void> {
   if (action.isDisabled) {
     throw new ViewerDownloadError({
@@ -51,28 +55,81 @@ export async function triggerViewerDownload(
 
   if (payload.kind === "none") return
   if (payload.kind === "href") {
-    clickDownload(payload.href, action.fileName)
+    try {
+      clickDownload(payload.href, action.fileName)
+    } catch (error) {
+      throw new ViewerDownloadError({
+        actionId: action.id,
+        kind: "unsupported",
+        message: "Could not start this download.",
+        cause: error,
+      })
+    }
     return
   }
 
-  const blob =
-    payload.kind === "blob"
-      ? payload.blob
-      : new Blob([payload.text], {
-          type: payload.mimeType ?? "text/plain;charset=utf-8",
-        })
-  const url = URL.createObjectURL(blob)
   try {
-    clickDownload(url, action.fileName)
-  } finally {
-    URL.revokeObjectURL(url)
+    const blob =
+      payload.kind === "blob"
+        ? payload.blob
+        : new Blob([payload.text], {
+            type: payload.mimeType ?? "text/plain;charset=utf-8",
+          })
+    const url = URL.createObjectURL(blob)
+    try {
+      clickDownload(url, action.fileName)
+    } finally {
+      URL.revokeObjectURL(url)
+    }
+  } catch (error) {
+    throw new ViewerDownloadError({
+      actionId: action.id,
+      kind: "unsupported",
+      message: "Could not start this download.",
+      cause: error,
+    })
   }
 }
 
-type ViewerDownloadErrorHandler = (
+export type ViewerDownloadErrorHandler = (
   error: ViewerDownloadError,
   action: ViewerDownloadAction
 ) => void
+
+export interface ViewerDownloadTrigger {
+  pendingActionId: string | null
+  triggerDownload: (action: ViewerDownloadAction) => void
+}
+
+export interface ViewerDownloadTriggerOptions {
+  /** Reports non-aborted action failures; visible failure UI belongs to consumers. */
+  onError?: ViewerDownloadErrorHandler
+  resetKey?: unknown
+}
+
+export interface ViewerDownloadControlProps {
+  actions: Array<ViewerDownloadAction | null | undefined>
+  variant?: React.ComponentProps<typeof Button>["variant"]
+  size?: React.ComponentProps<typeof Button>["size"]
+  className?: string
+  showLabel?: boolean
+  /** Reports non-aborted action failures; visible failure UI belongs to consumers. */
+  onError?: ViewerDownloadErrorHandler
+}
+
+export interface ViewerDownloadButtonProps extends Omit<
+  ViewerDownloadControlProps,
+  "actions"
+> {
+  action: ViewerDownloadAction | null
+}
+
+export interface ViewerDownloadMenuProps extends Omit<
+  ViewerDownloadControlProps,
+  "actions"
+> {
+  actions: ViewerDownloadAction[]
+}
 
 export function useViewerDownloadHref(
   action: ViewerDownloadAction | null
@@ -83,6 +140,45 @@ export function useViewerDownloadHref(
   return shouldCreateHref && payload?.kind === "href" ? payload.href : null
 }
 
+export function useViewerDownloadTrigger({
+  onError,
+  resetKey = "",
+}: ViewerDownloadTriggerOptions = {}): ViewerDownloadTrigger {
+  const [pendingActionId, setPendingActionId] = React.useState<string | null>(
+    null
+  )
+  const abortControllerRef = React.useRef<AbortController | null>(null)
+
+  React.useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort()
+      abortControllerRef.current = null
+    }
+  }, [resetKey])
+
+  const triggerDownload = React.useCallback(
+    (action: ViewerDownloadAction) => {
+      abortControllerRef.current?.abort()
+      const abortController = new AbortController()
+      abortControllerRef.current = abortController
+      setPendingActionId(action.id)
+      void triggerViewerDownload(action, { signal: abortController.signal })
+        .catch((error) => {
+          reportDownloadError(error, action, onError)
+        })
+        .finally(() => {
+          if (abortControllerRef.current === abortController) {
+            abortControllerRef.current = null
+            setPendingActionId(null)
+          }
+        })
+    },
+    [onError]
+  )
+
+  return { pendingActionId, triggerDownload }
+}
+
 export function ViewerDownloadControl({
   actions,
   variant = "ghost",
@@ -90,14 +186,7 @@ export function ViewerDownloadControl({
   className = "size-7",
   showLabel = false,
   onError,
-}: {
-  actions: Array<ViewerDownloadAction | null | undefined>
-  variant?: React.ComponentProps<typeof Button>["variant"]
-  size?: React.ComponentProps<typeof Button>["size"]
-  className?: string
-  showLabel?: boolean
-  onError?: ViewerDownloadErrorHandler
-}) {
+}: ViewerDownloadControlProps) {
   const enabledActions = actions.filter(
     (action): action is ViewerDownloadAction => Boolean(action)
   )
@@ -134,45 +223,21 @@ export function ViewerDownloadButton({
   className = "size-7",
   showLabel = false,
   onError,
-}: {
-  action: ViewerDownloadAction | null
-  variant?: React.ComponentProps<typeof Button>["variant"]
-  size?: React.ComponentProps<typeof Button>["size"]
-  className?: string
-  showLabel?: boolean
-  onError?: ViewerDownloadErrorHandler
-}) {
-  const [isPending, setIsPending] = React.useState(false)
-  const abortControllerRef = React.useRef<AbortController | null>(null)
+}: ViewerDownloadButtonProps) {
   const href = useViewerDownloadHref(action)
   const label = action?.label ?? "Download"
   const disabled = !action || action.isDisabled
   const hasDownloadHref = Boolean(href)
-
-  React.useEffect(() => {
-    return () => {
-      abortControllerRef.current?.abort()
-      abortControllerRef.current = null
-    }
-  }, [action])
+  const { pendingActionId, triggerDownload } = useViewerDownloadTrigger({
+    onError,
+    resetKey: action,
+  })
+  const isPending = Boolean(action && pendingActionId === action.id)
 
   const handleClick = React.useCallback(() => {
     if (!action || hasDownloadHref) return
-    abortControllerRef.current?.abort()
-    const abortController = new AbortController()
-    abortControllerRef.current = abortController
-    setIsPending(true)
-    void triggerViewerDownload(action, { signal: abortController.signal })
-      .catch((error) => {
-        reportDownloadError(error, action, onError)
-      })
-      .finally(() => {
-        if (abortControllerRef.current === abortController) {
-          abortControllerRef.current = null
-          setIsPending(false)
-        }
-      })
-  }, [action, hasDownloadHref, onError])
+    triggerDownload(action)
+  }, [action, hasDownloadHref, triggerDownload])
 
   if (href) {
     return (
@@ -214,44 +279,13 @@ export function ViewerDownloadMenu({
   className = "size-7",
   showLabel = false,
   onError,
-}: {
-  actions: ViewerDownloadAction[]
-  variant?: React.ComponentProps<typeof Button>["variant"]
-  size?: React.ComponentProps<typeof Button>["size"]
-  className?: string
-  showLabel?: boolean
-  onError?: ViewerDownloadErrorHandler
-}) {
-  const [pendingActionId, setPendingActionId] = React.useState<string | null>(
-    null
-  )
-  const abortControllerRef = React.useRef<AbortController | null>(null)
+}: ViewerDownloadMenuProps) {
   const actionSetKey = actions.map((action) => action.id).join("\u0000")
   const label = "Download"
-
-  React.useEffect(() => {
-    return () => {
-      abortControllerRef.current?.abort()
-      abortControllerRef.current = null
-    }
-  }, [actionSetKey])
-
-  const trigger = (action: ViewerDownloadAction) => {
-    abortControllerRef.current?.abort()
-    const abortController = new AbortController()
-    abortControllerRef.current = abortController
-    setPendingActionId(action.id)
-    void triggerViewerDownload(action, { signal: abortController.signal })
-      .catch((error) => {
-        reportDownloadError(error, action, onError)
-      })
-      .finally(() => {
-        if (abortControllerRef.current === abortController) {
-          abortControllerRef.current = null
-          setPendingActionId(null)
-        }
-      })
-  }
+  const { pendingActionId, triggerDownload } = useViewerDownloadTrigger({
+    onError,
+    resetKey: actionSetKey,
+  })
 
   return (
     <DropdownMenu>
@@ -275,7 +309,7 @@ export function ViewerDownloadMenu({
           <DropdownMenuItem
             key={action.id}
             disabled={action.isDisabled || pendingActionId != null}
-            onClick={() => trigger(action)}
+            onClick={() => triggerDownload(action)}
           >
             <Download />
             <span>{action.label}</span>

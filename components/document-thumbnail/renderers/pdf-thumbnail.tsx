@@ -9,7 +9,10 @@ import {
   getDocumentResource,
   getPageResource,
 } from "@/components/ui/pdf-viewer"
-import { useThumbnailResource } from "@/components/document-thumbnail/cache"
+import {
+  useThumbnailResource,
+  withThumbnailFormatError,
+} from "@/components/document-thumbnail/cache"
 import type { ThumbnailAnchor } from "@/components/document-thumbnail/types"
 import { ANCHOR_CORNER } from "@/components/document-thumbnail/types"
 
@@ -22,9 +25,10 @@ export function PdfFirstPage({
   anchor: ThumbnailAnchor
 }) {
   const doc = useThumbnailResource(
-    getDocumentResource(resource)
+    getDocumentResource(resource.content)
   ) as PDFDocumentProxy
   const page = useThumbnailResource(getPageResource(doc, 1))
+  const [renderError, setRenderError] = React.useState<unknown>(null)
 
   const RENDER_W = 520
   const viewport = React.useMemo(() => {
@@ -33,11 +37,14 @@ export function PdfFirstPage({
   }, [page])
   const dpr = (typeof window !== "undefined" ? window.devicePixelRatio : 1) || 1
 
+  if (renderError) throw renderError
+
   const canvasRef = React.useCallback(
     (canvas: HTMLCanvasElement | null) => {
       if (!canvas) return
       const context = canvas.getContext("2d")
       if (!context) return
+      let active = true
       canvas.width = Math.floor(viewport.width * dpr)
       canvas.height = Math.floor(viewport.height * dpr)
       const task = page.render({
@@ -46,10 +53,21 @@ export function PdfFirstPage({
         viewport,
         transform: dpr !== 1 ? [dpr, 0, 0, dpr, 0, 0] : undefined,
       })
-      task.promise.catch(() => {})
-      return () => task.cancel()
+      void withThumbnailFormatError(
+        "pdf",
+        "render_failed",
+        resource.fileName,
+        "Failed to render PDF thumbnail",
+        () => task.promise
+      ).catch((error: unknown) => {
+        if (active) setRenderError(error)
+      })
+      return () => {
+        active = false
+        task.cancel()
+      }
     },
-    [page, viewport, dpr]
+    [page, viewport, dpr, resource.fileName]
   )
 
   return (

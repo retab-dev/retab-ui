@@ -25,6 +25,21 @@ describe("page markdown model", () => {
     expect(zoomPageScale(10, 1.2)).toBe(3)
   })
 
+  it("keeps non-finite scale inputs from leaking into layout", () => {
+    expect(fitPageScale(Number.NaN)).toBe(1)
+    expect(fitPageScale(Number.POSITIVE_INFINITY)).toBe(1)
+    expect(zoomPageScale(Number.NaN, 1.2)).toBe(1)
+    expect(zoomPageScale(1, Number.POSITIVE_INFINITY)).toBe(1)
+    expect(
+      Number.isFinite(estimateMarkdownPageHeight("one line", Number.NaN))
+    ).toBe(true)
+    expect(
+      Number.isFinite(
+        estimateMarkdownPageHeight("one line", Number.POSITIVE_INFINITY)
+      )
+    ).toBe(true)
+  })
+
   it("estimates page height within stable bounds", () => {
     expect(estimateMarkdownPageHeight("one line", 1)).toBe(180)
     expect(
@@ -155,6 +170,22 @@ describe("page markdown model", () => {
         page: 1,
       })
     ).toMatchObject({
+      pending: null,
+      scrollTarget: null,
+      confirmed: false,
+    })
+  })
+
+  it("records same-page reports from a different pane without scheduling scroll work", () => {
+    const transition = resolvePagePaneReport({
+      state: { page: 1, pane: "document", version: 0 },
+      pending: null,
+      pane: "markdown",
+      page: 1,
+    })
+
+    expect(transition).toMatchObject({
+      state: { page: 1, pane: "markdown", version: 1 },
       pending: null,
       scrollTarget: null,
       confirmed: false,

@@ -34,6 +34,7 @@ export function getFixedGridRowWindowStyle({
 }
 
 function formatCssLength(value: CssLength | undefined) {
+  if (typeof value === "string") return value.trim() ? value : undefined
   if (typeof value !== "number") return value
   return Number.isFinite(value) && value >= 0 ? `${value}px` : undefined
 }

@@ -4,6 +4,7 @@ import {
   buildXlsxSourceFromCompact,
   compactSheetByteSize,
   createCompactSheet,
+  estimateXlsxSourceBytes,
   getCompactSheetCell,
   resolveXlsxSheetChange,
   xlsxColumnLabel,
@@ -34,6 +35,7 @@ describe("xlsx workbook helpers", () => {
     expect(xlsxColumnLabel(26)).toBe("AA")
     expect(xlsxColumnLabel(701)).toBe("ZZ")
     expect(xlsxColumnLabel(-1)).toBe("")
+    expect(xlsxColumnLabel(Number.MAX_SAFE_INTEGER + 1)).toBe("")
   })
 
   it("reads sparse compact sheet cells without dense allocation", () => {
@@ -64,6 +66,18 @@ describe("xlsx workbook helpers", () => {
       text: "",
       numeric: false,
     })
+  })
+
+  it("drops compact entries that cannot be represented in uint32 storage", () => {
+    const sheet = createCompactSheet({
+      name: "Overflow",
+      rowCount: Number.POSITIVE_INFINITY,
+      columnCount: 1,
+      entries: [{ cellIndex: 0x1_0000_0000, text: "wrapped" }],
+    })
+
+    expect(sheet.cellIndexes.length).toBe(0)
+    expect(getCompactSheetCell(sheet, 0, 0).text).toBe("")
   })
 
   it("builds source metadata and clamps out-of-range reads to an empty cell", () => {
@@ -106,6 +120,22 @@ describe("xlsx workbook helpers", () => {
         sheetCount: 2,
       })
     ).toEqual({ accepted: false, changed: false, sheetIndex: 0 })
+
+    expect(
+      resolveXlsxSheetChange({
+        activeSheet: 0,
+        requestedSheet: Number.MAX_SAFE_INTEGER + 1,
+        sheetCount: Number.MAX_SAFE_INTEGER + 2,
+      })
+    ).toEqual({ accepted: false, changed: false, sheetIndex: 0 })
+
+    expect(
+      resolveXlsxSheetChange({
+        activeSheet: 0,
+        requestedSheet: 1,
+        sheetCount: Number.NaN,
+      })
+    ).toEqual({ accepted: false, changed: false, sheetIndex: 0 })
   })
 
   it("estimates compact-sheet byte size monotonically", () => {
@@ -129,12 +159,25 @@ describe("xlsx workbook helpers", () => {
       compactSheetByteSize(small)
     )
   })
+
+  it("ignores invalid source byte-size estimates", () => {
+    const workbook = {
+      ...source("Estimate"),
+      estimatedByteSize: Number.NaN,
+    }
+
+    expect(estimateXlsxSourceBytes(workbook)).toBeGreaterThan(0)
+    expect(
+      estimateXlsxSourceBytes({ ...workbook, estimatedByteSize: -1 })
+    ).toBeGreaterThan(0)
+  })
 })
 
 describe("xlsx source adapter", () => {
   it("converts spreadsheet columns and anchors to zero-based cells", () => {
     expect(spreadsheetColumnToIndex("A")).toBe(0)
     expect(spreadsheetColumnToIndex("AA")).toBe(26)
+    expect(spreadsheetColumnToIndex("ZZZZZZZZZZZZ")).toBeNull()
 
     expect(
       spreadsheetAnchorToCell({
@@ -157,9 +200,69 @@ describe("xlsx source adapter", () => {
       })
     ).toEqual({ sheet: 0, row: 0, col: 1 })
   })
+
+  it("rejects spreadsheet anchors with unsafe integer coordinates", () => {
+    expect(
+      spreadsheetAnchorToCell({
+        kind: "spreadsheet_cell",
+        sheet_index: Number.MAX_SAFE_INTEGER + 1,
+        row: 1,
+        column: "A",
+      })
+    ).toBeUndefined()
+
+    expect(
+      spreadsheetAnchorToCell({
+        kind: "spreadsheet_cell",
+        sheet_index: 0,
+        row: Number.MAX_SAFE_INTEGER + 1,
+        column: "A",
+      })
+    ).toBeUndefined()
+  })
 })
 
 describe("XlsxSourceCache", () => {
+  it("coalesces concurrent loads for the same key", async () => {
+    const cache = new XlsxSourceCache({ maxEntries: 2 })
+    const pending = deferred<XlsxSource>()
+    const load = vi.fn(() => pending.promise)
+
+    const first = cache.get("/same.xlsx", load)
+    const second = cache.get("/same.xlsx", load)
+
+    expect(first).toBe(second)
+    await Promise.resolve()
+    expect(load).toHaveBeenCalledTimes(1)
+
+    pending.resolve(source("Same"))
+    await expect(first).resolves.toMatchObject({
+      sheets: [{ name: "Same" }],
+    })
+    await expect(second).resolves.toMatchObject({
+      sheets: [{ name: "Same" }],
+    })
+  })
+
+  it("refreshes resolved entries on cache hits before entry-count eviction", async () => {
+    const cache = new XlsxSourceCache({ maxEntries: 2 })
+    const disposeA = vi.fn()
+    const disposeB = vi.fn()
+    const disposeC = vi.fn()
+
+    cache.setResolvedForTest("/a.xlsx", { ...source("A"), dispose: disposeA })
+    cache.setResolvedForTest("/b.xlsx", { ...source("B"), dispose: disposeB })
+    await cache.get("/a.xlsx", () => Promise.resolve(source("Reloaded A")))
+    cache.setResolvedForTest("/c.xlsx", { ...source("C"), dispose: disposeC })
+
+    expect(cache.has("/a.xlsx")).toBe(true)
+    expect(cache.has("/b.xlsx")).toBe(false)
+    expect(cache.has("/c.xlsx")).toBe(true)
+    expect(disposeA).not.toHaveBeenCalled()
+    expect(disposeB).toHaveBeenCalledTimes(1)
+    expect(disposeC).not.toHaveBeenCalled()
+  })
+
   it("does not pin rejected loads", async () => {
     const cache = new XlsxSourceCache({ maxEntries: 2 })
     const load = vi
@@ -237,6 +340,25 @@ describe("XlsxSourceCache", () => {
     expect(cache.size()).toBe(0)
     expect(disposeA).toHaveBeenCalledTimes(1)
     expect(disposeB).toHaveBeenCalledTimes(1)
+  })
+
+  it("clear drops pending entries and disposes them if they later resolve", async () => {
+    const cache = new XlsxSourceCache({ maxEntries: 2 })
+    const pending = deferred<XlsxSource>()
+    const disposePending = vi.fn()
+
+    const promise = cache.get("/pending.xlsx", () => pending.promise)
+    cache.clear()
+
+    expect(cache.size()).toBe(0)
+
+    pending.resolve({ ...source("Pending"), dispose: disposePending })
+    await expect(promise).resolves.toMatchObject({
+      sheets: [{ name: "Pending" }],
+    })
+
+    expect(cache.size()).toBe(0)
+    expect(disposePending).toHaveBeenCalledTimes(1)
   })
 })
 

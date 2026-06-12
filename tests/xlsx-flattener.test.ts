@@ -2,6 +2,7 @@ import * as XLSX from "@e965/xlsx"
 import { describe, expect, it } from "vitest"
 
 import {
+  compactWorkbookTransferBuffers,
   flattenSheetJsWorkbook,
   flattenSheetJsWorksheet,
 } from "@/registry/new-york-v4/lib/xlsx-sheetjs-flattener"
@@ -62,6 +63,89 @@ describe("SheetJS XLSX flattener", () => {
     expect(sheet.columnCount).toBe(100)
     expect(sheet.cellIndexes.length).toBe(2)
     expect(getCompactSheetCell(sheet, 99_999, 99).text).toBe("far")
+  })
+
+  it("ignores non-cell worksheet properties and cells outside the declared range", () => {
+    const worksheet = {
+      "!ref": "B2:C3",
+      "!merges": [],
+      A1: { t: "s", v: "outside" },
+      B2: { t: "s", v: "inside" },
+      D4: { t: "s", v: "outside" },
+      _xlnm_Print_Area: { t: "s", v: "metadata" },
+      SheetName: { t: "s", v: "metadata" },
+    } as unknown as Parameters<typeof flattenSheetJsWorksheet>[1]
+
+    const sheet = flattenSheetJsWorksheet("Offset", worksheet)
+
+    expect(sheet.rowCount).toBe(3)
+    expect(sheet.columnCount).toBe(3)
+    expect(sheet.cellIndexes.length).toBe(1)
+    expect(getCompactSheetCell(sheet, 1, 1).text).toBe("inside")
+    expect(getCompactSheetCell(sheet, 0, 0).text).toBe("")
+    expect(getCompactSheetCell(sheet, 3, 3).text).toBe("")
+  })
+
+  it("treats malformed decoded ranges as empty sheets", () => {
+    const reversed = flattenSheetJsWorksheet("Reversed", {
+      "!ref": "C3:B2",
+      B2: { t: "s", v: "outside" },
+    })
+    const negativeStart = flattenSheetJsWorksheet("Negative", {
+      "!ref": ":B2",
+      A1: { t: "s", v: "outside" },
+    })
+
+    expect(reversed).toMatchObject({
+      rowCount: 0,
+      columnCount: 0,
+      text: "",
+    })
+    expect(reversed.cellIndexes.length).toBe(0)
+    expect(negativeStart).toMatchObject({
+      rowCount: 0,
+      columnCount: 0,
+      text: "",
+    })
+    expect(negativeStart.cellIndexes.length).toBe(0)
+  })
+
+  it("uses raw values when formatted values are absent and skips blank formatted cells", () => {
+    const worksheet = {
+      "!ref": "A1:C1",
+      A1: { t: "b", v: true },
+      B1: { t: "n", v: 12 },
+      C1: { t: "s", v: "fallback", w: "" },
+    }
+
+    const sheet = flattenSheetJsWorksheet("Formats", worksheet)
+
+    expect(getCompactSheetCell(sheet, 0, 0)).toEqual({
+      text: "true",
+      numeric: false,
+    })
+    expect(getCompactSheetCell(sheet, 0, 1)).toEqual({
+      text: "12",
+      numeric: true,
+    })
+    expect(getCompactSheetCell(sheet, 0, 2)).toEqual({
+      text: "",
+      numeric: false,
+    })
+  })
+
+  it("returns the compact typed-array buffers for worker transfer", () => {
+    const sheet = flattenSheetJsWorksheet("Transfer", {
+      "!ref": "A1:B1",
+      A1: { t: "s", v: "a" },
+      B1: { t: "n", v: 1 },
+    })
+
+    expect(compactWorkbookTransferBuffers([sheet])).toEqual([
+      sheet.cellIndexes.buffer,
+      sheet.textOffsets.buffer,
+      sheet.numericFlags.buffer,
+    ])
   })
 
   it("throws typed errors for over-limit ranges, cells, and text", () => {

@@ -7,7 +7,12 @@ import type * as DocxPreview from "docx-preview"
 import { Download, Maximize, Minus, Plus } from "lucide-react"
 
 import { cn } from "@/lib/utils"
-import { isResourceError, ViewerFormatError } from "@/lib/viewer-errors"
+import {
+  isResourceError,
+  isViewerFormatError,
+  ViewerFormatError,
+  type ViewerFormatErrorMapperOptions,
+} from "@/lib/viewer-errors"
 import {
   createViewerResource,
   type ViewerResource,
@@ -29,7 +34,10 @@ export { getDocxResource } from "./docx-viewer-resource"
 let docxPromise: Promise<typeof DocxPreview> | null = null
 function loadDocxPreview() {
   if (!docxPromise) {
-    docxPromise = import("docx-preview")
+    docxPromise = import("docx-preview").catch((error) => {
+      docxPromise = null
+      throw error
+    })
   }
   return docxPromise
 }
@@ -45,6 +53,9 @@ const RENDER_OPTIONS: Partial<DocxPreview.Options> = {
   renderFooters: true,
   renderFootnotes: true,
 }
+
+const DEFAULT_PAGE_WIDTH = 816
+const DEFAULT_PAGE_HEIGHT = 1056
 
 // Scoped overrides for docx-preview's default wrapper/section styling.
 const SCOPED_STYLES = `
@@ -121,6 +132,10 @@ export interface DocxViewerProps {
   aside?: React.ReactNode
 }
 
+export type DocxResourceViewerProps = Omit<DocxViewerProps, "source"> & {
+  resource: ViewerResource
+}
+
 // --- source locating ---------------------------------------------------------
 // docx-preview renders flowed, paginated HTML with no anchor indices, so a source
 // is located in the rendered DOM: table cells by their structural index (reliable
@@ -135,11 +150,12 @@ function tableCellRange(
   row: number,
   column: number
 ): Range | null {
-  const t = root.querySelectorAll("table")[table] as
-    | HTMLTableElement
-    | undefined
+  const t = root.querySelectorAll(".docx-wrapper > section.docx table")[
+    table
+  ] as HTMLTableElement | undefined
   const cell = t?.rows[row]?.cells[column]
   if (!cell) return null
+  if (hasHiddenAncestor(cell, root)) return null
   const range = document.createRange()
   range.selectNodeContents(cell)
   return range
@@ -147,7 +163,7 @@ function tableCellRange(
 
 /** A Range over the first whitespace-insensitive match of `query` in `root`, or null. */
 function textContentRange(root: HTMLElement, query: string): Range | null {
-  const needle = query.replace(/\s+/g, " ").trim()
+  const needle = normalizeTextTarget(query)
   if (!needle) return null
   // Concatenate the visible text, collapsing whitespace runs to a single space,
   // and remember each normalized character's source (text node + offset) so a
@@ -157,6 +173,7 @@ function textContentRange(root: HTMLElement, query: string): Range | null {
   const at: { node: Text; offset: number }[] = []
   let prevSpace = false
   for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+    if (!isDocumentTextNode(root, n as Text)) continue
     const data = (n as Text).data
     for (let i = 0; i < data.length; i++) {
       if (/\s/.test(data[i])) {
@@ -181,6 +198,37 @@ function textContentRange(root: HTMLElement, query: string): Range | null {
   return range
 }
 
+function isDocumentTextNode(root: HTMLElement, node: Text) {
+  const parent = node.parentElement
+  if (!parent || !root.contains(parent)) return false
+  if (!parent.closest(".docx-wrapper > section.docx")) return false
+  if (parent.closest("style, script, noscript, template")) return false
+  return !hasHiddenAncestor(parent, root)
+}
+
+function hasHiddenAncestor(element: HTMLElement, root: HTMLElement) {
+  for (let el: HTMLElement | null = element; el; el = el.parentElement) {
+    if (
+      el.hidden ||
+      el.getAttribute("aria-hidden")?.trim().toLowerCase() === "true"
+    ) {
+      return true
+    }
+    const style =
+      typeof window !== "undefined" ? window.getComputedStyle(el) : el.style
+    if (
+      style.display === "none" ||
+      style.visibility === "hidden" ||
+      style.visibility === "collapse" ||
+      style.getPropertyValue("content-visibility") === "hidden"
+    ) {
+      return true
+    }
+    if (el === root) break
+  }
+  return false
+}
+
 /** Resolve a target to a DOM Range in the rendered document, or null. */
 function targetRange(root: HTMLElement, target: DocxTarget): Range | null {
   return target.kind === "cell"
@@ -193,51 +241,70 @@ function targetKey(target: DocxTarget | null | undefined): string | null {
   if (!target) return null
   return target.kind === "cell"
     ? `cell:${target.table}:${target.row}:${target.column}`
-    : `text:${target.text}`
+    : `text:${normalizeTextTarget(target.text)}`
+}
+
+function normalizeTextTarget(text: string) {
+  return text.replace(/\s+/g, " ").trim()
 }
 
 export const DocxViewer = React.forwardRef<DocxViewerHandle, DocxViewerProps>(
   function DocxViewer(props, ref) {
-    const isClient = useIsClient()
-    const resource = React.useMemo(
-      () => createViewerResource(props.source),
-      [props.source]
-    )
-    if (!isClient) {
-      return (
-        <DocxViewerFallback
-          bare={props.bare}
-          className={props.className}
-          toolbar={props.toolbar}
-        />
-      )
-    }
+    const { source, ...resourceProps } = props
+    const resource = React.useMemo(() => createViewerResource(source), [source])
     return (
-      <ViewerErrorBoundary
-        className={props.className}
-        download={resource.getOriginalDownload()}
-        format="docx"
-        onRetry={(error) => {
-          if (isResourceError(error)) clearDocxResource(resource)
-        }}
-        resetKey={resource.keys.resource}
-        sourceKind={resource.sourceKind}
-      >
-        <React.Suspense
-          fallback={
-            <DocxViewerFallback
-              bare={props.bare}
-              className={props.className}
-              toolbar={props.toolbar}
-            />
-          }
-        >
-          <DocxViewerInner {...props} forwardedRef={ref} resource={resource} />
-        </React.Suspense>
-      </ViewerErrorBoundary>
+      <DocxResourceViewer {...resourceProps} ref={ref} resource={resource} />
     )
   }
 )
+
+export const DocxResourceViewer = React.forwardRef<
+  DocxViewerHandle,
+  DocxResourceViewerProps
+>(function DocxResourceViewer(props, ref) {
+  const isClient = useIsClient()
+  const resource = props.resource
+  if (!isClient) {
+    return (
+      <DocxViewerFallback
+        aside={props.aside}
+        bare={props.bare}
+        className={props.className}
+        header={props.header}
+        toolbar={props.toolbar}
+      />
+    )
+  }
+  return (
+    <ViewerErrorBoundary
+      bare={props.bare}
+      className={props.className}
+      download={resource.originalDownload}
+      format="docx"
+      onRetry={(error) => {
+        if (isResourceError(error) || !isViewerFormatError(error)) {
+          clearDocxResource(resource.content)
+        }
+      }}
+      resetKey={resource.keys.resource}
+      sourceKind={resource.sourceKind}
+    >
+      <React.Suspense
+        fallback={
+          <DocxViewerFallback
+            aside={props.aside}
+            bare={props.bare}
+            className={props.className}
+            header={props.header}
+            toolbar={props.toolbar}
+          />
+        }
+      >
+        <DocxViewerInner {...props} forwardedRef={ref} resource={resource} />
+      </React.Suspense>
+    </ViewerErrorBoundary>
+  )
+})
 
 function DocxViewerInner({
   resource,
@@ -251,11 +318,13 @@ function DocxViewerInner({
   aside,
   highlight,
   forwardedRef,
-}: DocxViewerProps & {
+}: Omit<DocxViewerProps, "source"> & {
   forwardedRef?: React.ForwardedRef<DocxViewerHandle>
   resource: ViewerResource
 }) {
-  const buffer = React.use(getDocxResource(resource, { retainRejected: true }))
+  const buffer = React.use(
+    getDocxResource(resource.content, { retainRejected: true })
+  )
 
   const [manualScale, setManualScale] = React.useState<number | null>(
     normalizeScale(fixedScale)
@@ -279,6 +348,7 @@ function DocxViewerInner({
   const containerRef = React.useCallback((el: HTMLDivElement | null) => {
     if (!el) return
     setContainerWidth(el.clientWidth)
+    if (typeof ResizeObserver === "undefined") return
     let frame = 0
     let latest = el.clientWidth
     const observer = new ResizeObserver((entries) => {
@@ -290,14 +360,16 @@ function DocxViewerInner({
       for (const entry of entries)
         latest = (entry.target as HTMLElement).clientWidth
       if (frame) return
-      frame = requestAnimationFrame(() => {
+      frame = -1
+      const requestedFrame = requestAnimationFrame(() => {
         frame = 0
         setContainerWidth(latest)
       })
+      if (frame === -1) frame = requestedFrame
     })
     observer.observe(el)
     return () => {
-      if (frame) cancelAnimationFrame(frame)
+      if (frame > 0) cancelAnimationFrame(frame)
       observer.disconnect()
     }
   }, [])
@@ -318,7 +390,7 @@ function DocxViewerInner({
     if (!viewport) return
     const scrollable = viewport.scrollHeight - viewport.clientHeight
     onScrollProgressChange?.(
-      scrollable > 0 ? viewport.scrollTop / scrollable : 0
+      scrollable > 0 ? clamp(viewport.scrollTop / scrollable, 0, 1) : 0
     )
     const rect = viewport.getBoundingClientRect()
     const marker = rect.top + rect.height * 0.2
@@ -339,11 +411,16 @@ function DocxViewerInner({
   }, [onVisiblePageChange, onScrollProgressChange])
   const handleScroll = React.useCallback(() => {
     if (scrollFrame.current) return
-    scrollFrame.current = requestAnimationFrame(measureScroll)
+    scrollFrame.current = -1
+    const requestedFrame = requestAnimationFrame(measureScroll)
+    if (scrollFrame.current === -1) scrollFrame.current = requestedFrame
   }, [measureScroll])
+  React.useEffect(() => {
+    if (ready) measureScroll()
+  }, [measureScroll, ready])
   React.useEffect(
     () => () => {
-      if (scrollFrame.current) cancelAnimationFrame(scrollFrame.current)
+      if (scrollFrame.current > 0) cancelAnimationFrame(scrollFrame.current)
     },
     []
   )
@@ -372,6 +449,8 @@ function DocxViewerInner({
     setNumPages(0)
     setCurrentPage(1)
     lastReported.current = 0
+    if (scrollViewportRef.current) scrollViewportRef.current.scrollTop = 0
+    host.replaceChildren()
     loadDocxPreview()
       .then(({ renderAsync }) => {
         if (cancelled) return
@@ -392,7 +471,11 @@ function DocxViewerInner({
           host.querySelectorAll<HTMLElement>(".docx-wrapper > section.docx")
         )
         if (!pages.length) {
-          throw new Error("DOCX render produced no pages.")
+          throw new ViewerFormatError({
+            format: "docx",
+            kind: "render_failed",
+            message: "DOCX render produced no pages.",
+          })
         }
         const z = scaleRef.current || 1
         // Two passes so we never interleave reads with writes: measure everything
@@ -400,7 +483,12 @@ function DocxViewerInner({
         // synchronous reflow per page — O(n) layout thrash on long documents.
         const sizes = pages.map((el) => {
           const r = el.getBoundingClientRect()
-          return [Math.round(r.width / z), Math.round(r.height / z)] as const
+          const width = positivePixel(Math.round(r.width / z))
+          const height = positivePixel(Math.round(r.height / z))
+          return [
+            width ?? DEFAULT_PAGE_WIDTH,
+            height ?? DEFAULT_PAGE_HEIGHT,
+          ] as const
         })
         pages.forEach((el, i) => {
           el.dataset.pageNumber = String(i + 1)
@@ -414,12 +502,12 @@ function DocxViewerInner({
       .catch((err) => {
         if (!cancelled) {
           setRenderError(
-            new ViewerFormatError({
-              format: "docx",
-              kind: "render_failed",
-              message: "Failed to render DOCX.",
-              cause: err,
-            })
+            isResourceError(err)
+              ? err
+              : toDocxFormatError(err, {
+                  kind: "render_failed",
+                  message: "Failed to render DOCX.",
+                })
           )
         }
       })
@@ -534,7 +622,7 @@ function DocxViewerInner({
               <Maximize />
             </IconButton>
             <Separator orientation="vertical" className="mx-1 h-4" />
-            <ViewerDownloadButton action={resource.getOriginalDownload()} />
+            <ViewerDownloadButton action={resource.originalDownload} />
           </div>
         </div>
       ) : null}
@@ -581,6 +669,19 @@ function DocxViewerInner({
   )
 }
 
+function toDocxFormatError(
+  error: unknown,
+  options: ViewerFormatErrorMapperOptions
+): ViewerFormatError {
+  if (isViewerFormatError(error)) return error
+  return new ViewerFormatError({
+    format: "docx",
+    kind: options.kind,
+    message: options.message,
+    cause: error,
+  })
+}
+
 function IconButton({
   label,
   children,
@@ -608,10 +709,14 @@ function DocxViewerFallback({
   className,
   bare = false,
   toolbar = true,
+  header,
+  aside,
 }: {
   className?: string
   bare?: boolean
   toolbar?: boolean
+  header?: React.ReactNode
+  aside?: React.ReactNode
 }) {
   return (
     <div
@@ -623,9 +728,19 @@ function DocxViewerFallback({
       data-slot="docx-viewer"
     >
       {toolbar ? <DocxToolbarSkeleton /> : null}
-      <div className="min-h-0 flex-1 overflow-auto">
-        <div className="flex flex-col items-center p-4">
-          <DocxSkeleton />
+      <div className="flex min-h-0 flex-1">
+        {aside ? (
+          <div data-slot="docx-viewer-aside" className="flex-shrink-0">
+            {aside}
+          </div>
+        ) : null}
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          {header ? <div data-slot="docx-viewer-header">{header}</div> : null}
+          <div className="min-h-0 flex-1 overflow-auto">
+            <div className="flex flex-col items-center p-4">
+              <DocxSkeleton />
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -694,6 +809,10 @@ function DocxSkeleton() {
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value))
+}
+
+function positivePixel(value: number) {
+  return Number.isFinite(value) && value > 0 ? value : null
 }
 
 function normalizeScale(value: number | null | undefined) {

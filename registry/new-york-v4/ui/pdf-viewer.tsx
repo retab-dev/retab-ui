@@ -15,8 +15,9 @@ import { PdfPage } from "./pdf-viewer-page"
 import { usePdfPageSizes } from "./pdf-viewer-page-sizes"
 import { PdfViewerRail } from "./pdf-viewer-rail"
 import {
-  getDocumentResource,
-  getPageResource,
+  clearDocumentResource,
+  readDocumentResource,
+  readPageResource,
   releaseDocumentResource,
   retainDocumentResource,
 } from "./pdf-viewer-resource"
@@ -111,51 +112,64 @@ export interface PdfViewerProps {
   defaultRailsOpen?: boolean
 }
 
+export type PdfResourceViewerProps = Omit<PdfViewerProps, "source"> & {
+  resource: ViewerResource
+}
+
 export const PdfViewer = React.forwardRef<PdfViewerHandle, PdfViewerProps>(
   function PdfViewer(props, ref) {
-    const isClient = useIsClient()
-    const resource = React.useMemo(
-      () => createViewerResource(props.source),
-      [props.source]
-    )
-    const hasRail = Boolean(props.slots?.left ?? props.slots?.right)
-    const showRailToggle = Boolean(hasRail && (props.railToggle ?? true))
-
-    if (!isClient) {
-      return (
-        <PdfViewerFallback
-          className={props.className}
-          bare={props.bare}
-          toolbar={props.toolbar}
-          showRailToggle={showRailToggle}
-        />
-      )
-    }
-
+    const { source, ...resourceProps } = props
+    const resource = React.useMemo(() => createViewerResource(source), [source])
     return (
-      <ViewerErrorBoundary
-        className={props.className}
-        download={resource.getOriginalDownload()}
-        format="pdf"
-        resetKey={resource.keys.resource}
-        sourceKind={resource.sourceKind}
-      >
-        <React.Suspense
-          fallback={
-            <PdfViewerFallback
-              className={props.className}
-              bare={props.bare}
-              toolbar={props.toolbar}
-              showRailToggle={showRailToggle}
-            />
-          }
-        >
-          <PdfViewerInner {...props} forwardedRef={ref} resource={resource} />
-        </React.Suspense>
-      </ViewerErrorBoundary>
+      <PdfResourceViewer {...resourceProps} ref={ref} resource={resource} />
     )
   }
 )
+
+export const PdfResourceViewer = React.forwardRef<
+  PdfViewerHandle,
+  PdfResourceViewerProps
+>(function PdfResourceViewer(props, ref) {
+  const resource = props.resource
+  const isClient = useIsClient()
+  const hasRail = Boolean(props.slots?.left ?? props.slots?.right)
+  const showRailToggle = Boolean(hasRail && (props.railToggle ?? true))
+
+  if (!isClient) {
+    return (
+      <PdfViewerFallback
+        className={props.className}
+        bare={props.bare}
+        toolbar={props.toolbar}
+        showRailToggle={showRailToggle}
+      />
+    )
+  }
+
+  return (
+    <ViewerErrorBoundary
+      className={props.className}
+      download={resource.originalDownload}
+      format="pdf"
+      onRetry={() => clearDocumentResource(resource.content)}
+      resetKey={resource.keys.resource}
+      sourceKind={resource.sourceKind}
+    >
+      <React.Suspense
+        fallback={
+          <PdfViewerFallback
+            className={props.className}
+            bare={props.bare}
+            toolbar={props.toolbar}
+            showRailToggle={showRailToggle}
+          />
+        }
+      >
+        <PdfViewerInner {...props} forwardedRef={ref} resource={resource} />
+      </React.Suspense>
+    </ViewerErrorBoundary>
+  )
+})
 
 function PdfViewerInner({
   resource,
@@ -172,7 +186,7 @@ function PdfViewerInner({
   railToggle,
   defaultRailsOpen,
   forwardedRef,
-}: PdfViewerProps & {
+}: Omit<PdfViewerProps, "source"> & {
   forwardedRef?: React.ForwardedRef<PdfViewerHandle>
   resource: ViewerResource
 }) {
@@ -186,28 +200,38 @@ function PdfViewerInner({
   )
   const [railsOpen, setRailsOpen] = React.useState(defaultRailsOpen ?? true)
 
-  const document = React.use(getDocumentResource(resource))
+  const content = resource.content
+  const document = readDocumentResource(content)
   React.useEffect(() => {
-    retainDocumentResource(resource, document)
-    return () => releaseDocumentResource(resource, document)
-  }, [resource, document])
+    retainDocumentResource(content, document)
+    return () => releaseDocumentResource(content, document)
+  }, [content, document])
 
-  const firstPage = React.use(getPageResource(document, 1))
+  const firstPage = readPageResource(document, 1)
   const firstPageSize = React.useMemo<PdfPageSize>(() => {
     const viewport = firstPage.getViewport({ scale: 1 })
     return { width: viewport.width, height: viewport.height }
   }, [firstPage])
 
   const { ref: containerRef, width: containerWidth } = useMeasuredElementWidth()
+  const [rotationState, setRotationState] = React.useState<{
+    document: typeof document
+    value: number
+  }>(() => ({ document, value: 0 }))
+  const rotation = Object.is(rotationState.document, document)
+    ? rotationState.value
+    : 0
+  const fitPageWidth =
+    rotation % 180 === 0 ? firstPageSize.width : firstPageSize.height
   const { resolvedScale, zoomIn, zoomOut, fitWidth } = usePdfScale({
     controlledScale,
     defaultScale,
     onScaleChange,
     containerWidth,
-    pageWidth: firstPageSize.width,
+    pageWidth: fitPageWidth,
+    resetKey: document,
   })
 
-  const [rotation, setRotation] = React.useState(0)
   const { pageSizeByNumber, setPageSize } = usePdfPageSizes(document)
   const pageLayout = React.useMemo(
     () =>
@@ -237,11 +261,13 @@ function PdfViewerInner({
   } = usePdfScroll({
     pageCount: document.numPages,
     layout: pageLayout,
+    resetKey: document,
     onVisiblePageChange,
     onScrollProgressChange,
   })
   const { visiblePageNumbers, measureVisiblePages } = usePdfPageVirtualization({
     layout: pageLayout,
+    resetKey: document,
     viewportElement,
   })
 
@@ -283,14 +309,21 @@ function PdfViewerInner({
           currentPage={currentPage}
           pageCount={document.numPages}
           scale={resolvedScale}
-          downloadAction={resource.getOriginalDownload()}
+          downloadAction={resource.originalDownload}
           showRailToggle={showRailToggle}
           railsOpen={railsOpen}
           onToggleRails={() => setRailsOpen((open) => !open)}
           onZoomOut={zoomOut}
           onZoomIn={zoomIn}
           onFitWidth={fitWidth}
-          onRotate={() => setRotation((value) => (value + 90) % 360)}
+          onRotate={() =>
+            setRotationState((state) => ({
+              document,
+              value:
+                ((Object.is(state.document, document) ? state.value : 0) + 90) %
+                360,
+            }))
+          }
         />
       ) : null}
 

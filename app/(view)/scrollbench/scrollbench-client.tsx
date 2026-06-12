@@ -11,7 +11,11 @@ import {
   type ImageViewerHandle,
 } from "@/components/ui/image-viewer"
 import { PdfViewer, type PdfViewerHandle } from "@/components/ui/pdf-viewer"
-import { PptxViewer } from "@/components/ui/pptx-viewer"
+import {
+  PptxViewer,
+  type PptxSlideRenderTiming,
+  type PptxSourceLoadTiming,
+} from "@/components/ui/pptx-viewer"
 import { TextViewer, type TextViewerHandle } from "@/components/ui/text-viewer"
 import { XlsxViewer, type XlsxViewerHandle } from "@/components/ui/xlsx-viewer"
 import type { TableDocument } from "@/components/json-table/lib/projects-types"
@@ -24,10 +28,13 @@ import {
   resolveScenario,
   resolveViewer,
   SCENARIOS,
+  summarizeImageRenderTimings,
   VIEWERS,
+  type ImageRenderTiming,
   type ScenarioDefinition,
   type ScenarioResult,
   type ScrollBenchResult,
+  type SourceLoadTimingResult,
   type ViewerId,
 } from "./scrollbench-core"
 import {
@@ -74,10 +81,13 @@ export function ScrollBenchClient({
   const rootRef = React.useRef<HTMLDivElement | null>(null)
   const viewportHandleRef = React.useRef<ViewportHandle | null>(null)
   const runAbortRef = React.useRef<AbortController | null>(null)
+  const imageRenderTimingsRef = React.useRef<ImageRenderTiming[]>([])
+  const sourceLoadTimingRef = React.useRef<SourceLoadTimingResult | null>(null)
 
   const [viewer, setViewer] = React.useState<ViewerId>(() =>
     normalizeViewerId(initialViewer ?? null)
   )
+  const [pptxFile, setPptxFile] = React.useState<File | null>(null)
   const [status, setStatus] = React.useState<RunStatus>("idle")
   const [error, setError] = React.useState<string | null>(null)
   const [result, setResult] = React.useState<ScrollBenchResult | null>(null)
@@ -101,6 +111,24 @@ export function ScrollBenchClient({
       )
     )
   }, [viewer])
+  const handlePptxFileChange = React.useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      setPptxFile(event.target.files?.[0] ?? null)
+    },
+    []
+  )
+  const handlePptxSlideRenderTiming = React.useCallback(
+    (timing: PptxSlideRenderTiming) => {
+      imageRenderTimingsRef.current.push(timing)
+    },
+    []
+  )
+  const handlePptxSourceLoadTiming = React.useCallback(
+    (timing: PptxSourceLoadTiming) => {
+      sourceLoadTimingRef.current = timing
+    },
+    []
+  )
 
   const runScenario = React.useCallback(
     async (scenarioId: ScenarioDefinition["id"]) => {
@@ -117,6 +145,7 @@ export function ScrollBenchClient({
     runAbortRef.current?.abort()
     const abortController = new AbortController()
     runAbortRef.current = abortController
+    imageRenderTimingsRef.current = []
 
     setStatus("running")
     setError(null)
@@ -138,7 +167,15 @@ export function ScrollBenchClient({
 
       const nextResult: ScrollBenchResult = {
         viewer,
+        imageRendering:
+          viewer === "pptx"
+            ? summarizeImageRenderTimings(imageRenderTimingsRef.current)
+            : undefined,
         measuredAt: new Date().toISOString(),
+        sourceLoad:
+          viewer === "pptx"
+            ? (sourceLoadTimingRef.current ?? undefined)
+            : undefined,
         viewport: viewportMetrics(scroller),
         scenarios,
       }
@@ -168,6 +205,15 @@ export function ScrollBenchClient({
     setStatus("idle")
     writeViewerToUrl(viewer)
   }, [viewer])
+
+  React.useEffect(() => {
+    if (viewer !== "pptx") return
+    runAbortRef.current?.abort()
+    sourceLoadTimingRef.current = null
+    setResult(null)
+    setError(null)
+    setStatus("idle")
+  }, [pptxFile, viewer])
 
   React.useEffect(() => {
     window.__scrollbench = { getScroller, run, runScenario }
@@ -231,7 +277,10 @@ export function ScrollBenchClient({
           {renderViewer({
             viewer,
             csvValue,
+            pptxFile,
             textValue,
+            onPptxSourceLoadTiming: handlePptxSourceLoadTiming,
+            onPptxSlideRenderTiming: handlePptxSlideRenderTiming,
             setViewportHandle,
           })}
         </div>
@@ -242,8 +291,23 @@ export function ScrollBenchClient({
               Fixture
             </div>
             <div className="mt-1 text-sm">
-              {VIEWERS.find((option) => option.id === viewer)?.sample}
+              {viewer === "pptx" && pptxFile
+                ? pptxFile.name
+                : VIEWERS.find((option) => option.id === viewer)?.sample}
             </div>
+            {viewer === "pptx" ? (
+              <label className="mt-3 block">
+                <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                  Custom deck
+                </span>
+                <input
+                  className="mt-1 block w-full text-xs text-muted-foreground file:mr-2 file:rounded-md file:border-0 file:bg-primary file:px-2 file:py-1 file:text-xs file:font-medium file:text-primary-foreground"
+                  type="file"
+                  accept=".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation"
+                  onChange={handlePptxFileChange}
+                />
+              </label>
+            ) : null}
           </div>
 
           <MetricPanel result={result} status={status} error={error} />
@@ -256,13 +320,19 @@ export function ScrollBenchClient({
 function renderViewer({
   viewer,
   csvValue,
+  pptxFile,
   textValue,
   setViewportHandle,
+  onPptxSourceLoadTiming,
+  onPptxSlideRenderTiming,
 }: {
   viewer: ViewerId
   csvValue: string
+  pptxFile: File | null
   textValue: string
   setViewportHandle: (handle: ViewportHandle | null) => void
+  onPptxSourceLoadTiming: (timing: PptxSourceLoadTiming) => void
+  onPptxSlideRenderTiming: (timing: PptxSlideRenderTiming) => void
 }) {
   const viewerClassName = "h-full rounded-none border-0"
 
@@ -356,15 +426,13 @@ function renderViewer({
     case "pptx":
       return (
         <PptxViewer
-          source={{
-            kind: "url",
-            url: "/samples/sample-presentation.pptx",
-            fileName: "sample-presentation.pptx",
-          }}
+          source={getScrollBenchPptxSource(pptxFile)}
           className={viewerClassName}
           toolbar={false}
           bare
           eager
+          onSourceLoadTiming={onPptxSourceLoadTiming}
+          onSlideRenderTiming={onPptxSlideRenderTiming}
         />
       )
     case "image":
@@ -382,6 +450,31 @@ function renderViewer({
           bare
         />
       )
+  }
+}
+
+function getScrollBenchPptxSource(file: File | null) {
+  if (!file) {
+    return {
+      kind: "url" as const,
+      url: "/samples/sample-presentation.pptx",
+      fileName: "sample-presentation.pptx",
+    }
+  }
+
+  return {
+    kind: "blob" as const,
+    blob: file,
+    fileName: file.name || "custom.pptx",
+    identityKey: [
+      "scrollbench-pptx",
+      file.name,
+      file.size,
+      file.lastModified,
+    ].join(":"),
+    mimeType:
+      file.type ||
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
   }
 }
 
@@ -459,6 +552,70 @@ function MetricPanel({
             />
           </React.Fragment>
         ))}
+        {result.imageRendering ? (
+          <>
+            <Metric
+              label="image renders"
+              value={String(result.imageRendering.count)}
+            />
+            <Metric
+              label="image total"
+              value={`${formatNumber(result.imageRendering.totalMs)}ms`}
+            />
+            <Metric
+              label="image avg"
+              value={`${formatNumber(result.imageRendering.averageMs)}ms`}
+            />
+            <Metric
+              label="image p95"
+              value={`${formatNumber(result.imageRendering.p95Ms)}ms`}
+            />
+            <Metric
+              label="image max"
+              value={`${formatNumber(result.imageRendering.maxMs)}ms`}
+            />
+            <Metric
+              label="image cached"
+              value={String(result.imageRendering.cached)}
+            />
+            <Metric
+              label="uncached p95"
+              value={`${formatNumber(result.imageRendering.uncachedTiming.p95Ms)}ms`}
+            />
+            <Metric
+              label="cached p95"
+              value={`${formatNumber(result.imageRendering.cachedTiming.p95Ms)}ms`}
+            />
+          </>
+        ) : null}
+        {result.sourceLoad ? (
+          <>
+            <Metric
+              label="load total"
+              value={`${formatNumber(result.sourceLoad.totalMs)}ms`}
+            />
+            <Metric
+              label="load bytes"
+              value={formatBytes(result.sourceLoad.byteLength)}
+            />
+            <Metric
+              label="read bytes"
+              value={`${formatNumber(result.sourceLoad.readBytesMs)}ms`}
+            />
+            <Metric
+              label="import pptx"
+              value={`${formatNumber(result.sourceLoad.importPptxMs)}ms`}
+            />
+            <Metric
+              label="read size"
+              value={`${formatNumber(result.sourceLoad.readSlideSizeMs)}ms`}
+            />
+            <Metric
+              label="parse deck"
+              value={`${formatNumber(result.sourceLoad.loadFileMs)}ms`}
+            />
+          </>
+        ) : null}
       </dl>
     </div>
   )
@@ -477,6 +634,13 @@ function formatNumber(value: number) {
   return new Intl.NumberFormat("en-US", {
     maximumFractionDigits: value >= 100 ? 0 : 1,
   }).format(value)
+}
+
+function formatBytes(value: number) {
+  if (!Number.isFinite(value) || value <= 0) return "0 B"
+  if (value < 1024) return `${formatNumber(value)} B`
+  if (value < 1024 * 1024) return `${formatNumber(value / 1024)} KB`
+  return `${formatNumber(value / (1024 * 1024))} MB`
 }
 
 function writeViewerToUrl(viewer: ViewerId) {

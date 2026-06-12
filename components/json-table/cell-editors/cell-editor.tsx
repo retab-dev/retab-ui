@@ -1,4 +1,3 @@
-import { CellDisplay } from "@/components/json-table/cell-display"
 import { ArrayCellEditor } from "@/components/json-table/cell-editors/array-editor"
 import { BooleanEditor } from "@/components/json-table/cell-editors/boolean-editor"
 import { DateEditor } from "@/components/json-table/cell-editors/date-editor"
@@ -9,6 +8,7 @@ import { NumberEditor } from "@/components/json-table/cell-editors/number-editor
 import { ObjectCellEditor } from "@/components/json-table/cell-editors/object-editor"
 import { TextEditor } from "@/components/json-table/cell-editors/text-editor"
 import { TimeEditor } from "@/components/json-table/cell-editors/time-editor"
+import { DataCell } from "@/components/ui/data-cell"
 
 export function CellEditor(props: CellEditorProps) {
   switch (props.field.fieldMetadata.kind) {
@@ -22,7 +22,7 @@ export function CellEditor(props: CellEditorProps) {
       return <EnumEditor {...props} />
     case "date":
       return <DateEditor {...props} />
-    case "iso-time":
+    case "time":
       return <TimeEditor {...props} />
     case "date-time":
       return <DateTimeEditor {...props} />
@@ -33,12 +33,15 @@ export function CellEditor(props: CellEditorProps) {
       return <TextEditor {...props} />
     default:
       return (
-        <CellDisplay className="items-start bg-muted/60 py-2">
-          {props.field.effectiveValue !== null &&
-          props.field.effectiveValue !== undefined
-            ? String(props.field.effectiveValue)
-            : ""}
-        </CellDisplay>
+        <DataCell
+          kind="text"
+          value={
+            props.field.effectiveValue == null
+              ? ""
+              : String(props.field.effectiveValue)
+          }
+          className="items-start bg-muted/60 py-2"
+        />
       )
   }
 }

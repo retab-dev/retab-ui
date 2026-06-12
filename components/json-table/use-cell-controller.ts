@@ -35,6 +35,10 @@ export function useCellController({
     []
   )
 
+  React.useEffect(() => {
+    setOptimisticValue(undefined)
+  }, [docId, materializedFieldPath, value])
+
   const effectiveValue = optimisticValue !== undefined ? optimisticValue : value
   const committedTextValue =
     effectiveValue !== null && effectiveValue !== undefined
@@ -48,12 +52,10 @@ export function useCellController({
     const previousValue = getValueAtPath(previousRoot, materializedFieldPath)
     const previousNormalized = normalize(previousValue)
     const nextNormalized = normalize(validatedValue)
-    const uiNormalized = normalize(value)
 
     const isNoOp =
       previousValue === validatedValue ||
-      safeStringify(previousNormalized) === safeStringify(nextNormalized) ||
-      safeStringify(uiNormalized) === safeStringify(nextNormalized)
+      safeStringify(previousNormalized) === safeStringify(nextNormalized)
     if (isNoOp) return
 
     const patch = buildDocumentDataPatch(

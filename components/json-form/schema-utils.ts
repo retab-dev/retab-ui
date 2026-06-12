@@ -174,6 +174,25 @@ export function expandRefs(
     )
   }
 
+  if (isSchema(working.additionalProperties)) {
+    working.additionalProperties = expandRefs(
+      working.additionalProperties,
+      definitions,
+      visited,
+      rootSchema
+    )
+  }
+
+  if (working.patternProperties) {
+    const patternProperties: Record<string, JSONSchema7Definition> = {}
+    for (const [key, value] of Object.entries(working.patternProperties)) {
+      patternProperties[key] = isSchema(value)
+        ? expandRefs(value, definitions, visited, rootSchema)
+        : value
+    }
+    working.patternProperties = patternProperties
+  }
+
   return working
 }
 

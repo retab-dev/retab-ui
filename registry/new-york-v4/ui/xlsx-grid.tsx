@@ -3,17 +3,15 @@
 import * as React from "react"
 
 import { xlsxColumnLabel, type XlsxCell } from "@/lib/xlsx-workbook"
-import {
-  fixedGridColumnWidths,
-} from "@/components/ui/fixed-grid-columns"
+import { fixedGridColumnWidths } from "@/components/ui/fixed-grid-columns"
 import {
   getFixedGridCanvasStyle,
   getFixedGridRowWindowStyle,
 } from "@/components/ui/fixed-grid-layout"
-import { buildVirtualGridTemplate } from "@/components/ui/fixed-grid-template"
-import { useFixedGridVirtualization } from "@/components/ui/fixed-grid-virtualization"
 import type { GridCellCoordinate } from "@/components/ui/fixed-grid-selection"
+import { buildVirtualGridTemplate } from "@/components/ui/fixed-grid-template"
 import { FixedGridViewport } from "@/components/ui/fixed-grid-viewport"
+import { useFixedGridVirtualization } from "@/components/ui/fixed-grid-virtualization"
 import { HeaderAwareScrollbar } from "@/components/ui/header-aware-scrollbar"
 import {
   XLSX_BASE_COLUMN_WIDTH,
@@ -62,10 +60,13 @@ export function XlsxGrid({
   isolateStyles: boolean
   viewportRef?: React.RefObject<HTMLDivElement | null>
 }) {
-  const rowHeight = Math.round(XLSX_BASE_ROW_HEIGHT * scale)
-  const columnWidth = Math.round(XLSX_BASE_COLUMN_WIDTH * scale)
-  const gutterWidth = Math.round(XLSX_BASE_GUTTER_WIDTH * scale)
-  const fontSize = XLSX_BASE_FONT_SIZE * scale
+  const safeRowCount = normalizeGridCount(rowCount)
+  const safeColumnCount = normalizeGridCount(columnCount)
+  const safeScale = normalizeGridScale(scale)
+  const rowHeight = Math.round(XLSX_BASE_ROW_HEIGHT * safeScale)
+  const columnWidth = Math.round(XLSX_BASE_COLUMN_WIDTH * safeScale)
+  const gutterWidth = Math.round(XLSX_BASE_GUTTER_WIDTH * safeScale)
+  const fontSize = XLSX_BASE_FONT_SIZE * safeScale
 
   const scrollRef = React.useRef<HTMLDivElement>(null)
   const setScrollElement = React.useCallback(
@@ -85,8 +86,8 @@ export function XlsxGrid({
     rightPad,
     scrollToCell,
   } = useFixedGridVirtualization({
-    rowCount,
-    columnCount,
+    rowCount: safeRowCount,
+    columnCount: safeColumnCount,
     rowSize: rowHeight,
     columnSize: columnWidth,
     rowOverscan: 30,
@@ -118,17 +119,17 @@ export function XlsxGrid({
 
   const gridTemplate = React.useMemo(
     () =>
-        buildVirtualGridTemplate({
-          leadingWidth: gutterWidth,
-          leftPad,
-          columnWidths: fixedGridColumnWidths(columnItems),
-          rightPad,
-        }),
+      buildVirtualGridTemplate({
+        leadingWidth: gutterWidth,
+        leftPad,
+        columnWidths: fixedGridColumnWidths(columnItems),
+        rightPad,
+      }),
     [gutterWidth, leftPad, columnItems, rightPad]
   )
   const totalWidth = gutterWidth + totalColumnSize
 
-  if (rowCount === 0 || columnCount === 0) {
+  if (safeRowCount === 0 || safeColumnCount === 0) {
     return (
       <div
         className="flex flex-1 items-center justify-center bg-card text-xs text-muted-foreground"
@@ -156,8 +157,8 @@ export function XlsxGrid({
           dataSlot="xlsx-body"
           role="grid"
           aria-label={sheetName}
-          aria-rowcount={rowCount}
-          aria-colcount={columnCount}
+          aria-rowcount={safeRowCount}
+          aria-colcount={safeColumnCount}
           tabIndex={0}
         >
           <div
@@ -191,9 +192,7 @@ export function XlsxGrid({
               <Spacer width={rightPad} />
             </div>
 
-            <div
-              style={getFixedGridRowWindowStyle({ height: totalRowSize })}
-            >
+            <div style={getFixedGridRowWindowStyle({ height: totalRowSize })}>
               {virtualRows.map((virtualRow) => (
                 <XlsxGridRow
                   key={virtualRow.index}
@@ -219,4 +218,15 @@ export function XlsxGrid({
       </ScrollerShell>
     </div>
   )
+}
+
+function normalizeGridCount(value: number) {
+  return Number.isFinite(value) && value > 0 && value <= Number.MAX_SAFE_INTEGER
+    ? Math.floor(value)
+    : 0
+}
+
+function normalizeGridScale(value: number) {
+  if (!Number.isFinite(value) || value <= 0) return 1
+  return Math.min(5, Math.max(0.25, value))
 }

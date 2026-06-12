@@ -7,13 +7,15 @@ import {
   cachedThumbnailResource,
   createThumbnailArtifactCache,
   shortName,
+  thumbnailFileMeta,
   timed,
   useThumbnailResource,
   withThumbnailDecodeSlot,
   withThumbnailFormatError,
   XLSX_THUMBNAIL_MAX_COLUMNS,
   XLSX_THUMBNAIL_MAX_ROWS,
-  type ThumbnailCacheEntry,
+  type ThumbnailBytesContent,
+  type ThumbnailFileMeta,
 } from "@/components/document-thumbnail/cache"
 import { GridTable } from "@/components/document-thumbnail/renderers/layout"
 
@@ -74,19 +76,20 @@ const xlsxCache = createThumbnailArtifactCache<XlsxPreview>({
 })
 
 function getXlsxPreview(
-  resource: ViewerResource,
-  cacheKey: string
+  meta: ThumbnailFileMeta,
+  content: ThumbnailBytesContent,
+  thumbnailKey: string
 ): Promise<XlsxPreview> {
-  return cachedThumbnailResource(xlsxCache, cacheKey, () =>
+  return cachedThumbnailResource(xlsxCache, thumbnailKey, () =>
     withThumbnailDecodeSlot(() =>
-      timed(`xlsx:total ${shortName(resource)}`, async () => {
+      timed(`xlsx:total ${shortName(meta)}`, async () => {
         const rows = await withThumbnailFormatError(
           "xlsx",
           "parse_failed",
-          resource.fileName,
+          meta.fileName,
           "Failed to parse spreadsheet thumbnail",
           async () => {
-            const buf = await resource.readArrayBuffer()
+            const buf = await content.readBytes()
             return timed("xlsx:worker-parse", () => parseXlsxInWorker(buf))
           }
         )
@@ -98,11 +101,13 @@ function getXlsxPreview(
 
 export function XlsxFirstSheet({
   resource,
-  cacheKey,
+  thumbnailKey,
 }: {
   resource: ViewerResource
-  cacheKey: string
+  thumbnailKey: string
 }) {
-  const { rows } = useThumbnailResource(getXlsxPreview(resource, cacheKey))
+  const { rows } = useThumbnailResource(
+    getXlsxPreview(thumbnailFileMeta(resource), resource.content, thumbnailKey)
+  )
   return <GridTable rows={rows} />
 }

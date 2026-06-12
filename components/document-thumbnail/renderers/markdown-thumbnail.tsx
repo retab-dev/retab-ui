@@ -6,12 +6,15 @@ import type * as Marked from "marked"
 import type { ViewerResource } from "@/lib/viewer-resource"
 import {
   cachedThumbnailResource,
+  createThumbnailArtifactCache,
   getThumbnailText,
   shortName,
+  thumbnailFileMeta,
   timed,
   useThumbnailResource,
   withThumbnailFormatError,
-  type ThumbnailCacheEntry,
+  type ThumbnailFileMeta,
+  type ThumbnailTextContent,
 } from "@/components/document-thumbnail/cache"
 import { IframeDoc } from "@/components/document-thumbnail/renderers/layout"
 
@@ -22,22 +25,27 @@ function loadMarkdown() {
   return mdLibs
 }
 
-const markdownCache = new Map<string, ThumbnailCacheEntry<string>>()
+const MARKDOWN_THUMBNAIL_CACHE_MAX_ENTRIES = 64
+
+const markdownCache = createThumbnailArtifactCache<string>({
+  maxEntries: MARKDOWN_THUMBNAIL_CACHE_MAX_ENTRIES,
+})
 
 function getMarkdownDoc(
-  resource: ViewerResource,
-  cacheKey: string
+  meta: ThumbnailFileMeta,
+  content: ThumbnailTextContent,
+  thumbnailKey: string
 ): Promise<string> {
-  return cachedThumbnailResource(markdownCache, cacheKey, () =>
+  return cachedThumbnailResource(markdownCache, thumbnailKey, () =>
     withThumbnailFormatError(
       "markdown",
       "render_failed",
-      resource.fileName,
+      meta.fileName,
       "Failed to render markdown thumbnail",
       () =>
-        timed(`markdown:total ${shortName(resource)}`, async () => {
+        timed(`markdown:total ${shortName(meta)}`, async () => {
           const [text, [{ marked }, DOMPurifyMod]] = await Promise.all([
-            getThumbnailText(resource, cacheKey),
+            getThumbnailText(meta, content, thumbnailKey),
             loadMarkdown(),
           ])
           const purifier = DOMPurifyMod as unknown as {
@@ -65,11 +73,13 @@ function getMarkdownDoc(
 
 export function MarkdownFirstPage({
   resource,
-  cacheKey,
+  thumbnailKey,
 }: {
   resource: ViewerResource
-  cacheKey: string
+  thumbnailKey: string
 }) {
-  const html = useThumbnailResource(getMarkdownDoc(resource, cacheKey))
+  const html = useThumbnailResource(
+    getMarkdownDoc(thumbnailFileMeta(resource), resource.content, thumbnailKey)
+  )
   return <IframeDoc html={html} />
 }

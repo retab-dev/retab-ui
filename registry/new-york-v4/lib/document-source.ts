@@ -177,8 +177,105 @@ function isSource(source: unknown): source is Source {
   const anchor = record.anchor
   if (typeof record.content !== "string") return false
   if (typeof anchor !== "object" || anchor === null) return false
-  const kind = (anchor as Record<string, unknown>).kind
-  return typeof kind === "string" && SOURCE_ANCHOR_KINDS.has(kind)
+  return isSourceAnchor(anchor)
+}
+
+function isSourceAnchor(anchor: object): boolean {
+  const record = anchor as Record<string, unknown>
+  const kind = record.kind
+  if (typeof kind !== "string" || !SOURCE_ANCHOR_KINDS.has(kind)) return false
+
+  if (kind === "pdf_bbox") {
+    return isPositiveInteger(record.page) && isValidNormalizedBox(record)
+  }
+  if (kind === "image_bbox") {
+    return (
+      (record.page == null || isPositiveInteger(record.page)) &&
+      isValidNormalizedBox(record)
+    )
+  }
+  if (kind === "csv_cell") {
+    return isPositiveInteger(record.row) && isColumnLetters(record.column)
+  }
+  if (kind === "spreadsheet_cell") {
+    return (
+      isNonNegativeInteger(record.sheet_index) &&
+      isPositiveInteger(record.row) &&
+      isColumnLetters(record.column)
+    )
+  }
+  if (kind === "docx_text_span") {
+    return (
+      isNonNegativeInteger(record.paragraph) &&
+      isValidOptionalRange(record.char_start, record.char_end)
+    )
+  }
+  if (kind === "docx_table_cell") {
+    return (
+      isNonNegativeInteger(record.table) &&
+      isNonNegativeInteger(record.row) &&
+      isNonNegativeInteger(record.column) &&
+      isValidOptionalRange(record.char_start, record.char_end)
+    )
+  }
+  if (kind === "text_span") {
+    return (
+      isPositiveInteger(record.line_start) &&
+      isPositiveInteger(record.line_end) &&
+      record.line_end >= record.line_start &&
+      isValidOptionalRange(record.char_start, record.char_end)
+    )
+  }
+  return false
+}
+
+function isPositiveInteger(value: unknown): value is number {
+  return Number.isInteger(value) && Number(value) >= 1
+}
+
+function isNonNegativeInteger(value: unknown): value is number {
+  return Number.isInteger(value) && Number(value) >= 0
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value)
+}
+
+function isColumnLetters(value: unknown): value is string {
+  if (typeof value !== "string" || !/^[A-Za-z]+$/.test(value)) return false
+  let index = 0
+  for (const character of value.toUpperCase()) {
+    index = index * 26 + (character.charCodeAt(0) - 64)
+    if (!Number.isSafeInteger(index)) return false
+  }
+  return true
+}
+
+function isValidOptionalRange(start: unknown, end: unknown) {
+  if (start == null && end == null) return true
+  if (start == null || end == null) return false
+  return (
+    isNonNegativeInteger(start) && isNonNegativeInteger(end) && end >= start
+  )
+}
+
+function isValidNormalizedBox(record: Record<string, unknown>) {
+  if (
+    !isFiniteNumber(record.left) ||
+    !isFiniteNumber(record.top) ||
+    !isFiniteNumber(record.width) ||
+    !isFiniteNumber(record.height)
+  ) {
+    return false
+  }
+  return (
+    record.left >= 0 &&
+    record.top >= 0 &&
+    record.width > 0 &&
+    record.height > 0 &&
+    record.left + record.width <= 1 &&
+    record.top + record.height <= 1
+  )
 }
 
 /**

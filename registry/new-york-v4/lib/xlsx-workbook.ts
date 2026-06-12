@@ -51,6 +51,7 @@ interface CacheEntry {
 }
 
 export const EMPTY_XLSX_CELL: XlsxCell = { text: "", numeric: false }
+const MAX_COMPACT_CELL_INDEX = 0xffffffff
 
 export function resolveXlsxSheetChange({
   activeSheet,
@@ -61,10 +62,15 @@ export function resolveXlsxSheetChange({
   requestedSheet: number
   sheetCount?: number | null
 }): XlsxSheetChangeResult {
-  if (!Number.isInteger(requestedSheet) || requestedSheet < 0) {
+  if (!Number.isSafeInteger(requestedSheet) || requestedSheet < 0) {
     return { accepted: false, changed: false, sheetIndex: activeSheet }
   }
-  if (sheetCount != null && requestedSheet >= sheetCount) {
+  if (
+    sheetCount != null &&
+    (!Number.isSafeInteger(sheetCount) ||
+      sheetCount < 0 ||
+      requestedSheet >= sheetCount)
+  ) {
     return { accepted: false, changed: false, sheetIndex: activeSheet }
   }
   return {
@@ -76,7 +82,7 @@ export function resolveXlsxSheetChange({
 
 /** Spreadsheet column label: 0 -> A, 25 -> Z, 26 -> AA. */
 export function xlsxColumnLabel(index: number): string {
-  if (!Number.isFinite(index) || index < 0) return ""
+  if (!Number.isSafeInteger(index) || index < 0) return ""
   let i = Math.floor(index) + 1
   let label = ""
   while (i > 0) {
@@ -97,7 +103,13 @@ export function compactSheetByteSize(sheet: CompactSheet): number {
 }
 
 export function estimateXlsxSourceBytes(source: XlsxSource): number {
-  if (source.estimatedByteSize != null) return source.estimatedByteSize
+  if (
+    source.estimatedByteSize != null &&
+    Number.isFinite(source.estimatedByteSize) &&
+    source.estimatedByteSize >= 0
+  ) {
+    return source.estimatedByteSize
+  }
   return source.sheets.reduce(
     (sum, sheet) =>
       sum +
@@ -168,13 +180,17 @@ export function createCompactSheet(input: {
   columnCount: number
   entries: Array<{ cellIndex: number; text: string; numeric?: boolean }>
 }): CompactSheet {
+  const rowCount = normalizeCompactDimension(input.rowCount)
+  const columnCount = normalizeCompactDimension(input.columnCount)
+  const cellCapacity = rowCount * columnCount
   const sorted = input.entries
     .filter(
       (entry) =>
         entry.text !== "" &&
-        Number.isInteger(entry.cellIndex) &&
+        Number.isSafeInteger(entry.cellIndex) &&
         entry.cellIndex >= 0 &&
-        entry.cellIndex < input.rowCount * input.columnCount
+        entry.cellIndex <= MAX_COMPACT_CELL_INDEX &&
+        entry.cellIndex < cellCapacity
     )
     .sort((a, b) => a.cellIndex - b.cellIndex)
 
@@ -196,8 +212,8 @@ export function createCompactSheet(input: {
 
   return {
     name: input.name,
-    rowCount: input.rowCount,
-    columnCount: input.columnCount,
+    rowCount,
+    columnCount,
     cellIndexes,
     textOffsets,
     numericFlags,
@@ -215,12 +231,11 @@ export class XlsxSourceCache {
     this.maxBytes = options.maxBytes ?? 96 * 1024 * 1024
   }
 
-  get(cacheKey: string, load: () => Promise<XlsxSource>): Promise<XlsxSource> {
-    const key = cacheKey
-    const existing = this.entries.get(key)
+  get(loadKey: string, load: () => Promise<XlsxSource>): Promise<XlsxSource> {
+    const existing = this.entries.get(loadKey)
     if (existing) {
-      this.entries.delete(key)
-      this.entries.set(key, existing)
+      this.entries.delete(loadKey)
+      this.entries.set(loadKey, existing)
       return existing.promise
     }
 
@@ -230,7 +245,7 @@ export class XlsxSourceCache {
         .then(load)
         .then(
           (source) => {
-            if (this.entries.get(key) !== entry) {
+            if (this.entries.get(loadKey) !== entry) {
               source.dispose?.()
               return source
             }
@@ -240,30 +255,30 @@ export class XlsxSourceCache {
             return source
           },
           (error) => {
-            if (this.entries.get(key) === entry) this.entries.delete(key)
+            if (this.entries.get(loadKey) === entry)
+              this.entries.delete(loadKey)
             throw error
           }
         ),
     }
 
-    this.entries.set(key, entry)
+    this.entries.set(loadKey, entry)
     this.evict()
     return entry.promise
   }
 
-  setResolvedForTest(cacheKey: string, source: XlsxSource, bytes = 1): void {
-    const key = cacheKey
+  setResolvedForTest(loadKey: string, source: XlsxSource, bytes = 1): void {
     const entry: CacheEntry = {
       source,
       bytes,
       promise: Promise.resolve(source),
     }
-    this.entries.set(key, entry)
+    this.entries.set(loadKey, entry)
     this.evict()
   }
 
-  has(cacheKey: string): boolean {
-    return this.entries.has(cacheKey)
+  has(loadKey: string): boolean {
+    return this.entries.has(loadKey)
   }
 
   clear(): void {
@@ -309,4 +324,8 @@ function binarySearchUint32(items: Uint32Array, target: number): number {
     else hi = mid - 1
   }
   return -1
+}
+
+function normalizeCompactDimension(value: number) {
+  return Number.isSafeInteger(value) && value > 0 ? value : 0
 }

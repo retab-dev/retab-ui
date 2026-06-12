@@ -14,19 +14,20 @@ import { Label } from "@/components/ui-retab/label"
 
 export function EnumValuesField({
   values,
+  resetKey,
   disabled,
   onChange,
 }: {
   values: JSONSchema7Type[]
+  resetKey: string
   disabled: boolean
   onChange: (values: JSONSchema7Type[]) => void
 }) {
   const [nextValue, setNextValue] = React.useState("")
-  const valuesKey = JSON.stringify(values)
 
   React.useEffect(() => {
     setNextValue("")
-  }, [valuesKey])
+  }, [resetKey])
 
   const addValue = () => {
     if (!nextValue.trim()) return

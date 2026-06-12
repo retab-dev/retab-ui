@@ -2,6 +2,7 @@
 
 import * as React from "react"
 
+import type { BlobViewerSource, UrlViewerSource } from "@/lib/viewer-source"
 import { FileViewer } from "@/components/ui/file-viewer"
 import {
   PdfViewer,
@@ -69,18 +70,16 @@ function SourceDocumentRenderer({
   viewerRef: React.RefObject<PdfViewerHandle | null>
   showPreview: boolean
 }) {
-  const src = useDocumentSrc(document)
-  if (!src) {
+  const source = useDocumentViewerSource(document)
+  if (!source) {
     return <NoDocumentState message="Document preview is unavailable." />
   }
-
-  const filename = document.filename ?? "document"
 
   if (canPreviewEditViewerDocument(document)) {
     return (
       <PdfViewer
         ref={viewerRef}
-        source={{ kind: "url", url: src, fileName: filename }}
+        source={source}
         bare
         className="h-full"
         renderPageOverlay={showPreview ? renderPageOverlay : undefined}
@@ -92,18 +91,7 @@ function SourceDocumentRenderer({
     return <NoDocumentState message="Preview requires a PDF source document." />
   }
 
-  return (
-    <FileViewer
-      source={{
-        kind: "url",
-        url: src,
-        fileName: filename,
-        mimeType: document.mimeType,
-      }}
-      bare
-      className="h-full"
-    />
-  )
+  return <FileViewer source={source} bare className="h-full" />
 }
 
 function FilledDocumentRenderer({
@@ -111,47 +99,48 @@ function FilledDocumentRenderer({
 }: {
   document: EditViewerDocument
 }) {
-  const src = useDocumentSrc(document)
-  if (!src) {
+  const source = useDocumentViewerSource(document)
+  if (!source) {
     return <NoDocumentState message="Document preview is unavailable." />
   }
 
-  return (
-    <FileViewer
-      source={{
+  return <FileViewer source={source} bare className="h-full" />
+}
+
+function useDocumentViewerSource(
+  document: EditViewerDocument
+): UrlViewerSource | BlobViewerSource | null {
+  return React.useMemo(() => {
+    const fileName = document.filename ?? "document"
+    if (document.src) {
+      return {
         kind: "url",
-        url: src,
-        fileName: document.filename ?? "document",
+        url: document.src,
+        fileName,
         mimeType: document.mimeType,
-      }}
-      bare
-      className="h-full"
-    />
-  )
-}
-
-function useDocumentSrc(document: EditViewerDocument) {
-  const objectUrl = useObjectUrl(
-    document.src ? null : (document.buffer ?? null),
-    document.mimeType
-  )
-
-  return document.src ?? objectUrl
-}
-
-function useObjectUrl(buffer: ArrayBuffer | null, mimeType: string) {
-  const [objectUrl, setObjectUrl] = React.useState<string | null>(null)
-
-  React.useEffect(() => {
-    if (!buffer) {
-      setObjectUrl(null)
-      return
+      }
     }
+    if (!document.buffer) return null
 
-    const url = URL.createObjectURL(new Blob([buffer], { type: mimeType }))
-    setObjectUrl(url)
-    return () => URL.revokeObjectURL(url)
-  }, [buffer, mimeType])
+    return {
+      kind: "blob",
+      blob: new Blob([document.buffer], { type: document.mimeType }),
+      identityKey: editViewerBufferIdentityKey(document.buffer),
+      fileName,
+      mimeType: document.mimeType,
+    }
+  }, [document.buffer, document.filename, document.mimeType, document.src])
+}
 
-  return objectUrl
+const editViewerBufferKeys = new WeakMap<ArrayBuffer, string>()
+let nextEditViewerBufferKey = 0
+
+function editViewerBufferIdentityKey(buffer: ArrayBuffer): string {
+  let key = editViewerBufferKeys.get(buffer)
+  if (!key) {
+    nextEditViewerBufferKey += 1
+    key = `edit-viewer-buffer:${nextEditViewerBufferKey}`
+    editViewerBufferKeys.set(buffer, key)
+  }
+  return key
 }

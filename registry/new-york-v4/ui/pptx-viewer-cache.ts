@@ -1,3 +1,5 @@
+import { lruGet, lruSet } from "./viewer-lru-cache"
+
 export interface Disposable {
   dispose(): void
 }
@@ -12,20 +14,23 @@ export class DisposableLruCache<K, V extends Disposable> {
   }
 
   get(key: K): V | undefined {
-    const value = this.values.get(key)
-    if (value !== undefined) {
-      this.values.delete(key)
-      this.values.set(key, value)
-    }
-    return value
+    return lruGet(this.values, key)
+  }
+
+  snapshotValues(): V[] {
+    return [...this.values.values()]
   }
 
   set(key: K, value: V) {
     const existing = this.values.get(key)
     if (existing) existing.dispose()
-    this.values.delete(key)
-    this.values.set(key, value)
-    this.evict()
+    lruSet(
+      this.values,
+      key,
+      value,
+      (_droppedKey, droppedValue) => droppedValue.dispose(),
+      this.limit
+    )
   }
 
   delete(key: K) {
@@ -38,14 +43,6 @@ export class DisposableLruCache<K, V extends Disposable> {
   clear() {
     for (const value of this.values.values()) value.dispose()
     this.values.clear()
-  }
-
-  private evict() {
-    while (this.values.size > this.limit) {
-      const oldest = this.values.keys().next().value as K | undefined
-      if (oldest === undefined) break
-      this.delete(oldest)
-    }
   }
 }
 

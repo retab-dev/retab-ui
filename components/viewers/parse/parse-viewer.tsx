@@ -24,6 +24,7 @@ export function ParseViewer({
 }: ParseViewerProps) {
   const pages = result?.output?.pages ?? []
   const text = result?.output?.text ?? undefined
+  const resetKey = result?.document?.id
 
   return (
     <PageMarkdownViewer
@@ -32,6 +33,7 @@ export function ParseViewer({
       isProcessing={isProcessing}
       renderDocument={renderDocument}
       onVisiblePageChange={onVisiblePageChange}
+      resetKey={resetKey}
       fileName="parse-output.md"
       processingLabel="Parsing document..."
     />

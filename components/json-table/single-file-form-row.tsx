@@ -1,14 +1,25 @@
 "use client"
 
 import React from "react"
+import dynamic from "next/dynamic"
 import type { JSONSchema7 } from "json-schema"
 
 import { getFixedGridRowStyle } from "@/components/ui/fixed-grid-row-style"
-import { DataCell } from "@/components/json-table/data-cell"
-import type { VisibleColumn } from "@/components/json-table/data-cell-types"
+import type { VisibleColumn } from "@/components/json-table/json-table-cell-types"
 import type { ProjectedRow } from "@/components/json-table/lib/document-projection"
 import type { TableDocument } from "@/components/json-table/lib/projects-types"
+import { ReadOnlyJsonTableCell } from "@/components/json-table/read-only-json-table-cell"
 import { TableRow } from "@/components/ui-retab/table"
+
+const EditableJsonTableCell = dynamic(
+  () =>
+    import("@/components/json-table/editable-json-table-cell").then(
+      (module) => ({
+        default: module.EditableJsonTableCell,
+      })
+    ),
+  { ssr: false }
+)
 
 interface SingleFileFormRowProps {
   document: TableDocument
@@ -50,7 +61,7 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
   }) => {
     const documentId = document.id
 
-    // Stable callback identity so DataCell's React.memo holds across the
+    // Stable callback identity so projected-cell memoization holds across the
     // parent's per-scroll re-renders.
     const handleDataChange = React.useCallback(
       async (_docId: string, value: unknown) => {
@@ -86,21 +97,24 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
         {visibleColumns.map((column, colIdx) => {
           const projectedCell = projectedRow?.cells[colIdx]
 
-          return (
-            <DataCell
-              key={column.key}
-              column={column}
-              projectedCell={projectedCell}
-              schema={schema}
-              document={document}
-              docId={documentId}
-              setOpenEditorPath={setOpenEditorPath}
-              openEditorPath={openEditorPath}
-              onDocumentDataChange={handleDataChange}
-              allowEditing={allowEditing}
-              onCellHoverStart={onCellHoverStart}
-              onCellHoverEnd={onCellHoverEnd}
-            />
+          const cellProps = {
+            column,
+            projectedCell,
+            schema,
+            document,
+            docId: documentId,
+            setOpenEditorPath,
+            openEditorPath,
+            onDocumentDataChange: handleDataChange,
+            allowEditing,
+            onCellHoverStart,
+            onCellHoverEnd,
+          }
+
+          return allowEditing ? (
+            <EditableJsonTableCell key={column.key} {...cellProps} />
+          ) : (
+            <ReadOnlyJsonTableCell key={column.key} {...cellProps} />
           )
         })}
       </TableRow>

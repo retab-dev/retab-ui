@@ -17,6 +17,7 @@ import {
   confidenceLevel,
   formatPageRanges,
   meanConfidence,
+  normalizePageCount,
   pageOwners,
   SEGMENT_PALETTE,
   segmentDisplayLabel,
@@ -36,7 +37,24 @@ import {
 import { PartitionViewer } from "@/components/viewers/partition/partition-viewer"
 
 vi.mock("@/components/ui/pdf-viewer", () => ({
-  PdfViewer: () => <div data-testid="pdf-viewer" />,
+  PdfViewer: ({
+    slots,
+  }: {
+    slots?: { top?: React.ReactNode; left?: React.ReactNode }
+  }) => (
+    <div data-testid="pdf-viewer">
+      {slots?.top}
+      {slots?.left}
+      {Array.from({ length: 6 }, (_, index) => {
+        const page = index + 1
+        return (
+          <div key={page} data-page={page} data-slot="pdf-page">
+            Page {page}
+          </div>
+        )
+      })}
+    </div>
+  ),
 }))
 
 afterEach(cleanup)
@@ -72,6 +90,20 @@ function createInteraction(
     selectSegment: vi.fn(),
     ...overrides,
   }
+}
+
+function expectNoDuplicateKeyWarnings(renderSurface: () => void) {
+  const consoleError = vi.spyOn(console, "error").mockImplementation(() => {})
+
+  renderSurface()
+  const hasDuplicateKeyWarning = consoleError.mock.calls.some((call) =>
+    call.some((message) =>
+      String(message).includes("Encountered two children with the same key")
+    )
+  )
+  consoleError.mockRestore()
+
+  expect(hasDuplicateKeyWarning).toBe(false)
 }
 
 describe("segment interaction helpers", () => {
@@ -244,6 +276,35 @@ describe("segment model helpers", () => {
     ])
   })
 
+  it("drops non-finite segment confidences during normalization", () => {
+    const normalized = toSegments(
+      [
+        { name: "NaN", pages: [1] },
+        { name: "Infinity", pages: [2] },
+        { name: "Valid", pages: [3] },
+      ],
+      [Number.NaN, Infinity, 0.8]
+    )
+
+    expect(normalized.map(({ confidence }) => confidence)).toEqual([
+      null,
+      null,
+      0.8,
+    ])
+  })
+
+  it("clamps finite segment confidences during normalization", () => {
+    const normalized = toSegments(
+      [
+        { name: "Low", pages: [1] },
+        { name: "High", pages: [2] },
+      ],
+      [-0.2, 1.4]
+    )
+
+    expect(normalized.map(({ confidence }) => confidence)).toEqual([0, 1])
+  })
+
   it("uses a deterministic label color map and wraps the palette", () => {
     const labels = [
       "Zulu",
@@ -256,6 +317,28 @@ describe("segment model helpers", () => {
     expect(colors.get("Zulu")).toBe(
       SEGMENT_PALETTE[(new Set(labels).size - 1) % SEGMENT_PALETTE.length]
     )
+  })
+
+  it("keys color maps by display label", () => {
+    const colors = buildColorMap([" Contract ", "", "   "])
+
+    expect(colors.get("Contract")).toBe(SEGMENT_PALETTE[0])
+    expect(colors.get("unnamed")).toBe(SEGMENT_PALETTE[1])
+    expect(colors.get(" Contract ")).toBeUndefined()
+  })
+
+  it("uses display labels when assigning colors", () => {
+    const normalized = toSegments([
+      { name: "Contract", pages: [1] },
+      { name: " Contract ", pages: [2] },
+      { name: "", pages: [3] },
+      { name: "   ", pages: [4] },
+    ])
+
+    expect(normalized[0].color).toBe(normalized[1].color)
+    expect(normalized[2].color).toBe(normalized[3].color)
+    expect(normalized[0].id).toBe("Contract#0")
+    expect(normalized[1].id).toBe(" Contract #1")
   })
 
   it("supports shared color overrides", () => {
@@ -296,6 +379,39 @@ describe("segment model helpers", () => {
     expect(owners.get(1)).toEqual([4])
     expect(owners.get(3)).toEqual([4, 2])
     expect(owners.get(2)).toBeUndefined()
+  })
+
+  it("ignores invalid pages when counting segment pages", () => {
+    expect(
+      segmentsPageCount([
+        segment({
+          id: "invalid",
+          index: 0,
+          label: "Invalid",
+          pages: [Number.NaN, Infinity, -1, 2],
+        }),
+      ])
+    ).toBe(2)
+  })
+
+  it("ignores invalid pages when mapping page owners", () => {
+    const owners = pageOwners([
+      segment({
+        id: "invalid",
+        index: 0,
+        label: "Invalid",
+        pages: [Number.NaN, Infinity, 0, -1, 1.5, 2],
+      }),
+    ])
+
+    expect(Array.from(owners.entries())).toEqual([[2, [0]]])
+  })
+
+  it("normalizes page counts to positive finite integers", () => {
+    expect(normalizePageCount(2.9)).toBe(2)
+    expect(normalizePageCount(0)).toBe(0)
+    expect(normalizePageCount(Number.NaN)).toBe(0)
+    expect(normalizePageCount(Infinity)).toBe(0)
   })
 
   it("classifies and averages confidence values without clamping", () => {
@@ -430,6 +546,30 @@ describe("SegmentLegend", () => {
     expect(screen.queryByRole("button", { name: /unused/i })).toBeNull()
   })
 
+  it("treats segments with only invalid pages as unused", () => {
+    render(
+      <SegmentLegend
+        segments={[
+          segment({
+            id: "invalid",
+            index: 0,
+            label: "Invalid",
+            pages: [Number.NaN, Infinity, 0, -1, 1.5],
+          }),
+        ]}
+        showUnusedToggle
+      />
+    )
+
+    expect(screen.queryByRole("button", { name: "Invalid" })).toBeNull()
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Show 1 unused segments" })
+    )
+
+    expect(screen.getByRole("button", { name: "Invalid" })).toBeTruthy()
+  })
+
   it("marks current and selected legend entries independently", () => {
     render(
       <SegmentLegend
@@ -504,6 +644,38 @@ describe("SegmentLegend", () => {
       name: "Intro",
     }).parentElement
     expect(verticalEntries?.getAttribute("style") ?? "").toBe("")
+  })
+
+  it("ignores invalid legend column counts", () => {
+    const { rerender } = render(
+      <SegmentLegend segments={segments} showUnused columns={-1} />
+    )
+
+    let entries = screen.getByRole("button", { name: "Intro" }).parentElement
+    expect(entries?.getAttribute("style") ?? "").toBe("")
+
+    rerender(
+      <SegmentLegend segments={segments} showUnused columns={Infinity} />
+    )
+
+    entries = screen.getByRole("button", { name: "Intro" }).parentElement
+    expect(entries?.getAttribute("style") ?? "").toBe("")
+  })
+
+  it("renders duplicate segment ids without duplicate React keys", () => {
+    expectNoDuplicateKeyWarnings(() => {
+      render(
+        <SegmentLegend
+          segments={[
+            segment({ id: "duplicate", index: 0, label: "First", pages: [1] }),
+            segment({ id: "duplicate", index: 1, label: "Second", pages: [2] }),
+          ]}
+        />
+      )
+    })
+
+    expect(screen.getByRole("button", { name: "First" })).toBeTruthy()
+    expect(screen.getByRole("button", { name: "Second" })).toBeTruthy()
   })
 })
 
@@ -670,6 +842,24 @@ describe("SegmentSidebar", () => {
     expect(screen.getByText("unnamed")).toBeTruthy()
   })
 
+  it("counts only valid unique pages in sidebar metadata", () => {
+    render(
+      <SegmentSidebar
+        segments={[
+          segment({
+            id: "messy",
+            index: 0,
+            label: "Messy",
+            pages: [2, 2, Number.NaN, -1, 1.5],
+          }),
+        ]}
+      />
+    )
+
+    expect(screen.getByText("1 page · 2")).toBeTruthy()
+    expect(screen.queryByText(/5 pages/)).toBeNull()
+  })
+
   it("does not dim all sidebar rows for stale interaction ids", () => {
     render(
       <SegmentSidebar
@@ -684,6 +874,22 @@ describe("SegmentSidebar", () => {
     expect(
       screen.getByRole("button", { name: /Results/ }).className
     ).not.toContain("opacity-60")
+  })
+
+  it("renders duplicate segment ids without duplicate sidebar keys", () => {
+    expectNoDuplicateKeyWarnings(() => {
+      render(
+        <SegmentSidebar
+          segments={[
+            segment({ id: "duplicate", index: 0, label: "First", pages: [1] }),
+            segment({ id: "duplicate", index: 1, label: "Second", pages: [2] }),
+          ]}
+        />
+      )
+    })
+
+    expect(screen.getByRole("button", { name: /First/ })).toBeTruthy()
+    expect(screen.getByRole("button", { name: /Second/ })).toBeTruthy()
   })
 })
 
@@ -877,8 +1083,47 @@ describe("PageTimeline", () => {
     )
   })
 
+  it("does not dim visible pages when the selected segment has only fractional pages", () => {
+    const timelineSegments = [
+      segment({ id: "visible", index: 0, label: "Visible", pages: [1] }),
+      segment({
+        id: "fractional",
+        index: 1,
+        label: "Fractional",
+        pages: [1.5],
+      }),
+    ]
+
+    render(
+      <PageTimeline
+        segments={timelineSegments}
+        pageCount={2}
+        interaction={createInteraction({ selectedId: "fractional" })}
+      />
+    )
+
+    expect(
+      screen.getByRole("button", { name: "Page 1 · Visible" }).className
+    ).toContain("opacity-100")
+    expect(screen.getByRole("button", { name: "Page 2" }).className).toContain(
+      "opacity-100"
+    )
+  })
+
   it("returns no page controls when there is no implied or explicit page count", () => {
     const { container } = render(<PageTimeline segments={[]} />)
+
+    expect(container.firstChild).toBeNull()
+  })
+
+  it("returns no page controls for non-finite explicit page counts", () => {
+    const { container, rerender } = render(
+      <PageTimeline segments={segments} pageCount={Number.NaN} />
+    )
+
+    expect(container.firstChild).toBeNull()
+
+    rerender(<PageTimeline segments={segments} pageCount={Infinity} />)
 
     expect(container.firstChild).toBeNull()
   })
@@ -953,6 +1198,37 @@ describe("PageRibbon", () => {
     expect(ribbon.getAttribute("data-current")).toBe("true")
     expect(screen.getByText("1")).toBeTruthy()
     expect(screen.getByText("3")).toBeTruthy()
+  })
+
+  it("falls back for invalid ribbon row thickness", () => {
+    const { container, rerender } = render(
+      <PageRibbon
+        rows={[{ id: "split", segments: segments.slice(0, 1) }]}
+        pageCount={2}
+        rowThickness={Number.NaN}
+      />
+    )
+
+    expect(
+      container
+        .querySelector('[data-slot="page-ribbon-row"]')
+        ?.getAttribute("style")
+    ).toContain("height: 10px")
+
+    rerender(
+      <PageRibbon
+        rows={[{ id: "split", segments: segments.slice(0, 1) }]}
+        pageCount={2}
+        orientation="vertical"
+        rowThickness={-1}
+      />
+    )
+
+    expect(
+      container
+        .querySelector('[data-slot="page-ribbon-row"]')
+        ?.getAttribute("style")
+    ).toContain("width: 44px")
   })
 
   it("clamps horizontal scroll progress cursor", () => {
@@ -1086,6 +1362,63 @@ describe("PageRibbon", () => {
     expect(run.getAttribute("style")).toContain("width: 66.66666666666666%")
     expect(screen.queryByLabelText("Tail pages 4 to 4")).toBeNull()
   })
+
+  it("returns no ribbon for non-finite page counts", () => {
+    const { container, rerender } = render(
+      <PageRibbon
+        rows={[{ id: "split", segments: segments.slice(0, 1) }]}
+        pageCount={Number.NaN}
+      />
+    )
+
+    expect(container.firstChild).toBeNull()
+
+    rerender(
+      <PageRibbon
+        rows={[{ id: "split", segments: segments.slice(0, 1) }]}
+        pageCount={Infinity}
+      />
+    )
+
+    expect(container.firstChild).toBeNull()
+  })
+
+  it("renders duplicate ribbon row and segment ids without duplicate keys", () => {
+    expectNoDuplicateKeyWarnings(() => {
+      render(
+        <PageRibbon
+          rows={[
+            {
+              id: "duplicate-row",
+              segments: [
+                segment({
+                  id: "duplicate",
+                  index: 0,
+                  label: "First",
+                  pages: [1],
+                }),
+              ],
+            },
+            {
+              id: "duplicate-row",
+              segments: [
+                segment({
+                  id: "duplicate",
+                  index: 1,
+                  label: "Second",
+                  pages: [2],
+                }),
+              ],
+            },
+          ]}
+          pageCount={2}
+        />
+      )
+    })
+
+    expect(screen.getByLabelText("First pages 1 to 1")).toBeTruthy()
+    expect(screen.getByLabelText("Second pages 2 to 2")).toBeTruthy()
+  })
 })
 
 describe("SegmentedDocumentViewer", () => {
@@ -1117,9 +1450,63 @@ describe("SegmentedDocumentViewer", () => {
     expect(screen.getByText("1 chunk")).toBeTruthy()
     expect(screen.getByRole("button", { name: "Page 4" })).toBeTruthy()
   })
+
+  it("jumps to the earliest normalized page for unsorted segment pages", () => {
+    const scrolledPages: string[] = []
+    const originalScrollIntoView = HTMLElement.prototype.scrollIntoView
+    HTMLElement.prototype.scrollIntoView = function () {
+      scrolledPages.push(this.getAttribute("data-page") ?? "")
+    }
+
+    try {
+      render(
+        <SegmentedDocumentViewer
+          src="/document.pdf"
+          segments={[
+            segment({
+              id: "manual",
+              index: 0,
+              label: "Manual",
+              pages: [5, 1],
+            }),
+          ]}
+        />
+      )
+
+      fireEvent.click(screen.getByRole("button", { name: /Manual.*2 pages/ }))
+
+      expect(scrolledPages).toEqual(["1"])
+    } finally {
+      HTMLElement.prototype.scrollIntoView = originalScrollIntoView
+    }
+  })
 })
 
 describe("partition segment composition", () => {
+  it("uses display-label colors for partition keys with surrounding whitespace", () => {
+    render(
+      <PartitionViewer
+        result={{
+          output: [
+            { key: "Contract", pages: [1] },
+            { key: " Contract ", pages: [2] },
+          ],
+          consensus: { choices: [], likelihoods: null },
+          usage: null,
+        }}
+        renderDocument={({ slots }) => <div>{slots.top}</div>}
+      />
+    )
+
+    const contractButtons = screen.getAllByRole("button", { name: "Contract" })
+    const swatches = contractButtons.map((button) =>
+      button.querySelector("span[style]")?.getAttribute("style")
+    )
+
+    expect(contractButtons).toHaveLength(2)
+    expect(swatches[0]).toBe(swatches[1])
+  })
+
   it("jumps to the earliest normalized page when a partition legend key is selected", () => {
     const scrolledPages: string[] = []
     const originalScrollIntoView = HTMLElement.prototype.scrollIntoView

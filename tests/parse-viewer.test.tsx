@@ -544,4 +544,83 @@ describe("ParseViewer", () => {
       expect(onVisiblePageChange).toHaveBeenCalledWith(2)
     })
   })
+
+  it("resets the current page after returning to the empty parse state", async () => {
+    const { rerender } = render(
+      <ParseViewer
+        result={parseResult()}
+        renderDocument={(handlers: ParseDocumentHandlers) => (
+          <button type="button" onClick={() => handlers.onCurrentPageChange(2)}>
+            Source document page 2
+          </button>
+        )}
+      />
+    )
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Source document page 2" })
+    )
+    await waitFor(() => {
+      expect(screen.getByText("Page 2 of 2")).toBeTruthy()
+    })
+
+    rerender(<ParseViewer result={null} isProcessing />)
+    expect(screen.getByText("Parsing document...")).toBeTruthy()
+
+    rerender(<ParseViewer result={parseResult()} />)
+
+    await waitFor(() => {
+      expect(screen.getByText("Page 1 of 2")).toBeTruthy()
+    })
+  })
+
+  it("accepts markdown page reports after a pending sync target disappears", async () => {
+    const onVisiblePageChange = vi.fn()
+    const { container, rerender } = render(
+      <ParseViewer
+        result={parseResult()}
+        onVisiblePageChange={onVisiblePageChange}
+        renderDocument={(handlers: ParseDocumentHandlers) => (
+          <button type="button" onClick={() => handlers.onCurrentPageChange(2)}>
+            Source document page 2
+          </button>
+        )}
+      />
+    )
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Source document page 2" })
+    )
+    await waitFor(() => {
+      expect(screen.getByText("Page 2 of 2")).toBeTruthy()
+    })
+
+    rerender(
+      <ParseViewer
+        result={parseResult({
+          pages: ["# Single replacement page"],
+          text: "# Single replacement page",
+        })}
+        onVisiblePageChange={onVisiblePageChange}
+        renderDocument={(handlers: ParseDocumentHandlers) => (
+          <button type="button" onClick={() => handlers.onCurrentPageChange(1)}>
+            Source document page 1
+          </button>
+        )}
+      />
+    )
+    await screen.findByText("Single replacement page")
+    onVisiblePageChange.mockClear()
+
+    const viewport = container.querySelector<HTMLElement>(
+      '[data-slot="scroll-area-viewport"]'
+    )
+    const page = container.querySelector<HTMLElement>("[data-page-number]")
+    vi.spyOn(viewport!, "getBoundingClientRect").mockReturnValue(rect(0, 400))
+    vi.spyOn(page!, "getBoundingClientRect").mockReturnValue(rect(0))
+
+    fireEvent.scroll(viewport!)
+
+    expect(onVisiblePageChange).toHaveBeenCalledWith(1)
+  })
 })

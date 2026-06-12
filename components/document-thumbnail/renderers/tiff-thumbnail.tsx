@@ -8,13 +8,16 @@ import { FileThumbnailShimmer } from "@/components/ui/file-thumbnail"
 import {
   cachedThumbnailResource,
   createThumbnailArtifactCache,
+  createThumbnailImageLoadError,
   shortName,
+  thumbnailFileMeta,
   TIFF_THUMBNAIL_TARGET_WIDTH,
   timed,
   useThumbnailResource,
   withThumbnailDecodeSlot,
   withThumbnailFormatError,
-  type ThumbnailCacheEntry,
+  type ThumbnailBytesContent,
+  type ThumbnailFileMeta,
 } from "@/components/document-thumbnail/cache"
 import { useObjectUrl } from "@/components/document-thumbnail/renderers/use-object-url"
 import type { ThumbnailAnchor } from "@/components/document-thumbnail/types"
@@ -66,21 +69,20 @@ function decodeTiffInWorker(buffer: ArrayBuffer): Promise<Blob> {
 const tiffCache = createThumbnailArtifactCache<Blob>({ maxEntries: 48 })
 
 function getTiffFirstPageBlob(
-  resource: ViewerResource,
-  cacheKey: string
+  meta: ThumbnailFileMeta,
+  content: ThumbnailBytesContent,
+  thumbnailKey: string
 ): Promise<Blob> {
-  return cachedThumbnailResource(tiffCache, cacheKey, () =>
+  return cachedThumbnailResource(tiffCache, thumbnailKey, () =>
     withThumbnailDecodeSlot(() =>
       withThumbnailFormatError(
         "image",
         "decode_failed",
-        resource.fileName,
+        meta.fileName,
         "Failed to decode TIFF thumbnail",
         () =>
-          timed(`tiff:total ${shortName(resource)}`, async () => {
-            const buf = await timed("tiff:fetch", () =>
-              resource.readArrayBuffer()
-            )
+          timed(`tiff:total ${shortName(meta)}`, async () => {
+            const buf = await timed("tiff:fetch", () => content.readBytes())
             return timed("tiff:worker-decode", () => decodeTiffInWorker(buf))
           })
       )
@@ -90,23 +92,33 @@ function getTiffFirstPageBlob(
 
 export function TiffFirstPage({
   resource,
-  cacheKey,
+  thumbnailKey,
   anchor,
+  onError,
 }: {
   resource: ViewerResource
-  cacheKey: string
+  thumbnailKey: string
   anchor: ThumbnailAnchor
+  onError: (error: unknown) => void
 }) {
-  const blob = useThumbnailResource(getTiffFirstPageBlob(resource, cacheKey))
-  return <TiffBlobImage blob={blob} anchor={anchor} />
+  const blob = useThumbnailResource(
+    getTiffFirstPageBlob(
+      thumbnailFileMeta(resource),
+      resource.content,
+      thumbnailKey
+    )
+  )
+  return <TiffBlobImage blob={blob} anchor={anchor} onError={onError} />
 }
 
 function TiffBlobImage({
   blob,
   anchor,
+  onError,
 }: {
   blob: Blob
   anchor: ThumbnailAnchor
+  onError: (error: unknown) => void
 }) {
   const url = useObjectUrl(blob)
 
@@ -118,6 +130,7 @@ function TiffBlobImage({
         src={url}
         alt=""
         className={cn("absolute block w-full", ANCHOR_CORNER[anchor])}
+        onError={() => onError(createThumbnailImageLoadError())}
       />
     </div>
   )

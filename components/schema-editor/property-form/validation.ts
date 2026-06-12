@@ -42,14 +42,43 @@ function invalidNode(message: string, code: string): NodeValidation {
   return { status: "invalid", message, code }
 }
 
+function getStableValueKey(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value.map(getStableValueKey).join(",")}]`
+  }
+  if (value && typeof value === "object") {
+    return `{${Object.entries(value)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(
+        ([key, currentValue]) =>
+          `${JSON.stringify(key)}:${getStableValueKey(currentValue)}`
+      )
+      .join(",")}}`
+  }
+  return JSON.stringify(value)
+}
+
+function hasDuplicateEnumValues(values: unknown[]) {
+  const seen = new Set<string>()
+  for (const value of values) {
+    const key = getStableValueKey(value)
+    if (seen.has(key)) return true
+    seen.add(key)
+  }
+  return false
+}
+
+function hasBlankEnumValues(values: unknown[]) {
+  return values.some((value) => typeof value === "string" && !value.trim())
+}
+
 export function validatePropertyDraft({
   propertyDraft,
   schemaContext,
 }: {
   propertyDraft: PropertyDraft
   schemaContext: PropertyFormSchemaContext
-}
-): PropertyValidation {
+}): PropertyValidation {
   const nameError = validatePropertyFormName({
     name: propertyDraft.name,
     siblingNames: schemaContext.siblingNames,
@@ -66,8 +95,18 @@ export function validatePropertyDraft({
     : []
   const schemaNode =
     effectiveType.type === "enum" && enumValues.length === 0
-      ? invalidNode("Multiple choice fields need at least one option", "enum_empty")
-      : validNode()
+      ? invalidNode(
+          "Multiple choice fields need at least one option",
+          "enum_empty"
+        )
+      : effectiveType.type === "enum" && hasBlankEnumValues(enumValues)
+        ? invalidNode("Multiple choice options cannot be blank", "enum_blank")
+        : effectiveType.type === "enum" && hasDuplicateEnumValues(enumValues)
+          ? invalidNode(
+              "Multiple choice options must be unique",
+              "enum_duplicate"
+            )
+          : validNode()
 
   return {
     name,

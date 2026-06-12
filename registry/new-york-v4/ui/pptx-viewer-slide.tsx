@@ -10,6 +10,7 @@ import {
   getVisibleSlideSize,
   type PptxSize,
   type PptxSlideOverlayProps,
+  type PptxSlideRenderTiming,
 } from "./pptx-viewer-core"
 import { type PptxScrollActivity } from "./pptx-viewer-scroll"
 import { type PptxSource } from "./pptx-viewer-source"
@@ -23,6 +24,7 @@ export interface PptxSlideScrollerProps {
   eager: boolean
   activity: PptxScrollActivity
   renderSlideOverlay?: (props: PptxSlideOverlayProps) => React.ReactNode
+  onSlideRenderTiming?: (timing: PptxSlideRenderTiming) => void
   containerRef: React.Ref<HTMLDivElement>
   viewportRef: React.Ref<HTMLDivElement>
   onScroll: () => void
@@ -35,6 +37,7 @@ export function PptxSlideScroller({
   eager,
   activity,
   renderSlideOverlay,
+  onSlideRenderTiming,
   containerRef,
   viewportRef,
   onScroll,
@@ -56,6 +59,7 @@ export function PptxSlideScroller({
             eager={eager}
             activity={activity}
             renderSlideOverlay={renderSlideOverlay}
+            onSlideRenderTiming={onSlideRenderTiming}
           />
         ))}
       </div>
@@ -71,6 +75,7 @@ function PptxSlideFrame({
   eager,
   activity,
   renderSlideOverlay,
+  onSlideRenderTiming,
 }: {
   source: PptxSource
   slideIndex: number
@@ -79,22 +84,33 @@ function PptxSlideFrame({
   eager: boolean
   activity: PptxScrollActivity
   renderSlideOverlay?: (props: PptxSlideOverlayProps) => React.ReactNode
+  onSlideRenderTiming?: (timing: PptxSlideRenderTiming) => void
 }) {
   const [isNearViewport, setIsNearViewport] = React.useState(false)
 
   const frameRef = React.useCallback((element: HTMLDivElement | null) => {
     if (!element) return
+    if (typeof IntersectionObserver === "undefined") {
+      setIsNearViewport(true)
+      return
+    }
     const root = element.closest<HTMLElement>(
       '[data-slot="scroll-area-viewport"]'
     )
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) setIsNearViewport(entry.isIntersecting)
-      },
-      { root, rootMargin: "150% 0px" }
-    )
-    observer.observe(element)
-    return () => observer.disconnect()
+    let observer: IntersectionObserver | null = null
+    try {
+      observer = new IntersectionObserver(
+        (entries) => {
+          for (const entry of entries) setIsNearViewport(entry.isIntersecting)
+        },
+        { root, rootMargin: "150% 0px" }
+      )
+      observer.observe(element)
+      return () => observer?.disconnect()
+    } catch {
+      observer?.disconnect()
+      setIsNearViewport(true)
+    }
   }, [])
 
   const slideSize = getScaledSlideSize(source.baseSize, zoomScale)
@@ -123,6 +139,7 @@ function PptxSlideFrame({
             zoomScale={zoomScale}
             eager={eager}
             activity={activity}
+            onSlideRenderTiming={onSlideRenderTiming}
           />
         ) : (
           <Skeleton className="size-full rounded-none" />
@@ -147,25 +164,33 @@ function PptxSlideCanvas({
   zoomScale,
   eager,
   activity,
+  onSlideRenderTiming,
 }: {
   source: PptxSource
   slideIndex: number
   zoomScale: number
   eager: boolean
   activity: PptxScrollActivity
+  onSlideRenderTiming?: (timing: PptxSlideRenderTiming) => void
 }) {
-  const dpr = (typeof window !== "undefined" ? window.devicePixelRatio : 1) || 1
+  const rawDpr = typeof window !== "undefined" ? window.devicePixelRatio : 1
+  const dpr = Number.isFinite(rawDpr) && rawDpr > 0 ? rawDpr : 1
   const slideSize = getScaledSlideSize(source.baseSize, zoomScale)
   const [renderState, setRenderState] = React.useState<SlideRenderState>("idle")
+  const onSlideRenderTimingRef = React.useRef(onSlideRenderTiming)
+  onSlideRenderTimingRef.current = onSlideRenderTiming
 
   const canvasRef = React.useCallback(
     (canvas: HTMLCanvasElement | null) => {
       if (!canvas) return
       let cancelled = false
       const renderScale = zoomScale * dpr
+      const immediateCached = source.hasBitmap({ slideIndex, renderScale })
       setRenderState("rendering")
 
       const start = () => {
+        const startedAt = now()
+        const startedCached = source.hasBitmap({ slideIndex, renderScale })
         source
           .renderSlide({
             slideIndex,
@@ -175,19 +200,30 @@ function PptxSlideCanvas({
           })
           .then((result) => {
             if (cancelled) return
+            notifySlideRenderTiming(onSlideRenderTimingRef.current, {
+              cached: startedCached,
+              durationMs: now() - startedAt,
+              renderScale,
+              slideNumber: slideIndex + 1,
+              status: result.status,
+            })
             if (result.status === "cancelled") return
             setRenderState(result.status === "failed" ? "failed" : "rendered")
           })
           .catch(() => {
-            if (!cancelled) setRenderState("failed")
+            if (cancelled) return
+            notifySlideRenderTiming(onSlideRenderTimingRef.current, {
+              cached: startedCached,
+              durationMs: now() - startedAt,
+              renderScale,
+              slideNumber: slideIndex + 1,
+              status: "failed",
+            })
+            setRenderState("failed")
           })
       }
 
-      if (
-        eager ||
-        source.hasBitmap({ slideIndex, renderScale }) ||
-        !activity.isScrolling()
-      ) {
+      if (eager || immediateCached || !activity.isScrolling()) {
         start()
         return () => {
           cancelled = true
@@ -222,6 +258,21 @@ function PptxSlideCanvas({
       ) : null}
     </>
   )
+}
+
+function notifySlideRenderTiming(
+  callback: ((timing: PptxSlideRenderTiming) => void) | undefined,
+  timing: PptxSlideRenderTiming
+) {
+  try {
+    callback?.(timing)
+  } catch {
+    /* Instrumentation callbacks must not affect slide rendering. */
+  }
+}
+
+function now() {
+  return typeof performance === "undefined" ? Date.now() : performance.now()
 }
 
 function PptxSlideOverlay({

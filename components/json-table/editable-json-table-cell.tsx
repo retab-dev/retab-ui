@@ -7,15 +7,21 @@ import {
   getCellWidthStyle,
   getSelectableCellWidthStyle,
 } from "@/components/json-table/cell-style"
-import type { DataCellProps } from "@/components/json-table/data-cell-types"
+import type { JsonTableCellProps } from "@/components/json-table/json-table-cell-types"
 import { getFieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
 import { formatValueForCommit } from "@/components/json-table/lib/value-normalization"
-import { useRefCallback } from "@/components/json-table/path-utils"
+import { cmp, useRefCallback } from "@/components/json-table/path-utils"
 import { useCellController } from "@/components/json-table/use-cell-controller"
 import { useElevatedVirtualRow } from "@/components/json-table/use-elevated-virtual-row"
 import { TableCell } from "@/components/ui-retab/table"
 
-export function EditableDataCell(props: DataCellProps) {
+function editableCellMemoVariables(props: JsonTableCellProps) {
+  const { document, ...rest } = props
+  const materializedFieldPath = props.projectedCell?.materializedFieldPath
+  return { ...rest, materializedFieldPath, document }
+}
+
+function EditableJsonTableCellContent(props: JsonTableCellProps) {
   const materializedFieldPath = props.projectedCell?.materializedFieldPath
   const {
     schema,
@@ -29,16 +35,13 @@ export function EditableDataCell(props: DataCellProps) {
   const [focusedField, setFocusedField] = useState<string | null>(null)
   const [isInputFocused, setIsInputFocused] = useState(false)
   const [isSelectOpen, setIsSelectOpen] = useState(false)
-  const [isDatePopoverOpen, setIsDatePopoverOpen] = useState(false)
   const [isPointerOver, setIsPointerOver] = useState(false)
-  const [isTextEditing, setIsTextEditing] = useState(false)
   const cellRootRef = React.useRef<HTMLDivElement>(null)
 
   useElevatedVirtualRow({
     cellRootRef,
     isInputFocused,
     isSelectOpen,
-    isDatePopoverOpen,
   })
 
   const value = props.projectedCell?.value
@@ -54,8 +57,7 @@ export function EditableDataCell(props: DataCellProps) {
   const [draftTextValue, setDraftTextValue] = useState<string>(
     () => committedTextValue
   )
-  const activeTextValue =
-    isInputFocused || isDatePopoverOpen ? draftTextValue : committedTextValue
+  const activeTextValue = isInputFocused ? draftTextValue : committedTextValue
 
   const cellWidth = props.column.widthPx
 
@@ -65,9 +67,7 @@ export function EditableDataCell(props: DataCellProps) {
       ? getFieldMetadata(schema, materializedFieldPath)
       : undefined)
   const isEditable = props.allowEditing ?? false
-  const showInput =
-    (isPointerOver || isInputFocused || isSelectOpen || isDatePopoverOpen) &&
-    isEditable
+  const showInput = (isPointerOver || isInputFocused || isSelectOpen) && isEditable
 
   const onCommit = useRefCallback((newValue: unknown) => {
     if (!materializedFieldPath || !fieldMetadata) return
@@ -96,7 +96,7 @@ export function EditableDataCell(props: DataCellProps) {
       className="relative m-0 border-t-0 border-r border-b border-l-0 p-0 select-none"
       onMouseLeave={() => {
         setIsPointerOver(false)
-        if (isSelectOpen || isDatePopoverOpen || isInputFocused) return
+        if (isSelectOpen || isInputFocused) return
         props.onCellHoverEnd?.()
       }}
       onMouseEnter={(event) => {
@@ -136,10 +136,6 @@ export function EditableDataCell(props: DataCellProps) {
             showInput,
             isSelectOpen,
             setIsSelectOpen,
-            isDatePopoverOpen,
-            setIsDatePopoverOpen,
-            isTextEditing,
-            setIsTextEditing,
             openEditorPath,
             setOpenEditorPath,
           }}
@@ -149,3 +145,12 @@ export function EditableDataCell(props: DataCellProps) {
     </TableCell>
   )
 }
+
+export const EditableJsonTableCell = React.memo(
+  EditableJsonTableCellContent,
+  (prev, next) =>
+    cmp(editableCellMemoVariables(prev), editableCellMemoVariables(next), {
+      deep: ["projectedCell.arrayIndexes"],
+    })
+)
+EditableJsonTableCell.displayName = "EditableJsonTableCell"

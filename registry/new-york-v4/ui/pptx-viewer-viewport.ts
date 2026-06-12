@@ -8,13 +8,20 @@ export function usePptxViewportWidth() {
   const containerRef = React.useCallback((element: HTMLDivElement | null) => {
     if (!element) return
     setViewportWidth(element.clientWidth)
-    const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        setViewportWidth((entry.target as HTMLElement).clientWidth)
-      }
-    })
-    observer.observe(element)
-    return () => observer.disconnect()
+    if (typeof ResizeObserver === "undefined") return
+    let observer: ResizeObserver | null = null
+    try {
+      observer = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          setViewportWidth((entry.target as HTMLElement).clientWidth)
+        }
+      })
+      observer.observe(element)
+      return () => observer?.disconnect()
+    } catch {
+      observer?.disconnect()
+      /* Keep the initial measurement when ResizeObserver is unavailable at runtime. */
+    }
   }, [])
 
   return { containerRef, viewportWidth }

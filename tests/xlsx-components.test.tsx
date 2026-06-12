@@ -2,21 +2,54 @@
 
 import * as React from "react"
 import { cleanup, fireEvent, render, screen } from "@testing-library/react"
-import { afterEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { XlsxGrid } from "@/registry/new-york-v4/ui/xlsx-grid"
 import { XlsxGridRow } from "@/registry/new-york-v4/ui/xlsx-grid-row"
 import { XlsxSheetTabs } from "@/registry/new-york-v4/ui/xlsx-sheet-tabs"
 import {
+  isValidLoadedScrollTarget,
   resolveLoadedScrollTarget,
   toInternalCellRef,
   type PendingXlsxScrollTarget,
 } from "@/registry/new-york-v4/ui/xlsx-viewer-scroll"
 
+const originalResizeObserver = globalThis.ResizeObserver
+
+beforeEach(() => {
+  globalThis.ResizeObserver = class ResizeObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  } as typeof ResizeObserver
+})
+
 afterEach(() => {
   cleanup()
   vi.restoreAllMocks()
+  globalThis.ResizeObserver = originalResizeObserver
 })
+
+function mockElementMetrics({
+  clientHeight,
+  clientWidth,
+}: {
+  clientHeight: number
+  clientWidth: number
+}) {
+  const clientHeightSpy = vi
+    .spyOn(HTMLElement.prototype, "clientHeight", "get")
+    .mockReturnValue(clientHeight)
+  const clientWidthSpy = vi
+    .spyOn(HTMLElement.prototype, "clientWidth", "get")
+    .mockReturnValue(clientWidth)
+  const scrollTo = vi.fn()
+  Object.defineProperty(HTMLElement.prototype, "scrollTo", {
+    configurable: true,
+    value: scrollTo,
+  })
+  return { clientHeightSpy, clientWidthSpy, scrollTo }
+}
 
 describe("XlsxSheetTabs", () => {
   it("renders sheet tabs with selected state and reports accepted clicks", () => {
@@ -89,6 +122,41 @@ describe("XlsxGrid", () => {
     )
   })
 
+  it("treats invalid grid dimensions as an empty sheet", () => {
+    render(
+      <XlsxGrid
+        rowCount={Number.MAX_SAFE_INTEGER + 1}
+        columnCount={1}
+        sheetName="Invalid"
+        getCell={() => ({ text: "should not render", numeric: false })}
+        scale={1}
+        isolateStyles={false}
+      />
+    )
+
+    expect(screen.getByText("Empty sheet")).toBeTruthy()
+    expect(screen.getByRole("status").getAttribute("aria-label")).toBe(
+      "Invalid is empty"
+    )
+    expect(screen.queryByText("should not render")).toBeNull()
+  })
+
+  it("falls back to a usable scale when the grid scale is invalid", () => {
+    render(
+      <XlsxGrid
+        rowCount={1}
+        columnCount={1}
+        sheetName="Invalid scale"
+        getCell={() => ({ text: "visible", numeric: false })}
+        scale={Number.NaN}
+        isolateStyles={false}
+      />
+    )
+
+    expect(screen.getByRole("grid").getAttribute("aria-rowcount")).toBe("1")
+    expect(screen.getByText("visible")).toBeTruthy()
+  })
+
   it("renders visible rows and cells with grid indexes", () => {
     render(
       <XlsxGridRow
@@ -116,6 +184,87 @@ describe("XlsxGrid", () => {
     expect(cells[1].getAttribute("aria-colindex")).toBe("2")
     expect(cells[1].className).toContain("ring-primary")
   })
+
+  it("marks the active cell only when the active row is visible", () => {
+    const { rerender } = render(
+      <XlsxGrid
+        rowCount={3}
+        columnCount={3}
+        sheetName="Active"
+        getCell={(rowIndex, columnIndex) => ({
+          text: `${rowIndex}:${columnIndex}`,
+          numeric: false,
+        })}
+        scale={1}
+        activeCell={{ rowIndex: 1, columnIndex: 2 }}
+        isolateStyles={false}
+      />
+    )
+
+    const activeCell = screen.getByTitle("1:2")
+    expect(activeCell.className).toContain("ring-primary")
+    expect(screen.getByTitle("0:2").className).not.toContain("ring-primary")
+
+    rerender(
+      <XlsxGrid
+        rowCount={3}
+        columnCount={3}
+        sheetName="Active"
+        getCell={(rowIndex, columnIndex) => ({
+          text: `${rowIndex}:${columnIndex}`,
+          numeric: false,
+        })}
+        scale={1}
+        activeCell={{ rowIndex: 2, columnIndex: 2 }}
+        isolateStyles={false}
+      />
+    )
+
+    expect(screen.getByTitle("1:2").className).not.toContain("ring-primary")
+    expect(screen.getByTitle("2:2").className).toContain("ring-primary")
+  })
+
+  it("scrolls requested cells to the viewport center using the scaled grid size", () => {
+    const { scrollTo } = mockElementMetrics({
+      clientHeight: 80,
+      clientWidth: 240,
+    })
+
+    const { rerender } = render(
+      <XlsxGrid
+        rowCount={50}
+        columnCount={20}
+        sheetName="Scroll"
+        getCell={() => ({ text: "", numeric: false })}
+        scale={2}
+        isolateStyles={false}
+      />
+    )
+
+    rerender(
+      <XlsxGrid
+        rowCount={50}
+        columnCount={20}
+        sheetName="Scroll"
+        getCell={() => ({ text: "", numeric: false })}
+        scale={2}
+        scrollRequest={{
+          sheetIndex: 0,
+          rowIndex: 10,
+          columnIndex: 4,
+          behavior: "auto",
+          nonce: 1,
+        }}
+        isolateStyles={false}
+      />
+    )
+
+    expect(scrollTo).toHaveBeenCalledWith({
+      top: 548,
+      left: 1032,
+      behavior: "auto",
+    })
+  })
 })
 
 describe("XlsxViewer scroll model", () => {
@@ -131,6 +280,79 @@ describe("XlsxViewer scroll model", () => {
       columnIndex: 3,
     })
     expect(toInternalCellRef({ sheet: -1, row: 0, col: 0 })).toBeNull()
+    expect(toInternalCellRef({ sheet: 0.5, row: 0, col: 0 })).toBeNull()
+    expect(toInternalCellRef({ sheet: 0, row: NaN, col: 0 })).toBeNull()
+    expect(
+      toInternalCellRef({
+        sheet: Number.MAX_SAFE_INTEGER + 1,
+        row: 0,
+        col: 0,
+      })
+    ).toBeNull()
+    expect(
+      toInternalCellRef({
+        sheet: 0,
+        row: Number.MAX_SAFE_INTEGER + 1,
+        col: 0,
+      })
+    ).toBeNull()
+  })
+
+  it("rejects invalid loaded scroll targets before resolving sheet changes", () => {
+    expect(
+      isValidLoadedScrollTarget(
+        { sheetIndex: 0, rowIndex: -1, columnIndex: 0 },
+        sheets
+      )
+    ).toBe(false)
+    expect(
+      isValidLoadedScrollTarget(
+        { sheetIndex: 0, rowIndex: 0, columnIndex: -1 },
+        sheets
+      )
+    ).toBe(false)
+    expect(
+      isValidLoadedScrollTarget(
+        { sheetIndex: 0, rowIndex: 0.5, columnIndex: 0 },
+        sheets
+      )
+    ).toBe(false)
+    expect(
+      isValidLoadedScrollTarget(
+        { sheetIndex: 0, rowIndex: 2, columnIndex: 1 },
+        sheets
+      )
+    ).toBe(true)
+  })
+
+  it("rejects loaded scroll targets that only fit invalid sheet dimensions", () => {
+    expect(
+      isValidLoadedScrollTarget(
+        { sheetIndex: 0, rowIndex: 1, columnIndex: 0 },
+        [
+          {
+            name: "Fractional",
+            rowCount: 1.5,
+            columnCount: 1,
+            nonEmptyCellCount: 0,
+          },
+        ]
+      )
+    ).toBe(false)
+
+    expect(
+      isValidLoadedScrollTarget(
+        { sheetIndex: 0, rowIndex: 0, columnIndex: 0 },
+        [
+          {
+            name: "Infinite",
+            rowCount: Number.POSITIVE_INFINITY,
+            columnCount: 1,
+            nonEmptyCellCount: 0,
+          },
+        ]
+      )
+    ).toBe(false)
   })
 
   it("replays a pending pre-load scroll target after sheets are known", () => {
@@ -167,5 +389,26 @@ describe("XlsxViewer scroll model", () => {
         sheets,
       })
     ).toBeNull()
+  })
+
+  it("resolves same-sheet loaded targets without reporting a sheet change", () => {
+    const target: PendingXlsxScrollTarget = {
+      sheetIndex: 0,
+      rowIndex: 2,
+      columnIndex: 1,
+      behavior: "smooth",
+    }
+
+    expect(
+      resolveLoadedScrollTarget({
+        activeSheetIndex: 0,
+        target,
+        sheets,
+      })
+    ).toEqual({
+      sheetIndex: 0,
+      request: target,
+      changed: false,
+    })
   })
 })

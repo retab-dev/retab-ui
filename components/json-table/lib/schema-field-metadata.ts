@@ -11,7 +11,7 @@ export type FieldKind =
   | "boolean"
   | "date"
   | "date-time"
-  | "iso-time"
+  | "time"
   | "enum"
   | "object"
   | "array"
@@ -39,7 +39,8 @@ export function getFieldMetadata(
   const { schema, nullable } = unwrapSchema(rawSchema, rootSchema)
   const type = Array.isArray(schema.type)
     ? schema.type.find((item) => item !== "null")
-    : schema.type
+    : schema.type ||
+      (schema.properties ? "object" : schema.items ? "array" : undefined)
   const format = schema.format
   const kind: FieldKind = Array.isArray(schema.enum)
     ? "enum"
@@ -47,8 +48,8 @@ export function getFieldMetadata(
       ? "date"
       : format === "date-time"
         ? "date-time"
-        : format === "iso-time"
-          ? "iso-time"
+        : format === "time"
+          ? "time"
           : type === "string" ||
               type === "number" ||
               type === "integer" ||

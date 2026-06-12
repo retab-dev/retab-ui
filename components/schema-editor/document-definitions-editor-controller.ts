@@ -13,6 +13,7 @@ import {
 } from "@/components/schema-editor/document/definition-operations"
 import { isDefinitionReferenced } from "@/components/schema-editor/document/derive"
 import { replaceNodeJson } from "@/components/schema-editor/document/json-node"
+import { definitionRef } from "@/components/schema-editor/document/json-pointer"
 import type {
   DefinitionEntry,
   SchemaDocument,
@@ -115,7 +116,7 @@ export function useDocumentDefinitionsEditorController({
       doc.defs.map((definition) => ({
         definition,
         nodeView: getDocumentNodeView(doc, definition.node),
-        path: `#/$defs/${definition.name}`,
+        path: definitionRef("$defs", definition.name),
         canDelete: !isDefinitionReferenced(doc, definition.id, {
           exceptDefId: definition.id,
         }),

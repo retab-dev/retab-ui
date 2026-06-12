@@ -16,6 +16,12 @@ import {
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
+  DataCell,
+  type DataCellKind,
+  type DataCellValue,
+  type DataCellValueMeta,
+} from "@/components/ui/data-cell"
+import {
   getFixedGridCanvasStyle,
   getFixedGridRowWindowStyle,
 } from "@/components/ui/fixed-grid-layout"
@@ -92,8 +98,8 @@ const TABLE_VIRTUALIZE_THRESHOLD = 30
 const LONG_ARRAY_THRESHOLD = 8
 const TABLE_ROW_HEIGHT = 44
 const TABLE_MAX_HEIGHT = 420
-const TABLE_ROW_OVERSCAN = 5
-const TABLE_JUMP_ROW_OVERSCAN = 9
+const TABLE_ROW_OVERSCAN = 3
+const TABLE_JUMP_ROW_OVERSCAN = 6
 
 // ---------------------------------------------------------------------------
 // Source linking — opt-in field-level hover/highlight
@@ -219,6 +225,32 @@ export function JsonFormField({
   }
 
   if (kind === "boolean") {
+    if (nullable) {
+      return (
+        <SourceFieldShell name={logicalPath}>
+          <FormField
+            name={name}
+            render={({ field }) => (
+              <FormItem className={className}>
+                <WithDescription text={schema.description}>
+                  <FormLabel>
+                    {heading}
+                    {required ? (
+                      <span className="text-destructive"> *</span>
+                    ) : null}
+                  </FormLabel>
+                </WithDescription>
+                <FormControl>
+                  <NullableBooleanControl field={field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </SourceFieldShell>
+      )
+    }
+
     return (
       <SourceFieldShell name={logicalPath}>
         <FormField
@@ -279,6 +311,48 @@ export function JsonFormField({
         )}
       />
     </SourceFieldShell>
+  )
+}
+
+function NullableBooleanControl({
+  field,
+  ...controlProps
+}: {
+  field: ControlFieldApi
+} & ScalarControlDomProps) {
+  const selectValue =
+    field.value === true
+      ? "true"
+      : field.value === false
+        ? "false"
+        : NULL_SELECT_VALUE
+  const displayValue =
+    field.value === true ? "True" : field.value === false ? "False" : "No value"
+
+  return (
+    <Select
+      value={selectValue}
+      onValueChange={(value) => {
+        if (value === "true") {
+          field.onChange(true)
+          return
+        }
+        if (value === "false") {
+          field.onChange(false)
+          return
+        }
+        field.onChange(null)
+      }}
+    >
+      <SelectTrigger {...controlProps}>
+        <SelectValue placeholder="Select...">{displayValue}</SelectValue>
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value={NULL_SELECT_VALUE}>No value</SelectItem>
+        <SelectItem value="true">True</SelectItem>
+        <SelectItem value="false">False</SelectItem>
+      </SelectContent>
+    </Select>
   )
 }
 
@@ -343,20 +417,22 @@ function enumLabel(value: unknown): string {
 
 function enumValueEquals(a: unknown, b: unknown): boolean {
   if (Object.is(a, b)) return true
-  if (
-    typeof a !== "object" ||
-    a === null ||
-    typeof b !== "object" ||
-    b === null
-  ) {
+  if (Array.isArray(a) || Array.isArray(b)) {
+    if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) {
+      return false
+    }
+    return a.every((item, index) => enumValueEquals(item, b[index]))
+  }
+  if (!isRecordValue(a) || !isRecordValue(b)) {
     return false
   }
 
-  try {
-    return JSON.stringify(a) === JSON.stringify(b)
-  } catch {
-    return false
-  }
+  const aKeys = Object.keys(a)
+  const bKeys = Object.keys(b)
+  if (aKeys.length !== bKeys.length) return false
+  return aKeys.every(
+    (key) => hasOwnRecordValue(b, key) && enumValueEquals(a[key], b[key])
+  )
 }
 
 function datetimeLocalInputValue(value: string): string {
@@ -374,6 +450,14 @@ function encodeFormSegment(segment: string): string {
       /[.[\]'"]/g,
       (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`
     )
+}
+
+function decodeFormSegment(segment: string): string {
+  try {
+    return decodeURIComponent(segment)
+  } catch {
+    return segment
+  }
 }
 
 function joinFormPath(parent: string, key: string | number): string {
@@ -397,24 +481,105 @@ function isRecordValue(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)
 }
 
+function schemaProperties(
+  schema: Schema
+): Record<string, JSONSchema7Definition> {
+  return (schema.properties ?? {}) as Record<string, JSONSchema7Definition>
+}
+
+function schemaPatternProperties(
+  schema: Schema
+): Record<string, JSONSchema7Definition> {
+  return (schema.patternProperties ?? {}) as Record<
+    string,
+    JSONSchema7Definition
+  >
+}
+
+function patternPropertySchemaFor(schema: Schema, key: string): Schema | null {
+  for (const [pattern, child] of Object.entries(
+    schemaPatternProperties(schema)
+  )) {
+    if (!isRecordValue(child)) continue
+    try {
+      if (new RegExp(pattern).test(key)) return child as Schema
+    } catch {
+      continue
+    }
+  }
+  return null
+}
+
+function additionalPropertySchemaFor(schema: Schema): Schema | null {
+  return isRecordValue(schema.additionalProperties)
+    ? (schema.additionalProperties as Schema)
+    : null
+}
+
+function dynamicPropertySchemaFor(schema: Schema, key: string): Schema | null {
+  return (
+    patternPropertySchemaFor(schema, key) ?? additionalPropertySchemaFor(schema)
+  )
+}
+
+function hasDynamicObjectProperties(schema: Schema): boolean {
+  const { schema: inner } = unwrapNullable(schema)
+  if (fieldKind(inner) !== "object") return false
+  return (
+    isRecordValue(inner.additionalProperties) ||
+    Object.values(schemaPatternProperties(inner)).some(isRecordValue)
+  )
+}
+
+function staticPropertyKeys(schema: Schema): Set<string> {
+  return new Set(
+    Object.keys(schemaProperties(schema)).flatMap((key) => [
+      key,
+      encodeFormSegment(key),
+    ])
+  )
+}
+
+function dynamicPropertyEntries(
+  schema: Schema,
+  currentValue: unknown,
+  staticKeys: Set<string>
+): Array<{ key: string; schema: Schema }> {
+  if (!isRecordValue(currentValue)) return []
+  return Object.keys(currentValue).flatMap((key) => {
+    if (staticKeys.has(key)) return []
+    const decodedKey = decodeFormSegment(key)
+    if (staticKeys.has(decodedKey)) return []
+    const childSchema = dynamicPropertySchemaFor(schema, decodedKey)
+    return childSchema ? [{ key: decodedKey, schema: childSchema }] : []
+  })
+}
+
 function schemaUsesEncodedPaths(schema: Schema): boolean {
   const { schema: inner } = unwrapNullable(schema)
   const kind = fieldKind(inner)
   if (kind === "object") {
-    const properties = (inner.properties ?? {}) as Record<
-      string,
-      JSONSchema7Definition
-    >
-    return Object.entries(properties).some(([key, child]) => {
-      return (
-        encodeFormSegment(key) !== key ||
-        (typeof child === "object" &&
-          child !== null &&
-          schemaUsesEncodedPaths(child))
-      )
-    })
+    const properties = schemaProperties(inner)
+    const patternProperties = schemaPatternProperties(inner)
+    return (
+      isRecordValue(inner.additionalProperties) ||
+      Object.values(patternProperties).some(isRecordValue) ||
+      Object.entries(properties).some(([key, child]) => {
+        return (
+          encodeFormSegment(key) !== key ||
+          (typeof child === "object" &&
+            child !== null &&
+            schemaUsesEncodedPaths(child))
+        )
+      })
+    )
   }
   if (kind === "array" && typeof inner.items === "object" && inner.items) {
+    if (Array.isArray(inner.items)) {
+      return inner.items.some((item) =>
+        isRecordValue(item) ? schemaUsesEncodedPaths(item as Schema) : false
+      )
+    }
     return schemaUsesEncodedPaths(inner.items as Schema)
   }
   return false
@@ -426,19 +591,14 @@ function encodeValueForForm(schema: Schema, value: unknown): unknown {
 
   if (kind === "array") {
     if (!Array.isArray(value)) return value
-    const itemSchema =
-      typeof inner.items === "object" && inner.items !== null
-        ? (inner.items as Schema)
-        : ({ type: "string" } as Schema)
-    return value.map((item) => encodeValueForForm(itemSchema, item))
+    return value.map((item, index) =>
+      encodeValueForForm(arrayItemSchemaAt(inner, index), item)
+    )
   }
 
   if (kind !== "object" || !isRecordValue(value)) return value
 
-  const properties = (inner.properties ?? {}) as Record<
-    string,
-    JSONSchema7Definition
-  >
+  const properties = schemaProperties(inner)
   const encoded: Record<string, unknown> = {}
   for (const [key, child] of Object.entries(properties)) {
     if (typeof child !== "object" || child === null) continue
@@ -450,6 +610,17 @@ function encodeValueForForm(schema: Schema, value: unknown): unknown {
       encoded[encodedKey] = encodeValueForForm(child, rawValue)
     }
   }
+  const propertyKeys = new Set(Object.keys(properties))
+  for (const [key, rawValue] of Object.entries(value)) {
+    const decodedKey = decodeFormSegment(key)
+    if (propertyKeys.has(key) || propertyKeys.has(decodedKey)) continue
+    const childSchema = dynamicPropertySchemaFor(inner, decodedKey)
+    if (!childSchema) continue
+    encoded[encodeFormSegment(decodedKey)] = encodeValueForForm(
+      childSchema,
+      rawValue
+    )
+  }
   return encoded
 }
 
@@ -459,28 +630,33 @@ function decodeValueFromForm(schema: Schema, value: unknown): unknown {
 
   if (kind === "array") {
     if (!Array.isArray(value)) return value
-    const itemSchema =
-      typeof inner.items === "object" && inner.items !== null
-        ? (inner.items as Schema)
-        : ({ type: "string" } as Schema)
-    return value.map((item) => decodeValueFromForm(itemSchema, item))
+    return value.map((item, index) =>
+      decodeValueFromForm(arrayItemSchemaAt(inner, index), item)
+    )
   }
 
   if (kind !== "object" || !isRecordValue(value)) return value
 
-  const properties = (inner.properties ?? {}) as Record<
-    string,
-    JSONSchema7Definition
-  >
+  const properties = schemaProperties(inner)
   const decoded: Record<string, unknown> = {}
+  const handledKeys = new Set<string>()
   for (const [key, child] of Object.entries(properties)) {
     if (typeof child !== "object" || child === null) continue
     const encodedKey = encodeFormSegment(key)
     const hasEncoded = hasOwnRecordValue(value, encodedKey)
     const rawValue = hasEncoded ? value[encodedKey] : value[key]
+    handledKeys.add(encodedKey)
+    handledKeys.add(key)
     if (rawValue !== undefined || hasEncoded || hasOwnRecordValue(value, key)) {
       decoded[key] = decodeValueFromForm(child, rawValue)
     }
+  }
+  for (const [key, rawValue] of Object.entries(value)) {
+    const decodedKey = decodeFormSegment(key)
+    if (handledKeys.has(key) || handledKeys.has(decodedKey)) continue
+    const childSchema = dynamicPropertySchemaFor(inner, decodedKey)
+    if (!childSchema) continue
+    decoded[decodedKey] = decodeValueFromForm(childSchema, rawValue)
   }
   return decoded
 }
@@ -501,6 +677,37 @@ function emptyArrayItemValue(schema: Schema, encodeKeys = false): unknown {
     }
   }
   return value
+}
+
+function arrayItemSchemaAt(schema: Schema, index: number): Schema {
+  const items = schema.items
+  if (Array.isArray(items)) {
+    const item = items[index]
+    if (isRecordValue(item)) return item as Schema
+    if (isRecordValue(schema.additionalItems)) {
+      return schema.additionalItems as Schema
+    }
+    return { type: "string" }
+  }
+  return isRecordValue(items) ? (items as Schema) : { type: "string" }
+}
+
+function canAppendArrayItem(schema: Schema, length: number): boolean {
+  if (typeof schema.maxItems === "number" && length >= schema.maxItems) {
+    return false
+  }
+  if (
+    Array.isArray(schema.items) &&
+    schema.additionalItems === false &&
+    length >= schema.items.length
+  ) {
+    return false
+  }
+  return true
+}
+
+function canRemoveArrayItem(schema: Schema, length: number): boolean {
+  return typeof schema.minItems !== "number" || length > schema.minItems
 }
 
 function ScalarControl({
@@ -524,20 +731,21 @@ function ScalarControl({
 
   if (kind === "enum") {
     const enumValues = schema.enum ?? []
+    const hasNullEnumValue = enumValues.some((value) => value === null)
     const currentIndex = enumValues.findIndex((value) =>
       enumValueEquals(value, field.value)
     )
     const selectValue =
-      field.value === null && nullable
-        ? NULL_SELECT_VALUE
-        : currentIndex >= 0
-          ? enumOptionValue(currentIndex)
+      currentIndex >= 0
+        ? enumOptionValue(currentIndex)
+        : field.value === null && nullable
+          ? NULL_SELECT_VALUE
           : undefined
     const displayValue =
-      field.value === null && nullable
-        ? "No value"
-        : currentIndex >= 0
-          ? enumLabel(enumValues[currentIndex])
+      currentIndex >= 0
+        ? enumLabel(enumValues[currentIndex])
+        : field.value === null && nullable
+          ? "No value"
           : undefined
 
     return (
@@ -557,7 +765,7 @@ function ScalarControl({
           <SelectValue placeholder="Select…">{displayValue}</SelectValue>
         </SelectTrigger>
         <SelectContent>
-          {nullable ? (
+          {nullable && !hasNullEnumValue ? (
             <SelectItem value={NULL_SELECT_VALUE}>No value</SelectItem>
           ) : null}
           {enumValues.map((option, index) => (
@@ -722,12 +930,21 @@ function JsonFormObject({
   className?: string
   depth: number
 }) {
-  const properties = (schema.properties ?? {}) as Record<
-    string,
-    JSONSchema7Definition
-  >
-  const required = new Set(schema.required ?? [])
-  const entries = Object.entries(properties)
+  const { control, getValues } = useFormContext()
+  const properties = React.useMemo(() => schemaProperties(schema), [schema])
+  const required = React.useMemo(() => new Set(schema.required ?? []), [schema])
+  const entries = React.useMemo(() => Object.entries(properties), [properties])
+  const currentValue = useWatch({
+    control,
+    name,
+    defaultValue: getValues(name),
+  }) as unknown
+  const staticKeys = React.useMemo(() => staticPropertyKeys(schema), [schema])
+  const dynamicEntries = React.useMemo(
+    () => dynamicPropertyEntries(schema, currentValue, staticKeys),
+    [currentValue, schema, staticKeys]
+  )
+  const fieldCount = entries.length + dynamicEntries.length
   const [open, setOpen] = React.useState(depth < AUTO_COLLAPSE_DEPTH)
 
   return (
@@ -736,7 +953,7 @@ function JsonFormObject({
         open={open}
         onToggle={() => setOpen((o) => !o)}
         title={label}
-        summary={`${entries.length} field${entries.length === 1 ? "" : "s"}`}
+        summary={`${fieldCount} field${fieldCount === 1 ? "" : "s"}`}
         description={schema.description}
       />
       {open ? (
@@ -754,9 +971,63 @@ function JsonFormObject({
               />
             ) : null
           )}
+          {dynamicEntries.map(({ key, schema: child }) => (
+            <JsonFormField
+              key={key}
+              name={joinFormPath(name, key)}
+              sourcePath={joinSourcePath(sourcePath, key)}
+              schema={child}
+              label={key}
+              depth={depth + 1}
+            />
+          ))}
         </div>
       ) : null}
     </div>
+  )
+}
+
+function JsonFormRootFields({ schema }: { schema: Schema }) {
+  const { control, getValues } = useFormContext()
+  const properties = schemaProperties(schema)
+  const required = new Set(schema.required ?? [])
+  const entries = Object.entries(properties)
+  const currentValue = useWatch({
+    control,
+    defaultValue: getValues(),
+  }) as unknown
+  const staticKeys = React.useMemo(() => staticPropertyKeys(schema), [schema])
+  const dynamicEntries = React.useMemo(
+    () => dynamicPropertyEntries(schema, currentValue, staticKeys),
+    [currentValue, schema, staticKeys]
+  )
+
+  return (
+    <>
+      {entries.map(([key, child]) =>
+        typeof child === "object" ? (
+          <JsonFormField
+            key={key}
+            name={joinFormPath("", key)}
+            sourcePath={key}
+            schema={child}
+            required={required.has(key)}
+            label={labelFor(key, child)}
+            depth={0}
+          />
+        ) : null
+      )}
+      {dynamicEntries.map(({ key, schema: child }) => (
+        <JsonFormField
+          key={key}
+          name={joinFormPath("", key)}
+          sourcePath={key}
+          schema={child}
+          label={key}
+          depth={0}
+        />
+      ))}
+    </>
   )
 }
 
@@ -781,40 +1052,60 @@ function JsonFormArray({
 }) {
   const { control, getValues, setValue, unregister } = useFormContext()
   const { fields, append, remove } = useFieldArray({ control, name })
-  const itemSchema = React.useMemo(
-    () =>
-      typeof schema.items === "object" && schema.items !== null
-        ? (schema.items as Schema)
-        : ({ type: "string" } as Schema),
-    [schema.items]
+  const arrayValue = useWatch({ control, name })
+  const renderedFields = React.useMemo(() => {
+    if (!Array.isArray(arrayValue)) return fields
+    return arrayValue.map((_, index) => ({
+      id: fields[index]?.id ?? `${name}.${index}`,
+    }))
+  }, [arrayValue, fields, name])
+  const itemSchema = React.useMemo(() => arrayItemSchemaAt(schema, 0), [schema])
+  const isTupleArray = Array.isArray(schema.items)
+  const hasDynamicItemProperties = React.useMemo(
+    () => hasDynamicObjectProperties(itemSchema),
+    [itemSchema]
+  )
+  const itemSchemaForIndex = React.useCallback(
+    (index: number) => arrayItemSchemaAt(schema, index),
+    [schema]
   )
 
   const columns = React.useMemo(
-    () => scalarObjectColumns(itemSchema),
-    [itemSchema]
+    () =>
+      isTupleArray || hasDynamicItemProperties
+        ? null
+        : scalarObjectColumns(itemSchema),
+    [hasDynamicItemProperties, isTupleArray, itemSchema]
   )
 
   const startOpen =
-    depth < AUTO_COLLAPSE_DEPTH && fields.length <= LONG_ARRAY_THRESHOLD
+    depth < AUTO_COLLAPSE_DEPTH && renderedFields.length <= LONG_ARRAY_THRESHOLD
   const [open, setOpen] = React.useState(startOpen)
-  const usesEncodedItemPaths = React.useMemo(
-    () => schemaUsesEncodedPaths(itemSchema),
-    [itemSchema]
-  )
+  const canAddItem = canAppendArrayItem(schema, renderedFields.length)
+  const canRemoveItem = canRemoveArrayItem(schema, renderedFields.length)
 
   const add = React.useCallback(() => {
-    const nextItem = emptyArrayItemValue(itemSchema, usesEncodedItemPaths)
     const current = getValues(name)
+    const nextIndex = Array.isArray(current)
+      ? current.length
+      : renderedFields.length
+    if (!canAppendArrayItem(schema, nextIndex)) return
+    const nextSchema = arrayItemSchemaAt(schema, nextIndex)
+    const nextItem = emptyArrayItemValue(
+      nextSchema,
+      schemaUsesEncodedPaths(nextSchema)
+    )
     append(nextItem as never)
     if (Array.isArray(current)) {
       setValue(name, [...current, nextItem], { shouldDirty: true })
     }
     setOpen(true)
-  }, [append, getValues, itemSchema, name, setValue, usesEncodedItemPaths])
+  }, [append, getValues, name, renderedFields.length, schema, setValue])
   const removeAt = React.useCallback(
     (index: number) => {
       const current = getValues(name)
       if (Array.isArray(current)) {
+        if (!canRemoveArrayItem(schema, current.length)) return
         const next = current.slice()
         next.splice(index, 1)
         remove(index)
@@ -822,45 +1113,68 @@ function JsonFormArray({
         unregister(`${name}.${next.length}`)
         return
       }
+      if (!canRemoveArrayItem(schema, renderedFields.length)) return
       remove(index)
     },
-    [getValues, name, remove, setValue, unregister]
+    [
+      getValues,
+      name,
+      remove,
+      renderedFields.length,
+      schema,
+      setValue,
+      unregister,
+    ]
   )
 
   return (
-    <div className={cn("rounded-lg border", className)}>
+    <div
+      className={cn(
+        "overflow-hidden rounded-lg border bg-background shadow-sm",
+        className
+      )}
+    >
       <DisclosureHeader
         open={open}
         onToggle={() => setOpen((o) => !o)}
         title={label}
-        summary={`${fields.length} item${fields.length === 1 ? "" : "s"}`}
+        summary={`${renderedFields.length} item${renderedFields.length === 1 ? "" : "s"}`}
         description={schema.description}
         actions={
-          <Button type="button" size="sm" variant="outline" onClick={add}>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={add}
+            disabled={!canAddItem}
+          >
             <Plus className="size-4" />
             Add
           </Button>
         }
       />
       {open ? (
-        <div className="border-t p-3">
-          {fields.length === 0 ? (
+        <div className={cn("border-t", columns ? "" : "p-3")}>
+          {renderedFields.length === 0 ? (
             <p className="text-sm text-muted-foreground">No items.</p>
           ) : columns ? (
             <ArrayTable
               name={name}
               sourcePath={sourcePath}
-              fields={fields}
+              fields={renderedFields}
               remove={removeAt}
+              canRemove={canRemoveItem}
               columns={columns}
             />
           ) : (
             <ArrayCards
               name={name}
               sourcePath={sourcePath}
-              fields={fields}
+              fields={renderedFields}
               remove={removeAt}
+              canRemove={canRemoveItem}
               itemSchema={itemSchema}
+              itemSchemaForIndex={itemSchemaForIndex}
               label={label}
               depth={depth}
             />
@@ -880,7 +1194,9 @@ interface ArrayBodyProps {
   sourcePath: string
   fields: { id: string }[]
   remove: (index: number) => void
+  canRemove: boolean
   itemSchema: Schema
+  itemSchemaForIndex: (index: number) => Schema
 }
 
 function ArrayCards({
@@ -888,7 +1204,9 @@ function ArrayCards({
   sourcePath,
   fields,
   remove,
+  canRemove,
   itemSchema,
+  itemSchemaForIndex,
   label,
   depth,
 }: ArrayBodyProps & { label: string; depth: number }) {
@@ -899,12 +1217,13 @@ function ArrayCards({
         sourcePath={sourcePath}
         index={index}
         remove={remove}
-        itemSchema={itemSchema}
+        canRemove={canRemove}
+        itemSchema={itemSchemaForIndex(index)}
         label={label}
         depth={depth}
       />
     ),
-    [name, sourcePath, remove, itemSchema, label, depth]
+    [name, sourcePath, remove, canRemove, itemSchemaForIndex, label, depth]
   )
 
   if (fields.length > CARD_VIRTUALIZE_THRESHOLD) {
@@ -932,6 +1251,7 @@ const ArrayCard = React.memo(function ArrayCard({
   sourcePath,
   index,
   remove,
+  canRemove,
   itemSchema,
   label,
   depth,
@@ -940,6 +1260,7 @@ const ArrayCard = React.memo(function ArrayCard({
   sourcePath: string
   index: number
   remove: (index: number) => void
+  canRemove: boolean
   itemSchema: Schema
   label: string
   depth: number
@@ -962,6 +1283,7 @@ const ArrayCard = React.memo(function ArrayCard({
         className="mt-1 text-muted-foreground hover:text-destructive"
         onClick={() => remove(index)}
         aria-label="Remove item"
+        disabled={!canRemove}
       >
         <Trash2 className="size-4" />
       </Button>
@@ -978,12 +1300,14 @@ function ArrayTable({
   sourcePath,
   fields,
   remove,
+  canRemove,
   columns,
 }: {
   name: string
   sourcePath: string
   fields: { id: string }[]
   remove: (index: number) => void
+  canRemove: boolean
   columns: Column[]
 }) {
   const template = `${columns.map(() => "minmax(9rem, 1fr)").join(" ")} 2.25rem`
@@ -992,6 +1316,8 @@ function ArrayTable({
     null
   )
   const activePath = React.useContext(FieldSourceActivePathContext)
+  const sourceActions = React.useContext(FieldSourceActionsContext)
+  const sourceLinked = Boolean(sourceActions)
   const tableRef = React.useRef<HTMLDivElement>(null)
 
   React.useEffect(() => {
@@ -1008,6 +1334,100 @@ function ArrayTable({
     }
   }, [activePath, fields.length])
 
+  const findEventCell = React.useCallback(
+    (target: EventTarget | null): HTMLElement | null => {
+      if (!(target instanceof Element)) return null
+      const cell = target.closest<HTMLElement>("[data-table-cell]")
+      return cell && tableRef.current?.contains(cell) ? cell : null
+    },
+    []
+  )
+
+  const handleTableClickCapture = React.useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      const table = tableRef.current
+      const activeElement = table?.ownerDocument.activeElement
+      if (
+        !(activeElement instanceof HTMLElement) ||
+        activeElement.dataset.tableCellEditor !== "true" ||
+        !table?.contains(activeElement) ||
+        activeElement === event.target ||
+        activeElement.contains(event.target as Node)
+      ) {
+        return
+      }
+      activeElement.blur()
+    },
+    []
+  )
+
+  const handleTableClick = React.useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      const cell = findEventCell(event.target)
+      if (!cell) return
+      const sourceCellPath = cell.dataset.sourcePath
+      if (sourceCellPath) sourceActions?.selectField?.(sourceCellPath)
+      if (cell.dataset.tableCellEditable !== "true") return
+      const path = cell.dataset.tableCellPath
+      if (path) setActiveEditorPath(path)
+    },
+    [findEventCell, sourceActions]
+  )
+
+  const handleTableKeyDown = React.useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      if (event.key !== "Enter" && event.key !== " ") return
+      const cell = findEventCell(event.target)
+      if (!cell || cell.dataset.tableCellEditable !== "true") return
+      const path = cell.dataset.tableCellPath
+      if (!path) return
+      const sourceCellPath = cell.dataset.sourcePath
+      if (sourceCellPath) sourceActions?.selectField?.(sourceCellPath)
+      event.preventDefault()
+      setActiveEditorPath(path)
+    },
+    [findEventCell, sourceActions]
+  )
+
+  const handleTableMouseOver = React.useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      if (!sourceActions) return
+      const cell = findEventCell(event.target)
+      if (!cell || cell.contains(event.relatedTarget as Node | null)) return
+      sourceActions.onFieldHover(cell.dataset.sourcePath ?? null)
+    },
+    [findEventCell, sourceActions]
+  )
+
+  const handleTableMouseOut = React.useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      if (!sourceActions) return
+      const cell = findEventCell(event.target)
+      if (!cell || cell.contains(event.relatedTarget as Node | null)) return
+      sourceActions.onFieldHover(null)
+    },
+    [findEventCell, sourceActions]
+  )
+
+  const handleTableFocus = React.useCallback(
+    (event: React.FocusEvent<HTMLDivElement>) => {
+      if (!sourceActions) return
+      const cell = findEventCell(event.target)
+      if (cell) sourceActions.onFieldHover(cell.dataset.sourcePath ?? null)
+    },
+    [findEventCell, sourceActions]
+  )
+
+  const handleTableBlur = React.useCallback(
+    (event: React.FocusEvent<HTMLDivElement>) => {
+      if (!sourceActions) return
+      const cell = findEventCell(event.target)
+      if (!cell || cell.contains(event.relatedTarget as Node | null)) return
+      sourceActions.onFieldHover(null)
+    },
+    [findEventCell, sourceActions]
+  )
+
   const renderRow = React.useCallback(
     (index: number, rowTopPx?: number) => (
       <ArrayTableRow
@@ -1017,9 +1437,15 @@ function ArrayTable({
         isLastRow={index === fields.length - 1}
         columns={columns}
         remove={remove}
+        canRemove={canRemove}
+        sourceLinked={sourceLinked}
         template={template}
         rowTopPx={rowTopPx}
-        activeEditorPath={activeEditorPath}
+        activeEditorPath={
+          activeEditorPath?.startsWith(`${joinFormPath(name, index)}.`)
+            ? activeEditorPath
+            : null
+        }
         setActiveEditorPath={setActiveEditorPath}
       />
     ),
@@ -1029,6 +1455,8 @@ function ArrayTable({
       fields.length,
       columns,
       remove,
+      canRemove,
+      sourceLinked,
       template,
       activeEditorPath,
     ]
@@ -1039,7 +1467,14 @@ function ArrayTable({
   return (
     <div
       ref={tableRef}
-      className="overflow-x-auto rounded-lg border bg-background shadow-sm"
+      onClickCapture={handleTableClickCapture}
+      onClick={handleTableClick}
+      onKeyDown={handleTableKeyDown}
+      onMouseOver={handleTableMouseOver}
+      onMouseOut={handleTableMouseOut}
+      onFocus={handleTableFocus}
+      onBlur={handleTableBlur}
+      className="overflow-x-auto bg-background"
     >
       <div style={getFixedGridCanvasStyle({ minWidth })}>
         <div
@@ -1090,6 +1525,8 @@ const ArrayTableRow = React.memo(function ArrayTableRow({
   isLastRow,
   columns,
   remove,
+  canRemove,
+  sourceLinked,
   template,
   rowTopPx,
   activeEditorPath,
@@ -1101,13 +1538,14 @@ const ArrayTableRow = React.memo(function ArrayTableRow({
   isLastRow: boolean
   columns: Column[]
   remove: (index: number) => void
+  canRemove: boolean
+  sourceLinked: boolean
   template: string
   rowTopPx?: number
   activeEditorPath: string | null
   setActiveEditorPath: (path: string | null) => void
 }) {
   const { control, setValue } = useFormContext()
-  const sourceActions = React.useContext(FieldSourceActionsContext)
   const rowPath = joinFormPath(name, index)
   const rowSourcePath = joinSourcePath(sourcePath, index)
   const rowValue = useWatch({ control, name: rowPath }) as
@@ -1118,10 +1556,10 @@ const ArrayTableRow = React.memo(function ArrayTableRow({
       rowTopPx === undefined
         ? { gridTemplateColumns: template }
         : getFixedGridRowStyle({
-            gridTemplate: template,
-            rowHeight: TABLE_ROW_HEIGHT,
-            top: rowTopPx,
-          }),
+          gridTemplate: template,
+          rowHeight: TABLE_ROW_HEIGHT,
+          top: rowTopPx,
+        }),
     [rowTopPx, template]
   )
 
@@ -1137,114 +1575,149 @@ const ArrayTableRow = React.memo(function ArrayTableRow({
         const path = joinFormPath(rowPath, col.key)
         const logicalPath = joinSourcePath(rowSourcePath, col.key)
         const value = rowValue?.[encodeFormSegment(col.key)]
-        const isEditing = activeEditorPath === path
-        // Same source-link affordance as scalar fields, sized for a table cell:
-        // hovering the cell reports its leaf path; the active cell tints.
-        const cellHandlers = sourceActions
-          ? {
-              onMouseEnter: () => sourceActions.onFieldHover(logicalPath),
-              onMouseLeave: () => sourceActions.onFieldHover(null),
-              onFocus: () => sourceActions.onFieldHover(logicalPath),
-              onBlur: () => sourceActions.onFieldHover(null),
-              onClick: () => sourceActions.selectField?.(logicalPath),
-            }
-          : undefined
+        const isEnum = col.kind === "enum"
+        const isActiveEditor = activeEditorPath === path
+        const isEditing = isEnum && isActiveEditor
+        const isSourceScalarEditing =
+          sourceLinked && !isEnum && isActiveEditor
+        const dataCellKind = dataCellKindForColumn(col)
+        const displayLabel = labelFor(col.key, col.schema)
+        const displayText = formatTableCellValue({ value, column: col })
+        const textValue = value == null ? "" : String(value)
+        const initialDisplay =
+          col.schema.format === "date-time"
+            ? datetimeLocalInputValue(textValue)
+            : textValue
+        const cellClassName = cn(
+          "min-w-0 rounded transition-colors data-[source-active=true]:bg-primary/5 data-[source-active=true]:ring-1 data-[source-active=true]:ring-primary/30",
+          !isEditing && !isSourceScalarEditing
+            ? "hover:bg-background focus-visible:bg-background focus-visible:ring-1 focus-visible:ring-ring/30"
+            : "px-1 py-0.5",
+          sourceLinked &&
+          (isEditing || isSourceScalarEditing) &&
+          "hover:bg-muted/55"
+        )
+        const cellProps = {
+          "data-table-cell": "",
+          "data-source-path": sourceLinked ? logicalPath : undefined,
+          className: cellClassName,
+        }
+        const commitDataCellValue = (
+          nextValue: unknown,
+          meta?: DataCellValueMeta
+        ) => {
+          let normalizedValue: unknown
+          if (col.kind === "number" || col.kind === "integer") {
+            if (meta && !meta.isValid) return
+            normalizedValue =
+              typeof nextValue === "number"
+                ? nextValue
+                : nextValue === null && col.nullable && meta?.isEmpty !== false
+                  ? null
+                  : undefined
+            if (normalizedValue === undefined) return
+          } else if (col.kind === "boolean") {
+            normalizedValue = Boolean(nextValue)
+          } else {
+            const nextText = typeof nextValue === "string" ? nextValue : ""
+            const nextDisplay =
+              col.schema.format === "date-time"
+                ? datetimeLocalInputValue(nextText)
+                : nextText
+            if (nextDisplay === initialDisplay) return
+            normalizedValue =
+              nextDisplay === "" && col.nullable ? null : nextDisplay
+          }
+
+          if (Object.is(value, normalizedValue)) return
+          setValue(path, normalizedValue, {
+            shouldDirty: true,
+            shouldTouch: true,
+            shouldValidate: true,
+          })
+        }
+
         return (
-          <div
-            key={col.key}
-            {...cellHandlers}
-            data-source-path={sourceActions ? logicalPath : undefined}
-            className={cn(
-              "min-w-0 rounded px-1 py-0.5 transition-colors data-[source-active=true]:bg-primary/5 data-[source-active=true]:ring-1 data-[source-active=true]:ring-primary/30",
-              sourceActions && "hover:bg-muted/55"
-            )}
-          >
-            {isEditing && col.kind !== "boolean" ? (
+          <React.Fragment key={col.key}>
+            {isEditing ? (
               <ArrayTableCellEditor
                 path={path}
                 column={col}
                 onClose={() => setActiveEditorPath(null)}
+                cellProps={cellProps}
               />
-            ) : col.kind === "boolean" ? (
-              <ArrayTableBooleanCell
-                path={path}
-                value={value}
-                onChange={(nextValue) => {
-                  setValue(path, nextValue, {
-                    shouldDirty: true,
-                    shouldTouch: true,
-                  })
-                }}
+            ) : isEnum ? (
+              <DataCell
+                {...cellProps}
+                kind="text"
+                mode="display"
+                value={dataCellValue(value)}
+                formatValue={() => displayText}
+                placeholder=""
+                role="button"
+                tabIndex={0}
+                aria-label={`${displayLabel} ${displayText}`}
+                data-table-cell-editable="true"
+                data-table-cell-path={path}
+                className={cn(cellClassName, "text-sm")}
               />
             ) : (
-              <ArrayTableDisplayCell
-                column={col}
-                value={value}
-                onEdit={() => setActiveEditorPath(path)}
+              <DataCell
+                {...cellProps}
+                kind={dataCellKind}
+                mode={
+                  sourceLinked
+                    ? isSourceScalarEditing
+                      ? "edit"
+                      : "display"
+                    : undefined
+                }
+                editable={!sourceLinked || isSourceScalarEditing}
+                value={
+                  col.kind === "boolean" ? Boolean(value) : dataCellValue(value)
+                }
+                dateTimeZone={
+                  col.schema.format === "date-time" ? "preserve" : undefined
+                }
+                formatValue={
+                  col.kind === "boolean" ? undefined : () => displayText
+                }
+                placeholder=""
+                role={
+                  sourceLinked && !isSourceScalarEditing ? "button" : undefined
+                }
+                aria-label={`${displayLabel} ${displayText}`}
+                tabIndex={0}
+                data-table-cell-editable={
+                  sourceLinked && !isSourceScalarEditing ? "true" : undefined
+                }
+                data-table-cell-path={
+                  sourceLinked && !isSourceScalarEditing ? path : undefined
+                }
+                autoFocus={isSourceScalarEditing}
+                name={path}
+                onValueCommit={commitDataCellValue}
+                data-table-cell-editor={
+                  !sourceLinked || isSourceScalarEditing ? "true" : undefined
+                }
+                onBlur={() => {
+                  if (isSourceScalarEditing) setActiveEditorPath(null)
+                }}
+                className={cn(cellClassName, "text-sm")}
               />
             )}
-          </div>
+          </React.Fragment>
         )
       })}
-      <Button
+      <button
         type="button"
-        size="icon"
-        variant="ghost"
-        className="size-8 text-muted-foreground hover:text-destructive"
+        className="flex size-8 items-center justify-center rounded-md text-base leading-none text-muted-foreground transition-colors hover:bg-accent hover:text-destructive focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
         onClick={() => remove(index)}
         aria-label="Remove row"
+        disabled={!canRemove}
       >
-        <Trash2 className="size-4" />
-      </Button>
-    </div>
-  )
-})
-
-const ArrayTableDisplayCell = React.memo(function ArrayTableDisplayCell({
-  column,
-  value,
-  onEdit,
-}: {
-  column: Column
-  value: unknown
-  onEdit: () => void
-}) {
-  const label = labelFor(column.key, column.schema)
-  const text = formatTableCellValue({ value, column })
-
-  return (
-    <button
-      type="button"
-      aria-label={`${label} ${text}`}
-      className={cn(
-        "flex h-8 w-full min-w-0 items-center rounded-md px-2 text-left text-sm text-foreground transition-colors hover:bg-background focus-visible:bg-background focus-visible:ring-1 focus-visible:ring-ring/30",
-        column.kind === "number" || column.kind === "integer"
-          ? "justify-end tabular-nums"
-          : "justify-start"
-      )}
-      onClick={onEdit}
-    >
-      <span className="truncate">{text}</span>
-    </button>
-  )
-})
-
-const ArrayTableBooleanCell = React.memo(function ArrayTableBooleanCell({
-  path,
-  value,
-  onChange,
-}: {
-  path: string
-  value: unknown
-  onChange: (value: boolean) => void
-}) {
-  return (
-    <div className="flex h-8 items-center justify-center">
-      <Checkbox
-        aria-label={path}
-        checked={Boolean(value)}
-        onCheckedChange={(nextValue) => onChange(nextValue === true)}
-      />
+        ×
+      </button>
     </div>
   )
 })
@@ -1253,26 +1726,40 @@ function ArrayTableCellEditor({
   path,
   column,
   onClose,
+  cellProps,
 }: {
   path: string
   column: Column
   onClose: () => void
+  cellProps: React.HTMLAttributes<HTMLElement>
+}) {
+  return (
+    <ArrayTableSelectCellEditor
+      path={path}
+      column={column}
+      onClose={onClose}
+      cellProps={cellProps}
+    />
+  )
+}
+
+function ArrayTableSelectCellEditor({
+  path,
+  column,
+  onClose,
+  cellProps,
+}: {
+  path: string
+  column: Column
+  onClose: () => void
+  cellProps: React.HTMLAttributes<HTMLElement>
 }) {
   const { control } = useFormContext()
   const { field } = useController({ control, name: path })
-  const wrapperRef = React.useRef<HTMLDivElement>(null)
-
-  React.useEffect(() => {
-    const input = wrapperRef.current?.querySelector<
-      HTMLInputElement | HTMLButtonElement
-    >("input,button")
-    input?.focus()
-    if (input instanceof HTMLInputElement) input.select()
-  }, [])
 
   return (
     <div
-      ref={wrapperRef}
+      {...cellProps}
       onKeyDown={(event) => {
         if (event.key === "Escape" || event.key === "Enter") {
           event.preventDefault()
@@ -1314,6 +1801,28 @@ function formatTableCellValue({
   if (typeof value === "number")
     return Number.isFinite(value) ? String(value) : "—"
   if (typeof value === "boolean") return value ? "True" : "False"
+  return String(value)
+}
+
+function dataCellKindForColumn(column: Column): DataCellKind {
+  if (column.kind === "number" || column.kind === "integer") return column.kind
+  if (column.kind === "boolean") return "boolean"
+  if (column.schema.format === "date-time") return "date-time"
+  if (column.schema.format === "date") return "date"
+  if (column.schema.format === "time") return "time"
+  return "text"
+}
+
+function dataCellValue(value: unknown): DataCellValue {
+  if (
+    value === null ||
+    value === undefined ||
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean"
+  ) {
+    return value
+  }
   return String(value)
 }
 
@@ -1465,11 +1974,6 @@ export function JsonForm({
   children,
 }: JsonFormProps) {
   const expandedSchema = React.useMemo(() => expandRefs(schema), [schema])
-  const properties = (expandedSchema.properties ?? {}) as Record<
-    string,
-    JSONSchema7Definition
-  >
-  const required = new Set(expandedSchema.required ?? [])
   const usesEncodedPaths = React.useMemo(
     () => schemaUsesEncodedPaths(expandedSchema),
     [expandedSchema]
@@ -1504,12 +2008,19 @@ export function JsonForm({
         event.preventDefault()
         return
       }
+      const activeElement = event.currentTarget.ownerDocument.activeElement
+      if (
+        activeElement instanceof HTMLElement &&
+        event.currentTarget.contains(activeElement)
+      ) {
+        activeElement.blur()
+      }
       return form.handleSubmit((data, submitEvent) => {
         const decoded = usesEncodedPaths
           ? (decodeValueFromForm(expandedSchema, data) as Record<
-              string,
-              unknown
-            >)
+            string,
+            unknown
+          >)
           : data
         return onSubmit(decoded, submitEvent)
       })(event)
@@ -1524,19 +2035,7 @@ export function JsonForm({
       >
         <Form {...form}>
           <form onSubmit={handleSubmit} className={cn("space-y-4", className)}>
-            {Object.entries(properties).map(([key, child]) =>
-              typeof child === "object" ? (
-                <JsonFormField
-                  key={key}
-                  name={joinFormPath("", key)}
-                  sourcePath={key}
-                  schema={child}
-                  required={required.has(key)}
-                  label={labelFor(key, child)}
-                  depth={0}
-                />
-              ) : null
-            )}
+            <JsonFormRootFields schema={expandedSchema} />
             {children}
           </form>
         </Form>

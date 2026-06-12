@@ -1,6 +1,9 @@
 import { mapPreserve } from "@/components/schema-editor/document/array"
 import { createId } from "@/components/schema-editor/document/id"
-import { getOwnProperty } from "@/components/schema-editor/document/node-selectors"
+import {
+  getEffectiveDocNode,
+  getOwnProperty,
+} from "@/components/schema-editor/document/node-selectors"
 import { updateNode } from "@/components/schema-editor/document/node-update"
 import {
   childNodes,
@@ -19,12 +22,53 @@ function updateObjectProperties(
   fn: (properties: PropertyEntry[]) => PropertyEntry[]
 ): SchemaDocument {
   return updateNode(doc, parentId, (node) => {
-    if (node.type !== "object" && !node.properties) return node
-    return {
-      ...node,
-      properties: fn(node.properties ?? []),
+    if (isSingleNullableBranchContainer(node)) {
+      const branch = getEffectiveDocNode(node)
+      if (branch.type !== "object" && !branch.properties) return node
+      return {
+        ...node,
+        anyOf: node.anyOf!.map((child) =>
+          child.id === branch.id
+            ? updateNodeProperties(child, fn(child.properties ?? []))
+            : child
+        ),
+      }
     }
+
+    if (node.type !== "object" && !node.properties) return node
+    return updateNodeProperties(node, fn(node.properties ?? []))
   })
+}
+
+function updateNodeProperties(
+  node: DocumentNode,
+  properties: PropertyEntry[]
+): DocumentNode {
+  return {
+    ...node,
+    properties,
+    requiredOrder: getRequiredOrder(node, properties),
+  }
+}
+
+function getRequiredOrder(
+  node: DocumentNode,
+  properties: PropertyEntry[]
+): string[] | undefined {
+  const requiredProperties = properties
+    .filter((property) => property.required && isProjectableProperty(property))
+    .map((property) => property.key)
+  const extraRequired = node.extraRequired ?? []
+
+  if (requiredProperties.length === 0 && extraRequired.length === 0) {
+    return node.requiredOrder?.length ? [] : undefined
+  }
+
+  const orderedExtraRequired = node.requiredOrder
+    ? node.requiredOrder.filter((name) => extraRequired.includes(name))
+    : extraRequired
+
+  return [...orderedExtraRequired, ...requiredProperties]
 }
 
 export function findOwningProperty(
@@ -58,6 +102,7 @@ export function addProperty(
   const entry: PropertyEntry = {
     id: init.id ?? createId("prop"),
     key: init.key ?? "",
+    isTransient: init.isTransient ?? (init.key ? undefined : true),
     required: init.required ?? false,
     node: init.node ?? createNode("string"),
   }
@@ -84,7 +129,9 @@ export function renameProperty(
   key: string
 ): SchemaDocument {
   return updateOwningEntry(doc, propertyId, (entry) =>
-    entry.key === key ? entry : { ...entry, key }
+    entry.key === key
+      ? entry
+      : { ...entry, key, isTransient: key === "" ? true : undefined }
   )
 }
 
@@ -124,7 +171,12 @@ export function moveProperty(
   if (!moved) return doc
   const targetParent = getNode(doc, targetParentId)
   if (!targetParent) return doc
-  if (targetParent.type !== "object" && !targetParent.properties) return doc
+  const targetEffectiveParent = getEffectiveDocNode(targetParent)
+  if (
+    targetEffectiveParent.type !== "object" &&
+    !targetEffectiveParent.properties
+  )
+    return doc
 
   if (isAncestor(doc, moved.node.id, targetParentId)) return doc
 
@@ -138,6 +190,22 @@ export function moveProperty(
     return out
   })
   return next
+}
+
+function isSingleNullableBranchContainer(node: DocumentNode): boolean {
+  if (!node.anyOf) return false
+  const nonNullBranches = node.anyOf.filter(
+    (branch) => branch.type !== "null" || branch.ref
+  )
+  return (
+    nonNullBranches.length === 1 &&
+    node.anyOf.length === 2 &&
+    node.anyOf.some((branch) => branch.type === "null" && !branch.ref)
+  )
+}
+
+function isProjectableProperty(property: PropertyEntry): boolean {
+  return property.key !== "" || !property.isTransient
 }
 
 function isAncestor(

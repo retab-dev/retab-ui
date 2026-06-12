@@ -62,6 +62,7 @@ export function PropertyFormShell({
               schemaNode={fields.schemaNodeDetails.schemaNode}
               schemaContext={fields.schemaNodeDetails.schemaContext}
               mode={fields.schemaNodeDetails.mode}
+              capabilities={fields.schemaNodeDetails.capabilities}
               disabled={fields.schemaNodeDetails.disabled}
               showTypeSelector={false}
               onChange={fields.schemaNodeDetails.onChange}

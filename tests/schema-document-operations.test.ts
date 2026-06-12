@@ -24,6 +24,7 @@ import {
   getChildPropertyId,
   getEffectiveDocNode,
   getItemsNodeId,
+  getOwnProperty,
 } from "@/components/schema-editor/document/node-selectors"
 import { stripDescriptions } from "@/components/schema-editor/document/node-metadata"
 import { updateNode } from "@/components/schema-editor/document/node-update"
@@ -40,6 +41,7 @@ import {
 } from "@/components/schema-editor/document/traversal"
 import {
   setNodeType,
+  setNodeEditorType,
   setNullable,
 } from "@/components/schema-editor/document/type-operations"
 import type { SchemaDocument } from "@/components/schema-editor/document/types"
@@ -88,6 +90,21 @@ describe("property operations", () => {
     expect(out.required).toEqual(["alpha"])
   })
 
+  it("renameProperty preserves external required names in source order", () => {
+    let d = doc({
+      type: "object",
+      properties: { a: { type: "string" }, b: { type: "number" } },
+      required: ["external", "a"],
+    })
+    const aPropertyId = getChildPropertyId(d, d.root.id, "a")!
+
+    d = renameProperty(d, aPropertyId, "alpha")
+
+    const out = json(d)
+    expect(Object.keys(out.properties!)).toEqual(["alpha", "b"])
+    expect(out.required).toEqual(["external", "alpha"])
+  })
+
   it("property edge operations are not addressed by child node id", () => {
     const d = doc(base)
     const aNodeId = getChildNodeId(d, d.root.id, "a")!
@@ -100,6 +117,58 @@ describe("property operations", () => {
     d = renameProperty(d, bPropertyId, "")
     expect(getNode(d, d.root.id)!.properties).toHaveLength(3) // still in doc
     expect(Object.keys(json(d).properties!)).toEqual(["a", "c"]) // b dropped
+  })
+
+  it("preserves imported empty-string property names during projection", () => {
+    const d = doc({
+      type: "object",
+      properties: { "": { type: "string" }, named: { type: "number" } },
+      required: ["", "named"],
+    })
+
+    const out = json(d)
+    expect(Object.keys(out.properties!)).toEqual(["", "named"])
+    expect(out.required).toEqual(["", "named"])
+  })
+
+  it("addProperty can intentionally add a real empty-string property", () => {
+    let d = doc({ type: "object", properties: {} })
+
+    d = addProperty(d, d.root.id, {
+      key: "",
+      isTransient: false,
+      required: true,
+    })
+
+    const out = json(d)
+    expect(Object.keys(out.properties!)).toEqual([""])
+    expect(out.required).toEqual([""])
+  })
+
+  it("keeps an imported empty-string property before a later transient blank row", () => {
+    let d = doc({
+      type: "object",
+      properties: { "": { type: "string" } },
+      required: [""],
+    })
+
+    d = addProperty(d, d.root.id)
+
+    const out = json(d)
+    expect(Object.keys(out.properties!)).toEqual([""])
+    expect(out.required).toEqual([""])
+  })
+
+  it("preserves non-empty whitespace property names during projection", () => {
+    let d = doc(base)
+    const bPropertyId = getChildPropertyId(d, d.root.id, "b")!
+
+    d = renameProperty(d, bPropertyId, " b ")
+    d = setRequired(d, bPropertyId, true)
+
+    const out = json(d)
+    expect(Object.keys(out.properties!)).toEqual(["a", " b ", "c"])
+    expect(out.required).toEqual(["a", " b "])
   })
 
   it("duplicate key keeps the first on export", () => {
@@ -121,6 +190,21 @@ describe("property operations", () => {
     expect(out.required).toEqual([])
   })
 
+  it("removeProperty preserves required names that are not modeled properties", () => {
+    let d = doc({
+      type: "object",
+      properties: { a: { type: "string" } },
+      required: ["external", "a"],
+    })
+    const aPropertyId = getChildPropertyId(d, d.root.id, "a")!
+
+    d = removeProperty(d, aPropertyId)
+
+    const out = json(d)
+    expect(out.properties).toEqual({})
+    expect(out.required).toEqual(["external"])
+  })
+
   it("setRequired toggles membership", () => {
     let d = doc(base)
     const bPropertyId = getChildPropertyId(d, d.root.id, "b")!
@@ -128,6 +212,39 @@ describe("property operations", () => {
     expect(json(d).required).toEqual(["a", "b"])
     d = setRequired(d, bPropertyId, false)
     expect(json(d).required).toEqual(["a"])
+  })
+
+  it("adds properties through imported anyOf nullable object containers", () => {
+    let d = doc({
+      type: "object",
+      properties: {
+        vendor: {
+          anyOf: [
+            {
+              type: "object",
+              properties: { name: { type: "string" } },
+            },
+            { type: "null" },
+          ],
+        },
+      },
+    })
+    const vendorId = getChildNodeId(d, d.root.id, "vendor")!
+
+    d = addProperty(d, vendorId, { key: "code" })
+
+    expect(json(d).properties!.vendor).toEqual({
+      anyOf: [
+        {
+          type: "object",
+          properties: {
+            name: { type: "string" },
+            code: { type: "string" },
+          },
+        },
+        { type: "null" },
+      ],
+    })
   })
 })
 
@@ -191,6 +308,46 @@ describe("moveProperty", () => {
     expect(out).toBe(d)
     expect(json(out)).toEqual(before)
   })
+
+  it("moves properties into imported anyOf nullable object containers", () => {
+    let d = doc({
+      type: "object",
+      properties: {
+        sku: { type: "string" },
+        vendor: {
+          anyOf: [
+            {
+              type: "object",
+              properties: { name: { type: "string" } },
+            },
+            { type: "null" },
+          ],
+        },
+      },
+      required: ["sku"],
+    })
+    const skuPropertyId = getChildPropertyId(d, d.root.id, "sku")!
+    const vendorId = getChildNodeId(d, d.root.id, "vendor")!
+
+    d = moveProperty(d, skuPropertyId, vendorId, 0)
+
+    const out = json(d)
+    expect(Object.keys(out.properties!)).toEqual(["vendor"])
+    expect(out.required).toEqual([])
+    expect(out.properties!.vendor).toEqual({
+      anyOf: [
+        {
+          type: "object",
+          properties: {
+            sku: { type: "string" },
+            name: { type: "string" },
+          },
+          required: ["sku"],
+        },
+        { type: "null" },
+      ],
+    })
+  })
 })
 
 describe("setNodeType", () => {
@@ -234,6 +391,131 @@ describe("setNodeType", () => {
 
     expect(json(d).properties!.anything).toEqual({ type: "string" })
   })
+
+  it("keeps imported anyOf nullable fields nullable when retyping", () => {
+    let d = doc({
+      type: "object",
+      properties: {
+        count: {
+          description: "optional count",
+          anyOf: [{ type: "string" }, { type: "null" }],
+        },
+      },
+    })
+    const countId = getChildNodeId(d, d.root.id, "count")!
+
+    d = setNodeType(d, countId, "integer")
+
+    expect(json(d).properties!.count).toEqual({
+      type: ["integer", "null"],
+      description: "optional count",
+    })
+  })
+
+  it("setNodeEditorType removes stale date formats when changing away from date-like strings", () => {
+    let d = doc({
+      type: "object",
+      properties: {
+        issued_at: {
+          type: "string",
+          format: "date-time",
+          description: "when it happened",
+        },
+      },
+    })
+    const issuedAtId = getChildNodeId(d, d.root.id, "issued_at")!
+
+    d = setNodeEditorType(d, issuedAtId, "number")
+
+    expect(json(d).properties!.issued_at).toEqual({
+      type: "number",
+      description: "when it happened",
+    })
+  })
+
+  it("drops string-only constraints when changing a string field to a number", () => {
+    let d = doc({
+      type: "object",
+      properties: {
+        code: {
+          type: "string",
+          minLength: 2,
+          maxLength: 8,
+          pattern: "^A",
+          default: "A1",
+          "x-retab": { source: "user" },
+        } as JSONSchema7,
+      },
+    })
+    const codeId = getChildNodeId(d, d.root.id, "code")!
+
+    d = setNodeType(d, codeId, "number")
+
+    expect(json(d).properties!.code).toEqual({
+      type: "number",
+      default: "A1",
+      "x-retab": { source: "user" },
+    })
+  })
+
+  it("drops number-only constraints when changing a number field to a string", () => {
+    let d = doc({
+      type: "object",
+      properties: {
+        amount: {
+          type: "number",
+          minimum: 0,
+          maximum: 100,
+          exclusiveMaximum: 101,
+          multipleOf: 0.01,
+          description: "amount",
+        } as JSONSchema7,
+      },
+    })
+    const amountId = getChildNodeId(d, d.root.id, "amount")!
+
+    d = setNodeType(d, amountId, "string")
+
+    expect(json(d).properties!.amount).toEqual({
+      type: "string",
+      description: "amount",
+    })
+  })
+
+  it("drops object required metadata when changing an object field to a scalar", () => {
+    let d = doc({
+      type: "object",
+      properties: {
+        payload: {
+          type: "object",
+          properties: { a: { type: "string" } },
+          required: ["external", "a"],
+        },
+      },
+    })
+    const payloadId = getChildNodeId(d, d.root.id, "payload")!
+
+    d = setNodeType(d, payloadId, "string")
+
+    expect(json(d).properties!.payload).toEqual({ type: "string" })
+  })
+
+  it("drops tuple items when changing a tuple array field to a scalar", () => {
+    let d = doc({
+      type: "object",
+      properties: {
+        pair: {
+          type: "array",
+          items: [{ type: "string" }, { type: "number" }],
+        } as JSONSchema7,
+      },
+    })
+    const pairId = getChildNodeId(d, d.root.id, "pair")!
+
+    d = setNodeType(d, pairId, "string")
+
+    expect(json(d).properties!.pair).toEqual({ type: "string" })
+  })
 })
 
 describe("setNullable (document canonical: type-union)", () => {
@@ -259,6 +541,124 @@ describe("setNullable (document canonical: type-union)", () => {
       "null",
     ])
   })
+
+  it("removes null from imported anyOf nullable fields without losing wrapper metadata", () => {
+    let d = doc({
+      type: "object",
+      properties: {
+        a: {
+          description: "optional text",
+          anyOf: [{ type: "string", minLength: 2 }, { type: "null" }],
+          default: null,
+        },
+      },
+    } as JSONSchema7)
+    const aId = getChildNodeId(d, d.root.id, "a")!
+
+    d = setNullable(d, aId, false)
+
+    expect(json(d).properties!.a).toEqual({
+      type: "string",
+      description: "optional text",
+      minLength: 2,
+      default: null,
+    })
+  })
+
+  it("wraps refs in anyOf when making them nullable", () => {
+    let d = doc({
+      type: "object",
+      $defs: {
+        Money: {
+          type: "object",
+          properties: { amount: { type: "number" } },
+        },
+      },
+      properties: {
+        total: {
+          $ref: "#/$defs/Money",
+          description: "optional total",
+        },
+      },
+    })
+    const totalId = getChildNodeId(d, d.root.id, "total")!
+
+    d = setNullable(d, totalId, true)
+
+    expect(json(d).properties!.total).toEqual({
+      description: "optional total",
+      anyOf: [{ $ref: "#/$defs/Money" }, { type: "null" }],
+    })
+  })
+
+  it("wraps enums in anyOf when making them nullable so null is actually allowed", () => {
+    let d = doc({
+      type: "object",
+      properties: {
+        status: {
+          type: "string",
+          enum: ["draft", "paid"],
+          description: "optional status",
+        },
+      },
+    })
+    const statusId = getChildNodeId(d, d.root.id, "status")!
+
+    d = setNullable(d, statusId, true)
+
+    expect(json(d).properties!.status).toEqual({
+      description: "optional status",
+      anyOf: [
+        { type: "string", enum: ["draft", "paid"] },
+        { type: "null" },
+      ],
+    })
+  })
+
+  it("normalizes type-array nullable enums into a non-null enum branch", () => {
+    let d = doc({
+      type: "object",
+      properties: {
+        status: {
+          type: ["string", "null"],
+          enum: ["draft", "paid"],
+          description: "optional status",
+        },
+      },
+    })
+    const statusId = getChildNodeId(d, d.root.id, "status")!
+
+    d = setNullable(d, statusId, true)
+
+    expect(json(d).properties!.status).toEqual({
+      description: "optional status",
+      anyOf: [
+        { type: "string", enum: ["draft", "paid"] },
+        { type: "null" },
+      ],
+    })
+  })
+
+  it("keeps nullable enum wrapping idempotent", () => {
+    let d = doc({
+      type: "object",
+      properties: {
+        status: {
+          description: "optional status",
+          anyOf: [
+            { type: "string", enum: ["draft", "paid"] },
+            { type: "null" },
+          ],
+        },
+      },
+    })
+    const statusId = getChildNodeId(d, d.root.id, "status")!
+    const before = json(d)
+
+    d = setNullable(d, statusId, true)
+
+    expect(json(d)).toEqual(before)
+  })
 })
 
 describe("enum operations", () => {
@@ -270,15 +670,94 @@ describe("enum operations", () => {
     const cId = getChildNodeId(d, d.root.id, "c")!
     d = addEnumValue(d, cId)
     const newId = getNode(d, cId)!.enum![1].id
-    d = updateEnumValue(d, cId, newId, { value: "b", description: "bee" })
+    d = updateEnumValue(d, cId, newId, { value: "b" })
     let out = json(d)
     expect((out.properties!.c as JSONSchema7).enum).toEqual(["a", "b"])
-    expect(
-      (out.properties!.c as Record<string, unknown>)["x-enumDescriptions"]
-    ).toEqual({ b: "bee" })
     d = removeEnumValue(d, cId, newId)
     out = json(d)
     expect((out.properties!.c as JSONSchema7).enum).toEqual(["a"])
+  })
+
+  it("addEnumValue normalizes type-array nullable enums", () => {
+    let d = doc({
+      type: "object",
+      properties: {
+        status: {
+          type: ["string", "null"],
+          enum: ["draft"],
+          description: "optional status",
+        },
+      },
+    })
+    const statusId = getChildNodeId(d, d.root.id, "status")!
+
+    d = addEnumValue(d, statusId, "paid")
+
+    expect(json(d).properties!.status).toEqual({
+      description: "optional status",
+      anyOf: [
+        { type: "string", enum: ["draft", "paid"] },
+        { type: "null" },
+      ],
+    })
+  })
+
+  it("setEnumValues on an existing type-array nullable enum does not leave enum on the wrapper", () => {
+    let d = doc({
+      type: "object",
+      properties: {
+        status: {
+          type: ["string", "null"],
+          enum: ["draft"],
+          description: "optional status",
+        },
+      },
+    })
+    const statusId = getChildNodeId(d, d.root.id, "status")!
+
+    d = setEnumValues(d, statusId, ["draft", "paid"])
+
+    expect(json(d).properties!.status).toEqual({
+      description: "optional status",
+      anyOf: [
+        { type: "string", enum: ["draft", "paid"] },
+        { type: "null" },
+      ],
+    })
+  })
+
+  it("update and remove enum values normalize type-array nullable enums", () => {
+    let d = doc({
+      type: "object",
+      properties: {
+        status: {
+          type: ["string", "null"],
+          enum: ["draft", "paid"],
+          "x-enumDescriptions": { paid: "Paid status" },
+        } as JSONSchema7,
+      },
+    })
+    const statusId = getChildNodeId(d, d.root.id, "status")!
+    const paidId = getNode(d, statusId)!.enum![1].id
+
+    d = updateEnumValue(d, statusId, paidId, {
+      value: "complete",
+    })
+    d = removeEnumValue(
+      d,
+      statusId,
+      getEffectiveDocNode(getNode(d, statusId)!).enum![0].id
+    )
+
+    expect(json(d).properties!.status).toEqual({
+      anyOf: [
+        {
+          type: "string",
+          enum: ["complete"],
+        },
+        { type: "null" },
+      ],
+    })
   })
 
   it("setEnumValues keeps type-array nullable fields nullable", () => {
@@ -325,32 +804,6 @@ describe("enum operations", () => {
 })
 
 describe("description operations", () => {
-  it("stripDescriptions removes enum value descriptions", () => {
-    const d = doc({
-      type: "object",
-      properties: {
-        status: {
-          type: "string",
-          enum: ["draft", "paid"],
-          "x-enumDescriptions": {
-            draft: "Draft status",
-            paid: "Paid status",
-          },
-        } as JSONSchema7,
-      },
-    })
-
-    const out = json(stripDescriptions(d))
-
-    expect((out.properties!.status as JSONSchema7).enum).toEqual([
-      "draft",
-      "paid",
-    ])
-    expect(
-      (out.properties!.status as Record<string, unknown>)["x-enumDescriptions"]
-    ).toBeUndefined()
-  })
-
   it("stripDescriptions removes descriptions from schema-bearing rest keywords", () => {
     const d = doc({
       type: "object",
@@ -368,6 +821,26 @@ describe("description operations", () => {
             { type: "string", description: "first item" },
             { type: "number", description: "second item" },
           ],
+          additionalItems: {
+            type: "string",
+            description: "additional tuple item",
+          },
+          unevaluatedItems: {
+            type: "number",
+            description: "unevaluated tuple item",
+          },
+          dependencies: {
+            code: {
+              type: "object",
+              description: "dependent object",
+              properties: {
+                dependent: {
+                  type: "string",
+                  description: "dependent field",
+                },
+              },
+            },
+          },
         } as JSONSchema7,
       },
     } as JSONSchema7)
@@ -384,6 +857,18 @@ describe("description operations", () => {
     ).toBeUndefined()
     expect(items[0].description).toBeUndefined()
     expect(items[1].description).toBeUndefined()
+    expect(
+      (pair.additionalItems as JSONSchema7).description
+    ).toBeUndefined()
+    expect(
+      ((pair as Record<string, unknown>).unevaluatedItems as JSONSchema7)
+        .description
+    ).toBeUndefined()
+    const dependencies = pair.dependencies as Record<string, JSONSchema7>
+    expect(dependencies.code.description).toBeUndefined()
+    expect(
+      (dependencies.code.properties!.dependent as JSONSchema7).description
+    ).toBeUndefined()
   })
 
   it("stripDescriptions leaves custom extension metadata untouched", () => {
@@ -406,6 +891,31 @@ describe("description operations", () => {
       ((out.properties as Record<string, JSONSchema7>).a as JSONSchema7)
         .description
     ).toBeUndefined()
+  })
+
+  it("stripDescriptions preserves schema map keys that collide with object prototype keys", () => {
+    const d = doc(
+      JSON.parse(
+        '{"type":"object","patternProperties":{"__proto__":{"type":"object","description":"proto","properties":{"value":{"type":"string","description":"value"}}},"constructor":{"type":"string","description":"ctor"}},"properties":{}}'
+      ) as JSONSchema7
+    )
+
+    const out = json(stripDescriptions(d))
+
+    expect(Object.prototype.hasOwnProperty.call(out.patternProperties, "__proto__"))
+      .toBe(true)
+    expect(Object.keys(out.patternProperties!)).toEqual([
+      "__proto__",
+      "constructor",
+    ])
+    expect((out.patternProperties!.__proto__ as JSONSchema7).description)
+      .toBeUndefined()
+    expect(
+      ((out.patternProperties!.__proto__ as JSONSchema7).properties!
+        .value as JSONSchema7).description
+    ).toBeUndefined()
+    expect((out.patternProperties!.constructor as JSONSchema7).description)
+      .toBeUndefined()
   })
 })
 
@@ -431,6 +941,136 @@ describe("definition operations", () => {
     expect((out.properties!.sub as JSONSchema7).$ref).toBe("#/$defs/Amount")
   })
 
+  it("resolves and renames definitions whose names need JSON Pointer escaping", () => {
+    let d = doc({
+      type: "object",
+      $defs: {
+        "A/B~C": { type: "object", properties: { value: { type: "string" } } },
+      },
+      properties: {
+        escaped: { $ref: "#/$defs/A~1B~0C" },
+      },
+    })
+    const defId = d.defs.find((definition) => definition.name === "A/B~C")!.id
+
+    expect(isDefinitionReferenced(d, defId)).toBe(true)
+
+    d = renameDefinition(d, defId, "D/E~F")
+
+    const out = json(d)
+    expect(Object.keys(out.$defs!)).toEqual(["D/E~F"])
+    expect((out.properties!.escaped as JSONSchema7).$ref).toBe(
+      "#/$defs/D~1E~0F"
+    )
+  })
+
+  it("resolves percent-encoded definition refs and normalizes them on rename", () => {
+    let d = doc({
+      type: "object",
+      $defs: {
+        "Line Item": {
+          type: "object",
+          properties: { sku: { type: "string" } },
+        },
+      },
+      properties: {
+        item: { $ref: "#/$defs/Line%20Item" },
+      },
+    })
+    const defId = d.defs.find((definition) => definition.name === "Line Item")!
+      .id
+
+    expect(isDefinitionReferenced(d, defId)).toBe(true)
+
+    d = renameDefinition(d, defId, "Order Item")
+
+    const out = json(d)
+    expect((out.properties!.item as JSONSchema7).$ref).toBe(
+      "#/$defs/Order Item"
+    )
+  })
+
+  it("resolves lowercase percent-encoded unicode definition refs", () => {
+    let d = doc({
+      type: "object",
+      $defs: {
+        "Café Item": {
+          type: "object",
+          properties: { name: { type: "string" } },
+        },
+      },
+      properties: {
+        item: { $ref: "#/$defs/Caf%c3%a9%20Item" },
+      },
+    })
+    const defId = d.defs.find((definition) => definition.name === "Café Item")!
+      .id
+
+    expect(isDefinitionReferenced(d, defId)).toBe(true)
+
+    d = renameDefinition(d, defId, "Menu Item")
+
+    const out = json(d)
+    expect((out.properties!.item as JSONSchema7).$ref).toBe(
+      "#/$defs/Menu Item"
+    )
+  })
+
+  it("resolves refs that percent-encode slash and tilde in definition names", () => {
+    let d = doc({
+      type: "object",
+      $defs: {
+        "A/B~C": {
+          type: "object",
+          properties: { value: { type: "string" } },
+        },
+      },
+      properties: {
+        item: { $ref: "#/$defs/A%2FB%7EC" },
+      },
+    })
+    const defId = d.defs.find((definition) => definition.name === "A/B~C")!.id
+
+    expect(isDefinitionReferenced(d, defId)).toBe(true)
+
+    d = renameDefinition(d, defId, "D/E~F")
+
+    const out = json(d)
+    expect((out.properties!.item as JSONSchema7).$ref).toBe(
+      "#/$defs/D~1E~0F"
+    )
+  })
+
+  it("prefers JSON Pointer semantics over tolerant encoded-name aliases", () => {
+    let d = doc({
+      type: "object",
+      $defs: {
+        "A/B": {
+          type: "object",
+          properties: { slash: { type: "string" } },
+        },
+        "A~1B": {
+          type: "object",
+          properties: { tilde_one: { type: "string" } },
+        },
+      },
+      properties: {
+        item: { $ref: "#/$defs/A~1B" },
+      },
+    })
+    const slashId = d.defs.find((definition) => definition.name === "A/B")!.id
+    const tildeOneId = d.defs.find((definition) => definition.name === "A~1B")!
+      .id
+
+    expect(isDefinitionReferenced(d, slashId)).toBe(true)
+    expect(isDefinitionReferenced(d, tildeOneId)).toBe(false)
+
+    d = renameDefinition(d, slashId, "Slash")
+
+    const out = json(d)
+    expect((out.properties!.item as JSONSchema7).$ref).toBe("#/$defs/Slash")
+  })
+
   it("renameDefinition updates refs inside schema-bearing rest keywords", () => {
     let d = doc({
       type: "object",
@@ -442,6 +1082,12 @@ describe("definition operations", () => {
         tuple: {
           type: "array",
           items: [{ $ref: "#/$defs/Money" }],
+          additionalItems: { $ref: "#/$defs/Money" },
+          unevaluatedItems: { $ref: "#/$defs/Money" },
+          dependencies: {
+            tag: { $ref: "#/$defs/Money" },
+            code: ["tag"],
+          },
         } as JSONSchema7,
       },
     } as JSONSchema7)
@@ -457,12 +1103,175 @@ describe("definition operations", () => {
       (((out.properties as Record<string, JSONSchema7>).tuple.items as JSONSchema7[])[0])
         .$ref
     ).toBe("#/$defs/Amount")
+    const tuple = (out.properties as Record<string, JSONSchema7>)
+      .tuple as JSONSchema7 & Record<string, unknown>
+    expect((tuple.additionalItems as JSONSchema7).$ref).toBe("#/$defs/Amount")
+    expect((tuple.unevaluatedItems as JSONSchema7).$ref).toBe(
+      "#/$defs/Amount"
+    )
+    expect(
+      (tuple.dependencies as Record<string, JSONSchema7 | string[]>).tag
+    ).toEqual({ $ref: "#/$defs/Amount" })
+    expect(
+      (tuple.dependencies as Record<string, JSONSchema7 | string[]>).code
+    ).toEqual(["tag"])
+  })
+
+  it("renames escaped refs inside schema-bearing rest keywords", () => {
+    let d = doc({
+      type: "object",
+      $defs: {
+        "A/B~C": { type: "object", properties: { value: { type: "string" } } },
+      },
+      additionalProperties: { $ref: "#/$defs/A~1B~0C" },
+      properties: {},
+    } as JSONSchema7)
+    const defId = d.defs.find((definition) => definition.name === "A/B~C")!.id
+
+    expect(isDefinitionReferenced(d, defId)).toBe(true)
+
+    d = renameDefinition(d, defId, "D/E~F")
+
+    const out = json(d) as Record<string, unknown>
+    expect((out.additionalProperties as JSONSchema7).$ref).toBe(
+      "#/$defs/D~1E~0F"
+    )
+  })
+
+  it("renames percent-encoded refs inside schema-bearing rest keywords", () => {
+    let d = doc({
+      type: "object",
+      $defs: {
+        "Line Item": {
+          type: "object",
+          properties: { sku: { type: "string" } },
+        },
+      },
+      additionalProperties: { $ref: "#/$defs/Line%20Item" },
+      properties: {},
+    } as JSONSchema7)
+    const defId = d.defs.find((definition) => definition.name === "Line Item")!
+      .id
+
+    expect(isDefinitionReferenced(d, defId)).toBe(true)
+
+    d = renameDefinition(d, defId, "Order Item")
+
+    const out = json(d) as Record<string, unknown>
+    expect((out.additionalProperties as JSONSchema7).$ref).toBe(
+      "#/$defs/Order Item"
+    )
+  })
+
+  it("renames refs in schema maps whose keys collide with object prototype keys", () => {
+    let d = doc(
+      JSON.parse(
+        '{"type":"object","$defs":{"Money":{"type":"object","properties":{"amount":{"type":"number"}}}},"patternProperties":{"__proto__":{"$ref":"#/$defs/Money"},"constructor":{"$ref":"#/$defs/Money"}},"properties":{}}'
+      ) as JSONSchema7
+    )
+    const moneyId = d.defs.find((definition) => definition.name === "Money")!.id
+
+    d = renameDefinition(d, moneyId, "Amount")
+
+    const out = json(d)
+    expect(Object.prototype.hasOwnProperty.call(out.patternProperties, "__proto__"))
+      .toBe(true)
+    expect(Object.keys(out.patternProperties!)).toEqual([
+      "__proto__",
+      "constructor",
+    ])
+    expect(out.patternProperties!.__proto__).toEqual({
+      $ref: "#/$defs/Amount",
+    })
+    expect(out.patternProperties!.constructor).toEqual({
+      $ref: "#/$defs/Amount",
+    })
+  })
+
+  it("round-trips mixed $defs and definitions refs with the same name", () => {
+    const schema = {
+      type: "object",
+      $defs: {
+        Money: { type: "object", properties: { amount: { type: "number" } } },
+      },
+      definitions: {
+        Money: { type: "object", properties: { currency: { type: "string" } } },
+      },
+      properties: {
+        modern: { $ref: "#/$defs/Money" },
+        legacy: { $ref: "#/definitions/Money" },
+      },
+    } as unknown as JSONSchema7
+
+    expect(json(doc(schema))).toEqual(schema)
+  })
+
+  it("renameDefinition does not rewrite refs into the unmodeled definitions namespace", () => {
+    let d = doc({
+      type: "object",
+      $defs: {
+        Money: { type: "object", properties: { amount: { type: "number" } } },
+      },
+      definitions: {
+        Money: { type: "object", properties: { currency: { type: "string" } } },
+      },
+      additionalProperties: { $ref: "#/definitions/Money" },
+      properties: {
+        modern: { $ref: "#/$defs/Money" },
+        legacy: { $ref: "#/definitions/Money" },
+      },
+    } as unknown as JSONSchema7)
+    const moneyId = d.defs.find((definition) => definition.name === "Money")!.id
+
+    d = renameDefinition(d, moneyId, "Amount")
+
+    const out = json(d) as Record<string, unknown>
+    expect(Object.keys(out.$defs!)).toEqual(["Amount"])
+    expect((out.definitions as Record<string, JSONSchema7>).Money).toEqual({
+      type: "object",
+      properties: { currency: { type: "string" } },
+    })
+    const properties = out.properties as Record<string, JSONSchema7>
+    expect(properties.modern.$ref).toBe("#/$defs/Amount")
+    expect(properties.legacy.$ref).toBe(
+      "#/definitions/Money"
+    )
+    expect((out.additionalProperties as JSONSchema7).$ref).toBe(
+      "#/definitions/Money"
+    )
   })
 
   it("addDefinition adds a uniquely-named entry", () => {
     let d = doc(withDefs)
     d = addDefinition(d, { name: "Money" }).doc // collides
     expect(d.defs.map((x) => x.name)).toEqual(["Money", "Money2"])
+  })
+
+  it("addDefinition trims names before uniquing", () => {
+    let d = doc(withDefs)
+    d = addDefinition(d, { name: " Money " }).doc
+    expect(d.defs.map((x) => x.name)).toEqual(["Money", "Money2"])
+  })
+
+  it("renameDefinition refuses blank names", () => {
+    const d = doc(withDefs)
+    const id = d.defs.find((x) => x.name === "Money")!.id
+
+    const out = renameDefinition(d, id, "   ")
+
+    expect(out).toBe(d)
+    expect(json(out)).toEqual(json(d))
+  })
+
+  it("renameDefinition trims names before updating refs", () => {
+    let d = doc(withDefs)
+    const id = d.defs.find((x) => x.name === "Money")!.id
+
+    d = renameDefinition(d, id, " Amount ")
+
+    const out = json(d)
+    expect(Object.keys(out.$defs!)).toEqual(["Amount"])
+    expect((out.properties!.total as JSONSchema7).$ref).toBe("#/$defs/Amount")
   })
 
   it("removeDefinition removes the entry (refs become dangling, not rewritten)", () => {
@@ -505,6 +1314,177 @@ describe("definition operations", () => {
       title: "Local title",
       description: "Local description",
       default: "value",
+    })
+  })
+
+  it("setRefByName removes stale date formats while preserving unrelated metadata", () => {
+    let d = doc({
+      ...withDefs,
+      properties: {
+        issued_at: {
+          type: "string",
+          format: "date-time",
+          default: "2025-01-01T00:00:00Z",
+        },
+      },
+    })
+    const issuedAtId = getChildNodeId(d, d.root.id, "issued_at")!
+
+    d = setRefByName(d, issuedAtId, "Money")
+
+    expect(json(d).properties!.issued_at).toEqual({
+      $ref: "#/$defs/Money",
+      default: "2025-01-01T00:00:00Z",
+    })
+  })
+
+  it("setRefByName removes stale scalar constraints while preserving neutral metadata", () => {
+    let d = doc({
+      ...withDefs,
+      properties: {
+        code: {
+          type: "string",
+          minLength: 2,
+          pattern: "^A",
+          default: "A1",
+        } as JSONSchema7,
+      },
+    })
+    const codeId = getChildNodeId(d, d.root.id, "code")!
+
+    d = setRefByName(d, codeId, "Money")
+
+    expect(json(d).properties!.code).toEqual({
+      $ref: "#/$defs/Money",
+      default: "A1",
+    })
+  })
+
+  it("setRefByName removes stale tuple items when converting a tuple array to a ref", () => {
+    let d = doc({
+      ...withDefs,
+      properties: {
+        pair: {
+          type: "array",
+          items: [{ type: "string" }, { type: "number" }],
+        } as JSONSchema7,
+      },
+    })
+    const pairId = getChildNodeId(d, d.root.id, "pair")!
+
+    d = setRefByName(d, pairId, "Money")
+
+    expect(json(d).properties!.pair).toEqual({ $ref: "#/$defs/Money" })
+  })
+
+  it("setRefByName removes stale formats inside nullable formatted branches", () => {
+    let d = doc({
+      type: "object",
+      $defs: {
+        Money: {
+          type: "object",
+          properties: { amount: { type: "number" } },
+        },
+      },
+      properties: {
+        maybe_issued_at: {
+          anyOf: [{ type: "string", format: "date-time" }, { type: "null" }],
+          default: null,
+        },
+      },
+    })
+    const maybeIssuedAtId = getChildNodeId(d, d.root.id, "maybe_issued_at")!
+
+    d = setRefByName(d, maybeIssuedAtId, "Money")
+
+    expect(json(d).properties!.maybe_issued_at).toEqual({
+      anyOf: [{ $ref: "#/$defs/Money" }, { type: "null" }],
+      default: null,
+    })
+  })
+
+  it("setEnumValues removes stale date formats when converting a formatted string to choices", () => {
+    let d = doc({
+      type: "object",
+      properties: {
+        issued_at: {
+          type: "string",
+          format: "date-time",
+        },
+      },
+    })
+    const issuedAtId = getChildNodeId(d, d.root.id, "issued_at")!
+
+    d = setEnumValues(d, issuedAtId, ["draft", "paid"])
+
+    expect(json(d).properties!.issued_at).toEqual({
+      type: "string",
+      enum: ["draft", "paid"],
+    })
+  })
+
+  it("setEnumValues removes stale scalar constraints when converting to choices", () => {
+    let d = doc({
+      type: "object",
+      properties: {
+        amount: {
+          type: "number",
+          minimum: 0,
+          maximum: 100,
+          default: 10,
+        } as JSONSchema7,
+      },
+    })
+    const amountId = getChildNodeId(d, d.root.id, "amount")!
+
+    d = setEnumValues(d, amountId, ["low", "high"])
+
+    expect(json(d).properties!.amount).toEqual({
+      type: "string",
+      enum: ["low", "high"],
+      default: 10,
+    })
+  })
+
+  it("setEnumValues removes stale tuple items when converting a tuple array to choices", () => {
+    let d = doc({
+      type: "object",
+      properties: {
+        pair: {
+          type: "array",
+          items: [{ type: "string" }, { type: "number" }],
+        } as JSONSchema7,
+      },
+    })
+    const pairId = getChildNodeId(d, d.root.id, "pair")!
+
+    d = setEnumValues(d, pairId, ["left", "right"])
+
+    expect(json(d).properties!.pair).toEqual({
+      type: "string",
+      enum: ["left", "right"],
+    })
+  })
+
+  it("setEnumValues removes stale formats from nullable formatted strings", () => {
+    let d = doc({
+      type: "object",
+      properties: {
+        status_at: {
+          type: ["string", "null"],
+          format: "date-time",
+        },
+      },
+    })
+    const statusAtId = getChildNodeId(d, d.root.id, "status_at")!
+
+    d = setEnumValues(d, statusAtId, ["draft", "paid"])
+
+    expect(json(d).properties!.status_at).toEqual({
+      anyOf: [
+        { type: "string", enum: ["draft", "paid"] },
+        { type: "null" },
+      ],
     })
   })
 
@@ -658,6 +1638,22 @@ describe("lookups", () => {
     expect(getChildNodeId(d, vId, "x")).toBeTruthy()
   })
 
+  it("getOwnProperty works through an anyOf-nullable object parent", () => {
+    const d = doc({
+      type: "object",
+      properties: {
+        v: {
+          anyOf: [
+            { type: "object", properties: { x: { type: "string" } } },
+            { type: "null" },
+          ],
+        },
+      },
+    })
+    const vId = getChildNodeId(d, d.root.id, "v")!
+    expect(getOwnProperty(d, vId, 0)?.key).toBe("x")
+  })
+
   it("getItemsNodeId returns the array's item node", () => {
     const d = doc({
       type: "object",
@@ -682,12 +1678,56 @@ describe("definition reference detection", () => {
         tuple: {
           type: "array",
           items: [{ $ref: "#/$defs/Money" }],
+          additionalItems: { $ref: "#/$defs/Money" },
+          dependencies: {
+            tag: { $ref: "#/$defs/Money" },
+            code: ["tag"],
+          },
         } as JSONSchema7,
       },
     } as JSONSchema7)
     const moneyId = d.defs.find((definition) => definition.name === "Money")!.id
 
     expect(isDefinitionReferenced(d, moneyId)).toBe(true)
+  })
+
+  it("finds refs inside array rest schema keywords", () => {
+    const d = doc({
+      type: "object",
+      $defs: {
+        Money: { type: "object", properties: { amount: { type: "number" } } },
+      },
+      properties: {
+        tuple: {
+          type: "array",
+          items: [{ type: "string" }],
+          additionalItems: { $ref: "#/$defs/Money" },
+          unevaluatedItems: { $ref: "#/$defs/Money" },
+        } as JSONSchema7,
+      },
+    } as JSONSchema7)
+    const moneyId = d.defs.find((definition) => definition.name === "Money")!.id
+
+    expect(isDefinitionReferenced(d, moneyId)).toBe(true)
+  })
+
+  it("does not treat raw refs into a secondary definitions namespace as modeled refs", () => {
+    const d = doc({
+      type: "object",
+      $defs: {
+        Money: { type: "object", properties: { amount: { type: "number" } } },
+      },
+      definitions: {
+        Money: { type: "object", properties: { currency: { type: "string" } } },
+      },
+      additionalProperties: { $ref: "#/definitions/Money" },
+      properties: {
+        legacy: { $ref: "#/definitions/Money" },
+      },
+    } as unknown as JSONSchema7)
+    const moneyId = d.defs.find((definition) => definition.name === "Money")!.id
+
+    expect(isDefinitionReferenced(d, moneyId)).toBe(false)
   })
 })
 

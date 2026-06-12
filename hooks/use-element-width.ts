@@ -16,6 +16,8 @@ export function useElementWidth<T extends HTMLElement = HTMLDivElement>(): [
     if (!element) return
 
     setWidth(element.clientWidth)
+    if (typeof ResizeObserver !== "function") return
+
     let frame = 0
     let nextWidth = element.clientWidth
     const observer = new ResizeObserver((entries) => {
@@ -23,6 +25,10 @@ export function useElementWidth<T extends HTMLElement = HTMLDivElement>(): [
         nextWidth = (entry.target as HTMLElement).clientWidth
       }
       if (frame) return
+      if (typeof requestAnimationFrame !== "function") {
+        setWidth(nextWidth)
+        return
+      }
       frame = requestAnimationFrame(() => {
         frame = 0
         setWidth(nextWidth)
@@ -31,7 +37,9 @@ export function useElementWidth<T extends HTMLElement = HTMLDivElement>(): [
 
     observer.observe(element)
     cleanupRef.current = () => {
-      if (frame) cancelAnimationFrame(frame)
+      if (frame && typeof cancelAnimationFrame === "function") {
+        cancelAnimationFrame(frame)
+      }
       observer.disconnect()
     }
   }, [])

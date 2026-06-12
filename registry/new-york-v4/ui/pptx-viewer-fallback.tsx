@@ -9,9 +9,11 @@ import { PptxToolbarSkeleton } from "./pptx-viewer-toolbar"
 export function PptxViewerFallback({
   className,
   bare = false,
+  toolbar = true,
 }: {
   className?: string
   bare?: boolean
+  toolbar?: boolean
 }) {
   return (
     <div
@@ -22,7 +24,7 @@ export function PptxViewerFallback({
       )}
       data-slot="pptx-viewer"
     >
-      <PptxToolbarSkeleton />
+      {toolbar ? <PptxToolbarSkeleton /> : null}
       <div className="min-h-0 flex-1 overflow-auto">
         <div className="flex flex-col items-center p-4">
           <PptxSlideSkeleton />

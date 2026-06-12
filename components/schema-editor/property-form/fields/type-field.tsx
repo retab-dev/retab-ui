@@ -8,6 +8,10 @@ import {
   updateEffectiveNode,
   updateType,
 } from "@/components/schema-editor/draft/draft-node-edits"
+import {
+  definitionNameFromRef,
+  definitionRef,
+} from "@/components/schema-editor/document/json-pointer"
 import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
 import { getEffectiveNode } from "@/components/schema-editor/lib/json-schema-utils"
 import type { PropertyFormSchemaContext } from "@/components/schema-editor/property-form/types"
@@ -52,7 +56,7 @@ const primitiveTypes = [
 function typeLabel(type: string, node: ExtendedJSONSchema7) {
   if (type === "$ref") {
     const ref = node.$ref
-    return ref ? ref.replace("#/$defs/", "") : "$ref"
+    return ref ? definitionNameFromRef(ref) : "$ref"
   }
   if (type === "datetime") return "timestamp"
   if (type === "boolean") return "true/false"
@@ -82,6 +86,7 @@ export function TypeField({
   const isDisabled = disabled || mode === "readOnly"
 
   const setType = (type: (typeof primitiveTypes)[number][0]) => {
+    if (isDisabled) return
     const nextSchemaNode = updateType(
       type,
       effectiveType.isNullable,
@@ -104,6 +109,7 @@ export function TypeField({
   }
 
   const setDefinition = (definitionName: string) => {
+    if (isDisabled) return
     void schemaContext.onCommand?.({
       type: "selectDefinition",
       definitionName,
@@ -112,13 +118,14 @@ export function TypeField({
       updateEffectiveNode(
         schemaNode,
         withReplacementMetadata({
-          $ref: `#/$defs/${definitionName}`,
+          $ref: definitionRef("$defs", definitionName),
         })
       )
     )
   }
 
   const setObjectTemplate = (templateName: string) => {
+    if (isDisabled) return
     void schemaContext.onCommand?.({
       type: "installObjectTemplate",
       templateName,
@@ -127,7 +134,7 @@ export function TypeField({
       updateEffectiveNode(
         schemaNode,
         withReplacementMetadata({
-          $ref: `#/$defs/${templateName}`,
+          $ref: definitionRef("$defs", templateName),
         })
       )
     )
@@ -145,7 +152,7 @@ export function TypeField({
           <div className="flex items-center gap-2">
             {effectiveType.type === "$ref" && effectiveSchemaNode.$ref
               ? getTemplateIcon(
-                  effectiveSchemaNode.$ref.replace("#/$defs/", "")
+                  definitionNameFromRef(effectiveSchemaNode.$ref)
                 )
               : getTypeIcon(effectiveType.type)}
             <span>{typeLabel(effectiveType.type, effectiveSchemaNode)}</span>
@@ -179,6 +186,7 @@ export function TypeField({
               {definitionNames.map((definitionName) => (
                 <DropdownMenuItem
                   key={definitionName}
+                  disabled={isDisabled}
                   onSelect={() => setDefinition(definitionName)}
                 >
                   <div className="flex items-center gap-2">

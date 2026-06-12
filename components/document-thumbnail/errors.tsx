@@ -8,14 +8,14 @@ export class ThumbnailErrorBoundary extends React.Component<
   {
     children: React.ReactNode
     fallback: React.ReactNode
-    onError: () => void
+    onError: (error: unknown) => void
   },
   { failed: boolean }
 > {
   constructor(props: {
     children: React.ReactNode
     fallback: React.ReactNode
-    onError: () => void
+    onError: (error: unknown) => void
   }) {
     super(props)
     this.state = { failed: false }
@@ -25,8 +25,8 @@ export class ThumbnailErrorBoundary extends React.Component<
     return { failed: true }
   }
 
-  componentDidCatch() {
-    this.props.onError()
+  componentDidCatch(error: unknown) {
+    this.props.onError(error)
   }
 
   render() {

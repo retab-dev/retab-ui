@@ -1,10 +1,14 @@
 import type {
   JSONSchema7,
   JSONSchema7Definition,
-  JSONSchema7Type,
 } from "json-schema"
 
 import { createId } from "./id"
+import {
+  definitionRefAliases,
+  definitionRef,
+  type DefinitionsKeyword,
+} from "./json-pointer"
 import type {
   DefinitionEntry,
   DocumentNode,
@@ -43,6 +47,7 @@ const MODELED_NODE_KEYS = new Set<string>([
   "anyOf",
   "oneOf",
   "allOf",
+  "x-enumDescriptions",
 ])
 
 const ENUM_DESCRIPTIONS_KEY = "x-enumDescriptions"
@@ -54,6 +59,8 @@ type RefMap = Map<string, string> // json-pointer string -> definition NodeId
 // ---------------------------------------------------------------------------
 
 export function fromJsonSchema(schema: JSONSchema7): SchemaDocument {
+  const hasDefsKeyword = schema.$defs !== undefined
+  const hasDefinitionsKeyword = schema.definitions !== undefined
   const defsKeyword = schema.$defs
     ? "$defs"
     : schema.definitions
@@ -72,8 +79,11 @@ export function fromJsonSchema(schema: JSONSchema7): SchemaDocument {
   }))
   const refMap: RefMap = new Map()
   for (const def of defEntries) {
-    refMap.set(`#/$defs/${def.name}`, def.id)
-    refMap.set(`#/definitions/${def.name}`, def.id)
+    addDefinitionRefMapEntries(refMap, def, {
+      defsKeyword,
+      hasOtherDefsKeyword:
+        defsKeyword === "$defs" ? hasDefinitionsKeyword : hasDefsKeyword,
+    })
   }
 
   // Second pass: build each definition's node now that the ref map exists.
@@ -111,7 +121,10 @@ function nodeFromSchema(
   if (typeof schema.$ref === "string") {
     const defId = refMap.get(schema.$ref)
     if (defId) node.ref = defId
-    else node.rest.$ref = schema.$ref // unresolved pointer — keep verbatim
+    else {
+      // unresolved pointer — keep verbatim
+      setRecordValue(node.rest, "$ref", schema.$ref)
+    }
   }
 
   if (schema.type !== undefined) node.type = schema.type
@@ -122,8 +135,12 @@ function nodeFromSchema(
     node.enum = enumFromSchema(schema)
   }
 
+  const required = Array.isArray(schema.required) ? schema.required : []
+  if (required.length > 0 || node.order?.includes("required")) {
+    node.requiredOrder = required
+  }
+
   if (schema.properties) {
-    const required = Array.isArray(schema.required) ? schema.required : []
     node.properties = Object.entries(schema.properties).map(
       ([key, child]): PropertyEntry => ({
         id: createId("prop"),
@@ -134,11 +151,17 @@ function nodeFromSchema(
     )
   }
 
+  if (required.length > 0) {
+    const propertyKeys = new Set(node.properties?.map((property) => property.key))
+    const extraRequired = required.filter((key) => !propertyKeys.has(key))
+    if (extraRequired.length > 0) node.extraRequired = extraRequired
+  }
+
   if (schema.items !== undefined) {
     if (Array.isArray(schema.items)) {
       // Tuple `items` (array form) is rare and not UI-editable; carry it
       // verbatim in `rest` so it survives the round-trip losslessly.
-      node.rest.items = schema.items
+      setRecordValue(node.rest, "items", schema.items)
     } else {
       node.items = nodeFromSchema(schema.items, refMap)
     }
@@ -155,29 +178,17 @@ function nodeFromSchema(
   for (const [key, value] of Object.entries(schema)) {
     if (MODELED_NODE_KEYS.has(key)) continue
     if (stripKeyword && key === stripKeyword) continue
-    if (node.enum && key === ENUM_DESCRIPTIONS_KEY) continue // folded into enum
-    node.rest[key] = value
+    setRecordValue(node.rest, key, value)
   }
 
   return node
 }
 
 function enumFromSchema(schema: JSONSchema7): EnumValue[] {
-  const raw = (schema as Record<string, unknown>)[ENUM_DESCRIPTIONS_KEY]
-  const descriptions =
-    raw && typeof raw === "object" ? (raw as Record<string, string>) : {}
-
-  return (schema.enum ?? []).map((value): EnumValue => {
-    const entry: EnumValue = { id: createId("enum"), value: value as JsonValue }
-    const description = descriptions[enumKey(value)]
-    if (description) entry.description = description
-    return entry
-  })
-}
-
-/** Stable string key for an enum literal, used to pair values with descriptions. */
-function enumKey(value: JSONSchema7Type): string {
-  return typeof value === "string" ? value : JSON.stringify(value)
+  return (schema.enum ?? []).map((value): EnumValue => ({
+    id: createId("enum"),
+    value: value as JsonValue,
+  }))
 }
 
 // ---------------------------------------------------------------------------
@@ -195,9 +206,13 @@ export function toJsonSchema(doc: SchemaDocument): JSONSchema7 {
   if (doc.defs.length > 0) {
     const bag: Record<string, JSONSchema7Definition> = {}
     for (const def of doc.defs) {
-      bag[def.name] = nodeToSchema(def.node, defNameById, defsKeyword)
+      setRecordValue(
+        bag,
+        def.name,
+        nodeToSchema(def.node, defNameById, defsKeyword)
+      )
     }
-    ;(out as Record<string, unknown>)[defsKeyword] = bag
+    setRecordValue(out as Record<string, unknown>, defsKeyword, bag)
   }
 
   // Replay the root key order (so $defs lands back where the source had it).
@@ -230,22 +245,48 @@ export function nodeFromJson(
   doc: SchemaDocument
 ): DocumentNode {
   const refMap: RefMap = new Map()
+  const defsKeyword =
+    doc.rest.defsKeyword === "definitions" ? "definitions" : "$defs"
+  const otherDefsKeyword =
+    defsKeyword === "$defs" ? "definitions" : "$defs"
+  const hasOtherDefsKeyword =
+    Object.prototype.hasOwnProperty.call(doc.root.rest, otherDefsKeyword)
   for (const def of doc.defs) {
-    refMap.set(`#/$defs/${def.name}`, def.id)
-    refMap.set(`#/definitions/${def.name}`, def.id)
+    addDefinitionRefMapEntries(refMap, def, {
+      defsKeyword,
+      hasOtherDefsKeyword,
+    })
   }
   // Strip the document's primary defs keyword — definitions live at the document
   // level, not on a node; this keeps a root-level edit (whose JSON still carries
   // `$defs`) from duplicating them into the root node's `rest`.
-  const defsKeyword =
-    doc.rest.defsKeyword === "definitions" ? "definitions" : "$defs"
   return nodeFromSchema(schema, refMap, defsKeyword)
+}
+
+function addDefinitionRefMapEntries(
+  refMap: RefMap,
+  def: DefinitionEntry,
+  options: {
+    defsKeyword: "$defs" | "definitions"
+    hasOtherDefsKeyword: boolean
+  }
+) {
+  for (const ref of definitionRefAliases(options.defsKeyword, def.name)) {
+    refMap.set(ref, def.id)
+  }
+  if (!options.hasOtherDefsKeyword) {
+    const otherKeyword =
+      options.defsKeyword === "$defs" ? "definitions" : "$defs"
+    for (const ref of definitionRefAliases(otherKeyword, def.name)) {
+      refMap.set(ref, def.id)
+    }
+  }
 }
 
 function nodeToSchema(
   node: DocumentNode,
   defNameById: Map<string, string>,
-  defsKeyword: string
+  defsKeyword: DefinitionsKeyword
 ): JSONSchema7Definition {
   if (node.booleanSchema !== undefined) {
     return node.booleanSchema
@@ -258,23 +299,20 @@ function nodeToSchema(
 
   if (node.ref) {
     const name = defNameById.get(node.ref)
-    if (name) out.$ref = `#/${defsKeyword}/${name}`
+    if (name) setRecordValue(out, "$ref", definitionRef(defsKeyword, name))
   }
 
-  if (node.type !== undefined) out.type = node.type
-  if (node.title !== undefined) out.title = node.title
-  if (node.description !== undefined) out.description = node.description
+  if (node.type !== undefined) setRecordValue(out, "type", node.type)
+  if (node.title !== undefined) setRecordValue(out, "title", node.title)
+  if (node.description !== undefined)
+    setRecordValue(out, "description", node.description)
 
   if (node.enum) {
-    out.enum = node.enum.map((entry) => entry.value)
-    const descriptions: Record<string, string> = {}
-    for (const entry of node.enum) {
-      if (entry.description)
-        descriptions[enumKey(entry.value)] = entry.description
-    }
-    if (Object.keys(descriptions).length > 0) {
-      out[ENUM_DESCRIPTIONS_KEY] = descriptions
-    }
+    setRecordValue(
+      out,
+      "enum",
+      node.enum.map((entry) => entry.value)
+    )
   }
 
   if (node.properties) {
@@ -282,36 +320,57 @@ function nodeToSchema(
     const required: string[] = []
     const seen = new Set<string>()
     for (const entry of node.properties) {
-      const key = entry.key.trim()
+      const key = entry.key
       // Transient-invalid states live in the Document, not the projection:
       // drop empty and duplicate keys at the boundary.
-      if (!key || seen.has(key)) continue
+      if ((entry.isTransient && !key) || seen.has(key)) continue
       seen.add(key)
-      properties[key] = nodeToSchema(entry.node, defNameById, defsKeyword)
+      setRecordValue(
+        properties,
+        key,
+        nodeToSchema(entry.node, defNameById, defsKeyword)
+      )
       if (entry.required) required.push(key)
     }
-    out.properties = properties
+    setRecordValue(out, "properties", properties)
     // Emit `required` when it has entries, or when the source had an explicit
     // (possibly empty) `required` key — so `required: []` round-trips faithfully.
     const hadRequiredKey = node.order?.includes("required") ?? false
-    if (required.length > 0 || hadRequiredKey) out.required = required
+    const projectedRequired = orderRequiredNames(
+      [...(node.extraRequired ?? []), ...required],
+      node.requiredOrder
+    )
+    if (projectedRequired.length > 0 || hadRequiredKey) {
+      setRecordValue(out, "required", projectedRequired)
+    }
+  } else if (node.extraRequired?.length) {
+    setRecordValue(
+      out,
+      "required",
+      orderRequiredNames(node.extraRequired, node.requiredOrder)
+    )
   }
 
   if (node.items) {
-    out.items = nodeToSchema(node.items, defNameById, defsKeyword)
+    setRecordValue(out, "items", nodeToSchema(node.items, defNameById, defsKeyword))
   }
 
   for (const key of ["anyOf", "oneOf", "allOf"] as const) {
     const value = node[key]
     if (value) {
-      out[key] = value.map((sub) => nodeToSchema(sub, defNameById, defsKeyword))
+      setRecordValue(
+        out,
+        key,
+        value.map((sub) => nodeToSchema(sub, defNameById, defsKeyword))
+      )
     }
   }
 
   // Trailing unmodeled keywords (const, default, format, pattern, x-*, …).
   for (const [key, value] of Object.entries(node.rest)) {
-    if (key in out) continue // modeled field already won this key
-    out[key] = value
+    if (hasOwn(out, key)) continue // modeled field already won this key
+    if (key === ENUM_DESCRIPTIONS_KEY) continue
+    setRecordValue(out, key, value)
   }
 
   return applyKeyOrder(out, node.order) as JSONSchema7
@@ -329,10 +388,42 @@ function applyKeyOrder(
   if (!Array.isArray(order)) return obj
   const result: Record<string, unknown> = {}
   for (const key of order as string[]) {
-    if (key in obj) result[key] = obj[key]
+    if (hasOwn(obj, key)) setRecordValue(result, key, obj[key])
   }
   for (const key of Object.keys(obj)) {
-    if (!(key in result)) result[key] = obj[key]
+    if (!hasOwn(result, key)) setRecordValue(result, key, obj[key])
   }
   return result
+}
+
+function hasOwn(record: Record<string, unknown>, key: string): boolean {
+  return Object.prototype.hasOwnProperty.call(record, key)
+}
+
+function setRecordValue<T>(
+  record: Record<string, T>,
+  key: string,
+  value: T
+) {
+  Object.defineProperty(record, key, {
+    value,
+    enumerable: true,
+    configurable: true,
+    writable: true,
+  })
+}
+
+function orderRequiredNames(names: string[], sourceOrder: unknown): string[] {
+  const uniqueNames = [...new Set(names)]
+  if (!Array.isArray(sourceOrder)) return uniqueNames
+
+  const remaining = new Set(uniqueNames)
+  const ordered: string[] = []
+  for (const name of sourceOrder) {
+    if (typeof name !== "string" || !remaining.has(name)) continue
+    ordered.push(name)
+    remaining.delete(name)
+  }
+  ordered.push(...remaining)
+  return ordered
 }

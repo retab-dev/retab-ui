@@ -6,12 +6,27 @@ export interface DocumentPatch {
   data: Record<string, unknown>
 }
 
+const unsafeDocumentPathSegments = new Set([
+  "__proto__",
+  "constructor",
+  "prototype",
+])
+
+function assertSafeDocumentPath(segments: string[]) {
+  for (const segment of segments) {
+    if (unsafeDocumentPathSegments.has(segment)) {
+      throw new Error(`Unsafe document path segment "${segment}"`)
+    }
+  }
+}
+
 export function setValueAtMaterializedPath(
   root: unknown,
   materializedFieldPath: MaterializedFieldPath,
   value: unknown | ((previousValue: unknown) => unknown)
 ): Record<string, unknown> {
   const segments = materializedFieldPath ? materializedFieldPath.split(".") : []
+  assertSafeDocumentPath(segments)
   return setValueAtSegments(root, segments, value) as Record<string, unknown>
 }
 

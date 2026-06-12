@@ -84,11 +84,9 @@ normalized boxes map with simple percentages:
   context, so heavy renders are queued — never overlapping, never racing — and a
   queued render is skipped if its slide has already scrolled away, so
   fast-scrolling never wastes the queue on stale slides.
-- **Scroll-aware deferral.** While the user is actively scrolling, a slide's
-  (expensive) first render is held until scrolling settles, so a fast fling stays
-  at frame rate instead of competing with on-the-fly renders. The initial paint, a
-  settled scroll, and already-cached slides all render immediately. Pass `eager`
-  to render slides the moment they near the viewport instead.
+- **Scroll-aware rendering.** Slides render as soon as they near the viewport, so
+  visible content appears immediately. Pass `eager={false}` for very large decks
+  when uncached slide renders should wait until scrolling settles.
 - **Bounded source ownership.** Parsed deck sources and rendered bitmaps are
   kept in a small LRU and disposed when evicted, so browsing many presentations
   does not leave old decks resident indefinitely.
@@ -116,6 +114,6 @@ The PPTX overlay field is `slideNumber`, a 1-based slide index.
 | `onScrollProgressChange` | `(progress: number) => void`          | Fires with scroll progress in `[0, 1]`.                                                                                              |
 | `header`                 | `ReactNode`                           | Full-width strip below the toolbar (e.g. a legend).                                                                                  |
 | `aside`                  | `ReactNode`                           | Left rail alongside the scrolling slides (e.g. a thumbnail rail).                                                                    |
-| `eager`                  | `boolean`                             | Render slides the moment they near the viewport, even mid-scroll, instead of deferring until scrolling settles. Defaults to `false`. |
+| `eager`                  | `boolean`                             | Render slides the moment they near the viewport, even mid-scroll. Pass `false` to defer uncached renders until scrolling settles. Defaults to `true`. |
 | `bare`                   | `boolean`                             | Drop the outer border/background so the viewer fills its container.                                                                  |
 | `className`              | `string`                              | Optional class on the viewer shell.                                                                                                  |

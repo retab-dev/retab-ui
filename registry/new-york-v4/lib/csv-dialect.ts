@@ -57,11 +57,14 @@ export function resolveCsvDialect({
 }): CsvDialect {
   const inferred = dialect ?? inferCsvDialect(descriptor)
   return {
-    delimiter: normalizeCsvDelimiter(delimiter) ?? inferred.delimiter,
+    delimiter:
+      normalizeCsvDelimiter(delimiter) ??
+      normalizeCsvDelimiter(inferred.delimiter) ??
+      inferred.delimiter,
     hasHeader: hasHeader ?? inferred.hasHeader,
   }
 }
 
 export function isTabDelimited(dialect: CsvDialect): boolean {
-  return dialect.delimiter === "\t"
+  return normalizeCsvDelimiter(dialect.delimiter) === "\t"
 }

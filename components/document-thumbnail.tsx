@@ -2,6 +2,7 @@
 
 import * as React from "react"
 
+import { toViewerErrorInfo, type ViewerErrorInfo } from "@/lib/viewer-errors"
 import {
   createViewerResource,
   type ViewerResource,
@@ -12,9 +13,11 @@ import {
   FileThumbnailShimmer,
 } from "@/components/ui/file-thumbnail"
 import {
+  createThumbnailImageLoadError,
   CSV_THUMBNAIL_MAX_COLUMNS,
   CSV_THUMBNAIL_MAX_ROWS,
   TEXT_THUMBNAIL_MAX_BYTES,
+  thumbnailCategoryFormat,
   TIFF_THUMBNAIL_TARGET_WIDTH,
   XLSX_THUMBNAIL_MAX_COLUMNS,
   XLSX_THUMBNAIL_MAX_ROWS,
@@ -25,7 +28,7 @@ import {
 } from "@/components/document-thumbnail/descriptor"
 import { ThumbnailErrorBoundary } from "@/components/document-thumbnail/errors"
 import {
-  getThumbnailCacheKey,
+  getThumbnailKey,
   getThumbnailRenderKey,
   thumbnailOption,
   type ThumbnailOption,
@@ -46,15 +49,21 @@ import {
   type ThumbnailAnchor,
 } from "@/components/document-thumbnail/types"
 
-export { getThumbnailCacheKey, getThumbnailRenderKey }
+export { getThumbnailKey, getThumbnailRenderKey }
 export type { DocumentThumbnailProps, ThumbnailAnchor }
 
 type DocumentRenderer = (props: {
   resource: ViewerResource
   descriptor: ViewerDescriptor
-  cacheKey: string
+  thumbnailKey: string
   anchor: ThumbnailAnchor
+  onError: (error: unknown) => void
 }) => React.ReactNode
+
+interface ThumbnailErrorState {
+  renderKey: string
+  info: ViewerErrorInfo
+}
 
 const DOCUMENT_RENDERERS: Record<
   Exclude<FileCategory, "unsupported">,
@@ -63,30 +72,39 @@ const DOCUMENT_RENDERERS: Record<
   pdf: ({ resource, anchor }) => (
     <PdfFirstPage resource={resource} anchor={anchor} />
   ),
-  xlsx: ({ resource, cacheKey }) => (
-    <XlsxFirstSheet resource={resource} cacheKey={cacheKey} />
+  xlsx: ({ resource, thumbnailKey }) => (
+    <XlsxFirstSheet resource={resource} thumbnailKey={thumbnailKey} />
   ),
-  pptx: ({ resource, cacheKey, anchor }) => (
-    <PptxFirstSlide resource={resource} cacheKey={cacheKey} anchor={anchor} />
+  pptx: ({ resource, thumbnailKey, anchor }) => (
+    <PptxFirstSlide
+      resource={resource}
+      thumbnailKey={thumbnailKey}
+      anchor={anchor}
+    />
   ),
   docx: ({ resource }) => <DocxFirstPage resource={resource} />,
-  image: ({ resource, descriptor, cacheKey, anchor }) =>
+  image: ({ resource, descriptor, thumbnailKey, anchor, onError }) =>
     isTiffDescriptor(descriptor) ? (
-      <TiffFirstPage resource={resource} cacheKey={cacheKey} anchor={anchor} />
+      <TiffFirstPage
+        resource={resource}
+        thumbnailKey={thumbnailKey}
+        anchor={anchor}
+        onError={onError}
+      />
     ) : (
-      <ImageFirstFrame resource={resource} anchor={anchor} />
+      <ImageFirstFrame resource={resource} anchor={anchor} onError={onError} />
     ),
-  csv: ({ resource, cacheKey }) => (
-    <CsvFirstRows resource={resource} cacheKey={cacheKey} />
+  csv: ({ resource, thumbnailKey }) => (
+    <CsvFirstRows resource={resource} thumbnailKey={thumbnailKey} />
   ),
-  markdown: ({ resource, cacheKey }) => (
-    <MarkdownFirstPage resource={resource} cacheKey={cacheKey} />
+  markdown: ({ resource, thumbnailKey }) => (
+    <MarkdownFirstPage resource={resource} thumbnailKey={thumbnailKey} />
   ),
-  html: ({ resource, cacheKey }) => (
-    <HtmlFirstPage resource={resource} cacheKey={cacheKey} />
+  html: ({ resource, thumbnailKey }) => (
+    <HtmlFirstPage resource={resource} thumbnailKey={thumbnailKey} />
   ),
-  text: ({ resource, cacheKey }) => (
-    <TextFirstLines resource={resource} cacheKey={cacheKey} />
+  text: ({ resource, thumbnailKey }) => (
+    <TextFirstLines resource={resource} thumbnailKey={thumbnailKey} />
   ),
 }
 
@@ -101,23 +119,25 @@ export function DocumentThumbnail({
   previewAspectRatio = 3 / 4,
   anchor = "top-left",
   retryKey,
+  onError,
 }: DocumentThumbnailProps) {
   const descriptor = resolveThumbnailDescriptor({ source, as })
   const resource = React.useMemo(() => createViewerResource(source), [source])
-  const cacheKey = getThumbnailCacheKey({
+  const thumbnailKey = getThumbnailKey({
     resource,
     descriptor,
     options: getThumbnailOptions(descriptor),
   })
   const renderKey = getThumbnailRenderKey({
-    cacheKey,
+    thumbnailKey,
     anchor,
     retryKey: retryKey ?? null,
   })
-  const [failedRenderKey, setFailedRenderKey] = React.useState<string | null>(
-    null
-  )
-  const directLoad = resource.getDirectLoad()
+  const [errorState, setErrorState] =
+    React.useState<ThumbnailErrorState | null>(null)
+  const currentErrorState =
+    errorState?.renderKey === renderKey ? errorState : null
+  const directUrl = resource.content.directUrl
 
   if (descriptor.category === "unsupported") {
     return (
@@ -132,15 +152,35 @@ export function DocumentThumbnail({
   if (
     descriptor.category === "image" &&
     !isTiffDescriptor(descriptor) &&
-    directLoad.kind === "url"
+    directUrl
   ) {
+    const failedDirectImage =
+      currentErrorState?.info.format === "image" ? currentErrorState : null
     return (
       <FileThumbnail
         file={{ name: descriptor.displayName, type: descriptor.mimeType ?? "" }}
-        previewImageUrl={directLoad.url}
+        previewImageUrl={directUrl}
         previewAspectRatio={previewAspectRatio}
         className={className}
         previewClassName={ANCHOR_OBJECT_POSITION[anchor]}
+        state={failedDirectImage ? "error" : "loaded"}
+        aria-label={failedDirectImage?.info.userMessage}
+        title={failedDirectImage?.info.userMessage}
+        data-error-domain={failedDirectImage?.info.domain}
+        data-error-format={failedDirectImage?.info.format}
+        data-error-kind={failedDirectImage?.info.kind}
+        data-error-message={failedDirectImage?.info.message}
+        onPreviewError={() => {
+          const error = createThumbnailImageLoadError()
+          const nextErrorState = createThumbnailErrorState({
+            renderKey,
+            error,
+            resource,
+            descriptor,
+          })
+          setErrorState(nextErrorState)
+          onError?.(error, nextErrorState.info)
+        }}
       />
     )
   }
@@ -150,15 +190,30 @@ export function DocumentThumbnail({
       file={{ name: descriptor.displayName, type: descriptor.mimeType ?? "" }}
       previewAspectRatio={previewAspectRatio}
       className={className}
-      state={failedRenderKey === renderKey ? "error" : "loaded"}
+      state={currentErrorState ? "error" : "loaded"}
+      aria-label={currentErrorState?.info.userMessage}
+      title={currentErrorState?.info.userMessage}
+      data-error-domain={currentErrorState?.info.domain}
+      data-error-format={currentErrorState?.info.format}
+      data-error-kind={currentErrorState?.info.kind}
+      data-error-message={currentErrorState?.info.message}
       previewContent={
         <ClientPreview
           key={renderKey}
           resource={resource}
           descriptor={descriptor}
-          cacheKey={cacheKey}
+          thumbnailKey={thumbnailKey}
           anchor={anchor}
-          onError={() => setFailedRenderKey(renderKey)}
+          onError={(error) => {
+            const nextErrorState = createThumbnailErrorState({
+              renderKey,
+              error,
+              resource,
+              descriptor,
+            })
+            setErrorState(nextErrorState)
+            onError?.(error, nextErrorState.info)
+          }}
         />
       }
     />
@@ -194,15 +249,15 @@ function getThumbnailOptions(descriptor: ViewerDescriptor): ThumbnailOption[] {
 function ClientPreview({
   resource,
   descriptor,
-  cacheKey,
+  thumbnailKey,
   anchor,
   onError,
 }: {
   resource: ViewerResource
   descriptor: ViewerDescriptor
-  cacheKey: string
+  thumbnailKey: string
   anchor: ThumbnailAnchor
-  onError: () => void
+  onError: (error: unknown) => void
 }) {
   const isClient = useIsClient()
   const { ref: inViewRef, seen: isSeen } = useThumbnailInView()
@@ -215,8 +270,9 @@ function ClientPreview({
             <FirstUnit
               resource={resource}
               descriptor={descriptor}
-              cacheKey={cacheKey}
+              thumbnailKey={thumbnailKey}
               anchor={anchor}
+              onError={onError}
             />
           </React.Suspense>
         </ThumbnailErrorBoundary>
@@ -225,6 +281,27 @@ function ClientPreview({
       )}
     </div>
   )
+}
+
+function createThumbnailErrorState({
+  renderKey,
+  error,
+  resource,
+  descriptor,
+}: {
+  renderKey: string
+  error: unknown
+  resource: ViewerResource
+  descriptor: ViewerDescriptor
+}): ThumbnailErrorState {
+  return {
+    renderKey,
+    info: toViewerErrorInfo(error, {
+      format: thumbnailCategoryFormat(descriptor.category),
+      sourceKind: resource.sourceKind,
+      canDownload: !resource.originalDownload.isDisabled,
+    }),
+  }
 }
 
 function useThumbnailInView() {
@@ -266,15 +343,17 @@ function useIsClient() {
 function FirstUnit({
   resource,
   descriptor,
-  cacheKey,
+  thumbnailKey,
   anchor,
+  onError,
 }: {
   resource: ViewerResource
   descriptor: ViewerDescriptor
-  cacheKey: string
+  thumbnailKey: string
   anchor: ThumbnailAnchor
+  onError: (error: unknown) => void
 }) {
   if (descriptor.category === "unsupported") return null
   const render = DOCUMENT_RENDERERS[descriptor.category]
-  return render({ resource, descriptor, cacheKey, anchor })
+  return render({ resource, descriptor, thumbnailKey, anchor, onError })
 }

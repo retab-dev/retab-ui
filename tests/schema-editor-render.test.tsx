@@ -204,6 +204,23 @@ describe("SchemaBuilder interactions (doc-routed)", () => {
     expect(out.required).toEqual(["invoice_number", "total"])
   })
 
+  it("changes a date-like field to a scalar type without keeping the stale format", async () => {
+    const { last } = renderEditor({
+      type: "object",
+      properties: {
+        issued_at: { type: "string", format: "date-time" },
+      },
+    })
+
+    fireEvent.pointerDown(screen.getByRole("button", { name: "datetime" }), {
+      button: 0,
+      ctrlKey: false,
+    })
+    fireEvent.click(await screen.findByRole("menuitem", { name: "number" }))
+
+    expect(last()!.properties!.issued_at).toEqual({ type: "number" })
+  })
+
   it("deletes all descriptions through the schema actions menu", async () => {
     const { last } = renderEditor({
       type: "object",
@@ -239,10 +256,6 @@ describe("SchemaBuilder interactions (doc-routed)", () => {
         status: {
           type: "string",
           enum: ["draft", "paid"],
-          "x-enumDescriptions": {
-            draft: "Draft status",
-            paid: "Paid status",
-          },
         } as JSONSchema7,
       },
     })
@@ -271,9 +284,6 @@ describe("SchemaBuilder interactions (doc-routed)", () => {
     expect(
       ((out.$defs!.Money as JSONSchema7).properties!.amount as JSONSchema7)
         .description
-    ).toBeUndefined()
-    expect(
-      (out.properties!.status as Record<string, unknown>)["x-enumDescriptions"]
     ).toBeUndefined()
   })
 

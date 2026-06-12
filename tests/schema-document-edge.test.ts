@@ -180,6 +180,39 @@ describe("requireAllProperties (every field required policy)", () => {
     ).toEqual(["a", "b"])
   })
 
+  it("preserves required names that are not declared properties", () => {
+    expect(
+      req({
+        type: "object",
+        properties: { a: { type: "string" }, b: { type: "number" } },
+        required: ["external", "a"],
+      }).required
+    ).toEqual(["external", "a", "b"])
+  })
+
+  it("treats an empty-string property name as a required property", () => {
+    const out = req({
+      type: "object",
+      properties: { "": { type: "string" }, named: { type: "number" } },
+    })
+
+    expect(Object.keys(out.properties!)).toEqual(["", "named"])
+    expect(out.required).toEqual(["", "named"])
+  })
+
+  it("preserves properties whose names collide with object prototype keys", () => {
+    const out = req(
+      JSON.parse(
+        '{"type":"object","properties":{"__proto__":{"type":"string"},"constructor":{"type":"number"}}}'
+      ) as JSONSchema7
+    )
+
+    expect(Object.prototype.hasOwnProperty.call(out.properties, "__proto__"))
+      .toBe(true)
+    expect(Object.keys(out.properties!)).toEqual(["__proto__", "constructor"])
+    expect(out.required).toEqual(["__proto__", "constructor"])
+  })
+
   it("recurses into nested objects, array items and $defs", () => {
     const out = req({
       type: "object",
@@ -223,6 +256,78 @@ describe("requireAllProperties (every field required policy)", () => {
     expect((v.anyOf![0] as JSONSchema7).required).toEqual(["x"])
     // the field stays required at the parent level
     expect(out.required).toEqual(["v"])
+  })
+
+  it("recurses into schema-bearing object keywords", () => {
+    const out = req({
+      type: "object",
+      properties: {
+        bag: {
+          type: "object",
+          additionalProperties: {
+            type: "object",
+            properties: { x: { type: "string" } },
+          },
+          patternProperties: {
+            "^meta_": {
+              type: "object",
+              properties: { value: { type: "string" } },
+            },
+          },
+          dependencies: {
+            tag: {
+              type: "object",
+              properties: { dependent: { type: "string" } },
+            },
+            code: ["tag"],
+          },
+        } as JSONSchema7,
+      },
+    })
+    const bag = out.properties!.bag as JSONSchema7
+    const additional = bag.additionalProperties as JSONSchema7
+    const pattern = bag.patternProperties!["^meta_"] as JSONSchema7
+    const dependency = (
+      bag.dependencies as Record<string, JSONSchema7 | string[]>
+    ).tag as JSONSchema7
+
+    expect(out.required).toEqual(["bag"])
+    expect(additional.required).toEqual(["x"])
+    expect(pattern.required).toEqual(["value"])
+    expect(dependency.required).toEqual(["dependent"])
+    expect(
+      (bag.dependencies as Record<string, JSONSchema7 | string[]>).code
+    ).toEqual(["tag"])
+  })
+
+  it("recurses into conditional and negated schemas", () => {
+    const out = req({
+      type: "object",
+      properties: {
+        mode: { type: "string" },
+      },
+      if: {
+        type: "object",
+        properties: { mode: { const: "manual" } },
+      },
+      then: {
+        type: "object",
+        properties: { approver: { type: "string" } },
+      },
+      else: {
+        type: "object",
+        properties: { auto_reason: { type: "string" } },
+      },
+      not: {
+        type: "object",
+        properties: { deprecated: { type: "boolean" } },
+      },
+    } as JSONSchema7)
+
+    expect((out.if as JSONSchema7).required).toEqual(["mode"])
+    expect((out.then as JSONSchema7).required).toEqual(["approver"])
+    expect((out.else as JSONSchema7).required).toEqual(["auto_reason"])
+    expect((out.not as JSONSchema7).required).toEqual(["deprecated"])
   })
 
   it("does not add `required` to objects without properties or to scalars", () => {

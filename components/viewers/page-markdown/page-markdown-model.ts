@@ -33,11 +33,12 @@ export function clamp(value: number, min: number, max: number): number {
 }
 
 export function clampPageScale(scale: number): number {
+  if (!Number.isFinite(scale)) return 1
   return clamp(scale, PAGE_MARKDOWN_SCALE_MIN, PAGE_MARKDOWN_SCALE_MAX)
 }
 
 export function fitPageScale(containerWidth: number | null): number {
-  if (!containerWidth) return 1
+  if (!containerWidth || !Number.isFinite(containerWidth)) return 1
   return clamp(
     (containerWidth - PAGE_MARKDOWN_FIT_HORIZONTAL_PADDING) /
       PAGE_MARKDOWN_PAGE_WIDTH,
@@ -54,10 +55,11 @@ export function estimateMarkdownPageHeight(
   markdown: string,
   scale: number
 ): number {
+  const safeScale = clampPageScale(scale)
   const lineCount = markdown.split("\n").length
   return Math.min(
-    1800 * scale,
-    Math.max(180 * scale, lineCount * 26 * scale + 80 * scale)
+    1800 * safeScale,
+    Math.max(180 * safeScale, lineCount * 26 * safeScale + 80 * safeScale)
   )
 }
 
@@ -121,9 +123,18 @@ export function resolvePagePaneReport({
     }
   }
 
-  if (!pending && state.page === nextPage) {
+  if (!pending && state.page === nextPage && state.pane === pane) {
     return {
       state,
+      pending: null,
+      scrollTarget: null,
+      confirmed: false,
+    }
+  }
+
+  if (!pending && state.page === nextPage) {
+    return {
+      state: { page: nextPage, pane, version: state.version + 1 },
       pending: null,
       scrollTarget: null,
       confirmed: false,

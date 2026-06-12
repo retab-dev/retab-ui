@@ -2,6 +2,7 @@
   "title": "Components",
   "pages": [
     "index",
+    "data-cell",
     "json-form",
     "json-table",
     "schema-builder",

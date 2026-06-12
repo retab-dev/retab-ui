@@ -9,21 +9,44 @@ import {
   blobSource,
   clearViewerResourceRegistryForTests,
   createViewerResource,
-  type ViewerResource,
+  type ViewerContentBytes,
+  type ViewerContentDirectUrl,
 } from "@/registry/new-york-v4/lib/viewer-resource"
 import {
   __resetPdfDocumentCacheForTests,
+  clearDocumentResource,
   getDocumentResource,
   getPageResource,
+  readDocumentResource,
+  readPageResource,
   releaseDocumentResource,
   retainDocumentResource,
 } from "@/registry/new-york-v4/ui/pdf-viewer-resource"
 
-const pdfjsMock = vi.hoisted(() => ({
-  docs: new Map<string, unknown>(),
-  getDocument: vi.fn(),
-  GlobalWorkerOptions: {} as { workerSrc?: string },
-}))
+const pdfjsMock = vi.hoisted(() => {
+  type Deferred<T> = {
+    promise: Promise<T>
+    resolve: (value: T) => void
+    reject: (reason?: unknown) => void
+  }
+  const deferred = <T>(): Deferred<T> => {
+    let resolve!: (value: T) => void
+    let reject!: (reason?: unknown) => void
+    const promise = new Promise<T>((res, rej) => {
+      resolve = res
+      reject = rej
+    })
+    return { promise, resolve, reject }
+  }
+
+  return {
+    docs: new Map<string, unknown>(),
+    pending: new Map<string, Deferred<unknown>>(),
+    deferred,
+    getDocument: vi.fn(),
+    GlobalWorkerOptions: {} as { workerSrc?: string },
+  }
+})
 
 vi.mock("pdfjs-dist", () => pdfjsMock)
 
@@ -38,10 +61,19 @@ function makeDoc() {
 beforeEach(() => {
   vi.useFakeTimers()
   pdfjsMock.docs.clear()
+  pdfjsMock.pending.clear()
   pdfjsMock.getDocument.mockImplementation(
     (input: string | { data: Uint8Array }) => {
       const key =
         typeof input === "string" ? input : `data:${input.data.join(",")}`
+      if (!pdfjsMock.docs.has(key)) {
+        let pending = pdfjsMock.pending.get(key)
+        if (!pending) {
+          pending = pdfjsMock.deferred()
+          pdfjsMock.pending.set(key, pending)
+        }
+        return { promise: pending.promise }
+      }
       const doc = pdfjsMock.docs.get(key)
       return {
         promise:
@@ -64,27 +96,73 @@ function pdfUrlSource(url: string, fileName?: string) {
   return { kind: "url" as const, url, fileName }
 }
 
-function pdfUrlResource(url: string, fileName?: string) {
-  return createViewerResource(pdfUrlSource(url, fileName))
+function pdfUrlContent(url: string, fileName?: string) {
+  return createViewerResource(pdfUrlSource(url, fileName)).content
 }
 
-function pdfBlobResource(bytes: Uint8Array, identityKey: string) {
+function pdfBlobContent(bytes: Uint8Array, identityKey: string) {
   return createViewerResource(
     blobSource(bytes, {
       identityKey,
       fileName: "local.pdf",
       mimeType: "application/pdf",
     })
-  )
+  ).content
 }
 
 describe("pdf-viewer-resource", () => {
+  it("sets the PDF.js worker URL once and preserves an existing worker override", async () => {
+    const firstDoc = makeDoc()
+    const secondDoc = makeDoc()
+    pdfjsMock.docs.set("/worker-default.pdf", firstDoc)
+    pdfjsMock.docs.set("/worker-custom.pdf", secondDoc)
+
+    await expect(
+      getDocumentResource(pdfUrlContent("/worker-default.pdf"))
+    ).resolves.toBe(firstDoc)
+    expect(pdfjsMock.GlobalWorkerOptions.workerSrc).toContain(
+      "pdf.worker.min.mjs"
+    )
+
+    __resetPdfDocumentCacheForTests()
+    pdfjsMock.GlobalWorkerOptions.workerSrc = "/custom-worker.mjs"
+
+    await expect(
+      getDocumentResource(pdfUrlContent("/worker-custom.pdf"))
+    ).resolves.toBe(secondDoc)
+    expect(pdfjsMock.GlobalWorkerOptions.workerSrc).toBe("/custom-worker.mjs")
+  })
+
+  it("reinitializes PDF.js worker setup after the test cache reset", async () => {
+    const firstDoc = makeDoc()
+    const secondDoc = makeDoc()
+    pdfjsMock.docs.set("/worker-reset-first.pdf", firstDoc)
+    pdfjsMock.docs.set("/worker-reset-second.pdf", secondDoc)
+
+    await expect(
+      getDocumentResource(pdfUrlContent("/worker-reset-first.pdf"))
+    ).resolves.toBe(firstDoc)
+    expect(pdfjsMock.GlobalWorkerOptions.workerSrc).toContain(
+      "pdf.worker.min.mjs"
+    )
+
+    __resetPdfDocumentCacheForTests()
+    pdfjsMock.GlobalWorkerOptions.workerSrc = undefined
+
+    await expect(
+      getDocumentResource(pdfUrlContent("/worker-reset-second.pdf"))
+    ).resolves.toBe(secondDoc)
+    expect(pdfjsMock.GlobalWorkerOptions.workerSrc).toContain(
+      "pdf.worker.min.mjs"
+    )
+  })
+
   it("deduplicates document loads for the same source", async () => {
     const doc = makeDoc()
     pdfjsMock.docs.set("/same.pdf", doc)
 
-    const first = getDocumentResource(pdfUrlResource("/same.pdf"))
-    const second = getDocumentResource(pdfUrlResource("/same.pdf"))
+    const first = getDocumentResource(pdfUrlContent("/same.pdf"))
+    const second = getDocumentResource(pdfUrlContent("/same.pdf"))
 
     await expect(first).resolves.toBe(doc)
     await expect(second).resolves.toBe(doc)
@@ -98,7 +176,7 @@ describe("pdf-viewer-resource", () => {
     vi.stubGlobal("fetch", fetchMock)
 
     await expect(
-      getDocumentResource(pdfUrlResource("/direct.pdf"))
+      getDocumentResource(pdfUrlContent("/direct.pdf"))
     ).resolves.toBe(doc)
 
     expect(pdfjsMock.getDocument).toHaveBeenCalledWith("/direct.pdf")
@@ -110,10 +188,10 @@ describe("pdf-viewer-resource", () => {
     pdfjsMock.docs.set("/metadata-shared.pdf", doc)
 
     const first = getDocumentResource(
-      pdfUrlResource("/metadata-shared.pdf", "first.pdf")
+      pdfUrlContent("/metadata-shared.pdf", "first.pdf")
     )
     const second = getDocumentResource(
-      pdfUrlResource("/metadata-shared.pdf", "second.pdf")
+      pdfUrlContent("/metadata-shared.pdf", "second.pdf")
     )
 
     await expect(first).resolves.toBe(doc)
@@ -134,7 +212,7 @@ describe("pdf-viewer-resource", () => {
           fileName: "first.pdf",
           mimeType: "application/pdf",
         })
-      )
+      ).content
     )
     const second = getDocumentResource(
       createViewerResource(
@@ -143,7 +221,7 @@ describe("pdf-viewer-resource", () => {
           fileName: "second.pdf",
           mimeType: "application/pdf",
         })
-      )
+      ).content
     )
 
     await expect(first).resolves.toBe(doc)
@@ -154,57 +232,268 @@ describe("pdf-viewer-resource", () => {
   it("does not evict retained documents when pruning the cache", async () => {
     const retainedDoc = makeDoc()
     pdfjsMock.docs.set("/retained.pdf", retainedDoc)
-    const retainedResource = pdfUrlResource("/retained.pdf")
-    await getDocumentResource(retainedResource)
-    retainDocumentResource(retainedResource, retainedDoc as never)
+    const retainedContent = pdfUrlContent("/retained.pdf")
+    await getDocumentResource(retainedContent)
+    retainDocumentResource(retainedContent, retainedDoc as never)
 
     for (let index = 0; index < 6; index += 1) {
       pdfjsMock.docs.set(`/other-${index}.pdf`, makeDoc())
-      await getDocumentResource(pdfUrlResource(`/other-${index}.pdf`))
+      await getDocumentResource(pdfUrlContent(`/other-${index}.pdf`))
     }
     await vi.runAllTimersAsync()
 
     expect(retainedDoc.destroy).not.toHaveBeenCalled()
 
-    releaseDocumentResource(retainedResource, retainedDoc as never)
+    releaseDocumentResource(retainedContent, retainedDoc as never)
   })
 
   it("evicts a retained document after its final release", async () => {
     const retainedDoc = makeDoc()
     pdfjsMock.docs.set("/release-then-evict.pdf", retainedDoc)
-    const retainedResource = pdfUrlResource("/release-then-evict.pdf")
-    await getDocumentResource(retainedResource)
-    retainDocumentResource(retainedResource, retainedDoc as never)
-    releaseDocumentResource(retainedResource, retainedDoc as never)
+    const retainedContent = pdfUrlContent("/release-then-evict.pdf")
+    await getDocumentResource(retainedContent)
+    retainDocumentResource(retainedContent, retainedDoc as never)
+    releaseDocumentResource(retainedContent, retainedDoc as never)
 
     for (let index = 0; index < 6; index += 1) {
       pdfjsMock.docs.set(`/release-other-${index}.pdf`, makeDoc())
-      await getDocumentResource(pdfUrlResource(`/release-other-${index}.pdf`))
+      await getDocumentResource(pdfUrlContent(`/release-other-${index}.pdf`))
     }
     await vi.runAllTimersAsync()
 
     expect(retainedDoc.destroy).toHaveBeenCalledTimes(1)
   })
 
-  it("destroys unretained fulfilled documents when evicted", async () => {
+  it("does not destroy a retained document when clearing its active cache entry", async () => {
+    const retainedDoc = makeDoc()
+    const replacementDoc = makeDoc()
+    pdfjsMock.docs.set("/clear-retained.pdf", retainedDoc)
+    const retainedContent = pdfUrlContent("/clear-retained.pdf")
+
+    await getDocumentResource(retainedContent)
+    retainDocumentResource(retainedContent, retainedDoc as never)
+
+    clearDocumentResource(retainedContent)
+
+    expect(retainedDoc.destroy).not.toHaveBeenCalled()
+
+    pdfjsMock.docs.set("/clear-retained.pdf", replacementDoc)
+    await expect(
+      getDocumentResource(pdfUrlContent("/clear-retained.pdf"))
+    ).resolves.toBe(replacementDoc)
+    expect(pdfjsMock.getDocument).toHaveBeenCalledTimes(2)
+    expect(retainedDoc.destroy).not.toHaveBeenCalled()
+
+    releaseDocumentResource(retainedContent, retainedDoc as never)
+
+    expect(retainedDoc.destroy).toHaveBeenCalledTimes(1)
+    expect(replacementDoc.destroy).not.toHaveBeenCalled()
+  })
+
+  it("waits for every retained consumer to release a cleared document", async () => {
+    const retainedDoc = makeDoc()
+    pdfjsMock.docs.set("/clear-retained-twice.pdf", retainedDoc)
+    const content = pdfUrlContent("/clear-retained-twice.pdf")
+
+    await getDocumentResource(content)
+    retainDocumentResource(content, retainedDoc as never)
+    retainDocumentResource(content, retainedDoc as never)
+
+    clearDocumentResource(content)
+    releaseDocumentResource(content, retainedDoc as never)
+
+    expect(retainedDoc.destroy).not.toHaveBeenCalled()
+
+    releaseDocumentResource(content, retainedDoc as never)
+
+    expect(retainedDoc.destroy).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not destroy an active replacement that shares a detached document object", async () => {
+    const doc = makeDoc()
+    pdfjsMock.docs.set("/clear-retained-same-object.pdf", doc)
+    const content = pdfUrlContent("/clear-retained-same-object.pdf")
+
+    await getDocumentResource(content)
+    retainDocumentResource(content, doc as never)
+    clearDocumentResource(content)
+
+    await expect(
+      getDocumentResource(pdfUrlContent("/clear-retained-same-object.pdf"))
+    ).resolves.toBe(doc)
+
+    releaseDocumentResource(content, doc as never)
+
+    expect(doc.destroy).not.toHaveBeenCalled()
+    await expect(
+      getDocumentResource(pdfUrlContent("/clear-retained-same-object.pdf"))
+    ).resolves.toBe(doc)
+  })
+
+  it("destroys a document object only once when reset sees attached and detached entries", async () => {
+    const doc = makeDoc()
+    pdfjsMock.docs.set("/reset-attached-detached-same-object.pdf", doc)
+    const content = pdfUrlContent("/reset-attached-detached-same-object.pdf")
+
+    await getDocumentResource(content)
+    retainDocumentResource(content, doc as never)
+    clearDocumentResource(content)
+
+    await expect(
+      getDocumentResource(
+        pdfUrlContent("/reset-attached-detached-same-object.pdf")
+      )
+    ).resolves.toBe(doc)
+
+    __resetPdfDocumentCacheForTests()
+
+    expect(doc.destroy).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not evict-destroy an active entry whose document is still retained as detached", async () => {
+    const doc = makeDoc()
+    pdfjsMock.docs.set("/evict-attached-detached-same-object.pdf", doc)
+    const content = pdfUrlContent("/evict-attached-detached-same-object.pdf")
+
+    await getDocumentResource(content)
+    retainDocumentResource(content, doc as never)
+    clearDocumentResource(content)
+
+    await expect(
+      getDocumentResource(
+        pdfUrlContent("/evict-attached-detached-same-object.pdf")
+      )
+    ).resolves.toBe(doc)
+
+    for (let index = 0; index < 6; index += 1) {
+      pdfjsMock.docs.set(`/attached-detached-other-${index}.pdf`, makeDoc())
+      await getDocumentResource(
+        pdfUrlContent(`/attached-detached-other-${index}.pdf`)
+      )
+    }
+    await vi.runAllTimersAsync()
+
+    expect(doc.destroy).not.toHaveBeenCalled()
+
+    releaseDocumentResource(content, doc as never)
+
+    expect(doc.destroy).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not release or clear another resource's detached retained document", async () => {
+    const doc = makeDoc()
+    pdfjsMock.docs.set("/detached-owner-a.pdf", doc)
+    pdfjsMock.docs.set("/detached-owner-b.pdf", doc)
+    const firstContent = pdfUrlContent("/detached-owner-a.pdf")
+    const secondContent = pdfUrlContent("/detached-owner-b.pdf")
+
+    await getDocumentResource(firstContent)
+    retainDocumentResource(firstContent, doc as never)
+    clearDocumentResource(firstContent)
+
+    await expect(getDocumentResource(secondContent)).resolves.toBe(doc)
+
+    releaseDocumentResource(secondContent, doc as never)
+    clearDocumentResource(secondContent)
+
+    expect(doc.destroy).not.toHaveBeenCalled()
+
+    releaseDocumentResource(firstContent, doc as never)
+
+    expect(doc.destroy).toHaveBeenCalledTimes(1)
+  })
+
+  it("destroys unretained resolved documents when evicted", async () => {
     const firstDoc = makeDoc()
     pdfjsMock.docs.set("/doc-0.pdf", firstDoc)
-    await getDocumentResource(pdfUrlResource("/doc-0.pdf"))
+    await getDocumentResource(pdfUrlContent("/doc-0.pdf"))
 
     for (let index = 1; index <= 6; index += 1) {
       pdfjsMock.docs.set(`/doc-${index}.pdf`, makeDoc())
-      await getDocumentResource(pdfUrlResource(`/doc-${index}.pdf`))
+      await getDocumentResource(pdfUrlContent(`/doc-${index}.pdf`))
     }
     await vi.runAllTimersAsync()
 
     expect(firstDoc.destroy).toHaveBeenCalledTimes(1)
   })
 
+  it("destroys a pending document if the resource is cleared before it resolves", async () => {
+    const content = pdfUrlContent("/clear-pending.pdf")
+    const pendingLoad = getDocumentResource(content)
+    await vi.waitFor(() =>
+      expect(pdfjsMock.pending.has("/clear-pending.pdf")).toBe(true)
+    )
+    expect(pdfjsMock.getDocument).toHaveBeenCalledTimes(1)
+
+    const replacementDoc = makeDoc()
+    pdfjsMock.docs.set("/clear-pending.pdf", replacementDoc)
+    clearDocumentResource(content)
+
+    const orphanDoc = makeDoc()
+    pdfjsMock.pending.get("/clear-pending.pdf")?.resolve(orphanDoc)
+
+    await expect(pendingLoad).resolves.toBe(orphanDoc)
+    await Promise.resolve()
+    expect(orphanDoc.destroy).toHaveBeenCalledTimes(1)
+
+    await expect(
+      getDocumentResource(pdfUrlContent("/clear-pending.pdf"))
+    ).resolves.toBe(replacementDoc)
+    expect(pdfjsMock.getDocument).toHaveBeenCalledTimes(2)
+  })
+
+  it("destroys a pending document if the cache is reset before it resolves", async () => {
+    const pendingLoad = getDocumentResource(
+      pdfUrlContent("/reset-pending.pdf")
+    )
+    await vi.waitFor(() =>
+      expect(pdfjsMock.pending.has("/reset-pending.pdf")).toBe(true)
+    )
+
+    __resetPdfDocumentCacheForTests()
+
+    const orphanDoc = makeDoc()
+    pdfjsMock.pending.get("/reset-pending.pdf")?.resolve(orphanDoc)
+
+    await expect(pendingLoad).resolves.toBe(orphanDoc)
+    await Promise.resolve()
+    expect(orphanDoc.destroy).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not let a stale pending document replace a newer load for the same source", async () => {
+    const firstContent = pdfUrlContent("/replace-pending.pdf")
+    const staleLoad = getDocumentResource(firstContent)
+    await vi.waitFor(() =>
+      expect(pdfjsMock.pending.has("/replace-pending.pdf")).toBe(true)
+    )
+
+    clearDocumentResource(firstContent)
+
+    const currentDoc = makeDoc()
+    pdfjsMock.docs.set("/replace-pending.pdf", currentDoc)
+
+    await expect(
+      getDocumentResource(pdfUrlContent("/replace-pending.pdf"))
+    ).resolves.toBe(currentDoc)
+
+    const staleDoc = makeDoc()
+    pdfjsMock.pending.get("/replace-pending.pdf")?.resolve(staleDoc)
+
+    await expect(staleLoad).resolves.toBe(staleDoc)
+    await Promise.resolve()
+
+    expect(staleDoc.destroy).toHaveBeenCalledTimes(1)
+    await expect(
+      getDocumentResource(pdfUrlContent("/replace-pending.pdf"))
+    ).resolves.toBe(currentDoc)
+    expect(pdfjsMock.getDocument).toHaveBeenCalledTimes(2)
+  })
+
   it("removes rejected document loads so the same source can retry", async () => {
     pdfjsMock.docs.set("/retry-resource.pdf", new Error("load failed"))
 
     await expect(
-      getDocumentResource(pdfUrlResource("/retry-resource.pdf"))
+      getDocumentResource(pdfUrlContent("/retry-resource.pdf"))
     ).rejects.toMatchObject({
       cause: expect.any(Error),
       format: "pdf",
@@ -215,8 +504,61 @@ describe("pdf-viewer-resource", () => {
     pdfjsMock.docs.set("/retry-resource.pdf", doc)
 
     await expect(
-      getDocumentResource(pdfUrlResource("/retry-resource.pdf"))
+      getDocumentResource(pdfUrlContent("/retry-resource.pdf"))
     ).resolves.toBe(doc)
+    expect(pdfjsMock.getDocument).toHaveBeenCalledTimes(2)
+  })
+
+  it("can retain rejected document loads for Suspense error boundaries", async () => {
+    pdfjsMock.docs.set("/retained-error.pdf", new Error("load failed"))
+    const content = pdfUrlContent("/retained-error.pdf")
+
+    const first = getDocumentResource(content, { retainRejected: true })
+
+    await expect(first).rejects.toMatchObject({
+      format: "pdf",
+      kind: "parse_failed",
+    })
+
+    expect(getDocumentResource(content, { retainRejected: true })).toBe(first)
+
+    const doc = makeDoc()
+    pdfjsMock.docs.set("/retained-error.pdf", doc)
+
+    await expect(getDocumentResource(content)).resolves.toBe(doc)
+    expect(pdfjsMock.getDocument).toHaveBeenCalledTimes(2)
+  })
+
+  it("lets a Suspense document reader retain a pending load started by a non-Suspense caller", async () => {
+    const content = pdfUrlContent("/pending-retain-upgrade.pdf")
+    const first = getDocumentResource(content)
+    await vi.waitFor(() =>
+      expect(pdfjsMock.pending.has("/pending-retain-upgrade.pdf")).toBe(true)
+    )
+
+    let thrown: unknown
+    try {
+      readDocumentResource(content)
+    } catch (error) {
+      thrown = error
+    }
+
+    expect(thrown).toBe(first)
+
+    pdfjsMock.pending
+      .get("/pending-retain-upgrade.pdf")
+      ?.reject(new Error("load failed"))
+
+    await expect(first).rejects.toMatchObject({
+      format: "pdf",
+      kind: "parse_failed",
+    })
+    expect(getDocumentResource(content, { retainRejected: true })).toBe(first)
+
+    const doc = makeDoc()
+    pdfjsMock.docs.set("/pending-retain-upgrade.pdf", doc)
+
+    await expect(getDocumentResource(content)).resolves.toBe(doc)
     expect(pdfjsMock.getDocument).toHaveBeenCalledTimes(2)
   })
 
@@ -224,12 +566,34 @@ describe("pdf-viewer-resource", () => {
     const doc = makeDoc()
     pdfjsMock.docs.set("data:1,2,3", doc)
 
-    const resource = pdfBlobResource(Uint8Array.of(1, 2, 3), "blob:pdf")
+    const content = pdfBlobContent(Uint8Array.of(1, 2, 3), "blob:pdf")
 
-    await expect(getDocumentResource(resource)).resolves.toBe(doc)
+    await expect(getDocumentResource(content)).resolves.toBe(doc)
     expect(pdfjsMock.getDocument).toHaveBeenCalledWith({
       data: Uint8Array.of(1, 2, 3),
     })
+  })
+
+  it("does not direct-load Blob PDFs from their download URL", async () => {
+    const doc = makeDoc()
+    pdfjsMock.docs.set("data:7,8,9", doc)
+
+    const content = createViewerResource(
+      blobSource(Uint8Array.of(7, 8, 9), {
+        identityKey: "blob:download-url",
+        fileName: "local.pdf",
+        mimeType: "application/pdf",
+        downloadUrl: "/download/local.pdf",
+      })
+    ).content
+
+    await expect(getDocumentResource(content)).resolves.toBe(doc)
+    expect(pdfjsMock.getDocument).toHaveBeenCalledWith({
+      data: Uint8Array.of(7, 8, 9),
+    })
+    expect(pdfjsMock.getDocument).not.toHaveBeenCalledWith(
+      "/download/local.pdf"
+    )
   })
 
   it("preserves ResourceError failures from non-direct resource reads", async () => {
@@ -237,18 +601,14 @@ describe("pdf-viewer-resource", () => {
       kind: "fetch_failed",
       message: "No bytes available.",
     })
-    const resource = {
-      keys: {
-        load: "manual-resource-error",
-        presentation: "manual-resource-error",
-        resource: "manual-resource-error",
-      },
+    const content = {
+      key: "manual-resource-error",
       sourceKind: "url",
-      getDirectLoad: () => ({ kind: "none" as const }),
-      readArrayBuffer: vi.fn(() => Promise.reject(error)),
-    } as unknown as ViewerResource
+      directUrl: null,
+      readBytes: vi.fn(() => Promise.reject(error)),
+    } as ViewerContentDirectUrl & ViewerContentBytes
 
-    await expect(getDocumentResource(resource)).rejects.toBe(error)
+    await expect(getDocumentResource(content)).rejects.toBe(error)
   })
 
   it("deduplicates page loads per document and page number", async () => {
@@ -282,6 +642,89 @@ describe("pdf-viewer-resource", () => {
 
     await expect(getPageResource(doc as never, 1)).rejects.toThrow(
       "page failed"
+    )
+    await expect(getPageResource(doc as never, 1)).resolves.toEqual({
+      pageNumber: 1,
+    })
+    expect(doc.getPage).toHaveBeenCalledTimes(2)
+  })
+
+  it("can retain rejected page loads for Suspense error boundaries", async () => {
+    const firstError = new Error("page failed")
+    const doc = {
+      getPage: vi
+        .fn()
+        .mockRejectedValueOnce(firstError)
+        .mockResolvedValueOnce({ pageNumber: 1 }),
+    }
+
+    const first = getPageResource(doc as never, 1, { retainRejected: true })
+
+    await expect(first).rejects.toBe(firstError)
+    expect(getPageResource(doc as never, 1, { retainRejected: true })).toBe(
+      first
+    )
+    await expect(getPageResource(doc as never, 1)).resolves.toEqual({
+      pageNumber: 1,
+    })
+    expect(doc.getPage).toHaveBeenCalledTimes(2)
+  })
+
+  it("clears retained page errors when the document resource is cleared", async () => {
+    const doc = {
+      numPages: 1,
+      getPage: vi
+        .fn()
+        .mockRejectedValueOnce(new Error("page failed"))
+        .mockResolvedValueOnce({ pageNumber: 1 }),
+      destroy: vi.fn(() => Promise.resolve()),
+    }
+    const content = pdfUrlContent("/clear-page-cache.pdf")
+    pdfjsMock.docs.set("/clear-page-cache.pdf", doc)
+
+    await expect(getDocumentResource(content)).resolves.toBe(doc)
+    const failedPage = getPageResource(doc as never, 1, {
+      retainRejected: true,
+    })
+
+    await expect(failedPage).rejects.toThrow("page failed")
+    expect(getPageResource(doc as never, 1, { retainRejected: true })).toBe(
+      failedPage
+    )
+
+    clearDocumentResource(content)
+
+    await expect(getDocumentResource(content)).resolves.toBe(doc)
+    await expect(
+      getPageResource(doc as never, 1, { retainRejected: true })
+    ).resolves.toEqual({ pageNumber: 1 })
+    expect(doc.getPage).toHaveBeenCalledTimes(2)
+  })
+
+  it("lets a Suspense page reader retain a pending page load started by a non-Suspense caller", async () => {
+    const pageLoad = pdfjsMock.deferred<{ pageNumber: number }>()
+    const doc = {
+      getPage: vi
+        .fn()
+        .mockReturnValueOnce(pageLoad.promise)
+        .mockResolvedValueOnce({ pageNumber: 1 }),
+    }
+    const first = getPageResource(doc as never, 1)
+
+    let thrown: unknown
+    try {
+      readPageResource(doc as never, 1)
+    } catch (error) {
+      thrown = error
+    }
+
+    expect(thrown).toBe(first)
+
+    pageLoad.reject(new Error("page failed"))
+
+    await expect(first).rejects.toThrow("page failed")
+    expect(getPageResource(doc as never, 1, { retainRejected: true })).toBe(
+      first
     )
     await expect(getPageResource(doc as never, 1)).resolves.toEqual({
       pageNumber: 1,

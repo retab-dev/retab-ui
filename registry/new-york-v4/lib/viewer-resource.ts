@@ -42,15 +42,57 @@ export interface ByteRangeResult {
   isComplete: boolean
 }
 
-export type DirectLoadCapability =
-  | { kind: "url"; url: string }
-  | { kind: "none" }
-
 export interface ViewerResourceKeys {
   readonly load: string
   readonly presentation: string
   readonly resource: string
 }
+
+export type ViewerResourcePayload =
+  | { kind: "url"; url: string }
+  | { kind: "blob"; blob: Blob }
+  | { kind: "text"; text: string }
+
+export interface ViewerResourceContent {
+  readonly key: string
+  readonly sourceKind: ViewerSource["kind"]
+  readonly directUrl: string | null
+  readonly payload: ViewerResourcePayload
+  readBlob(options?: ResourceReadOptions): Promise<Blob>
+  readBytes(options?: ResourceReadOptions): Promise<ArrayBuffer>
+  readText(options?: TextReadOptions): Promise<string>
+  readStream(options?: ResourceReadOptions): Promise<ReadableStream<Uint8Array>>
+  readRange(
+    range: ByteRange,
+    options?: ResourceReadOptions
+  ): Promise<ByteRangeResult>
+}
+
+export type ViewerContentIdentity = Pick<
+  ViewerResourceContent,
+  "key" | "sourceKind"
+>
+
+export type ViewerContentDirectUrl = ViewerContentIdentity &
+  Pick<ViewerResourceContent, "directUrl">
+
+export type ViewerContentPayload = ViewerContentIdentity &
+  Pick<ViewerResourceContent, "payload">
+
+export type ViewerContentBlob = ViewerContentIdentity &
+  Pick<ViewerResourceContent, "readBlob">
+
+export type ViewerContentBytes = ViewerContentIdentity &
+  Pick<ViewerResourceContent, "readBytes">
+
+export type ViewerContentText = ViewerContentIdentity &
+  Pick<ViewerResourceContent, "readText">
+
+export type ViewerContentStream = ViewerContentIdentity &
+  Pick<ViewerResourceContent, "readStream">
+
+export type ViewerContentRange = ViewerContentIdentity &
+  Pick<ViewerResourceContent, "readRange">
 
 export interface ViewerResource {
   readonly descriptor: ViewerDescriptor
@@ -59,28 +101,31 @@ export interface ViewerResource {
   readonly identityKey: string
   readonly fileName: string
   readonly mimeType?: string
-
-  getDirectLoad(): DirectLoadCapability
-  getOriginalDownload(): ViewerDownloadAction
-  getInlineText(): string | null
-  getBlob(): Blob | null
-  readBlob(options?: ResourceReadOptions): Promise<Blob>
-  readArrayBuffer(options?: ResourceReadOptions): Promise<ArrayBuffer>
-  readText(options?: TextReadOptions): Promise<string>
-  stream(options?: ResourceReadOptions): Promise<ReadableStream<Uint8Array>>
-  readRange(
-    range: ByteRange,
-    options?: ResourceReadOptions
-  ): Promise<ByteRangeResult>
+  readonly content: ViewerResourceContent
+  readonly originalDownload: ViewerDownloadAction
 }
 
 const URL_RESOURCE_REGISTRY_MAX = 128
+const TEXT_RESOURCE_REGISTRY_MAX = 64
 const TEXT_LINE_BREAK_PATTERN = /\r\n|\n|\r/g
 
 const urlViewerResourceRegistry = new Map<string, ViewerResource>()
+const urlViewerResourceContentRegistry = new Map<
+  string,
+  ViewerResourceContent
+>()
+const textViewerResourceRegistry = new Map<string, ViewerResource>()
+const textViewerResourceContentRegistry = new Map<
+  string,
+  ViewerResourceContent
+>()
 let blobViewerResourceRegistry = new WeakMap<
   Blob,
   Map<string, ViewerResource>
+>()
+let blobViewerResourceContentRegistry = new WeakMap<
+  Blob,
+  Map<string, ViewerResourceContent>
 >()
 const blobObjectKeys = new WeakMap<Blob, string>()
 let nextBlobObjectKey = 0
@@ -95,27 +140,16 @@ export function createViewerResource(source: ViewerSource): ViewerResource {
   if (source.kind === "blob") {
     return internBlobResource(source, descriptor, keys)
   }
-  return createUncachedViewerResource(source, descriptor, keys)
+  return internTextResource(source, descriptor, keys)
 }
 
 export function clearViewerResourceRegistryForTests() {
   urlViewerResourceRegistry.clear()
+  urlViewerResourceContentRegistry.clear()
+  textViewerResourceRegistry.clear()
+  textViewerResourceContentRegistry.clear()
   blobViewerResourceRegistry = new WeakMap()
-}
-
-function createUncachedViewerResource(
-  source: ViewerSource,
-  descriptor: ViewerDescriptor,
-  keys: ViewerResourceKeys
-): ViewerResource {
-  switch (source.kind) {
-    case "url":
-      return createUrlResource(source, descriptor, keys)
-    case "blob":
-      return createBlobResource(source, descriptor, keys)
-    case "text":
-      return createTextResource(source, descriptor, keys)
-  }
+  blobViewerResourceContentRegistry = new WeakMap()
 }
 
 function internUrlResource(
@@ -151,11 +185,49 @@ function internBlobResource(
   return resource
 }
 
+function internTextResource(
+  source: TextSource,
+  descriptor: ViewerDescriptor,
+  keys: ViewerResourceKeys
+): ViewerResource {
+  const cached = textViewerResourceRegistry.get(keys.resource)
+  if (cached) return cached
+
+  const resource = createTextResource(source, descriptor, keys)
+  textViewerResourceRegistry.set(keys.resource, resource)
+  pruneTextResourceRegistry()
+  return resource
+}
+
 function pruneUrlResourceRegistry() {
   while (urlViewerResourceRegistry.size > URL_RESOURCE_REGISTRY_MAX) {
     const firstKey = urlViewerResourceRegistry.keys().next().value
     if (!firstKey) return
     urlViewerResourceRegistry.delete(firstKey)
+  }
+}
+
+function pruneUrlResourceContentRegistry() {
+  while (urlViewerResourceContentRegistry.size > URL_RESOURCE_REGISTRY_MAX) {
+    const firstKey = urlViewerResourceContentRegistry.keys().next().value
+    if (!firstKey) return
+    urlViewerResourceContentRegistry.delete(firstKey)
+  }
+}
+
+function pruneTextResourceRegistry() {
+  while (textViewerResourceRegistry.size > TEXT_RESOURCE_REGISTRY_MAX) {
+    const firstKey = textViewerResourceRegistry.keys().next().value
+    if (!firstKey) return
+    textViewerResourceRegistry.delete(firstKey)
+  }
+}
+
+function pruneTextResourceContentRegistry() {
+  while (textViewerResourceContentRegistry.size > TEXT_RESOURCE_REGISTRY_MAX) {
+    const firstKey = textViewerResourceContentRegistry.keys().next().value
+    if (!firstKey) return
+    textViewerResourceContentRegistry.delete(firstKey)
   }
 }
 
@@ -261,22 +333,32 @@ function createUrlResource(
   descriptor: ViewerDescriptor,
   keys: ViewerResourceKeys
 ): ViewerResource {
-  return resourceBase(source, descriptor, keys, {
-    getDirectLoad: () => ({ kind: "url", url: source.url }),
-    getOriginalDownload: () =>
-      createHrefDownloadAction({
-        id: "download-original",
-        label: "Download",
-        href: source.downloadUrl ?? source.url,
-        fileName: descriptor.fileName,
-      }),
-    getInlineText: () => null,
-    getBlob: () => null,
+  const content = internUrlResourceContent(source, keys)
+  const originalDownload = createHrefDownloadAction({
+    id: "download-original",
+    label: "Download",
+    href: source.downloadUrl ?? source.url,
+    fileName: descriptor.fileName,
+  })
+
+  return resourceBase(source, descriptor, keys, { content, originalDownload })
+}
+
+function internUrlResourceContent(
+  source: UrlViewerSource,
+  keys: ViewerResourceKeys
+): ViewerResourceContent {
+  const cached = urlViewerResourceContentRegistry.get(keys.load)
+  if (cached) return cached
+
+  const content = resourceContentBase(source, keys, {
+    directUrl: source.url,
+    payload: { kind: "url", url: source.url },
     readBlob: async ({ signal } = {}) => {
       const response = await fetchResource(source.url, { signal })
       return response.blob()
     },
-    readArrayBuffer: async ({ signal } = {}) => {
+    readBytes: async ({ signal } = {}) => {
       const response = await fetchResource(source.url, { signal })
       return response.arrayBuffer()
     },
@@ -284,9 +366,12 @@ function createUrlResource(
       const response = await fetchResource(source.url, { signal })
       return readBoundedResponseText(response, { maxBytes, maxLines })
     },
-    stream: async ({ signal } = {}) => {
+    readStream: async ({ signal } = {}) => {
       const response = await fetchResource(source.url, { signal })
       if (!response.body) {
+        if (response.status === 204 || response.status === 205) {
+          return emptyByteStream()
+        }
         throw new ResourceError({
           kind: "unsupported_capability",
           message: "This response cannot be streamed.",
@@ -305,6 +390,12 @@ function createUrlResource(
       const contentRange = parseContentRange(
         response.headers.get("content-range")
       )
+      validateUrlRangeResponse({
+        bufferLength: buffer.byteLength,
+        contentRange,
+        range,
+        status: response.status,
+      })
       return {
         buffer,
         contentRange,
@@ -317,6 +408,17 @@ function createUrlResource(
       }
     },
   })
+  urlViewerResourceContentRegistry.set(keys.load, content)
+  pruneUrlResourceContentRegistry()
+  return content
+}
+
+function emptyByteStream() {
+  return new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.close()
+    },
+  })
 }
 
 function createBlobResource(
@@ -325,29 +427,46 @@ function createBlobResource(
   keys: ViewerResourceKeys
 ): ViewerResource {
   const blob = source.blob
-  return resourceBase(source, descriptor, keys, {
-    getDirectLoad: () => ({ kind: "none" }),
-    getOriginalDownload: () =>
-      source.downloadUrl
-        ? createHrefDownloadAction({
-            id: "download-original",
-            label: "Download",
-            href: source.downloadUrl,
-            fileName: descriptor.fileName,
-          })
-        : createBlobDownloadAction({
-            id: "download-original",
-            label: "Download",
-            blob,
-            fileName: descriptor.fileName,
-          }),
-    getInlineText: () => null,
-    getBlob: () => blob,
+  const content = internBlobResourceContent(source, keys)
+  const originalDownload = source.downloadUrl
+    ? createHrefDownloadAction({
+        id: "download-original",
+        label: "Download",
+        href: source.downloadUrl,
+        fileName: descriptor.fileName,
+      })
+    : createBlobDownloadAction({
+        id: "download-original",
+        label: "Download",
+        blob,
+        fileName: descriptor.fileName,
+      })
+
+  return resourceBase(source, descriptor, keys, { content, originalDownload })
+}
+
+function internBlobResourceContent(
+  source: BlobViewerSource,
+  keys: ViewerResourceKeys
+): ViewerResourceContent {
+  const blob = source.blob
+  let contents = blobViewerResourceContentRegistry.get(blob)
+  if (!contents) {
+    contents = new Map()
+    blobViewerResourceContentRegistry.set(blob, contents)
+  }
+
+  const cached = contents.get(keys.load)
+  if (cached) return cached
+
+  const content = resourceContentBase(source, keys, {
+    directUrl: null,
+    payload: { kind: "blob", blob },
     readBlob: async () => blob,
-    readArrayBuffer: async () => blob.arrayBuffer(),
+    readBytes: async () => blob.arrayBuffer(),
     readText: async ({ maxBytes, maxLines } = {}) =>
       readBoundedBlobText(blob, { maxBytes, maxLines }),
-    stream: async () => blob.stream(),
+    readStream: async () => blob.stream(),
     readRange: async (range) => {
       validateByteRange(range)
       const { start, end } = range
@@ -364,6 +483,8 @@ function createBlobResource(
       }
     },
   })
+  contents.set(keys.load, content)
+  return content
 }
 
 function createTextResource(
@@ -371,26 +492,37 @@ function createTextResource(
   descriptor: ViewerDescriptor,
   keys: ViewerResourceKeys
 ): ViewerResource {
-  return resourceBase(source, descriptor, keys, {
-    getDirectLoad: () => ({ kind: "none" }),
-    getOriginalDownload: () =>
-      createTextDownloadAction({
-        id: "download-original",
-        label: "Download",
-        text: source.text,
-        fileName: descriptor.fileName,
-        mimeType: descriptor.mimeType,
-      }),
-    getInlineText: () => source.text,
-    getBlob: () => null,
+  const content = internTextResourceContent(source, keys)
+  const originalDownload = createTextDownloadAction({
+    id: "download-original",
+    label: "Download",
+    text: source.text,
+    fileName: descriptor.fileName,
+    mimeType: descriptor.mimeType,
+  })
+
+  return resourceBase(source, descriptor, keys, { content, originalDownload })
+}
+
+function internTextResourceContent(
+  source: TextSource,
+  keys: ViewerResourceKeys
+): ViewerResourceContent {
+  const cached = textViewerResourceContentRegistry.get(keys.load)
+  if (cached) return cached
+
+  const content = resourceContentBase(source, keys, {
+    directUrl: null,
+    payload: { kind: "text", text: source.text },
     readBlob: async () =>
       new Blob([source.text], {
-        type: descriptor.mimeType ?? "text/plain;charset=utf-8",
+        type: "text/plain;charset=utf-8",
       }),
-    readArrayBuffer: async () => new TextEncoder().encode(source.text).buffer,
+    readBytes: async () =>
+      typedArrayBuffer(new TextEncoder().encode(source.text)),
     readText: async ({ maxBytes, maxLines } = {}) =>
       readBoundedInlineText(source.text, { maxBytes, maxLines }),
-    stream: async () => new Blob([source.text]).stream(),
+    readStream: async () => new Blob([source.text]).stream(),
     readRange: async (range) => {
       validateByteRange(range)
       const { start, end } = range
@@ -398,7 +530,7 @@ function createTextResource(
       validateKnownByteRangeStart(start, buffer.byteLength)
       const slice = buffer.slice(start, end + 1)
       return {
-        buffer: slice.buffer,
+        buffer: typedArrayBuffer(slice),
         contentRange: {
           start,
           end: Math.min(end, buffer.byteLength - 1),
@@ -408,25 +540,21 @@ function createTextResource(
       }
     },
   })
+  textViewerResourceContentRegistry.set(keys.load, content)
+  pruneTextResourceContentRegistry()
+  return content
 }
 
 function resourceBase(
   source: ViewerSource,
   descriptor: ViewerDescriptor,
   keys: ViewerResourceKeys,
-  methods: Pick<
-    ViewerResource,
-    | "getDirectLoad"
-    | "getOriginalDownload"
-    | "getInlineText"
-    | "getBlob"
-    | "readBlob"
-    | "readArrayBuffer"
-    | "readText"
-    | "stream"
-    | "readRange"
-  >
+  options: {
+    content: ViewerResourceContent
+    originalDownload: ViewerDownloadAction
+  }
 ): ViewerResource {
+  const { content, originalDownload } = options
   return Object.freeze({
     descriptor,
     sourceKind: source.kind,
@@ -434,8 +562,28 @@ function resourceBase(
     identityKey: descriptor.identityKey,
     fileName: descriptor.fileName,
     mimeType: descriptor.mimeType,
+    content,
+    originalDownload,
+  })
+}
+
+function resourceContentBase(
+  source: ViewerSource,
+  keys: ViewerResourceKeys,
+  methods: Omit<ViewerResourceContent, "key" | "sourceKind">
+): ViewerResourceContent {
+  return Object.freeze({
+    key: keys.load,
+    sourceKind: source.kind,
     ...methods,
   })
+}
+
+function typedArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  return bytes.buffer.slice(
+    bytes.byteOffset,
+    bytes.byteOffset + bytes.byteLength
+  ) as ArrayBuffer
 }
 
 async function fetchResource(
@@ -497,7 +645,12 @@ async function readBoundedResponseText(
 
   const body = response.body
   if (!body) {
-    const buffer = await response.arrayBuffer()
+    let buffer: ArrayBuffer
+    try {
+      buffer = await response.arrayBuffer()
+    } catch (error) {
+      throw resourceReadError(error)
+    }
     if (maxBytes != null && buffer.byteLength > maxBytes) {
       throw tooLarge("bytes")
     }
@@ -511,18 +664,18 @@ async function readBoundedResponseText(
   let text = ""
 
   while (true) {
-    const { done, value } = await reader.read()
+    const { done, value } = await readResponseStreamChunk(reader)
     if (done) break
     receivedBytes += value.byteLength
     if (maxBytes != null && receivedBytes > maxBytes) {
-      await reader.cancel()
+      await cancelReaderSilently(reader)
       throw tooLarge("bytes")
     }
     const chunkText = decoder.decode(value, { stream: true })
     try {
       lineLimitTracker.push(chunkText)
     } catch (error) {
-      await reader.cancel()
+      await cancelReaderSilently(reader)
       throw error
     }
     text += chunkText
@@ -532,6 +685,31 @@ async function readBoundedResponseText(
   lineLimitTracker.push(finalText)
   text += finalText
   return readBoundedInlineText(text, bounds)
+}
+
+async function readResponseStreamChunk(
+  reader: ReadableStreamDefaultReader<Uint8Array>
+) {
+  try {
+    return await reader.read()
+  } catch (error) {
+    throw resourceReadError(error)
+  }
+}
+
+function resourceReadError(error: unknown) {
+  if (isAbortError(error)) {
+    return new ResourceError({
+      kind: "aborted",
+      message: "Loading was cancelled.",
+      cause: error,
+    })
+  }
+  return new ResourceError({
+    kind: "fetch_failed",
+    message: "Could not read this resource.",
+    cause: error,
+  })
 }
 
 async function readBoundedBlobText(
@@ -571,6 +749,16 @@ function tooLarge(reason: ResourceTooLargeReason) {
   })
 }
 
+async function cancelReaderSilently(
+  reader: ReadableStreamDefaultReader<Uint8Array>
+) {
+  try {
+    await reader.cancel()
+  } catch {
+    // Preserve the user-facing load failure; cancellation is best-effort cleanup.
+  }
+}
+
 function validateByteRange({ start, end }: ByteRange) {
   if (
     !Number.isSafeInteger(start) ||
@@ -594,6 +782,53 @@ function validateKnownByteRangeStart(start: number, total: number) {
   }
 }
 
+function validateUrlRangeResponse({
+  bufferLength,
+  contentRange,
+  range,
+  status,
+}: {
+  bufferLength: number
+  contentRange: ByteRangeResult["contentRange"]
+  range: ByteRange
+  status: number
+}) {
+  if (status === 200) {
+    if (range.start !== 0 || bufferLength > range.end - range.start + 1) {
+      throw new ResourceError({
+        kind: "invalid_range",
+        message: "Full response does not match the requested byte range.",
+      })
+    }
+    return
+  }
+  if (status !== 206) {
+    throw new ResourceError({
+      kind: "invalid_range",
+      message: "Range response must return full or partial content.",
+    })
+  }
+  if (!contentRange) {
+    throw new ResourceError({
+      kind: "invalid_range",
+      message: "Partial content response is missing a valid byte range.",
+    })
+  }
+  const declaredLength = contentRange.end - contentRange.start + 1
+  if (
+    contentRange.start !== range.start ||
+    contentRange.end < contentRange.start ||
+    contentRange.end > range.end ||
+    (contentRange.total != null && contentRange.end >= contentRange.total) ||
+    declaredLength !== bufferLength
+  ) {
+    throw new ResourceError({
+      kind: "invalid_range",
+      message: "Response byte range does not match the requested range.",
+    })
+  }
+}
+
 function isByteRangeComplete({
   bufferLength,
   contentRange,
@@ -610,6 +845,7 @@ function isByteRangeComplete({
     if (contentRange.total <= 0) return true
     return contentRange.end >= contentRange.total - 1
   }
+  if (contentRange) return false
   return bufferLength < requestedLength
 }
 
@@ -644,7 +880,7 @@ function createLineLimitTracker(maxLines: number | undefined) {
 
 function parseContentRange(value: string | null) {
   if (!value) return undefined
-  const match = value.match(/bytes\s+(\d+)-(\d+)\/(\d+|\*)/i)
+  const match = value.match(/^bytes\s+(\d+)-(\d+)\/(\d+|\*)\s*$/i)
   if (!match) return undefined
   return {
     start: Number(match[1]),

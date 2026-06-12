@@ -5,6 +5,7 @@ import { getNode } from "@/components/schema-editor/document/traversal"
 import {
   createNode,
   createEnumValue,
+  stripSchemaTypeSpecificRest,
   updateEffectiveNodeShape,
 } from "@/components/schema-editor/document/type-operations"
 import type {
@@ -19,12 +20,19 @@ export function addEnumValue(
   id: string,
   value: JsonValue = ""
 ): SchemaDocument {
-  return updateNode(doc, id, (node) =>
-    updateEffectiveNodeShape(node, (effective) => ({
+  return updateNode(doc, id, (node) => {
+    if (isTypeArrayNullable(node) && node.enum) {
+      return createNullableEnumWrapper(node, [
+        ...node.enum,
+        { ...createEnumValue(), value },
+      ])
+    }
+
+    return updateEffectiveNodeShape(node, (effective) => ({
       ...effective,
       enum: [...(effective.enum ?? []), { ...createEnumValue(), value }],
     }))
-  )
+  })
 }
 
 export function updateEnumValue(
@@ -33,14 +41,23 @@ export function updateEnumValue(
   enumId: string,
   patch: Partial<Omit<EnumValue, "id">>
 ): SchemaDocument {
-  return updateNode(doc, id, (node) =>
-    updateEffectiveNodeShape(node, (effective) => ({
+  return updateNode(doc, id, (node) => {
+    if (isTypeArrayNullable(node) && node.enum) {
+      return createNullableEnumWrapper(
+        node,
+        mapPreserve(node.enum, (value) =>
+          value.id === enumId ? { ...value, ...patch } : value
+        )
+      )
+    }
+
+    return updateEffectiveNodeShape(node, (effective) => ({
       ...effective,
       enum: mapPreserve(effective.enum ?? [], (value) =>
         value.id === enumId ? { ...value, ...patch } : value
       ),
     }))
-  )
+  })
 }
 
 export function removeEnumValue(
@@ -48,12 +65,19 @@ export function removeEnumValue(
   id: string,
   enumId: string
 ): SchemaDocument {
-  return updateNode(doc, id, (node) =>
-    updateEffectiveNodeShape(node, (effective) => ({
+  return updateNode(doc, id, (node) => {
+    if (isTypeArrayNullable(node) && node.enum) {
+      return createNullableEnumWrapper(
+        node,
+        node.enum.filter((value) => value.id !== enumId)
+      )
+    }
+
+    return updateEffectiveNodeShape(node, (effective) => ({
       ...effective,
       enum: (effective.enum ?? []).filter((value) => value.id !== enumId),
     }))
-  )
+  })
 }
 
 export function setEnumValues(
@@ -63,21 +87,14 @@ export function setEnumValues(
 ): SchemaDocument {
   return updateNode(doc, id, (node) => {
     if (isTypeArrayNullable(node)) {
-      return {
-        ...node,
-        type: undefined,
-        properties: undefined,
-        items: undefined,
-        ref: undefined,
-        order: undefined,
-        anyOf: [createEnumNode(values, node.enum), { ...createNode("null") }],
-      }
+      return createNullableEnumWrapper(node, buildEnumValues(values, node.enum))
     }
 
     return updateEffectiveNodeShape(node, (effective) => ({
       ...effective,
       type: "string",
       enum: buildEnumValues(values, effective.enum),
+      rest: stripSchemaTypeSpecificRest(effective.rest),
       booleanSchema: undefined,
     }))
   })
@@ -126,10 +143,35 @@ function createEnumNode(
   values: JsonValue[],
   existing?: EnumValue[]
 ): DocumentNode {
+  return createEnumNodeFromEntries(buildEnumValues(values, existing))
+}
+
+function createEnumNodeFromEntries(enumEntries: EnumValue[]): DocumentNode {
   const node = createNode("string")
   return {
     ...node,
     type: "string",
-    enum: buildEnumValues(values, existing),
+    enum: enumEntries,
+  }
+}
+
+function createNullableEnumWrapper(
+  node: DocumentNode,
+  enumEntries: EnumValue[]
+): DocumentNode {
+  return {
+    ...node,
+    type: undefined,
+    properties: undefined,
+    items: undefined,
+    enum: undefined,
+    ref: undefined,
+    rest: stripSchemaTypeSpecificRest(node.rest),
+    order: undefined,
+    booleanSchema: undefined,
+    anyOf: [
+      createEnumNodeFromEntries(enumEntries),
+      { ...createNode("null") },
+    ],
   }
 }

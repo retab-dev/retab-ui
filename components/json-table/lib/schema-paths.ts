@@ -8,62 +8,100 @@ import {
 export type FieldPath = string
 export type MaterializedFieldPath = string
 
+function isArrayIndexSegment(segment: string): boolean {
+  return /^\d+$/.test(segment)
+}
+
+function isObjectTraversalSchema(schema: JSONSchema7): boolean {
+  return schema.type === "object" || !!schema.properties
+}
+
+function isArrayTraversalSchema(schema: JSONSchema7): boolean {
+  return schema.type === "array" || !!schema.items
+}
+
 export function getSchemaPropertyType(
   schema: JSONSchema7,
   key: FieldPath
-): JSONSchema7 {
+): JSONSchema7 | undefined {
   const rootSchema = schema
+  let currentSchema: JSONSchema7Definition = schema
   if (key === "") return schema
 
   for (const segment of key.split(".")) {
-    const traversal = unwrapSchema(
-      resolveSchema(schema, rootSchema),
+    const traversal: JSONSchema7 = unwrapSchema(
+      resolveSchema(currentSchema, rootSchema),
       rootSchema
     ).schema
 
-    if (traversal.type === "object" && traversal.properties) {
-      schema = traversal.properties[segment] as JSONSchema7
-    } else if (traversal.type === "array" && traversal.items) {
+    if (isObjectTraversalSchema(traversal) && traversal.properties) {
+      const nextSchema: JSONSchema7Definition | undefined =
+        traversal.properties[segment]
+      if (nextSchema === undefined) return undefined
+      currentSchema = nextSchema
+    } else if (isArrayTraversalSchema(traversal) && traversal.items) {
       if (Array.isArray(traversal.items)) {
-        schema = traversal.items[parseInt(segment, 10)] as JSONSchema7
+        if (!isArrayIndexSegment(segment)) return undefined
+        const nextSchema: JSONSchema7Definition | undefined =
+          traversal.items[parseInt(segment, 10)]
+        if (nextSchema === undefined) return undefined
+        currentSchema = nextSchema
       } else if (
-        typeof traversal.items === "object" &&
-        (segment === "*" || !Number.isNaN(parseInt(segment, 10)))
+        (typeof traversal.items === "object" ||
+          typeof traversal.items === "boolean") &&
+        (segment === "*" || isArrayIndexSegment(segment))
       ) {
-        schema = traversal.items as JSONSchema7
+        currentSchema = traversal.items
+      } else {
+        return undefined
       }
+    } else {
+      return undefined
     }
   }
 
-  return resolveSchema(schema, rootSchema)
+  return resolveSchema(currentSchema, rootSchema)
 }
 
 export function getSchemaPropertyTypeRaw(
   schema: JSONSchema7,
   key: FieldPath
-): JSONSchema7Definition {
+): JSONSchema7Definition | undefined {
   const rootSchema = schema
+  let currentSchema: JSONSchema7Definition = schema
   if (key === "") return schema
 
   for (const segment of key.split(".")) {
-    const traversal = unwrapSchema(
-      resolveSchema(schema, rootSchema),
+    const traversal: JSONSchema7 = unwrapSchema(
+      resolveSchema(currentSchema, rootSchema),
       rootSchema
     ).schema
 
-    if (traversal.type === "object" && traversal.properties) {
-      schema = traversal.properties[segment] as JSONSchema7
-    } else if (traversal.type === "array" && traversal.items) {
+    if (isObjectTraversalSchema(traversal) && traversal.properties) {
+      const nextSchema: JSONSchema7Definition | undefined =
+        traversal.properties[segment]
+      if (nextSchema === undefined) return undefined
+      currentSchema = nextSchema
+    } else if (isArrayTraversalSchema(traversal) && traversal.items) {
       if (Array.isArray(traversal.items)) {
-        schema = traversal.items[parseInt(segment, 10)] as JSONSchema7
+        if (!isArrayIndexSegment(segment)) return undefined
+        const nextSchema: JSONSchema7Definition | undefined =
+          traversal.items[parseInt(segment, 10)]
+        if (nextSchema === undefined) return undefined
+        currentSchema = nextSchema
       } else if (
-        typeof traversal.items === "object" &&
-        (segment === "*" || !Number.isNaN(parseInt(segment, 10)))
+        (typeof traversal.items === "object" ||
+          typeof traversal.items === "boolean") &&
+        (segment === "*" || isArrayIndexSegment(segment))
       ) {
-        schema = traversal.items as JSONSchema7
+        currentSchema = traversal.items
+      } else {
+        return undefined
       }
+    } else {
+      return undefined
     }
   }
 
-  return schema
+  return currentSchema
 }

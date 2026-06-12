@@ -21,6 +21,16 @@ export function materializeFieldPath(
   return materializedFieldPath
 }
 
+function isArrayIndexSegment(segment: string): boolean {
+  return /^\d+$/.test(segment)
+}
+
+function getOwnObjectValue(node: unknown, segment: string): unknown {
+  if (node === null || typeof node !== "object") return undefined
+  if (!Object.prototype.hasOwnProperty.call(node, segment)) return undefined
+  return (node as Record<string, unknown>)[segment]
+}
+
 export function getValueAtPath(
   data: unknown,
   materializedFieldPath: MaterializedFieldPath | undefined
@@ -57,9 +67,9 @@ export function getValueAtPath(
     }
 
     const next =
-      Array.isArray(node) && !Number.isNaN(Number(segment))
+      Array.isArray(node) && isArrayIndexSegment(segment)
         ? node[Number(segment)]
-        : (node as Record<string, unknown>)[segment]
+        : getOwnObjectValue(node, segment)
 
     return walk(next, index + 1)
   }

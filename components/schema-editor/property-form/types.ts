@@ -50,6 +50,7 @@ export interface PropertyFormSchemaContext {
   originalName: string
   schemaDefinitions: Record<string, JSONSchema7Definition>
   fieldPath?: string
+  resetKey?: string
   objectTemplatesEnabled?: boolean
   onCommand?: (command: PropertyFormCommand) => void | Promise<void>
 }
@@ -113,6 +114,13 @@ export interface PropertyFormViewModel {
       schemaNode: ExtendedJSONSchema7
       schemaContext: PropertyFormSchemaContext
       mode: PropertyFormMode
+      capabilities: Pick<
+        PropertyCapabilities,
+        | "canEditType"
+        | "canEditNestedObject"
+        | "canEditArrayItems"
+        | "canEditEnumValues"
+      >
       disabled: boolean
       onChange: (schemaNode: ExtendedJSONSchema7) => void
     }

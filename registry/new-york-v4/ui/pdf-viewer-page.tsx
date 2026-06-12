@@ -1,7 +1,8 @@
 import * as React from "react"
 import type { PDFDocumentProxy } from "pdfjs-dist"
 
-import { getPageResource } from "./pdf-viewer-resource"
+import { getPdfCanvasPixelSize } from "./pdf-viewer-canvas"
+import { readPageResource } from "./pdf-viewer-resource"
 import type { PageOverlayProps, PdfPageSize } from "./pdf-viewer-types"
 
 export function PdfPage({
@@ -19,7 +20,7 @@ export function PdfPage({
   renderOverlay?: (props: PageOverlayProps) => React.ReactNode
   onSize?: (pageNumber: number, size: PdfPageSize) => void
 }) {
-  const page = React.use(getPageResource(document, pageNumber))
+  const page = readPageResource(document, pageNumber)
   const intrinsicViewport = React.useMemo(
     () => page.getViewport({ scale: 1, rotation: page.rotate ?? 0 }),
     [page]
@@ -49,8 +50,8 @@ export function PdfPage({
       const context = canvas.getContext("2d")
       if (!context) return
 
-      canvas.width = Math.floor(viewport.width * devicePixelRatio)
-      canvas.height = Math.floor(viewport.height * devicePixelRatio)
+      canvas.width = getPdfCanvasPixelSize(viewport.width, devicePixelRatio)
+      canvas.height = getPdfCanvasPixelSize(viewport.height, devicePixelRatio)
       const renderTask = page.render({
         canvas,
         canvasContext: context,

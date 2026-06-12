@@ -10,6 +10,7 @@ import {
 import {
   formatPageRanges,
   segmentDisplayLabel,
+  segmentPageCount,
   type Segment,
 } from "@/lib/segments"
 import { cn } from "@/lib/utils"
@@ -46,7 +47,7 @@ export function SegmentSidebar({
 }: SegmentSidebarProps) {
   const visible = showUnused
     ? segments
-    : segments.filter((s) => s.pages.length > 0)
+    : segments.filter((s) => segmentPageCount(s.pages) > 0)
   const scopedInteraction = React.useMemo(
     () =>
       scopeSegmentInteraction(
@@ -66,7 +67,7 @@ export function SegmentSidebar({
         {visible.length === 1 ? "" : "s"}
       </div>
       <ul className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-auto px-2 pb-2">
-        {visible.map((segment) => {
+        {visible.map((segment, segmentPosition) => {
           const { state, eventHandlers, ariaProps, dataProps } =
             getSegmentSurfaceProps({
               segment,
@@ -75,8 +76,9 @@ export function SegmentSidebar({
               onSelect,
             })
           const label = segmentDisplayLabel(segment.label)
+          const pageCount = segmentPageCount(segment.pages)
           return (
-            <li key={segment.id}>
+            <li key={`${segment.id}-${segmentPosition}`}>
               <button
                 type="button"
                 {...ariaProps}
@@ -107,10 +109,10 @@ export function SegmentSidebar({
                     )}
                   </span>
                   <span className="font-mono text-xs text-muted-foreground">
-                    {segment.pages.length === 0
+                    {pageCount === 0
                       ? "no pages"
-                      : `${segment.pages.length} page${
-                          segment.pages.length === 1 ? "" : "s"
+                      : `${pageCount} page${
+                          pageCount === 1 ? "" : "s"
                         } · ${formatPageRanges(segment.pages)}`}
                   </span>
                   {segment.confidence != null ? (

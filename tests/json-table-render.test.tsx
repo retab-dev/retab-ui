@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { cleanup } from "@testing-library/react"
-import { afterEach, beforeAll, describe, expect, it } from "vitest"
+import { cleanup, fireEvent } from "@testing-library/react"
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
 
 import {
   baseField,
@@ -14,6 +14,12 @@ import { installJsonTableDom } from "./json-table-test-dom"
 beforeAll(() => installJsonTableDom())
 afterEach(() => cleanup())
 
+function activateDataCell(container: HTMLElement) {
+  const cell = container.querySelector('[data-slot="data-cell"]')
+  expect(cell).toBeTruthy()
+  fireEvent.mouseEnter(cell as HTMLElement)
+}
+
 describe("json table cell editor dispatch", () => {
   it("renders string display and edit states", () => {
     let view = renderEditor("string", {
@@ -22,10 +28,48 @@ describe("json table cell editor dispatch", () => {
     expect(view.getByText("hello")).toBeTruthy()
     cleanup()
 
-    view = renderEditor("string", {
-      overlays: { ...baseOverlays(), isTextEditing: true },
-    })
+    view = renderEditor("string")
+    activateDataCell(view.container)
     expect(view.getByRole("textbox")).toBeTruthy()
+  })
+
+  it("starts text editing from the display state", () => {
+    const view = renderEditor("string", {
+      field: { ...baseField("string"), effectiveValue: "hello" },
+    })
+
+    fireEvent.click(view.getByText("hello"))
+
+    expect(view.getByRole("textbox")).toBeTruthy()
+  })
+
+  it("commits empty text as null and exits edit mode on blur", () => {
+    const onCommit = vi.fn()
+    const setFocusedField = vi.fn()
+    const setIsInputFocused = vi.fn()
+    const view = renderEditor("string", {
+      textDraft: {
+        ...baseTextDraft(),
+        activeTextValue: "",
+        draftTextValue: "",
+      },
+      focus: {
+        focusedField: "doc_1-field",
+        setFocusedField,
+        setIsInputFocused,
+      },
+      commit: { onCommit },
+    })
+
+    activateDataCell(view.container)
+    fireEvent.blur(view.getByRole("textbox"))
+
+    expect(onCommit).toHaveBeenCalledWith(
+      null,
+      expect.objectContaining({ kind: "text", rawValue: "", isValid: true })
+    )
+    expect(setFocusedField).toHaveBeenCalledWith(null)
+    expect(setIsInputFocused).toHaveBeenCalledWith(false)
   })
 
   it("renders number, boolean, and enum editors", () => {
@@ -33,6 +77,7 @@ describe("json table cell editor dispatch", () => {
       overlays: { ...baseOverlays(), showInput: true },
       textDraft: { ...baseTextDraft(), activeTextValue: "42" },
     })
+    activateDataCell(view.container)
     expect(view.getByRole("spinbutton")).toBeTruthy()
     cleanup()
 
@@ -61,6 +106,40 @@ describe("json table cell editor dispatch", () => {
     expect(view.getByRole("combobox")).toBeTruthy()
   })
 
+  it("reports invalid integer inputs without lossy coercion", () => {
+    const onCommit = vi.fn()
+    const setFocusedField = vi.fn()
+    const setIsInputFocused = vi.fn()
+    const view = renderEditor("integer", {
+      overlays: { ...baseOverlays(), showInput: true },
+      textDraft: {
+        ...baseTextDraft(),
+        activeTextValue: "12.7",
+        draftTextValue: "12.7",
+      },
+      focus: {
+        focusedField: "doc_1-field",
+        setFocusedField,
+        setIsInputFocused,
+      },
+      commit: { onCommit },
+    })
+
+    activateDataCell(view.container)
+    fireEvent.blur(view.getByRole("spinbutton"))
+
+    expect(onCommit).toHaveBeenCalledWith(
+      null,
+      expect.objectContaining({
+        kind: "integer",
+        rawValue: "12.7",
+        isValid: false,
+      })
+    )
+    expect(setFocusedField).toHaveBeenCalledWith(null)
+    expect(setIsInputFocused).toHaveBeenCalledWith(false)
+  })
+
   it("renders date, date-time, and time editors", () => {
     let view = renderEditor("date", {
       textDraft: { ...baseTextDraft(), activeTextValue: "2024-01-02" },
@@ -75,13 +154,15 @@ describe("json table cell editor dispatch", () => {
         activeTextValue: "2024-01-02T03:04:00",
       },
     })
+    activateDataCell(view.container)
     expect(view.getByDisplayValue("2024-01-02T03:04")).toBeTruthy()
     cleanup()
 
-    view = renderEditor("iso-time", {
+    view = renderEditor("time", {
       overlays: { ...baseOverlays(), showInput: true },
       textDraft: { ...baseTextDraft(), activeTextValue: "03:04:00" },
     })
+    activateDataCell(view.container)
     expect(view.getByDisplayValue("03:04:00")).toBeTruthy()
   })
 

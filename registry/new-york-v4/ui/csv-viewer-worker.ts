@@ -1,4 +1,32 @@
 import type { CsvDialect } from "@/lib/csv"
+import {
+  isViewerFormatError,
+  ViewerFormatError,
+  type ViewerFormatErrorMapperOptions,
+} from "@/lib/viewer-errors"
+
+export class CsvWorkerUnavailableError extends Error {
+  constructor(message = "CSV worker unavailable", options?: ErrorOptions) {
+    super(message, options)
+    this.name = "CsvWorkerUnavailableError"
+  }
+}
+
+export function toCsvFormatError(
+  error: unknown,
+  options: ViewerFormatErrorMapperOptions = {
+    kind: "parse_failed",
+    message: "Failed to parse CSV.",
+  }
+): ViewerFormatError {
+  if (isViewerFormatError(error)) return error
+  return new ViewerFormatError({
+    format: "csv",
+    kind: options.kind,
+    message: options.message,
+    cause: error,
+  })
+}
 
 export interface CsvWorkerRequest {
   parseRequestId: string
@@ -38,8 +66,12 @@ export function parseCsvInWorker({
     let worker: Worker
     try {
       worker = createCsvWorker()
-    } catch {
-      reject(new Error("worker-unavailable"))
+    } catch (error) {
+      reject(
+        new CsvWorkerUnavailableError("CSV worker unavailable", {
+          cause: error,
+        })
+      )
       return
     }
 
@@ -54,9 +86,14 @@ export function parseCsvInWorker({
     }
 
     signal.addEventListener("abort", abort, { once: true })
-    worker.onerror = () => {
+    worker.onerror = (event) => {
       cleanup()
-      reject(new Error("worker-error"))
+      reject(
+        toCsvFormatError(event, {
+          kind: "worker_failed",
+          message: event?.message || "CSV worker failed.",
+        })
+      )
     }
     worker.onmessage = (event: MessageEvent<CsvWorkerResponse>) => {
       const message = event.data
@@ -68,7 +105,12 @@ export function parseCsvInWorker({
         resolve()
       } else {
         cleanup()
-        reject(new Error(message.message || "worker-error"))
+        reject(
+          toCsvFormatError(undefined, {
+            kind: "parse_failed",
+            message: message.message || "Failed to parse CSV.",
+          })
+        )
       }
     }
 

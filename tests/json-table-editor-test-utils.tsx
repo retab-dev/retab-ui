@@ -43,10 +43,6 @@ export function baseOverlays(): CellEditorProps["overlays"] {
     showInput: false,
     isSelectOpen: false,
     setIsSelectOpen: vi.fn(),
-    isDatePopoverOpen: false,
-    setIsDatePopoverOpen: vi.fn(),
-    isTextEditing: false,
-    setIsTextEditing: vi.fn(),
     openEditorPath: null,
     setOpenEditorPath: vi.fn(),
   }

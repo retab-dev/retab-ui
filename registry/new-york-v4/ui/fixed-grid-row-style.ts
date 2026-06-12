@@ -22,7 +22,7 @@ export function getFixedGridRowStyle({
     width: "100%",
     transform: `translate3d(0, ${safeTop}px, 0)`,
   }
-  if (gridTemplate) style.gridTemplateColumns = gridTemplate
+  if (gridTemplate?.trim()) style.gridTemplateColumns = gridTemplate
   if (contain) style.contain = "layout paint style"
   return style
 }

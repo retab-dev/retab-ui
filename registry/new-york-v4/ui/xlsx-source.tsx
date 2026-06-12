@@ -12,6 +12,7 @@ export function spreadsheetColumnToIndex(letter: string): number | null {
   let n = 0
   for (const ch of letter.toUpperCase()) {
     n = n * 26 + (ch.charCodeAt(0) - 64)
+    if (!Number.isSafeInteger(n)) return null
   }
   return n - 1
 }
@@ -27,9 +28,9 @@ export function spreadsheetAnchorToCell(
     const col = spreadsheetColumnToIndex(anchor.column)
     if (
       col == null ||
-      !Number.isInteger(anchor.sheet_index) ||
+      !Number.isSafeInteger(anchor.sheet_index) ||
       anchor.sheet_index < 0 ||
-      !Number.isInteger(anchor.row) ||
+      !Number.isSafeInteger(anchor.row) ||
       anchor.row < 1
     ) {
       return undefined

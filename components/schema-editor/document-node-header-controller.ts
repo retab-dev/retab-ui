@@ -38,7 +38,7 @@ export function useDocumentNodeHeaderController({
   const defs = React.useMemo(() => {
     const next: Record<string, JSONSchema7Definition> = {}
     for (const definition of doc.defs) {
-      next[definition.name] = projectNode(doc, definition.node)
+      setRecordValue(next, definition.name, projectNode(doc, definition.node))
     }
     return next
   }, [doc])
@@ -158,4 +158,17 @@ export function useDocumentNodeHeaderController({
     selectObjectTemplate,
     handlePropertyFormCommand,
   }
+}
+
+function setRecordValue<T>(
+  record: Record<string, T>,
+  key: string,
+  value: T
+) {
+  Object.defineProperty(record, key, {
+    value,
+    enumerable: true,
+    configurable: true,
+    writable: true,
+  })
 }

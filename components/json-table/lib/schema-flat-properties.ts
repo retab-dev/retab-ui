@@ -5,6 +5,14 @@ import {
   unwrapSchema,
 } from "@/components/json-table/lib/schema-references"
 
+function isObjectTraversalSchema(schema: JSONSchema7): boolean {
+  return schema.type === "object" || !!schema.properties
+}
+
+function isArrayTraversalSchema(schema: JSONSchema7): boolean {
+  return schema.type === "array" || !!schema.items
+}
+
 export function getSchemaFlatProperties(
   schema: JSONSchema7Definition,
   schemaPathParts: string[],
@@ -54,7 +62,7 @@ export function getSchemaFlatProperties(
 
   let result: { key: string; type: JSONSchema7 }[]
 
-  if (resolved.type === "array") {
+  if (isArrayTraversalSchema(resolved)) {
     if (resolved.items) {
       if (Array.isArray(resolved.items)) {
         result = resolved.items.flatMap((item, index) =>
@@ -87,7 +95,7 @@ export function getSchemaFlatProperties(
     } else {
       result = [{ key: schemaPathParts.join("."), type: resolved }]
     }
-  } else if (resolved.type === "object") {
+  } else if (isObjectTraversalSchema(resolved)) {
     if (resolved.properties) {
       result = Object.entries(resolved.properties).flatMap(([key, value]) =>
         getSchemaFlatProperties(value, [...schemaPathParts, key], context, {

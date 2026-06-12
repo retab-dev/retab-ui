@@ -60,6 +60,12 @@ export interface DocumentNode {
   /** object: ordered, identity-bearing property entries. */
   properties?: PropertyEntry[]
 
+  /** Required names from the source that are not modeled as property entries. */
+  extraRequired?: string[]
+
+  /** Source order for `required[]`, used to preserve external required names. */
+  requiredOrder?: string[]
+
   /** array: the item schema. (Tuple `items` arrays are carried in `rest` for v1.) */
   items?: DocumentNode
 
@@ -104,6 +110,8 @@ export interface DocumentNode {
 export interface PropertyEntry {
   id: PropertyId
   key: string
+  /** Empty key created by the editor while typing; omitted from projection. */
+  isTransient?: boolean
   required: boolean
   node: DocumentNode
 }
@@ -112,8 +120,6 @@ export interface PropertyEntry {
 export interface EnumValue {
   id: NodeId
   value: JsonValue
-  /** Optional per-value docs (projected to `x-enumDescriptions` on export). */
-  description?: string
 }
 
 /** A named definition under `$defs`. `name` is mutable; references point at `id`. */

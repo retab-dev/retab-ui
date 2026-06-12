@@ -56,11 +56,13 @@ describe("PdfViewerRail", () => {
     expect(rail.style.width).toBe("0px")
 
     screen.getByTestId("rail-content").dataset.width = "240"
-    resizeCallback?.(
+    const notifyResize = resizeCallback as unknown as ResizeObserverCallback
+    expect(notifyResize).not.toBeNull()
+    notifyResize(
       [
         {
           target: screen.getByTestId("rail-content").parentElement,
-        } as ResizeObserverEntry,
+        } as unknown as ResizeObserverEntry,
       ],
       {} as ResizeObserver
     )

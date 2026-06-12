@@ -67,6 +67,11 @@ export type ViewerFormatErrorKind =
   | "worker_failed"
   | "unknown"
 
+export interface ViewerFormatErrorMapperOptions {
+  kind: ViewerFormatErrorKind
+  message: string
+}
+
 export class ViewerFormatError extends Error {
   readonly domain = "format"
   readonly format: ViewerFormat
@@ -232,7 +237,6 @@ export function toViewerErrorInfo(
 
   if (isViewerFormatError(error)) {
     const format = error.format ?? context.format
-    const isBounds = format === "text" && error.kind === "bounds"
     return {
       domain: "format",
       format,
@@ -240,7 +244,7 @@ export function toViewerErrorInfo(
       message: error.message,
       isRetryable: retryable(
         context,
-        !isBounds && context.sourceKind === "url"
+        formatErrorDefaultRetry(error, context, format)
       ),
       isDownloadUseful: canDownload,
       userMessage: formatErrorUserMessage(format, error.kind, error),
@@ -293,7 +297,7 @@ export function toViewerErrorInfo(
     format: context.format,
     kind: "unknown",
     message,
-    isRetryable: retryable(context, context.sourceKind === "url"),
+    isRetryable: retryable(context, unknownErrorDefaultRetry(context)),
     isDownloadUseful: canDownload,
     userMessage: fallbackUserMessage(context.format),
     cause: error,
@@ -327,6 +331,23 @@ function resourceErrorDefaultRetry(
   if (error.kind === "invalid_range") return false
   if (error.kind === "too_large") return false
   if (error.kind === "unsupported_capability") return false
+  return context.sourceKind === "url"
+}
+
+function formatErrorDefaultRetry(
+  error: ViewerFormatError,
+  context: ViewerErrorContext,
+  format: ViewerFormat | undefined
+) {
+  if (format === "text" && error.kind === "bounds") return false
+  if (error.kind === "disposed") return false
+  if (error.kind === "index_out_of_range") return false
+  if (format === "docx") return true
+  return context.sourceKind === "url"
+}
+
+function unknownErrorDefaultRetry(context: ViewerErrorContext) {
+  if (context.format === "docx") return true
   return context.sourceKind === "url"
 }
 

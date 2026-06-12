@@ -166,13 +166,13 @@ Second-pass verdict:
 Implemented changes:
 
 - Split cell rendering by responsibility:
-  - `read-only-data-cell.tsx` renders display-only cells.
-  - `editable-data-cell.tsx` owns editor hooks and editor dispatch.
-  - `data-cell.tsx` is now a small switch.
+  - `read-only-json-table-cell.tsx` renders display-only projected cells.
+  - `editable-json-table-cell.tsx` owns editor hooks and editor dispatch.
+  - `single-file-form-row.tsx` selects the projected cell path directly.
 - Kept the editable cell behind a dynamic import so read-only rendering does not
   statically import `CellEditor`, editor hooks, object editors, popovers, or
   select/date editor modules.
-- Added `data-cell-types.ts` so both paths share props without sharing runtime
+- Added `json-table-cell-types.ts` so both paths share props without sharing runtime
   code.
 
 Current post-pass profile on `json-table-profile` with overscan `12`:
@@ -296,7 +296,7 @@ Fifth-pass verdict:
 
 Implemented changes:
 
-- Memoized `ReadOnlyDataCell` with a read-only-specific comparator:
+- Memoized `ReadOnlyJsonTableCell` with a read-only-specific comparator:
   - column key
   - column width
   - column metadata

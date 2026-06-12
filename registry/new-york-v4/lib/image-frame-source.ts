@@ -1,5 +1,9 @@
 import type { Size } from "@/lib/image-geometry"
-import { ViewerFormatError } from "@/lib/viewer-errors"
+import {
+  isViewerFormatError,
+  ViewerFormatError,
+  type ViewerFormatErrorMapperOptions,
+} from "@/lib/viewer-errors"
 
 export class ImageLoadError extends ViewerFormatError {
   constructor(message: string, options?: ErrorOptions) {
@@ -48,6 +52,28 @@ export class ImageFrameIndexError extends ViewerFormatError {
   }
 }
 
+export function toImageFormatError(
+  error: unknown,
+  options: ViewerFormatErrorMapperOptions
+): ViewerFormatError {
+  if (isViewerFormatError(error)) return error
+  if (options.kind === "load_failed") {
+    return new ImageLoadError(options.message, { cause: error })
+  }
+  if (options.kind === "decode_failed") {
+    return new ImageDecodeError(options.message, { cause: error })
+  }
+  if (options.kind === "disposed") {
+    return new ImageSourceDisposedError(options.message, { cause: error })
+  }
+  return new ViewerFormatError({
+    format: "image",
+    kind: options.kind,
+    message: options.message,
+    cause: error,
+  })
+}
+
 export interface FrameDescriptor {
   intrinsicSize: Size
 }
@@ -78,6 +104,10 @@ export class BitmapCache {
   }
 
   set(frameIndex: number, bitmap: ImageBitmap) {
+    const previousBitmap = this.bitmaps.get(frameIndex)
+    if (previousBitmap && previousBitmap !== bitmap) {
+      closeBitmap(previousBitmap)
+    }
     this.bitmaps.set(frameIndex, bitmap)
     this.touch(frameIndex)
     this.evict()
@@ -163,6 +193,12 @@ export function createFrameSource({
   initialBitmaps = [],
   onDispose,
 }: CreateFrameSourceOptions): FrameSource {
+  try {
+    validateFrameDescriptors(frames)
+  } catch (error) {
+    closeInitialBitmaps(initialBitmaps)
+    throw error
+  }
   const bitmapCache = new BitmapCache({ maxDecodedFrames })
   const inflightDecodes = new Map<number, InflightFrameDecode>()
   let disposed = false
@@ -207,7 +243,7 @@ export function createFrameSource({
           }
           decodedPromise
             .then((decodedBitmap) => {
-              if (!inflightDecodes.has(frameIndex)) {
+              if (inflightDecodes.get(frameIndex) !== currentInflight) {
                 closeBitmap(decodedBitmap)
                 reject(
                   new ImageSourceDisposedError("Image frame decode canceled")
@@ -224,10 +260,12 @@ export function createFrameSource({
               resolve(decodedBitmap)
             })
             .catch((error) => {
-              inflightDecodes.delete(frameIndex)
-              while (currentInflight.pinCount > 0) {
-                currentInflight.pinCount -= 1
-                bitmapCache.unpin(frameIndex)
+              if (inflightDecodes.get(frameIndex) === currentInflight) {
+                inflightDecodes.delete(frameIndex)
+                while (currentInflight.pinCount > 0) {
+                  currentInflight.pinCount -= 1
+                  bitmapCache.unpin(frameIndex)
+                }
               }
               reject(toImageDecodeError(error))
             })
@@ -290,7 +328,10 @@ export async function createNativeImageFrameSourceFromBlob(
   try {
     probe = await createImageBitmap(blob)
   } catch (error) {
-    throw new ImageDecodeError("Failed to decode image", { cause: error })
+    throw toImageFormatError(error, {
+      kind: "decode_failed",
+      message: "Failed to decode image",
+    })
   }
   const frames: FrameDescriptor[] = [
     { intrinsicSize: { width: probe.width, height: probe.height } },
@@ -344,11 +385,14 @@ export function closeBitmap(bitmap: ImageBitmap | undefined) {
   }
 }
 
-function toImageDecodeError(error: unknown): ImageDecodeError {
+function toImageDecodeError(error: unknown): ViewerFormatError {
   if (error instanceof ImageSourceDisposedError) return error
   return error instanceof ImageDecodeError
     ? error
-    : new ImageDecodeError("Image decode failed", { cause: error })
+    : toImageFormatError(error, {
+        kind: "decode_failed",
+        message: "Image decode failed",
+      })
 }
 
 function safeCancelDecode(
@@ -371,4 +415,27 @@ function isValidFrameIndex(frameIndex: number, frameCount: number) {
 
 function isTiffContentType(contentType: string | null): boolean {
   return contentType ? /^image\/(tiff|tif)(;|$)/i.test(contentType) : false
+}
+
+function validateFrameDescriptors(frames: readonly FrameDescriptor[]) {
+  if (frames.length === 0) {
+    throw new ImageDecodeError("Image does not contain any frames")
+  }
+  for (const [frameIndex, frame] of frames.entries()) {
+    const { width, height } = frame.intrinsicSize
+    if (
+      !Number.isFinite(width) ||
+      !Number.isFinite(height) ||
+      width <= 0 ||
+      height <= 0
+    ) {
+      throw new ImageDecodeError(
+        `Image frame ${frameIndex + 1} has invalid dimensions`
+      )
+    }
+  }
+}
+
+function closeInitialBitmaps(initialBitmaps: readonly InitialBitmap[]) {
+  for (const { bitmap } of initialBitmaps) closeBitmap(bitmap)
 }

@@ -21,11 +21,17 @@ export function createCsvParser(options?: CsvParserOptions): CsvParser {
   var inQuotes = false
   var pendingQuote = false
   var pendingCR = false
+  var fieldStarted = false
+  var sawFirstChar = false
 
   function push(text: string): string[][] {
     var out: string[][] = []
     for (var i = 0; i < text.length; i++) {
       var c = text.charAt(i)
+      if (!sawFirstChar) {
+        sawFirstChar = true
+        if (c === "\uFEFF") continue
+      }
 
       if (pendingCR) {
         pendingCR = false
@@ -33,6 +39,7 @@ export function createCsvParser(options?: CsvParserOptions): CsvParser {
         field = ""
         out.push(record)
         record = []
+        fieldStarted = false
         if (c === "\n") continue
       }
 
@@ -40,6 +47,7 @@ export function createCsvParser(options?: CsvParserOptions): CsvParser {
         pendingQuote = false
         if (c === '"') {
           field += '"'
+          fieldStarted = true
           continue
         }
         inQuotes = false
@@ -53,9 +61,11 @@ export function createCsvParser(options?: CsvParserOptions): CsvParser {
 
       if (c === '"') {
         inQuotes = true
+        fieldStarted = true
       } else if (c === delimiter) {
         record.push(field)
         field = ""
+        fieldStarted = false
       } else if (c === "\r") {
         pendingCR = true
       } else if (c === "\n") {
@@ -63,8 +73,10 @@ export function createCsvParser(options?: CsvParserOptions): CsvParser {
         field = ""
         out.push(record)
         record = []
+        fieldStarted = false
       } else {
         field += c
+        fieldStarted = true
       }
     }
     return out
@@ -78,19 +90,19 @@ export function createCsvParser(options?: CsvParserOptions): CsvParser {
     }
     if (pendingCR) {
       pendingCR = false
-      if (field.length > 0 || record.length > 0) {
-        record.push(field)
-        field = ""
-        out.push(record)
-        record = []
-      }
-      return out
-    }
-    if (field.length > 0 || record.length > 0) {
       record.push(field)
       field = ""
       out.push(record)
       record = []
+      fieldStarted = false
+      return out
+    }
+    if (field.length > 0 || record.length > 0 || fieldStarted) {
+      record.push(field)
+      field = ""
+      out.push(record)
+      record = []
+      fieldStarted = false
     }
     return out
   }

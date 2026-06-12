@@ -3,7 +3,11 @@
 import { useCallback, useMemo, useRef, useState, type ReactNode } from "react"
 import { Key, Loader2 } from "lucide-react"
 
-import { buildColorMap, type Segment } from "@/lib/segments"
+import {
+  buildColorMap,
+  segmentDisplayLabel,
+  type Segment,
+} from "@/lib/segments"
 import { PageRibbon, type RibbonRow } from "@/components/ui/page-ribbon"
 import { type PdfViewerSlots } from "@/components/ui/pdf-viewer"
 import { SegmentLegend } from "@/components/ui/segment-legend"
@@ -65,7 +69,10 @@ export function PartitionViewer({
       id: c.key,
       label: c.key,
       pages: normalizePages(c.pages),
-      color: colors.get(c.key) ?? "var(--color-muted-foreground)",
+      color:
+        colors.get(c.key) ??
+        colors.get(segmentDisplayLabel(c.key)) ??
+        "var(--color-muted-foreground)",
       index: 0,
     })
     const legendByKey = new Map<string, Segment>()

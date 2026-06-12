@@ -137,4 +137,20 @@ describe("ParseViewer adapter", () => {
       onVisiblePageChange,
     })
   })
+
+  it("uses the parse document id as the markdown reset key", () => {
+    render(
+      <ParseViewer
+        result={{
+          document: { id: "parse-document-id" },
+          output: {
+            pages: ["# One"],
+            text: "# One",
+          },
+        }}
+      />
+    )
+
+    expect(getLastMarkdownProps().resetKey).toBe("parse-document-id")
+  })
 })

@@ -34,6 +34,7 @@ export function PageMarkdownViewer({
   renderDocument,
   onVisiblePageChange,
   fileName = "document.md",
+  resetKey,
   processingLabel = "Preparing document...",
 }: PageMarkdownViewerProps) {
   const hasPages = pages.length > 0
@@ -42,8 +43,13 @@ export function PageMarkdownViewer({
   const [markdownContainerWidth, setMarkdownContainerWidth] = React.useState<
     number | null
   >(null)
+  const pagePaneResetKey = hasPages ? `pages:${resetKey ?? ""}` : "empty"
   const { currentPage, reportDocumentPage, reportMarkdownPage } =
-    usePagePaneSync({ onMarkdownPageChange: onVisiblePageChange })
+    usePagePaneSync({
+      onMarkdownPageChange: onVisiblePageChange,
+      pageCount: pages.length,
+      resetKey: pagePaneResetKey,
+    })
 
   const markdownPaneRef = React.useRef<PageMarkdownPaneHandle | null>(null)
   const documentPaneRef = React.useRef<PageMarkdownDocumentPaneHandle | null>(
@@ -52,6 +58,12 @@ export function PageMarkdownViewer({
   const [documentPageReport, setDocumentPageReport] = React.useState<{
     page: number
   } | null>(null)
+
+  React.useEffect(() => {
+    setMode("rendered")
+    setManualScale(null)
+    setDocumentPageReport(null)
+  }, [resetKey])
 
   const handleDocumentPageChange = React.useCallback(
     (page: number) => {
@@ -109,6 +121,7 @@ export function PageMarkdownViewer({
       scale={scale}
       currentPage={currentPage}
       fileName={fileName}
+      resetKey={resetKey}
       onModeChange={setMode}
       onZoom={(factor) => setManualScale(zoomPageScale(scale, factor))}
       onFitWidth={() => setManualScale(null)}

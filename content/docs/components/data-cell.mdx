@@ -1,0 +1,76 @@
+---
+title: Data Cell
+description: "A lightweight editable cell for scalar document data: text, numbers, booleans, dates, times, and date-times."
+component: true
+---
+
+Data Cell is the primitive for dense editable data surfaces. It renders the
+same compact cell shell for display and edit states, keeps editable cells
+display-only until interaction, and normalizes input behavior for common JSON
+scalar types.
+
+<DataCellDemo />
+
+## Installation
+
+```bash
+npx shadcn@latest add @retab/data-cell
+```
+
+## Usage
+
+```tsx
+import { DataCell } from "@/components/ui/data-cell"
+
+<DataCell kind="number" value={-108.3} />
+
+<DataCell
+  kind="number"
+  editable
+  value="-108.3"
+  onValueCommit={(value, meta) => {
+    // value is number | null for numeric cells
+    // meta.isValid distinguishes invalid input from an empty nullable value
+  }}
+/>
+
+<DataCell
+  kind="text"
+  mode="edit"
+  value="Committed"
+  draftValue={draft}
+  onDraftValueChange={setDraft}
+  onValueCommit={(value) => {
+    // value is string | null
+  }}
+/>
+```
+
+## API Reference
+
+| Prop              | Type                                                                 | Default     |
+| ----------------- | -------------------------------------------------------------------- | ----------- |
+| `kind`            | `DataCellKind`                                                      | `-` |
+| `value`           | `DataCellValue`                                                      | `undefined` |
+| `mode`            | `"display" \| "edit" \| "auto"`                                      | `"auto"` when editable, otherwise `"display"` |
+| `editable`        | `boolean`                                                            | `false`     |
+| `disabled`        | `boolean`                                                            | `false`     |
+| `name`            | `string`                                                             | `undefined` |
+| `placeholder`     | `string`                                                             | `"—"`       |
+| `dateTimeZone`    | `"local" \| "preserve" \| "utc"`                                     | `"local"`   |
+| `formatValue`     | `(value, meta) => React.ReactNode`                                   | `undefined` |
+| `draftValue`      | `string`                                                             | `undefined` |
+| `autoFocus`       | `boolean`                                                            | `false`     |
+| `onDraftValueChange` | `(value: string, meta: DataCellValueMeta) => void`                | `undefined` |
+| `onValueCommit`   | `(value: DataCellCommitValue, meta: DataCellValueMeta) => void`      | `undefined` |
+
+`DataCell` forwards standard `data-*`, ARIA, event, and style props to the
+rendered cell. In auto mode, it renders the display cell first and only mounts
+the edit control while hovered, focused, or explicitly activated. Number and
+integer edit cells intentionally use native `type="number"` inputs and keep the
+raw draft text separate from parsed commit metadata.
+
+`DataCell` only normalizes scalar input values. Schema policy belongs in the
+adapter: nullable fields can turn empty `null` commits into stored null,
+required numeric fields can ignore `meta.isValid === false`, and date-time
+fields can opt into explicit timezone preservation with `dateTimeZone`.

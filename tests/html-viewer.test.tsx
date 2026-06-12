@@ -11,6 +11,7 @@ import {
 } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { createViewerResource } from "@/lib/viewer-resource"
 import { FileViewer } from "@/registry/new-york-v4/ui/file-viewer"
 import { HtmlDocViewer } from "@/registry/new-york-v4/ui/file-viewer-html-viewer"
 
@@ -18,7 +19,7 @@ function response(body: string, init: ResponseInit = {}) {
   return new Response(body, init)
 }
 
-function htmlUrlSource(url: string, fileName?: string, mimeType?: string) {
+function htmlUrlSource(url: string, fileName?: string, mimeType = "text/html") {
   return { kind: "url" as const, url, fileName, mimeType }
 }
 
@@ -38,6 +39,24 @@ function htmlBlobSource(
     fileName,
     mimeType: type,
   }
+}
+
+function htmlUrlResource(url: string, fileName?: string) {
+  return createViewerResource(htmlUrlSource(url, fileName))
+}
+
+function htmlTextResource(text: string, fileName = "inline.html") {
+  return createViewerResource(htmlTextSource(text, fileName))
+}
+
+function htmlBlobResource(blob: Blob, fileName = "blob.html") {
+  return createViewerResource({
+    kind: "blob" as const,
+    blob,
+    identityKey: `blob-resource:${fileName}:${blob.size}`,
+    fileName,
+    mimeType: blob.type || "text/html",
+  })
 }
 
 function deferred<T>() {
@@ -205,6 +224,29 @@ describe("HtmlDocViewer", () => {
     ).toBe("/download/original.html")
   })
 
+  it("uses the original download URL while an HTML preview is still loading", async () => {
+    const pending = deferred<Response>()
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => pending.promise)
+    )
+
+    render(
+      <FileViewer
+        source={{
+          ...htmlUrlSource("/preview/loading.html", "loading.html"),
+          downloadUrl: "/download/loading-original.html",
+        }}
+      />
+    )
+
+    await waitFor(() => expect(fetch).toHaveBeenCalled())
+
+    expect(
+      screen.getByRole("link", { name: "Download" }).getAttribute("href")
+    ).toBe("/download/loading-original.html")
+  })
+
   it("updates the HTML download URL when the preview URL is reused", async () => {
     const pending = deferred<Response>()
     vi.stubGlobal(
@@ -360,6 +402,40 @@ describe("HtmlDocViewer", () => {
       "blob:html-viewer-download"
     )
     expect(click).toHaveBeenCalledTimes(1)
+  })
+
+  it("keeps HTML Blob downloads available while the preview is loading", async () => {
+    const click = vi
+      .spyOn(HTMLAnchorElement.prototype, "click")
+      .mockImplementation(() => {})
+    const text = deferred<string>()
+    const blob = {
+      type: "text/html",
+      text: vi.fn(() => text.promise),
+    } as unknown as Blob
+
+    render(
+      <FileViewer
+        source={{
+          kind: "blob",
+          blob,
+          identityKey: "slow-download-blob",
+          fileName: "slow.html",
+          mimeType: "text/html",
+        }}
+      />
+    )
+
+    await waitFor(() => expect(blob.text).toHaveBeenCalledTimes(1))
+
+    fireEvent.click(screen.getByRole("button", { name: "Download" }))
+
+    await waitFor(() => expect(URL.createObjectURL).toHaveBeenCalledWith(blob))
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith(
+      "blob:html-viewer-download"
+    )
+    expect(click).toHaveBeenCalledTimes(1)
+    expect(document.querySelector("iframe")).toBeNull()
   })
 
   it("downloads the latest HTML Blob after the source changes", async () => {
@@ -666,6 +742,53 @@ describe("HtmlDocViewer", () => {
     await waitFor(() => expect(fetchSignal?.aborted).toBe(true))
   })
 
+  it("does not evict active HTML preview fetches when the text cache exceeds its limit", async () => {
+    const urls = Array.from(
+      { length: 13 },
+      (_, index) => `/cache/active-${index}.html`
+    )
+    const pendingByUrl = new Map(urls.map((url) => [url, deferred<Response>()]))
+    const signalByUrl = new Map<string, AbortSignal>()
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((src: string, init?: RequestInit) => {
+        signalByUrl.set(src, init?.signal as AbortSignal)
+        const pending = pendingByUrl.get(src)
+        if (!pending) throw new Error(`unexpected fetch: ${src}`)
+        return pending.promise
+      })
+    )
+
+    const { container } = render(
+      <>
+        {urls.map((url, index) => (
+          <FileViewer
+            key={url}
+            source={htmlUrlSource(url, `active-${index}.html`)}
+          />
+        ))}
+      </>
+    )
+
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(urls.length))
+
+    expect(signalByUrl.get(urls[0])?.aborted).toBe(false)
+
+    await resolveFetch(
+      pendingByUrl.get(urls[0])!,
+      response("<p>first still mounted</p>", { status: 200 })
+    )
+
+    await waitFor(() => {
+      expect(
+        iframes(container).some(
+          (iframe) =>
+            iframe.getAttribute("srcdoc") === "<p>first still mounted</p>"
+        )
+      ).toBe(true)
+    })
+  })
+
   it("aborts stale HTML fetches on descriptor changes and ignores late old responses", async () => {
     const oldResponse = deferred<Response>()
     const newResponse = deferred<Response>()
@@ -772,7 +895,7 @@ describe("HtmlDocViewer", () => {
 
       const alert = await screen.findByRole("alert")
       expect(alert.getAttribute("data-error-message")).toBe(
-        "Failed to load file: 503"
+        "Failed to load resource: 503"
       )
       expect(document.querySelector("iframe")).toBeNull()
       expect(
@@ -806,7 +929,7 @@ describe("HtmlDocViewer", () => {
       await resolveFetch(bad, response("bad", { status: 500 }))
       expect(
         (await screen.findByRole("alert")).getAttribute("data-error-message")
-      ).toBe("Failed to load file: 500")
+      ).toBe("Failed to load resource: 500")
 
       rerender(<FileViewer source={htmlUrlSource("/good.html", "good.html")} />)
 
@@ -823,7 +946,7 @@ describe("HtmlDocViewer", () => {
     }
   })
 
-  it("does not keep showing stale direct HTML when its src changes", async () => {
+  it("does not keep showing stale direct HTML when its URL changes", async () => {
     const first = deferred<Response>()
     const second = deferred<Response>()
     vi.stubGlobal(
@@ -838,8 +961,7 @@ describe("HtmlDocViewer", () => {
 
     const { container, rerender } = render(
       <HtmlDocViewer
-        src="/direct-a.html"
-        fileName="direct-a.html"
+        resource={htmlUrlResource("/direct-a.html", "direct-a.html")}
         descriptorSignal={firstController.signal}
       />
     )
@@ -854,8 +976,7 @@ describe("HtmlDocViewer", () => {
 
     rerender(
       <HtmlDocViewer
-        src="/direct-b.html"
-        fileName="direct-b.html"
+        resource={htmlUrlResource("/direct-b.html", "direct-b.html")}
         descriptorSignal={secondController.signal}
       />
     )
@@ -874,7 +995,7 @@ describe("HtmlDocViewer", () => {
     )
   })
 
-  it("aborts stale direct HTML fetches when src changes with the same signal", async () => {
+  it("aborts stale direct HTML fetches when URL changes with the same signal", async () => {
     const first = deferred<Response>()
     const second = deferred<Response>()
     let firstSignal: AbortSignal | undefined
@@ -894,8 +1015,7 @@ describe("HtmlDocViewer", () => {
 
     const { container, rerender } = render(
       <HtmlDocViewer
-        src="/direct/same-signal-a.html"
-        fileName="first.html"
+        resource={htmlUrlResource("/direct/same-signal-a.html", "first.html")}
         descriptorSignal={controller.signal}
       />
     )
@@ -904,8 +1024,7 @@ describe("HtmlDocViewer", () => {
 
     rerender(
       <HtmlDocViewer
-        src="/direct/same-signal-b.html"
-        fileName="second.html"
+        resource={htmlUrlResource("/direct/same-signal-b.html", "second.html")}
         descriptorSignal={controller.signal}
       />
     )
@@ -917,6 +1036,64 @@ describe("HtmlDocViewer", () => {
     expect((await findIframe(container)).getAttribute("srcdoc")).toBe(
       "<p>second same signal</p>"
     )
+  })
+
+  it("keeps a shared direct HTML fetch alive when one subscriber changes URL", async () => {
+    const shared = deferred<Response>()
+    const next = deferred<Response>()
+    let sharedSignal: AbortSignal | undefined
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((src: string, init?: RequestInit) => {
+        if (src === "/direct/shared.html") {
+          sharedSignal = init?.signal ?? undefined
+          return shared.promise
+        }
+        return next.promise
+      })
+    )
+    const firstController = new AbortController()
+    const secondController = new AbortController()
+    const nextController = new AbortController()
+
+    const { container, rerender } = render(
+      <div>
+        <HtmlDocViewer
+          resource={htmlUrlResource("/direct/shared.html", "first.html")}
+          descriptorSignal={firstController.signal}
+        />
+        <HtmlDocViewer
+          resource={htmlUrlResource("/direct/shared.html", "second.html")}
+          descriptorSignal={secondController.signal}
+        />
+      </div>
+    )
+
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1))
+
+    rerender(
+      <div>
+        <HtmlDocViewer
+          resource={htmlUrlResource("/direct/next.html", "next.html")}
+          descriptorSignal={nextController.signal}
+        />
+        <HtmlDocViewer
+          resource={htmlUrlResource("/direct/shared.html", "second.html")}
+          descriptorSignal={secondController.signal}
+        />
+      </div>
+    )
+
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2))
+    expect(sharedSignal?.aborted).toBe(false)
+
+    await resolveFetch(shared, response("<p>shared still needed</p>"))
+    await resolveFetch(next, response("<p>next direct</p>"))
+
+    await waitFor(() => expect(iframes(container)).toHaveLength(2))
+    expect(
+      iframes(container).map((iframe) => iframe.getAttribute("srcdoc"))
+    ).toEqual(["<p>next direct</p>", "<p>shared still needed</p>"])
   })
 
   it("aborts direct HTML fetches on unmount", async () => {
@@ -933,8 +1110,7 @@ describe("HtmlDocViewer", () => {
 
     const { unmount } = render(
       <HtmlDocViewer
-        src="/direct/unmount.html"
-        fileName="unmount.html"
+        resource={htmlUrlResource("/direct/unmount.html", "unmount.html")}
         descriptorSignal={controller.signal}
       />
     )
@@ -960,8 +1136,10 @@ describe("HtmlDocViewer", () => {
 
     render(
       <HtmlDocViewer
-        src="/direct/parent-abort.html"
-        fileName="parent-abort.html"
+        resource={htmlUrlResource(
+          "/direct/parent-abort.html",
+          "parent-abort.html"
+        )}
         descriptorSignal={controller.signal}
       />
     )
@@ -973,7 +1151,29 @@ describe("HtmlDocViewer", () => {
     await waitFor(() => expect(fetchSignal?.aborted).toBe(true))
   })
 
-  it("switches direct HtmlDocViewer from loaded HTML to a fetched src", async () => {
+  it("does not start direct HTML fetches for already-aborted signals", async () => {
+    const fetchMock = vi.fn(() => Promise.resolve(response("<p>unused</p>")))
+    vi.stubGlobal("fetch", fetchMock)
+    const controller = new AbortController()
+    controller.abort()
+
+    render(
+      <HtmlDocViewer
+        resource={htmlUrlResource(
+          "/direct/already-aborted.html",
+          "already-aborted.html"
+        )}
+        descriptorSignal={controller.signal}
+      />
+    )
+
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(document.querySelector("iframe")).toBeNull()
+  })
+
+  it("switches direct HtmlDocViewer from loaded HTML to a fetched URL", async () => {
     const fetched = deferred<Response>()
     vi.stubGlobal(
       "fetch",
@@ -982,7 +1182,10 @@ describe("HtmlDocViewer", () => {
     const controller = new AbortController()
 
     const { container, rerender } = render(
-      <HtmlDocViewer html="<p>inline first</p>" fileName="inline.html" />
+      <HtmlDocViewer
+        resource={htmlTextResource("<p>inline first</p>", "inline.html")}
+        descriptorSignal={new AbortController().signal}
+      />
     )
 
     expect((await findIframe(container)).getAttribute("srcdoc")).toBe(
@@ -991,8 +1194,7 @@ describe("HtmlDocViewer", () => {
 
     rerender(
       <HtmlDocViewer
-        src="/direct/from-inline.html"
-        fileName="fetched.html"
+        resource={htmlUrlResource("/direct/from-inline.html", "fetched.html")}
         descriptorSignal={controller.signal}
       />
     )
@@ -1013,7 +1215,7 @@ describe("HtmlDocViewer", () => {
     expect(iframe.getAttribute("title")).toBe("fetched.html")
   })
 
-  it("switches direct HtmlDocViewer from a fetched src to loaded HTML without keeping stale content", async () => {
+  it("switches direct HtmlDocViewer from a fetched URL to loaded HTML without keeping stale content", async () => {
     const fetched = deferred<Response>()
     vi.stubGlobal(
       "fetch",
@@ -1023,8 +1225,7 @@ describe("HtmlDocViewer", () => {
 
     const { container, rerender } = render(
       <HtmlDocViewer
-        src="/direct/to-inline.html"
-        fileName="fetched.html"
+        resource={htmlUrlResource("/direct/to-inline.html", "fetched.html")}
         descriptorSignal={controller.signal}
       />
     )
@@ -1040,7 +1241,12 @@ describe("HtmlDocViewer", () => {
       "<p>fetched first</p>"
     )
 
-    rerender(<HtmlDocViewer html="<p>inline next</p>" fileName="inline.html" />)
+    rerender(
+      <HtmlDocViewer
+        resource={htmlTextResource("<p>inline next</p>", "inline.html")}
+        descriptorSignal={new AbortController().signal}
+      />
+    )
 
     const iframe = await findIframe(container)
     expect(iframe.getAttribute("srcdoc")).toBe("<p>inline next</p>")
@@ -1052,14 +1258,22 @@ describe("HtmlDocViewer", () => {
     const secondBlob = new Blob(["<p>second blob</p>"], { type: "text/html" })
 
     const { container, rerender } = render(
-      <HtmlDocViewer blob={firstBlob} fileName="first.html" />
+      <HtmlDocViewer
+        resource={htmlBlobResource(firstBlob, "first.html")}
+        descriptorSignal={new AbortController().signal}
+      />
     )
 
     expect((await findIframe(container)).getAttribute("srcdoc")).toBe(
       "<p>first blob</p>"
     )
 
-    rerender(<HtmlDocViewer blob={secondBlob} fileName="second.html" />)
+    rerender(
+      <HtmlDocViewer
+        resource={htmlBlobResource(secondBlob, "second.html")}
+        descriptorSignal={new AbortController().signal}
+      />
+    )
 
     await waitFor(() => {
       expect(container.querySelector("iframe")).toBeNull()
@@ -1079,7 +1293,10 @@ describe("HtmlDocViewer", () => {
     try {
       render(
         <TestErrorBoundary>
-          <HtmlDocViewer blob={brokenBlob} fileName="broken.html" />
+          <HtmlDocViewer
+            resource={htmlBlobResource(brokenBlob, "broken.html")}
+            descriptorSignal={new AbortController().signal}
+          />
         </TestErrorBoundary>
       )
 
@@ -1129,8 +1346,7 @@ describe("HtmlDocViewer", () => {
 
     const { container } = render(
       <HtmlDocViewer
-        html="<article>direct</article>"
-        fileName="direct.html"
+        resource={htmlTextResource("<article>direct</article>", "direct.html")}
         descriptorSignal={signal}
         bare
       />

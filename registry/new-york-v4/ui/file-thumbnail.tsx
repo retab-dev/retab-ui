@@ -11,8 +11,10 @@ export interface ThumbnailFile {
 
 export type FileThumbnailState = "loading" | "loaded" | "error"
 
-export interface FileThumbnailProps
-  extends Omit<React.ComponentPropsWithoutRef<"div">, "children"> {
+export interface FileThumbnailProps extends Omit<
+  React.ComponentPropsWithoutRef<"div">,
+  "children"
+> {
   /** The file being previewed. A browser `File` works too. */
   file: ThumbnailFile | File
   /** Aspect ratio of the preview frame (width / height). Defaults to 3 / 4. */
@@ -22,6 +24,8 @@ export interface FileThumbnailProps
   previewContent?: React.ReactNode
   /** Externally generated thumbnail image URL. */
   previewImageUrl?: string | null
+  /** Called when the browser image preview fails to load. */
+  onPreviewError?: () => void
   /** Explicit preview lifecycle. */
   state?: FileThumbnailState
 }
@@ -42,6 +46,7 @@ export function FileThumbnail({
   previewClassName,
   previewContent,
   previewImageUrl,
+  onPreviewError,
   state,
   style,
   ...props
@@ -83,6 +88,7 @@ export function FileThumbnail({
           alt={file.name}
           className={previewClassName}
           fallback={<Fallback extension={extension} />}
+          onError={onPreviewError}
         />
       ) : (
         <Fallback extension={extension} />
@@ -102,9 +108,7 @@ export function resolveFileThumbnailState({
   return hasPreview ? "loaded" : "error"
 }
 
-export function hasRenderablePreviewContent(
-  value: React.ReactNode
-): boolean {
+export function hasRenderablePreviewContent(value: React.ReactNode): boolean {
   return value !== null && value !== undefined && value !== false
 }
 
@@ -113,25 +117,40 @@ function ThumbnailImage({
   alt,
   className,
   fallback,
+  onError,
 }: {
   url: string
   alt: string
   className?: string
   fallback: React.ReactNode
+  onError?: () => void
 }) {
   const [loaded, setLoaded] = React.useState(false)
   const [failed, setFailed] = React.useState(false)
+  const didReportErrorRef = React.useRef(false)
+
+  const reportError = React.useCallback(() => {
+    if (didReportErrorRef.current) return
+    didReportErrorRef.current = true
+    onError?.()
+  }, [onError])
 
   // A cached image can finish loading before React attaches `onLoad`, so the
   // event never fires and the fade-in would stay stuck at opacity 0. Catch that
   // case from the ref by checking `complete` once the element mounts.
-  const imgRef = React.useCallback((img: HTMLImageElement | null) => {
-    if (!img) return
-    if (img.complete) {
-      if (img.naturalWidth > 0) setLoaded(true)
-      else setFailed(true)
-    }
-  }, [])
+  const imgRef = React.useCallback(
+    (img: HTMLImageElement | null) => {
+      if (!img) return
+      if (img.complete) {
+        if (img.naturalWidth > 0) setLoaded(true)
+        else {
+          setFailed(true)
+          reportError()
+        }
+      }
+    },
+    [reportError]
+  )
 
   if (failed) return <>{fallback}</>
 
@@ -145,7 +164,10 @@ function ThumbnailImage({
         loading="lazy"
         decoding="async"
         onLoad={() => setLoaded(true)}
-        onError={() => setFailed(true)}
+        onError={() => {
+          setFailed(true)
+          reportError()
+        }}
         className={cn(
           "absolute inset-0 size-full object-cover transition-opacity duration-300",
           loaded ? "opacity-100" : "opacity-0",
@@ -166,10 +188,7 @@ export function FileThumbnailShimmer() {
     if (!highlight || prefersReducedMotion || !highlight.animate) return
 
     const animation = highlight.animate(
-      [
-        { backgroundPosition: "200% 0" },
-        { backgroundPosition: "-200% 0" },
-      ],
+      [{ backgroundPosition: "200% 0" }, { backgroundPosition: "-200% 0" }],
       {
         duration: 1600,
         iterations: Infinity,

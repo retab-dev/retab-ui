@@ -12,10 +12,10 @@ export function parseEnumValueInput(value: string): JSONSchema7Type {
     const parsedValue = JSON.parse(trimmedValue)
     if (isJsonSchemaValue(parsedValue)) return parsedValue
   } catch {
-    return value
+    return trimmedValue
   }
 
-  return value
+  return trimmedValue
 }
 
 function isJsonSchemaValue(value: unknown): value is JSONSchema7Type {

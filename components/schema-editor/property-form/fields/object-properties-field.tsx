@@ -18,6 +18,10 @@ import { Button } from "@/components/ui-retab/button"
 import { Input } from "@/components/ui-retab/input"
 import { Label } from "@/components/ui-retab/label"
 
+function getPropertyNamesKey(propertyNames: string[]) {
+  return propertyNames.join("\0")
+}
+
 export function ObjectPropertiesField({
   schemaNode,
   schemaContext,
@@ -38,15 +42,10 @@ export function ObjectPropertiesField({
 }) {
   const [newPropertyName, setNewPropertyName] = React.useState("")
   const propertyNames = listObjectPropertyNames(schemaNode)
-  const propertyNamesKey = propertyNames.join("\0")
+  const propertyNamesKey = getPropertyNamesKey(propertyNames)
+  const localPropertyNamesKeyRef = React.useRef<string | null>(null)
   const [draftPropertyIdsByName, setDraftPropertyIdsByName] = React.useState(
-    () =>
-      Object.fromEntries(
-        propertyNames.map((propertyName, index) => [
-          propertyName,
-          `draft-property-${index}`,
-        ])
-      )
+    () => createDraftPropertyIdsByName(propertyNames)
   )
   const nextDraftPropertyIdRef = React.useRef(propertyNames.length)
   const trimmedNewPropertyName = newPropertyName.trim()
@@ -59,8 +58,18 @@ export function ObjectPropertiesField({
     : null
 
   React.useEffect(() => {
+    if (localPropertyNamesKeyRef.current === propertyNamesKey) {
+      localPropertyNamesKeyRef.current = null
+      return
+    }
     setNewPropertyName("")
   }, [propertyNamesKey, schemaContext.originalName])
+
+  const preserveNewPropertyNameForLocalProperties = (
+    nextPropertyNames: string[]
+  ) => {
+    localPropertyNamesKeyRef.current = getPropertyNamesKey(nextPropertyNames)
+  }
 
   const createDraftPropertyId = () => {
     const propertyId = `draft-property-${nextDraftPropertyIdRef.current}`
@@ -76,7 +85,7 @@ export function ObjectPropertiesField({
       const propertyId = current[oldPropertyName] ?? createDraftPropertyId()
       const next = { ...current }
       delete next[oldPropertyName]
-      next[propertyName] = propertyId
+      setRecordValue(next, propertyName, propertyId)
       return next
     })
   }
@@ -91,10 +100,15 @@ export function ObjectPropertiesField({
 
   const addProperty = () => {
     if (!trimmedNewPropertyName || newPropertyNameError) return
-    setDraftPropertyIdsByName((current) => ({
-      ...current,
-      [trimmedNewPropertyName]: createDraftPropertyId(),
-    }))
+    preserveNewPropertyNameForLocalProperties([
+      ...propertyNames,
+      trimmedNewPropertyName,
+    ])
+    setDraftPropertyIdsByName((current) => {
+      const next = { ...current }
+      setRecordValue(next, trimmedNewPropertyName, createDraftPropertyId())
+      return next
+    })
     onChange(
       replaceObjectProperty({
         schemaNode,
@@ -119,6 +133,16 @@ export function ObjectPropertiesField({
           ...schemaContext,
           siblingNames: propertyNames,
           originalName: propertyName,
+          fieldPath: [
+            schemaContext.fieldPath ?? schemaContext.originalName,
+            propertyId,
+          ].join("."),
+          resetKey: [
+            schemaContext.resetKey ??
+              schemaContext.fieldPath ??
+              schemaContext.originalName,
+            propertyId,
+          ].join("."),
         }
 
         return (
@@ -136,6 +160,11 @@ export function ObjectPropertiesField({
                     originalName: propertyName,
                   })
                   if (nameError) return
+                  preserveNewPropertyNameForLocalProperties(
+                    propertyNames.map((name) =>
+                      name === propertyName ? nextName : name
+                    )
+                  )
                   renameDraftPropertyId(propertyName, nextName)
                   onChange(
                     renameObjectProperty({
@@ -160,6 +189,9 @@ export function ObjectPropertiesField({
                 disabled={disabled}
                 aria-label={`Remove field ${propertyName}`}
                 onClick={() => {
+                  preserveNewPropertyNameForLocalProperties(
+                    propertyNames.filter((name) => name !== propertyName)
+                  )
                   removeDraftPropertyId(propertyName)
                   onChange(removeObjectProperty({ schemaNode, propertyName }))
                 }}
@@ -215,4 +247,29 @@ export function ObjectPropertiesField({
       </div>
     </div>
   )
+}
+
+function createDraftPropertyIdsByName(propertyNames: string[]) {
+  const draftPropertyIdsByName: Record<string, string> = {}
+  propertyNames.forEach((propertyName, index) => {
+    setRecordValue(
+      draftPropertyIdsByName,
+      propertyName,
+      `draft-property-${index}`
+    )
+  })
+  return draftPropertyIdsByName
+}
+
+function setRecordValue<T>(
+  record: Record<string, T>,
+  key: string,
+  value: T
+) {
+  Object.defineProperty(record, key, {
+    value,
+    enumerable: true,
+    configurable: true,
+    writable: true,
+  })
 }

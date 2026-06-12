@@ -65,19 +65,6 @@ describe("convert: semantic round-trip", () => {
       { type: "object", properties: { x: { type: ["string", "null"] } } },
     ],
     [
-      "enum of strings + descriptions",
-      {
-        type: "object",
-        properties: {
-          c: {
-            type: "string",
-            enum: ["a", "b"],
-            "x-enumDescriptions": { a: "first" },
-          } as JSONSchema7,
-        },
-      },
-    ],
-    [
       "enum of numbers",
       {
         type: "object",
@@ -239,6 +226,52 @@ describe("convert: semantic round-trip", () => {
       { type: "object", properties: { a: { type: "string" } }, required: [] },
     ],
     [
+      "required names without properties are preserved",
+      { type: "object", required: ["external"] },
+    ],
+    [
+      "required names outside properties are preserved in source order",
+      {
+        type: "object",
+        properties: { a: { type: "string" } },
+        required: ["external", "a"],
+      },
+    ],
+    [
+      "property names with leading/trailing spaces",
+      {
+        type: "object",
+        properties: { " a ": { type: "string" }, " ": { type: "number" } },
+        required: [" a ", " "],
+      },
+    ],
+    [
+      "empty string property names imported from a schema",
+      {
+        type: "object",
+        properties: { "": { type: "string" }, named: { type: "number" } },
+        required: ["", "named"],
+      },
+    ],
+    [
+      "property names that collide with object prototype keys",
+      JSON.parse(
+        '{"type":"object","properties":{"__proto__":{"type":"string"},"constructor":{"type":"number"}},"required":["__proto__","constructor"]}'
+      ) as JSONSchema7,
+    ],
+    [
+      "definition names that collide with object prototype keys",
+      JSON.parse(
+        '{"type":"object","$defs":{"__proto__":{"type":"string"},"constructor":{"type":"number"}},"properties":{"a":{"$ref":"#/$defs/__proto__"},"b":{"$ref":"#/$defs/constructor"}}}'
+      ) as JSONSchema7,
+    ],
+    [
+      "unmodeled keywords that collide with object prototype keys",
+      JSON.parse(
+        '{"type":"object","__proto__":{"safe":true},"constructor":{"safe":true},"toString":{"safe":true},"properties":{"field":{"type":"string","__proto__":{"nested":true},"constructor":{"nested":true},"toString":{"nested":true}}}}'
+      ) as JSONSchema7,
+    ],
+    [
       "deeply nested mixed",
       {
         type: "object",
@@ -276,6 +309,34 @@ describe("convert: semantic round-trip", () => {
       expect(semantic(schema)).toEqual(schema)
     })
   }
+})
+
+describe("convert: dropped extensions", () => {
+  it("drops x-enumDescriptions on projection", () => {
+    const input: JSONSchema7 = {
+      type: "object",
+      properties: {
+        status: {
+          type: "string",
+          enum: ["draft", "paid"],
+          "x-enumDescriptions": {
+            draft: "Draft status",
+            paid: "Paid status",
+          },
+        } as JSONSchema7,
+      },
+    }
+
+    expect(semantic(input)).toEqual({
+      type: "object",
+      properties: {
+        status: {
+          type: "string",
+          enum: ["draft", "paid"],
+        },
+      },
+    })
+  })
 })
 
 describe("convert: byte-exact round-trip (key order preserved)", () => {

@@ -9,11 +9,13 @@ import {
   cachedThumbnailResource,
   createThumbnailArtifactCache,
   shortName,
+  thumbnailFileMeta,
   timed,
   useThumbnailResource,
   withThumbnailDecodeSlot,
   withThumbnailFormatError,
-  type ThumbnailCacheEntry,
+  type ThumbnailBytesContent,
+  type ThumbnailFileMeta,
 } from "@/components/document-thumbnail/cache"
 import type { ThumbnailAnchor } from "@/components/document-thumbnail/types"
 import { ANCHOR_CORNER } from "@/components/document-thumbnail/types"
@@ -37,20 +39,21 @@ const pptxCache = createThumbnailArtifactCache<PptxFirstSlideSource>({
 })
 
 function getPptxFirstSlide(
-  resource: ViewerResource,
-  cacheKey: string
+  meta: ThumbnailFileMeta,
+  content: ThumbnailBytesContent,
+  thumbnailKey: string
 ): Promise<PptxFirstSlideSource> {
-  return cachedThumbnailResource(pptxCache, cacheKey, () =>
+  return cachedThumbnailResource(pptxCache, thumbnailKey, () =>
     withThumbnailDecodeSlot(() =>
       withThumbnailFormatError(
         "pptx",
         "parse_failed",
-        resource.fileName,
+        meta.fileName,
         "Failed to parse presentation thumbnail",
         () =>
-          timed(`pptx:total ${shortName(resource)}`, async () => {
+          timed(`pptx:total ${shortName(meta)}`, async () => {
             const [buf, mod] = await Promise.all([
-              resource.readArrayBuffer(),
+              content.readBytes(),
               loadPptx(),
             ])
             const { PPTXViewer } = mod
@@ -66,7 +69,7 @@ function getPptxFirstSlide(
               await withThumbnailFormatError(
                 "pptx",
                 "render_failed",
-                resource.fileName,
+                meta.fileName,
                 "Failed to render presentation thumbnail",
                 () => viewer.renderSlide(0, canvas, { scale, quality: "high" })
               )
@@ -115,27 +118,37 @@ interface JSZipLike {
 
 export function PptxFirstSlide({
   resource,
-  cacheKey,
+  thumbnailKey,
   anchor,
 }: {
   resource: ViewerResource
-  cacheKey: string
+  thumbnailKey: string
   anchor: ThumbnailAnchor
 }) {
-  const source = useThumbnailResource(getPptxFirstSlide(resource, cacheKey))
+  const source = useThumbnailResource(
+    getPptxFirstSlide(
+      thumbnailFileMeta(resource),
+      resource.content,
+      thumbnailKey
+    )
+  )
+  const [renderError, setRenderError] = React.useState<unknown>(null)
   const baseW = source.baseWidth || 960
   const baseH = source.baseHeight || 720
   const FILL_PX = 1024
   const scale = FILL_PX / Math.min(baseW, baseH)
 
+  if (renderError) throw renderError
+
   const canvasRef = React.useCallback(
     (canvas: HTMLCanvasElement | null) => {
       if (!canvas) return
-      let cancelled = false
-      source.render(canvas, scale).catch(() => {})
+      let active = true
+      source.render(canvas, scale).catch((error: unknown) => {
+        if (active) setRenderError(error)
+      })
       return () => {
-        cancelled = true
-        void cancelled
+        active = false
       }
     },
     [source, scale]

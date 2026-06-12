@@ -5,17 +5,24 @@ import * as React from "react"
 import type { ViewerResource } from "@/lib/viewer-resource"
 import {
   getThumbnailText,
+  thumbnailFileMeta,
   useThumbnailResource,
 } from "@/components/document-thumbnail/cache"
 
 export function TextFirstLines({
   resource,
-  cacheKey,
+  thumbnailKey,
 }: {
   resource: ViewerResource
-  cacheKey: string
+  thumbnailKey: string
 }) {
-  const raw = useThumbnailResource(getThumbnailText(resource, cacheKey))
+  const raw = useThumbnailResource(
+    getThumbnailText(
+      thumbnailFileMeta(resource),
+      resource.content,
+      thumbnailKey
+    )
+  )
   const text = React.useMemo(() => {
     if (/\.(json|json5|ndjson|jsonl)$/i.test(resource.fileName)) {
       try {

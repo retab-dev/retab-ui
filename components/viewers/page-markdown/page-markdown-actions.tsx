@@ -3,6 +3,7 @@
 import * as React from "react"
 import { Check, Copy, Download, MoreHorizontal } from "lucide-react"
 
+import { createTextDownloadAction } from "@/lib/viewer-download"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -10,6 +11,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  useViewerDownloadTrigger,
+  type ViewerDownloadErrorHandler,
+} from "@/components/ui/viewer-download"
 
 type CopyStatus = "idle" | "copied" | "failed"
 
@@ -17,20 +22,37 @@ function scheduleCopyStatusReset(
   timeoutRef: React.MutableRefObject<number | null>,
   setStatus: React.Dispatch<React.SetStateAction<CopyStatus>>
 ) {
-  timeoutRef.current = window.setTimeout(() => setStatus("idle"), 1200)
+  timeoutRef.current = window.setTimeout(() => {
+    timeoutRef.current = null
+    setStatus("idle")
+  }, 1200)
+}
+
+function clearCopyStatusReset(
+  timeoutRef: React.MutableRefObject<number | null>
+) {
+  if (timeoutRef.current === null) return
+  window.clearTimeout(timeoutRef.current)
+  timeoutRef.current = null
 }
 
 export function MarkdownActionButtons({
   text,
   fileName,
+  onDownloadError,
 }: {
   text: string
   fileName: string
+  onDownloadError?: ViewerDownloadErrorHandler
 }) {
   return (
     <>
       <CopyMarkdownButton text={text} />
-      <DownloadMarkdownButton text={text} fileName={fileName} />
+      <DownloadMarkdownButton
+        text={text}
+        fileName={fileName}
+        onDownloadError={onDownloadError}
+      />
     </>
   )
 }
@@ -38,11 +60,14 @@ export function MarkdownActionButtons({
 export function MarkdownActionsMenu({
   text,
   fileName,
+  onDownloadError,
 }: {
   text: string
   fileName: string
+  onDownloadError?: ViewerDownloadErrorHandler
 }) {
   const copy = useCopyMarkdown(text)
+  const download = useDownloadMarkdown(text, fileName, onDownloadError)
 
   return (
     <DropdownMenu modal={false}>
@@ -66,7 +91,10 @@ export function MarkdownActionsMenu({
               ? "Copy failed"
               : "Copy markdown"}
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => downloadMarkdown(text, fileName)}>
+        <DropdownMenuItem
+          disabled={download.isPending}
+          onClick={download.trigger}
+        >
           <Download />
           Download markdown
         </DropdownMenuItem>
@@ -99,10 +127,14 @@ function CopyMarkdownButton({ text }: { text: string }) {
 function DownloadMarkdownButton({
   text,
   fileName,
+  onDownloadError,
 }: {
   text: string
   fileName: string
+  onDownloadError?: ViewerDownloadErrorHandler
 }) {
+  const download = useDownloadMarkdown(text, fileName, onDownloadError)
+
   return (
     <Button
       variant="ghost"
@@ -110,7 +142,8 @@ function DownloadMarkdownButton({
       className="size-7"
       aria-label="Download markdown"
       title="Download markdown"
-      onClick={() => downloadMarkdown(text, fileName)}
+      loading={download.isPending}
+      onClick={download.trigger}
     >
       <Download />
     </Button>
@@ -120,31 +153,42 @@ function DownloadMarkdownButton({
 function useCopyMarkdown(text: string) {
   const [status, setStatus] = React.useState<CopyStatus>("idle")
   const timeoutRef = React.useRef<number | null>(null)
+  const isMountedRef = React.useRef(true)
+  const copyAttemptRef = React.useRef(0)
 
-  React.useEffect(
-    () => () => {
-      if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current)
-    },
-    []
-  )
+  React.useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+      clearCopyStatusReset(timeoutRef)
+    }
+  }, [])
 
   const write = React.useCallback(() => {
-    if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current)
+    clearCopyStatusReset(timeoutRef)
+    const copyAttempt = copyAttemptRef.current + 1
+    copyAttemptRef.current = copyAttempt
 
-    const writeText = navigator.clipboard?.writeText
-    if (typeof writeText !== "function") {
-      setStatus("failed")
-      scheduleCopyStatusReset(timeoutRef, setStatus)
-      return
-    }
+    const isCurrentCopyAttempt = () =>
+      isMountedRef.current && copyAttemptRef.current === copyAttempt
 
     try {
-      Promise.resolve(writeText.call(navigator.clipboard, text)).then(
+      const clipboard = navigator.clipboard
+      const writeText = clipboard?.writeText
+      if (typeof writeText !== "function") {
+        setStatus("failed")
+        scheduleCopyStatusReset(timeoutRef, setStatus)
+        return
+      }
+
+      Promise.resolve(writeText.call(clipboard, text)).then(
         () => {
+          if (!isCurrentCopyAttempt()) return
           setStatus("copied")
           scheduleCopyStatusReset(timeoutRef, setStatus)
         },
         () => {
+          if (!isCurrentCopyAttempt()) return
           setStatus("failed")
           scheduleCopyStatusReset(timeoutRef, setStatus)
         }
@@ -158,8 +202,27 @@ function useCopyMarkdown(text: string) {
   return { status, write }
 }
 
-export function createMarkdownBlob(text: string): Blob {
-  return new Blob([text], { type: "text/markdown;charset=utf-8" })
+function useDownloadMarkdown(
+  text: string,
+  fileName: string | undefined,
+  onError: ViewerDownloadErrorHandler | undefined
+) {
+  const action = React.useMemo(
+    () => downloadMarkdownAction(text, fileName),
+    [fileName, text]
+  )
+  const { pendingActionId, triggerDownload } = useViewerDownloadTrigger({
+    onError,
+    resetKey: action,
+  })
+  const trigger = React.useCallback(() => {
+    triggerDownload(action)
+  }, [action, triggerDownload])
+
+  return {
+    isPending: pendingActionId === action.id,
+    trigger,
+  }
 }
 
 export function normalizeMarkdownFileName(fileName?: string): string {
@@ -177,16 +240,13 @@ export function normalizeMarkdownFileName(fileName?: string): string {
   return `${trimmed}.md`
 }
 
-export function downloadMarkdown(text: string, fileName?: string) {
-  const url = URL.createObjectURL(createMarkdownBlob(text))
-  const anchor = document.createElement("a")
-  anchor.href = url
-  anchor.download = normalizeMarkdownFileName(fileName)
-  try {
-    document.body.append(anchor)
-    anchor.click()
-  } finally {
-    anchor.remove()
-    window.setTimeout(() => URL.revokeObjectURL(url), 0)
-  }
+export function downloadMarkdownAction(text: string, fileName?: string) {
+  return createTextDownloadAction({
+    id: "download-markdown",
+    label: "Download markdown",
+    text,
+    fileName: normalizeMarkdownFileName(fileName),
+    mimeType: "text/markdown;charset=utf-8",
+    origin: "derived",
+  })
 }

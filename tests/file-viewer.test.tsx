@@ -1,14 +1,18 @@
 // @vitest-environment jsdom
 import { readFileSync } from "node:fs"
 import * as React from "react"
-import { cleanup, render, screen, waitFor } from "@testing-library/react"
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { inferCsvDialect } from "@/lib/csv"
 import { createViewerResource } from "@/lib/viewer-resource"
+import {
+  ResourceError,
+  ViewerFormatError,
+  ViewerStateError,
+} from "@/registry/new-york-v4/lib/viewer-errors"
 import * as FileViewerModule from "@/registry/new-york-v4/ui/file-viewer"
 import { FileViewer } from "@/registry/new-york-v4/ui/file-viewer"
-import { isAbortError } from "@/registry/new-york-v4/ui/file-viewer-async"
 import {
   descriptorResetKey,
   detectCategory,
@@ -18,12 +22,26 @@ import { createMarkdownHtmlCache } from "@/registry/new-york-v4/ui/file-viewer-m
 import {
   createTextLoader,
   isSameTextView,
-  textKeyForFile,
+  textKeyForContent,
 } from "@/registry/new-york-v4/ui/file-viewer-text-loader"
 import { createTextResourceCache } from "@/registry/new-york-v4/ui/file-viewer-text-resource"
+import { toFileViewerTextError } from "@/registry/new-york-v4/ui/file-viewer-text-errors"
+import { isAbortError } from "@/registry/new-york-v4/ui/viewer-abortable-request"
+
+const docxRouteMock = vi.hoisted(() => ({
+  props: [] as Array<Record<string, unknown>>,
+}))
+
+vi.mock("@/components/ui/docx-viewer", () => ({
+  DocxResourceViewer: (props: Record<string, unknown>) => {
+    docxRouteMock.props.push(props)
+    return "Mock DOCX viewer"
+  },
+}))
 
 afterEach(() => {
   cleanup()
+  docxRouteMock.props.length = 0
   vi.restoreAllMocks()
   vi.unstubAllGlobals()
 })
@@ -36,11 +54,13 @@ function urlSource(url: string, fileName?: string, mimeType?: string) {
   return { kind: "url" as const, url, fileName, mimeType }
 }
 
-function textSubscription(src: string, mode: "stream" | "full" = "stream") {
+function textSubscription(url: string, mode: "stream" | "full" = "stream") {
   const controller = new AbortController()
+  const resource = createViewerResource(urlSource(url))
   return {
-    textKey: textKeyForFile(src, mode),
-    src,
+    textKey: textKeyForContent(resource.content, mode),
+    content: resource.content,
+    fileName: resource.fileName,
     mode,
     signal: controller.signal,
     controller,
@@ -89,8 +109,8 @@ describe("FileViewer detection helpers", () => {
     expect(
       createViewerResource(
         urlSource("/files/signed?id=1", "report.pdf", "text/plain")
-      ).getDirectLoad()
-    ).toEqual({ kind: "url", url: "/files/signed?id=1" })
+      ).content.directUrl
+    ).toBe("/files/signed?id=1")
     expect(descriptorResetKey(descriptor)).toBe(
       "url:/files/signed?id=1\u0000report.pdf\u0000text/plain\u0000pdf"
     )
@@ -123,20 +143,25 @@ describe("FileViewer detection helpers", () => {
       fileName: "inline.log",
     })
     expect(descriptor.identityKey).toBe("text:inline content")
-    expect(createViewerResource(source).getDirectLoad()).toEqual({
-      kind: "none",
-    })
+    expect(createViewerResource(source).content.directUrl).toBeNull()
   })
 
   it("separates text cache entries by loading mode", () => {
-    expect(textKeyForFile("/same-url", "stream")).not.toBe(
-      textKeyForFile("/same-url", "full")
+    const resource = createViewerResource(urlSource("/same-url"))
+    expect(textKeyForContent(resource.content, "stream")).not.toBe(
+      textKeyForContent(resource.content, "full")
     )
   })
 
   it("identifies stale text requests by request key", () => {
-    const oldKey = textKeyForFile("/old.log", "stream")
-    const newKey = textKeyForFile("/new.log", "stream")
+    const oldKey = textKeyForContent(
+      createViewerResource(urlSource("/old.log")).content,
+      "stream"
+    )
+    const newKey = textKeyForContent(
+      createViewerResource(urlSource("/new.log")).content,
+      "stream"
+    )
 
     expect(isSameTextView(oldKey, oldKey)).toBe(true)
     expect(isSameTextView(newKey, oldKey)).toBe(false)
@@ -163,7 +188,7 @@ describe("FileViewer detection helpers", () => {
     expect(source).not.toContain("./file-viewer-markdown-viewer")
   })
 
-  it("routes Blob DOCX sources through the canonical source viewer", () => {
+  it("routes Blob DOCX sources through the canonical resource viewer", () => {
     const source = readFileSync(
       "registry/new-york-v4/ui/file-viewer.tsx",
       "utf8"
@@ -173,8 +198,58 @@ describe("FileViewer detection helpers", () => {
       'category === "docx" && descriptor.source.kind === "blob"'
     )
     expect(source).toContain(
-      "<DocxViewer\n          source={descriptor.source}"
+      "<DocxResourceViewer\n          resource={resource}"
     )
+    expect(source).not.toContain("<DocxViewer")
+    expect(source).not.toContain("source={descriptor.source}")
+  })
+
+  it("keeps route-owned document adapters resource-first", () => {
+    const fileViewerSource = readFileSync(
+      "registry/new-york-v4/ui/file-viewer.tsx",
+      "utf8"
+    )
+    const chromeSource = readFileSync(
+      "registry/new-york-v4/ui/file-viewer-chrome.tsx",
+      "utf8"
+    )
+    const csvAdapterSource = readFileSync(
+      "registry/new-york-v4/ui/file-viewer-csv-viewer.tsx",
+      "utf8"
+    )
+
+    expect(fileViewerSource).toContain("ViewerFallback")
+    expect(fileViewerSource).toContain("UnsupportedCard")
+    expect(fileViewerSource).not.toContain("ViewerResourceFallback")
+    expect(fileViewerSource).not.toContain("UnsupportedResourceCard")
+    expect(fileViewerSource).not.toMatch(
+      /<(?:ViewerFallback|UnsupportedCard)\b(?:(?!\/>)[\s\S])*\b(?:category|fileName|url|downloadAction)=/
+    )
+    expect(fileViewerSource).not.toMatch(
+      /<CsvDocViewer\b(?:(?!\/>)[\s\S])*\b(?:source|fileName|mimeType)=/
+    )
+    expect(fileViewerSource).toContain("PdfResourceViewer")
+    expect(fileViewerSource).toContain("ImageResourceViewer")
+    expect(fileViewerSource).toContain("DocxResourceViewer")
+    expect(fileViewerSource).toContain("PptxResourceViewer")
+    expect(fileViewerSource).toContain("XlsxResourceViewer")
+    expect(fileViewerSource).not.toMatch(
+      /<(?:PdfViewer|ImageViewer|DocxViewer|PptxViewer|XlsxViewer)\b/
+    )
+    expect(fileViewerSource).not.toMatch(
+      /<(?:PdfResourceViewer|ImageResourceViewer|DocxResourceViewer|PptxResourceViewer|XlsxResourceViewer)\b(?:(?!\/>)[\s\S])*\bsource=/
+    )
+    expect(chromeSource).toContain("export function ResourceDocShell")
+    expect(chromeSource).not.toContain("export function DocShell")
+    expect(chromeSource).not.toContain("ViewerResourceFallback")
+    expect(chromeSource).not.toContain("UnsupportedResourceCard")
+    expect(chromeSource).not.toContain("fileName: string")
+    expect(chromeSource).not.toContain("url?: string")
+    expect(chromeSource).not.toContain("downloadAction?:")
+    expect(chromeSource).not.toContain("createHrefDownloadAction")
+    expect(csvAdapterSource).toMatch(/resource: ViewerResource/)
+    expect(csvAdapterSource).not.toMatch(/\bfileName:\s*string\b/)
+    expect(csvAdapterSource).not.toMatch(/\bmimeType\?:\s*string\b/)
   })
 
   it("keeps public runtime exports minimal", () => {
@@ -183,11 +258,11 @@ describe("FileViewer detection helpers", () => {
 
   it("keeps abort subscriptions in the neutral async module", () => {
     const asyncSource = readFileSync(
-      "registry/new-york-v4/ui/file-viewer-async.ts",
+      "registry/new-york-v4/ui/viewer-abortable-request.ts",
       "utf8"
     )
-    const resourceCacheSource = readFileSync(
-      "registry/new-york-v4/ui/file-viewer-resource-cache.ts",
+    const lruCacheSource = readFileSync(
+      "registry/new-york-v4/ui/viewer-lru-cache.ts",
       "utf8"
     )
     const textResourceSource = readFileSync(
@@ -200,8 +275,8 @@ describe("FileViewer detection helpers", () => {
     )
 
     expect(asyncSource).toContain("subscribeToAbortableRequest")
-    expect(resourceCacheSource).not.toContain("AbortController")
-    expect(resourceCacheSource).not.toContain("subscribeToAbortableRequest")
+    expect(lruCacheSource).not.toContain("AbortController")
+    expect(lruCacheSource).not.toContain("subscribeToAbortableRequest")
     expect(textResourceSource).not.toContain("./file-viewer-text-loader")
     expect(textResourceSource).toContain("subscribeToAbortableRequest")
     expect(textLoaderSource).toContain("subscribeToAbortableRequest")
@@ -213,7 +288,7 @@ describe("FileViewer text cache", () => {
     const cache = createTextLoader(1)
     vi.stubGlobal(
       "fetch",
-      vi.fn(() => Promise.resolve(response("content\n", { status: 206 })))
+      vi.fn(() => Promise.resolve(response("content\n", { status: 200 })))
     )
 
     const first = textSubscription("/first.log")
@@ -238,7 +313,7 @@ describe("FileViewer text cache", () => {
     const request = textSubscription("/retry.log", "full")
 
     await expect(cache.loadFirstChunk(request)).rejects.toThrow(
-      "Failed to load file: 500"
+      "Failed to load resource: 500"
     )
     expect(cache.size()).toBe(0)
 
@@ -317,7 +392,7 @@ describe("FileViewer text cache", () => {
     await expect(firstPromise).rejects.toMatchObject({ name: "AbortError" })
     expect(fetchSignal?.aborted).toBe(false)
 
-    pending.resolve(response("shared\n", { status: 206 }))
+    pending.resolve(response("shared\n", { status: 200 }))
     await expect(secondPromise).resolves.toMatchObject({ text: "shared\n" })
   })
 })
@@ -332,7 +407,7 @@ describe("FileViewer text resources", () => {
     vi.stubGlobal("fetch", fetchMock)
 
     await expect(cache.load(textSubscription("/retry.txt"))).rejects.toThrow(
-      "Failed to load file: 500"
+      "Failed to load resource: 500"
     )
     await expect(cache.load(textSubscription("/retry.txt"))).resolves.toBe(
       "ok\n"
@@ -350,7 +425,7 @@ describe("FileViewer text resources", () => {
 
     await expect(
       markdownCache.load(textSubscription("/retry.md"))
-    ).rejects.toThrow("Failed to load file: 500")
+    ).rejects.toThrow("Failed to load resource: 500")
     await expect(
       markdownCache.load(textSubscription("/retry.md"))
     ).resolves.toContain("<h1>Title</h1>")
@@ -380,7 +455,7 @@ describe("FileViewer text resources", () => {
     const markdownCache = createMarkdownHtmlCache({
       maxEntries: 1,
       textCache: {
-        load: vi.fn(async ({ src }) => `# ${src}\n`),
+        load: vi.fn(async ({ content }) => `# ${content.directUrl}\n`),
         clear() {},
         size() {
           return 0
@@ -437,6 +512,66 @@ describe("FileViewer text resources", () => {
 })
 
 describe("FileViewer text rendering", () => {
+  it("renders DOCX files through the lazy resource viewer", async () => {
+    render(<FileViewer source={urlSource("/report.docx", "report.docx")} />)
+
+    expect(await screen.findByText("Mock DOCX viewer")).toBeTruthy()
+    expect(docxRouteMock.props).toHaveLength(1)
+    const docxResource = docxRouteMock.props[0]?.resource as {
+      content: { directUrl: string | null }
+      fileName: string
+      sourceKind: string
+    }
+    expect(docxResource).toMatchObject({
+      fileName: "report.docx",
+      sourceKind: "url",
+    })
+    expect(docxResource.content).toMatchObject({
+      directUrl: "/report.docx",
+    })
+    expect("source" in docxRouteMock.props[0]!).toBe(false)
+  })
+
+  it("maps text route fallback failures through the FileViewer text boundary", () => {
+    const resourceError = new ResourceError({
+      kind: "fetch_failed",
+      message: "Network failed.",
+    })
+    const formatError = new ViewerFormatError({
+      format: "text",
+      kind: "bounds",
+      message: "Too large.",
+    })
+    const stateError = new ViewerStateError({
+      format: "file",
+      kind: "stale_resource",
+      message: "Stale.",
+    })
+
+    expect(toFileViewerTextError(resourceError)).toBe(resourceError)
+    expect(toFileViewerTextError(formatError)).toBe(formatError)
+    expect(toFileViewerTextError(stateError)).toBe(stateError)
+
+    const nonError = { reason: "loader returned a sentinel" }
+    const mappedNonError = toFileViewerTextError(nonError)
+    expect(mappedNonError).toBeInstanceOf(ViewerFormatError)
+    expect(mappedNonError).toMatchObject({
+      format: "text",
+      kind: "load_failed",
+      message: "Failed to load text preview.",
+      cause: nonError,
+    })
+
+    const genericError = new Error("plain loader failure")
+    const mappedGenericError = toFileViewerTextError(genericError)
+    expect(mappedGenericError).toBeInstanceOf(ViewerFormatError)
+    expect(mappedGenericError).toMatchObject({
+      format: "text",
+      kind: "load_failed",
+      cause: genericError,
+    })
+  })
+
   it("loads and renders text content under React StrictMode", async () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {})
     try {
@@ -444,7 +579,7 @@ describe("FileViewer text rendering", () => {
         "fetch",
         vi.fn(() =>
           Promise.resolve(
-            response("first log line\nsecond log line\n", { status: 206 })
+            response("first log line\nsecond log line\n", { status: 200 })
           )
         )
       )
@@ -468,7 +603,7 @@ describe("FileViewer text rendering", () => {
     try {
       vi.stubGlobal(
         "fetch",
-        vi.fn(() => Promise.resolve(response("content\n", { status: 206 })))
+        vi.fn(() => Promise.resolve(response("content\n", { status: 200 })))
       )
 
       const longName = "very-long-file-name-that-should-truncate-in-toolbar.log"
@@ -489,7 +624,7 @@ describe("FileViewer text rendering", () => {
       const oldResponse = deferred<Response>()
       const fetchMock = vi.fn((src: string, init?: RequestInit) => {
         if (src === "/old.log") return oldResponse.promise
-        return Promise.resolve(response("new\n", { status: 206 }))
+        return Promise.resolve(response("new\n", { status: 200 }))
       })
       vi.stubGlobal("fetch", fetchMock)
 
@@ -505,7 +640,7 @@ describe("FileViewer text rendering", () => {
       const oldSignal = fetchMock.mock.calls[0]?.[1]?.signal
       expect(oldSignal?.aborted).toBe(true)
 
-      oldResponse.resolve(response("old\n", { status: 206 }))
+      oldResponse.resolve(response("old\n", { status: 200 }))
       await Promise.resolve()
       expect(screen.queryByText("old")).toBeNull()
     } finally {
@@ -565,16 +700,16 @@ describe("FileViewer text rendering", () => {
       const fetchMock = vi
         .fn()
         .mockResolvedValueOnce(response("bad", { status: 500 }))
-        .mockResolvedValueOnce(response("good\n", { status: 206 }))
+        .mockResolvedValueOnce(response("good\n", { status: 200 }))
       vi.stubGlobal("fetch", fetchMock)
 
       const { rerender } = render(
         <FileViewer source={urlSource("/bad.log", "bad.log")} />
       )
 
-      expect(await screen.findByText("Couldn't load this file.")).toBeTruthy()
+      expect(await screen.findByText("Failed to load file: 500.")).toBeTruthy()
       expect(screen.getByRole("alert").getAttribute("data-error-message")).toBe(
-        "Failed to load file: 500"
+        "Failed to load resource: 500"
       )
       expect(
         screen.getByRole("link", { name: "Download" }).getAttribute("download")
@@ -583,10 +718,46 @@ describe("FileViewer text rendering", () => {
       rerender(<FileViewer source={urlSource("/good.log", "good.log")} />)
 
       expect(await screen.findByTitle("good.log")).toBeTruthy()
-      expect(screen.queryByText("Couldn't load this file.")).toBeNull()
+      expect(screen.queryByText("Failed to load file: 500.")).toBeNull()
     } finally {
       consoleError.mockRestore()
     }
+  })
+
+  it("renders inline markdown text sources through the resource route", async () => {
+    await act(async () => {
+      render(
+        <FileViewer
+          source={{
+            kind: "text",
+            text: "# Inline note\n\nBody copy",
+            fileName: "note.md",
+            mimeType: "text/markdown",
+          }}
+        />
+      )
+    })
+
+    expect(await screen.findByText("Inline note")).toBeTruthy()
+    expect(screen.getByText("Body copy")).toBeTruthy()
+    expect(screen.getByRole("button", { name: "Download" })).toBeTruthy()
+  })
+
+  it("renders inline CSV text sources through the resource route", async () => {
+    render(
+      <FileViewer
+        source={{
+          kind: "text",
+          text: "name,value\nalpha,42\n",
+          fileName: "data.csv",
+          mimeType: "text/csv",
+        }}
+      />
+    )
+
+    expect(await screen.findByText("alpha")).toBeTruthy()
+    expect(screen.getByText("42")).toBeTruthy()
+    expect(screen.getByRole("button", { name: "Download" })).toBeTruthy()
   })
 
   it("renders an unsupported fallback with a download link", () => {

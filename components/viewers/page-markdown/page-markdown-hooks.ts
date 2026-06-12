@@ -35,6 +35,13 @@ export function useMarkdownPageMeasurement({
     (element: HTMLDivElement | null) => {
       if (!element) return
 
+      if (typeof ResizeObserver !== "function") {
+        if (element.offsetHeight > 0) {
+          setMeasurement({ key, height: element.offsetHeight })
+        }
+        return
+      }
+
       const observer = new ResizeObserver(() => {
         if (element.offsetHeight > 0) {
           setMeasurement({ key, height: element.offsetHeight })
@@ -58,12 +65,41 @@ export function useMarkdownPageMeasurement({
 
 export function usePagePaneSync({
   onMarkdownPageChange,
+  pageCount,
+  resetKey,
 }: {
   onMarkdownPageChange?: (page: number) => void
+  pageCount?: number
+  resetKey?: string
 }) {
   const [state, setState] = React.useState(initialPagePaneState)
   const stateRef = React.useRef(state)
   const pendingRef = React.useRef<PendingPageScroll | null>(null)
+  const pageCountLimit = Math.max(1, pageCount ?? 1)
+
+  React.useEffect(() => {
+    const nextState = initialPagePaneState()
+    stateRef.current = nextState
+    pendingRef.current = null
+    setState(nextState)
+  }, [resetKey])
+
+  React.useEffect(() => {
+    const currentState = stateRef.current
+    const nextPage = Math.min(currentState.page, pageCountLimit)
+    const nextState =
+      nextPage === currentState.page
+        ? currentState
+        : { ...currentState, page: nextPage, version: currentState.version + 1 }
+    const currentPending = pendingRef.current
+
+    stateRef.current = nextState
+    pendingRef.current =
+      currentPending && currentPending.page <= pageCountLimit
+        ? currentPending
+        : null
+    setState(nextState)
+  }, [pageCountLimit])
 
   React.useEffect(() => {
     stateRef.current = state

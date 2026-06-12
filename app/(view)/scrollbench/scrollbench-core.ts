@@ -35,6 +35,47 @@ export interface ScenarioResult {
   distancePx: number
 }
 
+export interface ImageRenderTiming {
+  durationMs: number
+  cached?: boolean
+  status?: "rendered" | "cancelled" | "failed"
+}
+
+export interface DurationTimingResult {
+  count: number
+  totalMs: number
+  averageMs: number
+  p50Ms: number
+  p95Ms: number
+  maxMs: number
+}
+
+export interface ImageRenderingResult {
+  count: number
+  rendered: number
+  cached: number
+  failed: number
+  cancelled: number
+  totalMs: number
+  averageMs: number
+  p50Ms: number
+  p95Ms: number
+  maxMs: number
+  cachedTiming: DurationTimingResult
+  uncachedTiming: DurationTimingResult
+}
+
+export interface SourceLoadTimingResult {
+  byteLength: number
+  slideCount: number
+  totalMs: number
+  readBytesMs: number
+  importPptxMs: number
+  readSlideSizeMs: number
+  loadFileMs: number
+  inspectMs: number
+}
+
 export interface ScrollBenchResult {
   viewer: ViewerId
   measuredAt: string
@@ -44,6 +85,8 @@ export interface ScrollBenchResult {
     maxScrollTop: number
   }
   scenarios: ScenarioResult[]
+  imageRendering?: ImageRenderingResult
+  sourceLoad?: SourceLoadTimingResult
 }
 
 export const VIEWERS: readonly ViewerOption[] = [
@@ -51,7 +94,8 @@ export const VIEWERS: readonly ViewerOption[] = [
     id: "pdf",
     label: "PDF",
     sample: "big-911-report.pdf",
-    scrollerSelector: '[data-slot="pdf-viewer"] [data-slot="scroll-area-viewport"]',
+    scrollerSelector:
+      '[data-slot="pdf-viewer"] [data-slot="scroll-area-viewport"]',
   },
   {
     id: "csv",
@@ -109,6 +153,7 @@ export const SCENARIOS: readonly ScenarioDefinition[] = [
 export const DEFAULT_VIEWER: ViewerId = "pdf"
 export const FRAME_COUNT = 120
 export const MIN_STEP_PX = 16
+const MAX_FRAME_COUNT = 10_000
 
 export function normalizeViewerId(value: string | null | undefined): ViewerId {
   if (VIEWERS.some((viewer) => viewer.id === value)) return value as ViewerId
@@ -131,6 +176,9 @@ export function getScenarioStepPx({
   scenario: ScenarioDefinition
 }) {
   if (!Number.isFinite(clientHeight) || clientHeight <= 0) return MIN_STEP_PX
+  if (!Number.isFinite(scenario.stepRatio) || scenario.stepRatio <= 0) {
+    return MIN_STEP_PX
+  }
   const stepPx = Math.round(clientHeight * scenario.stepRatio)
   return Number.isFinite(stepPx) && stepPx > 0
     ? Math.max(MIN_STEP_PX, stepPx)
@@ -156,7 +204,7 @@ export function buildScrollTargets({
   ) {
     return []
   }
-  const safeFrameCount = Math.floor(frameCount)
+  const safeFrameCount = Math.min(Math.floor(frameCount), MAX_FRAME_COUNT)
 
   return Array.from({ length: safeFrameCount }, (_, frameIndex) =>
     Math.round(bouncePosition((frameIndex + 1) * stepPx, maxScrollTop))
@@ -197,6 +245,61 @@ export function summarizeFrameDurations({
     frames: validFrameDurations.length,
     stepPx: Number.isFinite(stepPx) && stepPx > 0 ? stepPx : 0,
     distancePx: Number.isFinite(distancePx) && distancePx > 0 ? distancePx : 0,
+  }
+}
+
+export function summarizeImageRenderTimings(
+  timings: readonly ImageRenderTiming[]
+): ImageRenderingResult {
+  const validTimings = timings.filter(
+    (timing) => Number.isFinite(timing.durationMs) && timing.durationMs >= 0
+  )
+  const durations = validTimings
+    .map((timing) => timing.durationMs)
+    .sort((a, b) => a - b)
+  const totalMs = durations.reduce((sum, duration) => sum + duration, 0)
+  const count = validTimings.length
+
+  return {
+    count,
+    rendered: validTimings.filter(
+      (timing) => timing.status === undefined || timing.status === "rendered"
+    ).length,
+    cached: validTimings.filter((timing) => timing.cached === true).length,
+    failed: validTimings.filter((timing) => timing.status === "failed").length,
+    cancelled: validTimings.filter((timing) => timing.status === "cancelled")
+      .length,
+    totalMs,
+    averageMs: count === 0 ? 0 : totalMs / count,
+    p50Ms: percentile(durations, 0.5),
+    p95Ms: percentile(durations, 0.95),
+    maxMs: durations[durations.length - 1] ?? 0,
+    cachedTiming: summarizeDurationTimings(
+      validTimings.filter((timing) => timing.cached === true)
+    ),
+    uncachedTiming: summarizeDurationTimings(
+      validTimings.filter((timing) => timing.cached !== true)
+    ),
+  }
+}
+
+function summarizeDurationTimings(
+  timings: readonly Pick<ImageRenderTiming, "durationMs">[]
+): DurationTimingResult {
+  const durations = timings
+    .map((timing) => timing.durationMs)
+    .filter((duration) => Number.isFinite(duration) && duration >= 0)
+    .sort((a, b) => a - b)
+  const totalMs = durations.reduce((sum, duration) => sum + duration, 0)
+  const count = durations.length
+
+  return {
+    count,
+    totalMs,
+    averageMs: count === 0 ? 0 : totalMs / count,
+    p50Ms: percentile(durations, 0.5),
+    p95Ms: percentile(durations, 0.95),
+    maxMs: durations[durations.length - 1] ?? 0,
   }
 }
 

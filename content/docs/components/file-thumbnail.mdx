@@ -78,6 +78,13 @@ If a document renderer fails transiently and you want to retry the same
 key, thumbnail category, anchor, and `retryKey` into explicit cache/render keys,
 so first-unit renderers can retry without inventing a different source.
 
+When a document renderer fails, `DocumentThumbnail` keeps the compact muted
+thumbnail fallback but projects the failure through the same canonical viewer
+error model used by full viewers. The user-safe message is exposed through
+accessibility/title text, diagnostic `data-error-*` attributes are attached to
+the shell, and `onError(error, info)` receives both the raw error and
+`ViewerErrorInfo`.
+
 ## Useful Behaviors
 
 - Accepts externally generated thumbnails as an image URL or custom React content.
@@ -98,9 +105,12 @@ so first-unit renderers can retry without inventing a different source.
 | `previewClassName`   | `string`                           | `-`     | No       |
 | `previewContent`     | `React.ReactNode`                  | `-`     | No       |
 | `previewImageUrl`    | `string \| null`                   | `-`     | No       |
+| `onPreviewError`     | `() => void`                       | `-`     | No       |
 | `state`              | `"loading" \| "loaded" \| "error"` | `-`     | No       |
 
 Use `state` when the thumbnail pipeline is still loading or has failed.
+Use `onPreviewError` when an image URL preview should report browser load
+failure to a parent renderer.
 
 `FileThumbnail` also forwards standard `div` props such as `aria-label`,
 `data-*`, event handlers, and `style`. Its internal `data-slot="file-thumbnail"`
@@ -120,6 +130,7 @@ so the component can fall back to `previewImageUrl` or the muted fallback surfac
 | `previewAspectRatio` | `number`                                     | `3 / 4`      | No       |
 | `anchor`             | `"top-left" \| "top-right" \| "bottom-left"` | `"top-left"` | No       |
 | `retryKey`           | `React.Key`                                  | `-`          | No       |
+| `onError`            | `(error, info) => void`                      | `-`          | No       |
 
 Use `as` only when the file name or MIME type is missing, wrong, or intentionally
 viewed as another supported category. `source` accepts URL, Blob, and inline text

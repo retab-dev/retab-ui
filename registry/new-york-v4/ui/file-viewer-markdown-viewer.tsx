@@ -3,15 +3,24 @@
 import * as React from "react"
 import type * as DOMPurifyNS from "dompurify"
 
-import { abortError, isAbortError, promiseForSignal } from "./file-viewer-async"
-import { DocShell, useZoom, ZoomActions } from "./file-viewer-chrome"
-import { baseName, timed } from "./file-viewer-core"
-import { lruGet, lruSet } from "./file-viewer-resource-cache"
+import type {
+  ViewerContentIdentity,
+  ViewerResource,
+} from "@/lib/viewer-resource"
+
+import { ResourceDocShell, useZoom, ZoomActions } from "./file-viewer-chrome"
+import { timed } from "./file-viewer-core"
 import {
   textResource,
   type TextResourceCache,
   type TextResourceSubscription,
 } from "./file-viewer-text-resource"
+import {
+  abortError,
+  isAbortError,
+  promiseForSignal,
+} from "./viewer-abortable-request"
+import { lruGet, lruSet } from "./viewer-lru-cache"
 
 type Sanitizer = typeof DOMPurifyNS.default
 let sanitizerPromise: Promise<Sanitizer> | null = null
@@ -55,12 +64,12 @@ export function createMarkdownHtmlCache({
 } = {}): MarkdownHtmlCache {
   const entries = new Map<string, MarkdownHtmlEntry>()
 
-  function remove(src: string) {
-    entries.delete(src)
+  function remove(contentKey: string) {
+    entries.delete(contentKey)
   }
 
-  function entryFor(src: string) {
-    let entry = lruGet(entries, src)
+  function entryFor(contentKey: string) {
+    let entry = lruGet(entries, contentKey)
     if (!entry) {
       entry = {
         subscriberPromises: new WeakMap(),
@@ -68,7 +77,7 @@ export function createMarkdownHtmlCache({
       }
       lruSet(
         entries,
-        src,
+        contentKey,
         entry,
         (_key, dropped) => {
           dropped.textController?.abort()
@@ -79,8 +88,17 @@ export function createMarkdownHtmlCache({
     return entry
   }
 
-  function renderHtml(src: string, text: string) {
-    return timed(`markdown:render ${baseName(src)}`, () =>
+  function renderHtml({
+    content,
+    fileName,
+    text,
+  }: {
+    content: ViewerContentIdentity
+    fileName: string
+    text: string
+  }) {
+    const contentKey = content.key
+    return timed(`markdown:render ${fileName}`, () =>
       Promise.all([import("marked"), loadSanitizer()]).then(
         async ([{ marked }, DOMPurify]) => {
           const dirty = String(await marked.parse(text, { gfm: true }))
@@ -88,16 +106,17 @@ export function createMarkdownHtmlCache({
         }
       )
     ).catch((error: unknown) => {
-      remove(src)
+      remove(contentKey)
       throw error
     })
   }
 
   return {
-    load({ src, signal }) {
+    load({ content, fileName, signal }) {
       if (signal.aborted) return Promise.reject(abortError())
 
-      const entry = entryFor(src)
+      const contentKey = content.key
+      const entry = entryFor(contentKey)
 
       return promiseForSignal(entry.subscriberPromises, signal, () => {
         entry.subscribers.add(signal)
@@ -116,7 +135,7 @@ export function createMarkdownHtmlCache({
             cleanup()
             if (!entry.html && entry.subscribers.size === 0) {
               entry.textController?.abort()
-              remove(src)
+              remove(contentKey)
             }
             reject(abortError())
           }
@@ -143,7 +162,7 @@ export function createMarkdownHtmlCache({
 
           entry.textController ??= new AbortController()
           entry.text ??= textCache
-            .load({ src, signal: entry.textController.signal })
+            .load({ content, fileName, signal: entry.textController.signal })
             .catch((error: unknown) => {
               entry.text = undefined
               entry.textController = undefined
@@ -153,7 +172,7 @@ export function createMarkdownHtmlCache({
           entry.text
             .then((text) => {
               if (signal.aborted) throw abortError()
-              entry.html ??= renderHtml(src, text)
+              entry.html ??= renderHtml({ content, fileName, text })
               return entry.html
             })
             .then(
@@ -167,7 +186,7 @@ export function createMarkdownHtmlCache({
                 if (done) return
                 done = true
                 cleanup()
-                if (!entry.html && !isAbortError(error)) remove(src)
+                if (!entry.html && !isAbortError(error)) remove(contentKey)
                 reject(error)
               }
             )
@@ -195,24 +214,27 @@ export function loadMarkdownHtml(
 }
 
 export function MarkdownDocViewer({
-  src,
-  fileName,
+  resource,
   className,
   bare,
   descriptorSignal,
 }: {
-  src: string
-  fileName: string
+  resource: ViewerResource
   className?: string
   bare?: boolean
   descriptorSignal: AbortSignal
 }) {
-  const html = React.use(loadMarkdownHtml({ src, signal: descriptorSignal }))
+  const html = React.use(
+    loadMarkdownHtml({
+      content: resource.content,
+      fileName: resource.fileName,
+      signal: descriptorSignal,
+    })
+  )
   const { scale, zoom, reset } = useZoom()
   return (
-    <DocShell
-      fileName={fileName}
-      src={src}
+    <ResourceDocShell
+      resource={resource}
       className={className}
       bare={bare}
       actions={<ZoomActions scale={scale} zoom={zoom} reset={reset} />}
@@ -227,7 +249,7 @@ export function MarkdownDocViewer({
           dangerouslySetInnerHTML={{ __html: html }}
         />
       </div>
-    </DocShell>
+    </ResourceDocShell>
   )
 }
 

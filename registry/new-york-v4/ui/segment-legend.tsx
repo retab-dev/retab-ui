@@ -7,7 +7,11 @@ import {
   scopeSegmentInteraction,
   type SegmentInteraction,
 } from "@/lib/segment-interaction"
-import { segmentDisplayLabel, type Segment } from "@/lib/segments"
+import {
+  segmentDisplayLabel,
+  segmentPageCount,
+  type Segment,
+} from "@/lib/segments"
 import { cn } from "@/lib/utils"
 
 /** How the legend attaches to the document surface. */
@@ -101,8 +105,10 @@ export function SegmentLegend({
   const [uncontrolledShowUnused, setUncontrolledShowUnused] =
     React.useState(defaultShowUnused)
   const reveal = showUnused ?? uncontrolledShowUnused
-  const visible = reveal ? segments : segments.filter((s) => s.pages.length > 0)
-  const hasHidden = segments.some((s) => s.pages.length === 0)
+  const visible = reveal
+    ? segments
+    : segments.filter((s) => segmentPageCount(s.pages) > 0)
+  const hasHidden = segments.some((s) => segmentPageCount(s.pages) === 0)
   const canToggleUnused = showUnusedToggle && hasHidden
   const scopedInteraction = React.useMemo(
     () =>
@@ -118,6 +124,17 @@ export function SegmentLegend({
   const d = DENSITY[density]
   const dockSide = side ?? (orientation === "vertical" ? "left" : "top")
   const isVertical = orientation === "vertical"
+  // Only a positive integer column count drives the grid; anything else
+  // (0, negative, fractional, Infinity, NaN) would emit invalid
+  // `grid-template-columns` and silently collapse the row into one column,
+  // so fall back to the wrapping flex layout instead.
+  const gridColumns =
+    !isVertical &&
+    columns != null &&
+    Number.isInteger(columns) &&
+    columns > 0
+      ? columns
+      : null
 
   const chrome = {
     bar: cn("bg-background px-3 py-2", DOCK_BORDER[dockSide]),
@@ -148,17 +165,17 @@ export function SegmentLegend({
             d.gap,
             isVertical
               ? "flex flex-col"
-              : columns
+              : gridColumns
                 ? "grid"
                 : "flex flex-wrap items-center"
           )}
           style={
-            !isVertical && columns
-              ? { gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }
+            gridColumns
+              ? { gridTemplateColumns: `repeat(${gridColumns}, minmax(0, 1fr))` }
               : undefined
           }
         >
-          {visible.map((segment) => {
+          {visible.map((segment, segmentPosition) => {
             const { state, eventHandlers, ariaProps, dataProps } =
               getSegmentSurfaceProps({
                 segment,
@@ -169,7 +186,7 @@ export function SegmentLegend({
             const label = segmentDisplayLabel(segment.label)
             return (
               <button
-                key={segment.id}
+                key={`${segment.id}-${segmentPosition}`}
                 type="button"
                 {...ariaProps}
                 {...dataProps}

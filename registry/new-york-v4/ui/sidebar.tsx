@@ -73,6 +73,48 @@ function isEditableShortcutTarget(target: EventTarget | null): boolean {
   )
 }
 
+function getSidebarButtonType({
+  defaultElement = "button",
+  render,
+}: {
+  defaultElement?: "a" | "button"
+  render: unknown
+}): React.ButtonHTMLAttributes<HTMLButtonElement>["type"] | undefined {
+  if (
+    (!render && defaultElement === "button") ||
+    (React.isValidElement(render) && render.type === "button")
+  ) {
+    return "button"
+  }
+
+  return undefined
+}
+
+function getSidebarRender(
+  render: useRender.RenderProp | undefined
+): useRender.RenderProp | undefined {
+  if (typeof render !== "function") return render
+
+  return (
+    props: React.HTMLAttributes<HTMLElement>,
+    state: Record<string, unknown>
+  ): React.ReactElement<unknown> => {
+    const element = render(props, state)
+
+    if (
+      React.isValidElement<React.ButtonHTMLAttributes<HTMLButtonElement>>(
+        element
+      ) &&
+      element.type === "button" &&
+      element.props.type == null
+    ) {
+      return React.cloneElement(element, { type: "button" })
+    }
+
+    return element
+  }
+}
+
 const sidebarMenuButtonVariants = cva(
   "peer/menu-button flex w-full items-center gap-2 overflow-hidden rounded-lg p-2 text-left text-sm ring-sidebar-ring outline-hidden transition-[width,height,padding] group-has-data-[sidebar=menu-action]/menu-item:pe-8 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[active=true]:bg-sidebar-accent data-[active=true]:font-medium data-[active=true]:text-sidebar-accent-foreground data-[state=open]:hover:bg-sidebar-accent data-[state=open]:hover:text-sidebar-accent-foreground [&>span:last-child]:truncate [&>svg]:shrink-0 [&>svg:not([class*='size-'])]:size-4",
   {
@@ -345,6 +387,7 @@ export function Sidebar({
 export function SidebarTrigger({
   className,
   onClick,
+  render,
   ...props
 }: React.ComponentProps<typeof Button>): React.ReactElement {
   const { toggleSidebar } = useSidebar()
@@ -360,7 +403,9 @@ export function SidebarTrigger({
           toggleSidebar()
         }
       }}
+      render={getSidebarRender(render)}
       size="icon"
+      type={getSidebarButtonType({ render })}
       variant="ghost"
       {...props}
     >
@@ -551,12 +596,13 @@ export function SidebarGroupAction({
     ),
     "data-sidebar": "group-action",
     "data-slot": "sidebar-group-action",
+    type: getSidebarButtonType({ render }),
   }
 
   return useRender({
     defaultTagName: "button",
     props: mergeProps(defaultProps, props),
-    render,
+    render: getSidebarRender(render),
   })
 }
 
@@ -623,6 +669,7 @@ export function SidebarMenuButton({
     (asChild && React.isValidElement(children)
       ? (children as React.ReactElement<Record<string, unknown>>)
       : undefined)
+  const buttonRender = getSidebarRender(renderValue)
 
   const defaultProps = {
     children: asChild && React.isValidElement(children) ? undefined : children,
@@ -631,6 +678,7 @@ export function SidebarMenuButton({
     "data-sidebar": "menu-button",
     "data-size": size,
     "data-slot": "sidebar-menu-button",
+    type: getSidebarButtonType({ render: renderValue }),
   }
 
   const buttonProps = mergeProps<"button">(defaultProps, props)
@@ -638,7 +686,7 @@ export function SidebarMenuButton({
   const buttonElement = useRender({
     defaultTagName: "button",
     props: buttonProps,
-    render: renderValue,
+    render: buttonRender,
   })
 
   if (!tooltip) {
@@ -658,9 +706,9 @@ export function SidebarMenuButton({
       />
       <TooltipPopup
         align="center"
-        hidden={state !== "collapsed" || isMobile}
         side="right"
         {...tooltip}
+        hidden={state !== "collapsed" || isMobile}
       />
     </Tooltip>
   )
@@ -689,12 +737,13 @@ export function SidebarMenuAction({
     ),
     "data-sidebar": "menu-action",
     "data-slot": "sidebar-menu-action",
+    type: getSidebarButtonType({ render }),
   }
 
   return useRender({
     defaultTagName: "button",
     props: mergeProps<"button">(defaultProps, props),
-    render,
+    render: getSidebarRender(render),
   })
 }
 
@@ -808,6 +857,7 @@ export function SidebarMenuSubButton({
     (asChild && React.isValidElement(children)
       ? (children as React.ReactElement<Record<string, unknown>>)
       : undefined)
+  const buttonRender = getSidebarRender(renderValue)
   const defaultProps = {
     children: asChild && React.isValidElement(children) ? undefined : children,
     className: cn(
@@ -822,11 +872,12 @@ export function SidebarMenuSubButton({
     "data-sidebar": "menu-sub-button",
     "data-size": size,
     "data-slot": "sidebar-menu-sub-button",
+    type: getSidebarButtonType({ defaultElement: "a", render: renderValue }),
   }
 
   return useRender({
     defaultTagName: "a",
     props: mergeProps<"a">(defaultProps, props),
-    render: renderValue,
+    render: buttonRender,
   })
 }

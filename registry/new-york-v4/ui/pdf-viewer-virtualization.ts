@@ -7,33 +7,66 @@ import {
 
 export function usePdfPageVirtualization({
   layout,
+  resetKey,
   viewportElement,
 }: {
   layout: PdfPageLayoutModel
+  resetKey?: unknown
   viewportElement: HTMLDivElement | null
 }) {
   const measureFrameRef = React.useRef(0)
-  const [visiblePageNumbers, setVisiblePageNumbers] = React.useState<
-    readonly number[]
-  >(() => [1])
+  const lastMeasuredResetKeyRef = React.useRef<unknown>(resetKey)
+  const getCurrentVisiblePageNumbers = React.useCallback(
+    () =>
+      getPdfVisiblePageNumbers({
+        layout,
+        scrollTop: Object.is(lastMeasuredResetKeyRef.current, resetKey)
+          ? (viewportElement?.scrollTop ?? 0)
+          : 0,
+        viewportHeight: viewportElement?.clientHeight ?? 0,
+      }),
+    [layout, resetKey, viewportElement]
+  )
+  const [state, setState] = React.useState<{
+    layout: PdfPageLayoutModel
+    resetKey: unknown
+    visiblePageNumbers: readonly number[]
+  }>(() => ({
+    layout,
+    resetKey,
+    visiblePageNumbers: getPdfVisiblePageNumbers({
+      layout,
+      scrollTop: viewportElement?.scrollTop ?? 0,
+      viewportHeight: viewportElement?.clientHeight ?? 0,
+    }),
+  }))
+  const visiblePageNumbers =
+    Object.is(state.layout, layout) && Object.is(state.resetKey, resetKey)
+      ? state.visiblePageNumbers
+      : getPdfVisiblePageNumbers({
+          layout,
+          scrollTop: Object.is(state.resetKey, resetKey)
+            ? (viewportElement?.scrollTop ?? 0)
+            : 0,
+          viewportHeight: viewportElement?.clientHeight ?? 0,
+        })
 
   const measureVisiblePagesNow = React.useCallback(() => {
     measureFrameRef.current = 0
-    const scrollTop = viewportElement?.scrollTop ?? 0
-    const viewportHeight = viewportElement?.clientHeight ?? 0
-    const nextPageNumbers = getPdfVisiblePageNumbers({
-      layout,
-      scrollTop,
-      viewportHeight,
-    })
-    setVisiblePageNumbers((previousPageNumbers) =>
-      arePageNumbersEqual(previousPageNumbers, nextPageNumbers)
-        ? previousPageNumbers
-        : nextPageNumbers
+    const nextPageNumbers = getCurrentVisiblePageNumbers()
+    lastMeasuredResetKeyRef.current = resetKey
+    setState((previousState) =>
+      Object.is(previousState.layout, layout) &&
+      Object.is(previousState.resetKey, resetKey) &&
+      arePageNumbersEqual(previousState.visiblePageNumbers, nextPageNumbers)
+        ? previousState
+        : { layout, resetKey, visiblePageNumbers: nextPageNumbers }
     )
-  }, [layout, viewportElement])
+  }, [getCurrentVisiblePageNumbers, layout, resetKey])
   const measureVisiblePagesNowRef = React.useRef(measureVisiblePagesNow)
-  measureVisiblePagesNowRef.current = measureVisiblePagesNow
+  React.useLayoutEffect(() => {
+    measureVisiblePagesNowRef.current = measureVisiblePagesNow
+  }, [measureVisiblePagesNow])
 
   const measureVisiblePages = React.useCallback(() => {
     if (measureFrameRef.current) return

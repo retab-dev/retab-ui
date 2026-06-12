@@ -9,7 +9,7 @@ export interface VisibleColumn extends FixedGridColumn<FieldMetadata> {
   fieldMetadata?: FieldMetadata
 }
 
-export interface DataCellProps {
+export interface JsonTableCellProps {
   column: VisibleColumn
   projectedCell?: ProjectedCell
   schema: JSONSchema7

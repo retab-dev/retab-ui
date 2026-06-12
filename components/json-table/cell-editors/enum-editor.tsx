@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils"
-import { CellDisplay } from "@/components/json-table/cell-display"
 import type { CellEditorProps } from "@/components/json-table/cell-editors/editor-types"
 import { fieldFocusId } from "@/components/json-table/cell-editors/editor-types"
+import { DataCell } from "@/components/ui/data-cell"
 import {
   Select,
   SelectContent,
@@ -9,6 +9,57 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui-retab/select"
+
+const NULL_SELECT_VALUE = "__json_table_null__"
+
+function enumOptionValue(index: number): string {
+  return `option:${index}`
+}
+
+function areJsonValuesEqual(left: unknown, right: unknown): boolean {
+  if (Object.is(left, right)) return true
+  if (typeof left !== typeof right) return false
+  if (left === null || right === null) return false
+  if (typeof left !== "object" || typeof right !== "object") return false
+
+  if (Array.isArray(left) || Array.isArray(right)) {
+    if (!Array.isArray(left) || !Array.isArray(right)) return false
+    return (
+      left.length === right.length &&
+      left.every((item, index) => areJsonValuesEqual(item, right[index]))
+    )
+  }
+
+  const leftRecord = left as Record<string, unknown>
+  const rightRecord = right as Record<string, unknown>
+  const leftKeys = Object.keys(leftRecord)
+  const rightKeys = Object.keys(rightRecord)
+  return (
+    leftKeys.length === rightKeys.length &&
+    leftKeys.every((key) =>
+      Object.prototype.hasOwnProperty.call(rightRecord, key)
+    ) &&
+    leftKeys.every((key) =>
+      areJsonValuesEqual(leftRecord[key], rightRecord[key])
+    )
+  )
+}
+
+function getEnumSelectValue(value: unknown, enumValues: unknown[]): string {
+  if (value === null || value === undefined) return NULL_SELECT_VALUE
+  const matchingIndex = enumValues.findIndex((enumValue) =>
+    areJsonValuesEqual(enumValue, value)
+  )
+  return matchingIndex === -1 ? String(value) : enumOptionValue(matchingIndex)
+}
+
+function getEnumCommitValue(newValue: string, enumValues: unknown[]): unknown {
+  if (!newValue.startsWith("option:")) return newValue
+  const optionIndex = Number(newValue.slice("option:".length))
+  return Number.isInteger(optionIndex) && optionIndex in enumValues
+    ? enumValues[optionIndex]
+    : newValue
+}
 
 export function EnumEditor({
   identity,
@@ -21,13 +72,11 @@ export function EnumEditor({
 
   if (!overlays.showInput) {
     return (
-      <CellDisplay className="items-start py-2">
-        {effectiveValue === null ||
-        effectiveValue === undefined ||
-        effectiveValue === "__null__"
-          ? "—"
-          : String(effectiveValue)}
-      </CellDisplay>
+      <DataCell
+        kind="text"
+        value={effectiveValue == null ? "" : String(effectiveValue)}
+        className="items-start py-2"
+      />
     )
   }
 
@@ -39,27 +88,15 @@ export function EnumEditor({
         focus.setFocusedField(open ? fieldFocusId(identity) : null)
         focus.setIsInputFocused(open)
       }}
-      value={
-        effectiveValue === null || effectiveValue === undefined
-          ? "__null__"
-          : String(effectiveValue)
-      }
+      value={getEnumSelectValue(effectiveValue, fieldMetadata.enumValues)}
       disabled={!field.isEditable}
       onValueChange={(newValue) => {
-        if (newValue === "__null__" && fieldMetadata.isNullable) {
+        if (newValue === NULL_SELECT_VALUE && fieldMetadata.isNullable) {
           commit.onCommit(null)
           return
         }
 
-        if (fieldMetadata.kind === "integer") {
-          const parsed = parseInt(newValue, 10)
-          commit.onCommit(Number.isNaN(parsed) ? null : parsed)
-        } else if (fieldMetadata.kind === "number") {
-          const parsed = parseFloat(newValue)
-          commit.onCommit(Number.isNaN(parsed) ? null : parsed)
-        } else {
-          commit.onCommit(newValue)
-        }
+        commit.onCommit(getEnumCommitValue(newValue, fieldMetadata.enumValues))
       }}
     >
       <SelectTrigger
@@ -85,29 +122,32 @@ export function EnumEditor({
       <SelectContent position="popper" className="z-[60]">
         {fieldMetadata.isNullable && (
           <SelectItem
-            key="__null__"
-            value="__null__"
+            key={NULL_SELECT_VALUE}
+            value={NULL_SELECT_VALUE}
             className="text-xs text-muted-foreground"
           >
             <em>No selection</em>
           </SelectItem>
         )}
         {fieldMetadata.enumValues
+          .map((option, optionIndex) => ({ option, optionIndex }))
           .filter(
-            (enumVal) =>
-              enumVal !== undefined &&
-              enumVal !== null &&
-              !(typeof enumVal === "string" && enumVal === "")
+            ({ option }) =>
+              option !== undefined &&
+              option !== null &&
+              !(typeof option === "string" && option === "")
           )
-          .map((option) => (
-            <SelectItem
-              key={String(option)}
-              value={String(option)}
-              className="text-xs"
-            >
-              {String(option)}
-            </SelectItem>
-          ))}
+          .map(({ option, optionIndex }) => {
+            return (
+              <SelectItem
+                key={enumOptionValue(optionIndex)}
+                value={enumOptionValue(optionIndex)}
+                className="text-xs"
+              >
+                {String(option)}
+              </SelectItem>
+            )
+          })}
       </SelectContent>
     </Select>
   )

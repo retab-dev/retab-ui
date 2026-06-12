@@ -1,5 +1,6 @@
 import type * as React from "react"
 
+import type { ViewerErrorInfo } from "@/lib/viewer-errors"
 import type { FileCategory, ViewerSource } from "@/lib/viewer-source"
 
 /**
@@ -17,6 +18,8 @@ export interface DocumentThumbnailProps {
   anchor?: ThumbnailAnchor
   /** Change this to retry a failed render without changing the source. */
   retryKey?: React.Key
+  /** Receives the raw failure and canonical, user-safe error projection. */
+  onError?: (error: unknown, info: ViewerErrorInfo) => void
 }
 
 /** Absolute-position classes that pin a covered element to its anchor corner. */

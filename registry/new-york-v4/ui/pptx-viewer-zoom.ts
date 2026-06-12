@@ -2,7 +2,7 @@
 
 import * as React from "react"
 
-import { clamp } from "./pptx-viewer-core"
+import { normalizePptxScale } from "./pptx-viewer-core"
 
 type PptxZoomState =
   | { mode: "fit" }
@@ -57,8 +57,4 @@ export function usePptxZoom({
   )
 
   return { scaleControlsDisabled, setViewerScale, zoomScale }
-}
-
-function normalizePptxScale(scale: number) {
-  return clamp(Number.isFinite(scale) ? scale : 1, 0.25, 5)
 }

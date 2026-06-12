@@ -1,25 +1,51 @@
 import type * as Pdfjs from "pdfjs-dist"
 import type { PDFDocumentProxy, PDFPageProxy } from "pdfjs-dist"
 
-import { ResourceError, ViewerFormatError } from "@/lib/viewer-errors"
-import { type ViewerResource } from "@/lib/viewer-resource"
+import {
+  isResourceError,
+  isViewerFormatError,
+  ViewerFormatError,
+  type ViewerFormatErrorMapperOptions,
+} from "@/lib/viewer-errors"
+import type {
+  ViewerContentBytes,
+  ViewerContentDirectUrl,
+  ViewerContentIdentity,
+} from "@/lib/viewer-resource"
 
 const PDF_CACHE_MAX = 6
 
+type PdfDocumentContent = ViewerContentIdentity &
+  ViewerContentDirectUrl &
+  ViewerContentBytes
+
 type DocumentCacheEntry = {
+  loadKey: string
   promise: Promise<PDFDocumentProxy>
   consumers: number
   lastUsedAt: number
-  status: "pending" | "fulfilled" | "rejected"
+  retainRejected: boolean
+  status: "pending" | "resolved" | "rejected"
   document?: PDFDocumentProxy
+  error?: unknown
+}
+
+type PageCacheEntry = {
+  promise: Promise<PDFPageProxy>
+  retainRejected: boolean
+  status: "pending" | "resolved" | "rejected"
+  page?: PDFPageProxy
+  error?: unknown
+}
+
+type PdfResourceOptions = {
+  retainRejected?: boolean
 }
 
 let pdfjsPromise: Promise<typeof Pdfjs> | null = null
 const documentCache = new Map<string, DocumentCacheEntry>()
-const pageCache = new WeakMap<
-  PDFDocumentProxy,
-  Map<number, Promise<PDFPageProxy>>
->()
+const pageCache = new WeakMap<PDFDocumentProxy, Map<number, PageCacheEntry>>()
+const detachedDocumentEntries = new Set<DocumentCacheEntry>()
 let pruneTimer = 0
 
 function loadPdfjs() {
@@ -60,126 +86,307 @@ function pruneDocumentCache() {
     }
     if (!evictKey || !evictEntry) return
     documentCache.delete(evictKey)
-    if (evictEntry.status === "fulfilled") {
-      void evictEntry.document?.destroy().catch(() => {})
+    if (evictEntry.status === "resolved") {
+      if (!hasDetachedDocument(evictEntry.document)) {
+        destroyPdfDocument(evictEntry.document)
+      }
     }
   }
 }
 
 export function getDocumentResource(
-  resource: ViewerResource
+  content: PdfDocumentContent,
+  options: PdfResourceOptions = {}
 ): Promise<PDFDocumentProxy> {
-  const resourceKey = resource.keys.load
-  const cachedDocumentEntry = documentCache.get(resourceKey)
+  return getDocumentCacheEntry(content, options).promise
+}
+
+export function readDocumentResource(
+  content: PdfDocumentContent
+): PDFDocumentProxy {
+  const documentEntry = getDocumentCacheEntry(content, {
+    retainRejected: true,
+  })
+  documentEntry.lastUsedAt = Date.now()
+  if (documentEntry.status === "pending") throw documentEntry.promise
+  if (documentEntry.status === "rejected") throw documentEntry.error
+  return documentEntry.document!
+}
+
+function getDocumentCacheEntry(
+  content: PdfDocumentContent,
+  options: PdfResourceOptions
+) {
+  const loadKey = content.key
+  const cachedDocumentEntry = documentCache.get(loadKey)
   if (cachedDocumentEntry) {
-    cachedDocumentEntry.lastUsedAt = Date.now()
-    return cachedDocumentEntry.promise
+    if (options.retainRejected) {
+      cachedDocumentEntry.retainRejected = true
+    }
+    if (cachedDocumentEntry.status === "rejected" && !options.retainRejected) {
+      documentCache.delete(loadKey)
+    } else {
+      cachedDocumentEntry.lastUsedAt = Date.now()
+      return cachedDocumentEntry
+    }
   }
 
   const documentEntry: DocumentCacheEntry = {
+    loadKey,
     promise: Promise.resolve(null as never),
     consumers: 0,
     lastUsedAt: Date.now(),
+    retainRejected: Boolean(options.retainRejected),
     status: "pending",
   }
   documentEntry.promise = loadPdfjs()
-    .then((pdfjs) => getPdfDocument(resource, pdfjs))
+    .then((pdfjs) => getPdfDocument(content, pdfjs))
     .then(
       (document) => {
-        documentEntry.status = "fulfilled"
+        documentEntry.status = "resolved"
         documentEntry.document = document
-        scheduleDocumentPrune()
+        if (documentCache.get(loadKey) !== documentEntry) {
+          destroyPdfDocument(document)
+        } else {
+          scheduleDocumentPrune()
+        }
         return document
       },
       (error) => {
         documentEntry.status = "rejected"
-        if (documentCache.get(resourceKey) === documentEntry) {
-          documentCache.delete(resourceKey)
+        documentEntry.error = error
+        if (
+          !documentEntry.retainRejected &&
+          documentCache.get(loadKey) === documentEntry
+        ) {
+          documentCache.delete(loadKey)
         }
         throw error
       }
     )
 
-  documentCache.set(resourceKey, documentEntry)
+  documentCache.set(loadKey, documentEntry)
   scheduleDocumentPrune()
-  return documentEntry.promise
+  return documentEntry
+}
+
+export function clearDocumentResource(content: ViewerContentIdentity) {
+  const documentEntry = documentCache.get(content.key)
+  if (!documentEntry) return
+  documentCache.delete(content.key)
+  if (documentEntry.status === "resolved") {
+    clearPageCache(documentEntry.document)
+    if (documentEntry.consumers > 0) {
+      detachedDocumentEntries.add(documentEntry)
+    } else if (hasDetachedDocument(documentEntry.document)) {
+      return
+    } else {
+      destroyPdfDocument(documentEntry.document)
+    }
+  }
 }
 
 export function retainDocumentResource(
-  resource: ViewerResource,
+  content: ViewerContentIdentity,
   document: PDFDocumentProxy
 ) {
-  const documentEntry = documentCache.get(resource.keys.load)
+  const documentEntry = documentCache.get(content.key)
   if (!documentEntry || documentEntry.document !== document) return
   documentEntry.consumers += 1
   documentEntry.lastUsedAt = Date.now()
 }
 
 export function releaseDocumentResource(
-  resource: ViewerResource,
+  content: ViewerContentIdentity,
   document: PDFDocumentProxy
 ) {
-  const documentEntry = documentCache.get(resource.keys.load)
+  const documentEntry =
+    findDetachedDocumentEntry(content, document) ??
+    findAttachedDocumentEntry(content, document)
   if (!documentEntry || documentEntry.document !== document) return
   documentEntry.consumers = Math.max(0, documentEntry.consumers - 1)
   documentEntry.lastUsedAt = Date.now()
+  if (detachedDocumentEntries.has(documentEntry)) {
+    if (documentEntry.consumers === 0) {
+      detachedDocumentEntries.delete(documentEntry)
+      if (!hasAttachedDocument(documentEntry.document)) {
+        destroyPdfDocument(documentEntry.document)
+      }
+    }
+    return
+  }
   scheduleDocumentPrune()
 }
 
 export function __resetPdfDocumentCacheForTests() {
+  pdfjsPromise = null
   if (pruneTimer && typeof window !== "undefined") {
     window.clearTimeout(pruneTimer)
     pruneTimer = 0
   }
+  const destroyedDocuments = new Set<PDFDocumentProxy>()
   for (const documentEntry of documentCache.values()) {
-    if (documentEntry.status === "fulfilled") {
-      void documentEntry.document?.destroy().catch(() => {})
+    if (documentEntry.status === "resolved") {
+      destroyPdfDocumentOnce(documentEntry.document, destroyedDocuments)
+    }
+  }
+  for (const documentEntry of detachedDocumentEntries) {
+    if (documentEntry.status === "resolved") {
+      destroyPdfDocumentOnce(documentEntry.document, destroyedDocuments)
     }
   }
   documentCache.clear()
+  detachedDocumentEntries.clear()
+}
+
+function findAttachedDocumentEntry(
+  content: ViewerContentIdentity,
+  document: PDFDocumentProxy
+) {
+  const documentEntry = documentCache.get(content.key)
+  return documentEntry?.document === document ? documentEntry : undefined
+}
+
+function findDetachedDocumentEntry(
+  content: ViewerContentIdentity,
+  document: PDFDocumentProxy
+) {
+  for (const documentEntry of detachedDocumentEntries) {
+    if (
+      documentEntry.loadKey === content.key &&
+      documentEntry.document === document
+    ) {
+      return documentEntry
+    }
+  }
+  return undefined
+}
+
+function hasAttachedDocument(document: PDFDocumentProxy | undefined) {
+  for (const documentEntry of documentCache.values()) {
+    if (documentEntry.document === document) return true
+  }
+  return false
+}
+
+function hasDetachedDocument(document: PDFDocumentProxy | undefined) {
+  for (const documentEntry of detachedDocumentEntries) {
+    if (documentEntry.document === document) return true
+  }
+  return false
 }
 
 export function getPageResource(
   document: PDFDocumentProxy,
+  pageNumber: number,
+  options: PdfResourceOptions = {}
+) {
+  return getPageCacheEntry(document, pageNumber, options).promise
+}
+
+export function readPageResource(
+  document: PDFDocumentProxy,
   pageNumber: number
+): PDFPageProxy {
+  const pageEntry = getPageCacheEntry(document, pageNumber, {
+    retainRejected: true,
+  })
+  if (pageEntry.status === "pending") throw pageEntry.promise
+  if (pageEntry.status === "rejected") throw pageEntry.error
+  return pageEntry.page!
+}
+
+function getPageCacheEntry(
+  document: PDFDocumentProxy,
+  pageNumber: number,
+  options: PdfResourceOptions
 ) {
   let pages = pageCache.get(document)
   if (!pages) {
     pages = new Map()
     pageCache.set(document, pages)
   }
-  let pagePromise = pages.get(pageNumber)
-  if (!pagePromise) {
-    pagePromise = document.getPage(pageNumber)
-    pages.set(pageNumber, pagePromise)
-    pagePromise.catch(() => {
-      if (pages?.get(pageNumber) === pagePromise) {
+  const cachedPageEntry = pages.get(pageNumber)
+  if (cachedPageEntry) {
+    if (options.retainRejected) {
+      cachedPageEntry.retainRejected = true
+    }
+    if (cachedPageEntry.status === "rejected" && !options.retainRejected) {
+      pages.delete(pageNumber)
+    } else {
+      return cachedPageEntry
+    }
+  }
+
+  const pageEntry: PageCacheEntry = {
+    promise: document.getPage(pageNumber),
+    retainRejected: Boolean(options.retainRejected),
+    status: "pending",
+  }
+  pages.set(pageNumber, pageEntry)
+  pageEntry.promise.then(
+    (page) => {
+      pageEntry.status = "resolved"
+      pageEntry.page = page
+    },
+    (error) => {
+      pageEntry.status = "rejected"
+      pageEntry.error = error
+      if (!pageEntry.retainRejected && pages?.get(pageNumber) === pageEntry) {
         pages.delete(pageNumber)
       }
-    })
-  }
-  return pagePromise
+    }
+  )
+  return pageEntry
 }
 
 async function getPdfDocument(
-  resource: ViewerResource,
+  content: PdfDocumentContent,
   pdfjs: typeof Pdfjs
 ): Promise<PDFDocumentProxy> {
   try {
-    const directLoad = resource.getDirectLoad()
-    if (directLoad.kind === "url") {
-      return await pdfjs.getDocument(directLoad.url).promise
+    if (content.directUrl) {
+      return await pdfjs.getDocument(content.directUrl).promise
     }
 
-    const buffer = await resource.readArrayBuffer()
+    const buffer = await content.readBytes()
     return await pdfjs.getDocument({ data: new Uint8Array(buffer) }).promise
   } catch (error) {
-    if (error instanceof ResourceError) throw error
-    throw new ViewerFormatError({
-      format: "pdf",
+    if (isResourceError(error)) throw error
+    throw toPdfFormatError(error, {
       kind: "parse_failed",
       message: "Failed to parse PDF.",
-      cause: error,
     })
   }
+}
+
+function toPdfFormatError(
+  error: unknown,
+  options: ViewerFormatErrorMapperOptions
+): ViewerFormatError {
+  if (isViewerFormatError(error)) return error
+  return new ViewerFormatError({
+    format: "pdf",
+    kind: options.kind,
+    message: options.message,
+    cause: error,
+  })
+}
+
+function destroyPdfDocument(document: PDFDocumentProxy | undefined) {
+  clearPageCache(document)
+  void document?.destroy().catch(() => {})
+}
+
+function destroyPdfDocumentOnce(
+  document: PDFDocumentProxy | undefined,
+  destroyedDocuments: Set<PDFDocumentProxy>
+) {
+  if (!document || destroyedDocuments.has(document)) return
+  destroyedDocuments.add(document)
+  destroyPdfDocument(document)
+}
+
+function clearPageCache(document: PDFDocumentProxy | undefined) {
+  if (document) pageCache.delete(document)
 }

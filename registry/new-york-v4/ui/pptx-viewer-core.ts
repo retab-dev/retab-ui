@@ -13,6 +13,25 @@ export interface PptxSlideOverlayProps {
   rotation: number
 }
 
+export interface PptxSlideRenderTiming {
+  slideNumber: number
+  durationMs: number
+  renderScale: number
+  cached: boolean
+  status: "rendered" | "cancelled" | "failed"
+}
+
+export interface PptxSourceLoadTiming {
+  byteLength: number
+  slideCount: number
+  totalMs: number
+  readBytesMs: number
+  importPptxMs: number
+  readSlideSizeMs: number
+  loadFileMs: number
+  inspectMs: number
+}
+
 export interface PptxResetInput {
   resourceKey: string
   scale?: number
@@ -48,9 +67,18 @@ export function getPptxResetKey({
 }: PptxResetInput) {
   return [
     resourceKey,
-    scale ?? defaultScale ?? "fit",
+    getResetScaleKey({ scale, defaultScale }),
     eager ? "eager" : "settled",
   ].join("\u0000")
+}
+
+function getResetScaleKey({
+  scale,
+  defaultScale,
+}: Pick<PptxResetInput, "scale" | "defaultScale">) {
+  if (scale !== undefined) return normalizePptxScale(scale)
+  if (defaultScale !== undefined) return normalizePptxScale(defaultScale)
+  return "fit"
 }
 
 export function getPptxBitmapCacheKey({
@@ -87,4 +115,8 @@ export function getRotatedSize(size: PptxSize, rotation: number): PptxSize {
 
 export function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value))
+}
+
+export function normalizePptxScale(scale: number) {
+  return clamp(Number.isFinite(scale) ? scale : 1, 0.25, 5)
 }

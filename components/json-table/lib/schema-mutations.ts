@@ -10,24 +10,95 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object"
 }
 
+function isArrayIndexSegment(segment: string): boolean {
+  return /^\d+$/.test(segment)
+}
+
+function isObjectTraversalSchema(schema: JSONSchema7): boolean {
+  return schema.type === "object" || !!schema.properties
+}
+
+function isArrayTraversalSchema(schema: JSONSchema7): boolean {
+  return schema.type === "array" || !!schema.items
+}
+
+function hasAllTargetProperties(
+  schema: JSONSchema7,
+  targetPropNames: string[]
+): boolean {
+  return targetPropNames.every(
+    (propName) => propName in (schema.properties ?? {})
+  )
+}
+
+function isMutableNonNullBranch(schema: JSONSchema7): boolean {
+  const type = Array.isArray(schema.type)
+    ? schema.type.find((item) => item !== "null")
+    : schema.type ||
+      (schema.properties ? "object" : schema.items ? "array" : undefined)
+  return type !== "null" && !!(type || schema.properties || schema.items)
+}
+
+function getMutableEffectiveNode(
+  schemaDef: JSONSchema7Definition | Record<string, unknown>,
+  rootSchema: JSONSchema7,
+  targetPropNames: string[] = []
+): JSONSchema7 | undefined {
+  const resolvedNode = resolveSchema(
+    schemaDef as JSONSchema7Definition,
+    rootSchema
+  )
+  if (!resolvedNode || typeof resolvedNode !== "object") return undefined
+
+  if (Array.isArray(resolvedNode.allOf)) {
+    const objectBranches = resolvedNode.allOf
+      .map((branch) => resolveSchema(branch, rootSchema))
+      .filter((branch) => branch.type === "object" && branch.properties)
+
+    if (targetPropNames.length > 0) {
+      const matchingBranch = objectBranches.find((branch) =>
+        hasAllTargetProperties(branch, targetPropNames)
+      )
+      if (matchingBranch) return matchingBranch
+    }
+
+    return objectBranches[0] ?? resolvedNode
+  }
+
+  const branches = resolvedNode.anyOf || resolvedNode.oneOf
+  if (!Array.isArray(branches)) return resolvedNode
+
+  const resolvedBranches = branches.map((branch) =>
+    resolveSchema(branch, rootSchema)
+  )
+
+  if (targetPropNames.length > 0) {
+    const matchingBranch = resolvedBranches.find((branch) =>
+      hasAllTargetProperties(branch, targetPropNames)
+    )
+    if (matchingBranch) return matchingBranch
+  }
+
+  const nonNullBranch = resolvedBranches.find(isMutableNonNullBranch)
+
+  return nonNullBranch ?? resolvedNode
+}
+
 function schemaAtPath(
   schema: JSONSchema7,
-  parentObjectPath: string
+  parentObjectPath: string,
+  targetPropNames: string[] = []
 ): JSONSchema7 | undefined {
-  if (!parentObjectPath) return schema
+  if (!parentObjectPath) {
+    return getMutableEffectiveNode(schema, schema, targetPropNames)
+  }
 
   let currentNode: JSONSchema7Definition | Record<string, unknown> = schema
   for (const segment of parentObjectPath.split(".")) {
-    const resolvedCurrentNode = resolveSchema(
-      currentNode as JSONSchema7Definition,
-      schema
-    )
-    if (!resolvedCurrentNode || typeof resolvedCurrentNode !== "object") {
-      return undefined
-    }
-
-    currentNode = resolvedCurrentNode
-    const currentSchemaRecord = currentNode as JSONSchema7
+    const currentSchemaRecord = getMutableEffectiveNode(currentNode, schema, [
+      segment,
+    ])
+    if (!currentSchemaRecord) return undefined
 
     if (segment === "$defs" && currentSchemaRecord.$defs) {
       currentNode = currentSchemaRecord.$defs
@@ -35,17 +106,24 @@ function schemaAtPath(
     }
 
     if (
-      currentSchemaRecord.type === "object" &&
+      isObjectTraversalSchema(currentSchemaRecord) &&
       currentSchemaRecord.properties &&
       currentSchemaRecord.properties[segment]
     ) {
       currentNode = currentSchemaRecord.properties[segment]
     } else if (
-      currentSchemaRecord.type === "array" &&
-      segment === "*" &&
+      isArrayTraversalSchema(currentSchemaRecord) &&
+      currentSchemaRecord.items &&
+      Array.isArray(currentSchemaRecord.items)
+    ) {
+      if (!isArrayIndexSegment(segment)) return undefined
+      currentNode = currentSchemaRecord.items[parseInt(segment, 10)]
+    } else if (
+      isArrayTraversalSchema(currentSchemaRecord) &&
       currentSchemaRecord.items &&
       typeof currentSchemaRecord.items === "object" &&
-      !Array.isArray(currentSchemaRecord.items)
+      !Array.isArray(currentSchemaRecord.items) &&
+      (segment === "*" || isArrayIndexSegment(segment))
     ) {
       currentNode = currentSchemaRecord.items
     } else if (isRecord(currentNode) && isRecord(currentNode[segment])) {
@@ -55,20 +133,7 @@ function schemaAtPath(
     }
   }
 
-  if (isRecord(currentNode) && typeof currentNode.$ref === "string") {
-    const refSegments = currentNode.$ref.split("/")
-    if (refSegments[0] === "#") {
-      let refTarget: unknown = schema
-      for (let i = 1; i < refSegments.length; i++) {
-        refTarget = isRecord(refTarget) ? refTarget[refSegments[i]] : undefined
-      }
-      if (isRecord(refTarget)) {
-        currentNode = refTarget as JSONSchema7
-      }
-    }
-  }
-
-  return currentNode as JSONSchema7
+  return getMutableEffectiveNode(currentNode, schema, targetPropNames)
 }
 
 export function reorderSchemaProperty({
@@ -83,9 +148,12 @@ export function reorderSchemaProperty({
   targetPropName: string
 }): JSONSchema7 {
   const schemaCopy = cloneSchema(schema)
-  const parentNode = schemaAtPath(schemaCopy, parentPath)
+  const parentNode = schemaAtPath(schemaCopy, parentPath, [
+    sourcePropName,
+    targetPropName,
+  ])
 
-  if (!parentNode || parentNode.type !== "object") {
+  if (!parentNode || !isObjectTraversalSchema(parentNode)) {
     return schemaCopy
   }
   if (!parentNode.properties) {
@@ -128,8 +196,14 @@ export function deleteSchemaProperty({
   const propertyName = pathSegments.pop()
   if (!propertyName) return schemaCopy
 
-  const parentNode = schemaAtPath(schemaCopy, pathSegments.join("."))
-  if (!parentNode || parentNode.type !== "object" || !parentNode.properties) {
+  const parentNode = schemaAtPath(schemaCopy, pathSegments.join("."), [
+    propertyName,
+  ])
+  if (
+    !parentNode ||
+    !isObjectTraversalSchema(parentNode) ||
+    !parentNode.properties
+  ) {
     return schemaCopy
   }
 

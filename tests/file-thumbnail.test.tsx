@@ -20,15 +20,20 @@ import {
 } from "@/components/ui/file-thumbnail"
 import {
   DocumentThumbnail,
-  getThumbnailCacheKey,
+  getThumbnailKey,
   getThumbnailRenderKey,
 } from "@/components/document-thumbnail"
 import {
   cachedThumbnailResource,
+  clearThumbnailCachesForTests,
   createThumbnailArtifactCache,
+  getThumbnailText,
+  TEXT_THUMBNAIL_CACHE_MAX_ENTRIES,
   TEXT_THUMBNAIL_MAX_BYTES,
+  thumbnailFileMeta,
   withThumbnailFormatError,
   type ThumbnailCacheEntry,
+  type ThumbnailTextContent,
 } from "@/components/document-thumbnail/cache"
 import { thumbnailOption } from "@/components/document-thumbnail/keys"
 import { useObjectUrl } from "@/components/document-thumbnail/renderers/use-object-url"
@@ -36,6 +41,7 @@ import { createViewerResource } from "@/registry/new-york-v4/lib/viewer-resource
 
 afterEach(() => {
   cleanup()
+  clearThumbnailCachesForTests()
   vi.restoreAllMocks()
   vi.unstubAllGlobals()
 })
@@ -79,52 +85,153 @@ describe("DocumentThumbnail helpers", () => {
     })
   }
 
+  it("keeps thumbnail live code on the canonical resource API", () => {
+    const liveFiles = [
+      "components/document-thumbnail.tsx",
+      "components/document-thumbnail/cache.ts",
+      "components/document-thumbnail/descriptor.ts",
+      "components/document-thumbnail/errors.tsx",
+      "components/document-thumbnail/keys.ts",
+      "components/document-thumbnail/types.ts",
+      "components/document-thumbnail/renderers/csv-thumbnail.tsx",
+      "components/document-thumbnail/renderers/docx-thumbnail.tsx",
+      "components/document-thumbnail/renderers/html-thumbnail.tsx",
+      "components/document-thumbnail/renderers/image-thumbnail.tsx",
+      "components/document-thumbnail/renderers/markdown-thumbnail.tsx",
+      "components/document-thumbnail/renderers/pdf-thumbnail.tsx",
+      "components/document-thumbnail/renderers/pptx-thumbnail.tsx",
+      "components/document-thumbnail/renderers/text-thumbnail.tsx",
+      "components/document-thumbnail/renderers/tiff-thumbnail.tsx",
+      "components/document-thumbnail/renderers/xlsx-thumbnail.tsx",
+    ]
+    const forbiddenNames = [
+      "get" + "DirectLoad",
+      "get" + "OriginalDownload",
+      "get" + "InlineText",
+      "get" + "Blob",
+      "read" + "ArrayBuffer",
+      "DirectLoad" + "Capability",
+      "Download" + "Capability",
+    ]
+    const forbidden = new RegExp(
+      `\\b(${forbiddenNames.join("|")})\\b|resource\\.str` + "eam\\("
+    )
+
+    for (const file of liveFiles) {
+      expect(readFileSync(file, "utf8"), file).not.toMatch(forbidden)
+    }
+  })
+
+  it("keeps expensive thumbnail helpers on narrow content contracts", () => {
+    const helperFiles = [
+      "components/document-thumbnail/cache.ts",
+      "components/document-thumbnail/renderers/markdown-thumbnail.tsx",
+      "components/document-thumbnail/renderers/pptx-thumbnail.tsx",
+      "components/document-thumbnail/renderers/tiff-thumbnail.tsx",
+      "components/document-thumbnail/renderers/xlsx-thumbnail.tsx",
+    ]
+    const broadHelperSignatures = [
+      "function getThumbnailText(\n  resource: ViewerResource",
+      "function getMarkdownDoc(\n  resource: ViewerResource",
+      "function getPptxFirstSlide(\n  resource: ViewerResource",
+      "function getTiffFirstPageBlob(\n  resource: ViewerResource",
+      "function getXlsxPreview(\n  resource: ViewerResource",
+    ]
+    const unboundedArtifactCache = "new Map<string, ThumbnailCacheEntry<"
+
+    for (const file of helperFiles) {
+      const source = readFileSync(file, "utf8")
+      for (const signature of broadHelperSignatures) {
+        expect(source, file).not.toContain(signature)
+      }
+    }
+    for (const file of helperFiles.filter(
+      (file) => file !== "components/document-thumbnail/cache.ts"
+    )) {
+      expect(readFileSync(file, "utf8"), file).not.toContain(
+        unboundedArtifactCache
+      )
+    }
+  })
+
+  it("does not swallow async canvas renderer failures", () => {
+    const files = [
+      "components/document-thumbnail/renderers/pdf-thumbnail.tsx",
+      "components/document-thumbnail/renderers/pptx-thumbnail.tsx",
+    ]
+
+    for (const file of files) {
+      expect(readFileSync(file, "utf8"), file).not.toContain(".catch(() => {})")
+    }
+  })
+
   it("builds stable thumbnail cache keys from resource identity", () => {
     const first = resource("/same.txt")
     const second = resource("/same.txt")
 
     expect(
-      getThumbnailCacheKey({
+      getThumbnailKey({
         resource: first,
         descriptor: first.descriptor,
       })
     ).toBe(
-      getThumbnailCacheKey({
+      getThumbnailKey({
         resource: second,
         descriptor: second.descriptor,
       })
     )
   })
 
+  it("keeps metadata-only URL changes on the same expensive cache identity", () => {
+    const first = resource("/same.txt", "before.txt", "text/plain")
+    const second = resource("/same.txt", "after.txt", "text/plain")
+
+    expect(first.keys.load).toBe(second.keys.load)
+    expect(first.keys.presentation).not.toBe(second.keys.presentation)
+    expect(
+      getThumbnailKey({
+        resource: first,
+        descriptor: first.descriptor,
+        options: [thumbnailOption("text-max-bytes", TEXT_THUMBNAIL_MAX_BYTES)],
+      })
+    ).toBe(
+      getThumbnailKey({
+        resource: second,
+        descriptor: second.descriptor,
+        options: [thumbnailOption("text-max-bytes", TEXT_THUMBNAIL_MAX_BYTES)],
+      })
+    )
+  })
+
   it("separates cache identity from render identity", () => {
     const file = resource("/same.txt")
-    const cacheKey = getThumbnailCacheKey({
+    const thumbnailKey = getThumbnailKey({
       resource: file,
       descriptor: file.descriptor,
     })
 
     expect(
       getThumbnailRenderKey({
-        cacheKey,
+        thumbnailKey,
         anchor: "top-left",
         retryKey: null,
       })
     ).not.toBe(
       getThumbnailRenderKey({
-        cacheKey,
+        thumbnailKey,
         anchor: "top-right",
         retryKey: null,
       })
     )
     expect(
       getThumbnailRenderKey({
-        cacheKey,
+        thumbnailKey,
         anchor: "top-left",
         retryKey: null,
       })
     ).not.toBe(
       getThumbnailRenderKey({
-        cacheKey,
+        thumbnailKey,
         anchor: "top-left",
         retryKey: 1,
       })
@@ -133,27 +240,27 @@ describe("DocumentThumbnail helpers", () => {
 
   it("distinguishes retry key primitive types and supports bigint keys", () => {
     const file = resource("/same.txt")
-    const cacheKey = getThumbnailCacheKey({
+    const thumbnailKey = getThumbnailKey({
       resource: file,
       descriptor: file.descriptor,
     })
 
     expect(
       getThumbnailRenderKey({
-        cacheKey,
+        thumbnailKey,
         anchor: "top-left",
         retryKey: "1",
       })
     ).not.toBe(
       getThumbnailRenderKey({
-        cacheKey,
+        thumbnailKey,
         anchor: "top-left",
         retryKey: 1,
       })
     )
     expect(() =>
       getThumbnailRenderKey({
-        cacheKey,
+        thumbnailKey,
         anchor: "top-left",
         retryKey: BigInt(1),
       })
@@ -165,30 +272,30 @@ describe("DocumentThumbnail helpers", () => {
     const second = resource("a")
 
     expect(
-      getThumbnailCacheKey({
+      getThumbnailKey({
         resource: first,
         descriptor: first.descriptor,
       })
     ).not.toBe(
-      getThumbnailCacheKey({
+      getThumbnailKey({
         resource: second,
         descriptor: second.descriptor,
       })
     )
 
-    const cacheKey = getThumbnailCacheKey({
+    const thumbnailKey = getThumbnailKey({
       resource: second,
       descriptor: second.descriptor,
     })
     expect(
       getThumbnailRenderKey({
-        cacheKey: "4:kind:text",
+        thumbnailKey: "4:kind:text",
         anchor: "top-left",
         retryKey: null,
       })
     ).not.toBe(
       getThumbnailRenderKey({
-        cacheKey,
+        thumbnailKey,
         anchor: "top-left",
         retryKey: "kind:text",
       })
@@ -197,14 +304,14 @@ describe("DocumentThumbnail helpers", () => {
 
   it("includes thumbnail output options in cache identity", () => {
     const file = resource("/same.txt")
-    const base = getThumbnailCacheKey({
+    const base = getThumbnailKey({
       resource: file,
       descriptor: file.descriptor,
       options: [thumbnailOption("text-max-bytes", TEXT_THUMBNAIL_MAX_BYTES)],
     })
 
     expect(base).not.toBe(
-      getThumbnailCacheKey({
+      getThumbnailKey({
         resource: file,
         descriptor: file.descriptor,
         options: [
@@ -234,7 +341,7 @@ describe("DocumentThumbnail helpers", () => {
     expect(load).toHaveBeenCalledTimes(2)
   })
 
-  it("bounds artifact caches and disposes evicted fulfilled values", async () => {
+  it("bounds artifact caches and disposes evicted resolved values", async () => {
     const dispose = vi.fn()
     const first = { id: "first" }
     const second = { id: "second" }
@@ -248,6 +355,68 @@ describe("DocumentThumbnail helpers", () => {
 
     expect(cache.size).toBe(1)
     expect(dispose).toHaveBeenCalledWith(first)
+  })
+
+  it("bounds the shared text thumbnail cache", async () => {
+    const fetchMock = vi.fn(async (input: string) => {
+      return new Response(`body:${input}`, { status: 200 })
+    })
+    vi.stubGlobal("fetch", fetchMock)
+
+    const first = resource("/text-cache-0.txt")
+    await getThumbnailText(
+      thumbnailFileMeta(first),
+      first.content,
+      "text-cache-0"
+    )
+
+    for (let index = 1; index <= TEXT_THUMBNAIL_CACHE_MAX_ENTRIES; index += 1) {
+      const file = resource(`/text-cache-${index}.txt`)
+      await getThumbnailText(
+        thumbnailFileMeta(file),
+        file.content,
+        `text-cache-${index}`
+      )
+    }
+
+    await getThumbnailText(
+      thumbnailFileMeta(first),
+      first.content,
+      "text-cache-0"
+    )
+
+    expect(fetchMock).toHaveBeenCalledTimes(
+      TEXT_THUMBNAIL_CACHE_MAX_ENTRIES + 2
+    )
+  })
+
+  it("loads thumbnail text from narrow content capabilities", async () => {
+    const content: ThumbnailTextContent = {
+      key: "narrow-text",
+      sourceKind: "text",
+      readRange: vi.fn(async () => ({
+        buffer: new TextEncoder().encode("Narrow text").buffer as ArrayBuffer,
+        isComplete: true,
+      })),
+      readStream: vi.fn(),
+    }
+
+    await expect(
+      getThumbnailText(
+        {
+          fileName: "narrow.txt",
+          mimeType: "text/plain",
+          sourceKind: "text",
+        },
+        content,
+        "narrow-text"
+      )
+    ).resolves.toBe("Narrow text")
+    expect(content.readRange).toHaveBeenCalledWith({
+      start: 0,
+      end: TEXT_THUMBNAIL_MAX_BYTES - 1,
+    })
+    expect(content.readStream).not.toHaveBeenCalled()
   })
 
   it("wraps format failures while preserving resource failures", async () => {
@@ -420,8 +589,13 @@ describe("FileThumbnail", () => {
   })
 
   it("renders fallback when image loading fails", () => {
+    const onPreviewError = vi.fn()
     const { container } = render(
-      <FileThumbnail file={file} previewImageUrl="/preview.png" />
+      <FileThumbnail
+        file={file}
+        previewImageUrl="/preview.png"
+        onPreviewError={onPreviewError}
+      />
     )
 
     const img = container.querySelector("img")
@@ -431,6 +605,7 @@ describe("FileThumbnail", () => {
     expect(
       container.querySelector('[data-slot="file-thumbnail-fallback"]')
     ).not.toBeNull()
+    expect(onPreviewError).toHaveBeenCalledTimes(1)
   })
 
   it("marks cached images as loaded from the image ref path", async () => {
@@ -558,6 +733,201 @@ describe("DocumentThumbnail", () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
+  it("surfaces direct URL image failures through canonical thumbnail errors", async () => {
+    const onError = vi.fn()
+    const { container } = render(
+      <DocumentThumbnail
+        source={{
+          kind: "url",
+          url: "/broken-image.png",
+          fileName: "broken-image.png",
+          mimeType: "image/png",
+        }}
+        onError={onError}
+      />
+    )
+
+    const img = container.querySelector("img")
+    expect(img).not.toBeNull()
+    fireEvent.error(img as HTMLImageElement)
+
+    await waitFor(() => {
+      expect(
+        container.querySelector('[data-slot="file-thumbnail-fallback"]')
+      ).not.toBeNull()
+    })
+
+    const thumbnail = container.querySelector('[data-slot="file-thumbnail"]')
+    expect(thumbnail?.getAttribute("aria-label")).toBe(
+      "Couldn't load this image."
+    )
+    expect(thumbnail?.getAttribute("title")).toBe("Couldn't load this image.")
+    expect(thumbnail?.getAttribute("data-error-domain")).toBe("format")
+    expect(thumbnail?.getAttribute("data-error-format")).toBe("image")
+    expect(thumbnail?.getAttribute("data-error-kind")).toBe("load_failed")
+    expect(thumbnail?.getAttribute("data-error-message")).toBe(
+      "Could not load image preview."
+    )
+    expect(onError).toHaveBeenCalledTimes(1)
+    expect(onError.mock.calls[0]?.[0]).toMatchObject({
+      name: "ViewerFormatError",
+      format: "image",
+      kind: "load_failed",
+    })
+    expect(onError.mock.calls[0]?.[1]).toMatchObject({
+      domain: "format",
+      format: "image",
+      kind: "load_failed",
+      userMessage: "Couldn't load this image.",
+    })
+  })
+
+  it("renders homepage CSV thumbnails when the server returns an invalid range response", async () => {
+    const csv = "Region,Revenue\nEMEA,1250\nNA,980\n"
+    const oversizedCsv = `${csv}${"Filler,1\n".repeat(9000)}`
+    const fetchMock = vi.fn(async (_input: string, init?: RequestInit) => {
+      const headers = new Headers(init?.headers)
+      if (headers.has("Range")) {
+        return new Response("Region,Revenue\n", {
+          status: 206,
+          headers: {
+            "content-range": "bytes 0-65535/32",
+          },
+        })
+      }
+      return new Response(oversizedCsv, {
+        status: 200,
+        headers: {
+          "content-type": "text/csv",
+          "content-length": String(
+            new TextEncoder().encode(oversizedCsv).byteLength
+          ),
+        },
+      })
+    })
+    vi.stubGlobal("fetch", fetchMock)
+
+    await renderAsync(
+      <DocumentThumbnail
+        source={{
+          kind: "url",
+          url: "/samples/sales.csv",
+          fileName: "sales.csv",
+          mimeType: "text/csv",
+        }}
+      />
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText("Region")).toBeTruthy()
+      expect(screen.getByText("EMEA")).toBeTruthy()
+    })
+
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
+      headers: { Range: `bytes=0-${TEXT_THUMBNAIL_MAX_BYTES - 1}` },
+    })
+    expect(fetchMock.mock.calls[1]?.[1]).toBeDefined()
+    expect(
+      new Headers(fetchMock.mock.calls[1]?.[1]?.headers).has("Range")
+    ).toBe(false)
+  })
+
+  it("renders homepage CSV thumbnails when the server rejects range requests", async () => {
+    const csv = "Region,Revenue\nEMEA,1250\nNA,980\n"
+    const oversizedCsv = `${csv}${"Filler,1\n".repeat(9000)}`
+    const fetchMock = vi.fn(async (_input: string, init?: RequestInit) => {
+      const headers = new Headers(init?.headers)
+      if (headers.has("Range")) {
+        return new Response("", { status: 416 })
+      }
+      return new Response(oversizedCsv, {
+        status: 200,
+        headers: {
+          "content-type": "text/csv",
+          "content-length": String(
+            new TextEncoder().encode(oversizedCsv).byteLength
+          ),
+        },
+      })
+    })
+    vi.stubGlobal("fetch", fetchMock)
+
+    await renderAsync(
+      <DocumentThumbnail
+        source={{
+          kind: "url",
+          url: "/samples/sales.csv",
+          fileName: "sales.csv",
+          mimeType: "text/csv",
+        }}
+      />
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText("Region")).toBeTruthy()
+      expect(screen.getByText("EMEA")).toBeTruthy()
+    })
+
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
+      headers: { Range: `bytes=0-${TEXT_THUMBNAIL_MAX_BYTES - 1}` },
+    })
+    expect(
+      new Headers(fetchMock.mock.calls[1]?.[1]?.headers).has("Range")
+    ).toBe(false)
+  })
+
+  it("surfaces Blob image object URL failures through canonical thumbnail errors", async () => {
+    const onError = vi.fn()
+    const OriginalURL = globalThis.URL
+    vi.stubGlobal("URL", {
+      ...OriginalURL,
+      createObjectURL: vi.fn(() => "blob:broken-image"),
+      revokeObjectURL: vi.fn(),
+    })
+
+    const view = await renderAsync(
+      <DocumentThumbnail
+        source={{
+          kind: "blob",
+          blob: new Blob(["not an image"], { type: "image/png" }),
+          identityKey: "broken-blob-image",
+          fileName: "broken-blob.png",
+          mimeType: "image/png",
+        }}
+        onError={onError}
+      />
+    )
+
+    await waitFor(() => {
+      expect(view.container.querySelector("img")?.getAttribute("src")).toBe(
+        "blob:broken-image"
+      )
+    })
+
+    fireEvent.error(view.container.querySelector("img") as HTMLImageElement)
+
+    await waitFor(() => {
+      expect(
+        view.container.querySelector('[data-slot="file-thumbnail-fallback"]')
+      ).not.toBeNull()
+    })
+
+    const thumbnail = view.container.querySelector(
+      '[data-slot="file-thumbnail"]'
+    )
+    expect(thumbnail?.getAttribute("data-error-domain")).toBe("format")
+    expect(thumbnail?.getAttribute("data-error-format")).toBe("image")
+    expect(thumbnail?.getAttribute("data-error-kind")).toBe("load_failed")
+    expect(onError).toHaveBeenCalledTimes(1)
+    expect(onError.mock.calls[0]?.[0]).toMatchObject({
+      name: "ViewerFormatError",
+      format: "image",
+      kind: "load_failed",
+    })
+  })
+
   it("renders inline text sources without fetching", async () => {
     const fetchMock = vi.fn()
     vi.stubGlobal("fetch", fetchMock)
@@ -575,6 +945,27 @@ describe("DocumentThumbnail", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Inline source line")).toBeTruthy()
+    })
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it("renders large inline text sources as a prefix instead of an error", async () => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal("fetch", fetchMock)
+
+    await renderAsync(
+      <DocumentThumbnail
+        source={{
+          kind: "text",
+          text: `Prefix survives\n${"x".repeat(TEXT_THUMBNAIL_MAX_BYTES + 1)}`,
+          fileName: "large-inline.txt",
+          mimeType: "text/plain",
+        }}
+      />
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText("Prefix survives")).toBeTruthy()
     })
     expect(fetchMock).not.toHaveBeenCalled()
   })
@@ -622,6 +1013,54 @@ describe("DocumentThumbnail", () => {
       ).not.toBeNull()
     })
     expect(screen.getByText("txt")).toBeTruthy()
+  })
+
+  it("surfaces canonical thumbnail errors through user-safe output and onError", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {})
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("", { status: 500 }))
+    )
+    const onError = vi.fn()
+
+    const view = render(
+      <DocumentThumbnail
+        source={urlTextSource("/metadata-error.txt", "metadata.txt")}
+        onError={onError}
+      />
+    )
+
+    await waitFor(() => {
+      expect(
+        view.container.querySelector('[data-slot="file-thumbnail-fallback"]')
+      ).not.toBeNull()
+    })
+
+    const thumbnail = view.container.querySelector(
+      '[data-slot="file-thumbnail"]'
+    )
+    expect(thumbnail?.getAttribute("aria-label")).toBe(
+      "Failed to load file: 500."
+    )
+    expect(thumbnail?.getAttribute("title")).toBe("Failed to load file: 500.")
+    expect(thumbnail?.getAttribute("data-error-domain")).toBe("resource")
+    expect(thumbnail?.getAttribute("data-error-format")).toBe("text")
+    expect(thumbnail?.getAttribute("data-error-kind")).toBe("http_error")
+    expect(thumbnail?.getAttribute("data-error-message")).toBe(
+      "Failed to load resource: 500"
+    )
+    expect(onError).toHaveBeenCalledTimes(1)
+    expect(onError.mock.calls[0]?.[0]).toMatchObject({
+      name: "ResourceError",
+      kind: "http_error",
+      status: 500,
+    })
+    expect(onError.mock.calls[0]?.[1]).toMatchObject({
+      domain: "resource",
+      format: "text",
+      kind: "http_error",
+      userMessage: "Failed to load file: 500.",
+    })
   })
 
   it("retries rendering after a failed source changes", async () => {

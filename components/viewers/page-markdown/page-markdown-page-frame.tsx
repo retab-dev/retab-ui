@@ -38,6 +38,11 @@ export const PageMarkdownPageFrame = React.memo(function PageMarkdownPageFrame({
       const root = pageElement.closest<HTMLElement>(
         '[data-slot="scroll-area-viewport"]'
       )
+      if (typeof IntersectionObserver !== "function") {
+        setIsNearViewport(true)
+        return () => cleanupMeasurement?.()
+      }
+
       const observer = new IntersectionObserver(
         (entries) => {
           for (const entry of entries) {

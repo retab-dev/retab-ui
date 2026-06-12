@@ -1,5 +1,6 @@
 import type { JSONSchema7TypeName } from "json-schema"
 
+import { definitionRefAliases } from "@/components/schema-editor/document/json-pointer"
 import type {
   DefinitionEntry,
   DocumentNode,
@@ -8,6 +9,7 @@ import type {
 } from "./types"
 
 const SCHEMA_VALUE_REST_KEYS = new Set([
+  "additionalItems",
   "additionalProperties",
   "allOf",
   "anyOf",
@@ -20,6 +22,7 @@ const SCHEMA_VALUE_REST_KEYS = new Set([
   "prefixItems",
   "propertyNames",
   "then",
+  "unevaluatedItems",
   "unevaluatedProperties",
 ])
 
@@ -27,6 +30,7 @@ const SCHEMA_MAP_REST_KEYS = new Set([
   "$defs",
   "definitions",
   "dependentSchemas",
+  "dependencies",
   "patternProperties",
   "properties",
 ])
@@ -92,18 +96,14 @@ export function isDefinitionReferenced(
   const referenced = doc.defs.find((definition) => definition.id === defId)
   if (!referenced) return false
 
-  if (nodeReferencesDefinition(doc.root, referenced, doc.rest.defsKeyword))
+  const refs = getReferenceRefOptions(doc)
+
+  if (nodeReferencesDefinition(doc.root, referenced, refs))
     return true
 
   for (const definition of doc.defs) {
     if (definition.id === options.exceptDefId) continue
-    if (
-      nodeReferencesDefinition(
-        definition.node,
-        referenced,
-        doc.rest.defsKeyword
-      )
-    )
+    if (nodeReferencesDefinition(definition.node, referenced, refs))
       return true
   }
 
@@ -113,26 +113,26 @@ export function isDefinitionReferenced(
 function nodeReferencesDefinition(
   node: DocumentNode,
   definition: DefinitionEntry,
-  defsKeyword: unknown
+  refs: ReferenceRefOptions
 ): boolean {
   if (node.ref === definition.id) return true
-  if (restReferencesDefinition(node.rest, definition, defsKeyword)) return true
+  if (restReferencesDefinition(node.rest, definition, refs)) return true
 
   if (node.properties) {
     for (const property of node.properties) {
-      if (nodeReferencesDefinition(property.node, definition, defsKeyword))
+      if (nodeReferencesDefinition(property.node, definition, refs))
         return true
     }
   }
 
-  if (node.items && nodeReferencesDefinition(node.items, definition, defsKeyword))
+  if (node.items && nodeReferencesDefinition(node.items, definition, refs))
     return true
 
   for (const key of ["anyOf", "oneOf", "allOf"] as const) {
     const children = node[key]
     if (!children) continue
     for (const child of children) {
-      if (nodeReferencesDefinition(child, definition, defsKeyword)) return true
+      if (nodeReferencesDefinition(child, definition, refs)) return true
     }
   }
 
@@ -142,14 +142,14 @@ function nodeReferencesDefinition(
 function restReferencesDefinition(
   rest: Record<string, unknown>,
   definition: DefinitionEntry,
-  defsKeyword: unknown
+  refs: ReferenceRefOptions
 ): boolean {
   for (const [key, value] of Object.entries(rest)) {
     if (SCHEMA_MAP_REST_KEYS.has(key)) {
-      if (schemaMapReferencesDefinition(value, definition, defsKeyword))
+      if (schemaMapReferencesDefinition(value, definition, refs))
         return true
     } else if (SCHEMA_VALUE_REST_KEYS.has(key)) {
-      if (schemaReferencesDefinition(value, definition, defsKeyword))
+      if (schemaReferencesDefinition(value, definition, refs))
         return true
     }
   }
@@ -159,38 +159,47 @@ function restReferencesDefinition(
 function schemaMapReferencesDefinition(
   value: unknown,
   definition: DefinitionEntry,
-  defsKeyword: unknown
+  refs: ReferenceRefOptions
 ): boolean {
   if (!isPlainObject(value)) return false
   return Object.values(value).some((child) =>
-    schemaReferencesDefinition(child, definition, defsKeyword)
+    schemaReferencesDefinition(child, definition, refs)
   )
 }
 
 function schemaReferencesDefinition(
   value: unknown,
   definition: DefinitionEntry,
-  defsKeyword: unknown
+  refs: ReferenceRefOptions
 ): boolean {
   if (Array.isArray(value)) {
     return value.some((child) =>
-      schemaReferencesDefinition(child, definition, defsKeyword)
+      schemaReferencesDefinition(child, definition, refs)
     )
   }
   if (!isPlainObject(value)) return false
 
   const ref = value.$ref
-  if (ref === `#/${primaryDefsKeyword(defsKeyword)}/${definition.name}`)
+  if (
+    definitionRefAliases(refs.primaryKeyword, definition.name).includes(
+      ref as string
+    )
+  )
     return true
-  if (ref === `#/$defs/${definition.name}`) return true
-  if (ref === `#/definitions/${definition.name}`) return true
+  if (
+    refs.allowOtherKeywordAlias &&
+    definitionRefAliases(refs.otherKeyword, definition.name).includes(
+      ref as string
+    )
+  )
+    return true
 
   for (const [key, child] of Object.entries(value)) {
     if (SCHEMA_MAP_REST_KEYS.has(key)) {
-      if (schemaMapReferencesDefinition(child, definition, defsKeyword))
+      if (schemaMapReferencesDefinition(child, definition, refs))
         return true
     } else if (SCHEMA_VALUE_REST_KEYS.has(key)) {
-      if (schemaReferencesDefinition(child, definition, defsKeyword))
+      if (schemaReferencesDefinition(child, definition, refs))
         return true
     }
   }
@@ -198,8 +207,24 @@ function schemaReferencesDefinition(
   return false
 }
 
-function primaryDefsKeyword(defsKeyword: unknown): "$defs" | "definitions" {
-  return defsKeyword === "definitions" ? "definitions" : "$defs"
+interface ReferenceRefOptions {
+  primaryKeyword: "$defs" | "definitions"
+  otherKeyword: "$defs" | "definitions"
+  allowOtherKeywordAlias: boolean
+}
+
+function getReferenceRefOptions(doc: SchemaDocument): ReferenceRefOptions {
+  const primaryKeyword =
+    doc.rest.defsKeyword === "definitions" ? "definitions" : "$defs"
+  const otherKeyword = primaryKeyword === "$defs" ? "definitions" : "$defs"
+  return {
+    primaryKeyword,
+    otherKeyword,
+    allowOtherKeywordAlias: !Object.prototype.hasOwnProperty.call(
+      doc.root.rest,
+      otherKeyword
+    ),
+  }
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {

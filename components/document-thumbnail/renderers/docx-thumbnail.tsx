@@ -26,7 +26,7 @@ function loadDocxPreview() {
 const DOCX_PAGE_W = 816 // US Letter at 96dpi
 
 export function DocxFirstPage({ resource }: { resource: ViewerResource }) {
-  const bytes = useThumbnailResource(getDocxResource(resource))
+  const bytes = useThumbnailResource(getDocxResource(resource.content))
   const { ref: frameRef, width: frameWidth } = useElementWidth()
   const [renderError, setRenderError] = React.useState<unknown>(null)
 

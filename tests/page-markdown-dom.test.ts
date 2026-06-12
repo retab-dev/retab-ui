@@ -30,4 +30,17 @@ describe("scrollPageIntoView", () => {
       scrollPageIntoView(document.createElement("div"), 3)
     ).not.toThrow()
   })
+
+  it("does nothing when the target element cannot scroll itself into view", () => {
+    const root = document.createElement("div")
+    const page = document.createElement("section")
+    page.dataset.pageNumber = "2"
+    Object.defineProperty(page, "scrollIntoView", {
+      configurable: true,
+      value: undefined,
+    })
+    root.append(page)
+
+    expect(() => scrollPageIntoView(root, 2)).not.toThrow()
+  })
 })

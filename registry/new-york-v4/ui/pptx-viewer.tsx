@@ -13,18 +13,28 @@ import {
   getPptxFitScale,
   getPptxResetKey,
   type PptxSlideOverlayProps,
+  type PptxSlideRenderTiming,
+  type PptxSourceLoadTiming,
 } from "./pptx-viewer-core"
 import { PptxViewerFallback } from "./pptx-viewer-fallback"
 import { useRetainedPptxSource } from "./pptx-viewer-hooks"
 import { createPptxScrollActivity } from "./pptx-viewer-scroll"
 import { PptxSlideScroller } from "./pptx-viewer-slide"
+import {
+  evictPptxSource,
+  subscribePptxSourceLoadTiming,
+} from "./pptx-viewer-source"
 import { PptxToolbar } from "./pptx-viewer-toolbar"
 import { usePptxViewportWidth } from "./pptx-viewer-viewport"
 import { usePptxVisibleSlide } from "./pptx-viewer-visible-slide"
 import { usePptxZoom } from "./pptx-viewer-zoom"
 import { ViewerErrorBoundary } from "./viewer-error"
 
-export type { PptxSlideOverlayProps }
+export type {
+  PptxSourceLoadTiming,
+  PptxSlideRenderTiming,
+  PptxSlideOverlayProps,
+}
 export type PptxDocumentSource = UrlViewerSource | BlobViewerSource
 
 /** Client gate without an effect: false during SSR, true after hydration. */
@@ -49,6 +59,10 @@ export interface PptxViewerProps {
   toolbar?: boolean
   /** Render absolutely-positioned overlays, such as bbox citations, on each slide. */
   renderSlideOverlay?: (props: PptxSlideOverlayProps) => React.ReactNode
+  /** Reports measured canvas render work for benchmark and profiling surfaces. */
+  onSlideRenderTiming?: (timing: PptxSlideRenderTiming) => void
+  /** Reports measured presentation fetch/parse/load work for benchmark surfaces. */
+  onSourceLoadTiming?: (timing: PptxSourceLoadTiming) => void
   /** Fired with the 1-based slide nearest the top of the viewport as you scroll. */
   onVisibleSlideChange?: (slide: number) => void
   /** Fired with scroll progress in [0, 1]. */
@@ -59,40 +73,71 @@ export interface PptxViewerProps {
   header?: React.ReactNode
   /** Rendered as a left rail alongside the scrolling slides. */
   aside?: React.ReactNode
-  /**
-   * Render slides as soon as they near the viewport, even mid-scroll. Defaults to
-   * false: uncached renders wait until scrolling settles.
-   */
+  /** Render slides as soon as they near the viewport, even mid-scroll. */
   eager?: boolean
 }
 
+export type PptxResourceViewerProps = Omit<PptxViewerProps, "source"> & {
+  resource: ViewerResource
+}
+
 export function PptxViewer(props: PptxViewerProps) {
-  const isClient = useIsClient()
-  const { source } = props
+  const { source, ...resourceProps } = props
   const resource = React.useMemo(() => createViewerResource(source), [source])
+  return <PptxResourceViewer {...resourceProps} resource={resource} />
+}
+
+export function PptxResourceViewer(props: PptxResourceViewerProps) {
+  const isClient = useIsClient()
+  const resource = props.resource
+  const onSourceLoadTimingRef = React.useRef(props.onSourceLoadTiming)
+  onSourceLoadTimingRef.current = props.onSourceLoadTiming
+
+  React.useEffect(() => {
+    if (!props.onSourceLoadTiming) return
+    return subscribePptxSourceLoadTiming(resource.content, (timing) => {
+      onSourceLoadTimingRef.current?.(timing)
+    })
+  }, [resource.content, Boolean(props.onSourceLoadTiming)])
+
   if (!isClient) {
-    return <PptxViewerFallback className={props.className} bare={props.bare} />
+    return (
+      <PptxViewerFallback
+        className={props.className}
+        bare={props.bare}
+        toolbar={props.toolbar}
+      />
+    )
   }
   return (
     <ViewerErrorBoundary
       className={props.className}
       bare={props.bare}
-      download={resource.getOriginalDownload()}
+      download={resource.originalDownload}
       format="pptx"
       resetKey={getPptxResetKey({
         resourceKey: resource.keys.resource,
         scale: props.scale,
         defaultScale: props.defaultScale,
-        eager: props.eager,
+        eager: props.eager ?? true,
       })}
       sourceKind={resource.sourceKind}
+      onRetry={() => evictPptxSource(resource.content)}
     >
       <React.Suspense
         fallback={
-          <PptxViewerFallback className={props.className} bare={props.bare} />
+          <PptxViewerFallback
+            className={props.className}
+            bare={props.bare}
+            toolbar={props.toolbar}
+          />
         }
       >
-        <PptxViewerContent {...props} resource={resource} />
+        <PptxViewerContent
+          key={resource.keys.load}
+          {...props}
+          resource={resource}
+        />
       </React.Suspense>
     </ViewerErrorBoundary>
   )
@@ -106,16 +151,17 @@ function PptxViewerContent({
   onScaleChange,
   toolbar = true,
   renderSlideOverlay,
+  onSlideRenderTiming,
   onVisibleSlideChange,
   onScrollProgressChange,
   bare = false,
   header,
   aside,
-  eager = false,
-}: PptxViewerProps & { resource: ViewerResource }) {
-  const source = useRetainedPptxSource(resource)
+  eager = true,
+}: Omit<PptxViewerProps, "source"> & { resource: ViewerResource }) {
+  const source = useRetainedPptxSource(resource.content)
   const downloadAction = React.useMemo(
-    () => resource.getOriginalDownload(),
+    () => resource.originalDownload,
     [resource]
   )
 
@@ -179,6 +225,7 @@ function PptxViewerContent({
             eager={eager}
             activity={scrollActivity}
             renderSlideOverlay={renderSlideOverlay}
+            onSlideRenderTiming={onSlideRenderTiming}
             containerRef={containerRef}
             viewportRef={scrollViewportRef}
             onScroll={handleViewportScroll}

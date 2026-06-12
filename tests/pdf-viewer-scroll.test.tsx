@@ -3,13 +3,62 @@ import * as React from "react"
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import { createPdfPageLayout } from "@/registry/new-york-v4/ui/pdf-viewer-layout"
+import {
+  createPdfPageLayout,
+  getPdfPageLayout,
+} from "@/registry/new-york-v4/ui/pdf-viewer-layout"
 import { usePdfScroll } from "@/registry/new-york-v4/ui/pdf-viewer-scroll"
 
 describe("usePdfScroll", () => {
   afterEach(() => {
     cleanup()
     vi.restoreAllMocks()
+  })
+
+  it("does not expose a stale current page during the reset-key render", async () => {
+    const layout = createPdfPageLayout({
+      pageCount: 20,
+      defaultPageSize: { width: 100, height: 200 },
+      pageSizeByNumber: new Map(),
+      scale: 1,
+      rotation: 0,
+    })
+
+    function Harness({ resetKey }: { resetKey: string }) {
+      const viewport = React.useMemo(
+        () =>
+          ({
+            scrollTop: getPdfPageLayout(layout, 10)!.offsetTop,
+            clientHeight: 200,
+            scrollHeight: 5000,
+            getBoundingClientRect: () => ({ top: 0, height: 200 }) as DOMRect,
+          }) as HTMLDivElement,
+        []
+      )
+      const result = usePdfScroll({
+        pageCount: 20,
+        layout,
+        resetKey,
+      })
+
+      React.useEffect(() => {
+        result.setViewportElement(viewport)
+        result.measureScroll()
+        return () => result.setViewportElement(null)
+      }, [result, viewport])
+
+      return <output data-testid="page">{result.currentPage}</output>
+    }
+
+    const view = render(<Harness resetKey="doc-a" />)
+
+    await waitFor(() =>
+      expect(screen.getByTestId("page").textContent).toBe("10")
+    )
+
+    view.rerender(<Harness resetKey="doc-b" />)
+
+    expect(screen.getByTestId("page").textContent).toBe("1")
   })
 
   it("uses the latest layout and callbacks for a pending scroll measurement", async () => {
@@ -40,7 +89,9 @@ describe("usePdfScroll", () => {
     const nextVisiblePageChange = vi.fn()
     const initialProgressChange = vi.fn()
     const nextProgressChange = vi.fn()
-    let handleScroll!: () => void
+    const harnessState = {
+      handleScroll: null as (() => void) | null,
+    }
 
     function Harness({
       layout,
@@ -68,9 +119,8 @@ describe("usePdfScroll", () => {
         onScrollProgressChange,
       })
 
-      handleScroll = result.handleScroll
-
       React.useEffect(() => {
+        harnessState.handleScroll = result.handleScroll
         result.setViewportElement(viewport)
         result.measureScroll()
         return () => result.setViewportElement(null)
@@ -94,7 +144,7 @@ describe("usePdfScroll", () => {
     initialProgressChange.mockClear()
 
     act(() => {
-      handleScroll()
+      harnessState.handleScroll!()
     })
     expect(frameCallbacks).toHaveLength(1)
 

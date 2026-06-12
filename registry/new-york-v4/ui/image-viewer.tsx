@@ -8,12 +8,15 @@ import {
   type FrameDescriptor,
   type FrameSource,
 } from "@/lib/image-frame-source"
-import { createViewerResource } from "@/lib/viewer-resource"
+import {
+  createViewerResource,
+  type ViewerResource,
+} from "@/lib/viewer-resource"
 import { ImageViewerFallback } from "@/components/ui/image-viewer-chrome"
 import {
-  clearImageSourceCacheForTests,
   getImageSource,
   ImageViewerContent,
+  resetImageSourceCacheForTests,
 } from "@/components/ui/image-viewer-content"
 import type {
   ImageViewerHandle,
@@ -28,24 +31,36 @@ export type {
   ImageViewerProps,
 } from "@/components/ui/image-viewer-types"
 export type { FrameDescriptor, FrameSource }
-export { clearImageSourceCacheForTests, getImageSource }
+export { getImageSource, resetImageSourceCacheForTests }
+
+export type ImageResourceViewerProps = Omit<ImageViewerProps, "source"> & {
+  resource: ViewerResource
+}
 
 export const ImageViewer = React.forwardRef<
   ImageViewerHandle,
   ImageViewerProps
 >(function ImageViewer(props, ref) {
-  const isClient = useIsClient()
-  const resource = React.useMemo(
-    () => createViewerResource(props.source),
-    [props.source]
+  const { source, ...resourceProps } = props
+  const resource = React.useMemo(() => createViewerResource(source), [source])
+  return (
+    <ImageResourceViewer {...resourceProps} ref={ref} resource={resource} />
   )
+})
+
+export const ImageResourceViewer = React.forwardRef<
+  ImageViewerHandle,
+  ImageResourceViewerProps
+>(function ImageResourceViewer(props, ref) {
+  const isClient = useIsClient()
+  const resource = props.resource
   if (!isClient) {
     return <ImageViewerFallback className={props.className} bare={props.bare} />
   }
   return (
     <ViewerErrorBoundary
       className={props.className}
-      download={resource.getOriginalDownload()}
+      download={resource.originalDownload}
       format="image"
       resetKey={resource.keys.resource}
       sourceKind={resource.sourceKind}

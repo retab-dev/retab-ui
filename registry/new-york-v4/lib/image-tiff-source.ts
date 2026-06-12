@@ -6,10 +6,16 @@ import {
   type FrameDescriptor,
   type FrameSource,
 } from "@/lib/image-frame-source"
+import { ViewerFormatError } from "@/lib/viewer-errors"
 
-export class TiffWorkerError extends Error {
+export class TiffWorkerError extends ViewerFormatError {
   constructor(message: string, options?: ErrorOptions) {
-    super(message, options)
+    super({
+      format: "image",
+      kind: "worker_failed",
+      message,
+      cause: options?.cause,
+    })
     this.name = "TiffWorkerError"
   }
 }
@@ -144,7 +150,7 @@ export class TiffWorkerClient {
 
   cancelDecode(
     frameIndex: number,
-    reason = new TiffWorkerError("TIFF decode canceled")
+    reason: Error = new TiffWorkerError("TIFF decode canceled")
   ) {
     for (const [requestId, pending] of this.pendingDecodes) {
       if (pending.frameIndex !== frameIndex) continue
@@ -158,7 +164,7 @@ export class TiffWorkerClient {
     }
   }
 
-  dispose(reason = new TiffWorkerError("TIFF worker disposed")) {
+  dispose(reason: Error = new TiffWorkerError("TIFF worker disposed")) {
     if (this.disposed) return
     this.disposed = true
     this.rejectInit(reason)
@@ -168,6 +174,12 @@ export class TiffWorkerClient {
 
   private handleMessage(message: TiffWorkerResponse) {
     if (message.type === "initOk") {
+      if (!isFrameDescriptorList(message.frames)) {
+        this.fail(
+          new TiffWorkerError("TIFF worker sent an invalid init response")
+        )
+        return
+      }
       this.initialized = true
       this.initResolve?.(message.frames)
       this.initResolve = null
@@ -175,6 +187,12 @@ export class TiffWorkerClient {
       return
     }
     if (message.type === "initError") {
+      if (typeof message.message !== "string") {
+        this.fail(
+          new TiffWorkerError("TIFF worker sent an invalid init response")
+        )
+        return
+      }
       const error = new TiffWorkerError(message.message)
       this.disposed = true
       this.rejectPending(error)
@@ -183,15 +201,38 @@ export class TiffWorkerClient {
       return
     }
     if (message.type === "decodeFrameOk") {
+      if (
+        !isWorkerRequestId(message.requestId) ||
+        !isImageBitmap(message.bitmap)
+      ) {
+        if (isImageBitmap(message.bitmap)) closeBitmap(message.bitmap)
+        this.fail(
+          new TiffWorkerError("TIFF worker sent an invalid decode response")
+        )
+        return
+      }
       const pending = this.pendingDecodes.get(message.requestId)
       this.pendingDecodes.delete(message.requestId)
       if (pending) pending.resolve(message.bitmap)
       else closeBitmap(message.bitmap)
       return
     }
-    const pending = this.pendingDecodes.get(message.requestId)
-    this.pendingDecodes.delete(message.requestId)
-    pending?.reject(new ImageDecodeError(message.message))
+    if (message.type === "decodeFrameError") {
+      if (
+        !isWorkerRequestId(message.requestId) ||
+        typeof message.message !== "string"
+      ) {
+        this.fail(
+          new TiffWorkerError("TIFF worker sent an invalid decode response")
+        )
+        return
+      }
+      const pending = this.pendingDecodes.get(message.requestId)
+      this.pendingDecodes.delete(message.requestId)
+      pending?.reject(new ImageDecodeError(message.message))
+      return
+    }
+    this.fail(new TiffWorkerError("TIFF worker sent an unknown message"))
   }
 
   private fail(error: Error) {
@@ -222,19 +263,54 @@ export async function createTiffFrameSource(
 ): Promise<FrameSource> {
   const client = new TiffWorkerClient(createWorker)
   const frames = await client.init(buffer, signal)
-  return createFrameSource({
-    kind: "tiff",
-    frames,
-    maxDecodedFrames,
-    decode: (frameIndex) => client.decode(frameIndex),
-    cancelDecode: (frameIndex, reason) =>
-      client.cancelDecode(frameIndex, reason),
-    onDispose: (reason) => client.dispose(reason),
-  })
+  try {
+    return createFrameSource({
+      kind: "tiff",
+      frames,
+      maxDecodedFrames,
+      decode: (frameIndex) => client.decode(frameIndex),
+      cancelDecode: (frameIndex, reason) =>
+        client.cancelDecode(frameIndex, reason),
+      onDispose: (reason) => client.dispose(reason),
+    })
+  } catch (error) {
+    client.dispose(error instanceof Error ? error : undefined)
+    throw error
+  }
 }
 
 function abortSignalReason(signal: AbortSignal): Error {
   return signal.reason instanceof Error
     ? signal.reason
     : new ImageSourceDisposedError()
+}
+
+function isWorkerRequestId(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0
+}
+
+function isImageBitmap(value: unknown): value is ImageBitmap {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    typeof (value as Partial<ImageBitmap>).close === "function" &&
+    Number.isFinite((value as Partial<ImageBitmap>).width) &&
+    Number.isFinite((value as Partial<ImageBitmap>).height)
+  )
+}
+
+function isFrameDescriptorList(value: unknown): value is FrameDescriptor[] {
+  return (
+    Array.isArray(value) &&
+    value.every((frame) => {
+      if (typeof frame !== "object" || frame === null) return false
+      const intrinsicSize = (frame as Partial<FrameDescriptor>).intrinsicSize
+      return (
+        typeof intrinsicSize === "object" &&
+        intrinsicSize !== null &&
+        typeof intrinsicSize.width === "number" &&
+        typeof intrinsicSize.height === "number"
+      )
+    })
+  )
 }

@@ -62,16 +62,17 @@ describe("pdf-viewer-scale", () => {
     })
 
     function MeasuredWidth({ width }: { width: number }) {
-      const measured = useMeasuredElementWidth()
+      const { ref: measuredRef, width: measuredWidth } =
+        useMeasuredElementWidth()
       return (
         <>
           <div
             key={width}
-            ref={measured.ref}
+            ref={measuredRef}
             data-testid="measured-element"
             data-width={width}
           />
-          <output data-testid="width">{measured.width ?? "null"}</output>
+          <output data-testid="width">{measuredWidth ?? "null"}</output>
         </>
       )
     }
@@ -90,11 +91,13 @@ describe("pdf-viewer-scale", () => {
     )
     expect(observedElement).toBe(screen.getByTestId("measured-element"))
 
-    resizeCallback?.(
+    const notifyResize = resizeCallback as unknown as ResizeObserverCallback
+    expect(notifyResize).not.toBeNull()
+    notifyResize(
       [
         {
           target: screen.getByTestId("measured-element"),
-        } as ResizeObserverEntry,
+        } as unknown as ResizeObserverEntry,
       ],
       {} as ResizeObserver
     )

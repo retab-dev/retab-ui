@@ -30,7 +30,8 @@ export function docxSourceToTarget(
     if (
       !isNonNegativeInteger(a.table) ||
       !isNonNegativeInteger(a.row) ||
-      !isNonNegativeInteger(a.column)
+      !isNonNegativeInteger(a.column) ||
+      !isValidOptionalRange(a.char_start, a.char_end)
     )
       return null
     return { kind: "cell", table: a.table, row: a.row, column: a.column }

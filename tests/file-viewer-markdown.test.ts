@@ -2,13 +2,19 @@
 
 import { describe, expect, it, vi } from "vitest"
 
+import { createViewerResource } from "@/lib/viewer-resource"
 import { createMarkdownHtmlCache } from "@/registry/new-york-v4/ui/file-viewer-markdown-viewer"
-import { type TextResourceCache } from "@/registry/new-york-v4/ui/file-viewer-text-resource"
+import {
+  type TextResourceCache,
+  type TextResourceSubscription,
+} from "@/registry/new-york-v4/ui/file-viewer-text-resource"
 
-function textSubscription(src: string) {
+function textSubscription(url: string) {
   const controller = new AbortController()
+  const resource = createViewerResource({ kind: "url" as const, url })
   return {
-    src,
+    content: resource.content,
+    fileName: resource.fileName,
     signal: controller.signal,
     controller,
   }
@@ -63,7 +69,13 @@ describe("file viewer markdown html", () => {
   it("opens safe links out of process and strips unsafe hrefs", async () => {
     const cache = createMarkdownHtmlCache({
       textCache: textCache(
-        "[Retab](https://retab.com) [Unsafe](javascript:alert('xss'))"
+        [
+          "[Retab](https://retab.com)",
+          "[Relative](/docs)",
+          "[Unsafe](javascript:alert('xss'))",
+          "[Uppercase](JaVaScRiPt:alert('xss'))",
+          "[Data](data:text/html,<script>alert('xss')</script>)",
+        ].join(" ")
       ),
     })
 
@@ -76,10 +88,45 @@ describe("file viewer markdown html", () => {
     expect(safe?.getAttribute("target")).toBe("_blank")
     expect(safe?.getAttribute("rel")).toBe("noopener noreferrer")
 
-    const unsafe = Array.from(document.querySelectorAll("a")).find(
-      (link) => link.textContent === "Unsafe"
+    const relative = Array.from(document.querySelectorAll("a")).find(
+      (link) => link.textContent === "Relative"
     )
-    expect(unsafe?.hasAttribute("href")).toBe(false)
+    expect(relative?.getAttribute("href")).toBe("/docs")
+    expect(relative?.getAttribute("target")).toBe("_blank")
+    expect(relative?.getAttribute("rel")).toBe("noopener noreferrer")
+
+    for (const label of ["Unsafe", "Uppercase", "Data"]) {
+      const unsafe = Array.from(document.querySelectorAll("a")).find(
+        (link) => link.textContent === label
+      )
+      expect(unsafe?.hasAttribute("href")).toBe(false)
+    }
+    expect(
+      Array.from(document.querySelectorAll("a")).filter((link) =>
+        ["Retab", "Relative"].includes(link.textContent ?? "")
+      )
+    ).toHaveLength(2)
+  })
+
+  it("keeps safe markdown images and strips unsafe image protocols", async () => {
+    const cache = createMarkdownHtmlCache({
+      textCache: textCache(
+        [
+          "![Safe](https://example.com/logo.png)",
+          "![Unsafe](javascript:alert('xss'))",
+        ].join("\n\n")
+      ),
+    })
+
+    const html = await cache.load(textSubscription("/images.md"))
+    const document = new DOMParser().parseFromString(html, "text/html")
+
+    expect(document.querySelector('img[alt="Safe"]')?.getAttribute("src")).toBe(
+      "https://example.com/logo.png"
+    )
+    expect(
+      document.querySelector('img[alt="Unsafe"]')?.getAttribute("src") ?? null
+    ).toBeNull()
   })
 
   it("does not start text loading for an already-aborted subscriber", async () => {
@@ -277,18 +324,16 @@ describe("file viewer markdown html", () => {
   it("aborts pending text loads when their markdown entry is evicted", async () => {
     let firstSignal: AbortSignal | undefined
     const firstPending = deferred<string>()
-    const load = vi.fn(
-      ({ src, signal }: { src: string; signal: AbortSignal }) => {
-        if (src === "/first.md") {
-          firstSignal = signal
-          signal.addEventListener("abort", () => {
-            firstPending.reject(new DOMException("Aborted", "AbortError"))
-          })
-          return firstPending.promise
-        }
-        return Promise.resolve("# Second")
+    const load = vi.fn(({ fileName, signal }: TextResourceSubscription) => {
+      if (fileName === "first.md") {
+        firstSignal = signal
+        signal.addEventListener("abort", () => {
+          firstPending.reject(new DOMException("Aborted", "AbortError"))
+        })
+        return firstPending.promise
       }
-    )
+      return Promise.resolve("# Second")
+    })
     const cache = createMarkdownHtmlCache({
       maxEntries: 1,
       textCache: {

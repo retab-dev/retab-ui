@@ -5,6 +5,7 @@ import { xlsxColumnLabel } from "@/lib/xlsx-workbook"
 import { serializeCsvTable } from "./csv-viewer-download"
 
 const CSV_DIALECT = { delimiter: ",", hasHeader: true } as const
+const MAX_DENSE_CSV_EXPORT_CELLS = 1_000_000
 
 export function createXlsxSheetCsvExportAction({
   fileName,
@@ -42,7 +43,10 @@ export function xlsxSheetCsvFileName({
   sheetName?: string
   sheetCount?: number
 }) {
-  const baseName = fileName.replace(/\.[^.\\/]+$/, "") || "spreadsheet"
+  const baseName = sanitizeFileNamePart(
+    fileName.replace(/\.[^.\\/]+$/, "") || "spreadsheet",
+    "spreadsheet"
+  )
   if (!sheetName || sheetCount == null || sheetCount <= 1) {
     return `${baseName}.csv`
   }
@@ -60,23 +64,33 @@ function serializeXlsxSheetAsCsv({
 }) {
   const sheet = source.sheets[sheetIndex]
   if (!sheet) return ""
+  const rowCount = normalizeSheetDimension(sheet.rowCount)
+  const columnCount = normalizeSheetDimension(sheet.columnCount)
+  if (rowCount === 0 || columnCount === 0) return ""
+  if (rowCount * columnCount > MAX_DENSE_CSV_EXPORT_CELLS) return ""
 
-  const columns = Array.from({ length: sheet.columnCount }, (_, columnIndex) =>
+  const columns = Array.from({ length: columnCount }, (_, columnIndex) =>
     xlsxColumnLabel(columnIndex)
   )
-  const sourceRows = Array.from({ length: sheet.rowCount }, (_, rowIndex) => {
+  const sourceRows = Array.from({ length: rowCount }, (_, rowIndex) => {
     throwIfAborted(signal)
-    return Array.from(
-      { length: sheet.columnCount },
-      (_, columnIndex) => source.getCell(sheetIndex, rowIndex, columnIndex).text
-    )
+    return Array.from({ length: columnCount }, (_, columnIndex) => {
+      const text = source.getCell(sheetIndex, rowIndex, columnIndex).text
+      throwIfAborted(signal)
+      return text
+    })
   })
 
   return serializeCsvTable({ columns, sourceRows, dialect: CSV_DIALECT })
 }
 
-function sanitizeFileNamePart(value: string) {
-  return value.trim().replace(/[/\\?%*:|"<>]+/g, "-") || "sheet"
+function normalizeSheetDimension(value: number) {
+  return Number.isFinite(value) && value > 0 ? Math.floor(value) : 0
+}
+
+function sanitizeFileNamePart(value: string, fallback = "sheet") {
+  const sanitized = value.trim().replace(/[\x00-\x1f\x7f/\\?%*:|"<>]+/g, "-")
+  return /[^\s.-]/u.test(sanitized) ? sanitized : fallback
 }
 
 function throwIfAborted(signal: AbortSignal | undefined) {

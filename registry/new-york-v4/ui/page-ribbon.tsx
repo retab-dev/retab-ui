@@ -9,6 +9,7 @@ import {
 } from "@/lib/segment-interaction"
 import {
   buildPageRuns,
+  normalizePageCount,
   segmentDisplayLabel,
   type Segment,
 } from "@/lib/segments"
@@ -63,7 +64,12 @@ export function PageRibbon({
   className,
 }: PageRibbonProps) {
   const vertical = orientation === "vertical"
-  const thickness = rowThickness ?? (vertical ? 44 : 10)
+  const total = normalizePageCount(pageCount)
+  const defaultThickness = vertical ? 44 : 10
+  const thickness =
+    rowThickness != null && Number.isFinite(rowThickness) && rowThickness > 0
+      ? rowThickness
+      : defaultThickness
   const scopedInteraction = React.useMemo(
     () =>
       scopeSegmentInteraction(
@@ -71,22 +77,21 @@ export function PageRibbon({
         rows.flatMap((row) =>
           row.segments
             .filter(
-              (segment) =>
-                buildVisiblePageRuns(segment.pages, pageCount).length > 0
+              (segment) => buildVisiblePageRuns(segment.pages, total).length > 0
             )
             .map((segment) => segment.id)
         )
       ),
-    [interaction, pageCount, rows]
+    [interaction, rows, total]
   )
-  if (pageCount <= 0 || rows.length === 0) return null
+  if (total <= 0 || rows.length === 0) return null
 
-  const ticks = showTicks ? buildTicks(pageCount) : []
+  const ticks = showTicks ? buildTicks(total) : []
   const cursorPct =
     scrollProgress != null && Number.isFinite(scrollProgress)
       ? clamp01(scrollProgress) * 100
       : currentPage != null && Number.isFinite(currentPage)
-        ? ((clamp(currentPage, 1, pageCount) - 0.5) / pageCount) * 100
+        ? ((clamp(currentPage, 1, total) - 0.5) / total) * 100
         : null
 
   return (
@@ -99,20 +104,20 @@ export function PageRibbon({
         className
       )}
     >
-      {rows.map((row) => (
+      {rows.map((row, rowPosition) => (
         <div
-          key={row.id}
+          key={`${row.id}-${rowPosition}`}
           data-slot="page-ribbon-row"
           title={row.label}
           className={cn("relative overflow-hidden rounded-[3px] bg-muted")}
           style={vertical ? { width: thickness } : { height: thickness }}
         >
-          {row.segments.flatMap((segment) =>
-            buildVisiblePageRuns(segment.pages, pageCount).map(
+          {row.segments.flatMap((segment, segmentPosition) =>
+            buildVisiblePageRuns(segment.pages, total).map(
               ([start, end], i) => {
                 const label = segmentDisplayLabel(segment.label)
-                const offsetPct = ((start - 1) / pageCount) * 100
-                const sizePct = ((end - start + 1) / pageCount) * 100
+                const offsetPct = ((start - 1) / total) * 100
+                const sizePct = ((end - start + 1) / total) * 100
                 const isCurrent =
                   currentPage != null &&
                   currentPage >= start &&
@@ -139,7 +144,7 @@ export function PageRibbon({
                     }
                 return (
                   <button
-                    key={`${segment.id}-${i}`}
+                    key={`${segment.id}-${segmentPosition}-${i}`}
                     type="button"
                     {...ariaProps}
                     {...dataProps}
@@ -212,7 +217,7 @@ export function PageRibbon({
           )}
         >
           {ticks.map((page) => {
-            const pct = ((page - 1) / pageCount) * 100
+            const pct = ((page - 1) / total) * 100
             return (
               <span
                 key={page}

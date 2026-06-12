@@ -64,6 +64,21 @@ describe("JSON bridge: getNodeJson / replaceNodeJson", () => {
     expect(out.properties!.b).toEqual({ type: "integer" })
   })
 
+  it("replaceNodeJson preserves unmodeled prototype-key keywords", () => {
+    const d = fromJsonSchema({
+      type: "object",
+      properties: { a: { type: "string" } },
+    })
+    const aId = getChildNodeId(d, d.root.id, "a")!
+    const replacement = JSON.parse(
+      '{"type":"string","__proto__":{"safe":true},"constructor":{"safe":true},"toString":{"safe":true}}'
+    ) as JSONSchema7
+
+    const out = json(replaceNodeJson(d, aId, replacement))
+
+    expect(out.properties!.a).toEqual(replacement)
+  })
+
   it("a root edit (whose JSON carries $defs) does not duplicate $defs", () => {
     const d = fromJsonSchema({
       type: "object",

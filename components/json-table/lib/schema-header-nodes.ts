@@ -20,10 +20,7 @@ function getHeaderEffectiveType(schema: JSONSchema7): string {
   if (Array.isArray(schema.enum)) return "enum"
   if (schema.$ref) return "$ref"
   if (schema.type === "string" && schema.format === "date") return "date"
-  if (
-    schema.type === "string" &&
-    (schema.format === "time" || schema.format === "iso-time")
-  ) {
+  if (schema.type === "string" && schema.format === "time") {
     return "time"
   }
   if (schema.type === "string" && schema.format === "date-time") {
@@ -32,6 +29,8 @@ function getHeaderEffectiveType(schema: JSONSchema7): string {
   if (Array.isArray(schema.type)) {
     return schema.type.find((type) => type !== "null")?.toString() ?? "string"
   }
+  if (schema.properties) return "object"
+  if (schema.items) return "array"
   return schema.type?.toString() || "string"
 }
 
@@ -64,14 +63,15 @@ function isObjectSchemaProperty(
   )
 }
 
+function pathContainsOrEquals(path: string, candidate: string): boolean {
+  return candidate === path || candidate.startsWith(path + ".")
+}
+
 export function buildHeaderNodesFromSchema(
   schema: JSONSchema7,
   collapsedPaths: FieldPath[]
 ): [JsonTableHeaderNode[], number] {
   let maxDepth = 0
-  if (!schema.properties || Object.keys(schema.properties).length === 0) {
-    return [[], 0]
-  }
 
   function buildNodes(
     properties: { key: string }[],
@@ -105,7 +105,7 @@ export function buildHeaderNodesFromSchema(
       const propName = key.split(".").pop() || key
       const parentPath = key.split(".").slice(0, -1).join(".")
 
-      const rawSchema = getSchemaPropertyTypeRaw(schema, key)
+      const rawSchema = getSchemaPropertyTypeRaw(schema, key) ?? {}
       const { schema: propertySchema } = unwrapSchema(rawSchema, schema)
 
       const effectiveType = getHeaderEffectiveType(propertySchema)
@@ -114,7 +114,7 @@ export function buildHeaderNodesFromSchema(
 
       if (effectiveType === "array") {
         const shouldShowChildren = !collapsedPaths.some((path) =>
-          key.startsWith(path)
+          pathContainsOrEquals(path, key)
         )
         let itemSchemaDef = rawSchema
         let itemSchema = propertySchema
@@ -172,7 +172,7 @@ export function buildHeaderNodesFromSchema(
       }
 
       const shouldShowChildren = !collapsedPaths.some((path) =>
-        key.startsWith(path)
+        pathContainsOrEquals(path, key)
       )
 
       return {

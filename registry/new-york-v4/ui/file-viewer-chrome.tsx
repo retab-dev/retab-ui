@@ -1,13 +1,9 @@
 "use client"
 
 import * as React from "react"
-import { Download, Maximize, Minus, Plus } from "lucide-react"
+import { Maximize, Minus, Plus } from "lucide-react"
 
 import { cn } from "@/lib/utils"
-import {
-  createHrefDownloadAction,
-  type ViewerDownloadAction,
-} from "@/lib/viewer-download"
 import type { ViewerResource } from "@/lib/viewer-resource"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -15,39 +11,27 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { ViewerDownloadButton } from "@/components/ui/viewer-download"
 import { ViewerErrorState } from "@/components/ui/viewer-error"
 
-import type { FileCategory, FileDescriptor } from "./file-viewer-core"
+import type { FileDescriptor } from "./file-viewer-core"
 
 const TEXT_SKELETON_FONT = 12.5
 const TEXT_SKELETON_LINE_HEIGHT = 20
 
-export function DocShell({
-  fileName,
-  src,
-  downloadAction,
+export function ResourceDocShell({
+  resource,
   meta,
   actions,
   className,
   bare,
   children,
 }: {
-  fileName: string
-  src?: string
-  downloadAction?: ViewerDownloadAction
+  resource: ViewerResource
   meta?: string
   actions?: React.ReactNode
   className?: string
   bare?: boolean
   children: React.ReactNode
 }) {
-  const resolvedDownloadAction =
-    downloadAction ??
-    (src
-      ? createHrefDownloadAction({
-          id: "download-original",
-          href: src,
-          fileName,
-        })
-      : null)
+  const fileName = resource.fileName
 
   return (
     <div
@@ -75,9 +59,7 @@ export function DocShell({
           {actions ? (
             <Separator orientation="vertical" className="mx-1 h-4" />
           ) : null}
-          {resolvedDownloadAction ? (
-            <ViewerDownloadButton action={resolvedDownloadAction} />
-          ) : null}
+          <ViewerDownloadButton action={resource.originalDownload} />
         </div>
       </div>
       <div className="flex min-h-0 flex-1 flex-col">{children}</div>
@@ -166,30 +148,16 @@ export function ZoomActionsSkeleton() {
 }
 
 export function UnsupportedCard({
-  src,
-  downloadAction,
-  fileName,
+  resource,
   className,
   bare,
   message = "No preview for",
 }: {
-  src?: string
-  downloadAction?: ViewerDownloadAction
-  fileName: string
+  resource: ViewerResource
   className?: string
   bare?: boolean
   message?: string
 }) {
-  const resolvedDownloadAction =
-    downloadAction ??
-    (src
-      ? createHrefDownloadAction({
-          id: "download-original",
-          href: src,
-          fileName,
-        })
-      : null)
-
   return (
     <div
       className={cn(
@@ -201,46 +169,43 @@ export function UnsupportedCard({
     >
       <p className="text-sm text-muted-foreground">
         {message}{" "}
-        <span className="font-medium text-foreground">{fileName}</span>.
+        <span className="font-medium text-foreground">
+          {resource.fileName}.
+        </span>
       </p>
-      {resolvedDownloadAction ? (
-        <ViewerDownloadButton
-          action={resolvedDownloadAction}
-          variant="outline"
-          size="sm"
-          className=""
-          showLabel
-        />
-      ) : null}
+      <ViewerDownloadButton
+        action={resource.originalDownload}
+        variant="outline"
+        size="sm"
+        className=""
+        showLabel
+      />
     </div>
   )
 }
 
 export function ViewerFallback({
-  category,
-  fileName,
-  src,
+  resource,
   className,
   bare = false,
 }: {
-  category?: FileCategory
-  fileName?: string
-  src?: string
+  resource: ViewerResource
   className?: string
   bare?: boolean
 }) {
+  const category = resource.descriptor.category
+  const url = resource.content.directUrl
+
   if (
-    src != null &&
-    fileName != null &&
+    url != null &&
     (category === "text" ||
       category === "markdown" ||
       category === "html" ||
       category === "csv")
   ) {
     return (
-      <DocShell
-        fileName={fileName}
-        src={src}
+      <ResourceDocShell
+        resource={resource}
         className={className}
         bare={bare}
         actions={<ZoomActionsSkeleton />}
@@ -254,7 +219,7 @@ export function ViewerFallback({
             <Skeleton className="size-full rounded-md" />
           </div>
         )}
-      </DocShell>
+      </ResourceDocShell>
     )
   }
 
@@ -282,16 +247,7 @@ export function ViewerFallback({
               <Separator orientation="vertical" className="mx-1 h-4" />
             </>
           ) : null}
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            className="size-7"
-            disabled
-            tabIndex={-1}
-            aria-hidden
-          >
-            <Download />
-          </Button>
+          <ViewerDownloadButton action={resource.originalDownload} />
         </div>
       </div>
       {tabular ? (
@@ -436,7 +392,7 @@ export class FileErrorBoundary extends React.Component<
           error={this.state.error}
           format="file"
           sourceKind={this.props.resource.sourceKind}
-          download={this.props.resource.getOriginalDownload()}
+          download={this.props.resource.originalDownload}
           className={this.props.className}
         />
       )

@@ -4,12 +4,13 @@ import {
   createCsvNormalizer,
   createCsvParser,
   parseCsv,
+  resolveCsvDialect,
   streamCsv,
   type ParsedCsv,
 } from "@/registry/new-york-v4/lib/csv"
 
 async function collectStream(
-  source: string | AsyncIterable<string>,
+  source: Parameters<typeof streamCsv>[0],
   options?: Parameters<typeof streamCsv>[2]
 ): Promise<ParsedCsv> {
   let columns: string[] = []
@@ -58,8 +59,37 @@ describe("createCsvParser (incremental, across chunk boundaries)", () => {
     expect(feed(['"x""', 'y"'])).toEqual([['x"y']])
   })
 
+  it("strips only the leading UTF-8 BOM", () => {
+    expect(feed(["", "\uFEFFa,b\nc,\uFEFFd"])).toEqual([
+      ["a", "b"],
+      ["c", "\uFEFFd"],
+    ])
+  })
+
+  it("emits a final quoted empty field at EOF", () => {
+    expect(feed(['""'])).toEqual([[""]])
+    expect(feed(["a\n", '""'])).toEqual([["a"], [""]])
+  })
+
+  it("keeps quoted empty fields around delimiters", () => {
+    expect(feed(['"",x\n', 'y,""'])).toEqual([
+      ["", "x"],
+      ["y", ""],
+    ])
+  })
+
   it("handles a CRLF split across chunks", () => {
     expect(feed(["a\r", "\nb"])).toEqual([["a"], ["b"]])
+  })
+
+  it("handles quoted empty fields before a split CRLF", () => {
+    expect(feed(['""\r', '\n"x"'])).toEqual([[""], ["x"]])
+  })
+
+  it("handles CR-only line endings consistently at EOF", () => {
+    expect(feed(["\r"])).toEqual([[""]])
+    expect(feed(['""\r'])).toEqual([[""]])
+    expect(feed(["a\r", '""\r'])).toEqual([["a"], [""]])
   })
 
   it("is self-contained when serialized (worker-safe)", () => {
@@ -112,6 +142,18 @@ describe("parseCsv", () => {
     expect(rows).toEqual([['she said "hi"']])
   })
 
+  it("strips a leading UTF-8 BOM from the first header", () => {
+    const { columns, rows } = parseCsv("\uFEFFname,age\nAlice,30")
+    expect(columns).toEqual(["name", "age"])
+    expect(rows).toEqual([["Alice", "30"]])
+  })
+
+  it("keeps final quoted empty rows", () => {
+    const { columns, rows } = parseCsv('value\n""')
+    expect(columns).toEqual(["value"])
+    expect(rows).toEqual([[""]])
+  })
+
   it("normalizes CRLF line endings", () => {
     const { columns, rows } = parseCsv("a,b\r\n1,2\r\n3,4")
     expect(columns).toEqual(["a", "b"])
@@ -152,6 +194,17 @@ describe("parseCsv", () => {
   })
 })
 
+describe("resolveCsvDialect", () => {
+  it("normalizes escaped tab delimiters from dialect objects", () => {
+    expect(
+      resolveCsvDialect({
+        dialect: { delimiter: "\\t", hasHeader: true },
+        descriptor: {},
+      })
+    ).toEqual({ delimiter: "\t", hasHeader: true })
+  })
+})
+
 describe("streamCsv", () => {
   it("matches parseCsv when later rows widen the table", async () => {
     const input = "a,b\n1,2\n3,4,5"
@@ -165,5 +218,34 @@ describe("streamCsv", () => {
     await expect(
       collectStream(input, { delimiter: "\t", hasHeader: false })
     ).resolves.toEqual(parseCsv(input, { delimiter: "\t", hasHeader: false }))
+  })
+
+  it("matches parseCsv for final quoted empty rows", async () => {
+    const input = 'value\n""'
+    await expect(collectStream(chunks(["value\n", '""']))).resolves.toEqual(
+      parseCsv(input)
+    )
+  })
+
+  it("matches parseCsv when quoted cells cross chunk boundaries", async () => {
+    const input = 'name,note\nAlice,"line 1\nline 2"\nBob,"said ""hi"""'
+    await expect(
+      collectStream(
+        chunks(['name,note\nAlice,"line', ' 1\nline 2"\nBob,"said "', '"hi"""'])
+      )
+    ).resolves.toEqual(parseCsv(input))
+  })
+
+  it("finishes empty byte streams as empty CSV input", async () => {
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.close()
+      },
+    })
+
+    await expect(collectStream(stream)).resolves.toEqual({
+      columns: [],
+      rows: [],
+    })
   })
 })

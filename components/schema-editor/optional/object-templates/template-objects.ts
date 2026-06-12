@@ -1,9 +1,10 @@
 import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types";
 
-export const templateObjects: Record<
-  string,
-  ExtendedJSONSchema7 & { deps?: string[] }
-> = {
+export const objectTemplateDependencies: Record<string, string[]> = {
+  Company: ["Address"],
+};
+
+export const templateObjects: Record<string, ExtendedJSONSchema7> = {
   Address: {
     description:
       "A normalized postal address (Schema.org / UBL / FHIR compatible).",
@@ -266,7 +267,6 @@ export const templateObjects: Record<
     required: ["name", "address"],
     title: "Company",
     type: "object",
-    deps: ["Address"],
   },
   Event: {
     description:

@@ -38,6 +38,9 @@ export function pdfAnchorToLocation(
     }
   }
   if (anchor.kind === "image_bbox") {
+    if (anchor.page != null && !isPositiveInteger(anchor.page)) {
+      return undefined
+    }
     if (!isValidNormalizedBox(anchor)) return undefined
     return {
       page: 1,

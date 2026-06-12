@@ -1,34 +1,62 @@
 // @vitest-environment jsdom
 
-import type * as React from "react"
-import { renderHook } from "@testing-library/react"
+import * as React from "react"
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  renderHook,
+  waitFor,
+} from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
+import * as PublicFixedGridBenchmark from "@/components/ui/fixed-grid-benchmark"
+import * as PublicFixedGridColumns from "@/components/ui/fixed-grid-columns"
+import * as PublicFixedGridLayout from "@/components/ui/fixed-grid-layout"
+import * as PublicFixedGridRowStyle from "@/components/ui/fixed-grid-row-style"
+import * as PublicFixedGridSelection from "@/components/ui/fixed-grid-selection"
+import * as PublicFixedGridTemplate from "@/components/ui/fixed-grid-template"
+import * as PublicFixedGridViewport from "@/components/ui/fixed-grid-viewport"
+import * as PublicFixedGridVirtualization from "@/components/ui/fixed-grid-virtualization"
+import * as PublicHeaderAwareScrollbar from "@/components/ui/header-aware-scrollbar"
+import * as PublicXlsxGridScrollbar from "@/components/ui/xlsx-grid-scrollbar"
 import {
-  buildFixedGridColumns,
-  fixedGridColumnWidths,
-} from "@/registry/new-york-v4/ui/fixed-grid-columns"
+  CSV_SCROLLBAR_CSS,
+  HeaderAwareScrollbar as CsvHeaderAwareScrollbar,
+} from "@/registry/new-york-v4/ui/csv-viewer-scrollbar"
 import {
   findFixedGridScroller,
   isScrollableViewport,
 } from "@/registry/new-york-v4/ui/fixed-grid-benchmark"
 import {
+  buildFixedGridColumns,
+  fixedGridColumnWidths,
+} from "@/registry/new-york-v4/ui/fixed-grid-columns"
+import {
   getFixedGridCanvasStyle,
   getFixedGridRowWindowStyle,
 } from "@/registry/new-york-v4/ui/fixed-grid-layout"
+import { getFixedGridRowStyle } from "@/registry/new-york-v4/ui/fixed-grid-row-style"
 import {
   gridCellKey,
   isSameGridCell,
   parseGridCellKey,
 } from "@/registry/new-york-v4/ui/fixed-grid-selection"
-import { getFixedGridRowStyle } from "@/registry/new-york-v4/ui/fixed-grid-row-style"
 import { buildVirtualGridTemplate } from "@/registry/new-york-v4/ui/fixed-grid-template"
+import { FixedGridViewport } from "@/registry/new-york-v4/ui/fixed-grid-viewport"
 import {
   fixedScrollOffset,
   fixedVirtualItems,
   useFixedGridVirtualization,
   useFixedRowVirtualization,
 } from "@/registry/new-york-v4/ui/fixed-grid-virtualization"
+import { HeaderAwareScrollbar } from "@/registry/new-york-v4/ui/header-aware-scrollbar"
+import {
+  XLSX_SCROLLBAR_CSS,
+  HeaderAwareScrollbar as XlsxHeaderAwareScrollbar,
+} from "@/registry/new-york-v4/ui/xlsx-grid-scrollbar"
+import { SCENARIOS } from "@/app/(view)/scrollbench/scrollbench-core"
 import {
   findScrollableViewport,
   isAbortError,
@@ -36,10 +64,67 @@ import {
   viewportMetrics,
   waitForScroller,
 } from "@/app/(view)/scrollbench/scrollbench-runner"
-import { SCENARIOS } from "@/app/(view)/scrollbench/scrollbench-core"
 
 afterEach(() => {
+  cleanup()
   vi.restoreAllMocks()
+  vi.unstubAllGlobals()
+})
+
+describe("fixed grid public entrypoints", () => {
+  it("keeps component-facing re-exports wired to the registry implementations", () => {
+    expect(PublicFixedGridBenchmark.findFixedGridScroller).toBe(
+      findFixedGridScroller
+    )
+    expect(PublicFixedGridBenchmark.isScrollableViewport).toBe(
+      isScrollableViewport
+    )
+    expect(PublicFixedGridColumns.buildFixedGridColumns).toBe(
+      buildFixedGridColumns
+    )
+    expect(PublicFixedGridColumns.fixedGridColumnWidths).toBe(
+      fixedGridColumnWidths
+    )
+    expect(PublicFixedGridLayout.getFixedGridCanvasStyle).toBe(
+      getFixedGridCanvasStyle
+    )
+    expect(PublicFixedGridLayout.getFixedGridRowWindowStyle).toBe(
+      getFixedGridRowWindowStyle
+    )
+    expect(PublicFixedGridRowStyle.getFixedGridRowStyle).toBe(
+      getFixedGridRowStyle
+    )
+    expect(PublicFixedGridSelection.gridCellKey).toBe(gridCellKey)
+    expect(PublicFixedGridSelection.isSameGridCell).toBe(isSameGridCell)
+    expect(PublicFixedGridSelection.parseGridCellKey).toBe(parseGridCellKey)
+    expect(PublicFixedGridTemplate.buildVirtualGridTemplate).toBe(
+      buildVirtualGridTemplate
+    )
+    expect(PublicFixedGridViewport.FixedGridViewport).toBe(FixedGridViewport)
+    expect(PublicFixedGridVirtualization.fixedScrollOffset).toBe(
+      fixedScrollOffset
+    )
+    expect(PublicFixedGridVirtualization.fixedVirtualItems).toBe(
+      fixedVirtualItems
+    )
+    expect(PublicFixedGridVirtualization.useFixedGridVirtualization).toBe(
+      useFixedGridVirtualization
+    )
+    expect(PublicFixedGridVirtualization.useFixedRowVirtualization).toBe(
+      useFixedRowVirtualization
+    )
+    expect(PublicHeaderAwareScrollbar.HeaderAwareScrollbar).toBe(
+      HeaderAwareScrollbar
+    )
+    expect(PublicXlsxGridScrollbar.HeaderAwareScrollbar).toBe(
+      HeaderAwareScrollbar
+    )
+    expect(CsvHeaderAwareScrollbar).toBe(HeaderAwareScrollbar)
+    expect(XlsxHeaderAwareScrollbar).toBe(HeaderAwareScrollbar)
+    expect(CSV_SCROLLBAR_CSS).toContain('[data-slot="csv-body"]')
+    expect(XLSX_SCROLLBAR_CSS).toContain('[data-slot="xlsx-body"]')
+    expect(PublicXlsxGridScrollbar.XLSX_SCROLLBAR_CSS).toBe(XLSX_SCROLLBAR_CSS)
+  })
 })
 
 describe("fixed grid columns", () => {
@@ -209,15 +294,34 @@ describe("fixed grid layout styles", () => {
     expect(rowWindowStyle).not.toHaveProperty("height")
     expect(rowWindowStyle).not.toHaveProperty("minWidth")
   })
+
+  it("omits blank CSS length strings", () => {
+    const canvasStyle = getFixedGridCanvasStyle({
+      width: "",
+      minWidth: "   ",
+    })
+
+    expect(canvasStyle).toStrictEqual({
+      position: "relative",
+    })
+    expect(canvasStyle).not.toHaveProperty("width")
+    expect(canvasStyle).not.toHaveProperty("minWidth")
+  })
 })
 
 describe("fixed grid selection", () => {
   it("compares nullable cell coordinates", () => {
     expect(
-      isSameGridCell({ rowIndex: 2, columnIndex: 3 }, { rowIndex: 2, columnIndex: 3 })
+      isSameGridCell(
+        { rowIndex: 2, columnIndex: 3 },
+        { rowIndex: 2, columnIndex: 3 }
+      )
     ).toBe(true)
     expect(
-      isSameGridCell({ rowIndex: 2, columnIndex: 3 }, { rowIndex: 2, columnIndex: 4 })
+      isSameGridCell(
+        { rowIndex: 2, columnIndex: 3 },
+        { rowIndex: 2, columnIndex: 4 }
+      )
     ).toBe(false)
     expect(isSameGridCell(null, { rowIndex: 2, columnIndex: 3 })).toBe(false)
     expect(isSameGridCell(undefined, undefined)).toBe(false)
@@ -251,9 +355,7 @@ describe("fixed grid selection", () => {
     expect(
       gridCellKey({ rowIndex: Number.MAX_SAFE_INTEGER + 1, columnIndex: 1 })
     ).toBeNull()
-    expect(
-      parseGridCellKey(`${Number.MAX_SAFE_INTEGER + 1}:1`)
-    ).toBeNull()
+    expect(parseGridCellKey(`${Number.MAX_SAFE_INTEGER + 1}:1`)).toBeNull()
   })
 
   it("does not consider invalid matching coordinates equal", () => {
@@ -356,6 +458,580 @@ describe("fixed grid template and row styles", () => {
       minHeight: 0,
       transform: "translate3d(0, 0px, 0)",
     })
+  })
+
+  it("omits blank row grid templates", () => {
+    const rowStyle = getFixedGridRowStyle({
+      gridTemplate: "   ",
+      rowHeight: 32,
+      top: 0,
+    })
+
+    expect(rowStyle).not.toHaveProperty("gridTemplateColumns")
+  })
+})
+
+describe("fixed grid viewport shell", () => {
+  it("forwards refs, data-slot, default classes, children, and DOM props", () => {
+    const ref = vi.fn()
+
+    const { unmount } = render(
+      React.createElement(FixedGridViewport, {
+        scrollRef: ref,
+        dataSlot: "shared-grid-body",
+        role: "grid",
+        tabIndex: 0,
+        "aria-label": "Shared grid",
+        children: React.createElement("span", null, "cell"),
+      })
+    )
+
+    const viewport = ref.mock.calls[0]?.[0] as HTMLDivElement
+    expect(viewport).toBeInstanceOf(HTMLDivElement)
+    expect(viewport.dataset.slot).toBe("shared-grid-body")
+    expect(viewport.className).toBe("absolute inset-0 overflow-auto")
+    expect(viewport.getAttribute("role")).toBe("grid")
+    expect(viewport.getAttribute("aria-label")).toBe("Shared grid")
+    expect(viewport.tabIndex).toBe(0)
+    expect(viewport.textContent).toBe("cell")
+
+    unmount()
+
+    expect(ref.mock.calls.at(-1)?.[0]).toBeNull()
+  })
+
+  it("allows consumers to replace the viewport className", () => {
+    const ref = vi.fn()
+
+    render(
+      React.createElement(FixedGridViewport, {
+        scrollRef: ref,
+        dataSlot: "json-table-scroll",
+        className: "w-full flex-1 overflow-auto",
+        children: "body",
+      })
+    )
+
+    const viewport = ref.mock.calls[0]?.[0] as HTMLDivElement
+    expect(viewport.className).toBe("w-full flex-1 overflow-auto")
+    expect(viewport.dataset.slot).toBe("json-table-scroll")
+  })
+
+  it("supports object refs used by grid consumers", () => {
+    const ref = React.createRef<HTMLDivElement>()
+
+    const { unmount } = render(
+      React.createElement(FixedGridViewport, {
+        scrollRef: ref,
+        dataSlot: "xlsx-body",
+        children: "sheet",
+      })
+    )
+
+    expect(ref.current).toBeInstanceOf(HTMLDivElement)
+    expect(ref.current?.dataset.slot).toBe("xlsx-body")
+
+    unmount()
+
+    expect(ref.current).toBeNull()
+  })
+})
+
+describe("header-aware scrollbar", () => {
+  it("renders a thumb below the header without ResizeObserver", async () => {
+    vi.stubGlobal("ResizeObserver", undefined)
+    const scroller = document.createElement("div")
+    defineViewportMetric(scroller, "clientHeight", 100)
+    defineViewportMetric(scroller, "scrollHeight", 200)
+    defineScrollMetric(scroller, "scrollTop", 50)
+    const scrollRef = {
+      current: scroller,
+    } as React.RefObject<HTMLDivElement | null>
+
+    const { container } = render(
+      React.createElement(HeaderAwareScrollbar, {
+        scrollRef,
+        headerHeight: 20,
+      })
+    )
+
+    await waitFor(() => {
+      const thumb = container.querySelector(
+        ".pointer-events-auto"
+      ) as HTMLElement | null
+      expect(thumb).toBeTruthy()
+      expect(thumb?.style.height).toBe("40px")
+      expect(thumb?.style.top).toBe("20px")
+    })
+
+    const track = container.firstElementChild as HTMLElement | null
+    expect(track?.style.top).toBe("20px")
+    expect(track?.style.bottom).toBe("0px")
+  })
+
+  it("hides the thumb when content is not scrollable", () => {
+    const scroller = document.createElement("div")
+    defineViewportMetric(scroller, "clientHeight", 100)
+    defineViewportMetric(scroller, "scrollHeight", 100)
+    defineScrollMetric(scroller, "scrollTop", 0)
+    const scrollRef = {
+      current: scroller,
+    } as React.RefObject<HTMLDivElement | null>
+
+    const { container } = render(
+      React.createElement(HeaderAwareScrollbar, {
+        scrollRef,
+        headerHeight: 20,
+      })
+    )
+
+    expect(container.firstElementChild).toBeNull()
+  })
+
+  it("hides the thumb for malformed scrollbar geometry", () => {
+    vi.stubGlobal("ResizeObserver", undefined)
+    const scroller = document.createElement("div")
+    defineViewportMetric(scroller, "clientHeight", Number.NaN)
+    defineViewportMetric(scroller, "scrollHeight", 200)
+    defineScrollMetric(scroller, "scrollTop", 0)
+    const scrollRef = {
+      current: scroller,
+    } as React.RefObject<HTMLDivElement | null>
+
+    const { container } = render(
+      React.createElement(HeaderAwareScrollbar, {
+        scrollRef,
+        headerHeight: 20,
+      })
+    )
+
+    expect(container.firstElementChild).toBeNull()
+  })
+
+  it("updates the thumb from scroll events", async () => {
+    vi.stubGlobal("ResizeObserver", undefined)
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      callback(performance.now())
+      return 1
+    })
+    vi.stubGlobal("cancelAnimationFrame", vi.fn())
+    const scroller = document.createElement("div")
+    defineViewportMetric(scroller, "clientHeight", 100)
+    defineViewportMetric(scroller, "scrollHeight", 200)
+    defineScrollMetric(scroller, "scrollTop", 0)
+    const scrollRef = {
+      current: scroller,
+    } as React.RefObject<HTMLDivElement | null>
+
+    const { container } = render(
+      React.createElement(HeaderAwareScrollbar, {
+        scrollRef,
+        headerHeight: 20,
+      })
+    )
+
+    await waitFor(() => {
+      expect(
+        (container.querySelector(".pointer-events-auto") as HTMLElement | null)
+          ?.style.top
+      ).toBe("0px")
+    })
+
+    defineScrollMetric(scroller, "scrollTop", 50)
+    act(() => {
+      scroller.dispatchEvent(new Event("scroll"))
+    })
+
+    await waitFor(() => {
+      expect(
+        (container.querySelector(".pointer-events-auto") as HTMLElement | null)
+          ?.style.top
+      ).toBe("20px")
+    })
+  })
+
+  it("reattaches measurements when the scrollbar scroll ref element changes", async () => {
+    vi.stubGlobal("ResizeObserver", undefined)
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      callback(performance.now())
+      return 1
+    })
+    vi.stubGlobal("cancelAnimationFrame", vi.fn())
+    const firstScroller = document.createElement("div")
+    const nextScroller = document.createElement("div")
+    defineViewportMetric(firstScroller, "clientHeight", 100)
+    defineViewportMetric(firstScroller, "scrollHeight", 200)
+    defineScrollMetric(firstScroller, "scrollTop", 0)
+    defineViewportMetric(nextScroller, "clientHeight", 100)
+    defineViewportMetric(nextScroller, "scrollHeight", 300)
+    defineScrollMetric(nextScroller, "scrollTop", 50)
+    const removeEventListener = vi.spyOn(firstScroller, "removeEventListener")
+    const addEventListener = vi.spyOn(nextScroller, "addEventListener")
+    const scrollRef = {
+      current: firstScroller,
+    } as React.RefObject<HTMLDivElement | null>
+
+    const { container, rerender } = render(
+      React.createElement(HeaderAwareScrollbar, {
+        scrollRef,
+        headerHeight: 20,
+      })
+    )
+
+    await waitFor(() => {
+      expect(
+        (container.querySelector(".pointer-events-auto") as HTMLElement | null)
+          ?.style.top
+      ).toBe("0px")
+    })
+
+    scrollRef.current = nextScroller
+    rerender(
+      React.createElement(HeaderAwareScrollbar, {
+        scrollRef,
+        headerHeight: 20,
+      })
+    )
+
+    await waitFor(() => {
+      expect(
+        (container.querySelector(".pointer-events-auto") as HTMLElement | null)
+          ?.style.top
+      ).toBe("13px")
+    })
+    expect(removeEventListener).toHaveBeenCalledWith(
+      "scroll",
+      expect.any(Function)
+    )
+    expect(addEventListener).toHaveBeenCalledWith(
+      "scroll",
+      expect.any(Function),
+      {
+        passive: true,
+      }
+    )
+  })
+
+  it("clamps the measured thumb position when scrollTop is stale", async () => {
+    vi.stubGlobal("ResizeObserver", undefined)
+    const scroller = document.createElement("div")
+    defineViewportMetric(scroller, "clientHeight", 100)
+    defineViewportMetric(scroller, "scrollHeight", 200)
+    defineScrollMetric(scroller, "scrollTop", 1_000)
+    const scrollRef = {
+      current: scroller,
+    } as React.RefObject<HTMLDivElement | null>
+
+    const { container } = render(
+      React.createElement(HeaderAwareScrollbar, {
+        scrollRef,
+        headerHeight: 20,
+      })
+    )
+
+    await waitFor(() => {
+      expect(
+        (container.querySelector(".pointer-events-auto") as HTMLElement | null)
+          ?.style.top
+      ).toBe("40px")
+    })
+  })
+
+  it("drags the thumb into scrollTop using header-adjusted track geometry", async () => {
+    vi.stubGlobal("ResizeObserver", undefined)
+    const scroller = document.createElement("div")
+    defineViewportMetric(scroller, "clientHeight", 100)
+    defineViewportMetric(scroller, "scrollHeight", 300)
+    defineScrollMetric(scroller, "scrollTop", 30)
+    const scrollRef = {
+      current: scroller,
+    } as React.RefObject<HTMLDivElement | null>
+
+    const { container } = render(
+      React.createElement(HeaderAwareScrollbar, {
+        scrollRef,
+        headerHeight: 20,
+      })
+    )
+
+    const thumb = await waitFor(() => {
+      const element = container.querySelector(
+        ".pointer-events-auto"
+      ) as HTMLElement | null
+      expect(element).toBeTruthy()
+      return element!
+    })
+    thumb.setPointerCapture = vi.fn()
+    thumb.releasePointerCapture = vi.fn()
+
+    fireEvent.pointerDown(thumb, {
+      clientY: 10,
+      pointerId: 7,
+    })
+    fireEvent.pointerMove(thumb, {
+      clientY: 36,
+      pointerId: 7,
+    })
+
+    expect(scroller.scrollTop).toBe(130)
+    expect(thumb.setPointerCapture).toHaveBeenCalledWith(7)
+
+    fireEvent.pointerUp(thumb, {
+      pointerId: 7,
+    })
+    expect(thumb.releasePointerCapture).toHaveBeenCalledWith(7)
+  })
+
+  it("clamps dragged scrollTop and tolerates missing pointer capture APIs", async () => {
+    vi.stubGlobal("ResizeObserver", undefined)
+    const scroller = document.createElement("div")
+    defineViewportMetric(scroller, "clientHeight", 100)
+    defineViewportMetric(scroller, "scrollHeight", 300)
+    defineScrollMetric(scroller, "scrollTop", 30)
+    const scrollRef = {
+      current: scroller,
+    } as React.RefObject<HTMLDivElement | null>
+
+    const { container } = render(
+      React.createElement(HeaderAwareScrollbar, {
+        scrollRef,
+        headerHeight: 20,
+      })
+    )
+
+    const thumb = await waitFor(() => {
+      const element = container.querySelector(
+        ".pointer-events-auto"
+      ) as HTMLElement | null
+      expect(element).toBeTruthy()
+      return element!
+    })
+
+    fireEvent.pointerDown(thumb, {
+      clientY: 10,
+      pointerId: 7,
+    })
+    fireEvent.pointerMove(thumb, {
+      clientY: 1000,
+      pointerId: 7,
+    })
+    expect(scroller.scrollTop).toBe(200)
+
+    fireEvent.pointerMove(thumb, {
+      clientY: -1000,
+      pointerId: 7,
+    })
+    expect(scroller.scrollTop).toBe(0)
+  })
+
+  it("updates the thumb from ResizeObserver notifications", async () => {
+    let resizeCallback: ResizeObserverCallback | null = null
+    vi.stubGlobal(
+      "ResizeObserver",
+      class ResizeObserver {
+        constructor(callback: ResizeObserverCallback) {
+          resizeCallback = callback
+        }
+        observe() {}
+        disconnect() {}
+      }
+    )
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      callback(performance.now())
+      return 1
+    })
+    vi.stubGlobal("cancelAnimationFrame", vi.fn())
+    const scroller = document.createElement("div")
+    defineViewportMetric(scroller, "clientHeight", 100)
+    defineViewportMetric(scroller, "scrollHeight", 200)
+    defineScrollMetric(scroller, "scrollTop", 0)
+    const scrollRef = {
+      current: scroller,
+    } as React.RefObject<HTMLDivElement | null>
+
+    const { container } = render(
+      React.createElement(HeaderAwareScrollbar, {
+        scrollRef,
+        headerHeight: 20,
+      })
+    )
+
+    await waitFor(() => {
+      expect(
+        (container.querySelector(".pointer-events-auto") as HTMLElement | null)
+          ?.style.height
+      ).toBe("40px")
+    })
+
+    defineViewportMetric(scroller, "scrollHeight", 400)
+    act(() => {
+      resizeCallback?.(
+        [{ target: scroller } as unknown as ResizeObserverEntry],
+        {} as ResizeObserver
+      )
+    })
+
+    await waitFor(() => {
+      expect(
+        (container.querySelector(".pointer-events-auto") as HTMLElement | null)
+          ?.style.height
+      ).toBe("28px")
+    })
+  })
+
+  it("hides a previously visible thumb after resize makes content fit", async () => {
+    let resizeCallback: ResizeObserverCallback | null = null
+    vi.stubGlobal(
+      "ResizeObserver",
+      class ResizeObserver {
+        constructor(callback: ResizeObserverCallback) {
+          resizeCallback = callback
+        }
+        observe() {}
+        disconnect() {}
+      }
+    )
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      callback(performance.now())
+      return 1
+    })
+    vi.stubGlobal("cancelAnimationFrame", vi.fn())
+    const scroller = document.createElement("div")
+    defineViewportMetric(scroller, "clientHeight", 100)
+    defineViewportMetric(scroller, "scrollHeight", 200)
+    defineScrollMetric(scroller, "scrollTop", 0)
+    const scrollRef = {
+      current: scroller,
+    } as React.RefObject<HTMLDivElement | null>
+
+    const { container } = render(
+      React.createElement(HeaderAwareScrollbar, {
+        scrollRef,
+        headerHeight: 20,
+      })
+    )
+
+    await waitFor(() => {
+      expect(container.querySelector(".pointer-events-auto")).toBeTruthy()
+    })
+
+    defineViewportMetric(scroller, "scrollHeight", 100)
+    act(() => {
+      resizeCallback?.(
+        [{ target: scroller } as unknown as ResizeObserverEntry],
+        {} as ResizeObserver
+      )
+    })
+
+    await waitFor(() => {
+      expect(container.firstElementChild).toBeNull()
+    })
+  })
+
+  it("cancels pending scrollbar measurements and removes listeners on unmount", async () => {
+    vi.stubGlobal("ResizeObserver", undefined)
+    const cancelAnimationFrame = vi.fn()
+    vi.stubGlobal(
+      "requestAnimationFrame",
+      vi.fn(() => 13)
+    )
+    vi.stubGlobal("cancelAnimationFrame", cancelAnimationFrame)
+    const scroller = document.createElement("div")
+    defineViewportMetric(scroller, "clientHeight", 100)
+    defineViewportMetric(scroller, "scrollHeight", 200)
+    defineScrollMetric(scroller, "scrollTop", 0)
+    const removeEventListener = vi.spyOn(scroller, "removeEventListener")
+    const scrollRef = {
+      current: scroller,
+    } as React.RefObject<HTMLDivElement | null>
+
+    const { unmount } = render(
+      React.createElement(HeaderAwareScrollbar, {
+        scrollRef,
+        headerHeight: 20,
+      })
+    )
+
+    await waitFor(() => {
+      expect(scroller.removeEventListener).not.toHaveBeenCalled()
+    })
+    act(() => {
+      scroller.dispatchEvent(new Event("scroll"))
+    })
+    unmount()
+
+    expect(cancelAnimationFrame).toHaveBeenCalledWith(13)
+    expect(removeEventListener).toHaveBeenCalledWith(
+      "scroll",
+      expect.any(Function)
+    )
+  })
+
+  it("disconnects ResizeObserver while cancelling pending scrollbar measurements", async () => {
+    const disconnect = vi.fn()
+    vi.stubGlobal(
+      "ResizeObserver",
+      class ResizeObserver {
+        observe() {}
+        disconnect = disconnect
+      }
+    )
+    const cancelAnimationFrame = vi.fn()
+    vi.stubGlobal(
+      "requestAnimationFrame",
+      vi.fn(() => 31)
+    )
+    vi.stubGlobal("cancelAnimationFrame", cancelAnimationFrame)
+    const scroller = document.createElement("div")
+    defineViewportMetric(scroller, "clientHeight", 100)
+    defineViewportMetric(scroller, "scrollHeight", 200)
+    defineScrollMetric(scroller, "scrollTop", 0)
+    const scrollRef = {
+      current: scroller,
+    } as React.RefObject<HTMLDivElement | null>
+
+    const { unmount } = render(
+      React.createElement(HeaderAwareScrollbar, {
+        scrollRef,
+        headerHeight: 20,
+      })
+    )
+
+    act(() => {
+      scroller.dispatchEvent(new Event("scroll"))
+    })
+    unmount()
+
+    expect(cancelAnimationFrame).toHaveBeenCalledWith(31)
+    expect(disconnect).toHaveBeenCalledTimes(1)
+  })
+
+  it("coalesces repeated scrollbar scroll events into one frame", async () => {
+    vi.stubGlobal("ResizeObserver", undefined)
+    const requestAnimationFrame = vi.fn(() => 1)
+    vi.stubGlobal("requestAnimationFrame", requestAnimationFrame)
+    vi.stubGlobal("cancelAnimationFrame", vi.fn())
+    const scroller = document.createElement("div")
+    defineViewportMetric(scroller, "clientHeight", 100)
+    defineViewportMetric(scroller, "scrollHeight", 200)
+    defineScrollMetric(scroller, "scrollTop", 0)
+    const scrollRef = {
+      current: scroller,
+    } as React.RefObject<HTMLDivElement | null>
+
+    render(
+      React.createElement(HeaderAwareScrollbar, {
+        scrollRef,
+        headerHeight: 20,
+      })
+    )
+
+    act(() => {
+      scroller.dispatchEvent(new Event("scroll"))
+      scroller.dispatchEvent(new Event("scroll"))
+    })
+
+    expect(requestAnimationFrame).toHaveBeenCalledTimes(1)
   })
 })
 
@@ -547,6 +1223,104 @@ describe("fixed grid virtualization math", () => {
     ])
   })
 
+  it("preserves virtual window invariants across varied grid inputs", () => {
+    let seed = 0x12345678
+    const next = () => {
+      seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0
+      return seed / 0xffffffff
+    }
+
+    for (let run = 0; run < 100; run += 1) {
+      const count = 1 + Math.floor(next() * 2_000)
+      const size = 1 + Math.floor(next() * 80)
+      const scrollOffset = next() * count * size * 1.25 - count * size * 0.1
+      const viewportSize = next() < 0.1 ? 0 : next() * size * 120
+      const overscan = Math.floor(next() * 200) - 20
+      const minimumVisibleCount = Math.floor(next() * 40)
+      const items = fixedVirtualItems({
+        count,
+        size,
+        scrollOffset,
+        viewportSize,
+        overscan,
+        minimumVisibleCount,
+      })
+
+      expect(items.length).toBeGreaterThan(0)
+      expect(items.length).toBeLessThanOrEqual(10_000)
+
+      for (let index = 0; index < items.length; index += 1) {
+        const item = items[index]!
+        expect(item.index).toBeGreaterThanOrEqual(0)
+        expect(item.index).toBeLessThan(count)
+        expect(item.start).toBe(item.index * size)
+        expect(item.size).toBe(size)
+        expect(item.end).toBe(item.start + size)
+        if (index > 0) {
+          expect(item.index).toBe(items[index - 1]!.index + 1)
+        }
+      }
+
+      const safeScrollOffset =
+        Number.isFinite(scrollOffset) && scrollOffset > 0 ? scrollOffset : 0
+      const safeViewportSize = Number.isFinite(viewportSize) ? viewportSize : 0
+      const safeMinimumVisibleCount =
+        Number.isFinite(minimumVisibleCount) && minimumVisibleCount > 0
+          ? Math.ceil(minimumVisibleCount)
+          : 1
+      const effectiveViewportSize = Math.max(
+        safeViewportSize,
+        size * safeMinimumVisibleCount
+      )
+      const visibleStart = Math.min(
+        count - 1,
+        Math.max(0, Math.floor(safeScrollOffset / size))
+      )
+      const visibleEnd = Math.min(
+        count - 1,
+        Math.max(
+          visibleStart,
+          Math.ceil((safeScrollOffset + effectiveViewportSize) / size)
+        )
+      )
+
+      expect(items[0]!.index).toBeLessThanOrEqual(visibleStart)
+      if (visibleEnd - visibleStart + 1 <= 10_000) {
+        expect(items.at(-1)!.index).toBeGreaterThanOrEqual(visibleEnd)
+      } else {
+        expect(items.at(-1)!.index).toBe(visibleStart + 9_999)
+      }
+    }
+  })
+
+  it("caps hostile virtual windows", () => {
+    const items = fixedVirtualItems({
+      count: 1_000_000,
+      size: 1,
+      scrollOffset: 0,
+      viewportSize: 1_000_000,
+      overscan: 1_000_000,
+    })
+
+    expect(items).toHaveLength(10_000)
+    expect(items[0]?.index).toBe(0)
+    expect(items.at(-1)?.index).toBe(9_999)
+  })
+
+  it("keeps the visible grid range inside capped hostile windows", () => {
+    const items = fixedVirtualItems({
+      count: 1_000_000,
+      size: 1,
+      scrollOffset: 500_000,
+      viewportSize: 100,
+      overscan: 1_000_000,
+    })
+
+    expect(items).toHaveLength(10_000)
+    expect(items[0]!.index).toBeLessThanOrEqual(500_000)
+    expect(items.at(-1)!.index).toBeGreaterThanOrEqual(500_100)
+  })
+
   it("computes scroll offsets for start, center, end, and auto alignment", () => {
     const target = { index: 10, itemSize: 25, viewportSize: 100 }
 
@@ -591,6 +1365,25 @@ describe("fixed grid virtualization math", () => {
     ).toBe(0)
   })
 
+  it("returns zero for non-integer scroll target indexes", () => {
+    expect(
+      fixedScrollOffset({
+        index: 1.5,
+        itemSize: 25,
+        viewportSize: 100,
+        align: "start",
+      })
+    ).toBe(0)
+    expect(
+      fixedScrollOffset({
+        index: Number.MAX_SAFE_INTEGER + 1,
+        itemSize: 25,
+        viewportSize: 100,
+        align: "center",
+      })
+    ).toBe(0)
+  })
+
   it("keeps hook total sizes finite for malformed grid dimensions", () => {
     const scrollRef = { current: null } as React.RefObject<HTMLElement | null>
     const { result } = renderHook(() =>
@@ -626,6 +1419,31 @@ describe("fixed grid virtualization math", () => {
     expect(result.current.virtualRows).toEqual([])
   })
 
+  it("treats negative row-only overscan as zero", () => {
+    const scroller = document.createElement("div")
+    defineViewportMetric(scroller, "clientHeight", 64)
+    vi.stubGlobal("ResizeObserver", StubResizeObserver)
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      callback(performance.now())
+      return 1
+    })
+    vi.stubGlobal("cancelAnimationFrame", vi.fn())
+
+    const scrollRef = {
+      current: scroller,
+    } as React.RefObject<HTMLElement | null>
+    const { result } = renderHook(() =>
+      useFixedRowVirtualization({
+        rowCount: 10,
+        rowSize: 32,
+        rowOverscan: -3,
+        scrollRef,
+      })
+    )
+
+    expect(result.current.virtualRows.map((row) => row.index)).toEqual([0, 1])
+  })
+
   it("does not throw for malformed non-virtualized column dimensions", () => {
     const scrollRef = { current: null } as React.RefObject<HTMLElement | null>
     const { result } = renderHook(() =>
@@ -643,6 +1461,627 @@ describe("fixed grid virtualization math", () => {
 
     expect(result.current.columnItems).toEqual([])
     expect(result.current.totalColumnSize).toBe(0)
+  })
+
+  it("does not allocate hostile non-virtualized column counts", () => {
+    const scrollRef = { current: null } as React.RefObject<HTMLElement | null>
+    const { result } = renderHook(() =>
+      useFixedGridVirtualization({
+        rowCount: 1,
+        columnCount: 1_000_000,
+        rowSize: 32,
+        columnSize: 80,
+        rowOverscan: 2,
+        columnOverscan: 2,
+        scrollRef,
+        virtualizeColumns: false,
+      })
+    )
+
+    expect(result.current.columnItems).toEqual([])
+    expect(result.current.totalColumnSize).toBe(80_000_000)
+  })
+
+  it("normalizes malformed viewport metrics before virtualizing", () => {
+    const scroller = document.createElement("div")
+    defineViewportMetric(scroller, "clientHeight", Number.NaN)
+    defineHorizontalViewportMetric(
+      scroller,
+      "clientWidth",
+      Number.POSITIVE_INFINITY
+    )
+    defineScrollMetric(scroller, "scrollTop", Number.NaN)
+    defineScrollMetric(scroller, "scrollLeft", Number.POSITIVE_INFINITY)
+    vi.stubGlobal("ResizeObserver", StubResizeObserver)
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      callback(performance.now())
+      return 1
+    })
+    vi.stubGlobal("cancelAnimationFrame", vi.fn())
+
+    const scrollRef = {
+      current: scroller,
+    } as React.RefObject<HTMLElement | null>
+    const { result } = renderHook(() =>
+      useFixedGridVirtualization({
+        rowCount: 10,
+        columnCount: 10,
+        rowSize: 32,
+        columnSize: 80,
+        rowOverscan: 0,
+        columnOverscan: 0,
+        scrollRef,
+        scrollElement: scroller,
+      })
+    )
+
+    expect(result.current.virtualRows.map((row) => row.index)).toEqual([
+      0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+    ])
+    expect(result.current.columnItems.map((column) => column.index)).toEqual([
+      0, 1, 2, 3, 4, 5, 6, 7, 8,
+    ])
+  })
+
+  it("updates grid windows from scroll events using jump overscan", () => {
+    const scroller = document.createElement("div")
+    defineViewportMetric(scroller, "clientHeight", 20)
+    defineHorizontalViewportMetric(scroller, "clientWidth", 30)
+    defineScrollMetric(scroller, "scrollTop", 0)
+    defineScrollMetric(scroller, "scrollLeft", 0)
+    vi.stubGlobal("ResizeObserver", StubResizeObserver)
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      callback(performance.now())
+      return 1
+    })
+    vi.stubGlobal("cancelAnimationFrame", vi.fn())
+
+    const scrollRef = {
+      current: scroller,
+    } as React.RefObject<HTMLElement | null>
+    const { result } = renderHook(() =>
+      useFixedGridVirtualization({
+        rowCount: 100,
+        columnCount: 100,
+        rowSize: 10,
+        columnSize: 10,
+        rowOverscan: 5,
+        columnOverscan: 5,
+        jumpRowOverscan: 0,
+        jumpColumnOverscan: 0,
+        scrollRef,
+        scrollElement: scroller,
+      })
+    )
+
+    expect(result.current.virtualRows[0]?.index).toBe(0)
+    expect(result.current.columnItems[0]?.index).toBe(0)
+
+    defineScrollMetric(scroller, "scrollTop", 500)
+    defineScrollMetric(scroller, "scrollLeft", 400)
+    act(() => {
+      scroller.dispatchEvent(new Event("scroll"))
+    })
+
+    expect(result.current.virtualRows[0]?.index).toBe(50)
+    expect(result.current.virtualRows.at(-1)?.index).toBe(82)
+    expect(result.current.columnItems[0]?.index).toBe(40)
+    expect(result.current.columnItems.at(-1)?.index).toBe(48)
+    expect(result.current.leftPad).toBe(400)
+    expect(result.current.rightPad).toBe(510)
+  })
+
+  it("switches the measured grid viewport when the scroll element changes", () => {
+    const firstScroller = document.createElement("div")
+    const nextScroller = document.createElement("div")
+    defineViewportMetric(firstScroller, "clientHeight", 20)
+    defineHorizontalViewportMetric(firstScroller, "clientWidth", 20)
+    defineScrollMetric(firstScroller, "scrollTop", 0)
+    defineScrollMetric(firstScroller, "scrollLeft", 0)
+    defineViewportMetric(nextScroller, "clientHeight", 20)
+    defineHorizontalViewportMetric(nextScroller, "clientWidth", 20)
+    defineScrollMetric(nextScroller, "scrollTop", 600)
+    defineScrollMetric(nextScroller, "scrollLeft", 300)
+    vi.stubGlobal("ResizeObserver", StubResizeObserver)
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      callback(performance.now())
+      return 1
+    })
+    vi.stubGlobal("cancelAnimationFrame", vi.fn())
+
+    const scrollRef = {
+      current: firstScroller,
+    } as React.RefObject<HTMLElement | null>
+    const { result, rerender } = renderHook(
+      ({ scrollElement }) =>
+        useFixedGridVirtualization({
+          rowCount: 100,
+          columnCount: 100,
+          rowSize: 10,
+          columnSize: 10,
+          rowOverscan: 0,
+          columnOverscan: 0,
+          scrollRef,
+          scrollElement,
+        }),
+      { initialProps: { scrollElement: firstScroller } }
+    )
+
+    expect(result.current.virtualRows[0]?.index).toBe(0)
+    expect(result.current.columnItems[0]?.index).toBe(0)
+
+    scrollRef.current = nextScroller
+    rerender({ scrollElement: nextScroller })
+
+    expect(result.current.virtualRows[0]?.index).toBe(60)
+    expect(result.current.columnItems[0]?.index).toBe(30)
+  })
+
+  it("scrolls grid cells through the shared offset helper", () => {
+    const scroller = document.createElement("div")
+    defineViewportMetric(scroller, "clientHeight", 100)
+    defineHorizontalViewportMetric(scroller, "clientWidth", 200)
+    const scrollTo = vi.fn()
+    Object.defineProperty(scroller, "scrollTo", {
+      configurable: true,
+      value: scrollTo,
+    })
+
+    const scrollRef = {
+      current: scroller,
+    } as React.RefObject<HTMLElement | null>
+    const { result } = renderHook(() =>
+      useFixedGridVirtualization({
+        rowCount: 100,
+        columnCount: 100,
+        rowSize: 20,
+        columnSize: 50,
+        rowOverscan: 2,
+        columnOverscan: 2,
+        scrollRef,
+      })
+    )
+
+    act(() => {
+      result.current.scrollToCell({
+        rowIndex: 10,
+        columnIndex: 5,
+        align: "end",
+        behavior: "auto",
+      })
+    })
+
+    expect(scrollTo).toHaveBeenCalledWith({
+      top: 120,
+      left: 100,
+      behavior: "auto",
+    })
+  })
+
+  it("cancels pending grid viewport reads on unmount", () => {
+    const scroller = document.createElement("div")
+    defineViewportMetric(scroller, "clientHeight", 100)
+    defineHorizontalViewportMetric(scroller, "clientWidth", 100)
+    defineScrollMetric(scroller, "scrollTop", 0)
+    defineScrollMetric(scroller, "scrollLeft", 0)
+    const removeEventListener = vi.spyOn(scroller, "removeEventListener")
+    const cancelAnimationFrame = vi.fn()
+    vi.stubGlobal("ResizeObserver", StubResizeObserver)
+    vi.stubGlobal(
+      "requestAnimationFrame",
+      vi.fn(() => 17)
+    )
+    vi.stubGlobal("cancelAnimationFrame", cancelAnimationFrame)
+
+    const scrollRef = {
+      current: scroller,
+    } as React.RefObject<HTMLElement | null>
+    const { unmount } = renderHook(() =>
+      useFixedGridVirtualization({
+        rowCount: 100,
+        columnCount: 100,
+        rowSize: 20,
+        columnSize: 50,
+        rowOverscan: 2,
+        columnOverscan: 2,
+        scrollRef,
+        scrollElement: scroller,
+      })
+    )
+
+    act(() => {
+      scroller.dispatchEvent(new Event("scroll"))
+    })
+    unmount()
+
+    expect(cancelAnimationFrame).toHaveBeenCalledWith(17)
+    expect(removeEventListener).toHaveBeenCalledWith(
+      "scroll",
+      expect.any(Function)
+    )
+  })
+
+  it("detaches grid viewport listeners from replaced scroll elements", () => {
+    const firstScroller = document.createElement("div")
+    const nextScroller = document.createElement("div")
+    defineViewportMetric(firstScroller, "clientHeight", 100)
+    defineHorizontalViewportMetric(firstScroller, "clientWidth", 100)
+    defineScrollMetric(firstScroller, "scrollTop", 0)
+    defineScrollMetric(firstScroller, "scrollLeft", 0)
+    defineViewportMetric(nextScroller, "clientHeight", 100)
+    defineHorizontalViewportMetric(nextScroller, "clientWidth", 100)
+    defineScrollMetric(nextScroller, "scrollTop", 0)
+    defineScrollMetric(nextScroller, "scrollLeft", 0)
+    const removeEventListener = vi.spyOn(firstScroller, "removeEventListener")
+    vi.stubGlobal("ResizeObserver", StubResizeObserver)
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      callback(performance.now())
+      return 1
+    })
+    vi.stubGlobal("cancelAnimationFrame", vi.fn())
+
+    const scrollRef = {
+      current: firstScroller,
+    } as React.RefObject<HTMLElement | null>
+    const { rerender } = renderHook(
+      ({ scrollElement }) =>
+        useFixedGridVirtualization({
+          rowCount: 100,
+          columnCount: 100,
+          rowSize: 20,
+          columnSize: 50,
+          rowOverscan: 2,
+          columnOverscan: 2,
+          scrollRef,
+          scrollElement,
+        }),
+      { initialProps: { scrollElement: firstScroller } }
+    )
+
+    scrollRef.current = nextScroller
+    rerender({ scrollElement: nextScroller })
+
+    expect(removeEventListener).toHaveBeenCalledWith(
+      "scroll",
+      expect.any(Function)
+    )
+  })
+
+  it("keeps visible grid rows and columns mounted when hostile overscan is capped", () => {
+    const scroller = document.createElement("div")
+    defineViewportMetric(scroller, "clientHeight", 100)
+    defineHorizontalViewportMetric(scroller, "clientWidth", 100)
+    defineScrollMetric(scroller, "scrollTop", 500_000)
+    defineScrollMetric(scroller, "scrollLeft", 400_000)
+    vi.stubGlobal("ResizeObserver", StubResizeObserver)
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      callback(performance.now())
+      return 1
+    })
+    vi.stubGlobal("cancelAnimationFrame", vi.fn())
+
+    const scrollRef = {
+      current: scroller,
+    } as React.RefObject<HTMLElement | null>
+    const { result } = renderHook(() =>
+      useFixedGridVirtualization({
+        rowCount: 1_000_000,
+        columnCount: 1_000_000,
+        rowSize: 1,
+        columnSize: 1,
+        rowOverscan: 1_000_000,
+        columnOverscan: 1_000_000,
+        scrollRef,
+        scrollElement: scroller,
+      })
+    )
+
+    expect(result.current.virtualRows).toHaveLength(10_000)
+    expect(result.current.virtualRows[0]!.index).toBeLessThanOrEqual(500_000)
+    expect(result.current.virtualRows.at(-1)!.index).toBeGreaterThanOrEqual(
+      500_100
+    )
+    expect(result.current.columnItems).toHaveLength(10_000)
+    expect(result.current.columnItems[0]!.index).toBeLessThanOrEqual(400_000)
+    expect(result.current.columnItems.at(-1)!.index).toBeGreaterThanOrEqual(
+      400_100
+    )
+  })
+
+  it("caps row-only virtualization without dropping the visible rows", () => {
+    const scroller = document.createElement("div")
+    defineViewportMetric(scroller, "clientHeight", 100)
+    defineScrollMetric(scroller, "scrollTop", 500_000)
+    vi.stubGlobal("ResizeObserver", StubResizeObserver)
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      callback(performance.now())
+      return 1
+    })
+    vi.stubGlobal("cancelAnimationFrame", vi.fn())
+
+    const scrollRef = {
+      current: scroller,
+    } as React.RefObject<HTMLElement | null>
+    const { result } = renderHook(() =>
+      useFixedRowVirtualization({
+        rowCount: 1_000_000,
+        rowSize: 1,
+        rowOverscan: 1_000_000,
+        scrollRef,
+      })
+    )
+
+    expect(result.current.virtualRows).toHaveLength(10_000)
+    expect(result.current.virtualRows[0]!.index).toBeLessThanOrEqual(500_000)
+    expect(result.current.virtualRows.at(-1)!.index).toBeGreaterThanOrEqual(
+      500_100
+    )
+  })
+
+  it("keeps a row-only tail window when scroll offset is beyond the row count", () => {
+    const scroller = document.createElement("div")
+    defineViewportMetric(scroller, "clientHeight", 64)
+    defineScrollMetric(scroller, "scrollTop", 10_000)
+    vi.stubGlobal("ResizeObserver", StubResizeObserver)
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      callback(performance.now())
+      return 1
+    })
+    vi.stubGlobal("cancelAnimationFrame", vi.fn())
+
+    const scrollRef = {
+      current: scroller,
+    } as React.RefObject<HTMLElement | null>
+    const { result } = renderHook(() =>
+      useFixedRowVirtualization({
+        rowCount: 5,
+        rowSize: 32,
+        rowOverscan: 2,
+        scrollRef,
+      })
+    )
+
+    expect(result.current.virtualRows.map((row) => row.index)).toEqual([
+      2, 3, 4,
+    ])
+  })
+
+  it("updates row-only windows from scroll events using jump overscan", () => {
+    const scroller = document.createElement("div")
+    defineViewportMetric(scroller, "clientHeight", 60)
+    defineScrollMetric(scroller, "scrollTop", 0)
+    vi.stubGlobal("ResizeObserver", StubResizeObserver)
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      callback(performance.now())
+      return 1
+    })
+    vi.stubGlobal("cancelAnimationFrame", vi.fn())
+
+    const scrollRef = {
+      current: scroller,
+    } as React.RefObject<HTMLElement | null>
+    const { result } = renderHook(() =>
+      useFixedRowVirtualization({
+        rowCount: 100,
+        rowSize: 20,
+        rowOverscan: 6,
+        jumpRowOverscan: 1,
+        scrollRef,
+      })
+    )
+
+    expect(result.current.virtualRows.map((row) => row.index)).toEqual([
+      0, 1, 2, 3, 4, 5, 6, 7, 8,
+    ])
+
+    defineScrollMetric(scroller, "scrollTop", 800)
+    act(() => {
+      scroller.dispatchEvent(new Event("scroll"))
+    })
+
+    expect(result.current.virtualRows.map((row) => row.index)).toEqual([
+      39, 40, 41, 42, 43,
+    ])
+  })
+
+  it("reattaches row-only measurement when the scroll ref element changes", () => {
+    const firstScroller = document.createElement("div")
+    const nextScroller = document.createElement("div")
+    defineViewportMetric(firstScroller, "clientHeight", 60)
+    defineScrollMetric(firstScroller, "scrollTop", 0)
+    defineViewportMetric(nextScroller, "clientHeight", 60)
+    defineScrollMetric(nextScroller, "scrollTop", 800)
+    const removeEventListener = vi.spyOn(firstScroller, "removeEventListener")
+    const addEventListener = vi.spyOn(nextScroller, "addEventListener")
+    vi.stubGlobal("ResizeObserver", StubResizeObserver)
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      callback(performance.now())
+      return 1
+    })
+    vi.stubGlobal("cancelAnimationFrame", vi.fn())
+
+    const scrollRef = {
+      current: firstScroller,
+    } as React.RefObject<HTMLElement | null>
+    const { result, rerender } = renderHook(
+      ({ revision }) => {
+        void revision
+        return useFixedRowVirtualization({
+          rowCount: 100,
+          rowSize: 20,
+          rowOverscan: 2,
+          scrollRef,
+        })
+      },
+      { initialProps: { revision: 0 } }
+    )
+
+    expect(result.current.virtualRows.map((row) => row.index)).toEqual([
+      0, 1, 2, 3, 4,
+    ])
+
+    scrollRef.current = nextScroller
+    rerender({ revision: 1 })
+
+    expect(result.current.virtualRows.map((row) => row.index)).toEqual([
+      38, 39, 40, 41, 42, 43, 44,
+    ])
+    expect(removeEventListener).toHaveBeenCalledWith(
+      "scroll",
+      expect.any(Function)
+    )
+    expect(addEventListener).toHaveBeenCalledWith(
+      "scroll",
+      expect.any(Function),
+      {
+        passive: true,
+      }
+    )
+  })
+
+  it("remeasures row-only windows when row count shrinks without scrolling", () => {
+    const scroller = document.createElement("div")
+    defineViewportMetric(scroller, "clientHeight", 60)
+    defineScrollMetric(scroller, "scrollTop", 800)
+    vi.stubGlobal("ResizeObserver", StubResizeObserver)
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      callback(performance.now())
+      return 1
+    })
+    vi.stubGlobal("cancelAnimationFrame", vi.fn())
+
+    const scrollRef = {
+      current: scroller,
+    } as React.RefObject<HTMLElement | null>
+    const { result, rerender } = renderHook(
+      ({ rowCount }) =>
+        useFixedRowVirtualization({
+          rowCount,
+          rowSize: 20,
+          rowOverscan: 2,
+          scrollRef,
+        }),
+      { initialProps: { rowCount: 100 } }
+    )
+
+    expect(result.current.virtualRows.map((row) => row.index)).toEqual([
+      38, 39, 40, 41, 42, 43, 44,
+    ])
+
+    rerender({ rowCount: 5 })
+
+    expect(result.current.virtualRows.map((row) => row.index)).toEqual([
+      2, 3, 4,
+    ])
+    expect(result.current.totalRowSize).toBe(100)
+  })
+
+  it("remeasures row-only geometry when row size changes without scrolling", () => {
+    const scroller = document.createElement("div")
+    defineViewportMetric(scroller, "clientHeight", 30)
+    defineScrollMetric(scroller, "scrollTop", 40)
+    vi.stubGlobal("ResizeObserver", StubResizeObserver)
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      callback(performance.now())
+      return 1
+    })
+    vi.stubGlobal("cancelAnimationFrame", vi.fn())
+
+    const scrollRef = {
+      current: scroller,
+    } as React.RefObject<HTMLElement | null>
+    const { result, rerender } = renderHook(
+      ({ rowSize }) =>
+        useFixedRowVirtualization({
+          rowCount: 20,
+          rowSize,
+          rowOverscan: 0,
+          scrollRef,
+        }),
+      { initialProps: { rowSize: 20 } }
+    )
+
+    expect(result.current.virtualRows).toEqual([
+      { index: 2, start: 40, size: 20, end: 60 },
+      { index: 3, start: 60, size: 20, end: 80 },
+    ])
+
+    rerender({ rowSize: 10 })
+
+    expect(result.current.virtualRows).toEqual([
+      { index: 4, start: 40, size: 10, end: 50 },
+      { index: 5, start: 50, size: 10, end: 60 },
+      { index: 6, start: 60, size: 10, end: 70 },
+    ])
+    expect(result.current.totalRowSize).toBe(200)
+  })
+
+  it("scrolls row-only targets through the shared offset helper", () => {
+    const scroller = document.createElement("div")
+    defineViewportMetric(scroller, "clientHeight", 100)
+    const scrollTo = vi.fn()
+    Object.defineProperty(scroller, "scrollTo", {
+      configurable: true,
+      value: scrollTo,
+    })
+
+    const scrollRef = {
+      current: scroller,
+    } as React.RefObject<HTMLElement | null>
+    const { result } = renderHook(() =>
+      useFixedRowVirtualization({
+        rowCount: 100,
+        rowSize: 20,
+        rowOverscan: 2,
+        scrollRef,
+      })
+    )
+
+    act(() => {
+      result.current.scrollToRow({
+        rowIndex: 10,
+        align: "center",
+        behavior: "auto",
+      })
+    })
+
+    expect(scrollTo).toHaveBeenCalledWith({
+      top: 160,
+      behavior: "auto",
+    })
+  })
+
+  it("cancels pending row-only measurements on unmount", () => {
+    const scroller = document.createElement("div")
+    defineViewportMetric(scroller, "clientHeight", 60)
+    defineScrollMetric(scroller, "scrollTop", 0)
+    let nextFrame = 0
+    const cancelAnimationFrame = vi.fn()
+    vi.stubGlobal("ResizeObserver", StubResizeObserver)
+    vi.stubGlobal(
+      "requestAnimationFrame",
+      vi.fn(() => ++nextFrame)
+    )
+    vi.stubGlobal("cancelAnimationFrame", cancelAnimationFrame)
+
+    const scrollRef = {
+      current: scroller,
+    } as React.RefObject<HTMLElement | null>
+    const { unmount } = renderHook(() =>
+      useFixedRowVirtualization({
+        rowCount: 100,
+        rowSize: 20,
+        rowOverscan: 2,
+        scrollRef,
+      })
+    )
+
+    act(() => {
+      scroller.dispatchEvent(new Event("scroll"))
+    })
+    unmount()
+
+    expect(cancelAnimationFrame).toHaveBeenCalledWith(1)
   })
 })
 
@@ -759,7 +2198,9 @@ describe("scrollbench runner infrastructure", () => {
 
     root.append(declaredButCollapsed, fallback)
 
-    expect(findScrollableViewport(root, '[data-slot="declared"]')).toBe(fallback)
+    expect(findScrollableViewport(root, '[data-slot="declared"]')).toBe(
+      fallback
+    )
   })
 
   it("falls back instead of throwing when the declared selector is invalid", () => {
@@ -839,9 +2280,9 @@ describe("scrollbench runner infrastructure", () => {
     defineViewportMetric(scroller, "clientHeight", 200)
     defineViewportMetric(scroller, "scrollHeight", 600)
 
-    await expect(waitForScroller(() => scroller, { timeoutMs: 0 })).resolves.toBe(
-      scroller
-    )
+    await expect(
+      waitForScroller(() => scroller, { timeoutMs: 0 })
+    ).resolves.toBe(scroller)
   })
 
   it("fails clearly when no scroller is found before timeout", async () => {
@@ -850,14 +2291,46 @@ describe("scrollbench runner infrastructure", () => {
     )
   })
 
+  it("treats malformed scroller wait timeouts as immediate timeouts", async () => {
+    await expect(
+      waitForScroller(() => null, { timeoutMs: Number.POSITIVE_INFINITY })
+    ).rejects.toThrow("Could not find a viewer scrollport.")
+
+    await expect(
+      waitForScroller(() => null, { timeoutMs: Number.NaN })
+    ).rejects.toThrow("Could not find a viewer scrollport.")
+  })
+
+  it("supports synchronous timer stubs while waiting for a scroller", async () => {
+    const scroller = document.createElement("div")
+    let calls = 0
+    defineViewportMetric(scroller, "clientHeight", 200)
+    defineViewportMetric(scroller, "scrollHeight", 600)
+    vi.stubGlobal("setTimeout", (callback: () => void) => {
+      callback()
+      return 1
+    })
+    vi.stubGlobal("clearTimeout", vi.fn())
+
+    await expect(
+      waitForScroller(
+        () => {
+          calls += 1
+          return calls > 1 ? scroller : null
+        },
+        { timeoutMs: 100 }
+      )
+    ).resolves.toBe(scroller)
+  })
+
   it("fails clearly when the scroller exists but is not scrollable", async () => {
     const scroller = document.createElement("div")
     defineViewportMetric(scroller, "clientHeight", 200)
     defineViewportMetric(scroller, "scrollHeight", 200)
 
-    await expect(waitForScroller(() => scroller, { timeoutMs: 0 })).rejects.toThrow(
-      "The viewer scrollport is not scrollable yet."
-    )
+    await expect(
+      waitForScroller(() => scroller, { timeoutMs: 0 })
+    ).rejects.toThrow("The viewer scrollport is not scrollable yet.")
   })
 
   it("rejects with an abort error when waiting is cancelled", async () => {
@@ -964,4 +2437,32 @@ function defineViewportMetric(
     configurable: true,
     value,
   })
+}
+
+function defineHorizontalViewportMetric(
+  element: HTMLElement,
+  key: "clientWidth",
+  value: number
+) {
+  Object.defineProperty(element, key, {
+    configurable: true,
+    value,
+  })
+}
+
+function defineScrollMetric(
+  element: HTMLElement,
+  key: "scrollLeft" | "scrollTop",
+  value: number
+) {
+  Object.defineProperty(element, key, {
+    configurable: true,
+    value,
+    writable: true,
+  })
+}
+
+class StubResizeObserver {
+  observe() {}
+  disconnect() {}
 }

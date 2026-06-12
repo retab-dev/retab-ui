@@ -16,6 +16,12 @@ export function usePptxVisibleSlide({
   const [currentSlide, setCurrentSlide] = React.useState(1)
   const scrollViewportRef = React.useRef<HTMLDivElement | null>(null)
   const lastReportedSlide = React.useRef(0)
+  const lastVisibleSlideCallback = React.useRef(onVisibleSlideChange)
+
+  if (lastVisibleSlideCallback.current !== onVisibleSlideChange) {
+    lastVisibleSlideCallback.current = onVisibleSlideChange
+    lastReportedSlide.current = 0
+  }
 
   const handleScroll = React.useCallback(() => {
     const viewport = scrollViewportRef.current

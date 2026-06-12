@@ -57,10 +57,14 @@ export function segmentDisplayLabel(label: string): string {
   return trimmed || "unnamed"
 }
 
-/** Assign one palette color per distinct label, ordered by sorted label. */
+export function normalizePageCount(value: number): number {
+  return Number.isFinite(value) && value > 0 ? Math.floor(value) : 0
+}
+
+/** Assign one palette color per distinct display label, ordered by sorted label. */
 export function buildColorMap(labels: string[]): Map<string, string> {
-  const distinct = Array.from(new Set(labels)).sort((a, b) =>
-    a.localeCompare(b)
+  const distinct = Array.from(new Set(labels.map(segmentDisplayLabel))).sort(
+    (a, b) => a.localeCompare(b)
   )
   const map = new Map<string, string>()
   distinct.forEach((label, i) => {
@@ -73,6 +77,14 @@ function normalizePages(pages: number[]): number[] {
   return Array.from(
     new Set((pages ?? []).filter((p) => Number.isInteger(p) && p > 0))
   ).sort((a, b) => a - b)
+}
+
+export function segmentPageCount(pages: number[]): number {
+  return normalizePages(pages).length
+}
+
+export function firstSegmentPage(pages: number[]): number | null {
+  return normalizePages(pages)[0] ?? null
 }
 
 /** Normalize partition/split output into the shared `Segment[]` model. */
@@ -91,17 +103,30 @@ export function toSegments(
       id: `${label}#${index}`,
       label,
       pages: normalizePages(chunk.pages),
-      color: colors.get(label) ?? "#888888",
+      color:
+        colors.get(label) ??
+        colors.get(segmentDisplayLabel(label)) ??
+        "#888888",
       index,
-      confidence: confidences?.[index] ?? null,
+      confidence: normalizeConfidence(confidences?.[index]),
     }
   })
+}
+
+function normalizeConfidence(value: number | null | undefined): number | null {
+  return value != null && Number.isFinite(value)
+    ? Math.max(0, Math.min(1, value))
+    : null
 }
 
 /** Total page count implied by a set of segments (max page seen). */
 export function segmentsPageCount(segments: Segment[]): number {
   let max = 0
-  for (const s of segments) for (const p of s.pages) max = Math.max(max, p)
+  for (const s of segments) {
+    for (const p of s.pages) {
+      if (Number.isInteger(p) && p > 0) max = Math.max(max, p)
+    }
+  }
   return max
 }
 
@@ -110,6 +135,7 @@ export function pageOwners(segments: Segment[]): Map<number, number[]> {
   const owners = new Map<number, number[]>()
   segments.forEach((segment) => {
     segment.pages.forEach((page) => {
+      if (!Number.isInteger(page) || page <= 0) return
       const list = owners.get(page) ?? []
       list.push(segment.index)
       owners.set(page, list)

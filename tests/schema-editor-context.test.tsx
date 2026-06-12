@@ -4,10 +4,14 @@ import { act, cleanup, render } from "@testing-library/react"
 import type { JSONSchema7 } from "json-schema"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
+import { fromJsonSchema } from "@/components/schema-editor/document/convert"
+import { useDocumentDefinitionsEditorController } from "@/components/schema-editor/document-definitions-editor-controller"
+import { useDocumentNodeHeaderController } from "@/components/schema-editor/document-node-header-controller"
 import {
   getChildNodeId,
   getChildPropertyId,
 } from "@/components/schema-editor/document/node-selectors"
+import { getSchemaDocumentView } from "@/components/schema-editor/document/view-model"
 import {
   addProperty,
   renameProperty,
@@ -73,6 +77,50 @@ function renderProvider(
   }
   const utils = render(<Harness />)
   return { apiRef, onEmit, api: () => apiRef.current!, ...utils }
+}
+
+function HeaderControllerCapture({
+  schema,
+  onDefs,
+}: {
+  schema: JSONSchema7
+  onDefs: (defs: Record<string, unknown>) => void
+}) {
+  const doc = React.useMemo(() => fromJsonSchema(schema), [schema])
+  const nodeView = React.useMemo(() => getSchemaDocumentView(doc).root, [doc])
+  const controller = useDocumentNodeHeaderController({
+    dispatch: () => {},
+    doc,
+    nodeId: doc.root.id,
+    nodeView,
+    setDefsAccordionOpen: () => {},
+  })
+  React.useEffect(() => {
+    onDefs(controller.defs)
+  }, [controller.defs, onDefs])
+  return null
+}
+
+function DefinitionsControllerCapture({
+  schema,
+  onPaths,
+}: {
+  schema: JSONSchema7
+  onPaths: (paths: string[]) => void
+}) {
+  const doc = React.useMemo(() => fromJsonSchema(schema), [schema])
+  const controller = useDocumentDefinitionsEditorController({
+    dispatch: () => {},
+    doc,
+    editMode: "editable",
+    definitionsEnabled: true,
+    accordionOpen: true,
+    setAccordionOpen: () => {},
+  })
+  React.useEffect(() => {
+    onPaths(controller.definitionViews.map((view) => view.path))
+  }, [controller.definitionViews, onPaths])
+  return null
 }
 
 const sample: JSONSchema7 = {
@@ -164,6 +212,48 @@ describe("useSchemaBuilderState wiring", () => {
       api().dispatch((d) => renameProperty(d, newPropertyId, "c"))
     })
     expect(Object.keys(api().schema.properties!)).toEqual(["a", "b", "c"])
+  })
+
+  it("builds header definition maps with prototype-key definition names", () => {
+    let defs: Record<string, unknown> | null = null
+    render(
+      <HeaderControllerCapture
+        schema={
+          JSON.parse(
+            '{"type":"object","$defs":{"__proto__":{"type":"object","properties":{"value":{"type":"string"}}},"constructor":{"type":"string"}},"properties":{"a":{"type":"string"}}}'
+          ) as JSONSchema7
+        }
+        onDefs={(nextDefs) => {
+          defs = nextDefs
+        }}
+      />
+    )
+
+    expect(Object.prototype.hasOwnProperty.call(defs, "__proto__")).toBe(true)
+    expect(Object.keys(defs || {})).toEqual(["__proto__", "constructor"])
+  })
+
+  it("builds escaped definition editor paths", () => {
+    let paths: string[] = []
+    render(
+      <DefinitionsControllerCapture
+        schema={{
+          type: "object",
+          $defs: {
+            "A/B~C": {
+              type: "object",
+              properties: { value: { type: "string" } },
+            },
+          },
+          properties: {},
+        }}
+        onPaths={(nextPaths) => {
+          paths = nextPaths
+        }}
+      />
+    )
+
+    expect(paths).toEqual(["#/$defs/A~1B~0C"])
   })
 
   it("blocks dispatch and replaceSchema when read-only", async () => {

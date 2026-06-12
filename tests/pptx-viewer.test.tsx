@@ -30,6 +30,7 @@ import { createPptxScrollActivity } from "@/registry/new-york-v4/ui/pptx-viewer-
 import { PptxSlideScroller } from "@/registry/new-york-v4/ui/pptx-viewer-slide"
 import {
   getPptxSource,
+  subscribePptxSourceLoadTiming,
   type PptxRenderResult,
 } from "@/registry/new-york-v4/ui/pptx-viewer-source"
 import { resetPptxViewerForTests } from "@/registry/new-york-v4/ui/pptx-viewer-test-utils"
@@ -100,6 +101,31 @@ class MockIntersectionObserver {
   }
 }
 
+class ManualIntersectionObserver {
+  static instances: ManualIntersectionObserver[] = []
+
+  readonly observe = vi.fn()
+  readonly disconnect = vi.fn()
+  readonly unobserve = vi.fn()
+  readonly takeRecords = vi.fn(() => [])
+
+  constructor(readonly callback: IntersectionObserverCallback) {
+    ManualIntersectionObserver.instances.push(this)
+  }
+
+  setIntersecting(isIntersecting: boolean) {
+    this.callback(
+      [
+        {
+          isIntersecting,
+          target: document.createElement("div"),
+        } as unknown as IntersectionObserverEntry,
+      ],
+      this as unknown as IntersectionObserver
+    )
+  }
+}
+
 function okPptxResponse() {
   return Promise.resolve(new Response(new Uint8Array([1, 2, 3]).buffer))
 }
@@ -109,7 +135,7 @@ function pptxUrlSource(url: string, fileName?: string) {
 }
 
 function pptxUrlResource(url: string, fileName?: string) {
-  return createViewerResource(pptxUrlSource(url, fileName))
+  return createViewerResource(pptxUrlSource(url, fileName)).content
 }
 
 function mockObjectUrls(url = "blob:pptx-download") {
@@ -171,6 +197,10 @@ function deferred<T = void>() {
     resolve = next
   })
   return { promise, resolve }
+}
+
+async function waitForPptxSourceFailureEviction() {
+  await new Promise((resolve) => window.setTimeout(resolve, 0))
 }
 
 function createFakePptxSource({
@@ -310,6 +340,17 @@ describe("PptxViewer helpers", () => {
     })
   })
 
+  it("falls back to 4:3 when a supplied slide-size XML parser throws", () => {
+    expect(
+      parsePptxSlideSize("<p:presentation />", () => {
+        throw new Error("parser unavailable")
+      })
+    ).toEqual({
+      width: 960,
+      height: 720,
+    })
+  })
+
   it("accepts an injected XML parser for slide size parsing", () => {
     const parseXml = vi.fn(() =>
       new DOMParser().parseFromString(
@@ -355,6 +396,18 @@ describe("PptxViewer helpers", () => {
     )
   })
 
+  it("builds reset keys from normalized scale values", () => {
+    expect(
+      getPptxResetKey({ resourceKey: "url:/a.pptx", scale: Number.NaN })
+    ).toBe(getPptxResetKey({ resourceKey: "url:/a.pptx", scale: 1 }))
+    expect(
+      getPptxResetKey({ resourceKey: "url:/a.pptx", defaultScale: Infinity })
+    ).toBe(getPptxResetKey({ resourceKey: "url:/a.pptx", defaultScale: 1 }))
+    expect(getPptxResetKey({ resourceKey: "url:/a.pptx", scale: 999 })).toBe(
+      getPptxResetKey({ resourceKey: "url:/a.pptx", scale: 5 })
+    )
+  })
+
   it("does not reuse a loaded presentation when a new Blob reuses the same identity", async () => {
     const first = createViewerResource(
       blobSource(new Uint8Array([1, 2, 3]), {
@@ -369,8 +422,10 @@ describe("PptxViewer helpers", () => {
       })
     )
 
-    await expect(getPptxSource(first)).resolves.toMatchObject({ slideCount: 1 })
-    await expect(getPptxSource(second)).resolves.toMatchObject({
+    await expect(getPptxSource(first.content)).resolves.toMatchObject({
+      slideCount: 1,
+    })
+    await expect(getPptxSource(second.content)).resolves.toMatchObject({
       slideCount: 1,
     })
 
@@ -408,10 +463,28 @@ describe("PptxViewer helpers", () => {
     })
     expect(pptxMock.destroy).toHaveBeenCalledTimes(1)
 
+    await waitForPptxSourceFailureEviction()
     await expect(getPptxSource(resource)).resolves.toMatchObject({
       slideCount: 1,
     })
     expect(pptxMock.loadFile).toHaveBeenCalledTimes(2)
+  })
+
+  it("cleans up and normalizes slide count read failures", async () => {
+    pptxMock.getSlideCount.mockImplementationOnce(() => {
+      throw new Error("count failed")
+    })
+
+    const error = await getPptxSource(
+      pptxUrlResource("/broken-count.pptx")
+    ).catch((caught) => caught)
+
+    expect(error).toBeInstanceOf(ViewerFormatError)
+    expect(error).toMatchObject({
+      format: "pptx",
+      kind: "load_failed",
+    })
+    expect(pptxMock.destroy).toHaveBeenCalledTimes(1)
   })
 
   it("falls back to the default slide size when the PPTX archive cannot be inspected", async () => {
@@ -425,6 +498,19 @@ describe("PptxViewer helpers", () => {
     })
   })
 
+  it("falls back to the default slide size when presentation.xml is missing", async () => {
+    zipMock.loadAsync.mockResolvedValueOnce({
+      file: vi.fn(() => null),
+    } as never)
+
+    await expect(
+      getPptxSource(pptxUrlResource("/missing-presentation-xml.pptx"))
+    ).resolves.toMatchObject({
+      baseSize: { width: 960, height: 720 },
+      slideCount: 1,
+    })
+  })
+
   it("removes failed source cache entries so a later retry can load the same URL", async () => {
     const resource = pptxUrlResource("/retry-after-failure.pptx")
     pptxMock.loadFile.mockRejectedValueOnce(new Error("first load failed"))
@@ -432,6 +518,24 @@ describe("PptxViewer helpers", () => {
     await expect(getPptxSource(resource)).rejects.toMatchObject({
       kind: "load_failed",
     })
+    await waitForPptxSourceFailureEviction()
+    await expect(getPptxSource(resource)).resolves.toMatchObject({
+      slideCount: 1,
+    })
+
+    expect(pptxMock.loadFile).toHaveBeenCalledTimes(2)
+  })
+
+  it("shares concurrent load failures and still retries the same URL later", async () => {
+    const resource = pptxUrlResource("/concurrent-retry-after-failure.pptx")
+    pptxMock.loadFile.mockRejectedValueOnce(new Error("shared load failed"))
+
+    const first = getPptxSource(resource)
+    const second = getPptxSource(resource)
+
+    await expect(first).rejects.toMatchObject({ kind: "load_failed" })
+    await expect(second).rejects.toMatchObject({ kind: "load_failed" })
+    await waitForPptxSourceFailureEviction()
     await expect(getPptxSource(resource)).resolves.toMatchObject({
       slideCount: 1,
     })
@@ -452,6 +556,7 @@ describe("PptxViewer helpers", () => {
       kind: "http_error",
       status: 500,
     })
+    await waitForPptxSourceFailureEviction()
     await expect(getPptxSource(resource)).resolves.toMatchObject({
       slideCount: 1,
     })
@@ -461,6 +566,7 @@ describe("PptxViewer helpers", () => {
   })
 
   it("serializes render calls and forwards render options to pptxviewjs", async () => {
+    pptxMock.getSlideCount.mockReturnValueOnce(2)
     const source = await getPptxSource(pptxUrlResource("/render-options.pptx"))
     const firstRender = deferred<undefined>()
     pptxMock.renderSlide.mockImplementationOnce(() => firstRender.promise)
@@ -517,6 +623,40 @@ describe("PptxViewer helpers", () => {
       })
     ).resolves.toEqual({ status: "rendered" })
 
+    expect(pptxMock.renderSlide).toHaveBeenCalledTimes(1)
+    expect(drawImageMock).toHaveBeenCalledWith(bitmapMocks[0], 0, 0)
+    expect(secondCanvas.width).toBe(960)
+    expect(secondCanvas.height).toBe(720)
+  })
+
+  it("uses the bitmap cached by an earlier queued render for duplicate live requests", async () => {
+    const firstRender = deferred<undefined>()
+    pptxMock.renderSlide.mockImplementationOnce(() => firstRender.promise)
+
+    const source = await getPptxSource(
+      pptxUrlResource("/queued-duplicate-cache.pptx")
+    )
+    const firstCanvas = document.createElement("canvas")
+    const secondCanvas = document.createElement("canvas")
+    const first = source.renderSlide({
+      canvas: firstCanvas,
+      renderScale: 1,
+      slideIndex: 0,
+    })
+    const second = source.renderSlide({
+      canvas: secondCanvas,
+      renderScale: 1,
+      slideIndex: 0,
+    })
+
+    await waitFor(() => {
+      expect(pptxMock.renderSlide).toHaveBeenCalledTimes(1)
+    })
+
+    firstRender.resolve(undefined)
+
+    await expect(first).resolves.toEqual({ status: "rendered" })
+    await expect(second).resolves.toEqual({ status: "rendered" })
     expect(pptxMock.renderSlide).toHaveBeenCalledTimes(1)
     expect(drawImageMock).toHaveBeenCalledWith(bitmapMocks[0], 0, 0)
     expect(secondCanvas.width).toBe(960)
@@ -619,7 +759,126 @@ describe("PptxViewer helpers", () => {
     expect(source.hasBitmap({ renderScale: 1, slideIndex: 0 })).toBe(false)
   })
 
+  it("keeps a successful render when bitmap snapshotting is unavailable", async () => {
+    vi.stubGlobal(
+      "createImageBitmap",
+      vi.fn(async () => {
+        throw new Error("snapshot unsupported")
+      })
+    )
+
+    const source = await getPptxSource(
+      pptxUrlResource("/snapshot-unsupported.pptx")
+    )
+
+    await expect(
+      source.renderSlide({
+        canvas: document.createElement("canvas"),
+        renderScale: 1,
+        slideIndex: 0,
+      })
+    ).resolves.toEqual({ status: "rendered" })
+
+    expect(source.hasBitmap({ renderScale: 1, slideIndex: 0 })).toBe(false)
+
+    await expect(
+      source.renderSlide({
+        canvas: document.createElement("canvas"),
+        renderScale: 1,
+        slideIndex: 0,
+      })
+    ).resolves.toEqual({ status: "rendered" })
+    expect(pptxMock.renderSlide).toHaveBeenCalledTimes(2)
+  })
+
+  it("cancels a render when snapshot failure happens after it becomes stale", async () => {
+    const snapshot = deferred<undefined>()
+    let isLive = true
+
+    vi.stubGlobal(
+      "createImageBitmap",
+      vi.fn(async () => {
+        await snapshot.promise
+        throw new Error("snapshot failed")
+      })
+    )
+
+    const source = await getPptxSource(
+      pptxUrlResource("/stale-snapshot-failure.pptx")
+    )
+    const render = source.renderSlide({
+      canvas: document.createElement("canvas"),
+      isLive: () => isLive,
+      renderScale: 1,
+      slideIndex: 0,
+    })
+
+    await waitFor(() => {
+      expect(createImageBitmap).toHaveBeenCalled()
+    })
+
+    isLive = false
+    snapshot.resolve(undefined)
+
+    await expect(render).resolves.toEqual({ status: "cancelled" })
+    expect(source.hasBitmap({ renderScale: 1, slideIndex: 0 })).toBe(false)
+  })
+
+  it("closes cached bitmaps when a source is disposed directly", async () => {
+    const source = await getPptxSource(
+      pptxUrlResource("/dispose-cached-bitmap.pptx")
+    )
+
+    await expect(
+      source.renderSlide({
+        canvas: document.createElement("canvas"),
+        renderScale: 1,
+        slideIndex: 0,
+      })
+    ).resolves.toEqual({ status: "rendered" })
+
+    expect(source.hasBitmap({ renderScale: 1, slideIndex: 0 })).toBe(true)
+
+    source.dispose()
+
+    expect(bitmapMocks[0]?.close).toHaveBeenCalledTimes(1)
+    expect(source.hasBitmap({ renderScale: 1, slideIndex: 0 })).toBe(false)
+    expect(pptxMock.destroy).toHaveBeenCalledTimes(1)
+  })
+
+  it("rejects new renders after direct source disposal without touching pptxviewjs", async () => {
+    const source = await getPptxSource(
+      pptxUrlResource("/render-after-dispose.pptx")
+    )
+    source.dispose()
+    pptxMock.renderSlide.mockClear()
+
+    await expect(
+      source.renderSlide({
+        canvas: document.createElement("canvas"),
+        renderScale: 1,
+        slideIndex: 0,
+      })
+    ).resolves.toMatchObject({
+      error: expect.objectContaining({ kind: "disposed" }),
+      status: "failed",
+    })
+
+    expect(pptxMock.renderSlide).not.toHaveBeenCalled()
+    expect(createImageBitmap).not.toHaveBeenCalled()
+  })
+
+  it("disposes a loaded source idempotently", async () => {
+    const source = await getPptxSource(pptxUrlResource("/dispose-once.pptx"))
+
+    source.dispose()
+    source.dispose()
+
+    expect(pptxMock.destroy).toHaveBeenCalledTimes(1)
+  })
+
   it("evicts the oldest cached slide bitmaps after the per-source limit", async () => {
+    pptxMock.getSlideCount.mockReturnValueOnce(9)
     const source = await getPptxSource(pptxUrlResource("/bitmap-lru.pptx"))
 
     for (let slideIndex = 0; slideIndex < 9; slideIndex += 1) {
@@ -662,6 +921,75 @@ describe("PptxViewer helpers", () => {
       })
     ).resolves.toEqual({ status: "rendered" })
     expect(pptxMock.renderSlide).toHaveBeenCalledTimes(2)
+  })
+
+  it("rejects out-of-range slide indexes before calling pptxviewjs", async () => {
+    pptxMock.getSlideCount.mockReturnValueOnce(2)
+    const source = await getPptxSource(pptxUrlResource("/bounds.pptx"))
+
+    await expect(
+      source.renderSlide({
+        canvas: document.createElement("canvas"),
+        renderScale: 1,
+        slideIndex: -1,
+      })
+    ).resolves.toMatchObject({
+      error: expect.objectContaining({ kind: "index_out_of_range" }),
+      status: "failed",
+    })
+    await expect(
+      source.renderSlide({
+        canvas: document.createElement("canvas"),
+        renderScale: 1,
+        slideIndex: 2,
+      })
+    ).resolves.toMatchObject({
+      error: expect.objectContaining({ kind: "index_out_of_range" }),
+      status: "failed",
+    })
+
+    expect(pptxMock.renderSlide).not.toHaveBeenCalled()
+    expect(createImageBitmap).not.toHaveBeenCalled()
+  })
+
+  it("rejects invalid render scales before calling pptxviewjs", async () => {
+    const source = await getPptxSource(pptxUrlResource("/invalid-scale.pptx"))
+
+    for (const renderScale of [0, -1, Number.NaN, Infinity]) {
+      await expect(
+        source.renderSlide({
+          canvas: document.createElement("canvas"),
+          renderScale,
+          slideIndex: 0,
+        })
+      ).resolves.toMatchObject({
+        error: expect.objectContaining({ kind: "bounds" }),
+        status: "failed",
+      })
+    }
+
+    expect(pptxMock.renderSlide).not.toHaveBeenCalled()
+    expect(createImageBitmap).not.toHaveBeenCalled()
+  })
+
+  it("cancels renders when the liveness callback fails", async () => {
+    const source = await getPptxSource(
+      pptxUrlResource("/throwing-liveness.pptx")
+    )
+
+    await expect(
+      source.renderSlide({
+        canvas: document.createElement("canvas"),
+        isLive: () => {
+          throw new Error("liveness failed")
+        },
+        renderScale: 1,
+        slideIndex: 0,
+      })
+    ).resolves.toEqual({ status: "cancelled" })
+
+    expect(pptxMock.renderSlide).not.toHaveBeenCalled()
+    expect(createImageBitmap).not.toHaveBeenCalled()
   })
 
   it("notifies scroll idle listeners once and supports cancellation", () => {
@@ -719,6 +1047,577 @@ describe("PptxViewer", () => {
     expect(renderedSlideIndexes).toEqual([0, 1, 2])
   })
 
+  it("reports slide render timings for benchmark instrumentation", async () => {
+    const onSlideRenderTiming = vi.fn()
+
+    await renderPptx(
+      <PptxViewer
+        source={pptxUrlSource("/timed.pptx")}
+        onSlideRenderTiming={onSlideRenderTiming}
+      />
+    )
+
+    await waitFor(() => {
+      expect(onSlideRenderTiming).toHaveBeenCalledWith(
+        expect.objectContaining({
+          cached: false,
+          durationMs: expect.any(Number),
+          renderScale: expect.any(Number),
+          slideNumber: 1,
+          status: "rendered",
+        })
+      )
+    })
+  })
+
+  it("reports source load timings for benchmark instrumentation", async () => {
+    const onSourceLoadTiming = vi.fn()
+
+    await renderPptx(
+      <PptxViewer
+        source={pptxUrlSource("/timed-load.pptx")}
+        onSourceLoadTiming={onSourceLoadTiming}
+      />
+    )
+
+    await waitFor(() => {
+      expect(onSourceLoadTiming).toHaveBeenCalledWith(
+        expect.objectContaining({
+          byteLength: 3,
+          importPptxMs: expect.any(Number),
+          inspectMs: expect.any(Number),
+          loadFileMs: expect.any(Number),
+          readBytesMs: expect.any(Number),
+          readSlideSizeMs: expect.any(Number),
+          slideCount: 1,
+          totalMs: expect.any(Number),
+        })
+      )
+    })
+  })
+
+  it("does not restart a pending source load when only the load timing callback changes", async () => {
+    const firstTiming = vi.fn()
+    const secondTiming = vi.fn()
+    const load = deferred<undefined>()
+    pptxMock.loadFile.mockReturnValueOnce(load.promise)
+
+    const view = await renderPptx(
+      <PptxViewer
+        source={pptxUrlSource("/pending-load-timing.pptx")}
+        onSourceLoadTiming={firstTiming}
+      />
+    )
+
+    expect(pptxMock.loadFile).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      view.rerender(
+        <PptxViewer
+          source={pptxUrlSource("/pending-load-timing.pptx")}
+          onSourceLoadTiming={secondTiming}
+        />
+      )
+    })
+
+    expect(pptxMock.loadFile).toHaveBeenCalledTimes(1)
+
+    load.resolve(undefined)
+
+    await waitFor(() => {
+      expect(secondTiming).toHaveBeenCalledWith(
+        expect.objectContaining({
+          byteLength: 3,
+          slideCount: 1,
+        })
+      )
+    })
+    expect(firstTiming).not.toHaveBeenCalled()
+  })
+
+  it("replays cached source load timings to a later viewer without reloading", async () => {
+    const firstTiming = vi.fn()
+    const secondTiming = vi.fn()
+
+    const first = await renderPptx(
+      <PptxViewer
+        source={pptxUrlSource("/cached-load-timing.pptx")}
+        onSourceLoadTiming={firstTiming}
+      />
+    )
+
+    await waitFor(() => {
+      expect(firstTiming).toHaveBeenCalledTimes(1)
+    })
+    first.unmount()
+    pptxMock.loadFile.mockClear()
+
+    await renderPptx(
+      <PptxViewer
+        source={pptxUrlSource("/cached-load-timing.pptx")}
+        onSourceLoadTiming={secondTiming}
+      />
+    )
+
+    await waitFor(() => {
+      expect(secondTiming).toHaveBeenCalledWith(firstTiming.mock.calls[0]?.[0])
+    })
+    expect(pptxMock.loadFile).not.toHaveBeenCalled()
+  })
+
+  it("replays cached source load timing after instrumentation is re-enabled", async () => {
+    const firstTiming = vi.fn()
+    const secondTiming = vi.fn()
+
+    const view = await renderPptx(
+      <PptxViewer
+        source={pptxUrlSource("/reenabled-load-timing.pptx")}
+        onSourceLoadTiming={firstTiming}
+      />
+    )
+
+    await waitFor(() => {
+      expect(firstTiming).toHaveBeenCalledTimes(1)
+    })
+
+    await act(async () => {
+      view.rerender(
+        <PptxViewer source={pptxUrlSource("/reenabled-load-timing.pptx")} />
+      )
+    })
+
+    pptxMock.loadFile.mockClear()
+
+    await act(async () => {
+      view.rerender(
+        <PptxViewer
+          source={pptxUrlSource("/reenabled-load-timing.pptx")}
+          onSourceLoadTiming={secondTiming}
+        />
+      )
+    })
+
+    await waitFor(() => {
+      expect(secondTiming).toHaveBeenCalledWith(firstTiming.mock.calls[0]?.[0])
+    })
+    expect(pptxMock.loadFile).not.toHaveBeenCalled()
+  })
+
+  it("replays retained source load timing after source cache eviction", async () => {
+    const onSourceLoadTiming = vi.fn()
+    const view = await renderPptx(
+      <PptxViewer source={pptxUrlSource("/retained-evicted-timing.pptx")} />
+    )
+
+    await screen.findByText("Slide 1 of 1")
+
+    for (let i = 0; i < 4; i += 1) {
+      await getPptxSource(pptxUrlResource(`/evict-timing-${i}.pptx`))
+    }
+
+    await act(async () => {
+      view.rerender(
+        <PptxViewer
+          source={pptxUrlSource("/retained-evicted-timing.pptx")}
+          onSourceLoadTiming={onSourceLoadTiming}
+        />
+      )
+    })
+
+    await waitFor(() => {
+      expect(onSourceLoadTiming).toHaveBeenCalledWith(
+        expect.objectContaining({ slideCount: 1 })
+      )
+    })
+  })
+
+  it("reports pending retained source load timing after source cache eviction", async () => {
+    const onSourceLoadTiming = vi.fn()
+    const load = deferred<undefined>()
+    pptxMock.loadFile.mockReturnValueOnce(load.promise)
+
+    const view = await renderPptx(
+      <PptxViewer source={pptxUrlSource("/pending-evicted-timing.pptx")} />
+    )
+
+    for (let i = 0; i < 4; i += 1) {
+      await getPptxSource(pptxUrlResource(`/pending-evict-timing-${i}.pptx`))
+    }
+
+    await act(async () => {
+      view.rerender(
+        <PptxViewer
+          source={pptxUrlSource("/pending-evicted-timing.pptx")}
+          onSourceLoadTiming={onSourceLoadTiming}
+        />
+      )
+    })
+
+    load.resolve(undefined)
+
+    await waitFor(() => {
+      expect(onSourceLoadTiming).toHaveBeenCalledWith(
+        expect.objectContaining({ slideCount: 1 })
+      )
+    })
+  })
+
+  it("reports shared pending source load timings to each mounted viewer", async () => {
+    const firstTiming = vi.fn()
+    const secondTiming = vi.fn()
+    const load = deferred<undefined>()
+    pptxMock.loadFile.mockReturnValueOnce(load.promise)
+
+    await renderPptx(
+      <div>
+        <PptxViewer
+          source={pptxUrlSource("/shared-pending-load-timing.pptx")}
+          onSourceLoadTiming={firstTiming}
+        />
+        <PptxViewer
+          source={pptxUrlSource("/shared-pending-load-timing.pptx")}
+          onSourceLoadTiming={secondTiming}
+        />
+      </div>
+    )
+
+    expect(pptxMock.loadFile).toHaveBeenCalledTimes(1)
+
+    load.resolve(undefined)
+
+    await waitFor(() => {
+      expect(firstTiming).toHaveBeenCalledTimes(1)
+      expect(secondTiming).toHaveBeenCalledTimes(1)
+    })
+    expect(firstTiming.mock.calls[0]?.[0]).toBe(secondTiming.mock.calls[0]?.[0])
+  })
+
+  it("does not report pending source load timings after unmount", async () => {
+    const onSourceLoadTiming = vi.fn()
+    const load = deferred<undefined>()
+    pptxMock.loadFile.mockReturnValueOnce(load.promise)
+
+    const view = await renderPptx(
+      <PptxViewer
+        source={pptxUrlSource("/unmounted-pending-load-timing.pptx")}
+        onSourceLoadTiming={onSourceLoadTiming}
+      />
+    )
+
+    view.unmount()
+    load.resolve(undefined)
+
+    await new Promise((resolve) => window.setTimeout(resolve, 0))
+    expect(onSourceLoadTiming).not.toHaveBeenCalled()
+  })
+
+  it("does not report pending source load timing after instrumentation is removed", async () => {
+    const onSourceLoadTiming = vi.fn()
+    const load = deferred<undefined>()
+    pptxMock.loadFile.mockReturnValueOnce(load.promise)
+
+    const view = await renderPptx(
+      <PptxViewer
+        source={pptxUrlSource("/removed-pending-load-timing.pptx")}
+        onSourceLoadTiming={onSourceLoadTiming}
+      />
+    )
+
+    await act(async () => {
+      view.rerender(
+        <PptxViewer
+          source={pptxUrlSource("/removed-pending-load-timing.pptx")}
+        />
+      )
+    })
+
+    load.resolve(undefined)
+
+    await new Promise((resolve) => window.setTimeout(resolve, 0))
+    expect(onSourceLoadTiming).not.toHaveBeenCalled()
+  })
+
+  it("cancels cached source load timing replay after unsubscribe", async () => {
+    vi.useFakeTimers()
+    const resource = pptxUrlResource("/cancelled-cached-load-timing.pptx")
+    const replayTiming = vi.fn()
+
+    await getPptxSource(resource)
+    const unsubscribe = subscribePptxSourceLoadTiming(resource, replayTiming)
+
+    unsubscribe()
+    vi.runOnlyPendingTimers()
+    expect(replayTiming).not.toHaveBeenCalled()
+    vi.useRealTimers()
+  })
+
+  it("does not replay stale source load timing after a fresh load failure", async () => {
+    const resource = pptxUrlResource("/stale-load-timing-after-failure.pptx")
+    const staleTiming = vi.fn()
+
+    await expect(getPptxSource(resource)).resolves.toMatchObject({
+      slideCount: 1,
+    })
+
+    for (let i = 0; i < 4; i += 1) {
+      await getPptxSource(pptxUrlResource(`/stale-timing-evict-${i}.pptx`))
+    }
+
+    pptxMock.loadFile.mockRejectedValueOnce(new Error("fresh load failed"))
+    await expect(getPptxSource(resource)).rejects.toMatchObject({
+      kind: "load_failed",
+    })
+    await waitForPptxSourceFailureEviction()
+
+    subscribePptxSourceLoadTiming(resource, staleTiming)
+    await new Promise((resolve) => window.setTimeout(resolve, 0))
+
+    expect(staleTiming).not.toHaveBeenCalled()
+  })
+
+  it("cancels evicted cached source load timing replay after unsubscribe", async () => {
+    vi.useFakeTimers()
+    const resource = pptxUrlResource("/cancelled-evicted-load-timing.pptx")
+    const replayTiming = vi.fn()
+
+    await getPptxSource(resource)
+    for (let i = 0; i < 4; i += 1) {
+      await getPptxSource(
+        pptxUrlResource(`/cancelled-evicted-load-timing-${i}.pptx`)
+      )
+    }
+
+    const unsubscribe = subscribePptxSourceLoadTiming(resource, replayTiming)
+
+    unsubscribe()
+    vi.runOnlyPendingTimers()
+    expect(replayTiming).not.toHaveBeenCalled()
+    vi.useRealTimers()
+  })
+
+  it("isolates source load timing subscriber failures", async () => {
+    const resource = pptxUrlResource("/isolated-source-timing.pptx")
+    const load = deferred<undefined>()
+    const throwingTiming = vi.fn(() => {
+      throw new Error("timing callback failed")
+    })
+    const secondTiming = vi.fn()
+    pptxMock.loadFile.mockReturnValueOnce(load.promise)
+
+    const sourcePromise = getPptxSource(resource)
+    subscribePptxSourceLoadTiming(resource, throwingTiming)
+    subscribePptxSourceLoadTiming(resource, secondTiming)
+
+    load.resolve(undefined)
+
+    await expect(sourcePromise).resolves.toMatchObject({ slideCount: 1 })
+    expect(throwingTiming).toHaveBeenCalledTimes(1)
+    expect(secondTiming).toHaveBeenCalledWith(
+      expect.objectContaining({ slideCount: 1 })
+    )
+  })
+
+  it("reports failed slide render timings", async () => {
+    const onSlideRenderTiming = vi.fn()
+    pptxMock.renderSlide.mockRejectedValueOnce(new Error("render failed"))
+
+    await renderPptx(
+      <PptxViewer
+        source={pptxUrlSource("/timed-failure.pptx")}
+        onSlideRenderTiming={onSlideRenderTiming}
+      />
+    )
+
+    await waitFor(() => {
+      expect(onSlideRenderTiming).toHaveBeenCalledWith(
+        expect.objectContaining({
+          cached: false,
+          durationMs: expect.any(Number),
+          renderScale: expect.any(Number),
+          slideNumber: 1,
+          status: "failed",
+        })
+      )
+    })
+  })
+
+  it("does not let slide timing callback errors fail a rendered slide", async () => {
+    const onSlideRenderTiming = vi.fn(() => {
+      throw new Error("timing callback failed")
+    })
+
+    await renderPptx(
+      <PptxViewer
+        source={pptxUrlSource("/throwing-slide-timing.pptx")}
+        onSlideRenderTiming={onSlideRenderTiming}
+      />
+    )
+
+    await waitFor(() => {
+      expect(onSlideRenderTiming).toHaveBeenCalledWith(
+        expect.objectContaining({ status: "rendered" })
+      )
+    })
+    expect(screen.queryByText("Couldn't render slide 1.")).toBeNull()
+  })
+
+  it("does not report slide render timings for renders cancelled by unmount", async () => {
+    const onSlideRenderTiming = vi.fn()
+    const renderResult = deferred<PptxRenderResult>()
+    const source = createFakePptxSource()
+    source.renderSlide.mockReturnValueOnce(renderResult.promise)
+    const activity = createManualPptxActivity(false).activity
+
+    const view = render(
+      <PptxSlideScroller
+        source={source}
+        zoomScale={1}
+        rotation={0}
+        eager={false}
+        activity={activity}
+        onSlideRenderTiming={onSlideRenderTiming}
+        containerRef={vi.fn()}
+        viewportRef={vi.fn()}
+        onScroll={vi.fn()}
+      />
+    )
+
+    await waitFor(() => {
+      expect(source.renderSlide).toHaveBeenCalledTimes(1)
+    })
+
+    view.unmount()
+
+    await act(async () => {
+      renderResult.resolve({ status: "cancelled" })
+    })
+
+    expect(onSlideRenderTiming).not.toHaveBeenCalled()
+  })
+
+  it("reports slide render timings for live renders that return cancelled", async () => {
+    const onSlideRenderTiming = vi.fn()
+    const source = createFakePptxSource()
+    source.renderSlide.mockResolvedValueOnce({ status: "cancelled" })
+    const activity = createManualPptxActivity(false).activity
+
+    render(
+      <PptxSlideScroller
+        source={source}
+        zoomScale={1}
+        rotation={0}
+        eager={false}
+        activity={activity}
+        onSlideRenderTiming={onSlideRenderTiming}
+        containerRef={vi.fn()}
+        viewportRef={vi.fn()}
+        onScroll={vi.fn()}
+      />
+    )
+
+    await waitFor(() => {
+      expect(onSlideRenderTiming).toHaveBeenCalledWith(
+        expect.objectContaining({
+          cached: false,
+          slideNumber: 1,
+          status: "cancelled",
+        })
+      )
+    })
+  })
+
+  it("reports deferred slide timings as cached when a bitmap appears before idle", async () => {
+    const onSlideRenderTiming = vi.fn()
+    const { activity, runIdle } = createManualPptxActivity()
+    const source = createFakePptxSource()
+    let hasBitmap = false
+    source.hasBitmap.mockImplementation(() => hasBitmap)
+
+    render(
+      <PptxSlideScroller
+        source={source}
+        zoomScale={1}
+        rotation={0}
+        eager={false}
+        activity={activity}
+        onSlideRenderTiming={onSlideRenderTiming}
+        containerRef={vi.fn()}
+        viewportRef={vi.fn()}
+        onScroll={vi.fn()}
+      />
+    )
+
+    expect(source.renderSlide).not.toHaveBeenCalled()
+    hasBitmap = true
+
+    await act(async () => {
+      runIdle()
+    })
+
+    await waitFor(() => {
+      expect(onSlideRenderTiming).toHaveBeenCalledWith(
+        expect.objectContaining({
+          cached: true,
+          status: "rendered",
+        })
+      )
+    })
+  })
+
+  it("does not restart a pending slide render when only the timing callback changes", async () => {
+    const firstTiming = vi.fn()
+    const secondTiming = vi.fn()
+    const renderResult = deferred<PptxRenderResult>()
+    const source = createFakePptxSource()
+    source.renderSlide.mockReturnValueOnce(renderResult.promise)
+    const activity = createManualPptxActivity(false).activity
+
+    const view = render(
+      <PptxSlideScroller
+        source={source}
+        zoomScale={1}
+        rotation={0}
+        eager={false}
+        activity={activity}
+        onSlideRenderTiming={firstTiming}
+        containerRef={vi.fn()}
+        viewportRef={vi.fn()}
+        onScroll={vi.fn()}
+      />
+    )
+
+    await waitFor(() => {
+      expect(source.renderSlide).toHaveBeenCalledTimes(1)
+    })
+
+    await act(async () => {
+      view.rerender(
+        <PptxSlideScroller
+          source={source}
+          zoomScale={1}
+          rotation={0}
+          eager={false}
+          activity={activity}
+          onSlideRenderTiming={secondTiming}
+          containerRef={vi.fn()}
+          viewportRef={vi.fn()}
+          onScroll={vi.fn()}
+        />
+      )
+    })
+
+    expect(source.renderSlide).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      renderResult.resolve({ status: "rendered" })
+    })
+
+    expect(firstTiming).not.toHaveBeenCalled()
+    expect(secondTiming).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "rendered" })
+    )
+  })
+
   it("shares one loaded source across viewers with the same source identity", async () => {
     const fetchMock = vi.fn(okPptxResponse)
     vi.stubGlobal("fetch", fetchMock)
@@ -774,6 +1673,53 @@ describe("PptxViewer", () => {
       { download: "b.pptx", href: "/download/b.pptx" },
     ])
     expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(pptxMock.loadFile).toHaveBeenCalledTimes(1)
+  })
+
+  it("shares loaded Blob sources while keeping Blob download metadata per viewer", async () => {
+    const blob = new Blob([new Uint8Array([1, 2, 3])], {
+      type: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    })
+    const click = vi
+      .spyOn(HTMLAnchorElement.prototype, "click")
+      .mockImplementation(() => undefined)
+    const { createObjectURL } = mockObjectUrls("blob:shared-download")
+
+    await renderPptx(
+      <div>
+        <PptxViewer
+          source={{
+            kind: "blob",
+            blob,
+            downloadUrl: "/download/blob-a.pptx",
+            fileName: "blob-a.pptx",
+            identityKey: "blob:shared",
+          }}
+        />
+        <PptxViewer
+          source={{
+            kind: "blob",
+            blob,
+            fileName: "blob-b.pptx",
+            identityKey: "blob:shared",
+          }}
+        />
+      </div>
+    )
+
+    expect(await screen.findAllByText("Slide 1 of 1")).toHaveLength(2)
+
+    const link = screen.getByRole("link", { name: "Download" })
+    expect(link.getAttribute("href")).toBe("/download/blob-a.pptx")
+    expect(link.getAttribute("download")).toBe("blob-a.pptx")
+
+    const button = screen.getByRole("button", { name: "Download" })
+    fireEvent.click(button)
+    await waitFor(() => {
+      expect(click).toHaveBeenCalled()
+    })
+
+    expect(createObjectURL).toHaveBeenCalledWith(blob)
     expect(pptxMock.loadFile).toHaveBeenCalledTimes(1)
   })
 
@@ -877,6 +1823,255 @@ describe("PptxViewer", () => {
     ).toBe(true)
   })
 
+  it("keeps the toolbar hidden while a toolbarless viewer is loading", async () => {
+    const load = deferred<undefined>()
+    pptxMock.loadFile.mockReturnValueOnce(load.promise)
+
+    const view = await renderPptx(
+      <PptxViewer
+        source={pptxUrlSource("/toolbarless-loading.pptx")}
+        toolbar={false}
+      />
+    )
+
+    expect(document.querySelector('[data-slot="pptx-viewer"]')).toBeTruthy()
+    expect(document.querySelectorAll('[data-slot="button"]')).toHaveLength(0)
+    expect(screen.queryByText("Slide 1 of 1")).toBeNull()
+
+    load.resolve(undefined)
+    await waitFor(() => {
+      expect(pptxMock.renderSlide).toHaveBeenCalledTimes(1)
+    })
+    expect(screen.queryByRole("link", { name: "Download" })).toBeNull()
+
+    view.unmount()
+  })
+
+  it("recovers from a real load failure when the source changes", async () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined)
+    pptxMock.loadFile.mockRejectedValue(new Error("bad deck"))
+
+    const view = await renderPptx(
+      <PptxViewer source={pptxUrlSource("/broken-then-fixed.pptx")} />
+    )
+
+    expect(
+      await screen.findByText("Couldn't load this presentation.")
+    ).toBeTruthy()
+
+    pptxMock.loadFile.mockReset()
+    pptxMock.loadFile.mockResolvedValue(undefined)
+
+    await act(async () => {
+      view.rerender(
+        <PptxViewer source={pptxUrlSource("/fixed-after-broken.pptx")} />
+      )
+    })
+
+    expect(await screen.findByText("Slide 1 of 1")).toBeTruthy()
+    expect(consoleError).toHaveBeenCalled()
+  })
+
+  it("retries a real load failure for the same source", async () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined)
+    pptxMock.loadFile
+      .mockRejectedValueOnce(new Error("bad deck"))
+      .mockResolvedValue(undefined)
+
+    await renderPptx(
+      <PptxViewer source={pptxUrlSource("/retry-same-source.pptx")} />
+    )
+
+    expect(
+      await screen.findByText("Couldn't load this presentation.")
+    ).toBeTruthy()
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Retry" }))
+    })
+
+    expect(await screen.findByText("Slide 1 of 1")).toBeTruthy()
+    expect(pptxMock.loadFile).toHaveBeenCalledTimes(2)
+    expect(consoleError).toHaveBeenCalled()
+  })
+
+  it("does not render an abandoned pending source after switching to a new source", async () => {
+    const slowLoad = deferred<undefined>()
+    pptxMock.loadFile
+      .mockReturnValueOnce(slowLoad.promise)
+      .mockResolvedValueOnce(undefined)
+
+    const view = await renderPptx(
+      <PptxViewer source={pptxUrlSource("/slow-source.pptx")} />
+    )
+
+    expect(screen.queryByText("Slide 1 of 1")).toBeNull()
+
+    await act(async () => {
+      view.rerender(<PptxViewer source={pptxUrlSource("/fast-source.pptx")} />)
+    })
+
+    expect(await screen.findByText("Slide 1 of 1")).toBeTruthy()
+    await waitFor(() => {
+      expect(pptxMock.renderSlide).toHaveBeenCalledTimes(1)
+    })
+
+    slowLoad.resolve(undefined)
+
+    await new Promise((resolve) => window.setTimeout(resolve, 0))
+    expect(screen.getByText("Slide 1 of 1")).toBeTruthy()
+    expect(pptxMock.renderSlide).toHaveBeenCalledTimes(1)
+  })
+
+  it("resets document-local rotation when the source changes", async () => {
+    const renderSlideOverlay = vi.fn(() => null)
+    const view = await renderPptx(
+      <PptxViewer
+        source={pptxUrlSource("/rotated-source-a.pptx")}
+        scale={1}
+        renderSlideOverlay={renderSlideOverlay}
+      />
+    )
+
+    await screen.findByText("100%")
+    fireEvent.click(screen.getByLabelText("Rotate"))
+
+    await waitFor(() => {
+      expect(renderSlideOverlay).toHaveBeenCalledWith(
+        expect.objectContaining({ rotation: 90 })
+      )
+    })
+    renderSlideOverlay.mockClear()
+
+    await act(async () => {
+      view.rerender(
+        <PptxViewer
+          source={pptxUrlSource("/rotated-source-b.pptx")}
+          scale={1}
+          renderSlideOverlay={renderSlideOverlay}
+        />
+      )
+    })
+
+    await waitFor(() => {
+      expect(renderSlideOverlay).toHaveBeenCalledWith(
+        expect.objectContaining({ rotation: 0 })
+      )
+    })
+    expect(renderSlideOverlay).not.toHaveBeenCalledWith(
+      expect.objectContaining({ rotation: 90 })
+    )
+  })
+
+  it("keeps document-local rotation when only download metadata changes", async () => {
+    const renderSlideOverlay = vi.fn(() => null)
+    const view = await renderPptx(
+      <PptxViewer
+        source={{
+          kind: "url",
+          downloadUrl: "/download/metadata-a.pptx",
+          fileName: "metadata-a.pptx",
+          url: "/metadata-stable-deck.pptx",
+        }}
+        scale={1}
+        renderSlideOverlay={renderSlideOverlay}
+      />
+    )
+
+    await screen.findByText("100%")
+    fireEvent.click(screen.getByLabelText("Rotate"))
+
+    await waitFor(() => {
+      expect(renderSlideOverlay).toHaveBeenCalledWith(
+        expect.objectContaining({ rotation: 90 })
+      )
+    })
+    renderSlideOverlay.mockClear()
+
+    await act(async () => {
+      view.rerender(
+        <PptxViewer
+          source={{
+            kind: "url",
+            downloadUrl: "/download/metadata-b.pptx",
+            fileName: "metadata-b.pptx",
+            url: "/metadata-stable-deck.pptx",
+          }}
+          scale={1}
+          renderSlideOverlay={renderSlideOverlay}
+        />
+      )
+    })
+
+    await waitFor(() => {
+      expect(renderSlideOverlay).toHaveBeenCalledWith(
+        expect.objectContaining({ rotation: 90 })
+      )
+    })
+  })
+
+  it("does not replay source load timing when only download metadata changes", async () => {
+    const onSourceLoadTiming = vi.fn()
+    const view = await renderPptx(
+      <PptxViewer
+        source={{
+          kind: "url",
+          downloadUrl: "/download/timing-metadata-a.pptx",
+          fileName: "timing-metadata-a.pptx",
+          url: "/timing-metadata-stable-deck.pptx",
+        }}
+        onSourceLoadTiming={onSourceLoadTiming}
+      />
+    )
+
+    await waitFor(() => {
+      expect(onSourceLoadTiming).toHaveBeenCalledTimes(1)
+    })
+
+    await act(async () => {
+      view.rerender(
+        <PptxViewer
+          source={{
+            kind: "url",
+            downloadUrl: "/download/timing-metadata-b.pptx",
+            fileName: "timing-metadata-b.pptx",
+            url: "/timing-metadata-stable-deck.pptx",
+          }}
+          onSourceLoadTiming={onSourceLoadTiming}
+        />
+      )
+    })
+
+    await new Promise((resolve) => window.setTimeout(resolve, 0))
+    expect(onSourceLoadTiming).toHaveBeenCalledTimes(1)
+  })
+
+  it("resets uncontrolled zoom to the new source fit scale", async () => {
+    const clientWidth = vi
+      .spyOn(HTMLElement.prototype, "clientWidth", "get")
+      .mockReturnValue(512)
+    const view = await renderPptx(
+      <PptxViewer source={pptxUrlSource("/zoom-source-a.pptx")} />
+    )
+
+    expect(await screen.findByText("50%")).toBeTruthy()
+    fireEvent.click(screen.getByLabelText("Zoom in"))
+    expect(await screen.findByText("60%")).toBeTruthy()
+
+    await act(async () => {
+      view.rerender(
+        <PptxViewer source={pptxUrlSource("/zoom-source-b.pptx")} />
+      )
+    })
+
+    expect(await screen.findByText("50%")).toBeTruthy()
+    clientWidth.mockRestore()
+  })
+
   it("uses fit-width zoom from the measured slide container before manual zoom", async () => {
     const clientWidth = vi
       .spyOn(HTMLElement.prototype, "clientWidth", "get")
@@ -886,6 +2081,72 @@ describe("PptxViewer", () => {
 
     expect(await screen.findByText("50%")).toBeTruthy()
 
+    clientWidth.mockRestore()
+  })
+
+  it("renders fit-width mode when ResizeObserver is unavailable", async () => {
+    vi.stubGlobal("ResizeObserver", undefined)
+    const clientWidth = vi
+      .spyOn(HTMLElement.prototype, "clientWidth", "get")
+      .mockReturnValue(512)
+
+    await renderPptx(
+      <PptxViewer source={pptxUrlSource("/no-resize-observer.pptx")} />
+    )
+
+    expect(await screen.findByText("50%")).toBeTruthy()
+    clientWidth.mockRestore()
+  })
+
+  it("renders fit-width mode when ResizeObserver throws", async () => {
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        constructor() {
+          throw new Error("resize observer unavailable")
+        }
+      }
+    )
+    const clientWidth = vi
+      .spyOn(HTMLElement.prototype, "clientWidth", "get")
+      .mockReturnValue(512)
+
+    await renderPptx(
+      <PptxViewer source={pptxUrlSource("/throwing-resize-observer.pptx")} />
+    )
+
+    expect(await screen.findByText("50%")).toBeTruthy()
+    clientWidth.mockRestore()
+  })
+
+  it("renders fit-width mode when ResizeObserver observe throws", async () => {
+    class ObserveThrowingResizeObserver {
+      static instances: ObserveThrowingResizeObserver[] = []
+
+      disconnect = vi.fn()
+      observe = vi.fn(() => {
+        throw new Error("resize observer observe failed")
+      })
+
+      constructor() {
+        ObserveThrowingResizeObserver.instances.push(this)
+      }
+    }
+    vi.stubGlobal("ResizeObserver", ObserveThrowingResizeObserver)
+    const clientWidth = vi
+      .spyOn(HTMLElement.prototype, "clientWidth", "get")
+      .mockReturnValue(512)
+
+    await renderPptx(
+      <PptxViewer source={pptxUrlSource("/throwing-resize-observe.pptx")} />
+    )
+
+    expect(await screen.findByText("50%")).toBeTruthy()
+    expect(
+      ObserveThrowingResizeObserver.instances.some(
+        (observer) => observer.disconnect.mock.calls.length > 0
+      )
+    ).toBe(true)
     clientWidth.mockRestore()
   })
 
@@ -990,6 +2251,35 @@ describe("PptxViewer", () => {
     expect(onScaleChange).toHaveBeenCalledWith(null)
   })
 
+  it("clamps controlled zoom requests before reporting them", async () => {
+    const onScaleChange = vi.fn()
+    const view = await renderPptx(
+      <PptxViewer
+        source={pptxUrlSource("/controlled-clamp.pptx")}
+        scale={5}
+        onScaleChange={onScaleChange}
+      />
+    )
+
+    await screen.findByText("500%")
+    fireEvent.click(screen.getByLabelText("Zoom in"))
+    expect(onScaleChange).toHaveBeenLastCalledWith(5)
+
+    await act(async () => {
+      view.rerender(
+        <PptxViewer
+          source={pptxUrlSource("/controlled-clamp.pptx")}
+          scale={0.25}
+          onScaleChange={onScaleChange}
+        />
+      )
+    })
+
+    await screen.findByText("25%")
+    fireEvent.click(screen.getByLabelText("Zoom out"))
+    expect(onScaleChange).toHaveBeenLastCalledWith(0.25)
+  })
+
   it("clamps uncontrolled zoom changes to the supported range", async () => {
     await renderPptx(
       <PptxViewer
@@ -1068,6 +2358,52 @@ describe("PptxViewer", () => {
     })
   })
 
+  it("reports the current visible slide to a replacement visible-slide callback", async () => {
+    pptxMock.getSlideCount.mockReturnValue(2)
+    const firstVisible = vi.fn()
+    const secondVisible = vi.fn()
+
+    const view = await renderPptx(
+      <PptxViewer
+        source={pptxUrlSource("/visible-callback-replacement.pptx")}
+        onVisibleSlideChange={firstVisible}
+      />
+    )
+
+    await screen.findByText("Slide 1 of 2")
+    const viewport = document.querySelector<HTMLElement>(
+      '[data-slot="scroll-area-viewport"]'
+    )
+    const slides = [
+      ...document.querySelectorAll<HTMLElement>("[data-slide-number]"),
+    ]
+    expect(viewport).toBeTruthy()
+    expect(slides).toHaveLength(2)
+
+    setElementRect(viewport!, { height: 100, top: 0 })
+    setElementRect(slides[0]!, { top: -250 })
+    setElementRect(slides[1]!, { top: 10 })
+
+    fireEvent.scroll(viewport!)
+
+    await waitFor(() => {
+      expect(firstVisible).toHaveBeenCalledWith(2)
+    })
+
+    await act(async () => {
+      view.rerender(
+        <PptxViewer
+          source={pptxUrlSource("/visible-callback-replacement.pptx")}
+          onVisibleSlideChange={secondVisible}
+        />
+      )
+    })
+
+    fireEvent.scroll(viewport!)
+
+    expect(secondVisible).toHaveBeenCalledWith(2)
+  })
+
   it("reports the nearest visible slide and clamps scroll progress", async () => {
     pptxMock.getSlideCount.mockReturnValue(3)
     const onVisibleSlideChange = vi.fn()
@@ -1106,6 +2442,30 @@ describe("PptxViewer", () => {
     })
     expect(onScrollProgressChange).toHaveBeenLastCalledWith(1)
     expect(await screen.findByText("Slide 2 of 3")).toBeTruthy()
+  })
+
+  it("reports zero scroll progress when the slide viewport has no overflow", async () => {
+    const onScrollProgressChange = vi.fn()
+
+    await renderPptx(
+      <PptxViewer
+        source={pptxUrlSource("/no-scroll-progress.pptx")}
+        onScrollProgressChange={onScrollProgressChange}
+      />
+    )
+
+    await screen.findByText("Slide 1 of 1")
+    const viewport = document.querySelector<HTMLElement>(
+      '[data-slot="scroll-area-viewport"]'
+    )
+    expect(viewport).toBeTruthy()
+    setElementNumberProperty(viewport!, "clientHeight", 100)
+    setElementNumberProperty(viewport!, "scrollHeight", 100)
+    setElementNumberProperty(viewport!, "scrollTop", 50)
+
+    fireEvent.scroll(viewport!)
+
+    expect(onScrollProgressChange).toHaveBeenLastCalledWith(0)
   })
 
   it("passes rotated visible slide size to the public overlay prop", async () => {
@@ -1314,6 +2674,225 @@ describe("PptxViewer", () => {
     expect(cachedSource.renderSlide).toHaveBeenCalledTimes(1)
   })
 
+  it("keeps offscreen slides as skeletons until the intersection observer reports them near", async () => {
+    ManualIntersectionObserver.instances.length = 0
+    vi.stubGlobal("IntersectionObserver", ManualIntersectionObserver)
+    const source = createFakePptxSource()
+    const activity = createManualPptxActivity(false).activity
+
+    render(
+      <PptxSlideScroller
+        source={source}
+        zoomScale={1}
+        rotation={0}
+        eager={false}
+        activity={activity}
+        containerRef={vi.fn()}
+        viewportRef={vi.fn()}
+        onScroll={vi.fn()}
+      />
+    )
+
+    expect(source.renderSlide).not.toHaveBeenCalled()
+    const observer = ManualIntersectionObserver.instances[0]
+    expect(observer?.observe).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      observer?.setIntersecting(true)
+    })
+
+    await waitFor(() => {
+      expect(source.renderSlide).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  it("renders slides when IntersectionObserver is unavailable", async () => {
+    vi.stubGlobal("IntersectionObserver", undefined)
+    const source = createFakePptxSource()
+    const activity = createManualPptxActivity(false).activity
+
+    render(
+      <PptxSlideScroller
+        source={source}
+        zoomScale={1}
+        rotation={0}
+        eager={false}
+        activity={activity}
+        containerRef={vi.fn()}
+        viewportRef={vi.fn()}
+        onScroll={vi.fn()}
+      />
+    )
+
+    await waitFor(() => {
+      expect(source.renderSlide).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  it("renders slides when IntersectionObserver throws", async () => {
+    vi.stubGlobal(
+      "IntersectionObserver",
+      class {
+        constructor() {
+          throw new Error("intersection observer unavailable")
+        }
+      }
+    )
+    const source = createFakePptxSource()
+    const activity = createManualPptxActivity(false).activity
+
+    render(
+      <PptxSlideScroller
+        source={source}
+        zoomScale={1}
+        rotation={0}
+        eager={false}
+        activity={activity}
+        containerRef={vi.fn()}
+        viewportRef={vi.fn()}
+        onScroll={vi.fn()}
+      />
+    )
+
+    await waitFor(() => {
+      expect(source.renderSlide).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  it("renders slides and disconnects when IntersectionObserver observe throws", async () => {
+    class ObserveThrowingIntersectionObserver {
+      static instances: ObserveThrowingIntersectionObserver[] = []
+
+      disconnect = vi.fn()
+      observe = vi.fn(() => {
+        throw new Error("intersection observer observe failed")
+      })
+      unobserve = vi.fn()
+      takeRecords = vi.fn(() => [])
+
+      constructor() {
+        ObserveThrowingIntersectionObserver.instances.push(this)
+      }
+    }
+    vi.stubGlobal("IntersectionObserver", ObserveThrowingIntersectionObserver)
+    const source = createFakePptxSource()
+    const activity = createManualPptxActivity(false).activity
+
+    render(
+      <PptxSlideScroller
+        source={source}
+        zoomScale={1}
+        rotation={0}
+        eager={false}
+        activity={activity}
+        containerRef={vi.fn()}
+        viewportRef={vi.fn()}
+        onScroll={vi.fn()}
+      />
+    )
+
+    await waitFor(() => {
+      expect(source.renderSlide).toHaveBeenCalledTimes(1)
+    })
+    expect(
+      ObserveThrowingIntersectionObserver.instances[0]?.disconnect
+    ).toHaveBeenCalledTimes(1)
+  })
+
+  it("disconnects slide intersection observers when frames unmount", () => {
+    ManualIntersectionObserver.instances.length = 0
+    vi.stubGlobal("IntersectionObserver", ManualIntersectionObserver)
+    const source = createFakePptxSource()
+    const activity = createManualPptxActivity(false).activity
+
+    const view = render(
+      <PptxSlideScroller
+        source={source}
+        zoomScale={1}
+        rotation={0}
+        eager={false}
+        activity={activity}
+        containerRef={vi.fn()}
+        viewportRef={vi.fn()}
+        onScroll={vi.fn()}
+      />
+    )
+
+    const observer = ManualIntersectionObserver.instances[0]
+    expect(observer?.disconnect).not.toHaveBeenCalled()
+
+    view.unmount()
+
+    expect(observer?.disconnect).toHaveBeenCalledTimes(1)
+  })
+
+  it("sizes slide frames from scaled rotated visible dimensions", () => {
+    const source = createFakePptxSource()
+    const activity = createManualPptxActivity(false).activity
+
+    render(
+      <PptxSlideScroller
+        source={source}
+        zoomScale={1.5}
+        rotation={90}
+        eager={false}
+        activity={activity}
+        containerRef={vi.fn()}
+        viewportRef={vi.fn()}
+        onScroll={vi.fn()}
+      />
+    )
+
+    const frame = document.querySelector<HTMLElement>(
+      '[data-slot="pptx-slide"]'
+    )
+    expect(frame?.style.width).toBe("1080px")
+    expect(frame?.style.height).toBe("1440px")
+  })
+
+  it("does not surface a pending render error after a slide leaves the viewport", async () => {
+    ManualIntersectionObserver.instances.length = 0
+    vi.stubGlobal("IntersectionObserver", ManualIntersectionObserver)
+    const source = createFakePptxSource()
+    const renderResult = deferred<PptxRenderResult>()
+    source.renderSlide.mockReturnValueOnce(renderResult.promise)
+    const activity = createManualPptxActivity(false).activity
+
+    render(
+      <PptxSlideScroller
+        source={source}
+        zoomScale={1}
+        rotation={0}
+        eager={false}
+        activity={activity}
+        containerRef={vi.fn()}
+        viewportRef={vi.fn()}
+        onScroll={vi.fn()}
+      />
+    )
+
+    expect(source.renderSlide).not.toHaveBeenCalled()
+    const observer = ManualIntersectionObserver.instances[0]
+    expect(observer).toBeTruthy()
+
+    await act(async () => {
+      observer?.setIntersecting(true)
+    })
+    await waitFor(() => {
+      expect(source.renderSlide).toHaveBeenCalledTimes(1)
+    })
+
+    await act(async () => {
+      observer?.setIntersecting(false)
+      renderResult.resolve({
+        status: "failed",
+        error: new PptxRendererError("render_failed", "late failure"),
+      })
+    })
+
+    expect(screen.queryByText("Couldn't render slide 1.")).toBeNull()
+  })
+
   it("renders slides at zoom scale multiplied by device pixel ratio", async () => {
     const source = createFakePptxSource()
     const activity = createManualPptxActivity(false).activity
@@ -1341,6 +2920,39 @@ describe("PptxViewer", () => {
       expect(source.renderSlide).toHaveBeenCalledWith(
         expect.objectContaining({
           renderScale: 3,
+          slideIndex: 0,
+        })
+      )
+    })
+  })
+
+  it("falls back to DPR 1 for non-finite device pixel ratios", async () => {
+    const source = createFakePptxSource()
+    const activity = createManualPptxActivity(false).activity
+    Object.defineProperty(window, "devicePixelRatio", {
+      configurable: true,
+      value: Infinity,
+    })
+
+    await act(async () => {
+      render(
+        <PptxSlideScroller
+          source={source}
+          zoomScale={1.2}
+          rotation={0}
+          eager={false}
+          activity={activity}
+          containerRef={vi.fn()}
+          viewportRef={vi.fn()}
+          onScroll={vi.fn()}
+        />
+      )
+    })
+
+    await waitFor(() => {
+      expect(source.renderSlide).toHaveBeenCalledWith(
+        expect.objectContaining({
+          renderScale: 1.2,
           slideIndex: 0,
         })
       )
@@ -1389,6 +3001,51 @@ describe("PptxViewer", () => {
 
     await waitFor(() => {
       expect(source.renderSlide).toHaveBeenCalledTimes(2)
+      expect(screen.queryByText("Couldn't render slide 1.")).toBeNull()
+    })
+  })
+
+  it("clears a failed slide frame when the source changes", async () => {
+    const failedSource = createFakePptxSource()
+    failedSource.renderSlide.mockResolvedValueOnce({
+      status: "failed",
+      error: new PptxRendererError("render_failed", "bad"),
+    })
+    const recoveredSource = createFakePptxSource()
+    const activity = createManualPptxActivity(false).activity
+
+    const view = render(
+      <PptxSlideScroller
+        source={failedSource}
+        zoomScale={1}
+        rotation={0}
+        eager={false}
+        activity={activity}
+        containerRef={vi.fn()}
+        viewportRef={vi.fn()}
+        onScroll={vi.fn()}
+      />
+    )
+
+    expect(await screen.findByText("Couldn't render slide 1.")).toBeTruthy()
+
+    await act(async () => {
+      view.rerender(
+        <PptxSlideScroller
+          source={recoveredSource}
+          zoomScale={1}
+          rotation={0}
+          eager={false}
+          activity={activity}
+          containerRef={vi.fn()}
+          viewportRef={vi.fn()}
+          onScroll={vi.fn()}
+        />
+      )
+    })
+
+    await waitFor(() => {
+      expect(recoveredSource.renderSlide).toHaveBeenCalledTimes(1)
       expect(screen.queryByText("Couldn't render slide 1.")).toBeNull()
     })
   })
@@ -1522,6 +3179,19 @@ describe("PptxViewer", () => {
     })
   })
 
+  it("ignores duplicate release calls after deferred source disposal", async () => {
+    const source = await getPptxSource(pptxUrlResource("/double-release.pptx"))
+    const release = source.retain()
+
+    source.dispose()
+    expect(pptxMock.destroy).not.toHaveBeenCalled()
+
+    release()
+    release()
+
+    expect(pptxMock.destroy).toHaveBeenCalledTimes(1)
+  })
+
   it("does not hand callers a disposed source when pending loads are evicted", async () => {
     const firstLoad = deferred<undefined>()
     pptxMock.loadFile.mockImplementationOnce(() => firstLoad.promise)
@@ -1542,6 +3212,34 @@ describe("PptxViewer", () => {
         slideIndex: 0,
       })
     ).resolves.toEqual({ status: "rendered" })
+  })
+
+  it("disposes pending loads that resolve after the source cache is cleared", async () => {
+    const load = deferred<undefined>()
+    pptxMock.loadFile.mockImplementationOnce(() => load.promise)
+
+    const sourcePromise = getPptxSource(
+      pptxUrlResource("/pending-clear-dispose.pptx")
+    )
+
+    await waitFor(() => {
+      expect(pptxMock.loadFile).toHaveBeenCalledTimes(1)
+    })
+
+    resetPptxViewerForTests()
+    load.resolve(undefined)
+    const source = await sourcePromise
+
+    await waitFor(() => {
+      expect(pptxMock.destroy).toHaveBeenCalledTimes(1)
+    })
+    await expect(
+      source.renderSlide({
+        canvas: document.createElement("canvas"),
+        renderScale: 1,
+        slideIndex: 0,
+      })
+    ).resolves.toMatchObject({ status: "failed" })
   })
 
   it("cancels queued renders before they touch a stale canvas", async () => {

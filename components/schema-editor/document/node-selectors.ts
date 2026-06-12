@@ -54,5 +54,7 @@ export function getOwnProperty(
   index: number
 ): PropertyEntry | null {
   const parent = getNode(doc, parentId)
-  return parent?.properties?.[index] ?? null
+  return parent
+    ? (getEffectiveDocNode(parent).properties?.[index] ?? null)
+    : null
 }

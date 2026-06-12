@@ -3,8 +3,8 @@
 import * as React from "react"
 
 import {
-  ImageDecodeError,
   ImageSourceDisposedError,
+  toImageFormatError,
   type FrameSource,
 } from "@/lib/image-frame-source"
 import {
@@ -13,7 +13,7 @@ import {
   type FrameOverlayProps,
   type QuarterTurn,
 } from "@/lib/image-geometry"
-import { isViewerFormatError } from "@/lib/viewer-errors"
+import { isResourceError } from "@/lib/viewer-errors"
 import { Skeleton } from "@/components/ui/skeleton"
 
 export interface ImageFrameProps {
@@ -140,9 +140,12 @@ function ImageFrameCanvas({
           if (error instanceof ImageSourceDisposedError) return
           if (!cancelled) {
             setDrawError(
-              isViewerFormatError(error)
+              isResourceError(error)
                 ? error
-                : new ImageDecodeError("Image decode failed", { cause: error })
+                : toImageFormatError(error, {
+                    kind: "decode_failed",
+                    message: "Image decode failed",
+                  })
             )
           }
         })

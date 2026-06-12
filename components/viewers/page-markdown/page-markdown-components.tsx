@@ -48,6 +48,8 @@ export const markdownComponents: Components = {
     ) : (
       <span>{children}</span>
     ),
+  img: ({ node: _node, src, alt, ...props }) =>
+    src ? <img {...props} src={src} alt={alt} /> : <span>{alt}</span>,
   strong: ({ node: _node, ...props }) => (
     <strong className="font-semibold" {...props} />
   ),

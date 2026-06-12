@@ -1,5 +1,14 @@
-import { ResourceError, ViewerFormatError } from "@/lib/viewer-errors"
-import { type ViewerResource } from "@/lib/viewer-resource"
+import {
+  isResourceError,
+  isViewerFormatError,
+  ViewerFormatError,
+  type ViewerFormatErrorMapperOptions,
+} from "@/lib/viewer-errors"
+import type {
+  ViewerContentIdentity,
+  ViewerContentPayload,
+  ViewerContentText,
+} from "@/lib/viewer-resource"
 
 export const DEFAULT_MAX_BYTES = 1_000_000
 export const DEFAULT_MAX_LINES = 10_000
@@ -41,25 +50,45 @@ export class TextViewerInvalidBoundsError extends ViewerFormatError {
   }
 }
 
+export function toTextFormatError(
+  error: unknown,
+  options: ViewerFormatErrorMapperOptions = {
+    kind: "load_failed",
+    message: "Failed to load text.",
+  }
+): ViewerFormatError {
+  if (isViewerFormatError(error)) return error
+  return new ViewerFormatError({
+    format: "text",
+    kind: options.kind,
+    message: options.message,
+    cause: error,
+  })
+}
+
 interface TextResource {
   promise: Promise<string>
-  status: "pending" | "fulfilled" | "rejected"
+  status: "pending" | "resolved" | "rejected"
   value?: string
   error?: unknown
 }
 
 const textResourceCache = new Map<string, TextResource>()
 
+export type TextViewerContent = ViewerContentIdentity &
+  ViewerContentPayload &
+  ViewerContentText
+
 function textViewerResourceKey({
-  resource,
+  content,
   retryVersion,
   bounds,
 }: {
-  resource: ViewerResource
+  content: ViewerContentIdentity
   retryVersion: number
   bounds: Required<TextViewerBounds>
 }) {
-  return `${resource.keys.load}\0${retryVersion}\0${bounds.maxBytes}\0${bounds.maxLines}`
+  return `${content.key}\0${retryVersion}\0${bounds.maxBytes}\0${bounds.maxLines}`
 }
 
 export function clearTextViewerResourceCacheForTests() {
@@ -93,35 +122,39 @@ export function splitTextLines(text: string) {
 }
 
 export function readTextResource({
-  resource,
+  content,
   retryVersion,
   bounds,
 }: {
-  resource: ViewerResource
+  content: TextViewerContent
   retryVersion: number
   bounds: Required<TextViewerBounds>
 }) {
-  const inlineText = resource.getInlineText()
-  if (inlineText !== null) {
+  const inlineText = inlineTextResource(content)
+  if (inlineText != null) {
     assertTextWithinBounds(inlineText, bounds)
     return inlineText
   }
 
-  const resourceKey = textViewerResourceKey({ resource, retryVersion, bounds })
-  const textResource = getTextResource({ resource, resourceKey, bounds })
+  const resourceKey = textViewerResourceKey({ content, retryVersion, bounds })
+  const textResource = getTextResource({ content, resourceKey, bounds })
 
-  if (textResource.status === "fulfilled") return textResource.value ?? ""
+  if (textResource.status === "resolved") return textResource.value ?? ""
   if (textResource.status === "rejected") throw textResource.error
 
   throw textResource.promise
 }
 
+function inlineTextResource(content: ViewerContentPayload) {
+  return content.payload.kind === "text" ? content.payload.text : null
+}
+
 function getTextResource({
-  resource,
+  content,
   resourceKey,
   bounds,
 }: {
-  resource: ViewerResource
+  content: TextViewerContent
   resourceKey: string
   bounds: Required<TextViewerBounds>
 }) {
@@ -129,11 +162,11 @@ function getTextResource({
   if (!textResource) {
     const nextResource: TextResource = {
       status: "pending",
-      promise: readBoundedTextResource(resource, bounds),
+      promise: readBoundedTextResource(content, bounds),
     }
     nextResource.promise.then(
       (value) => {
-        nextResource.status = "fulfilled"
+        nextResource.status = "resolved"
         nextResource.value = value
       },
       (error) => {
@@ -149,16 +182,14 @@ function getTextResource({
 }
 
 async function readBoundedTextResource(
-  resource: ViewerResource,
+  content: ViewerContentText,
   bounds: Required<TextViewerBounds>
 ) {
   try {
-    return await resource.readText(bounds)
+    return await content.readText(bounds)
   } catch (error) {
-    if (error instanceof ResourceError && error.kind === "too_large") {
-      throw new TextViewerTooLargeError(error.tooLargeReason ?? "bytes")
-    }
-    throw error
+    if (isResourceError(error)) throw error
+    throw toTextFormatError(error)
   }
 }
 

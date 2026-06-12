@@ -47,17 +47,17 @@ force a category.
 
 ## Supported types
 
-| Category | Extensions | Rendered by |
-| --- | --- | --- |
-| PDF | `pdf` | PDF Viewer |
-| Word | `docx` | DOCX Viewer |
-| Spreadsheet | `xlsx`, `xls`, `xlsm` | XLSX Viewer |
-| Presentation | `pptx` | PPTX Viewer |
-| Tabular | `csv`, `tsv` | CSV Viewer |
-| Image | `png`, `jpg`, `jpeg`, `gif`, `webp`, `avif`, `svg`, `bmp`, `ico`, `tif`, `tiff` | Image Viewer |
-| Markdown | `md`, `markdown`, `mdx` | `marked` → sanitized, inline |
-| HTML | `html`, `htm` | sandboxed iframe |
-| Text & code | `txt`, `log`, `json`, `xml`, `yaml`, `ts`, `py`, `go`, … | virtualized text viewer |
+| Category     | Extensions                                                                      | Rendered by                  |
+| ------------ | ------------------------------------------------------------------------------- | ---------------------------- |
+| PDF          | `pdf`                                                                           | PDF Viewer                   |
+| Word         | `docx`                                                                          | DOCX Viewer                  |
+| Spreadsheet  | `xlsx`, `xls`, `xlsm`                                                           | XLSX Viewer                  |
+| Presentation | `pptx`                                                                          | PPTX Viewer                  |
+| Tabular      | `csv`, `tsv`                                                                    | CSV Viewer                   |
+| Image        | `png`, `jpg`, `jpeg`, `gif`, `webp`, `avif`, `svg`, `bmp`, `ico`, `tif`, `tiff` | Image Viewer                 |
+| Markdown     | `md`, `markdown`, `mdx`                                                         | `marked` → sanitized, inline |
+| HTML         | `html`, `htm`                                                                   | sandboxed iframe             |
+| Text & code  | `txt`, `log`, `json`, `xml`, `yaml`, `ts`, `py`, `go`, …                        | virtualized text viewer      |
 
 Anything unrecognized falls back to a download card.
 
@@ -81,12 +81,12 @@ Anything unrecognized falls back to a download card.
 
 ## Props
 
-| Prop | Type | Description |
-| --- | --- | --- |
-| `source` | `ViewerSource` | Canonical file source. URL, Blob, and text sources carry file metadata with the payload identity. |
-| `as` | `FileCategory` | Force a category, bypassing detection. |
-| `bare` | `boolean` | Drop the outer border/background so the viewer fills its container. |
-| `className` | `string` | Optional class on the viewer shell. |
+| Prop        | Type           | Description                                                                                       |
+| ----------- | -------------- | ------------------------------------------------------------------------------------------------- |
+| `source`    | `ViewerSource` | Canonical file source. URL, Blob, and text sources carry file metadata with the payload identity. |
+| `as`        | `FileCategory` | Force a category, bypassing detection.                                                            |
+| `bare`      | `boolean`      | Drop the outer border/background so the viewer fills its container.                               |
+| `className` | `string`       | Optional class on the viewer shell.                                                               |
 
 The `detectCategory(fileName, mimeType?)` helper is also exported if you need to
 branch on the resolved category yourself.

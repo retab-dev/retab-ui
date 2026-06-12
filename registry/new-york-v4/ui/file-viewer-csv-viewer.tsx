@@ -3,33 +3,33 @@
 import * as React from "react"
 
 import { inferCsvDialect } from "@/lib/csv"
+import type { ViewerResource } from "@/lib/viewer-resource"
 
-import type { CsvDocumentSource } from "./csv-viewer-resource"
-import { DocShell } from "./file-viewer-chrome"
+import { ResourceDocShell } from "./file-viewer-chrome"
 
 const CsvViewer = React.lazy(() =>
   import("@/components/ui/csv-viewer").then((m) => ({ default: m.CsvViewer }))
 )
 
 export function CsvDocViewer({
-  source,
-  fileName,
-  mimeType,
+  resource,
   className,
   bare,
   isolateStyles,
 }: {
-  source: CsvDocumentSource
-  fileName: string
-  mimeType?: string
+  resource: ViewerResource
   className?: string
   bare?: boolean
   isolateStyles?: boolean
 }) {
-  const src = source.kind === "url" ? source.url : undefined
-  const dialect = inferCsvDialect({ src, fileName, mimeType })
+  const source = resource.descriptor.source
+  const dialect = inferCsvDialect({
+    src: resource.content.directUrl ?? undefined,
+    fileName: resource.fileName,
+    mimeType: resource.mimeType,
+  })
   return (
-    <DocShell fileName={fileName} src={src} className={className} bare={bare}>
+    <ResourceDocShell resource={resource} className={className} bare={bare}>
       <CsvViewer
         source={source}
         dialect={dialect}
@@ -38,6 +38,6 @@ export function CsvDocViewer({
         className="rounded-none border-0 bg-transparent"
         isolateStyles={isolateStyles}
       />
-    </DocShell>
+    </ResourceDocShell>
   )
 }

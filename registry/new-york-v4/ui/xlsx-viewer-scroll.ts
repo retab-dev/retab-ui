@@ -42,9 +42,9 @@ export function isValidPublicCellRef(
 ): cellRef is PublicXlsxCellRef {
   return (
     cellRef != null &&
-    Number.isInteger(cellRef.sheet) &&
-    Number.isInteger(cellRef.row) &&
-    Number.isInteger(cellRef.col) &&
+    Number.isSafeInteger(cellRef.sheet) &&
+    Number.isSafeInteger(cellRef.row) &&
+    Number.isSafeInteger(cellRef.col) &&
     cellRef.sheet >= 0 &&
     cellRef.row >= 0 &&
     cellRef.col >= 0
@@ -56,10 +56,16 @@ export function isValidLoadedScrollTarget(
   sheets: XlsxSheetMeta[]
 ): boolean {
   const sheet = sheets[target.sheetIndex]
+  const rowCount = normalizeSheetDimension(sheet?.rowCount)
+  const columnCount = normalizeSheetDimension(sheet?.columnCount)
   return (
     !!sheet &&
-    target.rowIndex < sheet.rowCount &&
-    target.columnIndex < sheet.columnCount
+    Number.isSafeInteger(target.rowIndex) &&
+    Number.isSafeInteger(target.columnIndex) &&
+    target.rowIndex >= 0 &&
+    target.columnIndex >= 0 &&
+    target.rowIndex < rowCount &&
+    target.columnIndex < columnCount
   )
 }
 
@@ -86,4 +92,10 @@ export function resolveLoadedScrollTarget({
     request: target,
     changed: change.changed,
   }
+}
+
+function normalizeSheetDimension(value: number | undefined) {
+  return value != null && Number.isFinite(value) && value > 0
+    ? Math.floor(value)
+    : 0
 }

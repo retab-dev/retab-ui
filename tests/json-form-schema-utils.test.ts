@@ -101,6 +101,38 @@ describe("json-form schema utilities", () => {
     })
   })
 
+  it("expands refs inside dictionary property schemas", () => {
+    const expanded = expandRefs({
+      type: "object",
+      $defs: {
+        Value: {
+          type: "string",
+          title: "Metadata value",
+        },
+      },
+      properties: {
+        metadata: {
+          type: "object",
+          additionalProperties: { $ref: "#/$defs/Value" },
+          patternProperties: {
+            "^x_": { $ref: "#/$defs/Value", description: "Extension" },
+          },
+        },
+      },
+    })
+    const metadata = expanded.properties?.metadata as JSONSchema7
+
+    expect(metadata.additionalProperties).toEqual({
+      type: "string",
+      title: "Metadata value",
+    })
+    expect(metadata.patternProperties?.["^x_"]).toEqual({
+      type: "string",
+      title: "Metadata value",
+      description: "Extension",
+    })
+  })
+
   it("merges allOf object branches", () => {
     const expanded = expandRefs({
       allOf: [

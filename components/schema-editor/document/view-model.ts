@@ -115,7 +115,7 @@ function getDocumentEditorType(
 
   const format = node.rest.format
   if (format === "date") return "date"
-  if (format === "time" || format === "iso-time") return "time"
+  if (format === "time") return "time"
   if (format === "date-time") return "datetime"
 
   return resolveRef(doc, node) ? "$ref" : "string"

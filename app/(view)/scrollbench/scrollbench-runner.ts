@@ -94,12 +94,14 @@ export async function waitForScroller(
 ) {
   throwIfAborted(signal)
 
+  const safeTimeoutMs =
+    Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : 0
   const start = performance.now()
   let scroller = getScroller()
 
   while (
     !isScrollableViewport(scroller) &&
-    performance.now() - start < timeoutMs
+    performance.now() - start < safeTimeoutMs
   ) {
     throwIfAborted(signal)
     await delay(100, signal)
@@ -159,16 +161,17 @@ function delay(ms: number, signal?: AbortSignal) {
       return
     }
 
-    const timeout = window.setTimeout(() => {
-      signal?.removeEventListener("abort", handleAbort)
-      resolve()
-    }, ms)
+    let timeout = 0
     const handleAbort = () => {
       window.clearTimeout(timeout)
       reject(abortError())
     }
 
     signal?.addEventListener("abort", handleAbort, { once: true })
+    timeout = window.setTimeout(() => {
+      signal?.removeEventListener("abort", handleAbort)
+      resolve()
+    }, ms)
   })
 }
 

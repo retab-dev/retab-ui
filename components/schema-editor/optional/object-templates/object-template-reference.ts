@@ -5,7 +5,10 @@ import {
 } from "@/components/schema-editor/document/definition-operations"
 import type { SchemaDocument } from "@/components/schema-editor/document/types"
 
-import { templateObjects } from "./template-objects"
+import {
+  objectTemplateDependencies,
+  templateObjects,
+} from "./template-objects"
 
 export function applyObjectTemplateReferenceToDocument(
   doc: SchemaDocument,
@@ -26,10 +29,10 @@ export function addObjectTemplateDefinitionsToDocument(
   const template = templateObjects[templateName]
   if (!template) return doc
 
-  const defsToAdd = [templateName]
-  if (template.deps) {
-    defsToAdd.push(...template.deps)
-  }
+  const defsToAdd = [
+    templateName,
+    ...(objectTemplateDependencies[templateName] ?? []),
+  ]
 
   let next = doc
   for (const defName of defsToAdd) {

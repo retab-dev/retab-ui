@@ -6,13 +6,13 @@ import {
   createViewerResource,
 } from "@/registry/new-york-v4/lib/viewer-resource"
 import {
-  __resetDocxResourceCacheForTests,
   clearDocxResource,
   getDocxResource,
+  resetDocxResourceCacheForTests,
 } from "@/registry/new-york-v4/ui/docx-viewer-resource"
 
 afterEach(() => {
-  __resetDocxResourceCacheForTests()
+  resetDocxResourceCacheForTests()
   clearViewerResourceRegistryForTests()
   vi.restoreAllMocks()
   vi.unstubAllGlobals()
@@ -48,9 +48,9 @@ describe("docx-viewer-resource", () => {
     )
     vi.stubGlobal("fetch", fetchMock)
 
-    const resource = docxUrlResource("/document.docx")
-    const first = getDocxResource(resource)
-    const second = getDocxResource(resource)
+    const content = docxUrlResource("/document.docx").content
+    const first = getDocxResource(content)
+    const second = getDocxResource(content)
 
     expect(first).toBe(second)
     await expect(first).resolves.toHaveProperty("byteLength", 3)
@@ -66,10 +66,13 @@ describe("docx-viewer-resource", () => {
     )
     vi.stubGlobal("fetch", fetchMock)
 
-    const first = getDocxResource(docxUrlResource("/same-bytes.docx", "a.docx"))
-    const second = getDocxResource(
-      docxUrlResource("/same-bytes.docx", "renamed.docx")
-    )
+    const firstResource = docxUrlResource("/same-bytes.docx", "a.docx")
+    const secondResource = docxUrlResource("/same-bytes.docx", "renamed.docx")
+
+    expect(firstResource.content).toBe(secondResource.content)
+
+    const first = getDocxResource(firstResource.content)
+    const second = getDocxResource(secondResource.content)
 
     expect(first).toBe(second)
     await expect(first).resolves.toHaveProperty("byteLength", 3)
@@ -83,13 +86,13 @@ describe("docx-viewer-resource", () => {
       .mockResolvedValueOnce(response(Uint8Array.of(4, 5), { status: 200 }))
     vi.stubGlobal("fetch", fetchMock)
 
-    const resource = docxUrlResource("/retry.docx")
+    const content = docxUrlResource("/retry.docx").content
 
-    await expect(getDocxResource(resource)).rejects.toMatchObject({
+    await expect(getDocxResource(content)).rejects.toMatchObject({
       kind: "http_error",
       status: 500,
     })
-    await expect(getDocxResource(resource)).resolves.toHaveProperty(
+    await expect(getDocxResource(content)).resolves.toHaveProperty(
       "byteLength",
       2
     )
@@ -102,15 +105,15 @@ describe("docx-viewer-resource", () => {
     )
     vi.stubGlobal("fetch", fetchMock)
 
-    const resource = docxUrlResource("/retained-error.docx")
-    const first = getDocxResource(resource, { retainRejected: true })
+    const content = docxUrlResource("/retained-error.docx").content
+    const first = getDocxResource(content, { retainRejected: true })
 
     await expect(first).rejects.toMatchObject({
       kind: "http_error",
       status: 500,
     })
 
-    const second = getDocxResource(resource, { retainRejected: true })
+    const second = getDocxResource(content, { retainRejected: true })
     expect(second).toBe(first)
     await expect(second).rejects.toMatchObject({
       kind: "http_error",
@@ -126,19 +129,19 @@ describe("docx-viewer-resource", () => {
       .mockResolvedValueOnce(response(Uint8Array.of(8, 9), { status: 200 }))
     vi.stubGlobal("fetch", fetchMock)
 
-    const resource = docxUrlResource("/clear-retry.docx")
+    const content = docxUrlResource("/clear-retry.docx").content
 
     await expect(
-      getDocxResource(resource, { retainRejected: true })
+      getDocxResource(content, { retainRejected: true })
     ).rejects.toMatchObject({
       kind: "http_error",
       status: 500,
     })
 
-    clearDocxResource(resource)
+    clearDocxResource(content)
 
     await expect(
-      getDocxResource(resource, { retainRejected: true })
+      getDocxResource(content, { retainRejected: true })
     ).resolves.toHaveProperty("byteLength", 2)
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })
@@ -148,7 +151,7 @@ describe("docx-viewer-resource", () => {
     vi.stubGlobal("fetch", fetchMock)
 
     const buffer = await getDocxResource(
-      docxBlobResource(Uint8Array.of(7, 8, 9), "blob:docx")
+      docxBlobResource(Uint8Array.of(7, 8, 9), "blob:docx").content
     )
 
     expect(new Uint8Array(buffer)).toEqual(Uint8Array.of(7, 8, 9))

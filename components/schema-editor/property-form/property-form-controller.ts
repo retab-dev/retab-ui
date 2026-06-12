@@ -34,20 +34,26 @@ function normalizeValidationForCapabilities({
   validation: PropertyValidation
   capabilities: PropertyCapabilities
 }): PropertyValidation {
-  const canEditSchema =
-    capabilities.canEditType ||
-    capabilities.canEditNullable ||
-    capabilities.canEditNestedObject ||
-    capabilities.canEditArrayItems ||
-    capabilities.canEditEnumValues
+  const isEnumValueValidation =
+    validation.schemaNode.code === "enum_empty" ||
+    validation.schemaNode.code === "enum_blank" ||
+    validation.schemaNode.code === "enum_duplicate"
+  const canEditSchemaValidation =
+    validation.schemaNode.status !== "invalid" ||
+    (isEnumValueValidation
+      ? capabilities.canEditType || capabilities.canEditEnumValues
+      : capabilities.canEditType ||
+        capabilities.canEditNullable ||
+        capabilities.canEditNestedObject ||
+        capabilities.canEditArrayItems ||
+        capabilities.canEditEnumValues)
   const name =
     capabilities.canEditName || validation.name.status !== "invalid"
       ? validation.name
       : { status: "valid" as const }
-  const schemaNode =
-    canEditSchema || validation.schemaNode.status !== "invalid"
-      ? validation.schemaNode
-      : { status: "valid" as const }
+  const schemaNode = canEditSchemaValidation
+    ? validation.schemaNode
+    : { status: "valid" as const }
 
   return {
     ...validation,
@@ -72,12 +78,14 @@ export function usePropertyFormController({
 }: PropertyFormControllerInput): PropertyFormViewModel {
   const [propertyDraft, setPropertyDraft] = React.useState(initialPropertyDraft)
   const propertyDraftRef = React.useRef(initialPropertyDraft)
+  const [draftResetVersion, setDraftResetVersion] = React.useState(0)
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const isSubmittingRef = React.useRef(false)
 
   React.useEffect(() => {
     propertyDraftRef.current = initialPropertyDraft
     setPropertyDraft(initialPropertyDraft)
+    setDraftResetVersion((version) => version + 1)
   }, [initialPropertyDraft])
 
   const capabilities = React.useMemo(() => {
@@ -101,17 +109,29 @@ export function usePropertyFormController({
     }
   }, [canDelete, capabilitiesProp, mode])
 
-  const validation = validationProp
-    ? validationProp
-    : normalizeValidationForCapabilities({
-        validation: validatePropertyDraft({
-          propertyDraft,
-          schemaContext,
-        }),
-        capabilities,
-      })
+  const validation = normalizeValidationForCapabilities({
+    validation:
+      validationProp ??
+      validatePropertyDraft({
+        propertyDraft,
+        schemaContext,
+      }),
+    capabilities,
+  })
   const effectiveSchemaNode = getEffectiveNode(propertyDraft.schemaNode)
   const effectiveType = getEffectiveType(propertyDraft.schemaNode)
+  const schemaDetailsContext = React.useMemo(
+    () => ({
+      ...schemaContext,
+      resetKey: [
+        schemaContext.resetKey ??
+          schemaContext.fieldPath ??
+          schemaContext.originalName,
+        draftResetVersion,
+      ].join(":"),
+    }),
+    [draftResetVersion, schemaContext]
+  )
 
   const updatePropertyDraft = React.useCallback(
     (operation: PropertyDraftOperation) => {
@@ -131,15 +151,15 @@ export function usePropertyFormController({
     if (capabilities.mode === "readOnly") return false
 
     const currentPropertyDraft = propertyDraftRef.current
-    const currentValidation = validationProp
-      ? validationProp
-      : normalizeValidationForCapabilities({
-          validation: validatePropertyDraft({
-            propertyDraft: currentPropertyDraft,
-            schemaContext,
-          }),
-          capabilities,
-        })
+    const currentValidation = normalizeValidationForCapabilities({
+      validation:
+        validationProp ??
+        validatePropertyDraft({
+          propertyDraft: currentPropertyDraft,
+          schemaContext,
+        }),
+      capabilities,
+    })
     if (!currentValidation.canCommit) return false
 
     isSubmittingRef.current = true
@@ -232,8 +252,14 @@ export function usePropertyFormController({
       schemaNodeDetails: showSchemaNodeDetails
         ? {
             schemaNode: propertyDraft.schemaNode,
-            schemaContext,
+            schemaContext: schemaDetailsContext,
             mode: editMode,
+            capabilities: {
+              canEditType: capabilities.canEditType,
+              canEditNestedObject: capabilities.canEditNestedObject,
+              canEditArrayItems: capabilities.canEditArrayItems,
+              canEditEnumValues: capabilities.canEditEnumValues,
+            },
             disabled:
               !capabilities.canEditEnumValues &&
               !capabilities.canEditNestedObject &&

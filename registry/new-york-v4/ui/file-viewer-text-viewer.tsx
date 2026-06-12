@@ -5,18 +5,22 @@ import { useVirtualizer } from "@tanstack/react-virtual"
 import Prism from "prismjs"
 import { createPortal } from "react-dom"
 
-import { isAbortError } from "./file-viewer-async"
-import { DocShell, useZoom, ZoomActions } from "./file-viewer-chrome"
+import type { ViewerResource } from "@/lib/viewer-resource"
+
+import { ResourceDocShell, useZoom, ZoomActions } from "./file-viewer-chrome"
+import { toFileViewerTextError } from "./file-viewer-text-errors"
 import {
   formatBytes,
   isSameTextView,
   loadFirstTextChunk,
   loadNextTextChunk,
-  textKeyForFile,
+  textKeyForContent,
   textLoader,
+  type TextLoaderContent,
   type TextLoadMode,
   type TextSnapshot,
 } from "./file-viewer-text-loader"
+import { isAbortError } from "./viewer-abortable-request"
 
 const TEXT_FONT = 12.5
 const TEXT_LINE_HEIGHT = 20
@@ -236,36 +240,38 @@ function ScrollerShell({
 }
 
 function makeTextSubscription(
-  src: string,
+  content: TextLoaderContent,
+  fileName: string,
   mode: TextLoadMode,
   signal: AbortSignal
 ) {
   return {
-    textKey: textKeyForFile(src, mode),
-    src,
+    textKey: textKeyForContent(content, mode),
+    content,
+    fileName,
     mode,
     signal,
   }
 }
 
 export function TextDocViewer({
-  src,
-  fileName,
+  resource,
   className,
   bare,
   isolateStyles,
   descriptorSignal,
 }: {
-  src: string
-  fileName: string
+  resource: ViewerResource
   className?: string
   bare?: boolean
   isolateStyles?: boolean
   descriptorSignal: AbortSignal
 }) {
+  const fileName = resource.fileName
+  const content = resource.content
   const isJson = /\.(json|json5)$/i.test(fileName)
   const textMode: TextLoadMode = isJson ? "full" : "stream"
-  const textKey = textKeyForFile(src, textMode)
+  const textKey = textKeyForContent(content, textMode)
   const textViewKey = `${textKey}\u0000${fileName}`
   const currentTextViewKeyRef = React.useRef(textViewKey)
   currentTextViewKeyRef.current = textViewKey
@@ -291,7 +297,12 @@ export function TextDocViewer({
 
   React.useEffect(() => {
     const startedTextViewKey = textViewKey
-    const sub = makeTextSubscription(src, textMode, descriptorSignal)
+    const sub = makeTextSubscription(
+      content,
+      fileName,
+      textMode,
+      descriptorSignal
+    )
     void loadFirstTextChunk(sub)
       .then((next) => {
         if (!isSameTextView(currentTextViewKeyRef.current, startedTextViewKey))
@@ -302,9 +313,9 @@ export function TextDocViewer({
         if (!isSameTextView(currentTextViewKeyRef.current, startedTextViewKey))
           return
         if (isAbortError(error)) return
-        setLoadError(error instanceof Error ? error : new Error(String(error)))
+        setLoadError(toFileViewerTextError(error))
       })
-  }, [descriptorSignal, src, textKey, textMode, textViewKey])
+  }, [content, descriptorSignal, fileName, textKey, textMode, textViewKey])
 
   const lineLeaves = React.useCallback(
     (line: string): Leaf[] | null => {
@@ -323,7 +334,12 @@ export function TextDocViewer({
 
   const loadMore = React.useCallback(() => {
     const startedTextViewKey = textViewKey
-    const sub = makeTextSubscription(src, textMode, descriptorSignal)
+    const sub = makeTextSubscription(
+      content,
+      fileName,
+      textMode,
+      descriptorSignal
+    )
     setLoadingMore((busy) => {
       if (busy) return busy
       void loadNextTextChunk(sub)
@@ -344,14 +360,12 @@ export function TextDocViewer({
             setLoadingMore(false)
             return
           }
-          setLoadError(
-            error instanceof Error ? error : new Error(String(error))
-          )
+          setLoadError(toFileViewerTextError(error))
           setLoadingMore(false)
         })
       return true
     })
-  }, [descriptorSignal, src, textMode, textViewKey])
+  }, [content, descriptorSignal, fileName, textMode, textViewKey])
 
   const text = React.useMemo(() => {
     if (!snap) return ""
@@ -422,9 +436,8 @@ export function TextDocViewer({
         } loaded`
 
   return (
-    <DocShell
-      fileName={fileName}
-      src={src}
+    <ResourceDocShell
+      resource={resource}
       className={className}
       bare={bare}
       meta={meta}
@@ -485,7 +498,7 @@ export function TextDocViewer({
           </div>
         </div>
       </ScrollerShell>
-    </DocShell>
+    </ResourceDocShell>
   )
 }
 

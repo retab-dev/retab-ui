@@ -60,6 +60,6 @@ export async function timed<T>(
   }
 }
 
-export function baseName(src: string): string {
-  return src.split("/").pop() ?? src
+export function baseName(url: string): string {
+  return url.split("/").pop() ?? url
 }

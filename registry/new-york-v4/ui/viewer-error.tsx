@@ -86,6 +86,7 @@ export interface ViewerErrorBoundaryProps extends ViewerErrorContext {
   bare?: boolean
   variant?: "card" | "document" | "inline"
   onRetry?: (error: unknown) => void
+  onCaughtError?: (error: unknown, errorInfo: React.ErrorInfo) => void
 }
 
 export class ViewerErrorBoundary extends React.Component<
@@ -110,8 +111,8 @@ export class ViewerErrorBoundary extends React.Component<
     return { error }
   }
 
-  componentDidCatch(error: unknown) {
-    console.error("Viewer failed to render.", error)
+  componentDidCatch(error: unknown, errorInfo: React.ErrorInfo) {
+    this.props.onCaughtError?.(error, errorInfo)
   }
 
   render() {

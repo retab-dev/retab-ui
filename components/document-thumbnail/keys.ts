@@ -5,7 +5,7 @@ import type { ViewerDescriptor } from "@/lib/viewer-source"
 
 import type { ThumbnailAnchor } from "./types"
 
-export interface ThumbnailCacheKeyInput {
+export interface ThumbnailKeyInput {
   resource: ViewerResource
   descriptor: ViewerDescriptor
   unit?: string
@@ -13,17 +13,17 @@ export interface ThumbnailCacheKeyInput {
 }
 
 export interface ThumbnailRenderKeyInput {
-  cacheKey: string
+  thumbnailKey: string
   anchor: ThumbnailAnchor
   retryKey: React.Key | null
 }
 
-export function getThumbnailCacheKey({
+export function getThumbnailKey({
   resource,
   descriptor,
   unit = "first",
   options = [],
-}: ThumbnailCacheKeyInput): string {
+}: ThumbnailKeyInput): string {
   return [
     encodePart(`resource:${resource.keys.load}`),
     encodePart(`category:${descriptor.category}`),
@@ -44,12 +44,12 @@ export function thumbnailOption(
 }
 
 export function getThumbnailRenderKey({
-  cacheKey,
+  thumbnailKey,
   anchor,
   retryKey,
 }: ThumbnailRenderKeyInput): string {
   return [
-    encodePart(`cache:${cacheKey}`),
+    encodePart(`thumbnail:${thumbnailKey}`),
     encodePart(`anchor:${anchor}`),
     encodeRetryKey(retryKey),
   ].join("")

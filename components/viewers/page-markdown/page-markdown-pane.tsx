@@ -23,6 +23,7 @@ export const PageMarkdownPane = React.forwardRef<
     scale: number
     currentPage: number
     fileName: string
+    resetKey?: string
     onModeChange: (mode: PageMarkdownViewMode) => void
     onZoom: (factor: number) => void
     onFitWidth: () => void
@@ -37,6 +38,7 @@ export const PageMarkdownPane = React.forwardRef<
     scale,
     currentPage,
     fileName,
+    resetKey,
     onModeChange,
     onZoom,
     onFitWidth,
@@ -49,7 +51,10 @@ export const PageMarkdownPane = React.forwardRef<
   const viewportRef = React.useRef<HTMLDivElement | null>(null)
   const scrollFrameRef = React.useRef(0)
   const lastVisiblePageRef = React.useRef(1)
-  const pagesSignature = React.useMemo(() => pages.join("\u0000"), [pages])
+  const pagesSignature = React.useMemo(
+    () => `${resetKey ?? ""}\u0000${pages.join("\u0000")}`,
+    [pages, resetKey]
+  )
 
   React.useEffect(() => {
     onContainerWidthChange(pageContainerWidth)
@@ -83,12 +88,21 @@ export const PageMarkdownPane = React.forwardRef<
 
   const handleScroll = React.useCallback(() => {
     if (scrollFrameRef.current) return
+    if (typeof requestAnimationFrame !== "function") {
+      reportVisiblePage()
+      return
+    }
     scrollFrameRef.current = requestAnimationFrame(reportVisiblePage)
   }, [reportVisiblePage])
 
   React.useEffect(
     () => () => {
-      if (scrollFrameRef.current) cancelAnimationFrame(scrollFrameRef.current)
+      if (
+        scrollFrameRef.current &&
+        typeof cancelAnimationFrame === "function"
+      ) {
+        cancelAnimationFrame(scrollFrameRef.current)
+      }
     },
     []
   )

@@ -19,7 +19,12 @@ export function parsePptxSlideSize(
     return DEFAULT_PPTX_SLIDE_SIZE
   }
 
-  const document = parseXml(xml)
+  let document: Document | null
+  try {
+    document = parseXml(xml)
+  } catch {
+    return DEFAULT_PPTX_SLIDE_SIZE
+  }
   if (!document) return DEFAULT_PPTX_SLIDE_SIZE
 
   const parseError = document.getElementsByTagName("parsererror")[0]

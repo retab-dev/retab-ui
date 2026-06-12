@@ -284,6 +284,65 @@ describe("SidebarProvider and useSidebar", () => {
     expect(onTriggerClick).toHaveBeenCalledTimes(1)
   })
 
+  it("does not submit parent forms from a rendered trigger button", async () => {
+    const onSubmit = vi.fn((event: React.FormEvent<HTMLFormElement>) => {
+      event.preventDefault()
+    })
+    const { container } = render(
+      <form onSubmit={onSubmit}>
+        <SidebarProvider>
+          <SidebarTrigger render={<button />} />
+          <ContextProbe />
+        </SidebarProvider>
+      </form>
+    )
+
+    fireEvent.click(getTrigger(container))
+
+    await waitFor(() => {
+      expect(
+        container.querySelector("output")?.getAttribute("data-state")
+      ).toBe("collapsed")
+    })
+    expect(onSubmit).not.toHaveBeenCalled()
+    expect(getTrigger(container).getAttribute("type")).toBe("button")
+  })
+
+  it("does not submit parent forms from a trigger render function", async () => {
+    const onSubmit = vi.fn((event: React.FormEvent<HTMLFormElement>) => {
+      event.preventDefault()
+    })
+    const { container } = render(
+      <form onSubmit={onSubmit}>
+        <SidebarProvider>
+          <SidebarTrigger render={(props) => <button {...props} />} />
+          <ContextProbe />
+        </SidebarProvider>
+      </form>
+    )
+
+    fireEvent.click(getTrigger(container))
+
+    await waitFor(() => {
+      expect(
+        container.querySelector("output")?.getAttribute("data-state")
+      ).toBe("collapsed")
+    })
+    expect(onSubmit).not.toHaveBeenCalled()
+    expect(getTrigger(container).getAttribute("type")).toBe("button")
+  })
+
+  it("does not add button-only attributes to rendered trigger links", () => {
+    const { container } = renderSidebar(
+      <SidebarTrigger render={<a href="/nav" />} />
+    )
+
+    const trigger = getTrigger(container)
+    expect(trigger.tagName).toBe("A")
+    expect(trigger.getAttribute("href")).toBe("/nav")
+    expect(trigger.getAttribute("type")).toBeNull()
+  })
+
   it("toggles from the desktop rail without entering the tab order", async () => {
     const { container } = renderSidebar(
       <>
@@ -350,6 +409,30 @@ describe("SidebarProvider and useSidebar", () => {
     )
     expect(cookieSet).not.toHaveBeenCalled()
     expect(onRailClick).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not toggle from disabled trigger or rail controls", () => {
+    const onTriggerClick = vi.fn()
+    const onRailClick = vi.fn()
+    const { container } = renderSidebar(
+      <>
+        <SidebarTrigger disabled onClick={onTriggerClick} />
+        <Sidebar collapsible="icon">
+          <SidebarRail disabled onClick={onRailClick} />
+        </Sidebar>
+        <ContextProbe />
+      </>
+    )
+
+    fireEvent.click(getTrigger(container))
+    fireEvent.click(container.querySelector('[data-sidebar="rail"]')!)
+
+    expect(container.querySelector("output")?.getAttribute("data-state")).toBe(
+      "expanded"
+    )
+    expect(cookieSet).not.toHaveBeenCalled()
+    expect(onTriggerClick).not.toHaveBeenCalled()
+    expect(onRailClick).not.toHaveBeenCalled()
   })
 
   it("uses ctrl/cmd+b as the desktop shortcut and ignores plain b", async () => {
@@ -424,6 +507,10 @@ describe("SidebarProvider and useSidebar", () => {
     const { container } = renderSidebar(
       <>
         <SidebarInput aria-label="Filter" />
+        <textarea aria-label="Notes" />
+        <select aria-label="Project">
+          <option>Retab</option>
+        </select>
         <div
           aria-label="Document title"
           contentEditable
@@ -444,9 +531,19 @@ describe("SidebarProvider and useSidebar", () => {
       screen.getByRole("textbox", { name: "Document title" }),
       { metaKey: true, key: "b" }
     )
+    const textareaEvent = fireEvent.keyDown(
+      screen.getByRole("textbox", { name: "Notes" }),
+      { ctrlKey: true, key: "b" }
+    )
+    const selectEvent = fireEvent.keyDown(
+      screen.getByRole("combobox", { name: "Project" }),
+      { ctrlKey: true, key: "b" }
+    )
 
     expect(inputEvent).toBe(true)
     expect(editorEvent).toBe(true)
+    expect(textareaEvent).toBe(true)
+    expect(selectEvent).toBe(true)
     expect(container.querySelector("output")?.getAttribute("data-state")).toBe(
       "expanded"
     )
@@ -472,6 +569,15 @@ describe("SidebarProvider and useSidebar", () => {
     expect(container.querySelector("output")?.getAttribute("data-state")).toBe(
       "expanded"
     )
+    expect(cookieSet).not.toHaveBeenCalled()
+  })
+
+  it("removes the keyboard shortcut listener on unmount", () => {
+    const { unmount } = renderSidebar(<ContextProbe />)
+
+    unmount()
+    fireEvent.keyDown(window, { ctrlKey: true, key: "b" })
+
     expect(cookieSet).not.toHaveBeenCalled()
   })
 
@@ -768,6 +874,32 @@ describe("Sidebar desktop and mobile rendering", () => {
     expect(cookieSet).not.toHaveBeenCalled()
   })
 
+  it("does not call controlled desktop onOpenChange from mobile toggles", async () => {
+    setMobileViewport(true)
+    const onOpenChange = vi.fn()
+    const { container } = render(
+      <SidebarProvider open={false} onOpenChange={onOpenChange}>
+        <SidebarTrigger />
+        <Sidebar>
+          <SidebarHeader>Mobile nav</SidebarHeader>
+        </Sidebar>
+        <ContextProbe />
+      </SidebarProvider>
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "Toggle Sidebar" }))
+
+    expect(await screen.findByText("Mobile nav")).toBeTruthy()
+    expect(
+      container.querySelector("output")?.getAttribute("data-openmobile")
+    ).toBe("true")
+    expect(container.querySelector("output")?.getAttribute("data-state")).toBe(
+      "collapsed"
+    )
+    expect(onOpenChange).not.toHaveBeenCalled()
+    expect(cookieSet).not.toHaveBeenCalled()
+  })
+
   it("applies multiple synchronous mobile setter updates against latest state", async () => {
     setMobileViewport(true)
 
@@ -935,18 +1067,73 @@ describe("Sidebar compound components", () => {
             <a href="/billing">Billing</a>
           </SidebarMenuSubButton>
         </SidebarMenuItem>
+        <SidebarMenuItem>
+          <SidebarMenuButton render={<a href="/reports" />}>
+            Reports
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+        <SidebarMenuItem>
+          <SidebarMenuSubButton render={<a href="/teams" />}>
+            Teams
+          </SidebarMenuSubButton>
+        </SidebarMenuItem>
+        <SidebarMenuItem>
+          <SidebarMenuButton
+            render={(props) => <a {...props} href="/reports-function" />}
+          >
+            Reports function
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+        <SidebarMenuItem>
+          <SidebarMenuSubButton
+            render={(props) => <a {...props} href="/teams-function" />}
+          >
+            Teams function
+          </SidebarMenuSubButton>
+        </SidebarMenuItem>
       </SidebarMenu>
     )
 
     const settings = screen.getByRole("link", { name: "Settings" })
     const billing = screen.getByRole("link", { name: "Billing" })
+    const reports = screen.getByRole("link", { name: "Reports" })
+    const teams = screen.getByRole("link", { name: "Teams" })
+    const reportsFunction = screen.getByRole("link", {
+      name: "Reports function",
+    })
+    const teamsFunction = screen.getByRole("link", { name: "Teams function" })
 
     expect(settings.getAttribute("href")).toBe("/settings")
     expect(settings.getAttribute("data-sidebar")).toBe("menu-button")
     expect(settings.getAttribute("data-active")).toBe("true")
+    expect(settings.getAttribute("type")).toBeNull()
     expect(settings.querySelector("button")).toBeNull()
     expect(billing.getAttribute("href")).toBe("/billing")
     expect(billing.getAttribute("data-sidebar")).toBe("menu-sub-button")
+    expect(reports.getAttribute("data-sidebar")).toBe("menu-button")
+    expect(reports.getAttribute("type")).toBeNull()
+    expect(teams.getAttribute("data-sidebar")).toBe("menu-sub-button")
+    expect(teams.getAttribute("type")).toBeNull()
+    expect(reportsFunction.getAttribute("data-sidebar")).toBe("menu-button")
+    expect(reportsFunction.getAttribute("type")).toBeNull()
+    expect(teamsFunction.getAttribute("data-sidebar")).toBe("menu-sub-button")
+    expect(teamsFunction.getAttribute("type")).toBeNull()
+  })
+
+  it("preserves menu button metadata when wrapped with a tooltip", () => {
+    renderSidebar(
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <SidebarMenuButton tooltip="Open inbox">Inbox</SidebarMenuButton>
+        </SidebarMenuItem>
+      </SidebarMenu>,
+      false
+    )
+
+    const button = screen.getByRole("button", { name: "Inbox" })
+    expect(button.getAttribute("data-sidebar")).toBe("menu-button")
+    expect(button.getAttribute("data-slot")).toBe("sidebar-menu-button")
+    expect(button.getAttribute("type")).toBe("button")
   })
 
   it("does not submit parent forms from sidebar button primitives", () => {
@@ -981,6 +1168,168 @@ describe("Sidebar compound components", () => {
     ).toBe("button")
     expect(
       screen.getByRole("button", { name: "Menu action" }).getAttribute("type")
+    ).toBe("button")
+  })
+
+  it("does not submit parent forms from rendered sidebar button primitives", () => {
+    const onSubmit = vi.fn((event: React.FormEvent<HTMLFormElement>) => {
+      event.preventDefault()
+    })
+
+    renderSidebar(
+      <form onSubmit={onSubmit}>
+        <SidebarGroup>
+          <SidebarGroupAction
+            aria-label="Rendered group action"
+            render={<button />}
+          />
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton render={<button />}>
+                Rendered menu item
+              </SidebarMenuButton>
+              <SidebarMenuAction
+                aria-label="Rendered menu action"
+                render={<button />}
+              />
+              <SidebarMenuButton asChild>
+                <button>As child menu item</button>
+              </SidebarMenuButton>
+              <SidebarMenuSub>
+                <SidebarMenuSubItem>
+                  <SidebarMenuSubButton render={<button />}>
+                    Rendered submenu item
+                  </SidebarMenuSubButton>
+                </SidebarMenuSubItem>
+                <SidebarMenuSubItem>
+                  <SidebarMenuSubButton asChild>
+                    <button>As child submenu item</button>
+                  </SidebarMenuSubButton>
+                </SidebarMenuSubItem>
+              </SidebarMenuSub>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroup>
+      </form>
+    )
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Rendered group action" })
+    )
+    fireEvent.click(screen.getByRole("button", { name: "Rendered menu item" }))
+    fireEvent.click(
+      screen.getByRole("button", { name: "Rendered menu action" })
+    )
+    fireEvent.click(screen.getByRole("button", { name: "As child menu item" }))
+    fireEvent.click(
+      screen.getByRole("button", { name: "Rendered submenu item" })
+    )
+    fireEvent.click(
+      screen.getByRole("button", { name: "As child submenu item" })
+    )
+
+    expect(onSubmit).not.toHaveBeenCalled()
+    expect(
+      screen
+        .getByRole("button", { name: "Rendered group action" })
+        .getAttribute("type")
+    ).toBe("button")
+    expect(
+      screen
+        .getByRole("button", { name: "Rendered menu item" })
+        .getAttribute("type")
+    ).toBe("button")
+    expect(
+      screen
+        .getByRole("button", { name: "Rendered menu action" })
+        .getAttribute("type")
+    ).toBe("button")
+    expect(
+      screen
+        .getByRole("button", { name: "As child menu item" })
+        .getAttribute("type")
+    ).toBe("button")
+    expect(
+      screen
+        .getByRole("button", { name: "Rendered submenu item" })
+        .getAttribute("type")
+    ).toBe("button")
+    expect(
+      screen
+        .getByRole("button", { name: "As child submenu item" })
+        .getAttribute("type")
+    ).toBe("button")
+  })
+
+  it("does not submit parent forms from render-function sidebar buttons", () => {
+    const onSubmit = vi.fn((event: React.FormEvent<HTMLFormElement>) => {
+      event.preventDefault()
+    })
+
+    renderSidebar(
+      <form onSubmit={onSubmit}>
+        <SidebarGroup>
+          <SidebarGroupAction
+            aria-label="Render function group action"
+            render={(props) => <button {...props} />}
+          />
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton render={(props) => <button {...props} />}>
+                Render function menu item
+              </SidebarMenuButton>
+              <SidebarMenuAction
+                aria-label="Render function menu action"
+                render={(props) => <button {...props} />}
+              />
+              <SidebarMenuSub>
+                <SidebarMenuSubItem>
+                  <SidebarMenuSubButton
+                    render={(props) => <button {...props} />}
+                  >
+                    Render function submenu item
+                  </SidebarMenuSubButton>
+                </SidebarMenuSubItem>
+              </SidebarMenuSub>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroup>
+      </form>
+    )
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Render function group action" })
+    )
+    fireEvent.click(
+      screen.getByRole("button", { name: "Render function menu item" })
+    )
+    fireEvent.click(
+      screen.getByRole("button", { name: "Render function menu action" })
+    )
+    fireEvent.click(
+      screen.getByRole("button", { name: "Render function submenu item" })
+    )
+
+    expect(onSubmit).not.toHaveBeenCalled()
+    expect(
+      screen
+        .getByRole("button", { name: "Render function group action" })
+        .getAttribute("type")
+    ).toBe("button")
+    expect(
+      screen
+        .getByRole("button", { name: "Render function menu item" })
+        .getAttribute("type")
+    ).toBe("button")
+    expect(
+      screen
+        .getByRole("button", { name: "Render function menu action" })
+        .getAttribute("type")
+    ).toBe("button")
+    expect(
+      screen
+        .getByRole("button", { name: "Render function submenu item" })
+        .getAttribute("type")
     ).toBe("button")
   })
 

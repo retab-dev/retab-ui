@@ -15,6 +15,7 @@ export function columnLetterToIndex(letter: string): number | null {
   let n = 0
   for (const ch of letter.toUpperCase()) {
     n = n * 26 + (ch.charCodeAt(0) - 64)
+    if (!Number.isSafeInteger(n)) return null
   }
   return n - 1
 }

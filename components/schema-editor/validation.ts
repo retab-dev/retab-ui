@@ -13,8 +13,28 @@ import type {
   SchemaValidationIssue,
   SchemaValidationResult,
 } from "@/components/schema-editor/schema-builder-types";
+import { decodeJsonPointerSegment } from "@/components/schema-editor/document/json-pointer";
 
 const PROPERTY_LIMIT = 500;
+
+const SCHEMA_VALUE_KEYS = [
+  "additionalItems",
+  "additionalProperties",
+  "contains",
+  "else",
+  "if",
+  "not",
+  "propertyNames",
+  "then",
+  "unevaluatedItems",
+  "unevaluatedProperties",
+] as const;
+
+const SCHEMA_MAP_KEYS = [
+  "dependentSchemas",
+  "dependencies",
+  "patternProperties",
+] as const;
 
 export function validateProjectedSchema(
   schema: ExtendedJSONSchema7,
@@ -51,33 +71,48 @@ export function validationErrorsText(
 export function countSchemaProperties(schema?: ExtendedJSONSchema7): number {
   if (!schema || typeof schema !== "object") return 0;
 
+  const resolveLocalRef = (ref: string): ExtendedJSONSchema7 | undefined => {
+    if (!ref.startsWith("#/")) return undefined;
+
+    const segments = ref
+      .substring(2)
+      .split("/")
+      .map(decodeJsonPointerSegment);
+    let refSchema: unknown = schema;
+    for (const segment of segments) {
+      if (refSchema && typeof refSchema === "object") {
+        const record = refSchema as Record<string, unknown>;
+        if (!Object.prototype.hasOwnProperty.call(record, segment)) {
+          return undefined;
+        }
+        refSchema = record[segment];
+      } else {
+        return undefined;
+      }
+    }
+
+    return refSchema && typeof refSchema === "object"
+      ? (refSchema as ExtendedJSONSchema7)
+      : undefined;
+  };
+
   const countProperties = (
     node: ExtendedJSONSchema7,
     path: string = "",
+    activeSchemas: Set<ExtendedJSONSchema7> = new Set(),
   ): number => {
     if (!node || typeof node !== "object") return 0;
 
     let count = 0;
 
     if (node.$ref && typeof node.$ref === "string") {
-      if (node.$ref.startsWith("#/")) {
-        const refPath = node.$ref.substring(2).split("/");
-        let refSchema: unknown = schema;
-        for (const segment of refPath) {
-          if (refSchema && typeof refSchema === "object") {
-            refSchema = (refSchema as Record<string, unknown>)[segment];
-          } else {
-            refSchema = undefined;
-            break;
-          }
-        }
-
-        if (refSchema) {
-          count += countProperties(
-            refSchema as ExtendedJSONSchema7,
-            `${path}>${node.$ref}`,
-          );
-        }
+      const refSchema = resolveLocalRef(node.$ref);
+      if (refSchema && !activeSchemas.has(refSchema)) {
+        count += countProperties(
+          refSchema,
+          `${path}>${node.$ref}`,
+          new Set([...activeSchemas, refSchema]),
+        );
       }
     }
 
@@ -87,35 +122,74 @@ export function countSchemaProperties(schema?: ExtendedJSONSchema7): number {
         count += countProperties(
           propSchema as ExtendedJSONSchema7,
           `${path}/properties/${propertyName}`,
+          activeSchemas,
         );
       });
     }
 
-    if (node.type === "array" && node.items) {
+    if (node.items) {
       if (Array.isArray(node.items)) {
         node.items.forEach((item, index) => {
           count += countProperties(
             item as ExtendedJSONSchema7,
             `${path}/items/${index}`,
+            activeSchemas,
           );
         });
       } else {
         count += countProperties(
           node.items as ExtendedJSONSchema7,
           `${path}/items`,
+          activeSchemas,
         );
       }
     }
 
+    const record = node as Record<string, unknown>;
+    if (Array.isArray(record.prefixItems)) {
+      record.prefixItems.forEach((item, index) => {
+        count += countProperties(
+          item as ExtendedJSONSchema7,
+          `${path}/prefixItems/${index}`,
+          activeSchemas,
+        );
+      });
+    }
+
     for (const keyword of ["allOf", "anyOf", "oneOf"] as const) {
-      const compositionArray = (node as Record<string, unknown>)[keyword];
+      const compositionArray = record[keyword];
       if (Array.isArray(compositionArray)) {
         compositionArray.forEach((subSchema, index) => {
           count += countProperties(
             subSchema as ExtendedJSONSchema7,
             `${path}/${keyword}/${index}`,
+            activeSchemas,
           );
         });
+      }
+    }
+
+    for (const keyword of SCHEMA_VALUE_KEYS) {
+      const value = record[keyword];
+      if (isSchemaObject(value)) {
+        count += countProperties(
+          value as ExtendedJSONSchema7,
+          `${path}/${keyword}`,
+          activeSchemas,
+        );
+      }
+    }
+
+    for (const keyword of SCHEMA_MAP_KEYS) {
+      const value = record[keyword];
+      if (!isSchemaObject(value)) continue;
+
+      for (const [name, child] of Object.entries(value)) {
+        count += countProperties(
+          child as ExtendedJSONSchema7,
+          `${path}/${keyword}/${name}`,
+          activeSchemas,
+        );
       }
     }
 
@@ -123,6 +197,10 @@ export function countSchemaProperties(schema?: ExtendedJSONSchema7): number {
   };
 
   return countProperties(schema);
+}
+
+function isSchemaObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 export function processValidationErrors(

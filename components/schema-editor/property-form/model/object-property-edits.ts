@@ -58,8 +58,11 @@ export function renameObjectProperty({
   const properties = schemaNode.properties || {}
   const nextProperties: NonNullable<ExtendedJSONSchema7["properties"]> = {}
   for (const [currentName, propertySchema] of Object.entries(properties)) {
-    nextProperties[currentName === oldName ? newName : currentName] =
+    setRecordValue(
+      nextProperties,
+      currentName === oldName ? newName : currentName,
       propertySchema
+    )
   }
 
   return {
@@ -69,6 +72,19 @@ export function renameObjectProperty({
       name === oldName ? newName : name
     ),
   }
+}
+
+function setRecordValue<T>(
+  record: Record<string, T>,
+  key: string,
+  value: T
+) {
+  Object.defineProperty(record, key, {
+    value,
+    enumerable: true,
+    configurable: true,
+    writable: true,
+  })
 }
 
 export function removeObjectProperty({

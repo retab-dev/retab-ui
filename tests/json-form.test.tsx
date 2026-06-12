@@ -47,6 +47,21 @@ function cloneJson(value: unknown): unknown {
   return JSON.parse(JSON.stringify(value))
 }
 
+function queryTableDataCell(name: string): HTMLElement | null {
+  return (
+    Array.from(document.querySelectorAll<HTMLElement>("[data-table-cell]")).find(
+      (cell) => cell.getAttribute("aria-label") === name
+    ) ?? null
+  )
+}
+
+function getTableDataCell(name: string): HTMLElement {
+  const cell = queryTableDataCell(name)
+  expect(cell).toBeTruthy()
+  expect(cell?.getAttribute("data-slot")).toBe("data-cell")
+  return cell as HTMLElement
+}
+
 function renderJsonForm({
   schema,
   defaultValues = {},
@@ -211,6 +226,37 @@ describe("JsonForm scalar fields", () => {
     })
   })
 
+  it("submits null, true, and false for nullable boolean fields", async () => {
+    const { submit } = renderJsonForm({
+      schema: {
+        type: "object",
+        properties: {
+          approved: {
+            type: ["boolean", "null"],
+            title: "Approved",
+          },
+        },
+      },
+      defaultValues: {
+        approved: null,
+      },
+    })
+
+    expect(screen.getByLabelText("Approved").textContent).toContain("No value")
+
+    await selectOption("Approved", "True")
+    expect(screen.getByLabelText("Approved").textContent).toContain("True")
+
+    await selectOption("Approved", "False")
+    expect(screen.getByLabelText("Approved").textContent).toContain("False")
+
+    await selectOption("Approved", "No value")
+
+    await expect(submit()).resolves.toEqual({
+      approved: null,
+    })
+  })
+
   it("clears required number inputs to undefined instead of null", () => {
     const { form } = renderJsonForm({
       schema: {
@@ -301,6 +347,37 @@ describe("JsonForm scalar fields", () => {
     })
   })
 
+  it("does not duplicate null choices for nullable enums that already include null", async () => {
+    const { submit } = renderJsonForm({
+      schema: {
+        type: "object",
+        properties: {
+          status: {
+            type: ["string", "null"],
+            title: "Status",
+            enum: ["draft", null],
+          },
+        },
+      },
+      defaultValues: {
+        status: "draft",
+      },
+    })
+
+    const trigger = screen.getByLabelText("Status")
+    fireEvent.focus(trigger)
+    fireEvent.keyDown(trigger, { key: "ArrowDown" })
+
+    const nullOptions = await screen.findAllByText("No value")
+    expect(nullOptions).toHaveLength(1)
+    fireEvent.pointerDown(nullOptions[0], { button: 0, ctrlKey: false })
+    fireEvent.click(nullOptions[0])
+
+    await expect(submit()).resolves.toEqual({
+      status: null,
+    })
+  })
+
   it("preserves non-string enum value types", async () => {
     const { submit } = renderJsonForm({
       schema: {
@@ -360,6 +437,27 @@ describe("JsonForm scalar fields", () => {
     await expect(submit()).resolves.toEqual({
       layout: detailed,
     })
+  })
+
+  it("matches object-valued enum defaults regardless of object key order", async () => {
+    renderJsonForm({
+      schema: {
+        type: "object",
+        properties: {
+          layout: {
+            title: "Layout",
+            enum: [{ mode: "compact", columns: 2 }],
+          },
+        },
+      },
+      defaultValues: {
+        layout: { columns: 2, mode: "compact" },
+      },
+    })
+
+    expect(screen.getByLabelText("Layout").textContent).toContain(
+      '{"mode":"compact","columns":2}'
+    )
   })
 
   it("preserves property names that contain react-hook-form path separators", async () => {
@@ -449,6 +547,160 @@ describe("JsonForm objects and refs", () => {
     )
   })
 
+  it("renders existing additionalProperties entries and preserves their keys", async () => {
+    const { submit } = renderJsonForm({
+      schema: {
+        type: "object",
+        properties: {
+          metadata: {
+            type: "object",
+            title: "Metadata",
+            additionalProperties: {
+              type: "string",
+            },
+          },
+        },
+      },
+      defaultValues: {
+        metadata: {
+          source: "email",
+          "invoice.number": "INV-1",
+        },
+      },
+    })
+
+    const disclosure = await screen.findByRole("button", {
+      name: /Metadata 2 fields/,
+    })
+    if (disclosure.getAttribute("aria-expanded") !== "true") {
+      fireEvent.click(disclosure)
+    }
+    await waitFor(() =>
+      expect(disclosure.getAttribute("aria-expanded")).toBe("true")
+    )
+
+    expect((screen.getByLabelText("source") as HTMLInputElement).value).toBe(
+      "email"
+    )
+    expect(
+      (screen.getByLabelText("invoice.number") as HTMLInputElement).value
+    ).toBe("INV-1")
+
+    fireEvent.change(screen.getByLabelText("invoice.number"), {
+      target: { value: "INV-2" },
+    })
+
+    await expect(submit()).resolves.toEqual({
+      metadata: {
+        source: "email",
+        "invoice.number": "INV-2",
+      },
+    })
+  })
+
+  it("renders root additionalProperties entries and preserves their keys", async () => {
+    const { submit } = renderJsonForm({
+      schema: {
+        type: "object",
+        additionalProperties: {
+          type: "string",
+        },
+      },
+      defaultValues: {
+        source: "email",
+        "invoice.number": "INV-1",
+      },
+    })
+
+    expect((screen.getByLabelText("source") as HTMLInputElement).value).toBe(
+      "email"
+    )
+    expect(
+      (screen.getByLabelText("invoice.number") as HTMLInputElement).value
+    ).toBe("INV-1")
+
+    fireEvent.change(screen.getByLabelText("invoice.number"), {
+      target: { value: "INV-2" },
+    })
+
+    await expect(submit()).resolves.toEqual({
+      source: "email",
+      "invoice.number": "INV-2",
+    })
+  })
+
+  it("renders patternProperties entries with their matching schema", async () => {
+    const { submit } = renderJsonForm({
+      schema: {
+        type: "object",
+        properties: {
+          metadata: {
+            type: "object",
+            title: "Metadata",
+            patternProperties: {
+              "^x_": { type: "number" },
+              "^flag\\.": { type: "boolean" },
+            },
+          },
+        },
+      },
+      defaultValues: {
+        metadata: {
+          x_score: 5,
+          "flag.ready": false,
+        },
+      },
+    })
+
+    const disclosure = await screen.findByRole("button", {
+      name: /Metadata 2 fields/,
+    })
+    if (disclosure.getAttribute("aria-expanded") !== "true") {
+      fireEvent.click(disclosure)
+    }
+    await waitFor(() =>
+      expect(disclosure.getAttribute("aria-expanded")).toBe("true")
+    )
+
+    fireEvent.change(screen.getByLabelText("x_score"), {
+      target: { value: "7" },
+    })
+    fireEvent.click(screen.getByRole("checkbox", { name: "flag.ready" }))
+
+    await expect(submit()).resolves.toEqual({
+      metadata: {
+        x_score: 7,
+        "flag.ready": true,
+      },
+    })
+  })
+
+  it("renders root patternProperties entries with escaped keys", async () => {
+    const { submit } = renderJsonForm({
+      schema: {
+        type: "object",
+        patternProperties: {
+          "^extra\\.": { type: "string" },
+        },
+      },
+      defaultValues: {
+        "extra.note": "old",
+      },
+    })
+
+    expect(
+      (screen.getByLabelText("extra.note") as HTMLInputElement).value
+    ).toBe("old")
+
+    fireEvent.change(screen.getByLabelText("extra.note"), {
+      target: { value: "new" },
+    })
+
+    await expect(submit()).resolves.toEqual({
+      "extra.note": "new",
+    })
+  })
+
   it("renders fields through $defs refs and submits edited ref values", async () => {
     const { submit } = renderJsonForm({
       schema: {
@@ -507,7 +759,7 @@ describe("JsonForm objects and refs", () => {
     })
 
     expect(screen.getByText("Code")).toBeTruthy()
-    fireEvent.click(screen.getByRole("button", { name: "Code A" }))
+    fireEvent.click(getTableDataCell("Code A"))
     fireEvent.change(screen.getByDisplayValue("A"), {
       target: { value: "B" },
     })
@@ -549,20 +801,22 @@ describe("JsonForm arrays", () => {
     expect(screen.getByText("Quantity")).toBeTruthy()
     expect(screen.getByText("Taxable")).toBeTruthy()
 
-    fireEvent.click(screen.getByRole("button", { name: "Description Widget" }))
+    const descriptionCell = getTableDataCell("Description Widget")
+    fireEvent.click(descriptionCell)
     fireEvent.change(screen.getByDisplayValue("Widget"), {
       target: { value: "Hardware" },
     })
-    fireEvent.click(screen.getByRole("button", { name: "Quantity 2" }))
-    fireEvent.change(screen.getByDisplayValue("2"), {
+    const quantityCell = getTableDataCell("Quantity 2")
+    fireEvent.click(quantityCell)
+    const quantityInput = screen.getByDisplayValue("2")
+    expect(quantityInput.getAttribute("data-slot")).toBe("data-cell")
+    fireEvent.change(quantityInput, {
       target: { value: "3" },
     })
     fireEvent.click(screen.getAllByRole("checkbox")[1])
     fireEvent.click(screen.getAllByRole("button", { name: "Remove row" })[1])
     await waitFor(() =>
-      expect(
-        screen.queryByRole("button", { name: "Description Service" })
-      ).toBeNull()
+      expect(queryTableDataCell("Description Service")).toBeNull()
     )
     fireEvent.click(screen.getByRole("button", { name: "Add" }))
 
@@ -599,6 +853,92 @@ describe("JsonForm arrays", () => {
     })
 
     await expect(submit()).resolves.toEqual({ tags: ["first", "second"] })
+  })
+
+  it("renders falsy primitive array items instead of compacting them away", async () => {
+    const { submit } = renderJsonForm({
+      schema: {
+        type: "object",
+        properties: {
+          flags: {
+            type: "array",
+            title: "Flags",
+            items: { type: "boolean" },
+          },
+        },
+      },
+      defaultValues: { flags: [false, true] },
+    })
+
+    expect(screen.getByRole("button", { name: /Flags 2 items/ })).toBeTruthy()
+    expect(screen.getAllByRole("checkbox")).toHaveLength(2)
+
+    fireEvent.click(screen.getAllByRole("checkbox")[0])
+    fireEvent.click(screen.getAllByRole("checkbox")[1])
+
+    await expect(submit()).resolves.toEqual({ flags: [true, false] })
+  })
+
+  it("uses per-index schemas for tuple arrays", async () => {
+    const { submit } = renderJsonForm({
+      schema: {
+        type: "object",
+        properties: {
+          tuple: {
+            type: "array",
+            title: "Tuple",
+            items: [
+              { type: "string", title: "Label" },
+              { type: "number", title: "Amount" },
+              { type: "boolean", title: "Enabled" },
+            ],
+          },
+        },
+      },
+      defaultValues: {
+        tuple: ["fee", 1.5, false],
+      },
+    })
+
+    fireEvent.change(screen.getByLabelText("Tuple 1"), {
+      target: { value: "service" },
+    })
+    fireEvent.change(screen.getByLabelText("Tuple 2"), {
+      target: { value: "2.25" },
+    })
+    fireEvent.click(screen.getByRole("checkbox", { name: "Tuple 3" }))
+
+    await expect(submit()).resolves.toEqual({
+      tuple: ["service", 2.25, true],
+    })
+  })
+
+  it("uses the next tuple schema when appending tuple items", async () => {
+    const { submit } = renderJsonForm({
+      schema: {
+        type: "object",
+        properties: {
+          tuple: {
+            type: "array",
+            title: "Tuple",
+            items: [{ type: "string", title: "Label" }],
+            additionalItems: { type: "number", title: "Amount" },
+          },
+        },
+      },
+      defaultValues: {
+        tuple: ["fee"],
+      },
+    })
+
+    fireEvent.click(screen.getByRole("button", { name: "Add" }))
+    fireEvent.change(screen.getByLabelText("Tuple 2"), {
+      target: { value: "4.5" },
+    })
+
+    await expect(submit()).resolves.toEqual({
+      tuple: ["fee", 4.5],
+    })
   })
 
   it("starts long arrays collapsed and opens them when adding an item", () => {
@@ -660,12 +1000,112 @@ describe("JsonForm arrays", () => {
     expect(screen.getByText("No items.")).toBeTruthy()
 
     fireEvent.click(screen.getByRole("button", { name: "Add" }))
-    fireEvent.click(screen.getByRole("button", { name: "Name —" }))
+    fireEvent.click(getTableDataCell("Name —"))
     fireEvent.change(screen.getByDisplayValue(""), {
       target: { value: "Ada" },
     })
 
     await expect(submit()).resolves.toEqual({ contacts: [{ name: "Ada" }] })
+  })
+
+  it("materializes missing optional arrays on first add", async () => {
+    const { submit } = renderJsonForm({
+      schema: {
+        type: "object",
+        properties: {
+          tags: {
+            type: "array",
+            title: "Tags",
+            items: { type: "string" },
+          },
+        },
+      },
+    })
+
+    expect(screen.getByText("No items.")).toBeTruthy()
+
+    fireEvent.click(screen.getByRole("button", { name: "Add" }))
+    fireEvent.change(screen.getByLabelText("Tags 1"), {
+      target: { value: "first" },
+    })
+
+    await expect(submit()).resolves.toEqual({ tags: ["first"] })
+  })
+
+  it("disables adding array items after maxItems is reached", async () => {
+    const { submit } = renderJsonForm({
+      schema: {
+        type: "object",
+        properties: {
+          tags: {
+            type: "array",
+            title: "Tags",
+            maxItems: 1,
+            items: { type: "string" },
+          },
+        },
+      },
+      defaultValues: { tags: ["first"] },
+    })
+
+    const addButton = screen.getByRole("button", { name: "Add" })
+    expect((addButton as HTMLButtonElement).disabled).toBe(true)
+    fireEvent.click(addButton)
+
+    await expect(submit()).resolves.toEqual({ tags: ["first"] })
+  })
+
+  it("disables adding tuple items when additionalItems is false", async () => {
+    const { submit } = renderJsonForm({
+      schema: {
+        type: "object",
+        properties: {
+          tuple: {
+            type: "array",
+            title: "Tuple",
+            items: [
+              { type: "string", title: "Label" },
+              { type: "number", title: "Amount" },
+            ],
+            additionalItems: false,
+          },
+        },
+      },
+      defaultValues: {
+        tuple: ["fee", 1.5],
+      },
+    })
+
+    const addButton = screen.getByRole("button", { name: "Add" })
+    expect((addButton as HTMLButtonElement).disabled).toBe(true)
+    fireEvent.click(addButton)
+
+    await expect(submit()).resolves.toEqual({
+      tuple: ["fee", 1.5],
+    })
+  })
+
+  it("disables removing array items at minItems", async () => {
+    const { submit } = renderJsonForm({
+      schema: {
+        type: "object",
+        properties: {
+          tags: {
+            type: "array",
+            title: "Tags",
+            minItems: 1,
+            items: { type: "string" },
+          },
+        },
+      },
+      defaultValues: { tags: ["required"] },
+    })
+
+    const removeButton = screen.getByRole("button", { name: "Remove item" })
+    expect((removeButton as HTMLButtonElement).disabled).toBe(true)
+    fireEvent.click(removeButton)
+
+    await expect(submit()).resolves.toEqual({ tags: ["required"] })
   })
 
   it("removes the first table row, shifts values, and appends without stale child values", async () => {
@@ -782,16 +1222,94 @@ describe("JsonForm arrays", () => {
       },
     })
 
-    const displayCell = await screen.findByRole("button", {
-      name: "Unit Price 1.5",
-    })
+    const displayCell = getTableDataCell("Unit Price 1.5")
     fireEvent.click(displayCell)
-    fireEvent.change(screen.getByDisplayValue("1.5"), {
+    const input = screen.getByDisplayValue("1.5") as HTMLInputElement
+    expect(input.type).toBe("number")
+    fireEvent.change(input, {
       target: { value: "2.25" },
     })
 
     await expect(submit()).resolves.toEqual({
       rows: [{ "unit.price": 2.25 }],
+    })
+  })
+
+  it("renders additionalProperties entries inside array object items", async () => {
+    const { submit } = renderJsonForm({
+      schema: {
+        type: "object",
+        properties: {
+          rows: {
+            type: "array",
+            title: "Rows",
+            items: {
+              type: "object",
+              additionalProperties: { type: "string" },
+            },
+          },
+        },
+      },
+      defaultValues: {
+        rows: [{ "extra.key": "A" }],
+      },
+    })
+
+    fireEvent.click(screen.getByRole("button", { name: /Rows 1 1 field/ }))
+    expect((screen.getByLabelText("extra.key") as HTMLInputElement).value).toBe(
+      "A"
+    )
+
+    fireEvent.change(screen.getByLabelText("extra.key"), {
+      target: { value: "B" },
+    })
+
+    await expect(submit()).resolves.toEqual({
+      rows: [{ "extra.key": "B" }],
+    })
+  })
+
+  it("uses card mode for array object items with declared and dynamic properties", async () => {
+    const { submit } = renderJsonForm({
+      schema: {
+        type: "object",
+        properties: {
+          rows: {
+            type: "array",
+            title: "Rows",
+            items: {
+              type: "object",
+              properties: {
+                name: { type: "string", title: "Name" },
+              },
+              patternProperties: {
+                "^extra\\.": { type: "number" },
+              },
+            },
+          },
+        },
+      },
+      defaultValues: {
+        rows: [{ name: "Ada", "extra.score": 3 }],
+      },
+    })
+
+    expect(screen.queryByRole("button", { name: "Name Ada" })).toBeNull()
+
+    fireEvent.click(screen.getByRole("button", { name: /Rows 1 2 fields/ }))
+    expect((screen.getByLabelText("Name") as HTMLInputElement).value).toBe(
+      "Ada"
+    )
+    expect(
+      (screen.getByLabelText("extra.score") as HTMLInputElement).value
+    ).toBe("3")
+
+    fireEvent.change(screen.getByLabelText("extra.score"), {
+      target: { value: "4" },
+    })
+
+    await expect(submit()).resolves.toEqual({
+      rows: [{ name: "Ada", "extra.score": 4 }],
     })
   })
 
@@ -919,17 +1437,58 @@ describe("JsonForm source linking", () => {
       },
     })
 
-    const button = screen.getByRole("button", { name: "Value A" })
-    const cell = button.closest("[data-source-active='true']")
+    const cell = getTableDataCell("Value A")
     expect(cell).toBeTruthy()
 
-    fireEvent.focus(button)
-    fireEvent.blur(button)
-    fireEvent.click(button)
+    fireEvent.focus(cell)
+    fireEvent.blur(cell)
+    fireEvent.click(cell)
 
     expect(onFieldHover).toHaveBeenCalledWith("rows.0.value")
     expect(onFieldHover).toHaveBeenCalledWith(null)
     expect(selectField).toHaveBeenCalledWith("rows.0.value")
+  })
+
+  it("keeps source-linked table cells in display mode on hover", () => {
+    const onFieldHover = vi.fn()
+    const selectField = vi.fn()
+    renderJsonForm({
+      schema: {
+        type: "object",
+        properties: {
+          rows: {
+            type: "array",
+            title: "Rows",
+            items: {
+              type: "object",
+              properties: {
+                amount: { type: "number", title: "Amount" },
+              },
+            },
+          },
+        },
+      },
+      defaultValues: { rows: [{ amount: 1875.24 }] },
+      sourceLink: {
+        activePath: null,
+        onFieldHover,
+        selectField,
+      },
+    })
+
+    const cell = getTableDataCell("Amount 1875.24")
+    fireEvent.mouseOver(cell)
+
+    expect(cell.getAttribute("data-mode")).toBe("display")
+    expect(screen.queryByRole("spinbutton")).toBeNull()
+    expect(onFieldHover).toHaveBeenCalledWith("rows.0.amount")
+
+    fireEvent.click(cell)
+
+    const input = screen.getByRole("spinbutton", { name: "Amount 1875.24" })
+    expect((input as HTMLInputElement).type).toBe("number")
+    expect(input.getAttribute("data-slot")).toBe("data-cell")
+    expect(selectField).toHaveBeenCalledWith("rows.0.amount")
   })
 })
 

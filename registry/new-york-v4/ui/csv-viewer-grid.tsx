@@ -39,6 +39,7 @@ export interface CsvGridProps {
   fillHeight: boolean
   isolateStyles: boolean
   scale: number
+  sortResetKey: unknown
   statusNode: React.ReactNode
 }
 
@@ -63,6 +64,7 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
       fillHeight,
       isolateStyles,
       scale,
+      sortResetKey,
       statusNode,
     },
     ref
@@ -71,6 +73,14 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
       columnIndex: number
       descending: boolean
     } | null>(null)
+    const columnShapeKey = React.useMemo(
+      () => columns.join("\u0000"),
+      [columns]
+    )
+
+    React.useEffect(() => {
+      setSort(null)
+    }, [columnShapeKey, sortResetKey])
 
     const toggleSort = React.useCallback((columnIndex: number) => {
       setSort((current) =>

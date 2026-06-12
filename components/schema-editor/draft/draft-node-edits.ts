@@ -25,10 +25,7 @@ export function getEffectiveType(node: ExtendedJSONSchema7): {
       if (nonNull.type === "string" && nonNull.format === "date") {
         return { type: "date", isNullable }
       }
-      if (
-        nonNull.type === "string" &&
-        (nonNull.format === "time" || nonNull.format === "iso-time")
-      ) {
+      if (nonNull.type === "string" && nonNull.format === "time") {
         return { type: "time", isNullable }
       }
       if (nonNull.type === "string" && nonNull.format === "date-time") {
@@ -43,10 +40,7 @@ export function getEffectiveType(node: ExtendedJSONSchema7): {
   if (node.type === "string" && node.format === "date") {
     return { type: "date", isNullable: false }
   }
-  if (
-    node.type === "string" &&
-    (node.format === "time" || node.format === "iso-time")
-  ) {
+  if (node.type === "string" && node.format === "time") {
     return { type: "time", isNullable: false }
   }
   if (node.type === "string" && node.format === "date-time") {
@@ -89,6 +83,7 @@ export function updateType(
   nullable: boolean,
   oldNode: ExtendedJSONSchema7
 ): ExtendedJSONSchema7 {
+  const effectiveOldNode = getEffectiveNode(oldNode)
   const metadata: Partial<ExtendedJSONSchema7> = {}
   if (oldNode.title) metadata.title = oldNode.title
   if (oldNode.description) metadata.description = oldNode.description
@@ -98,12 +93,15 @@ export function updateType(
   if (newType === "array") {
     baseSchema = {
       type: "array",
-      items: oldNode.type === "object" ? oldNode : { type: "string" },
+      items:
+        effectiveOldNode.type === "object"
+          ? effectiveOldNode
+          : { type: "string" },
     }
   } else if (newType === "enum") {
     baseSchema = {
       type: "string",
-      enum: oldNode.enum || [],
+      enum: effectiveOldNode.enum || [],
     }
   }
 
@@ -151,8 +149,7 @@ export function setNullable(
       (branch: JSONSchema7Definition) =>
         typeof branch === "object" && (branch.type !== "null" || branch.$ref)
     )
-    const nonNullObject =
-      typeof nonNullBranch === "object" ? nonNullBranch : {}
+    const nonNullObject = typeof nonNullBranch === "object" ? nonNullBranch : {}
 
     return {
       ...nonNullObject,

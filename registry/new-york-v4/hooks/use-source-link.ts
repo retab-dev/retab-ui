@@ -74,6 +74,7 @@ export function useSourceLink({
     source: Source
   } | null>(null)
   const pendingScrollsRef = React.useRef<Map<string, ScrollBehavior>>(new Map())
+  const suppressNextHoverClearRef = React.useRef(false)
   const scrollToPath = React.useCallback(
     (path: string, behavior: ScrollBehavior) => {
       const scrollTo = target?.scrollTo
@@ -101,22 +102,59 @@ export function useSourceLink({
     [sources, target]
   )
 
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
     if (activePath == null) return
     const pendingBehavior = pendingScrollsRef.current.get(activePath)
     if (!pendingBehavior) return
     scrollToPath(activePath, pendingBehavior)
   }, [activePath, scrollToPath])
 
+  React.useLayoutEffect(() => {
+    if (activePath == null) return
+    if (!target?.scrollTo) {
+      if (!pendingScrollsRef.current.has(activePath)) {
+        pendingScrollsRef.current.set(activePath, "auto")
+      }
+      return
+    }
+    if (!activeSource) {
+      if (!pendingScrollsRef.current.has(activePath)) {
+        pendingScrollsRef.current.set(activePath, "auto")
+      }
+      if (lastScrolledRef.current?.path === activePath) {
+        lastScrolledRef.current = null
+        pendingScrollsRef.current.set(activePath, "auto")
+      }
+      return
+    }
+    const lastScrolled = lastScrolledRef.current
+    if (!lastScrolled || lastScrolled.path !== activePath) return
+    if (lastScrolled.source === activeSource) return
+    scrollToPath(activePath, "auto")
+  }, [activePath, activeSource, scrollToPath, target])
+
   const onFieldHover = React.useCallback(
     (path: string | null) => {
       setHoverPath(path)
       if (path == null) {
+        if (suppressNextHoverClearRef.current) {
+          suppressNextHoverClearRef.current = false
+          return
+        }
+        const lastScrolled = lastScrolledRef.current
         lastScrolledRef.current = null
         for (const [pendingPath, behavior] of pendingScrollsRef.current) {
           if (behavior === "auto") pendingScrollsRef.current.delete(pendingPath)
         }
         if (pinnedPath != null) {
+          const pinnedSource = sources[pinnedPath]
+          if (
+            pinnedSource &&
+            lastScrolled?.path === pinnedPath &&
+            lastScrolled.source === pinnedSource
+          ) {
+            return
+          }
           scrollToPath(
             pinnedPath,
             pendingScrollsRef.current.get(pinnedPath) ?? "auto"
@@ -124,13 +162,16 @@ export function useSourceLink({
         }
         return
       }
+      suppressNextHoverClearRef.current = false
       if (path != null) scrollToPath(path, "auto")
     },
-    [pinnedPath, scrollToPath]
+    [pinnedPath, scrollToPath, sources]
   )
 
   const selectField = React.useCallback(
     (path: string) => {
+      suppressNextHoverClearRef.current = true
+      setHoverPath(null)
       setPinnedPath(path)
       scrollToPath(path, "smooth")
     },

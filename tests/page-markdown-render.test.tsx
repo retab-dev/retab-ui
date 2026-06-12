@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -91,6 +92,62 @@ describe("PageMarkdownViewer", () => {
     expect(await screen.findByText("First page")).toBeTruthy()
   })
 
+  it("renders markdown pages when IntersectionObserver is unavailable", async () => {
+    vi.stubGlobal("IntersectionObserver", undefined)
+
+    render(<PageMarkdownViewer pages={PAGES} />)
+
+    expect(screen.getByText("Page 1 of 2")).toBeTruthy()
+    expect(await screen.findByText("First page")).toBeTruthy()
+    expect(await screen.findByText("Second page")).toBeTruthy()
+  })
+
+  it("renders markdown pages when ResizeObserver is unavailable", async () => {
+    vi.stubGlobal("ResizeObserver", undefined)
+
+    render(<PageMarkdownViewer pages={PAGES} />)
+
+    expect(screen.getByText("Page 1 of 2")).toBeTruthy()
+    expect(await screen.findByText("First page")).toBeTruthy()
+    expect(await screen.findByText("Second page")).toBeTruthy()
+  })
+
+  it("handles ResizeObserver callbacks when requestAnimationFrame is unavailable", async () => {
+    const resizeCallbacks: ResizeObserverCallback[] = []
+    vi.stubGlobal(
+      "ResizeObserver",
+      class ResizeObserver {
+        constructor(callback: ResizeObserverCallback) {
+          resizeCallbacks.push(callback)
+        }
+        observe() {}
+        disconnect() {}
+      }
+    )
+    vi.stubGlobal("requestAnimationFrame", undefined)
+    vi.stubGlobal("cancelAnimationFrame", undefined)
+
+    render(<PageMarkdownViewer pages={PAGES} />)
+    await screen.findByText("First page")
+
+    const target = document.createElement("div")
+    Object.defineProperty(target, "clientWidth", {
+      configurable: true,
+      value: 640,
+    })
+
+    expect(() => {
+      act(() => {
+        for (const callback of resizeCallbacks) {
+          callback(
+            [{ target } as unknown as ResizeObserverEntry],
+            {} as ResizeObserver
+          )
+        }
+      })
+    }).not.toThrow()
+  })
+
   it("moves secondary actions into a menu when the toolbar is narrow", () => {
     Object.defineProperty(HTMLElement.prototype, "clientWidth", {
       configurable: true,
@@ -158,10 +215,9 @@ describe("PageMarkdownViewer", () => {
     fireEvent.click(screen.getByLabelText("More markdown actions"))
     fireEvent.click(await screen.findByText("Download markdown"))
 
-    expect(createObjectURL).toHaveBeenCalledWith(expect.any(Blob))
-    expect(click).toHaveBeenCalledTimes(1)
-
     await waitFor(() => {
+      expect(createObjectURL).toHaveBeenCalledWith(expect.any(Blob))
+      expect(click).toHaveBeenCalledTimes(1)
       expect(revokeObjectURL).toHaveBeenCalledWith(
         "blob:compact-markdown-download"
       )
@@ -265,7 +321,15 @@ describe("PageMarkdownViewer", () => {
   it("hardens markdown links while leaving unsafe URL protocols inert", async () => {
     render(
       <PageMarkdownViewer
-        pages={["[Retab](https://retab.com) [Unsafe](javascript:alert('xss'))"]}
+        pages={[
+          [
+            "[Retab](https://retab.com)",
+            "[Relative](/docs)",
+            "[Unsafe](javascript:alert('xss'))",
+            "[Uppercase](JaVaScRiPt:alert('xss'))",
+            "[Data](data:text/html,<script>alert('xss')</script>)",
+          ].join(" "),
+        ]}
       />
     )
 
@@ -274,7 +338,33 @@ describe("PageMarkdownViewer", () => {
     expect(link.getAttribute("target")).toBe("_blank")
     expect(link.getAttribute("rel")).toBe("noopener noreferrer")
 
+    const relative = screen.getByRole("link", { name: "Relative" })
+    expect(relative.getAttribute("href")).toBe("/docs")
+    expect(relative.getAttribute("target")).toBe("_blank")
+    expect(relative.getAttribute("rel")).toBe("noopener noreferrer")
+
     expect(screen.getByText("Unsafe").closest("a")).toBeNull()
+    expect(screen.getByText("Uppercase").closest("a")).toBeNull()
+    expect(screen.getByText("Data").closest("a")).toBeNull()
+  })
+
+  it("renders safe markdown images without activating unsafe image protocols", async () => {
+    const { container } = render(
+      <PageMarkdownViewer
+        pages={[
+          [
+            "![Safe](https://example.com/logo.png)",
+            "![Unsafe](javascript:alert('xss'))",
+          ].join("\n\n"),
+        ]}
+      />
+    )
+
+    const safeImage = (await screen.findByAltText("Safe")) as HTMLImageElement
+    expect(safeImage.getAttribute("src")).toBe("https://example.com/logo.png")
+
+    expect(container.querySelector('img[alt="Unsafe"]')).toBeNull()
+    expect(screen.getByText("Unsafe")).toBeTruthy()
   })
 
   it("uses explicit download text instead of deriving it from visible pages", async () => {
@@ -333,8 +423,88 @@ describe("PageMarkdownViewer", () => {
     })
   })
 
-  it("downloads markdown with the provided file name and revokes the object URL", () => {
+  it("shows copy failure when clipboard access throws", async () => {
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      get() {
+        throw new Error("clipboard getter blocked")
+      },
+    })
+
+    render(<PageMarkdownViewer pages={PAGES} />)
+
+    expect(() =>
+      fireEvent.click(screen.getByLabelText("Copy markdown"))
+    ).not.toThrow()
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Copy failed")).toBeTruthy()
+    })
+  })
+
+  it("does not schedule copy status work after unmount", async () => {
     vi.useFakeTimers()
+    let resolveCopy!: () => void
+    const writeText = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveCopy = resolve
+        })
+    )
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    })
+    const { unmount } = render(<PageMarkdownViewer pages={PAGES} />)
+
+    fireEvent.click(screen.getByLabelText("Copy markdown"))
+    unmount()
+
+    await act(async () => {
+      resolveCopy()
+    })
+
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it("ignores stale clipboard results from earlier copy attempts", async () => {
+    let rejectFirst!: () => void
+    let resolveSecond!: () => void
+    const writeText = vi
+      .fn()
+      .mockImplementationOnce(
+        () =>
+          new Promise<void>((_resolve, reject) => {
+            rejectFirst = () => reject(new Error("first copy failed late"))
+          })
+      )
+      .mockImplementationOnce(
+        () =>
+          new Promise<void>((resolve) => {
+            resolveSecond = resolve
+          })
+      )
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    })
+
+    render(<PageMarkdownViewer pages={PAGES} />)
+
+    fireEvent.click(screen.getByLabelText("Copy markdown"))
+    fireEvent.click(screen.getByLabelText("Copy markdown"))
+
+    await act(async () => {
+      resolveSecond()
+    })
+    await act(async () => {
+      rejectFirst()
+    })
+
+    expect(screen.queryByLabelText("Copy failed")).toBeNull()
+  })
+
+  it("downloads markdown with the provided file name and revokes the object URL", async () => {
     const createObjectURL = vi.fn(() => "blob:markdown-download")
     const revokeObjectURL = vi.fn()
     const click = vi
@@ -359,16 +529,15 @@ describe("PageMarkdownViewer", () => {
 
     fireEvent.click(screen.getByLabelText("Download markdown"))
 
-    expect(createObjectURL).toHaveBeenCalledWith(expect.any(Blob))
-    expect(click).toHaveBeenCalledTimes(1)
+    await waitFor(() => {
+      expect(createObjectURL).toHaveBeenCalledWith(expect.any(Blob))
+      expect(click).toHaveBeenCalledTimes(1)
+      expect(revokeObjectURL).toHaveBeenCalledWith("blob:markdown-download")
+    })
     expect(document.querySelector('a[download="parsed.md"]')).toBeNull()
-
-    vi.runOnlyPendingTimers()
-    expect(revokeObjectURL).toHaveBeenCalledWith("blob:markdown-download")
   })
 
-  it("normalizes non-markdown file names when downloading from the viewer", () => {
-    vi.useFakeTimers()
+  it("normalizes non-markdown file names when downloading from the viewer", async () => {
     let downloadedName: string | undefined
     Object.defineProperty(URL, "createObjectURL", {
       configurable: true,
@@ -378,11 +547,11 @@ describe("PageMarkdownViewer", () => {
       configurable: true,
       value: vi.fn(),
     })
-    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(
-      function (this: HTMLAnchorElement) {
-        downloadedName = this.download
-      }
-    )
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (
+      this: HTMLAnchorElement
+    ) {
+      downloadedName = this.download
+    })
 
     render(
       <PageMarkdownViewer
@@ -394,8 +563,9 @@ describe("PageMarkdownViewer", () => {
 
     fireEvent.click(screen.getByLabelText("Download markdown"))
 
-    expect(downloadedName).toBe("report.md")
-    vi.runOnlyPendingTimers()
+    await waitFor(() => {
+      expect(downloadedName).toBe("report.md")
+    })
   })
 
   it("zooms manually and returns to fit-width scale", () => {
@@ -617,6 +787,143 @@ describe("PageMarkdownViewer", () => {
       })
     })
     expect(screen.getByText("Page 2 of 2")).toBeTruthy()
+  })
+
+  it("reports visible markdown page changes when requestAnimationFrame is unavailable", async () => {
+    vi.stubGlobal("requestAnimationFrame", undefined)
+    vi.stubGlobal("cancelAnimationFrame", undefined)
+    const onVisiblePageChange = vi.fn()
+
+    render(
+      <PageMarkdownViewer
+        pages={PAGES}
+        onVisiblePageChange={onVisiblePageChange}
+      />
+    )
+
+    await screen.findByText("Second page")
+
+    const markdownViewport = document.querySelector<HTMLElement>(
+      '[data-slot="scroll-area-viewport"]'
+    )
+    expect(markdownViewport).toBeTruthy()
+    markdownViewport!.getBoundingClientRect = () =>
+      ({
+        top: 0,
+        bottom: 500,
+        left: 0,
+        right: 100,
+        width: 100,
+        height: 500,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      }) as DOMRect
+
+    const markdownPages = Array.from(
+      markdownViewport!.querySelectorAll<HTMLElement>("[data-page-number]")
+    )
+    expect(markdownPages).toHaveLength(2)
+    markdownPages[0]!.getBoundingClientRect = () =>
+      ({
+        top: -300,
+        bottom: -100,
+        left: 0,
+        right: 100,
+        width: 100,
+        height: 200,
+        x: 0,
+        y: -300,
+        toJSON: () => ({}),
+      }) as DOMRect
+    markdownPages[1]!.getBoundingClientRect = () =>
+      ({
+        top: 40,
+        bottom: 240,
+        left: 0,
+        right: 100,
+        width: 100,
+        height: 200,
+        x: 0,
+        y: 40,
+        toJSON: () => ({}),
+      }) as DOMRect
+
+    expect(() => fireEvent.scroll(markdownViewport!)).not.toThrow()
+    expect(onVisiblePageChange).toHaveBeenCalledWith(2)
+  })
+
+  it("clamps the current page when the page list shrinks", async () => {
+    const pages = [...PAGES, "## Third page\n\nGamma"]
+    const { rerender } = render(
+      <PageMarkdownViewer
+        pages={pages}
+        renderDocument={({ onCurrentPageChange }) => (
+          <button type="button" onClick={() => onCurrentPageChange(3)}>
+            Show document page 3
+          </button>
+        )}
+      />
+    )
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Show document page 3" })
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText("Page 3 of 3")).toBeTruthy()
+    })
+
+    rerender(
+      <PageMarkdownViewer
+        pages={PAGES}
+        renderDocument={({ onCurrentPageChange }) => (
+          <button type="button" onClick={() => onCurrentPageChange(2)}>
+            Show document page 2
+          </button>
+        )}
+      />
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText("Page 2 of 2")).toBeTruthy()
+    })
+    expect(screen.queryByText("Page 3 of 2")).toBeNull()
+  })
+
+  it("resets view mode and manual zoom when the reset key changes", async () => {
+    const { rerender } = render(
+      <PageMarkdownViewer pages={PAGES} resetKey="document-one" />
+    )
+
+    fireEvent.click(screen.getByRole("tab", { name: "Text" }))
+    fireEvent.click(screen.getByLabelText("Zoom in"))
+
+    await waitFor(() => {
+      expect(
+        Array.from(document.querySelectorAll("pre")).some((pre) =>
+          pre.textContent?.includes("# First page")
+        )
+      ).toBe(true)
+      expect(screen.getByText("120%")).toBeTruthy()
+    })
+
+    rerender(
+      <PageMarkdownViewer
+        pages={["# Replacement page\n\nGamma"]}
+        resetKey="document-two"
+      />
+    )
+
+    await waitFor(() => {
+      expect(
+        screen
+          .getByRole("tab", { name: "Rendered" })
+          .getAttribute("aria-selected")
+      ).toBe("true")
+      expect(screen.getByText("100%")).toBeTruthy()
+    })
+    expect(await screen.findByText("Replacement page")).toBeTruthy()
   })
 
   it("shows a generic page-by-page empty state", () => {

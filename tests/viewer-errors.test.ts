@@ -120,4 +120,121 @@ describe("toViewerErrorInfo", () => {
       userMessage: "Couldn't load this presentation.",
     })
   })
+
+  it("honors explicit retry and download projection policy", () => {
+    const info = toViewerErrorInfo(
+      new ViewerFormatError({
+        format: "docx",
+        kind: "render_failed",
+        message: "render failed",
+      }),
+      {
+        canDownload: false,
+        retry: "never",
+        sourceKind: "url",
+      }
+    )
+
+    expect(info).toMatchObject({
+      domain: "format",
+      format: "docx",
+      kind: "render_failed",
+      isRetryable: false,
+      isDownloadUseful: false,
+    })
+  })
+
+  it("treats DOCX Blob render failures as retryable format errors", () => {
+    const info = toViewerErrorInfo(
+      new ViewerFormatError({
+        format: "docx",
+        kind: "render_failed",
+        message: "render failed",
+      }),
+      { sourceKind: "blob" }
+    )
+
+    expect(info).toMatchObject({
+      domain: "format",
+      format: "docx",
+      kind: "render_failed",
+      isRetryable: true,
+      userMessage: "Couldn't render this document.",
+    })
+  })
+
+  it("treats unknown DOCX Blob failures as retryable read errors", () => {
+    const info = toViewerErrorInfo(new Error("blob read failed"), {
+      format: "docx",
+      sourceKind: "blob",
+    })
+
+    expect(info).toMatchObject({
+      domain: "unknown",
+      format: "docx",
+      kind: "unknown",
+      isRetryable: true,
+      userMessage: "Couldn't load this document.",
+    })
+  })
+
+  it("keeps aborted DOCX Blob loads non-retryable", () => {
+    const info = toViewerErrorInfo(
+      new ResourceError({
+        kind: "aborted",
+        message: "Loading was cancelled.",
+      }),
+      { format: "docx", sourceKind: "blob" }
+    )
+
+    expect(info).toMatchObject({
+      domain: "resource",
+      format: "docx",
+      kind: "aborted",
+      isRetryable: false,
+      isDownloadUseful: false,
+      userMessage: "Loading was cancelled.",
+    })
+  })
+
+  it("projects canonical worker failures without parsing messages", () => {
+    const info = toViewerErrorInfo(
+      new ViewerFormatError({
+        format: "csv",
+        kind: "worker_failed",
+        message: "worker exploded with implementation detail",
+      }),
+      { sourceKind: "blob" }
+    )
+
+    expect(info).toMatchObject({
+      domain: "format",
+      format: "csv",
+      kind: "worker_failed",
+      message: "worker exploded with implementation detail",
+      isRetryable: false,
+      userMessage: "Couldn't parse this table.",
+    })
+  })
+
+  it("recognizes type-erased error-like objects across module realms", () => {
+    const info = toViewerErrorInfo(
+      {
+        name: "ViewerFormatError",
+        domain: "format",
+        format: "image",
+        kind: "decode_failed",
+        message: "decoded elsewhere",
+      },
+      { sourceKind: "url" }
+    )
+
+    expect(info).toMatchObject({
+      domain: "format",
+      format: "image",
+      kind: "decode_failed",
+      isRetryable: true,
+      userMessage: "Couldn't decode this image.",
+    })
+  })
 })

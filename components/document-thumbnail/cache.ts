@@ -1,6 +1,17 @@
-import { isResourceError, ViewerFormatError } from "@/lib/viewer-errors"
-import type { ViewerResource } from "@/lib/viewer-resource"
-import type { FileCategory } from "@/lib/viewer-source"
+import {
+  isAbortError,
+  isResourceError,
+  ResourceError,
+  ViewerFormatError,
+  type ViewerFormat,
+} from "@/lib/viewer-errors"
+import type {
+  ViewerContentBytes,
+  ViewerContentIdentity,
+  ViewerContentRange,
+  ViewerContentStream,
+} from "@/lib/viewer-resource"
+import type { FileCategory, ViewerSource } from "@/lib/viewer-source"
 
 export const TEXT_THUMBNAIL_MAX_BYTES = 64 * 1024
 export const CSV_THUMBNAIL_MAX_ROWS = 16
@@ -8,6 +19,19 @@ export const CSV_THUMBNAIL_MAX_COLUMNS = 6
 export const XLSX_THUMBNAIL_MAX_ROWS = 16
 export const XLSX_THUMBNAIL_MAX_COLUMNS = 6
 export const TIFF_THUMBNAIL_TARGET_WIDTH = 320
+export const TEXT_THUMBNAIL_CACHE_MAX_ENTRIES = 96
+
+export interface ThumbnailFileMeta {
+  fileName: string
+  mimeType?: string
+  sourceKind: ViewerSource["kind"]
+}
+
+export type ThumbnailTextContent = ViewerContentIdentity &
+  ViewerContentRange &
+  ViewerContentStream
+
+export type ThumbnailBytesContent = ViewerContentIdentity & ViewerContentBytes
 
 // ---------------------------------------------------------------------------
 // Concurrency gate — every renderer parses a heavy library and does synchronous
@@ -25,10 +49,10 @@ function acquireDecodeSlot(): Promise<() => void> {
   return new Promise((resolve) => {
     const grant = () => {
       activeDecodes++
-      let released = false
+      let hasReleased = false
       resolve(() => {
-        if (released) return
-        released = true
+        if (hasReleased) return
+        hasReleased = true
         activeDecodes--
         decodeQueue.shift()?.()
       })
@@ -72,13 +96,13 @@ export async function timed<T>(
 
 export const timedThumbnail = timed
 
-export function shortName(resource: ViewerResource): string {
-  return resource.fileName
+export function shortName(meta: ThumbnailFileMeta): string {
+  return meta.fileName
 }
 
 export interface ThumbnailCacheEntry<T> {
   promise: Promise<T>
-  status: "pending" | "fulfilled" | "rejected"
+  status: "pending" | "resolved" | "rejected"
   value?: T
 }
 
@@ -86,6 +110,7 @@ export interface ThumbnailCacheStore<T> {
   get(key: string): ThumbnailCacheEntry<T> | undefined
   set(key: string, entry: ThumbnailCacheEntry<T>): void
   delete(key: string): boolean
+  clear?(): void
   prune?(): void
 }
 
@@ -98,7 +123,9 @@ export interface ThumbnailArtifactCache<T> extends ThumbnailCacheStore<T> {
   readonly size: number
 }
 
-const textCache = new Map<string, ThumbnailCacheEntry<string>>()
+const textCache = createThumbnailArtifactCache<string>({
+  maxEntries: TEXT_THUMBNAIL_CACHE_MAX_ENTRIES,
+})
 
 export function cachedThumbnailResource<T>(
   cache: ThumbnailCacheStore<T>,
@@ -117,7 +144,7 @@ export function cachedThumbnailResource<T>(
     status: "pending",
     promise: load().then(
       (value) => {
-        entry.status = "fulfilled"
+        entry.status = "resolved"
         entry.value = value
         cache.prune?.()
         return value
@@ -160,9 +187,15 @@ export function createThumbnailArtifactCache<T>({
       disposeCacheEntry(entry, dispose)
       return true
     },
+    clear() {
+      for (const entry of entries.values()) {
+        disposeCacheEntry(entry, dispose)
+      }
+      entries.clear()
+    },
     prune() {
       while (entries.size > maxEntries) {
-        const evicted = evictOldestFulfilledEntry(entries, dispose)
+        const evicted = evictOldestResolvedEntry(entries, dispose)
         if (!evicted) return
       }
     },
@@ -171,7 +204,7 @@ export function createThumbnailArtifactCache<T>({
   return cache
 }
 
-function evictOldestFulfilledEntry<T>(
+function evictOldestResolvedEntry<T>(
   entries: Map<string, ThumbnailCacheEntry<T>>,
   dispose?: (value: T) => void
 ): boolean {
@@ -189,27 +222,113 @@ function disposeCacheEntry<T>(
   entry: ThumbnailCacheEntry<T>,
   dispose?: (value: T) => void
 ) {
-  if (entry.status === "fulfilled" && entry.value !== undefined) {
+  if (entry.status === "resolved" && entry.value !== undefined) {
     dispose?.(entry.value)
   }
 }
 
 export function getThumbnailText(
-  resource: ViewerResource,
-  cacheKey: string
+  meta: ThumbnailFileMeta,
+  content: ThumbnailTextContent,
+  thumbnailKey: string
 ): Promise<string> {
-  return cachedThumbnailResource(textCache, cacheKey, () =>
-    timed(`text:fetch ${shortName(resource)}`, async () => {
-      if (resource.sourceKind === "url") {
-        const range = await resource.readRange({
-          start: 0,
-          end: TEXT_THUMBNAIL_MAX_BYTES - 1,
-        })
-        return new TextDecoder().decode(range.buffer)
+  return cachedThumbnailResource(textCache, thumbnailKey, () =>
+    timed(`text:fetch ${shortName(meta)}`, async () => {
+      if (meta.sourceKind === "url") {
+        try {
+          return readThumbnailTextRange(content)
+        } catch (error) {
+          if (shouldReadTextStreamPrefix(error)) {
+            return readThumbnailTextStreamPrefix(content)
+          }
+          throw error
+        }
       }
-      return resource.readText({ maxBytes: TEXT_THUMBNAIL_MAX_BYTES })
+      return readThumbnailTextRange(content)
     })
   )
+}
+
+function shouldReadTextStreamPrefix(error: unknown): boolean {
+  return (
+    isResourceError(error) &&
+    (error.kind === "invalid_range" ||
+      (error.kind === "http_error" && error.status === 416))
+  )
+}
+
+async function readThumbnailTextRange(content: ThumbnailTextContent) {
+  const range = await content.readRange({
+    start: 0,
+    end: TEXT_THUMBNAIL_MAX_BYTES - 1,
+  })
+  return new TextDecoder().decode(range.buffer)
+}
+
+async function readThumbnailTextStreamPrefix(content: ThumbnailTextContent) {
+  const stream = await content.readStream()
+  const reader = stream.getReader()
+  const decoder = new TextDecoder()
+  let remainingBytes = TEXT_THUMBNAIL_MAX_BYTES
+  let text = ""
+
+  try {
+    while (remainingBytes > 0) {
+      const { done, value } = await reader.read()
+      if (done) return text + decoder.decode()
+
+      const chunk =
+        value.byteLength > remainingBytes
+          ? value.slice(0, remainingBytes)
+          : value
+      text += decoder.decode(chunk, { stream: true })
+      remainingBytes -= chunk.byteLength
+
+      if (chunk.byteLength < value.byteLength || remainingBytes === 0) {
+        cancelThumbnailTextReader(reader)
+        return text + decoder.decode()
+      }
+    }
+
+    cancelThumbnailTextReader(reader)
+    return text + decoder.decode()
+  } catch (error) {
+    throw createThumbnailTextReadError(error)
+  }
+}
+
+function createThumbnailTextReadError(error: unknown): ResourceError {
+  if (isResourceError(error)) return error
+  if (isAbortError(error)) {
+    return new ResourceError({
+      kind: "aborted",
+      message: "Resource load was aborted.",
+      cause: error,
+    })
+  }
+  return new ResourceError({
+    kind: "fetch_failed",
+    message: "Could not read this resource.",
+    cause: error,
+  })
+}
+
+function cancelThumbnailTextReader(
+  reader: ReadableStreamDefaultReader<Uint8Array>
+) {
+  try {
+    void reader.cancel().catch(() => {})
+  } catch {
+    /* The preview prefix is already available; cancellation is best-effort. */
+  }
+}
+
+export function thumbnailFileMeta({
+  fileName,
+  mimeType,
+  sourceKind,
+}: ThumbnailFileMeta): ThumbnailFileMeta {
+  return { fileName, mimeType, sourceKind }
 }
 
 export async function withThumbnailFormatError<T>(
@@ -237,10 +356,22 @@ export async function withThumbnailFormatError<T>(
   }
 }
 
-function thumbnailCategoryFormat(category: FileCategory) {
+export function createThumbnailImageLoadError(): ViewerFormatError {
+  return new ViewerFormatError({
+    format: "image",
+    kind: "load_failed",
+    message: "Could not load image preview.",
+  })
+}
+
+export function thumbnailCategoryFormat(category: FileCategory): ViewerFormat {
   if (category === "markdown" || category === "html") return "text"
   if (category === "unsupported") return "file"
   return category
+}
+
+export function clearThumbnailCachesForTests() {
+  textCache.clear?.()
 }
 
 export function useThumbnailResource<T>(promise: Promise<T>): T {
@@ -269,7 +400,7 @@ function getThumbnailResourceRecord<T>(
   }
   promise.then(
     (value) => {
-      record.status = "fulfilled"
+      record.status = "resolved"
       record.value = value
     },
     (error) => {
@@ -286,7 +417,7 @@ function getThumbnailResourceRecord<T>(
 
 interface ThumbnailResourceRecord<T> {
   promise: Promise<T>
-  status: "pending" | "fulfilled" | "rejected"
+  status: "pending" | "resolved" | "rejected"
   value?: T
   error?: unknown
 }

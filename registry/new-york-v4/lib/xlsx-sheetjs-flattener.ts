@@ -36,16 +36,12 @@ export function flattenSheetJsWorksheet(
 ): CompactSheet {
   const ref = worksheet?.["!ref"]
   if (typeof ref !== "string") {
-    return createCompactSheet({
-      name,
-      rowCount: 0,
-      columnCount: 0,
-      entries: [],
-    })
+    return createEmptyCompactSheet(name)
   }
   const source = worksheet as SheetJsWorksheet
 
   const range = XLSX.utils.decode_range(ref)
+  if (!isValidDecodedRange(range)) return createEmptyCompactSheet(name)
   const rowCount = range.e.r + 1
   const columnCount = range.e.c + 1
   const maxIndex = rowCount * columnCount - 1
@@ -69,8 +65,8 @@ export function flattenSheetJsWorksheet(
     if (!isSheetJsCell(cell)) continue
     const { c: columnIndex, r: rowIndex } = XLSX.utils.decode_cell(key)
     if (
-      rowIndex < 0 ||
-      columnIndex < 0 ||
+      rowIndex < range.s.r ||
+      columnIndex < range.s.c ||
       rowIndex >= rowCount ||
       columnIndex >= columnCount
     ) {
@@ -125,4 +121,22 @@ export function compactWorkbookTransferBuffers(
 
 function isSheetJsCell(value: unknown): value is SheetJsCell {
   return value != null && typeof value === "object"
+}
+
+function createEmptyCompactSheet(name: string) {
+  return createCompactSheet({
+    name,
+    rowCount: 0,
+    columnCount: 0,
+    entries: [],
+  })
+}
+
+function isValidDecodedRange(range: XLSX.Range) {
+  return (
+    range.s.r >= 0 &&
+    range.s.c >= 0 &&
+    range.e.r >= range.s.r &&
+    range.e.c >= range.s.c
+  )
 }

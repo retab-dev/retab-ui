@@ -234,12 +234,15 @@ export async function applyTemplateToTableSchemaProperty(
   propertyPath: string,
   templateName: string
 ): Promise<ExtendedJSONSchema7> {
-  const { templateObjects } =
+  const { objectTemplateDependencies, templateObjects } =
     await import("@/components/schema-editor/optional/object-templates/template-objects")
   const template = templateObjects[templateName]
   if (!template) return schemaNode
 
-  const defsToAdd = [templateName, ...(template.deps ?? [])]
+  const defsToAdd = [
+    templateName,
+    ...(objectTemplateDependencies[templateName] ?? []),
+  ]
   const nextDefs = { ...(schemaNode.$defs || {}) }
   for (const definitionName of defsToAdd) {
     if (!nextDefs[definitionName]) {

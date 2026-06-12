@@ -99,14 +99,14 @@ patterns. It is the version where every remaining pattern pays rent.
 ### Cell UI
 
 - `data-cell.tsx`: connects projected document cells to editor props.
-- `cell-display.tsx`: read-only scalar display.
+- `components/ui/data-cell.tsx`: shared scalar display and edit cell.
+- `cell-display.tsx`: legacy display helper for non-scalar/table-specific cells.
 - `object-editor.tsx`: embedded JSON form editor for object and array values.
 - `use-cell-controller.ts`: cell commit/no-op/optimistic state controller.
 - `use-elevated-virtual-row.ts`: transient row stacking while overlays are open.
 - `cell-editors/cell-editor.tsx`: editor dispatch by `FieldKind`.
 - `cell-editors/editor-classes.ts`: shared editor class names.
 - `cell-editors/editor-types.ts`: grouped editor prop contracts.
-- `cell-editors/primitive-editor.tsx`: primitive editor shell.
 - `cell-editors/text-editor.tsx`: string editor.
 - `cell-editors/number-editor.tsx`: number editor.
 - `cell-editors/boolean-editor.tsx`: boolean editor.
@@ -331,7 +331,7 @@ bun run typecheck 2>&1 | rg "components/json-table|tests/json-table"
 rg "row\\.original|PathInfo|assignObjectKey|buildCellPathRows|header-from-schema|@tanstack/react-table|\\bany\\b" components/json-table tests/json-table*.test.* -g '!*.md'
 rg "schema-inspection|json-schema-utils|date-utils|actualKey|keyValue|openPopover|setOpenPopover|cleanStringValue|liveStringValue|stringValue|value-formatting" components/json-table tests/json-table*.test.* -g '!*.md'
 rg "from \\\"react\\\"|from 'react'|@/components/ui|ui-retab|\\bwindow\\.|globalThis|HTMLElement|DocumentFragment|MutationObserver" components/json-table/lib/schema-*.ts components/json-table/lib/document-*.ts components/json-table/lib/value-*.ts components/json-table/lib/date-*.ts components/json-table/lib/header-drag-model.ts
-wc -l components/json-table/data-cell.tsx components/json-table/header-cell.tsx components/json-table/use-cell-controller.ts components/json-table/use-header-controller.ts components/json-table/use-elevated-virtual-row.ts components/json-table/cell-editors/*.tsx components/json-table/cell-editors/*.ts components/json-table/lib/schema-*.ts components/json-table/lib/document-*.ts components/json-table/lib/date-*.ts components/json-table/lib/value-normalization.ts tests/json-table-model.test.ts tests/json-table-controller.test.tsx tests/json-table-render.test.tsx tests/json-table-header-menu.test.tsx
+wc -l components/json-table/single-file-form-row.tsx components/json-table/header-cell.tsx components/json-table/use-cell-controller.ts components/json-table/use-header-controller.ts components/json-table/use-elevated-virtual-row.ts components/json-table/cell-editors/*.tsx components/json-table/cell-editors/*.ts components/json-table/lib/schema-*.ts components/json-table/lib/document-*.ts components/json-table/lib/date-*.ts components/json-table/lib/value-normalization.ts tests/json-table-model.test.ts tests/json-table-controller.test.tsx tests/json-table-render.test.tsx tests/json-table-header-menu.test.tsx
 ```
 
 Expected:

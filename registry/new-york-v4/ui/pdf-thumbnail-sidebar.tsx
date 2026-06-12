@@ -7,12 +7,15 @@ import { cn } from "@/lib/utils"
 import { createViewerResource } from "@/lib/viewer-resource"
 import { Spinner } from "@/components/ui/spinner"
 
+import { getPdfCanvasPixelSize } from "./pdf-viewer-canvas"
 import {
-  getDocumentResource,
-  getPageResource,
+  clearDocumentResource,
+  readDocumentResource,
+  readPageResource,
   releaseDocumentResource,
   retainDocumentResource,
 } from "./pdf-viewer-resource"
+import { ViewerErrorBoundary } from "./viewer-error"
 
 export interface PdfThumbnailSidebarProps {
   /** Same URL as the PdfViewer; the document load is shared by resource cache key. */
@@ -33,29 +36,45 @@ export interface PdfThumbnailSidebarProps {
  * it scales to large documents. Reuses the PdfViewer's cached document.
  */
 export function PdfThumbnailSidebar(props: PdfThumbnailSidebarProps) {
+  const resource = React.useMemo(
+    () => createViewerResource({ kind: "url", url: props.src }),
+    [props.src]
+  )
+
   return (
-    <React.Suspense fallback={<SidebarFallback className={props.className} />}>
-      <PdfThumbnailSidebarInner {...props} />
-    </React.Suspense>
+    <ViewerErrorBoundary
+      className={props.className}
+      download={resource.originalDownload}
+      format="pdf"
+      onRetry={() => clearDocumentResource(resource.content)}
+      resetKey={resource.keys.resource}
+      sourceKind={resource.sourceKind}
+      variant="inline"
+    >
+      <React.Suspense
+        fallback={<SidebarFallback className={props.className} />}
+      >
+        <PdfThumbnailSidebarInner {...props} resource={resource} />
+      </React.Suspense>
+    </ViewerErrorBoundary>
   )
 }
 
 function PdfThumbnailSidebarInner({
-  src,
+  resource,
   currentPage,
   onSelectPage,
   width = 120,
   className,
-}: PdfThumbnailSidebarProps) {
-  const resource = React.useMemo(
-    () => createViewerResource({ kind: "url", url: src }),
-    [src]
-  )
-  const doc = React.use(getDocumentResource(resource))
+}: PdfThumbnailSidebarProps & {
+  resource: ReturnType<typeof createViewerResource>
+}) {
+  const content = resource.content
+  const doc = readDocumentResource(content)
   React.useEffect(() => {
-    retainDocumentResource(resource, doc)
-    return () => releaseDocumentResource(resource, doc)
-  }, [doc, resource])
+    retainDocumentResource(content, doc)
+    return () => releaseDocumentResource(content, doc)
+  }, [content, doc])
 
   return (
     <div
@@ -162,7 +181,7 @@ function ThumbnailCanvas({
   pageNumber: number
   width: number
 }) {
-  const page = React.use(getPageResource(doc, pageNumber))
+  const page = readPageResource(doc, pageNumber)
   // Default rotation uses the page's intrinsic /Rotate (correct orientation).
   const viewport = React.useMemo(() => {
     const base = page.getViewport({ scale: 1 })
@@ -175,8 +194,8 @@ function ThumbnailCanvas({
       if (!canvas) return
       const context = canvas.getContext("2d")
       if (!context) return
-      canvas.width = Math.floor(viewport.width * dpr)
-      canvas.height = Math.floor(viewport.height * dpr)
+      canvas.width = getPdfCanvasPixelSize(viewport.width, dpr)
+      canvas.height = getPdfCanvasPixelSize(viewport.height, dpr)
       const task = page.render({
         canvas,
         canvasContext: context,

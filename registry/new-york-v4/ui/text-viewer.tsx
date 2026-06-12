@@ -8,6 +8,7 @@ import { useVirtualizer } from "@tanstack/react-virtual"
 import { cn } from "@/lib/utils"
 import {
   createViewerResource,
+  type ViewerContentIdentity,
   type ViewerResource,
 } from "@/lib/viewer-resource"
 import type {
@@ -28,6 +29,8 @@ import {
   type TextLineRange,
 } from "@/components/ui/text-viewer-ranges"
 import {
+  DEFAULT_MAX_BYTES,
+  DEFAULT_MAX_LINES,
   readTextResource,
   resolvedTextViewerBounds,
   splitTextLines,
@@ -74,11 +77,21 @@ export interface TextViewerProps extends TextViewerBounds {
 
 export const TextViewer = React.forwardRef<TextViewerHandle, TextViewerProps>(
   function TextViewer(props, ref) {
-    const [retryVersion, setRetryVersion] = React.useState(0)
+    const [retryState, setRetryState] = React.useState({
+      contentKey: "",
+      version: 0,
+    })
     const isClient = useIsClient()
     const { source } = props
     const resource = React.useMemo(() => createViewerResource(source), [source])
+    const contentBaseKey = textViewerContentBaseKey(resource.content, props)
+    const retryVersion =
+      retryState.contentKey === contentBaseKey ? retryState.version : 0
     const resetKey = textViewerResetKey(resource, props, retryVersion)
+    const contentResetKey = textViewerContentResetKey(
+      contentBaseKey,
+      retryVersion
+    )
 
     if (source.kind !== "text" && !isClient) {
       return (
@@ -94,13 +107,22 @@ export const TextViewer = React.forwardRef<TextViewerHandle, TextViewerProps>(
       <ViewerErrorBoundary
         bare={props.bare}
         className={props.className}
-        download={resource.getOriginalDownload()}
+        download={
+          props.toolbar === false ? null : textViewerDownloadAction(resource)
+        }
         format="text"
         resetKey={resetKey}
         sourceKind={resource.sourceKind}
-        onRetry={() => setRetryVersion((version) => version + 1)}
+        onRetry={() =>
+          setRetryState((state) => ({
+            contentKey: contentBaseKey,
+            version:
+              state.contentKey === contentBaseKey ? state.version + 1 : 1,
+          }))
+        }
       >
         <React.Suspense
+          key={contentResetKey}
           fallback={
             <TextViewerFallback
               className={props.className}
@@ -137,11 +159,15 @@ function TextViewerInner({
   forwardedRef?: React.ForwardedRef<TextViewerHandle>
 }) {
   const bounds = resolvedTextViewerBounds({ maxBytes, maxLines })
-  const text = readTextResource({ resource, retryVersion, bounds })
+  const text = readTextResource({
+    content: resource.content,
+    retryVersion,
+    bounds,
+  })
   const textLines = React.useMemo(() => splitTextLines(text), [text])
   const highlightRange = normalizeTextLineRange(highlight, textLines.length)
   const downloadAction = React.useMemo(
-    () => resource.getOriginalDownload(),
+    () => textViewerDownloadAction(resource),
     [resource]
   )
 
@@ -283,17 +309,50 @@ function TextLine({
   )
 }
 
+function textViewerDownloadAction(resource: ViewerResource) {
+  return resource.originalDownload
+}
+
 function textViewerResetKey(
   resource: ViewerResource,
   props: Pick<TextViewerProps, "maxBytes" | "maxLines">,
   retryVersion: number
 ): string {
+  const [maxBytesKey, maxLinesKey] = textViewerBoundsResetKey(props)
+  return [resource.keys.resource, retryVersion, maxBytesKey, maxLinesKey].join(
+    "\u0000"
+  )
+}
+
+function textViewerContentResetKey(
+  contentBaseKey: string,
+  retryVersion: number
+): string {
+  return [contentBaseKey, retryVersion].join("\u0000")
+}
+
+function textViewerContentBaseKey(
+  content: ViewerContentIdentity,
+  props: Pick<TextViewerProps, "maxBytes" | "maxLines">
+): string {
+  const [maxBytesKey, maxLinesKey] = textViewerBoundsResetKey(props)
+  return [content.key, maxBytesKey, maxLinesKey].join("\u0000")
+}
+
+function textViewerBoundsResetKey(
+  props: Pick<TextViewerProps, "maxBytes" | "maxLines">
+) {
   return [
-    resource.keys.resource,
-    retryVersion,
-    props.maxBytes ?? "",
-    props.maxLines ?? "",
-  ].join("\u0000")
+    textViewerBoundResetKeyPart(props.maxBytes, DEFAULT_MAX_BYTES),
+    textViewerBoundResetKeyPart(props.maxLines, DEFAULT_MAX_LINES),
+  ] as const
+}
+
+function textViewerBoundResetKeyPart(
+  value: number | undefined,
+  defaultValue: number
+) {
+  return String(value === undefined ? defaultValue : value)
 }
 
 function useIsClient() {

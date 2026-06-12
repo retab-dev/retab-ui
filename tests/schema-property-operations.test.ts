@@ -60,4 +60,28 @@ describe("schema property operations", () => {
       anyOf: [{ $ref: "#/$defs/Address" }, { type: "null" }],
     })
   })
+
+  it("applies object template dependencies without leaking template metadata", async () => {
+    const schema: ExtendedJSONSchema7 = {
+      type: "object",
+      properties: {
+        company: { type: "object", properties: {} },
+      },
+    }
+
+    const next = await applyTemplateToTableSchemaProperty(
+      schema,
+      "company",
+      "Company"
+    )
+    const defs = next.$defs as Record<
+      string,
+      ExtendedJSONSchema7 & Record<string, unknown>
+    >
+
+    expect(defs.Address).toBeTruthy()
+    expect(defs.Company).toBeTruthy()
+    expect(defs.Company.deps).toBeUndefined()
+    expect(next.properties?.company).toEqual({ $ref: "#/$defs/Company" })
+  })
 })

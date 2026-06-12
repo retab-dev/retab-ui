@@ -29,11 +29,17 @@ import {
   normalizeTextLineRange,
 } from "@/registry/new-york-v4/ui/text-viewer-ranges"
 import {
+  assertTextWithinBounds,
   clearTextViewerResourceCacheForTests,
+  DEFAULT_MAX_BYTES,
+  DEFAULT_MAX_LINES,
   MAX_TEXT_RESOURCE_CACHE_ENTRIES,
   readTextResource,
   resolvedTextViewerBounds,
+  splitTextLines,
+  TextViewerInvalidBoundsError,
   TextViewerTooLargeError,
+  toTextFormatError,
 } from "@/registry/new-york-v4/ui/text-viewer-resource"
 
 function response(body: string, init: ResponseInit = {}) {
@@ -79,6 +85,18 @@ function textSource(text: string, fileName?: string) {
 
 function urlSource(url: string, fileName?: string) {
   return { kind: "url" as const, url, fileName }
+}
+
+function downloadableUrlSource({
+  url,
+  fileName,
+  downloadUrl,
+}: {
+  url: string
+  fileName: string
+  downloadUrl: string
+}) {
+  return { kind: "url" as const, url, fileName, downloadUrl }
 }
 
 function textBlobSource(text: string, fileName: string, identityKey: string) {
@@ -129,7 +147,7 @@ function readRegistryFile(path: string) {
 }
 
 function mockObjectUrls(url = "blob:download") {
-  const createObjectURL = vi.fn(() => url)
+  const createObjectURL = vi.fn((_blob: Blob) => url)
   const revokeObjectURL = vi.fn()
   Object.defineProperty(URL, "createObjectURL", {
     configurable: true,
@@ -219,6 +237,17 @@ describe("text-viewer-ranges", () => {
       end: 1,
     })
   })
+
+  it("floors fractional document lengths before clamping", () => {
+    expect(normalizeTextLineRange({ start: 1, end: 10 }, 2.9)).toMatchObject({
+      start: 1,
+      end: 2,
+    })
+  })
+
+  it("rejects non-finite document lengths", () => {
+    expect(normalizeTextLineRange({ start: 1, end: 2 }, Infinity)).toBeNull()
+  })
 })
 
 describe("text-viewer-layout", () => {
@@ -248,21 +277,82 @@ describe("text-viewer-layout", () => {
 })
 
 describe("text-viewer-resource", () => {
+  it("splits every supported line ending and preserves blank terminal lines", () => {
+    expect(splitTextLines("one\ntwo\rthree\r\nfour\n")).toEqual([
+      "one",
+      "two",
+      "three",
+      "four",
+      "",
+    ])
+  })
+
   it("models text bounds failures as format errors", () => {
     expect(() =>
       readTextResource({
-        resource: createViewerResource(textSource("too large")),
+        content: createViewerResource(textSource("too large")).content,
         retryVersion: 0,
         bounds: { maxBytes: 1, maxLines: 10 },
       })
     ).toThrow(TextViewerTooLargeError)
     expect(() =>
       readTextResource({
-        resource: createViewerResource(textSource("too large")),
+        content: createViewerResource(textSource("too large")).content,
         retryVersion: 0,
         bounds: { maxBytes: 1, maxLines: 10 },
       })
     ).toThrow(ViewerFormatError)
+  })
+
+  it("preserves structurally equivalent resource too-large errors at the load boundary", async () => {
+    const resource = createViewerResource(urlSource("/structural-too-large.txt"))
+    const content = {
+      ...resource.content,
+      readText: vi.fn(() =>
+        Promise.reject({
+          name: "ResourceError",
+          domain: "resource",
+          kind: "too_large",
+          tooLargeReason: "lines",
+          message: "Resource exceeds lines limit.",
+        })
+      ),
+    }
+
+    await expect(
+      readResourceAfterSuspense({
+        content,
+        retryVersion: 0,
+        bounds: resolvedTextViewerBounds(),
+      })
+    ).rejects.toMatchObject({
+      name: "ResourceError",
+      domain: "resource",
+      kind: "too_large",
+      tooLargeReason: "lines",
+    })
+  })
+
+  it("maps text boundary failures through the canonical text mapper", () => {
+    const loadError = toTextFormatError(new Error("decode failed"), {
+      kind: "load_failed",
+      message: "Failed to load text.",
+    })
+
+    expect(loadError).toBeInstanceOf(ViewerFormatError)
+    expect(loadError).toMatchObject({
+      format: "text",
+      kind: "load_failed",
+    })
+    expect(loadError.cause).toBeInstanceOf(Error)
+
+    const existing = new TextViewerInvalidBoundsError("maxBytes")
+    expect(
+      toTextFormatError(existing, {
+        kind: "load_failed",
+        message: "ignored",
+      })
+    ).toBe(existing)
   })
 
   it("loads and caches successful text by source and retry version", async () => {
@@ -272,19 +362,41 @@ describe("text-viewer-resource", () => {
 
     await expect(
       readResourceAfterSuspense({
-        resource: textResource("/cached.txt"),
+        content: textResource("/cached.txt").content,
         retryVersion: 0,
         bounds,
       })
     ).resolves.toBe("cached text")
     expect(
       readTextResource({
-        resource: textResource("/cached.txt"),
+        content: textResource("/cached.txt").content,
         retryVersion: 0,
         bounds,
       })
     ).toBe("cached text")
     expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("keeps URL cache entries separate when bounds differ", async () => {
+    const fetchMock = vi.fn(() => Promise.resolve(response("same url")))
+    vi.stubGlobal("fetch", fetchMock)
+    const content = textResource("/same-bounds.txt").content
+
+    await expect(
+      readResourceAfterSuspense({
+        content,
+        retryVersion: 0,
+        bounds: resolvedTextViewerBounds({ maxBytes: 8 }),
+      })
+    ).resolves.toBe("same url")
+    await expect(
+      readResourceAfterSuspense({
+        content,
+        retryVersion: 0,
+        bounds: resolvedTextViewerBounds({ maxBytes: 9 }),
+      })
+    ).resolves.toBe("same url")
+    expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
   it("uses retry versions for same-source retry", async () => {
@@ -297,14 +409,14 @@ describe("text-viewer-resource", () => {
 
     await expect(
       readResourceAfterSuspense({
-        resource: textResource("/retry.txt"),
+        content: textResource("/retry.txt").content,
         retryVersion: 0,
         bounds,
       })
     ).rejects.toThrow("Failed to load")
     await expect(
       readResourceAfterSuspense({
-        resource: textResource("/retry.txt"),
+        content: textResource("/retry.txt").content,
         retryVersion: 1,
         bounds,
       })
@@ -327,7 +439,7 @@ describe("text-viewer-resource", () => {
     const byteBounds = resolvedTextViewerBounds({ maxBytes: 4 })
     await expect(
       readResourceAfterSuspense({
-        resource: textResource("/too-large-bytes.txt"),
+        content: textResource("/too-large-bytes.txt").content,
         retryVersion: 0,
         bounds: byteBounds,
       })
@@ -336,11 +448,53 @@ describe("text-viewer-resource", () => {
     const lineBounds = resolvedTextViewerBounds({ maxLines: 2 })
     await expect(
       readResourceAfterSuspense({
-        resource: textResource("/too-large-lines.txt"),
+        content: textResource("/too-large-lines.txt").content,
         retryVersion: 0,
         bounds: lineBounds,
       })
     ).rejects.toThrow("lines limit")
+  })
+
+  it("allows content-length exactly at the byte limit", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve(
+          response("éx", {
+            headers: { "content-length": "3" },
+          })
+        )
+      )
+    )
+
+    await expect(
+      readResourceAfterSuspense({
+        content: textResource("/exact-bytes.txt").content,
+        retryVersion: 0,
+        bounds: resolvedTextViewerBounds({ maxBytes: 3 }),
+      })
+    ).resolves.toBe("éx")
+  })
+
+  it("still enforces byte limits when content-length is malformed", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve(
+          response("abcd", {
+            headers: { "content-length": "not-a-number" },
+          })
+        )
+      )
+    )
+
+    await expect(
+      readResourceAfterSuspense({
+        content: textResource("/malformed-content-length.txt").content,
+        retryVersion: 0,
+        bounds: resolvedTextViewerBounds({ maxBytes: 3 }),
+      })
+    ).rejects.toThrow("bytes limit")
   })
 
   it("rejects invalid bounds", () => {
@@ -348,6 +502,24 @@ describe("text-viewer-resource", () => {
     expect(() => resolvedTextViewerBounds({ maxLines: Infinity })).toThrow(
       "maxLines"
     )
+    expect(() => resolvedTextViewerBounds({ maxBytes: 1.5 })).toThrow(
+      TextViewerInvalidBoundsError
+    )
+    expect(() =>
+      resolvedTextViewerBounds({ maxLines: Number.MAX_SAFE_INTEGER + 1 })
+    ).toThrow(TextViewerInvalidBoundsError)
+  })
+
+  it("accepts text exactly at byte and line limits", () => {
+    expect(() =>
+      assertTextWithinBounds("é\nx", { maxBytes: 4, maxLines: 2 })
+    ).not.toThrow()
+  })
+
+  it("counts a trailing newline as an additional blank line for bounds", () => {
+    expect(() =>
+      assertTextWithinBounds("one\n", { maxBytes: 10, maxLines: 1 })
+    ).toThrow("lines limit")
   })
 
   it("counts bytes rather than UTF-16 code units for inline text", () => {
@@ -355,14 +527,14 @@ describe("text-viewer-resource", () => {
 
     expect(() =>
       readTextResource({
-        resource,
+        content: resource.content,
         retryVersion: 0,
         bounds: resolvedTextViewerBounds({ maxBytes: 1 }),
       })
     ).toThrow("bytes limit")
     expect(
       readTextResource({
-        resource,
+        content: resource.content,
         retryVersion: 0,
         bounds: resolvedTextViewerBounds({ maxBytes: 2 }),
       })
@@ -372,7 +544,7 @@ describe("text-viewer-resource", () => {
   it("counts CR-only newlines toward the line limit", () => {
     expect(() =>
       readTextResource({
-        resource: createViewerResource(textSource("one\rtwo")),
+        content: createViewerResource(textSource("one\rtwo")).content,
         retryVersion: 0,
         bounds: resolvedTextViewerBounds({ maxLines: 1 }),
       })
@@ -387,7 +559,7 @@ describe("text-viewer-resource", () => {
 
     await expect(
       readResourceAfterSuspense({
-        resource: textResource("/classic-newlines.txt"),
+        content: textResource("/classic-newlines.txt").content,
         retryVersion: 0,
         bounds: resolvedTextViewerBounds({ maxLines: 1 }),
       })
@@ -410,7 +582,33 @@ describe("text-viewer-resource", () => {
 
     await expect(
       readResourceAfterSuspense({
-        resource: textResource("/stream-too-large.txt"),
+        content: textResource("/stream-too-large.txt").content,
+        retryVersion: 0,
+        bounds: resolvedTextViewerBounds({ maxBytes: 3 }),
+      })
+    ).rejects.toThrow("bytes limit")
+    expect(cancel).toHaveBeenCalledTimes(1)
+  })
+
+  it("preserves byte-limit errors when stream cancellation fails", async () => {
+    const cancel = vi.fn(() => {
+      throw new Error("cancel transport failed")
+    })
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve(
+          streamResponse(["ab", "cd"], {
+            closeAfterChunks: false,
+            onCancel: cancel,
+          })
+        )
+      )
+    )
+
+    await expect(
+      readResourceAfterSuspense({
+        content: textResource("/stream-cancel-fails-bytes.txt").content,
         retryVersion: 0,
         bounds: resolvedTextViewerBounds({ maxBytes: 3 }),
       })
@@ -434,7 +632,33 @@ describe("text-viewer-resource", () => {
 
     await expect(
       readResourceAfterSuspense({
-        resource: textResource("/stream-too-many-lines.txt"),
+        content: textResource("/stream-too-many-lines.txt").content,
+        retryVersion: 0,
+        bounds: resolvedTextViewerBounds({ maxLines: 1 }),
+      })
+    ).rejects.toThrow("lines limit")
+    expect(cancel).toHaveBeenCalledTimes(1)
+  })
+
+  it("preserves line-limit errors when stream cancellation fails", async () => {
+    const cancel = vi.fn(() => {
+      throw new Error("cancel transport failed")
+    })
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve(
+          streamResponse(["one\n", "two"], {
+            closeAfterChunks: false,
+            onCancel: cancel,
+          })
+        )
+      )
+    )
+
+    await expect(
+      readResourceAfterSuspense({
+        content: textResource("/stream-cancel-fails-lines.txt").content,
         retryVersion: 0,
         bounds: resolvedTextViewerBounds({ maxLines: 1 }),
       })
@@ -450,7 +674,7 @@ describe("text-viewer-resource", () => {
 
     await expect(
       readResourceAfterSuspense({
-        resource: textResource("/split-crlf.txt"),
+        content: textResource("/split-crlf.txt").content,
         retryVersion: 0,
         bounds: resolvedTextViewerBounds({ maxLines: 2 }),
       })
@@ -478,11 +702,38 @@ describe("text-viewer-resource", () => {
 
     await expect(
       readResourceAfterSuspense({
-        resource: textResource("/split-utf8.txt"),
+        content: textResource("/split-utf8.txt").content,
         retryVersion: 0,
         bounds: resolvedTextViewerBounds(),
       })
     ).resolves.toBe("a🙂b")
+  })
+
+  it("normalizes abort errors thrown while reading a streamed URL response", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve(
+          new Response(
+            new ReadableStream<Uint8Array>({
+              pull() {
+                throw new DOMException("Aborted", "AbortError")
+              },
+            })
+          )
+        )
+      )
+    )
+
+    await expect(
+      readResourceAfterSuspense({
+        content: textResource("/stream-aborted.txt").content,
+        retryVersion: 0,
+        bounds: resolvedTextViewerBounds(),
+      })
+    ).rejects.toMatchObject({
+      kind: "aborted",
+    } satisfies Partial<ResourceError>)
   })
 
   it("rejects partial-content URL responses for full text reads", async () => {
@@ -500,7 +751,7 @@ describe("text-viewer-resource", () => {
 
     await expect(
       readResourceAfterSuspense({
-        resource: textResource("/partial.txt"),
+        content: textResource("/partial.txt").content,
         retryVersion: 0,
         bounds: resolvedTextViewerBounds(),
       })
@@ -515,14 +766,14 @@ describe("text-viewer-resource", () => {
       Promise.resolve(response("", { status: 500 }))
     )
     vi.stubGlobal("fetch", fetchMock)
-    const resource = textResource("/cached-error.txt")
+    const content = textResource("/cached-error.txt").content
     const bounds = resolvedTextViewerBounds()
 
     await expect(
-      readResourceAfterSuspense({ resource, retryVersion: 0, bounds })
+      readResourceAfterSuspense({ content, retryVersion: 0, bounds })
     ).rejects.toThrow("Failed to load")
     await expect(
-      readResourceAfterSuspense({ resource, retryVersion: 0, bounds })
+      readResourceAfterSuspense({ content, retryVersion: 0, bounds })
     ).rejects.toThrow("Failed to load")
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
@@ -536,7 +787,7 @@ describe("text-viewer-resource", () => {
       const src = `/cached-${index}.txt`
       await expect(
         readResourceAfterSuspense({
-          resource: textResource(src),
+          content: textResource(src).content,
           retryVersion: 0,
           bounds,
         })
@@ -546,7 +797,7 @@ describe("text-viewer-resource", () => {
     const firstSrc = "/cached-0.txt"
     await expect(
       readResourceAfterSuspense({
-        resource: textResource(firstSrc),
+        content: textResource(firstSrc).content,
         retryVersion: 0,
         bounds,
       })
@@ -559,9 +810,9 @@ describe("text-viewer-resource", () => {
 
     await expect(
       readResourceAfterSuspense({
-        resource: createViewerResource(
+        content: createViewerResource(
           textBlobSource("blob text", "blob.txt", "blob:one")
-        ),
+        ).content,
         retryVersion: 0,
         bounds,
       })
@@ -573,18 +824,18 @@ describe("text-viewer-resource", () => {
 
     await expect(
       readResourceAfterSuspense({
-        resource: createViewerResource(
+        content: createViewerResource(
           textBlobSource("same-size-a", "same.txt", "blob:a")
-        ),
+        ).content,
         retryVersion: 0,
         bounds,
       })
     ).resolves.toBe("same-size-a")
     await expect(
       readResourceAfterSuspense({
-        resource: createViewerResource(
+        content: createViewerResource(
           textBlobSource("same-size-b", "same.txt", "blob:b")
-        ),
+        ).content,
         retryVersion: 0,
         bounds,
       })
@@ -602,7 +853,7 @@ describe("text-viewer-resource", () => {
     )
     vi.stubGlobal("fetch", fetchMock)
 
-    const result = await textResource("/range.txt").readRange({
+    const result = await textResource("/range.txt").content.readRange({
       start: 2,
       end: 4,
     })
@@ -630,11 +881,134 @@ describe("text-viewer-resource", () => {
     )
 
     await expect(
-      textResource("/range.txt").readRange({ start: 0, end: 2 })
+      textResource("/range.txt").content.readRange({ start: 0, end: 2 })
     ).resolves.toMatchObject({
       contentRange: { start: 0, end: 2, total: 5 },
       isComplete: false,
     })
+  })
+
+  it("keeps short URL byte ranges incomplete when the total size is unknown", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve(
+          response("ab", {
+            status: 206,
+            headers: { "content-range": "bytes 0-1/*" },
+          })
+        )
+      )
+    )
+
+    await expect(
+      textResource("/range-unknown-total.txt").content.readRange({ start: 0, end: 9 })
+    ).resolves.toMatchObject({
+      contentRange: { start: 0, end: 1, total: null },
+      isComplete: false,
+    })
+  })
+
+  it("rejects URL byte ranges when Content-Range starts before the requested range", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve(
+          response("abc", {
+            status: 206,
+            headers: { "content-range": "bytes 0-2/5" },
+          })
+        )
+      )
+    )
+
+    await expect(
+      textResource("/range-mismatch.txt").content.readRange({ start: 2, end: 4 })
+    ).rejects.toMatchObject({
+      kind: "invalid_range",
+    } satisfies Partial<ResourceError>)
+  })
+
+  it("rejects URL byte ranges when Content-Range length disagrees with the body", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve(
+          response("ab", {
+            status: 206,
+            headers: { "content-range": "bytes 0-2/5" },
+          })
+        )
+      )
+    )
+
+    await expect(
+      textResource("/range-length-mismatch.txt").content.readRange({ start: 0, end: 2 })
+    ).rejects.toMatchObject({
+      kind: "invalid_range",
+    } satisfies Partial<ResourceError>)
+  })
+
+  it("rejects partial URL byte ranges without Content-Range metadata", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(response("abc", { status: 206 })))
+    )
+
+    await expect(
+      textResource("/range-missing-content-range.txt").content.readRange({
+        start: 0,
+        end: 2,
+      })
+    ).rejects.toMatchObject({
+      kind: "invalid_range",
+    } satisfies Partial<ResourceError>)
+  })
+
+  it("rejects partial URL byte ranges with malformed Content-Range metadata", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve(
+          response("abc", {
+            status: 206,
+            headers: { "content-range": "bytes abc" },
+          })
+        )
+      )
+    )
+
+    await expect(
+      textResource("/range-malformed-content-range.txt").content.readRange({
+        start: 0,
+        end: 2,
+      })
+    ).rejects.toMatchObject({
+      kind: "invalid_range",
+    } satisfies Partial<ResourceError>)
+  })
+
+  it("rejects partial URL byte ranges with trailing junk in Content-Range metadata", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve(
+          response("abc", {
+            status: 206,
+            headers: { "content-range": "bytes 0-2/5 trailing" },
+          })
+        )
+      )
+    )
+
+    await expect(
+      textResource("/range-junk-content-range.txt").content.readRange({
+        start: 0,
+        end: 2,
+      })
+    ).rejects.toMatchObject({
+      kind: "invalid_range",
+    } satisfies Partial<ResourceError>)
   })
 
   it("treats full URL range responses as complete even without Content-Range", async () => {
@@ -644,8 +1018,56 @@ describe("text-viewer-resource", () => {
     )
 
     await expect(
-      textResource("/range.txt").readRange({ start: 0, end: 99 })
+      textResource("/range.txt").content.readRange({ start: 0, end: 99 })
     ).resolves.toMatchObject({ contentRange: undefined, isComplete: true })
+  })
+
+  it("rejects full URL range responses for non-zero requested starts", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(response("abcdef", { status: 200 })))
+    )
+
+    await expect(
+      textResource("/ignored-nonzero-range.txt").content.readRange({
+        start: 2,
+        end: 4,
+      })
+    ).rejects.toMatchObject({
+      kind: "invalid_range",
+    } satisfies Partial<ResourceError>)
+  })
+
+  it("rejects full URL range responses longer than a zero-start requested range", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(response("abcdef", { status: 200 })))
+    )
+
+    await expect(
+      textResource("/ignored-short-range.txt").content.readRange({
+        start: 0,
+        end: 2,
+      })
+    ).rejects.toMatchObject({
+      kind: "invalid_range",
+    } satisfies Partial<ResourceError>)
+  })
+
+  it("rejects successful URL byte range responses with unsupported statuses", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(new Response(null, { status: 204 })))
+    )
+
+    await expect(
+      textResource("/range-empty-success.txt").content.readRange({
+        start: 0,
+        end: 2,
+      })
+    ).rejects.toMatchObject({
+      kind: "invalid_range",
+    } satisfies Partial<ResourceError>)
   })
 
   it("rejects invalid URL byte ranges before sending a request", async () => {
@@ -653,12 +1075,12 @@ describe("text-viewer-resource", () => {
     vi.stubGlobal("fetch", fetchMock)
 
     await expect(
-      textResource("/range.txt").readRange({ start: -1, end: 2 })
+      textResource("/range.txt").content.readRange({ start: -1, end: 2 })
     ).rejects.toMatchObject({
       kind: "invalid_range",
     } satisfies Partial<ResourceError>)
     await expect(
-      textResource("/range.txt").readRange({ start: 4, end: 3 })
+      textResource("/range.txt").content.readRange({ start: 4, end: 3 })
     ).rejects.toMatchObject({
       kind: "invalid_range",
     } satisfies Partial<ResourceError>)
@@ -667,7 +1089,7 @@ describe("text-viewer-resource", () => {
 
   it("rejects invalid local byte ranges", async () => {
     await expect(
-      createViewerResource(textSource("abc")).readRange({ start: 2.5, end: 3 })
+      createViewerResource(textSource("abc")).content.readRange({ start: 2.5, end: 3 })
     ).rejects.toMatchObject({
       kind: "invalid_range",
     } satisfies Partial<ResourceError>)
@@ -675,7 +1097,7 @@ describe("text-viewer-resource", () => {
     await expect(
       createViewerResource(
         textBlobSource("abc", "abc.txt", "blob:abc")
-      ).readRange({ start: 3, end: 2 })
+      ).content.readRange({ start: 3, end: 2 })
     ).rejects.toMatchObject({
       kind: "invalid_range",
     } satisfies Partial<ResourceError>)
@@ -683,7 +1105,7 @@ describe("text-viewer-resource", () => {
 
   it("rejects local byte ranges that start past the available payload", async () => {
     await expect(
-      createViewerResource(textSource("abc")).readRange({ start: 3, end: 4 })
+      createViewerResource(textSource("abc")).content.readRange({ start: 3, end: 4 })
     ).rejects.toMatchObject({
       kind: "invalid_range",
     } satisfies Partial<ResourceError>)
@@ -691,15 +1113,26 @@ describe("text-viewer-resource", () => {
     await expect(
       createViewerResource(
         textBlobSource("abc", "abc.txt", "blob:range")
-      ).readRange({ start: 4, end: 5 })
+      ).content.readRange({ start: 4, end: 5 })
     ).rejects.toMatchObject({
       kind: "invalid_range",
     } satisfies Partial<ResourceError>)
   })
 
+  it("returns a complete truncated range when a local byte range overreaches", async () => {
+    const result = await createViewerResource(textSource("abc")).content.readRange({
+      start: 1,
+      end: 99,
+    })
+
+    expect(new TextDecoder().decode(result.buffer)).toBe("bc")
+    expect(result.contentRange).toEqual({ start: 1, end: 2, total: 3 })
+    expect(result.isComplete).toBe(true)
+  })
+
   it("returns a coherent empty range for empty local payloads", async () => {
     await expect(
-      createViewerResource(textSource("")).readRange({ start: 0, end: 0 })
+      createViewerResource(textSource("")).content.readRange({ start: 0, end: 0 })
     ).resolves.toMatchObject({
       contentRange: { start: 0, end: -1, total: 0 },
       isComplete: true,
@@ -708,7 +1141,7 @@ describe("text-viewer-resource", () => {
     await expect(
       createViewerResource(
         textBlobSource("", "empty.txt", "blob:empty")
-      ).readRange({ start: 0, end: 0 })
+      ).content.readRange({ start: 0, end: 0 })
     ).resolves.toMatchObject({
       contentRange: { start: 0, end: -1, total: 0 },
       isComplete: true,
@@ -716,7 +1149,7 @@ describe("text-viewer-resource", () => {
   })
 
   it("reads text byte ranges over encoded UTF-8 bytes", async () => {
-    const result = await createViewerResource(textSource("éx")).readRange({
+    const result = await createViewerResource(textSource("éx")).content.readRange({
       start: 0,
       end: 1,
     })
@@ -732,13 +1165,13 @@ describe("text-viewer-resource", () => {
     )
 
     await expect(
-      resource.readRange({ start: 0, end: 2 })
+      resource.content.readRange({ start: 0, end: 2 })
     ).resolves.toMatchObject({
       contentRange: { start: 0, end: 2, total: 6 },
       isComplete: false,
     })
     await expect(
-      resource.readRange({ start: 3, end: 5 })
+      resource.content.readRange({ start: 3, end: 5 })
     ).resolves.toMatchObject({
       contentRange: { start: 3, end: 5, total: 6 },
       isComplete: true,
@@ -752,14 +1185,14 @@ describe("text-viewer-resource", () => {
 
     await expect(
       readResourceAfterSuspense({
-        resource: textResource("/same.txt", "first.txt"),
+        content: textResource("/same.txt", "first.txt").content,
         retryVersion: 0,
         bounds,
       })
     ).resolves.toBe("same payload")
     await expect(
       readResourceAfterSuspense({
-        resource: textResource("/same.txt", "second.txt"),
+        content: textResource("/same.txt", "second.txt").content,
         retryVersion: 0,
         bounds,
       })
@@ -773,18 +1206,18 @@ describe("text-viewer-resource", () => {
 
     await expect(
       readResourceAfterSuspense({
-        resource: createViewerResource(
+        content: createViewerResource(
           textBlobSource("first blob", "same.txt", "blob:reused")
-        ),
+        ).content,
         retryVersion: 0,
         bounds,
       })
     ).resolves.toBe("first blob")
     await expect(
       readResourceAfterSuspense({
-        resource: createViewerResource(
+        content: createViewerResource(
           textBlobSource("second blob", "same.txt", "blob:reused")
-        ),
+        ).content,
         retryVersion: 0,
         bounds,
       })
@@ -837,11 +1270,66 @@ describe("TextViewer", () => {
     ).toBe("gamma")
   })
 
+  it("updates rendered line count and rows when the inline source changes", () => {
+    const { container, rerender } = render(
+      <TextViewer source={textSource("one\ntwo")} />
+    )
+
+    expect(screen.getByText("2 lines")).toBeTruthy()
+    expect(container.querySelector('[data-line-number="2"]')).toBeTruthy()
+
+    rerender(<TextViewer source={textSource("solo")} />)
+
+    expect(screen.getByText("1 line")).toBeTruthy()
+    expect(screen.getByText("solo")).toBeTruthy()
+    expect(screen.queryByText("two")).toBeNull()
+    expect(container.querySelector('[data-line-number="2"]')).toBeNull()
+  })
+
+  it("drops stale virtual rows when a large source shrinks", () => {
+    const { container, rerender } = render(
+      <TextViewer
+        source={textSource(
+          Array.from(
+            { length: 10_000 },
+            (_, index) => `line ${index + 1}`
+          ).join("\n")
+        )}
+        toolbar={false}
+      />
+    )
+
+    expect(
+      container.querySelectorAll("[data-line-number]").length
+    ).toBeGreaterThan(1)
+
+    rerender(<TextViewer source={textSource("single")} toolbar={false} />)
+
+    expect(screen.getByText("single")).toBeTruthy()
+    expect(container.querySelectorAll("[data-line-number]")).toHaveLength(1)
+    expect(container.querySelector('[data-line-number="2"]')).toBeNull()
+  })
+
+  it("does not keep previous text visible while a new URL source is pending", () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => new Promise<Response>(() => {}))
+    )
+    const { rerender } = render(<TextViewer source={textSource("old text")} />)
+
+    expect(screen.getByText("old text")).toBeTruthy()
+
+    rerender(<TextViewer source={urlSource("/pending-new-source.txt")} />)
+
+    expect(screen.queryByText("old text")).toBeNull()
+  })
+
   it("hides toolbar chrome when toolbar is false", () => {
     render(<TextViewer source={textSource("alpha")} toolbar={false} />)
 
     expect(screen.queryByText("1 line")).toBeNull()
     expect(screen.queryByLabelText("Zoom in")).toBeNull()
+    expect(screen.queryByLabelText("Download")).toBeNull()
   })
 
   it("hides fallback toolbar chrome when toolbar is false", () => {
@@ -853,6 +1341,24 @@ describe("TextViewer", () => {
     render(<TextViewer source={urlSource("/pending.txt")} toolbar={false} />)
 
     expect(screen.queryByLabelText("Zoom in")).toBeNull()
+    expect(screen.queryByLabelText("Download")).toBeNull()
+  })
+
+  it("hides error-state download chrome when toolbar is false", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {})
+
+    render(
+      <TextViewer
+        source={textSource("one\ntwo")}
+        maxLines={1}
+        toolbar={false}
+      />
+    )
+
+    expect(
+      await screen.findByText("This text file has too many lines to preview.")
+    ).toBeTruthy()
+    expect(screen.queryByLabelText("Download")).toBeNull()
   })
 
   it("highlights every line in a normalized multi-line range", () => {
@@ -905,6 +1411,31 @@ describe("TextViewer", () => {
     )
 
     expect(container.querySelector(".bg-primary\\/12")).toBeNull()
+  })
+
+  it("updates highlighted rows when the highlight prop changes", () => {
+    const { container, rerender } = render(
+      <TextViewer source={textSource("one\ntwo\nthree")} highlight={null} />
+    )
+
+    expect(container.querySelector(".bg-primary\\/12")).toBeNull()
+
+    rerender(
+      <TextViewer
+        source={textSource("one\ntwo\nthree")}
+        highlight={{ start: 2, end: 2 }}
+      />
+    )
+
+    expect(
+      container.querySelector('[data-line-number="1"]')?.className
+    ).not.toContain("bg-primary/12")
+    expect(
+      container.querySelector('[data-line-number="2"]')?.className
+    ).toContain("bg-primary/12")
+    expect(
+      container.querySelector('[data-line-number="3"]')?.className
+    ).not.toContain("bg-primary/12")
   })
 
   it("scrolls to reveal the full requested range", () => {
@@ -1003,6 +1534,24 @@ describe("TextViewer", () => {
     })
 
     expect(scrollTo).toHaveBeenCalledWith({ top: 186, behavior: "auto" })
+  })
+
+  it("applies zoom changes to the rendered text metrics", () => {
+    const { container } = render(<TextViewer source={textSource("alpha")} />)
+    const pre = container.querySelector("pre")
+
+    expect(pre?.style.fontSize).toBe("12px")
+    expect(pre?.style.lineHeight).toBe("20px")
+
+    fireEvent.click(screen.getByLabelText("Zoom in"))
+
+    expect(pre?.style.fontSize).toBe("14.399999999999999px")
+    expect(pre?.style.lineHeight).toBe("24px")
+
+    fireEvent.click(screen.getByLabelText("Reset zoom"))
+
+    expect(pre?.style.fontSize).toBe("12px")
+    expect(pre?.style.lineHeight).toBe("20px")
   })
 
   it("clamps zoom controls to the supported scale range", () => {
@@ -1118,6 +1667,40 @@ describe("TextViewer", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
+  it("resets retry versions when switching between payload identities", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {})
+    const fetchMock = vi.fn().mockImplementation((url: string) => {
+      if (url === "/cached-before-retry.txt") {
+        return Promise.resolve(response("cached before retry"))
+      }
+      if (url === "/retry-reset.txt") {
+        return Promise.resolve(response("", { status: 500 }))
+      }
+      return Promise.reject(new Error(`unexpected fetch: ${url}`))
+    })
+    vi.stubGlobal("fetch", fetchMock)
+
+    const { rerender } = render(
+      <TextViewer source={urlSource("/cached-before-retry.txt")} />
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText("cached before retry")).toBeTruthy()
+    })
+
+    rerender(<TextViewer source={urlSource("/retry-reset.txt")} />)
+    expect(await screen.findByText("Failed to load file: 500.")).toBeTruthy()
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }))
+    expect(await screen.findByText("Failed to load file: 500.")).toBeTruthy()
+
+    rerender(<TextViewer source={urlSource("/cached-before-retry.txt")} />)
+
+    await waitFor(() => {
+      expect(screen.getByText("cached before retry")).toBeTruthy()
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+  })
+
   it("ignores a stale pending URL load after the source changes", async () => {
     let resolveSlow: ((response: Response) => void) | null = null
     const fetchMock = vi.fn((url: string) => {
@@ -1216,6 +1799,29 @@ describe("TextViewer", () => {
     expect(screen.queryByText("Text viewer bounds are invalid.")).toBeNull()
   })
 
+  it("recovers when nullable runtime bounds are removed", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {})
+
+    const { rerender } = render(
+      <TextViewer
+        source={textSource("one")}
+        maxLines={null as unknown as number}
+      />
+    )
+
+    expect(
+      await screen.findByText("Text viewer bounds are invalid.")
+    ).toBeTruthy()
+
+    rerender(<TextViewer source={textSource("one")} />)
+
+    await waitFor(() => {
+      expect(screen.getByText("1 line")).toBeTruthy()
+      expect(screen.getByText("one")).toBeTruthy()
+    })
+    expect(screen.queryByText("Text viewer bounds are invalid.")).toBeNull()
+  })
+
   it("recovers from a URL line-limit error when the limit is raised", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {})
     const fetchMock = vi.fn(() => Promise.resolve(response("one\ntwo\nthree")))
@@ -1226,7 +1832,7 @@ describe("TextViewer", () => {
     )
 
     expect(
-      await screen.findByText("This text file has too many lines to preview.")
+      await screen.findByText("This file has too many lines to preview.")
     ).toBeTruthy()
 
     rerender(<TextViewer source={urlSource("/bounded.txt")} maxLines={3} />)
@@ -1280,6 +1886,82 @@ describe("TextViewer", () => {
     expect(revokeObjectURL).toHaveBeenCalledWith("blob:download")
   })
 
+  it("uses the latest inline text and file name when downloading after a source change", async () => {
+    const { createObjectURL } = mockObjectUrls("blob:inline-latest")
+    const { click, clicks } = captureAnchorClicks()
+    const { rerender } = render(
+      <TextViewer source={textSource("first text", "first.txt")} />
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "Download" }))
+    await waitFor(() => expect(click).toHaveBeenCalledTimes(1))
+
+    rerender(<TextViewer source={textSource("second text", "second.txt")} />)
+
+    await waitFor(() => {
+      expect(screen.getByText("second text")).toBeTruthy()
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Download" }))
+    await waitFor(() => expect(click).toHaveBeenCalledTimes(2))
+
+    const firstBlob = createObjectURL.mock.calls[0]?.[0] as Blob
+    const secondBlob = createObjectURL.mock.calls[1]?.[0] as Blob
+    await expect(firstBlob.text()).resolves.toBe("first text")
+    await expect(secondBlob.text()).resolves.toBe("second text")
+    expect(clicks).toEqual([
+      { href: "blob:inline-latest", download: "first.txt" },
+      { href: "blob:inline-latest", download: "second.txt" },
+    ])
+  })
+
+  it("uses a Blob source downloadUrl as a direct href without object URLs", async () => {
+    const { createObjectURL } = mockObjectUrls("blob:should-not-be-created")
+
+    render(
+      <TextViewer
+        source={sharedTextBlobSource({
+          blob: new Blob(["blob href text"], { type: "text/plain" }),
+          fileName: "href.txt",
+          identityKey: "blob:href",
+          downloadUrl: "/download/blob-href.txt",
+        })}
+      />
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText("blob href text")).toBeTruthy()
+      const link = screen.getByRole("link", { name: "Download" })
+      expect(link.getAttribute("href")).toBe("/download/blob-href.txt")
+      expect(link.getAttribute("download")).toBe("href.txt")
+    })
+    expect(createObjectURL).not.toHaveBeenCalled()
+  })
+
+  it("keeps URL download metadata available from a load error state", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {})
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(response("", { status: 500 })))
+    )
+
+    render(
+      <TextViewer
+        source={downloadableUrlSource({
+          url: "/preview-fails.txt",
+          fileName: "original.txt",
+          downloadUrl: "/download/original.txt",
+        })}
+      />
+    )
+
+    expect(await screen.findByText("Failed to load file: 500.")).toBeTruthy()
+    expect(screen.getByRole("button", { name: "Retry" })).toBeTruthy()
+
+    const link = screen.getByRole("link", { name: "Download" })
+    expect(link.getAttribute("href")).toBe("/download/original.txt")
+    expect(link.getAttribute("download")).toBe("original.txt")
+  })
+
   it("updates URL download metadata without refetching the same text payload", async () => {
     const fetchMock = vi.fn(() => Promise.resolve(response("cached url text")))
     vi.stubGlobal("fetch", fetchMock)
@@ -1302,6 +1984,146 @@ describe("TextViewer", () => {
       expect(
         screen.getByRole("link", { name: "Download" }).getAttribute("download")
       ).toBe("second.txt")
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("preserves zoom across URL metadata-only source changes", async () => {
+    const fetchMock = vi.fn(() => Promise.resolve(response("zoomed url text")))
+    vi.stubGlobal("fetch", fetchMock)
+
+    const { rerender } = render(
+      <TextViewer source={urlSource("/zoom-metadata.txt", "first.txt")} />
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText("zoomed url text")).toBeTruthy()
+    })
+    fireEvent.click(screen.getByLabelText("Zoom in"))
+    expect(screen.getByText("120%")).toBeTruthy()
+
+    rerender(
+      <TextViewer source={urlSource("/zoom-metadata.txt", "second.txt")} />
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText("zoomed url text")).toBeTruthy()
+      expect(screen.getByText("120%")).toBeTruthy()
+      expect(
+        screen.getByRole("link", { name: "Download" }).getAttribute("download")
+      ).toBe("second.txt")
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("preserves zoom and cache when omitted bounds become explicit defaults", async () => {
+    const fetchMock = vi.fn(() =>
+      Promise.resolve(response("default bounds text"))
+    )
+    vi.stubGlobal("fetch", fetchMock)
+
+    const { rerender } = render(
+      <TextViewer source={urlSource("/default-bounds.txt")} />
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText("default bounds text")).toBeTruthy()
+    })
+    fireEvent.click(screen.getByLabelText("Zoom in"))
+    expect(screen.getByText("120%")).toBeTruthy()
+
+    rerender(
+      <TextViewer
+        source={urlSource("/default-bounds.txt")}
+        maxBytes={DEFAULT_MAX_BYTES}
+        maxLines={DEFAULT_MAX_LINES}
+      />
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText("default bounds text")).toBeTruthy()
+      expect(screen.getByText("120%")).toBeTruthy()
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("updates URL download hrefs without refetching the same text payload", async () => {
+    const fetchMock = vi.fn(() => Promise.resolve(response("download source")))
+    vi.stubGlobal("fetch", fetchMock)
+
+    const { rerender } = render(
+      <TextViewer
+        source={downloadableUrlSource({
+          url: "/preview.txt",
+          fileName: "first.txt",
+          downloadUrl: "/download/first.txt",
+        })}
+      />
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText("download source")).toBeTruthy()
+      const link = screen.getByRole("link", { name: "Download" })
+      expect(link.getAttribute("href")).toBe("/download/first.txt")
+      expect(link.getAttribute("download")).toBe("first.txt")
+    })
+
+    rerender(
+      <TextViewer
+        source={downloadableUrlSource({
+          url: "/preview.txt",
+          fileName: "second.txt",
+          downloadUrl: "/download/second.txt",
+        })}
+      />
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText("download source")).toBeTruthy()
+      const link = screen.getByRole("link", { name: "Download" })
+      expect(link.getAttribute("href")).toBe("/download/second.txt")
+      expect(link.getAttribute("download")).toBe("second.txt")
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("preserves zoom across URL download href changes", async () => {
+    const fetchMock = vi.fn(() =>
+      Promise.resolve(response("download zoom text"))
+    )
+    vi.stubGlobal("fetch", fetchMock)
+
+    const { rerender } = render(
+      <TextViewer
+        source={downloadableUrlSource({
+          url: "/download-zoom.txt",
+          fileName: "download-zoom.txt",
+          downloadUrl: "/download/zoom-a.txt",
+        })}
+      />
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText("download zoom text")).toBeTruthy()
+    })
+    fireEvent.click(screen.getByLabelText("Zoom in"))
+    expect(screen.getByText("120%")).toBeTruthy()
+
+    rerender(
+      <TextViewer
+        source={downloadableUrlSource({
+          url: "/download-zoom.txt",
+          fileName: "download-zoom.txt",
+          downloadUrl: "/download/zoom-b.txt",
+        })}
+      />
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText("120%")).toBeTruthy()
+      expect(
+        screen.getByRole("link", { name: "Download" }).getAttribute("href")
+      ).toBe("/download/zoom-b.txt")
     })
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
@@ -1390,7 +2212,7 @@ describe("TextViewer", () => {
     )
 
     expect(
-      await screen.findByText("This text file has too many lines to preview.")
+      await screen.findByText("This file has too many lines to preview.")
     ).toBeTruthy()
     expect(screen.queryByRole("button", { name: "Retry" })).toBeNull()
   })
@@ -1498,7 +2320,7 @@ describe("text-viewer implementation boundaries", () => {
     )
 
     expect(resourceModuleSource).toContain("tooLargeReason")
-    expect(textResourceSource).toContain("tooLargeReason")
+    expect(textResourceSource).toContain("isResourceError")
     expect(textResourceSource).not.toContain('includes("lines")')
   })
 

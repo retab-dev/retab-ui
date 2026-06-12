@@ -52,7 +52,11 @@ export function useImageViewerScale(
     ? (frameListWidth - IMAGE_VIEWER_HORIZONTAL_PADDING) / widestFrameWidth
     : 1
   const scale =
-    controlledScale ?? uncontrolledScale ?? Math.max(0.25, fitWidthScale)
+    controlledScale !== undefined
+      ? normalizeViewerScale(controlledScale)
+      : uncontrolledScale !== null
+        ? normalizeViewerScale(uncontrolledScale)
+        : Math.max(0.25, fitWidthScale)
 
   const setViewerScale = React.useCallback(
     (nextScale: number | null) => {
@@ -74,6 +78,19 @@ export function useImageViewerScale(
   }
 }
 
+function normalizeViewerScale(scale: number): number {
+  return Number.isFinite(scale) && scale > 0 ? Math.max(0.25, scale) : 0.25
+}
+
+function clamp01(value: number): number {
+  return Math.min(1, Math.max(0, value))
+}
+
+function normalizeFrameAreaPercent(value: number): number | null {
+  if (!Number.isFinite(value)) return null
+  return Math.min(100, Math.max(0, value))
+}
+
 export function useVisibleFrame(
   onScrollProgressChange: ImageViewerProps["onScrollProgressChange"],
   onVisibleFrameChange: ImageViewerProps["onVisibleFrameChange"]
@@ -87,7 +104,7 @@ export function useVisibleFrame(
     if (!viewport) return
     const scrollable = viewport.scrollHeight - viewport.clientHeight
     onScrollProgressChange?.(
-      scrollable > 0 ? viewport.scrollTop / scrollable : 0
+      scrollable > 0 ? clamp01(viewport.scrollTop / scrollable) : 0
     )
 
     const frameNumber = findVisibleFrameNumber(viewport)
@@ -109,16 +126,18 @@ export function useImageViewerHandle(
     forwardedRef,
     () => ({
       scrollToFrameArea: (frameNumber, area, options) => {
+        const areaTop = normalizeFrameAreaPercent(area.top)
+        if (areaTop == null) return
         const viewport = scrollViewportRef.current
         const frame = viewport?.querySelector<HTMLElement>(
-          `[data-frame-number="${frameNumber}"]`
+          `[data-slot="image-frame"][data-frame-number="${frameNumber}"]`
         )
         if (!viewport || !frame) return
         const frameRect = frame.getBoundingClientRect()
         const viewportRect = viewport.getBoundingClientRect()
         const frameTop = frameRect.top - viewportRect.top + viewport.scrollTop
         const targetTop =
-          frameTop + (area.top / 100) * frameRect.height - IMAGE_SCROLL_HEADROOM
+          frameTop + (areaTop / 100) * frameRect.height - IMAGE_SCROLL_HEADROOM
         viewport.scrollTo({
           top: Math.max(0, targetTop),
           behavior: "smooth",
@@ -140,12 +159,16 @@ function findVisibleFrameNumber(viewport: HTMLElement): number {
     markerY
   )
   for (const element of elementsFromPoint ?? []) {
-    const frame = element.closest<HTMLElement>("[data-frame-number]")
+    const frame = element.closest<HTMLElement>(
+      '[data-slot="image-frame"][data-frame-number]'
+    )
     const frameNumber = Number(frame?.dataset.frameNumber)
     if (frameNumber) return frameNumber
   }
 
-  const frames = viewport.querySelectorAll<HTMLElement>("[data-frame-number]")
+  const frames = viewport.querySelectorAll<HTMLElement>(
+    '[data-slot="image-frame"][data-frame-number]'
+  )
   let frameNumber = 1
   for (const frame of frames) {
     if (frame.getBoundingClientRect().top <= markerY) {

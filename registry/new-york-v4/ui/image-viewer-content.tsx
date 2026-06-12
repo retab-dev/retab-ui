@@ -6,9 +6,13 @@ import { type FrameSource } from "@/lib/image-frame-source"
 import {
   imageFrameSourceManager,
   type FrameSourceLease,
+  type ImageSourceContent,
 } from "@/lib/image-source-cache"
 import { cn } from "@/lib/utils"
-import { type ViewerResource } from "@/lib/viewer-resource"
+import {
+  type ViewerContentIdentity,
+  type ViewerResource,
+} from "@/lib/viewer-resource"
 import { ImageViewerToolbar } from "@/components/ui/image-viewer-chrome"
 import { ImageFrame } from "@/components/ui/image-viewer-frame"
 import {
@@ -35,12 +39,12 @@ export function ImageViewerContent({
   header,
   aside,
   forwardedRef,
-}: ImageViewerProps & {
+}: Omit<ImageViewerProps, "source"> & {
   forwardedRef?: React.ForwardedRef<ImageViewerHandle>
   resource: ViewerResource
 }) {
-  const frameSource = React.use(getImageSource(resource))
-  const sourceLeaseRef = useFrameSourceLease(resource, frameSource)
+  const frameSource = React.use(getImageSource(resource.content))
+  const sourceLeaseRef = useFrameSourceLease(resource.content, frameSource)
   const { frameListRef, frameListWidth } = useFrameListWidth()
   const {
     isScaleControlled,
@@ -73,7 +77,7 @@ export function ImageViewerContent({
         <ImageViewerToolbar
           countLabel={countLabel}
           scale={scale}
-          downloadAction={resource.getOriginalDownload()}
+          downloadAction={resource.originalDownload}
           isScaleControlled={isScaleControlled}
           onZoomOut={() => setViewerScale(clamp(scale / 1.2, 0.25, 5))}
           onZoomIn={() => setViewerScale(clamp(scale * 1.2, 0.25, 5))}
@@ -128,33 +132,35 @@ export function ImageViewerContent({
   )
 }
 
-export function getImageSource(resource: ViewerResource): Promise<FrameSource> {
-  return imageFrameSourceManager.load(resource, createTiffWorker)
+export function getImageSource(
+  content: ImageSourceContent
+): Promise<FrameSource> {
+  return imageFrameSourceManager.load(content, createTiffWorker)
 }
 
-export function clearImageSourceCacheForTests() {
+export function resetImageSourceCacheForTests() {
   imageFrameSourceManager.clear()
 }
 
 function useFrameSourceLease(
-  resource: ViewerResource,
+  content: ViewerContentIdentity,
   source: FrameSource
 ): React.RefCallback<HTMLDivElement> {
   return React.useCallback(
     (element: HTMLDivElement | null) => {
       if (!element) return
-      const lease = retainImageSource(resource, source)
+      const lease = retainImageSource(content, source)
       return () => lease?.release()
     },
-    [resource, source]
+    [content, source]
   )
 }
 
 function retainImageSource(
-  resource: ViewerResource,
+  content: ViewerContentIdentity,
   source: FrameSource
 ): FrameSourceLease | null {
-  return imageFrameSourceManager.retain(resource, source)
+  return imageFrameSourceManager.retain(content, source)
 }
 
 function createTiffWorker() {

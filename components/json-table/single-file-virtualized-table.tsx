@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/fixed-grid-layout"
 import { useFixedRowVirtualization } from "@/components/ui/fixed-grid-virtualization"
 import { FixedGridViewport } from "@/components/ui/fixed-grid-viewport"
-import type { VisibleColumn } from "@/components/json-table/data-cell-types"
+import type { VisibleColumn } from "@/components/json-table/json-table-cell-types"
 import { JsonTableHeaderCell } from "@/components/json-table/header-cell"
 import type { ProjectedRow } from "@/components/json-table/lib/document-projection"
 import { buildHeaderGridRows } from "@/components/json-table/lib/header-nodes"

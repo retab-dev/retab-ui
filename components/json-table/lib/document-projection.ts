@@ -23,6 +23,12 @@ function joinTemplateFieldPath(templateFieldPathParts: string[]) {
   return templateFieldPathParts.filter(Boolean).join(".")
 }
 
+function getOwnObjectValue(node: unknown, property: string): unknown {
+  if (node === null || typeof node !== "object") return undefined
+  if (!Object.prototype.hasOwnProperty.call(node, property)) return undefined
+  return (node as Record<string, unknown>)[property]
+}
+
 export function projectDocumentRows({
   document,
   visiblePaths,
@@ -126,9 +132,7 @@ export function projectDocumentRows({
       const childTemplates = templateParts.filter(
         (template) => template[depth] === property
       )
-      const childNode = (node as Record<string, unknown> | undefined)?.[
-        property
-      ]
+      const childNode = getOwnObjectValue(node, property)
       const [childRows, childCols] = compile(
         childNode,
         childTemplates,

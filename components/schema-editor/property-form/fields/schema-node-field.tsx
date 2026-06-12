@@ -5,6 +5,7 @@ import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-sc
 import { getEffectiveNode } from "@/components/schema-editor/lib/json-schema-utils"
 import { getArrayItemsForDraft } from "@/components/schema-editor/property-form/model/effective-node-edits"
 import type {
+  PropertyCapabilities,
   PropertyFormMode,
   PropertyFormSchemaContext,
 } from "@/components/schema-editor/property-form/types"
@@ -18,6 +19,7 @@ export function SchemaNodeField({
   schemaNode,
   schemaContext,
   mode,
+  capabilities,
   disabled,
   showTypeSelector = true,
   onChange,
@@ -25,6 +27,13 @@ export function SchemaNodeField({
   schemaNode: ExtendedJSONSchema7
   schemaContext: PropertyFormSchemaContext
   mode: PropertyFormMode
+  capabilities: Pick<
+    PropertyCapabilities,
+    | "canEditType"
+    | "canEditNestedObject"
+    | "canEditArrayItems"
+    | "canEditEnumValues"
+  >
   disabled: boolean
   showTypeSelector?: boolean
   onChange: (schemaNode: ExtendedJSONSchema7) => void
@@ -41,53 +50,67 @@ export function SchemaNodeField({
           schemaNode={schemaNode}
           schemaContext={schemaContext}
           mode={mode}
-          disabled={disabled}
+          disabled={disabled || !capabilities.canEditType}
           onChange={onChange}
         />
       )}
-      {Array.isArray(effectiveSchemaNode.enum) && (
-        <EnumValuesField
-          values={effectiveSchemaNode.enum}
-          disabled={disabled}
-          onChange={(values) => {
-            updateEffectiveSchemaNode({ ...effectiveSchemaNode, enum: values })
-          }}
-        />
-      )}
-      {effectiveSchemaNode.type === "object" && !effectiveSchemaNode.$ref && (
-        <ObjectPropertiesField
-          schemaNode={effectiveSchemaNode}
-          schemaContext={schemaContext}
-          disabled={disabled}
-          onChange={updateEffectiveSchemaNode}
-          renderPropertyEditor={({
-            propertySchema,
-            propertySchemaContext,
-            onPropertySchemaChange,
-          }) => (
-            <SchemaNodeField
-              schemaNode={propertySchema}
-              schemaContext={propertySchemaContext}
-              mode={mode}
-              disabled={disabled}
-              onChange={onPropertySchemaChange}
-            />
-          )}
-        />
-      )}
-      {effectiveSchemaNode.type === "array" && (
-        <ArrayItemsField>
-          <SchemaNodeField
-            schemaNode={getArrayItemsForDraft(schemaNode)}
-            schemaContext={schemaContext}
-            mode={mode}
-            disabled={disabled}
-            onChange={(items) => {
-              updateEffectiveSchemaNode({ ...effectiveSchemaNode, items })
+      {capabilities.canEditEnumValues &&
+        Array.isArray(effectiveSchemaNode.enum) && (
+          <EnumValuesField
+            values={effectiveSchemaNode.enum}
+            resetKey={
+              schemaContext.resetKey ??
+              schemaContext.fieldPath ??
+              schemaContext.originalName
+            }
+            disabled={disabled || !capabilities.canEditEnumValues}
+            onChange={(values) => {
+              updateEffectiveSchemaNode({
+                ...effectiveSchemaNode,
+                enum: values,
+              })
             }}
           />
-        </ArrayItemsField>
-      )}
+        )}
+      {capabilities.canEditNestedObject &&
+        effectiveSchemaNode.type === "object" &&
+        !effectiveSchemaNode.$ref && (
+          <ObjectPropertiesField
+            schemaNode={effectiveSchemaNode}
+            schemaContext={schemaContext}
+            disabled={disabled || !capabilities.canEditNestedObject}
+            onChange={updateEffectiveSchemaNode}
+            renderPropertyEditor={({
+              propertySchema,
+              propertySchemaContext,
+              onPropertySchemaChange,
+            }) => (
+              <SchemaNodeField
+                schemaNode={propertySchema}
+                schemaContext={propertySchemaContext}
+                mode={mode}
+                capabilities={capabilities}
+                disabled={disabled}
+                onChange={onPropertySchemaChange}
+              />
+            )}
+          />
+        )}
+      {capabilities.canEditArrayItems &&
+        effectiveSchemaNode.type === "array" && (
+          <ArrayItemsField>
+            <SchemaNodeField
+              schemaNode={getArrayItemsForDraft(schemaNode)}
+              schemaContext={schemaContext}
+              mode={mode}
+              capabilities={capabilities}
+              disabled={disabled}
+              onChange={(items) => {
+                updateEffectiveSchemaNode({ ...effectiveSchemaNode, items })
+              }}
+            />
+          </ArrayItemsField>
+        )}
     </div>
   )
 }

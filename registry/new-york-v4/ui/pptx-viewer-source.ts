@@ -1,4 +1,7 @@
-import { type ViewerResource } from "@/lib/viewer-resource"
+import type {
+  ViewerContentBytes,
+  ViewerContentIdentity,
+} from "@/lib/viewer-resource"
 
 import {
   DisposableLruCache,
@@ -9,6 +12,7 @@ import {
   getPptxBitmapCacheKey,
   type PptxBitmapCacheInput,
   type PptxSize,
+  type PptxSourceLoadTiming,
 } from "./pptx-viewer-core"
 import {
   createPptxRenderer,
@@ -17,6 +21,7 @@ import {
 } from "./pptx-viewer-renderer"
 
 const PPTX_SOURCE_CACHE_MAX = 4
+const PPTX_SOURCE_TIMING_CACHE_MAX = 32
 const PPTX_BITMAP_CACHE_MAX = 8
 
 export type PptxSourceRelease = () => void
@@ -71,9 +76,27 @@ class RendererSource implements PptxSource {
         ),
       })
     }
+    if (!isValidSlideIndex(input.slideIndex, this.slideCount)) {
+      return Promise.resolve({
+        status: "failed",
+        error: new PptxRendererError(
+          "index_out_of_range",
+          `Slide ${input.slideIndex + 1} is outside the presentation.`
+        ),
+      })
+    }
+    if (!isValidRenderScale(input.renderScale)) {
+      return Promise.resolve({
+        status: "failed",
+        error: new PptxRendererError(
+          "bounds",
+          "Render scale must be a positive finite number."
+        ),
+      })
+    }
 
-    const cacheKey = getPptxBitmapCacheKey(input)
-    const cached = this.bitmaps.get(cacheKey)
+    const bitmapKey = getPptxBitmapCacheKey(input)
+    const cached = this.bitmaps.get(bitmapKey)
     if (cached) {
       if (!isRenderLive(input)) return Promise.resolve({ status: "cancelled" })
       drawBitmap(input.canvas, cached.bitmap)
@@ -85,6 +108,12 @@ class RendererSource implements PptxSource {
       .then(async (): Promise<PptxRenderResult> => {
         if (this.disposed) return { status: "cancelled" }
         if (!isRenderLive(input)) return { status: "cancelled" }
+
+        const queuedCached = this.bitmaps.get(bitmapKey)
+        if (queuedCached) {
+          drawBitmap(input.canvas, queuedCached.bitmap)
+          return { status: "rendered" }
+        }
 
         try {
           await this.renderer.renderSlide(input)
@@ -105,9 +134,10 @@ class RendererSource implements PptxSource {
             bitmap.close()
             return { status: "cancelled" }
           }
-          this.bitmaps.set(cacheKey, new PptxBitmapEntry(bitmap))
+          this.bitmaps.set(bitmapKey, new PptxBitmapEntry(bitmap))
         } catch {
           if (this.disposed) return { status: "cancelled" }
+          if (!isRenderLive(input)) return { status: "cancelled" }
           /* Snapshot unsupported: the slide still rendered, just without cache. */
         }
 
@@ -121,10 +151,10 @@ class RendererSource implements PptxSource {
   retain(): PptxSourceRelease {
     if (this.disposed) return () => {}
     this.retainCount += 1
-    let released = false
+    let hasReleased = false
     return () => {
-      if (released) return
-      released = true
+      if (hasReleased) return
+      hasReleased = true
       this.retainCount -= 1
       if (this.retainCount === 0 && this.disposeRequested) this.close()
     }
@@ -145,12 +175,17 @@ class RendererSource implements PptxSource {
 
 class SourceCacheEntry implements Disposable {
   source?: PptxSource
+  loadTiming?: PptxSourceLoadTiming
   disposed = false
+  private readonly loadTimingSubscribers = new Set<
+    (timing: PptxSourceLoadTiming) => void
+  >()
 
   constructor(readonly promise: Promise<PptxSource>) {
     promise.then(
       (source) => {
         this.source = source
+        if (this.disposed) source.dispose()
       },
       () => {
         /* rejected entries are removed by getPptxSource */
@@ -159,46 +194,167 @@ class SourceCacheEntry implements Disposable {
   }
 
   dispose() {
+    this.loadTimingSubscribers.clear()
     if (!this.source) return
     this.source?.dispose()
     this.disposed = true
+  }
+
+  disposeWhenResolved() {
+    this.disposed = true
+    this.loadTimingSubscribers.clear()
+    this.source?.dispose()
+  }
+
+  setLoadTiming(timing: PptxSourceLoadTiming) {
+    this.loadTiming = timing
+    for (const subscriber of this.loadTimingSubscribers) {
+      notifyLoadTimingSubscriber(subscriber, timing)
+    }
+  }
+
+  subscribeLoadTiming(callback: (timing: PptxSourceLoadTiming) => void) {
+    this.loadTimingSubscribers.add(callback)
+    if (this.loadTiming) {
+      const loadTiming = this.loadTiming
+      setTimeout(() => {
+        if (this.loadTimingSubscribers.has(callback)) {
+          notifyLoadTimingSubscriber(callback, loadTiming)
+        }
+      }, 0)
+    }
+    return () => {
+      this.loadTimingSubscribers.delete(callback)
+    }
+  }
+}
+
+function notifyLoadTimingSubscriber(
+  subscriber: (timing: PptxSourceLoadTiming) => void,
+  timing: PptxSourceLoadTiming
+) {
+  try {
+    subscriber(timing)
+  } catch {
+    /* Instrumentation callbacks must not affect viewer loading. */
   }
 }
 
 const sourceCache = new DisposableLruCache<string, SourceCacheEntry>(
   PPTX_SOURCE_CACHE_MAX
 )
+const sourceLoadTimingCache = new Map<string, PptxSourceLoadTiming>()
 
-export function getPptxSource(resource: ViewerResource): Promise<PptxSource> {
-  const loadKey = resource.keys.load
+export function getPptxSource(
+  content: ViewerContentBytes
+): Promise<PptxSource> {
+  const loadKey = content.key
   const cached = sourceCache.get(loadKey)
   if (cached) return cached.promise
 
+  sourceLoadTimingCache.delete(loadKey)
+
   const pendingEntry: { current?: SourceCacheEntry } = {}
-  const promise = createPptxRenderer(resource).then(
+  let pendingLoadTiming: PptxSourceLoadTiming | null = null
+  const handleLoadTiming = (timing: PptxSourceLoadTiming) => {
+    rememberSourceLoadTiming(loadKey, timing)
+    if (pendingEntry.current) {
+      pendingEntry.current.setLoadTiming(timing)
+    } else {
+      pendingLoadTiming = timing
+    }
+  }
+  const promise = createPptxRenderer(content, handleLoadTiming).then(
     (renderer) => new RendererSource(renderer),
     (error) => {
-      if (
-        pendingEntry.current &&
-        sourceCache.get(loadKey) === pendingEntry.current
-      ) {
-        sourceCache.delete(loadKey)
-      }
+      scheduleFailedSourceEviction(loadKey, pendingEntry.current)
       throw error
     }
   )
   const entry = new SourceCacheEntry(promise)
   pendingEntry.current = entry
+  if (pendingLoadTiming) entry.setLoadTiming(pendingLoadTiming)
   sourceCache.set(loadKey, entry)
   return entry.promise
 }
 
+export function subscribePptxSourceLoadTiming(
+  content: ViewerContentIdentity,
+  callback: (timing: PptxSourceLoadTiming) => void
+) {
+  const loadKey = content.key
+  const entry = sourceCache.get(loadKey)
+  if (!entry) return subscribeCachedSourceLoadTiming(loadKey, callback)
+  return entry.subscribeLoadTiming(callback)
+}
+
+export function evictPptxSource(content: ViewerContentIdentity) {
+  sourceLoadTimingCache.delete(content.key)
+  sourceCache.delete(content.key)
+}
+
+function subscribeCachedSourceLoadTiming(
+  loadKey: string,
+  callback: (timing: PptxSourceLoadTiming) => void
+) {
+  const loadTiming = sourceLoadTimingCache.get(loadKey)
+  if (!loadTiming) return () => {}
+  let isSubscribed = true
+  setTimeout(() => {
+    if (isSubscribed) notifyLoadTimingSubscriber(callback, loadTiming)
+  }, 0)
+  return () => {
+    isSubscribed = false
+  }
+}
+
+function rememberSourceLoadTiming(
+  loadKey: string,
+  timing: PptxSourceLoadTiming
+) {
+  sourceLoadTimingCache.delete(loadKey)
+  sourceLoadTimingCache.set(loadKey, timing)
+  while (sourceLoadTimingCache.size > PPTX_SOURCE_TIMING_CACHE_MAX) {
+    const oldestLoadKey = sourceLoadTimingCache.keys().next().value
+    if (!oldestLoadKey) return
+    sourceLoadTimingCache.delete(oldestLoadKey)
+  }
+}
+
+function scheduleFailedSourceEviction(
+  loadKey: string,
+  entry: SourceCacheEntry | undefined
+) {
+  if (!entry) return
+  setTimeout(() => {
+    if (sourceCache.get(loadKey) === entry) sourceCache.delete(loadKey)
+  }, 0)
+}
+
 export function disposePptxSourceCache() {
+  for (const entry of sourceCache.snapshotValues()) {
+    entry.disposeWhenResolved()
+  }
   sourceCache.clear()
+  sourceLoadTimingCache.clear()
 }
 
 function isRenderLive({ isLive }: Pick<PptxSourceRenderInput, "isLive">) {
-  return !isLive || isLive()
+  try {
+    return !isLive || isLive()
+  } catch {
+    return false
+  }
+}
+
+function isValidSlideIndex(slideIndex: number, slideCount: number) {
+  return (
+    Number.isInteger(slideIndex) && slideIndex >= 0 && slideIndex < slideCount
+  )
+}
+
+function isValidRenderScale(renderScale: number) {
+  return Number.isFinite(renderScale) && renderScale > 0
 }
 
 function drawBitmap(canvas: HTMLCanvasElement, bitmap: ImageBitmap) {

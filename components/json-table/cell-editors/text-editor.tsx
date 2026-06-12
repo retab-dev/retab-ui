@@ -1,44 +1,33 @@
 import { cn } from "@/lib/utils"
-import { CellDisplay } from "@/components/json-table/cell-display"
 import type { CellEditorProps } from "@/components/json-table/cell-editors/editor-types"
 import { fieldFocusId } from "@/components/json-table/cell-editors/editor-types"
-import { DoubleClickTextarea } from "@/components/json-table/cell-editors/primitive-editor"
+import { DataCell } from "@/components/ui/data-cell"
 
 export function TextEditor({
   identity,
   field,
   textDraft,
   focus,
-  overlays,
   commit,
 }: CellEditorProps) {
   const focusId = fieldFocusId(identity)
 
-  if (!overlays.isTextEditing) {
-    return (
-      <CellDisplay
-        className={cn("items-start py-2", field.isEditable && "cursor-text")}
-        onClick={() => {
-          if (field.isEditable) overlays.setIsTextEditing(true)
-        }}
-      >
-        {field.effectiveValue !== null && field.effectiveValue !== undefined
-          ? String(field.effectiveValue)
-          : ""}
-      </CellDisplay>
-    )
-  }
-
   return (
-    <DoubleClickTextarea
-      autoFocus
+    <DataCell
+      kind="text"
+      editable={field.isEditable}
       value={textDraft.activeTextValue ?? null}
-      onChange={(event) => textDraft.setDraftTextValue(event.target.value)}
+      formatValue={() =>
+        field.effectiveValue === null || field.effectiveValue === undefined
+          ? ""
+          : String(field.effectiveValue)
+      }
+      draftValue={textDraft.activeTextValue}
+      onDraftValueChange={textDraft.setDraftTextValue}
+      onValueCommit={commit.onCommit}
       onBlur={() => {
-        commit.onCommit(textDraft.draftTextValue || null)
         focus.setFocusedField(null)
         focus.setIsInputFocused(false)
-        overlays.setIsTextEditing(false)
       }}
       onFocus={() => {
         textDraft.setDraftTextValue(textDraft.committedTextValue)
@@ -47,14 +36,14 @@ export function TextEditor({
       }}
       disabled={!field.isEditable}
       className={cn(
-        "h-full w-full rounded-none px-2 py-2 text-xs leading-none shadow-none focus-visible:ring-0 focus-visible:ring-offset-0",
-        !field.effectiveValue && "text-muted-foreground",
+        "h-full w-full rounded-none border-0 px-2 text-xs",
+        "data-[mode=display]:items-start data-[mode=display]:py-2",
+        field.isEditable && "data-[mode=display]:cursor-text",
+        "data-[mode=edit]:h-full data-[mode=edit]:w-full data-[mode=edit]:rounded-none data-[mode=edit]:px-2 data-[mode=edit]:py-2 data-[mode=edit]:text-xs data-[mode=edit]:leading-none data-[mode=edit]:shadow-none data-[mode=edit]:focus-visible:ring-0 data-[mode=edit]:focus-visible:ring-offset-0",
+        !field.effectiveValue && "data-[mode=edit]:text-muted-foreground",
         focus.focusedField === focusId &&
-          "absolute top-[1px] left-[1px] z-10 h-64 min-w-[200px] bg-background shadow-md outline-1 outline-primary"
+          "data-[mode=edit]:absolute data-[mode=edit]:top-[1px] data-[mode=edit]:left-[1px] data-[mode=edit]:z-10 data-[mode=edit]:h-64 data-[mode=edit]:min-w-[200px] data-[mode=edit]:bg-background data-[mode=edit]:shadow-md data-[mode=edit]:outline-1 data-[mode=edit]:outline-primary"
       )}
-      style={{
-        resize: "none",
-      }}
     />
   )
 }

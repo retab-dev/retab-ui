@@ -75,11 +75,10 @@ export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
     const tableDialect = source?.kind === "table" ? source.dialect : undefined
     const tableFileName = source?.kind === "table" ? source.fileName : undefined
     const dialect = React.useMemo(() => {
-      const directLoad = resource?.getDirectLoad()
       return resolveCsvDialect({
         dialect: dialectProp ?? tableDialect,
         descriptor: {
-          src: directLoad?.kind === "url" ? directLoad.url : undefined,
+          src: resource?.content.directUrl ?? undefined,
           fileName: resource?.fileName ?? tableFileName,
           mimeType: resource?.mimeType,
         },
@@ -95,13 +94,20 @@ export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
     const { zoom, setZoom } = useCsvViewerZoom()
     const columns = resourceState.columns
     const sourceRows = resourceState.sourceRows
+    const canExportTable =
+      resourceState.status === "ready" || resourceState.status === "empty"
+    const sortResetKey =
+      resource?.keys.resource ??
+      (source?.kind === "table"
+        ? (source.identityKey ?? source.table)
+        : "empty")
     const resolvedExportFileName =
       resource?.fileName ?? tableFileName ?? defaultCsvDownloadName(dialect)
     const downloadActions = React.useMemo(() => {
       const actions: ViewerDownloadAction[] = []
       if (resource) {
         actions.push({
-          ...resource.getOriginalDownload(),
+          ...resource.originalDownload,
           label: "Download original",
         })
       }
@@ -111,10 +117,18 @@ export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
           sourceRows,
           dialect,
           fileName: resolvedExportFileName,
+          isDisabled: !canExportTable,
         })
       )
       return actions
-    }, [columns, dialect, resource, resolvedExportFileName, sourceRows])
+    }, [
+      canExportTable,
+      columns,
+      dialect,
+      resource,
+      resolvedExportFileName,
+      sourceRows,
+    ])
 
     React.useImperativeHandle(
       ref,
@@ -134,7 +148,7 @@ export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
             error={resourceState.error}
             format="csv"
             sourceKind={resource?.sourceKind}
-            download={resource?.getOriginalDownload()}
+            download={resource?.originalDownload}
             variant="inline"
             onRetry={() => setRetryVersion((version) => version + 1)}
           />
@@ -179,6 +193,7 @@ export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
           fillHeight={fillHeight}
           isolateStyles={isolateStyles}
           scale={zoom}
+          sortResetKey={sortResetKey}
           statusNode={statusNode}
         />
       </div>

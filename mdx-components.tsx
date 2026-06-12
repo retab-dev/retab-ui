@@ -24,6 +24,7 @@ import {
   CsvViewerDemo,
   CsvViewerStreamingDemo,
 } from "@/components/csv-viewer-demo"
+import { DataCellDemo } from "@/components/data-cell-demo"
 import { DocsMdxCodeBlock } from "@/components/docs-code-block"
 import { DocxViewerDemo } from "@/components/docx-viewer-demo"
 import { FileThumbnailDemo } from "@/components/file-thumbnail-demo"
@@ -363,6 +364,7 @@ export const mdxComponents = {
   PropertyFormDemo,
   CsvViewerDemo,
   CsvViewerStreamingDemo,
+  DataCellDemo,
   PdfViewerDemo,
   DocxViewerDemo,
   ImageViewerDemo,

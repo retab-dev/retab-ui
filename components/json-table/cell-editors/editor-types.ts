@@ -32,10 +32,6 @@ export interface CellOverlayState {
   showInput: boolean
   isSelectOpen: boolean
   setIsSelectOpen: (value: boolean) => void
-  isDatePopoverOpen: boolean
-  setIsDatePopoverOpen: (value: boolean) => void
-  isTextEditing: boolean
-  setIsTextEditing: (value: boolean) => void
   openEditorPath: string | null
   setOpenEditorPath: (key: string | null) => void
 }

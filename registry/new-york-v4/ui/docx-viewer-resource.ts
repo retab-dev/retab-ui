@@ -1,28 +1,35 @@
-import { type ViewerResource } from "@/lib/viewer-resource"
+import type {
+  ViewerContentBytes,
+  ViewerContentIdentity,
+} from "@/lib/viewer-resource"
 
 const bufferCache = new Map<string, Promise<ArrayBuffer>>()
 
 export function getDocxResource(
-  resource: ViewerResource,
+  content: ViewerContentBytes,
   options: { retainRejected?: boolean } = {}
 ): Promise<ArrayBuffer> {
-  const resourceKey = resource.keys.load
-  const cached = bufferCache.get(resourceKey)
+  const loadKey = content.key
+  const cached = bufferCache.get(loadKey)
   if (cached) return cached
 
-  const promise = resource.readArrayBuffer().catch((error) => {
-    if (!options.retainRejected && bufferCache.get(resourceKey) === promise)
-      bufferCache.delete(resourceKey)
+  const promise = readDocxBytes(content).catch((error) => {
+    if (!options.retainRejected && bufferCache.get(loadKey) === promise)
+      bufferCache.delete(loadKey)
     throw error
   })
-  bufferCache.set(resourceKey, promise)
+  bufferCache.set(loadKey, promise)
   return promise
 }
 
-export function clearDocxResource(resource: ViewerResource) {
-  bufferCache.delete(resource.keys.load)
+export function clearDocxResource(content: ViewerContentIdentity) {
+  bufferCache.delete(content.key)
 }
 
-export function __resetDocxResourceCacheForTests() {
+export function resetDocxResourceCacheForTests() {
   bufferCache.clear()
+}
+
+function readDocxBytes(content: ViewerContentBytes): Promise<ArrayBuffer> {
+  return content.readBytes()
 }

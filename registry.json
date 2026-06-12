@@ -230,6 +230,20 @@
       ]
     },
     {
+      "name": "data-cell",
+      "type": "registry:ui",
+      "title": "Data Cell",
+      "description": "A lightweight editable cell for scalar document data: text, numbers, booleans, dates, times, and date-times.",
+      "registryDependencies": ["utils"],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/data-cell.tsx",
+          "type": "registry:ui",
+          "target": "@ui/data-cell.tsx"
+        }
+      ]
+    },
+    {
       "name": "group",
       "type": "registry:ui",
       "title": "Group",
@@ -1090,19 +1104,24 @@
           "target": "@ui/file-viewer-chrome.tsx"
         },
         {
-          "path": "registry/new-york-v4/ui/file-viewer-async.ts",
+          "path": "registry/new-york-v4/ui/viewer-abortable-request.ts",
           "type": "registry:ui",
-          "target": "@ui/file-viewer-async.ts"
+          "target": "@ui/viewer-abortable-request.ts"
         },
         {
-          "path": "registry/new-york-v4/ui/file-viewer-resource-cache.ts",
+          "path": "registry/new-york-v4/ui/viewer-lru-cache.ts",
           "type": "registry:ui",
-          "target": "@ui/file-viewer-resource-cache.ts"
+          "target": "@ui/viewer-lru-cache.ts"
         },
         {
           "path": "registry/new-york-v4/ui/file-viewer-text-resource.ts",
           "type": "registry:ui",
           "target": "@ui/file-viewer-text-resource.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-viewer-text-errors.ts",
+          "type": "registry:ui",
+          "target": "@ui/file-viewer-text-errors.ts"
         },
         {
           "path": "registry/new-york-v4/ui/file-viewer-text-loader.ts",
@@ -1128,6 +1147,21 @@
           "path": "registry/new-york-v4/ui/file-viewer-csv-viewer.tsx",
           "type": "registry:ui",
           "target": "@ui/file-viewer-csv-viewer.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/lib/viewer-download.ts",
+          "type": "registry:lib",
+          "target": "@lib/viewer-download.ts"
+        },
+        {
+          "path": "registry/new-york-v4/lib/viewer-errors.ts",
+          "type": "registry:lib",
+          "target": "@lib/viewer-errors.ts"
+        },
+        {
+          "path": "registry/new-york-v4/lib/viewer-resource.ts",
+          "type": "registry:lib",
+          "target": "@lib/viewer-resource.ts"
         },
         {
           "path": "registry/new-york-v4/lib/viewer-source.ts",

@@ -31,29 +31,53 @@ export function ScrollArea({
     ref: viewportPropsRef,
     ...resolvedViewportProps
   } = viewportProps ?? {}
+  const rootClassName = cn(
+    "size-full min-h-0",
+    scrollbarOverflowOnly && "scrollbar-overflow-only",
+    className
+  )
+  const resolvedViewportClassName = cn(
+    "transition-shadows h-full rounded-[inherit] outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background data-has-overflow-x:overscroll-x-contain data-has-overflow-y:overscroll-y-contain",
+    scrollFade &&
+      "mask-t-from-[calc(100%-min(var(--fade-size),var(--scroll-area-overflow-y-start)))] mask-r-from-[calc(100%-min(var(--fade-size),var(--scroll-area-overflow-x-end)))] mask-b-from-[calc(100%-min(var(--fade-size),var(--scroll-area-overflow-y-end)))] mask-l-from-[calc(100%-min(var(--fade-size),var(--scroll-area-overflow-x-start)))] [--fade-size:1.5rem]",
+    scrollbarGutter && "data-has-overflow-x:pb-2.5 data-has-overflow-y:pe-2.5",
+    viewportPropsClassName,
+    viewportClassName
+  )
+
+  if (!canUsePrimitiveScrollArea()) {
+    const { style: rootStyle, ...rootProps } = props
+    const { style: viewportStyle, ...viewportHtmlProps } = resolvedViewportProps
+
+    return (
+      <div
+        className={rootClassName}
+        style={typeof rootStyle === "function" ? undefined : rootStyle}
+        {...rootProps}
+      >
+        <div
+          key={viewportKey}
+          {...viewportHtmlProps}
+          ref={composeRefs(viewportPropsRef, viewportRef)}
+          className={cn("overflow-auto", resolvedViewportClassName)}
+          data-slot="scroll-area-viewport"
+          style={
+            typeof viewportStyle === "function" ? undefined : viewportStyle
+          }
+        >
+          {children}
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <ScrollAreaPrimitive.Root
-      className={cn(
-        "size-full min-h-0",
-        scrollbarOverflowOnly && "scrollbar-overflow-only",
-        className
-      )}
-      {...props}
-    >
+    <ScrollAreaPrimitive.Root className={rootClassName} {...props}>
       <ScrollAreaPrimitive.Viewport
         key={viewportKey}
         {...resolvedViewportProps}
         ref={composeRefs(viewportPropsRef, viewportRef)}
-        className={cn(
-          "transition-shadows h-full rounded-[inherit] outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background data-has-overflow-x:overscroll-x-contain data-has-overflow-y:overscroll-y-contain",
-          scrollFade &&
-            "mask-t-from-[calc(100%-min(var(--fade-size),var(--scroll-area-overflow-y-start)))] mask-r-from-[calc(100%-min(var(--fade-size),var(--scroll-area-overflow-x-end)))] mask-b-from-[calc(100%-min(var(--fade-size),var(--scroll-area-overflow-y-end)))] mask-l-from-[calc(100%-min(var(--fade-size),var(--scroll-area-overflow-x-start)))] [--fade-size:1.5rem]",
-          scrollbarGutter &&
-            "data-has-overflow-x:pb-2.5 data-has-overflow-y:pe-2.5",
-          viewportPropsClassName,
-          viewportClassName
-        )}
+        className={resolvedViewportClassName}
         data-slot="scroll-area-viewport"
       >
         {children}
@@ -69,6 +93,32 @@ export function ScrollArea({
       ) : null}
     </ScrollAreaPrimitive.Root>
   )
+}
+
+let checkedResizeObserver: typeof ResizeObserver | undefined
+let isPrimitiveScrollAreaUsable = true
+
+function canUsePrimitiveScrollArea() {
+  const ResizeObserverCtor = globalThis.ResizeObserver
+  if (typeof ResizeObserverCtor === "undefined") return true
+  if (checkedResizeObserver === ResizeObserverCtor) {
+    return isPrimitiveScrollAreaUsable
+  }
+  checkedResizeObserver = ResizeObserverCtor
+  try {
+    const observer = new ResizeObserverCtor(() => {})
+    try {
+      if (typeof document !== "undefined") {
+        observer.observe(document.createElement("div"))
+      }
+      isPrimitiveScrollAreaUsable = true
+    } finally {
+      observer.disconnect()
+    }
+  } catch {
+    isPrimitiveScrollAreaUsable = false
+  }
+  return isPrimitiveScrollAreaUsable
 }
 
 function composeRefs<T>(

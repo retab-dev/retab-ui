@@ -125,6 +125,8 @@ const docxCellSource = source({
   column: 3,
 })
 
+const oversizedColumn = "A".repeat(1000)
+
 describe("document source model", () => {
   it("flattens nested source trees into dotted and indexed field paths", () => {
     expect(
@@ -200,6 +202,83 @@ describe("document source model", () => {
       })
     ).toEqual({
       valid: pdfSource,
+    })
+  })
+
+  it("skips source leaves with invalid known anchor payloads", () => {
+    expect(
+      extractionSourcesToSourceMap({
+        valid_pdf: { value: "ok", source: pdfSource },
+        pdf_missing_page: {
+          value: "bad",
+          source: {
+            content: "bad",
+            anchor: {
+              kind: "pdf_bbox",
+              left: 0.1,
+              top: 0.1,
+              width: 0.2,
+              height: 0.2,
+            },
+          },
+        },
+        image_bad_frame: {
+          value: "bad",
+          source: {
+            content: "bad",
+            anchor: {
+              kind: "image_bbox",
+              page: 0,
+              left: 0.1,
+              top: 0.1,
+              width: 0.2,
+              height: 0.2,
+            },
+          },
+        },
+        csv_bad_column: {
+          value: "bad",
+          source: {
+            content: "bad",
+            anchor: { kind: "csv_cell", row: 1, column: "A1" },
+          },
+        },
+        csv_oversized_column: {
+          value: "bad",
+          source: {
+            content: "bad",
+            anchor: { kind: "csv_cell", row: 1, column: oversizedColumn },
+          },
+        },
+        xlsx_bad_sheet: {
+          value: "bad",
+          source: {
+            content: "bad",
+            anchor: {
+              kind: "spreadsheet_cell",
+              sheet_index: -1,
+              row: 1,
+              column: "A",
+            },
+          },
+        },
+        docx_bad_span: {
+          value: "bad",
+          source: {
+            content: "bad",
+            anchor: { kind: "docx_text_span", paragraph: -1 },
+          },
+        },
+        text_bad_range: {
+          value: "bad",
+          source: {
+            content: "bad",
+            anchor: { kind: "text_span", line_start: 2, line_end: 1 },
+          },
+        },
+      })
+    ).toEqual({
+      valid_pdf: pdfSource,
     })
   })
 
@@ -292,6 +371,16 @@ describe("source adapters", () => {
     ).toBeUndefined()
     expect(
       imageAnchorToFrame({
+        kind: "image_bbox",
+        page: 0,
+        left: 0.1,
+        top: 0.1,
+        width: 0.2,
+        height: 0.2,
+      })
+    ).toBeUndefined()
+    expect(
+      pdfAnchorToLocation({
         kind: "image_bbox",
         page: 0,
         left: 0.1,
@@ -418,8 +507,10 @@ describe("source adapters", () => {
     expect(columnLetterToIndex("")).toBeNull()
     expect(columnLetterToIndex("A1")).toBeNull()
     expect(columnLetterToIndex("a-z")).toBeNull()
+    expect(columnLetterToIndex(oversizedColumn)).toBeNull()
     expect(spreadsheetColumnToIndex("")).toBeNull()
     expect(spreadsheetColumnToIndex("1")).toBeNull()
+    expect(spreadsheetColumnToIndex(oversizedColumn)).toBeNull()
 
     expect(
       csvAnchorToCell({
@@ -433,6 +524,13 @@ describe("source adapters", () => {
         kind: "csv_cell",
         row: 1,
         column: "",
+      })
+    ).toBeNull()
+    expect(
+      csvAnchorToCell({
+        kind: "csv_cell",
+        row: 1,
+        column: oversizedColumn,
       })
     ).toBeNull()
     expect(
@@ -457,6 +555,14 @@ describe("source adapters", () => {
         sheet_index: 0,
         row: 1,
         column: "A1",
+      })
+    ).toBeUndefined()
+    expect(
+      spreadsheetAnchorToCell({
+        kind: "spreadsheet_cell",
+        sheet_index: 0,
+        row: 1,
+        column: oversizedColumn,
       })
     ).toBeUndefined()
   })
@@ -541,6 +647,18 @@ describe("source adapters", () => {
           table: 0,
           row: 1.5,
           column: 0,
+        })
+      )
+    ).toBeNull()
+    expect(
+      docxSourceToTarget(
+        source({
+          kind: "docx_table_cell",
+          table: 0,
+          row: 0,
+          column: 0,
+          char_start: 4,
+          char_end: 2,
         })
       )
     ).toBeNull()
@@ -645,6 +763,33 @@ function SourceLinkHarness({
   )
 }
 
+function SourceFieldListHarness({
+  sources,
+  onScroll,
+}: {
+  sources: SourceMap
+  onScroll: (source: Source, options: { behavior: ScrollBehavior }) => void
+}) {
+  const link = useSourceLink({
+    sources,
+    target: { scrollTo: onScroll },
+    initialField: null,
+  })
+
+  return (
+    <div>
+      <output data-testid="active">{link.activePath ?? "(none)"}</output>
+      <SourceFieldList
+        fields={[
+          { key: "total", label: "Total", value: "$120.00" },
+          { key: "date", label: "Date", value: "2026-06-12" },
+        ]}
+        link={link}
+      />
+    </div>
+  )
+}
+
 describe("useSourceLink", () => {
   const sources: SourceMap = {
     "": textSource,
@@ -690,8 +835,41 @@ describe("useSourceLink", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "select missing" }))
     expect(screen.getByTestId("pinned").textContent).toBe("missing")
-    expect(screen.getByTestId("active").textContent).toBe("total")
+    expect(screen.getByTestId("active").textContent).toBe("missing")
+    expect(screen.getByTestId("source").textContent).toBe("(none)")
     expect(scrollTo).toHaveBeenCalledTimes(2)
+  })
+
+  it("clears a stale hover when a different field is selected", () => {
+    const scrollTo = vi.fn()
+    render(<SourceLinkHarness sources={sources} onScroll={scrollTo} />)
+
+    fireEvent.mouseEnter(screen.getByRole("button", { name: "hover total" }))
+    expect(screen.getByTestId("active").textContent).toBe("total")
+    expect(scrollTo).toHaveBeenLastCalledWith(pdfSource, { behavior: "auto" })
+
+    fireEvent.click(screen.getByRole("button", { name: "select date" }))
+
+    expect(screen.getByTestId("hover").textContent).toBe("(none)")
+    expect(screen.getByTestId("pinned").textContent).toBe("date")
+    expect(screen.getByTestId("active").textContent).toBe("date")
+    expect(scrollTo).toHaveBeenLastCalledWith(csvSource, { behavior: "smooth" })
+  })
+
+  it("does not auto-scroll again on mouseleave immediately after selecting a field", () => {
+    const scrollTo = vi.fn()
+    render(<SourceLinkHarness sources={sources} onScroll={scrollTo} />)
+
+    fireEvent.mouseEnter(screen.getByRole("button", { name: "hover total" }))
+    fireEvent.click(screen.getByRole("button", { name: "select date" }))
+    fireEvent.mouseLeave(screen.getByRole("button", { name: "leave" }))
+
+    expect(screen.getByTestId("active").textContent).toBe("date")
+    expect(scrollTo).toHaveBeenCalledTimes(2)
+    expect(scrollTo).toHaveBeenNthCalledWith(1, pdfSource, { behavior: "auto" })
+    expect(scrollTo).toHaveBeenNthCalledWith(2, csvSource, {
+      behavior: "smooth",
+    })
   })
 
   it("scrolls again when a user leaves and re-enters the same field", () => {
@@ -743,6 +921,62 @@ describe("useSourceLink", () => {
     })
   })
 
+  it("reveals an already active field again when its source changes", () => {
+    const scrollTo = vi.fn()
+    const { rerender } = render(
+      <SourceLinkHarness sources={sources} onScroll={scrollTo} />
+    )
+
+    fireEvent.mouseEnter(screen.getByRole("button", { name: "hover total" }))
+    expect(scrollTo).toHaveBeenCalledWith(pdfSource, { behavior: "auto" })
+
+    const movedTotalSource = source(
+      {
+        kind: "pdf_bbox",
+        page: 5,
+        left: 0.2,
+        top: 0.2,
+        width: 0.2,
+        height: 0.2,
+      },
+      "moved total"
+    )
+    rerender(
+      <SourceLinkHarness
+        sources={{ ...sources, total: movedTotalSource }}
+        onScroll={scrollTo}
+      />
+    )
+
+    expect(screen.getByTestId("active").textContent).toBe("total")
+    expect(screen.getByTestId("source").textContent).toBe("moved total")
+    expect(scrollTo).toHaveBeenCalledWith(movedTotalSource, {
+      behavior: "auto",
+    })
+  })
+
+  it("reveals an active field again when its source disappears and reappears", () => {
+    const scrollTo = vi.fn()
+    const { rerender } = render(
+      <SourceLinkHarness sources={sources} onScroll={scrollTo} />
+    )
+
+    fireEvent.mouseEnter(screen.getByRole("button", { name: "hover total" }))
+    expect(scrollTo).toHaveBeenCalledWith(pdfSource, { behavior: "auto" })
+
+    rerender(
+      <SourceLinkHarness sources={{ date: csvSource }} onScroll={scrollTo} />
+    )
+    expect(screen.getByTestId("active").textContent).toBe("total")
+    expect(screen.getByTestId("source").textContent).toBe("(none)")
+
+    rerender(<SourceLinkHarness sources={sources} onScroll={scrollTo} />)
+
+    expect(screen.getByTestId("source").textContent).toBe("quoted content")
+    expect(scrollTo).toHaveBeenCalledTimes(2)
+    expect(scrollTo).toHaveBeenLastCalledWith(pdfSource, { behavior: "auto" })
+  })
+
   it("reveals a hovered field once its source arrives asynchronously", () => {
     const scrollTo = vi.fn()
     const { rerender } = render(
@@ -785,6 +1019,32 @@ describe("useSourceLink", () => {
 
     expect(screen.getByTestId("source").textContent).toBe("quoted content")
     expect(scrollTo).toHaveBeenCalledWith(csvSource, { behavior: "smooth" })
+  })
+
+  it("reveals an initially pinned field once its source arrives asynchronously", () => {
+    const scrollTo = vi.fn()
+    const { rerender } = render(
+      <SourceLinkHarness
+        sources={{ date: csvSource }}
+        initialField="total"
+        onScroll={scrollTo}
+      />
+    )
+
+    expect(screen.getByTestId("active").textContent).toBe("total")
+    expect(screen.getByTestId("source").textContent).toBe("(none)")
+    expect(scrollTo).not.toHaveBeenCalled()
+
+    rerender(
+      <SourceLinkHarness
+        sources={{ total: pdfSource, date: csvSource }}
+        initialField="total"
+        onScroll={scrollTo}
+      />
+    )
+
+    expect(screen.getByTestId("source").textContent).toBe("quoted content")
+    expect(scrollTo).toHaveBeenCalledWith(pdfSource, { behavior: "auto" })
   })
 
   it("reveals a hovered field once the viewer target becomes available", () => {
@@ -834,6 +1094,33 @@ describe("useSourceLink", () => {
     )
 
     expect(scrollTo).toHaveBeenCalledWith(csvSource, { behavior: "smooth" })
+  })
+
+  it("reveals an initially pinned field once the viewer target becomes available", () => {
+    const scrollTo = vi.fn()
+    const { rerender } = render(
+      <SourceLinkHarness
+        sources={sources}
+        initialField="total"
+        hasTarget={false}
+        onScroll={scrollTo}
+      />
+    )
+
+    expect(screen.getByTestId("active").textContent).toBe("total")
+    expect(screen.getByTestId("source").textContent).toBe("quoted content")
+    expect(scrollTo).not.toHaveBeenCalled()
+
+    rerender(
+      <SourceLinkHarness
+        sources={sources}
+        initialField="total"
+        hasTarget
+        onScroll={scrollTo}
+      />
+    )
+
+    expect(scrollTo).toHaveBeenCalledWith(pdfSource, { behavior: "auto" })
   })
 
   it("does not reveal a stale hovered field after the pointer leaves before sources arrive", () => {
@@ -950,6 +1237,70 @@ describe("useSourceLink", () => {
     expect(screen.getByTestId("source").textContent).toBe("(none)")
   })
 
+  it("clears pending selected reveals", () => {
+    const scrollTo = vi.fn()
+    const { rerender } = render(
+      <SourceLinkHarness
+        sources={{ total: pdfSource }}
+        initialField={null}
+        onScroll={scrollTo}
+      />
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "select date" }))
+    expect(screen.getByTestId("active").textContent).toBe("date")
+    expect(scrollTo).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole("button", { name: "clear" }))
+    rerender(
+      <SourceLinkHarness
+        sources={{ total: pdfSource, date: csvSource }}
+        initialField={null}
+        onScroll={scrollTo}
+      />
+    )
+
+    expect(screen.getByTestId("active").textContent).toBe("(none)")
+    expect(scrollTo).not.toHaveBeenCalled()
+  })
+
+  it("does not reveal a stale pending selected field after another field is selected", () => {
+    const scrollTo = vi.fn()
+    const { rerender } = render(
+      <SourceLinkHarness
+        sources={{ total: pdfSource, date: csvSource }}
+        initialField={null}
+        onScroll={scrollTo}
+      />
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "select missing" }))
+    expect(screen.getByTestId("active").textContent).toBe("missing")
+    expect(scrollTo).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole("button", { name: "select date" }))
+    expect(screen.getByTestId("active").textContent).toBe("date")
+    expect(scrollTo).toHaveBeenCalledTimes(1)
+    expect(scrollTo).toHaveBeenLastCalledWith(csvSource, {
+      behavior: "smooth",
+    })
+
+    rerender(
+      <SourceLinkHarness
+        sources={{
+          total: pdfSource,
+          date: csvSource,
+          missing: imageSource,
+        }}
+        initialField={null}
+        onScroll={scrollTo}
+      />
+    )
+
+    expect(screen.getByTestId("active").textContent).toBe("date")
+    expect(scrollTo).toHaveBeenCalledTimes(1)
+  })
+
   it("keeps the latest sources and target callbacks after rerender", () => {
     const firstScroll = vi.fn()
     const secondScroll = vi.fn()
@@ -983,6 +1334,36 @@ describe("useSourceLink", () => {
 })
 
 describe("source UI components", () => {
+  it("SourceFieldList and useSourceLink do not double-scroll when a hovered field is clicked then left", () => {
+    const scrollTo = vi.fn()
+    render(
+      <SourceFieldListHarness
+        sources={{ total: pdfSource, date: csvSource }}
+        onScroll={scrollTo}
+      />
+    )
+
+    const total = screen.getByRole("button", { name: /total/i })
+    const date = screen.getByRole("button", { name: /date/i })
+
+    fireEvent.mouseEnter(total)
+    fireEvent.mouseEnter(date)
+    fireEvent.click(date)
+    fireEvent.mouseLeave(date)
+
+    expect(screen.getByTestId("active").textContent).toBe("date")
+    expect(scrollTo).toHaveBeenCalledTimes(3)
+    expect(scrollTo).toHaveBeenNthCalledWith(1, pdfSource, {
+      behavior: "auto",
+    })
+    expect(scrollTo).toHaveBeenNthCalledWith(2, csvSource, {
+      behavior: "auto",
+    })
+    expect(scrollTo).toHaveBeenNthCalledWith(3, csvSource, {
+      behavior: "smooth",
+    })
+  })
+
   it("SourceFieldList renders fields and forwards hover, focus, blur, and click events", () => {
     const link = {
       activePath: "total",

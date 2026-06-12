@@ -1,6 +1,6 @@
 import type { CellEditorProps } from "@/components/json-table/cell-editors/editor-types"
 import { fieldFocusId } from "@/components/json-table/cell-editors/editor-types"
-import { Checkbox } from "@/components/ui-retab/checkbox"
+import { DataCell } from "@/components/ui/data-cell"
 
 export function BooleanEditor({
   identity,
@@ -9,23 +9,23 @@ export function BooleanEditor({
   commit,
 }: CellEditorProps) {
   return (
-    <div className="flex h-full items-center justify-center py-1">
-      <Checkbox
-        checked={Boolean(field.effectiveValue)}
-        disabled={!field.isEditable}
-        onCheckedChange={(checked) => {
-          if (field.isEditable) commit.onCommit(checked)
-        }}
-        onFocus={() => {
-          focus.setFocusedField(fieldFocusId(identity))
-          focus.setIsInputFocused(true)
-        }}
-        onBlur={() => {
-          focus.setFocusedField(null)
-          focus.setIsInputFocused(false)
-        }}
-        className="rounded-sm disabled:opacity-100"
-      />
-    </div>
+    <DataCell
+      kind="boolean"
+      editable={field.isEditable}
+      value={Boolean(field.effectiveValue)}
+      disabled={!field.isEditable}
+      onValueCommit={(value) => {
+        if (field.isEditable) commit.onCommit(value)
+      }}
+      onFocus={() => {
+        focus.setFocusedField(fieldFocusId(identity))
+        focus.setIsInputFocused(true)
+      }}
+      onBlur={() => {
+        focus.setFocusedField(null)
+        focus.setIsInputFocused(false)
+      }}
+      className="h-full rounded-none border-0 py-1"
+    />
   )
 }

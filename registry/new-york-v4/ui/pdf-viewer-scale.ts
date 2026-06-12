@@ -62,17 +62,30 @@ export function usePdfScale({
   onScaleChange,
   containerWidth,
   pageWidth,
+  resetKey,
 }: {
   controlledScale?: number
   defaultScale?: number
   onScaleChange?: (scale: number | null) => void
   containerWidth: number | null
   pageWidth: number
+  resetKey?: unknown
 }) {
-  const [uncontrolledRequestedScale, setUncontrolledRequestedScale] =
-    React.useState<number | null>(() =>
-      defaultScale == null ? null : clampPdfScale(defaultScale)
-    )
+  const initialRequestedScale =
+    defaultScale == null ? null : clampPdfScale(defaultScale)
+  const [uncontrolledScaleState, setUncontrolledScaleState] = React.useState<{
+    resetKey: unknown
+    requestedScale: number | null
+  }>(() => ({
+    resetKey,
+    requestedScale: initialRequestedScale,
+  }))
+  const uncontrolledRequestedScale = Object.is(
+    uncontrolledScaleState.resetKey,
+    resetKey
+  )
+    ? uncontrolledScaleState.requestedScale
+    : initialRequestedScale
   const isControlledScale = controlledScale !== undefined
   const fitWidthScale = getPdfFitWidthScale(containerWidth, pageWidth)
   const resolvedScale = isControlledScale
@@ -87,9 +100,14 @@ export function usePdfScale({
         onScaleChange?.(normalizedScale)
         return
       }
-      setUncontrolledRequestedScale(normalizedScale)
+      setUncontrolledScaleState((previousState) =>
+        Object.is(previousState.resetKey, resetKey) &&
+        previousState.requestedScale === normalizedScale
+          ? previousState
+          : { resetKey, requestedScale: normalizedScale }
+      )
     },
-    [isControlledScale, onScaleChange]
+    [isControlledScale, onScaleChange, resetKey]
   )
 
   const zoomIn = React.useCallback(

@@ -2,11 +2,11 @@
 
 import * as React from "react"
 
-import type { ViewerDownloadAction } from "@/lib/viewer-download"
+import type { ViewerResource } from "@/lib/viewer-resource"
 
-import { isAbortError } from "./file-viewer-async"
+import { isAbortError } from "./viewer-abortable-request"
 import {
-  DocShell,
+  ResourceDocShell,
   useZoom,
   ViewerFallback,
   ZoomActions,
@@ -19,56 +19,29 @@ type HtmlLoadState =
   | { status: "error"; key: unknown; error: unknown }
 
 export function HtmlDocViewer({
-  html,
-  blob,
-  src,
-  fileName,
-  downloadAction,
+  resource,
   className,
   bare,
   descriptorSignal,
 }: {
-  html?: string
-  blob?: Blob
-  src?: string
-  fileName: string
-  downloadAction?: ViewerDownloadAction
+  resource: ViewerResource
   className?: string
   bare?: boolean
-  descriptorSignal?: AbortSignal
+  descriptorSignal: AbortSignal
 }) {
-  if (html != null) {
+  if (resource.content.payload.kind === "text") {
     return (
       <HtmlDocViewerContent
-        html={html}
-        src={src}
-        fileName={fileName}
-        downloadAction={downloadAction}
+        resource={resource}
+        html={resource.content.payload.text}
         className={className}
         bare={bare}
       />
     )
-  }
-  if (blob) {
-    return (
-      <HtmlDocViewerBlob
-        blob={blob}
-        src={src}
-        fileName={fileName}
-        downloadAction={downloadAction}
-        className={className}
-        bare={bare}
-      />
-    )
-  }
-  if (!src || !descriptorSignal) {
-    throw new Error("HtmlDocViewer requires src and descriptorSignal")
   }
   return (
     <HtmlDocViewerResource
-      src={src}
-      fileName={fileName}
-      downloadAction={downloadAction}
+      resource={resource}
       className={className}
       bare={bare}
       descriptorSignal={descriptorSignal}
@@ -76,107 +49,29 @@ export function HtmlDocViewer({
   )
 }
 
-function HtmlDocViewerBlob({
-  blob,
-  src,
-  fileName,
-  downloadAction,
-  className,
-  bare,
-}: {
-  blob: Blob
-  src?: string
-  fileName: string
-  downloadAction?: ViewerDownloadAction
-  className?: string
-  bare?: boolean
-}) {
-  const [state, setState] = React.useState<HtmlLoadState>({
-    status: "loading",
-    key: blob,
-  })
-
-  React.useEffect(() => {
-    let active = true
-    setState({ status: "loading", key: blob })
-
-    blob.text().then(
-      (html) => {
-        if (active) setState({ status: "loaded", key: blob, html })
-      },
-      (error: unknown) => {
-        if (active) setState({ status: "error", key: blob, error })
-      }
-    )
-
-    return () => {
-      active = false
-    }
-  }, [blob])
-
-  if (state.key !== blob) {
-    return (
-      <ViewerFallback
-        category="html"
-        fileName={fileName}
-        src={src}
-        className={className}
-        bare={bare}
-      />
-    )
-  }
-  if (state.status === "error") {
-    throw state.error
-  }
-  if (state.status === "loading") {
-    return (
-      <ViewerFallback
-        category="html"
-        fileName={fileName}
-        src={src}
-        className={className}
-        bare={bare}
-      />
-    )
-  }
-
-  return (
-    <HtmlDocViewerContent
-      html={state.html}
-      src={src}
-      fileName={fileName}
-      downloadAction={downloadAction}
-      className={className}
-      bare={bare}
-    />
-  )
-}
-
 function HtmlDocViewerResource({
-  src,
-  fileName,
-  downloadAction,
+  resource,
   className,
   bare,
   descriptorSignal,
 }: {
-  src: string
-  fileName: string
-  downloadAction?: ViewerDownloadAction
+  resource: ViewerResource
   className?: string
   bare?: boolean
   descriptorSignal: AbortSignal
 }) {
+  const content = resource.content
+  const contentKey = content.key
   const [state, setState] = React.useState<HtmlLoadState>({
     status: "loading",
-    key: src,
+    key: contentKey,
   })
 
   React.useEffect(() => {
     let active = true
     const controller = new AbortController()
     const abortLocal = () => controller.abort()
-    setState({ status: "loading", key: src })
+    setState({ status: "loading", key: contentKey })
 
     if (descriptorSignal.aborted) {
       abortLocal()
@@ -184,15 +79,19 @@ function HtmlDocViewerResource({
       descriptorSignal.addEventListener("abort", abortLocal, { once: true })
     }
 
-    loadTextResource({ src, signal: controller.signal }).then(
+    loadTextResource({
+      content,
+      fileName: resource.fileName,
+      signal: controller.signal,
+    }).then(
       (html) => {
         if (active && !controller.signal.aborted) {
-          setState({ status: "loaded", key: src, html })
+          setState({ status: "loaded", key: contentKey, html })
         }
       },
       (error: unknown) => {
         if (!active || isAbortError(error)) return
-        setState({ status: "error", key: src, error })
+        setState({ status: "error", key: contentKey, error })
       }
     )
 
@@ -201,17 +100,11 @@ function HtmlDocViewerResource({
       descriptorSignal.removeEventListener("abort", abortLocal)
       abortLocal()
     }
-  }, [descriptorSignal, src])
+  }, [content, contentKey, descriptorSignal, resource.fileName])
 
-  if (state.key !== src) {
+  if (state.key !== contentKey) {
     return (
-      <ViewerFallback
-        category="html"
-        fileName={fileName}
-        src={src}
-        className={className}
-        bare={bare}
-      />
+      <ViewerFallback resource={resource} className={className} bare={bare} />
     )
   }
   if (state.status === "error") {
@@ -219,23 +112,15 @@ function HtmlDocViewerResource({
   }
   if (state.status === "loading") {
     return (
-      <ViewerFallback
-        category="html"
-        fileName={fileName}
-        src={src}
-        className={className}
-        bare={bare}
-      />
+      <ViewerFallback resource={resource} className={className} bare={bare} />
     )
   }
 
   const { html } = state
   return (
     <HtmlDocViewerContent
+      resource={resource}
       html={html}
-      src={src}
-      fileName={fileName}
-      downloadAction={downloadAction}
       className={className}
       bare={bare}
     />
@@ -243,32 +128,27 @@ function HtmlDocViewerResource({
 }
 
 function HtmlDocViewerContent({
+  resource,
   html,
-  src,
-  fileName,
-  downloadAction,
   className,
   bare,
 }: {
+  resource: ViewerResource
   html: string
-  src?: string
-  fileName: string
-  downloadAction?: ViewerDownloadAction
   className?: string
   bare?: boolean
 }) {
+  const fileName = resource.fileName
   const { scale, zoom, reset } = useZoom()
   return (
-    <DocShell
-      fileName={fileName}
-      src={src}
-      downloadAction={downloadAction}
+    <ResourceDocShell
+      resource={resource}
       className={className}
       bare={bare}
       actions={<ZoomActions scale={scale} zoom={zoom} reset={reset} />}
     >
       <SandboxedDoc html={html} title={fileName} scale={scale} />
-    </DocShell>
+    </ResourceDocShell>
   )
 }
 
