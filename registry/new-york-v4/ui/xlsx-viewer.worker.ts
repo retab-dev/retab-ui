@@ -9,6 +9,7 @@ import {
   flattenSheetJsWorkbook,
 } from "@/lib/xlsx-sheetjs-flattener"
 import {
+  isSpreadsheetContainer,
   XlsxWorkerError,
   type XlsxWorkerRequest,
   type XlsxWorkerResponse,
@@ -24,6 +25,15 @@ ctx.onmessage = (event: MessageEvent<XlsxWorkerRequest>) => {
       throw new XlsxWorkerError(
         "parse_failed",
         "Unsupported spreadsheet request"
+      )
+    }
+
+    // SheetJS sniffs arbitrary bytes into a stub sheet rather than failing, so
+    // reject anything that is not a real spreadsheet container up front.
+    if (!isSpreadsheetContainer(event.data.buffer)) {
+      throw new XlsxWorkerError(
+        "parse_failed",
+        "File is not a recognized spreadsheet (.xlsx or .xls)."
       )
     }
 

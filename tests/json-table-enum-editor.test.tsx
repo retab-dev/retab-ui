@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import type { ReactNode } from "react"
+import type { ButtonHTMLAttributes, ReactNode } from "react"
 import { cleanup, fireEvent, render } from "@testing-library/react"
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
 
@@ -33,14 +33,21 @@ vi.mock("@/components/ui/select", () => ({
     selectContext.value = value
     return <div>{children}</div>
   },
-  SelectTrigger: ({ children }: { children: ReactNode }) => (
-    <button type="button">{children}</button>
+  SelectTrigger: ({
+    children,
+    ...props
+  }: {
+    children: ReactNode
+  } & ButtonHTMLAttributes<HTMLButtonElement>) => (
+    <button type="button" {...props}>
+      {children}
+    </button>
   ),
   SelectValue: ({ placeholder }: { placeholder?: string }) => (
     <span>{placeholder ?? "value"}</span>
   ),
   SelectContent: ({ children }: { children: ReactNode }) => (
-    <div>{children}</div>
+    <div data-slot="select-content">{children}</div>
   ),
   SelectItem: ({ children, value }: { children: ReactNode; value: string }) => (
     <button type="button" onClick={() => selectContext.onValueChange(value)}>
@@ -148,6 +155,32 @@ describe("json table enum editor", () => {
     expect(onCommit).toHaveBeenCalledWith(true)
   })
 
+  it("renders the selected option label in the trigger, not the internal option id", () => {
+    const view = renderEnumEditor({
+      field: {
+        ...baseField("enum"),
+        effectiveValue: "DEBIT",
+        fieldMetadata: {
+          fieldPath: "payment_type",
+          rawSchema: { type: "string", enum: ["CREDIT", "DEBIT"] },
+          schema: { type: "string", enum: ["CREDIT", "DEBIT"] },
+          effectiveSchema: { type: "string", enum: ["CREDIT", "DEBIT"] },
+          isNullable: false,
+          kind: "enum",
+          enumValues: ["CREDIT", "DEBIT"],
+        },
+      },
+    })
+
+    const trigger = view.container.querySelector<HTMLElement>(
+      '[data-slot="data-cell"]'
+    )
+    if (!trigger) throw new Error("Missing enum trigger")
+    expect(trigger.textContent).toContain("DEBIT")
+    expect(trigger.textContent).not.toContain("option:")
+    expect(selectContext.value).toBe("option:1")
+  })
+
   it("renders literal sentinel-like string enum values", () => {
     const view = renderEnumEditor({
       field: {
@@ -188,7 +221,7 @@ describe("json table enum editor", () => {
       commit: { onCommit },
     })
 
-    fireEvent.click(view.getByRole("button", { name: "__null__" }))
+    fireEvent.click(view.getAllByRole("button", { name: "__null__" }).at(-1)!)
     expect(onCommit).toHaveBeenCalledWith("__null__")
 
     fireEvent.click(view.getByRole("button", { name: /no selection/i }))
@@ -214,7 +247,9 @@ describe("json table enum editor", () => {
       commit: { onCommit: onNullableCommit },
     })
 
-    fireEvent.click(nullableView.getByRole("button", { name: /no selection/i }))
+    fireEvent.click(
+      nullableView.getAllByRole("button", { name: /no selection/i }).at(-1)!
+    )
     expect(onNullableCommit).toHaveBeenCalledWith(null)
     cleanup()
 

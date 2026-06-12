@@ -8,6 +8,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -299,11 +300,14 @@ afterEach(() => {
 
 describe("PptxViewer helpers", () => {
   it("parses slide size from presentation.xml and falls back to 4:3", () => {
+    // Declare xmlns:p (as real presentation.xml does) and use non-default dims so
+    // this exercises the parse path rather than coincidentally matching the 960x720
+    // parse-error fallback.
     expect(
       parsePptxSlideSize(
-        '<p:presentation><p:sldSz cx="9144000" cy="6858000"/></p:presentation>'
+        '<p:presentation xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:sldSz cx="12192000" cy="6858000"/></p:presentation>'
       )
-    ).toEqual({ width: 960, height: 720 })
+    ).toEqual({ width: 1280, height: 720 })
 
     expect(parsePptxSlideSize("<p:presentation />")).toEqual({
       width: 960,
@@ -3362,5 +3366,196 @@ describe("PptxViewer", () => {
     await expect(first).resolves.toEqual({ status: "rendered" })
     await expect(second).resolves.toEqual({ status: "cancelled" })
     expect(pptxMock.renderSlide).toHaveBeenCalledTimes(1)
+  })
+
+  it("PROBE evicted-pending retained disposal", async () => {
+    const load = deferred<undefined>()
+    pptxMock.loadFile.mockImplementationOnce(() => load.promise)
+
+    const view = await renderPptx(
+      <PptxViewer source={pptxUrlSource("/probe-evicted-pending.pptx")} />
+    )
+    // eslint-disable-next-line no-console
+    console.log(`PROBE after-mount destroy=${pptxMock.destroy.mock.calls.length}`)
+    // Evict the still-pending entry from the size-4 source cache.
+    for (let i = 0; i < 4; i += 1) {
+      await getPptxSource(pptxUrlResource(`/probe-evictor-${i}.pptx`))
+    }
+    // eslint-disable-next-line no-console
+    console.log(`PROBE after-evict destroy=${pptxMock.destroy.mock.calls.length}`)
+
+    // eslint-disable-next-line no-console
+    console.log(
+      `PROBE after-evict created=${pptxMock.viewerOptions.length} loadFile=${pptxMock.loadFile.mock.calls.length}`
+    )
+
+    load.resolve(undefined)
+    await screen.findByText("Slide 1 of 1")
+    // eslint-disable-next-line no-console
+    console.log(
+      `PROBE after-resolve destroy=${pptxMock.destroy.mock.calls.length} created=${pptxMock.viewerOptions.length} loadFile=${pptxMock.loadFile.mock.calls.length} renderError=${Boolean(screen.queryByText("Couldn't render slide 1."))}`
+    )
+
+    const before = pptxMock.destroy.mock.calls.length
+    view.unmount()
+    await new Promise((resolve) => window.setTimeout(resolve, 20))
+    const after = pptxMock.destroy.mock.calls.length
+    // eslint-disable-next-line no-console
+    console.log(`PROBE evicted-pending destroy before=${before} after=${after}`)
+  })
+
+  it("PROBE control normally-cached retained disposal", async () => {
+    const view = await renderPptx(
+      <PptxViewer source={pptxUrlSource("/probe-cached.pptx")} />
+    )
+    await screen.findByText("Slide 1 of 1")
+    for (let i = 0; i < 4; i += 1) {
+      await getPptxSource(pptxUrlResource(`/probe-control-evictor-${i}.pptx`))
+    }
+    const before = pptxMock.destroy.mock.calls.length
+    view.unmount()
+    await new Promise((resolve) => window.setTimeout(resolve, 20))
+    const after = pptxMock.destroy.mock.calls.length
+    // eslint-disable-next-line no-console
+    console.log(`PROBE control destroy before=${before} after=${after}`)
+  })
+
+  it("shows the suspense fallback with the requested slide aspect ratio while loading", async () => {
+    const load = deferred<undefined>()
+    pptxMock.loadFile.mockReturnValueOnce(load.promise)
+
+    await renderPptx(
+      <PptxViewer
+        source={pptxUrlSource("/pending-fallback.pptx")}
+        fallbackSlideSize={{ width: 1600, height: 900 }}
+      />
+    )
+
+    const skeleton = document.querySelector<HTMLElement>(
+      '[data-slot="pptx-slide-skeleton"]'
+    )
+    expect(skeleton?.style.aspectRatio).toBe("1600 / 900")
+    expect(screen.queryByText("Slide 1 of 1")).toBeNull()
+
+    load.resolve(undefined)
+    expect(await screen.findByText("Slide 1 of 1")).toBeTruthy()
+    expect(
+      document.querySelector('[data-slot="pptx-slide-skeleton"]')
+    ).toBeNull()
+  })
+
+  it("keeps the bare layout while suspended on a pending load", async () => {
+    const load = deferred<undefined>()
+    pptxMock.loadFile.mockReturnValueOnce(load.promise)
+
+    const view = await renderPptx(
+      <PptxViewer source={pptxUrlSource("/pending-bare.pptx")} bare />
+    )
+
+    const root = document.querySelector('[data-slot="pptx-viewer"]')
+    expect(root?.classList.contains("h-full")).toBe(true)
+    expect(root?.classList.contains("rounded-xl")).toBe(false)
+
+    load.resolve(undefined)
+    await screen.findByText("Slide 1 of 1")
+    view.unmount()
+  })
+
+  it("combines zoom and rotation in the overlay geometry", async () => {
+    const renderSlideOverlay = vi.fn(() => null)
+
+    await renderPptx(
+      <PptxViewer
+        source={pptxUrlSource("/zoom-rotate-overlay.pptx")}
+        scale={2}
+        renderSlideOverlay={renderSlideOverlay}
+      />
+    )
+
+    await screen.findByText("200%")
+    // base 960x720 * 2 = 1920x1440, upright.
+    await waitFor(() => {
+      expect(renderSlideOverlay).toHaveBeenCalledWith(
+        expect.objectContaining({
+          height: 1440,
+          rotation: 0,
+          scale: 2,
+          width: 1920,
+        })
+      )
+    })
+
+    fireEvent.click(screen.getByLabelText("Rotate"))
+
+    // Rotated a quarter turn swaps the scaled axes.
+    await waitFor(() => {
+      expect(renderSlideOverlay).toHaveBeenCalledWith(
+        expect.objectContaining({
+          height: 1920,
+          rotation: 90,
+          scale: 2,
+          width: 1440,
+        })
+      )
+    })
+  })
+
+  it("sizes the slide frame to the zoomed slide in the full viewer", async () => {
+    await renderPptx(
+      <PptxViewer source={pptxUrlSource("/frame-size.pptx")} scale={2} />
+    )
+
+    await screen.findByText("200%")
+    const frame = document.querySelector<HTMLElement>(
+      '[data-slot="pptx-slide"]'
+    )
+    expect(frame?.style.width).toBe("1920px")
+    expect(frame?.style.height).toBe("1440px")
+  })
+
+  it("offers a download of the original presentation after a load failure", async () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined)
+    pptxMock.loadFile.mockRejectedValue(new Error("bad deck"))
+
+    await renderPptx(
+      <PptxViewer
+        source={{
+          kind: "url",
+          downloadUrl: "/download/original.pptx",
+          fileName: "original.pptx",
+          url: "/load-failure-download.pptx",
+        }}
+      />
+    )
+
+    const alert = await screen.findByRole("alert")
+    expect(alert.textContent).toContain("Couldn't load this presentation.")
+    const download = within(alert).getByRole("link", { name: /download/i })
+    expect(download.getAttribute("href")).toBe("/download/original.pptx")
+    expect(download.getAttribute("download")).toBe("original.pptx")
+    expect(consoleError).toHaveBeenCalled()
+  })
+
+  it("clears a per-slide render error after switching to a working source", async () => {
+    pptxMock.renderSlide.mockRejectedValueOnce(new Error("render failed"))
+
+    const view = await renderPptx(
+      <PptxViewer source={pptxUrlSource("/render-fail-then-fix.pptx")} />
+    )
+
+    expect(await screen.findByText("Couldn't render slide 1.")).toBeTruthy()
+
+    await act(async () => {
+      view.rerender(
+        <PptxViewer source={pptxUrlSource("/render-fixed.pptx")} />
+      )
+    })
+
+    await waitFor(() => {
+      expect(screen.queryByText("Couldn't render slide 1.")).toBeNull()
+    })
+    expect(screen.getByText("Slide 1 of 1")).toBeTruthy()
   })
 })

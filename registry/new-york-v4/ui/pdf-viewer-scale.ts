@@ -10,7 +10,10 @@ export function clamp(value: number, min: number, max: number) {
 }
 
 export function clampPdfScale(value: number) {
-  return clamp(Number.isFinite(value) ? value : 1, MIN_PDF_SCALE, MAX_PDF_SCALE)
+  // NaN has no ordering, so default it to 1; ±Infinity clamps to the bounds
+  // like any large/small finite value (e.g. 1e9 → MAX, -1e9 → MIN).
+  if (Number.isNaN(value)) return 1
+  return clamp(value, MIN_PDF_SCALE, MAX_PDF_SCALE)
 }
 
 export function getPdfFitWidthScale(

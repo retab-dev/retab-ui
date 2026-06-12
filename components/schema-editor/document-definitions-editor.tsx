@@ -147,7 +147,7 @@ export function DocumentDefinitionsEditor({
                   onClick={controller.addNewDefinition}
                   className="p-1!"
                 >
-                  Add Definition
+                  + Add
                 </Button>
               </div>
             )}

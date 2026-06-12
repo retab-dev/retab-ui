@@ -6,6 +6,7 @@ import { CellEditor } from "@/components/json-table/cell-editors/cell-editor"
 import {
   getCellWidthStyle,
   getSelectableCellWidthStyle,
+  interactiveCellOverlayClass,
 } from "@/components/json-table/cell-style"
 import type { JsonTableCellProps } from "@/components/json-table/json-table-cell-types"
 import { JsonTableDataCell } from "@/components/json-table/json-table-data-cell"
@@ -92,7 +93,7 @@ function ActiveEditableJsonTableCell({
   return (
     <div
       ref={cellRootRef}
-      className="h-full w-full border border-transparent focus-within:overflow-visible hover:border-foreground"
+      className="h-full w-full focus-within:overflow-visible"
     >
       <CellEditor
         identity={{ docId, fieldPath: materializedFieldPath }}
@@ -179,7 +180,11 @@ function EditableJsonTableCellContent(props: JsonTableCellProps) {
     <TableCell
       data-field-path={materializedFieldPath}
       data-json-table-editable-cell="true"
-      className="relative m-0 border-t-0 border-r border-b border-l-0 p-0 select-none hover:outline hover:outline-1 hover:-outline-offset-1 hover:outline-foreground"
+      data-active={isActive || undefined}
+      className={[
+        "relative m-0 border-t-0 border-r border-b border-l-0 p-0 select-none",
+        interactiveCellOverlayClass,
+      ].join(" ")}
       style={getSelectableCellWidthStyle(cellWidth)}
     >
       {isActive ? (

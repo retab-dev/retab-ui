@@ -25,6 +25,15 @@ describe("pdf-viewer-scale", () => {
     expect(clampPdfScale(Number.NaN)).toBe(1)
   })
 
+  it("clamps non-finite scales to the bounds, consistent with large finite ones", () => {
+    // A huge finite scale clamps to MAX; ±Infinity must do the same rather than
+    // snapping to 100%, so a runaway zoom request degrades predictably.
+    expect(clampPdfScale(1e9)).toBe(MAX_PDF_SCALE)
+    expect(clampPdfScale(Number.POSITIVE_INFINITY)).toBe(MAX_PDF_SCALE)
+    expect(clampPdfScale(-1e9)).toBe(MIN_PDF_SCALE)
+    expect(clampPdfScale(Number.NEGATIVE_INFINITY)).toBe(MIN_PDF_SCALE)
+  })
+
   it("clamps fit-width scale with the same policy as manual zoom", () => {
     expect(getPdfFitWidthScale(0, 100)).toBe(1)
     expect(getPdfFitWidthScale(PDF_PAGE_HORIZONTAL_PADDING - 1, 100)).toBe(

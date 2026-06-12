@@ -107,7 +107,10 @@ export interface ViewerResource {
 
 const URL_RESOURCE_REGISTRY_MAX = 128
 const TEXT_RESOURCE_REGISTRY_MAX = 64
-const TEXT_LINE_BREAK_PATTERN = /\r\n|\n|\r/g
+// LF, CR, CRLF, LINE SEPARATOR (U+2028), and PARAGRAPH SEPARATOR (U+2029) — the
+// ECMAScript LineTerminator set, matching what a browser breaks on in a
+// `white-space: pre` block. Kept in sync with text-viewer-resource's splitter.
+const TEXT_LINE_BREAK_PATTERN = /\r\n|[\n\r\u2028\u2029]/g
 
 const urlViewerResourceRegistry = new Map<string, ViewerResource>()
 const urlViewerResourceContentRegistry = new Map<
@@ -646,7 +649,9 @@ async function readBoundedResponseText(
     if (maxBytes != null && buffer.byteLength > maxBytes) {
       throw tooLarge("bytes")
     }
-    return readBoundedInlineText(new TextDecoder().decode(buffer), bounds)
+    const text = new TextDecoder().decode(buffer)
+    assertLineLimit(text, bounds.maxLines)
+    return text
   }
 
   const reader = body.getReader()
@@ -676,7 +681,8 @@ async function readBoundedResponseText(
   const finalText = decoder.decode()
   lineLimitTracker.push(finalText)
   text += finalText
-  return readBoundedInlineText(text, bounds)
+  assertLineLimit(text, bounds.maxLines)
+  return text
 }
 
 function validateFullContentResponse(response: Response) {
@@ -737,26 +743,38 @@ async function readBoundedBlobText(
   if (bounds.maxBytes != null && blob.size > bounds.maxBytes) {
     throw tooLarge("bytes")
   }
-  return readBoundedInlineText(await blob.text(), bounds)
+  const text = await blob.text()
+  assertLineLimit(text, bounds.maxLines)
+  return text
 }
 
 function readBoundedInlineText(
   text: string,
   { maxBytes, maxLines }: { maxBytes?: number; maxLines?: number }
 ) {
+  // For inline sources the string *is* the resource, so its UTF-8 byte length
+  // is the authoritative size to measure against maxBytes.
   if (
     maxBytes != null &&
     new TextEncoder().encode(text).byteLength > maxBytes
   ) {
     throw tooLarge("bytes")
   }
+  assertLineLimit(text, maxLines)
+  return text
+}
+
+// Used after a transferred-byte check has already enforced maxBytes (URL/blob).
+// Re-encoding the decoded text here would double-count: invalid UTF-8 decodes to
+// U+FFFD (3 bytes each), inflating the measured size past the real wire bytes
+// and falsely rejecting small resources as "too large".
+function assertLineLimit(text: string, maxLines: number | undefined) {
   if (
     maxLines != null &&
     text.split(TEXT_LINE_BREAK_PATTERN).length > maxLines
   ) {
     throw tooLarge("lines")
   }
-  return text
 }
 
 function tooLarge(reason: ResourceTooLargeReason) {
@@ -867,6 +885,11 @@ function isByteRangeComplete({
   return bufferLength < requestedLength
 }
 
+function isStandaloneLineBreak(character: string) {
+  const code = character.charCodeAt(0)
+  return code === 0x0a || code === 0x2028 || code === 0x2029
+}
+
 function createLineLimitTracker(maxLines: number | undefined) {
   let lineCount = 1
   let previousWasCR = false
@@ -884,7 +907,8 @@ function createLineLimitTracker(maxLines: number | undefined) {
         if (character === "\r") {
           lineCount += 1
           previousWasCR = true
-        } else if (character === "\n") {
+        } else if (isStandaloneLineBreak(character)) {
+          // LF, plus LINE/PARAGRAPH SEPARATOR (U+2028/U+2029); none pair with CR.
           lineCount += 1
         }
 

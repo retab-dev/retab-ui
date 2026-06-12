@@ -162,6 +162,58 @@ function tableCellRange(
   return range
 }
 
+// Tags that flow inline. docx-preview shatters a single sentence across many
+// inline run <span>s, so runs inside one block must join with no gap. Anything
+// not in this set (p, section, td, li, h1…) introduces a visual break, so a
+// boundary space is inserted between blocks — otherwise a quoted phrase that
+// straddles a paragraph/page/cell break would neither match (the chars are
+// adjacent in the string with no separator) nor be meaningfully adjacent.
+const INLINE_TAGS = new Set([
+  "SPAN",
+  "A",
+  "B",
+  "I",
+  "EM",
+  "STRONG",
+  "U",
+  "S",
+  "STRIKE",
+  "DEL",
+  "INS",
+  "SMALL",
+  "BIG",
+  "SUB",
+  "SUP",
+  "MARK",
+  "FONT",
+  "CODE",
+  "ABBR",
+  "CITE",
+  "Q",
+  "TIME",
+  "BDI",
+  "BDO",
+  "WBR",
+  "LABEL",
+  "VAR",
+  "SAMP",
+  "KBD",
+  "TT",
+  "NOBR",
+])
+
+/** The nearest non-inline (block-ish) ancestor of `el`, bounded by `root`. */
+function blockContainer(
+  el: HTMLElement | null,
+  root: HTMLElement
+): HTMLElement {
+  let cur = el
+  while (cur && cur !== root && INLINE_TAGS.has(cur.tagName)) {
+    cur = cur.parentElement
+  }
+  return cur ?? root
+}
+
 /** A Range over the first whitespace-insensitive match of `query` in `root`, or null. */
 function textContentRange(root: HTMLElement, query: string): Range | null {
   const needle = normalizeTextTarget(query)
@@ -169,12 +221,43 @@ function textContentRange(root: HTMLElement, query: string): Range | null {
   // Concatenate the visible text, collapsing whitespace runs to a single space,
   // and remember each normalized character's source (text node + offset) so a
   // match maps back to a DOM Range — even when it spans multiple run <span>s.
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
+  // Elements are walked alongside text so forced breaks (<br>/<hr>) can be seen.
+  const walker = document.createTreeWalker(
+    root,
+    NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT
+  )
   let normalized = ""
   const at: { node: Text; offset: number }[] = []
   let prevSpace = false
+  let prevBlock: HTMLElement | null = null
+  let pendingBreak = false
   for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+    if (n.nodeType === Node.ELEMENT_NODE) {
+      const tag = (n as HTMLElement).tagName
+      if (
+        (tag === "BR" || tag === "HR") &&
+        isDocumentBreakElement(root, n as HTMLElement)
+      ) {
+        pendingBreak = true
+      }
+      continue
+    }
     if (!isDocumentTextNode(root, n as Text)) continue
+    // A block boundary or a forced break (<br>/<hr>) between this run and the
+    // previous one renders as a visual break, so emit a separating space (unless
+    // one was already emitted). The separator's source position is interior to
+    // any match it falls inside — a trimmed needle never starts or ends on a
+    // space — so mapping it to the head of the current node never affects a
+    // resolved Range's endpoints.
+    const block = blockContainer((n as Text).parentElement, root)
+    const broke = pendingBreak || (prevBlock !== null && block !== prevBlock)
+    pendingBreak = false
+    if (broke && !prevSpace && normalized) {
+      prevSpace = true
+      normalized += " "
+      at.push({ node: n as Text, offset: 0 })
+    }
+    prevBlock = block
     const data = (n as Text).data
     for (let i = 0; i < data.length; i++) {
       if (/\s/.test(data[i])) {
@@ -205,6 +288,13 @@ function isDocumentTextNode(root: HTMLElement, node: Text) {
   if (!parent.closest(".docx-wrapper > section.docx")) return false
   if (parent.closest("style, script, noscript, template")) return false
   return !hasHiddenAncestor(parent, root)
+}
+
+/** A forced break (<br>/<hr>) that is part of the rendered, visible document. */
+function isDocumentBreakElement(root: HTMLElement, el: HTMLElement) {
+  if (!root.contains(el)) return false
+  if (!el.closest(".docx-wrapper > section.docx")) return false
+  return !hasHiddenAncestor(el, root)
 }
 
 function hasHiddenAncestor(element: HTMLElement, root: HTMLElement) {

@@ -250,6 +250,35 @@ export const SingleFileVirtualizedTable =
         setActiveCellElement(null)
       }, [setActiveCellElement])
 
+      React.useEffect(() => {
+        if (!isJsonEditable) return
+
+        const handleDocumentPointerMove = (event: PointerEvent) => {
+          const scroller = scrollRef.current
+          const target = event.target
+
+          if (!scroller || !(target instanceof Node)) return
+          if (scroller.contains(target)) return
+
+          hoveredCellElementRef.current = null
+
+          if (lockedCellPathRef.current) return
+
+          setActiveCellElement(null)
+        }
+
+        globalThis.document.addEventListener(
+          "pointermove",
+          handleDocumentPointerMove
+        )
+        return () => {
+          globalThis.document.removeEventListener(
+            "pointermove",
+            handleDocumentPointerMove
+          )
+        }
+      }, [isJsonEditable, setActiveCellElement])
+
       const handleCellActivityLockChange = React.useCallback(
         (fieldPath: string, locked: boolean) => {
           if (locked) {

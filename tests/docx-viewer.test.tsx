@@ -2694,3 +2694,467 @@ describe("DocxViewer", () => {
     expect(fetch).not.toHaveBeenCalled()
   })
 })
+
+// Targeted edge-case probes around the trickiest logic: the text-range boundary
+// math (off-by-one at match edges), whitespace/case normalization, page
+// counting, and the scale/zoom controls. These dig into corners the broad suite
+// above doesn't exercise, to surface latent bugs.
+describe("DocxViewer edge cases", () => {
+  // Build a document with arbitrary per-page contents. Pages are stacked 1100px
+  // apart (matching the default fixture) so scroll/page math stays realistic.
+  function installCustomPages(
+    host: HTMLElement,
+    builders: Array<(page: HTMLElement) => void>
+  ) {
+    const wrapper = document.createElement("div")
+    wrapper.className = "docx-wrapper"
+    builders.forEach((build, index) => {
+      const page = document.createElement("section")
+      page.className = "docx"
+      page.getBoundingClientRect = vi.fn(() => rect(index * 1100))
+      build(page)
+      wrapper.append(page)
+    })
+    host.replaceChildren(wrapper)
+  }
+
+  function paragraphPage(text: string) {
+    return (page: HTMLElement) => {
+      const p = document.createElement("p")
+      p.textContent = text
+      page.append(p)
+    }
+  }
+
+  it("highlights a partial text match without an off-by-one at the trailing edge", async () => {
+    const highlights = new Map<string, MockHighlight>()
+    installHighlightApi(highlights)
+    docxMock.renderAsync.mockImplementationOnce(async (_buffer, host) => {
+      installCustomPages(host, [paragraphPage("Hello World Extra")])
+    })
+
+    await renderDocx(
+      <DocxViewer
+        source={docxUrlSource("/partial-match.docx")}
+        highlight={{ kind: "text", text: "Hello World" }}
+      />
+    )
+
+    await screen.findByText("Hello World Extra")
+    await waitFor(() => {
+      expect(highlights.size).toBe(1)
+    })
+    // A regression that dropped the `+ 1` on the end offset would yield
+    // "Hello Worl"; one that over-ran would pull in " Extra".
+    expect([...highlights.values()][0]?.ranges[0]?.toString()).toBe(
+      "Hello World"
+    )
+  })
+
+  it("highlights a text match that ends at the very end of the document", async () => {
+    const highlights = new Map<string, MockHighlight>()
+    installHighlightApi(highlights)
+    docxMock.renderAsync.mockImplementationOnce(async (_buffer, host) => {
+      installCustomPages(host, [paragraphPage("Alpha Beta")])
+    })
+
+    await renderDocx(
+      <DocxViewer
+        source={docxUrlSource("/match-at-end.docx")}
+        highlight={{ kind: "text", text: "Beta" }}
+      />
+    )
+
+    await screen.findByText("Alpha Beta")
+    await waitFor(() => {
+      expect(highlights.size).toBe(1)
+    })
+    // setEnd(node, offset + 1) must land exactly on the node's length here.
+    expect([...highlights.values()][0]?.ranges[0]?.toString()).toBe("Beta")
+  })
+
+  it("matches text targets after collapsing tabs and newlines in the query", async () => {
+    const highlights = new Map<string, MockHighlight>()
+    installHighlightApi(highlights)
+
+    await renderDocx(
+      <DocxViewer
+        source={docxUrlSource("/tabbed-query.docx")}
+        highlight={{ kind: "text", text: "Quarterly\t\t revenue \n increased" }}
+      />
+    )
+
+    await waitForRenderedDocx()
+    await waitFor(() => {
+      expect(highlights.size).toBe(1)
+    })
+    // The fixture's raw DOM keeps its original spacing; the match spans the full
+    // run despite the query's tabs/newlines.
+    expect([...highlights.values()][0]?.ranges[0]?.toString()).toBe(
+      "Quarterly   revenue increased"
+    )
+  })
+
+  it("matches text targets case-sensitively", async () => {
+    const highlights = new Map<string, MockHighlight>()
+    installHighlightApi(highlights)
+
+    await renderDocx(
+      <DocxViewer
+        source={docxUrlSource("/case-sensitive.docx")}
+        highlight={{ kind: "text", text: "TARGET CELL" }}
+      />
+    )
+
+    await waitForRenderedDocx()
+    // Normalization collapses whitespace but does not fold case, so a
+    // differently-cased query resolves nothing.
+    await waitFor(() => {
+      expect(docxMock.renderAsync).toHaveBeenCalled()
+    })
+    expect(highlights.size).toBe(0)
+  })
+
+  it("highlights the first occurrence when the target text repeats", async () => {
+    const highlights = new Map<string, MockHighlight>()
+    installHighlightApi(highlights)
+    docxMock.renderAsync.mockImplementationOnce(async (_buffer, host) => {
+      installCustomPages(host, [
+        (page) => {
+          const first = document.createElement("p")
+          first.id = "first-occurrence"
+          first.textContent = "Repeat me"
+          const second = document.createElement("p")
+          second.id = "second-occurrence"
+          second.textContent = "Repeat me"
+          page.append(first, second)
+        },
+      ])
+    })
+
+    await renderDocx(
+      <DocxViewer
+        source={docxUrlSource("/repeat-text.docx")}
+        highlight={{ kind: "text", text: "Repeat me" }}
+      />
+    )
+
+    await waitFor(() => {
+      expect(highlights.size).toBe(1)
+    })
+    const range = [...highlights.values()][0]?.ranges[0]
+    expect(range?.startContainer.parentElement?.id).toBe("first-occurrence")
+  })
+
+  it("renders a single-page document as Page 1 of 1", async () => {
+    docxMock.renderAsync.mockImplementationOnce(async (_buffer, host) => {
+      installCustomPages(host, [paragraphPage("Solo page")])
+    })
+
+    await renderDocx(<DocxViewer source={docxUrlSource("/single-page.docx")} />)
+
+    expect(await screen.findByText("Page 1 of 1")).toBeTruthy()
+    const pages = document.querySelectorAll<HTMLElement>("[data-page-number]")
+    expect([...pages].map((page) => page.dataset.pageNumber)).toEqual(["1"])
+  })
+
+  it("reports the first page on initial render before any scroll", async () => {
+    const onVisiblePageChange = vi.fn()
+
+    await renderDocx(
+      <DocxViewer
+        source={docxUrlSource("/initial-page.docx")}
+        onVisiblePageChange={onVisiblePageChange}
+      />
+    )
+    await waitForRenderedDocx()
+
+    expect(onVisiblePageChange).toHaveBeenCalledWith(1)
+  })
+
+  it("treats a NaN scale as a controlled 100% zoom", async () => {
+    await renderDocx(
+      <DocxViewer source={docxUrlSource("/nan-scale.docx")} scale={NaN} />
+    )
+
+    await waitForRenderedDocx()
+    expect(screen.getByText("100%")).toBeTruthy()
+
+    // NaN is a non-null fixed scale, so it must stay controlled — toolbar zoom
+    // is inert.
+    fireEvent.click(screen.getByLabelText("Zoom in"))
+    expect(screen.getByText("100%")).toBeTruthy()
+    expect(screen.queryByText("120%")).toBeNull()
+    const host = document.querySelector<HTMLElement>(
+      '[data-slot="docx-viewer"] .docx-wrapper'
+    )?.parentElement
+    expect(host?.style.zoom).toBe("1")
+  })
+
+  it("clamps repeated zoom-in clicks to the maximum 500% zoom", async () => {
+    await renderDocx(<DocxViewer source={docxUrlSource("/zoom-clamp.docx")} />)
+    await waitForRenderedDocx()
+    expect(screen.getByText("100%")).toBeTruthy()
+
+    for (let i = 0; i < 12; i += 1) {
+      fireEvent.click(screen.getByLabelText("Zoom in"))
+    }
+
+    expect(await screen.findByText("500%")).toBeTruthy()
+    const host = document.querySelector<HTMLElement>(
+      '[data-slot="docx-viewer"] .docx-wrapper'
+    )?.parentElement
+    expect(host?.style.zoom).toBe("5")
+  })
+
+  it("ignores whitespace-only text highlight targets", async () => {
+    const highlights = new Map<string, MockHighlight>()
+    installHighlightApi(highlights)
+
+    await renderDocx(
+      <DocxViewer
+        source={docxUrlSource("/whitespace-highlight.docx")}
+        highlight={{ kind: "text", text: "  \n\t  " }}
+      />
+    )
+
+    await waitForRenderedDocx()
+    expect(highlights.size).toBe(0)
+    expect(screen.queryByRole("alert")).toBeNull()
+    expect(screen.getByText("Target cell")).toBeTruthy()
+  })
+
+  it("clears the highlight when the target becomes null without unmounting", async () => {
+    const highlights = new Map<string, MockHighlight>()
+    installHighlightApi(highlights)
+
+    const view = await renderDocx(
+      <DocxViewer
+        source={docxUrlSource("/clear-highlight.docx")}
+        highlight={{ kind: "text", text: "Target cell" }}
+      />
+    )
+
+    await waitForRenderedDocx()
+    await waitFor(() => {
+      expect(highlights.size).toBe(1)
+    })
+
+    await act(async () => {
+      view.rerender(
+        <DocxViewer
+          source={docxUrlSource("/clear-highlight.docx")}
+          highlight={null}
+        />
+      )
+    })
+
+    await waitFor(() => {
+      expect(highlights.size).toBe(0)
+    })
+  })
+
+  it("switches the highlight when the target kind changes from text to cell", async () => {
+    const highlights = new Map<string, MockHighlight>()
+    installHighlightApi(highlights)
+
+    const view = await renderDocx(
+      <DocxViewer
+        source={docxUrlSource("/switch-kind.docx")}
+        highlight={{ kind: "text", text: "revenue increased" }}
+      />
+    )
+
+    await waitForRenderedDocx()
+    await waitFor(() => {
+      expect([...highlights.values()][0]?.ranges[0]?.toString()).toBe(
+        "revenue increased"
+      )
+    })
+
+    await act(async () => {
+      view.rerender(
+        <DocxViewer
+          source={docxUrlSource("/switch-kind.docx")}
+          highlight={{ kind: "cell", table: 0, row: 0, column: 1 }}
+        />
+      )
+    })
+
+    await waitFor(() => {
+      expect([...highlights.values()][0]?.ranges[0]?.toString()).toBe(
+        "Target cell"
+      )
+    })
+    expect(highlights.size).toBe(1)
+  })
+})
+
+// `textContentRange` joins the visible text of every run, inserting a separating
+// space at block boundaries but none between inline runs. Inside one paragraph,
+// docx-preview splits a sentence across many inline <span>s that must join with
+// no gap; across blocks (paragraph-to-paragraph, page <section>-to-<section>,
+// table cell-to-cell) the rendered text has a visual break, so a quoted phrase
+// that straddles the break still resolves — and a gap-less token across the
+// break does not falsely resolve.
+describe("DocxViewer cross-boundary text resolution", () => {
+  function installBlocks(
+    host: HTMLElement,
+    pages: string[][] // pages[i] = paragraphs on page i
+  ) {
+    const wrapper = document.createElement("div")
+    wrapper.className = "docx-wrapper"
+    pages.forEach((paragraphs, pageIndex) => {
+      const page = document.createElement("section")
+      page.className = "docx"
+      page.getBoundingClientRect = vi.fn(() => rect(pageIndex * 1100))
+      for (const text of paragraphs) {
+        const p = document.createElement("p")
+        p.textContent = text
+        page.append(p)
+      }
+      wrapper.append(page)
+    })
+    host.replaceChildren(wrapper)
+  }
+
+  it("resolves a text target that spans a paragraph boundary", async () => {
+    const highlights = new Map<string, MockHighlight>()
+    installHighlightApi(highlights)
+    docxMock.renderAsync.mockImplementationOnce(async (_buffer, host) => {
+      installBlocks(host, [["alpha", "bravo"]])
+    })
+
+    await renderDocx(
+      <DocxViewer
+        source={docxUrlSource("/para-boundary.docx")}
+        highlight={{ kind: "text", text: "alpha bravo" }}
+      />
+    )
+
+    await screen.findByText("Page 1 of 1")
+    await waitFor(() => {
+      expect(highlights.size).toBe(1)
+    })
+    const range = [...highlights.values()][0]?.ranges[0]
+    // The DOM has no character at the paragraph break, so the resolved range's
+    // text is gap-less even though the quoted phrase contained a space.
+    expect(range?.toString()).toBe("alphabravo")
+    expect(range?.startContainer.parentElement?.tagName).toBe("P")
+    expect(range?.endContainer.parentElement?.tagName).toBe("P")
+    expect(range?.startContainer).not.toBe(range?.endContainer)
+  })
+
+  it("resolves a text target that spans a page/section boundary", async () => {
+    const highlights = new Map<string, MockHighlight>()
+    installHighlightApi(highlights)
+    docxMock.renderAsync.mockImplementationOnce(async (_buffer, host) => {
+      installBlocks(host, [["alpha"], ["bravo"]])
+    })
+
+    await renderDocx(
+      <DocxViewer
+        source={docxUrlSource("/page-boundary.docx")}
+        highlight={{ kind: "text", text: "alpha bravo" }}
+      />
+    )
+
+    await screen.findByText("Page 1 of 2")
+    await waitFor(() => {
+      expect(highlights.size).toBe(1)
+    })
+  })
+
+  it("does not resolve a gap-less token straddling a paragraph boundary", async () => {
+    const highlights = new Map<string, MockHighlight>()
+    installHighlightApi(highlights)
+    docxMock.renderAsync.mockImplementationOnce(async (_buffer, host) => {
+      installBlocks(host, [["alpha", "bravo"]])
+    })
+
+    await renderDocx(
+      <DocxViewer
+        source={docxUrlSource("/para-no-concat.docx")}
+        highlight={{ kind: "text", text: "alphabravo" }}
+      />
+    )
+
+    await screen.findByText("Page 1 of 1")
+    // The inserted boundary space makes the two paragraphs read as "alpha
+    // bravo", so the run-together token no longer matches across the break.
+    expect(highlights.size).toBe(0)
+  })
+
+  it("resolves a text target that spans a <br> soft line break", async () => {
+    const highlights = new Map<string, MockHighlight>()
+    installHighlightApi(highlights)
+    docxMock.renderAsync.mockImplementationOnce(async (_buffer, host) => {
+      const wrapper = document.createElement("div")
+      wrapper.className = "docx-wrapper"
+      const page = document.createElement("section")
+      page.className = "docx"
+      page.getBoundingClientRect = vi.fn(() => rect(0))
+      const p = document.createElement("p")
+      // docx-preview renders w:br as <br>; the two text fragments share one <p>.
+      p.append(
+        document.createTextNode("line1"),
+        document.createElement("br"),
+        document.createTextNode("line2")
+      )
+      page.append(p)
+      wrapper.append(page)
+      host.replaceChildren(wrapper)
+    })
+
+    await renderDocx(
+      <DocxViewer
+        source={docxUrlSource("/br-boundary.docx")}
+        highlight={{ kind: "text", text: "line1 line2" }}
+      />
+    )
+
+    await screen.findByText("Page 1 of 1")
+    await waitFor(() => {
+      expect(highlights.size).toBe(1)
+    })
+    expect([...highlights.values()][0]?.ranges[0]?.toString()).toBe(
+      "line1line2"
+    )
+  })
+
+  it("joins inline runs within a single paragraph with no separator", async () => {
+    const highlights = new Map<string, MockHighlight>()
+    installHighlightApi(highlights)
+    docxMock.renderAsync.mockImplementationOnce(async (_buffer, host) => {
+      const wrapper = document.createElement("div")
+      wrapper.className = "docx-wrapper"
+      const page = document.createElement("section")
+      page.className = "docx"
+      page.getBoundingClientRect = vi.fn(() => rect(0))
+      const p = document.createElement("p")
+      // docx-preview shatters a sentence across run <span>s; "foo" + "bar"
+      // inside one paragraph must read as "foobar".
+      const runA = document.createElement("span")
+      runA.textContent = "foo"
+      const runB = document.createElement("span")
+      runB.textContent = "bar"
+      p.append(runA, runB)
+      page.append(p)
+      wrapper.append(page)
+      host.replaceChildren(wrapper)
+    })
+
+    await renderDocx(
+      <DocxViewer
+        source={docxUrlSource("/inline-runs.docx")}
+        highlight={{ kind: "text", text: "foobar" }}
+      />
+    )
+
+    await screen.findByText("Page 1 of 1")
+    await waitFor(() => {
+      expect(highlights.size).toBe(1)
+    })
+    expect([...highlights.values()][0]?.ranges[0]?.toString()).toBe("foobar")
+  })
+})

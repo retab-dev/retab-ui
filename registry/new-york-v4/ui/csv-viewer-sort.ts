@@ -32,7 +32,10 @@ export function compareCsvCells(a: string, b: string): number {
 
 /**
  * Returns the display order (source-row indices) for a column sort. Ascending
- * order follows `compareCsvCells`; descending reverses that order.
+ * order follows `compareCsvCells`; descending negates it. Rows that compare
+ * equal always keep their original relative order in *both* directions: a
+ * naive `reverse()` of the ascending order would flip tied rows, so equal keys
+ * fall back to the source index as a stable tiebreaker.
  */
 export function sortedRowOrder(
   sourceRows: string[][],
@@ -40,12 +43,13 @@ export function sortedRowOrder(
   descending: boolean
 ): number[] {
   const order = sourceRows.map((_, rowIndex) => rowIndex)
-  order.sort((a, b) =>
-    compareCsvCells(
+  const direction = descending ? -1 : 1
+  order.sort((a, b) => {
+    const cmp = compareCsvCells(
       sourceRows[a][columnIndex] ?? "",
       sourceRows[b][columnIndex] ?? ""
     )
-  )
-  if (descending) order.reverse()
+    return cmp !== 0 ? direction * cmp : a - b
+  })
   return order
 }

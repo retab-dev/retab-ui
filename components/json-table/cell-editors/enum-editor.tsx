@@ -1,17 +1,16 @@
 import { cn } from "@/lib/utils"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "@/components/ui/select"
 import type { CellEditorProps } from "@/components/json-table/cell-editors/editor-types"
 import { fieldFocusId } from "@/components/json-table/cell-editors/editor-types"
 import {
   JsonTableDataCell,
   jsonTableSelectDataCellClass,
 } from "@/components/json-table/json-table-data-cell"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 
 const NULL_SELECT_VALUE = "__json_table_null__"
 
@@ -64,6 +63,13 @@ function getEnumCommitValue(newValue: string, enumValues: unknown[]): unknown {
     : newValue
 }
 
+function getEnumDisplayValue(value: unknown, isNullable: boolean): string {
+  if (value === null || value === undefined) {
+    return isNullable ? "No selection" : ""
+  }
+  return String(value)
+}
+
 export function EnumEditor({
   identity,
   field,
@@ -72,6 +78,10 @@ export function EnumEditor({
   commit,
 }: CellEditorProps) {
   const { fieldMetadata, effectiveValue } = field
+  const displayValue = getEnumDisplayValue(
+    effectiveValue,
+    fieldMetadata.isNullable
+  )
 
   if (!overlays.showInput) {
     return (
@@ -123,9 +133,15 @@ export function EnumEditor({
           }
         }}
       >
-        <SelectValue
-          placeholder={fieldMetadata.isNullable ? "Select..." : undefined}
-        />
+        <span
+          data-slot="select-value"
+          className={cn(
+            "flex-1 truncate",
+            !displayValue && "text-muted-foreground"
+          )}
+        >
+          {displayValue || "Select..."}
+        </span>
       </SelectTrigger>
       <SelectContent className="z-[60]">
         {fieldMetadata.isNullable && (

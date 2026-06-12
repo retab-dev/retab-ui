@@ -21,14 +21,19 @@ export function normalizeCsvDelimiter(
 }
 
 /**
- * Normalizes a delimiter and discards empty values. A CSV delimiter must be a
- * non-empty string: an empty delimiter would make the parser fall back to a
- * comma (`delimiter || ","`) while the exporter would quote every field and
- * join with nothing, so callers must never let `""` through.
+ * Normalizes a delimiter and discards values the parser cannot honor. A CSV
+ * delimiter must be exactly one character: the incremental parser matches a
+ * field separator one character at a time (`c === delimiter`), so an empty
+ * delimiter makes it fall back to a comma (`delimiter || ","`) while a
+ * multi-character delimiter (e.g. `"::"`) never matches at all and collapses
+ * every row into a single field. In both cases the exporter would still join
+ * with the unusable delimiter, producing output the parser cannot read back.
+ * Callers must never let either through, so anything other than a single
+ * character is discarded here and resolution falls back to the inferred dialect.
  */
 function usableDelimiter(delimiter: string | undefined): string | undefined {
   const normalized = normalizeCsvDelimiter(delimiter)
-  return normalized ? normalized : undefined
+  return normalized && normalized.length === 1 ? normalized : undefined
 }
 
 export function extensionOfDelimitedName(name: string): string | null {
