@@ -13,8 +13,8 @@ import type {
   PropertyDraftOperation,
   PropertyFormMode,
   PropertyFormProps,
-  PropertyValidation,
   PropertyFormViewModel,
+  PropertyValidation,
 } from "@/components/schema-editor/property-form/types"
 import { validatePropertyDraft } from "@/components/schema-editor/property-form/validation"
 
@@ -34,15 +34,26 @@ function normalizeValidationForCapabilities({
   validation: PropertyValidation
   capabilities: PropertyCapabilities
 }): PropertyValidation {
-  if (capabilities.canEditName || validation.name.status !== "invalid") {
-    return validation
-  }
+  const canEditSchema =
+    capabilities.canEditType ||
+    capabilities.canEditNullable ||
+    capabilities.canEditNestedObject ||
+    capabilities.canEditArrayItems ||
+    capabilities.canEditEnumValues
+  const name =
+    capabilities.canEditName || validation.name.status !== "invalid"
+      ? validation.name
+      : { status: "valid" as const }
+  const schemaNode =
+    canEditSchema || validation.schemaNode.status !== "invalid"
+      ? validation.schemaNode
+      : { status: "valid" as const }
 
-  const name = { status: "valid" as const }
   return {
     ...validation,
     name,
-    canCommit: validation.schemaNode.status !== "invalid",
+    schemaNode,
+    canCommit: name.status !== "invalid" && schemaNode.status !== "invalid",
   }
 }
 
@@ -69,29 +80,26 @@ export function usePropertyFormController({
     setPropertyDraft(initialPropertyDraft)
   }, [initialPropertyDraft])
 
-  const capabilities = React.useMemo(
-    () => {
-      if (mode !== "editable") {
-        return resolvePropertyCapabilities({
-          mode,
-          canDelete,
-        })
-      }
-
-      const nextCapabilities =
-        capabilitiesProp ??
-        resolvePropertyCapabilities({
-          mode,
-          canDelete,
-        })
-
-      return {
-        ...nextCapabilities,
+  const capabilities = React.useMemo(() => {
+    if (mode !== "editable") {
+      return resolvePropertyCapabilities({
         mode,
-      }
-    },
-    [canDelete, capabilitiesProp, mode]
-  )
+        canDelete,
+      })
+    }
+
+    const nextCapabilities =
+      capabilitiesProp ??
+      resolvePropertyCapabilities({
+        mode,
+        canDelete,
+      })
+
+    return {
+      ...nextCapabilities,
+      mode,
+    }
+  }, [canDelete, capabilitiesProp, mode])
 
   const validation = validationProp
     ? validationProp

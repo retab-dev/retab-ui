@@ -11,6 +11,30 @@ import type {
   SchemaDocument,
 } from "@/components/schema-editor/document/types"
 
+const SCHEMA_VALUE_REST_KEYS = new Set([
+  "additionalProperties",
+  "allOf",
+  "anyOf",
+  "contains",
+  "else",
+  "if",
+  "items",
+  "not",
+  "oneOf",
+  "prefixItems",
+  "propertyNames",
+  "then",
+  "unevaluatedProperties",
+])
+
+const SCHEMA_MAP_REST_KEYS = new Set([
+  "$defs",
+  "definitions",
+  "dependentSchemas",
+  "patternProperties",
+  "properties",
+])
+
 export function addDefinition(
   doc: SchemaDocument,
   init: Partial<DefinitionEntry> = {}
@@ -28,6 +52,9 @@ export function renameDefinition(
   defId: string,
   name: string
 ): SchemaDocument {
+  const currentDefinition = doc.defs.find((definition) => definition.id === defId)
+  if (!currentDefinition) return doc
+
   const taken = new Set(
     doc.defs
       .filter((definition) => definition.id !== defId)
@@ -42,7 +69,13 @@ export function renameDefinition(
   const defs = mapPreserve(doc.defs, (definition) =>
     definition.id === defId ? { ...definition, name: finalName } : definition
   )
-  return defs === doc.defs ? doc : { ...doc, defs }
+  if (defs === doc.defs) return doc
+
+  return rewriteRawDefinitionRefs(
+    { ...doc, defs },
+    currentDefinition.name,
+    finalName
+  )
 }
 
 export function removeDefinition(
@@ -111,4 +144,154 @@ function createRefNode(defId: string): DocumentNode {
     ref: defId,
     rest: {},
   }
+}
+
+function rewriteRawDefinitionRefs(
+  doc: SchemaDocument,
+  oldName: string,
+  newName: string
+): SchemaDocument {
+  if (oldName === newName) return doc
+
+  const root = rewriteRawDefinitionRefsInNode(doc.root, oldName, newName)
+  const defs = mapPreserve(doc.defs, (definition) => {
+    const node = rewriteRawDefinitionRefsInNode(
+      definition.node,
+      oldName,
+      newName
+    )
+    return node === definition.node ? definition : { ...definition, node }
+  })
+
+  if (root === doc.root && defs === doc.defs) return doc
+  return { ...doc, root, defs }
+}
+
+function rewriteRawDefinitionRefsInNode(
+  node: DocumentNode,
+  oldName: string,
+  newName: string
+): DocumentNode {
+  let next = node
+
+  const rest = rewriteRawDefinitionRefsInRest(node.rest, oldName, newName)
+  if (rest !== node.rest) next = { ...next, rest }
+
+  if (node.properties) {
+    const properties = mapPreserve(node.properties, (property) => {
+      const child = rewriteRawDefinitionRefsInNode(
+        property.node,
+        oldName,
+        newName
+      )
+      return child === property.node ? property : { ...property, node: child }
+    })
+    if (properties !== node.properties) next = { ...next, properties }
+  }
+
+  if (node.items) {
+    const items = rewriteRawDefinitionRefsInNode(node.items, oldName, newName)
+    if (items !== node.items) next = { ...next, items }
+  }
+
+  for (const key of ["anyOf", "oneOf", "allOf"] as const) {
+    const children = node[key]
+    if (!children) continue
+    const mapped = mapPreserve(children, (child) =>
+      rewriteRawDefinitionRefsInNode(child, oldName, newName)
+    )
+    if (mapped !== children) next = { ...next, [key]: mapped }
+  }
+
+  return next
+}
+
+function rewriteRawDefinitionRefsInRest(
+  rest: Record<string, unknown>,
+  oldName: string,
+  newName: string
+): Record<string, unknown> {
+  let next = rest
+
+  for (const [key, value] of Object.entries(rest)) {
+    const rewritten = SCHEMA_MAP_REST_KEYS.has(key)
+      ? rewriteRefsInSchemaMap(value, oldName, newName)
+      : SCHEMA_VALUE_REST_KEYS.has(key)
+        ? rewriteRefsInSchemaValue(value, oldName, newName)
+        : value
+
+    if (rewritten !== value) {
+      if (next === rest) next = { ...rest }
+      next[key] = rewritten
+    }
+  }
+
+  return next
+}
+
+function rewriteRefsInSchemaMap(
+  value: unknown,
+  oldName: string,
+  newName: string
+): unknown {
+  if (!isPlainObject(value)) return value
+
+  let next: Record<string, unknown> = value
+  for (const [key, child] of Object.entries(value)) {
+    const rewritten = rewriteRefsInSchemaValue(child, oldName, newName)
+    if (rewritten !== child) {
+      if (next === value) next = { ...value }
+      next[key] = rewritten
+    }
+  }
+  return next
+}
+
+function rewriteRefsInSchemaValue(
+  value: unknown,
+  oldName: string,
+  newName: string
+): unknown {
+  if (Array.isArray(value)) {
+    return mapPreserve(value, (child) =>
+      rewriteRefsInSchemaValue(child, oldName, newName)
+    )
+  }
+  if (!isPlainObject(value)) return value
+
+  let next: Record<string, unknown> = value
+  const rewrittenRef = rewriteDefinitionRef(value.$ref, oldName, newName)
+  if (rewrittenRef !== value.$ref) {
+    next = { ...value, $ref: rewrittenRef }
+  }
+
+  for (const [key, child] of Object.entries(next)) {
+    let rewritten = child
+    if (SCHEMA_MAP_REST_KEYS.has(key)) {
+      rewritten = rewriteRefsInSchemaMap(child, oldName, newName)
+    } else if (SCHEMA_VALUE_REST_KEYS.has(key)) {
+      rewritten = rewriteRefsInSchemaValue(child, oldName, newName)
+    }
+
+    if (rewritten !== child) {
+      if (next === value) next = { ...value }
+      next[key] = rewritten
+    }
+  }
+
+  return next
+}
+
+function rewriteDefinitionRef(
+  value: unknown,
+  oldName: string,
+  newName: string
+): unknown {
+  if (value === `#/$defs/${oldName}`) return `#/$defs/${newName}`
+  if (value === `#/definitions/${oldName}`) return `#/definitions/${newName}`
+  return value
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
 }

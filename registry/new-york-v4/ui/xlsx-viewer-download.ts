@@ -66,8 +66,9 @@ function serializeXlsxSheetAsCsv({
   )
   const sourceRows = Array.from({ length: sheet.rowCount }, (_, rowIndex) => {
     throwIfAborted(signal)
-    return Array.from({ length: sheet.columnCount }, (_, columnIndex) =>
-      source.getCell(sheetIndex, rowIndex, columnIndex).text
+    return Array.from(
+      { length: sheet.columnCount },
+      (_, columnIndex) => source.getCell(sheetIndex, rowIndex, columnIndex).text
     )
   })
 

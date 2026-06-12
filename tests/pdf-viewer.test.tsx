@@ -918,6 +918,35 @@ describe("PdfViewer", () => {
     })
   })
 
+  it("renders page canvases at device pixel ratio without changing css size", async () => {
+    const page = makePage(100, 200)
+    const doc = {
+      numPages: 1,
+      getPage: vi.fn(() => Promise.resolve(page)),
+      destroy: vi.fn(() => Promise.resolve()),
+    }
+    pdfjsMock.docs.set("/dpr.pdf", doc)
+
+    Object.defineProperty(window, "devicePixelRatio", {
+      configurable: true,
+      value: 2,
+    })
+
+    await act(async () => {
+      render(<PdfViewer source={pdfUrlSource("/dpr.pdf")} defaultScale={1} />)
+    })
+
+    await waitFor(() => expect(page.render).toHaveBeenCalledTimes(1))
+    const renderCall = page.render.mock.calls[0]?.[0]
+    const canvas = renderCall.canvas as HTMLCanvasElement
+
+    expect(canvas.width).toBe(200)
+    expect(canvas.height).toBe(400)
+    expect(canvas.style.width).toBe("100px")
+    expect(canvas.style.height).toBe("200px")
+    expect(renderCall.transform).toEqual([2, 0, 0, 2, 0, 0])
+  })
+
   it("cancels stale page render tasks when scale changes and when unmounted", async () => {
     pdfjsMock.docs.set("/cancel-render.pdf", makeDoc([[100, 200]]))
 
@@ -1019,6 +1048,39 @@ describe("PdfViewer", () => {
       true
     )
     expect(sidebarDoc.destroy).not.toHaveBeenCalled()
+  })
+
+  it("releases the previous thumbnail sidebar document when switching sources", async () => {
+    const firstDoc = makeDoc([[100, 200]])
+    const secondDoc = makeDoc([[100, 200]])
+    pdfjsMock.docs.set("/sidebar-switch-first.pdf", firstDoc)
+    pdfjsMock.docs.set("/sidebar-switch-second.pdf", secondDoc)
+
+    let view!: ReturnType<typeof render>
+    await act(async () => {
+      view = render(<PdfThumbnailSidebar src="/sidebar-switch-first.pdf" />)
+    })
+    await screen.findByText("1")
+
+    await act(async () => {
+      view.rerender(<PdfThumbnailSidebar src="/sidebar-switch-second.pdf" />)
+    })
+    await screen.findByText("1")
+
+    for (let index = 0; index < 6; index += 1) {
+      const otherDoc = makeDoc([[100, 200]])
+      pdfjsMock.docs.set(`/sidebar-switch-other-${index}.pdf`, otherDoc)
+      await getDocumentResource(
+        pdfUrlResource(`/sidebar-switch-other-${index}.pdf`)
+      )
+    }
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+
+    expect(firstDoc.destroy).toHaveBeenCalledTimes(1)
+    expect(secondDoc.destroy).not.toHaveBeenCalled()
   })
 
   it("marks the active thumbnail and reports selected page clicks", async () => {

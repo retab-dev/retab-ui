@@ -422,7 +422,7 @@ The platonic implementation removes or hides:
 - public virtualization tuning props
 - separate `showZoom` and `showDownload` props
 - raw error string state
-- top-level `src`, `value`, and `data` props
+- parallel top-level source aliases
 - helper exports from the public component module
 - comments that justify accidental architecture
 - local variable aliases for the same concept
@@ -437,7 +437,8 @@ The component reaches this blueprint when:
 - Main-thread and worker parsing share one parity suite.
 - CSV and TSV work through direct `CsvViewer` and `FileViewer`.
 - Sorting never breaks source-linked highlighting or scrolling.
-- Downloads preserve original bytes for `src` and active dialect otherwise.
+- Downloads preserve original source bytes when available and the active dialect
+  otherwise.
 - Loading, empty, ready, and error states are typed and tested.
 - Browser verification documents scroll performance and memory behavior.
 - The public API has no prop that exists only because the implementation needed

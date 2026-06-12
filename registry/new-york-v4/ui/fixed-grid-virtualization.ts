@@ -64,8 +64,8 @@ export function useFixedGridVirtualization({
   })
   const viewport = useFixedGridViewport(resolvedScrollElement)
 
-  const totalRowSize = rowCount * rowSize
-  const totalColumnSize = columnCount * columnSize
+  const totalRowSize = fixedTotalSize(rowCount, rowSize)
+  const totalColumnSize = fixedTotalSize(columnCount, columnSize)
   const activeRowOverscan = viewport.isJumpingRows
     ? jumpRowOverscan
     : rowOverscan
@@ -99,10 +99,12 @@ export function useFixedGridVirtualization({
     rightPad: number
   }>(() => {
     if (!virtualizeColumns) {
+      const safeColumnCount = fixedItemCount(columnCount)
+      const safeColumnSize = fixedItemSize(columnSize)
       return {
-        columnItems: Array.from({ length: columnCount }, (_, index) => ({
+        columnItems: Array.from({ length: safeColumnCount }, (_, index) => ({
           index,
-          widthPx: columnSize,
+          widthPx: safeColumnSize,
         })),
         leftPad: 0,
         rightPad: 0,
@@ -191,7 +193,7 @@ export function useFixedRowVirtualization({
   const [range, setRange] = React.useState({ start: 0, end: 0 })
   const rangeRef = React.useRef(range)
   const rafRef = React.useRef(0)
-  const totalRowSize = rowCount * rowSize
+  const totalRowSize = fixedTotalSize(rowCount, rowSize)
 
   const setMeasuredRange = React.useCallback((next: typeof range) => {
     const current = rangeRef.current
@@ -465,6 +467,22 @@ export function fixedVirtualItems({
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value))
+}
+
+function fixedTotalSize(count: number, size: number) {
+  if (!Number.isFinite(count) || !Number.isFinite(size) || count <= 0 || size <= 0) {
+    return 0
+  }
+  const totalSize = Math.floor(count) * size
+  return Number.isFinite(totalSize) ? totalSize : 0
+}
+
+function fixedItemCount(count: number) {
+  return Number.isFinite(count) && count > 0 ? Math.floor(count) : 0
+}
+
+function fixedItemSize(size: number) {
+  return Number.isFinite(size) && size > 0 ? size : 0
 }
 
 export function fixedScrollOffset({

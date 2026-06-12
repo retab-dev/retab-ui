@@ -33,9 +33,9 @@ a root style tag.
 ## Document Previews
 
 File Thumbnail does not parse documents or install renderer packages. The
-registry item has no npm dependencies; generate the preview with whichever viewer
-stack you already use, then pass the result through `previewImageUrl` or
-`previewContent`.
+registry item installs only the dependency-free shell; generate the preview with
+whichever viewer stack you already use, then pass the result through
+`previewImageUrl` or `previewContent`.
 
 The hero above feeds each format's Retab viewer into `previewContent` — each
 renderer wraps a standard React library (`pdfjs-dist`, `@e965/xlsx`,
@@ -43,9 +43,11 @@ renderer wraps a standard React library (`pdfjs-dist`, `@e965/xlsx`,
 first sheet, or the first slide — never the whole document, so there is no
 scrolling, no sheet tabs, and no toolbar. A raster image needs no renderer at all.
 
-`DocumentThumbnail` wraps `FileThumbnail` and does the first-unit render per
-format; it suspends (showing the shimmer) while the library parses, and falls back
-to the muted surface if a parse fails.
+The Retab app uses `DocumentThumbnail` as an app-side helper around
+`FileThumbnail` for the docs demo. It does the first-unit render per format;
+it suspends (showing the shimmer) while the library parses, and falls back to the
+muted surface if a parse fails. It is not part of the `@retab/file-thumbnail`
+registry install.
 
 ```tsx
 import { DocumentThumbnail } from "@/components/document-thumbnail"
@@ -108,7 +110,7 @@ is kept stable for styling and tests.
 `0` and an empty string. `null`, `undefined`, and `false` are treated as absent,
 so the component can fall back to `previewImageUrl` or the muted fallback surface.
 
-### DocumentThumbnail
+### DocumentThumbnail App Helper
 
 | Prop                 | Type                                         | Default      | Required |
 | -------------------- | -------------------------------------------- | ------------ | -------- |

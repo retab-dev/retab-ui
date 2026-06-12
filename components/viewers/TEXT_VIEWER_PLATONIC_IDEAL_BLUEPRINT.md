@@ -15,7 +15,11 @@ and scrolled into view.
 
 ```tsx
 <TextViewer
-  src="/samples/extraction-run.log"
+  source={{
+    kind: "url",
+    url: "/samples/extraction-run.log",
+    fileName: "extraction-run.log",
+  }}
   highlight={{ start: 21, end: 24 }}
 />
 ```
@@ -50,11 +54,9 @@ export interface TextViewerHandle {
 }
 
 export interface TextViewerProps {
-  src?: string
-  value?: string
+  source: TextDocumentSource
   className?: string
   toolbar?: boolean
-  downloadName?: string
   highlight?: TextLineRange | null
   bare?: boolean
   maxBytes?: number
@@ -69,10 +71,8 @@ export interface TextLineRange {
 
 Rules:
 
-- `value` and `src` are mutually exclusive in spirit. If both are passed, `value`
-  wins, but tests document that behavior.
-- `downloadName`, not `downloadFileName`, is the public name. It matches the
-  action.
+- `source` is the only public data entrypoint.
+- URL, Blob, and text inputs are distinguished by `source.kind`.
 - `scrollToLineRange` takes the same shape as `highlight`; no parallel
   `(lineStart, lineEnd)` vocabulary.
 - `maxBytes` and `maxLines` make whole-file loading an enforced contract.
@@ -90,11 +90,11 @@ Use these names everywhere:
 | Scroll container | `viewportElement` |
 | First line element | `startLineElement` |
 | Last line element | `endLineElement` |
-| Download filename | `downloadName` |
+| Download filename | `fileName` |
 | Fetch/cache identity | `resourceKey` |
 
-Avoid aliases like `lineStart`, `lineEnd`, `row`, `lit`, `srcKey`, or
-`downloadFileName` inside the ideal implementation.
+Avoid aliases like `lineStart`, `lineEnd`, `row`, `lit`, `srcKey`,
+`downloadName`, or `downloadFileName` inside the ideal implementation.
 
 ## Module Shape
 
@@ -131,9 +131,10 @@ Owns:
 
 Rules:
 
-- Cache key is `src`.
+- Cache key is `resource.cacheKey`.
 - Rejected resources are not permanently cached.
-- Same-`src` retry is represented by a resource version/nonce, not by remounting.
+- Same-source retry is represented by a resource version/nonce, not by
+  remounting.
 - `maxBytes` is enforced before reading the whole body when possible.
 - `maxLines` is enforced after decoding.
 
@@ -193,10 +194,11 @@ The error state must be local and recoverable.
 Requirements:
 
 - Failed fetch renders `Could not load this text file.`
-- Same-`src` retry is available when `src` is present.
-- Changing `src` automatically resets the error state.
-- Inline `value` cannot enter fetch error state.
-- Error boundaries reset by `{ src, resourceVersion }`, not `src` alone.
+- Same-source retry is available for URL and Blob sources.
+- Changing `source` automatically resets the error state.
+- Text sources cannot enter fetch error state.
+- Error boundaries reset by `{ resource.cacheKey, resourceVersion }`, not source
+  object identity alone.
 
 The retry button belongs in the error state, not the toolbar.
 
@@ -213,12 +215,12 @@ const DEFAULT_MAX_LINES = 10_000
 
 Rules:
 
-- `value` is checked by byte length and line count.
-- `src` is checked against `Content-Length` when available.
+- Text sources are checked by byte length and line count.
+- URL sources are checked against `Content-Length` when available.
 - If `Content-Length` is missing, the reader aborts once the byte limit is
   exceeded.
 - Exceeding bounds renders a local too-large state with a download action when
-  `src` is present.
+  the source is downloadable.
 - The component never silently tries to render an unbounded log.
 
 ## Rendering
@@ -264,14 +266,14 @@ Contents:
 - zoom percentage
 - zoom in
 - reset zoom
-- download, only for `src`
+- download through `resource.getOriginalDownload()`
 
 Rules:
 
 - Fallback toolbar appears only when `toolbar !== false`.
 - Error state does not show inert zoom controls.
-- Download uses `downloadName` when provided.
-- Download without a provided name uses browser default behavior.
+- Download uses `source.fileName` when provided.
+- Download without a provided name uses the source/resource default.
 - Toolbar button labels use one vocabulary: `Zoom out`, `Zoom in`, `Reset zoom`,
   `Download`.
 
@@ -310,13 +312,13 @@ function findLineElement(
 
 ### Resource Tests
 
-- successful `src` load caches fulfilled text
-- failed load can be retried for the same `src`
-- changing `src` uses a distinct resource
+- successful URL load caches fulfilled text
+- failed load can be retried for the same source
+- changing `source` uses a distinct resource
 - `maxBytes` rejects by `Content-Length`
 - `maxBytes` rejects during stream read
 - `maxLines` rejects after decoding
-- inline `value` path enforces bounds
+- text source path enforces bounds
 
 ### Geometry Tests
 
@@ -327,15 +329,15 @@ function findLineElement(
 
 ### Component Tests
 
-- inline `value` renders line numbers and text
+- text source renders line numbers and text
 - `toolbar={false}` hides toolbar in fallback and loaded states
 - multi-line highlight marks every included line
 - invalid highlight marks no lines
 - fetch error renders local error
-- retry button retries same `src`
-- changing `src` recovers from error
+- retry button retries the same source
+- changing `source` recovers from error
 - too-large state renders locally
-- download exists for `src`, not for `value`
+- download exists through the resource action
 
 ## Visual Verification
 
@@ -346,8 +348,8 @@ Before calling the component ideal:
 - Add a sample field with a multi-line source and verify full-range highlight.
 - Test at 100%, zoomed in, and zoomed out.
 - Test narrow container width.
-- Test missing `src`.
-- Test too-large `src`.
+- Test missing or failed URL source.
+- Test too-large URL source.
 
 If browser automation is blocked, record that explicitly and do not claim visual
 verification.
@@ -357,7 +359,7 @@ verification.
 The ideal removes:
 
 - public `clearTextViewerResourceCache`
-- ambiguous `downloadFileName`
+- top-level `src`, `value`, `downloadName`, and `downloadFileName` props
 - positional `scrollToLines(lineStart, lineEnd)`
 - comments as the only large-file guard
 - test logic coupled to component internals

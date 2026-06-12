@@ -174,6 +174,35 @@ describe("document source model", () => {
     })
   })
 
+  it("skips malformed source leaves instead of leaking invalid runtime sources", () => {
+    expect(
+      extractionSourcesToSourceMap({
+        valid: { value: "ok", source: pdfSource },
+        missing_content: {
+          value: "bad",
+          source: { anchor: pdfSource.anchor },
+        },
+        missing_anchor: {
+          value: "bad",
+          source: { content: "bad" },
+        },
+        unknown_anchor: {
+          value: "bad",
+          source: {
+            content: "bad",
+            anchor: { kind: "unknown_anchor" },
+          },
+        },
+        primitive_source: {
+          value: "bad",
+          source: "not a source",
+        },
+      })
+    ).toEqual({
+      valid: pdfSource,
+    })
+  })
+
   it("builds stable location keys from the full page and box geometry", () => {
     expect(
       sourceLocationKey({
@@ -475,6 +504,23 @@ describe("source adapters", () => {
         line_end: 2,
       })
     ).toBeUndefined()
+    expect(
+      textAnchorToLines({
+        kind: "text_span",
+        line_start: 1,
+        line_end: 2,
+        char_start: 4,
+      })
+    ).toBeUndefined()
+    expect(
+      textAnchorToLines({
+        kind: "text_span",
+        line_start: 1,
+        line_end: 2,
+        char_start: 4,
+        char_end: 2,
+      })
+    ).toBeUndefined()
   })
 
   it("rejects invalid docx anchors instead of producing impossible viewer targets", () => {
@@ -508,6 +554,41 @@ describe("source adapters", () => {
             char_end: 0,
           },
           "   "
+        )
+      )
+    ).toBeNull()
+    expect(
+      docxSourceToTarget(
+        source(
+          {
+            kind: "docx_text_span",
+            paragraph: -1,
+          },
+          "ACME"
+        )
+      )
+    ).toBeNull()
+    expect(
+      docxSourceToTarget(
+        source(
+          {
+            kind: "docx_text_span",
+            paragraph: 1.5,
+          },
+          "ACME"
+        )
+      )
+    ).toBeNull()
+    expect(
+      docxSourceToTarget(
+        source(
+          {
+            kind: "docx_text_span",
+            paragraph: 0,
+            char_start: 4,
+            char_end: 2,
+          },
+          "ACME"
         )
       )
     ).toBeNull()

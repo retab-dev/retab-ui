@@ -38,6 +38,7 @@ export function ObjectPropertiesField({
 }) {
   const [newPropertyName, setNewPropertyName] = React.useState("")
   const propertyNames = listObjectPropertyNames(schemaNode)
+  const propertyNamesKey = propertyNames.join("\0")
   const [draftPropertyIdsByName, setDraftPropertyIdsByName] = React.useState(
     () =>
       Object.fromEntries(
@@ -56,6 +57,10 @@ export function ObjectPropertiesField({
         originalName: "",
       })
     : null
+
+  React.useEffect(() => {
+    setNewPropertyName("")
+  }, [propertyNamesKey, schemaContext.originalName])
 
   const createDraftPropertyId = () => {
     const propertyId = `draft-property-${nextDraftPropertyIdRef.current}`

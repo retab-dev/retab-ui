@@ -25,6 +25,7 @@ import {
   type PptxSlideOverlayProps,
 } from "@/registry/new-york-v4/ui/pptx-viewer-core"
 import { parsePptxSlideSize } from "@/registry/new-york-v4/ui/pptx-viewer-presentation"
+import { PptxRendererError } from "@/registry/new-york-v4/ui/pptx-viewer-renderer"
 import { createPptxScrollActivity } from "@/registry/new-york-v4/ui/pptx-viewer-scroll"
 import { PptxSlideScroller } from "@/registry/new-york-v4/ui/pptx-viewer-slide"
 import {
@@ -343,14 +344,14 @@ describe("PptxViewer helpers", () => {
   })
 
   it("builds reset keys from render-affecting inputs", () => {
-    expect(getPptxResetKey({ cacheKey: "url:/a.pptx" })).not.toBe(
-      getPptxResetKey({ cacheKey: "url:/a.pptx", scale: 2 })
+    expect(getPptxResetKey({ resourceKey: "url:/a.pptx" })).not.toBe(
+      getPptxResetKey({ resourceKey: "url:/a.pptx", scale: 2 })
     )
-    expect(getPptxResetKey({ cacheKey: "url:/a.pptx" })).not.toBe(
-      getPptxResetKey({ cacheKey: "url:/a.pptx", defaultScale: 2 })
+    expect(getPptxResetKey({ resourceKey: "url:/a.pptx" })).not.toBe(
+      getPptxResetKey({ resourceKey: "url:/a.pptx", defaultScale: 2 })
     )
-    expect(getPptxResetKey({ cacheKey: "url:/a.pptx" })).not.toBe(
-      getPptxResetKey({ cacheKey: "url:/a.pptx", eager: true })
+    expect(getPptxResetKey({ resourceKey: "url:/a.pptx" })).not.toBe(
+      getPptxResetKey({ resourceKey: "url:/a.pptx", eager: true })
     )
   })
 
@@ -374,7 +375,7 @@ describe("PptxViewer helpers", () => {
     })
 
     expect(second).not.toBe(first)
-    expect(second.cacheKey).not.toBe(first.cacheKey)
+    expect(second.keys.load).not.toBe(first.keys.load)
     expect(pptxMock.loadFile).toHaveBeenCalledTimes(2)
   })
 
@@ -904,12 +905,42 @@ describe("PptxViewer", () => {
     expect(await screen.findByText("200%")).toBeTruthy()
   })
 
+  it("normalizes invalid controlled scale values before rendering", async () => {
+    const view = await renderPptx(
+      <PptxViewer
+        source={pptxUrlSource("/nan-scale.pptx")}
+        scale={Number.NaN}
+      />
+    )
+
+    expect(await screen.findByText("100%")).toBeTruthy()
+
+    await act(async () => {
+      view.rerender(
+        <PptxViewer source={pptxUrlSource("/nan-scale.pptx")} scale={999} />
+      )
+    })
+
+    expect(await screen.findByText("500%")).toBeTruthy()
+  })
+
   it("uses an uncontrolled default scale before user zoom changes", async () => {
     await renderPptx(
       <PptxViewer source={pptxUrlSource("/deck.pptx")} defaultScale={1.5} />
     )
 
     expect(await screen.findByText("150%")).toBeTruthy()
+  })
+
+  it("normalizes invalid uncontrolled default scale values", async () => {
+    await renderPptx(
+      <PptxViewer
+        source={pptxUrlSource("/nan-default-scale.pptx")}
+        defaultScale={Number.NaN}
+      />
+    )
+
+    expect(await screen.findByText("100%")).toBeTruthy()
   })
 
   it("ignores default scale changes after the uncontrolled initial mount", async () => {
@@ -1319,7 +1350,10 @@ describe("PptxViewer", () => {
   it("retries a failed slide frame when the render scale changes", async () => {
     const source = createFakePptxSource()
     source.renderSlide
-      .mockResolvedValueOnce({ status: "failed", error: new Error("bad") })
+      .mockResolvedValueOnce({
+        status: "failed",
+        error: new PptxRendererError("render_failed", "bad"),
+      })
       .mockResolvedValueOnce({ status: "rendered" })
     const activity = createManualPptxActivity(false).activity
 
@@ -1356,6 +1390,100 @@ describe("PptxViewer", () => {
     await waitFor(() => {
       expect(source.renderSlide).toHaveBeenCalledTimes(2)
       expect(screen.queryByText("Couldn't render slide 1.")).toBeNull()
+    })
+  })
+
+  it("shows a slide error when renderSlide unexpectedly rejects", async () => {
+    const source = createFakePptxSource()
+    source.renderSlide.mockRejectedValueOnce(new Error("unexpected failure"))
+    const activity = createManualPptxActivity(false).activity
+
+    render(
+      <PptxSlideScroller
+        source={source}
+        zoomScale={1}
+        rotation={0}
+        eager={false}
+        activity={activity}
+        containerRef={vi.fn()}
+        viewportRef={vi.fn()}
+        onScroll={vi.fn()}
+      />
+    )
+
+    expect(await screen.findByText("Couldn't render slide 1.")).toBeTruthy()
+  })
+
+  it("ignores stale failed render results after a newer render succeeds", async () => {
+    const source = createFakePptxSource()
+    const firstRender = deferred<PptxRenderResult>()
+    source.renderSlide
+      .mockReturnValueOnce(firstRender.promise)
+      .mockResolvedValueOnce({ status: "rendered" })
+    const activity = createManualPptxActivity(false).activity
+
+    const view = render(
+      <PptxSlideScroller
+        source={source}
+        zoomScale={1}
+        rotation={0}
+        eager={false}
+        activity={activity}
+        containerRef={vi.fn()}
+        viewportRef={vi.fn()}
+        onScroll={vi.fn()}
+      />
+    )
+
+    await waitFor(() => {
+      expect(source.renderSlide).toHaveBeenCalledTimes(1)
+    })
+
+    await act(async () => {
+      view.rerender(
+        <PptxSlideScroller
+          source={source}
+          zoomScale={2}
+          rotation={0}
+          eager={false}
+          activity={activity}
+          containerRef={vi.fn()}
+          viewportRef={vi.fn()}
+          onScroll={vi.fn()}
+        />
+      )
+    })
+
+    await waitFor(() => {
+      expect(source.renderSlide).toHaveBeenCalledTimes(2)
+    })
+
+    await act(async () => {
+      firstRender.resolve({
+        status: "failed",
+        error: new PptxRendererError("render_failed", "stale"),
+      })
+    })
+
+    expect(screen.queryByText("Couldn't render slide 1.")).toBeNull()
+  })
+
+  it("keeps a mounted viewer source alive across cache eviction", async () => {
+    const view = await renderPptx(
+      <PptxViewer source={pptxUrlSource("/mounted-retained.pptx")} />
+    )
+    await screen.findByText("Slide 1 of 1")
+
+    for (let i = 0; i < 4; i += 1) {
+      await getPptxSource(pptxUrlResource(`/mounted-evict-${i}.pptx`))
+    }
+
+    expect(pptxMock.destroy).not.toHaveBeenCalled()
+
+    view.unmount()
+
+    await waitFor(() => {
+      expect(pptxMock.destroy).toHaveBeenCalledTimes(1)
     })
   })
 

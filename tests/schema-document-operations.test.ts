@@ -69,6 +69,16 @@ describe("property operations", () => {
     expect(Object.keys(json(d).properties!)).toEqual(["a", "b", "c"])
   })
 
+  it("addProperty refuses non-object parent nodes", () => {
+    const d = doc(base)
+    const aId = getChildNodeId(d, d.root.id, "a")!
+
+    const out = addProperty(d, aId, { key: "child" })
+
+    expect(out).toBe(d)
+    expect(json(out)).toEqual(json(d))
+  })
+
   it("renameProperty renames and keeps order + required", () => {
     let d = doc(base)
     const aPropertyId = getChildPropertyId(d, d.root.id, "a")!
@@ -210,6 +220,20 @@ describe("setNodeType", () => {
     expect(getNode(d, aId)!.enum).toHaveLength(1)
     expect(getNode(d, aId)!.type).toBe("string")
   })
+
+  it("retyping a boolean schema replaces the boolean literal", () => {
+    let d = doc({
+      type: "object",
+      properties: {
+        anything: true,
+      },
+    } as JSONSchema7)
+    const anythingId = getChildNodeId(d, d.root.id, "anything")!
+
+    d = setNodeType(d, anythingId, "string")
+
+    expect(json(d).properties!.anything).toEqual({ type: "string" })
+  })
 })
 
 describe("setNullable (document canonical: type-union)", () => {
@@ -279,6 +303,23 @@ describe("enum operations", () => {
         { type: "null" },
       ],
       default: null,
+    })
+  })
+
+  it("setEnumValues replaces boolean schema literals", () => {
+    let d = doc({
+      type: "object",
+      properties: {
+        status: true,
+      },
+    } as JSONSchema7)
+    const statusId = getChildNodeId(d, d.root.id, "status")!
+
+    d = setEnumValues(d, statusId, ["draft", "paid"])
+
+    expect(json(d).properties!.status).toEqual({
+      type: "string",
+      enum: ["draft", "paid"],
     })
   })
 })
@@ -388,6 +429,34 @@ describe("definition operations", () => {
     expect(Object.keys(out.$defs!)).toEqual(["Amount"])
     expect((out.properties!.total as JSONSchema7).$ref).toBe("#/$defs/Amount")
     expect((out.properties!.sub as JSONSchema7).$ref).toBe("#/$defs/Amount")
+  })
+
+  it("renameDefinition updates refs inside schema-bearing rest keywords", () => {
+    let d = doc({
+      type: "object",
+      $defs: {
+        Money: { type: "object", properties: { amount: { type: "number" } } },
+      },
+      additionalProperties: { $ref: "#/$defs/Money" },
+      properties: {
+        tuple: {
+          type: "array",
+          items: [{ $ref: "#/$defs/Money" }],
+        } as JSONSchema7,
+      },
+    } as JSONSchema7)
+    const moneyId = d.defs.find((definition) => definition.name === "Money")!.id
+
+    d = renameDefinition(d, moneyId, "Amount")
+
+    const out = json(d) as Record<string, unknown>
+    expect(
+      (out.additionalProperties as JSONSchema7).$ref
+    ).toBe("#/$defs/Amount")
+    expect(
+      (((out.properties as Record<string, JSONSchema7>).tuple.items as JSONSchema7[])[0])
+        .$ref
+    ).toBe("#/$defs/Amount")
   })
 
   it("addDefinition adds a uniquely-named entry", () => {

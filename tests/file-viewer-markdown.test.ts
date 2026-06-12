@@ -127,6 +127,32 @@ describe("file viewer markdown html", () => {
     expect(load).toHaveBeenCalledTimes(2)
   })
 
+  it("drops failed text loads so the same source can retry", async () => {
+    const load = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("text load failed"))
+      .mockResolvedValueOnce("# Loaded on retry")
+    const cache = createMarkdownHtmlCache({
+      textCache: {
+        load,
+        clear() {},
+        size() {
+          return 0
+        },
+      },
+    })
+
+    await expect(
+      cache.load(textSubscription("/retry-after-failure.md"))
+    ).rejects.toThrow("text load failed")
+    expect(cache.size()).toBe(0)
+
+    await expect(
+      cache.load(textSubscription("/retry-after-failure.md"))
+    ).resolves.toContain("<h1>Loaded on retry</h1>")
+    expect(load).toHaveBeenCalledTimes(2)
+  })
+
   it("shares rendered html across subscribers for the same source", async () => {
     const load = vi.fn(async () => "# Shared")
     const cache = createMarkdownHtmlCache({

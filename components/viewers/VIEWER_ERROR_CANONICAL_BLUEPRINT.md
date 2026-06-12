@@ -741,3 +741,11 @@ This keeps the abstraction honest:
 
 That is the minimum structure needed for consistent, debuggable, user-friendly
 viewer errors without flattening real format differences.
+
+# Superseded Download Note
+
+Download behavior now uses `ViewerDownloadAction` and
+`ViewerResource.getOriginalDownload()`. Older mentions of
+`DownloadCapability`, `getDownload()`, `ViewerDownloadAnchor`, or
+`useDownloadHref()` in this document are historical design notes, not the
+current runtime contract.

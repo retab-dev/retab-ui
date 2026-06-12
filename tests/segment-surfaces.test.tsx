@@ -300,11 +300,18 @@ describe("segment model helpers", () => {
 
   it("classifies and averages confidence values without clamping", () => {
     expect(confidenceLevel(undefined)).toBeNull()
+    expect(confidenceLevel(Number.NaN)).toBeNull()
+    expect(confidenceLevel(Infinity)).toBeNull()
     expect(confidenceLevel(0.95)).toBe("high")
     expect(confidenceLevel(0.75)).toBe("medium")
     expect(confidenceLevel(0.2)).toBe("low")
     expect(meanConfidence([])).toBeNull()
     expect(meanConfidence([0.25, 0.5, 1])).toBeCloseTo(0.583333, 5)
+  })
+
+  it("ignores non-finite values when averaging confidence", () => {
+    expect(meanConfidence([0.5, Number.NaN, Infinity, 1])).toBe(0.75)
+    expect(meanConfidence([Number.NaN, Infinity])).toBeNull()
   })
 
   it("normalizes display labels without changing segment ids", () => {
@@ -635,6 +642,26 @@ describe("SegmentSidebar", () => {
     expect(screen.getByText("0%")).toBeTruthy()
   })
 
+  it("does not render NaN confidence values", () => {
+    render(
+      <SegmentSidebar
+        segments={[
+          {
+            id: "nan#0",
+            label: "Invalid confidence",
+            pages: [1],
+            color: "#000000",
+            index: 0,
+            confidence: Number.NaN,
+          },
+        ]}
+      />
+    )
+
+    expect(screen.queryByText("NaN%")).toBeNull()
+    expect(screen.getByText("0%")).toBeTruthy()
+  })
+
   it("renders whitespace-only sidebar labels as unnamed", () => {
     render(
       <SegmentSidebar segments={toSegments([{ name: "   ", pages: [1] }])} />
@@ -694,6 +721,30 @@ describe("PageTimeline", () => {
     expect(
       screen.getByRole("button", { name: "Page 1 · unnamed" })
     ).toBeTruthy()
+  })
+
+  it("does not confuse timeline segments with duplicate index fields", () => {
+    const duplicateIndexSegments = [
+      segment({
+        id: "first",
+        index: 0,
+        label: "First",
+        pages: [1],
+        color: "#111111",
+      }),
+      segment({
+        id: "second",
+        index: 0,
+        label: "Second",
+        pages: [2],
+        color: "#222222",
+      }),
+    ]
+
+    render(<PageTimeline segments={duplicateIndexSegments} />)
+
+    expect(screen.getByRole("button", { name: "Page 1 · First" })).toBeTruthy()
+    expect(screen.getByRole("button", { name: "Page 2 · Second" })).toBeTruthy()
   })
 
   it("selects the first segment for overlapping pages without dimming shared mappings", () => {
@@ -929,6 +980,28 @@ describe("PageRibbon", () => {
         .querySelector(".pointer-events-none.absolute")
         ?.getAttribute("style")
     ).toContain("left: 0%")
+  })
+
+  it("does not render a cursor for non-finite progress or current page", () => {
+    const { container, rerender } = render(
+      <PageRibbon
+        rows={[{ id: "split", segments: segments.slice(0, 1) }]}
+        pageCount={2}
+        scrollProgress={Number.NaN}
+      />
+    )
+
+    expect(container.querySelector(".pointer-events-none.absolute")).toBeNull()
+
+    rerender(
+      <PageRibbon
+        rows={[{ id: "split", segments: segments.slice(0, 1) }]}
+        pageCount={2}
+        currentPage={Number.NaN}
+      />
+    )
+
+    expect(container.querySelector(".pointer-events-none.absolute")).toBeNull()
   })
 
   it("renders a single tick for one-page ribbons", () => {

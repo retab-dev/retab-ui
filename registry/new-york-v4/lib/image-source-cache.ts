@@ -159,7 +159,8 @@ export class FrameSourceManager {
       return createTiffFrameSource(
         await resource.readArrayBuffer({ signal }),
         createTiffWorker,
-        this.maxDecodedFrames
+        this.maxDecodedFrames,
+        signal
       )
     }
 
@@ -171,7 +172,12 @@ export class FrameSourceManager {
     }
 
     const blob = await resource.readBlob({ signal })
-    return this.createSourceFromUnknownBlob(sourceName, blob, createTiffWorker)
+    return this.createSourceFromUnknownBlob(
+      sourceName,
+      blob,
+      createTiffWorker,
+      signal
+    )
   }
 
   private disposeEntry(entry: FrameSourceEntry, reason: Error) {
@@ -209,7 +215,8 @@ export class FrameSourceManager {
   private async createSourceFromUnknownBlob(
     sourceName: string,
     blob: Blob,
-    createTiffWorker: TiffWorkerFactory
+    createTiffWorker: TiffWorkerFactory,
+    signal: AbortSignal
   ): Promise<FrameSource> {
     const contentType = blob.type || null
     const prefix = await blob.slice(0, TIFF_SIGNATURE_BYTE_COUNT).arrayBuffer()
@@ -217,7 +224,8 @@ export class FrameSourceManager {
       return createTiffFrameSource(
         await blob.arrayBuffer(),
         createTiffWorker,
-        this.maxDecodedFrames
+        this.maxDecodedFrames,
+        signal
       )
     }
 

@@ -809,6 +809,40 @@ describe("DocxViewer", () => {
     expect(screen.getByText("new document")).toBeTruthy()
   })
 
+  it("ignores stale document bytes after the source changes during loading", async () => {
+    const firstResponse = deferred<Response>()
+    vi.mocked(fetch).mockImplementation((url) => {
+      if (url === "/slow-load.docx") return firstResponse.promise
+      return Promise.resolve(response(Uint8Array.of(4, 5, 6), { status: 200 }))
+    })
+    docxMock.renderAsync.mockImplementation(async (_buffer, host) => {
+      installRenderedDocument(host, { text: "fast document" })
+    })
+
+    const view = await renderDocx(
+      <DocxViewer source={docxUrlSource("/slow-load.docx")} />
+    )
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledWith("/slow-load.docx", {
+        signal: undefined,
+      })
+    })
+
+    await act(async () => {
+      view.rerender(<DocxViewer source={docxUrlSource("/fast-load.docx")} />)
+    })
+    expect(await screen.findByText("fast document")).toBeTruthy()
+
+    await act(async () => {
+      firstResponse.resolve(response(Uint8Array.of(1, 2, 3), { status: 200 }))
+      await firstResponse.promise
+    })
+
+    expect(screen.getByText("fast document")).toBeTruthy()
+    expect(docxMock.renderAsync).toHaveBeenCalledTimes(1)
+  })
+
   it("ignores stale render failures after the source changes", async () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined)
     const first = deferred<void>()
@@ -889,6 +923,24 @@ describe("DocxViewer", () => {
     expect(await screen.findByText("Page 1 of 2")).toBeTruthy()
   })
 
+  it("retries a failed document load for the same source", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined)
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(response(Uint8Array.of(), { status: 500 }))
+      .mockResolvedValueOnce(response(Uint8Array.of(4, 5, 6), { status: 200 }))
+
+    await renderDocx(<DocxViewer source={docxUrlSource("/retry-load.docx")} />)
+
+    expect(await screen.findByText("Failed to load file: 500.")).toBeTruthy()
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Retry" }))
+    })
+
+    expect(await screen.findByText("Page 1 of 2")).toBeTruthy()
+    expect(fetch).toHaveBeenCalledTimes(2)
+  })
+
   it("shows a render error and recovers when the source changes", async () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined)
     docxMock.renderAsync
@@ -913,5 +965,30 @@ describe("DocxViewer", () => {
     })
 
     expect(await screen.findByText("Page 1 of 2")).toBeTruthy()
+  })
+
+  it("retries a failed document render for the same source", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined)
+    docxMock.renderAsync
+      .mockRejectedValueOnce(new Error("bad docx"))
+      .mockImplementationOnce(async (_buffer, host) => {
+        installRenderedDocument(host)
+      })
+
+    await renderDocx(
+      <DocxViewer source={docxUrlSource("/retry-render.docx")} />
+    )
+
+    expect(
+      await screen.findByText("Couldn't render this document.")
+    ).toBeTruthy()
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Retry" }))
+    })
+
+    expect(await screen.findByText("Page 1 of 2")).toBeTruthy()
+    expect(docxMock.renderAsync).toHaveBeenCalledTimes(2)
+    expect(fetch).toHaveBeenCalledTimes(1)
   })
 })

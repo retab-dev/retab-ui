@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
 
+import type * as React from "react"
+import { renderHook } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import {
@@ -24,6 +26,8 @@ import { buildVirtualGridTemplate } from "@/registry/new-york-v4/ui/fixed-grid-t
 import {
   fixedScrollOffset,
   fixedVirtualItems,
+  useFixedGridVirtualization,
+  useFixedRowVirtualization,
 } from "@/registry/new-york-v4/ui/fixed-grid-virtualization"
 import {
   findScrollableViewport,
@@ -586,6 +590,60 @@ describe("fixed grid virtualization math", () => {
       })
     ).toBe(0)
   })
+
+  it("keeps hook total sizes finite for malformed grid dimensions", () => {
+    const scrollRef = { current: null } as React.RefObject<HTMLElement | null>
+    const { result } = renderHook(() =>
+      useFixedGridVirtualization({
+        rowCount: Number.NaN,
+        columnCount: Number.POSITIVE_INFINITY,
+        rowSize: 32,
+        columnSize: Number.NaN,
+        rowOverscan: 2,
+        columnOverscan: 2,
+        scrollRef,
+      })
+    )
+
+    expect(result.current.totalRowSize).toBe(0)
+    expect(result.current.totalColumnSize).toBe(0)
+    expect(result.current.virtualRows).toEqual([])
+    expect(result.current.columnItems).toEqual([])
+  })
+
+  it("keeps row-only hook total sizes finite for malformed row dimensions", () => {
+    const scrollRef = { current: null } as React.RefObject<HTMLElement | null>
+    const { result } = renderHook(() =>
+      useFixedRowVirtualization({
+        rowCount: Number.POSITIVE_INFINITY,
+        rowSize: 32,
+        rowOverscan: 2,
+        scrollRef,
+      })
+    )
+
+    expect(result.current.totalRowSize).toBe(0)
+    expect(result.current.virtualRows).toEqual([])
+  })
+
+  it("does not throw for malformed non-virtualized column dimensions", () => {
+    const scrollRef = { current: null } as React.RefObject<HTMLElement | null>
+    const { result } = renderHook(() =>
+      useFixedGridVirtualization({
+        rowCount: 1,
+        columnCount: Number.POSITIVE_INFINITY,
+        rowSize: 32,
+        columnSize: Number.NaN,
+        rowOverscan: 2,
+        columnOverscan: 2,
+        scrollRef,
+        virtualizeColumns: false,
+      })
+    )
+
+    expect(result.current.columnItems).toEqual([])
+    expect(result.current.totalColumnSize).toBe(0)
+  })
 })
 
 describe("fixed grid benchmark scroller discovery", () => {
@@ -760,6 +818,18 @@ describe("scrollbench runner infrastructure", () => {
     expect(viewportMetrics(scroller)).toEqual({
       clientHeight: 500,
       scrollHeight: 120,
+      maxScrollTop: 0,
+    })
+  })
+
+  it("keeps viewport metrics finite for malformed DOM geometry", () => {
+    const scroller = document.createElement("div")
+    defineViewportMetric(scroller, "clientHeight", Number.NaN)
+    defineViewportMetric(scroller, "scrollHeight", Number.POSITIVE_INFINITY)
+
+    expect(viewportMetrics(scroller)).toEqual({
+      clientHeight: 0,
+      scrollHeight: 0,
       maxScrollTop: 0,
     })
   })

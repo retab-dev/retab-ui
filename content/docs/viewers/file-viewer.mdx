@@ -32,13 +32,18 @@ at runtime, only when a Markdown file is opened.
 import { FileViewer } from "@/components/ui/file-viewer"
 
 export function Example() {
-  return <FileViewer src="/report.pdf" fileName="report.pdf" />
+  return (
+    <FileViewer
+      source={{ kind: "url", url: "/report.pdf", fileName: "report.pdf" }}
+    />
+  )
 }
 ```
 
-`fileName` drives type detection and the download button. If you only have a URL,
-it's used for both; pass `mimeType` when the extension is missing or ambiguous,
-or `as` to force a category.
+`source.fileName` drives type detection and the download button. If you only
+have a URL, the URL is used for display and its basename is used for downloads;
+pass `source.mimeType` when the extension is missing or ambiguous, or `as` to
+force a category.
 
 ## Supported types
 
@@ -78,9 +83,7 @@ Anything unrecognized falls back to a download card.
 
 | Prop | Type | Description |
 | --- | --- | --- |
-| `src` | `string` | URL of the file (same-origin or CORS-enabled). |
-| `fileName` | `string` | Name for type detection + download. Falls back to `src`. |
-| `mimeType` | `string` | MIME hint used when the extension is missing/ambiguous. |
+| `source` | `ViewerSource` | Canonical file source. URL, Blob, and text sources carry file metadata with the payload identity. |
 | `as` | `FileCategory` | Force a category, bypassing detection. |
 | `bare` | `boolean` | Drop the outer border/background so the viewer fills its container. |
 | `className` | `string` | Optional class on the viewer shell. |

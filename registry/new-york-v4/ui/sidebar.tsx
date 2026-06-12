@@ -149,12 +149,11 @@ export function SidebarProvider({
       const previousOpen = isControlled ? open : openRef.current
       const openState =
         typeof value === "function" ? value(previousOpen) : value
-      if (setOpenProp) {
-        setOpenProp(openState)
-      } else {
+      if (!isControlled) {
         _setOpen(openState)
         openRef.current = openState
       }
+      setOpenProp?.(openState)
 
       // This sets the cookie to keep the sidebar state.
       persistSidebarState(openState)
@@ -254,6 +253,7 @@ export function Sidebar({
           "flex h-full w-(--sidebar-width) flex-col bg-sidebar text-sidebar-foreground",
           className
         )}
+        data-sidebar="sidebar"
         data-slot="sidebar"
         style={style}
         {...props}

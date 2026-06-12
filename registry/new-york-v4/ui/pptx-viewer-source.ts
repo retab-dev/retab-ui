@@ -170,8 +170,8 @@ const sourceCache = new DisposableLruCache<string, SourceCacheEntry>(
 )
 
 export function getPptxSource(resource: ViewerResource): Promise<PptxSource> {
-  const cacheKey = resource.keys.load
-  const cached = sourceCache.get(cacheKey)
+  const loadKey = resource.keys.load
+  const cached = sourceCache.get(loadKey)
   if (cached) return cached.promise
 
   const pendingEntry: { current?: SourceCacheEntry } = {}
@@ -180,16 +180,16 @@ export function getPptxSource(resource: ViewerResource): Promise<PptxSource> {
     (error) => {
       if (
         pendingEntry.current &&
-        sourceCache.get(cacheKey) === pendingEntry.current
+        sourceCache.get(loadKey) === pendingEntry.current
       ) {
-        sourceCache.delete(cacheKey)
+        sourceCache.delete(loadKey)
       }
       throw error
     }
   )
   const entry = new SourceCacheEntry(promise)
   pendingEntry.current = entry
-  sourceCache.set(cacheKey, entry)
+  sourceCache.set(loadKey, entry)
   return entry.promise
 }
 

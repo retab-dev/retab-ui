@@ -11,7 +11,9 @@ network failures, hostile host CSS, and narrow layouts.
 `FileViewer` should be a thin, predictable shell:
 
 ```tsx
-<FileViewer src="/samples/report.pdf" fileName="report.pdf" />
+<FileViewer
+  source={{ kind: "url", url: "/samples/report.pdf", fileName: "report.pdf" }}
+/>
 ```
 
 It should normalize file identity once, route to one specialized viewer, provide
@@ -78,9 +80,7 @@ Keep the current prop surface:
 
 ```ts
 export interface FileViewerProps {
-  src: string
-  fileName?: string
-  mimeType?: string
+  source: ViewerSource
   as?: FileCategory
   className?: string
   bare?: boolean
@@ -104,7 +104,7 @@ Every range/full text request should be tied to an `AbortController`.
 
 Rules:
 
-- changing `src`, `fileName`, `mimeType`, or `as` aborts pending text work
+- changing `source` or `as` aborts pending text work
 - unmounting a text viewer aborts pending text work
 - an aborted request must not surface as a user-visible error
 - a non-abort fetch failure should clear busy state and render through the error
@@ -115,7 +115,7 @@ Target helper shape:
 ```ts
 interface TextLoadRequest {
   key: string
-  src: string
+  resource: ViewerResource
   mode: TextLoadMode
   signal: AbortSignal
 }
@@ -141,7 +141,7 @@ interface TextLoaderCache {
 
 Rules:
 
-- cache keys include `src` and `TextLoadMode`
+- cache keys include `resource.cacheKey` and `TextLoadMode`
 - first-chunk promise and streaming loader state are evicted together
 - failed first-chunk requests are removed from cache so retry can work
 - aborted requests are removed only if they did not produce a usable snapshot
@@ -232,10 +232,10 @@ Add or preserve coverage for:
 
 Cover:
 
-- switching text `src` while first chunk is pending
-- switching text `src` while next chunk is pending
+- switching text source while first chunk is pending
+- switching text source while next chunk is pending
 - same URL rendered as JSON and streamed text without cache poisoning
-- error boundary recovery when `fileName`, `mimeType`, or `as` changes
+- error boundary recovery when `source` or `as` changes
 - long filename toolbar keeps download reachable
 - unsupported fallback keeps download reachable
 

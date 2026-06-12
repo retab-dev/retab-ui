@@ -118,10 +118,13 @@ export async function waitForScroller(
 }
 
 export function viewportMetrics(scroller: HTMLElement) {
+  const clientHeight = finitePositiveMetric(scroller.clientHeight)
+  const scrollHeight = finitePositiveMetric(scroller.scrollHeight)
+
   return {
-    clientHeight: scroller.clientHeight,
-    scrollHeight: scroller.scrollHeight,
-    maxScrollTop: Math.max(0, scroller.scrollHeight - scroller.clientHeight),
+    clientHeight,
+    scrollHeight,
+    maxScrollTop: Math.max(0, scrollHeight - clientHeight),
   }
 }
 
@@ -175,4 +178,8 @@ function throwIfAborted(signal?: AbortSignal) {
 
 function abortError() {
   return new DOMException("Scrollbench run was cancelled.", "AbortError")
+}
+
+function finitePositiveMetric(value: number) {
+  return Number.isFinite(value) && value > 0 ? value : 0
 }

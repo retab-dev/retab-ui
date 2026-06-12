@@ -3,7 +3,9 @@
   "name": "use-source-link",
   "title": "useSourceLink",
   "description": "Generic, viewer-agnostic mediator linking a field emitter (json-form, a field list) to a document viewer: owns the hover-vs-pin state machine, resolves the active field to a location via an injected SourceTarget, and drives the viewer's scroll. Unidirectional.",
-  "registryDependencies": ["document-source"],
+  "registryDependencies": [
+    "document-source"
+  ],
   "files": [
     {
       "path": "registry/new-york-v4/hooks/use-source-link.ts",

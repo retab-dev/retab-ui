@@ -9,7 +9,7 @@ export interface ThumbnailCacheKeyInput {
   resource: ViewerResource
   descriptor: ViewerDescriptor
   unit?: string
-  options?: readonly string[]
+  options?: readonly ThumbnailOption[]
 }
 
 export interface ThumbnailRenderKeyInput {
@@ -25,11 +25,22 @@ export function getThumbnailCacheKey({
   options = [],
 }: ThumbnailCacheKeyInput): string {
   return [
-    encodePart(`resource:${resource.cacheKey}`),
+    encodePart(`resource:${resource.keys.load}`),
     encodePart(`category:${descriptor.category}`),
     encodePart(`unit:${unit}`),
     ...options.map((option) => encodePart(`option:${option}`)),
   ].join("")
+}
+
+export type ThumbnailOption = string & {
+  readonly __thumbnailOption: unique symbol
+}
+
+export function thumbnailOption(
+  name: string,
+  value: string | number
+): ThumbnailOption {
+  return `${name}:${String(value)}` as ThumbnailOption
 }
 
 export function getThumbnailRenderKey({

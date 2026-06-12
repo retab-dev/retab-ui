@@ -5,6 +5,8 @@ import * as React from "react"
 import { inferCsvDialect, parseCsv } from "@/lib/csv"
 import type { ViewerResource } from "@/lib/viewer-resource"
 import {
+  CSV_THUMBNAIL_MAX_COLUMNS,
+  CSV_THUMBNAIL_MAX_ROWS,
   getThumbnailText,
   useThumbnailResource,
 } from "@/components/document-thumbnail/cache"
@@ -24,8 +26,14 @@ export function CsvFirstRows({
       mimeType: resource.mimeType,
     })
     const table = parseCsv(raw, dialect)
-    const header = table.columns.length ? [table.columns.slice(0, 6)] : []
-    return header.concat(table.rows.slice(0, 15).map((row) => row.slice(0, 6)))
+    const header = table.columns.length
+      ? [table.columns.slice(0, CSV_THUMBNAIL_MAX_COLUMNS)]
+      : []
+    return header.concat(
+      table.rows
+        .slice(0, CSV_THUMBNAIL_MAX_ROWS - header.length)
+        .map((row) => row.slice(0, CSV_THUMBNAIL_MAX_COLUMNS))
+    )
   }, [raw, resource.fileName, resource.mimeType])
   return <GridTable rows={rows} headerRow />
 }

@@ -150,7 +150,7 @@ export type ConfidenceLevel = "high" | "medium" | "low"
 export function confidenceLevel(
   value: number | null | undefined
 ): ConfidenceLevel | null {
-  if (value == null) return null
+  if (value == null || !Number.isFinite(value)) return null
   if (value >= 0.9) return "high"
   if (value >= 0.7) return "medium"
   return "low"
@@ -158,6 +158,7 @@ export function confidenceLevel(
 
 /** Average a per-page likelihood array into a single segment confidence. */
 export function meanConfidence(values: number[] | undefined): number | null {
-  if (!values || values.length === 0) return null
-  return values.reduce((a, b) => a + b, 0) / values.length
+  const finiteValues = values?.filter((value) => Number.isFinite(value)) ?? []
+  if (finiteValues.length === 0) return null
+  return finiteValues.reduce((a, b) => a + b, 0) / finiteValues.length
 }

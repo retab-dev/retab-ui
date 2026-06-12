@@ -2,6 +2,7 @@ import {
   closeBitmap,
   createFrameSource,
   ImageDecodeError,
+  ImageSourceDisposedError,
   type FrameDescriptor,
   type FrameSource,
 } from "@/lib/image-frame-source"
@@ -38,6 +39,7 @@ export class TiffWorkerClient {
   private initResolve: ((frames: readonly FrameDescriptor[]) => void) | null =
     null
   private initReject: ((error: Error) => void) | null = null
+  private initAbortCleanup: (() => void) | null = null
   private nextRequestId = 0
   private initialized = false
   private disposed = false
@@ -55,19 +57,49 @@ export class TiffWorkerClient {
     }
   }
 
-  init(buffer: ArrayBuffer): Promise<readonly FrameDescriptor[]> {
+  init(
+    buffer: ArrayBuffer,
+    signal?: AbortSignal
+  ): Promise<readonly FrameDescriptor[]> {
     if (this.disposed) {
       return Promise.reject(new TiffWorkerError("TIFF worker disposed"))
     }
     if (this.initResolve) {
-      return Promise.reject(new TiffWorkerError("TIFF worker already initializing"))
+      return Promise.reject(
+        new TiffWorkerError("TIFF worker already initializing")
+      )
     }
     if (this.initialized) {
-      return Promise.reject(new TiffWorkerError("TIFF worker already initialized"))
+      return Promise.reject(
+        new TiffWorkerError("TIFF worker already initialized")
+      )
     }
     return new Promise((resolve, reject) => {
-      this.initResolve = resolve
-      this.initReject = reject
+      const cleanup = () => {
+        this.initAbortCleanup?.()
+        this.initAbortCleanup = null
+      }
+      this.initResolve = (frames) => {
+        cleanup()
+        resolve(frames)
+      }
+      this.initReject = (error) => {
+        cleanup()
+        reject(error)
+      }
+      if (signal) {
+        const abort = () => {
+          this.dispose(abortSignalReason(signal))
+        }
+        if (signal.aborted) {
+          abort()
+          return
+        }
+        signal.addEventListener("abort", abort, { once: true })
+        this.initAbortCleanup = () => {
+          signal.removeEventListener("abort", abort)
+        }
+      }
       try {
         this.worker.postMessage({ type: "init", buffer }, [buffer])
       } catch (error) {
@@ -78,11 +110,9 @@ export class TiffWorkerClient {
           }
         )
         this.disposed = true
-        this.initResolve = null
-        this.initReject = null
+        this.rejectInit(workerError)
         this.rejectPending(workerError)
         this.worker.terminate()
-        reject(workerError)
       }
     })
   }
@@ -165,6 +195,7 @@ export class TiffWorkerClient {
   }
 
   private fail(error: Error) {
+    if (this.disposed) return
     this.disposed = true
     this.rejectPending(error)
     this.rejectInit(error)
@@ -186,10 +217,11 @@ export class TiffWorkerClient {
 export async function createTiffFrameSource(
   buffer: ArrayBuffer,
   createWorker: TiffWorkerFactory,
-  maxDecodedFrames: number
+  maxDecodedFrames: number,
+  signal?: AbortSignal
 ): Promise<FrameSource> {
   const client = new TiffWorkerClient(createWorker)
-  const frames = await client.init(buffer)
+  const frames = await client.init(buffer, signal)
   return createFrameSource({
     kind: "tiff",
     frames,
@@ -199,4 +231,10 @@ export async function createTiffFrameSource(
       client.cancelDecode(frameIndex, reason),
     onDispose: (reason) => client.dispose(reason),
   })
+}
+
+function abortSignalReason(signal: AbortSignal): Error {
+  return signal.reason instanceof Error
+    ? signal.reason
+    : new ImageSourceDisposedError()
 }

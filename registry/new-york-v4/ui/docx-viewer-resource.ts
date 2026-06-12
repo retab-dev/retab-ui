@@ -19,6 +19,10 @@ export function getDocxResource(
   return promise
 }
 
+export function clearDocxResource(resource: ViewerResource) {
+  bufferCache.delete(resource.keys.load)
+}
+
 export function __resetDocxResourceCacheForTests() {
   bufferCache.clear()
 }

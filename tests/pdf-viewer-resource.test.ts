@@ -238,8 +238,12 @@ describe("pdf-viewer-resource", () => {
       message: "No bytes available.",
     })
     const resource = {
-      cacheKey: "manual-resource-error",
-      source: { kind: "url", url: "/manual-resource-error.pdf" },
+      keys: {
+        load: "manual-resource-error",
+        presentation: "manual-resource-error",
+        resource: "manual-resource-error",
+      },
+      sourceKind: "url",
       getDirectLoad: () => ({ kind: "none" as const }),
       readArrayBuffer: vi.fn(() => Promise.reject(error)),
     } as unknown as ViewerResource

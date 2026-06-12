@@ -101,9 +101,10 @@ export function readTextResource({
   retryVersion: number
   bounds: Required<TextViewerBounds>
 }) {
-  if (resource.sourceKind === "text") {
-    assertTextWithinBounds(resource.source.text, bounds)
-    return resource.source.text
+  const inlineText = resource.getInlineText()
+  if (inlineText !== null) {
+    assertTextWithinBounds(inlineText, bounds)
+    return inlineText
   }
 
   const resourceKey = textViewerResourceKey({ resource, retryVersion, bounds })

@@ -178,6 +178,9 @@ function PptxSlideCanvas({
             if (result.status === "cancelled") return
             setRenderState(result.status === "failed" ? "failed" : "rendered")
           })
+          .catch(() => {
+            if (!cancelled) setRenderState("failed")
+          })
       }
 
       if (

@@ -53,7 +53,6 @@ export interface ViewerResourceKeys {
 }
 
 export interface ViewerResource {
-  readonly source: ViewerSource
   readonly descriptor: ViewerDescriptor
   readonly sourceKind: ViewerSource["kind"]
   readonly keys: ViewerResourceKeys
@@ -352,12 +351,13 @@ function createBlobResource(
     readRange: async (range) => {
       validateByteRange(range)
       const { start, end } = range
+      validateKnownByteRangeStart(start, blob.size)
       const rangeBlob = blob.slice(start, end + 1)
       return {
         buffer: await rangeBlob.arrayBuffer(),
         contentRange: {
           start,
-          end: Math.min(end, Math.max(0, blob.size - 1)),
+          end: Math.min(end, blob.size - 1),
           total: blob.size,
         },
         isComplete: end >= blob.size - 1,
@@ -395,12 +395,13 @@ function createTextResource(
       validateByteRange(range)
       const { start, end } = range
       const buffer = new TextEncoder().encode(source.text)
+      validateKnownByteRangeStart(start, buffer.byteLength)
       const slice = buffer.slice(start, end + 1)
       return {
         buffer: slice.buffer,
         contentRange: {
           start,
-          end: Math.min(end, Math.max(0, buffer.byteLength - 1)),
+          end: Math.min(end, buffer.byteLength - 1),
           total: buffer.byteLength,
         },
         isComplete: end >= buffer.byteLength - 1,
@@ -427,7 +428,6 @@ function resourceBase(
   >
 ): ViewerResource {
   return Object.freeze({
-    source,
     descriptor,
     sourceKind: source.kind,
     keys,
@@ -581,6 +581,15 @@ function validateByteRange({ start, end }: ByteRange) {
     throw new ResourceError({
       kind: "invalid_range",
       message: "Byte range must use non-negative integer bounds.",
+    })
+  }
+}
+
+function validateKnownByteRangeStart(start: number, total: number) {
+  if (start > 0 && start >= total) {
+    throw new ResourceError({
+      kind: "invalid_range",
+      message: "Byte range starts past the available resource.",
     })
   }
 }

@@ -12,7 +12,9 @@ making async state, cache ownership, and verification as rigorous as the design.
 right specialized viewer.
 
 ```tsx
-<FileViewer src="/samples/report.pdf" fileName="report.pdf" />
+<FileViewer
+  source={{ kind: "url", url: "/samples/report.pdf", fileName: "report.pdf" }}
+/>
 ```
 
 It should provide consistent chrome, download behavior, loading behavior, and
@@ -25,9 +27,7 @@ Keep the public API narrow:
 
 ```ts
 export interface FileViewerProps {
-  src: string
-  fileName?: string
-  mimeType?: string
+  source: ViewerSource
   as?: FileCategory
   className?: string
   bare?: boolean
@@ -37,8 +37,8 @@ export interface FileViewerProps {
 
 Rules:
 
-- `src` is the resource identity.
-- `fileName`, `mimeType`, and `as` are viewer-selection inputs.
+- `source` is the file identity and metadata declaration.
+- `source.fileName`, `source.mimeType`, and `as` are viewer-selection inputs.
 - `bare` only changes outer chrome density.
 - `isolateStyles` only affects dense virtualized grids.
 - New format-specific controls belong in the leaf viewer first. Add them to
@@ -65,9 +65,9 @@ Remaining concerns:
 
 - A stale text range request can update state after the mounted viewer has moved
   to a different file.
-- The text first-chunk cache is keyed only by `src`, even though behavior also
+- The text first-chunk cache is keyed only by URL, even though behavior also
   depends on whether the caller needs the whole file (`loadAll` for JSON).
-- The top-level error boundary resets only on `src`, not on other
+- The top-level error boundary resets only on URL, not on other
   viewer-selection inputs.
 - Toolbar layout can degrade in narrow containers with long filenames.
 - There are no focused `FileViewer` regression tests for detection, prop changes,
@@ -97,9 +97,9 @@ downloads do not each recompute slightly different state.
 
 ```ts
 interface FileDescriptor {
-  src: string
+  source: ViewerSource
   displayName: string
-  downloadName: string
+  fileName: string
   mimeType?: string
   category: FileCategory
 }
@@ -111,11 +111,11 @@ function resolveFileDescriptor(props: FileViewerProps): FileDescriptor
 
 Rules:
 
-- `displayName = fileName ?? src`
-- `downloadName = fileName ?? extractName(src)`
+- `displayName = source.fileName ?? defaultDisplayName(source)`
+- `fileName = source.fileName ?? defaultFileName(source)`
 - `category = as ?? detectCategory(displayName, mimeType)`
-- The error-boundary reset key should include `src`, `displayName`, `mimeType`,
-  and `category`.
+- The error-boundary reset key should include `identityKey`, `displayName`,
+  `mimeType`, and `category`.
 
 ## Async State Rules
 
@@ -124,7 +124,7 @@ Text loading should guard every async continuation with a request identity.
 Target pattern:
 
 ```ts
-const requestKey = textRequestKey(src, mode)
+const requestKey = textRequestKey(resource.cacheKey, mode)
 
 void loadNextChunk(requestKey).then((next) => {
   if (currentRequestKeyRef.current !== requestKey) return
@@ -140,7 +140,7 @@ Rules:
 - Use `try/finally` or a rejection path so failed range requests do not leave the
   viewer permanently busy.
 - Reset token caches when the text mode or displayed file changes, not only when
-  `src` changes.
+  source changes.
 
 ## Cache Keys
 
@@ -149,7 +149,7 @@ The text cache needs an explicit mode.
 ```ts
 type TextLoadMode = "stream" | "full"
 
-function textCacheKey(src: string, mode: TextLoadMode): string
+function textCacheKey(resourceKey: string, mode: TextLoadMode): string
 ```
 
 Rules:
@@ -216,9 +216,9 @@ Create tests for:
 
 Add React tests for:
 
-- same mounted `FileViewer` switching from one text `src` to another while a
+- same mounted `FileViewer` switching from one text source to another while a
   range request is pending
-- same `src` rendered once as text and once as JSON
+- same source rendered once as text and once as JSON
 - error boundary recovery when `as`, `mimeType`, or `fileName` changes
 - long filename toolbar truncation preserving the download action
 - unsupported files rendering the download fallback

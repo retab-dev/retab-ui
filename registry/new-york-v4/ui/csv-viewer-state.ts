@@ -132,8 +132,8 @@ export function useCsvResourceState({
     const runResource = async () => {
       if (csvResource.kind !== "resource") return
       try {
-        if (csvResource.resource.sourceKind === "blob") {
-          const blob = csvResource.resource.source.blob
+        const blob = csvResource.resource.getBlob()
+        if (blob) {
           if (typeof Worker !== "undefined") {
             void parseCsvInWorker({
               source: blob,

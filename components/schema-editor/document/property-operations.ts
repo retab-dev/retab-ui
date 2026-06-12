@@ -18,10 +18,13 @@ function updateObjectProperties(
   parentId: string,
   fn: (properties: PropertyEntry[]) => PropertyEntry[]
 ): SchemaDocument {
-  return updateNode(doc, parentId, (node) => ({
-    ...node,
-    properties: fn(node.properties ?? []),
-  }))
+  return updateNode(doc, parentId, (node) => {
+    if (node.type !== "object" && !node.properties) return node
+    return {
+      ...node,
+      properties: fn(node.properties ?? []),
+    }
+  })
 }
 
 export function findOwningProperty(

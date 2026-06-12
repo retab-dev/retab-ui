@@ -80,7 +80,7 @@ export function PptxViewer(props: PptxViewerProps) {
       download={resource.getOriginalDownload()}
       format="pptx"
       resetKey={getPptxResetKey({
-        cacheKey: resource.keys.load,
+        resourceKey: resource.keys.resource,
         scale: props.scale,
         defaultScale: props.defaultScale,
         eager: props.eager,

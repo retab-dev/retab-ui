@@ -10,6 +10,7 @@ import {
   timed,
   useThumbnailResource,
   withThumbnailDecodeSlot,
+  withThumbnailFormatError,
 } from "@/components/document-thumbnail/cache"
 import {
   Surface,
@@ -27,25 +28,35 @@ const DOCX_PAGE_W = 816 // US Letter at 96dpi
 export function DocxFirstPage({ resource }: { resource: ViewerResource }) {
   const bytes = useThumbnailResource(getDocxResource(resource))
   const { ref: frameRef, width: frameWidth } = useElementWidth()
+  const [renderError, setRenderError] = React.useState<unknown>(null)
 
   const renderRef = React.useCallback(
     (el: HTMLDivElement | null) => {
       if (!el) return
       let active = true
       void withThumbnailDecodeSlot(() =>
-        timed(`docx:render ${shortName(resource)}`, async () => {
-          if (!active) return
-          const docx = await loadDocxPreview()
-          if (!active) return
-          el.innerHTML = ""
-          await docx.renderAsync(bytes.slice(0), el, undefined, {
-            inWrapper: true,
-            breakPages: true,
-            ignoreLastRenderedPageBreak: false,
-            experimental: true,
-          })
-        })
-      )
+        withThumbnailFormatError(
+          "docx",
+          "render_failed",
+          resource.fileName,
+          "Failed to render DOCX thumbnail",
+          () =>
+            timed(`docx:render ${shortName(resource)}`, async () => {
+              if (!active) return
+              const docx = await loadDocxPreview()
+              if (!active) return
+              el.innerHTML = ""
+              await docx.renderAsync(bytes.slice(0), el, undefined, {
+                inWrapper: true,
+                breakPages: true,
+                ignoreLastRenderedPageBreak: false,
+                experimental: true,
+              })
+            })
+        )
+      ).catch((error) => {
+        if (active) setRenderError(error)
+      })
       return () => {
         active = false
       }
@@ -54,6 +65,8 @@ export function DocxFirstPage({ resource }: { resource: ViewerResource }) {
   )
 
   const scale = frameWidth ? frameWidth / DOCX_PAGE_W : null
+
+  if (renderError) throw renderError
 
   return (
     <Surface>

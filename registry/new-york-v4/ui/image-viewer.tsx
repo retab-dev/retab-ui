@@ -47,7 +47,7 @@ export const ImageViewer = React.forwardRef<
       className={props.className}
       download={resource.getOriginalDownload()}
       format="image"
-      resetKey={resource.keys.load}
+      resetKey={resource.keys.resource}
       sourceKind={resource.sourceKind}
     >
       <React.Suspense

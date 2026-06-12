@@ -37,9 +37,9 @@ it can preserve its native URL, range, and worker behavior.
 
 But `directUrl` is not descriptor metadata. It is a loading capability.
 
-`downloadHref` has the same boundary problem for user download behavior. It is
-less dangerous because `resource.getDownload()` already exists, but the final
-descriptor should not expose either field.
+`downloadHref` has the same boundary problem for user download behavior. The
+resource already owns original-download creation, so the final descriptor
+should not expose either field.
 
 ## Target Descriptor
 
@@ -85,7 +85,7 @@ export interface ViewerResource {
   readonly mimeType?: string
 
   getDirectLoad(): DirectLoadCapability
-  getDownload(): DownloadCapability
+  getOriginalDownload(): ViewerDownloadAction | null
 
   readBlob(options?: ResourceReadOptions): Promise<Blob>
   readArrayBuffer(options?: ResourceReadOptions): Promise<ArrayBuffer>
@@ -156,7 +156,7 @@ Do not merge these concepts. The canonical split is:
 
 ```ts
 resource.getDirectLoad()
-resource.getDownload()
+resource.getOriginalDownload()
 ```
 
 ## Loader Policy
@@ -183,7 +183,7 @@ CSV:
 async function streamCsvResource(resource: ViewerResource) {
   const directLoad = resource.getDirectLoad()
   const dialect = inferCsvDialect({
-    src: directLoad.kind === "url" ? directLoad.url : undefined,
+    url: directLoad.kind === "url" ? directLoad.url : undefined,
     fileName: resource.fileName,
     mimeType: resource.mimeType,
   })
@@ -196,21 +196,19 @@ async function streamCsvResource(resource: ViewerResource) {
 }
 ```
 
-FileViewer legacy adapters:
+FileViewer adapter policy:
 
 ```tsx
 const directLoad = resource.getDirectLoad()
 
 if (category === "xlsx") {
-  if (directLoad.kind !== "url") {
-    return <UnsupportedCard resource={resource} />
-  }
-  return <XlsxViewer src={directLoad.url} />
+  return <XlsxViewer source={resource.source} />
 }
 ```
 
-The adapter is now explicit: URL-only viewers receive a URL only when the
-resource actually has a direct URL.
+Adapters should prefer passing the canonical source through. A format library
+that can only consume URLs may use `getDirectLoad()` internally and surface an
+unsupported state for non-URL resources.
 
 ## Cache Key Rules
 
@@ -242,8 +240,8 @@ function directLoadCacheKey(source: ViewerSource) {
 
 Download URL should only be included if changing it changes resource behavior.
 For most loaded-resource caches it should not, because download URL does not
-change loaded bytes. If a cache key currently includes download URL only because
-it came from `descriptor.downloadHref`, remove that coupling.
+change loaded bytes. Resource cache keys should not depend on descriptor
+download fields.
 
 ## Migration Plan
 
@@ -267,10 +265,10 @@ it came from `descriptor.downloadHref`, remove that coupling.
 9. Update FileViewer to create one `ViewerResource` and pass that resource to
    routing decisions.
 
-10. Update URL-only legacy adapters to require `getDirectLoad().kind === "url"`.
+10. Update URL-only format loaders to require `getDirectLoad().kind === "url"`.
 
-11. Update unsupported and error fallbacks to use `resource.getDownload()`
-    instead of descriptor download fields.
+11. Update unsupported and error fallbacks to use
+    `resource.getOriginalDownload()` instead of descriptor download fields.
 
 12. Update tests so descriptor assertions no longer mention `directUrl` or
     `downloadHref`.
@@ -309,10 +307,10 @@ CSV tests:
 
 FileViewer tests:
 
-- URL-only legacy viewers receive direct URL resources.
+- URL-only format loaders receive direct URL resources.
 - Blob resources for unmigrated URL-only viewers render unsupported.
-- Unsupported fallback still exposes download when `resource.getDownload()`
-  allows it.
+- Unsupported fallback still exposes download when
+  `resource.getOriginalDownload()` allows it.
 
 Search tests:
 
@@ -336,3 +334,8 @@ The search should return no production usage after migration.
 
 When this blueprint is implemented, `directUrl` stops being a descriptor leak
 and becomes a clean resource capability.
+
+# Download Boundary
+
+Download behavior uses `ViewerDownloadAction` and
+`ViewerResource.getOriginalDownload()`. The descriptor stays metadata-only.

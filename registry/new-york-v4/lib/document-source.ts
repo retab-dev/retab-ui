@@ -152,6 +152,16 @@ export type SourcePath = string
 /** Flat lookup from field path to its source. */
 export type SourceMap = Record<SourcePath, Source>
 
+const SOURCE_ANCHOR_KINDS = new Set<string>([
+  "pdf_bbox",
+  "image_bbox",
+  "csv_cell",
+  "spreadsheet_cell",
+  "docx_text_span",
+  "docx_table_cell",
+  "text_span",
+])
+
 function isSourcedLeaf(node: unknown): node is SourcedLeaf {
   return (
     typeof node === "object" &&
@@ -159,6 +169,16 @@ function isSourcedLeaf(node: unknown): node is SourcedLeaf {
     "value" in node &&
     "source" in node
   )
+}
+
+function isSource(source: unknown): source is Source {
+  if (typeof source !== "object" || source === null) return false
+  const record = source as Record<string, unknown>
+  const anchor = record.anchor
+  if (typeof record.content !== "string") return false
+  if (typeof anchor !== "object" || anchor === null) return false
+  const kind = (anchor as Record<string, unknown>).kind
+  return typeof kind === "string" && SOURCE_ANCHOR_KINDS.has(kind)
 }
 
 /**
@@ -171,7 +191,7 @@ export function extractionSourcesToSourceMap(sources: unknown): SourceMap {
 
   const walk = (node: unknown, prefix: string) => {
     if (isSourcedLeaf(node)) {
-      if (node.source) map[prefix] = node.source
+      if (isSource(node.source)) map[prefix] = node.source
       if (node.value != null && typeof node.value === "object") {
         walk(node.value, prefix)
       }

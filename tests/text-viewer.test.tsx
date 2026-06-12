@@ -88,6 +88,24 @@ function textBlobSource(text: string, fileName: string, identityKey: string) {
   })
 }
 
+function sharedTextBlobSource({
+  blob,
+  fileName,
+  identityKey,
+  downloadUrl,
+}: {
+  blob: Blob
+  fileName: string
+  identityKey: string
+  downloadUrl?: string
+}) {
+  return blobSource(blob, {
+    fileName,
+    identityKey,
+    downloadUrl,
+  })
+}
+
 function textResource(url: string, fileName?: string) {
   return createViewerResource(urlSource(url, fileName))
 }
@@ -122,6 +140,19 @@ function mockObjectUrls(url = "blob:download") {
     value: revokeObjectURL,
   })
   return { createObjectURL, revokeObjectURL }
+}
+
+function captureAnchorClicks() {
+  const clicks: Array<{ href: string | null; download: string }> = []
+  const click = vi
+    .spyOn(HTMLAnchorElement.prototype, "click")
+    .mockImplementation(function (this: HTMLAnchorElement) {
+      clicks.push({
+        href: this.getAttribute("href"),
+        download: this.download,
+      })
+    })
+  return { click, clicks }
 }
 
 beforeEach(() => {
@@ -648,6 +679,40 @@ describe("text-viewer-resource", () => {
     ).rejects.toMatchObject({
       kind: "invalid_range",
     } satisfies Partial<ResourceError>)
+  })
+
+  it("rejects local byte ranges that start past the available payload", async () => {
+    await expect(
+      createViewerResource(textSource("abc")).readRange({ start: 3, end: 4 })
+    ).rejects.toMatchObject({
+      kind: "invalid_range",
+    } satisfies Partial<ResourceError>)
+
+    await expect(
+      createViewerResource(
+        textBlobSource("abc", "abc.txt", "blob:range")
+      ).readRange({ start: 4, end: 5 })
+    ).rejects.toMatchObject({
+      kind: "invalid_range",
+    } satisfies Partial<ResourceError>)
+  })
+
+  it("returns a coherent empty range for empty local payloads", async () => {
+    await expect(
+      createViewerResource(textSource("")).readRange({ start: 0, end: 0 })
+    ).resolves.toMatchObject({
+      contentRange: { start: 0, end: -1, total: 0 },
+      isComplete: true,
+    })
+
+    await expect(
+      createViewerResource(
+        textBlobSource("", "empty.txt", "blob:empty")
+      ).readRange({ start: 0, end: 0 })
+    ).resolves.toMatchObject({
+      contentRange: { start: 0, end: -1, total: 0 },
+      isComplete: true,
+    })
   })
 
   it("reads text byte ranges over encoded UTF-8 bytes", async () => {
@@ -1213,6 +1278,106 @@ describe("TextViewer", () => {
     })
     expect(createObjectURL).toHaveBeenCalledTimes(2)
     expect(revokeObjectURL).toHaveBeenCalledWith("blob:download")
+  })
+
+  it("updates URL download metadata without refetching the same text payload", async () => {
+    const fetchMock = vi.fn(() => Promise.resolve(response("cached url text")))
+    vi.stubGlobal("fetch", fetchMock)
+
+    const { rerender } = render(
+      <TextViewer source={urlSource("/metadata.txt", "first.txt")} />
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText("cached url text")).toBeTruthy()
+      expect(
+        screen.getByRole("link", { name: "Download" }).getAttribute("download")
+      ).toBe("first.txt")
+    })
+
+    rerender(<TextViewer source={urlSource("/metadata.txt", "second.txt")} />)
+
+    await waitFor(() => {
+      expect(screen.getByText("cached url text")).toBeTruthy()
+      expect(
+        screen.getByRole("link", { name: "Download" }).getAttribute("download")
+      ).toBe("second.txt")
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("updates Blob download metadata while reusing the same Blob payload", async () => {
+    const { createObjectURL } = mockObjectUrls("blob:shared-text")
+    const { click, clicks } = captureAnchorClicks()
+    const sharedBlob = new Blob(["shared blob text"], { type: "text/plain" })
+
+    const { rerender } = render(
+      <TextViewer
+        source={sharedTextBlobSource({
+          blob: sharedBlob,
+          fileName: "first.txt",
+          identityKey: "blob:shared",
+        })}
+      />
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText("shared blob text")).toBeTruthy()
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Download" }))
+    await waitFor(() => {
+      expect(click).toHaveBeenCalledTimes(1)
+    })
+
+    rerender(
+      <TextViewer
+        source={sharedTextBlobSource({
+          blob: sharedBlob,
+          fileName: "second.txt",
+          identityKey: "blob:shared",
+        })}
+      />
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText("shared blob text")).toBeTruthy()
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Download" }))
+
+    await waitFor(() => expect(click).toHaveBeenCalledTimes(2))
+    expect(createObjectURL).toHaveBeenCalledTimes(2)
+    expect(clicks).toEqual([
+      { href: "blob:shared-text", download: "first.txt" },
+      { href: "blob:shared-text", download: "second.txt" },
+    ])
+  })
+
+  it("lets a retry after a metadata-only URL change refetch the same payload identity", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {})
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(response("", { status: 500 }))
+      .mockResolvedValueOnce(response("retried after metadata change"))
+    vi.stubGlobal("fetch", fetchMock)
+
+    const { rerender } = render(
+      <TextViewer source={urlSource("/retry-metadata.txt", "first.txt")} />
+    )
+
+    expect(await screen.findByText("Failed to load file: 500.")).toBeTruthy()
+
+    rerender(
+      <TextViewer source={urlSource("/retry-metadata.txt", "second.txt")} />
+    )
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }))
+
+    await waitFor(() => {
+      expect(screen.getByText("retried after metadata change")).toBeTruthy()
+      expect(
+        screen.getByRole("link", { name: "Download" }).getAttribute("download")
+      ).toBe("second.txt")
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
   it("renders Blob sources and treats bounds errors as local non-retryable states", async () => {

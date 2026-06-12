@@ -1,7 +1,14 @@
 // @vitest-environment jsdom
 
 import * as React from "react"
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react"
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { blobSource } from "@/registry/new-york-v4/lib/viewer-resource"
@@ -56,6 +63,33 @@ class FakeXlsxWorker {
   constructor() {
     FakeXlsxWorker.instances.push(this)
   }
+}
+
+function mockObjectUrls(url = "blob:xlsx-export") {
+  const createObjectURL = vi.fn((_blob: Blob) => url)
+  const revokeObjectURL = vi.fn()
+  Object.defineProperty(URL, "createObjectURL", {
+    configurable: true,
+    value: createObjectURL,
+  })
+  Object.defineProperty(URL, "revokeObjectURL", {
+    configurable: true,
+    value: revokeObjectURL,
+  })
+  return { createObjectURL, revokeObjectURL }
+}
+
+function captureAnchorClicks() {
+  const clicks: Array<{ href: string | null; download: string }> = []
+  vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (
+    this: HTMLAnchorElement
+  ) {
+    clicks.push({
+      href: this.getAttribute("href"),
+      download: this.download,
+    })
+  })
+  return clicks
 }
 
 beforeEach(() => {
@@ -171,5 +205,111 @@ describe("XlsxViewer imperative ref", () => {
 
     expect(await screen.findByRole("grid", { name: "Local" })).toBeTruthy()
     expect(globalThis.fetch).not.toHaveBeenCalled()
+  })
+
+  it("exports the active sheet as a derived CSV download", async () => {
+    const { createObjectURL, revokeObjectURL } = mockObjectUrls()
+    const clicks = captureAnchorClicks()
+
+    await act(async () => {
+      render(
+        <XlsxViewer
+          source={blobSource(new Uint8Array([1, 2, 3]), {
+            identityKey: "blob:xlsx-export",
+            fileName: "book.xlsx",
+          })}
+          defaultSheetIndex={1}
+        />
+      )
+    })
+
+    await waitFor(() => {
+      expect(FakeXlsxWorker.instances.length).toBe(1)
+      expect(FakeXlsxWorker.instances[0].onmessage).not.toBeNull()
+    })
+
+    await act(async () => {
+      FakeXlsxWorker.instances[0].onmessage?.({
+        data: {
+          type: "workbook",
+          sheets: [
+            createCompactSheet({
+              name: "Summary",
+              rowCount: 1,
+              columnCount: 1,
+              entries: [{ cellIndex: 0, text: "ignored" }],
+            }),
+            createCompactSheet({
+              name: "Detail",
+              rowCount: 2,
+              columnCount: 2,
+              entries: [
+                { cellIndex: 0, text: "name" },
+                { cellIndex: 3, text: "42", numeric: true },
+              ],
+            }),
+          ],
+        },
+      } as MessageEvent)
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+
+    expect(await screen.findByRole("grid", { name: "Detail" })).toBeTruthy()
+    expect(createObjectURL).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole("button", { name: "Download" }))
+    fireEvent.click(await screen.findByText("Export sheet"))
+
+    await waitFor(() => expect(createObjectURL).toHaveBeenCalledTimes(1))
+    const blob = createObjectURL.mock.calls[0]?.[0] as unknown as Blob
+    expect(await blob.text()).toBe("A,B\r\nname,\r\n,42")
+    expect(clicks).toEqual([
+      { href: "blob:xlsx-export", download: "book.Detail.csv" },
+    ])
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:xlsx-export")
+  })
+
+  it("offers original and active-sheet export actions when ready", async () => {
+    await act(async () => {
+      render(
+        <XlsxViewer
+          source={{
+            kind: "url",
+            url: "/book.xlsx",
+            fileName: "book.xlsx",
+            downloadUrl: "/download/book.xlsx",
+          }}
+        />
+      )
+    })
+
+    await waitFor(() => {
+      expect(FakeXlsxWorker.instances.length).toBe(1)
+      expect(FakeXlsxWorker.instances[0].onmessage).not.toBeNull()
+    })
+
+    await act(async () => {
+      FakeXlsxWorker.instances[0].onmessage?.({
+        data: {
+          type: "workbook",
+          sheets: [
+            createCompactSheet({
+              name: "Only",
+              rowCount: 1,
+              columnCount: 1,
+              entries: [{ cellIndex: 0, text: "value" }],
+            }),
+          ],
+        },
+      } as MessageEvent)
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+
+    expect(await screen.findByRole("grid", { name: "Only" })).toBeTruthy()
+
+    fireEvent.click(screen.getByRole("button", { name: "Download" }))
+
+    expect(await screen.findByText("Download original")).toBeTruthy()
+    expect(await screen.findByText("Export sheet")).toBeTruthy()
   })
 })

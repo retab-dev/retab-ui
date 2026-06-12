@@ -7,17 +7,18 @@ import type { ViewerResource } from "@/lib/viewer-resource"
 import { FileThumbnailShimmer } from "@/components/ui/file-thumbnail"
 import {
   cachedThumbnailResource,
+  createThumbnailArtifactCache,
   shortName,
+  TIFF_THUMBNAIL_TARGET_WIDTH,
   timed,
   useThumbnailResource,
   withThumbnailDecodeSlot,
+  withThumbnailFormatError,
   type ThumbnailCacheEntry,
 } from "@/components/document-thumbnail/cache"
 import { useObjectUrl } from "@/components/document-thumbnail/renderers/use-object-url"
 import type { ThumbnailAnchor } from "@/components/document-thumbnail/types"
 import { ANCHOR_CORNER } from "@/components/document-thumbnail/types"
-
-const TIFF_TARGET_W = 320
 
 interface TiffWorkerReply {
   id: number
@@ -55,11 +56,14 @@ function decodeTiffInWorker(buffer: ArrayBuffer): Promise<Blob> {
   const id = ++tiffReqId
   return new Promise<Blob>((resolve, reject) => {
     tiffPending.set(id, { resolve, reject })
-    worker.postMessage({ id, buffer, targetWidth: TIFF_TARGET_W }, [buffer])
+    worker.postMessage(
+      { id, buffer, targetWidth: TIFF_THUMBNAIL_TARGET_WIDTH },
+      [buffer]
+    )
   })
 }
 
-const tiffCache = new Map<string, ThumbnailCacheEntry<Blob>>()
+const tiffCache = createThumbnailArtifactCache<Blob>({ maxEntries: 48 })
 
 function getTiffFirstPageBlob(
   resource: ViewerResource,
@@ -67,10 +71,19 @@ function getTiffFirstPageBlob(
 ): Promise<Blob> {
   return cachedThumbnailResource(tiffCache, cacheKey, () =>
     withThumbnailDecodeSlot(() =>
-      timed(`tiff:total ${shortName(resource)}`, async () => {
-        const buf = await timed("tiff:fetch", () => resource.readArrayBuffer())
-        return timed("tiff:worker-decode", () => decodeTiffInWorker(buf))
-      })
+      withThumbnailFormatError(
+        "image",
+        "decode_failed",
+        resource.fileName,
+        "Failed to decode TIFF thumbnail",
+        () =>
+          timed(`tiff:total ${shortName(resource)}`, async () => {
+            const buf = await timed("tiff:fetch", () =>
+              resource.readArrayBuffer()
+            )
+            return timed("tiff:worker-decode", () => decodeTiffInWorker(buf))
+          })
+      )
     )
   )
 }

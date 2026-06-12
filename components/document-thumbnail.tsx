@@ -12,6 +12,14 @@ import {
   FileThumbnailShimmer,
 } from "@/components/ui/file-thumbnail"
 import {
+  CSV_THUMBNAIL_MAX_COLUMNS,
+  CSV_THUMBNAIL_MAX_ROWS,
+  TEXT_THUMBNAIL_MAX_BYTES,
+  TIFF_THUMBNAIL_TARGET_WIDTH,
+  XLSX_THUMBNAIL_MAX_COLUMNS,
+  XLSX_THUMBNAIL_MAX_ROWS,
+} from "@/components/document-thumbnail/cache"
+import {
   isTiffDescriptor,
   resolveThumbnailDescriptor,
 } from "@/components/document-thumbnail/descriptor"
@@ -19,6 +27,8 @@ import { ThumbnailErrorBoundary } from "@/components/document-thumbnail/errors"
 import {
   getThumbnailCacheKey,
   getThumbnailRenderKey,
+  thumbnailOption,
+  type ThumbnailOption,
 } from "@/components/document-thumbnail/keys"
 import { CsvFirstRows } from "@/components/document-thumbnail/renderers/csv-thumbnail"
 import { DocxFirstPage } from "@/components/document-thumbnail/renderers/docx-thumbnail"
@@ -97,7 +107,7 @@ export function DocumentThumbnail({
   const cacheKey = getThumbnailCacheKey({
     resource,
     descriptor,
-    options: isTiffDescriptor(descriptor) ? ["tiff"] : [],
+    options: getThumbnailOptions(descriptor),
   })
   const renderKey = getThumbnailRenderKey({
     cacheKey,
@@ -153,6 +163,32 @@ export function DocumentThumbnail({
       }
     />
   )
+}
+
+function getThumbnailOptions(descriptor: ViewerDescriptor): ThumbnailOption[] {
+  switch (descriptor.category) {
+    case "text":
+    case "markdown":
+    case "html":
+      return [thumbnailOption("text-max-bytes", TEXT_THUMBNAIL_MAX_BYTES)]
+    case "csv":
+      return [
+        thumbnailOption("text-max-bytes", TEXT_THUMBNAIL_MAX_BYTES),
+        thumbnailOption("csv-max-rows", CSV_THUMBNAIL_MAX_ROWS),
+        thumbnailOption("csv-max-columns", CSV_THUMBNAIL_MAX_COLUMNS),
+      ]
+    case "xlsx":
+      return [
+        thumbnailOption("xlsx-max-rows", XLSX_THUMBNAIL_MAX_ROWS),
+        thumbnailOption("xlsx-max-columns", XLSX_THUMBNAIL_MAX_COLUMNS),
+      ]
+    case "image":
+      return isTiffDescriptor(descriptor)
+        ? [thumbnailOption("tiff-target-width", TIFF_THUMBNAIL_TARGET_WIDTH)]
+        : []
+    default:
+      return []
+  }
 }
 
 function ClientPreview({

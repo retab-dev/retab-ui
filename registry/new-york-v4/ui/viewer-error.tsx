@@ -85,7 +85,7 @@ export interface ViewerErrorBoundaryProps extends ViewerErrorContext {
   className?: string
   bare?: boolean
   variant?: "card" | "document" | "inline"
-  onRetry?: () => void
+  onRetry?: (error: unknown) => void
 }
 
 export class ViewerErrorBoundary extends React.Component<
@@ -132,7 +132,7 @@ export class ViewerErrorBoundary extends React.Component<
               error: null,
               retryKey: state.retryKey + 1,
             }))
-            this.props.onRetry?.()
+            this.props.onRetry?.(this.state.error)
           }}
         />
       )

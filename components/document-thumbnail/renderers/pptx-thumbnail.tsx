@@ -7,10 +7,12 @@ import { cn } from "@/lib/utils"
 import type { ViewerResource } from "@/lib/viewer-resource"
 import {
   cachedThumbnailResource,
+  createThumbnailArtifactCache,
   shortName,
   timed,
   useThumbnailResource,
   withThumbnailDecodeSlot,
+  withThumbnailFormatError,
   type ThumbnailCacheEntry,
 } from "@/components/document-thumbnail/cache"
 import type { ThumbnailAnchor } from "@/components/document-thumbnail/types"
@@ -26,9 +28,13 @@ interface PptxFirstSlideSource {
   render: (canvas: HTMLCanvasElement, scale: number) => Promise<void>
   baseWidth: number
   baseHeight: number
+  dispose?: () => void
 }
 
-const pptxCache = new Map<string, ThumbnailCacheEntry<PptxFirstSlideSource>>()
+const pptxCache = createThumbnailArtifactCache<PptxFirstSlideSource>({
+  maxEntries: 16,
+  dispose: (source) => source.dispose?.(),
+})
 
 function getPptxFirstSlide(
   resource: ViewerResource,
@@ -36,24 +42,43 @@ function getPptxFirstSlide(
 ): Promise<PptxFirstSlideSource> {
   return cachedThumbnailResource(pptxCache, cacheKey, () =>
     withThumbnailDecodeSlot(() =>
-      timed(`pptx:total ${shortName(resource)}`, async () => {
-        const [buf, mod] = await Promise.all([
-          resource.readArrayBuffer(),
-          loadPptx(),
-        ])
-        const { PPTXViewer } = mod
-        const offscreen = document.createElement("canvas")
-        const viewer = new PPTXViewer({
-          canvas: offscreen,
-          slideSizeMode: "actual",
-        })
-        await viewer.loadFile(buf)
-        const size = await readSlideSize(buf.slice(0))
-        const render = async (canvas: HTMLCanvasElement, scale: number) => {
-          await viewer.renderSlide(0, canvas, { scale, quality: "high" })
-        }
-        return { render, baseWidth: size.width, baseHeight: size.height }
-      })
+      withThumbnailFormatError(
+        "pptx",
+        "parse_failed",
+        resource.fileName,
+        "Failed to parse presentation thumbnail",
+        () =>
+          timed(`pptx:total ${shortName(resource)}`, async () => {
+            const [buf, mod] = await Promise.all([
+              resource.readArrayBuffer(),
+              loadPptx(),
+            ])
+            const { PPTXViewer } = mod
+            const offscreen = document.createElement("canvas")
+            const viewer = new PPTXViewer({
+              canvas: offscreen,
+              slideSizeMode: "actual",
+            })
+            await viewer.loadFile(buf)
+            const size = await readSlideSize(buf.slice(0))
+            const disposableViewer = viewer as { dispose?: () => void }
+            const render = async (canvas: HTMLCanvasElement, scale: number) => {
+              await withThumbnailFormatError(
+                "pptx",
+                "render_failed",
+                resource.fileName,
+                "Failed to render presentation thumbnail",
+                () => viewer.renderSlide(0, canvas, { scale, quality: "high" })
+              )
+            }
+            return {
+              render,
+              baseWidth: size.width,
+              baseHeight: size.height,
+              dispose: () => disposableViewer.dispose?.(),
+            }
+          })
+      )
     )
   )
 }

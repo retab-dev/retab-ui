@@ -1,4 +1,13 @@
+import { isResourceError, ViewerFormatError } from "@/lib/viewer-errors"
 import type { ViewerResource } from "@/lib/viewer-resource"
+import type { FileCategory } from "@/lib/viewer-source"
+
+export const TEXT_THUMBNAIL_MAX_BYTES = 64 * 1024
+export const CSV_THUMBNAIL_MAX_ROWS = 16
+export const CSV_THUMBNAIL_MAX_COLUMNS = 6
+export const XLSX_THUMBNAIL_MAX_ROWS = 16
+export const XLSX_THUMBNAIL_MAX_COLUMNS = 6
+export const TIFF_THUMBNAIL_TARGET_WIDTH = 320
 
 // ---------------------------------------------------------------------------
 // Concurrency gate — every renderer parses a heavy library and does synchronous
@@ -67,20 +76,32 @@ export function shortName(resource: ViewerResource): string {
   return resource.fileName
 }
 
-// A thumbnail only shows the head of a text document, so cap the download with
-// a Range request — a 40 MB log costs the same as a small one. Servers that
-// ignore Range just return the whole body (200), which still works.
-const TEXT_HEAD_BYTES = 64 * 1024
-
 export interface ThumbnailCacheEntry<T> {
   promise: Promise<T>
   status: "pending" | "fulfilled" | "rejected"
+  value?: T
+}
+
+export interface ThumbnailCacheStore<T> {
+  get(key: string): ThumbnailCacheEntry<T> | undefined
+  set(key: string, entry: ThumbnailCacheEntry<T>): void
+  delete(key: string): boolean
+  prune?(): void
+}
+
+export interface ThumbnailArtifactCacheOptions<T> {
+  maxEntries: number
+  dispose?: (value: T) => void
+}
+
+export interface ThumbnailArtifactCache<T> extends ThumbnailCacheStore<T> {
+  readonly size: number
 }
 
 const textCache = new Map<string, ThumbnailCacheEntry<string>>()
 
 export function cachedThumbnailResource<T>(
-  cache: Map<string, ThumbnailCacheEntry<T>>,
+  cache: ThumbnailCacheStore<T>,
   key: string,
   load: () => Promise<T>
 ): Promise<T> {
@@ -97,6 +118,8 @@ export function cachedThumbnailResource<T>(
     promise: load().then(
       (value) => {
         entry.status = "fulfilled"
+        entry.value = value
+        cache.prune?.()
         return value
       },
       (error) => {
@@ -109,22 +132,115 @@ export function cachedThumbnailResource<T>(
   return entry.promise
 }
 
+export function createThumbnailArtifactCache<T>({
+  maxEntries,
+  dispose,
+}: ThumbnailArtifactCacheOptions<T>): ThumbnailArtifactCache<T> {
+  const entries = new Map<string, ThumbnailCacheEntry<T>>()
+
+  const cache: ThumbnailArtifactCache<T> = {
+    get size() {
+      return entries.size
+    },
+    get(key) {
+      const entry = entries.get(key)
+      if (!entry) return undefined
+      entries.delete(key)
+      entries.set(key, entry)
+      return entry
+    },
+    set(key, entry) {
+      entries.set(key, entry)
+      cache.prune?.()
+    },
+    delete(key) {
+      const entry = entries.get(key)
+      if (!entry) return false
+      entries.delete(key)
+      disposeCacheEntry(entry, dispose)
+      return true
+    },
+    prune() {
+      while (entries.size > maxEntries) {
+        const evicted = evictOldestFulfilledEntry(entries, dispose)
+        if (!evicted) return
+      }
+    },
+  }
+
+  return cache
+}
+
+function evictOldestFulfilledEntry<T>(
+  entries: Map<string, ThumbnailCacheEntry<T>>,
+  dispose?: (value: T) => void
+): boolean {
+  for (const [key, entry] of entries) {
+    if (entry.status !== "pending") {
+      entries.delete(key)
+      disposeCacheEntry(entry, dispose)
+      return true
+    }
+  }
+  return false
+}
+
+function disposeCacheEntry<T>(
+  entry: ThumbnailCacheEntry<T>,
+  dispose?: (value: T) => void
+) {
+  if (entry.status === "fulfilled" && entry.value !== undefined) {
+    dispose?.(entry.value)
+  }
+}
+
 export function getThumbnailText(
   resource: ViewerResource,
   cacheKey: string
 ): Promise<string> {
   return cachedThumbnailResource(textCache, cacheKey, () =>
     timed(`text:fetch ${shortName(resource)}`, async () => {
-      if (resource.source.kind === "url") {
+      if (resource.sourceKind === "url") {
         const range = await resource.readRange({
           start: 0,
-          end: TEXT_HEAD_BYTES - 1,
+          end: TEXT_THUMBNAIL_MAX_BYTES - 1,
         })
         return new TextDecoder().decode(range.buffer)
       }
-      return resource.readText({ maxBytes: TEXT_HEAD_BYTES })
+      return resource.readText({ maxBytes: TEXT_THUMBNAIL_MAX_BYTES })
     })
   )
+}
+
+export async function withThumbnailFormatError<T>(
+  category: FileCategory,
+  kind:
+    | "decode_failed"
+    | "load_failed"
+    | "parse_failed"
+    | "render_failed"
+    | "unknown",
+  fileName: string,
+  message: string,
+  load: () => Promise<T>
+): Promise<T> {
+  try {
+    return await load()
+  } catch (error) {
+    if (isResourceError(error)) throw error
+    throw new ViewerFormatError({
+      format: thumbnailCategoryFormat(category),
+      kind,
+      message: `${message}: ${fileName}`,
+      cause: error,
+    })
+  }
+}
+
+function thumbnailCategoryFormat(category: FileCategory) {
+  if (category === "markdown" || category === "html") return "text"
+  if (category === "unsupported") return "file"
+  return category
 }
 
 export function useThumbnailResource<T>(promise: Promise<T>): T {

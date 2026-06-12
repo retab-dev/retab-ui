@@ -246,6 +246,7 @@ describe("ParseViewer", () => {
       fireEvent.click(screen.getByLabelText("Copy markdown"))
     ).not.toThrow()
     expect(writeText).toHaveBeenCalledWith(PAGES.join("\n\n"))
+    expect(screen.queryByLabelText("Copy failed")).toBeNull()
   })
 
   it("downloads parse markdown using the parse file name and explicit text", async () => {
@@ -489,6 +490,53 @@ describe("ParseViewer", () => {
       rect(-300)
     )
     vi.spyOn(pageElements[1], "getBoundingClientRect").mockReturnValue(rect(0))
+
+    fireEvent.scroll(viewport!)
+
+    await waitFor(() => {
+      expect(onVisiblePageChange).toHaveBeenCalledWith(2)
+    })
+  })
+
+  it("reports the same visible page again for a new document with identical markdown", async () => {
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      window.setTimeout(() => callback(0), 0)
+      return 1
+    })
+    const onVisiblePageChange = vi.fn()
+    const { container, rerender } = render(
+      <ParseViewer
+        result={{ ...parseResult(), document: { id: "doc-one" } }}
+        onVisiblePageChange={onVisiblePageChange}
+      />
+    )
+    const viewport = container.querySelector<HTMLElement>(
+      '[data-slot="scroll-area-viewport"]'
+    )
+    const pageElements =
+      container.querySelectorAll<HTMLElement>("[data-page-number]")
+
+    vi.spyOn(viewport!, "getBoundingClientRect").mockReturnValue(rect(0, 400))
+    vi.spyOn(pageElements[0], "getBoundingClientRect").mockReturnValue(
+      rect(-300)
+    )
+    vi.spyOn(pageElements[1], "getBoundingClientRect").mockReturnValue(rect(0))
+
+    fireEvent.scroll(viewport!)
+    await waitFor(() => {
+      expect(onVisiblePageChange).toHaveBeenCalledWith(2)
+    })
+    onVisiblePageChange.mockClear()
+
+    rerender(
+      <ParseViewer
+        result={{ ...parseResult(), document: { id: "doc-two" } }}
+        onVisiblePageChange={onVisiblePageChange}
+      />
+    )
+    await waitFor(() => {
+      expect(screen.getByText("Page 1 of 2")).toBeTruthy()
+    })
 
     fireEvent.scroll(viewport!)
 

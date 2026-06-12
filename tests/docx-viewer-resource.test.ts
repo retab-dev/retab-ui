@@ -7,6 +7,7 @@ import {
 } from "@/registry/new-york-v4/lib/viewer-resource"
 import {
   __resetDocxResourceCacheForTests,
+  clearDocxResource,
   getDocxResource,
 } from "@/registry/new-york-v4/ui/docx-viewer-resource"
 
@@ -59,6 +60,22 @@ describe("docx-viewer-resource", () => {
     })
   })
 
+  it("shares document bytes across resources with the same load key", async () => {
+    const fetchMock = vi.fn(() =>
+      Promise.resolve(response(Uint8Array.of(1, 2, 3), { status: 200 }))
+    )
+    vi.stubGlobal("fetch", fetchMock)
+
+    const first = getDocxResource(docxUrlResource("/same-bytes.docx", "a.docx"))
+    const second = getDocxResource(
+      docxUrlResource("/same-bytes.docx", "renamed.docx")
+    )
+
+    expect(first).toBe(second)
+    await expect(first).resolves.toHaveProperty("byteLength", 3)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
   it("removes rejected document bytes so the same resource can retry", async () => {
     const fetchMock = vi
       .fn()
@@ -100,6 +117,30 @@ describe("docx-viewer-resource", () => {
       status: 500,
     })
     expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("clears a retained rejected document so retry can load the same resource", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(response(Uint8Array.of(), { status: 500 }))
+      .mockResolvedValueOnce(response(Uint8Array.of(8, 9), { status: 200 }))
+    vi.stubGlobal("fetch", fetchMock)
+
+    const resource = docxUrlResource("/clear-retry.docx")
+
+    await expect(
+      getDocxResource(resource, { retainRejected: true })
+    ).rejects.toMatchObject({
+      kind: "http_error",
+      status: 500,
+    })
+
+    clearDocxResource(resource)
+
+    await expect(
+      getDocxResource(resource, { retainRejected: true })
+    ).resolves.toHaveProperty("byteLength", 2)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
   it("loads Blob sources through the resource without fetch", async () => {

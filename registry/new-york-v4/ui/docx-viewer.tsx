@@ -7,7 +7,7 @@ import type * as DocxPreview from "docx-preview"
 import { Download, Maximize, Minus, Plus } from "lucide-react"
 
 import { cn } from "@/lib/utils"
-import { ViewerFormatError } from "@/lib/viewer-errors"
+import { isResourceError, ViewerFormatError } from "@/lib/viewer-errors"
 import {
   createViewerResource,
   type ViewerResource,
@@ -20,7 +20,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { ViewerDownloadButton } from "@/components/ui/viewer-download"
 import { ViewerErrorBoundary } from "@/components/ui/viewer-error"
 
-import { getDocxResource } from "./docx-viewer-resource"
+import { clearDocxResource, getDocxResource } from "./docx-viewer-resource"
 
 export { getDocxResource } from "./docx-viewer-resource"
 
@@ -217,7 +217,10 @@ export const DocxViewer = React.forwardRef<DocxViewerHandle, DocxViewerProps>(
         className={props.className}
         download={resource.getOriginalDownload()}
         format="docx"
-        resetKey={resource.keys.load}
+        onRetry={(error) => {
+          if (isResourceError(error)) clearDocxResource(resource)
+        }}
+        resetKey={resource.keys.resource}
         sourceKind={resource.sourceKind}
       >
         <React.Suspense

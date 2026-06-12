@@ -137,7 +137,7 @@ export const PdfViewer = React.forwardRef<PdfViewerHandle, PdfViewerProps>(
         className={props.className}
         download={resource.getOriginalDownload()}
         format="pdf"
-        resetKey={resource.keys.load}
+        resetKey={resource.keys.resource}
         sourceKind={resource.sourceKind}
       >
         <React.Suspense

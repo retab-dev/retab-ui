@@ -5,8 +5,10 @@ import { useVirtualizer } from "@tanstack/react-virtual"
 import type { JSONSchema7Definition } from "json-schema"
 import { ChevronRight, Plus, Trash2 } from "lucide-react"
 import {
+  useController,
   useFieldArray,
   useFormContext,
+  useWatch,
   type SubmitHandler,
   type UseFormReturn,
 } from "react-hook-form"
@@ -90,6 +92,8 @@ const TABLE_VIRTUALIZE_THRESHOLD = 30
 const LONG_ARRAY_THRESHOLD = 8
 const TABLE_ROW_HEIGHT = 44
 const TABLE_MAX_HEIGHT = 420
+const TABLE_ROW_OVERSCAN = 5
+const TABLE_JUMP_ROW_OVERSCAN = 9
 
 // ---------------------------------------------------------------------------
 // Source linking — opt-in field-level hover/highlight
@@ -108,7 +112,11 @@ export interface FieldSourceLink {
   selectField?: (path: string) => void
 }
 
-const FieldSourceLinkContext = React.createContext<FieldSourceLink | null>(null)
+type FieldSourceLinkActions = Omit<FieldSourceLink, "activePath">
+
+const FieldSourceActivePathContext = React.createContext<string | null>(null)
+const FieldSourceActionsContext =
+  React.createContext<FieldSourceLinkActions | null>(null)
 
 /**
  * Wraps a scalar leaf so it reports its path on hover/focus and lights up as a
@@ -122,16 +130,17 @@ function SourceFieldShell({
   name: string
   children: React.ReactNode
 }) {
-  const sourceLink = React.useContext(FieldSourceLinkContext)
-  if (!sourceLink) return <>{children}</>
-  const active = sourceLink.activePath === name
+  const activePath = React.useContext(FieldSourceActivePathContext)
+  const sourceActions = React.useContext(FieldSourceActionsContext)
+  if (!sourceActions) return <>{children}</>
+  const active = activePath === name
   return (
     <div
-      onMouseEnter={() => sourceLink.onFieldHover(name)}
-      onMouseLeave={() => sourceLink.onFieldHover(null)}
-      onFocus={() => sourceLink.onFieldHover(name)}
-      onBlur={() => sourceLink.onFieldHover(null)}
-      onClick={() => sourceLink.selectField?.(name)}
+      onMouseEnter={() => sourceActions.onFieldHover(name)}
+      onMouseLeave={() => sourceActions.onFieldHover(null)}
+      onFocus={() => sourceActions.onFieldHover(name)}
+      onBlur={() => sourceActions.onFieldHover(null)}
+      onClick={() => sourceActions.selectField?.(name)}
       className={cn(
         "rounded-md border px-3 py-2 transition-colors",
         active
@@ -151,6 +160,8 @@ function SourceFieldShell({
 export interface JsonFormFieldProps {
   /** react-hook-form field path, e.g. `vendor.name` or `items.0`. */
   name: string
+  /** Logical document/source path before react-hook-form-safe path encoding. */
+  sourcePath?: string
   schema: Schema
   required?: boolean
   /** Override the derived label. */
@@ -162,6 +173,7 @@ export interface JsonFormFieldProps {
 
 export function JsonFormField({
   name,
+  sourcePath,
   schema: rawSchema,
   required = false,
   label,
@@ -178,11 +190,13 @@ export function JsonFormField({
   const { schema, nullable } = unwrapNullable(expandedSchema)
   const kind = fieldKind(schema)
   const heading = labelFor(name, schema, label)
+  const logicalPath = sourcePath ?? name
 
   if (kind === "object") {
     return (
       <JsonFormObject
         name={name}
+        sourcePath={logicalPath}
         schema={schema}
         label={heading}
         className={className}
@@ -195,6 +209,7 @@ export function JsonFormField({
     return (
       <JsonFormArray
         name={name}
+        sourcePath={logicalPath}
         schema={schema}
         label={heading}
         className={className}
@@ -205,7 +220,7 @@ export function JsonFormField({
 
   if (kind === "boolean") {
     return (
-      <SourceFieldShell name={name}>
+      <SourceFieldShell name={logicalPath}>
         <FormField
           name={name}
           render={({ field }) => (
@@ -240,7 +255,7 @@ export function JsonFormField({
   }
 
   return (
-    <SourceFieldShell name={name}>
+    <SourceFieldShell name={logicalPath}>
       <FormField
         name={name}
         render={({ field }) => (
@@ -349,7 +364,128 @@ function datetimeLocalInputValue(value: string): string {
   return withoutTimezone.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/)?.[0] ?? value
 }
 
-function emptyArrayItemValue(schema: Schema): unknown {
+function encodeFormSegment(segment: string): string {
+  return encodeURIComponent(segment)
+    .replace(
+      /[!'()*]/g,
+      (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`
+    )
+    .replace(
+      /[.[\]'"]/g,
+      (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`
+    )
+}
+
+function joinFormPath(parent: string, key: string | number): string {
+  const segment = typeof key === "number" ? String(key) : encodeFormSegment(key)
+  return parent ? `${parent}.${segment}` : segment
+}
+
+function joinSourcePath(parent: string, key: string | number): string {
+  const segment = String(key)
+  return parent ? `${parent}.${segment}` : segment
+}
+
+function hasOwnRecordValue(
+  value: Record<string, unknown>,
+  key: string
+): boolean {
+  return Object.prototype.hasOwnProperty.call(value, key)
+}
+
+function isRecordValue(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+}
+
+function schemaUsesEncodedPaths(schema: Schema): boolean {
+  const { schema: inner } = unwrapNullable(schema)
+  const kind = fieldKind(inner)
+  if (kind === "object") {
+    const properties = (inner.properties ?? {}) as Record<
+      string,
+      JSONSchema7Definition
+    >
+    return Object.entries(properties).some(([key, child]) => {
+      return (
+        encodeFormSegment(key) !== key ||
+        (typeof child === "object" &&
+          child !== null &&
+          schemaUsesEncodedPaths(child))
+      )
+    })
+  }
+  if (kind === "array" && typeof inner.items === "object" && inner.items) {
+    return schemaUsesEncodedPaths(inner.items as Schema)
+  }
+  return false
+}
+
+function encodeValueForForm(schema: Schema, value: unknown): unknown {
+  const { schema: inner } = unwrapNullable(schema)
+  const kind = fieldKind(inner)
+
+  if (kind === "array") {
+    if (!Array.isArray(value)) return value
+    const itemSchema =
+      typeof inner.items === "object" && inner.items !== null
+        ? (inner.items as Schema)
+        : ({ type: "string" } as Schema)
+    return value.map((item) => encodeValueForForm(itemSchema, item))
+  }
+
+  if (kind !== "object" || !isRecordValue(value)) return value
+
+  const properties = (inner.properties ?? {}) as Record<
+    string,
+    JSONSchema7Definition
+  >
+  const encoded: Record<string, unknown> = {}
+  for (const [key, child] of Object.entries(properties)) {
+    if (typeof child !== "object" || child === null) continue
+    const encodedKey = encodeFormSegment(key)
+    const rawValue = hasOwnRecordValue(value, key)
+      ? value[key]
+      : value[encodedKey]
+    if (rawValue !== undefined || hasOwnRecordValue(value, key)) {
+      encoded[encodedKey] = encodeValueForForm(child, rawValue)
+    }
+  }
+  return encoded
+}
+
+function decodeValueFromForm(schema: Schema, value: unknown): unknown {
+  const { schema: inner } = unwrapNullable(schema)
+  const kind = fieldKind(inner)
+
+  if (kind === "array") {
+    if (!Array.isArray(value)) return value
+    const itemSchema =
+      typeof inner.items === "object" && inner.items !== null
+        ? (inner.items as Schema)
+        : ({ type: "string" } as Schema)
+    return value.map((item) => decodeValueFromForm(itemSchema, item))
+  }
+
+  if (kind !== "object" || !isRecordValue(value)) return value
+
+  const properties = (inner.properties ?? {}) as Record<
+    string,
+    JSONSchema7Definition
+  >
+  const decoded: Record<string, unknown> = {}
+  for (const [key, child] of Object.entries(properties)) {
+    if (typeof child !== "object" || child === null) continue
+    const encodedKey = encodeFormSegment(key)
+    const hasEncoded = hasOwnRecordValue(value, encodedKey)
+    const rawValue = hasEncoded ? value[encodedKey] : value[key]
+    if (rawValue !== undefined || hasEncoded || hasOwnRecordValue(value, key)) {
+      decoded[key] = decodeValueFromForm(child, rawValue)
+    }
+  }
+  return decoded
+}
+
+function emptyArrayItemValue(schema: Schema, encodeKeys = false): unknown {
   const { schema: inner, nullable } = unwrapNullable(schema)
   if (nullable) return null
   if (fieldKind(inner) !== "object") return emptyValueFor(inner)
@@ -361,7 +497,7 @@ function emptyArrayItemValue(schema: Schema): unknown {
   const value: Record<string, unknown> = {}
   for (const [key, child] of Object.entries(properties)) {
     if (typeof child === "object" && child !== null) {
-      value[key] = emptyValueFor(child)
+      value[encodeKeys ? encodeFormSegment(key) : key] = emptyValueFor(child)
     }
   }
   return value
@@ -573,12 +709,14 @@ function DisclosureHeader({
 
 function JsonFormObject({
   name,
+  sourcePath,
   schema,
   label,
   className,
   depth,
 }: {
   name: string
+  sourcePath: string
   schema: Schema
   label: string
   className?: string
@@ -607,9 +745,11 @@ function JsonFormObject({
             typeof child === "object" ? (
               <JsonFormField
                 key={key}
-                name={name ? `${name}.${key}` : key}
+                name={joinFormPath(name, key)}
+                sourcePath={joinSourcePath(sourcePath, key)}
                 schema={child}
                 required={required.has(key)}
+                label={labelFor(key, child)}
                 depth={depth + 1}
               />
             ) : null
@@ -626,12 +766,14 @@ function JsonFormObject({
 
 function JsonFormArray({
   name,
+  sourcePath,
   schema,
   label,
   className,
   depth,
 }: {
   name: string
+  sourcePath: string
   schema: Schema
   label: string
   className?: string
@@ -655,16 +797,20 @@ function JsonFormArray({
   const startOpen =
     depth < AUTO_COLLAPSE_DEPTH && fields.length <= LONG_ARRAY_THRESHOLD
   const [open, setOpen] = React.useState(startOpen)
+  const usesEncodedItemPaths = React.useMemo(
+    () => schemaUsesEncodedPaths(itemSchema),
+    [itemSchema]
+  )
 
   const add = React.useCallback(() => {
-    const nextItem = emptyArrayItemValue(itemSchema)
+    const nextItem = emptyArrayItemValue(itemSchema, usesEncodedItemPaths)
     const current = getValues(name)
     append(nextItem as never)
     if (Array.isArray(current)) {
       setValue(name, [...current, nextItem], { shouldDirty: true })
     }
     setOpen(true)
-  }, [append, getValues, itemSchema, name, setValue])
+  }, [append, getValues, itemSchema, name, setValue, usesEncodedItemPaths])
   const removeAt = React.useCallback(
     (index: number) => {
       const current = getValues(name)
@@ -703,6 +849,7 @@ function JsonFormArray({
           ) : columns ? (
             <ArrayTable
               name={name}
+              sourcePath={sourcePath}
               fields={fields}
               remove={removeAt}
               columns={columns}
@@ -710,6 +857,7 @@ function JsonFormArray({
           ) : (
             <ArrayCards
               name={name}
+              sourcePath={sourcePath}
               fields={fields}
               remove={removeAt}
               itemSchema={itemSchema}
@@ -729,6 +877,7 @@ function JsonFormArray({
 
 interface ArrayBodyProps {
   name: string
+  sourcePath: string
   fields: { id: string }[]
   remove: (index: number) => void
   itemSchema: Schema
@@ -736,6 +885,7 @@ interface ArrayBodyProps {
 
 function ArrayCards({
   name,
+  sourcePath,
   fields,
   remove,
   itemSchema,
@@ -746,6 +896,7 @@ function ArrayCards({
     (index: number) => (
       <ArrayCard
         name={name}
+        sourcePath={sourcePath}
         index={index}
         remove={remove}
         itemSchema={itemSchema}
@@ -753,7 +904,7 @@ function ArrayCards({
         depth={depth}
       />
     ),
-    [name, remove, itemSchema, label, depth]
+    [name, sourcePath, remove, itemSchema, label, depth]
   )
 
   if (fields.length > CARD_VIRTUALIZE_THRESHOLD) {
@@ -778,6 +929,7 @@ function ArrayCards({
 
 const ArrayCard = React.memo(function ArrayCard({
   name,
+  sourcePath,
   index,
   remove,
   itemSchema,
@@ -785,6 +937,7 @@ const ArrayCard = React.memo(function ArrayCard({
   depth,
 }: {
   name: string
+  sourcePath: string
   index: number
   remove: (index: number) => void
   itemSchema: Schema
@@ -795,7 +948,8 @@ const ArrayCard = React.memo(function ArrayCard({
     <div className="flex items-start gap-2">
       <div className="min-w-0 flex-1">
         <JsonFormField
-          name={`${name}.${index}`}
+          name={joinFormPath(name, index)}
+          sourcePath={joinSourcePath(sourcePath, index)}
           schema={itemSchema}
           label={`${label} ${index + 1}`}
           depth={depth + 1}
@@ -821,37 +975,72 @@ const ArrayCard = React.memo(function ArrayCard({
 
 function ArrayTable({
   name,
+  sourcePath,
   fields,
   remove,
   columns,
 }: {
   name: string
+  sourcePath: string
   fields: { id: string }[]
   remove: (index: number) => void
   columns: Column[]
 }) {
   const template = `${columns.map(() => "minmax(9rem, 1fr)").join(" ")} 2.25rem`
   const minWidth = columns.length * 150 + 36
+  const [activeEditorPath, setActiveEditorPath] = React.useState<string | null>(
+    null
+  )
+  const activePath = React.useContext(FieldSourceActivePathContext)
+  const tableRef = React.useRef<HTMLDivElement>(null)
+
+  React.useEffect(() => {
+    const table = tableRef.current
+    if (!table) return
+    for (const cell of table.querySelectorAll("[data-source-active='true']")) {
+      cell.removeAttribute("data-source-active")
+    }
+    if (!activePath) return
+    for (const cell of table.querySelectorAll("[data-source-path]")) {
+      if (cell.getAttribute("data-source-path") === activePath) {
+        cell.setAttribute("data-source-active", "true")
+      }
+    }
+  }, [activePath, fields.length])
 
   const renderRow = React.useCallback(
     (index: number, rowTopPx?: number) => (
       <ArrayTableRow
         name={name}
+        sourcePath={sourcePath}
         index={index}
         isLastRow={index === fields.length - 1}
         columns={columns}
         remove={remove}
         template={template}
         rowTopPx={rowTopPx}
+        activeEditorPath={activeEditorPath}
+        setActiveEditorPath={setActiveEditorPath}
       />
     ),
-    [name, fields.length, columns, remove, template]
+    [
+      name,
+      sourcePath,
+      fields.length,
+      columns,
+      remove,
+      template,
+      activeEditorPath,
+    ]
   )
 
   const virtualize = fields.length > TABLE_VIRTUALIZE_THRESHOLD
 
   return (
-    <div className="overflow-x-auto rounded-lg border bg-background shadow-sm">
+    <div
+      ref={tableRef}
+      className="overflow-x-auto rounded-lg border bg-background shadow-sm"
+    >
       <div style={getFixedGridCanvasStyle({ minWidth })}>
         <div
           className="grid h-9 items-center gap-1 border-b bg-muted/35 px-2"
@@ -875,7 +1064,13 @@ function ArrayTable({
           <span className="sr-only">Actions</span>
         </div>
         {virtualize ? (
-          <FixedArrayTableBody fields={fields} renderItem={renderRow} />
+          <FixedArrayTableBody
+            name={name}
+            fields={fields}
+            activeEditorPath={activeEditorPath}
+            activeSourcePath={activePath}
+            renderItem={renderRow}
+          />
         ) : (
           <div>
             {fields.map((entry, index) => (
@@ -890,22 +1085,34 @@ function ArrayTable({
 
 const ArrayTableRow = React.memo(function ArrayTableRow({
   name,
+  sourcePath,
   index,
   isLastRow,
   columns,
   remove,
   template,
   rowTopPx,
+  activeEditorPath,
+  setActiveEditorPath,
 }: {
   name: string
+  sourcePath: string
   index: number
   isLastRow: boolean
   columns: Column[]
   remove: (index: number) => void
   template: string
   rowTopPx?: number
+  activeEditorPath: string | null
+  setActiveEditorPath: (path: string | null) => void
 }) {
-  const sourceLink = React.useContext(FieldSourceLinkContext)
+  const { control, setValue } = useFormContext()
+  const sourceActions = React.useContext(FieldSourceActionsContext)
+  const rowPath = joinFormPath(name, index)
+  const rowSourcePath = joinSourcePath(sourcePath, index)
+  const rowValue = useWatch({ control, name: rowPath }) as
+    | Record<string, unknown>
+    | undefined
   const rowStyle = React.useMemo(
     () =>
       rowTopPx === undefined
@@ -927,63 +1134,53 @@ const ArrayTableRow = React.memo(function ArrayTableRow({
       style={rowStyle}
     >
       {columns.map((col) => {
-        const path = `${name}.${index}.${col.key}`
-        const active = sourceLink?.activePath === path
+        const path = joinFormPath(rowPath, col.key)
+        const logicalPath = joinSourcePath(rowSourcePath, col.key)
+        const value = rowValue?.[encodeFormSegment(col.key)]
+        const isEditing = activeEditorPath === path
         // Same source-link affordance as scalar fields, sized for a table cell:
         // hovering the cell reports its leaf path; the active cell tints.
-        const cellHandlers = sourceLink
+        const cellHandlers = sourceActions
           ? {
-              onMouseEnter: () => sourceLink.onFieldHover(path),
-              onMouseLeave: () => sourceLink.onFieldHover(null),
-              onFocus: () => sourceLink.onFieldHover(path),
-              onBlur: () => sourceLink.onFieldHover(null),
-              onClick: () => sourceLink.selectField?.(path),
+              onMouseEnter: () => sourceActions.onFieldHover(logicalPath),
+              onMouseLeave: () => sourceActions.onFieldHover(null),
+              onFocus: () => sourceActions.onFieldHover(logicalPath),
+              onBlur: () => sourceActions.onFieldHover(null),
+              onClick: () => sourceActions.selectField?.(logicalPath),
             }
           : undefined
         return (
           <div
             key={col.key}
             {...cellHandlers}
+            data-source-path={sourceActions ? logicalPath : undefined}
             className={cn(
-              "min-w-0 rounded px-1 py-0.5 transition-colors",
-              sourceLink && "hover:bg-muted/55",
-              active && "bg-primary/5 ring-1 ring-primary/30"
+              "min-w-0 rounded px-1 py-0.5 transition-colors data-[source-active=true]:bg-primary/5 data-[source-active=true]:ring-1 data-[source-active=true]:ring-primary/30",
+              sourceActions && "hover:bg-muted/55"
             )}
           >
-            {col.kind === "boolean" ? (
-              <FormField
-                name={path}
-                render={({ field }) => (
-                  <FormItem className="flex h-8 items-center justify-center space-y-0">
-                    <FormControl>
-                      <Checkbox
-                        checked={Boolean(field.value)}
-                        onCheckedChange={(value) =>
-                          field.onChange(value === true)
-                        }
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+            {isEditing && col.kind !== "boolean" ? (
+              <ArrayTableCellEditor
+                path={path}
+                column={col}
+                onClose={() => setActiveEditorPath(null)}
+              />
+            ) : col.kind === "boolean" ? (
+              <ArrayTableBooleanCell
+                path={path}
+                value={value}
+                onChange={(nextValue) => {
+                  setValue(path, nextValue, {
+                    shouldDirty: true,
+                    shouldTouch: true,
+                  })
+                }}
               />
             ) : (
-              <FormField
-                name={path}
-                render={({ field }) => (
-                  <FormItem className="space-y-0">
-                    <FormControl>
-                      <ScalarControl
-                        kind={col.kind}
-                        schema={col.schema}
-                        field={field}
-                        compact
-                        nullable={col.nullable}
-                      />
-                    </FormControl>
-                    <FormMessage className="text-xs" />
-                  </FormItem>
-                )}
+              <ArrayTableDisplayCell
+                column={col}
+                value={value}
+                onEdit={() => setActiveEditorPath(path)}
               />
             )}
           </div>
@@ -1003,21 +1200,160 @@ const ArrayTableRow = React.memo(function ArrayTableRow({
   )
 })
 
+const ArrayTableDisplayCell = React.memo(function ArrayTableDisplayCell({
+  column,
+  value,
+  onEdit,
+}: {
+  column: Column
+  value: unknown
+  onEdit: () => void
+}) {
+  const label = labelFor(column.key, column.schema)
+  const text = formatTableCellValue({ value, column })
+
+  return (
+    <button
+      type="button"
+      aria-label={`${label} ${text}`}
+      className={cn(
+        "flex h-8 w-full min-w-0 items-center rounded-md px-2 text-left text-sm text-foreground transition-colors hover:bg-background focus-visible:bg-background focus-visible:ring-1 focus-visible:ring-ring/30",
+        column.kind === "number" || column.kind === "integer"
+          ? "justify-end tabular-nums"
+          : "justify-start"
+      )}
+      onClick={onEdit}
+    >
+      <span className="truncate">{text}</span>
+    </button>
+  )
+})
+
+const ArrayTableBooleanCell = React.memo(function ArrayTableBooleanCell({
+  path,
+  value,
+  onChange,
+}: {
+  path: string
+  value: unknown
+  onChange: (value: boolean) => void
+}) {
+  return (
+    <div className="flex h-8 items-center justify-center">
+      <Checkbox
+        aria-label={path}
+        checked={Boolean(value)}
+        onCheckedChange={(nextValue) => onChange(nextValue === true)}
+      />
+    </div>
+  )
+})
+
+function ArrayTableCellEditor({
+  path,
+  column,
+  onClose,
+}: {
+  path: string
+  column: Column
+  onClose: () => void
+}) {
+  const { control } = useFormContext()
+  const { field } = useController({ control, name: path })
+  const wrapperRef = React.useRef<HTMLDivElement>(null)
+
+  React.useEffect(() => {
+    const input = wrapperRef.current?.querySelector<
+      HTMLInputElement | HTMLButtonElement
+    >("input,button")
+    input?.focus()
+    if (input instanceof HTMLInputElement) input.select()
+  }, [])
+
+  return (
+    <div
+      ref={wrapperRef}
+      onKeyDown={(event) => {
+        if (event.key === "Escape" || event.key === "Enter") {
+          event.preventDefault()
+          onClose()
+        }
+      }}
+    >
+      <ScalarControl
+        kind={column.kind}
+        schema={column.schema}
+        field={{
+          ...field,
+          onBlur: () => {
+            field.onBlur()
+            onClose()
+          },
+        }}
+        compact
+        nullable={column.nullable}
+      />
+    </div>
+  )
+}
+
+function formatTableCellValue({
+  value,
+  column,
+}: {
+  value: unknown
+  column: Column
+}) {
+  if (value == null || value === "") return "—"
+  if (column.kind === "enum") {
+    const option = column.schema.enum?.find((candidate) =>
+      enumValueEquals(candidate, value)
+    )
+    return option === undefined ? enumLabel(value) : enumLabel(option)
+  }
+  if (typeof value === "number")
+    return Number.isFinite(value) ? String(value) : "—"
+  if (typeof value === "boolean") return value ? "True" : "False"
+  return String(value)
+}
+
 function FixedArrayTableBody({
+  name,
   fields,
+  activeEditorPath,
+  activeSourcePath,
   renderItem,
 }: {
+  name: string
   fields: { id: string }[]
+  activeEditorPath: string | null
+  activeSourcePath: string | null
   renderItem: (index: number, rowTopPx: number) => React.ReactNode
 }) {
   const scrollRef = React.useRef<HTMLDivElement>(null)
   const { virtualRows, totalRowSize } = useFixedRowVirtualization({
     rowCount: fields.length,
     rowSize: TABLE_ROW_HEIGHT,
-    rowOverscan: 10,
-    jumpRowOverscan: 18,
+    rowOverscan: TABLE_ROW_OVERSCAN,
+    jumpRowOverscan: TABLE_JUMP_ROW_OVERSCAN,
     scrollRef,
   })
+
+  React.useEffect(() => {
+    const scrollElement = scrollRef.current
+    if (!scrollElement) return
+    for (const cell of scrollElement.querySelectorAll(
+      "[data-source-active='true']"
+    )) {
+      cell.removeAttribute("data-source-active")
+    }
+    if (!activeSourcePath) return
+    for (const cell of scrollElement.querySelectorAll("[data-source-path]")) {
+      if (cell.getAttribute("data-source-path") === activeSourcePath) {
+        cell.setAttribute("data-source-active", "true")
+      }
+    }
+  }, [activeSourcePath, virtualRows])
 
   return (
     <div
@@ -1032,11 +1368,20 @@ function FixedArrayTableBody({
           minWidth: "100%",
         })}
       >
-        {virtualRows.map((virtualRow) => (
-          <React.Fragment key={fields[virtualRow.index].id}>
-            {renderItem(virtualRow.index, virtualRow.start)}
-          </React.Fragment>
-        ))}
+        {virtualRows.map((virtualRow, slotIndex) => {
+          const isEditingRow = activeEditorPath?.startsWith(
+            `${name}.${virtualRow.index}.`
+          )
+          return (
+            <React.Fragment
+              key={
+                isEditingRow ? fields[virtualRow.index].id : `slot-${slotIndex}`
+              }
+            >
+              {renderItem(virtualRow.index, virtualRow.start)}
+            </React.Fragment>
+          )
+        })}
       </div>
     </div>
   )
@@ -1125,30 +1470,77 @@ export function JsonForm({
     JSONSchema7Definition
   >
   const required = new Set(expandedSchema.required ?? [])
+  const usesEncodedPaths = React.useMemo(
+    () => schemaUsesEncodedPaths(expandedSchema),
+    [expandedSchema]
+  )
+  const onFieldHover = sourceLink?.onFieldHover
+  const selectField = sourceLink?.selectField
+  const sourceActions = React.useMemo<FieldSourceLinkActions | null>(
+    () => (onFieldHover ? { onFieldHover, selectField } : null),
+    [onFieldHover, selectField]
+  )
+  const normalizedInitialValuesRef = React.useRef<Schema | null>(null)
+
+  React.useEffect(() => {
+    if (
+      !usesEncodedPaths ||
+      normalizedInitialValuesRef.current === expandedSchema
+    ) {
+      return
+    }
+    normalizedInitialValuesRef.current = expandedSchema
+    form.reset(
+      encodeValueForForm(expandedSchema, form.getValues()) as Record<
+        string,
+        unknown
+      >
+    )
+  }, [expandedSchema, form, usesEncodedPaths])
+
+  const handleSubmit = React.useCallback(
+    (event: React.FormEvent) => {
+      if (!onSubmit) {
+        event.preventDefault()
+        return
+      }
+      return form.handleSubmit((data, submitEvent) => {
+        const decoded = usesEncodedPaths
+          ? (decodeValueFromForm(expandedSchema, data) as Record<
+              string,
+              unknown
+            >)
+          : data
+        return onSubmit(decoded, submitEvent)
+      })(event)
+    },
+    [expandedSchema, form, onSubmit, usesEncodedPaths]
+  )
 
   return (
-    <FieldSourceLinkContext.Provider value={sourceLink ?? null}>
-      <Form {...form}>
-        <form
-          onSubmit={
-            onSubmit ? form.handleSubmit(onSubmit) : (e) => e.preventDefault()
-          }
-          className={cn("space-y-4", className)}
-        >
-          {Object.entries(properties).map(([key, child]) =>
-            typeof child === "object" ? (
-              <JsonFormField
-                key={key}
-                name={key}
-                schema={child}
-                required={required.has(key)}
-                depth={0}
-              />
-            ) : null
-          )}
-          {children}
-        </form>
-      </Form>
-    </FieldSourceLinkContext.Provider>
+    <FieldSourceActionsContext.Provider value={sourceActions}>
+      <FieldSourceActivePathContext.Provider
+        value={sourceLink?.activePath ?? null}
+      >
+        <Form {...form}>
+          <form onSubmit={handleSubmit} className={cn("space-y-4", className)}>
+            {Object.entries(properties).map(([key, child]) =>
+              typeof child === "object" ? (
+                <JsonFormField
+                  key={key}
+                  name={joinFormPath("", key)}
+                  sourcePath={key}
+                  schema={child}
+                  required={required.has(key)}
+                  label={labelFor(key, child)}
+                  depth={0}
+                />
+              ) : null
+            )}
+            {children}
+          </form>
+        </Form>
+      </FieldSourceActivePathContext.Provider>
+    </FieldSourceActionsContext.Provider>
   )
 }

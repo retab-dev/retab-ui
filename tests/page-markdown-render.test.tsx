@@ -314,6 +314,25 @@ describe("PageMarkdownViewer", () => {
     })
   })
 
+  it("shows copy failure when clipboard writing throws synchronously", async () => {
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: vi.fn(() => {
+          throw new Error("clipboard blocked")
+        }),
+      },
+    })
+
+    render(<PageMarkdownViewer pages={PAGES} />)
+
+    fireEvent.click(screen.getByLabelText("Copy markdown"))
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Copy failed")).toBeTruthy()
+    })
+  })
+
   it("downloads markdown with the provided file name and revokes the object URL", () => {
     vi.useFakeTimers()
     const createObjectURL = vi.fn(() => "blob:markdown-download")
@@ -346,6 +365,37 @@ describe("PageMarkdownViewer", () => {
 
     vi.runOnlyPendingTimers()
     expect(revokeObjectURL).toHaveBeenCalledWith("blob:markdown-download")
+  })
+
+  it("normalizes non-markdown file names when downloading from the viewer", () => {
+    vi.useFakeTimers()
+    let downloadedName: string | undefined
+    Object.defineProperty(URL, "createObjectURL", {
+      configurable: true,
+      value: vi.fn(() => "blob:renamed-markdown-download"),
+    })
+    Object.defineProperty(URL, "revokeObjectURL", {
+      configurable: true,
+      value: vi.fn(),
+    })
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(
+      function (this: HTMLAnchorElement) {
+        downloadedName = this.download
+      }
+    )
+
+    render(
+      <PageMarkdownViewer
+        pages={PAGES}
+        text="download markdown"
+        fileName="report.pdf"
+      />
+    )
+
+    fireEvent.click(screen.getByLabelText("Download markdown"))
+
+    expect(downloadedName).toBe("report.md")
+    vi.runOnlyPendingTimers()
   })
 
   it("zooms manually and returns to fit-width scale", () => {

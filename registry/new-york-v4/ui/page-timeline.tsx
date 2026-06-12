@@ -9,7 +9,6 @@ import {
   type SegmentInteraction,
 } from "@/lib/segment-interaction"
 import {
-  pageOwners as buildPageSegmentIndexes,
   segmentDisplayLabel,
   segmentsPageCount,
   type Segment,
@@ -156,14 +155,26 @@ export function PageTimeline({
 
 function buildSegmentByIndex(segments: Segment[]): Map<number, Segment> {
   const map = new Map<number, Segment>()
-  segments.forEach((segment) => map.set(segment.index, segment))
+  segments.forEach((segment, index) => map.set(index, segment))
   return map
 }
 
 function buildSegmentIndexById(segments: Segment[]): Map<string, number> {
   const map = new Map<string, number>()
-  segments.forEach((segment) => map.set(segment.id, segment.index))
+  segments.forEach((segment, index) => map.set(segment.id, index))
   return map
+}
+
+function buildPageSegmentIndexes(segments: Segment[]): Map<number, number[]> {
+  const owners = new Map<number, number[]>()
+  segments.forEach((segment, index) => {
+    segment.pages.forEach((page) => {
+      const list = owners.get(page) ?? []
+      list.push(index)
+      owners.set(page, list)
+    })
+  })
+  return owners
 }
 
 function getTimelinePageSegment({

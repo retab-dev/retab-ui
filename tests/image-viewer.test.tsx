@@ -101,7 +101,7 @@ describe("ViewerResource registry", () => {
 
     expect(second).toBe(first)
     expect(changedBytes).not.toBe(first)
-    expect(changedBytes.cacheKey).not.toBe(first.cacheKey)
+    expect(changedBytes.keys.load).not.toBe(first.keys.load)
     await expect(first.readText()).resolves.toBe("first")
     await expect(changedBytes.readText()).resolves.toBe("second")
   })
@@ -121,7 +121,7 @@ describe("ViewerResource registry", () => {
     })
 
     expect(second).not.toBe(first)
-    expect(second.cacheKey).not.toBe(first.cacheKey)
+    expect(second.keys.load).not.toBe(first.keys.load)
     await expect(first.readText()).resolves.toBe("first")
     await expect(second.readText()).resolves.toBe("second")
   })
@@ -1100,6 +1100,7 @@ describe("FrameSourceManager lifecycle", () => {
   it("marks pending loads for disposal when cleared", async () => {
     const manager = new FrameSourceManager()
     const pendingBitmap = deferred<ImageBitmap>()
+    const lateBitmap = bitmap()
     vi.stubGlobal(
       "fetch",
       vi.fn(() =>
@@ -1121,9 +1122,62 @@ describe("FrameSourceManager lifecycle", () => {
     )
     await Promise.resolve()
     manager.clear()
-    pendingBitmap.resolve(bitmap())
+    pendingBitmap.resolve(lateBitmap)
 
     await expect(load).rejects.toThrow("Image source was disposed before use")
+    expect(lateBitmap.close).toHaveBeenCalledTimes(1)
+  })
+
+  it("cancels pending TIFF worker initialization when cleared", async () => {
+    const manager = new FrameSourceManager()
+    const worker = new FakeTiffWorker()
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve(
+          new Response(new ArrayBuffer(4), {
+            headers: { "content-type": "image/tiff" },
+          })
+        )
+      )
+    )
+
+    const load = manager.load(
+      imageUrlResource("/pending-init.tiff"),
+      () => worker as unknown as Worker
+    )
+    await waitForWorkerPost(worker)
+    manager.clear()
+
+    await expect(load).rejects.toThrow("Image source disposed")
+    expect(worker.terminate).toHaveBeenCalledTimes(1)
+  })
+
+  it("cancels pending sniffed-TIFF worker initialization when cleared", async () => {
+    const manager = new FrameSourceManager()
+    const worker = new FakeTiffWorker()
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve({
+          ok: true,
+          headers: { get: vi.fn(() => null) },
+          blob: vi.fn(() =>
+            Promise.resolve(new Blob([Uint8Array.of(0x49, 0x49, 0x2a, 0)]))
+          ),
+        } as unknown as Response)
+      )
+    )
+
+    const load = manager.load(
+      imageUrlResource("/pending-sniffed"),
+      () => worker as unknown as Worker
+    )
+    await waitForWorkerPost(worker)
+    manager.clear()
+
+    await expect(load).rejects.toThrow("Image source disposed")
+    expect(worker.terminate).toHaveBeenCalledTimes(1)
   })
 
   it("disposes resolved unclaimed sources after the unclaimed timeout", async () => {
@@ -1367,6 +1421,18 @@ describe("TiffWorkerClient", () => {
     worker.emitMessageError()
 
     await expect(decoded).rejects.toThrow("TIFF worker sent an unreadable")
+    expect(worker.terminate).toHaveBeenCalledTimes(1)
+  })
+
+  it("handles repeated worker failures idempotently", async () => {
+    const { worker, client } = createFakeWorkerClient()
+    const decoded = client.decode(0)
+
+    worker.emitError("transport failed")
+    worker.emitMessageError()
+    worker.emitError("transport failed again")
+
+    await expect(decoded).rejects.toThrow("transport failed")
     expect(worker.terminate).toHaveBeenCalledTimes(1)
   })
 

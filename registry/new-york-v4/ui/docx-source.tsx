@@ -18,6 +18,11 @@ export function docxSourceToTarget(
   if (!source) return null
   const a = source.anchor
   if (a.kind === "docx_text_span") {
+    if (
+      !isNonNegativeInteger(a.paragraph) ||
+      !isValidOptionalRange(a.char_start, a.char_end)
+    )
+      return null
     const text = source.content.trim()
     return text ? { kind: "text", text } : null
   }
@@ -35,6 +40,17 @@ export function docxSourceToTarget(
 
 function isNonNegativeInteger(value: number) {
   return Number.isInteger(value) && value >= 0
+}
+
+function isValidOptionalRange(start?: number, end?: number) {
+  if (start == null && end == null) return true
+  if (start == null || end == null) return false
+  return (
+    Number.isInteger(start) &&
+    Number.isInteger(end) &&
+    start >= 0 &&
+    end >= start
+  )
 }
 
 /** A stable `SourceTarget` over a `DocxViewer` ref — pass to `useSourceLink`. */

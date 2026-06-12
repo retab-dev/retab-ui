@@ -18,13 +18,25 @@ export function textAnchorToLines(
       !Number.isInteger(anchor.line_start) ||
       !Number.isInteger(anchor.line_end) ||
       anchor.line_start < 1 ||
-      anchor.line_end < anchor.line_start
+      anchor.line_end < anchor.line_start ||
+      !isValidOptionalRange(anchor.char_start, anchor.char_end)
     ) {
       return undefined
     }
     return { start: anchor.line_start, end: anchor.line_end }
   }
   return undefined
+}
+
+function isValidOptionalRange(start?: number, end?: number) {
+  if (start == null && end == null) return true
+  if (start == null || end == null) return false
+  return (
+    Number.isInteger(start) &&
+    Number.isInteger(end) &&
+    start >= 0 &&
+    end >= start
+  )
 }
 
 /** A stable `SourceTarget` over a `TextViewer` ref — pass to `useSourceLink`. */

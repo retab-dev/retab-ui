@@ -127,7 +127,8 @@ export function SegmentSidebar({
 }
 
 function ConfidenceBar({ value }: { value: number }) {
-  const pct = Math.round(Math.max(0, Math.min(1, value)) * 100)
+  const safeValue = Number.isFinite(value) ? value : 0
+  const pct = Math.round(Math.max(0, Math.min(1, safeValue)) * 100)
   return (
     <span className="mt-0.5 flex items-center gap-1.5">
       <span className="h-1 w-16 overflow-hidden rounded-full bg-muted-foreground/20">

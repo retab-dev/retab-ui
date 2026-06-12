@@ -84,6 +84,12 @@ describe("scrollbench core", () => {
     expect(measuredScrollDistance([100, 200, 50])).toBe(350)
   })
 
+  it("ignores malformed targets when reporting measured path distance", () => {
+    expect(
+      measuredScrollDistance([100, Number.NaN, 200, Number.POSITIVE_INFINITY, 50])
+    ).toBe(350)
+  })
+
   it("summarizes frame durations into fps and frame budget counts", () => {
     const scenario = SCENARIOS[0]
     const result = summarizeFrameDurations({
@@ -101,5 +107,24 @@ describe("scrollbench core", () => {
     expect(result.over16).toBe(3)
     expect(result.over33).toBe(1)
     expect(result.frames).toBe(4)
+  })
+
+  it("summarizes only finite positive frame durations", () => {
+    const scenario = SCENARIOS[0]
+    const result = summarizeFrameDurations({
+      scenario,
+      frameDurations: [10, Number.NaN, -5, 20, Number.POSITIVE_INFINITY],
+      stepPx: Number.NaN,
+      distancePx: Number.POSITIVE_INFINITY,
+    })
+
+    expect(result.fps).toBeCloseTo(66.6666666667)
+    expect(result.averageFrameMs).toBe(15)
+    expect(result.p50FrameMs).toBe(10)
+    expect(result.p95FrameMs).toBe(10)
+    expect(result.maxFrameMs).toBe(20)
+    expect(result.frames).toBe(2)
+    expect(result.stepPx).toBe(0)
+    expect(result.distancePx).toBe(0)
   })
 })

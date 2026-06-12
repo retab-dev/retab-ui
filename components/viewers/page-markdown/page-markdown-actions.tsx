@@ -139,7 +139,7 @@ function useCopyMarkdown(text: string) {
     }
 
     try {
-      writeText.call(navigator.clipboard, text).then(
+      Promise.resolve(writeText.call(navigator.clipboard, text)).then(
         () => {
           setStatus("copied")
           scheduleCopyStatusReset(timeoutRef, setStatus)
@@ -182,8 +182,11 @@ export function downloadMarkdown(text: string, fileName?: string) {
   const anchor = document.createElement("a")
   anchor.href = url
   anchor.download = normalizeMarkdownFileName(fileName)
-  document.body.append(anchor)
-  anchor.click()
-  anchor.remove()
-  window.setTimeout(() => URL.revokeObjectURL(url), 0)
+  try {
+    document.body.append(anchor)
+    anchor.click()
+  } finally {
+    anchor.remove()
+    window.setTimeout(() => URL.revokeObjectURL(url), 0)
+  }
 }

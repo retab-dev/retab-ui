@@ -10,6 +10,7 @@ import {
   shortName,
   timed,
   useThumbnailResource,
+  withThumbnailFormatError,
   type ThumbnailCacheEntry,
 } from "@/components/document-thumbnail/cache"
 import { IframeDoc } from "@/components/document-thumbnail/renderers/layout"
@@ -28,19 +29,25 @@ function getMarkdownDoc(
   cacheKey: string
 ): Promise<string> {
   return cachedThumbnailResource(markdownCache, cacheKey, () =>
-    timed(`markdown:total ${shortName(resource)}`, async () => {
-      const [text, [{ marked }, DOMPurifyMod]] = await Promise.all([
-        getThumbnailText(resource, cacheKey),
-        loadMarkdown(),
-      ])
-      const purifier = DOMPurifyMod as unknown as {
-        default?: { sanitize?: (html: string) => string }
-        sanitize?: (html: string) => string
-      }
-      const sanitize = purifier.default?.sanitize ?? purifier.sanitize
-      if (!sanitize) throw new Error("DOMPurify sanitize unavailable")
-      const body = sanitize(await marked.parse(text))
-      return `<!doctype html><html><head><meta charset="utf-8"><style>
+    withThumbnailFormatError(
+      "markdown",
+      "render_failed",
+      resource.fileName,
+      "Failed to render markdown thumbnail",
+      () =>
+        timed(`markdown:total ${shortName(resource)}`, async () => {
+          const [text, [{ marked }, DOMPurifyMod]] = await Promise.all([
+            getThumbnailText(resource, cacheKey),
+            loadMarkdown(),
+          ])
+          const purifier = DOMPurifyMod as unknown as {
+            default?: { sanitize?: (html: string) => string }
+            sanitize?: (html: string) => string
+          }
+          const sanitize = purifier.default?.sanitize ?? purifier.sanitize
+          if (!sanitize) throw new Error("DOMPurify sanitize unavailable")
+          const body = sanitize(await marked.parse(text))
+          return `<!doctype html><html><head><meta charset="utf-8"><style>
         body{margin:0;padding:18px;font:14px/1.6 -apple-system,BlinkMacSystemFont,system-ui,sans-serif;color:#0f172a}
         h1{font-size:1.6em;margin:.1em 0 .5em;border-bottom:1px solid #e2e8f0;padding-bottom:.25em}
         h2{font-size:1.3em;margin:1em 0 .4em;border-bottom:1px solid #e2e8f0;padding-bottom:.25em}
@@ -51,7 +58,8 @@ function getMarkdownDoc(
         table{border-collapse:collapse;width:100%}td,th{border:1px solid #e2e8f0;padding:4px 8px;text-align:left}
         a{color:#4f46e5}blockquote{margin:0 0 .8em;padding-left:12px;border-left:3px solid #e2e8f0;color:#475569}
       </style></head><body>${body}</body></html>`
-    })
+        })
+    )
   )
 }
 

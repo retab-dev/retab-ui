@@ -397,6 +397,64 @@ describe("HtmlDocViewer", () => {
     expect(click).toHaveBeenCalledTimes(1)
   })
 
+  it("ignores late stale HTML Blob text after the source changes", async () => {
+    const firstText = deferred<string>()
+    const secondText = deferred<string>()
+    const firstBlob = {
+      type: "text/html",
+      text: vi.fn(() => firstText.promise),
+    } as unknown as Blob
+    const secondBlob = {
+      type: "text/html",
+      text: vi.fn(() => secondText.promise),
+    } as unknown as Blob
+
+    const { container, rerender } = render(
+      <FileViewer
+        source={{
+          kind: "blob",
+          blob: firstBlob,
+          identityKey: "first-slow-blob",
+          fileName: "first.html",
+          mimeType: "text/html",
+        }}
+      />
+    )
+
+    await waitFor(() => expect(firstBlob.text).toHaveBeenCalledTimes(1))
+
+    rerender(
+      <FileViewer
+        source={{
+          kind: "blob",
+          blob: secondBlob,
+          identityKey: "second-slow-blob",
+          fileName: "second.html",
+          mimeType: "text/html",
+        }}
+      />
+    )
+
+    await waitFor(() => expect(secondBlob.text).toHaveBeenCalledTimes(1))
+    await act(async () => {
+      secondText.resolve("<p>second slow blob</p>")
+      await Promise.resolve()
+    })
+
+    expect((await findIframe(container)).getAttribute("srcdoc")).toBe(
+      "<p>second slow blob</p>"
+    )
+
+    await act(async () => {
+      firstText.resolve("<p>first late blob</p>")
+      await Promise.resolve()
+    })
+
+    expect(container.querySelector("iframe")?.getAttribute("srcdoc")).toBe(
+      "<p>second slow blob</p>"
+    )
+  })
+
   it("prefers an HTML Blob download URL over a generated object URL", async () => {
     const { container } = render(
       <FileViewer
@@ -816,6 +874,105 @@ describe("HtmlDocViewer", () => {
     )
   })
 
+  it("aborts stale direct HTML fetches when src changes with the same signal", async () => {
+    const first = deferred<Response>()
+    const second = deferred<Response>()
+    let firstSignal: AbortSignal | undefined
+    let secondSignal: AbortSignal | undefined
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((src: string, init?: RequestInit) => {
+        if (src === "/direct/same-signal-a.html") {
+          firstSignal = init?.signal ?? undefined
+          return first.promise
+        }
+        secondSignal = init?.signal ?? undefined
+        return second.promise
+      })
+    )
+    const controller = new AbortController()
+
+    const { container, rerender } = render(
+      <HtmlDocViewer
+        src="/direct/same-signal-a.html"
+        fileName="first.html"
+        descriptorSignal={controller.signal}
+      />
+    )
+
+    await waitFor(() => expect(firstSignal).toBeTruthy())
+
+    rerender(
+      <HtmlDocViewer
+        src="/direct/same-signal-b.html"
+        fileName="second.html"
+        descriptorSignal={controller.signal}
+      />
+    )
+
+    await waitFor(() => expect(firstSignal?.aborted).toBe(true))
+    await waitFor(() => expect(secondSignal).toBeTruthy())
+    await resolveFetch(second, response("<p>second same signal</p>"))
+
+    expect((await findIframe(container)).getAttribute("srcdoc")).toBe(
+      "<p>second same signal</p>"
+    )
+  })
+
+  it("aborts direct HTML fetches on unmount", async () => {
+    const pending = deferred<Response>()
+    let fetchSignal: AbortSignal | undefined
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((_src: string, init?: RequestInit) => {
+        fetchSignal = init?.signal ?? undefined
+        return pending.promise
+      })
+    )
+    const controller = new AbortController()
+
+    const { unmount } = render(
+      <HtmlDocViewer
+        src="/direct/unmount.html"
+        fileName="unmount.html"
+        descriptorSignal={controller.signal}
+      />
+    )
+
+    await waitFor(() => expect(fetchSignal).toBeTruthy())
+
+    unmount()
+
+    await waitFor(() => expect(fetchSignal?.aborted).toBe(true))
+  })
+
+  it("aborts direct HTML fetches when the parent descriptor signal aborts", async () => {
+    const pending = deferred<Response>()
+    let fetchSignal: AbortSignal | undefined
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((_src: string, init?: RequestInit) => {
+        fetchSignal = init?.signal ?? undefined
+        return pending.promise
+      })
+    )
+    const controller = new AbortController()
+
+    render(
+      <HtmlDocViewer
+        src="/direct/parent-abort.html"
+        fileName="parent-abort.html"
+        descriptorSignal={controller.signal}
+      />
+    )
+
+    await waitFor(() => expect(fetchSignal).toBeTruthy())
+
+    controller.abort()
+
+    await waitFor(() => expect(fetchSignal?.aborted).toBe(true))
+  })
+
   it("switches direct HtmlDocViewer from loaded HTML to a fetched src", async () => {
     const fetched = deferred<Response>()
     vi.stubGlobal(
@@ -928,6 +1085,38 @@ describe("HtmlDocViewer", () => {
 
       expect(await screen.findByRole("alert")).toBeTruthy()
       expect(screen.queryByTitle("broken.html")).toBeNull()
+    } finally {
+      consoleError.mockRestore()
+    }
+  })
+
+  it("shows the viewer error state when FileViewer cannot read an HTML Blob", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {})
+    const brokenBlob = {
+      type: "text/html",
+      text: vi.fn(() => Promise.reject(new Error("blob text failed"))),
+    } as unknown as Blob
+
+    try {
+      render(
+        <FileViewer
+          source={{
+            kind: "blob",
+            blob: brokenBlob,
+            identityKey: "broken-html-blob",
+            fileName: "broken-blob.html",
+            mimeType: "text/html",
+            downloadUrl: "/download/broken-blob.html",
+          }}
+        />
+      )
+
+      const alert = await screen.findByRole("alert")
+      expect(alert.getAttribute("data-error-message")).toBe("blob text failed")
+      expect(document.querySelector("iframe")).toBeNull()
+      const download = screen.getByRole("link", { name: "Download" })
+      expect(download.getAttribute("href")).toBe("/download/broken-blob.html")
+      expect(download.getAttribute("download")).toBe("broken-blob.html")
     } finally {
       consoleError.mockRestore()
     }

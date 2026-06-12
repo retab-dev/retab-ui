@@ -22,6 +22,11 @@ export function EnumValuesField({
   onChange: (values: JSONSchema7Type[]) => void
 }) {
   const [nextValue, setNextValue] = React.useState("")
+  const valuesKey = JSON.stringify(values)
+
+  React.useEffect(() => {
+    setNextValue("")
+  }, [valuesKey])
 
   const addValue = () => {
     if (!nextValue.trim()) return

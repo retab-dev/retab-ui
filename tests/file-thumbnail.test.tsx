@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { readFileSync } from "node:fs"
 import * as React from "react"
 import {
   act,
@@ -11,6 +12,7 @@ import {
 } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
+import { ResourceError } from "@/lib/viewer-errors"
 import {
   FileThumbnail,
   hasRenderablePreviewContent,
@@ -21,6 +23,14 @@ import {
   getThumbnailCacheKey,
   getThumbnailRenderKey,
 } from "@/components/document-thumbnail"
+import {
+  cachedThumbnailResource,
+  createThumbnailArtifactCache,
+  TEXT_THUMBNAIL_MAX_BYTES,
+  withThumbnailFormatError,
+  type ThumbnailCacheEntry,
+} from "@/components/document-thumbnail/cache"
+import { thumbnailOption } from "@/components/document-thumbnail/keys"
 import { useObjectUrl } from "@/components/document-thumbnail/renderers/use-object-url"
 import { createViewerResource } from "@/registry/new-york-v4/lib/viewer-resource"
 
@@ -183,6 +193,97 @@ describe("DocumentThumbnail helpers", () => {
         retryKey: "kind:text",
       })
     )
+  })
+
+  it("includes thumbnail output options in cache identity", () => {
+    const file = resource("/same.txt")
+    const base = getThumbnailCacheKey({
+      resource: file,
+      descriptor: file.descriptor,
+      options: [thumbnailOption("text-max-bytes", TEXT_THUMBNAIL_MAX_BYTES)],
+    })
+
+    expect(base).not.toBe(
+      getThumbnailCacheKey({
+        resource: file,
+        descriptor: file.descriptor,
+        options: [
+          thumbnailOption("text-max-bytes", TEXT_THUMBNAIL_MAX_BYTES + 1),
+        ],
+      })
+    )
+  })
+
+  it("keeps rejected cache entries observable once before retrying", async () => {
+    const cache = new Map<string, ThumbnailCacheEntry<string>>()
+    const firstError = new Error("first failure")
+    const load = vi
+      .fn<() => Promise<string>>()
+      .mockRejectedValueOnce(firstError)
+      .mockResolvedValueOnce("recovered")
+
+    await expect(cachedThumbnailResource(cache, "same", load)).rejects.toBe(
+      firstError
+    )
+    await expect(cachedThumbnailResource(cache, "same", load)).rejects.toBe(
+      firstError
+    )
+    await expect(cachedThumbnailResource(cache, "same", load)).resolves.toBe(
+      "recovered"
+    )
+    expect(load).toHaveBeenCalledTimes(2)
+  })
+
+  it("bounds artifact caches and disposes evicted fulfilled values", async () => {
+    const dispose = vi.fn()
+    const first = { id: "first" }
+    const second = { id: "second" }
+    const cache = createThumbnailArtifactCache<{ id: string }>({
+      maxEntries: 1,
+      dispose,
+    })
+
+    await cachedThumbnailResource(cache, "first", async () => first)
+    await cachedThumbnailResource(cache, "second", async () => second)
+
+    expect(cache.size).toBe(1)
+    expect(dispose).toHaveBeenCalledWith(first)
+  })
+
+  it("wraps format failures while preserving resource failures", async () => {
+    await expect(
+      withThumbnailFormatError(
+        "xlsx",
+        "parse_failed",
+        "sheet.xlsx",
+        "Failed to parse spreadsheet thumbnail",
+        async () => {
+          throw new Error("bad zip")
+        }
+      )
+    ).rejects.toMatchObject({
+      name: "ViewerFormatError",
+      format: "xlsx",
+      kind: "parse_failed",
+    })
+
+    const resourceError = new ResourceError({
+      kind: "http_error",
+      status: 500,
+      message: "Nope",
+    })
+
+    await expect(
+      withThumbnailFormatError(
+        "xlsx",
+        "parse_failed",
+        "sheet.xlsx",
+        "Failed to parse spreadsheet thumbnail",
+        async () => {
+          throw resourceError
+        }
+      )
+    ).rejects.toBe(resourceError)
   })
 })
 
@@ -371,6 +472,26 @@ describe("FileThumbnail", () => {
     expect(
       container.querySelector('[data-slot="file-thumbnail-shimmer-highlight"]')
     ).not.toBeNull()
+  })
+})
+
+describe("FileThumbnail registry item", () => {
+  it("ships only the dependency-free shell", () => {
+    const registry = JSON.parse(readFileSync("registry.json", "utf8")) as {
+      items: Array<{
+        name: string
+        files?: Array<{ path: string }>
+        registryDependencies?: string[]
+        dependencies?: string[]
+      }>
+    }
+    const item = registry.items.find((entry) => entry.name === "file-thumbnail")
+
+    expect(item?.files?.map((file) => file.path)).toEqual([
+      "registry/new-york-v4/ui/file-thumbnail.tsx",
+    ])
+    expect(item?.registryDependencies).toEqual(["utils"])
+    expect(item?.dependencies ?? []).toEqual([])
   })
 })
 

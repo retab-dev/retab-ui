@@ -133,7 +133,7 @@ export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
           <ViewerErrorState
             error={resourceState.error}
             format="csv"
-            sourceKind={resource?.source.kind}
+            sourceKind={resource?.sourceKind}
             download={resource?.getOriginalDownload()}
             variant="inline"
             onRetry={() => setRetryVersion((version) => version + 1)}

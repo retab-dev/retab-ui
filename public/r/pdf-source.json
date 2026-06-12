@@ -3,7 +3,11 @@
   "name": "pdf-source",
   "title": "PDF source adapter",
   "description": "Bridges the document-source model to the PDF viewer: pdfAnchorToLocation (normalized bbox → page %), usePdfSourceTarget (a SourceTarget over a PdfViewer ref), and renderPdfSourceOverlay (draws a PdfHighlight on the active source's page).",
-  "registryDependencies": ["pdf-viewer", "document-source", "use-source-link"],
+  "registryDependencies": [
+    "pdf-viewer",
+    "document-source",
+    "use-source-link"
+  ],
   "files": [
     {
       "path": "registry/new-york-v4/ui/pdf-source.tsx",

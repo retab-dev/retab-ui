@@ -174,12 +174,15 @@ export function summarizeFrameDurations({
   stepPx: number
   distancePx: number
 }): ScenarioResult {
-  const sortedDurations = [...frameDurations].sort((a, b) => a - b)
+  const validFrameDurations = frameDurations.filter(
+    (duration) => Number.isFinite(duration) && duration >= 0
+  )
+  const sortedDurations = [...validFrameDurations].sort((a, b) => a - b)
   const averageFrameMs =
-    frameDurations.length === 0
+    validFrameDurations.length === 0
       ? 0
-      : frameDurations.reduce((sum, duration) => sum + duration, 0) /
-        frameDurations.length
+      : validFrameDurations.reduce((sum, duration) => sum + duration, 0) /
+        validFrameDurations.length
 
   return {
     id: scenario.id,
@@ -189,11 +192,11 @@ export function summarizeFrameDurations({
     p50FrameMs: percentile(sortedDurations, 0.5),
     p95FrameMs: percentile(sortedDurations, 0.95),
     maxFrameMs: sortedDurations[sortedDurations.length - 1] ?? 0,
-    over16: frameDurations.filter((duration) => duration > 16.7).length,
-    over33: frameDurations.filter((duration) => duration > 33.3).length,
-    frames: frameDurations.length,
-    stepPx,
-    distancePx,
+    over16: validFrameDurations.filter((duration) => duration > 16.7).length,
+    over33: validFrameDurations.filter((duration) => duration > 33.3).length,
+    frames: validFrameDurations.length,
+    stepPx: Number.isFinite(stepPx) && stepPx > 0 ? stepPx : 0,
+    distancePx: Number.isFinite(distancePx) && distancePx > 0 ? distancePx : 0,
   }
 }
 
@@ -202,6 +205,7 @@ export function measuredScrollDistance(targets: readonly number[]) {
   let distance = 0
 
   for (const target of targets) {
+    if (!Number.isFinite(target) || target < 0) continue
     distance += Math.abs(target - previous)
     previous = target
   }

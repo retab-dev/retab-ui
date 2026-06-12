@@ -1247,3 +1247,11 @@ The source architecture is canonical when:
 
 The goal is not to remove format-specific logic. The goal is to put it where it
 belongs, behind one rigorous source boundary.
+
+# Superseded Download Note
+
+Download behavior now uses `ViewerDownloadAction` and
+`ViewerResource.getOriginalDownload()`. Older mentions of
+`DownloadCapability`, `getDownload()`, `ViewerDownloadAnchor`, or
+`useDownloadHref()` in this document are historical design notes, not the
+current runtime contract.

@@ -289,7 +289,7 @@ function textViewerResetKey(
   retryVersion: number
 ): string {
   return [
-    resource.keys.load,
+    resource.keys.resource,
     retryVersion,
     props.maxBytes ?? "",
     props.maxLines ?? "",

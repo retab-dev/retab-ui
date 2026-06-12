@@ -152,7 +152,7 @@ export const XlsxViewer = React.forwardRef<XlsxViewerHandle, XlsxViewerProps>(
         className={props.className}
         download={resource.getOriginalDownload()}
         format="xlsx"
-        resetKey={resource.keys.load}
+        resetKey={resource.keys.resource}
         sourceKind={resource.sourceKind}
       >
         <React.Suspense
@@ -161,7 +161,7 @@ export const XlsxViewer = React.forwardRef<XlsxViewerHandle, XlsxViewerProps>(
           }
         >
           <XlsxViewerSession
-            key={resource.keys.load}
+            key={resource.keys.resource}
             {...props}
             forwardedRef={ref}
             resource={resource}

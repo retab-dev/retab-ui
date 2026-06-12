@@ -169,6 +169,17 @@ function DoubleMobileSetterButton() {
   )
 }
 
+function ControlledSidebarHarness() {
+  const [open, setOpen] = React.useState(false)
+
+  return (
+    <SidebarProvider open={open} onOpenChange={setOpen}>
+      <SidebarTrigger />
+      <ContextProbe />
+    </SidebarProvider>
+  )
+}
+
 afterEach(() => {
   cleanup()
   vi.restoreAllMocks()
@@ -491,6 +502,28 @@ describe("SidebarProvider and useSidebar", () => {
     )
   })
 
+  it("updates internal state when uncontrolled with onOpenChange", async () => {
+    const onOpenChange = vi.fn()
+    const { container } = render(
+      <SidebarProvider defaultOpen onOpenChange={onOpenChange}>
+        <SidebarTrigger />
+        <ContextProbe />
+      </SidebarProvider>
+    )
+
+    fireEvent.click(getTrigger(container))
+
+    await waitFor(() => {
+      expect(
+        container.querySelector("output")?.getAttribute("data-state")
+      ).toBe("collapsed")
+    })
+    expect(onOpenChange).toHaveBeenCalledWith(false)
+    expect(cookieSet).toHaveBeenCalledWith(
+      expect.objectContaining({ value: "false" })
+    )
+  })
+
   it("derives repeated controlled toggles from the controlled open prop", async () => {
     const onOpenChange = vi.fn()
     const { container } = render(
@@ -510,6 +543,38 @@ describe("SidebarProvider and useSidebar", () => {
     expect(onOpenChange).toHaveBeenNthCalledWith(2, true)
     expect(container.querySelector("output")?.getAttribute("data-state")).toBe(
       "collapsed"
+    )
+  })
+
+  it("tracks controlled state after the parent applies onOpenChange", async () => {
+    const { container } = render(<ControlledSidebarHarness />)
+
+    expect(container.querySelector("output")?.getAttribute("data-state")).toBe(
+      "collapsed"
+    )
+
+    fireEvent.click(getTrigger(container))
+
+    await waitFor(() => {
+      expect(
+        container.querySelector("output")?.getAttribute("data-state")
+      ).toBe("expanded")
+    })
+
+    fireEvent.click(getTrigger(container))
+
+    await waitFor(() => {
+      expect(
+        container.querySelector("output")?.getAttribute("data-state")
+      ).toBe("collapsed")
+    })
+    expect(cookieSet).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ value: "true" })
+    )
+    expect(cookieSet).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ value: "false" })
     )
   })
 
@@ -573,6 +638,25 @@ describe("SidebarProvider and useSidebar", () => {
     })
     expect(cookieSet).toHaveBeenCalledTimes(1)
   })
+
+  it("keeps toggling when cookieStore returns a non-promise value", async () => {
+    cookieSet.mockReturnValueOnce(undefined as never)
+    const { container } = renderSidebar(
+      <>
+        <SidebarTrigger />
+        <ContextProbe />
+      </>
+    )
+
+    fireEvent.click(getTrigger(container))
+
+    await waitFor(() => {
+      expect(
+        container.querySelector("output")?.getAttribute("data-state")
+      ).toBe("collapsed")
+    })
+    expect(cookieSet).toHaveBeenCalledTimes(1)
+  })
 })
 
 describe("Sidebar desktop and mobile rendering", () => {
@@ -585,6 +669,7 @@ describe("Sidebar desktop and mobile rendering", () => {
 
     const sidebar = container.querySelector('[data-slot="sidebar"]')
     expect(sidebar?.textContent).toBe("Static sidebar")
+    expect(sidebar?.getAttribute("data-sidebar")).toBe("sidebar")
     expect(sidebar?.getAttribute("data-state")).toBeNull()
     expect(sidebar?.className).toContain("custom-sidebar")
   })
@@ -611,6 +696,24 @@ describe("Sidebar desktop and mobile rendering", () => {
       expect(sidebar?.getAttribute("data-state")).toBe("collapsed")
     })
     expect(sidebar?.getAttribute("data-collapsible")).toBe("icon")
+  })
+
+  it("forwards sidebar DOM props to the desktop sidebar container", () => {
+    renderSidebar(
+      <Sidebar
+        className="custom-desktop-sidebar"
+        data-testid="desktop-sidebar"
+        style={{ "--sidebar-width": "20rem" } as React.CSSProperties}
+      >
+        Desktop nav
+      </Sidebar>
+    )
+
+    const sidebar = screen.getByTestId("desktop-sidebar")
+    expect(sidebar.getAttribute("data-slot")).toBe("sidebar-container")
+    expect(sidebar.className).toContain("custom-desktop-sidebar")
+    expect(sidebar.style.getPropertyValue("--sidebar-width")).toBe("20rem")
+    expect(sidebar.textContent).toBe("Desktop nav")
   })
 
   it("opens mobile content from the same trigger without writing the desktop cookie", async () => {

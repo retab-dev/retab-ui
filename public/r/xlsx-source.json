@@ -3,7 +3,11 @@
   "name": "xlsx-source",
   "title": "Excel source adapter",
   "description": "Bridges the document-source model to the xlsx viewer: spreadsheetAnchorToCell, useXlsxSourceTarget, and sourceToXlsxCell for spreadsheet_cell anchors (sheet-aware).",
-  "registryDependencies": ["xlsx-viewer", "document-source", "use-source-link"],
+  "registryDependencies": [
+    "xlsx-viewer",
+    "document-source",
+    "use-source-link"
+  ],
   "files": [
     {
       "path": "registry/new-york-v4/ui/xlsx-source.tsx",

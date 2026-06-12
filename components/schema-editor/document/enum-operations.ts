@@ -78,6 +78,7 @@ export function setEnumValues(
       ...effective,
       type: "string",
       enum: buildEnumValues(values, effective.enum),
+      booleanSchema: undefined,
     }))
   })
 }

@@ -50,6 +50,7 @@ export function normalizeNodeForType(
     properties: undefined,
     items: undefined,
     enum: undefined,
+    booleanSchema: undefined,
   }
 
   if (type === "enum") {

@@ -27,21 +27,22 @@ export function usePptxZoom({
   const [zoomState, setZoomState] = React.useState<PptxZoomState>(() =>
     defaultScale == null
       ? { mode: "fit" }
-      : { mode: "manual", value: clamp(defaultScale, 0.25, 5) }
+      : { mode: "manual", value: normalizePptxScale(defaultScale) }
   )
 
   const isScaleControlled = controlledScale !== undefined
+  const normalizedControlledScale = isScaleControlled
+    ? normalizePptxScale(controlledScale)
+    : undefined
   const zoomScale =
-    controlledScale ??
+    normalizedControlledScale ??
     (zoomState.mode === "manual" ? zoomState.value : fitScale)
   const scaleControlsDisabled = isScaleControlled && !onScaleChange
 
   const setViewerScale = React.useCallback(
     (nextScale: number | null) => {
       const normalized =
-        nextScale == null
-          ? null
-          : clamp(Number.isFinite(nextScale) ? nextScale : 1, 0.25, 5)
+        nextScale == null ? null : normalizePptxScale(nextScale)
       if (isScaleControlled) {
         onScaleChange?.(normalized)
         return
@@ -56,4 +57,8 @@ export function usePptxZoom({
   )
 
   return { scaleControlsDisabled, setViewerScale, zoomScale }
+}
+
+function normalizePptxScale(scale: number) {
+  return clamp(Number.isFinite(scale) ? scale : 1, 0.25, 5)
 }

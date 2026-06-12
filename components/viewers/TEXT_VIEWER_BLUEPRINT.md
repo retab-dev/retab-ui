@@ -11,7 +11,11 @@ line can be highlighted and scrolled to by source anchors.
 
 ```tsx
 <TextViewer
-  src="/samples/extraction-run.log"
+  source={{
+    kind: "url",
+    url: "/samples/extraction-run.log",
+    fileName: "extraction-run.log",
+  }}
   highlight={{ start: 21, end: 24 }}
 />
 ```
@@ -32,7 +36,7 @@ fail locally when a text resource cannot be loaded.
 The implementation in `registry/new-york-v4/ui/text-viewer.tsx` has the right
 basic shape:
 
-- It supports `src` and inline `value`.
+- It supports URL, Blob, and text sources through one `source` prop.
 - It uses Suspense with a stable promise cache for fetched text.
 - It renders explicit line nodes with `data-line`, which makes source anchors
   addressable.
@@ -68,20 +72,19 @@ export interface TextViewerHandle {
 }
 
 export interface TextViewerProps {
-  src?: string
-  value?: string
+  source: TextDocumentSource
   className?: string
   toolbar?: boolean
-  downloadFileName?: string
   highlight?: { start: number; end: number } | null
   bare?: boolean
+  maxBytes?: number
+  maxLines?: number
 }
 ```
 
 Rules:
 
-- `value` wins over `src`.
-- `src` is the resource identity and the error-boundary reset key.
+- `source` is the file identity and error-boundary reset input.
 - `toolbar={false}` affects both fallback and loaded states.
 - `highlight` is a 1-based inclusive line range.
 - Invalid ranges should normalize to a no-op, not create impossible DOM queries.
@@ -91,14 +94,14 @@ Rules:
 These rules should be true after hardening:
 
 1. A failed fetch renders a local text-viewer error state.
-2. Changing `src` after an error gives the new resource a fresh attempt.
+2. Changing `source` after an error gives the new resource a fresh attempt.
 3. A rejected fetch promise is not cached forever.
 4. `scrollToLines(start, end)` reveals the requested range, not only the first
    line.
 5. `highlight` and `scrollToLines` use the same range normalization.
 6. The fallback toolbar matches the requested toolbar state.
-7. Inline `value` renders during SSR/hydration without needing client fetch.
-8. Download is shown only for `src`.
+7. Text sources render during SSR/hydration without needing client fetch.
+8. Download is derived from `resource.getOriginalDownload()`.
 9. Large-file behavior is explicitly bounded or documented at call sites.
 10. `TextViewer` never imports or depends on `FileViewer`.
 
@@ -141,7 +144,7 @@ Implementation can stay DOM-based because this viewer renders all lines.
 
 ## Async And Cache Rules
 
-The `src` resource cache should remain small and explicit.
+The text resource cache should remain small and explicit.
 
 Target cache entry:
 
@@ -154,9 +157,9 @@ interface TextResource {
 
 Rules:
 
-- Cache by `src`.
+- Cache by `resource.cacheKey`, bounds, and retry version.
 - Delete or replace rejected entries so retry is possible.
-- Keep fulfilled entries reusable for the same `src`.
+- Keep fulfilled entries reusable for the same source and bounds.
 - Do not add global eviction unless this viewer starts handling unbounded user
   files.
 
@@ -168,7 +171,7 @@ Mirror the other leaf viewers (`PdfViewer`, `ImageViewer`, `DocxViewer`,
 Rules:
 
 - Wrap the Suspense body in `TextViewerErrorBoundary`.
-- Reset on `src`.
+- Reset on source identity and retry version.
 - Render a compact local message: `Couldn’t load this text file.`
 - Preserve `className` and `bare` layout semantics in the error state.
 - Do not let a failed text fetch take down the whole route.
@@ -212,25 +215,25 @@ Pure tests:
 
 Component tests:
 
-- Inline `value` renders line numbers and text.
+- Text sources render line numbers and text.
 - `toolbar={false}` hides toolbar in fallback and loaded states.
 - `highlight` marks every line in a multi-line range.
 - `scrollToLines` uses both `lineStart` and `lineEnd`.
-- Failed `src` renders the local error state.
-- Changing `src` after an error retries with the new URL.
+- Failed URL sources render the local error state.
+- Changing `source` after an error retries with the new resource.
 
 Manual verification:
 
 - Open the text sources block and hover fields.
 - Confirm highlighted lines remain visible after zoom changes.
-- Confirm download still points at the original `src`.
+- Confirm download still points at the original source.
 
 ## Migration Plan
 
 1. Add `normalizeLineRange` and tests.
 2. Update highlight rendering to use normalized ranges.
 3. Update `scrollToLines` to reveal the normalized full range.
-4. Add `TextViewerErrorBoundary` with `src` reset behavior.
+4. Add `TextViewerErrorBoundary` with source reset behavior.
 5. Change the cache so rejected fetches do not poison future renders.
 6. Make `TextViewerFallback` accept and honor `toolbar`.
 7. Add component tests for failure, retry, fallback chrome, and range behavior.

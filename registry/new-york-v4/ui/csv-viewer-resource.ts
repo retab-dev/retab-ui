@@ -47,8 +47,9 @@ export function resolveCsvResource({
     }
   }
   if (resource) {
-    if (resource.sourceKind === "text") {
-      return { kind: "text", text: resource.source.text }
+    const inlineText = resource.getInlineText()
+    if (inlineText !== null) {
+      return { kind: "text", text: inlineText }
     }
     return { kind: "resource", resource }
   }

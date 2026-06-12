@@ -83,9 +83,9 @@ export function PageRibbon({
 
   const ticks = showTicks ? buildTicks(pageCount) : []
   const cursorPct =
-    scrollProgress != null
+    scrollProgress != null && Number.isFinite(scrollProgress)
       ? clamp01(scrollProgress) * 100
-      : currentPage != null
+      : currentPage != null && Number.isFinite(currentPage)
         ? ((clamp(currentPage, 1, pageCount) - 0.5) / pageCount) * 100
         : null
 

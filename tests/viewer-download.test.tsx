@@ -170,6 +170,7 @@ describe("ViewerDownloadControl", () => {
   })
 
   it("contains failed generated downloads inside the control", async () => {
+    const onError = vi.fn()
     const action: ViewerDownloadAction = {
       id: "broken-export",
       label: "Export table",
@@ -178,13 +179,52 @@ describe("ViewerDownloadControl", () => {
       getPayload: () => Promise.reject(new Error("bad export")),
     }
 
-    render(<ViewerDownloadControl actions={[action]} />)
+    render(<ViewerDownloadControl actions={[action]} onError={onError} />)
 
     fireEvent.click(screen.getByRole("button", { name: "Export table" }))
 
     await waitFor(() => {
       expect(screen.getByRole("button", { name: "Export table" })).toBeTruthy()
     })
+    expect(onError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "ViewerDownloadError",
+        kind: "payload_failed",
+        actionId: "broken-export",
+      }),
+      action
+    )
     expect(URL.createObjectURL).not.toHaveBeenCalled()
+  })
+
+  it("aborts pending generated downloads when the control unmounts", async () => {
+    const onError = vi.fn()
+    const aborts: AbortSignal[] = []
+    const action: ViewerDownloadAction = {
+      id: "slow-export",
+      label: "Export table",
+      fileName: "data.csv",
+      origin: "derived",
+      getPayload: ({ signal } = {}) =>
+        new Promise((_, reject) => {
+          if (!signal) return
+          aborts.push(signal)
+          signal.addEventListener("abort", () => {
+            reject(new DOMException("cancelled", "AbortError"))
+          })
+        }),
+    }
+
+    const view = render(
+      <ViewerDownloadControl actions={[action]} onError={onError} />
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "Export table" }))
+    await waitFor(() => expect(aborts).toHaveLength(1))
+
+    view.unmount()
+
+    await waitFor(() => expect(aborts[0].aborted).toBe(true))
+    expect(onError).not.toHaveBeenCalled()
   })
 })

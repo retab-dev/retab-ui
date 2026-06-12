@@ -5,10 +5,14 @@ import * as React from "react"
 import type { ViewerResource } from "@/lib/viewer-resource"
 import {
   cachedThumbnailResource,
+  createThumbnailArtifactCache,
   shortName,
   timed,
   useThumbnailResource,
   withThumbnailDecodeSlot,
+  withThumbnailFormatError,
+  XLSX_THUMBNAIL_MAX_COLUMNS,
+  XLSX_THUMBNAIL_MAX_ROWS,
   type ThumbnailCacheEntry,
 } from "@/components/document-thumbnail/cache"
 import { GridTable } from "@/components/document-thumbnail/renderers/layout"
@@ -16,9 +20,6 @@ import { GridTable } from "@/components/document-thumbnail/renderers/layout"
 interface XlsxPreview {
   rows: string[][]
 }
-
-const XLSX_MAX_ROWS = 16
-const XLSX_MAX_COLS = 6
 
 interface XlsxWorkerReply {
   id: number
@@ -57,13 +58,20 @@ function parseXlsxInWorker(buffer: ArrayBuffer): Promise<string[][]> {
   return new Promise<string[][]>((resolve, reject) => {
     xlsxPending.set(id, { resolve, reject })
     worker.postMessage(
-      { id, buffer, maxRows: XLSX_MAX_ROWS, maxCols: XLSX_MAX_COLS },
+      {
+        id,
+        buffer,
+        maxRows: XLSX_THUMBNAIL_MAX_ROWS,
+        maxCols: XLSX_THUMBNAIL_MAX_COLUMNS,
+      },
       [buffer]
     )
   })
 }
 
-const xlsxCache = new Map<string, ThumbnailCacheEntry<XlsxPreview>>()
+const xlsxCache = createThumbnailArtifactCache<XlsxPreview>({
+  maxEntries: 64,
+})
 
 function getXlsxPreview(
   resource: ViewerResource,
@@ -72,9 +80,15 @@ function getXlsxPreview(
   return cachedThumbnailResource(xlsxCache, cacheKey, () =>
     withThumbnailDecodeSlot(() =>
       timed(`xlsx:total ${shortName(resource)}`, async () => {
-        const buf = await resource.readArrayBuffer()
-        const rows = await timed("xlsx:worker-parse", () =>
-          parseXlsxInWorker(buf)
+        const rows = await withThumbnailFormatError(
+          "xlsx",
+          "parse_failed",
+          resource.fileName,
+          "Failed to parse spreadsheet thumbnail",
+          async () => {
+            const buf = await resource.readArrayBuffer()
+            return timed("xlsx:worker-parse", () => parseXlsxInWorker(buf))
+          }
         )
         return { rows }
       })

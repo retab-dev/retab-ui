@@ -174,11 +174,19 @@ function HtmlDocViewerResource({
 
   React.useEffect(() => {
     let active = true
+    const controller = new AbortController()
+    const abortLocal = () => controller.abort()
     setState({ status: "loading", key: src })
 
-    loadTextResource({ src, signal: descriptorSignal }).then(
+    if (descriptorSignal.aborted) {
+      abortLocal()
+    } else {
+      descriptorSignal.addEventListener("abort", abortLocal, { once: true })
+    }
+
+    loadTextResource({ src, signal: controller.signal }).then(
       (html) => {
-        if (active && !descriptorSignal.aborted) {
+        if (active && !controller.signal.aborted) {
           setState({ status: "loaded", key: src, html })
         }
       },
@@ -190,6 +198,8 @@ function HtmlDocViewerResource({
 
     return () => {
       active = false
+      descriptorSignal.removeEventListener("abort", abortLocal)
+      abortLocal()
     }
   }, [descriptorSignal, src])
 

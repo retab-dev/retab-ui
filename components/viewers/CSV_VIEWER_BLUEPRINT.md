@@ -94,17 +94,17 @@ Remaining concerns:
 - The worker path calls `source.text()` and parses the entire file before posting
   row batches, so worker mode is progressive rendering but not true streaming
   parsing.
-- The `src` path fetches a complete Blob before parsing starts, so remote files
-  do not begin rendering until the whole response has downloaded.
+- The URL source path fetches a complete Blob before parsing starts, so remote
+  files do not begin rendering until the whole response has downloaded.
 - Worker failures are collapsed into "done" state, which hides parse/load errors
   from the user.
 - `scrollToCell` does not account for sorted display order, so source-link
   scrolling can land on the wrong visible row after sorting.
-- Download serialization always emits comma-delimited CSV for non-`src` inputs,
+- Download serialization always emits comma-delimited CSV for generated exports,
   even when the viewer parsed TSV or another delimiter.
 - There are parser tests, but no focused React tests for viewer rendering,
-  source/worker behavior, `src` loading, TSV routing, source anchors, sorting,
-  download, or error states.
+  source/worker behavior, URL source loading, TSV routing, source anchors,
+  sorting, download, or error states.
 
 ## Invariants
 
@@ -122,8 +122,8 @@ These rules should be true after hardening:
 7. Parse and fetch errors are visible and do not masquerade as empty data.
 8. Sorting changes display order only; source coordinates remain stable.
 9. `scrollToCell(row, col)` scrolls to the source row even after sorting.
-10. Download output matches the displayed delimiter unless returning the original
-    `src` bytes.
+10. Download output matches the displayed delimiter unless returning original
+    source bytes.
 11. Virtualization never changes row or column semantics.
 12. Style isolation must remain opt-in and must not be required for correct
     visuals.
@@ -178,9 +178,9 @@ Blob/File/string/Response.body
 Rules:
 
 - For `Blob` and `File`, prefer `blob.stream().pipeThrough(new TextDecoderStream())`.
-- For `src`, prefer `fetch(src).body` when available; fall back to `blob()` only
-  when streaming is unavailable.
-- For `string` sources, slice into bounded chunks.
+- For URL sources, prefer `fetch(source.url).body` when available; fall back to
+  Blob parsing only when streaming is unavailable.
+- For text sources, slice into bounded chunks.
 - Worker mode should parse chunks in the worker and post batches as they are
   produced.
 - Main-thread fallback should yield periodically with an abort signal.
@@ -279,8 +279,8 @@ const displayIndexBySourceRow = React.useMemo(() => {
 
 Download behavior should be predictable:
 
-- If `src` is set, download the original bytes.
-- If `delimiter` is `"\t"`, serialize tab-delimited output for non-`src` data.
+- If the resource exposes an original download, offer that original file.
+- If `delimiter` is `"\t"`, serialize tab-delimited output for generated data.
 - If `delimiter` is omitted, serialize comma-delimited output.
 - Use the source file name when possible.
 - Use `data.tsv` for tab-delimited generated downloads and `data.csv` otherwise.
@@ -316,7 +316,8 @@ Rules:
 
 - Empty state should not display while a source is still loading.
 - Error state should include a terse message and keep the viewer chrome stable.
-- Retrying should happen by changing `src`/`source` identity or remounting.
+- Retrying should happen through the resource retry path or by changing source
+  identity.
 - Worker errors should not be treated as successful completion.
 
 ## Accessibility
@@ -393,11 +394,13 @@ Use docs/demo samples to verify:
    choose and document a no-truncation policy that remains identical everywhere.
 4. Replace the worker's whole-file `source.text()` parse with chunked parsing.
 5. Surface worker/runtime errors through viewer error state.
-6. Stream `src` from `fetch().body` when possible, falling back to Blob parsing.
+6. Stream URL sources from `fetch().body` when possible, falling back to Blob
+   parsing.
 7. Teach `FileViewer` to pass tab delimiter for TSV descriptors.
 8. Make sorting source-coordinate aware for `activeCell`, row numbers, and
    `scrollToCell`.
-9. Serialize non-`src` downloads with the active delimiter and filename extension.
+9. Serialize generated downloads with the active delimiter and filename
+   extension.
 10. Add parser, component, and FileViewer integration regression tests.
 11. Run the docs demo in a browser and verify scroll, sort, loading, error, and
     source-highlight behavior.
@@ -420,10 +423,10 @@ Use docs/demo samples to verify:
   for the same input and options.
 - Later wider rows are not silently truncated.
 - Large `source` inputs render progressively without blocking the main thread.
-- `src` inputs begin parsing from streaming responses when available.
+- URL sources begin parsing from streaming responses when available.
 - Runtime worker errors produce an error state.
 - Sorting does not break source-linked scroll or active-cell highlighting.
-- Non-`src` downloads preserve the active delimiter.
+- Generated downloads preserve the active delimiter.
 - Focused parser and React tests cover the hardening cases above.
 - Browser verification passes for CSV, TSV, large-file scroll, sort, download,
   and style-isolated rendering.

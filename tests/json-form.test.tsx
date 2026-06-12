@@ -64,7 +64,9 @@ function renderJsonForm({
       defaultValues,
       mode: "onBlur",
     })
-    formApi = form
+    React.useEffect(() => {
+      formApi = form
+    }, [form])
     return (
       <JsonForm
         form={form}
@@ -91,14 +93,6 @@ function renderJsonForm({
       return submissions[0]
     },
   }
-}
-
-function getInputByName(name: string): HTMLInputElement {
-  const input = document.querySelector(`input[name="${name}"]`)
-  if (!(input instanceof HTMLInputElement)) {
-    throw new Error(`input ${name} was not found`)
-  }
-  return input
 }
 
 function closestWithClass(element: Element, className: string): HTMLElement {
@@ -367,6 +361,55 @@ describe("JsonForm scalar fields", () => {
       layout: detailed,
     })
   })
+
+  it("preserves property names that contain react-hook-form path separators", async () => {
+    const { submit } = renderJsonForm({
+      schema: {
+        type: "object",
+        properties: {
+          "invoice.number": {
+            type: "string",
+            title: "Invoice Number",
+          },
+          vendor: {
+            type: "object",
+            title: "Vendor",
+            properties: {
+              "tax.id": {
+                type: "string",
+                title: "Tax ID",
+              },
+            },
+          },
+        },
+      },
+      defaultValues: {
+        "invoice.number": "INV-1",
+        vendor: { "tax.id": "EU-1" },
+      },
+    })
+
+    await waitFor(() =>
+      expect(
+        (screen.getByLabelText("Invoice Number") as HTMLInputElement).value
+      ).toBe("INV-1")
+    )
+    expect((screen.getByLabelText("Tax ID") as HTMLInputElement).value).toBe(
+      "EU-1"
+    )
+
+    fireEvent.change(screen.getByLabelText("Invoice Number"), {
+      target: { value: "INV-2" },
+    })
+    fireEvent.change(screen.getByLabelText("Tax ID"), {
+      target: { value: "EU-2" },
+    })
+
+    await expect(submit()).resolves.toEqual({
+      "invoice.number": "INV-2",
+      vendor: { "tax.id": "EU-2" },
+    })
+  })
 })
 
 describe("JsonForm objects and refs", () => {
@@ -464,6 +507,7 @@ describe("JsonForm objects and refs", () => {
     })
 
     expect(screen.getByText("Code")).toBeTruthy()
+    fireEvent.click(screen.getByRole("button", { name: "Code A" }))
     fireEvent.change(screen.getByDisplayValue("A"), {
       target: { value: "B" },
     })
@@ -505,16 +549,20 @@ describe("JsonForm arrays", () => {
     expect(screen.getByText("Quantity")).toBeTruthy()
     expect(screen.getByText("Taxable")).toBeTruthy()
 
+    fireEvent.click(screen.getByRole("button", { name: "Description Widget" }))
     fireEvent.change(screen.getByDisplayValue("Widget"), {
       target: { value: "Hardware" },
     })
+    fireEvent.click(screen.getByRole("button", { name: "Quantity 2" }))
     fireEvent.change(screen.getByDisplayValue("2"), {
       target: { value: "3" },
     })
     fireEvent.click(screen.getAllByRole("checkbox")[1])
     fireEvent.click(screen.getAllByRole("button", { name: "Remove row" })[1])
     await waitFor(() =>
-      expect(screen.queryByDisplayValue("Service")).toBeNull()
+      expect(
+        screen.queryByRole("button", { name: "Description Service" })
+      ).toBeNull()
     )
     fireEvent.click(screen.getByRole("button", { name: "Add" }))
 
@@ -612,7 +660,8 @@ describe("JsonForm arrays", () => {
     expect(screen.getByText("No items.")).toBeTruthy()
 
     fireEvent.click(screen.getByRole("button", { name: "Add" }))
-    fireEvent.change(getInputByName("contacts.0.name"), {
+    fireEvent.click(screen.getByRole("button", { name: "Name —" }))
+    fireEvent.change(screen.getByDisplayValue(""), {
       target: { value: "Ada" },
     })
 
@@ -646,7 +695,9 @@ describe("JsonForm arrays", () => {
     })
 
     fireEvent.click(screen.getAllByRole("button", { name: "Remove row" })[0])
-    await waitFor(() => expect(screen.queryByDisplayValue("A")).toBeNull())
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: "Code A" })).toBeNull()
+    )
     fireEvent.click(screen.getByRole("button", { name: "Add" }))
 
     await expect(submit()).resolves.toEqual({
@@ -681,17 +732,20 @@ describe("JsonForm arrays", () => {
       },
     })
 
-    const triggers = screen.getAllByRole("combobox")
-    fireEvent.focus(triggers[0])
-    fireEvent.keyDown(triggers[0], { key: "ArrowDown" })
+    fireEvent.click(screen.getByRole("button", { name: "Score 1" }))
+    let trigger = screen.getByRole("combobox")
+    fireEvent.focus(trigger)
+    fireEvent.keyDown(trigger, { key: "ArrowDown" })
     fireEvent.pointerDown(await screen.findByText("3"), {
       button: 0,
       ctrlKey: false,
     })
     fireEvent.click(screen.getByText("3"))
 
-    fireEvent.focus(triggers[1])
-    fireEvent.keyDown(triggers[1], { key: "ArrowDown" })
+    fireEvent.click(screen.getByRole("button", { name: "Accepted true" }))
+    trigger = screen.getByRole("combobox")
+    fireEvent.focus(trigger)
+    fireEvent.keyDown(trigger, { key: "ArrowDown" })
     fireEvent.pointerDown(await screen.findByText("false"), {
       button: 0,
       ctrlKey: false,
@@ -700,6 +754,44 @@ describe("JsonForm arrays", () => {
 
     await expect(submit()).resolves.toEqual({
       rows: [{ score: 3, accepted: false }],
+    })
+  })
+
+  it("preserves table-row property names that contain dots", async () => {
+    const { submit } = renderJsonForm({
+      schema: {
+        type: "object",
+        properties: {
+          rows: {
+            type: "array",
+            title: "Rows",
+            items: {
+              type: "object",
+              properties: {
+                "unit.price": {
+                  type: "number",
+                  title: "Unit Price",
+                },
+              },
+            },
+          },
+        },
+      },
+      defaultValues: {
+        rows: [{ "unit.price": 1.5 }],
+      },
+    })
+
+    const displayCell = await screen.findByRole("button", {
+      name: "Unit Price 1.5",
+    })
+    fireEvent.click(displayCell)
+    fireEvent.change(screen.getByDisplayValue("1.5"), {
+      target: { value: "2.25" },
+    })
+
+    await expect(submit()).resolves.toEqual({
+      rows: [{ "unit.price": 2.25 }],
     })
   })
 
@@ -827,13 +919,13 @@ describe("JsonForm source linking", () => {
       },
     })
 
-    const input = screen.getByDisplayValue("A")
-    const cell = closestWithClass(input, "bg-primary/5")
-    expect(cell.className).toContain("bg-primary/5")
+    const button = screen.getByRole("button", { name: "Value A" })
+    const cell = button.closest("[data-source-active='true']")
+    expect(cell).toBeTruthy()
 
-    fireEvent.focus(input)
-    fireEvent.blur(input)
-    fireEvent.click(input)
+    fireEvent.focus(button)
+    fireEvent.blur(button)
+    fireEvent.click(button)
 
     expect(onFieldHover).toHaveBeenCalledWith("rows.0.value")
     expect(onFieldHover).toHaveBeenCalledWith(null)

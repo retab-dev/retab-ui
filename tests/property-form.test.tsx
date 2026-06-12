@@ -581,6 +581,41 @@ describe("PropertyForm", () => {
     })
   })
 
+  it("allows saving editable fields when a locked name is invalid", async () => {
+    const onCommitPropertyDraft = vi.fn()
+    render(
+      <PropertyForm
+        propertyDraft={{
+          name: "1legacy_name",
+          schemaNode: { type: "string", description: "old" },
+        }}
+        schemaContext={baseSchemaContext({
+          siblingNames: ["1legacy_name"],
+          originalName: "1legacy_name",
+        })}
+        capabilities={editableCapabilities({
+          canEditName: false,
+        })}
+        onCommitPropertyDraft={onCommitPropertyDraft}
+      />
+    )
+
+    fireEvent.change(screen.getByLabelText("Description"), {
+      target: { value: "new description" },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Save Changes" }))
+
+    await waitFor(() => expect(onCommitPropertyDraft).toHaveBeenCalledTimes(1))
+    expect(onCommitPropertyDraft).toHaveBeenCalledWith({
+      name: "1legacy_name",
+      schemaNode: {
+        type: "string",
+        description: "new description",
+        title: "1legacyName",
+      },
+    })
+  })
+
   it("does not submit from plain Enter in the description but does with Control+Enter", async () => {
     const onCommitPropertyDraft = vi.fn()
     render(
@@ -1329,6 +1364,48 @@ describe("PropertyForm", () => {
     })
   })
 
+  it("handles rejected create definition commands without mutating the draft", async () => {
+    const onCommand = vi.fn().mockRejectedValue(new Error("command failed"))
+    const onCommitPropertyDraft = vi.fn()
+    render(
+      <PropertyForm
+        propertyDraft={{
+          name: "billing_address",
+          schemaNode: { type: "string" },
+        }}
+        schemaContext={baseSchemaContext({
+          siblingNames: ["billing_address"],
+          originalName: "billing_address",
+          schemaDefinitions: {},
+          onCommand,
+        })}
+        onCommitPropertyDraft={onCommitPropertyDraft}
+      />
+    )
+
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Data type" }), {
+      button: 0,
+      ctrlKey: false,
+    })
+    const definitionTrigger = await screen.findByText("definition")
+    fireEvent.focus(definitionTrigger)
+    fireEvent.keyDown(definitionTrigger, { key: "ArrowRight" })
+    fireEvent.click(await screen.findByText("Create new definition"))
+    fireEvent.click(screen.getByRole("button", { name: "Save Changes" }))
+
+    await waitFor(() =>
+      expect(onCommand).toHaveBeenCalledWith({ type: "createDefinition" })
+    )
+    await waitFor(() => expect(onCommitPropertyDraft).toHaveBeenCalledTimes(1))
+    expect(onCommitPropertyDraft).toHaveBeenCalledWith({
+      name: "billing_address",
+      schemaNode: {
+        type: "string",
+        title: "BillingAddress",
+      },
+    })
+  })
+
   it("resets local edits when a new property draft prop is received", () => {
     const onCommitPropertyDraft = vi.fn()
     const view = render(
@@ -1368,6 +1445,205 @@ describe("PropertyForm", () => {
     expect(
       screen.getByRole("button", { name: "Data type" }).textContent
     ).toContain("number")
+  })
+
+  it("resets pending nested input state when a new property draft prop is received", () => {
+    const onCommitPropertyDraft = vi.fn()
+    const view = render(
+      <PropertyForm
+        propertyDraft={{
+          name: "status",
+          schemaNode: { type: "string", enum: ["draft"] },
+        }}
+        schemaContext={baseSchemaContext({
+          siblingNames: ["status"],
+          originalName: "status",
+        })}
+        onCommitPropertyDraft={onCommitPropertyDraft}
+      />
+    )
+
+    fireEvent.change(screen.getByPlaceholderText("Add new value"), {
+      target: { value: "paid" },
+    })
+
+    view.rerender(
+      <PropertyForm
+        propertyDraft={{
+          name: "address",
+          schemaNode: {
+            type: "object",
+            properties: { city: { type: "string" } },
+            required: ["city"],
+          },
+        }}
+        schemaContext={baseSchemaContext({
+          siblingNames: ["address"],
+          originalName: "address",
+        })}
+        onCommitPropertyDraft={onCommitPropertyDraft}
+      />
+    )
+
+    fireEvent.change(screen.getByLabelText("New object field"), {
+      target: { value: "country" },
+    })
+
+    view.rerender(
+      <PropertyForm
+        propertyDraft={{
+          name: "status",
+          schemaNode: { type: "string", enum: ["draft"] },
+        }}
+        schemaContext={baseSchemaContext({
+          siblingNames: ["status"],
+          originalName: "status",
+        })}
+        onCommitPropertyDraft={onCommitPropertyDraft}
+      />
+    )
+
+    expect(screen.getByPlaceholderText("Add new value")).toHaveProperty(
+      "value",
+      ""
+    )
+  })
+
+  it("resets pending object field input when switching between object drafts", () => {
+    const onCommitPropertyDraft = vi.fn()
+    const view = render(
+      <PropertyForm
+        propertyDraft={{
+          name: "address",
+          schemaNode: {
+            type: "object",
+            properties: { city: { type: "string" } },
+            required: ["city"],
+          },
+        }}
+        schemaContext={baseSchemaContext({
+          siblingNames: ["address"],
+          originalName: "address",
+        })}
+        onCommitPropertyDraft={onCommitPropertyDraft}
+      />
+    )
+
+    fireEvent.change(screen.getByLabelText("New object field"), {
+      target: { value: "country" },
+    })
+
+    view.rerender(
+      <PropertyForm
+        propertyDraft={{
+          name: "company",
+          schemaNode: {
+            type: "object",
+            properties: { name: { type: "string" } },
+            required: ["name"],
+          },
+        }}
+        schemaContext={baseSchemaContext({
+          siblingNames: ["company"],
+          originalName: "company",
+        })}
+        onCommitPropertyDraft={onCommitPropertyDraft}
+      />
+    )
+
+    expect(screen.getByLabelText("New object field")).toHaveProperty(
+      "value",
+      ""
+    )
+  })
+
+  it("resets pending object field input when the same object draft receives new properties", () => {
+    const onCommitPropertyDraft = vi.fn()
+    const view = render(
+      <PropertyForm
+        propertyDraft={{
+          name: "address",
+          schemaNode: {
+            type: "object",
+            properties: { city: { type: "string" } },
+            required: ["city"],
+          },
+        }}
+        schemaContext={baseSchemaContext({
+          siblingNames: ["address"],
+          originalName: "address",
+        })}
+        onCommitPropertyDraft={onCommitPropertyDraft}
+      />
+    )
+
+    fireEvent.change(screen.getByLabelText("New object field"), {
+      target: { value: "country" },
+    })
+
+    view.rerender(
+      <PropertyForm
+        propertyDraft={{
+          name: "address",
+          schemaNode: {
+            type: "object",
+            properties: { line1: { type: "string" } },
+            required: ["line1"],
+          },
+        }}
+        schemaContext={baseSchemaContext({
+          siblingNames: ["address"],
+          originalName: "address",
+        })}
+        onCommitPropertyDraft={onCommitPropertyDraft}
+      />
+    )
+
+    expect(screen.getByLabelText("New object field")).toHaveProperty(
+      "value",
+      ""
+    )
+    expect(screen.getByLabelText("Field name line1")).toBeTruthy()
+  })
+
+  it("resets pending enum option input when switching between enum drafts", () => {
+    const onCommitPropertyDraft = vi.fn()
+    const view = render(
+      <PropertyForm
+        propertyDraft={{
+          name: "status",
+          schemaNode: { type: "string", enum: ["draft"] },
+        }}
+        schemaContext={baseSchemaContext({
+          siblingNames: ["status"],
+          originalName: "status",
+        })}
+        onCommitPropertyDraft={onCommitPropertyDraft}
+      />
+    )
+
+    fireEvent.change(screen.getByPlaceholderText("Add new value"), {
+      target: { value: "paid" },
+    })
+
+    view.rerender(
+      <PropertyForm
+        propertyDraft={{
+          name: "priority",
+          schemaNode: { type: "string", enum: ["low"] },
+        }}
+        schemaContext={baseSchemaContext({
+          siblingNames: ["priority"],
+          originalName: "priority",
+        })}
+        onCommitPropertyDraft={onCommitPropertyDraft}
+      />
+    )
+
+    expect(screen.getByPlaceholderText("Add new value")).toHaveProperty(
+      "value",
+      ""
+    )
   })
 
   it("re-enables actions after a rejected commit and allows retrying", async () => {

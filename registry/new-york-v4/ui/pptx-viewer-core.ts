@@ -14,7 +14,7 @@ export interface PptxSlideOverlayProps {
 }
 
 export interface PptxResetInput {
-  cacheKey: string
+  resourceKey: string
   scale?: number
   defaultScale?: number
   eager?: boolean
@@ -41,13 +41,13 @@ export function getPptxFitScale(
 }
 
 export function getPptxResetKey({
-  cacheKey,
+  resourceKey,
   scale,
   defaultScale,
   eager,
 }: PptxResetInput) {
   return [
-    cacheKey,
+    resourceKey,
     scale ?? defaultScale ?? "fit",
     eager ? "eager" : "settled",
   ].join("\u0000")

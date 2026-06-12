@@ -91,7 +91,11 @@ describe("pdf-viewer-scale", () => {
     expect(observedElement).toBe(screen.getByTestId("measured-element"))
 
     resizeCallback?.(
-      [screen.getByTestId("measured-element") as unknown as ResizeObserverEntry],
+      [
+        {
+          target: screen.getByTestId("measured-element"),
+        } as ResizeObserverEntry,
+      ],
       {} as ResizeObserver
     )
     expect(frames.size).toBe(1)

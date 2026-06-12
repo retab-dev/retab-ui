@@ -36,9 +36,7 @@ Allowed public props:
 
 ```ts
 interface FileViewerProps {
-  src: string
-  fileName?: string
-  mimeType?: string
+  source: ViewerSource
   as?: FileCategory
   className?: string
   bare?: boolean
@@ -100,15 +98,16 @@ Use these names:
 | Rendered text viewer identity         | `textViewKey`      |
 | Abort signal owned by `FileViewer`    | `descriptorSignal` |
 | User-visible name                     | `displayName`      |
-| Download filename                     | `downloadName`     |
+| Download filename                     | `fileName`         |
 | File route category                   | `category`         |
 | Text load behavior                    | `textMode`         |
 
 Rules:
 
 - Do not use both `requestKey` and `cacheKey` for the same text identity.
-- Do not use `fileName` when the value is actually `downloadName`.
-- Do not use `src` as a proxy for file identity when `descriptor` is available.
+- Do not use `fileName` for anything except the canonical file/download name.
+- Do not use URL strings as a proxy for file identity when `descriptor` is
+  available.
 - A variable named `signal` must be local to a fetch call; wider scopes must say
   what owns the signal.
 - Tests should use the same names as production code.
@@ -119,9 +118,9 @@ The descriptor is the single source of truth:
 
 ```ts
 interface FileDescriptor {
-  src: string
+  source: ViewerSource
   displayName: string
-  downloadName: string
+  fileName: string
   mimeType?: string
   category: FileCategory
 }
@@ -130,16 +129,16 @@ interface FileDescriptor {
 Rules:
 
 - Routing uses `descriptor.category`.
-- Fallbacks use `descriptor.category` and `descriptor.downloadName`.
+- Fallbacks use `descriptor.category` and `descriptor.fileName`.
 - Error UI uses `descriptor`.
-- Downloads use `descriptor.downloadName`.
+- Downloads use `descriptor.fileName`.
 - Reset/remount uses `descriptorKey`.
 - Leaf viewers receive only the fields they need.
 
 `descriptorKey` includes every input that can change the mounted viewer:
 
 ```ts
-descriptorKey = [src, displayName, mimeType ?? "", category].join("\0")
+descriptorKey = [identityKey, displayName, mimeType ?? "", category].join("\0")
 ```
 
 ## Text Loader Ideal
@@ -150,7 +149,7 @@ Target shape:
 
 ```ts
 interface TextKey {
-  src: string
+  resourceKey: string
   mode: "stream" | "full"
 }
 
