@@ -73,7 +73,7 @@ export function ImageViewerContent({
         <ImageViewerToolbar
           countLabel={countLabel}
           scale={scale}
-          download={resource.getDownload()}
+          downloadAction={resource.getOriginalDownload()}
           isScaleControlled={isScaleControlled}
           onZoomOut={() => setViewerScale(clamp(scale / 1.2, 0.25, 5))}
           onZoomIn={() => setViewerScale(clamp(scale * 1.2, 0.25, 5))}

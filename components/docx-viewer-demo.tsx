@@ -10,8 +10,11 @@ export function DocxViewerDemo() {
     // document's own page count) so off-screen page skipping shows at scale.
     <div className="not-prose my-6 h-[600px]">
       <DocxViewer
-        src="/samples/quarterly-business-review.docx"
-        downloadFileName="quarterly-business-review.docx"
+        source={{
+          kind: "url",
+          url: "/samples/quarterly-business-review.docx",
+          fileName: "quarterly-business-review.docx",
+        }}
         className="h-full"
       />
     </div>

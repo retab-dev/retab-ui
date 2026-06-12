@@ -8,8 +8,11 @@ export function XlsxViewerDemo() {
   return (
     <div className="not-prose my-6 h-[600px]">
       <XlsxViewer
-        src="/samples/nvidia-financials-fy2024.xlsx"
-        downloadFileName="nvidia-financials-fy2024.xlsx"
+        source={{
+          kind: "url",
+          url: "/samples/nvidia-financials-fy2024.xlsx",
+          fileName: "nvidia-financials-fy2024.xlsx",
+        }}
         className="h-full"
         isolateStyles
       />

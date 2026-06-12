@@ -23,7 +23,7 @@ export function ParseViewer({
   onVisiblePageChange,
 }: ParseViewerProps) {
   const pages = result?.output?.pages ?? []
-  const text = result?.output?.text || undefined
+  const text = result?.output?.text ?? undefined
 
   return (
     <PageMarkdownViewer
@@ -32,7 +32,7 @@ export function ParseViewer({
       isProcessing={isProcessing}
       renderDocument={renderDocument}
       onVisiblePageChange={onVisiblePageChange}
-      downloadFileName="parse-output.md"
+      fileName="parse-output.md"
       processingLabel="Parsing document..."
     />
   )

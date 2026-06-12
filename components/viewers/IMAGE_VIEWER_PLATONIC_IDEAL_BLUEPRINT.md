@@ -116,7 +116,6 @@ export interface ImageViewerProps {
   className?: string
   scale?: number
   toolbar?: boolean
-  downloadFileName?: string
   renderPageOverlay?: (props: PageOverlayProps) => React.ReactNode
   onVisiblePageChange?: (page: number) => void
   onScrollProgressChange?: (progress: number) => void

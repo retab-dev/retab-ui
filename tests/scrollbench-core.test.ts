@@ -29,6 +29,21 @@ describe("scrollbench core", () => {
     expect(getScenarioStepPx({ clientHeight: 10, scenario: small! })).toBe(16)
   })
 
+  it("keeps scenario steps finite for malformed viewport heights", () => {
+    const small = SCENARIOS[0]
+
+    expect(
+      getScenarioStepPx({ clientHeight: Number.NaN, scenario: small })
+    ).toBe(16)
+    expect(
+      getScenarioStepPx({
+        clientHeight: Number.POSITIVE_INFINITY,
+        scenario: small,
+      })
+    ).toBe(16)
+    expect(getScenarioStepPx({ clientHeight: -100, scenario: small })).toBe(16)
+  })
+
   it("builds bounded bouncing targets for shallow scrollports", () => {
     const targets = buildScrollTargets({
       maxScrollTop: 461,
@@ -39,6 +54,30 @@ describe("scrollbench core", () => {
     expect(targets).toEqual([354, 214, 140, 428, 74, 280, 288, 66])
     expect(new Set(targets).size).toBeGreaterThan(1)
     expect(targets.every((target) => target >= 0 && target <= 461)).toBe(true)
+  })
+
+  it("returns no scroll targets for malformed scroll geometry", () => {
+    expect(
+      buildScrollTargets({
+        maxScrollTop: Number.NaN,
+        stepPx: 16,
+        frameCount: 8,
+      })
+    ).toEqual([])
+    expect(
+      buildScrollTargets({
+        maxScrollTop: 400,
+        stepPx: Number.POSITIVE_INFINITY,
+        frameCount: 8,
+      })
+    ).toEqual([])
+    expect(
+      buildScrollTargets({
+        maxScrollTop: 400,
+        stepPx: 16,
+        frameCount: 2.5,
+      })
+    ).toEqual([16, 32])
   })
 
   it("reports measured path distance", () => {

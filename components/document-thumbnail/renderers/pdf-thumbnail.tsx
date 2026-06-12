@@ -4,28 +4,27 @@ import * as React from "react"
 import type { PDFDocumentProxy } from "pdfjs-dist"
 
 import { cn } from "@/lib/utils"
-import { createViewerResource } from "@/lib/viewer-resource"
+import type { ViewerResource } from "@/lib/viewer-resource"
 import {
   getDocumentResource,
   getPageResource,
 } from "@/components/ui/pdf-viewer"
+import { useThumbnailResource } from "@/components/document-thumbnail/cache"
 import type { ThumbnailAnchor } from "@/components/document-thumbnail/types"
 import { ANCHOR_CORNER } from "@/components/document-thumbnail/types"
 
 // Page 1 via pdfjs, reusing the PdfViewer's cached document.
 export function PdfFirstPage({
-  src,
+  resource,
   anchor,
 }: {
-  src: string
+  resource: ViewerResource
   anchor: ThumbnailAnchor
 }) {
-  const resource = React.useMemo(
-    () => createViewerResource({ kind: "url", url: src }),
-    [src]
-  )
-  const doc = React.use(getDocumentResource(resource)) as PDFDocumentProxy
-  const page = React.use(getPageResource(doc, 1))
+  const doc = useThumbnailResource(
+    getDocumentResource(resource)
+  ) as PDFDocumentProxy
+  const page = useThumbnailResource(getPageResource(doc, 1))
 
   const RENDER_W = 520
   const viewport = React.useMemo(() => {

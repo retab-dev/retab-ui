@@ -285,8 +285,11 @@ function renderViewer({
       return (
         <CsvViewer
           ref={setViewportHandle as React.Ref<CsvViewerHandle>}
-          value={csvValue}
-          downloadName="scrollbench.csv"
+          source={{
+            kind: "text",
+            text: csvValue,
+            fileName: "scrollbench.csv",
+          }}
           className={viewerClassName}
           toolbar={false}
           fillHeight
@@ -308,8 +311,11 @@ function renderViewer({
       return (
         <XlsxViewer
           ref={setViewportHandle as React.Ref<XlsxViewerHandle>}
-          src="/samples/nvidia-financials-fy2024.xlsx"
-          downloadFileName="nvidia-financials-fy2024.xlsx"
+          source={{
+            kind: "url",
+            url: "/samples/nvidia-financials-fy2024.xlsx",
+            fileName: "nvidia-financials-fy2024.xlsx",
+          }}
           className={viewerClassName}
           toolbar={false}
           bare
@@ -337,8 +343,11 @@ function renderViewer({
       return (
         <DocxViewer
           ref={setViewportHandle as React.Ref<DocxViewerHandle>}
-          src="/samples/quarterly-business-review.docx"
-          downloadFileName="quarterly-business-review.docx"
+          source={{
+            kind: "url",
+            url: "/samples/quarterly-business-review.docx",
+            fileName: "quarterly-business-review.docx",
+          }}
           className={viewerClassName}
           toolbar={false}
           bare

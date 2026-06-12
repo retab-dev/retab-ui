@@ -60,6 +60,7 @@ function unwrapContainer(
 ): DocumentNode | undefined {
   let current = node
   while (current) {
+    current = getEffectiveContainerNode(current)
     if (current.ref) {
       current = doc.defs.find(
         (definition) => definition.id === current!.ref
@@ -73,4 +74,14 @@ function unwrapContainer(
     break
   }
   return current
+}
+
+function getEffectiveContainerNode(node: DocumentNode): DocumentNode {
+  if (node.anyOf) {
+    const nonNull = node.anyOf.find(
+      (branch) => branch.type !== "null" || branch.ref
+    )
+    if (nonNull) return nonNull
+  }
+  return node
 }

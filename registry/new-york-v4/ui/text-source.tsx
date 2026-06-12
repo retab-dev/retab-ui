@@ -14,6 +14,14 @@ export function textAnchorToLines(
   anchor: SourceAnchor
 ): TextLineRange | undefined {
   if (anchor.kind === "text_span") {
+    if (
+      !Number.isInteger(anchor.line_start) ||
+      !Number.isInteger(anchor.line_end) ||
+      anchor.line_start < 1 ||
+      anchor.line_end < anchor.line_start
+    ) {
+      return undefined
+    }
     return { start: anchor.line_start, end: anchor.line_end }
   }
   return undefined

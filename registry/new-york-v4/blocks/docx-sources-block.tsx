@@ -5,15 +5,15 @@ import * as React from "react"
 import type { Source, SourceMap } from "@/lib/document-source"
 import { useSourceLink } from "@/hooks/use-source-link"
 import {
-  SourceFieldList,
-  type SourceField,
-} from "@/components/ui/source-field-list"
-import { SourceIndicator } from "@/components/ui/source-indicator"
-import {
   sourceToDocxHighlight,
   useDocxSourceTarget,
 } from "@/components/ui/docx-source"
 import { DocxViewer, type DocxViewerHandle } from "@/components/ui/docx-viewer"
+import {
+  SourceFieldList,
+  type SourceField,
+} from "@/components/ui/source-field-list"
+import { SourceIndicator } from "@/components/ui/source-indicator"
 import docxSample from "@/components/viewers/sample-data/docx-sources.json"
 
 const DOCX_URL = "/samples/quarterly-business-review.docx"
@@ -46,16 +46,23 @@ const SOURCES: SourceMap = Object.fromEntries(
 export function DocxSourcesBlock() {
   const viewerRef = React.useRef<DocxViewerHandle>(null)
   const target = useDocxSourceTarget(viewerRef)
-  const link = useSourceLink({ sources: SOURCES, target, initialField: FIELDS[0]?.key })
+  const link = useSourceLink({
+    sources: SOURCES,
+    target,
+    initialField: FIELDS[0]?.key,
+  })
 
   return (
     <div className="flex h-full min-h-[680px] bg-background">
       <div className="relative min-w-0 flex-1">
         <DocxViewer
           ref={viewerRef}
-          src={DOCX_URL}
+          source={{
+            kind: "url",
+            url: DOCX_URL,
+            fileName: "quarterly-business-review.docx",
+          }}
           bare
-          downloadFileName="quarterly-business-review.docx"
           className="h-full"
           highlight={sourceToDocxHighlight(link.activeSource)}
         />

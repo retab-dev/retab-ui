@@ -1,4 +1,5 @@
-import { ResourceError, type ViewerResource } from "@/lib/viewer-resource"
+import { ResourceError, ViewerFormatError } from "@/lib/viewer-errors"
+import { type ViewerResource } from "@/lib/viewer-resource"
 
 export const DEFAULT_MAX_BYTES = 1_000_000
 export const DEFAULT_MAX_LINES = 10_000
@@ -12,21 +13,29 @@ export interface TextViewerBounds {
 export type TextViewerTooLargeReason = "bytes" | "lines"
 export type TextViewerBoundName = "maxBytes" | "maxLines"
 
-export class TextViewerTooLargeError extends Error {
+export class TextViewerTooLargeError extends ViewerFormatError {
   readonly reason: TextViewerTooLargeReason
 
   constructor(reason: TextViewerTooLargeReason) {
-    super(`Text file exceeds ${reason} limit`)
+    super({
+      format: "text",
+      kind: "bounds",
+      message: `Text file exceeds ${reason} limit`,
+    })
     this.name = "TextViewerTooLargeError"
     this.reason = reason
   }
 }
 
-export class TextViewerInvalidBoundsError extends Error {
+export class TextViewerInvalidBoundsError extends ViewerFormatError {
   readonly boundName: TextViewerBoundName
 
   constructor(boundName: TextViewerBoundName) {
-    super(`${boundName} must be a positive integer`)
+    super({
+      format: "text",
+      kind: "bounds",
+      message: `${boundName} must be a positive integer`,
+    })
     this.name = "TextViewerInvalidBoundsError"
     this.boundName = boundName
   }
@@ -50,7 +59,7 @@ function textViewerResourceKey({
   retryVersion: number
   bounds: Required<TextViewerBounds>
 }) {
-  return `${resource.cacheKey}\0${retryVersion}\0${bounds.maxBytes}\0${bounds.maxLines}`
+  return `${resource.keys.load}\0${retryVersion}\0${bounds.maxBytes}\0${bounds.maxLines}`
 }
 
 export function clearTextViewerResourceCacheForTests() {
@@ -79,6 +88,10 @@ export function assertTextWithinBounds(
   }
 }
 
+export function splitTextLines(text: string) {
+  return text.split(/\r\n|\n|\r/g)
+}
+
 export function readTextResource({
   resource,
   retryVersion,
@@ -88,7 +101,7 @@ export function readTextResource({
   retryVersion: number
   bounds: Required<TextViewerBounds>
 }) {
-  if (resource.source.kind === "text") {
+  if (resource.sourceKind === "text") {
     assertTextWithinBounds(resource.source.text, bounds)
     return resource.source.text
   }
@@ -149,7 +162,7 @@ async function readBoundedTextResource(
 }
 
 function lineCountOf(text: string) {
-  return text.split("\n").length
+  return splitTextLines(text).length
 }
 
 function resolveTextViewerBound(value: number, boundName: TextViewerBoundName) {

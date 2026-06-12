@@ -78,7 +78,7 @@ export interface PageMarkdownViewerProps {
   isProcessing?: boolean
   renderDocument?: (handlers: PageMarkdownDocumentHandlers) => ReactNode
   onVisiblePageChange?: (page: number) => void
-  downloadFileName?: string
+  fileName?: string
 }
 ```
 
@@ -99,8 +99,7 @@ Rules:
 - `text` is the copy/download source when supplied.
 - Empty `pages` means empty viewer, even if `text` exists.
 - Page numbers exposed across the API are 1-based.
-- `downloadFileName` defaults to `document.md`; `ParseViewer` passes
-  `parse-output.md`.
+- `fileName` defaults to `document.md`; `ParseViewer` passes `parse-output.md`.
 
 ## Naming
 
@@ -195,7 +194,7 @@ interface PageMarkdownPaneProps {
   mode: PageMarkdownViewMode
   scale: number
   currentPage: number
-  downloadFileName: string
+  fileName: string
   onModeChange: (mode: PageMarkdownViewMode) => void
   onZoom: (factor: number) => void
   onFitWidth: () => void

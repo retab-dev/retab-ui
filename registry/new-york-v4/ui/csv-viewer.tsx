@@ -4,15 +4,26 @@ import * as React from "react"
 
 import { resolveCsvDialect, type CsvDialect, type CsvTable } from "@/lib/csv"
 import { cn } from "@/lib/utils"
+import type { ViewerDownloadAction } from "@/lib/viewer-download"
+import {
+  createViewerResource,
+  type ViewerResource,
+} from "@/lib/viewer-resource"
 
-import { defaultCsvDownloadName, downloadCsvTable } from "./csv-viewer-download"
+import {
+  createCsvExportAction,
+  defaultCsvDownloadName,
+} from "./csv-viewer-download"
 import { CsvGrid, type CsvGridHandle } from "./csv-viewer-grid"
 import {
-  getCsvErrorMessage,
-  useCsvResourceState,
-  type CsvCellAddress,
-} from "./csv-viewer-state"
+  isCsvDocumentSource,
+  type CsvDocumentSource,
+  type CsvTableSource,
+  type CsvViewerSource,
+} from "./csv-viewer-resource"
+import { useCsvResourceState, type CsvCellAddress } from "./csv-viewer-state"
 import { CsvViewerToolbar, useCsvViewerZoom } from "./csv-viewer-toolbar"
+import { ViewerErrorState } from "./viewer-error"
 
 const BASE_FONT_SIZE = 13
 
@@ -29,14 +40,10 @@ export interface CsvViewerHandle {
 }
 
 export interface CsvViewerProps {
-  src?: string
-  value?: string
-  source?: Blob
-  data?: CsvTable
+  source?: CsvViewerSource
   dialect?: CsvDialect
   className?: string
   toolbar?: boolean
-  downloadName?: string
   height?: number
   fillHeight?: boolean
   activeCell?: CsvCellAddress | null
@@ -46,14 +53,10 @@ export interface CsvViewerProps {
 export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
   function CsvViewer(
     {
-      src,
-      value,
-      data,
       source,
       dialect: dialectProp,
       className,
       toolbar = true,
-      downloadName,
       height = 480,
       fillHeight = false,
       activeCell,
@@ -61,26 +64,57 @@ export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
     },
     ref
   ) {
-    const dialect = React.useMemo(
+    const [retryVersion, setRetryVersion] = React.useState(0)
+    const resource = React.useMemo<ViewerResource | null>(
       () =>
-        resolveCsvDialect({
-          dialect: dialectProp,
-          descriptor: { src, fileName: downloadName },
-        }),
-      [dialectProp, downloadName, src]
+        source && isCsvDocumentSource(source)
+          ? createViewerResource(source)
+          : null,
+      [source]
     )
+    const tableDialect = source?.kind === "table" ? source.dialect : undefined
+    const tableFileName = source?.kind === "table" ? source.fileName : undefined
+    const dialect = React.useMemo(() => {
+      const directLoad = resource?.getDirectLoad()
+      return resolveCsvDialect({
+        dialect: dialectProp ?? tableDialect,
+        descriptor: {
+          src: directLoad?.kind === "url" ? directLoad.url : undefined,
+          fileName: resource?.fileName ?? tableFileName,
+          mimeType: resource?.mimeType,
+        },
+      })
+    }, [dialectProp, resource, tableDialect, tableFileName])
     const resourceState = useCsvResourceState({
-      src,
-      value,
       source,
-      data,
+      resource,
       dialect,
+      retryVersion,
     })
     const gridRef = React.useRef<CsvGridHandle>(null)
     const { zoom, setZoom } = useCsvViewerZoom()
     const columns = resourceState.columns
     const sourceRows = resourceState.sourceRows
-    const resolvedDownloadName = downloadName ?? defaultCsvDownloadName(dialect)
+    const resolvedExportFileName =
+      resource?.fileName ?? tableFileName ?? defaultCsvDownloadName(dialect)
+    const downloadActions = React.useMemo(() => {
+      const actions: ViewerDownloadAction[] = []
+      if (resource) {
+        actions.push({
+          ...resource.getOriginalDownload(),
+          label: "Download original",
+        })
+      }
+      actions.push(
+        createCsvExportAction({
+          columns,
+          sourceRows,
+          dialect,
+          fileName: resolvedExportFileName,
+        })
+      )
+      return actions
+    }, [columns, dialect, resource, resolvedExportFileName, sourceRows])
 
     React.useImperativeHandle(
       ref,
@@ -93,26 +127,17 @@ export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
       []
     )
 
-    const handleDownload = React.useCallback(() => {
-      void downloadCsvTable({
-        src,
-        columns,
-        sourceRows,
-        dialect,
-        downloadName: resolvedDownloadName,
-      })
-    }, [columns, dialect, resolvedDownloadName, sourceRows, src])
-
     const statusNode = React.useMemo(() => {
       if (resourceState.status === "error") {
         return (
-          <div
-            role="status"
-            aria-live="polite"
-            className="flex h-24 items-center justify-center px-3 text-center text-xs text-muted-foreground"
-          >
-            {getCsvErrorMessage(resourceState.error)}
-          </div>
+          <ViewerErrorState
+            error={resourceState.error}
+            format="csv"
+            sourceKind={resource?.source.kind}
+            download={resource?.getOriginalDownload()}
+            variant="inline"
+            onRetry={() => setRetryVersion((version) => version + 1)}
+          />
         )
       }
       if (sourceRows.length === 0 && resourceState.status !== "loading") {
@@ -123,7 +148,7 @@ export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
         )
       }
       return null
-    }, [resourceState, sourceRows.length])
+    }, [resource, resourceState, sourceRows.length])
 
     return (
       <div
@@ -142,7 +167,7 @@ export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
             isLoading={resourceState.status === "loading"}
             zoom={zoom}
             onZoomChange={setZoom}
-            onDownload={handleDownload}
+            downloadActions={downloadActions}
           />
         ) : null}
         <CsvGrid
@@ -161,4 +186,11 @@ export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
   }
 )
 
-export { type CsvCellAddress, type CsvDialect, type CsvTable }
+export {
+  type CsvCellAddress,
+  type CsvDialect,
+  type CsvDocumentSource,
+  type CsvTableSource,
+  type CsvTable,
+  type CsvViewerSource,
+}

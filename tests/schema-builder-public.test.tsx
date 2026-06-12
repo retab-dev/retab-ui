@@ -21,10 +21,14 @@ function renderPublicBuilder({
   schema = sample,
   features,
   view,
+  readOnly,
+  onViewChange,
 }: {
   schema?: JSONSchema7
   features?: React.ComponentProps<typeof SchemaBuilder>["features"]
   view?: React.ComponentProps<typeof SchemaBuilder>["view"]
+  readOnly?: boolean
+  onViewChange?: React.ComponentProps<typeof SchemaBuilder>["onViewChange"]
 } = {}) {
   const emits: JSONSchema7[] = []
 
@@ -35,6 +39,8 @@ function renderPublicBuilder({
         value={value}
         view={view}
         features={features}
+        readOnly={readOnly}
+        onViewChange={onViewChange}
         onValueChange={(next) => {
           emits.push(next as JSONSchema7)
           setValue(next as JSONSchema7)
@@ -98,6 +104,63 @@ describe("SchemaBuilder public API", () => {
 
     expect(emits).toHaveLength(1)
     expect(Object.keys(emits[0].properties!)).toEqual(["total"])
+  })
+
+  it("switches between fields and JSON mode when uncontrolled", async () => {
+    const onViewChange = vi.fn()
+    renderPublicBuilder({
+      features: { jsonMode: true },
+      onViewChange,
+    })
+
+    expect(screen.getByText("invoice_number")).toBeTruthy()
+    fireEvent.click(screen.getByRole("button", { name: "JSON" }))
+    expect(await screen.findByRole("textbox")).toBeTruthy()
+    expect(onViewChange).toHaveBeenLastCalledWith("json")
+
+    fireEvent.click(screen.getByRole("button", { name: "Fields" }))
+    expect(screen.getByText("invoice_number")).toBeTruthy()
+    expect(onViewChange).toHaveBeenLastCalledWith("fields")
+  })
+
+  it("discarding dirty JSON text restores the current schema without emitting", async () => {
+    const { emits } = renderPublicBuilder({
+      features: { jsonMode: true },
+      view: "json",
+    })
+    const editor = await screen.findByRole("textbox")
+    fireEvent.change(editor, {
+      target: {
+        value: JSON.stringify(
+          {
+            type: "object",
+            properties: { changed: { type: "boolean" } },
+          },
+          null,
+          2
+        ),
+      },
+    })
+
+    fireEvent.click(screen.getByRole("button", { name: "Discard" }))
+
+    expect(emits).toHaveLength(0)
+    expect((editor as HTMLTextAreaElement).value).toContain("invoice_number")
+    expect((editor as HTMLTextAreaElement).value).not.toContain("changed")
+  })
+
+  it("renders JSON mode read-only without apply controls", async () => {
+    const { emits } = renderPublicBuilder({
+      features: { jsonMode: true },
+      view: "json",
+      readOnly: true,
+    })
+
+    const editor = (await screen.findByRole("textbox")) as HTMLTextAreaElement
+    expect(editor.readOnly).toBe(true)
+    expect(screen.queryByRole("button", { name: "Apply" })).toBeNull()
+    expect(screen.queryByRole("button", { name: "Discard" })).toBeNull()
+    expect(emits).toHaveLength(0)
   })
 
   it("keeps definition creation hidden when definitions are disabled", () => {

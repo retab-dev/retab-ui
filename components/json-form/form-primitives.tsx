@@ -104,18 +104,25 @@ export function FormLabel({
 
 export function FormControl(props: React.ComponentProps<typeof Slot>) {
   const { error, formItemId, formDescriptionId, formMessageId } = useFormField()
+  const { children, ...controlProps } = props
+  const fieldProps = {
+    "data-slot": "form-control",
+    id: formItemId,
+    "aria-describedby": error
+      ? `${formDescriptionId} ${formMessageId}`
+      : `${formDescriptionId}`,
+    "aria-invalid": !!error,
+    ...controlProps,
+  }
 
-  return (
-    <Slot
-      data-slot="form-control"
-      id={formItemId}
-      aria-describedby={
-        error ? `${formDescriptionId} ${formMessageId}` : `${formDescriptionId}`
-      }
-      aria-invalid={!!error}
-      {...props}
-    />
-  )
+  if (React.isValidElement(children)) {
+    return React.cloneElement(
+      children as React.ReactElement<Record<string, unknown>>,
+      fieldProps
+    )
+  }
+
+  return <Slot {...fieldProps} />
 }
 
 export function FormMessage({

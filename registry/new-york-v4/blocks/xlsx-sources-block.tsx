@@ -40,16 +40,23 @@ const SOURCES: SourceMap = Object.fromEntries(
 export function XlsxSourcesBlock() {
   const viewerRef = React.useRef<XlsxViewerHandle>(null)
   const target = useXlsxSourceTarget(viewerRef)
-  const link = useSourceLink({ sources: SOURCES, target, initialField: FIELDS[0]?.key })
+  const link = useSourceLink({
+    sources: SOURCES,
+    target,
+    initialField: FIELDS[0]?.key,
+  })
 
   return (
     <div className="flex h-full min-h-[680px] bg-background">
       <div className="relative min-w-0 flex-1">
         <XlsxViewer
           ref={viewerRef}
-          src={XLSX_URL}
+          source={{
+            kind: "url",
+            url: XLSX_URL,
+            fileName: "nvidia-financials-fy2024.xlsx",
+          }}
           bare
-          downloadFileName="nvidia-financials-fy2024.xlsx"
           className="h-full"
           activeCell={sourceToXlsxCell(link.activeSource)}
         />

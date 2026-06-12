@@ -17,7 +17,6 @@ import type {
 } from "@/lib/viewer-source"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
-  TextViewerErrorState,
   TextViewerFallback,
   TextViewerFrame,
   TextViewerToolbar,
@@ -31,10 +30,10 @@ import {
 import {
   readTextResource,
   resolvedTextViewerBounds,
-  TextViewerInvalidBoundsError,
-  TextViewerTooLargeError,
+  splitTextLines,
   type TextViewerBounds,
 } from "@/components/ui/text-viewer-resource"
+import { ViewerErrorBoundary } from "@/components/ui/viewer-error"
 
 const BASE_FONT_PX = 12
 const BASE_LINE_PX = 20
@@ -79,7 +78,7 @@ export const TextViewer = React.forwardRef<TextViewerHandle, TextViewerProps>(
     const isClient = useIsClient()
     const { source } = props
     const resource = React.useMemo(() => createViewerResource(source), [source])
-    const resetToken = textViewerResetToken(resource, props, retryVersion)
+    const resetKey = textViewerResetKey(resource, props, retryVersion)
 
     if (source.kind !== "text" && !isClient) {
       return (
@@ -92,11 +91,13 @@ export const TextViewer = React.forwardRef<TextViewerHandle, TextViewerProps>(
     }
 
     return (
-      <TextViewerErrorBoundary
+      <ViewerErrorBoundary
         bare={props.bare}
         className={props.className}
-        resetToken={resetToken}
-        resource={resource}
+        download={resource.getOriginalDownload()}
+        format="text"
+        resetKey={resetKey}
+        sourceKind={resource.sourceKind}
         onRetry={() => setRetryVersion((version) => version + 1)}
       >
         <React.Suspense
@@ -115,7 +116,7 @@ export const TextViewer = React.forwardRef<TextViewerHandle, TextViewerProps>(
             resource={resource}
           />
         </React.Suspense>
-      </TextViewerErrorBoundary>
+      </ViewerErrorBoundary>
     )
   }
 )
@@ -137,9 +138,12 @@ function TextViewerInner({
 }) {
   const bounds = resolvedTextViewerBounds({ maxBytes, maxLines })
   const text = readTextResource({ resource, retryVersion, bounds })
-  const textLines = React.useMemo(() => text.split("\n"), [text])
+  const textLines = React.useMemo(() => splitTextLines(text), [text])
   const highlightRange = normalizeTextLineRange(highlight, textLines.length)
-  const download = React.useMemo(() => resource.getDownload(), [resource])
+  const downloadAction = React.useMemo(
+    () => resource.getOriginalDownload(),
+    [resource]
+  )
 
   const [fontScale, setFontScale] = React.useState(1)
   const viewportElementRef = React.useRef<HTMLDivElement | null>(null)
@@ -191,7 +195,7 @@ function TextViewerInner({
         <TextViewerToolbar
           lineCount={textLines.length}
           fontScale={fontScale}
-          download={download}
+          downloadAction={downloadAction}
           onZoomOut={() => zoom(1 / 1.2)}
           onZoomIn={() => zoom(1.2)}
           onResetZoom={() => setFontScale(1)}
@@ -279,106 +283,17 @@ function TextLine({
   )
 }
 
-class TextViewerErrorBoundary extends React.Component<
-  {
-    children: React.ReactNode
-    className?: string
-    bare?: boolean
-    resource: ViewerResource
-    resetToken: TextViewerResetToken
-    onRetry: () => void
-  },
-  { error: unknown | null }
-> {
-  state: Readonly<{ error: unknown | null }> = { error: null }
-
-  componentDidUpdate(prev: { resetToken: TextViewerResetToken }) {
-    if (
-      textViewerResetTokenChanged(prev.resetToken, this.props.resetToken) &&
-      this.state.error
-    ) {
-      this.setState({ error: null })
-    }
-  }
-
-  static getDerivedStateFromError(error: unknown) {
-    return { error }
-  }
-
-  render() {
-    if (this.state.error) {
-      const tooLargeReason =
-        this.state.error instanceof TextViewerTooLargeError
-          ? this.state.error.reason
-          : null
-      const isInvalidBounds =
-        this.state.error instanceof TextViewerInvalidBoundsError
-      const isRetryable = Boolean(
-        this.props.resource.source.kind === "url" &&
-        !tooLargeReason &&
-        !isInvalidBounds
-      )
-      return (
-        <TextViewerErrorState
-          className={this.props.className}
-          bare={this.props.bare}
-          message={textViewerErrorMessage({ tooLargeReason, isInvalidBounds })}
-          isRetryable={isRetryable}
-          download={this.props.resource.getDownload()}
-          onRetry={this.props.onRetry}
-        />
-      )
-    }
-
-    return this.props.children
-  }
-}
-
-function textViewerErrorMessage({
-  tooLargeReason,
-  isInvalidBounds,
-}: {
-  tooLargeReason: "bytes" | "lines" | null
-  isInvalidBounds: boolean
-}) {
-  if (tooLargeReason) {
-    return `This text file is too large to preview (${tooLargeReason} limit).`
-  }
-  if (isInvalidBounds) {
-    return "Text viewer bounds are invalid."
-  }
-  return "Could not load this text file."
-}
-
-type TextViewerResetToken = {
-  cacheKey: string
-  retryVersion: number
-  maxBytes: number | undefined
-  maxLines: number | undefined
-}
-
-function textViewerResetToken(
+function textViewerResetKey(
   resource: ViewerResource,
   props: Pick<TextViewerProps, "maxBytes" | "maxLines">,
   retryVersion: number
-): TextViewerResetToken {
-  return {
-    cacheKey: resource.cacheKey,
+): string {
+  return [
+    resource.keys.load,
     retryVersion,
-    maxBytes: props.maxBytes,
-    maxLines: props.maxLines,
-  }
-}
-
-function textViewerResetTokenChanged(
-  previous: TextViewerResetToken,
-  next: TextViewerResetToken
-) {
-  if (previous.cacheKey !== next.cacheKey) return true
-  if (previous.retryVersion !== next.retryVersion) return true
-  if (previous.maxBytes !== next.maxBytes) return true
-  if (previous.maxLines !== next.maxLines) return true
-  return false
+    props.maxBytes ?? "",
+    props.maxLines ?? "",
+  ].join("\u0000")
 }
 
 function useIsClient() {

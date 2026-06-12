@@ -5,6 +5,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { inferCsvDialect } from "@/lib/csv"
+import { createViewerResource } from "@/lib/viewer-resource"
 import * as FileViewerModule from "@/registry/new-york-v4/ui/file-viewer"
 import { FileViewer } from "@/registry/new-york-v4/ui/file-viewer"
 import { isAbortError } from "@/registry/new-york-v4/ui/file-viewer-async"
@@ -79,14 +80,17 @@ describe("FileViewer detection helpers", () => {
         fileName: "report.pdf",
         mimeType: "text/plain",
       },
-      loadUrl: "/files/signed?id=1",
-      downloadHref: "/files/signed?id=1",
       displayName: "report.pdf",
-      downloadFileName: "report.pdf",
+      fileName: "report.pdf",
       identityKey: "url:/files/signed?id=1",
       mimeType: "text/plain",
       category: "pdf",
     })
+    expect(
+      createViewerResource(
+        urlSource("/files/signed?id=1", "report.pdf", "text/plain")
+      ).getDirectLoad()
+    ).toEqual({ kind: "url", url: "/files/signed?id=1" })
     expect(descriptorResetKey(descriptor)).toBe(
       "url:/files/signed?id=1\u0000report.pdf\u0000text/plain\u0000pdf"
     )
@@ -98,28 +102,30 @@ describe("FileViewer detection helpers", () => {
       })
     ).toMatchObject({
       displayName: "/files/export",
-      downloadFileName: "export",
+      fileName: "export",
       category: "text",
     })
   })
 
-  it("resolves non-url text sources without inventing a load URL", () => {
+  it("resolves non-url text sources without inventing load capabilities", () => {
+    const source = {
+      kind: "text" as const,
+      text: "inline content",
+      fileName: "inline.log",
+    }
     const descriptor = resolveFileDescriptor({
-      source: {
-        kind: "text",
-        text: "inline content",
-        fileName: "inline.log",
-      },
+      source,
     })
 
     expect(descriptor).toMatchObject({
       category: "text",
       displayName: "inline.log",
-      downloadFileName: "inline.log",
-      downloadHref: undefined,
-      loadUrl: undefined,
+      fileName: "inline.log",
     })
     expect(descriptor.identityKey).toBe("text:inline content")
+    expect(createViewerResource(source).getDirectLoad()).toEqual({
+      kind: "none",
+    })
   })
 
   it("separates text cache entries by loading mode", () => {
@@ -155,6 +161,20 @@ describe("FileViewer detection helpers", () => {
 
     expect(source).toContain("./file-viewer-text-resource")
     expect(source).not.toContain("./file-viewer-markdown-viewer")
+  })
+
+  it("routes Blob DOCX sources through the canonical source viewer", () => {
+    const source = readFileSync(
+      "registry/new-york-v4/ui/file-viewer.tsx",
+      "utf8"
+    )
+
+    expect(source).toContain(
+      'category === "docx" && descriptor.source.kind === "blob"'
+    )
+    expect(source).toContain(
+      "<DocxViewer\n          source={descriptor.source}"
+    )
   })
 
   it("keeps public runtime exports minimal", () => {
@@ -552,7 +572,10 @@ describe("FileViewer text rendering", () => {
         <FileViewer source={urlSource("/bad.log", "bad.log")} />
       )
 
-      expect(await screen.findByText(/Could not load/)).toBeTruthy()
+      expect(await screen.findByText("Couldn't load this file.")).toBeTruthy()
+      expect(screen.getByRole("alert").getAttribute("data-error-message")).toBe(
+        "Failed to load file: 500"
+      )
       expect(
         screen.getByRole("link", { name: "Download" }).getAttribute("download")
       ).toBe("bad.log")
@@ -560,7 +583,7 @@ describe("FileViewer text rendering", () => {
       rerender(<FileViewer source={urlSource("/good.log", "good.log")} />)
 
       expect(await screen.findByTitle("good.log")).toBeTruthy()
-      expect(screen.queryByText(/Could not load/)).toBeNull()
+      expect(screen.queryByText("Couldn't load this file.")).toBeNull()
     } finally {
       consoleError.mockRestore()
     }

@@ -1,28 +1,56 @@
-import type { CsvTable } from "@/lib/csv"
+import type { CsvDialect, CsvTable } from "@/lib/csv"
+import type { ViewerResource } from "@/lib/viewer-resource"
+import type {
+  BlobViewerSource,
+  TextSource,
+  UrlViewerSource,
+} from "@/lib/viewer-source"
 
 export type CsvResource =
-  | { kind: "src"; src: string }
-  | { kind: "source"; source: Blob }
-  | { kind: "value"; value: string }
-  | { kind: "data"; csvTable: CsvTable }
+  | { kind: "resource"; resource: ViewerResource }
+  | { kind: "text"; text: string }
+  | { kind: "table"; table: CsvTable; fileName?: string }
   | { kind: "empty" }
 
+export type CsvDocumentSource = UrlViewerSource | BlobViewerSource | TextSource
+
+export interface CsvTableSource {
+  kind: "table"
+  table: CsvTable
+  fileName?: string
+  identityKey?: string
+  dialect?: CsvDialect
+}
+
+export type CsvViewerSource = CsvDocumentSource | CsvTableSource
+
 export interface CsvResourceInput {
-  src?: string
-  value?: string
-  source?: Blob
-  data?: CsvTable
+  source?: CsvViewerSource
+  resource?: ViewerResource | null
+}
+
+export function isCsvDocumentSource(
+  source: CsvViewerSource
+): source is CsvDocumentSource {
+  return source.kind !== "table"
 }
 
 export function resolveCsvResource({
-  src,
   source,
-  value,
-  data,
+  resource,
 }: CsvResourceInput): CsvResource {
-  if (src) return { kind: "src", src }
-  if (source) return { kind: "source", source }
-  if (value != null) return { kind: "value", value }
-  if (data) return { kind: "data", csvTable: data }
+  if (source?.kind === "table") {
+    return {
+      kind: "table",
+      table: source.table,
+      fileName: source.fileName,
+    }
+  }
+  if (resource) {
+    if (resource.sourceKind === "text") {
+      return { kind: "text", text: resource.source.text }
+    }
+    return { kind: "resource", resource }
+  }
   return { kind: "empty" }
 }

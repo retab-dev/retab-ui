@@ -2,12 +2,10 @@
 
 import * as React from "react"
 
-import { DocsViewCodeBlock } from "@/components/docs-code-block"
-import {
-  DocumentThumbnail,
-  type DocumentKind,
-} from "@/components/document-thumbnail"
 import { cn } from "@/lib/utils"
+import type { FileCategory } from "@/lib/viewer-source"
+import { DocsViewCodeBlock } from "@/components/docs-code-block"
+import { DocumentThumbnail } from "@/components/document-thumbnail"
 
 /**
  * The hero showcase: one bordered card with a large, labeled, *square* preview
@@ -20,96 +18,87 @@ import { cn } from "@/lib/utils"
 
 interface FormatSample {
   label: string
-  kind: DocumentKind
-  src: string
-  name: string
-  type: string
+  url: string
+  fileName: string
+  mimeType: string
+  as?: FileCategory
 }
 
 const SAMPLES: FormatSample[] = [
   {
     label: "Image",
-    kind: "image",
-    src: "/samples/dashboard-preview.svg",
-    name: "dashboard.png",
-    type: "image/png",
+    url: "/samples/dashboard-preview.svg",
+    fileName: "dashboard.png",
+    mimeType: "image/png",
   },
   {
     label: "PDF",
-    kind: "pdf",
-    src: "/samples/attention.pdf",
-    name: "attention.pdf",
-    type: "application/pdf",
+    url: "/samples/attention.pdf",
+    fileName: "attention.pdf",
+    mimeType: "application/pdf",
   },
   {
     label: "DOCX",
-    kind: "docx",
-    src: "/samples/quarterly-business-review.docx",
-    name: "quarterly-business-review.docx",
-    type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    url: "/samples/quarterly-business-review.docx",
+    fileName: "quarterly-business-review.docx",
+    mimeType:
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   },
   {
     label: "PPTX",
-    kind: "pptx",
-    src: "/samples/sample-deck.pptx",
-    name: "sample-deck.pptx",
-    type: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    url: "/samples/sample-deck.pptx",
+    fileName: "sample-deck.pptx",
+    mimeType:
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
   },
   {
     label: "XLSX",
-    kind: "xlsx",
-    src: "/samples/nvidia-financials-fy2024.xlsx",
-    name: "nvidia-financials.xlsx",
-    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    url: "/samples/nvidia-financials-fy2024.xlsx",
+    fileName: "nvidia-financials.xlsx",
+    mimeType:
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   },
   {
     label: "CSV",
-    kind: "csv",
-    src: "/samples/sales.csv",
-    name: "sales.csv",
-    type: "text/csv",
+    url: "/samples/sales.csv",
+    fileName: "sales.csv",
+    mimeType: "text/csv",
   },
   {
     label: "Markdown",
-    kind: "markdown",
-    src: "/samples/release-notes.md",
-    name: "release-notes.md",
-    type: "text/markdown",
+    url: "/samples/release-notes.md",
+    fileName: "release-notes.md",
+    mimeType: "text/markdown",
   },
   {
     label: "HTML",
-    kind: "html",
-    src: "/samples/welcome.html",
-    name: "welcome.html",
-    type: "text/html",
+    url: "/samples/welcome.html",
+    fileName: "welcome.html",
+    mimeType: "text/html",
   },
   {
     label: "JSON",
-    kind: "text",
-    src: "/samples/app-config.json",
-    name: "app-config.json",
-    type: "application/json",
+    url: "/samples/app-config.json",
+    fileName: "app-config.json",
+    mimeType: "application/json",
   },
   {
     label: "Code",
-    kind: "text",
-    src: "/samples/use-debounced-value.ts",
-    name: "use-debounced-value.ts",
-    type: "text/plain",
+    url: "/samples/use-debounced-value.ts",
+    fileName: "use-debounced-value.ts",
+    mimeType: "text/plain",
   },
   {
     label: "Log",
-    kind: "text",
-    src: "/samples/server.log",
-    name: "server.log",
-    type: "text/plain",
+    url: "/samples/server.log",
+    fileName: "server.log",
+    mimeType: "text/plain",
   },
   {
     label: "TIFF",
-    kind: "tiff",
-    src: "/samples/nvidia-10q-scan.tiff",
-    name: "nvidia-10q-scan.tiff",
-    type: "image/tiff",
+    url: "/samples/nvidia-10q-scan.tiff",
+    fileName: "nvidia-10q-scan.tiff",
+    mimeType: "image/tiff",
   },
 ]
 
@@ -121,15 +110,18 @@ export function FileThumbnailFormatsGrid({
   className?: string
 }) {
   return (
-    <div className={cn("bg-background grid grid-cols-4 gap-3 p-6", className)}>
+    <div className={cn("grid grid-cols-4 gap-3 bg-background p-6", className)}>
       {SAMPLES.map((sample) => (
         <div key={sample.label} className="space-y-1.5">
           <div className="truncate text-xs font-medium">{sample.label}</div>
           <DocumentThumbnail
-            kind={sample.kind}
-            src={sample.src}
-            name={sample.name}
-            type={sample.type}
+            source={{
+              kind: "url",
+              url: sample.url,
+              fileName: sample.fileName,
+              mimeType: sample.mimeType,
+            }}
+            as={sample.as}
             previewAspectRatio={1}
           />
         </div>
@@ -161,16 +153,15 @@ import { FileThumbnail } from "@/components/ui/file-thumbnail"
 // marked) and drops it into the FileThumbnail shell. Pass previewAspectRatio={1}
 // for uniform square tiles.
 //
-// kind: "pdf" | "docx" | "xlsx" | "pptx" | "image"
-//     | "tiff" | "csv" | "markdown" | "html" | "text"
-
 export function ImageThumbnail() {
   return (
     <DocumentThumbnail
-      kind="image"
-      src="/page.png"
-      name="page.png"
-      type="image/png"
+      source={{
+        kind: "url",
+        url: "/page.png",
+        fileName: "page.png",
+        mimeType: "image/png",
+      }}
       previewAspectRatio={1}
     />
   )
@@ -179,10 +170,12 @@ export function ImageThumbnail() {
 export function PdfThumbnail() {
   return (
     <DocumentThumbnail
-      kind="pdf"
-      src="/attention.pdf"
-      name="attention.pdf"
-      type="application/pdf"
+      source={{
+        kind: "url",
+        url: "/attention.pdf",
+        fileName: "attention.pdf",
+        mimeType: "application/pdf",
+      }}
       previewAspectRatio={1}
     />
   )
@@ -191,10 +184,13 @@ export function PdfThumbnail() {
 export function DocxThumbnail() {
   return (
     <DocumentThumbnail
-      kind="docx"
-      src="/quarterly-business-review.docx"
-      name="quarterly-business-review.docx"
-      type="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      source={{
+        kind: "url",
+        url: "/quarterly-business-review.docx",
+        fileName: "quarterly-business-review.docx",
+        mimeType:
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      }}
       previewAspectRatio={1}
     />
   )
@@ -203,10 +199,13 @@ export function DocxThumbnail() {
 export function XlsxThumbnail() {
   return (
     <DocumentThumbnail
-      kind="xlsx"
-      src="/financials.xlsx"
-      name="financials.xlsx"
-      type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      source={{
+        kind: "url",
+        url: "/financials.xlsx",
+        fileName: "financials.xlsx",
+        mimeType:
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      }}
       previewAspectRatio={1}
     />
   )

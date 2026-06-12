@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Jane Doe Bank Statement - 5 Page Sample</title>
+    <style>
+      @page {
+        size: Letter;
+        margin: 0;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: #f1f1f1;
+      }
+
+      body {
+        font-family: Arial, Helvetica, sans-serif;
+        color: #000;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      .page {
+        width: 8.5in;
+        height: 11in;
+        box-sizing: border-box;
+        padding: 0.28in 0.98in 0.4in 1.08in;
+        background: #fff;
+        page-break-after: always;
+        position: relative;
+        font-size: 11px;
+        line-height: 1.08;
+      }
+
+      .page:last-child {
+        page-break-after: auto;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        margin-left: -0.42in;
+        margin-bottom: 7px;
+      }
+
+      .globe {
+        width: 33px;
+        height: 33px;
+        border-radius: 50%;
+        background: #000;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .globe::before {
+        content: "";
+        position: absolute;
+        inset: 4px 7px;
+        border-left: 1.5px solid #fff;
+        border-right: 1.5px solid #fff;
+        border-radius: 50%;
+      }
+
+      .globe::after {
+        content: "";
+        position: absolute;
+        left: -3px;
+        right: -3px;
+        top: 8px;
+        height: 14px;
+        border-top: 1.5px solid #fff;
+        border-bottom: 1.5px solid #fff;
+      }
+
+      .brand-name {
+        font-family: "Times New Roman", Times, serif;
+        font-weight: 700;
+        font-size: 25px;
+        letter-spacing: -0.2px;
+      }
+
+      .member {
+        font-size: 5px;
+        text-align: right;
+        margin-top: -5px;
+        font-weight: 700;
+      }
+
+      .bank-address,
+      .customer {
+        font-size: 13px;
+        margin-bottom: 15px;
+      }
+
+      .customer {
+        font-weight: 700;
+        line-height: 1.18;
+        margin-bottom: 28px;
+      }
+
+      .statement-header {
+        display: grid;
+        grid-template-columns: 1fr 1.08fr;
+        align-items: end;
+        border-bottom: 5px double #000;
+        padding-bottom: 4px;
+        margin-bottom: 12px;
+      }
+
+      .continuation .statement-header {
+        margin-top: 1.55in;
+      }
+
+      .title {
+        font-size: 18px;
+        font-weight: 400;
+        margin-bottom: 1px;
+      }
+
+      .help {
+        font-family: "Times New Roman", Times, serif;
+        font-style: italic;
+        font-size: 14px;
+        line-height: 1.05;
+      }
+
+      .meta {
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .meta-row {
+        display: grid;
+        grid-template-columns: 1.35fr 0.75fr;
+        gap: 8px;
+        margin: 4px 0;
+      }
+
+      .meta-row div:last-child {
+        text-align: right;
+      }
+
+      .account-line {
+        font-size: 12px;
+        margin: 7px 0 10px;
+      }
+
+      .account-line strong {
+        font-size: 13px;
+        margin-right: 7px;
+      }
+
+      .section-title {
+        font-weight: 700;
+        margin: 10px 0 6px;
+      }
+
+      .section-title .account {
+        font-weight: 400;
+        margin-left: 5px;
+      }
+
+      .short-rule {
+        width: 306px;
+        border-top: 2px solid #000;
+        margin: 2px 0 8px;
+      }
+
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        table-layout: fixed;
+      }
+
+      th,
+      td {
+        padding: 2px 3px;
+        vertical-align: top;
+      }
+
+      th {
+        font-weight: 700;
+        text-align: left;
+      }
+
+      .num {
+        text-align: right;
+        white-space: nowrap;
+      }
+
+      .summary {
+        margin-bottom: 12px;
+      }
+
+      .summary td:first-child {
+        width: 70%;
+      }
+
+      .summary .ending-label {
+        text-align: center;
+        padding-top: 7px;
+      }
+
+      .summary .total-line td:last-child {
+        border-top: 1px solid #000;
+        padding-top: 7px;
+        font-weight: 700;
+      }
+
+      .activity thead th {
+        border-bottom: 1px solid #000;
+        padding-bottom: 5px;
+      }
+
+      .activity tbody td {
+        border-bottom: 1px solid #000;
+        padding-top: 3px;
+        padding-bottom: 3px;
+      }
+
+      .activity .date {
+        width: 0.52in;
+      }
+
+      .activity .description {
+        width: 2.72in;
+      }
+
+      .activity .reference {
+        width: 1.05in;
+      }
+
+      .activity .money {
+        width: 0.84in;
+      }
+
+      .continued {
+        font-size: 11px;
+        font-weight: 700;
+        margin: -2px 0 8px;
+      }
+
+      .footer-note {
+        position: absolute;
+        left: 1.08in;
+        right: 0.98in;
+        bottom: 0.34in;
+        font-size: 9px;
+        color: #000;
+        display: flex;
+        justify-content: space-between;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="statement"></div>
+
+    <script>
+      const accountNumber = "000009752";
+      const startBalance = 10959.87;
+      const statementStart = "June 6, 2003";
+      const statementEnd = "July 8, 2003";
+      const statementDate = "July 8, 2003";
+      const totalPages = 5;
+      const rowsPerPage = [18, 28, 28, 28, 28];
+      const merchants = [
+        ["CHECKCARD PURCHASE - GROCER'S MARKET 0042, SMALL TOWN MO", 34.18, 96.44],
+        ["AUTOMATIC PAYMENT - TELEPHONE SERVICE", 62.50, 91.25],
+        ["CHECKCARD PURCHASE - FUEL STOP 1187, KANSAS CITY MO", 28.14, 61.88],
+        ["ATM WITHDRAWAL - 1000 WALNUT ST M119", 20.00, 80.00],
+        ["CHECKCARD PURCHASE - MAIN STREET PHARMACY", 12.85, 48.90],
+        ["BILL PAYMENT - CITY UTILITIES", 74.20, 138.64],
+        ["CHECKCARD PURCHASE - BOOKS AND NEWS", 9.95, 42.35],
+        ["ONLINE TRANSFER TO SAVINGS", 100.00, 275.00],
+        ["CHECKCARD PURCHASE - GARDEN CENTER", 22.45, 71.30],
+        ["CHECKCARD PURCHASE - COFFEE HOUSE 013", 5.62, 18.75],
+        ["CHECKCARD PURCHASE - OFFICE SUPPLY 3301", 18.90, 84.40],
+        ["CHECKCARD PURCHASE - HARDWARE STORE", 16.55, 65.95],
+        ["AUTOMATIC PAYMENT - INSURANCE PREMIUM", 122.80, 181.45],
+        ["CHECKCARD PURCHASE - DRY CLEANERS", 14.00, 36.20],
+        ["BILL PAYMENT - MOBILE SERVICE", 44.00, 77.95],
+        ["CHECKCARD PURCHASE - FAMILY RESTAURANT", 26.48, 74.62],
+        ["CHECKCARD PURCHASE - POSTAL CENTER", 7.85, 28.45],
+        ["CHECKCARD PURCHASE - MOVIE THEATER", 19.50, 58.75],
+        ["CHECKCARD PURCHASE - AUTO PARTS", 25.55, 78.35],
+        ["AUTOMATIC PAYMENT - CABLE SERVICE", 68.40, 98.20],
+        ["MONTHLY SERVICE CHARGE", 5.00, 5.00],
+        ["CHECKCARD PURCHASE - DINER", 18.65, 47.88],
+      ];
+      const credits = [
+        ["DEPOSIT - PAYROLL DIRECT DEP", 1875.24],
+        ["DEPOSIT - MOBILE DEPOSIT", 420.00],
+        ["ACH CREDIT - CUSTOMER REFUND", 54.19],
+        ["ACH CREDIT - EXPENSE REIMBURSEMENT", 96.50],
+        ["ATM DEPOSIT - SMALL TOWN BRANCH", 225.00],
+        ["DEPOSIT - COUNTER CREDIT", 640.00],
+      ];
+
+      let seed = 9752;
+      function random() {
+        seed = (seed * 1664525 + 1013904223) % 4294967296;
+        return seed / 4294967296;
+      }
+
+      function money(min, max) {
+        return Number((min + random() * (max - min)).toFixed(2));
+      }
+
+      function mmdd(date) {
+        return `${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+      }
+
+      function reference(prefix, index) {
+        return `${prefix}${String(82464000 + index * 37 + Math.floor(random() * 29)).padStart(8, "0")}`;
+      }
+
+      const transactions = [];
+      const firstDate = new Date(2003, 5, 6);
+      for (let index = 0; index < 130; index += 1) {
+        const date = new Date(firstDate);
+        date.setDate(firstDate.getDate() + Math.floor(index / 4));
+        if ([2, 29, 58, 88, 118].includes(index)) {
+          const credit = credits[(index / 29) | 0] || credits[index % credits.length];
+          transactions.push([mmdd(date), credit[0], reference("130", index), 0, credit[1]]);
+          continue;
+        }
+        if ([16, 43, 75, 104].includes(index)) {
+          const checkNumber = 1007 + transactions.filter((row) => row[1].startsWith("CHECK ")).length;
+          transactions.push([mmdd(date), `CHECK ${checkNumber}`, reference("000", index), money(40, 180), 0]);
+          continue;
+        }
+        const merchant = merchants[index % merchants.length];
+        transactions.push([mmdd(date), merchant[0], reference("000", index), money(merchant[1], merchant[2]), 0]);
+      }
+
+      const currency = (value) =>
+        value
+          ? `$${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+          : "";
+      let balance = startBalance;
+      let debitTotal = 0;
+      let creditTotal = 0;
+      const rows = transactions.map((transaction) => {
+        const [date, description, rowReference, debit, credit] = transaction;
+        balance += credit - debit;
+        debitTotal += debit;
+        creditTotal += credit;
+        return { date, description, rowReference, debit, credit, balance };
+      });
+
+      function header(pageNumber) {
+        return `
+          <div class="statement-header">
+            <div>
+              <div class="title">Bank Statement</div>
+              <div class="help">If you have any questions about your statement,<br />please call us at 816-234-2265</div>
+            </div>
+            <div class="meta">
+              <div class="meta-row"><div>Primary Account Number:</div><div>${accountNumber}</div></div>
+              <div class="meta-row"><div>Statement Date:</div><div>${statementDate}</div></div>
+              <div class="meta-row"><div>Page Number:</div><div>${pageNumber}</div></div>
+            </div>
+          </div>
+          <div class="account-line"><strong>CONNECTIONS CHECKING</strong> Account # ${accountNumber}</div>
+        `;
+      }
+
+      function activityTable(pageRows) {
+        return `
+          <table class="activity">
+            <thead>
+              <tr>
+                <th class="date">Date</th>
+                <th class="description">Description</th>
+                <th class="reference">Reference Number</th>
+                <th class="money num">Debits</th>
+                <th class="money num">Credits</th>
+                <th class="money num">Balance</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${pageRows
+                .map(
+                  (row) => `
+                <tr>
+                  <td>${row.date}</td>
+                  <td>${row.description}</td>
+                  <td>${row.rowReference}</td>
+                  <td class="num">${currency(row.debit)}</td>
+                  <td class="num">${currency(row.credit)}</td>
+                  <td class="num">${currency(row.balance)}</td>
+                </tr>
+              `
+                )
+                .join("")}
+            </tbody>
+          </table>
+        `;
+      }
+
+      const rowChunks = [];
+      let offset = 0;
+      for (const count of rowsPerPage) {
+        rowChunks.push(rows.slice(offset, offset + count));
+        offset += count;
+      }
+      const endingBalance = startBalance + creditTotal - debitTotal;
+      const pages = rowChunks.map((chunk, index) => {
+        const pageNumber = index + 1;
+        const isFirst = pageNumber === 1;
+        return `
+          <section class="page ${isFirst ? "" : "continuation"}">
+            ${
+              isFirst
+                ? `
+              <div class="brand">
+                <div class="globe"></div>
+                <div>
+                  <div class="brand-name">Commerce Bank</div>
+                  <div class="member">Member FDIC</div>
+                </div>
+              </div>
+              <div class="bank-address">1000 Walnut<br />Kansas City MO 64106-3686</div>
+              <div class="customer">Jane Doe<br />1234 Anywhere Dr.<br />Small Town, MO 12345-6789</div>
+            `
+                : ""
+            }
+            ${header(pageNumber)}
+            ${
+              isFirst
+                ? `
+              <div class="section-title">Account Summary <span class="account">Account # ${accountNumber}</span></div>
+              <div class="short-rule"></div>
+              <table class="summary">
+                <tbody>
+                  <tr><td>Beginning Balance on ${statementStart}</td><td class="num">${currency(startBalance)}</td></tr>
+                  <tr><td>Deposits &amp; Other Credits</td><td class="num">+${creditTotal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td></tr>
+                  <tr><td>Withdrawals, Purchases, Checks &amp; Other Debits</td><td class="num">-${debitTotal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td></tr>
+                  <tr class="total-line"><td class="ending-label">Ending Balance on ${statementEnd}</td><td class="num">${currency(endingBalance)}</td></tr>
+                </tbody>
+              </table>
+            `
+                : `<div class="continued">Account Activity continued</div>`
+            }
+            <div class="section-title">Account Activity <span class="account">Account # ${accountNumber}</span></div>
+            <div class="short-rule"></div>
+            ${activityTable(chunk)}
+            <div class="footer-note"><span>Synthetic_Bank_Statement_Sample.PDF - not an issued bank record</span><span>Page ${pageNumber} of ${totalPages}</span></div>
+          </section>
+        `;
+      });
+
+      document.getElementById("statement").innerHTML = pages.join("");
+    </script>
+  </body>
+</html>

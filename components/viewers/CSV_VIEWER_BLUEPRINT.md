@@ -13,18 +13,17 @@ integration, and verification as rigorous as the table surface.
 source:
 
 ```tsx
-<CsvViewer src="/samples/sales.csv" />
-<CsvViewer src="/samples/sales.tsv" delimiter="\t" />
-<CsvViewer value={csvText} />
-<CsvViewer source={largeFile} />
-<CsvViewer data={{ columns, rows }} />
+<CsvViewer source={{ kind: "url", url: "/samples/sales.csv" }} />
+<CsvViewer source={{ kind: "url", url: "/samples/sales.tsv" }} />
+<CsvViewer source={{ kind: "text", text: csvText, fileName: "sales.csv" }} />
+<CsvViewer source={{ kind: "table", table: { columns, rows } }} />
 ```
 
 The same logical file should produce the same table regardless of whether it is
-provided as `value`, `source`, `src`, or pre-parsed `data`. Large inputs should
-start rendering progressively without blocking the main thread, and the public
-API should make delimiter and header behavior explicit enough that hosts like
-`FileViewer` cannot accidentally misparse TSV as CSV.
+provided as a URL source, Blob source, text source, or pre-parsed table source.
+Large inputs should start rendering progressively without blocking the main
+thread, and the public API should make delimiter and header behavior explicit
+enough that hosts like `FileViewer` cannot accidentally misparse TSV as CSV.
 
 ## Public API
 
@@ -32,10 +31,7 @@ Keep the API focused on tabular text viewing:
 
 ```ts
 export interface CsvViewerProps {
-  src?: string
-  value?: string
-  data?: ParsedCsv
-  source?: Blob | string
+  source?: CsvViewerSource
   worker?: boolean
   batchSize?: number
   delimiter?: string
@@ -60,14 +56,14 @@ export interface CsvViewerProps {
 
 Rules:
 
-- `src` is a remote resource identity and takes precedence over `value`, `data`,
-  and `source`.
+- `source` is the only public data entrypoint.
+- URL, Blob, text, and parsed table inputs are distinguished by `source.kind`.
 - `delimiter` must affect every input path consistently.
 - `hasHeader` must affect every input path consistently.
-- `value` is acceptable for small strings and may parse synchronously.
-- `source` and `src` are the large-file paths and should parse off the render
-  path.
-- `data` is already normalized and should not be reparsed.
+- Text sources are acceptable for small strings and may parse synchronously.
+- URL and Blob sources are the large-file paths and should parse off the render
+  path when possible.
+- Table sources are already normalized and should not be reparsed.
 - Display controls such as zoom, height, virtualization, and row numbers must not
   change parse semantics.
 - `activeCell` and `scrollToCell` use data coordinates, not display coordinates.
@@ -114,8 +110,8 @@ Remaining concerns:
 
 These rules should be true after hardening:
 
-1. The same records produce the same `columns` and `rows` for `value`, `source`,
-   `src`, and worker paths.
+1. The same records produce the same `columns` and `rows` for text, URL, Blob,
+   table, and worker paths.
 2. `delimiter` and `hasHeader` are honored by every parsing path.
 3. TSV files routed through `FileViewer` are parsed with tab delimiters.
 4. Large local files parse incrementally without materializing a second complete
@@ -233,7 +229,7 @@ Target helper:
 
 ```ts
 function delimiterFromCsvDescriptor(descriptor: FileDescriptor): string {
-  return extensionOf(descriptor.downloadName) === "tsv" ||
+  return extensionOf(descriptor.fileName) === "tsv" ||
     descriptor.mimeType === "text/tab-separated-values"
     ? "\t"
     : ","
@@ -358,7 +354,7 @@ Cover:
 
 Cover:
 
-- `CsvViewer value` renders headers and cells.
+- text source renders headers and cells.
 - `CsvViewer source` transitions loading to rows.
 - worker failure shows error rather than empty state.
 - clicking a header cycles asc, desc, none.

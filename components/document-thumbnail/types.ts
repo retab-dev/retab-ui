@@ -1,16 +1,6 @@
 import type * as React from "react"
 
-export type DocumentKind =
-  | "pdf"
-  | "docx"
-  | "xlsx"
-  | "pptx"
-  | "image"
-  | "tiff"
-  | "csv"
-  | "markdown"
-  | "html"
-  | "text"
+import type { FileCategory, ViewerSource } from "@/lib/viewer-source"
 
 /**
  * Which corner of the document stays pinned when its preview is larger than the
@@ -19,46 +9,14 @@ export type DocumentKind =
 export type ThumbnailAnchor = "top-left" | "top-right" | "bottom-left"
 
 export interface DocumentThumbnailProps {
-  src: string
-  name: string
-  type: string
-  kind: DocumentKind
+  source: ViewerSource
+  as?: FileCategory
   className?: string
   previewAspectRatio?: number
   /** Corner of the document to keep visible when it overflows. Default top-left. */
   anchor?: ThumbnailAnchor
   /** Change this to retry a failed render without changing the source. */
   retryKey?: React.Key
-}
-
-export interface ThumbnailResourceIdentity {
-  kind: DocumentKind
-  src: string
-  anchor: ThumbnailAnchor
-  retryKey: React.Key | null
-}
-
-export function getThumbnailResourceKey({
-  kind,
-  src,
-  anchor,
-  retryKey,
-}: ThumbnailResourceIdentity): string {
-  return [
-    encodePart(`kind:${kind}`),
-    encodePart(`src:${src}`),
-    encodePart(`anchor:${anchor}`),
-    encodeRetryKey(retryKey),
-  ].join("")
-}
-
-function encodePart(value: string): string {
-  return `${value.length}:${value}`
-}
-
-function encodeRetryKey(retryKey: React.Key | null): string {
-  if (retryKey === null) return encodePart("retry:null:")
-  return encodePart(`retry:${typeof retryKey}:${String(retryKey)}`)
 }
 
 /** Absolute-position classes that pin a covered element to its anchor corner. */

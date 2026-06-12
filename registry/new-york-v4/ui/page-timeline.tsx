@@ -5,10 +5,12 @@ import * as React from "react"
 import {
   getSegmentSurfaceProps,
   resolveHighlightedSegmentId,
+  scopeSegmentInteraction,
   type SegmentInteraction,
 } from "@/lib/segment-interaction"
 import {
   pageOwners as buildPageSegmentIndexes,
+  segmentDisplayLabel,
   segmentsPageCount,
   type Segment,
 } from "@/lib/segments"
@@ -64,9 +66,21 @@ export function PageTimeline({
     () => buildSegmentIndexById(segments),
     [segments]
   )
+  const scopedInteraction = React.useMemo(
+    () =>
+      scopeSegmentInteraction(
+        interaction,
+        segments
+          .filter((segment) =>
+            segment.pages.some((page) => page >= 1 && page <= total)
+          )
+          .map((segment) => segment.id)
+      ),
+    [interaction, segments, total]
+  )
 
   if (total <= 0) return null
-  const highlightedSegmentId = resolveHighlightedSegmentId(interaction)
+  const highlightedSegmentId = resolveHighlightedSegmentId(scopedInteraction)
   const highlightedSegmentIndex = getHighlightedSegmentIndex({
     highlightedSegmentId,
     segmentIndexById,
@@ -91,7 +105,7 @@ export function PageTimeline({
         const surfaceProps = primarySegment
           ? getSegmentSurfaceProps({
               segment: primarySegment,
-              interaction,
+              interaction: scopedInteraction,
               isCurrent: currentPage === page,
               onSelect,
             })
@@ -168,7 +182,9 @@ function getTimelinePageSegment({
   const segmentLabel =
     segmentIndexes.length > 1
       ? `${segmentIndexes.length} segments`
-      : primarySegment?.label
+      : primarySegment
+        ? segmentDisplayLabel(primarySegment.label)
+        : undefined
 
   return {
     segmentIndexes,

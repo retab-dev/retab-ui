@@ -3,6 +3,11 @@
 import * as React from "react"
 
 import {
+  createViewerResource,
+  type ViewerResource,
+} from "@/lib/viewer-resource"
+
+import {
   FileErrorBoundary,
   UnsupportedCard,
   ViewerFallback,
@@ -88,14 +93,19 @@ function useDescriptorSignal(descriptorKey: string): AbortSignal {
 
 export function FileViewer(props: FileViewerProps) {
   const isClient = useIsClient()
+  const resource = React.useMemo(
+    () => createViewerResource(props.source),
+    [props.source]
+  )
   const descriptor = resolveFileDescriptor(props)
   const descriptorKey = descriptorResetKey(descriptor)
   const descriptorSignal = useDescriptorSignal(descriptorKey)
+  const directLoad = resource.getDirectLoad()
   const fallback = (
     <ViewerFallback
       category={descriptor.category}
-      fileName={descriptor.downloadFileName}
-      src={descriptor.loadUrl}
+      fileName={descriptor.fileName}
+      src={directLoad.kind === "url" ? directLoad.url : undefined}
       className={props.className}
       bare={props.bare}
     />
@@ -107,6 +117,7 @@ export function FileViewer(props: FileViewerProps) {
     <FileErrorBoundary
       key={descriptorKey}
       descriptor={descriptor}
+      resource={resource}
       className={props.className}
       resetKey={descriptorKey}
     >
@@ -114,6 +125,7 @@ export function FileViewer(props: FileViewerProps) {
         <FileViewerRoute
           {...props}
           descriptor={descriptor}
+          resource={resource}
           descriptorSignal={descriptorSignal}
         />
       </React.Suspense>
@@ -127,12 +139,27 @@ function FileViewerRoute({
   bare = false,
   isolateStyles = false,
   descriptorSignal,
+  resource,
 }: FileViewerProps & {
   descriptor: FileDescriptor
+  resource: ViewerResource
   descriptorSignal: AbortSignal
 }) {
-  const { category, downloadFileName, loadUrl } = descriptor
+  const { category, fileName } = descriptor
+  const directLoad = resource.getDirectLoad()
+  const directLoadUrl = directLoad.kind === "url" ? directLoad.url : undefined
   if (descriptor.source.kind === "text") {
+    if (category === "html") {
+      return (
+        <HtmlDocViewer
+          html={descriptor.source.text}
+          fileName={fileName}
+          downloadAction={resource.getOriginalDownload()}
+          className={className}
+          bare={bare}
+        />
+      )
+    }
     if (category === "text") {
       return (
         <TextViewer
@@ -144,21 +171,21 @@ function FileViewerRoute({
     }
     return (
       <UnsupportedCard
-        fileName={downloadFileName}
+        fileName={fileName}
+        downloadAction={resource.getOriginalDownload()}
         className={className}
         bare={bare}
       />
     )
   }
 
-  if (!loadUrl) {
+  if (!directLoadUrl) {
     if (category === "pdf" && descriptor.source.kind === "blob") {
       return (
         <PdfViewer
           source={descriptor.source}
           className={className}
           bare={bare}
-          downloadFileName={downloadFileName}
         />
       )
     }
@@ -168,7 +195,6 @@ function FileViewerRoute({
           source={descriptor.source}
           className={className}
           bare={bare}
-          downloadFileName={downloadFileName}
         />
       )
     }
@@ -178,14 +204,56 @@ function FileViewerRoute({
           source={descriptor.source}
           className={className}
           bare={bare}
-          downloadFileName={downloadFileName}
+        />
+      )
+    }
+    if (category === "csv" && descriptor.source.kind === "blob") {
+      return (
+        <CsvDocViewer
+          source={descriptor.source}
+          fileName={fileName}
+          mimeType={descriptor.mimeType}
+          className={className}
+          bare={bare}
+          isolateStyles={isolateStyles}
+        />
+      )
+    }
+    if (category === "html" && descriptor.source.kind === "blob") {
+      return (
+        <HtmlDocViewer
+          blob={descriptor.source.blob}
+          src={directLoadUrl}
+          fileName={fileName}
+          downloadAction={resource.getOriginalDownload()}
+          className={className}
+          bare={bare}
+        />
+      )
+    }
+    if (category === "docx" && descriptor.source.kind === "blob") {
+      return (
+        <DocxViewer
+          source={descriptor.source}
+          className={className}
+          bare={bare}
+        />
+      )
+    }
+    if (category === "xlsx" && descriptor.source.kind === "blob") {
+      return (
+        <XlsxViewer
+          source={descriptor.source}
+          className={className}
+          bare={bare}
+          isolateStyles={isolateStyles}
         />
       )
     }
     return (
       <UnsupportedCard
-        fileName={downloadFileName}
-        downloadHref={descriptor.downloadHref}
+        fileName={fileName}
+        downloadAction={resource.getOriginalDownload()}
         className={className}
         bare={bare}
       />
@@ -199,18 +267,22 @@ function FileViewerRoute({
           source={descriptor.source}
           className={className}
           bare={bare}
-          downloadFileName={downloadFileName}
         />
       )
     case "docx":
-      return <DocxViewer src={loadUrl} className={className} bare={bare} />
+      return (
+        <DocxViewer
+          source={descriptor.source}
+          className={className}
+          bare={bare}
+        />
+      )
     case "image":
       return (
         <ImageViewer
           source={descriptor.source}
           className={className}
           bare={bare}
-          downloadFileName={downloadFileName}
         />
       )
     case "pptx":
@@ -219,24 +291,22 @@ function FileViewerRoute({
           source={descriptor.source}
           className={className}
           bare={bare}
-          downloadFileName={downloadFileName}
         />
       )
     case "xlsx":
       return (
         <XlsxViewer
-          src={loadUrl}
+          source={descriptor.source}
           className={className}
           bare={bare}
-          downloadFileName={downloadFileName}
           isolateStyles={isolateStyles}
         />
       )
     case "csv":
       return (
         <CsvDocViewer
-          src={loadUrl}
-          fileName={downloadFileName}
+          source={descriptor.source}
+          fileName={fileName}
           mimeType={descriptor.mimeType}
           className={className}
           bare={bare}
@@ -246,8 +316,8 @@ function FileViewerRoute({
     case "markdown":
       return (
         <MarkdownDocViewer
-          src={loadUrl}
-          fileName={downloadFileName}
+          src={directLoadUrl}
+          fileName={fileName}
           className={className}
           bare={bare}
           descriptorSignal={descriptorSignal}
@@ -256,8 +326,9 @@ function FileViewerRoute({
     case "html":
       return (
         <HtmlDocViewer
-          src={loadUrl}
-          fileName={downloadFileName}
+          src={directLoadUrl}
+          fileName={fileName}
+          downloadAction={resource.getOriginalDownload()}
           className={className}
           bare={bare}
           descriptorSignal={descriptorSignal}
@@ -266,8 +337,8 @@ function FileViewerRoute({
     case "text":
       return (
         <TextDocViewer
-          src={loadUrl}
-          fileName={downloadFileName}
+          src={directLoadUrl}
+          fileName={fileName}
           className={className}
           bare={bare}
           isolateStyles={isolateStyles}
@@ -277,8 +348,9 @@ function FileViewerRoute({
     default:
       return (
         <UnsupportedCard
-          src={loadUrl}
-          fileName={downloadFileName}
+          src={directLoadUrl}
+          downloadAction={resource.getOriginalDownload()}
+          fileName={fileName}
           className={className}
           bare={bare}
         />

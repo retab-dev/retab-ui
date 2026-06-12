@@ -1,13 +1,13 @@
 "use client"
 
 import * as React from "react"
-import { Download, Maximize, Minus, Plus, RotateCcw } from "lucide-react"
+import { Maximize, Minus, Plus, RotateCcw } from "lucide-react"
 
-import { type DownloadCapability } from "@/lib/viewer-resource"
 import { cn } from "@/lib/utils"
+import { type ViewerDownloadAction } from "@/lib/viewer-download"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { ViewerDownloadAnchor } from "@/components/ui/viewer-download"
+import { ViewerDownloadControl } from "@/components/ui/viewer-download"
 
 export function TextViewerFrame({
   className,
@@ -35,14 +35,14 @@ export function TextViewerFrame({
 export function TextViewerToolbar({
   lineCount,
   fontScale,
-  download,
+  downloadAction,
   onZoomOut,
   onZoomIn,
   onResetZoom,
 }: {
   lineCount: number
   fontScale: number
-  download: DownloadCapability
+  downloadAction: ViewerDownloadAction
   onZoomOut: () => void
   onZoomIn: () => void
   onResetZoom: () => void
@@ -58,12 +58,8 @@ export function TextViewerToolbar({
             onZoomIn={onZoomIn}
             onResetZoom={onResetZoom}
           />
-          {download.kind !== "none" ? (
-            <>
-              <div className="mx-1 h-4 w-px bg-border" />
-              <DownloadButton download={download} />
-            </>
-          ) : null}
+          <div className="mx-1 h-4 w-px bg-border" />
+          <ViewerDownloadControl actions={[downloadAction]} />
         </>
       }
     />
@@ -105,14 +101,14 @@ export function TextViewerErrorState({
   bare,
   message,
   isRetryable,
-  download,
+  downloadAction,
   onRetry,
 }: {
   className?: string
   bare?: boolean
   message: string
   isRetryable: boolean
-  download: DownloadCapability
+  downloadAction: ViewerDownloadAction
   onRetry: () => void
 }) {
   return (
@@ -126,12 +122,13 @@ export function TextViewerErrorState({
               Retry
             </Button>
           ) : null}
-          {download.kind !== "none" ? (
-            <DownloadAction
-              download={download}
-              variant={message.includes("too large") ? "outline" : "ghost"}
-            />
-          ) : null}
+          <ViewerDownloadControl
+            actions={[downloadAction]}
+            variant={message.includes("too large") ? "outline" : "ghost"}
+            size="sm"
+            className=""
+            showLabel
+          />
         </div>
       </div>
     </TextViewerFrame>
@@ -199,40 +196,6 @@ function TextViewerZoomControls({
         <Maximize />
       </IconButton>
     </>
-  )
-}
-
-function DownloadButton({ download }: { download: DownloadCapability }) {
-  return (
-    <Button
-      variant="ghost"
-      size="icon-sm"
-      className="size-7"
-      aria-label="Download"
-      title="Download"
-      render={<ViewerDownloadAnchor download={download} />}
-    >
-      <Download />
-    </Button>
-  )
-}
-
-function DownloadAction({
-  download,
-  variant,
-}: {
-  download: DownloadCapability
-  variant: "ghost" | "outline"
-}) {
-  return (
-    <Button
-      variant={variant}
-      size="sm"
-      render={<ViewerDownloadAnchor download={download} />}
-    >
-      <Download className="mr-1.5 size-4" />
-      Download
-    </Button>
   )
 }
 

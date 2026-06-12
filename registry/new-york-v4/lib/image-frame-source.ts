@@ -1,31 +1,49 @@
 import type { Size } from "@/lib/image-geometry"
+import { ViewerFormatError } from "@/lib/viewer-errors"
 
-export class ImageLoadError extends Error {
+export class ImageLoadError extends ViewerFormatError {
   constructor(message: string, options?: ErrorOptions) {
-    super(message, options)
+    super({
+      format: "image",
+      kind: "load_failed",
+      message,
+      cause: options?.cause,
+    })
     this.name = "ImageLoadError"
   }
 }
 
-export class ImageDecodeError extends Error {
+export class ImageDecodeError extends ViewerFormatError {
   constructor(message: string, options?: ErrorOptions) {
-    super(message, options)
+    super({
+      format: "image",
+      kind: "decode_failed",
+      message,
+      cause: options?.cause,
+    })
     this.name = "ImageDecodeError"
   }
 }
 
-export class ImageSourceDisposedError extends Error {
+export class ImageSourceDisposedError extends ViewerFormatError {
   constructor(message = "Image source disposed", options?: ErrorOptions) {
-    super(message, options)
+    super({
+      format: "image",
+      kind: "disposed",
+      message,
+      cause: options?.cause,
+    })
     this.name = "ImageSourceDisposedError"
   }
 }
 
-export class ImageFrameIndexError extends Error {
+export class ImageFrameIndexError extends ViewerFormatError {
   constructor(frameIndex: number, frameCount: number) {
-    super(
-      `Invalid image frame index ${frameIndex}; expected 0-${Math.max(0, frameCount - 1)}`
-    )
+    super({
+      format: "image",
+      kind: "index_out_of_range",
+      message: `Invalid image frame index ${frameIndex}; expected 0-${Math.max(0, frameCount - 1)}`,
+    })
     this.name = "ImageFrameIndexError"
   }
 }
@@ -133,6 +151,7 @@ interface InitialBitmap {
 interface InflightFrameDecode {
   promise: Promise<ImageBitmap>
   reject(error: Error): void
+  pinCount: number
 }
 
 export function createFrameSource({
@@ -173,9 +192,20 @@ export function createFrameSource({
       let inflight = inflightDecodes.get(frameIndex)
       if (!inflight) {
         let rejectInflight: (error: Error) => void = () => {}
+        const currentInflight = {
+          reject: rejectInflight,
+          pinCount: 0,
+        } as InflightFrameDecode
         const promise = new Promise<ImageBitmap>((resolve, reject) => {
           rejectInflight = reject
-          decode(frameIndex)
+          currentInflight.reject = reject
+          let decodedPromise: Promise<ImageBitmap>
+          try {
+            decodedPromise = decode(frameIndex)
+          } catch (error) {
+            decodedPromise = Promise.reject(error)
+          }
+          decodedPromise
             .then((decodedBitmap) => {
               if (!inflightDecodes.has(frameIndex)) {
                 closeBitmap(decodedBitmap)
@@ -195,13 +225,18 @@ export function createFrameSource({
             })
             .catch((error) => {
               inflightDecodes.delete(frameIndex)
-              bitmapCache.unpin(frameIndex)
+              while (currentInflight.pinCount > 0) {
+                currentInflight.pinCount -= 1
+                bitmapCache.unpin(frameIndex)
+              }
               reject(toImageDecodeError(error))
             })
         })
-        inflight = { promise, reject: rejectInflight }
+        currentInflight.promise = promise
+        inflight = currentInflight
         inflightDecodes.set(frameIndex, inflight)
       }
+      inflight.pinCount += 1
 
       return inflight.promise
     },
@@ -210,6 +245,7 @@ export function createFrameSource({
       if (disposed) return
       bitmapCache.unpin(frameIndex)
       const inflight = inflightDecodes.get(frameIndex)
+      if (inflight) inflight.pinCount = Math.max(0, inflight.pinCount - 1)
       if (
         inflight &&
         !bitmapCache.isPinned(frameIndex) &&
@@ -220,14 +256,17 @@ export function createFrameSource({
         )
         inflight.reject(reason)
         inflightDecodes.delete(frameIndex)
-        cancelDecode?.(frameIndex, reason)
+        safeCancelDecode(cancelDecode, frameIndex, reason)
       }
     },
     dispose(reason = new ImageSourceDisposedError()) {
       if (disposed) return
       disposed = true
       bitmapCache.dispose()
-      for (const inflight of inflightDecodes.values()) inflight.reject(reason)
+      for (const [frameIndex, inflight] of inflightDecodes) {
+        inflight.reject(reason)
+        safeCancelDecode(cancelDecode, frameIndex, reason)
+      }
       inflightDecodes.clear()
       onDispose?.(reason)
     },
@@ -306,9 +345,22 @@ export function closeBitmap(bitmap: ImageBitmap | undefined) {
 }
 
 function toImageDecodeError(error: unknown): ImageDecodeError {
+  if (error instanceof ImageSourceDisposedError) return error
   return error instanceof ImageDecodeError
     ? error
     : new ImageDecodeError("Image decode failed", { cause: error })
+}
+
+function safeCancelDecode(
+  cancelDecode: CreateFrameSourceOptions["cancelDecode"] | undefined,
+  frameIndex: number,
+  reason: Error
+) {
+  try {
+    cancelDecode?.(frameIndex, reason)
+  } catch {
+    // Local lifecycle cleanup has already happened; cancellation transport is best-effort.
+  }
 }
 
 function isValidFrameIndex(frameIndex: number, frameCount: number) {

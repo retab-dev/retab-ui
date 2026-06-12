@@ -133,7 +133,6 @@ vertical target.
 | `defaultScale`           | `number`                                 | Initial uncontrolled scale. Omit for fit-to-width.                                                                 |
 | `onScaleChange`          | `(scale: number \| null) => void`        | Fired when toolbar zoom controls request a scale change; `null` means fit width.                                   |
 | `toolbar`                | `boolean`                                | Show the zoom/rotate/download toolbar. Defaults to `true`.                                                         |
-| `downloadFileName`       | `string`                                 | Optional filename override for the download button.                                                                |
 | `renderPageOverlay`      | `(props: PageOverlayProps) => ReactNode` | Per-page overlay; receives `{ pageNumber, width, height, scale, rotation }`.                                       |
 | `onVisiblePageChange`    | `(page: number) => void`                 | Fired with the 1-based page nearest the top of the viewport.                                                       |
 | `onScrollProgressChange` | `(progress: number) => void`             | Fired with scroll progress in `[0, 1]`.                                                                            |

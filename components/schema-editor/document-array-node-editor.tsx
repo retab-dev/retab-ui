@@ -38,7 +38,7 @@ export function DocumentArrayNodeEditor({
 }: DocumentArrayNodeEditorProps) {
   const itemView = nodeView.items
   if (!itemView) {
-    throw new Error(`Missing document node id for array items at "${path}"`)
+    return null
   }
 
   return (

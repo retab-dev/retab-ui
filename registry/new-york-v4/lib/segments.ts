@@ -9,10 +9,26 @@
 
 // Tableau 20 — the palette Retab's dashboard uses, so colors match.
 export const SEGMENT_PALETTE = [
-  "#4E79A7", "#A0CBE8", "#F28E2B", "#FFBE7D", "#59A14F",
-  "#8CD17D", "#B6992D", "#F1CE63", "#499894", "#86BCB6",
-  "#E15759", "#FF9D9A", "#79706E", "#BAB0AC", "#D37295",
-  "#FABFD2", "#B07AA1", "#D4A6C8", "#9D7660", "#D7B5A6",
+  "#4E79A7",
+  "#A0CBE8",
+  "#F28E2B",
+  "#FFBE7D",
+  "#59A14F",
+  "#8CD17D",
+  "#B6992D",
+  "#F1CE63",
+  "#499894",
+  "#86BCB6",
+  "#E15759",
+  "#FF9D9A",
+  "#79706E",
+  "#BAB0AC",
+  "#D37295",
+  "#FABFD2",
+  "#B07AA1",
+  "#D4A6C8",
+  "#9D7660",
+  "#D7B5A6",
 ] as const
 
 export interface Segment {
@@ -36,9 +52,16 @@ export interface SegmentChunk {
   pages: number[]
 }
 
+export function segmentDisplayLabel(label: string): string {
+  const trimmed = label.trim()
+  return trimmed || "unnamed"
+}
+
 /** Assign one palette color per distinct label, ordered by sorted label. */
 export function buildColorMap(labels: string[]): Map<string, string> {
-  const distinct = Array.from(new Set(labels)).sort((a, b) => a.localeCompare(b))
+  const distinct = Array.from(new Set(labels)).sort((a, b) =>
+    a.localeCompare(b)
+  )
   const map = new Map<string, string>()
   distinct.forEach((label, i) => {
     map.set(label, SEGMENT_PALETTE[i % SEGMENT_PALETTE.length])
@@ -124,7 +147,9 @@ export function formatPageRanges(pages: number[]): string {
 
 export type ConfidenceLevel = "high" | "medium" | "low"
 
-export function confidenceLevel(value: number | null | undefined): ConfidenceLevel | null {
+export function confidenceLevel(
+  value: number | null | undefined
+): ConfidenceLevel | null {
   if (value == null) return null
   if (value >= 0.9) return "high"
   if (value >= 0.7) return "medium"

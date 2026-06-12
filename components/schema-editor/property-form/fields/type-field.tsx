@@ -9,6 +9,7 @@ import {
   updateType,
 } from "@/components/schema-editor/draft/draft-node-edits"
 import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
+import { getEffectiveNode } from "@/components/schema-editor/lib/json-schema-utils"
 import type { PropertyFormSchemaContext } from "@/components/schema-editor/property-form/types"
 import {
   getTemplateIcon,
@@ -76,6 +77,7 @@ export function TypeField({
   onChange: (schemaNode: ExtendedJSONSchema7) => void
 }) {
   const effectiveType = getEffectiveType(schemaNode)
+  const effectiveSchemaNode = getEffectiveNode(schemaNode)
   const definitionNames = Object.keys(schemaContext.schemaDefinitions)
   const isDisabled = disabled || mode === "readOnly"
 
@@ -88,15 +90,31 @@ export function TypeField({
     onChange(nextSchemaNode)
   }
 
+  const withReplacementMetadata = (
+    replacement: ExtendedJSONSchema7
+  ): ExtendedJSONSchema7 => {
+    if (schemaNode.anyOf && Array.isArray(schemaNode.anyOf)) return replacement
+    return {
+      ...replacement,
+      ...(schemaNode.title ? { title: schemaNode.title } : {}),
+      ...(schemaNode.description
+        ? { description: schemaNode.description }
+        : {}),
+    }
+  }
+
   const setDefinition = (definitionName: string) => {
     void schemaContext.onCommand?.({
       type: "selectDefinition",
       definitionName,
     })
     onChange(
-      updateEffectiveNode(schemaNode, {
-        $ref: `#/$defs/${definitionName}`,
-      })
+      updateEffectiveNode(
+        schemaNode,
+        withReplacementMetadata({
+          $ref: `#/$defs/${definitionName}`,
+        })
+      )
     )
   }
 
@@ -106,9 +124,12 @@ export function TypeField({
       templateName,
     })
     onChange(
-      updateEffectiveNode(schemaNode, {
-        $ref: `#/$defs/${templateName}`,
-      })
+      updateEffectiveNode(
+        schemaNode,
+        withReplacementMetadata({
+          $ref: `#/$defs/${templateName}`,
+        })
+      )
     )
   }
 
@@ -122,10 +143,12 @@ export function TypeField({
           className={`mt-2 w-full justify-between ${isDisabled ? "disabled:opacity-100" : ""}`}
         >
           <div className="flex items-center gap-2">
-            {effectiveType.type === "$ref" && schemaNode.$ref
-              ? getTemplateIcon(schemaNode.$ref.replace("#/$defs/", ""))
+            {effectiveType.type === "$ref" && effectiveSchemaNode.$ref
+              ? getTemplateIcon(
+                  effectiveSchemaNode.$ref.replace("#/$defs/", "")
+                )
               : getTypeIcon(effectiveType.type)}
-            <span>{typeLabel(effectiveType.type, schemaNode)}</span>
+            <span>{typeLabel(effectiveType.type, effectiveSchemaNode)}</span>
           </div>
           <ChevronDown className="ml-2 h-4 w-4" />
         </Button>

@@ -32,7 +32,12 @@ call.
 import { DocxViewer } from "@/components/ui/docx-viewer"
 
 export function Example() {
-  return <DocxViewer src="/document.docx" className="h-[600px]" />
+  return (
+    <DocxViewer
+      source={{ kind: "url", url: "/document.docx", fileName: "document.docx" }}
+      className="h-[600px]"
+    />
+  )
 }
 ```
 
@@ -47,16 +52,15 @@ document.
 
 ## Props
 
-| Prop | Type | Description |
-| --- | --- | --- |
-| `src` | `string` | URL of the `.docx` (same-origin or CORS-enabled). |
-| `scale` | `number` | Optional fixed zoom; omit to fit page width to the container. |
-| `toolbar` | `boolean` | Show the zoom/download toolbar. Defaults to `true`. |
-| `downloadFileName` | `string` | Filename for the download button. |
-| `highlight` | `DocxTarget \| null` | A resolved target to highlight — a text span (located by content match) or a table cell (by index) — tinted via the CSS Custom Highlight API. Derive it from a source with the `docx-source` adapter's `sourceToDocxHighlight`. |
-| `onVisiblePageChange` | `(page: number) => void` | Fired with the 1-based page nearest the top of the viewport. |
-| `onScrollProgressChange` | `(progress: number) => void` | Fired with scroll progress in `[0, 1]`. |
-| `header` | `ReactNode` | Strip rendered directly below the toolbar. |
-| `aside` | `ReactNode` | Left rail rendered alongside the scrolling pages. |
-| `bare` | `boolean` | Drop the outer border/background so the viewer fills its container. |
-| `className` | `string` | Optional class on the viewer shell. |
+| Prop                     | Type                                  | Description                                                                                                                                                                                                                     |
+| ------------------------ | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `source`                 | `UrlViewerSource \| BlobViewerSource` | Canonical DOCX source. URL sources load through fetch; Blob sources load directly from the Blob.                                                                                                                                |
+| `scale`                  | `number`                              | Optional fixed zoom; omit to fit page width to the container.                                                                                                                                                                   |
+| `toolbar`                | `boolean`                             | Show the zoom/download toolbar. Defaults to `true`.                                                                                                                                                                             |
+| `highlight`              | `DocxTarget \| null`                  | A resolved target to highlight — a text span (located by content match) or a table cell (by index) — tinted via the CSS Custom Highlight API. Derive it from a source with the `docx-source` adapter's `sourceToDocxHighlight`. |
+| `onVisiblePageChange`    | `(page: number) => void`              | Fired with the 1-based page nearest the top of the viewport.                                                                                                                                                                    |
+| `onScrollProgressChange` | `(progress: number) => void`          | Fired with scroll progress in `[0, 1]`.                                                                                                                                                                                         |
+| `header`                 | `ReactNode`                           | Strip rendered directly below the toolbar.                                                                                                                                                                                      |
+| `aside`                  | `ReactNode`                           | Left rail rendered alongside the scrolling pages.                                                                                                                                                                               |
+| `bare`                   | `boolean`                             | Drop the outer border/background so the viewer fills its container.                                                                                                                                                             |
+| `className`              | `string`                              | Optional class on the viewer shell.                                                                                                                                                                                             |

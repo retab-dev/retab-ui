@@ -1,9 +1,13 @@
 import { mapPreserve } from "@/components/schema-editor/document/array"
 import { createId } from "@/components/schema-editor/document/id"
 import { updateNode } from "@/components/schema-editor/document/node-update"
-import { createNode } from "@/components/schema-editor/document/type-operations"
+import {
+  createNode,
+  updateEffectiveNodeShape,
+} from "@/components/schema-editor/document/type-operations"
 import type {
   DefinitionEntry,
+  DocumentNode,
   SchemaDocument,
 } from "@/components/schema-editor/document/types"
 
@@ -55,12 +59,29 @@ export function setRef(
   id: string,
   defId: string
 ): SchemaDocument {
-  return updateNode(doc, id, (node) => ({
-    id: node.id,
-    ref: defId,
-    description: node.description,
-    rest: node.rest,
-  }))
+  return updateNode(doc, id, (node) => {
+    if (isTypeArrayNullable(node)) {
+      return {
+        ...node,
+        type: undefined,
+        properties: undefined,
+        items: undefined,
+        enum: undefined,
+        ref: undefined,
+        order: undefined,
+        anyOf: [createRefNode(defId), createNode("null")],
+      }
+    }
+
+    return updateEffectiveNodeShape(node, (effective) => ({
+      id: effective.id,
+      ref: defId,
+      title: effective.title,
+      description: effective.description,
+      rest: effective.rest,
+      order: effective.order,
+    }))
+  })
 }
 
 export function setRefByName(
@@ -78,4 +99,16 @@ function uniqueDefinitionName(doc: SchemaDocument, base: string): string {
   let index = 2
   while (taken.has(`${base}${index}`)) index += 1
   return `${base}${index}`
+}
+
+function isTypeArrayNullable(node: DocumentNode): boolean {
+  return Array.isArray(node.type) && node.type.includes("null")
+}
+
+function createRefNode(defId: string): DocumentNode {
+  return {
+    id: createId(),
+    ref: defId,
+    rest: {},
+  }
 }

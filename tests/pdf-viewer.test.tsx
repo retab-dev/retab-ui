@@ -14,8 +14,10 @@ import {
   clearViewerResourceRegistryForTests,
   createViewerResource,
 } from "@/registry/new-york-v4/lib/viewer-resource"
+import { PdfThumbnailSidebar } from "@/registry/new-york-v4/ui/pdf-thumbnail-sidebar"
 import {
   getDocumentResource,
+  PdfHighlight,
   PdfViewer,
   type PdfViewerHandle,
 } from "@/registry/new-york-v4/ui/pdf-viewer"
@@ -83,6 +85,7 @@ function makeDoc(pageSizes: Array<[number, number]>) {
   const pages = pageSizes.map(([width, height]) => makePage(width, height))
   return {
     numPages: pages.length,
+    pages,
     getPage: vi.fn((pageNumber: number) =>
       Promise.resolve(pages[pageNumber - 1])
     ),
@@ -256,6 +259,27 @@ describe("PdfViewer", () => {
     expect(await screen.findByText("300%")).toBeTruthy()
   })
 
+  it("reports a controlled fit-width request as null", async () => {
+    pdfjsMock.docs.set("/controlled-fit.pdf", makeDoc([[100, 200]]))
+    const onScaleChange = vi.fn()
+
+    await act(async () => {
+      render(
+        <PdfViewer
+          source={pdfUrlSource("/controlled-fit.pdf")}
+          scale={2}
+          onScaleChange={onScaleChange}
+        />
+      )
+    })
+    await findByTextContent("Page 1 of 1")
+
+    fireEvent.click(screen.getByLabelText("Fit width"))
+
+    expect(onScaleChange).toHaveBeenCalledWith(null)
+    expect(screen.getByText("200%")).toBeTruthy()
+  })
+
   it("clamps fit-width scale in the rendered toolbar", async () => {
     pdfjsMock.docs.set("/fit-clamp.pdf", makeDoc([[100, 200]]))
 
@@ -264,6 +288,26 @@ describe("PdfViewer", () => {
     })
 
     expect(await screen.findByText("500%")).toBeTruthy()
+  })
+
+  it("returns uncontrolled manual zoom back to fit width", async () => {
+    pdfjsMock.docs.set("/uncontrolled-fit.pdf", makeDoc([[400, 800]]))
+
+    await act(async () => {
+      render(
+        <PdfViewer
+          source={pdfUrlSource("/uncontrolled-fit.pdf")}
+          defaultScale={1}
+        />
+      )
+    })
+    await screen.findByText("100%")
+
+    fireEvent.click(screen.getByLabelText("Zoom in"))
+    expect(await screen.findByText("120%")).toBeTruthy()
+
+    fireEvent.click(screen.getByLabelText("Fit width"))
+    expect(await screen.findByText("200%")).toBeTruthy()
   })
 
   it("reports the initial visible page after mounting", async () => {
@@ -311,12 +355,15 @@ describe("PdfViewer", () => {
     expect(document.querySelectorAll("canvas").length).toBeLessThan(100)
   })
 
-  it("does not keep rejected document loads cached for the same src", async () => {
+  it("does not keep rejected document loads cached for the same source", async () => {
     pdfjsMock.docs.set("/retry.pdf", new Error("load failed"))
 
     await expect(
       getDocumentResource(pdfUrlResource("/retry.pdf"))
-    ).rejects.toThrow("load failed")
+    ).rejects.toMatchObject({
+      format: "pdf",
+      kind: "parse_failed",
+    })
 
     const doc = makeDoc([[100, 200]])
     pdfjsMock.docs.set("/retry.pdf", doc)
@@ -325,6 +372,52 @@ describe("PdfViewer", () => {
       getDocumentResource(pdfUrlResource("/retry.pdf"))
     ).resolves.toBe(doc)
     expect(pdfjsMock.getDocument).toHaveBeenCalledTimes(2)
+  })
+
+  it("does not reload a URL document when rerendered with an equivalent source object", async () => {
+    pdfjsMock.docs.set("/stable-source.pdf", makeDoc([[100, 200]]))
+
+    let view!: ReturnType<typeof render>
+    await act(async () => {
+      view = render(<PdfViewer source={pdfUrlSource("/stable-source.pdf")} />)
+    })
+    await findByTextContent("Page 1 of 1")
+
+    view.rerender(<PdfViewer source={pdfUrlSource("/stable-source.pdf")} />)
+
+    expect(await findByTextContent("Page 1 of 1")).toBeTruthy()
+    expect(pdfjsMock.getDocument).toHaveBeenCalledTimes(1)
+  })
+
+  it("releases the previous document when switching sources", async () => {
+    const firstDoc = makeDoc([[100, 200]])
+    const secondDoc = makeDoc([[100, 200]])
+    pdfjsMock.docs.set("/switch-first.pdf", firstDoc)
+    pdfjsMock.docs.set("/switch-second.pdf", secondDoc)
+
+    let view!: ReturnType<typeof render>
+    await act(async () => {
+      view = render(<PdfViewer source={pdfUrlSource("/switch-first.pdf")} />)
+    })
+    await findByTextContent("Page 1 of 1")
+
+    await act(async () => {
+      view.rerender(<PdfViewer source={pdfUrlSource("/switch-second.pdf")} />)
+    })
+    await findByTextContent("Page 1 of 1")
+
+    for (let index = 0; index < 6; index += 1) {
+      const otherDoc = makeDoc([[100, 200]])
+      pdfjsMock.docs.set(`/switch-other-${index}.pdf`, otherDoc)
+      await getDocumentResource(pdfUrlResource(`/switch-other-${index}.pdf`))
+    }
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+
+    expect(firstDoc.destroy).toHaveBeenCalledTimes(1)
+    expect(secondDoc.destroy).not.toHaveBeenCalled()
   })
 
   it("scrolls a normalized page target through the imperative handle", async () => {
@@ -677,5 +770,350 @@ describe("PdfViewer", () => {
 
     await waitFor(() => expect(onVisiblePageChange).toHaveBeenLastCalledWith(2))
     expect(await findByTextContent("Page 2 of 3")).toBeTruthy()
+  })
+
+  it("renders document slots and toggles both side rails together", async () => {
+    pdfjsMock.docs.set("/slots.pdf", makeDoc([[100, 200]]))
+
+    await act(async () => {
+      render(
+        <PdfViewer
+          source={pdfUrlSource("/slots.pdf")}
+          defaultRailsOpen={false}
+          slots={{
+            top: <div>Top slot</div>,
+            bottom: <div>Bottom slot</div>,
+            left: <aside>Left rail</aside>,
+            right: <aside>Right rail</aside>,
+            overlay: <button type="button">Overlay action</button>,
+          }}
+        />
+      )
+    })
+    await findByTextContent("Page 1 of 1")
+
+    expect(screen.getByText("Top slot")).toBeTruthy()
+    expect(screen.getByText("Bottom slot")).toBeTruthy()
+    expect(screen.getByText("Left rail")).toBeTruthy()
+    expect(screen.getByText("Right rail")).toBeTruthy()
+    expect(screen.getByRole("button", { name: "Overlay action" })).toBeTruthy()
+
+    const toggle = screen.getByLabelText("Show sidebar")
+    expect(toggle.getAttribute("aria-pressed")).toBe("false")
+    expect(
+      Array.from(
+        document.querySelectorAll("[data-slot='pdf-viewer-rail']")
+      ).map((rail) => rail.getAttribute("data-state"))
+    ).toEqual(["closed", "closed"])
+
+    fireEvent.click(toggle)
+
+    expect(
+      screen.getByLabelText("Hide sidebar").getAttribute("aria-pressed")
+    ).toBe("true")
+    expect(
+      Array.from(
+        document.querySelectorAll("[data-slot='pdf-viewer-rail']")
+      ).map((rail) => rail.getAttribute("data-state"))
+    ).toEqual(["open", "open"])
+  })
+
+  it("does not render a rail toggle when railToggle is disabled", async () => {
+    pdfjsMock.docs.set("/rail-toggle-disabled.pdf", makeDoc([[100, 200]]))
+
+    await act(async () => {
+      render(
+        <PdfViewer
+          source={pdfUrlSource("/rail-toggle-disabled.pdf")}
+          railToggle={false}
+          slots={{ left: <aside>Fixed rail</aside> }}
+        />
+      )
+    })
+    await findByTextContent("Page 1 of 1")
+
+    expect(screen.queryByLabelText("Hide sidebar")).toBeNull()
+    expect(screen.queryByLabelText("Show sidebar")).toBeNull()
+    expect(
+      document
+        .querySelector("[data-slot='pdf-viewer-rail']")
+        ?.getAttribute("data-state")
+    ).toBe("open")
+  })
+
+  it("renders page overlays with current geometry and rotation", async () => {
+    pdfjsMock.docs.set("/overlay.pdf", makeDoc([[100, 200]]))
+
+    await act(async () => {
+      render(
+        <PdfViewer
+          source={pdfUrlSource("/overlay.pdf")}
+          defaultScale={1}
+          renderPageOverlay={({
+            pageNumber,
+            width,
+            height,
+            scale,
+            rotation,
+          }) => (
+            <>
+              <div data-testid="overlay-props">
+                {pageNumber}:{width}x{height}:{scale}:{rotation}
+              </div>
+              <PdfHighlight
+                data-testid="highlight"
+                area={{ left: 10, top: 20, width: 30, height: 40 }}
+              />
+            </>
+          )}
+        />
+      )
+    })
+
+    await waitFor(() =>
+      expect(screen.getByTestId("overlay-props").textContent).toBe(
+        "1:100x200:1:0"
+      )
+    )
+    expect(screen.getByTestId("highlight").getAttribute("style")).toContain(
+      "left: 10%;"
+    )
+
+    fireEvent.click(screen.getByLabelText("Rotate"))
+
+    await waitFor(() =>
+      expect(screen.getByTestId("overlay-props").textContent).toBe(
+        "1:200x100:1:90"
+      )
+    )
+  })
+
+  it("combines intrinsic page rotation with toolbar rotation while rendering", async () => {
+    const page = makePage(100, 200, 90)
+    const doc = {
+      numPages: 1,
+      getPage: vi.fn(() => Promise.resolve(page)),
+      destroy: vi.fn(() => Promise.resolve()),
+    }
+    pdfjsMock.docs.set("/rotated.pdf", doc)
+
+    await act(async () => {
+      render(
+        <PdfViewer source={pdfUrlSource("/rotated.pdf")} defaultScale={1} />
+      )
+    })
+
+    await waitFor(() => expect(page.render).toHaveBeenCalledTimes(1))
+    expect(page.render.mock.calls.at(-1)?.[0].viewport).toMatchObject({
+      width: 200,
+      height: 100,
+    })
+
+    fireEvent.click(screen.getByLabelText("Rotate"))
+
+    await waitFor(() => expect(page.render).toHaveBeenCalledTimes(2))
+    expect(page.render.mock.calls.at(-1)?.[0].viewport).toMatchObject({
+      width: 100,
+      height: 200,
+    })
+  })
+
+  it("cancels stale page render tasks when scale changes and when unmounted", async () => {
+    pdfjsMock.docs.set("/cancel-render.pdf", makeDoc([[100, 200]]))
+
+    let view!: ReturnType<typeof render>
+    await act(async () => {
+      view = render(
+        <PdfViewer
+          source={pdfUrlSource("/cancel-render.pdf")}
+          defaultScale={1}
+        />
+      )
+    })
+
+    await waitFor(() => expect(pdfjsMock.renderTasks).toHaveLength(1))
+    const firstTask = pdfjsMock.renderTasks[0]
+
+    fireEvent.click(screen.getByLabelText("Zoom in"))
+
+    await waitFor(() => expect(pdfjsMock.renderTasks).toHaveLength(2))
+    expect(firstTask.cancel).toHaveBeenCalledTimes(1)
+
+    const secondTask = pdfjsMock.renderTasks[1]
+    view.unmount()
+
+    expect(secondTask.cancel).toHaveBeenCalledTimes(1)
+  })
+
+  it("wires download metadata through the toolbar anchor", async () => {
+    pdfjsMock.docs.set("/signed-pdf", makeDoc([[100, 200]]))
+
+    await act(async () => {
+      render(
+        <PdfViewer
+          source={{
+            kind: "url",
+            url: "/signed-pdf",
+            fileName: "report.pdf",
+            downloadUrl: "/download/report.pdf",
+          }}
+        />
+      )
+    })
+    await findByTextContent("Page 1 of 1")
+
+    const download = screen.getByLabelText("Download")
+    expect(download.tagName).toBe("A")
+    expect(download.getAttribute("href")).toBe("/download/report.pdf")
+    expect(download.getAttribute("download")).toBe("report.pdf")
+  })
+
+  it("shares a document load between the viewer and matching thumbnail sidebar source", async () => {
+    pdfjsMock.docs.set(
+      "/shared-sidebar.pdf",
+      makeDoc([
+        [100, 200],
+        [100, 200],
+      ])
+    )
+
+    await act(async () => {
+      render(
+        <PdfViewer
+          source={pdfUrlSource("/shared-sidebar.pdf", "named-shared.pdf")}
+          slots={{ left: <PdfThumbnailSidebar src="/shared-sidebar.pdf" /> }}
+        />
+      )
+    })
+
+    await findByTextContent("Page 1 of 2")
+    await screen.findByText("2")
+    expect(pdfjsMock.getDocument).toHaveBeenCalledTimes(1)
+  })
+
+  it("keeps a mounted thumbnail sidebar document retained during cache pruning", async () => {
+    const sidebarDoc = makeDoc([
+      [100, 200],
+      [100, 200],
+    ])
+    pdfjsMock.docs.set("/sidebar-retained.pdf", sidebarDoc)
+
+    await act(async () => {
+      render(<PdfThumbnailSidebar src="/sidebar-retained.pdf" />)
+    })
+    await screen.findByText("1")
+
+    const otherDocs: ReturnType<typeof makeDoc>[] = []
+    for (let index = 0; index < 7; index += 1) {
+      const otherDoc = makeDoc([[100, 200]])
+      otherDocs.push(otherDoc)
+      pdfjsMock.docs.set(`/sidebar-other-${index}.pdf`, otherDoc)
+      await getDocumentResource(pdfUrlResource(`/sidebar-other-${index}.pdf`))
+    }
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+
+    expect(otherDocs.some((doc) => doc.destroy.mock.calls.length > 0)).toBe(
+      true
+    )
+    expect(sidebarDoc.destroy).not.toHaveBeenCalled()
+  })
+
+  it("marks the active thumbnail and reports selected page clicks", async () => {
+    const onSelectPage = vi.fn()
+    pdfjsMock.docs.set(
+      "/thumbnail-select.pdf",
+      makeDoc([
+        [100, 200],
+        [100, 200],
+        [100, 200],
+      ])
+    )
+
+    let view!: ReturnType<typeof render>
+    await act(async () => {
+      view = render(
+        <PdfThumbnailSidebar
+          src="/thumbnail-select.pdf"
+          currentPage={2}
+          onSelectPage={onSelectPage}
+        />
+      )
+    })
+    await screen.findByText("3")
+
+    expect(screen.getByRole("button", { current: "page" }).textContent).toBe(
+      "2"
+    )
+
+    fireEvent.click(screen.getByText("3").closest("button")!)
+    expect(onSelectPage).toHaveBeenCalledWith(3)
+
+    view.rerender(
+      <PdfThumbnailSidebar
+        src="/thumbnail-select.pdf"
+        currentPage={3}
+        onSelectPage={onSelectPage}
+      />
+    )
+
+    expect(screen.getByRole("button", { current: "page" }).textContent).toBe(
+      "3"
+    )
+  })
+
+  it("cancels thumbnail render tasks when thumbnails unmount", async () => {
+    pdfjsMock.docs.set("/thumbnail-cancel.pdf", makeDoc([[100, 200]]))
+
+    let view!: ReturnType<typeof render>
+    await act(async () => {
+      view = render(<PdfThumbnailSidebar src="/thumbnail-cancel.pdf" />)
+    })
+
+    await waitFor(() => expect(pdfjsMock.renderTasks).toHaveLength(1))
+    const task = pdfjsMock.renderTasks[0]
+
+    view.unmount()
+
+    expect(task.cancel).toHaveBeenCalledTimes(1)
+  })
+
+  it("renders thumbnails immediately when IntersectionObserver is unavailable", async () => {
+    vi.stubGlobal("IntersectionObserver", undefined)
+    const doc = makeDoc([[100, 200]])
+    pdfjsMock.docs.set("/thumbnail-no-observer.pdf", doc)
+
+    await act(async () => {
+      render(
+        <PdfThumbnailSidebar src="/thumbnail-no-observer.pdf" width={50} />
+      )
+    })
+
+    await waitFor(() => expect(doc.getPage).toHaveBeenCalledWith(1))
+    const canvas = document.querySelector<HTMLCanvasElement>("canvas")
+    expect(canvas).toBeTruthy()
+    expect(canvas?.style.width).toBe("50px")
+    expect(canvas?.style.height).toBe("100px")
+  })
+
+  it("sizes thumbnails from intrinsically rotated page viewports", async () => {
+    const page = makePage(100, 200, 90)
+    const doc = {
+      numPages: 1,
+      getPage: vi.fn(() => Promise.resolve(page)),
+      destroy: vi.fn(() => Promise.resolve()),
+    }
+    pdfjsMock.docs.set("/thumbnail-rotated.pdf", doc)
+
+    await act(async () => {
+      render(<PdfThumbnailSidebar src="/thumbnail-rotated.pdf" width={50} />)
+    })
+
+    await waitFor(() => expect(page.render).toHaveBeenCalledTimes(1))
+    const canvas = document.querySelector<HTMLCanvasElement>("canvas")
+    expect(canvas?.style.width).toBe("50px")
+    expect(canvas?.style.height).toBe("25px")
   })
 })

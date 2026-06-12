@@ -13,6 +13,7 @@ import {
   type FrameOverlayProps,
   type QuarterTurn,
 } from "@/lib/image-geometry"
+import { isViewerFormatError } from "@/lib/viewer-errors"
 import { Skeleton } from "@/components/ui/skeleton"
 
 export interface ImageFrameProps {
@@ -117,26 +118,29 @@ function ImageFrameCanvas({
         .then((bitmap) => {
           if (cancelled) return
           ctx.save()
-          ctx.scale(dpr, dpr)
-          ctx.translate(frameRect.width / 2, frameRect.height / 2)
-          ctx.rotate((rotation * Math.PI) / 180)
-          const drawWidth = descriptor.intrinsicSize.width * scale
-          const drawHeight = descriptor.intrinsicSize.height * scale
-          ctx.imageSmoothingQuality = "high"
-          ctx.drawImage(
-            bitmap,
-            -drawWidth / 2,
-            -drawHeight / 2,
-            drawWidth,
-            drawHeight
-          )
-          ctx.restore()
+          try {
+            ctx.scale(dpr, dpr)
+            ctx.translate(frameRect.width / 2, frameRect.height / 2)
+            ctx.rotate((rotation * Math.PI) / 180)
+            const drawWidth = descriptor.intrinsicSize.width * scale
+            const drawHeight = descriptor.intrinsicSize.height * scale
+            ctx.imageSmoothingQuality = "high"
+            ctx.drawImage(
+              bitmap,
+              -drawWidth / 2,
+              -drawHeight / 2,
+              drawWidth,
+              drawHeight
+            )
+          } finally {
+            ctx.restore()
+          }
         })
         .catch((error) => {
           if (error instanceof ImageSourceDisposedError) return
           if (!cancelled) {
             setDrawError(
-              error instanceof Error
+              isViewerFormatError(error)
                 ? error
                 : new ImageDecodeError("Image decode failed", { cause: error })
             )

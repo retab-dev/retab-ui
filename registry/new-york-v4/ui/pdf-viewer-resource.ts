@@ -1,6 +1,7 @@
 import type * as Pdfjs from "pdfjs-dist"
 import type { PDFDocumentProxy, PDFPageProxy } from "pdfjs-dist"
 
+import { ResourceError, ViewerFormatError } from "@/lib/viewer-errors"
 import { type ViewerResource } from "@/lib/viewer-resource"
 
 const PDF_CACHE_MAX = 6
@@ -68,7 +69,7 @@ function pruneDocumentCache() {
 export function getDocumentResource(
   resource: ViewerResource
 ): Promise<PDFDocumentProxy> {
-  const resourceKey = resource.cacheKey
+  const resourceKey = resource.keys.load
   const cachedDocumentEntry = documentCache.get(resourceKey)
   if (cachedDocumentEntry) {
     cachedDocumentEntry.lastUsedAt = Date.now()
@@ -108,7 +109,7 @@ export function retainDocumentResource(
   resource: ViewerResource,
   document: PDFDocumentProxy
 ) {
-  const documentEntry = documentCache.get(resource.cacheKey)
+  const documentEntry = documentCache.get(resource.keys.load)
   if (!documentEntry || documentEntry.document !== document) return
   documentEntry.consumers += 1
   documentEntry.lastUsedAt = Date.now()
@@ -118,7 +119,7 @@ export function releaseDocumentResource(
   resource: ViewerResource,
   document: PDFDocumentProxy
 ) {
-  const documentEntry = documentCache.get(resource.cacheKey)
+  const documentEntry = documentCache.get(resource.keys.load)
   if (!documentEntry || documentEntry.document !== document) return
   documentEntry.consumers = Math.max(0, documentEntry.consumers - 1)
   documentEntry.lastUsedAt = Date.now()
@@ -151,6 +152,11 @@ export function getPageResource(
   if (!pagePromise) {
     pagePromise = document.getPage(pageNumber)
     pages.set(pageNumber, pagePromise)
+    pagePromise.catch(() => {
+      if (pages?.get(pageNumber) === pagePromise) {
+        pages.delete(pageNumber)
+      }
+    })
   }
   return pagePromise
 }
@@ -159,10 +165,21 @@ async function getPdfDocument(
   resource: ViewerResource,
   pdfjs: typeof Pdfjs
 ): Promise<PDFDocumentProxy> {
-  if (resource.source.kind === "url" && resource.descriptor.loadUrl) {
-    return pdfjs.getDocument(resource.descriptor.loadUrl).promise
-  }
+  try {
+    const directLoad = resource.getDirectLoad()
+    if (directLoad.kind === "url") {
+      return await pdfjs.getDocument(directLoad.url).promise
+    }
 
-  const buffer = await resource.readArrayBuffer()
-  return pdfjs.getDocument({ data: new Uint8Array(buffer) }).promise
+    const buffer = await resource.readArrayBuffer()
+    return await pdfjs.getDocument({ data: new Uint8Array(buffer) }).promise
+  } catch (error) {
+    if (error instanceof ResourceError) throw error
+    throw new ViewerFormatError({
+      format: "pdf",
+      kind: "parse_failed",
+      message: "Failed to parse PDF.",
+      cause: error,
+    })
+  }
 }

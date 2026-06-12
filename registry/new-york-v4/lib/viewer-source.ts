@@ -10,10 +10,7 @@ export type FileCategory =
   | "text"
   | "unsupported"
 
-export type ViewerSource =
-  | UrlViewerSource
-  | TextSource
-  | BlobViewerSource
+export type ViewerSource = UrlViewerSource | TextSource | BlobViewerSource
 
 export interface UrlViewerSource {
   kind: "url"
@@ -46,9 +43,7 @@ export interface ViewerDescriptor {
   category: FileCategory
   identityKey: string
   displayName: string
-  downloadFileName: string
-  downloadHref?: string
-  loadUrl?: string
+  fileName: string
   mimeType?: string
 }
 
@@ -153,22 +148,16 @@ export function detectCategory(
 
 export function resolveViewerDescriptor({
   source,
-  fileName,
-  mimeType,
   category,
 }: {
   source: ViewerSource
-  fileName?: string
-  mimeType?: string
   category?: FileCategory
 }): ViewerDescriptor {
   const resolvedMimeType =
-    mimeType ??
     source.mimeType ??
     (source.kind === "blob" && source.blob.type ? source.blob.type : undefined)
-  const displayName = fileName ?? source.fileName ?? defaultDisplayName(source)
-  const downloadFileName =
-    fileName ?? source.fileName ?? defaultDownloadFileName(source)
+  const displayName = source.fileName ?? defaultDisplayName(source)
+  const fileName = source.fileName ?? defaultFileName(source)
   const resolvedCategory =
     category ?? detectCategory(displayName, resolvedMimeType)
 
@@ -177,9 +166,7 @@ export function resolveViewerDescriptor({
     category: resolvedCategory,
     identityKey: source.identityKey ?? defaultIdentityKey(source),
     displayName,
-    downloadFileName,
-    downloadHref: downloadHrefOf(source),
-    loadUrl: source.kind === "url" ? source.url : undefined,
+    fileName,
     mimeType: resolvedMimeType,
   }
 }
@@ -207,7 +194,7 @@ function defaultDisplayName(source: ViewerSource) {
   return "file"
 }
 
-function defaultDownloadFileName(source: ViewerSource) {
+function defaultFileName(source: ViewerSource) {
   if (source.kind === "url") return extractName(source.url)
   if (source.kind === "text") return "text.txt"
   return "file"
@@ -217,10 +204,4 @@ function defaultIdentityKey(source: ViewerSource) {
   if (source.kind === "url") return `url:${source.url}`
   if (source.kind === "text") return `text:${source.text}`
   return source.identityKey
-}
-
-function downloadHrefOf(source: ViewerSource) {
-  if (source.kind === "url") return source.downloadUrl ?? source.url
-  if (source.kind === "blob") return source.downloadUrl
-  return undefined
 }

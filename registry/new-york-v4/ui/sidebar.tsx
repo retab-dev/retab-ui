@@ -20,11 +20,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet"
 import { Skeleton } from "@/components/ui/skeleton"
-import {
-  Tooltip,
-  TooltipPopup,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
+import { Tooltip, TooltipPopup, TooltipTrigger } from "@/components/ui/tooltip"
 
 const SIDEBAR_COOKIE_NAME: string = "sidebar_state"
 const SIDEBAR_COOKIE_MAX_AGE: number = 60 * 60 * 24 * 7
@@ -32,6 +28,50 @@ const SIDEBAR_WIDTH: string = "16rem"
 const SIDEBAR_WIDTH_MOBILE: string = "18rem"
 const SIDEBAR_WIDTH_ICON: string = "3rem"
 const SIDEBAR_KEYBOARD_SHORTCUT: string = "b"
+
+function persistSidebarState(openState: boolean): void {
+  const expiresAt = Date.now() + SIDEBAR_COOKIE_MAX_AGE * 1000
+  const value = String(openState)
+
+  if (typeof cookieStore !== "undefined") {
+    try {
+      void cookieStore
+        .set({
+          expires: expiresAt,
+          name: SIDEBAR_COOKIE_NAME,
+          path: "/",
+          value,
+        })
+        .catch(() => {})
+    } catch {
+      // Cookie persistence is best-effort; sidebar state should still update.
+    }
+    return
+  }
+
+  if (typeof document !== "undefined") {
+    document.cookie = `${SIDEBAR_COOKIE_NAME}=${value}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}; samesite=lax`
+  }
+}
+
+function isEditableShortcutTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false
+
+  const editableParent = target.closest("[contenteditable]")
+  if (
+    target.isContentEditable ||
+    (editableParent instanceof HTMLElement &&
+      editableParent.contentEditable !== "false")
+  ) {
+    return true
+  }
+
+  return (
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    target instanceof HTMLSelectElement
+  )
+}
 
 const sidebarMenuButtonVariants = cva(
   "peer/menu-button flex w-full items-center gap-2 overflow-hidden rounded-lg p-2 text-left text-sm ring-sidebar-ring outline-hidden transition-[width,height,padding] group-has-data-[sidebar=menu-action]/menu-item:pe-8 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[active=true]:bg-sidebar-accent data-[active=true]:font-medium data-[active=true]:text-sidebar-accent-foreground data-[state=open]:hover:bg-sidebar-accent data-[state=open]:hover:text-sidebar-accent-foreground [&>span:last-child]:truncate [&>svg]:shrink-0 [&>svg:not([class*='size-'])]:size-4",
@@ -58,9 +98,9 @@ const sidebarMenuButtonVariants = cva(
 export type SidebarContextProps = {
   state: "expanded" | "collapsed"
   open: boolean
-  setOpen: (open: boolean) => void
+  setOpen: (open: boolean | ((open: boolean) => boolean)) => void
   openMobile: boolean
-  setOpenMobile: (open: boolean) => void
+  setOpenMobile: (open: boolean | ((open: boolean) => boolean)) => void
   isMobile: boolean
   toggleSidebar: () => void
 }
@@ -97,24 +137,29 @@ export function SidebarProvider({
   // We use openProp and setOpenProp for control from outside the component.
   const [_open, _setOpen] = React.useState(defaultOpen)
   const open = openProp ?? _open
+  const isControlled = openProp !== undefined
+  const openRef = React.useRef(open)
+
+  React.useEffect(() => {
+    openRef.current = open
+  }, [open])
+
   const setOpen = React.useCallback(
-    async (value: boolean | ((value: boolean) => boolean)) => {
-      const openState = typeof value === "function" ? value(open) : value
+    (value: boolean | ((value: boolean) => boolean)) => {
+      const previousOpen = isControlled ? open : openRef.current
+      const openState =
+        typeof value === "function" ? value(previousOpen) : value
       if (setOpenProp) {
         setOpenProp(openState)
       } else {
         _setOpen(openState)
+        openRef.current = openState
       }
 
       // This sets the cookie to keep the sidebar state.
-      await cookieStore.set({
-        expires: Date.now() + SIDEBAR_COOKIE_MAX_AGE * 1000,
-        name: SIDEBAR_COOKIE_NAME,
-        path: "/",
-        value: String(openState),
-      })
+      persistSidebarState(openState)
     },
-    [setOpenProp, open]
+    [isControlled, open, setOpenProp]
   )
 
   // Helper to toggle the sidebar.
@@ -122,12 +167,21 @@ export function SidebarProvider({
     return isMobile ? setOpenMobile((open) => !open) : setOpen((open) => !open)
   }, [isMobile, setOpen])
 
+  React.useEffect(() => {
+    if (!isMobile && openMobile) {
+      setOpenMobile(false)
+    }
+  }, [isMobile, openMobile])
+
   // Adds a keyboard shortcut to toggle the sidebar.
   React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent): void => {
       if (
-        event.key === SIDEBAR_KEYBOARD_SHORTCUT &&
-        (event.metaKey || event.ctrlKey)
+        event.key.toLowerCase() === SIDEBAR_KEYBOARD_SHORTCUT &&
+        (event.metaKey || event.ctrlKey) &&
+        !event.defaultPrevented &&
+        !event.repeat &&
+        !isEditableShortcutTarget(event.target)
       ) {
         event.preventDefault()
         toggleSidebar()
@@ -183,6 +237,7 @@ export function Sidebar({
   variant = "sidebar",
   collapsible = "offcanvas",
   className,
+  style,
   children,
   ...props
 }: React.ComponentProps<"div"> & {
@@ -200,6 +255,7 @@ export function Sidebar({
           className
         )}
         data-slot="sidebar"
+        style={style}
         {...props}
       >
         {children}
@@ -209,9 +265,12 @@ export function Sidebar({
 
   if (isMobile) {
     return (
-      <Sheet onOpenChange={setOpenMobile} open={openMobile} {...props}>
+      <Sheet onOpenChange={setOpenMobile} open={openMobile}>
         <SheetPopup
-          className="w-(--sidebar-width) bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden"
+          className={cn(
+            "w-(--sidebar-width) bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden",
+            className
+          )}
           data-mobile="true"
           data-sidebar="sidebar"
           data-slot="sidebar"
@@ -219,8 +278,10 @@ export function Sidebar({
           style={
             {
               "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
+              ...style,
             } as React.CSSProperties
           }
+          {...props}
         >
           <SheetHeader className="sr-only">
             <SheetTitle>Sidebar</SheetTitle>
@@ -266,6 +327,7 @@ export function Sidebar({
           className
         )}
         data-slot="sidebar-container"
+        style={style}
         {...props}
       >
         <div
@@ -294,7 +356,9 @@ export function SidebarTrigger({
       data-slot="sidebar-trigger"
       onClick={(event: React.MouseEvent<HTMLButtonElement>) => {
         onClick?.(event)
-        toggleSidebar()
+        if (!event.defaultPrevented) {
+          toggleSidebar()
+        }
       }}
       size="icon"
       variant="ghost"
@@ -308,6 +372,7 @@ export function SidebarTrigger({
 
 export function SidebarRail({
   className,
+  onClick,
   ...props
 }: React.ComponentProps<"button">): React.ReactElement {
   const { toggleSidebar } = useSidebar()
@@ -326,7 +391,12 @@ export function SidebarRail({
       )}
       data-sidebar="rail"
       data-slot="sidebar-rail"
-      onClick={toggleSidebar}
+      onClick={(event) => {
+        onClick?.(event)
+        if (!event.defaultPrevented) {
+          toggleSidebar()
+        }
+      }}
       tabIndex={-1}
       title="Toggle Sidebar"
       type="button"

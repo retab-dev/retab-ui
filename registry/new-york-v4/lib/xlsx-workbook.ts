@@ -52,10 +52,6 @@ interface CacheEntry {
 
 export const EMPTY_XLSX_CELL: XlsxCell = { text: "", numeric: false }
 
-export function xlsxCacheKey(src: string): string {
-  return src
-}
-
 export function resolveXlsxSheetChange({
   activeSheet,
   requestedSheet,
@@ -219,8 +215,8 @@ export class XlsxSourceCache {
     this.maxBytes = options.maxBytes ?? 96 * 1024 * 1024
   }
 
-  get(src: string, load: () => Promise<XlsxSource>): Promise<XlsxSource> {
-    const key = xlsxCacheKey(src)
+  get(cacheKey: string, load: () => Promise<XlsxSource>): Promise<XlsxSource> {
+    const key = cacheKey
     const existing = this.entries.get(key)
     if (existing) {
       this.entries.delete(key)
@@ -255,8 +251,8 @@ export class XlsxSourceCache {
     return entry.promise
   }
 
-  setResolvedForTest(src: string, source: XlsxSource, bytes = 1): void {
-    const key = xlsxCacheKey(src)
+  setResolvedForTest(cacheKey: string, source: XlsxSource, bytes = 1): void {
+    const key = cacheKey
     const entry: CacheEntry = {
       source,
       bytes,
@@ -266,8 +262,8 @@ export class XlsxSourceCache {
     this.evict()
   }
 
-  has(src: string): boolean {
-    return this.entries.has(xlsxCacheKey(src))
+  has(cacheKey: string): boolean {
+    return this.entries.has(cacheKey)
   }
 
   clear(): void {

@@ -56,7 +56,11 @@ export function CsvViewerDemo() {
   const csv = React.useMemo(() => buildCsv(5000), [])
   return (
     <div className="not-prose my-6">
-      <CsvViewer value={csv} height={420} isolateStyles />
+      <CsvViewer
+        source={{ kind: "text", text: csv, fileName: "people.csv" }}
+        height={420}
+        isolateStyles
+      />
     </div>
   )
 }
@@ -70,7 +74,17 @@ export function CsvViewerStreamingDemo() {
   )
   return (
     <div className="not-prose my-6">
-      <CsvViewer source={source} height={420} isolateStyles />
+      <CsvViewer
+        source={{
+          kind: "blob",
+          blob: source,
+          identityKey: "csv-demo:100000-people",
+          fileName: "people.csv",
+          mimeType: "text/csv",
+        }}
+        height={420}
+        isolateStyles
+      />
     </div>
   )
 }

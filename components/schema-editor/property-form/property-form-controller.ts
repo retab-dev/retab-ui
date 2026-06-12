@@ -9,9 +9,11 @@ import { resolvePropertyCapabilities } from "@/components/schema-editor/property
 import { buildCommittedDraft } from "@/components/schema-editor/property-form/model/property-draft-commit"
 import { propertyDraftReducer } from "@/components/schema-editor/property-form/reducer"
 import type {
+  PropertyCapabilities,
   PropertyDraftOperation,
   PropertyFormMode,
   PropertyFormProps,
+  PropertyValidation,
   PropertyFormViewModel,
 } from "@/components/schema-editor/property-form/types"
 import { validatePropertyDraft } from "@/components/schema-editor/property-form/validation"
@@ -23,6 +25,25 @@ type PropertyFormControllerInput = Omit<
   mode: PropertyFormMode
   submitLabel: string
   canDelete: boolean
+}
+
+function normalizeValidationForCapabilities({
+  validation,
+  capabilities,
+}: {
+  validation: PropertyValidation
+  capabilities: PropertyCapabilities
+}): PropertyValidation {
+  if (capabilities.canEditName || validation.name.status !== "invalid") {
+    return validation
+  }
+
+  const name = { status: "valid" as const }
+  return {
+    ...validation,
+    name,
+    canCommit: validation.schemaNode.status !== "invalid",
+  }
 }
 
 export function usePropertyFormController({
@@ -38,8 +59,7 @@ export function usePropertyFormController({
   onCancel,
   onDelete,
 }: PropertyFormControllerInput): PropertyFormViewModel {
-  const [propertyDraft, setPropertyDraft] =
-    React.useState(initialPropertyDraft)
+  const [propertyDraft, setPropertyDraft] = React.useState(initialPropertyDraft)
   const propertyDraftRef = React.useRef(initialPropertyDraft)
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const isSubmittingRef = React.useRef(false)
@@ -50,21 +70,38 @@ export function usePropertyFormController({
   }, [initialPropertyDraft])
 
   const capabilities = React.useMemo(
-    () =>
-      capabilitiesProp ??
-      resolvePropertyCapabilities({
+    () => {
+      if (mode !== "editable") {
+        return resolvePropertyCapabilities({
+          mode,
+          canDelete,
+        })
+      }
+
+      const nextCapabilities =
+        capabilitiesProp ??
+        resolvePropertyCapabilities({
+          mode,
+          canDelete,
+        })
+
+      return {
+        ...nextCapabilities,
         mode,
-        canDelete,
-      }),
+      }
+    },
     [canDelete, capabilitiesProp, mode]
   )
 
-  const validation =
-    validationProp ??
-    validatePropertyDraft({
-      propertyDraft,
-      schemaContext,
-    })
+  const validation = validationProp
+    ? validationProp
+    : normalizeValidationForCapabilities({
+        validation: validatePropertyDraft({
+          propertyDraft,
+          schemaContext,
+        }),
+        capabilities,
+      })
   const effectiveSchemaNode = getEffectiveNode(propertyDraft.schemaNode)
   const effectiveType = getEffectiveType(propertyDraft.schemaNode)
 
@@ -83,12 +120,18 @@ export function usePropertyFormController({
 
   const commitPropertyDraft = React.useCallback(async () => {
     if (isSubmittingRef.current) return false
+    if (capabilities.mode === "readOnly") return false
 
     const currentPropertyDraft = propertyDraftRef.current
-    const currentValidation = validatePropertyDraft({
-      propertyDraft: currentPropertyDraft,
-      schemaContext,
-    })
+    const currentValidation = validationProp
+      ? validationProp
+      : normalizeValidationForCapabilities({
+          validation: validatePropertyDraft({
+            propertyDraft: currentPropertyDraft,
+            schemaContext,
+          }),
+          capabilities,
+        })
     if (!currentValidation.canCommit) return false
 
     isSubmittingRef.current = true
@@ -97,15 +140,19 @@ export function usePropertyFormController({
     try {
       await onCommitPropertyDraft(buildCommittedDraft(currentPropertyDraft))
       return true
+    } catch {
+      return false
     } finally {
       isSubmittingRef.current = false
       setIsSubmitting(false)
     }
-  }, [onCommitPropertyDraft, schemaContext])
+  }, [capabilities, onCommitPropertyDraft, schemaContext, validationProp])
 
   const keyDown = React.useCallback(
     (event: React.KeyboardEvent) => {
       if (event.key !== "Enter" || event.shiftKey) return
+      if (event.nativeEvent.isComposing) return
+      if (event.target instanceof HTMLButtonElement) return
       if (event.target instanceof HTMLTextAreaElement) {
         if (event.ctrlKey || event.metaKey) {
           event.preventDefault()

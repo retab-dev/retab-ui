@@ -11,14 +11,16 @@ export function getFixedGridRowStyle({
   top: number
   contain?: boolean
 }): React.CSSProperties {
+  const safeRowHeight = Number.isFinite(rowHeight) && rowHeight > 0 ? rowHeight : 0
+  const safeTop = Number.isFinite(top) && top > 0 ? top : 0
   const style: React.CSSProperties = {
-    height: rowHeight,
-    minHeight: rowHeight,
+    height: safeRowHeight,
+    minHeight: safeRowHeight,
     position: "absolute",
     top: 0,
     left: 0,
     width: "100%",
-    transform: `translate3d(0, ${top}px, 0)`,
+    transform: `translate3d(0, ${safeTop}px, 0)`,
   }
   if (gridTemplate) style.gridTemplateColumns = gridTemplate
   if (contain) style.contain = "layout paint style"

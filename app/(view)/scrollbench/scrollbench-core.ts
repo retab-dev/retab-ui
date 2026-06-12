@@ -130,7 +130,11 @@ export function getScenarioStepPx({
   clientHeight: number
   scenario: ScenarioDefinition
 }) {
-  return Math.max(MIN_STEP_PX, Math.round(clientHeight * scenario.stepRatio))
+  if (!Number.isFinite(clientHeight) || clientHeight <= 0) return MIN_STEP_PX
+  const stepPx = Math.round(clientHeight * scenario.stepRatio)
+  return Number.isFinite(stepPx) && stepPx > 0
+    ? Math.max(MIN_STEP_PX, stepPx)
+    : MIN_STEP_PX
 }
 
 export function buildScrollTargets({
@@ -142,9 +146,19 @@ export function buildScrollTargets({
   stepPx: number
   frameCount?: number
 }) {
-  if (maxScrollTop <= 0 || frameCount <= 0) return []
+  if (
+    !Number.isFinite(maxScrollTop) ||
+    !Number.isFinite(stepPx) ||
+    !Number.isFinite(frameCount) ||
+    maxScrollTop <= 0 ||
+    stepPx <= 0 ||
+    frameCount <= 0
+  ) {
+    return []
+  }
+  const safeFrameCount = Math.floor(frameCount)
 
-  return Array.from({ length: frameCount }, (_, frameIndex) =>
+  return Array.from({ length: safeFrameCount }, (_, frameIndex) =>
     Math.round(bouncePosition((frameIndex + 1) * stepPx, maxScrollTop))
   )
 }

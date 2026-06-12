@@ -22,7 +22,7 @@ export const PageMarkdownPane = React.forwardRef<
     mode: PageMarkdownViewMode
     scale: number
     currentPage: number
-    downloadFileName: string
+    fileName: string
     onModeChange: (mode: PageMarkdownViewMode) => void
     onZoom: (factor: number) => void
     onFitWidth: () => void
@@ -36,7 +36,7 @@ export const PageMarkdownPane = React.forwardRef<
     mode,
     scale,
     currentPage,
-    downloadFileName,
+    fileName,
     onModeChange,
     onZoom,
     onFitWidth,
@@ -49,10 +49,15 @@ export const PageMarkdownPane = React.forwardRef<
   const viewportRef = React.useRef<HTMLDivElement | null>(null)
   const scrollFrameRef = React.useRef(0)
   const lastVisiblePageRef = React.useRef(1)
+  const pagesSignature = React.useMemo(() => pages.join("\u0000"), [pages])
 
   React.useEffect(() => {
     onContainerWidthChange(pageContainerWidth)
   }, [onContainerWidthChange, pageContainerWidth])
+
+  React.useEffect(() => {
+    lastVisiblePageRef.current = 0
+  }, [pagesSignature])
 
   React.useImperativeHandle(
     ref,
@@ -96,7 +101,7 @@ export const PageMarkdownPane = React.forwardRef<
         mode={mode}
         scale={scale}
         text={text}
-        downloadFileName={downloadFileName}
+        fileName={fileName}
         onModeChange={onModeChange}
         onZoom={onZoom}
         onFitWidth={onFitWidth}

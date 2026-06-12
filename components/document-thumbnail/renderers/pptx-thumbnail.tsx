@@ -4,13 +4,17 @@ import * as React from "react"
 import type * as PptxNS from "pptxviewjs"
 
 import { cn } from "@/lib/utils"
-import type { ThumbnailAnchor } from "@/components/document-thumbnail/types"
-import { ANCHOR_CORNER } from "@/components/document-thumbnail/types"
+import type { ViewerResource } from "@/lib/viewer-resource"
 import {
+  cachedThumbnailResource,
   shortName,
   timed,
-  withDecodeSlot,
+  useThumbnailResource,
+  withThumbnailDecodeSlot,
+  type ThumbnailCacheEntry,
 } from "@/components/document-thumbnail/cache"
+import type { ThumbnailAnchor } from "@/components/document-thumbnail/types"
+import { ANCHOR_CORNER } from "@/components/document-thumbnail/types"
 
 let pptxLib: Promise<typeof PptxNS> | null = null
 function loadPptx() {
@@ -24,19 +28,19 @@ interface PptxFirstSlideSource {
   baseHeight: number
 }
 
-const pptxCache = new Map<string, Promise<PptxFirstSlideSource>>()
+const pptxCache = new Map<string, ThumbnailCacheEntry<PptxFirstSlideSource>>()
 
 function getPptxFirstSlide(
-  src: string,
-  resourceKey = src
+  resource: ViewerResource,
+  cacheKey: string
 ): Promise<PptxFirstSlideSource> {
-  let promise = pptxCache.get(resourceKey)
-  if (!promise) {
-    promise = withDecodeSlot(() =>
-      timed(`pptx:total ${shortName(src)}`, async () => {
-        const [res, mod] = await Promise.all([fetch(src), loadPptx()])
-        if (!res.ok) throw new Error(`Failed to load presentation: ${res.status}`)
-        const buf = await res.arrayBuffer()
+  return cachedThumbnailResource(pptxCache, cacheKey, () =>
+    withThumbnailDecodeSlot(() =>
+      timed(`pptx:total ${shortName(resource)}`, async () => {
+        const [buf, mod] = await Promise.all([
+          resource.readArrayBuffer(),
+          loadPptx(),
+        ])
         const { PPTXViewer } = mod
         const offscreen = document.createElement("canvas")
         const viewer = new PPTXViewer({
@@ -51,9 +55,7 @@ function getPptxFirstSlide(
         return { render, baseWidth: size.width, baseHeight: size.height }
       })
     )
-    pptxCache.set(resourceKey, promise)
-  }
-  return promise
+  )
 }
 
 const EMU_PER_PX = 9525
@@ -87,15 +89,15 @@ interface JSZipLike {
 }
 
 export function PptxFirstSlide({
-  src,
-  resourceKey,
+  resource,
+  cacheKey,
   anchor,
 }: {
-  src: string
-  resourceKey: string
+  resource: ViewerResource
+  cacheKey: string
   anchor: ThumbnailAnchor
 }) {
-  const source = React.use(getPptxFirstSlide(src, resourceKey))
+  const source = useThumbnailResource(getPptxFirstSlide(resource, cacheKey))
   const baseW = source.baseWidth || 960
   const baseH = source.baseHeight || 720
   const FILL_PX = 1024

@@ -4,10 +4,7 @@ import * as React from "react"
 
 import type { Source } from "@/lib/document-source"
 import type { SourceTarget } from "@/hooks/use-source-link"
-import type {
-  DocxTarget,
-  DocxViewerHandle,
-} from "@/components/ui/docx-viewer"
+import type { DocxTarget, DocxViewerHandle } from "@/components/ui/docx-viewer"
 
 /**
  * A docx source → a viewer-ready `DocxTarget`, or null when the anchor isn't a
@@ -15,13 +12,29 @@ import type {
  * match); table cells carry their index. Mirrors the PDF adapter's
  * `pdfAnchorToLocation` — the adapter resolves the anchor, the viewer the DOM.
  */
-export function docxSourceToTarget(source: Source | undefined): DocxTarget | null {
+export function docxSourceToTarget(
+  source: Source | undefined
+): DocxTarget | null {
   if (!source) return null
   const a = source.anchor
-  if (a.kind === "docx_text_span") return { kind: "text", text: source.content }
-  if (a.kind === "docx_table_cell")
+  if (a.kind === "docx_text_span") {
+    const text = source.content.trim()
+    return text ? { kind: "text", text } : null
+  }
+  if (a.kind === "docx_table_cell") {
+    if (
+      !isNonNegativeInteger(a.table) ||
+      !isNonNegativeInteger(a.row) ||
+      !isNonNegativeInteger(a.column)
+    )
+      return null
     return { kind: "cell", table: a.table, row: a.row, column: a.column }
+  }
   return null
+}
+
+function isNonNegativeInteger(value: number) {
+  return Number.isInteger(value) && value >= 0
 }
 
 /** A stable `SourceTarget` over a `DocxViewer` ref — pass to `useSourceLink`. */

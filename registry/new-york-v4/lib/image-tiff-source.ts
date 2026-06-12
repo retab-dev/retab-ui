@@ -39,6 +39,7 @@ export class TiffWorkerClient {
     null
   private initReject: ((error: Error) => void) | null = null
   private nextRequestId = 0
+  private initialized = false
   private disposed = false
 
   constructor(createWorker: TiffWorkerFactory) {
@@ -58,19 +59,30 @@ export class TiffWorkerClient {
     if (this.disposed) {
       return Promise.reject(new TiffWorkerError("TIFF worker disposed"))
     }
+    if (this.initResolve) {
+      return Promise.reject(new TiffWorkerError("TIFF worker already initializing"))
+    }
+    if (this.initialized) {
+      return Promise.reject(new TiffWorkerError("TIFF worker already initialized"))
+    }
     return new Promise((resolve, reject) => {
       this.initResolve = resolve
       this.initReject = reject
       try {
         this.worker.postMessage({ type: "init", buffer }, [buffer])
       } catch (error) {
+        const workerError = new TiffWorkerError(
+          "Failed to initialize TIFF worker",
+          {
+            cause: error,
+          }
+        )
+        this.disposed = true
         this.initResolve = null
         this.initReject = null
-        reject(
-          new TiffWorkerError("Failed to initialize TIFF worker", {
-            cause: error,
-          })
-        )
+        this.rejectPending(workerError)
+        this.worker.terminate()
+        reject(workerError)
       }
     })
   }
@@ -85,12 +97,17 @@ export class TiffWorkerClient {
       try {
         this.worker.postMessage({ type: "decodeFrame", requestId, frameIndex })
       } catch (error) {
-        this.pendingDecodes.delete(requestId)
-        reject(
-          new TiffWorkerError("Failed to request TIFF frame decode", {
+        const workerError = new TiffWorkerError(
+          "Failed to request TIFF frame decode",
+          {
             cause: error,
-          })
+          }
         )
+        this.pendingDecodes.delete(requestId)
+        this.disposed = true
+        this.rejectPending(workerError)
+        this.worker.terminate()
+        reject(workerError)
       }
     })
   }
@@ -121,14 +138,17 @@ export class TiffWorkerClient {
 
   private handleMessage(message: TiffWorkerResponse) {
     if (message.type === "initOk") {
+      this.initialized = true
       this.initResolve?.(message.frames)
       this.initResolve = null
       this.initReject = null
       return
     }
     if (message.type === "initError") {
+      const error = new TiffWorkerError(message.message)
       this.disposed = true
-      this.rejectInit(new TiffWorkerError(message.message))
+      this.rejectPending(error)
+      this.rejectInit(error)
       this.worker.terminate()
       return
     }
@@ -146,8 +166,8 @@ export class TiffWorkerClient {
 
   private fail(error: Error) {
     this.disposed = true
-    this.rejectInit(error)
     this.rejectPending(error)
+    this.rejectInit(error)
     this.worker.terminate()
   }
 

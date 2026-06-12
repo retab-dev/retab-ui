@@ -1,16 +1,28 @@
 "use client"
 
 import * as React from "react"
-import { Download, Maximize, Minus, Plus } from "lucide-react"
 // Type-only import — erased at compile time, so docx-preview never loads on the
 // server (it touches the DOM at call time).
 import type * as DocxPreview from "docx-preview"
+import { Download, Maximize, Minus, Plus } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { ViewerFormatError } from "@/lib/viewer-errors"
+import {
+  createViewerResource,
+  type ViewerResource,
+} from "@/lib/viewer-resource"
+import type { BlobViewerSource, UrlViewerSource } from "@/lib/viewer-source"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
+import { ViewerDownloadButton } from "@/components/ui/viewer-download"
+import { ViewerErrorBoundary } from "@/components/ui/viewer-error"
+
+import { getDocxResource } from "./docx-viewer-resource"
+
+export { getDocxResource } from "./docx-viewer-resource"
 
 // docx-preview is browser-only, so it is imported lazily on the client. jszip
 // (its single dependency) is resolved by the bundler from the installed package.
@@ -46,27 +58,6 @@ const SCOPED_STYLES = `
   box-shadow: 0 0 0 1px var(--border), 0 1px 2px 0 rgb(0 0 0 / 0.05);
 }`
 
-// --- resource cache: stable promises so React `use()` can read them -----------
-
-// Cache an ArrayBuffer, not a Blob. docx-preview forwards its input straight to
-// JSZip; a Blob makes JSZip convert it via `new FileReader().readAsArrayBuffer`,
-// which is flaky under dev/HMR (a transient FileReader without that method throws
-// intermittently). An ArrayBuffer skips that path entirely — JSZip reads it
-// directly — so the render is deterministic.
-const bufferCache = new Map<string, Promise<ArrayBuffer>>()
-
-function getDocxResource(src: string): Promise<ArrayBuffer> {
-  let promise = bufferCache.get(src)
-  if (!promise) {
-    promise = fetch(src).then((res) => {
-      if (!res.ok) throw new Error(`Failed to load DOCX: ${res.status}`)
-      return res.arrayBuffer()
-    })
-    bufferCache.set(src, promise)
-  }
-  return promise
-}
-
 /** Client gate without an effect — false during SSR, true after hydration. */
 function useIsClient() {
   return React.useSyncExternalStore(
@@ -77,6 +68,8 @@ function useIsClient() {
 }
 
 // --- public API --------------------------------------------------------------
+
+export type DocxDocumentSource = UrlViewerSource | BlobViewerSource
 
 /**
  * Imperative handle for driving the viewer from outside (e.g. scroll to the
@@ -98,19 +91,18 @@ export interface DocxViewerHandle {
    * located. Like the other viewers, this takes resolved coordinates (the adapter
    * turns an anchor into a `DocxTarget`), not a raw source.
    */
-  scrollToTarget: (target: DocxTarget, options?: ScrollToOptions) => void
+  scrollToTarget: (target: DocxTarget, options?: ScrollIntoViewOptions) => void
   /** The scrolling viewport element, or null before the document renders. */
   getViewportElement: () => HTMLDivElement | null
 }
 
 export interface DocxViewerProps {
-  /** URL of the .docx (same-origin or CORS-enabled). */
-  src: string
+  /** Canonical DOCX source. */
+  source: DocxDocumentSource
   className?: string
   /** Fixed zoom; when omitted the viewer fits page width to the container. */
   scale?: number
   toolbar?: boolean
-  downloadFileName?: string
   /**
    * A resolved target to highlight in the document. Feed
    * `useSourceLink(...).activeSource` through the `docx-source` adapter's
@@ -207,29 +199,48 @@ function targetKey(target: DocxTarget | null | undefined): string | null {
 export const DocxViewer = React.forwardRef<DocxViewerHandle, DocxViewerProps>(
   function DocxViewer(props, ref) {
     const isClient = useIsClient()
+    const resource = React.useMemo(
+      () => createViewerResource(props.source),
+      [props.source]
+    )
     if (!isClient) {
-      return <DocxViewerFallback className={props.className} bare={props.bare} />
+      return (
+        <DocxViewerFallback
+          bare={props.bare}
+          className={props.className}
+          toolbar={props.toolbar}
+        />
+      )
     }
     return (
-      <DocxErrorBoundary className={props.className} resetKey={props.src}>
+      <ViewerErrorBoundary
+        className={props.className}
+        download={resource.getOriginalDownload()}
+        format="docx"
+        resetKey={resource.keys.load}
+        sourceKind={resource.sourceKind}
+      >
         <React.Suspense
           fallback={
-            <DocxViewerFallback className={props.className} bare={props.bare} />
+            <DocxViewerFallback
+              bare={props.bare}
+              className={props.className}
+              toolbar={props.toolbar}
+            />
           }
         >
-          <DocxViewerInner {...props} forwardedRef={ref} />
+          <DocxViewerInner {...props} forwardedRef={ref} resource={resource} />
         </React.Suspense>
-      </DocxErrorBoundary>
+      </ViewerErrorBoundary>
     )
   }
 )
 
 function DocxViewerInner({
-  src,
+  resource,
   className,
   scale: fixedScale,
   toolbar = true,
-  downloadFileName,
   onVisiblePageChange,
   onScrollProgressChange,
   bare = false,
@@ -239,13 +250,19 @@ function DocxViewerInner({
   forwardedRef,
 }: DocxViewerProps & {
   forwardedRef?: React.ForwardedRef<DocxViewerHandle>
+  resource: ViewerResource
 }) {
-  const buffer = React.use(getDocxResource(src))
+  const buffer = React.use(getDocxResource(resource, { retainRejected: true }))
 
   const [manualScale, setManualScale] = React.useState<number | null>(
-    fixedScale ?? null
+    normalizeScale(fixedScale)
   )
-  const [containerWidth, setContainerWidth] = React.useState<number | null>(null)
+  React.useEffect(() => {
+    setManualScale(normalizeScale(fixedScale))
+  }, [fixedScale])
+  const [containerWidth, setContainerWidth] = React.useState<number | null>(
+    null
+  )
   // Known only after docx-preview lays the document out.
   const [numPages, setNumPages] = React.useState(0)
   const [pageWidth, setPageWidth] = React.useState<number | null>(null)
@@ -267,7 +284,8 @@ function DocxViewerInner({
       // entry.contentRect.width here (which already excludes padding) would
       // double-subtract it, shrinking the page 32px below the full content
       // width — and below the w-full skeleton that stands in for it.
-      for (const entry of entries) latest = (entry.target as HTMLElement).clientWidth
+      for (const entry of entries)
+        latest = (entry.target as HTMLElement).clientWidth
       if (frame) return
       frame = requestAnimationFrame(() => {
         frame = 0
@@ -296,7 +314,9 @@ function DocxViewerInner({
     const viewport = scrollViewportRef.current
     if (!viewport) return
     const scrollable = viewport.scrollHeight - viewport.clientHeight
-    onScrollProgressChange?.(scrollable > 0 ? viewport.scrollTop / scrollable : 0)
+    onScrollProgressChange?.(
+      scrollable > 0 ? viewport.scrollTop / scrollable : 0
+    )
     const rect = viewport.getBoundingClientRect()
     const marker = rect.top + rect.height * 0.2
     const pages = viewport.querySelectorAll<HTMLElement>("[data-page-number]")
@@ -325,8 +345,12 @@ function DocxViewerInner({
     []
   )
 
-  const fitScale = containerWidth && pageWidth ? (containerWidth - 32) / pageWidth : 1
+  const fitScale =
+    containerWidth && pageWidth
+      ? clamp((containerWidth - 32) / pageWidth, 0.25, 5)
+      : 1
   const scale = manualScale ?? fitScale
+  const isScaleControlled = fixedScale != null
   // Mirror the live scale into a ref so the render effect can divide measured
   // (zoomed) page sizes back to natural units without re-running on every zoom.
   const scaleRef = React.useRef(scale)
@@ -343,14 +367,20 @@ function DocxViewerInner({
     let cancelled = false
     setReady(false)
     setNumPages(0)
+    setCurrentPage(1)
+    lastReported.current = 0
     loadDocxPreview()
       .then(({ renderAsync }) => {
         if (cancelled) return
-        host.replaceChildren()
-        return renderAsync(buffer, host, undefined, RENDER_OPTIONS)
+        const renderHost = document.createElement("div")
+        return renderAsync(buffer, renderHost, undefined, RENDER_OPTIONS).then(
+          () => renderHost
+        )
       })
-      .then(() => {
+      .then((renderHost) => {
         if (cancelled || !hostRef.current) return
+        if (renderHost)
+          host.replaceChildren(...Array.from(renderHost.childNodes))
         // Tag pages for scroll tracking and hand off-screen pages to the browser
         // via `content-visibility` — a long document then only lays out and
         // paints the pages near the viewport. Intrinsic sizes (measured in the
@@ -358,6 +388,9 @@ function DocxViewerInner({
         const pages = Array.from(
           host.querySelectorAll<HTMLElement>(".docx-wrapper > section.docx")
         )
+        if (!pages.length) {
+          throw new Error("DOCX render produced no pages.")
+        }
         const z = scaleRef.current || 1
         // Two passes so we never interleave reads with writes: measure everything
         // first (one layout), then style everything. Interleaving would force a
@@ -377,7 +410,14 @@ function DocxViewerInner({
       })
       .catch((err) => {
         if (!cancelled) {
-          setRenderError(err instanceof Error ? err : new Error("Failed to render DOCX"))
+          setRenderError(
+            new ViewerFormatError({
+              format: "docx",
+              kind: "render_failed",
+              message: "Failed to render DOCX.",
+              cause: err,
+            })
+          )
         }
       })
     return () => {
@@ -385,7 +425,14 @@ function DocxViewerInner({
     }
   }, [buffer])
 
-  const zoom = (factor: number) => setManualScale(clamp(scale * factor, 0.25, 5))
+  const zoom = (factor: number) => {
+    if (isScaleControlled) return
+    setManualScale(clamp(scale * factor, 0.25, 5))
+  }
+  const fitWidth = () => {
+    if (isScaleControlled) return
+    setManualScale(null)
+  }
 
   // CSS Custom Highlight API: mark the active source's Range without mutating
   // docx-preview's DOM (wrapping nodes would disturb its layout). The registry is
@@ -433,6 +480,7 @@ function DocxViewerInner({
           block: "center",
           inline: "nearest",
           behavior: options?.behavior ?? "smooth",
+          ...options,
         })
       },
       getViewportElement: () => scrollViewportRef.current,
@@ -468,7 +516,7 @@ function DocxViewerInner({
             <IconButton label="Zoom out" onClick={() => zoom(1 / 1.2)}>
               <Minus />
             </IconButton>
-            <span className="w-12 text-center text-xs tabular-nums text-muted-foreground">
+            <span className="w-12 text-center text-xs text-muted-foreground tabular-nums">
               {ready ? (
                 `${Math.round(scale * 100)}%`
               ) : (
@@ -479,27 +527,11 @@ function DocxViewerInner({
             <IconButton label="Zoom in" onClick={() => zoom(1.2)}>
               <Plus />
             </IconButton>
-            <IconButton label="Fit width" onClick={() => setManualScale(null)}>
+            <IconButton label="Fit width" onClick={fitWidth}>
               <Maximize />
             </IconButton>
             <Separator orientation="vertical" className="mx-1 h-4" />
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              className="size-7"
-              aria-label="Download"
-              title="Download"
-              render={
-                <a
-                  href={src}
-                  download={downloadFileName}
-                  target="_blank"
-                  rel="noreferrer"
-                />
-              }
-            >
-              <Download />
-            </Button>
+            <ViewerDownloadButton action={resource.getOriginalDownload()} />
           </div>
         </div>
       ) : null}
@@ -572,9 +604,11 @@ function IconButton({
 function DocxViewerFallback({
   className,
   bare = false,
+  toolbar = true,
 }: {
   className?: string
   bare?: boolean
+  toolbar?: boolean
 }) {
   return (
     <div
@@ -585,7 +619,7 @@ function DocxViewerFallback({
       )}
       data-slot="docx-viewer"
     >
-      <DocxToolbarSkeleton />
+      {toolbar ? <DocxToolbarSkeleton /> : null}
       <div className="min-h-0 flex-1 overflow-auto">
         <div className="flex flex-col items-center p-4">
           <DocxSkeleton />
@@ -647,7 +681,11 @@ function ToolbarIconPlaceholder({ children }: { children: React.ReactNode }) {
 // replaces it. (For A4 docs this would be 210 / 297.)
 function DocxSkeleton() {
   return (
-    <Skeleton aria-hidden className="w-full rounded-sm" style={{ aspectRatio: "8.5 / 11" }} />
+    <Skeleton
+      aria-hidden
+      className="w-full rounded-sm"
+      style={{ aspectRatio: "8.5 / 11" }}
+    />
   )
 }
 
@@ -655,34 +693,8 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value))
 }
 
-class DocxErrorBoundary extends React.Component<
-  { children: React.ReactNode; className?: string; resetKey?: unknown },
-  { error: boolean }
-> {
-  state = { error: false }
-  // Recover when the source changes: a new file gets a fresh attempt instead
-  // of staying stuck on the previous file's error.
-  componentDidUpdate(prev: { resetKey?: unknown }) {
-    if (prev.resetKey !== this.props.resetKey && this.state.error) {
-      this.setState({ error: false })
-    }
-  }
-  static getDerivedStateFromError() {
-    return { error: true }
-  }
-  render() {
-    if (this.state.error) {
-      return (
-        <div
-          className={cn(
-            "flex min-h-64 items-center justify-center rounded-xl border bg-muted/30 p-6 text-center text-sm text-muted-foreground",
-            this.props.className
-          )}
-        >
-          Couldn&apos;t load this document.
-        </div>
-      )
-    }
-    return this.props.children
-  }
+function normalizeScale(value: number | null | undefined) {
+  if (value == null) return null
+  if (Number.isNaN(value)) return 1
+  return clamp(value, 0.25, 5)
 }

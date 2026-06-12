@@ -9,10 +9,7 @@ import {
   type FrameSource,
 } from "@/lib/image-frame-source"
 import { createViewerResource } from "@/lib/viewer-resource"
-import {
-  ImageViewerErrorBoundary,
-  ImageViewerFallback,
-} from "@/components/ui/image-viewer-chrome"
+import { ImageViewerFallback } from "@/components/ui/image-viewer-chrome"
 import {
   clearImageSourceCacheForTests,
   getImageSource,
@@ -22,6 +19,7 @@ import type {
   ImageViewerHandle,
   ImageViewerProps,
 } from "@/components/ui/image-viewer-types"
+import { ViewerErrorBoundary } from "@/components/ui/viewer-error"
 
 export type {
   ImageDocumentSource,
@@ -38,19 +36,19 @@ export const ImageViewer = React.forwardRef<
 >(function ImageViewer(props, ref) {
   const isClient = useIsClient()
   const resource = React.useMemo(
-    () =>
-      createViewerResource(props.source, {
-        fileName: props.downloadFileName,
-      }),
-    [props.downloadFileName, props.source]
+    () => createViewerResource(props.source),
+    [props.source]
   )
   if (!isClient) {
     return <ImageViewerFallback className={props.className} bare={props.bare} />
   }
   return (
-    <ImageViewerErrorBoundary
+    <ViewerErrorBoundary
       className={props.className}
-      resetKey={resource.cacheKey}
+      download={resource.getOriginalDownload()}
+      format="image"
+      resetKey={resource.keys.load}
+      sourceKind={resource.sourceKind}
     >
       <React.Suspense
         fallback={
@@ -59,7 +57,7 @@ export const ImageViewer = React.forwardRef<
       >
         <ImageViewerContent {...props} forwardedRef={ref} resource={resource} />
       </React.Suspense>
-    </ImageViewerErrorBoundary>
+    </ViewerErrorBoundary>
   )
 })
 

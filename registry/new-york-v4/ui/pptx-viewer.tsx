@@ -14,7 +14,6 @@ import {
   getPptxResetKey,
   type PptxSlideOverlayProps,
 } from "./pptx-viewer-core"
-import { PptxErrorBoundary } from "./pptx-viewer-error-boundary"
 import { PptxViewerFallback } from "./pptx-viewer-fallback"
 import { useRetainedPptxSource } from "./pptx-viewer-hooks"
 import { createPptxScrollActivity } from "./pptx-viewer-scroll"
@@ -23,6 +22,7 @@ import { PptxToolbar } from "./pptx-viewer-toolbar"
 import { usePptxViewportWidth } from "./pptx-viewer-viewport"
 import { usePptxVisibleSlide } from "./pptx-viewer-visible-slide"
 import { usePptxZoom } from "./pptx-viewer-zoom"
+import { ViewerErrorBoundary } from "./viewer-error"
 
 export type { PptxSlideOverlayProps }
 export type PptxDocumentSource = UrlViewerSource | BlobViewerSource
@@ -47,7 +47,6 @@ export interface PptxViewerProps {
   /** Called by zoom controls. `null` means return to fit-width mode. */
   onScaleChange?: (scale: number | null) => void
   toolbar?: boolean
-  downloadFileName?: string
   /** Render absolutely-positioned overlays, such as bbox citations, on each slide. */
   renderSlideOverlay?: (props: PptxSlideOverlayProps) => React.ReactNode
   /** Fired with the 1-based slide nearest the top of the viewport as you scroll. */
@@ -69,25 +68,24 @@ export interface PptxViewerProps {
 
 export function PptxViewer(props: PptxViewerProps) {
   const isClient = useIsClient()
-  const { downloadFileName, source } = props
-  const resource = React.useMemo(
-    () => createViewerResource(source, { fileName: downloadFileName }),
-    [downloadFileName, source]
-  )
+  const { source } = props
+  const resource = React.useMemo(() => createViewerResource(source), [source])
   if (!isClient) {
     return <PptxViewerFallback className={props.className} bare={props.bare} />
   }
   return (
-    <PptxErrorBoundary
+    <ViewerErrorBoundary
       className={props.className}
       bare={props.bare}
-      download={resource.getDownload()}
+      download={resource.getOriginalDownload()}
+      format="pptx"
       resetKey={getPptxResetKey({
-        cacheKey: resource.cacheKey,
+        cacheKey: resource.keys.load,
         scale: props.scale,
         defaultScale: props.defaultScale,
         eager: props.eager,
       })}
+      sourceKind={resource.sourceKind}
     >
       <React.Suspense
         fallback={
@@ -96,7 +94,7 @@ export function PptxViewer(props: PptxViewerProps) {
       >
         <PptxViewerContent {...props} resource={resource} />
       </React.Suspense>
-    </PptxErrorBoundary>
+    </ViewerErrorBoundary>
   )
 }
 
@@ -116,7 +114,10 @@ function PptxViewerContent({
   eager = false,
 }: PptxViewerProps & { resource: ViewerResource }) {
   const source = useRetainedPptxSource(resource)
-  const download = React.useMemo(() => resource.getDownload(), [resource])
+  const downloadAction = React.useMemo(
+    () => resource.getOriginalDownload(),
+    [resource]
+  )
 
   const [rotation, setRotation] = React.useState(0)
   const scrollActivity = React.useMemo(() => createPptxScrollActivity(), [])
@@ -156,7 +157,7 @@ function PptxViewerContent({
           slideCount={source.slideCount}
           zoomScale={zoomScale}
           scaleControlsDisabled={scaleControlsDisabled}
-          download={download}
+          downloadAction={downloadAction}
           onZoom={(factor) => setViewerScale(zoomScale * factor)}
           onFitWidth={() => setViewerScale(null)}
           onRotate={() => setRotation((value) => (value + 90) % 360)}

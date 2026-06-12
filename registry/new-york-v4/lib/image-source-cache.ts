@@ -61,7 +61,7 @@ export class FrameSourceManager {
     resource: ViewerResource,
     createTiffWorker: TiffWorkerFactory
   ): Promise<FrameSource> {
-    const resourceKey = resource.cacheKey
+    const resourceKey = resource.keys.load
     let entry = this.entries.get(resourceKey)
     if (!entry) {
       const abortController = new AbortController()
@@ -113,7 +113,7 @@ export class FrameSourceManager {
     resource: ViewerResource,
     source: FrameSource
   ): FrameSourceLease | null {
-    const entry = this.entries.get(resource.cacheKey)
+    const entry = this.entries.get(resource.keys.load)
     if (!entry || entry.source !== source || entry.state === "disposed") {
       return null
     }
@@ -126,7 +126,7 @@ export class FrameSourceManager {
       release: () => {
         if (released) return
         released = true
-        const current = this.entries.get(resource.cacheKey)
+        const current = this.entries.get(resource.keys.load)
         if (!current || current.source !== source) return
         current.leaseCount = Math.max(0, current.leaseCount - 1)
         if (current.leaseCount === 0) {
@@ -181,8 +181,8 @@ export class FrameSourceManager {
     this.cancelDispose(entry)
     entry.abortController.abort(reason)
     entry.source?.dispose(reason)
-    if (this.entries.get(entry.resource.cacheKey) === entry) {
-      this.entries.delete(entry.resource.cacheKey)
+    if (this.entries.get(entry.resource.keys.load) === entry) {
+      this.entries.delete(entry.resource.keys.load)
     }
   }
 
@@ -194,7 +194,7 @@ export class FrameSourceManager {
     this.cancelDispose(entry)
     entry.disposeReason = reason
     entry.disposeTimer = setTimeout(() => {
-      const current = this.entries.get(entry.resource.cacheKey)
+      const current = this.entries.get(entry.resource.keys.load)
       if (!current || current !== entry || current.leaseCount > 0) return
       this.disposeEntry(current, reason)
     }, delayMs)
@@ -228,5 +228,6 @@ export class FrameSourceManager {
 export const imageFrameSourceManager = new FrameSourceManager()
 
 function imageSourceName(resource: ViewerResource): string {
-  return resource.descriptor.loadUrl ?? resource.fileName
+  const directLoad = resource.getDirectLoad()
+  return directLoad.kind === "url" ? directLoad.url : resource.fileName
 }

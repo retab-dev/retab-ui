@@ -65,6 +65,21 @@ describe("page markdown model", () => {
     ).not.toBe(base)
   })
 
+  it("does not collide when only the middle of same-length markdown changes", () => {
+    const first = createPageMeasurementKey({
+      markdown: `# Invoice\n\n${"alpha ".repeat(12)}\n\nTotal due`,
+      mode: "rendered",
+      scale: 1,
+    })
+    const second = createPageMeasurementKey({
+      markdown: `# Invoice\n\n${"bravo ".repeat(12)}\n\nTotal due`,
+      mode: "rendered",
+      scale: 1,
+    })
+
+    expect(first).not.toBe(second)
+  })
+
   it("requests the opposite pane when a new pane reports a page", () => {
     const transition = resolvePagePaneReport({
       state: initialPagePaneState(),
@@ -108,6 +123,29 @@ describe("page markdown model", () => {
     })
   })
 
+  it("ignores stale reports from the pending target pane", () => {
+    const requested = resolvePagePaneReport({
+      state: initialPagePaneState(),
+      pending: null,
+      pane: "document",
+      page: 2,
+    })
+
+    const stale = resolvePagePaneReport({
+      state: requested.state,
+      pending: requested.pending,
+      pane: "markdown",
+      page: 1,
+    })
+
+    expect(stale).toMatchObject({
+      state: requested.state,
+      pending: requested.pending,
+      scrollTarget: null,
+      confirmed: false,
+    })
+  })
+
   it("does not schedule work for an unchanged page without pending sync", () => {
     expect(
       resolvePagePaneReport({
@@ -120,6 +158,24 @@ describe("page markdown model", () => {
       pending: null,
       scrollTarget: null,
       confirmed: false,
+    })
+  })
+
+  it("normalizes non-finite reported pages to the first page", () => {
+    const transition = resolvePagePaneReport({
+      state: { page: 2, pane: "document", version: 0 },
+      pending: null,
+      pane: "markdown",
+      page: Number.NaN,
+    })
+
+    expect(transition.state).toMatchObject({
+      page: 1,
+      pane: "markdown",
+    })
+    expect(transition.scrollTarget).toMatchObject({
+      pane: "document",
+      page: 1,
     })
   })
 })

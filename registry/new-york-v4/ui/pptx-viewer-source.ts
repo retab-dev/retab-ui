@@ -57,6 +57,7 @@ class RendererSource implements PptxSource {
   }
 
   hasBitmap(input: PptxBitmapCacheInput) {
+    if (this.disposed) return false
     return this.bitmaps.get(getPptxBitmapCacheKey(input)) !== undefined
   }
 
@@ -82,27 +83,31 @@ class RendererSource implements PptxSource {
     const run = this.queue
       .catch(() => {})
       .then(async (): Promise<PptxRenderResult> => {
+        if (this.disposed) return { status: "cancelled" }
         if (!isRenderLive(input)) return { status: "cancelled" }
 
         try {
           await this.renderer.renderSlide(input)
         } catch (error) {
+          if (this.disposed) return { status: "cancelled" }
           return {
             status: "failed",
             error: normalizeRendererError(error),
           }
         }
 
+        if (this.disposed) return { status: "cancelled" }
         if (!isRenderLive(input)) return { status: "cancelled" }
 
         try {
           const bitmap = await createImageBitmap(input.canvas)
-          if (!isRenderLive(input)) {
+          if (this.disposed || !isRenderLive(input)) {
             bitmap.close()
             return { status: "cancelled" }
           }
           this.bitmaps.set(cacheKey, new PptxBitmapEntry(bitmap))
         } catch {
+          if (this.disposed) return { status: "cancelled" }
           /* Snapshot unsupported: the slide still rendered, just without cache. */
         }
 
@@ -146,7 +151,6 @@ class SourceCacheEntry implements Disposable {
     promise.then(
       (source) => {
         this.source = source
-        if (this.disposed) source.dispose()
       },
       () => {
         /* rejected entries are removed by getPptxSource */
@@ -155,8 +159,9 @@ class SourceCacheEntry implements Disposable {
   }
 
   dispose() {
-    this.disposed = true
+    if (!this.source) return
     this.source?.dispose()
+    this.disposed = true
   }
 }
 
@@ -165,7 +170,7 @@ const sourceCache = new DisposableLruCache<string, SourceCacheEntry>(
 )
 
 export function getPptxSource(resource: ViewerResource): Promise<PptxSource> {
-  const cacheKey = resource.cacheKey
+  const cacheKey = resource.keys.load
   const cached = sourceCache.get(cacheKey)
   if (cached) return cached.promise
 

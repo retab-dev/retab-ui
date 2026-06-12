@@ -4,9 +4,14 @@ import * as React from "react"
 
 import {
   getSegmentSurfaceProps,
+  scopeSegmentInteraction,
   type SegmentInteraction,
 } from "@/lib/segment-interaction"
-import { formatPageRanges, type Segment } from "@/lib/segments"
+import {
+  formatPageRanges,
+  segmentDisplayLabel,
+  type Segment,
+} from "@/lib/segments"
 import { cn } from "@/lib/utils"
 
 export interface SegmentSidebarProps {
@@ -42,6 +47,14 @@ export function SegmentSidebar({
   const visible = showUnused
     ? segments
     : segments.filter((s) => s.pages.length > 0)
+  const scopedInteraction = React.useMemo(
+    () =>
+      scopeSegmentInteraction(
+        interaction,
+        visible.map((segment) => segment.id)
+      ),
+    [interaction, visible]
+  )
 
   return (
     <div
@@ -57,10 +70,11 @@ export function SegmentSidebar({
           const { state, eventHandlers, ariaProps, dataProps } =
             getSegmentSurfaceProps({
               segment,
-              interaction,
+              interaction: scopedInteraction,
               currentPage,
               onSelect,
             })
+          const label = segmentDisplayLabel(segment.label)
           return (
             <li key={segment.id}>
               <button
@@ -84,7 +98,9 @@ export function SegmentSidebar({
                 />
                 <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                   <span className="truncate text-sm font-medium">
-                    {segment.label || (
+                    {segment.label.trim() ? (
+                      label
+                    ) : (
                       <span className="text-muted-foreground italic">
                         unnamed
                       </span>

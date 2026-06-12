@@ -2,6 +2,8 @@
 
 import * as React from "react"
 
+import { clamp } from "./pptx-viewer-core"
+
 export interface PptxVisibleSlideInput {
   onVisibleSlideChange?: (slide: number) => void
   onScrollProgressChange?: (progress: number) => void
@@ -21,7 +23,7 @@ export function usePptxVisibleSlide({
 
     const scrollable = viewport.scrollHeight - viewport.clientHeight
     onScrollProgressChange?.(
-      scrollable > 0 ? viewport.scrollTop / scrollable : 0
+      scrollable > 0 ? clamp(viewport.scrollTop / scrollable, 0, 1) : 0
     )
 
     const rect = viewport.getBoundingClientRect()

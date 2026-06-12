@@ -2,8 +2,8 @@
   "object": "extraction.sources",
   "document_type": "pdf",
   "file": {
-    "id": "file_bank_statement_jun_2003",
-    "filename": "bank-statement.pdf",
+    "id": "file_jane_doe_bank_statement_jul_2003",
+    "filename": "jane-doe-bank-statement-5-pages.pdf",
     "mime_type": "application/pdf"
   },
   "schema": {
@@ -44,32 +44,657 @@
   },
   "extraction": {
     "account_number": "000009752",
-    "statement_date": "June 5, 2003",
+    "statement_date": "July 8, 2003",
     "transactions": [
       {
-        "date": "05-15",
-        "description": "Deposit",
-        "amount": 3615.08
+        "date": "06-06",
+        "description": "CHECKCARD PURCHASE - GROCER'S MARKET 0042, SMALL TOWN MO",
+        "amount": -85.34
       },
       {
-        "date": "05-18",
-        "description": "ATM Withdrawal",
-        "amount": 20
+        "date": "06-06",
+        "description": "AUTOMATIC PAYMENT - TELEPHONE SERVICE",
+        "amount": -81.23
       },
       {
-        "date": "05-12",
-        "description": "Check #1001",
-        "amount": 75
+        "date": "06-06",
+        "description": "DEPOSIT - PAYROLL DIRECT DEP",
+        "amount": 1875.24
       },
       {
-        "date": "05-18",
-        "description": "Check #1002",
-        "amount": 30
+        "date": "06-06",
+        "description": "ATM WITHDRAWAL - 1000 WALNUT ST M119",
+        "amount": -69.01
       },
       {
-        "date": "05-24",
-        "description": "Check #1003",
-        "amount": 200
+        "date": "06-07",
+        "description": "CHECKCARD PURCHASE - MAIN STREET PHARMACY",
+        "amount": -30.79
+      },
+      {
+        "date": "06-07",
+        "description": "BILL PAYMENT - CITY UTILITIES",
+        "amount": -108.3
+      },
+      {
+        "date": "06-07",
+        "description": "CHECKCARD PURCHASE - BOOKS AND NEWS",
+        "amount": -41.2
+      },
+      {
+        "date": "06-07",
+        "description": "ONLINE TRANSFER TO SAVINGS",
+        "amount": -213.49
+      },
+      {
+        "date": "06-08",
+        "description": "CHECKCARD PURCHASE - GARDEN CENTER",
+        "amount": -35.52
+      },
+      {
+        "date": "06-08",
+        "description": "CHECKCARD PURCHASE - COFFEE HOUSE 013",
+        "amount": -7.95
+      },
+      {
+        "date": "06-08",
+        "description": "CHECKCARD PURCHASE - OFFICE SUPPLY 3301",
+        "amount": -19.24
+      },
+      {
+        "date": "06-08",
+        "description": "CHECKCARD PURCHASE - HARDWARE STORE",
+        "amount": -41.72
+      },
+      {
+        "date": "06-09",
+        "description": "AUTOMATIC PAYMENT - INSURANCE PREMIUM",
+        "amount": -174.12
+      },
+      {
+        "date": "06-09",
+        "description": "CHECKCARD PURCHASE - DRY CLEANERS",
+        "amount": -27.77
+      },
+      {
+        "date": "06-09",
+        "description": "BILL PAYMENT - MOBILE SERVICE",
+        "amount": -48.75
+      },
+      {
+        "date": "06-09",
+        "description": "CHECKCARD PURCHASE - FAMILY RESTAURANT",
+        "amount": -58.01
+      },
+      {
+        "date": "06-10",
+        "description": "CHECK 1007",
+        "amount": -123.1
+      },
+      {
+        "date": "06-10",
+        "description": "CHECKCARD PURCHASE - MOVIE THEATER",
+        "amount": -26.65
+      },
+      {
+        "date": "06-10",
+        "description": "CHECKCARD PURCHASE - AUTO PARTS",
+        "amount": -74.08
+      },
+      {
+        "date": "06-10",
+        "description": "AUTOMATIC PAYMENT - CABLE SERVICE",
+        "amount": -87.17
+      },
+      {
+        "date": "06-11",
+        "description": "MONTHLY SERVICE CHARGE",
+        "amount": -5
+      },
+      {
+        "date": "06-11",
+        "description": "CHECKCARD PURCHASE - DINER",
+        "amount": -38.07
+      },
+      {
+        "date": "06-11",
+        "description": "CHECKCARD PURCHASE - GROCER'S MARKET 0042, SMALL TOWN MO",
+        "amount": -73.25
+      },
+      {
+        "date": "06-11",
+        "description": "AUTOMATIC PAYMENT - TELEPHONE SERVICE",
+        "amount": -77.9
+      },
+      {
+        "date": "06-12",
+        "description": "CHECKCARD PURCHASE - FUEL STOP 1187, KANSAS CITY MO",
+        "amount": -31.14
+      },
+      {
+        "date": "06-12",
+        "description": "ATM WITHDRAWAL - 1000 WALNUT ST M119",
+        "amount": -58.72
+      },
+      {
+        "date": "06-12",
+        "description": "CHECKCARD PURCHASE - MAIN STREET PHARMACY",
+        "amount": -41.2
+      },
+      {
+        "date": "06-12",
+        "description": "BILL PAYMENT - CITY UTILITIES",
+        "amount": -129.74
+      },
+      {
+        "date": "06-13",
+        "description": "CHECKCARD PURCHASE - BOOKS AND NEWS",
+        "amount": -34.84
+      },
+      {
+        "date": "06-13",
+        "description": "DEPOSIT - MOBILE DEPOSIT",
+        "amount": 420
+      },
+      {
+        "date": "06-13",
+        "description": "CHECKCARD PURCHASE - GARDEN CENTER",
+        "amount": -71.14
+      },
+      {
+        "date": "06-13",
+        "description": "CHECKCARD PURCHASE - COFFEE HOUSE 013",
+        "amount": -8.67
+      },
+      {
+        "date": "06-14",
+        "description": "CHECKCARD PURCHASE - OFFICE SUPPLY 3301",
+        "amount": -41.37
+      },
+      {
+        "date": "06-14",
+        "description": "CHECKCARD PURCHASE - HARDWARE STORE",
+        "amount": -41.86
+      },
+      {
+        "date": "06-14",
+        "description": "AUTOMATIC PAYMENT - INSURANCE PREMIUM",
+        "amount": -132.11
+      },
+      {
+        "date": "06-14",
+        "description": "CHECKCARD PURCHASE - DRY CLEANERS",
+        "amount": -31.5
+      },
+      {
+        "date": "06-15",
+        "description": "BILL PAYMENT - MOBILE SERVICE",
+        "amount": -72.18
+      },
+      {
+        "date": "06-15",
+        "description": "CHECKCARD PURCHASE - FAMILY RESTAURANT",
+        "amount": -52.41
+      },
+      {
+        "date": "06-15",
+        "description": "CHECKCARD PURCHASE - POSTAL CENTER",
+        "amount": -15.84
+      },
+      {
+        "date": "06-15",
+        "description": "CHECKCARD PURCHASE - MOVIE THEATER",
+        "amount": -31.59
+      },
+      {
+        "date": "06-16",
+        "description": "CHECKCARD PURCHASE - AUTO PARTS",
+        "amount": -47.27
+      },
+      {
+        "date": "06-16",
+        "description": "AUTOMATIC PAYMENT - CABLE SERVICE",
+        "amount": -93.98
+      },
+      {
+        "date": "06-16",
+        "description": "MONTHLY SERVICE CHARGE",
+        "amount": -5
+      },
+      {
+        "date": "06-16",
+        "description": "CHECK 1008",
+        "amount": -89
+      },
+      {
+        "date": "06-17",
+        "description": "CHECKCARD PURCHASE - GROCER'S MARKET 0042, SMALL TOWN MO",
+        "amount": -71.51
+      },
+      {
+        "date": "06-17",
+        "description": "AUTOMATIC PAYMENT - TELEPHONE SERVICE",
+        "amount": -73.43
+      },
+      {
+        "date": "06-17",
+        "description": "CHECKCARD PURCHASE - FUEL STOP 1187, KANSAS CITY MO",
+        "amount": -41.87
+      },
+      {
+        "date": "06-17",
+        "description": "ATM WITHDRAWAL - 1000 WALNUT ST M119",
+        "amount": -77.2
+      },
+      {
+        "date": "06-18",
+        "description": "CHECKCARD PURCHASE - MAIN STREET PHARMACY",
+        "amount": -46.3
+      },
+      {
+        "date": "06-18",
+        "description": "BILL PAYMENT - CITY UTILITIES",
+        "amount": -120.45
+      },
+      {
+        "date": "06-18",
+        "description": "CHECKCARD PURCHASE - BOOKS AND NEWS",
+        "amount": -35
+      },
+      {
+        "date": "06-18",
+        "description": "ONLINE TRANSFER TO SAVINGS",
+        "amount": -106.83
+      },
+      {
+        "date": "06-19",
+        "description": "CHECKCARD PURCHASE - GARDEN CENTER",
+        "amount": -52.55
+      },
+      {
+        "date": "06-19",
+        "description": "CHECKCARD PURCHASE - COFFEE HOUSE 013",
+        "amount": -15.42
+      },
+      {
+        "date": "06-19",
+        "description": "CHECKCARD PURCHASE - OFFICE SUPPLY 3301",
+        "amount": -31.46
+      },
+      {
+        "date": "06-19",
+        "description": "CHECKCARD PURCHASE - HARDWARE STORE",
+        "amount": -47.3
+      },
+      {
+        "date": "06-20",
+        "description": "AUTOMATIC PAYMENT - INSURANCE PREMIUM",
+        "amount": -155.05
+      },
+      {
+        "date": "06-20",
+        "description": "CHECKCARD PURCHASE - DRY CLEANERS",
+        "amount": -35.57
+      },
+      {
+        "date": "06-20",
+        "description": "ACH CREDIT - CUSTOMER REFUND",
+        "amount": 54.19
+      },
+      {
+        "date": "06-20",
+        "description": "CHECKCARD PURCHASE - FAMILY RESTAURANT",
+        "amount": -55.86
+      },
+      {
+        "date": "06-21",
+        "description": "CHECKCARD PURCHASE - POSTAL CENTER",
+        "amount": -23.97
+      },
+      {
+        "date": "06-21",
+        "description": "CHECKCARD PURCHASE - MOVIE THEATER",
+        "amount": -35.78
+      },
+      {
+        "date": "06-21",
+        "description": "CHECKCARD PURCHASE - AUTO PARTS",
+        "amount": -64.3
+      },
+      {
+        "date": "06-21",
+        "description": "AUTOMATIC PAYMENT - CABLE SERVICE",
+        "amount": -73.81
+      },
+      {
+        "date": "06-22",
+        "description": "MONTHLY SERVICE CHARGE",
+        "amount": -5
+      },
+      {
+        "date": "06-22",
+        "description": "CHECKCARD PURCHASE - DINER",
+        "amount": -44.13
+      },
+      {
+        "date": "06-22",
+        "description": "CHECKCARD PURCHASE - GROCER'S MARKET 0042, SMALL TOWN MO",
+        "amount": -48.6
+      },
+      {
+        "date": "06-22",
+        "description": "AUTOMATIC PAYMENT - TELEPHONE SERVICE",
+        "amount": -77.82
+      },
+      {
+        "date": "06-23",
+        "description": "CHECKCARD PURCHASE - FUEL STOP 1187, KANSAS CITY MO",
+        "amount": -58.48
+      },
+      {
+        "date": "06-23",
+        "description": "ATM WITHDRAWAL - 1000 WALNUT ST M119",
+        "amount": -28.91
+      },
+      {
+        "date": "06-23",
+        "description": "CHECKCARD PURCHASE - MAIN STREET PHARMACY",
+        "amount": -27.12
+      },
+      {
+        "date": "06-23",
+        "description": "BILL PAYMENT - CITY UTILITIES",
+        "amount": -125.07
+      },
+      {
+        "date": "06-24",
+        "description": "CHECKCARD PURCHASE - BOOKS AND NEWS",
+        "amount": -42.1
+      },
+      {
+        "date": "06-24",
+        "description": "ONLINE TRANSFER TO SAVINGS",
+        "amount": -222.37
+      },
+      {
+        "date": "06-24",
+        "description": "CHECKCARD PURCHASE - GARDEN CENTER",
+        "amount": -31.59
+      },
+      {
+        "date": "06-24",
+        "description": "CHECK 1009",
+        "amount": -69.65
+      },
+      {
+        "date": "06-25",
+        "description": "CHECKCARD PURCHASE - OFFICE SUPPLY 3301",
+        "amount": -54.55
+      },
+      {
+        "date": "06-25",
+        "description": "CHECKCARD PURCHASE - HARDWARE STORE",
+        "amount": -48.03
+      },
+      {
+        "date": "06-25",
+        "description": "AUTOMATIC PAYMENT - INSURANCE PREMIUM",
+        "amount": -147.09
+      },
+      {
+        "date": "06-25",
+        "description": "CHECKCARD PURCHASE - DRY CLEANERS",
+        "amount": -25.3
+      },
+      {
+        "date": "06-26",
+        "description": "BILL PAYMENT - MOBILE SERVICE",
+        "amount": -62.79
+      },
+      {
+        "date": "06-26",
+        "description": "CHECKCARD PURCHASE - FAMILY RESTAURANT",
+        "amount": -66.49
+      },
+      {
+        "date": "06-26",
+        "description": "CHECKCARD PURCHASE - POSTAL CENTER",
+        "amount": -26.59
+      },
+      {
+        "date": "06-26",
+        "description": "CHECKCARD PURCHASE - MOVIE THEATER",
+        "amount": -28.02
+      },
+      {
+        "date": "06-27",
+        "description": "CHECKCARD PURCHASE - AUTO PARTS",
+        "amount": -30.23
+      },
+      {
+        "date": "06-27",
+        "description": "AUTOMATIC PAYMENT - CABLE SERVICE",
+        "amount": -70.26
+      },
+      {
+        "date": "06-27",
+        "description": "MONTHLY SERVICE CHARGE",
+        "amount": -5
+      },
+      {
+        "date": "06-27",
+        "description": "CHECKCARD PURCHASE - DINER",
+        "amount": -22.66
+      },
+      {
+        "date": "06-28",
+        "description": "ACH CREDIT - EXPENSE REIMBURSEMENT",
+        "amount": 96.5
+      },
+      {
+        "date": "06-28",
+        "description": "AUTOMATIC PAYMENT - TELEPHONE SERVICE",
+        "amount": -88.25
+      },
+      {
+        "date": "06-28",
+        "description": "CHECKCARD PURCHASE - FUEL STOP 1187, KANSAS CITY MO",
+        "amount": -38.13
+      },
+      {
+        "date": "06-28",
+        "description": "ATM WITHDRAWAL - 1000 WALNUT ST M119",
+        "amount": -49.3
+      },
+      {
+        "date": "06-29",
+        "description": "CHECKCARD PURCHASE - MAIN STREET PHARMACY",
+        "amount": -32.73
+      },
+      {
+        "date": "06-29",
+        "description": "BILL PAYMENT - CITY UTILITIES",
+        "amount": -87.98
+      },
+      {
+        "date": "06-29",
+        "description": "CHECKCARD PURCHASE - BOOKS AND NEWS",
+        "amount": -27.12
+      },
+      {
+        "date": "06-29",
+        "description": "ONLINE TRANSFER TO SAVINGS",
+        "amount": -173.65
+      },
+      {
+        "date": "06-30",
+        "description": "CHECKCARD PURCHASE - GARDEN CENTER",
+        "amount": -51.97
+      },
+      {
+        "date": "06-30",
+        "description": "CHECKCARD PURCHASE - COFFEE HOUSE 013",
+        "amount": -17.91
+      },
+      {
+        "date": "06-30",
+        "description": "CHECKCARD PURCHASE - OFFICE SUPPLY 3301",
+        "amount": -74.91
+      },
+      {
+        "date": "06-30",
+        "description": "CHECKCARD PURCHASE - HARDWARE STORE",
+        "amount": -33.34
+      },
+      {
+        "date": "07-01",
+        "description": "AUTOMATIC PAYMENT - INSURANCE PREMIUM",
+        "amount": -167.63
+      },
+      {
+        "date": "07-01",
+        "description": "CHECKCARD PURCHASE - DRY CLEANERS",
+        "amount": -18.94
+      },
+      {
+        "date": "07-01",
+        "description": "BILL PAYMENT - MOBILE SERVICE",
+        "amount": -59.37
+      },
+      {
+        "date": "07-01",
+        "description": "CHECKCARD PURCHASE - FAMILY RESTAURANT",
+        "amount": -43.76
+      },
+      {
+        "date": "07-02",
+        "description": "CHECK 1010",
+        "amount": -115.17
+      },
+      {
+        "date": "07-02",
+        "description": "CHECKCARD PURCHASE - MOVIE THEATER",
+        "amount": -20.21
+      },
+      {
+        "date": "07-02",
+        "description": "CHECKCARD PURCHASE - AUTO PARTS",
+        "amount": -75.17
+      },
+      {
+        "date": "07-02",
+        "description": "AUTOMATIC PAYMENT - CABLE SERVICE",
+        "amount": -93.9
+      },
+      {
+        "date": "07-03",
+        "description": "MONTHLY SERVICE CHARGE",
+        "amount": -5
+      },
+      {
+        "date": "07-03",
+        "description": "CHECKCARD PURCHASE - DINER",
+        "amount": -21.27
+      },
+      {
+        "date": "07-03",
+        "description": "CHECKCARD PURCHASE - GROCER'S MARKET 0042, SMALL TOWN MO",
+        "amount": -52.88
+      },
+      {
+        "date": "07-03",
+        "description": "AUTOMATIC PAYMENT - TELEPHONE SERVICE",
+        "amount": -88.93
+      },
+      {
+        "date": "07-04",
+        "description": "CHECKCARD PURCHASE - FUEL STOP 1187, KANSAS CITY MO",
+        "amount": -45.92
+      },
+      {
+        "date": "07-04",
+        "description": "ATM WITHDRAWAL - 1000 WALNUT ST M119",
+        "amount": -42.9
+      },
+      {
+        "date": "07-04",
+        "description": "CHECKCARD PURCHASE - MAIN STREET PHARMACY",
+        "amount": -35.54
+      },
+      {
+        "date": "07-04",
+        "description": "BILL PAYMENT - CITY UTILITIES",
+        "amount": -81.24
+      },
+      {
+        "date": "07-05",
+        "description": "CHECKCARD PURCHASE - BOOKS AND NEWS",
+        "amount": -39.69
+      },
+      {
+        "date": "07-05",
+        "description": "ONLINE TRANSFER TO SAVINGS",
+        "amount": -219.21
+      },
+      {
+        "date": "07-05",
+        "description": "ATM DEPOSIT - SMALL TOWN BRANCH",
+        "amount": 225
+      },
+      {
+        "date": "07-05",
+        "description": "CHECKCARD PURCHASE - COFFEE HOUSE 013",
+        "amount": -6.58
+      },
+      {
+        "date": "07-06",
+        "description": "CHECKCARD PURCHASE - OFFICE SUPPLY 3301",
+        "amount": -36.07
+      },
+      {
+        "date": "07-06",
+        "description": "CHECKCARD PURCHASE - HARDWARE STORE",
+        "amount": -51.25
+      },
+      {
+        "date": "07-06",
+        "description": "AUTOMATIC PAYMENT - INSURANCE PREMIUM",
+        "amount": -127.13
+      },
+      {
+        "date": "07-06",
+        "description": "CHECKCARD PURCHASE - DRY CLEANERS",
+        "amount": -25.2
+      },
+      {
+        "date": "07-07",
+        "description": "BILL PAYMENT - MOBILE SERVICE",
+        "amount": -76.42
+      },
+      {
+        "date": "07-07",
+        "description": "CHECKCARD PURCHASE - FAMILY RESTAURANT",
+        "amount": -33.72
+      },
+      {
+        "date": "07-07",
+        "description": "CHECKCARD PURCHASE - POSTAL CENTER",
+        "amount": -24.21
+      },
+      {
+        "date": "07-07",
+        "description": "CHECKCARD PURCHASE - MOVIE THEATER",
+        "amount": -45.25
+      },
+      {
+        "date": "07-08",
+        "description": "CHECKCARD PURCHASE - AUTO PARTS",
+        "amount": -70.6
+      },
+      {
+        "date": "07-08",
+        "description": "AUTOMATIC PAYMENT - CABLE SERVICE",
+        "amount": -76.67
       }
     ]
   },
@@ -81,23 +706,23 @@
         "anchor": {
           "kind": "pdf_bbox",
           "page": 1,
-          "left": 0.8199,
-          "top": 0.181,
-          "width": 0.0746,
+          "left": 0.8111,
+          "top": 0.1772,
+          "width": 0.0736,
           "height": 0.0127
         }
       }
     },
     "statement_date": {
-      "value": "June 5, 2003",
+      "value": "July 8, 2003",
       "source": {
-        "content": "June 5, 2003",
+        "content": "July 8, 2003",
         "anchor": {
           "kind": "pdf_bbox",
           "page": 1,
-          "left": 0.8033,
-          "top": 0.216,
-          "width": 0.0898,
+          "left": 0.8021,
+          "top": 0.1933,
+          "width": 0.0826,
           "height": 0.0127
         }
       }
@@ -105,220 +730,5720 @@
     "transactions": [
       {
         "date": {
-          "value": "05-15",
+          "value": "06-06",
           "source": {
-            "content": "05-15",
+            "content": "06-06",
             "anchor": {
               "kind": "pdf_bbox",
               "page": 1,
-              "left": 0.6345,
-              "top": 0.508,
-              "width": 0.0385,
-              "height": 0.0101
-            }
-          }
-        },
-        "description": {
-          "value": "Deposit",
-          "source": {
-            "content": "Deposit",
-            "anchor": {
-              "kind": "pdf_bbox",
-              "page": 1,
-              "left": 0.1299,
-              "top": 0.508,
-              "width": 0.0512,
-              "height": 0.0101
-            }
-          }
-        },
-        "amount": {
-          "value": 3615.08,
-          "source": {
-            "content": "3,615.08",
-            "anchor": {
-              "kind": "pdf_bbox",
-              "page": 1,
-              "left": 0.8259,
-              "top": 0.508,
-              "width": 0.0672,
-              "height": 0.0101
-            }
-          }
-        }
-      },
-      {
-        "date": {
-          "value": "05-18",
-          "source": {
-            "content": "05-18",
-            "anchor": {
-              "kind": "pdf_bbox",
-              "page": 1,
-              "left": 0.5366,
-              "top": 0.6405,
-              "width": 0.0389,
-              "height": 0.0101
-            }
-          }
-        },
-        "description": {
-          "value": "ATM Withdrawal",
-          "source": {
-            "content": "ATM Withdrawal",
-            "anchor": {
-              "kind": "pdf_bbox",
-              "page": 1,
-              "left": 0.1299,
-              "top": 0.615,
-              "width": 0.1089,
-              "height": 0.0101
-            }
-          }
-        },
-        "amount": {
-          "value": 20,
-          "source": {
-            "content": "20.00",
-            "anchor": {
-              "kind": "pdf_bbox",
-              "page": 1,
-              "left": 0.8444,
-              "top": 0.6405,
-              "width": 0.0463,
-              "height": 0.0101
-            }
-          }
-        }
-      },
-      {
-        "date": {
-          "value": "05-12",
-          "source": {
-            "content": "05-12",
-            "anchor": {
-              "kind": "pdf_bbox",
-              "page": 1,
-              "left": 0.1299,
-              "top": 0.7623,
-              "width": 0.0402,
-              "height": 0.0126
-            }
-          }
-        },
-        "description": {
-          "value": "Check #1001",
-          "source": {
-            "content": "1001",
-            "anchor": {
-              "kind": "pdf_bbox",
-              "page": 1,
-              "left": 0.2302,
-              "top": 0.7623,
+              "left": 0.1307,
+              "top": 0.4195,
               "width": 0.0345,
-              "height": 0.0126
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - GROCER'S MARKET 0042, SMALL TOWN MO",
+          "source": {
+            "content": "CHECKCARD PURCHASE - GROCER'S MARKET 0042, SMALL TOWN MO",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.1992,
+              "top": 0.4195,
+              "width": 0.3067,
+              "height": 0.023
             }
           }
         },
         "amount": {
-          "value": 75,
+          "value": -85.34,
           "source": {
-            "content": "75.00",
+            "content": "$85.34",
             "anchor": {
               "kind": "pdf_bbox",
               "page": 1,
-              "left": 0.3873,
-              "top": 0.7623,
-              "width": 0.0391,
-              "height": 0.0126
+              "left": 0.715,
+              "top": 0.4195,
+              "width": 0.0412,
+              "height": 0.0116
             }
           }
         }
       },
       {
         "date": {
-          "value": "05-18",
+          "value": "06-06",
           "source": {
-            "content": "05-18",
+            "content": "06-06",
             "anchor": {
               "kind": "pdf_bbox",
               "page": 1,
-              "left": 0.1299,
-              "top": 0.7784,
-              "width": 0.0402,
-              "height": 0.0126
+              "left": 0.1307,
+              "top": 0.4489,
+              "width": 0.0345,
+              "height": 0.0116
             }
           }
         },
         "description": {
-          "value": "Check #1002",
+          "value": "AUTOMATIC PAYMENT - TELEPHONE SERVICE",
           "source": {
-            "content": "1002",
+            "content": "AUTOMATIC PAYMENT - TELEPHONE SERVICE",
             "anchor": {
               "kind": "pdf_bbox",
               "page": 1,
-              "left": 0.2302,
-              "top": 0.7784,
-              "width": 0.0345,
-              "height": 0.0126
+              "left": 0.1992,
+              "top": 0.4489,
+              "width": 0.3009,
+              "height": 0.0116
             }
           }
         },
         "amount": {
-          "value": 30,
+          "value": -81.23,
           "source": {
-            "content": "30.00",
+            "content": "$81.23",
             "anchor": {
               "kind": "pdf_bbox",
               "page": 1,
-              "left": 0.3873,
-              "top": 0.7784,
-              "width": 0.0391,
-              "height": 0.0126
+              "left": 0.715,
+              "top": 0.4489,
+              "width": 0.0412,
+              "height": 0.0116
             }
           }
         }
       },
       {
         "date": {
-          "value": "05-24",
+          "value": "06-06",
           "source": {
-            "content": "05-24",
+            "content": "06-06",
             "anchor": {
               "kind": "pdf_bbox",
               "page": 1,
-              "left": 0.1299,
-              "top": 0.7954,
-              "width": 0.0402,
-              "height": 0.0126
+              "left": 0.1307,
+              "top": 0.4669,
+              "width": 0.0345,
+              "height": 0.0116
             }
           }
         },
         "description": {
-          "value": "Check #1003",
+          "value": "DEPOSIT - PAYROLL DIRECT DEP",
           "source": {
-            "content": "1003",
+            "content": "DEPOSIT - PAYROLL DIRECT DEP",
             "anchor": {
               "kind": "pdf_bbox",
               "page": 1,
-              "left": 0.2302,
-              "top": 0.7954,
-              "width": 0.0345,
-              "height": 0.0126
+              "left": 0.1992,
+              "top": 0.4669,
+              "width": 0.2157,
+              "height": 0.0116
             }
           }
         },
         "amount": {
-          "value": 200,
+          "value": 1875.24,
           "source": {
-            "content": "200.00",
+            "content": "$1,875.24",
             "anchor": {
               "kind": "pdf_bbox",
               "page": 1,
-              "left": 0.3787,
-              "top": 0.7954,
+              "left": 0.8024,
+              "top": 0.4669,
+              "width": 0.06,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-06",
+          "source": {
+            "content": "06-06",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.1307,
+              "top": 0.4839,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "ATM WITHDRAWAL - 1000 WALNUT ST M119",
+          "source": {
+            "content": "ATM WITHDRAWAL - 1000 WALNUT ST M119",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.1992,
+              "top": 0.4839,
+              "width": 0.2809,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -69.01,
+          "source": {
+            "content": "$69.01",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.715,
+              "top": 0.4839,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-07",
+          "source": {
+            "content": "06-07",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.1307,
+              "top": 0.5019,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - MAIN STREET PHARMACY",
+          "source": {
+            "content": "CHECKCARD PURCHASE - MAIN STREET PHARMACY",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.1992,
+              "top": 0.5019,
+              "width": 0.2666,
+              "height": 0.023
+            }
+          }
+        },
+        "amount": {
+          "value": -30.79,
+          "source": {
+            "content": "$30.79",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.715,
+              "top": 0.5019,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-07",
+          "source": {
+            "content": "06-07",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.1307,
+              "top": 0.5313,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "BILL PAYMENT - CITY UTILITIES",
+          "source": {
+            "content": "BILL PAYMENT - CITY UTILITIES",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.1992,
+              "top": 0.5313,
+              "width": 0.203,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -108.3,
+          "source": {
+            "content": "$108.30",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.7075,
+              "top": 0.5313,
+              "width": 0.0487,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-07",
+          "source": {
+            "content": "06-07",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.1307,
+              "top": 0.5493,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - BOOKS AND NEWS",
+          "source": {
+            "content": "CHECKCARD PURCHASE - BOOKS AND NEWS",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.1992,
+              "top": 0.5493,
+              "width": 0.2996,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -41.2,
+          "source": {
+            "content": "$41.20",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.715,
+              "top": 0.5493,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-07",
+          "source": {
+            "content": "06-07",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.1307,
+              "top": 0.5673,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "ONLINE TRANSFER TO SAVINGS",
+          "source": {
+            "content": "ONLINE TRANSFER TO SAVINGS",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.1992,
+              "top": 0.5673,
+              "width": 0.211,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -213.49,
+          "source": {
+            "content": "$213.49",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.7075,
+              "top": 0.5673,
+              "width": 0.0487,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-08",
+          "source": {
+            "content": "06-08",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.1307,
+              "top": 0.5853,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - GARDEN CENTER",
+          "source": {
+            "content": "CHECKCARD PURCHASE - GARDEN CENTER",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.1992,
+              "top": 0.5853,
+              "width": 0.2929,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -35.52,
+          "source": {
+            "content": "$35.52",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.715,
+              "top": 0.5853,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-08",
+          "source": {
+            "content": "06-08",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.1307,
+              "top": 0.6033,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - COFFEE HOUSE 013",
+          "source": {
+            "content": "CHECKCARD PURCHASE - COFFEE HOUSE 013",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.1992,
+              "top": 0.6033,
+              "width": 0.3086,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -7.95,
+          "source": {
+            "content": "$7.95",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.7225,
+              "top": 0.6033,
+              "width": 0.0337,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-08",
+          "source": {
+            "content": "06-08",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.1307,
+              "top": 0.6203,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - OFFICE SUPPLY 3301",
+          "source": {
+            "content": "CHECKCARD PURCHASE - OFFICE SUPPLY 3301",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.1992,
+              "top": 0.6203,
+              "width": 0.3149,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -19.24,
+          "source": {
+            "content": "$19.24",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.715,
+              "top": 0.6203,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-08",
+          "source": {
+            "content": "06-08",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.1307,
+              "top": 0.6383,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - HARDWARE STORE",
+          "source": {
+            "content": "CHECKCARD PURCHASE - HARDWARE STORE",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.1992,
+              "top": 0.6383,
+              "width": 0.3041,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -41.72,
+          "source": {
+            "content": "$41.72",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.715,
+              "top": 0.6383,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-09",
+          "source": {
+            "content": "06-09",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.1307,
+              "top": 0.6563,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "AUTOMATIC PAYMENT - INSURANCE PREMIUM",
+          "source": {
+            "content": "AUTOMATIC PAYMENT - INSURANCE PREMIUM",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.1992,
+              "top": 0.6563,
+              "width": 0.3036,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -174.12,
+          "source": {
+            "content": "$174.12",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.7075,
+              "top": 0.6563,
+              "width": 0.0487,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-09",
+          "source": {
+            "content": "06-09",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.1307,
+              "top": 0.6743,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - DRY CLEANERS",
+          "source": {
+            "content": "CHECKCARD PURCHASE - DRY CLEANERS",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.1992,
+              "top": 0.6743,
+              "width": 0.2804,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -27.77,
+          "source": {
+            "content": "$27.77",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.715,
+              "top": 0.6743,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-09",
+          "source": {
+            "content": "06-09",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.1307,
+              "top": 0.6923,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "BILL PAYMENT - MOBILE SERVICE",
+          "source": {
+            "content": "BILL PAYMENT - MOBILE SERVICE",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.1992,
+              "top": 0.6923,
+              "width": 0.2195,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -48.75,
+          "source": {
+            "content": "$48.75",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.715,
+              "top": 0.6923,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-09",
+          "source": {
+            "content": "06-09",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.1307,
+              "top": 0.7103,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - FAMILY RESTAURANT",
+          "source": {
+            "content": "CHECKCARD PURCHASE - FAMILY RESTAURANT",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.1992,
+              "top": 0.7103,
+              "width": 0.3168,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -58.01,
+          "source": {
+            "content": "$58.01",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.715,
+              "top": 0.7103,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-10",
+          "source": {
+            "content": "06-10",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.1307,
+              "top": 0.7283,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECK 1007",
+          "source": {
+            "content": "CHECK 1007",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.1992,
+              "top": 0.7283,
+              "width": 0.0809,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -123.1,
+          "source": {
+            "content": "$123.10",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.7075,
+              "top": 0.7283,
+              "width": 0.0487,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-10",
+          "source": {
+            "content": "06-10",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.1307,
+              "top": 0.7463,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - MOVIE THEATER",
+          "source": {
+            "content": "CHECKCARD PURCHASE - MOVIE THEATER",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.1992,
+              "top": 0.7463,
+              "width": 0.2849,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -26.65,
+          "source": {
+            "content": "$26.65",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 1,
+              "left": 0.715,
+              "top": 0.7463,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-10",
+          "source": {
+            "content": "06-10",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1307,
+              "top": 0.3267,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - AUTO PARTS",
+          "source": {
+            "content": "CHECKCARD PURCHASE - AUTO PARTS",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1992,
+              "top": 0.3267,
+              "width": 0.2599,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -74.08,
+          "source": {
+            "content": "$74.08",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.715,
+              "top": 0.3267,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-10",
+          "source": {
+            "content": "06-10",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1307,
+              "top": 0.3447,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "AUTOMATIC PAYMENT - CABLE SERVICE",
+          "source": {
+            "content": "AUTOMATIC PAYMENT - CABLE SERVICE",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1992,
+              "top": 0.3447,
+              "width": 0.2637,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -87.17,
+          "source": {
+            "content": "$87.17",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.715,
+              "top": 0.3447,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-11",
+          "source": {
+            "content": "06-11",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1307,
+              "top": 0.3627,
+              "width": 0.0335,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "MONTHLY SERVICE CHARGE",
+          "source": {
+            "content": "MONTHLY SERVICE CHARGE",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1992,
+              "top": 0.3627,
+              "width": 0.1888,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -5,
+          "source": {
+            "content": "$5.00",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.7225,
+              "top": 0.3627,
+              "width": 0.0337,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-11",
+          "source": {
+            "content": "06-11",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1307,
+              "top": 0.3807,
+              "width": 0.0335,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - DINER",
+          "source": {
+            "content": "CHECKCARD PURCHASE - DINER",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1992,
+              "top": 0.3807,
+              "width": 0.218,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -38.07,
+          "source": {
+            "content": "$38.07",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.715,
+              "top": 0.3807,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-11",
+          "source": {
+            "content": "06-11",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1307,
+              "top": 0.3987,
+              "width": 0.0335,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - GROCER'S MARKET 0042, SMALL TOWN MO",
+          "source": {
+            "content": "CHECKCARD PURCHASE - GROCER'S MARKET 0042, SMALL TOWN MO",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1992,
+              "top": 0.3987,
+              "width": 0.3067,
+              "height": 0.023
+            }
+          }
+        },
+        "amount": {
+          "value": -73.25,
+          "source": {
+            "content": "$73.25",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.715,
+              "top": 0.3987,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-11",
+          "source": {
+            "content": "06-11",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1307,
+              "top": 0.4271,
+              "width": 0.0335,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "AUTOMATIC PAYMENT - TELEPHONE SERVICE",
+          "source": {
+            "content": "AUTOMATIC PAYMENT - TELEPHONE SERVICE",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1992,
+              "top": 0.4271,
+              "width": 0.3009,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -77.9,
+          "source": {
+            "content": "$77.90",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.715,
+              "top": 0.4271,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-12",
+          "source": {
+            "content": "06-12",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1307,
+              "top": 0.4451,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - FUEL STOP 1187, KANSAS CITY MO",
+          "source": {
+            "content": "CHECKCARD PURCHASE - FUEL STOP 1187, KANSAS CITY MO",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1992,
+              "top": 0.4451,
+              "width": 0.2864,
+              "height": 0.023
+            }
+          }
+        },
+        "amount": {
+          "value": -31.14,
+          "source": {
+            "content": "$31.14",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.715,
+              "top": 0.4451,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-12",
+          "source": {
+            "content": "06-12",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1307,
+              "top": 0.4745,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "ATM WITHDRAWAL - 1000 WALNUT ST M119",
+          "source": {
+            "content": "ATM WITHDRAWAL - 1000 WALNUT ST M119",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1992,
+              "top": 0.4745,
+              "width": 0.2809,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -58.72,
+          "source": {
+            "content": "$58.72",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.715,
+              "top": 0.4745,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-12",
+          "source": {
+            "content": "06-12",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1307,
+              "top": 0.4925,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - MAIN STREET PHARMACY",
+          "source": {
+            "content": "CHECKCARD PURCHASE - MAIN STREET PHARMACY",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1992,
+              "top": 0.4925,
+              "width": 0.2666,
+              "height": 0.023
+            }
+          }
+        },
+        "amount": {
+          "value": -41.2,
+          "source": {
+            "content": "$41.20",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.715,
+              "top": 0.4925,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-12",
+          "source": {
+            "content": "06-12",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1307,
+              "top": 0.5218,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "BILL PAYMENT - CITY UTILITIES",
+          "source": {
+            "content": "BILL PAYMENT - CITY UTILITIES",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1992,
+              "top": 0.5218,
+              "width": 0.203,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -129.74,
+          "source": {
+            "content": "$129.74",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.7075,
+              "top": 0.5218,
+              "width": 0.0487,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-13",
+          "source": {
+            "content": "06-13",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1307,
+              "top": 0.5398,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - BOOKS AND NEWS",
+          "source": {
+            "content": "CHECKCARD PURCHASE - BOOKS AND NEWS",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1992,
+              "top": 0.5398,
+              "width": 0.2996,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -34.84,
+          "source": {
+            "content": "$34.84",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.715,
+              "top": 0.5398,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-13",
+          "source": {
+            "content": "06-13",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1307,
+              "top": 0.5569,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "DEPOSIT - MOBILE DEPOSIT",
+          "source": {
+            "content": "DEPOSIT - MOBILE DEPOSIT",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1992,
+              "top": 0.5569,
+              "width": 0.1848,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": 420,
+          "source": {
+            "content": "$420.00",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.8137,
+              "top": 0.5569,
+              "width": 0.0487,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-13",
+          "source": {
+            "content": "06-13",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1307,
+              "top": 0.5749,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - GARDEN CENTER",
+          "source": {
+            "content": "CHECKCARD PURCHASE - GARDEN CENTER",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1992,
+              "top": 0.5749,
+              "width": 0.2929,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -71.14,
+          "source": {
+            "content": "$71.14",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.715,
+              "top": 0.5749,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-13",
+          "source": {
+            "content": "06-13",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1307,
+              "top": 0.5928,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - COFFEE HOUSE 013",
+          "source": {
+            "content": "CHECKCARD PURCHASE - COFFEE HOUSE 013",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1992,
+              "top": 0.5928,
+              "width": 0.3086,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -8.67,
+          "source": {
+            "content": "$8.67",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.7225,
+              "top": 0.5928,
+              "width": 0.0337,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-14",
+          "source": {
+            "content": "06-14",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1307,
+              "top": 0.6108,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - OFFICE SUPPLY 3301",
+          "source": {
+            "content": "CHECKCARD PURCHASE - OFFICE SUPPLY 3301",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1992,
+              "top": 0.6108,
+              "width": 0.3149,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -41.37,
+          "source": {
+            "content": "$41.37",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.715,
+              "top": 0.6108,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-14",
+          "source": {
+            "content": "06-14",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1307,
+              "top": 0.6288,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - HARDWARE STORE",
+          "source": {
+            "content": "CHECKCARD PURCHASE - HARDWARE STORE",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1992,
+              "top": 0.6288,
+              "width": 0.3041,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -41.86,
+          "source": {
+            "content": "$41.86",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.715,
+              "top": 0.6288,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-14",
+          "source": {
+            "content": "06-14",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1307,
+              "top": 0.6468,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "AUTOMATIC PAYMENT - INSURANCE PREMIUM",
+          "source": {
+            "content": "AUTOMATIC PAYMENT - INSURANCE PREMIUM",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1992,
+              "top": 0.6468,
+              "width": 0.3036,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -132.11,
+          "source": {
+            "content": "$132.11",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.7085,
+              "top": 0.6468,
               "width": 0.0477,
-              "height": 0.0126
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-14",
+          "source": {
+            "content": "06-14",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1307,
+              "top": 0.6648,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - DRY CLEANERS",
+          "source": {
+            "content": "CHECKCARD PURCHASE - DRY CLEANERS",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1992,
+              "top": 0.6648,
+              "width": 0.2804,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -31.5,
+          "source": {
+            "content": "$31.50",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.715,
+              "top": 0.6648,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-15",
+          "source": {
+            "content": "06-15",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1307,
+              "top": 0.6828,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "BILL PAYMENT - MOBILE SERVICE",
+          "source": {
+            "content": "BILL PAYMENT - MOBILE SERVICE",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1992,
+              "top": 0.6828,
+              "width": 0.2195,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -72.18,
+          "source": {
+            "content": "$72.18",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.715,
+              "top": 0.6828,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-15",
+          "source": {
+            "content": "06-15",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1307,
+              "top": 0.6999,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - FAMILY RESTAURANT",
+          "source": {
+            "content": "CHECKCARD PURCHASE - FAMILY RESTAURANT",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1992,
+              "top": 0.6999,
+              "width": 0.3168,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -52.41,
+          "source": {
+            "content": "$52.41",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.715,
+              "top": 0.6999,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-15",
+          "source": {
+            "content": "06-15",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1307,
+              "top": 0.7178,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - POSTAL CENTER",
+          "source": {
+            "content": "CHECKCARD PURCHASE - POSTAL CENTER",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1992,
+              "top": 0.7178,
+              "width": 0.2869,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -15.84,
+          "source": {
+            "content": "$15.84",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.715,
+              "top": 0.7178,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-15",
+          "source": {
+            "content": "06-15",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1307,
+              "top": 0.7358,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - MOVIE THEATER",
+          "source": {
+            "content": "CHECKCARD PURCHASE - MOVIE THEATER",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1992,
+              "top": 0.7358,
+              "width": 0.2849,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -31.59,
+          "source": {
+            "content": "$31.59",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.715,
+              "top": 0.7358,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-16",
+          "source": {
+            "content": "06-16",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1307,
+              "top": 0.7538,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - AUTO PARTS",
+          "source": {
+            "content": "CHECKCARD PURCHASE - AUTO PARTS",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1992,
+              "top": 0.7538,
+              "width": 0.2599,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -47.27,
+          "source": {
+            "content": "$47.27",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.715,
+              "top": 0.7538,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-16",
+          "source": {
+            "content": "06-16",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1307,
+              "top": 0.7718,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "AUTOMATIC PAYMENT - CABLE SERVICE",
+          "source": {
+            "content": "AUTOMATIC PAYMENT - CABLE SERVICE",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1992,
+              "top": 0.7718,
+              "width": 0.2637,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -93.98,
+          "source": {
+            "content": "$93.98",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.715,
+              "top": 0.7718,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-16",
+          "source": {
+            "content": "06-16",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1307,
+              "top": 0.7898,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "MONTHLY SERVICE CHARGE",
+          "source": {
+            "content": "MONTHLY SERVICE CHARGE",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1992,
+              "top": 0.7898,
+              "width": 0.1888,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -5,
+          "source": {
+            "content": "$5.00",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.7225,
+              "top": 0.7898,
+              "width": 0.0337,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-16",
+          "source": {
+            "content": "06-16",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1307,
+              "top": 0.8078,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECK 1008",
+          "source": {
+            "content": "CHECK 1008",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1992,
+              "top": 0.8078,
+              "width": 0.0809,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -89,
+          "source": {
+            "content": "$89.00",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.715,
+              "top": 0.8078,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-17",
+          "source": {
+            "content": "06-17",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1307,
+              "top": 0.8258,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - GROCER'S MARKET 0042, SMALL TOWN MO",
+          "source": {
+            "content": "CHECKCARD PURCHASE - GROCER'S MARKET 0042, SMALL TOWN MO",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1992,
+              "top": 0.8258,
+              "width": 0.3067,
+              "height": 0.0221
+            }
+          }
+        },
+        "amount": {
+          "value": -71.51,
+          "source": {
+            "content": "$71.51",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.715,
+              "top": 0.8258,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-17",
+          "source": {
+            "content": "06-17",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1307,
+              "top": 0.8542,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "AUTOMATIC PAYMENT - TELEPHONE SERVICE",
+          "source": {
+            "content": "AUTOMATIC PAYMENT - TELEPHONE SERVICE",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.1992,
+              "top": 0.8542,
+              "width": 0.3009,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -73.43,
+          "source": {
+            "content": "$73.43",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 2,
+              "left": 0.715,
+              "top": 0.8542,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-17",
+          "source": {
+            "content": "06-17",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1307,
+              "top": 0.3267,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - FUEL STOP 1187, KANSAS CITY MO",
+          "source": {
+            "content": "CHECKCARD PURCHASE - FUEL STOP 1187, KANSAS CITY MO",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1992,
+              "top": 0.3267,
+              "width": 0.2864,
+              "height": 0.023
+            }
+          }
+        },
+        "amount": {
+          "value": -41.87,
+          "source": {
+            "content": "$41.87",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.715,
+              "top": 0.3267,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-17",
+          "source": {
+            "content": "06-17",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1307,
+              "top": 0.3561,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "ATM WITHDRAWAL - 1000 WALNUT ST M119",
+          "source": {
+            "content": "ATM WITHDRAWAL - 1000 WALNUT ST M119",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1992,
+              "top": 0.3561,
+              "width": 0.2809,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -77.2,
+          "source": {
+            "content": "$77.20",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.715,
+              "top": 0.3561,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-18",
+          "source": {
+            "content": "06-18",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1307,
+              "top": 0.3741,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - MAIN STREET PHARMACY",
+          "source": {
+            "content": "CHECKCARD PURCHASE - MAIN STREET PHARMACY",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1992,
+              "top": 0.3741,
+              "width": 0.2666,
+              "height": 0.023
+            }
+          }
+        },
+        "amount": {
+          "value": -46.3,
+          "source": {
+            "content": "$46.30",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.715,
+              "top": 0.3741,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-18",
+          "source": {
+            "content": "06-18",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1307,
+              "top": 0.4034,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "BILL PAYMENT - CITY UTILITIES",
+          "source": {
+            "content": "BILL PAYMENT - CITY UTILITIES",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1992,
+              "top": 0.4034,
+              "width": 0.203,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -120.45,
+          "source": {
+            "content": "$120.45",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.7075,
+              "top": 0.4034,
+              "width": 0.0487,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-18",
+          "source": {
+            "content": "06-18",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1307,
+              "top": 0.4205,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - BOOKS AND NEWS",
+          "source": {
+            "content": "CHECKCARD PURCHASE - BOOKS AND NEWS",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1992,
+              "top": 0.4205,
+              "width": 0.2996,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -35,
+          "source": {
+            "content": "$35.00",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.715,
+              "top": 0.4205,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-18",
+          "source": {
+            "content": "06-18",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1307,
+              "top": 0.4385,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "ONLINE TRANSFER TO SAVINGS",
+          "source": {
+            "content": "ONLINE TRANSFER TO SAVINGS",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1992,
+              "top": 0.4385,
+              "width": 0.211,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -106.83,
+          "source": {
+            "content": "$106.83",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.7075,
+              "top": 0.4385,
+              "width": 0.0487,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-19",
+          "source": {
+            "content": "06-19",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1307,
+              "top": 0.4565,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - GARDEN CENTER",
+          "source": {
+            "content": "CHECKCARD PURCHASE - GARDEN CENTER",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1992,
+              "top": 0.4565,
+              "width": 0.2929,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -52.55,
+          "source": {
+            "content": "$52.55",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.715,
+              "top": 0.4565,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-19",
+          "source": {
+            "content": "06-19",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1307,
+              "top": 0.4745,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - COFFEE HOUSE 013",
+          "source": {
+            "content": "CHECKCARD PURCHASE - COFFEE HOUSE 013",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1992,
+              "top": 0.4745,
+              "width": 0.3086,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -15.42,
+          "source": {
+            "content": "$15.42",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.715,
+              "top": 0.4745,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-19",
+          "source": {
+            "content": "06-19",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1307,
+              "top": 0.4925,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - OFFICE SUPPLY 3301",
+          "source": {
+            "content": "CHECKCARD PURCHASE - OFFICE SUPPLY 3301",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1992,
+              "top": 0.4925,
+              "width": 0.3149,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -31.46,
+          "source": {
+            "content": "$31.46",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.715,
+              "top": 0.4925,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-19",
+          "source": {
+            "content": "06-19",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1307,
+              "top": 0.5105,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - HARDWARE STORE",
+          "source": {
+            "content": "CHECKCARD PURCHASE - HARDWARE STORE",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1992,
+              "top": 0.5105,
+              "width": 0.3041,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -47.3,
+          "source": {
+            "content": "$47.30",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.715,
+              "top": 0.5105,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-20",
+          "source": {
+            "content": "06-20",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1307,
+              "top": 0.5284,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "AUTOMATIC PAYMENT - INSURANCE PREMIUM",
+          "source": {
+            "content": "AUTOMATIC PAYMENT - INSURANCE PREMIUM",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1992,
+              "top": 0.5284,
+              "width": 0.3036,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -155.05,
+          "source": {
+            "content": "$155.05",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.7075,
+              "top": 0.5284,
+              "width": 0.0487,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-20",
+          "source": {
+            "content": "06-20",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1307,
+              "top": 0.5464,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - DRY CLEANERS",
+          "source": {
+            "content": "CHECKCARD PURCHASE - DRY CLEANERS",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1992,
+              "top": 0.5464,
+              "width": 0.2804,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -35.57,
+          "source": {
+            "content": "$35.57",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.715,
+              "top": 0.5464,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-20",
+          "source": {
+            "content": "06-20",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1307,
+              "top": 0.5635,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "ACH CREDIT - CUSTOMER REFUND",
+          "source": {
+            "content": "ACH CREDIT - CUSTOMER REFUND",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1992,
+              "top": 0.5635,
+              "width": 0.2309,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": 54.19,
+          "source": {
+            "content": "$54.19",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.8212,
+              "top": 0.5635,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-20",
+          "source": {
+            "content": "06-20",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1307,
+              "top": 0.5815,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - FAMILY RESTAURANT",
+          "source": {
+            "content": "CHECKCARD PURCHASE - FAMILY RESTAURANT",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1992,
+              "top": 0.5815,
+              "width": 0.3168,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -55.86,
+          "source": {
+            "content": "$55.86",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.715,
+              "top": 0.5815,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-21",
+          "source": {
+            "content": "06-21",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1307,
+              "top": 0.5995,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - POSTAL CENTER",
+          "source": {
+            "content": "CHECKCARD PURCHASE - POSTAL CENTER",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1992,
+              "top": 0.5995,
+              "width": 0.2869,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -23.97,
+          "source": {
+            "content": "$23.97",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.715,
+              "top": 0.5995,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-21",
+          "source": {
+            "content": "06-21",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1307,
+              "top": 0.6175,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - MOVIE THEATER",
+          "source": {
+            "content": "CHECKCARD PURCHASE - MOVIE THEATER",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1992,
+              "top": 0.6175,
+              "width": 0.2849,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -35.78,
+          "source": {
+            "content": "$35.78",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.715,
+              "top": 0.6175,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-21",
+          "source": {
+            "content": "06-21",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1307,
+              "top": 0.6355,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - AUTO PARTS",
+          "source": {
+            "content": "CHECKCARD PURCHASE - AUTO PARTS",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1992,
+              "top": 0.6355,
+              "width": 0.2599,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -64.3,
+          "source": {
+            "content": "$64.30",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.715,
+              "top": 0.6355,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-21",
+          "source": {
+            "content": "06-21",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1307,
+              "top": 0.6534,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "AUTOMATIC PAYMENT - CABLE SERVICE",
+          "source": {
+            "content": "AUTOMATIC PAYMENT - CABLE SERVICE",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1992,
+              "top": 0.6534,
+              "width": 0.2637,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -73.81,
+          "source": {
+            "content": "$73.81",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.715,
+              "top": 0.6534,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-22",
+          "source": {
+            "content": "06-22",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1307,
+              "top": 0.6714,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "MONTHLY SERVICE CHARGE",
+          "source": {
+            "content": "MONTHLY SERVICE CHARGE",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1992,
+              "top": 0.6714,
+              "width": 0.1888,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -5,
+          "source": {
+            "content": "$5.00",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.7225,
+              "top": 0.6714,
+              "width": 0.0337,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-22",
+          "source": {
+            "content": "06-22",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1307,
+              "top": 0.6894,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - DINER",
+          "source": {
+            "content": "CHECKCARD PURCHASE - DINER",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1992,
+              "top": 0.6894,
+              "width": 0.218,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -44.13,
+          "source": {
+            "content": "$44.13",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.715,
+              "top": 0.6894,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-22",
+          "source": {
+            "content": "06-22",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1307,
+              "top": 0.7065,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - GROCER'S MARKET 0042, SMALL TOWN MO",
+          "source": {
+            "content": "CHECKCARD PURCHASE - GROCER'S MARKET 0042, SMALL TOWN MO",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1992,
+              "top": 0.7065,
+              "width": 0.3067,
+              "height": 0.023
+            }
+          }
+        },
+        "amount": {
+          "value": -48.6,
+          "source": {
+            "content": "$48.60",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.715,
+              "top": 0.7065,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-22",
+          "source": {
+            "content": "06-22",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1307,
+              "top": 0.7358,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "AUTOMATIC PAYMENT - TELEPHONE SERVICE",
+          "source": {
+            "content": "AUTOMATIC PAYMENT - TELEPHONE SERVICE",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1992,
+              "top": 0.7358,
+              "width": 0.3009,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -77.82,
+          "source": {
+            "content": "$77.82",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.715,
+              "top": 0.7358,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-23",
+          "source": {
+            "content": "06-23",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1307,
+              "top": 0.7538,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - FUEL STOP 1187, KANSAS CITY MO",
+          "source": {
+            "content": "CHECKCARD PURCHASE - FUEL STOP 1187, KANSAS CITY MO",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1992,
+              "top": 0.7538,
+              "width": 0.2864,
+              "height": 0.023
+            }
+          }
+        },
+        "amount": {
+          "value": -58.48,
+          "source": {
+            "content": "$58.48",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.715,
+              "top": 0.7538,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-23",
+          "source": {
+            "content": "06-23",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1307,
+              "top": 0.7832,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "ATM WITHDRAWAL - 1000 WALNUT ST M119",
+          "source": {
+            "content": "ATM WITHDRAWAL - 1000 WALNUT ST M119",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1992,
+              "top": 0.7832,
+              "width": 0.2809,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -28.91,
+          "source": {
+            "content": "$28.91",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.715,
+              "top": 0.7832,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-23",
+          "source": {
+            "content": "06-23",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1307,
+              "top": 0.8012,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - MAIN STREET PHARMACY",
+          "source": {
+            "content": "CHECKCARD PURCHASE - MAIN STREET PHARMACY",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1992,
+              "top": 0.8012,
+              "width": 0.2666,
+              "height": 0.023
+            }
+          }
+        },
+        "amount": {
+          "value": -27.12,
+          "source": {
+            "content": "$27.12",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.715,
+              "top": 0.8012,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-23",
+          "source": {
+            "content": "06-23",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1307,
+              "top": 0.8296,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "BILL PAYMENT - CITY UTILITIES",
+          "source": {
+            "content": "BILL PAYMENT - CITY UTILITIES",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1992,
+              "top": 0.8296,
+              "width": 0.203,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -125.07,
+          "source": {
+            "content": "$125.07",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.7075,
+              "top": 0.8296,
+              "width": 0.0487,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-24",
+          "source": {
+            "content": "06-24",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1307,
+              "top": 0.8476,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - BOOKS AND NEWS",
+          "source": {
+            "content": "CHECKCARD PURCHASE - BOOKS AND NEWS",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1992,
+              "top": 0.8476,
+              "width": 0.2996,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -42.1,
+          "source": {
+            "content": "$42.10",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.715,
+              "top": 0.8476,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-24",
+          "source": {
+            "content": "06-24",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1307,
+              "top": 0.8656,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "ONLINE TRANSFER TO SAVINGS",
+          "source": {
+            "content": "ONLINE TRANSFER TO SAVINGS",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.1992,
+              "top": 0.8656,
+              "width": 0.211,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -222.37,
+          "source": {
+            "content": "$222.37",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 3,
+              "left": 0.7075,
+              "top": 0.8656,
+              "width": 0.0487,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-24",
+          "source": {
+            "content": "06-24",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1307,
+              "top": 0.3267,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - GARDEN CENTER",
+          "source": {
+            "content": "CHECKCARD PURCHASE - GARDEN CENTER",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1992,
+              "top": 0.3267,
+              "width": 0.2929,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -31.59,
+          "source": {
+            "content": "$31.59",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.715,
+              "top": 0.3267,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-24",
+          "source": {
+            "content": "06-24",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1307,
+              "top": 0.3447,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECK 1009",
+          "source": {
+            "content": "CHECK 1009",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1992,
+              "top": 0.3447,
+              "width": 0.0809,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -69.65,
+          "source": {
+            "content": "$69.65",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.715,
+              "top": 0.3447,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-25",
+          "source": {
+            "content": "06-25",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1307,
+              "top": 0.3627,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - OFFICE SUPPLY 3301",
+          "source": {
+            "content": "CHECKCARD PURCHASE - OFFICE SUPPLY 3301",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1992,
+              "top": 0.3627,
+              "width": 0.3149,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -54.55,
+          "source": {
+            "content": "$54.55",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.715,
+              "top": 0.3627,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-25",
+          "source": {
+            "content": "06-25",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1307,
+              "top": 0.3807,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - HARDWARE STORE",
+          "source": {
+            "content": "CHECKCARD PURCHASE - HARDWARE STORE",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1992,
+              "top": 0.3807,
+              "width": 0.3041,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -48.03,
+          "source": {
+            "content": "$48.03",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.715,
+              "top": 0.3807,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-25",
+          "source": {
+            "content": "06-25",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1307,
+              "top": 0.3987,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "AUTOMATIC PAYMENT - INSURANCE PREMIUM",
+          "source": {
+            "content": "AUTOMATIC PAYMENT - INSURANCE PREMIUM",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1992,
+              "top": 0.3987,
+              "width": 0.3036,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -147.09,
+          "source": {
+            "content": "$147.09",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.7075,
+              "top": 0.3987,
+              "width": 0.0487,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-25",
+          "source": {
+            "content": "06-25",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1307,
+              "top": 0.4167,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - DRY CLEANERS",
+          "source": {
+            "content": "CHECKCARD PURCHASE - DRY CLEANERS",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1992,
+              "top": 0.4167,
+              "width": 0.2804,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -25.3,
+          "source": {
+            "content": "$25.30",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.715,
+              "top": 0.4167,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-26",
+          "source": {
+            "content": "06-26",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1307,
+              "top": 0.4338,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "BILL PAYMENT - MOBILE SERVICE",
+          "source": {
+            "content": "BILL PAYMENT - MOBILE SERVICE",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1992,
+              "top": 0.4338,
+              "width": 0.2195,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -62.79,
+          "source": {
+            "content": "$62.79",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.715,
+              "top": 0.4338,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-26",
+          "source": {
+            "content": "06-26",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1307,
+              "top": 0.4517,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - FAMILY RESTAURANT",
+          "source": {
+            "content": "CHECKCARD PURCHASE - FAMILY RESTAURANT",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1992,
+              "top": 0.4517,
+              "width": 0.3168,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -66.49,
+          "source": {
+            "content": "$66.49",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.715,
+              "top": 0.4517,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-26",
+          "source": {
+            "content": "06-26",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1307,
+              "top": 0.4697,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - POSTAL CENTER",
+          "source": {
+            "content": "CHECKCARD PURCHASE - POSTAL CENTER",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1992,
+              "top": 0.4697,
+              "width": 0.2869,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -26.59,
+          "source": {
+            "content": "$26.59",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.715,
+              "top": 0.4697,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-26",
+          "source": {
+            "content": "06-26",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1307,
+              "top": 0.4877,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - MOVIE THEATER",
+          "source": {
+            "content": "CHECKCARD PURCHASE - MOVIE THEATER",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1992,
+              "top": 0.4877,
+              "width": 0.2849,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -28.02,
+          "source": {
+            "content": "$28.02",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.715,
+              "top": 0.4877,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-27",
+          "source": {
+            "content": "06-27",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1307,
+              "top": 0.5057,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - AUTO PARTS",
+          "source": {
+            "content": "CHECKCARD PURCHASE - AUTO PARTS",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1992,
+              "top": 0.5057,
+              "width": 0.2599,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -30.23,
+          "source": {
+            "content": "$30.23",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.715,
+              "top": 0.5057,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-27",
+          "source": {
+            "content": "06-27",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1307,
+              "top": 0.5237,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "AUTOMATIC PAYMENT - CABLE SERVICE",
+          "source": {
+            "content": "AUTOMATIC PAYMENT - CABLE SERVICE",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1992,
+              "top": 0.5237,
+              "width": 0.2637,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -70.26,
+          "source": {
+            "content": "$70.26",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.715,
+              "top": 0.5237,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-27",
+          "source": {
+            "content": "06-27",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1307,
+              "top": 0.5417,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "MONTHLY SERVICE CHARGE",
+          "source": {
+            "content": "MONTHLY SERVICE CHARGE",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1992,
+              "top": 0.5417,
+              "width": 0.1888,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -5,
+          "source": {
+            "content": "$5.00",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.7225,
+              "top": 0.5417,
+              "width": 0.0337,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-27",
+          "source": {
+            "content": "06-27",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1307,
+              "top": 0.5597,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - DINER",
+          "source": {
+            "content": "CHECKCARD PURCHASE - DINER",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1992,
+              "top": 0.5597,
+              "width": 0.218,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -22.66,
+          "source": {
+            "content": "$22.66",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.715,
+              "top": 0.5597,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-28",
+          "source": {
+            "content": "06-28",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1307,
+              "top": 0.5767,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "ACH CREDIT - EXPENSE REIMBURSEMENT",
+          "source": {
+            "content": "ACH CREDIT - EXPENSE REIMBURSEMENT",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1992,
+              "top": 0.5767,
+              "width": 0.2799,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": 96.5,
+          "source": {
+            "content": "$96.50",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.8212,
+              "top": 0.5767,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-28",
+          "source": {
+            "content": "06-28",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1307,
+              "top": 0.5947,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "AUTOMATIC PAYMENT - TELEPHONE SERVICE",
+          "source": {
+            "content": "AUTOMATIC PAYMENT - TELEPHONE SERVICE",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1992,
+              "top": 0.5947,
+              "width": 0.3009,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -88.25,
+          "source": {
+            "content": "$88.25",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.715,
+              "top": 0.5947,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-28",
+          "source": {
+            "content": "06-28",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1307,
+              "top": 0.6127,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - FUEL STOP 1187, KANSAS CITY MO",
+          "source": {
+            "content": "CHECKCARD PURCHASE - FUEL STOP 1187, KANSAS CITY MO",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1992,
+              "top": 0.6127,
+              "width": 0.2864,
+              "height": 0.023
+            }
+          }
+        },
+        "amount": {
+          "value": -38.13,
+          "source": {
+            "content": "$38.13",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.715,
+              "top": 0.6127,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-28",
+          "source": {
+            "content": "06-28",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1307,
+              "top": 0.6421,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "ATM WITHDRAWAL - 1000 WALNUT ST M119",
+          "source": {
+            "content": "ATM WITHDRAWAL - 1000 WALNUT ST M119",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1992,
+              "top": 0.6421,
+              "width": 0.2809,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -49.3,
+          "source": {
+            "content": "$49.30",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.715,
+              "top": 0.6421,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-29",
+          "source": {
+            "content": "06-29",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1307,
+              "top": 0.6601,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - MAIN STREET PHARMACY",
+          "source": {
+            "content": "CHECKCARD PURCHASE - MAIN STREET PHARMACY",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1992,
+              "top": 0.6601,
+              "width": 0.2666,
+              "height": 0.023
+            }
+          }
+        },
+        "amount": {
+          "value": -32.73,
+          "source": {
+            "content": "$32.73",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.715,
+              "top": 0.6601,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-29",
+          "source": {
+            "content": "06-29",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1307,
+              "top": 0.6894,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "BILL PAYMENT - CITY UTILITIES",
+          "source": {
+            "content": "BILL PAYMENT - CITY UTILITIES",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1992,
+              "top": 0.6894,
+              "width": 0.203,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -87.98,
+          "source": {
+            "content": "$87.98",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.715,
+              "top": 0.6894,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-29",
+          "source": {
+            "content": "06-29",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1307,
+              "top": 0.7065,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - BOOKS AND NEWS",
+          "source": {
+            "content": "CHECKCARD PURCHASE - BOOKS AND NEWS",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1992,
+              "top": 0.7065,
+              "width": 0.2996,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -27.12,
+          "source": {
+            "content": "$27.12",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.715,
+              "top": 0.7065,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-29",
+          "source": {
+            "content": "06-29",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1307,
+              "top": 0.7245,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "ONLINE TRANSFER TO SAVINGS",
+          "source": {
+            "content": "ONLINE TRANSFER TO SAVINGS",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1992,
+              "top": 0.7245,
+              "width": 0.211,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -173.65,
+          "source": {
+            "content": "$173.65",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.7075,
+              "top": 0.7245,
+              "width": 0.0487,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-30",
+          "source": {
+            "content": "06-30",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1307,
+              "top": 0.7425,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - GARDEN CENTER",
+          "source": {
+            "content": "CHECKCARD PURCHASE - GARDEN CENTER",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1992,
+              "top": 0.7425,
+              "width": 0.2929,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -51.97,
+          "source": {
+            "content": "$51.97",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.715,
+              "top": 0.7425,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-30",
+          "source": {
+            "content": "06-30",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1307,
+              "top": 0.7605,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - COFFEE HOUSE 013",
+          "source": {
+            "content": "CHECKCARD PURCHASE - COFFEE HOUSE 013",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1992,
+              "top": 0.7605,
+              "width": 0.3086,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -17.91,
+          "source": {
+            "content": "$17.91",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.715,
+              "top": 0.7605,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-30",
+          "source": {
+            "content": "06-30",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1307,
+              "top": 0.7784,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - OFFICE SUPPLY 3301",
+          "source": {
+            "content": "CHECKCARD PURCHASE - OFFICE SUPPLY 3301",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1992,
+              "top": 0.7784,
+              "width": 0.3149,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -74.91,
+          "source": {
+            "content": "$74.91",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.715,
+              "top": 0.7784,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "06-30",
+          "source": {
+            "content": "06-30",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1307,
+              "top": 0.7964,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - HARDWARE STORE",
+          "source": {
+            "content": "CHECKCARD PURCHASE - HARDWARE STORE",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1992,
+              "top": 0.7964,
+              "width": 0.3041,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -33.34,
+          "source": {
+            "content": "$33.34",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.715,
+              "top": 0.7964,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "07-01",
+          "source": {
+            "content": "07-01",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1307,
+              "top": 0.8144,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "AUTOMATIC PAYMENT - INSURANCE PREMIUM",
+          "source": {
+            "content": "AUTOMATIC PAYMENT - INSURANCE PREMIUM",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1992,
+              "top": 0.8144,
+              "width": 0.3036,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -167.63,
+          "source": {
+            "content": "$167.63",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.7075,
+              "top": 0.8144,
+              "width": 0.0487,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "07-01",
+          "source": {
+            "content": "07-01",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1307,
+              "top": 0.8324,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - DRY CLEANERS",
+          "source": {
+            "content": "CHECKCARD PURCHASE - DRY CLEANERS",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.1992,
+              "top": 0.8324,
+              "width": 0.2804,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -18.94,
+          "source": {
+            "content": "$18.94",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 4,
+              "left": 0.715,
+              "top": 0.8324,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "07-01",
+          "source": {
+            "content": "07-01",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1307,
+              "top": 0.3267,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "BILL PAYMENT - MOBILE SERVICE",
+          "source": {
+            "content": "BILL PAYMENT - MOBILE SERVICE",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1992,
+              "top": 0.3267,
+              "width": 0.2195,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -59.37,
+          "source": {
+            "content": "$59.37",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.715,
+              "top": 0.3267,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "07-01",
+          "source": {
+            "content": "07-01",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1307,
+              "top": 0.3447,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - FAMILY RESTAURANT",
+          "source": {
+            "content": "CHECKCARD PURCHASE - FAMILY RESTAURANT",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1992,
+              "top": 0.3447,
+              "width": 0.3168,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -43.76,
+          "source": {
+            "content": "$43.76",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.715,
+              "top": 0.3447,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "07-02",
+          "source": {
+            "content": "07-02",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1307,
+              "top": 0.3627,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECK 1010",
+          "source": {
+            "content": "CHECK 1010",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1992,
+              "top": 0.3627,
+              "width": 0.0809,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -115.17,
+          "source": {
+            "content": "$115.17",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.7085,
+              "top": 0.3627,
+              "width": 0.0477,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "07-02",
+          "source": {
+            "content": "07-02",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1307,
+              "top": 0.3807,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - MOVIE THEATER",
+          "source": {
+            "content": "CHECKCARD PURCHASE - MOVIE THEATER",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1992,
+              "top": 0.3807,
+              "width": 0.2849,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -20.21,
+          "source": {
+            "content": "$20.21",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.715,
+              "top": 0.3807,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "07-02",
+          "source": {
+            "content": "07-02",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1307,
+              "top": 0.3987,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - AUTO PARTS",
+          "source": {
+            "content": "CHECKCARD PURCHASE - AUTO PARTS",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1992,
+              "top": 0.3987,
+              "width": 0.2599,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -75.17,
+          "source": {
+            "content": "$75.17",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.715,
+              "top": 0.3987,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "07-02",
+          "source": {
+            "content": "07-02",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1307,
+              "top": 0.4167,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "AUTOMATIC PAYMENT - CABLE SERVICE",
+          "source": {
+            "content": "AUTOMATIC PAYMENT - CABLE SERVICE",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1992,
+              "top": 0.4167,
+              "width": 0.2637,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -93.9,
+          "source": {
+            "content": "$93.90",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.715,
+              "top": 0.4167,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "07-03",
+          "source": {
+            "content": "07-03",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1307,
+              "top": 0.4338,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "MONTHLY SERVICE CHARGE",
+          "source": {
+            "content": "MONTHLY SERVICE CHARGE",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1992,
+              "top": 0.4338,
+              "width": 0.1888,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -5,
+          "source": {
+            "content": "$5.00",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.7225,
+              "top": 0.4338,
+              "width": 0.0337,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "07-03",
+          "source": {
+            "content": "07-03",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1307,
+              "top": 0.4517,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - DINER",
+          "source": {
+            "content": "CHECKCARD PURCHASE - DINER",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1992,
+              "top": 0.4517,
+              "width": 0.218,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -21.27,
+          "source": {
+            "content": "$21.27",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.715,
+              "top": 0.4517,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "07-03",
+          "source": {
+            "content": "07-03",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1307,
+              "top": 0.4697,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - GROCER'S MARKET 0042, SMALL TOWN MO",
+          "source": {
+            "content": "CHECKCARD PURCHASE - GROCER'S MARKET 0042, SMALL TOWN MO",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1992,
+              "top": 0.4697,
+              "width": 0.3067,
+              "height": 0.023
+            }
+          }
+        },
+        "amount": {
+          "value": -52.88,
+          "source": {
+            "content": "$52.88",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.715,
+              "top": 0.4697,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "07-03",
+          "source": {
+            "content": "07-03",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1307,
+              "top": 0.4991,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "AUTOMATIC PAYMENT - TELEPHONE SERVICE",
+          "source": {
+            "content": "AUTOMATIC PAYMENT - TELEPHONE SERVICE",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1992,
+              "top": 0.4991,
+              "width": 0.3009,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -88.93,
+          "source": {
+            "content": "$88.93",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.715,
+              "top": 0.4991,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "07-04",
+          "source": {
+            "content": "07-04",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1307,
+              "top": 0.5171,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - FUEL STOP 1187, KANSAS CITY MO",
+          "source": {
+            "content": "CHECKCARD PURCHASE - FUEL STOP 1187, KANSAS CITY MO",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1992,
+              "top": 0.5171,
+              "width": 0.2864,
+              "height": 0.023
+            }
+          }
+        },
+        "amount": {
+          "value": -45.92,
+          "source": {
+            "content": "$45.92",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.715,
+              "top": 0.5171,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "07-04",
+          "source": {
+            "content": "07-04",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1307,
+              "top": 0.5464,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "ATM WITHDRAWAL - 1000 WALNUT ST M119",
+          "source": {
+            "content": "ATM WITHDRAWAL - 1000 WALNUT ST M119",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1992,
+              "top": 0.5464,
+              "width": 0.2809,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -42.9,
+          "source": {
+            "content": "$42.90",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.715,
+              "top": 0.5464,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "07-04",
+          "source": {
+            "content": "07-04",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1307,
+              "top": 0.5635,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - MAIN STREET PHARMACY",
+          "source": {
+            "content": "CHECKCARD PURCHASE - MAIN STREET PHARMACY",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1992,
+              "top": 0.5635,
+              "width": 0.2666,
+              "height": 0.023
+            }
+          }
+        },
+        "amount": {
+          "value": -35.54,
+          "source": {
+            "content": "$35.54",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.715,
+              "top": 0.5635,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "07-04",
+          "source": {
+            "content": "07-04",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1307,
+              "top": 0.5928,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "BILL PAYMENT - CITY UTILITIES",
+          "source": {
+            "content": "BILL PAYMENT - CITY UTILITIES",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1992,
+              "top": 0.5928,
+              "width": 0.203,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -81.24,
+          "source": {
+            "content": "$81.24",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.715,
+              "top": 0.5928,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "07-05",
+          "source": {
+            "content": "07-05",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1307,
+              "top": 0.6108,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - BOOKS AND NEWS",
+          "source": {
+            "content": "CHECKCARD PURCHASE - BOOKS AND NEWS",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1992,
+              "top": 0.6108,
+              "width": 0.2996,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -39.69,
+          "source": {
+            "content": "$39.69",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.715,
+              "top": 0.6108,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "07-05",
+          "source": {
+            "content": "07-05",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1307,
+              "top": 0.6288,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "ONLINE TRANSFER TO SAVINGS",
+          "source": {
+            "content": "ONLINE TRANSFER TO SAVINGS",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1992,
+              "top": 0.6288,
+              "width": 0.211,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -219.21,
+          "source": {
+            "content": "$219.21",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.7075,
+              "top": 0.6288,
+              "width": 0.0487,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "07-05",
+          "source": {
+            "content": "07-05",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1307,
+              "top": 0.6468,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "ATM DEPOSIT - SMALL TOWN BRANCH",
+          "source": {
+            "content": "ATM DEPOSIT - SMALL TOWN BRANCH",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1992,
+              "top": 0.6468,
+              "width": 0.2509,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": 225,
+          "source": {
+            "content": "$225.00",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.8137,
+              "top": 0.6468,
+              "width": 0.0487,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "07-05",
+          "source": {
+            "content": "07-05",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1307,
+              "top": 0.6648,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - COFFEE HOUSE 013",
+          "source": {
+            "content": "CHECKCARD PURCHASE - COFFEE HOUSE 013",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1992,
+              "top": 0.6648,
+              "width": 0.3086,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -6.58,
+          "source": {
+            "content": "$6.58",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.7225,
+              "top": 0.6648,
+              "width": 0.0337,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "07-06",
+          "source": {
+            "content": "07-06",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1307,
+              "top": 0.6828,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - OFFICE SUPPLY 3301",
+          "source": {
+            "content": "CHECKCARD PURCHASE - OFFICE SUPPLY 3301",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1992,
+              "top": 0.6828,
+              "width": 0.3149,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -36.07,
+          "source": {
+            "content": "$36.07",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.715,
+              "top": 0.6828,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "07-06",
+          "source": {
+            "content": "07-06",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1307,
+              "top": 0.6999,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - HARDWARE STORE",
+          "source": {
+            "content": "CHECKCARD PURCHASE - HARDWARE STORE",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1992,
+              "top": 0.6999,
+              "width": 0.3041,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -51.25,
+          "source": {
+            "content": "$51.25",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.715,
+              "top": 0.6999,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "07-06",
+          "source": {
+            "content": "07-06",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1307,
+              "top": 0.7178,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "AUTOMATIC PAYMENT - INSURANCE PREMIUM",
+          "source": {
+            "content": "AUTOMATIC PAYMENT - INSURANCE PREMIUM",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1992,
+              "top": 0.7178,
+              "width": 0.3036,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -127.13,
+          "source": {
+            "content": "$127.13",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.7075,
+              "top": 0.7178,
+              "width": 0.0487,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "07-06",
+          "source": {
+            "content": "07-06",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1307,
+              "top": 0.7358,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - DRY CLEANERS",
+          "source": {
+            "content": "CHECKCARD PURCHASE - DRY CLEANERS",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1992,
+              "top": 0.7358,
+              "width": 0.2804,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -25.2,
+          "source": {
+            "content": "$25.20",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.715,
+              "top": 0.7358,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "07-07",
+          "source": {
+            "content": "07-07",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1307,
+              "top": 0.7538,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "BILL PAYMENT - MOBILE SERVICE",
+          "source": {
+            "content": "BILL PAYMENT - MOBILE SERVICE",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1992,
+              "top": 0.7538,
+              "width": 0.2195,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -76.42,
+          "source": {
+            "content": "$76.42",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.715,
+              "top": 0.7538,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "07-07",
+          "source": {
+            "content": "07-07",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1307,
+              "top": 0.7718,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - FAMILY RESTAURANT",
+          "source": {
+            "content": "CHECKCARD PURCHASE - FAMILY RESTAURANT",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1992,
+              "top": 0.7718,
+              "width": 0.3168,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -33.72,
+          "source": {
+            "content": "$33.72",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.715,
+              "top": 0.7718,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "07-07",
+          "source": {
+            "content": "07-07",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1307,
+              "top": 0.7898,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - POSTAL CENTER",
+          "source": {
+            "content": "CHECKCARD PURCHASE - POSTAL CENTER",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1992,
+              "top": 0.7898,
+              "width": 0.2869,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -24.21,
+          "source": {
+            "content": "$24.21",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.715,
+              "top": 0.7898,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "07-07",
+          "source": {
+            "content": "07-07",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1307,
+              "top": 0.8078,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - MOVIE THEATER",
+          "source": {
+            "content": "CHECKCARD PURCHASE - MOVIE THEATER",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1992,
+              "top": 0.8078,
+              "width": 0.2849,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -45.25,
+          "source": {
+            "content": "$45.25",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.715,
+              "top": 0.8078,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "07-08",
+          "source": {
+            "content": "07-08",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1307,
+              "top": 0.8258,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "CHECKCARD PURCHASE - AUTO PARTS",
+          "source": {
+            "content": "CHECKCARD PURCHASE - AUTO PARTS",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1992,
+              "top": 0.8258,
+              "width": 0.2599,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -70.6,
+          "source": {
+            "content": "$70.60",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.715,
+              "top": 0.8258,
+              "width": 0.0412,
+              "height": 0.0116
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "value": "07-08",
+          "source": {
+            "content": "07-08",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1307,
+              "top": 0.8428,
+              "width": 0.0345,
+              "height": 0.0116
+            }
+          }
+        },
+        "description": {
+          "value": "AUTOMATIC PAYMENT - CABLE SERVICE",
+          "source": {
+            "content": "AUTOMATIC PAYMENT - CABLE SERVICE",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.1992,
+              "top": 0.8428,
+              "width": 0.2637,
+              "height": 0.0116
+            }
+          }
+        },
+        "amount": {
+          "value": -76.67,
+          "source": {
+            "content": "$76.67",
+            "anchor": {
+              "kind": "pdf_bbox",
+              "page": 5,
+              "left": 0.715,
+              "top": 0.8428,
+              "width": 0.0412,
+              "height": 0.0116
             }
           }
         }

@@ -15,9 +15,10 @@ justify itself.
 Render delimited text as an addressable, source-linked, virtualized table.
 
 ```tsx
-<CsvViewer src="/samples/sales.csv" />
-<CsvViewer src="/samples/sales.tsv" />
-<CsvViewer value={csvText} />
+<CsvViewer source={{ kind: "url", url: "/samples/sales.csv" }} />
+<CsvViewer source={{ kind: "url", url: "/samples/sales.tsv" }} />
+<CsvViewer source={{ kind: "text", text: csvText, fileName: "sales.csv" }} />
+<CsvViewer source={{ kind: "table", table: { columns, rows } }} />
 ```
 
 It is not a spreadsheet. It is not an editor. It is not a data-grid framework.
@@ -42,7 +43,7 @@ Perfection means:
    changing.
 4. Source coordinates are stable under sorting and virtualization.
 5. Every rendered cell is addressable by source row and source column.
-6. `src` loading begins from the response stream when possible.
+6. URL source loading begins from the response stream when possible.
 7. Worker parsing is real chunked parsing, not whole-file parsing in another
    thread.
 8. Errors are typed states, not strings passed through ad hoc branches.
@@ -63,14 +64,10 @@ export interface CsvViewerHandle {
 }
 
 export interface CsvViewerProps {
-  src?: string
-  value?: string
-  source?: Blob
-  data?: CsvTable
+  source?: CsvViewerSource
   dialect?: CsvDialect
   className?: string
   toolbar?: boolean
-  downloadName?: string
   height?: number
   fillHeight?: boolean
   activeCell?: CsvCellAddress | null
@@ -85,16 +82,32 @@ export interface CsvCellAddress {
 export interface CsvScrollOptions {
   behavior?: ScrollBehavior
 }
+
+export type CsvViewerSource =
+  | UrlViewerSource
+  | BlobViewerSource
+  | TextSource
+  | CsvTableSource
+
+export interface CsvTableSource {
+  kind: "table"
+  table: CsvTable
+  fileName?: string
+  identityKey?: string
+  dialect?: CsvDialect
+}
 ```
 
 Rules:
 
-- `value`, `src`, `source`, and `data` are mutually exclusive in spirit. If more
-  than one is passed, precedence is documented and tested.
-- `source` means `Blob` or `File`, not a raw string. Raw strings use `value`.
+- `source` is the only public data entrypoint.
+- URL, Blob, text, and table inputs are distinguished by `source.kind`.
+- Parsed tables are CSV-specific source variants, not universal
+  `ViewerSource` variants.
 - `dialect`, not scattered props, owns delimiter and header semantics.
 - `toolbar` is a boolean, not several independent chrome flags.
-- `downloadName` names the output file. It is not inferred in multiple places.
+- `source.fileName` names the download when present; generated fallback names
+  belong in one helper.
 - `scrollToCell` accepts the same shape as `activeCell`; no parallel positional
   API.
 - Virtualization tuning is not public by default. It belongs in an internal
@@ -115,7 +128,7 @@ Defaults:
 
 - `.csv` and `text/csv`: `{ delimiter: ",", hasHeader: true }`
 - `.tsv` and `text/tab-separated-values`: `{ delimiter: "\t", hasHeader: true }`
-- `value` and `source` without hints: `{ delimiter: ",", hasHeader: true }`
+- sources without hints: `{ delimiter: ",", hasHeader: true }`
 
 Rules:
 
@@ -141,7 +154,7 @@ Use these names everywhere:
 | Delimiter/header config | `dialect`                |
 | Load state              | `resourceState`          |
 | Scroll container        | `viewportElement`        |
-| Download filename       | `downloadName`           |
+| Download filename       | `fileName`               |
 | Worker request identity | `parseRequestId`         |
 
 Avoid aliases like `col`, `idx`, `lit`, `parsedRows`, `parsedColumns`,
@@ -176,7 +189,7 @@ Responsibilities:
 - `csv-dialect.ts`: delimiter/header inference and serialization dialect.
 - `csv-viewer.tsx`: public props, ref, and composition only.
 - `csv-viewer-state.ts`: typed resource and parse state transitions.
-- `csv-viewer-resource.ts`: `src`, `value`, `source`, and `data` input
+- `csv-viewer-resource.ts`: CSV source discrimination and resource
   normalization.
 - `csv-viewer-worker.ts`: typed worker client and fallback policy.
 - `csv-viewer.worker.ts`: chunked worker parser.
@@ -312,9 +325,9 @@ Rules:
 
 Downloads are deterministic:
 
-- `src`: download original bytes.
-- `value`, `source`, `data`: serialize the normalized table with the active
-  dialect.
+- resource-backed sources download original bytes when the resource exposes a
+  direct download.
+- text and table sources serialize the normalized table with the active dialect.
 - Tab-delimited generated files default to `.tsv`.
 - Comma-delimited generated files default to `.csv`.
 - Fields quote only when required by delimiter, quote, CR, or LF.
@@ -330,9 +343,8 @@ Ideal boundary:
 
 ```tsx
 <CsvViewer
-  src={descriptor.src}
+  source={descriptor.source}
   dialect={csvDialectFromDescriptor(descriptor)}
-  downloadName={descriptor.downloadName}
   toolbar={false}
   fillHeight
 />
@@ -366,9 +378,9 @@ Cover:
 
 Cover:
 
-- `src` streaming from `Response.body`
+- URL streaming from `Response.body`
 - Blob streaming
-- string value parsing
+- text source parsing
 - stale request cancellation
 - failed fetch error state
 - worker construction fallback
@@ -410,7 +422,7 @@ The platonic implementation removes or hides:
 - public virtualization tuning props
 - separate `showZoom` and `showDownload` props
 - raw error string state
-- `source` accepting raw strings
+- top-level `src`, `value`, and `data` props
 - helper exports from the public component module
 - comments that justify accidental architecture
 - local variable aliases for the same concept

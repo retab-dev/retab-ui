@@ -61,32 +61,72 @@ export function useSourceLink({
   initialField?: string | null
 }): UseSourceLinkResult {
   const [hoverPath, setHoverPath] = React.useState<string | null>(null)
-  const [pinnedPath, setPinnedPath] = React.useState<string | null>(initialField)
+  const [pinnedPath, setPinnedPath] = React.useState<string | null>(
+    initialField
+  )
 
   const activePath = hoverPath ?? pinnedPath
-  const activeSource = activePath ? sources[activePath] : undefined
+  const activeSource = activePath != null ? sources[activePath] : undefined
 
   // Dedupe scrolls to the same field (hover fires many times per field).
-  const lastScrolledPath = React.useRef<string | null>(null)
+  const lastScrolledRef = React.useRef<{
+    path: string
+    source: Source
+  } | null>(null)
+  const pendingScrollsRef = React.useRef<Map<string, ScrollBehavior>>(new Map())
   const scrollToPath = React.useCallback(
     (path: string, behavior: ScrollBehavior) => {
       const scrollTo = target?.scrollTo
-      if (!scrollTo) return
-      if (behavior === "auto" && path === lastScrolledPath.current) return
+      if (!scrollTo) {
+        pendingScrollsRef.current.set(path, behavior)
+        return
+      }
       const source = sources[path]
-      if (!source) return
-      lastScrolledPath.current = path
+      if (!source) {
+        pendingScrollsRef.current.set(path, behavior)
+        return
+      }
+      const lastScrolled = lastScrolledRef.current
+      if (
+        behavior === "auto" &&
+        lastScrolled?.path === path &&
+        lastScrolled.source === source
+      ) {
+        return
+      }
+      pendingScrollsRef.current.delete(path)
+      lastScrolledRef.current = { path, source }
       scrollTo(source, { behavior })
     },
     [sources, target]
   )
 
+  React.useEffect(() => {
+    if (activePath == null) return
+    const pendingBehavior = pendingScrollsRef.current.get(activePath)
+    if (!pendingBehavior) return
+    scrollToPath(activePath, pendingBehavior)
+  }, [activePath, scrollToPath])
+
   const onFieldHover = React.useCallback(
     (path: string | null) => {
       setHoverPath(path)
-      if (path) scrollToPath(path, "auto")
+      if (path == null) {
+        lastScrolledRef.current = null
+        for (const [pendingPath, behavior] of pendingScrollsRef.current) {
+          if (behavior === "auto") pendingScrollsRef.current.delete(pendingPath)
+        }
+        if (pinnedPath != null) {
+          scrollToPath(
+            pinnedPath,
+            pendingScrollsRef.current.get(pinnedPath) ?? "auto"
+          )
+        }
+        return
+      }
+      if (path != null) scrollToPath(path, "auto")
     },
-    [scrollToPath]
+    [pinnedPath, scrollToPath]
   )
 
   const selectField = React.useCallback(
@@ -100,6 +140,8 @@ export function useSourceLink({
   const clear = React.useCallback(() => {
     setHoverPath(null)
     setPinnedPath(null)
+    lastScrolledRef.current = null
+    pendingScrollsRef.current.clear()
   }, [])
 
   return {

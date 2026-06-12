@@ -94,7 +94,6 @@ export interface PptxViewerProps {
   className?: string
   scale?: number
   toolbar?: boolean
-  downloadFileName?: string
   renderSlideOverlay?: (props: PptxSlideOverlayProps) => React.ReactNode
   onVisibleSlideChange?: (slide: number) => void
   onScrollProgressChange?: (progress: number) => void
@@ -283,7 +282,7 @@ Test:
 - a single slide render failure shows per-slide error UI
 - unmounted slides do not set rendered state after cancellation
 - `onVisibleSlideChange` and `onScrollProgressChange` fire from scroll events
-- download uses `downloadFileName`
+- download uses `source.fileName`
 
 ### Browser Verification
 

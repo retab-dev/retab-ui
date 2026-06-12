@@ -61,11 +61,15 @@ export function usePdfScroll({
       onVisiblePageChange?.(visiblePage)
     }
   }, [layout, onScrollProgressChange, onVisiblePageChange, pageCount])
+  const measureScrollRef = React.useRef(measureScroll)
+  measureScrollRef.current = measureScroll
 
   const handleScroll = React.useCallback(() => {
     if (scrollFrameRef.current) return
-    scrollFrameRef.current = requestAnimationFrame(measureScroll)
-  }, [measureScroll])
+    scrollFrameRef.current = requestAnimationFrame(() =>
+      measureScrollRef.current()
+    )
+  }, [])
 
   const scrollToPageTarget = React.useCallback(
     (
@@ -97,6 +101,13 @@ export function usePdfScroll({
     () => viewportElementRef.current,
     []
   )
+
+  React.useEffect(() => {
+    if (scrollFrameRef.current) {
+      cancelAnimationFrame(scrollFrameRef.current)
+      scrollFrameRef.current = 0
+    }
+  }, [measureScroll])
 
   React.useEffect(
     () => () => {

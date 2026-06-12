@@ -52,6 +52,40 @@ export function resolveHighlightedSegmentId(
   )
 }
 
+export function scopeSegmentInteraction(
+  interaction: SegmentInteraction | null | undefined,
+  segmentIds: Iterable<string>
+): SegmentInteraction | null | undefined {
+  if (!interaction) return interaction
+
+  const knownIds = new Set(segmentIds)
+  const hoveredId = knownSegmentId(interaction.hoveredId, knownIds)
+  const focusedId = knownSegmentId(interaction.focusedId, knownIds)
+  const selectedId = knownSegmentId(interaction.selectedId, knownIds)
+
+  if (
+    hoveredId === interaction.hoveredId &&
+    focusedId === interaction.focusedId &&
+    selectedId === interaction.selectedId
+  ) {
+    return interaction
+  }
+
+  return {
+    ...interaction,
+    hoveredId,
+    focusedId,
+    selectedId,
+  }
+}
+
+function knownSegmentId(
+  id: string | null,
+  knownIds: ReadonlySet<string>
+): string | null {
+  return id != null && knownIds.has(id) ? id : null
+}
+
 export function isSegmentCurrentPage(
   segment: Segment,
   currentPage?: number | null

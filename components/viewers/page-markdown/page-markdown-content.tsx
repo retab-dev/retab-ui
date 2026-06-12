@@ -1,7 +1,6 @@
 "use client"
 
 import ReactMarkdown from "react-markdown"
-import rehypeRaw from "rehype-raw"
 import remarkGfm from "remark-gfm"
 
 import { markdownComponents } from "@/components/viewers/page-markdown/page-markdown-components"
@@ -31,7 +30,6 @@ export function PageMarkdownContent({
     <div className="leading-relaxed" style={{ fontSize: `${14 * scale}px` }}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
-        rehypePlugins={[rehypeRaw]}
         components={markdownComponents}
       >
         {markdown}

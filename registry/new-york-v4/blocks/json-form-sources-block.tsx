@@ -16,7 +16,7 @@ import { SourceIndicator } from "@/components/ui/source-indicator"
 import { JsonForm } from "@/components/json-form/json-form"
 import sourcesSample from "@/components/viewers/sample-data/json-form-sources.json"
 
-const PDF_URL = "/samples/bank-statement-x4uhhi7t.pdf"
+const PDF_URL = "/samples/jane-doe-bank-statement-5-pages.pdf"
 
 // An extraction of the bank-statement sample shaped like the
 // `GET /v1/extractions/{id}/sources` response: a JSON Schema, the extracted
@@ -51,7 +51,7 @@ export function JsonFormSourcesBlock() {
           source={{
             kind: "url",
             url: PDF_URL,
-            fileName: "bank-statement.pdf",
+            fileName: "jane-doe-bank-statement-5-pages.pdf",
           }}
           bare
           className="h-full"

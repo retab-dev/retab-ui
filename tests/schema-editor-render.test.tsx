@@ -15,13 +15,17 @@ import { SchemaBuilder } from "@/components/schema-editor/schema-builder"
 afterEach(cleanup)
 
 /** Controlled editor harness that records every emitted schema. */
-function renderEditor(initial: JSONSchema7) {
+function renderEditor(
+  initial: JSONSchema7,
+  options: { readOnly?: boolean } = {}
+) {
   const emits: JSONSchema7[] = []
   function Harness() {
     const [schema, setSchema] = React.useState(initial)
     return (
       <SchemaBuilder
         value={schema}
+        readOnly={options.readOnly}
         onValueChange={(s) => {
           emits.push(s as JSONSchema7)
           setSchema(s as JSONSchema7)
@@ -31,6 +35,16 @@ function renderEditor(initial: JSONSchema7) {
   }
   const utils = render(<Harness />)
   return { emits, last: () => emits.at(-1), ...utils }
+}
+
+function openSchemaActionsMenu() {
+  fireEvent.pointerDown(
+    screen.getByRole("button", { name: "Open schema actions" }),
+    {
+      button: 0,
+      ctrlKey: false,
+    }
+  )
 }
 
 const sample: JSONSchema7 = {
@@ -66,6 +80,39 @@ describe("SchemaBuilder renders (integration smoke)", () => {
     // $defs section header
     expect(screen.getByText(/Definitions/)).toBeTruthy()
   })
+
+  it("does not offer to delete definitions referenced from raw schema keywords", () => {
+    renderEditor({
+      type: "object",
+      $defs: {
+        Money: { type: "object", properties: { amount: { type: "number" } } },
+      },
+      additionalProperties: { $ref: "#/$defs/Money" },
+      properties: {},
+    } as JSONSchema7)
+
+    const moneySection = screen.getByText("Money").closest("[id]")!
+
+    expect(
+      within(moneySection as HTMLElement).queryByRole("button", {
+        name: "Delete field",
+      })
+    ).toBeNull()
+  })
+
+  it("renders imported arrays without an items schema", () => {
+    expect(() =>
+      renderEditor({
+        type: "object",
+        properties: {
+          rows: { type: "array" },
+        },
+      })
+    ).not.toThrow()
+
+    expect(screen.getByText("rows")).toBeTruthy()
+    expect(screen.getByText("list")).toBeTruthy()
+  })
 })
 
 describe("SchemaBuilder interactions (doc-routed)", () => {
@@ -82,6 +129,167 @@ describe("SchemaBuilder interactions (doc-routed)", () => {
     expect(Object.keys(out.properties!)).toEqual(
       expect.arrayContaining(["invoice_number", "total", "memo"])
     )
+  })
+
+  it("rejects duplicate property names before emitting", () => {
+    const { emits } = renderEditor(sample)
+    const input = screen.getAllByPlaceholderText("New property name")[0]
+    fireEvent.change(input, { target: { value: "total" } })
+
+    expect(screen.getByText(/already exists/)).toBeTruthy()
+    expect(
+      (screen.getByRole("button", { name: "Add" }) as HTMLButtonElement)
+        .disabled
+    ).toBe(true)
+
+    fireEvent.keyDown(input, { key: "Enter" })
+    expect(emits).toHaveLength(0)
+  })
+
+  it("does not render editing controls or emit in read-only mode", () => {
+    const { emits } = renderEditor(sample, { readOnly: true })
+
+    expect(screen.getByText("invoice_number")).toBeTruthy()
+    expect(screen.queryByPlaceholderText("New property name")).toBeNull()
+    expect(screen.queryByRole("button", { name: "Delete field" })).toBeNull()
+    expect(
+      (screen.getByDisplayValue("Invoice") as HTMLInputElement).disabled
+    ).toBe(true)
+    expect(
+      screen.getByRole("button", { name: "View schema properties" })
+    ).toBeTruthy()
+    expect(emits).toHaveLength(0)
+  })
+
+  it("does not render enum editing controls in read-only mode", () => {
+    const { emits } = renderEditor(
+      {
+        type: "object",
+        properties: {
+          status: { type: "string", enum: ["draft", "paid"] },
+        },
+      },
+      { readOnly: true }
+    )
+
+    expect(
+      (screen.getByDisplayValue("draft") as HTMLInputElement).disabled
+    ).toBe(true)
+    expect(
+      (screen.getByDisplayValue("paid") as HTMLInputElement).disabled
+    ).toBe(true)
+    expect(screen.queryByPlaceholderText("New choice")).toBeNull()
+    expect(screen.queryByRole("button", { name: "Add" })).toBeNull()
+    expect(emits).toHaveLength(0)
+  })
+
+  it("edits root title and description without dropping fields", () => {
+    const { last } = renderEditor(sample)
+    const titleInput = screen.getByDisplayValue("Invoice") as HTMLInputElement
+    fireEvent.change(titleInput, { target: { value: "Receipt" } })
+    fireEvent.blur(titleInput)
+
+    const descriptionInput = screen.getByPlaceholderText(
+      "Add a description to your schema"
+    ) as HTMLTextAreaElement
+    fireEvent.change(descriptionInput, {
+      target: { value: "Fields captured from the invoice." },
+    })
+    fireEvent.blur(descriptionInput)
+
+    const out = last()!
+    expect(out.title).toBe("Receipt")
+    expect(out.description).toBe("Fields captured from the invoice.")
+    expect(Object.keys(out.properties!)).toEqual(["invoice_number", "total"])
+    expect(out.required).toEqual(["invoice_number", "total"])
+  })
+
+  it("deletes all descriptions through the schema actions menu", async () => {
+    const { last } = renderEditor({
+      type: "object",
+      description: "root description",
+      $defs: {
+        Money: {
+          type: "object",
+          description: "money description",
+          properties: {
+            amount: { type: "number", description: "amount description" },
+          },
+        },
+      },
+      properties: {
+        vendor: {
+          type: "object",
+          description: "vendor description",
+          properties: {
+            name: { type: "string", description: "name description" },
+          },
+        },
+        rows: {
+          type: "array",
+          description: "rows description",
+          items: {
+            type: "object",
+            description: "row description",
+            properties: {
+              sku: { type: "string", description: "sku description" },
+            },
+          },
+        },
+        status: {
+          type: "string",
+          enum: ["draft", "paid"],
+          "x-enumDescriptions": {
+            draft: "Draft status",
+            paid: "Paid status",
+          },
+        } as JSONSchema7,
+      },
+    })
+
+    openSchemaActionsMenu()
+    fireEvent.click(
+      await screen.findByRole("menuitem", {
+        name: /Delete all descriptions/,
+      })
+    )
+    fireEvent.click(screen.getByRole("button", { name: "Delete" }))
+
+    const out = last()!
+    expect(out.description).toBeUndefined()
+    expect((out.properties!.vendor as JSONSchema7).description).toBeUndefined()
+    expect(
+      ((out.properties!.vendor as JSONSchema7).properties!.name as JSONSchema7)
+        .description
+    ).toBeUndefined()
+    expect((out.properties!.rows as JSONSchema7).description).toBeUndefined()
+    expect(
+      (((out.properties!.rows as JSONSchema7).items as JSONSchema7).properties!
+        .sku as JSONSchema7).description
+    ).toBeUndefined()
+    expect((out.$defs!.Money as JSONSchema7).description).toBeUndefined()
+    expect(
+      ((out.$defs!.Money as JSONSchema7).properties!.amount as JSONSchema7)
+        .description
+    ).toBeUndefined()
+    expect(
+      (out.properties!.status as Record<string, unknown>)["x-enumDescriptions"]
+    ).toBeUndefined()
+  })
+
+  it("deletes root fields through the schema actions menu", async () => {
+    const { last } = renderEditor(sample)
+
+    openSchemaActionsMenu()
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: /Delete Schema/ })
+    )
+    fireEvent.click(screen.getByRole("button", { name: "Delete" }))
+
+    const out = last()!
+    expect(out.type).toBe("object")
+    expect(out.properties).toEqual({})
+    expect(out.required).toEqual([])
   })
 
   it("edits a property description inline and emits it", () => {

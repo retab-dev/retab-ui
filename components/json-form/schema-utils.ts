@@ -44,9 +44,21 @@ function definitionsFrom(
 function mergeSchemas(base: Schema, next: Schema): Schema {
   const merged: Schema = { ...base, ...next }
   if (base.properties || next.properties) {
-    merged.properties = {
-      ...((base.properties ?? {}) as Record<string, JSONSchema7Definition>),
-      ...((next.properties ?? {}) as Record<string, JSONSchema7Definition>),
+    const baseProperties = (base.properties ?? {}) as Record<
+      string,
+      JSONSchema7Definition
+    >
+    const nextProperties = (next.properties ?? {}) as Record<
+      string,
+      JSONSchema7Definition
+    >
+    merged.properties = { ...baseProperties }
+    for (const [key, value] of Object.entries(nextProperties)) {
+      const existing = merged.properties[key]
+      merged.properties[key] =
+        isSchema(existing) && isSchema(value)
+          ? mergeSchemas(existing, value)
+          : value
     }
   }
   if (base.required || next.required) {
@@ -57,33 +69,66 @@ function mergeSchemas(base: Schema, next: Schema): Schema {
   return merged
 }
 
+function decodePointerSegment(segment: string): string {
+  return segment.replace(/~1/g, "/").replace(/~0/g, "~")
+}
+
+function resolveLocalPointer(
+  schema: Schema,
+  ref: string
+): JSONSchema7Definition | undefined {
+  if (!ref.startsWith("#/")) return undefined
+
+  let current: unknown = schema
+  for (const segment of ref.slice(2).split("/").map(decodePointerSegment)) {
+    if (!isSchema(current) && !Array.isArray(current)) return undefined
+    current = (current as Record<string, unknown>)[segment]
+  }
+  return current as JSONSchema7Definition | undefined
+}
+
 function refKey(ref: string): string | null {
-  if (ref.startsWith("#/$defs/")) return ref.slice("#/$defs/".length)
+  if (ref.startsWith("#/$defs/")) {
+    return decodePointerSegment(ref.slice("#/$defs/".length))
+  }
   if (ref.startsWith("#/definitions/")) {
-    return ref.slice("#/definitions/".length)
+    return decodePointerSegment(ref.slice("#/definitions/".length))
   }
   return null
+}
+
+function resolveRef(
+  ref: string,
+  rootSchema: Schema,
+  definitions: Record<string, JSONSchema7Definition>
+): JSONSchema7Definition | undefined {
+  return resolveLocalPointer(rootSchema, ref) ?? definitions[refKey(ref) ?? ""]
 }
 
 export function expandRefs(
   schema: Schema,
   definitions: Record<string, JSONSchema7Definition> = definitionsFrom(schema),
-  visited: Set<string> = new Set()
+  visited: Set<string> = new Set(),
+  rootSchema: Schema = schema
 ): Schema {
   const working = cloneSchema(schema)
 
   if (typeof working.$ref === "string") {
-    const key = refKey(working.$ref)
-    const target = key ? definitions[key] : undefined
-    if (!key || !isSchema(target) || visited.has(key)) return working
+    const ref = working.$ref
+    const target = resolveRef(ref, rootSchema, definitions)
+    if (!isSchema(target) || visited.has(ref)) return working
 
     const nextVisited = new Set(visited)
-    nextVisited.add(key)
+    nextVisited.add(ref)
     const { $ref: _ref, ...overrides } = working
     return expandRefs(
-      mergeSchemas(expandRefs(target, definitions, nextVisited), overrides),
+      mergeSchemas(
+        expandRefs(target, definitions, nextVisited, rootSchema),
+        overrides
+      ),
       definitions,
-      nextVisited
+      nextVisited,
+      rootSchema
     )
   }
 
@@ -92,7 +137,10 @@ export function expandRefs(
     delete working.allOf
     return allOf.reduce<Schema>((merged, branch) => {
       return isSchema(branch)
-        ? mergeSchemas(merged, expandRefs(branch, definitions, visited))
+        ? mergeSchemas(
+            merged,
+            expandRefs(branch, definitions, visited, rootSchema)
+          )
         : merged
     }, working)
   }
@@ -101,7 +149,9 @@ export function expandRefs(
     const branches = working[key]
     if (Array.isArray(branches)) {
       working[key] = branches.map((branch) =>
-        isSchema(branch) ? expandRefs(branch, definitions, visited) : branch
+        isSchema(branch)
+          ? expandRefs(branch, definitions, visited, rootSchema)
+          : branch
       )
     }
   }
@@ -110,17 +160,17 @@ export function expandRefs(
     const properties: Record<string, JSONSchema7Definition> = {}
     for (const [key, value] of Object.entries(working.properties)) {
       properties[key] = isSchema(value)
-        ? expandRefs(value, definitions, visited)
+        ? expandRefs(value, definitions, visited, rootSchema)
         : value
     }
     working.properties = properties
   }
 
   if (isSchema(working.items)) {
-    working.items = expandRefs(working.items, definitions, visited)
+    working.items = expandRefs(working.items, definitions, visited, rootSchema)
   } else if (Array.isArray(working.items)) {
     working.items = working.items.map((item) =>
-      isSchema(item) ? expandRefs(item, definitions, visited) : item
+      isSchema(item) ? expandRefs(item, definitions, visited, rootSchema) : item
     )
   }
 

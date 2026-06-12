@@ -4,9 +4,10 @@ import * as React from "react"
 
 import {
   getSegmentSurfaceProps,
+  scopeSegmentInteraction,
   type SegmentInteraction,
 } from "@/lib/segment-interaction"
-import { type Segment } from "@/lib/segments"
+import { segmentDisplayLabel, type Segment } from "@/lib/segments"
 import { cn } from "@/lib/utils"
 
 /** How the legend attaches to the document surface. */
@@ -102,8 +103,17 @@ export function SegmentLegend({
   const reveal = showUnused ?? uncontrolledShowUnused
   const visible = reveal ? segments : segments.filter((s) => s.pages.length > 0)
   const hasHidden = segments.some((s) => s.pages.length === 0)
+  const canToggleUnused = showUnusedToggle && hasHidden
+  const scopedInteraction = React.useMemo(
+    () =>
+      scopeSegmentInteraction(
+        interaction,
+        visible.map((segment) => segment.id)
+      ),
+    [interaction, visible]
+  )
 
-  if (visible.length === 0) return null
+  if (visible.length === 0 && !canToggleUnused) return null
 
   const d = DENSITY[density]
   const dockSide = side ?? (orientation === "vertical" ? "left" : "top")
@@ -132,74 +142,78 @@ export function SegmentLegend({
       data-variant={variant}
       className={cn(chrome, className)}
     >
-      <div
-        className={cn(
-          d.gap,
-          isVertical
-            ? "flex flex-col"
-            : columns
-              ? "grid"
-              : "flex flex-wrap items-center"
-        )}
-        style={
-          !isVertical && columns
-            ? { gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }
-            : undefined
-        }
-      >
-        {visible.map((segment) => {
-          const { state, eventHandlers, ariaProps, dataProps } =
-            getSegmentSurfaceProps({
-              segment,
-              interaction,
-              currentPage,
-              onSelect,
-            })
-          return (
-            <button
-              key={segment.id}
-              type="button"
-              {...ariaProps}
-              {...dataProps}
-              {...eventHandlers}
-              title={segment.label}
-              className={cn(
-                "flex min-w-0 items-center gap-2 rounded-[3px] transition-opacity focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-                d.text,
-                state.isDimmed ? "opacity-40" : "opacity-100"
-              )}
-            >
-              <span
-                aria-hidden
-                className={cn("shrink-0 rounded-[2px]", d.swatch)}
-                style={{ backgroundColor: segment.color }}
-              />
-              {/* Reserve the bold width up front: an always-semibold but
-                  invisible copy sizes the slot, and the visible label overlays
-                  it so highlighted/current labels cannot shift the layout. */}
-              <span className="grid min-w-0">
+      {visible.length > 0 ? (
+        <div
+          className={cn(
+            d.gap,
+            isVertical
+              ? "flex flex-col"
+              : columns
+                ? "grid"
+                : "flex flex-wrap items-center"
+          )}
+          style={
+            !isVertical && columns
+              ? { gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }
+              : undefined
+          }
+        >
+          {visible.map((segment) => {
+            const { state, eventHandlers, ariaProps, dataProps } =
+              getSegmentSurfaceProps({
+                segment,
+                interaction: scopedInteraction,
+                currentPage,
+                onSelect,
+              })
+            const label = segmentDisplayLabel(segment.label)
+            return (
+              <button
+                key={segment.id}
+                type="button"
+                {...ariaProps}
+                {...dataProps}
+                {...eventHandlers}
+                title={label}
+                className={cn(
+                  "flex min-w-0 items-center gap-2 rounded-[3px] transition-opacity focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                  d.text,
+                  state.isDimmed ? "opacity-40" : "opacity-100"
+                )}
+              >
                 <span
                   aria-hidden
-                  className="invisible col-start-1 row-start-1 truncate font-semibold"
-                >
-                  {segment.label}
+                  className={cn("shrink-0 rounded-[2px]", d.swatch)}
+                  style={{ backgroundColor: segment.color }}
+                />
+                {/* Reserve the bold width up front: an always-semibold but
+                    invisible copy sizes the slot, and the visible label overlays
+                    it so highlighted/current labels cannot shift the layout. */}
+                <span className="grid min-w-0">
+                  <span
+                    aria-hidden
+                    className="invisible col-start-1 row-start-1 truncate font-semibold"
+                  >
+                    {label}
+                  </span>
+                  <span
+                    className={cn(
+                      "col-start-1 row-start-1 truncate",
+                      !segment.label.trim() && "italic",
+                      state.isHighlighted || state.isCurrent || state.isSelected
+                        ? "font-semibold text-foreground"
+                        : "font-normal text-muted-foreground"
+                    )}
+                  >
+                    {label}
+                  </span>
                 </span>
-                <span
-                  className={cn(
-                    "col-start-1 row-start-1 truncate",
-                    state.isHighlighted || state.isCurrent || state.isSelected
-                      ? "font-semibold text-foreground"
-                      : "font-normal text-muted-foreground"
-                  )}
-                >
-                  {segment.label}
-                </span>
-              </span>
-            </button>
-          )
-        })}
-      </div>
-      {showUnusedToggle && hasHidden ? (
+              </button>
+            )
+          })}
+        </div>
+      ) : null}
+      {canToggleUnused ? (
         <button
           type="button"
           aria-label={

@@ -12,9 +12,9 @@ export function getFixedGridCanvasStyle({
   contain?: boolean
 }): React.CSSProperties {
   return {
-    width: formatCssLength(width),
-    minWidth: formatCssLength(minWidth),
     position: "relative",
+    ...cssLengthProperty("width", width),
+    ...cssLengthProperty("minWidth", minWidth),
     ...(contain ? { contain: "layout paint style" } : null),
   }
 }
@@ -28,11 +28,20 @@ export function getFixedGridRowWindowStyle({
 }): React.CSSProperties {
   return {
     position: "relative",
-    height: formatCssLength(height),
-    minWidth: formatCssLength(minWidth),
+    ...cssLengthProperty("height", height),
+    ...cssLengthProperty("minWidth", minWidth),
   }
 }
 
 function formatCssLength(value: CssLength | undefined) {
-  return typeof value === "number" ? `${value}px` : value
+  if (typeof value !== "number") return value
+  return Number.isFinite(value) && value >= 0 ? `${value}px` : undefined
+}
+
+function cssLengthProperty<Property extends "height" | "minWidth" | "width">(
+  property: Property,
+  value: CssLength | undefined
+): Pick<React.CSSProperties, Property> | object {
+  const formattedValue = formatCssLength(value)
+  return formattedValue === undefined ? {} : { [property]: formattedValue }
 }

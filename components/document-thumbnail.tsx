@@ -3,71 +3,80 @@
 import * as React from "react"
 
 import {
+  createViewerResource,
+  type ViewerResource,
+} from "@/lib/viewer-resource"
+import type { FileCategory, ViewerDescriptor } from "@/lib/viewer-source"
+import {
   FileThumbnail,
   FileThumbnailShimmer,
 } from "@/components/ui/file-thumbnail"
+import {
+  isTiffDescriptor,
+  resolveThumbnailDescriptor,
+} from "@/components/document-thumbnail/descriptor"
 import { ThumbnailErrorBoundary } from "@/components/document-thumbnail/errors"
+import {
+  getThumbnailCacheKey,
+  getThumbnailRenderKey,
+} from "@/components/document-thumbnail/keys"
 import { CsvFirstRows } from "@/components/document-thumbnail/renderers/csv-thumbnail"
 import { DocxFirstPage } from "@/components/document-thumbnail/renderers/docx-thumbnail"
 import { HtmlFirstPage } from "@/components/document-thumbnail/renderers/html-thumbnail"
+import { ImageFirstFrame } from "@/components/document-thumbnail/renderers/image-thumbnail"
 import { MarkdownFirstPage } from "@/components/document-thumbnail/renderers/markdown-thumbnail"
 import { PdfFirstPage } from "@/components/document-thumbnail/renderers/pdf-thumbnail"
 import { PptxFirstSlide } from "@/components/document-thumbnail/renderers/pptx-thumbnail"
-import { TiffFirstPage } from "@/components/document-thumbnail/renderers/tiff-thumbnail"
 import { TextFirstLines } from "@/components/document-thumbnail/renderers/text-thumbnail"
+import { TiffFirstPage } from "@/components/document-thumbnail/renderers/tiff-thumbnail"
 import { XlsxFirstSheet } from "@/components/document-thumbnail/renderers/xlsx-thumbnail"
 import {
   ANCHOR_OBJECT_POSITION,
-  getThumbnailResourceKey,
-  type DocumentKind,
   type DocumentThumbnailProps,
   type ThumbnailAnchor,
-  type ThumbnailResourceIdentity,
 } from "@/components/document-thumbnail/types"
 
-export { getThumbnailResourceKey }
-export type {
-  DocumentKind,
-  DocumentThumbnailProps,
-  ThumbnailAnchor,
-  ThumbnailResourceIdentity,
-}
-
-type ThumbnailDocumentKind = Exclude<DocumentKind, "image">
+export { getThumbnailCacheKey, getThumbnailRenderKey }
+export type { DocumentThumbnailProps, ThumbnailAnchor }
 
 type DocumentRenderer = (props: {
-  src: string
-  resourceKey: string
+  resource: ViewerResource
+  descriptor: ViewerDescriptor
+  cacheKey: string
   anchor: ThumbnailAnchor
 }) => React.ReactNode
 
-const DOCUMENT_RENDERERS: Record<ThumbnailDocumentKind, DocumentRenderer> = {
-  // PDF reuses the shared PdfViewer resource cache by `src`; `resourceKey`
-  // remounts the canvas/error boundary but does not evict the pdfjs document.
-  pdf: ({ src, anchor }) => <PdfFirstPage src={src} anchor={anchor} />,
-  xlsx: ({ src, resourceKey }) => (
-    <XlsxFirstSheet src={src} resourceKey={resourceKey} />
+const DOCUMENT_RENDERERS: Record<
+  Exclude<FileCategory, "unsupported">,
+  DocumentRenderer
+> = {
+  pdf: ({ resource, anchor }) => (
+    <PdfFirstPage resource={resource} anchor={anchor} />
   ),
-  pptx: ({ src, resourceKey, anchor }) => (
-    <PptxFirstSlide src={src} resourceKey={resourceKey} anchor={anchor} />
+  xlsx: ({ resource, cacheKey }) => (
+    <XlsxFirstSheet resource={resource} cacheKey={cacheKey} />
   ),
-  docx: ({ src, resourceKey }) => (
-    <DocxFirstPage src={src} resourceKey={resourceKey} />
+  pptx: ({ resource, cacheKey, anchor }) => (
+    <PptxFirstSlide resource={resource} cacheKey={cacheKey} anchor={anchor} />
   ),
-  tiff: ({ src, resourceKey, anchor }) => (
-    <TiffFirstPage src={src} resourceKey={resourceKey} anchor={anchor} />
+  docx: ({ resource }) => <DocxFirstPage resource={resource} />,
+  image: ({ resource, descriptor, cacheKey, anchor }) =>
+    isTiffDescriptor(descriptor) ? (
+      <TiffFirstPage resource={resource} cacheKey={cacheKey} anchor={anchor} />
+    ) : (
+      <ImageFirstFrame resource={resource} anchor={anchor} />
+    ),
+  csv: ({ resource, cacheKey }) => (
+    <CsvFirstRows resource={resource} cacheKey={cacheKey} />
   ),
-  csv: ({ src, resourceKey }) => (
-    <CsvFirstRows src={src} resourceKey={resourceKey} />
+  markdown: ({ resource, cacheKey }) => (
+    <MarkdownFirstPage resource={resource} cacheKey={cacheKey} />
   ),
-  markdown: ({ src, resourceKey }) => (
-    <MarkdownFirstPage src={src} resourceKey={resourceKey} />
+  html: ({ resource, cacheKey }) => (
+    <HtmlFirstPage resource={resource} cacheKey={cacheKey} />
   ),
-  html: ({ src, resourceKey }) => (
-    <HtmlFirstPage src={src} resourceKey={resourceKey} />
-  ),
-  text: ({ src, resourceKey }) => (
-    <TextFirstLines src={src} resourceKey={resourceKey} />
+  text: ({ resource, cacheKey }) => (
+    <TextFirstLines resource={resource} cacheKey={cacheKey} />
   ),
 }
 
@@ -76,28 +85,49 @@ const DOCUMENT_RENDERERS: Record<ThumbnailDocumentKind, DocumentRenderer> = {
  * first slide — then drops it into the dependency-free `FileThumbnail` shell.
  */
 export function DocumentThumbnail({
-  src,
-  name,
-  type,
-  kind,
+  source,
+  as,
   className,
   previewAspectRatio = 3 / 4,
   anchor = "top-left",
   retryKey,
 }: DocumentThumbnailProps) {
-  const resourceKey = getThumbnailResourceKey({
-    kind,
-    src,
+  const descriptor = resolveThumbnailDescriptor({ source, as })
+  const resource = React.useMemo(() => createViewerResource(source), [source])
+  const cacheKey = getThumbnailCacheKey({
+    resource,
+    descriptor,
+    options: isTiffDescriptor(descriptor) ? ["tiff"] : [],
+  })
+  const renderKey = getThumbnailRenderKey({
+    cacheKey,
     anchor,
     retryKey: retryKey ?? null,
   })
-  const [failedKey, setFailedKey] = React.useState<string | null>(null)
+  const [failedRenderKey, setFailedRenderKey] = React.useState<string | null>(
+    null
+  )
+  const directLoad = resource.getDirectLoad()
 
-  if (kind === "image") {
+  if (descriptor.category === "unsupported") {
     return (
       <FileThumbnail
-        file={{ name, type }}
-        previewImageUrl={src}
+        file={{ name: descriptor.displayName, type: descriptor.mimeType ?? "" }}
+        previewAspectRatio={previewAspectRatio}
+        className={className}
+      />
+    )
+  }
+
+  if (
+    descriptor.category === "image" &&
+    !isTiffDescriptor(descriptor) &&
+    directLoad.kind === "url"
+  ) {
+    return (
+      <FileThumbnail
+        file={{ name: descriptor.displayName, type: descriptor.mimeType ?? "" }}
+        previewImageUrl={directLoad.url}
         previewAspectRatio={previewAspectRatio}
         className={className}
         previewClassName={ANCHOR_OBJECT_POSITION[anchor]}
@@ -107,18 +137,18 @@ export function DocumentThumbnail({
 
   return (
     <FileThumbnail
-      file={{ name, type }}
+      file={{ name: descriptor.displayName, type: descriptor.mimeType ?? "" }}
       previewAspectRatio={previewAspectRatio}
       className={className}
-      state={failedKey === resourceKey ? "error" : "loaded"}
+      state={failedRenderKey === renderKey ? "error" : "loaded"}
       previewContent={
         <ClientPreview
-          key={resourceKey}
-          src={src}
-          resourceKey={resourceKey}
-          kind={kind}
+          key={renderKey}
+          resource={resource}
+          descriptor={descriptor}
+          cacheKey={cacheKey}
           anchor={anchor}
-          onError={() => setFailedKey(resourceKey)}
+          onError={() => setFailedRenderKey(renderKey)}
         />
       }
     />
@@ -126,30 +156,30 @@ export function DocumentThumbnail({
 }
 
 function ClientPreview({
-  src,
-  resourceKey,
-  kind,
+  resource,
+  descriptor,
+  cacheKey,
   anchor,
   onError,
 }: {
-  src: string
-  resourceKey: string
-  kind: DocumentKind
+  resource: ViewerResource
+  descriptor: ViewerDescriptor
+  cacheKey: string
   anchor: ThumbnailAnchor
   onError: () => void
 }) {
   const isClient = useIsClient()
-  const inView = useInView()
+  const { ref: inViewRef, seen: isSeen } = useThumbnailInView()
 
   return (
-    <div ref={inView.ref} className="absolute inset-0">
-      {isClient && inView.seen ? (
+    <div ref={inViewRef} className="absolute inset-0">
+      {isClient && isSeen ? (
         <ThumbnailErrorBoundary fallback={null} onError={onError}>
           <React.Suspense fallback={<FileThumbnailShimmer />}>
             <FirstUnit
-              src={src}
-              resourceKey={resourceKey}
-              kind={kind}
+              resource={resource}
+              descriptor={descriptor}
+              cacheKey={cacheKey}
               anchor={anchor}
             />
           </React.Suspense>
@@ -161,11 +191,14 @@ function ClientPreview({
   )
 }
 
-function useInView() {
+function useThumbnailInView() {
   const [seen, setSeen] = React.useState(false)
+  const [node, setNode] = React.useState<HTMLElement | null>(null)
   const seenRef = React.useRef(false)
-  const ref = React.useCallback((el: HTMLElement | null) => {
-    if (!el || seenRef.current) return
+  const ref = React.useCallback((el: HTMLElement | null) => setNode(el), [])
+
+  React.useEffect(() => {
+    if (!node || seenRef.current) return
     if (typeof IntersectionObserver === "undefined") {
       seenRef.current = true
       setSeen(true)
@@ -181,32 +214,31 @@ function useInView() {
       },
       { rootMargin: "300px" }
     )
-    observer.observe(el)
+    observer.observe(node)
     return () => observer.disconnect()
-  }, [])
+  }, [node])
+
   return { ref, seen }
 }
 
 function useIsClient() {
-  return React.useSyncExternalStore(
-    () => () => {},
-    () => true,
-    () => false
-  )
+  const [isClient, setIsClient] = React.useState(false)
+  React.useEffect(() => setIsClient(true), [])
+  return isClient
 }
 
 function FirstUnit({
-  src,
-  resourceKey,
-  kind,
+  resource,
+  descriptor,
+  cacheKey,
   anchor,
 }: {
-  src: string
-  resourceKey: string
-  kind: DocumentKind
+  resource: ViewerResource
+  descriptor: ViewerDescriptor
+  cacheKey: string
   anchor: ThumbnailAnchor
 }) {
-  if (kind === "image") return null
-  const render = DOCUMENT_RENDERERS[kind]
-  return render({ src, resourceKey, anchor })
+  if (descriptor.category === "unsupported") return null
+  const render = DOCUMENT_RENDERERS[descriptor.category]
+  return render({ resource, descriptor, cacheKey, anchor })
 }

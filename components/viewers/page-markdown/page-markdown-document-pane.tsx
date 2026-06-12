@@ -17,9 +17,12 @@ export const PageMarkdownDocumentPane = React.forwardRef<
   {
     renderDocument: NonNullable<PageMarkdownViewerProps["renderDocument"]>
     onCurrentPageChange: PageMarkdownDocumentHandlers["onCurrentPageChange"]
+    onScrollProgressChange: NonNullable<
+      PageMarkdownDocumentHandlers["onScrollProgressChange"]
+    >
   }
 >(function PageMarkdownDocumentPane(
-  { renderDocument, onCurrentPageChange },
+  { renderDocument, onCurrentPageChange, onScrollProgressChange },
   ref
 ) {
   const documentPaneRef = React.useRef<HTMLDivElement | null>(null)
@@ -36,7 +39,7 @@ export const PageMarkdownDocumentPane = React.forwardRef<
 
   return (
     <div ref={documentPaneRef} className="h-full min-w-0">
-      {renderDocument({ onCurrentPageChange })}
+      {renderDocument({ onCurrentPageChange, onScrollProgressChange })}
     </div>
   )
 })

@@ -1,6 +1,7 @@
 import type * as PptxNS from "pptxviewjs"
 
-import { ResourceError, type ViewerResource } from "@/lib/viewer-resource"
+import { ViewerFormatError } from "@/lib/viewer-errors"
+import { type ViewerResource } from "@/lib/viewer-resource"
 
 import { DEFAULT_PPTX_SLIDE_SIZE, type PptxSize } from "./pptx-viewer-core"
 import { parsePptxSlideSize } from "./pptx-viewer-presentation"
@@ -13,20 +14,15 @@ interface JSZipLike {
   }>
 }
 
-export type PptxRendererErrorKind =
-  | "fetch_failed"
-  | "load_failed"
-  | "render_failed"
-  | "disposed"
+export type PptxRendererErrorKind = "load_failed" | "render_failed" | "disposed"
 
-export class PptxRendererError extends Error {
-  constructor(
-    readonly kind: PptxRendererErrorKind,
-    message: string,
-    readonly cause?: unknown
-  ) {
-    super(message)
+export class PptxRendererError extends ViewerFormatError {
+  override readonly kind: PptxRendererErrorKind
+
+  constructor(kind: PptxRendererErrorKind, message: string, cause?: unknown) {
+    super({ format: "pptx", kind, message, cause })
     this.name = "PptxRendererError"
+    this.kind = kind
   }
 }
 
@@ -72,29 +68,10 @@ async function readSlideSize(buffer: ArrayBuffer): Promise<PptxSize> {
   }
 }
 
-async function readPptxResource(resource: ViewerResource) {
-  try {
-    return await resource.readArrayBuffer()
-  } catch (error) {
-    if (error instanceof ResourceError && error.kind === "http_error") {
-      throw new PptxRendererError(
-        "fetch_failed",
-        `Failed to load presentation: ${error.status}`,
-        error
-      )
-    }
-    throw new PptxRendererError(
-      "fetch_failed",
-      "Failed to fetch presentation.",
-      error
-    )
-  }
-}
-
 export async function createPptxRenderer(
   resource: ViewerResource
 ): Promise<PptxRenderer> {
-  const buffer = await readPptxResource(resource)
+  const buffer = await resource.readArrayBuffer()
   const [pptx, baseSize] = await Promise.all([
     loadPptx(),
     readSlideSize(buffer),
@@ -110,6 +87,7 @@ export async function createPptxRenderer(
   try {
     await viewer.loadFile(buffer)
   } catch (error) {
+    viewer.destroy?.()
     throw new PptxRendererError(
       "load_failed",
       "Failed to parse presentation.",
@@ -117,10 +95,19 @@ export async function createPptxRenderer(
     )
   }
 
+  const slideCount = viewer.getSlideCount()
+  if (!Number.isInteger(slideCount) || slideCount <= 0) {
+    viewer.destroy?.()
+    throw new PptxRendererError(
+      "load_failed",
+      "Presentation does not contain any slides."
+    )
+  }
+
   let disposed = false
 
   return {
-    slideCount: viewer.getSlideCount(),
+    slideCount,
     baseSize,
     async renderSlide({ slideIndex, canvas, renderScale }) {
       if (disposed) {

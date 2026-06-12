@@ -52,22 +52,29 @@ import { DocumentThumbnail } from "@/components/document-thumbnail"
 
 // PDF / DOCX / XLSX / PPTX: first page, first sheet, or first slide only.
 <DocumentThumbnail
-  kind="pdf"
-  src="/attention.pdf"
-  name="attention.pdf"
-  type="application/pdf"
+  source={{
+    kind: "url",
+    url: "/attention.pdf",
+    fileName: "attention.pdf",
+    mimeType: "application/pdf",
+  }}
 />
 
 // Images need no renderer.
-<DocumentThumbnail kind="image" src="/page.png" name="page.png" type="image/png" />
+<DocumentThumbnail
+  source={{
+    kind: "url",
+    url: "/page.png",
+    fileName: "page.png",
+    mimeType: "image/png",
+  }}
+/>
 ```
 
-If a document renderer fails transiently and you want to retry the same `src`,
-change `retryKey`. `DocumentThumbnail` folds `kind`, `src`, `anchor`, and
-`retryKey` into one resource identity, so local first-unit renderers remount and
-use a fresh cache entry without changing the visible thumbnail API. PDF previews
-deliberately reuse the shared PDF viewer cache by `src`; `retryKey` still
-remounts the thumbnail surface and error boundary.
+If a document renderer fails transiently and you want to retry the same
+`source`, change `retryKey`. `DocumentThumbnail` folds the shared resource cache
+key, thumbnail category, anchor, and `retryKey` into explicit cache/render keys,
+so first-unit renderers can retry without inventing a different source.
 
 ## Useful Behaviors
 
@@ -100,6 +107,21 @@ is kept stable for styling and tests.
 `previewContent` is treated as present for any renderable React node, including
 `0` and an empty string. `null`, `undefined`, and `false` are treated as absent,
 so the component can fall back to `previewImageUrl` or the muted fallback surface.
+
+### DocumentThumbnail
+
+| Prop                 | Type                                         | Default      | Required |
+| -------------------- | -------------------------------------------- | ------------ | -------- |
+| `source`             | `ViewerSource`                               | `-`          | Yes      |
+| `as`                 | `FileCategory`                               | auto-detect  | No       |
+| `className`          | `string`                                     | `-`          | No       |
+| `previewAspectRatio` | `number`                                     | `3 / 4`      | No       |
+| `anchor`             | `"top-left" \| "top-right" \| "bottom-left"` | `"top-left"` | No       |
+| `retryKey`           | `React.Key`                                  | `-`          | No       |
+
+Use `as` only when the file name or MIME type is missing, wrong, or intentionally
+viewed as another supported category. `source` accepts URL, Blob, and inline text
+sources through the same file boundary used by File Viewer.
 
 ### ThumbnailFile
 

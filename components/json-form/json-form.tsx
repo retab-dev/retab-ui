@@ -13,6 +13,12 @@ import {
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import {
+  getFixedGridCanvasStyle,
+  getFixedGridRowWindowStyle,
+} from "@/components/ui/fixed-grid-layout"
+import { getFixedGridRowStyle } from "@/components/ui/fixed-grid-row-style"
+import { useFixedRowVirtualization } from "@/components/ui/fixed-grid-virtualization"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -82,6 +88,8 @@ const CARD_VIRTUALIZE_THRESHOLD = 30
 const TABLE_VIRTUALIZE_THRESHOLD = 30
 /** Arrays longer than this start collapsed regardless of depth. */
 const LONG_ARRAY_THRESHOLD = 8
+const TABLE_ROW_HEIGHT = 44
+const TABLE_MAX_HEIGHT = 420
 
 // ---------------------------------------------------------------------------
 // Source linking — opt-in field-level hover/highlight
@@ -215,7 +223,12 @@ export function JsonFormField({
               </FormControl>
               <div className="leading-none">
                 <WithDescription text={schema.description}>
-                  <FormLabel>{heading}</FormLabel>
+                  <FormLabel>
+                    {heading}
+                    {required ? (
+                      <span className="text-destructive"> *</span>
+                    ) : null}
+                  </FormLabel>
                 </WithDescription>
               </div>
               <FormMessage />
@@ -294,6 +307,13 @@ interface ControlFieldApi {
   ref?: React.Ref<HTMLElement>
 }
 
+type ScalarControlDomProps = {
+  id?: string
+  "aria-describedby"?: string
+  "aria-invalid"?: boolean
+  "data-slot"?: string
+}
+
 const NULL_SELECT_VALUE = "__json-form-null__"
 
 function enumOptionValue(index: number): string {
@@ -306,12 +326,54 @@ function enumLabel(value: unknown): string {
   return JSON.stringify(value)
 }
 
+function enumValueEquals(a: unknown, b: unknown): boolean {
+  if (Object.is(a, b)) return true
+  if (
+    typeof a !== "object" ||
+    a === null ||
+    typeof b !== "object" ||
+    b === null
+  ) {
+    return false
+  }
+
+  try {
+    return JSON.stringify(a) === JSON.stringify(b)
+  } catch {
+    return false
+  }
+}
+
+function datetimeLocalInputValue(value: string): string {
+  const withoutTimezone = value.trim().replace(/(?:Z|[+-]\d{2}:\d{2})$/, "")
+  return withoutTimezone.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/)?.[0] ?? value
+}
+
+function emptyArrayItemValue(schema: Schema): unknown {
+  const { schema: inner, nullable } = unwrapNullable(schema)
+  if (nullable) return null
+  if (fieldKind(inner) !== "object") return emptyValueFor(inner)
+
+  const properties = (inner.properties ?? {}) as Record<
+    string,
+    JSONSchema7Definition
+  >
+  const value: Record<string, unknown> = {}
+  for (const [key, child] of Object.entries(properties)) {
+    if (typeof child === "object" && child !== null) {
+      value[key] = emptyValueFor(child)
+    }
+  }
+  return value
+}
+
 function ScalarControl({
   kind,
   schema,
   field,
   compact = false,
   nullable = false,
+  ...controlProps
 }: {
   kind: FieldKind
   schema: Schema
@@ -319,19 +381,27 @@ function ScalarControl({
   /** Dense, single-line variant for table cells. */
   compact?: boolean
   nullable?: boolean
-}) {
-  const sizing = compact ? "h-8 text-sm" : undefined
+} & ScalarControlDomProps) {
+  const sizing = compact
+    ? "h-8 rounded-md border-transparent bg-transparent px-2 text-sm shadow-none transition-colors hover:border-border hover:bg-background focus-visible:border-ring focus-visible:bg-background focus-visible:ring-1 focus-visible:ring-ring/30"
+    : undefined
 
   if (kind === "enum") {
     const enumValues = schema.enum ?? []
     const currentIndex = enumValues.findIndex((value) =>
-      Object.is(value, field.value)
+      enumValueEquals(value, field.value)
     )
     const selectValue =
       field.value === null && nullable
         ? NULL_SELECT_VALUE
         : currentIndex >= 0
           ? enumOptionValue(currentIndex)
+          : undefined
+    const displayValue =
+      field.value === null && nullable
+        ? "No value"
+        : currentIndex >= 0
+          ? enumLabel(enumValues[currentIndex])
           : undefined
 
     return (
@@ -347,8 +417,8 @@ function ScalarControl({
           field.onChange(enumValues[index])
         }}
       >
-        <SelectTrigger className={sizing}>
-          <SelectValue placeholder="Select…" />
+        <SelectTrigger className={sizing} {...controlProps}>
+          <SelectValue placeholder="Select…">{displayValue}</SelectValue>
         </SelectTrigger>
         <SelectContent>
           {nullable ? (
@@ -370,9 +440,11 @@ function ScalarControl({
   if (kind === "number" || kind === "integer") {
     return (
       <Input
+        nativeInput
         type="number"
         step={kind === "integer" ? 1 : "any"}
         className={sizing}
+        {...controlProps}
         value={field.value == null ? "" : (field.value as number)}
         onChange={(e) =>
           field.onChange(
@@ -394,9 +466,13 @@ function ScalarControl({
   if (schema.format === "date" || schema.format === "date-time") {
     return (
       <Input
+        nativeInput
         type={schema.format === "date" ? "date" : "datetime-local"}
         className={sizing}
-        value={value}
+        {...controlProps}
+        value={
+          schema.format === "date-time" ? datetimeLocalInputValue(value) : value
+        }
         onChange={(e) =>
           field.onChange(
             e.target.value === "" && nullable ? null : e.target.value
@@ -414,6 +490,7 @@ function ScalarControl({
   ) {
     return (
       <Textarea
+        {...controlProps}
         value={value}
         onChange={(e) =>
           field.onChange(
@@ -427,7 +504,9 @@ function ScalarControl({
   }
   return (
     <Input
+      nativeInput
       className={sizing}
+      {...controlProps}
       value={value}
       onChange={(e) =>
         field.onChange(
@@ -465,6 +544,7 @@ function DisclosureHeader({
         type="button"
         onClick={onToggle}
         aria-expanded={open}
+        aria-label={summary ? `${title} ${summary}` : title}
         className="flex min-w-0 flex-1 items-center gap-1.5 text-left"
       >
         <ChevronRight
@@ -557,12 +637,15 @@ function JsonFormArray({
   className?: string
   depth: number
 }) {
-  const { control } = useFormContext()
+  const { control, getValues, setValue, unregister } = useFormContext()
   const { fields, append, remove } = useFieldArray({ control, name })
-  const itemSchema =
-    typeof schema.items === "object" && schema.items !== null
-      ? (schema.items as Schema)
-      : ({ type: "string" } as Schema)
+  const itemSchema = React.useMemo(
+    () =>
+      typeof schema.items === "object" && schema.items !== null
+        ? (schema.items as Schema)
+        : ({ type: "string" } as Schema),
+    [schema.items]
+  )
 
   const columns = React.useMemo(
     () => scalarObjectColumns(itemSchema),
@@ -574,9 +657,29 @@ function JsonFormArray({
   const [open, setOpen] = React.useState(startOpen)
 
   const add = React.useCallback(() => {
-    append(emptyValueFor(itemSchema) as never)
+    const nextItem = emptyArrayItemValue(itemSchema)
+    const current = getValues(name)
+    append(nextItem as never)
+    if (Array.isArray(current)) {
+      setValue(name, [...current, nextItem], { shouldDirty: true })
+    }
     setOpen(true)
-  }, [append, itemSchema])
+  }, [append, getValues, itemSchema, name, setValue])
+  const removeAt = React.useCallback(
+    (index: number) => {
+      const current = getValues(name)
+      if (Array.isArray(current)) {
+        const next = current.slice()
+        next.splice(index, 1)
+        remove(index)
+        setValue(name, next, { shouldDirty: true })
+        unregister(`${name}.${next.length}`)
+        return
+      }
+      remove(index)
+    },
+    [getValues, name, remove, setValue, unregister]
+  )
 
   return (
     <div className={cn("rounded-lg border", className)}>
@@ -601,14 +704,14 @@ function JsonFormArray({
             <ArrayTable
               name={name}
               fields={fields}
-              remove={remove}
+              remove={removeAt}
               columns={columns}
             />
           ) : (
             <ArrayCards
               name={name}
               fields={fields}
-              remove={remove}
+              remove={removeAt}
               itemSchema={itemSchema}
               label={label}
               depth={depth}
@@ -727,36 +830,37 @@ function ArrayTable({
   remove: (index: number) => void
   columns: Column[]
 }) {
-  const template = `${columns.map(() => "minmax(120px, 1fr)").join(" ")} 40px`
-  const minWidth = columns.length * 140 + 40
+  const template = `${columns.map(() => "minmax(9rem, 1fr)").join(" ")} 2.25rem`
+  const minWidth = columns.length * 150 + 36
 
   const renderRow = React.useCallback(
-    (index: number) => (
+    (index: number, rowTopPx?: number) => (
       <ArrayTableRow
         name={name}
         index={index}
+        isLastRow={index === fields.length - 1}
         columns={columns}
         remove={remove}
         template={template}
+        rowTopPx={rowTopPx}
       />
     ),
-    [name, columns, remove, template]
+    [name, fields.length, columns, remove, template]
   )
 
   const virtualize = fields.length > TABLE_VIRTUALIZE_THRESHOLD
 
   return (
-    <div className="overflow-x-auto rounded-md border">
-      <div style={{ minWidth }}>
-        {/* Header */}
+    <div className="overflow-x-auto rounded-lg border bg-background shadow-sm">
+      <div style={getFixedGridCanvasStyle({ minWidth })}>
         <div
-          className="grid items-center gap-2 border-b bg-muted/50 px-2 py-1.5"
+          className="grid h-9 items-center gap-1 border-b bg-muted/35 px-2"
           style={{ gridTemplateColumns: template }}
         >
           {columns.map((col) => (
             <div
               key={col.key}
-              className="flex min-w-0 items-center gap-1 text-xs font-medium text-muted-foreground"
+              className="flex min-w-0 items-center gap-1 px-2 text-xs font-medium text-muted-foreground"
             >
               <WithDescription text={col.schema.description}>
                 <span className="truncate">
@@ -770,14 +874,8 @@ function ArrayTable({
           ))}
           <span className="sr-only">Actions</span>
         </div>
-        {/* Body */}
         {virtualize ? (
-          <VirtualList
-            fields={fields}
-            estimateSize={44}
-            renderItem={renderRow}
-            maxHeight={420}
-          />
+          <FixedArrayTableBody fields={fields} renderItem={renderRow} />
         ) : (
           <div>
             {fields.map((entry, index) => (
@@ -793,21 +891,40 @@ function ArrayTable({
 const ArrayTableRow = React.memo(function ArrayTableRow({
   name,
   index,
+  isLastRow,
   columns,
   remove,
   template,
+  rowTopPx,
 }: {
   name: string
   index: number
+  isLastRow: boolean
   columns: Column[]
   remove: (index: number) => void
   template: string
+  rowTopPx?: number
 }) {
   const sourceLink = React.useContext(FieldSourceLinkContext)
+  const rowStyle = React.useMemo(
+    () =>
+      rowTopPx === undefined
+        ? { gridTemplateColumns: template }
+        : getFixedGridRowStyle({
+            gridTemplate: template,
+            rowHeight: TABLE_ROW_HEIGHT,
+            top: rowTopPx,
+          }),
+    [rowTopPx, template]
+  )
+
   return (
     <div
-      className="grid items-center gap-2 border-b px-2 py-1 last:border-b-0"
-      style={{ gridTemplateColumns: template }}
+      className={cn(
+        "grid items-center gap-1 border-b px-2 py-1 transition-colors hover:bg-muted/25",
+        isLastRow && "border-b-0"
+      )}
+      style={rowStyle}
     >
       {columns.map((col) => {
         const path = `${name}.${index}.${col.key}`
@@ -828,8 +945,8 @@ const ArrayTableRow = React.memo(function ArrayTableRow({
             key={col.key}
             {...cellHandlers}
             className={cn(
-              "-mx-1 min-w-0 rounded px-1 transition-colors",
-              sourceLink && "hover:bg-muted/60",
+              "min-w-0 rounded px-1 py-0.5 transition-colors",
+              sourceLink && "hover:bg-muted/55",
               active && "bg-primary/5 ring-1 ring-primary/30"
             )}
           >
@@ -837,7 +954,7 @@ const ArrayTableRow = React.memo(function ArrayTableRow({
               <FormField
                 name={path}
                 render={({ field }) => (
-                  <FormItem className="space-y-0">
+                  <FormItem className="flex h-8 items-center justify-center space-y-0">
                     <FormControl>
                       <Checkbox
                         checked={Boolean(field.value)}
@@ -854,7 +971,7 @@ const ArrayTableRow = React.memo(function ArrayTableRow({
               <FormField
                 name={path}
                 render={({ field }) => (
-                  <FormItem className="space-y-1">
+                  <FormItem className="space-y-0">
                     <FormControl>
                       <ScalarControl
                         kind={col.kind}
@@ -885,6 +1002,45 @@ const ArrayTableRow = React.memo(function ArrayTableRow({
     </div>
   )
 })
+
+function FixedArrayTableBody({
+  fields,
+  renderItem,
+}: {
+  fields: { id: string }[]
+  renderItem: (index: number, rowTopPx: number) => React.ReactNode
+}) {
+  const scrollRef = React.useRef<HTMLDivElement>(null)
+  const { virtualRows, totalRowSize } = useFixedRowVirtualization({
+    rowCount: fields.length,
+    rowSize: TABLE_ROW_HEIGHT,
+    rowOverscan: 10,
+    jumpRowOverscan: 18,
+    scrollRef,
+  })
+
+  return (
+    <div
+      ref={scrollRef}
+      data-slot="json-form-table-scroll"
+      className="overflow-y-auto"
+      style={{ maxHeight: TABLE_MAX_HEIGHT }}
+    >
+      <div
+        style={getFixedGridRowWindowStyle({
+          height: totalRowSize,
+          minWidth: "100%",
+        })}
+      >
+        {virtualRows.map((virtualRow) => (
+          <React.Fragment key={fields[virtualRow.index].id}>
+            {renderItem(virtualRow.index, virtualRow.start)}
+          </React.Fragment>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 // ---------------------------------------------------------------------------
 // Virtualized list — windows rows so only the visible ones are in the DOM

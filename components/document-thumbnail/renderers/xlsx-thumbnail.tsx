@@ -2,10 +2,14 @@
 
 import * as React from "react"
 
+import type { ViewerResource } from "@/lib/viewer-resource"
 import {
+  cachedThumbnailResource,
   shortName,
   timed,
-  withDecodeSlot,
+  useThumbnailResource,
+  withThumbnailDecodeSlot,
+  type ThumbnailCacheEntry,
 } from "@/components/document-thumbnail/cache"
 import { GridTable } from "@/components/document-thumbnail/renderers/layout"
 
@@ -59,34 +63,32 @@ function parseXlsxInWorker(buffer: ArrayBuffer): Promise<string[][]> {
   })
 }
 
-const xlsxCache = new Map<string, Promise<XlsxPreview>>()
+const xlsxCache = new Map<string, ThumbnailCacheEntry<XlsxPreview>>()
 
-function getXlsxPreview(src: string, resourceKey = src): Promise<XlsxPreview> {
-  let promise = xlsxCache.get(resourceKey)
-  if (!promise) {
-    promise = withDecodeSlot(() =>
-      timed(`xlsx:total ${shortName(src)}`, async () => {
-        const res = await fetch(src)
-        if (!res.ok) throw new Error(`Failed to load spreadsheet: ${res.status}`)
-        const buf = await res.arrayBuffer()
+function getXlsxPreview(
+  resource: ViewerResource,
+  cacheKey: string
+): Promise<XlsxPreview> {
+  return cachedThumbnailResource(xlsxCache, cacheKey, () =>
+    withThumbnailDecodeSlot(() =>
+      timed(`xlsx:total ${shortName(resource)}`, async () => {
+        const buf = await resource.readArrayBuffer()
         const rows = await timed("xlsx:worker-parse", () =>
           parseXlsxInWorker(buf)
         )
         return { rows }
       })
     )
-    xlsxCache.set(resourceKey, promise)
-  }
-  return promise
+  )
 }
 
 export function XlsxFirstSheet({
-  src,
-  resourceKey,
+  resource,
+  cacheKey,
 }: {
-  src: string
-  resourceKey: string
+  resource: ViewerResource
+  cacheKey: string
 }) {
-  const { rows } = React.use(getXlsxPreview(src, resourceKey))
+  const { rows } = useThumbnailResource(getXlsxPreview(resource, cacheKey))
   return <GridTable rows={rows} />
 }

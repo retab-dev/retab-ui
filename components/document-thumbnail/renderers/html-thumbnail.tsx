@@ -2,16 +2,20 @@
 
 import * as React from "react"
 
-import { getText } from "@/components/document-thumbnail/cache"
+import type { ViewerResource } from "@/lib/viewer-resource"
+import {
+  getThumbnailText,
+  useThumbnailResource,
+} from "@/components/document-thumbnail/cache"
 import { IframeDoc } from "@/components/document-thumbnail/renderers/layout"
 
 export function HtmlFirstPage({
-  src,
-  resourceKey,
+  resource,
+  cacheKey,
 }: {
-  src: string
-  resourceKey: string
+  resource: ViewerResource
+  cacheKey: string
 }) {
-  const html = React.use(getText(src, resourceKey))
+  const html = useThumbnailResource(getThumbnailText(resource, cacheKey))
   return <IframeDoc html={html} />
 }

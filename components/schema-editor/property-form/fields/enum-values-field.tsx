@@ -47,6 +47,11 @@ export function EnumValuesField({
                   nextValues[index] = parseEnumValueInput(event.target.value)
                   onChange(nextValues)
                 }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.stopPropagation()
+                  }
+                }}
                 className="h-6 w-24 border-0 bg-transparent px-1 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
               />
               <Button
@@ -57,7 +62,9 @@ export function EnumValuesField({
                 className="h-4 w-4 p-0"
                 aria-label={`Remove option ${formatEnumValueInput(value)}`}
                 onClick={() => {
-                  onChange(values.filter((_value, current) => current !== index))
+                  onChange(
+                    values.filter((_value, current) => current !== index)
+                  )
                 }}
               >
                 <X className="h-3 w-3" />
@@ -76,6 +83,7 @@ export function EnumValuesField({
           onKeyDown={(event) => {
             if (event.key === "Enter") {
               event.preventDefault()
+              event.stopPropagation()
               addValue()
             }
           }}

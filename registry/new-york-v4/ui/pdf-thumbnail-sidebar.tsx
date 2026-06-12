@@ -5,14 +5,17 @@ import type { PDFDocumentProxy } from "pdfjs-dist"
 
 import { cn } from "@/lib/utils"
 import { createViewerResource } from "@/lib/viewer-resource"
+import { Spinner } from "@/components/ui/spinner"
+
 import {
   getDocumentResource,
   getPageResource,
-} from "@/components/ui/pdf-viewer"
-import { Spinner } from "@/components/ui/spinner"
+  releaseDocumentResource,
+  retainDocumentResource,
+} from "./pdf-viewer-resource"
 
 export interface PdfThumbnailSidebarProps {
-  /** Same URL as the PdfViewer — the document load is shared (cached by src). */
+  /** Same URL as the PdfViewer; the document load is shared by resource cache key. */
   src: string
   /** 1-based current page; its thumbnail is highlighted. */
   currentPage?: number | null
@@ -49,6 +52,11 @@ function PdfThumbnailSidebarInner({
     [src]
   )
   const doc = React.use(getDocumentResource(resource))
+  React.useEffect(() => {
+    retainDocumentResource(resource, doc)
+    return () => releaseDocumentResource(resource, doc)
+  }, [doc, resource])
+
   return (
     <div
       data-slot="pdf-thumbnail-sidebar"
@@ -90,6 +98,10 @@ function Thumbnail({
   const observerRef = React.useCallback(
     (el: HTMLButtonElement | null) => {
       if (!el || visible) return
+      if (typeof IntersectionObserver === "undefined") {
+        setVisible(true)
+        return
+      }
       const observer = new IntersectionObserver(
         ([entry]) => {
           if (entry.isIntersecting) {

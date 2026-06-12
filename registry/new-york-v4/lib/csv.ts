@@ -155,7 +155,12 @@ async function* readTextChunks(
     for await (const chunk of source as AsyncIterable<string>) yield chunk
     return
   }
-  yield* decodeByteStream((source as Blob).stream())
+  const blob = source as Blob
+  if (typeof blob.stream === "function") {
+    yield* decodeByteStream(blob.stream())
+    return
+  }
+  yield await blob.text()
 }
 
 async function* decodeByteStream(

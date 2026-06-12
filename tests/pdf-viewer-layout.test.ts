@@ -133,6 +133,54 @@ describe("pdf viewer layout", () => {
     expect(findPdfPageByOffset(layout, Number.MAX_SAFE_INTEGER)).toBe(3)
   })
 
+  it("accounts for measured page height deltas while finding pages by offset", () => {
+    const layout = createPdfPageLayout({
+      pageCount: 4,
+      defaultPageSize: pageSize,
+      pageSizeByNumber: new Map([
+        [2, { width: 100, height: 500 }],
+        [3, { width: 100, height: 120 }],
+      ]),
+      scale: 1,
+      rotation: 0,
+    })
+
+    const page2 = getPdfPageLayout(layout, 2)!
+    const page3 = getPdfPageLayout(layout, 3)!
+    const page4 = getPdfPageLayout(layout, 4)!
+
+    expect(page3.offsetTop).toBe(page2.offsetTop + 500 + PDF_PAGE_GAP)
+    expect(page4.offsetTop).toBe(page3.offsetTop + 120 + PDF_PAGE_GAP)
+    expect(findPdfPageByOffset(layout, page2.offsetTop + 499)).toBe(2)
+    expect(findPdfPageByOffset(layout, page3.offsetTop)).toBe(3)
+    expect(findPdfPageByOffset(layout, page4.offsetTop)).toBe(4)
+  })
+
+  it("uses measured rotated dimensions for total height and max width", () => {
+    const layout = createPdfPageLayout({
+      pageCount: 2,
+      defaultPageSize: pageSize,
+      pageSizeByNumber: new Map([[2, { width: 80, height: 500 }]]),
+      scale: 1,
+      rotation: 90,
+    })
+
+    expect(getPdfPageLayout(layout, 1)).toMatchObject({
+      width: 200,
+      height: 100,
+      offsetTop: PDF_PAGE_PADDING,
+    })
+    expect(getPdfPageLayout(layout, 2)).toMatchObject({
+      width: 500,
+      height: 80,
+      offsetTop: PDF_PAGE_PADDING + 100 + PDF_PAGE_GAP,
+    })
+    expect(layout.maxPageWidth).toBe(500)
+    expect(layout.totalHeight).toBe(
+      PDF_PAGE_PADDING * 2 + 100 + PDF_PAGE_GAP + 80
+    )
+  })
+
   it("returns a bounded overscanned page window", () => {
     const layout = createPdfPageLayout({
       pageCount: 585,

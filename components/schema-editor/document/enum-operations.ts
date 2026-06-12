@@ -3,10 +3,12 @@ import { getEffectiveDocNode } from "@/components/schema-editor/document/node-se
 import { updateNode } from "@/components/schema-editor/document/node-update"
 import { getNode } from "@/components/schema-editor/document/traversal"
 import {
+  createNode,
   createEnumValue,
   updateEffectiveNodeShape,
 } from "@/components/schema-editor/document/type-operations"
 import type {
+  DocumentNode,
   EnumValue,
   JsonValue,
   SchemaDocument,
@@ -59,16 +61,25 @@ export function setEnumValues(
   id: string,
   values: JsonValue[]
 ): SchemaDocument {
-  return updateNode(doc, id, (node) =>
-    updateEffectiveNodeShape(node, (effective) => ({
+  return updateNode(doc, id, (node) => {
+    if (isTypeArrayNullable(node)) {
+      return {
+        ...node,
+        type: undefined,
+        properties: undefined,
+        items: undefined,
+        ref: undefined,
+        order: undefined,
+        anyOf: [createEnumNode(values, node.enum), { ...createNode("null") }],
+      }
+    }
+
+    return updateEffectiveNodeShape(node, (effective) => ({
       ...effective,
       type: "string",
-      enum: values.map((value, index) => ({
-        ...(effective.enum?.[index] ?? createEnumValue()),
-        value,
-      })),
+      enum: buildEnumValues(values, effective.enum),
     }))
-  )
+  })
 }
 
 export function updateEnumValueAtIndex(
@@ -94,4 +105,30 @@ export function removeEnumValueAtIndex(
 
   const enumId = getEffectiveDocNode(node).enum?.[index]?.id
   return enumId ? removeEnumValue(doc, id, enumId) : doc
+}
+
+function buildEnumValues(
+  values: JsonValue[],
+  existing?: EnumValue[]
+): EnumValue[] {
+  return values.map((value, index) => ({
+    ...(existing?.[index] ?? createEnumValue()),
+    value,
+  }))
+}
+
+function isTypeArrayNullable(node: DocumentNode): boolean {
+  return Array.isArray(node.type) && node.type.includes("null")
+}
+
+function createEnumNode(
+  values: JsonValue[],
+  existing?: EnumValue[]
+): DocumentNode {
+  const node = createNode("string")
+  return {
+    ...node,
+    type: "string",
+    enum: buildEnumValues(values, existing),
+  }
 }

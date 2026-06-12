@@ -83,4 +83,82 @@ describe("usePdfPageVirtualization", () => {
       expect(screen.getByTestId("pages").textContent).toBe("7,8,9,10,11,12,13")
     )
   })
+
+  it("ignores a pending measurement from a previous layout after rerender", async () => {
+    const initialLayout = createPdfPageLayout({
+      pageCount: 20,
+      defaultPageSize: { width: 100, height: 200 },
+      pageSizeByNumber: new Map(),
+      scale: 1,
+      rotation: 0,
+    })
+    const nextLayout = createPdfPageLayout({
+      pageCount: 20,
+      defaultPageSize: { width: 100, height: 400 },
+      pageSizeByNumber: new Map(),
+      scale: 1,
+      rotation: 0,
+    })
+    const frameCallbacks: FrameRequestCallback[] = []
+    const cancelAnimationFrame = vi
+      .spyOn(window, "cancelAnimationFrame")
+      .mockImplementation(() => {})
+    vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
+      frameCallbacks.push(callback)
+      return frameCallbacks.length
+    })
+
+    let viewportElement!: HTMLDivElement
+    let measureVisiblePages!: () => void
+
+    function Harness({ layout }: { layout: typeof initialLayout }) {
+      const [viewport] = React.useState(
+        () =>
+          ({
+            scrollTop: getPdfPageLayout(initialLayout, 10)!.offsetTop,
+            clientHeight: 200,
+          }) as HTMLDivElement
+      )
+      const result = usePdfPageVirtualization({
+        layout,
+        viewportElement: viewport,
+      })
+
+      viewportElement = viewport
+      measureVisiblePages = result.measureVisiblePages
+
+      return (
+        <output data-testid="pages">
+          {result.visiblePageNumbers.join(",")}
+        </output>
+      )
+    }
+
+    const view = render(<Harness layout={initialLayout} />)
+
+    await waitFor(() =>
+      expect(screen.getByTestId("pages").textContent).toBe("7,8,9,10,11,12,13")
+    )
+
+    act(() => {
+      measureVisiblePages()
+    })
+    expect(frameCallbacks).toHaveLength(1)
+
+    view.rerender(<Harness layout={nextLayout} />)
+
+    await waitFor(() =>
+      expect(screen.getByTestId("pages").textContent).toBe("3,4,5,6,7,8")
+    )
+    expect(cancelAnimationFrame).toHaveBeenCalledWith(1)
+
+    act(() => {
+      frameCallbacks[0]?.(0)
+    })
+
+    expect(screen.getByTestId("pages").textContent).toBe("3,4,5,6,7,8")
+    expect(viewportElement.scrollTop).toBe(
+      getPdfPageLayout(initialLayout, 10)!.offsetTop
+    )
+  })
 })

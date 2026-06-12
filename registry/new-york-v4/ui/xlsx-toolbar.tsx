@@ -3,14 +3,15 @@
 import * as React from "react"
 import { Download, Maximize, Minus, Plus } from "lucide-react"
 
+import { type ViewerDownloadAction } from "@/lib/viewer-download"
 import type { XlsxSheetMeta } from "@/lib/xlsx-workbook"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
+import { ViewerDownloadControl } from "@/components/ui/viewer-download"
 
 export function XlsxToolbar({
-  src,
-  downloadFileName,
+  downloadActions,
   sheet,
   isReady,
   scale,
@@ -18,8 +19,7 @@ export function XlsxToolbar({
   onZoomIn,
   onResetZoom,
 }: {
-  src: string
-  downloadFileName?: string
+  downloadActions: ViewerDownloadAction[]
   sheet?: XlsxSheetMeta
   isReady: boolean
   scale: number
@@ -61,23 +61,7 @@ export function XlsxToolbar({
           <Maximize />
         </IconButton>
         <Separator orientation="vertical" className="mx-1 h-4" />
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          className="size-7"
-          aria-label="Download"
-          title="Download"
-          render={
-            <a
-              href={src}
-              download={downloadFileName}
-              target="_blank"
-              rel="noreferrer"
-            />
-          }
-        >
-          <Download />
-        </Button>
+        <ViewerDownloadControl actions={downloadActions} />
       </div>
     </div>
   )

@@ -4,9 +4,16 @@ import * as React from "react"
 import { Download, Maximize, Minus, Plus } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import {
+  createHrefDownloadAction,
+  type ViewerDownloadAction,
+} from "@/lib/viewer-download"
+import type { ViewerResource } from "@/lib/viewer-resource"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
+import { ViewerDownloadButton } from "@/components/ui/viewer-download"
+import { ViewerErrorState } from "@/components/ui/viewer-error"
 
 import type { FileCategory, FileDescriptor } from "./file-viewer-core"
 
@@ -16,6 +23,7 @@ const TEXT_SKELETON_LINE_HEIGHT = 20
 export function DocShell({
   fileName,
   src,
+  downloadAction,
   meta,
   actions,
   className,
@@ -23,13 +31,24 @@ export function DocShell({
   children,
 }: {
   fileName: string
-  src: string
+  src?: string
+  downloadAction?: ViewerDownloadAction
   meta?: string
   actions?: React.ReactNode
   className?: string
   bare?: boolean
   children: React.ReactNode
 }) {
+  const resolvedDownloadAction =
+    downloadAction ??
+    (src
+      ? createHrefDownloadAction({
+          id: "download-original",
+          href: src,
+          fileName,
+        })
+      : null)
+
   return (
     <div
       data-slot="file-viewer"
@@ -56,23 +75,9 @@ export function DocShell({
           {actions ? (
             <Separator orientation="vertical" className="mx-1 h-4" />
           ) : null}
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            className="size-7"
-            aria-label="Download"
-            title="Download"
-            render={
-              <a
-                href={src}
-                download={fileName}
-                target="_blank"
-                rel="noreferrer"
-              />
-            }
-          >
-            <Download />
-          </Button>
+          {resolvedDownloadAction ? (
+            <ViewerDownloadButton action={resolvedDownloadAction} />
+          ) : null}
         </div>
       </div>
       <div className="flex min-h-0 flex-1 flex-col">{children}</div>
@@ -162,20 +167,29 @@ export function ZoomActionsSkeleton() {
 
 export function UnsupportedCard({
   src,
-  downloadHref,
+  downloadAction,
   fileName,
   className,
   bare,
   message = "No preview for",
 }: {
   src?: string
-  downloadHref?: string
+  downloadAction?: ViewerDownloadAction
   fileName: string
   className?: string
   bare?: boolean
   message?: string
 }) {
-  const href = downloadHref ?? src
+  const resolvedDownloadAction =
+    downloadAction ??
+    (src
+      ? createHrefDownloadAction({
+          id: "download-original",
+          href: src,
+          fileName,
+        })
+      : null)
+
   return (
     <div
       className={cn(
@@ -189,22 +203,14 @@ export function UnsupportedCard({
         {message}{" "}
         <span className="font-medium text-foreground">{fileName}</span>.
       </p>
-      {href ? (
-        <Button
+      {resolvedDownloadAction ? (
+        <ViewerDownloadButton
+          action={resolvedDownloadAction}
           variant="outline"
           size="sm"
-          render={
-            <a
-              href={href}
-              download={fileName}
-              target="_blank"
-              rel="noreferrer"
-            />
-          }
-        >
-          <Download className="mr-1.5 size-4" />
-          Download
-        </Button>
+          className=""
+          showLabel
+        />
       ) : null}
     </div>
   )
@@ -405,32 +411,33 @@ export class FileErrorBoundary extends React.Component<
   {
     children: React.ReactNode
     descriptor: FileDescriptor
+    resource: ViewerResource
     className?: string
     resetKey?: unknown
   },
-  { error: boolean }
+  { error: unknown | null }
 > {
-  state = { error: false }
+  state: Readonly<{ error: unknown | null }> = { error: null }
 
   componentDidUpdate(prev: { resetKey?: unknown }) {
     if (prev.resetKey !== this.props.resetKey && this.state.error) {
-      this.setState({ error: false })
+      this.setState({ error: null })
     }
   }
 
-  static getDerivedStateFromError() {
-    return { error: true }
+  static getDerivedStateFromError(error: unknown) {
+    return { error }
   }
 
   render() {
-    if (this.state.error) {
+    if (this.state.error != null) {
       return (
-        <UnsupportedCard
-          src={this.props.descriptor.loadUrl}
-          downloadHref={this.props.descriptor.downloadHref}
-          fileName={this.props.descriptor.downloadFileName}
+        <ViewerErrorState
+          error={this.state.error}
+          format="file"
+          sourceKind={this.props.resource.sourceKind}
+          download={this.props.resource.getOriginalDownload()}
           className={this.props.className}
-          message="Could not load"
         />
       )
     }

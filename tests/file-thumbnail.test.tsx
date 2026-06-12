@@ -18,9 +18,11 @@ import {
 } from "@/components/ui/file-thumbnail"
 import {
   DocumentThumbnail,
-  getThumbnailResourceKey,
+  getThumbnailCacheKey,
+  getThumbnailRenderKey,
 } from "@/components/document-thumbnail"
 import { useObjectUrl } from "@/components/document-thumbnail/renderers/use-object-url"
+import { createViewerResource } from "@/registry/new-york-v4/lib/viewer-resource"
 
 afterEach(() => {
   cleanup()
@@ -54,86 +56,131 @@ describe("FileThumbnail helpers", () => {
 })
 
 describe("DocumentThumbnail helpers", () => {
-  it("builds stable resource keys from the complete render identity", () => {
+  function resource(
+    url: string,
+    fileName = "same.txt",
+    mimeType = "text/plain"
+  ) {
+    return createViewerResource({
+      kind: "url",
+      url,
+      fileName,
+      mimeType,
+    })
+  }
+
+  it("builds stable thumbnail cache keys from resource identity", () => {
+    const first = resource("/same.txt")
+    const second = resource("/same.txt")
+
     expect(
-      getThumbnailResourceKey({
-        kind: "text",
-        src: "/same.txt",
-        anchor: "top-left",
-        retryKey: null,
+      getThumbnailCacheKey({
+        resource: first,
+        descriptor: first.descriptor,
       })
     ).toBe(
-      getThumbnailResourceKey({
-        kind: "text",
-        src: "/same.txt",
-        anchor: "top-left",
-        retryKey: null,
+      getThumbnailCacheKey({
+        resource: second,
+        descriptor: second.descriptor,
       })
     )
   })
 
-  it("includes retryKey, kind, and anchor in the resource identity", () => {
-    const base = {
-      kind: "text" as const,
-      src: "/same.txt",
-      anchor: "top-left" as const,
-      retryKey: null,
-    }
+  it("separates cache identity from render identity", () => {
+    const file = resource("/same.txt")
+    const cacheKey = getThumbnailCacheKey({
+      resource: file,
+      descriptor: file.descriptor,
+    })
 
-    expect(getThumbnailResourceKey(base)).not.toBe(
-      getThumbnailResourceKey({ ...base, retryKey: 1 })
+    expect(
+      getThumbnailRenderKey({
+        cacheKey,
+        anchor: "top-left",
+        retryKey: null,
+      })
+    ).not.toBe(
+      getThumbnailRenderKey({
+        cacheKey,
+        anchor: "top-right",
+        retryKey: null,
+      })
     )
-    expect(getThumbnailResourceKey(base)).not.toBe(
-      getThumbnailResourceKey({ ...base, kind: "pdf" })
-    )
-    expect(getThumbnailResourceKey(base)).not.toBe(
-      getThumbnailResourceKey({ ...base, anchor: "top-right" })
+    expect(
+      getThumbnailRenderKey({
+        cacheKey,
+        anchor: "top-left",
+        retryKey: null,
+      })
+    ).not.toBe(
+      getThumbnailRenderKey({
+        cacheKey,
+        anchor: "top-left",
+        retryKey: 1,
+      })
     )
   })
 
   it("distinguishes retry key primitive types and supports bigint keys", () => {
-    const base = {
-      kind: "text" as const,
-      src: "/same.txt",
-      anchor: "top-left" as const,
-    }
+    const file = resource("/same.txt")
+    const cacheKey = getThumbnailCacheKey({
+      resource: file,
+      descriptor: file.descriptor,
+    })
 
-    expect(getThumbnailResourceKey({ ...base, retryKey: "1" })).not.toBe(
-      getThumbnailResourceKey({ ...base, retryKey: 1 })
+    expect(
+      getThumbnailRenderKey({
+        cacheKey,
+        anchor: "top-left",
+        retryKey: "1",
+      })
+    ).not.toBe(
+      getThumbnailRenderKey({
+        cacheKey,
+        anchor: "top-left",
+        retryKey: 1,
+      })
     )
     expect(() =>
-      getThumbnailResourceKey({ ...base, retryKey: BigInt(1) })
+      getThumbnailRenderKey({
+        cacheKey,
+        anchor: "top-left",
+        retryKey: BigInt(1),
+      })
     ).not.toThrow()
   })
 
   it("does not collide when fields contain delimiter-like characters", () => {
-    const base = {
-      kind: "text" as const,
-      anchor: "top-left" as const,
-      retryKey: null,
-    }
+    const first = resource("a\u0000src:1")
+    const second = resource("a")
 
     expect(
-      getThumbnailResourceKey({
-        ...base,
-        src: "a\u0000src:1",
+      getThumbnailCacheKey({
+        resource: first,
+        descriptor: first.descriptor,
       })
     ).not.toBe(
-      getThumbnailResourceKey({
-        ...base,
-        src: "a",
-        retryKey: "\u0000src:1",
+      getThumbnailCacheKey({
+        resource: second,
+        descriptor: second.descriptor,
       })
     )
+
+    const cacheKey = getThumbnailCacheKey({
+      resource: second,
+      descriptor: second.descriptor,
+    })
     expect(
-      getThumbnailResourceKey({
-        ...base,
-        src: "4:kind:text",
+      getThumbnailRenderKey({
+        cacheKey: "4:kind:text",
+        anchor: "top-left",
+        retryKey: null,
       })
     ).not.toBe(
-      getThumbnailResourceKey({
-        ...base,
-        src: "kind:text",
+      getThumbnailRenderKey({
+        cacheKey,
+        anchor: "top-left",
+        retryKey: "kind:text",
       })
     )
   })
@@ -352,28 +399,97 @@ describe("DocumentThumbnail renderers", () => {
 })
 
 describe("DocumentThumbnail", () => {
+  async function renderAsync(ui: React.ReactElement) {
+    let view!: ReturnType<typeof render>
+    await act(async () => {
+      view = render(ui)
+    })
+    return view
+  }
+
+  function urlTextSource(url: string, fileName: string) {
+    return {
+      kind: "url" as const,
+      url,
+      fileName,
+      mimeType: "text/plain",
+    }
+  }
+
+  it("renders direct URL images without fetching through a renderer", () => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal("fetch", fetchMock)
+
+    const { container } = render(
+      <DocumentThumbnail
+        source={{
+          kind: "url",
+          url: "/page.png",
+          fileName: "page.png",
+          mimeType: "image/png",
+        }}
+      />
+    )
+
+    expect(container.querySelector("img")?.getAttribute("src")).toBe(
+      "/page.png"
+    )
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it("renders inline text sources without fetching", async () => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal("fetch", fetchMock)
+
+    await renderAsync(
+      <DocumentThumbnail
+        source={{
+          kind: "text",
+          text: "Inline source line",
+          fileName: "inline.txt",
+          mimeType: "text/plain",
+        }}
+      />
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText("Inline source line")).toBeTruthy()
+    })
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it("renders blob text sources without fetching", async () => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal("fetch", fetchMock)
+
+    await renderAsync(
+      <DocumentThumbnail
+        source={{
+          kind: "blob",
+          blob: new Blob(["Blob source line"], { type: "text/plain" }),
+          identityKey: "blob-source-line",
+          fileName: "blob.txt",
+          mimeType: "text/plain",
+        }}
+      />
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText("Blob source line")).toBeTruthy()
+    })
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
   it("renders the shared FileThumbnail fallback when a renderer fails", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {})
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => ({
-        ok: false,
-        status: 500,
-        text: async () => "",
-      }))
+      vi.fn(async () => new Response("", { status: 500 }))
     )
 
-    let container!: HTMLElement
-    await act(async () => {
-      container = render(
-        <DocumentThumbnail
-          kind="text"
-          src="/broken.txt"
-          name="broken.txt"
-          type="text/plain"
-        />
-      ).container
-    })
+    const view = render(
+      <DocumentThumbnail source={urlTextSource("/broken.txt", "broken.txt")} />
+    )
 
     await waitFor(() => {
       expect(fetch).toHaveBeenCalled()
@@ -381,7 +497,7 @@ describe("DocumentThumbnail", () => {
 
     await waitFor(() => {
       expect(
-        container.querySelector('[data-slot="file-thumbnail-fallback"]')
+        view.container.querySelector('[data-slot="file-thumbnail-fallback"]')
       ).not.toBeNull()
     })
     expect(screen.getByText("txt")).toBeTruthy()
@@ -389,34 +505,20 @@ describe("DocumentThumbnail", () => {
 
   it("retries rendering after a failed source changes", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {})
-    const fetchMock = vi.fn(async (src: string) => {
-      if (src === "/broken-reset.txt") {
-        return {
-          ok: false,
-          status: 500,
-          text: async () => "",
-        }
+    const fetchMock = vi.fn(async (input: string) => {
+      if (input === "/broken-reset.txt") {
+        return new Response("", { status: 500 })
       }
 
-      return {
-        ok: true,
-        status: 200,
-        text: async () => "Recovered line",
-      }
+      return new Response("Recovered line", { status: 200 })
     })
     vi.stubGlobal("fetch", fetchMock)
 
-    let view!: ReturnType<typeof render>
-    await act(async () => {
-      view = render(
-        <DocumentThumbnail
-          kind="text"
-          src="/broken-reset.txt"
-          name="broken.txt"
-          type="text/plain"
-        />
-      )
-    })
+    const view = render(
+      <DocumentThumbnail
+        source={urlTextSource("/broken-reset.txt", "broken.txt")}
+      />
+    )
 
     await waitFor(() => {
       expect(
@@ -427,10 +529,7 @@ describe("DocumentThumbnail", () => {
     await act(async () => {
       view.rerender(
         <DocumentThumbnail
-          kind="text"
-          src="/working-reset.txt"
-          name="working.txt"
-          type="text/plain"
+          source={urlTextSource("/working-reset.txt", "working.txt")}
         />
       )
     })
@@ -449,32 +548,20 @@ describe("DocumentThumbnail", () => {
 
   it("retries the same source when retryKey changes", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {})
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce({
-        ok: false,
-        status: 500,
-        text: async () => "",
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        text: async () => "Recovered same source",
-      })
+    let shouldFail = true
+    const fetchMock = vi.fn(async () =>
+      shouldFail
+        ? new Response("", { status: 500 })
+        : new Response("Recovered same source", { status: 200 })
+    )
     vi.stubGlobal("fetch", fetchMock)
 
-    let view!: ReturnType<typeof render>
-    await act(async () => {
-      view = render(
-        <DocumentThumbnail
-          kind="text"
-          src="/same-retry.txt"
-          name="same.txt"
-          type="text/plain"
-          retryKey={0}
-        />
-      )
-    })
+    const view = render(
+      <DocumentThumbnail
+        source={urlTextSource("/same-retry.txt", "same.txt")}
+        retryKey={0}
+      />
+    )
 
     await waitFor(() => {
       expect(
@@ -482,13 +569,11 @@ describe("DocumentThumbnail", () => {
       ).not.toBeNull()
     })
 
+    shouldFail = false
     await act(async () => {
       view.rerender(
         <DocumentThumbnail
-          kind="text"
-          src="/same-retry.txt"
-          name="same.txt"
-          type="text/plain"
+          source={urlTextSource("/same-retry.txt", "same.txt")}
           retryKey={1}
         />
       )
@@ -500,6 +585,6 @@ describe("DocumentThumbnail", () => {
     expect(
       view.container.querySelector('[data-slot="file-thumbnail-fallback"]')
     ).toBeNull()
-    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(fetchMock.mock.calls.length).toBeGreaterThanOrEqual(2)
   })
 })

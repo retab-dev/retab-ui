@@ -9,8 +9,17 @@ export function buildVirtualGridTemplate({
   columnWidths: readonly number[]
   rightPad: number
 }) {
-  const columns = columnWidths.map((width) => `${width}px`).join(" ")
-  return [`${leadingWidth}px`, `${leftPad}px`, columns, `${rightPad}px`]
+  const columns = columnWidths.map(formatTemplateWidth).join(" ")
+  return [
+    formatTemplateWidth(leadingWidth),
+    formatTemplateWidth(leftPad),
+    columns,
+    formatTemplateWidth(rightPad),
+  ]
     .filter(Boolean)
     .join(" ")
+}
+
+function formatTemplateWidth(width: number) {
+  return `${Number.isFinite(width) && width > 0 ? width : 0}px`
 }

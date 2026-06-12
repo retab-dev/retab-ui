@@ -3,15 +3,19 @@
 import * as React from "react"
 
 import { cn } from "@/lib/utils"
+import type { ViewerResource } from "@/lib/viewer-resource"
 import { FileThumbnailShimmer } from "@/components/ui/file-thumbnail"
-import type { ThumbnailAnchor } from "@/components/document-thumbnail/types"
-import { ANCHOR_CORNER } from "@/components/document-thumbnail/types"
 import {
+  cachedThumbnailResource,
   shortName,
   timed,
-  withDecodeSlot,
+  useThumbnailResource,
+  withThumbnailDecodeSlot,
+  type ThumbnailCacheEntry,
 } from "@/components/document-thumbnail/cache"
 import { useObjectUrl } from "@/components/document-thumbnail/renderers/use-object-url"
+import type { ThumbnailAnchor } from "@/components/document-thumbnail/types"
+import { ANCHOR_CORNER } from "@/components/document-thumbnail/types"
 
 const TIFF_TARGET_W = 320
 
@@ -55,39 +59,32 @@ function decodeTiffInWorker(buffer: ArrayBuffer): Promise<Blob> {
   })
 }
 
-const tiffCache = new Map<string, Promise<Blob>>()
+const tiffCache = new Map<string, ThumbnailCacheEntry<Blob>>()
 
-function getTiffFirstPageBlob(src: string, resourceKey = src): Promise<Blob> {
-  let promise = tiffCache.get(resourceKey)
-  if (!promise) {
-    promise = withDecodeSlot(() =>
-      timed(`tiff:total ${shortName(src)}`, async () => {
-        const buf = await timed("tiff:fetch", () =>
-          fetch(src).then((r) => {
-            if (!r.ok) throw new Error(`Failed to load TIFF: ${r.status}`)
-            return r.arrayBuffer()
-          })
-        )
-        return timed("tiff:worker-decode", () =>
-          decodeTiffInWorker(buf)
-        )
+function getTiffFirstPageBlob(
+  resource: ViewerResource,
+  cacheKey: string
+): Promise<Blob> {
+  return cachedThumbnailResource(tiffCache, cacheKey, () =>
+    withThumbnailDecodeSlot(() =>
+      timed(`tiff:total ${shortName(resource)}`, async () => {
+        const buf = await timed("tiff:fetch", () => resource.readArrayBuffer())
+        return timed("tiff:worker-decode", () => decodeTiffInWorker(buf))
       })
     )
-    tiffCache.set(resourceKey, promise)
-  }
-  return promise
+  )
 }
 
 export function TiffFirstPage({
-  src,
-  resourceKey,
+  resource,
+  cacheKey,
   anchor,
 }: {
-  src: string
-  resourceKey: string
+  resource: ViewerResource
+  cacheKey: string
   anchor: ThumbnailAnchor
 }) {
-  const blob = React.use(getTiffFirstPageBlob(src, resourceKey))
+  const blob = useThumbnailResource(getTiffFirstPageBlob(resource, cacheKey))
   return <TiffBlobImage blob={blob} anchor={anchor} />
 }
 
@@ -104,7 +101,6 @@ function TiffBlobImage({
 
   return (
     <div className="absolute inset-0 overflow-hidden bg-white">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={url}
         alt=""

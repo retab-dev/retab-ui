@@ -40,6 +40,8 @@ export interface MarkdownHtmlCache {
 
 interface MarkdownHtmlEntry {
   html?: Promise<string>
+  text?: Promise<string>
+  textController?: AbortController
   subscriberPromises: WeakMap<AbortSignal, Promise<string>>
   subscribers: Set<AbortSignal>
 }
@@ -64,7 +66,15 @@ export function createMarkdownHtmlCache({
         subscriberPromises: new WeakMap(),
         subscribers: new Set(),
       }
-      lruSet(entries, src, entry, undefined, maxEntries)
+      lruSet(
+        entries,
+        src,
+        entry,
+        (_key, dropped) => {
+          dropped.textController?.abort()
+        },
+        maxEntries
+      )
     }
     return entry
   }
@@ -105,6 +115,7 @@ export function createMarkdownHtmlCache({
             done = true
             cleanup()
             if (!entry.html && entry.subscribers.size === 0) {
+              entry.textController?.abort()
               remove(src)
             }
             reject(abortError())
@@ -112,8 +123,34 @@ export function createMarkdownHtmlCache({
 
           signal.addEventListener("abort", onAbort, { once: true })
 
-          textCache
-            .load({ src, signal })
+          if (entry.html) {
+            entry.html.then(
+              (html) => {
+                if (done) return
+                done = true
+                cleanup()
+                resolve(html)
+              },
+              (error: unknown) => {
+                if (done) return
+                done = true
+                cleanup()
+                reject(error)
+              }
+            )
+            return
+          }
+
+          entry.textController ??= new AbortController()
+          entry.text ??= textCache
+            .load({ src, signal: entry.textController.signal })
+            .catch((error: unknown) => {
+              entry.text = undefined
+              entry.textController = undefined
+              throw error
+            })
+
+          entry.text
             .then((text) => {
               if (signal.aborted) throw abortError()
               entry.html ??= renderHtml(src, text)
@@ -138,6 +175,9 @@ export function createMarkdownHtmlCache({
       })
     },
     clear() {
+      for (const entry of entries.values()) {
+        entry.textController?.abort()
+      }
       entries.clear()
     },
     size() {

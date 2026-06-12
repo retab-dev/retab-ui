@@ -60,16 +60,16 @@ right abstraction is "one source contract, many loaders."
 
 The existing implementation already proves that loading is format-specific.
 
-| Viewer                  | Current input                                   | Loading model                                                                                                                                                | Cache/retention model                                                                                               | Why it cannot be generic                                                                           |
-| ----------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `PdfViewer`             | `source: UrlViewerSource \| BlobViewerSource`   | URL resources pass the load URL to `pdfjs.getDocument`; Blob resources read bytes and pass `{ data }`; pages load lazily with `document.getPage(pageNumber)` | document cache keyed by `resource.cacheKey`, consumer counts, LRU pruning, `PDFDocumentProxy.destroy()` on eviction | PDF has a document object, page objects, range-capable URL loading, and library-owned worker state |
-| `ImageViewer`           | `source: UrlViewerSource \| BlobViewerSource`   | read Blob/bytes through `ViewerResource`, sniff TIFF/native image, create `ImageBitmap`s                                                                     | frame source manager keyed by `resource.cacheKey`, leases, decoded bitmap cache, disposal timers                    | image performance is about decoded frame retention, not just fetched bytes                         |
-| `DocxViewer`            | `src: string`                                   | fetch full ArrayBuffer, pass to `docx-preview`, render imperatively into DOM                                                                                 | ArrayBuffer promise cache keyed by `src`; DOM render is owned by an effect                                          | DOCX rendering is full-file, DOM-producing, and not streamable in this implementation              |
-| `XlsxViewer`            | `src: string`                                   | fetch full ArrayBuffer, parse workbook in a worker                                                                                                           | `XlsxSourceCache` keyed by `src`; viewer stores active sheet and scroll requests                                    | spreadsheet performance is parsed workbook structure plus virtualized grid cells                   |
-| `PptxViewer`            | `source: UrlViewerSource \| BlobViewerSource`   | read full ArrayBuffer from `ViewerResource`, create renderer, render slides to canvas                                                                        | retained `PptxSource`, queued slide renders, slide bitmap cache, disposable renderer keyed by `cacheKey`            | PPTX performance is renderer lifetime plus canvas bitmap caching                                   |
-| `CsvViewer`             | `src`, `Blob`, inline `value`, or parsed `data` | stream CSV rows in batches for URL/Blob; parse inline value synchronously; accept already parsed table                                                       | effect-owned abort controller; worker fallback for Blob parsing                                                     | CSV has real streaming semantics and parsed-data semantics                                         |
-| `TextViewer`            | source descriptor with URL or inline text       | bounded full text load for URL; direct bounded read for inline text                                                                                          | resource cache keyed by URL, retry version, and bounds                                                              | source-linked text needs all lines addressable, not FileViewer's incremental text strategy         |
-| `FileViewer` text route | URL descriptor                                  | byte range loading with stream/full modes                                                                                                                    | mode-aware text loader cache, abortable shared requests                                                             | large text/log preview requires incremental rendering; JSON may need full mode                     |
+| Viewer                  | Current input                                 | Loading model                                                                                                                                                       | Cache/retention model                                                                                               | Why it cannot be generic                                                                           |
+| ----------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `PdfViewer`             | `source: UrlViewerSource \| BlobViewerSource` | URL resources pass the load URL to `pdfjs.getDocument`; Blob resources read bytes and pass `{ data }`; pages load lazily with `document.getPage(pageNumber)`        | document cache keyed by `resource.cacheKey`, consumer counts, LRU pruning, `PDFDocumentProxy.destroy()` on eviction | PDF has a document object, page objects, range-capable URL loading, and library-owned worker state |
+| `ImageViewer`           | `source: UrlViewerSource \| BlobViewerSource` | read Blob/bytes through `ViewerResource`, sniff TIFF/native image, create `ImageBitmap`s                                                                            | frame source manager keyed by `resource.cacheKey`, leases, decoded bitmap cache, disposal timers                    | image performance is about decoded frame retention, not just fetched bytes                         |
+| `DocxViewer`            | `source: UrlViewerSource \| BlobViewerSource` | read full ArrayBuffer from `ViewerResource`, pass to `docx-preview`, render imperatively into DOM                                                                   | ArrayBuffer promise cache keyed by `resource.cacheKey`; DOM render is owned by an effect                            | DOCX rendering is full-file, DOM-producing, and not streamable in this implementation              |
+| `XlsxViewer`            | `source: UrlViewerSource \| BlobViewerSource` | read full ArrayBuffer from `ViewerResource`, parse workbook in a worker                                                                                             | `XlsxSourceCache` keyed by `resource.cacheKey`; viewer stores active sheet and scroll requests                      | spreadsheet performance is parsed workbook structure plus virtualized grid cells                   |
+| `PptxViewer`            | `source: UrlViewerSource \| BlobViewerSource` | read full ArrayBuffer from `ViewerResource`, create renderer, render slides to canvas                                                                               | retained `PptxSource`, queued slide renders, slide bitmap cache, disposable renderer keyed by `cacheKey`            | PPTX performance is renderer lifetime plus canvas bitmap caching                                   |
+| `CsvViewer`             | `source: CsvViewerSource`                     | URL resources stream rows from the response body; Blob resources parse in a worker when available; text resources parse synchronously; table sources bypass loading | effect-owned abort controller; worker fallback for Blob parsing; no loaded table cache yet                          | CSV has real streaming semantics and parsed-table semantics                                        |
+| `TextViewer`            | source descriptor with URL or inline text     | bounded full text load for URL; direct bounded read for inline text                                                                                                 | resource cache keyed by URL, retry version, and bounds                                                              | source-linked text needs all lines addressable, not FileViewer's incremental text strategy         |
+| `FileViewer` text route | URL descriptor                                | byte range loading with stream/full modes                                                                                                                           | mode-aware text loader cache, abortable shared requests                                                             | large text/log preview requires incremental rendering; JSON may need full mode                     |
 
 The conclusion is mechanical: the source boundary can be shared, but the loader
 must stay per format.
@@ -194,9 +194,10 @@ The public type remains simple:
 
 ### Why Parsed Data Is Not A `ViewerSource`
 
-CSV currently accepts `data?: CsvTable`.
+CSV accepts pre-parsed `CsvTable` values through a CSV-specific table source.
 
-That is useful, but it is not a file source. It is already parsed viewer data.
+That is useful, but it is not a file source. It is already parsed viewer data,
+so it must not be promoted into the universal `ViewerSource` union.
 
 Putting parsed data into the universal source model would pollute every viewer:
 
@@ -206,18 +207,27 @@ Putting parsed data into the universal source model would pollute every viewer:
 - PPTX parsed data would be renderer state or slide descriptions.
 - DOCX parsed data would be rendered DOM or document model.
 
-Parsed data belongs to viewer-specific APIs.
+Parsed data belongs to viewer-specific source unions.
 
 For example:
 
 ```ts
-export type CsvViewerInput =
-  | { kind: "source"; source: ViewerSource }
-  | { kind: "table"; table: CsvTable; fileName?: string }
+export type CsvViewerSource =
+  | UrlViewerSource
+  | BlobViewerSource
+  | TextSource
+  | {
+      kind: "table"
+      table: CsvTable
+      fileName?: string
+      identityKey?: string
+      dialect?: CsvDialect
+    }
 ```
 
 But `FileViewer` and shared viewer infrastructure should only accept
-`ViewerSource`.
+file-like `ViewerSource` variants unless a route explicitly supports a
+viewer-specific source variant.
 
 ## Descriptor Model
 
@@ -230,8 +240,7 @@ export interface ViewerDescriptor {
   category: FileCategory
   identityKey: string
   displayName: string
-  downloadFileName: string
-  downloadHref?: string
+  fileName: string
   mimeType?: string
 }
 ```
@@ -242,11 +251,10 @@ Rules:
 - `descriptor.category` is detected from `fileName`, MIME type, or override.
 - `descriptor.identityKey` is caller/content identity.
 - `descriptor.displayName` is what the viewer header shows.
-- `descriptor.downloadFileName` is the `download` filename.
-- `descriptor.downloadHref` exists only when there is a stable URL already
-  known synchronously.
-- `descriptor.loadUrl` exists only for URL resources that can be loaded directly
-  by format libraries. It is not a download URL.
+- `descriptor.fileName` is the canonical file name for download and format
+  hints.
+- `descriptor` does not expose load URLs, download URLs, object URLs, streams,
+  ranges, blobs, or text reads. Those are resource capabilities.
 
 ### Default Names
 
@@ -256,21 +264,21 @@ For URL:
 
 ```ts
 displayName = source.fileName ?? source.url
-downloadFileName = source.fileName ?? extractName(source.url)
+fileName = source.fileName ?? extractName(source.url)
 ```
 
 For Blob:
 
 ```ts
 displayName = source.fileName ?? "file"
-downloadFileName = source.fileName ?? "file"
+fileName = source.fileName ?? "file"
 ```
 
 For text:
 
 ```ts
 displayName = source.fileName ?? "text.txt"
-downloadFileName = source.fileName ?? "text.txt"
+fileName = source.fileName ?? "text.txt"
 ```
 
 ### Identity Keys
@@ -319,7 +327,8 @@ export interface ViewerResource {
   readonly fileName: string
   readonly mimeType?: string
 
-  getDownload(): DownloadCapability
+  getDirectLoad(): DirectLoadCapability
+  getOriginalDownload(): ViewerDownloadAction
   readBlob(options?: ResourceReadOptions): Promise<Blob>
   readArrayBuffer(options?: ResourceReadOptions): Promise<ArrayBuffer>
   readText(options?: TextReadOptions): Promise<string>
@@ -355,16 +364,18 @@ export interface ByteRangeResult {
   isComplete: boolean
 }
 
-export type DownloadCapability =
-  | { kind: "href"; href: string; fileName: string }
-  | { kind: "blob"; blob: Blob; fileName: string }
-  | { kind: "text"; text: string; fileName: string; mimeType?: string }
-  | { kind: "none"; fileName: string }
-
 export interface ResourceObjectUrl {
   url: string
   revoke(): void
 }
+```
+
+`getDirectLoad()` is intentionally separate from download:
+
+```ts
+export type DirectLoadCapability =
+  | { kind: "url"; url: string }
+  | { kind: "none" }
 ```
 
 ### URL Resource Behavior
@@ -452,17 +463,34 @@ export class ResourceError extends Error {
   readonly status?: number
   readonly cause?: unknown
 }
+
+export type ViewerFormatErrorKind =
+  | "bounds"
+  | "decode_failed"
+  | "disposed"
+  | "index_out_of_range"
+  | "load_failed"
+  | "parse_failed"
+  | "render_failed"
+  | "unknown"
+
+export class ViewerFormatError extends Error {
+  readonly format: string
+  readonly kind: ViewerFormatErrorKind
+  readonly cause?: unknown
+}
 ```
 
-Format loaders may wrap resource errors in format-specific errors, but should
-preserve `cause`.
+Resource errors stay resource errors. Format loaders should not hide transport,
+abort, bounds, or capability failures behind parse/render names.
 
 Examples:
 
 ```ts
-PdfLoadError("document_failed", { cause: ResourceError("http_error") })
-ImageDecodeError("decode_failed", { cause: Error("bad image bytes") })
-TextViewerTooLargeError("bytes", { cause: ResourceError("too_large") })
+ResourceError("http_error")
+ViewerFormatError({ format: "pdf", kind: "parse_failed" })
+ImageDecodeError({ kind: "decode_failed", cause: Error("bad image bytes") })
+TextViewerTooLargeError("bytes")
 ```
 
 Decode, parse, render, and worker-protocol failures are format errors, not
@@ -476,29 +504,22 @@ Download is a capability, not a prop sprinkled across viewers.
 The canonical viewer toolbar asks:
 
 ```ts
-const download = resource.getDownload()
+const download = resource.getOriginalDownload()
 ```
 
 Rendering rules:
 
-- `href` download renders a normal anchor.
-- `blob` download creates an object URL for the lifetime of the button.
-- `text` download creates a Blob and object URL for the lifetime of the button.
-- `none` hides or disables the download action depending on viewer context.
+- `href` action renders a normal anchor.
+- `blob` action creates an object URL at click time.
+- `text` action creates a Blob and object URL at click time.
+- Viewers omit the button when no action should be offered.
 
 ```tsx
-<DownloadButton download={resource.getDownload()} />
+<ViewerDownloadButton action={resource.getOriginalDownload()} />
 ```
 
-The download button owns object URL creation and revocation:
-
-```ts
-function useDownloadHref(download: DownloadCapability): string | null {
-  // href: return href
-  // blob/text: create object URL, revoke on change/unmount
-  // none: return null
-}
-```
+The download button owns object URL creation, click dispatch, and immediate
+revocation for generated downloads.
 
 No leaf viewer should separately decide:
 
@@ -544,8 +565,8 @@ releasePdfDocument(resource.cacheKey, document)
 
 Implementation notes:
 
-- URL resource passes `descriptor.loadUrl` directly to PDF.js to preserve native
-  URL/range/worker behavior.
+- URL resource passes `resource.getDirectLoad().url` directly to PDF.js to
+  preserve native URL/range/worker behavior.
 - Blob resource reads bytes and passes `{ data: Uint8Array }` to PDF.js.
 - Cache key must include `resource.cacheKey`.
 - Page cache stays a WeakMap by document.
@@ -583,7 +604,7 @@ getDocxBuffer(resource: ViewerResource): Promise<ArrayBuffer>
 
 Implementation notes:
 
-- DOCX currently fetches full ArrayBuffer.
+- DOCX reads a full ArrayBuffer through `ViewerResource`.
 - `docx-preview` receives ArrayBuffer for deterministic JSZip behavior.
 - Cache key is `resource.cacheKey`.
 - Rendering remains effect-owned because `docx-preview` mutates the DOM.
@@ -626,8 +647,10 @@ Implementation notes:
 Target shape:
 
 ```ts
-type CsvViewerInput =
-  | { kind: "source"; source: ViewerSource }
+type CsvViewerSource =
+  | UrlViewerSource
+  | BlobViewerSource
+  | TextSource
   | { kind: "table"; table: CsvTable; fileName?: string }
 ```
 
@@ -847,7 +870,7 @@ TextViewer should not receive a download prop.
 It asks the resource:
 
 ```ts
-const download = resource.getDownload()
+const download = resource.getOriginalDownload()
 ```
 
 Rules:
@@ -855,7 +878,7 @@ Rules:
 - URL text downloads via href.
 - Blob text downloads via object URL.
 - Inline text downloads via generated Blob.
-- Download filename is `descriptor.downloadFileName`.
+- Download filename is `descriptor.fileName`.
 - If toolbar is hidden, no download action is shown.
 - Error UI may still show download when source is downloadable.
 
@@ -892,18 +915,17 @@ The ideal sequence:
 1. Replace `BytesViewerSource` with `BlobViewerSource` in the shared source
    model.
 2. Add `ViewerResource` construction helpers.
-3. Add a canonical `DownloadButton` that consumes `DownloadCapability`.
+3. Add a canonical `ViewerDownloadButton` that consumes `ViewerDownloadAction`.
 4. Refactor `TextViewer` to consume `ViewerResource`.
 5. Add Blob source support to `TextViewer`.
 6. Move TextViewer chrome to `text-viewer-chrome.tsx`.
 7. Move TextViewer resource loading to resource capabilities.
 8. Update TextViewer tests to cover URL, Blob, text, download, retry, and bounds.
-9. Migrate `CsvViewer` source inputs to `ViewerSource`, while keeping parsed
-   table as a CSV-specific input.
+9. Migrate `CsvViewer` to a single `source` prop, while keeping parsed table as
+   a CSV-specific source variant.
 10. Migrate `ImageViewer` to `ViewerSource` because image Blob support maps
     naturally to the existing frame source manager.
-11. Migrate `DocxViewer`, `XlsxViewer`, and `PptxViewer` to `ViewerSource` by
-    reading ArrayBuffer from resource.
+11. Migrate `XlsxViewer` to `ViewerSource` by reading ArrayBuffer from resource.
 12. Evaluate PDF last, because URL-based PDF.js loading may have performance
     advantages that should not be lost.
 13. Remove internal leaf `src` adapters when every leaf accepts source/resource.
@@ -960,10 +982,11 @@ Owns runtime source capabilities.
 Should export:
 
 ```ts
-createViewerResource(source: ViewerSource, options?: DescriptorOptions)
+createViewerResource(source: ViewerSource)
 ViewerResource
-DownloadCapability
+ViewerDownloadAction
 ResourceError
+ViewerFormatError
 readBoundedText
 ```
 
@@ -981,15 +1004,14 @@ Owns React-only download presentation.
 Should export:
 
 ```ts
-useDownloadHref(download: DownloadCapability): string | null
-ViewerDownloadAnchor
+ViewerDownloadButton
 ```
 
 Rules:
 
 - It may call `URL.createObjectURL`.
-- It must revoke object URLs in effect cleanup.
-- It can import `DownloadCapability` from `viewer-resource.ts`.
+- It must revoke object URLs after generated download clicks.
+- It can import `ViewerDownloadAction` from `viewer-download.ts`.
 - `viewer-resource.ts` must never import React to support it.
 
 ### `text-viewer-resource.ts`
@@ -1041,7 +1063,7 @@ Rules:
 - No text loading.
 - No range normalization.
 - No line rendering.
-- Download button consumes `DownloadCapability`.
+- Download button consumes `ViewerDownloadAction`.
 
 ### `text-viewer.tsx`
 
@@ -1129,23 +1151,23 @@ The next TextViewer pass is complete only when these behaviors are tested.
 
 Use one vocabulary.
 
-| Concept              | Canonical name     |
-| -------------------- | ------------------ |
-| Public input         | `source`           |
-| Runtime capability   | `resource`         |
-| Synchronous metadata | `descriptor`       |
-| Stable identity      | `identityKey`      |
-| User-visible name    | `displayName`      |
-| Download filename    | `downloadFileName` |
-| Download behavior    | `download`         |
-| Network URL          | `url`              |
-| Generated object URL | `objectUrl`        |
-| Text content         | `text`             |
-| Text lines array     | `textLines`        |
-| Scroll container     | `viewportElement`  |
-| Retry nonce          | `retryVersion`     |
-| Bounds object        | `bounds`           |
-| Resource lifecycle   | `cacheKey`         |
+| Concept              | Canonical name    |
+| -------------------- | ----------------- |
+| Public input         | `source`          |
+| Runtime capability   | `resource`        |
+| Synchronous metadata | `descriptor`      |
+| Stable identity      | `identityKey`     |
+| User-visible name    | `displayName`     |
+| Download filename    | `fileName`        |
+| Download behavior    | `download`        |
+| Network URL          | `url`             |
+| Generated object URL | `objectUrl`       |
+| Text content         | `text`            |
+| Text lines array     | `textLines`       |
+| Scroll container     | `viewportElement` |
+| Retry nonce          | `retryVersion`    |
+| Bounds object        | `bounds`          |
+| Resource lifecycle   | `cacheKey`        |
 
 Forbidden aliases in canonical files:
 
@@ -1209,12 +1231,13 @@ The source architecture is canonical when:
 
 - `ViewerSource` has URL, Blob, and text variants.
 - No canonical viewer public API exposes parallel `src` or `value` props.
-- Download behavior is derived from `DownloadCapability`.
+- Download behavior is derived from `ViewerDownloadAction`.
 - Object URL lifecycle is centralized.
 - TextViewer supports URL, Blob, and text sources.
 - TextViewer has no public legacy adapters.
 - TextViewer loading is resource-based, not URL-string based.
-- CSV distinguishes file source from parsed table input.
+- CSV exposes one public `source` prop and keeps parsed table input as a
+  CSV-specific source variant.
 - FileViewer can route non-URL sources only to supported viewers.
 - Leaf viewers no longer re-infer names or download filenames.
 - Every cache key is based on `identityKey` plus loader-specific inputs.

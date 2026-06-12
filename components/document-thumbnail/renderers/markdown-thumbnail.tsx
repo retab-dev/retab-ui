@@ -1,31 +1,36 @@
 "use client"
 
-import * as React from "react"
+import type * as DOMPurify from "dompurify"
+import type * as Marked from "marked"
 
+import type { ViewerResource } from "@/lib/viewer-resource"
 import {
-  getText,
+  cachedThumbnailResource,
+  getThumbnailText,
   shortName,
   timed,
+  useThumbnailResource,
+  type ThumbnailCacheEntry,
 } from "@/components/document-thumbnail/cache"
 import { IframeDoc } from "@/components/document-thumbnail/renderers/layout"
 
-let mdLibs: Promise<
-  [typeof import("marked"), typeof import("dompurify")]
-> | null = null
+let mdLibs: Promise<[typeof Marked, typeof DOMPurify]> | null = null
 
 function loadMarkdown() {
   if (!mdLibs) mdLibs = Promise.all([import("marked"), import("dompurify")])
   return mdLibs
 }
 
-const markdownCache = new Map<string, Promise<string>>()
+const markdownCache = new Map<string, ThumbnailCacheEntry<string>>()
 
-function getMarkdownDoc(src: string, resourceKey = src): Promise<string> {
-  let promise = markdownCache.get(resourceKey)
-  if (!promise) {
-    promise = timed(`markdown:total ${shortName(src)}`, async () => {
+function getMarkdownDoc(
+  resource: ViewerResource,
+  cacheKey: string
+): Promise<string> {
+  return cachedThumbnailResource(markdownCache, cacheKey, () =>
+    timed(`markdown:total ${shortName(resource)}`, async () => {
       const [text, [{ marked }, DOMPurifyMod]] = await Promise.all([
-        getText(src, resourceKey),
+        getThumbnailText(resource, cacheKey),
         loadMarkdown(),
       ])
       const purifier = DOMPurifyMod as unknown as {
@@ -47,18 +52,16 @@ function getMarkdownDoc(src: string, resourceKey = src): Promise<string> {
         a{color:#4f46e5}blockquote{margin:0 0 .8em;padding-left:12px;border-left:3px solid #e2e8f0;color:#475569}
       </style></head><body>${body}</body></html>`
     })
-    markdownCache.set(resourceKey, promise)
-  }
-  return promise
+  )
 }
 
 export function MarkdownFirstPage({
-  src,
-  resourceKey,
+  resource,
+  cacheKey,
 }: {
-  src: string
-  resourceKey: string
+  resource: ViewerResource
+  cacheKey: string
 }) {
-  const html = React.use(getMarkdownDoc(src, resourceKey))
+  const html = useThumbnailResource(getMarkdownDoc(resource, cacheKey))
   return <IframeDoc html={html} />
 }

@@ -8,9 +8,9 @@
       "anchor": {
         "kind": "pdf_bbox",
         "page": 1,
-        "left": 0.8199,
-        "top": 0.181,
-        "width": 0.0746,
+        "left": 0.8111,
+        "top": 0.1772,
+        "width": 0.0736,
         "height": 0.0127
       }
     }
@@ -18,15 +18,15 @@
   {
     "key": "statementDate",
     "label": "Statement date",
-    "value": "June 5, 2003",
+    "value": "July 8, 2003",
     "source": {
-      "content": "June 5, 2003",
+      "content": "July 8, 2003",
       "anchor": {
         "kind": "pdf_bbox",
         "page": 1,
-        "left": 0.8033,
-        "top": 0.216,
-        "width": 0.0898,
+        "left": 0.8021,
+        "top": 0.1933,
+        "width": 0.0826,
         "height": 0.0127
       }
     }
@@ -34,64 +34,64 @@
   {
     "key": "beginningBalance",
     "label": "Beginning balance",
-    "value": "$7,126.11",
+    "value": "$10,959.87",
     "source": {
-      "content": "$7,126.11",
+      "content": "$10,959.87",
       "anchor": {
         "kind": "pdf_bbox",
         "page": 1,
-        "left": 0.8248,
-        "top": 0.3337,
-        "width": 0.0672,
-        "height": 0.0101
+        "left": 0.8136,
+        "top": 0.2964,
+        "width": 0.0675,
+        "height": 0.0116
       }
     }
   },
   {
     "key": "endingBalance",
     "label": "Ending balance",
-    "value": "$10,521.19",
+    "value": "$6,046.95",
     "source": {
-      "content": "$10,521.19",
+      "content": "$6,046.95",
       "anchor": {
         "kind": "pdf_bbox",
         "page": 1,
-        "left": 0.8174,
-        "top": 0.4225,
-        "width": 0.0757,
-        "height": 0.0127
+        "left": 0.8211,
+        "top": 0.3466,
+        "width": 0.06,
+        "height": 0.0116
       }
     }
   },
   {
     "key": "totalDeposits",
     "label": "Total deposits & credits",
-    "value": "$3,615.08",
+    "value": "$2,670.93",
     "source": {
-      "content": "$3,615.08",
+      "content": "+2,670.93",
       "anchor": {
         "kind": "pdf_bbox",
         "page": 1,
-        "left": 0.8259,
-        "top": 0.508,
-        "width": 0.0672,
-        "height": 0.0101
+        "left": 0.8207,
+        "top": 0.3116,
+        "width": 0.0603,
+        "height": 0.0116
       }
     }
   },
   {
     "key": "atmWithdrawal",
     "label": "ATM withdrawal",
-    "value": "$20.00",
+    "value": "$69.01",
     "source": {
-      "content": "$20.00",
+      "content": "$69.01",
       "anchor": {
         "kind": "pdf_bbox",
         "page": 1,
-        "left": 0.8444,
-        "top": 0.6405,
-        "width": 0.0463,
-        "height": 0.0101
+        "left": 0.715,
+        "top": 0.4839,
+        "width": 0.0412,
+        "height": 0.0116
       }
     }
   }

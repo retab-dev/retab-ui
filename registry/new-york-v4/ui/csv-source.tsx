@@ -10,10 +10,10 @@ import type {
 } from "@/components/ui/csv-viewer"
 
 /** Spreadsheet column letter → 0-based index ("A" → 0, "C" → 2, "AA" → 26). */
-export function columnLetterToIndex(letter: string): number {
+export function columnLetterToIndex(letter: string): number | null {
+  if (!/^[A-Za-z]+$/.test(letter)) return null
   let n = 0
   for (const ch of letter.toUpperCase()) {
-    if (ch < "A" || ch > "Z") continue
     n = n * 26 + (ch.charCodeAt(0) - 64)
   }
   return n - 1
@@ -25,9 +25,17 @@ export function columnLetterToIndex(letter: string): number {
  */
 export function csvAnchorToCell(anchor: SourceAnchor): CsvCellAddress | null {
   if (anchor.kind === "csv_cell") {
+    const columnIndex = columnLetterToIndex(anchor.column)
+    if (
+      columnIndex == null ||
+      !Number.isInteger(anchor.row) ||
+      anchor.row < 1
+    ) {
+      return null
+    }
     return {
       rowIndex: anchor.row - 1,
-      columnIndex: columnLetterToIndex(anchor.column),
+      columnIndex,
     }
   }
   return null

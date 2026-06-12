@@ -16,7 +16,7 @@ import { SourceIndicator } from "@/components/ui/source-indicator"
 import { JsonForm } from "@/components/json-form/json-form"
 import extractSample from "@/components/viewers/sample-data/extract.json"
 
-const PDF_URL = "/samples/bank-statement-x4uhhi7t.pdf"
+const PDF_URL = "/samples/jane-doe-bank-statement-5-pages.pdf"
 
 type ExtractField = {
   key: string
@@ -75,7 +75,7 @@ export function ExtractViewerBlock() {
           source={{
             kind: "url",
             url: PDF_URL,
-            fileName: "bank-statement.pdf",
+            fileName: "jane-doe-bank-statement-5-pages.pdf",
           }}
           bare
           className="h-full"

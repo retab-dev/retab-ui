@@ -1,9 +1,10 @@
 "use client"
 
 import * as React from "react"
-import { Download, Maximize, Minus, Plus } from "lucide-react"
+import { Maximize, Minus, Plus } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
+import type { ViewerDownloadAction } from "@/lib/viewer-download"
+import { ViewerDownloadControl } from "@/components/ui/viewer-download"
 
 export function useCsvViewerZoom() {
   const [zoom, setZoom] = React.useState(1)
@@ -16,14 +17,14 @@ export function CsvViewerToolbar({
   isLoading,
   zoom,
   onZoomChange,
-  onDownload,
+  downloadActions,
 }: {
   rowCount: number
   columnCount: number
   isLoading: boolean
   zoom: number
   onZoomChange: (zoom: number) => void
-  onDownload: () => void
+  downloadActions: ViewerDownloadAction[]
 }) {
   return (
     <div className="flex shrink-0 items-center justify-between border-b px-3 py-1.5 text-xs text-muted-foreground">
@@ -77,16 +78,7 @@ export function CsvViewerToolbar({
             <Maximize className="size-3.5" />
           </button>
         </span>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          className="size-7"
-          aria-label="Download"
-          title="Download"
-          onClick={onDownload}
-        >
-          <Download />
-        </Button>
+        <ViewerDownloadControl actions={downloadActions} />
       </span>
     </div>
   )

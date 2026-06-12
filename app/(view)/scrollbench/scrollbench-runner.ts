@@ -21,8 +21,12 @@ export async function measureScenario(
 ): Promise<ScenarioResult> {
   throwIfAborted(signal)
 
+  if (!isScrollableViewport(scroller)) {
+    throw new Error("The selected viewer does not have a scrollable viewport.")
+  }
+
   const maxScrollTop = scroller.scrollHeight - scroller.clientHeight
-  if (maxScrollTop <= 0) {
+  if (!Number.isFinite(maxScrollTop) || maxScrollTop <= 0) {
     throw new Error("The selected viewer does not have a scrollable viewport.")
   }
 
@@ -70,7 +74,7 @@ export function findScrollableViewport(root: HTMLElement | null, selector: strin
   for (const element of allElements) {
     const style = window.getComputedStyle(element)
     const canScrollY = /(auto|scroll)/.test(style.overflowY)
-    if (canScrollY && element.scrollHeight > element.clientHeight) {
+    if (canScrollY && isScrollableViewport(element)) {
       return element
     }
   }
@@ -88,6 +92,8 @@ export async function waitForScroller(
     timeoutMs?: number
   } = {}
 ) {
+  throwIfAborted(signal)
+
   const start = performance.now()
   let scroller = getScroller()
 
@@ -130,16 +136,16 @@ function nextFrame(signal?: AbortSignal) {
       return
     }
 
-    const frame = requestAnimationFrame(() => {
-      signal?.removeEventListener("abort", handleAbort)
-      resolve()
-    })
+    let frame = 0
     const handleAbort = () => {
       cancelAnimationFrame(frame)
       reject(abortError())
     }
-
     signal?.addEventListener("abort", handleAbort, { once: true })
+    frame = requestAnimationFrame(() => {
+      signal?.removeEventListener("abort", handleAbort)
+      resolve()
+    })
   })
 }
 

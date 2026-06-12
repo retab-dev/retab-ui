@@ -122,6 +122,7 @@ export function DocumentSchemaNodeEditor({
       {localType === "enum" && (
         <DocumentEnumNodeEditor
           dispatch={dispatch}
+          editMode={editMode}
           nodeId={nodeId}
           enumEntries={nodeView.enumEntries}
         />

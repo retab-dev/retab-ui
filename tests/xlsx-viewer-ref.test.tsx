@@ -4,6 +4,7 @@ import * as React from "react"
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { blobSource } from "@/registry/new-york-v4/lib/viewer-resource"
 import { createCompactSheet } from "@/registry/new-york-v4/lib/xlsx-workbook"
 import {
   XlsxViewer,
@@ -82,7 +83,11 @@ describe("XlsxViewer imperative ref", () => {
       render(
         <XlsxViewer
           ref={viewerRef}
-          src={`/mounted-preload-${crypto.randomUUID()}.xlsx`}
+          source={{
+            kind: "url",
+            url: `/mounted-preload-${crypto.randomUUID()}.xlsx`,
+            fileName: "mounted-preload.xlsx",
+          }}
           toolbar={false}
           onSheetChange={onSheetChange}
         />
@@ -127,5 +132,44 @@ describe("XlsxViewer imperative ref", () => {
       expect(detailGrid.getAttribute("data-scroll-target")).toBe("1:2:3:auto")
     )
     expect(onSheetChange).toHaveBeenCalledWith(1)
+  })
+
+  it("loads Blob sources without fetching a URL", async () => {
+    await act(async () => {
+      render(
+        <XlsxViewer
+          source={blobSource(new Uint8Array([1, 2, 3]), {
+            identityKey: "blob:xlsx",
+            fileName: "local.xlsx",
+          })}
+          toolbar={false}
+        />
+      )
+    })
+
+    await waitFor(() => {
+      expect(FakeXlsxWorker.instances.length).toBe(1)
+      expect(FakeXlsxWorker.instances[0].onmessage).not.toBeNull()
+    })
+
+    await act(async () => {
+      FakeXlsxWorker.instances[0].onmessage?.({
+        data: {
+          type: "workbook",
+          sheets: [
+            createCompactSheet({
+              name: "Local",
+              rowCount: 1,
+              columnCount: 1,
+              entries: [{ cellIndex: 0, text: "blob" }],
+            }),
+          ],
+        },
+      } as MessageEvent)
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+
+    expect(await screen.findByRole("grid", { name: "Local" })).toBeTruthy()
+    expect(globalThis.fetch).not.toHaveBeenCalled()
   })
 })

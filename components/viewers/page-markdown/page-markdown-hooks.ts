@@ -82,7 +82,7 @@ export function usePagePaneSync({
       pendingRef.current = transition.pending
       setState(transition.state)
 
-      if (pane === "markdown") {
+      if (transition.state.pane === "markdown") {
         onMarkdownPageChange?.(transition.state.page)
       }
 

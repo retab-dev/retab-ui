@@ -119,6 +119,9 @@ export function moveProperty(
   if (!owner) return doc
   const moved = getOwnProperty(doc, owner.parentId, owner.index)
   if (!moved) return doc
+  const targetParent = getNode(doc, targetParentId)
+  if (!targetParent) return doc
+  if (targetParent.type !== "object" && !targetParent.properties) return doc
 
   if (isAncestor(doc, moved.node.id, targetParentId)) return doc
 

@@ -140,6 +140,12 @@ export function ObjectPropertiesField({
                     })
                   )
                 }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault()
+                    event.stopPropagation()
+                  }
+                }}
                 className="h-8"
               />
               <Button
@@ -183,6 +189,7 @@ export function ObjectPropertiesField({
           onKeyDown={(event) => {
             if (event.key === "Enter") {
               event.preventDefault()
+              event.stopPropagation()
               addProperty()
             }
           }}

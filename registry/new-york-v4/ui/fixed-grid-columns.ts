@@ -17,14 +17,15 @@ export function buildFixedGridColumns<Item, Metadata = unknown>({
 }): FixedGridColumn<Metadata>[] {
   return items.map((item, index) => {
     const metadata = getMetadata?.(item, index)
+    const widthPx = normalizeFixedGridColumnWidth(getWidthPx(item, index))
     return metadata === undefined
       ? {
           key: getKey(item, index),
-          widthPx: getWidthPx(item, index),
+          widthPx,
         }
       : {
           key: getKey(item, index),
-          widthPx: getWidthPx(item, index),
+          widthPx,
           metadata,
         }
   })
@@ -33,5 +34,9 @@ export function buildFixedGridColumns<Item, Metadata = unknown>({
 export function fixedGridColumnWidths(
   columns: readonly Pick<FixedGridColumn, "widthPx">[]
 ) {
-  return columns.map((column) => column.widthPx)
+  return columns.map((column) => normalizeFixedGridColumnWidth(column.widthPx))
+}
+
+function normalizeFixedGridColumnWidth(widthPx: number) {
+  return Number.isFinite(widthPx) && widthPx > 0 ? widthPx : 0
 }

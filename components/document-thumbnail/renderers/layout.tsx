@@ -59,7 +59,7 @@ export function GridTable({
                   className={cn(
                     "truncate border-r border-b border-slate-200 px-1 py-0.5 last:border-r-0",
                     headerRow && r === 0
-                      ? "text-foreground bg-slate-50 font-semibold"
+                      ? "bg-slate-50 font-semibold text-foreground"
                       : "text-foreground/80"
                   )}
                 >

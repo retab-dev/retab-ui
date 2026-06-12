@@ -14,7 +14,13 @@ export function findFixedGridScroller({
 }) {
   if (!root) return null
 
-  const candidates = root.querySelectorAll<HTMLElement>(selector)
+  let candidates: NodeListOf<HTMLElement>
+  try {
+    candidates = root.querySelectorAll<HTMLElement>(selector)
+  } catch {
+    return null
+  }
+
   for (const candidate of candidates) {
     if (isScrollableViewport(candidate)) return candidate
   }
@@ -25,6 +31,8 @@ export function findFixedGridScroller({
 export function isScrollableViewport(scroller: HTMLElement | null) {
   return (
     !!scroller &&
+    Number.isFinite(scroller.clientHeight) &&
+    Number.isFinite(scroller.scrollHeight) &&
     scroller.clientHeight > 0 &&
     scroller.scrollHeight > scroller.clientHeight
   )

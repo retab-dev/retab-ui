@@ -74,7 +74,16 @@ export function createPageMeasurementKey({
   mode: string
   scale: number
 }): string {
-  return `${mode}:${scale.toFixed(3)}:${markdown.length}:${markdown.slice(0, 24)}:${markdown.slice(-24)}`
+  return `${mode}:${scale.toFixed(3)}:${markdown.length}:${hashMarkdown(markdown)}`
+}
+
+function hashMarkdown(markdown: string): string {
+  let hash = 2166136261
+  for (let index = 0; index < markdown.length; index += 1) {
+    hash ^= markdown.charCodeAt(index)
+    hash = Math.imul(hash, 16777619)
+  }
+  return (hash >>> 0).toString(36)
 }
 
 export function initialPagePaneState(): PagePaneState {
@@ -92,7 +101,7 @@ export function resolvePagePaneReport({
   pane: PagePane
   page: number
 }): PagePaneTransition {
-  const nextPage = Math.max(1, Math.floor(page))
+  const nextPage = Math.max(1, Number.isFinite(page) ? Math.floor(page) : 1)
 
   if (pending?.pane === pane && pending.page === nextPage) {
     return {
@@ -100,6 +109,15 @@ export function resolvePagePaneReport({
       pending: null,
       scrollTarget: null,
       confirmed: true,
+    }
+  }
+
+  if (pending?.pane === pane) {
+    return {
+      state,
+      pending,
+      scrollTarget: null,
+      confirmed: false,
     }
   }
 

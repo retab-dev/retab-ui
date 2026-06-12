@@ -1,4 +1,5 @@
 import { isTabDelimited, type CsvDialect } from "@/lib/csv"
+import type { ViewerDownloadAction } from "@/lib/viewer-download"
 
 export function escapeDelimitedField(value: string, delimiter: string): string {
   const text = value ?? ""
@@ -35,38 +36,28 @@ export function defaultCsvDownloadName(dialect: CsvDialect): string {
   return isTabDelimited(dialect) ? "data.tsv" : "data.csv"
 }
 
-export async function downloadCsvTable({
-  src,
+export function createCsvExportAction({
   columns,
   sourceRows,
   dialect,
-  downloadName,
+  fileName,
 }: {
-  src?: string
   columns: string[]
   sourceRows: string[][]
   dialect: CsvDialect
-  downloadName: string
-}): Promise<void> {
-  const blob = src
-    ? await fetch(src).then((response) => {
-        if (!response.ok) {
-          throw new Error(`Failed to load file: ${response.status}`)
-        }
-        return response.blob()
-      })
-    : new Blob([serializeCsvTable({ columns, sourceRows, dialect })], {
-        type: isTabDelimited(dialect)
-          ? "text/tab-separated-values;charset=utf-8"
-          : "text/csv;charset=utf-8",
-      })
-  const url = URL.createObjectURL(blob)
-  const anchor = document.createElement("a")
-  anchor.href = url
-  anchor.download = downloadName
-  anchor.rel = "noreferrer"
-  document.body.appendChild(anchor)
-  anchor.click()
-  anchor.remove()
-  URL.revokeObjectURL(url)
+  fileName: string
+}): ViewerDownloadAction {
+  return {
+    id: "csv-export-table",
+    label: "Export table",
+    fileName,
+    origin: "derived",
+    getPayload: () => ({
+      kind: "text",
+      text: serializeCsvTable({ columns, sourceRows, dialect }),
+      mimeType: isTabDelimited(dialect)
+        ? "text/tab-separated-values;charset=utf-8"
+        : "text/csv;charset=utf-8",
+    }),
+  }
 }

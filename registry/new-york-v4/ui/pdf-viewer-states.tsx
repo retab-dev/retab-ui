@@ -47,58 +47,6 @@ export function PageSkeleton() {
   return <Skeleton className="size-full rounded-md" />
 }
 
-export class PdfErrorBoundary extends React.Component<
-  { children: React.ReactNode; className?: string; resetKey?: unknown },
-  { error: boolean; retryKey: number }
-> {
-  state = { error: false, retryKey: 0 }
-
-  componentDidUpdate(previousProps: { resetKey?: unknown }) {
-    if (previousProps.resetKey !== this.props.resetKey && this.state.error) {
-      this.setState({ error: false })
-    }
-  }
-
-  static getDerivedStateFromError() {
-    return { error: true }
-  }
-
-  render() {
-    if (this.state.error) {
-      return (
-        <div
-          className={cn(
-            "flex min-h-64 flex-col items-center justify-center gap-3 rounded-xl border bg-muted/30 p-6 text-center text-sm text-muted-foreground",
-            this.props.className
-          )}
-          role="alert"
-        >
-          <div>Couldn&apos;t load this PDF.</div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() =>
-              this.setState((state) => ({
-                error: false,
-                retryKey: state.retryKey + 1,
-              }))
-            }
-          >
-            Retry
-          </Button>
-        </div>
-      )
-    }
-
-    return (
-      <React.Fragment key={this.state.retryKey}>
-        {this.props.children}
-      </React.Fragment>
-    )
-  }
-}
-
 function PdfToolbarSkeleton({
   showRailToggle = false,
 }: {

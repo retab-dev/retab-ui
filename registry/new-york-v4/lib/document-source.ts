@@ -172,6 +172,9 @@ export function extractionSourcesToSourceMap(sources: unknown): SourceMap {
   const walk = (node: unknown, prefix: string) => {
     if (isSourcedLeaf(node)) {
       if (node.source) map[prefix] = node.source
+      if (node.value != null && typeof node.value === "object") {
+        walk(node.value, prefix)
+      }
       return
     }
     if (Array.isArray(node)) {

@@ -2,25 +2,30 @@
 
 import * as React from "react"
 
-import { getText } from "@/components/document-thumbnail/cache"
+import { inferCsvDialect, parseCsv } from "@/lib/csv"
+import type { ViewerResource } from "@/lib/viewer-resource"
+import {
+  getThumbnailText,
+  useThumbnailResource,
+} from "@/components/document-thumbnail/cache"
 import { GridTable } from "@/components/document-thumbnail/renderers/layout"
 
 export function CsvFirstRows({
-  src,
-  resourceKey,
+  resource,
+  cacheKey,
 }: {
-  src: string
-  resourceKey: string
+  resource: ViewerResource
+  cacheKey: string
 }) {
-  const raw = React.use(getText(src, resourceKey))
-  const rows = React.useMemo(
-    () =>
-      raw
-        .split(/\r?\n/)
-        .filter((line) => line.length > 0)
-        .slice(0, 16)
-        .map((line) => line.split(",").slice(0, 6)),
-    [raw]
-  )
+  const raw = useThumbnailResource(getThumbnailText(resource, cacheKey))
+  const rows = React.useMemo(() => {
+    const dialect = inferCsvDialect({
+      fileName: resource.fileName,
+      mimeType: resource.mimeType,
+    })
+    const table = parseCsv(raw, dialect)
+    const header = table.columns.length ? [table.columns.slice(0, 6)] : []
+    return header.concat(table.rows.slice(0, 15).map((row) => row.slice(0, 6)))
+  }, [raw, resource.fileName, resource.mimeType])
   return <GridTable rows={rows} headerRow />
 }

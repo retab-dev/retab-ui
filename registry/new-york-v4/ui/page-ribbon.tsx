@@ -4,9 +4,14 @@ import * as React from "react"
 
 import {
   getSegmentSurfaceProps,
+  scopeSegmentInteraction,
   type SegmentInteraction,
 } from "@/lib/segment-interaction"
-import { buildPageRuns, type Segment } from "@/lib/segments"
+import {
+  buildPageRuns,
+  segmentDisplayLabel,
+  type Segment,
+} from "@/lib/segments"
 import { cn } from "@/lib/utils"
 
 /** One lane of the ribbon: segments positioned by their page ranges. */
@@ -59,6 +64,21 @@ export function PageRibbon({
 }: PageRibbonProps) {
   const vertical = orientation === "vertical"
   const thickness = rowThickness ?? (vertical ? 44 : 10)
+  const scopedInteraction = React.useMemo(
+    () =>
+      scopeSegmentInteraction(
+        interaction,
+        rows.flatMap((row) =>
+          row.segments
+            .filter(
+              (segment) =>
+                buildVisiblePageRuns(segment.pages, pageCount).length > 0
+            )
+            .map((segment) => segment.id)
+        )
+      ),
+    [interaction, pageCount, rows]
+  )
   if (pageCount <= 0 || rows.length === 0) return null
 
   const ticks = showTicks ? buildTicks(pageCount) : []
@@ -88,68 +108,71 @@ export function PageRibbon({
           style={vertical ? { width: thickness } : { height: thickness }}
         >
           {row.segments.flatMap((segment) =>
-            buildPageRuns(segment.pages).map(([start, end], i) => {
-              const offsetPct = ((start - 1) / pageCount) * 100
-              const sizePct = ((end - start + 1) / pageCount) * 100
-              const isCurrent =
-                currentPage != null &&
-                currentPage >= start &&
-                currentPage <= end
-              const { state, eventHandlers, ariaProps, dataProps } =
-                getSegmentSurfaceProps({
-                  segment,
-                  interaction,
-                  isCurrent,
-                  onSelect,
-                })
-              const style: React.CSSProperties = vertical
-                ? {
-                    top: `${offsetPct}%`,
-                    height: `max(${sizePct}%, 2px)`,
-                    left: 0,
-                    right: 0,
-                  }
-                : {
-                    left: `${offsetPct}%`,
-                    width: `${sizePct}%`,
-                    top: 0,
-                    bottom: 0,
-                  }
-              return (
-                <button
-                  key={`${segment.id}-${i}`}
-                  type="button"
-                  {...ariaProps}
-                  {...dataProps}
-                  title={`${segment.label} · pages ${start}${end > start ? `–${end}` : ""}`}
-                  onClick={() => {
-                    eventHandlers.onClick()
-                    onSelectPage?.(start)
-                  }}
-                  onMouseEnter={eventHandlers.onMouseEnter}
-                  onMouseLeave={eventHandlers.onMouseLeave}
-                  onFocus={eventHandlers.onFocus}
-                  onBlur={eventHandlers.onBlur}
-                  className={cn(
-                    "absolute cursor-pointer transition-opacity before:absolute before:-inset-1 before:content-[''] hover:brightness-110 focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-                    state.isDimmed
-                      ? "opacity-30"
-                      : isCurrent
-                        ? "opacity-100"
-                        : "opacity-85"
-                  )}
-                  style={{
-                    ...style,
-                    backgroundColor: segment.color,
-                    boxShadow:
-                      state.isHighlighted || state.isSelected || isCurrent
-                        ? "inset 0 0 0 1.5px rgb(24 24 27)"
-                        : undefined,
-                  }}
-                  aria-label={`${segment.label} pages ${start} to ${end}`}
-                />
-              )
-            })
+            buildVisiblePageRuns(segment.pages, pageCount).map(
+              ([start, end], i) => {
+                const label = segmentDisplayLabel(segment.label)
+                const offsetPct = ((start - 1) / pageCount) * 100
+                const sizePct = ((end - start + 1) / pageCount) * 100
+                const isCurrent =
+                  currentPage != null &&
+                  currentPage >= start &&
+                  currentPage <= end
+                const { state, eventHandlers, ariaProps, dataProps } =
+                  getSegmentSurfaceProps({
+                    segment,
+                    interaction: scopedInteraction,
+                    isCurrent,
+                    onSelect,
+                  })
+                const style: React.CSSProperties = vertical
+                  ? {
+                      top: `${offsetPct}%`,
+                      height: `max(${sizePct}%, 2px)`,
+                      left: 0,
+                      right: 0,
+                    }
+                  : {
+                      left: `${offsetPct}%`,
+                      width: `${sizePct}%`,
+                      top: 0,
+                      bottom: 0,
+                    }
+                return (
+                  <button
+                    key={`${segment.id}-${i}`}
+                    type="button"
+                    {...ariaProps}
+                    {...dataProps}
+                    title={`${label} · pages ${start}${end > start ? `–${end}` : ""}`}
+                    onClick={() => {
+                      eventHandlers.onClick()
+                      onSelectPage?.(start)
+                    }}
+                    onMouseEnter={eventHandlers.onMouseEnter}
+                    onMouseLeave={eventHandlers.onMouseLeave}
+                    onFocus={eventHandlers.onFocus}
+                    onBlur={eventHandlers.onBlur}
+                    className={cn(
+                      "absolute cursor-pointer transition-opacity before:absolute before:-inset-1 before:content-[''] hover:brightness-110 focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                      state.isDimmed
+                        ? "opacity-30"
+                        : isCurrent
+                          ? "opacity-100"
+                          : "opacity-85"
+                    )}
+                    style={{
+                      ...style,
+                      backgroundColor: segment.color,
+                      boxShadow:
+                        state.isHighlighted || state.isSelected || isCurrent
+                          ? "inset 0 0 0 1.5px rgb(24 24 27)"
+                          : undefined,
+                    }}
+                    aria-label={`${label} pages ${start} to ${end}`}
+                  />
+                )
+              }
+            )
           )}
         </div>
       ))}
@@ -215,8 +238,20 @@ function buildTicks(pageCount: number): number[] {
   const step = Math.max(5, Math.round(pageCount / 10 / 5) * 5)
   const ticks = [1]
   for (let p = step; p < pageCount; p += step) ticks.push(p)
-  ticks.push(pageCount)
+  if (pageCount !== 1) ticks.push(pageCount)
   return ticks
+}
+
+function buildVisiblePageRuns(
+  pages: number[],
+  pageCount: number
+): Array<[number, number]> {
+  if (pageCount <= 0) return []
+  return buildPageRuns(pages)
+    .map(
+      ([start, end]) => [start, Math.min(end, pageCount)] as [number, number]
+    )
+    .filter(([start, end]) => start <= pageCount && end >= 1 && start <= end)
 }
 
 function clamp(v: number, lo: number, hi: number) {

@@ -3,6 +3,12 @@
 import * as React from "react"
 
 import { cn } from "@/lib/utils"
+import { ResourceError, ViewerFormatError } from "@/lib/viewer-errors"
+import {
+  createViewerResource,
+  type ViewerResource,
+} from "@/lib/viewer-resource"
+import type { BlobViewerSource, UrlViewerSource } from "@/lib/viewer-source"
 import {
   buildXlsxSourceFromCompact,
   resolveXlsxSheetChange,
@@ -15,6 +21,7 @@ import {
   type XlsxWorkerRequest,
   type XlsxWorkerResponse,
 } from "@/lib/xlsx-worker-protocol"
+import { ViewerErrorBoundary } from "@/components/ui/viewer-error"
 import { XlsxGrid, XlsxGridSkeleton } from "@/components/ui/xlsx-grid"
 import { XlsxSheetTabs } from "@/components/ui/xlsx-sheet-tabs"
 import { XlsxToolbar, XlsxToolbarSkeleton } from "@/components/ui/xlsx-toolbar"
@@ -27,15 +34,26 @@ import {
   type XlsxScrollRequest,
 } from "@/components/ui/xlsx-viewer-scroll"
 
+import {
+  createXlsxSheetCsvExportAction,
+  xlsxSheetCsvFileName,
+} from "./xlsx-viewer-download"
+
 const sourceCache = new XlsxSourceCache({ maxEntries: 4 })
 
-async function buildXlsxSource(src: string): Promise<XlsxSource> {
-  const response = await fetch(src)
-  if (!response.ok) {
-    throw new Error(`Failed to load spreadsheet: ${response.status}`)
+async function buildXlsxSource(resource: ViewerResource): Promise<XlsxSource> {
+  try {
+    const buffer = await resource.readArrayBuffer()
+    return buildXlsxSourceFromCompact(await parseWorkbookInWorker(buffer))
+  } catch (error) {
+    if (error instanceof ResourceError) throw error
+    throw new ViewerFormatError({
+      format: "xlsx",
+      kind: "parse_failed",
+      message: "Failed to parse spreadsheet.",
+      cause: error,
+    })
   }
-  const buffer = await response.arrayBuffer()
-  return buildXlsxSourceFromCompact(await parseWorkbookInWorker(buffer))
 }
 
 function parseWorkbookInWorker(buffer: ArrayBuffer): Promise<CompactSheet[]> {
@@ -66,8 +84,8 @@ function parseWorkbookInWorker(buffer: ArrayBuffer): Promise<CompactSheet[]> {
   })
 }
 
-function getXlsxSource(src: string): Promise<XlsxSource> {
-  return sourceCache.get(src, () => buildXlsxSource(src))
+function getXlsxSource(resource: ViewerResource): Promise<XlsxSource> {
+  return sourceCache.get(resource.keys.load, () => buildXlsxSource(resource))
 }
 
 /** Client gate without an effect: false during SSR, true after hydration. */
@@ -79,12 +97,13 @@ function useIsClient() {
   )
 }
 
+export type XlsxDocumentSource = UrlViewerSource | BlobViewerSource
+
 export interface XlsxViewerProps {
-  /** URL of the .xlsx/.xls (same-origin or CORS-enabled). */
-  src: string
+  /** Canonical spreadsheet source. */
+  source: XlsxDocumentSource
   className?: string
   toolbar?: boolean
-  downloadFileName?: string
   /** Sheet shown first. Defaults to 0. */
   defaultSheetIndex?: number
   /** Fired with the active sheet index on tab switch and imperative sheet changes. */
@@ -119,30 +138,44 @@ export interface XlsxViewerHandle {
 export const XlsxViewer = React.forwardRef<XlsxViewerHandle, XlsxViewerProps>(
   function XlsxViewer(props, ref) {
     const isClient = useIsClient()
+    const resource = React.useMemo(
+      () => createViewerResource(props.source),
+      [props.source]
+    )
     if (!isClient) {
       return (
         <XlsxViewerFallback className={props.className} bare={props.bare} />
       )
     }
     return (
-      <XlsxErrorBoundary className={props.className} resetKey={props.src}>
+      <ViewerErrorBoundary
+        className={props.className}
+        download={resource.getOriginalDownload()}
+        format="xlsx"
+        resetKey={resource.keys.load}
+        sourceKind={resource.sourceKind}
+      >
         <React.Suspense
           fallback={
             <XlsxViewerFallback className={props.className} bare={props.bare} />
           }
         >
-          <XlsxViewerSession key={props.src} {...props} forwardedRef={ref} />
+          <XlsxViewerSession
+            key={resource.keys.load}
+            {...props}
+            forwardedRef={ref}
+            resource={resource}
+          />
         </React.Suspense>
-      </XlsxErrorBoundary>
+      </ViewerErrorBoundary>
     )
   }
 )
 
 function XlsxViewerSession({
-  src,
+  resource,
   className,
   toolbar = true,
-  downloadFileName,
   defaultSheetIndex = 0,
   onSheetChange,
   bare = false,
@@ -152,6 +185,7 @@ function XlsxViewerSession({
   isolateStyles = false,
   forwardedRef,
 }: XlsxViewerProps & {
+  resource: ViewerResource
   forwardedRef?: React.ForwardedRef<XlsxViewerHandle>
 }) {
   const [activeSheetIndex, setActiveSheetIndex] = React.useState(
@@ -248,6 +282,25 @@ function XlsxViewerSession({
   const isReady = sheets != null
   const activeSheet = sheets?.[activeSheetIndex]
   const activeCellTarget = toInternalCellRef(activeCell)
+  const downloadActions = React.useMemo(() => {
+    const originalDownloadAction = {
+      ...resource.getOriginalDownload(),
+      label: activeSheet ? "Download original" : "Download",
+    }
+    if (!activeSheet || !sheets) return [originalDownloadAction]
+    return [
+      originalDownloadAction,
+      createXlsxSheetCsvExportAction({
+        fileName: xlsxSheetCsvFileName({
+          fileName: resource.fileName,
+          sheetName: activeSheet.name,
+          sheetCount: sheets.length,
+        }),
+        sheetIndex: activeSheetIndex,
+        getSource: () => getXlsxSource(resource),
+      }),
+    ]
+  }, [activeSheet, activeSheetIndex, resource, sheets])
   const zoom = (factor: number) =>
     setScale((value) => clamp(value * factor, 0.25, 5))
 
@@ -262,8 +315,7 @@ function XlsxViewerSession({
     >
       {toolbar ? (
         <XlsxToolbar
-          src={src}
-          downloadFileName={downloadFileName}
+          downloadActions={downloadActions}
           sheet={activeSheet}
           isReady={isReady}
           scale={scale}
@@ -283,7 +335,7 @@ function XlsxViewerSession({
           {header ? <div data-slot="xlsx-viewer-header">{header}</div> : null}
           <React.Suspense fallback={<XlsxGridSkeleton />}>
             <XlsxSheet
-              src={src}
+              resource={resource}
               activeSheetIndex={activeSheetIndex}
               scale={scale}
               onReportSource={reportSource}
@@ -308,7 +360,7 @@ function XlsxViewerSession({
 }
 
 function XlsxSheet({
-  src,
+  resource,
   activeSheetIndex,
   scale,
   onReportSource,
@@ -317,7 +369,7 @@ function XlsxSheet({
   isolateStyles,
   viewportRef,
 }: {
-  src: string
+  resource: ViewerResource
   activeSheetIndex: number
   scale: number
   onReportSource: (source: XlsxSource) => void
@@ -326,7 +378,7 @@ function XlsxSheet({
   isolateStyles: boolean
   viewportRef?: React.RefObject<HTMLDivElement | null>
 }) {
-  const source = React.use(getXlsxSource(src))
+  const source = React.use(getXlsxSource(resource))
 
   React.useEffect(() => {
     onReportSource(source)
@@ -394,37 +446,4 @@ function XlsxViewerFallback({
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value))
-}
-
-class XlsxErrorBoundary extends React.Component<
-  { children: React.ReactNode; className?: string; resetKey?: unknown },
-  { error: boolean }
-> {
-  state = { error: false }
-
-  componentDidUpdate(prev: { resetKey?: unknown }) {
-    if (prev.resetKey !== this.props.resetKey && this.state.error) {
-      this.setState({ error: false })
-    }
-  }
-
-  static getDerivedStateFromError() {
-    return { error: true }
-  }
-
-  render() {
-    if (this.state.error) {
-      return (
-        <div
-          className={cn(
-            "flex min-h-64 items-center justify-center rounded-xl border bg-muted/30 p-6 text-center text-sm text-muted-foreground",
-            this.props.className
-          )}
-        >
-          Couldn&apos;t load this spreadsheet.
-        </div>
-      )
-    }
-    return this.props.children
-  }
 }

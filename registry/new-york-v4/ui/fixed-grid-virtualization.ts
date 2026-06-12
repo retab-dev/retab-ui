@@ -58,7 +58,11 @@ export function useFixedGridVirtualization({
   scrollElement?: HTMLElement | null
   virtualizeColumns?: boolean
 }) {
-  const viewport = useFixedGridViewport(scrollElement ?? scrollRef.current)
+  const resolvedScrollElement = useResolvedScrollElement({
+    scrollRef,
+    scrollElement,
+  })
+  const viewport = useFixedGridViewport(resolvedScrollElement)
 
   const totalRowSize = rowCount * rowSize
   const totalColumnSize = columnCount * columnSize
@@ -330,6 +334,26 @@ interface FixedVirtualWindow {
   minimumVisibleCount?: number
 }
 
+function useResolvedScrollElement({
+  scrollRef,
+  scrollElement,
+}: {
+  scrollRef: React.RefObject<HTMLElement | null>
+  scrollElement?: HTMLElement | null
+}) {
+  const [resolvedScrollElement, setResolvedScrollElement] =
+    React.useState<HTMLElement | null>(scrollElement ?? null)
+
+  useIsomorphicLayoutEffect(() => {
+    const nextScrollElement = scrollElement ?? scrollRef.current
+    setResolvedScrollElement((current) =>
+      current === nextScrollElement ? current : nextScrollElement
+    )
+  }, [scrollElement, scrollRef])
+
+  return resolvedScrollElement
+}
+
 function useFixedGridViewport(scrollElement: HTMLElement | null | undefined) {
   const [viewport, setViewport] = React.useState<FixedGridViewport>({
     scrollTop: 0,
@@ -399,15 +423,34 @@ export function fixedVirtualItems({
   overscan,
   minimumVisibleCount = 1,
 }: FixedVirtualWindow): FixedGridVirtualItem[] {
-  if (count <= 0 || size <= 0) return []
+  if (!Number.isFinite(count) || !Number.isFinite(size)) return []
+  const itemCount = Math.floor(count)
+  if (itemCount <= 0 || size <= 0) return []
+  const safeScrollOffset =
+    Number.isFinite(scrollOffset) && scrollOffset > 0 ? scrollOffset : 0
+  const safeViewportSize = Number.isFinite(viewportSize) ? viewportSize : 0
+  const safeOverscan =
+    Number.isFinite(overscan) && overscan > 0 ? Math.floor(overscan) : 0
+  const safeMinimumVisibleCount =
+    Number.isFinite(minimumVisibleCount) && minimumVisibleCount > 0
+      ? Math.ceil(minimumVisibleCount)
+      : 1
   const effectiveViewportSize = Math.max(
-    viewportSize,
-    size * minimumVisibleCount
+    safeViewportSize,
+    size * safeMinimumVisibleCount
   )
-  const visibleStart = Math.floor(scrollOffset / size)
-  const visibleEnd = Math.ceil((scrollOffset + effectiveViewportSize) / size)
-  const start = Math.max(0, visibleStart - overscan)
-  const end = Math.min(count - 1, visibleEnd + overscan)
+  const visibleStart = clamp(
+    Math.floor(safeScrollOffset / size),
+    0,
+    itemCount - 1
+  )
+  const visibleEnd = clamp(
+    Math.ceil((safeScrollOffset + effectiveViewportSize) / size),
+    visibleStart,
+    itemCount - 1
+  )
+  const start = Math.max(0, visibleStart - safeOverscan)
+  const end = Math.min(itemCount - 1, visibleEnd + safeOverscan)
   return Array.from({ length: end - start + 1 }, (_, offset) => {
     const index = start + offset
     const itemStart = index * size
@@ -418,6 +461,10 @@ export function fixedVirtualItems({
       end: itemStart + size,
     }
   })
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value))
 }
 
 export function fixedScrollOffset({
@@ -431,10 +478,21 @@ export function fixedScrollOffset({
   viewportSize: number
   align: NonNullable<FixedGridScrollTarget["align"]>
 }) {
+  if (
+    !Number.isFinite(index) ||
+    !Number.isFinite(itemSize) ||
+    !Number.isFinite(viewportSize) ||
+    itemSize <= 0 ||
+    viewportSize < 0
+  ) {
+    return 0
+  }
   const start = index * itemSize
-  if (align === "end") return start - viewportSize + itemSize
-  if (align === "center") return start - viewportSize / 2 + itemSize / 2
-  return start
+  if (align === "end") return Math.max(0, start - viewportSize + itemSize)
+  if (align === "center") {
+    return Math.max(0, start - viewportSize / 2 + itemSize / 2)
+  }
+  return Math.max(0, start)
 }
 
 function fixedGridViewportEqual(

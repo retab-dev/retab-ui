@@ -4,16 +4,16 @@ import * as React from "react"
 import { Download, Maximize, Minus, Plus, RotateCw } from "lucide-react"
 
 import { cn } from "@/lib/utils"
-import { type DownloadCapability } from "@/lib/viewer-resource"
+import { type ViewerDownloadAction } from "@/lib/viewer-download"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
-import { ViewerDownloadAnchor } from "@/components/ui/viewer-download"
+import { ViewerDownloadControl } from "@/components/ui/viewer-download"
 
 export interface ImageViewerToolbarProps {
   countLabel: string
   scale: number
-  download: DownloadCapability
+  downloadAction: ViewerDownloadAction
   isScaleControlled?: boolean
   onZoomOut(): void
   onZoomIn(): void
@@ -24,7 +24,7 @@ export interface ImageViewerToolbarProps {
 export function ImageViewerToolbar({
   countLabel,
   scale,
-  download,
+  downloadAction,
   isScaleControlled = false,
   onZoomOut,
   onZoomIn,
@@ -65,16 +65,7 @@ export function ImageViewerToolbar({
           <RotateCw />
         </ToolbarIconButton>
         <Separator orientation="vertical" className="mx-1 h-4" />
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          className="size-7"
-          aria-label="Download"
-          title="Download"
-          render={<ViewerDownloadAnchor download={download} />}
-        >
-          <Download />
-        </Button>
+        <ViewerDownloadControl actions={[downloadAction]} />
       </div>
     </div>
   )
@@ -104,45 +95,6 @@ export function ImageViewerFallback({
       </div>
     </div>
   )
-}
-
-export class ImageViewerErrorBoundary extends React.Component<
-  { children: React.ReactNode; className?: string; resetKey?: unknown },
-  { error: Error | null }
-> {
-  state: { error: Error | null } = { error: null }
-
-  componentDidUpdate(prev: { resetKey?: unknown }) {
-    if (prev.resetKey !== this.props.resetKey && this.state.error) {
-      this.setState({ error: null })
-    }
-  }
-
-  static getDerivedStateFromError(error: Error) {
-    return { error }
-  }
-
-  componentDidCatch(error: Error) {
-    console.error("ImageViewer failed to render.", error)
-  }
-
-  render() {
-    if (this.state.error) {
-      return (
-        <div
-          className={cn(
-            "flex min-h-64 items-center justify-center rounded-xl border bg-muted/30 p-6 text-center text-sm text-muted-foreground",
-            this.props.className
-          )}
-          data-error-message={this.state.error.message}
-          data-slot="image-viewer-error"
-        >
-          Couldn&apos;t load this image.
-        </div>
-      )
-    }
-    return this.props.children
-  }
 }
 
 function ToolbarIconButton({

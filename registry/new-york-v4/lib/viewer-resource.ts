@@ -1,4 +1,15 @@
 import {
+  createBlobDownloadAction,
+  createHrefDownloadAction,
+  createTextDownloadAction,
+  type ViewerDownloadAction,
+} from "@/lib/viewer-download"
+import {
+  isAbortError,
+  ResourceError,
+  type ResourceTooLargeReason,
+} from "@/lib/viewer-errors"
+import {
   resolveViewerDescriptor,
   type BlobViewerSource,
   type TextSource,
@@ -31,21 +42,29 @@ export interface ByteRangeResult {
   isComplete: boolean
 }
 
-export type DownloadCapability =
-  | { kind: "href"; href: string; fileName: string }
-  | { kind: "blob"; blob: Blob; fileName: string }
-  | { kind: "text"; text: string; fileName: string; mimeType?: string }
-  | { kind: "none"; fileName: string }
+export type DirectLoadCapability =
+  | { kind: "url"; url: string }
+  | { kind: "none" }
+
+export interface ViewerResourceKeys {
+  readonly load: string
+  readonly presentation: string
+  readonly resource: string
+}
 
 export interface ViewerResource {
   readonly source: ViewerSource
   readonly descriptor: ViewerDescriptor
-  readonly cacheKey: string
+  readonly sourceKind: ViewerSource["kind"]
+  readonly keys: ViewerResourceKeys
   readonly identityKey: string
   readonly fileName: string
   readonly mimeType?: string
 
-  getDownload(): DownloadCapability
+  getDirectLoad(): DirectLoadCapability
+  getOriginalDownload(): ViewerDownloadAction
+  getInlineText(): string | null
+  getBlob(): Blob | null
   readBlob(options?: ResourceReadOptions): Promise<Blob>
   readArrayBuffer(options?: ResourceReadOptions): Promise<ArrayBuffer>
   readText(options?: TextReadOptions): Promise<string>
@@ -56,50 +75,8 @@ export interface ViewerResource {
   ): Promise<ByteRangeResult>
 }
 
-export type ResourceErrorKind =
-  | "fetch_failed"
-  | "http_error"
-  | "aborted"
-  | "too_large"
-  | "unsupported_capability"
-  | "unknown"
-
-export type ResourceTooLargeReason = "bytes" | "lines"
-
-export class ResourceError extends Error {
-  readonly kind: ResourceErrorKind
-  readonly status?: number
-  readonly tooLargeReason?: ResourceTooLargeReason
-  override readonly cause?: unknown
-
-  constructor({
-    kind,
-    message,
-    status,
-    tooLargeReason,
-    cause,
-  }: {
-    kind: ResourceErrorKind
-    message: string
-    status?: number
-    tooLargeReason?: ResourceTooLargeReason
-    cause?: unknown
-  }) {
-    super(message)
-    this.name = "ResourceError"
-    this.kind = kind
-    this.status = status
-    this.tooLargeReason = tooLargeReason
-    this.cause = cause
-  }
-}
-
-export interface DescriptorOptions {
-  fileName?: string
-  mimeType?: string
-}
-
 const URL_RESOURCE_REGISTRY_MAX = 128
+const TEXT_LINE_BREAK_PATTERN = /\r\n|\n|\r/g
 
 const urlViewerResourceRegistry = new Map<string, ViewerResource>()
 let blobViewerResourceRegistry = new WeakMap<
@@ -109,20 +86,17 @@ let blobViewerResourceRegistry = new WeakMap<
 const blobObjectKeys = new WeakMap<Blob, string>()
 let nextBlobObjectKey = 0
 
-export function createViewerResource(
-  source: ViewerSource,
-  options: DescriptorOptions = {}
-): ViewerResource {
-  const descriptor = resolveViewerDescriptor({ source, ...options })
-  const cacheKey = viewerResourceCacheKey(source, descriptor)
+export function createViewerResource(source: ViewerSource): ViewerResource {
+  const descriptor = resolveViewerDescriptor({ source })
+  const keys = viewerResourceKeys(source, descriptor)
 
   if (source.kind === "url") {
-    return internUrlResource(source, descriptor, cacheKey)
+    return internUrlResource(source, descriptor, keys)
   }
   if (source.kind === "blob") {
-    return internBlobResource(source, descriptor, cacheKey)
+    return internBlobResource(source, descriptor, keys)
   }
-  return createUncachedViewerResource(source, descriptor, cacheKey)
+  return createUncachedViewerResource(source, descriptor, keys)
 }
 
 export function clearViewerResourceRegistryForTests() {
@@ -133,28 +107,28 @@ export function clearViewerResourceRegistryForTests() {
 function createUncachedViewerResource(
   source: ViewerSource,
   descriptor: ViewerDescriptor,
-  cacheKey: string
+  keys: ViewerResourceKeys
 ): ViewerResource {
   switch (source.kind) {
     case "url":
-      return createUrlResource(source, descriptor, cacheKey)
+      return createUrlResource(source, descriptor, keys)
     case "blob":
-      return createBlobResource(source, descriptor, cacheKey)
+      return createBlobResource(source, descriptor, keys)
     case "text":
-      return createTextResource(source, descriptor, cacheKey)
+      return createTextResource(source, descriptor, keys)
   }
 }
 
 function internUrlResource(
   source: UrlViewerSource,
   descriptor: ViewerDescriptor,
-  cacheKey: string
+  keys: ViewerResourceKeys
 ): ViewerResource {
-  const cached = urlViewerResourceRegistry.get(cacheKey)
+  const cached = urlViewerResourceRegistry.get(keys.resource)
   if (cached) return cached
 
-  const resource = createUrlResource(source, descriptor, cacheKey)
-  urlViewerResourceRegistry.set(cacheKey, resource)
+  const resource = createUrlResource(source, descriptor, keys)
+  urlViewerResourceRegistry.set(keys.resource, resource)
   pruneUrlResourceRegistry()
   return resource
 }
@@ -162,7 +136,7 @@ function internUrlResource(
 function internBlobResource(
   source: BlobViewerSource,
   descriptor: ViewerDescriptor,
-  cacheKey: string
+  keys: ViewerResourceKeys
 ): ViewerResource {
   let resources = blobViewerResourceRegistry.get(source.blob)
   if (!resources) {
@@ -170,11 +144,11 @@ function internBlobResource(
     blobViewerResourceRegistry.set(source.blob, resources)
   }
 
-  const cached = resources.get(cacheKey)
+  const cached = resources.get(keys.resource)
   if (cached) return cached
 
-  const resource = createBlobResource(source, descriptor, cacheKey)
-  resources.set(cacheKey, resource)
+  const resource = createBlobResource(source, descriptor, keys)
+  resources.set(keys.resource, resource)
   return resource
 }
 
@@ -186,21 +160,48 @@ function pruneUrlResourceRegistry() {
   }
 }
 
-function viewerResourceCacheKey(
+function viewerResourceKeys(
+  source: ViewerSource,
+  descriptor: ViewerDescriptor
+): ViewerResourceKeys {
+  const load = viewerResourceLoadKey(source)
+  const presentation = viewerResourcePresentationKey(source, descriptor)
+  return {
+    load,
+    presentation,
+    resource: [load, presentation].join("\u0000"),
+  }
+}
+
+function viewerResourceLoadKey(source: ViewerSource) {
+  return [
+    source.kind,
+    source.identityKey ?? "",
+    directLoadCacheKey(source),
+    payloadCacheKey(source),
+  ].join("\u0000")
+}
+
+function viewerResourcePresentationKey(
   source: ViewerSource,
   descriptor: ViewerDescriptor
 ) {
   return [
-    source.kind,
-    descriptor.identityKey,
     descriptor.category,
     descriptor.displayName,
-    descriptor.downloadFileName,
-    descriptor.downloadHref ?? "",
-    descriptor.loadUrl ?? "",
+    descriptor.fileName,
     descriptor.mimeType ?? "",
-    payloadCacheKey(source),
+    downloadCacheKey(source),
   ].join("\u0000")
+}
+
+function directLoadCacheKey(source: ViewerSource) {
+  return source.kind === "url" ? source.url : ""
+}
+
+function downloadCacheKey(source: ViewerSource) {
+  if (source.kind === "text") return ""
+  return source.downloadUrl ?? ""
 }
 
 function payloadCacheKey(source: ViewerSource) {
@@ -259,14 +260,19 @@ export function blobSource(
 function createUrlResource(
   source: UrlViewerSource,
   descriptor: ViewerDescriptor,
-  cacheKey: string
+  keys: ViewerResourceKeys
 ): ViewerResource {
-  return resourceBase(source, descriptor, cacheKey, {
-    getDownload: () => ({
-      kind: "href",
-      href: source.downloadUrl ?? source.url,
-      fileName: descriptor.downloadFileName,
-    }),
+  return resourceBase(source, descriptor, keys, {
+    getDirectLoad: () => ({ kind: "url", url: source.url }),
+    getOriginalDownload: () =>
+      createHrefDownloadAction({
+        id: "download-original",
+        label: "Download",
+        href: source.downloadUrl ?? source.url,
+        fileName: descriptor.fileName,
+      }),
+    getInlineText: () => null,
+    getBlob: () => null,
     readBlob: async ({ signal } = {}) => {
       const response = await fetchResource(source.url, { signal })
       return response.blob()
@@ -289,16 +295,26 @@ function createUrlResource(
       }
       return response.body
     },
-    readRange: async ({ start, end }, { signal } = {}) => {
+    readRange: async (range, { signal } = {}) => {
+      validateByteRange(range)
+      const { start, end } = range
       const response = await fetchResource(source.url, {
         signal,
         headers: { Range: `bytes=${start}-${end}` },
       })
       const buffer = await response.arrayBuffer()
+      const contentRange = parseContentRange(
+        response.headers.get("content-range")
+      )
       return {
         buffer,
-        contentRange: parseContentRange(response.headers.get("content-range")),
-        isComplete: response.status === 200 || buffer.byteLength <= end - start,
+        contentRange,
+        isComplete: isByteRangeComplete({
+          bufferLength: buffer.byteLength,
+          contentRange,
+          requestedLength: end - start + 1,
+          status: response.status,
+        }),
       }
     },
   })
@@ -307,28 +323,35 @@ function createUrlResource(
 function createBlobResource(
   source: BlobViewerSource,
   descriptor: ViewerDescriptor,
-  cacheKey: string
+  keys: ViewerResourceKeys
 ): ViewerResource {
   const blob = source.blob
-  return resourceBase(source, descriptor, cacheKey, {
-    getDownload: () =>
+  return resourceBase(source, descriptor, keys, {
+    getDirectLoad: () => ({ kind: "none" }),
+    getOriginalDownload: () =>
       source.downloadUrl
-        ? {
-            kind: "href",
+        ? createHrefDownloadAction({
+            id: "download-original",
+            label: "Download",
             href: source.downloadUrl,
-            fileName: descriptor.downloadFileName,
-          }
-        : {
-            kind: "blob",
+            fileName: descriptor.fileName,
+          })
+        : createBlobDownloadAction({
+            id: "download-original",
+            label: "Download",
             blob,
-            fileName: descriptor.downloadFileName,
-          },
+            fileName: descriptor.fileName,
+          }),
+    getInlineText: () => null,
+    getBlob: () => blob,
     readBlob: async () => blob,
     readArrayBuffer: async () => blob.arrayBuffer(),
     readText: async ({ maxBytes, maxLines } = {}) =>
       readBoundedBlobText(blob, { maxBytes, maxLines }),
     stream: async () => blob.stream(),
-    readRange: async ({ start, end }) => {
+    readRange: async (range) => {
+      validateByteRange(range)
+      const { start, end } = range
       const rangeBlob = blob.slice(start, end + 1)
       return {
         buffer: await rangeBlob.arrayBuffer(),
@@ -346,15 +369,20 @@ function createBlobResource(
 function createTextResource(
   source: TextSource,
   descriptor: ViewerDescriptor,
-  cacheKey: string
+  keys: ViewerResourceKeys
 ): ViewerResource {
-  return resourceBase(source, descriptor, cacheKey, {
-    getDownload: () => ({
-      kind: "text",
-      text: source.text,
-      fileName: descriptor.downloadFileName,
-      mimeType: descriptor.mimeType,
-    }),
+  return resourceBase(source, descriptor, keys, {
+    getDirectLoad: () => ({ kind: "none" }),
+    getOriginalDownload: () =>
+      createTextDownloadAction({
+        id: "download-original",
+        label: "Download",
+        text: source.text,
+        fileName: descriptor.fileName,
+        mimeType: descriptor.mimeType,
+      }),
+    getInlineText: () => source.text,
+    getBlob: () => null,
     readBlob: async () =>
       new Blob([source.text], {
         type: descriptor.mimeType ?? "text/plain;charset=utf-8",
@@ -363,7 +391,9 @@ function createTextResource(
     readText: async ({ maxBytes, maxLines } = {}) =>
       readBoundedInlineText(source.text, { maxBytes, maxLines }),
     stream: async () => new Blob([source.text]).stream(),
-    readRange: async ({ start, end }) => {
+    readRange: async (range) => {
+      validateByteRange(range)
+      const { start, end } = range
       const buffer = new TextEncoder().encode(source.text)
       const slice = buffer.slice(start, end + 1)
       return {
@@ -382,10 +412,13 @@ function createTextResource(
 function resourceBase(
   source: ViewerSource,
   descriptor: ViewerDescriptor,
-  cacheKey: string,
+  keys: ViewerResourceKeys,
   methods: Pick<
     ViewerResource,
-    | "getDownload"
+    | "getDirectLoad"
+    | "getOriginalDownload"
+    | "getInlineText"
+    | "getBlob"
     | "readBlob"
     | "readArrayBuffer"
     | "readText"
@@ -396,9 +429,10 @@ function resourceBase(
   return Object.freeze({
     source,
     descriptor,
-    cacheKey,
+    sourceKind: source.kind,
+    keys,
     identityKey: descriptor.identityKey,
-    fileName: descriptor.downloadFileName,
+    fileName: descriptor.fileName,
     mimeType: descriptor.mimeType,
     ...methods,
   })
@@ -441,6 +475,14 @@ async function readBoundedResponseText(
   response: Response,
   bounds: { maxBytes?: number; maxLines?: number }
 ) {
+  if (response.status === 206) {
+    throw new ResourceError({
+      kind: "partial_content",
+      message: "Full text response returned partial content.",
+      status: response.status,
+    })
+  }
+
   const maxBytes = bounds.maxBytes
   const contentLength = response.headers.get("content-length")
   const contentByteLength = contentLength ? Number(contentLength) : null
@@ -464,6 +506,7 @@ async function readBoundedResponseText(
 
   const reader = body.getReader()
   const decoder = new TextDecoder()
+  const lineLimitTracker = createLineLimitTracker(bounds.maxLines)
   let receivedBytes = 0
   let text = ""
 
@@ -475,10 +518,19 @@ async function readBoundedResponseText(
       await reader.cancel()
       throw tooLarge("bytes")
     }
-    text += decoder.decode(value, { stream: true })
+    const chunkText = decoder.decode(value, { stream: true })
+    try {
+      lineLimitTracker.push(chunkText)
+    } catch (error) {
+      await reader.cancel()
+      throw error
+    }
+    text += chunkText
   }
 
-  text += decoder.decode()
+  const finalText = decoder.decode()
+  lineLimitTracker.push(finalText)
+  text += finalText
   return readBoundedInlineText(text, bounds)
 }
 
@@ -502,18 +554,83 @@ function readBoundedInlineText(
   ) {
     throw tooLarge("bytes")
   }
-  if (maxLines != null && text.split("\n").length > maxLines) {
+  if (
+    maxLines != null &&
+    text.split(TEXT_LINE_BREAK_PATTERN).length > maxLines
+  ) {
     throw tooLarge("lines")
   }
   return text
 }
 
-function tooLarge(reason: "bytes" | "lines") {
+function tooLarge(reason: ResourceTooLargeReason) {
   return new ResourceError({
     kind: "too_large",
     tooLargeReason: reason,
     message: `Resource exceeds ${reason} limit.`,
   })
+}
+
+function validateByteRange({ start, end }: ByteRange) {
+  if (
+    !Number.isSafeInteger(start) ||
+    !Number.isSafeInteger(end) ||
+    start < 0 ||
+    end < start
+  ) {
+    throw new ResourceError({
+      kind: "invalid_range",
+      message: "Byte range must use non-negative integer bounds.",
+    })
+  }
+}
+
+function isByteRangeComplete({
+  bufferLength,
+  contentRange,
+  requestedLength,
+  status,
+}: {
+  bufferLength: number
+  contentRange: ByteRangeResult["contentRange"]
+  requestedLength: number
+  status: number
+}) {
+  if (status === 200) return true
+  if (contentRange?.total != null) {
+    if (contentRange.total <= 0) return true
+    return contentRange.end >= contentRange.total - 1
+  }
+  return bufferLength < requestedLength
+}
+
+function createLineLimitTracker(maxLines: number | undefined) {
+  let lineCount = 1
+  let previousWasCR = false
+
+  return {
+    push(text: string) {
+      if (maxLines == null || text.length === 0) return
+
+      for (const character of text) {
+        if (previousWasCR) {
+          previousWasCR = false
+          if (character === "\n") continue
+        }
+
+        if (character === "\r") {
+          lineCount += 1
+          previousWasCR = true
+        } else if (character === "\n") {
+          lineCount += 1
+        }
+
+        if (lineCount > maxLines) {
+          throw tooLarge("lines")
+        }
+      }
+    },
+  }
 }
 
 function parseContentRange(value: string | null) {
@@ -525,8 +642,4 @@ function parseContentRange(value: string | null) {
     end: Number(match[2]),
     total: match[3] === "*" ? null : Number(match[3]),
   }
-}
-
-function isAbortError(error: unknown) {
-  return error instanceof DOMException && error.name === "AbortError"
 }

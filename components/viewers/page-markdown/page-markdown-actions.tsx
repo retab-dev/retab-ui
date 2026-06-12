@@ -13,6 +13,13 @@ import {
 
 type CopyStatus = "idle" | "copied" | "failed"
 
+function scheduleCopyStatusReset(
+  timeoutRef: React.MutableRefObject<number | null>,
+  setStatus: React.Dispatch<React.SetStateAction<CopyStatus>>
+) {
+  timeoutRef.current = window.setTimeout(() => setStatus("idle"), 1200)
+}
+
 export function MarkdownActionButtons({
   text,
   fileName,
@@ -51,7 +58,7 @@ export function MarkdownActionsMenu({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-44">
-        <DropdownMenuItem onSelect={copy.write}>
+        <DropdownMenuItem onClick={copy.write}>
           <Copy />
           {copy.status === "copied"
             ? "Copied"
@@ -59,7 +66,7 @@ export function MarkdownActionsMenu({
               ? "Copy failed"
               : "Copy markdown"}
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => downloadMarkdown(text, fileName)}>
+        <DropdownMenuItem onClick={() => downloadMarkdown(text, fileName)}>
           <Download />
           Download markdown
         </DropdownMenuItem>
@@ -124,22 +131,28 @@ function useCopyMarkdown(text: string) {
   const write = React.useCallback(() => {
     if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current)
 
-    if (!navigator.clipboard) {
+    const writeText = navigator.clipboard?.writeText
+    if (typeof writeText !== "function") {
       setStatus("failed")
-      timeoutRef.current = window.setTimeout(() => setStatus("idle"), 1200)
+      scheduleCopyStatusReset(timeoutRef, setStatus)
       return
     }
 
-    navigator.clipboard.writeText(text).then(
-      () => {
-        setStatus("copied")
-        timeoutRef.current = window.setTimeout(() => setStatus("idle"), 1200)
-      },
-      () => {
-        setStatus("failed")
-        timeoutRef.current = window.setTimeout(() => setStatus("idle"), 1200)
-      }
-    )
+    try {
+      writeText.call(navigator.clipboard, text).then(
+        () => {
+          setStatus("copied")
+          scheduleCopyStatusReset(timeoutRef, setStatus)
+        },
+        () => {
+          setStatus("failed")
+          scheduleCopyStatusReset(timeoutRef, setStatus)
+        }
+      )
+    } catch {
+      setStatus("failed")
+      scheduleCopyStatusReset(timeoutRef, setStatus)
+    }
   }, [text])
 
   return { status, write }
@@ -151,7 +164,17 @@ export function createMarkdownBlob(text: string): Blob {
 
 export function normalizeMarkdownFileName(fileName?: string): string {
   const trimmed = fileName?.trim()
-  return trimmed ? trimmed : "document.md"
+  if (!trimmed) return "document.md"
+  if (/\.(?:md|markdown)$/i.test(trimmed)) return trimmed
+
+  const slashIndex = Math.max(
+    trimmed.lastIndexOf("/"),
+    trimmed.lastIndexOf("\\")
+  )
+  const dotIndex = trimmed.lastIndexOf(".")
+  if (dotIndex > slashIndex + 1) return `${trimmed.slice(0, dotIndex)}.md`
+
+  return `${trimmed}.md`
 }
 
 export function downloadMarkdown(text: string, fileName?: string) {

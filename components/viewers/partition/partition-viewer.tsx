@@ -48,16 +48,10 @@ export function PartitionViewer({
 
   const pageCount = useMemo(() => {
     if (!result) return 0
-    const lastPage = (chunks: PartitionChunk[]) =>
-      chunks.reduce(
-        (max, c) =>
-          Math.max(max, c.pages.length ? c.pages[c.pages.length - 1] : 0),
-        0
-      )
-    return Math.max(
-      lastPage(result.output),
-      voteChoices.reduce((m, chunks) => Math.max(m, lastPage(chunks)), 0)
-    )
+    return maxChunkPage([
+      ...result.output,
+      ...voteChoices.flatMap((chunks) => chunks),
+    ])
   }, [result, voteChoices])
 
   const { legendSegments, rows } = useMemo(() => {
@@ -70,7 +64,7 @@ export function PartitionViewer({
     const seg = (c: PartitionChunk): Segment => ({
       id: c.key,
       label: c.key,
-      pages: [...c.pages].sort((a, b) => a - b),
+      pages: normalizePages(c.pages),
       color: colors.get(c.key) ?? "var(--color-muted-foreground)",
       index: 0,
     })
@@ -80,7 +74,10 @@ export function PartitionViewer({
       legendByKey.set(
         c.key,
         existing
-          ? { ...existing, pages: [...existing.pages, ...c.pages] }
+          ? {
+              ...existing,
+              pages: normalizePages([...existing.pages, ...c.pages]),
+            }
           : seg(c)
       )
     }
@@ -175,4 +172,20 @@ export function PartitionViewer({
       )}
     </div>
   )
+}
+
+function normalizePages(pages: number[]): number[] {
+  return Array.from(
+    new Set((pages ?? []).filter((page) => Number.isInteger(page) && page > 0))
+  ).sort((a, b) => a - b)
+}
+
+function maxChunkPage(chunks: PartitionChunk[]): number {
+  let max = 0
+  for (const chunk of chunks) {
+    for (const page of normalizePages(chunk.pages)) {
+      max = Math.max(max, page)
+    }
+  }
+  return max
 }

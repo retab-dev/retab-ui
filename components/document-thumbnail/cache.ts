@@ -1,3 +1,5 @@
+import type { ViewerResource } from "@/lib/viewer-resource"
+
 // ---------------------------------------------------------------------------
 // Concurrency gate — every renderer parses a heavy library and does synchronous
 // CPU work (UTIF decode, XLSX parse, canvas paint), all on the main thread. A
@@ -28,7 +30,9 @@ function acquireDecodeSlot(): Promise<() => void> {
 }
 
 /** Run `fn` once a decode slot is free, always releasing it afterward. */
-export async function withDecodeSlot<T>(fn: () => Promise<T>): Promise<T> {
+export async function withThumbnailDecodeSlot<T>(
+  fn: () => Promise<T>
+): Promise<T> {
   const release = await acquireDecodeSlot()
   try {
     return await fn()
@@ -53,13 +57,14 @@ export async function timed<T>(
   try {
     return await fn()
   } finally {
-    // eslint-disable-next-line no-console
     console.log(`[thumb] ${label} ${(performance.now() - t0).toFixed(1)}ms`)
   }
 }
 
-export function shortName(src: string): string {
-  return src.split("/").pop() ?? src
+export const timedThumbnail = timed
+
+export function shortName(resource: ViewerResource): string {
+  return resource.fileName
 }
 
 // A thumbnail only shows the head of a text document, so cap the download with
@@ -67,19 +72,105 @@ export function shortName(src: string): string {
 // ignore Range just return the whole body (200), which still works.
 const TEXT_HEAD_BYTES = 64 * 1024
 
-const textCache = new Map<string, Promise<string>>()
+export interface ThumbnailCacheEntry<T> {
+  promise: Promise<T>
+  status: "pending" | "fulfilled" | "rejected"
+}
 
-export function getText(src: string, resourceKey = src): Promise<string> {
-  let promise = textCache.get(resourceKey)
-  if (!promise) {
-    promise = timed(`text:fetch ${shortName(src)}`, async () => {
-      const res = await fetch(src, {
-        headers: { Range: `bytes=0-${TEXT_HEAD_BYTES - 1}` },
-      })
-      if (!res.ok) throw new Error(`Failed to load ${src}: ${res.status}`)
-      return res.text()
-    })
-    textCache.set(resourceKey, promise)
+const textCache = new Map<string, ThumbnailCacheEntry<string>>()
+
+export function cachedThumbnailResource<T>(
+  cache: Map<string, ThumbnailCacheEntry<T>>,
+  key: string,
+  load: () => Promise<T>
+): Promise<T> {
+  const cached = cache.get(key)
+  if (cached) {
+    if (cached.status === "rejected") {
+      cache.delete(key)
+    }
+    return cached.promise
   }
-  return promise
+
+  const entry: ThumbnailCacheEntry<T> = {
+    status: "pending",
+    promise: load().then(
+      (value) => {
+        entry.status = "fulfilled"
+        return value
+      },
+      (error) => {
+        entry.status = "rejected"
+        throw error
+      }
+    ),
+  }
+  cache.set(key, entry)
+  return entry.promise
+}
+
+export function getThumbnailText(
+  resource: ViewerResource,
+  cacheKey: string
+): Promise<string> {
+  return cachedThumbnailResource(textCache, cacheKey, () =>
+    timed(`text:fetch ${shortName(resource)}`, async () => {
+      if (resource.source.kind === "url") {
+        const range = await resource.readRange({
+          start: 0,
+          end: TEXT_HEAD_BYTES - 1,
+        })
+        return new TextDecoder().decode(range.buffer)
+      }
+      return resource.readText({ maxBytes: TEXT_HEAD_BYTES })
+    })
+  )
+}
+
+export function useThumbnailResource<T>(promise: Promise<T>): T {
+  const record = getThumbnailResourceRecord(promise)
+  if (record.status === "pending") throw record.promise
+  if (record.status === "rejected") throw record.error
+  return record.value as T
+}
+
+const thumbnailResourceRecords = new WeakMap<
+  Promise<unknown>,
+  ThumbnailResourceRecord<unknown>
+>()
+
+function getThumbnailResourceRecord<T>(
+  promise: Promise<T>
+): ThumbnailResourceRecord<T> {
+  const cached = thumbnailResourceRecords.get(promise) as
+    | ThumbnailResourceRecord<T>
+    | undefined
+  if (cached) return cached
+
+  const record: ThumbnailResourceRecord<T> = {
+    promise,
+    status: "pending",
+  }
+  promise.then(
+    (value) => {
+      record.status = "fulfilled"
+      record.value = value
+    },
+    (error) => {
+      record.status = "rejected"
+      record.error = error
+    }
+  )
+  thumbnailResourceRecords.set(
+    promise,
+    record as ThumbnailResourceRecord<unknown>
+  )
+  return record
+}
+
+interface ThumbnailResourceRecord<T> {
+  promise: Promise<T>
+  status: "pending" | "fulfilled" | "rejected"
+  value?: T
+  error?: unknown
 }

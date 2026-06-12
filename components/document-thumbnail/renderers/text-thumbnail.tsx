@@ -2,18 +2,22 @@
 
 import * as React from "react"
 
-import { getText } from "@/components/document-thumbnail/cache"
+import type { ViewerResource } from "@/lib/viewer-resource"
+import {
+  getThumbnailText,
+  useThumbnailResource,
+} from "@/components/document-thumbnail/cache"
 
 export function TextFirstLines({
-  src,
-  resourceKey,
+  resource,
+  cacheKey,
 }: {
-  src: string
-  resourceKey: string
+  resource: ViewerResource
+  cacheKey: string
 }) {
-  const raw = React.use(getText(src, resourceKey))
+  const raw = useThumbnailResource(getThumbnailText(resource, cacheKey))
   const text = React.useMemo(() => {
-    if (/\.(json|json5|ndjson|jsonl)$/i.test(src)) {
+    if (/\.(json|json5|ndjson|jsonl)$/i.test(resource.fileName)) {
       try {
         return JSON.stringify(JSON.parse(raw), null, 2)
       } catch {
@@ -21,7 +25,7 @@ export function TextFirstLines({
       }
     }
     return raw
-  }, [raw, src])
+  }, [raw, resource.fileName])
 
   const lines = React.useMemo(
     () => text.replace(/\n$/, "").split("\n").slice(0, 60),
@@ -29,15 +33,21 @@ export function TextFirstLines({
   )
 
   return (
-    <div className="bg-card absolute inset-0 overflow-hidden">
-      <div aria-hidden className="absolute inset-y-0 left-0 w-2.5 bg-slate-50" />
-      <div className="relative font-mono" style={{ fontSize: 5, lineHeight: 1.5 }}>
+    <div className="absolute inset-0 overflow-hidden bg-card">
+      <div
+        aria-hidden
+        className="absolute inset-y-0 left-0 w-2.5 bg-slate-50"
+      />
+      <div
+        className="relative font-mono"
+        style={{ fontSize: 5, lineHeight: 1.5 }}
+      >
         {lines.map((line, i) => (
           <div key={i} className="flex">
             <span className="w-2.5 shrink-0 pr-px text-right text-slate-300 select-none">
               {i + 1}
             </span>
-            <span className="text-foreground/80 whitespace-pre pl-0.5">
+            <span className="pl-0.5 whitespace-pre text-foreground/80">
               {line || " "}
             </span>
           </div>

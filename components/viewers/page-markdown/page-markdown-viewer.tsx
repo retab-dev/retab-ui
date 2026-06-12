@@ -33,7 +33,7 @@ export function PageMarkdownViewer({
   isProcessing = false,
   renderDocument,
   onVisiblePageChange,
-  downloadFileName = "document.md",
+  fileName = "document.md",
   processingLabel = "Preparing document...",
 }: PageMarkdownViewerProps) {
   const hasPages = pages.length > 0
@@ -53,9 +53,22 @@ export function PageMarkdownViewer({
     page: number
   } | null>(null)
 
-  const handleDocumentPageChange = React.useCallback((page: number) => {
-    setDocumentPageReport({ page })
-  }, [])
+  const handleDocumentPageChange = React.useCallback(
+    (page: number) => {
+      const normalizedPage = Number.isFinite(page) ? Math.floor(page) : 1
+      const pageCount = Math.max(1, pages.length)
+      setDocumentPageReport({
+        page: Math.min(pageCount, Math.max(1, normalizedPage)),
+      })
+    },
+    [pages.length]
+  )
+  const handleDocumentScrollProgressChange = React.useCallback(
+    (progress: number) => {
+      void progress
+    },
+    []
+  )
 
   React.useEffect(() => {
     if (!documentPageReport) return
@@ -95,7 +108,7 @@ export function PageMarkdownViewer({
       mode={mode}
       scale={scale}
       currentPage={currentPage}
-      downloadFileName={downloadFileName}
+      fileName={fileName}
       onModeChange={setMode}
       onZoom={(factor) => setManualScale(zoomPageScale(scale, factor))}
       onFitWidth={() => setManualScale(null)}
@@ -115,6 +128,7 @@ export function PageMarkdownViewer({
           ref={documentPaneRef}
           renderDocument={renderDocument}
           onCurrentPageChange={handleDocumentPageChange}
+          onScrollProgressChange={handleDocumentScrollProgressChange}
         />
       </ResizablePanel>
       <ResizableHandle withHandle />

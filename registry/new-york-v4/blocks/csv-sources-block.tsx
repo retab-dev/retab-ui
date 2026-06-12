@@ -42,14 +42,18 @@ const SOURCES: SourceMap = Object.fromEntries(
 export function CsvSourcesBlock() {
   const viewerRef = React.useRef<CsvViewerHandle>(null)
   const target = useCsvSourceTarget(viewerRef)
-  const link = useSourceLink({ sources: SOURCES, target, initialField: FIELDS[0]?.key })
+  const link = useSourceLink({
+    sources: SOURCES,
+    target,
+    initialField: FIELDS[0]?.key,
+  })
 
   return (
     <div className="flex h-full min-h-[680px] bg-background">
       <div className="relative min-w-0 flex-1">
         <CsvViewer
           ref={viewerRef}
-          value={CSV_TEXT}
+          source={{ kind: "text", text: CSV_TEXT, fileName: "sales.csv" }}
           fillHeight
           className="h-full rounded-none border-0"
           activeCell={sourceToCsvCell(link.activeSource)}

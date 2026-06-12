@@ -32,13 +32,21 @@ export function usePdfPageVirtualization({
         : nextPageNumbers
     )
   }, [layout, viewportElement])
+  const measureVisiblePagesNowRef = React.useRef(measureVisiblePagesNow)
+  measureVisiblePagesNowRef.current = measureVisiblePagesNow
 
   const measureVisiblePages = React.useCallback(() => {
     if (measureFrameRef.current) return
-    measureFrameRef.current = requestAnimationFrame(measureVisiblePagesNow)
-  }, [measureVisiblePagesNow])
+    measureFrameRef.current = requestAnimationFrame(() =>
+      measureVisiblePagesNowRef.current()
+    )
+  }, [])
 
   React.useEffect(() => {
+    if (measureFrameRef.current) {
+      cancelAnimationFrame(measureFrameRef.current)
+      measureFrameRef.current = 0
+    }
     measureVisiblePagesNow()
   }, [measureVisiblePagesNow])
 

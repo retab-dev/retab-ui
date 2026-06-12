@@ -7,6 +7,12 @@ import {
   type CsvDialect,
   type CsvStreamSource,
 } from "@/lib/csv"
+import {
+  isAbortError,
+  isResourceError,
+  ResourceError,
+  ViewerFormatError,
+} from "@/lib/viewer-errors"
 
 import {
   resolveCsvResource,
@@ -19,13 +25,6 @@ const CSV_STREAM_BATCH_SIZE = 5000
 
 export type CsvCellAddress = GridCellCoordinate
 
-export type CsvViewerError =
-  | { kind: "fetch"; status?: number }
-  | { kind: "decode" }
-  | { kind: "worker" }
-  | { kind: "aborted" }
-  | { kind: "unknown"; message?: string }
-
 export type CsvResourceState =
   | { status: "idle"; columns: string[]; sourceRows: string[][] }
   | { status: "loading"; columns: string[]; sourceRows: string[][] }
@@ -35,28 +34,8 @@ export type CsvResourceState =
       status: "error"
       columns: string[]
       sourceRows: string[][]
-      error: CsvViewerError
+      error: unknown
     }
-
-export function getCsvErrorMessage(error: CsvViewerError): string {
-  if (error.kind === "fetch") {
-    return error.status
-      ? `Failed to load file: ${error.status}`
-      : "Couldn't load this file."
-  }
-  if (error.kind === "decode") return "Couldn't decode this file."
-  if (error.kind === "worker") return "Couldn't parse this file."
-  if (error.kind === "aborted") return "Loading was cancelled."
-  return error.message || "Couldn't load this file."
-}
-
-export function unknownToCsvError(error: unknown): CsvViewerError {
-  if (error instanceof DOMException && error.name === "AbortError") {
-    return { kind: "aborted" }
-  }
-  if (error instanceof Error) return { kind: "unknown", message: error.message }
-  return { kind: "unknown", message: String(error) }
-}
 
 export function readyCsvState(
   columns: string[],
@@ -68,27 +47,24 @@ export function readyCsvState(
 }
 
 export function useCsvResourceState({
-  src,
-  value,
   source,
-  data,
+  resource,
   dialect,
+  retryVersion = 0,
 }: CsvResourceInput & {
   dialect: CsvDialect
+  retryVersion?: number
 }): CsvResourceState {
   const csvResource = React.useMemo(
-    () => resolveCsvResource({ src, source, value, data }),
-    [data, source, src, value]
+    () => resolveCsvResource({ source, resource }),
+    [source, resource]
   )
   const syncState = React.useMemo<CsvResourceState | null>(() => {
-    if (csvResource.kind === "data") {
-      return readyCsvState(
-        csvResource.csvTable.columns,
-        csvResource.csvTable.rows
-      )
+    if (csvResource.kind === "table") {
+      return readyCsvState(csvResource.table.columns, csvResource.table.rows)
     }
-    if (csvResource.kind === "value") {
-      const table = parseCsv(csvResource.value, dialect)
+    if (csvResource.kind === "text") {
+      const table = parseCsv(csvResource.text, dialect)
       return readyCsvState(table.columns, table.rows)
     }
     if (csvResource.kind === "empty") {
@@ -104,7 +80,7 @@ export function useCsvResourceState({
   })
 
   React.useEffect(() => {
-    if (csvResource.kind !== "src" && csvResource.kind !== "source") return
+    if (csvResource.kind !== "resource") return
 
     const controller = new AbortController()
     const sourceRows: string[][] = []
@@ -136,7 +112,7 @@ export function useCsvResourceState({
         status: "error",
         columns,
         sourceRows: sourceRows.slice(),
-        error: unknownToCsvError(error),
+        error: normalizeCsvError(error),
       })
     }
 
@@ -153,54 +129,77 @@ export function useCsvResourceState({
       )
     }
 
-    const runSrc = async () => {
-      if (csvResource.kind !== "src") return
+    const runResource = async () => {
+      if (csvResource.kind !== "resource") return
       try {
-        const response = await fetch(csvResource.src, {
-          signal: controller.signal,
-        })
-        if (!response.ok) {
-          setState({
-            status: "error",
-            columns,
-            sourceRows: sourceRows.slice(),
-            error: { kind: "fetch", status: response.status },
-          })
+        if (csvResource.resource.sourceKind === "blob") {
+          const blob = csvResource.resource.source.blob
+          if (typeof Worker !== "undefined") {
+            void parseCsvInWorker({
+              source: blob,
+              dialect,
+              batchSize: CSV_STREAM_BATCH_SIZE,
+              onColumns,
+              onSourceRows,
+              signal: controller.signal,
+            }).then(onDone, (error) => {
+              if (
+                error instanceof Error &&
+                error.message === "worker-unavailable"
+              ) {
+                runMainThread(blob)
+              } else {
+                onError(error)
+              }
+            })
+            return
+          }
+
+          runMainThread(blob)
           return
         }
-        if (response.body) runMainThread(response.body)
-        else runMainThread(await response.blob())
+
+        if (csvResource.resource.stream) {
+          runMainThread(
+            await csvResource.resource.stream({
+              signal: controller.signal,
+            })
+          )
+          return
+        }
+
+        runMainThread(
+          await csvResource.resource.readBlob({ signal: controller.signal })
+        )
       } catch (error) {
         onError(error)
       }
     }
 
-    if (csvResource.kind === "src") {
-      void runSrc()
-    } else if (typeof Worker !== "undefined") {
-      void parseCsvInWorker({
-        source: csvResource.source,
-        dialect,
-        batchSize: CSV_STREAM_BATCH_SIZE,
-        onColumns,
-        onSourceRows,
-        signal: controller.signal,
-      }).then(onDone, (error) => {
-        if (error instanceof Error && error.message === "worker-unavailable") {
-          runMainThread(csvResource.source)
-        } else {
-          onError(error)
-        }
-      })
-    } else {
-      runMainThread(csvResource.source)
-    }
+    void runResource()
 
     return () => {
       cancelled = true
       controller.abort()
     }
-  }, [csvResource, dialect])
+  }, [csvResource, dialect, retryVersion])
 
   return syncState ?? state
+}
+
+function normalizeCsvError(error: unknown) {
+  if (isResourceError(error)) return error
+  if (isAbortError(error)) {
+    return new ResourceError({
+      kind: "aborted",
+      message: "Loading was cancelled.",
+      cause: error,
+    })
+  }
+  return new ViewerFormatError({
+    format: "csv",
+    kind: "parse_failed",
+    message: "Failed to parse CSV.",
+    cause: error,
+  })
 }

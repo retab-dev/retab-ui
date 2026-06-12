@@ -7,10 +7,10 @@ import type { SourceTarget } from "@/hooks/use-source-link"
 import type { XlsxViewerHandle } from "@/components/ui/xlsx-viewer"
 
 /** Spreadsheet column letter → 0-based index ("A" → 0, "B" → 1, "AA" → 26). */
-export function spreadsheetColumnToIndex(letter: string): number {
+export function spreadsheetColumnToIndex(letter: string): number | null {
+  if (!/^[A-Za-z]+$/.test(letter)) return null
   let n = 0
   for (const ch of letter.toUpperCase()) {
-    if (ch < "A" || ch > "Z") continue
     n = n * 26 + (ch.charCodeAt(0) - 64)
   }
   return n - 1
@@ -24,10 +24,20 @@ export function spreadsheetAnchorToCell(
   anchor: SourceAnchor
 ): { sheet: number; row: number; col: number } | undefined {
   if (anchor.kind === "spreadsheet_cell") {
+    const col = spreadsheetColumnToIndex(anchor.column)
+    if (
+      col == null ||
+      !Number.isInteger(anchor.sheet_index) ||
+      anchor.sheet_index < 0 ||
+      !Number.isInteger(anchor.row) ||
+      anchor.row < 1
+    ) {
+      return undefined
+    }
     return {
       sheet: anchor.sheet_index,
       row: anchor.row - 1,
-      col: spreadsheetColumnToIndex(anchor.column),
+      col,
     }
   }
   return undefined

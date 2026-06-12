@@ -20,7 +20,7 @@ export function PageMarkdownToolbar({
   mode,
   scale,
   text,
-  downloadFileName,
+  fileName,
   onModeChange,
   onZoom,
   onFitWidth,
@@ -30,7 +30,7 @@ export function PageMarkdownToolbar({
   mode: PageMarkdownViewMode
   scale: number
   text: string
-  downloadFileName: string
+  fileName: string
   onModeChange: (mode: PageMarkdownViewMode) => void
   onZoom: (factor: number) => void
   onFitWidth: () => void
@@ -65,9 +65,9 @@ export function PageMarkdownToolbar({
         </ToolbarIconButton>
         <Separator orientation="vertical" className="mx-1 h-4" />
         {isCompact ? (
-          <MarkdownActionsMenu text={text} fileName={downloadFileName} />
+          <MarkdownActionsMenu text={text} fileName={fileName} />
         ) : (
-          <MarkdownActionButtons text={text} fileName={downloadFileName} />
+          <MarkdownActionButtons text={text} fileName={fileName} />
         )}
       </div>
     </div>

@@ -697,6 +697,26 @@
           "path": "registry/new-york-v4/ui/docx-viewer.tsx",
           "type": "registry:ui",
           "target": "@ui/docx-viewer.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/docx-viewer-resource.ts",
+          "type": "registry:ui",
+          "target": "@ui/docx-viewer-resource.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/viewer-download.tsx",
+          "type": "registry:ui",
+          "target": "@ui/viewer-download.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/lib/viewer-source.ts",
+          "type": "registry:lib",
+          "target": "@lib/viewer-source.ts"
+        },
+        {
+          "path": "registry/new-york-v4/lib/viewer-resource.ts",
+          "type": "registry:lib",
+          "target": "@lib/viewer-resource.ts"
         }
       ]
     },
@@ -869,11 +889,6 @@
           "path": "registry/new-york-v4/ui/pptx-viewer-fallback.tsx",
           "type": "registry:ui",
           "target": "@ui/pptx-viewer-fallback.tsx"
-        },
-        {
-          "path": "registry/new-york-v4/ui/pptx-viewer-error-boundary.tsx",
-          "type": "registry:ui",
-          "target": "@ui/pptx-viewer-error-boundary.tsx"
         }
       ]
     },

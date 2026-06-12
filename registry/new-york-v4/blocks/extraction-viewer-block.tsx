@@ -56,7 +56,7 @@ import xlsxSample from "@/components/viewers/sample-data/xlsx-sources.json"
 
 // ── Sample sources, one per file format ───────────────────────────────────────
 
-const PDF_URL = "/samples/bank-statement-x4uhhi7t.pdf"
+const PDF_URL = "/samples/jane-doe-bank-statement-5-pages.pdf"
 const IMAGE_URL = "/samples/attention-page-1.png"
 const TEXT_URL = "/samples/extraction-run.log"
 const XLSX_URL = "/samples/nvidia-financials-fy2024.xlsx"
@@ -186,7 +186,7 @@ function PdfTab() {
         source={{
           kind: "url",
           url: PDF_URL,
-          fileName: "bank-statement.pdf",
+          fileName: "jane-doe-bank-statement-5-pages.pdf",
         }}
         bare
         className="h-full"
@@ -246,7 +246,7 @@ function CsvTab() {
     <ExtractionShell link={link} extraction={CSV_EXTRACTION}>
       <CsvViewer
         ref={viewerRef}
-        value={CSV_TEXT}
+        source={{ kind: "text", text: CSV_TEXT, fileName: "sales.csv" }}
         fillHeight
         className="h-full rounded-none border-0"
         activeCell={sourceToCsvCell(link.activeSource)}
@@ -263,9 +263,12 @@ function ExcelTab() {
     <ExtractionShell link={link} extraction={XLSX_EXTRACTION}>
       <XlsxViewer
         ref={viewerRef}
-        src={XLSX_URL}
+        source={{
+          kind: "url",
+          url: XLSX_URL,
+          fileName: "nvidia-financials-fy2024.xlsx",
+        }}
         bare
-        downloadFileName="nvidia-financials-fy2024.xlsx"
         className="h-full"
         activeCell={sourceToXlsxCell(link.activeSource)}
       />
@@ -281,9 +284,12 @@ function DocxTab() {
     <ExtractionShell link={link} extraction={DOCX_EXTRACTION}>
       <DocxViewer
         ref={viewerRef}
-        src={DOCX_URL}
+        source={{
+          kind: "url",
+          url: DOCX_URL,
+          fileName: "quarterly-business-review.docx",
+        }}
         bare
-        downloadFileName="quarterly-business-review.docx"
         className="h-full"
         highlight={sourceToDocxHighlight(link.activeSource)}
       />

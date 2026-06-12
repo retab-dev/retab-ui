@@ -18,6 +18,7 @@ export function imageAnchorToArea(
   anchor: SourceAnchor
 ): SourceArea | undefined {
   if (anchor.kind === "image_bbox" || anchor.kind === "pdf_bbox") {
+    if (!isValidNormalizedBox(anchor)) return undefined
     return {
       left: anchor.left * 100,
       top: anchor.top * 100,
@@ -34,9 +35,43 @@ export function imageAnchorToArea(
  * a rasterized slide deck) sets `page` explicitly.
  */
 export function imageAnchorToFrame(anchor: SourceAnchor): number | undefined {
-  if (anchor.kind === "image_bbox") return anchor.page ?? 1
-  if (anchor.kind === "pdf_bbox") return anchor.page
+  if (anchor.kind === "image_bbox") {
+    const frame = anchor.page ?? 1
+    return isPositiveInteger(frame) ? frame : undefined
+  }
+  if (anchor.kind === "pdf_bbox") {
+    return isPositiveInteger(anchor.page) ? anchor.page : undefined
+  }
   return undefined
+}
+
+function isPositiveInteger(value: number): boolean {
+  return Number.isInteger(value) && value >= 1
+}
+
+function isValidNormalizedBox({
+  left,
+  top,
+  width,
+  height,
+}: {
+  left: number
+  top: number
+  width: number
+  height: number
+}): boolean {
+  return (
+    Number.isFinite(left) &&
+    Number.isFinite(top) &&
+    Number.isFinite(width) &&
+    Number.isFinite(height) &&
+    left >= 0 &&
+    top >= 0 &&
+    width > 0 &&
+    height > 0 &&
+    left + width <= 1 &&
+    top + height <= 1
+  )
 }
 
 export function rotateImageArea(

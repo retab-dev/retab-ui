@@ -40,7 +40,6 @@ export interface ImageViewerProps {
   /** Fixed scale; when omitted the viewer fits frame width to the container. */
   scale?: number
   toolbar?: boolean
-  downloadFileName?: string
   /** Render absolutely-positioned overlays (e.g. bbox citations) on each frame. */
   renderFrameOverlay?: (props: ImageFrameOverlayProps) => React.ReactNode
   /** Fired with the 1-based frame nearest the top of the viewport as you scroll. */

@@ -3,10 +3,13 @@
 import * as React from "react"
 import type * as DocxPreview from "docx-preview"
 
+import type { ViewerResource } from "@/lib/viewer-resource"
+import { getDocxResource } from "@/components/ui/docx-viewer"
 import {
   shortName,
   timed,
-  withDecodeSlot,
+  useThumbnailResource,
+  withThumbnailDecodeSlot,
 } from "@/components/document-thumbnail/cache"
 import {
   Surface,
@@ -19,40 +22,18 @@ function loadDocxPreview() {
   return docxLib
 }
 
-const docxCache = new Map<string, Promise<ArrayBuffer>>()
-
-function getDocxBytes(src: string, resourceKey = src): Promise<ArrayBuffer> {
-  let promise = docxCache.get(resourceKey)
-  if (!promise) {
-    promise = timed(`docx:fetch ${shortName(src)}`, () =>
-      fetch(src).then((res) => {
-        if (!res.ok) throw new Error(`Failed to load DOCX: ${res.status}`)
-        return res.arrayBuffer()
-      })
-    )
-    docxCache.set(resourceKey, promise)
-  }
-  return promise
-}
-
 const DOCX_PAGE_W = 816 // US Letter at 96dpi
 
-export function DocxFirstPage({
-  src,
-  resourceKey,
-}: {
-  src: string
-  resourceKey: string
-}) {
-  const bytes = React.use(getDocxBytes(src, resourceKey))
+export function DocxFirstPage({ resource }: { resource: ViewerResource }) {
+  const bytes = useThumbnailResource(getDocxResource(resource))
   const { ref: frameRef, width: frameWidth } = useElementWidth()
 
   const renderRef = React.useCallback(
     (el: HTMLDivElement | null) => {
       if (!el) return
       let active = true
-      void withDecodeSlot(() =>
-        timed(`docx:render ${shortName(src)}`, async () => {
+      void withThumbnailDecodeSlot(() =>
+        timed(`docx:render ${shortName(resource)}`, async () => {
           if (!active) return
           const docx = await loadDocxPreview()
           if (!active) return
@@ -69,7 +50,7 @@ export function DocxFirstPage({
         active = false
       }
     },
-    [bytes, src]
+    [bytes, resource]
   )
 
   const scale = frameWidth ? frameWidth / DOCX_PAGE_W : null
