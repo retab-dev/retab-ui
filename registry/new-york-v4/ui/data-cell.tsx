@@ -1,8 +1,6 @@
 "use client"
 
 import * as React from "react"
-import { CheckIcon } from "lucide-react"
-
 import { cn } from "@/lib/utils"
 
 export type DataCellKind =
@@ -54,11 +52,11 @@ const dataCellDisplayClass =
 const dataCellInputClass =
   "h-8 w-full min-w-0 rounded-md border border-transparent bg-transparent px-2 text-sm text-foreground shadow-none transition-colors outline-none hover:border-border hover:bg-background focus-visible:border-ring focus-visible:bg-background focus-visible:ring-1 focus-visible:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-60"
 
-const dataCellCheckboxDisplayClass =
-  "peer border-input dark:bg-input/30 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground dark:data-[state=checked]:bg-primary data-[state=checked]:border-primary focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive size-4 shrink-0 rounded-[4px] border shadow-xs transition-shadow outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50"
+const dataCellSwitchClass =
+  "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-transparent bg-input shadow-xs transition-colors outline-none data-[state=checked]:bg-primary disabled:cursor-not-allowed disabled:opacity-50 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
 
-const dataCellCheckboxInputClass =
-  "border-input bg-background text-primary accent-primary focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive size-4 shrink-0 rounded-[4px] border shadow-xs transition-shadow outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50"
+const dataCellSwitchThumbClass =
+  "pointer-events-none block size-4 rounded-full bg-background shadow-sm ring-0 transition-transform data-[state=checked]:translate-x-4 data-[state=unchecked]:translate-x-0.5"
 
 export function DataCell({
   mode,
@@ -130,7 +128,20 @@ function InteractiveDataCell({
       onMouseLeave={onMouseLeave}
       onClick={(event) => {
         onClick?.(event)
-        if (!event.defaultPrevented) setIsEditing(true)
+        if (event.defaultPrevented) return
+
+        if (props.kind === "boolean") {
+          const nextValue = !Boolean(props.value)
+          props.onValueCommit?.(nextValue, {
+            kind: props.kind,
+            rawValue: String(nextValue),
+            isEmpty: false,
+            isValid: true,
+          })
+          return
+        }
+
+        setIsEditing(true)
       }}
     />
   )
@@ -175,6 +186,8 @@ function DataCellEdit({
   }, [draftValue, kind, value])
 
   if (kind === "boolean") {
+    const checked = Boolean(value)
+
     return (
       <div
         {...props}
@@ -183,22 +196,28 @@ function DataCellEdit({
         data-mode="edit"
         className={cn(dataCellDisplayClass, "justify-center px-1", className)}
       >
-        <input
-          type="checkbox"
+        <button
+          type="button"
+          role="switch"
           name={name}
-          checked={Boolean(value)}
-          data-state={Boolean(value) ? "checked" : "unchecked"}
+          aria-checked={checked}
+          aria-label={checked ? "true" : "false"}
+          data-state={checked ? "checked" : "unchecked"}
           disabled={disabled}
           autoFocus={autoFocus}
-          className={dataCellCheckboxInputClass}
-          onChange={(event) =>
-            onValueCommit?.(event.currentTarget.checked, {
+          className={dataCellSwitchClass}
+          onClick={(event) => {
+            event.stopPropagation()
+            if (disabled) return
+            const nextValue = !checked
+            onValueCommit?.(nextValue, {
               kind,
-              rawValue: String(event.currentTarget.checked),
+              rawValue: String(nextValue),
               isEmpty: false,
               isValid: true,
             })
-          }
+            onClick?.(event)
+          }}
           onFocus={(event) => {
             onInputFocusChange?.(true)
             onFocus?.(event)
@@ -208,13 +227,15 @@ function DataCellEdit({
             onInputEditingEnd?.()
             onBlur?.(event)
           }}
-          onClick={(event) => {
-            event.stopPropagation()
-            onClick?.(event)
-          }}
           onKeyDown={onKeyDown}
           onDoubleClick={onDoubleClick}
-        />
+        >
+          <span
+            data-slot="switch-thumb"
+            data-state={checked ? "checked" : "unchecked"}
+            className={dataCellSwitchThumbClass}
+          />
+        </button>
       </div>
     )
   }
@@ -237,7 +258,7 @@ function DataCellEdit({
       className={cn(
         dataCellInputClass,
         (kind === "number" || kind === "integer") &&
-          "[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
+          "text-right tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
         className
       )}
       onChange={(event) => {
@@ -313,6 +334,8 @@ function DataCellDisplay({
   ...props
 }: DataCellProps) {
   if (kind === "boolean") {
+    const checked = Boolean(value)
+
     return (
       <div
         {...props}
@@ -328,24 +351,18 @@ function DataCellDisplay({
         )}
       >
         <span
-          role="checkbox"
-          data-slot="checkbox"
-          data-state={Boolean(value) ? "checked" : "unchecked"}
-          aria-checked={Boolean(value)}
-          aria-label={Boolean(value) ? "true" : "false"}
-          className={cn(
-            dataCellCheckboxDisplayClass,
-            "pointer-events-none flex items-center justify-center"
-          )}
+          role="switch"
+          data-slot="switch"
+          data-state={checked ? "checked" : "unchecked"}
+          aria-checked={checked}
+          aria-label={checked ? "true" : "false"}
+          className={cn(dataCellSwitchClass, "pointer-events-none")}
         >
-          {Boolean(value) ? (
-            <span
-              data-slot="checkbox-indicator"
-              className="flex items-center justify-center text-current transition-none"
-            >
-              <CheckIcon className="size-3.5" />
-            </span>
-          ) : null}
+          <span
+            data-slot="switch-thumb"
+            data-state={checked ? "checked" : "unchecked"}
+            className={dataCellSwitchThumbClass}
+          />
         </span>
       </div>
     )

@@ -419,6 +419,31 @@ describe("DocumentThumbnail helpers", () => {
     expect(content.readStream).not.toHaveBeenCalled()
   })
 
+  it("falls back to a URL stream prefix when range loading is unavailable", async () => {
+    const csv = "Region,Revenue\nEMEA,1250\n"
+    const oversizedCsv = `${csv}${"Filler,1\n".repeat(9000)}`
+    const fetchMock = vi.fn(async (_input: string, init?: RequestInit) => {
+      const headers = new Headers(init?.headers)
+      if (headers.has("Range")) return new Response("", { status: 416 })
+      return new Response(oversizedCsv, {
+        status: 200,
+        headers: {
+          "content-type": "text/csv",
+          "content-length": String(
+            new TextEncoder().encode(oversizedCsv).byteLength
+          ),
+        },
+      })
+    })
+    vi.stubGlobal("fetch", fetchMock)
+
+    const file = resource("/fallback.csv", "fallback.csv", "text/csv")
+
+    await expect(
+      getThumbnailText(thumbnailFileMeta(file), file.content, "fallback-csv")
+    ).resolves.toContain("EMEA")
+  })
+
   it("wraps format failures while preserving resource failures", async () => {
     await expect(
       withThumbnailFormatError(

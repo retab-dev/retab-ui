@@ -27,7 +27,7 @@ describe("DataCell", () => {
     expect(screen.getByText("CHECKCARD PURCHASE")).toBeTruthy()
     expect(screen.getByText("-108.3")).toBeTruthy()
     expect(screen.getByText("42")).toBeTruthy()
-    expect(screen.getByRole("checkbox").getAttribute("aria-checked")).toBe(
+    expect(screen.getByRole("switch").getAttribute("aria-checked")).toBe(
       "true"
     )
     expect(screen.getByText("2026-06-12")).toBeTruthy()
@@ -48,10 +48,15 @@ describe("DataCell", () => {
 
     const input = screen.getByRole("spinbutton") as HTMLInputElement
     expect(input.type).toBe("number")
+    expect(input.className).toContain("text-right")
+    expect(input.className).toContain("tabular-nums")
     fireEvent.change(input, { target: { value: "2.25" } })
     fireEvent.blur(input)
 
-    expect(onValueCommit).toHaveBeenCalledWith(2.25)
+    expect(onValueCommit).toHaveBeenCalledWith(
+      2.25,
+      expect.objectContaining({ isValid: true })
+    )
   })
 
   it("commits boolean edits", () => {
@@ -65,12 +70,13 @@ describe("DataCell", () => {
       />
     )
 
-    fireEvent.click(screen.getByRole("checkbox"))
+    fireEvent.click(screen.getByRole("switch"))
 
-    expect(onValueCommit).toHaveBeenCalledWith(true)
-    expect((screen.getByRole("checkbox") as HTMLInputElement).type).toBe(
-      "checkbox"
+    expect(onValueCommit).toHaveBeenCalledWith(
+      true,
+      expect.objectContaining({ kind: "boolean", rawValue: "true" })
     )
+    expect(screen.getByRole("switch").tagName).toBe("BUTTON")
   })
 
   it("keeps forced display cells inert on hover", () => {
@@ -102,10 +108,29 @@ describe("DataCell", () => {
     expect(screen.getByRole("textbox")).toBeTruthy()
   })
 
+  it("toggles editable boolean display cells on click", () => {
+    const onValueCommit = vi.fn()
+    render(
+      <DataCell
+        kind="boolean"
+        value={false}
+        editable
+        onValueCommit={onValueCommit}
+      />
+    )
+
+    fireEvent.click(screen.getByRole("switch"))
+
+    expect(onValueCommit).toHaveBeenCalledWith(
+      true,
+      expect.objectContaining({ kind: "boolean", rawValue: "true" })
+    )
+  })
+
   it("keeps boolean display free of native inputs", () => {
     render(<DataCell kind="boolean" value={true} />)
 
-    expect(screen.getByRole("checkbox").tagName).toBe("SPAN")
+    expect(screen.getByRole("switch").tagName).toBe("SPAN")
     expect(document.querySelector('input[type="checkbox"]')).toBeNull()
   })
 
@@ -142,7 +167,7 @@ describe("DataCell", () => {
     const onValueCommit = vi.fn()
     render(
       <DataCell
-        kind="number"
+        kind="integer"
         mode="edit"
         value="1"
         onDraftValueChange={onDraftValueChange}
@@ -151,16 +176,16 @@ describe("DataCell", () => {
     )
 
     const input = screen.getByRole("spinbutton") as HTMLInputElement
-    fireEvent.change(input, { target: { value: "abc" } })
+    fireEvent.change(input, { target: { value: "1.5" } })
     fireEvent.blur(input)
 
     expect(onDraftValueChange).toHaveBeenCalledWith(
-      "abc",
+      "1.5",
       expect.objectContaining({ isEmpty: false, isValid: false })
     )
     expect(onValueCommit).toHaveBeenCalledWith(
       null,
-      expect.objectContaining({ rawValue: "abc", isValid: false })
+      expect.objectContaining({ rawValue: "1.5", isValid: false })
     )
   })
 

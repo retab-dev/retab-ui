@@ -1578,8 +1578,7 @@ const ArrayTableRow = React.memo(function ArrayTableRow({
         const isEnum = col.kind === "enum"
         const isActiveEditor = activeEditorPath === path
         const isEditing = isEnum && isActiveEditor
-        const isSourceScalarEditing =
-          sourceLinked && !isEnum && isActiveEditor
+        const isScalarEditing = !isEnum && isActiveEditor
         const dataCellKind = dataCellKindForColumn(col)
         const displayLabel = labelFor(col.key, col.schema)
         const displayText = formatTableCellValue({ value, column: col })
@@ -1590,11 +1589,11 @@ const ArrayTableRow = React.memo(function ArrayTableRow({
             : textValue
         const cellClassName = cn(
           "min-w-0 rounded transition-colors data-[source-active=true]:bg-primary/5 data-[source-active=true]:ring-1 data-[source-active=true]:ring-primary/30",
-          !isEditing && !isSourceScalarEditing
+          !isEditing && !isScalarEditing
             ? "hover:bg-background focus-visible:bg-background focus-visible:ring-1 focus-visible:ring-ring/30"
             : "px-1 py-0.5",
           sourceLinked &&
-          (isEditing || isSourceScalarEditing) &&
+          (isEditing || isScalarEditing) &&
           "hover:bg-muted/55"
         )
         const cellProps = {
@@ -1665,43 +1664,30 @@ const ArrayTableRow = React.memo(function ArrayTableRow({
               <DataCell
                 {...cellProps}
                 kind={dataCellKind}
-                mode={
-                  sourceLinked
-                    ? isSourceScalarEditing
-                      ? "edit"
-                      : "display"
-                    : undefined
-                }
-                editable={!sourceLinked || isSourceScalarEditing}
+                mode={isScalarEditing ? "edit" : "display"}
+                editable={isScalarEditing}
                 value={
                   col.kind === "boolean" ? Boolean(value) : dataCellValue(value)
-                }
-                dateTimeZone={
-                  col.schema.format === "date-time" ? "preserve" : undefined
                 }
                 formatValue={
                   col.kind === "boolean" ? undefined : () => displayText
                 }
                 placeholder=""
-                role={
-                  sourceLinked && !isSourceScalarEditing ? "button" : undefined
-                }
+                role={!isScalarEditing ? "button" : undefined}
                 aria-label={`${displayLabel} ${displayText}`}
                 tabIndex={0}
                 data-table-cell-editable={
-                  sourceLinked && !isSourceScalarEditing ? "true" : undefined
+                  !isScalarEditing ? "true" : undefined
                 }
                 data-table-cell-path={
-                  sourceLinked && !isSourceScalarEditing ? path : undefined
+                  !isScalarEditing ? path : undefined
                 }
-                autoFocus={isSourceScalarEditing}
+                autoFocus={isScalarEditing}
                 name={path}
                 onValueCommit={commitDataCellValue}
-                data-table-cell-editor={
-                  !sourceLinked || isSourceScalarEditing ? "true" : undefined
-                }
+                data-table-cell-editor={isScalarEditing ? "true" : undefined}
                 onBlur={() => {
-                  if (isSourceScalarEditing) setActiveEditorPath(null)
+                  if (isScalarEditing) setActiveEditorPath(null)
                 }}
                 className={cn(cellClassName, "text-sm")}
               />

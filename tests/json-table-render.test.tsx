@@ -84,7 +84,7 @@ describe("json table cell editor dispatch", () => {
     view = renderEditor("boolean", {
       field: { ...baseField("boolean"), effectiveValue: true },
     })
-    expect(view.getByRole("checkbox").getAttribute("aria-checked")).toBe("true")
+    expect(view.getByRole("switch").getAttribute("aria-checked")).toBe("true")
     cleanup()
 
     view = renderEditor("enum", {

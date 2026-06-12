@@ -234,9 +234,9 @@ export function getThumbnailText(
 ): Promise<string> {
   return cachedThumbnailResource(textCache, thumbnailKey, () =>
     timed(`text:fetch ${shortName(meta)}`, async () => {
-      if (meta.sourceKind === "url") {
+      if (meta.sourceKind === "url" || content.sourceKind === "url") {
         try {
-          return readThumbnailTextRange(content)
+          return await readThumbnailTextRange(content)
         } catch (error) {
           if (shouldReadTextStreamPrefix(error)) {
             return readThumbnailTextStreamPrefix(content)
@@ -250,11 +250,22 @@ export function getThumbnailText(
 }
 
 function shouldReadTextStreamPrefix(error: unknown): boolean {
-  return (
-    isResourceError(error) &&
-    (error.kind === "invalid_range" ||
-      (error.kind === "http_error" && error.status === 416))
+  const candidate = resourceErrorCandidate(error)
+  return Boolean(
+    candidate &&
+    (candidate.kind === "invalid_range" ||
+      (candidate.kind === "http_error" && candidate.status === 416))
   )
+}
+
+function resourceErrorCandidate(error: unknown):
+  | {
+      kind?: unknown
+      status?: unknown
+    }
+  | undefined {
+  if (!error || typeof error !== "object") return undefined
+  return error as { kind?: unknown; status?: unknown }
 }
 
 async function readThumbnailTextRange(content: ThumbnailTextContent) {

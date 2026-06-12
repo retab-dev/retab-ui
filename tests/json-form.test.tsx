@@ -802,18 +802,23 @@ describe("JsonForm arrays", () => {
     expect(screen.getByText("Taxable")).toBeTruthy()
 
     const descriptionCell = getTableDataCell("Description Widget")
+    fireEvent.mouseEnter(descriptionCell)
+    expect(screen.queryByDisplayValue("Widget")).toBeNull()
     fireEvent.click(descriptionCell)
     fireEvent.change(screen.getByDisplayValue("Widget"), {
       target: { value: "Hardware" },
     })
     const quantityCell = getTableDataCell("Quantity 2")
+    fireEvent.mouseEnter(quantityCell)
+    expect(screen.queryByRole("spinbutton")).toBeNull()
     fireEvent.click(quantityCell)
     const quantityInput = screen.getByDisplayValue("2")
     expect(quantityInput.getAttribute("data-slot")).toBe("data-cell")
     fireEvent.change(quantityInput, {
       target: { value: "3" },
     })
-    fireEvent.click(screen.getAllByRole("checkbox")[1])
+    fireEvent.click(getTableDataCell("Taxable False"))
+    fireEvent.click(screen.getByRole("switch", { name: "false" }))
     fireEvent.click(screen.getAllByRole("button", { name: "Remove row" })[1])
     await waitFor(() =>
       expect(queryTableDataCell("Description Service")).toBeNull()
