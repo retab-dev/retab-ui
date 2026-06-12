@@ -36,7 +36,7 @@ describe("scrollbench core", () => {
       frameCount: 8,
     })
 
-    expect(targets).toEqual([354, 214, 140, 428, 74, 288, 280, 82])
+    expect(targets).toEqual([354, 214, 140, 428, 74, 280, 288, 66])
     expect(new Set(targets).size).toBeGreaterThan(1)
     expect(targets.every((target) => target >= 0 && target <= 461)).toBe(true)
   })

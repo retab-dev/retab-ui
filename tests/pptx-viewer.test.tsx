@@ -227,6 +227,23 @@ describe("PptxViewer", () => {
     })
   })
 
+  it("shares one loaded source across viewers with the same src", async () => {
+    const fetchMock = vi.fn(okPptxResponse)
+    vi.stubGlobal("fetch", fetchMock)
+
+    await renderPptx(
+      <div>
+        <PptxViewer src="/shared-deck.pptx" />
+        <PptxViewer src="/shared-deck.pptx" />
+      </div>
+    )
+
+    expect(await screen.findAllByText("Slide 1 of 1")).toHaveLength(2)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(pptxMock.loadFile).toHaveBeenCalledTimes(1)
+    expect(pptxMock.viewerOptions).toHaveLength(1)
+  })
+
   it("reacts to controlled scale prop changes", async () => {
     const view = await renderPptx(<PptxViewer src="/deck.pptx" scale={1} />)
 

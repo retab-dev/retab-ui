@@ -13,6 +13,7 @@ import { PdfViewer, type PdfViewerHandle } from "@/components/ui/pdf-viewer"
 import { PptxViewer } from "@/components/ui/pptx-viewer"
 import { TextViewer, type TextViewerHandle } from "@/components/ui/text-viewer"
 import { XlsxViewer, type XlsxViewerHandle } from "@/components/ui/xlsx-viewer"
+
 import {
   buildScrollTargets,
   getScenarioStepPx,
