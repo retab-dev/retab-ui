@@ -1673,6 +1673,16 @@
           "target": "@ui/file-system-controller.ts"
         },
         {
+          "path": "registry/new-york-v4/ui/file-system-chrome.tsx",
+          "type": "registry:ui",
+          "target": "@ui/file-system-chrome.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-system-navigation.ts",
+          "type": "registry:ui",
+          "target": "@ui/file-system-navigation.ts"
+        },
+        {
           "path": "registry/new-york-v4/ui/file-system-preview.tsx",
           "type": "registry:ui",
           "target": "@ui/file-system-preview.tsx"

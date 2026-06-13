@@ -5,11 +5,9 @@ export type FileSystemNavigationEntry = {
   path: string
 }
 
-export function fileSystemEntryAtOffset<Entry extends FileSystemNavigationEntry>(
-  entries: readonly Entry[],
-  selectedPath: string | null,
-  offset: number
-) {
+export function fileSystemEntryAtOffset<
+  Entry extends FileSystemNavigationEntry,
+>(entries: readonly Entry[], selectedPath: string | null, offset: number) {
   const currentIndex = entries.findIndex((entry) => entry.path === selectedPath)
   const nextIndex = Math.min(
     entries.length - 1,
@@ -19,10 +17,9 @@ export function fileSystemEntryAtOffset<Entry extends FileSystemNavigationEntry>
   return entries[nextIndex] ?? null
 }
 
-export function fileSystemBoundaryEntry<Entry extends FileSystemNavigationEntry>(
-  entries: readonly Entry[],
-  boundary: "first" | "last"
-) {
+export function fileSystemBoundaryEntry<
+  Entry extends FileSystemNavigationEntry,
+>(entries: readonly Entry[], boundary: "first" | "last") {
   return boundary === "first"
     ? (entries[0] ?? null)
     : (entries[entries.length - 1] ?? null)

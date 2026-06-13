@@ -8,6 +8,11 @@ import { cn } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
 import type { FileSystemController } from "./file-system-controller"
+import {
+  fileSystemBoundaryEntry,
+  fileSystemEntryAtOffset,
+  fileSystemTypeAheadMatch,
+} from "./file-system-navigation"
 import { FileSystemThumbnail } from "./file-system-preview"
 import type { FileSystemEntry, FileSystemFileEntry } from "./file-system-types"
 
@@ -23,6 +28,7 @@ export function FileSystemGridView({
   onOpenFile: (file: FileSystemFileEntry) => void
 }) {
   const viewportRef = React.useRef<HTMLDivElement | null>(null)
+  const tileRefs = React.useRef(new Map<string, HTMLButtonElement>())
   const [columnCount, setColumnCount] = React.useState(1)
   const entries = controller.currentEntries
 
@@ -58,6 +64,84 @@ export function FileSystemGridView({
   const totalSize = virtualRows.length
     ? virtualizer.getTotalSize()
     : rowCount * TILE_HEIGHT
+  const focusEntry = React.useCallback(
+    (entry: FileSystemEntry) => {
+      const index = entries.findIndex(
+        (candidate) => candidate.path === entry.path
+      )
+      if (index !== -1)
+        virtualizer.scrollToIndex(Math.floor(index / columnCount))
+
+      requestAnimationFrame(() => {
+        tileRefs.current.get(entry.path)?.focus()
+      })
+    },
+    [columnCount, entries, virtualizer]
+  )
+  const selectEntry = React.useCallback(
+    (entry: FileSystemEntry | null) => {
+      if (!entry) return
+      controller.selectEntry(entry)
+      focusEntry(entry)
+    },
+    [controller, focusEntry]
+  )
+  const openEntry = React.useCallback(
+    (entry: FileSystemEntry) => {
+      if (entry.kind === "folder") {
+        controller.navigateTo(entry.path)
+      } else {
+        onOpenFile(entry)
+      }
+    },
+    [controller, onOpenFile]
+  )
+  const handleKeyDown = (event: React.KeyboardEvent) => {
+    if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
+      selectEntry(
+        fileSystemEntryAtOffset(
+          entries,
+          controller.selectedPath,
+          event.key === "ArrowRight" ? 1 : -1
+        )
+      )
+      event.preventDefault()
+      return
+    }
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      selectEntry(
+        fileSystemEntryAtOffset(
+          entries,
+          controller.selectedPath,
+          event.key === "ArrowDown" ? columnCount : -columnCount
+        )
+      )
+      event.preventDefault()
+      return
+    }
+    if (event.key === "Home" || event.key === "End") {
+      selectEntry(
+        fileSystemBoundaryEntry(
+          entries,
+          event.key === "Home" ? "first" : "last"
+        )
+      )
+      event.preventDefault()
+      return
+    }
+    if (event.key === "Enter" && controller.selectedEntry) {
+      openEntry(controller.selectedEntry)
+      event.preventDefault()
+      return
+    }
+
+    const match = fileSystemTypeAheadMatch(
+      event,
+      entries,
+      controller.selectedPath
+    )
+    selectEntry(match)
+  }
 
   if (!entries.length) {
     return (
@@ -72,7 +156,12 @@ export function FileSystemGridView({
       orientation="vertical"
       viewportRef={viewportRef}
       viewportClassName="p-3"
-      viewportProps={{ role: "listbox", "aria-label": "Files" }}
+      viewportProps={{
+        onKeyDown: handleKeyDown,
+        role: "listbox",
+        tabIndex: 0,
+        "aria-label": "Files",
+      }}
     >
       <div className="relative" style={{ height: totalSize }}>
         {renderedRows.map((row) => {
@@ -96,6 +185,13 @@ export function FileSystemGridView({
                   controller={controller}
                   entry={entry}
                   onOpenFile={onOpenFile}
+                  ref={(element) => {
+                    if (element) {
+                      tileRefs.current.set(entry.path, element)
+                    } else {
+                      tileRefs.current.delete(entry.path)
+                    }
+                  }}
                 />
               ))}
             </div>
@@ -106,19 +202,19 @@ export function FileSystemGridView({
   )
 }
 
-function FileSystemGridTile({
-  controller,
-  entry,
-  onOpenFile,
-}: {
-  controller: FileSystemController
-  entry: FileSystemEntry
-  onOpenFile: (file: FileSystemFileEntry) => void
-}) {
+const FileSystemGridTile = React.forwardRef<
+  HTMLButtonElement,
+  {
+    controller: FileSystemController
+    entry: FileSystemEntry
+    onOpenFile: (file: FileSystemFileEntry) => void
+  }
+>(function FileSystemGridTile({ controller, entry, onOpenFile }, ref) {
   const isSelected = entry.path === controller.selectedPath
 
   return (
     <button
+      ref={ref}
       type="button"
       role="option"
       aria-selected={isSelected}
@@ -159,4 +255,4 @@ function FileSystemGridTile({
       </span>
     </button>
   )
-}
+})

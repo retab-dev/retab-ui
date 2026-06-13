@@ -11,7 +11,10 @@ import {
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { FileSystem } from "@/registry/new-york-v4/ui/file-system"
-import type { FileSystemItem } from "@/registry/new-york-v4/ui/file-system-types"
+import type {
+  FileSystemItem,
+  FileSystemQueryState,
+} from "@/registry/new-york-v4/ui/file-system-types"
 
 vi.mock("@/components/ui/file-viewer", () => ({
   FileViewer: ({ source }: { source: { fileName?: string } }) => (
@@ -108,6 +111,100 @@ describe("FileSystem", () => {
 
     expect(screen.getByRole("treeitem", { name: /recent.txt/i })).toBeTruthy()
     expect(screen.queryByRole("treeitem", { name: /old.txt/i })).toBeNull()
+  })
+
+  it("preserves selection and preview when switching views", async () => {
+    render(<FileSystem defaultPath="reports/" items={items} />)
+
+    fireEvent.click(screen.getByRole("treeitem", { name: /report.pdf/i }))
+    await screen.findByText("report.pdf selected")
+
+    fireEvent.click(screen.getByRole("tab", { name: "Grid view" }))
+
+    expect(
+      screen
+        .getByRole("option", { name: /report.pdf/i })
+        .getAttribute("aria-selected")
+    ).toBe("true")
+    expect(screen.getByText("report.pdf selected")).toBeTruthy()
+    await waitFor(() => {
+      expect(screen.getByTestId("file-viewer").textContent).toBe(
+        "viewer:report.pdf"
+      )
+    })
+  })
+
+  it("opens files through onFileOpen instead of the built-in dialog", async () => {
+    const onFileOpen = vi.fn()
+
+    render(
+      <FileSystem
+        defaultPath="reports/"
+        items={items}
+        onFileOpen={onFileOpen}
+      />
+    )
+
+    fireEvent.doubleClick(screen.getByRole("treeitem", { name: /report.pdf/i }))
+
+    await waitFor(() => {
+      expect(onFileOpen).toHaveBeenCalledWith(
+        expect.objectContaining({ path: "reports/report.pdf" }),
+        expect.objectContaining({ fileName: "report.pdf" })
+      )
+    })
+    expect(screen.queryByRole("dialog")).toBeNull()
+  })
+
+  it("supports controlled query state", () => {
+    function ControlledFileSystem() {
+      const [query, setQuery] = React.useState<Partial<FileSystemQueryState>>({
+        search: "report.pdf",
+      })
+
+      return (
+        <FileSystem
+          defaultPath="reports/"
+          items={items}
+          query={query}
+          onQueryChange={setQuery}
+        />
+      )
+    }
+
+    render(<ControlledFileSystem />)
+
+    expect(screen.getByRole("treeitem", { name: /report.pdf/i })).toBeTruthy()
+    expect(screen.queryByRole("treeitem", { name: /table.csv/i })).toBeNull()
+
+    fireEvent.change(screen.getByRole("searchbox", { name: "Search files" }), {
+      target: { value: "table" },
+    })
+
+    expect(screen.getByRole("treeitem", { name: /table.csv/i })).toBeTruthy()
+    expect(screen.queryByRole("treeitem", { name: /report.pdf/i })).toBeNull()
+  })
+
+  it("moves selection with grid keyboard controls", () => {
+    render(
+      <FileSystem defaultPath="reports/" defaultView="grid" items={items} />
+    )
+
+    const listbox = screen.getByRole("listbox", { name: "Files" })
+
+    fireEvent.keyDown(listbox, { key: "ArrowRight" })
+    expect(
+      screen
+        .getByRole("option", { name: /report.pdf/i })
+        .getAttribute("aria-selected")
+    ).toBe("true")
+
+    fireEvent.keyDown(listbox, { key: "ArrowRight" })
+    expect(
+      screen
+        .getByRole("option", { name: /table.csv/i })
+        .getAttribute("aria-selected")
+    ).toBe("true")
   })
 
   it("loads lazy folders and retries failed folder loads", async () => {

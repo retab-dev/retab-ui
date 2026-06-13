@@ -68,10 +68,7 @@ export function FileSystemListView({
   const focusRow = React.useCallback((entry: FileSystemEntry) => {
     requestAnimationFrame(() => rowRefs.current.get(entry.path)?.focus())
   }, [])
-  const rowEntries = React.useMemo(
-    () => rows.map((row) => row.entry),
-    [rows]
-  )
+  const rowEntries = React.useMemo(() => rows.map((row) => row.entry), [rows])
 
   const selectByOffset = (offset: number) => {
     const nextEntry = fileSystemEntryAtOffset(
@@ -179,6 +176,7 @@ export function FileSystemListView({
         viewportProps={{
           onKeyDown: handleKeyDown,
           role: "tree",
+          tabIndex: 0,
           "aria-label": "Files",
         }}
       >

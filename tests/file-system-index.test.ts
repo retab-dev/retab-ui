@@ -99,4 +99,32 @@ describe("file-system index", () => {
     ).toEqual(["invoices/2025/december.csv"])
     expect(visible.children.get("invoices/2026/")).toBeUndefined()
   })
+
+  it("indexes and filters a large object-store manifest", () => {
+    const largeItems: FileSystemItem[] = Array.from(
+      { length: 5_000 },
+      (_, index) => ({
+        kind: "file",
+        path: `workspace/batch-${Math.floor(index / 100)}/document-${index}.pdf`,
+        mimeType: "application/pdf",
+        size: index,
+      })
+    )
+
+    const index = buildFileSystemIndex(largeItems)
+    const visible = deriveVisibleIndex(index, "workspace/", {
+      filters: { categories: [], updatedAfter: null },
+      search: "document-4999",
+      sort: DEFAULT_FILE_SYSTEM_SORT,
+    })
+
+    expect(index.files.size).toBe(5_000)
+    expect(index.folders.size).toBe(51)
+    expect(
+      visible.children.get("workspace/")?.map((entry) => entry.path)
+    ).toEqual(["workspace/batch-49/"])
+    expect(visible.children.get("workspace/batch-49/")?.[0]?.path).toBe(
+      "workspace/batch-49/document-4999.pdf"
+    )
+  })
 })

@@ -177,38 +177,47 @@ export function useFileSystemController({
     }
   }, [])
 
-  const setSearch = React.useCallback((search: string) => {
-    setQuery((previous) => ({ ...previous, search }))
-  }, [])
+  const setSearch = React.useCallback(
+    (search: string) => {
+      setQuery((previous) => ({ ...previous, search }))
+    },
+    [setQuery]
+  )
 
-  const setSortKey = React.useCallback((key: FileSystemSortKey) => {
-    setQuery((previous) => ({
-      ...previous,
-      sort:
-        previous.sort.key === key
-          ? {
-              direction: previous.sort.direction === "asc" ? "desc" : "asc",
-              key,
-            }
-          : {
-              direction: key === "name" || key === "kind" ? "asc" : "desc",
-              key,
-            },
-    }))
-  }, [])
-
-  const toggleCategory = React.useCallback((category: string) => {
-    setQuery((previous) => {
-      const categories = previous.filters.categories.includes(category)
-        ? previous.filters.categories.filter((entry) => entry !== category)
-        : [...previous.filters.categories, category]
-
-      return {
+  const setSortKey = React.useCallback(
+    (key: FileSystemSortKey) => {
+      setQuery((previous) => ({
         ...previous,
-        filters: { ...previous.filters, categories },
-      }
-    })
-  }, [])
+        sort:
+          previous.sort.key === key
+            ? {
+                direction: previous.sort.direction === "asc" ? "desc" : "asc",
+                key,
+              }
+            : {
+                direction: key === "name" || key === "kind" ? "asc" : "desc",
+                key,
+              },
+      }))
+    },
+    [setQuery]
+  )
+
+  const toggleCategory = React.useCallback(
+    (category: string) => {
+      setQuery((previous) => {
+        const categories = previous.filters.categories.includes(category)
+          ? previous.filters.categories.filter((entry) => entry !== category)
+          : [...previous.filters.categories, category]
+
+        return {
+          ...previous,
+          filters: { ...previous.filters, categories },
+        }
+      })
+    },
+    [setQuery]
+  )
 
   const setModifiedAfter = React.useCallback(
     (updatedAfter: FileSystemQueryState["filters"]["updatedAfter"]) => {
@@ -223,7 +232,7 @@ export function useFileSystemController({
         },
       }))
     },
-    []
+    [setQuery]
   )
 
   const clearFilters = React.useCallback(() => {
@@ -231,7 +240,7 @@ export function useFileSystemController({
       ...previous,
       filters: { categories: [], updatedAfter: null },
     }))
-  }, [])
+  }, [setQuery])
 
   const toggleExpanded = React.useCallback((path: string) => {
     setExpandedPaths((previous) => {

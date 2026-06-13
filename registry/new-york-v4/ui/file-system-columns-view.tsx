@@ -9,6 +9,11 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 
 import type { FileSystemController } from "./file-system-controller"
 import { folderHasChildren, pathParent } from "./file-system-index"
+import {
+  fileSystemBoundaryEntry,
+  fileSystemEntryAtOffset,
+  fileSystemTypeAheadMatch,
+} from "./file-system-navigation"
 import { FileSystemThumbnail } from "./file-system-preview"
 import type { FileSystemEntry, FileSystemFileEntry } from "./file-system-types"
 
@@ -80,7 +85,11 @@ function FileSystemColumn({
   path: string
 }) {
   const viewportRef = React.useRef<HTMLDivElement | null>(null)
-  const entries = controller.index.children.get(path) ?? []
+  const rowRefs = React.useRef(new Map<string, HTMLButtonElement>())
+  const entries = React.useMemo(
+    () => controller.index.children.get(path) ?? [],
+    [controller.index.children, path]
+  )
   const virtualizer = useVirtualizer({
     count: entries.length,
     estimateSize: () => COLUMN_ROW_HEIGHT,
@@ -100,12 +109,127 @@ function FileSystemColumn({
   const totalSize = virtualRows.length
     ? virtualizer.getTotalSize()
     : entries.length * COLUMN_ROW_HEIGHT
+  const focusEntry = React.useCallback(
+    (entry: FileSystemEntry) => {
+      const index = entries.findIndex(
+        (candidate) => candidate.path === entry.path
+      )
+      if (index !== -1) virtualizer.scrollToIndex(index)
+
+      requestAnimationFrame(() => {
+        const localRow = rowRefs.current.get(entry.path)
+        if (localRow) {
+          localRow.focus()
+          return
+        }
+
+        for (const row of document.querySelectorAll<HTMLButtonElement>(
+          "[data-file-system-entry-path]"
+        )) {
+          if (row.dataset.fileSystemEntryPath === entry.path) {
+            row.focus()
+            return
+          }
+        }
+      })
+    },
+    [entries, virtualizer]
+  )
+  const selectEntry = React.useCallback(
+    (entry: FileSystemEntry | null) => {
+      if (!entry) return
+      controller.selectEntry(entry)
+      if (entry.kind === "folder") void controller.ensureChildren(entry.path)
+      focusEntry(entry)
+    },
+    [controller, focusEntry]
+  )
+  const openEntry = React.useCallback(
+    (entry: FileSystemEntry) => {
+      if (entry.kind === "folder") {
+        controller.navigateTo(entry.path)
+      } else {
+        onOpenFile(entry)
+      }
+    },
+    [controller, onOpenFile]
+  )
+  const selectParent = React.useCallback(() => {
+    const selectedEntry = controller.selectedEntry
+    if (!selectedEntry) return
+
+    const parentPath =
+      selectedEntry.kind === "folder"
+        ? pathParent(selectedEntry.path)
+        : selectedEntry.parentPath
+    const parent = parentPath
+      ? (controller.rawIndex.folders.get(parentPath) ?? null)
+      : null
+
+    selectEntry(parent)
+  }, [controller.rawIndex.folders, controller.selectedEntry, selectEntry])
+  const selectChild = React.useCallback(() => {
+    const selectedEntry = controller.selectedEntry
+    if (selectedEntry?.kind !== "folder") return
+
+    void controller.ensureChildren(selectedEntry.path)
+    selectEntry(
+      fileSystemBoundaryEntry(
+        controller.index.children.get(selectedEntry.path) ?? [],
+        "first"
+      )
+    )
+  }, [controller, selectEntry])
+  const handleKeyDown = (event: React.KeyboardEvent) => {
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      selectEntry(
+        fileSystemEntryAtOffset(
+          entries,
+          controller.selectedPath,
+          event.key === "ArrowDown" ? 1 : -1
+        )
+      )
+      event.preventDefault()
+      return
+    }
+    if (event.key === "Home" || event.key === "End") {
+      selectEntry(
+        fileSystemBoundaryEntry(
+          entries,
+          event.key === "Home" ? "first" : "last"
+        )
+      )
+      event.preventDefault()
+      return
+    }
+    if (event.key === "ArrowRight") {
+      selectChild()
+      event.preventDefault()
+      return
+    }
+    if (event.key === "ArrowLeft") {
+      selectParent()
+      event.preventDefault()
+      return
+    }
+    if (event.key === "Enter" && controller.selectedEntry) {
+      openEntry(controller.selectedEntry)
+      event.preventDefault()
+      return
+    }
+
+    selectEntry(
+      fileSystemTypeAheadMatch(event, entries, controller.selectedPath)
+    )
+  }
 
   return (
     <div
       className={cn("w-64 shrink-0 border-r", isLast && "flex-1")}
       role="listbox"
       aria-label={path || "Files"}
+      tabIndex={0}
+      onKeyDown={handleKeyDown}
     >
       <div ref={viewportRef} className="h-full overflow-auto p-1.5">
         {entries.length ? (
@@ -116,6 +240,13 @@ function FileSystemColumn({
                 controller={controller}
                 entry={entry}
                 onOpenFile={onOpenFile}
+                ref={(element) => {
+                  if (element) {
+                    rowRefs.current.set(entry.path, element)
+                  } else {
+                    rowRefs.current.delete(entry.path)
+                  }
+                }}
                 style={{ transform: `translateY(${start}px)` }}
               />
             ))}
@@ -130,17 +261,15 @@ function FileSystemColumn({
   )
 }
 
-function FileSystemColumnRow({
-  controller,
-  entry,
-  onOpenFile,
-  style,
-}: {
-  controller: FileSystemController
-  entry: FileSystemEntry
-  onOpenFile: (file: FileSystemFileEntry) => void
-  style: React.CSSProperties
-}) {
+const FileSystemColumnRow = React.forwardRef<
+  HTMLButtonElement,
+  {
+    controller: FileSystemController
+    entry: FileSystemEntry
+    onOpenFile: (file: FileSystemFileEntry) => void
+    style: React.CSSProperties
+  }
+>(function FileSystemColumnRow({ controller, entry, onOpenFile, style }, ref) {
   const isSelected = entry.path === controller.selectedPath
   const isOnTrail =
     entry.kind === "folder" &&
@@ -149,7 +278,9 @@ function FileSystemColumnRow({
 
   return (
     <button
+      ref={ref}
       type="button"
+      data-file-system-entry-path={entry.path}
       role="option"
       aria-selected={isSelected}
       tabIndex={isSelected || !controller.selectedPath ? 0 : -1}
@@ -190,4 +321,4 @@ function FileSystemColumnRow({
       ) : null}
     </button>
   )
-}
+})

@@ -26,10 +26,7 @@ import { FileSystemGalleryView } from "./file-system-gallery-view"
 import { FileSystemGridView } from "./file-system-grid-view"
 import { FileSystemListView } from "./file-system-list-view"
 import { FileSystemPreview } from "./file-system-preview"
-import type {
-  FileSystemFileEntry,
-  FileSystemProps,
-} from "./file-system-types"
+import type { FileSystemFileEntry, FileSystemProps } from "./file-system-types"
 
 export type {
   FileSystemFileItem,
