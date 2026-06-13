@@ -45,7 +45,6 @@ export const XlsxResourceViewer = React.forwardRef<
         fallbackSheetTabs={props.fallbackSheetTabs}
         toolbar={props.toolbar}
         bare={props.bare}
-        slots={props.slots}
       />
     )
   }
@@ -64,7 +63,6 @@ export const XlsxResourceViewer = React.forwardRef<
             fallbackSheetTabs={props.fallbackSheetTabs}
             toolbar={props.toolbar}
             bare={props.bare}
-            slots={props.slots}
           />
         }
       >

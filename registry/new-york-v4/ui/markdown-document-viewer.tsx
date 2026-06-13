@@ -31,7 +31,7 @@ import {
   topForMarkdownIndex,
   type MarkdownVirtualItem,
 } from "./markdown-document-virtualizer"
-import { PlainTextViewerShell } from "./plain-text-viewer-shell"
+import { PlainTextViewerFrame } from "./plain-text-viewer-frame"
 import { ScrollArea } from "./scroll-area"
 import { Separator } from "./separator"
 import { Tabs, TabsList, TabsTrigger } from "./tabs"
@@ -83,7 +83,7 @@ export const MarkdownDocumentViewer = React.forwardRef<
   TextViewerProps
 >(function MarkdownDocumentViewer(props, ref) {
   return (
-    <PlainTextViewerShell
+    <PlainTextViewerFrame
       props={props}
       forwardedRef={ref}
       clientFallbackPolicy="always"

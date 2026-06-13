@@ -1,8 +1,6 @@
 import type { ViewerResource } from "@/lib/viewer-resource"
 import type { BlobViewerSource, UrlViewerSource } from "@/lib/viewer-source"
 
-import type { ViewerSlots } from "./viewer-slots"
-
 export type DocxDocumentSource = UrlViewerSource | BlobViewerSource
 
 export type DocxTarget =
@@ -13,8 +11,6 @@ export interface DocxViewerHandle {
   scrollToTarget: (target: DocxTarget, options?: ScrollIntoViewOptions) => void
   getViewportElement: () => HTMLDivElement | null
 }
-
-export type DocxViewerSlots = ViewerSlots
 
 export interface DocxViewerProps {
   source: DocxDocumentSource
@@ -27,7 +23,6 @@ export interface DocxViewerProps {
   onVisiblePageChange?: (page: number) => void
   onScrollProgressChange?: (progress: number) => void
   bare?: boolean
-  slots?: DocxViewerSlots
 }
 
 export type DocxResourceViewerProps = Omit<DocxViewerProps, "source"> & {

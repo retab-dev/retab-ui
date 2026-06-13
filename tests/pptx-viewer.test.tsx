@@ -36,6 +36,13 @@ import {
   type PptxRenderResult,
 } from "@/registry/new-york-v4/ui/pptx-viewer-source"
 import { resetPptxViewerForTests } from "@/registry/new-york-v4/ui/pptx-viewer-test-utils"
+import {
+  ViewerBody,
+  ViewerHeader,
+  ViewerRoot,
+  ViewerSidebar,
+  ViewerSurface,
+} from "@/registry/new-york-v4/ui/viewer"
 import { ViewerErrorBoundary } from "@/registry/new-york-v4/ui/viewer-error"
 
 const pptxMock = vi.hoisted(() => ({
@@ -2002,17 +2009,21 @@ describe("PptxViewer", () => {
     expect(createObjectURL).not.toHaveBeenCalled()
   })
 
-  it("supports bare layout, document slots, and hidden toolbar", async () => {
+  it("supports bare layout, viewer chrome, and hidden toolbar", async () => {
     await renderPptx(
-      <PptxViewer
-        source={pptxUrlSource("/structured.pptx")}
-        bare
-        toolbar={false}
-        slots={{
-          top: <div data-testid="pptx-header">header</div>,
-          left: <div data-testid="pptx-aside">aside</div>,
-        }}
-      />
+      <ViewerRoot bare>
+        <ViewerHeader data-testid="pptx-header">header</ViewerHeader>
+        <ViewerBody>
+          <ViewerSidebar data-testid="pptx-aside">aside</ViewerSidebar>
+          <ViewerSurface>
+            <PptxViewer
+              source={pptxUrlSource("/structured.pptx")}
+              bare
+              toolbar={false}
+            />
+          </ViewerSurface>
+        </ViewerBody>
+      </ViewerRoot>
     )
 
     expect(await screen.findByTestId("pptx-header")).toBeTruthy()

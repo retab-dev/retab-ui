@@ -9,7 +9,7 @@
   "files": [
     {
       "path": "registry/new-york-v4/ui/text-viewer-chenglou.tsx",
-      "content": "\"use client\"\n\nimport * as React from \"react\"\n\nimport { PlainTextViewerShell } from \"./plain-text-viewer-shell\"\nimport { ChenglouTextViewerContent } from \"./text-viewer-chenglou-content\"\nimport { TextViewerFallback } from \"./text-viewer-chrome\"\nimport type { TextViewerHandle, TextViewerProps } from \"./text-viewer-types\"\n\nexport const ChenglouTextViewer = React.forwardRef<\n  TextViewerHandle,\n  TextViewerProps\n>(function ChenglouTextViewer(props, ref) {\n  return (\n    <PlainTextViewerShell\n      props={props}\n      forwardedRef={ref}\n      clientFallbackPolicy=\"always\"\n      Fallback={TextViewerFallback}\n      Content={ChenglouTextViewerContent}\n    />\n  )\n})\n",
+      "content": "\"use client\"\n\nimport * as React from \"react\"\n\nimport { PlainTextViewerFrame } from \"./plain-text-viewer-frame\"\nimport { ChenglouTextViewerContent } from \"./text-viewer-chenglou-content\"\nimport { TextViewerFallback } from \"./text-viewer-chrome\"\nimport type { TextViewerHandle, TextViewerProps } from \"./text-viewer-types\"\n\nexport const ChenglouTextViewer = React.forwardRef<\n  TextViewerHandle,\n  TextViewerProps\n>(function ChenglouTextViewer(props, ref) {\n  return (\n    <PlainTextViewerFrame\n      props={props}\n      forwardedRef={ref}\n      clientFallbackPolicy=\"always\"\n      Fallback={TextViewerFallback}\n      Content={ChenglouTextViewerContent}\n    />\n  )\n})\n",
       "type": "registry:ui",
       "target": "@ui/text-viewer-chenglou.tsx"
     },

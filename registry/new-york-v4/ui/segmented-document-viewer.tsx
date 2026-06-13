@@ -14,6 +14,12 @@ import { PdfViewer } from "@/components/ui/pdf-viewer"
 import { SegmentLegend } from "@/components/ui/segment-legend"
 import { SegmentSidebar } from "@/components/ui/segment-sidebar"
 import { useSegmentInteraction } from "@/components/ui/use-segment-interaction"
+import {
+  ViewerBody,
+  ViewerHeader,
+  ViewerSidebar,
+  ViewerSurface,
+} from "@/components/ui/viewer"
 
 export interface SegmentedDocumentViewerProps {
   segments: Segment[]
@@ -83,23 +89,8 @@ export function SegmentedDocumentViewer({
             showUnusedToggle
           />
         )
-        const sidebar = (
-          <aside className="h-full w-64 flex-shrink-0 overflow-auto border-r">
-            <SegmentSidebar
-              segments={segments}
-              interaction={interaction}
-              currentPage={currentPage}
-              unitLabel={unitLabel}
-              onSelect={(segment) => {
-                const page = firstSegmentPage(segment.pages)
-                if (page != null) jumpToPage(page)
-              }}
-              className="h-full"
-            />
-          </aside>
-        )
         const header = (
-          <div className="border-b">
+          <ViewerHeader>
             {title ? (
               <div className="px-3 pt-2 text-sm font-medium">{title}</div>
             ) : null}
@@ -113,33 +104,53 @@ export function SegmentedDocumentViewer({
                 onSelectPage={jumpToPage}
               />
             </div>
-          </div>
+          </ViewerHeader>
+        )
+        const sidebar = (
+          <ViewerSidebar className="w-64 overflow-auto border-r">
+            <SegmentSidebar
+              segments={segments}
+              interaction={interaction}
+              currentPage={currentPage}
+              unitLabel={unitLabel}
+              onSelect={(segment) => {
+                const page = firstSegmentPage(segment.pages)
+                if (page != null) jumpToPage(page)
+              }}
+              className="h-full"
+            />
+          </ViewerSidebar>
         )
 
         if (!src) {
           return (
             <>
               {header}
-              <div className="flex min-h-0 flex-1">
+              <ViewerBody>
                 {sidebar}
-                <div className="flex flex-1 items-center justify-center p-3 text-center text-xs text-muted-foreground">
+                <ViewerSurface className="items-center justify-center p-3 text-center text-xs text-muted-foreground">
                   Pass a document URL to preview its pages.
-                </div>
-              </div>
+                </ViewerSurface>
+              </ViewerBody>
             </>
           )
         }
 
         return (
-          <div ref={documentRef} className="min-h-0 flex-1">
-            <PdfViewer
-              source={{ kind: "url", url: src }}
-              bare
-              className="h-full"
-              slots={{ top: header, left: sidebar }}
-              onVisiblePageChange={setCurrentPage}
-            />
-          </div>
+          <>
+            {header}
+            <ViewerBody ref={documentRef}>
+              {sidebar}
+              <ViewerSurface>
+                <PdfViewer
+                  source={{ kind: "url", url: src }}
+                  bare
+                  className="h-full"
+                  onVisiblePageChange={setCurrentPage}
+                />
+              </ViewerSurface>
+            </ViewerBody>
+          </>
         )
       })()}
     </div>

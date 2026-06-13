@@ -302,9 +302,9 @@ describe("FileViewer detection helpers", () => {
     expect(fileViewerSource).toContain("DocxResourceViewer")
     expect(fileViewerSource).toContain("PptxResourceViewer")
     expect(fileViewerSource).toContain("XlsxResourceViewer")
-    expect(fileViewerSource).toContain("slots={slots}")
-    expect(fileViewerSource).toContain("renderWithViewerShellSlots")
-    expect(fileViewerSource).toContain("<ViewerShell")
+    expect(fileViewerSource).not.toContain("slots={slots}")
+    expect(fileViewerSource).not.toContain("renderWithViewerShellSlots")
+    expect(fileViewerSource).not.toContain("ViewerShell")
     expect(fileViewerSource).toContain(
       'import("@/components/ui/text-viewer-chenglou")'
     )
@@ -606,29 +606,6 @@ describe("FileViewer text rendering", () => {
     expect(container.querySelector('[data-slot="code-viewer"]')).toBeNull()
     expect(container.querySelector(".fv-markdown")).toBeNull()
     expect(container.querySelector("[data-line-number]")).toBeNull()
-  })
-
-  it("wraps non-slot-native routes in ViewerShell when file-viewer slots are provided", async () => {
-    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null)
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(() => Promise.resolve(response("first note\nsecond note\n")))
-    )
-
-    const { container } = render(
-      <FileViewer
-        source={urlSource("/notes.txt", "notes.txt")}
-        slots={{ right: <aside>Related files</aside> }}
-      />
-    )
-
-    expect(await screen.findByText("first note")).toBeTruthy()
-    expect(screen.getByText("Related files")).toBeTruthy()
-    expect(container.querySelector('[data-slot="viewer-shell"]')).toBeTruthy()
-    expect(
-      container.querySelector('[data-slot="viewer-shell-right"]')?.textContent
-    ).toBe("Related files")
-    expect(container.querySelector('[data-slot="text-viewer"]')).toBeTruthy()
   })
 
   it("routes markdown files through the wrapped Text Viewer markdown mode", async () => {

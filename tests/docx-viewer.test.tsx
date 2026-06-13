@@ -23,6 +23,13 @@ import {
   DocxViewer,
   type DocxViewerHandle,
 } from "@/registry/new-york-v4/ui/docx-viewer"
+import {
+  ViewerBody,
+  ViewerHeader,
+  ViewerRoot,
+  ViewerSidebar,
+  ViewerSurface,
+} from "@/registry/new-york-v4/ui/viewer"
 
 const docxMock = vi.hoisted(() => ({
   renderAsync: vi.fn(),
@@ -501,19 +508,21 @@ function restoreWindowGlobal(key: string, value: unknown) {
 describe("DocxViewer", () => {
   it("renders server fallback markup without loading document bytes", () => {
     const html = renderToStaticMarkup(
-      <DocxViewer
-        source={docxUrlSource("/server.docx")}
-        slots={{
-          top: <div>Server header</div>,
-          left: <div>Server aside</div>,
-        }}
-      />
+      <ViewerRoot>
+        <ViewerHeader>Server header</ViewerHeader>
+        <ViewerBody>
+          <ViewerSidebar>Server aside</ViewerSidebar>
+          <ViewerSurface>
+            <DocxViewer source={docxUrlSource("/server.docx")} bare />
+          </ViewerSurface>
+        </ViewerBody>
+      </ViewerRoot>
     )
 
     expect(html).toContain('data-slot="docx-viewer"')
-    expect(html).toContain('data-slot="docx-viewer-top"')
+    expect(html).toContain('data-slot="viewer-header"')
     expect(html).toContain("Server header")
-    expect(html).toContain('data-slot="docx-viewer-left"')
+    expect(html).toContain('data-slot="viewer-sidebar"')
     expect(html).toContain("Server aside")
     expect(html).toContain('data-slot="docx-page-skeleton"')
     expect(html).toContain("<button")
@@ -1154,41 +1163,48 @@ describe("DocxViewer", () => {
     expect(screen.getByText("100%")).toBeTruthy()
   })
 
-  it("renders top and left slots without blocking document render", async () => {
+  it("renders viewer header and sidebar without blocking document render", async () => {
     const view = await renderDocx(
-      <DocxViewer
-        source={docxUrlSource("/slots.docx")}
-        slots={{
-          top: <div>Document legend</div>,
-          left: <nav aria-label="Pages">Page rail</nav>,
-        }}
-      />
+      <ViewerRoot>
+        <ViewerHeader>Document legend</ViewerHeader>
+        <ViewerBody>
+          <ViewerSidebar>
+            <nav aria-label="Pages">Page rail</nav>
+          </ViewerSidebar>
+          <ViewerSurface>
+            <DocxViewer source={docxUrlSource("/slots.docx")} bare />
+          </ViewerSurface>
+        </ViewerBody>
+      </ViewerRoot>
     )
 
     await waitForRenderedDocx()
 
     expect(
-      view.container.querySelector('[data-slot="docx-viewer-top"]')?.textContent
+      view.container.querySelector('[data-slot="viewer-header"]')?.textContent
     ).toBe("Document legend")
     expect(
-      view.container.querySelector('[data-slot="docx-viewer-left"]')
-        ?.textContent
+      view.container.querySelector('[data-slot="viewer-sidebar"]')?.textContent
     ).toBe("Page rail")
     expect(screen.getByText("Target cell")).toBeTruthy()
   })
 
-  it("keeps top and left slots visible while resource bytes are loading", async () => {
+  it("keeps viewer header and sidebar visible while resource bytes are loading", async () => {
     const pendingResponse = deferred<Response>()
     vi.mocked(fetch).mockImplementation(() => pendingResponse.promise)
 
     await renderDocx(
-      <DocxViewer
-        source={docxUrlSource("/loading-slots.docx")}
-        slots={{
-          top: <div>Loading legend</div>,
-          left: <nav>Loading rail</nav>,
-        }}
-      />
+      <ViewerRoot>
+        <ViewerHeader>Loading legend</ViewerHeader>
+        <ViewerBody>
+          <ViewerSidebar>
+            <nav>Loading rail</nav>
+          </ViewerSidebar>
+          <ViewerSurface>
+            <DocxViewer source={docxUrlSource("/loading-slots.docx")} bare />
+          </ViewerSurface>
+        </ViewerBody>
+      </ViewerRoot>
     )
 
     expect(await screen.findByText("Loading legend")).toBeTruthy()
@@ -1203,7 +1219,7 @@ describe("DocxViewer", () => {
     expect(await screen.findByText("Target cell")).toBeTruthy()
   })
 
-  it("keeps top and left slots visible while rendering is pending", async () => {
+  it("keeps viewer header and sidebar visible while rendering is pending", async () => {
     const pending = deferred<void>()
     docxMock.renderAsync.mockImplementation(async (_buffer, host) => {
       installRenderedDocument(host)
@@ -1211,13 +1227,17 @@ describe("DocxViewer", () => {
     })
 
     await renderDocx(
-      <DocxViewer
-        source={docxUrlSource("/pending-slots.docx")}
-        slots={{
-          top: <div>Pending legend</div>,
-          left: <nav>Pending rail</nav>,
-        }}
-      />
+      <ViewerRoot>
+        <ViewerHeader>Pending legend</ViewerHeader>
+        <ViewerBody>
+          <ViewerSidebar>
+            <nav>Pending rail</nav>
+          </ViewerSidebar>
+          <ViewerSurface>
+            <DocxViewer source={docxUrlSource("/pending-slots.docx")} bare />
+          </ViewerSurface>
+        </ViewerBody>
+      </ViewerRoot>
     )
 
     expect(await screen.findByText("Pending legend")).toBeTruthy()
@@ -2557,7 +2577,7 @@ describe("DocxViewer", () => {
     expect(fetch).toHaveBeenCalledTimes(2)
   })
 
-  it("restores loading slots while retrying a failed document load", async () => {
+  it("restores viewer chrome while retrying a failed document load", async () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined)
     const retryResponse = deferred<Response>()
     vi.mocked(fetch)
@@ -2565,13 +2585,20 @@ describe("DocxViewer", () => {
       .mockImplementationOnce(() => retryResponse.promise)
 
     await renderDocx(
-      <DocxViewer
-        source={docxUrlSource("/retry-loading-slots.docx")}
-        slots={{
-          top: <div>Retry legend</div>,
-          left: <nav>Retry rail</nav>,
-        }}
-      />
+      <ViewerRoot>
+        <ViewerHeader>Retry legend</ViewerHeader>
+        <ViewerBody>
+          <ViewerSidebar>
+            <nav>Retry rail</nav>
+          </ViewerSidebar>
+          <ViewerSurface>
+            <DocxViewer
+              source={docxUrlSource("/retry-loading-slots.docx")}
+              bare
+            />
+          </ViewerSurface>
+        </ViewerBody>
+      </ViewerRoot>
     )
 
     expect(await screen.findByText("Failed to load file: 500.")).toBeTruthy()

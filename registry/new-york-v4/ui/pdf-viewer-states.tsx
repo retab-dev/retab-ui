@@ -1,12 +1,5 @@
 import * as React from "react"
-import {
-  Download,
-  Maximize,
-  Minus,
-  PanelLeftClose,
-  Plus,
-  RotateCw,
-} from "lucide-react"
+import { Download, Maximize, Minus, Plus, RotateCw } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -17,12 +10,10 @@ export function PdfViewerFallback({
   className,
   bare = false,
   toolbar = true,
-  showRailToggle = false,
 }: {
   className?: string
   bare?: boolean
   toolbar?: boolean
-  showRailToggle?: boolean
 }) {
   return (
     <div
@@ -33,7 +24,7 @@ export function PdfViewerFallback({
       )}
       data-slot="pdf-viewer"
     >
-      {toolbar ? <PdfToolbarSkeleton showRailToggle={showRailToggle} /> : null}
+      {toolbar ? <PdfToolbarSkeleton /> : null}
       <div className="min-h-0 flex-1 overflow-auto">
         <div className="flex flex-col items-center p-4">
           <PageAspectSkeleton />
@@ -47,18 +38,9 @@ export function PageSkeleton() {
   return <Skeleton className="size-full rounded-md" />
 }
 
-function PdfToolbarSkeleton({
-  showRailToggle = false,
-}: {
-  showRailToggle?: boolean
-}) {
+function PdfToolbarSkeleton() {
   return (
     <div className="flex h-10 flex-shrink-0 items-center gap-1 border-b bg-card px-2">
-      {showRailToggle ? (
-        <ToolbarIconPlaceholder>
-          <PanelLeftClose />
-        </ToolbarIconPlaceholder>
-      ) : null}
       <span className="px-1">
         <Skeleton className="inline-block h-3 w-12 align-middle" />
       </span>

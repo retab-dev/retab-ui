@@ -24,9 +24,8 @@ const PARTITION_RESULT: PartitionResult = {
 
 /**
  * Partition viewer block — the file + legend + waterfall ribbon over keyed
- * chunks. `PartitionViewer` hands the document surface its chrome as `slots`
- * (the color key in `top`, the consensus waterfall in `bottom`); the surface
- * spreads them onto the `PdfViewer`.
+ * chunks. `PartitionViewer` owns the key and ribbon; the document renderer only
+ * receives page and scroll handlers.
  */
 export function PartitionViewerBlock() {
   return (
@@ -41,7 +40,6 @@ export function PartitionViewerBlock() {
               fileName: "an-image-is-worth-16x16-words.pdf",
             }}
             bare
-            slots={handlers.slots}
             onVisiblePageChange={handlers.onCurrentPageChange}
             onScrollProgressChange={handlers.onScrollProgressChange}
             className="h-full"

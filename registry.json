@@ -952,13 +952,24 @@
         "scroll-area",
         "separator",
         "skeleton",
-        "dropdown-menu"
+        "dropdown-menu",
+        "spinner"
       ],
       "files": [
         {
           "path": "registry/new-york-v4/ui/pdf-viewer.tsx",
           "type": "registry:ui",
           "target": "@ui/pdf-viewer.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/pdf-viewer-context.tsx",
+          "type": "registry:ui",
+          "target": "@ui/pdf-viewer-context.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/viewer.tsx",
+          "type": "registry:ui",
+          "target": "@ui/viewer.tsx"
         },
         {
           "path": "registry/new-york-v4/ui/viewer-error.tsx",
@@ -1016,14 +1027,54 @@
           "target": "@ui/pdf-viewer-toolbar.tsx"
         },
         {
-          "path": "registry/new-york-v4/ui/pdf-viewer-rail.tsx",
-          "type": "registry:ui",
-          "target": "@ui/pdf-viewer-rail.tsx"
-        },
-        {
           "path": "registry/new-york-v4/ui/pdf-viewer-states.tsx",
           "type": "registry:ui",
           "target": "@ui/pdf-viewer-states.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/pdf-thumbnail-sidebar.tsx",
+          "type": "registry:ui",
+          "target": "@ui/pdf-thumbnail-sidebar.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/pdf-thumbnail-layout.ts",
+          "type": "registry:ui",
+          "target": "@ui/pdf-thumbnail-layout.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/use-pdf-thumbnail-document.ts",
+          "type": "registry:ui",
+          "target": "@ui/use-pdf-thumbnail-document.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/use-pdf-thumbnail-page-metrics.ts",
+          "type": "registry:ui",
+          "target": "@ui/use-pdf-thumbnail-page-metrics.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/use-pdf-thumbnail-window.ts",
+          "type": "registry:ui",
+          "target": "@ui/use-pdf-thumbnail-window.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/use-thumbnail-rail-follow.ts",
+          "type": "registry:ui",
+          "target": "@ui/use-thumbnail-rail-follow.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/pdf-thumbnail-rail.tsx",
+          "type": "registry:ui",
+          "target": "@ui/pdf-thumbnail-rail.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/pdf-thumbnail-item.tsx",
+          "type": "registry:ui",
+          "target": "@ui/pdf-thumbnail-item.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/pdf-thumbnail-canvas.tsx",
+          "type": "registry:ui",
+          "target": "@ui/pdf-thumbnail-canvas.tsx"
         },
         {
           "path": "registry/new-york-v4/lib/viewer-source.ts",
@@ -1034,11 +1085,6 @@
           "path": "registry/new-york-v4/ui/use-is-client.ts",
           "type": "registry:ui",
           "target": "@ui/use-is-client.ts"
-        },
-        {
-          "path": "registry/new-york-v4/ui/viewer-slots.ts",
-          "type": "registry:ui",
-          "target": "@ui/viewer-slots.ts"
         },
         {
           "path": "registry/new-york-v4/ui/viewer-download.tsx",
@@ -1142,11 +1188,6 @@
           "path": "registry/new-york-v4/ui/use-is-client.ts",
           "type": "registry:ui",
           "target": "@ui/use-is-client.ts"
-        },
-        {
-          "path": "registry/new-york-v4/ui/viewer-slots.ts",
-          "type": "registry:ui",
-          "target": "@ui/viewer-slots.ts"
         }
       ]
     },
@@ -1228,11 +1269,6 @@
           "path": "registry/new-york-v4/ui/use-is-client.ts",
           "type": "registry:ui",
           "target": "@ui/use-is-client.ts"
-        },
-        {
-          "path": "registry/new-york-v4/ui/viewer-slots.ts",
-          "type": "registry:ui",
-          "target": "@ui/viewer-slots.ts"
         }
       ]
     },
@@ -1410,11 +1446,6 @@
           "path": "registry/new-york-v4/ui/use-is-client.ts",
           "type": "registry:ui",
           "target": "@ui/use-is-client.ts"
-        },
-        {
-          "path": "registry/new-york-v4/ui/viewer-slots.ts",
-          "type": "registry:ui",
-          "target": "@ui/viewer-slots.ts"
         }
       ]
     },
@@ -1610,11 +1641,6 @@
           "target": "@ui/use-is-client.ts"
         },
         {
-          "path": "registry/new-york-v4/ui/viewer-slots.ts",
-          "type": "registry:ui",
-          "target": "@ui/viewer-slots.ts"
-        },
-        {
           "path": "registry/new-york-v4/ui/xlsx-viewer-sheet-state.ts",
           "type": "registry:ui",
           "target": "@ui/xlsx-viewer-sheet-state.ts"
@@ -1637,25 +1663,6 @@
       ]
     },
     {
-      "name": "viewer-shell",
-      "type": "registry:ui",
-      "title": "Viewer Shell",
-      "description": "Format-neutral frame for compound viewer composition with header, toolbar, rail, strip, overlay, and document content slots.",
-      "registryDependencies": ["utils"],
-      "files": [
-        {
-          "path": "registry/new-york-v4/ui/viewer-shell.tsx",
-          "type": "registry:ui",
-          "target": "@ui/viewer-shell.tsx"
-        },
-        {
-          "path": "registry/new-york-v4/ui/viewer-slots.ts",
-          "type": "registry:ui",
-          "target": "@ui/viewer-slots.ts"
-        }
-      ]
-    },
-    {
       "name": "file-viewer",
       "type": "registry:ui",
       "title": "File Viewer",
@@ -1673,7 +1680,6 @@
         "code-viewer",
         "text-viewer-chenglou",
         "markdown-document-viewer",
-        "viewer-shell",
         "skeleton"
       ],
       "files": [
@@ -1771,6 +1777,11 @@
           "path": "registry/new-york-v4/ui/file-system.tsx",
           "type": "registry:ui",
           "target": "@ui/file-system.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/viewer.tsx",
+          "type": "registry:ui",
+          "target": "@ui/viewer.tsx"
         },
         {
           "path": "registry/new-york-v4/ui/file-system-types.ts",
@@ -2058,7 +2069,6 @@
         "sidebar",
         "file-size-format",
         "file-thumbnail",
-        "viewer-shell",
         "file-viewer"
       ],
       "files": [
@@ -2769,7 +2779,7 @@
       "name": "pdf-thumbnail-sidebar",
       "type": "registry:ui",
       "title": "PDF Thumbnail Sidebar",
-      "description": "A page-thumbnail rail for the PdfViewer left slot: lazy pdfjs thumbnails, active-page highlight, click-to-jump. Reuses the viewer’s cached document.",
+      "description": "A page-thumbnail sidebar for explicit PdfViewer composition: lazy pdfjs thumbnails, active-page highlight, click-to-jump. Reuses the viewer’s cached document.",
       "registryDependencies": ["pdf-viewer", "utils", "spinner"],
       "files": [
         {
@@ -2877,6 +2887,11 @@
           "path": "registry/new-york-v4/blocks/dropzone-uploader-viewer-parts.tsx",
           "type": "registry:component",
           "target": "@components/blocks/dropzone-uploader-viewer-parts.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/viewer.tsx",
+          "type": "registry:ui",
+          "target": "@ui/viewer.tsx"
         },
         {
           "path": "registry/new-york-v4/blocks/dropzone-workflow-examples.tsx",
@@ -3094,9 +3109,9 @@
           "target": "@ui/text-code-viewer-chrome.tsx"
         },
         {
-          "path": "registry/new-york-v4/ui/plain-text-viewer-shell.tsx",
+          "path": "registry/new-york-v4/ui/plain-text-viewer-frame.tsx",
           "type": "registry:ui",
-          "target": "@ui/plain-text-viewer-shell.tsx"
+          "target": "@ui/plain-text-viewer-frame.tsx"
         },
         {
           "path": "registry/new-york-v4/ui/code-viewer-content.tsx",
@@ -3210,9 +3225,9 @@
           "target": "@ui/text-code-viewer-chrome.tsx"
         },
         {
-          "path": "registry/new-york-v4/ui/plain-text-viewer-shell.tsx",
+          "path": "registry/new-york-v4/ui/plain-text-viewer-frame.tsx",
           "type": "registry:ui",
-          "target": "@ui/plain-text-viewer-shell.tsx"
+          "target": "@ui/plain-text-viewer-frame.tsx"
         },
         {
           "path": "registry/new-york-v4/ui/text-viewer-content.tsx",
@@ -3317,6 +3332,10 @@
         "marked@18.0.5",
         "react-markdown",
         "rehype-katex",
+        "rehype-pretty-code",
+        "rehype-raw",
+        "rehype-sanitize",
+        "remark-breaks",
         "remark-directive",
         "remark-gfm",
         "remark-math",

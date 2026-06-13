@@ -61,9 +61,9 @@ flowchart TD
   SourceToTextHighlight --> Props
 
   %% ---------------------------------------------------------------------------
-  %% TextViewer shell
+  %% TextViewer frame
   %% ---------------------------------------------------------------------------
-  subgraph ViewerShell["TextViewer shell: registry/new-york-v4/ui/text-viewer.tsx"]
+  subgraph TextViewerFrame["TextViewer frame: registry/new-york-v4/ui/text-viewer.tsx"]
     TextViewer["TextViewer forwardRef"]
     RetryState["retryState\n{ contentKey, version }"]
     UseIsClient["useIsClient()\nuseSyncExternalStore\nserver snapshot false\nclient snapshot true"]
@@ -368,7 +368,7 @@ flowchart TD
   MainTests --> Scrolling
   EdgeTests --> Rendering
   BugHuntTests --> TextResource
-  BugHuntTests --> ViewerShell
+  BugHuntTests --> TextViewerFrame
   SourceTests --> SourceLink
   FileMarkdownTests --> ConsumerAPI
 ```

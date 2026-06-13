@@ -1,13 +1,7 @@
 import * as React from "react"
-import {
-  Maximize,
-  Minus,
-  PanelLeftClose,
-  PanelLeftOpen,
-  Plus,
-  RotateCw,
-} from "lucide-react"
+import { Maximize, Minus, Plus, RotateCw } from "lucide-react"
 
+import { cn } from "@/lib/utils"
 import { type ViewerDownloadAction } from "@/lib/viewer-download"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -18,37 +12,40 @@ export function PdfViewerToolbar({
   pageCount,
   scale,
   downloadAction,
-  showRailToggle,
-  railsOpen,
-  onToggleRails,
   onZoomOut,
   onZoomIn,
   onFitWidth,
   onRotate,
-}: {
-  currentPage: number
-  pageCount: number
-  scale: number
-  downloadAction: ViewerDownloadAction
-  showRailToggle: boolean
-  railsOpen: boolean
-  onToggleRails: () => void
-  onZoomOut: () => void
-  onZoomIn: () => void
-  onFitWidth: () => void
-  onRotate: () => void
-}) {
+}: PdfViewerControlsProps) {
   return (
     <div className="flex h-10 flex-shrink-0 items-center gap-1 border-b bg-card px-2">
-      {showRailToggle ? (
-        <IconButton
-          label={railsOpen ? "Hide sidebar" : "Show sidebar"}
-          aria-pressed={railsOpen}
-          onClick={onToggleRails}
-        >
-          {railsOpen ? <PanelLeftClose /> : <PanelLeftOpen />}
-        </IconButton>
-      ) : null}
+      <PdfViewerControls
+        currentPage={currentPage}
+        pageCount={pageCount}
+        scale={scale}
+        downloadAction={downloadAction}
+        onZoomOut={onZoomOut}
+        onZoomIn={onZoomIn}
+        onFitWidth={onFitWidth}
+        onRotate={onRotate}
+      />
+    </div>
+  )
+}
+
+export function PdfViewerControls({
+  currentPage,
+  pageCount,
+  scale,
+  downloadAction,
+  onZoomOut,
+  onZoomIn,
+  onFitWidth,
+  onRotate,
+  className,
+}: PdfViewerControlsProps & { className?: string }) {
+  return (
+    <div className={cn("flex min-w-0 flex-1 items-center gap-1", className)}>
       <span className="px-1 text-xs text-muted-foreground tabular-nums">
         Page {Math.min(currentPage, pageCount)} of {pageCount}
       </span>
@@ -73,6 +70,17 @@ export function PdfViewerToolbar({
       </div>
     </div>
   )
+}
+
+type PdfViewerControlsProps = {
+  currentPage: number
+  pageCount: number
+  scale: number
+  downloadAction: ViewerDownloadAction
+  onZoomOut: () => void
+  onZoomIn: () => void
+  onFitWidth: () => void
+  onRotate: () => void
 }
 
 function IconButton({

@@ -213,6 +213,11 @@ describe("EmailViewer", () => {
     expect(
       container.querySelector('[data-slot="mime-part-sidebar"]')
     ).toBeTruthy()
+    expect(container.querySelector('[data-slot="viewer-root"]')).toBeTruthy()
+    expect(container.querySelector('[data-slot="viewer-header"]')).toBeTruthy()
+    expect(container.querySelector('[data-slot="viewer-body"]')).toBeTruthy()
+    expect(container.querySelector('[data-slot="viewer-sidebar"]')).toBeTruthy()
+    expect(container.querySelector('[data-slot="viewer-surface"]')).toBeTruthy()
     expect(
       container.querySelector('[data-slot="attachment-sidebar"]')
     ).toBeNull()

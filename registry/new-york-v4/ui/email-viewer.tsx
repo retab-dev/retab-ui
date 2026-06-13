@@ -39,7 +39,13 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "./sidebar"
-import { ViewerShell } from "./viewer-shell"
+import {
+  ViewerBody,
+  ViewerHeader,
+  ViewerRoot,
+  ViewerSidebar,
+  ViewerSurface,
+} from "./viewer"
 
 export type {
   EmailViewerMessage,
@@ -62,14 +68,41 @@ export {
   replaceCidUrls,
 } from "./email-viewer-model"
 
-export function EmailViewer({
+export interface EmailViewerProviderProps {
+  message: EmailViewerMessage
+  selectedPath?: MimePartPath | null
+  defaultSelectedPath?: MimePartPath
+  onSelectedPathChange?: (path: MimePartPath, node: MimePartNode) => void
+  children: React.ReactNode
+}
+
+type EmailViewerContextValue = {
+  display: MimeDisplayPart | null
+  message: EmailViewerMessage
+  rootNode: MimePartNode
+  selectedNode: MimePartNode
+  setSelectedNode: (node: MimePartNode) => void
+}
+
+const EmailViewerContext = React.createContext<EmailViewerContextValue | null>(
+  null
+)
+
+export function useEmailViewer() {
+  const context = React.useContext(EmailViewerContext)
+  if (!context) {
+    throw new Error("useEmailViewer must be used within EmailViewerProvider.")
+  }
+  return context
+}
+
+export function EmailViewerProvider({
   message,
   selectedPath,
   defaultSelectedPath,
   onSelectedPathChange,
-  className,
-  bare = false,
-}: EmailViewerProps) {
+  children,
+}: EmailViewerProviderProps) {
   const rootNode = React.useMemo(
     () => buildMimeTree(message.root),
     [message.root]
@@ -112,33 +145,80 @@ export function EmailViewer({
     () => getMimeDisplayPart(selectedNode, inlineResourceUrls),
     [inlineResourceUrls, selectedNode]
   )
+  const value = React.useMemo<EmailViewerContextValue>(
+    () => ({
+      display,
+      message,
+      rootNode,
+      selectedNode,
+      setSelectedNode,
+    }),
+    [display, message, rootNode, selectedNode, setSelectedNode]
+  )
 
   return (
-    <div data-slot="email-viewer" className={cn("min-h-0", className)}>
-      <ViewerShell
-        bare={bare}
-        className="h-full"
-        bodyClassName="flex-col md:flex-row"
-        contentClassName="min-h-[26rem] md:min-h-0"
-        slots={{
-          header: <MimeMessageHeader message={message} />,
-          left: (
-            <MimePartSidebar
-              root={rootNode}
-              selectedPath={selectedNode.path}
-              onSelectNode={setSelectedNode}
-              className="border-t md:border-t-0"
-            />
-          ),
-        }}
-      >
-        <MimeViewerContent
-          message={message}
-          selectedNode={selectedNode}
-          display={display}
-        />
-      </ViewerShell>
-    </div>
+    <EmailViewerContext.Provider value={value}>
+      {children}
+    </EmailViewerContext.Provider>
+  )
+}
+
+export function EmailViewer({
+  message,
+  selectedPath,
+  defaultSelectedPath,
+  onSelectedPathChange,
+  className,
+  bare = false,
+}: EmailViewerProps) {
+  return (
+    <EmailViewerProvider
+      message={message}
+      selectedPath={selectedPath}
+      defaultSelectedPath={defaultSelectedPath}
+      onSelectedPathChange={onSelectedPathChange}
+    >
+      <div data-slot="email-viewer" className={cn("min-h-0", className)}>
+        <ViewerRoot bare={bare} className="h-full">
+          <EmailViewerHeader />
+          <ViewerBody className="flex-col md:flex-row">
+            <ViewerSidebar className="border-t md:border-t-0">
+              <EmailViewerPartsList />
+            </ViewerSidebar>
+            <ViewerSurface className="min-h-[26rem] md:min-h-0">
+              <EmailViewerSelectedPart />
+            </ViewerSurface>
+          </ViewerBody>
+        </ViewerRoot>
+      </div>
+    </EmailViewerProvider>
+  )
+}
+
+export function EmailViewerHeader() {
+  const { message } = useEmailViewer()
+  return <MimeMessageHeader message={message} />
+}
+
+export function EmailViewerPartsList() {
+  const { rootNode, selectedNode, setSelectedNode } = useEmailViewer()
+  return (
+    <MimePartSidebar
+      root={rootNode}
+      selectedPath={selectedNode.path}
+      onSelectNode={setSelectedNode}
+    />
+  )
+}
+
+export function EmailViewerSelectedPart() {
+  const { display, message, selectedNode } = useEmailViewer()
+  return (
+    <MimeViewerContent
+      message={message}
+      selectedNode={selectedNode}
+      display={display}
+    />
   )
 }
 
@@ -194,26 +274,28 @@ function MimeMessageHeader({ message }: { message: EmailViewerMessage }) {
   const sentAt = formatSentAt(message.sentAt)
 
   return (
-    <div
-      data-slot="email-message-header"
-      className="flex min-h-0 flex-shrink-0 flex-col gap-1 border-b bg-card px-3 py-2"
-    >
-      <div className="flex min-w-0 items-center gap-2">
-        <Mail className="size-4 flex-shrink-0 text-muted-foreground" />
-        <h2 className="min-w-0 flex-1 truncate text-sm font-medium">
-          {subject}
-        </h2>
+    <ViewerHeader className="px-3 py-2">
+      <div
+        data-slot="email-message-header"
+        className="flex min-h-0 flex-col gap-1"
+      >
+        <div className="flex min-w-0 items-center gap-2">
+          <Mail className="size-4 flex-shrink-0 text-muted-foreground" />
+          <h2 className="min-w-0 flex-1 truncate text-sm font-medium">
+            {subject}
+          </h2>
+        </div>
+        <div className="flex min-w-0 flex-wrap gap-x-3 gap-y-1 pl-6 text-xs text-muted-foreground">
+          {message.from ? (
+            <span className="min-w-0 truncate">From {message.from}</span>
+          ) : null}
+          {recipients ? (
+            <span className="min-w-0 truncate">To {recipients}</span>
+          ) : null}
+          {sentAt ? <span className="tabular-nums">{sentAt}</span> : null}
+        </div>
       </div>
-      <div className="flex min-w-0 flex-wrap gap-x-3 gap-y-1 pl-6 text-xs text-muted-foreground">
-        {message.from ? (
-          <span className="min-w-0 truncate">From {message.from}</span>
-        ) : null}
-        {recipients ? (
-          <span className="min-w-0 truncate">To {recipients}</span>
-        ) : null}
-        {sentAt ? <span className="tabular-nums">{sentAt}</span> : null}
-      </div>
-    </div>
+    </ViewerHeader>
   )
 }
 
@@ -237,7 +319,7 @@ function MimePartSidebar({
   return (
     <EmbeddedSidebarProvider
       width="19rem"
-      className="h-72 md:h-full md:w-(--sidebar-width)"
+      className="h-72 bg-transparent md:h-full md:w-(--sidebar-width)"
     >
       <Sidebar
         side="left"

@@ -4,72 +4,116 @@ import * as React from "react"
 import { Eye, Upload, X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
-import type {
-  DropzoneFileItem,
-  UseDropzoneReturn,
+import { blobSource } from "@/lib/viewer-resource"
+import type { BlobViewerSource } from "@/lib/viewer-source"
+import {
+  useDropzone,
+  type DropzoneFileItem,
+  type UseDropzoneReturn,
 } from "@/components/ui/dropzone"
 import { formatFileSize } from "@/components/ui/file-size-format"
 import { FileThumbnail } from "@/components/ui/file-thumbnail"
+import { FileViewer } from "@/components/ui/file-viewer"
+import {
+  ViewerHeader,
+  ViewerRoot,
+  ViewerSidebar,
+  ViewerSurface,
+} from "@/components/ui/viewer"
 
-type UploaderViewerDropzone = Pick<
-  UseDropzoneReturn,
-  | "clearFiles"
-  | "getButtonProps"
-  | "getInputProps"
-  | "getRootProps"
-  | "getTriggerProps"
-  | "isDragging"
->
+const DEFAULT_UPLOADABLE_VIEWER_ACCEPT =
+  ".pdf,.png,.jpg,.jpeg,.csv,.txt,.md,.json,application/pdf,image/*,text/*,text/csv,application/json"
 
-export function UploaderViewerRoot({
-  children,
-  className,
-  dropzone,
-}: {
+export interface UploadableFileViewerProviderProps {
+  accept?: string
   children: React.ReactNode
-  className?: string
-  dropzone: UploaderViewerDropzone
-}) {
+}
+
+type UploadableFileViewerContextValue = {
+  dropzone: UseDropzoneReturn
+  selectedFile: DropzoneFileItem | undefined
+  viewerSource: BlobViewerSource | null
+}
+
+const UploadableFileViewerContext =
+  React.createContext<UploadableFileViewerContextValue | null>(null)
+
+export function useUploadableFileViewer() {
+  const context = React.useContext(UploadableFileViewerContext)
+  if (!context) {
+    throw new Error(
+      "useUploadableFileViewer must be used within UploadableFileViewerProvider."
+    )
+  }
+  return context
+}
+
+export function UploadableFileViewerProvider({
+  accept = DEFAULT_UPLOADABLE_VIEWER_ACCEPT,
+  children,
+}: UploadableFileViewerProviderProps) {
+  const dropzone = useDropzone({
+    accept,
+    maxFiles: 1,
+    multiple: false,
+  })
+  const selectedFile = dropzone.files[0]
+  const viewerSource = React.useMemo(() => {
+    if (!selectedFile) return null
+
+    return blobSource(selectedFile.file, {
+      fileName: selectedFile.file.name,
+      identityKey: selectedFile.id,
+      mimeType: selectedFile.file.type || undefined,
+    })
+  }, [selectedFile])
+  const value = React.useMemo<UploadableFileViewerContextValue>(
+    () => ({
+      dropzone,
+      selectedFile,
+      viewerSource,
+    }),
+    [dropzone, selectedFile, viewerSource]
+  )
+
   return (
-    <section
-      {...dropzone.getRootProps({
-        className: cn(
-          "overflow-hidden rounded-lg border bg-background transition-colors",
-          dropzone.isDragging && "border-foreground/40 bg-accent/35",
-          className
-        ),
-      })}
-    >
-      {children}
-    </section>
+    <UploadableFileViewerContext.Provider value={value}>
+      <section {...dropzone.getRootProps({ className: "contents" })}>
+        <input {...dropzone.getInputProps({ className: "hidden" })} />
+        {children}
+      </section>
+    </UploadableFileViewerContext.Provider>
   )
 }
 
-export function UploaderViewerInput({
-  dropzone,
-}: {
-  dropzone: UploaderViewerDropzone
-}) {
-  return <input {...dropzone.getInputProps({ className: "hidden" })} />
-}
-
-export function UploaderViewerFrame({
+export function UploadableFileViewerFrame({
   children,
+  className,
 }: {
   children: React.ReactNode
+  className?: string
 }) {
-  return <div className="flex min-h-[30rem] flex-col">{children}</div>
+  const { dropzone } = useUploadableFileViewer()
+
+  return (
+    <ViewerRoot
+      bare
+      className={cn(
+        "min-h-[30rem] rounded-lg border bg-background text-foreground transition-colors",
+        dropzone.isDragging && "border-foreground/40 bg-accent/35",
+        className
+      )}
+    >
+      {children}
+    </ViewerRoot>
+  )
 }
 
-export function UploaderViewerHeader({
-  dropzone,
-  selectedFile,
-}: {
-  dropzone: UploaderViewerDropzone
-  selectedFile?: DropzoneFileItem
-}) {
+export function UploadableFileViewerHeader() {
+  const { dropzone, selectedFile } = useUploadableFileViewer()
+
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
+    <ViewerHeader className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
       <div className="min-w-0">
         <div className="flex items-center gap-2 text-sm font-medium">
           <Eye className="size-4 text-muted-foreground" aria-hidden />
@@ -102,29 +146,66 @@ export function UploaderViewerHeader({
           {selectedFile ? "Replace" : "Upload file"}
         </button>
       </div>
-    </div>
+    </ViewerHeader>
   )
 }
 
-export function UploaderViewerSidebar({
-  dropzone,
-  selectedFile,
-}: {
-  dropzone: UploaderViewerDropzone
-  selectedFile?: DropzoneFileItem
-}) {
+export function UploadableFileViewerSummary() {
+  const { dropzone, selectedFile } = useUploadableFileViewer()
+
   return (
-    <aside className="border-b bg-muted/20 p-4 md:border-r md:border-b-0">
+    <ViewerSidebar className="border-b bg-muted/20 p-4 md:border-r md:border-b-0">
       {selectedFile ? (
-        <UploaderViewerFileCard fileItem={selectedFile} />
+        <UploadableFileViewerFileCard fileItem={selectedFile} />
       ) : (
-        <UploaderViewerNoFile dropzone={dropzone} />
+        <UploadableFileViewerNoFile />
       )}
-    </aside>
+      {!selectedFile ? (
+        <button
+          {...dropzone.getButtonProps({
+            className:
+              "mt-4 inline-flex h-8 w-fit cursor-pointer items-center gap-2 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground outline-none focus-visible:ring-[3px] focus-visible:ring-ring/24",
+          })}
+        >
+          <Upload className="size-3.5" aria-hidden />
+          Upload file
+        </button>
+      ) : null}
+    </ViewerSidebar>
   )
 }
 
-function UploaderViewerFileCard({ fileItem }: { fileItem: DropzoneFileItem }) {
+export function UploadableFileViewerContent({
+  renderViewer,
+}: {
+  renderViewer?: (source: BlobViewerSource) => React.ReactNode
+}) {
+  const { dropzone, viewerSource } = useUploadableFileViewer()
+
+  return (
+    <ViewerSurface className="min-h-[24rem] bg-muted/10 p-3">
+      {viewerSource ? (
+        renderViewer ? (
+          renderViewer(viewerSource)
+        ) : (
+          <FileViewer
+            source={viewerSource}
+            bare
+            className="size-full min-h-0"
+          />
+        )
+      ) : (
+        <UploadableFileViewerEmptyState dropzone={dropzone} />
+      )}
+    </ViewerSurface>
+  )
+}
+
+function UploadableFileViewerFileCard({
+  fileItem,
+}: {
+  fileItem: DropzoneFileItem
+}) {
   return (
     <div className="space-y-3">
       <FileThumbnail
@@ -147,44 +228,21 @@ function UploaderViewerFileCard({ fileItem }: { fileItem: DropzoneFileItem }) {
   )
 }
 
-function UploaderViewerNoFile({
-  dropzone,
-}: {
-  dropzone: UploaderViewerDropzone
-}) {
+function UploadableFileViewerNoFile() {
   return (
-    <div className="flex h-full min-h-40 flex-col justify-between gap-4">
-      <div>
-        <div className="text-sm font-medium">No file selected</div>
-        <div className="mt-1 text-xs text-muted-foreground">
-          PDF, image, CSV, text, Markdown, or JSON.
-        </div>
+    <div>
+      <div className="text-sm font-medium">No file selected</div>
+      <div className="mt-1 text-xs text-muted-foreground">
+        PDF, image, CSV, text, Markdown, or JSON.
       </div>
-      <button
-        {...dropzone.getButtonProps({
-          className:
-            "inline-flex h-8 w-fit cursor-pointer items-center gap-2 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground outline-none focus-visible:ring-[3px] focus-visible:ring-ring/24",
-        })}
-      >
-        <Upload className="size-3.5" aria-hidden />
-        Upload file
-      </button>
     </div>
   )
 }
 
-export function UploaderViewerMain({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  return <div className="min-h-[24rem] bg-muted/10 p-3">{children}</div>
-}
-
-export function UploaderViewerEmptyState({
+function UploadableFileViewerEmptyState({
   dropzone,
 }: {
-  dropzone: UploaderViewerDropzone
+  dropzone: UseDropzoneReturn
 }) {
   return (
     <div

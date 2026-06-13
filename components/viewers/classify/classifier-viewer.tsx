@@ -4,26 +4,16 @@ import { useCallback, useMemo, useRef, type ReactNode } from "react"
 import { Loader2, Tags } from "lucide-react"
 
 import { buildColorMap, type Segment } from "@/lib/segments"
-import { type PdfViewerSlots } from "@/components/ui/pdf-viewer"
 import { SegmentLegend } from "@/components/ui/segment-legend"
 import { useSegmentInteraction } from "@/components/ui/use-segment-interaction"
 import type { ClassifyResult } from "@/components/viewers/lib/classify-types"
-
-/**
- * Slots a document surface receives. The category legend mounts in `top` — the
- * surface spreads them onto its `PdfViewer`, exactly like the split and
- * partition viewers.
- */
-export interface ClassifierDocumentHandlers {
-  slots: PdfViewerSlots
-}
 
 export interface ClassifierViewerProps {
   result: ClassifyResult | null
   isProcessing?: boolean
   emptyTitle?: string
   emptyDescription?: string
-  renderDocument?: (handlers: ClassifierDocumentHandlers) => ReactNode
+  renderDocument?: () => ReactNode
 }
 
 /**
@@ -89,11 +79,11 @@ export function ClassifierViewer({
     )
   }
 
-  // The category legend mounts in the document's `top` slot. The reasoning rides
-  // along as a muted caption — the only classify-specific detail, passed to the
-  // legend's `caption` slot rather than wrapped in chrome of its own.
-  const slots = {
-    top: (
+  return (
+    <div
+      ref={previewRef}
+      className="flex min-h-0 flex-1 flex-col bg-background"
+    >
       <SegmentLegend
         segments={segments}
         interaction={interaction}
@@ -102,13 +92,8 @@ export function ClassifierViewer({
           reasoning ? <span title={reasoning}>{reasoning}</span> : undefined
         }
       />
-    ),
-  }
-
-  return (
-    <div ref={previewRef} className="flex min-h-0 flex-1 bg-background">
       {renderDocument ? (
-        renderDocument({ slots })
+        renderDocument()
       ) : (
         <div className="flex h-full flex-1 items-center justify-center">
           <span className="text-sm text-muted-foreground">

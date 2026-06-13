@@ -38,7 +38,6 @@ export function DocxViewerContent({
   onVisiblePageChange,
   resource,
   scale: controlledScale,
-  slots,
   toolbar = true,
 }: Omit<DocxResourceViewerProps, "source"> & {
   forwardedRef?: React.ForwardedRef<DocxViewerHandle>
@@ -210,7 +209,7 @@ export function DocxViewerContent({
           zoomOut={zoomOut}
         />
       ) : null}
-      <DocxViewerBody slots={slots}>
+      <DocxViewerBody>
         <ScrollArea
           className="min-h-0 flex-1"
           viewportRef={scrollViewportRef}

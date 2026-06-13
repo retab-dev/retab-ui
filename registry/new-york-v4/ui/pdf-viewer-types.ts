@@ -1,5 +1,3 @@
-import type { ViewerSlots } from "./viewer-slots"
-
 export interface PageOverlayProps {
   pageNumber: number
   /** Rendered page size in CSS pixels (post-scale, post-rotation). */
@@ -25,8 +23,6 @@ export interface PdfViewerHandle {
   ) => void
   getViewportElement: () => HTMLDivElement | null
 }
-
-export type PdfViewerSlots = ViewerSlots
 
 export type PdfPageSize = {
   width: number

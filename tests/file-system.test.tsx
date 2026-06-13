@@ -10,11 +10,23 @@ import {
 } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import { FileSystem } from "@/registry/new-york-v4/ui/file-system"
+import {
+  FileSystem,
+  FileSystemViewerHeader,
+  FileSystemViewerProvider,
+  FileSystemViewerSelectedFile,
+  FileSystemViewerTree,
+} from "@/registry/new-york-v4/ui/file-system"
 import type {
   FileSystemItem,
   FileSystemQueryState,
 } from "@/registry/new-york-v4/ui/file-system-types"
+import {
+  ViewerBody,
+  ViewerRoot,
+  ViewerSidebar,
+  ViewerSurface,
+} from "@/registry/new-york-v4/ui/viewer"
 
 vi.mock("@/components/ui/file-viewer", () => ({
   FileViewer: ({ source }: { source: { fileName?: string } }) => (
@@ -134,6 +146,56 @@ async function expandFileTreeItem(name: RegExp | string) {
 }
 
 describe("FileSystem", () => {
+  it("builds the easy file-system viewer from the explicit viewer primitive tree", () => {
+    render(<FileSystem items={items} />)
+
+    const root = document.querySelector<HTMLElement>(
+      '[data-slot="viewer-root"]'
+    )
+    expect(root).toBeTruthy()
+    expect(root?.getAttribute("data-viewer")).toBe("file-system")
+    expect(document.querySelectorAll('[data-slot="viewer-root"]')).toHaveLength(
+      1
+    )
+    expect(root?.children[0]?.getAttribute("data-slot")).toBe("viewer-header")
+    expect(root?.children[1]?.getAttribute("data-slot")).toBe("viewer-body")
+
+    const body = root?.querySelector<HTMLElement>('[data-slot="viewer-body"]')
+    expect(
+      body?.querySelector(':scope > [data-slot="viewer-sidebar"]')
+    ).toBeTruthy()
+    expect(
+      body?.querySelector(':scope > [data-slot="viewer-surface"]')
+    ).toBeTruthy()
+  })
+
+  it("composes file-system provider parts directly", async () => {
+    render(
+      <FileSystemViewerProvider items={items}>
+        <ViewerRoot>
+          <FileSystemViewerHeader />
+          <ViewerBody>
+            <ViewerSidebar>
+              <FileSystemViewerTree />
+            </ViewerSidebar>
+            <ViewerSurface>
+              <FileSystemViewerSelectedFile />
+            </ViewerSurface>
+          </ViewerBody>
+        </ViewerRoot>
+      </FileSystemViewerProvider>
+    )
+
+    fireEvent.doubleClick(await findFileTreeItem(/reports/i))
+    fireEvent.click(await findFileTreeItem(/report.pdf/i))
+
+    await waitFor(() => {
+      expect(screen.getByTestId("file-viewer").textContent).toBe(
+        "viewer:report.pdf"
+      )
+    })
+  })
+
   it("renders inferred folders and previews the selected file", async () => {
     render(<FileSystem items={items} />)
 
@@ -154,7 +216,9 @@ describe("FileSystem", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "CSV" }))
 
-    expect(await screen.findByRole("option", { name: /table.csv/i })).toBeTruthy()
+    expect(
+      await screen.findByRole("option", { name: /table.csv/i })
+    ).toBeTruthy()
     expect(screen.queryByRole("option", { name: /report.pdf/i })).toBeNull()
   })
 
@@ -181,7 +245,9 @@ describe("FileSystem", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Modified 30d" }))
 
-    expect(await screen.findByRole("option", { name: /recent.txt/i })).toBeTruthy()
+    expect(
+      await screen.findByRole("option", { name: /recent.txt/i })
+    ).toBeTruthy()
     expect(screen.queryByRole("option", { name: /old.txt/i })).toBeNull()
   })
 
@@ -248,14 +314,18 @@ describe("FileSystem", () => {
 
     render(<ControlledFileSystem />)
 
-    expect(await screen.findByRole("option", { name: /report.pdf/i })).toBeTruthy()
+    expect(
+      await screen.findByRole("option", { name: /report.pdf/i })
+    ).toBeTruthy()
     expect(screen.queryByRole("option", { name: /table.csv/i })).toBeNull()
 
     fireEvent.change(screen.getByRole("searchbox", { name: "Search files" }), {
       target: { value: "table" },
     })
 
-    expect(await screen.findByRole("option", { name: /table.csv/i })).toBeTruthy()
+    expect(
+      await screen.findByRole("option", { name: /table.csv/i })
+    ).toBeTruthy()
     expect(screen.queryByRole("option", { name: /report.pdf/i })).toBeNull()
   })
 
@@ -269,7 +339,9 @@ describe("FileSystem", () => {
       />
     )
 
-    expect(await screen.findByRole("option", { name: /report.pdf/i })).toBeTruthy()
+    expect(
+      await screen.findByRole("option", { name: /report.pdf/i })
+    ).toBeTruthy()
     expect(screen.queryByRole("option", { name: /table.csv/i })).toBeNull()
   })
 
@@ -491,7 +563,9 @@ describe("FileSystem", () => {
     })
     fireEvent.doubleClick(screen.getByRole("option", { name: /stable/i }))
 
-    expect(await screen.findByRole("option", { name: /stable.txt/i })).toBeTruthy()
+    expect(
+      await screen.findByRole("option", { name: /stable.txt/i })
+    ).toBeTruthy()
     await act(async () => {
       deferred.resolve({
         items: [

@@ -35,10 +35,7 @@ import {
 } from "@/lib/segments"
 import { PageRibbon } from "@/components/ui/page-ribbon"
 import { PageTimeline } from "@/components/ui/page-timeline"
-import type {
-  PdfViewerHandle,
-  PdfViewerSlots,
-} from "@/components/ui/pdf-viewer"
+import type { PdfViewerHandle } from "@/components/ui/pdf-viewer"
 import { SegmentLegend } from "@/components/ui/segment-legend"
 import { SegmentSidebar } from "@/components/ui/segment-sidebar"
 import { SegmentedDocumentViewer } from "@/components/ui/segmented-document-viewer"
@@ -51,14 +48,8 @@ import { SplitViewer } from "@/components/viewers/split/split-viewer"
 import { useSegmentViewportController } from "@/components/viewers/split/use-segment-viewport-controller"
 
 vi.mock("@/components/ui/pdf-viewer", () => ({
-  PdfViewer: ({
-    slots,
-  }: {
-    slots?: { top?: React.ReactNode; left?: React.ReactNode }
-  }) => (
+  PdfViewer: () => (
     <div data-testid="pdf-viewer">
-      {slots?.top}
-      {slots?.left}
       {Array.from({ length: 6 }, (_, index) => {
         const page = index + 1
         return (
@@ -1568,7 +1559,7 @@ describe("partition segment composition", () => {
           consensus: { choices: [], likelihoods: null },
           usage: null,
         }}
-        renderDocument={({ slots }) => <div>{slots.top}</div>}
+        renderDocument={() => <div data-testid="partition-document" />}
       />
     )
 
@@ -1596,9 +1587,8 @@ describe("partition segment composition", () => {
             consensus: { choices: [], likelihoods: null },
             usage: null,
           }}
-          renderDocument={({ slots }) => (
+          renderDocument={() => (
             <div>
-              {slots.top}
               <div data-page-number="1" />
               <div data-page-number="5" />
             </div>
@@ -1622,7 +1612,7 @@ describe("partition segment composition", () => {
           consensus: { choices: [], likelihoods: null },
           usage: null,
         }}
-        renderDocument={({ slots }) => <div>{slots.top}</div>}
+        renderDocument={() => <div data-testid="partition-document" />}
       />
     )
 
@@ -1819,16 +1809,18 @@ describe("split segment composition", () => {
 
     expect(wrapperClassName).toContain("min-w-0")
     expect(wrapperClassName).toContain("flex-1")
+    expect(document.querySelector('[data-slot="viewer-root"]')).toBeTruthy()
+    expect(document.querySelector('[data-slot="viewer-header"]')).toBeTruthy()
+    expect(document.querySelector('[data-slot="viewer-body"]')).toBeTruthy()
+    expect(document.querySelector('[data-slot="viewer-surface"]')).toBeTruthy()
   })
 
   it("jumps through the PDF viewer handle when a legend segment page is virtualized", () => {
     const scrollToPage = vi.fn()
 
     function DocumentWithHandle({
-      slots,
       setViewerHandle,
     }: {
-      slots: PdfViewerSlots
       setViewerHandle: (handle: PdfViewerHandle | null) => void
     }) {
       React.useEffect(() => {
@@ -1840,14 +1832,14 @@ describe("split segment composition", () => {
         return () => setViewerHandle(null)
       }, [setViewerHandle])
 
-      return <div>{slots.top}</div>
+      return <div data-testid="split-document" />
     }
 
     render(
       <SplitViewer
         result={{ output: [{ name: "Invoices", pages: [5] }] }}
-        renderDocument={({ slots, setViewerHandle }) => (
-          <DocumentWithHandle slots={slots} setViewerHandle={setViewerHandle} />
+        renderDocument={({ setViewerHandle }) => (
+          <DocumentWithHandle setViewerHandle={setViewerHandle} />
         )}
       />
     )
@@ -1859,11 +1851,9 @@ describe("split segment composition", () => {
 
   it("clears clicked category previewing when scrolling outside its pages", () => {
     function DocumentHarness({
-      slots,
       onCurrentPageChange,
       setViewerHandle,
     }: {
-      slots: PdfViewerSlots
       onCurrentPageChange: (page: number) => void
       setViewerHandle: (handle: PdfViewerHandle | null) => void
     }) {
@@ -1878,7 +1868,6 @@ describe("split segment composition", () => {
 
       return (
         <div>
-          {slots.top}
           <button type="button" onClick={() => onCurrentPageChange(1)}>
             Scroll to title
           </button>
@@ -1894,9 +1883,8 @@ describe("split segment composition", () => {
             { name: "Results", pages: [7, 8, 9] },
           ],
         }}
-        renderDocument={({ slots, onCurrentPageChange, setViewerHandle }) => (
+        renderDocument={({ onCurrentPageChange, setViewerHandle }) => (
           <DocumentHarness
-            slots={slots}
             onCurrentPageChange={onCurrentPageChange}
             setViewerHandle={setViewerHandle}
           />

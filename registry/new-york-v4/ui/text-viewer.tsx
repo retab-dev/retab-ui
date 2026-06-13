@@ -2,7 +2,7 @@
 
 import * as React from "react"
 
-import { PlainTextViewerShell } from "./plain-text-viewer-shell"
+import { PlainTextViewerFrame } from "./plain-text-viewer-frame"
 import { TextViewerFallback } from "./text-viewer-chrome"
 import { TextViewerContent } from "./text-viewer-content"
 import type { TextViewerHandle, TextViewerProps } from "./text-viewer-types"
@@ -17,7 +17,7 @@ export type {
 export const TextViewer = React.forwardRef<TextViewerHandle, TextViewerProps>(
   function TextViewer(props, ref) {
     return (
-      <PlainTextViewerShell
+      <PlainTextViewerFrame
         props={props}
         forwardedRef={ref}
         clientFallbackPolicy="always"
