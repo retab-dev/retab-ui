@@ -426,8 +426,8 @@ For highlights:
 The File Viewer should route:
 
 - `.txt`, `.text`, `text/plain` extensionless -> Prose/Text mode
-- `.md`, `.markdown`, `.mdx` -> Markdown mode
-- `.log`, `.json`, language extensions -> Code Viewer or code-like preview
+- `.md`, `.markdown`, `text/markdown` -> Markdown mode
+- `.mdx`, `.log`, `.json`, language extensions -> Code Viewer or code-like preview
 
 Do not let `.log` use the prose pipeline. Logs need fixed rows, line numbers,
 and streaming.

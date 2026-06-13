@@ -111,6 +111,24 @@ describe("SchemaBuilder renders (integration smoke)", () => {
     expect(screen.getByText(/Definitions/)).toBeTruthy()
   })
 
+  it("allows the definitions accordion to close when definitions exist", async () => {
+    renderEditor({
+      type: "object",
+      $defs: {
+        Money: { type: "object", properties: { amount: { type: "number" } } },
+      },
+      properties: {},
+    })
+
+    expect(screen.getByText("Money")).toBeTruthy()
+
+    fireEvent.click(screen.getByRole("button", { name: /Definitions/ }))
+
+    await waitFor(() => {
+      expect(screen.queryByText("Money")).toBeNull()
+    })
+  })
+
   it("does not offer to delete definitions referenced from raw schema keywords", () => {
     renderEditor({
       type: "object",

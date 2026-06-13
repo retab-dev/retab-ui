@@ -242,18 +242,32 @@ export function getTextFrameVirtualItems({
 }): TextFrameVirtualItem[] {
   if (frames.length === 0) return []
 
-  const minY = Math.max(0, safeOffset(scrollTop) - safeSize(overscanPx))
-  const maxY =
-    safeOffset(scrollTop) +
-    Math.max(1, safeSize(viewportHeight)) +
-    safeSize(overscanPx)
-  const start = findFirstFrameEndingAfter(frames, minY)
-  const end = findFirstFrameStartingAtOrAfter(frames, maxY, start)
-  const cappedEnd = Math.min(
-    frames.length,
-    Math.max(start + 1, end),
-    start + maxItems
+  const safeScrollTop = safeOffset(scrollTop)
+  const safeViewportHeight = Math.max(1, safeSize(viewportHeight))
+  const safeOverscanPx = safeSize(overscanPx)
+  const visibleStart = findFirstFrameEndingAfter(frames, safeScrollTop)
+  const visibleEnd = Math.max(
+    visibleStart + 1,
+    findFirstFrameStartingAtOrAfter(
+      frames,
+      safeScrollTop + safeViewportHeight,
+      visibleStart
+    )
   )
+  const start = findFirstFrameEndingAfter(
+    frames,
+    Math.max(0, safeScrollTop - safeOverscanPx)
+  )
+  const end = Math.max(
+    visibleEnd,
+    findFirstFrameStartingAtOrAfter(
+      frames,
+      safeScrollTop + safeViewportHeight + safeOverscanPx,
+      visibleStart
+    )
+  )
+  const safeMaxItems = Math.max(visibleEnd - start, safeCount(maxItems))
+  const cappedEnd = Math.min(frames.length, end, start + safeMaxItems)
 
   return Array.from({ length: cappedEnd - start }, (_, localIndex) => {
     const index = start + localIndex

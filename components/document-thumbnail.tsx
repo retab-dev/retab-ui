@@ -3,7 +3,7 @@
 import * as React from "react"
 
 import { createViewerResource } from "@/lib/viewer-resource"
-import { FileThumbnail } from "@/components/ui/file-thumbnail"
+import { FileThumbnailFrame } from "@/components/ui/file-thumbnail-frame"
 import { resolveThumbnailDescriptor } from "@/components/document-thumbnail/descriptor"
 import {
   getThumbnailKey,
@@ -38,6 +38,7 @@ export function DocumentThumbnail({
   anchor = "top-left",
   retryKey,
   onError,
+  ...props
 }: DocumentThumbnailProps) {
   const descriptor = resolveThumbnailDescriptor({ source, as })
   const resource = React.useMemo(() => createViewerResource(source), [source])
@@ -59,7 +60,8 @@ export function DocumentThumbnail({
 
   if (descriptor.category === "unsupported") {
     return (
-      <FileThumbnail
+      <FileThumbnailFrame
+        {...props}
         file={{ name: descriptor.displayName, type: descriptor.mimeType ?? "" }}
         previewAspectRatio={previewAspectRatio}
         className={className}
@@ -78,6 +80,7 @@ export function DocumentThumbnail({
         anchor={anchor}
         renderKey={renderKey}
         errorState={currentErrorState}
+        thumbnailProps={props}
         onError={(error, nextErrorState) => {
           setErrorState(nextErrorState)
           onError?.(error, nextErrorState.info)
@@ -87,7 +90,8 @@ export function DocumentThumbnail({
   }
 
   return (
-    <FileThumbnail
+    <FileThumbnailFrame
+      {...props}
       file={{ name: descriptor.displayName, type: descriptor.mimeType ?? "" }}
       previewAspectRatio={previewAspectRatio}
       className={className}

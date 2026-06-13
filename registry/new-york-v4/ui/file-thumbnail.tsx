@@ -1,101 +1,126 @@
 "use client"
 
-import type * as React from "react"
+import * as React from "react"
 
-import { cn } from "@/lib/utils"
+import type { ViewerSource } from "@/lib/viewer-source"
+import { DocumentThumbnail } from "@/components/document-thumbnail"
 
-import { getFileThumbnailExtension } from "./file-thumbnail-extension"
-import { FileThumbnailFallback } from "./file-thumbnail-fallback"
-import { FileThumbnailImage } from "./file-thumbnail-image"
-import { FileThumbnailShimmer } from "./file-thumbnail-shimmer"
+import {
+  FileThumbnailFrame,
+  FileThumbnailShimmer,
+  hasRenderablePreviewContent,
+  resolveFileThumbnailState,
+} from "./file-thumbnail-frame"
 import type {
+  FileThumbnailFrameProps,
   FileThumbnailProps,
-  FileThumbnailState,
-} from "./file-thumbnail-types"
-
-export { FileThumbnailShimmer }
-export type {
-  FileThumbnailProps,
+  FileThumbnailSource,
   FileThumbnailState,
   ThumbnailFile,
 } from "./file-thumbnail-types"
 
+export {
+  FileThumbnailFrame,
+  FileThumbnailShimmer,
+  hasRenderablePreviewContent,
+  resolveFileThumbnailState,
+}
+export type {
+  FileThumbnailFrameProps,
+  FileThumbnailProps,
+  FileThumbnailSource,
+  FileThumbnailState,
+  ThumbnailFile,
+}
+
 /**
- * A compact preview shell for a file: a fixed-ratio frame with a loading
- * shimmer, a fade-in once the preview loads, and a muted fallback surface when
- * there is no preview or it fails to load.
- *
- * It does not parse documents or pull in any renderer packages — generate the
- * thumbnail with whatever viewer stack you already use and pass it in through
- * `previewImageUrl` or `previewContent`.
+ * Render a complete file thumbnail from a browser File, a viewer source, an
+ * externally generated image, custom preview content, or plain file metadata.
  */
 export function FileThumbnail({
+  source,
   file,
-  className,
-  previewAspectRatio,
-  previewClassName,
-  previewContent,
-  previewImageUrl,
-  onPreviewError,
-  state,
-  style,
-  ...props
+  as,
+  anchor,
+  retryKey,
+  onError,
+  ...frameProps
 }: FileThumbnailProps) {
-  const extension = getFileThumbnailExtension(file)
-  const hasRenderableContent = hasRenderablePreviewContent(previewContent)
-  const resolvedState = resolveFileThumbnailState({
-    explicitState: state,
-    hasPreview: hasRenderableContent || Boolean(previewImageUrl),
-  })
+  const resolvedSource = resolveFileThumbnailSource(source, file)
+  const {
+    previewClassName: _previewClassName,
+    previewContent: _previewContent,
+    previewImageUrl: _previewImageUrl,
+    onPreviewError: _onPreviewError,
+    state: _state,
+    ...thumbnailProps
+  } = frameProps
+
+  if (shouldUseFrame(frameProps) || !resolvedSource) {
+    return (
+      <FileThumbnailFrame
+        {...frameProps}
+        file={file ?? fileFromSource(resolvedSource)}
+      />
+    )
+  }
 
   return (
-    <div
-      {...props}
-      data-slot="file-thumbnail"
-      className={cn(
-        "relative overflow-hidden rounded-md border bg-muted text-muted-foreground",
-        className
-      )}
-      style={{
-        ...style,
-        aspectRatio: style?.aspectRatio ?? String(previewAspectRatio ?? 3 / 4),
-      }}
-    >
-      {resolvedState === "loading" ? (
-        <FileThumbnailShimmer />
-      ) : resolvedState === "error" ? (
-        <FileThumbnailFallback extension={extension} />
-      ) : hasRenderableContent ? (
-        <div className={cn("absolute inset-0", previewClassName)}>
-          {previewContent}
-        </div>
-      ) : previewImageUrl ? (
-        <FileThumbnailImage
-          key={previewImageUrl}
-          url={previewImageUrl}
-          alt={file.name}
-          className={previewClassName}
-          fallback={<FileThumbnailFallback extension={extension} />}
-          onError={onPreviewError}
-        />
-      ) : (
-        <FileThumbnailFallback extension={extension} />
-      )}
-    </div>
+    <DocumentThumbnail
+      source={resolvedSource}
+      as={as}
+      anchor={anchor}
+      retryKey={retryKey}
+      onError={onError}
+      {...thumbnailProps}
+    />
   )
 }
 
-export function resolveFileThumbnailState({
-  explicitState,
-  hasPreview,
-}: {
-  explicitState?: FileThumbnailState
-  hasPreview: boolean
-}): FileThumbnailState {
-  if (explicitState) return explicitState
-  return hasPreview ? "loaded" : "error"
+function shouldUseFrame({
+  previewContent,
+  previewImageUrl,
+  state,
+}: Pick<
+  FileThumbnailProps,
+  "previewContent" | "previewImageUrl" | "state"
+>): boolean {
+  return (
+    hasRenderablePreviewContent(previewContent) ||
+    Boolean(previewImageUrl) ||
+    state !== undefined
+  )
 }
 
-export function hasRenderablePreviewContent(value: React.ReactNode): boolean {
-  return value !== null && value !== undefined && value !== false
+function resolveFileThumbnailSource(
+  source: FileThumbnailProps["source"],
+  file: FileThumbnailProps["file"]
+): ViewerSource | null {
+  if (isFile(source)) return fileSource(source)
+  if (source) return source
+  if (isFile(file)) return fileSource(file)
+  return null
+}
+
+function isFile(value: unknown): value is File {
+  return typeof File !== "undefined" && value instanceof File
+}
+
+function fileSource(file: File): ViewerSource {
+  return {
+    kind: "blob",
+    blob: file,
+    identityKey: `${file.name}-${file.size}-${file.lastModified}`,
+    fileName: file.name,
+    mimeType: file.type,
+  }
+}
+
+function fileFromSource(source: ViewerSource | null): ThumbnailFile {
+  if (!source) return { name: "file", type: "" }
+  if (isFile(source)) return source
+  return {
+    name: source.fileName ?? "file",
+    type: source.mimeType ?? "",
+  }
 }

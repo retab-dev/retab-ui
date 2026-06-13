@@ -37,14 +37,18 @@ export interface PreparedTextDocument {
 export type PreparedTextBlock =
   | PreparedInlineTextBlock
   | PreparedCodeTextBlock
+  | PreparedImageTextBlock
   | PreparedRuleTextBlock
+  | PreparedTableTextBlock
 
 export interface PreparedTextBlockBase {
   contentLeft: number
+  listDepth: number
   marginTop: number
   markerClassName: string | null
   markerLeft: number | null
   markerText: string | null
+  quoteDepth: number
   quoteRailLefts: number[]
   sourceEndLine: number
   sourceStartLine: number
@@ -54,22 +58,52 @@ export interface PreparedInlineTextBlock extends PreparedTextBlockBase {
   classNames: string[]
   fallbackText: string
   flow: PreparedRichInline | null
+  fonts: string[]
   hrefs: Array<string | null>
   kind: "inline"
   lineHeight: number
+  texts: string[]
+  titles: Array<string | null>
   variant: InlineVariant
 }
 
 export interface PreparedCodeTextBlock extends PreparedTextBlockBase {
   fallbackText: string
+  font: string
   kind: "code"
+  language: string | null
   lineHeight: number
   prepared: PreparedTextWithSegments | null
+}
+
+export interface PreparedImageTextBlock extends PreparedTextBlockBase {
+  alt: string
+  href: string | null
+  kind: "image"
+  src: string | null
+  title: string | null
 }
 
 export interface PreparedRuleTextBlock extends PreparedTextBlockBase {
   height: number
   kind: "rule"
+}
+
+export interface PreparedTableTextBlock extends PreparedTextBlockBase {
+  alignments: TableColumnAlignment[]
+  columnWidths: number[]
+  header: PreparedTableCell[]
+  kind: "table"
+  rowHeight: number
+  rowSourceStartLines: number[]
+  rows: PreparedTableCell[][]
+}
+
+export interface PreparedTableCell {
+  className: string
+  href: string | null
+  text: string
+  title: string | null
 }
 
 export interface TextDocumentFrame {
@@ -81,19 +115,24 @@ export interface TextDocumentFrame {
 export type TextBlockFrame =
   | InlineTextBlockFrame
   | CodeTextBlockFrame
+  | ImageTextBlockFrame
   | RuleTextBlockFrame
+  | TableTextBlockFrame
 
 interface TextBlockFrameBase {
   blockIndex: number
   bottom: number
   contentLeft: number
   height: number
+  listDepth: number
   markerClassName: string | null
   markerLeft: number | null
   markerText: string | null
+  quoteDepth: number
   quoteRailLefts: number[]
   sourceEndLine: number
   sourceStartLine: number
+  scale: number
   top: number
 }
 
@@ -106,9 +145,17 @@ export interface InlineTextBlockFrame extends TextBlockFrameBase {
 
 export interface CodeTextBlockFrame extends TextBlockFrameBase {
   kind: "code"
+  language: string | null
   lineCount: number
   lineHeight: number
   width: number
+}
+
+export interface ImageTextBlockFrame extends TextBlockFrameBase {
+  alt: string
+  imageHeight: number
+  imageWidth: number
+  kind: "image"
 }
 
 export interface RuleTextBlockFrame extends TextBlockFrameBase {
@@ -116,11 +163,23 @@ export interface RuleTextBlockFrame extends TextBlockFrameBase {
   width: number
 }
 
+export interface TableTextBlockFrame extends TextBlockFrameBase {
+  columnWidths: number[]
+  headerHeight: number
+  kind: "table"
+  rowCount: number
+  rowHeight: number
+  rowSourceStartLines: number[]
+  tableWidth: number
+}
+
 export interface InlineFragmentLayout {
   className: string
+  font: string
   href: string | null
   leadingGap: number
   text: string
+  title: string | null
 }
 
 export interface InlineLineLayout {
@@ -134,6 +193,20 @@ export interface CodeLineLayout {
   top: number
 }
 
+export interface TextLineWindow {
+  firstLine: number
+  lastLine: number
+}
+
+export type TableColumnAlignment = "center" | "left" | "right"
+
+export interface TableRowWindow {
+  afterHeight: number
+  beforeHeight: number
+  endIndex: number
+  startIndex: number
+}
+
 type InlineVariant = "body" | "heading-1" | "heading-2"
 
 type MarkState = {
@@ -141,6 +214,7 @@ type MarkState = {
   italic: boolean
   strike: boolean
   href: string | null
+  title: string | null
 }
 
 type ParseContext = {
@@ -155,6 +229,7 @@ type InlinePiece = {
   font: string
   href: string | null
   text: string
+  title: string | null
 }
 
 const BODY_FONT_PX = 15
@@ -168,7 +243,7 @@ const CODE_LINE_PX = 20
 const MARKER_FONT_PX = 12
 const CHIP_FONT_PX = 12
 const INLINE_CODE_EXTRA_WIDTH = 12
-const IMAGE_EXTRA_WIDTH = 14
+const IMAGE_EXTRA_WIDTH = 16
 const CODE_BLOCK_PADDING_X = 12
 const CODE_BLOCK_PADDING_Y = 10
 const DOCUMENT_PADDING_Y = 16
@@ -181,6 +256,19 @@ const LIST_NESTING_INDENT = 20
 const BLOCKQUOTE_INDENT = 18
 const RAIL_OFFSET = 5
 const RULE_HEIGHT = 20
+const IMAGE_BLOCK_HEIGHT = 220
+const IMAGE_BLOCK_MAX_WIDTH = 720
+const IMAGE_BLOCK_MIN_WIDTH = 220
+const IMAGE_PLACEHOLDER_HEIGHT = 72
+const TABLE_CELL_FONT_PX = 13
+const TABLE_CELL_PADDING_X = 14
+const TABLE_COLUMN_MIN_WIDTH = 72
+const TABLE_COLUMN_MAX_WIDTH = 320
+const TABLE_HEADER_HEIGHT = 38
+const TABLE_ROW_HEIGHT = 34
+const TABLE_ROW_OVERSCAN = 4
+const HARD_WRAPPED_LINE_MIN_LENGTH = 52
+const HARD_WRAPPED_RUN_AVERAGE_LENGTH = 64
 const SANS_FAMILY = "Arial, Helvetica, sans-serif"
 const SERIF_FAMILY = "Georgia, Times New Roman, serif"
 const MONO_FAMILY = '"SF Mono", Menlo, Monaco, Consolas, monospace'
@@ -189,6 +277,7 @@ const EMPTY_MARK_STATE: MarkState = {
   href: null,
   italic: false,
   strike: false,
+  title: null,
 }
 const markerWidthCache = new Map<string, number>()
 
@@ -203,7 +292,6 @@ export function resolveTextViewerMode({
   const lowerMime = mimeType?.toLowerCase().split(";")[0].trim()
   return lowerName.endsWith(".md") ||
     lowerName.endsWith(".markdown") ||
-    lowerName.endsWith(".mdx") ||
     lowerMime === "text/markdown"
     ? "markdown"
     : "text"
@@ -235,11 +323,14 @@ export function createPreparedTextDocument({
 export function layoutTextDocument({
   contentWidth,
   document,
+  fontScale = 1,
 }: {
   contentWidth: number
   document: PreparedTextDocument
+  fontScale?: number
 }): TextDocumentFrame {
   const safeContentWidth = safeWidth(contentWidth)
+  const safeFontScale = safeScale(fontScale)
   const frames: TextBlockFrame[] = []
   let y = DOCUMENT_PADDING_Y
 
@@ -250,6 +341,7 @@ export function layoutTextDocument({
       block,
       blockIndex: index,
       contentWidth: safeContentWidth,
+      scale: safeFontScale,
       top: y,
     })
     frames.push(frame)
@@ -266,37 +358,27 @@ export function layoutTextDocument({
 export function materializeInlineVisibleLines({
   block,
   frame,
+  lineWindow,
   maxWidth,
   viewportBottom,
   viewportTop,
 }: {
   block: PreparedInlineTextBlock
   frame: InlineTextBlockFrame
+  lineWindow?: TextLineWindow | null
   maxWidth: number
   viewportBottom: number
   viewportTop: number
 }): InlineLineLayout[] {
-  const firstLine = Math.max(
-    0,
-    Math.floor((viewportTop - frame.top) / frame.lineHeight) - 1
-  )
-  const lastLine = Math.min(
-    frame.lineCount - 1,
-    Math.ceil((viewportBottom - frame.top) / frame.lineHeight) + 1
-  )
-  if (lastLine < firstLine) return []
+  const window =
+    lineWindow ??
+    getInlineVisibleLineWindow({ frame, viewportBottom, viewportTop })
+  if (!window) return []
 
   if (!block.flow) {
     return [
       {
-        fragments: [
-          {
-            className: inlineClassName(block.variant, EMPTY_MARK_STATE),
-            href: null,
-            leadingGap: 0,
-            text: block.fallbackText || " ",
-          },
-        ],
+        fragments: fallbackInlineFragments(block),
         top: 0,
         width: frame.usedWidth,
       },
@@ -304,15 +386,15 @@ export function materializeInlineVisibleLines({
   }
 
   const lines: InlineLineLayout[] = []
-  const lineWidth = safeWidth(maxWidth - frame.contentLeft)
+  const lineWidth = safeWidth((maxWidth - frame.contentLeft) / frame.scale)
   let lineIndex = 0
   walkRichInlineLineRanges(block.flow, lineWidth, (range) => {
-    if (lineIndex >= firstLine && lineIndex <= lastLine) {
+    if (lineIndex >= window.firstLine && lineIndex <= window.lastLine) {
       const line = materializeRichInlineLineRange(block.flow!, range)
       lines.push({
         fragments: richInlineFragments(block, line),
         top: lineIndex * frame.lineHeight,
-        width: line.width,
+        width: line.width * frame.scale,
       })
     }
     lineIndex++
@@ -322,28 +404,23 @@ export function materializeInlineVisibleLines({
 
 export function materializeCodeVisibleLines({
   block,
+  contentWidth,
   frame,
+  lineWindow,
   viewportBottom,
   viewportTop,
 }: {
   block: PreparedCodeTextBlock
+  contentWidth: number
   frame: CodeTextBlockFrame
+  lineWindow?: TextLineWindow | null
   viewportBottom: number
   viewportTop: number
 }): CodeLineLayout[] {
-  const firstLine = Math.max(
-    0,
-    Math.floor(
-      (viewportTop - frame.top - CODE_BLOCK_PADDING_Y) / frame.lineHeight
-    ) - 1
-  )
-  const lastLine = Math.min(
-    frame.lineCount - 1,
-    Math.ceil(
-      (viewportBottom - frame.top - CODE_BLOCK_PADDING_Y) / frame.lineHeight
-    ) + 1
-  )
-  if (lastLine < firstLine) return []
+  const window =
+    lineWindow ??
+    getCodeVisibleLineWindow({ frame, viewportBottom, viewportTop })
+  if (!window) return []
 
   if (!block.prepared) {
     return [
@@ -360,21 +437,108 @@ export function materializeCodeVisibleLines({
   }
 
   const lines: CodeLineLayout[] = []
-  let lineIndex = 0
-  walkLineRanges(
-    block.prepared,
-    safeWidth(frame.width - CODE_BLOCK_PADDING_X * 2),
-    (range) => {
-      if (lineIndex >= firstLine && lineIndex <= lastLine) {
-        lines.push({
-          line: materializeLineRange(block.prepared!, range),
-          top: CODE_BLOCK_PADDING_Y + lineIndex * frame.lineHeight,
-        })
-      }
-      lineIndex++
-    }
+  const boxWidth = safeWidth(contentWidth - frame.contentLeft)
+  const innerWidth = safeWidth(
+    (boxWidth - CODE_BLOCK_PADDING_X * 2) / frame.scale
   )
+  let lineIndex = 0
+  walkLineRanges(block.prepared, innerWidth, (range) => {
+    if (lineIndex >= window.firstLine && lineIndex <= window.lastLine) {
+      lines.push({
+        line: materializeLineRange(block.prepared!, range),
+        top: CODE_BLOCK_PADDING_Y + lineIndex * frame.lineHeight,
+      })
+    }
+    lineIndex++
+  })
   return lines
+}
+
+export function getInlineVisibleLineWindow({
+  frame,
+  viewportBottom,
+  viewportTop,
+}: {
+  frame: InlineTextBlockFrame
+  viewportBottom: number
+  viewportTop: number
+}): TextLineWindow | null {
+  return getVisibleLineWindow({
+    lineCount: frame.lineCount,
+    lineHeight: frame.lineHeight,
+    originTop: frame.top,
+    viewportBottom,
+    viewportTop,
+  })
+}
+
+export function getCodeVisibleLineWindow({
+  frame,
+  viewportBottom,
+  viewportTop,
+}: {
+  frame: CodeTextBlockFrame
+  viewportBottom: number
+  viewportTop: number
+}): TextLineWindow | null {
+  return getVisibleLineWindow({
+    lineCount: frame.lineCount,
+    lineHeight: frame.lineHeight,
+    originTop: frame.top + CODE_BLOCK_PADDING_Y,
+    viewportBottom,
+    viewportTop,
+  })
+}
+
+function getVisibleLineWindow({
+  lineCount,
+  lineHeight,
+  originTop,
+  viewportBottom,
+  viewportTop,
+}: {
+  lineCount: number
+  lineHeight: number
+  originTop: number
+  viewportBottom: number
+  viewportTop: number
+}): TextLineWindow | null {
+  const firstLine = Math.max(
+    0,
+    Math.floor((viewportTop - originTop) / lineHeight) - 1
+  )
+  const lastLine = Math.min(
+    lineCount - 1,
+    Math.ceil((viewportBottom - originTop) / lineHeight) + 1
+  )
+  return lastLine < firstLine ? null : { firstLine, lastLine }
+}
+
+export function getTableVisibleRowWindow({
+  frame,
+  viewportBottom,
+  viewportTop,
+}: {
+  frame: TableTextBlockFrame
+  viewportBottom: number
+  viewportTop: number
+}): TableRowWindow {
+  const relativeTop = viewportTop - frame.top - frame.headerHeight
+  const relativeBottom = viewportBottom - frame.top - frame.headerHeight
+  const startIndex = Math.max(
+    0,
+    Math.floor(relativeTop / frame.rowHeight) - TABLE_ROW_OVERSCAN
+  )
+  const endIndex = Math.min(
+    frame.rowCount,
+    Math.ceil(relativeBottom / frame.rowHeight) + TABLE_ROW_OVERSCAN
+  )
+  return {
+    afterHeight: Math.max(0, (frame.rowCount - endIndex) * frame.rowHeight),
+    beforeHeight: startIndex * frame.rowHeight,
+    endIndex,
+    startIndex,
+  }
 }
 
 export function textFrameIntersectsLineRange({
@@ -395,12 +559,17 @@ function parseMarkdownBlocks(
   markdown: string,
   style: TextStyleConfig
 ): PreparedTextBlock[] {
-  return parseBlockTokens(marked.lexer(markdown, { gfm: true }), {
-    ctx: { listDepth: 0, quoteDepth: 0 },
-    sourceEndLine: splitTextLines(markdown).length,
-    sourceStartLine: 1,
-    style,
-  })
+  const sourceEndLine = splitTextLines(markdown).length
+  try {
+    return parseBlockTokens(marked.lexer(markdown, { gfm: true }), {
+      ctx: { listDepth: 0, quoteDepth: 0 },
+      sourceEndLine,
+      sourceStartLine: 1,
+      style,
+    })
+  } catch {
+    return buildPlainTextBlocks(markdown, style)
+  }
 }
 
 function parseBlockTokens(
@@ -421,7 +590,7 @@ function parseBlockTokens(
   let cursorLine = sourceStartLine
 
   for (const token of tokens) {
-    const tokenLineCount = Math.max(1, splitTextLines(token.raw ?? "").length)
+    const tokenLineCount = markdownRawLineCount(token.raw)
     const tokenStartLine = cursorLine
     const tokenEndLine = Math.min(
       sourceEndLine,
@@ -435,6 +604,21 @@ function parseBlockTokens(
         continue
 
       case "paragraph":
+        if (isStandaloneImageParagraph(token)) {
+          appendBlockGroup(
+            blocks,
+            [
+              buildImageBlock({
+                ctx,
+                sourceEndLine: tokenEndLine,
+                sourceStartLine: tokenStartLine,
+                token: token.tokens[0] as Tokens.Image,
+              }),
+            ],
+            BLOCK_GAP
+          )
+          continue
+        }
         appendBlockGroup(
           blocks,
           buildInlineBlocks({
@@ -472,6 +656,7 @@ function parseBlockTokens(
           [
             buildCodeBlock({
               ctx,
+              language: sanitizeMarkdownLanguage(token.lang),
               sourceEndLine: tokenEndLine,
               sourceStartLine: tokenStartLine,
               style,
@@ -530,12 +715,11 @@ function parseBlockTokens(
         appendBlockGroup(
           blocks,
           [
-            buildCodeBlock({
+            buildTableBlock({
               ctx,
               sourceEndLine: tokenEndLine,
               sourceStartLine: tokenStartLine,
-              style,
-              text: formatTable(token as Tokens.Table),
+              token: token as Tokens.Table,
             }),
           ],
           RICH_BLOCK_GAP
@@ -550,6 +734,7 @@ function parseBlockTokens(
             [
               buildCodeBlock({
                 ctx,
+                language: null,
                 sourceEndLine: tokenEndLine,
                 sourceStartLine: tokenStartLine,
                 style,
@@ -621,16 +806,116 @@ function buildPlainTextBlocks(
   style: TextStyleConfig
 ): PreparedTextBlock[] {
   const lines = splitTextLines(text)
-  return lines.map((line, index) =>
-    buildInlineBlock({
-      ctx: { listDepth: 0, quoteDepth: 0 },
-      pieces: [createTextPiece(line || " ", EMPTY_MARK_STATE, "body", style)!],
-      sourceEndLine: index + 1,
-      sourceStartLine: index + 1,
-      style,
-      variant: "body",
-    })
+  const blocks: PreparedTextBlock[] = []
+  let run: string[] = []
+  let runStartLine = 1
+
+  function appendLine(line: string, sourceLine: number) {
+    blocks.push(buildPlainTextLineBlock(line, sourceLine, style))
+  }
+
+  function flushRun(endLine: number) {
+    if (run.length === 0) return
+    if (shouldJoinPlainTextRun(run)) {
+      blocks.push(
+        buildInlineBlock({
+          ctx: { listDepth: 0, quoteDepth: 0 },
+          pieces: [
+            createTextPiece(
+              joinPlainTextRun(run),
+              EMPTY_MARK_STATE,
+              "body",
+              style
+            )!,
+          ],
+          sourceEndLine: endLine,
+          sourceStartLine: runStartLine,
+          style,
+          variant: "body",
+        })
+      )
+    } else {
+      for (let index = 0; index < run.length; index++) {
+        appendLine(run[index]!, runStartLine + index)
+      }
+    }
+    run = []
+  }
+
+  for (let index = 0; index < lines.length; index++) {
+    const line = lines[index]!
+    const sourceLine = index + 1
+    if (line.trim() === "") {
+      flushRun(sourceLine - 1)
+      appendLine(" ", sourceLine)
+      runStartLine = sourceLine + 1
+      continue
+    }
+    if (run.length === 0) runStartLine = sourceLine
+    run.push(line)
+  }
+
+  flushRun(lines.length)
+  return blocks
+}
+
+function buildPlainTextLineBlock(
+  line: string,
+  sourceLine: number,
+  style: TextStyleConfig
+): PreparedInlineTextBlock {
+  return buildInlineBlock({
+    ctx: { listDepth: 0, quoteDepth: 0 },
+    pieces: [createTextPiece(line || " ", EMPTY_MARK_STATE, "body", style)!],
+    sourceEndLine: sourceLine,
+    sourceStartLine: sourceLine,
+    style,
+    variant: "body",
+  })
+}
+
+function shouldJoinPlainTextRun(lines: readonly string[]) {
+  if (lines.length < 2) return false
+
+  const trimmed = lines.map((line) => line.trim()).filter(Boolean)
+  if (
+    trimmed.length < 2 ||
+    countRecordLikeLines(trimmed) > trimmed.length / 3
+  ) {
+    return false
+  }
+
+  const lengths = trimmed.map((line) => line.length)
+  const average =
+    lengths.reduce((total, length) => total + length, 0) / lengths.length
+  if (average < HARD_WRAPPED_RUN_AVERAGE_LENGTH) return false
+
+  const internal = lengths.slice(0, -1)
+  const shortInternalCount = internal.filter(
+    (length) => length < HARD_WRAPPED_LINE_MIN_LENGTH
+  ).length
+  return shortInternalCount <= Math.floor(internal.length * 0.15)
+}
+
+function countRecordLikeLines(lines: readonly string[]) {
+  return lines.reduce((count, line) => {
+    return count + (isRecordLikePlainTextLine(line) ? 1 : 0)
+  }, 0)
+}
+
+function isRecordLikePlainTextLine(line: string) {
+  return (
+    /^\d{4}-\d{2}-\d{2}(?:[T\s]|\b)/.test(line) ||
+    /^\d{1,6}[:.)\]]\s/.test(line) ||
+    /^[-*+]\s/.test(line) ||
+    /^(?:TRACE|DEBUG|INFO|WARN|ERROR|FATAL)\b/.test(line) ||
+    /\b(?:TRACE|DEBUG|INFO|WARN|ERROR|FATAL)\b/.test(line.slice(0, 80)) ||
+    /^[{[]/.test(line)
   )
+}
+
+function joinPlainTextRun(lines: readonly string[]) {
+  return lines.map((line) => line.trim()).join(" ")
 }
 
 function appendPlainTextFallback({
@@ -685,12 +970,21 @@ function buildListBlocks({
     quoteDepth: ctx.quoteDepth,
   }
 
+  let itemCursorLine = sourceStartLine
   for (let index = 0; index < token.items.length; index++) {
     const item = token.items[index]!
+    const itemLineCount = markdownRawLineCount(item.raw)
+    const itemStartLine = Math.min(sourceEndLine, itemCursorLine)
+    const itemEndLine = Math.min(
+      sourceEndLine,
+      itemStartLine + itemLineCount - 1
+    )
+    itemCursorLine = itemEndLine + 1
+
     let itemBlocks = parseBlockTokens(item.tokens, {
       ctx: itemCtx,
-      sourceEndLine,
-      sourceStartLine,
+      sourceEndLine: itemEndLine,
+      sourceStartLine: itemStartLine,
       style,
     })
     if (itemBlocks.length === 0) {
@@ -701,8 +995,8 @@ function buildListBlocks({
             Boolean
           ) as InlinePiece[],
         ],
-        sourceEndLine,
-        sourceStartLine,
+        sourceEndLine: itemEndLine,
+        sourceStartLine: itemStartLine,
         style,
         variant: "body",
       })
@@ -795,39 +1089,65 @@ function buildInlineBlock({
     classNames: pieces.map((piece) => piece.className),
     fallbackText: pieces.map((piece) => piece.text).join(""),
     flow: prepareRichInlineSafe(pieces),
+    fonts: pieces.map((piece) => piece.font),
     hrefs: pieces.map((piece) => piece.href),
     kind: "inline",
     lineHeight: lineHeightForVariant(variant, style),
+    texts: pieces.map((piece) => piece.text),
+    titles: pieces.map((piece) => piece.title),
     variant,
   }
 }
 
 function buildCodeBlock({
   ctx,
+  language,
   sourceEndLine,
   sourceStartLine,
   style,
   text,
 }: {
   ctx: ParseContext
+  language: string | null
   sourceEndLine: number
   sourceStartLine: number
   style: TextStyleConfig
   text: string
 }): PreparedCodeTextBlock {
   const code = stripSingleTrailingNewline(text)
+  const font = codeFont(style)
   return {
     ...createBlockBase(ctx, sourceStartLine, sourceEndLine),
     fallbackText: code,
+    font,
     kind: "code",
+    language,
     lineHeight: CODE_LINE_PX * style.fontScale,
-    prepared: prepareWithSegmentsSafe(
-      code || " ",
-      `500 ${CODE_FONT_PX * style.fontScale}px ${MONO_FAMILY}`,
-      {
-        whiteSpace: "pre-wrap",
-      }
-    ),
+    prepared: prepareWithSegmentsSafe(code || " ", font, {
+      whiteSpace: "pre-wrap",
+    }),
+  }
+}
+
+function buildImageBlock({
+  ctx,
+  sourceEndLine,
+  sourceStartLine,
+  token,
+}: {
+  ctx: ParseContext
+  sourceEndLine: number
+  sourceStartLine: number
+  token: Tokens.Image
+}): PreparedImageTextBlock {
+  const alt = token.text?.trim() || token.href || "Markdown image"
+  return {
+    ...createBlockBase(ctx, sourceStartLine, sourceEndLine),
+    alt,
+    href: parseMarkdownHref(token.href),
+    kind: "image",
+    src: parseMarkdownImageSrc(token.href),
+    title: sanitizeMarkdownTitle(token.title),
   }
 }
 
@@ -847,6 +1167,39 @@ function buildRuleBlock({
   }
 }
 
+function buildTableBlock({
+  ctx,
+  sourceEndLine,
+  sourceStartLine,
+  token,
+}: {
+  ctx: ParseContext
+  sourceEndLine: number
+  sourceStartLine: number
+  token: Tokens.Table
+}): PreparedTableTextBlock {
+  const header = token.header.map((cell) => tableCellFromTokens(cell.tokens))
+  const rows = token.rows.map((row) =>
+    row.map((cell) => tableCellFromTokens(cell.tokens))
+  )
+  const rowSourceStartLines = token.rows.map(
+    (_row, index) => sourceStartLine + 2 + index
+  )
+  const alignments = token.align.map((alignment) =>
+    tableColumnAlignment(alignment)
+  )
+  return {
+    ...createBlockBase(ctx, sourceStartLine, sourceEndLine),
+    alignments,
+    columnWidths: measureTableColumnWidths(header, rows),
+    header,
+    kind: "table",
+    rowHeight: TABLE_ROW_HEIGHT,
+    rowSourceStartLines,
+    rows,
+  }
+}
+
 function createBlockBase(
   ctx: ParseContext,
   sourceStartLine: number,
@@ -860,10 +1213,12 @@ function createBlockBase(
 
   return {
     contentLeft,
+    listDepth: ctx.listDepth,
     marginTop: 0,
     markerClassName: null,
     markerLeft: null,
     markerText: null,
+    quoteDepth: ctx.quoteDepth,
     quoteRailLefts,
     sourceEndLine,
     sourceStartLine,
@@ -925,6 +1280,7 @@ function collectInlinePieceLines(
           walk(token.tokens ?? [], {
             ...marks,
             href: parseMarkdownHref(token.href),
+            title: sanitizeMarkdownTitle(token.title),
           })
           continue
         case "image":
@@ -977,6 +1333,7 @@ function createTextPiece(
     font: inlineFont(variant, marks, style),
     href: marks.href,
     text,
+    title: marks.title,
   }
 }
 
@@ -989,10 +1346,19 @@ function createCodePiece(
     breakMode: "normal",
     className: "rounded bg-muted px-1.5 py-0.5 font-mono text-[0.92em]",
     extraWidth: INLINE_CODE_EXTRA_WIDTH,
-    font: `600 ${CODE_FONT_PX * style.fontScale}px ${MONO_FAMILY}`,
+    font: codeInlineFont(style),
     href: null,
     text,
+    title: null,
   }
+}
+
+function codeFont(style: TextStyleConfig) {
+  return `500 ${CODE_FONT_PX * style.fontScale}px ${MONO_FAMILY}`
+}
+
+function codeInlineFont(style: TextStyleConfig) {
+  return `600 ${CODE_FONT_PX * style.fontScale}px ${MONO_FAMILY}`
 }
 
 function createImagePiece(text: string, style: TextStyleConfig): InlinePiece {
@@ -1004,6 +1370,7 @@ function createImagePiece(text: string, style: TextStyleConfig): InlinePiece {
     font: `600 ${CHIP_FONT_PX * style.fontScale}px ${SANS_FAMILY}`,
     href: null,
     text: text || "image",
+    title: null,
   }
 }
 
@@ -1011,56 +1378,102 @@ function layoutTextBlock({
   block,
   blockIndex,
   contentWidth,
+  scale,
   top,
 }: {
   block: PreparedTextBlock
   blockIndex: number
   contentWidth: number
+  scale: number
   top: number
 }): TextBlockFrame {
   switch (block.kind) {
     case "inline": {
-      const lineWidth = safeWidth(contentWidth - block.contentLeft)
+      const lineWidth = safeWidth((contentWidth - block.contentLeft) / scale)
       const stats = block.flow
         ? measureRichInlineStatsSafe(block.flow, lineWidth, block.fallbackText)
         : estimateInlineStats(block.fallbackText, lineWidth)
       const lineCount = Math.max(1, stats.lineCount)
-      const height = lineCount * block.lineHeight
+      const lineHeight = block.lineHeight * scale
+      const height = lineCount * lineHeight
       return {
-        ...frameBase(block, blockIndex, top, height),
+        ...frameBase(block, blockIndex, top, height, scale),
         kind: "inline",
         lineCount,
-        lineHeight: block.lineHeight,
-        usedWidth: stats.maxLineWidth,
+        lineHeight,
+        usedWidth: stats.maxLineWidth * scale,
       }
     }
 
     case "code": {
       const boxWidth = safeWidth(contentWidth - block.contentLeft)
-      const innerWidth = safeWidth(boxWidth - CODE_BLOCK_PADDING_X * 2)
+      const innerWidth = safeWidth(
+        (boxWidth - CODE_BLOCK_PADDING_X * 2) / scale
+      )
       const stats = block.prepared
         ? measureLineStatsSafe(block.prepared, innerWidth, block.fallbackText)
         : estimateInlineStats(block.fallbackText, innerWidth)
       const lineCount = Math.max(1, stats.lineCount)
       const width = Math.min(
         boxWidth,
-        Math.max(1, stats.maxLineWidth + CODE_BLOCK_PADDING_X * 2)
+        Math.max(1, stats.maxLineWidth * scale + CODE_BLOCK_PADDING_X * 2)
       )
-      const height = lineCount * block.lineHeight + CODE_BLOCK_PADDING_Y * 2
+      const lineHeight = block.lineHeight * scale
+      const height = lineCount * lineHeight + CODE_BLOCK_PADDING_Y * 2
       return {
-        ...frameBase(block, blockIndex, top, height),
+        ...frameBase(block, blockIndex, top, height, scale),
         kind: "code",
+        language: block.language,
         lineCount,
-        lineHeight: block.lineHeight,
+        lineHeight,
         width,
+      }
+    }
+
+    case "image": {
+      const availableWidth = safeWidth(contentWidth - block.contentLeft)
+      const imageWidth = Math.min(
+        IMAGE_BLOCK_MAX_WIDTH,
+        Math.max(IMAGE_BLOCK_MIN_WIDTH, availableWidth)
+      )
+      const imageHeight = block.src
+        ? IMAGE_BLOCK_HEIGHT
+        : IMAGE_PLACEHOLDER_HEIGHT
+      return {
+        ...frameBase(block, blockIndex, top, imageHeight, scale),
+        alt: block.alt,
+        imageHeight,
+        imageWidth,
+        kind: "image",
       }
     }
 
     case "rule": {
       return {
-        ...frameBase(block, blockIndex, top, block.height),
+        ...frameBase(block, blockIndex, top, block.height, scale),
         kind: "rule",
         width: safeWidth(contentWidth - block.contentLeft),
+      }
+    }
+
+    case "table": {
+      const availableWidth = safeWidth(contentWidth - block.contentLeft)
+      const intrinsicWidth = block.columnWidths.reduce(
+        (total, width) => total + width,
+        0
+      )
+      const tableWidth = Math.max(availableWidth, intrinsicWidth)
+      const height =
+        TABLE_HEADER_HEIGHT + block.rows.length * block.rowHeight + 2
+      return {
+        ...frameBase(block, blockIndex, top, height, scale),
+        columnWidths: block.columnWidths,
+        headerHeight: TABLE_HEADER_HEIGHT,
+        kind: "table",
+        rowCount: block.rows.length,
+        rowHeight: block.rowHeight,
+        rowSourceStartLines: block.rowSourceStartLines,
+        tableWidth,
       }
     }
   }
@@ -1070,17 +1483,21 @@ function frameBase(
   block: PreparedTextBlock,
   blockIndex: number,
   top: number,
-  height: number
+  height: number,
+  scale: number
 ): TextBlockFrameBase {
   return {
     blockIndex,
     bottom: top + height,
     contentLeft: block.contentLeft,
     height,
+    listDepth: block.listDepth,
     markerClassName: block.markerClassName,
     markerLeft: block.markerLeft,
     markerText: block.markerText,
+    quoteDepth: block.quoteDepth,
     quoteRailLefts: block.quoteRailLefts,
+    scale,
     sourceEndLine: block.sourceEndLine,
     sourceStartLine: block.sourceStartLine,
     top,
@@ -1093,10 +1510,42 @@ function richInlineFragments(
 ): InlineFragmentLayout[] {
   return line.fragments.map((fragment) => ({
     className: block.classNames[fragment.itemIndex] ?? "",
+    font:
+      block.fonts[fragment.itemIndex] ??
+      inlineFont("body", EMPTY_MARK_STATE, { fontScale: 1 }),
     href: block.hrefs[fragment.itemIndex] ?? null,
     leadingGap: fragment.gapBefore,
     text: fragment.text,
+    title: block.titles[fragment.itemIndex] ?? null,
   }))
+}
+
+function fallbackInlineFragments(
+  block: PreparedInlineTextBlock
+): InlineFragmentLayout[] {
+  const fragments = block.texts.map((text, index) => ({
+    className: block.classNames[index] ?? "",
+    font:
+      block.fonts[index] ??
+      inlineFont(block.variant, EMPTY_MARK_STATE, { fontScale: 1 }),
+    href: block.hrefs[index] ?? null,
+    leadingGap: 0,
+    text,
+    title: block.titles[index] ?? null,
+  }))
+
+  return fragments.length > 0
+    ? fragments
+    : [
+        {
+          className: inlineClassName(block.variant, EMPTY_MARK_STATE),
+          font: inlineFont(block.variant, EMPTY_MARK_STATE, { fontScale: 1 }),
+          href: null,
+          leadingGap: 0,
+          text: block.fallbackText || " ",
+          title: null,
+        },
+      ]
 }
 
 function prepareRichInlineSafe(pieces: InlinePiece[]) {
@@ -1228,13 +1677,66 @@ function resolveListMarkerClassName(list: Tokens.List, item: Tokens.ListItem) {
   return list.ordered ? "text-muted-foreground" : "text-muted-foreground"
 }
 
+function isStandaloneImageParagraph(
+  token: Token
+): token is Tokens.Paragraph & { tokens: [Tokens.Image] } {
+  return (
+    token.type === "paragraph" &&
+    Array.isArray(token.tokens) &&
+    token.tokens.length === 1 &&
+    token.tokens[0]?.type === "image"
+  )
+}
+
 function parseMarkdownHref(href: string | null | undefined) {
-  if (!href) return null
+  return sanitizeMarkdownUrl(href, {
+    allowedAbsoluteProtocols: new Set(["http:", "https:", "mailto:"]),
+    allowRelative: true,
+  })
+}
+
+function parseMarkdownImageSrc(src: string | null | undefined) {
+  return sanitizeMarkdownUrl(src, {
+    allowedAbsoluteProtocols: new Set(["http:", "https:", "blob:"]),
+    allowRelative: true,
+  })
+}
+
+function sanitizeMarkdownTitle(title: string | null | undefined) {
+  if (!title) return null
+  return title.replace(/[\u0000-\u001f\u007f]/g, "").trim() || null
+}
+
+function sanitizeMarkdownLanguage(language: string | null | undefined) {
+  if (!language) return null
+  return (
+    language
+      .replace(/[\u0000-\u001f\u007f]/g, "")
+      .trim()
+      .slice(0, 40) || null
+  )
+}
+
+function sanitizeMarkdownUrl(
+  value: string | null | undefined,
+  {
+    allowedAbsoluteProtocols,
+    allowRelative,
+  }: {
+    allowedAbsoluteProtocols: ReadonlySet<string>
+    allowRelative: boolean
+  }
+) {
+  if (!value) return null
+  const trimmed = value.trim()
+  if (!trimmed || /[\u0000-\u001f\u007f]/.test(trimmed)) return null
+  if (trimmed.startsWith("#")) return trimmed
+  if (allowRelative && /^\.{0,2}\//.test(trimmed)) return trimmed
+  if (allowRelative && /^\//.test(trimmed)) return trimmed
+
   try {
-    const url = new URL(href)
-    return url.protocol === "http:" || url.protocol === "https:"
-      ? url.href
-      : null
+    const url = new URL(trimmed)
+    return allowedAbsoluteProtocols.has(url.protocol) ? url.href : null
   } catch {
     return null
   }
@@ -1245,44 +1747,104 @@ function fallbackTextForToken(token: Token) {
   return token.raw ?? ""
 }
 
-function formatTable(token: Tokens.Table) {
-  const header = token.header
-    .map((cell) => inlineTokensToPlainText(cell.tokens))
-    .join(" | ")
-  const divider = token.header.map(() => "---").join(" | ")
-  const rows = token.rows.map((row) =>
-    row.map((cell) => inlineTokensToPlainText(cell.tokens)).join(" | ")
+function markdownRawLineCount(raw: string | null | undefined) {
+  return Math.max(
+    1,
+    splitTextLines(stripSingleTrailingNewline(raw ?? "")).length
   )
-  return [header, divider, ...rows].join("\n")
 }
 
-function inlineTokensToPlainText(tokens: readonly Token[]) {
+function tableCellFromTokens(tokens: readonly Token[]): PreparedTableCell {
+  const { className, href, text, title } = inlineTokensToTableCell(tokens)
+  return {
+    className,
+    href,
+    text: text || " ",
+    title,
+  }
+}
+
+function inlineTokensToTableCell(tokens: readonly Token[]): PreparedTableCell {
+  let className = ""
+  let href: string | null = null
   let text = ""
+  let title: string | null = null
   for (const token of tokens) {
     switch (token.type) {
       case "strong":
-      case "em":
-      case "del":
-      case "link":
-        text += inlineTokensToPlainText(token.tokens ?? [])
+        text += inlineTokensToTableCell(token.tokens ?? []).text
+        className = cnClassNames(className, "font-semibold")
         break
+      case "em":
+        text += inlineTokensToTableCell(token.tokens ?? []).text
+        className = cnClassNames(className, "italic")
+        break
+      case "del":
+        text += inlineTokensToTableCell(token.tokens ?? []).text
+        className = cnClassNames(className, "line-through")
+        break
+      case "link": {
+        const child = inlineTokensToTableCell(token.tokens ?? [])
+        text += child.text
+        href = href ?? parseMarkdownHref(token.href)
+        title = title ?? sanitizeMarkdownTitle(token.title)
+        className = cnClassNames(className, "text-primary underline")
+        break
+      }
       case "codespan":
+        text += token.text
+        className = cnClassNames(className, "font-mono")
+        break
       case "escape":
       case "text":
       case "html":
         text += token.text
         break
       case "br":
-        text += "\n"
+        text += " "
         break
       case "image":
-        text += token.text
+        text += token.text || token.href
         break
       default:
         text += fallbackTextForToken(token)
     }
   }
-  return text
+  return { className, href, text, title }
+}
+
+function measureTableColumnWidths(
+  header: readonly PreparedTableCell[],
+  rows: readonly PreparedTableCell[][]
+) {
+  return header.map((cell, columnIndex) => {
+    const columnTexts = [
+      cell.text,
+      ...rows.map((row) => row[columnIndex]?.text ?? ""),
+    ]
+    const maxLength = Math.max(
+      1,
+      ...columnTexts.map((text) => Math.min(48, text.length))
+    )
+    return Math.min(
+      TABLE_COLUMN_MAX_WIDTH,
+      Math.max(
+        TABLE_COLUMN_MIN_WIDTH,
+        maxLength * TABLE_CELL_FONT_PX * 0.58 + TABLE_CELL_PADDING_X * 2
+      )
+    )
+  })
+}
+
+function tableColumnAlignment(
+  alignment: "center" | "left" | "right" | null
+): TableColumnAlignment {
+  if (alignment === "center" || alignment === "right") return alignment
+  return "left"
+}
+
+function cnClassNames(...classes: Array<string | null | undefined>) {
+  return classes.filter(Boolean).join(" ")
 }
 
 function headingVariant(depth: number): InlineVariant {
@@ -1339,7 +1901,8 @@ function canMergeInlinePieces(a: InlinePiece, b: InlinePiece) {
     a.className === b.className &&
     a.extraWidth === b.extraWidth &&
     a.font === b.font &&
-    a.href === b.href
+    a.href === b.href &&
+    a.title === b.title
   )
 }
 
@@ -1354,4 +1917,8 @@ function countTextWords(text: string) {
 
 function safeWidth(width: number) {
   return Number.isFinite(width) && width > 0 ? width : 1
+}
+
+function safeScale(scale: number) {
+  return Number.isFinite(scale) && scale > 0 ? scale : 1
 }

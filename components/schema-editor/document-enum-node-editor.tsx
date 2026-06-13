@@ -59,7 +59,7 @@ export function DocumentEnumNodeEditor({
         {enumEntries.map((entry, index) => (
           <li
             key={entry.id}
-            className="flex h-7 items-center gap-1 rounded-md border border-border bg-muted px-2 py-0.5"
+            className="flex h-7 items-center gap-1 rounded-md border border-border bg-muted py-1 pr-0 pl-1"
           >
             <input
               value={String(entry.value)}

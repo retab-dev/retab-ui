@@ -9,7 +9,8 @@ import type { FileCategory, ViewerSource } from "@/lib/viewer-source"
  */
 export type ThumbnailAnchor = "top-left" | "top-right" | "bottom-left"
 
-export interface DocumentThumbnailProps {
+export interface DocumentThumbnailProps
+  extends Omit<React.ComponentPropsWithoutRef<"div">, "children" | "onError"> {
   source: ViewerSource
   as?: FileCategory
   className?: string

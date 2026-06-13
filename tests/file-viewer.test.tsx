@@ -14,7 +14,6 @@ import {
   isProseTextDescriptor,
   resolveFileDescriptor,
 } from "@/registry/new-york-v4/ui/file-viewer-core"
-import { createMarkdownHtmlCache } from "@/registry/new-york-v4/ui/file-viewer-markdown-viewer"
 import { createTextResourceCache } from "@/registry/new-york-v4/ui/file-viewer-text-resource"
 
 const docxRouteMock = vi.hoisted(() => ({
@@ -126,7 +125,14 @@ describe("FileViewer detection helpers", () => {
   it("detects categories by extension before MIME type", () => {
     expect(detectCategory("report.pdf", "text/plain")).toBe("pdf")
     expect(detectCategory("data", "text/csv")).toBe("csv")
+    expect(detectCategory("release-notes.md")).toBe("markdown")
+    expect(detectCategory("release-notes.markdown")).toBe("markdown")
+    expect(detectCategory("release-notes.mdx")).toBe("text")
+    expect(detectCategory("download", "text/markdown")).toBe("markdown")
     expect(detectCategory("config", "application/json")).toBe("text")
+    expect(detectCategory("events.log", "text/plain")).toBe("text")
+    expect(detectCategory("data.json")).toBe("text")
+    expect(detectCategory("download", "application/json")).toBe("text")
     expect(detectCategory("image", "image/png")).toBe("image")
     expect(detectCategory("archive.zip", "application/octet-stream")).toBe(
       "unsupported"
@@ -296,6 +302,13 @@ describe("FileViewer detection helpers", () => {
     expect(fileViewerSource).toContain("DocxResourceViewer")
     expect(fileViewerSource).toContain("PptxResourceViewer")
     expect(fileViewerSource).toContain("XlsxResourceViewer")
+    expect(fileViewerSource).toContain('import("@/components/ui/text-viewer")')
+    expect(fileViewerSource).toContain('import("@/components/ui/code-viewer")')
+    expect(fileViewerSource).toContain('mode="markdown"')
+    expect(fileViewerSource).toContain('mode="text"')
+    expect(fileViewerSource).not.toContain("MarkdownDocViewer")
+    expect(fileViewerSource).not.toContain("file-viewer-markdown-viewer")
+    expect(fileViewerSource).not.toContain("loadMarkdownHtml")
     expect(fileViewerSource).not.toMatch(
       /<(?:PdfViewer|ImageViewer|DocxViewer|PptxViewer|XlsxViewer)\b/
     )
@@ -356,71 +369,6 @@ describe("FileViewer text resources", () => {
       "ok\n"
     )
     expect(fetchMock).toHaveBeenCalledTimes(2)
-  })
-
-  it("evicts failed Markdown render promises so callers can retry the same source", async () => {
-    const markdownCache = createMarkdownHtmlCache()
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(response("nope", { status: 500 }))
-      .mockResolvedValueOnce(response("# Title\n", { status: 200 }))
-    vi.stubGlobal("fetch", fetchMock)
-
-    await expect(
-      markdownCache.load(textSubscription("/retry.md"))
-    ).rejects.toThrow("Failed to load resource: 500")
-    await expect(
-      markdownCache.load(textSubscription("/retry.md"))
-    ).resolves.toContain("<h1>Title</h1>")
-    expect(fetchMock).toHaveBeenCalledTimes(2)
-  })
-
-  it("returns a stable Markdown promise for the same source and signal", async () => {
-    const markdownCache = createMarkdownHtmlCache({
-      textCache: {
-        load: vi.fn(async () => "# Title\n"),
-        clear() {},
-        size() {
-          return 0
-        },
-      },
-    })
-    const request = textSubscription("/same.md")
-
-    const firstPromise = markdownCache.load(request)
-    const secondPromise = markdownCache.load(request)
-
-    expect(secondPromise).toBe(firstPromise)
-    await expect(firstPromise).resolves.toContain("<h1>Title</h1>")
-  })
-
-  it("drops Markdown subscriber state when a source is evicted", async () => {
-    const markdownCache = createMarkdownHtmlCache({
-      maxEntries: 1,
-      textCache: {
-        load: vi.fn(async ({ content }) => `# ${content.directUrl}\n`),
-        clear() {},
-        size() {
-          return 0
-        },
-      },
-    })
-    const first = textSubscription("/first.md")
-    const second = textSubscription("/second.md")
-
-    const firstPromise = markdownCache.load(first)
-    await expect(firstPromise).resolves.toContain("<h1>/first.md</h1>")
-    expect(markdownCache.size()).toBe(1)
-
-    await expect(markdownCache.load(second)).resolves.toContain(
-      "<h1>/second.md</h1>"
-    )
-    expect(markdownCache.size()).toBe(1)
-
-    const firstAfterEviction = markdownCache.load(first)
-    expect(firstAfterEviction).not.toBe(firstPromise)
-    await expect(firstAfterEviction).resolves.toContain("<h1>/first.md</h1>")
-    expect(markdownCache.size()).toBe(1)
   })
 
   it("aborts a shared text resource fetch only after every subscriber aborts", async () => {
@@ -643,7 +591,46 @@ describe("FileViewer text rendering", () => {
     expect(await screen.findByText("first note")).toBeTruthy()
     expect(screen.getByText("second note")).toBeTruthy()
     expect(container.querySelector('[data-slot="text-viewer"]')).toBeTruthy()
+    expect(container.querySelector('[data-slot="code-viewer"]')).toBeNull()
+    expect(container.querySelector(".fv-markdown")).toBeNull()
     expect(container.querySelector("[data-line-number]")).toBeNull()
+  })
+
+  it("routes markdown files through the wrapped Text Viewer markdown mode", async () => {
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null)
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(response("# Release\n\nBody copy\n")))
+    )
+
+    const { container } = render(
+      <FileViewer source={urlSource("/release.md", "release.md")} />
+    )
+
+    expect(await screen.findByRole("heading", { name: "Release" })).toBeTruthy()
+    expect(screen.getByText("Body copy")).toBeTruthy()
+    expect(container.querySelector('[data-slot="text-viewer"]')).toBeTruthy()
+    expect(container.querySelector('[data-slot="code-viewer"]')).toBeNull()
+    expect(container.querySelector(".fv-markdown")).toBeNull()
+    expect(container.querySelector("iframe")).toBeNull()
+  })
+
+  it("routes MDX files through the standalone Code Viewer", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve(response("import X from './x'\n\n# Title\n<X />"))
+      )
+    )
+
+    const { container } = render(
+      <FileViewer source={urlSource("/component.mdx", "component.mdx")} />
+    )
+
+    await waitFor(() => {
+      expect(container.querySelector('[data-slot="code-viewer"]')).toBeTruthy()
+    })
+    expect(container.querySelector('[data-slot="text-viewer"]')).toBeNull()
   })
 
   it("routes source-code text files through the standalone Code Viewer", async () => {
@@ -659,6 +646,7 @@ describe("FileViewer text rendering", () => {
     await waitFor(() => {
       expect(container.querySelector('[data-slot="code-viewer"]')).toBeTruthy()
     })
+    expect(container.querySelector('[data-slot="text-viewer"]')).toBeNull()
   })
 
   it("routes logs through the standalone Code Viewer", async () => {
@@ -687,8 +675,31 @@ describe("FileViewer text rendering", () => {
       <FileViewer source={urlSource("/data.json", "data.json")} />
     )
 
-    expect(await screen.findByText('{"answer":42}')).toBeTruthy()
+    await waitFor(() => {
+      expect(container.querySelector(".cv-token-property")?.textContent).toBe(
+        '"answer"'
+      )
+    })
+    expect(container.querySelector(".cv-token-number")?.textContent).toBe("42")
     expect(container.querySelector('[data-slot="code-viewer"]')).toBeTruthy()
+    expect(container.querySelector('[data-slot="text-viewer"]')).toBeNull()
+  })
+
+  it("routes extensionless JSON MIME sources through the standalone Code Viewer", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(response('{"mode":"code"}')))
+    )
+
+    const { container } = render(
+      <FileViewer
+        source={urlSource("/api/config", "download", "application/json")}
+      />
+    )
+
+    await waitFor(() => {
+      expect(container.querySelector('[data-slot="code-viewer"]')).toBeTruthy()
+    })
     expect(container.querySelector('[data-slot="text-viewer"]')).toBeNull()
   })
 
@@ -856,6 +867,8 @@ describe("FileViewer text rendering", () => {
     expect(await screen.findByText("Inline note")).toBeTruthy()
     expect(screen.getByText("Body copy")).toBeTruthy()
     expect(document.querySelector('[data-slot="text-viewer"]')).toBeTruthy()
+    expect(document.querySelector('[data-slot="code-viewer"]')).toBeNull()
+    expect(document.querySelector(".fv-markdown")).toBeNull()
     expect(screen.getByRole("button", { name: "Download" })).toBeTruthy()
   })
 

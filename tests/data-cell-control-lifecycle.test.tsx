@@ -72,6 +72,48 @@ describe("DataCell direct control lifecycle", () => {
     expect(input.selectionEnd).toBe(5)
   })
 
+  it("restores pointer caret placement after the activation click tail selects text", () => {
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
+      x: 0,
+      y: 0,
+      top: 0,
+      left: 0,
+      right: 30,
+      bottom: 24,
+      width: 30,
+      height: 24,
+      toJSON: () => ({}),
+    } as DOMRect)
+
+    render(
+      <DataCell
+        kind="text"
+        mode="edit"
+        value="USD"
+        activationIntent={{
+          type: "pointer",
+          clientX: 10,
+          clientY: 8,
+          detail: 1,
+        }}
+      />
+    )
+
+    const input = screen.getByRole("textbox") as HTMLInputElement
+    expect(input.selectionStart).toBe(1)
+    expect(input.selectionEnd).toBe(1)
+
+    input.setSelectionRange(0, input.value.length)
+    fireEvent.mouseUp(input)
+    expect(input.selectionStart).toBe(1)
+    expect(input.selectionEnd).toBe(1)
+
+    input.setSelectionRange(0, input.value.length)
+    fireEvent.click(input)
+    expect(input.selectionStart).toBe(1)
+    expect(input.selectionEnd).toBe(1)
+  })
+
   it("commits empty number and integer controls as valid null values", () => {
     const onNumberCommit = vi.fn()
     const onIntegerCommit = vi.fn()
@@ -201,7 +243,7 @@ describe("DataCell direct control lifecycle", () => {
     )
   })
 
-  it("blurs and commits text controls on Enter and Escape", () => {
+  it("commits text controls on Enter and cancels them on Escape", () => {
     const onCommit = vi.fn()
     render(<DataCell kind="text" mode="edit" value="old" onCommit={onCommit} />)
 
@@ -227,18 +269,10 @@ describe("DataCell direct control lifecycle", () => {
     fireEvent.keyDown(input, { key: "Escape" })
 
     expect(document.activeElement).not.toBe(input)
-    expect(onCommit).toHaveBeenCalledWith(
-      "escaped",
-      expect.objectContaining({
-        kind: "text",
-        rawValue: "escaped",
-        isEmpty: false,
-        isValid: true,
-      })
-    )
+    expect(onCommit).not.toHaveBeenCalled()
   })
 
-  it("blurs and commits number controls on Enter and Escape", () => {
+  it("commits number controls on Enter and cancels them on Escape", () => {
     const onCommit = vi.fn()
     render(<DataCell kind="number" mode="edit" value={1} onCommit={onCommit} />)
 
@@ -264,15 +298,7 @@ describe("DataCell direct control lifecycle", () => {
     fireEvent.keyDown(input, { key: "Escape" })
 
     expect(document.activeElement).not.toBe(input)
-    expect(onCommit).toHaveBeenCalledWith(
-      3.25,
-      expect.objectContaining({
-        kind: "number",
-        rawValue: "3.25",
-        isEmpty: false,
-        isValid: true,
-      })
-    )
+    expect(onCommit).not.toHaveBeenCalled()
   })
 
   it("opens date pickers from autofocus and activation, then closes on outside pointer and Escape", () => {

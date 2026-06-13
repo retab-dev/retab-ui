@@ -254,29 +254,27 @@ export function JsonTableDisplayCell({
 export function JsonTableDataCell({
   activationIntent,
   autoFocus,
-  draftValue,
+  active,
   fieldMetadata,
   isEditable = false,
-  isPickerOpen,
   mode,
   onCommit,
-  onDraftValueChange,
   onEditingEnd,
   onKeyDown,
+  onActiveChange,
   onPickerOpenChange,
   value,
 }: {
   activationIntent?: React.ComponentProps<typeof DataCell>["activationIntent"]
   autoFocus?: boolean
-  draftValue?: string
+  active?: boolean
   fieldMetadata: FieldMetadata
   isEditable?: boolean
-  isPickerOpen?: boolean
   mode: "display" | "edit"
   onCommit?: (value: unknown, meta: DataCellValueMeta) => void
-  onDraftValueChange?: (value: string, meta: DataCellValueMeta) => void
   onEditingEnd?: () => void
   onKeyDown?: React.KeyboardEventHandler<HTMLElement>
+  onActiveChange?: (active: boolean) => void
   onPickerOpenChange?: (open: boolean) => void
   value: unknown
 }) {
@@ -324,11 +322,12 @@ export function JsonTableDataCell({
         value={selectValue}
         selectOptions={enumDataCellOptions(fieldMetadata)}
         editable={isEditable}
+        active={active}
         activationIntent={activationIntent}
         autoFocus={autoFocus}
-        isPickerOpen={isPickerOpen}
         onCommit={handleSelectCommit}
         onEditingEnd={onEditingEnd}
+        onActiveChange={onActiveChange}
         onPickerOpenChange={onPickerOpenChange}
         onKeyDown={onKeyDown}
         placeholder="Select..."
@@ -349,12 +348,12 @@ export function JsonTableDataCell({
         mode={mode}
         value={numberDataCellValue(value)}
         editable={isEditable}
-        draftValue={draftValue}
+        active={active}
         activationIntent={activationIntent}
         autoFocus={autoFocus}
-        onDraftValueChange={onDraftValueChange}
         onCommit={handleNumberCommit}
         onEditingEnd={onEditingEnd}
+        onActiveChange={onActiveChange}
         onKeyDown={onKeyDown}
         className={jsonTableDataCellClass}
       />
@@ -368,10 +367,12 @@ export function JsonTableDataCell({
         mode={mode}
         value={typeof value === "boolean" ? value : null}
         editable={isEditable}
+        active={active}
         activationIntent={activationIntent}
         autoFocus={autoFocus}
         onCommit={handleBooleanCommit}
         onEditingEnd={onEditingEnd}
+        onActiveChange={onActiveChange}
         onKeyDown={onKeyDown}
         className={jsonTableDataCellClass}
       />
@@ -385,13 +386,12 @@ export function JsonTableDataCell({
         mode={mode}
         value={textDataCellValue(value)}
         editable={isEditable}
-        draftValue={draftValue}
+        active={active}
         activationIntent={activationIntent}
         autoFocus={autoFocus}
-        isPickerOpen={isPickerOpen}
-        onDraftValueChange={onDraftValueChange}
         onCommit={handleTextCommit}
         onEditingEnd={onEditingEnd}
+        onActiveChange={onActiveChange}
         onPickerOpenChange={onPickerOpenChange}
         onKeyDown={onKeyDown}
         showPickerIcon={false}
@@ -411,12 +411,12 @@ export function JsonTableDataCell({
       mode={mode}
       value={formatJsonTableNestedValue(value)}
       editable={isEditable}
-      draftValue={draftValue}
+      active={active}
       activationIntent={activationIntent}
       autoFocus={autoFocus}
-      onDraftValueChange={onDraftValueChange}
       onCommit={handleTextCommit}
       onEditingEnd={onEditingEnd}
+      onActiveChange={onActiveChange}
       onKeyDown={onKeyDown}
       className={jsonTableDataCellClass}
     />

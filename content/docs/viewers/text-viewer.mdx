@@ -3,8 +3,8 @@ title: Text Viewer
 description: A Pretext-powered wrapped text viewer with variable-height virtualization, prose chrome, source-line highlights, zoom, retry, and download.
 ---
 
-The Text Viewer is for prose and markdown-like text. It uses Pretext to predict
-wrapped line heights without measuring DOM nodes, then renders a custom
+The Text Viewer is for prose text and Markdown documents. It uses Pretext to
+predict wrapped line heights without measuring DOM nodes, then renders a custom
 variable-height virtual window so long documents stay responsive while text
 wraps naturally inside the viewport.
 
@@ -54,6 +54,37 @@ URL and Blob sources use the same bounded text resource path as the Code Viewer:
 - **Custom virtualization** — variable-height source lines are windowed with local offset math, not TanStack Virtual.
 - **Stable source-line addressing** — `highlight` and `scrollToLineRange` still use 1-based inclusive source-line ranges.
 - **Prose chrome** — the toolbar shows word count, text scale controls, and downloads from the source resource.
+- **Markdown mode** — `.md`, `.markdown`, and `text/markdown` sources render through the Text Viewer in `mode="markdown"` with Pretext-backed block frames and visible-window materialization.
+
+## Markdown Contract
+
+Markdown mode renders common Markdown prose constructs as viewer-owned React
+DOM, not as injected HTML. Headings, paragraphs, emphasis, inline code, safe
+links, standalone images, lists, task markers, blockquotes, rules, tables, and
+fenced code blocks use the same Pretext/custom virtualization path as prose
+text. Large tables mount only the visible body-row window. Raw HTML is displayed
+as inert text or code fallback, so scripts, event handlers, forms, frames, and
+unsafe URLs do not become live DOM.
+
+Markdown in the File Viewer is not the old sanitized HTML Markdown document
+viewer. The File Viewer routes Markdown documents to `TextViewer` with
+`mode="markdown"`.
+
+Fenced code blocks show their language label and expose a copy action. Markdown
+images reserve stable space and fall back to inert alt text if the URL is unsafe
+or the image fails to load.
+
+Raw HTML rendering, syntax-highlighted fenced code, MDX, math, footnotes,
+directives, and full GitHub visual parity are not part of the completed
+Markdown contract yet; unsupported constructs must degrade to stable inert
+text/code output rather than executing or rendering blank. `.mdx` files are
+source files and route to the Code Viewer in the File Viewer.
+
+## Text And Code
+
+Plain prose text does not show a code-style line-number gutter. Logs, JSON, and
+source-like files remain Code Viewer responsibilities and keep their line
+numbers, monospaced layout, syntax support, and line-oriented scrolling.
 
 ## Props
 

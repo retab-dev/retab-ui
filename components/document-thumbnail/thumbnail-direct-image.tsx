@@ -1,8 +1,10 @@
 "use client"
 
+import type * as React from "react"
+
 import type { ViewerResource } from "@/lib/viewer-resource"
 import type { ViewerDescriptor } from "@/lib/viewer-source"
-import { FileThumbnail } from "@/components/ui/file-thumbnail"
+import { FileThumbnailFrame } from "@/components/ui/file-thumbnail-frame"
 
 import { isTiffDescriptor } from "./descriptor"
 import {
@@ -35,6 +37,7 @@ export function DirectImageThumbnail({
   anchor,
   renderKey,
   errorState,
+  thumbnailProps,
   onError,
 }: {
   descriptor: ViewerDescriptor
@@ -45,13 +48,15 @@ export function DirectImageThumbnail({
   anchor: ThumbnailAnchor
   renderKey: string
   errorState: ThumbnailErrorState | null
+  thumbnailProps?: Omit<React.ComponentPropsWithoutRef<"div">, "children">
   onError?: (error: unknown, errorState: ThumbnailErrorState) => void
 }) {
   const failedDirectImage =
     errorState?.info.format === "image" ? errorState : null
 
   return (
-    <FileThumbnail
+    <FileThumbnailFrame
+      {...thumbnailProps}
       file={{ name: descriptor.displayName, type: descriptor.mimeType ?? "" }}
       previewImageUrl={directUrl}
       previewAspectRatio={previewAspectRatio}

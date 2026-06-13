@@ -46,17 +46,14 @@ export function renderDataCell(
   overrides: JsonTableCellHarnessProps = {}
 ) {
   const fieldMetadata = overrides.fieldMetadata ?? baseField(kind)
-  const draftValue = overrides.draftValue ?? "value"
   return render(
     <JsonTableDataCell
       fieldMetadata={fieldMetadata}
       value={overrides.effectiveValue ?? overrides.value ?? "value"}
       mode="edit"
+      active
       isEditable
-      draftValue={draftValue}
       autoFocus
-      isPickerOpen={overrides.editSession?.isOverlayOpen ?? false}
-      onDraftValueChange={overrides.setDraftValue ?? vi.fn()}
       onPickerOpenChange={overrides.setOverlayOpen ?? vi.fn()}
       onEditingEnd={overrides.closeEditSession ?? vi.fn()}
       onCommit={(value, meta) => overrides.commitValue?.(value, meta)}
@@ -73,9 +70,9 @@ export function renderEnumCell(overrides: JsonTableCellHarnessProps = {}) {
       fieldMetadata={fieldMetadata}
       value={overrides.effectiveValue ?? overrides.value ?? "value"}
       mode="edit"
+      active
       isEditable={true}
       autoFocus
-      isPickerOpen={editSession.isOverlayOpen}
       onPickerOpenChange={overrides.setOverlayOpen ?? vi.fn()}
       onEditingEnd={overrides.closeEditSession ?? vi.fn()}
       onCommit={(value, meta) => overrides.commitValue?.(value, meta)}

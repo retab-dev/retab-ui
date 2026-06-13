@@ -210,14 +210,14 @@ This pattern is already clear in PDF, image, PPTX, text, DOCX, and XLSX. It shou
 3. Render a descriptor-aware fallback.
 4. Route by category and source kind.
 5. Lazy-load heavyweight standalone viewers.
-6. Use file-level preview adapters for markdown, html, and CSV.
+6. Route Markdown and prose through the Text Viewer, code-like text through the
+   Code Viewer, and file-level preview adapters for HTML and CSV.
 7. Use standalone `ResourceViewer` components for PDF, DOCX, image, PPTX, and XLSX when possible.
 
 The file-specific preview components are not substitutes for standalone viewers:
 
-- `text-viewer.tsx` owns prose text such as `.txt`.
+- `text-viewer.tsx` owns prose text and Markdown documents.
 - `code-viewer.tsx` owns preformatted text such as code, JSON, and logs; syntax highlighting is optional.
-- `file-viewer-markdown-viewer.tsx` renders markdown through marked and DOMPurify into file chrome.
 - `file-viewer-html-viewer.tsx` renders sandboxed HTML in an iframe.
 - `file-viewer-csv-viewer.tsx` adapts the standalone CSV grid into file chrome.
 

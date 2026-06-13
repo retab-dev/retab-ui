@@ -1,13 +1,14 @@
 ---
 title: File Thumbnail
-description: Render compact file preview images with a skeleton, fade transition, and fallback state.
+description: Render compact file thumbnails from files, URLs, blobs, text sources, images, or custom preview content.
 component: true
 ---
 
-File Thumbnail gives document lists, upload queues, and attachment trays a
-consistent preview shell. Pass an image URL or renderer output from your PDF,
-DOCX, XLSX, or image pipeline; the component handles the thumbnail frame, loading
-shimmer, fade-in, and fallback state.
+File Thumbnail gives document lists, upload queues, file browsers, and
+attachment trays one thumbnail component for every file source. Pass a browser
+`File`, a URL/blob/text source, an external image preview, or custom rendered
+content; the component handles the frame, loading shimmer, first-unit document
+rendering, fade-in, and fallback state.
 
 <FileThumbnailFormatsDemo />
 
@@ -17,133 +18,97 @@ shimmer, fade-in, and fallback state.
 npx shadcn@latest add @retab/file-thumbnail
 ```
 
-For the first-unit document renderer stack:
+## Usage
 
-```bash
-npx shadcn@latest add @retab/document-thumbnail
+```tsx
+import { FileThumbnail } from "@/components/ui/file-thumbnail"
+
+export function PdfThumbnail({ file }: { file: File }) {
+  return <FileThumbnail file={file} previewAspectRatio={1} />
+}
+
+export function UrlThumbnail() {
+  return (
+    <FileThumbnail
+      source={{
+        kind: "url",
+        url: "/contract.pdf",
+        fileName: "contract.pdf",
+        mimeType: "application/pdf",
+      }}
+      previewAspectRatio={1}
+    />
+  )
+}
 ```
 
 ## States
 
-`FileThumbnail` is just the preview shell — it tracks loading, fade-in, and
-fallback so every thumbnail in a list looks consistent regardless of which
-renderer produced it. Feed it a finished image with `previewImageUrl`, custom
-React with `previewContent`, or set `state="loading"` / `state="error"` while
-your thumbnail pipeline is working.
+`FileThumbnail` renders supported documents to their first unit: page 1 for PDF
+and DOCX, the first sheet for XLSX, the first slide for PPTX, the first TIFF
+frame, or the head of CSV, text, markdown, and HTML files. Images render
+directly. Unsupported files fall back to the compact extension surface.
 
 <FileThumbnailDemo />
 
-`FileThumbnailShimmer` is self-contained; it does not require global keyframes or
-a root style tag.
-
-## Document Previews
-
-File Thumbnail does not parse documents or install renderer packages. The
-registry item installs only the dependency-free shell; generate the preview with
-whichever viewer stack you already use, then pass the result through
-`previewImageUrl` or `previewContent`.
-
-The hero above feeds each format's Retab viewer into `previewContent` — each
-renderer wraps a standard React library (`pdfjs-dist`, `@e965/xlsx`,
-`pptxviewjs`, `docx-preview`). Each renders **only the first unit** — page 1, the
-first sheet, or the first slide — never the whole document, so there is no
-scrolling, no sheet tabs, and no toolbar. A raster image needs no renderer at all.
-
-`DocumentThumbnail` is the optional renderer stack around `FileThumbnail`. It
-does the first-unit render per format; it suspends (showing the shimmer) while
-the library parses, and falls back to the muted surface if a parse fails. Install
-`@retab/file-thumbnail` for only the dependency-free shell, or
-`@retab/document-thumbnail` when you want the complete PDF, DOCX, XLSX, PPTX,
-CSV, text, markdown, HTML, TIFF, and direct-image thumbnail path.
-The document thumbnail install uses shared PDF/DOCX resource loaders, not the
-full PDF or DOCX viewer chrome.
+When you already have a generated preview, pass it directly:
 
 ```tsx
-import { DocumentThumbnail } from "@/components/document-thumbnail"
-
-// PDF / DOCX / XLSX / PPTX: first page, first sheet, or first slide only.
-<DocumentThumbnail
-  source={{
-    kind: "url",
-    url: "/an-image-is-worth-16x16-words.pdf",
-    fileName: "an-image-is-worth-16x16-words.pdf",
-    mimeType: "application/pdf",
-  }}
+<FileThumbnail
+  file={{ name: "invoice.pdf", type: "application/pdf" }}
+  previewImageUrl="/previews/invoice-page-1.png"
 />
 
-// Images need no renderer.
-<DocumentThumbnail
-  source={{
-    kind: "url",
-    url: "/page.png",
-    fileName: "page.png",
-    mimeType: "image/png",
-  }}
+<FileThumbnail
+  file={{ name: "custom.bin", type: "application/octet-stream" }}
+  previewContent={<div className="grid size-full place-items-center">Ready</div>}
 />
 ```
 
-If a document renderer fails transiently and you want to retry the same
-`source`, change `retryKey`. `DocumentThumbnail` folds the shared resource cache
-key, thumbnail category, anchor, and `retryKey` into explicit cache/render keys,
-so first-unit renderers can retry without inventing a different source.
-
-When a document renderer fails, `DocumentThumbnail` keeps the compact muted
-thumbnail fallback but projects the failure through the same canonical viewer
-error model used by full viewers. The user-safe message is exposed through
-accessibility/title text, diagnostic `data-error-*` attributes are attached to
-the shell, and `onError(error, info)` receives both the raw error and
-`ViewerErrorInfo`.
+Use `state="loading"` or `state="error"` when an external thumbnail pipeline is
+in charge of the preview lifecycle.
 
 ## Useful Behaviors
 
-- Accepts externally generated thumbnails as an image URL or custom React content.
-- Shows a shimmering file-preview state while your thumbnail generator is loading.
-- Fades the preview in after it loads.
-- Falls back to a blank muted preview surface when no preview is available, the
-  explicit state is `error`, or image loading fails.
+- Accepts browser `File` objects, URL sources, Blob sources, text sources,
+  external preview image URLs, or custom React preview content.
+- Renders only the first unit of supported documents, never the whole document.
+- Shows a shimmer while document renderers load or an image preview decodes.
+- Falls back to a muted extension surface for unsupported files and errors.
+- Keeps the visual frame consistent across generated and externally supplied
+  previews.
 
 ## API Reference
 
 ### FileThumbnail
 
-| Prop                 | Type                               | Default | Required |
-| -------------------- | ---------------------------------- | ------- | -------- |
-| `file`               | `ThumbnailFile \| File`            | `-`     | Yes      |
-| `className`          | `string`                           | `-`     | No       |
-| `previewAspectRatio` | `number`                           | `3 / 4` | No       |
-| `previewClassName`   | `string`                           | `-`     | No       |
-| `previewContent`     | `React.ReactNode`                  | `-`     | No       |
-| `previewImageUrl`    | `string \| null`                   | `-`     | No       |
-| `onPreviewError`     | `() => void`                       | `-`     | No       |
-| `state`              | `"loading" \| "loaded" \| "error"` | `-`     | No       |
-
-Use `state` when the thumbnail pipeline is still loading or has failed.
-Use `onPreviewError` when an image URL preview should report browser load
-failure to a parent renderer.
-
-`FileThumbnail` also forwards standard `div` props such as `aria-label`,
-`data-*`, event handlers, and `style`. Its internal `data-slot="file-thumbnail"`
-is kept stable for styling and tests.
-
-`previewContent` is treated as present for any renderable React node, including
-`0` and an empty string. `null`, `undefined`, and `false` are treated as absent,
-so the component can fall back to `previewImageUrl` or the muted fallback surface.
-
-### DocumentThumbnail
-
 | Prop                 | Type                                         | Default      | Required |
 | -------------------- | -------------------------------------------- | ------------ | -------- |
-| `source`             | `ViewerSource`                               | `-`          | Yes      |
+| `file`               | `ThumbnailFile \| File`                      | `-`          | No       |
+| `source`             | `ViewerSource \| File`                       | `-`          | No       |
 | `as`                 | `FileCategory`                               | auto-detect  | No       |
 | `className`          | `string`                                     | `-`          | No       |
 | `previewAspectRatio` | `number`                                     | `3 / 4`      | No       |
+| `previewClassName`   | `string`                                     | `-`          | No       |
+| `previewContent`     | `React.ReactNode`                            | `-`          | No       |
+| `previewImageUrl`    | `string \| null`                             | `-`          | No       |
 | `anchor`             | `"top-left" \| "top-right" \| "bottom-left"` | `"top-left"` | No       |
 | `retryKey`           | `React.Key`                                  | `-`          | No       |
+| `state`              | `"loading" \| "loaded" \| "error"`           | `-`          | No       |
 | `onError`            | `(error, info) => void`                      | `-`          | No       |
+| `onPreviewError`     | `() => void`                                 | `-`          | No       |
 
-Use `as` only when the file name or MIME type is missing, wrong, or intentionally
-viewed as another supported category. `source` accepts URL, Blob, and inline text
-sources through the same file boundary used by File Viewer.
+`file` is enough for browser uploads. Use `source` for URL, Blob, or inline text
+sources. Use `as` only when the file name or MIME type is missing, wrong, or
+intentionally viewed as another supported category.
+
+`previewContent` and `previewImageUrl` take priority over generated document
+rendering. That keeps the component useful when another system already produced
+the thumbnail.
+
+`FileThumbnail` also forwards standard `div` props such as `aria-label`,
+`data-*`, event handlers, and `style`. Its internal
+`data-slot="file-thumbnail"` is kept stable for styling and tests.
 
 ### ThumbnailFile
 

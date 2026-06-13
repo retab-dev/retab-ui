@@ -246,7 +246,7 @@ describe("json table text and number interactions", () => {
     expect(input).toHaveProperty("value", "ACME")
   })
 
-  it("saves text edits on blur, Enter, and Escape", async () => {
+  it("saves text edits on blur and Enter, then cancels them on Escape", async () => {
     const onBlurChange = vi.fn()
     const blurView = renderInteractionRow({
       visiblePaths: ["vendor"],
@@ -283,7 +283,7 @@ describe("json table text and number interactions", () => {
       target: { value: "Umbrella" },
     })
     fireEvent.keyDown(escapeView.getByRole("textbox"), { key: "Escape" })
-    expect(onEscapeChange).toHaveBeenCalledWith("doc_1", "vendor", "Umbrella")
+    expect(onEscapeChange).not.toHaveBeenCalled()
   })
 
   it("does not save unchanged text values", async () => {

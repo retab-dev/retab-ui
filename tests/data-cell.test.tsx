@@ -294,7 +294,7 @@ describe("DataCell", () => {
     })
   })
 
-  it("uses Enter and Escape to end editing through the native blur path", () => {
+  it("uses Enter to commit and Escape to cancel through the native blur path", () => {
     const onCommit = vi.fn()
     const onKeyDown = vi.fn()
     render(
@@ -322,10 +322,8 @@ describe("DataCell", () => {
     input.focus()
     fireEvent.keyDown(input, { key: "Escape" })
 
-    expect(onCommit).toHaveBeenCalledWith(
-      "new",
-      expect.objectContaining({ kind: "text", rawValue: "new" })
-    )
+    expect(onCommit).not.toHaveBeenCalled()
+    expect(onKeyDown).toHaveBeenCalledTimes(2)
   })
 
   it("commits boolean edits", () => {

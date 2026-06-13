@@ -42,7 +42,7 @@ export function useDocumentDefinitionsEditorController({
   const isEditable = editMode === "editable"
   const shouldShowClosedPrompt =
     doc.defs.length === 0 && (!accordionOpen || !definitionsEnabled)
-  const accordionValue = doc.defs.length > 0 || accordionOpen ? "defs" : ""
+  const accordionValue = accordionOpen ? "defs" : ""
 
   const openDefinitions = React.useCallback(() => {
     setAccordionOpen(true)

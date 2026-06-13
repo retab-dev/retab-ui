@@ -168,6 +168,7 @@ function FileViewerRoute({
           source={resource.descriptor.source}
           className={className}
           bare={bare}
+          mode="markdown"
         />
       )
     }
@@ -318,6 +319,7 @@ function FileViewerRoute({
           source={resource.descriptor.source}
           className={className}
           bare={bare}
+          mode="markdown"
         />
       )
     case "html":
@@ -355,7 +357,14 @@ function renderTextViewer({
 }) {
   const source = resource.descriptor.source
   if (isProseTextDescriptor(descriptor)) {
-    return <ProseTextViewer source={source} className={className} bare={bare} />
+    return (
+      <ProseTextViewer
+        source={source}
+        className={className}
+        bare={bare}
+        mode="text"
+      />
+    )
   }
   return <CodeTextViewer source={source} className={className} bare={bare} />
 }

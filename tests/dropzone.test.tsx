@@ -55,11 +55,13 @@ describe("Dropzone", () => {
 
   it("accepts dropped files and limits to one file when multiple is false", () => {
     const onFilesAccepted = vi.fn()
-
-    render(<Dropzone multiple={false} onFilesAccepted={onFilesAccepted} />)
+    const { container } = render(
+      <Dropzone multiple={false} onFilesAccepted={onFilesAccepted} />
+    )
+    const dropzone = screen.getByRole("button")
 
     fireEvent.drop(
-      screen.getByRole("button"),
+      dropzone,
       dropData([
         file("first.pdf", "application/pdf"),
         file("second.pdf", "application/pdf"),
@@ -69,6 +71,45 @@ describe("Dropzone", () => {
     expect(onFilesAccepted).toHaveBeenCalledTimes(1)
     expect(onFilesAccepted.mock.calls[0][0]).toHaveLength(1)
     expect(onFilesAccepted.mock.calls[0][0][0].name).toBe("first.pdf")
+    expect(
+      container.querySelector('[data-slot="dropzone-file-list"]')
+    ).not.toBeNull()
+    expect(
+      container.querySelectorAll('[data-slot="file-thumbnail"]')
+    ).toHaveLength(1)
+    expect(dropzone.textContent).toContain("1 file ready")
+    expect(dropzone.textContent).toContain("first.pdf")
+    expect(dropzone.textContent).not.toContain("second.pdf")
+  })
+
+  it("removes selected files from the thumbnail grid", () => {
+    const onFilesChange = vi.fn()
+    const { container } = render(<Dropzone onFilesChange={onFilesChange} />)
+    const dropzone = screen.getByRole("button")
+
+    fireEvent.drop(
+      dropzone,
+      dropData([
+        file("first.pdf", "application/pdf"),
+        file("second.pdf", "application/pdf"),
+      ])
+    )
+
+    expect(
+      container.querySelectorAll('[data-slot="dropzone-file-item"]')
+    ).toHaveLength(2)
+
+    fireEvent.click(screen.getByRole("button", { name: "Remove first.pdf" }))
+
+    expect(
+      container.querySelectorAll('[data-slot="dropzone-file-item"]')
+    ).toHaveLength(1)
+    expect(dropzone.textContent).toContain("1 file ready")
+    expect(dropzone.textContent).not.toContain("first.pdf")
+    expect(dropzone.textContent).toContain("second.pdf")
+    expect(onFilesChange).toHaveBeenLastCalledWith([
+      expect.objectContaining({ name: "second.pdf" }),
+    ])
   })
 
   it("rejects unsupported dropped files", () => {

@@ -32,6 +32,7 @@ export function DataCellSelectControl({
   kind,
   value,
   editable: _editable,
+  active: _active,
   mode: _mode,
   disabled = false,
   name: _name,
@@ -42,12 +43,13 @@ export function DataCellSelectControl({
   formatValue,
   draftValue: _draftValue,
   autoFocus,
-  activationIntent: _activationIntent,
+  activationIntent,
   isPickerOpen,
   selectOptions,
   onDraftValueChange: _onDraftValueChange,
   onCommit,
   onEditingEnd,
+  onActiveChange: _onActiveChange,
   onPickerOpenChange,
   onFocus: _onFocus,
   onBlur: _onBlur,
@@ -60,6 +62,9 @@ export function DataCellSelectControl({
   const closeTimerRef = React.useRef<ReturnType<
     typeof globalThis.setTimeout
   > | null>(null)
+  const skipAutoFocusCloseRef = React.useRef(
+    Boolean(autoFocus) && activationIntent?.type === "pointer"
+  )
   const lastCommittedValueRef = React.useRef<string | null>(null)
   const [uncontrolledOpen, setUncontrolledOpen] = React.useState(false)
   const open = isPickerOpen ?? uncontrolledOpen
@@ -105,9 +110,10 @@ export function DataCellSelectControl({
   React.useLayoutEffect(() => {
     if (!autoFocus) return
     lastCommittedValueRef.current = null
+    skipAutoFocusCloseRef.current = activationIntent?.type === "pointer"
     triggerRef.current?.focus({ preventScroll: true })
     setOpen(true)
-  }, [autoFocus, setOpen])
+  }, [activationIntent, autoFocus, setOpen])
 
   React.useEffect(() => {
     if (open) cancelScheduledClose()
@@ -124,6 +130,11 @@ export function DataCellSelectControl({
         if (nextOpen) {
           setOpen(true)
           cancelScheduledClose()
+          return
+        }
+        if (skipAutoFocusCloseRef.current) {
+          skipAutoFocusCloseRef.current = false
+          setOpen(true)
           return
         }
         closeAfterDismiss()

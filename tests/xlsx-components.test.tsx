@@ -167,7 +167,7 @@ describe("XlsxSheetTabs", () => {
     expect(screen.queryByRole("tablist")).toBeNull()
   })
 
-  it("keeps overflow inside one native-like tab strip with compact tab widths", () => {
+  it("keeps overflow inside one native-like tab strip with clipped overflow", () => {
     mockSheetTabMetrics({
       clientWidth: 240,
       scrollWidth: 720,
@@ -202,7 +202,7 @@ describe("XlsxSheetTabs", () => {
       screen.getByRole("tab", { name: "Sheet 1" }).style.height
     ).toBe("28px")
     expect(screen.getByRole("tab", { name: "Sheet 1" }).style.width).toBe(
-      "92px"
+      "104px"
     )
   })
 
@@ -620,6 +620,7 @@ describe("XlsxSheetTabs", () => {
     fireEvent.keyDown(screen.getByRole("tab", { name: "Sheet 1" }), {
       key: "ArrowLeft",
     })
+    expect(onSelectSheet).toHaveBeenLastCalledWith(7)
 
     rerender(
       <XlsxSheetTabs
@@ -630,13 +631,11 @@ describe("XlsxSheetTabs", () => {
         onSelectSheet={onSelectSheet}
       />
     )
-
     fireEvent.keyDown(screen.getByRole("tab", { name: "Sheet 8" }), {
       key: "ArrowRight",
     })
 
-    expect(onSelectSheet).toHaveBeenNthCalledWith(1, 7)
-    expect(onSelectSheet).toHaveBeenNthCalledWith(2, 0)
+    expect(onSelectSheet).toHaveBeenLastCalledWith(0)
   })
 })
 

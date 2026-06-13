@@ -84,6 +84,7 @@ export function DocumentDefinitionsEditor({
       id={DEFINITIONS_SECTION_ID}
       className="mt-6 w-full rounded-lg border border-border px-4 pb-0 shadow-sm"
       value={[controller.accordionValue]}
+      onValueChange={(value) => setAccordionOpen(value.includes("defs"))}
     >
       <AccordionItem value="defs" className="border-none bg-transparent">
         <AccordionTrigger className="bg-transparent font-medium text-muted-foreground">

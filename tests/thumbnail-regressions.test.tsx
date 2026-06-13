@@ -1447,9 +1447,9 @@ describe("thumbnail generated registry regressions", () => {
     expect(documentThumbnail).not.toContain("@/registry/new-york-v4")
   })
 
-  it("keeps the shell package free of renderer dependencies", () => {
+  it("keeps the frame package free of renderer dependencies", () => {
     const item = JSON.parse(
-      readFileSync("public/r/file-thumbnail.json", "utf8")
+      readFileSync("public/r/file-thumbnail-frame.json", "utf8")
     )
 
     expect(item.registryDependencies).toEqual(["utils"])
@@ -1470,7 +1470,7 @@ describe("thumbnail generated registry regressions", () => {
     const files = item.files.map((file) => file.target ?? file.path)
 
     expect(item.registryDependencies).toEqual([
-      "file-thumbnail",
+      "file-thumbnail-frame",
       "pdf-document-resource",
       "docx-document-resource",
       "csv",

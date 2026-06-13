@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { Check, Copy } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import type { ViewerResource } from "@/lib/viewer-resource"
@@ -9,19 +10,30 @@ import { ScrollArea } from "./scroll-area"
 import { TextViewerFrame, TextViewerToolbar } from "./text-viewer-chrome"
 import {
   createPreparedTextDocument,
+  getCodeVisibleLineWindow,
+  getInlineVisibleLineWindow,
+  getTableVisibleRowWindow,
   layoutTextDocument,
   materializeCodeVisibleLines,
   materializeInlineVisibleLines,
   resolveTextViewerMode,
   textFrameIntersectsLineRange,
   type CodeTextBlockFrame,
+  type ImageTextBlockFrame,
   type InlineTextBlockFrame,
   type PreparedCodeTextBlock,
+  type PreparedImageTextBlock,
   type PreparedInlineTextBlock,
   type PreparedRuleTextBlock,
+  type PreparedTableTextBlock,
   type PreparedTextBlock,
+  type PreparedTextDocument,
   type RuleTextBlockFrame,
+  type TableRowWindow,
+  type TableTextBlockFrame,
   type TextBlockFrame,
+  type TextDocumentFrame,
+  type TextLineWindow,
 } from "./text-viewer-layout"
 import { isLineInRange, normalizeTextLineRange } from "./text-viewer-ranges"
 import {
@@ -54,6 +66,7 @@ export function TextViewerContent({
   maxLines,
   retryVersion,
   forwardedRef,
+  mode: forcedMode,
 }: TextViewerProps & {
   resource: ViewerResource
   retryVersion: number
@@ -74,11 +87,12 @@ export function TextViewerContent({
   )
   const mode = React.useMemo(
     () =>
+      forcedMode ??
       resolveTextViewerMode({
         fileName: resource.fileName,
         mimeType: resource.content.mimeType,
       }),
-    [resource.content.mimeType, resource.fileName]
+    [forcedMode, resource.content.mimeType, resource.fileName]
   )
   const downloadAction = React.useMemo(
     () => resource.originalDownload,
@@ -93,6 +107,7 @@ export function TextViewerContent({
   const viewport = useTextVirtualViewport(viewportRef)
   const viewportHeight = viewport.clientHeight || 600
   const viewportWidth = viewport.clientWidth || 800
+  const fontEpoch = useTextViewerFontEpoch()
   const [contentWidth, setContentWidth] = React.useState(
     TEXT_VIEWER_INITIAL_TEXT_WIDTH
   )
@@ -101,18 +116,19 @@ export function TextViewerContent({
     () =>
       createPreparedTextDocument({
         mode,
-        style: { fontScale },
+        style: { fontScale: 1 },
         text,
       }),
-    [fontScale, mode, text]
+    [fontEpoch, mode, text]
   )
   const frame = React.useMemo(
     () =>
       layoutTextDocument({
         contentWidth,
         document: preparedDocument,
+        fontScale,
       }),
-    [contentWidth, preparedDocument]
+    [contentWidth, fontScale, preparedDocument]
   )
   const highlightStart = highlight?.start
   const highlightEnd = highlight?.end
@@ -126,17 +142,6 @@ export function TextViewerContent({
       ),
     [highlightEnd, highlightStart, preparedDocument.sourceLineCount]
   )
-  const virtualItems = React.useMemo(
-    () =>
-      getTextFrameVirtualItems({
-        frames: frame.frames,
-        overscanPx: TEXT_VIEWER_OVERSCAN_PX,
-        scrollTop: viewport.scrollTop,
-        viewportHeight,
-      }),
-    [frame.frames, viewport.scrollTop, viewportHeight]
-  )
-
   const captureScrollAnchor = React.useCallback(() => {
     pendingScrollAnchorRef.current = getTextFrameScrollAnchor({
       frames: frame.frames,
@@ -247,54 +252,137 @@ export function TextViewerContent({
         viewportClassName="bg-background"
         viewportRef={viewportRef}
       >
-        <div
-          className="relative min-w-0"
-          data-slot="text-virtual-canvas"
-          style={{
-            height: frame.totalHeight,
-            minWidth: viewportWidth,
-          }}
-        >
-          {virtualItems.map((item) => {
-            const block = preparedDocument.blocks[item.index]
-            const blockFrame = frame.frames[item.index]
-            if (!block || !blockFrame) return null
-            return (
-              <TextBlock
-                key={item.index}
-                block={block}
-                contentWidth={contentWidth}
-                frame={blockFrame}
-                highlightRange={highlightRange}
-                viewportBottom={
-                  viewport.scrollTop + viewportHeight + TEXT_VIEWER_OVERSCAN_PX
-                }
-                viewportTop={viewport.scrollTop - TEXT_VIEWER_OVERSCAN_PX}
-              />
-            )
-          })}
-        </div>
+        <TextVirtualCanvas
+          contentWidth={contentWidth}
+          document={preparedDocument}
+          frame={frame}
+          highlightRange={highlightRange}
+          scrollTop={viewport.scrollTop}
+          viewportHeight={viewportHeight}
+          viewportWidth={viewportWidth}
+        />
       </ScrollArea>
     </TextViewerFrame>
   )
 }
 
-function TextBlock({
-  block,
+type TextVirtualCanvasProps = {
+  contentWidth: number
+  document: PreparedTextDocument
+  frame: TextDocumentFrame
+  highlightRange: ReturnType<typeof normalizeTextLineRange>
+  scrollTop: number
+  viewportHeight: number
+  viewportWidth: number
+}
+
+const TextVirtualCanvas = React.memo(
+  TextVirtualCanvasImpl,
+  areTextVirtualCanvasPropsEqual
+)
+
+function TextVirtualCanvasImpl({
   contentWidth,
+  document,
   frame,
   highlightRange,
-  viewportBottom,
-  viewportTop,
-}: {
+  scrollTop,
+  viewportHeight,
+  viewportWidth,
+}: TextVirtualCanvasProps) {
+  const virtualItems = React.useMemo(
+    () =>
+      getTextFrameVirtualItems({
+        frames: frame.frames,
+        overscanPx: TEXT_VIEWER_OVERSCAN_PX,
+        scrollTop,
+        viewportHeight,
+      }),
+    [frame.frames, scrollTop, viewportHeight]
+  )
+  const viewportTop = scrollTop - TEXT_VIEWER_OVERSCAN_PX
+  const viewportBottom = scrollTop + viewportHeight + TEXT_VIEWER_OVERSCAN_PX
+
+  return (
+    <div
+      className="relative min-w-0"
+      data-slot="text-virtual-canvas"
+      style={{
+        height: frame.totalHeight,
+        minWidth: viewportWidth,
+      }}
+    >
+      {virtualItems.map((item) => {
+        const block = document.blocks[item.index]
+        const blockFrame = frame.frames[item.index]
+        if (!block || !blockFrame) return null
+        return (
+          <TextBlock
+            key={item.index}
+            block={block}
+            contentWidth={contentWidth}
+            frame={blockFrame}
+            highlightRange={highlightRange}
+            viewportBottom={viewportBottom}
+            viewportTop={viewportTop}
+          />
+        )
+      })}
+    </div>
+  )
+}
+
+function areTextVirtualCanvasPropsEqual(
+  previous: TextVirtualCanvasProps,
+  next: TextVirtualCanvasProps
+) {
+  return (
+    previous.contentWidth === next.contentWidth &&
+    previous.document === next.document &&
+    previous.frame === next.frame &&
+    previous.viewportHeight === next.viewportHeight &&
+    previous.viewportWidth === next.viewportWidth &&
+    isSameHighlightRange(previous.highlightRange, next.highlightRange) &&
+    textProjectionWindowKey(
+      previous.frame.frames,
+      previous.scrollTop,
+      previous.viewportHeight
+    ) ===
+      textProjectionWindowKey(
+        next.frame.frames,
+        next.scrollTop,
+        next.viewportHeight
+      )
+  )
+}
+
+type TextBlockProps = {
   block: PreparedTextBlock
   contentWidth: number
   frame: TextBlockFrame
   highlightRange: ReturnType<typeof normalizeTextLineRange>
   viewportBottom: number
   viewportTop: number
-}) {
-  if (block.kind !== frame.kind) return null
+}
+
+const TextBlock = React.memo(TextBlockImpl, areTextBlockPropsEqual)
+
+function TextBlockImpl({
+  block,
+  contentWidth,
+  frame,
+  highlightRange,
+  viewportBottom,
+  viewportTop,
+}: TextBlockProps) {
+  if (block.kind !== frame.kind) {
+    if (process.env.NODE_ENV !== "production") {
+      throw new Error(
+        `Text viewer block/frame mismatch: block=${block.kind}, frame=${frame.kind}`
+      )
+    }
+    return null
+  }
 
   const isHighlighted =
     frame.sourceStartLine === frame.sourceEndLine
@@ -317,10 +405,19 @@ function TextBlock({
       return (
         <CodeTextBlock
           block={block}
+          contentWidth={contentWidth}
           frame={frame as CodeTextBlockFrame}
           isHighlighted={isHighlighted}
           viewportBottom={viewportBottom}
           viewportTop={viewportTop}
+        />
+      )
+    case "image":
+      return (
+        <ImageTextBlock
+          block={block}
+          frame={frame as ImageTextBlockFrame}
+          isHighlighted={isHighlighted}
         />
       )
     case "rule":
@@ -331,7 +428,118 @@ function TextBlock({
           isHighlighted={isHighlighted}
         />
       )
+    case "table":
+      return (
+        <TableTextBlock
+          block={block}
+          frame={frame as TableTextBlockFrame}
+          isHighlighted={isHighlighted}
+          viewportBottom={viewportBottom}
+          viewportTop={viewportTop}
+        />
+      )
   }
+}
+
+function areTextBlockPropsEqual(
+  previous: TextBlockProps,
+  next: TextBlockProps
+) {
+  return (
+    previous.block === next.block &&
+    previous.frame === next.frame &&
+    previous.contentWidth === next.contentWidth &&
+    isSameHighlightRange(previous.highlightRange, next.highlightRange) &&
+    textBlockVisibleWindowKey(
+      previous.frame,
+      previous.viewportTop,
+      previous.viewportBottom
+    ) ===
+      textBlockVisibleWindowKey(
+        next.frame,
+        next.viewportTop,
+        next.viewportBottom
+      )
+  )
+}
+
+function isSameHighlightRange(
+  a: ReturnType<typeof normalizeTextLineRange>,
+  b: ReturnType<typeof normalizeTextLineRange>
+) {
+  return (
+    a === b ||
+    (a != null && b != null && a.start === b.start && a.end === b.end)
+  )
+}
+
+function textProjectionWindowKey(
+  frames: readonly TextBlockFrame[],
+  scrollTop: number,
+  viewportHeight: number
+) {
+  const viewportTop = scrollTop - TEXT_VIEWER_OVERSCAN_PX
+  const viewportBottom = scrollTop + viewportHeight + TEXT_VIEWER_OVERSCAN_PX
+  return getTextFrameVirtualItems({
+    frames,
+    overscanPx: TEXT_VIEWER_OVERSCAN_PX,
+    scrollTop,
+    viewportHeight,
+  })
+    .map((item) => {
+      const frame = frames[item.index]
+      if (!frame) return `${item.index}:missing`
+      return `${item.index}:${textBlockVisibleWindowKey(
+        frame,
+        viewportTop,
+        viewportBottom
+      )}`
+    })
+    .join("|")
+}
+
+function textBlockVisibleWindowKey(
+  frame: TextBlockFrame,
+  viewportTop: number,
+  viewportBottom: number
+) {
+  switch (frame.kind) {
+    case "inline":
+      return lineWindowKey(
+        getInlineVisibleLineWindow({
+          frame,
+          viewportBottom,
+          viewportTop,
+        })
+      )
+    case "code":
+      return lineWindowKey(
+        getCodeVisibleLineWindow({
+          frame,
+          viewportBottom,
+          viewportTop,
+        })
+      )
+    case "table":
+      return tableRowWindowKey(
+        getTableVisibleRowWindow({
+          frame,
+          viewportBottom,
+          viewportTop,
+        })
+      )
+    case "image":
+    case "rule":
+      return "static"
+  }
+}
+
+function lineWindowKey(window: TextLineWindow | null) {
+  return window ? `${window.firstLine}:${window.lastLine}` : "none"
+}
+
+function tableRowWindowKey(window: TableRowWindow) {
+  return `${window.startIndex}:${window.endIndex}`
 }
 
 function InlineTextBlock({
@@ -356,6 +564,15 @@ function InlineTextBlock({
     viewportBottom,
     viewportTop,
   })
+  const headingLevel = inlineHeadingLevel(block)
+  const role =
+    headingLevel == null && frame.markerText
+      ? "listitem"
+      : headingLevel == null
+        ? undefined
+        : "heading"
+  const ariaLevel =
+    headingLevel ?? (frame.markerText ? frame.listDepth : undefined)
 
   return (
     <div
@@ -365,6 +582,10 @@ function InlineTextBlock({
       )}
       data-slot="text-line"
       data-source-line={frame.sourceStartLine}
+      data-list-depth={frame.listDepth || undefined}
+      data-quote-depth={frame.quoteDepth || undefined}
+      role={role}
+      aria-level={ariaLevel}
       style={{
         height: frame.height,
         transform: `translateY(${frame.top}px)`,
@@ -379,22 +600,29 @@ function InlineTextBlock({
             height: frame.lineHeight,
             left: 16 + frame.contentLeft,
             top: line.top,
+            transform: `scale(${frame.scale})`,
+            transformOrigin: "left top",
           }}
         >
           {line.fragments.map((fragment, fragmentIndex) => {
             const style =
               fragment.leadingGap > 0
-                ? { marginLeft: fragment.leadingGap }
-                : undefined
+                ? {
+                    font: fragment.font,
+                    letterSpacing: 0,
+                    marginLeft: fragment.leadingGap,
+                  }
+                : { font: fragment.font, letterSpacing: 0 }
             if (fragment.href) {
               return (
                 <a
                   key={fragmentIndex}
                   className={fragment.className}
                   href={fragment.href}
-                  rel="noreferrer"
+                  rel="noopener noreferrer"
                   style={style}
                   target="_blank"
+                  title={fragment.title ?? undefined}
                 >
                   {fragment.text}
                 </a>
@@ -416,14 +644,42 @@ function InlineTextBlock({
   )
 }
 
+function useTextViewerFontEpoch() {
+  const [fontEpoch, setFontEpoch] = React.useState(0)
+
+  React.useEffect(() => {
+    const fonts = document.fonts
+    if (!fonts) return
+
+    let isMounted = true
+    void fonts.ready.then(() => {
+      if (isMounted) setFontEpoch((epoch) => epoch + 1)
+    })
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  return fontEpoch
+}
+
+function inlineHeadingLevel(block: PreparedInlineTextBlock) {
+  if (block.variant === "heading-1") return 1
+  if (block.variant === "heading-2") return 2
+  return undefined
+}
+
 function CodeTextBlock({
   block,
+  contentWidth,
   frame,
   isHighlighted,
   viewportBottom,
   viewportTop,
 }: {
   block: PreparedCodeTextBlock
+  contentWidth: number
   frame: CodeTextBlockFrame
   isHighlighted: boolean
   viewportBottom: number
@@ -431,6 +687,7 @@ function CodeTextBlock({
 }) {
   const lines = materializeCodeVisibleLines({
     block,
+    contentWidth,
     frame,
     viewportBottom,
     viewportTop,
@@ -444,12 +701,17 @@ function CodeTextBlock({
       )}
       data-slot="text-line"
       data-source-line={frame.sourceStartLine}
+      data-list-depth={frame.listDepth || undefined}
+      data-quote-depth={frame.quoteDepth || undefined}
+      role={frame.markerText ? "listitem" : undefined}
+      aria-level={frame.markerText ? frame.listDepth : undefined}
       style={{
         height: frame.height,
         transform: `translateY(${frame.top}px)`,
       }}
     >
       <BlockChrome frame={frame} />
+      <CodeBlockToolbar block={block} frame={frame} />
       <pre
         className="absolute overflow-hidden rounded-md border bg-muted text-foreground"
         style={{
@@ -464,10 +726,12 @@ function CodeTextBlock({
               key={`${top}-${index}`}
               className="absolute font-mono whitespace-pre"
               style={{
-                fontSize: 13,
+                font: block.font,
                 left: 12,
                 lineHeight: `${frame.lineHeight}px`,
                 top,
+                transform: `scale(${frame.scale})`,
+                transformOrigin: "left top",
               }}
             >
               {line.text}
@@ -476,6 +740,141 @@ function CodeTextBlock({
         </code>
       </pre>
     </div>
+  )
+}
+
+function CodeBlockToolbar({
+  block,
+  frame,
+}: {
+  block: PreparedCodeTextBlock
+  frame: CodeTextBlockFrame
+}) {
+  return (
+    <div
+      className="absolute z-10 flex items-center gap-1"
+      style={{
+        left: 16 + frame.contentLeft + Math.max(0, frame.width - 66),
+        top: 6,
+      }}
+    >
+      {block.language ? (
+        <span className="rounded bg-background/90 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground shadow-sm">
+          {block.language}
+        </span>
+      ) : null}
+      <CopyTextButton label="Copy code block" text={block.fallbackText} />
+    </div>
+  )
+}
+
+function CopyTextButton({ label, text }: { label: string; text: string }) {
+  const [copied, setCopied] = React.useState(false)
+
+  return (
+    <button
+      type="button"
+      aria-label={copied ? "Copied" : label}
+      className="rounded bg-background/90 p-1 text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground"
+      onClick={() => {
+        void navigator.clipboard?.writeText(text).then(() => {
+          setCopied(true)
+          window.setTimeout(() => setCopied(false), 1200)
+        })
+      }}
+    >
+      {copied ? (
+        <Check className="size-3 text-emerald-600 dark:text-emerald-400" />
+      ) : (
+        <Copy className="size-3" />
+      )}
+    </button>
+  )
+}
+
+function ImageTextBlock({
+  block,
+  frame,
+  isHighlighted,
+}: {
+  block: PreparedImageTextBlock
+  frame: ImageTextBlockFrame
+  isHighlighted: boolean
+}) {
+  const [imageState, setImageState] = React.useState<
+    "idle" | "loaded" | "failed"
+  >(block.src ? "idle" : "failed")
+
+  React.useEffect(() => {
+    setImageState(block.src ? "idle" : "failed")
+  }, [block.src])
+
+  const showImage = Boolean(block.src) && imageState !== "failed"
+
+  return (
+    <figure
+      className={cn(
+        "absolute left-0 w-full px-4",
+        isHighlighted && "bg-primary/12 ring-1 ring-primary/30 ring-inset"
+      )}
+      data-slot="text-line"
+      data-source-line={frame.sourceStartLine}
+      data-list-depth={frame.listDepth || undefined}
+      data-quote-depth={frame.quoteDepth || undefined}
+      role={frame.markerText ? "listitem" : undefined}
+      aria-level={frame.markerText ? frame.listDepth : undefined}
+      style={{
+        height: frame.height,
+        transform: `translateY(${frame.top}px)`,
+      }}
+    >
+      <BlockChrome frame={frame} />
+      {showImage ? (
+        <>
+          <img
+            alt={block.alt}
+            className="absolute rounded-md border bg-muted object-contain"
+            data-image-state={imageState}
+            onError={() => setImageState("failed")}
+            onLoad={() => setImageState("loaded")}
+            src={block.src ?? undefined}
+            title={block.title ?? undefined}
+            style={{
+              height: frame.imageHeight,
+              left: 16 + frame.contentLeft,
+              maxWidth: "calc(100% - 32px)",
+              width: frame.imageWidth,
+            }}
+          />
+          {imageState === "idle" ? (
+            <div
+              aria-hidden="true"
+              className="absolute rounded-md border bg-muted/70"
+              data-image-state="loading"
+              style={{
+                height: frame.imageHeight,
+                left: 16 + frame.contentLeft,
+                width: frame.imageWidth,
+              }}
+            />
+          ) : null}
+        </>
+      ) : (
+        <div
+          className="absolute flex items-center rounded-md border bg-muted px-4 text-sm text-muted-foreground"
+          role="img"
+          aria-label={block.alt}
+          data-image-state="failed"
+          style={{
+            height: frame.imageHeight,
+            left: 16 + frame.contentLeft,
+            width: frame.imageWidth,
+          }}
+        >
+          {block.alt}
+        </div>
+      )}
+    </figure>
   )
 }
 
@@ -495,6 +894,10 @@ function RuleTextBlock({
       )}
       data-slot="text-line"
       data-source-line={frame.sourceStartLine}
+      data-list-depth={frame.listDepth || undefined}
+      data-quote-depth={frame.quoteDepth || undefined}
+      role={frame.markerText ? "listitem" : undefined}
+      aria-level={frame.markerText ? frame.listDepth : undefined}
       style={{
         height: frame.height,
         transform: `translateY(${frame.top}px)`,
@@ -510,6 +913,138 @@ function RuleTextBlock({
         }}
       />
     </div>
+  )
+}
+
+function TableTextBlock({
+  block,
+  frame,
+  isHighlighted,
+  viewportBottom,
+  viewportTop,
+}: {
+  block: PreparedTableTextBlock
+  frame: TableTextBlockFrame
+  isHighlighted: boolean
+  viewportBottom: number
+  viewportTop: number
+}) {
+  const rowWindow = getTableVisibleRowWindow({
+    frame,
+    viewportBottom,
+    viewportTop,
+  })
+  const visibleRows = block.rows.slice(rowWindow.startIndex, rowWindow.endIndex)
+
+  return (
+    <div
+      className={cn(
+        "absolute left-0 w-full px-4",
+        isHighlighted && "bg-primary/12 ring-1 ring-primary/30 ring-inset"
+      )}
+      data-slot="text-line"
+      data-source-line={frame.sourceStartLine}
+      data-list-depth={frame.listDepth || undefined}
+      data-quote-depth={frame.quoteDepth || undefined}
+      role={frame.markerText ? "listitem" : undefined}
+      aria-level={frame.markerText ? frame.listDepth : undefined}
+      style={{
+        height: frame.height,
+        transform: `translateY(${frame.top}px)`,
+      }}
+    >
+      <BlockChrome frame={frame} />
+      <div
+        className="absolute max-w-[calc(100%-32px)] overflow-x-auto rounded-md border"
+        style={{
+          height: frame.height,
+          left: 16 + frame.contentLeft,
+          width: frame.tableWidth,
+        }}
+      >
+        <table
+          className="border-collapse text-left text-[13px]"
+          style={{ width: frame.tableWidth }}
+        >
+          <colgroup>
+            {frame.columnWidths.map((width, index) => (
+              <col key={index} style={{ width }} />
+            ))}
+          </colgroup>
+          <thead className="bg-muted">
+            <tr style={{ height: frame.headerHeight }}>
+              {block.header.map((cell, index) => (
+                <th
+                  key={index}
+                  className="border-b px-3.5 py-2 font-semibold text-foreground"
+                  scope="col"
+                  style={{ textAlign: block.alignments[index] ?? "left" }}
+                >
+                  <TableCellContent cell={cell} />
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rowWindow.beforeHeight > 0 ? (
+              <tr aria-hidden="true" style={{ height: rowWindow.beforeHeight }}>
+                <td colSpan={block.header.length || 1} />
+              </tr>
+            ) : null}
+            {visibleRows.map((row, rowIndex) => (
+              <tr
+                key={rowWindow.startIndex + rowIndex}
+                data-source-line={
+                  frame.rowSourceStartLines[rowWindow.startIndex + rowIndex]
+                }
+                style={{ height: frame.rowHeight }}
+              >
+                {block.header.map((_, cellIndex) => (
+                  <td
+                    key={cellIndex}
+                    className="border-t px-3.5 py-1.5 align-top text-foreground"
+                    style={{
+                      textAlign: block.alignments[cellIndex] ?? "left",
+                    }}
+                  >
+                    <TableCellContent cell={row[cellIndex]} />
+                  </td>
+                ))}
+              </tr>
+            ))}
+            {rowWindow.afterHeight > 0 ? (
+              <tr aria-hidden="true" style={{ height: rowWindow.afterHeight }}>
+                <td colSpan={block.header.length || 1} />
+              </tr>
+            ) : null}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+function TableCellContent({
+  cell,
+}: {
+  cell: PreparedTableTextBlock["header"][number] | undefined
+}) {
+  if (!cell) return null
+  if (cell.href) {
+    return (
+      <a
+        className={cn("wrap-break-word", cell.className)}
+        href={cell.href}
+        rel="noopener noreferrer"
+        target="_blank"
+        title={cell.title ?? undefined}
+      >
+        {cell.text}
+      </a>
+    )
+  }
+  return (
+    <span className={cn("wrap-break-word", cell.className)}>{cell.text}</span>
   )
 }
 

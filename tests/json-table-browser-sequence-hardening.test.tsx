@@ -149,6 +149,42 @@ describe("json table browser sequence hardening", () => {
     expect(onDocumentDataChange).not.toHaveBeenCalled()
   })
 
+  it("restores a collapsed text caret when the mounted input receives the activation click tail", async () => {
+    const view = renderInteractionRow({
+      document: {
+        id: "doc_1",
+        data: {
+          vendor: "USD",
+        },
+      },
+      visiblePaths: ["vendor"],
+    })
+    const cell = await editableCell(view, "vendor")
+
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
+      x: 0,
+      y: 0,
+      top: 0,
+      left: 0,
+      right: 30,
+      bottom: 24,
+      width: 30,
+      height: 24,
+      toJSON: () => ({}),
+    } as DOMRect)
+
+    fireEvent.pointerDown(cell, {
+      ...browserPointerEventInit(),
+      clientX: 10,
+    })
+    const input = textInput(view)
+    input.setSelectionRange(0, input.value.length)
+    finishBrowserClick(input)
+
+    expect(input.selectionStart).toBe(1)
+    expect(input.selectionEnd).toBe(1)
+  })
+
   it("preserves a dirty text draft through rapid same-cell clicks and commits once on blur", async () => {
     const onDocumentDataChange = vi.fn()
     const view = renderInteractionRow({

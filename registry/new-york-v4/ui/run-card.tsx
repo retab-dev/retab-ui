@@ -43,13 +43,13 @@ const RUN_STATUS: Record<
 export interface RunCardProps
   extends Pick<
     FileThumbnailProps,
-    | "file"
     | "previewContent"
     | "previewImageUrl"
     | "previewAspectRatio"
     | "previewClassName"
     | "state"
   > {
+  file: NonNullable<FileThumbnailProps["file"]>
   /**
    * Replaces the single `FileThumbnail` with custom media in the same framed,
    * status-pilled slot — e.g. a bundle of per-subdocument thumbnails. The frame
@@ -113,9 +113,9 @@ export function RunCard({
           : undefined
       }
       className={cn(
-        "group/run-card bg-card text-card-foreground flex flex-col overflow-hidden rounded-xl border transition-colors",
+        "group/run-card flex flex-col overflow-hidden rounded-xl border bg-card text-card-foreground transition-colors",
         interactive &&
-          "hover:border-foreground/20 focus-visible:ring-ring cursor-pointer outline-none focus-visible:ring-2",
+          "cursor-pointer outline-none hover:border-foreground/20 focus-visible:ring-2 focus-visible:ring-ring",
         className
       )}
     >
@@ -153,7 +153,7 @@ export function RunCard({
                 {title ?? file.name}
               </span>
               {meta ? (
-                <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
+                <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
                   {meta}
                 </span>
               ) : null}
@@ -178,7 +178,7 @@ export function RunStatusBadge({
   return (
     <span
       className={cn(
-        "bg-background/85 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium backdrop-blur",
+        "inline-flex items-center gap-1 rounded-full border bg-background/85 px-2 py-0.5 text-[11px] font-medium backdrop-blur",
         tone,
         className
       )}

@@ -10,6 +10,8 @@ const TAB_HEIGHT_PX = 28
 const SCROLL_EPSILON_PX = 1
 const TAB_MIN_WIDTH_PX = 92
 const TAB_MAX_WIDTH_PX = 184
+const TAB_GAP_PX = 2
+const TAB_SCROLL_INLINE_PADDING_PX = 12
 const PREFERRED_VISIBLE_TABS = 6
 const LARGE_REVEAL_DISTANCE_MULTIPLIER = 1.25
 const OVERFLOW_REVEAL_DESKTOP_PX = 22
@@ -52,10 +54,7 @@ function scrollTabsTo(
 }
 
 function resolveOverflowRevealPx(viewportWidth: number, tabWidth: number) {
-  const targetReveal =
-    viewportWidth <= 420
-      ? OVERFLOW_REVEAL_MOBILE_PX
-      : OVERFLOW_REVEAL_DESKTOP_PX
+  const targetReveal = resolveOverflowRevealTargetPx(viewportWidth)
   const maxTabReveal = Math.max(
     OVERFLOW_REVEAL_MIN_PX,
     Math.floor(tabWidth * 0.35)
@@ -65,6 +64,12 @@ function resolveOverflowRevealPx(viewportWidth: number, tabWidth: number) {
     OVERFLOW_REVEAL_MIN_PX,
     Math.min(targetReveal, maxTabReveal)
   )
+}
+
+function resolveOverflowRevealTargetPx(viewportWidth: number) {
+  return viewportWidth <= 420
+    ? OVERFLOW_REVEAL_MOBILE_PX
+    : OVERFLOW_REVEAL_DESKTOP_PX
 }
 
 function resolveTabRevealScrollLeft({
@@ -116,8 +121,35 @@ function readScrollState(scrollElement: HTMLElement): SheetTabScrollState {
 function resolveTabWidth(viewportWidth: number, sheetCount: number) {
   if (viewportWidth <= 0 || sheetCount <= 0) return undefined
 
-  const visibleTabs = Math.min(sheetCount, PREFERRED_VISIBLE_TABS)
-  const availableWidth = Math.max(0, viewportWidth - 16)
+  const preferredVisibleTabs = Math.min(sheetCount, PREFERRED_VISIBLE_TABS)
+  const isOverflowing = sheetCount > preferredVisibleTabs
+  const overflowRevealPx = isOverflowing
+    ? resolveOverflowRevealTargetPx(viewportWidth)
+    : 0
+  const visibleTabs = isOverflowing
+    ? Math.max(
+        1,
+        Math.min(
+          preferredVisibleTabs,
+          Math.floor(
+            (viewportWidth -
+              TAB_SCROLL_INLINE_PADDING_PX -
+              overflowRevealPx +
+              TAB_GAP_PX) /
+              (TAB_MIN_WIDTH_PX + TAB_GAP_PX)
+          )
+        )
+      )
+    : preferredVisibleTabs
+  const gapCount = isOverflowing ? visibleTabs : Math.max(0, sheetCount - 1)
+  const availableWidth = Math.max(
+    0,
+    viewportWidth -
+      TAB_SCROLL_INLINE_PADDING_PX -
+      gapCount * TAB_GAP_PX -
+      overflowRevealPx
+  )
+
   return Math.round(
     Math.min(
       TAB_MAX_WIDTH_PX,
@@ -162,6 +194,51 @@ export function XlsxSheetTabs({
     )
   }, [])
 
+  const scrollTabsBy = React.useCallback(
+    (delta: number) => {
+      const scrollElement = scrollRef.current
+      if (!scrollElement) return false
+
+      const maxScrollLeft = Math.max(
+        0,
+        scrollElement.scrollWidth - scrollElement.clientWidth
+      )
+      const nextScrollLeft = scrollElement.scrollLeft + delta
+      const clampedScrollLeft = Math.min(
+        maxScrollLeft,
+        Math.max(0, nextScrollLeft)
+      )
+
+      if (Math.abs(clampedScrollLeft - scrollElement.scrollLeft) <= 0.5) {
+        return false
+      }
+
+      scrollElement.scrollLeft = clampedScrollLeft
+      updateScrollState()
+      return true
+    },
+    [updateScrollState]
+  )
+
+  const onTabsWheel = React.useCallback(
+    (event: WheelEvent) => {
+      const scrollElement = scrollRef.current
+      if (!scrollElement || !readScrollState(scrollElement).isOverflowing) {
+        return
+      }
+
+      const dominantDelta =
+        Math.abs(event.deltaX) > Math.abs(event.deltaY)
+          ? event.deltaX
+          : event.deltaY
+      if (dominantDelta === 0) return
+
+      if (!scrollTabsBy(dominantDelta)) return
+      event.preventDefault()
+    },
+    [scrollTabsBy]
+  )
+
   React.useLayoutEffect(() => {
     updateScrollState()
 
@@ -176,11 +253,13 @@ export function XlsxSheetTabs({
     scrollElement.addEventListener("scroll", updateScrollState, {
       passive: true,
     })
+    scrollElement.addEventListener("wheel", onTabsWheel, { passive: false })
     return () => {
       resizeObserver.disconnect()
       scrollElement.removeEventListener("scroll", updateScrollState)
+      scrollElement.removeEventListener("wheel", onTabsWheel)
     }
-  }, [sheets.length, updateScrollState])
+  }, [onTabsWheel, sheets.length, updateScrollState])
 
   React.useLayoutEffect(() => {
     const scrollElement = scrollRef.current
@@ -241,43 +320,6 @@ export function XlsxSheetTabs({
     tabRefs.current[nextSheetIndex]?.focus()
   }
 
-  const scrollTabsBy = (delta: number) => {
-    const scrollElement = scrollRef.current
-    if (!scrollElement) return false
-
-    const maxScrollLeft = Math.max(
-      0,
-      scrollElement.scrollWidth - scrollElement.clientWidth
-    )
-    const nextScrollLeft = scrollElement.scrollLeft + delta
-    const clampedScrollLeft = Math.min(
-      maxScrollLeft,
-      Math.max(0, nextScrollLeft)
-    )
-
-    if (Math.abs(clampedScrollLeft - scrollElement.scrollLeft) <= 0.5) {
-      return false
-    }
-
-    scrollElement.scrollLeft = clampedScrollLeft
-    updateScrollState()
-    return true
-  }
-
-  const onTabsWheel = (event: React.WheelEvent<HTMLDivElement>) => {
-    const scrollElement = scrollRef.current
-    if (!scrollElement || !scrollState.isOverflowing) return
-
-    const dominantDelta =
-      Math.abs(event.deltaX) > Math.abs(event.deltaY)
-        ? event.deltaX
-        : event.deltaY
-    if (dominantDelta === 0) return
-
-    if (!scrollTabsBy(dominantDelta)) return
-    event.preventDefault()
-  }
-
   return (
     <div
       data-slot="xlsx-viewer-tabs"
@@ -293,7 +335,6 @@ export function XlsxSheetTabs({
         ref={scrollRef}
         data-slot="xlsx-viewer-tabs-scroll"
         className="h-full overflow-x-auto overflow-y-hidden px-1.5 py-1 overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        onWheel={onTabsWheel}
       >
         <div
           ref={listRef}

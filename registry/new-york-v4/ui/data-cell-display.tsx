@@ -24,32 +24,39 @@ type DataCellFormatValue = (
   meta: { kind: DataCellKind }
 ) => React.ReactNode
 
-export function DataCellDisplay({
-  kind,
-  value,
-  editable = false,
-  disabled = false,
-  name: _name,
-  placeholder,
-  className,
-  dateTimeZone: _dateTimeZone,
-  showPickerIcon = true,
-  formatValue,
-  draftValue: _draftValue,
-  autoFocus: _autoFocus,
-  onDraftValueChange: _onDraftValueChange,
-  onCommit: _onCommit,
-  selectOptions: _selectOptions,
-  activationIntent: _activationIntent,
-  isPickerOpen: _isPickerOpen,
-  onEditingEnd: _onEditingEnd,
-  onPickerOpenChange: _onPickerOpenChange,
-  ...props
-}: DataCellProps) {
+export const DataCellDisplay = React.forwardRef<HTMLElement, DataCellProps>(
+  function DataCellDisplay(
+    {
+      kind,
+      value,
+      editable = false,
+      active: _active,
+      disabled = false,
+      name: _name,
+      placeholder,
+      className,
+      dateTimeZone: _dateTimeZone,
+      showPickerIcon = true,
+      formatValue,
+      draftValue: _draftValue,
+      autoFocus: _autoFocus,
+      onDraftValueChange: _onDraftValueChange,
+      onCommit: _onCommit,
+      selectOptions: _selectOptions,
+      activationIntent: _activationIntent,
+      isPickerOpen: _isPickerOpen,
+      onEditingEnd: _onEditingEnd,
+      onActiveChange: _onActiveChange,
+      onPickerOpenChange: _onPickerOpenChange,
+      ...props
+    },
+    ref
+  ) {
   if (kind === "boolean") {
     return (
       <div
         {...props}
+        ref={ref as React.Ref<HTMLDivElement>}
         data-slot="data-cell"
         data-kind={kind}
         data-mode="display"
@@ -84,6 +91,7 @@ export function DataCellDisplay({
     return (
       <DataCellPickerDisplay
         {...props}
+        ref={ref as React.Ref<HTMLDivElement>}
         kind={kind}
         value={value}
         editable={editable}
@@ -104,6 +112,7 @@ export function DataCellDisplay({
   return (
     <div
       {...props}
+      ref={ref as React.Ref<HTMLDivElement>}
       data-slot="data-cell"
       data-kind={kind}
       data-mode="display"
@@ -117,33 +126,44 @@ export function DataCellDisplay({
       )}
     >
       <span className={dataCellDisplayValueClass}>
-        <span className={cn("truncate", isEmpty && "text-muted-foreground")}>
+        <span
+          data-slot="data-cell-value"
+          className={cn("truncate", isEmpty && "text-muted-foreground")}
+        >
           {isEmpty ? (placeholder ?? "—") : content}
         </span>
       </span>
     </div>
   )
-}
+  }
+)
+DataCellDisplay.displayName = "DataCellDisplay"
 
-function DataCellPickerDisplay({
-  kind,
-  value,
-  editable,
-  disabled,
-  placeholder,
-  formatValue,
-  showPickerIcon,
-  className,
-  ...props
-}: Omit<React.HTMLAttributes<HTMLElement>, "children"> & {
-  kind: "date" | "time" | "date-time"
-  value: DataCellValue
-  editable?: boolean
-  disabled?: boolean
-  placeholder?: string
-  formatValue?: DataCellFormatValue
-  showPickerIcon: boolean
-}) {
+const DataCellPickerDisplay = React.forwardRef<
+  HTMLDivElement,
+  Omit<React.HTMLAttributes<HTMLElement>, "children"> & {
+    kind: "date" | "time" | "date-time"
+    value: DataCellValue
+    editable?: boolean
+    disabled?: boolean
+    placeholder?: string
+    formatValue?: DataCellFormatValue
+    showPickerIcon: boolean
+  }
+>(function DataCellPickerDisplay(
+  {
+    kind,
+    value,
+    editable,
+    disabled,
+    placeholder,
+    formatValue,
+    showPickerIcon,
+    className,
+    ...props
+  },
+  ref
+) {
   const content =
     formatValue?.(value, { kind }) ?? formatDataCellDisplayValue(kind, value)
   const isEmpty = content === ""
@@ -151,6 +171,7 @@ function DataCellPickerDisplay({
   return (
     <div
       {...props}
+      ref={ref}
       data-slot="data-cell"
       data-kind={kind}
       data-mode="display"
@@ -163,10 +184,13 @@ function DataCellPickerDisplay({
         className
       )}
     >
-      <span className={cn("truncate", isEmpty && "text-muted-foreground")}>
+      <span
+        data-slot="data-cell-value"
+        className={cn("truncate", isEmpty && "text-muted-foreground")}
+      >
         {isEmpty ? (placeholder ?? "—") : content}
       </span>
       {showPickerIcon ? <DataCellPickerIcon kind={kind} /> : null}
     </div>
   )
-}
+})

@@ -19,15 +19,15 @@ function sourceFilesUnder(path: string): string[] {
 }
 
 describe("thumbnail architecture", () => {
-  it("keeps FileThumbnail as a dependency-free shell", () => {
+  it("keeps FileThumbnailFrame as a dependency-free shell", () => {
     const primitiveFiles = [
-      "registry/new-york-v4/ui/file-thumbnail.tsx",
+      "registry/new-york-v4/ui/file-thumbnail-frame.tsx",
+      "registry/new-york-v4/ui/file-thumbnail-frame-types.ts",
       "registry/new-york-v4/ui/file-thumbnail-extension.ts",
       "registry/new-york-v4/ui/file-thumbnail-fallback.tsx",
       "registry/new-york-v4/ui/file-thumbnail-image.tsx",
       "registry/new-york-v4/ui/file-thumbnail-shimmer.tsx",
-      "registry/new-york-v4/ui/file-thumbnail-types.ts",
-      "components/ui/file-thumbnail.tsx",
+      "components/ui/file-thumbnail-frame.tsx",
     ]
     const forbidden = [
       "components/document-thumbnail",
@@ -156,7 +156,7 @@ describe("thumbnail architecture", () => {
     }
   })
 
-  it("keeps file-thumbnail registry metadata scoped to the shell", () => {
+  it("keeps file-thumbnail-frame registry metadata scoped to the shell", () => {
     const registry = JSON.parse(read("registry.json")) as {
       items: Array<{
         name: string
@@ -165,14 +165,14 @@ describe("thumbnail architecture", () => {
       }>
     }
     const item = registry.items.find(
-      (candidate) => candidate.name === "file-thumbnail"
+      (candidate) => candidate.name === "file-thumbnail-frame"
     )
 
     expect(item).toBeTruthy()
     expect(item!.registryDependencies).toEqual(["utils"])
     expect(item!.files.map((file) => file.path)).toEqual([
-      "registry/new-york-v4/ui/file-thumbnail.tsx",
-      "registry/new-york-v4/ui/file-thumbnail-types.ts",
+      "registry/new-york-v4/ui/file-thumbnail-frame.tsx",
+      "registry/new-york-v4/ui/file-thumbnail-frame-types.ts",
       "registry/new-york-v4/ui/file-thumbnail-extension.ts",
       "registry/new-york-v4/ui/file-thumbnail-fallback.tsx",
       "registry/new-york-v4/ui/file-thumbnail-shimmer.tsx",
@@ -243,7 +243,7 @@ describe("thumbnail architecture", () => {
     expect(item).toBeTruthy()
     expect(item!.type).toBe("registry:component")
     expect(item!.registryDependencies).toEqual([
-      "file-thumbnail",
+      "file-thumbnail-frame",
       "pdf-document-resource",
       "docx-document-resource",
       "csv",

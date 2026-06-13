@@ -1,4 +1,4 @@
-import type { ThumbnailFile } from "./file-thumbnail-types"
+import type { ThumbnailFile } from "./file-thumbnail-frame-types"
 
 export function getFileThumbnailExtension(
   file: ThumbnailFile | File

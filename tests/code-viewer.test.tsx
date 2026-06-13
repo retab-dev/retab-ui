@@ -1371,6 +1371,30 @@ describe("CodeViewer", () => {
     expect(screen.getByText("beta")).toBeTruthy()
   })
 
+  it("highlights JSON tokens without changing line text", () => {
+    const { container } = render(
+      <CodeViewer
+        source={textSource(
+          '{"enabled":true,"rollout":25,"owner":"viewer"}',
+          "config.json"
+        )}
+      />
+    )
+
+    const line = container.querySelector('[data-line-number="1"]')
+    expect(line?.textContent).toContain(
+      '{"enabled":true,"rollout":25,"owner":"viewer"}'
+    )
+    expect(line?.querySelector(".cv-token-property")?.textContent).toBe(
+      '"enabled"'
+    )
+    expect(line?.querySelector(".cv-token-keyword")?.textContent).toBe("true")
+    expect(line?.querySelector(".cv-token-number")?.textContent).toBe("25")
+    expect(line?.querySelector(".cv-token-string")?.textContent).toBe(
+      '"viewer"'
+    )
+  })
+
   it("renders empty text as a single blank line", () => {
     const { container } = render(<CodeViewer source={textSource("")} />)
 

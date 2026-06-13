@@ -392,7 +392,11 @@ describe("DocumentThumbnail helpers", () => {
       dispose,
     })
 
-    const promise = cachedThumbnailResource(cache, "late", () => pending.promise)
+    const promise = cachedThumbnailResource(
+      cache,
+      "late",
+      () => pending.promise
+    )
     expect(cache.size).toBe(1)
 
     cache.clear()
@@ -413,7 +417,11 @@ describe("DocumentThumbnail helpers", () => {
       dispose,
     })
 
-    const promise = cachedThumbnailResource(cache, "deleted", () => pending.promise)
+    const promise = cachedThumbnailResource(
+      cache,
+      "deleted",
+      () => pending.promise
+    )
     expect(cache.delete("deleted")).toBe(true)
     expect(cache.size).toBe(0)
 
@@ -904,7 +912,7 @@ describe("FileThumbnail", () => {
 })
 
 describe("FileThumbnail registry item", () => {
-  it("ships only the dependency-free shell", () => {
+  it("ships the complete thumbnail facade", () => {
     const registry = JSON.parse(readFileSync("registry.json", "utf8")) as {
       items: Array<{
         name: string
@@ -918,12 +926,11 @@ describe("FileThumbnail registry item", () => {
     expect(item?.files?.map((file) => file.path)).toEqual([
       "registry/new-york-v4/ui/file-thumbnail.tsx",
       "registry/new-york-v4/ui/file-thumbnail-types.ts",
-      "registry/new-york-v4/ui/file-thumbnail-extension.ts",
-      "registry/new-york-v4/ui/file-thumbnail-fallback.tsx",
-      "registry/new-york-v4/ui/file-thumbnail-shimmer.tsx",
-      "registry/new-york-v4/ui/file-thumbnail-image.tsx",
     ])
-    expect(item?.registryDependencies).toEqual(["utils"])
+    expect(item?.registryDependencies).toEqual([
+      "document-thumbnail",
+      "file-thumbnail-frame",
+    ])
     expect(item?.dependencies ?? []).toEqual([])
   })
 })
@@ -1353,7 +1360,7 @@ describe("DocumentThumbnail", () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByText("Prefix survives")).toBeTruthy()
+      expect(screen.getByText(/Prefix survives/)).toBeTruthy()
     })
     expect(fetchMock).not.toHaveBeenCalled()
   })

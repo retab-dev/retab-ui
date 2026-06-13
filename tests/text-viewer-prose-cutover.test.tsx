@@ -11,6 +11,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { TextViewer } from "@/components/ui/text-viewer"
+import { createPreparedTextDocument } from "@/registry/new-york-v4/ui/text-viewer-layout"
 
 function textSource(text: string, fileName = "notes.txt") {
   return { kind: "text" as const, text, fileName }
@@ -151,5 +152,43 @@ describe("public TextViewer prose cutover", () => {
     expect(
       container.querySelectorAll('[data-slot="text-line"]').length
     ).toBeLessThan(120)
+  })
+
+  it("groups hard-wrapped plain text into paragraph blocks", () => {
+    const source = Array.from(
+      { length: 5 },
+      () =>
+        "This is a deliberately long prose line that looks like a hard-wrapped paragraph and should flow as one text block."
+    ).join("\n")
+
+    const document = createPreparedTextDocument({
+      mode: "text",
+      style: { fontScale: 1 },
+      text: source,
+    })
+
+    expect(document.blocks).toHaveLength(1)
+    expect(document.blocks[0]).toMatchObject({
+      sourceEndLine: 5,
+      sourceStartLine: 1,
+    })
+  })
+
+  it("keeps short plain text lines individually addressable", () => {
+    const document = createPreparedTextDocument({
+      mode: "text",
+      style: { fontScale: 1 },
+      text: "alpha\nbeta",
+    })
+
+    expect(document.blocks).toHaveLength(2)
+    expect(document.blocks[0]).toMatchObject({
+      sourceEndLine: 1,
+      sourceStartLine: 1,
+    })
+    expect(document.blocks[1]).toMatchObject({
+      sourceEndLine: 2,
+      sourceStartLine: 2,
+    })
   })
 })

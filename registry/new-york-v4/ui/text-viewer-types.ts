@@ -4,6 +4,7 @@ import type {
   UrlViewerSource,
 } from "@/lib/viewer-source"
 
+import type { TextViewerMode } from "./text-viewer-layout"
 import type { TextLineRange } from "./text-viewer-ranges"
 import type { TextViewerBounds } from "./text-viewer-resource"
 
@@ -24,4 +25,6 @@ export interface TextViewerProps extends TextViewerBounds {
   highlight?: TextLineRange | null
   /** Drop the outer border/rounded/background so the viewer fills its container. */
   bare?: boolean
+  /** Explicitly select text or markdown when the caller has already classified the source. */
+  mode?: TextViewerMode
 }

@@ -69,7 +69,7 @@ const EXTENSION_CATEGORY: Record<string, FileCategory> = {
   tiff: "image",
   md: "markdown",
   markdown: "markdown",
-  mdx: "markdown",
+  mdx: "text",
   html: "html",
   htm: "html",
   txt: "text",

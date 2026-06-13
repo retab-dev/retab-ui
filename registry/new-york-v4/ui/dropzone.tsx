@@ -6,10 +6,12 @@ import {
   FileSpreadsheet,
   FileText,
   Upload,
+  X,
   type LucideIcon,
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { FileThumbnail } from "@/components/ui/file-thumbnail"
 
 export type DropzoneAcceptedFileType = {
   label: string
@@ -20,6 +22,11 @@ export type DropzoneFileRejection = {
   file: File
   reason: "file-invalid-type" | "file-too-large"
   message: string
+}
+
+export type DropzoneFileItem = {
+  id: string
+  file: File
 }
 
 export type DropzoneProps = Omit<
@@ -34,8 +41,10 @@ export type DropzoneProps = Omit<
   draggingLabel?: string
   maxSize?: number
   multiple?: boolean
+  showFileList?: boolean
   title?: string
   onFilesAccepted?: (files: File[]) => void
+  onFilesChange?: (files: File[]) => void
   onFilesRejected?: (rejections: DropzoneFileRejection[]) => void
 }
 
@@ -45,19 +54,10 @@ const ACCEPTED_FILE_TYPES: DropzoneAcceptedFileType[] = [
   { label: "Sheet", icon: FileSpreadsheet },
 ]
 
-const ICON_TRANSFORMS = [
-  {
-    idle: "translate(-78%, -50%) rotate(-8deg)",
-    active: "translate(-114%, -50%) rotate(-12deg) scale(1.08)",
-  },
-  {
-    idle: "translate(-50%, -50%) rotate(0deg)",
-    active: "translate(-50%, -50%) rotate(0deg) scale(1.18)",
-  },
-  {
-    idle: "translate(-22%, -50%) rotate(8deg)",
-    active: "translate(14%, -50%) rotate(12deg) scale(1.08)",
-  },
+const STATIC_ICON_OFFSETS = [
+  "translate(-78%, -50%) rotate(-8deg)",
+  "translate(-50%, -50%)",
+  "translate(-22%, -50%) rotate(8deg)",
 ]
 
 export function Dropzone({
@@ -70,25 +70,31 @@ export function Dropzone({
   draggingLabel = "Drop to add",
   maxSize,
   multiple = true,
+  showFileList = true,
   title = "Click to upload or drop files",
   onFilesAccepted,
+  onFilesChange,
   onFilesRejected,
   ...props
 }: DropzoneProps) {
   const dragDepthRef = React.useRef(0)
   const inputRef = React.useRef<HTMLInputElement>(null)
   const [isDragging, setIsDragging] = React.useState(false)
+  const [files, setFiles] = React.useState<DropzoneFileItem[]>([])
   const [rejectionMessage, setRejectionMessage] = React.useState<string | null>(
     null
   )
 
   const commitFiles = React.useCallback(
     (nextFiles: FileList | File[]) => {
-      const files = Array.from(nextFiles).slice(0, multiple ? undefined : 1)
+      const incomingFiles = Array.from(nextFiles).slice(
+        0,
+        multiple ? undefined : 1
+      )
       const acceptedFiles: File[] = []
       const rejections: DropzoneFileRejection[] = []
 
-      for (const file of files) {
+      for (const file of incomingFiles) {
         const rejection = validateDropzoneFile(file, { accept, maxSize })
         if (rejection) rejections.push(rejection)
         else acceptedFiles.push(file)
@@ -102,10 +108,28 @@ export function Dropzone({
       }
 
       if (acceptedFiles.length > 0) {
+        const acceptedItems = acceptedFiles.map((file) => ({
+          id: createDropzoneFileId(file),
+          file,
+        }))
+        const nextFiles = multiple
+          ? [...files, ...acceptedItems]
+          : acceptedItems
+
+        setFiles(nextFiles)
+        onFilesChange?.(nextFiles.map((item) => item.file))
         onFilesAccepted?.(acceptedFiles)
       }
     },
-    [accept, maxSize, multiple, onFilesAccepted, onFilesRejected]
+    [
+      accept,
+      files,
+      maxSize,
+      multiple,
+      onFilesAccepted,
+      onFilesChange,
+      onFilesRejected,
+    ]
   )
 
   const openFileDialog = React.useCallback(() => {
@@ -117,6 +141,17 @@ export function Dropzone({
     setIsDragging(false)
   }, [])
 
+  const removeFile = React.useCallback(
+    (fileId: string) => {
+      setFiles((currentFiles) => {
+        const nextFiles = currentFiles.filter((item) => item.id !== fileId)
+        onFilesChange?.(nextFiles.map((item) => item.file))
+        return nextFiles
+      })
+    },
+    [onFilesChange]
+  )
+
   return (
     <div
       {...props}
@@ -126,8 +161,7 @@ export function Dropzone({
       data-dragging={isDragging ? "" : undefined}
       data-slot="dropzone"
       className={cn(
-        "relative flex min-h-64 cursor-pointer flex-col items-center justify-center gap-5 overflow-hidden rounded-lg border border-dashed bg-background px-6 py-10 text-center outline-none transition-[border-color,background-color,box-shadow] duration-200 ease-out",
-        "motion-reduce:transition-none",
+        "relative flex min-h-64 cursor-pointer flex-col items-center justify-center gap-5 overflow-hidden rounded-lg border border-dashed bg-background px-6 py-10 text-center outline-none",
         "focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/24",
         isDragging
           ? "border-foreground/40 bg-accent/35"
@@ -194,6 +228,9 @@ export function Dropzone({
         <Upload className="size-3.5" aria-hidden />
         <span>{isDragging ? draggingLabel : browseLabel}</span>
       </div>
+      {showFileList && files.length > 0 ? (
+        <DropzoneFileList files={files} onRemoveFile={removeFile} />
+      ) : null}
       <input
         ref={inputRef}
         type="file"
@@ -213,6 +250,93 @@ export function Dropzone({
   )
 }
 
+function DropzoneFileList({
+  files,
+  onRemoveFile,
+}: {
+  files: DropzoneFileItem[]
+  onRemoveFile: (fileId: string) => void
+}) {
+  return (
+    <div
+      data-slot="dropzone-file-list"
+      className="w-full max-w-xl rounded-lg border bg-background/80 p-3 text-left shadow-xs"
+    >
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="text-sm font-medium">
+          {files.length} file{files.length === 1 ? "" : "s"} ready
+        </div>
+        <div className="text-xs text-muted-foreground">
+          {formatDropzoneBytes(
+            files.reduce((totalSize, item) => totalSize + item.file.size, 0)
+          )}
+        </div>
+      </div>
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] gap-x-2 gap-y-4">
+        {files.map((item) => (
+          <DropzoneFileTile
+            key={item.id}
+            item={item}
+            onRemoveFile={onRemoveFile}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function DropzoneFileTile({
+  item,
+  onRemoveFile,
+}: {
+  item: DropzoneFileItem
+  onRemoveFile: (fileId: string) => void
+}) {
+  return (
+    <div
+      data-slot="dropzone-file-item"
+      className="flex min-w-0 flex-col items-center gap-2"
+    >
+      <div className="relative">
+        <DropzoneFileThumbnail file={item.file} />
+        <button
+          type="button"
+          aria-label={`Remove ${item.file.name}`}
+          className="absolute -top-1 -right-1 grid size-5 place-items-center rounded-[4px] border bg-background text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/24 focus-visible:outline-none"
+          onClick={(event) => {
+            event.preventDefault()
+            event.stopPropagation()
+            onRemoveFile(item.id)
+          }}
+          onKeyDown={(event) => {
+            event.stopPropagation()
+          }}
+        >
+          <X className="size-3" aria-hidden />
+        </button>
+      </div>
+      <div className="max-w-full text-center">
+        <div className="line-clamp-2 text-xs leading-tight break-words text-foreground">
+          {item.file.name}
+        </div>
+        <div className="mt-0.5 truncate text-[0.6875rem] leading-none text-muted-foreground">
+          {formatDropzoneBytes(item.file.size)}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function DropzoneFileThumbnail({ file }: { file: File }) {
+  return (
+    <FileThumbnail
+      file={file}
+      previewAspectRatio={1}
+      className="size-16 shrink-0 bg-background shadow-sm ring-1 ring-black/5"
+    />
+  )
+}
+
 function DropzoneIconCluster({
   acceptedFileTypes,
   isDragging,
@@ -221,7 +345,6 @@ function DropzoneIconCluster({
   isDragging: boolean
 }) {
   const visibleTypes = acceptedFileTypes.slice(0, 3)
-  const singleIcon = visibleTypes.length === 1
 
   return (
     <div className="relative h-14 w-36" aria-hidden>
@@ -232,18 +355,16 @@ function DropzoneIconCluster({
           <div
             key={item.label}
             className={cn(
-              "absolute top-1/2 left-1/2 grid size-12 place-items-center rounded-lg border bg-background text-muted-foreground shadow-xs transition-[transform,color,background-color,box-shadow] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
-              "motion-reduce:transition-none",
+              "absolute top-1/2 left-1/2 grid size-12 place-items-center rounded-lg border bg-background text-muted-foreground shadow-xs",
               index === 1 && "z-10",
               isDragging &&
                 "bg-popover text-foreground shadow-md shadow-black/10 dark:shadow-black/25"
             )}
             style={{
-              transform: singleIcon
-                ? `translate(-50%, -50%) scale(${isDragging ? 1.14 : 1})`
-                : isDragging
-                  ? ICON_TRANSFORMS[index]?.active
-                  : ICON_TRANSFORMS[index]?.idle,
+              transform:
+                visibleTypes.length === 1
+                  ? "translate(-50%, -50%)"
+                  : STATIC_ICON_OFFSETS[index],
             }}
           >
             <Icon className="size-5" />
@@ -311,6 +432,15 @@ export function formatDropzoneBytes(bytes: number): string {
   return `${(bytes / 1024 ** index).toFixed(index === 0 ? 0 : 1)} ${
     units[index]
   }`
+}
+
+function createDropzoneFileId(file: File): string {
+  const uniqueId =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`
+
+  return `${file.name}-${file.size}-${file.lastModified}-${uniqueId}`
 }
 
 function hasDraggedFiles(dataTransfer: DataTransfer | null): boolean {

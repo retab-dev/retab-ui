@@ -240,7 +240,7 @@ describe("json table text and number hardening", () => {
     expect(onDocumentDataChange).not.toHaveBeenCalled()
   })
 
-  it("saves text edits on blur, Enter, and Escape through the current blur path", async () => {
+  it("saves text edits on blur and Enter, then cancels them on Escape", async () => {
     for (const [key, value] of [
       ["blur", "BlurCo"],
       ["Enter", "EnterCo"],
@@ -261,17 +261,21 @@ describe("json table text and number hardening", () => {
         fireEvent.keyDown(input, { key })
       }
 
-      expect(onDocumentDataChange).toHaveBeenCalledWith(
-        "doc_1",
-        "vendor",
-        value
-      )
-      expect(onDocumentDataChange).toHaveBeenCalledTimes(1)
+      if (key === "Escape") {
+        expect(onDocumentDataChange).not.toHaveBeenCalled()
+      } else {
+        expect(onDocumentDataChange).toHaveBeenCalledWith(
+          "doc_1",
+          "vendor",
+          value
+        )
+        expect(onDocumentDataChange).toHaveBeenCalledTimes(1)
+      }
       cleanup()
     }
   })
 
-  it("saves number edits on blur, Enter, and Escape through the current blur path", async () => {
+  it("saves number edits on blur and Enter, then cancels them on Escape", async () => {
     for (const [key, rawValue, committedValue] of [
       ["blur", "45.25", 45.25],
       ["Enter", "46.5", 46.5],
@@ -292,12 +296,16 @@ describe("json table text and number hardening", () => {
         fireEvent.keyDown(input, { key })
       }
 
-      expect(onDocumentDataChange).toHaveBeenCalledWith(
-        "doc_1",
-        "amount",
-        committedValue
-      )
-      expect(onDocumentDataChange).toHaveBeenCalledTimes(1)
+      if (key === "Escape") {
+        expect(onDocumentDataChange).not.toHaveBeenCalled()
+      } else {
+        expect(onDocumentDataChange).toHaveBeenCalledWith(
+          "doc_1",
+          "amount",
+          committedValue
+        )
+        expect(onDocumentDataChange).toHaveBeenCalledTimes(1)
+      }
       cleanup()
     }
   })

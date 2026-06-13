@@ -5,12 +5,14 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 
 export function CodeLine({
+  children,
   gutterWidth,
   isHighlighted,
   lineNumber,
   style,
   text,
 }: {
+  children?: React.ReactNode
   gutterWidth: string
   isHighlighted: boolean
   lineNumber: number
@@ -32,7 +34,7 @@ export function CodeLine({
       >
         {lineNumber}
       </span>
-      <span className="whitespace-pre">{text || " "}</span>
+      <span className="whitespace-pre">{(children ?? text) || " "}</span>
     </div>
   )
 }

@@ -235,7 +235,7 @@
       "title": "Dropzone",
       "description": "A document upload dropzone with drag-and-drop, file picker entrypoint, accept validation, and rejection feedback.",
       "dependencies": ["lucide-react"],
-      "registryDependencies": ["utils"],
+      "registryDependencies": ["file-thumbnail", "utils"],
       "files": [
         {
           "path": "registry/new-york-v4/ui/dropzone.tsx",
@@ -1550,11 +1550,6 @@
           "target": "@ui/file-viewer-text-resource.ts"
         },
         {
-          "path": "registry/new-york-v4/ui/file-viewer-markdown-viewer.tsx",
-          "type": "registry:ui",
-          "target": "@ui/file-viewer-markdown-viewer.tsx"
-        },
-        {
           "path": "registry/new-york-v4/ui/file-viewer-html-viewer.tsx",
           "type": "registry:ui",
           "target": "@ui/file-viewer-html-viewer.tsx"
@@ -1770,21 +1765,21 @@
       ]
     },
     {
-      "name": "file-thumbnail",
+      "name": "file-thumbnail-frame",
       "type": "registry:ui",
-      "title": "File Thumbnail",
-      "description": "Compact file preview shell with a loading shimmer, fade-in, and muted fallback surface. No renderer dependencies.",
+      "title": "File Thumbnail Frame",
+      "description": "Dependency-free thumbnail frame with a loading shimmer, fade-in, and muted fallback surface.",
       "registryDependencies": ["utils"],
       "files": [
         {
-          "path": "registry/new-york-v4/ui/file-thumbnail.tsx",
+          "path": "registry/new-york-v4/ui/file-thumbnail-frame.tsx",
           "type": "registry:ui",
-          "target": "@ui/file-thumbnail.tsx"
+          "target": "@ui/file-thumbnail-frame.tsx"
         },
         {
-          "path": "registry/new-york-v4/ui/file-thumbnail-types.ts",
+          "path": "registry/new-york-v4/ui/file-thumbnail-frame-types.ts",
           "type": "registry:ui",
-          "target": "@ui/file-thumbnail-types.ts"
+          "target": "@ui/file-thumbnail-frame-types.ts"
         },
         {
           "path": "registry/new-york-v4/ui/file-thumbnail-extension.ts",
@@ -1809,12 +1804,31 @@
       ]
     },
     {
+      "name": "file-thumbnail",
+      "type": "registry:ui",
+      "title": "File Thumbnail",
+      "description": "Render complete file thumbnails from browser files, URLs, blobs, text sources, external images, or custom preview content.",
+      "registryDependencies": ["document-thumbnail", "file-thumbnail-frame"],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/file-thumbnail.tsx",
+          "type": "registry:ui",
+          "target": "@ui/file-thumbnail.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-thumbnail-types.ts",
+          "type": "registry:ui",
+          "target": "@ui/file-thumbnail-types.ts"
+        }
+      ]
+    },
+    {
       "name": "document-thumbnail",
       "type": "registry:component",
       "title": "Document Thumbnail",
-      "description": "Render first-page document thumbnails through the dependency-free FileThumbnail shell.",
+      "description": "Render first-page document thumbnails through the dependency-free FileThumbnailFrame shell.",
       "registryDependencies": [
-        "file-thumbnail",
+        "file-thumbnail-frame",
         "pdf-document-resource",
         "docx-document-resource",
         "csv",
@@ -2642,7 +2656,11 @@
       "type": "registry:ui",
       "title": "Code Viewer",
       "description": "A fixed-line code and log viewer with line numbers, TanStack virtualization, source-line highlights, retry, zoom, and download.",
-      "dependencies": ["@tanstack/react-virtual", "lucide-react"],
+      "dependencies": [
+        "@tanstack/react-virtual",
+        "lucide-react",
+        "prismjs@^1.30.0"
+      ],
       "registryDependencies": [
         "button",
         "dropdown-menu",

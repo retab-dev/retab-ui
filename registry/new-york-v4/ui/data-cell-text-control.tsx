@@ -10,6 +10,7 @@ import {
   getDataCellValueMeta,
   parseDataCellInputValue,
 } from "@/registry/new-york-v4/ui/data-cell-format"
+import { getDataCellTextSelectionOffset } from "@/registry/new-york-v4/ui/data-cell-text-hit-test"
 import type {
   DataCellActivationIntent,
   DataCellCommitHandler,
@@ -30,46 +31,55 @@ export function DataCellTextControl(props: DataCellTextControlProps) {
   return <DataCellInputControl {...props} />
 }
 
-function dataCellTextSelectionIndexFromPointer(
-  input: HTMLInputElement,
-  clientX: number
-) {
-  const valueLength = input.value.length
-  if (valueLength === 0) return 0
-
-  const rect = input.getBoundingClientRect()
-  if (rect.width <= 0) return valueLength
-
-  const styles = globalThis.getComputedStyle(input)
-  const paddingLeft = Number.parseFloat(styles.paddingLeft) || 0
-  const paddingRight = Number.parseFloat(styles.paddingRight) || 0
-  const contentLeft = rect.left + paddingLeft
-  const contentWidth = Math.max(1, rect.width - paddingLeft - paddingRight)
-  const ratio = Math.min(1, Math.max(0, (clientX - contentLeft) / contentWidth))
-
-  return Math.min(valueLength, Math.max(0, Math.round(ratio * valueLength)))
-}
-
 function focusDataCellTextInput(
   input: HTMLInputElement | null,
   intent: DataCellActivationIntent | undefined
-) {
-  if (!input) return
+): number | null {
+  if (!input) return null
   input.focus({ preventScroll: true })
 
-  if (input.type !== "text" && input.type !== "search") return
+  if (input.type !== "text" && input.type !== "search") return null
 
   const selectionIndex =
     intent?.type === "pointer"
-      ? dataCellTextSelectionIndexFromPointer(input, intent.clientX)
+      ? (intent.selectionOffset ??
+        getDataCellTextSelectionOffset({
+          clientX: intent.clientX,
+          input,
+          value: input.value,
+        }))
       : input.value.length
   input.setSelectionRange(selectionIndex, selectionIndex)
+  return intent?.type === "pointer" ? selectionIndex : null
+}
+
+function initialInputValueForActivation({
+  activationIntent,
+  kind,
+  value,
+}: {
+  activationIntent: DataCellActivationIntent | undefined
+  kind: DataCellKind
+  value: DataCellProps["value"]
+}) {
+  if (activationIntent?.type !== "keyboard" || activationIntent.key.length !== 1) {
+    return formatDataCellEditValue(kind, value)
+  }
+  if (kind === "text") return activationIntent.key
+  if (
+    (kind === "number" || kind === "integer") &&
+    /^[0-9.+-]$/.test(activationIntent.key)
+  ) {
+    return activationIntent.key
+  }
+  return formatDataCellEditValue(kind, value)
 }
 
 export function DataCellInputControl({
   kind,
   value,
   editable: _editable,
+  active: _active,
   mode: _mode,
   disabled = false,
   name,
@@ -85,29 +95,124 @@ export function DataCellInputControl({
   onDraftValueChange,
   onCommit,
   onEditingEnd,
+  onActiveChange: _onActiveChange,
   onPickerOpenChange: _onPickerOpenChange,
   onFocus,
   onBlur,
   onKeyDown,
   onClick,
+  onMouseUp,
   onDoubleClick,
   ...props
 }: DataCellInputControlProps) {
-  const initialInputValue = formatDataCellEditValue(kind, value)
+  const initialInputValue = initialInputValueForActivation({
+    activationIntent,
+    kind,
+    value,
+  })
   const [uncontrolledDraftValue, setUncontrolledDraftValue] =
     React.useState(initialInputValue)
   const inputRef = React.useRef<HTMLInputElement>(null)
+  const lastInputValueRef = React.useRef(initialInputValue)
+  const didFinishEditingRef = React.useRef(false)
+  const pendingPointerSelectionRef = React.useRef<number | null>(null)
+  const clearPointerSelectionTimerRef = React.useRef<ReturnType<
+    typeof globalThis.setTimeout
+  > | null>(null)
   const inputValue = draftValue ?? uncontrolledDraftValue
 
   React.useEffect(() => {
     if (draftValue !== undefined) return
-    setUncontrolledDraftValue(formatDataCellEditValue(kind, value))
-  }, [draftValue, kind, value])
+    setUncontrolledDraftValue(
+      initialInputValueForActivation({
+        activationIntent,
+        kind,
+        value,
+      })
+    )
+  }, [activationIntent, draftValue, kind, value])
+
+  React.useEffect(() => {
+    lastInputValueRef.current = inputValue
+  }, [inputValue])
 
   React.useLayoutEffect(() => {
     if (!autoFocus && !activationIntent) return
-    focusDataCellTextInput(inputRef.current, activationIntent)
+    pendingPointerSelectionRef.current = focusDataCellTextInput(
+      inputRef.current,
+      activationIntent
+    )
+    if (clearPointerSelectionTimerRef.current !== null) {
+      globalThis.clearTimeout(clearPointerSelectionTimerRef.current)
+      clearPointerSelectionTimerRef.current = null
+    }
+    if (pendingPointerSelectionRef.current !== null) {
+      clearPointerSelectionTimerRef.current = globalThis.setTimeout(() => {
+        pendingPointerSelectionRef.current = null
+        clearPointerSelectionTimerRef.current = null
+      }, 1000)
+    }
   }, [activationIntent, autoFocus])
+
+  React.useEffect(
+    () => () => {
+      if (clearPointerSelectionTimerRef.current === null) return
+      globalThis.clearTimeout(clearPointerSelectionTimerRef.current)
+    },
+    []
+  )
+
+  const restorePendingPointerSelection = React.useCallback(
+    (input: HTMLInputElement) => {
+      const selectionIndex = pendingPointerSelectionRef.current
+      if (selectionIndex === null) return
+      input.setSelectionRange(selectionIndex, selectionIndex)
+    },
+    []
+  )
+
+  const clearPendingPointerSelection = React.useCallback(() => {
+    pendingPointerSelectionRef.current = null
+    if (clearPointerSelectionTimerRef.current === null) return
+    globalThis.clearTimeout(clearPointerSelectionTimerRef.current)
+    clearPointerSelectionTimerRef.current = null
+  }, [])
+
+  const commitCurrentInputValue = React.useCallback(
+    (input: HTMLInputElement | null, endEditing = true) => {
+      if (didFinishEditingRef.current) return
+      didFinishEditingRef.current = true
+      const rawValue = input?.value ?? lastInputValueRef.current
+      ;(onCommit as DataCellCommitHandler | undefined)?.(
+        parseDataCellInputValue({
+          kind,
+          value: rawValue,
+          dateTimeZone,
+          previousValue: value,
+        }),
+        getDataCellValueMeta({
+          kind,
+          value: rawValue,
+          isBadInput: input?.validity.badInput ?? false,
+        })
+      )
+      if (endEditing) onEditingEnd?.()
+    },
+    [dateTimeZone, kind, onCommit, onEditingEnd, value]
+  )
+
+  const cancelCurrentInputValue = React.useCallback(() => {
+    if (didFinishEditingRef.current) return
+    didFinishEditingRef.current = true
+    onEditingEnd?.()
+  }, [onEditingEnd])
+
+  React.useEffect(
+    () => () => {
+      commitCurrentInputValue(inputRef.current, false)
+    },
+    [commitCurrentInputValue]
+  )
 
   const inputType = inputTypeForDataCell(kind)
   const {
@@ -151,6 +256,7 @@ export function DataCellInputControl({
       placeholder={placeholder}
       onChange={(event) => {
         const nextValue = event.currentTarget.value
+        lastInputValueRef.current = nextValue
         if (draftValue === undefined) setUncontrolledDraftValue(nextValue)
         onDraftValueChange?.(
           nextValue,
@@ -163,31 +269,34 @@ export function DataCellInputControl({
       }}
       onFocus={onFocus}
       onBlur={(event) => {
-        const rawValue = event.currentTarget.value
-        ;(onCommit as DataCellCommitHandler | undefined)?.(
-          parseDataCellInputValue({
-            kind,
-            value: rawValue,
-            dateTimeZone,
-            previousValue: value,
-          }),
-          getDataCellValueMeta({
-            kind,
-            value: rawValue,
-            isBadInput: event.currentTarget.validity.badInput,
-          })
-        )
-        onEditingEnd?.()
+        commitCurrentInputValue(event.currentTarget)
         onBlur?.(event)
       }}
       onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === "Escape") {
+        onKeyDown?.(event)
+        if (event.defaultPrevented) return
+        if (event.key === "Enter") {
+          commitCurrentInputValue(event.currentTarget)
           event.currentTarget.blur()
           event.preventDefault()
+          return
         }
-        onKeyDown?.(event)
+        if (event.key === "Escape") {
+          cancelCurrentInputValue()
+          event.currentTarget.blur()
+          event.preventDefault()
+          return
+        }
       }}
-      onClick={onClick}
+      onMouseUp={(event) => {
+        restorePendingPointerSelection(event.currentTarget)
+        onMouseUp?.(event)
+      }}
+      onClick={(event) => {
+        restorePendingPointerSelection(event.currentTarget)
+        clearPendingPointerSelection()
+        onClick?.(event)
+      }}
       onDoubleClick={onDoubleClick}
     />
   )

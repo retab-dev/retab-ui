@@ -4,7 +4,7 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 import type { ViewerContentBlob, ViewerResource } from "@/lib/viewer-resource"
-import { FileThumbnailShimmer } from "@/components/ui/file-thumbnail"
+import { FileThumbnailShimmer } from "@/components/ui/file-thumbnail-frame"
 import { useObjectUrl } from "@/components/document-thumbnail/renderers/use-object-url"
 import {
   cachedThumbnailResource,

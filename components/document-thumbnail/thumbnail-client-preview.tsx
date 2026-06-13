@@ -4,7 +4,7 @@ import * as React from "react"
 
 import type { ViewerResource } from "@/lib/viewer-resource"
 import type { ViewerDescriptor } from "@/lib/viewer-source"
-import { FileThumbnailShimmer } from "@/components/ui/file-thumbnail"
+import { FileThumbnailShimmer } from "@/components/ui/file-thumbnail-frame"
 import { useIsClient } from "@/components/ui/use-is-client"
 
 import { ThumbnailErrorBoundary } from "./errors"

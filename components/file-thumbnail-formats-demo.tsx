@@ -4,16 +4,15 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 import type { FileCategory } from "@/lib/viewer-source"
+import { FileThumbnail } from "@/components/ui/file-thumbnail"
 import { DocsViewCodeBlock } from "@/components/docs-code-block"
-import { DocumentThumbnail } from "@/components/document-thumbnail"
 
 /**
  * The hero showcase: one bordered card with a large, labeled, *square* preview
  * per format plus an inline "View Code" panel — the same shape as the rest of
- * the component docs. Each preview is rendered to its first unit only (page 1,
- * first sheet) by `DocumentThumbnail`, then dropped into the dependency-free
- * `FileThumbnail` shell, which handles the loading shimmer, fade-in, and
- * fallback. Forcing a square aspect ratio keeps every tile the same size.
+ * the component docs. Each preview is rendered to its first unit only: page 1,
+ * first sheet, first slide, or the head of a text-like file. Forcing a square
+ * aspect ratio keeps every tile the same size.
  */
 
 interface FormatSample {
@@ -114,7 +113,7 @@ export function FileThumbnailFormatsGrid({
       {SAMPLES.map((sample) => (
         <div key={sample.label} className="space-y-1.5">
           <div className="truncate text-xs font-medium">{sample.label}</div>
-          <DocumentThumbnail
+          <FileThumbnail
             source={{
               kind: "url",
               url: sample.url,
@@ -144,18 +143,15 @@ export function FileThumbnailFormatsDemo() {
 
 const formatsDemoCode = `"use client"
 
-import { DocumentThumbnail } from "@/components/document-thumbnail"
 import { FileThumbnail } from "@/components/ui/file-thumbnail"
 
-// DocumentThumbnail renders the first unit — page 1, first sheet, first slide,
-// first TIFF frame, or the head of a text/markdown/html/csv file — using the
-// standard libraries (pdfjs-dist, @e965/xlsx, pptxviewjs, docx-preview, utif,
-// marked) and drops it into the FileThumbnail shell. Pass previewAspectRatio={1}
-// for uniform square tiles.
+// FileThumbnail renders the first unit — page 1, first sheet, first slide,
+// first TIFF frame, or the head of a text/markdown/html/csv file. Pass
+// previewAspectRatio={1} for uniform square tiles.
 //
 export function ImageThumbnail() {
   return (
-    <DocumentThumbnail
+    <FileThumbnail
       source={{
         kind: "url",
         url: "/page.png",
@@ -169,7 +165,7 @@ export function ImageThumbnail() {
 
 export function PdfThumbnail() {
   return (
-    <DocumentThumbnail
+    <FileThumbnail
       source={{
         kind: "url",
         url: "/an-image-is-worth-16x16-words.pdf",
@@ -183,7 +179,7 @@ export function PdfThumbnail() {
 
 export function DocxThumbnail() {
   return (
-    <DocumentThumbnail
+    <FileThumbnail
       source={{
         kind: "url",
         url: "/quarterly-business-review.docx",
@@ -198,7 +194,7 @@ export function DocxThumbnail() {
 
 export function XlsxThumbnail() {
   return (
-    <DocumentThumbnail
+    <FileThumbnail
       source={{
         kind: "url",
         url: "/financials.xlsx",
@@ -211,8 +207,8 @@ export function XlsxThumbnail() {
   )
 }
 
-// FileThumbnail on its own is just the shell — feed it any externally
-// generated thumbnail through previewImageUrl or previewContent.
+// You can still feed externally generated thumbnails through previewImageUrl or
+// previewContent when the preview already exists.
 export function ExternalThumbnail({ url }: { url: string }) {
   return (
     <FileThumbnail

@@ -31,7 +31,9 @@ export function useDocumentSchemaEditorController({
   features: featuresProp,
 }: DocumentSchemaEditorControllerOptions) {
   const features = featuresProp ?? resolveSchemaBuilderFeatures()
-  const [defsAccordionOpen, setDefsAccordionOpen] = React.useState(false)
+  const [defsAccordionOpen, setDefsAccordionOpen] = React.useState(
+    () => doc.defs.length > 0
+  )
   const draggedParentRef = React.useRef<string | null>(null)
   const draggedPropertyRef = React.useRef<string | null>(null)
   const validationErrors = React.useMemo(

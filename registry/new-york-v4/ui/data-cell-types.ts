@@ -21,6 +21,7 @@ export type DataCellActivationIntent =
       clientX: number
       clientY: number
       detail: number
+      selectionOffset?: number
     }
   | {
       type: "keyboard"
@@ -57,6 +58,7 @@ type DataCellBaseProps<Kind extends DataCellKind, Value> = Omit<
   value?: Value
   mode?: DataCellMode
   editable?: boolean
+  active?: boolean
   disabled?: boolean
   name?: string
   placeholder?: string
@@ -73,6 +75,7 @@ type DataCellBaseProps<Kind extends DataCellKind, Value> = Omit<
   autoFocus?: boolean
   onDraftValueChange?: (value: string, meta: DataCellValueMeta) => void
   onEditingEnd?: () => void
+  onActiveChange?: (active: boolean) => void
   onPickerOpenChange?: (open: boolean) => void
 }
 
