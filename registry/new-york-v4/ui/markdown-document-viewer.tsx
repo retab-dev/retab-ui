@@ -7,6 +7,8 @@ import type { ViewerResource } from "@/lib/viewer-resource"
 
 import { Button } from "./button"
 import {
+  createMarkdownLayoutStyle,
+  createMarkdownPageEstimates,
   MARKDOWN_DOCUMENT_PAGE_PADDING_X,
   MARKDOWN_DOCUMENT_PAGE_PADDING_Y,
   MARKDOWN_DOCUMENT_PAGE_WIDTH,
@@ -19,6 +21,7 @@ import {
   type MarkdownDocumentPage,
 } from "./markdown-document-model"
 import { MarkdownDocumentPageRenderer } from "./markdown-document-renderer"
+import { patchMarkdownPageTables } from "./markdown-document-table-accessibility"
 import {
   createMarkdownVirtualGeometry,
   getMarkdownScrollAnchor,
@@ -137,11 +140,20 @@ function MarkdownDocumentViewerContent({
     () => `${mode}:${scale.toFixed(3)}:${viewportWidth}:${text.length}`,
     [mode, scale, text.length, viewportWidth]
   )
+  const pageEstimates = React.useMemo(
+    () =>
+      createMarkdownPageEstimates(
+        document,
+        createMarkdownLayoutStyle({
+          contentWidth: MARKDOWN_DOCUMENT_PAGE_WIDTH * scale,
+          zoom: scale,
+        })
+      ),
+    [document, scale]
+  )
   const estimateHeight = React.useCallback(
-    (index: number) =>
-      (document.pages[index]?.estimatedHeight ?? 1) * scale +
-      MARKDOWN_VIEWER_PAGE_GAP,
-    [document.pages, scale]
+    (index: number) => (pageEstimates[index] ?? 1) + MARKDOWN_VIEWER_PAGE_GAP,
+    [pageEstimates]
   )
   const getKey = React.useCallback(
     (index: number) =>
@@ -573,7 +585,7 @@ function MarkdownVirtualPage({
     if (!element) return
 
     const syncPage = () => {
-      patchMarkdownTableAccessibility(element)
+      patchMarkdownPageTables({ pageId: page.id, root: element })
       const height =
         element.offsetHeight || element.getBoundingClientRect().height
       onMeasure(pageMeasurementKey, height + MARKDOWN_VIEWER_PAGE_GAP)
@@ -600,7 +612,7 @@ function MarkdownVirtualPage({
       mutationObserver?.disconnect()
       resizeObserver?.disconnect()
     }
-  }, [pageMeasurementKey, onMeasure])
+  }, [page.id, pageMeasurementKey, onMeasure])
 
   const isHighlighted = markdownPageIntersectsLineRange({
     page,
@@ -699,30 +711,4 @@ function decodeFragmentHref(href: string) {
   } catch {
     return href.slice(1)
   }
-}
-
-function patchMarkdownTableAccessibility(root: HTMLElement | null) {
-  if (!root) return
-
-  const tables = root.querySelectorAll<HTMLTableElement>(
-    "table[data-markdown-table]"
-  )
-  tables.forEach((table, tableIndex) => {
-    const headers = Array.from(table.querySelectorAll("thead th"))
-    headers.forEach((header, columnIndex) => {
-      if (!header.id) {
-        header.id = `markdown-table-${tableIndex}-column-${columnIndex}`
-      }
-      header.setAttribute("scope", "col")
-    })
-
-    table.querySelectorAll("tbody tr").forEach((row) => {
-      Array.from(row.querySelectorAll<HTMLTableCellElement>("td")).forEach(
-        (cell, columnIndex) => {
-          const header = headers[columnIndex]
-          if (header) cell.headers = header.id
-        }
-      )
-    })
-  })
 }

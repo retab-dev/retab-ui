@@ -113,32 +113,6 @@ function flattenTokens(
   return leaves
 }
 
-function CodeLineContent({
-  leaves,
-  text,
-}: {
-  leaves: CodeTokenLeaf[] | null
-  text: string
-}) {
-  if (text === "") return <> </>
-  if (!leaves) return <>{text}</>
-  return (
-    <>
-      {leaves.map((leaf, index) => {
-        const className = CODE_TOKEN_CLASS[leaf.type]
-        if (!className) {
-          return <React.Fragment key={index}>{leaf.text}</React.Fragment>
-        }
-        return (
-          <span key={index} className={className}>
-            {leaf.text}
-          </span>
-        )
-      })}
-    </>
-  )
-}
-
 type CodeLineTokenGetter = (line: string) => CodeTokenLeaf[] | null
 
 type CodeRowCache = {
@@ -206,7 +180,7 @@ function projectCodeRows({
     removeCodeRow(cache, index)
   }
 
-  let anchor: ChildNode | null = null
+  const rows: HTMLDivElement[] = []
   for (const virtualLine of virtualLines) {
     const row = prepareCodeRow({
       cache,
@@ -217,12 +191,11 @@ function projectCodeRows({
       textLines,
       virtualLine,
     }).row
-    if (row.parentNode !== pre) {
-      pre.insertBefore(row, anchor)
-    } else if (anchor && row.nextSibling !== anchor) {
-      pre.insertBefore(row, anchor)
-    }
-    anchor = row.nextSibling
+    rows.push(row)
+  }
+
+  for (const row of rows) {
+    pre.append(row)
   }
 }
 

@@ -2227,8 +2227,9 @@ describe("ImageFrame rendering lifecycle", () => {
     })
     expect(
       workers[0].posts
-        .filter((post) => post.message.type === "decodeFrame")
-        .map((post) => post.message.frameIndex)
+        .flatMap((post) =>
+          post.message.type === "decodeFrame" ? [post.message.frameIndex] : []
+        )
     ).toEqual([0, 1, 2, 3, 4, 5])
 
     const viewport = container.querySelector(
@@ -2259,8 +2260,9 @@ describe("ImageFrame rendering lifecycle", () => {
     })
     expect(
       workers[0].posts
-        .filter((post) => post.message.type === "decodeFrame")
-        .map((post) => post.message.frameIndex)
+        .flatMap((post) =>
+          post.message.type === "decodeFrame" ? [post.message.frameIndex] : []
+        )
     ).toEqual([
       0, 1, 2, 3, 4, 5, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54,
     ])

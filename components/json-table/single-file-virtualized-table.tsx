@@ -205,11 +205,14 @@ export const SingleFileVirtualizedTable =
       const pendingDocumentDataRef = useRef<Record<string, unknown> | null>(
         null
       )
+      const [pendingDocumentData, setPendingDocumentData] =
+        React.useState<Record<string, unknown> | null>(null)
 
       React.useEffect(() => {
         documentDataRef.current = document.data
         if (pendingDocumentDataRef.current === document.data) {
           pendingDocumentDataRef.current = null
+          setPendingDocumentData(null)
         }
       }, [document.data])
 
@@ -302,6 +305,7 @@ export const SingleFileVirtualizedTable =
             value
           )
           pendingDocumentDataRef.current = nextData
+          setPendingDocumentData(nextData)
           onUpdateDocument({ data: nextData })
           markJsonTableProfile("document-patch-end", {
             fieldPath: materializedFieldPath,
@@ -408,7 +412,6 @@ export const SingleFileVirtualizedTable =
                   const rowKey = isJsonEditable
                     ? `row-${rowIdx}`
                     : `slot-${slotIndex}`
-                  const pendingDocumentData = pendingDocumentDataRef.current
                   const projectedRow = projectedRows[rowIdx]
                   const effectiveProjectedRow =
                     pendingDocumentData && projectedRow

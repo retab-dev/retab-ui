@@ -22,7 +22,7 @@ npx shadcn@latest add @retab/file-viewer
 ```
 
 This pulls in the format-specific viewers it delegates to, plus `marked` for
-Markdown tokenization, `@tanstack/react-virtual` for the Code Viewer, and
+Markdown tokenization, custom fixed-line virtualization for the Code Viewer, and
 `@chenglou/pretext` for the wrapped Text and Markdown surfaces.
 
 ## Usage
@@ -66,7 +66,7 @@ Anything unrecognized falls back to a download card.
 - **Code-split delegation.** Each format-specific viewer is a `React.lazy`
   import — opening a PDF never loads SheetJS, pptxviewjs, or the others.
 - **Code and text split.** Code-like files render as fixed lines through the
-  Code Viewer (`@tanstack/react-virtual`) with line numbers. Prose text renders
+  Code Viewer with line numbers. Prose text renders
   through the Pretext Text Viewer with natural wrapping and custom
   variable-height virtualization.
 - **Markdown and prose share the fast path.** Markdown is tokenized with

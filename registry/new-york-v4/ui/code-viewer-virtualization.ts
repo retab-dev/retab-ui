@@ -49,10 +49,9 @@ export function getCodeVirtualLines({
   const safeOverscan = safeCount(overscan)
   const safeScrollTop = Math.max(0, finiteNumber(scrollTop))
   const safeViewportHeight = Math.max(0, finiteNumber(viewportHeight))
+  const safePaddingStart = safePadding(paddingStart)
   const firstVisibleLine = clamp(
-    Math.floor(
-      Math.max(0, safeScrollTop - safeSize(paddingStart)) / safeLineHeight
-    ),
+    Math.floor(Math.max(0, safeScrollTop - safePaddingStart) / safeLineHeight),
     0,
     safeLineCount - 1
   )
@@ -72,7 +71,7 @@ export function getCodeVirtualLines({
       index,
       key: index,
       size: safeLineHeight,
-      start: safeSize(paddingStart) + index * safeLineHeight,
+      start: safePaddingStart + index * safeLineHeight,
     }
   })
 }
@@ -89,9 +88,9 @@ export function getCodeVirtualTotalSize({
   paddingStart?: number
 }) {
   return (
-    safeSize(paddingStart) +
+    safePadding(paddingStart) +
     safeCount(lineCount) * safeSize(lineHeight) +
-    safeSize(paddingEnd)
+    safePadding(paddingEnd)
   )
 }
 
@@ -105,6 +104,10 @@ function safeCount(value: number) {
 
 function safeSize(value: number) {
   return Number.isFinite(value) && value > 0 ? value : 1
+}
+
+function safePadding(value: number) {
+  return Number.isFinite(value) && value > 0 ? value : 0
 }
 
 function clamp(value: number, min: number, max: number) {
