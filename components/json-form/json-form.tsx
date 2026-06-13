@@ -3,13 +3,7 @@
 import * as React from "react"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import type { JSONSchema7Definition } from "json-schema"
-import {
-  CalendarIcon,
-  ChevronRight,
-  ClockIcon,
-  Plus,
-  Trash2,
-} from "lucide-react"
+import { CalendarIcon, ChevronRight, ClockIcon, Plus, X } from "lucide-react"
 import {
   useController,
   useFieldArray,
@@ -192,10 +186,14 @@ export interface JsonFormFieldProps {
   required?: boolean
   /** Override the derived label. */
   label?: string
+  /** Force plain string fields to render as single-line inputs or textareas. */
+  textInput?: JsonFormTextInput
   className?: string
   /** Nesting depth, used to decide default collapse state. */
   depth?: number
 }
+
+export type JsonFormTextInput = "input" | "textarea"
 
 export function JsonFormField({
   name,
@@ -203,6 +201,7 @@ export function JsonFormField({
   schema: rawSchema,
   required = false,
   label,
+  textInput,
   className,
   depth = 0,
 }: JsonFormFieldProps) {
@@ -225,6 +224,7 @@ export function JsonFormField({
         sourcePath={logicalPath}
         schema={schema}
         label={heading}
+        textInput={textInput}
         className={className}
         depth={depth}
       />
@@ -238,6 +238,7 @@ export function JsonFormField({
         sourcePath={logicalPath}
         schema={schema}
         label={heading}
+        textInput={textInput}
         className={className}
         depth={depth}
       />
@@ -321,6 +322,7 @@ export function JsonFormField({
                 kind={kind}
                 schema={schema}
                 field={field}
+                textInput={textInput}
                 nullable={nullable}
               />
             </FormControl>
@@ -801,6 +803,7 @@ function ScalarControl({
   kind,
   schema,
   field,
+  textInput,
   compact = false,
   nullable = false,
   ...controlProps
@@ -808,6 +811,7 @@ function ScalarControl({
   kind: FieldKind
   schema: Schema
   field: ControlFieldApi
+  textInput?: JsonFormTextInput
   /** Dense, single-line variant for table cells. */
   compact?: boolean
   nullable?: boolean
@@ -961,10 +965,7 @@ function ScalarControl({
   }
 
   // Textareas would break table-row heights, so compact cells stay single-line.
-  if (
-    !compact &&
-    (schema.format === "textarea" || (schema.maxLength ?? 0) > 120)
-  ) {
+  if (!compact && shouldRenderTextarea(schema, textInput)) {
     return (
       <Textarea
         {...controlProps}
@@ -1013,6 +1014,15 @@ function ScalarControl({
       name={field.name}
     />
   )
+}
+
+function shouldRenderTextarea(
+  schema: Schema,
+  textInput: JsonFormTextInput | undefined
+): boolean {
+  if (textInput === "input") return false
+  if (textInput === "textarea") return true
+  return schema.format === "textarea" || (schema.maxLength ?? 0) > 120
 }
 
 type DateTimeControlKind = "date" | "time" | "date-time"
@@ -1220,6 +1230,7 @@ function JsonFormObject({
   sourcePath,
   schema,
   label,
+  textInput,
   className,
   depth,
 }: {
@@ -1227,6 +1238,7 @@ function JsonFormObject({
   sourcePath: string
   schema: Schema
   label: string
+  textInput?: JsonFormTextInput
   className?: string
   depth: number
 }) {
@@ -1270,6 +1282,7 @@ function JsonFormObject({
                 schema={child}
                 required={required.has(key)}
                 label={labelFor(key, child)}
+                textInput={textInput}
                 depth={depth + 1}
               />
             ) : null
@@ -1281,6 +1294,7 @@ function JsonFormObject({
               sourcePath={joinSourcePath(sourcePath, key)}
               schema={child}
               label={key}
+              textInput={textInput}
               depth={depth + 1}
             />
           ))}
@@ -1290,7 +1304,13 @@ function JsonFormObject({
   )
 }
 
-function JsonFormRootFields({ schema }: { schema: Schema }) {
+function JsonFormRootFields({
+  schema,
+  textInput,
+}: {
+  schema: Schema
+  textInput?: JsonFormTextInput
+}) {
   const { control, getValues } = useFormContext()
   const properties = schemaProperties(schema)
   const required = new Set(schema.required ?? [])
@@ -1316,6 +1336,7 @@ function JsonFormRootFields({ schema }: { schema: Schema }) {
             schema={child}
             required={required.has(key)}
             label={labelFor(key, child)}
+            textInput={textInput}
             depth={0}
           />
         ) : null
@@ -1327,6 +1348,7 @@ function JsonFormRootFields({ schema }: { schema: Schema }) {
           sourcePath={key}
           schema={child}
           label={key}
+          textInput={textInput}
           depth={0}
         />
       ))}
@@ -1343,6 +1365,7 @@ function JsonFormArray({
   sourcePath,
   schema,
   label,
+  textInput,
   className,
   depth,
 }: {
@@ -1350,6 +1373,7 @@ function JsonFormArray({
   sourcePath: string
   schema: Schema
   label: string
+  textInput?: JsonFormTextInput
   className?: string
   depth: number
 }) {
@@ -1482,6 +1506,7 @@ function JsonFormArray({
               itemSchema={itemSchema}
               itemSchemaForIndex={itemSchemaForIndex}
               label={label}
+              textInput={textInput}
               depth={depth}
             />
           )}
@@ -1514,8 +1539,13 @@ function ArrayCards({
   itemSchema,
   itemSchemaForIndex,
   label,
+  textInput,
   depth,
-}: ArrayBodyProps & { label: string; depth: number }) {
+}: ArrayBodyProps & {
+  label: string
+  textInput?: JsonFormTextInput
+  depth: number
+}) {
   const renderCard = React.useCallback(
     (index: number) => (
       <ArrayCard
@@ -1526,10 +1556,20 @@ function ArrayCards({
         canRemove={canRemove}
         itemSchema={itemSchemaForIndex(index)}
         label={label}
+        textInput={textInput}
         depth={depth}
       />
     ),
-    [name, sourcePath, remove, canRemove, itemSchemaForIndex, label, depth]
+    [
+      name,
+      sourcePath,
+      remove,
+      canRemove,
+      itemSchemaForIndex,
+      label,
+      textInput,
+      depth,
+    ]
   )
 
   if (fields.length > CARD_VIRTUALIZE_THRESHOLD) {
@@ -1560,6 +1600,7 @@ const ArrayCard = React.memo(function ArrayCard({
   canRemove,
   itemSchema,
   label,
+  textInput,
   depth,
 }: {
   name: string
@@ -1569,6 +1610,7 @@ const ArrayCard = React.memo(function ArrayCard({
   canRemove: boolean
   itemSchema: Schema
   label: string
+  textInput?: JsonFormTextInput
   depth: number
 }) {
   return (
@@ -1579,6 +1621,7 @@ const ArrayCard = React.memo(function ArrayCard({
           sourcePath={joinSourcePath(sourcePath, index)}
           schema={itemSchema}
           label={`${label} ${index + 1}`}
+          textInput={textInput}
           depth={depth + 1}
         />
       </div>
@@ -1586,12 +1629,12 @@ const ArrayCard = React.memo(function ArrayCard({
         type="button"
         size="icon"
         variant="ghost"
-        className="mt-1 text-muted-foreground hover:text-destructive"
+        className="mt-1 border-transparent text-muted-foreground hover:border-border hover:bg-transparent hover:text-destructive"
         onClick={() => remove(index)}
         aria-label="Remove item"
         disabled={!canRemove}
       >
-        <Trash2 className="size-4" />
+        <X className="size-4" />
       </Button>
     </div>
   )
@@ -2133,12 +2176,12 @@ const ArrayTableRow = React.memo(function ArrayTableRow({
       })}
       <button
         type="button"
-        className="flex size-8 items-center justify-center rounded-md text-base leading-none text-muted-foreground transition-colors hover:bg-accent hover:text-destructive focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
+        className="flex size-8 items-center justify-center rounded-md border border-transparent text-base leading-none text-muted-foreground transition-colors hover:border-border hover:text-destructive focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
         onClick={() => remove(index)}
         aria-label="Remove row"
         disabled={!canRemove}
       >
-        ×
+        <X className="size-4" />
       </button>
     </div>
   )
@@ -2445,6 +2488,8 @@ export interface JsonFormProps {
   schema: Schema
   onSubmit?: SubmitHandler<Record<string, unknown>>
   className?: string
+  /** Force plain string fields to render as single-line inputs or textareas. */
+  textInput?: JsonFormTextInput
   /**
    * Opt into field-level source linking. When set, every scalar field becomes a
    * hoverable card that reports its path and highlights when active — wire it
@@ -2465,6 +2510,7 @@ export function JsonForm({
   schema,
   onSubmit,
   className,
+  textInput,
   sourceLink,
   defaultOpenPaths,
   children,
@@ -2542,7 +2588,10 @@ export function JsonForm({
               onSubmit={handleSubmit}
               className={cn("space-y-4", className)}
             >
-              <JsonFormRootFields schema={expandedSchema} />
+              <JsonFormRootFields
+                schema={expandedSchema}
+                textInput={textInput}
+              />
               {children}
             </form>
           </Form>

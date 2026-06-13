@@ -67,6 +67,7 @@ import {
 
 afterEach(() => {
   cleanup()
+  vi.useRealTimers()
   vi.restoreAllMocks()
   vi.unstubAllGlobals()
 })
@@ -538,6 +539,13 @@ describe("fixed grid viewport shell", () => {
 })
 
 describe("header-aware scrollbar", () => {
+  function expectThumbOffset(
+    element: HTMLElement | null | undefined,
+    offset: string
+  ) {
+    expect(element?.style.transform).toBe(`translateY(${offset})`)
+  }
+
   it("renders a thumb below the header without ResizeObserver", async () => {
     vi.stubGlobal("ResizeObserver", undefined)
     const scroller = document.createElement("div")
@@ -561,7 +569,7 @@ describe("header-aware scrollbar", () => {
       ) as HTMLElement | null
       expect(thumb).toBeTruthy()
       expect(thumb?.style.height).toBe("40px")
-      expect(thumb?.style.top).toBe("20px")
+      expectThumbOffset(thumb, "20px")
     })
 
     const track = container.firstElementChild as HTMLElement | null
@@ -631,10 +639,10 @@ describe("header-aware scrollbar", () => {
     )
 
     await waitFor(() => {
-      expect(
-        (container.querySelector(".pointer-events-auto") as HTMLElement | null)
-          ?.style.top
-      ).toBe("0px")
+      expectThumbOffset(
+        container.querySelector(".pointer-events-auto") as HTMLElement | null,
+        "0px"
+      )
     })
 
     defineScrollMetric(scroller, "scrollTop", 50)
@@ -643,10 +651,10 @@ describe("header-aware scrollbar", () => {
     })
 
     await waitFor(() => {
-      expect(
-        (container.querySelector(".pointer-events-auto") as HTMLElement | null)
-          ?.style.top
-      ).toBe("20px")
+      expectThumbOffset(
+        container.querySelector(".pointer-events-auto") as HTMLElement | null,
+        "20px"
+      )
     })
   })
 
@@ -679,10 +687,10 @@ describe("header-aware scrollbar", () => {
     )
 
     await waitFor(() => {
-      expect(
-        (container.querySelector(".pointer-events-auto") as HTMLElement | null)
-          ?.style.top
-      ).toBe("0px")
+      expectThumbOffset(
+        container.querySelector(".pointer-events-auto") as HTMLElement | null,
+        "0px"
+      )
     })
 
     scrollRef.current = nextScroller
@@ -694,10 +702,10 @@ describe("header-aware scrollbar", () => {
     )
 
     await waitFor(() => {
-      expect(
-        (container.querySelector(".pointer-events-auto") as HTMLElement | null)
-          ?.style.top
-      ).toBe("13px")
+      expectThumbOffset(
+        container.querySelector(".pointer-events-auto") as HTMLElement | null,
+        "13px"
+      )
     })
     expect(removeEventListener).toHaveBeenCalledWith(
       "scroll",
@@ -769,10 +777,10 @@ describe("header-aware scrollbar", () => {
     )
 
     await waitFor(() => {
-      expect(
-        (container.querySelector(".pointer-events-auto") as HTMLElement | null)
-          ?.style.top
-      ).toBe("20px")
+      expectThumbOffset(
+        container.querySelector(".pointer-events-auto") as HTMLElement | null,
+        "20px"
+      )
     })
 
     rerender(
@@ -788,7 +796,7 @@ describe("header-aware scrollbar", () => {
         ".pointer-events-auto"
       ) as HTMLElement | null
       expect(track?.style.top).toBe("40px")
-      expect(thumb?.style.top).toBe("15px")
+      expectThumbOffset(thumb, "15px")
     })
   })
 
@@ -810,10 +818,10 @@ describe("header-aware scrollbar", () => {
     )
 
     await waitFor(() => {
-      expect(
-        (container.querySelector(".pointer-events-auto") as HTMLElement | null)
-          ?.style.top
-      ).toBe("40px")
+      expectThumbOffset(
+        container.querySelector(".pointer-events-auto") as HTMLElement | null,
+        "40px"
+      )
     })
   })
 
@@ -1649,6 +1657,63 @@ describe("fixed grid virtualization math", () => {
     expect(result.current.columnItems.at(-1)?.index).toBe(48)
     expect(result.current.leftPad).toBe(400)
     expect(result.current.rightPad).toBe(510)
+  })
+
+  it("lets handled jump-row viewports settle after skipping immediate React window updates", () => {
+    vi.useFakeTimers()
+    const scroller = document.createElement("div")
+    defineViewportMetric(scroller, "clientHeight", 20)
+    defineHorizontalViewportMetric(scroller, "clientWidth", 30)
+    defineScrollMetric(scroller, "scrollTop", 0)
+    defineScrollMetric(scroller, "scrollLeft", 0)
+    vi.stubGlobal("ResizeObserver", StubResizeObserver)
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      callback(performance.now())
+      return 1
+    })
+    vi.stubGlobal("cancelAnimationFrame", vi.fn())
+    const onJumpRowsViewport = vi.fn(() => true)
+
+    const scrollRef = {
+      current: scroller,
+    } as React.RefObject<HTMLElement | null>
+    const { result } = renderHook(() =>
+      useFixedGridVirtualization({
+        rowCount: 100,
+        columnCount: 100,
+        rowSize: 10,
+        columnSize: 10,
+        rowOverscan: 5,
+        columnOverscan: 5,
+        jumpRowOverscan: 0,
+        jumpColumnOverscan: 0,
+        onJumpRowsViewport,
+        scrollRef,
+        scrollElement: scroller,
+      })
+    )
+
+    expect(result.current.virtualRows[0]?.index).toBe(0)
+
+    defineScrollMetric(scroller, "scrollTop", 500)
+    act(() => {
+      scroller.dispatchEvent(new Event("scroll"))
+    })
+
+    expect(onJumpRowsViewport).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scrollTop: 500,
+        isJumpingRows: true,
+      })
+    )
+    expect(result.current.virtualRows[0]?.index).toBe(0)
+
+    act(() => {
+      vi.advanceTimersByTime(80)
+    })
+
+    expect(result.current.virtualRows[0]?.index).toBe(50)
+    expect(result.current.virtualRows.at(-1)?.index).toBe(82)
   })
 
   it("switches the measured grid viewport when the scroll element changes", () => {

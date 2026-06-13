@@ -1,5 +1,6 @@
 import * as React from "react"
 import { useState } from "react"
+import { flushSync } from "react-dom"
 
 import { TableCell } from "@/components/ui/table"
 import { CellEditor } from "@/components/json-table/cell-editors/cell-editor"
@@ -86,6 +87,31 @@ function ActiveEditableJsonTableCell({
     isInputFocused,
     isSelectOpen,
   })
+
+  React.useLayoutEffect(() => {
+    if (!shouldAutoFocus) return
+
+    const root = cellRootRef.current
+    if (!root || root.contains(globalThis.document.activeElement)) return
+
+    const focusTarget = root.querySelector<HTMLElement>(
+      'input:not(:disabled), textarea:not(:disabled), [role="combobox"], button:not(:disabled)'
+    )
+    focusTarget?.focus({ preventScroll: true })
+
+    if (
+      focusTarget instanceof HTMLInputElement &&
+      (focusTarget.type === "text" ||
+        focusTarget.type === "search" ||
+        focusTarget.type === "url" ||
+        focusTarget.type === "tel" ||
+        focusTarget.type === "email" ||
+        focusTarget.type === "password")
+    ) {
+      const textLength = focusTarget.value.length
+      focusTarget.setSelectionRange(textLength, textLength)
+    }
+  }, [shouldAutoFocus])
 
   React.useEffect(() => {
     markJsonTableProfile("active-editor-mounted", {
@@ -225,10 +251,33 @@ function EditableJsonTableCellContent(props: JsonTableCellProps) {
   const handlePointerDown = React.useCallback(
     (event: React.PointerEvent<HTMLTableCellElement>) => {
       if (!materializedFieldPath || !isEditable || event.button !== 0) return
-      setIsPointerActive(true)
-      setShouldAutoFocus(true)
+
+      const target = event.target instanceof Element ? event.target : null
+      const dataCell = target?.closest('[data-slot="data-cell"]')
+      const isEditingCell =
+        dataCell instanceof HTMLElement && dataCell.dataset.mode === "edit"
+
+      if (fieldMetadata?.kind === "boolean" && !isEditingCell) {
+        onDocumentDataChange(docId, materializedFieldPath, !Boolean(value))
+        event.preventDefault()
+        event.stopPropagation()
+        return
+      }
+
+      pointerOverRef.current = true
+      flushSync(() => {
+        setIsPointerActive(true)
+        setShouldAutoFocus(true)
+      })
     },
-    [isEditable, materializedFieldPath]
+    [
+      docId,
+      fieldMetadata?.kind,
+      isEditable,
+      materializedFieldPath,
+      onDocumentDataChange,
+      value,
+    ]
   )
   const handlePointerLeave = React.useCallback(() => {
     pointerOverRef.current = false

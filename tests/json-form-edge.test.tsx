@@ -11,7 +11,10 @@ import type { JSONSchema7 } from "json-schema"
 import { useForm, type UseFormReturn } from "react-hook-form"
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest"
 
-import { JsonForm } from "@/components/json-form/json-form"
+import {
+  JsonForm,
+  type JsonFormTextInput,
+} from "@/components/json-form/json-form"
 
 const originalResizeObserver = globalThis.ResizeObserver
 
@@ -48,9 +51,11 @@ function getTableDataCell(name: string): HTMLElement {
 function renderJsonForm({
   schema,
   defaultValues = {},
+  textInput,
 }: {
   schema: JSONSchema7
   defaultValues?: FormValues
+  textInput?: JsonFormTextInput
 }) {
   const submissions: FormValues[] = []
   let formApi: UseFormReturn<FormValues> | null = null
@@ -64,6 +69,7 @@ function renderJsonForm({
       <JsonForm
         form={form}
         schema={schema}
+        textInput={textInput}
         onSubmit={(data) => submissions.push(cloneJson(data) as FormValues)}
       >
         <button type="submit">Submit</button>
@@ -132,6 +138,42 @@ describe("JsonForm scalar edge cases", () => {
     expect(screen.getByLabelText("Summary").tagName).toBe("TEXTAREA")
     expect(screen.getByLabelText("Body").tagName).toBe("TEXTAREA")
     expect(screen.getByLabelText("Short").tagName).toBe("INPUT")
+  })
+
+  it("uses textInput to force plain string controls to input or textarea", () => {
+    const schema: JSONSchema7 = {
+      type: "object",
+      properties: {
+        summary: { type: "string", title: "Summary", maxLength: 200 },
+        body: { type: "string", title: "Body", format: "textarea" },
+        short: { type: "string", title: "Short", maxLength: 40 },
+        issued_at: { type: "string", title: "Issued At", format: "date" },
+      },
+    }
+
+    const inputRender = renderJsonForm({
+      schema,
+      textInput: "input",
+      defaultValues: { summary: "", body: "", short: "", issued_at: "" },
+    })
+
+    expect(screen.getByLabelText("Summary").tagName).toBe("INPUT")
+    expect(screen.getByLabelText("Body").tagName).toBe("INPUT")
+    expect(screen.getByLabelText("Short").tagName).toBe("INPUT")
+    expect(screen.getByLabelText("Issued At").tagName).toBe("BUTTON")
+
+    inputRender.unmount()
+
+    renderJsonForm({
+      schema,
+      textInput: "textarea",
+      defaultValues: { summary: "", body: "", short: "", issued_at: "" },
+    })
+
+    expect(screen.getByLabelText("Summary").tagName).toBe("TEXTAREA")
+    expect(screen.getByLabelText("Body").tagName).toBe("TEXTAREA")
+    expect(screen.getByLabelText("Short").tagName).toBe("TEXTAREA")
+    expect(screen.getByLabelText("Issued At").tagName).toBe("BUTTON")
   })
 
   it("marks required nested-object fields with an asterisk", () => {

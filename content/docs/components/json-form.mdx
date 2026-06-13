@@ -19,6 +19,7 @@ whole schema and owns the `<form>`.
 
 ```tsx
 import { useForm } from "react-hook-form"
+
 import { JsonForm } from "@/components/json-form/json-form"
 
 export function Example() {
@@ -26,7 +27,11 @@ export function Example() {
     defaultValues: { invoice_number: "INV-1024", total: 1280.5 },
   })
   return (
-    <JsonForm form={form} schema={schema} onSubmit={(data) => console.log(data)}>
+    <JsonForm
+      form={form}
+      schema={schema}
+      onSubmit={(data) => console.log(data)}
+    >
       <button type="submit">Submit</button>
     </JsonForm>
   )
@@ -38,27 +43,33 @@ Render a single field on its own:
 ```tsx
 import { JsonFormField } from "@/components/json-form/json-form"
 
-<JsonFormField name="vendor.name" schema={{ type: "string" }} required />
+export function VendorNameField() {
+  return (
+    <JsonFormField name="vendor.name" schema={{ type: "string" }} required />
+  )
+}
 ```
 
 ## Props
 
 ### `JsonForm`
 
-| Prop | Type | Description |
-| --- | --- | --- |
-| `form` | `UseFormReturn` | A `react-hook-form` instance holding the data values. |
-| `schema` | `JSONSchema7` | The schema describing the form's structure. |
-| `onSubmit` | `SubmitHandler` | Optional submit handler for the underlying `<form>`. |
-| `sourceLink` | `FieldSourceLink` | Opt into field-level source linking — every scalar becomes a hoverable card that reports its path and highlights when active (wire it straight from a `useSourceLink` result). |
-| `children` | `ReactNode` | Rendered after the fields, e.g. a submit button. |
-| `className` | `string` | Class names for the form container. |
+| Prop         | Type                    | Description                                                                                                                                                                    |
+| ------------ | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `form`       | `UseFormReturn`         | A `react-hook-form` instance holding the data values.                                                                                                                          |
+| `schema`     | `JSONSchema7`           | The schema describing the form's structure.                                                                                                                                    |
+| `onSubmit`   | `SubmitHandler`         | Optional submit handler for the underlying `<form>`.                                                                                                                           |
+| `textInput`  | `"input" \| "textarea"` | Optional override for plain string fields. Omit it to keep the default auto behavior (`format: "textarea"` or long strings render as textareas).                               |
+| `sourceLink` | `FieldSourceLink`       | Opt into field-level source linking — every scalar becomes a hoverable card that reports its path and highlights when active (wire it straight from a `useSourceLink` result). |
+| `children`   | `ReactNode`             | Rendered after the fields, e.g. a submit button.                                                                                                                               |
+| `className`  | `string`                | Class names for the form container.                                                                                                                                            |
 
 ### `JsonFormField`
 
-| Prop | Type | Description |
-| --- | --- | --- |
-| `name` | `string` | The `react-hook-form` field path, e.g. `vendor.name` or `items.0`. |
-| `schema` | `JSONSchema7` | The schema for this property. |
-| `required` | `boolean` | Marks the field required. |
-| `label` | `string` | Override the derived label. |
+| Prop        | Type                    | Description                                                        |
+| ----------- | ----------------------- | ------------------------------------------------------------------ |
+| `name`      | `string`                | The `react-hook-form` field path, e.g. `vendor.name` or `items.0`. |
+| `schema`    | `JSONSchema7`           | The schema for this property.                                      |
+| `required`  | `boolean`               | Marks the field required.                                          |
+| `label`     | `string`                | Override the derived label.                                        |
+| `textInput` | `"input" \| "textarea"` | Optional override for plain string fields.                         |

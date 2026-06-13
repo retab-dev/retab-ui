@@ -1,3 +1,5 @@
+import * as React from "react"
+
 import { cn } from "@/lib/utils"
 import {
   Select,
@@ -80,6 +82,23 @@ export function EnumEditor({
     effectiveValue,
     fieldMetadata.isNullable
   )
+  const { autoFocus, setIsSelectOpen } = overlays
+  const { setFocusedField, setIsInputFocused } = focus
+
+  React.useLayoutEffect(() => {
+    if (!autoFocus || !field.isEditable) return
+    setIsSelectOpen(true)
+    setFocusedField(fieldFocusId(identity))
+    setIsInputFocused(true)
+  }, [
+    autoFocus,
+    field.isEditable,
+    identity.docId,
+    identity.fieldPath,
+    setFocusedField,
+    setIsInputFocused,
+    setIsSelectOpen,
+  ])
 
   if (!overlays.showInput) {
     return (
@@ -93,6 +112,7 @@ export function EnumEditor({
   return (
     <Select
       key={`${identity.fieldPath}-${field.value}`}
+      open={overlays.isSelectOpen}
       onOpenChange={(open) => {
         overlays.setIsSelectOpen(open)
         focus.setFocusedField(open ? fieldFocusId(identity) : null)

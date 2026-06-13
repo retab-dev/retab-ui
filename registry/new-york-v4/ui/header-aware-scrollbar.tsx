@@ -120,8 +120,9 @@ export function HeaderAwareScrollbar({
         ref={thumbRef}
         className="pointer-events-auto absolute right-0.5 w-1.5 rounded-full bg-foreground/25 transition-colors hover:bg-foreground/40"
         style={{
-          top: thumbMetrics.current.top,
+          top: 0,
           height: thumbMetrics.current.height,
+          transform: `translateY(${thumbMetrics.current.top}px)`,
         }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
@@ -167,5 +168,5 @@ function applyThumbStyle(
 ) {
   if (!element) return
   element.style.height = `${metrics.height}px`
-  element.style.top = `${metrics.top}px`
+  element.style.transform = `translateY(${metrics.top}px)`
 }

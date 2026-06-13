@@ -18,11 +18,21 @@ import { getFixedGridRowStyle } from "./fixed-grid-row-style"
 import { buildVirtualGridTemplate } from "./fixed-grid-template"
 import { FixedGridViewport } from "./fixed-grid-viewport"
 import {
+  fixedVirtualItems,
   useFixedGridVirtualization,
   type FixedGridColumnItem,
+  type FixedGridViewport as FixedGridViewportMetrics,
 } from "./fixed-grid-virtualization"
 
 type Row = string[]
+type CsvJumpRenderState = {
+  activeCell: CsvCellAddress | null
+  columnItems: FixedGridColumnItem[]
+  effectiveRowHeight: number
+  rowOrder: number[] | null
+  shouldVirtualizeRows: boolean
+  sourceRows: string[][]
+}
 
 export interface CsvGridHandle {
   scrollToCell: (
@@ -123,6 +133,7 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
     )
 
     const viewportRef = React.useRef<HTMLDivElement>(null)
+    const rowWindowRef = React.useRef<HTMLDivElement>(null)
     const [viewportElement, setViewportElement] =
       React.useState<HTMLDivElement | null>(null)
     const setViewportRef = React.useCallback((node: HTMLDivElement | null) => {
@@ -136,6 +147,91 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
     const effectiveRowHeight = Math.max(1, Math.round(ROW_HEIGHT * scale))
     const effectiveColumnWidth = Math.max(1, Math.round(COLUMN_WIDTH * scale))
     const effectiveRowNumberWidth = Math.round(ROW_NUMBER_WIDTH * scale)
+    const jumpRenderStateRef = React.useRef<CsvJumpRenderState | null>(null)
+    const renderJumpRows = React.useCallback(
+      (viewport: FixedGridViewportMetrics) => {
+        const state = jumpRenderStateRef.current
+        if (!state) return false
+        if (!state.shouldVirtualizeRows || state.activeCell) return false
+        if (viewport.scrollLeft > 0 || viewport.isJumpingColumns) return false
+
+        const rowWindow = rowWindowRef.current
+        if (!rowWindow) return false
+
+        const rows = Array.from(
+          rowWindow.querySelectorAll<HTMLElement>('[data-slot="csv-row"]')
+        )
+        if (rows.length === 0) return false
+
+        const nextRows = fixedVirtualItems({
+          count: state.sourceRows.length,
+          size: state.effectiveRowHeight,
+          scrollOffset: viewport.scrollTop,
+          viewportSize: viewport.clientHeight,
+          overscan: JUMP_ROW_OVERSCAN,
+          minimumVisibleCount: 1,
+        })
+        if (nextRows.length === 0 || nextRows.length > rows.length) {
+          return false
+        }
+
+        const requiredCellCount = state.columnItems.length
+        for (let index = 0; index < nextRows.length; index++) {
+          const cellElements = rows[index].querySelectorAll<HTMLElement>(
+            '[data-slot="csv-cell"]'
+          )
+          if (cellElements.length < requiredCellCount) return false
+        }
+
+        for (let index = 0; index < rows.length; index++) {
+          const rowElement = rows[index]
+          const virtualRow = nextRows[index]
+          if (!virtualRow) {
+            rowElement.hidden = true
+            continue
+          }
+
+          const displayRowIndex = virtualRow.index
+          const sourceRowIndex = state.rowOrder
+            ? state.rowOrder[displayRowIndex]
+            : displayRowIndex
+          const cells = state.sourceRows[sourceRowIndex]
+
+          rowElement.hidden = false
+          rowElement.setAttribute("aria-rowindex", String(displayRowIndex + 2))
+          rowElement.style.transform = `translate3d(0, ${virtualRow.start}px, 0)`
+
+          const rowNumber = rowElement.querySelector<HTMLElement>(
+            '[data-slot="csv-row-number"]'
+          )
+          if (rowNumber) rowNumber.textContent = String(sourceRowIndex + 1)
+
+          const cellElements = rowElement.querySelectorAll<HTMLElement>(
+            '[data-slot="csv-cell"]'
+          )
+          for (
+            let columnItemIndex = 0;
+            columnItemIndex < requiredCellCount;
+            columnItemIndex++
+          ) {
+            const text =
+              cells?.[state.columnItems[columnItemIndex].index] ?? ""
+            const cell = cellElements[columnItemIndex]
+            const textElement = cell.firstElementChild
+            if (textElement) {
+              if (textElement.textContent !== text) {
+                textElement.textContent = text
+              }
+            } else if (cell.textContent !== text) {
+              cell.textContent = text
+            }
+          }
+        }
+
+        return true
+      },
+      []
+    )
 
     const {
       virtualRows,
@@ -155,6 +251,8 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
       columnOverscan: COLUMN_OVERSCAN,
       jumpRowOverscan: JUMP_ROW_OVERSCAN,
       jumpColumnOverscan: JUMP_COLUMN_OVERSCAN,
+      minimumRowWindow: 1,
+      onJumpRowsViewport: renderJumpRows,
       scrollRef: viewportRef,
       scrollElement: viewportElement,
       virtualizeColumns: shouldVirtualizeColumns,
@@ -192,6 +290,24 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
     )
     const totalWidth = effectiveRowNumberWidth + totalColumnSize
     const firstVirtualRowIndex = virtualRows[0]?.index ?? 0
+
+    React.useLayoutEffect(() => {
+      jumpRenderStateRef.current = {
+        activeCell: activeCell ?? null,
+        columnItems,
+        effectiveRowHeight,
+        rowOrder,
+        shouldVirtualizeRows,
+        sourceRows,
+      }
+    }, [
+      activeCell,
+      columnItems,
+      effectiveRowHeight,
+      rowOrder,
+      shouldVirtualizeRows,
+      sourceRows,
+    ])
 
     return (
       <div
@@ -257,6 +373,7 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
                 statusNode
               ) : shouldVirtualizeRows ? (
                 <div
+                  ref={rowWindowRef}
                   role="rowgroup"
                   style={getFixedGridRowWindowStyle({ height: totalRowSize })}
                 >
@@ -414,6 +531,7 @@ const CsvRow = React.memo(function CsvRow({
     <div
       role="row"
       aria-rowindex={displayRowIndex + 2}
+      hidden={false}
       data-slot="csv-row"
       className={cn(
         "grid border-b",

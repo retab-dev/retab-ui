@@ -20,6 +20,7 @@ const schema: JSONSchema7 = {
   properties: {
     vendor: { type: "string" },
     shipped_at: { type: "string", format: "date" },
+    is_paid: { type: "boolean" },
     lines: {
       type: "array",
       items: {
@@ -49,6 +50,7 @@ const document: TableDocument = {
   data: {
     vendor: "ACME",
     shipped_at: "2024-01-02",
+    is_paid: false,
     lines: [{ name: "one" }, { name: "two" }],
     metadata: { source: "upload" },
     nullable_note: null,
@@ -205,7 +207,7 @@ describe("json table row rendering", () => {
 
     fireEvent.pointerDown(cell, { button: 0 })
 
-    const input = await view.findByRole("textbox")
+    const input = view.getByRole("textbox")
     expect(globalThis.document.activeElement).toBe(input)
 
     fireEvent.change(input, { target: { value: "Globex" } })
@@ -216,5 +218,98 @@ describe("json table row rendering", () => {
       "vendor",
       "Globex"
     )
+  })
+
+  it("toggles boolean cells on the first click", async () => {
+    const visiblePaths = ["is_paid"]
+    const rows = projectDocumentRows({
+      document,
+      visiblePaths,
+      includeArrayAddRows: true,
+    })
+    const onDocumentDataChange = vi.fn()
+
+    const view = render(
+      <table>
+        <tbody>
+          <SingleFileFormRow
+            document={document}
+            schema={schema}
+            projectedRow={rows[0]}
+            visibleColumns={visiblePaths.map(visibleColumn)}
+            rowIdx={0}
+            rowTopPx={0}
+            rowHeightPx={32}
+            openEditorPath={null}
+            setOpenEditorPath={vi.fn()}
+            onDocumentDataChange={onDocumentDataChange}
+            isJsonEditable
+          />
+        </tbody>
+      </table>
+    )
+
+    const cell = await waitFor(() => {
+      const editableCell = view.container.querySelector(
+        '[data-json-table-editable-cell="true"]'
+      )
+      if (!(editableCell instanceof HTMLElement)) {
+        throw new Error("Expected editable boolean cell to render")
+      }
+      return editableCell
+    })
+
+    fireEvent.pointerDown(cell, { button: 0 })
+
+    expect(onDocumentDataChange).toHaveBeenCalledWith(
+      document.id,
+      "is_paid",
+      true
+    )
+  })
+
+  it("opens enum selects on the first click", async () => {
+    const visiblePaths = ["status"]
+    const rows = projectDocumentRows({
+      document,
+      visiblePaths,
+      includeArrayAddRows: true,
+    })
+
+    const view = render(
+      <table>
+        <tbody>
+          <SingleFileFormRow
+            document={document}
+            schema={schema}
+            projectedRow={rows[0]}
+            visibleColumns={visiblePaths.map(visibleColumn)}
+            rowIdx={0}
+            rowTopPx={0}
+            rowHeightPx={32}
+            openEditorPath={null}
+            setOpenEditorPath={vi.fn()}
+            onDocumentDataChange={vi.fn()}
+            isJsonEditable
+          />
+        </tbody>
+      </table>
+    )
+
+    const cell = await waitFor(() => {
+      const editableCell = view.container.querySelector(
+        '[data-json-table-editable-cell="true"]'
+      )
+      if (!(editableCell instanceof HTMLElement)) {
+        throw new Error("Expected editable enum cell to render")
+      }
+      return editableCell
+    })
+
+    fireEvent.pointerDown(cell, { button: 0 })
+
+    expect(
+      (await view.findByRole("combobox")).getAttribute("aria-expanded")
+    ).toBe("true")
   })
 })
