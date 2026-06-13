@@ -1,7 +1,4 @@
-import {
-  measureLineStats,
-  prepareWithSegments,
-} from "@chenglou/pretext"
+import { measureLineStats, prepareWithSegments } from "@chenglou/pretext"
 
 import type {
   MarkdownDocument,
@@ -64,7 +61,9 @@ export function estimateMarkdownBlockHeight(
 ) {
   switch (block.kind) {
     case "heading":
-      return estimateFlowTextHeight(block.markdown, style, 1.25) + 18 * style.zoom
+      return (
+        estimateFlowTextHeight(block.markdown, style, 1.25) + 18 * style.zoom
+      )
     case "rule":
       return 34 * style.zoom
     case "code":
@@ -76,7 +75,10 @@ export function estimateMarkdownBlockHeight(
           44 * style.zoom
       )
     case "math":
-      return Math.max(86 * style.zoom, countRawLines(block.markdown) * 28 * style.zoom + 42 * style.zoom)
+      return Math.max(
+        86 * style.zoom,
+        countRawLines(block.markdown) * 28 * style.zoom + 42 * style.zoom
+      )
     case "table":
       return estimateTableHeight(block.markdown, style)
     case "image":
@@ -99,8 +101,10 @@ export function estimateMarkdownBlockHeight(
         countRawLines(block.markdown) * 24 * style.zoom + 20 * style.zoom
       )
     case "paragraph":
-      return estimateFlowTextHeight(stripMarkdownSyntax(block.markdown), style, 1) +
+      return (
+        estimateFlowTextHeight(stripMarkdownSyntax(block.markdown), style, 1) +
         24 * style.zoom
+      )
   }
 }
 
@@ -112,7 +116,9 @@ export function estimateMarkdownPageHeight(
     style.pagePaddingY * 2 +
       page.blocks.reduce(
         (height, block) =>
-          height + estimateMarkdownBlockHeight(block, style) + style.blockSpacing,
+          height +
+          estimateMarkdownBlockHeight(block, style) +
+          style.blockSpacing,
         0
       )
   )
@@ -180,17 +186,16 @@ function estimateFlowTextHeight(
   lineHeightMultiplier: number
 ) {
   const text = markdown.replace(/\s+/g, " ").trim() || " "
-  const width = Math.max(
-    1,
-    style.contentWidth - style.pagePaddingX * 2
-  )
+  const width = Math.max(1, style.contentWidth - style.pagePaddingX * 2)
   const lineHeight = style.bodyLineHeight * lineHeightMultiplier
-  return measurePretextLineCount({
-    fallbackText: text,
-    font: style.bodyFont,
-    text,
-    width,
-  }) * lineHeight
+  return (
+    measurePretextLineCount({
+      fallbackText: text,
+      font: style.bodyFont,
+      text,
+      width,
+    }) * lineHeight
+  )
 }
 
 function estimateCodeHeight(
@@ -247,7 +252,9 @@ function measurePretextLineCount({
 }
 
 function isJsdomRuntime() {
-  return globalThis.navigator?.userAgent.toLowerCase().includes("jsdom") ?? false
+  return (
+    globalThis.navigator?.userAgent.toLowerCase().includes("jsdom") ?? false
+  )
 }
 
 function estimateLineCount(text: string, width: number) {

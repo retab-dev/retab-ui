@@ -1255,6 +1255,11 @@
           "target": "@ui/image-viewer-hooks.ts"
         },
         {
+          "path": "registry/new-york-v4/ui/image-viewer-virtualization.ts",
+          "type": "registry:ui",
+          "target": "@ui/image-viewer-virtualization.ts"
+        },
+        {
           "path": "registry/new-york-v4/ui/image-viewer-frame.tsx",
           "type": "registry:ui",
           "target": "@ui/image-viewer-frame.tsx"
@@ -2009,6 +2014,29 @@
           "path": "registry/new-york-v4/ui/schema-builder.tsx",
           "type": "registry:ui",
           "target": "@ui/schema-builder.tsx"
+        }
+      ]
+    },
+    {
+      "name": "email-viewer",
+      "type": "registry:ui",
+      "title": "Email Viewer",
+      "description": "Render HTML email bodies with CID inline files and independently previewable attachments in a sidebar.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "utils",
+        "button",
+        "file-size-format",
+        "file-thumbnail",
+        "file-viewer"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/email-viewer.tsx",
+          "type": "registry:ui",
+          "target": "@ui/email-viewer.tsx"
         }
       ]
     },

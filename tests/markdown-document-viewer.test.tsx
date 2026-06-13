@@ -103,13 +103,18 @@ describe("MarkdownDocumentViewer", () => {
 
   it("marks rendered pages ready after async Markdown content appears", async () => {
     const { container } = render(
-      <MarkdownDocumentViewer source={markdownSource("# Ready")} toolbar={false} />
+      <MarkdownDocumentViewer
+        source={markdownSource("# Ready")}
+        toolbar={false}
+      />
     )
 
     expect(await screen.findByRole("heading", { name: "Ready" })).toBeTruthy()
-    expect(
-      container.querySelector('[data-markdown-render-state="ready"]')
-    ).toBeTruthy()
+    await waitFor(() => {
+      expect(
+        container.querySelector('[data-markdown-render-state="ready"]')
+      ).toBeTruthy()
+    })
   })
 
   it("renders fenced code language labels and copies code", async () => {

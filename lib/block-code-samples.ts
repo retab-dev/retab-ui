@@ -23,25 +23,17 @@ export type LoadedBlockCodeFile = {
 
 const appRoot = process.cwd()
 
-/**
- * Read every source file for each viewer block from disk (server-only), keyed by
- * the block's short id. The block's files come straight from its registry.json
- * entry, so the Code view stays in sync with what `shadcn add` would install.
- */
-export async function getLoadedBlockCodeFileManifest(): Promise<
-  Record<string, LoadedBlockCodeFile[]>
-> {
+// Load one block's source files from registry.json so the Code view stays in
+// sync with what `shadcn add` would install without bloating the /blocks page.
+export async function getLoadedBlockCodeFiles(
+  blockId: string
+): Promise<LoadedBlockCodeFile[] | null> {
+  const block = VIEWER_BLOCKS.find((item) => item.id === blockId)
+  if (!block) return null
+
   const itemsByName = await getRegistryItemsByName()
-
-  const entries = await Promise.all(
-    VIEWER_BLOCKS.map(async (block) => {
-      const files = itemsByName.get(block.registryName)?.files ?? []
-      const loaded = await Promise.all(orderBlockFiles(files).map(loadBlockCodeFile))
-      return [block.id, loaded] as const
-    })
-  )
-
-  return Object.fromEntries(entries)
+  const files = itemsByName.get(block.registryName)?.files ?? []
+  return Promise.all(orderBlockFiles(files).map(loadBlockCodeFile))
 }
 
 // Show the block wrapper first (it's the teaching artifact), then its deps.
@@ -88,7 +80,9 @@ function getCodeLanguage(filePath: string) {
 // consumer app — that's the label shown in the Code view's file list.
 function normalizeRegistryTarget(file: RegistryFile) {
   const target = file.target ?? file.path
-  if (target.startsWith("@components/")) return target.replace("@components/", "components/")
+  if (target.startsWith("@components/")) {
+    return target.replace("@components/", "components/")
+  }
   if (target.startsWith("@ui/")) return target.replace("@ui/", "components/ui/")
   if (target.startsWith("@hooks/")) return target.replace("@hooks/", "hooks/")
   if (target.startsWith("@lib/")) return target.replace("@lib/", "lib/")

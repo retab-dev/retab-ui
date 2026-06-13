@@ -1,13 +1,12 @@
 "use client"
 
 import * as React from "react"
-import { FileText, Mail, Paperclip } from "lucide-react"
+import { Mail, Paperclip } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { createViewerResource } from "@/lib/viewer-resource"
 import type { ViewerSource } from "@/lib/viewer-source"
 
-import { Button } from "./button"
 import { formatFileSize } from "./file-size-format"
 import { FileThumbnail } from "./file-thumbnail"
 import { FileViewer } from "./file-viewer"
@@ -39,6 +38,7 @@ export interface EmailViewerProps {
 }
 
 type Selection = { kind: "body" } | { kind: "attachment"; attachmentId: string }
+type EmailBodySource = ReturnType<typeof createEmailBodySource>
 
 const EMPTY_ATTACHMENTS: readonly EmailViewerAttachment[] = []
 
@@ -120,6 +120,7 @@ export function EmailViewer({
         </div>
       </div>
       <EmailAttachmentSidebar
+        bodySource={bodySource}
         attachments={sidebarAttachments}
         isBodySelected={selection.kind === "body"}
         selectedAttachmentId={
@@ -170,12 +171,14 @@ function EmailHeader({
 }
 
 function EmailAttachmentSidebar({
+  bodySource,
   attachments,
   isBodySelected,
   selectedAttachmentId,
   onSelectBody,
   onSelectAttachment,
 }: {
+  bodySource: EmailBodySource
   attachments: readonly EmailViewerAttachment[]
   isBodySelected: boolean
   selectedAttachmentId: string | null
@@ -192,24 +195,36 @@ function EmailAttachmentSidebar({
         {attachments.length} attachment{attachments.length === 1 ? "" : "s"}
       </div>
       <div className="min-h-0 flex-1 overflow-auto p-2">
-        <Button
-          type="button"
-          variant="ghost"
-          className={cn(
-            "mb-2 h-auto w-full justify-start gap-2 rounded-md border px-2 py-2 text-left",
-            isBodySelected
-              ? "border-border bg-muted text-foreground"
-              : "border-transparent"
-          )}
-          aria-current={isBodySelected ? "page" : undefined}
-          onClick={onSelectBody}
-        >
-          <FileText className="size-4 flex-shrink-0 text-muted-foreground" />
-          <span className="min-w-0 flex-1 truncate text-sm font-medium">
-            Message body
-          </span>
-        </Button>
         <ul className="flex flex-col gap-2">
+          <li>
+            <button
+              type="button"
+              aria-label="Message body"
+              aria-current={isBodySelected ? "page" : undefined}
+              onClick={onSelectBody}
+              className={cn(
+                "flex w-full gap-2 rounded-md border p-2 text-left transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                isBodySelected
+                  ? "border-border bg-muted"
+                  : "border-transparent hover:bg-muted/50"
+              )}
+            >
+              <FileThumbnail
+                source={bodySource.source}
+                as={bodySource.category}
+                className="h-16 w-12 flex-shrink-0"
+                previewAspectRatio={3 / 4}
+              />
+              <span className="flex min-w-0 flex-1 flex-col gap-1 pt-0.5">
+                <span className="truncate text-sm font-medium">
+                  Message body
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {createViewerResource(bodySource.source).fileName}
+                </span>
+              </span>
+            </button>
+          </li>
           {attachments.map((attachment) => {
             const resource = createViewerResource(attachment.source)
             const isSelected = selectedAttachmentId === attachment.id

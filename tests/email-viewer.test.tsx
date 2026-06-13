@@ -102,6 +102,12 @@ describe("EmailViewer", () => {
     expect(
       screen.queryByRole("button", { name: /retab-logo\.svg/i })
     ).toBeNull()
+    expect(screen.getByRole("button", { name: "Message body" })).toBeTruthy()
+    expect(
+      screen.getAllByTestId("file-thumbnail").some((thumbnail) => {
+        return thumbnail.textContent === "message.html"
+      })
+    ).toBe(true)
     expect(
       screen.getByRole("button", { name: /spacex-prospectus\.pdf/i })
     ).toBeTruthy()

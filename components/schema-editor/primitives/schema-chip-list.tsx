@@ -4,7 +4,7 @@ import * as React from "react"
 import { PlusIcon, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { Input, InputPrimitive } from "@/components/ui/input"
 
 interface SchemaChipListProps {
   editable: boolean
@@ -53,9 +53,10 @@ export function SchemaChipList({
             return (
               <div
                 key={getKey(index)}
-                className="flex items-center space-x-2 rounded-md border border-border bg-muted px-2 py-1"
+                className="flex items-center gap-1 rounded-md border border-border bg-transparent shadow-none"
               >
-                <Input
+                <InputPrimitive
+                  data-slot="schema-chip-input"
                   disabled={!editable}
                   value={value}
                   onChange={(event) => {
@@ -66,14 +67,14 @@ export function SchemaChipList({
                       event.stopPropagation()
                     }
                   }}
-                  className="h-6 w-24 border-0 bg-transparent px-1 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                  className="h-6 w-24 min-w-0 rounded-[inherit] border-0 bg-transparent px-1 text-sm leading-6 outline-none shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 disabled:opacity-64"
                 />
                 <Button
                   type="button"
                   disabled={!editable}
                   variant="ghost"
                   size="icon"
-                  className="h-4 w-4 p-0"
+                  className="h-6 w-6 rounded-sm border-0 bg-transparent p-0 shadow-none hover:bg-transparent data-pressed:bg-transparent"
                   aria-label={`Remove option ${value}`}
                   onClick={() => onRemoveValue(index)}
                 >

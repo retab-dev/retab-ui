@@ -29,8 +29,8 @@ type DropzoneDataAttributes = {
   [key: `data-${string}`]: string | undefined
 }
 
-type DropzoneRootGetterProps<T extends HTMLElement> =
-  React.HTMLAttributes<T> & Partial<DropzoneDataAttributes>
+type DropzoneRootGetterProps<T extends HTMLElement> = React.HTMLAttributes<T> &
+  Partial<DropzoneDataAttributes>
 
 type DropzoneInputGetterProps = React.ComponentPropsWithRef<"input"> &
   Partial<DropzoneDataAttributes>

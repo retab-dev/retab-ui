@@ -59,9 +59,11 @@ describe("markdown document layout", () => {
     expect(
       createEstimatedMarkdownBlock({
         kind: "code",
-        markdown: ["```txt", ...Array.from({ length: 401 }, () => "x"), "```"].join(
-          "\n"
-        ),
+        markdown: [
+          "```txt",
+          ...Array.from({ length: 401 }, () => "x"),
+          "```",
+        ].join("\n"),
       }).isHostile
     ).toBe(true)
     expect(

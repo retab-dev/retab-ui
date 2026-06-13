@@ -1,12 +1,14 @@
 "use client"
 
 import * as React from "react"
+import { createRoot, type Root } from "react-dom/client"
 
 import { useElementWidth } from "@/hooks/use-element-width"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   createPageMarkdownLayout,
   getPageMarkdownPageLayout,
+  getPageMarkdownVisiblePageNumbers,
 } from "@/components/viewers/page-markdown/page-markdown-layout"
 import {
   usePageMarkdownMeasurements,
@@ -16,7 +18,6 @@ import { PageMarkdownPageFrame } from "@/components/viewers/page-markdown/page-m
 import { usePageMarkdownScroll } from "@/components/viewers/page-markdown/page-markdown-scroll"
 import { PageMarkdownToolbar } from "@/components/viewers/page-markdown/page-markdown-toolbar"
 import { type PageMarkdownViewMode } from "@/components/viewers/page-markdown/page-markdown-types"
-import { usePageMarkdownPageVirtualization } from "@/components/viewers/page-markdown/page-markdown-virtualization"
 
 export interface PageMarkdownPaneHandle {
   scrollToPage: (pageNumber: number) => void
@@ -58,6 +59,13 @@ export const PageMarkdownPane = React.forwardRef<
   ref
 ) {
   const [viewportWidthRef, viewportWidth] = useElementWidth()
+  const canvasRef = React.useRef<HTMLDivElement | null>(null)
+  const projectionFrameRef = React.useRef<number | null>(null)
+  const projectPagesRef = React.useRef<() => void>(() => {})
+  const projectionCacheRef = React.useRef<PageMarkdownProjectionCache>({
+    resetKey: null,
+    slots: new Map(),
+  })
   const pagesSignature = React.useMemo(
     () => `${resetKey ?? ""}\u0000${pages.join("\u0000")}`,
     [pages, resetKey]
@@ -87,32 +95,14 @@ export const PageMarkdownPane = React.forwardRef<
     pageCount: pages.length,
     resetKey: pagesSignature,
   })
-  const { measureVisiblePages, visiblePageNumbers } =
-    usePageMarkdownPageVirtualization({
-      getViewportElement,
-      layout,
-      resetKey: pagesSignature,
-      viewportElement,
-    })
 
   React.useLayoutEffect(() => {
     onContainerWidthChange(viewportWidth)
   }, [onContainerWidthChange, viewportWidth])
 
-  React.useImperativeHandle(
-    ref,
-    () => ({
-      scrollToPage: (pageNumber) => {
-        scrollToPage(pageNumber)
-        measureScroll()
-        measureVisiblePages()
-      },
-    }),
-    [measureScroll, measureVisiblePages, scrollToPage]
-  )
   const { captureScrollAnchor } = usePageMarkdownScrollAnchor({
     layout,
-    onRestore: measureVisiblePages,
+    onRestore: () => projectPagesRef.current(),
     viewportElement,
   })
   const handlePageSize = React.useCallback(
@@ -122,14 +112,74 @@ export const PageMarkdownPane = React.forwardRef<
     [captureScrollAnchor, setPageHeight]
   )
 
-  React.useEffect(() => {
-    measureVisiblePages()
-  }, [layout, measureVisiblePages, viewportElement])
+  const projectPages = React.useCallback(() => {
+    projectionFrameRef.current = null
+    projectPageMarkdownPages({
+      cache: projectionCacheRef.current,
+      canvas: canvasRef.current,
+      layout,
+      mode,
+      onSize: handlePageSize,
+      pages,
+      resetKey: pagesSignature,
+      scale,
+      viewportElement: getViewportElement(),
+    })
+  }, [
+    getViewportElement,
+    handlePageSize,
+    layout,
+    mode,
+    pages,
+    pagesSignature,
+    scale,
+  ])
+  React.useLayoutEffect(() => {
+    projectPagesRef.current = projectPages
+  }, [projectPages])
+
+  const schedulePageProjection = React.useCallback(() => {
+    if (projectionFrameRef.current !== null) return
+    if (typeof requestAnimationFrame !== "function") {
+      projectPages()
+      return
+    }
+    projectionFrameRef.current = requestAnimationFrame(projectPages)
+  }, [projectPages])
+
+  React.useImperativeHandle(
+    ref,
+    () => ({
+      scrollToPage: (pageNumber) => {
+        scrollToPage(pageNumber)
+        measureScroll()
+        projectPages()
+      },
+    }),
+    [measureScroll, projectPages, scrollToPage]
+  )
+
+  React.useLayoutEffect(() => {
+    projectPages()
+  }, [projectPages, viewportElement])
+
+  React.useEffect(
+    () => () => {
+      if (
+        projectionFrameRef.current !== null &&
+        typeof cancelAnimationFrame === "function"
+      ) {
+        cancelAnimationFrame(projectionFrameRef.current)
+      }
+      disposePageMarkdownProjectionCache(projectionCacheRef.current)
+    },
+    []
+  )
 
   const handleViewportScroll = React.useCallback(() => {
     handleScroll()
-    measureVisiblePages()
-  }, [handleScroll, measureVisiblePages])
+    schedulePageProjection()
+  }, [handleScroll, schedulePageProjection])
 
   const handleViewportKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -180,9 +230,9 @@ export const PageMarkdownPane = React.forwardRef<
         Math.max(0, nextScrollTop)
       )
       measureScroll()
-      measureVisiblePages()
+      projectPages()
     },
-    [measureScroll, measureVisiblePages]
+    [measureScroll, projectPages]
   )
 
   if (!isScaleReady) {
@@ -221,43 +271,182 @@ export const PageMarkdownPane = React.forwardRef<
       >
         <div ref={viewportWidthRef} className="w-full min-w-0">
           <div
+            ref={canvasRef}
             className="relative mx-auto"
             style={{
               height: layout.totalHeight,
               minWidth: layout.width,
             }}
-          >
-            {visiblePageNumbers.map((pageNumber) => {
-              const pageLayout = getPageMarkdownPageLayout(layout, pageNumber)
-              const markdown = pages[pageNumber - 1]
-              if (!pageLayout || markdown == null) return null
-
-              return (
-                <div
-                  key={pageNumber}
-                  data-slot="page-markdown-page-slot"
-                  data-page-number={pageNumber}
-                  className="absolute left-1/2 -translate-x-1/2"
-                  style={{
-                    top: pageLayout.offsetTop,
-                    width: pageLayout.width,
-                    minHeight: pageLayout.height,
-                  }}
-                >
-                  <PageMarkdownPageFrame
-                    estimatedHeight={pageLayout.height}
-                    pageNumber={pageNumber}
-                    markdown={markdown}
-                    mode={mode}
-                    onSize={handlePageSize}
-                    scale={scale}
-                  />
-                </div>
-              )
-            })}
-          </div>
+          />
         </div>
       </ScrollArea>
     </div>
   )
 })
+
+type PageMarkdownProjectionCache = {
+  resetKey: unknown
+  slots: Map<number, PageMarkdownProjectedSlot>
+}
+
+type PageMarkdownProjectedSlot = {
+  renderKey: string
+  root: Root
+  slot: HTMLElement
+}
+
+function projectPageMarkdownPages({
+  cache,
+  canvas,
+  layout,
+  mode,
+  onSize,
+  pages,
+  resetKey,
+  scale,
+  viewportElement,
+}: {
+  cache: PageMarkdownProjectionCache
+  canvas: HTMLDivElement | null
+  layout: ReturnType<typeof createPageMarkdownLayout>
+  mode: PageMarkdownViewMode
+  onSize: (pageNumber: number, height: number) => void
+  pages: readonly string[]
+  resetKey: unknown
+  scale: number
+  viewportElement: HTMLDivElement | null
+}) {
+  if (!canvas) return
+
+  canvas.style.height = `${layout.totalHeight}px`
+  canvas.style.minWidth = `${layout.width}px`
+
+  if (!Object.is(cache.resetKey, resetKey)) {
+    disposePageMarkdownProjectionCache(cache)
+    cache.resetKey = resetKey
+  }
+
+  const visiblePageNumbers = getPageMarkdownVisiblePageNumbers({
+    layout,
+    scrollTop: viewportElement?.scrollTop ?? 0,
+    viewportHeight: getPageMarkdownViewportHeight(viewportElement),
+  })
+  const visiblePageNumberSet = new Set(visiblePageNumbers)
+
+  for (const [pageNumber, projectedSlot] of cache.slots) {
+    if (visiblePageNumberSet.has(pageNumber)) continue
+    disposePageMarkdownProjectedSlot(projectedSlot)
+    cache.slots.delete(pageNumber)
+  }
+
+  for (const pageNumber of visiblePageNumbers) {
+    const pageLayout = getPageMarkdownPageLayout(layout, pageNumber)
+    const markdown = pages[pageNumber - 1]
+    if (!pageLayout || markdown == null) continue
+
+    const projectedSlot =
+      cache.slots.get(pageNumber) ?? createPageMarkdownProjectedSlot(pageNumber)
+    patchPageMarkdownProjectedSlot(projectedSlot.slot, pageLayout)
+    renderPageMarkdownProjectedSlot({
+      markdown,
+      mode,
+      onSize,
+      pageLayout,
+      pageNumber,
+      projectedSlot,
+      scale,
+    })
+    cache.slots.set(pageNumber, projectedSlot)
+    canvas.append(projectedSlot.slot)
+  }
+}
+
+function createPageMarkdownProjectedSlot(pageNumber: number) {
+  const slot = document.createElement("div")
+  slot.dataset.pageNumber = String(pageNumber)
+  slot.dataset.slot = "page-markdown-page-slot"
+  slot.className = "absolute left-1/2 -translate-x-1/2"
+  return {
+    renderKey: "",
+    root: createRoot(slot),
+    slot,
+  }
+}
+
+function patchPageMarkdownProjectedSlot(
+  slot: HTMLElement,
+  pageLayout: NonNullable<ReturnType<typeof getPageMarkdownPageLayout>>
+) {
+  slot.style.top = `${pageLayout.offsetTop}px`
+  slot.style.width = `${pageLayout.width}px`
+  slot.style.minHeight = `${pageLayout.height}px`
+}
+
+function renderPageMarkdownProjectedSlot({
+  markdown,
+  mode,
+  onSize,
+  pageLayout,
+  pageNumber,
+  projectedSlot,
+  scale,
+}: {
+  markdown: string
+  mode: PageMarkdownViewMode
+  onSize: (pageNumber: number, height: number) => void
+  pageLayout: NonNullable<ReturnType<typeof getPageMarkdownPageLayout>>
+  pageNumber: number
+  projectedSlot: PageMarkdownProjectedSlot
+  scale: number
+}) {
+  const renderKey = [
+    pageNumber,
+    mode,
+    scale,
+    pageLayout.height,
+    pageLayout.width,
+    markdown,
+  ].join("\u0000")
+  if (projectedSlot.renderKey === renderKey) return
+
+  projectedSlot.renderKey = renderKey
+  projectedSlot.root.render(
+    <PageMarkdownPageFrame
+      estimatedHeight={pageLayout.height}
+      markdown={markdown}
+      mode={mode}
+      onSize={onSize}
+      pageNumber={pageNumber}
+      scale={scale}
+    />
+  )
+}
+
+function getPageMarkdownViewportHeight(viewportElement: HTMLElement | null) {
+  return (
+    viewportElement?.clientHeight ||
+    viewportElement?.getBoundingClientRect().height ||
+    0
+  )
+}
+
+function disposePageMarkdownProjectionCache(cache: PageMarkdownProjectionCache) {
+  for (const projectedSlot of cache.slots.values()) {
+    disposePageMarkdownProjectedSlot(projectedSlot)
+  }
+  cache.slots.clear()
+}
+
+function disposePageMarkdownProjectedSlot(projectedSlot: PageMarkdownProjectedSlot) {
+  deferPageMarkdownRootUnmount(projectedSlot.root)
+  projectedSlot.slot.remove()
+}
+
+function deferPageMarkdownRootUnmount(root: Root) {
+  const unmount = () => root.unmount()
+  if (typeof queueMicrotask === "function") {
+    queueMicrotask(unmount)
+    return
+  }
+  window.setTimeout(unmount, 0)
+}

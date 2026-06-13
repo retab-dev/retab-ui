@@ -10,7 +10,7 @@ type TextInputState = {
 }
 
 test.beforeEach(async ({ page }) => {
-  await page.goto(LAB_PATH)
+  await page.goto(LAB_PATH, { waitUntil: "domcontentloaded" })
   await expect(jsonTableCell(page, "code")).toBeVisible()
 })
 
@@ -172,8 +172,10 @@ async function textOffsetPoint(
         ? cell.querySelector<HTMLInputElement>(
             'input[data-kind="text"][data-mode="edit"]'
           )
-        : cell.querySelector<HTMLElement>('[data-slot="data-cell"]')
+        : cell.querySelector<HTMLElement>('[data-slot="data-cell-value"]')
     if (!element) throw new Error(`Missing ${target} target for ${fieldPath}`)
+    const dataCell = cell.querySelector<HTMLElement>('[data-slot="data-cell"]')
+    if (!dataCell) throw new Error(`Missing data-cell for ${fieldPath}`)
 
     const value =
       element instanceof HTMLInputElement
@@ -184,6 +186,7 @@ async function textOffsetPoint(
     }
 
     const rect = element.getBoundingClientRect()
+    const dataCellRect = dataCell.getBoundingClientRect()
     const styles = getComputedStyle(element)
     const canvas = document.createElement("canvas")
     const context = canvas.getContext("2d")
@@ -193,9 +196,13 @@ async function textOffsetPoint(
     const paddingLeft = Number.parseFloat(styles.paddingLeft) || 0
     const prefix = value.slice(0, offset)
     const prefixWidth = context.measureText(prefix).width
+    const x =
+      target === "cell" && offset === value.length
+        ? Math.min(dataCellRect.right - 1, rect.left + paddingLeft + prefixWidth + 4)
+        : rect.left + paddingLeft + prefixWidth
 
     return {
-      x: rect.left + paddingLeft + prefixWidth,
+      x,
       y: rect.top + rect.height / 2,
     }
   }, options)

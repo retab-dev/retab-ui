@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import ReactMarkdown, { MarkdownHooks } from "react-markdown"
+import { MarkdownHooks } from "react-markdown"
 
 import {
   type MarkdownDocumentPage,
@@ -10,7 +10,6 @@ import {
 import {
   MARKDOWN_DOCUMENT_REHYPE_PLUGINS,
   MARKDOWN_DOCUMENT_REMARK_PLUGINS,
-  MARKDOWN_DOCUMENT_SYNC_REHYPE_PLUGINS,
 } from "./markdown-document-plugins"
 import { createMarkdownDocumentRenderers } from "./markdown-document-renderers"
 import { sanitizeMarkdownUrl } from "./markdown-document-url-policy"
@@ -40,7 +39,7 @@ export function MarkdownDocumentPageRenderer({
       }),
     [headingIdsByLine, highlightRange, page]
   )
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
     hasReportedReadyRef.current = false
     setRenderState("pending")
   }, [page.markdown])
@@ -70,7 +69,11 @@ export function MarkdownDocumentPageRenderer({
       childList: true,
       subtree: true,
     })
-    return () => observer?.disconnect()
+    const readyCheckTimeout = window.setTimeout(() => markReady(true), 0)
+    return () => {
+      window.clearTimeout(readyCheckTimeout)
+      observer?.disconnect()
+    }
   }, [onContentReady, page.markdown])
 
   return (

@@ -5,7 +5,6 @@ import {
   PageHeaderDescription,
   PageHeaderHeading,
 } from "@/components/page-header"
-import { getLoadedBlockCodeFileManifest } from "@/lib/block-code-samples"
 import { ViewerBlocks } from "@/components/viewer-blocks"
 
 export const dynamic = "force-static"
@@ -17,9 +16,7 @@ export const metadata: Metadata = {
     "Document-viewer blocks built from the shared segment primitives — split, partition, and classification, each with preview + source.",
 }
 
-export default async function BlocksPage() {
-  const codeSamples = await getLoadedBlockCodeFileManifest()
-
+export default function BlocksPage() {
   return (
     <div className="flex flex-1 flex-col">
       <PageHeader>
@@ -32,7 +29,7 @@ export default async function BlocksPage() {
       </PageHeader>
       <div className="container-wrapper flex-1">
         <div className="container py-8">
-          <ViewerBlocks codeSamples={codeSamples} />
+          <ViewerBlocks />
         </div>
       </div>
     </div>

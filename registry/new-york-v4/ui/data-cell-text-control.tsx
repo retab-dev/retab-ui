@@ -34,11 +34,11 @@ export function DataCellTextControl(props: DataCellTextControlProps) {
 function focusDataCellTextInput(
   input: HTMLInputElement | null,
   intent: DataCellActivationIntent | undefined
-): number | null {
+) {
   if (!input) return null
   input.focus({ preventScroll: true })
 
-  if (input.type !== "text" && input.type !== "search") return null
+  if (input.type !== "text" && input.type !== "search") return
 
   const selectionIndex =
     intent?.type === "pointer"
@@ -50,7 +50,6 @@ function focusDataCellTextInput(
         }))
       : input.value.length
   input.setSelectionRange(selectionIndex, selectionIndex)
-  return intent?.type === "pointer" ? selectionIndex : null
 }
 
 function initialInputValueForActivation({
@@ -119,10 +118,6 @@ export function DataCellInputControl({
   const inputRef = React.useRef<HTMLInputElement>(null)
   const lastInputValueRef = React.useRef(initialInputValue)
   const didFinishEditingRef = React.useRef(false)
-  const pendingPointerSelectionRef = React.useRef<number | null>(null)
-  const clearPointerSelectionTimerRef = React.useRef<ReturnType<
-    typeof globalThis.setTimeout
-  > | null>(null)
   const inputValue = draftValue ?? uncontrolledDraftValue
 
   React.useEffect(() => {
@@ -142,45 +137,8 @@ export function DataCellInputControl({
 
   React.useLayoutEffect(() => {
     if (!autoFocus && !activationIntent) return
-    pendingPointerSelectionRef.current = focusDataCellTextInput(
-      inputRef.current,
-      activationIntent
-    )
-    if (clearPointerSelectionTimerRef.current !== null) {
-      globalThis.clearTimeout(clearPointerSelectionTimerRef.current)
-      clearPointerSelectionTimerRef.current = null
-    }
-    if (pendingPointerSelectionRef.current !== null) {
-      clearPointerSelectionTimerRef.current = globalThis.setTimeout(() => {
-        pendingPointerSelectionRef.current = null
-        clearPointerSelectionTimerRef.current = null
-      }, 1000)
-    }
+    focusDataCellTextInput(inputRef.current, activationIntent)
   }, [activationIntent, autoFocus])
-
-  React.useEffect(
-    () => () => {
-      if (clearPointerSelectionTimerRef.current === null) return
-      globalThis.clearTimeout(clearPointerSelectionTimerRef.current)
-    },
-    []
-  )
-
-  const restorePendingPointerSelection = React.useCallback(
-    (input: HTMLInputElement) => {
-      const selectionIndex = pendingPointerSelectionRef.current
-      if (selectionIndex === null) return
-      input.setSelectionRange(selectionIndex, selectionIndex)
-    },
-    []
-  )
-
-  const clearPendingPointerSelection = React.useCallback(() => {
-    pendingPointerSelectionRef.current = null
-    if (clearPointerSelectionTimerRef.current === null) return
-    globalThis.clearTimeout(clearPointerSelectionTimerRef.current)
-    clearPointerSelectionTimerRef.current = null
-  }, [])
 
   const commitCurrentInputValue = React.useCallback(
     (input: HTMLInputElement | null, endEditing = true) => {
@@ -300,12 +258,9 @@ export function DataCellInputControl({
         }
       }}
       onMouseUp={(event) => {
-        restorePendingPointerSelection(event.currentTarget)
         onMouseUp?.(event)
       }}
       onClick={(event) => {
-        restorePendingPointerSelection(event.currentTarget)
-        clearPendingPointerSelection()
         onClick?.(event)
       }}
       onDoubleClick={onDoubleClick}

@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { Code, FileCode, Terminal } from "lucide-react"
+import { Code, FileCode, Loader2, Terminal } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import {
@@ -46,6 +46,12 @@ type BlockCodeSample = {
   lineCount: number
 }
 
+type BlockCodeSamplesState =
+  | { status: "idle"; codeSamples: BlockCodeSample[]; error?: undefined }
+  | { status: "loading"; codeSamples: BlockCodeSample[]; error?: undefined }
+  | { status: "ready"; codeSamples: BlockCodeSample[]; error?: undefined }
+  | { status: "error"; codeSamples: BlockCodeSample[]; error: string }
+
 type ViewerBlock = ViewerBlockMetadata & { component: React.ComponentType }
 
 type BlockView = "preview" | "code"
@@ -86,11 +92,7 @@ const PAIRED_BLOCK_IDS: Partial<
   primitives: ["split", "partition"],
 }
 
-export function ViewerBlocks({
-  codeSamples,
-}: {
-  codeSamples: Record<string, BlockCodeSample[]>
-}) {
+export function ViewerBlocks() {
   const [activeCategory, setActiveCategory] =
     React.useState<ViewerBlockCategoryTabId>("featured")
 
@@ -101,11 +103,7 @@ export function ViewerBlocks({
   )
 
   const renderBlock = (block: ViewerBlock) => (
-    <ViewerBlockPreview
-      key={block.id}
-      block={block}
-      codeSamples={codeSamples[block.id] ?? []}
-    />
+    <ViewerBlockPreview key={block.id} block={block} />
   )
 
   // Lead with this tab's paired viewers in a shared 50/50 row (in the configured
@@ -190,16 +188,20 @@ function BlockCategoryTabs({
 
 function ViewerBlockPreview({
   block,
-  codeSamples,
 }: {
   block: ViewerBlock
-  codeSamples: BlockCodeSample[]
 }) {
   const [previewKey] = React.useState(0)
   const [view, setView] = React.useState<BlockView>("preview")
   const [hasOpenedCode, setHasOpenedCode] = React.useState(false)
   const [codeScrollResetKey, setCodeScrollResetKey] = React.useState(0)
   const [isCommandCopied, setIsCommandCopied] = React.useState(false)
+  const [codeSamplesState, setCodeSamplesState] =
+    React.useState<BlockCodeSamplesState>({
+      status: "idle",
+      codeSamples: [],
+    })
+  const codeSamples = codeSamplesState.codeSamples
   const [activeFile, setActiveFile] = React.useState<string | null>(
     codeSamples[0]?.targetPath ?? null
   )
@@ -225,6 +227,43 @@ function ViewerBlockPreview({
   }, [isCommandCopied])
 
   React.useEffect(() => {
+    if (!hasOpenedCode || codeSamplesState.status !== "idle") return
+
+    const controller = new AbortController()
+
+    async function loadCodeSamples() {
+      setCodeSamplesState({ status: "loading", codeSamples: [] })
+
+      try {
+        const response = await fetch(
+          `/api/block-code-samples/${encodeURIComponent(block.id)}`,
+          { signal: controller.signal }
+        )
+        if (!response.ok) {
+          throw new Error(`Request failed with ${response.status}`)
+        }
+        const payload = (await response.json()) as {
+          codeSamples?: BlockCodeSample[]
+        }
+        setCodeSamplesState({
+          status: "ready",
+          codeSamples: payload.codeSamples ?? [],
+        })
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return
+        setCodeSamplesState({
+          status: "error",
+          codeSamples: [],
+          error: "Could not load source files.",
+        })
+      }
+    }
+
+    void loadCodeSamples()
+    return () => controller.abort()
+  }, [block.id, codeSamplesState.status, hasOpenedCode])
+
+  React.useEffect(() => {
     if (!codeSamples.length) {
       setActiveFile(null)
       return
@@ -240,6 +279,11 @@ function ViewerBlockPreview({
   async function copyInstallCommand() {
     const copied = await copyToClipboardWithMeta(block.command)
     if (copied) setIsCommandCopied(true)
+  }
+
+  function retryCodeSamples() {
+    setCodeSamplesState({ status: "idle", codeSamples: [] })
+    setHasOpenedCode(true)
   }
 
   return (
@@ -318,9 +362,10 @@ function ViewerBlockPreview({
         {hasOpenedCode ? (
           <div className={view === "code" ? "block" : "hidden"}>
             <BlockCodePanel
-              codeSamples={codeSamples}
+              codeSamplesState={codeSamplesState}
               activeFile={activeFile}
               onActiveFileChange={setActiveFile}
+              onRetry={retryCodeSamples}
               scrollResetKey={codeScrollResetKey}
             />
           </div>
@@ -414,19 +459,59 @@ const BlockPreviewSurface = React.memo(function BlockPreviewSurface({
 })
 
 function BlockCodePanel({
-  codeSamples,
+  codeSamplesState,
   activeFile,
   onActiveFileChange,
+  onRetry,
   scrollResetKey,
 }: {
-  codeSamples: BlockCodeSample[]
+  codeSamplesState: BlockCodeSamplesState
   activeFile: string | null
   onActiveFileChange: (file: string) => void
+  onRetry: () => void
   scrollResetKey: React.Key
 }) {
+  const codeSamples = codeSamplesState.codeSamples
   const activeCodeSample =
     codeSamples.find((sample) => sample.targetPath === activeFile) ??
     codeSamples[0]
+
+  if (
+    codeSamplesState.status === "idle" ||
+    codeSamplesState.status === "loading"
+  ) {
+    return (
+      <div
+        className={cn(
+          "grid place-items-center rounded-xl border bg-code text-sm text-code-foreground",
+          BLOCK_VIEWPORT_HEIGHT_CLASS
+        )}
+      >
+        <div className="flex items-center gap-2 text-code-foreground/78">
+          <Loader2 className="size-4 animate-spin" />
+          Loading source files...
+        </div>
+      </div>
+    )
+  }
+
+  if (codeSamplesState.status === "error") {
+    return (
+      <div
+        className={cn(
+          "grid place-items-center rounded-xl border bg-code text-sm text-code-foreground",
+          BLOCK_VIEWPORT_HEIGHT_CLASS
+        )}
+      >
+        <div className="flex flex-col items-center gap-3 text-code-foreground/78">
+          <span>{codeSamplesState.error}</span>
+          <Button type="button" variant="secondary" size="sm" onClick={onRetry}>
+            Retry
+          </Button>
+        </div>
+      </div>
+    )
+  }
 
   if (!activeCodeSample) {
     return (

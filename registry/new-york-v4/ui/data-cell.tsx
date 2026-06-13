@@ -128,8 +128,8 @@ export function DataCell({
       }
 
       event.stopPropagation()
+      event.preventDefault()
       if (props.kind === "boolean") {
-        event.preventDefault()
         commitBooleanDisplayValue()
         didActivateBeforeClickRef.current = true
         return

@@ -109,7 +109,7 @@ export function getDataCellTextSelectionOffset({
 
 export function getDataCellDisplayTextSelectionOffset({
   clientX,
-  clientY,
+  clientY: _clientY,
   textElement,
   value,
 }: {
@@ -118,14 +118,6 @@ export function getDataCellDisplayTextSelectionOffset({
   textElement: HTMLElement
   value: string
 }): number {
-  const nativeOffset = getNativeTextSelectionOffset({
-    clientX,
-    clientY,
-    textElement,
-    value,
-  })
-  if (nativeOffset !== null) return nativeOffset
-
   return getDataCellTextSelectionOffsetFromElement({
     clientX,
     element: textElement,
@@ -180,89 +172,6 @@ function getDataCellTextSelectionOffsetFromElement({
       valueLength,
     })
   }
-}
-
-function getNativeTextSelectionOffset({
-  clientX,
-  clientY,
-  textElement,
-  value,
-}: {
-  clientX: number
-  clientY: number
-  textElement: HTMLElement
-  value: string
-}): number | null {
-  const ownerDocument = textElement.ownerDocument
-  const documentWithCaretPosition = ownerDocument as Document & {
-    caretPositionFromPoint?: (
-      x: number,
-      y: number
-    ) => { offsetNode: Node; offset: number } | null
-  }
-  const documentWithCaretRange = ownerDocument as Document & {
-    caretRangeFromPoint?: (x: number, y: number) => Range | null
-  }
-
-  const caretPosition = documentWithCaretPosition.caretPositionFromPoint?.(
-    clientX,
-    clientY
-  )
-  if (caretPosition) {
-    return nativeOffsetFromNode({
-      node: caretPosition.offsetNode,
-      offset: caretPosition.offset,
-      textElement,
-      value,
-    })
-  }
-
-  const caretRange = documentWithCaretRange.caretRangeFromPoint?.(
-    clientX,
-    clientY
-  )
-  if (caretRange) {
-    return nativeOffsetFromNode({
-      node: caretRange.startContainer,
-      offset: caretRange.startOffset,
-      textElement,
-      value,
-    })
-  }
-
-  return null
-}
-
-function nativeOffsetFromNode({
-  node,
-  offset,
-  textElement,
-  value,
-}: {
-  node: Node
-  offset: number
-  textElement: HTMLElement
-  value: string
-}): number | null {
-  if (!textElement.contains(node)) return null
-  const walker = textElement.ownerDocument.createTreeWalker(
-    textElement,
-    NodeFilter.SHOW_TEXT
-  )
-  let textOffset = 0
-  while (walker.nextNode()) {
-    const currentNode = walker.currentNode
-    const currentLength = currentNode.textContent?.length ?? 0
-    if (currentNode === node) {
-      return clampTextOffset(textOffset + offset, value)
-    }
-    textOffset += currentLength
-  }
-  return null
-}
-
-function clampTextOffset(offset: number, value: string): number {
-  return Math.min(value.length, Math.max(0, offset))
 }
 
 function getPretextTextSelectionOffset({

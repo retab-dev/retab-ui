@@ -243,10 +243,12 @@ Argument to remove:
 - Consumers rarely need it directly.
 - `UseDropzoneReturn` may be enough.
 
-Decision rule:
+Decision:
 
-Search for real external or internal uses. If no one imports `DropzoneState`,
-delete it and inline the return type.
+Remove it.
+
+The public API only needs `UseDropzoneReturn`. A separate `DropzoneState` type
+made the implementation tidy, but it did not give consumers a distinct concept.
 
 ## Naming Standard
 

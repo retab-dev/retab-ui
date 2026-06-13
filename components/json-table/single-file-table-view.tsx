@@ -219,7 +219,7 @@ export const SingleFileTableView = React.memo<SingleFileTableViewProps>(
     const rowCount = Math.max(projectedRows.length, 1)
 
     return (
-      <div className="relative flex min-h-0 w-full flex-1 flex-col">
+      <div className="relative flex h-full min-h-0 w-full flex-1 flex-col">
         <div className="absolute inset-0 flex origin-top-left flex-col">
           <React.Profiler id="JsonTable" onRender={recordJsonTableReactCommit}>
             <SingleFileVirtualizedTable

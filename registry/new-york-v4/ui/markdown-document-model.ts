@@ -40,6 +40,7 @@ export interface MarkdownDocumentPage {
   pageEndLine: number
   pageNumber: number
   pageStartLine: number
+  sourceLineByRenderedLine: ReadonlyMap<number, number>
 }
 
 export interface MarkdownDocument {
@@ -213,7 +214,8 @@ function createMarkdownPages(
 
   const flush = () => {
     if (currentBlocks.length === 0) return
-    const markdown = currentBlocks.map((block) => block.markdown).join("\n\n")
+    const { markdown, sourceLineByRenderedLine } =
+      createMarkdownPageContent(currentBlocks)
     const pageStartLine = currentBlocks[0]!.blockStartLine
     const pageEndLine = currentBlocks[currentBlocks.length - 1]!.blockEndLine
     pages.push({
@@ -224,6 +226,7 @@ function createMarkdownPages(
       pageEndLine,
       pageNumber: pages.length + 1,
       pageStartLine,
+      sourceLineByRenderedLine,
     })
     currentBlocks = []
     currentHeight = pageChromeHeight()
@@ -334,9 +337,19 @@ function isOversizedBlock(block: MarkdownDocumentBlock) {
 
 function createHeadingId(text: string, registry: HeadingRegistry) {
   const base = slugifyHeading(text) || "section"
-  const count = registry.get(base) ?? 0
+  let count = registry.get(base) ?? 0
+  let candidate = count === 0 ? base : `${base}-${count}`
+
+  while (registry.has(candidate)) {
+    count += 1
+    candidate = `${base}-${count}`
+  }
+
   registry.set(base, count + 1)
-  return count === 0 ? base : `${base}-${count}`
+  if (candidate !== base) {
+    registry.set(candidate, 1)
+  }
+  return candidate
 }
 
 function slugifyHeading(text: string) {
