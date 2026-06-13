@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { createRoot, type Root } from "react-dom/client"
 import { Check, Copy, Maximize, Minus, Plus } from "lucide-react"
 
 import type { ViewerResource } from "@/lib/viewer-resource"
@@ -106,7 +107,7 @@ function MarkdownDocumentViewerContent({
   const document = React.useMemo(() => createMarkdownDocument(text), [text])
   const [mode, setMode] = React.useState<MarkdownDocumentViewMode>("rendered")
   const [manualScale, setManualScale] = React.useState<number | null>(null)
-  const [scrollTop, setScrollTop] = React.useState(0)
+  const [currentPage, setCurrentPage] = React.useState(1)
   const [viewportSize, setViewportSize] = React.useState<ViewportSize>({
     height: 0,
     width: 0,
@@ -114,8 +115,14 @@ function MarkdownDocumentViewerContent({
   const [measuredHeights, setMeasuredHeights] = React.useState<
     Map<string, number>
   >(() => new Map())
+  const canvasRef = React.useRef<HTMLDivElement | null>(null)
   const viewportRef = React.useRef<HTMLDivElement | null>(null)
   const scrollFrameRef = React.useRef<number | null>(null)
+  const scrollTopRef = React.useRef(0)
+  const projectionCacheRef = React.useRef<MarkdownProjectionCache>({
+    measurementKey: "",
+    pages: new Map(),
+  })
   const pendingAnchorRef = React.useRef<ReturnType<
     typeof getMarkdownScrollAnchor
   > | null>(null)
@@ -128,10 +135,6 @@ function MarkdownDocumentViewerContent({
     [viewportWidth]
   )
   const scale = manualScale ?? fitScale
-  const virtualScrollTop = Math.max(
-    0,
-    scrollTop - MARKDOWN_VIEWER_CANVAS_PADDING_Y
-  )
   const highlightRange = React.useMemo(
     () => normalizeTextLineRange(highlight, document.lineCount),
     [document.lineCount, highlight]
@@ -170,21 +173,8 @@ function MarkdownDocumentViewerContent({
       }),
     [document.pages.length, estimateHeight, getKey, measuredHeights]
   )
-  const virtualWindow = React.useMemo(
-    () =>
-      getMarkdownVirtualItems({
-        geometry: virtualGeometry,
-        overscanPx: MARKDOWN_VIEWER_OVERSCAN_PX,
-        scrollTop: virtualScrollTop,
-        viewportHeight,
-      }),
-    [virtualScrollTop, viewportHeight, virtualGeometry]
-  )
-  const currentPage = currentPageFromVirtualItems({
-    items: virtualWindow.items,
-    pages: document.pages,
-    scrollTop: virtualScrollTop,
-  })
+  const canvasHeight =
+    virtualGeometry.totalHeight + MARKDOWN_VIEWER_CANVAS_PADDING_Y * 2
 
   React.useEffect(() => {
     setMeasuredHeights(new Map())
@@ -193,20 +183,25 @@ function MarkdownDocumentViewerContent({
   React.useEffect(() => {
     pendingAnchorRef.current = null
     setManualScale(null)
-    setScrollTop(0)
+    setCurrentPage(1)
+    scrollTopRef.current = 0
     scrollMarkdownViewportTo(viewportRef.current, { left: 0, top: 0 })
   }, [document])
+
+  const readVirtualScrollTop = React.useCallback(() => {
+    return Math.max(
+      0,
+      (viewportRef.current?.scrollTop ?? scrollTopRef.current) -
+        MARKDOWN_VIEWER_CANVAS_PADDING_Y
+    )
+  }, [])
 
   const captureScrollAnchor = React.useCallback(() => {
     pendingAnchorRef.current = getMarkdownScrollAnchor({
       geometry: virtualGeometry,
-      scrollTop: Math.max(
-        0,
-        (viewportRef.current?.scrollTop ?? scrollTop) -
-          MARKDOWN_VIEWER_CANVAS_PADDING_Y
-      ),
+      scrollTop: readVirtualScrollTop(),
     })
-  }, [scrollTop, virtualGeometry])
+  }, [readVirtualScrollTop, virtualGeometry])
 
   React.useLayoutEffect(() => {
     const anchor = pendingAnchorRef.current
@@ -219,6 +214,7 @@ function MarkdownDocumentViewerContent({
         anchor,
         geometry: virtualGeometry,
       }) + MARKDOWN_VIEWER_CANVAS_PADDING_Y
+    scrollTopRef.current = viewport.scrollTop
   }, [virtualGeometry])
 
   React.useLayoutEffect(() => {
@@ -246,30 +242,6 @@ function MarkdownDocumentViewerContent({
     return () => observer?.disconnect()
   }, [])
 
-  const handleScroll = React.useCallback(() => {
-    if (scrollFrameRef.current !== null) return
-    if (typeof requestAnimationFrame === "undefined") {
-      setScrollTop(viewportRef.current?.scrollTop ?? 0)
-      return
-    }
-    scrollFrameRef.current = requestAnimationFrame(() => {
-      scrollFrameRef.current = null
-      setScrollTop(viewportRef.current?.scrollTop ?? 0)
-    })
-  }, [])
-
-  React.useEffect(
-    () => () => {
-      if (
-        scrollFrameRef.current !== null &&
-        typeof cancelAnimationFrame !== "undefined"
-      ) {
-        cancelAnimationFrame(scrollFrameRef.current)
-      }
-    },
-    []
-  )
-
   const measurePage = React.useCallback(
     (key: string, height: number) => {
       if (!Number.isFinite(height) || height <= 0) return
@@ -283,6 +255,65 @@ function MarkdownDocumentViewerContent({
       })
     },
     [captureScrollAnchor]
+  )
+
+  const projectPages = React.useCallback(() => {
+    scrollFrameRef.current = null
+    const nextPage = projectMarkdownPages({
+      cache: projectionCacheRef.current,
+      canvas: canvasRef.current,
+      document,
+      geometry: virtualGeometry,
+      highlightRange,
+      measurePage,
+      measurementKey: pageMeasurementKey,
+      mode,
+      scale,
+      viewport: viewportRef.current,
+      viewportHeight,
+    })
+
+    setCurrentPage((page) => (page === nextPage ? page : nextPage))
+  }, [
+    document,
+    virtualGeometry,
+    highlightRange,
+    measurePage,
+    mode,
+    pageMeasurementKey,
+    scale,
+    viewportHeight,
+  ])
+
+  const scheduleProjectPages = React.useCallback(() => {
+    if (scrollFrameRef.current !== null) return
+    if (typeof requestAnimationFrame === "undefined") {
+      projectPages()
+      return
+    }
+    scrollFrameRef.current = requestAnimationFrame(projectPages)
+  }, [projectPages])
+
+  const handleScroll = React.useCallback(() => {
+    scrollTopRef.current = viewportRef.current?.scrollTop ?? 0
+    scheduleProjectPages()
+  }, [scheduleProjectPages])
+
+  React.useLayoutEffect(() => {
+    projectPages()
+  }, [projectPages])
+
+  React.useEffect(
+    () => () => {
+      if (
+        scrollFrameRef.current !== null &&
+        typeof cancelAnimationFrame !== "undefined"
+      ) {
+        cancelAnimationFrame(scrollFrameRef.current)
+      }
+      disposeMarkdownProjectionCache(projectionCacheRef.current)
+    },
+    []
   )
 
   const scrollToPageIndex = React.useCallback(
@@ -405,29 +436,11 @@ function MarkdownDocumentViewerContent({
           className="relative mx-auto min-w-0"
           data-slot="markdown-document-virtual-canvas"
           style={{
-            height:
-              virtualWindow.totalHeight + MARKDOWN_VIEWER_CANVAS_PADDING_Y * 2,
+            height: canvasHeight,
             width: Math.max(1, MARKDOWN_DOCUMENT_PAGE_WIDTH * scale),
           }}
-        >
-          {virtualWindow.items.map((virtualItem) => {
-            const page = document.pages[virtualItem.index]
-            if (!page) return null
-            return (
-              <MarkdownVirtualPage
-                key={virtualItem.key}
-                document={document}
-                highlightRange={highlightRange}
-                mode={mode}
-                page={page}
-                pageMeasurementKey={virtualItem.key}
-                scale={scale}
-                virtualItem={virtualItem}
-                onMeasure={measurePage}
-              />
-            )
-          })}
-        </div>
+          ref={canvasRef}
+        />
       </ScrollArea>
     </TextViewerFrame>
   )
@@ -579,17 +592,25 @@ function MarkdownVirtualPage({
   onMeasure: (key: string, height: number) => void
 }) {
   const pageRef = React.useRef<HTMLElement | null>(null)
+  const syncPage = React.useCallback(() => {
+    const element = pageRef.current
+    if (!element) return
+
+    patchMarkdownPageTables({ pageId: page.id, root: element })
+    const content = element.querySelector<HTMLElement>(
+      '[data-slot="markdown-document-rendered-content"], [data-slot="markdown-document-text-content"]'
+    )
+    const measuredElement = content ?? element
+    const height =
+      measuredElement.offsetHeight ||
+      measuredElement.getBoundingClientRect().height
+    onMeasure(pageMeasurementKey, height + MARKDOWN_VIEWER_PAGE_GAP)
+  }, [page.id, pageMeasurementKey, onMeasure])
 
   React.useLayoutEffect(() => {
     const element = pageRef.current
     if (!element) return
 
-    const syncPage = () => {
-      patchMarkdownPageTables({ pageId: page.id, root: element })
-      const height =
-        element.offsetHeight || element.getBoundingClientRect().height
-      onMeasure(pageMeasurementKey, height + MARKDOWN_VIEWER_PAGE_GAP)
-    }
     syncPage()
 
     const resizeObserver =
@@ -598,21 +619,8 @@ function MarkdownVirtualPage({
         : new ResizeObserver(syncPage)
     resizeObserver?.observe(element)
 
-    const mutationObserver =
-      typeof MutationObserver === "undefined"
-        ? null
-        : new MutationObserver(syncPage)
-    mutationObserver?.observe(element, {
-      attributes: false,
-      childList: true,
-      subtree: true,
-    })
-
-    return () => {
-      mutationObserver?.disconnect()
-      resizeObserver?.disconnect()
-    }
-  }, [page.id, pageMeasurementKey, onMeasure])
+    return () => resizeObserver?.disconnect()
+  }, [syncPage])
 
   const isHighlighted = markdownPageIntersectsLineRange({
     page,
@@ -648,13 +656,17 @@ function MarkdownVirtualPage({
       }}
     >
       {mode === "text" ? (
-        <pre className="font-mono leading-relaxed whitespace-pre-wrap text-foreground/90">
+        <pre
+          className="font-mono leading-relaxed whitespace-pre-wrap text-foreground/90"
+          data-slot="markdown-document-text-content"
+        >
           {page.markdown}
         </pre>
       ) : (
         <MarkdownDocumentPageRenderer
           headingIdsByLine={document.headingIdsByLine}
           highlightRange={highlightRange}
+          onContentReady={syncPage}
           page={page}
         />
       )}

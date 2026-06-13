@@ -62,8 +62,7 @@ export function createImageFrameLayout({
     frameCount: frames.length,
     gap,
     padding,
-    totalHeight:
-      frames.length === 0 ? 0 : offsetTop - gap + padding,
+    totalHeight: frames.length === 0 ? 0 : offsetTop - gap + padding,
     maxFrameWidth,
     frames: frameLayouts,
   }
@@ -119,7 +118,10 @@ export function getVisibleImageFrameNumbers({
   const firstVisibleFrame = findImageFrameByOffset(layout, startOffset)
   const lastVisibleFrame = findImageFrameByOffset(layout, endOffset)
   const firstFrame = Math.max(1, firstVisibleFrame - overscanFrames)
-  const lastFrame = Math.min(layout.frameCount, lastVisibleFrame + overscanFrames)
+  const lastFrame = Math.min(
+    layout.frameCount,
+    lastVisibleFrame + overscanFrames
+  )
 
   return Array.from(
     { length: lastFrame - firstFrame + 1 },
@@ -192,10 +194,7 @@ export function useImageFrameVirtualization({
     setState((previousState) =>
       Object.is(previousState.layout, layout) &&
       Object.is(previousState.resetKey, resetKey) &&
-      areFrameNumbersEqual(
-        previousState.visibleFrameNumbers,
-        nextFrameNumbers
-      )
+      areFrameNumbersEqual(previousState.visibleFrameNumbers, nextFrameNumbers)
         ? previousState
         : { layout, resetKey, visibleFrameNumbers: nextFrameNumbers }
     )

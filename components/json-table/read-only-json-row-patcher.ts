@@ -200,7 +200,13 @@ function canPatchRowHandles(
       const projectedCell = projectedRow?.cells[cellIndex]
       const fieldMetadata = column?.fieldMetadata
       if (!projectedCell?.materializedFieldPath || !fieldMetadata) continue
-      if (fieldMetadata.kind === "boolean") return false
+      if (
+        fieldMetadata.kind === "boolean" ||
+        fieldMetadata.kind === "object" ||
+        fieldMetadata.kind === "array"
+      ) {
+        return false
+      }
       if (!rowHandle.cells[cellIndex]?.textNode) return false
     }
   }

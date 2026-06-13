@@ -5,14 +5,15 @@ import * as React from "react"
 import { type FrameSource } from "@/lib/image-frame-source"
 import { normalizeRotation, rotatedSize } from "@/lib/image-geometry"
 import {
+  type ImageViewerHandle,
+  type ImageViewerProps,
+} from "@/components/ui/image-viewer-types"
+
+import {
   getCurrentImageFrameNumber,
   getImageFrameLayout,
   type ImageFrameLayoutModel,
 } from "./image-viewer-virtualization"
-import {
-  type ImageViewerHandle,
-  type ImageViewerProps,
-} from "@/components/ui/image-viewer-types"
 
 const IMAGE_SCROLL_HEADROOM = 48
 const IMAGE_VIEWER_HORIZONTAL_PADDING = 32
@@ -196,7 +197,9 @@ export function useImageViewerHandle(
         const frame = getImageFrameLayout(layout, frameNumber)
         if (!viewport || !frame) return
         const targetTop =
-          frame.offsetTop + (areaTop / 100) * frame.height - IMAGE_SCROLL_HEADROOM
+          frame.offsetTop +
+          (areaTop / 100) * frame.height -
+          IMAGE_SCROLL_HEADROOM
         viewport.scrollTo({
           top: Math.max(0, targetTop),
           behavior: "smooth",

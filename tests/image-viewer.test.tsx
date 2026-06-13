@@ -2221,15 +2221,14 @@ describe("ImageFrame rendering lifecycle", () => {
 
     expect(await screen.findByText("Page 1 of 100")).toBeTruthy()
     await waitFor(() => {
-      expect(container.querySelectorAll("[data-slot='image-frame']")).toHaveLength(
-        6
-      )
+      expect(
+        container.querySelectorAll("[data-slot='image-frame']")
+      ).toHaveLength(6)
     })
     expect(
-      workers[0].posts
-        .flatMap((post) =>
-          post.message.type === "decodeFrame" ? [post.message.frameIndex] : []
-        )
+      workers[0].posts.flatMap((post) =>
+        post.message.type === "decodeFrame" ? [post.message.frameIndex] : []
+      )
     ).toEqual([0, 1, 2, 3, 4, 5])
 
     const viewport = container.querySelector(
@@ -2259,13 +2258,10 @@ describe("ImageFrame rendering lifecycle", () => {
       ])
     })
     expect(
-      workers[0].posts
-        .flatMap((post) =>
-          post.message.type === "decodeFrame" ? [post.message.frameIndex] : []
-        )
-    ).toEqual([
-      0, 1, 2, 3, 4, 5, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54,
-    ])
+      workers[0].posts.flatMap((post) =>
+        post.message.type === "decodeFrame" ? [post.message.frameIndex] : []
+      )
+    ).toEqual([0, 1, 2, 3, 4, 5, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54])
   })
 
   it("draws an observed frame at device-pixel size and releases it on unmount", async () => {

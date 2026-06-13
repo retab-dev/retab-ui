@@ -213,7 +213,7 @@ describe("Dropzone primitive", () => {
       return (
         <div {...dropzone.getRootProps()}>
           <input {...dropzone.getInputProps()} />
-          <div>rejections:{dropzone.fileRejections.length}</div>
+          <div>rejections:{dropzone.lastIntake.fileRejections.length}</div>
         </div>
       )
     }

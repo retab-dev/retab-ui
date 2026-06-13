@@ -10,6 +10,7 @@ import {
 } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { createFakeEmailMessage } from "@/components/email-viewer-demo"
 import { EmailViewer } from "@/registry/new-york-v4/ui/email-viewer"
 import type { EmailViewerMessage } from "@/registry/new-york-v4/ui/email-viewer"
 
@@ -85,6 +86,34 @@ function imageBlobSource(fileName: string) {
 }
 
 describe("EmailViewer", () => {
+  it("renders the full fake email fixture as an integration test case", async () => {
+    const { container } = render(
+      <EmailViewer message={createFakeEmailMessage()} className="h-[720px]" />
+    )
+
+    await waitFor(() => {
+      expect(iframe(container).getAttribute("srcdoc")).toContain(
+        'src="blob:inline-1"'
+      )
+    })
+    expect(iframe(container).getAttribute("srcdoc")).toContain(
+      "Contract packet ready for review"
+    )
+    expect(
+      screen.queryByRole("button", { name: /retab-logo\.svg/i })
+    ).toBeNull()
+    expect(
+      screen.getByRole("button", { name: /spacex-prospectus\.pdf/i })
+    ).toBeTruthy()
+    expect(screen.getByRole("button", { name: /sales\.csv/i })).toBeTruthy()
+    expect(
+      screen.getByRole("button", { name: /nvidia-financials-fy2024\.xlsx/i })
+    ).toBeTruthy()
+    expect(
+      screen.getByRole("button", { name: /review-note\.html/i })
+    ).toBeTruthy()
+  })
+
   it("renders the HTML body and rewrites cid URLs to inline attachment object URLs", async () => {
     const message: EmailViewerMessage = {
       id: "email-1",

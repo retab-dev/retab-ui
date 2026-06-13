@@ -101,6 +101,17 @@ describe("MarkdownDocumentViewer", () => {
     })
   })
 
+  it("marks rendered pages ready after async Markdown content appears", async () => {
+    const { container } = render(
+      <MarkdownDocumentViewer source={markdownSource("# Ready")} toolbar={false} />
+    )
+
+    expect(await screen.findByRole("heading", { name: "Ready" })).toBeTruthy()
+    expect(
+      container.querySelector('[data-markdown-render-state="ready"]')
+    ).toBeTruthy()
+  })
+
   it("renders fenced code language labels and copies code", async () => {
     render(
       <MarkdownDocumentViewer
@@ -261,6 +272,30 @@ describe("MarkdownDocumentViewer", () => {
     })
     expect(viewport!.scrollTop).toBeGreaterThan(0)
     expect(container.querySelector('[aria-current="true"]')).toBeTruthy()
+  })
+
+  it("keeps a 6,000-line Markdown fixture bounded to the virtual window", async () => {
+    const markdown = Array.from(
+      { length: 1500 },
+      (_, index) => `## Section ${index + 1}\n\nBody line ${index + 1}`
+    ).join("\n\n")
+    const { container } = render(
+      <MarkdownDocumentViewer
+        className="h-80 w-[620px]"
+        source={markdownSource(markdown)}
+        toolbar={false}
+      />
+    )
+
+    expect(
+      await screen.findByRole("heading", { name: "Section 1" })
+    ).toBeTruthy()
+    const mountedPages = container.querySelectorAll(
+      '[data-slot="markdown-document-page"]'
+    ).length
+    expect(mountedPages).toBeGreaterThan(0)
+    expect(mountedPages).toBeLessThan(40)
+    expect(container.textContent).not.toContain("Section 1500")
   })
 
   it("switches between rendered and raw text modes and keeps zoom controls", async () => {

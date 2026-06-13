@@ -20,6 +20,8 @@ import { PageMarkdownViewer } from "@/components/viewers/page-markdown/page-mark
 const PAGES = ["# First page\n\nAlpha", "## Second page\n\nBeta"]
 const LARGE_PAGE_COUNT = 1000
 const MAX_VIRTUAL_PAGE_SLOTS = 14
+const PAGE_WIDTH = 768
+const FIT_PADDING = 32
 
 function rect(top: number, height = 500): DOMRect {
   return {
@@ -61,6 +63,47 @@ function pageSlotNumbers(container: ParentNode = document) {
       '[data-slot="page-markdown-page-slot"]'
     )
   ).map((slot) => Number(slot.dataset.pageNumber))
+}
+
+function pageWidth(container: ParentNode = document) {
+  const page = container.querySelector<HTMLElement>(
+    '[data-slot="page-markdown-page"]'
+  )
+  return page ? Number.parseFloat(page.style.width) : null
+}
+
+function fitScaleForWidth(width: number) {
+  return (width - FIT_PADDING) / PAGE_WIDTH
+}
+
+class TrackingResizeObserver {
+  static instances: TrackingResizeObserver[] = []
+  readonly callback: ResizeObserverCallback
+  readonly targets: Element[] = []
+
+  constructor(callback: ResizeObserverCallback) {
+    this.callback = callback
+    TrackingResizeObserver.instances.push(this)
+  }
+
+  observe(target: Element) {
+    this.targets.push(target)
+  }
+
+  disconnect() {}
+
+  emit(target: Element) {
+    this.callback(
+      [{ target } as unknown as ResizeObserverEntry],
+      this as unknown as ResizeObserver
+    )
+  }
+}
+
+function installTrackedResizeObserver() {
+  TrackingResizeObserver.instances = []
+  vi.stubGlobal("ResizeObserver", TrackingResizeObserver)
+  return TrackingResizeObserver
 }
 
 beforeEach(() => {
@@ -643,6 +686,130 @@ describe("PageMarkdownViewer", () => {
 
     fireEvent.click(screen.getByLabelText("Fit width"))
     expect(screen.getByText("100%")).toBeTruthy()
+  })
+
+  it("mounts pages at fitted scale without a 100% intermediate canvas", async () => {
+    installTrackedResizeObserver()
+    Object.defineProperty(HTMLElement.prototype, "clientWidth", {
+      configurable: true,
+      get: () => 638,
+    })
+
+    const { container } = render(<PageMarkdownViewer pages={PAGES} />)
+
+    expect(await screen.findByText("Page 1 of 2")).toBeTruthy()
+    expect(screen.getByText("79%")).toBeTruthy()
+    expect(screen.queryByText("100%")).toBeNull()
+    expect(pageWidth(container)).toBeCloseTo(PAGE_WIDTH * fitScaleForWidth(638), 1)
+  })
+
+  it("observes a stable viewport-width wrapper instead of the scaled canvas", async () => {
+    const ResizeObserverMock = installTrackedResizeObserver()
+    Object.defineProperty(HTMLElement.prototype, "clientWidth", {
+      configurable: true,
+      get: () => 638,
+    })
+
+    const { container } = render(<PageMarkdownViewer pages={PAGES} />)
+
+    expect(await screen.findByText("First page")).toBeTruthy()
+    const observedTargets = ResizeObserverMock.instances.flatMap(
+      (observer) => observer.targets
+    )
+    const pageCanvas = container.querySelector<HTMLElement>(
+      '[data-slot="page-markdown-page-slot"]'
+    )?.parentElement
+    expect(pageCanvas).toBeTruthy()
+    expect(observedTargets).not.toContain(pageCanvas)
+    expect(
+      observedTargets.some((target) => {
+        const element = target as HTMLElement
+        return (
+          element.getAttribute("class") === "w-full min-w-0" &&
+          Boolean(element.querySelector('[data-slot="page-markdown-page-slot"]'))
+        )
+      })
+    ).toBe(true)
+  })
+
+  it("keeps fit scale stable when page height measurements arrive", async () => {
+    const ResizeObserverMock = installTrackedResizeObserver()
+    Object.defineProperty(HTMLElement.prototype, "clientWidth", {
+      configurable: true,
+      get: () => 638,
+    })
+    let measuredPageHeight = 900
+    Object.defineProperty(HTMLElement.prototype, "offsetHeight", {
+      configurable: true,
+      get() {
+        return (this as HTMLElement).dataset.slot === "page-markdown-page"
+          ? measuredPageHeight
+          : 0
+      },
+    })
+
+    const { container } = render(<PageMarkdownViewer pages={PAGES} />)
+
+    expect(await screen.findByText("79%")).toBeTruthy()
+    const initialPageWidth = pageWidth(container)
+    expect(initialPageWidth).toBeCloseTo(PAGE_WIDTH * fitScaleForWidth(638), 1)
+
+    const pageElement = container.querySelector<HTMLElement>(
+      '[data-slot="page-markdown-page"]'
+    )
+    expect(pageElement).toBeTruthy()
+    const pageObserver = ResizeObserverMock.instances.find((observer) =>
+      observer.targets.includes(pageElement!)
+    )
+    expect(pageObserver).toBeTruthy()
+
+    measuredPageHeight = 1800
+    act(() => {
+      pageObserver!.emit(pageElement!)
+    })
+
+    expect(screen.getByText("79%")).toBeTruthy()
+    expect(pageWidth(container)).toBe(initialPageWidth)
+  })
+
+  it("updates fit scale from the stable width observer when the viewport resizes", async () => {
+    const ResizeObserverMock = installTrackedResizeObserver()
+    const measuredWidths = new WeakMap<Element, number>()
+    Object.defineProperty(HTMLElement.prototype, "clientWidth", {
+      configurable: true,
+      get() {
+        return measuredWidths.get(this) ?? 638
+      },
+    })
+
+    const { container } = render(<PageMarkdownViewer pages={PAGES} />)
+
+    expect(await screen.findByText("79%")).toBeTruthy()
+    const widthTarget = ResizeObserverMock.instances
+      .flatMap((observer) => observer.targets)
+      .find((target) => {
+        const element = target as HTMLElement
+        return (
+          element.getAttribute("class") === "w-full min-w-0" &&
+          Boolean(element.querySelector('[data-slot="page-markdown-page-slot"]'))
+        )
+      })
+    expect(widthTarget).toBeTruthy()
+
+    measuredWidths.set(widthTarget!, 720)
+    const widthObserver = ResizeObserverMock.instances.find((observer) =>
+      observer.targets.includes(widthTarget!)
+    )
+    expect(widthObserver).toBeTruthy()
+    act(() => {
+      widthObserver!.emit(widthTarget!)
+    })
+
+    expect(screen.getByText("90%")).toBeTruthy()
+    expect(pageWidth(container)).toBeCloseTo(
+      PAGE_WIDTH * fitScaleForWidth(720),
+      1
+    )
   })
 
   it("scrolls the markdown pane when the document pane reports a new page", async () => {

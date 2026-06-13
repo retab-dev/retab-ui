@@ -27,12 +27,13 @@ import {
   type ImageViewerHandle,
   type ImageViewerProps,
 } from "@/components/ui/image-viewer-types"
+import { ScrollArea } from "@/components/ui/scroll-area"
+
 import {
   createImageFrameLayout,
   getImageFrameLayout,
   useImageFrameVirtualization,
 } from "./image-viewer-virtualization"
-import { ScrollArea } from "@/components/ui/scroll-area"
 
 export function ImageViewerContent({
   resource,
@@ -189,12 +190,7 @@ export function ImageViewerContent({
                           rotation={rotation}
                           renderOverlay={
                             renderFrameOverlay
-                              ? ({
-                                  frameNumber,
-                                  frameRect,
-                                  scale,
-                                  rotation,
-                                }) =>
+                              ? ({ frameNumber, frameRect, scale, rotation }) =>
                                   renderFrameOverlay({
                                     frameNumber,
                                     width: frameRect.width,

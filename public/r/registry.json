@@ -2724,12 +2724,8 @@
       "name": "code-viewer",
       "type": "registry:ui",
       "title": "Code Viewer",
-      "description": "A fixed-line code and log viewer with line numbers, TanStack virtualization, source-line highlights, retry, zoom, and download.",
-      "dependencies": [
-        "@tanstack/react-virtual",
-        "lucide-react",
-        "prismjs@^1.30.0"
-      ],
+      "description": "A fixed-line code and log viewer with line numbers, custom virtualization, source-line highlights, retry, zoom, and download.",
+      "dependencies": ["lucide-react", "prismjs@^1.30.0"],
       "registryDependencies": [
         "button",
         "dropdown-menu",
@@ -2762,11 +2758,6 @@
           "path": "registry/new-york-v4/ui/code-viewer-content.tsx",
           "type": "registry:ui",
           "target": "@ui/code-viewer-content.tsx"
-        },
-        {
-          "path": "registry/new-york-v4/ui/code-viewer-line.tsx",
-          "type": "registry:ui",
-          "target": "@ui/code-viewer-line.tsx"
         },
         {
           "path": "registry/new-york-v4/ui/code-viewer-layout.ts",

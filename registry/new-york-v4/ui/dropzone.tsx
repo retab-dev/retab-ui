@@ -41,15 +41,6 @@ export type DropzoneTriggerGetterProps<T extends HTMLElement> =
 export type DropzoneButtonGetterProps = React.ComponentPropsWithRef<"button"> &
   Partial<DropzoneDataAttributes>
 
-export type DropzoneState = {
-  files: DropzoneFileItem[]
-  lastIntake: DropzoneIntake
-  fileRejections: DropzoneFileRejection[]
-  isDragging: boolean
-  isFocused: boolean
-  isDisabled: boolean
-}
-
 export type UseDropzoneProps = {
   accept?: string
   disabled?: boolean
@@ -62,7 +53,12 @@ export type UseDropzoneProps = {
   onIntake?: (intake: DropzoneIntake) => void
 }
 
-export type UseDropzoneReturn = DropzoneState & {
+export type UseDropzoneReturn = {
+  files: DropzoneFileItem[]
+  lastIntake: DropzoneIntake
+  isDragging: boolean
+  isFocused: boolean
+  isDisabled: boolean
   clearFiles: () => void
   openFileDialog: () => void
   removeFile: (fileId: string) => void
@@ -331,7 +327,6 @@ export function useDropzone({
   return {
     files: currentFiles,
     lastIntake,
-    fileRejections: lastIntake.fileRejections,
     isDragging,
     isFocused,
     isDisabled: disabled,

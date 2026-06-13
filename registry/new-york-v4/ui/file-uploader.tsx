@@ -77,8 +77,8 @@ export function FileUploader({
     onFilesChange,
     onIntake,
   })
-  const rejectionMessage = dropzone.fileRejections[0]
-    ? getDropzoneRejectionMessage(dropzone.fileRejections[0])
+  const rejectionMessage = dropzone.lastIntake.fileRejections[0]
+    ? getDropzoneRejectionMessage(dropzone.lastIntake.fileRejections[0])
     : null
   const titleText = typeof title === "string" ? title : "Upload files"
   const triggerProps = dropzone.getTriggerProps<HTMLDivElement>({

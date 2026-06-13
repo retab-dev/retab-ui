@@ -41,7 +41,7 @@ export function JsonTablePrimitiveCell({
   })
 
   return (
-    <div ref={cellRootRef} className="h-full w-full">
+    <div ref={cellRootRef} className="relative z-20 h-full w-full">
       <JsonTableDataCell
         fieldMetadata={fieldMetadata}
         value={effectiveValue}

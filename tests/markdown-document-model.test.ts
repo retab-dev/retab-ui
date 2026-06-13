@@ -57,6 +57,29 @@ describe("markdown document model", () => {
     expect(findMarkdownPageForLine(document.pages, 1)).toBe(firstPage)
   })
 
+  it("isolates hostile blocks into their own pages", () => {
+    const hostileCode = [
+      "Before",
+      "",
+      "```txt",
+      ...Array.from({ length: 401 }, (_, index) => `line ${index}`),
+      "```",
+      "",
+      "After",
+    ].join("\n")
+    const document = createMarkdownDocument(hostileCode)
+    const hostilePage = document.pages.find((page) =>
+      page.blocks.some((block) => block.isHostile)
+    )
+
+    expect(hostilePage).toBeTruthy()
+    expect(hostilePage?.blocks).toHaveLength(1)
+    expect(hostilePage?.blocks[0]).toMatchObject({
+      isHostile: true,
+      kind: "code",
+    })
+  })
+
   it("serializes Markdown tables as TSV for clipboard copy", () => {
     expect(
       serializeMarkdownTableForClipboard(

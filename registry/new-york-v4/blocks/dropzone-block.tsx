@@ -93,7 +93,7 @@ function NonButtonTrigger({ className }: { className?: string }) {
         </div>
       </div>
       <InlineFileRows files={dropzone.files} onRemove={dropzone.removeFile} />
-      <RejectionRows rejections={dropzone.fileRejections} />
+      <RejectionRows rejections={dropzone.lastIntake.fileRejections} />
     </section>
   )
 }
@@ -134,7 +134,7 @@ function NativeButtonQueue({ className }: { className?: string }) {
         </button>
       </div>
       <InlineFileRows files={dropzone.files} onRemove={dropzone.removeFile} />
-      <RejectionRows rejections={dropzone.fileRejections} />
+      <RejectionRows rejections={dropzone.lastIntake.fileRejections} />
     </section>
   )
 }
@@ -185,7 +185,7 @@ function ControlledQueue({ className }: { className?: string }) {
         </div>
       </div>
       <InlineFileRows files={files} onRemove={dropzone.removeFile} />
-      <RejectionRows rejections={dropzone.fileRejections} />
+      <RejectionRows rejections={dropzone.lastIntake.fileRejections} />
     </section>
   )
 }
@@ -285,7 +285,7 @@ function CustomThumbnailGrid({ className }: { className?: string }) {
           </div>
         )}
       </div>
-      <RejectionRows rejections={dropzone.fileRejections} />
+      <RejectionRows rejections={dropzone.lastIntake.fileRejections} />
     </section>
   )
 }
@@ -372,7 +372,7 @@ function MediaTranscriptQueue({ className }: { className?: string }) {
           </div>
         )}
       </div>
-      <RejectionRows rejections={dropzone.fileRejections} />
+      <RejectionRows rejections={dropzone.lastIntake.fileRejections} />
     </section>
   )
 }
@@ -445,7 +445,7 @@ function AvatarImageSlot({ className }: { className?: string }) {
           </div>
         )}
       </div>
-      <RejectionRows rejections={dropzone.fileRejections} />
+      <RejectionRows rejections={dropzone.lastIntake.fileRejections} />
     </section>
   )
 }
@@ -536,7 +536,7 @@ function SpreadsheetImportCard({ className }: { className?: string }) {
           </div>
         )}
       </div>
-      <RejectionRows rejections={dropzone.fileRejections} />
+      <RejectionRows rejections={dropzone.lastIntake.fileRejections} />
     </section>
   )
 }
@@ -623,7 +623,7 @@ function EvidenceTimeline({ className }: { className?: string }) {
           </div>
         )}
       </div>
-      <RejectionRows rejections={dropzone.fileRejections} />
+      <RejectionRows rejections={dropzone.lastIntake.fileRejections} />
     </section>
   )
 }
@@ -712,7 +712,7 @@ function ComparisonSlot({ label }: { label: string }) {
           Drop {label.toLowerCase()} document.
         </div>
       )}
-      <RejectionRows rejections={dropzone.fileRejections} />
+      <RejectionRows rejections={dropzone.lastIntake.fileRejections} />
     </div>
   )
 }
@@ -801,7 +801,7 @@ function IntakeRouter({ className }: { className?: string }) {
           onRemove={dropzone.removeFile}
         />
       </div>
-      <RejectionRows rejections={dropzone.fileRejections} />
+      <RejectionRows rejections={dropzone.lastIntake.fileRejections} />
     </section>
   )
 }
@@ -942,7 +942,7 @@ function PacketSlot({ label }: { label: string }) {
           Drop required file.
         </div>
       )}
-      <RejectionRows rejections={dropzone.fileRejections} />
+      <RejectionRows rejections={dropzone.lastIntake.fileRejections} />
     </div>
   )
 }
@@ -1014,7 +1014,7 @@ function PinboardDropSurface({ className }: { className?: string }) {
           </div>
         )}
       </div>
-      <RejectionRows rejections={dropzone.fileRejections} />
+      <RejectionRows rejections={dropzone.lastIntake.fileRejections} />
     </section>
   )
 }
