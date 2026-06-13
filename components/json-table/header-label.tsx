@@ -12,7 +12,7 @@ import {
 
 const headerLabelClass =
   "flex min-w-0 max-w-full flex-row items-center gap-2 overflow-hidden text-xs leading-none"
-const headerIconClass = "size-3 shrink-0"
+const headerIconClass = "size-3 shrink-0 !mx-0 overflow-visible"
 
 function renderHeaderIcon(type: string) {
   switch (type) {

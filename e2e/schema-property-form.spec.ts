@@ -47,6 +47,7 @@ test("schema builder keeps grips, enum chips, and description caret exact", asyn
 
   const enumChip = enumChipForInput(page.getByLabel("Option 1: USD"))
   await expect(enumChip).toBeVisible()
+  // These classes are the chip shell's explicit compact visual contract.
   await expect(enumChip).toHaveClass(/bg-muted/)
   await expect(enumChip).toHaveClass(/px-1/)
   await expect(enumChip).toHaveClass(/shadow-none/)
@@ -69,7 +70,7 @@ function rowGrip(row: Locator) {
 }
 
 function enumChipForInput(input: Locator) {
-  return input.locator('xpath=ancestor::div[contains(@class, "bg-muted")][1]')
+  return input.locator('xpath=ancestor::*[@data-slot="schema-chip"][1]')
 }
 
 async function clickInputTextOffset(

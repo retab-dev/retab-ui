@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs"
 import { join, relative } from "node:path"
+import ts from "typescript"
 import { describe, expect, it } from "vitest"
 
 const repoRoot = process.cwd()
@@ -109,6 +110,40 @@ function sourceFilesUnder(path: string): string[] {
     if (!/\.(ts|tsx)$/.test(entry)) return []
     return [relative(repoRoot, fullPath)]
   })
+}
+
+function functionFirstParameterTypeProperties({
+  file,
+  functionName,
+}: {
+  file: string
+  functionName: string
+}) {
+  const content = readFileSync(join(repoRoot, file), "utf8")
+  const sourceFile = ts.createSourceFile(
+    file,
+    content,
+    ts.ScriptTarget.Latest,
+    true,
+    file.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS
+  )
+  const propertyNames: string[] = []
+
+  ts.forEachChild(sourceFile, function visit(node: ts.Node) {
+    if (ts.isFunctionDeclaration(node) && node.name?.text === functionName) {
+      const typeNode = node.parameters[0]?.type
+      if (typeNode && ts.isTypeLiteralNode(typeNode)) {
+        for (const member of typeNode.members) {
+          if (ts.isPropertySignature(member) && member.name) {
+            propertyNames.push(member.name.getText(sourceFile))
+          }
+        }
+      }
+    }
+    ts.forEachChild(node, visit)
+  })
+
+  return propertyNames
 }
 
 const schemaEditorSourceFiles = sourceFilesUnder(
@@ -523,7 +558,7 @@ describe("schema builder architecture", () => {
       ),
       "utf8"
     )
-    const objectTemplateAccessoryContent = readFileSync(
+    const objectTemplateTrailingContent = readFileSync(
       join(repoRoot, "components/schema-editor/object-template-type-section.tsx"),
       "utf8"
     )
@@ -536,9 +571,11 @@ describe("schema builder architecture", () => {
     ).toBe(false)
     expect(primitiveContent.includes("object-template")).toBe(false)
     expect(primitiveContent.includes("React.lazy")).toBe(false)
-    expect(primitiveContent.includes("SchemaTypeMenuAccessory")).toBe(true)
-    expect(objectTemplateAccessoryContent.includes("React.lazy")).toBe(true)
-    expect(objectTemplateAccessoryContent.includes("object-template-menu")).toBe(
+    expect(primitiveContent.includes("SchemaTypeMenuTrailingContent")).toBe(true)
+    expect(primitiveContent.includes("trailingContent")).toBe(true)
+    expect(primitiveContent.includes("access" + "ory")).toBe(false)
+    expect(objectTemplateTrailingContent.includes("React.lazy")).toBe(true)
+    expect(objectTemplateTrailingContent.includes("object-template-menu")).toBe(
       true
     )
   })
@@ -569,6 +606,20 @@ describe("schema builder architecture", () => {
       ),
       "utf8"
     )
+    const detailsFieldContent = readFileSync(
+      join(
+        repoRoot,
+        "components/schema-editor/property-form/fields/property-schema-details-field.tsx"
+      ),
+      "utf8"
+    )
+    const objectPropertiesModelContent = readFileSync(
+      join(
+        repoRoot,
+        "components/schema-editor/property-form/fields/object-properties-model.ts"
+      ),
+      "utf8"
+    )
 
     expect(typeContent.includes("enumValues?: PropertyEnumValuesFieldModel")).toBe(
       true
@@ -581,6 +632,135 @@ describe("schema builder architecture", () => {
     )
     expect(shellContent.includes("PropertySchemaDetailsField")).toBe(true)
     expect(shellContent.includes("SchemaNode" + "Field")).toBe(false)
+    expect(detailsFieldContent.includes("createPropertySchemaDetails")).toBe(
+      false
+    )
+    expect(
+      objectPropertiesModelContent.includes("createPropertySchemaDetails")
+    ).toBe(true)
+  })
+
+  it("keeps property schema detail capabilities single-sourced", () => {
+    const duplicateTypeCapability = "canEdit" + "PropertyType"
+    const files = [
+      "components/schema-editor/property-form/types.ts",
+      "components/schema-editor/property-form/model/property-schema-details.ts",
+      "components/schema-editor/property-form/fields/object-properties-field.tsx",
+      "components/schema-editor/property-form/fields/property-schema-details-field.tsx",
+    ]
+
+    for (const file of files) {
+      const content = readFileSync(join(repoRoot, file), "utf8")
+      expect(content.includes(duplicateTypeCapability), file).toBe(false)
+    }
+
+    const typeContent = readFileSync(
+      join(repoRoot, "components/schema-editor/property-form/types.ts"),
+      "utf8"
+    )
+
+    expect(
+      typeContent.includes("PropertySchemaDetailsCapabilities")
+    ).toBe(true)
+    expect(
+      typeContent.includes("capabilities: PropertySchemaDetailsCapabilities")
+    ).toBe(true)
+  })
+
+  it("keeps type menu variants unified across adapters and primitives", () => {
+    const files = [
+      "components/schema-editor/property-form/fields/type-field.tsx",
+      "components/schema-editor/property-form/fields/object-properties-field.tsx",
+      "components/schema-editor/primitives/schema-type-menu.tsx",
+    ]
+
+    for (const file of files) {
+      const content = readFileSync(join(repoRoot, file), "utf8")
+      expect(content.includes(["variant=", '"compact"'].join("")), file).toBe(
+        false
+      )
+      expect(content.includes(["variant=", '"outline"'].join("")), file).toBe(
+        false
+      )
+    }
+
+    const typeFieldContent = readFileSync(
+      join(
+        repoRoot,
+        "components/schema-editor/property-form/fields/type-field.tsx"
+      ),
+      "utf8"
+    )
+
+    expect(typeFieldContent.includes('variant = "form"')).toBe(true)
+    expect(typeFieldContent.includes("variant={variant}")).toBe(true)
+  })
+
+  it("keeps TypeField editability pre-reduced by callers", () => {
+    expect(
+      functionFirstParameterTypeProperties({
+        file: "components/schema-editor/property-form/fields/type-field.tsx",
+        functionName: "TypeField",
+      })
+    ).toEqual([
+      "schemaNode",
+      "schemaContext",
+      "fieldPath",
+      "editable",
+      "variant",
+      "onChange",
+    ])
+
+    const typeFieldContent = readFileSync(
+      join(
+        repoRoot,
+        "components/schema-editor/property-form/fields/type-field.tsx"
+      ),
+      "utf8"
+    )
+
+    expect(typeFieldContent.includes("mode:")).toBe(false)
+    expect(typeFieldContent.includes("mode ===")).toBe(false)
+  })
+
+  it("keeps object row type editability in the object properties model", () => {
+    expect(
+      functionFirstParameterTypeProperties({
+        file: "components/schema-editor/property-form/fields/object-properties-field.tsx",
+        functionName: "ObjectPropertiesField",
+      })
+    ).toEqual([
+      "schemaNode",
+      "schemaContext",
+      "mode",
+      "capabilities",
+      "editable",
+      "onChange",
+      "renderPropertyDetails",
+    ])
+
+    const fieldContent = readFileSync(
+      join(
+        repoRoot,
+        "components/schema-editor/property-form/fields/object-properties-field.tsx"
+      ),
+      "utf8"
+    )
+    const modelContent = readFileSync(
+      join(
+        repoRoot,
+        "components/schema-editor/property-form/fields/object-properties-model.ts"
+      ),
+      "utf8"
+    )
+
+    expect(fieldContent.includes("capabilities.canEditType")).toBe(false)
+    expect(fieldContent.includes("row.type.editable")).toBe(true)
+    expect(fieldContent.includes("row.type.onChange")).toBe(true)
+    expect(modelContent.includes("type: {")).toBe(true)
+    expect(modelContent.includes("editable: editable && capabilities.canEditType")).toBe(
+      true
+    )
   })
 
   it("keeps property form validation and submit lifecycle outside the controller", () => {

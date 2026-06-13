@@ -44,7 +44,7 @@ afterEach(() => {
 })
 
 describe("MarkdownDocumentViewer", () => {
-  it("renders GFM Markdown as virtualized document pages", async () => {
+  it("renders GFM Markdown as a continuous virtualized document", async () => {
     const rows = Array.from(
       { length: 140 },
       (_, index) => `## Section ${index + 1}\n\nParagraph ${index + 1}`
@@ -68,7 +68,7 @@ describe("MarkdownDocumentViewer", () => {
       container.querySelector('[data-slot="markdown-document-virtual-canvas"]')
     ).toBeTruthy()
     expect(
-      container.querySelectorAll('[data-slot="markdown-document-page"]').length
+      container.querySelectorAll('[data-slot="markdown-document-chunk"]').length
     ).toBeLessThan(140)
   })
 
@@ -105,7 +105,7 @@ describe("MarkdownDocumentViewer", () => {
     })
   })
 
-  it("marks rendered pages ready after async Markdown content appears", async () => {
+  it("marks rendered chunks ready after async Markdown content appears", async () => {
     const { container } = render(
       <MarkdownDocumentViewer
         source={markdownSource("# Ready")}
@@ -299,11 +299,11 @@ describe("MarkdownDocumentViewer", () => {
     expect(
       await screen.findByRole("heading", { name: "Section 1" })
     ).toBeTruthy()
-    const mountedPages = container.querySelectorAll(
-      '[data-slot="markdown-document-page"]'
+    const mountedChunks = container.querySelectorAll(
+      '[data-slot="markdown-document-chunk"]'
     ).length
-    expect(mountedPages).toBeGreaterThan(0)
-    expect(mountedPages).toBeLessThan(40)
+    expect(mountedChunks).toBeGreaterThan(0)
+    expect(mountedChunks).toBeLessThan(40)
     expect(container.textContent).not.toContain("Section 1500")
   })
 
@@ -313,6 +313,7 @@ describe("MarkdownDocumentViewer", () => {
     )
 
     expect(await screen.findByRole("heading", { name: "Title" })).toBeTruthy()
+    expect(screen.queryByText(/Chunk \d+ of \d+/)).toBeNull()
     fireEvent.click(screen.getByLabelText("Copy markdown"))
     await waitFor(() => {
       expect(navigator.clipboard.writeText).toHaveBeenCalledWith(

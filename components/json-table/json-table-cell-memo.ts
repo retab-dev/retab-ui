@@ -24,7 +24,6 @@ function editableJsonTableCellMemoVariables(props: JsonTableCellProps) {
 
   return {
     ...rest,
-    primitiveActiveCellId: props.primitiveActiveCell?.cellId ?? null,
     isPrimitiveActiveCell,
     structuredEditSessionId,
     structuredEditSessionOverlayOpen,

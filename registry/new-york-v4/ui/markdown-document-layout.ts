@@ -4,16 +4,16 @@ import type {
   MarkdownDocument,
   MarkdownDocumentBlock,
   MarkdownDocumentBlockKind,
-  MarkdownDocumentPage,
+  MarkdownDocumentChunk,
 } from "./markdown-document-model"
 import { splitTextLines } from "./text-viewer-resource"
 
-export const MARKDOWN_DOCUMENT_PAGE_WIDTH = 768
-export const MARKDOWN_DOCUMENT_PAGE_PADDING_X = 36
-export const MARKDOWN_DOCUMENT_PAGE_PADDING_Y = 28
-export const MARKDOWN_DOCUMENT_TARGET_PAGE_HEIGHT = 980
-export const MARKDOWN_DOCUMENT_MIN_PAGE_HEIGHT = 220
-export const MARKDOWN_DOCUMENT_MAX_ESTIMATED_PAGE_HEIGHT = 2200
+export const MARKDOWN_DOCUMENT_COLUMN_WIDTH = 768
+export const MARKDOWN_DOCUMENT_CHUNK_PADDING_X = 36
+export const MARKDOWN_DOCUMENT_CHUNK_PADDING_Y = 28
+export const MARKDOWN_DOCUMENT_TARGET_CHUNK_HEIGHT = 980
+export const MARKDOWN_DOCUMENT_MIN_CHUNK_HEIGHT = 220
+export const MARKDOWN_DOCUMENT_MAX_ESTIMATED_CHUNK_HEIGHT = 2200
 
 const MARKDOWN_DOCUMENT_BODY_FONT =
   '14px ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
@@ -35,7 +35,7 @@ export type MarkdownDocumentLayoutStyle = {
 }
 
 export function createMarkdownLayoutStyle({
-  contentWidth = MARKDOWN_DOCUMENT_PAGE_WIDTH,
+  contentWidth = MARKDOWN_DOCUMENT_COLUMN_WIDTH,
   zoom = 1,
 }: {
   contentWidth?: number
@@ -48,8 +48,8 @@ export function createMarkdownLayoutStyle({
     codeFont: MARKDOWN_DOCUMENT_CODE_FONT,
     codeLineHeight: 22 * zoom,
     contentWidth: Math.max(1, contentWidth),
-    pagePaddingX: MARKDOWN_DOCUMENT_PAGE_PADDING_X * zoom,
-    pagePaddingY: MARKDOWN_DOCUMENT_PAGE_PADDING_Y * zoom,
+    pagePaddingX: MARKDOWN_DOCUMENT_CHUNK_PADDING_X * zoom,
+    pagePaddingY: MARKDOWN_DOCUMENT_CHUNK_PADDING_Y * zoom,
     styleVersion: MARKDOWN_DOCUMENT_STYLE_VERSION,
     zoom,
   }
@@ -108,13 +108,13 @@ export function estimateMarkdownBlockHeight(
   }
 }
 
-export function estimateMarkdownPageHeight(
-  page: MarkdownDocumentPage,
+export function estimateMarkdownChunkHeight(
+  chunk: MarkdownDocumentChunk,
   style: MarkdownDocumentLayoutStyle
 ) {
-  return clampMarkdownPageHeight(
+  return clampMarkdownChunkHeight(
     style.pagePaddingY * 2 +
-      page.blocks.reduce(
+      chunk.blocks.reduce(
         (height, block) =>
           height +
           estimateMarkdownBlockHeight(block, style) +
@@ -124,11 +124,11 @@ export function estimateMarkdownPageHeight(
   )
 }
 
-export function createMarkdownPageEstimates(
+export function createMarkdownChunkEstimates(
   document: MarkdownDocument,
   style: MarkdownDocumentLayoutStyle
 ) {
-  return document.pages.map((page) => estimateMarkdownPageHeight(page, style))
+  return document.chunks.map((chunk) => estimateMarkdownChunkHeight(chunk, style))
 }
 
 export function createEstimatedMarkdownBlock({
@@ -147,14 +147,14 @@ export function createEstimatedMarkdownBlock({
   }
 }
 
-export function pageChromeHeight() {
-  return MARKDOWN_DOCUMENT_PAGE_PADDING_Y * 2
+export function chunkChromeHeight() {
+  return MARKDOWN_DOCUMENT_CHUNK_PADDING_Y * 2
 }
 
-export function clampMarkdownPageHeight(height: number) {
+export function clampMarkdownChunkHeight(height: number) {
   return Math.min(
-    MARKDOWN_DOCUMENT_MAX_ESTIMATED_PAGE_HEIGHT,
-    Math.max(MARKDOWN_DOCUMENT_MIN_PAGE_HEIGHT, height)
+    MARKDOWN_DOCUMENT_MAX_ESTIMATED_CHUNK_HEIGHT,
+    Math.max(MARKDOWN_DOCUMENT_MIN_CHUNK_HEIGHT, height)
   )
 }
 

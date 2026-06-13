@@ -72,7 +72,7 @@ describe("markdown heading anchor navigation", () => {
   })
 
   it("navigates when a link targets a heading's real DOM anchor", async () => {
-    // Links live on page 1; the target heading sits far below so a successful
+    // Links live on chunk 1; the target heading sits far below so a successful
     // navigation produces a measurable scrollTop. The link points at the
     // heading's actual DOM id (#snake_case_thing) — which currently fails to
     // scroll because handleFragmentClick only matches the model slug.

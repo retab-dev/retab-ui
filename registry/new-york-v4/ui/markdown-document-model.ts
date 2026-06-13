@@ -1,10 +1,10 @@
 import { marked, type Token, type Tokens } from "marked"
 
 import {
-  clampMarkdownPageHeight,
+  clampMarkdownChunkHeight,
   createEstimatedMarkdownBlock,
-  MARKDOWN_DOCUMENT_TARGET_PAGE_HEIGHT,
-  pageChromeHeight,
+  MARKDOWN_DOCUMENT_TARGET_CHUNK_HEIGHT,
+  chunkChromeHeight,
 } from "./markdown-document-layout"
 import { splitTextLines } from "./text-viewer-resource"
 
@@ -32,14 +32,14 @@ export interface MarkdownDocumentBlock {
   markdown: string
 }
 
-export interface MarkdownDocumentPage {
+export interface MarkdownDocumentChunk {
   blocks: MarkdownDocumentBlock[]
   estimatedHeight: number
   id: string
   markdown: string
-  pageEndLine: number
-  pageNumber: number
-  pageStartLine: number
+  chunkEndLine: number
+  chunkIndex: number
+  chunkStartLine: number
   sourceText: string
   sourceLineByRenderedLine: ReadonlyMap<number, number>
 }
@@ -48,7 +48,7 @@ export interface MarkdownDocument {
   blocks: MarkdownDocumentBlock[]
   headingIdsByLine: Map<number, string>
   lineCount: number
-  pages: MarkdownDocumentPage[]
+  chunks: MarkdownDocumentChunk[]
   text: string
   wordCount: number
 }
@@ -70,7 +70,7 @@ export function createMarkdownDocument(text: string): MarkdownDocument {
   const normalizedText = text.length === 0 ? " " : text
   const headingRegistry: HeadingRegistry = new Map()
   const blocks = createMarkdownBlocks(normalizedText, headingRegistry)
-  const pages = createMarkdownPages(blocks, normalizedText)
+  const chunks = createMarkdownChunks(blocks, normalizedText)
   const headingIdsByLine = new Map<number, string>()
 
   for (const block of blocks) {
@@ -83,30 +83,30 @@ export function createMarkdownDocument(text: string): MarkdownDocument {
     blocks,
     headingIdsByLine,
     lineCount: splitTextLines(normalizedText).length,
-    pages,
+    chunks,
     text: normalizedText,
     wordCount: countWords(normalizedText),
   }
 }
 
-export function findMarkdownPageForLine(
-  pages: readonly MarkdownDocumentPage[],
+export function findMarkdownChunkForLine(
+  chunks: readonly MarkdownDocumentChunk[],
   sourceLine: number
 ) {
-  return pages.find(
-    (page) => sourceLine >= page.pageStartLine && sourceLine <= page.pageEndLine
+  return chunks.find(
+    (chunk) => sourceLine >= chunk.chunkStartLine && sourceLine <= chunk.chunkEndLine
   )
 }
 
-export function markdownPageIntersectsLineRange({
-  page,
+export function markdownChunkIntersectsLineRange({
+  chunk,
   range,
 }: {
-  page: MarkdownDocumentPage
+  chunk: MarkdownDocumentChunk
   range: MarkdownLineRange | null
 }) {
   if (!range) return false
-  return page.pageStartLine <= range.end && page.pageEndLine >= range.start
+  return chunk.chunkStartLine <= range.end && chunk.chunkEndLine >= range.start
 }
 
 export function serializeMarkdownTableForClipboard(markdown: string) {
@@ -206,39 +206,39 @@ function createMarkdownBlocks(
   return blocks
 }
 
-function createMarkdownPages(
+function createMarkdownChunks(
   blocks: readonly MarkdownDocumentBlock[],
   text: string
-): MarkdownDocumentPage[] {
-  const pages: MarkdownDocumentPage[] = []
+): MarkdownDocumentChunk[] {
+  const chunks: MarkdownDocumentChunk[] = []
   const sourceLineOffsets = createSourceLineOffsets(text)
   let currentBlocks: MarkdownDocumentBlock[] = []
-  let currentHeight = pageChromeHeight()
+  let currentHeight = chunkChromeHeight()
 
   const flush = () => {
     if (currentBlocks.length === 0) return
     const { markdown, sourceLineByRenderedLine } =
-      createMarkdownPageContent(currentBlocks)
-    const pageStartLine = currentBlocks[0]!.blockStartLine
-    const pageEndLine = currentBlocks[currentBlocks.length - 1]!.blockEndLine
-    pages.push({
+      createMarkdownChunkContent(currentBlocks)
+    const chunkStartLine = currentBlocks[0]!.blockStartLine
+    const chunkEndLine = currentBlocks[currentBlocks.length - 1]!.blockEndLine
+    chunks.push({
       blocks: currentBlocks,
-      estimatedHeight: clampMarkdownPageHeight(currentHeight),
-      id: `page-${pages.length + 1}-${pageStartLine}`,
+      estimatedHeight: clampMarkdownChunkHeight(currentHeight),
+      id: `chunk-${chunks.length + 1}-${chunkStartLine}`,
       markdown,
-      pageEndLine,
-      pageNumber: pages.length + 1,
-      pageStartLine,
+      chunkEndLine,
+      chunkIndex: chunks.length + 1,
+      chunkStartLine,
       sourceText: sourceTextForLineRange({
-        endLine: pageEndLine,
+        endLine: chunkEndLine,
         lineOffsets: sourceLineOffsets,
-        startLine: pageStartLine,
+        startLine: chunkStartLine,
         text,
       }),
       sourceLineByRenderedLine,
     })
     currentBlocks = []
-    currentHeight = pageChromeHeight()
+    currentHeight = chunkChromeHeight()
   }
 
   for (let index = 0; index < blocks.length; index++) {
@@ -258,12 +258,12 @@ function createMarkdownPages(
       block.kind === "heading" &&
       nextBlock &&
       currentHeight + blockHeight + nextBlock.estimatedHeight <=
-        MARKDOWN_DOCUMENT_TARGET_PAGE_HEIGHT
+        MARKDOWN_DOCUMENT_TARGET_CHUNK_HEIGHT
 
     if (
       currentBlocks.length > 0 &&
       !shouldKeepHeadingWithNext &&
-      currentHeight + blockHeight > MARKDOWN_DOCUMENT_TARGET_PAGE_HEIGHT
+      currentHeight + blockHeight > MARKDOWN_DOCUMENT_TARGET_CHUNK_HEIGHT
     ) {
       flush()
     }
@@ -272,7 +272,7 @@ function createMarkdownPages(
     currentHeight += blockHeight
 
     if (
-      currentHeight > MARKDOWN_DOCUMENT_TARGET_PAGE_HEIGHT &&
+      currentHeight > MARKDOWN_DOCUMENT_TARGET_CHUNK_HEIGHT &&
       isOversizedBlock(block)
     ) {
       flush()
@@ -280,10 +280,10 @@ function createMarkdownPages(
   }
 
   flush()
-  return pages
+  return chunks
 }
 
-function createMarkdownPageContent(blocks: readonly MarkdownDocumentBlock[]): {
+function createMarkdownChunkContent(blocks: readonly MarkdownDocumentBlock[]): {
   markdown: string
   sourceLineByRenderedLine: ReadonlyMap<number, number>
 } {
@@ -404,7 +404,7 @@ function isMathBlock(raw: string) {
 }
 
 function isOversizedBlock(block: MarkdownDocumentBlock) {
-  return block.estimatedHeight > MARKDOWN_DOCUMENT_TARGET_PAGE_HEIGHT * 0.8
+  return block.estimatedHeight > MARKDOWN_DOCUMENT_TARGET_CHUNK_HEIGHT * 0.8
 }
 
 function createHeadingId(text: string, registry: HeadingRegistry) {

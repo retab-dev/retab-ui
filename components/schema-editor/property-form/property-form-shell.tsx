@@ -49,8 +49,7 @@ export function PropertyFormShell({
               />
             </div>
             <TypeField
-              mode={fields.type.mode}
-              disabled={fields.type.disabled}
+              editable={fields.type.editable}
               schemaNode={fields.type.schemaNode}
               onChange={fields.type.onChange}
               schemaContext={fields.type.schemaContext}

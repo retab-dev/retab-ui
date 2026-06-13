@@ -413,6 +413,32 @@ describe("json table session and virtualization hardening", () => {
     )
   })
 
+  it("opens a primitive dropdown without rendering sibling cells", async () => {
+    const profiler = installProfiler()
+    const view = renderVirtualTable({
+      visiblePaths: ["vendor", "status", "amount"],
+    })
+
+    await waitFor(() => expect(editableCells(view.container)).toHaveLength(3))
+    clearProfilerEvents()
+
+    clickCell(view.container, "status")
+    const combobox = await view.findByRole("combobox")
+    await waitFor(() =>
+      expect(combobox.getAttribute("aria-expanded")).toBe("true")
+    )
+
+    expect(
+      profiler.renders.byInstance["EditableJsonTableCell:status"] ?? 0
+    ).toBeGreaterThan(0)
+    expect(
+      profiler.renders.byInstance["EditableJsonTableCell:vendor"] ?? 0
+    ).toBe(0)
+    expect(
+      profiler.renders.byInstance["EditableJsonTableCell:amount"] ?? 0
+    ).toBe(0)
+  })
+
   it("elevates only the active row while scalar input is focused and clears elevation on close", async () => {
     const view = renderVirtualTable({
       tableDocument: linesDocument(),

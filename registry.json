@@ -3570,10 +3570,31 @@
       ]
     },
     {
+      "name": "pretext-markdown-viewer",
+      "type": "registry:ui",
+      "title": "Pretext Markdown Viewer",
+      "description": "A continuous Markdown viewer forked from the Chenglou Pretext text viewer, with block virtualization and no visible page model.",
+      "registryDependencies": [
+        "text-viewer"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/pretext-markdown-viewer.tsx",
+          "type": "registry:ui",
+          "target": "@ui/pretext-markdown-viewer.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/pretext-markdown-viewer-content.tsx",
+          "type": "registry:ui",
+          "target": "@ui/pretext-markdown-viewer-content.tsx"
+        }
+      ]
+    },
+    {
       "name": "markdown-document-viewer",
       "type": "registry:ui",
       "title": "Markdown Document Viewer",
-      "description": "A page-based Markdown document viewer that renders visible pages with React Markdown/GFM and uses a custom virtualizer for large files.",
+      "description": "A continuous Markdown document viewer that renders visible chunks with React Markdown/GFM and uses a custom virtualizer for large files.",
       "dependencies": [
         "@chenglou/pretext",
         "katex",

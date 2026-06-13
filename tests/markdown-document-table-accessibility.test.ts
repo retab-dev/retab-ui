@@ -21,22 +21,22 @@ describe("markdown document table accessibility", () => {
       </table>
     `
 
-    patchMarkdownPageTables({ pageId: "page-3-12", root })
-    patchMarkdownPageTables({ pageId: "page-3-12", root })
+    patchMarkdownPageTables({ pageId: "chunk-3-12", root })
+    patchMarkdownPageTables({ pageId: "chunk-3-12", root })
 
-    expect(markdownTableHeaderId("page-3-12", 1, 0)).toBe(
-      "page-3-12-table-1-column-0"
+    expect(markdownTableHeaderId("chunk-3-12", 1, 0)).toBe(
+      "chunk-3-12-table-1-column-0"
     )
 
     const headers = root.querySelectorAll<HTMLTableCellElement>("th")
-    expect(headers[0]?.id).toBe("page-3-12-table-0-column-0")
+    expect(headers[0]?.id).toBe("chunk-3-12-table-0-column-0")
     expect(headers[0]?.scope).toBe("col")
-    expect(headers[1]?.id).toBe("page-3-12-table-0-column-1")
-    expect(headers[2]?.id).toBe("page-3-12-table-1-column-0")
+    expect(headers[1]?.id).toBe("chunk-3-12-table-0-column-1")
+    expect(headers[2]?.id).toBe("chunk-3-12-table-1-column-0")
 
     const cells = root.querySelectorAll<HTMLTableCellElement>("td")
-    expect(cells[0]?.headers).toBe("page-3-12-table-0-column-0")
-    expect(cells[1]?.headers).toBe("page-3-12-table-0-column-1")
-    expect(cells[2]?.headers).toBe("page-3-12-table-1-column-0")
+    expect(cells[0]?.headers).toBe("chunk-3-12-table-0-column-0")
+    expect(cells[1]?.headers).toBe("chunk-3-12-table-0-column-1")
+    expect(cells[2]?.headers).toBe("chunk-3-12-table-1-column-0")
   })
 })

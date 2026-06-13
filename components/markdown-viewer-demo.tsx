@@ -57,7 +57,7 @@ const MARKDOWN_VIEWER_DEMO_TEXT = [
   ...Array.from(
     { length: 24 },
     (_, index) =>
-      `## Section ${index + 1}\n\nThis section gives the demo enough length to prove that the viewer keeps a small virtual page window while preserving normal document reading flow.`
+      `## Section ${index + 1}\n\nThis section gives the demo enough length to prove that the viewer keeps a small virtual chunk window while preserving continuous document reading flow.`
   ),
 ].join("\n")
 

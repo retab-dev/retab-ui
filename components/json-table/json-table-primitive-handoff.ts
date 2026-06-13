@@ -20,7 +20,10 @@ export function finishPreviousPrimitiveEditor({
     activeCell: JsonTablePrimitiveActiveCell | null
   ) => void
 }) {
-  if (!primitiveActiveCell || primitiveActiveCell.cellId === currentCellId) {
+  if (primitiveActiveCell?.cellId === currentCellId) {
+    return
+  }
+  if (!primitiveActiveCell && !primitiveEditorHandleRef.current) {
     return
   }
 

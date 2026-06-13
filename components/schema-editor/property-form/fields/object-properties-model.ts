@@ -11,10 +11,19 @@ import {
   renameObjectProperty,
   replaceObjectProperty,
 } from "@/components/schema-editor/property-form/model/object-property-edits"
-import type { PropertyFormSchemaContext } from "@/components/schema-editor/property-form/types"
+import { createPropertySchemaDetails } from "@/components/schema-editor/property-form/model/property-schema-details"
+import type {
+  PropertyFormMode,
+  PropertyFormSchemaContext,
+  PropertySchemaDetailsCapabilities,
+  PropertySchemaDetailsModel,
+} from "@/components/schema-editor/property-form/types"
 import { validatePropertyFormName } from "@/components/schema-editor/property-form/validation"
 
 interface UseObjectPropertiesModelInput {
+  capabilities: PropertySchemaDetailsCapabilities
+  editable: boolean
+  mode: PropertyFormMode
   schemaNode: ExtendedJSONSchema7
   schemaContext: PropertyFormSchemaContext
   onChange: (schemaNode: ExtendedJSONSchema7) => void
@@ -22,9 +31,14 @@ interface UseObjectPropertiesModelInput {
 
 export interface ObjectPropertyRowModel {
   id: string
+  details: PropertySchemaDetailsModel
   name: string
   schemaNode: ExtendedJSONSchema7
   schemaContext: PropertyFormSchemaContext
+  type: {
+    editable: boolean
+    onChange: (schemaNode: ExtendedJSONSchema7) => void
+  }
   validation: {
     name: (value: string) => string | null
   }
@@ -43,6 +57,9 @@ export interface ObjectPropertyAddRowModel {
 }
 
 export function useObjectPropertiesModel({
+  capabilities,
+  editable,
+  mode,
   schemaNode,
   schemaContext,
   onChange,
@@ -120,6 +137,9 @@ export function useObjectPropertiesModel({
     if (!isSchemaNode(propertySchema)) return []
 
     const id = rowIdsByName[name] ?? `external-property-${name}`
+    const replaceSchemaNode = (nextSchemaNode: ExtendedJSONSchema7) => {
+      replacePropertySchemaNode(name, nextSchemaNode)
+    }
     const rowSchemaContext = {
       ...schemaContext,
       siblingNames: propertyNames,
@@ -139,9 +159,22 @@ export function useObjectPropertiesModel({
     return [
       {
         id,
+        details: createPropertySchemaDetails({
+          schemaNode: propertySchema,
+          schemaContext: rowSchemaContext,
+          mode,
+          capabilities,
+          disabled: !editable,
+          showTypeSelector: false,
+          onChange: replaceSchemaNode,
+        }),
         name,
         schemaNode: propertySchema,
         schemaContext: rowSchemaContext,
+        type: {
+          editable: editable && capabilities.canEditType,
+          onChange: replaceSchemaNode,
+        },
         validation: {
           name: (value: string) =>
             validatePropertyFormName({
@@ -173,9 +206,7 @@ export function useObjectPropertiesModel({
             removeRowId(name)
             onChange(removeObjectProperty({ schemaNode, propertyName: name }))
           },
-          replaceSchemaNode: (nextSchemaNode: ExtendedJSONSchema7) => {
-            replacePropertySchemaNode(name, nextSchemaNode)
-          },
+          replaceSchemaNode,
         },
       },
     ]

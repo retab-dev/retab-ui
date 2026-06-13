@@ -210,7 +210,7 @@ export function useDataCellActivationClickTail() {
   )
 }
 
-export function holdDataCellActivationThroughOpeningEvent(
+function holdDataCellActivationThroughOpeningEvent(
   activation: DataCellActivationSource | undefined,
   {
     releaseAfterMicrotask = false,

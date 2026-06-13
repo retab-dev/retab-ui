@@ -11,6 +11,8 @@ import { SchemaRowActions } from "@/components/schema-editor/primitives/schema-r
 import type {
   PropertyFormMode,
   PropertyFormSchemaContext,
+  PropertySchemaDetailsCapabilities,
+  PropertySchemaDetailsModel,
 } from "@/components/schema-editor/property-form/types"
 
 import { useObjectPropertiesModel } from "./object-properties-model"
@@ -20,26 +22,23 @@ export function ObjectPropertiesField({
   schemaNode,
   schemaContext,
   mode,
-  canEditPropertyType,
-  disabled,
+  capabilities,
+  editable,
   onChange,
-  renderPropertyEditor,
+  renderPropertyDetails,
 }: {
   schemaNode: ExtendedJSONSchema7
   schemaContext: PropertyFormSchemaContext
   mode: PropertyFormMode
-  canEditPropertyType: boolean
-  disabled: boolean
+  capabilities: PropertySchemaDetailsCapabilities
+  editable: boolean
   onChange: (schemaNode: ExtendedJSONSchema7) => void
-  renderPropertyEditor: (props: {
-    propertyName: string
-    propertySchema: ExtendedJSONSchema7
-    propertySchemaContext: PropertyFormSchemaContext
-    onPropertySchemaChange: (schemaNode: ExtendedJSONSchema7) => void
-    showTypeSelector: boolean
-  }) => React.ReactNode
+  renderPropertyDetails: (details: PropertySchemaDetailsModel) => React.ReactNode
 }) {
   const model = useObjectPropertiesModel({
+    capabilities,
+    editable,
+    mode,
     schemaNode,
     schemaContext,
     onChange,
@@ -50,12 +49,12 @@ export function ObjectPropertiesField({
       {model.rows.map((row) => (
         <div key={row.id} className="ml-4 border-l border-border">
           <SchemaFieldRow
-            grip={disabled ? "empty" : "static"}
+            grip={editable ? "static" : "empty"}
             name={
               <SchemaInlineName
                 ariaLabel={`Field name ${row.name}`}
                 value={row.name}
-                editable={!disabled}
+                editable={editable}
                 validate={row.validation.name}
                 onCommit={row.actions.rename}
               />
@@ -64,7 +63,7 @@ export function ObjectPropertiesField({
               <SchemaInlineDescription
                 ariaLabel={`Description for ${row.name}`}
                 value={row.schemaNode.description || ""}
-                editable={!disabled}
+                editable={editable}
                 onCommit={(description) => {
                   row.actions.replaceSchemaNode({
                     ...row.schemaNode,
@@ -76,7 +75,7 @@ export function ObjectPropertiesField({
             actions={
               <SchemaRowActions
                 canDelete={true}
-                editable={!disabled}
+                editable={editable}
                 deleteLabel={`Remove field ${row.name}`}
                 onDelete={row.actions.remove}
               />
@@ -86,26 +85,19 @@ export function ObjectPropertiesField({
                 schemaNode={row.schemaNode}
                 schemaContext={row.schemaContext}
                 fieldPath={row.schemaContext.fieldPath}
-                mode={disabled || !canEditPropertyType ? "readOnly" : mode}
-                disabled={disabled || !canEditPropertyType}
-                variant="compact"
-                onChange={row.actions.replaceSchemaNode}
+                editable={row.type.editable}
+                variant="row"
+                onChange={row.type.onChange}
               />
             }
           />
-          {renderPropertyEditor({
-            propertyName: row.name,
-            propertySchema: row.schemaNode,
-            propertySchemaContext: row.schemaContext,
-            onPropertySchemaChange: row.actions.replaceSchemaNode,
-            showTypeSelector: false,
-          })}
+          {renderPropertyDetails(row.details)}
         </div>
       ))}
 
       <SchemaAddRow
         className="ml-4 border-l border-border pl-4"
-        disabled={disabled}
+        disabled={!editable}
         error={model.addRow.error}
         inputLabel="New object field"
         placeholder="New property name"

@@ -53,6 +53,7 @@ export function SchemaChipList({
             return (
               <div
                 key={getKey(index)}
+                data-slot="schema-chip"
                 className="flex items-center gap-1 rounded-md border border-border bg-muted px-1 shadow-none"
               >
                 <InputPrimitive

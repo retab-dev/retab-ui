@@ -324,17 +324,24 @@ describe("json table and DataCell architecture", () => {
 
     expect(existsSync(join(repoRoot, modelFile)), modelFile).toBe(true)
     expect(modelContent.includes("createJsonTableDataCellModel")).toBe(true)
+    expect(modelContent.includes("JsonTableSelectDataCellModel")).toBe(true)
+    expect(modelContent.includes("JsonTableBooleanDataCellModel")).toBe(true)
+    expect(modelContent.includes("JsonTableNumberDataCellModel")).toBe(true)
+    expect(modelContent.includes("JsonTableTextDataCellModel")).toBe(true)
     expect(modelContent.includes("JSON_TABLE_NULL_SELECT_VALUE")).toBe(true)
     expect(modelContent.includes("enumCommitValue")).toBe(true)
-    expect(modelContent.includes("normalizeDataCellCommitValue")).toBe(true)
+    expect(modelContent.includes("jsonCommitValue")).toBe(true)
 
     for (const pattern of [
       "JSON_TABLE_NULL_SELECT_VALUE",
       "enumCommitValue",
       "enumDataCellValue",
-      "normalizeDataCellCommitValue",
+      "jsonCommitValue",
       "numberDataCellValue",
       "textDataCellValue",
+      "as DataCellProps",
+      "as never",
+      "selectOptions: []",
     ]) {
       expect(
         displayContent.includes(pattern),

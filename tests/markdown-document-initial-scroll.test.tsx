@@ -44,7 +44,7 @@ afterEach(() => {
 })
 
 describe("markdown document initial scroll", () => {
-  it("keeps the first page below the toolbar after page measurement", async () => {
+  it("keeps the continuous document below the toolbar after chunk measurement", async () => {
     render(
       <div style={{ height: 620 }}>
         <MarkdownDocumentViewer
@@ -59,14 +59,15 @@ describe("markdown document initial scroll", () => {
     const viewport = document.querySelector<HTMLElement>(
       '[data-slot="text-viewer"] [data-slot="scroll-area-viewport"]'
     )
-    const page = document.querySelector<HTMLElement>(
-      '[data-slot="markdown-document-page"]'
+    const chunk = document.querySelector<HTMLElement>(
+      '[data-slot="markdown-document-chunk"]'
     )
 
     expect(viewport).toBeTruthy()
-    expect(page).toBeTruthy()
-    await waitFor(() => expect(page?.style.minHeight).toBe("554px"))
+    expect(chunk).toBeTruthy()
+    await waitFor(() => expect(chunk?.style.minHeight).toBe(""))
 
     expect(viewport?.scrollTop).toBe(0)
+    expect(screen.queryByText(/Chunk \d+ of \d+/)).toBeNull()
   })
 })

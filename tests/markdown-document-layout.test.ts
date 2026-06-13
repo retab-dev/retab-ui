@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest"
 import {
   createEstimatedMarkdownBlock,
   createMarkdownLayoutStyle,
-  createMarkdownPageEstimates,
+  createMarkdownChunkEstimates,
   estimateMarkdownBlockHeight,
 } from "@/registry/new-york-v4/ui/markdown-document-layout"
 import { createMarkdownDocument } from "@/registry/new-york-v4/ui/markdown-document-model"
@@ -45,17 +45,17 @@ describe("markdown document layout", () => {
     expect(narrow).toBeGreaterThan(wide)
   })
 
-  it("clamps layout width and produces stable page estimates", () => {
+  it("clamps layout width and produces stable chunk estimates", () => {
     const document = createMarkdownDocument("# Title\n\nBody")
     const style = createMarkdownLayoutStyle({ contentWidth: 0, zoom: 1 })
 
     expect(style.contentWidth).toBe(1)
-    expect(createMarkdownPageEstimates(document, style)).toEqual(
-      createMarkdownPageEstimates(document, style)
+    expect(createMarkdownChunkEstimates(document, style)).toEqual(
+      createMarkdownChunkEstimates(document, style)
     )
   })
 
-  it("identifies hostile blocks for page isolation", () => {
+  it("identifies hostile blocks for chunk isolation", () => {
     expect(
       createEstimatedMarkdownBlock({
         kind: "code",

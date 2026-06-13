@@ -46,6 +46,7 @@ describe("markdown diagrams", () => {
     )
 
     expect(diagram).toBeTruthy()
+    expect(diagram?.textContent).not.toContain("Rendering diagram")
     await waitFor(() =>
       expect(diagram?.dataset.diagramState).toBe("ready")
     )

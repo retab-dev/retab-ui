@@ -9,19 +9,19 @@
 import { describe, expect, it } from "vitest"
 
 import {
-  clampMarkdownPageHeight,
+  clampMarkdownChunkHeight,
   createMarkdownLayoutStyle,
   estimateMarkdownBlockHeight,
   isHostileMarkdownBlock,
-  MARKDOWN_DOCUMENT_MAX_ESTIMATED_PAGE_HEIGHT,
-  MARKDOWN_DOCUMENT_MIN_PAGE_HEIGHT,
+  MARKDOWN_DOCUMENT_MAX_ESTIMATED_CHUNK_HEIGHT,
+  MARKDOWN_DOCUMENT_MIN_CHUNK_HEIGHT,
 } from "@/registry/new-york-v4/ui/markdown-document-layout"
 import {
   createMarkdownDocument,
-  findMarkdownPageForLine,
-  markdownPageIntersectsLineRange,
+  findMarkdownChunkForLine,
+  markdownChunkIntersectsLineRange,
   serializeMarkdownTableForClipboard,
-  type MarkdownDocumentPage,
+  type MarkdownDocumentChunk,
 } from "@/registry/new-york-v4/ui/markdown-document-model"
 import {
   createMarkdownVirtualGeometry,
@@ -51,19 +51,19 @@ const geometry = (heights: number[]) =>
     measuredHeights: new Map(),
   })
 
-// The page renderer feeds compact `page.markdown` to react-markdown, then maps
-// rendered line positions back to true source lines through the page model.
-const rendererSourceLines = (page: MarkdownDocumentPage) =>
-  page.blocks.map((block, index) => {
+// The chunk renderer feeds compact `chunk.markdown` to react-markdown, then maps
+// rendered line positions back to true source lines through the chunk model.
+const rendererSourceLines = (chunk: MarkdownDocumentChunk) =>
+  chunk.blocks.map((block, index) => {
     const prefix =
-      page.blocks
+      chunk.blocks
         .slice(0, index)
         .map((b) => b.markdown)
         .join("\n\n") + (index > 0 ? "\n\n" : "")
     const lineWithinPage = prefix.length === 0 ? 1 : prefix.split("\n").length
     return (
-      page.sourceLineByRenderedLine.get(lineWithinPage) ??
-      page.pageStartLine + lineWithinPage - 1
+      chunk.sourceLineByRenderedLine.get(lineWithinPage) ??
+      chunk.chunkStartLine + lineWithinPage - 1
     )
   })
 
@@ -169,25 +169,25 @@ describe("markdown model — source line attribution", () => {
 
   it("keeps rendered source lines aligned with true source lines (single-blank gaps)", () => {
     // When blocks are separated by exactly one blank line, the reconstructed
-    // page.markdown matches the original spacing, so attribution is exact.
+    // chunk.markdown matches the original spacing, so attribution is exact.
     const document = createMarkdownDocument(
       ["# First", "", "Paragraph", "", "## Second"].join("\n")
     )
-    const page = document.pages[0]!
-    expect(rendererSourceLines(page)).toEqual(
-      page.blocks.map((block) => block.blockStartLine)
+    const chunk = document.chunks[0]!
+    expect(rendererSourceLines(chunk)).toEqual(
+      chunk.blocks.map((block) => block.blockStartLine)
     )
   })
 
   it("keeps rendered source lines aligned with true source lines across wide gaps", () => {
-    // page.markdown stays compact for render performance, but the page model
+    // chunk.markdown stays compact for render performance, but the chunk model
     // preserves the original source line for each rendered markdown line.
     const document = createMarkdownDocument(
       ["# First", "", "", "", "Paragraph", "", "", "## Second"].join("\n")
     )
-    const page = document.pages[0]!
-    expect(rendererSourceLines(page)).toEqual(
-      page.blocks.map((block) => block.blockStartLine)
+    const chunk = document.chunks[0]!
+    expect(rendererSourceLines(chunk)).toEqual(
+      chunk.blocks.map((block) => block.blockStartLine)
     )
   })
 })
@@ -242,7 +242,7 @@ describe("markdown model — degenerate input", () => {
     for (const text of ["", " ", "\n\n\n", "\t"]) {
       const document = createMarkdownDocument(text)
       expect(document.blocks.length).toBeGreaterThan(0)
-      expect(document.pages.length).toBeGreaterThan(0)
+      expect(document.chunks.length).toBeGreaterThan(0)
       expect(document.lineCount).toBeGreaterThanOrEqual(1)
     }
   })
@@ -258,22 +258,22 @@ describe("markdown model — degenerate input", () => {
 // Pagination
 // ---------------------------------------------------------------------------
 
-describe("markdown model — pages", () => {
-  it("covers every source line with page bounds (incl. blank gaps)", () => {
+describe("markdown model — chunks", () => {
+  it("covers every source line with chunk bounds (incl. blank gaps)", () => {
     const document = createMarkdownDocument(
       Array.from({ length: 60 }, (_, i) => `## H${i}\n\nBody ${i}`).join("\n\n")
     )
-    expect(document.pages.length).toBeGreaterThan(1)
-    // First page starts at line 1; pages are monotonic and non-overlapping.
-    expect(document.pages[0]!.pageStartLine).toBe(1)
-    for (let i = 1; i < document.pages.length; i++) {
-      expect(document.pages[i]!.pageStartLine).toBeGreaterThan(
-        document.pages[i - 1]!.pageEndLine
+    expect(document.chunks.length).toBeGreaterThan(1)
+    // First chunk starts at line 1; chunks are monotonic and non-overlapping.
+    expect(document.chunks[0]!.chunkStartLine).toBe(1)
+    for (let i = 1; i < document.chunks.length; i++) {
+      expect(document.chunks[i]!.chunkStartLine).toBeGreaterThan(
+        document.chunks[i - 1]!.chunkEndLine
       )
     }
   })
 
-  it("isolates hostile blocks onto their own page", () => {
+  it("isolates hostile blocks onto their own chunk", () => {
     const document = createMarkdownDocument(
       [
         "Before",
@@ -285,22 +285,22 @@ describe("markdown model — pages", () => {
         "After",
       ].join("\n")
     )
-    const hostilePage = document.pages.find((page) =>
-      page.blocks.some((block) => block.isHostile)
+    const hostilePage = document.chunks.find((chunk) =>
+      chunk.blocks.some((block) => block.isHostile)
     )
     expect(hostilePage?.blocks).toHaveLength(1)
   })
 
-  it("finds the owning page for any in-range line", () => {
+  it("finds the owning chunk for any in-range line", () => {
     const document = createMarkdownDocument(
       Array.from({ length: 40 }, (_, i) => `Paragraph ${i}`).join("\n\n")
     )
-    const page = document.pages[0]!
-    expect(findMarkdownPageForLine(document.pages, page.pageStartLine)).toBe(
-      page
+    const chunk = document.chunks[0]!
+    expect(findMarkdownChunkForLine(document.chunks, chunk.chunkStartLine)).toBe(
+      chunk
     )
-    expect(findMarkdownPageForLine(document.pages, page.pageEndLine)).toBe(page)
-    expect(findMarkdownPageForLine(document.pages, 100000)).toBeUndefined()
+    expect(findMarkdownChunkForLine(document.chunks, chunk.chunkEndLine)).toBe(chunk)
+    expect(findMarkdownChunkForLine(document.chunks, 100000)).toBeUndefined()
   })
 })
 
@@ -309,27 +309,27 @@ describe("markdown model — pages", () => {
 // ---------------------------------------------------------------------------
 
 describe("markdown model — line-range intersection", () => {
-  const page = { pageStartLine: 5, pageEndLine: 10 } as MarkdownDocumentPage
+  const chunk = { chunkStartLine: 5, chunkEndLine: 10 } as MarkdownDocumentChunk
 
   it("returns false for a null range", () => {
-    expect(markdownPageIntersectsLineRange({ page, range: null })).toBe(false)
+    expect(markdownChunkIntersectsLineRange({ chunk, range: null })).toBe(false)
   })
 
   it("detects overlap inclusively at both edges", () => {
     expect(
-      markdownPageIntersectsLineRange({ page, range: { start: 1, end: 4 } })
+      markdownChunkIntersectsLineRange({ chunk, range: { start: 1, end: 4 } })
     ).toBe(false)
     expect(
-      markdownPageIntersectsLineRange({ page, range: { start: 1, end: 5 } })
+      markdownChunkIntersectsLineRange({ chunk, range: { start: 1, end: 5 } })
     ).toBe(true)
     expect(
-      markdownPageIntersectsLineRange({ page, range: { start: 10, end: 12 } })
+      markdownChunkIntersectsLineRange({ chunk, range: { start: 10, end: 12 } })
     ).toBe(true)
     expect(
-      markdownPageIntersectsLineRange({ page, range: { start: 11, end: 12 } })
+      markdownChunkIntersectsLineRange({ chunk, range: { start: 11, end: 12 } })
     ).toBe(false)
     expect(
-      markdownPageIntersectsLineRange({ page, range: { start: 1, end: 99 } })
+      markdownChunkIntersectsLineRange({ chunk, range: { start: 1, end: 99 } })
     ).toBe(true)
   })
 })
@@ -385,13 +385,13 @@ describe("markdown model — table clipboard", () => {
 // ---------------------------------------------------------------------------
 
 describe("markdown layout — estimates", () => {
-  it("clamps page heights to the configured envelope", () => {
-    expect(clampMarkdownPageHeight(-100)).toBe(
-      MARKDOWN_DOCUMENT_MIN_PAGE_HEIGHT
+  it("clamps chunk heights to the configured envelope", () => {
+    expect(clampMarkdownChunkHeight(-100)).toBe(
+      MARKDOWN_DOCUMENT_MIN_CHUNK_HEIGHT
     )
-    expect(clampMarkdownPageHeight(10)).toBe(MARKDOWN_DOCUMENT_MIN_PAGE_HEIGHT)
-    expect(clampMarkdownPageHeight(99999)).toBe(
-      MARKDOWN_DOCUMENT_MAX_ESTIMATED_PAGE_HEIGHT
+    expect(clampMarkdownChunkHeight(10)).toBe(MARKDOWN_DOCUMENT_MIN_CHUNK_HEIGHT)
+    expect(clampMarkdownChunkHeight(99999)).toBe(
+      MARKDOWN_DOCUMENT_MAX_ESTIMATED_CHUNK_HEIGHT
     )
   })
 
@@ -483,6 +483,16 @@ describe("markdown virtualizer", () => {
     expect(g.heights).toEqual([100, 555])
   })
 
+  it("lets measured heights shrink estimates for continuous flow", () => {
+    const g = createMarkdownVirtualGeometry({
+      count: 2,
+      estimateHeight: () => 300,
+      getKey: (index) => `key-${index}`,
+      measuredHeights: new Map([["key-0", 240], ["key-1", 360]]),
+    })
+    expect(g.heights).toEqual([240, 360])
+  })
+
   it("round-trips scroll anchors within an item", () => {
     const g = geometry([100, 200, 300])
     for (const top of [0, 50, 250, 599]) {
@@ -556,7 +566,7 @@ describe("markdown virtualizer", () => {
 // makes more likely.
 //
 // BUG 2 (FIXED during this session) — Source-line drift for rendered elements.
-// createMarkdownPages keeps page markdown compact, but now also carries a
+// createMarkdownChunks keeps chunk markdown compact, but now also carries a
 // rendered-line -> source-line map. The renderer uses that map for
 // data-source-line and highlight rings, so wide blank gaps no longer make later
 // blocks steal earlier lines.

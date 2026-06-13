@@ -17,7 +17,7 @@ import {
   MarkdownTableCopyButton,
 } from "./markdown-document-copy"
 import {
-  type MarkdownDocumentPage,
+  type MarkdownDocumentChunk,
   type MarkdownLineRange,
 } from "./markdown-document-model"
 import {
@@ -28,21 +28,21 @@ import {
 export function createMarkdownDocumentRenderers({
   headingIdsByLine,
   highlightRange,
-  page,
+  chunk,
 }: {
   headingIdsByLine: ReadonlyMap<number, string>
   highlightRange: MarkdownLineRange | null
-  page: MarkdownDocumentPage
+  chunk: MarkdownDocumentChunk
 }): Components {
   const sourceLineFromNode = (node: unknown) =>
-    absoluteSourceLine(page, relativeSourceLine(node))
+    absoluteSourceLine(chunk, relativeSourceLine(node))
   const highlightedClassName = (node: unknown) =>
     isSourceLineHighlighted(sourceLineFromNode(node), highlightRange)
       ? " bg-primary/12 ring-1 ring-primary/30 ring-inset"
       : ""
   const headingOrdinalBySlug = new Map<string, number>()
   const headingId = (node: unknown, children: React.ReactNode) =>
-    headingIdForNode({ headingIdsByLine, node, page }) ??
+    headingIdForNode({ headingIdsByLine, node, chunk }) ??
     nextHeadingId(extractReactText(children), headingOrdinalBySlug)
 
   return {
@@ -293,7 +293,7 @@ export function createMarkdownDocumentRenderers({
     table: ({ node, ...props }) => {
       const sourceLine = sourceLineFromNode(node)
       const tableMarkdown =
-        page.blocks.find(
+        chunk.blocks.find(
           (block) =>
             block.kind === "table" &&
             sourceLine >= block.blockStartLine &&
@@ -350,13 +350,20 @@ function MarkdownDiagram({
   source: string
   sourceLine: number
 }) {
+  const immediateState = React.useMemo(
+    () => renderBasicMermaidDiagram(source),
+    [source]
+  )
   const [state, setState] = React.useState<
     | { status: "failed"; message: string }
-    | { status: "loading" }
     | { status: "ready"; svg: string }
     | { status: "unavailable" }
-  >({ status: "loading" })
+  >(immediateState)
   const diagramId = React.useId().replace(/:/g, "")
+
+  React.useLayoutEffect(() => {
+    setState(immediateState)
+  }, [immediateState])
 
   React.useEffect(() => {
     let isMounted = true
@@ -392,9 +399,7 @@ function MarkdownDiagram({
         <pre className="overflow-x-auto p-3 font-mono text-[0.82em] leading-relaxed text-muted-foreground">
           {state.status === "failed"
             ? state.message
-            : state.status === "loading"
-              ? "Rendering diagram..."
-              : source}
+            : source}
         </pre>
       )}
     </figure>
@@ -592,14 +597,14 @@ function MarkdownImage({
 function headingIdForNode({
   headingIdsByLine,
   node,
-  page,
+  chunk,
 }: {
   headingIdsByLine: ReadonlyMap<number, string>
   node: unknown
-  page: MarkdownDocumentPage
+  chunk: MarkdownDocumentChunk
 }) {
   return headingIdsByLine.get(
-    absoluteSourceLine(page, relativeSourceLine(node))
+    absoluteSourceLine(chunk, relativeSourceLine(node))
   )
 }
 
@@ -626,10 +631,10 @@ function relativeSourceLine(node: unknown) {
   return Number.isFinite(line) && line ? line : 1
 }
 
-function absoluteSourceLine(page: MarkdownDocumentPage, relativeLine: number) {
+function absoluteSourceLine(chunk: MarkdownDocumentChunk, relativeLine: number) {
   return (
-    page.sourceLineByRenderedLine?.get(relativeLine) ??
-    page.pageStartLine + relativeLine - 1
+    chunk.sourceLineByRenderedLine?.get(relativeLine) ??
+    chunk.chunkStartLine + relativeLine - 1
   )
 }
 

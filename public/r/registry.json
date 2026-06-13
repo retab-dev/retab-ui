@@ -3573,7 +3573,7 @@
       "name": "markdown-document-viewer",
       "type": "registry:ui",
       "title": "Markdown Document Viewer",
-      "description": "A page-based Markdown document viewer that renders visible pages with React Markdown/GFM and uses a custom virtualizer for large files.",
+      "description": "A continuous Markdown document viewer that renders visible chunks with React Markdown/GFM and uses a custom virtualizer for large files.",
       "dependencies": [
         "@chenglou/pretext",
         "katex",

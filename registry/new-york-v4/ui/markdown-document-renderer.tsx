@@ -4,7 +4,7 @@ import * as React from "react"
 import { MarkdownHooks } from "react-markdown"
 
 import {
-  type MarkdownDocumentPage,
+  type MarkdownDocumentChunk,
   type MarkdownLineRange,
 } from "./markdown-document-model"
 import {
@@ -14,16 +14,16 @@ import {
 import { createMarkdownDocumentRenderers } from "./markdown-document-renderers"
 import { sanitizeMarkdownUrl } from "./markdown-document-url-policy"
 
-export function MarkdownDocumentPageRenderer({
+export function MarkdownDocumentChunkRenderer({
   headingIdsByLine,
   highlightRange,
   onContentReady,
-  page,
+  chunk,
 }: {
   headingIdsByLine: ReadonlyMap<number, string>
   highlightRange: MarkdownLineRange | null
   onContentReady?: () => void
-  page: MarkdownDocumentPage
+  chunk: MarkdownDocumentChunk
 }) {
   const contentRef = React.useRef<HTMLDivElement | null>(null)
   const hasReportedReadyRef = React.useRef(false)
@@ -35,14 +35,14 @@ export function MarkdownDocumentPageRenderer({
       createMarkdownDocumentRenderers({
         headingIdsByLine,
         highlightRange,
-        page,
+        chunk,
       }),
-    [headingIdsByLine, highlightRange, page]
+    [headingIdsByLine, highlightRange, chunk]
   )
   React.useLayoutEffect(() => {
     hasReportedReadyRef.current = false
     setRenderState("pending")
-  }, [page.markdown])
+  }, [chunk.markdown])
 
   React.useLayoutEffect(() => {
     const content = contentRef.current
@@ -74,7 +74,7 @@ export function MarkdownDocumentPageRenderer({
       window.clearTimeout(readyCheckTimeout)
       observer?.disconnect()
     }
-  }, [onContentReady, page.markdown])
+  }, [onContentReady, chunk.markdown])
 
   return (
     <div
@@ -89,7 +89,7 @@ export function MarkdownDocumentPageRenderer({
         components={components}
         urlTransform={sanitizeMarkdownUrl}
       >
-        {page.markdown}
+        {chunk.markdown}
       </MarkdownHooks>
     </div>
   )

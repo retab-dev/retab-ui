@@ -171,8 +171,7 @@ export function usePropertyFormController({
       type: {
         schemaNode: propertyDraft.schemaNode,
         schemaContext,
-        mode: capabilities.mode,
-        disabled: !capabilities.canEditType,
+        editable: capabilities.canEditType,
         onChange: (schemaNode: ExtendedJSONSchema7) =>
           updatePropertyDraft({
             type: "replacePropertySchemaNode",

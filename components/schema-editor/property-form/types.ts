@@ -86,8 +86,7 @@ export interface PropertyFormFooterModel {
 export interface PropertyTypeFieldModel {
   schemaNode: ExtendedJSONSchema7
   schemaContext: PropertyFormSchemaContext
-  mode: PropertyFormMode
-  disabled: boolean
+  editable: boolean
   onChange: (schemaNode: ExtendedJSONSchema7) => void
 }
 
@@ -98,19 +97,20 @@ export interface PropertyEnumValuesFieldModel {
   onChange: (values: JSONSchema7Type[]) => void
 }
 
+export type PropertySchemaDetailsCapabilities = Pick<
+  PropertyCapabilities,
+  | "canEditType"
+  | "canEditNestedObject"
+  | "canEditArrayItems"
+  | "canEditEnumValues"
+>
+
 export interface PropertyObjectPropertiesFieldModel {
   schemaNode: ExtendedJSONSchema7
   schemaContext: PropertyFormSchemaContext
   mode: PropertyFormMode
-  canEditPropertyType: boolean
-  capabilities: Pick<
-    PropertyCapabilities,
-    | "canEditType"
-    | "canEditNestedObject"
-    | "canEditArrayItems"
-    | "canEditEnumValues"
-  >
-  disabled: boolean
+  capabilities: PropertySchemaDetailsCapabilities
+  editable: boolean
   onChange: (schemaNode: ExtendedJSONSchema7) => void
 }
 

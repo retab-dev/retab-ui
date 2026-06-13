@@ -205,6 +205,14 @@ describe("property form models", () => {
 
     function Harness({ node }: { node: ExtendedJSONSchema7 }) {
       const nextModel = useObjectPropertiesModel({
+        capabilities: {
+          canEditType: true,
+          canEditNestedObject: true,
+          canEditArrayItems: true,
+          canEditEnumValues: true,
+        },
+        editable: true,
+        mode: "editable",
         schemaNode: node,
         schemaContext: {
           siblingNames: [],
@@ -266,6 +274,14 @@ describe("property form models", () => {
 
     function Harness({ node }: { node: ExtendedJSONSchema7 }) {
       const nextModel = useObjectPropertiesModel({
+        capabilities: {
+          canEditType: true,
+          canEditNestedObject: true,
+          canEditArrayItems: true,
+          canEditEnumValues: true,
+        },
+        editable: true,
+        mode: "editable",
         schemaNode: node,
         schemaContext: {
           siblingNames: [],
@@ -685,6 +701,37 @@ describe("PropertyForm", () => {
         title: "Status",
       },
     })
+  })
+
+  it("hides nested object rows in description-only mode", () => {
+    render(
+      <PropertyForm
+        propertyDraft={{
+          name: "address",
+          schemaNode: {
+            type: "object",
+            properties: {
+              city: { type: "string" },
+            },
+            required: ["city"],
+            description: "editable description",
+          },
+        }}
+        schemaContext={baseSchemaContext({
+          siblingNames: ["address"],
+          originalName: "address",
+        })}
+        mode="descriptionOnly"
+        onCommitPropertyDraft={() => {}}
+      />
+    )
+
+    expect(screen.getByLabelText("Description")).toHaveProperty(
+      "disabled",
+      false
+    )
+    expect(screen.queryByLabelText("Field name city")).toBeNull()
+    expect(screen.queryByLabelText("New object field")).toBeNull()
   })
 
   it("honors explicit capabilities by locking fields and hiding disabled nested editors", async () => {
@@ -2598,6 +2645,33 @@ describe("PropertyForm", () => {
 
     expect(screen.queryByRole("button", { name: "Save Changes" })).toBeNull()
     expect(screen.queryByRole("button", { name: "Delete Property" })).toBeNull()
+  })
+
+  it("hides nested object rows in read-only mode", () => {
+    render(
+      <PropertyForm
+        propertyDraft={{
+          name: "address",
+          schemaNode: {
+            type: "object",
+            properties: {
+              city: { type: "string" },
+            },
+            required: ["city"],
+          },
+        }}
+        schemaContext={baseSchemaContext({
+          siblingNames: ["address"],
+          originalName: "address",
+        })}
+        mode="readOnly"
+        onCommitPropertyDraft={() => {}}
+      />
+    )
+
+    expect(screen.queryByLabelText("Field name city")).toBeNull()
+    expect(screen.queryByLabelText("New object field")).toBeNull()
+    expect(screen.queryByRole("button", { name: "Save Changes" })).toBeNull()
   })
 
   it("does not commit from keyboard shortcuts in read-only mode", () => {

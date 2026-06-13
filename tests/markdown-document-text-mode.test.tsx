@@ -2,7 +2,7 @@
 
 // Bug hunt for the "Text" view tab fidelity.
 //
-// The Text tab renders each page's `page.markdown`, which createMarkdownPages
+// The Text tab renders each chunk's `chunk.markdown`, which createMarkdownChunks
 // rebuilds from parsed blocks (`blocks.map(b => b.markdown).join("\n\n")`):
 //   * YAML frontmatter is rewritten to a ```yaml fenced code block,
 //   * runs of blank lines collapse to a single blank line,
@@ -41,7 +41,7 @@ afterEach(() => {
 })
 
 describe("markdown Text view fidelity", () => {
-  it("shows a simple single-page document verbatim", async () => {
+  it("shows a simple single-chunk document verbatim", async () => {
     const source = "# Title\n\nBody paragraph"
     render(<MarkdownDocumentViewer source={markdownSource(source)} />)
     await screen.findByRole("heading", { name: "Title" })

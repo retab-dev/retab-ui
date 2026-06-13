@@ -45,24 +45,24 @@ export type SchemaTypeMenuSection =
       items: SchemaTypeMenuItem[]
     }
 
-export type SchemaTypeMenuAccessory = (context: {
+export type SchemaTypeMenuTrailingContent = (context: {
   editable: boolean
 }) => React.ReactNode
 
 interface SchemaTypeMenuProps {
-  accessory?: SchemaTypeMenuAccessory
   ariaLabel?: string
   editable: boolean
   sections: SchemaTypeMenuSection[]
+  trailingContent?: SchemaTypeMenuTrailingContent
   value: SchemaTypeMenuValue
   variant: SchemaTypeMenuVariant
 }
 
 export function SchemaTypeMenu({
-  accessory,
   ariaLabel,
   editable,
   sections,
+  trailingContent,
   value,
   variant,
 }: SchemaTypeMenuProps) {
@@ -150,7 +150,7 @@ export function SchemaTypeMenu({
             />
           ))
         })}
-        {accessory?.({ editable })}
+        {trailingContent?.({ editable })}
       </DropdownMenuContent>
     </DropdownMenu>
   )

@@ -8,7 +8,7 @@ import {
   topForMarkdownIndex,
 } from "@/registry/new-york-v4/ui/markdown-document-virtualizer"
 
-const getKey = (index: number) => `page-${index + 1}`
+const getKey = (index: number) => `chunk-${index + 1}`
 const estimateHeight = (index: number) => [100, 200, 300, 400][index] ?? 100
 
 describe("markdown document virtualizer", () => {
@@ -31,13 +31,13 @@ describe("markdown document virtualizer", () => {
     expect(window.items[0]).toMatchObject({
       bottom: 300,
       height: 200,
-      key: "page-2",
+      key: "chunk-2",
       top: 100,
     })
   })
 
   it("uses measured heights ahead of estimates", () => {
-    const measuredHeights = new Map([["page-2", 250]])
+    const measuredHeights = new Map([["chunk-2", 250]])
     const geometry = createMarkdownVirtualGeometry({
       count: 3,
       estimateHeight,
@@ -77,7 +77,7 @@ describe("markdown document virtualizer", () => {
       count: 4,
       estimateHeight,
       getKey,
-      measuredHeights: new Map([["page-1", 120]]),
+      measuredHeights: new Map([["chunk-1", 120]]),
     })
     expect(
       scrollTopForMarkdownAnchor({

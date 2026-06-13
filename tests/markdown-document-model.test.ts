@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import {
   createMarkdownDocument,
-  findMarkdownPageForLine,
+  findMarkdownChunkForLine,
   serializeMarkdownTableForClipboard,
 } from "@/registry/new-york-v4/ui/markdown-document-model"
 
@@ -22,7 +22,7 @@ describe("markdown document model", () => {
     expect(document.headingIdsByLine.get(7)).toBe("body-1")
   })
 
-  it("classifies callout and math blocks for page-height estimates", () => {
+  it("classifies callout and math blocks for chunk-height estimates", () => {
     const document = createMarkdownDocument(
       [
         ':::warning{title="Careful"}',
@@ -43,21 +43,21 @@ describe("markdown document model", () => {
     expect(document.blocks[1]?.estimatedHeight).toBeGreaterThanOrEqual(86)
   })
 
-  it("groups blocks into pages with explicit page line bounds", () => {
+  it("groups blocks into chunks with explicit chunk line bounds", () => {
     const markdown = Array.from(
       { length: 80 },
       (_, index) => `## Section ${index + 1}\n\nParagraph ${index + 1}`
     ).join("\n\n")
     const document = createMarkdownDocument(markdown)
-    const firstPage = document.pages[0]!
+    const firstPage = document.chunks[0]!
 
-    expect(document.pages.length).toBeGreaterThan(1)
-    expect(firstPage.pageStartLine).toBe(1)
-    expect(firstPage.pageEndLine).toBeGreaterThan(firstPage.pageStartLine)
-    expect(findMarkdownPageForLine(document.pages, 1)).toBe(firstPage)
+    expect(document.chunks.length).toBeGreaterThan(1)
+    expect(firstPage.chunkStartLine).toBe(1)
+    expect(firstPage.chunkEndLine).toBeGreaterThan(firstPage.chunkStartLine)
+    expect(findMarkdownChunkForLine(document.chunks, 1)).toBe(firstPage)
   })
 
-  it("isolates hostile blocks into their own pages", () => {
+  it("isolates hostile blocks into their own chunks", () => {
     const hostileCode = [
       "Before",
       "",
@@ -68,8 +68,8 @@ describe("markdown document model", () => {
       "After",
     ].join("\n")
     const document = createMarkdownDocument(hostileCode)
-    const hostilePage = document.pages.find((page) =>
-      page.blocks.some((block) => block.isHostile)
+    const hostilePage = document.chunks.find((chunk) =>
+      chunk.blocks.some((block) => block.isHostile)
     )
 
     expect(hostilePage).toBeTruthy()

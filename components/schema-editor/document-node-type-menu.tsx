@@ -3,7 +3,7 @@
 import type { JSONSchema7Definition } from "json-schema"
 
 import type { SchemaEditorType } from "@/components/schema-editor/document/type-operations"
-import { createObjectTemplateTypeAccessory } from "@/components/schema-editor/object-template-type-section"
+import { createObjectTemplateTypeTrailingContent } from "@/components/schema-editor/object-template-type-section"
 import {
   SchemaTypeMenu,
   type SchemaTypeMenuSection,
@@ -60,18 +60,18 @@ export function DocumentNodeTypeMenu({
     )
   }
 
-  const accessory = features.objectTemplates
-    ? createObjectTemplateTypeAccessory({
+  const trailingContent = features.objectTemplates
+    ? createObjectTemplateTypeTrailingContent({
         onSelectTemplate: onSelectObjectTemplate,
       })
     : undefined
 
   return (
     <SchemaTypeMenu
-      accessory={accessory}
       variant="row"
       editable={editable}
       sections={sections}
+      trailingContent={trailingContent}
       value={createTypeMenuValue({ type: localType, refName })}
     />
   )

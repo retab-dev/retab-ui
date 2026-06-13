@@ -49,8 +49,7 @@ export function createPropertySchemaDetails({
       ? {
           schemaNode,
           schemaContext,
-          mode,
-          disabled: disabled || !capabilities.canEditType,
+          editable: !disabled && capabilities.canEditType,
           onChange,
         }
       : undefined,
@@ -76,9 +75,8 @@ export function createPropertySchemaDetails({
             schemaNode: effectiveSchemaNode,
             schemaContext,
             mode,
-            canEditPropertyType: capabilities.canEditType,
             capabilities,
-            disabled: disabled || !capabilities.canEditNestedObject,
+            editable: !disabled && capabilities.canEditNestedObject,
             onChange: updateEffectiveSchemaNode,
           }
         : undefined,

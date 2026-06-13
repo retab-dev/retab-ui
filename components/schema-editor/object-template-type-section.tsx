@@ -2,7 +2,7 @@
 
 import * as React from "react"
 
-import type { SchemaTypeMenuAccessory } from "@/components/schema-editor/primitives/schema-type-menu"
+import type { SchemaTypeMenuTrailingContent } from "@/components/schema-editor/primitives/schema-type-menu"
 
 const LazyObjectTemplateSubmenu = React.lazy(() =>
   import(
@@ -12,12 +12,16 @@ const LazyObjectTemplateSubmenu = React.lazy(() =>
   }))
 )
 
-export function createObjectTemplateTypeAccessory({
+export function createObjectTemplateTypeTrailingContent({
   onSelectTemplate,
 }: {
   onSelectTemplate: (templateName: string) => void
-}): SchemaTypeMenuAccessory {
-  function ObjectTemplateTypeAccessory({ editable }: { editable: boolean }) {
+}): SchemaTypeMenuTrailingContent {
+  function ObjectTemplateTypeTrailingContent({
+    editable,
+  }: {
+    editable: boolean
+  }) {
     return (
       <React.Suspense fallback={null}>
         <LazyObjectTemplateSubmenu
@@ -30,6 +34,7 @@ export function createObjectTemplateTypeAccessory({
     )
   }
 
-  ObjectTemplateTypeAccessory.displayName = "ObjectTemplateTypeAccessory"
-  return ObjectTemplateTypeAccessory
+  ObjectTemplateTypeTrailingContent.displayName =
+    "ObjectTemplateTypeTrailingContent"
+  return ObjectTemplateTypeTrailingContent
 }
