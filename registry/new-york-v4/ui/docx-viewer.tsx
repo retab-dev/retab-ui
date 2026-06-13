@@ -22,7 +22,6 @@ export type {
   DocxTarget,
   DocxViewerHandle,
   DocxViewerProps,
-  DocxViewerSlots,
 } from "./docx-viewer-types"
 
 export const DocxViewer = React.forwardRef<DocxViewerHandle, DocxViewerProps>(
@@ -46,7 +45,6 @@ export const DocxResourceViewer = React.forwardRef<
       <DocxViewerFallback
         bare={props.bare}
         className={props.className}
-        slots={props.slots}
         toolbar={props.toolbar}
       />
     )
@@ -70,7 +68,6 @@ export const DocxResourceViewer = React.forwardRef<
           <DocxViewerFallback
             bare={props.bare}
             className={props.className}
-            slots={props.slots}
             toolbar={props.toolbar}
           />
         }

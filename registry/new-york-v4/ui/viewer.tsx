@@ -46,19 +46,6 @@ export function ViewerHeader({
   )
 }
 
-export function ViewerToolbar({
-  className,
-  ...props
-}: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="viewer-toolbar"
-      className={cn("flex-shrink-0 border-b bg-background", className)}
-      {...props}
-    />
-  )
-}
-
 export function ViewerBody({
   className,
   ...props
@@ -88,19 +75,6 @@ export function ViewerSidebar({
   )
 }
 
-export function ViewerRail({
-  className,
-  ...props
-}: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="viewer-rail"
-      className={cn("min-h-0 flex-shrink-0", className)}
-      {...props}
-    />
-  )
-}
-
 export function ViewerSurface({
   className,
   ...props
@@ -109,45 +83,6 @@ export function ViewerSurface({
     <div
       data-slot="viewer-surface"
       className={cn("flex min-h-0 min-w-0 flex-1 flex-col", className)}
-      {...props}
-    />
-  )
-}
-
-export function ViewerAside({
-  className,
-  ...props
-}: React.ComponentProps<"aside">) {
-  return (
-    <aside
-      data-slot="viewer-aside"
-      className={cn("min-h-0 flex-shrink-0", className)}
-      {...props}
-    />
-  )
-}
-
-export function ViewerFooter({
-  className,
-  ...props
-}: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="viewer-footer"
-      className={cn("flex-shrink-0 border-t bg-background", className)}
-      {...props}
-    />
-  )
-}
-
-export function ViewerOverlay({
-  className,
-  ...props
-}: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="viewer-overlay"
-      className={cn("pointer-events-none absolute inset-0 z-20", className)}
       {...props}
     />
   )

@@ -50,6 +50,13 @@ import {
   type ImageViewerHandle,
 } from "@/registry/new-york-v4/ui/image-viewer"
 import { ImageFrame } from "@/registry/new-york-v4/ui/image-viewer-frame"
+import {
+  ViewerBody,
+  ViewerHeader,
+  ViewerRoot,
+  ViewerSidebar,
+  ViewerSurface,
+} from "@/registry/new-york-v4/ui/viewer"
 import { ViewerErrorBoundary } from "@/registry/new-york-v4/ui/viewer-error"
 
 afterEach(() => {
@@ -2736,21 +2743,28 @@ describe("ImageViewer interactions", () => {
     expect(download.getAttribute("download")).toBe("second-name.png")
   })
 
-  it("renders document slots while allowing the toolbar to be hidden", async () => {
+  it("renders viewer chrome while allowing the toolbar to be hidden", async () => {
     stubImageLoading(bitmap(20, 20))
     stubObservableLayout({ isIntersecting: false })
 
     let view!: RenderResult
     await act(async () => {
       view = render(
-        <ImageViewer
-          source={imageUrlSource("/slotted.png")}
-          toolbar={false}
-          slots={{
-            top: <div>Image header</div>,
-            left: <nav>Image rail</nav>,
-          }}
-        />
+        <ViewerRoot>
+          <ViewerHeader>Image header</ViewerHeader>
+          <ViewerBody>
+            <ViewerSidebar>
+              <nav>Image rail</nav>
+            </ViewerSidebar>
+            <ViewerSurface>
+              <ImageViewer
+                source={imageUrlSource("/slotted.png")}
+                toolbar={false}
+                bare
+              />
+            </ViewerSurface>
+          </ViewerBody>
+        </ViewerRoot>
       )
     })
     const { container } = view
@@ -2759,10 +2773,10 @@ describe("ImageViewer interactions", () => {
     expect(screen.getByText("Image rail")).toBeTruthy()
     expect(screen.queryByLabelText("Zoom in")).toBeNull()
     expect(
-      container.querySelector('[data-slot="image-viewer-top"]')?.textContent
+      container.querySelector('[data-slot="viewer-header"]')?.textContent
     ).toBe("Image header")
     expect(
-      container.querySelector('[data-slot="image-viewer-left"]')?.textContent
+      container.querySelector('[data-slot="viewer-sidebar"]')?.textContent
     ).toBe("Image rail")
     expect(container.querySelector('[data-frame-number="1"]')).toBeTruthy()
   })

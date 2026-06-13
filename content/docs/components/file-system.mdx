@@ -51,6 +51,31 @@ export function Documents() {
 }
 ```
 
+## Viewer Composition
+
+`FileSystem` is the easy API. The same viewer can be composed from named parts
+when the surrounding workflow owns the frame:
+
+```tsx
+<FileSystemViewerProvider items={items} title="Workspace">
+  <ViewerRoot>
+    <FileSystemViewerHeader />
+    <ViewerBody>
+      <ViewerSidebar>
+        <FileSystemViewerTree />
+      </ViewerSidebar>
+      <ViewerSurface>
+        <FileSystemViewerSelectedFile />
+      </ViewerSurface>
+    </ViewerBody>
+  </ViewerRoot>
+</FileSystemViewerProvider>
+```
+
+The provider owns path, query, view, selection, lazy loading, and source
+resolution. The viewer primitives own layout. `FileSystemViewerSelectedFile`
+resolves the selected file to a `ViewerSource` and renders it with `FileViewer`.
+
 ## Useful Behaviors
 
 - Accepts a flat manifest and infers missing parent folders.

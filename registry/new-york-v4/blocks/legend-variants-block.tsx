@@ -5,7 +5,7 @@ import * as React from "react"
 import { type SegmentInteraction } from "@/lib/segment-interaction"
 import { segmentsPageCount, toSegments, type Segment } from "@/lib/segments"
 import { PageRibbon } from "@/components/ui/page-ribbon"
-import { PdfViewer, type PdfViewerSlots } from "@/components/ui/pdf-viewer"
+import { PdfViewer } from "@/components/ui/pdf-viewer"
 import {
   SegmentLegend,
   type SegmentLegendOrientation,
@@ -13,6 +13,12 @@ import {
   type SegmentLegendVariant,
 } from "@/components/ui/segment-legend"
 import { useSegmentInteraction } from "@/components/ui/use-segment-interaction"
+import {
+  ViewerBody,
+  ViewerRoot,
+  ViewerSidebar,
+  ViewerSurface,
+} from "@/components/ui/viewer"
 
 const PDF_URL = "/samples/an-image-is-worth-16x16-words.pdf"
 
@@ -154,19 +160,6 @@ function Cell({
     </div>
   )
 
-  // The legend's slot depends on the variant; the ribbon is always the left rail.
-  const slots: PdfViewerSlots = {
-    left: ribbon,
-    [preset.slot]:
-      preset.slot === "right" ? (
-        <div className="h-full overflow-auto border-l border-border bg-background px-2 py-4">
-          {legend}
-        </div>
-      ) : (
-        legend
-      ),
-  }
-
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col space-y-1.5">
       <div className="flex flex-wrap items-baseline gap-x-2">
@@ -187,19 +180,39 @@ function Cell({
           ref={panelRef}
           className="aspect-[21/29.7] h-full max-w-full overflow-hidden rounded-lg border bg-card"
         >
-          <PdfViewer
-            source={{
-              kind: "url",
-              url: PDF_URL,
-              fileName: "an-image-is-worth-16x16-words.pdf",
-            }}
-            bare
-            toolbar={false}
-            railToggle={false}
-            slots={slots}
-            onVisiblePageChange={setCurrentPage}
-            className="h-full"
-          />
+          <ViewerRoot bare className="h-full">
+            <ViewerBody>
+              <ViewerSidebar className="w-12">{ribbon}</ViewerSidebar>
+              <ViewerSurface className="relative">
+                {preset.slot === "top" ? legend : null}
+                <div className="relative flex min-h-0 flex-1">
+                  <div className="relative min-h-0 flex-1">
+                    <PdfViewer
+                      source={{
+                        kind: "url",
+                        url: PDF_URL,
+                        fileName: "an-image-is-worth-16x16-words.pdf",
+                      }}
+                      bare
+                      toolbar={false}
+                      onVisiblePageChange={setCurrentPage}
+                      className="h-full"
+                    />
+                    {preset.slot === "overlay" ? (
+                      <div className="pointer-events-none absolute inset-x-3 top-3 z-10 [&>*]:pointer-events-auto">
+                        {legend}
+                      </div>
+                    ) : null}
+                  </div>
+                  {preset.slot === "right" ? (
+                    <aside className="h-full w-40 overflow-auto border-l border-border bg-background px-2 py-4">
+                      {legend}
+                    </aside>
+                  ) : null}
+                </div>
+              </ViewerSurface>
+            </ViewerBody>
+          </ViewerRoot>
         </div>
       </div>
     </div>

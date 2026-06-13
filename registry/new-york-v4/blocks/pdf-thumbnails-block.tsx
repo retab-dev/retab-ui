@@ -2,12 +2,18 @@
 
 import * as React from "react"
 
-import { createViewerResource } from "@/lib/viewer-resource"
-import { PdfThumbnailSidebar } from "@/components/ui/pdf-thumbnail-sidebar"
 import {
-  PdfResourceViewer,
-  type PdfViewerHandle,
+  PdfViewerHeader,
+  PdfViewerPages,
+  PdfViewerProvider,
+  PdfViewerThumbnails,
 } from "@/components/ui/pdf-viewer"
+import {
+  ViewerBody,
+  ViewerRoot,
+  ViewerSidebar,
+  ViewerSurface,
+} from "@/components/ui/viewer"
 
 const PDF_URL = "/samples/nvidia-10k-fy2024.pdf"
 const PDF_SOURCE = {
@@ -19,40 +25,26 @@ const PDF_SOURCE = {
 /**
  * PDF viewer with a page-thumbnail sidebar.
  *
- * The thumbnail rail goes in the viewer's left slot; the viewer's built-in
- * toolbar toggle (`railToggle`) collapses/expands it. The viewer reports the
- * visible page (`onVisiblePageChange`) so the active thumbnail highlights, and
- * clicking a thumbnail scrolls the document to that page. Thumbnails render
- * lazily as they scroll into view, so this works on large documents.
+ * The thumbnail rail is explicit viewer structure: a ViewerSidebar beside the
+ * PDF rendering surface. The viewer reports the visible page so the active
+ * thumbnail highlights, and clicking a thumbnail scrolls the document.
  */
 export function PdfThumbnailsBlock() {
-  const [currentPage, setCurrentPage] = React.useState(1)
-  const viewerRef = React.useRef<PdfViewerHandle>(null)
-  const resource = React.useMemo(() => createViewerResource(PDF_SOURCE), [])
-
-  const jumpToPage = React.useCallback((page: number) => {
-    viewerRef.current?.scrollToPage(page)
-  }, [])
-
   return (
     <div className="h-full min-h-[680px] bg-background">
-      <PdfResourceViewer
-        ref={viewerRef}
-        resource={resource}
-        bare
-        onVisiblePageChange={setCurrentPage}
-        slots={{
-          left: (
-            <PdfThumbnailSidebar
-              resource={resource}
-              currentPage={currentPage}
-              onSelectPage={jumpToPage}
-              className="w-36 border-r"
-            />
-          ),
-        }}
-        className="h-full"
-      />
+      <PdfViewerProvider source={PDF_SOURCE}>
+        <ViewerRoot bare className="h-full">
+          <PdfViewerHeader />
+          <ViewerBody>
+            <ViewerSidebar className="w-36 border-r">
+              <PdfViewerThumbnails />
+            </ViewerSidebar>
+            <ViewerSurface>
+              <PdfViewerPages bare className="h-full" />
+            </ViewerSurface>
+          </ViewerBody>
+        </ViewerRoot>
+      </PdfViewerProvider>
     </div>
   )
 }

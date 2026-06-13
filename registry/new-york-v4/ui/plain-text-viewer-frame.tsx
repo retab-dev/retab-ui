@@ -24,9 +24,9 @@ import { ViewerErrorBoundary } from "./viewer-error"
 type TextResourceSource = UrlViewerSource | BlobViewerSource | TextSource
 type ClientFallbackPolicy = "always" | "non-inline-source"
 
-export interface PlainTextViewerShellProps<
+export interface PlainTextViewerFrameProps<
   THandle,
-  TProps extends PlainTextViewerShellPublicProps,
+  TProps extends PlainTextViewerFramePublicProps,
 > {
   props: TProps
   forwardedRef: React.ForwardedRef<THandle>
@@ -41,7 +41,7 @@ export interface PlainTextViewerShellProps<
   >
 }
 
-export interface PlainTextViewerShellPublicProps extends TextViewerBounds {
+export interface PlainTextViewerFramePublicProps extends TextViewerBounds {
   source: TextResourceSource
   className?: string
   toolbar?: boolean
@@ -54,16 +54,16 @@ export interface PlainTextViewerFallbackProps {
   bare?: boolean
 }
 
-export function PlainTextViewerShell<
+export function PlainTextViewerFrame<
   THandle,
-  TProps extends PlainTextViewerShellPublicProps,
+  TProps extends PlainTextViewerFramePublicProps,
 >({
   props,
   forwardedRef,
   clientFallbackPolicy,
   Fallback,
   Content,
-}: PlainTextViewerShellProps<THandle, TProps>) {
+}: PlainTextViewerFrameProps<THandle, TProps>) {
   const [retryState, setRetryState] = React.useState({
     contentKey: "",
     version: 0,
@@ -134,7 +134,7 @@ function plainTextViewerDownloadAction(resource: ViewerResource) {
 
 function plainTextViewerResetKey(
   resource: ViewerResource,
-  props: Pick<PlainTextViewerShellPublicProps, "maxBytes" | "maxLines">,
+  props: Pick<PlainTextViewerFramePublicProps, "maxBytes" | "maxLines">,
   retryVersion: number
 ): string {
   const [maxBytesKey, maxLinesKey] = plainTextViewerBoundsResetKey(props)
@@ -152,14 +152,14 @@ function plainTextViewerContentResetKey(
 
 function plainTextViewerContentBaseKey(
   content: ViewerContentIdentity,
-  props: Pick<PlainTextViewerShellPublicProps, "maxBytes" | "maxLines">
+  props: Pick<PlainTextViewerFramePublicProps, "maxBytes" | "maxLines">
 ): string {
   const [maxBytesKey, maxLinesKey] = plainTextViewerBoundsResetKey(props)
   return [content.key, maxBytesKey, maxLinesKey].join("\u0000")
 }
 
 function plainTextViewerBoundsResetKey(
-  props: Pick<PlainTextViewerShellPublicProps, "maxBytes" | "maxLines">
+  props: Pick<PlainTextViewerFramePublicProps, "maxBytes" | "maxLines">
 ) {
   return [
     plainTextViewerBoundResetKeyPart(props.maxBytes, DEFAULT_MAX_BYTES),

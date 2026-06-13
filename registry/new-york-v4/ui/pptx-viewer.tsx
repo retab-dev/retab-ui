@@ -32,11 +32,7 @@ import { usePptxZoom } from "./pptx-viewer-zoom"
 import { useIsClient } from "./use-is-client"
 import { ViewerErrorBoundary } from "./viewer-error"
 
-export type {
-  PptxDocumentSource,
-  PptxViewerProps,
-  PptxViewerSlots,
-} from "./pptx-viewer-types"
+export type { PptxDocumentSource, PptxViewerProps } from "./pptx-viewer-types"
 export type {
   PptxSourceLoadTiming,
   PptxSlideRenderTiming,
@@ -128,14 +124,8 @@ function PptxViewerContent({
   onVisibleSlideChange,
   onScrollProgressChange,
   bare = false,
-  slots,
   eager = true,
 }: Omit<PptxViewerProps, "source"> & { resource: ViewerResource }) {
-  const topSlot = slots?.top
-  const bottomSlot = slots?.bottom
-  const leftRailSlot = slots?.left
-  const rightRailSlot = slots?.right
-  const overlaySlot = slots?.overlay
   const source = useRetainedPptxSource(resource.content)
   const downloadAction = React.useMemo(
     () => resource.originalDownload,
@@ -200,13 +190,7 @@ function PptxViewerContent({
       ) : null}
 
       <div className="flex min-h-0 flex-1">
-        {leftRailSlot ? (
-          <div data-slot="pptx-viewer-left" className="flex-shrink-0">
-            {leftRailSlot}
-          </div>
-        ) : null}
         <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
-          {topSlot ? <div data-slot="pptx-viewer-top">{topSlot}</div> : null}
           <div className="relative flex min-h-0 flex-1 flex-col">
             <PptxSlideScroller
               source={source}
@@ -221,24 +205,8 @@ function PptxViewerContent({
               viewportRef={scrollViewportRef}
               onScroll={handleViewportScroll}
             />
-            {overlaySlot ? (
-              <div
-                data-slot="pptx-viewer-overlay"
-                className="pointer-events-none absolute inset-0 z-10 [&>*]:pointer-events-auto"
-              >
-                {overlaySlot}
-              </div>
-            ) : null}
           </div>
-          {bottomSlot ? (
-            <div data-slot="pptx-viewer-bottom">{bottomSlot}</div>
-          ) : null}
         </div>
-        {rightRailSlot ? (
-          <div data-slot="pptx-viewer-right" className="flex-shrink-0">
-            {rightRailSlot}
-          </div>
-        ) : null}
       </div>
     </div>
   )

@@ -23,8 +23,6 @@ import {
 } from "./file-viewer-core"
 import { CsvDocViewer } from "./file-viewer-csv-viewer"
 import { HtmlDocViewer } from "./file-viewer-html-viewer"
-import { ViewerShell } from "./viewer-shell"
-import type { ViewerSlots } from "./viewer-slots"
 
 export { type FileCategory, type FileViewerProps } from "./file-viewer-core"
 
@@ -149,7 +147,6 @@ function FileViewerRoute({
   className,
   bare = false,
   isolateStyles = false,
-  slots,
   descriptorSignal,
   resource,
 }: FileViewerProps & {
@@ -159,60 +156,42 @@ function FileViewerRoute({
 }) {
   const { category } = descriptor
   const directLoadUrl = resource.content.directUrl ?? undefined
-  const standaloneClassName = slots ? "h-full" : className
-  const standaloneBare = slots ? true : bare
   if (descriptor.source.kind === "text") {
     if (category === "csv") {
-      return renderWithViewerShellSlots(
+      return (
         <CsvDocViewer
           resource={resource}
-          className={standaloneClassName}
-          bare={standaloneBare}
+          className={className}
+          bare={bare}
           isolateStyles={isolateStyles}
-        />,
-        { bare, className, slots }
+        />
       )
     }
     if (category === "markdown") {
-      return renderWithViewerShellSlots(
+      return (
         <MarkdownDocumentViewer
           source={resource.descriptor.source}
-          className={standaloneClassName}
-          bare={standaloneBare}
+          className={className}
+          bare={bare}
           mode="markdown"
-        />,
-        { bare, className, slots }
+        />
       )
     }
     if (category === "html") {
-      return renderWithViewerShellSlots(
+      return (
         <HtmlDocViewer
           resource={resource}
-          className={standaloneClassName}
-          bare={standaloneBare}
+          className={className}
+          bare={bare}
           descriptorSignal={descriptorSignal}
-        />,
-        { bare, className, slots }
+        />
       )
     }
     if (category === "text") {
-      return renderWithViewerShellSlots(
-        renderTextViewer({
-          descriptor,
-          resource,
-          className: standaloneClassName,
-          bare: standaloneBare,
-        }),
-        { bare, className, slots }
-      )
+      return renderTextViewer({ descriptor, resource, className, bare })
     }
-    return renderWithViewerShellSlots(
-      <UnsupportedCard
-        resource={resource}
-        className={standaloneClassName}
-        bare={standaloneBare}
-      />,
-      { bare, className, slots }
+    return (
+      <UnsupportedCard resource={resource} className={className} bare={bare} />
     )
   }
 
@@ -223,7 +202,6 @@ function FileViewerRoute({
           resource={resource}
           className={className}
           bare={bare}
-          slots={slots}
         />
       )
     }
@@ -233,7 +211,6 @@ function FileViewerRoute({
           resource={resource}
           className={className}
           bare={bare}
-          slots={slots}
         />
       )
     }
@@ -243,30 +220,27 @@ function FileViewerRoute({
           resource={resource}
           className={className}
           bare={bare}
-          slots={slots}
         />
       )
     }
     if (category === "csv" && descriptor.source.kind === "blob") {
-      return renderWithViewerShellSlots(
+      return (
         <CsvDocViewer
           resource={resource}
-          className={standaloneClassName}
-          bare={standaloneBare}
+          className={className}
+          bare={bare}
           isolateStyles={isolateStyles}
-        />,
-        { bare, className, slots }
+        />
       )
     }
     if (category === "html" && descriptor.source.kind === "blob") {
-      return renderWithViewerShellSlots(
+      return (
         <HtmlDocViewer
           resource={resource}
-          className={standaloneClassName}
-          bare={standaloneBare}
+          className={className}
+          bare={bare}
           descriptorSignal={descriptorSignal}
-        />,
-        { bare, className, slots }
+        />
       )
     }
     if (category === "docx" && descriptor.source.kind === "blob") {
@@ -275,7 +249,6 @@ function FileViewerRoute({
           resource={resource}
           className={className}
           bare={bare}
-          slots={slots}
         />
       )
     }
@@ -286,17 +259,11 @@ function FileViewerRoute({
           className={className}
           bare={bare}
           isolateStyles={isolateStyles}
-          slots={slots}
         />
       )
     }
-    return renderWithViewerShellSlots(
-      <UnsupportedCard
-        resource={resource}
-        className={standaloneClassName}
-        bare={standaloneBare}
-      />,
-      { bare, className, slots }
+    return (
+      <UnsupportedCard resource={resource} className={className} bare={bare} />
     )
   }
 
@@ -307,7 +274,6 @@ function FileViewerRoute({
           resource={resource}
           className={className}
           bare={bare}
-          slots={slots}
         />
       )
     case "docx":
@@ -316,7 +282,6 @@ function FileViewerRoute({
           resource={resource}
           className={className}
           bare={bare}
-          slots={slots}
         />
       )
     case "image":
@@ -325,7 +290,6 @@ function FileViewerRoute({
           resource={resource}
           className={className}
           bare={bare}
-          slots={slots}
         />
       )
     case "pptx":
@@ -334,7 +298,6 @@ function FileViewerRoute({
           resource={resource}
           className={className}
           bare={bare}
-          slots={slots}
         />
       )
     case "xlsx":
@@ -344,84 +307,46 @@ function FileViewerRoute({
           className={className}
           bare={bare}
           isolateStyles={isolateStyles}
-          slots={slots}
         />
       )
     case "csv":
-      return renderWithViewerShellSlots(
+      return (
         <CsvDocViewer
           resource={resource}
-          className={standaloneClassName}
-          bare={standaloneBare}
+          className={className}
+          bare={bare}
           isolateStyles={isolateStyles}
-        />,
-        { bare, className, slots }
+        />
       )
     case "markdown":
-      return renderWithViewerShellSlots(
+      return (
         <MarkdownDocumentViewer
           source={resource.descriptor.source}
-          className={standaloneClassName}
-          bare={standaloneBare}
+          className={className}
+          bare={bare}
           mode="markdown"
-        />,
-        { bare, className, slots }
+        />
       )
     case "html":
-      return renderWithViewerShellSlots(
+      return (
         <HtmlDocViewer
           resource={resource}
-          className={standaloneClassName}
-          bare={standaloneBare}
+          className={className}
+          bare={bare}
           descriptorSignal={descriptorSignal}
-        />,
-        { bare, className, slots }
+        />
       )
     case "text":
-      return renderWithViewerShellSlots(
-        renderTextViewer({
-          descriptor,
-          resource,
-          className: standaloneClassName,
-          bare: standaloneBare,
-        }),
-        { bare, className, slots }
-      )
+      return renderTextViewer({ descriptor, resource, className, bare })
     default:
-      return renderWithViewerShellSlots(
+      return (
         <UnsupportedCard
           resource={resource}
-          className={standaloneClassName}
-          bare={standaloneBare}
-        />,
-        { bare, className, slots }
+          className={className}
+          bare={bare}
+        />
       )
   }
-}
-
-function renderWithViewerShellSlots(
-  children: React.ReactNode,
-  {
-    bare,
-    className,
-    slots,
-  }: {
-    bare: boolean
-    className?: string
-    slots?: ViewerSlots
-  }
-) {
-  if (!slots) return children
-  return (
-    <ViewerShell
-      bare={bare}
-      className={className}
-      contentClassName="min-h-0"
-      slots={slots}
-    >
-      {children}
-    </ViewerShell>
-  )
 }
 
 function renderTextViewer({

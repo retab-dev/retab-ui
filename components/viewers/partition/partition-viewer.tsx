@@ -9,7 +9,6 @@ import {
   type Segment,
 } from "@/lib/segments"
 import { PageRibbon, type RibbonRow } from "@/components/ui/page-ribbon"
-import { type PdfViewerSlots } from "@/components/ui/pdf-viewer"
 import { SegmentLegend } from "@/components/ui/segment-legend"
 import { useSegmentInteraction } from "@/components/ui/use-segment-interaction"
 import type {
@@ -17,15 +16,9 @@ import type {
   PartitionResult,
 } from "@/components/viewers/lib/partition-types"
 
-/**
- * Slots a document surface receives: the color key in `top`, the consensus
- * waterfall in `bottom`. They're independent regions — the key and the
- * page-axis waterfall never share a slot, so either can be placed on its own.
- */
 export interface PartitionDocumentHandlers {
   onCurrentPageChange: (page: number) => void
   onScrollProgressChange: (progress: number) => void
-  slots: PdfViewerSlots
 }
 
 export interface PartitionViewerProps {
@@ -131,10 +124,11 @@ export function PartitionViewer({
     )
   }
 
-  // The color key and the consensus waterfall stack in the `top` slot — two
-  // independent surfaces the viewer composes, not one nested in the other.
-  const slots: PdfViewerSlots = {
-    top: (
+  return (
+    <div
+      ref={previewPanelRef}
+      className="flex min-h-0 flex-1 flex-col bg-background"
+    >
       <div className="space-y-2 border-b border-border bg-background px-3 py-2">
         <SegmentLegend
           variant="plain"
@@ -156,19 +150,10 @@ export function PartitionViewer({
           onSelectPage={handleJumpToPage}
         />
       </div>
-    ),
-  }
-
-  return (
-    <div
-      ref={previewPanelRef}
-      className="flex min-h-0 flex-1 flex-col bg-background"
-    >
       {renderDocument ? (
         renderDocument({
           onCurrentPageChange: setCurrentPdfPage,
           onScrollProgressChange: setScrollProgress,
-          slots,
         })
       ) : (
         <div className="flex h-full items-center justify-center">

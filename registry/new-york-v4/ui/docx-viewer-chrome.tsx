@@ -4,13 +4,11 @@ import * as React from "react"
 import { Download, Maximize, Minus, Plus } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import type { ViewerDownloadAction } from "@/lib/viewer-download"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ViewerDownloadButton } from "@/components/ui/viewer-download"
-import type { ViewerDownloadAction } from "@/lib/viewer-download"
-
-import type { DocxViewerSlots } from "./docx-viewer-types"
 
 export function DocxViewerFrame({
   bare = false,
@@ -35,42 +33,10 @@ export function DocxViewerFrame({
   )
 }
 
-export function DocxViewerBody({
-  children,
-  slots,
-}: {
-  children: React.ReactNode
-  slots?: DocxViewerSlots
-}) {
+export function DocxViewerBody({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative flex min-h-0 flex-1">
-      {slots?.left ? (
-        <div data-slot="docx-viewer-left" className="flex-shrink-0">
-          {slots.left}
-        </div>
-      ) : null}
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        {slots?.top ? (
-          <div data-slot="docx-viewer-top">{slots.top}</div>
-        ) : null}
-        {children}
-        {slots?.bottom ? (
-          <div data-slot="docx-viewer-bottom">{slots.bottom}</div>
-        ) : null}
-      </div>
-      {slots?.right ? (
-        <div data-slot="docx-viewer-right" className="flex-shrink-0">
-          {slots.right}
-        </div>
-      ) : null}
-      {slots?.overlay ? (
-        <div
-          data-slot="docx-viewer-overlay"
-          className="pointer-events-none absolute inset-0 z-20"
-        >
-          {slots.overlay}
-        </div>
-      ) : null}
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">{children}</div>
     </div>
   )
 }
@@ -132,18 +98,16 @@ export function DocxViewerToolbar({
 export function DocxViewerFallback({
   bare = false,
   className,
-  slots,
   toolbar = true,
 }: {
   bare?: boolean
   className?: string
-  slots?: DocxViewerSlots
   toolbar?: boolean
 }) {
   return (
     <DocxViewerFrame bare={bare} className={className}>
       {toolbar ? <DocxToolbarSkeleton /> : null}
-      <DocxViewerBody slots={slots}>
+      <DocxViewerBody>
         <div className="min-h-0 flex-1 overflow-auto">
           <div className="flex flex-col items-center p-4">
             <DocxSkeleton />

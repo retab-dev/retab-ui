@@ -1,12 +1,9 @@
 import type { ViewerResource } from "@/lib/viewer-resource"
 import type { BlobViewerSource, UrlViewerSource } from "@/lib/viewer-source"
 
-import type { ViewerSlots } from "./viewer-slots"
 import type { PublicXlsxCellRef } from "./xlsx-viewer-scroll"
 
 export type XlsxDocumentSource = UrlViewerSource | BlobViewerSource
-
-export type XlsxViewerSlots = ViewerSlots
 
 export interface XlsxViewerProps {
   /** Canonical spreadsheet source. */
@@ -21,8 +18,6 @@ export interface XlsxViewerProps {
   fallbackSheetTabs?: boolean
   /** Drop the outer border/rounded/background so the viewer fills its container. */
   bare?: boolean
-  /** Document-attached chrome mounted around the grid surface. */
-  slots?: XlsxViewerSlots
   /** Public compatibility coordinates: 0-based row + column on `sheet`. */
   activeCell?: XlsxCellRef | null
   /**

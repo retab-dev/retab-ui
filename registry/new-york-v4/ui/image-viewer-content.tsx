@@ -46,17 +46,11 @@ export function ImageViewerContent({
   onVisibleFrameChange,
   onScrollProgressChange,
   bare = false,
-  slots,
   forwardedRef,
 }: Omit<ImageViewerProps, "source"> & {
   forwardedRef?: React.ForwardedRef<ImageViewerHandle>
   resource: ViewerResource
 }) {
-  const topSlot = slots?.top
-  const bottomSlot = slots?.bottom
-  const leftRailSlot = slots?.left
-  const rightRailSlot = slots?.right
-  const overlaySlot = slots?.overlay
   const frameSource = React.use(getImageSource(resource.content))
   const sourceLeaseRef = useFrameSourceLease(resource.content, frameSource)
   const { frameListRef, frameListWidth } = useFrameListWidth()
@@ -144,13 +138,7 @@ export function ImageViewerContent({
       ) : null}
 
       <div className="flex min-h-0 flex-1">
-        {leftRailSlot ? (
-          <div data-slot="image-viewer-left" className="flex-shrink-0">
-            {leftRailSlot}
-          </div>
-        ) : null}
         <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
-          {topSlot ? <div data-slot="image-viewer-top">{topSlot}</div> : null}
           <div className="relative flex min-h-0 flex-1 flex-col">
             <ScrollArea
               className="min-h-0 flex-1"
@@ -207,24 +195,8 @@ export function ImageViewerContent({
                 </div>
               </div>
             </ScrollArea>
-            {overlaySlot ? (
-              <div
-                data-slot="image-viewer-overlay"
-                className="pointer-events-none absolute inset-0 z-10 [&>*]:pointer-events-auto"
-              >
-                {overlaySlot}
-              </div>
-            ) : null}
           </div>
-          {bottomSlot ? (
-            <div data-slot="image-viewer-bottom">{bottomSlot}</div>
-          ) : null}
         </div>
-        {rightRailSlot ? (
-          <div data-slot="image-viewer-right" className="flex-shrink-0">
-            {rightRailSlot}
-          </div>
-        ) : null}
       </div>
     </div>
   )

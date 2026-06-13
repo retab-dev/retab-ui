@@ -13,16 +13,16 @@ import {
   PDF_THUMBNAIL_OVERSCAN,
 } from "./pdf-thumbnail-layout"
 import { PdfThumbnailRail } from "./pdf-thumbnail-rail"
+import { useOptionalPdfViewer } from "./pdf-viewer-context"
 import { usePdfThumbnailDocument } from "./use-pdf-thumbnail-document"
 import { usePdfThumbnailPageMetrics } from "./use-pdf-thumbnail-page-metrics"
 import { usePdfThumbnailWindow } from "./use-pdf-thumbnail-window"
 import { useThumbnailRailFollow } from "./use-thumbnail-rail-follow"
-import { ViewerSidebar } from "./viewer"
 import { ViewerErrorBoundary } from "./viewer-error"
 
 export interface PdfThumbnailSidebarProps {
   /** Same resource object passed to PdfResourceViewer. */
-  resource: ViewerResource
+  resource?: ViewerResource
   /** 1-based current page; its thumbnail is highlighted. */
   currentPage?: number | null
   /** Click a thumbnail to jump the document to that page. */
@@ -32,31 +32,46 @@ export interface PdfThumbnailSidebarProps {
   className?: string
 }
 
-/**
- * A page-thumbnail rail for the PdfViewer `slots.left` rail. Each thumbnail is a
- * small pdfjs render of the page. The rail is virtualized, so only the visible
- * rows plus overscan mount and render, even for large documents. Reuses the
- * PdfViewer's cached document.
- */
 export function PdfThumbnailSidebar(props: PdfThumbnailSidebarProps) {
-  const resource = props.resource
+  return <PdfViewerThumbnails {...props} />
+}
+
+export function PdfViewerThumbnails(props: PdfThumbnailSidebarProps) {
+  const context = useOptionalPdfViewer()
+  const resource = props.resource ?? context?.resource
+  const currentPage = props.currentPage ?? context?.currentPage
+  const onSelectPage =
+    props.onSelectPage ??
+    (context?.viewerHandle
+      ? (page: number) => context.viewerHandle?.scrollToPage(page)
+      : undefined)
+
+  if (!resource) {
+    throw new Error(
+      "PdfViewerThumbnails requires a resource prop or PdfViewerProvider."
+    )
+  }
 
   return (
-    <ViewerSidebar className={cn("bg-sidebar", props.className)}>
-      <ViewerErrorBoundary
-        className="h-full"
-        download={resource.originalDownload}
-        format="pdf"
-        onRetry={() => clearPdfDocumentResource(resource.content)}
-        resetKey={resource.keys.resource}
-        sourceKind={resource.sourceKind}
-        variant="inline"
-      >
-        <React.Suspense fallback={<SidebarFallback />}>
-          <PdfThumbnailSidebarInner {...props} className="h-full" />
-        </React.Suspense>
-      </ViewerErrorBoundary>
-    </ViewerSidebar>
+    <ViewerErrorBoundary
+      className={cn("h-full", props.className)}
+      download={resource.originalDownload}
+      format="pdf"
+      onRetry={() => clearPdfDocumentResource(resource.content)}
+      resetKey={resource.keys.resource}
+      sourceKind={resource.sourceKind}
+      variant="inline"
+    >
+      <React.Suspense fallback={<SidebarFallback />}>
+        <PdfThumbnailSidebarInner
+          {...props}
+          resource={resource}
+          currentPage={currentPage}
+          onSelectPage={onSelectPage}
+          className="h-full"
+        />
+      </React.Suspense>
+    </ViewerErrorBoundary>
   )
 }
 
@@ -66,7 +81,7 @@ function PdfThumbnailSidebarInner({
   onSelectPage,
   width = 120,
   className,
-}: PdfThumbnailSidebarProps) {
+}: Omit<PdfThumbnailSidebarProps, "resource"> & { resource: ViewerResource }) {
   const doc = usePdfThumbnailDocument(resource)
   const pageMetrics = usePdfThumbnailPageMetrics(doc, doc)
   const { metricByPageNumber, pageCount, requestPageMetrics } = pageMetrics

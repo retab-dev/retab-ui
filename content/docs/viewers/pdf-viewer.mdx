@@ -1,13 +1,13 @@
 ---
 title: PDF Viewer
-description: A pdfjs-backed PDF viewer with zoom, rotate, fit-to-width, download, and a per-page overlay slot for bounding-box citations.
+description: A pdfjs-backed PDF viewer with explicit viewer composition, zoom, rotate, fit-to-width, download, and per-page overlays.
 ---
 
 The PDF Viewer renders a document with [pdf.js](https://mozilla.github.io/pdf.js/)
 directly — no `react-pdf` wrapper. It does continuous-scroll rendering, zoom,
-rotate, fit-to-width, and download, and exposes a per-page overlay slot so you
-can draw bounding-box citations (edit fields, extraction sources) on top of the
-rendered page.
+rotate, fit-to-width, and download, and exposes a per-page overlay callback so
+you can draw bounding-box citations (edit fields, extraction sources) on top of
+the rendered page.
 
 Document and page loading use React's `use()` with Suspense, and each page
 renders into its canvas from a ref callback (with a cleanup that cancels the
@@ -75,26 +75,47 @@ inside `renderPageOverlay` (the overlay layer is already `position: absolute`):
 `<PdfHighlight area={{ left, top, width, height }} />`, each field a percentage
 `[0, 100]` of the page. Style it via `className`/`style`.
 
-## Chrome slots
+## Viewer composition
 
-Beyond the overlay, the viewer mounts chrome around the document — one node per
-edge plus a floating overlay. Pass them through `slots`.
+`PdfViewer` is the easy API. For compound layouts, compose the named PDF parts
+inside the viewer primitives.
 
 ```tsx
-<PdfViewer
-  source={{ kind: "url", url, fileName: "document.pdf" }}
-  slots={{
-    top: <Legend />, // full-width strip below the toolbar
-    left: <PageRibbon />, // collapsible rail (toggled with right)
-    right: <Outline />, // collapsible rail
-    bottom: <Waterfall />, // full-width strip under the document column
-    overlay: <FloatingLegend />, // floats over the scrolling pages
-  }}
-/>
+<PdfViewerProvider source={{ kind: "url", url, fileName: "document.pdf" }}>
+  <ViewerRoot>
+    <PdfViewerHeader />
+    <ViewerBody>
+      <ViewerSidebar>
+        <PdfViewerThumbnails />
+      </ViewerSidebar>
+      <ViewerSurface>
+        <PdfViewerPages />
+      </ViewerSurface>
+    </ViewerBody>
+  </ViewerRoot>
+</PdfViewerProvider>
 ```
 
-The `left`/`right` rails collapse together via a toolbar button (shown by
-default when a rail is set; control with `railToggle` / `defaultRailsOpen`).
+The hierarchy is visible in JSX: viewer primitives own layout, the PDF provider
+owns shared PDF state, and `PdfViewerPages` renders the document pages.
+
+You can also compose workflow chrome around the PDF surface:
+
+```tsx
+<PdfViewerProvider source={{ kind: "url", url, fileName: "document.pdf" }}>
+  <ViewerRoot>
+    <WorkflowHeader />
+    <ViewerBody>
+      <ViewerSidebar>
+        <PageRibbon />
+      </ViewerSidebar>
+      <ViewerSurface>
+        <PdfViewerPages bare className="h-full" />
+      </ViewerSurface>
+    </ViewerBody>
+  </ViewerRoot>
+</PdfViewerProvider>
+```
 
 ## Scale control
 
@@ -127,18 +148,15 @@ needs the vertical target.
 
 ## Props
 
-| Prop                     | Type                                     | Description                                                                                                        |
-| ------------------------ | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `source`                 | `UrlViewerSource \| BlobViewerSource`    | Canonical PDF source. URL sources preserve PDF.js range-loading behavior.                                          |
-| `scale`                  | `number`                                 | Controlled rendered scale. Omit for fit-to-width/uncontrolled zoom.                                                |
-| `defaultScale`           | `number`                                 | Initial uncontrolled scale. Omit for fit-to-width.                                                                 |
-| `onScaleChange`          | `(scale: number \| null) => void`        | Fired when toolbar zoom controls request a scale change; `null` means fit width.                                   |
-| `toolbar`                | `boolean`                                | Show the zoom/rotate/download toolbar. Defaults to `true`.                                                         |
-| `renderPageOverlay`      | `(props: PageOverlayProps) => ReactNode` | Per-page overlay; receives `{ pageNumber, width, height, scale, rotation }`.                                       |
-| `onVisiblePageChange`    | `(page: number) => void`                 | Fired with the 1-based page nearest the top of the viewport.                                                       |
-| `onScrollProgressChange` | `(progress: number) => void`             | Fired with scroll progress in `[0, 1]`.                                                                            |
-| `slots`                  | `PdfViewerSlots`                         | Chrome around the document: `top` / `bottom` strips, `left` / `right` collapsible rails, and a floating `overlay`. |
-| `railToggle`             | `boolean`                                | Show a toolbar button that collapses/expands the rails. Defaults to `true` when a rail is set.                     |
-| `defaultRailsOpen`       | `boolean`                                | Initial open state of the rails. Defaults to `true`.                                                               |
-| `bare`                   | `boolean`                                | Drop the outer border/background so the viewer fills its container.                                                |
-| `className`              | `string`                                 | Optional class on the viewer shell.                                                                                |
+| Prop                     | Type                                     | Description                                                                      |
+| ------------------------ | ---------------------------------------- | -------------------------------------------------------------------------------- |
+| `source`                 | `UrlViewerSource \| BlobViewerSource`    | Canonical PDF source. URL sources preserve PDF.js range-loading behavior.        |
+| `scale`                  | `number`                                 | Controlled rendered scale. Omit for fit-to-width/uncontrolled zoom.              |
+| `defaultScale`           | `number`                                 | Initial uncontrolled scale. Omit for fit-to-width.                               |
+| `onScaleChange`          | `(scale: number \| null) => void`        | Fired when toolbar zoom controls request a scale change; `null` means fit width. |
+| `toolbar`                | `boolean`                                | Show the zoom/rotate/download toolbar. Defaults to `true`.                       |
+| `renderPageOverlay`      | `(props: PageOverlayProps) => ReactNode` | Per-page overlay; receives `{ pageNumber, width, height, scale, rotation }`.     |
+| `onVisiblePageChange`    | `(page: number) => void`                 | Fired with the 1-based page nearest the top of the viewport.                     |
+| `onScrollProgressChange` | `(progress: number) => void`             | Fired with scroll progress in `[0, 1]`.                                          |
+| `bare`                   | `boolean`                                | Drop the outer border/background so the viewer fills its container.              |
+| `className`              | `string`                                 | Optional class on the viewer shell.                                              |

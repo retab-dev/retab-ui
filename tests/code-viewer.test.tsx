@@ -2448,7 +2448,7 @@ describe("code-viewer implementation boundaries", () => {
 
   it("uses exact reset keys instead of fingerprints", () => {
     const shellModuleSource = readRegistryFile(
-      "registry/new-york-v4/ui/plain-text-viewer-shell.tsx"
+      "registry/new-york-v4/ui/plain-text-viewer-frame.tsx"
     )
 
     expect(shellModuleSource).toContain("plainTextViewerResetKey")

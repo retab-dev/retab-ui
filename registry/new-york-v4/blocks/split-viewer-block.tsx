@@ -20,9 +20,8 @@ const SPLIT_RESULT: SplitView = {
 
 /**
  * Split viewer block — the file + sidebar + legend system over a split result.
- * `SplitViewer` hands the document surface its chrome as `slots` (legend in
- * `top`, page ribbon as a `left` rail); the surface spreads them onto the
- * `PdfViewer`.
+ * `SplitViewer` owns the legend and page rail; the document renderer only
+ * receives page and scroll handlers.
  */
 export function SplitViewerBlock() {
   return (
@@ -38,7 +37,6 @@ export function SplitViewerBlock() {
               fileName: "an-image-is-worth-16x16-words.pdf",
             }}
             bare
-            slots={handlers.slots}
             onVisiblePageChange={handlers.onCurrentPageChange}
             onScrollProgressChange={handlers.onScrollProgressChange}
             className="h-full"

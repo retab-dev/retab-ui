@@ -10,39 +10,44 @@ import {
   retainPdfDocumentResource,
 } from "@/lib/pdf-document-resource"
 import { cn } from "@/lib/utils"
-import {
-  createViewerResource,
-  type ViewerResource,
-} from "@/lib/viewer-resource"
-import type { BlobViewerSource, UrlViewerSource } from "@/lib/viewer-source"
+import type { ViewerResource } from "@/lib/viewer-resource"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
+import {
+  PdfViewerProvider,
+  useOptionalPdfViewer,
+  usePdfViewer,
+  type PdfDocumentSource,
+  type PdfViewerHeaderControls,
+} from "./pdf-viewer-context"
 import { createPdfPageLayout, getPdfPageLayout } from "./pdf-viewer-layout"
 import { PdfPage } from "./pdf-viewer-page"
 import { usePdfPageSizes } from "./pdf-viewer-page-sizes"
-import { PdfViewerRail } from "./pdf-viewer-rail"
 import { useMeasuredElementWidth, usePdfScale } from "./pdf-viewer-scale"
 import { usePdfScroll } from "./pdf-viewer-scroll"
 import { PageSkeleton, PdfViewerFallback } from "./pdf-viewer-states"
-import { PdfViewerToolbar } from "./pdf-viewer-toolbar"
+import { PdfViewerControls, PdfViewerToolbar } from "./pdf-viewer-toolbar"
 import type {
   PageOverlayProps,
   PdfPageSize,
   PdfViewerHandle,
-  PdfViewerSlots,
 } from "./pdf-viewer-types"
 import { usePdfPageVirtualization } from "./pdf-viewer-virtualization"
 import { useIsClient } from "./use-is-client"
+import { ViewerBody, ViewerHeader, ViewerRoot, ViewerSurface } from "./viewer"
 import { ViewerErrorBoundary } from "./viewer-error"
 
 export type {
   PageOverlayProps,
   PdfPageAreaTarget,
   PdfViewerHandle,
-  PdfViewerSlots,
 } from "./pdf-viewer-types"
-
-export type PdfDocumentSource = UrlViewerSource | BlobViewerSource
+export {
+  PdfViewerProvider,
+  usePdfViewer,
+  type PdfDocumentSource,
+} from "./pdf-viewer-context"
+export { PdfViewerThumbnails } from "./pdf-thumbnail-sidebar"
 
 export interface PdfHighlightProps extends React.ComponentProps<"div"> {
   /** Normalized box, each field a percentage [0, 100] of the page. */
@@ -93,15 +98,6 @@ export interface PdfViewerProps {
   onScrollProgressChange?: (progress: number) => void
   /** Drop the outer border/rounded/background so the viewer fills its container. */
   bare?: boolean
-  /**
-   * Chrome mounted around the document. `top`/`bottom` are document-column
-   * strips, `left`/`right` are rails, and `overlay` floats over the scroller.
-   */
-  slots?: PdfViewerSlots
-  /** Show the toolbar button that collapses/expands rails. */
-  railToggle?: boolean
-  /** Initial open state of the rails. */
-  defaultRailsOpen?: boolean
 }
 
 export type PdfResourceViewerProps = Omit<PdfViewerProps, "source"> & {
@@ -110,13 +106,93 @@ export type PdfResourceViewerProps = Omit<PdfViewerProps, "source"> & {
 
 export const PdfViewer = React.forwardRef<PdfViewerHandle, PdfViewerProps>(
   function PdfViewer(props, ref) {
-    const { source, ...resourceProps } = props
-    const resource = React.useMemo(() => createViewerResource(source), [source])
+    const {
+      source,
+      className,
+      bare = false,
+      toolbar = true,
+      ...pagesProps
+    } = props
     return (
-      <PdfResourceViewer {...resourceProps} ref={ref} resource={resource} />
+      <PdfViewerProvider source={source}>
+        <ViewerRoot bare={bare} className={cn("h-full", className)}>
+          <PdfViewerHeader toolbar={toolbar} />
+          <ViewerBody>
+            <ViewerSurface>
+              <PdfViewerPages
+                {...pagesProps}
+                bare
+                className="h-full"
+                ref={ref}
+              />
+            </ViewerSurface>
+          </ViewerBody>
+        </ViewerRoot>
+      </PdfViewerProvider>
     )
   }
 )
+
+export function PdfViewerHeader({
+  className,
+  toolbar = true,
+}: {
+  className?: string
+  toolbar?: boolean
+}) {
+  const { currentPage, headerControls, resource } = usePdfViewer()
+  const label = resource.fileName || "PDF"
+
+  return (
+    <ViewerHeader
+      className={cn("flex min-h-10 items-center gap-3 px-2 py-1", className)}
+    >
+      <div className="min-w-0 truncate px-1 text-sm font-medium">{label}</div>
+      {toolbar && headerControls ? (
+        <PdfViewerControls {...headerControls} />
+      ) : toolbar && currentPage ? (
+        <div className="ml-auto px-1 text-xs text-muted-foreground tabular-nums">
+          Page {currentPage}
+        </div>
+      ) : null}
+    </ViewerHeader>
+  )
+}
+
+export const PdfViewerPages = React.forwardRef<
+  PdfViewerHandle,
+  Omit<PdfViewerProps, "source">
+>(function PdfViewerPages(props, ref) {
+  const { resource, setCurrentPage, setViewerHandle } = usePdfViewer()
+  const handleVisiblePageChange = React.useCallback(
+    (page: number) => {
+      setCurrentPage(page)
+      props.onVisiblePageChange?.(page)
+    },
+    [props.onVisiblePageChange, setCurrentPage]
+  )
+  const handleRef = React.useCallback(
+    (handle: PdfViewerHandle | null) => {
+      setViewerHandle(handle)
+      if (typeof ref === "function") {
+        ref(handle)
+        return
+      }
+      if (ref) ref.current = handle
+    },
+    [ref, setViewerHandle]
+  )
+
+  return (
+    <PdfResourceViewer
+      {...props}
+      ref={handleRef}
+      resource={resource}
+      toolbar={false}
+      onVisiblePageChange={handleVisiblePageChange}
+    />
+  )
+})
 
 export const PdfResourceViewer = React.forwardRef<
   PdfViewerHandle,
@@ -124,8 +200,6 @@ export const PdfResourceViewer = React.forwardRef<
 >(function PdfResourceViewer(props, ref) {
   const resource = props.resource
   const isClient = useIsClient()
-  const hasRail = Boolean(props.slots?.left ?? props.slots?.right)
-  const showRailToggle = Boolean(hasRail && (props.railToggle ?? true))
 
   if (!isClient) {
     return (
@@ -133,7 +207,6 @@ export const PdfResourceViewer = React.forwardRef<
         className={props.className}
         bare={props.bare}
         toolbar={props.toolbar}
-        showRailToggle={showRailToggle}
       />
     )
   }
@@ -153,7 +226,6 @@ export const PdfResourceViewer = React.forwardRef<
             className={props.className}
             bare={props.bare}
             toolbar={props.toolbar}
-            showRailToggle={showRailToggle}
           />
         }
       >
@@ -174,24 +246,12 @@ function PdfViewerInner({
   onVisiblePageChange,
   onScrollProgressChange,
   bare = false,
-  slots,
-  railToggle,
-  defaultRailsOpen,
   forwardedRef,
 }: Omit<PdfViewerProps, "source"> & {
   forwardedRef?: React.ForwardedRef<PdfViewerHandle>
   resource: ViewerResource
 }) {
-  const topSlot = slots?.top
-  const bottomSlot = slots?.bottom
-  const leftRailSlot = slots?.left
-  const rightRailSlot = slots?.right
-  const overlaySlot = slots?.overlay
-  const showRailToggle = Boolean(
-    (leftRailSlot || rightRailSlot) && (railToggle ?? true)
-  )
-  const [railsOpen, setRailsOpen] = React.useState(defaultRailsOpen ?? true)
-
+  const pdfViewerContext = useOptionalPdfViewer()
   const content = resource.content
   const document = readPdfDocumentResource(content)
   React.useEffect(() => {
@@ -258,6 +318,41 @@ function PdfViewerInner({
     onVisiblePageChange,
     onScrollProgressChange,
   })
+  const handleRotate = React.useCallback(() => {
+    setRotationState((state) => ({
+      document,
+      value:
+        ((Object.is(state.document, document) ? state.value : 0) + 90) % 360,
+    }))
+  }, [document])
+  const headerControls = React.useMemo<PdfViewerHeaderControls>(
+    () => ({
+      currentPage,
+      downloadAction: resource.originalDownload,
+      onFitWidth: fitWidth,
+      onRotate: handleRotate,
+      onZoomIn: zoomIn,
+      onZoomOut: zoomOut,
+      pageCount: document.numPages,
+      scale: resolvedScale,
+    }),
+    [
+      currentPage,
+      document.numPages,
+      fitWidth,
+      handleRotate,
+      resource.originalDownload,
+      resolvedScale,
+      zoomIn,
+      zoomOut,
+    ]
+  )
+  React.useEffect(() => {
+    const setHeaderControls = pdfViewerContext?.setHeaderControls
+    if (!setHeaderControls) return
+    setHeaderControls(headerControls)
+    return () => setHeaderControls(null)
+  }, [headerControls, pdfViewerContext?.setHeaderControls])
   const { visiblePageNumbers, measureVisiblePages } = usePdfPageVirtualization({
     layout: pageLayout,
     resetKey: document,
@@ -304,31 +399,15 @@ function PdfViewerInner({
           pageCount={document.numPages}
           scale={resolvedScale}
           downloadAction={resource.originalDownload}
-          showRailToggle={showRailToggle}
-          railsOpen={railsOpen}
-          onToggleRails={() => setRailsOpen((open) => !open)}
           onZoomOut={zoomOut}
           onZoomIn={zoomIn}
           onFitWidth={fitWidth}
-          onRotate={() =>
-            setRotationState((state) => ({
-              document,
-              value:
-                ((Object.is(state.document, document) ? state.value : 0) + 90) %
-                360,
-            }))
-          }
+          onRotate={handleRotate}
         />
       ) : null}
 
       <div className="flex min-h-0 flex-1">
-        {leftRailSlot ? (
-          <PdfViewerRail side="left" open={railsOpen} animate={showRailToggle}>
-            {leftRailSlot}
-          </PdfViewerRail>
-        ) : null}
         <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
-          {topSlot ? <div data-slot="pdf-viewer-top">{topSlot}</div> : null}
           <div className="relative flex min-h-0 flex-1 flex-col">
             <ScrollArea
               className="min-h-0 flex-1"
@@ -380,24 +459,8 @@ function PdfViewerInner({
                 </div>
               </div>
             </ScrollArea>
-            {overlaySlot ? (
-              <div
-                data-slot="pdf-viewer-overlay"
-                className="pointer-events-none absolute inset-0 z-10 [&>*]:pointer-events-auto"
-              >
-                {overlaySlot}
-              </div>
-            ) : null}
           </div>
-          {bottomSlot ? (
-            <div data-slot="pdf-viewer-bottom">{bottomSlot}</div>
-          ) : null}
         </div>
-        {rightRailSlot ? (
-          <PdfViewerRail side="right" open={railsOpen} animate={showRailToggle}>
-            {rightRailSlot}
-          </PdfViewerRail>
-        ) : null}
       </div>
     </div>
   )

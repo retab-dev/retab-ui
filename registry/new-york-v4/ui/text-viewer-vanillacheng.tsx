@@ -4,7 +4,7 @@ import * as React from "react"
 
 import type { ViewerResource } from "@/lib/viewer-resource"
 
-import { PlainTextViewerShell } from "./plain-text-viewer-shell"
+import { PlainTextViewerFrame } from "./plain-text-viewer-frame"
 import { ChenglouTextViewerContent } from "./text-viewer-chenglou-content"
 import { TextViewerFallback } from "./text-viewer-chrome"
 import type { TextViewerHandle, TextViewerProps } from "./text-viewer-types"
@@ -14,7 +14,7 @@ export const VanillaChengTextViewer = React.forwardRef<
   TextViewerProps
 >(function VanillaChengTextViewer(props, ref) {
   return (
-    <PlainTextViewerShell
+    <PlainTextViewerFrame
       props={props}
       forwardedRef={ref}
       clientFallbackPolicy="always"

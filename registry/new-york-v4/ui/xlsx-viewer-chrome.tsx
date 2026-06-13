@@ -11,8 +11,6 @@ import {
   XlsxToolbarSkeleton,
 } from "@/components/ui/xlsx-toolbar"
 
-import type { XlsxViewerSlots } from "./xlsx-viewer-types"
-
 export function XlsxViewerFrame({
   className,
   bare,
@@ -39,12 +37,10 @@ export function XlsxViewerFrame({
 export function XlsxViewerBody({
   children,
   fallbackSheetTabs,
-  slots,
   toolbar,
 }: {
   children: React.ReactNode
   fallbackSheetTabs: boolean
-  slots?: XlsxViewerSlots
   toolbar: boolean
 }) {
   return (
@@ -64,31 +60,7 @@ export function XlsxViewerBody({
           : undefined
       }
     >
-      {slots?.left ? (
-        <div data-slot="xlsx-viewer-left" className="flex-shrink-0">
-          {slots.left}
-        </div>
-      ) : null}
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        {slots?.top ? <div data-slot="xlsx-viewer-top">{slots.top}</div> : null}
-        {children}
-        {slots?.bottom ? (
-          <div data-slot="xlsx-viewer-bottom">{slots.bottom}</div>
-        ) : null}
-      </div>
-      {slots?.right ? (
-        <div data-slot="xlsx-viewer-right" className="flex-shrink-0">
-          {slots.right}
-        </div>
-      ) : null}
-      {slots?.overlay ? (
-        <div
-          data-slot="xlsx-viewer-overlay"
-          className="pointer-events-none absolute inset-0 z-20"
-        >
-          {slots.overlay}
-        </div>
-      ) : null}
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">{children}</div>
     </div>
   )
 }
@@ -102,22 +74,16 @@ export function XlsxViewerFallback({
   fallbackSheetTabs = false,
   toolbar = true,
   bare = false,
-  slots,
 }: {
   className?: string
   fallbackSheetTabs?: boolean
   toolbar?: boolean
   bare?: boolean
-  slots?: XlsxViewerSlots
 }) {
   return (
     <XlsxViewerFrame className={className} bare={bare}>
       {toolbar ? <XlsxToolbarSkeleton /> : null}
-      <XlsxViewerBody
-        toolbar={toolbar}
-        fallbackSheetTabs={fallbackSheetTabs}
-        slots={slots}
-      >
+      <XlsxViewerBody toolbar={toolbar} fallbackSheetTabs={fallbackSheetTabs}>
         <XlsxGridSkeleton />
       </XlsxViewerBody>
       {fallbackSheetTabs ? <XlsxSheetTabsSkeleton /> : null}

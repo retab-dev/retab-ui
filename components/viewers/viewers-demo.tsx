@@ -133,7 +133,6 @@ export function PartitionViewerDemo() {
               fileName: "an-image-is-worth-16x16-words.pdf",
             }}
             bare
-            slots={handlers.slots}
             onVisiblePageChange={handlers.onCurrentPageChange}
             onScrollProgressChange={handlers.onScrollProgressChange}
             className="h-full"
@@ -156,7 +155,7 @@ export function ClassificationViewerDemo() {
           reasoning:
             "The document is a Uniform Residential Loan Application (Form 1003): it collects borrower, employment, and property details for a mortgage request, which matches the Loan Application category.",
         }}
-        renderDocument={(handlers) => (
+        renderDocument={() => (
           <PdfViewer
             source={{
               kind: "url",
@@ -164,7 +163,6 @@ export function ClassificationViewerDemo() {
               fileName: "loan-application.pdf",
             }}
             bare
-            slots={handlers.slots}
             className="h-full"
           />
         )}
@@ -190,7 +188,6 @@ export function SplitViewerDemo() {
               fileName: "harris_2023_federal_state_returns.pdf",
             }}
             bare
-            slots={handlers.slots}
             onVisiblePageChange={handlers.onCurrentPageChange}
             onScrollProgressChange={handlers.onScrollProgressChange}
             className="h-full"

@@ -30,7 +30,6 @@ export type {
   ImageFrameOverlayProps,
   ImageViewerHandle,
   ImageViewerProps,
-  ImageViewerSlots,
 } from "@/components/ui/image-viewer-types"
 export type { FrameDescriptor, FrameSource }
 export { getImageSource, resetImageSourceCacheForTests }

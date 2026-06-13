@@ -13,8 +13,8 @@ import {
   XlsxViewerFrame,
 } from "./xlsx-viewer-chrome"
 import { useXlsxDownloadActions } from "./xlsx-viewer-download"
-import { useXlsxScale } from "./xlsx-viewer-scale"
 import { getXlsxSource } from "./xlsx-viewer-resource"
+import { useXlsxScale } from "./xlsx-viewer-scale"
 import { useXlsxScrollController } from "./xlsx-viewer-scroll"
 import { XlsxViewerSheet, XlsxViewerSheetSkeleton } from "./xlsx-viewer-sheet"
 import { useXlsxSheetState } from "./xlsx-viewer-sheet-state"
@@ -28,7 +28,6 @@ export function XlsxViewerSession({
   onSheetChange,
   fallbackSheetTabs = false,
   bare = false,
-  slots,
   activeCell,
   isolateStyles = false,
   forwardedRef,
@@ -90,7 +89,6 @@ export function XlsxViewerSession({
       <XlsxViewerBody
         toolbar={toolbar}
         fallbackSheetTabs={isReservingFallbackSheetTabs}
-        slots={slots}
       >
         <XlsxGridColumn>
           <React.Suspense fallback={<XlsxViewerSheetSkeleton />}>

@@ -7,11 +7,8 @@ import type {
   PptxSlideRenderTiming,
   PptxSourceLoadTiming,
 } from "./pptx-viewer-core"
-import type { ViewerSlots } from "./viewer-slots"
 
 export type PptxDocumentSource = UrlViewerSource | BlobViewerSource
-
-export type PptxViewerSlots = ViewerSlots
 
 export interface PptxViewerProps {
   /** Canonical presentation source. */
@@ -38,11 +35,6 @@ export interface PptxViewerProps {
   onScrollProgressChange?: (progress: number) => void
   /** Drop the outer border/rounded/background so the viewer fills its container. */
   bare?: boolean
-  /**
-   * Chrome mounted around the document. `top`/`bottom` are document-column
-   * strips, `left`/`right` are rails, and `overlay` floats over the scroller.
-   */
-  slots?: PptxViewerSlots
   /** Render slides as soon as they near the viewport, even mid-scroll. */
   eager?: boolean
 }

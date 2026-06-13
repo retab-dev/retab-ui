@@ -29,12 +29,21 @@ import {
   PdfHighlight,
   PdfResourceViewer,
   PdfViewer,
+  PdfViewerHeader,
+  PdfViewerPages,
+  PdfViewerProvider,
   type PdfViewerHandle,
 } from "@/registry/new-york-v4/ui/pdf-viewer"
 import {
   PDF_THUMBNAIL_PAGE_METRIC_CONCURRENCY,
   usePdfThumbnailPageMetrics,
 } from "@/registry/new-york-v4/ui/use-pdf-thumbnail-page-metrics"
+import {
+  ViewerBody,
+  ViewerRoot,
+  ViewerSidebar,
+  ViewerSurface,
+} from "@/registry/new-york-v4/ui/viewer"
 
 const pdfjsMock = vi.hoisted(() => {
   type Deferred<T> = {
@@ -697,6 +706,33 @@ describe("PdfViewer", () => {
     })
 
     expect(await screen.findByText("500%")).toBeTruthy()
+  })
+
+  it("builds the easy PDF viewer from the explicit viewer primitive tree", async () => {
+    pdfjsMock.docs.set("/easy-tree.pdf", makeDoc([[100, 200]]))
+
+    await act(async () => {
+      render(<PdfViewer source={pdfUrlSource("/easy-tree.pdf")} />)
+    })
+    await findByTextContent("Page 1 of 1")
+
+    const root = document.querySelector<HTMLElement>(
+      '[data-slot="viewer-root"]'
+    )
+    expect(root).toBeTruthy()
+    expect(document.querySelectorAll('[data-slot="viewer-root"]')).toHaveLength(
+      1
+    )
+    expect(root?.children[0]?.getAttribute("data-slot")).toBe("viewer-header")
+    expect(root?.children[1]?.getAttribute("data-slot")).toBe("viewer-body")
+
+    const body = root?.querySelector<HTMLElement>('[data-slot="viewer-body"]')
+    expect(
+      body?.querySelector(':scope > [data-slot="viewer-surface"]')
+    ).toBeTruthy()
+    expect(
+      root?.querySelector('[data-slot="viewer-header"] [aria-label="Zoom in"]')
+    ).toBeTruthy()
   })
 
   it("fits width from a stable viewport wrapper instead of the scaled document", async () => {
@@ -1780,73 +1816,30 @@ describe("PdfViewer", () => {
     expect(await findByTextContent("Page 2 of 3")).toBeTruthy()
   })
 
-  it("renders document slots and toggles both side rails together", async () => {
-    pdfjsMock.docs.set("/slots.pdf", makeDoc([[100, 200]]))
+  it("leaves sidebars to viewer composition instead of PDF slots", async () => {
+    pdfjsMock.docs.set("/composed-sidebar.pdf", makeDoc([[100, 200]]))
 
     await act(async () => {
       render(
-        <PdfViewer
-          source={pdfUrlSource("/slots.pdf")}
-          defaultRailsOpen={false}
-          slots={{
-            top: <div>Top slot</div>,
-            bottom: <div>Bottom slot</div>,
-            left: <aside>Left rail</aside>,
-            right: <aside>Right rail</aside>,
-            overlay: <button type="button">Overlay action</button>,
-          }}
-        />
+        <PdfViewerProvider source={pdfUrlSource("/composed-sidebar.pdf")}>
+          <ViewerRoot>
+            <PdfViewerHeader />
+            <ViewerBody>
+              <ViewerSidebar>Composed sidebar</ViewerSidebar>
+              <ViewerSurface>
+                <PdfViewerPages bare className="h-full" />
+              </ViewerSurface>
+            </ViewerBody>
+          </ViewerRoot>
+        </PdfViewerProvider>
       )
     })
     await findByTextContent("Page 1 of 1")
 
-    expect(screen.getByText("Top slot")).toBeTruthy()
-    expect(screen.getByText("Bottom slot")).toBeTruthy()
-    expect(screen.getByText("Left rail")).toBeTruthy()
-    expect(screen.getByText("Right rail")).toBeTruthy()
-    expect(screen.getByRole("button", { name: "Overlay action" })).toBeTruthy()
-
-    const toggle = screen.getByLabelText("Show sidebar")
-    expect(toggle.getAttribute("aria-pressed")).toBe("false")
-    expect(
-      Array.from(
-        document.querySelectorAll("[data-slot='pdf-viewer-rail']")
-      ).map((rail) => rail.getAttribute("data-state"))
-    ).toEqual(["closed", "closed"])
-
-    fireEvent.click(toggle)
-
-    expect(
-      screen.getByLabelText("Hide sidebar").getAttribute("aria-pressed")
-    ).toBe("true")
-    expect(
-      Array.from(
-        document.querySelectorAll("[data-slot='pdf-viewer-rail']")
-      ).map((rail) => rail.getAttribute("data-state"))
-    ).toEqual(["open", "open"])
-  })
-
-  it("does not render a rail toggle when railToggle is disabled", async () => {
-    pdfjsMock.docs.set("/rail-toggle-disabled.pdf", makeDoc([[100, 200]]))
-
-    await act(async () => {
-      render(
-        <PdfViewer
-          source={pdfUrlSource("/rail-toggle-disabled.pdf")}
-          railToggle={false}
-          slots={{ left: <aside>Fixed rail</aside> }}
-        />
-      )
-    })
-    await findByTextContent("Page 1 of 1")
-
+    expect(screen.getByText("Composed sidebar")).toBeTruthy()
     expect(screen.queryByLabelText("Hide sidebar")).toBeNull()
     expect(screen.queryByLabelText("Show sidebar")).toBeNull()
-    expect(
-      document
-        .querySelector("[data-slot='pdf-viewer-rail']")
-        ?.getAttribute("data-state")
-    ).toBe("open")
+    expect(document.querySelector("[data-slot='pdf-viewer-rail']")).toBeNull()
   })
 
   it("renders page overlays with current geometry and rotation", async () => {
@@ -2108,21 +2101,26 @@ describe("PdfViewer", () => {
       ])
     )
 
-    await act(async () => {
-      render(
-        <PdfResourceViewer
-          resource={resource}
-          slots={{ left: <PdfThumbnailSidebar resource={resource} /> }}
-        />
-      )
-    })
+    render(
+      <ViewerRoot className="h-[420px]">
+        <ViewerBody>
+          <ViewerSidebar className="w-36">
+            <PdfThumbnailSidebar resource={resource} />
+          </ViewerSidebar>
+          <ViewerSurface>
+            <PdfResourceViewer resource={resource} />
+          </ViewerSurface>
+        </ViewerBody>
+      </ViewerRoot>
+    )
 
     await findByTextContent("Page 1 of 2")
-    await screen.findByText("2")
+    await waitFor(() =>
+      expect(
+        document.querySelector('[data-slot="pdf-thumbnail-sidebar"]')
+      ).toBeTruthy()
+    )
     expect(document.querySelector('[data-slot="viewer-sidebar"]')).toBeTruthy()
-    expect(
-      document.querySelector('[data-slot="pdf-thumbnail-sidebar"]')
-    ).toBeTruthy()
     expect(pdfjsMock.getDocument).toHaveBeenCalledTimes(1)
   })
 

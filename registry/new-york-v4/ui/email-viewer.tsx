@@ -68,14 +68,41 @@ export {
   replaceCidUrls,
 } from "./email-viewer-model"
 
-export function EmailViewer({
+export interface EmailViewerProviderProps {
+  message: EmailViewerMessage
+  selectedPath?: MimePartPath | null
+  defaultSelectedPath?: MimePartPath
+  onSelectedPathChange?: (path: MimePartPath, node: MimePartNode) => void
+  children: React.ReactNode
+}
+
+type EmailViewerContextValue = {
+  display: MimeDisplayPart | null
+  message: EmailViewerMessage
+  rootNode: MimePartNode
+  selectedNode: MimePartNode
+  setSelectedNode: (node: MimePartNode) => void
+}
+
+const EmailViewerContext = React.createContext<EmailViewerContextValue | null>(
+  null
+)
+
+export function useEmailViewer() {
+  const context = React.useContext(EmailViewerContext)
+  if (!context) {
+    throw new Error("useEmailViewer must be used within EmailViewerProvider.")
+  }
+  return context
+}
+
+export function EmailViewerProvider({
   message,
   selectedPath,
   defaultSelectedPath,
   onSelectedPathChange,
-  className,
-  bare = false,
-}: EmailViewerProps) {
+  children,
+}: EmailViewerProviderProps) {
   const rootNode = React.useMemo(
     () => buildMimeTree(message.root),
     [message.root]
@@ -118,29 +145,80 @@ export function EmailViewer({
     () => getMimeDisplayPart(selectedNode, inlineResourceUrls),
     [inlineResourceUrls, selectedNode]
   )
+  const value = React.useMemo<EmailViewerContextValue>(
+    () => ({
+      display,
+      message,
+      rootNode,
+      selectedNode,
+      setSelectedNode,
+    }),
+    [display, message, rootNode, selectedNode, setSelectedNode]
+  )
 
   return (
-    <div data-slot="email-viewer" className={cn("min-h-0", className)}>
-      <ViewerRoot bare={bare} className="h-full">
-        <MimeMessageHeader message={message} />
-        <ViewerBody className="flex-col md:flex-row">
-          <ViewerSidebar className="border-t md:border-t-0">
-            <MimePartSidebar
-              root={rootNode}
-              selectedPath={selectedNode.path}
-              onSelectNode={setSelectedNode}
-            />
-          </ViewerSidebar>
-          <ViewerSurface className="min-h-[26rem] md:min-h-0">
-            <MimeViewerContent
-              message={message}
-              selectedNode={selectedNode}
-              display={display}
-            />
-          </ViewerSurface>
-        </ViewerBody>
-      </ViewerRoot>
-    </div>
+    <EmailViewerContext.Provider value={value}>
+      {children}
+    </EmailViewerContext.Provider>
+  )
+}
+
+export function EmailViewer({
+  message,
+  selectedPath,
+  defaultSelectedPath,
+  onSelectedPathChange,
+  className,
+  bare = false,
+}: EmailViewerProps) {
+  return (
+    <EmailViewerProvider
+      message={message}
+      selectedPath={selectedPath}
+      defaultSelectedPath={defaultSelectedPath}
+      onSelectedPathChange={onSelectedPathChange}
+    >
+      <div data-slot="email-viewer" className={cn("min-h-0", className)}>
+        <ViewerRoot bare={bare} className="h-full">
+          <EmailViewerHeader />
+          <ViewerBody className="flex-col md:flex-row">
+            <ViewerSidebar className="border-t md:border-t-0">
+              <EmailViewerPartsList />
+            </ViewerSidebar>
+            <ViewerSurface className="min-h-[26rem] md:min-h-0">
+              <EmailViewerSelectedPart />
+            </ViewerSurface>
+          </ViewerBody>
+        </ViewerRoot>
+      </div>
+    </EmailViewerProvider>
+  )
+}
+
+export function EmailViewerHeader() {
+  const { message } = useEmailViewer()
+  return <MimeMessageHeader message={message} />
+}
+
+export function EmailViewerPartsList() {
+  const { rootNode, selectedNode, setSelectedNode } = useEmailViewer()
+  return (
+    <MimePartSidebar
+      root={rootNode}
+      selectedPath={selectedNode.path}
+      onSelectNode={setSelectedNode}
+    />
+  )
+}
+
+export function EmailViewerSelectedPart() {
+  const { display, message, selectedNode } = useEmailViewer()
+  return (
+    <MimeViewerContent
+      message={message}
+      selectedNode={selectedNode}
+      display={display}
+    />
   )
 }
 

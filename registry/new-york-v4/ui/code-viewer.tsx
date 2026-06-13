@@ -5,7 +5,7 @@ import * as React from "react"
 import { CodeViewerFallback } from "./code-viewer-chrome"
 import { CodeViewerContent } from "./code-viewer-content"
 import type { CodeViewerHandle, CodeViewerProps } from "./code-viewer-types"
-import { PlainTextViewerShell } from "./plain-text-viewer-shell"
+import { PlainTextViewerFrame } from "./plain-text-viewer-frame"
 
 export type {
   CodeDocumentSource,
@@ -17,7 +17,7 @@ export type {
 export const CodeViewer = React.forwardRef<CodeViewerHandle, CodeViewerProps>(
   function CodeViewer(props, ref) {
     return (
-      <PlainTextViewerShell
+      <PlainTextViewerFrame
         props={props}
         forwardedRef={ref}
         clientFallbackPolicy="non-inline-source"

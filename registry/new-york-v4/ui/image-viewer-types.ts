@@ -2,8 +2,6 @@ import type * as React from "react"
 
 import type { BlobViewerSource, UrlViewerSource } from "@/lib/viewer-source"
 
-import type { ViewerSlots } from "./viewer-slots"
-
 export interface ImageFrameOverlayProps {
   /** 1-based frame index (a TIFF page; always 1 for single images). */
   frameNumber: number
@@ -35,8 +33,6 @@ export interface ImageViewerHandle {
 
 export type ImageDocumentSource = UrlViewerSource | BlobViewerSource
 
-export type ImageViewerSlots = ViewerSlots
-
 export interface ImageViewerProps {
   /** Canonical image source. PNG/JPEG/WebP/GIF/AVIF/BMP/ICO or TIFF. */
   source: ImageDocumentSource
@@ -58,9 +54,4 @@ export interface ImageViewerProps {
   onScrollProgressChange?: (progress: number) => void
   /** Drop the outer border/rounded/background so the viewer fills its container. */
   bare?: boolean
-  /**
-   * Chrome mounted around the document. `top`/`bottom` are document-column
-   * strips, `left`/`right` are rails, and `overlay` floats over the scroller.
-   */
-  slots?: ImageViewerSlots
 }

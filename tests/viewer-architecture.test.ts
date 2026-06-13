@@ -70,6 +70,7 @@ const canonicalViewerNames = new Set([
   "pptx-viewer",
   "xlsx-viewer",
   "file-viewer",
+  "file-system",
   "text-viewer",
 ])
 
@@ -168,32 +169,16 @@ describe("viewer architecture", () => {
     }
   })
 
-  it("keeps viewer slot exports as aliases to ViewerSlots", () => {
+  it("keeps viewer runtime code free of slot-object type aliases", () => {
     for (const file of sourceFilesUnder(
       join(repoRoot, "registry/new-york-v4/ui")
     )) {
       if (!/(?:^|\/)[a-z0-9-]+viewer(?:-types)?\.tsx?$/.test(file)) continue
       const content = fileContent(file)
-      const interfaceMatch = content.match(
-        /\binterface\s+([A-Z][A-Za-z0-9]*ViewerSlots)\b/
-      )
       expect(
-        interfaceMatch?.[1],
-        `${file} declares ${interfaceMatch?.[1]} as an interface`
-      ).toBeUndefined()
-
-      for (const match of content.matchAll(
-        /\bexport\s+type\s+([A-Z][A-Za-z0-9]*ViewerSlots)\s*=/g
-      )) {
-        const slotName = match[1]
-        const aliasPattern = new RegExp(
-          `\\bexport\\s+type\\s+${slotName}\\s*=\\s*ViewerSlots\\b`
-        )
-        expect(
-          aliasPattern.test(content),
-          `${file} must export ${slotName} as ViewerSlots`
-        ).toBe(true)
-      }
+        /\b[A-Z][A-Za-z0-9]*ViewerSlots\b/.test(content),
+        `${file} exports a slot-object alias`
+      ).toBe(false)
     }
   })
 

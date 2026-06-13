@@ -883,6 +883,22 @@ describe("DropzoneBlock", () => {
       'input[type="file"]'
     ) as HTMLInputElement
 
+    expect(
+      viewerSection.querySelectorAll('[data-slot="viewer-root"]')
+    ).toHaveLength(1)
+    expect(
+      viewerSection.querySelector('[data-slot="viewer-header"]')
+    ).toBeTruthy()
+    expect(
+      viewerSection.querySelector('[data-slot="viewer-body"]')
+    ).toBeTruthy()
+    expect(
+      viewerSection.querySelector('[data-slot="viewer-sidebar"]')
+    ).toBeTruthy()
+    expect(
+      viewerSection.querySelector('[data-slot="viewer-surface"]')
+    ).toBeTruthy()
+
     expect(within(viewerSection).getByText("No file selected")).toBeTruthy()
     expect(
       within(viewerSection).getAllByText("Upload file").length
@@ -1020,6 +1036,12 @@ describe("Dropzone registry split", () => {
     expect(dropzoneUploaderViewerSource).not.toContain(
       "@/components/ui/file-viewer"
     )
+    expect(dropzoneUploaderViewerSource).toContain(
+      "UploadableFileViewerProvider"
+    )
+    expect(dropzoneUploaderViewerSource).toContain(
+      "UploadableFileViewerContent"
+    )
     expect(dropzoneUploaderViewerSource).toContain("renderViewer")
     expect(dropzoneDocsSource).toContain("Browser file intake is not upload.")
     expect(dropzoneDocsSource).toContain("`files` is selected-file state.")
@@ -1067,6 +1089,7 @@ describe("Dropzone registry split", () => {
       "registry/new-york-v4/blocks/dropzone-file-examples.tsx",
       "registry/new-york-v4/blocks/dropzone-uploader-viewer.tsx",
       "registry/new-york-v4/blocks/dropzone-uploader-viewer-parts.tsx",
+      "registry/new-york-v4/ui/viewer.tsx",
       "registry/new-york-v4/blocks/dropzone-workflow-examples.tsx",
     ])
   })

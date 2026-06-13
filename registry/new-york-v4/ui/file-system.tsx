@@ -14,6 +14,13 @@ import {
 } from "@/components/ui/dialog"
 import { FileViewer } from "@/components/ui/file-viewer"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import {
+  ViewerBody,
+  ViewerHeader,
+  ViewerRoot,
+  ViewerSidebar,
+  ViewerSurface,
+} from "@/components/ui/viewer"
 
 import {
   FileSystemFilterBar,
@@ -40,9 +47,47 @@ export type {
   FileSystemView,
 } from "./file-system-types"
 
-export function FileSystem({
+export type FileSystemViewerProviderProps = Omit<
+  FileSystemProps,
+  "className"
+> & {
+  children: React.ReactNode
+}
+
+type FileSystemViewerContextValue = {
+  controller: ReturnType<typeof useFileSystemController>
+  openedFile: {
+    file: FileSystemFileEntry
+    source: ViewerSource | null
+  } | null
+  openFile: (file: FileSystemFileEntry) => void
+  renderFileActions?: FileSystemProps["renderFileActions"]
+  renderMetadata?: FileSystemProps["renderMetadata"]
+  setOpenedFile: React.Dispatch<
+    React.SetStateAction<{
+      file: FileSystemFileEntry
+      source: ViewerSource | null
+    } | null>
+  >
+  title: string
+}
+
+const FileSystemViewerContext =
+  React.createContext<FileSystemViewerContextValue | null>(null)
+
+export function useFileSystemViewer() {
+  const context = React.useContext(FileSystemViewerContext)
+  if (!context) {
+    throw new Error(
+      "useFileSystemViewer must be used within FileSystemViewerProvider."
+    )
+  }
+  return context
+}
+
+export function FileSystemViewerProvider({
   items,
-  className,
+  children,
   defaultPath,
   defaultQuery,
   defaultSelectedPath,
@@ -61,7 +106,7 @@ export function FileSystem({
   selectedPath,
   title = "Files",
   view,
-}: FileSystemProps) {
+}: FileSystemViewerProviderProps) {
   const controller = useFileSystemController({
     defaultPath,
     defaultQuery,
@@ -108,91 +153,196 @@ export function FileSystem({
     [controller, onFileOpen]
   )
 
+  const value = React.useMemo<FileSystemViewerContextValue>(
+    () => ({
+      controller,
+      openedFile,
+      openFile,
+      renderFileActions,
+      renderMetadata,
+      setOpenedFile,
+      title,
+    }),
+    [controller, openedFile, openFile, renderFileActions, renderMetadata, title]
+  )
+
   return (
-    <section
-      data-slot="file-system"
-      className={cn(
-        "flex h-[640px] min-h-0 overflow-hidden rounded-lg border bg-background text-foreground",
-        className
-      )}
+    <FileSystemViewerContext.Provider value={value}>
+      {children}
+    </FileSystemViewerContext.Provider>
+  )
+}
+
+export function FileSystem({
+  items,
+  className,
+  defaultPath,
+  defaultQuery,
+  defaultSelectedPath,
+  defaultView = "list",
+  loadChildren,
+  onPathChange,
+  onQueryChange,
+  onFileOpen,
+  onSelectionChange,
+  onViewChange,
+  path,
+  query,
+  renderFileActions,
+  renderMetadata,
+  resolveSource,
+  selectedPath,
+  title = "Files",
+  view,
+}: FileSystemProps) {
+  return (
+    <FileSystemViewerProvider
+      items={items}
+      defaultPath={defaultPath}
+      defaultQuery={defaultQuery}
+      defaultSelectedPath={defaultSelectedPath}
+      defaultView={defaultView}
+      loadChildren={loadChildren}
+      onPathChange={onPathChange}
+      onQueryChange={onQueryChange}
+      onFileOpen={onFileOpen}
+      onSelectionChange={onSelectionChange}
+      onViewChange={onViewChange}
+      path={path}
+      query={query}
+      renderFileActions={renderFileActions}
+      renderMetadata={renderMetadata}
+      resolveSource={resolveSource}
+      selectedPath={selectedPath}
+      title={title}
+      view={view}
     >
-      <div className="flex min-w-0 flex-1 flex-col">
-        <FileSystemToolbar controller={controller} title={title} />
-        <FileSystemFilterBar controller={controller} />
-        <div className="min-h-0 flex-1">
-          {controller.view === "list" ? (
-            <FileSystemListView controller={controller} onOpenFile={openFile} />
-          ) : controller.view === "grid" ? (
-            <FileSystemGridView controller={controller} onOpenFile={openFile} />
-          ) : controller.view === "columns" ? (
-            <FileSystemColumnsView
-              controller={controller}
-              onOpenFile={openFile}
-            />
-          ) : (
-            <FileSystemGalleryView
-              controller={controller}
-              onOpenFile={openFile}
-              renderFileActions={renderFileActions}
-              renderMetadata={renderMetadata}
-            />
-          )}
-        </div>
-        <FileSystemStatusBar controller={controller} />
-      </div>
-      {controller.view !== "gallery" ? (
-        <FileSystemPreview
-          entry={controller.selectedEntry}
-          renderFileActions={renderFileActions}
-          renderMetadata={renderMetadata}
-          resolveFileSource={controller.resolveFileSource}
-          className="hidden w-[42%] max-w-xl min-w-[22rem] lg:flex"
-        />
-      ) : null}
-      <Dialog
-        open={openedFile !== null}
-        onOpenChange={(open) => {
-          if (!open) setOpenedFile(null)
-        }}
+      <ViewerRoot
+        data-viewer="file-system"
+        bare
+        className={cn(
+          "h-[640px] rounded-lg border bg-background text-foreground",
+          className
+        )}
       >
-        {openedFile ? (
-          <DialogContent className="h-[88vh] max-w-[min(96vw,1280px)] overflow-hidden p-0">
-            <DialogHeader className="shrink-0 border-b px-4 py-3">
-              <div className="flex min-w-0 items-center gap-3 pr-8">
-                <DialogTitle className="truncate text-base">
-                  {openedFile.file.name}
-                </DialogTitle>
-                {openedFile.source?.kind === "url" ? (
-                  <Button
-                    render={
-                      <a
-                        href={openedFile.source.url}
-                        target="_blank"
-                        rel="noreferrer"
-                      />
-                    }
-                    size="xs"
-                    variant="outline"
-                  >
-                    <ExternalLink className="size-3.5" aria-hidden />
-                    Open
-                  </Button>
-                ) : null}
-              </div>
-            </DialogHeader>
-            <div className="min-h-0 flex-1">
-              {openedFile.source ? (
-                <FileSystemPreviewDialog source={openedFile.source} />
-              ) : (
-                <div className="flex size-full items-center justify-center text-sm text-muted-foreground">
-                  Preview unavailable
-                </div>
-              )}
+        <FileSystemViewerHeader />
+        <ViewerBody>
+          <ViewerSidebar className="min-w-0 flex-1 border-r md:w-auto">
+            <FileSystemViewerTree />
+          </ViewerSidebar>
+          <ViewerSurface className="hidden w-[42%] max-w-xl min-w-[22rem] flex-none lg:flex">
+            <FileSystemViewerSelectedFile />
+          </ViewerSurface>
+        </ViewerBody>
+        <FileSystemOpenDialog />
+      </ViewerRoot>
+    </FileSystemViewerProvider>
+  )
+}
+
+export function FileSystemViewerHeader() {
+  const { controller, title } = useFileSystemViewer()
+
+  return (
+    <ViewerHeader className="flex flex-col">
+      <FileSystemToolbar controller={controller} title={title} />
+      <FileSystemFilterBar controller={controller} />
+    </ViewerHeader>
+  )
+}
+
+export function FileSystemViewerTree() {
+  const { controller, openFile, renderFileActions, renderMetadata } =
+    useFileSystemViewer()
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="min-h-0 flex-1">
+        {controller.view === "list" ? (
+          <FileSystemListView controller={controller} onOpenFile={openFile} />
+        ) : controller.view === "grid" ? (
+          <FileSystemGridView controller={controller} onOpenFile={openFile} />
+        ) : controller.view === "columns" ? (
+          <FileSystemColumnsView
+            controller={controller}
+            onOpenFile={openFile}
+          />
+        ) : (
+          <FileSystemGalleryView
+            controller={controller}
+            onOpenFile={openFile}
+            renderFileActions={renderFileActions}
+            renderMetadata={renderMetadata}
+          />
+        )}
+      </div>
+      <FileSystemStatusBar controller={controller} />
+    </div>
+  )
+}
+
+export function FileSystemViewerSelectedFile() {
+  const { controller, renderFileActions, renderMetadata } =
+    useFileSystemViewer()
+
+  return (
+    <FileSystemPreview
+      entry={controller.selectedEntry}
+      renderFileActions={renderFileActions}
+      renderMetadata={renderMetadata}
+      resolveFileSource={controller.resolveFileSource}
+      className="size-full border-l-0"
+    />
+  )
+}
+
+function FileSystemOpenDialog() {
+  const { openedFile, setOpenedFile } = useFileSystemViewer()
+
+  return (
+    <Dialog
+      open={openedFile !== null}
+      onOpenChange={(open) => {
+        if (!open) setOpenedFile(null)
+      }}
+    >
+      {openedFile ? (
+        <DialogContent className="h-[88vh] max-w-[min(96vw,1280px)] overflow-hidden p-0">
+          <DialogHeader className="shrink-0 border-b px-4 py-3">
+            <div className="flex min-w-0 items-center gap-3 pr-8">
+              <DialogTitle className="truncate text-base">
+                {openedFile.file.name}
+              </DialogTitle>
+              {openedFile.source?.kind === "url" ? (
+                <Button
+                  render={
+                    <a
+                      href={openedFile.source.url}
+                      target="_blank"
+                      rel="noreferrer"
+                    />
+                  }
+                  size="xs"
+                  variant="outline"
+                >
+                  <ExternalLink className="size-3.5" aria-hidden />
+                  Open
+                </Button>
+              ) : null}
             </div>
-          </DialogContent>
-        ) : null}
-      </Dialog>
-    </section>
+          </DialogHeader>
+          <div className="min-h-0 flex-1">
+            {openedFile.source ? (
+              <FileSystemPreviewDialog source={openedFile.source} />
+            ) : (
+              <div className="flex size-full items-center justify-center text-sm text-muted-foreground">
+                Preview unavailable
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      ) : null}
+    </Dialog>
   )
 }
 
