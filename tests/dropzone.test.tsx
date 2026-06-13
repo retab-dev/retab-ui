@@ -149,6 +149,33 @@ describe("Dropzone primitive", () => {
     expect(root!.textContent).toContain("files:0rejected:0")
   })
 
+  it("tracks file drag state and ignores non-file drags", () => {
+    function Probe() {
+      const dropzone = useDropzone()
+      return (
+        <div {...dropzone.getRootProps()}>
+          <input {...dropzone.getInputProps()} />
+          dragging:{dropzone.isDragging ? "yes" : "no"}
+        </div>
+      )
+    }
+
+    const { container } = render(<Probe />)
+    const root = container.querySelector('[data-slot="dropzone"]')
+
+    fireEvent.dragEnter(root!, textDragData())
+    expect(root?.hasAttribute("data-dragging")).toBe(false)
+    expect(root!.textContent).toContain("dragging:no")
+
+    fireEvent.dragEnter(root!, dropData([file("first.pdf", "application/pdf")]))
+    expect(root?.hasAttribute("data-dragging")).toBe(true)
+    expect(root!.textContent).toContain("dragging:yes")
+
+    fireEvent.drop(root!, dropData([file("first.pdf", "application/pdf")]))
+    expect(root?.hasAttribute("data-dragging")).toBe(false)
+    expect(root!.textContent).toContain("dragging:no")
+  })
+
   it("uses functional uncontrolled transitions for rapid consecutive intake", () => {
     function Probe() {
       const dropzone = useDropzone({ multiple: true })
@@ -167,6 +194,41 @@ describe("Dropzone primitive", () => {
     fireEvent.drop(root!, dropData([file("second.pdf", "application/pdf")]))
 
     expect(root!.textContent).toContain("first.pdf,second.pdf")
+  })
+
+  it("limits single-file intake before validation and selected state", () => {
+    const onIntake = vi.fn()
+
+    function Probe() {
+      const dropzone = useDropzone({
+        multiple: false,
+        onIntake,
+      })
+      return (
+        <div {...dropzone.getRootProps()}>
+          <input {...dropzone.getInputProps()} />
+          {dropzone.files.map((item) => item.file.name).join(",")}
+        </div>
+      )
+    }
+
+    const { container } = render(<Probe />)
+    const root = container.querySelector('[data-slot="dropzone"]')
+
+    fireEvent.drop(
+      root!,
+      dropData([
+        file("first.pdf", "application/pdf"),
+        file("second.pdf", "application/pdf"),
+      ])
+    )
+
+    expect(root!.textContent).toContain("first.pdf")
+    expect(root!.textContent).not.toContain("second.pdf")
+    expect(onIntake).toHaveBeenCalledWith({
+      acceptedFiles: [expect.objectContaining({ name: "first.pdf" })],
+      fileRejections: [],
+    })
   })
 
   it("keeps controlled files controlled and reports the requested transition", () => {
@@ -240,6 +302,34 @@ describe("Dropzone primitive", () => {
     expect(root!.textContent).toContain("rejections:1")
   })
 
+  it("does not report selected-file changes for rejected-only attempts", () => {
+    const onFilesChange = vi.fn()
+    const onIntake = vi.fn()
+
+    function Probe() {
+      const dropzone = useDropzone({
+        accept: "application/pdf",
+        onFilesChange,
+        onIntake,
+      })
+      return (
+        <div {...dropzone.getRootProps()}>
+          <input {...dropzone.getInputProps()} />
+          rejected:{dropzone.lastIntake.fileRejections.length}
+        </div>
+      )
+    }
+
+    const { container } = render(<Probe />)
+    const root = container.querySelector('[data-slot="dropzone"]')
+
+    fireEvent.drop(root!, dropData([file("notes.txt", "text/plain")]))
+
+    expect(onIntake).toHaveBeenCalledOnce()
+    expect(onFilesChange).not.toHaveBeenCalled()
+    expect(root!.textContent).toContain("rejected:1")
+  })
+
   it("supports native button and non-button trigger semantics", () => {
     const clickSpy = vi.spyOn(HTMLInputElement.prototype, "click")
 
@@ -264,6 +354,39 @@ describe("Dropzone primitive", () => {
     fireEvent.keyDown(nonButton, { key: "Enter" })
     fireEvent.click(button)
     expect(clickSpy).toHaveBeenCalledTimes(2)
+  })
+
+  it("blocks file dialog and intake while disabled", () => {
+    const clickSpy = vi.spyOn(HTMLInputElement.prototype, "click")
+    const onFilesChange = vi.fn()
+    const onIntake = vi.fn()
+
+    function Probe() {
+      const dropzone = useDropzone({
+        disabled: true,
+        onFilesChange,
+        onIntake,
+      })
+      return (
+        <div {...dropzone.getRootProps()}>
+          <input {...dropzone.getInputProps()} />
+          <button {...dropzone.getButtonProps()}>native button</button>
+          files:{dropzone.files.length}
+        </div>
+      )
+    }
+
+    const { container } = render(<Probe />)
+    const root = container.querySelector('[data-slot="dropzone"]')
+    const button = screen.getByRole("button", { name: "native button" })
+
+    fireEvent.click(button)
+    fireEvent.drop(root!, dropData([file("first.pdf", "application/pdf")]))
+
+    expect(clickSpy).not.toHaveBeenCalled()
+    expect(onIntake).not.toHaveBeenCalled()
+    expect(onFilesChange).not.toHaveBeenCalled()
+    expect(root!.textContent).toContain("files:0")
   })
 })
 
@@ -388,6 +511,17 @@ describe("Dropzone registry split", () => {
     expect(dropzoneSource).not.toContain("onFilesAccepted")
     expect(dropzoneSource).not.toContain("onFilesRejected")
     expect(dropzoneSource).not.toContain("hasFiles")
+    expect(dropzoneSource).not.toContain("DropzoneState")
+    expect(dropzoneSource).not.toContain(
+      "fileRejections: lastIntake.fileRejections"
+    )
+    expect(dropzoneSource).not.toContain("export type DropzoneDataAttributes")
+    expect(dropzoneSource).not.toContain("export type DropzoneRootGetterProps")
+    expect(dropzoneSource).not.toContain("export type DropzoneInputGetterProps")
+    expect(dropzoneSource).not.toContain(
+      "export type DropzoneTriggerGetterProps"
+    )
+    expect(dropzoneSource).not.toContain("export type DropzoneButtonGetterProps")
     expect(dropzoneSource).not.toContain("export function DropzoneRoot")
     expect(dropzoneSource).not.toContain("DropzoneContext")
     expect(dropzoneCoreSource).not.toContain("message:")

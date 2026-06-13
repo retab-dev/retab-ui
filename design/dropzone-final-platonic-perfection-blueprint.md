@@ -76,7 +76,6 @@ type UseDropzoneProps = {
 type UseDropzoneReturn = {
   files: DropzoneFileItem[]
   lastIntake: DropzoneIntake
-  fileRejections: DropzoneFileRejection[]
   isDragging: boolean
   isFocused: boolean
   isDisabled: boolean
@@ -119,12 +118,16 @@ Argument to remove:
 - `lastIntake.fileRejections` teaches the correct temporal model.
 - Removing it makes the return smaller.
 
-Decision rule:
+Decision:
 
-Keep `fileRejections` only if docs use it as the ergonomic visual-layer field
-and explain that it aliases the latest intake result.
+Remove it.
 
-If it causes confusion, remove it.
+The small convenience does not beat the conceptual clarity of a single attempt
+source. Visual layers should read:
+
+```ts
+dropzone.lastIntake.fileRejections
+```
 
 ### 2. Is `lastIntake` The Final Name?
 
@@ -253,7 +256,6 @@ Every name must answer one question.
 | ----------------------- | --------------------------------------- |
 | `files`                 | What files are currently selected?      |
 | `lastIntake`            | What happened in the latest attempt?    |
-| `fileRejections`        | Which files failed the latest attempt?  |
 | `onFilesChange`         | When did selected file state change?    |
 | `onIntake`              | When did the user attempt file intake?  |
 | `clearFiles`            | How do I clear selected files?          |
@@ -386,8 +388,8 @@ Registry tests must prove:
    - Delete any type that does not earn its place.
 
 2. Decide `fileRejections`.
-   - Keep only if docs use it deliberately.
-   - Otherwise remove and force `lastIntake.fileRejections`.
+   - Remove the shortcut.
+   - Force `lastIntake.fileRejections`.
 
 3. Decide trigger split.
    - Keep both only if docs and tests make the semantic distinction clear.

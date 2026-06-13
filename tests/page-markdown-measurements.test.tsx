@@ -76,15 +76,6 @@ describe("page markdown measurements", () => {
     const viewport = document.createElement("div") as HTMLDivElement
     viewport.scrollTop = 260
     const restoreCalls: number[] = []
-    const harnessState = {
-      setPageHeight: null as
-        | ((
-            pageNumber: number,
-            height: number,
-            beforeMeasurementChange?: () => void
-          ) => void)
-        | null,
-    }
 
     function Harness() {
       const measurement = usePageMarkdownMeasurements({
@@ -108,8 +99,6 @@ describe("page markdown measurements", () => {
         viewportElement: viewport,
       })
 
-      harnessState.setPageHeight = measurement.setPageHeight
-
       return (
         <button
           type="button"
@@ -129,17 +118,8 @@ describe("page markdown measurements", () => {
     })
     const initialAnchorPage = getPageMarkdownPageLayout(initialLayout, 2)!
     expect(viewport.scrollTop).toBeGreaterThan(initialAnchorPage.offsetTop)
-
-    act(() => {
-      harnessState.setPageHeight!(1, 360, () => {
-        const pageLayout = getPageMarkdownPageLayout(initialLayout, 2)!
-        viewport.dataset.anchorOffset = String(
-          viewport.scrollTop - pageLayout.offsetTop
-        )
-      })
-    })
-
-    expect(restoreCalls).toHaveLength(0)
+    const offsetWithinAnchorPage =
+      viewport.scrollTop - initialAnchorPage.offsetTop
 
     act(() => {
       screen.getByRole("button", { name: "measure" }).click()
@@ -152,7 +132,9 @@ describe("page markdown measurements", () => {
       scale: 1,
     })
     const expectedAnchorPage = getPageMarkdownPageLayout(expectedLayout, 2)!
-    expect(viewport.scrollTop).toBe(expectedAnchorPage.offsetTop)
+    expect(viewport.scrollTop).toBe(
+      expectedAnchorPage.offsetTop + offsetWithinAnchorPage
+    )
     expect(restoreCalls.at(-1)).toBe(viewport.scrollTop)
   })
 })

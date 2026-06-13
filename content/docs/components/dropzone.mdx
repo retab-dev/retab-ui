@@ -23,6 +23,7 @@ npx shadcn@latest add @retab/dropzone
 <DropzoneDemo />
 
 ```tsx
+import * as React from "react"
 import { useDropzone } from "@/components/ui/dropzone"
 
 export function UploadTarget() {
@@ -38,6 +39,62 @@ export function UploadTarget() {
     <div {...dropzone.getRootProps(dropzone.getTriggerProps())}>
       <input {...dropzone.getInputProps()} />
       Drop or browse files
+    </div>
+  )
+}
+```
+
+## Mental Model
+
+A dropzone is not a rectangle. It is the browser file-intake behavior normalized
+into React state and prop getters.
+
+- `files` is selected-file state.
+- `lastIntake` is the latest file-intake attempt.
+- `onFilesChange` reports selected-file state changes.
+- `onIntake` reports accepted and rejected files from one attempt.
+- `getTriggerProps` is for custom elements that need button semantics.
+- `getButtonProps` is for real `<button>` elements.
+
+## Native Button Trigger
+
+```tsx
+export function ToolbarUpload() {
+  const dropzone = useDropzone()
+
+  return (
+    <div {...dropzone.getRootProps()}>
+      <input {...dropzone.getInputProps()} />
+      <button {...dropzone.getButtonProps()}>Add files</button>
+    </div>
+  )
+}
+```
+
+## Validation Only
+
+```tsx
+import * as React from "react"
+import { useDropzone, type DropzoneIntake } from "@/components/ui/dropzone"
+
+export function PdfValidationTarget() {
+  const [lastIntake, setLastIntake] = React.useState<DropzoneIntake>({
+    acceptedFiles: [],
+    fileRejections: [],
+  })
+  const dropzone = useDropzone({
+    accept: "application/pdf,.pdf",
+    files: [],
+    maxSize: 100 * 1024,
+    onFilesChange: () => {},
+    onIntake: setLastIntake,
+  })
+
+  return (
+    <div {...dropzone.getRootProps(dropzone.getTriggerProps())}>
+      <input {...dropzone.getInputProps()} />
+      Accepted: {lastIntake.acceptedFiles.length}
+      Rejected: {lastIntake.fileRejections.length}
     </div>
   )
 }
@@ -79,7 +136,6 @@ export function UploadTarget() {
 | ----------------- | ----------------------------------------------------------- |
 | `files`           | `DropzoneFileItem[]`                                        |
 | `lastIntake`      | `DropzoneIntake`                                            |
-| `fileRejections`  | `DropzoneFileRejection[]`                                   |
 | `isDragging`      | `boolean`                                                   |
 | `isFocused`       | `boolean`                                                   |
 | `isDisabled`      | `boolean`                                                   |
@@ -93,8 +149,13 @@ export function UploadTarget() {
 | `getTriggerProps` | `(props?) => React.HTMLAttributes<HTMLElement>`             |
 | `getButtonProps`  | `(props?) => React.ButtonHTMLAttributes<HTMLButtonElement>` |
 
-The package also exports `parseDropzoneAccept`, `matchesDropzoneAccept`,
-`validateDropzoneFile`, and `validateDropzoneFiles`.
+The package also exports the public types `DropzoneFileItem`,
+`DropzoneIntake`, `DropzoneFileRejection`, `UseDropzoneProps`, and
+`UseDropzoneReturn`.
+
+Validation helpers are exported for tests and advanced compositions:
+`parseDropzoneAccept`, `matchesDropzoneAccept`, `validateDropzoneFile`, and
+`validateDropzoneFiles`.
 
 `DropzoneFileRejection` is a discriminated union:
 

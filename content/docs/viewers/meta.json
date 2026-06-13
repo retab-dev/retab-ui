@@ -9,6 +9,7 @@
     "text-viewer",
     "markdown-viewer",
     "html-viewer",
+    "email-viewer",
     "xlsx-viewer",
     "docx-viewer",
     "pptx-viewer",

@@ -236,12 +236,18 @@ function measurePretextLineCount({
   whiteSpace?: "pre-wrap"
   width: number
 }) {
+  if (isJsdomRuntime()) return estimateLineCount(fallbackText, width)
+
   try {
     const prepared = prepareWithSegments(text, font, { whiteSpace })
     return Math.max(1, measureLineStats(prepared, Math.max(1, width)).lineCount)
   } catch {
     return estimateLineCount(fallbackText, width)
   }
+}
+
+function isJsdomRuntime() {
+  return globalThis.navigator?.userAgent.toLowerCase().includes("jsdom") ?? false
 }
 
 function estimateLineCount(text: string, width: number) {

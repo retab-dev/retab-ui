@@ -151,6 +151,10 @@ beforeEach(() => {
     configurable: true,
     get: () => 800,
   })
+  Object.defineProperty(HTMLElement.prototype, "offsetHeight", {
+    configurable: true,
+    get: () => 0,
+  })
   HTMLElement.prototype.getAnimations = vi.fn(() => [])
   HTMLElement.prototype.scrollIntoView = vi.fn()
   Object.defineProperty(HTMLElement.prototype, "scrollTo", {

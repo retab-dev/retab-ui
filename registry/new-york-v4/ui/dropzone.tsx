@@ -25,20 +25,20 @@ export type DropzoneFileItem = {
   file: File
 }
 
-export type DropzoneDataAttributes = {
+type DropzoneDataAttributes = {
   [key: `data-${string}`]: string | undefined
 }
 
-export type DropzoneRootGetterProps<T extends HTMLElement> =
+type DropzoneRootGetterProps<T extends HTMLElement> =
   React.HTMLAttributes<T> & Partial<DropzoneDataAttributes>
 
-export type DropzoneInputGetterProps = React.ComponentPropsWithRef<"input"> &
+type DropzoneInputGetterProps = React.ComponentPropsWithRef<"input"> &
   Partial<DropzoneDataAttributes>
 
-export type DropzoneTriggerGetterProps<T extends HTMLElement> =
+type DropzoneTriggerGetterProps<T extends HTMLElement> =
   React.HTMLAttributes<T> & Partial<DropzoneDataAttributes>
 
-export type DropzoneButtonGetterProps = React.ComponentPropsWithRef<"button"> &
+type DropzoneButtonGetterProps = React.ComponentPropsWithRef<"button"> &
   Partial<DropzoneDataAttributes>
 
 export type UseDropzoneProps = {
