@@ -6,18 +6,21 @@ import { Check, Copy, Maximize, Minus, Plus } from "lucide-react"
 import type { ViewerResource } from "@/lib/viewer-resource"
 
 import { Button } from "./button"
-import { MarkdownDocumentPageContent } from "./markdown-document-components"
 import {
-  createMarkdownDocument,
-  findMarkdownPageForLine,
   MARKDOWN_DOCUMENT_PAGE_PADDING_X,
   MARKDOWN_DOCUMENT_PAGE_PADDING_Y,
   MARKDOWN_DOCUMENT_PAGE_WIDTH,
+} from "./markdown-document-layout"
+import {
+  createMarkdownDocument,
+  findMarkdownPageForLine,
   markdownPageIntersectsLineRange,
   type MarkdownDocument,
   type MarkdownDocumentPage,
 } from "./markdown-document-model"
+import { MarkdownDocumentPageRenderer } from "./markdown-document-renderer"
 import {
+  createMarkdownVirtualGeometry,
   getMarkdownScrollAnchor,
   getMarkdownVirtualItems,
   scrollTopForMarkdownAnchor,
@@ -28,7 +31,7 @@ import { PlainTextViewerShell } from "./plain-text-viewer-shell"
 import { ScrollArea } from "./scroll-area"
 import { Separator } from "./separator"
 import { Tabs, TabsList, TabsTrigger } from "./tabs"
-import { TextViewerFrame, TextViewerFallback } from "./text-viewer-chrome"
+import { TextViewerFallback, TextViewerFrame } from "./text-viewer-chrome"
 import { normalizeTextLineRange } from "./text-viewer-ranges"
 import {
   readTextResource,
@@ -41,7 +44,11 @@ import { ViewerDownloadControl } from "./viewer-download"
 const MARKDOWN_VIEWER_OVERSCAN_PX = 900
 const MARKDOWN_VIEWER_DEFAULT_VIEWPORT_HEIGHT = 720
 const MARKDOWN_VIEWER_DEFAULT_VIEWPORT_WIDTH = 960
-const MARKDOWN_VIEWER_FIT_PADDING_X = 64
+const MARKDOWN_VIEWER_CANVAS_PADDING_Y = 16
+const MARKDOWN_VIEWER_FIT_PADDING_X = 32
+const MARKDOWN_VIEWER_PAGE_GAP = 16
+const MARKDOWN_VIEWER_READING_SCALE = 0.75
+const MARKDOWN_VIEWER_ZOOM_STEP = 1.2
 
 type MarkdownDocumentViewMode = "rendered" | "text"
 
@@ -95,7 +102,7 @@ function MarkdownDocumentViewerContent({
   )
   const document = React.useMemo(() => createMarkdownDocument(text), [text])
   const [mode, setMode] = React.useState<MarkdownDocumentViewMode>("rendered")
-  const [scale, setScale] = React.useState(1)
+  const [manualScale, setManualScale] = React.useState<number | null>(null)
   const [scrollTop, setScrollTop] = React.useState(0)
   const [viewportSize, setViewportSize] = React.useState<ViewportSize>({
     height: 0,
@@ -113,62 +120,81 @@ function MarkdownDocumentViewerContent({
     viewportSize.height || MARKDOWN_VIEWER_DEFAULT_VIEWPORT_HEIGHT
   const viewportWidth =
     viewportSize.width || MARKDOWN_VIEWER_DEFAULT_VIEWPORT_WIDTH
+  const fitScale = React.useMemo(
+    () => getMarkdownDocumentFitScale(viewportWidth),
+    [viewportWidth]
+  )
+  const scale = manualScale ?? fitScale
+  const virtualScrollTop = Math.max(
+    0,
+    scrollTop - MARKDOWN_VIEWER_CANVAS_PADDING_Y
+  )
   const highlightRange = React.useMemo(
     () => normalizeTextLineRange(highlight, document.lineCount),
     [document.lineCount, highlight]
   )
-  const measurementKey = React.useMemo(
+  const pageMeasurementKey = React.useMemo(
     () => `${mode}:${scale.toFixed(3)}:${viewportWidth}:${text.length}`,
     [mode, scale, text.length, viewportWidth]
   )
   const estimateHeight = React.useCallback(
-    (index: number) => document.pages[index]?.estimatedHeight * scale || 1,
+    (index: number) =>
+      (document.pages[index]?.estimatedHeight ?? 1) * scale +
+      MARKDOWN_VIEWER_PAGE_GAP,
     [document.pages, scale]
   )
   const getKey = React.useCallback(
-    (index: number) => `${measurementKey}:${document.pages[index]?.id ?? index}`,
-    [document.pages, measurementKey]
+    (index: number) =>
+      `${pageMeasurementKey}:${document.pages[index]?.id ?? index}`,
+    [document.pages, pageMeasurementKey]
   )
-  const virtualWindow = React.useMemo(
+  const virtualGeometry = React.useMemo(
     () =>
-      getMarkdownVirtualItems({
+      createMarkdownVirtualGeometry({
         count: document.pages.length,
         estimateHeight,
         getKey,
         measuredHeights,
+      }),
+    [document.pages.length, estimateHeight, getKey, measuredHeights]
+  )
+  const virtualWindow = React.useMemo(
+    () =>
+      getMarkdownVirtualItems({
+        geometry: virtualGeometry,
         overscanPx: MARKDOWN_VIEWER_OVERSCAN_PX,
-        scrollTop,
+        scrollTop: virtualScrollTop,
         viewportHeight,
       }),
-    [
-      document.pages.length,
-      estimateHeight,
-      getKey,
-      measuredHeights,
-      scrollTop,
-      viewportHeight,
-    ]
+    [virtualScrollTop, viewportHeight, virtualGeometry]
   )
   const currentPage = currentPageFromVirtualItems({
     items: virtualWindow.items,
     pages: document.pages,
-    scrollTop,
+    scrollTop: virtualScrollTop,
   })
 
   React.useEffect(() => {
     setMeasuredHeights(new Map())
+  }, [pageMeasurementKey])
+
+  React.useEffect(() => {
+    pendingAnchorRef.current = null
+    setManualScale(null)
     setScrollTop(0)
-  }, [document, measurementKey])
+    scrollMarkdownViewportTo(viewportRef.current, { left: 0, top: 0 })
+  }, [document])
 
   const captureScrollAnchor = React.useCallback(() => {
     pendingAnchorRef.current = getMarkdownScrollAnchor({
-      count: document.pages.length,
-      estimateHeight,
-      getKey,
-      measuredHeights,
-      scrollTop: viewportRef.current?.scrollTop ?? scrollTop,
+      geometry: virtualGeometry,
+      scrollTop: Math.max(
+        0,
+        (viewportRef.current?.scrollTop ?? scrollTop) -
+          MARKDOWN_VIEWER_CANVAS_PADDING_Y
+      ),
     })
-  }, [document.pages.length, estimateHeight, getKey, measuredHeights, scrollTop])
+  }, [scrollTop, virtualGeometry])
 
   React.useLayoutEffect(() => {
     const anchor = pendingAnchorRef.current
@@ -176,14 +202,12 @@ function MarkdownDocumentViewerContent({
     if (!anchor || !viewport) return
 
     pendingAnchorRef.current = null
-    viewport.scrollTop = scrollTopForMarkdownAnchor({
-      anchor,
-      count: document.pages.length,
-      estimateHeight,
-      getKey,
-      measuredHeights,
-    })
-  }, [document.pages.length, estimateHeight, getKey, measuredHeights])
+    viewport.scrollTop =
+      scrollTopForMarkdownAnchor({
+        anchor,
+        geometry: virtualGeometry,
+      }) + MARKDOWN_VIEWER_CANVAS_PADDING_Y
+  }, [virtualGeometry])
 
   React.useLayoutEffect(() => {
     const viewport = viewportRef.current
@@ -212,6 +236,10 @@ function MarkdownDocumentViewerContent({
 
   const handleScroll = React.useCallback(() => {
     if (scrollFrameRef.current !== null) return
+    if (typeof requestAnimationFrame === "undefined") {
+      setScrollTop(viewportRef.current?.scrollTop ?? 0)
+      return
+    }
     scrollFrameRef.current = requestAnimationFrame(() => {
       scrollFrameRef.current = null
       setScrollTop(viewportRef.current?.scrollTop ?? 0)
@@ -220,7 +248,10 @@ function MarkdownDocumentViewerContent({
 
   React.useEffect(
     () => () => {
-      if (scrollFrameRef.current !== null) {
+      if (
+        scrollFrameRef.current !== null &&
+        typeof cancelAnimationFrame !== "undefined"
+      ) {
         cancelAnimationFrame(scrollFrameRef.current)
       }
     },
@@ -249,22 +280,21 @@ function MarkdownDocumentViewerContent({
       const page = document.pages[index]
       const lineOffset =
         page && sourceLine
-          ? Math.max(0, sourceLine - page.sourceStartLine) * 24 * scale
+          ? Math.max(0, sourceLine - page.pageStartLine) * 24 * scale
           : 0
-      viewport.scrollTo({
+      scrollMarkdownViewportTo(viewport, {
         behavior: "smooth",
         top:
+          MARKDOWN_VIEWER_CANVAS_PADDING_Y +
           topForMarkdownIndex({
-            count: document.pages.length,
-            estimateHeight,
-            getKey,
+            geometry: virtualGeometry,
             index,
-            measuredHeights,
-          }) + lineOffset,
+          }) +
+          lineOffset,
         ...options,
       })
     },
-    [document.pages, estimateHeight, getKey, measuredHeights, scale]
+    [document.pages, scale, virtualGeometry]
   )
 
   const scrollToLineRange = React.useCallback(
@@ -285,7 +315,10 @@ function MarkdownDocumentViewerContent({
     () => ({
       getViewportElement: () => viewportRef.current,
       scrollToLineRange: (range, options) => {
-        scrollToLineRange(normalizeTextLineRange(range, document.lineCount), options)
+        scrollToLineRange(
+          normalizeTextLineRange(range, document.lineCount),
+          options
+        )
       },
     }),
     [document.lineCount, scrollToLineRange]
@@ -297,20 +330,15 @@ function MarkdownDocumentViewerContent({
 
   const zoom = (factor: number) => {
     captureScrollAnchor()
-    setScale((value) => clampTextViewerScale(value * factor))
+    setManualScale(clampTextViewerScale(scale * factor))
   }
   const fitWidth = () => {
     captureScrollAnchor()
-    setScale(
-      clampTextViewerScale(
-        (viewportWidth - MARKDOWN_VIEWER_FIT_PADDING_X) /
-          MARKDOWN_DOCUMENT_PAGE_WIDTH
-      )
-    )
+    setManualScale(null)
   }
   const resetZoom = () => {
     captureScrollAnchor()
-    setScale(1)
+    setManualScale(1)
   }
   const handleFragmentClick = React.useCallback(
     (event: React.MouseEvent) => {
@@ -326,7 +354,7 @@ function MarkdownDocumentViewerContent({
       event.preventDefault()
       const targetLine =
         targetPage.blocks.find((block) => block.headingId === targetId)
-          ?.sourceStartLine ?? targetPage.sourceStartLine
+          ?.blockStartLine ?? targetPage.pageStartLine
       scrollToPageIndex(targetPage.pageNumber - 1, undefined, targetLine)
       if (window.location.hash !== href) {
         window.history.replaceState(null, "", href)
@@ -347,14 +375,14 @@ function MarkdownDocumentViewerContent({
           onFitWidth={fitWidth}
           onModeChange={setMode}
           onResetZoom={resetZoom}
-          onZoomIn={() => zoom(1.2)}
-          onZoomOut={() => zoom(1 / 1.2)}
+          onZoomIn={() => zoom(MARKDOWN_VIEWER_ZOOM_STEP)}
+          onZoomOut={() => zoom(1 / MARKDOWN_VIEWER_ZOOM_STEP)}
         />
       ) : null}
       <ScrollArea
-        className="min-h-0 flex-1 bg-muted/20"
+        className="min-h-0 flex-1 bg-muted/30"
         orientation="vertical"
-        viewportClassName="bg-muted/20"
+        viewportClassName="bg-muted/30"
         viewportProps={{
           onClickCapture: handleFragmentClick,
           onScroll: handleScroll,
@@ -365,23 +393,24 @@ function MarkdownDocumentViewerContent({
           className="relative mx-auto min-w-0"
           data-slot="markdown-document-virtual-canvas"
           style={{
-            height: virtualWindow.totalHeight,
+            height:
+              virtualWindow.totalHeight + MARKDOWN_VIEWER_CANVAS_PADDING_Y * 2,
             width: Math.max(1, MARKDOWN_DOCUMENT_PAGE_WIDTH * scale),
           }}
         >
-          {virtualWindow.items.map((item) => {
-            const page = document.pages[item.index]
+          {virtualWindow.items.map((virtualItem) => {
+            const page = document.pages[virtualItem.index]
             if (!page) return null
             return (
               <MarkdownVirtualPage
-                key={item.key}
+                key={virtualItem.key}
                 document={document}
                 highlightRange={highlightRange}
-                item={item}
-                measurementKey={item.key}
                 mode={mode}
                 page={page}
+                pageMeasurementKey={virtualItem.key}
                 scale={scale}
+                virtualItem={virtualItem}
                 onMeasure={measurePage}
               />
             )
@@ -422,7 +451,9 @@ function MarkdownDocumentToolbar({
       </span>
       <Tabs
         value={mode}
-        onValueChange={(value) => onModeChange(value as MarkdownDocumentViewMode)}
+        onValueChange={(value) =>
+          onModeChange(value as MarkdownDocumentViewMode)
+        }
       >
         <TabsList variant="underline" className="py-0">
           <TabsTrigger value="rendered" className="h-8 text-xs sm:text-xs">
@@ -519,20 +550,20 @@ function ToolbarIconButton({
 function MarkdownVirtualPage({
   document,
   highlightRange,
-  item,
-  measurementKey,
   mode,
   page,
+  pageMeasurementKey,
   scale,
+  virtualItem,
   onMeasure,
 }: {
   document: MarkdownDocument
   highlightRange: ReturnType<typeof normalizeTextLineRange>
-  item: MarkdownVirtualItem
-  measurementKey: string
   mode: MarkdownDocumentViewMode
   page: MarkdownDocumentPage
+  pageMeasurementKey: string
   scale: number
+  virtualItem: MarkdownVirtualItem
   onMeasure: (key: string, height: number) => void
 }) {
   const pageRef = React.useRef<HTMLElement | null>(null)
@@ -541,47 +572,66 @@ function MarkdownVirtualPage({
     const element = pageRef.current
     if (!element) return
 
-    const measure = () => {
-      const height = element.offsetHeight || element.getBoundingClientRect().height
-      onMeasure(measurementKey, height)
+    const syncPage = () => {
+      patchMarkdownTableAccessibility(element)
+      const height =
+        element.offsetHeight || element.getBoundingClientRect().height
+      onMeasure(pageMeasurementKey, height + MARKDOWN_VIEWER_PAGE_GAP)
     }
-    measure()
+    syncPage()
 
-    const observer =
+    const resizeObserver =
       typeof ResizeObserver === "undefined"
         ? null
-        : new ResizeObserver(measure)
-    observer?.observe(element)
-    return () => observer?.disconnect()
-  }, [measurementKey, onMeasure])
+        : new ResizeObserver(syncPage)
+    resizeObserver?.observe(element)
 
-  React.useEffect(() => {
-    patchMarkdownTableAccessibility(pageRef.current)
-  })
+    const mutationObserver =
+      typeof MutationObserver === "undefined"
+        ? null
+        : new MutationObserver(syncPage)
+    mutationObserver?.observe(element, {
+      attributes: false,
+      childList: true,
+      subtree: true,
+    })
+
+    return () => {
+      mutationObserver?.disconnect()
+      resizeObserver?.disconnect()
+    }
+  }, [pageMeasurementKey, onMeasure])
 
   const isHighlighted = markdownPageIntersectsLineRange({
     page,
     range: highlightRange,
   })
   const pageWidth = MARKDOWN_DOCUMENT_PAGE_WIDTH * scale
+  const measuredPageHeight = Math.max(
+    1,
+    virtualItem.height - MARKDOWN_VIEWER_PAGE_GAP
+  )
 
   return (
     <article
       ref={pageRef}
       aria-current={isHighlighted ? "true" : undefined}
-      className={`absolute left-0 w-full bg-card text-card-foreground shadow-sm ring-1 ring-border ${
+      className={`absolute bg-card text-card-foreground shadow-sm ring-1 ring-border ${
         isHighlighted ? "ring-primary/40" : ""
       }`}
       data-page-number={page.pageNumber}
       data-slot="markdown-document-page"
-      data-source-end-line={page.sourceEndLine}
-      data-source-line={page.sourceStartLine}
+      data-source-end-line={page.pageEndLine}
+      data-source-line={page.pageStartLine}
       style={{
         fontSize: `${14 * scale}px`,
-        minHeight: item.height,
+        left: "50%",
+        minHeight: measuredPageHeight,
         paddingBlock: `${MARKDOWN_DOCUMENT_PAGE_PADDING_Y * scale}px`,
         paddingInline: `${MARKDOWN_DOCUMENT_PAGE_PADDING_X * scale}px`,
-        transform: `translateY(${item.top}px)`,
+        transform: `translate(-50%, ${
+          virtualItem.top + MARKDOWN_VIEWER_CANVAS_PADDING_Y
+        }px)`,
         width: pageWidth,
       }}
     >
@@ -590,7 +640,7 @@ function MarkdownVirtualPage({
           {page.markdown}
         </pre>
       ) : (
-        <MarkdownDocumentPageContent
+        <MarkdownDocumentPageRenderer
           headingIdsByLine={document.headingIdsByLine}
           highlightRange={highlightRange}
           page={page}
@@ -598,6 +648,27 @@ function MarkdownVirtualPage({
       )}
     </article>
   )
+}
+
+function getMarkdownDocumentFitScale(viewportWidth: number) {
+  const availableWidth = viewportWidth - MARKDOWN_VIEWER_FIT_PADDING_X
+  const fitWidthScale = availableWidth / MARKDOWN_DOCUMENT_PAGE_WIDTH
+  return clampTextViewerScale(
+    Math.min(MARKDOWN_VIEWER_READING_SCALE, fitWidthScale)
+  )
+}
+
+function scrollMarkdownViewportTo(
+  viewport: HTMLElement | null,
+  options: ScrollToOptions
+) {
+  if (!viewport) return
+  if (typeof viewport.scrollTo === "function") {
+    viewport.scrollTo(options)
+    return
+  }
+  if (typeof options.left === "number") viewport.scrollLeft = options.left
+  if (typeof options.top === "number") viewport.scrollTop = options.top
 }
 
 function currentPageFromVirtualItems({
@@ -609,9 +680,10 @@ function currentPageFromVirtualItems({
   pages: readonly MarkdownDocumentPage[]
   scrollTop: number
 }) {
-  const currentItem =
-    items.find((item) => item.bottom >= scrollTop + 80) ?? items[0]
-  return pages[currentItem?.index ?? 0]?.pageNumber ?? 1
+  const currentVirtualItem =
+    items.find((virtualItem) => virtualItem.bottom >= scrollTop + 80) ??
+    items[0]
+  return pages[currentVirtualItem?.index ?? 0]?.pageNumber ?? 1
 }
 
 function localFragmentHrefFromEventTarget(target: EventTarget | null) {

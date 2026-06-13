@@ -32,7 +32,11 @@ export function SchemaFieldRow({
   bodyClassName,
 }: SchemaFieldRowProps) {
   return (
-    <div id={id} className={cn("group", className)}>
+    <div
+      id={id}
+      data-slot="schema-field-row"
+      className={cn("group", className)}
+    >
       <div className="flex min-h-12 flex-col items-start justify-between py-0 hover:bg-accent sm:flex-row sm:items-center">
         <SchemaRowGrip mode={grip} />
         <div className="flex min-w-0 flex-1 items-center space-x-2">

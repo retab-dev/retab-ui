@@ -18,6 +18,8 @@ import {
 import { PageMarkdownViewer } from "@/components/viewers/page-markdown/page-markdown-viewer"
 
 const PAGES = ["# First page\n\nAlpha", "## Second page\n\nBeta"]
+const LARGE_PAGE_COUNT = 1000
+const MAX_VIRTUAL_PAGE_SLOTS = 14
 
 function rect(top: number, height = 500): DOMRect {
   return {
@@ -51,6 +53,14 @@ function scrollMarkdownViewportToPage(
   vi.spyOn(viewport, "getBoundingClientRect").mockReturnValue(rect(0, 500))
   viewport.scrollTop = markdownPageOffset(pages, pageNumber)
   fireEvent.scroll(viewport)
+}
+
+function pageSlotNumbers(container: ParentNode = document) {
+  return Array.from(
+    container.querySelectorAll<HTMLElement>(
+      '[data-slot="page-markdown-page-slot"]'
+    )
+  ).map((slot) => Number(slot.dataset.pageNumber))
 }
 
 beforeEach(() => {
@@ -636,8 +646,6 @@ describe("PageMarkdownViewer", () => {
   })
 
   it("scrolls the markdown pane when the document pane reports a new page", async () => {
-    const scrollIntoView = vi.fn()
-
     render(
       <PageMarkdownViewer
         pages={PAGES}
@@ -649,20 +657,18 @@ describe("PageMarkdownViewer", () => {
       />
     )
 
-    const markdownPage = await screen.findByText("Second page")
-    const markdownFrame = markdownPage.closest("[data-page-number]")
-    expect(markdownFrame).toBeTruthy()
-    ;(markdownFrame as HTMLElement).scrollIntoView = scrollIntoView
+    await screen.findByText("Second page")
+    const markdownViewport = document.querySelector<HTMLElement>(
+      '[data-slot="scroll-area-viewport"]'
+    )
+    expect(markdownViewport).toBeTruthy()
 
     fireEvent.click(
       screen.getByRole("button", { name: "Show document page 2" })
     )
 
     await waitFor(() => {
-      expect(scrollIntoView).toHaveBeenCalledWith({
-        behavior: "smooth",
-        block: "start",
-      })
+      expect(markdownViewport!.scrollTop).toBe(markdownPageOffset(PAGES, 2))
     })
     expect(screen.getByText("Page 2 of 2")).toBeTruthy()
   })
@@ -692,61 +698,7 @@ describe("PageMarkdownViewer", () => {
       '[data-slot="scroll-area-viewport"]'
     )
     expect(markdownViewport).toBeTruthy()
-    markdownViewport!.getBoundingClientRect = () =>
-      ({
-        top: 0,
-        bottom: 500,
-        left: 0,
-        right: 100,
-        width: 100,
-        height: 500,
-        x: 0,
-        y: 0,
-        toJSON: () => ({}),
-      }) as DOMRect
-
-    const markdownPages = Array.from(
-      markdownViewport!.querySelectorAll<HTMLElement>("[data-page-number]")
-    )
-    expect(markdownPages).toHaveLength(3)
-    markdownPages[0]!.getBoundingClientRect = () =>
-      ({
-        top: -500,
-        bottom: -300,
-        left: 0,
-        right: 100,
-        width: 100,
-        height: 200,
-        x: 0,
-        y: -500,
-        toJSON: () => ({}),
-      }) as DOMRect
-    markdownPages[1]!.getBoundingClientRect = () =>
-      ({
-        top: -200,
-        bottom: 0,
-        left: 0,
-        right: 100,
-        width: 100,
-        height: 200,
-        x: 0,
-        y: -200,
-        toJSON: () => ({}),
-      }) as DOMRect
-    markdownPages[2]!.getBoundingClientRect = () =>
-      ({
-        top: 40,
-        bottom: 240,
-        left: 0,
-        right: 100,
-        width: 100,
-        height: 200,
-        x: 0,
-        y: 40,
-        toJSON: () => ({}),
-      }) as DOMRect
-
-    fireEvent.scroll(markdownViewport!)
+    scrollMarkdownViewportToPage(markdownViewport!, pages, 2)
 
     await waitFor(() => {
       expect(screen.getByText("Page 2 of 3")).toBeTruthy()
@@ -784,49 +736,7 @@ describe("PageMarkdownViewer", () => {
       '[data-slot="scroll-area-viewport"]'
     )
     expect(markdownViewport).toBeTruthy()
-    markdownViewport!.getBoundingClientRect = () =>
-      ({
-        top: 0,
-        bottom: 500,
-        left: 0,
-        right: 100,
-        width: 100,
-        height: 500,
-        x: 0,
-        y: 0,
-        toJSON: () => ({}),
-      }) as DOMRect
-
-    const markdownPages = Array.from(
-      markdownViewport!.querySelectorAll<HTMLElement>("[data-page-number]")
-    )
-    expect(markdownPages).toHaveLength(2)
-    markdownPages[0]!.getBoundingClientRect = () =>
-      ({
-        top: -300,
-        bottom: -100,
-        left: 0,
-        right: 100,
-        width: 100,
-        height: 200,
-        x: 0,
-        y: -300,
-        toJSON: () => ({}),
-      }) as DOMRect
-    markdownPages[1]!.getBoundingClientRect = () =>
-      ({
-        top: 40,
-        bottom: 240,
-        left: 0,
-        right: 100,
-        width: 100,
-        height: 200,
-        x: 0,
-        y: 40,
-        toJSON: () => ({}),
-      }) as DOMRect
-
-    fireEvent.scroll(markdownViewport!)
+    scrollMarkdownViewportToPage(markdownViewport!, PAGES, 2)
 
     await waitFor(() => {
       expect(onVisiblePageChange).toHaveBeenCalledWith(2)
@@ -856,50 +766,54 @@ describe("PageMarkdownViewer", () => {
       '[data-slot="scroll-area-viewport"]'
     )
     expect(markdownViewport).toBeTruthy()
-    markdownViewport!.getBoundingClientRect = () =>
-      ({
-        top: 0,
-        bottom: 500,
-        left: 0,
-        right: 100,
-        width: 100,
-        height: 500,
-        x: 0,
-        y: 0,
-        toJSON: () => ({}),
-      }) as DOMRect
-
-    const markdownPages = Array.from(
-      markdownViewport!.querySelectorAll<HTMLElement>("[data-page-number]")
-    )
-    expect(markdownPages).toHaveLength(2)
-    markdownPages[0]!.getBoundingClientRect = () =>
-      ({
-        top: -300,
-        bottom: -100,
-        left: 0,
-        right: 100,
-        width: 100,
-        height: 200,
-        x: 0,
-        y: -300,
-        toJSON: () => ({}),
-      }) as DOMRect
-    markdownPages[1]!.getBoundingClientRect = () =>
-      ({
-        top: 40,
-        bottom: 240,
-        left: 0,
-        right: 100,
-        width: 100,
-        height: 200,
-        x: 0,
-        y: 40,
-        toJSON: () => ({}),
-      }) as DOMRect
-
-    expect(() => fireEvent.scroll(markdownViewport!)).not.toThrow()
+    expect(() =>
+      scrollMarkdownViewportToPage(markdownViewport!, PAGES, 2)
+    ).not.toThrow()
     expect(onVisiblePageChange).toHaveBeenCalledWith(2)
+  })
+
+  it("keeps a 1,000-page document bounded to the virtual page window", async () => {
+    const pages = Array.from(
+      { length: LARGE_PAGE_COUNT },
+      (_, index) => `# Page ${index + 1}\n\n${"content ".repeat(12)}`
+    )
+    const { container } = render(<PageMarkdownViewer pages={pages} />)
+
+    await waitFor(() => {
+      const pageNumbers = pageSlotNumbers(container)
+      expect(pageNumbers.length).toBeGreaterThan(0)
+      expect(pageNumbers.length).toBeLessThanOrEqual(MAX_VIRTUAL_PAGE_SLOTS)
+      expect(pageNumbers[0]).toBe(1)
+    })
+
+    const markdownViewport = container.querySelector<HTMLElement>(
+      '[data-slot="scroll-area-viewport"]'
+    )
+    expect(markdownViewport).toBeTruthy()
+
+    scrollMarkdownViewportToPage(markdownViewport!, pages, 500)
+
+    await waitFor(() => {
+      const pageNumbers = pageSlotNumbers(container)
+      expect(pageNumbers).toContain(500)
+      expect(pageNumbers.length).toBeLessThanOrEqual(MAX_VIRTUAL_PAGE_SLOTS)
+      expect(screen.getByText("Page 500 of 1000")).toBeTruthy()
+    })
+
+    fireEvent.click(screen.getByRole("tab", { name: "Text" }))
+    await waitFor(() => {
+      expect(pageSlotNumbers(container).length).toBeLessThanOrEqual(
+        MAX_VIRTUAL_PAGE_SLOTS
+      )
+    })
+
+    fireEvent.click(screen.getByLabelText("Zoom in"))
+    await waitFor(() => {
+      expect(pageSlotNumbers(container).length).toBeLessThanOrEqual(
+        MAX_VIRTUAL_PAGE_SLOTS
+      )
+      expect(screen.queryByText("Page 500 of 1000")).toBeTruthy()
+    })
   })
 
   it("clamps the current page when the page list shrinks", async () => {

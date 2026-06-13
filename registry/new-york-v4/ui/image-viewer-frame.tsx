@@ -14,7 +14,6 @@ import {
   type QuarterTurn,
 } from "@/lib/image-geometry"
 import { isResourceError } from "@/lib/viewer-errors"
-import { Skeleton } from "@/components/ui/skeleton"
 
 export interface ImageFrameProps {
   source: FrameSource
@@ -31,46 +30,24 @@ export function ImageFrame({
   rotation,
   renderOverlay,
 }: ImageFrameProps) {
-  const [isNearViewport, setIsNearViewport] = React.useState(false)
   const descriptor = source.frames[frameIndex]
   const frameRect = frameCssSize(descriptor.intrinsicSize, scale, rotation)
-
-  const frameRef = React.useCallback((element: HTMLDivElement | null) => {
-    if (!element) return
-    const root = element.closest<HTMLElement>(
-      '[data-slot="scroll-area-viewport"]'
-    )
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) setIsNearViewport(entry.isIntersecting)
-      },
-      { root, rootMargin: "150% 0px" }
-    )
-    observer.observe(element)
-    return () => observer.disconnect()
-  }, [])
-
   const frameNumber = frameIndexToNumber(frameIndex)
 
   return (
     <div
-      ref={frameRef}
       className="relative shadow-sm ring-1 ring-border"
       style={{ width: frameRect.width, height: frameRect.height }}
       data-slot="image-frame"
       data-frame={frameNumber}
       data-frame-number={frameNumber}
     >
-      {isNearViewport ? (
-        <ImageFrameCanvas
-          source={source}
-          frameIndex={frameIndex}
-          scale={scale}
-          rotation={rotation}
-        />
-      ) : (
-        <Skeleton className="absolute inset-0 rounded-none" />
-      )}
+      <ImageFrameCanvas
+        source={source}
+        frameIndex={frameIndex}
+        scale={scale}
+        rotation={rotation}
+      />
       {renderOverlay ? (
         <div className="pointer-events-none absolute inset-0">
           {renderOverlay({

@@ -1,0 +1,68 @@
+---
+title: Markdown Viewer
+description: A page-based Markdown document viewer with React Markdown rendering, GFM support, text mode, zoom, download, and custom virtualization.
+---
+
+The Markdown Viewer renders Markdown as a document, not as code. It keeps
+Markdown pages virtualized, supports rendered and source-text modes, and uses
+the same source-based API as the Text Viewer so inline text, URL, and Blob
+sources all go through one resource path.
+
+<MarkdownViewerDemo />
+
+## Installation
+
+```bash
+npx shadcn@latest add @retab/markdown-document-viewer
+```
+
+## Usage
+
+```tsx
+import { MarkdownDocumentViewer } from "@/components/ui/markdown-document-viewer"
+
+export function Example() {
+  return (
+    <MarkdownDocumentViewer
+      source={{
+        kind: "text",
+        text: "# Notes\n\nMarkdown should wrap and render like a document.",
+        fileName: "notes.md",
+        mimeType: "text/markdown",
+      }}
+    />
+  )
+}
+```
+
+URL sources work the same way:
+
+```tsx
+<MarkdownDocumentViewer
+  source={{
+    kind: "url",
+    url: "/samples/release-notes.md",
+    fileName: "release-notes.md",
+  }}
+/>
+```
+
+## Features
+
+- **Rendered/Text modes** — switch between rendered Markdown and wrapped source text.
+- **Document virtualization** — only visible Markdown pages mount, so long documents stay responsive.
+- **GFM rendering** — headings, paragraphs, links, task lists, tables, blockquotes, fenced code, images, and rules render as React-owned DOM.
+- **Safe fallbacks** — raw HTML and unsafe URLs do not become live executable DOM.
+- **Document controls** — page indicator, zoom, fit width, copy, and download are built in.
+
+## Props
+
+| Prop        | Type                    | Description                                                                |
+| ----------- | ----------------------- | -------------------------------------------------------------------------- |
+| `source`    | `TextDocumentSource`    | Required source descriptor. Supports URL, Blob, and inline text resources. |
+| `className` | `string`                | Optional class on the viewer container.                                    |
+| `toolbar`   | `boolean`               | Show page, mode, zoom, copy, and download controls. Defaults to `true`.    |
+| `highlight` | `TextLineRange \| null` | 1-based inclusive source-line range to highlight.                          |
+| `bare`      | `boolean`               | Drop the outer border/background so the viewer fills its container.        |
+| `maxBytes`  | `number`                | Maximum text payload size accepted by the viewer.                          |
+| `maxLines`  | `number`                | Maximum number of source lines accepted by the viewer.                     |

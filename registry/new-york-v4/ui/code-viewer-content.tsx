@@ -1,14 +1,12 @@
 "use client"
 
 import * as React from "react"
-import { useVirtualizer } from "@tanstack/react-virtual"
 import Prism from "prismjs"
 
 import type { ViewerResource } from "@/lib/viewer-resource"
 
 import { CodeViewerFrame, CodeViewerToolbar } from "./code-viewer-chrome"
 import { scrollLineRangeMetricsIntoView } from "./code-viewer-layout"
-import { CodeLine } from "./code-viewer-line"
 import {
   clampCodeViewerScale,
   CODE_VIEWER_BASE_FONT_PX,
@@ -18,7 +16,10 @@ import {
   CODE_VIEWER_OVERSCAN,
 } from "./code-viewer-scale"
 import type { CodeViewerHandle, CodeViewerProps } from "./code-viewer-types"
-import { createInitialCodeVirtualLines } from "./code-viewer-virtualization"
+import {
+  getCodeVirtualLines,
+  getCodeVirtualTotalSize,
+} from "./code-viewer-virtualization"
 import { isLineInRange, normalizeTextLineRange } from "./line-ranges"
 import {
   readTextResource,
@@ -35,6 +36,7 @@ interface CodeTokenLeaf {
 }
 
 const JSON_LINE_MAX = 2000
+const CODE_VIEWER_DEFAULT_VIEWPORT_WIDTH = 800
 
 const JSON_GRAMMAR: Prism.Grammar = {
   property: {
@@ -137,6 +139,237 @@ function CodeLineContent({
   )
 }
 
+type CodeLineTokenGetter = (line: string) => CodeTokenLeaf[] | null
+
+type CodeRowCache = {
+  contentSpan: HTMLSpanElement
+  gutterSpan: HTMLSpanElement
+  renderKey: string
+  row: HTMLDivElement
+}
+
+type CodeProjectionCache = {
+  lineHeight: number
+  rows: Array<CodeRowCache | undefined>
+  textLines: string[] | null
+}
+
+function projectCodeRows({
+  cache,
+  getLineTokens,
+  gutterWidth,
+  highlightRange,
+  lineHeight,
+  pre,
+  textLines,
+  viewport,
+}: {
+  cache: CodeProjectionCache
+  getLineTokens: CodeLineTokenGetter
+  gutterWidth: string
+  highlightRange: ReturnType<typeof normalizeTextLineRange>
+  lineHeight: number
+  pre: HTMLPreElement | null
+  textLines: string[]
+  viewport: HTMLDivElement | null
+}) {
+  if (!pre) return
+
+  if (cache.textLines !== textLines || cache.lineHeight !== lineHeight) {
+    pre.replaceChildren()
+    cache.lineHeight = lineHeight
+    cache.rows = []
+    cache.textLines = textLines
+  }
+
+  pre.style.height = `${getCodeVirtualTotalSize({
+    lineCount: textLines.length,
+    lineHeight,
+  })}px`
+
+  const virtualLines = getCodeVirtualLines({
+    lineCount: textLines.length,
+    lineHeight,
+    overscan: CODE_VIEWER_OVERSCAN,
+    paddingStart: CODE_VIEWER_BLOCK_PADDING,
+    scrollTop: viewport?.scrollTop ?? 0,
+    viewportHeight:
+      viewport?.clientHeight || CODE_VIEWER_INITIAL_VIEWPORT_HEIGHT,
+  })
+  const start = virtualLines[0]?.index ?? 0
+  const end = virtualLines.length
+    ? virtualLines[virtualLines.length - 1]!.index + 1
+    : start
+
+  for (let index = 0; index < cache.rows.length; index++) {
+    if (index >= start && index < end) continue
+    removeCodeRow(cache, index)
+  }
+
+  let anchor: ChildNode | null = null
+  for (const virtualLine of virtualLines) {
+    const row = prepareCodeRow({
+      cache,
+      getLineTokens,
+      gutterWidth,
+      highlightRange,
+      lineHeight,
+      textLines,
+      virtualLine,
+    }).row
+    if (row.parentNode !== pre) {
+      pre.insertBefore(row, anchor)
+    } else if (anchor && row.nextSibling !== anchor) {
+      pre.insertBefore(row, anchor)
+    }
+    anchor = row.nextSibling
+  }
+}
+
+function removeCodeRow(cache: CodeProjectionCache, index: number) {
+  const cachedRow = cache.rows[index]
+  if (!cachedRow) return
+  cachedRow.row.remove()
+  cache.rows[index] = undefined
+}
+
+function prepareCodeRow({
+  cache,
+  getLineTokens,
+  gutterWidth,
+  highlightRange,
+  lineHeight,
+  textLines,
+  virtualLine,
+}: {
+  cache: CodeProjectionCache
+  getLineTokens: CodeLineTokenGetter
+  gutterWidth: string
+  highlightRange: ReturnType<typeof normalizeTextLineRange>
+  lineHeight: number
+  textLines: string[]
+  virtualLine: ReturnType<typeof getCodeVirtualLines>[number]
+}): CodeRowCache {
+  const lineNumber = virtualLine.index + 1
+  const text = textLines[virtualLine.index] ?? ""
+  const isHighlighted = isLineInRange(lineNumber, highlightRange)
+  const renderKey = [
+    lineNumber,
+    text,
+    gutterWidth,
+    lineHeight,
+    isHighlighted ? "highlighted" : "",
+  ].join("\u0000")
+  let cachedRow = cache.rows[virtualLine.index]
+
+  if (!cachedRow) {
+    cachedRow = createCodeRow()
+    cache.rows[virtualLine.index] = cachedRow
+  }
+
+  cachedRow.row.style.height = `${virtualLine.size}px`
+  cachedRow.row.style.transform = `translateY(${virtualLine.start}px)`
+
+  if (cachedRow.renderKey !== renderKey) {
+    cachedRow.renderKey = renderKey
+    renderCodeRow({
+      cachedRow,
+      getLineTokens,
+      gutterWidth,
+      isHighlighted,
+      lineNumber,
+      text,
+    })
+  }
+
+  return cachedRow
+}
+
+function createCodeRow(): CodeRowCache {
+  const row = document.createElement("div")
+  const gutterSpan = document.createElement("span")
+  const contentSpan = document.createElement("span")
+
+  row.className = codeRowClassName(false)
+  row.style.position = "absolute"
+  row.style.top = "0"
+  row.style.left = "0"
+
+  gutterSpan.className =
+    "flex-shrink-0 pr-3 text-right text-muted-foreground/60 select-none"
+  contentSpan.className = "whitespace-pre"
+
+  row.append(gutterSpan, contentSpan)
+
+  return {
+    contentSpan,
+    gutterSpan,
+    renderKey: "",
+    row,
+  }
+}
+
+function renderCodeRow({
+  cachedRow,
+  getLineTokens,
+  gutterWidth,
+  isHighlighted,
+  lineNumber,
+  text,
+}: {
+  cachedRow: CodeRowCache
+  getLineTokens: CodeLineTokenGetter
+  gutterWidth: string
+  isHighlighted: boolean
+  lineNumber: number
+  text: string
+}) {
+  cachedRow.row.dataset.lineNumber = String(lineNumber)
+  cachedRow.row.className = codeRowClassName(isHighlighted)
+  cachedRow.gutterSpan.style.width = gutterWidth
+  cachedRow.gutterSpan.textContent = String(lineNumber)
+  replaceCodeContent(cachedRow.contentSpan, getLineTokens(text), text)
+}
+
+function replaceCodeContent(
+  contentSpan: HTMLSpanElement,
+  leaves: CodeTokenLeaf[] | null,
+  text: string
+) {
+  contentSpan.replaceChildren()
+  if (text === "") {
+    contentSpan.textContent = " "
+    return
+  }
+  if (!leaves) {
+    contentSpan.textContent = text
+    return
+  }
+
+  const fragment = document.createDocumentFragment()
+  for (const leaf of leaves) {
+    const className = CODE_TOKEN_CLASS[leaf.type]
+    if (!className) {
+      fragment.append(document.createTextNode(leaf.text))
+      continue
+    }
+    const span = document.createElement("span")
+    span.className = className
+    span.textContent = leaf.text
+    fragment.append(span)
+  }
+  contentSpan.append(fragment)
+}
+
+function codeRowClassName(isHighlighted: boolean) {
+  return [
+    "absolute top-0 left-0 flex min-w-full px-2",
+    isHighlighted ? "bg-primary/12 ring-1 ring-primary/30 ring-inset" : "",
+  ]
+    .filter(Boolean)
+    .join(" ")
+}
+
 export function CodeViewerContent({
   resource,
   className,
@@ -199,26 +432,17 @@ export function CodeViewerContent({
 
   const [fontScale, setFontScale] = React.useState(1)
   const viewportElementRef = React.useRef<HTMLDivElement | null>(null)
-  const lineHeight = CODE_VIEWER_BASE_LINE_PX * fontScale
-  const lineVirtualizer = useVirtualizer({
-    count: textLines.length,
-    getScrollElement: () => viewportElementRef.current,
-    estimateSize: () => lineHeight,
-    overscan: CODE_VIEWER_OVERSCAN,
-    paddingStart: CODE_VIEWER_BLOCK_PADDING,
-    paddingEnd: CODE_VIEWER_BLOCK_PADDING,
-    initialRect: {
-      width: 800,
-      height: CODE_VIEWER_INITIAL_VIEWPORT_HEIGHT,
-    },
+  const preRef = React.useRef<HTMLPreElement | null>(null)
+  const projectionCacheRef = React.useRef<CodeProjectionCache>({
+    lineHeight: 0,
+    rows: [],
+    textLines: null,
   })
+  const scheduledProjectionRef = React.useRef(0)
+  const lineHeight = CODE_VIEWER_BASE_LINE_PX * fontScale
 
   const zoom = (factor: number) =>
     setFontScale((scale) => clampCodeViewerScale(scale * factor))
-
-  React.useEffect(() => {
-    lineVirtualizer.measure()
-  }, [lineHeight, lineVirtualizer])
 
   React.useImperativeHandle(
     forwardedRef,
@@ -247,11 +471,51 @@ export function CodeViewerContent({
   }, [highlightRange, lineHeight])
 
   const gutterWidth = `${String(textLines.length).length + 1}ch`
-  const measuredVirtualLines = lineVirtualizer.getVirtualItems()
-  const virtualLines =
-    measuredVirtualLines.length > 0
-      ? measuredVirtualLines
-      : createInitialCodeVirtualLines(textLines.length, lineHeight)
+  const totalHeight = getCodeVirtualTotalSize({
+    lineCount: textLines.length,
+    lineHeight,
+  })
+  const projectRows = React.useCallback(() => {
+    scheduledProjectionRef.current = 0
+    projectCodeRows({
+      cache: projectionCacheRef.current,
+      getLineTokens: lineTokens,
+      gutterWidth,
+      highlightRange,
+      lineHeight,
+      pre: preRef.current,
+      textLines,
+      viewport: viewportElementRef.current,
+    })
+  }, [gutterWidth, highlightRange, lineHeight, lineTokens, textLines])
+
+  const scheduleProjectRows = React.useCallback(() => {
+    if (scheduledProjectionRef.current) return
+    scheduledProjectionRef.current = requestAnimationFrame(projectRows)
+  }, [projectRows])
+
+  React.useLayoutEffect(() => {
+    projectRows()
+  }, [projectRows])
+
+  React.useLayoutEffect(() => {
+    const viewport = viewportElementRef.current
+    if (!viewport) return
+    viewport.addEventListener("scroll", scheduleProjectRows, { passive: true })
+    const observer =
+      typeof ResizeObserver === "undefined"
+        ? null
+        : new ResizeObserver(scheduleProjectRows)
+    observer?.observe(viewport)
+    return () => {
+      viewport.removeEventListener("scroll", scheduleProjectRows)
+      observer?.disconnect()
+      if (scheduledProjectionRef.current) {
+        cancelAnimationFrame(scheduledProjectionRef.current)
+        scheduledProjectionRef.current = 0
+      }
+    }
+  }, [scheduleProjectRows])
 
   return (
     <CodeViewerFrame className={className} bare={bare}>
@@ -268,33 +532,15 @@ export function CodeViewerContent({
       {grammar ? <style>{CODE_VIEWER_SYNTAX_STYLE}</style> : null}
       <ScrollArea className="min-h-0 flex-1" viewportRef={viewportElementRef}>
         <pre
+          ref={preRef}
           className="relative w-max min-w-full font-mono"
           style={{
             fontSize: `${CODE_VIEWER_BASE_FONT_PX * fontScale}px`,
             lineHeight: `${lineHeight}px`,
-            height: lineVirtualizer.getTotalSize(),
+            height: totalHeight,
+            minWidth: CODE_VIEWER_DEFAULT_VIEWPORT_WIDTH,
           }}
-        >
-          {virtualLines.map((virtualLine) => {
-            const lineNumber = virtualLine.index + 1
-            const line = textLines[virtualLine.index] ?? ""
-            return (
-              <CodeLine
-                key={virtualLine.key}
-                gutterWidth={gutterWidth}
-                isHighlighted={isLineInRange(lineNumber, highlightRange)}
-                lineNumber={lineNumber}
-                text={line}
-                style={{
-                  height: virtualLine.size,
-                  transform: `translateY(${virtualLine.start}px)`,
-                }}
-              >
-                <CodeLineContent leaves={lineTokens(line)} text={line} />
-              </CodeLine>
-            )
-          })}
-        </pre>
+        />
       </ScrollArea>
     </CodeViewerFrame>
   )

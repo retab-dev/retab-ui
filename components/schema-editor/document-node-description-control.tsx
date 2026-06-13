@@ -1,6 +1,6 @@
 "use client"
 
-import { SchemaInlineDescription } from "@/components/schema-editor/primitives/schema-inline-description"
+import { SchemaFieldDescription } from "@/components/schema-editor/primitives/schema-field-description"
 
 interface DocumentNodeDescriptionControlProps {
   description: string
@@ -16,10 +16,10 @@ export function DocumentNodeDescriptionControl({
   onSubmitDescription,
 }: DocumentNodeDescriptionControlProps) {
   return (
-    <SchemaInlineDescription
+    <SchemaFieldDescription
       value={description}
-      editMode={editMode}
-      onOpenMetadata={onOpenMetadata}
+      editable={editMode !== "readOnly"}
+      onOpenDetails={onOpenMetadata}
       onCommit={onSubmitDescription}
     />
   )

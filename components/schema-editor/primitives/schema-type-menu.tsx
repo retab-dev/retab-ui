@@ -1,6 +1,6 @@
 "use client"
 
-import type * as React from "react"
+import * as React from "react"
 import { ChevronDown } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -119,7 +119,9 @@ export function SchemaTypeMenu({
         {sections.map((section) => {
           if (section.kind === "custom") {
             return (
-              <div key={section.id}>{section.render({ editable })}</div>
+              <React.Fragment key={section.id}>
+                {section.render({ editable })}
+              </React.Fragment>
             )
           }
 

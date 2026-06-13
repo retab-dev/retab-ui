@@ -1,55 +1,33 @@
 "use client"
 
 import * as React from "react"
-import { Check, Copy } from "lucide-react"
-import ReactMarkdown, { type Components } from "react-markdown"
-import remarkGfm from "remark-gfm"
+import type { Components } from "react-markdown"
 
-import { Button } from "./button"
+import {
+  MarkdownCallout,
+  markdownCalloutKindFromProps,
+  markdownCalloutTitleFromProps,
+} from "./markdown-document-callouts"
+import {
+  MarkdownCodeCopyButton,
+  MarkdownTableCopyButton,
+} from "./markdown-document-copy"
 import {
   type MarkdownDocumentPage,
-  serializeMarkdownTableForClipboard,
+  type MarkdownLineRange,
 } from "./markdown-document-model"
+import {
+  sanitizeMarkdownImageUrl,
+  sanitizeMarkdownUrl,
+} from "./markdown-document-url-policy"
 
-type CopyStatus = "copied" | "idle"
-
-export function MarkdownDocumentPageContent({
+export function createMarkdownDocumentRenderers({
   headingIdsByLine,
   highlightRange,
   page,
 }: {
   headingIdsByLine: ReadonlyMap<number, string>
-  highlightRange: { end: number; start: number } | null
-  page: MarkdownDocumentPage
-}) {
-  const components = React.useMemo(
-    () =>
-      createMarkdownComponents({
-        headingIdsByLine,
-        highlightRange,
-        page,
-      }),
-    [headingIdsByLine, highlightRange, page]
-  )
-
-  return (
-    <ReactMarkdown
-      remarkPlugins={[remarkGfm]}
-      components={components}
-      urlTransform={sanitizeMarkdownUrl}
-    >
-      {page.markdown}
-    </ReactMarkdown>
-  )
-}
-
-function createMarkdownComponents({
-  headingIdsByLine,
-  highlightRange,
-  page,
-}: {
-  headingIdsByLine: ReadonlyMap<number, string>
-  highlightRange: { end: number; start: number } | null
+  highlightRange: MarkdownLineRange | null
   page: MarkdownDocumentPage
 }): Components {
   const sourceLineFromNode = (node: unknown) =>
@@ -61,7 +39,7 @@ function createMarkdownComponents({
   const headingOrdinalBySlug = new Map<string, number>()
   const headingId = (node: unknown, children: React.ReactNode) =>
     headingIdForNode({ headingIdsByLine, node, page }) ??
-    nextHeadingId(extractText(children), headingOrdinalBySlug)
+    nextHeadingId(extractReactText(children), headingOrdinalBySlug)
 
   return {
     a: ({ node: _node, href, children, ...props }) => {
@@ -80,6 +58,7 @@ function createMarkdownComponents({
         </a>
       )
     },
+    br: ({ node: _node, ...props }) => <br {...props} />,
     blockquote: ({ node, ...props }) => (
       <blockquote
         className={`my-3 border-l-2 border-border pl-3 text-muted-foreground italic${highlightedClassName(node)}`}
@@ -94,6 +73,39 @@ function createMarkdownComponents({
       >
         {children}
       </code>
+    ),
+    del: ({ node: _node, ...props }) => (
+      <del className="text-muted-foreground" {...props} />
+    ),
+    details: ({ node, ...props }) => (
+      <details
+        className={`my-3 rounded-lg border bg-muted/20 px-3 py-2${highlightedClassName(node)}`}
+        data-source-line={sourceLineFromNode(node)}
+        {...props}
+      />
+    ),
+    div: ({ node, children, ...props }) => {
+      const calloutKind = markdownCalloutKindFromProps(props)
+      if (!calloutKind) {
+        return <div {...props}>{children}</div>
+      }
+      return (
+        <MarkdownCallout
+          kind={calloutKind}
+          title={markdownCalloutTitleFromProps(props)}
+          className={highlightedClassName(node)}
+          sourceLine={sourceLineFromNode(node)}
+        >
+          {children}
+        </MarkdownCallout>
+      )
+    },
+    figure: ({ node, ...props }) => (
+      <figure
+        className={`my-3 overflow-hidden rounded-lg border bg-muted/50${highlightedClassName(node)}`}
+        data-source-line={sourceLineFromNode(node)}
+        {...props}
+      />
     ),
     h1: ({ node, children, ...props }) => (
       <h1
@@ -135,6 +147,26 @@ function createMarkdownComponents({
         {children}
       </h4>
     ),
+    h5: ({ node, children, ...props }) => (
+      <h5
+        id={headingId(node, children)}
+        className={`mt-3 mb-1.5 text-[0.95em] leading-snug font-medium first:mt-0${highlightedClassName(node)}`}
+        data-source-line={sourceLineFromNode(node)}
+        {...props}
+      >
+        {children}
+      </h5>
+    ),
+    h6: ({ node, children, ...props }) => (
+      <h6
+        id={headingId(node, children)}
+        className={`mt-3 mb-1.5 text-[0.9em] leading-snug font-medium text-muted-foreground first:mt-0${highlightedClassName(node)}`}
+        data-source-line={sourceLineFromNode(node)}
+        {...props}
+      >
+        {children}
+      </h6>
+    ),
     hr: ({ node, ...props }) => (
       <hr
         className={`my-4 border-border${highlightedClassName(node)}`}
@@ -152,10 +184,29 @@ function createMarkdownComponents({
         {...props}
       />
     ),
+    input: ({ node: _node, ...props }) => (
+      <input
+        className="mr-2 size-3.5 rounded border-border align-[-0.15em]"
+        readOnly
+        {...props}
+      />
+    ),
+    kbd: ({ node: _node, ...props }) => (
+      <kbd
+        className="rounded border bg-muted px-1.5 py-0.5 font-mono text-[0.78em] shadow-xs"
+        {...props}
+      />
+    ),
     li: ({ node, ...props }) => (
       <li
         className={`leading-relaxed${highlightedClassName(node)}`}
         data-source-line={sourceLineFromNode(node)}
+        {...props}
+      />
+    ),
+    mark: ({ node: _node, ...props }) => (
+      <mark
+        className="rounded bg-yellow-200/70 px-1 text-foreground"
         {...props}
       />
     ),
@@ -175,7 +226,7 @@ function createMarkdownComponents({
     ),
     pre: ({ node, children }) => {
       const sourceLine = sourceLineFromNode(node)
-      const text = extractText(children).replace(/\n$/, "")
+      const text = extractReactText(children).replace(/\n$/, "")
       const language = codeLanguage(children)
       return (
         <div
@@ -188,7 +239,7 @@ function createMarkdownComponents({
                 {language}
               </span>
             ) : null}
-            <CodeCopyButton text={text} />
+            <MarkdownCodeCopyButton text={text} />
           </div>
           <pre className="overflow-x-auto p-3 font-mono text-[0.85em] leading-relaxed">
             {children}
@@ -196,8 +247,21 @@ function createMarkdownComponents({
         </div>
       )
     },
+    section: ({ node, className, ...props }) => (
+      <section
+        className={`mt-6 border-t pt-4 text-[0.9em] text-muted-foreground ${className ?? ""}${highlightedClassName(node)}`}
+        data-source-line={sourceLineFromNode(node)}
+        {...props}
+      />
+    ),
     strong: ({ node: _node, ...props }) => (
       <strong className="font-semibold" {...props} />
+    ),
+    summary: ({ node: _node, ...props }) => (
+      <summary className="cursor-pointer font-medium" {...props} />
+    ),
+    sup: ({ node: _node, ...props }) => (
+      <sup className="text-[0.72em] leading-none" {...props} />
     ),
     table: ({ node, ...props }) => {
       const sourceLine = sourceLineFromNode(node)
@@ -205,15 +269,15 @@ function createMarkdownComponents({
         page.blocks.find(
           (block) =>
             block.kind === "table" &&
-            sourceLine >= block.sourceStartLine &&
-            sourceLine <= block.sourceEndLine
+            sourceLine >= block.blockStartLine &&
+            sourceLine <= block.blockEndLine
         )?.markdown ?? ""
       return (
         <div
           className={`group relative my-3 overflow-x-auto rounded-lg border${highlightedClassName(node)}`}
           data-source-line={sourceLine}
         >
-          <TableCopyButton markdown={tableMarkdown} />
+          <MarkdownTableCopyButton markdown={tableMarkdown} />
           <table
             className="w-full border-collapse text-[0.85em]"
             data-markdown-table
@@ -261,7 +325,7 @@ function MarkdownImage({
   sourceLine: number
 }) {
   const [status, setStatus] = React.useState<"failed" | "idle">("idle")
-  const safeSrc = typeof src === "string" ? sanitizeImageUrl(src) : ""
+  const safeSrc = typeof src === "string" ? sanitizeMarkdownImageUrl(src) : ""
   const label = alt || safeSrc || "Markdown image"
 
   if (!safeSrc || status === "failed") {
@@ -289,75 +353,6 @@ function MarkdownImage({
       onError={() => setStatus("failed")}
       {...props}
     />
-  )
-}
-
-function CodeCopyButton({ text }: { text: string }) {
-  return (
-    <CopyButton
-      ariaLabel="Copy code block"
-      copiedLabel="Copied"
-      className="ml-auto opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
-      text={text}
-    />
-  )
-}
-
-function TableCopyButton({ markdown }: { markdown: string }) {
-  return (
-    <CopyButton
-      ariaLabel="Copy table"
-      copiedLabel="Copied"
-      className="absolute top-2 right-2 z-10 opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
-      text={serializeMarkdownTableForClipboard(markdown)}
-    />
-  )
-}
-
-function CopyButton({
-  ariaLabel,
-  className,
-  copiedLabel,
-  text,
-}: {
-  ariaLabel: string
-  className?: string
-  copiedLabel: string
-  text: string
-}) {
-  const [status, setStatus] = React.useState<CopyStatus>("idle")
-  const timeoutRef = React.useRef<number | null>(null)
-
-  React.useEffect(
-    () => () => {
-      if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current)
-    },
-    []
-  )
-
-  const copy = () => {
-    if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current)
-    void navigator.clipboard?.writeText(text).then(() => {
-      setStatus("copied")
-      timeoutRef.current = window.setTimeout(() => {
-        timeoutRef.current = null
-        setStatus("idle")
-      }, 1200)
-    })
-  }
-
-  return (
-    <Button
-      aria-label={status === "copied" ? copiedLabel : ariaLabel}
-      className={className}
-      size="icon-sm"
-      title={ariaLabel}
-      type="button"
-      variant="ghost"
-      onClick={copy}
-    >
-      {status === "copied" ? <Check /> : <Copy />}
-    </Button>
   )
 }
 
@@ -399,59 +394,39 @@ function relativeSourceLine(node: unknown) {
 }
 
 function absoluteSourceLine(page: MarkdownDocumentPage, relativeLine: number) {
-  return page.sourceStartLine + relativeLine - 1
+  return page.pageStartLine + relativeLine - 1
 }
 
 function isSourceLineHighlighted(
   sourceLine: number,
-  range: { end: number; start: number } | null
+  range: MarkdownLineRange | null
 ) {
   return Boolean(range && sourceLine >= range.start && sourceLine <= range.end)
 }
 
-function sanitizeMarkdownUrl(value: string) {
-  const trimmed = value.trim()
-  if (!trimmed) return ""
-  if (trimmed.startsWith("#") || trimmed.startsWith("/")) return trimmed
-
-  try {
-    const url = new URL(trimmed, "https://retab.local")
-    if (
-      url.protocol === "http:" ||
-      url.protocol === "https:" ||
-      url.protocol === "mailto:"
-    ) {
-      return trimmed
-    }
-  } catch {
-    return ""
-  }
-
-  return ""
-}
-
-function sanitizeImageUrl(value: string) {
-  const safeUrl = sanitizeMarkdownUrl(value)
-  if (!safeUrl || safeUrl.startsWith("mailto:") || safeUrl.startsWith("#")) {
-    return ""
-  }
-  return safeUrl
-}
-
-function extractText(node: React.ReactNode): string {
+function extractReactText(node: React.ReactNode): string {
   if (typeof node === "string" || typeof node === "number") return String(node)
-  if (Array.isArray(node)) return node.map(extractText).join("")
+  if (Array.isArray(node)) return node.map(extractReactText).join("")
   if (React.isValidElement<{ children?: React.ReactNode }>(node)) {
-    return extractText(node.props.children)
+    return extractReactText(node.props.children)
   }
   return ""
 }
 
 function codeLanguage(node: React.ReactNode): string | null {
-  if (!React.isValidElement<{ className?: string }>(node)) {
+  if (
+    !React.isValidElement<{
+      className?: string
+      "data-language"?: string
+    }>(node)
+  ) {
     if (Array.isArray(node)) return node.map(codeLanguage).find(Boolean) ?? null
     return null
   }
   const className = node.props.className ?? ""
-  return className.match(/language-([^\s]+)/)?.[1] ?? null
+  return (
+    node.props["data-language"] ??
+    className.match(/language-([^\s]+)/)?.[1] ??
+    null
+  )
 }

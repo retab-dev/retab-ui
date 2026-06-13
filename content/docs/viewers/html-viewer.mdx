@@ -1,0 +1,77 @@
+---
+title: HTML Viewer
+description: A sandboxed HTML document viewer for previewing standalone HTML files without executing scripts or exposing app origin access.
+---
+
+The HTML Viewer renders standalone `.html` and `.htm` documents through the
+File Viewer. HTML is loaded as a bounded text resource, then mounted inside a
+sandboxed iframe so untrusted documents can be previewed without running
+scripts or reaching the host app.
+
+<HtmlViewerDemo />
+
+## Installation
+
+```bash
+npx shadcn@latest add @retab/file-viewer
+```
+
+## Usage
+
+```tsx
+import { FileViewer } from "@/components/ui/file-viewer"
+
+export function Example() {
+  return (
+    <FileViewer
+      source={{
+        kind: "url",
+        url: "/samples/welcome.html",
+        fileName: "welcome.html",
+        mimeType: "text/html",
+      }}
+    />
+  )
+}
+```
+
+Inline HTML is supported too:
+
+```tsx
+<FileViewer
+  source={{
+    kind: "text",
+    text: "<!doctype html><html><body><h1>Hello</h1></body></html>",
+    fileName: "inline.html",
+    mimeType: "text/html",
+  }}
+/>
+```
+
+Use `as="html"` when a URL or Blob does not carry a useful file name or MIME
+type:
+
+```tsx
+<FileViewer
+  as="html"
+  source={{ kind: "url", url: "/rendered-document", fileName: "document" }}
+/>
+```
+
+## Features
+
+- **Sandboxed rendering** — HTML is mounted in an iframe with an empty `sandbox` attribute, so scripts, forms, modals, and same-origin access are disabled.
+- **Resource-based sources** — URL, Blob, and inline text sources share the File Viewer resource path.
+- **Viewer chrome** — zoom, retry, and download actions use the same shell as other File Viewer document routes.
+- **Explicit routing** — `.html`, `.htm`, and `text/html` sources route to the HTML viewer; `as="html"` can force the route.
+
+## Props
+
+The HTML route is exposed through `FileViewer`.
+
+| Prop        | Type           | Description                                                                                       |
+| ----------- | -------------- | ------------------------------------------------------------------------------------------------- |
+| `source`    | `ViewerSource` | Canonical file source. URL, Blob, and text sources carry file metadata with the payload identity. |
+| `as`        | `FileCategory` | Pass `"html"` to force HTML rendering when detection is ambiguous.                                |
+| `bare`      | `boolean`      | Drop the outer border/background so the viewer fills its container.                               |
+| `className` | `string`       | Optional class on the viewer shell.                                                               |

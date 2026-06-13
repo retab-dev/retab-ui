@@ -9,6 +9,7 @@
 @source "../mdx-components.tsx";
 
 @import "tw-animate-css";
+@import "katex/dist/katex.min.css";
 @import "./shadcn-tailwind.css";
 @import "./legacy-themes.css";
 

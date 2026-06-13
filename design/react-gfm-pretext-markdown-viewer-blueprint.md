@@ -1,0 +1,483 @@
+# React GFM + Pretext Markdown Viewer Blueprint
+
+## Purpose
+
+Build the Markdown viewer that combines the two things we actually want:
+
+- React/GFM rendering quality for real Markdown documents.
+- Chenglou-style Pretext geometry and custom virtualization for speed.
+
+The mistake to avoid is treating Markdown as code. Markdown is prose and
+document structure. It should wrap naturally, render tables and lists like a
+document, and still stay fast on large files.
+
+The second mistake to avoid is asking Pretext to become the whole Markdown
+renderer. Pretext should provide layout intelligence and stable geometry.
+React Markdown should render the mounted document content.
+
+## Target
+
+The target viewer should be:
+
+- simple: one parsing pipeline, one render pipeline, one virtualizer
+- fast: bounded mounted content, no full-document React render
+- complete: GFM, math, callouts, footnotes, code, tables, safe HTML
+- modular: parser, layout, virtualization, rendering, and policy separated
+- exact: consistent naming, explicit invariants, no compatibility shims
+
+## Architecture
+
+```text
+markdown source
+  -> markdown document model
+  -> semantic blocks with source ranges
+  -> page groups
+  -> Pretext-informed height estimates
+  -> custom virtualizer window
+  -> React/GFM renders visible pages
+  -> ResizeObserver records actual heights
+  -> anchor-preserving offset update
+```
+
+Pretext is not the renderer. It is the fast geometry layer.
+
+React Markdown is not the virtualizer. It is the visible content renderer.
+
+The custom virtualizer owns scroll math and mounted ranges.
+
+## Why Pretext Belongs Here
+
+Pretext is useful because it lets us answer layout questions before mounting
+DOM:
+
+- How many wrapped visual lines does a paragraph probably occupy?
+- How tall is a code block with pre-wrap?
+- What is the max line width for a text run?
+- How should width and zoom changes affect estimated geometry?
+
+Those answers let the virtualizer start with good offsets instead of terrible
+guesses. Good estimates mean fewer scroll jumps, fewer measurement corrections,
+and less visible churn.
+
+Pretext does not replace final browser layout for Markdown. Browser layout is
+still better for tables, nested lists, footnotes, math HTML, links, images, and
+rich Markdown component styling.
+
+## Rendering Boundary
+
+### React/GFM Owns
+
+- Markdown semantics
+- GFM tables
+- task lists
+- footnotes
+- math rendering
+- callout rendering
+- safe raw HTML rendering
+- code block presentation
+- copy controls
+- image states
+- accessible table markup
+
+### Pretext Owns
+
+- text measurement primitives
+- paragraph line estimates
+- code block line estimates
+- width-sensitive frame estimates
+- stable geometry inputs for the virtualizer
+
+### Custom Virtualizer Owns
+
+- visible page range
+- total canvas height
+- measured height map
+- anchor capture and restore
+- zoom and width relayout behavior
+- bounded mounted content
+
+## Module Shape
+
+### `markdown-document-model.ts`
+
+Owns source parsing and stable document records.
+
+Exports:
+
+- `createMarkdownDocument(text)`
+- `findMarkdownPageForLine(pages, sourceLine)`
+- `markdownPageIntersectsLineRange({ page, range })`
+- `serializeMarkdownTableForClipboard(markdown)`
+- document, page, block, and source range types
+
+Rules:
+
+- no React imports
+- no DOM imports
+- no virtualizer imports
+- source lines are always 1-based
+- pages use `pageStartLine` and `pageEndLine`
+- blocks use `blockStartLine` and `blockEndLine`
+
+### `markdown-document-layout.ts`
+
+Owns Pretext-informed estimates.
+
+Exports:
+
+- `createMarkdownLayoutEstimate(document, options)`
+- `estimateMarkdownBlockHeight(block, layoutStyle)`
+- `estimateMarkdownPageHeight(page, layoutStyle)`
+
+Inputs:
+
+- page width
+- zoom
+- font shorthand
+- line height
+- block spacing
+- code font
+- code line height
+
+Rules:
+
+- no React imports
+- no DOM measurement
+- Pretext style inputs must match CSS
+- width is clamped with `Math.max(1, width)`
+- estimates may be wrong, but must be stable and cheap
+
+### `markdown-document-virtualizer.ts`
+
+Owns scroll geometry.
+
+Exports:
+
+- visible range calculation
+- offset lookup
+- anchor capture
+- anchor restore
+- scroll-to-line offset
+
+Rules:
+
+- no React imports
+- no Markdown parsing
+- no DOM measurement
+- binary-search frame offsets
+- overscan in pixels, not items
+- measured heights are authoritative
+
+### `markdown-document-renderer.tsx`
+
+Owns one visible page render lifecycle.
+
+Responsibilities:
+
+- invoke React Markdown through the configured plugin pipeline
+- isolate async render readiness
+- call measurement notification after render/mutation
+- expose page root refs for table accessibility patches
+
+Rules:
+
+- no virtualizer math
+- no plugin declarations inline
+- no sanitizer declarations inline
+
+### `markdown-document-renderers.tsx`
+
+Owns visual Markdown component overrides.
+
+Includes:
+
+- headings
+- paragraphs and breaks
+- lists and task checkboxes
+- blockquotes
+- links
+- images
+- code and pre
+- tables
+- footnotes
+- `details`, `summary`, `kbd`, `mark`, `sub`, `sup`
+
+Rules:
+
+- visual components only
+- no parser policy
+- no sanitizer policy
+- no virtualizer math
+
+### `markdown-document-plugins.ts`
+
+Owns Markdown language policy.
+
+Order:
+
+```text
+remark-gfm
+remark-breaks
+remark-math
+remark-directive
+remark-callouts
+rehype-raw
+rehype-sanitize
+rehype-slug
+rehype-katex
+rehype-pretty-code
+```
+
+Rules:
+
+- plugin arrays are stable constants
+- user raw HTML is sanitized before renderer-generated KaTeX and Shiki markup
+- Pretty Code remains async
+
+### `markdown-document-sanitize.ts`
+
+Owns safe HTML.
+
+Allow:
+
+- safe document tags
+- GFM footnote attributes
+- task-list checkboxes
+- `details` and `summary`
+- `kbd`, `mark`, `sub`, `sup`
+- generated callout data attributes
+- tightly scoped generated KaTeX and Pretty Code attributes
+
+Block:
+
+- `script`
+- event handlers
+- unsafe URL protocols
+- arbitrary user-authored class names
+- arbitrary inline styles
+
+### `markdown-document-callouts.ts`
+
+Owns directive semantics.
+
+Supported input names:
+
+- `note`
+- `info`
+- `tip`
+- `success`
+- `warning`
+- `caution`
+- `danger`
+- `error`
+- `failure`
+
+Normalized output kinds:
+
+- `note`
+- `info`
+- `tip`
+- `warning`
+- `danger`
+
+Syntax:
+
+```md
+:::warning{title="Migration note"}
+This renders as a warning callout.
+:::
+```
+
+The remark transform should emit neutral data properties:
+
+- `dataCalloutKind`
+- `dataCalloutTitle`
+
+The React renderer converts those properties into UI.
+
+## Chenglou Tricks To Keep
+
+- Prepare source/style data once; layout many times.
+- Keep CSS and Pretext style inputs identical.
+- Wait for font readiness or use stable explicit fonts.
+- Cache prepared text by content and style version.
+- Cache frame estimates by width, zoom, and style version.
+- Use binary search for visible ranges.
+- Overscan in pixels.
+- Batch scroll and resize projection with `requestAnimationFrame`.
+- Preserve scroll anchors across measured height changes.
+- Never compute virtual heights with hidden probe DOM.
+- Never render the full document just to learn its size.
+- Clamp widths to at least 1 CSS pixel.
+- Treat very large blocks as hostile and give them a secondary strategy.
+
+## What We Should Not Copy
+
+Do not copy the markdown-chat demo as a full renderer for this component.
+
+That path is perfect for chat-style text projection, but our viewer needs real
+document Markdown:
+
+- real tables
+- nested lists
+- accessible semantics
+- math output
+- footnotes
+- safe HTML
+- code block UI
+- parse-viewer-level polish
+
+Pretext should improve geometry. React/GFM should preserve document fidelity.
+
+## Virtualization Unit
+
+Use page virtualization first.
+
+A page is a grouped set of top-level Markdown blocks with a stable source-line
+range and a readable document width.
+
+Why pages:
+
+- fewer mounted React roots
+- closer to parse viewer visual quality
+- natural place for page padding and document styling
+- simpler table and list containment
+
+Rules:
+
+- keep headings with following blocks when possible
+- do not split tables initially
+- do not split fenced code blocks initially
+- allow over-height pages for hostile blocks
+- measure actual page height after render
+- page estimates are only the starting geometry
+
+## Hostile Blocks
+
+Large blocks need explicit handling.
+
+Examples:
+
+- a single 10,000-line fenced code block
+- a huge generated table
+- a paragraph with megabytes of unbroken text
+- deeply nested generated lists
+
+Initial strategy:
+
+- cap mounted pages, not source lines
+- detect hostile blocks during modeling
+- keep hostile blocks in their own page
+- estimate conservatively with Pretext where possible
+- render only the hostile page when visible
+
+Future strategy:
+
+- add internal virtualization for hostile code blocks
+- add table row virtualization only if profiling proves it is needed
+
+## Measurement Policy
+
+Use estimates first and measurements second.
+
+Rules:
+
+- Pretext estimates feed the first virtual frame.
+- `ResizeObserver` records actual rendered page heights.
+- measured heights replace estimates.
+- updating heights must preserve the current scroll anchor.
+- zoom and width changes rebuild estimates and clear incompatible
+  measurements.
+- document identity changes clear all measurements.
+
+## File Viewer Routing
+
+File Viewer should route by content semantics:
+
+- Markdown files use this Markdown document viewer.
+- prose text uses the fast Pretext text viewer.
+- logs, JSON, source code, and line-oriented text use the Code Viewer.
+
+The tabs should say what the user is choosing:
+
+- `Text` for prose
+- `Code` for code/log/source
+- `Markdown` for Markdown
+
+## Tests
+
+### Model
+
+- frontmatter line accounting
+- heading ids and duplicate suffixes
+- page grouping
+- block source ranges
+- table source preservation
+- hostile block detection
+
+### Layout
+
+- paragraph estimate changes with width
+- code estimate respects line count
+- width clamps at 1 pixel
+- repeated layout with same key reuses cached work
+- font/style mismatch is impossible through typed options
+
+### Virtualizer
+
+- visible range uses binary search
+- overscan is pixel-based
+- mounted page count remains bounded
+- measured heights replace estimates
+- anchor restore prevents jumps
+- scroll-to-line works before and after measurement
+
+### Renderer
+
+- GFM tables
+- task lists
+- hard breaks
+- math
+- callouts
+- footnotes
+- safe HTML
+- unsafe HTML blocked
+- highlighted code
+- code copy
+- table copy
+- image loading and failure states
+
+### Integration
+
+- File Viewer routes Markdown to this viewer
+- File Viewer routes prose to Text Viewer
+- File Viewer routes logs/code to Code Viewer
+- stale async resource loads do not win
+- large Markdown mounts a bounded number of pages
+
+## Acceptance Criteria
+
+The component is done when:
+
+- plugin policy exists in exactly one module
+- sanitizer policy exists in exactly one module
+- callout policy exists in exactly one module
+- React renderers contain no virtualizer math
+- virtualizer contains no React
+- model contains no React or DOM logic
+- Pretext is used for estimates, not full Markdown rendering
+- React/GFM owns final visible Markdown rendering
+- large files do not mount the full document
+- scroll remains stable as measurements arrive
+- tables remain accessible after async rendering
+- safe HTML is useful but not dangerous
+- File Viewer uses this path for Markdown
+- focused tests, typecheck, and registry build pass
+
+## Final Shape
+
+The ideal viewer has one clean sentence:
+
+React/GFM renders the visible Markdown document; Pretext gives the virtualizer
+good geometry; the custom virtualizer keeps the mounted document bounded.
+

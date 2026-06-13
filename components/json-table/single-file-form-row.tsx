@@ -168,6 +168,7 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
     return (
       <TableRow
         data-index={rowIdx}
+        data-slot="json-table-row"
         className="flex w-full border-b-0 border-border bg-transparent hover:bg-muted/50"
         style={rowStyle}
       >

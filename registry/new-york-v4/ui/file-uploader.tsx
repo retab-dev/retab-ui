@@ -12,11 +12,12 @@ import {
 
 import { cn } from "@/lib/utils"
 import {
-  formatDropzoneBytes,
   useDropzone,
   type DropzoneFileItem,
+  type DropzoneFileRejection,
   type UseDropzoneProps,
 } from "@/components/ui/dropzone"
+import { formatFileSize } from "@/components/ui/file-size-format"
 import { FileThumbnail } from "@/components/ui/file-thumbnail"
 
 export type FileUploaderAcceptedFileType = {
@@ -30,8 +31,6 @@ export type FileUploaderProps = UseDropzoneProps &
     browseLabel?: React.ReactNode
     description?: React.ReactNode
     draggingLabel?: React.ReactNode
-    renderFileItem?: (item: DropzoneFileItem) => React.ReactNode
-    renderFileList?: (items: DropzoneFileItem[]) => React.ReactNode
     showFileList?: boolean
     title?: React.ReactNode
   }
@@ -61,13 +60,10 @@ export function FileUploader({
   maxFiles,
   maxSize,
   multiple = true,
-  renderFileItem,
-  renderFileList,
   showFileList = true,
   title = "Click to upload or drop files",
-  onFilesAccepted,
   onFilesChange,
-  onFilesRejected,
+  onIntake,
   ...props
 }: FileUploaderProps) {
   const dropzone = useDropzone({
@@ -78,11 +74,12 @@ export function FileUploader({
     maxFiles,
     maxSize,
     multiple,
-    onFilesAccepted,
     onFilesChange,
-    onFilesRejected,
+    onIntake,
   })
-  const rejectionMessage = dropzone.rejectedFiles[0]?.message ?? null
+  const rejectionMessage = dropzone.fileRejections[0]
+    ? getDropzoneRejectionMessage(dropzone.fileRejections[0])
+    : null
   const titleText = typeof title === "string" ? title : "Upload files"
   const triggerProps = dropzone.getTriggerProps<HTMLDivElement>({
     ...props,
@@ -117,15 +114,12 @@ export function FileUploader({
         <Upload className="size-3.5" aria-hidden />
         <span>{dropzone.isDragging ? draggingLabel : browseLabel}</span>
       </div>
-      {showFileList && dropzone.files.length > 0
-        ? (renderFileList?.(dropzone.files) ?? (
-            <FileUploaderFileList
-              files={dropzone.files}
-              renderFileItem={renderFileItem}
-              onRemoveFile={dropzone.removeFile}
-            />
-          ))
-        : null}
+      {showFileList && dropzone.files.length > 0 ? (
+        <FileUploaderFileList
+          files={dropzone.files}
+          onRemoveFile={dropzone.removeFile}
+        />
+      ) : null}
       <input
         {...dropzone.getInputProps({
           "aria-label": titleText,
@@ -138,11 +132,9 @@ export function FileUploader({
 
 function FileUploaderFileList({
   files,
-  renderFileItem,
   onRemoveFile,
 }: {
   files: DropzoneFileItem[]
-  renderFileItem?: (item: DropzoneFileItem) => React.ReactNode
   onRemoveFile: (fileId: string) => void
 }) {
   return (
@@ -155,18 +147,18 @@ function FileUploaderFileList({
           {files.length} file{files.length === 1 ? "" : "s"} ready
         </div>
         <div className="text-xs text-muted-foreground">
-          {formatDropzoneBytes(
+          {formatFileSize(
             files.reduce((totalSize, item) => totalSize + item.file.size, 0)
           )}
         </div>
       </div>
       <div className="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] gap-x-2 gap-y-4">
         {files.map((item) => (
-          <React.Fragment key={item.id}>
-            {renderFileItem?.(item) ?? (
-              <FileUploaderFileTile item={item} onRemoveFile={onRemoveFile} />
-            )}
-          </React.Fragment>
+          <FileUploaderFileTile
+            key={item.id}
+            item={item}
+            onRemoveFile={onRemoveFile}
+          />
         ))}
       </div>
     </div>
@@ -212,7 +204,7 @@ function FileUploaderFileTile({
           {item.file.name}
         </div>
         <div className="mt-0.5 truncate text-[0.6875rem] leading-none text-muted-foreground">
-          {formatDropzoneBytes(item.file.size)}
+          {formatFileSize(item.file.size)}
         </div>
       </div>
     </div>
@@ -255,4 +247,16 @@ function FileUploaderIconCluster({
       })}
     </div>
   )
+}
+
+function getDropzoneRejectionMessage(rejection: DropzoneFileRejection): string {
+  if (rejection.reason === "file-invalid-type") {
+    return "This file type is not supported here."
+  }
+  if (rejection.reason === "file-too-large") {
+    return `File must be ${formatFileSize(rejection.maxSize)} or smaller.`
+  }
+  return rejection.maxFiles === 1
+    ? "Only one file can be selected."
+    : `Only ${rejection.maxFiles} files can be selected.`
 }

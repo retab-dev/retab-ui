@@ -7,6 +7,8 @@
     "csv-viewer",
     "code-viewer",
     "text-viewer",
+    "markdown-viewer",
+    "html-viewer",
     "xlsx-viewer",
     "docx-viewer",
     "pptx-viewer",

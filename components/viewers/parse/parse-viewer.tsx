@@ -13,7 +13,7 @@ export interface ParseViewerProps {
   result: ParseResponse | null
   isProcessing?: boolean
   renderDocument?: PageMarkdownViewerProps["renderDocument"]
-  onVisiblePageChange?: (page: number) => void
+  onVisiblePageChange?: (pageNumber: number) => void
 }
 
 export function ParseViewer({

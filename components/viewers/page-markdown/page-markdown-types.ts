@@ -3,7 +3,7 @@ import { type ReactNode } from "react"
 export type PageMarkdownViewMode = "rendered" | "text"
 
 export interface PageMarkdownDocumentHandlers {
-  onCurrentPageChange: (page: number) => void
+  onCurrentPageChange: (pageNumber: number) => void
   onScrollProgressChange?: (progress: number) => void
 }
 
@@ -12,7 +12,7 @@ export interface PageMarkdownViewerProps {
   text?: string
   isProcessing?: boolean
   renderDocument?: (handlers: PageMarkdownDocumentHandlers) => ReactNode
-  onVisiblePageChange?: (page: number) => void
+  onVisiblePageChange?: (pageNumber: number) => void
   fileName?: string
   resetKey?: string
   processingLabel?: string

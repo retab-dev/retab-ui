@@ -406,7 +406,13 @@ function stubCanvasContext() {
 function stubTiffMetadataLoading(
   frames: readonly { width: number; height: number }[]
 ) {
+  const workers: FakeTiffWorker[] = []
   class MetadataWorker extends FakeTiffWorker {
+    constructor() {
+      super()
+      workers.push(this)
+    }
+
     override postMessage(
       message: TiffWorkerRequest,
       transfer?: readonly Transferable[]
@@ -436,6 +442,7 @@ function stubTiffMetadataLoading(
     )
   )
   vi.stubGlobal("Worker", MetadataWorker)
+  return { workers }
 }
 
 async function waitForWorkerPost(worker: FakeTiffWorker) {
@@ -2193,24 +2200,70 @@ describe("TiffWorkerClient", () => {
 })
 
 describe("ImageFrame rendering lifecycle", () => {
-  it("does not acquire a frame until the frame is near the viewport", async () => {
-    const layout = stubObservableLayout({ isIntersecting: false })
+  it("only mounts and decodes a virtual window of large TIFF frames", async () => {
+    stubObservableLayout({
+      frameListWidth: 132,
+      clientHeight: 200,
+      isIntersecting: false,
+    })
     stubCanvasContext()
-    const decode = vi.fn(() => Promise.resolve(bitmap(30, 20)))
-    const source = createImageSourceForTests("image", frameCount(1), decode)
+    const { workers } = stubTiffMetadataLoading(
+      Array.from({ length: 100 }, () => ({ width: 100, height: 100 }))
+    )
 
-    render(<ImageFrame source={source} frameIndex={0} scale={1} rotation={0} />)
+    let view!: RenderResult
     await act(async () => {
-      await Promise.resolve()
+      view = render(
+        <ImageViewer source={imageUrlSource("/large-windowed.tiff")} />
+      )
+    })
+    const { container } = view
+
+    expect(await screen.findByText("Page 1 of 100")).toBeTruthy()
+    await waitFor(() => {
+      expect(container.querySelectorAll("[data-slot='image-frame']")).toHaveLength(
+        6
+      )
+    })
+    expect(
+      workers[0].posts
+        .filter((post) => post.message.type === "decodeFrame")
+        .map((post) => post.message.frameIndex)
+    ).toEqual([0, 1, 2, 3, 4, 5])
+
+    const viewport = container.querySelector(
+      '[data-slot="scroll-area-viewport"]'
+    ) as HTMLElement
+    Object.defineProperty(viewport, "clientHeight", {
+      configurable: true,
+      value: 200,
+    })
+    Object.defineProperty(viewport, "scrollHeight", {
+      configurable: true,
+      value: 11616,
+    })
+    viewport.scrollTop = 16 + 49 * 116
+
+    await act(async () => {
+      fireEvent.scroll(viewport)
+      await new Promise((resolve) => requestAnimationFrame(resolve))
     })
 
-    expect(decode).not.toHaveBeenCalled()
-
-    await act(async () => {
-      layout.triggerAll(true)
+    await waitFor(() => {
+      const mountedFrameNumbers = Array.from(
+        container.querySelectorAll<HTMLElement>("[data-slot='image-frame']")
+      ).map((frame) => Number(frame.dataset.frameNumber))
+      expect(mountedFrameNumbers).toEqual([
+        46, 47, 48, 49, 50, 51, 52, 53, 54, 55,
+      ])
     })
-
-    await waitFor(() => expect(decode).toHaveBeenCalledTimes(1))
+    expect(
+      workers[0].posts
+        .filter((post) => post.message.type === "decodeFrame")
+        .map((post) => post.message.frameIndex)
+    ).toEqual([
+      0, 1, 2, 3, 4, 5, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54,
+    ])
   })
 
   it("draws an observed frame at device-pixel size and releases it on unmount", async () => {
@@ -2830,7 +2883,7 @@ describe("ImageViewer interactions", () => {
     expect(screen.getByText("200%")).toBeTruthy()
   })
 
-  it("reports scroll progress and the frame under the viewport marker", async () => {
+  it("reports scroll progress and the frame under the layout marker", async () => {
     stubObservableLayout({ isIntersecting: false })
     stubTiffMetadataLoading([
       { width: 100, height: 100 },
@@ -2856,9 +2909,6 @@ describe("ImageViewer interactions", () => {
     const viewport = container.querySelector(
       '[data-slot="scroll-area-viewport"]'
     ) as HTMLElement
-    const secondFrame = container.querySelector(
-      '[data-frame-number="2"]'
-    ) as HTMLElement
     Object.defineProperty(viewport, "clientHeight", {
       configurable: true,
       value: 250,
@@ -2868,10 +2918,6 @@ describe("ImageViewer interactions", () => {
       value: 1000,
     })
     viewport.scrollTop = 375
-    Object.defineProperty(document, "elementsFromPoint", {
-      configurable: true,
-      value: vi.fn(() => [secondFrame]),
-    })
 
     await act(async () => {
       fireEvent.scroll(viewport)
@@ -2882,7 +2928,7 @@ describe("ImageViewer interactions", () => {
     await waitFor(() => expect(screen.getByText("Page 2 of 3")).toBeTruthy())
   })
 
-  it("falls back to frame bounding boxes when elementsFromPoint is unavailable", async () => {
+  it("uses layout math for visible frame detection without DOM scanning", async () => {
     stubObservableLayout({ isIntersecting: false })
     stubTiffMetadataLoading([
       { width: 100, height: 100 },
@@ -2908,41 +2954,25 @@ describe("ImageViewer interactions", () => {
     const viewport = container.querySelector(
       '[data-slot="scroll-area-viewport"]'
     ) as HTMLElement
-    const frames = Array.from(
-      container.querySelectorAll<HTMLElement>("[data-frame-number]")
-    )
-    viewport.getBoundingClientRect = vi.fn(
-      () =>
-        ({
-          top: 0,
-          left: 0,
-          width: 300,
-          height: 200,
-          right: 300,
-          bottom: 200,
-        }) as DOMRect
-    )
     Object.defineProperty(viewport, "clientHeight", {
       configurable: true,
       value: 200,
     })
     Object.defineProperty(viewport, "scrollHeight", {
       configurable: true,
-      value: 200,
+      value: 1000,
     })
     Object.defineProperty(document, "elementsFromPoint", {
       configurable: true,
       value: undefined,
     })
-    frames[0].getBoundingClientRect = vi.fn(() => ({ top: -80 }) as DOMRect)
-    frames[1].getBoundingClientRect = vi.fn(() => ({ top: 20 }) as DOMRect)
-    frames[2].getBoundingClientRect = vi.fn(() => ({ top: 140 }) as DOMRect)
+    viewport.scrollTop = 320
 
     await act(async () => {
       fireEvent.scroll(viewport)
     })
 
-    expect(onScrollProgressChange).toHaveBeenCalledWith(0)
+    expect(onScrollProgressChange).toHaveBeenCalledWith(0.4)
     expect(onVisibleFrameChange).toHaveBeenCalledWith(2)
     await waitFor(() => expect(screen.getByText("Page 2 of 3")).toBeTruthy())
   })
@@ -3027,7 +3057,7 @@ describe("ImageViewer interactions", () => {
   })
 
   it("exposes the scroll viewport and scrolls to frame areas through its ref", async () => {
-    stubObservableLayout({ isIntersecting: false })
+    stubObservableLayout({ frameListWidth: 132, isIntersecting: false })
     stubTiffMetadataLoading([
       { width: 100, height: 100 },
       { width: 100, height: 400 },
@@ -3046,34 +3076,9 @@ describe("ImageViewer interactions", () => {
     const viewport = container.querySelector(
       '[data-slot="scroll-area-viewport"]'
     ) as HTMLElement
-    const secondFrame = container.querySelector(
-      '[data-frame-number="2"]'
-    ) as HTMLElement
     const scrollTo = vi.fn()
     viewport.scrollTop = 20
     viewport.scrollTo = scrollTo
-    viewport.getBoundingClientRect = vi.fn(
-      () =>
-        ({
-          top: 100,
-          left: 0,
-          width: 300,
-          height: 250,
-          right: 300,
-          bottom: 350,
-        }) as DOMRect
-    )
-    secondFrame.getBoundingClientRect = vi.fn(
-      () =>
-        ({
-          top: 300,
-          left: 0,
-          width: 100,
-          height: 400,
-          right: 100,
-          bottom: 700,
-        }) as DOMRect
-    )
 
     expect(ref.current?.getViewportElement()).toBe(viewport)
 
@@ -3085,11 +3090,11 @@ describe("ImageViewer interactions", () => {
       )
     })
 
-    expect(scrollTo).toHaveBeenCalledWith({ top: 372, behavior: "auto" })
+    expect(scrollTo).toHaveBeenCalledWith({ top: 284, behavior: "auto" })
   })
 
   it("clamps imperative frame-area scrolling and ignores missing frames", async () => {
-    stubObservableLayout({ isIntersecting: false })
+    stubObservableLayout({ frameListWidth: 132, isIntersecting: false })
     stubTiffMetadataLoading([{ width: 100, height: 100 }])
     const ref = React.createRef<ImageViewerHandle>()
 
@@ -3108,34 +3113,9 @@ describe("ImageViewer interactions", () => {
     const viewport = container.querySelector(
       '[data-slot="scroll-area-viewport"]'
     ) as HTMLElement
-    const firstFrame = container.querySelector(
-      '[data-frame-number="1"]'
-    ) as HTMLElement
     const scrollTo = vi.fn()
     viewport.scrollTop = 0
     viewport.scrollTo = scrollTo
-    viewport.getBoundingClientRect = vi.fn(
-      () =>
-        ({
-          top: 100,
-          left: 0,
-          width: 300,
-          height: 250,
-          right: 300,
-          bottom: 350,
-        }) as DOMRect
-    )
-    firstFrame.getBoundingClientRect = vi.fn(
-      () =>
-        ({
-          top: 110,
-          left: 0,
-          width: 100,
-          height: 100,
-          right: 100,
-          bottom: 210,
-        }) as DOMRect
-    )
 
     act(() => {
       ref.current?.scrollToFrameArea(1, { top: 0 }, { behavior: "auto" })
@@ -3147,7 +3127,7 @@ describe("ImageViewer interactions", () => {
   })
 
   it("normalizes imperative frame-area percentages before scrolling", async () => {
-    stubObservableLayout({ isIntersecting: false })
+    stubObservableLayout({ frameListWidth: 132, isIntersecting: false })
     stubTiffMetadataLoading([{ width: 100, height: 100 }])
     const ref = React.createRef<ImageViewerHandle>()
 
@@ -3166,34 +3146,9 @@ describe("ImageViewer interactions", () => {
     const viewport = container.querySelector(
       '[data-slot="scroll-area-viewport"]'
     ) as HTMLElement
-    const firstFrame = container.querySelector(
-      '[data-frame-number="1"]'
-    ) as HTMLElement
     const scrollTo = vi.fn()
     viewport.scrollTop = 0
     viewport.scrollTo = scrollTo
-    viewport.getBoundingClientRect = vi.fn(
-      () =>
-        ({
-          top: 100,
-          left: 0,
-          width: 300,
-          height: 250,
-          right: 300,
-          bottom: 350,
-        }) as DOMRect
-    )
-    firstFrame.getBoundingClientRect = vi.fn(
-      () =>
-        ({
-          top: 110,
-          left: 0,
-          width: 100,
-          height: 100,
-          right: 100,
-          bottom: 210,
-        }) as DOMRect
-    )
 
     act(() => {
       ref.current?.scrollToFrameArea(1, { top: Number.NaN })
@@ -3201,11 +3156,11 @@ describe("ImageViewer interactions", () => {
     })
 
     expect(scrollTo).toHaveBeenCalledTimes(1)
-    expect(scrollTo).toHaveBeenCalledWith({ top: 62, behavior: "auto" })
+    expect(scrollTo).toHaveBeenCalledWith({ top: 68, behavior: "auto" })
   })
 
   it("does not let overlay data attributes spoof imperative frame targets", async () => {
-    stubObservableLayout({ isIntersecting: false })
+    stubObservableLayout({ frameListWidth: 132, isIntersecting: false })
     stubTiffMetadataLoading([{ width: 100, height: 100 }])
     const ref = React.createRef<ImageViewerHandle>()
 
@@ -3233,28 +3188,6 @@ describe("ImageViewer interactions", () => {
     const overlay = screen.getByTestId("imperative-spoof-overlay")
     const scrollTo = vi.fn()
     viewport.scrollTo = scrollTo
-    viewport.getBoundingClientRect = vi.fn(
-      () =>
-        ({
-          top: 100,
-          left: 0,
-          width: 300,
-          height: 250,
-          right: 300,
-          bottom: 350,
-        }) as DOMRect
-    )
-    overlay.getBoundingClientRect = vi.fn(
-      () =>
-        ({
-          top: 120,
-          left: 0,
-          width: 20,
-          height: 20,
-          right: 20,
-          bottom: 140,
-        }) as DOMRect
-    )
 
     act(() => {
       ref.current?.scrollToFrameArea(99, { top: 50 }, { behavior: "auto" })

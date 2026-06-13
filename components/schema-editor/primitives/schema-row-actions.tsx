@@ -11,26 +11,26 @@ import {
 
 interface SchemaRowActionsProps {
   canDelete: boolean
-  editMode: "descriptionOnly" | "readOnly" | "editable"
-  hidePencilButton?: boolean
-  isEditable: boolean
   deleteLabel?: string
+  details?: {
+    label: string
+    mode: "edit" | "view"
+    onOpen: () => void
+  }
+  editable: boolean
   onDelete?: () => void
-  onOpenMetadata?: () => void
 }
 
 export function SchemaRowActions({
   canDelete,
-  editMode,
-  hidePencilButton = false,
-  isEditable,
   deleteLabel = "Delete field",
+  details,
+  editable,
   onDelete,
-  onOpenMetadata,
 }: SchemaRowActionsProps) {
   return (
     <>
-      {isEditable && canDelete && (
+      {editable && canDelete && (
         <Button
           type="button"
           variant="ghost"
@@ -43,7 +43,7 @@ export function SchemaRowActions({
         </Button>
       )}
 
-      {!hidePencilButton && editMode !== "readOnly" && onOpenMetadata && (
+      {details && (
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
@@ -51,34 +51,18 @@ export function SchemaRowActions({
               variant="ghost"
               size="icon-sm"
               className="m-0 shrink-0 p-0"
-              aria-label="Edit field properties"
-              onClick={onOpenMetadata}
+              aria-label={details.label}
+              onClick={details.onOpen}
             >
-              <Pencil className="size-4 text-muted-foreground opacity-0 group-hover:opacity-100" />
+              {details.mode === "edit" ? (
+                <Pencil className="size-4 text-muted-foreground opacity-0 group-hover:opacity-100" />
+              ) : (
+                <Eye className="size-4 text-muted-foreground opacity-0 group-hover:opacity-100" />
+              )}
             </Button>
           </TooltipTrigger>
           <TooltipContent className="max-w-xs">
-            <p>Edit field properties</p>
-          </TooltipContent>
-        </Tooltip>
-      )}
-
-      {editMode === "readOnly" && onOpenMetadata && (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              className="m-0 shrink-0 p-0"
-              aria-label="View field properties"
-              onClick={onOpenMetadata}
-            >
-              <Eye className="size-4 text-muted-foreground opacity-0 group-hover:opacity-100" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent className="max-w-xs">
-            <p>View field properties</p>
+            <p>{details.label}</p>
           </TooltipContent>
         </Tooltip>
       )}

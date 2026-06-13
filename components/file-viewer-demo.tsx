@@ -36,6 +36,9 @@ type DemoFileKey = DemoFile["file"]
 const SHOWCASE_FILES = FILES.filter((file) => file.label !== "Code").map(
   (file) => (file.label === "JSON" ? { ...file, label: "Code" } : file)
 )
+const DOCS_DEMO_FILES = FILES.filter((file) => file.label !== "Code").map(
+  (file) => (file.label === "JSON" ? { ...file, label: "Code" } : file)
+)
 const SHOWCASE_INITIAL_FILE_KEY =
   SHOWCASE_FILES.find((file) => file.label === "Text")?.file ??
   SHOWCASE_FILES[0].file
@@ -178,14 +181,17 @@ function FileCanvas({ file, idPrefix }: { file: DemoFile; idPrefix: string }) {
 /** Standalone demo (docs): format tabs stacked above the viewer. */
 export function FileViewerDemo() {
   const idPrefix = React.useId()
-  const [active, setActive] = React.useState<DemoFileKey>(FILES[0].file)
-  const activeFile = getActiveFile(FILES, active)
+  const [active, setActive] = React.useState<DemoFileKey>(
+    DOCS_DEMO_FILES[0].file
+  )
+  const activeFile = getActiveFile(DOCS_DEMO_FILES, active)
 
   return (
     <div className="not-prose my-6 flex flex-col gap-3">
       <FileTabs
         activeFileKey={active}
         idPrefix={idPrefix}
+        files={DOCS_DEMO_FILES}
         onChange={setActive}
       />
       <FileCanvas file={activeFile} idPrefix={idPrefix} />

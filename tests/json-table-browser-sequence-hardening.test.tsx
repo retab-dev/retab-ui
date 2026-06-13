@@ -78,6 +78,13 @@ async function editableCell(view: RenderedView, fieldPath: string) {
   })
 }
 
+async function editableDataCell(view: RenderedView, fieldPath: string) {
+  const cell = await editableCell(view, fieldPath)
+  const dataCell = cell.querySelector<HTMLElement>('[data-slot="data-cell"]')
+  if (!dataCell) throw new Error(`Expected DataCell for ${fieldPath}`)
+  return dataCell
+}
+
 function textInput(view: RenderedView) {
   return view.getByRole("textbox") as HTMLInputElement
 }
@@ -159,7 +166,7 @@ describe("json table browser sequence hardening", () => {
       },
       visiblePaths: ["vendor"],
     })
-    const cell = await editableCell(view, "vendor")
+    const cell = await editableDataCell(view, "vendor")
 
     vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
       x: 0,
@@ -172,17 +179,46 @@ describe("json table browser sequence hardening", () => {
       height: 24,
       toJSON: () => ({}),
     } as DOMRect)
-
-    fireEvent.pointerDown(cell, {
-      ...browserPointerEventInit(),
-      clientX: 10,
+    const valueNode = cell.querySelector(
+      '[data-slot="data-cell-value"]'
+    )?.firstChild
+    if (!valueNode) throw new Error("Expected DataCell text node")
+    const documentWithCaret = document as Document & {
+      caretPositionFromPoint?: (
+        x: number,
+        y: number
+      ) => CaretPosition | null
+    }
+    const previousCaretPositionFromPoint =
+      documentWithCaret.caretPositionFromPoint
+    Object.defineProperty(documentWithCaret, "caretPositionFromPoint", {
+      configurable: true,
+      value: vi.fn((): CaretPosition => ({
+        getClientRect: () => null,
+        offsetNode: valueNode as ChildNode,
+        offset: 1,
+      })),
     })
-    const input = textInput(view)
-    input.setSelectionRange(0, input.value.length)
-    finishBrowserClick(input)
 
-    expect(input.selectionStart).toBe(1)
-    expect(input.selectionEnd).toBe(1)
+    try {
+      fireEvent.pointerDown(cell, {
+        ...browserPointerEventInit(),
+        clientX: 10,
+      })
+      const input = textInput(view)
+      expect(input.selectionStart).toBe(1)
+      expect(input.selectionEnd).toBe(1)
+      input.setSelectionRange(0, input.value.length)
+      finishBrowserClick(input)
+
+      expect(input.selectionStart).toBe(1)
+      expect(input.selectionEnd).toBe(1)
+    } finally {
+      Object.defineProperty(documentWithCaret, "caretPositionFromPoint", {
+        configurable: true,
+        value: previousCaretPositionFromPoint,
+      })
+    }
   })
 
   it("preserves a dirty text draft through rapid same-cell clicks and commits once on blur", async () => {
@@ -303,7 +339,7 @@ describe("json table browser sequence hardening", () => {
       onDocumentDataChange,
     })
 
-    browserClick(await editableCell(view, "status"))
+    browserClick(await editableDataCell(view, "status"))
 
     const trigger = await view.findByRole("combobox")
     await waitFor(() =>
@@ -333,7 +369,7 @@ describe("json table browser sequence hardening", () => {
       visiblePaths: ["status"],
       onDocumentDataChange,
     })
-    const cell = await editableCell(view, "status")
+    const cell = await editableDataCell(view, "status")
 
     browserClick(cell)
     const trigger = await view.findByRole("combobox")

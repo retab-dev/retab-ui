@@ -934,9 +934,6 @@ describe("document swap page indicator", () => {
     const viewport = container.querySelector(
       '[data-slot="scroll-area-viewport"]'
     ) as HTMLElement
-    const thirdFrame = container.querySelector(
-      '[data-frame-number="3"]'
-    ) as HTMLElement
     Object.defineProperty(viewport, "clientHeight", {
       configurable: true,
       value: 200,
@@ -946,10 +943,6 @@ describe("document swap page indicator", () => {
       value: 1000,
     })
     viewport.scrollTop = 800
-    Object.defineProperty(document, "elementsFromPoint", {
-      configurable: true,
-      value: vi.fn(() => [thirdFrame]),
-    })
     await act(async () => {
       fireEvent.scroll(viewport)
     })

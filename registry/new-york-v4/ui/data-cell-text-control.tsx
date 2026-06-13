@@ -254,7 +254,6 @@ export function DataCellInputControl({
       data-mode="edit"
       value={inputValue}
       disabled={disabled}
-      autoFocus={autoFocus}
       unstyled
       nativeInput
       inputMode={

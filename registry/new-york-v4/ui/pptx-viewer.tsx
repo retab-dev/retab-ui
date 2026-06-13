@@ -8,14 +8,15 @@ import {
   type ViewerResource,
 } from "@/lib/viewer-resource"
 
-import {
-  getPptxFitScale,
-  getPptxResetKey,
-} from "./pptx-viewer-core"
+import { getPptxFitScale, getPptxResetKey } from "./pptx-viewer-core"
 import { PptxViewerFallback } from "./pptx-viewer-fallback"
 import { useRetainedPptxSource } from "./pptx-viewer-hooks"
 import { createPptxScrollActivity } from "./pptx-viewer-scroll"
-import { PptxSlideScroller } from "./pptx-viewer-slide"
+import {
+  PPTX_SLIDE_GAP,
+  PPTX_SLIDE_PADDING,
+  PptxSlideScroller,
+} from "./pptx-viewer-slide"
 import {
   evictPptxSource,
   subscribePptxSourceLoadTiming,
@@ -23,7 +24,10 @@ import {
 import { PptxToolbar } from "./pptx-viewer-toolbar"
 import type { PptxViewerProps } from "./pptx-viewer-types"
 import { usePptxViewportWidth } from "./pptx-viewer-viewport"
-import { usePptxVisibleSlide } from "./pptx-viewer-visible-slide"
+import {
+  createPptxSlideLayout,
+  usePptxVisibleSlide,
+} from "./pptx-viewer-visible-slide"
 import { usePptxZoom } from "./pptx-viewer-zoom"
 import { useIsClient } from "./use-is-client"
 import { ViewerErrorBoundary } from "./viewer-error"
@@ -141,13 +145,6 @@ function PptxViewerContent({
   const [rotation, setRotation] = React.useState(0)
   const scrollActivity = React.useMemo(() => createPptxScrollActivity(), [])
   const { containerRef, viewportWidth } = usePptxViewportWidth()
-  const { currentSlide, handleScroll, scrollViewportRef } = usePptxVisibleSlide(
-    {
-      onScrollProgressChange,
-      onVisibleSlideChange,
-    }
-  )
-
   const fitScale = getPptxFitScale(viewportWidth, source.baseSize.width)
   const { scaleControlsDisabled, setViewerScale, zoomScale } = usePptxZoom({
     controlledScale,
@@ -155,6 +152,25 @@ function PptxViewerContent({
     fitScale,
     onScaleChange,
   })
+  const slideLayout = React.useMemo(
+    () =>
+      createPptxSlideLayout({
+        baseSize: source.baseSize,
+        zoomScale,
+        rotation,
+        slideCount: source.slideCount,
+        slideGap: PPTX_SLIDE_GAP,
+        slidePadding: PPTX_SLIDE_PADDING,
+      }),
+    [source.baseSize, source.slideCount, zoomScale, rotation]
+  )
+  const { currentSlide, handleScroll, scrollViewportRef } = usePptxVisibleSlide(
+    {
+      layout: slideLayout,
+      onScrollProgressChange,
+      onVisibleSlideChange,
+    }
+  )
 
   const handleViewportScroll = React.useCallback(() => {
     if (!eager) scrollActivity.handleScroll()

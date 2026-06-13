@@ -1,5 +1,8 @@
 "use client"
 
+import * as React from "react"
+import { PlusIcon } from "lucide-react"
+
 import {
   definitionNameFromRef,
   definitionRef,
@@ -11,21 +14,29 @@ import {
 } from "@/components/schema-editor/draft/draft-node-edits"
 import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
 import { getEffectiveNode } from "@/components/schema-editor/lib/json-schema-utils"
-import { SchemaTypeMenu } from "@/components/schema-editor/primitives/schema-type-menu"
+import {
+  SchemaTypeMenu,
+  type SchemaTypeMenuSection,
+} from "@/components/schema-editor/primitives/schema-type-menu"
+import {
+  schemaTypeIcon,
+  schemaTypeLabel,
+  schemaTypeOptions,
+  type SchemaTypeOptionId,
+} from "@/components/schema-editor/primitives/schema-type-options"
 import type { PropertyFormSchemaContext } from "@/components/schema-editor/property-form/types"
+import {
+  getTemplateIcon,
+  getTypeIcon,
+} from "@/components/schema-editor/type-icons"
 
-const primitiveTypes = [
-  ["string", "string"],
-  ["number", "number"],
-  ["integer", "integer"],
-  ["boolean", "true/false"],
-  ["enum", "multiple choice"],
-  ["date", "date"],
-  ["time", "time"],
-  ["datetime", "timestamp"],
-  ["array", "list"],
-  ["object", "object"],
-] as const
+const LazyObjectTemplateSubmenu = React.lazy(() =>
+  import(
+    "@/components/schema-editor/optional/object-templates/object-template-menu"
+  ).then((module) => ({
+    default: module.ObjectTemplateSubmenu,
+  }))
+)
 
 export function TypeField({
   schemaNode,
@@ -48,7 +59,7 @@ export function TypeField({
   const effectiveSchemaNode = getEffectiveNode(schemaNode)
   const isDisabled = disabled || mode === "readOnly"
 
-  const setType = (type: (typeof primitiveTypes)[number][0]) => {
+  const setType = (type: SchemaTypeOptionId) => {
     if (isDisabled) return
     const nextSchemaNode = updateType(
       type,
@@ -107,27 +118,73 @@ export function TypeField({
     effectiveType.type === "$ref" && effectiveSchemaNode.$ref
       ? definitionNameFromRef(effectiveSchemaNode.$ref)
       : undefined
+  const definitionNames = Object.keys(schemaContext.schemaDefinitions)
+  const sections: SchemaTypeMenuSection[] = [
+    {
+      id: "types",
+      kind: "items",
+      items: schemaTypeOptions.map((option) => ({
+        id: option.id,
+        label: option.label,
+        icon: option.icon,
+        onSelect: () => setType(option.id),
+      })),
+    },
+    {
+      id: "definitions",
+      kind: "submenu",
+      label: "definition",
+      icon: getTypeIcon("$ref"),
+      items:
+        definitionNames.length === 0
+          ? [
+              {
+                id: "create-definition",
+                label: "Create new definition",
+                icon: <PlusIcon className="h-4 w-4" />,
+                onSelect: () => {
+                  if (isDisabled) return
+                  void schemaContext.onCommand?.({ type: "createDefinition" })
+                },
+              },
+            ]
+          : definitionNames.map((definitionName) => ({
+              id: definitionName,
+              label: definitionName,
+              icon: getTemplateIcon(definitionName),
+              onSelect: () => setDefinition(definitionName),
+            })),
+    },
+  ]
+
+  if (schemaContext.objectTemplatesEnabled) {
+    sections.push({
+      id: "object-templates",
+      kind: "custom",
+      render: ({ editable }) => (
+        <React.Suspense fallback={null}>
+          <LazyObjectTemplateSubmenu
+            onSelectTemplate={(templateName) => {
+              if (!editable) return
+              setObjectTemplate(templateName)
+            }}
+          />
+        </React.Suspense>
+      ),
+    })
+  }
 
   return (
     <SchemaTypeMenu
       ariaLabel={`Data type${fieldPath ? ` for ${fieldPath}` : ""}`}
-      defs={schemaContext.schemaDefinitions}
-      definitionsEnabled={true}
-      definitionCreateLabel="Create new definition"
-      isEditable={!isDisabled}
-      localType={effectiveType.type}
-      objectTemplatesEnabled={Boolean(schemaContext.objectTemplatesEnabled)}
-      refName={refName}
-      variant={variant === "compact" ? "row" : "form"}
-      onCreateDefinition={() => {
-        if (isDisabled) return
-        void schemaContext.onCommand?.({ type: "createDefinition" })
+      editable={!isDisabled}
+      sections={sections}
+      value={{
+        id: effectiveType.type,
+        label: schemaTypeLabel(effectiveType.type, refName),
+        icon: schemaTypeIcon(effectiveType.type, refName),
       }}
-      onSelectDefinition={setDefinition}
-      onSelectObjectTemplate={setObjectTemplate}
-      onSelectType={(type) =>
-        setType(type as (typeof primitiveTypes)[number][0])
-      }
+      variant={variant === "compact" ? "row" : "form"}
     />
   )
 }

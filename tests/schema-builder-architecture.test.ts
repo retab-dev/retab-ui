@@ -349,6 +349,53 @@ describe("schema builder architecture", () => {
         'import("./optional/object-templates/object-template-reference")'
       )
     ).toBe(true)
+    expect(
+      /import\(\s*["']@\/components\/schema-editor\/optional\/object-templates\/object-template-menu["']\s*\)/.test(
+        defaultSource
+      )
+    ).toBe(true)
+  })
+
+  it("keeps schema editor primitives model and feature agnostic", () => {
+    const primitiveFiles = sourceFilesUnder(
+      join(repoRoot, "components/schema-editor/primitives")
+    )
+    const forbiddenImports = [
+      "@/components/schema-editor/optional/",
+      "@/components/schema-editor/property-form/",
+      "@/components/schema-editor/document/",
+    ]
+
+    for (const file of primitiveFiles) {
+      const content = readFileSync(join(repoRoot, file), "utf8")
+      for (const forbiddenImport of forbiddenImports) {
+        expect(
+          content.includes(forbiddenImport),
+          `${file} imports ${forbiddenImport}`
+        ).toBe(false)
+      }
+    }
+
+    const typeMenuContent = readFileSync(
+      join(
+        repoRoot,
+        "components/schema-editor/primitives/schema-type-menu.tsx"
+      ),
+      "utf8"
+    )
+    expect(typeMenuContent.includes("React.lazy")).toBe(false)
+    expect(typeMenuContent.includes("object-template")).toBe(false)
+  })
+
+  it("keeps renamed schema editor primitive files as hard cutovers", () => {
+    const removedPrimitiveFiles = [
+      "components/schema-editor/primitives/schema-inline-name.tsx",
+      "components/schema-editor/primitives/schema-inline-description.tsx",
+    ]
+
+    for (const file of removedPrimitiveFiles) {
+      expect(existsSync(join(repoRoot, file)), file).toBe(false)
+    }
   })
 
   it("uses one shared SchemaEditorMode definition", () => {

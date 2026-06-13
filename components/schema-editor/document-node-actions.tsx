@@ -12,5 +12,27 @@ interface DocumentNodeActionsProps {
 }
 
 export function DocumentNodeActions(props: DocumentNodeActionsProps) {
-  return <SchemaRowActions {...props} />
+  const details =
+    props.hidePencilButton || !props.onOpenMetadata
+      ? undefined
+      : props.editMode === "readOnly"
+        ? {
+            label: "View field properties",
+            mode: "view" as const,
+            onOpen: props.onOpenMetadata,
+          }
+        : {
+            label: "Edit field properties",
+            mode: "edit" as const,
+            onOpen: props.onOpenMetadata,
+          }
+
+  return (
+    <SchemaRowActions
+      canDelete={props.canDelete}
+      editable={props.isEditable}
+      details={details}
+      onDelete={props.onDelete}
+    />
+  )
 }

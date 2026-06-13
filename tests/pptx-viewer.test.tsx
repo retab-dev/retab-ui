@@ -2529,9 +2529,8 @@ describe("PptxViewer", () => {
     expect(viewport).toBeTruthy()
     expect(slides).toHaveLength(2)
 
-    setElementRect(viewport!, { height: 100, top: 0 })
-    setElementRect(slides[0]!, { top: -250 })
-    setElementRect(slides[1]!, { top: 10 })
+    setElementNumberProperty(viewport!, "clientHeight", 100)
+    setElementNumberProperty(viewport!, "scrollTop", 732)
 
     fireEvent.scroll(viewport!)
 
@@ -2576,10 +2575,6 @@ describe("PptxViewer", () => {
     expect(viewport).toBeTruthy()
     expect(slides).toHaveLength(3)
 
-    setElementRect(viewport!, { height: 100, top: 0 })
-    setElementRect(slides[0]!, { top: -250 })
-    setElementRect(slides[1]!, { top: 10 })
-    setElementRect(slides[2]!, { top: 300 })
     setElementNumberProperty(viewport!, "clientHeight", 100)
     setElementNumberProperty(viewport!, "scrollHeight", 500)
     setElementNumberProperty(viewport!, "scrollTop", 800)
@@ -3706,9 +3701,7 @@ describe("PptxViewer", () => {
     expect(await screen.findByText("Couldn't render slide 1.")).toBeTruthy()
 
     await act(async () => {
-      view.rerender(
-        <PptxViewer source={pptxUrlSource("/render-fixed.pptx")} />
-      )
+      view.rerender(<PptxViewer source={pptxUrlSource("/render-fixed.pptx")} />)
     })
 
     await waitFor(() => {

@@ -17,6 +17,7 @@ const dataCellRuntimeFiles = [
   "registry/new-york-v4/ui/data-cell-number-control.tsx",
   "registry/new-york-v4/ui/data-cell-picker-control.tsx",
   "registry/new-york-v4/ui/data-cell-picker-position.ts",
+  "registry/new-york-v4/ui/data-cell-select-control.tsx",
   "registry/new-york-v4/ui/data-cell-text-control.tsx",
   "registry/new-york-v4/ui/data-cell-types.ts",
   "components/ui/data-cell.tsx",
@@ -51,6 +52,89 @@ const forbiddenJsonTableRuntimePatterns = [
   "primitiveActivationIntent",
 ]
 
+const forbiddenEditableRouterPatterns = [
+  "flushSync",
+  "canActivateDataCellFromKey",
+  "DataCellEditorHandle",
+  "structuredEditSessionId",
+  'recordJsonTableRender("JsonTableStructuredActiveCell"',
+  'event.getModifierState("AltGraph")',
+  'fieldMetadata.kind === "boolean"',
+  "activationRequest: {",
+]
+
+const forbiddenEditableCoordinatorPatterns = [
+  "getFieldMetadata",
+  "useCellController",
+  "formatValueForCommit",
+  "markJsonTableProfile",
+  "recordJsonTableRender",
+  "finishPreviousPrimitiveEditor",
+  "commitPrimitiveCommand",
+  "pointerActivationRequest",
+  "keyboardActivationRequest",
+  "getSelectableCellWidthStyle",
+  "getCellWidthStyle",
+  "onPointerDown:",
+  "onKeyDown:",
+  "React.useLayoutEffect",
+]
+
+const forbiddenPrimitiveShellActivationPatterns = [
+  "pointerActivationRequest",
+  "select",
+  "enum",
+  "option",
+  "@base-ui/react/select",
+  "@/components/ui/select",
+  "DATA_CELL_SELECT_CLOSE_DELAY",
+]
+
+const forbiddenPrimitiveShellHandlerPatterns = [
+  ...forbiddenPrimitiveShellActivationPatterns,
+  "clientX",
+  "clientY",
+]
+
+const jsonTableLineCountLimits = [
+  {
+    file: "components/json-table/editable-json-table-cell.tsx",
+    maxLines: 80,
+  },
+  {
+    file: "components/json-table/use-json-table-editable-cell-model.ts",
+    maxLines: 180,
+  },
+  {
+    file: "components/json-table/use-json-table-cell-field.ts",
+    maxLines: 220,
+  },
+  {
+    file: "components/json-table/use-json-table-primitive-control.ts",
+    maxLines: 220,
+  },
+  {
+    file: "components/json-table/use-json-table-shell-handlers.ts",
+    maxLines: 220,
+  },
+  {
+    file: "components/json-table/use-json-table-focus-return.ts",
+    maxLines: 220,
+  },
+  {
+    file: "components/json-table/use-json-table-cell-profiler.ts",
+    maxLines: 220,
+  },
+  {
+    file: "components/json-table/json-table-cell-shell.ts",
+    maxLines: 220,
+  },
+  {
+    file: "components/json-table/json-table-cell-model.ts",
+    maxLines: 220,
+  },
+]
+
 const forbiddenRuntimeRegexes = [
   /\bprops\.session\b/,
   /\bprops\.commit\b/,
@@ -72,6 +156,10 @@ function isJsonTableRuntimeFile(file: string): boolean {
   if (file.includes("/sample/")) return false
   if (file.includes("/read-only-")) return true
   return true
+}
+
+function lineCount(content: string): number {
+  return content.trimEnd().split(/\r?\n/).length
 }
 
 describe("json table and DataCell architecture", () => {
@@ -106,6 +194,61 @@ describe("json table and DataCell architecture", () => {
           false
         )
       }
+    }
+  })
+
+  it("keeps EditableJsonTableCell as a pure router", () => {
+    const file = "components/json-table/editable-json-table-cell.tsx"
+    const content = readFileSync(join(repoRoot, file), "utf8")
+
+    for (const pattern of forbiddenEditableRouterPatterns) {
+      expect(content.includes(pattern), `${file} contains ${pattern}`).toBe(
+        false
+      )
+    }
+  })
+
+  it("keeps useJsonTableEditableCellModel as a composition hook", () => {
+    const file = "components/json-table/use-json-table-editable-cell-model.ts"
+    const content = readFileSync(join(repoRoot, file), "utf8")
+
+    for (const pattern of forbiddenEditableCoordinatorPatterns) {
+      expect(content.includes(pattern), `${file} contains ${pattern}`).toBe(
+        false
+      )
+    }
+  })
+
+  it("keeps primitive shell activation generic and select-blind", () => {
+    const handlerFile = "components/json-table/use-json-table-shell-handlers.ts"
+    const handlerContent = readFileSync(join(repoRoot, handlerFile), "utf8")
+
+    for (const pattern of forbiddenPrimitiveShellHandlerPatterns) {
+      expect(
+        handlerContent.includes(pattern),
+        `${handlerFile} contains ${pattern}`
+      ).toBe(false)
+    }
+
+    const activationFile =
+      "components/json-table/json-table-primitive-activation.ts"
+    const activationContent = readFileSync(join(repoRoot, activationFile), "utf8")
+
+    for (const pattern of forbiddenPrimitiveShellActivationPatterns) {
+      expect(
+        activationContent.includes(pattern),
+        `${activationFile} contains ${pattern}`
+      ).toBe(false)
+    }
+  })
+
+  it("keeps json table cell modules below gravity-well size", () => {
+    for (const { file, maxLines } of jsonTableLineCountLimits) {
+      const content = readFileSync(join(repoRoot, file), "utf8")
+
+      expect(lineCount(content), `${file} line count`).toBeLessThanOrEqual(
+        maxLines
+      )
     }
   })
 })

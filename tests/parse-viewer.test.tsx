@@ -12,6 +12,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { type ParseResponse } from "@/components/viewers/lib/parse-types"
 import {
+  createPageMarkdownLayout,
+  getPageMarkdownPageLayout,
+} from "@/components/viewers/page-markdown/page-markdown-layout"
+import {
   ParseViewer,
   type ParseDocumentHandlers,
 } from "@/components/viewers/parse/parse-viewer"
@@ -43,6 +47,26 @@ function rect(top: number, height = 100): DOMRect {
     bottom: top + height,
     toJSON: () => ({}),
   } as DOMRect
+}
+
+function markdownPageOffset(pages: readonly string[], pageNumber: number) {
+  const layout = createPageMarkdownLayout({
+    measuredHeightByPageNumber: new Map(),
+    mode: "rendered",
+    pages,
+    scale: 1,
+  })
+  return getPageMarkdownPageLayout(layout, pageNumber)!.offsetTop
+}
+
+function scrollMarkdownViewportToPage(
+  viewport: HTMLElement,
+  pages: readonly string[],
+  pageNumber: number
+) {
+  vi.spyOn(viewport, "getBoundingClientRect").mockReturnValue(rect(0, 400))
+  viewport.scrollTop = markdownPageOffset(pages, pageNumber)
+  fireEvent.scroll(viewport)
 }
 
 beforeEach(() => {
@@ -92,6 +116,17 @@ beforeEach(() => {
   })
   HTMLElement.prototype.getAnimations = vi.fn(() => [])
   HTMLElement.prototype.scrollIntoView = vi.fn()
+  Object.defineProperty(HTMLElement.prototype, "scrollTo", {
+    configurable: true,
+    value: vi.fn(function (
+      this: HTMLElement,
+      options?: ScrollToOptions | number,
+      y?: number
+    ) {
+      this.scrollTop =
+        typeof options === "number" ? (y ?? options) : Number(options?.top ?? 0)
+    }),
+  })
   vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
     callback(0)
     return 1
@@ -250,7 +285,6 @@ describe("ParseViewer", () => {
   })
 
   it("downloads parse markdown using the parse file name and explicit text", async () => {
-    vi.useFakeTimers()
     const createObjectURL = vi.fn((_blob: Blob) => "blob:parse-download")
     const revokeObjectURL = vi.fn()
     const click = vi
@@ -276,14 +310,14 @@ describe("ParseViewer", () => {
 
     fireEvent.click(screen.getByLabelText("Download markdown"))
 
+    await waitFor(() => {
+      expect(createObjectURL).toHaveBeenCalledWith(expect.any(Blob))
+    })
     const blob = createObjectURL.mock.calls[0][0]
     expect(await blob.text()).toBe("canonical download text")
     expect(click).toHaveBeenCalledTimes(1)
     expect(document.querySelector('a[download="parse-output.md"]')).toBeNull()
-
-    vi.runOnlyPendingTimers()
     expect(revokeObjectURL).toHaveBeenCalledWith("blob:parse-download")
-    vi.useRealTimers()
   })
 
   it("renders the source document pane and reacts to document page reports", async () => {
@@ -311,7 +345,7 @@ describe("ParseViewer", () => {
   })
 
   it("clamps out-of-range source document page reports before syncing markdown", async () => {
-    render(
+    const { container } = render(
       <ParseViewer
         result={parseResult()}
         renderDocument={(handlers: ParseDocumentHandlers) => (
@@ -325,11 +359,10 @@ describe("ParseViewer", () => {
       />
     )
 
-    const pageElements =
-      document.querySelectorAll<HTMLElement>("[data-page-number]")
-    const secondMarkdownPage = pageElements[1]
-    const scrollIntoView = vi.fn()
-    secondMarkdownPage.scrollIntoView = scrollIntoView
+    const markdownViewport = container.querySelector<HTMLElement>(
+      '[data-slot="scroll-area-viewport"]'
+    )
+    expect(markdownViewport).toBeTruthy()
 
     fireEvent.click(
       screen.getByRole("button", { name: "Source document page 99" })
@@ -337,10 +370,7 @@ describe("ParseViewer", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Page 2 of 2")).toBeTruthy()
-      expect(scrollIntoView).toHaveBeenCalledWith({
-        behavior: "smooth",
-        block: "start",
-      })
+      expect(markdownViewport!.scrollTop).toBe(markdownPageOffset(PAGES, 2))
     })
   })
 
@@ -365,26 +395,16 @@ describe("ParseViewer", () => {
     const markdownViewport = container.querySelector<HTMLElement>(
       '[data-slot="scroll-area-viewport"]'
     )
-    const markdownPages =
-      markdownViewport!.querySelectorAll<HTMLElement>("[data-page-number]")
     const documentPageOne = screen
       .getByText("Document page 1")
       .closest<HTMLElement>("[data-page-number]")
     const documentPageOneScrollIntoView = vi.fn()
     documentPageOne!.scrollIntoView = documentPageOneScrollIntoView
 
-    vi.spyOn(markdownViewport!, "getBoundingClientRect").mockReturnValue(
-      rect(0, 400)
-    )
-    vi.spyOn(markdownPages[0], "getBoundingClientRect").mockReturnValue(rect(0))
-    vi.spyOn(markdownPages[1], "getBoundingClientRect").mockReturnValue(
-      rect(500)
-    )
-
     fireEvent.click(
       screen.getByRole("button", { name: "Source document page 2" })
     )
-    fireEvent.scroll(markdownViewport!)
+    scrollMarkdownViewportToPage(markdownViewport!, PAGES, 2)
 
     await waitFor(() => {
       expect(screen.getByText("Page 2 of 2")).toBeTruthy()
@@ -428,19 +448,10 @@ describe("ParseViewer", () => {
     const viewport = container.querySelector<HTMLElement>(
       '[data-slot="scroll-area-viewport"]'
     )
-    const pageElements =
-      container.querySelectorAll<HTMLElement>("[data-page-number]")
 
     expect(viewport).toBeTruthy()
-    expect(pageElements).toHaveLength(2)
 
-    vi.spyOn(viewport!, "getBoundingClientRect").mockReturnValue(rect(0, 400))
-    vi.spyOn(pageElements[0], "getBoundingClientRect").mockReturnValue(
-      rect(-300)
-    )
-    vi.spyOn(pageElements[1], "getBoundingClientRect").mockReturnValue(rect(0))
-
-    fireEvent.scroll(viewport!)
+    scrollMarkdownViewportToPage(viewport!, PAGES, 2)
 
     expect(onVisiblePageChange).toHaveBeenCalledWith(2)
   })
@@ -460,38 +471,26 @@ describe("ParseViewer", () => {
     const viewport = container.querySelector<HTMLElement>(
       '[data-slot="scroll-area-viewport"]'
     )
-    let pageElements =
-      container.querySelectorAll<HTMLElement>("[data-page-number]")
 
-    vi.spyOn(viewport!, "getBoundingClientRect").mockReturnValue(rect(0, 400))
-    vi.spyOn(pageElements[0], "getBoundingClientRect").mockReturnValue(
-      rect(-300)
-    )
-    vi.spyOn(pageElements[1], "getBoundingClientRect").mockReturnValue(rect(0))
-
-    fireEvent.scroll(viewport!)
+    scrollMarkdownViewportToPage(viewport!, PAGES, 2)
     await waitFor(() => {
       expect(onVisiblePageChange).toHaveBeenCalledWith(2)
     })
     onVisiblePageChange.mockClear()
 
+    const replacementPages = ["# Replacement first", "# Replacement second"]
     rerender(
       <ParseViewer
         result={parseResult({
-          pages: ["# Replacement first", "# Replacement second"],
+          pages: replacementPages,
           text: "# Replacement first\n\n# Replacement second",
         })}
         onVisiblePageChange={onVisiblePageChange}
       />
     )
     expect(await screen.findByText("Replacement second")).toBeTruthy()
-    pageElements = container.querySelectorAll<HTMLElement>("[data-page-number]")
-    vi.spyOn(pageElements[0], "getBoundingClientRect").mockReturnValue(
-      rect(-300)
-    )
-    vi.spyOn(pageElements[1], "getBoundingClientRect").mockReturnValue(rect(0))
 
-    fireEvent.scroll(viewport!)
+    scrollMarkdownViewportToPage(viewport!, replacementPages, 2)
 
     await waitFor(() => {
       expect(onVisiblePageChange).toHaveBeenCalledWith(2)
@@ -513,16 +512,8 @@ describe("ParseViewer", () => {
     const viewport = container.querySelector<HTMLElement>(
       '[data-slot="scroll-area-viewport"]'
     )
-    const pageElements =
-      container.querySelectorAll<HTMLElement>("[data-page-number]")
 
-    vi.spyOn(viewport!, "getBoundingClientRect").mockReturnValue(rect(0, 400))
-    vi.spyOn(pageElements[0], "getBoundingClientRect").mockReturnValue(
-      rect(-300)
-    )
-    vi.spyOn(pageElements[1], "getBoundingClientRect").mockReturnValue(rect(0))
-
-    fireEvent.scroll(viewport!)
+    scrollMarkdownViewportToPage(viewport!, PAGES, 2)
     await waitFor(() => {
       expect(onVisiblePageChange).toHaveBeenCalledWith(2)
     })
@@ -538,7 +529,7 @@ describe("ParseViewer", () => {
       expect(screen.getByText("Page 1 of 2")).toBeTruthy()
     })
 
-    fireEvent.scroll(viewport!)
+    scrollMarkdownViewportToPage(viewport!, PAGES, 2)
 
     await waitFor(() => {
       expect(onVisiblePageChange).toHaveBeenCalledWith(2)
@@ -615,9 +606,6 @@ describe("ParseViewer", () => {
     const viewport = container.querySelector<HTMLElement>(
       '[data-slot="scroll-area-viewport"]'
     )
-    const page = container.querySelector<HTMLElement>("[data-page-number]")
-    vi.spyOn(viewport!, "getBoundingClientRect").mockReturnValue(rect(0, 400))
-    vi.spyOn(page!, "getBoundingClientRect").mockReturnValue(rect(0))
 
     fireEvent.scroll(viewport!)
 

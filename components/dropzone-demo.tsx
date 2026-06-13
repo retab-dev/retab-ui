@@ -4,10 +4,10 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 import {
-  formatDropzoneBytes,
   useDropzone,
   type DropzoneFileItem,
 } from "@/registry/new-york-v4/ui/dropzone"
+import { formatFileSize } from "@/registry/new-york-v4/ui/file-size-format"
 import { FileUploader } from "@/registry/new-york-v4/ui/file-uploader"
 
 export function DropzoneDemo() {
@@ -48,7 +48,7 @@ export function DropzoneDemo() {
                   {item.file.name}
                 </span>
                 <span className="text-muted-foreground">
-                  {formatDropzoneBytes(item.file.size)}
+                  {formatFileSize(item.file.size)}
                 </span>
               </div>
             ))

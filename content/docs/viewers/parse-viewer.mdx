@@ -14,6 +14,13 @@ controls, copy, and download actions. Below is the raw renderer on its own.
 
 <ParseViewerDemo />
 
+## Large Document
+
+This fixture renders 1,000 markdown pages. It exists to prove the viewer keeps
+the mounted page DOM bounded while scrolling, switching modes, and zooming.
+
+<LargeParseViewerDemo />
+
 Pair it with a source document through `renderDocument` to get the standard
 side-by-side parse layout (document ↔ markdown, synced by page) — that
 composition is the [Parse Viewer block](/blocks#parse).
@@ -54,9 +61,9 @@ Omit `renderDocument` to show the page-by-page markdown full-width.
 
 ## Props
 
-| Prop                  | Type                      | Description                                                                                                                                    |
-| --------------------- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `result`              | `ParseResponse \| null`   | The parsed document output; `output.pages` is an array of per-page markdown.                                                                   |
-| `renderDocument`      | `(handlers) => ReactNode` | Renders the source document beside the markdown. Receives `{ onCurrentPageChange, onScrollProgressChange }`. Omit to show markdown full-width. |
-| `isProcessing`        | `boolean`                 | Show the parsing state while a result is pending.                                                                                              |
-| `onVisiblePageChange` | `(page: number) => void`  | Fired with the 1-based page nearest the top of the markdown viewport as it scrolls.                                                            |
+| Prop                  | Type                           | Description                                                                                                                                    |
+| --------------------- | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `result`              | `ParseResponse \| null`        | The parsed document output; `output.pages` is an array of per-page markdown.                                                                   |
+| `renderDocument`      | `(handlers) => ReactNode`      | Renders the source document beside the markdown. Receives `{ onCurrentPageChange, onScrollProgressChange }`. Omit to show markdown full-width. |
+| `isProcessing`        | `boolean`                      | Show the parsing state while a result is pending.                                                                                              |
+| `onVisiblePageChange` | `(pageNumber: number) => void` | Fired with the 1-based page nearest the top of the markdown viewport as it scrolls.                                                            |

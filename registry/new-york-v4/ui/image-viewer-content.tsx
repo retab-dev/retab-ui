@@ -27,6 +27,11 @@ import {
   type ImageViewerHandle,
   type ImageViewerProps,
 } from "@/components/ui/image-viewer-types"
+import {
+  createImageFrameLayout,
+  getImageFrameLayout,
+  useImageFrameVirtualization,
+} from "./image-viewer-virtualization"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
 export function ImageViewerContent({
@@ -67,15 +72,44 @@ export function ImageViewerContent({
     onScaleChange,
     frameListWidth
   )
-  const { currentFrameNumber, handleScroll, scrollViewportRef } =
-    useVisibleFrame(frameSource, onScrollProgressChange, onVisibleFrameChange)
-  useImageViewerHandle(forwardedRef, scrollViewportRef)
+  const frameLayout = React.useMemo(
+    () =>
+      createImageFrameLayout({
+        frames: frameSource.frames,
+        scale,
+        rotation,
+      }),
+    [frameSource.frames, rotation, scale]
+  )
+  const {
+    currentFrameNumber,
+    handleScroll,
+    scrollViewportElement,
+    scrollViewportRef,
+    setScrollViewportRef,
+  } = useVisibleFrame(
+    frameLayout,
+    frameSource,
+    onScrollProgressChange,
+    onVisibleFrameChange
+  )
+  const { visibleFrameNumbers, measureVisibleFrames } =
+    useImageFrameVirtualization({
+      layout: frameLayout,
+      resetKey: frameSource,
+      viewportElement: scrollViewportElement,
+    })
+  useImageViewerHandle(forwardedRef, scrollViewportRef, frameLayout)
 
   const frameCount = frameSource.frames.length
   const countLabel =
     frameSource.kind === "tiff"
       ? `Page ${Math.min(currentFrameNumber, frameCount)} of ${frameCount}`
       : `${frameCount} image${frameCount === 1 ? "" : "s"}`
+  const handleViewportScroll = React.useCallback(() => {
+    handleScroll()
+    measureVisibleFrames()
+  }, [handleScroll, measureVisibleFrames])
 
   return (
     <div
@@ -119,34 +153,62 @@ export function ImageViewerContent({
           <div className="relative flex min-h-0 flex-1 flex-col">
             <ScrollArea
               className="min-h-0 flex-1"
-              viewportRef={scrollViewportRef}
-              viewportProps={{ onScroll: handleScroll }}
+              viewportRef={setScrollViewportRef}
+              viewportProps={{ onScroll: handleViewportScroll }}
             >
               <div
                 ref={frameListRef}
-                className="flex flex-col items-center gap-4 p-4"
+                className="relative min-h-full w-full"
+                style={{ height: frameLayout.totalHeight }}
               >
-                {frameSource.frames.map((_, frameIndex) => (
-                  <ImageFrame
-                    key={frameIndex}
-                    source={frameSource}
-                    frameIndex={frameIndex}
-                    scale={scale}
-                    rotation={rotation}
-                    renderOverlay={
-                      renderFrameOverlay
-                        ? ({ frameNumber, frameRect, scale, rotation }) =>
-                            renderFrameOverlay({
-                              frameNumber,
-                              width: frameRect.width,
-                              height: frameRect.height,
-                              scale,
-                              rotation,
-                            })
-                        : undefined
-                    }
-                  />
-                ))}
+                <div
+                  className="relative mx-auto h-full w-full"
+                  style={{
+                    minWidth:
+                      frameLayout.maxFrameWidth + frameLayout.padding * 2,
+                  }}
+                >
+                  {visibleFrameNumbers.map((frameNumber) => {
+                    const frame = getImageFrameLayout(frameLayout, frameNumber)
+                    if (!frame) return null
+
+                    return (
+                      <div
+                        key={frameNumber}
+                        className="absolute left-1/2 -translate-x-1/2"
+                        style={{
+                          top: frame.offsetTop,
+                          width: frame.width,
+                          height: frame.height,
+                        }}
+                      >
+                        <ImageFrame
+                          source={frameSource}
+                          frameIndex={frame.frameIndex}
+                          scale={scale}
+                          rotation={rotation}
+                          renderOverlay={
+                            renderFrameOverlay
+                              ? ({
+                                  frameNumber,
+                                  frameRect,
+                                  scale,
+                                  rotation,
+                                }) =>
+                                  renderFrameOverlay({
+                                    frameNumber,
+                                    width: frameRect.width,
+                                    height: frameRect.height,
+                                    scale,
+                                    rotation,
+                                  })
+                              : undefined
+                          }
+                        />
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
             </ScrollArea>
             {overlaySlot ? (

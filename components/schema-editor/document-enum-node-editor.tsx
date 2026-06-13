@@ -51,19 +51,18 @@ export function DocumentEnumNodeEditor({
     <div className="ml-6">
       <div className="mt-1 mb-2">
         <SchemaChipList
-          disabled={!isEditable}
-          focusInputAfterAdd
-          getKey={(_value, index) => enumEntries[index]?.id ?? String(index)}
-          inputValue={newEnumValue}
+          editable={isEditable}
+          focusInputAfterSubmit
+          getKey={(index) => enumEntries[index]?.id ?? String(index)}
+          pendingValue={newEnumValue}
           placeholder="New choice"
+          showSubmitInput={isEditable}
+          submitLabel="Add"
           values={enumEntries.map((entry) => String(entry.value))}
-          formatValue={(value) => value}
-          parseInput={(input) => input.trim()}
-          showAddInput={isEditable}
-          onAdd={() => handleAddEnum()}
-          onInputChange={setNewEnumValue}
-          onRemove={handleRemoveEnum}
-          onReplace={(index, value) => handleEditEnum(index, value)}
+          onPendingValueChange={setNewEnumValue}
+          onRemoveValue={handleRemoveEnum}
+          onReplaceValue={(index, value) => handleEditEnum(index, value)}
+          onSubmitPendingValue={handleAddEnum}
         />
       </div>
 

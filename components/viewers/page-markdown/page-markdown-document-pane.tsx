@@ -2,14 +2,14 @@
 
 import * as React from "react"
 
-import { scrollPageIntoView } from "@/components/viewers/page-markdown/page-markdown-dom"
+import { scrollDocumentPageIntoView } from "@/components/viewers/page-markdown/page-markdown-document-dom"
 import {
   type PageMarkdownDocumentHandlers,
   type PageMarkdownViewerProps,
 } from "@/components/viewers/page-markdown/page-markdown-types"
 
 export interface PageMarkdownDocumentPaneHandle {
-  scrollToPage: (page: number) => void
+  scrollToPage: (pageNumber: number) => void
 }
 
 export const PageMarkdownDocumentPane = React.forwardRef<
@@ -30,8 +30,8 @@ export const PageMarkdownDocumentPane = React.forwardRef<
   React.useImperativeHandle(
     ref,
     () => ({
-      scrollToPage(page) {
-        scrollPageIntoView(documentPaneRef.current, page)
+      scrollToPage(pageNumber) {
+        scrollDocumentPageIntoView(documentPaneRef.current, pageNumber)
       },
     }),
     []

@@ -42,19 +42,20 @@ export function DocumentPropertyAddRow({
 
   return (
     <SchemaAddRow
-      ariaLabel="New property name"
       className={
         rootLayout ? "mt-3 ml-4" : "mt-2 ml-4 border-l border-border pl-4"
       }
       disabled={false}
       error={propertyNameError}
+      inputLabel="New property name"
       placeholder="New property name"
+      submitLabel="Add"
       value={propertyName}
-      onAdd={addProperty}
       onChange={(value) => {
         setPropertyName(value)
         setPropertyNameError(value ? validatePropertyName(value) : null)
       }}
+      onSubmit={addProperty}
     />
   )
 }

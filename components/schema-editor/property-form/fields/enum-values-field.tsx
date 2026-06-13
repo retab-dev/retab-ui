@@ -31,24 +31,24 @@ export function EnumValuesField({
     <div className="space-y-2">
       <Label className="text-xs text-muted-foreground">Enabled options</Label>
       <SchemaChipList
-        disabled={disabled}
-        inputValue={nextValue}
+        editable={!disabled}
+        getKey={(index) => `enum-value-${index}`}
+        pendingValue={nextValue}
         placeholder="Add new value"
-        values={values}
-        formatValue={formatEnumValueInput}
-        parseInput={parseEnumValueInput}
-        onAdd={(value) => {
-          onChange([...values, value])
-          setNextValue("")
-        }}
-        onInputChange={setNextValue}
-        onRemove={(index) =>
+        submitLabel="Add"
+        values={values.map(formatEnumValueInput)}
+        onPendingValueChange={setNextValue}
+        onRemoveValue={(index) =>
           onChange(values.filter((_value, current) => current !== index))
         }
-        onReplace={(index, value) => {
+        onReplaceValue={(index, value) => {
           const nextValues = values.slice()
-          nextValues[index] = value
+          nextValues[index] = parseEnumValueInput(value)
           onChange(nextValues)
+        }}
+        onSubmitPendingValue={() => {
+          onChange([...values, parseEnumValueInput(nextValue)])
+          setNextValue("")
         }}
       />
     </div>

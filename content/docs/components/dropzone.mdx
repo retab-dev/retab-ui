@@ -29,8 +29,8 @@ export function UploadTarget() {
   const dropzone = useDropzone({
     accept: "application/pdf,image/*,.docx,.xlsx,.csv",
     maxFiles: 3,
-    onFilesAccepted(files) {
-      console.log(files)
+    onIntake(intake) {
+      console.log(intake.acceptedFiles, intake.fileRejections)
     },
   })
 
@@ -52,47 +52,60 @@ export function UploadTarget() {
 - Accepts MIME types, wildcard MIME types such as `image/*`, and extensions.
 - Supports controlled and uncontrolled file state.
 - Supports `multiple`, `maxFiles`, and `maxSize`.
-- Exposes `removeFile` and `clearFiles`.
+- Exposes `removeFile`, `clearFiles`, `resetIntake`, and `reset`.
+- Reports each intake attempt through `lastIntake` and `onIntake`.
+- Reports rejection facts, not display copy.
 - Composes consumer event handlers and respects `event.defaultPrevented`.
 
 ## API Reference
 
 ### `useDropzone`
 
-| Prop              | Type                                            | Default | Required |
-| ----------------- | ----------------------------------------------- | ------- | -------- |
-| `accept`          | `string`                                        | `-`     | No       |
-| `defaultFiles`    | `DropzoneFileItem[]`                            | `[]`    | No       |
-| `disabled`        | `boolean`                                       | `false` | No       |
-| `files`           | `DropzoneFileItem[]`                            | `-`     | No       |
-| `maxFiles`        | `number`                                        | `-`     | No       |
-| `maxSize`         | `number`                                        | `-`     | No       |
-| `multiple`        | `boolean`                                       | `true`  | No       |
-| `onFilesAccepted` | `(files: File[]) => void`                       | `-`     | No       |
-| `onFilesChange`   | `(files: DropzoneFileItem[]) => void`           | `-`     | No       |
-| `onFilesRejected` | `(rejections: DropzoneFileRejection[]) => void` | `-`     | No       |
+| Prop            | Type                                  | Default | Required |
+| --------------- | ------------------------------------- | ------- | -------- |
+| `accept`        | `string`                              | `-`     | No       |
+| `defaultFiles`  | `DropzoneFileItem[]`                  | `[]`    | No       |
+| `disabled`      | `boolean`                             | `false` | No       |
+| `files`         | `DropzoneFileItem[]`                  | `-`     | No       |
+| `maxFiles`      | `number`                              | `-`     | No       |
+| `maxSize`       | `number`                              | `-`     | No       |
+| `multiple`      | `boolean`                             | `true`  | No       |
+| `onFilesChange` | `(files: DropzoneFileItem[]) => void` | `-`     | No       |
+| `onIntake`      | `(intake: DropzoneIntake) => void`    | `-`     | No       |
 
 ### Return Value
 
-| Field             | Type                                                      |
-| ----------------- | --------------------------------------------------------- |
-| `files`           | `DropzoneFileItem[]`                                      |
-| `acceptedFiles`   | `File[]`                                                  |
-| `rejectedFiles`   | `DropzoneFileRejection[]`                                 |
-| `isDragging`      | `boolean`                                                 |
-| `isFocused`       | `boolean`                                                 |
-| `isDisabled`      | `boolean`                                                 |
-| `hasFiles`        | `boolean`                                                 |
-| `clearFiles`      | `() => void`                                              |
-| `openFileDialog`  | `() => void`                                              |
-| `removeFile`      | `(fileId: string) => void`                                |
-| `getRootProps`    | `(props?) => React.HTMLAttributes<HTMLElement>`           |
-| `getInputProps`   | `(props?) => React.InputHTMLAttributes<HTMLInputElement>` |
-| `getTriggerProps` | `(props?) => React.HTMLAttributes<HTMLElement>`           |
+| Field             | Type                                                        |
+| ----------------- | ----------------------------------------------------------- |
+| `files`           | `DropzoneFileItem[]`                                        |
+| `lastIntake`      | `DropzoneIntake`                                            |
+| `fileRejections`  | `DropzoneFileRejection[]`                                   |
+| `isDragging`      | `boolean`                                                   |
+| `isFocused`       | `boolean`                                                   |
+| `isDisabled`      | `boolean`                                                   |
+| `clearFiles`      | `() => void`                                                |
+| `resetIntake`     | `() => void`                                                |
+| `reset`           | `() => void`                                                |
+| `openFileDialog`  | `() => void`                                                |
+| `removeFile`      | `(fileId: string) => void`                                  |
+| `getRootProps`    | `(props?) => React.HTMLAttributes<HTMLElement>`             |
+| `getInputProps`   | `(props?) => React.InputHTMLAttributes<HTMLInputElement>`   |
+| `getTriggerProps` | `(props?) => React.HTMLAttributes<HTMLElement>`             |
+| `getButtonProps`  | `(props?) => React.ButtonHTMLAttributes<HTMLButtonElement>` |
 
-The package also exports `DropzoneRoot`, `DropzoneInput`, `DropzoneTrigger`,
-`useDropzoneContext`, `matchesDropzoneAccept`, `validateDropzoneFile`,
-`validateDropzoneFiles`, and `formatDropzoneBytes`.
+The package also exports `parseDropzoneAccept`, `matchesDropzoneAccept`,
+`validateDropzoneFile`, and `validateDropzoneFiles`.
+
+`DropzoneFileRejection` is a discriminated union:
+
+| Reason              | Extra fields  |
+| ------------------- | ------------- |
+| `file-invalid-type` | `acceptRules` |
+| `file-too-large`    | `maxSize`     |
+| `too-many-files`    | `maxFiles`    |
+
+The primitive does not export rejection messages or file-size formatting.
+Render copy in the visual layer.
 
 ## Source
 

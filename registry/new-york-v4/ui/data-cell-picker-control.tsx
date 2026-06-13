@@ -72,7 +72,9 @@ export function DataCellPickerControl({
   const triggerRef = React.useRef<HTMLButtonElement>(null)
   const popupRef = React.useRef<HTMLDivElement>(null)
   const shouldSkipAutoFocusClick =
-    Boolean(autoFocus) && activationIntent?.type === "pointer"
+    Boolean(autoFocus) &&
+    activationIntent !== undefined &&
+    activationIntent.type !== "keyboard"
   const skipAutoFocusClickRef = React.useRef(shouldSkipAutoFocusClick)
   const openingPointerDownRef = React.useRef(
     activationIntent?.type === "pointer"

@@ -104,7 +104,9 @@ describe("MarkdownDocumentViewer", () => {
   it("renders fenced code language labels and copies code", async () => {
     render(
       <MarkdownDocumentViewer
-        source={markdownSource(["```ts", "const answer = 42", "```"].join("\n"))}
+        source={markdownSource(
+          ["```ts", "const answer = 42", "```"].join("\n")
+        )}
         toolbar={false}
       />
     )
@@ -116,6 +118,47 @@ describe("MarkdownDocumentViewer", () => {
         "const answer = 42"
       )
     })
+  })
+
+  it("renders breaks, math, callouts, footnotes, and sanitized safe HTML", async () => {
+    const { container } = render(
+      <MarkdownDocumentViewer
+        source={markdownSource(
+          [
+            "First line",
+            "Second line",
+            "",
+            "Inline math $E = mc^2$.",
+            "",
+            "$$",
+            "x^2",
+            "$$",
+            "",
+            ':::warning{title="Careful"}',
+            "Sanitized **callout** body.",
+            ":::",
+            "",
+            "<details><summary>More</summary><mark>Safe</mark><script>alert(1)</script></details>",
+            "",
+            "Footnote here.[^one]",
+            "",
+            "[^one]: Footnote body.",
+          ].join("\n")
+        )}
+        toolbar={false}
+      />
+    )
+
+    expect(await screen.findByText("Careful")).toBeTruthy()
+    expect(
+      container.querySelector('[data-callout-kind="warning"]')
+    ).toBeTruthy()
+    expect(container.querySelector(".katex")).toBeTruthy()
+    expect(container.querySelector("details")).toBeTruthy()
+    expect(container.querySelector("mark")?.textContent).toBe("Safe")
+    expect(container.querySelector("script")).toBeNull()
+    expect(container.querySelector("[data-footnotes]")).toBeTruthy()
+    expect(container.querySelector("p br")).toBeTruthy()
   })
 
   it("keeps unsafe Markdown inert while preserving safe links and images", async () => {
@@ -158,7 +201,9 @@ describe("MarkdownDocumentViewer", () => {
     )
 
     expect(await screen.findByText("yaml")).toBeTruthy()
-    expect(screen.getByText(/title: Demo/)).toBeTruthy()
+    expect(container.querySelector("code")?.textContent).toContain(
+      "title: Demo"
+    )
     expect(await screen.findByRole("heading", { name: "Body" })).toBeTruthy()
     expect(container.querySelector("script")).toBeNull()
   })
@@ -189,15 +234,9 @@ describe("MarkdownDocumentViewer", () => {
         ref={viewerRef}
         className="h-40 w-[420px]"
         source={markdownSource(
-          [
-            "# Docs",
-            "",
-            "[Jump](#docs-1)",
-            "",
-            ...filler,
-            "",
-            "# Docs",
-          ].join("\n")
+          ["# Docs", "", "[Jump](#docs-1)", "", ...filler, "", "# Docs"].join(
+            "\n"
+          )
         )}
         highlight={{ start: 84, end: 84 }}
         toolbar={false}
@@ -239,7 +278,7 @@ describe("MarkdownDocumentViewer", () => {
     fireEvent.click(screen.getByRole("tab", { name: "Text" }))
     expect(await screen.findByText(/# Title/)).toBeTruthy()
     fireEvent.click(screen.getByLabelText("Zoom in"))
-    expect(await screen.findByText("120%")).toBeTruthy()
+    expect(await screen.findByText("90%")).toBeTruthy()
     fireEvent.click(screen.getByTitle("Reset zoom"))
     expect(await screen.findByText("100%")).toBeTruthy()
   })

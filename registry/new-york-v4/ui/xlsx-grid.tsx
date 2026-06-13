@@ -11,7 +11,11 @@ import {
 import type { GridCellCoordinate } from "@/components/ui/fixed-grid-selection"
 import { buildVirtualGridTemplate } from "@/components/ui/fixed-grid-template"
 import { FixedGridViewport } from "@/components/ui/fixed-grid-viewport"
-import { useFixedGridVirtualization } from "@/components/ui/fixed-grid-virtualization"
+import {
+  useFixedGridVirtualization,
+  useFixedRowPool,
+  type FixedGridRowPoolSlot,
+} from "@/components/ui/fixed-grid-virtualization"
 import { HeaderAwareScrollbar } from "@/components/ui/header-aware-scrollbar"
 import {
   XLSX_BASE_COLUMN_WIDTH,
@@ -26,8 +30,15 @@ import {
 } from "@/components/ui/xlsx-grid-row"
 import { XLSX_SCROLLBAR_CSS } from "@/components/ui/xlsx-grid-scrollbar"
 import { ScrollerShell } from "@/components/ui/xlsx-shadow-scope"
+import {
+  useXlsxRowPatcher,
+  type XlsxRowPatchState,
+} from "@/registry/new-york-v4/ui/xlsx-viewer-row-patcher"
 
 export { XlsxGridSkeleton } from "@/components/ui/xlsx-grid-skeleton"
+
+const ROW_OVERSCAN = 30
+const COLUMN_OVERSCAN = 30
 
 export interface XlsxScrollRequest {
   sheetIndex: number
@@ -69,12 +80,34 @@ export function XlsxGrid({
   const fontSize = XLSX_BASE_FONT_SIZE * safeScale
 
   const scrollRef = React.useRef<HTMLDivElement>(null)
+  const rowWindowRef = React.useRef<HTMLDivElement>(null)
   const setScrollElement = React.useCallback(
     (element: HTMLDivElement | null) => {
       scrollRef.current = element
       if (viewportRef) viewportRef.current = element
     },
     [viewportRef]
+  )
+  const columnItemsRef = React.useRef<XlsxGridColumnItem[]>([])
+  const getRowPatchState = React.useCallback(
+    (): XlsxRowPatchState => ({
+      activeCell: activeCell ?? null,
+      columnCount: safeColumnCount,
+      columnItems: columnItemsRef.current,
+      getCell,
+      rowCount: safeRowCount,
+      rowHeight,
+      sheetName,
+    }),
+    [activeCell, getCell, rowHeight, safeColumnCount, safeRowCount, sheetName]
+  )
+  const rowPatcher = useXlsxRowPatcher({
+    rowWindowRef,
+    getState: getRowPatchState,
+  })
+  const rowScrollStrategy = React.useMemo(
+    () => ({ handleViewport: rowPatcher.patch }),
+    [rowPatcher]
   )
 
   const {
@@ -85,13 +118,15 @@ export function XlsxGrid({
     leftPad,
     rightPad,
     scrollToCell,
+    viewportClientHeight,
   } = useFixedGridVirtualization({
     rowCount: safeRowCount,
     columnCount: safeColumnCount,
     rowSize: rowHeight,
     columnSize: columnWidth,
-    rowOverscan: 30,
-    columnOverscan: 30,
+    rowOverscan: ROW_OVERSCAN,
+    columnOverscan: COLUMN_OVERSCAN,
+    rowScrollStrategy,
     scrollRef,
   })
 
@@ -117,6 +152,10 @@ export function XlsxGrid({
     [virtualColumnItems]
   )
 
+  React.useLayoutEffect(() => {
+    columnItemsRef.current = columnItems
+  }, [columnItems])
+
   const gridTemplate = React.useMemo(
     () =>
       buildVirtualGridTemplate({
@@ -128,6 +167,27 @@ export function XlsxGrid({
     [gutterWidth, leftPad, columnItems, rightPad]
   )
   const totalWidth = gutterWidth + totalColumnSize
+  const minimumRowPoolSize =
+    Math.ceil(viewportClientHeight / rowHeight) + ROW_OVERSCAN * 2 + 2
+  const rowPoolSlots = useFixedRowPool({
+    minimumPoolSize: minimumRowPoolSize,
+    rowCount: safeRowCount,
+    virtualRows,
+  })
+
+  React.useLayoutEffect(() => {
+    rowPatcher.invalidate()
+  }, [
+    rowPatcher,
+    virtualRows,
+    columnItems,
+    rowHeight,
+    safeRowCount,
+    safeColumnCount,
+    sheetName,
+    getCell,
+    activeCell,
+  ])
 
   if (safeRowCount === 0 || safeColumnCount === 0) {
     return (
@@ -192,23 +252,22 @@ export function XlsxGrid({
               <Spacer width={rightPad} />
             </div>
 
-            <div style={getFixedGridRowWindowStyle({ height: totalRowSize })}>
-              {virtualRows.map((virtualRow) => (
-                <XlsxGridRow
-                  key={virtualRow.index}
-                  rowIndex={virtualRow.index}
+            <div
+              ref={rowWindowRef}
+              style={getFixedGridRowWindowStyle({ height: totalRowSize })}
+            >
+              {rowPoolSlots.map((slot) => (
+                <XlsxGridRowSlot
+                  key={slot.slotIndex}
+                  slot={slot}
+                  rowCount={safeRowCount}
                   getCell={getCell}
                   gridTemplate={gridTemplate}
                   rowHeight={rowHeight}
                   columnItems={columnItems}
                   leftPad={leftPad}
                   rightPad={rightPad}
-                  start={virtualRow.start}
-                  activeColumnIndex={
-                    activeCell?.rowIndex === virtualRow.index
-                      ? activeCell.columnIndex
-                      : null
-                  }
+                  activeCell={activeCell ?? null}
                 />
               ))}
             </div>
@@ -217,6 +276,51 @@ export function XlsxGrid({
         <HeaderAwareScrollbar scrollRef={scrollRef} headerHeight={rowHeight} />
       </ScrollerShell>
     </div>
+  )
+}
+
+function XlsxGridRowSlot({
+  slot,
+  rowCount,
+  getCell,
+  gridTemplate,
+  rowHeight,
+  columnItems,
+  leftPad,
+  rightPad,
+  activeCell,
+}: {
+  slot: FixedGridRowPoolSlot
+  rowCount: number
+  getCell: (rowIndex: number, columnIndex: number) => XlsxCell
+  gridTemplate: string
+  rowHeight: number
+  columnItems: XlsxGridColumnItem[]
+  leftPad: number
+  rightPad: number
+  activeCell: XlsxGridCellRef | null
+}) {
+  const fallbackRowIndex =
+    rowCount > 0 ? Math.min(slot.slotIndex, rowCount - 1) : 0
+  const rowIndex = slot.virtualRow?.index ?? fallbackRowIndex
+
+  return (
+    <XlsxGridRow
+      rowIndex={rowIndex}
+      getCell={getCell}
+      gridTemplate={gridTemplate}
+      rowHeight={rowHeight}
+      columnItems={columnItems}
+      leftPad={leftPad}
+      rightPad={rightPad}
+      start={slot.virtualRow?.start ?? 0}
+      hidden={slot.isHidden}
+      activeColumnIndex={
+        slot.virtualRow && activeCell?.rowIndex === rowIndex
+          ? activeCell.columnIndex
+          : null
+      }
+    />
   )
 }
 

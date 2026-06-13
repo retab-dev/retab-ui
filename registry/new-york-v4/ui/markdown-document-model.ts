@@ -1,33 +1,35 @@
 import { marked, type Token, type Tokens } from "marked"
 
+import {
+  clampMarkdownPageHeight,
+  createEstimatedMarkdownBlock,
+  MARKDOWN_DOCUMENT_TARGET_PAGE_HEIGHT,
+  pageChromeHeight,
+} from "./markdown-document-layout"
 import { splitTextLines } from "./text-viewer-resource"
-
-export const MARKDOWN_DOCUMENT_PAGE_WIDTH = 768
-export const MARKDOWN_DOCUMENT_PAGE_PADDING_X = 36
-export const MARKDOWN_DOCUMENT_PAGE_PADDING_Y = 28
-export const MARKDOWN_DOCUMENT_TARGET_PAGE_HEIGHT = 980
-export const MARKDOWN_DOCUMENT_MIN_PAGE_HEIGHT = 220
-export const MARKDOWN_DOCUMENT_MAX_ESTIMATED_PAGE_HEIGHT = 2200
 
 export type MarkdownDocumentBlockKind =
   | "blockquote"
+  | "callout"
   | "code"
   | "heading"
   | "html"
   | "image"
   | "list"
+  | "math"
   | "paragraph"
   | "rule"
   | "table"
 
 export interface MarkdownDocumentBlock {
+  blockEndLine: number
+  blockStartLine: number
   estimatedHeight: number
   headingId: string | null
   id: string
+  isHostile: boolean
   kind: MarkdownDocumentBlockKind
   markdown: string
-  sourceEndLine: number
-  sourceStartLine: number
 }
 
 export interface MarkdownDocumentPage {
@@ -35,9 +37,9 @@ export interface MarkdownDocumentPage {
   estimatedHeight: number
   id: string
   markdown: string
+  pageEndLine: number
   pageNumber: number
-  sourceEndLine: number
-  sourceStartLine: number
+  pageStartLine: number
 }
 
 export interface MarkdownDocument {
@@ -47,6 +49,11 @@ export interface MarkdownDocument {
   pages: MarkdownDocumentPage[]
   text: string
   wordCount: number
+}
+
+export type MarkdownLineRange = {
+  end: number
+  start: number
 }
 
 type SourceToken = Token & {
@@ -66,7 +73,7 @@ export function createMarkdownDocument(text: string): MarkdownDocument {
 
   for (const block of blocks) {
     if (block.headingId) {
-      headingIdsByLine.set(block.sourceStartLine, block.headingId)
+      headingIdsByLine.set(block.blockStartLine, block.headingId)
     }
   }
 
@@ -84,8 +91,8 @@ export function findMarkdownPageForLine(
   pages: readonly MarkdownDocumentPage[],
   sourceLine: number
 ) {
-  return pages.find((page) =>
-    sourceLine >= page.sourceStartLine && sourceLine <= page.sourceEndLine
+  return pages.find(
+    (page) => sourceLine >= page.pageStartLine && sourceLine <= page.pageEndLine
   )
 }
 
@@ -94,10 +101,10 @@ export function markdownPageIntersectsLineRange({
   range,
 }: {
   page: MarkdownDocumentPage
-  range: { end: number; start: number } | null
+  range: MarkdownLineRange | null
 }) {
   if (!range) return false
-  return page.sourceStartLine <= range.end && page.sourceEndLine >= range.start
+  return page.pageStartLine <= range.end && page.pageEndLine >= range.start
 }
 
 export function serializeMarkdownTableForClipboard(markdown: string) {
@@ -119,64 +126,78 @@ function createMarkdownBlocks(
   const blocks: MarkdownDocumentBlock[] = []
 
   if (frontmatter) {
-    blocks.push({
-      estimatedHeight: estimateCodeHeight(frontmatter.markdown),
-      headingId: null,
-      id: "block-1-frontmatter",
+    const estimatedBlock = createEstimatedMarkdownBlock({
       kind: "code",
       markdown: frontmatter.renderMarkdown,
-      sourceEndLine: frontmatter.endLine,
-      sourceStartLine: 1,
+    })
+    blocks.push({
+      blockEndLine: frontmatter.endLine,
+      blockStartLine: 1,
+      estimatedHeight: estimatedBlock.estimatedHeight,
+      headingId: null,
+      id: "block-1-frontmatter",
+      isHostile: estimatedBlock.isHostile,
+      kind: "code",
+      markdown: frontmatter.renderMarkdown,
     })
   }
 
   const markdownText = frontmatter
-    ? text.slice(frontmatter.markdown.length).replace(/^\r?\n/, "")
+    ? text.slice(frontmatter.markdown.length)
     : text
   const baseLine = frontmatter ? frontmatter.endLine + 1 : 1
   const tokens = marked.lexer(markdownText, { gfm: true })
   let cursorLine = baseLine
+  let previousTokenWasBlock = false
 
   for (const token of tokens as SourceToken[]) {
     if (token.type === "space") {
-      cursorLine += countRawLines(token.raw ?? "\n")
+      const rawLineCount = countRawLines(token.raw ?? "\n")
+      cursorLine += previousTokenWasBlock
+        ? Math.max(0, rawLineCount - 1)
+        : rawLineCount
       continue
     }
 
     const raw = token.raw ?? tokenText(token)
-    const sourceStartLine = cursorLine
-    const sourceEndLine = Math.max(
-      sourceStartLine,
-      sourceStartLine + countRawLines(raw) - 1
+    const blockStartLine = cursorLine
+    const blockEndLine = Math.max(
+      blockStartLine,
+      blockStartLine + countRawLines(raw) - 1
     )
-    const kind = markdownBlockKind(token)
+    const kind = markdownBlockKind(token, raw)
     const headingId =
       token.type === "heading"
         ? createHeadingId((token as Tokens.Heading).text, headingRegistry)
         : null
+    const markdown = raw.trimEnd() || " "
+    const estimatedBlock = createEstimatedMarkdownBlock({ kind, markdown })
 
     blocks.push({
-      estimatedHeight: estimateBlockHeight({ kind, raw, token }),
+      blockEndLine,
+      blockStartLine,
+      estimatedHeight: estimatedBlock.estimatedHeight,
       headingId,
-      id: `block-${blocks.length + 1}-${sourceStartLine}`,
+      id: `block-${blocks.length + 1}-${blockStartLine}`,
+      isHostile: estimatedBlock.isHostile,
       kind,
-      markdown: raw.trimEnd() || " ",
-      sourceEndLine,
-      sourceStartLine,
+      markdown,
     })
 
-    cursorLine = sourceEndLine + 1
+    cursorLine = blockEndLine + 1
+    previousTokenWasBlock = true
   }
 
   if (blocks.length === 0) {
     blocks.push({
+      blockEndLine: 1,
+      blockStartLine: 1,
       estimatedHeight: 120,
       headingId: null,
       id: "block-1-empty",
+      isHostile: false,
       kind: "paragraph",
       markdown: " ",
-      sourceEndLine: 1,
-      sourceStartLine: 1,
     })
   }
 
@@ -193,16 +214,16 @@ function createMarkdownPages(
   const flush = () => {
     if (currentBlocks.length === 0) return
     const markdown = currentBlocks.map((block) => block.markdown).join("\n\n")
-    const sourceStartLine = currentBlocks[0]!.sourceStartLine
-    const sourceEndLine = currentBlocks[currentBlocks.length - 1]!.sourceEndLine
+    const pageStartLine = currentBlocks[0]!.blockStartLine
+    const pageEndLine = currentBlocks[currentBlocks.length - 1]!.blockEndLine
     pages.push({
       blocks: currentBlocks,
-      estimatedHeight: clampPageHeight(currentHeight),
-      id: `page-${pages.length + 1}-${sourceStartLine}`,
+      estimatedHeight: clampMarkdownPageHeight(currentHeight),
+      id: `page-${pages.length + 1}-${pageStartLine}`,
       markdown,
+      pageEndLine,
       pageNumber: pages.length + 1,
-      sourceEndLine,
-      sourceStartLine,
+      pageStartLine,
     })
     currentBlocks = []
     currentHeight = pageChromeHeight()
@@ -212,6 +233,15 @@ function createMarkdownPages(
     const block = blocks[index]!
     const nextBlock = blocks[index + 1]
     const blockHeight = block.estimatedHeight
+
+    if (block.isHostile) {
+      flush()
+      currentBlocks.push(block)
+      currentHeight += blockHeight
+      flush()
+      continue
+    }
+
     const shouldKeepHeadingWithNext =
       block.kind === "heading" &&
       nextBlock &&
@@ -254,7 +284,13 @@ function extractYamlFrontmatter(text: string) {
   }
 }
 
-function markdownBlockKind(token: Token): MarkdownDocumentBlockKind {
+function markdownBlockKind(
+  token: Token,
+  raw: string
+): MarkdownDocumentBlockKind {
+  if (isDirectiveBlock(raw)) return "callout"
+  if (isMathBlock(raw)) return "math"
+
   switch (token.type) {
     case "blockquote":
       return "blockquote"
@@ -282,62 +318,14 @@ function markdownBlockKind(token: Token): MarkdownDocumentBlockKind {
   }
 }
 
-function estimateBlockHeight({
-  kind,
-  raw,
-  token,
-}: {
-  kind: MarkdownDocumentBlockKind
-  raw: string
-  token: SourceToken
-}) {
-  switch (kind) {
-    case "heading":
-      return 58
-    case "rule":
-      return 34
-    case "code":
-      return estimateCodeHeight(raw)
-    case "table":
-      return estimateTableHeight(token)
-    case "image":
-      return 260
-    case "list":
-      return Math.max(72, countRawLines(raw) * 26 + 24)
-    case "blockquote":
-      return Math.max(72, countRawLines(raw) * 28 + 24)
-    case "html":
-      return Math.max(56, countRawLines(raw) * 24 + 20)
-    case "paragraph":
-      return estimateParagraphHeight(raw)
-  }
-}
-
-function estimateCodeHeight(raw: string) {
-  return Math.max(86, countRawLines(raw) * 22 + 58)
-}
-
-function estimateTableHeight(token: SourceToken) {
-  if (token.type !== "table") return 120
-  const table = token as Tokens.Table
-  return Math.max(96, 48 + table.rows.length * 36)
-}
-
-function estimateParagraphHeight(raw: string) {
-  const text = raw.replace(/\s+/g, " ").trim()
-  const estimatedLines = Math.max(1, Math.ceil(text.length / 78))
-  return estimatedLines * 26 + 28
-}
-
-function pageChromeHeight() {
-  return MARKDOWN_DOCUMENT_PAGE_PADDING_Y * 2
-}
-
-function clampPageHeight(height: number) {
-  return Math.min(
-    MARKDOWN_DOCUMENT_MAX_ESTIMATED_PAGE_HEIGHT,
-    Math.max(MARKDOWN_DOCUMENT_MIN_PAGE_HEIGHT, height)
+function isDirectiveBlock(raw: string) {
+  return /^:::(?:note|info|tip|success|warning|caution|danger|error|failure)\b/im.test(
+    raw.trimStart()
   )
+}
+
+function isMathBlock(raw: string) {
+  return /^\$\$[\s\S]*\$\$\s*$/.test(raw.trim())
 }
 
 function isOversizedBlock(block: MarkdownDocumentBlock) {
@@ -365,7 +353,7 @@ function countRawLines(raw: string) {
 }
 
 function tokenText(token: SourceToken) {
-  return typeof token.text === "string" ? token.text : token.raw ?? ""
+  return typeof token.text === "string" ? token.text : (token.raw ?? "")
 }
 
 function countWords(text: string) {

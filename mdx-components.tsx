@@ -32,11 +32,13 @@ import { DropzoneDemo, FileUploaderDemo } from "@/components/dropzone-demo"
 import { FileThumbnailDemo } from "@/components/file-thumbnail-demo"
 import { FileThumbnailFormatsDemo } from "@/components/file-thumbnail-formats-demo"
 import { FileViewerDemo } from "@/components/file-viewer-demo"
+import { HtmlViewerDemo } from "@/components/html-viewer-demo"
 import { getIconForLanguageExtension } from "@/components/icons"
 import { ImageViewerDemo } from "@/components/image-viewer-demo"
 import { JsonFormDemo } from "@/components/json-form-demo"
 import { JsonTableDemo } from "@/components/json-table/json-table-demo"
 import { DocumentAiLayoutBlocksDemo } from "@/components/layout-blocks-document-ai-demo"
+import { MarkdownViewerDemo } from "@/components/markdown-viewer-demo"
 import { MermaidDiagram } from "@/components/mermaid-diagram"
 import { PdfViewerDemo } from "@/components/pdf-viewer-demo"
 import { PptxViewerDemo } from "@/components/pptx-viewer-demo"
@@ -56,6 +58,7 @@ import {
   EditViewerDemo,
   ExtractViewerDemo,
   JsonFormSourcesDemo,
+  LargeParseViewerDemo,
   ParseViewerDemo,
   PartitionViewerDemo,
   SplitViewerDemo,
@@ -380,6 +383,7 @@ export const mdxComponents = {
   JsonTableDemo,
   DocumentAiLayoutBlocksDemo,
   ParseViewerDemo,
+  LargeParseViewerDemo,
   ExtractViewerDemo,
   JsonFormSourcesDemo,
   ClassificationViewerDemo,
@@ -393,6 +397,8 @@ export const mdxComponents = {
   FileThumbnailDemo,
   FileThumbnailFormatsDemo,
   TextViewerDemo,
+  MarkdownViewerDemo,
+  HtmlViewerDemo,
   CodeViewerDemo,
   Link: ({ className, ...props }: React.ComponentProps<typeof Link>) => (
     <Link

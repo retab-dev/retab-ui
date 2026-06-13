@@ -12,7 +12,6 @@ import {
   type PageMarkdownDocumentPaneHandle,
 } from "@/components/viewers/page-markdown/page-markdown-document-pane"
 import { PageMarkdownEmptyState } from "@/components/viewers/page-markdown/page-markdown-empty-state"
-import { usePagePaneSync } from "@/components/viewers/page-markdown/page-markdown-hooks"
 import { PAGE_MARKDOWN_PAGE_WIDTH } from "@/components/viewers/page-markdown/page-markdown-layout"
 import { joinMarkdownPages } from "@/components/viewers/page-markdown/page-markdown-model"
 import {
@@ -23,6 +22,7 @@ import {
   usePageMarkdownScale,
   zoomPageScale,
 } from "@/components/viewers/page-markdown/page-markdown-scale"
+import { usePageMarkdownSync } from "@/components/viewers/page-markdown/page-markdown-sync"
 import {
   type PageMarkdownViewerProps,
   type PageMarkdownViewMode,
@@ -45,7 +45,7 @@ export function PageMarkdownViewer({
   >(null)
   const pagePaneResetKey = hasPages ? `pages:${resetKey ?? ""}` : "empty"
   const { currentPage, reportDocumentPage, reportMarkdownPage } =
-    usePagePaneSync({
+    usePageMarkdownSync({
       onMarkdownPageChange: onVisiblePageChange,
       pageCount: pages.length,
       resetKey: pagePaneResetKey,
@@ -56,7 +56,7 @@ export function PageMarkdownViewer({
     null
   )
   const [documentPageReport, setDocumentPageReport] = React.useState<{
-    page: number
+    pageNumber: number
   } | null>(null)
 
   React.useEffect(() => {
@@ -65,11 +65,13 @@ export function PageMarkdownViewer({
   }, [resetKey])
 
   const handleDocumentPageChange = React.useCallback(
-    (page: number) => {
-      const normalizedPage = Number.isFinite(page) ? Math.floor(page) : 1
+    (pageNumber: number) => {
+      const normalizedPage = Number.isFinite(pageNumber)
+        ? Math.floor(pageNumber)
+        : 1
       const pageCount = Math.max(1, pages.length)
       setDocumentPageReport({
-        page: Math.min(pageCount, Math.max(1, normalizedPage)),
+        pageNumber: Math.min(pageCount, Math.max(1, normalizedPage)),
       })
     },
     [pages.length]
@@ -83,17 +85,17 @@ export function PageMarkdownViewer({
 
   React.useEffect(() => {
     if (!documentPageReport) return
-    const target = reportDocumentPage(documentPageReport.page)
+    const target = reportDocumentPage(documentPageReport.pageNumber)
     if (target?.pane === "markdown") {
-      markdownPaneRef.current?.scrollToPage(target.page)
+      markdownPaneRef.current?.scrollToPage(target.pageNumber)
     }
   }, [documentPageReport, reportDocumentPage])
 
-  const handleVisibleMarkdownPageChange = React.useCallback(
-    (page: number) => {
-      const target = reportMarkdownPage(page)
+  const handleMarkdownPageChange = React.useCallback(
+    (pageNumber: number) => {
+      const target = reportMarkdownPage(pageNumber)
       if (target?.pane === "document") {
-        documentPaneRef.current?.scrollToPage(target.page)
+        documentPaneRef.current?.scrollToPage(target.pageNumber)
       }
     },
     [reportMarkdownPage]
@@ -104,6 +106,7 @@ export function PageMarkdownViewer({
     pageWidth: PAGE_MARKDOWN_PAGE_WIDTH,
     resetKey,
   })
+  const isMarkdownScaleReady = markdownContainerWidth !== null
 
   if (!hasPages) {
     return (
@@ -121,6 +124,7 @@ export function PageMarkdownViewer({
       text={text}
       mode={mode}
       scale={scale}
+      isScaleReady={isMarkdownScaleReady}
       currentPage={currentPage}
       fileName={fileName}
       resetKey={resetKey}
@@ -128,7 +132,7 @@ export function PageMarkdownViewer({
       onZoom={(factor) => setViewerScale(zoomPageScale(scale, factor))}
       onFitWidth={fitWidth}
       onContainerWidthChange={setMarkdownContainerWidth}
-      onVisiblePageChange={handleVisibleMarkdownPageChange}
+      onVisiblePageChange={handleMarkdownPageChange}
     />
   )
 

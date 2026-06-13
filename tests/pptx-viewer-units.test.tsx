@@ -22,7 +22,11 @@ import {
 import { PptxViewerFallback } from "@/registry/new-york-v4/ui/pptx-viewer-fallback"
 import { parsePptxSlideSize } from "@/registry/new-york-v4/ui/pptx-viewer-presentation"
 import { createPptxScrollActivity } from "@/registry/new-york-v4/ui/pptx-viewer-scroll"
-import { usePptxVisibleSlide } from "@/registry/new-york-v4/ui/pptx-viewer-visible-slide"
+import {
+  createPptxSlideLayout,
+  getPptxSlideAtScrollMarker,
+  usePptxVisibleSlide,
+} from "@/registry/new-york-v4/ui/pptx-viewer-visible-slide"
 import { usePptxZoom } from "@/registry/new-york-v4/ui/pptx-viewer-zoom"
 
 const originalGetAnimations = HTMLElement.prototype.getAnimations
@@ -53,26 +57,6 @@ function setElementNumberProperty(
   value: number
 ) {
   Object.defineProperty(element, key, { configurable: true, value })
-}
-
-function setElementRect(
-  element: Element,
-  rect: Partial<Pick<DOMRect, "top" | "height">>
-) {
-  element.getBoundingClientRect = vi.fn(
-    () =>
-      ({
-        bottom: (rect.top ?? 0) + (rect.height ?? 0),
-        height: rect.height ?? 0,
-        left: 0,
-        right: 0,
-        toJSON: () => ({}),
-        top: rect.top ?? 0,
-        width: 0,
-        x: 0,
-        y: rect.top ?? 0,
-      }) as DOMRect
-  )
 }
 
 describe("pptx-viewer-core geometry", () => {
@@ -127,25 +111,66 @@ describe("pptx-viewer-core geometry", () => {
     expect(getPptxBitmapCacheKey({ slideIndex: 0, renderScale: 1 })).toBe(
       "0@1000"
     )
-    expect(
-      getPptxBitmapCacheKey({ slideIndex: 3, renderScale: 0.0004 })
-    ).toBe("3@0")
-    expect(
-      getPptxBitmapCacheKey({ slideIndex: 3, renderScale: 0.0006 })
-    ).toBe("3@1")
+    expect(getPptxBitmapCacheKey({ slideIndex: 3, renderScale: 0.0004 })).toBe(
+      "3@0"
+    )
+    expect(getPptxBitmapCacheKey({ slideIndex: 3, renderScale: 0.0006 })).toBe(
+      "3@1"
+    )
   })
 
   it("treats fit/manual reset inputs as distinct keys but coincident clamped scales as equal", () => {
     const fit = getPptxResetKey({ resourceKey: "url:/a.pptx" })
     const manual = getPptxResetKey({ resourceKey: "url:/a.pptx", scale: 1 })
     expect(fit).not.toBe(manual)
-    expect(
-      getPptxResetKey({ resourceKey: "url:/a.pptx", scale: 0.1 })
-    ).toBe(getPptxResetKey({ resourceKey: "url:/a.pptx", scale: 0.25 }))
+    expect(getPptxResetKey({ resourceKey: "url:/a.pptx", scale: 0.1 })).toBe(
+      getPptxResetKey({ resourceKey: "url:/a.pptx", scale: 0.25 })
+    )
   })
 
   it("exposes the documented default slide size", () => {
     expect(DEFAULT_PPTX_SLIDE_SIZE).toEqual({ width: 960, height: 720 })
+  })
+})
+
+describe("pptx slide scroll layout", () => {
+  it("builds a uniform slide layout from slide size, zoom, rotation, gap, and padding", () => {
+    expect(
+      createPptxSlideLayout({
+        baseSize: { width: 960, height: 720 },
+        zoomScale: 2,
+        rotation: 90,
+        slideCount: 3,
+        slideGap: 16,
+        slidePadding: 16,
+      })
+    ).toEqual({
+      slideCount: 3,
+      slideGap: 16,
+      slideHeight: 1920,
+      slideStride: 1936,
+      slideTopPadding: 16,
+      totalHeight: 5824,
+    })
+  })
+
+  it("maps the scroll marker to the last slide top at or above the marker", () => {
+    const layout = createPptxSlideLayout({
+      baseSize: { width: 960, height: 720 },
+      zoomScale: 1,
+      rotation: 0,
+      slideCount: 3,
+      slideGap: 16,
+      slidePadding: 16,
+    })
+
+    expect(getPptxSlideAtScrollMarker(layout, 0)).toBe(1)
+    expect(getPptxSlideAtScrollMarker(layout, 16)).toBe(1)
+    expect(getPptxSlideAtScrollMarker(layout, 751)).toBe(1)
+    expect(getPptxSlideAtScrollMarker(layout, 752)).toBe(2)
+    expect(getPptxSlideAtScrollMarker(layout, 1487)).toBe(2)
+    expect(getPptxSlideAtScrollMarker(layout, 1488)).toBe(3)
+    expect(getPptxSlideAtScrollMarker(layout, 9999)).toBe(3)
   })
 })
 
@@ -173,19 +198,27 @@ const P_NS =
 describe("parsePptxSlideSize edge cases", () => {
   it("falls back when only one slide-size axis is present", () => {
     expect(
-      parsePptxSlideSize(`<p:presentation ${P_NS}><p:sldSz cx="9144000"/></p:presentation>`)
+      parsePptxSlideSize(
+        `<p:presentation ${P_NS}><p:sldSz cx="9144000"/></p:presentation>`
+      )
     ).toEqual(DEFAULT_PPTX_SLIDE_SIZE)
     expect(
-      parsePptxSlideSize(`<p:presentation ${P_NS}><p:sldSz cy="6858000"/></p:presentation>`)
+      parsePptxSlideSize(
+        `<p:presentation ${P_NS}><p:sldSz cy="6858000"/></p:presentation>`
+      )
     ).toEqual(DEFAULT_PPTX_SLIDE_SIZE)
   })
 
   it("falls back when an axis is zero or negative", () => {
     expect(
-      parsePptxSlideSize(`<p:presentation ${P_NS}><p:sldSz cx="0" cy="6858000"/></p:presentation>`)
+      parsePptxSlideSize(
+        `<p:presentation ${P_NS}><p:sldSz cx="0" cy="6858000"/></p:presentation>`
+      )
     ).toEqual(DEFAULT_PPTX_SLIDE_SIZE)
     expect(
-      parsePptxSlideSize(`<p:presentation ${P_NS}><p:sldSz cx="9144000" cy="-1"/></p:presentation>`)
+      parsePptxSlideSize(
+        `<p:presentation ${P_NS}><p:sldSz cx="9144000" cy="-1"/></p:presentation>`
+      )
     ).toEqual(DEFAULT_PPTX_SLIDE_SIZE)
   })
 
@@ -397,7 +430,9 @@ describe("PptxViewerFallback", () => {
   })
 
   it("honors a custom fallback slide size aspect ratio", () => {
-    render(<PptxViewerFallback fallbackSlideSize={{ width: 1280, height: 720 }} />)
+    render(
+      <PptxViewerFallback fallbackSlideSize={{ width: 1280, height: 720 }} />
+    )
     const skeleton = document.querySelector<HTMLElement>(
       '[data-slot="pptx-slide-skeleton"]'
     )
@@ -424,21 +459,50 @@ describe("PptxViewerFallback", () => {
 
 function VisibleSlideHarness({
   slideCount,
+  baseSize = { width: 960, height: 720 },
+  zoomScale = 1,
+  rotation = 0,
+  slideGap = 16,
+  slidePadding = 16,
   onVisibleSlideChange,
   onScrollProgressChange,
 }: {
   slideCount: number
+  baseSize?: { width: number; height: number }
+  zoomScale?: number
+  rotation?: number
+  slideGap?: number
+  slidePadding?: number
   onVisibleSlideChange?: (slide: number) => void
   onScrollProgressChange?: (progress: number) => void
 }) {
-  const { currentSlide, handleScroll, scrollViewportRef } = usePptxVisibleSlide({
-    onVisibleSlideChange,
-    onScrollProgressChange,
-  })
+  const layout = React.useMemo(
+    () =>
+      createPptxSlideLayout({
+        baseSize,
+        zoomScale,
+        rotation,
+        slideCount,
+        slideGap,
+        slidePadding,
+      }),
+    [baseSize, zoomScale, rotation, slideCount, slideGap, slidePadding]
+  )
+  const { currentSlide, handleScroll, scrollViewportRef } = usePptxVisibleSlide(
+    {
+      layout,
+      onVisibleSlideChange,
+      onScrollProgressChange,
+    }
+  )
   return (
     <div ref={scrollViewportRef} data-testid="viewport">
       {Array.from({ length: slideCount }, (_, index) => (
-        <div key={index} data-slide-number={index + 1} data-testid={`slide-${index + 1}`} />
+        <div
+          key={index}
+          data-slide-number={index + 1}
+          data-testid={`slide-${index + 1}`}
+        />
       ))}
       <span data-testid="current-slide">{currentSlide}</span>
       <button type="button" onClick={handleScroll}>
@@ -458,16 +522,17 @@ describe("usePptxVisibleSlide", () => {
     expect(screen.getByTestId("current-slide").textContent).toBe("1")
   })
 
-  it("reports the slide occupying the 20% marker line", () => {
+  it("reports the slide occupying the 20% scroll marker", () => {
     const onVisibleSlideChange = vi.fn()
     render(
-      <VisibleSlideHarness slideCount={3} onVisibleSlideChange={onVisibleSlideChange} />
+      <VisibleSlideHarness
+        slideCount={3}
+        onVisibleSlideChange={onVisibleSlideChange}
+      />
     )
     const viewport = screen.getByTestId("viewport")
-    setElementRect(viewport, { top: 0, height: 100 }) // marker at y=20
-    setElementRect(screen.getByTestId("slide-1"), { top: -200 })
-    setElementRect(screen.getByTestId("slide-2"), { top: 10 })
-    setElementRect(screen.getByTestId("slide-3"), { top: 400 })
+    setElementNumberProperty(viewport, "clientHeight", 100)
+    setElementNumberProperty(viewport, "scrollTop", 732)
 
     scroll()
 
@@ -475,16 +540,17 @@ describe("usePptxVisibleSlide", () => {
     expect(screen.getByTestId("current-slide").textContent).toBe("2")
   })
 
-  it("keeps slide 1 when every slide sits below the marker", () => {
+  it("keeps slide 1 before the second slide reaches the marker", () => {
     const onVisibleSlideChange = vi.fn()
     render(
-      <VisibleSlideHarness slideCount={3} onVisibleSlideChange={onVisibleSlideChange} />
+      <VisibleSlideHarness
+        slideCount={3}
+        onVisibleSlideChange={onVisibleSlideChange}
+      />
     )
     const viewport = screen.getByTestId("viewport")
-    setElementRect(viewport, { top: 0, height: 100 }) // marker at y=20
-    setElementRect(screen.getByTestId("slide-1"), { top: 500 })
-    setElementRect(screen.getByTestId("slide-2"), { top: 900 })
-    setElementRect(screen.getByTestId("slide-3"), { top: 1300 })
+    setElementNumberProperty(viewport, "clientHeight", 100)
+    setElementNumberProperty(viewport, "scrollTop", 731)
 
     scroll()
 
@@ -492,15 +558,17 @@ describe("usePptxVisibleSlide", () => {
     expect(screen.getByTestId("current-slide").textContent).toBe("1")
   })
 
-  it("counts a slide whose top sits exactly on the marker", () => {
+  it("counts a slide whose top sits exactly on the scroll marker", () => {
     const onVisibleSlideChange = vi.fn()
     render(
-      <VisibleSlideHarness slideCount={2} onVisibleSlideChange={onVisibleSlideChange} />
+      <VisibleSlideHarness
+        slideCount={2}
+        onVisibleSlideChange={onVisibleSlideChange}
+      />
     )
     const viewport = screen.getByTestId("viewport")
-    setElementRect(viewport, { top: 0, height: 100 }) // marker at y=20
-    setElementRect(screen.getByTestId("slide-1"), { top: -100 })
-    setElementRect(screen.getByTestId("slide-2"), { top: 20 }) // exactly on marker
+    setElementNumberProperty(viewport, "clientHeight", 100)
+    setElementNumberProperty(viewport, "scrollTop", 732)
 
     scroll()
 
@@ -510,12 +578,14 @@ describe("usePptxVisibleSlide", () => {
   it("reports each visible slide only once until it changes", () => {
     const onVisibleSlideChange = vi.fn()
     render(
-      <VisibleSlideHarness slideCount={2} onVisibleSlideChange={onVisibleSlideChange} />
+      <VisibleSlideHarness
+        slideCount={2}
+        onVisibleSlideChange={onVisibleSlideChange}
+      />
     )
     const viewport = screen.getByTestId("viewport")
-    setElementRect(viewport, { top: 0, height: 100 })
-    setElementRect(screen.getByTestId("slide-1"), { top: -200 })
-    setElementRect(screen.getByTestId("slide-2"), { top: 10 })
+    setElementNumberProperty(viewport, "clientHeight", 100)
+    setElementNumberProperty(viewport, "scrollTop", 732)
 
     scroll()
     scroll()
@@ -523,6 +593,27 @@ describe("usePptxVisibleSlide", () => {
 
     expect(onVisibleSlideChange).toHaveBeenCalledTimes(1)
     expect(onVisibleSlideChange).toHaveBeenCalledWith(2)
+  })
+
+  it("does not query slide DOM geometry while scrolling", () => {
+    const onVisibleSlideChange = vi.fn()
+    render(
+      <VisibleSlideHarness
+        slideCount={3}
+        onVisibleSlideChange={onVisibleSlideChange}
+      />
+    )
+    const viewport = screen.getByTestId("viewport")
+    const querySelectorAll = vi.spyOn(viewport, "querySelectorAll")
+    const getBoundingClientRect = vi.spyOn(viewport, "getBoundingClientRect")
+    setElementNumberProperty(viewport, "clientHeight", 100)
+    setElementNumberProperty(viewport, "scrollTop", 732)
+
+    scroll()
+
+    expect(onVisibleSlideChange).toHaveBeenCalledWith(2)
+    expect(querySelectorAll).not.toHaveBeenCalled()
+    expect(getBoundingClientRect).not.toHaveBeenCalled()
   })
 
   it("clamps scroll progress to [0, 1] including overscroll", () => {
@@ -534,8 +625,6 @@ describe("usePptxVisibleSlide", () => {
       />
     )
     const viewport = screen.getByTestId("viewport")
-    setElementRect(viewport, { top: 0, height: 100 })
-    setElementRect(screen.getByTestId("slide-1"), { top: 0 })
     setElementNumberProperty(viewport, "clientHeight", 100)
     setElementNumberProperty(viewport, "scrollHeight", 300)
 
@@ -561,8 +650,6 @@ describe("usePptxVisibleSlide", () => {
       />
     )
     const viewport = screen.getByTestId("viewport")
-    setElementRect(viewport, { top: 0, height: 100 })
-    setElementRect(screen.getByTestId("slide-1"), { top: 0 })
     setElementNumberProperty(viewport, "clientHeight", 100)
     setElementNumberProperty(viewport, "scrollHeight", 100)
     setElementNumberProperty(viewport, "scrollTop", 50)
@@ -634,7 +721,11 @@ describe("usePptxZoom", () => {
   it("normalizes the controlled scale and does not mutate internal state", () => {
     const onScaleChange = vi.fn()
     render(
-      <ZoomHarness fitScale={0.5} controlledScale={999} onScaleChange={onScaleChange} />
+      <ZoomHarness
+        fitScale={0.5}
+        controlledScale={999}
+        onScaleChange={onScaleChange}
+      />
     )
     expect(screen.getByTestId("zoom").textContent).toBe("5")
 
@@ -647,7 +738,11 @@ describe("usePptxZoom", () => {
   it("reports fit-width requests as null in controlled mode", () => {
     const onScaleChange = vi.fn()
     render(
-      <ZoomHarness fitScale={0.5} controlledScale={1} onScaleChange={onScaleChange} />
+      <ZoomHarness
+        fitScale={0.5}
+        controlledScale={1}
+        onScaleChange={onScaleChange}
+      />
     )
     fireEvent.click(screen.getByRole("button", { name: "fit" }))
     expect(onScaleChange).toHaveBeenCalledWith(null)
@@ -661,7 +756,11 @@ describe("usePptxZoom", () => {
   it("treats a controlled scale of zero as controlled and clamps it", () => {
     const onScaleChange = vi.fn()
     render(
-      <ZoomHarness fitScale={0.5} controlledScale={0} onScaleChange={onScaleChange} />
+      <ZoomHarness
+        fitScale={0.5}
+        controlledScale={0}
+        onScaleChange={onScaleChange}
+      />
     )
     expect(screen.getByTestId("zoom").textContent).toBe("0.25")
     expect(screen.getByTestId("disabled").textContent).toBe("false")

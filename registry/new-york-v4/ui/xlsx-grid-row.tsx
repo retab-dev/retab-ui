@@ -21,6 +21,7 @@ export const XlsxGridRow = React.memo(function XlsxGridRow({
   leftPad,
   rightPad,
   start,
+  hidden = false,
   activeColumnIndex,
 }: {
   rowIndex: number
@@ -31,6 +32,7 @@ export const XlsxGridRow = React.memo(function XlsxGridRow({
   leftPad: number
   rightPad: number
   start: number
+  hidden?: boolean
   activeColumnIndex?: GridCellCoordinate["columnIndex"] | null
 }) {
   const style = getFixedGridRowStyle({
@@ -44,9 +46,12 @@ export const XlsxGridRow = React.memo(function XlsxGridRow({
       style={style}
       role="row"
       aria-rowindex={rowIndex + 1}
+      hidden={hidden}
+      data-slot="xlsx-row"
     >
       <div
         aria-hidden
+        data-slot="xlsx-row-number"
         className="sticky left-0 z-[1] flex items-center justify-end border-r bg-card px-2 text-muted-foreground tabular-nums group-hover:bg-[color-mix(in_oklab,var(--card)_97%,var(--foreground))]"
       >
         {rowIndex + 1}
@@ -62,6 +67,7 @@ export const XlsxGridRow = React.memo(function XlsxGridRow({
             role="gridcell"
             aria-rowindex={rowIndex + 1}
             aria-colindex={columnIndex + 1}
+            data-slot="xlsx-cell"
             className={cn(
               "flex items-center truncate border-r px-2 last:border-r-0",
               cell.numeric ? "justify-end tabular-nums" : "justify-start",

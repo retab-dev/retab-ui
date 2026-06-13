@@ -1,0 +1,15 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "file-size-format",
+  "title": "File Size Format",
+  "description": "A small byte-size display formatter for file UI components.",
+  "files": [
+    {
+      "path": "registry/new-york-v4/ui/file-size-format.ts",
+      "content": "export function formatFileSize(bytes: number): string {\n  if (bytes === 0) return \"0 B\"\n\n  const units = [\"B\", \"KB\", \"MB\", \"GB\"]\n  const unitIndex = Math.min(\n    Math.floor(Math.log(bytes) / Math.log(1024)),\n    units.length - 1\n  )\n\n  return `${(bytes / 1024 ** unitIndex).toFixed(unitIndex === 0 ? 0 : 1)} ${\n    units[unitIndex]\n  }`\n}\n",
+      "type": "registry:ui",
+      "target": "@ui/file-size-format.ts"
+    }
+  ],
+  "type": "registry:ui"
+}

@@ -4,9 +4,9 @@ import * as React from "react"
 
 import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
 import { SchemaAddRow } from "@/components/schema-editor/primitives/schema-add-row"
+import { SchemaFieldDescription } from "@/components/schema-editor/primitives/schema-field-description"
+import { SchemaFieldName } from "@/components/schema-editor/primitives/schema-field-name"
 import { SchemaFieldRow } from "@/components/schema-editor/primitives/schema-field-row"
-import { SchemaInlineDescription } from "@/components/schema-editor/primitives/schema-inline-description"
-import { SchemaInlineName } from "@/components/schema-editor/primitives/schema-inline-name"
 import { SchemaRowActions } from "@/components/schema-editor/primitives/schema-row-actions"
 import {
   createObjectPropertySchema,
@@ -159,11 +159,9 @@ export function ObjectPropertiesField({
             <SchemaFieldRow
               grip={disabled ? "empty" : "static"}
               name={
-                <SchemaInlineName
+                <SchemaFieldName
                   value={propertyName}
                   editable={!disabled}
-                  siblingValues={propertyNames}
-                  canRename={true}
                   validate={(nextName) =>
                     validatePropertyFormName({
                       name: nextName,
@@ -189,9 +187,9 @@ export function ObjectPropertiesField({
                 />
               }
               description={
-                <SchemaInlineDescription
+                <SchemaFieldDescription
                   value={propertySchema.description || ""}
-                  editMode={disabled ? "readOnly" : "editable"}
+                  editable={!disabled}
                   onCommit={(description) => {
                     onChange(
                       replaceObjectProperty({
@@ -209,9 +207,7 @@ export function ObjectPropertiesField({
               actions={
                 <SchemaRowActions
                   canDelete={true}
-                  editMode={disabled ? "readOnly" : "editable"}
-                  isEditable={!disabled}
-                  hidePencilButton={true}
+                  editable={!disabled}
                   deleteLabel={`Remove field ${propertyName}`}
                   onDelete={() => {
                     preserveNewPropertyNameForLocalProperties(
@@ -261,14 +257,15 @@ export function ObjectPropertiesField({
       })}
 
       <SchemaAddRow
-        ariaLabel="New object field"
         className="ml-4 border-l border-border pl-4"
         disabled={disabled}
         error={newPropertyNameError}
+        inputLabel="New object field"
         placeholder="New property name"
+        submitLabel="Add"
         value={newPropertyName}
-        onAdd={addProperty}
         onChange={setNewPropertyName}
+        onSubmit={addProperty}
       />
     </div>
   )

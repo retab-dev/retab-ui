@@ -17,6 +17,9 @@ import { type PptxSource } from "./pptx-viewer-source"
 
 type SlideRenderState = "idle" | "rendering" | "rendered" | "failed"
 
+export const PPTX_SLIDE_GAP = 16
+export const PPTX_SLIDE_PADDING = 16
+
 export interface PptxSlideScrollerProps {
   source: PptxSource
   zoomScale: number

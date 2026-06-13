@@ -76,11 +76,17 @@ function ReadOnlyJsonFormCell({
       <PopoverTrigger asChild>
         <button className="h-full w-full justify-start overflow-hidden px-1 text-xs leading-none text-inherit select-none hover:bg-accent/50 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none">
           {displayValue ? (
-            <div className="max-w-[80px] truncate text-left">
+            <div
+              data-slot="json-table-read-only-cell-text"
+              className="max-w-[80px] truncate text-left"
+            >
               {displayValue}
             </div>
           ) : (
-            <div className="max-w-[80px] truncate text-left text-muted-foreground">
+            <div
+              data-slot="json-table-read-only-cell-text"
+              className="max-w-[80px] truncate text-left text-muted-foreground"
+            >
               {title}
             </div>
           )}
@@ -130,6 +136,7 @@ function ReadOnlyJsonTableCellContent(props: JsonTableCellProps) {
     return (
       <TableCell
         data-field-path={materializedFieldPath}
+        data-slot="json-table-read-only-cell"
         className="relative cursor-not-allowed bg-muted/60 p-0"
         style={getCellWidthStyle(cellWidth)}
       >
@@ -147,6 +154,7 @@ function ReadOnlyJsonTableCellContent(props: JsonTableCellProps) {
   return (
     <TableCell
       data-field-path={materializedFieldPath}
+      data-slot="json-table-read-only-cell"
       className="relative m-0 border-t-0 border-r border-b border-l-0 p-0 select-none"
       style={getSelectableCellWidthStyle(cellWidth)}
     >

@@ -121,6 +121,30 @@ test.describe("JSON table text caret", () => {
   })
 })
 
+test.describe("JSON table enum select", () => {
+  test("first click opens the enum options", async ({ page }) => {
+    await clickCellCenter(page, "status")
+
+    await expect(page.getByRole("combobox")).toHaveAttribute(
+      "aria-expanded",
+      "true"
+    )
+    await expect(page.getByRole("option", { name: "approved" })).toBeVisible()
+  })
+
+  test("clicking an enum option commits the JSON value once", async ({
+    page,
+  }) => {
+    await clickCellCenter(page, "status")
+    await page.getByRole("option", { name: "approved" }).click()
+
+    await expect.poll(() => documentData(page)).toMatchObject({
+      status: "approved",
+    })
+    await expect(page.getByRole("combobox")).toHaveCount(0)
+  })
+})
+
 function jsonTableCell(page: Page, fieldPath: string) {
   return page.locator(
     `td[data-field-path="${fieldPath}"][data-json-table-editable-cell="true"]`
@@ -132,12 +156,12 @@ async function clickCellTextOffset(
   fieldPath: string,
   offset: number
 ) {
-  const point = await textOffsetPoint(page, {
+  const position = await textOffsetPosition(page, {
     fieldPath,
     offset,
     target: "cell",
   })
-  await page.mouse.click(point.x, point.y)
+  await dataCellLocator(page, fieldPath).click({ force: true, position })
 }
 
 async function clickInputTextOffset(
@@ -145,15 +169,29 @@ async function clickInputTextOffset(
   fieldPath: string,
   offset: number
 ) {
-  const point = await textOffsetPoint(page, {
+  const position = await textOffsetPosition(page, {
     fieldPath,
     offset,
     target: "input",
   })
-  await page.mouse.click(point.x, point.y)
+  await textInputLocator(page, fieldPath).click({ force: true, position })
 }
 
-async function textOffsetPoint(
+async function clickCellCenter(page: Page, fieldPath: string) {
+  await dataCellLocator(page, fieldPath).click({ force: true })
+}
+
+function dataCellLocator(page: Page, fieldPath: string) {
+  return jsonTableCell(page, fieldPath).locator('[data-slot="data-cell"]')
+}
+
+function textInputLocator(page: Page, fieldPath: string) {
+  return jsonTableCell(page, fieldPath).locator(
+    'input[data-kind="text"][data-mode="edit"]'
+  )
+}
+
+async function textOffsetPosition(
   page: Page,
   options: {
     fieldPath: string
@@ -194,10 +232,7 @@ async function textOffsetPoint(
     const prefix = value.slice(0, offset)
     const prefixWidth = context.measureText(prefix).width
 
-    return {
-      x: rect.left + paddingLeft + prefixWidth,
-      y: rect.top + rect.height / 2,
-    }
+    return { x: paddingLeft + prefixWidth, y: rect.height / 2 }
   }, options)
 }
 

@@ -7,35 +7,38 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
 interface SchemaAddRowProps {
-  ariaLabel: string
-  buttonLabel?: string
   className?: string
   disabled: boolean
-  error: string | null
+  error?: string | null
+  inputLabel: string
   placeholder: string
+  submitLabel: string
   value: string
-  onAdd: () => void
   onChange: (value: string) => void
+  onSubmit: () => void
 }
 
 export function SchemaAddRow({
-  ariaLabel,
-  buttonLabel = "Add",
   className,
   disabled,
   error,
+  inputLabel,
   placeholder,
+  submitLabel,
   value,
-  onAdd,
   onChange,
+  onSubmit,
 }: SchemaAddRowProps) {
-  const isAddDisabled = disabled || !value.trim() || Boolean(error)
+  const isSubmitDisabled = disabled || !value.trim() || Boolean(error)
 
   return (
-    <div className={cn("flex flex-col gap-1", className)}>
+    <div
+      data-slot="schema-add-row"
+      className={cn("flex flex-col gap-1", className)}
+    >
       <div className="flex items-center gap-3">
         <Input
-          aria-label={ariaLabel}
+          aria-label={inputLabel}
           placeholder={placeholder}
           disabled={disabled}
           value={value}
@@ -44,7 +47,7 @@ export function SchemaAddRow({
             if (event.key === "Enter") {
               event.preventDefault()
               event.stopPropagation()
-              if (!isAddDisabled) onAdd()
+              if (!isSubmitDisabled) onSubmit()
             }
           }}
           className={`h-8 w-40 ${error ? "border-destructive" : ""}`}
@@ -53,12 +56,12 @@ export function SchemaAddRow({
           type="button"
           variant="outline"
           size="sm"
-          disabled={isAddDisabled}
-          className={isAddDisabled ? "cursor-not-allowed" : ""}
-          onClick={onAdd}
+          disabled={isSubmitDisabled}
+          className={isSubmitDisabled ? "cursor-not-allowed" : ""}
+          onClick={onSubmit}
         >
           <PlusIcon className="h-4 w-4" />
-          <span>{buttonLabel}</span>
+          <span>{submitLabel}</span>
         </Button>
       </div>
 

@@ -11,6 +11,7 @@ const PAGE_MARKDOWN_ESTIMATE_MAX = 1800
 const PAGE_MARKDOWN_TEXT_LINE_HEIGHT = 22
 const PAGE_MARKDOWN_RENDERED_LINE_HEIGHT = 26
 const PAGE_MARKDOWN_ESTIMATE_VERTICAL_PADDING = 80
+const PAGE_MARKDOWN_ESTIMATE_CHARS_PER_LINE = 82
 
 export type PageMarkdownMeasuredPageLayout = {
   height: number
@@ -76,16 +77,16 @@ export function createPageMarkdownLayout({
       heightDelta: height - estimatedHeights[pageNumber - 1]!,
       pageNumber,
     }))
-    .filter((page) => page.heightDelta !== 0)
+    .filter((measuredPage) => measuredPage.heightDelta !== 0)
     .sort((a, b) => a.pageNumber - b.pageNumber)
 
   const measuredPageByNumber = new Map(
-    measuredPages.map((page) => [page.pageNumber, page])
+    measuredPages.map((measuredPage) => [measuredPage.pageNumber, measuredPage])
   )
   const prefixHeightDeltas: number[] = []
   let totalHeightDelta = 0
-  for (const page of measuredPages) {
-    totalHeightDelta += page.heightDelta
+  for (const measuredPage of measuredPages) {
+    totalHeightDelta += measuredPage.heightDelta
     prefixHeightDeltas.push(totalHeightDelta)
   }
 
@@ -178,16 +179,16 @@ export function estimateMarkdownPageHeight(
   mode: PageMarkdownViewMode = "rendered"
 ): number {
   const safeScale = safePageScale(scale)
-  const lineHeight =
+  const estimatedContentHeight =
     mode === "text"
-      ? PAGE_MARKDOWN_TEXT_LINE_HEIGHT
-      : PAGE_MARKDOWN_RENDERED_LINE_HEIGHT
-  const lineCount = markdown.split("\n").length
+      ? estimateTextContentHeight(markdown)
+      : estimateRenderedContentHeight(markdown)
+
   return Math.min(
     PAGE_MARKDOWN_ESTIMATE_MAX * safeScale,
     Math.max(
       PAGE_MARKDOWN_ESTIMATE_MIN * safeScale,
-      lineCount * lineHeight * safeScale +
+      estimatedContentHeight * safeScale +
         PAGE_MARKDOWN_ESTIMATE_VERTICAL_PADDING * safeScale
     )
   )
@@ -250,6 +251,113 @@ function getLastMeasuredPageIndexBefore(
 
 function safePageScale(scale: number) {
   return Number.isFinite(scale) && scale > 0 ? scale : 1
+}
+
+function estimateTextContentHeight(markdown: string): number {
+  return (
+    Math.max(1, markdown.split("\n").length) * PAGE_MARKDOWN_TEXT_LINE_HEIGHT
+  )
+}
+
+function estimateRenderedContentHeight(markdown: string): number {
+  const lines = markdown.split("\n")
+  let height = 0
+  let index = 0
+
+  while (index < lines.length) {
+    const line = lines[index]!
+    const trimmed = line.trim()
+
+    if (!trimmed) {
+      height += 10
+      index += 1
+      continue
+    }
+
+    if (/^```|^~~~/.test(trimmed)) {
+      const fence = trimmed.slice(0, 3)
+      let codeLines = 0
+      index += 1
+      while (index < lines.length && !lines[index]!.trim().startsWith(fence)) {
+        codeLines += 1
+        index += 1
+      }
+      if (index < lines.length) index += 1
+      height += 42 + Math.max(1, codeLines) * 22
+      continue
+    }
+
+    if (isMarkdownTableStart(lines, index)) {
+      let rowCount = 0
+      while (index < lines.length && isMarkdownTableRow(lines[index]!)) {
+        rowCount += 1
+        index += 1
+      }
+      height += 34 + Math.max(1, rowCount) * 34
+      continue
+    }
+
+    const heading = /^(#{1,6})\s+/.exec(trimmed)
+    if (heading) {
+      height += Math.max(30, 48 - heading[1]!.length * 3)
+      index += 1
+      continue
+    }
+
+    if (/^!\[[^\]]*]\([^)]+\)/.test(trimmed)) {
+      height += 260
+      index += 1
+      continue
+    }
+
+    if (/^(?:[-*+]\s+|\d+\.\s+|>\s*)/.test(trimmed)) {
+      height += PAGE_MARKDOWN_RENDERED_LINE_HEIGHT + 8
+      index += 1
+      continue
+    }
+
+    let paragraphChars = trimmed.length
+    index += 1
+    while (index < lines.length && lines[index]!.trim()) {
+      const nextLine = lines[index]!.trim()
+      if (
+        /^```|^~~~/.test(nextLine) ||
+        /^#{1,6}\s+/.test(nextLine) ||
+        /^!\[[^\]]*]\([^)]+\)/.test(nextLine) ||
+        /^(?:[-*+]\s+|\d+\.\s+|>\s*)/.test(nextLine) ||
+        isMarkdownTableStart(lines, index)
+      ) {
+        break
+      }
+      paragraphChars += 1 + nextLine.length
+      index += 1
+    }
+
+    height +=
+      Math.ceil(paragraphChars / PAGE_MARKDOWN_ESTIMATE_CHARS_PER_LINE) *
+        PAGE_MARKDOWN_RENDERED_LINE_HEIGHT +
+      14
+  }
+
+  return height
+}
+
+function isMarkdownTableStart(
+  lines: readonly string[],
+  index: number
+): boolean {
+  return (
+    index + 1 < lines.length &&
+    isMarkdownTableRow(lines[index]!) &&
+    /^\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(
+      lines[index + 1]!
+    )
+  )
+}
+
+function isMarkdownTableRow(line: string): boolean {
+  const trimmed = line.trim()
+  return trimmed.includes("|") && !/^```|^~~~/.test(trimmed)
 }
 
 function hashMarkdown(markdown: string): string {

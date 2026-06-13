@@ -2,9 +2,9 @@
 
 import { describe, expect, it, vi } from "vitest"
 
-import { scrollPageIntoView } from "@/components/viewers/page-markdown/page-markdown-dom"
+import { scrollDocumentPageIntoView } from "@/components/viewers/page-markdown/page-markdown-document-dom"
 
-describe("scrollPageIntoView", () => {
+describe("scrollDocumentPageIntoView", () => {
   it("scrolls the requested page into view", () => {
     const root = document.createElement("div")
     const firstPage = document.createElement("section")
@@ -16,7 +16,7 @@ describe("scrollPageIntoView", () => {
     secondPage.scrollIntoView = scrollIntoView
     root.append(firstPage, secondPage)
 
-    scrollPageIntoView(root, 2)
+    scrollDocumentPageIntoView(root, 2)
 
     expect(scrollIntoView).toHaveBeenCalledWith({
       behavior: "smooth",
@@ -25,9 +25,9 @@ describe("scrollPageIntoView", () => {
   })
 
   it("does nothing without a matching root or page", () => {
-    expect(() => scrollPageIntoView(null, 3)).not.toThrow()
+    expect(() => scrollDocumentPageIntoView(null, 3)).not.toThrow()
     expect(() =>
-      scrollPageIntoView(document.createElement("div"), 3)
+      scrollDocumentPageIntoView(document.createElement("div"), 3)
     ).not.toThrow()
   })
 
@@ -41,6 +41,6 @@ describe("scrollPageIntoView", () => {
     })
     root.append(page)
 
-    expect(() => scrollPageIntoView(root, 2)).not.toThrow()
+    expect(() => scrollDocumentPageIntoView(root, 2)).not.toThrow()
   })
 })

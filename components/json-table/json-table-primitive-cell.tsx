@@ -9,6 +9,18 @@ import { JsonTableDataCell } from "@/components/json-table/json-table-display-ce
 import type { FieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
 import { useElevatedVirtualRow } from "@/components/json-table/use-elevated-virtual-row"
 
+export type JsonTablePrimitiveCellProps = {
+  activationRequest?: DataCellActivationIntent
+  effectiveValue: unknown
+  fieldMetadata: FieldMetadata
+  isActive: boolean
+  isEditable: boolean
+  onActiveChange: (active: boolean) => void
+  onCommit: (value: unknown, meta: DataCellValueMeta) => void
+  onEditingEnd: () => void
+  onEditorHandleChange: (handle: DataCellEditorHandle | null) => void
+}
+
 export function JsonTablePrimitiveCell({
   activationRequest,
   effectiveValue,
@@ -19,17 +31,7 @@ export function JsonTablePrimitiveCell({
   onCommit,
   onEditingEnd,
   onEditorHandleChange,
-}: {
-  activationRequest?: DataCellActivationIntent
-  effectiveValue: unknown
-  fieldMetadata: FieldMetadata
-  isActive: boolean
-  isEditable: boolean
-  onActiveChange: (active: boolean) => void
-  onCommit: (value: unknown, meta: DataCellValueMeta) => void
-  onEditingEnd: () => void
-  onEditorHandleChange: (handle: DataCellEditorHandle | null) => void
-}) {
+}: JsonTablePrimitiveCellProps) {
   const cellRootRef = React.useRef<HTMLDivElement>(null)
 
   useElevatedVirtualRow({

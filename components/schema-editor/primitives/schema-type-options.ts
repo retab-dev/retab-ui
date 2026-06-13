@@ -38,12 +38,13 @@ const schemaTypeOptionLabels: Array<[SchemaTypeOptionId, string]> = [
   ["datetime", "timestamp"],
 ]
 
-export const schemaTypeOptions: SchemaTypeOption[] =
-  schemaTypeOptionLabels.map(([id, label]) => ({
+export const schemaTypeOptions: SchemaTypeOption[] = schemaTypeOptionLabels.map(
+  ([id, label]) => ({
     id,
     label,
     icon: getTypeIcon(id),
-  }))
+  })
+)
 
 export function schemaTypeLabel(type: string, refName?: string) {
   if (type === "$ref" && refName) return refName

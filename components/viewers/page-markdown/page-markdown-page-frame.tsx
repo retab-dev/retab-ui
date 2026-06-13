@@ -12,7 +12,7 @@ import { type PageMarkdownViewMode } from "@/components/viewers/page-markdown/pa
 
 export const PageMarkdownPageFrame = React.memo(function PageMarkdownPageFrame({
   estimatedHeight,
-  page,
+  pageNumber,
   markdown,
   mode,
   onSize,
@@ -21,8 +21,8 @@ export const PageMarkdownPageFrame = React.memo(function PageMarkdownPageFrame({
   estimatedHeight: number
   markdown: string
   mode: PageMarkdownViewMode
-  onSize: (page: number, height: number) => void
-  page: number
+  onSize: (pageNumber: number, height: number) => void
+  pageNumber: number
   scale: number
 }) {
   const pageRef = React.useCallback(
@@ -31,7 +31,7 @@ export const PageMarkdownPageFrame = React.memo(function PageMarkdownPageFrame({
 
       const reportSize = () => {
         const height = pageElement.offsetHeight
-        if (height > 0) onSize(page, height)
+        if (height > 0) onSize(pageNumber, height)
       }
       reportSize()
 
@@ -41,7 +41,7 @@ export const PageMarkdownPageFrame = React.memo(function PageMarkdownPageFrame({
       observer.observe(pageElement)
       return () => observer.disconnect()
     },
-    [onSize, page]
+    [onSize, pageNumber]
   )
 
   const pageWidth = PAGE_MARKDOWN_PAGE_WIDTH * scale
@@ -52,7 +52,7 @@ export const PageMarkdownPageFrame = React.memo(function PageMarkdownPageFrame({
     <div
       ref={pageRef}
       data-slot="page-markdown-page"
-      data-page={page}
+      data-page={pageNumber}
       className="relative w-full max-w-3xl bg-card shadow-sm ring-1 ring-border"
       style={{
         minHeight: estimatedHeight,

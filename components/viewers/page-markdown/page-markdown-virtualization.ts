@@ -8,30 +8,32 @@ import {
 } from "./page-markdown-layout"
 
 export function usePageMarkdownPageVirtualization({
+  getViewportElement,
   layout,
   resetKey,
   viewportElement,
 }: {
+  getViewportElement?: () => HTMLDivElement | null
   layout: PageMarkdownLayoutModel
   resetKey?: unknown
   viewportElement: HTMLDivElement | null
 }) {
   const measureFrameRef = React.useRef(0)
   const lastMeasuredResetKeyRef = React.useRef<unknown>(resetKey)
-  const getCurrentVisiblePageNumbers = React.useCallback(
-    () =>
-      getPageMarkdownVisiblePageNumbers({
-        layout,
-        scrollTop: Object.is(lastMeasuredResetKeyRef.current, resetKey)
-          ? (viewportElement?.scrollTop ?? 0)
-          : 0,
-        viewportHeight:
-          viewportElement?.clientHeight ||
-          viewportElement?.getBoundingClientRect().height ||
-          0,
-      }),
-    [layout, resetKey, viewportElement]
+  const resolveViewportElement = React.useCallback(
+    () => getViewportElement?.() ?? viewportElement,
+    [getViewportElement, viewportElement]
   )
+  const getCurrentVisiblePageNumbers = React.useCallback(() => {
+    const currentViewportElement = resolveViewportElement()
+    return getPageMarkdownVisiblePageNumbers({
+      layout,
+      scrollTop: Object.is(lastMeasuredResetKeyRef.current, resetKey)
+        ? (currentViewportElement?.scrollTop ?? 0)
+        : 0,
+      viewportHeight: getViewportHeight(currentViewportElement),
+    })
+  }, [layout, resetKey, resolveViewportElement])
   const [state, setState] = React.useState<{
     layout: PageMarkdownLayoutModel
     resetKey: unknown
@@ -39,13 +41,9 @@ export function usePageMarkdownPageVirtualization({
   }>(() => ({
     layout,
     resetKey,
-    visiblePageNumbers: getPageMarkdownVisiblePageNumbers({
+    visiblePageNumbers: getInitialVisiblePageNumbers({
       layout,
-      scrollTop: viewportElement?.scrollTop ?? 0,
-      viewportHeight:
-        viewportElement?.clientHeight ||
-        viewportElement?.getBoundingClientRect().height ||
-        0,
+      viewportElement,
     }),
   }))
   const visiblePageNumbers =
@@ -54,12 +52,9 @@ export function usePageMarkdownPageVirtualization({
       : getPageMarkdownVisiblePageNumbers({
           layout,
           scrollTop: Object.is(state.resetKey, resetKey)
-            ? (viewportElement?.scrollTop ?? 0)
+            ? (resolveViewportElement()?.scrollTop ?? 0)
             : 0,
-          viewportHeight:
-            viewportElement?.clientHeight ||
-            viewportElement?.getBoundingClientRect().height ||
-            0,
+          viewportHeight: getViewportHeight(resolveViewportElement()),
         })
 
   const measureVisiblePagesNow = React.useCallback(() => {
@@ -85,23 +80,30 @@ export function usePageMarkdownPageVirtualization({
       measureVisiblePagesNowRef.current()
       return
     }
-    measureFrameRef.current = requestAnimationFrame(() =>
+    measureFrameRef.current = -1
+    const requestedFrame = requestAnimationFrame(() =>
       measureVisiblePagesNowRef.current()
     )
+    if (measureFrameRef.current === -1) {
+      measureFrameRef.current = requestedFrame
+    }
   }, [])
 
   React.useEffect(() => {
-    if (measureFrameRef.current && typeof cancelAnimationFrame === "function") {
+    if (
+      measureFrameRef.current > 0 &&
+      typeof cancelAnimationFrame === "function"
+    ) {
       cancelAnimationFrame(measureFrameRef.current)
       measureFrameRef.current = 0
     }
     measureVisiblePagesNow()
-  }, [measureVisiblePagesNow])
+  }, [measureVisiblePagesNow, viewportElement])
 
   React.useEffect(
     () => () => {
       if (
-        measureFrameRef.current &&
+        measureFrameRef.current > 0 &&
         typeof cancelAnimationFrame === "function"
       ) {
         cancelAnimationFrame(measureFrameRef.current)
@@ -111,6 +113,28 @@ export function usePageMarkdownPageVirtualization({
   )
 
   return { measureVisiblePages, visiblePageNumbers }
+}
+
+function getInitialVisiblePageNumbers({
+  layout,
+  viewportElement,
+}: {
+  layout: PageMarkdownLayoutModel
+  viewportElement: HTMLDivElement | null
+}) {
+  return getPageMarkdownVisiblePageNumbers({
+    layout,
+    scrollTop: viewportElement?.scrollTop ?? 0,
+    viewportHeight: getViewportHeight(viewportElement),
+  })
+}
+
+function getViewportHeight(viewportElement: HTMLDivElement | null) {
+  return (
+    viewportElement?.clientHeight ||
+    viewportElement?.getBoundingClientRect().height ||
+    0
+  )
 }
 
 function arePageNumbersEqual(

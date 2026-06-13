@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { flushSync } from "react-dom"
 
 import { DataCellBooleanControl } from "@/registry/new-york-v4/ui/data-cell-boolean-control"
 import { DataCellDisplay } from "@/registry/new-york-v4/ui/data-cell-display"
@@ -52,6 +53,19 @@ export { DataCellTextControl }
 
 const dataCellNumberKeyPattern = /^[0-9.+-]$/
 
+function storeDataCellActivationIntent(
+  intentRef: React.MutableRefObject<DataCellActivationIntent | undefined>,
+  setIntent: React.Dispatch<
+    React.SetStateAction<DataCellActivationIntent | undefined>
+  >,
+  intent: DataCellActivationIntent
+) {
+  flushSync(() => {
+    intentRef.current = intent
+    setIntent(intent)
+  })
+}
+
 export function DataCell({
   mode,
   active,
@@ -68,6 +82,9 @@ export function DataCell({
 }: DataCellProps) {
   const displayRef = React.useRef<HTMLElement>(null)
   const didActivateBeforeClickRef = React.useRef(false)
+  const activationIntentRef = React.useRef<DataCellActivationIntent | undefined>(
+    undefined
+  )
   const [uncontrolledActive, setUncontrolledActive] = React.useState(false)
   const [activationIntent, setActivationIntent] =
     React.useState<DataCellActivationIntent>()
@@ -87,6 +104,7 @@ export function DataCell({
   )
 
   const endEditing = React.useCallback(() => {
+    activationIntentRef.current = undefined
     setActive(false)
     onEditingEnd?.()
   }, [onEditingEnd, setActive])
@@ -109,6 +127,7 @@ export function DataCell({
         return
       }
 
+      event.stopPropagation()
       if (props.kind === "boolean") {
         event.preventDefault()
         commitBooleanDisplayValue()
@@ -138,7 +157,11 @@ export function DataCell({
           })
         }
       }
-      setActivationIntent(intent)
+      storeDataCellActivationIntent(
+        activationIntentRef,
+        setActivationIntent,
+        intent
+      )
       didActivateBeforeClickRef.current = true
       setActive(true)
     },
@@ -157,10 +180,12 @@ export function DataCell({
       onClick?.(event)
       if (didActivateBeforeClickRef.current) {
         didActivateBeforeClickRef.current = false
+        event.stopPropagation()
         return
       }
       if (event.defaultPrevented || !canSelfActivate) return
 
+      event.stopPropagation()
       if (props.kind === "boolean") {
         commitBooleanDisplayValue()
         return
@@ -188,7 +213,11 @@ export function DataCell({
           })
         }
       }
-      setActivationIntent(intent)
+      storeDataCellActivationIntent(
+        activationIntentRef,
+        setActivationIntent,
+        intent
+      )
       setActive(true)
     },
     [
@@ -224,16 +253,23 @@ export function DataCell({
 
       if (props.kind === "boolean" && event.key === " ") {
         event.preventDefault()
+        event.stopPropagation()
         commitBooleanDisplayValue()
         return
       }
 
       if (!canActivateDataCellFromKey(props.kind, event.key)) return
       event.preventDefault()
-      setActivationIntent({
+      event.stopPropagation()
+      const intent: DataCellActivationIntent = {
         type: "keyboard",
         key: event.key,
-      })
+      }
+      storeDataCellActivationIntent(
+        activationIntentRef,
+        setActivationIntent,
+        intent
+      )
       setActive(true)
     },
     [
@@ -251,7 +287,11 @@ export function DataCell({
         {...props}
         editable={editable}
         disabled={disabled}
-        activationIntent={props.activationIntent ?? activationIntent}
+        activationIntent={
+          props.activationIntent ??
+          activationIntent ??
+          activationIntentRef.current
+        }
         autoFocus={props.autoFocus ?? canSelfActivate}
         onCommit={onCommit as never}
         onEditingEnd={endEditing}

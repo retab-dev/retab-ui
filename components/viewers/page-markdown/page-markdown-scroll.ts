@@ -18,23 +18,23 @@ export function usePageMarkdownScroll({
 }: {
   layout: PageMarkdownLayoutModel
   onScrollProgressChange?: (progress: number) => void
-  onVisiblePageChange?: (page: number) => void
+  onVisiblePageChange?: (pageNumber: number) => void
   pageCount: number
   resetKey?: unknown
 }) {
   const viewportElementRef = React.useRef<HTMLDivElement | null>(null)
-  const lastReportedPageRef = React.useRef(0)
+  const lastReportedPageNumberRef = React.useRef(0)
   const scrollFrameRef = React.useRef(0)
   const viewportResetKeyRef = React.useRef<unknown>(resetKey)
   const didMountResetEffectRef = React.useRef(false)
   const [viewportElement, setViewportElementState] =
     React.useState<HTMLDivElement | null>(null)
   const [currentPageState, setCurrentPageState] = React.useState<{
-    page: number
+    pageNumber: number
     resetKey: unknown
-  }>(() => ({ page: 1, resetKey }))
+  }>(() => ({ pageNumber: 1, resetKey }))
   const currentPage = Object.is(currentPageState.resetKey, resetKey)
-    ? currentPageState.page
+    ? currentPageState.pageNumber
     : 1
 
   const resetViewportForKey = React.useCallback(
@@ -72,21 +72,21 @@ export function usePageMarkdownScroll({
     onScrollProgressChange?.(progress)
 
     const markerOffset = viewportElement.scrollTop + viewportHeight * 0.2
-    const visiblePage = findPageMarkdownPageByOffset(layout, markerOffset)
+    const visiblePageNumber = findPageMarkdownPageByOffset(layout, markerOffset)
 
     if (
-      visiblePage >= 1 &&
-      visiblePage <= pageCount &&
-      visiblePage !== lastReportedPageRef.current
+      visiblePageNumber >= 1 &&
+      visiblePageNumber <= pageCount &&
+      visiblePageNumber !== lastReportedPageNumberRef.current
     ) {
-      lastReportedPageRef.current = visiblePage
+      lastReportedPageNumberRef.current = visiblePageNumber
       setCurrentPageState((previousState) =>
         Object.is(previousState.resetKey, resetKey) &&
-        previousState.page === visiblePage
+        previousState.pageNumber === visiblePageNumber
           ? previousState
-          : { page: visiblePage, resetKey }
+          : { pageNumber: visiblePageNumber, resetKey }
       )
-      onVisiblePageChange?.(visiblePage)
+      onVisiblePageChange?.(visiblePageNumber)
     }
   }, [layout, onScrollProgressChange, onVisiblePageChange, pageCount, resetKey])
   const measureScrollRef = React.useRef(measureScroll)
@@ -100,9 +100,13 @@ export function usePageMarkdownScroll({
       measureScrollRef.current()
       return
     }
-    scrollFrameRef.current = requestAnimationFrame(() =>
+    scrollFrameRef.current = -1
+    const requestedFrame = requestAnimationFrame(() =>
       measureScrollRef.current()
     )
+    if (scrollFrameRef.current === -1) {
+      scrollFrameRef.current = requestedFrame
+    }
   }, [])
 
   React.useEffect(() => {
@@ -110,11 +114,12 @@ export function usePageMarkdownScroll({
       didMountResetEffectRef.current = true
       return
     }
-    lastReportedPageRef.current = 0
+    lastReportedPageNumberRef.current = 0
     setCurrentPageState((previousState) =>
-      Object.is(previousState.resetKey, resetKey) && previousState.page === 1
+      Object.is(previousState.resetKey, resetKey) &&
+      previousState.pageNumber === 1
         ? previousState
-        : { page: 1, resetKey }
+        : { pageNumber: 1, resetKey }
     )
     const viewportElement = viewportElementRef.current
     if (viewportElement) resetViewportForKey(viewportElement, resetKey)
@@ -142,7 +147,10 @@ export function usePageMarkdownScroll({
   )
 
   React.useEffect(() => {
-    if (scrollFrameRef.current && typeof cancelAnimationFrame === "function") {
+    if (
+      scrollFrameRef.current > 0 &&
+      typeof cancelAnimationFrame === "function"
+    ) {
       cancelAnimationFrame(scrollFrameRef.current)
       scrollFrameRef.current = 0
     }
@@ -151,7 +159,7 @@ export function usePageMarkdownScroll({
   React.useEffect(
     () => () => {
       if (
-        scrollFrameRef.current &&
+        scrollFrameRef.current > 0 &&
         typeof cancelAnimationFrame === "function"
       ) {
         cancelAnimationFrame(scrollFrameRef.current)

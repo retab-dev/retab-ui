@@ -3,12 +3,16 @@ import { describe, expect, it } from "vitest"
 import {
   createPageMeasurementKey,
   estimateMarkdownPageHeight,
+} from "@/components/viewers/page-markdown/page-markdown-layout"
+import { joinMarkdownPages } from "@/components/viewers/page-markdown/page-markdown-model"
+import {
   fitPageScale,
-  initialPagePaneState,
-  joinMarkdownPages,
-  resolvePagePaneReport,
   zoomPageScale,
-} from "@/components/viewers/page-markdown/page-markdown-model"
+} from "@/components/viewers/page-markdown/page-markdown-scale"
+import {
+  initialPageMarkdownSyncState,
+  resolvePageMarkdownSyncReport,
+} from "@/components/viewers/page-markdown/page-markdown-sync"
 
 describe("page markdown model", () => {
   it("joins page markdown without inventing structure", () => {
@@ -45,9 +49,11 @@ describe("page markdown model", () => {
     expect(
       estimateMarkdownPageHeight(
         Array.from({ length: 200 }, (_, index) => `line ${index}`).join("\n"),
-        1
+        1,
+        "text"
       )
     ).toBe(1800)
+    expect(estimateMarkdownPageHeight("word ".repeat(2000), 1)).toBe(1800)
   })
 
   it("keys page measurements by mode, scale, and markdown signature", () => {
@@ -96,61 +102,61 @@ describe("page markdown model", () => {
   })
 
   it("requests the opposite pane when a new pane reports a page", () => {
-    const transition = resolvePagePaneReport({
-      state: initialPagePaneState(),
+    const transition = resolvePageMarkdownSyncReport({
+      state: initialPageMarkdownSyncState(),
       pending: null,
       pane: "markdown",
-      page: 3,
+      pageNumber: 3,
     })
 
     expect(transition.state).toMatchObject({
-      page: 3,
+      pageNumber: 3,
       pane: "markdown",
     })
     expect(transition.scrollTarget).toMatchObject({
       pane: "document",
-      page: 3,
+      pageNumber: 3,
     })
     expect(transition.pending).toEqual(transition.scrollTarget)
   })
 
   it("clears pending sync when the target pane confirms the requested page", () => {
-    const requested = resolvePagePaneReport({
-      state: initialPagePaneState(),
+    const requested = resolvePageMarkdownSyncReport({
+      state: initialPageMarkdownSyncState(),
       pending: null,
       pane: "document",
-      page: 2,
+      pageNumber: 2,
     })
 
-    const confirmed = resolvePagePaneReport({
+    const confirmed = resolvePageMarkdownSyncReport({
       state: requested.state,
       pending: requested.pending,
       pane: "markdown",
-      page: 2,
+      pageNumber: 2,
     })
 
     expect(confirmed.confirmed).toBe(true)
     expect(confirmed.pending).toBeNull()
     expect(confirmed.scrollTarget).toBeNull()
     expect(confirmed.state).toMatchObject({
-      page: 2,
+      pageNumber: 2,
       pane: "markdown",
     })
   })
 
   it("ignores stale reports from the pending target pane", () => {
-    const requested = resolvePagePaneReport({
-      state: initialPagePaneState(),
+    const requested = resolvePageMarkdownSyncReport({
+      state: initialPageMarkdownSyncState(),
       pending: null,
       pane: "document",
-      page: 2,
+      pageNumber: 2,
     })
 
-    const stale = resolvePagePaneReport({
+    const stale = resolvePageMarkdownSyncReport({
       state: requested.state,
       pending: requested.pending,
       pane: "markdown",
-      page: 1,
+      pageNumber: 1,
     })
 
     expect(stale).toMatchObject({
@@ -163,11 +169,11 @@ describe("page markdown model", () => {
 
   it("does not schedule work for an unchanged page without pending sync", () => {
     expect(
-      resolvePagePaneReport({
-        state: initialPagePaneState(),
+      resolvePageMarkdownSyncReport({
+        state: initialPageMarkdownSyncState(),
         pending: null,
         pane: "markdown",
-        page: 1,
+        pageNumber: 1,
       })
     ).toMatchObject({
       pending: null,
@@ -177,15 +183,15 @@ describe("page markdown model", () => {
   })
 
   it("records same-page reports from a different pane without scheduling scroll work", () => {
-    const transition = resolvePagePaneReport({
-      state: { page: 1, pane: "document", version: 0 },
+    const transition = resolvePageMarkdownSyncReport({
+      state: { pageNumber: 1, pane: "document", version: 0 },
       pending: null,
       pane: "markdown",
-      page: 1,
+      pageNumber: 1,
     })
 
     expect(transition).toMatchObject({
-      state: { page: 1, pane: "markdown", version: 1 },
+      state: { pageNumber: 1, pane: "markdown", version: 1 },
       pending: null,
       scrollTarget: null,
       confirmed: false,
@@ -193,20 +199,20 @@ describe("page markdown model", () => {
   })
 
   it("normalizes non-finite reported pages to the first page", () => {
-    const transition = resolvePagePaneReport({
-      state: { page: 2, pane: "document", version: 0 },
+    const transition = resolvePageMarkdownSyncReport({
+      state: { pageNumber: 2, pane: "document", version: 0 },
       pending: null,
       pane: "markdown",
-      page: Number.NaN,
+      pageNumber: Number.NaN,
     })
 
     expect(transition.state).toMatchObject({
-      page: 1,
+      pageNumber: 1,
       pane: "markdown",
     })
     expect(transition.scrollTarget).toMatchObject({
       pane: "document",
-      page: 1,
+      pageNumber: 1,
     })
   })
 })

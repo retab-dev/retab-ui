@@ -239,6 +239,11 @@
           "path": "registry/new-york-v4/ui/dropzone.tsx",
           "type": "registry:ui",
           "target": "@ui/dropzone.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/dropzone-core.ts",
+          "type": "registry:ui",
+          "target": "@ui/dropzone-core.ts"
         }
       ]
     },
@@ -248,12 +253,30 @@
       "title": "File Uploader",
       "description": "A polished Retab document upload area built from the headless Dropzone primitive and File Thumbnail.",
       "dependencies": ["lucide-react"],
-      "registryDependencies": ["dropzone", "file-thumbnail", "utils"],
+      "registryDependencies": [
+        "dropzone",
+        "file-thumbnail",
+        "file-size-format",
+        "utils"
+      ],
       "files": [
         {
           "path": "registry/new-york-v4/ui/file-uploader.tsx",
           "type": "registry:ui",
           "target": "@ui/file-uploader.tsx"
+        }
+      ]
+    },
+    {
+      "name": "file-size-format",
+      "type": "registry:ui",
+      "title": "File Size Format",
+      "description": "A small byte-size display formatter for file UI components.",
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/file-size-format.ts",
+          "type": "registry:ui",
+          "target": "@ui/file-size-format.ts"
         }
       ]
     },
@@ -2171,6 +2194,11 @@
           "target": "@components/viewers/page-markdown/page-markdown-document-pane.tsx"
         },
         {
+          "path": "components/viewers/page-markdown/page-markdown-document-dom.ts",
+          "type": "registry:component",
+          "target": "@components/viewers/page-markdown/page-markdown-document-dom.ts"
+        },
+        {
           "path": "components/viewers/page-markdown/page-markdown-empty-state.tsx",
           "type": "registry:component",
           "target": "@components/viewers/page-markdown/page-markdown-empty-state.tsx"
@@ -2201,9 +2229,34 @@
           "target": "@components/viewers/page-markdown/page-markdown-components.tsx"
         },
         {
-          "path": "components/viewers/page-markdown/page-markdown-hooks.ts",
+          "path": "components/viewers/page-markdown/page-markdown-layout.ts",
           "type": "registry:component",
-          "target": "@components/viewers/page-markdown/page-markdown-hooks.ts"
+          "target": "@components/viewers/page-markdown/page-markdown-layout.ts"
+        },
+        {
+          "path": "components/viewers/page-markdown/page-markdown-scale.ts",
+          "type": "registry:component",
+          "target": "@components/viewers/page-markdown/page-markdown-scale.ts"
+        },
+        {
+          "path": "components/viewers/page-markdown/page-markdown-scroll.ts",
+          "type": "registry:component",
+          "target": "@components/viewers/page-markdown/page-markdown-scroll.ts"
+        },
+        {
+          "path": "components/viewers/page-markdown/page-markdown-virtualization.ts",
+          "type": "registry:component",
+          "target": "@components/viewers/page-markdown/page-markdown-virtualization.ts"
+        },
+        {
+          "path": "components/viewers/page-markdown/page-markdown-measurements.ts",
+          "type": "registry:component",
+          "target": "@components/viewers/page-markdown/page-markdown-measurements.ts"
+        },
+        {
+          "path": "components/viewers/page-markdown/page-markdown-sync.ts",
+          "type": "registry:component",
+          "target": "@components/viewers/page-markdown/page-markdown-sync.ts"
         },
         {
           "path": "components/viewers/page-markdown/page-markdown-model.ts",
@@ -2214,16 +2267,6 @@
           "path": "components/viewers/page-markdown/page-markdown-types.ts",
           "type": "registry:lib",
           "target": "@components/viewers/page-markdown/page-markdown-types.ts"
-        },
-        {
-          "path": "components/viewers/page-markdown/visible-page.ts",
-          "type": "registry:lib",
-          "target": "@components/viewers/page-markdown/visible-page.ts"
-        },
-        {
-          "path": "components/viewers/page-markdown/page-markdown-dom.ts",
-          "type": "registry:lib",
-          "target": "@components/viewers/page-markdown/page-markdown-dom.ts"
         },
         {
           "path": "hooks/use-element-width.ts",
@@ -2507,9 +2550,14 @@
       "name": "dropzone-block",
       "type": "registry:block",
       "title": "Dropzone",
-      "description": "A file-uploader lab with document, single PDF, image-only, size-limited, disabled, and callback-only dropzones sharing the same primitive.",
+      "description": "A file-uploader lab proving the headless dropzone primitive across default, non-button, native-button, controlled, validation-only, custom grid, and disabled surfaces.",
       "dependencies": ["lucide-react"],
-      "registryDependencies": ["dropzone", "file-uploader", "file-thumbnail"],
+      "registryDependencies": [
+        "dropzone",
+        "file-size-format",
+        "file-uploader",
+        "file-thumbnail"
+      ],
       "files": [
         {
           "path": "registry/new-york-v4/blocks/dropzone-block.tsx",
@@ -2928,10 +2976,20 @@
       "title": "Markdown Document Viewer",
       "description": "A page-based Markdown document viewer that renders visible pages with React Markdown/GFM and uses a custom virtualizer for large files.",
       "dependencies": [
+        "katex",
         "lucide-react",
         "marked@18.0.5",
+        "rehype-katex",
+        "rehype-pretty-code",
+        "rehype-raw",
+        "rehype-sanitize",
+        "rehype-slug",
         "react-markdown",
-        "remark-gfm"
+        "remark-breaks",
+        "remark-directive",
+        "remark-gfm",
+        "remark-math",
+        "unist-util-visit"
       ],
       "registryDependencies": ["text-viewer", "separator", "tabs"],
       "files": [
@@ -2941,9 +2999,39 @@
           "target": "@ui/markdown-document-viewer.tsx"
         },
         {
-          "path": "registry/new-york-v4/ui/markdown-document-components.tsx",
+          "path": "registry/new-york-v4/ui/markdown-document-renderer.tsx",
           "type": "registry:ui",
-          "target": "@ui/markdown-document-components.tsx"
+          "target": "@ui/markdown-document-renderer.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/markdown-document-renderers.tsx",
+          "type": "registry:ui",
+          "target": "@ui/markdown-document-renderers.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/markdown-document-plugins.ts",
+          "type": "registry:ui",
+          "target": "@ui/markdown-document-plugins.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/markdown-document-sanitize.ts",
+          "type": "registry:ui",
+          "target": "@ui/markdown-document-sanitize.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/markdown-document-callouts.tsx",
+          "type": "registry:ui",
+          "target": "@ui/markdown-document-callouts.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/markdown-document-copy.tsx",
+          "type": "registry:ui",
+          "target": "@ui/markdown-document-copy.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/markdown-document-url-policy.ts",
+          "type": "registry:ui",
+          "target": "@ui/markdown-document-url-policy.ts"
         },
         {
           "path": "registry/new-york-v4/ui/markdown-document-model.ts",

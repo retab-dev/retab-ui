@@ -233,13 +233,15 @@ export function getJsonTableCellDisplayValue({
   return formatJsonTableNestedValue(value)
 }
 
+export type JsonTableDisplayCellProps = {
+  fieldMetadata: FieldMetadata
+  value: unknown
+}
+
 export function JsonTableDisplayCell({
   fieldMetadata,
   value,
-}: {
-  fieldMetadata: FieldMetadata
-  value: unknown
-}) {
+}: JsonTableDisplayCellProps) {
   return (
     <JsonTableDataCell
       fieldMetadata={fieldMetadata}
