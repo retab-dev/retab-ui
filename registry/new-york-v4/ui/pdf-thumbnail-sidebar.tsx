@@ -17,6 +17,7 @@ import { usePdfThumbnailDocument } from "./use-pdf-thumbnail-document"
 import { usePdfThumbnailPageMetrics } from "./use-pdf-thumbnail-page-metrics"
 import { usePdfThumbnailWindow } from "./use-pdf-thumbnail-window"
 import { useThumbnailRailFollow } from "./use-thumbnail-rail-follow"
+import { ViewerSidebar } from "./viewer"
 import { ViewerErrorBoundary } from "./viewer-error"
 
 export interface PdfThumbnailSidebarProps {
@@ -41,21 +42,21 @@ export function PdfThumbnailSidebar(props: PdfThumbnailSidebarProps) {
   const resource = props.resource
 
   return (
-    <ViewerErrorBoundary
-      className={props.className}
-      download={resource.originalDownload}
-      format="pdf"
-      onRetry={() => clearPdfDocumentResource(resource.content)}
-      resetKey={resource.keys.resource}
-      sourceKind={resource.sourceKind}
-      variant="inline"
-    >
-      <React.Suspense
-        fallback={<SidebarFallback className={props.className} />}
+    <ViewerSidebar className={cn("bg-sidebar", props.className)}>
+      <ViewerErrorBoundary
+        className="h-full"
+        download={resource.originalDownload}
+        format="pdf"
+        onRetry={() => clearPdfDocumentResource(resource.content)}
+        resetKey={resource.keys.resource}
+        sourceKind={resource.sourceKind}
+        variant="inline"
       >
-        <PdfThumbnailSidebarInner {...props} />
-      </React.Suspense>
-    </ViewerErrorBoundary>
+        <React.Suspense fallback={<SidebarFallback />}>
+          <PdfThumbnailSidebarInner {...props} className="h-full" />
+        </React.Suspense>
+      </ViewerErrorBoundary>
+    </ViewerSidebar>
   )
 }
 

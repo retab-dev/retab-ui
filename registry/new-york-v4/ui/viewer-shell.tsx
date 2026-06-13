@@ -4,6 +4,13 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
+import {
+  ViewerBody,
+  ViewerOverlay,
+  ViewerRail,
+  ViewerRoot,
+  ViewerSurface,
+} from "./viewer"
 import type { ViewerSlots } from "./viewer-slots"
 
 export interface ViewerShellSlots extends ViewerSlots {
@@ -35,33 +42,18 @@ export function ViewerShell({
   contentClassName,
 }: ViewerShellProps) {
   return (
-    <div
-      data-slot="viewer-shell"
-      className={cn(
-        "flex min-h-0 flex-col overflow-hidden",
-        bare ? "h-full bg-muted/20" : "rounded-xl border bg-muted/30",
-        className
-      )}
-    >
+    <ViewerRoot data-slot="viewer-shell" bare={bare} className={className}>
       {slots?.header ? (
         <div data-slot="viewer-shell-header">{slots.header}</div>
       ) : null}
       {slots?.toolbar ? (
         <div data-slot="viewer-shell-toolbar">{slots.toolbar}</div>
       ) : null}
-      <div
-        data-slot="viewer-shell-body"
-        className={cn("relative flex min-h-0 flex-1", bodyClassName)}
-      >
+      <ViewerBody data-slot="viewer-shell-body" className={bodyClassName}>
         {slots?.left ? (
-          <div data-slot="viewer-shell-left" className="flex-shrink-0">
-            {slots.left}
-          </div>
+          <ViewerRail data-slot="viewer-shell-left">{slots.left}</ViewerRail>
         ) : null}
-        <div
-          data-slot="viewer-shell-main"
-          className={cn("flex min-h-0 min-w-0 flex-1 flex-col", mainClassName)}
-        >
+        <ViewerSurface data-slot="viewer-shell-main" className={mainClassName}>
           {slots?.top ? (
             <div data-slot="viewer-shell-top">{slots.top}</div>
           ) : null}
@@ -74,21 +66,16 @@ export function ViewerShell({
           {slots?.bottom ? (
             <div data-slot="viewer-shell-bottom">{slots.bottom}</div>
           ) : null}
-        </div>
+        </ViewerSurface>
         {slots?.right ? (
-          <div data-slot="viewer-shell-right" className="flex-shrink-0">
-            {slots.right}
-          </div>
+          <ViewerRail data-slot="viewer-shell-right">{slots.right}</ViewerRail>
         ) : null}
         {slots?.overlay ? (
-          <div
-            data-slot="viewer-shell-overlay"
-            className="pointer-events-none absolute inset-0 z-20"
-          >
+          <ViewerOverlay data-slot="viewer-shell-overlay">
             {slots.overlay}
-          </div>
+          </ViewerOverlay>
         ) : null}
-      </div>
-    </div>
+      </ViewerBody>
+    </ViewerRoot>
   )
 }

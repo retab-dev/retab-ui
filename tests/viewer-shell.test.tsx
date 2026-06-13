@@ -4,6 +4,13 @@ import * as React from "react"
 import { cleanup, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it } from "vitest"
 
+import {
+  ViewerBody,
+  ViewerHeader,
+  ViewerRoot,
+  ViewerSidebar,
+  ViewerSurface,
+} from "@/registry/new-york-v4/ui/viewer"
 import { ViewerShell } from "@/registry/new-york-v4/ui/viewer-shell"
 
 afterEach(() => {
@@ -11,6 +18,30 @@ afterEach(() => {
 })
 
 describe("ViewerShell", () => {
+  it("exposes the named viewer primitive hierarchy", () => {
+    const { container } = render(
+      <ViewerRoot>
+        <ViewerHeader>Header</ViewerHeader>
+        <ViewerBody>
+          <ViewerSidebar>Sidebar</ViewerSidebar>
+          <ViewerSurface>Surface</ViewerSurface>
+        </ViewerBody>
+      </ViewerRoot>
+    )
+
+    expect(container.querySelector('[data-slot="viewer-root"]')).toBeTruthy()
+    expect(
+      container.querySelector('[data-slot="viewer-header"]')?.textContent
+    ).toBe("Header")
+    expect(container.querySelector('[data-slot="viewer-body"]')).toBeTruthy()
+    expect(
+      container.querySelector('[data-slot="viewer-sidebar"]')?.textContent
+    ).toBe("Sidebar")
+    expect(
+      container.querySelector('[data-slot="viewer-surface"]')?.textContent
+    ).toBe("Surface")
+  })
+
   it("places compound viewer chrome around the primary document surface", () => {
     const { container } = render(
       <ViewerShell

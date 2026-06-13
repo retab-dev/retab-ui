@@ -2119,6 +2119,10 @@ describe("PdfViewer", () => {
 
     await findByTextContent("Page 1 of 2")
     await screen.findByText("2")
+    expect(document.querySelector('[data-slot="viewer-sidebar"]')).toBeTruthy()
+    expect(
+      document.querySelector('[data-slot="pdf-thumbnail-sidebar"]')
+    ).toBeTruthy()
     expect(pdfjsMock.getDocument).toHaveBeenCalledTimes(1)
   })
 

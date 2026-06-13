@@ -1819,6 +1819,10 @@ describe("split segment composition", () => {
 
     expect(wrapperClassName).toContain("min-w-0")
     expect(wrapperClassName).toContain("flex-1")
+    expect(document.querySelector('[data-slot="viewer-root"]')).toBeTruthy()
+    expect(document.querySelector('[data-slot="viewer-header"]')).toBeTruthy()
+    expect(document.querySelector('[data-slot="viewer-body"]')).toBeTruthy()
+    expect(document.querySelector('[data-slot="viewer-surface"]')).toBeTruthy()
   })
 
   it("jumps through the PDF viewer handle when a legend segment page is virtualized", () => {

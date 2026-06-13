@@ -1,18 +1,18 @@
 "use client"
 
 import * as React from "react"
-import { FileText, Mail } from "lucide-react"
+import { FileText, Mail, Paperclip } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { createViewerResource } from "@/lib/viewer-resource"
 import type { ViewerSource } from "@/lib/viewer-source"
 
-import {
-  AttachmentSidebar,
-  type AttachmentSidebarItem,
-} from "./attachment-sidebar"
+import { formatFileSize } from "./file-size-format"
+import { FileThumbnail } from "./file-thumbnail"
 import { FileViewer } from "./file-viewer"
 import {
+  EmbeddedSidebarProvider,
+  SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -21,7 +21,13 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "./sidebar"
-import { ViewerShell } from "./viewer-shell"
+import {
+  ViewerBody,
+  ViewerHeader,
+  ViewerRoot,
+  ViewerSidebar,
+  ViewerSurface,
+} from "./viewer"
 
 export interface EmailViewerAttachment {
   id: string
@@ -58,6 +64,66 @@ export function EmailViewer({
   className,
   bodyFileName = "message",
 }: EmailViewerProps) {
+  return (
+    <EmailViewerProvider message={message} bodyFileName={bodyFileName}>
+      <div data-slot="email-viewer" className={cn("min-h-0", className)}>
+        <ViewerRoot className="h-full">
+          <EmailViewerHeader />
+          <ViewerBody className="flex-col md:flex-row">
+            <ViewerSidebar className="border-b bg-background md:border-r md:border-b-0">
+              <EmbeddedSidebarProvider
+                className="h-full bg-transparent"
+                width="var(--viewer-sidebar-width)"
+              >
+                <div data-slot="attachment-sidebar" className="h-full">
+                  <EmailViewerPartsList />
+                </div>
+              </EmbeddedSidebarProvider>
+            </ViewerSidebar>
+            <ViewerSurface className="min-h-[26rem] p-3 md:min-h-0">
+              <EmailViewerSelectedPart />
+            </ViewerSurface>
+          </ViewerBody>
+        </ViewerRoot>
+      </div>
+    </EmailViewerProvider>
+  )
+}
+
+type EmailViewerContextValue = {
+  message: EmailViewerMessage
+  selection: Selection
+  setSelection: React.Dispatch<React.SetStateAction<Selection>>
+  bodySource: ReturnType<typeof createEmailBodySource>
+  sidebarAttachments: readonly EmailViewerAttachment[]
+  selectedAttachment: EmailViewerAttachment | null
+  selectedSource: ViewerSource
+  selectedCategory: "html" | "text" | undefined
+  title: string
+  bodyFormat: string
+}
+
+const EmailViewerContext = React.createContext<EmailViewerContextValue | null>(
+  null
+)
+
+export function useEmailViewer() {
+  const context = React.useContext(EmailViewerContext)
+  if (!context) {
+    throw new Error("useEmailViewer must be used within EmailViewerProvider.")
+  }
+  return context
+}
+
+export function EmailViewerProvider({
+  message,
+  bodyFileName = "message",
+  children,
+}: {
+  message: EmailViewerMessage
+  bodyFileName?: string
+  children: React.ReactNode
+}) {
   const attachments = message.attachments ?? EMPTY_ATTACHMENTS
   const inlineAttachments = React.useMemo(
     () => attachments.filter(isInlineAttachment),
@@ -93,15 +159,6 @@ export function EmailViewer({
       }),
     [bodyFileName, inlineUrls, message]
   )
-  const attachmentItems = React.useMemo<AttachmentSidebarItem[]>(
-    () =>
-      sidebarAttachments.map((attachment) => ({
-        id: attachment.id,
-        source: attachment.source,
-        size: attachment.size,
-      })),
-    [sidebarAttachments]
-  )
   const selectedAttachment =
     selection.kind === "attachment"
       ? (sidebarAttachments.find(
@@ -115,66 +172,47 @@ export function EmailViewer({
       ? attachmentFileName(selectedAttachment)
       : "Message body"
   const bodyFormat = bodySource.category === "html" ? "HTML" : "Text"
+  const value = React.useMemo<EmailViewerContextValue>(
+    () => ({
+      bodyFormat,
+      bodySource,
+      message,
+      selectedAttachment,
+      selectedCategory,
+      selectedSource,
+      selection,
+      setSelection,
+      sidebarAttachments,
+      title,
+    }),
+    [
+      bodyFormat,
+      bodySource,
+      message,
+      selectedAttachment,
+      selectedCategory,
+      selectedSource,
+      selection,
+      sidebarAttachments,
+      title,
+    ]
+  )
 
   return (
-    <div data-slot="email-viewer" className={cn("min-h-0", className)}>
-      <ViewerShell
-        className="h-full"
-        bodyClassName="flex-col md:flex-row"
-        contentClassName="min-h-[26rem] p-3 md:min-h-0"
-        slots={{
-          header: <EmailHeader message={message} title={title} />,
-          right: (
-            <AttachmentSidebar
-              items={attachmentItems}
-              selectedId={
-                selection.kind === "attachment" ? selection.attachmentId : null
-              }
-              onSelect={(attachmentId) =>
-                setSelection({ kind: "attachment", attachmentId })
-              }
-              emptyLabel="No regular attachments."
-              providerClassName="h-72 md:h-full md:w-(--sidebar-width)"
-              className="border-t md:border-t-0"
-            >
-              <EmailBodySidebarGroup
-                bodyFormat={bodyFormat}
-                isBodySelected={selection.kind === "body"}
-                onSelectBody={() => setSelection({ kind: "body" })}
-              />
-            </AttachmentSidebar>
-          ),
-        }}
-      >
-        <FileViewer
-          key={
-            selectedAttachment
-              ? `attachment:${selectedAttachment.id}`
-              : bodySource.key
-          }
-          source={selectedSource}
-          as={selectedCategory}
-          bare
-          className="h-full rounded-lg border"
-        />
-      </ViewerShell>
-    </div>
+    <EmailViewerContext.Provider value={value}>
+      {children}
+    </EmailViewerContext.Provider>
   )
 }
 
-function EmailHeader({
-  message,
-  title,
-}: {
-  message: EmailViewerMessage
-  title: string
-}) {
+export function EmailViewerHeader() {
+  const { message, title } = useEmailViewer()
   const subject = message.subject?.trim() || "(no subject)"
   const recipients = normalizeAddressList(message.to)
   const sentAt = formatSentAt(message.sentAt)
 
   return (
-    <div className="flex min-h-0 flex-shrink-0 flex-col gap-1 border-b bg-card px-3 py-2">
+    <ViewerHeader className="flex min-h-0 flex-col gap-1 px-3 py-2">
       <div className="flex min-w-0 items-center gap-2">
         <Mail className="size-4 flex-shrink-0 text-muted-foreground" />
         <h2 className="min-w-0 flex-1 truncate text-sm font-medium">
@@ -193,40 +231,136 @@ function EmailHeader({
         ) : null}
         {sentAt ? <span className="tabular-nums">{sentAt}</span> : null}
       </div>
+    </ViewerHeader>
+  )
+}
+
+export function EmailViewerPartsList() {
+  const { bodyFormat, selection, setSelection, sidebarAttachments } =
+    useEmailViewer()
+  const selectedAttachmentId =
+    selection.kind === "attachment" ? selection.attachmentId : null
+
+  return (
+    <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
+      <div className="flex h-10 flex-shrink-0 items-center gap-2 border-b px-3 text-xs font-medium">
+        <Paperclip className="size-3.5 text-sidebar-accent-foreground" />
+        <span>
+          {sidebarAttachments.length} attachment
+          {sidebarAttachments.length === 1 ? "" : "s"}
+        </span>
+      </div>
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupLabel>Body</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  aria-current={selection.kind === "body" ? "page" : undefined}
+                  aria-label="Message body"
+                  className="border border-transparent data-[active=true]:border-sidebar-border"
+                  isActive={selection.kind === "body"}
+                  onClick={() => setSelection({ kind: "body" })}
+                >
+                  <FileText className="text-sidebar-accent-foreground" />
+                  <span className="min-w-0 flex-1 truncate">Message body</span>
+                  <SidebarMenuBadge>{bodyFormat}</SidebarMenuBadge>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+        <SidebarGroup className="min-h-0 flex-1">
+          <SidebarGroupLabel>Attachments</SidebarGroupLabel>
+          <SidebarGroupContent>
+            {sidebarAttachments.length === 0 ? (
+              <p className="px-2 py-3 text-xs text-sidebar-foreground/70">
+                No regular attachments.
+              </p>
+            ) : (
+              <SidebarMenu className="gap-2">
+                {sidebarAttachments.map((attachment) => (
+                  <EmailViewerAttachmentItem
+                    key={attachment.id}
+                    attachment={attachment}
+                    isSelected={selectedAttachmentId === attachment.id}
+                    onSelect={() =>
+                      setSelection({
+                        kind: "attachment",
+                        attachmentId: attachment.id,
+                      })
+                    }
+                  />
+                ))}
+              </SidebarMenu>
+            )}
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
     </div>
   )
 }
 
-function EmailBodySidebarGroup({
-  bodyFormat,
-  isBodySelected,
-  onSelectBody,
+function EmailViewerAttachmentItem({
+  attachment,
+  isSelected,
+  onSelect,
 }: {
-  bodyFormat: string
-  isBodySelected: boolean
-  onSelectBody: () => void
+  attachment: EmailViewerAttachment
+  isSelected: boolean
+  onSelect: () => void
 }) {
+  const resource = createViewerResource(attachment.source)
+  const meta =
+    attachment.size != null
+      ? formatFileSize(attachment.size)
+      : (resource.mimeType ?? resource.descriptor.category)
+
   return (
-    <SidebarGroup>
-      <SidebarGroupLabel>Message</SidebarGroupLabel>
-      <SidebarGroupContent>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              aria-current={isBodySelected ? "page" : undefined}
-              aria-label="Message body"
-              className="border border-transparent data-[active=true]:border-sidebar-border"
-              isActive={isBodySelected}
-              onClick={onSelectBody}
-            >
-              <FileText className="text-sidebar-accent-foreground" />
-              <span className="min-w-0 flex-1 truncate">Message body</span>
-              <SidebarMenuBadge>{bodyFormat}</SidebarMenuBadge>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarGroupContent>
-    </SidebarGroup>
+    <SidebarMenuItem>
+      <SidebarMenuButton
+        aria-current={isSelected ? "page" : undefined}
+        aria-label={`${resource.fileName} ${meta}`}
+        className="h-auto items-start gap-2 rounded-lg border border-transparent p-2 data-[active=true]:border-sidebar-border"
+        isActive={isSelected}
+        onClick={onSelect}
+      >
+        <FileThumbnail
+          source={attachment.source}
+          presentation="decorative"
+          className="h-16 w-12 flex-shrink-0"
+          previewAspectRatio={3 / 4}
+        />
+        <span className="flex min-w-0 flex-1 flex-col gap-1 pt-0.5">
+          <span className="truncate text-sm font-medium">
+            {resource.fileName}
+          </span>
+          <span className="truncate text-xs text-sidebar-foreground/70">
+            {meta}
+          </span>
+        </span>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  )
+}
+
+export function EmailViewerSelectedPart() {
+  const { bodySource, selectedAttachment, selectedCategory, selectedSource } =
+    useEmailViewer()
+
+  return (
+    <FileViewer
+      key={
+        selectedAttachment
+          ? `attachment:${selectedAttachment.id}`
+          : bodySource.key
+      }
+      source={selectedSource}
+      as={selectedCategory}
+      bare
+      className="h-full rounded-lg border"
+    />
   )
 }
 
