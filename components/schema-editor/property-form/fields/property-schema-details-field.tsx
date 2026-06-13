@@ -35,8 +35,8 @@ export function PropertySchemaDetailsField({
       {objectProperties && (
         <ObjectPropertiesField
           details={objectProperties}
-          renderPropertyDetails={(propertyDetails) => (
-            <PropertySchemaDetailsField details={propertyDetails} />
+          renderSchemaDetails={(schemaDetails) => (
+            <PropertySchemaDetailsField details={schemaDetails} />
           )}
         />
       )}

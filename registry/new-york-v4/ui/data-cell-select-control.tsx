@@ -10,12 +10,16 @@ import {
 } from "@/registry/new-york-v4/ui/data-cell-activation"
 import { dataCellPickerTriggerClass } from "@/registry/new-york-v4/ui/data-cell-classes"
 import {
-  DataCellSelectPopup,
-  getDataCellSelectPopupPosition,
+  firstEnabledDataCellSelectOptionIndex,
+  lastEnabledDataCellSelectOptionIndex,
   nextEnabledDataCellSelectOptionIndex,
   selectedDataCellSelectOptionIndex,
+} from "@/registry/new-york-v4/ui/data-cell-select-navigation"
+import { DataCellSelectPopup } from "@/registry/new-york-v4/ui/data-cell-select-popup"
+import {
+  getDataCellSelectPopupPosition,
   type DataCellSelectPopupPosition,
-} from "@/registry/new-york-v4/ui/data-cell-select-popup"
+} from "@/registry/new-york-v4/ui/data-cell-select-popup-position"
 import type {
   DataCellProps,
   DataCellValueMeta,
@@ -85,6 +89,9 @@ export function DataCellSelectControl({
   })
   const lastCommittedValueRef = React.useRef<string | null>(null)
   const didFinishEditingRef = React.useRef(false)
+  const popupPositionRef = React.useRef<DataCellSelectPopupPosition | null>(
+    null
+  )
   const [uncontrolledOpen, setUncontrolledOpen] = React.useState(false)
   const [activeOptionIndex, setActiveOptionIndex] = React.useState(-1)
   const [popupPosition, setPopupPosition] =
@@ -103,7 +110,10 @@ export function DataCellSelectControl({
 
   const setOpen = React.useCallback(
     (nextOpen: boolean) => {
-      if (!nextOpen) setPopupPosition(null)
+      if (!nextOpen) {
+        popupPositionRef.current = null
+        setPopupPosition(null)
+      }
       if (isPickerOpen === undefined) setUncontrolledOpen(nextOpen)
       onPickerOpenChange?.(nextOpen)
     },
@@ -114,13 +124,16 @@ export function DataCellSelectControl({
     const trigger = triggerRef.current
     if (!trigger) return
 
-    setPopupPosition(
-      getDataCellSelectPopupPosition({
-        rect: trigger.getBoundingClientRect(),
-        viewportWidth: window.innerWidth,
-        viewportHeight: window.innerHeight,
+    if (!popupPositionRef.current) {
+      popupPositionRef.current = getDataCellSelectPopupPosition({
+        anchorRect: trigger.getBoundingClientRect(),
+        viewport: {
+          width: window.innerWidth,
+          height: window.innerHeight,
+        },
       })
-    )
+    }
+    setPopupPosition(popupPositionRef.current)
     setActiveOptionIndex(
       selectedDataCellSelectOptionIndex({
         options: selectOptions,
@@ -269,14 +282,11 @@ export function DataCellSelectControl({
               openSelectEditor()
               return
             }
-            const enabledOptions = selectOptions
-              .map((option, index) => ({ option, index }))
-              .filter(({ option }) => !option.disabled)
-            const nextOption =
+            const nextOptionIndex =
               event.key === "Home"
-                ? enabledOptions[0]
-                : enabledOptions[enabledOptions.length - 1]
-            setActiveOptionIndex(nextOption?.index ?? -1)
+                ? firstEnabledDataCellSelectOptionIndex(selectOptions)
+                : lastEnabledDataCellSelectOptionIndex(selectOptions)
+            setActiveOptionIndex(nextOptionIndex)
             return
           }
 

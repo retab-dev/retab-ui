@@ -29,6 +29,8 @@ const deletedFiles = [
   "components/schema-editor/document/tree.ts",
   "components/schema-editor/document-property-drag.ts",
   "components/schema-editor/document-property-reorder.ts",
+  "components/schema-editor/property-form/fields/object-property-order-focus.ts",
+  "components/schema-editor/property-form/fields/object-property-rows.tsx",
 ]
 
 const executableFilesToCheck = [
@@ -72,6 +74,8 @@ const executableFilesToCheck = [
   "components/schema-editor/property-form/property-form-shell.tsx",
   "components/schema-editor/property-form/fields/type-field.tsx",
   "components/schema-editor/property-form/fields/object-properties-field.tsx",
+  "components/schema-editor/property-form/fields/object-properties-reorder-focus.ts",
+  "components/schema-editor/property-form/fields/object-property-row.tsx",
   "components/schema-editor/property-form/fields/array-items-field.tsx",
   "components/schema-editor/property-form/fields/enum-values-field.tsx",
   "components/schema-editor/property-form/fields/property-schema-details-field.tsx",
@@ -80,6 +84,7 @@ const executableFilesToCheck = [
   "components/schema-editor/property-form/fields/property-type-menu-model.ts",
   "components/schema-editor/property-form/fields/object-properties-drag.ts",
   "components/schema-editor/property-form/fields/object-property-row-details.ts",
+  "components/schema-editor/primitives/schema-row-reorder-actions.tsx",
   "components/schema-editor/primitives/schema-row-drag.ts",
   "components/schema-editor/schema-type-menu-sections.tsx",
   "components/schema-editor/object-template-type-section.tsx",
@@ -504,7 +509,7 @@ describe("schema builder architecture", () => {
     expect(content.includes("useObjectPropertiesModel")).toBe(true)
   })
 
-  it("keeps object property reorder explicit and centralized", () => {
+  it("keeps object property order explicit and centralized", () => {
     const orderContent = readFileSync(
       join(repoRoot, "components/schema-editor/primitives/schema-order.ts"),
       "utf8"
@@ -537,6 +542,34 @@ describe("schema builder architecture", () => {
       ),
       "utf8"
     )
+    const rowContent = readFileSync(
+      join(
+        repoRoot,
+        "components/schema-editor/property-form/fields/object-property-row.tsx"
+      ),
+      "utf8"
+    )
+    const focusContent = readFileSync(
+      join(
+        repoRoot,
+        "components/schema-editor/property-form/fields/object-properties-reorder-focus.ts"
+      ),
+      "utf8"
+    )
+    const actionsContent = readFileSync(
+      join(
+        repoRoot,
+        "components/schema-editor/primitives/schema-row-actions.tsx"
+      ),
+      "utf8"
+    )
+    const reorderActionsContent = readFileSync(
+      join(
+        repoRoot,
+        "components/schema-editor/primitives/schema-row-reorder-actions.tsx"
+      ),
+      "utf8"
+    )
 
     expect(orderContent.includes("export function moveOrderedItem")).toBe(true)
     expect(editsContent.includes("moveOrderedItem")).toBe(true)
@@ -544,12 +577,50 @@ describe("schema builder architecture", () => {
       modelContent.includes("reorder: ObjectPropertyRowReorderModel")
     ).toBe(true)
     expect(modelContent.includes("ObjectPropertyRowReorderModel")).toBe(true)
+    expect(modelContent.includes("ObjectPropertyRowOrderModel")).toBe(false)
     expect(modelContent.includes("moveOrderedItem")).toBe(true)
+    expect(modelContent.includes("move: (targetIndex: number)")).toBe(true)
+    expect(modelContent.includes("moveTo: (targetIndex: number)")).toBe(false)
     expect(dragContent.includes("sourceRow?.reorder.move")).toBe(true)
+    expect(dragContent.includes("sourceRow?.order.moveTo")).toBe(false)
+    expect(dragContent.includes("useObjectPropertiesRowDrag")).toBe(true)
     expect(dragContent.includes("moveObjectProperty")).toBe(false)
-    expect(viewContent.includes("row.reorder.moveUp")).toBe(true)
-    expect(viewContent.includes("row.reorder.moveDown")).toBe(true)
-    expect(viewContent.includes("row.actions.move")).toBe(false)
+    expect(rowContent.includes("row.reorder.moveUp")).toBe(true)
+    expect(rowContent.includes("row.reorder.moveDown")).toBe(true)
+    expect(rowContent.includes("export function ObjectPropertyRows")).toBe(
+      true
+    )
+    expect(rowContent.includes("useObjectPropertiesRowDrag")).toBe(true)
+    expect(rowContent.includes("row.rowDetails")).toBe(true)
+    expect(rowContent.includes("row.details")).toBe(false)
+    expect(rowContent.includes("data-schema-row-order-row-id")).toBe(false)
+    expect(viewContent.includes("useLayoutEffect")).toBe(false)
+    expect(viewContent.includes("useObjectPropertiesRowDrag")).toBe(false)
+    expect(viewContent.includes("ObjectPropertyRow")).toBe(true)
+    expect(viewContent.includes("ObjectPropertyRows")).toBe(true)
+    expect(viewContent.includes("SchemaInlineName")).toBe(false)
+    expect(
+      existsSync(
+        join(
+          repoRoot,
+          "components/schema-editor/property-form/fields/object-property-rows.tsx"
+        )
+      )
+    ).toBe(false)
+    expect(
+      existsSync(
+        join(
+          repoRoot,
+          "components/schema-editor/property-form/fields/object-property-order-focus.ts"
+        )
+      )
+    ).toBe(false)
+    expect(actionsContent.includes("reorder?:")).toBe(false)
+    expect(actionsContent.includes("moveUpLabel")).toBe(false)
+    expect(reorderActionsContent.includes("SchemaRowReorderActions")).toBe(true)
+    expect(focusContent.includes("aria-label")).toBe(false)
+    expect(focusContent.includes("data-schema-row-reorder-row-id")).toBe(true)
+    expect(focusContent.includes("data-schema-row-order-row-id")).toBe(false)
   })
 
   it("keeps property type field model-driven", () => {
@@ -704,6 +775,8 @@ describe("schema builder architecture", () => {
 
   it("keeps property schema detail access single-sourced", () => {
     const duplicateTypeCapability = "canEdit" + "PropertyType"
+    const duplicateDetailsCapabilities =
+      "PropertySchema" + "DetailsCapabilities"
     const files = [
       "components/schema-editor/property-form/types.ts",
       "components/schema-editor/property-form/model/property-schema-details.ts",
@@ -715,9 +788,7 @@ describe("schema builder architecture", () => {
     for (const file of files) {
       const content = readFileSync(join(repoRoot, file), "utf8")
       expect(content.includes(duplicateTypeCapability), file).toBe(false)
-      expect(content.includes("PropertySchemaDetailsCapabilities"), file).toBe(
-        false
-      )
+      expect(content.includes(duplicateDetailsCapabilities), file).toBe(false)
     }
 
     const typeContent = readFileSync(
@@ -793,12 +864,19 @@ describe("schema builder architecture", () => {
         file: "components/schema-editor/property-form/fields/object-properties-field.tsx",
         functionName: "ObjectPropertiesField",
       })
-    ).toEqual(["details", "renderPropertyDetails"])
+    ).toEqual(["details", "renderSchemaDetails"])
 
     const fieldContent = readFileSync(
       join(
         repoRoot,
         "components/schema-editor/property-form/fields/object-properties-field.tsx"
+      ),
+      "utf8"
+    )
+    const rowContent = readFileSync(
+      join(
+        repoRoot,
+        "components/schema-editor/property-form/fields/object-property-row.tsx"
       ),
       "utf8"
     )
@@ -812,9 +890,10 @@ describe("schema builder architecture", () => {
 
     expect(fieldContent.includes("capabilities")).toBe(false)
     expect(fieldContent.includes("schemaNode:")).toBe(false)
-    expect(fieldContent.includes("row.type.editable")).toBe(true)
-    expect(fieldContent.includes("row.type.onChange")).toBe(true)
-    expect(modelContent.includes("type: {")).toBe(true)
+    expect(fieldContent.includes("row.typeField")).toBe(false)
+    expect(rowContent.includes("row.typeField.editable")).toBe(true)
+    expect(rowContent.includes("row.typeField.onChange")).toBe(true)
+    expect(modelContent.includes("typeField: {")).toBe(true)
     expect(modelContent.includes("editable: editable && access.type")).toBe(
       true
     )

@@ -4,14 +4,9 @@ import * as React from "react"
 import { createPortal } from "react-dom"
 
 import { cn } from "@/lib/utils"
+import { useDataCellSelectPopupDismissal } from "@/registry/new-york-v4/ui/data-cell-select-popup-dismissal"
+import type { DataCellSelectPopupPosition } from "@/registry/new-york-v4/ui/data-cell-select-popup-position"
 import type { DataCellSelectOption } from "@/registry/new-york-v4/ui/data-cell-types"
-
-export type DataCellSelectPopupPosition = {
-  left: number
-  top: number
-  width: number
-  maxHeight: number
-}
 
 export type DataCellSelectPopupProps = {
   anchor: HTMLElement
@@ -26,10 +21,6 @@ export type DataCellSelectPopupProps = {
   onCancel: () => void
   onOutsidePointerDown: (event: PointerEvent) => void
 }
-
-const popupGapPx = 4
-const viewportMarginPx = 8
-const minimumPopupHeightPx = 64
 
 export function DataCellSelectPopup({
   anchor,
@@ -46,34 +37,12 @@ export function DataCellSelectPopup({
 }: DataCellSelectPopupProps) {
   const popupRef = React.useRef<HTMLDivElement>(null)
 
-  React.useEffect(() => {
-    const handlePointerDown = (event: PointerEvent) => {
-      const target = event.target
-      if (!(target instanceof Node)) return
-      if (anchor.contains(target) || popupRef.current?.contains(target)) return
-
-      onOutsidePointerDown(event)
-    }
-
-    document.addEventListener("pointerdown", handlePointerDown, true)
-    return () =>
-      document.removeEventListener("pointerdown", handlePointerDown, true)
-  }, [anchor, onOutsidePointerDown])
-
-  React.useEffect(() => {
-    const handleViewportChange = (event: Event) => {
-      const target = event.target
-      if (target instanceof Node && popupRef.current?.contains(target)) return
-      onCancel()
-    }
-
-    window.addEventListener("resize", handleViewportChange)
-    window.addEventListener("scroll", handleViewportChange, true)
-    return () => {
-      window.removeEventListener("resize", handleViewportChange)
-      window.removeEventListener("scroll", handleViewportChange, true)
-    }
-  }, [onCancel])
+  useDataCellSelectPopupDismissal({
+    anchor,
+    popupRef,
+    onCancel,
+    onOutsidePointerDown,
+  })
 
   return createPortal(
     <div
@@ -139,78 +108,4 @@ export function DataCellSelectPopup({
     </div>,
     document.body
   )
-}
-
-export function getDataCellSelectPopupPosition({
-  rect,
-  viewportWidth,
-  viewportHeight,
-}: {
-  rect: DOMRect
-  viewportWidth: number
-  viewportHeight: number
-}): DataCellSelectPopupPosition {
-  const availableBelow = viewportHeight - rect.bottom - viewportMarginPx
-  const availableAbove = rect.top - viewportMarginPx
-  const shouldPlaceAbove =
-    availableBelow < minimumPopupHeightPx && availableAbove > availableBelow
-  const maxHeight = Math.max(
-    minimumPopupHeightPx,
-    shouldPlaceAbove ? availableAbove - popupGapPx : availableBelow - popupGapPx
-  )
-  const top = shouldPlaceAbove
-    ? Math.max(viewportMarginPx, rect.top - popupGapPx - maxHeight)
-    : Math.min(rect.bottom + popupGapPx, viewportHeight - viewportMarginPx)
-  const left = Math.min(
-    Math.max(viewportMarginPx, rect.left),
-    Math.max(viewportMarginPx, viewportWidth - rect.width - viewportMarginPx)
-  )
-
-  return {
-    left,
-    top,
-    width: rect.width,
-    maxHeight,
-  }
-}
-
-export function firstEnabledDataCellSelectOptionIndex(
-  options: DataCellSelectOption[]
-) {
-  return options.findIndex((option) => !option.disabled)
-}
-
-export function nextEnabledDataCellSelectOptionIndex({
-  options,
-  currentIndex,
-  direction,
-}: {
-  options: DataCellSelectOption[]
-  currentIndex: number
-  direction: 1 | -1
-}) {
-  if (options.length === 0) return -1
-
-  for (let offset = 1; offset <= options.length; offset += 1) {
-    const index =
-      (currentIndex + direction * offset + options.length) % options.length
-    if (!options[index]?.disabled) return index
-  }
-
-  return -1
-}
-
-export function selectedDataCellSelectOptionIndex({
-  options,
-  value,
-}: {
-  options: DataCellSelectOption[]
-  value: string | null
-}) {
-  const selectedIndex = options.findIndex((option) => option.value === value)
-  if (selectedIndex >= 0 && !options[selectedIndex]?.disabled) {
-    return selectedIndex
-  }
-
-  return firstEnabledDataCellSelectOptionIndex(options)
 }

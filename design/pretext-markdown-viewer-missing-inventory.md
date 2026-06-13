@@ -7,13 +7,14 @@ leaking virtual chunks as visible pages.
 
 ## Missing Features
 
-1. Mermaid / diagram blocks.
-2. Directive callouts: `:::note`, `:::tip`, `:::warning`, etc.
-3. MDX/component markdown: `Metric`, `Badge`, `Tabs`, etc.
-4. Footnotes.
-5. Math / KaTeX.
+1. Full Mermaid / diagram syntax beyond the current graph/flowchart surface.
+2. Directive semantics beyond callouts.
+3. Broader MDX/component markdown beyond the restricted `Metric` and `Badge`
+   subset.
+4. Footnote polish beyond initial GFM references and backrefs.
+5. Math / KaTeX polish beyond initial inline and block rendering.
 6. Syntax highlighting for fenced code.
-7. Copy button for code blocks.
+7. Code block copy polish beyond the initial copy button.
 8. Raw HTML policy polish beyond the current inert text/code fallback.
 9. Full GitHub alert visual styling; currently normalized into quoted prose only.
 10. More complete emoji shortcode vocabulary.
@@ -21,7 +22,7 @@ leaking virtual chunks as visible pages.
 12. Heading levels beyond the current h1/h2-style variants.
 13. Nested list/callout/table visual polish audit.
 14. Table polish parity with the old markdown viewer.
-15. Table copy coverage in the new component's own tests.
+15. Table copy polish beyond current rendered-cell TSV copy.
 16. Image loading/error polish parity.
 17. Component-specific stable block heights for rich blocks.
 18. Browser verification page/demo for the new component.
@@ -76,24 +77,24 @@ leaking virtual chunks as visible pages.
 
 ## Missing Rich Block Work
 
-61. Mermaid rendering with deterministic pre-layout dimensions.
+61. Full Mermaid rendering with deterministic pre-layout dimensions.
 62. Mermaid loading/error states that do not shift layout.
 63. Mermaid source copy.
 64. Diagram security policy.
-65. Code block language headers.
+65. Code block language header polish.
 66. Code block line virtualization for large fences.
 67. Code block horizontal scrolling behavior.
 68. Code block line wrapping policy.
-69. Code block copy success/error state.
+69. Code block copy error state.
 70. Table column sizing based on measured content rather than approximate character counts.
 71. Table horizontal scrolling for wide tables.
 72. Table row virtualization for very large tables.
 73. Table header stickiness decision.
 74. Table alignment and numeric tabular styling.
-75. Footnote reference/backref navigation.
-76. Footnote section layout at the end of the continuous document.
-77. Math inline rendering.
-78. Math block rendering.
+75. Footnote reference/backref navigation polish.
+76. Footnote section layout polish at the end of the continuous document.
+77. Math inline rendering polish.
+78. Math block rendering polish.
 79. KaTeX CSS and sanitization policy.
 80. Safe image sizing from known dimensions where possible.
 81. Image loading, error, retry, and alt-text states.
@@ -118,7 +119,7 @@ leaking virtual chunks as visible pages.
 97. Download action parity.
 98. Hash fragment navigation after page load.
 99. Back/forward navigation with hash changes.
-100. Preserve scroll position when toggling feature flags or switching viewer implementations.
+100.  Preserve scroll position when toggling feature flags or switching viewer implementations.
 
 ## Missing Accessibility Work
 
@@ -266,17 +267,17 @@ leaking virtual chunks as visible pages.
 224. SVG image security policy.
 225. Data URI image policy.
 
-## Missing Component Markdown Work
+## Remaining Component Markdown Work
 
 226. A component registry type.
 227. A component prop schema type.
-228. Literal prop parsing.
+228. Literal prop parsing beyond quoted strings.
 229. Boolean prop parsing.
 230. Numeric prop parsing.
 231. Enum prop validation.
-232. Unknown prop rejection.
-233. Event handler prop rejection.
-234. Expression prop rejection.
+232. Unknown prop rejection with schema-owned diagnostics.
+233. Event handler prop rejection with dedicated security tests.
+234. Expression prop rejection with dedicated security tests.
 235. Import/export rejection.
 236. Remote component rejection.
 237. Component child markdown parsing.
@@ -290,8 +291,8 @@ leaking virtual chunks as visible pages.
 245. Component hydration behavior.
 246. Component registry docs.
 247. Initial components: `Callout`.
-248. Initial components: `Metric`.
-249. Initial components: `Badge`.
+248. Initial components beyond the current restricted `Metric`.
+249. Initial components beyond the current restricted `Badge`.
 250. Initial components: `Tabs`.
 251. Initial components: `Accordion`.
 252. Initial components: `Image`.

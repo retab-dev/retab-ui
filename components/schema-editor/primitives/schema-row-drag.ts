@@ -50,6 +50,7 @@ export function applySchemaRowDropClasses(
   element: HTMLElement,
   indicator: SchemaRowDropIndicator
 ) {
+  // Native dragover fires continuously; keep the drop indicator out of React state.
   clearSchemaRowDropClasses(element)
   const classes = getSchemaRowDropClasses(indicator)
   if (classes.length) element.classList.add(...classes)

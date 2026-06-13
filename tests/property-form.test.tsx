@@ -316,7 +316,7 @@ describe("property form models", () => {
     ])
 
     act(() => {
-      model?.rows[0]?.actions.rename("road")
+      model?.rows[0]?.nameField.onCommit("road")
     })
     view.rerender(<Harness node={schemaNode} />)
 
@@ -324,7 +324,7 @@ describe("property form models", () => {
       ["road", "draft-property-0"],
       ["city", "draft-property-1"],
     ])
-    expect(model?.rows[0]?.schemaContext.resetKey).toBe(
+    expect(model?.rows[0]?.typeField.schemaContext.resetKey).toBe(
       "address.draft-property-0"
     )
 
@@ -570,6 +570,8 @@ describe("PropertyForm", () => {
 
     const dataTransfer = createDragDataTransfer()
     const cityRow = getPropertyFormRow("city")
+    expect(cityRow).toHaveProperty("draggable", true)
+    expect(cityRow.classList.contains("cursor-grab")).toBe(true)
     fireEvent.dragStart(getPropertyFormRow("zip"), { dataTransfer })
     expect(dataTransfer.getData("text/plain")).toMatch(/^draft-property-/)
     fireEvent.dragOver(cityRow, {

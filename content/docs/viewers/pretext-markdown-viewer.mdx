@@ -67,6 +67,7 @@ remain stable while the Pretext path iterates toward feature completeness.
 - **Markdown-first routing** - sources are parsed as Markdown even when the file extension is generic text.
 - **Source-line addressing** - `highlight` and `scrollToLineRange` keep using 1-based inclusive source-line ranges.
 - **Stable heading anchors** - heading DOM IDs and virtual fragment navigation come from the same model-owned slug registry.
+- **Restricted component markdown** - whitelisted self-closing components render through safe React components with quoted string props.
 - **Safe output** - unsupported Markdown should degrade to inert text or code output rather than executable DOM.
 - **Separate implementation** - this component lives apart from `MarkdownDocumentViewer` and can make hard cutovers without compatibility shims.
 
@@ -74,9 +75,17 @@ remain stable while the Pretext path iterates toward feature completeness.
 
 - Headings, paragraphs, emphasis, inline code, lists, task markers, blockquotes, rules, tables, images, and fenced code render through React Markdown/GFM.
 - GitHub blockquote alert markers such as `> [!IMPORTANT]` render as alert surfaces.
+- Directive callouts such as `:::warning{title="Careful"}` render as callout surfaces.
 - YAML frontmatter is a first-class frontmatter chunk instead of being rewritten into a fenced code block.
 - Heading IDs support duplicate suffixes and local `#fragment` links scroll through the virtual document model.
+- Links and images use the same safe URL policy as the Markdown Document Viewer; unsafe links become text and unsafe images become accessible placeholders.
 - Common typography and emoji shortcode transforms apply to normal prose text while inline code stays literal.
+- Restricted component markdown supports `<Metric label="Accuracy" value="98%" />` and `<Badge label="Stable" tone="success" />`; unknown JSX-like syntax renders as inert `mdx` code.
+- Mermaid fenced blocks render as diagram surfaces for simple `graph` and `flowchart` diagrams, with unsupported syntax shown as a non-crashing error state.
+- Inline and block math render through `remark-math` and KaTeX.
+- GFM footnotes render with references and backrefs.
+- Fenced code blocks show language headers and copy controls.
+- GFM tables include a copy action that writes rendered cells as TSV.
 - URL, Blob, and inline text sources load through the existing bounded text resource layer.
 - The registry item is separate: `pretext-markdown-viewer`.
 
@@ -84,10 +93,10 @@ remain stable while the Pretext path iterates toward feature completeness.
 
 The missing work is tracked in the repository file
 `design/pretext-markdown-viewer-missing-inventory.md`. The largest gaps are
-Mermaid and diagram rendering, MDX/component markdown, richer GitHub alert
-visuals, directive semantics beyond callouts, full accessibility verification,
-hostile-block inner virtualization, and migration rules for File Viewer
-routing.
+full Mermaid syntax, arbitrary MDX execution, richer GitHub alert visuals,
+directive semantics beyond callouts, full accessibility verification, syntax
+highlighting, hostile-block inner virtualization, and migration rules for File
+Viewer routing.
 
 ## Props
 

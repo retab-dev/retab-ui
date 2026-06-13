@@ -44,16 +44,16 @@ Target behavior:
 
 ## Proposed Architecture
 
-Introduce a table-specific enum popup used only by `DataCellSelectControl`.
+Introduce a DataCell-owned select popup used only by `DataCellSelectControl`.
 
 ```txt
 EditableJsonTableCell
   -> JsonTablePrimitiveHandoff
     -> DataCellSelectControl
-      -> JsonTableEnumPopup
+      -> DataCellSelectPopup
 ```
 
-`JsonTableEnumPopup` should be a small fixed-position portal with table-focused behavior:
+`DataCellSelectPopup` should be a small fixed-position portal with primitive grid-cell behavior:
 
 - measure the trigger once on open
 - render the popup with `position: fixed`
@@ -71,10 +71,11 @@ This removes Floating UI positioning, Base UI backdrop measurement, and generic 
 The new popup should receive only UI-level props:
 
 ```ts
-type JsonTableEnumPopupProps = {
+type DataCellSelectPopupProps = {
   anchor: HTMLElement
+  position: DataCellSelectPopupPosition
   value: string | null
-  options: string[]
+  options: DataCellSelectOption[]
   onCommit: (value: string) => void
   onCancel: () => void
 }
@@ -87,7 +88,7 @@ type JsonTableEnumPopupProps = {
 - calling the existing `onValueChange`
 - preserving labels and placeholders
 
-`JsonTableEnumPopup` owns:
+`DataCellSelectPopup` owns:
 
 - open overlay rendering
 - keyboard navigation
@@ -145,7 +146,7 @@ The commit path currently rerenders many cells because it updates projected docu
 
 ## Migration Plan
 
-1. Add `JsonTableEnumPopup` beside the JSON table components.
+1. Add `DataCellSelectPopup` as a DataCell primitive.
 2. Replace the Base UI `Select` usage inside `DataCellSelectControl` only.
 3. Keep the visual styling close to the existing table cell select.
 4. Preserve the public props of `DataCellSelectControl`.
@@ -190,4 +191,3 @@ Mitigations:
 - close on scroll and unmount
 - test keyboard behavior at the table integration level
 - reuse existing design tokens/classes where possible without importing Base UI select primitives
-

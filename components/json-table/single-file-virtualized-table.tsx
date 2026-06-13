@@ -80,20 +80,22 @@ interface SingleFileVirtualizedTableProps {
   jumpOverscan?: number
 }
 
-type PendingDocumentPatch = {
+type PendingDocumentData = {
   data: Record<string, unknown>
-  fieldPath: string
 }
 
-function projectedRowWithPendingPatch(
+function projectedRowWithPendingData(
   projectedRow: ProjectedRow,
-  patch: PendingDocumentPatch
+  pendingDocument: PendingDocumentData
 ): ProjectedRow {
   let didPatchCell = false
   const cells = projectedRow.cells.map((cell) => {
-    if (cell?.materializedFieldPath !== patch.fieldPath) return cell
+    if (!cell?.materializedFieldPath) return cell
 
-    const nextValue = getValueAtPath(patch.data, cell.materializedFieldPath)
+    const nextValue = getValueAtPath(
+      pendingDocument.data,
+      cell.materializedFieldPath
+    )
     if (Object.is(cell.value, nextValue)) return cell
 
     didPatchCell = true
@@ -227,11 +229,14 @@ export const SingleFileVirtualizedTable =
       const primitiveEditorHandleRef = useRef<DataCellEditorHandle | null>(null)
       const structuredEditSessionIdRef = useRef(0)
       const documentDataRef = useRef(document.data)
-      const pendingDocumentPatchRef = useRef<PendingDocumentPatch | null>(
-        null
-      )
+      const pendingDocumentPatchRef = useRef<PendingDocumentData | null>(null)
+      const onUpdateDocumentRef = useRef(onUpdateDocument)
       const [pendingDocumentPatch, setPendingDocumentPatch] =
-        React.useState<PendingDocumentPatch | null>(null)
+        React.useState<PendingDocumentData | null>(null)
+
+      React.useLayoutEffect(() => {
+        onUpdateDocumentRef.current = onUpdateDocument
+      }, [onUpdateDocument])
 
       React.useEffect(() => {
         documentDataRef.current = document.data
@@ -317,7 +322,8 @@ export const SingleFileVirtualizedTable =
       }, [])
       const patchDocumentData = React.useCallback(
         (materializedFieldPath: string, value: unknown) => {
-          if (!onUpdateDocument) return
+          const updateDocument = onUpdateDocumentRef.current
+          if (!updateDocument) return
 
           markJsonTableProfile("document-patch-start", {
             fieldPath: materializedFieldPath,
@@ -331,16 +337,15 @@ export const SingleFileVirtualizedTable =
           )
           const nextPatch = {
             data: nextData,
-            fieldPath: materializedFieldPath,
           }
           pendingDocumentPatchRef.current = nextPatch
           setPendingDocumentPatch(nextPatch)
-          onUpdateDocument({ data: nextData })
+          updateDocument({ data: nextData })
           markJsonTableProfile("document-patch-end", {
             fieldPath: materializedFieldPath,
           })
         },
-        [onUpdateDocument]
+        []
       )
       const handleDocumentDataChange = React.useCallback(
         (_docId: string, materializedFieldPath: string, value: unknown) => {
@@ -444,7 +449,7 @@ export const SingleFileVirtualizedTable =
                   const projectedRow = projectedRows[rowIdx]
                   const effectiveProjectedRow =
                     pendingDocumentPatch && projectedRow
-                      ? projectedRowWithPendingPatch(
+                      ? projectedRowWithPendingData(
                           projectedRow,
                           pendingDocumentPatch
                         )

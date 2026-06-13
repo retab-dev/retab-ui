@@ -4,8 +4,8 @@ import React, { useMemo, useState } from "react"
 import type { JSONSchema7 } from "json-schema"
 
 import { buildFixedGridColumns } from "@/components/ui/fixed-grid-columns"
-import { jsonTableDisplayText } from "@/components/json-table/json-table-display-value"
 import type { JsonTableCellHoverInfo } from "@/components/json-table/json-table-cell-types"
+import { jsonTableDisplayText } from "@/components/json-table/json-table-display-value"
 import type {
   JsonTableJsonEditMode,
   JsonTableSchemaEditMode,

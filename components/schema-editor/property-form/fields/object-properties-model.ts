@@ -32,25 +32,47 @@ interface UseObjectPropertiesModelInput {
   onChange: (schemaNode: ExtendedJSONSchema7) => void
 }
 
+export interface ObjectPropertiesModel {
+  addRow: ObjectPropertyAddRowModel
+  editable: boolean
+  rows: ObjectPropertyRowModel[]
+}
+
 export interface ObjectPropertyRowModel {
   id: string
-  details: PropertySchemaDetailsModel
   name: string
+  rowDetails: PropertySchemaDetailsModel
+  nameField: ObjectPropertyNameFieldModel
+  descriptionField: ObjectPropertyDescriptionFieldModel
   reorder: ObjectPropertyRowReorderModel
+  typeField: ObjectPropertyTypeFieldModel
+  deleteAction: {
+    label: string
+    onDelete: () => void
+  }
+}
+
+export interface ObjectPropertyNameFieldModel {
+  ariaLabel: string
+  value: string
+  editable: boolean
+  validate: (value: string) => string | null
+  onCommit: (name: string) => void
+}
+
+export interface ObjectPropertyDescriptionFieldModel {
+  ariaLabel: string
+  value: string
+  editable: boolean
+  onCommit: (description: string) => void
+}
+
+export interface ObjectPropertyTypeFieldModel {
   schemaNode: ExtendedJSONSchema7
   schemaContext: PropertyFormSchemaContext
-  type: {
-    editable: boolean
-    onChange: (schemaNode: ExtendedJSONSchema7) => void
-  }
-  validation: {
-    name: (value: string) => string | null
-  }
-  actions: {
-    rename: (name: string) => void
-    remove: () => void
-    replaceSchemaNode: (schemaNode: ExtendedJSONSchema7) => void
-  }
+  fieldPath?: string
+  editable: boolean
+  onChange: (schemaNode: ExtendedJSONSchema7) => void
 }
 
 export interface ObjectPropertyRowReorderModel {
@@ -59,6 +81,8 @@ export interface ObjectPropertyRowReorderModel {
   move: (targetIndex: number) => void
   moveDown: () => void
   moveUp: () => void
+  moveDownLabel: string
+  moveUpLabel: string
   position: number
   rowCount: number
 }
@@ -77,7 +101,7 @@ export function useObjectPropertiesModel({
   schemaNode,
   schemaContext,
   onChange,
-}: UseObjectPropertiesModelInput) {
+}: UseObjectPropertiesModelInput): ObjectPropertiesModel {
   const [newPropertyName, setNewPropertyName] = React.useState("")
   const propertyNames = listObjectPropertyNames(schemaNode)
   const propertyNamesKey = getPropertyNamesKey(propertyNames)
@@ -190,7 +214,7 @@ export function useObjectPropertiesModel({
       return [
         {
           id,
-          details: createObjectPropertyRowDetails({
+          rowDetails: createObjectPropertyRowDetails({
             access,
             editable,
             mode,
@@ -199,35 +223,17 @@ export function useObjectPropertiesModel({
             onChange: replaceSchemaNode,
           }),
           name,
-          reorder: {
-            canMoveDown: editable && index < propertyNames.length - 1,
-            canMoveUp: editable && index > 0,
-            move,
-            moveDown: () => {
-              if (index < propertyNames.length - 1) move(index + 1)
-            },
-            moveUp: () => {
-              if (index > 0) move(index - 1)
-            },
-            position: index + 1,
-            rowCount: propertyNames.length,
-          },
-          schemaNode: propertySchema,
-          schemaContext: rowSchemaContext,
-          type: {
-            editable: editable && access.type,
-            onChange: replaceSchemaNode,
-          },
-          validation: {
-            name: (value: string) =>
+          nameField: {
+            ariaLabel: `Field name ${name}`,
+            value: name,
+            editable,
+            validate: (value: string) =>
               validatePropertyFormName({
                 name: value,
                 siblingNames: propertyNames,
                 originalName: name,
               }),
-          },
-          actions: {
-            rename: (nextName: string) => {
+            onCommit: (nextName: string) => {
               preserveNewPropertyNameForLocalProperties(
                 propertyNames.map((propertyName) =>
                   propertyName === name ? nextName : propertyName
@@ -242,14 +248,49 @@ export function useObjectPropertiesModel({
                 })
               )
             },
-            remove: () => {
+          },
+          descriptionField: {
+            ariaLabel: `Description for ${name}`,
+            value: propertySchema.description || "",
+            editable,
+            onCommit: (description: string) => {
+              replaceSchemaNode({
+                ...propertySchema,
+                description: description || undefined,
+              })
+            },
+          },
+          reorder: {
+            canMoveDown: editable && index < propertyNames.length - 1,
+            canMoveUp: editable && index > 0,
+            move,
+            moveDown: () => {
+              if (index < propertyNames.length - 1) move(index + 1)
+            },
+            moveUp: () => {
+              if (index > 0) move(index - 1)
+            },
+            moveDownLabel: `Move field ${name} down`,
+            moveUpLabel: `Move field ${name} up`,
+            position: index + 1,
+            rowCount: propertyNames.length,
+          },
+          typeField: {
+            schemaNode: propertySchema,
+            schemaContext: rowSchemaContext,
+            fieldPath: rowSchemaContext.fieldPath,
+            editable: editable && access.type,
+            onChange: replaceSchemaNode,
+          },
+          deleteAction: {
+            label: `Remove field ${name}`,
+            onDelete: () => {
               preserveNewPropertyNameForLocalProperties(
                 propertyNames.filter((propertyName) => propertyName !== name)
               )
               removeRowId(name)
               onChange(removeObjectProperty({ schemaNode, propertyName: name }))
             },
-            replaceSchemaNode,
           },
         },
       ]
@@ -281,6 +322,7 @@ export function useObjectPropertiesModel({
 
   return {
     addRow,
+    editable,
     rows,
   }
 }

@@ -21,8 +21,12 @@ const dataCellRuntimeFiles = [
   "registry/new-york-v4/ui/data-cell-picker-control.tsx",
   "registry/new-york-v4/ui/data-cell-picker-position.ts",
   "registry/new-york-v4/ui/data-cell-select-control.tsx",
+  "registry/new-york-v4/ui/data-cell-select-navigation.ts",
+  "registry/new-york-v4/ui/data-cell-select-popup-dismissal.ts",
+  "registry/new-york-v4/ui/data-cell-select-popup-position.ts",
   "registry/new-york-v4/ui/data-cell-select-popup.tsx",
   "registry/new-york-v4/ui/data-cell-text-control.tsx",
+  "registry/new-york-v4/ui/data-cell-text-hit-test.ts",
   "registry/new-york-v4/ui/data-cell-types.ts",
   "components/ui/data-cell.tsx",
 ]
@@ -318,6 +322,23 @@ describe("json table and DataCell architecture", () => {
   })
 
   it("keeps DataCell independent from json-table", () => {
+    const selectControlFile =
+      "registry/new-york-v4/ui/data-cell-select-control.tsx"
+    const selectNavigationFile =
+      "registry/new-york-v4/ui/data-cell-select-navigation.ts"
+    const selectPopupFile = "registry/new-york-v4/ui/data-cell-select-popup.tsx"
+    const selectPopupDismissalFile =
+      "registry/new-york-v4/ui/data-cell-select-popup-dismissal.ts"
+    const selectPopupPositionFile =
+      "registry/new-york-v4/ui/data-cell-select-popup-position.ts"
+    const deletedJsonTablePopupFile =
+      "components/json-table/json-table-enum-popup.tsx"
+
+    expect(
+      existsSync(join(repoRoot, deletedJsonTablePopupFile)),
+      deletedJsonTablePopupFile
+    ).toBe(false)
+
     for (const file of dataCellRuntimeFiles) {
       const content = readFileSync(join(repoRoot, file), "utf8")
       expect(
@@ -325,9 +346,64 @@ describe("json table and DataCell architecture", () => {
         `${file} imports json-table`
       ).toBe(false)
       expect(
+        content.includes("components/json-table"),
+        `${file} imports json-table`
+      ).toBe(false)
+      expect(
         content.includes("JsonTable"),
         `${file} contains table-specific naming`
       ).toBe(false)
+      for (const pattern of ["jsonValue", "fieldMetadata", "sentinel"]) {
+        expect(
+          content.includes(pattern),
+          `${file} contains table identity detail ${pattern}`
+        ).toBe(false)
+      }
+    }
+
+    const dataCellSelectFiles = [
+      selectControlFile,
+      selectNavigationFile,
+      selectPopupFile,
+      selectPopupDismissalFile,
+      selectPopupPositionFile,
+    ]
+
+    for (const file of dataCellSelectFiles) {
+      const content = readFileSync(join(repoRoot, file), "utf8")
+      for (const pattern of ["Enum", "enum", "schema"]) {
+        expect(
+          content.includes(pattern),
+          `${file} contains table/select identity detail ${pattern}`
+        ).toBe(false)
+      }
+    }
+
+    const selectPopupContent = readFileSync(
+      join(repoRoot, selectPopupFile),
+      "utf8"
+    )
+    for (const pattern of [
+      "getBoundingClientRect",
+      "window.addEventListener",
+      "document.addEventListener",
+      "nextEnabledDataCellSelectOptionIndex",
+      "getDataCellSelectPopupPosition",
+    ]) {
+      expect(
+        selectPopupContent.includes(pattern),
+        `${selectPopupFile} owns delegated select policy ${pattern}`
+      ).toBe(false)
+    }
+
+    for (const file of [selectNavigationFile, selectPopupPositionFile]) {
+      const content = readFileSync(join(repoRoot, file), "utf8")
+      for (const pattern of ["React", "document", "window"]) {
+        expect(
+          content.includes(pattern),
+          `${file} contains impure primitive dependency ${pattern}`
+        ).toBe(false)
+      }
     }
   })
 
@@ -408,6 +484,17 @@ describe("json table and DataCell architecture", () => {
     expect(selectOptionsContent.includes("jsonTableSelectCommitValue")).toBe(
       true
     )
+    for (const pattern of [
+      "document.",
+      "window.",
+      "PointerEvent",
+      "KeyboardEvent",
+    ]) {
+      expect(
+        selectOptionsContent.includes(pattern),
+        `${selectOptionsFile} owns DOM behavior ${pattern}`
+      ).toBe(false)
+    }
     expect(commitValueContent.includes("dateStringToFormat")).toBe(true)
     expect(commitValueContent.includes("jsonTableCommitValue")).toBe(true)
 

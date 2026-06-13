@@ -2,7 +2,7 @@
 
 ## Current State
 
-The enum select overlay no longer uses the generic Base UI select stack. Opening a select now mounts `JsonTableEnumPopup` instead of Base UI `SelectContent`, `Positioner`, `Popup`, and backdrop internals.
+The enum select overlay no longer uses the generic Base UI select stack. Opening a select now mounts `DataCellSelectPopup` instead of Base UI `SelectContent`, `Positioner`, `Popup`, and backdrop internals.
 
 The latest select-open probe showed:
 
@@ -81,7 +81,7 @@ Consumers that need geometry call `getRect()`. Consumers that only need identity
 
 ### Problem
 
-`DataCellSelectControl` opens local state, then `JsonTableEnumPopup` measures its anchor in `useLayoutEffect`, then the popup renders with a position.
+Earlier versions opened local state before the popup position was known. The current shape measures in `DataCellSelectControl` before opening, then renders `DataCellSelectPopup` with a position.
 
 That keeps the component simple, but it creates an extra layout-effect cycle.
 
@@ -93,14 +93,14 @@ Measure before opening:
 2. read `triggerRef.current.getBoundingClientRect()`
 3. compute the fixed popup position synchronously
 4. store `{ open: true, position, activeOptionIndex }` in one state update
-5. render `JsonTableEnumPopup` already positioned
+5. render `DataCellSelectPopup` already positioned
 
-`JsonTableEnumPopup` should become a pure overlay:
+`DataCellSelectPopup` should become a pure overlay:
 
 ```ts
-type JsonTableEnumPopupProps = {
+type DataCellSelectPopupProps = {
   id: string
-  position: JsonTableEnumPopupPosition
+  position: DataCellSelectPopupPosition
   value: string | null
   activeIndex: number
   options: DataCellSelectOption[]
@@ -193,7 +193,7 @@ Scenarios:
 
 Assertions:
 
-- enum open mounts `[data-slot="json-table-enum-popup"]`
+- enum open mounts `[data-slot="data-cell-select-popup"]`
 - enum open does not mount Base UI select slots
 - enum open rect reads are at or below the expected count
 - enum open renders only the active row/cell path
@@ -216,7 +216,7 @@ The command should be deterministic enough for local regression checks. CI wirin
 
 The interaction path is complete when current evidence proves:
 
-- enum open uses the table-specific popup only
+- enum open uses the DataCell-owned popup only
 - enum open performs one popup anchor measurement and no eager hover measurement
 - enum open has no unrelated row or cell renders
 - enum open renders the popup positioned on first mount
@@ -233,4 +233,3 @@ The interaction path is complete when current evidence proves:
 5. Tighten profiler assertions around commit fanout.
 
 This order removes the cheap measurable waste first, then makes the remaining broad commit path visible and enforceable while it is being fixed.
-

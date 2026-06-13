@@ -11,7 +11,7 @@ import {
 
 import type { ObjectPropertyRowModel } from "./object-properties-model"
 
-export function useObjectPropertiesDrag({
+export function useObjectPropertiesRowDrag({
   rows,
   editable,
 }: {

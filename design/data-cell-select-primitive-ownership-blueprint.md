@@ -2,78 +2,128 @@
 
 ## Verdict
 
-Not platonic yet.
+The correct architecture is not "JSON-table has a special enum editor" and it
+is not "DataCell imports a table-specific popup."
 
-The JSON-table adapter is cleaner now, but the select primitive ownership is
-still the weak point:
-
-```txt
-DataCellSelectControl -> components/json-table/*
-```
-
-That dependency direction is wrong.
-
-`DataCell` is supposed to be the primitive trompe-l'oeil. A primitive cannot
-import one of its consumers. Once `DataCellSelectControl` imports a JSON-table
-popup, `DataCell` stops being universal and starts carrying table knowledge.
-
-The correct dependency direction is:
+The correct architecture is:
 
 ```txt
-json-table -> DataCell -> DataCellSelectControl -> DataCellSelectPopup
+json-table adapts JSON values into primitive DataCell props.
+DataCell owns every primitive interaction.
 ```
 
-Never:
+`DataCell` is the trompe-l'oeil. Consumers should be able to place DataCells
+everywhere without knowing when an editor is mounted, how a popup survives the
+opening click, how keyboard focus is kept, or how a listbox is positioned.
 
-```txt
-DataCell -> json-table
+If `DataCell` imports `components/json-table/*`, ownership is inverted. The
+primitive now depends on one consumer, so the primitive is no longer pure.
+
+## Principle
+
+There are only two layers.
+
+1. Primitive layer: `DataCell`
+2. Adapter layer: `json-table`
+
+The primitive layer owns interaction. The adapter layer owns meaning.
+
+That distinction is the whole design.
+
+## Dependency Rule
+
+Allowed:
+
+```mermaid
+flowchart TD
+  A["json-table schema + jsonValue"] --> B["jsonTableDataCellModel"]
+  B --> C["DataCell props"]
+  C --> D["DataCell"]
+  D --> E["DataCellSelectControl"]
+  E --> F["DataCellSelectPopup"]
+  F --> G["primitive string commit"]
+  G --> H["jsonTableSelectCommitValue"]
+  H --> I["JSON patch"]
 ```
 
-## Target
+Forbidden:
 
-Make select popup behavior a DataCell-owned primitive.
+```mermaid
+flowchart TD
+  A["DataCellSelectControl"] --> B["components/json-table/*"]
+  C["DataCellSelectPopup"] --> D["JsonTable / Enum / schema / sentinel"]
+```
 
-JSON-table should supply:
+`json-table` may depend on `DataCell`. `DataCell` must never depend on
+`json-table`.
 
-- select options
-- current primitive select value
-- JSON commit reconstruction
+## Pure Responsibilities
 
-DataCell should own:
+### DataCell Owns Primitive Interaction
 
-- combobox trigger
+DataCell owns:
+
+- activation
+- mounted editor lifecycle
+- focus
+- pointer handoff
+- keyboard handling
+- popup open state
 - popup positioning
 - listbox rendering
 - active option tracking
-- keyboard navigation
 - outside pointer dismissal
-- scroll/resize cancellation
-- primitive option commit
+- scroll and resize cancellation
+- primitive value commit
+- ARIA semantics
 
-The popup may have been motivated by JSON-table performance, but its API is
-generic. Its home must be DataCell.
+DataCell does not own:
 
-## Ideal Dependency Graph
+- JSON equality
+- enum identity
+- nullable sentinels
+- schema metadata
+- table row identity
+- virtual row lifetime
+- document patches
 
-```mermaid
-flowchart TD
-  A["json-table schema + jsonValue"] --> B["JsonTableDataCellModel"]
-  B --> C["DataCell"]
-  C --> D["DataCellSelectControl"]
-  D --> E["DataCellSelectPopup"]
-  E --> F["primitive commitValue"]
-  F --> G["JsonTableDataCellModel.commitValue"]
-  G --> H["jsonCommitValue"]
+The select control should read as:
+
+```txt
+props -> selected primitive option -> open state -> active option -> commit string
 ```
 
-Forbidden graph:
+No JSON-table noun should be needed to understand it.
 
-```mermaid
-flowchart TD
-  A["DataCellSelectControl"] --> B["components/json-table/json-table-enum-popup"]
+### JSON-table Owns Value Projection
+
+JSON-table owns:
+
+- reading schema metadata
+- deciding a primitive cell kind
+- projecting a JSON value into a primitive value
+- projecting JSON enum values into primitive select options
+- preserving JSON identity during commit
+- preserving nullable semantics
+- producing document patches
+- coordinating table focus and virtualization
+
+JSON-table does not own:
+
+- listbox DOM
+- popup position
+- pointer event survival
+- keyboard option navigation
+- combobox ARIA
+- DataCell mounted editor internals
+
+The table path should read as:
+
+```txt
+schema + jsonValue -> DataCell props -> primitive commit -> JSON value -> patch
 ```
 
-## File Ownership
+## Target Files
 
 ### `registry/new-york-v4/ui/data-cell-select-popup.tsx`
 
@@ -82,6 +132,7 @@ Owns the generic popup/listbox mechanics.
 Exports:
 
 - `DataCellSelectPopup`
+- `getDataCellSelectPopupPosition`
 - `firstEnabledDataCellSelectOptionIndex`
 - `nextEnabledDataCellSelectOptionIndex`
 - `selectedDataCellSelectOptionIndex`
@@ -98,16 +149,17 @@ Forbidden imports:
 - `components/json-table/*`
 - JSON schema types
 - table cell/session types
-- JSON-table classes
-- enum-specific helpers
+- table utility functions
 
 Allowed language:
 
-- select
-- option
-- listbox
-- popup
-- active option
+- `DataCell`
+- `Select`
+- `Popup`
+- `Option`
+- `Listbox`
+- `activeIndex`
+- `value`
 
 Forbidden language:
 
@@ -118,12 +170,13 @@ Forbidden language:
 - `schema`
 - `sentinel`
 
-The popup props should stay primitive-only:
+The popup props must stay primitive-only:
 
 ```ts
 type DataCellSelectPopupProps = {
   anchor: HTMLElement
   id: string
+  position: DataCellSelectPopupPosition
   activeDescendantId: string | undefined
   value: string | null
   activeIndex: number
@@ -135,84 +188,88 @@ type DataCellSelectPopupProps = {
 }
 ```
 
-This API is acceptable because it knows only primitive select concepts.
+This API is clean because every field is primitive UI state.
 
 ### `registry/new-york-v4/ui/data-cell-select-control.tsx`
 
-Owns the primitive select control.
+Owns the primitive combobox.
 
 Allowed:
 
 - trigger rendering
-- primitive display text
+- display text
+- placeholder state
+- `aria-expanded`
+- `aria-controls`
 - `aria-activedescendant`
-- open/close state
-- keyboard navigation
-- option commit as a string value
-- activation event-tail survival
-- import `DataCellSelectPopup`
+- open and close state
+- measuring the trigger
+- opening click survival
+- primitive string commit
+- editor finish/cancel handoff
 
 Forbidden:
 
 - importing from `components/json-table/*`
-- using names containing `JsonTable`
-- using names containing `Enum`
-- knowing nullable sentinel semantics
-- knowing JSON identity semantics
-- knowing schema semantics
-
-The control should be readable as:
-
-```txt
-props -> selected option -> popup open state -> primitive commit
-```
-
-No JSON-table concept should appear in the file.
+- names containing `JsonTable`
+- names containing `Enum`
+- nullable sentinel logic
+- JSON equality
+- schema field metadata
+- table row/session knowledge
 
 ### `components/json-table/json-table-select-options.ts`
 
-Owns JSON-table select identity.
+Owns JSON select projection.
 
 Allowed:
 
-- nullable sentinel
-- JSON equality
-- option index identity
-- JSON enum value commit reconstruction
+- nullable sentinel value
+- JSON value equality
+- enum option identity
+- conversion from JSON enum option to primitive select option
+- conversion from primitive committed string back to JSON value
 
 Forbidden:
 
-- popup behavior
-- trigger behavior
+- DOM
+- React state
+- popup state
 - keyboard behavior
+- pointer behavior
+- focus behavior
 - positioning
 - `document`
 - `window`
-- DOM events
+- browser event types
 
-This file may import `DataCellSelectOption` as a type only, because it projects
-table enum values into primitive select options.
+This file is the adapter. It can know that an enum option is really an object,
+array, null, number, boolean, or string. It cannot know how the select opens.
 
 ### `components/json-table/json-table-data-cell-model.ts`
 
-Continues to assemble the model.
+Owns DataCell model assembly.
 
 Allowed:
 
-- `selectOptions: jsonTableSelectOptions(fieldMetadata)`
-- `value: jsonTableSelectValue({ fieldMetadata, jsonValue })`
-- `commitValue: jsonTableCommitValue(...)`
+- choose DataCell kind
+- pass primitive value
+- pass select options
+- pass formatted display value
+- translate primitive commit through JSON-table commit helpers
 
 Forbidden:
 
-- popup imports
-- select DOM behavior
-- JSON-table enum popup names
-- direct select sentinel details
+- importing popup components
+- implementing select behavior
+- duplicating DataCell keyboard or focus logic
+- using table-specific enum editor components
 
-## Rename Map
+## Hard Cutover
 
-Hard cutover. No aliases.
+No adapters. No aliases. No compatibility layer.
+
+Rename table/enum popup language into primitive/select language:
 
 ```txt
 JsonTableEnumPopup -> DataCellSelectPopup
@@ -230,91 +287,113 @@ Delete:
 components/json-table/json-table-enum-popup.tsx
 ```
 
-unless it already no longer exists in the current tree.
+The deleted file should not be replaced by another table-owned popup.
+
+## Architecture Tests
+
+Add tests that enforce the boundary directly.
+
+DataCell runtime files must not contain:
+
+- `@/components/json-table`
+- `components/json-table`
+- `JsonTable`
+
+`data-cell-select-popup.tsx` must not contain:
+
+- `Enum`
+- `jsonValue`
+- `fieldMetadata`
+- `schema`
+- `sentinel`
+
+`json-table-select-options.ts` must not contain:
+
+- `document.`
+- `window.`
+- `PointerEvent`
+- `KeyboardEvent`
+- `HTMLElement`
+- `createPortal`
+
+The old table popup file must not exist:
+
+```txt
+components/json-table/json-table-enum-popup.tsx
+```
+
+## Interaction Contract
+
+The refactor must preserve these behaviors:
+
+- click on a select cell opens the listbox on the first click
+- the opening click does not immediately close the popup
+- clicking an option commits that option
+- clicking outside cancels without committing
+- Escape cancels
+- Enter commits the active option
+- ArrowDown and ArrowUp move active option
+- disabled options are skipped
+- scroll and resize cancel the popup
+- selected option is reflected through `aria-selected`
+- active option is reflected through `aria-activedescendant`
+- nullable enum values round-trip as `null`
+- object and array enum values preserve JSON identity
 
 ## Implementation Plan
 
-1. Move the popup implementation into
-   `registry/new-york-v4/ui/data-cell-select-popup.tsx`.
-
-2. Rename every exported symbol from table/enum language to DataCell/select
-   language.
-
-3. Update `registry/new-york-v4/ui/data-cell-select-control.tsx` to import the
-   new primitive popup.
-
-4. Remove the JSON-table popup file and all references to it.
-
-5. Strengthen architecture tests:
-
-   - DataCell runtime files must not import `components/json-table`.
-   - DataCell runtime files must not contain `JsonTableEnumPopup`.
-   - DataCell runtime files must not contain `JsonTable`.
-   - DataCell select popup must not contain `Enum`.
-   - `components/json-table` must not contain popup implementation files.
-   - `json-table-select-options.ts` may own sentinel/equality, but must not own
-     DOM events.
-
-6. Update tests from old Base UI select assumptions to generic combobox/listbox
-   assertions where needed:
-
-   - trigger has role `combobox`
-   - popup has role `listbox`
-   - options have role `option`
-   - active option is proven through `aria-activedescendant`
-   - commit still emits the primitive string option value
-
-7. Run full verification.
-
-## Non-Goals
-
-- no JSON-table adapter rewrite
-- no new `DataCell` public API
-- no behavior change beyond restoring dependency ownership
-- no nullable sentinel changes
-- no enum identity changes
-- no date/time changes
-- no virtualization work
-- no registry churn except generated `data-cell` artifacts if required
+1. Make `DataCellSelectPopup` the only popup implementation.
+2. Make `DataCellSelectControl` import only DataCell-owned popup utilities.
+3. Keep JSON enum projection in `json-table-select-options.ts`.
+4. Keep DataCell model assembly in `json-table-data-cell-model.ts`.
+5. Delete every table-specific enum popup path.
+6. Rename all leftover table/enum primitive symbols.
+7. Add architecture tests that make dependency inversion impossible to reintroduce.
+8. Run interaction tests before considering the cutover done.
 
 ## Verification Gates
 
 Required:
 
-- `pnpm exec vitest run tests/json-table-data-cell-model.test.ts tests/json-table-architecture.test.ts --reporter=dot`
-- focused DataCell/json-table interaction batch
-- full JSON-table suite
-- `pnpm exec tsc --noEmit --pretty false --skipLibCheck`
-- `pnpm run verify:data-cell`
-- `pnpm exec playwright test e2e/data-cell-caret.spec.ts`
-- data-cell registry build and validation into a temporary output directory
-- `git diff --check`
+```sh
+pnpm exec vitest run tests/json-table-data-cell-model.test.ts tests/json-table-architecture.test.ts --reporter=dot
+pnpm exec vitest run tests/data-cell-control-lifecycle.test.tsx tests/data-cell.test.tsx tests/data-cell-text-hit-test.test.ts tests/json-table-browser-sequence-hardening.test.tsx tests/json-table-boolean-enum-interactions.test.tsx tests/json-table-enum-cell.test.tsx tests/json-table-enum-dropdown-hardening.test.tsx tests/json-table-picker-interactions.test.tsx tests/json-table-picker-overlay-hardening.test.tsx tests/json-table-data-cell-model.test.ts tests/json-table-architecture.test.ts --reporter=dot
+pnpm exec vitest run $(rg --files tests | rg 'json-table.*\.test\.(ts|tsx)$' | tr '\n' ' ') --reporter=dot
+pnpm exec tsc --noEmit --pretty false --skipLibCheck
+pnpm run verify:data-cell
+pnpm exec playwright test e2e/data-cell-caret.spec.ts
+git diff --check
+```
 
-Additional ownership proof:
+Ownership proof:
 
 ```sh
 rg -n "components/json-table|JsonTable|Enum" registry/new-york-v4/ui/data-cell-select-control.tsx registry/new-york-v4/ui/data-cell-select-popup.tsx
 ```
 
-The command should return no forbidden ownership leaks except allowed test
-strings if the command is expanded to test files.
+That command should return no matches.
 
 ## Completion Criteria
 
-This pass is complete when:
+This blueprint is implemented when:
 
-- no DataCell runtime file imports `components/json-table/*`
-- no DataCell select primitive uses `JsonTable` or `Enum` names
-- the custom popup is a DataCell-owned primitive
-- JSON-table owns only JSON select identity and commit reconstruction
-- DataCell owns only primitive select mechanics
+- `DataCell` has no runtime dependency on `components/json-table/*`
+- DataCell select files contain no table or enum language
+- the popup is a generic DataCell primitive
+- JSON-table owns only JSON projection and commit reconstruction
+- JSON-table select projection contains no DOM behavior
 - architecture tests enforce the dependency direction
-- all verification gates are green
+- interaction tests prove the first-click enum/select behavior
+- all verification gates pass
 
-At that point, the component would have the correct ownership graph again:
+Then the architecture is clean:
 
 ```txt
 json-table -> DataCell
 ```
 
-and the select popup optimization would stop being an architectural smell.
+and never:
+
+```txt
+DataCell -> json-table
+```

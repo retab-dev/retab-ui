@@ -69,7 +69,9 @@ Before implementing another custom Markdown feature from scratch, clone the
 libraries that already solve the hard parts and use their implementation and
 test suites as the basis for our own narrowed version.
 
-Use a local research folder outside the shipped source tree:
+Use a local research folder outside the shipped source tree. These repos are
+not vendored product code; they are reference implementations that we can grep,
+run, compare, and translate into this viewer's smaller security model.
 
 ```bash
 mkdir -p tmp/markdown-upstreams
@@ -95,6 +97,36 @@ git clone https://github.com/remarkjs/remark-gemoji.git
 git clone https://github.com/rhysd/remark-emoji.git
 git clone https://github.com/silvenon/remark-smartypants.git
 ```
+
+Local reference inventory:
+
+| Area                     | Local clone                                             | Upstream repo                                                                                             |
+| ------------------------ | ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Pretext geometry         | `tmp/markdown-upstreams/pretext`                        | [chenglou/pretext](https://github.com/chenglou/pretext)                                                   |
+| React Markdown rendering | `tmp/markdown-upstreams/react-markdown`                 | [remarkjs/react-markdown](https://github.com/remarkjs/react-markdown)                                     |
+| GFM                      | `tmp/markdown-upstreams/remark-gfm`                     | [remarkjs/remark-gfm](https://github.com/remarkjs/remark-gfm)                                             |
+| Frontmatter              | `tmp/markdown-upstreams/remark-frontmatter`             | [remarkjs/remark-frontmatter](https://github.com/remarkjs/remark-frontmatter)                             |
+| Directives               | `tmp/markdown-upstreams/remark-directive`               | [remarkjs/remark-directive](https://github.com/remarkjs/remark-directive)                                 |
+| Math syntax              | `tmp/markdown-upstreams/remark-math`                    | [remarkjs/remark-math](https://github.com/remarkjs/remark-math)                                           |
+| Markdown to HAST         | `tmp/markdown-upstreams/remark-rehype`                  | [remarkjs/remark-rehype](https://github.com/remarkjs/remark-rehype)                                       |
+| Raw HTML parsing         | `tmp/markdown-upstreams/rehype-raw`                     | [rehypejs/rehype-raw](https://github.com/rehypejs/rehype-raw)                                             |
+| Sanitization             | `tmp/markdown-upstreams/rehype-sanitize`                | [rehypejs/rehype-sanitize](https://github.com/rehypejs/rehype-sanitize)                                   |
+| Heading slugs            | `tmp/markdown-upstreams/rehype-slug`                    | [rehypejs/rehype-slug](https://github.com/rehypejs/rehype-slug)                                           |
+| Code highlighting        | `tmp/markdown-upstreams/rehype-pretty-code`             | [rehype-pretty/rehype-pretty-code](https://github.com/rehype-pretty/rehype-pretty-code)                   |
+| Tokenization themes      | `tmp/markdown-upstreams/shiki`                          | [shikijs/shiki](https://github.com/shikijs/shiki)                                                         |
+| MDX parsing              | `tmp/markdown-upstreams/mdx`                            | [mdx-js/mdx](https://github.com/mdx-js/mdx)                                                               |
+| Mermaid diagrams         | `tmp/markdown-upstreams/mermaid`                        | [mermaid-js/mermaid](https://github.com/mermaid-js/mermaid)                                               |
+| GitHub alerts            | `tmp/markdown-upstreams/remark-github-blockquote-alert` | [jaywcjlove/remark-github-blockquote-alert](https://github.com/jaywcjlove/remark-github-blockquote-alert) |
+| Alert variants           | `tmp/markdown-upstreams/remark-alerts`                  | [7nohe/remark-alerts](https://github.com/7nohe/remark-alerts)                                             |
+| GitHub emoji             | `tmp/markdown-upstreams/remark-gemoji`                  | [remarkjs/remark-gemoji](https://github.com/remarkjs/remark-gemoji)                                       |
+| Emoji shortcodes         | `tmp/markdown-upstreams/remark-emoji`                   | [rhysd/remark-emoji](https://github.com/rhysd/remark-emoji)                                               |
+| Typography               | `tmp/markdown-upstreams/remark-smartypants`             | [silvenon/remark-smartypants](https://github.com/silvenon/remark-smartypants)                             |
+
+Implementation rule: start from the upstream source and tests for the feature
+being implemented, then keep only the minimal behavior that belongs in our
+viewer. This should make the custom component simpler than accumulating local
+remark tricks, because each feature starts from a proven parser or renderer and
+is narrowed deliberately.
 
 Study these repos by responsibility:
 

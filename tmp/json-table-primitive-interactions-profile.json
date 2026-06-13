@@ -1,0 +1,350 @@
+{
+  "measuredAt": "2026-06-13T22:16:23.323Z",
+  "route": "http://localhost:3100/json-table-profile",
+  "scenarios": [
+    {
+      "name": "open-enum",
+      "popupMounted": true,
+      "popupOptions": 2,
+      "baseUiSelectMounted": false,
+      "activeEditableCells": 1,
+      "totalDomNodes": 1398,
+      "rectProbe": {
+        "count": 1,
+        "bySlot": {
+          "data-cell": 1
+        }
+      },
+      "profiler": {
+        "renders": {
+          "total": 10,
+          "byComponent": [
+            {
+              "name": "SingleFileVirtualizedTable",
+              "count": 4
+            },
+            {
+              "name": "EditableJsonTableCell",
+              "count": 4
+            },
+            {
+              "name": "SingleFileFormRow",
+              "count": 2
+            }
+          ],
+          "byInstance": [
+            {
+              "name": "SingleFileVirtualizedTable:doc_1",
+              "count": 4
+            },
+            {
+              "name": "EditableJsonTableCell:transactions.0.transaction_type",
+              "count": 4
+            },
+            {
+              "name": "SingleFileFormRow:0",
+              "count": 2
+            }
+          ],
+          "changedProps": [
+            {
+              "name": "SingleFileVirtualizedTable.same-props",
+              "count": 3
+            },
+            {
+              "name": "EditableJsonTableCell.same-props",
+              "count": 3
+            },
+            {
+              "name": "SingleFileVirtualizedTable.primitiveActiveFieldPath",
+              "count": 1
+            },
+            {
+              "name": "SingleFileFormRow.primitiveActiveFieldPath",
+              "count": 1
+            },
+            {
+              "name": "SingleFileFormRow.same-props",
+              "count": 1
+            },
+            {
+              "name": "EditableJsonTableCell.primitiveActiveFieldPath",
+              "count": 1
+            },
+            {
+              "name": "EditableJsonTableCell.isEditing",
+              "count": 1
+            }
+          ]
+        },
+        "reactCommits": {
+          "count": 3,
+          "totalActualDurationMs": 1.7999999970197678,
+          "maxActualDurationMs": 1.0999999940395355
+        }
+      },
+      "wait": {
+        "ok": true,
+        "elapsedMs": 32.899999998509884
+      },
+      "elapsedMs": 131.5,
+      "metricsDelta": {
+        "Nodes": 16,
+        "LayoutCount": 2,
+        "RecalcStyleCount": 13,
+        "LayoutDurationMs": 0.4299999999999997,
+        "RecalcStyleDurationMs": 86.42199999999997,
+        "ScriptDurationMs": 5.634999999999991,
+        "TaskDurationMs": 95.58000000000004
+      }
+    },
+    {
+      "name": "open-and-commit-enum",
+      "popupMounted": false,
+      "popupOptions": 0,
+      "baseUiSelectMounted": false,
+      "activeEditableCells": 0,
+      "totalDomNodes": 1388,
+      "rectProbe": {
+        "count": 3,
+        "bySlot": {
+          "table-cell": 1,
+          "data-cell": 1,
+          "option": 1
+        }
+      },
+      "profiler": {
+        "renders": {
+          "total": 28,
+          "byComponent": [
+            {
+              "name": "EditableJsonTableCell",
+              "count": 12
+            },
+            {
+              "name": "SingleFileVirtualizedTable",
+              "count": 8
+            },
+            {
+              "name": "SingleFileFormRow",
+              "count": 6
+            },
+            {
+              "name": "SingleFileTableView",
+              "count": 2
+            }
+          ],
+          "byInstance": [
+            {
+              "name": "EditableJsonTableCell:transactions.0.transaction_type",
+              "count": 12
+            },
+            {
+              "name": "SingleFileVirtualizedTable:doc_1",
+              "count": 8
+            },
+            {
+              "name": "SingleFileFormRow:0",
+              "count": 6
+            },
+            {
+              "name": "SingleFileTableView:doc_1",
+              "count": 2
+            }
+          ],
+          "changedProps": [
+            {
+              "name": "EditableJsonTableCell.same-props",
+              "count": 10
+            },
+            {
+              "name": "SingleFileVirtualizedTable.same-props",
+              "count": 6
+            },
+            {
+              "name": "SingleFileFormRow.same-props",
+              "count": 4
+            },
+            {
+              "name": "SingleFileVirtualizedTable.primitiveActiveFieldPath",
+              "count": 2
+            },
+            {
+              "name": "SingleFileFormRow.primitiveActiveFieldPath",
+              "count": 2
+            },
+            {
+              "name": "EditableJsonTableCell.primitiveActiveFieldPath",
+              "count": 2
+            },
+            {
+              "name": "EditableJsonTableCell.isEditing",
+              "count": 2
+            },
+            {
+              "name": "SingleFileTableView.same-props",
+              "count": 2
+            }
+          ]
+        },
+        "reactCommits": {
+          "count": 7,
+          "totalActualDurationMs": 8,
+          "maxActualDurationMs": 2.0999999940395355
+        }
+      },
+      "wait": {
+        "ok": true,
+        "elapsedMs": 32.70000000298023
+      },
+      "elapsedMs": 249.70000000298023,
+      "metricsDelta": {
+        "Nodes": 20,
+        "LayoutCount": 3,
+        "RecalcStyleCount": 23,
+        "LayoutDurationMs": 0.32700000000000173,
+        "RecalcStyleDurationMs": 131.825,
+        "ScriptDurationMs": 28.81099999999998,
+        "TaskDurationMs": 167.6780000000001
+      }
+    },
+    {
+      "name": "toggle-checkbox",
+      "popupMounted": false,
+      "popupOptions": 0,
+      "baseUiSelectMounted": false,
+      "activeEditableCells": 0,
+      "totalDomNodes": 1388,
+      "rectProbe": {
+        "count": 2,
+        "bySlot": {
+          "table-cell": 2
+        }
+      },
+      "profiler": {
+        "renders": {
+          "total": 0,
+          "byComponent": [],
+          "byInstance": [],
+          "changedProps": []
+        },
+        "reactCommits": {
+          "count": 0,
+          "totalActualDurationMs": 0,
+          "maxActualDurationMs": 0
+        }
+      },
+      "wait": {
+        "ok": true,
+        "elapsedMs": 32.600000001490116
+      },
+      "elapsedMs": 43.79999999701977,
+      "metricsDelta": {
+        "Nodes": 0,
+        "LayoutCount": 0,
+        "RecalcStyleCount": 6,
+        "LayoutDurationMs": 0,
+        "RecalcStyleDurationMs": 0.7180000000000177,
+        "ScriptDurationMs": 0.6340000000000146,
+        "TaskDurationMs": 13.569999999999936
+      }
+    },
+    {
+      "name": "open-date-picker",
+      "popupMounted": false,
+      "popupOptions": 0,
+      "baseUiSelectMounted": false,
+      "activeEditableCells": 1,
+      "totalDomNodes": 1487,
+      "rectProbe": {
+        "count": 6,
+        "bySlot": {
+          "table-cell": 2,
+          "data-cell": 4
+        }
+      },
+      "profiler": {
+        "renders": {
+          "total": 8,
+          "byComponent": [
+            {
+              "name": "EditableJsonTableCell",
+              "count": 4
+            },
+            {
+              "name": "SingleFileVirtualizedTable",
+              "count": 2
+            },
+            {
+              "name": "SingleFileFormRow",
+              "count": 2
+            }
+          ],
+          "byInstance": [
+            {
+              "name": "EditableJsonTableCell:transactions.0.date",
+              "count": 4
+            },
+            {
+              "name": "SingleFileVirtualizedTable:doc_1",
+              "count": 2
+            },
+            {
+              "name": "SingleFileFormRow:0",
+              "count": 2
+            }
+          ],
+          "changedProps": [
+            {
+              "name": "EditableJsonTableCell.same-props",
+              "count": 3
+            },
+            {
+              "name": "SingleFileVirtualizedTable.primitiveActiveFieldPath",
+              "count": 1
+            },
+            {
+              "name": "SingleFileVirtualizedTable.same-props",
+              "count": 1
+            },
+            {
+              "name": "SingleFileFormRow.primitiveActiveFieldPath",
+              "count": 1
+            },
+            {
+              "name": "SingleFileFormRow.same-props",
+              "count": 1
+            },
+            {
+              "name": "EditableJsonTableCell.primitiveActiveFieldPath",
+              "count": 1
+            },
+            {
+              "name": "EditableJsonTableCell.isEditing",
+              "count": 1
+            }
+          ]
+        },
+        "reactCommits": {
+          "count": 3,
+          "totalActualDurationMs": 28.399999998509884,
+          "maxActualDurationMs": 19.400000005960464
+        }
+      },
+      "wait": {
+        "ok": true,
+        "elapsedMs": 33.79999999701977
+      },
+      "elapsedMs": 171.89999999850988,
+      "metricsDelta": {
+        "Nodes": 360,
+        "LayoutCount": 2,
+        "RecalcStyleCount": 9,
+        "LayoutDurationMs": 0.9719999999999995,
+        "RecalcStyleDurationMs": 91.88299999999992,
+        "ScriptDurationMs": 33.424000000000035,
+        "TaskDurationMs": 129.57000000000005
+      }
+    }
+  ]
+}
