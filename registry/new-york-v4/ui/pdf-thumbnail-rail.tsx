@@ -76,7 +76,10 @@ export function PdfThumbnailRail({
       onPointerEnter={onPointerEnter}
       onPointerLeave={onPointerLeave}
       onScroll={onScroll}
-      className={cn("h-full overflow-auto bg-muted/30 p-2", className)}
+      className={cn(
+        "h-full overflow-auto bg-sidebar p-2 text-sidebar-foreground",
+        className
+      )}
     >
       <ol className="relative w-full" style={{ height: layout.totalHeight }}>
         {visibleItems.map((item) => (

@@ -1,0 +1,81 @@
+---
+title: Email Viewer
+description: Compose HTML email bodies, CID inline files, and independently previewable attachments with the shared File Viewer, File Thumbnail, and Sidebar primitives.
+---
+
+The Email Viewer is a compound viewer over the existing preview primitives. It
+renders the message body as HTML when available, falls back to plain text, maps
+`cid:` references to inline attachment resources, and keeps non-inline
+attachments in the shared sidebar primitive where each file can be opened
+independently.
+
+<EmailViewerDemo />
+
+## Installation
+
+```bash
+npx shadcn@latest add @retab/email-viewer
+```
+
+## Usage
+
+```tsx
+import { EmailViewer } from "@/components/ui/email-viewer"
+
+export function Example() {
+  return (
+    <EmailViewer
+      message={{
+        subject: "Contract packet ready for review",
+        from: "Mina Patel <mina@example.com>",
+        to: "Avery Lee <avery@example.com>",
+        htmlBody:
+          '<main><img src="cid:<logo@example.com>" alt="Logo" /><p>See attached.</p></main>',
+        textBody: "See attached.",
+        attachments: [
+          {
+            id: "logo",
+            contentId: "<logo@example.com>",
+            contentDisposition: "inline",
+            source: {
+              kind: "url",
+              url: "/brand/logo.png",
+              fileName: "logo.png",
+              mimeType: "image/png",
+            },
+          },
+          {
+            id: "contract",
+            source: {
+              kind: "url",
+              url: "/files/contract.pdf",
+              fileName: "contract.pdf",
+              mimeType: "application/pdf",
+            },
+          },
+        ],
+      }}
+    />
+  )
+}
+```
+
+## Behavior
+
+- **HTML body first** — `htmlBody` routes through the sandboxed HTML File Viewer.
+- **Text fallback** — `textBody` renders when no HTML body is present.
+- **CID inline files** — inline attachments with `contentId` replace matching
+  `cid:` URLs in the HTML body, including bracketed values like
+  `cid:<logo@example.com>`.
+- **Attachment sidebar** — non-inline attachments stay out of the email body and
+  are rendered with the shared `Sidebar` menu primitives.
+- **Shared preview stack** — attachment thumbnails use `FileThumbnail`; selected
+  attachments open through `FileViewer`.
+
+## Props
+
+| Prop           | Type                 | Description                                                            |
+| -------------- | -------------------- | ---------------------------------------------------------------------- |
+| `message`      | `EmailViewerMessage` | Email subject, participants, body fields, and attachment resources.    |
+| `bodyFileName` | `string`             | Base file name used for body download metadata. Defaults to `message`. |
+| `className`    | `string`             | Optional class on the outer email viewer shell.                        |

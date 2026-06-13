@@ -41,6 +41,20 @@ vi.mock("@/registry/new-york-v4/ui/file-thumbnail", () => ({
 }))
 
 beforeEach(() => {
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    value: vi.fn((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  })
+
   let nextObjectUrl = 0
   Object.defineProperty(URL, "createObjectURL", {
     configurable: true,
@@ -112,6 +126,15 @@ describe("EmailViewer", () => {
     expect(
       screen.getByRole("button", { name: /review-note\.html/i })
     ).toBeTruthy()
+    expect(
+      container.querySelector('[data-slot="attachment-sidebar"]')
+    ).toBeTruthy()
+    expect(
+      container.querySelector('[data-slot="email-attachment-sidebar"]')
+    ).toBeNull()
+    expect(
+      container.querySelectorAll('[data-slot="sidebar-menu-button"]').length
+    ).toBeGreaterThanOrEqual(5)
   })
 
   it("renders the HTML body and rewrites cid URLs to inline attachment object URLs", async () => {
@@ -151,6 +174,34 @@ describe("EmailViewer", () => {
     expect(
       screen.getByRole("button", { name: /invoice\.html.*2\.0 KB/i })
     ).toBeTruthy()
+  })
+
+  it("keeps content-id files in the sidebar when disposition is attachment", async () => {
+    const message: EmailViewerMessage = {
+      id: "email-content-id-attachment",
+      subject: "CID attachment",
+      htmlBody: '<main><img alt="Logo" src="cid:logo@example.com"></main>',
+      attachments: [
+        {
+          id: "logo",
+          contentId: "<logo@example.com>",
+          contentDisposition: "attachment",
+          source: imageBlobSource("logo.png"),
+        },
+      ],
+    }
+
+    const { container } = render(
+      <EmailViewer message={message} className="h-[600px]" />
+    )
+
+    await waitFor(() => {
+      expect(iframe(container).getAttribute("srcdoc")).toContain(
+        "cid:logo@example.com"
+      )
+    })
+    expect(URL.createObjectURL).not.toHaveBeenCalled()
+    expect(screen.getByRole("button", { name: /logo\.png/i })).toBeTruthy()
   })
 
   it("falls back to the text body when there is no HTML body", async () => {
