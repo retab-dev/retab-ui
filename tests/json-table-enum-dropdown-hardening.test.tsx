@@ -140,15 +140,20 @@ async function expectDropdownClosed(view: ReturnType<typeof renderEnumRow>) {
 }
 
 describe("json table enum dropdown hardening", () => {
-  it("opens options on the first click and moves focus into the selected option", async () => {
+  it("opens options on the first click and marks the selected option active", async () => {
     const view = renderEnumRow({ visiblePaths: ["status"] })
 
     const { cell, trigger } = await openEnumCell(view, "status")
 
     expect(cell.getAttribute("data-active")).toBe("true")
     expect(trigger.getAttribute("aria-expanded")).toBe("true")
-    expect(document.activeElement?.getAttribute("role")).toBe("option")
-    expect(document.activeElement?.textContent).toContain("draft")
+    const activeOptionId = trigger.getAttribute("aria-activedescendant")
+    expect(activeOptionId).toBeTruthy()
+    const activeOption = activeOptionId
+      ? document.getElementById(activeOptionId)
+      : null
+    expect(activeOption?.getAttribute("role")).toBe("option")
+    expect(activeOption?.textContent).toContain("draft")
     expect(await view.findByRole("option", { name: "paid" })).toBeTruthy()
   })
 
@@ -277,7 +282,12 @@ describe("json table enum dropdown hardening", () => {
 
     active = await openEnumCell(view, "status")
     expect(active.trigger.getAttribute("aria-expanded")).toBe("true")
-    expect(document.activeElement?.getAttribute("role")).toBe("option")
+    const activeOptionId = active.trigger.getAttribute("aria-activedescendant")
+    expect(activeOptionId).toBeTruthy()
+    const activeOption = activeOptionId
+      ? document.getElementById(activeOptionId)
+      : null
+    expect(activeOption?.getAttribute("role")).toBe("option")
     await selectOption(view, "void")
 
     await waitFor(() =>

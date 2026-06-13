@@ -5,9 +5,9 @@ import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-sc
 import { getEffectiveNode } from "@/components/schema-editor/lib/json-schema-utils"
 import { getArrayItemsForDraft } from "@/components/schema-editor/property-form/model/effective-node-edits"
 import type {
-  PropertyCapabilities,
   PropertyFormMode,
   PropertyFormSchemaContext,
+  PropertySchemaDetailAccess,
   PropertySchemaDetailsModel,
 } from "@/components/schema-editor/property-form/types"
 
@@ -15,13 +15,7 @@ interface CreatePropertySchemaDetailsInput {
   schemaNode: ExtendedJSONSchema7
   schemaContext: PropertyFormSchemaContext
   mode: PropertyFormMode
-  capabilities: Pick<
-    PropertyCapabilities,
-    | "canEditType"
-    | "canEditNestedObject"
-    | "canEditArrayItems"
-    | "canEditEnumValues"
-  >
+  access: PropertySchemaDetailAccess
   disabled: boolean
   showTypeSelector?: boolean
   onChange: (schemaNode: ExtendedJSONSchema7) => void
@@ -31,7 +25,7 @@ export function createPropertySchemaDetails({
   schemaNode,
   schemaContext,
   mode,
-  capabilities,
+  access,
   disabled,
   showTypeSelector = true,
   onChange,
@@ -49,16 +43,16 @@ export function createPropertySchemaDetails({
       ? {
           schemaNode,
           schemaContext,
-          editable: !disabled && capabilities.canEditType,
+          editable: !disabled && access.type,
           onChange,
         }
       : undefined,
     enumValues:
-      capabilities.canEditEnumValues && Array.isArray(effectiveSchemaNode.enum)
+      access.enumValues && Array.isArray(effectiveSchemaNode.enum)
         ? {
             values: effectiveSchemaNode.enum,
             resetKey,
-            disabled: disabled || !capabilities.canEditEnumValues,
+            disabled: disabled || !access.enumValues,
             onChange: (values) => {
               updateEffectiveSchemaNode({
                 ...effectiveSchemaNode,
@@ -68,26 +62,26 @@ export function createPropertySchemaDetails({
           }
         : undefined,
     objectProperties:
-      capabilities.canEditNestedObject &&
+      access.objectProperties &&
       effectiveSchemaNode.type === "object" &&
       !effectiveSchemaNode.$ref
         ? {
             schemaNode: effectiveSchemaNode,
             schemaContext,
             mode,
-            capabilities,
-            editable: !disabled && capabilities.canEditNestedObject,
+            access,
+            editable: !disabled && access.objectProperties,
             onChange: updateEffectiveSchemaNode,
           }
         : undefined,
     arrayItems:
-      capabilities.canEditArrayItems && effectiveSchemaNode.type === "array"
+      access.arrayItems && effectiveSchemaNode.type === "array"
         ? {
             itemDetails: createPropertySchemaDetails({
               schemaNode: getArrayItemsForDraft(schemaNode),
               schemaContext,
               mode,
-              capabilities,
+              access,
               disabled,
               onChange: (items) => {
                 updateEffectiveSchemaNode({

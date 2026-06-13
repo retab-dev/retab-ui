@@ -1,0 +1,148 @@
+{
+  "wait": {
+    "ok": true,
+    "elapsedMs": 17.599999994039536
+  },
+  "popupMounted": false,
+  "baseUiSelectMounted": false,
+  "activeEditableCells": 0,
+  "totalDomNodes": 1388,
+  "profiler": {
+    "renders": {
+      "total": 130,
+      "byComponent": [
+        {
+          "name": "EditableJsonTableCell",
+          "count": 104
+        },
+        {
+          "name": "SingleFileFormRow",
+          "count": 16
+        },
+        {
+          "name": "SingleFileVirtualizedTable",
+          "count": 8
+        },
+        {
+          "name": "SingleFileTableView",
+          "count": 2
+        }
+      ],
+      "byInstance": [
+        {
+          "name": "EditableJsonTableCell:transactions.0.transaction_type",
+          "count": 10
+        },
+        {
+          "name": "SingleFileVirtualizedTable:doc_1",
+          "count": 8
+        },
+        {
+          "name": "SingleFileFormRow:0",
+          "count": 6
+        },
+        {
+          "name": "SingleFileTableView:doc_1",
+          "count": 2
+        },
+        {
+          "name": "EditableJsonTableCell:transactions.0.date",
+          "count": 2
+        },
+        {
+          "name": "EditableJsonTableCell:transactions.0.amount.amount",
+          "count": 2
+        },
+        {
+          "name": "EditableJsonTableCell:transactions.0.amount.iso_4217_currency_code",
+          "count": 2
+        },
+        {
+          "name": "EditableJsonTableCell:transactions.0.description",
+          "count": 2
+        },
+        {
+          "name": "EditableJsonTableCell:transactions.0.check_number",
+          "count": 2
+        },
+        {
+          "name": "EditableJsonTableCell:transactions.0.account_number_last4",
+          "count": 2
+        },
+        {
+          "name": "EditableJsonTableCell:transactions.0.is_reconciled",
+          "count": 2
+        },
+        {
+          "name": "SingleFileFormRow:1",
+          "count": 2
+        },
+        {
+          "name": "EditableJsonTableCell:transactions.1.date",
+          "count": 2
+        },
+        {
+          "name": "EditableJsonTableCell:transactions.1.amount.amount",
+          "count": 2
+        },
+        {
+          "name": "EditableJsonTableCell:transactions.1.amount.iso_4217_currency_code",
+          "count": 2
+        },
+        {
+          "name": "EditableJsonTableCell:transactions.1.description",
+          "count": 2
+        }
+      ],
+      "changedProps": [
+        {
+          "name": "EditableJsonTableCell.same-props",
+          "count": 102
+        },
+        {
+          "name": "SingleFileFormRow.same-props",
+          "count": 14
+        },
+        {
+          "name": "SingleFileVirtualizedTable.same-props",
+          "count": 6
+        },
+        {
+          "name": "SingleFileVirtualizedTable.primitiveActiveFieldPath",
+          "count": 2
+        },
+        {
+          "name": "SingleFileFormRow.primitiveActiveFieldPath",
+          "count": 2
+        },
+        {
+          "name": "EditableJsonTableCell.primitiveActiveFieldPath",
+          "count": 2
+        },
+        {
+          "name": "EditableJsonTableCell.isEditing",
+          "count": 2
+        },
+        {
+          "name": "SingleFileTableView.same-props",
+          "count": 2
+        }
+      ]
+    },
+    "reactCommits": {
+      "count": 6,
+      "totalActualDurationMs": 5.799999997019768,
+      "maxActualDurationMs": 2.399999998509884
+    }
+  },
+  "elapsedMs": 237.60000000149012,
+  "metricsDelta": {
+    "Nodes": 20,
+    "LayoutCount": 3,
+    "RecalcStyleCount": 21,
+    "LayoutDurationMs": 0.5410000000000004,
+    "RecalcStyleDurationMs": 173.70000000000005,
+    "ScriptDurationMs": 36.38499999999999,
+    "TaskDurationMs": 216.94799999999998
+  }
+}

@@ -356,7 +356,7 @@ describe("json table value normalization hardening", () => {
     })
     expect(options).toHaveLength(2)
     expect(trigger.textContent).toContain("[object Object]")
-    expect(document.activeElement).toBe(options[0])
+    expect(trigger.getAttribute("aria-activedescendant")).toBe(options[0]?.id)
     expect(view.onDocumentDataChange).not.toHaveBeenCalled()
   })
 

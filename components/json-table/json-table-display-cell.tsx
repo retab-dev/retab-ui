@@ -7,7 +7,6 @@ import {
 } from "@/components/ui/data-cell"
 import {
   createJsonTableDataCellModel,
-  getJsonTableCellDisplayValue,
   type JsonTableBooleanDataCellModel,
   type JsonTableNumberDataCellModel,
   type JsonTableSelectDataCellModel,

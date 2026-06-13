@@ -1,21 +1,20 @@
 import { cn } from "@/lib/utils"
+import type { DataCellKind } from "@/components/ui/data-cell"
 import { jsonTableDataCellClass } from "@/components/json-table/json-table-data-cell"
-import { primitiveKindForField } from "@/components/json-table/json-table-data-cell-model"
-import type { FieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
 import { DataCellBooleanIndicator } from "@/registry/new-york-v4/ui/data-cell-boolean-control"
 import { dataCellCheckboxDisplayClass } from "@/registry/new-york-v4/ui/data-cell-classes"
 
 export function JsonTableReadOnlyPrimitiveDisplayCell({
   displayValue,
-  fieldMetadata,
+  primitiveKind,
 }: {
   displayValue: string
-  fieldMetadata: FieldMetadata
+  primitiveKind: DataCellKind | null
 }) {
   const isEmpty = displayValue === ""
   const text = isEmpty ? "—" : displayValue
 
-  if (fieldMetadata.kind === "boolean") {
+  if (primitiveKind === "boolean") {
     const checked = displayValue === "true"
     return (
       <div
@@ -51,7 +50,7 @@ export function JsonTableReadOnlyPrimitiveDisplayCell({
   return (
     <div
       data-slot="data-cell"
-      data-kind={primitiveKindForField(fieldMetadata) ?? "text"}
+      data-kind={primitiveKind ?? "text"}
       data-mode="display"
       aria-readonly
       className={cn(

@@ -136,11 +136,11 @@ export function usePropertyFormController({
     schemaNode: propertyDraft.schemaNode,
     schemaContext: schemaDetailsContext,
     mode: capabilities.mode,
-    capabilities: {
-      canEditType: capabilities.canEditType,
-      canEditNestedObject: capabilities.canEditNestedObject,
-      canEditArrayItems: capabilities.canEditArrayItems,
-      canEditEnumValues: capabilities.canEditEnumValues,
+    access: {
+      arrayItems: capabilities.canEditArrayItems,
+      enumValues: capabilities.canEditEnumValues,
+      objectProperties: capabilities.canEditNestedObject,
+      type: capabilities.canEditType,
     },
     disabled:
       !capabilities.canEditEnumValues &&

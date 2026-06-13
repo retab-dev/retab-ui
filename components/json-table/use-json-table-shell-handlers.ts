@@ -75,10 +75,11 @@ export function useJsonTableShellHandlers({
     markJsonTableProfile("pointer-enter-cell", {
       fieldPath: materializedFieldPath,
     })
+    const target = event.currentTarget
     onCellHoverStart?.({
       docId,
       fieldPath: materializedFieldPath,
-      rect: event.currentTarget.getBoundingClientRect(),
+      getRect: () => target.getBoundingClientRect(),
     })
   })
 

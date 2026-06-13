@@ -3,6 +3,7 @@
 import * as React from "react"
 
 import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
+import { moveOrderedItem } from "@/components/schema-editor/primitives/schema-order"
 import {
   createObjectPropertySchema,
   isSchemaNode,
@@ -12,17 +13,18 @@ import {
   renameObjectProperty,
   replaceObjectProperty,
 } from "@/components/schema-editor/property-form/model/object-property-edits"
-import { createPropertySchemaDetails } from "@/components/schema-editor/property-form/model/property-schema-details"
 import type {
   PropertyFormMode,
   PropertyFormSchemaContext,
-  PropertySchemaDetailsCapabilities,
+  PropertySchemaDetailAccess,
   PropertySchemaDetailsModel,
 } from "@/components/schema-editor/property-form/types"
 import { validatePropertyFormName } from "@/components/schema-editor/property-form/validation"
 
+import { createObjectPropertyRowDetails } from "./object-property-row-details"
+
 interface UseObjectPropertiesModelInput {
-  capabilities: PropertySchemaDetailsCapabilities
+  access: PropertySchemaDetailAccess
   editable: boolean
   mode: PropertyFormMode
   schemaNode: ExtendedJSONSchema7
@@ -34,6 +36,7 @@ export interface ObjectPropertyRowModel {
   id: string
   details: PropertySchemaDetailsModel
   name: string
+  reorder: ObjectPropertyRowReorderModel
   schemaNode: ExtendedJSONSchema7
   schemaContext: PropertyFormSchemaContext
   type: {
@@ -47,8 +50,17 @@ export interface ObjectPropertyRowModel {
     rename: (name: string) => void
     remove: () => void
     replaceSchemaNode: (schemaNode: ExtendedJSONSchema7) => void
-    move: (targetIndex: number) => void
   }
+}
+
+export interface ObjectPropertyRowReorderModel {
+  canMoveDown: boolean
+  canMoveUp: boolean
+  move: (targetIndex: number) => void
+  moveDown: () => void
+  moveUp: () => void
+  position: number
+  rowCount: number
 }
 
 export interface ObjectPropertyAddRowModel {
@@ -59,7 +71,7 @@ export interface ObjectPropertyAddRowModel {
 }
 
 export function useObjectPropertiesModel({
-  capabilities,
+  access,
   editable,
   mode,
   schemaNode,
@@ -134,101 +146,115 @@ export function useObjectPropertiesModel({
     )
   }
 
-  const rows: ObjectPropertyRowModel[] = propertyNames.flatMap((name) => {
-    const propertySchema = schemaNode.properties?.[name]
-    if (!isSchemaNode(propertySchema)) return []
+  const rows: ObjectPropertyRowModel[] = propertyNames.flatMap(
+    (name, index) => {
+      const propertySchema = schemaNode.properties?.[name]
+      if (!isSchemaNode(propertySchema)) return []
 
-    const id = rowIdsByName[name] ?? `external-property-${name}`
-    const replaceSchemaNode = (nextSchemaNode: ExtendedJSONSchema7) => {
-      replacePropertySchemaNode(name, nextSchemaNode)
-    }
-    const rowSchemaContext = {
-      ...schemaContext,
-      siblingNames: propertyNames,
-      originalName: name,
-      fieldPath: [
-        schemaContext.fieldPath ?? schemaContext.originalName,
-        id,
-      ].join("."),
-      resetKey: [
-        schemaContext.resetKey ??
-          schemaContext.fieldPath ??
-          schemaContext.originalName,
-        id,
-      ].join("."),
-    }
+      const id = rowIdsByName[name] ?? `external-property-${name}`
+      const replaceSchemaNode = (nextSchemaNode: ExtendedJSONSchema7) => {
+        replacePropertySchemaNode(name, nextSchemaNode)
+      }
+      const move = (targetIndex: number) => {
+        preserveNewPropertyNameForLocalProperties(
+          moveOrderedItem({
+            items: propertyNames,
+            sourceIndex: index,
+            targetIndex,
+          })
+        )
+        onChange(
+          moveObjectProperty({
+            schemaNode,
+            propertyName: name,
+            targetIndex,
+          })
+        )
+      }
+      const rowSchemaContext = {
+        ...schemaContext,
+        siblingNames: propertyNames,
+        originalName: name,
+        fieldPath: [
+          schemaContext.fieldPath ?? schemaContext.originalName,
+          id,
+        ].join("."),
+        resetKey: [
+          schemaContext.resetKey ??
+            schemaContext.fieldPath ??
+            schemaContext.originalName,
+          id,
+        ].join("."),
+      }
 
-    return [
-      {
-        id,
-        details: createPropertySchemaDetails({
+      return [
+        {
+          id,
+          details: createObjectPropertyRowDetails({
+            access,
+            editable,
+            mode,
+            schemaNode: propertySchema,
+            schemaContext: rowSchemaContext,
+            onChange: replaceSchemaNode,
+          }),
+          name,
+          reorder: {
+            canMoveDown: editable && index < propertyNames.length - 1,
+            canMoveUp: editable && index > 0,
+            move,
+            moveDown: () => {
+              if (index < propertyNames.length - 1) move(index + 1)
+            },
+            moveUp: () => {
+              if (index > 0) move(index - 1)
+            },
+            position: index + 1,
+            rowCount: propertyNames.length,
+          },
           schemaNode: propertySchema,
           schemaContext: rowSchemaContext,
-          mode,
-          capabilities,
-          disabled: !editable,
-          showTypeSelector: false,
-          onChange: replaceSchemaNode,
-        }),
-        name,
-        schemaNode: propertySchema,
-        schemaContext: rowSchemaContext,
-        type: {
-          editable: editable && capabilities.canEditType,
-          onChange: replaceSchemaNode,
-        },
-        validation: {
-          name: (value: string) =>
-            validatePropertyFormName({
-              name: value,
-              siblingNames: propertyNames,
-              originalName: name,
-            }),
-        },
-        actions: {
-          rename: (nextName: string) => {
-            preserveNewPropertyNameForLocalProperties(
-              propertyNames.map((propertyName) =>
-                propertyName === name ? nextName : propertyName
+          type: {
+            editable: editable && access.type,
+            onChange: replaceSchemaNode,
+          },
+          validation: {
+            name: (value: string) =>
+              validatePropertyFormName({
+                name: value,
+                siblingNames: propertyNames,
+                originalName: name,
+              }),
+          },
+          actions: {
+            rename: (nextName: string) => {
+              preserveNewPropertyNameForLocalProperties(
+                propertyNames.map((propertyName) =>
+                  propertyName === name ? nextName : propertyName
+                )
               )
-            )
-            renameRowId(name, nextName)
-            onChange(
-              renameObjectProperty({
-                schemaNode,
-                oldName: name,
-                newName: nextName,
-              })
-            )
-          },
-          remove: () => {
-            preserveNewPropertyNameForLocalProperties(
-              propertyNames.filter((propertyName) => propertyName !== name)
-            )
-            removeRowId(name)
-            onChange(removeObjectProperty({ schemaNode, propertyName: name }))
-          },
-          replaceSchemaNode,
-          move: (targetIndex: number) => {
-            preserveNewPropertyNameForLocalProperties(
-              movePropertyName({
-                propertyNames,
-                propertyName: name,
-                targetIndex,
-              })
-            )
-            onChange(
-              moveObjectProperty({
-                schemaNode,
-                propertyName: name,
-                targetIndex,
-              })
-            )
+              renameRowId(name, nextName)
+              onChange(
+                renameObjectProperty({
+                  schemaNode,
+                  oldName: name,
+                  newName: nextName,
+                })
+              )
+            },
+            remove: () => {
+              preserveNewPropertyNameForLocalProperties(
+                propertyNames.filter((propertyName) => propertyName !== name)
+              )
+              removeRowId(name)
+              onChange(removeObjectProperty({ schemaNode, propertyName: name }))
+            },
+            replaceSchemaNode,
           },
         },
-      },
-    ]
-  })
+      ]
+    }
+  )
 
   const addRow: ObjectPropertyAddRowModel = {
     error: newPropertyNameError,
@@ -269,28 +295,6 @@ function createRowIdsByName(propertyNames: string[]) {
     setRecordValue(rowIdsByName, propertyName, `draft-property-${index}`)
   })
   return rowIdsByName
-}
-
-function movePropertyName({
-  propertyNames,
-  propertyName,
-  targetIndex,
-}: {
-  propertyNames: string[]
-  propertyName: string
-  targetIndex: number
-}) {
-  const nextPropertyNames = propertyNames.slice()
-  const sourceIndex = nextPropertyNames.indexOf(propertyName)
-  if (sourceIndex < 0) return propertyNames
-
-  const [movedPropertyName] = nextPropertyNames.splice(sourceIndex, 1)
-  const clampedTargetIndex = Math.max(
-    0,
-    Math.min(targetIndex, nextPropertyNames.length)
-  )
-  nextPropertyNames.splice(clampedTargetIndex, 0, movedPropertyName)
-  return nextPropertyNames
 }
 
 function setRecordValue<T>(record: Record<string, T>, key: string, value: T) {

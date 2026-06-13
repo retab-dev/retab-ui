@@ -1,6 +1,6 @@
 "use client"
 
-import { Eye, Pencil, Trash2 } from "lucide-react"
+import { ArrowDown, ArrowUp, Eye, Pencil, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -19,6 +19,14 @@ interface SchemaRowActionsProps {
   }
   editable: boolean
   onDelete?: () => void
+  reorder?: {
+    canMoveDown: boolean
+    canMoveUp: boolean
+    moveDownLabel: string
+    moveUpLabel: string
+    onMoveDown: () => void
+    onMoveUp: () => void
+  }
 }
 
 export function SchemaRowActions({
@@ -27,9 +35,37 @@ export function SchemaRowActions({
   details,
   editable,
   onDelete,
+  reorder,
 }: SchemaRowActionsProps) {
   return (
     <>
+      {editable && reorder && (
+        <>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            className="m-0 shrink-0 p-0"
+            aria-label={reorder.moveUpLabel}
+            disabled={!reorder.canMoveUp}
+            onClick={reorder.onMoveUp}
+          >
+            <ArrowUp className="size-4 text-muted-foreground" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            className="m-0 shrink-0 p-0"
+            aria-label={reorder.moveDownLabel}
+            disabled={!reorder.canMoveDown}
+            onClick={reorder.onMoveDown}
+          >
+            <ArrowDown className="size-4 text-muted-foreground" />
+          </Button>
+        </>
+      )}
+
       {editable && canDelete && (
         <Button
           type="button"

@@ -1,0 +1,95 @@
+{
+  "wait": {
+    "ok": true,
+    "elapsedMs": 16.399999998509884
+  },
+  "popupOptions": 2,
+  "popupSlot": "json-table-enum-popup",
+  "baseUiSelectMounted": false,
+  "activeCells": 2,
+  "totalDomNodes": 1398,
+  "rectProbe": {
+    "count": 2,
+    "bySlot": {
+      "data-cell": 2
+    }
+  },
+  "profiler": {
+    "renders": {
+      "total": 10,
+      "byComponent": [
+        {
+          "name": "SingleFileVirtualizedTable",
+          "count": 4
+        },
+        {
+          "name": "EditableJsonTableCell",
+          "count": 4
+        },
+        {
+          "name": "SingleFileFormRow",
+          "count": 2
+        }
+      ],
+      "byInstance": [
+        {
+          "name": "SingleFileVirtualizedTable:doc_1",
+          "count": 4
+        },
+        {
+          "name": "EditableJsonTableCell:transactions.0.transaction_type",
+          "count": 4
+        },
+        {
+          "name": "SingleFileFormRow:0",
+          "count": 2
+        }
+      ],
+      "changedProps": [
+        {
+          "name": "SingleFileVirtualizedTable.same-props",
+          "count": 3
+        },
+        {
+          "name": "EditableJsonTableCell.same-props",
+          "count": 3
+        },
+        {
+          "name": "SingleFileVirtualizedTable.primitiveActiveFieldPath",
+          "count": 1
+        },
+        {
+          "name": "SingleFileFormRow.primitiveActiveFieldPath",
+          "count": 1
+        },
+        {
+          "name": "SingleFileFormRow.same-props",
+          "count": 1
+        },
+        {
+          "name": "EditableJsonTableCell.primitiveActiveFieldPath",
+          "count": 1
+        },
+        {
+          "name": "EditableJsonTableCell.isEditing",
+          "count": 1
+        }
+      ]
+    },
+    "reactCommits": {
+      "count": 4,
+      "totalActualDurationMs": 3.6999999955296516,
+      "maxActualDurationMs": 2.2999999970197678
+    }
+  },
+  "elapsedMs": 152.5,
+  "metricsDelta": {
+    "Nodes": 16,
+    "LayoutCount": 2,
+    "RecalcStyleCount": 11,
+    "LayoutDurationMs": 0.375,
+    "RecalcStyleDurationMs": 124.39199999999997,
+    "ScriptDurationMs": 8.238999999999976,
+    "TaskDurationMs": 135.54600000000005
+  }
+}

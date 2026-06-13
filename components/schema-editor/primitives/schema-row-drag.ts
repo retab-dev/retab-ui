@@ -5,7 +5,13 @@ export interface SchemaRowDragItem {
   label: string
 }
 
-export type SchemaRowDropIndicator = "before" | "after" | null
+export type SchemaRowDropPlacement = "before" | "after"
+export type SchemaRowDropIndicator = SchemaRowDropPlacement | null
+
+interface SchemaRowDropTargetRect {
+  height: number
+  top: number
+}
 
 const ROW_DRAG_FORMAT = "text/plain"
 const DROP_CLASSES = [
@@ -15,22 +21,14 @@ const DROP_CLASSES = [
   "border-dashed",
 ] as const
 
-export function getSchemaRowDropIndicator({
-  rowIds,
-  sourceRowId,
-  targetRowId,
+export function getSchemaRowDropPlacement({
+  clientY,
+  targetRect,
 }: {
-  rowIds: string[]
-  sourceRowId: string | null
-  targetRowId: string
-}): SchemaRowDropIndicator {
-  if (!sourceRowId || sourceRowId === targetRowId) return null
-
-  const sourceIndex = rowIds.indexOf(sourceRowId)
-  const targetIndex = rowIds.indexOf(targetRowId)
-  if (sourceIndex < 0 || targetIndex < 0) return null
-
-  return sourceIndex > targetIndex ? "before" : "after"
+  clientY: number
+  targetRect: SchemaRowDropTargetRect
+}): SchemaRowDropPlacement {
+  return clientY < targetRect.top + targetRect.height / 2 ? "before" : "after"
 }
 
 export function getSchemaRowDropClasses(
@@ -58,13 +56,24 @@ export function applySchemaRowDropClasses(
 }
 
 export function getSchemaRowDropTargetIndex({
+  placement,
   rowIds,
+  sourceRowId,
   targetRowId,
 }: {
+  placement: SchemaRowDropPlacement
   rowIds: string[]
+  sourceRowId: string
   targetRowId: string
 }) {
-  return rowIds.indexOf(targetRowId)
+  const sourceIndex = rowIds.indexOf(sourceRowId)
+  if (sourceIndex < 0 || sourceRowId === targetRowId) return -1
+
+  const remainingRowIds = rowIds.filter((rowId) => rowId !== sourceRowId)
+  const targetIndex = remainingRowIds.indexOf(targetRowId)
+  if (targetIndex < 0) return -1
+
+  return placement === "after" ? targetIndex + 1 : targetIndex
 }
 
 export function beginSchemaRowDrag({
@@ -101,21 +110,23 @@ export function updateSchemaRowDragTarget({
   draggedRowIdRef: React.RefObject<string | null>
 }) {
   event.preventDefault()
-  const indicator = getSchemaRowDropIndicator({
-    rowIds,
-    sourceRowId: draggedRowIdRef.current,
-    targetRowId,
-  })
+  const indicator =
+    draggedRowIdRef.current &&
+    draggedRowIdRef.current !== targetRowId &&
+    rowIds.includes(draggedRowIdRef.current) &&
+    rowIds.includes(targetRowId)
+      ? getSchemaRowDropPlacement({
+          clientY: event.clientY,
+          targetRect: event.currentTarget.getBoundingClientRect(),
+        })
+      : null
 
   event.dataTransfer.dropEffect = "move"
   applySchemaRowDropClasses(event.currentTarget, indicator)
 }
 
 export function leaveSchemaRowDragTarget(
-  event: Pick<
-    React.DragEvent<HTMLElement>,
-    "currentTarget" | "stopPropagation"
-  >
+  event: Pick<React.DragEvent<HTMLElement>, "currentTarget" | "stopPropagation">
 ) {
   event.stopPropagation()
   clearSchemaRowDropClasses(event.currentTarget)
@@ -132,7 +143,9 @@ export function resolveSchemaRowDrop({
   targetRowId: string
   draggedRowIdRef: React.RefObject<string | null>
 }): {
+  placement: SchemaRowDropPlacement
   sourceRowId: string
+  targetRowId: string
   targetIndex: number
 } | null {
   event.stopPropagation()
@@ -150,9 +163,23 @@ export function resolveSchemaRowDrop({
     return null
   }
 
-  return {
+  const placement = getSchemaRowDropPlacement({
+    clientY: event.clientY,
+    targetRect: event.currentTarget.getBoundingClientRect(),
+  })
+  const targetIndex = getSchemaRowDropTargetIndex({
+    placement,
+    rowIds,
     sourceRowId,
-    targetIndex: getSchemaRowDropTargetIndex({ rowIds, targetRowId }),
+    targetRowId,
+  })
+  if (targetIndex < 0) return null
+
+  return {
+    placement,
+    sourceRowId,
+    targetRowId,
+    targetIndex,
   }
 }
 

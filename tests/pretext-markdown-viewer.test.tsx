@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import * as React from "react"
-import { cleanup, render, screen } from "@testing-library/react"
+import { cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { PretextMarkdownViewer } from "@/components/ui/pretext-markdown-viewer"
@@ -87,7 +87,7 @@ describe("PretextMarkdownViewer", () => {
     ).toBeTruthy()
   })
 
-  it("normalizes GitHub alerts into continuous quoted prose", async () => {
+  it("renders GitHub alerts as React Markdown alert surfaces", async () => {
     const { container } = render(
       <PretextMarkdownViewer
         source={markdownSource("> [!IMPORTANT]\n> Ship **carefully**.")}
@@ -98,7 +98,9 @@ describe("PretextMarkdownViewer", () => {
     expect(await screen.findByText(/Important:/)).toBeTruthy()
     expect(screen.getByText("carefully")).toBeTruthy()
     expect(container.textContent).not.toContain("[!IMPORTANT]")
-    expect(container.querySelector('[data-quote-depth="1"]')).toBeTruthy()
+    expect(
+      container.querySelector('[data-pretext-alert-kind="important"]')
+    ).toBeTruthy()
   })
 
   it("applies prose transforms without rewriting inline code", async () => {
@@ -115,4 +117,84 @@ describe("PretextMarkdownViewer", () => {
     expect(screen.getByText(/→ arrows ✨/)).toBeTruthy()
     expect(screen.getByText("literal -> :sparkles:")).toBeTruthy()
   })
+
+  it("keeps YAML frontmatter as a first-class page", async () => {
+    const { container } = render(
+      <PretextMarkdownViewer
+        source={markdownSource(
+          ["---", "title: Release Notes", "---", "", "# Body"].join("\n")
+        )}
+        toolbar={false}
+      />
+    )
+
+    expect(await screen.findByText("title: Release Notes")).toBeTruthy()
+    expect(await screen.findByRole("heading", { name: "Body" })).toBeTruthy()
+    expect(
+      container.querySelector("[data-pretext-markdown-frontmatter]")
+    ).toBeTruthy()
+    expect(container.textContent).not.toContain("```yaml")
+  })
+
+  it("uses the same stable ids for rendered and modeled headings", async () => {
+    render(
+      <PretextMarkdownViewer
+        source={markdownSource(
+          ["# API_v2 & SDK", "", "# API_v2 & SDK"].join("\n")
+        )}
+        toolbar={false}
+      />
+    )
+
+    const headings = await screen.findAllByRole("heading", {
+      name: "API_v2 & SDK",
+    })
+    expect(headings.map((heading) => heading.id)).toEqual([
+      "api_v2-sdk",
+      "api_v2-sdk-1",
+    ])
+  })
+
+  it("resolves local heading fragments through the virtual document model", async () => {
+    const sections = Array.from(
+      { length: 40 },
+      (_, index) => `## Filler ${index + 1}\n\nParagraph ${index + 1}.`
+    ).join("\n\n")
+    render(
+      <PretextMarkdownViewer
+        className="h-80 w-[420px]"
+        source={markdownSource(
+          [
+            "# Links",
+            "",
+            "[Jump](#snake_case_thing)",
+            "",
+            sections,
+            "",
+            "## snake_case_thing",
+            "",
+            "Target section.",
+          ].join("\n")
+        )}
+        toolbar={false}
+      />
+    )
+
+    fireEvent.click(await screen.findByRole("link", { name: "Jump" }))
+
+    expect(HTMLElement.prototype.scrollTo).toHaveBeenCalled()
+    expect(
+      vi
+        .mocked(HTMLElement.prototype.scrollTo)
+        .mock.calls.some(([options]) =>
+          isPositiveScrollTop(options as ScrollToOptions | number)
+        )
+    ).toBe(true)
+  })
 })
+
+function isPositiveScrollTop(options: ScrollToOptions | number | undefined) {
+  return (
+    typeof options === "object" && options !== null && Number(options.top) > 0
+  )
+}

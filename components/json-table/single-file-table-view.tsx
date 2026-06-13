@@ -4,7 +4,8 @@ import React, { useMemo, useState } from "react"
 import type { JSONSchema7 } from "json-schema"
 
 import { buildFixedGridColumns } from "@/components/ui/fixed-grid-columns"
-import { getJsonTableCellDisplayValue } from "@/components/json-table/json-table-data-cell-model"
+import { jsonTableDisplayText } from "@/components/json-table/json-table-display-value"
+import type { JsonTableCellHoverInfo } from "@/components/json-table/json-table-cell-types"
 import type {
   JsonTableJsonEditMode,
   JsonTableSchemaEditMode,
@@ -43,11 +44,7 @@ interface SingleFileTableViewProps {
   onUpdateDocument?: (patch: Record<string, unknown>) => Promise<void>
   jsonEditMode: JsonTableJsonEditMode
   schemaEditMode: JsonTableSchemaEditMode
-  onCellHoverStart?: (info: {
-    docId: string
-    fieldPath: string
-    rect: DOMRect
-  }) => void
+  onCellHoverStart?: (info: JsonTableCellHoverInfo) => void
   onCellHoverEnd?: () => void
   /** Rows to render beyond the viewport on each side (virtualization buffer). Default 12. */
   overscan?: number
@@ -201,9 +198,9 @@ export const SingleFileTableView = React.memo<SingleFileTableViewProps>(
             const fieldMetadata = visibleFieldMetadata[columnIndex]
             if (!fieldMetadata) continue
 
-            cell.displayValue = getJsonTableCellDisplayValue({
+            cell.displayValue = jsonTableDisplayText({
               fieldMetadata,
-              value: cell.value,
+              jsonValue: cell.value,
             })
           }
         }

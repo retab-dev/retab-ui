@@ -13,7 +13,8 @@ import {
   getSelectableCellWidthStyle,
 } from "@/components/json-table/cell-style"
 import type { JsonTableCellProps } from "@/components/json-table/json-table-cell-types"
-import { getJsonTableCellDisplayValue } from "@/components/json-table/json-table-data-cell-model"
+import { jsonTableDisplayText } from "@/components/json-table/json-table-display-value"
+import { jsonTablePrimitiveKind } from "@/components/json-table/json-table-primitive-kind"
 import { JsonTableReadOnlyPrimitiveDisplayCell } from "@/components/json-table/json-table-read-only-primitive-cell"
 import { getFieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
 import type { FieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
@@ -145,9 +146,10 @@ function ReadOnlyJsonTableCellContent(props: JsonTableCellProps) {
 
   const isJsonFormCell =
     fieldMetadata.kind === "object" || fieldMetadata.kind === "array"
+  const primitiveKind = jsonTablePrimitiveKind(fieldMetadata)
   const displayValue =
     props.projectedCell?.displayValue ??
-    getJsonTableCellDisplayValue({ fieldMetadata, value })
+    jsonTableDisplayText({ fieldMetadata, jsonValue: value })
 
   return (
     <TableCell
@@ -166,7 +168,7 @@ function ReadOnlyJsonTableCellContent(props: JsonTableCellProps) {
       ) : (
         <JsonTableReadOnlyPrimitiveDisplayCell
           displayValue={displayValue}
-          fieldMetadata={fieldMetadata}
+          primitiveKind={primitiveKind}
         />
       )}
     </TableCell>

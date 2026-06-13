@@ -65,7 +65,7 @@ export function useObjectPropertiesDrag({
         const sourceRow = rows.find(
           (candidate) => candidate.id === move.sourceRowId
         )
-        sourceRow?.actions.move(move.targetIndex)
+        sourceRow?.reorder.move(move.targetIndex)
       },
     }
   }

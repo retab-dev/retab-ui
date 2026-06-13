@@ -5,7 +5,8 @@ description: An experimental Pretext-based Markdown viewer with continuous virtu
 
 The Pretext Markdown Viewer is the new Markdown experiment built from the
 Chenglou/Pretext text viewer path. It renders Markdown as a single continuous
-document surface instead of exposing pages as a user-facing model.
+document surface, keeps chunking internal to virtualization, and lets
+React/GFM own the visible Markdown semantics.
 
 <PretextMarkdownViewerDemo />
 
@@ -61,16 +62,20 @@ remain stable while the Pretext path iterates toward feature completeness.
 ## Current Contract
 
 - **Continuous rendering** - no page count, page frame, or page delimiter should be part of the Markdown user experience.
-- **Pretext layout** - text and Markdown blocks use predicted layout and custom virtual windowing instead of full-document DOM measurement.
-- **Markdown-first parsing** - sources are parsed as Markdown even when the file extension is generic text.
+- **React/GFM rendering** - visible chunks render through React Markdown with GFM instead of a hand-built Markdown DOM renderer.
+- **Pretext layout** - visible chunks start from Pretext-informed height estimates, then measured heights feed back into the virtual frame.
+- **Markdown-first routing** - sources are parsed as Markdown even when the file extension is generic text.
 - **Source-line addressing** - `highlight` and `scrollToLineRange` keep using 1-based inclusive source-line ranges.
+- **Stable heading anchors** - heading DOM IDs and virtual fragment navigation come from the same model-owned slug registry.
 - **Safe output** - unsupported Markdown should degrade to inert text or code output rather than executable DOM.
 - **Separate implementation** - this component lives apart from `MarkdownDocumentViewer` and can make hard cutovers without compatibility shims.
 
 ## Implemented So Far
 
-- Headings, paragraphs, emphasis, inline code, lists, task markers, blockquotes, rules, tables, images, and fenced code block frames.
-- GitHub blockquote alert markers such as `> [!IMPORTANT]` normalize into readable quoted prose.
+- Headings, paragraphs, emphasis, inline code, lists, task markers, blockquotes, rules, tables, images, and fenced code render through React Markdown/GFM.
+- GitHub blockquote alert markers such as `> [!IMPORTANT]` render as alert surfaces.
+- YAML frontmatter is a first-class frontmatter chunk instead of being rewritten into a fenced code block.
+- Heading IDs support duplicate suffixes and local `#fragment` links scroll through the virtual document model.
 - Common typography and emoji shortcode transforms apply to normal prose text while inline code stays literal.
 - URL, Blob, and inline text sources load through the existing bounded text resource layer.
 - The registry item is separate: `pretext-markdown-viewer`.
@@ -79,10 +84,10 @@ remain stable while the Pretext path iterates toward feature completeness.
 
 The missing work is tracked in the repository file
 `design/pretext-markdown-viewer-missing-inventory.md`. The largest gaps are
-first-class frontmatter, reliable heading anchors, Mermaid and diagram
-rendering, MDX/component markdown, richer GitHub alert visuals, directive
-semantics beyond callouts, full accessibility verification, and migration rules
-for File Viewer routing.
+Mermaid and diagram rendering, MDX/component markdown, richer GitHub alert
+visuals, directive semantics beyond callouts, full accessibility verification,
+hostile-block inner virtualization, and migration rules for File Viewer
+routing.
 
 ## Props
 

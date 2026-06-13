@@ -7,9 +7,11 @@ export function installJsonTableDom() {
     window: dom.window,
     document: dom.window.document,
     DocumentFragment: dom.window.DocumentFragment,
+    Element: dom.window.Element,
     HTMLElement: dom.window.HTMLElement,
     MouseEvent: dom.window.MouseEvent,
     MutationObserver: dom.window.MutationObserver,
+    Node: dom.window.Node,
     PointerEvent: dom.window.PointerEvent,
     getComputedStyle: dom.window.getComputedStyle,
   })

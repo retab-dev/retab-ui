@@ -1,9 +1,7 @@
 import { describe, expect, it } from "vitest"
 
-import {
-  createJsonTableDataCellModel,
-  getJsonTableCellDisplayValue,
-} from "@/components/json-table/json-table-data-cell-model"
+import { createJsonTableDataCellModel } from "@/components/json-table/json-table-data-cell-model"
+import { jsonTableDisplayText } from "@/components/json-table/json-table-display-value"
 import type {
   FieldKind,
   FieldMetadata,
@@ -113,9 +111,9 @@ describe("json table DataCell model", () => {
     expect(model.kind).toBe("date")
     if (model.kind !== "date") throw new Error("Expected date model")
     expect(
-      getJsonTableCellDisplayValue({
+      jsonTableDisplayText({
         fieldMetadata: metadata,
-        value: "2025-07-18",
+        jsonValue: "2025-07-18",
       })
     ).toBe("Jul 18, 2025")
     expect(model.commitValue("7/18/2025")).toBe("2025-07-18")

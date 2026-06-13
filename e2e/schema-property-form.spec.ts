@@ -5,20 +5,24 @@ test("property form object fields reuse schema-builder row mechanics", async ({
 }) => {
   await page.goto("/docs/components/property-form")
 
-  const topLevelType = page.getByRole("button", {
-    exact: true,
-    name: "Data type",
-  }).first()
+  const topLevelType = page
+    .getByRole("button", {
+      exact: true,
+      name: "Data type",
+    })
+    .first()
 
   await expect(topLevelType).toContainText("object")
 
   const streetRow = schemaRowForInput(page.getByLabel("Field name street"))
   await expect(streetRow).toBeVisible()
   await expect(rowGrip(streetRow)).toBeVisible()
-  await expect(rowGrip(streetRow)).toHaveCSS("cursor", "pointer")
+  await expect(streetRow).toHaveCSS("cursor", "grab")
+  await expect(rowGrip(streetRow)).toHaveCSS("cursor", "grab")
 
   await propertyFormRowForInput(page.getByLabel("Field name city")).dragTo(
-    propertyFormRowForInput(page.getByLabel("Field name street"))
+    propertyFormRowForInput(page.getByLabel("Field name street")),
+    { targetPosition: { x: 12, y: 4 } }
   )
   await expectPropertyFieldOrder(page, ["city", "street"])
   await page.getByRole("button", { exact: true, name: "Save" }).click()
@@ -39,6 +43,36 @@ test("property form object fields reuse schema-builder row mechanics", async ({
   await page.getByRole("menuitem", { name: "list" }).click()
   await expect(topLevelType).toContainText("list")
   await expect(page.getByText("List item type")).toBeVisible()
+})
+
+test("property form object fields support keyboard reordering", async ({
+  page,
+}) => {
+  await page.goto("/docs/components/property-form")
+
+  await page.getByLabel("New object field").fill("zip")
+  await page.getByRole("button", { exact: true, name: "Add" }).click()
+  await expectPropertyFieldOrder(page, ["street", "city", "zip"])
+
+  await expect(
+    page.getByRole("button", { name: "Move field street up" })
+  ).toBeDisabled()
+  await expect(
+    page.getByRole("button", { name: "Move field zip down" })
+  ).toBeDisabled()
+
+  await page.getByRole("button", { name: "Move field zip up" }).click()
+  await expectPropertyFieldOrder(page, ["street", "zip", "city"])
+  await expect(page.getByText("zip moved to position 2 of 3")).toBeVisible()
+  await expect(
+    page.getByRole("button", { name: "Move field zip up" })
+  ).toBeFocused()
+
+  await page.getByRole("button", { name: "Move field street down" }).click()
+  await expectPropertyFieldOrder(page, ["zip", "street", "city"])
+
+  await page.getByRole("button", { exact: true, name: "Save" }).click()
+  await expectPropertyFieldOrder(page, ["zip", "street", "city"])
 })
 
 test("schema builder keeps grips, enum chips, and description caret exact", async ({
@@ -79,7 +113,7 @@ function rowGrip(row: Locator) {
 
 function propertyFormRowForInput(input: Locator) {
   return input.locator(
-    'xpath=ancestor::*[@data-property-form-property-name][1]'
+    "xpath=ancestor::*[@data-property-form-property-name][1]"
   )
 }
 
@@ -90,11 +124,13 @@ function enumChipForInput(input: Locator) {
 async function expectPropertyFieldOrder(page: Page, expected: string[]) {
   await expect
     .poll(() =>
-      page.locator('input[aria-label^="Field name "]').evaluateAll((inputs) =>
-        inputs.map((input) =>
-          input instanceof HTMLInputElement ? input.value : ""
+      page
+        .locator('input[aria-label^="Field name "]')
+        .evaluateAll((inputs) =>
+          inputs.map((input) =>
+            input instanceof HTMLInputElement ? input.value : ""
+          )
         )
-      )
     )
     .toEqual(expected)
 }

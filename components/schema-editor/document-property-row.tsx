@@ -2,6 +2,7 @@
 
 import type * as React from "react"
 
+import { cn } from "@/lib/utils"
 import type {
   DocumentSchemaNodeEditorProps,
   RenderDocumentNodeEditor,
@@ -64,7 +65,10 @@ export function DocumentPropertyRow({
 }: DocumentPropertyRowProps) {
   return (
     <div
-      className={rootLayout ? "" : "ml-4 border-l border-border"}
+      className={cn(
+        rootLayout ? "" : "ml-4 border-l border-border",
+        editable && "cursor-grab"
+      )}
       draggable={editable}
       onDragStart={onDragStart}
       onDragOver={onDragOver}

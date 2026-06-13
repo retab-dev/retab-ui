@@ -2,9 +2,10 @@
 import type * as React from "react"
 import { describe, expect, it } from "vitest"
 
+import { moveOrderedItem } from "@/components/schema-editor/primitives/schema-order"
 import {
   getSchemaRowDropClasses,
-  getSchemaRowDropIndicator,
+  getSchemaRowDropPlacement,
   getSchemaRowDropTargetIndex,
   resolveSchemaRowDrop,
 } from "@/components/schema-editor/primitives/schema-row-drag"
@@ -12,48 +13,45 @@ import {
 describe("schema row reorder helpers", () => {
   const rowIds = ["prop_a", "prop_b", "prop_c"]
 
-  it("returns before when the source is after the target", () => {
-    expect(
-      getSchemaRowDropIndicator({
-        rowIds,
-        sourceRowId: "prop_c",
-        targetRowId: "prop_a",
-      })
-    ).toBe("before")
-  })
+  it("moves ordered items with one clamping rule", () => {
+    const first = { id: "first" }
+    const second = { id: "second" }
+    const third = { id: "third" }
+    const items = [first, second, third]
 
-  it("returns after when the source is before the target", () => {
     expect(
-      getSchemaRowDropIndicator({
-        rowIds,
-        sourceRowId: "prop_a",
-        targetRowId: "prop_c",
+      moveOrderedItem({
+        items,
+        sourceIndex: 0,
+        targetIndex: 99,
       })
-    ).toBe("after")
-  })
+    ).toEqual([second, third, first])
 
-  it("returns null for same, missing, or unknown source", () => {
     expect(
-      getSchemaRowDropIndicator({
-        rowIds,
-        sourceRowId: "prop_b",
-        targetRowId: "prop_b",
+      moveOrderedItem({
+        items,
+        sourceIndex: 2,
+        targetIndex: -1,
       })
-    ).toBeNull()
+    ).toEqual([third, first, second])
+
     expect(
-      getSchemaRowDropIndicator({
-        rowIds,
-        sourceRowId: null,
-        targetRowId: "prop_b",
+      moveOrderedItem({
+        items,
+        sourceIndex: -1,
+        targetIndex: 0,
       })
-    ).toBeNull()
+    ).toEqual(items)
     expect(
-      getSchemaRowDropIndicator({
-        rowIds,
-        sourceRowId: "prop_x",
-        targetRowId: "prop_b",
+      moveOrderedItem({
+        items,
+        sourceIndex: 1,
+        targetIndex: 1,
       })
-    ).toBeNull()
+    ).toEqual(items)
+    expect(moveOrderedItem({ items, sourceIndex: 0, targetIndex: 2 })[2]).toBe(
+      first
+    )
   })
 
   it("maps indicators to stable CSS classes", () => {
@@ -70,21 +68,56 @@ describe("schema row reorder helpers", () => {
     expect(getSchemaRowDropClasses(null)).toEqual([])
   })
 
-  it("resolves target index by row id", () => {
+  it("resolves placement from the pointer position within the target row", () => {
+    expect(
+      getSchemaRowDropPlacement({
+        clientY: 12,
+        targetRect: { top: 10, height: 20 },
+      })
+    ).toBe("before")
+    expect(
+      getSchemaRowDropPlacement({
+        clientY: 25,
+        targetRect: { top: 10, height: 20 },
+      })
+    ).toBe("after")
+  })
+
+  it("resolves target index after removing the source row", () => {
     expect(
       getSchemaRowDropTargetIndex({
+        placement: "before",
         rowIds,
+        sourceRowId: "prop_c",
         targetRowId: "prop_b",
       })
     ).toBe(1)
+    expect(
+      getSchemaRowDropTargetIndex({
+        placement: "after",
+        rowIds,
+        sourceRowId: "prop_a",
+        targetRowId: "prop_c",
+      })
+    ).toBe(2)
+    expect(
+      getSchemaRowDropTargetIndex({
+        placement: "after",
+        rowIds,
+        sourceRowId: "prop_a",
+        targetRowId: "prop_a",
+      })
+    ).toBe(-1)
   })
 
-  it("resolves a valid DOM drop and clears target classes", () => {
+  it("resolves a valid DOM drop before the target and clears target classes", () => {
     const target = document.createElement("div")
     target.classList.add("border-t-2")
+    target.getBoundingClientRect = () => ({ top: 10, height: 20 }) as DOMRect
     const event = {
       stopPropagation: () => undefined,
       preventDefault: () => undefined,
+      clientY: 12,
       currentTarget: target,
       dataTransfer: {
         getData: () => "prop_a",
@@ -99,9 +132,42 @@ describe("schema row reorder helpers", () => {
         draggedRowIdRef: { current: "prop_a" },
       })
     ).toEqual({
+      placement: "before",
       sourceRowId: "prop_a",
-      targetIndex: 2,
+      targetRowId: "prop_c",
+      targetIndex: 1,
     })
     expect(target.classList.contains("border-t-2")).toBe(false)
+  })
+
+  it("returns null for same-row and unknown-source drops", () => {
+    const target = document.createElement("div")
+    target.getBoundingClientRect = () => ({ top: 10, height: 20 }) as DOMRect
+    const event = {
+      stopPropagation: () => undefined,
+      preventDefault: () => undefined,
+      clientY: 25,
+      currentTarget: target,
+      dataTransfer: {
+        getData: () => "prop_b",
+      },
+    } as unknown as React.DragEvent<HTMLElement>
+
+    expect(
+      resolveSchemaRowDrop({
+        event,
+        targetRowId: "prop_b",
+        rowIds,
+        draggedRowIdRef: { current: "prop_b" },
+      })
+    ).toBeNull()
+    expect(
+      resolveSchemaRowDrop({
+        event,
+        targetRowId: "prop_c",
+        rowIds,
+        draggedRowIdRef: { current: "prop_x" },
+      })
+    ).toBeNull()
   })
 })

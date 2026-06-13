@@ -18,7 +18,10 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { JsonTableHeaderCell } from "@/components/json-table/header-cell"
-import type { VisibleColumn } from "@/components/json-table/json-table-cell-types"
+import type {
+  JsonTableCellHoverInfo,
+  VisibleColumn,
+} from "@/components/json-table/json-table-cell-types"
 import type {
   JsonTableJsonEditMode,
   JsonTableSchemaEditMode,
@@ -69,16 +72,38 @@ interface SingleFileVirtualizedTableProps {
   rowCount: number
   onUpdateDocument?: (patch: Record<string, unknown>) => Promise<void>
   columnWidth?: ColumnWidth
-  onCellHoverStart?: (info: {
-    docId: string
-    fieldPath: string
-    rect: DOMRect
-  }) => void
+  onCellHoverStart?: (info: JsonTableCellHoverInfo) => void
   onCellHoverEnd?: () => void
   /** Rows to render beyond the viewport on each side (virtualization buffer). Default 12. */
   overscan?: number
   /** Rows to render beyond the viewport after large scroll jumps. Defaults to overscan. */
   jumpOverscan?: number
+}
+
+type PendingDocumentPatch = {
+  data: Record<string, unknown>
+  fieldPath: string
+}
+
+function projectedRowWithPendingPatch(
+  projectedRow: ProjectedRow,
+  patch: PendingDocumentPatch
+): ProjectedRow {
+  let didPatchCell = false
+  const cells = projectedRow.cells.map((cell) => {
+    if (cell?.materializedFieldPath !== patch.fieldPath) return cell
+
+    const nextValue = getValueAtPath(patch.data, cell.materializedFieldPath)
+    if (Object.is(cell.value, nextValue)) return cell
+
+    didPatchCell = true
+    return {
+      ...cell,
+      value: nextValue,
+    }
+  })
+
+  return didPatchCell ? { ...projectedRow, cells } : projectedRow
 }
 
 const SingleFileTableHeader = React.memo(
@@ -202,17 +227,17 @@ export const SingleFileVirtualizedTable =
       const primitiveEditorHandleRef = useRef<DataCellEditorHandle | null>(null)
       const structuredEditSessionIdRef = useRef(0)
       const documentDataRef = useRef(document.data)
-      const pendingDocumentDataRef = useRef<Record<string, unknown> | null>(
+      const pendingDocumentPatchRef = useRef<PendingDocumentPatch | null>(
         null
       )
-      const [pendingDocumentData, setPendingDocumentData] =
-        React.useState<Record<string, unknown> | null>(null)
+      const [pendingDocumentPatch, setPendingDocumentPatch] =
+        React.useState<PendingDocumentPatch | null>(null)
 
       React.useEffect(() => {
         documentDataRef.current = document.data
-        if (pendingDocumentDataRef.current === document.data) {
-          pendingDocumentDataRef.current = null
-          setPendingDocumentData(null)
+        if (pendingDocumentPatchRef.current?.data === document.data) {
+          pendingDocumentPatchRef.current = null
+          setPendingDocumentPatch(null)
         }
       }, [document.data])
 
@@ -298,14 +323,18 @@ export const SingleFileVirtualizedTable =
             fieldPath: materializedFieldPath,
           })
           const baseData =
-            pendingDocumentDataRef.current ?? documentDataRef.current
+            pendingDocumentPatchRef.current?.data ?? documentDataRef.current
           const nextData = setValueAtMaterializedPath(
             baseData,
             materializedFieldPath,
             value
           )
-          pendingDocumentDataRef.current = nextData
-          setPendingDocumentData(nextData)
+          const nextPatch = {
+            data: nextData,
+            fieldPath: materializedFieldPath,
+          }
+          pendingDocumentPatchRef.current = nextPatch
+          setPendingDocumentPatch(nextPatch)
           onUpdateDocument({ data: nextData })
           markJsonTableProfile("document-patch-end", {
             fieldPath: materializedFieldPath,
@@ -414,21 +443,11 @@ export const SingleFileVirtualizedTable =
                     : `slot-${slotIndex}`
                   const projectedRow = projectedRows[rowIdx]
                   const effectiveProjectedRow =
-                    pendingDocumentData && projectedRow
-                      ? {
-                          ...projectedRow,
-                          cells: projectedRow.cells.map((cell) =>
-                            cell?.materializedFieldPath
-                              ? {
-                                  ...cell,
-                                  value: getValueAtPath(
-                                    pendingDocumentData,
-                                    cell.materializedFieldPath
-                                  ),
-                                }
-                              : cell
-                          ),
-                        }
+                    pendingDocumentPatch && projectedRow
+                      ? projectedRowWithPendingPatch(
+                          projectedRow,
+                          pendingDocumentPatch
+                        )
                       : projectedRow
                   return (
                     <SingleFileFormRow

@@ -34,12 +34,7 @@ export function PropertySchemaDetailsField({
       )}
       {objectProperties && (
         <ObjectPropertiesField
-          schemaNode={objectProperties.schemaNode}
-          schemaContext={objectProperties.schemaContext}
-          mode={objectProperties.mode}
-          capabilities={objectProperties.capabilities}
-          editable={objectProperties.editable}
-          onChange={objectProperties.onChange}
+          details={objectProperties}
           renderPropertyDetails={(propertyDetails) => (
             <PropertySchemaDetailsField details={propertyDetails} />
           )}

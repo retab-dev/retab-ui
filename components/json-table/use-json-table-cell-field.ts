@@ -1,10 +1,10 @@
 import type { DataCellKind } from "@/components/ui/data-cell"
 import type { JsonTableCellProps } from "@/components/json-table/json-table-cell-types"
-import { primitiveKindForField } from "@/components/json-table/json-table-data-cell-model"
 import {
   jsonTableCellId,
   type JsonTableCellId,
 } from "@/components/json-table/json-table-edit-session"
+import { jsonTablePrimitiveKind } from "@/components/json-table/json-table-primitive-kind"
 import {
   getFieldMetadata,
   type FieldMetadata,
@@ -34,7 +34,7 @@ export function useJsonTableCellField(
       ? getFieldMetadata(props.schema, materializedFieldPath)
       : undefined)
   const dataCellKind = fieldMetadata
-    ? primitiveKindForField(fieldMetadata)
+    ? jsonTablePrimitiveKind(fieldMetadata)
     : null
   const cellId = materializedFieldPath
     ? jsonTableCellId(props.docId, materializedFieldPath)

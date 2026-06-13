@@ -1,17 +1,27 @@
 import type * as React from "react"
-import { format } from "date-fns"
 
 import {
-  formatDataCellDisplayValue,
   type DataCellKind,
   type DataCellSelectOption,
 } from "@/components/ui/data-cell"
+import { jsonTableCommitValue } from "@/components/json-table/json-table-commit-value"
 import {
   jsonTableDataCellClass,
   jsonTableSelectDataCellClass,
 } from "@/components/json-table/json-table-data-cell"
-import { dateStringToFormat } from "@/components/json-table/lib/date-display-formatting"
-import { parseDateStringAsLocal } from "@/components/json-table/lib/date-parsing"
+import {
+  jsonTableBooleanDataCellValue,
+  jsonTableJsonText,
+  jsonTableNumberDataCellValue,
+  jsonTableTextDataCellValue,
+} from "@/components/json-table/json-table-data-cell-value"
+import { jsonTableDateDisplayText } from "@/components/json-table/json-table-display-value"
+import { jsonTablePrimitiveKind } from "@/components/json-table/json-table-primitive-kind"
+import {
+  jsonTableSelectDisplayText,
+  jsonTableSelectOptions,
+  jsonTableSelectValue,
+} from "@/components/json-table/json-table-select-options"
 import type { FieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
 
 type JsonTableTextDataCellKind = "text" | "date" | "time" | "date-time"
@@ -34,7 +44,7 @@ type JsonTableDataCellBaseModel<
   className: string
   kind: Kind
   value: Value
-  commitValue: (value: CommitValue) => unknown
+  commitValue: (commitValue: CommitValue) => unknown
 }
 
 type JsonTableTextDataCellModelFor<Kind extends JsonTableTextDataCellKind> =
@@ -73,62 +83,6 @@ export type JsonTableDataCellModel =
   | JsonTableBooleanDataCellModel
   | JsonTableSelectDataCellModel
 
-export function primitiveKindForField(
-  fieldMetadata: FieldMetadata
-): DataCellKind | null {
-  switch (fieldMetadata.kind) {
-    case "enum":
-      return "select"
-    case "string":
-    case "unknown":
-      return "text"
-    case "number":
-    case "integer":
-    case "boolean":
-    case "date":
-    case "date-time":
-    case "time":
-      return fieldMetadata.kind
-    default:
-      return null
-  }
-}
-
-export function getJsonTableCellDisplayValue({
-  fieldMetadata,
-  value: jsonValue,
-}: {
-  fieldMetadata: FieldMetadata
-  value: unknown
-}): string {
-  const primitiveKind = primitiveKindForField(fieldMetadata)
-
-  if (primitiveKind === "select") {
-    return formatDataCellDisplayValue("select", dataCellTextValue(jsonValue))
-  }
-
-  if (primitiveKind === "number" || primitiveKind === "integer") {
-    return formatDataCellDisplayValue(
-      primitiveKind,
-      dataCellNumberValue(jsonValue)
-    )
-  }
-
-  if (primitiveKind === "boolean") {
-    return typeof jsonValue === "boolean" ? String(jsonValue) : ""
-  }
-
-  if (primitiveKind) {
-    if (fieldMetadata.kind === "date") return dateDisplayText(jsonValue)
-    return formatDataCellDisplayValue(
-      primitiveKind,
-      dataCellTextValue(jsonValue)
-    )
-  }
-
-  return jsonValueText(jsonValue)
-}
-
 export function createJsonTableDataCellModel({
   fieldMetadata,
   value: jsonValue,
@@ -136,7 +90,7 @@ export function createJsonTableDataCellModel({
   fieldMetadata: FieldMetadata
   value: unknown
 }): JsonTableDataCellModel {
-  const primitiveKind = primitiveKindForField(fieldMetadata)
+  const primitiveKind = jsonTablePrimitiveKind(fieldMetadata)
 
   if (primitiveKind === "select") {
     return selectDataCellModel(fieldMetadata, jsonValue)
@@ -165,19 +119,20 @@ function selectDataCellModel(
     className: jsonTableSelectDataCellClass,
     formatValue:
       fieldMetadata.kind === "enum"
-        ? () => selectDisplayText(jsonValue, fieldMetadata.isNullable)
+        ? () =>
+            jsonTableSelectDisplayText({
+              isNullable: fieldMetadata.isNullable,
+              jsonValue,
+            })
         : undefined,
     kind: "select",
     placeholder: "Select...",
-    selectOptions: dataCellSelectOptions(fieldMetadata),
-    value:
-      fieldMetadata.kind === "enum"
-        ? dataCellSelectValue(jsonValue, fieldMetadata.enumValues)
-        : dataCellTextValue(jsonValue),
+    selectOptions: jsonTableSelectOptions(fieldMetadata),
+    value: jsonTableSelectValue({ fieldMetadata, jsonValue }),
     commitValue: (commitValue) =>
       commitValue === null
         ? null
-        : jsonSelectCommitValue(commitValue, fieldMetadata),
+        : jsonTableCommitValue({ fieldMetadata, commitValue }),
   }
 }
 
@@ -188,7 +143,7 @@ function numberDataCellModel(
   return {
     className: jsonTableDataCellClass,
     kind,
-    value: dataCellNumberValue(jsonValue),
+    value: jsonTableNumberDataCellValue(jsonValue),
     commitValue: (commitValue) => commitValue,
   }
 }
@@ -200,8 +155,9 @@ function booleanDataCellModel(
   return {
     className: jsonTableDataCellClass,
     kind: "boolean",
-    value: typeof jsonValue === "boolean" ? jsonValue : null,
-    commitValue: (commitValue) => jsonCommitValue(fieldMetadata, commitValue),
+    value: jsonTableBooleanDataCellValue(jsonValue),
+    commitValue: (commitValue) =>
+      jsonTableCommitValue({ fieldMetadata, commitValue }),
   }
 }
 
@@ -214,12 +170,13 @@ function textDataCellModel(
     className: jsonTableDataCellClass,
     formatValue:
       fieldMetadata.kind === "date"
-        ? (dataCellValue) => dateDisplayText(dataCellValue)
+        ? (dataCellValue) => jsonTableDateDisplayText(dataCellValue)
         : undefined,
     kind,
     showPickerIcon: false,
-    value: dataCellTextValue(jsonValue),
-    commitValue: (commitValue) => jsonCommitValue(fieldMetadata, commitValue),
+    value: jsonTableTextDataCellValue(jsonValue),
+    commitValue: (commitValue) =>
+      jsonTableCommitValue({ fieldMetadata, commitValue }),
   }
 }
 
@@ -230,185 +187,8 @@ function fallbackTextDataCellModel(
   return {
     className: jsonTableDataCellClass,
     kind: "text",
-    value: jsonValueText(jsonValue),
-    commitValue: (commitValue) => jsonCommitValue(fieldMetadata, commitValue),
+    value: jsonTableJsonText(jsonValue),
+    commitValue: (commitValue) =>
+      jsonTableCommitValue({ fieldMetadata, commitValue }),
   }
-}
-
-const nullSelectOptionValue = "__json_table_null__"
-
-function jsonValueText(jsonValue: unknown): string {
-  if (Array.isArray(jsonValue)) return `[${jsonValue.length} items]`
-  if (jsonValue === null || jsonValue === undefined) return ""
-  if (typeof jsonValue !== "object") return String(jsonValue)
-  try {
-    return JSON.stringify(jsonValue)
-  } catch {
-    return String(jsonValue)
-  }
-}
-
-function selectOptionValue(index: number): string {
-  return `option:${index}`
-}
-
-function jsonValuesEqual(left: unknown, right: unknown): boolean {
-  if (Object.is(left, right)) return true
-  if (typeof left !== typeof right) return false
-  if (left === null || right === null) return false
-  if (typeof left !== "object" || typeof right !== "object") return false
-
-  if (Array.isArray(left) || Array.isArray(right)) {
-    if (!Array.isArray(left) || !Array.isArray(right)) return false
-    return (
-      left.length === right.length &&
-      left.every((item, index) => jsonValuesEqual(item, right[index]))
-    )
-  }
-
-  const leftRecord = left as Record<string, unknown>
-  const rightRecord = right as Record<string, unknown>
-  const leftKeys = Object.keys(leftRecord)
-  const rightKeys = Object.keys(rightRecord)
-  return (
-    leftKeys.length === rightKeys.length &&
-    leftKeys.every((key) =>
-      Object.prototype.hasOwnProperty.call(rightRecord, key)
-    ) &&
-    leftKeys.every((key) => jsonValuesEqual(leftRecord[key], rightRecord[key]))
-  )
-}
-
-function dataCellSelectValue(
-  jsonValue: unknown,
-  optionJsonValues: unknown[]
-): string {
-  if (jsonValue === null || jsonValue === undefined) {
-    return nullSelectOptionValue
-  }
-  const matchingIndex = optionJsonValues.findIndex((optionJsonValue) =>
-    jsonValuesEqual(optionJsonValue, jsonValue)
-  )
-  return matchingIndex === -1
-    ? String(jsonValue)
-    : selectOptionValue(matchingIndex)
-}
-
-function jsonSelectCommitValue(
-  commitValue: string,
-  fieldMetadata: FieldMetadata
-): unknown {
-  if (
-    commitValue === nullSelectOptionValue &&
-    fieldMetadata.kind === "enum" &&
-    fieldMetadata.isNullable
-  ) {
-    return null
-  }
-  if (!commitValue.startsWith("option:")) return commitValue
-  const optionIndex = Number(commitValue.slice("option:".length))
-  return fieldMetadata.kind === "enum" &&
-    Number.isInteger(optionIndex) &&
-    optionIndex in fieldMetadata.enumValues
-    ? fieldMetadata.enumValues[optionIndex]
-    : commitValue
-}
-
-function selectDisplayText(jsonValue: unknown, isNullable: boolean): string {
-  if (jsonValue === null || jsonValue === undefined) {
-    return isNullable ? "No selection" : ""
-  }
-  return String(jsonValue)
-}
-
-function dataCellSelectOptions(
-  fieldMetadata: FieldMetadata
-): DataCellSelectOption[] {
-  if (fieldMetadata.kind !== "enum") return []
-
-  const nullOption: DataCellSelectOption[] = fieldMetadata.isNullable
-    ? [
-        {
-          value: nullSelectOptionValue,
-          label: "No selection",
-          className: "text-xs text-muted-foreground",
-        },
-      ]
-    : []
-
-  return [
-    ...nullOption,
-    ...fieldMetadata.enumValues
-      .map((jsonOption, optionIndex) => ({ jsonOption, optionIndex }))
-      .filter(
-        ({ jsonOption }) =>
-          jsonOption !== undefined &&
-          jsonOption !== null &&
-          !(typeof jsonOption === "string" && jsonOption === "")
-      )
-      .map(({ jsonOption, optionIndex }) => ({
-        value: selectOptionValue(optionIndex),
-        label: String(jsonOption),
-        className: "text-xs",
-      })),
-  ]
-}
-
-function jsonPrimitiveTextValue(jsonValue: unknown) {
-  if (
-    jsonValue === null ||
-    jsonValue === undefined ||
-    typeof jsonValue === "string" ||
-    typeof jsonValue === "number" ||
-    typeof jsonValue === "boolean"
-  ) {
-    return jsonValue
-  }
-  return jsonValueText(jsonValue)
-}
-
-function dataCellNumberValue(jsonValue: unknown): string | number | null {
-  return typeof jsonValue === "number" || typeof jsonValue === "string"
-    ? jsonValue
-    : null
-}
-
-function dataCellTextValue(jsonValue: unknown): string | null {
-  return jsonValue === null || jsonValue === undefined
-    ? null
-    : String(jsonPrimitiveTextValue(jsonValue))
-}
-
-function dateDisplayText(jsonValue: unknown): string {
-  if (jsonValue === null || jsonValue === undefined || jsonValue === "") {
-    return ""
-  }
-  if (typeof jsonValue !== "string") return String(jsonValue)
-  const date = parseDateStringAsLocal(jsonValue)
-  return date ? format(date, "PP") : jsonValue
-}
-
-function jsonCommitValue(
-  fieldMetadata: FieldMetadata,
-  commitValue: string | number | boolean | null
-): string | number | boolean | null {
-  if (typeof commitValue !== "string") return commitValue
-
-  if (fieldMetadata.kind === "date") {
-    return dateStringToFormat(commitValue, "2000-01-01") || null
-  }
-
-  if (fieldMetadata.kind === "time") {
-    const valueWithSeconds =
-      commitValue && /^\d{1,2}:\d{2}$/.test(commitValue)
-        ? `${commitValue}:00`
-        : commitValue
-    return dateStringToFormat(valueWithSeconds, "00:00") || null
-  }
-
-  if (fieldMetadata.kind === "date-time") {
-    return dateStringToFormat(commitValue, "2000-01-01T00:00:00") || null
-  }
-
-  return commitValue
 }

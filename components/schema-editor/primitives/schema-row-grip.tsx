@@ -22,7 +22,7 @@ export function SchemaRowGrip({ mode, className }: SchemaRowGripProps) {
       className={cn(
         "h-12 w-6 px-1 py-4",
         mode === "drag"
-          ? "cursor-pointer text-transparent group-hover:text-muted-foreground"
+          ? "cursor-grab text-transparent group-hover:text-muted-foreground"
           : "text-muted-foreground",
         className
       )}

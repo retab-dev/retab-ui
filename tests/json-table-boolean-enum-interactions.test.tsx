@@ -21,7 +21,10 @@ import { SingleFileFormRow } from "@/components/json-table/single-file-form-row"
 import { installJsonTableDom } from "./json-table-test-dom"
 
 beforeAll(() => installJsonTableDom())
-afterEach(() => cleanup())
+afterEach(() => {
+  cleanup()
+  vi.restoreAllMocks()
+})
 
 const schema: JSONSchema7 = {
   type: "object",
@@ -122,13 +125,16 @@ function SingleFileFormRowHarness({
     },
     [props.document.id]
   )
-  const setStructuredEditSessionOverlayOpen = React.useCallback((open: boolean) => {
-    setStructuredEditSession((currentSession) =>
-      currentSession && currentSession.isOverlayOpen !== open
-        ? { ...currentSession, isOverlayOpen: open }
-        : currentSession
-    )
-  }, [])
+  const setStructuredEditSessionOverlayOpen = React.useCallback(
+    (open: boolean) => {
+      setStructuredEditSession((currentSession) =>
+        currentSession && currentSession.isOverlayOpen !== open
+          ? { ...currentSession, isOverlayOpen: open }
+          : currentSession
+      )
+    },
+    []
+  )
   const closeStructuredEditSession = React.useCallback(() => {
     setStructuredEditSession(null)
   }, [])
@@ -258,6 +264,25 @@ async function chooseOption(
   fireEvent.click(option)
 }
 
+function mockElementRect() {
+  return vi
+    .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+    .mockImplementation(
+      () =>
+        ({
+          x: 24,
+          y: 48,
+          top: 48,
+          left: 24,
+          right: 204,
+          bottom: 78,
+          width: 180,
+          height: 30,
+          toJSON: () => ({}),
+        }) as DOMRect
+    )
+}
+
 describe("json table boolean interactions", () => {
   it("toggles once and closes on the first boolean click", async () => {
     const onDocumentDataChange = vi.fn()
@@ -363,6 +388,29 @@ describe("json table enum interactions", () => {
 
     expect(trigger.getAttribute("aria-expanded")).toBe("true")
     expect(await findByRole("option", { name: "paid" })).toBeTruthy()
+  })
+
+  it("opens enum options with one anchor layout read", async () => {
+    const getBoundingClientRect = mockElementRect()
+    const view = await activateEnumCell("status")
+
+    expect(await view.findByRole("option", { name: "paid" })).toBeTruthy()
+    expect(getBoundingClientRect).toHaveBeenCalledTimes(1)
+  })
+
+  it("commits enum options from keyboard navigation", async () => {
+    const view = await activateEnumCell("status")
+
+    fireEvent.keyDown(view.trigger, { key: "ArrowDown" })
+    fireEvent.keyDown(view.trigger, { key: "Enter" })
+
+    await waitFor(() =>
+      expect(view.onDocumentDataChange).toHaveBeenCalledWith(
+        tableDocument.id,
+        "status",
+        "paid"
+      )
+    )
   })
 
   it("closes enum options on Escape without committing", async () => {

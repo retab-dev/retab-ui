@@ -21,6 +21,7 @@ const dataCellRuntimeFiles = [
   "registry/new-york-v4/ui/data-cell-picker-control.tsx",
   "registry/new-york-v4/ui/data-cell-picker-position.ts",
   "registry/new-york-v4/ui/data-cell-select-control.tsx",
+  "registry/new-york-v4/ui/data-cell-select-popup.tsx",
   "registry/new-york-v4/ui/data-cell-text-control.tsx",
   "registry/new-york-v4/ui/data-cell-types.ts",
   "components/ui/data-cell.tsx",
@@ -316,26 +317,99 @@ describe("json table and DataCell architecture", () => {
     expect(existsSync(join(repoRoot, registryFile)), registryFile).toBe(true)
   })
 
+  it("keeps DataCell independent from json-table", () => {
+    for (const file of dataCellRuntimeFiles) {
+      const content = readFileSync(join(repoRoot, file), "utf8")
+      expect(
+        content.includes("@/components/json-table"),
+        `${file} imports json-table`
+      ).toBe(false)
+      expect(
+        content.includes("JsonTable"),
+        `${file} contains table-specific naming`
+      ).toBe(false)
+    }
+  })
+
   it("keeps json-table DataCell adaptation pure and outside the renderer", () => {
     const modelFile = "components/json-table/json-table-data-cell-model.ts"
     const displayFile = "components/json-table/json-table-display-cell.tsx"
+    const readOnlyDisplayFile =
+      "components/json-table/json-table-read-only-primitive-cell.tsx"
+    const primitiveKindFile =
+      "components/json-table/json-table-primitive-kind.ts"
+    const displayValueFile = "components/json-table/json-table-display-value.ts"
+    const dataCellValueFile =
+      "components/json-table/json-table-data-cell-value.ts"
+    const selectOptionsFile =
+      "components/json-table/json-table-select-options.ts"
+    const commitValueFile = "components/json-table/json-table-commit-value.ts"
     const modelContent = readFileSync(join(repoRoot, modelFile), "utf8")
     const displayContent = readFileSync(join(repoRoot, displayFile), "utf8")
+    const readOnlyDisplayContent = readFileSync(
+      join(repoRoot, readOnlyDisplayFile),
+      "utf8"
+    )
+    const primitiveKindContent = readFileSync(
+      join(repoRoot, primitiveKindFile),
+      "utf8"
+    )
+    const displayValueContent = readFileSync(
+      join(repoRoot, displayValueFile),
+      "utf8"
+    )
+    const dataCellValueContent = readFileSync(
+      join(repoRoot, dataCellValueFile),
+      "utf8"
+    )
+    const selectOptionsContent = readFileSync(
+      join(repoRoot, selectOptionsFile),
+      "utf8"
+    )
+    const commitValueContent = readFileSync(
+      join(repoRoot, commitValueFile),
+      "utf8"
+    )
 
     expect(existsSync(join(repoRoot, modelFile)), modelFile).toBe(true)
+    expect(
+      existsSync(join(repoRoot, primitiveKindFile)),
+      primitiveKindFile
+    ).toBe(true)
+    expect(existsSync(join(repoRoot, displayValueFile)), displayValueFile).toBe(
+      true
+    )
+    expect(
+      existsSync(join(repoRoot, dataCellValueFile)),
+      dataCellValueFile
+    ).toBe(true)
+    expect(
+      existsSync(join(repoRoot, selectOptionsFile)),
+      selectOptionsFile
+    ).toBe(true)
+    expect(existsSync(join(repoRoot, commitValueFile)), commitValueFile).toBe(
+      true
+    )
     expect(modelContent.includes("createJsonTableDataCellModel")).toBe(true)
     expect(modelContent.includes("JsonTableSelectDataCellModel")).toBe(true)
     expect(modelContent.includes("JsonTableBooleanDataCellModel")).toBe(true)
     expect(modelContent.includes("JsonTableNumberDataCellModel")).toBe(true)
     expect(modelContent.includes("JsonTableTextDataCellModel")).toBe(true)
-    expect(modelContent.includes("nullSelectOptionValue")).toBe(true)
     expect(modelContent.includes("selectDataCellModel")).toBe(true)
     expect(modelContent.includes("numberDataCellModel")).toBe(true)
     expect(modelContent.includes("booleanDataCellModel")).toBe(true)
     expect(modelContent.includes("textDataCellModel")).toBe(true)
     expect(modelContent.includes("fallbackTextDataCellModel")).toBe(true)
-    expect(modelContent.includes("jsonSelectCommitValue")).toBe(true)
-    expect(modelContent.includes("jsonCommitValue")).toBe(true)
+    expect(primitiveKindContent.includes("jsonTablePrimitiveKind")).toBe(true)
+    expect(displayValueContent.includes("jsonTableDisplayText")).toBe(true)
+    expect(dataCellValueContent.includes("jsonTableDataCellValue")).toBe(true)
+    expect(selectOptionsContent.includes("nullSelectOptionValue")).toBe(true)
+    expect(selectOptionsContent.includes("jsonValuesEqual")).toBe(true)
+    expect(selectOptionsContent.includes("jsonTableSelectCommitValue")).toBe(
+      true
+    )
+    expect(commitValueContent.includes("dateStringToFormat")).toBe(true)
+    expect(commitValueContent.includes("jsonTableCommitValue")).toBe(true)
 
     for (const pattern of [
       "nullSelectOptionValue",
@@ -344,10 +418,10 @@ describe("json table and DataCell architecture", () => {
       "parseDateStringAsLocal",
       "jsonValuesEqual",
       "jsonSelectCommitValue",
-      "dataCellSelectValue",
+      "jsonTableSelectCommitValue",
       "jsonCommitValue",
-      "dataCellNumberValue",
-      "dataCellTextValue",
+      "jsonTableNumberDataCellValue(",
+      "jsonTableTextDataCellValue(",
       "primitiveKindForField",
       "as DataCellProps",
       "as never",
@@ -356,6 +430,50 @@ describe("json table and DataCell architecture", () => {
       expect(
         displayContent.includes(pattern),
         `${displayFile} contains ${pattern}`
+      ).toBe(false)
+    }
+
+    for (const pattern of [
+      "nullSelectOptionValue",
+      "dateStringToFormat",
+      "parseDateStringAsLocal",
+      "jsonValuesEqual",
+      "jsonTableSelectCommitValue",
+      "jsonTablePrimitiveKind",
+      "as DataCellProps",
+      "as never",
+    ]) {
+      expect(
+        readOnlyDisplayContent.includes(pattern),
+        `${readOnlyDisplayFile} contains ${pattern}`
+      ).toBe(false)
+    }
+
+    for (const pattern of [
+      "nullSelectOptionValue",
+      "dateStringToFormat",
+      "parseDateStringAsLocal",
+      "jsonValuesEqual",
+      "jsonTableSelectCommitValue",
+      "selectOptionValue",
+    ]) {
+      expect(
+        modelContent.includes(pattern),
+        `${modelFile} owns projection detail ${pattern}`
+      ).toBe(false)
+    }
+
+    for (const pattern of [
+      "jsonTableDataCellClass",
+      "jsonTableSelectDataCellClass",
+    ]) {
+      expect(
+        selectOptionsContent.includes(pattern),
+        `${selectOptionsFile} imports rendering detail ${pattern}`
+      ).toBe(false)
+      expect(
+        commitValueContent.includes(pattern),
+        `${commitValueFile} imports rendering detail ${pattern}`
       ).toBe(false)
     }
 

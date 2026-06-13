@@ -19,6 +19,7 @@ import {
 } from "vitest"
 
 import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
+import { useObjectPropertiesModel } from "@/components/schema-editor/property-form/fields/object-properties-model"
 import {
   formatEnumValueInput,
   parseEnumValueInput,
@@ -29,7 +30,6 @@ import {
   renameObjectProperty,
   replaceObjectProperty,
 } from "@/components/schema-editor/property-form/model/object-property-edits"
-import { useObjectPropertiesModel } from "@/components/schema-editor/property-form/fields/object-properties-model"
 import { PropertyForm } from "@/components/schema-editor/property-form/property-form"
 import type {
   PropertyCapabilities,
@@ -285,11 +285,11 @@ describe("property form models", () => {
 
     function Harness({ node }: { node: ExtendedJSONSchema7 }) {
       const nextModel = useObjectPropertiesModel({
-        capabilities: {
-          canEditType: true,
-          canEditNestedObject: true,
-          canEditArrayItems: true,
-          canEditEnumValues: true,
+        access: {
+          arrayItems: true,
+          enumValues: true,
+          objectProperties: true,
+          type: true,
         },
         editable: true,
         mode: "editable",
@@ -347,7 +347,7 @@ describe("property form models", () => {
       model?.addRow.onChange("country")
     })
     act(() => {
-      model?.rows[2]?.actions.move(0)
+      model?.rows[2]?.reorder.move(0)
     })
     view.rerender(<Harness node={schemaNode} />)
 
@@ -374,11 +374,11 @@ describe("property form models", () => {
 
     function Harness({ node }: { node: ExtendedJSONSchema7 }) {
       const nextModel = useObjectPropertiesModel({
-        capabilities: {
-          canEditType: true,
-          canEditNestedObject: true,
-          canEditArrayItems: true,
-          canEditEnumValues: true,
+        access: {
+          arrayItems: true,
+          enumValues: true,
+          objectProperties: true,
+          type: true,
         },
         editable: true,
         mode: "editable",
@@ -543,7 +543,7 @@ describe("PropertyForm", () => {
     })
   })
 
-  it("reorders nested object properties by drag before committing", async () => {
+  it("wires nested object property drag affordances", () => {
     const onCommitPropertyDraft = vi.fn()
     render(
       <PropertyForm
@@ -569,10 +569,80 @@ describe("PropertyForm", () => {
     )
 
     const dataTransfer = createDragDataTransfer()
+    const cityRow = getPropertyFormRow("city")
     fireEvent.dragStart(getPropertyFormRow("zip"), { dataTransfer })
-    fireEvent.dragOver(getPropertyFormRow("street"), { dataTransfer })
-    fireEvent.drop(getPropertyFormRow("street"), { dataTransfer })
+    expect(dataTransfer.getData("text/plain")).toMatch(/^draft-property-/)
+    fireEvent.dragOver(cityRow, {
+      clientY: -1,
+      dataTransfer,
+    })
+    expect(
+      cityRow.classList.contains("border-t-2") ||
+        cityRow.classList.contains("border-b-2")
+    ).toBe(true)
+    fireEvent.dragLeave(cityRow)
+    expect(cityRow.classList.contains("border-t-2")).toBe(false)
+    expect(cityRow.classList.contains("border-b-2")).toBe(false)
+  })
 
+  it("reorders nested object properties by keyboard controls before committing", async () => {
+    const onCommitPropertyDraft = vi.fn()
+    render(
+      <PropertyForm
+        propertyDraft={{
+          name: "address",
+          schemaNode: {
+            type: "object",
+            properties: {
+              street: { type: "string" },
+              city: { type: "string" },
+              zip: { type: "string" },
+            },
+            required: ["street", "zip"],
+          },
+        }}
+        schemaContext={{
+          siblingNames: [],
+          originalName: "address",
+          schemaDefinitions: {},
+        }}
+        onCommitPropertyDraft={onCommitPropertyDraft}
+      />
+    )
+
+    expect(
+      screen.getByRole("button", { name: "Move field street up" })
+    ).toHaveProperty("disabled", true)
+    expect(
+      screen.getByRole("button", { name: "Move field zip down" })
+    ).toHaveProperty("disabled", true)
+
+    fireEvent.change(screen.getByLabelText("New object field"), {
+      target: { value: "country" },
+    })
+    const zipUp = screen.getByRole("button", { name: "Move field zip up" })
+    zipUp.focus()
+    fireEvent.click(zipUp)
+
+    await waitFor(() =>
+      expect(
+        screen
+          .getAllByLabelText(/^Field name /)
+          .map((input) => (input as HTMLInputElement).value)
+      ).toEqual(["street", "zip", "city"])
+    )
+    expect(document.activeElement?.getAttribute("aria-label")).toBe(
+      "Move field zip up"
+    )
+    expect(screen.getByText("zip moved to position 2 of 3")).toBeTruthy()
+    expect(screen.getByLabelText("New object field")).toHaveProperty(
+      "value",
+      "country"
+    )
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Move field street down" })
+    )
     await waitFor(() =>
       expect(
         screen
@@ -582,7 +652,6 @@ describe("PropertyForm", () => {
     )
 
     fireEvent.click(screen.getByRole("button", { name: "Save Changes" }))
-
     await waitFor(() => expect(onCommitPropertyDraft).toHaveBeenCalledTimes(1))
     const committed = onCommitPropertyDraft.mock.calls[0]?.[0]
     expect(Object.keys(committed.schemaNode.properties || {})).toEqual([

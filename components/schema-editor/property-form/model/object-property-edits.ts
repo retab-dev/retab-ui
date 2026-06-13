@@ -1,6 +1,7 @@
 import type { JSONSchema7Definition } from "json-schema"
 
 import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
+import { moveOrderedItem } from "@/components/schema-editor/primitives/schema-order"
 import { formatTitle } from "@/components/schema-editor/schema-title"
 
 export function isSchemaNode(
@@ -103,18 +104,17 @@ export function moveObjectProperty({
 }): ExtendedJSONSchema7 {
   const properties = schemaNode.properties || {}
   const propertyEntries = Object.entries(properties)
-  const sourceIndex = propertyEntries.findIndex(([name]) => name === propertyName)
+  const sourceIndex = propertyEntries.findIndex(
+    ([name]) => name === propertyName
+  )
   if (sourceIndex < 0) return schemaNode
 
-  const [movedProperty] = propertyEntries.splice(sourceIndex, 1)
-  const clampedTargetIndex = Math.max(
-    0,
-    Math.min(targetIndex, propertyEntries.length)
-  )
-  propertyEntries.splice(clampedTargetIndex, 0, movedProperty)
-
   const nextProperties: NonNullable<ExtendedJSONSchema7["properties"]> = {}
-  for (const [name, propertySchema] of propertyEntries) {
+  for (const [name, propertySchema] of moveOrderedItem({
+    items: propertyEntries,
+    sourceIndex,
+    targetIndex,
+  })) {
     setRecordValue(nextProperties, name, propertySchema)
   }
 
@@ -124,11 +124,7 @@ export function moveObjectProperty({
   }
 }
 
-function setRecordValue<T>(
-  record: Record<string, T>,
-  key: string,
-  value: T
-) {
+function setRecordValue<T>(record: Record<string, T>, key: string, value: T) {
   Object.defineProperty(record, key, {
     value,
     enumerable: true,

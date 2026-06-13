@@ -33,5 +33,5 @@
     "next.config.mjs",
     ".next/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules", "reference"]
+  "exclude": ["node_modules", "reference", "tmp"]
 }

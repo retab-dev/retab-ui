@@ -1,3 +1,4 @@
+import type { ComponentProps } from "react"
 import { render } from "@testing-library/react"
 import type { JSONSchema7 } from "json-schema"
 import { vi } from "vitest"
@@ -27,6 +28,9 @@ export interface JsonTableCellHarnessProps {
   onPickerOpenChange?: (open: boolean) => void
   onEditingEnd?: () => void
   commitValue?: (value: unknown, meta?: unknown) => void
+  activationSource?: ComponentProps<
+    typeof JsonTableDataCell
+  >["activationSource"]
 }
 
 export function baseField(kind: FieldKind): FieldMetadata {
@@ -54,6 +58,7 @@ export function renderDataCell(
       active
       isEditable
       autoFocus
+      activationSource={overrides.activationSource}
       onPickerOpenChange={overrides.onPickerOpenChange ?? vi.fn()}
       onEditingEnd={overrides.onEditingEnd ?? vi.fn()}
       onCommit={(value, meta) => overrides.commitValue?.(value, meta)}
@@ -71,6 +76,7 @@ export function renderEnumCell(overrides: JsonTableCellHarnessProps = {}) {
       active
       isEditable={true}
       autoFocus
+      activationSource={overrides.activationSource}
       onPickerOpenChange={overrides.onPickerOpenChange ?? vi.fn()}
       onEditingEnd={overrides.onEditingEnd ?? vi.fn()}
       onCommit={(value, meta) => overrides.commitValue?.(value, meta)}

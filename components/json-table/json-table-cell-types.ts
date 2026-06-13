@@ -16,6 +16,12 @@ export interface VisibleColumn extends FixedGridColumn<FieldMetadata> {
   fieldMetadata?: FieldMetadata
 }
 
+export interface JsonTableCellHoverInfo {
+  docId: string
+  fieldPath: string
+  getRect: () => DOMRect
+}
+
 export interface JsonTableCellProps {
   column: VisibleColumn
   projectedCell?: ProjectedCell
@@ -39,11 +45,7 @@ export interface JsonTableCellProps {
     materializedFieldPath: string,
     value: unknown
   ) => void
-  onCellHoverStart?: (info: {
-    docId: string
-    fieldPath: string
-    rect: DOMRect
-  }) => void
+  onCellHoverStart?: (info: JsonTableCellHoverInfo) => void
   onCellHoverEnd?: () => void
   isJsonEditable: boolean
 }

@@ -97,19 +97,18 @@ export interface PropertyEnumValuesFieldModel {
   onChange: (values: JSONSchema7Type[]) => void
 }
 
-export type PropertySchemaDetailsCapabilities = Pick<
-  PropertyCapabilities,
-  | "canEditType"
-  | "canEditNestedObject"
-  | "canEditArrayItems"
-  | "canEditEnumValues"
->
+export interface PropertySchemaDetailAccess {
+  arrayItems: boolean
+  enumValues: boolean
+  objectProperties: boolean
+  type: boolean
+}
 
 export interface PropertyObjectPropertiesFieldModel {
   schemaNode: ExtendedJSONSchema7
   schemaContext: PropertyFormSchemaContext
   mode: PropertyFormMode
-  capabilities: PropertySchemaDetailsCapabilities
+  access: PropertySchemaDetailAccess
   editable: boolean
   onChange: (schemaNode: ExtendedJSONSchema7) => void
 }
