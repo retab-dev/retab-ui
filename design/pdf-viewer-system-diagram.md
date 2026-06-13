@@ -31,7 +31,7 @@ flowchart TD
     pdf_viewer["PdfViewer<br/>source-driven component"]
     pdf_resource_viewer["PdfResourceViewer<br/>prebuilt ViewerResource component"]
     pdf_highlight["PdfHighlight<br/>percentage positioned overlay box"]
-    pdf_handle["PdfViewerHandle<br/>scrollToPageTarget<br/>getViewportElement"]
+    pdf_handle["PdfViewerHandle<br/>scrollToPage<br/>scrollToPageArea<br/>getViewportElement"]
     pdf_resource_exports["getDocumentResource / getPageResource<br/>shared async cache access"]
     layout_exports["createPdfPageLayout / getPdfPageLayout<br/>findPdfPageByOffset / getPdfVisiblePageNumbers"]
   end
@@ -182,7 +182,7 @@ flowchart TD
     visible_window["getPdfVisiblePageNumbers<br/>start = scrollTop - viewportHeight<br/>end = scrollTop + viewportHeight*2<br/>overscanPages default 2<br/>bounds to 1..pageCount"]
     scroll_hook["usePdfScroll<br/>currentPage state keyed by document<br/>viewport ref/state<br/>reset scrollTop on document change<br/>measure scroll progress and marker page"]
     scroll_marker["visible page marker<br/>scrollTop + viewport height * 0.2"]
-    imperative_scroll["scrollToPageTarget(page, { top })<br/>top percent clamped 0..100<br/>subtract 48px headroom<br/>scrollTo smooth unless options override"]
+    imperative_scroll["scrollToPage(page) / scrollToPageArea({ pageNumber, top })<br/>top percent clamped 0..100<br/>subtract 48px headroom<br/>scrollTo smooth unless options override"]
     virtualization_hook["usePdfPageVirtualization<br/>visiblePageNumbers state keyed by layout + document<br/>coalesces measurements with requestAnimationFrame<br/>cancels pending frames on layout changes/unmount"]
   end
 

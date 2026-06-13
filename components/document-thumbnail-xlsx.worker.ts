@@ -4,7 +4,7 @@
 // the parser early so a 100k-row workbook costs the same as a 16-row one.
 import * as XLSX from "@e965/xlsx"
 
-import { isSpreadsheetContainer } from "@/registry/new-york-v4/lib/xlsx-worker-protocol"
+import { isSpreadsheetContainer } from "@/lib/xlsx-worker-protocol"
 
 interface Req {
   id: number
@@ -36,7 +36,9 @@ ctx.onmessage = (event: MessageEvent<Req>) => {
     })
     const rows = grid
       .slice(0, maxRows)
-      .map((r) => (Array.isArray(r) ? r.slice(0, maxCols).map((c) => `${c ?? ""}`) : []))
+      .map((r) =>
+        Array.isArray(r) ? r.slice(0, maxCols).map((c) => `${c ?? ""}`) : []
+      )
     ctx.postMessage({ id, ok: true, rows })
   } catch (err) {
     ctx.postMessage({

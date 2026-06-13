@@ -1,9 +1,17 @@
 // @vitest-environment jsdom
 import * as React from "react"
-import { cleanup, fireEvent, render, screen } from "@testing-library/react"
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  renderHook,
+  screen,
+} from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import {
+  getSegmentInteractionState,
   getSegmentSurfaceProps,
   getSegmentViewState,
   isSegmentCurrentPage,
@@ -40,6 +48,7 @@ import {
 } from "@/components/ui/use-segment-interaction"
 import { PartitionViewer } from "@/components/viewers/partition/partition-viewer"
 import { SplitViewer } from "@/components/viewers/split/split-viewer"
+import { useSegmentViewportController } from "@/components/viewers/split/use-segment-viewport-controller"
 
 vi.mock("@/components/ui/pdf-viewer", () => ({
   PdfViewer: ({
@@ -81,16 +90,80 @@ function segment(
   }
 }
 
+function createRailGeometry({
+  markerBottom,
+  markerOffsetHeight,
+  markerOffsetTop,
+  markerTop,
+  viewportBottom,
+  viewportHeight,
+  viewportTop,
+}: {
+  markerBottom: number
+  markerOffsetHeight: number
+  markerOffsetTop: number
+  markerTop: number
+  viewportBottom: number
+  viewportHeight: number
+  viewportTop: number
+}) {
+  const viewport = document.createElement("div")
+  const marker = document.createElement("span")
+  const scrollTo = vi.fn()
+
+  Object.defineProperty(viewport, "clientHeight", {
+    configurable: true,
+    value: viewportHeight,
+  })
+  Object.defineProperty(viewport, "scrollTo", {
+    configurable: true,
+    value: scrollTo,
+  })
+  Object.defineProperty(marker, "offsetTop", {
+    configurable: true,
+    value: markerOffsetTop,
+  })
+  Object.defineProperty(marker, "offsetHeight", {
+    configurable: true,
+    value: markerOffsetHeight,
+  })
+
+  viewport.getBoundingClientRect = () =>
+    ({
+      bottom: viewportBottom,
+      height: viewportBottom - viewportTop,
+      left: 0,
+      right: 0,
+      top: viewportTop,
+      width: 0,
+      x: 0,
+      y: viewportTop,
+      toJSON: () => ({}),
+    }) as DOMRect
+
+  marker.getBoundingClientRect = () =>
+    ({
+      bottom: markerBottom,
+      height: markerBottom - markerTop,
+      left: 0,
+      right: 0,
+      top: markerTop,
+      width: 0,
+      x: 0,
+      y: markerTop,
+      toJSON: () => ({}),
+    }) as DOMRect
+
+  return { marker, scrollTo, viewport }
+}
+
 function createInteraction(
   overrides: Partial<SegmentInteraction> = {}
 ): SegmentInteraction {
   return {
-    hoveredSegmentId: null,
-    focusedSegmentId: null,
+    previewSegmentId: null,
     previewSegment: vi.fn(),
     clearPreview: vi.fn(),
-    focusSegment: vi.fn(),
-    clearFocus: vi.fn(),
     ...overrides,
   }
 }
@@ -110,25 +183,13 @@ function expectNoDuplicateKeyWarnings(renderSurface: () => void) {
 }
 
 describe("segment interaction helpers", () => {
-  it("resolves previewed id from hover, then focus", () => {
+  it("resolves the transient preview id", () => {
     expect(resolvePreviewedSegmentId()).toBeNull()
     expect(
       resolvePreviewedSegmentId({
-        focusedSegmentId: "focused",
+        previewSegmentId: "previewed",
       })
-    ).toBe("focused")
-    expect(
-      resolvePreviewedSegmentId({
-        hoveredSegmentId: "hovered",
-        focusedSegmentId: "focused",
-      })
-    ).toBe("hovered")
-    expect(
-      resolvePreviewedSegmentId({
-        hoveredSegmentId: "hovered",
-        focusedSegmentId: "focused",
-      })
-    ).toBe("hovered")
+    ).toBe("previewed")
   })
 
   it("marks current pages from normalized page ownership", () => {
@@ -140,34 +201,72 @@ describe("segment interaction helpers", () => {
     expect(isSegmentCurrentPage(intro)).toBe(false)
   })
 
-  it("derives hover, focus, current, and dimmed state", () => {
+  it("derives current and highlighted segment ids from one interaction state", () => {
+    expect(
+      getSegmentInteractionState({
+        segments,
+        currentPage: 3,
+        interaction: createInteraction(),
+      })
+    ).toMatchObject({
+      currentPage: 3,
+      currentSegmentId: segments[1].id,
+      currentSegmentIds: [segments[1].id],
+      previewSegmentId: null,
+      highlightedSegmentId: segments[1].id,
+      highlightedSegmentIds: [segments[1].id],
+    })
+
+    expect(
+      getSegmentInteractionState({
+        segments,
+        currentPage: 3,
+        interaction: createInteraction({ previewSegmentId: segments[0].id }),
+      })
+    ).toMatchObject({
+      currentPage: 3,
+      currentSegmentId: segments[1].id,
+      currentSegmentIds: [segments[1].id],
+      previewSegmentId: segments[0].id,
+      highlightedSegmentId: segments[0].id,
+      highlightedSegmentIds: [segments[0].id],
+    })
+  })
+
+  it("derives preview, current, highlighted, and dimmed state", () => {
     const intro = segments[0]
     const results = segments[1]
+    const interactionState = getSegmentInteractionState({
+      segments,
+      currentPage: 1,
+      interaction: createInteraction({
+        previewSegmentId: results.id,
+      }),
+    })
 
     expect(
       getSegmentViewState({
         segment: intro,
-        interaction: createInteraction({
-          hoveredSegmentId: results.id,
-          focusedSegmentId: intro.id,
-        }),
-        currentPage: 1,
+        interactionState,
       })
     ).toEqual({
-      isHovered: false,
-      isFocused: true,
       isPreviewed: false,
       isCurrent: true,
-      isActive: true,
+      isHighlighted: false,
       isDimmed: true,
     })
   })
 
   it("lets explicit current state override page membership", () => {
+    const interactionState = getSegmentInteractionState({
+      segments,
+      currentPage: 1,
+      interaction: null,
+    })
     expect(
       getSegmentViewState({
         segment: segments[0],
-        currentPage: 1,
+        interactionState,
         isCurrent: false,
       }).isCurrent
     ).toBe(false)
@@ -175,28 +274,39 @@ describe("segment interaction helpers", () => {
 
   it("builds safe surface props without an interaction controller", () => {
     const onSelect = vi.fn()
+    const interactionState = getSegmentInteractionState({
+      segments,
+      currentPage: 1,
+      interaction: null,
+    })
     const { state, eventHandlers, dataProps } = getSegmentSurfaceProps({
       segment: segments[0],
-      currentPage: 1,
+      interactionState,
       onSelect,
     })
 
-    eventHandlers.onMouseEnter()
-    eventHandlers.onFocus()
-    eventHandlers.onMouseLeave()
-    eventHandlers.onBlur()
+    eventHandlers.onPointerEnter()
+    eventHandlers.onPointerLeave()
     eventHandlers.onClick()
 
     expect(state.isCurrent).toBe(true)
     expect(dataProps["data-current"]).toBe(true)
+    expect(dataProps["data-highlighted"]).toBe(true)
     expect(onSelect).toHaveBeenCalledWith(segments[0])
   })
 
   it("notifies surface click callers without writing persistent selection", () => {
     const calls: string[] = []
+    const interaction = createInteraction()
+    const interactionState = getSegmentInteractionState({
+      segments,
+      currentPage: null,
+      interaction,
+    })
     const { eventHandlers } = getSegmentSurfaceProps({
       segment: segments[0],
-      interaction: createInteraction(),
+      interaction,
+      interactionState,
       onSelect: (selected) => calls.push(`notify:${selected.id}`),
     })
 
@@ -207,12 +317,10 @@ describe("segment interaction helpers", () => {
 
   it("scopes stale interaction ids to the rendered segment ids", () => {
     const validInteraction = createInteraction({
-      hoveredSegmentId: segments[0].id,
-      focusedSegmentId: segments[1].id,
+      previewSegmentId: segments[0].id,
     })
     const staleInteraction = createInteraction({
-      hoveredSegmentId: segments[0].id,
-      focusedSegmentId: "removed#1",
+      previewSegmentId: "removed#1",
     })
 
     expect(
@@ -224,8 +332,7 @@ describe("segment interaction helpers", () => {
     expect(
       scopeSegmentInteraction(staleInteraction, [segments[0].id])
     ).toMatchObject({
-      hoveredSegmentId: segments[0].id,
-      focusedSegmentId: null,
+      previewSegmentId: null,
     })
   })
 })
@@ -446,15 +553,11 @@ describe("SegmentLegend", () => {
   it("emits hover, focus, and segment click callbacks separately", () => {
     const previewSegment = vi.fn()
     const clearPreview = vi.fn()
-    const focusSegment = vi.fn()
-    const clearFocus = vi.fn()
     const onSelect = vi.fn()
     const intro = segments[0]
     const interaction = createInteraction({
       previewSegment,
       clearPreview,
-      focusSegment,
-      clearFocus,
     })
 
     render(
@@ -468,16 +571,14 @@ describe("SegmentLegend", () => {
 
     const button = screen.getByRole("button", { name: "Intro" })
 
-    fireEvent.mouseEnter(button)
+    fireEvent.pointerEnter(button)
     fireEvent.focus(button)
     fireEvent.click(button)
-    fireEvent.mouseLeave(button)
+    fireEvent.pointerLeave(button)
     fireEvent.blur(button)
 
     expect(previewSegment).toHaveBeenCalledWith(intro.id)
     expect(clearPreview).toHaveBeenCalled()
-    expect(focusSegment).toHaveBeenCalledWith(intro.id)
-    expect(clearFocus).toHaveBeenCalled()
     expect(onSelect).toHaveBeenCalledWith(intro)
   })
 
@@ -594,7 +695,7 @@ describe("SegmentLegend", () => {
     render(
       <SegmentLegend
         segments={segments.slice(0, 2)}
-        interaction={createInteraction({ hoveredSegmentId: "removed#99" })}
+        interaction={createInteraction({ previewSegmentId: "removed#99" })}
       />
     )
 
@@ -689,11 +790,11 @@ describe("SegmentSidebar", () => {
     expect(intro.hasAttribute("aria-pressed")).toBe(false)
     expect(intro.getAttribute("data-current")).toBe("true")
 
-    fireEvent.mouseEnter(results)
+    fireEvent.pointerEnter(results)
     expect(results.getAttribute("data-previewed")).toBe("true")
     expect(intro.getAttribute("data-current")).toBe("true")
 
-    fireEvent.mouseLeave(results)
+    fireEvent.pointerLeave(results)
     expect(results.getAttribute("data-previewed")).toBe("false")
     expect(intro.getAttribute("data-current")).toBe("true")
   })
@@ -707,16 +808,14 @@ describe("SegmentSidebar", () => {
     expect(results.hasAttribute("aria-pressed")).toBe(false)
   })
 
-  it("supports caller-owned hovered segment state", () => {
+  it("supports caller-owned previewed segment state", () => {
     function Harness() {
-      const [hoveredSegmentId, setHoveredSegmentId] = React.useState<
+      const [previewSegmentId, setPreviewSegmentId] = React.useState<
         string | null
       >(null)
       const interaction = useControlledSegmentInteraction({
-        hoveredSegmentId,
-        focusedSegmentId: null,
-        setHoveredSegmentId,
-        setFocusedSegmentId: vi.fn(),
+        previewSegmentId,
+        setPreviewSegmentId,
       })
 
       return (
@@ -724,16 +823,16 @@ describe("SegmentSidebar", () => {
           <SegmentSidebar segments={segments} interaction={interaction} />
           <button
             type="button"
-            onClick={() => setHoveredSegmentId(segments[1].id)}
+            onClick={() => setPreviewSegmentId(segments[1].id)}
           >
-            Hover results
+            Preview results
           </button>
         </>
       )
     }
 
     render(<Harness />)
-    fireEvent.click(screen.getByRole("button", { name: "Hover results" }))
+    fireEvent.click(screen.getByRole("button", { name: "Preview results" }))
 
     expect(
       screen.getByRole("button", { name: /Intro/ }).hasAttribute("aria-pressed")
@@ -745,29 +844,21 @@ describe("SegmentSidebar", () => {
     ).toBe("true")
   })
 
-  it("clears transient preview and focus on navigation click", () => {
+  it("clears transient preview on navigation click", () => {
     function Harness() {
-      const [hoveredSegmentId, setHoveredSegmentId] = React.useState<
-        string | null
-      >(segments[0].id)
-      const [focusedSegmentId, setFocusedSegmentId] = React.useState<
+      const [previewSegmentId, setPreviewSegmentId] = React.useState<
         string | null
       >(segments[0].id)
       const interaction = useControlledSegmentInteraction({
-        hoveredSegmentId,
-        focusedSegmentId,
-        setHoveredSegmentId,
-        setFocusedSegmentId,
+        previewSegmentId,
+        setPreviewSegmentId,
       })
 
       return (
         <>
           <SegmentSidebar segments={segments} interaction={interaction} />
-          <output aria-label="hovered-segment-id">
-            {hoveredSegmentId ?? ""}
-          </output>
-          <output aria-label="focused-segment-id">
-            {focusedSegmentId ?? ""}
+          <output aria-label="preview-segment-id">
+            {previewSegmentId ?? ""}
           </output>
         </>
       )
@@ -776,8 +867,7 @@ describe("SegmentSidebar", () => {
     render(<Harness />)
     fireEvent.click(screen.getByRole("button", { name: /Results/ }))
 
-    expect(screen.getByLabelText("hovered-segment-id").textContent).toBe("")
-    expect(screen.getByLabelText("focused-segment-id").textContent).toBe("")
+    expect(screen.getByLabelText("preview-segment-id").textContent).toBe("")
   })
 
   it("can hide unused rows and update the visible count", () => {
@@ -855,7 +945,7 @@ describe("SegmentSidebar", () => {
     render(
       <SegmentSidebar
         segments={segments}
-        interaction={createInteraction({ hoveredSegmentId: "removed#99" })}
+        interaction={createInteraction({ previewSegmentId: "removed#99" })}
       />
     )
 
@@ -952,7 +1042,7 @@ describe("PageTimeline", () => {
       { name: "Addendum", pages: [2] },
     ])
     const interaction = createInteraction({
-      hoveredSegmentId: overlappingSegments[1].id,
+      previewSegmentId: overlappingSegments[1].id,
     })
 
     render(
@@ -1019,7 +1109,7 @@ describe("PageTimeline", () => {
     render(
       <PageTimeline
         segments={segments}
-        interaction={createInteraction({ hoveredSegmentId: "missing" })}
+        interaction={createInteraction({ previewSegmentId: "missing" })}
       />
     )
 
@@ -1031,11 +1121,11 @@ describe("PageTimeline", () => {
     ).toContain("opacity-100")
   })
 
-  it("does not dim mapped pages when a zero-page segment is hovered", () => {
+  it("does not dim mapped pages when a zero-page segment is previewed", () => {
     render(
       <PageTimeline
         segments={segments}
-        interaction={createInteraction({ hoveredSegmentId: segments[2].id })}
+        interaction={createInteraction({ previewSegmentId: segments[2].id })}
       />
     )
 
@@ -1047,7 +1137,7 @@ describe("PageTimeline", () => {
     ).toContain("opacity-100")
   })
 
-  it("does not dim visible pages when the hovered segment is outside pageCount", () => {
+  it("does not dim visible pages when the previewed segment is outside pageCount", () => {
     const timelineSegments = toSegments([
       { name: "Visible", pages: [1] },
       { name: "Outside", pages: [4] },
@@ -1058,7 +1148,7 @@ describe("PageTimeline", () => {
         segments={timelineSegments}
         pageCount={3}
         interaction={createInteraction({
-          hoveredSegmentId: timelineSegments[1].id,
+          previewSegmentId: timelineSegments[1].id,
         })}
       />
     )
@@ -1071,7 +1161,7 @@ describe("PageTimeline", () => {
     )
   })
 
-  it("does not dim visible pages when the hovered segment has only fractional pages", () => {
+  it("does not dim visible pages when the previewed segment has only fractional pages", () => {
     const timelineSegments = [
       segment({ id: "visible", index: 0, label: "Visible", pages: [1] }),
       segment({
@@ -1086,7 +1176,7 @@ describe("PageTimeline", () => {
       <PageTimeline
         segments={timelineSegments}
         pageCount={2}
-        interaction={createInteraction({ hoveredSegmentId: "fractional" })}
+        interaction={createInteraction({ previewSegmentId: "fractional" })}
       />
     )
 
@@ -1288,7 +1378,7 @@ describe("PageRibbon", () => {
       <PageRibbon
         rows={[{ id: "split", segments: segments.slice(0, 2) }]}
         pageCount={3}
-        interaction={createInteraction({ focusedSegmentId: "removed#99" })}
+        interaction={createInteraction({ previewSegmentId: "removed#99" })}
       />
     )
 
@@ -1300,12 +1390,12 @@ describe("PageRibbon", () => {
     ).not.toContain("opacity-30")
   })
 
-  it("does not dim all ribbon runs when a zero-page segment is hovered", () => {
+  it("does not dim all ribbon runs when a zero-page segment is previewed", () => {
     render(
       <PageRibbon
         rows={[{ id: "split", segments }]}
         pageCount={3}
-        interaction={createInteraction({ hoveredSegmentId: segments[2].id })}
+        interaction={createInteraction({ previewSegmentId: segments[2].id })}
       />
     )
 
@@ -1544,9 +1634,195 @@ describe("partition segment composition", () => {
   })
 })
 
+describe("segment viewport controller", () => {
+  it("derives the segment viewport model from current page and preview", () => {
+    const controllerSegments = toSegments([
+      { name: "Title", pages: [1] },
+      { name: "Results", pages: [5] },
+    ])
+    const { result } = renderHook(() =>
+      useSegmentViewportController({ segments: controllerSegments })
+    )
+
+    expect(result.current.model.currentPage).toBe(1)
+    expect(result.current.model.currentSegmentId).toBe(controllerSegments[0].id)
+    expect(result.current.model.highlightedSegmentId).toBe(
+      controllerSegments[0].id
+    )
+
+    act(() => {
+      result.current.documentHandlers.onCurrentPageChange(5)
+    })
+
+    expect(result.current.model.currentSegmentId).toBe(controllerSegments[1].id)
+    expect(result.current.model.highlightedSegmentId).toBe(
+      controllerSegments[1].id
+    )
+
+    act(() => {
+      result.current.interaction.previewSegment(controllerSegments[0].id)
+    })
+
+    expect(result.current.model.previewSegmentId).toBe(controllerSegments[0].id)
+    expect(result.current.model.highlightedSegmentId).toBe(
+      controllerSegments[0].id
+    )
+
+    act(() => {
+      result.current.interaction.clearPreview()
+    })
+
+    expect(result.current.model.highlightedSegmentId).toBe(
+      controllerSegments[1].id
+    )
+  })
+
+  it("requests document navigation without mutating current page", () => {
+    const controllerSegments = toSegments([{ name: "Results", pages: [5] }])
+    const scrollToPage = vi.fn()
+    const { result } = renderHook(() =>
+      useSegmentViewportController({ segments: controllerSegments })
+    )
+
+    act(() => {
+      result.current.documentHandlers.setViewerHandle({
+        scrollToPage,
+        scrollToPageArea: vi.fn(),
+        getViewportElement: () => null,
+      })
+    })
+
+    act(() => {
+      result.current.navigation.scrollToSegmentStart(controllerSegments[0])
+    })
+
+    expect(scrollToPage).toHaveBeenCalledWith(5)
+    expect(result.current.model.currentPage).toBe(1)
+    expect(result.current.model.currentSegmentId).toBeNull()
+  })
+
+  it("keeps the rail still when the current page marker is visible", () => {
+    const controllerSegments = toSegments([{ name: "Results", pages: [2] }])
+    const { result } = renderHook(() =>
+      useSegmentViewportController({ segments: controllerSegments })
+    )
+    const { viewport, marker, scrollTo } = createRailGeometry({
+      markerBottom: 48,
+      markerOffsetHeight: 10,
+      markerOffsetTop: 40,
+      markerTop: 38,
+      viewportBottom: 100,
+      viewportHeight: 100,
+      viewportTop: 0,
+    })
+
+    act(() => {
+      result.current.rail.setViewportElement(viewport)
+      result.current.rail.setPageElement(2, marker)
+      result.current.documentHandlers.onCurrentPageChange(2)
+    })
+
+    expect(scrollTo).not.toHaveBeenCalled()
+  })
+
+  it("reveals the current page marker when it is outside the rail viewport", () => {
+    const controllerSegments = toSegments([{ name: "Results", pages: [5] }])
+    const { result } = renderHook(() =>
+      useSegmentViewportController({ segments: controllerSegments })
+    )
+    const { viewport, marker, scrollTo } = createRailGeometry({
+      markerBottom: 230,
+      markerOffsetHeight: 10,
+      markerOffsetTop: 220,
+      markerTop: 220,
+      viewportBottom: 100,
+      viewportHeight: 100,
+      viewportTop: 0,
+    })
+
+    act(() => {
+      result.current.rail.setViewportElement(viewport)
+      result.current.rail.setPageElement(5, marker)
+      result.current.documentHandlers.onCurrentPageChange(5)
+    })
+
+    expect(scrollTo).toHaveBeenCalledWith({
+      top: 175,
+      behavior: "smooth",
+    })
+  })
+
+  it("suspends rail follow while the pointer is inside the rail", () => {
+    const controllerSegments = toSegments([{ name: "Results", pages: [5] }])
+    const { result } = renderHook(() =>
+      useSegmentViewportController({ segments: controllerSegments })
+    )
+    const { viewport, marker, scrollTo } = createRailGeometry({
+      markerBottom: 230,
+      markerOffsetHeight: 10,
+      markerOffsetTop: 220,
+      markerTop: 220,
+      viewportBottom: 100,
+      viewportHeight: 100,
+      viewportTop: 0,
+    })
+
+    act(() => {
+      result.current.rail.setViewportElement(viewport)
+      result.current.rail.setPageElement(5, marker)
+      result.current.rail.onPointerEnter()
+      result.current.documentHandlers.onCurrentPageChange(5)
+    })
+
+    expect(scrollTo).not.toHaveBeenCalled()
+  })
+
+  it("suspends rail follow while the user is scrolling the rail", () => {
+    const now = vi.spyOn(performance, "now").mockReturnValue(1000)
+    const controllerSegments = toSegments([{ name: "Results", pages: [5] }])
+    const { result } = renderHook(() =>
+      useSegmentViewportController({ segments: controllerSegments })
+    )
+    const { viewport, marker, scrollTo } = createRailGeometry({
+      markerBottom: 230,
+      markerOffsetHeight: 10,
+      markerOffsetTop: 220,
+      markerTop: 220,
+      viewportBottom: 100,
+      viewportHeight: 100,
+      viewportTop: 0,
+    })
+
+    act(() => {
+      result.current.rail.setViewportElement(viewport)
+      result.current.rail.setPageElement(5, marker)
+      result.current.rail.onScroll()
+      result.current.documentHandlers.onCurrentPageChange(5)
+    })
+
+    expect(scrollTo).not.toHaveBeenCalled()
+    now.mockRestore()
+  })
+})
+
 describe("split segment composition", () => {
+  it("gives the rendered document pane the full flex width", () => {
+    render(
+      <SplitViewer
+        result={{ output: [{ name: "Invoices", pages: [1] }] }}
+        renderDocument={() => <div data-testid="split-document-pane" />}
+      />
+    )
+
+    const wrapperClassName =
+      screen.getByTestId("split-document-pane").parentElement?.className ?? ""
+
+    expect(wrapperClassName).toContain("min-w-0")
+    expect(wrapperClassName).toContain("flex-1")
+  })
+
   it("jumps through the PDF viewer handle when a legend segment page is virtualized", () => {
-    const scrollToPageTarget = vi.fn()
+    const scrollToPage = vi.fn()
 
     function DocumentWithHandle({
       slots,
@@ -1557,7 +1833,8 @@ describe("split segment composition", () => {
     }) {
       React.useEffect(() => {
         setViewerHandle({
-          scrollToPageTarget,
+          scrollToPage,
+          scrollToPageArea: vi.fn(),
           getViewportElement: () => null,
         })
         return () => setViewerHandle(null)
@@ -1577,17 +1854,28 @@ describe("split segment composition", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Invoices" }))
 
-    expect(scrollToPageTarget).toHaveBeenCalledWith(5, { top: 0 })
+    expect(scrollToPage).toHaveBeenCalledWith(5)
   })
 
   it("clears clicked category previewing when scrolling outside its pages", () => {
     function DocumentHarness({
       slots,
       onCurrentPageChange,
+      setViewerHandle,
     }: {
       slots: PdfViewerSlots
       onCurrentPageChange: (page: number) => void
+      setViewerHandle: (handle: PdfViewerHandle | null) => void
     }) {
+      React.useEffect(() => {
+        setViewerHandle({
+          scrollToPage: (page) => onCurrentPageChange(page),
+          scrollToPageArea: vi.fn(),
+          getViewportElement: () => null,
+        })
+        return () => setViewerHandle(null)
+      }, [onCurrentPageChange, setViewerHandle])
+
       return (
         <div>
           {slots.top}
@@ -1606,10 +1894,11 @@ describe("split segment composition", () => {
             { name: "Results", pages: [7, 8, 9] },
           ],
         }}
-        renderDocument={({ slots, onCurrentPageChange }) => (
+        renderDocument={({ slots, onCurrentPageChange, setViewerHandle }) => (
           <DocumentHarness
             slots={slots}
             onCurrentPageChange={onCurrentPageChange}
+            setViewerHandle={setViewerHandle}
           />
         )}
       />

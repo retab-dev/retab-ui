@@ -3,11 +3,11 @@
     "id": "image",
     "label": "Image Viewer",
     "source": {
-      "url": "/samples/nvidia-10q-scan.tiff",
-      "fileName": "nvidia-10q-scan.tiff",
+      "url": "/samples/entropy.tiff",
+      "fileName": "entropy.tiff",
       "mimeType": "image/tiff"
     },
-    "pauseUrlIncludes": "nvidia-10q-scan.tiff",
+    "pauseUrlIncludes": "entropy.tiff",
     "skeletonSelector": "[data-slot=\"image-frame-skeleton\"]",
     "loadedSelector": "canvas",
     "fallbackFrameSize": { "width": 1275, "height": 1650 }

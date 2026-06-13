@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import type { ButtonHTMLAttributes, ReactNode } from "react"
-import { cleanup, fireEvent, render } from "@testing-library/react"
+import { act, cleanup, fireEvent, render } from "@testing-library/react"
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
 
 import type { CellEditorProps } from "@/components/json-table/cell-editors/editor-types"
@@ -12,19 +12,23 @@ import { installJsonTableDom } from "./json-table-test-dom"
 
 const selectContext = {
   onValueChange: (_value: string) => {},
+  onOpenChange: (_open: boolean) => {},
   value: "",
 }
 
 vi.mock("@/components/ui/select", () => ({
   Select: ({
     children,
+    onOpenChange,
     onValueChange,
     value,
   }: {
     children: ReactNode
+    onOpenChange: (open: boolean) => void
     onValueChange: (value: string) => void
     value: string
   }) => {
+    selectContext.onOpenChange = onOpenChange
     selectContext.onValueChange = onValueChange
     selectContext.value = value
     return <div>{children}</div>
@@ -191,6 +195,28 @@ describe("json table enum editor", () => {
     expect(view.getAllByText("__null__")).toHaveLength(2)
   })
 
+  it("does not close from trigger blur while the table is opening the dropdown", () => {
+    const closeEditSession = vi.fn()
+    const setOverlayOpen = vi.fn()
+    const view = renderEnumEditor({
+      closeEditSession,
+      editSession: baseSession({
+        fieldPath: "status",
+        isOverlayOpen: false,
+      }),
+      setOverlayOpen,
+    })
+
+    const trigger = view.container.querySelector<HTMLElement>(
+      '[data-slot="data-cell"]'
+    )
+    if (!trigger) throw new Error("Missing enum trigger")
+    fireEvent.blur(trigger)
+
+    expect(closeEditSession).not.toHaveBeenCalled()
+    expect(setOverlayOpen).toHaveBeenCalledWith(true)
+  })
+
   it("distinguishes nullable null from a literal sentinel-like string option", () => {
     const onCommit = vi.fn()
     const view = renderEnumEditor({
@@ -285,5 +311,63 @@ describe("json table enum editor", () => {
     })
 
     expect(selectContext.value).toBe("option:0")
+  })
+
+  it("lets value selection win when the dropdown reports close before value", () => {
+    vi.useFakeTimers()
+    try {
+      const closeEditSession = vi.fn()
+      const onCommit = vi.fn()
+      renderEnumEditor({
+        cell: {
+          ...baseField("enum"),
+          effectiveValue: "draft",
+          fieldMetadata: {
+            fieldPath: "status",
+            rawSchema: { enum: ["draft", "paid"] },
+            schema: { enum: ["draft", "paid"] },
+            effectiveSchema: { enum: ["draft", "paid"] },
+            isNullable: false,
+            kind: "enum",
+            enumValues: ["draft", "paid"],
+          },
+        },
+        closeEditSession,
+        commitValue: onCommit,
+      })
+
+      act(() => {
+        selectContext.onOpenChange(false)
+        selectContext.onValueChange("option:1")
+      })
+
+      expect(onCommit).toHaveBeenCalledWith("paid")
+      expect(closeEditSession).toHaveBeenCalledTimes(1)
+
+      act(() => vi.runAllTimers())
+
+      expect(closeEditSession).toHaveBeenCalledTimes(1)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it("closes after a dropdown dismisses without selecting a value", () => {
+    vi.useFakeTimers()
+    try {
+      const closeEditSession = vi.fn()
+      const setOverlayOpen = vi.fn()
+      renderEnumEditor({ closeEditSession, setOverlayOpen })
+
+      act(() => selectContext.onOpenChange(false))
+
+      expect(closeEditSession).not.toHaveBeenCalled()
+
+      act(() => vi.runAllTimers())
+
+      expect(closeEditSession).toHaveBeenCalledTimes(1)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

@@ -11,15 +11,17 @@ import * as React from "react"
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import {
+  getDocxDocumentResource,
+  resetDocxDocumentResourceCacheForTests,
+} from "@/lib/docx-document-resource"
 import { isViewerFormatError } from "@/lib/viewer-errors"
+import { DocxFirstPage } from "@/components/document-thumbnail/renderers/docx-thumbnail"
+import { clearThumbnailCachesForTests } from "@/components/document-thumbnail/thumbnail-test-reset"
 import {
   clearViewerResourceRegistryForTests,
   createViewerResource,
 } from "@/registry/new-york-v4/lib/viewer-resource"
-import { resetDocxResourceCacheForTests } from "@/registry/new-york-v4/ui/docx-viewer-resource"
-import { getDocxResource } from "@/components/ui/docx-viewer"
-import { DocxFirstPage } from "@/components/document-thumbnail/renderers/docx-thumbnail"
-import { clearThumbnailCachesForTests } from "@/components/document-thumbnail/cache"
 
 const docxMock = vi.hoisted(() => ({
   renderAsync: vi.fn(),
@@ -70,7 +72,11 @@ class ErrorBoundary extends React.Component<
     this.props.onError(error)
   }
   render() {
-    return this.state.failed ? <div data-testid="boundary" /> : this.props.children
+    return this.state.failed ? (
+      <div data-testid="boundary" />
+    ) : (
+      this.props.children
+    )
   }
 }
 
@@ -95,16 +101,18 @@ beforeEach(() => {
   observedWidth = 320
   docxMock.calls.length = 0
   docxMock.renderAsync.mockReset()
-  docxMock.renderAsync.mockImplementation(async (buffer, host, _styleMap, options) => {
-    docxMock.calls.push({ buffer, options })
-    const wrapper = document.createElement("div")
-    wrapper.className = "docx-wrapper"
-    const page = document.createElement("section")
-    page.className = "docx"
-    page.textContent = "First page body"
-    wrapper.append(page)
-    host.replaceChildren(wrapper)
-  })
+  docxMock.renderAsync.mockImplementation(
+    async (buffer, host, _styleMap, options) => {
+      docxMock.calls.push({ buffer, options })
+      const wrapper = document.createElement("div")
+      wrapper.className = "docx-wrapper"
+      const page = document.createElement("section")
+      page.className = "docx"
+      page.textContent = "First page body"
+      wrapper.append(page)
+      host.replaceChildren(wrapper)
+    }
+  )
 
   vi.stubGlobal("ResizeObserver", ResizeObserverMock)
   vi.stubGlobal(
@@ -115,7 +123,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup()
-  resetDocxResourceCacheForTests()
+  resetDocxDocumentResourceCacheForTests()
   clearViewerResourceRegistryForTests()
   clearThumbnailCachesForTests()
   vi.restoreAllMocks()
@@ -140,7 +148,7 @@ describe("DocxFirstPage", () => {
       expect(docxMock.calls).toHaveLength(1)
     })
 
-    const cached = await getDocxResource(resource.content)
+    const cached = await getDocxDocumentResource(resource.content)
     const passed = docxMock.calls[0]!.buffer
 
     // A distinct ArrayBuffer instance...
@@ -171,9 +179,7 @@ describe("DocxFirstPage", () => {
     await renderThumb(docxResource("/scale.docx"))
     await screen.findByText("First page body")
 
-    const scaled = document.querySelector<HTMLElement>(
-      '[style*="scale("]'
-    )
+    const scaled = document.querySelector<HTMLElement>('[style*="scale("]')
     expect(scaled).toBeTruthy()
     expect(scaled!.style.transform).toBe("scale(0.5)")
     expect(scaled!.style.visibility).toBe("visible")

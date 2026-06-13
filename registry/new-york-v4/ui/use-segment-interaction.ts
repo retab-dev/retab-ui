@@ -5,25 +5,18 @@ import * as React from "react"
 import { type SegmentInteraction } from "@/lib/segment-interaction"
 
 export interface ControlledSegmentInteractionOptions {
-  hoveredSegmentId: string | null
-  focusedSegmentId: string | null
-  setHoveredSegmentId: (segmentId: string | null) => void
-  setFocusedSegmentId: (segmentId: string | null) => void
+  previewSegmentId: string | null
+  setPreviewSegmentId: (segmentId: string | null) => void
 }
 
 export function useSegmentInteraction(): SegmentInteraction {
-  const [hoveredSegmentId, setHoveredSegmentId] = React.useState<string | null>(
-    null
-  )
-  const [focusedSegmentId, setFocusedSegmentId] = React.useState<string | null>(
+  const [previewSegmentId, setPreviewSegmentId] = React.useState<string | null>(
     null
   )
 
   return useSegmentInteractionObject({
-    hoveredSegmentId,
-    focusedSegmentId,
-    setHoveredSegmentId,
-    setFocusedSegmentId,
+    previewSegmentId,
+    setPreviewSegmentId,
   })
 }
 
@@ -34,44 +27,24 @@ export function useControlledSegmentInteraction(
 }
 
 function useSegmentInteractionObject({
-  hoveredSegmentId,
-  focusedSegmentId,
-  setHoveredSegmentId,
-  setFocusedSegmentId,
+  previewSegmentId,
+  setPreviewSegmentId,
 }: ControlledSegmentInteractionOptions): SegmentInteraction {
   const previewSegment = React.useCallback(
-    (segmentId: string) => setHoveredSegmentId(segmentId),
-    [setHoveredSegmentId]
+    (segmentId: string) => setPreviewSegmentId(segmentId),
+    [setPreviewSegmentId]
   )
   const clearPreview = React.useCallback(
-    () => setHoveredSegmentId(null),
-    [setHoveredSegmentId]
-  )
-  const focusSegment = React.useCallback(
-    (segmentId: string) => setFocusedSegmentId(segmentId),
-    [setFocusedSegmentId]
-  )
-  const clearFocus = React.useCallback(
-    () => setFocusedSegmentId(null),
-    [setFocusedSegmentId]
+    () => setPreviewSegmentId(null),
+    [setPreviewSegmentId]
   )
 
   return React.useMemo(
     () => ({
-      hoveredSegmentId,
-      focusedSegmentId,
+      previewSegmentId,
       previewSegment,
       clearPreview,
-      focusSegment,
-      clearFocus,
     }),
-    [
-      clearFocus,
-      clearPreview,
-      focusSegment,
-      focusedSegmentId,
-      hoveredSegmentId,
-      previewSegment,
-    ]
+    [clearPreview, previewSegment, previewSegmentId]
   )
 }

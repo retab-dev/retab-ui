@@ -11,6 +11,7 @@ import type { CellEditorProps } from "@/components/json-table/cell-editors/edito
 import { jsonTableSelectDataCellClass } from "@/components/json-table/json-table-data-cell"
 
 const NULL_SELECT_VALUE = "__json_table_null__"
+const CLOSE_WITHOUT_SELECTION_DELAY_MS = 24
 
 function enumOptionValue(index: number): string {
   return `option:${index}`
@@ -80,42 +81,104 @@ export function EnumEditor({
     effectiveValue,
     fieldMetadata.isNullable
   )
+  const triggerRef = React.useRef<HTMLButtonElement>(null)
+  const closeTimerRef = React.useRef<ReturnType<
+    typeof globalThis.setTimeout
+  > | null>(null)
+  const skipActivationTriggerClickRef = React.useRef(false)
+  const isActivationTriggerClickRef = React.useRef(false)
+  const lastCommittedValueRef = React.useRef<string | null>(null)
+
+  const cancelScheduledClose = React.useCallback(() => {
+    if (closeTimerRef.current === null) return
+    globalThis.clearTimeout(closeTimerRef.current)
+    closeTimerRef.current = null
+  }, [])
+
+  const scheduleClose = React.useCallback(() => {
+    cancelScheduledClose()
+    closeTimerRef.current = globalThis.setTimeout(() => {
+      closeTimerRef.current = null
+      closeEditSession()
+    }, CLOSE_WITHOUT_SELECTION_DELAY_MS)
+  }, [cancelScheduledClose, closeEditSession])
+
+  const commitSelectValue = React.useCallback(
+    (newValue: string) => {
+      if (lastCommittedValueRef.current === newValue) return
+      lastCommittedValueRef.current = newValue
+      cancelScheduledClose()
+      if (newValue === NULL_SELECT_VALUE && fieldMetadata.isNullable) {
+        commitValue(null)
+        closeEditSession()
+        return
+      }
+
+      commitValue(getEnumCommitValue(newValue, fieldMetadata.enumValues))
+      closeEditSession()
+    },
+    [
+      cancelScheduledClose,
+      closeEditSession,
+      commitValue,
+      fieldMetadata.enumValues,
+      fieldMetadata.isNullable,
+    ]
+  )
 
   React.useLayoutEffect(() => {
     if (!cell.isEditable) return
+    lastCommittedValueRef.current = null
+    skipActivationTriggerClickRef.current = editSession.intent.type === "pointer"
+    triggerRef.current?.focus({ preventScroll: true })
     setOverlayOpen(true)
-  }, [cell.isEditable, editSession.id, setOverlayOpen])
+  }, [cell.isEditable, editSession.id, editSession.intent, setOverlayOpen])
+
+  React.useEffect(() => {
+    if (editSession.isOverlayOpen) cancelScheduledClose()
+  }, [cancelScheduledClose, editSession.isOverlayOpen])
+
+  React.useEffect(() => cancelScheduledClose, [cancelScheduledClose])
 
   return (
     <Select
       key={`${cell.fieldPath}-${cell.value}`}
       open={editSession.isOverlayOpen}
       onOpenChange={(open) => {
-        setOverlayOpen(open)
-        if (!open) closeEditSession()
+        if (open) {
+          setOverlayOpen(true)
+          cancelScheduledClose()
+          return
+        }
+        if (isActivationTriggerClickRef.current) {
+          isActivationTriggerClickRef.current = false
+          setOverlayOpen(true)
+          cancelScheduledClose()
+          return
+        }
+        scheduleClose()
       }}
       value={getEnumSelectValue(effectiveValue, fieldMetadata.enumValues)}
       disabled={!cell.isEditable}
       onValueChange={(newValue) => {
         if (newValue === null) return
-        if (newValue === NULL_SELECT_VALUE && fieldMetadata.isNullable) {
-          commitValue(null)
-          closeEditSession()
-          return
-        }
-
-        commitValue(getEnumCommitValue(newValue, fieldMetadata.enumValues))
-        closeEditSession()
+        commitSelectValue(newValue)
       }}
     >
       <SelectTrigger
+        ref={triggerRef}
         data-slot="data-cell"
         data-kind="text"
         data-mode="edit"
         autoFocus
         className={cn(jsonTableSelectDataCellClass, "disabled:opacity-100")}
-        onBlur={() => {
-          if (!editSession.isOverlayOpen) closeEditSession()
+        onClickCapture={() => {
+          if (!skipActivationTriggerClickRef.current) return
+          skipActivationTriggerClickRef.current = false
+          isActivationTriggerClickRef.current = true
+          globalThis.setTimeout(() => {
+            isActivationTriggerClickRef.current = false
+          }, 0)
         }}
       >
         <span
@@ -134,6 +197,7 @@ export function EnumEditor({
             key={NULL_SELECT_VALUE}
             value={NULL_SELECT_VALUE}
             className="text-xs text-muted-foreground"
+            onPointerUp={() => commitSelectValue(NULL_SELECT_VALUE)}
           >
             <em>No selection</em>
           </SelectItem>
@@ -152,6 +216,7 @@ export function EnumEditor({
                 key={enumOptionValue(optionIndex)}
                 value={enumOptionValue(optionIndex)}
                 className="text-xs"
+                onPointerUp={() => commitSelectValue(enumOptionValue(optionIndex))}
               >
                 {String(option)}
               </SelectItem>

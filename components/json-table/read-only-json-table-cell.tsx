@@ -13,7 +13,10 @@ import {
   getSelectableCellWidthStyle,
 } from "@/components/json-table/cell-style"
 import type { JsonTableCellProps } from "@/components/json-table/json-table-cell-types"
-import { getJsonTableCellDisplayValue } from "@/components/json-table/json-table-display-cell"
+import {
+  getJsonTableCellDisplayValue,
+  JsonTableDisplayCell,
+} from "@/components/json-table/json-table-display-cell"
 import { getFieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
 import type { FieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
 
@@ -51,72 +54,6 @@ function formatNestedValue(value: unknown): string {
   } catch {
     return String(value)
   }
-}
-
-function readOnlyCellKindForField(fieldMetadata: FieldMetadata) {
-  switch (fieldMetadata.kind) {
-    case "string":
-    case "enum":
-    case "unknown":
-      return "text"
-    case "number":
-    case "integer":
-    case "boolean":
-    case "date":
-    case "date-time":
-    case "time":
-      return fieldMetadata.kind
-    default:
-      return null
-  }
-}
-
-const readOnlyScalarCellClass =
-  "flex h-full w-full min-w-0 items-center overflow-hidden rounded-none border-0 bg-transparent px-3 text-xs leading-none text-foreground"
-
-function ReadOnlyScalarCell({
-  emptyText = String.fromCharCode(8212),
-  kind,
-  value,
-}: {
-  emptyText?: string
-  kind: string
-  value: string
-}) {
-  const isEmpty = value === ""
-
-  return (
-    <div
-      data-slot="data-cell"
-      data-kind={kind}
-      data-mode="display"
-      aria-readonly
-      className={readOnlyScalarCellClass}
-    >
-      {kind === "boolean" ? (
-        <span
-          role="checkbox"
-          data-slot="checkbox"
-          data-state={value === "true" ? "checked" : "unchecked"}
-          aria-checked={value === "true"}
-          aria-label={value || "false"}
-          className="min-w-0 truncate"
-        >
-          {value || "false"}
-        </span>
-      ) : (
-        <span
-          className={
-            isEmpty
-              ? "min-w-0 truncate text-muted-foreground"
-              : "min-w-0 truncate"
-          }
-        >
-          {isEmpty ? emptyText : value}
-        </span>
-      )}
-    </div>
-  )
 }
 
 function ReadOnlyJsonFormCell({
@@ -196,12 +133,11 @@ function ReadOnlyJsonTableCellContent(props: JsonTableCellProps) {
         className="relative cursor-not-allowed bg-muted/60 p-0"
         style={getCellWidthStyle(cellWidth)}
       >
-        <ReadOnlyScalarCell emptyText="" kind="text" value="" />
+        <div data-slot="data-cell" className="h-full w-full" />
       </TableCell>
     )
   }
 
-  const dataCellKind = readOnlyCellKindForField(fieldMetadata)
   const isJsonFormCell =
     fieldMetadata.kind === "object" || fieldMetadata.kind === "array"
   const displayValue =
@@ -221,10 +157,8 @@ function ReadOnlyJsonTableCellContent(props: JsonTableCellProps) {
           rootSchema={props.schema}
           value={value}
         />
-      ) : dataCellKind ? (
-        <ReadOnlyScalarCell kind={dataCellKind} value={displayValue} />
       ) : (
-        <ReadOnlyScalarCell kind="text" value={displayValue} />
+        <JsonTableDisplayCell fieldMetadata={fieldMetadata} value={value} />
       )}
     </TableCell>
   )

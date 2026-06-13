@@ -13,7 +13,7 @@ flowchart TD
     Registry["registry.json entry: image-viewer\n- title and description\n- deps: lucide-react, utif@3.1.0\n- registry deps: utils, button, scroll-area, separator, skeleton\n- files copied into @ui and @lib targets"]
     PublicRegistry["public/r/image-viewer.json and public/r/registry.json\npublished registry payloads"]
     Docs["content/docs/viewers/image-viewer.mdx\n- install command\n- usage example\n- performance model\n- props table"]
-    Demo["components/image-viewer-demo.tsx\nrenders /samples/nvidia-10q-scan.tiff\nfallback size 1275 x 1650"]
+    Demo["components/image-viewer-demo.tsx\nrenders /samples/entropy.tiff\nfallback size 1275 x 1650"]
     Shims["components/ui/image-viewer*.tsx and lib/image-*.ts\nthin re-export shims to registry/new-york-v4"]
     SourceShim["components/ui/image-source.tsx\nre-export source adapter"]
   end
@@ -439,24 +439,24 @@ flowchart LR
 
 ## File and Responsibility Index
 
-| Area | Files | Responsibility |
-| --- | --- | --- |
-| Public viewer API | `registry/new-york-v4/ui/image-viewer.tsx`, `image-viewer-types.ts` | `ImageViewer`, `ImageResourceViewer`, public props, handle, test helpers, client/Suspense/error boundary entry. |
-| Content shell | `registry/new-york-v4/ui/image-viewer-content.tsx` | Loads `FrameSource`, retains source lease, renders toolbar, header, aside, scroll area, frames, and source cache helpers. |
-| Hooks | `registry/new-york-v4/ui/image-viewer-hooks.ts` | Fit-width scale, controlled/uncontrolled zoom, rotation reset, visible frame detection, scroll progress, imperative handle. |
-| Frame rendering | `registry/new-york-v4/ui/image-viewer-frame.tsx` | Lazy frame observation, skeleton/canvas switch, DPR canvas sizing, acquire/draw/release lifecycle, overlay mount. |
-| Toolbar/fallback | `registry/new-york-v4/ui/image-viewer-chrome.tsx` | Toolbar controls, download control, skeleton toolbar, fallback frame sizing. |
-| Geometry | `registry/new-york-v4/lib/image-geometry.ts` | Quarter-turn normalization, rotated sizes, frame CSS size, bbox rotation, frame index/number conversion. |
-| Frame source | `registry/new-york-v4/lib/image-frame-source.ts` | FrameSource abstraction, BitmapCache, acquire/release/dispose semantics, native image source, TIFF/native detection helpers, image errors. |
-| Source cache | `registry/new-york-v4/lib/image-source-cache.ts` | Shared load cache keyed by resource content, source lifetime leases, disposal timers, source route selection. |
-| TIFF client | `registry/new-york-v4/lib/image-tiff-source.ts` | Main-thread worker client, init/decode/cancel protocol, malformed message handling, worker termination. |
-| TIFF worker | `registry/new-york-v4/ui/image-viewer.worker.ts` | UTIF metadata parse, serialized decode queue, cancellation set, RGBA conversion, ImageBitmap transfer. |
-| Resource infra | `registry/new-york-v4/lib/viewer-source.ts`, `viewer-resource.ts`, `viewer-download.ts`, `viewer-errors.ts` | Source descriptors, stable keys, interned resources, readers, download actions, shared error shapes. |
-| Source adapter | `registry/new-york-v4/ui/image-source.tsx` | Converts source anchors to frame/area, rotates highlight geometry, bridges `useSourceLink` to the image viewer handle. |
-| Integration blocks | `registry/new-york-v4/blocks/image-sources-block.tsx`, `extraction-viewer-block.tsx` | Real field/source UI demonstrating hover/click source linking into image overlays and scrolling. |
-| Re-export shims | `components/ui/image-viewer*.tsx`, `components/ui/image-source.tsx`, `lib/image-*.ts` | Local import surface that points at the registry implementation. |
-| Docs and demo | `content/docs/viewers/image-viewer.mdx`, `components/image-viewer-demo.tsx` | User-facing install, usage, performance explanation, prop table, and TIFF sample. |
-| Tests | `tests/image-viewer*.test.tsx`, `tests/sources.test.tsx`, `tests/file-viewer.test.tsx` | Lifecycle, cache, worker, rendering, geometry, integration, and routing coverage. |
+| Area               | Files                                                                                                       | Responsibility                                                                                                                             |
+| ------------------ | ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Public viewer API  | `registry/new-york-v4/ui/image-viewer.tsx`, `image-viewer-types.ts`                                         | `ImageViewer`, `ImageResourceViewer`, public props, handle, test helpers, client/Suspense/error boundary entry.                            |
+| Content shell      | `registry/new-york-v4/ui/image-viewer-content.tsx`                                                          | Loads `FrameSource`, retains source lease, renders toolbar, header, aside, scroll area, frames, and source cache helpers.                  |
+| Hooks              | `registry/new-york-v4/ui/image-viewer-hooks.ts`                                                             | Fit-width scale, controlled/uncontrolled zoom, rotation reset, visible frame detection, scroll progress, imperative handle.                |
+| Frame rendering    | `registry/new-york-v4/ui/image-viewer-frame.tsx`                                                            | Lazy frame observation, skeleton/canvas switch, DPR canvas sizing, acquire/draw/release lifecycle, overlay mount.                          |
+| Toolbar/fallback   | `registry/new-york-v4/ui/image-viewer-chrome.tsx`                                                           | Toolbar controls, download control, skeleton toolbar, fallback frame sizing.                                                               |
+| Geometry           | `registry/new-york-v4/lib/image-geometry.ts`                                                                | Quarter-turn normalization, rotated sizes, frame CSS size, bbox rotation, frame index/number conversion.                                   |
+| Frame source       | `registry/new-york-v4/lib/image-frame-source.ts`                                                            | FrameSource abstraction, BitmapCache, acquire/release/dispose semantics, native image source, TIFF/native detection helpers, image errors. |
+| Source cache       | `registry/new-york-v4/lib/image-source-cache.ts`                                                            | Shared load cache keyed by resource content, source lifetime leases, disposal timers, source route selection.                              |
+| TIFF client        | `registry/new-york-v4/lib/image-tiff-source.ts`                                                             | Main-thread worker client, init/decode/cancel protocol, malformed message handling, worker termination.                                    |
+| TIFF worker        | `registry/new-york-v4/ui/image-viewer.worker.ts`                                                            | UTIF metadata parse, serialized decode queue, cancellation set, RGBA conversion, ImageBitmap transfer.                                     |
+| Resource infra     | `registry/new-york-v4/lib/viewer-source.ts`, `viewer-resource.ts`, `viewer-download.ts`, `viewer-errors.ts` | Source descriptors, stable keys, interned resources, readers, download actions, shared error shapes.                                       |
+| Source adapter     | `registry/new-york-v4/ui/image-source.tsx`                                                                  | Converts source anchors to frame/area, rotates highlight geometry, bridges `useSourceLink` to the image viewer handle.                     |
+| Integration blocks | `registry/new-york-v4/blocks/image-sources-block.tsx`, `extraction-viewer-block.tsx`                        | Real field/source UI demonstrating hover/click source linking into image overlays and scrolling.                                           |
+| Re-export shims    | `components/ui/image-viewer*.tsx`, `components/ui/image-source.tsx`, `lib/image-*.ts`                       | Local import surface that points at the registry implementation.                                                                           |
+| Docs and demo      | `content/docs/viewers/image-viewer.mdx`, `components/image-viewer-demo.tsx`                                 | User-facing install, usage, performance explanation, prop table, and TIFF sample.                                                          |
+| Tests              | `tests/image-viewer*.test.tsx`, `tests/sources.test.tsx`, `tests/file-viewer.test.tsx`                      | Lifecycle, cache, worker, rendering, geometry, integration, and routing coverage.                                                          |
 
 ## Key Invariants
 

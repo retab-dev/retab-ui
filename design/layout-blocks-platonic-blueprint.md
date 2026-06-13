@@ -220,12 +220,7 @@ type LayoutRect = {
   height: number
 }
 
-type LayoutQuad = [
-  LayoutPoint,
-  LayoutPoint,
-  LayoutPoint,
-  LayoutPoint,
-]
+type LayoutQuad = [LayoutPoint, LayoutPoint, LayoutPoint, LayoutPoint]
 
 type LayoutItem = {
   id: string

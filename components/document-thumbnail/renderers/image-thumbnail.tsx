@@ -5,13 +5,13 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 import type { ViewerContentBlob, ViewerResource } from "@/lib/viewer-resource"
 import { FileThumbnailShimmer } from "@/components/ui/file-thumbnail"
+import { useObjectUrl } from "@/components/document-thumbnail/renderers/use-object-url"
 import {
   cachedThumbnailResource,
   createThumbnailArtifactCache,
-  createThumbnailImageLoadError,
-  useThumbnailResource,
-} from "@/components/document-thumbnail/cache"
-import { useObjectUrl } from "@/components/document-thumbnail/renderers/use-object-url"
+} from "@/components/document-thumbnail/thumbnail-cache"
+import { createThumbnailImageLoadError } from "@/components/document-thumbnail/thumbnail-errors"
+import { useThumbnailResource } from "@/components/document-thumbnail/thumbnail-resource"
 import type { ThumbnailAnchor } from "@/components/document-thumbnail/types"
 import { ANCHOR_CORNER } from "@/components/document-thumbnail/types"
 

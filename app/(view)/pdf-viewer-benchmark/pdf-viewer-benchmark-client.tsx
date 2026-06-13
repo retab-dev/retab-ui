@@ -107,7 +107,7 @@ function jumpToPage(
     Math.max(1, Math.round(pageNumber))
   )
   const startedAt = performance.now()
-  viewer?.scrollToPageTarget(targetPage, { top: 0 }, { behavior: "auto" })
+  viewer?.scrollToPage(targetPage, { behavior: "auto" })
 
   return new Promise((resolve) => {
     const deadline = performance.now() + 10_000

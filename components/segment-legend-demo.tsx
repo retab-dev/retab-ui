@@ -15,11 +15,12 @@ import { LegendVariantsBlock } from "@/registry/new-york-v4/blocks/legend-varian
 
 // One split-style result drives every variant — only the chrome changes.
 const segments = toSegments([
-  { name: "Title & Abstract", pages: [1] },
-  { name: "Introduction", pages: [2, 3] },
-  { name: "Model Architecture", pages: [4, 5, 6] },
-  { name: "Results", pages: [7, 8] },
-  { name: "References", pages: [9, 10, 11] },
+  { name: "Title, Abstract & Introduction", pages: [1] },
+  { name: "Related Work", pages: [2] },
+  { name: "Method", pages: [3] },
+  { name: "Experiments", pages: [4, 5, 6, 7, 8] },
+  { name: "Conclusion & References", pages: [9, 10, 11, 12] },
+  { name: "Appendix", pages: [13, 14, 15, 16, 17, 18, 19, 20, 21, 22] },
 ])
 
 type Preset = {
@@ -103,7 +104,7 @@ export function SegmentLegendDemo() {
   )
 }
 
-// The legend on a real split viewer: one attention.pdf split result rendered
+// The legend on a real split viewer: one ViT paper split result rendered
 // with all three placements — bar, floating, and a vertical rail — sharing one
 // selection across every cell.
 export function SegmentLegendSplitDemo() {

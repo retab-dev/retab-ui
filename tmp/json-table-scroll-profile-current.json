@@ -1,0 +1,363 @@
+{
+  "measuredAt": "2026-06-13T09:17:49.665Z",
+  "route": "http://localhost:3100/json-table-profile",
+  "mode": "headless Chrome CDP",
+  "initial": {
+    "url": "http://localhost:3100/json-table-profile",
+    "elapsedWallMs": 715,
+    "navigation": {
+      "domContentLoaded": 117.90000000037253,
+      "load": 196.90000000037253,
+      "responseEnd": 86.5,
+      "transferSize": 37567,
+      "encodedBodySize": 37267
+    },
+    "paint": [
+      {
+        "name": "first-paint",
+        "startTime": 124
+      },
+      {
+        "name": "first-contentful-paint",
+        "startTime": 124
+      }
+    ],
+    "scroll": {
+      "scrollHeight": 48000,
+      "clientHeight": 367,
+      "scrollTop": 0
+    },
+    "mountedRows": 27,
+    "mountedDataCells": 192,
+    "totalDomNodes": 911
+  },
+  "scenarios": [
+    {
+      "name": "small-increment",
+      "scroll": {
+        "finalScrollTop": 2380,
+        "frames": {
+          "count": 120,
+          "avg": 10.950833333330229,
+          "p50": 8.300000000745058,
+          "p95": 45.30000000074506,
+          "max": 64.09999999962747,
+          "over16": 10,
+          "over33": 10
+        },
+        "longTasks": [],
+        "mountedRows": 39,
+        "mountedDataCells": 288,
+        "totalDomNodes": 1211
+      },
+      "performanceMetrics": {
+        "JSHeapUsedSize": 24194496,
+        "Nodes": 1995,
+        "LayoutCount": 17,
+        "RecalcStyleCount": 19,
+        "LayoutDurationMs": 13.997,
+        "RecalcStyleDurationMs": 441.11,
+        "ScriptDurationMs": 313.664,
+        "TaskDurationMs": 894.3910000000001
+      },
+      "trace": {
+        "EventDispatch": {
+          "count": 238,
+          "totalMs": 375.484,
+          "maxMs": 37.261
+        },
+        "FunctionCall": {
+          "count": 761,
+          "totalMs": 532.73,
+          "maxMs": 37.196
+        },
+        "UpdateLayoutTree": {
+          "count": 10,
+          "totalMs": 354.38,
+          "maxMs": 36.432
+        },
+        "Layout": {
+          "count": 10,
+          "totalMs": 7.852,
+          "maxMs": 0.929
+        },
+        "Paint": {
+          "count": 1033,
+          "totalMs": 7.393,
+          "maxMs": 0.467
+        },
+        "topEvents": [
+          {
+            "name": "RunTask",
+            "ms": 38.722,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 38.625,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 38.605,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 38.534,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 38.426,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 38.143,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 37.871,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 37.854,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 37.833,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "EventDispatch",
+            "ms": 37.261,
+            "category": "devtools.timeline",
+            "type": "scroll"
+          },
+          {
+            "name": "FunctionCall",
+            "ms": 37.196,
+            "category": "devtools.timeline",
+            "url": "http://localhost:3100/_next/static/chunks/0f4w_next_dist_compiled_react-dom_1fpdgb7._.js"
+          },
+          {
+            "name": "EventDispatch",
+            "ms": 37.191,
+            "category": "devtools.timeline",
+            "type": "scroll"
+          },
+          {
+            "name": "EventDispatch",
+            "ms": 37.155,
+            "category": "devtools.timeline",
+            "type": "scroll"
+          },
+          {
+            "name": "EventDispatch",
+            "ms": 37.153,
+            "category": "devtools.timeline",
+            "type": "scroll"
+          },
+          {
+            "name": "FunctionCall",
+            "ms": 37.133,
+            "category": "devtools.timeline",
+            "url": "http://localhost:3100/_next/static/chunks/0f4w_next_dist_compiled_react-dom_1fpdgb7._.js"
+          },
+          {
+            "name": "FunctionCall",
+            "ms": 37.071,
+            "category": "devtools.timeline",
+            "url": "http://localhost:3100/_next/static/chunks/0f4w_next_dist_compiled_react-dom_1fpdgb7._.js"
+          },
+          {
+            "name": "FunctionCall",
+            "ms": 37.052,
+            "category": "devtools.timeline",
+            "url": "http://localhost:3100/_next/static/chunks/0f4w_next_dist_compiled_react-dom_1fpdgb7._.js"
+          },
+          {
+            "name": "EventDispatch",
+            "ms": 36.918,
+            "category": "devtools.timeline",
+            "type": "scroll"
+          },
+          {
+            "name": "FunctionCall",
+            "ms": 36.837,
+            "category": "devtools.timeline",
+            "url": "http://localhost:3100/_next/static/chunks/0f4w_next_dist_compiled_react-dom_1fpdgb7._.js"
+          },
+          {
+            "name": "EventDispatch",
+            "ms": 36.735,
+            "category": "devtools.timeline",
+            "type": "scroll"
+          }
+        ]
+      }
+    },
+    {
+      "name": "large-jump",
+      "scroll": {
+        "finalScrollTop": 47633,
+        "frames": {
+          "count": 120,
+          "avg": 44.5674999999969,
+          "p50": 44.29999999888241,
+          "p95": 66.39999999850988,
+          "max": 69.5,
+          "over16": 113,
+          "over33": 112
+        },
+        "longTasks": [],
+        "mountedRows": 32,
+        "mountedDataCells": 232,
+        "totalDomNodes": 1036
+      },
+      "performanceMetrics": {
+        "JSHeapUsedSize": 19109324,
+        "Nodes": 1761,
+        "LayoutCount": 130,
+        "RecalcStyleCount": 132,
+        "LayoutDurationMs": 109.22500000000001,
+        "RecalcStyleDurationMs": 4360.544,
+        "ScriptDurationMs": 1413.465,
+        "TaskDurationMs": 6206.072
+      },
+      "trace": {
+        "EventDispatch": {
+          "count": 230,
+          "totalMs": 4028.823,
+          "maxMs": 37.579
+        },
+        "FunctionCall": {
+          "count": 1072,
+          "totalMs": 5116.93,
+          "maxMs": 37.524
+        },
+        "UpdateLayoutTree": {
+          "count": 113,
+          "totalMs": 3919.066,
+          "maxMs": 35.989
+        },
+        "Layout": {
+          "count": 113,
+          "totalMs": 94.447,
+          "maxMs": 1.49
+        },
+        "Paint": {
+          "count": 14191,
+          "totalMs": 87.69,
+          "maxMs": 0.597
+        },
+        "topEvents": [
+          {
+            "name": "RunTask",
+            "ms": 39.236,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 38.46,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 38.419,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 38.364,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 38.358,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 38.351,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 38.318,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 38.252,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 38.224,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 38.204,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 38.175,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 38.166,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 38.162,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 38.162,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 38.131,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 38.113,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 38.071,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 38.064,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 38.064,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 38.057,
+            "category": "disabled-by-default-devtools.timeline"
+          }
+        ]
+      }
+    }
+  ]
+}

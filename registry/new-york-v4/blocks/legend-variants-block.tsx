@@ -14,16 +14,16 @@ import {
 } from "@/components/ui/segment-legend"
 import { useSegmentInteraction } from "@/components/ui/use-segment-interaction"
 
-const PDF_URL = "/samples/attention.pdf"
+const PDF_URL = "/samples/an-image-is-worth-16x16-words.pdf"
 
-// The same split result the standalone Split Viewer block uses, over attention.pdf.
+// The same split result the standalone Split Viewer block uses, over the ViT paper.
 const SPLIT_OUTPUT = [
-  { name: "Title & Abstract", pages: [1] },
-  { name: "Introduction", pages: [2, 3] },
-  { name: "Model Architecture", pages: [4, 5, 6] },
-  { name: "Results", pages: [7, 8, 9] },
-  { name: "References", pages: [10, 11] },
-  { name: "Attention Visualizations", pages: [12, 13, 14, 15] },
+  { name: "Title, Abstract & Introduction", pages: [1] },
+  { name: "Related Work", pages: [2] },
+  { name: "Method", pages: [3] },
+  { name: "Experiments", pages: [4, 5, 6, 7, 8] },
+  { name: "Conclusion & References", pages: [9, 10, 11, 12] },
+  { name: "Appendix", pages: [13, 14, 15, 16, 17, 18, 19, 20, 21, 22] },
 ]
 
 type LegendSlot = "top" | "overlay" | "right"
@@ -59,9 +59,9 @@ const PRESETS: Preset[] = [
 
 /**
  * The split viewer shown with every legend variant — a 2×2 gallery over one
- * `attention.pdf` split result. Each cell is a real `PdfViewer` with the page
+ * ViT paper split result. Each cell is a real `PdfViewer` with the page
  * ribbon as a left rail and the `SegmentLegend` placed a different way; one
- * shared selection dims the matching pages across all four at once.
+ * shared preview dims unrelated pages across all four at once.
  */
 export function LegendVariantsBlock({ columns = 1 }: { columns?: 1 | 3 } = {}) {
   const segments = React.useMemo(() => toSegments(SPLIT_OUTPUT), [])
@@ -191,7 +191,7 @@ function Cell({
             source={{
               kind: "url",
               url: PDF_URL,
-              fileName: "attention.pdf",
+              fileName: "an-image-is-worth-16x16-words.pdf",
             }}
             bare
             toolbar={false}

@@ -4,19 +4,23 @@ import type * as DOMPurify from "dompurify"
 import type * as Marked from "marked"
 
 import type { ViewerResource } from "@/lib/viewer-resource"
+import { IframeDoc } from "@/components/document-thumbnail/renderers/layout"
 import {
   cachedThumbnailResource,
   createThumbnailArtifactCache,
-  getThumbnailText,
+} from "@/components/document-thumbnail/thumbnail-cache"
+import { withThumbnailFormatError } from "@/components/document-thumbnail/thumbnail-errors"
+import {
   shortName,
+  timedThumbnail,
+} from "@/components/document-thumbnail/thumbnail-profile"
+import { useThumbnailResource } from "@/components/document-thumbnail/thumbnail-resource"
+import {
+  getThumbnailText,
   thumbnailFileMeta,
-  timed,
-  useThumbnailResource,
-  withThumbnailFormatError,
   type ThumbnailFileMeta,
   type ThumbnailTextContent,
-} from "@/components/document-thumbnail/cache"
-import { IframeDoc } from "@/components/document-thumbnail/renderers/layout"
+} from "@/components/document-thumbnail/thumbnail-text"
 
 let mdLibs: Promise<[typeof Marked, typeof DOMPurify]> | null = null
 
@@ -43,7 +47,7 @@ function getMarkdownDoc(
       meta.fileName,
       "Failed to render markdown thumbnail",
       () =>
-        timed(`markdown:total ${shortName(meta)}`, async () => {
+        timedThumbnail(`markdown:total ${shortName(meta)}`, async () => {
           const [text, [{ marked }, DOMPurifyMod]] = await Promise.all([
             getThumbnailText(meta, content, thumbnailKey),
             loadMarkdown(),

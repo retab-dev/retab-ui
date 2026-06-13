@@ -1,15 +1,16 @@
 ---
 title: Segment Sidebar
-description: A selectable list of document segments with page ranges and confidence, driven by shared hover, focus, and selection state.
+description: A navigable list of document segments with page ranges and confidence, driven by shared preview and current-page state.
 ---
 
 `SegmentSidebar` is the "list" surface over a page-segmented result (partition
 chunks or split subdocuments). Each row shows a color swatch, label, page
 ranges, page count, and — when present — a confidence bar.
 
-Hovering, keyboard focus, and persistent selection are separate states.
-Clicking fires `onSelect` so the host can scroll the document to the segment's
-first page. Wire it to the same `useSegmentInteraction` object as a
+Hovering is a temporary preview. When nothing is hovered, `currentPage` derives
+the highlighted segment. Clicking fires `onSelect` so the host can scroll the
+document to the segment's first page; it does not persist category selection.
+Wire it to the same `useSegmentInteraction` object as a
 [legend](/docs/components/legend) for a coordinated layout.
 
 <SegmentSidebarDemo />
@@ -17,9 +18,9 @@ first page. Wire it to the same `useSegmentInteraction` object as a
 ## In a split viewer
 
 Mounted as the left rail of a [split viewer](/docs/components/split-viewer), the
-sidebar shares hover, focus, and selection with the legend and page timeline —
-hover or focus a row to dim the others everywhere, click to select and scroll
-the document to that subdocument's first page.
+sidebar shares preview and current-page state with the legend and page timeline.
+Hover a row to dim the others everywhere; click to scroll the document to that
+subdocument's first page.
 
 <SegmentSidebarSplitDemo />
 
@@ -55,7 +56,7 @@ export function Example() {
 }
 ```
 
-For caller-owned selection state, build the same `interaction` object with
+For caller-owned preview state, build the same `interaction` object with
 `useControlledSegmentInteraction`; do not pass selection props to the sidebar.
 
 ## Props
@@ -63,9 +64,9 @@ For caller-owned selection state, build the same `interaction` object with
 | Prop          | Type                         | Description                                                             |
 | ------------- | ---------------------------- | ----------------------------------------------------------------------- |
 | `segments`    | `Segment[]`                  | Labels + pages + colors (use `toSegments`).                             |
-| `interaction` | `SegmentInteraction`         | Shared hover/focus/selection state.                                     |
-| `onSelect`    | `(segment: Segment) => void` | Fired when a segment is clicked, after shared selection is requested.   |
-| `currentPage` | `number \| null`             | 1-based current page; owning segments receive current-page state.       |
+| `interaction` | `SegmentInteraction`         | Shared transient preview state.                                        |
+| `onSelect`    | `(segment: Segment) => void` | Fired when a segment is clicked, after transient preview is cleared.    |
+| `currentPage` | `number \| null`             | 1-based current page; owning segments highlight when no preview exists. |
 | `unitLabel`   | `string`                     | Row noun, e.g. `"chunk"` or `"subdocument"`. Defaults to `"segment"`.   |
 | `showUnused`  | `boolean`                    | Show segments with zero pages too. Defaults to `true`.                  |
 | `className`   | `string`                     | Container class.                                                        |

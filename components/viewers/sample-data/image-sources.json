@@ -2,73 +2,121 @@
   {
     "key": "title",
     "label": "Title",
-    "value": "Attention Is All You Need",
+    "value": "An Image is Worth 16x16 Words",
     "source": {
-      "content": "Attention Is All You Need",
-      "anchor": { "kind": "image_bbox", "left": 0.3423, "top": 0.1854, "width": 0.3144, "height": 0.0268 }
+      "content": "An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale",
+      "anchor": {
+        "kind": "image_bbox",
+        "left": 0.1772,
+        "top": 0.1034,
+        "width": 0.6457,
+        "height": 0.0446
+      }
     }
   },
   {
     "key": "firstAuthor",
     "label": "First author",
-    "value": "Ashish Vaswani",
+    "value": "Alexey Dosovitskiy",
     "source": {
-      "content": "Ashish Vaswani",
-      "anchor": { "kind": "image_bbox", "left": 0.2139, "top": 0.2943, "width": 0.1158, "height": 0.0176 }
+      "content": "Alexey Dosovitskiy",
+      "anchor": {
+        "kind": "image_bbox",
+        "left": 0.2313,
+        "top": 0.1739,
+        "width": 0.1314,
+        "height": 0.0113
+      }
     }
   },
   {
     "key": "affiliation",
     "label": "Affiliation",
-    "value": "Google Brain",
+    "value": "Google Research, Brain Team",
     "source": {
-      "content": "Google Brain",
-      "anchor": { "kind": "image_bbox", "left": 0.2245, "top": 0.3081, "width": 0.0947, "height": 0.0176 }
+      "content": "Google Research, Brain Team",
+      "anchor": {
+        "kind": "image_bbox",
+        "left": 0.4118,
+        "top": 0.2417,
+        "width": 0.196,
+        "height": 0.0112
+      }
     }
   },
   {
     "key": "firstAuthorEmail",
     "label": "First author email",
-    "value": "avaswani@google.com",
+    "value": "adosovitskiy@google.com",
     "source": {
-      "content": "avaswani@google.com",
-      "anchor": { "kind": "image_bbox", "left": 0.2046, "top": 0.3262, "width": 0.1554, "height": 0.0166 }
+      "content": "{adosovitskiy, neilhoulsby}@google.com",
+      "anchor": {
+        "kind": "image_bbox",
+        "left": 0.3258,
+        "top": 0.2575,
+        "width": 0.3679,
+        "height": 0.0119
+      }
     }
   },
   {
     "key": "secondAuthor",
     "label": "Second author",
-    "value": "Noam Shazeer",
+    "value": "Lucas Beyer",
     "source": {
-      "content": "Noam Shazeer",
-      "anchor": { "kind": "image_bbox", "left": 0.4018, "top": 0.2943, "width": 0.1124, "height": 0.0176 }
+      "content": "Lucas Beyer",
+      "anchor": {
+        "kind": "image_bbox",
+        "left": 0.3882,
+        "top": 0.1739,
+        "width": 0.0862,
+        "height": 0.0113
+      }
     }
   },
   {
     "key": "model",
     "label": "Proposed model",
-    "value": "Transformer",
+    "value": "Vision Transformer (ViT)",
     "source": {
-      "content": "Transformer",
-      "anchor": { "kind": "image_bbox", "left": 0.6778, "top": 0.5607, "width": 0.089, "height": 0.0178 }
+      "content": "Vision Transformer (ViT)",
+      "anchor": {
+        "kind": "image_bbox",
+        "left": 0.4868,
+        "top": 0.4533,
+        "width": 0.1682,
+        "height": 0.0112
+      }
     }
   },
   {
-    "key": "bleuScore",
-    "label": "EN-DE BLEU",
-    "value": "28.4",
+    "key": "benchmark",
+    "label": "Benchmarks",
+    "value": "ImageNet, CIFAR-100, VTAB",
     "source": {
-      "content": "28.4",
-      "anchor": { "kind": "image_bbox", "left": 0.4952, "top": 0.6158, "width": 0.0356, "height": 0.0178 }
+      "content": "ImageNet, CIFAR-100, VTAB",
+      "anchor": {
+        "kind": "image_bbox",
+        "left": 0.2349,
+        "top": 0.4533,
+        "width": 0.2481,
+        "height": 0.0112
+      }
     }
   },
   {
     "key": "venue",
     "label": "Venue",
-    "value": "NIPS 2017",
+    "value": "ICLR 2021",
     "source": {
-      "content": "31st Conference on Neural Information Processing Systems (NIPS 2017), Long Beach, CA, USA.",
-      "anchor": { "kind": "image_bbox", "left": 0.1815, "top": 0.9356, "width": 0.6378, "height": 0.0166 }
+      "content": "Published as a conference paper at ICLR 2021",
+      "anchor": {
+        "kind": "image_bbox",
+        "left": 0.1765,
+        "top": 0.0361,
+        "width": 0.3024,
+        "height": 0.0112
+      }
     }
   }
 ]

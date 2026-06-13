@@ -3,6 +3,7 @@
 import * as React from "react"
 
 import {
+  getSegmentInteractionState,
   getSegmentSurfaceProps,
   scopeSegmentInteraction,
   type SegmentInteraction,
@@ -17,9 +18,9 @@ import { cn } from "@/lib/utils"
 
 export interface SegmentSidebarProps {
   segments: Segment[]
-  /** Shared hover/focus state. */
+  /** Shared preview state. */
   interaction?: SegmentInteraction
-  /** Fired when a segment surface is clicked. */
+  /** Fired when a segment surface is clicked, after transient preview is cleared. */
   onSelect?: (segment: Segment) => void
   /** 1-based current page; owning segments receive current-page state. */
   currentPage?: number | null
@@ -33,8 +34,8 @@ export interface SegmentSidebarProps {
 /**
  * A navigable list of segments — the "sidebar" surface. Each row shows the
  * color swatch, label, page ranges, page count, and (when present) a confidence
- * bar. Hovering and focusing preview the segment; clicking fires `onSelect`
- * for host side effects like document scrolling.
+ * bar. Hovering previews the segment; clicking fires `onSelect` for host side
+ * effects like document scrolling.
  */
 export function SegmentSidebar({
   segments,
@@ -56,6 +57,15 @@ export function SegmentSidebar({
       ),
     [interaction, visible]
   )
+  const interactionState = React.useMemo(
+    () =>
+      getSegmentInteractionState({
+        segments: visible,
+        currentPage,
+        interaction: scopedInteraction,
+      }),
+    [currentPage, scopedInteraction, visible]
+  )
 
   return (
     <div
@@ -72,7 +82,7 @@ export function SegmentSidebar({
           const { state, eventHandlers, dataProps } = getSegmentSurfaceProps({
             segment,
             interaction: scopedInteraction,
-            currentPage,
+            interactionState,
             onSelect,
           })
           const label = segmentDisplayLabel(segment.label)
@@ -86,7 +96,7 @@ export function SegmentSidebar({
                 aria-current={state.isCurrent ? "page" : undefined}
                 className={cn(
                   "flex w-full items-start gap-2.5 rounded-md border px-2.5 py-2 text-left transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-                  state.isActive
+                  state.isHighlighted
                     ? "border-border bg-muted"
                     : "border-transparent hover:bg-muted/50",
                   state.isDimmed && "opacity-60"

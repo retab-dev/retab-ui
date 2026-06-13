@@ -21,8 +21,8 @@ import { JsonFormSourcesBlock } from "@/registry/new-york-v4/blocks/json-form-so
 
 /** Real split result: Harris 2023 federal + state tax returns (51 subdocuments). */
 const SPLIT_PDF_URL = "/samples/harris_2023_federal_state_returns.pdf"
-/** Real partition result: "Attention Is All You Need" partitioned by section (10 keyed chunks over 15 pages). */
-const PARTITION_PDF_URL = "/samples/attention.pdf"
+/** Real partition result: ViT paper partitioned by section (8 keyed chunks over 22 pages). */
+const PARTITION_PDF_URL = "/samples/an-image-is-worth-16x16-words.pdf"
 
 const partitionResult: PartitionResult = {
   output: partitionSample.output as PartitionResult["output"],
@@ -99,7 +99,7 @@ export function PartitionViewerDemo() {
             source={{
               kind: "url",
               url: PARTITION_PDF_URL,
-              fileName: "attention.pdf",
+              fileName: "an-image-is-worth-16x16-words.pdf",
             }}
             bare
             slots={handlers.slots}

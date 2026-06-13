@@ -4,14 +4,16 @@ import * as React from "react"
 
 import { inferCsvDialect, parseCsv } from "@/lib/csv"
 import type { ViewerResource } from "@/lib/viewer-resource"
+import { GridTable } from "@/components/document-thumbnail/renderers/layout"
 import {
   CSV_THUMBNAIL_MAX_COLUMNS,
   CSV_THUMBNAIL_MAX_ROWS,
+} from "@/components/document-thumbnail/thumbnail-limits"
+import { useThumbnailResource } from "@/components/document-thumbnail/thumbnail-resource"
+import {
   getThumbnailText,
   thumbnailFileMeta,
-  useThumbnailResource,
-} from "@/components/document-thumbnail/cache"
-import { GridTable } from "@/components/document-thumbnail/renderers/layout"
+} from "@/components/document-thumbnail/thumbnail-text"
 
 export function CsvFirstRows({
   resource,

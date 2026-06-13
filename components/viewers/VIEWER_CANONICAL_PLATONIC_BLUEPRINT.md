@@ -1625,12 +1625,12 @@ This is the current cache map. Keep this table true when changing cache code.
 
 ```txt
 File                                                          Owner                         Key
-registry/new-york-v4/ui/pdf-viewer-resource.ts                module-owned PDF documents    resource.keys.load
-registry/new-york-v4/ui/pdf-viewer-resource.ts                PDF pages by PDF document     PDFDocumentProxy + pageNumber
+registry/new-york-v4/lib/pdf-document-resource.ts                module-owned PDF documents    resource.keys.load
+registry/new-york-v4/lib/pdf-document-resource.ts                PDF pages by PDF document     PDFDocumentProxy + pageNumber
 registry/new-york-v4/lib/image-source-cache.ts                image frame source manager    resource.keys.load
 registry/new-york-v4/ui/pptx-viewer-source.ts                 module-owned PPTX sources     resource.keys.load
 registry/new-york-v4/ui/pptx-viewer-source.ts                 per-source slide bitmaps      slideIndex + renderScale
-registry/new-york-v4/ui/docx-viewer-resource.ts               module-owned DOCX bytes       resource.keys.load
+registry/new-york-v4/lib/docx-document-resource.ts               module-owned DOCX bytes       resource.keys.load
 registry/new-york-v4/lib/xlsx-workbook.ts                     workbook source cache         resource.keys.load at call site
 registry/new-york-v4/ui/text-viewer-resource.ts               text viewer bounded text      resource.keys.load + retry + bounds
 registry/new-york-v4/ui/file-viewer-text-resource.ts          FileViewer text resource      resource.keys.load
@@ -1646,7 +1646,7 @@ UI/downloads without refetching or reparsing content.
 
 The code also proves that a single universal cache class would be wrong:
 
-- PDF needs `retainDocumentResource` and `releaseDocumentResource` because
+- PDF needs `retainPdfDocumentResource` and `releasePdfDocumentResource` because
   mounted viewers may keep a document alive past LRU eviction.
 - Image needs leases, delayed disposal timers, TIFF/native branching, and abort
   propagation through `FrameSourceManager`.
@@ -1686,9 +1686,9 @@ These concrete vocabulary mismatches have been closed in live viewer-cache code.
 Current examples:
 
 ```txt
-pdf-viewer-resource.ts: "pending" | "resolved" | "rejected"
+pdf-document-resource.ts: "pending" | "resolved" | "rejected"
 text-viewer-resource.ts: "pending" | "resolved" | "rejected"
-document-thumbnail/cache.ts: "pending" | "resolved" | "rejected"
+document-thumbnail/thumbnail-cache.ts: "pending" | "resolved" | "rejected"
 image-source-cache.ts: "pending" | "resolved" | "evictable" | "disposed"
 ```
 
@@ -1747,7 +1747,7 @@ Current examples:
 
 ```txt
 resetImageSourceCacheForTests()
-resetDocxResourceCacheForTests()
+resetDocxDocumentResourceCacheForTests()
 disposePptxSourceCache()
 XlsxSourceCache.clear()
 ```

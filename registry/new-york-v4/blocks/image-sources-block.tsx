@@ -19,7 +19,7 @@ import {
 import { SourceIndicator } from "@/components/ui/source-indicator"
 import imageSample from "@/components/viewers/sample-data/image-sources.json"
 
-const IMAGE_URL = "/samples/attention-page-1.png"
+const IMAGE_URL = "/samples/an-image-is-worth-16x16-words-page-1.png"
 
 type ImageField = SourceField & { source: Source }
 
@@ -51,7 +51,7 @@ export function ImageSourcesBlock() {
           source={{
             kind: "url",
             url: IMAGE_URL,
-            fileName: "attention-page-1.png",
+            fileName: "an-image-is-worth-16x16-words-page-1.png",
           }}
           bare
           className="h-full"

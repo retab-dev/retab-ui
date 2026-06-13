@@ -5,64 +5,63 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 import type { ViewerResource } from "@/lib/viewer-resource"
 import { FileThumbnailShimmer } from "@/components/ui/file-thumbnail"
+import { useObjectUrl } from "@/components/document-thumbnail/renderers/use-object-url"
 import {
   cachedThumbnailResource,
   createThumbnailArtifactCache,
+} from "@/components/document-thumbnail/thumbnail-cache"
+import { withThumbnailDecodeSlot } from "@/components/document-thumbnail/thumbnail-decode-queue"
+import {
   createThumbnailImageLoadError,
-  shortName,
-  thumbnailFileMeta,
-  TIFF_THUMBNAIL_TARGET_WIDTH,
-  timed,
-  useThumbnailResource,
-  withThumbnailDecodeSlot,
   withThumbnailFormatError,
+} from "@/components/document-thumbnail/thumbnail-errors"
+import { TIFF_THUMBNAIL_TARGET_WIDTH } from "@/components/document-thumbnail/thumbnail-limits"
+import {
+  shortName,
+  timedThumbnail,
+} from "@/components/document-thumbnail/thumbnail-profile"
+import { useThumbnailResource } from "@/components/document-thumbnail/thumbnail-resource"
+import {
+  thumbnailFileMeta,
   type ThumbnailBytesContent,
   type ThumbnailFileMeta,
-} from "@/components/document-thumbnail/cache"
-import { useObjectUrl } from "@/components/document-thumbnail/renderers/use-object-url"
+} from "@/components/document-thumbnail/thumbnail-text"
+import {
+  createThumbnailWorkerClient,
+  type ThumbnailWorkerMessage,
+} from "@/components/document-thumbnail/thumbnail-worker-client"
 import type { ThumbnailAnchor } from "@/components/document-thumbnail/types"
 import { ANCHOR_CORNER } from "@/components/document-thumbnail/types"
 
-interface TiffWorkerReply {
+interface TiffWorkerRequest extends ThumbnailWorkerMessage {
+  buffer: ArrayBuffer
+  targetWidth: number
+}
+
+interface TiffWorkerReply extends ThumbnailWorkerMessage {
   id: number
   ok: boolean
   blob?: Blob
   error?: string
 }
 
-let tiffWorker: Worker | null = null
-let tiffReqId = 0
-const tiffPending = new Map<
-  number,
-  { resolve: (b: Blob) => void; reject: (e: Error) => void }
->()
-
-function getTiffWorker(): Worker {
-  if (!tiffWorker) {
-    tiffWorker = new Worker(
+const tiffWorkerClient = createThumbnailWorkerClient<
+  TiffWorkerRequest,
+  TiffWorkerReply
+>({
+  createWorker: () =>
+    new Worker(
       new URL("../../document-thumbnail-tiff.worker", import.meta.url)
-    )
-    tiffWorker.onmessage = (e: MessageEvent<TiffWorkerReply>) => {
-      const { id, ok, blob, error } = e.data
-      const entry = tiffPending.get(id)
-      if (!entry) return
-      tiffPending.delete(id)
-      if (ok && blob) entry.resolve(blob)
-      else entry.reject(new Error(error ?? "TIFF decode failed"))
-    }
-  }
-  return tiffWorker
-}
+    ),
+  resolve: (response) =>
+    response.ok && response.blob ? response.blob : undefined,
+  reject: (response) => response.error ?? "TIFF decode failed",
+})
 
 function decodeTiffInWorker(buffer: ArrayBuffer): Promise<Blob> {
-  const worker = getTiffWorker()
-  const id = ++tiffReqId
-  return new Promise<Blob>((resolve, reject) => {
-    tiffPending.set(id, { resolve, reject })
-    worker.postMessage(
-      { id, buffer, targetWidth: TIFF_THUMBNAIL_TARGET_WIDTH },
-      [buffer]
-    )
+  return tiffWorkerClient.request<Blob>({
+    request: { buffer, targetWidth: TIFF_THUMBNAIL_TARGET_WIDTH },
+    transfer: [buffer],
   })
 }
 
@@ -81,9 +80,13 @@ function getTiffFirstPageBlob(
         meta.fileName,
         "Failed to decode TIFF thumbnail",
         () =>
-          timed(`tiff:total ${shortName(meta)}`, async () => {
-            const buf = await timed("tiff:fetch", () => content.readBytes())
-            return timed("tiff:worker-decode", () => decodeTiffInWorker(buf))
+          timedThumbnail(`tiff:total ${shortName(meta)}`, async () => {
+            const buf = await timedThumbnail("tiff:fetch", () =>
+              content.readBytes()
+            )
+            return timedThumbnail("tiff:worker-decode", () =>
+              decodeTiffInWorker(buf)
+            )
           })
       )
     )

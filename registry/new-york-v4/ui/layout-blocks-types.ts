@@ -24,12 +24,7 @@ export type LayoutRect = {
   height: number
 }
 
-export type LayoutQuad = [
-  LayoutPoint,
-  LayoutPoint,
-  LayoutPoint,
-  LayoutPoint,
-]
+export type LayoutQuad = [LayoutPoint, LayoutPoint, LayoutPoint, LayoutPoint]
 
 export type LayoutTextSpan = {
   start: number

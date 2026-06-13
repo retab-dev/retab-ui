@@ -247,16 +247,28 @@ export function useFixedRowVirtualization({
   rowSize,
   rowOverscan,
   jumpRowOverscan = rowOverscan,
+  initialViewportHeight = 0,
   scrollRef,
 }: {
   rowCount: number
   rowSize: number
   rowOverscan: number
   jumpRowOverscan?: number
+  initialViewportHeight?: number
   scrollRef: React.RefObject<HTMLElement | null>
 }) {
   const resolvedScrollElement = useResolvedScrollElement({ scrollRef })
-  const [range, setRange] = React.useState({ start: 0, end: 0 })
+  const [range, setRange] = React.useState(() =>
+    initialViewportHeight > 0
+      ? fixedRowRange({
+          rowCount,
+          rowSize,
+          scrollTop: 0,
+          viewportHeight: initialViewportHeight,
+          rowOverscan,
+        })
+      : { start: 0, end: 0 }
+  )
   const rangeRef = React.useRef(range)
   const rafRef = React.useRef(0)
   const totalRowSize = fixedTotalSize(rowCount, rowSize)
@@ -285,7 +297,7 @@ export function useFixedRowVirtualization({
       Number.isFinite(scrollElement.clientHeight) &&
       scrollElement.clientHeight > 0
         ? scrollElement.clientHeight
-        : 0
+        : fixedViewportMetric(initialViewportHeight)
     const firstVisibleRow = clamp(
       Math.floor(scrollTop / safeRowSize),
       0,
@@ -328,6 +340,7 @@ export function useFixedRowVirtualization({
     setMeasuredRange({ start, end })
   }, [
     jumpRowOverscan,
+    initialViewportHeight,
     rowCount,
     rowOverscan,
     rowSize,
@@ -345,10 +358,13 @@ export function useFixedRowVirtualization({
 
     const scheduleMeasure = () => {
       if (rafRef.current) return
-      rafRef.current = requestAnimationFrame(() => {
+      let didRun = false
+      const frame = requestAnimationFrame(() => {
+        didRun = true
         rafRef.current = 0
         measure()
       })
+      rafRef.current = didRun ? 0 : frame
     }
 
     scrollElement.addEventListener("scroll", scheduleMeasure, {
@@ -408,6 +424,47 @@ export function useFixedRowVirtualization({
     totalRowSize,
     scrollToRow,
   }
+}
+
+function fixedRowRange({
+  rowCount,
+  rowSize,
+  scrollTop,
+  viewportHeight,
+  rowOverscan,
+}: {
+  rowCount: number
+  rowSize: number
+  scrollTop: number
+  viewportHeight: number
+  rowOverscan: number
+}) {
+  const safeRowCount = fixedItemCount(rowCount)
+  const safeRowSize = fixedItemSize(rowSize)
+  if (safeRowCount <= 0 || safeRowSize <= 0) return { start: 0, end: 0 }
+
+  const safeScrollTop =
+    Number.isFinite(scrollTop) && scrollTop > 0 ? scrollTop : 0
+  const safeViewportHeight = fixedViewportMetric(viewportHeight)
+  const firstVisibleRow = clamp(
+    Math.floor(safeScrollTop / safeRowSize),
+    0,
+    safeRowCount - 1
+  )
+  const visibleRowCount = Math.ceil(safeViewportHeight / safeRowSize)
+  const activeOverscan = fixedOverscan(rowOverscan)
+  const uncappedStart = Math.max(0, firstVisibleRow - activeOverscan)
+  const uncappedEnd = Math.min(
+    safeRowCount,
+    firstVisibleRow + visibleRowCount + activeOverscan
+  )
+  return capVirtualRange({
+    uncappedStart,
+    uncappedEnd,
+    visibleStart: firstVisibleRow,
+    visibleEnd: Math.min(safeRowCount, firstVisibleRow + visibleRowCount),
+    maxItems: MAX_VIRTUAL_ITEMS,
+  })
 }
 
 export interface FixedGridViewport {
@@ -527,7 +584,12 @@ function useFixedGridViewport(
 
     const scheduleRead = () => {
       if (frame) return
-      frame = requestAnimationFrame(readViewport)
+      let didRun = false
+      const nextFrame = requestAnimationFrame(() => {
+        didRun = true
+        readViewport()
+      })
+      frame = didRun ? 0 : nextFrame
     }
 
     readViewport()

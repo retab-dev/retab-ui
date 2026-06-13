@@ -250,13 +250,13 @@ Use `renderFormatSourceOverlay` for overlay-based highlighting, such as PDF page
 Target types remain format-specific:
 
 ```ts
-PdfTarget     // page + normalized page area
-ImageTarget   // frame + normalized frame area
-TextTarget    // line range
-CsvTarget     // cell address
-XlsxTarget    // sheet + cell address
-DocxTarget    // text match or table cell index
-PptxTarget    // slide + normalized slide area, if PPTX gets source linking
+PdfTarget // page + normalized page area
+ImageTarget // frame + normalized frame area
+TextTarget // line range
+CsvTarget // cell address
+XlsxTarget // sheet + cell address
+DocxTarget // text match or table cell index
+PptxTarget // slide + normalized slide area, if PPTX gets source linking
 ```
 
 ## Scale And Scroll Standard
@@ -341,7 +341,7 @@ Use PDF as the reference. It already has the right module boundaries:
 
 - `pdf-viewer.tsx`
 - `pdf-viewer-types.ts`
-- `pdf-viewer-resource.ts`
+- `pdf-document-resource.ts`
 - `pdf-viewer-layout.ts`
 - `pdf-viewer-scale.ts`
 - `pdf-viewer-scroll.ts`
@@ -449,7 +449,7 @@ Proposed split:
 ```txt
 docx-viewer.tsx              facade + resource viewer shell
 docx-viewer-types.ts         props, handle, target, slots
-docx-viewer-resource.ts      existing byte promise cache
+docx-document-resource.ts      existing byte promise cache
 docx-viewer-core.ts          constants, render options, scale clamps, target keys
 docx-viewer-render.ts        lazy import, renderAsync, page tagging, page measurements
 docx-viewer-scale.ts         container width, fit width, controlled/default scale

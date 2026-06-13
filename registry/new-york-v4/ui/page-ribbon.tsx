@@ -3,6 +3,7 @@
 import * as React from "react"
 
 import {
+  getSegmentInteractionState,
   getSegmentSurfaceProps,
   scopeSegmentInteraction,
   type SegmentInteraction,
@@ -31,7 +32,7 @@ export interface PageRibbonProps {
   currentPage?: number | null
   /** 0..1 fine-grained scroll cursor (horizontal only); overrides the page line. */
   scrollProgress?: number | null
-  /** Shared hover/focus state. */
+  /** Shared preview state. */
   interaction?: SegmentInteraction
   /** Click a segment → jump the document to its first page. */
   onSelectPage?: (page: number) => void
@@ -47,8 +48,8 @@ export interface PageRibbonProps {
  * A page-axis ribbon: every segment is drawn as a block spanning its pages.
  * One vertical row with tiled segments is the split sidebar; many horizontal
  * rows (consensus + votes) is the partition waterfall — same component, same
- * `Segment[]` model. Driven by shared interaction state so hovering or focusing
- * a segment here dims the others in the legend too.
+ * `Segment[]` model. Driven by shared interaction state so hovering a segment
+ * here dims the others in the legend too.
  */
 export function PageRibbon({
   rows,
@@ -70,19 +71,31 @@ export function PageRibbon({
     rowThickness != null && Number.isFinite(rowThickness) && rowThickness > 0
       ? rowThickness
       : defaultThickness
+  const visibleSegments = React.useMemo(
+    () =>
+      rows.flatMap((row) =>
+        row.segments.filter(
+          (segment) => buildVisiblePageRuns(segment.pages, total).length > 0
+        )
+      ),
+    [rows, total]
+  )
   const scopedInteraction = React.useMemo(
     () =>
       scopeSegmentInteraction(
         interaction,
-        rows.flatMap((row) =>
-          row.segments
-            .filter(
-              (segment) => buildVisiblePageRuns(segment.pages, total).length > 0
-            )
-            .map((segment) => segment.id)
-        )
+        visibleSegments.map((segment) => segment.id)
       ),
-    [interaction, rows, total]
+    [interaction, visibleSegments]
+  )
+  const interactionState = React.useMemo(
+    () =>
+      getSegmentInteractionState({
+        segments: visibleSegments,
+        currentPage,
+        interaction: scopedInteraction,
+      }),
+    [currentPage, scopedInteraction, visibleSegments]
   )
   if (total <= 0 || rows.length === 0) return null
 
@@ -127,6 +140,7 @@ export function PageRibbon({
                   getSegmentSurfaceProps({
                     segment,
                     interaction: scopedInteraction,
+                    interactionState,
                     isCurrent,
                     onSelect,
                   })
@@ -153,10 +167,8 @@ export function PageRibbon({
                       eventHandlers.onClick()
                       onSelectPage?.(start)
                     }}
-                    onMouseEnter={eventHandlers.onMouseEnter}
-                    onMouseLeave={eventHandlers.onMouseLeave}
-                    onFocus={eventHandlers.onFocus}
-                    onBlur={eventHandlers.onBlur}
+                    onPointerEnter={eventHandlers.onPointerEnter}
+                    onPointerLeave={eventHandlers.onPointerLeave}
                     className={cn(
                       "absolute cursor-pointer transition-opacity before:absolute before:-inset-1 before:content-[''] hover:brightness-110 focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
                       state.isDimmed
@@ -168,7 +180,7 @@ export function PageRibbon({
                     style={{
                       ...style,
                       backgroundColor: segment.color,
-                      boxShadow: state.isActive
+                      boxShadow: state.isHighlighted
                         ? "inset 0 0 0 1.5px rgb(24 24 27)"
                         : undefined,
                     }}

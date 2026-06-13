@@ -7,15 +7,25 @@
 // any of those paths fails here.
 
 import * as React from "react"
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { resetDocxDocumentResourceCacheForTests } from "@/lib/docx-document-resource"
 import {
   blobSource,
   clearViewerResourceRegistryForTests,
 } from "@/registry/new-york-v4/lib/viewer-resource"
-import { DocxViewer, type DocxViewerHandle } from "@/registry/new-york-v4/ui/docx-viewer"
-import { resetDocxResourceCacheForTests } from "@/registry/new-york-v4/ui/docx-viewer-resource"
+import {
+  DocxViewer,
+  type DocxViewerHandle,
+} from "@/registry/new-york-v4/ui/docx-viewer"
 
 const docxMock = vi.hoisted(() => ({
   renderAsync: vi.fn(),
@@ -51,7 +61,10 @@ class ResizeObserverMock {
   }
   observe(target: Element) {
     setClientWidth(target, observedContainerWidth)
-    this.callback([{ target } as ResizeObserverEntry], this as unknown as ResizeObserver)
+    this.callback(
+      [{ target } as ResizeObserverEntry],
+      this as unknown as ResizeObserver
+    )
   }
   disconnect() {}
   unobserve() {}
@@ -92,7 +105,10 @@ function docxBlobSource(bytes: Uint8Array, identityKey = "blob:docx") {
 }
 
 function setClientWidth(element: Element, width: number) {
-  Object.defineProperty(element, "clientWidth", { configurable: true, value: width })
+  Object.defineProperty(element, "clientWidth", {
+    configurable: true,
+    value: width,
+  })
 }
 
 function setScrollMetrics(
@@ -103,8 +119,14 @@ function setScrollMetrics(
     scrollTop,
   }: { clientHeight: number; scrollHeight: number; scrollTop?: number }
 ) {
-  Object.defineProperty(element, "clientHeight", { configurable: true, value: clientHeight })
-  Object.defineProperty(element, "scrollHeight", { configurable: true, value: scrollHeight })
+  Object.defineProperty(element, "clientHeight", {
+    configurable: true,
+    value: clientHeight,
+  })
+  Object.defineProperty(element, "scrollHeight", {
+    configurable: true,
+    value: scrollHeight,
+  })
   if (scrollTop != null) {
     Object.defineProperty(element, "scrollTop", {
       configurable: true,
@@ -172,8 +194,14 @@ function installHighlightApi(highlights: Map<string, MockHighlight>) {
   const css = { highlights }
   Object.defineProperty(globalThis, "CSS", { configurable: true, value: css })
   Object.defineProperty(window, "CSS", { configurable: true, value: css })
-  Object.defineProperty(globalThis, "Highlight", { configurable: true, value: MockHighlight })
-  Object.defineProperty(window, "Highlight", { configurable: true, value: MockHighlight })
+  Object.defineProperty(globalThis, "Highlight", {
+    configurable: true,
+    value: MockHighlight,
+  })
+  Object.defineProperty(window, "Highlight", {
+    configurable: true,
+    value: MockHighlight,
+  })
 }
 
 function restoreBrowserGlobal<K extends keyof typeof globalThis>(
@@ -246,7 +274,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup()
-  resetDocxResourceCacheForTests()
+  resetDocxDocumentResourceCacheForTests()
   clearViewerResourceRegistryForTests()
   if (originalGetAnimations) {
     Object.defineProperty(HTMLElement.prototype, "getAnimations", {
@@ -283,7 +311,10 @@ describe("DocxViewer zoom + scale coercion", () => {
 
   it("treats a NaN controlled scale as 100%", async () => {
     await renderDocx(
-      <DocxViewer source={docxUrlSource("/nan-scale.docx")} scale={Number.NaN} />
+      <DocxViewer
+        source={docxUrlSource("/nan-scale.docx")}
+        scale={Number.NaN}
+      />
     )
     await waitForRenderedDocx()
 
@@ -309,7 +340,10 @@ describe("DocxViewer zoom + scale coercion", () => {
 
   it("keeps the fit-width zoom inert when zoom-out is clicked under a controlled scale", async () => {
     await renderDocx(
-      <DocxViewer source={docxUrlSource("/controlled-zoom-out.docx")} scale={2} />
+      <DocxViewer
+        source={docxUrlSource("/controlled-zoom-out.docx")}
+        scale={2}
+      />
     )
     await waitForRenderedDocx()
 
@@ -354,7 +388,9 @@ describe("DocxViewer page count + visible page", () => {
   })
 
   it("treats a page whose top sits exactly at the marker as the current page", async () => {
-    await renderDocx(<DocxViewer source={docxUrlSource("/marker-boundary.docx")} />)
+    await renderDocx(
+      <DocxViewer source={docxUrlSource("/marker-boundary.docx")} />
+    )
     await waitForRenderedDocx()
 
     const viewport = document.querySelector<HTMLElement>(
@@ -419,14 +455,19 @@ describe("DocxViewer imperative handle before render", () => {
     const ref = React.createRef<DocxViewerHandle>()
 
     await renderDocx(
-      <DocxViewer ref={ref} source={docxUrlSource("/viewport-during-render.docx")} />
+      <DocxViewer
+        ref={ref}
+        source={docxUrlSource("/viewport-during-render.docx")}
+      />
     )
 
     await waitFor(() => {
       expect(docxMock.renderAsync).toHaveBeenCalledTimes(1)
     })
 
-    const viewport = document.querySelector('[data-slot="scroll-area-viewport"]')
+    const viewport = document.querySelector(
+      '[data-slot="scroll-area-viewport"]'
+    )
     expect(viewport).toBeTruthy()
     expect(ref.current?.getViewportElement()).toBe(viewport)
 
@@ -534,7 +575,9 @@ describe("DocxViewer highlight target keys", () => {
 
     expect(set).toHaveBeenCalledTimes(1)
     expect(highlights.size).toBe(1)
-    expect([...highlights.values()][0]?.ranges[0]?.toString()).toBe("Target cell")
+    expect([...highlights.values()][0]?.ranges[0]?.toString()).toBe(
+      "Target cell"
+    )
   })
 
   it("moves the highlight when the target switches from text to cell", async () => {
@@ -564,7 +607,9 @@ describe("DocxViewer highlight target keys", () => {
     })
 
     await waitFor(() => {
-      expect([...highlights.values()][0]?.ranges[0]?.toString()).toBe("Target cell")
+      expect([...highlights.values()][0]?.ranges[0]?.toString()).toBe(
+        "Target cell"
+      )
     })
   })
 
@@ -625,10 +670,14 @@ describe("DocxViewer highlight target keys", () => {
 
 describe("DocxViewer layout props on the happy path", () => {
   it("applies bare styling to a successfully rendered viewer", async () => {
-    await renderDocx(<DocxViewer source={docxUrlSource("/bare-success.docx")} bare />)
+    await renderDocx(
+      <DocxViewer source={docxUrlSource("/bare-success.docx")} bare />
+    )
     await waitForRenderedDocx()
 
-    const viewer = document.querySelector<HTMLElement>('[data-slot="docx-viewer"]')
+    const viewer = document.querySelector<HTMLElement>(
+      '[data-slot="docx-viewer"]'
+    )
     expect(viewer).toBeTruthy()
     expect(viewer!.className).toContain("bg-muted/20")
     expect(viewer!.className).not.toContain("rounded-xl")
@@ -644,7 +693,9 @@ describe("DocxViewer layout props on the happy path", () => {
     )
     await waitForRenderedDocx()
 
-    const viewer = document.querySelector<HTMLElement>('[data-slot="docx-viewer"]')
+    const viewer = document.querySelector<HTMLElement>(
+      '[data-slot="docx-viewer"]'
+    )
     expect(viewer?.className).toContain("custom-docx-class")
   })
 })

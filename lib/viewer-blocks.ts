@@ -3,10 +3,7 @@
 // registry item named `<id>-viewer-block` (see registry.json), whose source
 // files feed the Code view.
 
-type ViewerBlockCategoryId =
-  | "primitives"
-  | "legends"
-  | "run-cards"
+type ViewerBlockCategoryId = "primitives" | "legends" | "run-cards"
 
 type ViewerBlockConfig = {
   id: string
@@ -41,6 +38,19 @@ function getRegistryAddCommand(name: string) {
 }
 
 export const VIEWER_BLOCKS = [
+  {
+    id: "ocr",
+    registryName: "ocr-block",
+    title: "OCR",
+    description:
+      "OCR review for a scanned document — source image on the left, detected text blocks on the right, and matching polygon overlays with confidence filtering.",
+    command: getRegistryAddCommand("ocr-block"),
+    docsHref: "/docs/components/layout-blocks",
+    viewHref: "/view/blocks/ocr",
+    featured: true,
+    previewHeightClassName: "h-[680px]",
+    categories: [],
+  },
   {
     id: "split",
     registryName: "split-viewer-block",
@@ -183,7 +193,7 @@ export const VIEWER_BLOCKS = [
     registryName: "legend-variants-block",
     title: "Legend Variants",
     description:
-      "The split viewer shown with every legend placement — bar, floating, and a vertical rail — over one attention.pdf split result, all sharing one selection.",
+      "The split viewer shown with every legend placement — bar, floating, and a vertical rail — over one ViT paper split result, all sharing one selection.",
     command: getRegistryAddCommand("legend-variants-block"),
     docsHref: "/docs/components/split-viewer",
     viewHref: "/view/blocks/legend-variants",
@@ -206,6 +216,8 @@ export const VIEWER_BLOCKS = [
 export type ViewerBlockId = (typeof VIEWER_BLOCKS)[number]["id"]
 export type ViewerBlockMetadata = ViewerBlockConfig & { id: ViewerBlockId }
 
-export function getViewerBlock(blockId: string): ViewerBlockMetadata | undefined {
+export function getViewerBlock(
+  blockId: string
+): ViewerBlockMetadata | undefined {
   return VIEWER_BLOCKS.find((block) => block.id === blockId)
 }

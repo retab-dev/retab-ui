@@ -86,7 +86,10 @@ export function normalizeRotation(rotation: number): 0 | 90 | 180 | 270 {
   return 270
 }
 
-export function getRotatedPageSize(page: LayoutPage, rotation = page.rotation) {
+export function getRotatedPageSize(
+  page: LayoutPage,
+  rotation: number = page.rotation
+) {
   const normalizedRotation = normalizeRotation(rotation)
   return normalizedRotation === 90 || normalizedRotation === 270
     ? { width: page.height, height: page.width }
@@ -96,7 +99,7 @@ export function getRotatedPageSize(page: LayoutPage, rotation = page.rotation) {
 export function rotatePoint(
   point: LayoutPoint,
   page: LayoutPage,
-  rotation = page.rotation
+  rotation: number = page.rotation
 ): LayoutPoint {
   switch (normalizeRotation(rotation)) {
     case 90:
@@ -114,7 +117,7 @@ export function rotatePoint(
 export function rotateQuad(
   quad: LayoutQuad,
   page: LayoutPage,
-  rotation = page.rotation
+  rotation: number = page.rotation
 ): LayoutQuad {
   return quad.map((point) => rotatePoint(point, page, rotation)) as LayoutQuad
 }
@@ -140,7 +143,7 @@ export function itemToRect(
 export function toPercentRect(
   rect: LayoutRect,
   page: LayoutPage,
-  rotation = page.rotation
+  rotation: number = page.rotation
 ): LayoutRect {
   const size = getRotatedPageSize(page, rotation)
   return {
@@ -154,7 +157,7 @@ export function toPercentRect(
 export function toSvgPoints(
   quad: LayoutQuad,
   page: LayoutPage,
-  rotation = page.rotation
+  rotation: number = page.rotation
 ): string {
   const rotatedQuad = rotateQuad(quad, page, rotation)
   const size = getRotatedPageSize(page, rotation)

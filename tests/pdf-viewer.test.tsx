@@ -11,18 +11,20 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
+  getPdfDocumentResource,
+  resetPdfDocumentResourceCacheForTests,
+} from "@/lib/pdf-document-resource"
+import {
   blobSource,
   clearViewerResourceRegistryForTests,
   createViewerResource,
 } from "@/registry/new-york-v4/lib/viewer-resource"
 import { PdfThumbnailSidebar } from "@/registry/new-york-v4/ui/pdf-thumbnail-sidebar"
 import {
-  getDocumentResource,
   PdfHighlight,
   PdfViewer,
   type PdfViewerHandle,
 } from "@/registry/new-york-v4/ui/pdf-viewer"
-import { __resetPdfDocumentCacheForTests } from "@/registry/new-york-v4/ui/pdf-viewer-resource"
 
 const pdfjsMock = vi.hoisted(() => {
   type Deferred<T> = {
@@ -98,6 +100,30 @@ function findByTextContent(text: string) {
   return screen.findByText((_, element) => element?.textContent === text)
 }
 
+function stubElementScrollTo() {
+  const scrollTo = vi.fn()
+  const original = HTMLElement.prototype.scrollTo
+  Object.defineProperty(HTMLElement.prototype, "scrollTo", {
+    configurable: true,
+    value: scrollTo,
+  })
+
+  return {
+    scrollTo,
+    restore: () => {
+      if (original) {
+        Object.defineProperty(HTMLElement.prototype, "scrollTo", {
+          configurable: true,
+          value: original,
+        })
+      } else {
+        delete (HTMLElement.prototype as unknown as Record<string, unknown>)
+          .scrollTo
+      }
+    },
+  }
+}
+
 class ResizeObserverMock {
   private callback: ResizeObserverCallback
   constructor(callback: ResizeObserverCallback) {
@@ -154,18 +180,31 @@ beforeEach(() => {
     }
   )
   pdfjsMock.GlobalWorkerOptions.workerSrc = undefined
-  __resetPdfDocumentCacheForTests()
+  resetPdfDocumentResourceCacheForTests()
 
   vi.stubGlobal("ResizeObserver", ResizeObserverMock)
   vi.stubGlobal("IntersectionObserver", IntersectionObserverMock)
   vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(
     {} as never
   )
+  const animationFrames = new Map<number, ReturnType<typeof setTimeout>>()
+  let animationFrameId = 0
   vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
-    callback(0)
-    return 1
+    const id = ++animationFrameId
+    const timeout = setTimeout(() => {
+      animationFrames.delete(id)
+      callback(performance.now())
+    }, 0)
+    animationFrames.set(id, timeout)
+    return id
   })
-  vi.spyOn(window, "cancelAnimationFrame").mockImplementation(() => {})
+  vi.spyOn(window, "cancelAnimationFrame").mockImplementation((id) => {
+    const timeout = animationFrames.get(id)
+    if (timeout) {
+      clearTimeout(timeout)
+      animationFrames.delete(id)
+    }
+  })
   Element.prototype.getAnimations = vi.fn(() => [])
 
   Object.defineProperty(HTMLElement.prototype, "clientWidth", {
@@ -202,7 +241,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup()
-  __resetPdfDocumentCacheForTests()
+  resetPdfDocumentResourceCacheForTests()
   clearViewerResourceRegistryForTests()
   vi.restoreAllMocks()
   vi.unstubAllGlobals()
@@ -422,7 +461,7 @@ describe("PdfViewer", () => {
     pdfjsMock.docs.set("/retry.pdf", new Error("load failed"))
 
     await expect(
-      getDocumentResource(pdfUrlContent("/retry.pdf"))
+      getPdfDocumentResource(pdfUrlContent("/retry.pdf"))
     ).rejects.toMatchObject({
       format: "pdf",
       kind: "parse_failed",
@@ -432,7 +471,7 @@ describe("PdfViewer", () => {
     pdfjsMock.docs.set("/retry.pdf", doc)
 
     await expect(
-      getDocumentResource(pdfUrlContent("/retry.pdf"))
+      getPdfDocumentResource(pdfUrlContent("/retry.pdf"))
     ).resolves.toBe(doc)
     expect(pdfjsMock.getDocument).toHaveBeenCalledTimes(2)
   })
@@ -856,7 +895,7 @@ describe("PdfViewer", () => {
     for (let index = 0; index < 6; index += 1) {
       const otherDoc = makeDoc([[100, 200]])
       pdfjsMock.docs.set(`/switch-other-${index}.pdf`, otherDoc)
-      await getDocumentResource(pdfUrlContent(`/switch-other-${index}.pdf`))
+      await getPdfDocumentResource(pdfUrlContent(`/switch-other-${index}.pdf`))
     }
 
     await act(async () => {
@@ -956,9 +995,8 @@ describe("PdfViewer", () => {
           <button
             type="button"
             onClick={() =>
-              ref.current?.scrollToPageTarget(
-                2,
-                { top: 25 },
+              ref.current?.scrollToPageArea(
+                { pageNumber: 2, top: 25 },
                 { behavior: "auto" }
               )
             }
@@ -1017,9 +1055,8 @@ describe("PdfViewer", () => {
           <button
             type="button"
             onClick={() =>
-              ref.current?.scrollToPageTarget(
-                2,
-                { top: 200 },
+              ref.current?.scrollToPageArea(
+                { pageNumber: 2, top: 200 },
                 { behavior: "auto" }
               )
             }
@@ -1078,9 +1115,8 @@ describe("PdfViewer", () => {
           <button
             type="button"
             onClick={() =>
-              ref.current?.scrollToPageTarget(
-                2,
-                { top: -25 },
+              ref.current?.scrollToPageArea(
+                { pageNumber: 2, top: -25 },
                 { behavior: "auto" }
               )
             }
@@ -1136,9 +1172,8 @@ describe("PdfViewer", () => {
           <button
             type="button"
             onClick={() =>
-              ref.current?.scrollToPageTarget(
-                2,
-                { top: 25 },
+              ref.current?.scrollToPageArea(
+                { pageNumber: 2, top: 25 },
                 { behavior: "auto" }
               )
             }
@@ -1188,9 +1223,8 @@ describe("PdfViewer", () => {
             <button
               type="button"
               onClick={() =>
-                ref.current?.scrollToPageTarget(
-                  2,
-                  { top: targetTop },
+                ref.current?.scrollToPageArea(
+                  { pageNumber: 2, top: targetTop },
                   { behavior: "auto" }
                 )
               }
@@ -1815,7 +1849,7 @@ describe("PdfViewer", () => {
     for (let index = 0; index < 7; index += 1) {
       const otherDoc = makeDoc([[100, 200]])
       pdfjsMock.docs.set(`/shared-viewers-other-${index}.pdf`, otherDoc)
-      await getDocumentResource(
+      await getPdfDocumentResource(
         pdfUrlContent(`/shared-viewers-other-${index}.pdf`)
       )
     }
@@ -1844,7 +1878,7 @@ describe("PdfViewer", () => {
       const otherDoc = makeDoc([[100, 200]])
       otherDocs.push(otherDoc)
       pdfjsMock.docs.set(`/sidebar-other-${index}.pdf`, otherDoc)
-      await getDocumentResource(pdfUrlContent(`/sidebar-other-${index}.pdf`))
+      await getPdfDocumentResource(pdfUrlContent(`/sidebar-other-${index}.pdf`))
     }
 
     await act(async () => {
@@ -1877,7 +1911,7 @@ describe("PdfViewer", () => {
     for (let index = 0; index < 6; index += 1) {
       const otherDoc = makeDoc([[100, 200]])
       pdfjsMock.docs.set(`/sidebar-switch-other-${index}.pdf`, otherDoc)
-      await getDocumentResource(
+      await getPdfDocumentResource(
         pdfUrlContent(`/sidebar-switch-other-${index}.pdf`)
       )
     }
@@ -1938,6 +1972,116 @@ describe("PdfViewer", () => {
     )
 
     view.unmount()
+  })
+
+  it("scrolls the thumbnail sidebar to the active page when it leaves the rail viewport", async () => {
+    vi.stubGlobal("IntersectionObserver", undefined)
+    const { restore, scrollTo } = stubElementScrollTo()
+    const doc = makeDoc(
+      Array.from({ length: 96 }, () => [100, 200] as [number, number])
+    )
+    pdfjsMock.docs.set("/thumbnail-follow.pdf", doc)
+
+    try {
+      await act(async () => {
+        render(
+          <PdfThumbnailSidebar
+            src="/thumbnail-follow.pdf"
+            currentPage={50}
+            width={50}
+          />
+        )
+      })
+
+      await waitFor(() => expect(scrollTo).toHaveBeenCalled())
+    } finally {
+      restore()
+    }
+  })
+
+  it("does not auto-scroll thumbnails while the pointer is inside the rail", async () => {
+    vi.stubGlobal("IntersectionObserver", undefined)
+    const { restore, scrollTo } = stubElementScrollTo()
+    const doc = makeDoc(
+      Array.from({ length: 96 }, () => [100, 200] as [number, number])
+    )
+    pdfjsMock.docs.set("/thumbnail-pointer-follow.pdf", doc)
+
+    try {
+      const view = render(
+        <PdfThumbnailSidebar
+          src="/thumbnail-pointer-follow.pdf"
+          currentPage={1}
+          width={50}
+        />
+      )
+      await screen.findByText("1")
+
+      fireEvent.pointerEnter(
+        document.querySelector('[data-slot="pdf-thumbnail-sidebar"]')!
+      )
+      scrollTo.mockClear()
+
+      view.rerender(
+        <PdfThumbnailSidebar
+          src="/thumbnail-pointer-follow.pdf"
+          currentPage={50}
+          width={50}
+        />
+      )
+
+      await act(async () => {
+        await Promise.resolve()
+      })
+
+      expect(scrollTo).not.toHaveBeenCalled()
+    } finally {
+      restore()
+    }
+  })
+
+  it("does not auto-scroll thumbnails while the user is scrolling the rail", async () => {
+    vi.stubGlobal("IntersectionObserver", undefined)
+    const now = vi.spyOn(performance, "now").mockReturnValue(1000)
+    const { restore, scrollTo } = stubElementScrollTo()
+    const doc = makeDoc(
+      Array.from({ length: 96 }, () => [100, 200] as [number, number])
+    )
+    pdfjsMock.docs.set("/thumbnail-user-scroll-follow.pdf", doc)
+
+    try {
+      const view = render(
+        <PdfThumbnailSidebar
+          src="/thumbnail-user-scroll-follow.pdf"
+          currentPage={1}
+          width={50}
+        />
+      )
+      await screen.findByText("1")
+
+      now.mockReturnValue(1300)
+      fireEvent.scroll(
+        document.querySelector('[data-slot="pdf-thumbnail-sidebar"]')!
+      )
+      scrollTo.mockClear()
+
+      view.rerender(
+        <PdfThumbnailSidebar
+          src="/thumbnail-user-scroll-follow.pdf"
+          currentPage={50}
+          width={50}
+        />
+      )
+
+      await act(async () => {
+        await Promise.resolve()
+      })
+
+      expect(scrollTo).not.toHaveBeenCalled()
+    } finally {
+      now.mockRestore()
+      restore()
+    }
   })
 
   it("virtualizes thumbnail rows for large documents", async () => {

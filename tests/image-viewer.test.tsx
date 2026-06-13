@@ -471,7 +471,7 @@ describe("ImageViewer TIFF detection", () => {
   })
 
   it("decodes the real TIFF demo fixture with UTIF", () => {
-    const bytes = fs.readFileSync("public/samples/nvidia-10q-scan.tiff")
+    const bytes = fs.readFileSync("public/samples/entropy.tiff")
     const arrayBuffer = bytes.buffer.slice(
       bytes.byteOffset,
       bytes.byteOffset + bytes.byteLength

@@ -1,45 +1,77 @@
 import { type Segment } from "@/lib/segments"
 
 export interface SegmentInteraction {
-  hoveredSegmentId: string | null
-  focusedSegmentId: string | null
+  previewSegmentId: string | null
   previewSegment: (segmentId: string) => void
   clearPreview: () => void
-  focusSegment: (segmentId: string) => void
-  clearFocus: () => void
+}
+
+export interface SegmentInteractionState {
+  currentPage: number | null
+  currentSegmentId: string | null
+  currentSegmentIds: readonly string[]
+  previewSegmentId: string | null
+  highlightedSegmentId: string | null
+  highlightedSegmentIds: readonly string[]
 }
 
 export interface SegmentViewState {
-  isHovered: boolean
-  isFocused: boolean
   isPreviewed: boolean
   isCurrent: boolean
-  isActive: boolean
+  isHighlighted: boolean
   isDimmed: boolean
 }
 
 export interface SegmentSurfaceProps {
   state: SegmentViewState
   eventHandlers: {
-    onMouseEnter: () => void
-    onMouseLeave: () => void
-    onFocus: () => void
-    onBlur: () => void
+    onPointerEnter: () => void
+    onPointerLeave: () => void
     onClick: () => void
   }
   dataProps: {
     "data-previewed": boolean
     "data-current": boolean
-    "data-active": boolean
+    "data-highlighted": boolean
   }
 }
 
 export function resolvePreviewedSegmentId(
-  interaction?: Partial<
-    Pick<SegmentInteraction, "hoveredSegmentId" | "focusedSegmentId">
-  > | null
+  interaction?: Partial<Pick<SegmentInteraction, "previewSegmentId">> | null
 ): string | null {
-  return interaction?.hoveredSegmentId ?? interaction?.focusedSegmentId ?? null
+  return interaction?.previewSegmentId ?? null
+}
+
+export function getSegmentInteractionState({
+  segments,
+  currentPage,
+  interaction,
+}: {
+  segments: Segment[]
+  currentPage?: number | null
+  interaction?: SegmentInteraction | null
+}): SegmentInteractionState {
+  const segmentIds = new Set(segments.map((segment) => segment.id))
+  const previewSegmentId = knownSegmentId(
+    resolvePreviewedSegmentId(interaction),
+    segmentIds
+  )
+  const resolvedCurrentPage = normalizeCurrentPage(currentPage)
+  const currentSegmentIds =
+    resolvedCurrentPage == null
+      ? []
+      : resolveCurrentSegmentIds(segments, resolvedCurrentPage)
+  const highlightedSegmentIds =
+    previewSegmentId != null ? [previewSegmentId] : currentSegmentIds
+
+  return {
+    currentPage: resolvedCurrentPage,
+    currentSegmentId: currentSegmentIds[0] ?? null,
+    currentSegmentIds,
+    previewSegmentId,
+    highlightedSegmentId: highlightedSegmentIds[0] ?? null,
+    highlightedSegmentIds,
+  }
 }
 
 export function scopeSegmentInteraction(
@@ -49,26 +81,18 @@ export function scopeSegmentInteraction(
   if (!interaction) return interaction
 
   const knownIds = new Set(segmentIds)
-  const hoveredSegmentId = knownSegmentId(
-    interaction.hoveredSegmentId,
-    knownIds
-  )
-  const focusedSegmentId = knownSegmentId(
-    interaction.focusedSegmentId,
+  const previewSegmentId = knownSegmentId(
+    interaction.previewSegmentId,
     knownIds
   )
 
-  if (
-    hoveredSegmentId === interaction.hoveredSegmentId &&
-    focusedSegmentId === interaction.focusedSegmentId
-  ) {
+  if (previewSegmentId === interaction.previewSegmentId) {
     return interaction
   }
 
   return {
     ...interaction,
-    hoveredSegmentId,
-    focusedSegmentId,
+    previewSegmentId,
   }
 }
 
@@ -92,70 +116,82 @@ export function isSegmentCurrentPage(
   )
 }
 
+function normalizeCurrentPage(currentPage?: number | null): number | null {
+  return currentPage != null &&
+    Number.isInteger(currentPage) &&
+    currentPage > 0
+    ? currentPage
+    : null
+}
+
+function resolveCurrentSegmentIds(
+  segments: Segment[],
+  currentPage: number
+): string[] {
+  return segments
+    .filter((segment) => isSegmentCurrentPage(segment, currentPage))
+    .map((segment) => segment.id)
+}
+
 export function getSegmentViewState({
   segment,
-  interaction,
-  currentPage,
+  interactionState,
   isCurrent,
 }: {
   segment: Segment
-  interaction?: SegmentInteraction | null
-  currentPage?: number | null
+  interactionState: SegmentInteractionState
   isCurrent?: boolean
 }): SegmentViewState {
-  const previewedSegmentId = resolvePreviewedSegmentId(interaction)
-  const current = isCurrent ?? isSegmentCurrentPage(segment, currentPage)
-  const isHovered = interaction?.hoveredSegmentId === segment.id
-  const isFocused = interaction?.focusedSegmentId === segment.id
-  const isPreviewed = previewedSegmentId === segment.id
+  const current =
+    isCurrent ??
+    (interactionState.currentSegmentIds.includes(segment.id) &&
+      isSegmentCurrentPage(segment, interactionState.currentPage))
+  const isPreviewed = interactionState.previewSegmentId === segment.id
+  const isHighlighted =
+    interactionState.highlightedSegmentIds.includes(segment.id) &&
+    (interactionState.previewSegmentId != null ? isPreviewed : current)
 
   return {
-    isHovered,
-    isFocused,
     isPreviewed,
     isCurrent: current,
-    isActive: current || isPreviewed,
-    isDimmed: previewedSegmentId != null && !isPreviewed,
+    isHighlighted,
+    isDimmed: interactionState.previewSegmentId != null && !isPreviewed,
   }
 }
 
 export function getSegmentSurfaceProps({
   segment,
   interaction,
-  currentPage,
+  interactionState,
   isCurrent,
   onSelect,
 }: {
   segment: Segment
   interaction?: SegmentInteraction | null
-  currentPage?: number | null
+  interactionState: SegmentInteractionState
   isCurrent?: boolean
   onSelect?: (segment: Segment) => void
 }): SegmentSurfaceProps {
   const state = getSegmentViewState({
     segment,
-    interaction,
-    currentPage,
+    interactionState,
     isCurrent,
   })
 
   return {
     state,
     eventHandlers: {
-      onMouseEnter: () => interaction?.previewSegment(segment.id),
-      onMouseLeave: () => interaction?.clearPreview(),
-      onFocus: () => interaction?.focusSegment(segment.id),
-      onBlur: () => interaction?.clearFocus(),
+      onPointerEnter: () => interaction?.previewSegment(segment.id),
+      onPointerLeave: () => interaction?.clearPreview(),
       onClick: () => {
         interaction?.clearPreview()
-        interaction?.clearFocus()
         onSelect?.(segment)
       },
     },
     dataProps: {
       "data-previewed": state.isPreviewed,
       "data-current": state.isCurrent,
-      "data-active": state.isActive,
+      "data-highlighted": state.isHighlighted,
     },
   }
 }

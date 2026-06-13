@@ -8,17 +8,19 @@ chunks or split subdocuments) — a compact map from color to label. It docks to
 document surface in three flavors: a flush **bar**, a **floating** overlay card,
 or a vertical **rail**.
 
-Hovering, keyboard focus, persistent selection, and `currentPage` are separate
-states. Wire the legend to the same `useSegmentInteraction` object as a
-[sidebar](/docs/components/sidebar) for a coordinated layout.
+Hovering is a temporary preview. When nothing is hovered, `currentPage` derives
+the highlighted segment. Clicking a segment only asks the host to navigate; it
+does not persist category selection. Wire the legend to the same
+`useSegmentInteraction` object as a [sidebar](/docs/components/sidebar) for a
+coordinated layout.
 
 <SegmentLegendDemo />
 
 ## In a split viewer
 
 Docked to a [split viewer](/docs/components/split-viewer) over one
-`attention.pdf` split result — the same legend placed three ways (a flush bar,
-a floating card, and a vertical rail). One shared interaction state dims the
+ViT paper split result — the same legend placed three ways (a flush bar, a
+floating card, and a vertical rail). One shared interaction state dims the
 matching pages across every cell at once.
 
 <SegmentLegendSplitDemo />
@@ -58,7 +60,7 @@ export function Example() {
 The `floating` variant needs a `relative` parent to anchor against; `side`
 controls which edge it docks to.
 
-For caller-owned selection state, build the same `interaction` object with
+For caller-owned preview state, build the same `interaction` object with
 `useControlledSegmentInteraction`; do not pass selection props to the legend.
 
 ## Props
@@ -66,13 +68,13 @@ For caller-owned selection state, build the same `interaction` object with
 | Prop                 | Type                                     | Description                                                                  |
 | -------------------- | ---------------------------------------- | ---------------------------------------------------------------------------- |
 | `segments`           | `Segment[]`                              | Labels + pages + colors (use `toSegments`).                                  |
-| `interaction`        | `SegmentInteraction`                     | Shared hover/focus/selection state.                                          |
+| `interaction`        | `SegmentInteraction`                     | Shared transient preview state.                                              |
 | `variant`            | `"bar" \| "floating" \| "plain"`         | How the legend attaches to the surface. Defaults to `"bar"`.                 |
 | `orientation`        | `"horizontal" \| "vertical"`             | Wrap/grid vs. rail layout. Defaults to `"horizontal"`.                       |
 | `side`               | `"top" \| "bottom" \| "left" \| "right"` | Edge the legend docks to — drives the border (`bar`) or anchor (`floating`). |
 | `density`            | `"comfortable" \| "compact"`             | Swatch + label scale. Defaults to `"comfortable"`.                           |
-| `onSelect`           | `(segment: Segment) => void`             | Fired when a segment is clicked, after shared selection is requested.         |
-| `currentPage`        | `number \| null`                         | 1-based current page; segments that own it render bold.                      |
+| `onSelect`           | `(segment: Segment) => void`             | Fired when a segment is clicked, after transient preview is cleared.         |
+| `currentPage`        | `number \| null`                         | 1-based current page; segments that own it highlight when no preview exists. |
 | `columns`            | `number`                                 | Lay entries out on a grid of N columns (horizontal only).                    |
 | `showUnusedToggle`   | `boolean`                                | Render a "Show all / Hide unused" toggle when some segments own no pages.    |
 | `showUnused`         | `boolean`                                | Controlled visibility of zero-page segments.                                 |

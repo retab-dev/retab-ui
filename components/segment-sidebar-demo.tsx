@@ -10,18 +10,20 @@ import { useSegmentInteraction } from "@/components/ui/use-segment-interaction"
 // A split-style result (named subdocuments) with per-page likelihoods — the
 // same model also covers partition chunks; only the label differs.
 const output = [
-  { name: "Title & Abstract", pages: [1] },
-  { name: "Introduction", pages: [2, 3] },
-  { name: "Model Architecture", pages: [4, 5, 6] },
-  { name: "Results", pages: [7, 8] },
-  { name: "References", pages: [9, 10, 11] },
+  { name: "Title, Abstract & Introduction", pages: [1] },
+  { name: "Related Work", pages: [2] },
+  { name: "Method", pages: [3] },
+  { name: "Experiments", pages: [4, 5, 6, 7, 8] },
+  { name: "Conclusion & References", pages: [9, 10, 11, 12] },
+  { name: "Appendix", pages: [13, 14, 15, 16, 17, 18, 19, 20, 21, 22] },
 ]
 const likelihoods = [
   [0.99],
-  [0.95, 0.9],
-  [0.9, 0.85, 0.9],
-  [0.8, 0.82],
-  [0.97, 0.95, 0.96],
+  [0.94],
+  [0.92],
+  [0.88, 0.86, 0.9, 0.87, 0.85],
+  [0.96, 0.95, 0.94, 0.93],
+  [0.91, 0.9, 0.92, 0.89, 0.9, 0.88, 0.87, 0.9, 0.89, 0.88],
 ]
 
 export function SegmentSidebarDemo() {
@@ -47,15 +49,15 @@ export function SegmentSidebarDemo() {
 }
 
 // The same split result, but mounted in a real split viewer: the sidebar is the
-// left rail beside attention.pdf, sharing hover, focus, and selection with the
+// left rail beside the ViT paper, sharing hover, focus, and selection with the
 // legend and page timeline above the document.
 const splitOutput = [
-  { name: "Title & Abstract", pages: [1] },
-  { name: "Introduction", pages: [2, 3] },
-  { name: "Model Architecture", pages: [4, 5, 6] },
-  { name: "Results", pages: [7, 8, 9] },
-  { name: "References", pages: [10, 11] },
-  { name: "Attention Visualizations", pages: [12, 13, 14, 15] },
+  { name: "Title, Abstract & Introduction", pages: [1] },
+  { name: "Related Work", pages: [2] },
+  { name: "Method", pages: [3] },
+  { name: "Experiments", pages: [4, 5, 6, 7, 8] },
+  { name: "Conclusion & References", pages: [9, 10, 11, 12] },
+  { name: "Appendix", pages: [13, 14, 15, 16, 17, 18, 19, 20, 21, 22] },
 ]
 
 export function SegmentSidebarSplitDemo() {
@@ -64,9 +66,9 @@ export function SegmentSidebarSplitDemo() {
     <div className="not-prose my-6" style={{ height: 640 }}>
       <SegmentedDocumentViewer
         segments={segments}
-        src="/samples/attention.pdf"
+        src="/samples/an-image-is-worth-16x16-words.pdf"
         unitLabel="subdocument"
-        title="attention.pdf · 6 subdocuments"
+        title="an-image-is-worth-16x16-words.pdf · 6 subdocuments"
         className="h-full"
       />
     </div>

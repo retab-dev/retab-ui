@@ -7,8 +7,8 @@ import { FileViewer } from "@/components/ui/file-viewer"
 
 const FILES = [
   { label: "PDF", file: "spacex-prospectus.pdf" },
-  { label: "Image", file: "attention-page-1.png" },
-  { label: "TIFF", file: "nvidia-10q-scan.tiff" },
+  { label: "Image", file: "an-image-is-worth-16x16-words-page-1.png" },
+  { label: "TIFF", file: "entropy.tiff" },
   { label: "XLSX", file: "nvidia-financials-fy2024.xlsx" },
   { label: "PPTX", file: "sample-presentation.pptx" },
   { label: "DOCX", file: "quarterly-business-review.docx" },

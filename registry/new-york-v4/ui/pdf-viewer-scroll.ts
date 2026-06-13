@@ -6,7 +6,7 @@ import {
   type PdfPageLayoutModel,
 } from "./pdf-viewer-layout"
 import { clamp } from "./pdf-viewer-scale"
-import type { PdfPageScrollTarget } from "./pdf-viewer-types"
+import type { PdfPageAreaTarget } from "./pdf-viewer-types"
 
 const PDF_SCROLL_TARGET_HEADROOM = 48
 
@@ -117,13 +117,10 @@ export function usePdfScroll({
     }
   }, [resetKey, resetViewportForKey])
 
-  const scrollToPageTarget = React.useCallback(
-    (
-      pageNumber: number,
-      target: PdfPageScrollTarget,
-      options?: ScrollToOptions
-    ) => {
+  const scrollToPageArea = React.useCallback(
+    (target: PdfPageAreaTarget, options?: ScrollToOptions) => {
       const viewportElement = viewportElementRef.current
+      const pageNumber = target.pageNumber
       if (!viewportElement || pageNumber < 1 || pageNumber > pageCount) return
 
       const pageLayout = getPdfPageLayout(layout, pageNumber)
@@ -143,6 +140,12 @@ export function usePdfScroll({
       })
     },
     [layout, pageCount]
+  )
+  const scrollToPage = React.useCallback(
+    (pageNumber: number, options?: ScrollToOptions) => {
+      scrollToPageArea({ pageNumber, top: 0 }, options)
+    },
+    [scrollToPageArea]
   )
   const getViewportElement = React.useCallback(
     () => viewportElementRef.current,
@@ -169,7 +172,8 @@ export function usePdfScroll({
     setViewportElement,
     measureScroll,
     handleScroll,
-    scrollToPageTarget,
+    scrollToPage,
+    scrollToPageArea,
     getViewportElement,
   }
 }

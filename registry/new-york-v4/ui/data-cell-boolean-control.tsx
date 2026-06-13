@@ -47,6 +47,7 @@ export function DataCellBooleanControl({
   showPickerIcon: _showPickerIcon,
   activationIntent: _activationIntent,
   isPickerOpen: _isPickerOpen,
+  autoFocus,
   onDraftValueChange: _onDraftValueChange,
   onCommit,
   onEditingEnd,
@@ -90,6 +91,7 @@ export function DataCellBooleanControl({
         aria-label={ariaLabel ?? (checked ? "true" : "false")}
         data-state={checked ? "checked" : "unchecked"}
         disabled={disabled}
+        autoFocus={autoFocus}
         className={cn(
           dataCellCheckboxDisplayClass,
           "flex items-center justify-center"

@@ -3,6 +3,7 @@
 import * as React from "react"
 
 import {
+  getSegmentInteractionState,
   getSegmentSurfaceProps,
   scopeSegmentInteraction,
   type SegmentInteraction,
@@ -36,9 +37,9 @@ export interface SegmentLegendProps {
   side?: SegmentLegendSide
   /** Swatch + label scale. @default "comfortable" */
   density?: SegmentLegendDensity
-  /** Shared hover/focus state. */
+  /** Shared preview state. */
   interaction?: SegmentInteraction
-  /** Fired when a segment surface is clicked. */
+  /** Fired when a segment surface is clicked, after transient preview is cleared. */
   onSelect?: (segment: Segment) => void
   /** 1-based current page; owning segments receive current-page styling. */
   currentPage?: number | null
@@ -76,9 +77,9 @@ const FLOAT_ANCHOR: Record<SegmentLegendSide, string> = {
 }
 
 /**
- * Compact color legend: one swatch + label per segment. Hovering or focusing
- * previews that segment and dims the others. Segments containing
- * `currentPage` receive separate current-page styling.
+ * Compact color legend: one swatch + label per segment. Hovering previews that
+ * segment and dims the others. When nothing is previewed, the segment containing
+ * `currentPage` is highlighted.
  * Zero-page segments are hidden unless shown via the toggle.
  *
  * `variant` controls how it sits on the document surface (flush bar, floating
@@ -122,6 +123,15 @@ export function SegmentLegend({
         visible.map((segment) => segment.id)
       ),
     [interaction, visible]
+  )
+  const interactionState = React.useMemo(
+    () =>
+      getSegmentInteractionState({
+        segments: visible,
+        currentPage,
+        interaction: scopedInteraction,
+      }),
+    [currentPage, scopedInteraction, visible]
   )
 
   if (visible.length === 0 && !canToggleUnused) return null
@@ -184,7 +194,7 @@ export function SegmentLegend({
             const { state, eventHandlers, dataProps } = getSegmentSurfaceProps({
               segment,
               interaction: scopedInteraction,
-              currentPage,
+              interactionState,
               onSelect,
             })
             const label = segmentDisplayLabel(segment.label)
@@ -197,6 +207,7 @@ export function SegmentLegend({
                 type="button"
                 {...dataProps}
                 {...eventHandlers}
+                aria-current={state.isCurrent ? "page" : undefined}
                 title={label}
                 className={cn(
                   "flex min-w-0 items-center gap-2 rounded-[3px] transition-opacity focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
@@ -223,7 +234,7 @@ export function SegmentLegend({
                     className={cn(
                       "col-start-1 row-start-1 truncate",
                       !hasExplicitLabel && "italic",
-                      state.isActive
+                      state.isHighlighted
                         ? "font-semibold text-foreground"
                         : "font-normal text-muted-foreground"
                     )}

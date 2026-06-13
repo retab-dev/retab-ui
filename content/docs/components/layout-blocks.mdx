@@ -1,0 +1,52 @@
+---
+title: Layout Blocks
+description: Inspect OCR layout blocks over the source image, starting from Google Document AI output.
+---
+
+Layout Blocks turns OCR layout output into a review surface: the document image
+on the left, a virtualized block list on the right, and exact block overlays on
+the page. The first adapter normalizes Google Document AI's `blocks`,
+`paragraphs`, `lines`, and `tokens` into a generic `LayoutDocument`; the default
+inspector keeps the UI focused on document blocks.
+
+<DocumentAiLayoutBlocksDemo />
+
+## Installation
+
+```bash
+pnpm dlx shadcn@latest add @retab/layout-blocks
+```
+
+## Data model
+
+Document AI stores one global `text` buffer. Each block, paragraph, line, and
+token points into that buffer with `layout.textAnchor.textSegments`, and carries
+`layout.boundingPoly` plus confidence. The adapter slices text from the anchor,
+uses polygon geometry for overlays, and derives parents by text-span
+containment:
+
+```txt
+block span contains paragraph span
+paragraph span contains line span
+line span contains token span
+```
+
+## API
+
+### `DocumentAiLayoutBlocks`
+
+| Prop              | Type                 | Required | Description                                     |
+| ----------------- | -------------------- | -------- | ----------------------------------------------- |
+| `output`          | `DocumentAiDocument` | Yes      | Raw Google Document AI JSON output.             |
+| `heightClassName` | `string`             | No       | Root height class. Defaults to `h-[680px]`.     |
+| `className`       | `string`             | No       | Optional class for the root split-view surface. |
+
+### Pure helpers
+
+| Export                       | Description                                             |
+| ---------------------------- | ------------------------------------------------------- |
+| `documentAiToLayoutDocument` | Converts Google Document AI output to `LayoutDocument`. |
+| `createLayoutItemIndex`      | Builds `itemsById`, `itemsByPage`, and `itemsByLevel`.  |
+| `LayoutOverlayLayer`         | Renders SVG polygon overlays for one page/frame.        |
+| `LayoutBlocksPanel`          | Renders a virtualized, keyboardable layout item panel.  |
+| `useLayoutBlockSelection`    | Owns hover preview and pinned selection state.          |

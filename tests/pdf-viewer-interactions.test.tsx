@@ -15,7 +15,7 @@ import {
   createViewerResource,
 } from "@/registry/new-york-v4/lib/viewer-resource"
 import { PdfViewer } from "@/registry/new-york-v4/ui/pdf-viewer"
-import { __resetPdfDocumentCacheForTests } from "@/registry/new-york-v4/ui/pdf-viewer-resource"
+import { resetPdfDocumentResourceCacheForTests } from "@/lib/pdf-document-resource"
 
 /**
  * These tests target multi-step *interactions* across the orchestrator —
@@ -153,7 +153,7 @@ beforeEach(() => {
     }
   )
   pdfjsMock.GlobalWorkerOptions.workerSrc = undefined
-  __resetPdfDocumentCacheForTests()
+  resetPdfDocumentResourceCacheForTests()
 
   vi.stubGlobal("ResizeObserver", ResizeObserverMock)
   vi.stubGlobal("IntersectionObserver", IntersectionObserverMock)
@@ -201,7 +201,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup()
-  __resetPdfDocumentCacheForTests()
+  resetPdfDocumentResourceCacheForTests()
   clearViewerResourceRegistryForTests()
   vi.restoreAllMocks()
   vi.unstubAllGlobals()

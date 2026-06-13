@@ -2,16 +2,17 @@
 
 import * as React from "react"
 
+import { getDocxDocumentResource } from "@/lib/docx-document-resource"
 import { isAbortError, isResourceError } from "@/lib/viewer-errors"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
-import { DOCX_SCOPED_STYLES, toDocxFormatError } from "./docx-viewer-core"
 import {
   DocxSkeleton,
   DocxViewerBody,
   DocxViewerFrame,
   DocxViewerToolbar,
 } from "./docx-viewer-chrome"
+import { DOCX_SCOPED_STYLES, toDocxFormatError } from "./docx-viewer-core"
 import { useDocxHighlight } from "./docx-viewer-highlight"
 import { commitDocxRender, renderDocxPreview } from "./docx-viewer-render"
 import { useDocxViewerScale } from "./docx-viewer-scale"
@@ -25,7 +26,6 @@ import type {
   DocxResourceViewerProps,
   DocxViewerHandle,
 } from "./docx-viewer-types"
-import { getDocxResource } from "./docx-viewer-resource"
 
 export function DocxViewerContent({
   bare = false,
@@ -44,7 +44,7 @@ export function DocxViewerContent({
   forwardedRef?: React.ForwardedRef<DocxViewerHandle>
 }) {
   const buffer = React.use(
-    getDocxResource(resource.content, { retainRejected: true })
+    getDocxDocumentResource(resource.content, { retainRejected: true })
   )
   const [containerWidth, setContainerWidth] = React.useState<number | null>(
     null
@@ -220,7 +220,11 @@ export function DocxViewerContent({
             {!ready ? <DocxSkeleton /> : null}
             <div
               ref={hostRef}
-              className={ready ? "w-full opacity-100 transition-opacity duration-200" : "w-full opacity-0 transition-opacity duration-200"}
+              className={
+                ready
+                  ? "w-full opacity-100 transition-opacity duration-200"
+                  : "w-full opacity-0 transition-opacity duration-200"
+              }
               style={{ zoom: scale }}
             />
           </div>

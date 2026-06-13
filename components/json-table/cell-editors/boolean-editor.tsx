@@ -44,6 +44,11 @@ export function BooleanEditor({
         closeEditSession()
       }}
       onEditingEnd={closeEditSession}
+      onKeyDown={(event) => {
+        if (event.key !== "Escape") return
+        event.preventDefault()
+        closeEditSession()
+      }}
     />
   )
 }

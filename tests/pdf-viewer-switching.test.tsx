@@ -4,14 +4,14 @@ import { act, cleanup, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
+  getPdfDocumentResource,
+  resetPdfDocumentResourceCacheForTests,
+} from "@/lib/pdf-document-resource"
+import {
   clearViewerResourceRegistryForTests,
   createViewerResource,
 } from "@/registry/new-york-v4/lib/viewer-resource"
 import { PdfViewer } from "@/registry/new-york-v4/ui/pdf-viewer"
-import {
-  __resetPdfDocumentCacheForTests,
-  getDocumentResource,
-} from "@/registry/new-york-v4/ui/pdf-viewer-resource"
 
 const pdfjsMock = vi.hoisted(() => {
   type Deferred<T> = {
@@ -72,7 +72,9 @@ function makeDoc(pageSizes: Array<[number, number]>) {
   return {
     numPages: pages.length,
     pages,
-    getPage: vi.fn((pageNumber: number) => Promise.resolve(pages[pageNumber - 1])),
+    getPage: vi.fn((pageNumber: number) =>
+      Promise.resolve(pages[pageNumber - 1])
+    ),
     destroy: vi.fn(() => Promise.resolve()),
   }
 }
@@ -131,11 +133,13 @@ beforeEach(() => {
     }
   )
   pdfjsMock.GlobalWorkerOptions.workerSrc = undefined
-  __resetPdfDocumentCacheForTests()
+  resetPdfDocumentResourceCacheForTests()
 
   vi.stubGlobal("ResizeObserver", ResizeObserverMock)
   vi.stubGlobal("IntersectionObserver", IntersectionObserverMock)
-  vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({} as never)
+  vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(
+    {} as never
+  )
   vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
     callback(0)
     return 1
@@ -177,7 +181,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup()
-  __resetPdfDocumentCacheForTests()
+  resetPdfDocumentResourceCacheForTests()
   clearViewerResourceRegistryForTests()
   vi.restoreAllMocks()
   vi.unstubAllGlobals()
@@ -194,19 +198,32 @@ function findByTextContent(text: string) {
 describe("PdfViewer — rapid source switching with concurrent in-flight loads", () => {
   it("settles on the last source when earlier loads are still pending, destroying the abandoned ones", async () => {
     const docA = makeDoc([[100, 200]]) // 1 page
-    const docB = makeDoc([[100, 200], [100, 200]]) // 2 pages
-    const docC = makeDoc([[100, 200], [100, 200], [100, 200]]) // 3 pages
+    const docB = makeDoc([
+      [100, 200],
+      [100, 200],
+    ]) // 2 pages
+    const docC = makeDoc([
+      [100, 200],
+      [100, 200],
+      [100, 200],
+    ]) // 3 pages
 
     let view!: ReturnType<typeof render>
     await act(async () => {
-      view = render(<PdfViewer source={pdfUrlSource("/A.pdf")} defaultScale={1} />)
+      view = render(
+        <PdfViewer source={pdfUrlSource("/A.pdf")} defaultScale={1} />
+      )
     })
     // A and B both left pending; we land on C.
     await act(async () => {
-      view.rerender(<PdfViewer source={pdfUrlSource("/B.pdf")} defaultScale={1} />)
+      view.rerender(
+        <PdfViewer source={pdfUrlSource("/B.pdf")} defaultScale={1} />
+      )
     })
     await act(async () => {
-      view.rerender(<PdfViewer source={pdfUrlSource("/C.pdf")} defaultScale={1} />)
+      view.rerender(
+        <PdfViewer source={pdfUrlSource("/C.pdf")} defaultScale={1} />
+      )
     })
 
     // Resolve C first — the viewer should show C's 3 pages.
@@ -236,7 +253,10 @@ describe("PdfViewer — rapid source switching with concurrent in-flight loads",
 
   it("evicts the abandoned (unretained) loads once the cache exceeds its limit", async () => {
     const abandoned = makeDoc([[100, 200]])
-    const active = makeDoc([[100, 200], [100, 200]])
+    const active = makeDoc([
+      [100, 200],
+      [100, 200],
+    ])
 
     let view!: ReturnType<typeof render>
     await act(async () => {
@@ -262,7 +282,7 @@ describe("PdfViewer — rapid source switching with concurrent in-flight loads",
     for (let i = 0; i < 6; i++) {
       pdfjsMock.docs.set(`/filler-${i}.pdf`, makeDoc([[100, 200]]))
       await act(async () => {
-        await getDocumentResource(
+        await getPdfDocumentResource(
           createViewerResource(pdfUrlSource(`/filler-${i}.pdf`)).content
         )
       })

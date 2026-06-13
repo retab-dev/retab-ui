@@ -10,7 +10,11 @@ import {
   interactiveCellOverlayClass,
 } from "@/components/json-table/cell-style"
 import type { JsonTableCellProps } from "@/components/json-table/json-table-cell-types"
-import { JsonTableDisplayCell } from "@/components/json-table/json-table-display-cell"
+import {
+  dataCellKindForField,
+  JsonTableDataCell,
+  JsonTableDisplayCell,
+} from "@/components/json-table/json-table-display-cell"
 import { jsonTableCellId } from "@/components/json-table/json-table-edit-session"
 import {
   markJsonTableProfile,
@@ -22,6 +26,8 @@ import { formatValueForCommit } from "@/components/json-table/lib/value-normaliz
 import { cmp, useRefCallback } from "@/components/json-table/path-utils"
 import { useCellController } from "@/components/json-table/use-cell-controller"
 import { useElevatedVirtualRow } from "@/components/json-table/use-elevated-virtual-row"
+
+const JSON_TABLE_NUMBER_KEY = /^[0-9.+-]$/
 
 function editableCellMemoVariables(props: JsonTableCellProps) {
   const { document: _document, editSession: _editSession, ...rest } = props
@@ -43,6 +49,40 @@ function editableCellMemoVariables(props: JsonTableCellProps) {
     editSessionOverlayOpen,
     materializedFieldPath,
   }
+}
+
+function isOverlayField(fieldMetadata: FieldMetadata): boolean {
+  return (
+    fieldMetadata.kind === "enum" ||
+    fieldMetadata.kind === "date" ||
+    fieldMetadata.kind === "time" ||
+    fieldMetadata.kind === "date-time"
+  )
+}
+
+function canStartEditFromKey(
+  fieldMetadata: FieldMetadata,
+  key: string
+): boolean {
+  if (key === "Enter" || key === "F2") return true
+
+  if (fieldMetadata.kind === "boolean") return key === " "
+
+  if (
+    fieldMetadata.kind === "enum" ||
+    fieldMetadata.kind === "date" ||
+    fieldMetadata.kind === "time" ||
+    fieldMetadata.kind === "date-time" ||
+    fieldMetadata.kind === "object" ||
+    fieldMetadata.kind === "array"
+  ) {
+    return key === " "
+  }
+
+  if (key.length !== 1) return false
+  if (fieldMetadata.kind === "integer") return /^[+-]$|^\d$/.test(key)
+  if (fieldMetadata.kind === "number") return /^[+\-.]$|^\d$/.test(key)
+  return fieldMetadata.kind === "string"
 }
 
 function ActiveEditableJsonTableCell({
@@ -91,6 +131,17 @@ function ActiveEditableJsonTableCell({
     session.draftValue === null || session.draftValue === undefined
       ? ""
       : String(session.draftValue)
+  const dataCellKind = dataCellKindForField(fieldMetadata)
+  const usesDataCellEditor =
+    Boolean(dataCellKind) && fieldMetadata.kind !== "enum"
+  if (usesDataCellEditor) {
+    recordJsonTableRender("CellEditor", materializedFieldPath, {
+      editSessionId: session.id,
+      fieldKind: fieldMetadata.kind,
+      isEditable: true,
+      isSelectOpen: session.isOverlayOpen,
+    })
+  }
 
   useElevatedVirtualRow({
     cellRootRef,
@@ -116,28 +167,98 @@ function ActiveEditableJsonTableCell({
     [updateEditSessionDraft]
   )
 
+  React.useEffect(() => {
+    if (session.intent.type !== "keyboard" || session.intent.key.length !== 1) {
+      return
+    }
+    if (fieldMetadata.kind === "string") {
+      setDraftTextValue(session.intent.key)
+      return
+    }
+    if (
+      (fieldMetadata.kind === "number" || fieldMetadata.kind === "integer") &&
+      JSON_TABLE_NUMBER_KEY.test(session.intent.key)
+    ) {
+      setDraftTextValue(session.intent.key)
+    }
+  }, [
+    fieldMetadata.kind,
+    session.id,
+    session.intent,
+    setDraftTextValue,
+  ])
+
+  React.useEffect(() => {
+    if (fieldMetadata.kind !== "boolean") return
+    const shouldToggle =
+      session.intent.type === "pointer" ||
+      session.intent.type === "programmatic" ||
+      (session.intent.type === "keyboard" &&
+        session.intent.key === " ")
+    if (!shouldToggle) return
+
+    commitValue(!Boolean(effectiveValue))
+    closeEditSession()
+  }, [
+    closeEditSession,
+    commitValue,
+    effectiveValue,
+    fieldMetadata.kind,
+    session.id,
+    session.intent,
+  ])
+
+  const handleDataCellKeyDown = React.useCallback<
+    React.KeyboardEventHandler<HTMLElement>
+  >(
+    (event) => {
+      if (fieldMetadata.kind !== "boolean" || event.key !== "Escape") return
+      event.preventDefault()
+      closeEditSession()
+    },
+    [closeEditSession, fieldMetadata.kind]
+  )
+
   return (
     <div
       ref={cellRootRef}
       className="h-full w-full focus-within:overflow-visible"
     >
-      <CellEditor
-        cell={{
-          docId,
-          fieldPath: materializedFieldPath,
-          schema,
-          fieldMetadata,
-          value,
-          effectiveValue,
-          isEditable: true,
-        }}
-        editSession={session}
-        draftValue={draftTextValue}
-        setDraftValue={setDraftTextValue}
-        setOverlayOpen={setEditSessionOverlayOpen}
-        closeEditSession={closeEditSession}
-        commitValue={commitValue}
-      />
+      {usesDataCellEditor ? (
+        <JsonTableDataCell
+          fieldMetadata={fieldMetadata}
+          value={effectiveValue}
+          mode="edit"
+          isEditable={true}
+          draftValue={draftTextValue}
+          activationIntent={session.intent}
+          autoFocus
+          isPickerOpen={session.isOverlayOpen}
+          onDraftValueChange={setDraftTextValue}
+          onCommit={commitValue}
+          onEditingEnd={closeEditSession}
+          onKeyDown={handleDataCellKeyDown}
+          onPickerOpenChange={setEditSessionOverlayOpen}
+        />
+      ) : (
+        <CellEditor
+          cell={{
+            docId,
+            fieldPath: materializedFieldPath,
+            schema,
+            fieldMetadata,
+            value,
+            effectiveValue,
+            isEditable: true,
+          }}
+          editSession={session}
+          draftValue={draftTextValue}
+          setDraftValue={setDraftTextValue}
+          setOverlayOpen={setEditSessionOverlayOpen}
+          closeEditSession={closeEditSession}
+          commitValue={commitValue}
+        />
+      )}
     </div>
   )
 }
@@ -167,6 +288,15 @@ function EditableJsonTableCellContent(props: JsonTableCellProps) {
   const isEditing = Boolean(
     isEditable && cellId && editSession?.cellId === cellId
   )
+  const tableCellRef = React.useRef<HTMLTableCellElement>(null)
+  const wasEditingRef = React.useRef(isEditing)
+
+  React.useLayoutEffect(() => {
+    if (wasEditingRef.current && !isEditing && !editSession) {
+      tableCellRef.current?.focus({ preventScroll: true })
+    }
+    wasEditingRef.current = isEditing
+  }, [editSession, isEditing])
 
   recordJsonTableRender(
     "EditableJsonTableCell",
@@ -199,12 +329,18 @@ function EditableJsonTableCellContent(props: JsonTableCellProps) {
       if (
         !props.projectedCell ||
         !materializedFieldPath ||
+        !fieldMetadata ||
         !isEditable ||
         event.button !== 0
       ) {
         return
       }
-      if (isEditing) return
+      if (isEditing) {
+        if (fieldMetadata.kind === "enum") {
+          props.setEditSessionOverlayOpen(true)
+        }
+        return
+      }
 
       flushSync(() => {
         startEditSession(props.projectedCell!, {
@@ -216,25 +352,52 @@ function EditableJsonTableCellContent(props: JsonTableCellProps) {
       })
     },
     [
+      editSession?.isOverlayOpen,
+      fieldMetadata,
       isEditable,
       isEditing,
       materializedFieldPath,
       props.projectedCell,
+      props.setEditSessionOverlayOpen,
       startEditSession,
     ]
   )
+  const handleOverlayActivationTail = React.useCallback(
+    (event: React.SyntheticEvent<HTMLTableCellElement>) => {
+      if (!fieldMetadata) return
+      if (!isEditing || !isOverlayField(fieldMetadata)) return
+      event.stopPropagation()
+    },
+    [fieldMetadata, isEditing]
+  )
   const handleKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLTableCellElement>) => {
-      if (!props.projectedCell || !materializedFieldPath || !isEditable) return
-      if (isEditing) return
       if (
-        event.key !== "Enter" &&
-        event.key !== "F2" &&
-        event.key !== " " &&
-        event.key.length !== 1
+        !props.projectedCell ||
+        !materializedFieldPath ||
+        !fieldMetadata ||
+        !isEditable
       ) {
         return
       }
+      if (isEditing) return
+      const isAltGraph =
+        event.getModifierState("AltGraph") ||
+        event.nativeEvent.getModifierState?.("AltGraph") ||
+        (event.ctrlKey &&
+          event.altKey &&
+          event.key.length === 1 &&
+          !/^[\x00-\x7F]$/.test(event.key))
+      if (
+        event.defaultPrevented ||
+        event.metaKey ||
+        (event.ctrlKey && !isAltGraph) ||
+        (event.altKey && !isAltGraph) ||
+        event.nativeEvent.isComposing
+      ) {
+        return
+      }
+      if (!canStartEditFromKey(fieldMetadata, event.key)) return
 
       event.preventDefault()
       startEditSession(props.projectedCell, {
@@ -245,6 +408,7 @@ function EditableJsonTableCellContent(props: JsonTableCellProps) {
     [
       isEditable,
       isEditing,
+      fieldMetadata,
       materializedFieldPath,
       props.projectedCell,
       startEditSession,
@@ -268,12 +432,14 @@ function EditableJsonTableCellContent(props: JsonTableCellProps) {
 
   return (
     <TableCell
+      ref={tableCellRef}
       data-field-path={materializedFieldPath}
       data-json-table-editable-cell="true"
       data-active={isEditing || undefined}
       onPointerEnter={handlePointerEnter}
       onPointerMove={handlePointerEnter}
       onPointerDown={handlePointerDown}
+      onMouseDownCapture={handleOverlayActivationTail}
       onPointerLeave={handlePointerLeave}
       onKeyDown={handleKeyDown}
       tabIndex={isEditable ? 0 : undefined}

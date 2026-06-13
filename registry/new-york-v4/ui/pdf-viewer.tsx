@@ -2,6 +2,13 @@
 
 import * as React from "react"
 
+import {
+  clearPdfDocumentResource,
+  readPdfDocumentResource,
+  readPdfPageResource,
+  releasePdfDocumentResource,
+  retainPdfDocumentResource,
+} from "@/lib/pdf-document-resource"
 import { cn } from "@/lib/utils"
 import {
   createViewerResource,
@@ -14,13 +21,6 @@ import { createPdfPageLayout, getPdfPageLayout } from "./pdf-viewer-layout"
 import { PdfPage } from "./pdf-viewer-page"
 import { usePdfPageSizes } from "./pdf-viewer-page-sizes"
 import { PdfViewerRail } from "./pdf-viewer-rail"
-import {
-  clearDocumentResource,
-  readDocumentResource,
-  readPageResource,
-  releaseDocumentResource,
-  retainDocumentResource,
-} from "./pdf-viewer-resource"
 import { useMeasuredElementWidth, usePdfScale } from "./pdf-viewer-scale"
 import { usePdfScroll } from "./pdf-viewer-scroll"
 import { PageSkeleton, PdfViewerFallback } from "./pdf-viewer-states"
@@ -35,10 +35,9 @@ import { usePdfPageVirtualization } from "./pdf-viewer-virtualization"
 import { useIsClient } from "./use-is-client"
 import { ViewerErrorBoundary } from "./viewer-error"
 
-export { getDocumentResource, getPageResource } from "./pdf-viewer-resource"
 export type {
   PageOverlayProps,
-  PdfPageScrollTarget,
+  PdfPageAreaTarget,
   PdfViewerHandle,
   PdfViewerSlots,
 } from "./pdf-viewer-types"
@@ -144,7 +143,7 @@ export const PdfResourceViewer = React.forwardRef<
       className={props.className}
       download={resource.originalDownload}
       format="pdf"
-      onRetry={() => clearDocumentResource(resource.content)}
+      onRetry={() => clearPdfDocumentResource(resource.content)}
       resetKey={resource.keys.resource}
       sourceKind={resource.sourceKind}
     >
@@ -194,13 +193,13 @@ function PdfViewerInner({
   const [railsOpen, setRailsOpen] = React.useState(defaultRailsOpen ?? true)
 
   const content = resource.content
-  const document = readDocumentResource(content)
+  const document = readPdfDocumentResource(content)
   React.useEffect(() => {
-    retainDocumentResource(content, document)
-    return () => releaseDocumentResource(content, document)
+    retainPdfDocumentResource(content, document)
+    return () => releasePdfDocumentResource(content, document)
   }, [content, document])
 
-  const firstPage = readPageResource(document, 1)
+  const firstPage = readPdfPageResource(document, 1)
   const firstPageSize = React.useMemo<PdfPageSize>(() => {
     const viewport = firstPage.getViewport({ scale: 1 })
     return { width: viewport.width, height: viewport.height }
@@ -249,7 +248,8 @@ function PdfViewerInner({
     setViewportElement,
     measureScroll,
     handleScroll,
-    scrollToPageTarget,
+    scrollToPage,
+    scrollToPageArea,
     getViewportElement,
   } = usePdfScroll({
     pageCount: document.numPages,
@@ -282,10 +282,11 @@ function PdfViewerInner({
   React.useImperativeHandle(
     forwardedRef,
     () => ({
-      scrollToPageTarget,
+      scrollToPage,
+      scrollToPageArea,
       getViewportElement,
     }),
-    [getViewportElement, scrollToPageTarget]
+    [getViewportElement, scrollToPage, scrollToPageArea]
   )
 
   return (

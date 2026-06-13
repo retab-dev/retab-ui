@@ -2,24 +2,20 @@
 
 import * as React from "react"
 
-import {
-  isResourceError,
-  isViewerFormatError,
-} from "@/lib/viewer-errors"
+import { clearDocxDocumentResource } from "@/lib/docx-document-resource"
+import { isResourceError, isViewerFormatError } from "@/lib/viewer-errors"
 import { createViewerResource } from "@/lib/viewer-resource"
 import { useIsClient } from "@/components/ui/use-is-client"
 import { ViewerErrorBoundary } from "@/components/ui/viewer-error"
 
 import { DocxViewerFallback } from "./docx-viewer-chrome"
 import { DocxViewerContent } from "./docx-viewer-content"
-import { clearDocxResource, getDocxResource } from "./docx-viewer-resource"
 import type {
   DocxResourceViewerProps,
   DocxViewerHandle,
   DocxViewerProps,
 } from "./docx-viewer-types"
 
-export { getDocxResource } from "./docx-viewer-resource"
 export type {
   DocxDocumentSource,
   DocxResourceViewerProps,
@@ -63,7 +59,7 @@ export const DocxResourceViewer = React.forwardRef<
       format="docx"
       onRetry={(error) => {
         if (isResourceError(error) || !isViewerFormatError(error)) {
-          clearDocxResource(resource.content)
+          clearDocxDocumentResource(resource.content)
         }
       }}
       resetKey={resource.keys.resource}
@@ -79,11 +75,7 @@ export const DocxResourceViewer = React.forwardRef<
           />
         }
       >
-        <DocxViewerContent
-          {...props}
-          forwardedRef={ref}
-          resource={resource}
-        />
+        <DocxViewerContent {...props} forwardedRef={ref} resource={resource} />
       </React.Suspense>
     </ViewerErrorBoundary>
   )

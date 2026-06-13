@@ -3,8 +3,8 @@
 import * as React from "react"
 
 import {
+  getSegmentInteractionState,
   getSegmentSurfaceProps,
-  resolvePreviewedSegmentId,
   scopeSegmentInteraction,
   type SegmentInteraction,
 } from "@/lib/segment-interaction"
@@ -20,7 +20,7 @@ export interface PageTimelineProps {
   segments: Segment[]
   /** Total pages; defaults to the max page across segments. */
   pageCount?: number
-  /** Shared hover/focus state. */
+  /** Shared preview state. */
   interaction?: SegmentInteraction
   /** 1-based current page to mark (e.g. synced to a PDF scroll position). */
   currentPage?: number | null
@@ -42,8 +42,8 @@ interface TimelinePageSegment {
  * It ties the legend and sidebar to the document: hovering a cell previews its
  * segment, previewing a segment elsewhere dims unrelated pages, and clicking
  * a cell jumps the document. If multiple segments map to a page, the first
- * segment in document order owns the hover/focus state and the page label calls
- * out the overlap.
+ * segment in document order owns the preview state and the page label calls out
+ * the overlap.
  */
 export function PageTimeline({
   segments,
@@ -67,25 +67,36 @@ export function PageTimeline({
     () => buildSegmentIndexById(segments),
     [segments]
   )
+  const visibleSegments = React.useMemo(
+    () =>
+      segments.filter((segment) =>
+        segment.pages.some(
+          (page) => Number.isInteger(page) && page >= 1 && page <= total
+        )
+      ),
+    [segments, total]
+  )
   const scopedInteraction = React.useMemo(
     () =>
       scopeSegmentInteraction(
         interaction,
-        segments
-          .filter((segment) =>
-            segment.pages.some(
-              (page) => Number.isInteger(page) && page >= 1 && page <= total
-            )
-          )
-          .map((segment) => segment.id)
+        visibleSegments.map((segment) => segment.id)
       ),
-    [interaction, segments, total]
+    [interaction, visibleSegments]
+  )
+  const interactionState = React.useMemo(
+    () =>
+      getSegmentInteractionState({
+        segments: visibleSegments,
+        currentPage,
+        interaction: scopedInteraction,
+      }),
+    [currentPage, scopedInteraction, visibleSegments]
   )
 
   if (total <= 0) return null
-  const previewedSegmentId = resolvePreviewedSegmentId(scopedInteraction)
   const previewedSegmentIndex = getPreviewedSegmentIndex({
-    previewedSegmentId,
+    previewedSegmentId: interactionState.previewSegmentId,
     segmentIndexById,
   })
 
@@ -108,11 +119,12 @@ export function PageTimeline({
         const { segmentIndexes, primarySegment } = pageSegment
         const surfaceProps = primarySegment
           ? getSegmentSurfaceProps({
-              segment: primarySegment,
-              interaction: scopedInteraction,
-              isCurrent: currentPage === page,
-              onSelect,
-            })
+            segment: primarySegment,
+            interaction: scopedInteraction,
+            interactionState,
+            isCurrent: currentPage === page,
+            onSelect,
+          })
           : null
         const dimmed =
           previewedSegmentIndex != null
@@ -126,17 +138,15 @@ export function PageTimeline({
             aria-current={isCurrent ? "page" : undefined}
             aria-label={pageSegment.label}
             title={pageSegment.label}
-            onMouseEnter={surfaceProps?.eventHandlers.onMouseEnter}
-            onMouseLeave={surfaceProps?.eventHandlers.onMouseLeave}
-            onFocus={surfaceProps?.eventHandlers.onFocus}
-            onBlur={surfaceProps?.eventHandlers.onBlur}
+            onPointerEnter={surfaceProps?.eventHandlers.onPointerEnter}
+            onPointerLeave={surfaceProps?.eventHandlers.onPointerLeave}
             onClick={() => {
               surfaceProps?.eventHandlers.onClick()
               onSelectPage?.(page)
             }}
             data-previewed={surfaceProps?.state.isPreviewed ?? false}
             data-current={isCurrent}
-            data-active={surfaceProps?.state.isActive ?? isCurrent}
+            data-highlighted={surfaceProps?.state.isHighlighted ?? isCurrent}
             className={cn(
               "group relative h-7 flex-1 transition-opacity focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
               dimmed ? "opacity-25" : "opacity-100"

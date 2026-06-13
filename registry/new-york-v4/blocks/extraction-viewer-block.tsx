@@ -57,7 +57,7 @@ import xlsxSample from "@/components/viewers/sample-data/xlsx-sources.json"
 // ── Sample sources, one per file format ───────────────────────────────────────
 
 const PDF_URL = "/samples/jane-doe-bank-statement-5-pages.pdf"
-const IMAGE_URL = "/samples/attention-page-1.png"
+const IMAGE_URL = "/samples/an-image-is-worth-16x16-words-page-1.png"
 const TEXT_URL = "/samples/extraction-run.log"
 const XLSX_URL = "/samples/nvidia-financials-fy2024.xlsx"
 const DOCX_URL = "/samples/quarterly-business-review.docx"
@@ -207,7 +207,7 @@ function ImageTab() {
         source={{
           kind: "url",
           url: IMAGE_URL,
-          fileName: "attention-page-1.png",
+          fileName: "an-image-is-worth-16x16-words-page-1.png",
         }}
         bare
         className="h-full"

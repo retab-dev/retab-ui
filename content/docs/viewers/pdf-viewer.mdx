@@ -118,11 +118,12 @@ button reports `null`.
 ## Imperative handle
 
 A `ref` exposes `PdfViewerHandle`:
-`scrollToPageTarget(pageNumber, target, options)` scrolls a page's normalized
-vertical position (`target.top`, a percentage `[0, 100]`) into view, and
+`scrollToPage(pageNumber, options)` scrolls to a page,
+`scrollToPageArea({ pageNumber, top }, options)` scrolls a page's normalized
+vertical position (`top`, a percentage `[0, 100]`) into view, and
 `getViewportElement()` returns the scrolling viewport. Overlay boxes still use
-full `{ left, top, width, height }` geometry; imperative scrolling only needs the
-vertical target.
+full `{ left, top, width, height }` geometry; imperative area scrolling only
+needs the vertical target.
 
 ## Props
 

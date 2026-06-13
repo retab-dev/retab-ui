@@ -4,8 +4,8 @@ import * as React from "react"
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { resetDocxDocumentResourceCacheForTests } from "@/lib/docx-document-resource"
 import { clearViewerResourceRegistryForTests } from "@/registry/new-york-v4/lib/viewer-resource"
-import { resetDocxResourceCacheForTests } from "@/registry/new-york-v4/ui/docx-viewer-resource"
 
 const originalGetAnimations = HTMLElement.prototype.getAnimations
 
@@ -93,7 +93,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup()
-  resetDocxResourceCacheForTests()
+  resetDocxDocumentResourceCacheForTests()
   clearViewerResourceRegistryForTests()
   if (originalGetAnimations) {
     Object.defineProperty(HTMLElement.prototype, "getAnimations", {

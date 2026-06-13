@@ -1,18 +1,18 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import {
+  clearDocxDocumentResource,
+  getDocxDocumentResource,
+  resetDocxDocumentResourceCacheForTests,
+} from "@/lib/docx-document-resource"
+import {
   blobSource,
   clearViewerResourceRegistryForTests,
   createViewerResource,
 } from "@/registry/new-york-v4/lib/viewer-resource"
-import {
-  clearDocxResource,
-  getDocxResource,
-  resetDocxResourceCacheForTests,
-} from "@/registry/new-york-v4/ui/docx-viewer-resource"
 
 afterEach(() => {
-  resetDocxResourceCacheForTests()
+  resetDocxDocumentResourceCacheForTests()
   clearViewerResourceRegistryForTests()
   vi.restoreAllMocks()
   vi.unstubAllGlobals()
@@ -41,7 +41,7 @@ function response(bytes: Uint8Array, init: ResponseInit = {}) {
   return new Response(new Uint8Array(bytes), init)
 }
 
-describe("docx-viewer-resource", () => {
+describe("docx-document-resource", () => {
   it("deduplicates document bytes for the same resource", async () => {
     const fetchMock = vi.fn(() =>
       Promise.resolve(response(Uint8Array.of(1, 2, 3), { status: 200 }))
@@ -49,8 +49,8 @@ describe("docx-viewer-resource", () => {
     vi.stubGlobal("fetch", fetchMock)
 
     const content = docxUrlResource("/document.docx").content
-    const first = getDocxResource(content)
-    const second = getDocxResource(content)
+    const first = getDocxDocumentResource(content)
+    const second = getDocxDocumentResource(content)
 
     expect(first).toBe(second)
     await expect(first).resolves.toHaveProperty("byteLength", 3)
@@ -71,8 +71,8 @@ describe("docx-viewer-resource", () => {
 
     expect(firstResource.content).toBe(secondResource.content)
 
-    const first = getDocxResource(firstResource.content)
-    const second = getDocxResource(secondResource.content)
+    const first = getDocxDocumentResource(firstResource.content)
+    const second = getDocxDocumentResource(secondResource.content)
 
     expect(first).toBe(second)
     await expect(first).resolves.toHaveProperty("byteLength", 3)
@@ -88,11 +88,11 @@ describe("docx-viewer-resource", () => {
 
     const content = docxUrlResource("/retry.docx").content
 
-    await expect(getDocxResource(content)).rejects.toMatchObject({
+    await expect(getDocxDocumentResource(content)).rejects.toMatchObject({
       kind: "http_error",
       status: 500,
     })
-    await expect(getDocxResource(content)).resolves.toHaveProperty(
+    await expect(getDocxDocumentResource(content)).resolves.toHaveProperty(
       "byteLength",
       2
     )
@@ -106,14 +106,14 @@ describe("docx-viewer-resource", () => {
     vi.stubGlobal("fetch", fetchMock)
 
     const content = docxUrlResource("/retained-error.docx").content
-    const first = getDocxResource(content, { retainRejected: true })
+    const first = getDocxDocumentResource(content, { retainRejected: true })
 
     await expect(first).rejects.toMatchObject({
       kind: "http_error",
       status: 500,
     })
 
-    const second = getDocxResource(content, { retainRejected: true })
+    const second = getDocxDocumentResource(content, { retainRejected: true })
     expect(second).toBe(first)
     await expect(second).rejects.toMatchObject({
       kind: "http_error",
@@ -132,16 +132,16 @@ describe("docx-viewer-resource", () => {
     const content = docxUrlResource("/clear-retry.docx").content
 
     await expect(
-      getDocxResource(content, { retainRejected: true })
+      getDocxDocumentResource(content, { retainRejected: true })
     ).rejects.toMatchObject({
       kind: "http_error",
       status: 500,
     })
 
-    clearDocxResource(content)
+    clearDocxDocumentResource(content)
 
     await expect(
-      getDocxResource(content, { retainRejected: true })
+      getDocxDocumentResource(content, { retainRejected: true })
     ).resolves.toHaveProperty("byteLength", 2)
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })
@@ -159,16 +159,16 @@ describe("docx-viewer-resource", () => {
     expect(first.content).toBe(second.content)
 
     await expect(
-      getDocxResource(first.content, { retainRejected: true })
+      getDocxDocumentResource(first.content, { retainRejected: true })
     ).rejects.toMatchObject({
       kind: "http_error",
       status: 500,
     })
 
-    clearDocxResource(second.content)
+    clearDocxDocumentResource(second.content)
 
     await expect(
-      getDocxResource(second.content, { retainRejected: true })
+      getDocxDocumentResource(second.content, { retainRejected: true })
     ).resolves.toHaveProperty("byteLength", 3)
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })
@@ -177,7 +177,7 @@ describe("docx-viewer-resource", () => {
     const fetchMock = vi.fn()
     vi.stubGlobal("fetch", fetchMock)
 
-    const buffer = await getDocxResource(
+    const buffer = await getDocxDocumentResource(
       docxBlobResource(Uint8Array.of(7, 8, 9), "blob:docx").content
     )
 

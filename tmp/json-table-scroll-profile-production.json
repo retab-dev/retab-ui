@@ -1,0 +1,363 @@
+{
+  "measuredAt": "2026-06-13T09:20:22.417Z",
+  "route": "http://localhost:3101/json-table-profile",
+  "mode": "headless Chrome CDP",
+  "initial": {
+    "url": "http://localhost:3101/json-table-profile",
+    "elapsedWallMs": 630,
+    "navigation": {
+      "domContentLoaded": 85.5,
+      "load": 101,
+      "responseEnd": 6,
+      "transferSize": 27391,
+      "encodedBodySize": 27091
+    },
+    "paint": [
+      {
+        "name": "first-paint",
+        "startTime": 88
+      },
+      {
+        "name": "first-contentful-paint",
+        "startTime": 88
+      }
+    ],
+    "scroll": {
+      "scrollHeight": 48000,
+      "clientHeight": 367,
+      "scrollTop": 0
+    },
+    "mountedRows": 27,
+    "mountedDataCells": 192,
+    "totalDomNodes": 891
+  },
+  "scenarios": [
+    {
+      "name": "small-increment",
+      "scroll": {
+        "finalScrollTop": 2380,
+        "frames": {
+          "count": 120,
+          "avg": 10.105833333342646,
+          "p50": 8.300000000745058,
+          "p95": 40.90000000037253,
+          "max": 41.90000000037253,
+          "over16": 10,
+          "over33": 10
+        },
+        "longTasks": [],
+        "mountedRows": 39,
+        "mountedDataCells": 288,
+        "totalDomNodes": 1191
+      },
+      "performanceMetrics": {
+        "JSHeapUsedSize": 13978620,
+        "Nodes": 1569,
+        "LayoutCount": 14,
+        "RecalcStyleCount": 16,
+        "LayoutDurationMs": 13.197000000000001,
+        "RecalcStyleDurationMs": 389.294,
+        "ScriptDurationMs": 74.788,
+        "TaskDurationMs": 560.724
+      },
+      "trace": {
+        "EventDispatch": {
+          "count": 238,
+          "totalMs": 334.459,
+          "maxMs": 33.64
+        },
+        "FunctionCall": {
+          "count": 757,
+          "totalMs": 346.065,
+          "maxMs": 33.401
+        },
+        "UpdateLayoutTree": {
+          "count": 10,
+          "totalMs": 314.493,
+          "maxMs": 32.284
+        },
+        "Layout": {
+          "count": 10,
+          "totalMs": 7.724,
+          "maxMs": 1.042
+        },
+        "Paint": {
+          "count": 1033,
+          "totalMs": 7.721,
+          "maxMs": 0.54
+        },
+        "topEvents": [
+          {
+            "name": "RunTask",
+            "ms": 35.183,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 34.833,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 34.663,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 34.625,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 34.296,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 34.179,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 34.124,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 34.003,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "EventDispatch",
+            "ms": 33.64,
+            "category": "devtools.timeline",
+            "type": "scroll"
+          },
+          {
+            "name": "FunctionCall",
+            "ms": 33.401,
+            "category": "devtools.timeline",
+            "url": "http://localhost:3101/_next/static/chunks/2adw8rp80adjs.js"
+          },
+          {
+            "name": "EventDispatch",
+            "ms": 33.266,
+            "category": "devtools.timeline",
+            "type": "scroll"
+          },
+          {
+            "name": "FunctionCall",
+            "ms": 33.144,
+            "category": "devtools.timeline",
+            "url": "http://localhost:3101/_next/static/chunks/2adw8rp80adjs.js"
+          },
+          {
+            "name": "EventDispatch",
+            "ms": 33.058,
+            "category": "devtools.timeline",
+            "type": "scroll"
+          },
+          {
+            "name": "EventDispatch",
+            "ms": 33.053,
+            "category": "devtools.timeline",
+            "type": "scroll"
+          },
+          {
+            "name": "FunctionCall",
+            "ms": 32.938,
+            "category": "devtools.timeline",
+            "url": "http://localhost:3101/_next/static/chunks/2adw8rp80adjs.js"
+          },
+          {
+            "name": "RunTask",
+            "ms": 32.915,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "FunctionCall",
+            "ms": 32.91,
+            "category": "devtools.timeline",
+            "url": "http://localhost:3101/_next/static/chunks/2adw8rp80adjs.js"
+          },
+          {
+            "name": "EventDispatch",
+            "ms": 32.792,
+            "category": "devtools.timeline",
+            "type": "scroll"
+          },
+          {
+            "name": "EventDispatch",
+            "ms": 32.701,
+            "category": "devtools.timeline",
+            "type": "scroll"
+          },
+          {
+            "name": "FunctionCall",
+            "ms": 32.673,
+            "category": "devtools.timeline",
+            "url": "http://localhost:3101/_next/static/chunks/2adw8rp80adjs.js"
+          }
+        ]
+      }
+    },
+    {
+      "name": "large-jump",
+      "scroll": {
+        "finalScrollTop": 47633,
+        "frames": {
+          "count": 120,
+          "avg": 33.2375,
+          "p50": 35.09999999962747,
+          "p95": 36.69999999925494,
+          "max": 38.59999999962747,
+          "over16": 112,
+          "over33": 111
+        },
+        "longTasks": [],
+        "mountedRows": 32,
+        "mountedDataCells": 232,
+        "totalDomNodes": 1016
+      },
+      "performanceMetrics": {
+        "JSHeapUsedSize": 15414680,
+        "Nodes": 1569,
+        "LayoutCount": 127,
+        "RecalcStyleCount": 129,
+        "LayoutDurationMs": 105.47800000000001,
+        "RecalcStyleDurationMs": 3918.82,
+        "ScriptDurationMs": 215.048,
+        "TaskDurationMs": 4505.366999999999
+      },
+      "trace": {
+        "EventDispatch": {
+          "count": 230,
+          "totalMs": 3635.666,
+          "maxMs": 33.923
+        },
+        "FunctionCall": {
+          "count": 1039,
+          "totalMs": 3764.009,
+          "maxMs": 33.877
+        },
+        "UpdateLayoutTree": {
+          "count": 113,
+          "totalMs": 3529.156,
+          "maxMs": 32.643
+        },
+        "Layout": {
+          "count": 113,
+          "totalMs": 91.494,
+          "maxMs": 1.194
+        },
+        "Paint": {
+          "count": 14191,
+          "totalMs": 87.518,
+          "maxMs": 0.593
+        },
+        "topEvents": [
+          {
+            "name": "RunTask",
+            "ms": 35.591,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 35.36,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 35.23,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 35.051,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 35.016,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 34.878,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 34.844,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 34.838,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 34.765,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 34.756,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 34.755,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 34.741,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 34.732,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 34.728,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 34.624,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 34.602,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 34.512,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 34.511,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 34.493,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 34.467,
+            "category": "disabled-by-default-devtools.timeline"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -4,8 +4,8 @@ import ReactMarkdown, { type Components } from "react-markdown"
 import remarkGfm from "remark-gfm"
 
 import {
-  SEGMENT_PALETTE,
   buildColorMap,
+  SEGMENT_PALETTE,
   segmentsPageCount,
   toSegments,
   type Segment,
@@ -15,8 +15,8 @@ import { PageRibbon, type RibbonRow } from "@/components/ui/page-ribbon"
 import { RunCard } from "@/components/ui/run-card"
 import { SegmentLegend } from "@/components/ui/segment-legend"
 import type { ClassifyResult } from "@/components/viewers/lib/classify-types"
-import type { SplitView } from "@/components/viewers/lib/split-types"
 import type { PartitionResult } from "@/components/viewers/lib/partition-types"
+import type { SplitView } from "@/components/viewers/lib/split-types"
 import extractSample from "@/components/viewers/sample-data/extract.json"
 import parseSample from "@/components/viewers/sample-data/parse.json"
 
@@ -37,31 +37,32 @@ const CLASSIFICATION = {
 }
 
 const SPLIT = {
-  file: { name: "attention.pdf", type: "application/pdf" },
+  file: { name: "an-image-is-worth-16x16-words.pdf", type: "application/pdf" },
   result: {
     output: [
-      { name: "Title & Abstract", pages: [1] },
-      { name: "Introduction", pages: [2, 3] },
-      { name: "Model Architecture", pages: [4, 5, 6] },
-      { name: "Results", pages: [7, 8, 9] },
-      { name: "References", pages: [10, 11] },
-      { name: "Attention Visualizations", pages: [12, 13, 14, 15] },
+      { name: "Title, Abstract & Introduction", pages: [1] },
+      { name: "Related Work", pages: [2] },
+      { name: "Method", pages: [3] },
+      { name: "Experiments", pages: [4, 5, 6, 7, 8] },
+      { name: "Conclusion & References", pages: [9, 10, 11, 12] },
+      { name: "Appendix", pages: [13, 14, 15, 16, 17, 18, 19, 20, 21, 22] },
     ],
   } satisfies SplitView,
 }
 
 const PARTITION = {
-  file: { name: "attention.pdf", type: "application/pdf" },
-  thumbnail: "/samples/attention-page-1.png",
+  file: { name: "an-image-is-worth-16x16-words.pdf", type: "application/pdf" },
+  thumbnail: "/samples/an-image-is-worth-16x16-words-page-1.png",
   result: {
     output: [
       { key: "abstract", pages: [1] },
-      { key: "introduction", pages: [2] },
-      { key: "model_architecture", pages: [2, 3, 4, 5, 6] },
-      { key: "training", pages: [7, 8] },
-      { key: "results", pages: [8, 9, 10] },
-      { key: "references", pages: [10, 11, 12] },
-      { key: "attention_visualizations", pages: [13, 14, 15] },
+      { key: "introduction", pages: [1, 2] },
+      { key: "related_work", pages: [2] },
+      { key: "method", pages: [3, 4] },
+      { key: "experiments", pages: [4, 5, 6, 7, 8] },
+      { key: "conclusion", pages: [9] },
+      { key: "references", pages: [9, 10, 11, 12] },
+      { key: "appendix", pages: [13, 14, 15, 16, 17, 18, 19, 20, 21, 22] },
     ],
   } satisfies Pick<PartitionResult, "output">,
 }
@@ -205,8 +206,8 @@ function SplitMiniViewer({
   const pageCount = segmentsPageCount(segments)
 
   return (
-    <div className="bg-muted/30 flex size-full">
-      <div className="bg-background flex h-full shrink-0 border-r px-2 py-3">
+    <div className="flex size-full bg-muted/30">
+      <div className="flex h-full shrink-0 border-r bg-background px-2 py-3">
         <PageRibbon
           orientation="vertical"
           rows={[{ id: "split", segments }]}
@@ -215,7 +216,10 @@ function SplitMiniViewer({
         />
       </div>
       <div className="relative min-w-0 flex-1">
-        <FillThumbnail src="/samples/attention-page-1.png" fileName={file.name} />
+        <FillThumbnail
+          src="/samples/an-image-is-worth-16x16-words-page-1.png"
+          fileName={file.name}
+        />
       </div>
     </div>
   )
@@ -228,7 +232,7 @@ function PartitionCard() {
   const segments = toSegments(result.output)
   const pageCount = segmentsPageCount(segments)
   // One ribbon lane per chunk over a shared page axis, so chunks that share a
-  // page (e.g. introduction + model_architecture on page 2) read as an overlap.
+  // page (e.g. method + experiments on page 4) read as an overlap.
   const rows: RibbonRow[] = segments.map((segment) => ({
     id: segment.id,
     label: segment.label,
@@ -264,19 +268,32 @@ function PartitionCard() {
 // Card-sized renderers for the parsed markdown — headings and a GFM table,
 // scaled down to read inside the thumbnail frame.
 const PARSE_MARKDOWN_COMPONENTS: Components = {
-  h1: (props) => <h1 className="text-foreground mb-1 text-[11px] font-bold" {...props} />,
-  h2: (props) => (
-    <h2 className="text-foreground mt-2 mb-1 text-[10px] font-semibold" {...props} />
+  h1: (props) => (
+    <h1 className="mb-1 text-[11px] font-bold text-foreground" {...props} />
   ),
-  p: (props) => <p className="text-muted-foreground mb-1 text-[9px]" {...props} />,
+  h2: (props) => (
+    <h2
+      className="mt-2 mb-1 text-[10px] font-semibold text-foreground"
+      {...props}
+    />
+  ),
+  p: (props) => (
+    <p className="mb-1 text-[9px] text-muted-foreground" {...props} />
+  ),
   table: (props) => (
     <table className="mb-1 w-full border-collapse text-[8px]" {...props} />
   ),
   th: (props) => (
-    <th className="border-border bg-muted/50 border px-1 py-0.5 text-left font-medium" {...props} />
+    <th
+      className="border border-border bg-muted/50 px-1 py-0.5 text-left font-medium"
+      {...props}
+    />
   ),
   td: (props) => (
-    <td className="border-border text-muted-foreground border px-1 py-0.5" {...props} />
+    <td
+      className="border border-border px-1 py-0.5 text-muted-foreground"
+      {...props}
+    />
   ),
 }
 
@@ -288,7 +305,7 @@ function ParseCard() {
       file={file}
       status="completed"
       media={
-        <div className="bg-card size-full overflow-hidden p-3 leading-snug">
+        <div className="size-full overflow-hidden bg-card p-3 leading-snug">
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             components={PARSE_MARKDOWN_COMPONENTS}
@@ -348,19 +365,24 @@ function ExtractCard() {
     >
       <div className="flex flex-col gap-1">
         {shown.map((field) => (
-          <span key={field.key} className="flex items-center gap-1.5 text-[11px]">
+          <span
+            key={field.key}
+            className="flex items-center gap-1.5 text-[11px]"
+          >
             <span
               className="h-3 w-5 shrink-0 rounded-[2px]"
               style={{ backgroundColor: field.color }}
             />
-            <span className="text-muted-foreground shrink-0">{field.label}</span>
+            <span className="shrink-0 text-muted-foreground">
+              {field.label}
+            </span>
             <span className="ml-auto truncate font-medium tabular-nums">
               {field.value}
             </span>
           </span>
         ))}
         {rest > 0 ? (
-          <span className="text-muted-foreground text-[10px]">
+          <span className="text-[10px] text-muted-foreground">
             +{rest} more fields
           </span>
         ) : null}
@@ -390,4 +412,3 @@ function withAlpha(hex: string, alpha: number): string {
   const b = parseInt(value.slice(4, 6), 16)
   return `rgba(${r}, ${g}, ${b}, ${alpha})`
 }
-

@@ -3,6 +3,7 @@
 import React, { useRef } from "react"
 import type { JSONSchema7 } from "json-schema"
 
+import { parseDataCellNumberInput } from "@/components/ui/data-cell"
 import { fixedGridColumnWidths } from "@/components/ui/fixed-grid-columns"
 import {
   getFixedGridCanvasStyle,
@@ -32,10 +33,14 @@ import {
   recordJsonTableRender,
 } from "@/components/json-table/json-table-profiler"
 import { setValueAtMaterializedPath } from "@/components/json-table/lib/document-patches"
+import { getValueAtPath } from "@/components/json-table/lib/document-paths"
 import type { ProjectedRow } from "@/components/json-table/lib/document-projection"
 import { buildHeaderGridRows } from "@/components/json-table/lib/header-nodes"
 import type { JsonTableHeaderNode } from "@/components/json-table/lib/header-nodes"
 import type { TableDocument } from "@/components/json-table/lib/projects-types"
+import { getFieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
+import type { FieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
+import { formatValueForCommit } from "@/components/json-table/lib/value-normalization"
 
 import { SingleFileFormRow } from "./single-file-form-row"
 import {
@@ -160,6 +165,43 @@ const SingleFileTableHeader = React.memo(
 )
 SingleFileTableHeader.displayName = "SingleFileTableHeader"
 
+function normalizeCommittedValue(value: unknown) {
+  return value === "" || value === undefined ? null : value
+}
+
+function areCommittedValuesEqual(left: unknown, right: unknown) {
+  const normalizedLeft = normalizeCommittedValue(left)
+  const normalizedRight = normalizeCommittedValue(right)
+  if (Object.is(normalizedLeft, normalizedRight)) return true
+  try {
+    return JSON.stringify(normalizedLeft) === JSON.stringify(normalizedRight)
+  } catch {
+    return false
+  }
+}
+
+const JSON_TABLE_NUMBER_KEY = /^[0-9.+-]$/
+
+function initialDraftValueForSession({
+  fieldMetadata,
+  intent,
+  value,
+}: {
+  fieldMetadata: FieldMetadata | undefined
+  intent: JsonTableActivationIntent
+  value: unknown
+}) {
+  if (intent.type !== "keyboard" || intent.key.length !== 1) return value
+  if (fieldMetadata?.kind === "string") return intent.key
+  if (
+    (fieldMetadata?.kind === "number" || fieldMetadata?.kind === "integer") &&
+    JSON_TABLE_NUMBER_KEY.test(intent.key)
+  ) {
+    return intent.key
+  }
+  return value
+}
+
 export const SingleFileVirtualizedTable =
   React.memo<SingleFileVirtualizedTableProps>(
     ({
@@ -226,31 +268,6 @@ export const SingleFileVirtualizedTable =
         rowCount,
         virtualRows: virtualRows.length,
       })
-      const startEditSession = React.useCallback(
-        (
-          projectedCell: ProjectedRow["cells"][number],
-          intent: JsonTableActivationIntent
-        ) => {
-          if (!projectedCell?.materializedFieldPath) return
-          const nextSessionId = editSessionIdRef.current + 1
-          editSessionIdRef.current = nextSessionId
-          setEditSession({
-            id: nextSessionId,
-            cellId: jsonTableCellId(
-              document.id,
-              projectedCell.materializedFieldPath
-            ),
-            docId: document.id,
-            fieldPath: projectedCell.materializedFieldPath,
-            intent,
-            initialValue: projectedCell.value,
-            draftValue: projectedCell.value,
-            status: "editing",
-            isOverlayOpen: false,
-          })
-        },
-        [document.id]
-      )
       const updateEditSessionDraft = React.useCallback((value: unknown) => {
         setEditSession((currentSession) =>
           currentSession && !Object.is(currentSession.draftValue, value)
@@ -260,7 +277,7 @@ export const SingleFileVirtualizedTable =
       }, [])
       const setEditSessionOverlayOpen = React.useCallback((open: boolean) => {
         setEditSession((currentSession) =>
-          currentSession
+          currentSession && currentSession.isOverlayOpen !== open
             ? { ...currentSession, isOverlayOpen: open }
             : currentSession
         )
@@ -268,8 +285,8 @@ export const SingleFileVirtualizedTable =
       const closeEditSession = React.useCallback(() => {
         setEditSession(null)
       }, [])
-      const handleDocumentDataChange = React.useCallback(
-        (_docId: string, materializedFieldPath: string, value: unknown) => {
+      const patchDocumentData = React.useCallback(
+        (materializedFieldPath: string, value: unknown) => {
           if (!onUpdateDocument) return
 
           markJsonTableProfile("document-patch-start", {
@@ -289,6 +306,92 @@ export const SingleFileVirtualizedTable =
           })
         },
         [onUpdateDocument]
+      )
+      const handleDocumentDataChange = React.useCallback(
+        (_docId: string, materializedFieldPath: string, value: unknown) => {
+          patchDocumentData(materializedFieldPath, value)
+        },
+        [patchDocumentData]
+      )
+      const commitEditSessionDraft = React.useCallback(
+        (session: JsonTableEditSession) => {
+          if (!onUpdateDocument) return
+
+          const fieldMetadata = getFieldMetadata(schema, session.fieldPath)
+          if (!fieldMetadata) return
+
+          const rawDraftValue =
+            session.draftValue === null || session.draftValue === undefined
+              ? ""
+              : String(session.draftValue)
+          const parsedDraftValue =
+            fieldMetadata.kind === "number" || fieldMetadata.kind === "integer"
+              ? parseDataCellNumberInput({
+                  kind: fieldMetadata.kind,
+                  value: rawDraftValue,
+                }).value
+              : fieldMetadata.kind === "string"
+                ? rawDraftValue === ""
+                  ? null
+                  : rawDraftValue
+                : session.draftValue
+          const nextValue = formatValueForCommit(
+            parsedDraftValue,
+            fieldMetadata.rawSchema,
+            schema
+          )
+          const baseData =
+            pendingDocumentDataRef.current ?? documentDataRef.current
+          const previousValue = getValueAtPath(baseData, session.fieldPath)
+
+          if (areCommittedValuesEqual(previousValue, nextValue)) return
+          patchDocumentData(session.fieldPath, nextValue)
+        },
+        [onUpdateDocument, patchDocumentData, schema]
+      )
+      const startEditSession = React.useCallback(
+        (
+          projectedCell: ProjectedRow["cells"][number],
+          intent: JsonTableActivationIntent
+        ) => {
+          if (!projectedCell?.materializedFieldPath) return
+          const nextCellId = jsonTableCellId(
+            document.id,
+            projectedCell.materializedFieldPath
+          )
+          if (editSession && editSession.cellId !== nextCellId) {
+            commitEditSessionDraft(editSession)
+          }
+          const baseData =
+            pendingDocumentDataRef.current ?? documentDataRef.current
+          const sessionValue = getValueAtPath(
+            baseData,
+            projectedCell.materializedFieldPath
+          )
+          const fieldMetadata = getFieldMetadata(
+            schema,
+            projectedCell.materializedFieldPath
+          )
+
+          const nextSessionId = editSessionIdRef.current + 1
+          editSessionIdRef.current = nextSessionId
+          setEditSession({
+            id: nextSessionId,
+            cellId: nextCellId,
+            docId: document.id,
+            fieldPath: projectedCell.materializedFieldPath,
+            intent,
+            initialValue: sessionValue,
+            draftValue: initialDraftValueForSession({
+              fieldMetadata,
+              intent,
+              value: sessionValue,
+            }),
+            status: "editing",
+            isOverlayOpen: false,
+          })
+        },
+        [commitEditSessionDraft, document.id, editSession, schema]
       )
 
       const handleBodyScroll = React.useCallback(

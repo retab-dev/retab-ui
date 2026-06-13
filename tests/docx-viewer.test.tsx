@@ -12,6 +12,7 @@ import {
 import { renderToStaticMarkup } from "react-dom/server"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { resetDocxDocumentResourceCacheForTests } from "@/lib/docx-document-resource"
 import {
   blobSource,
   clearViewerResourceRegistryForTests,
@@ -22,7 +23,6 @@ import {
   DocxViewer,
   type DocxViewerHandle,
 } from "@/registry/new-york-v4/ui/docx-viewer"
-import { resetDocxResourceCacheForTests } from "@/registry/new-york-v4/ui/docx-viewer-resource"
 
 const docxMock = vi.hoisted(() => ({
   renderAsync: vi.fn(),
@@ -430,7 +430,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup()
-  resetDocxResourceCacheForTests()
+  resetDocxDocumentResourceCacheForTests()
   clearViewerResourceRegistryForTests()
   if (originalGetAnimations) {
     Object.defineProperty(HTMLElement.prototype, "getAnimations", {
@@ -1127,7 +1127,7 @@ describe("DocxViewer", () => {
 
     narrowView.unmount()
     cleanup()
-    resetDocxResourceCacheForTests()
+    resetDocxDocumentResourceCacheForTests()
     clearViewerResourceRegistryForTests()
 
     observedContainerWidth = 5000
@@ -1171,7 +1171,8 @@ describe("DocxViewer", () => {
       view.container.querySelector('[data-slot="docx-viewer-top"]')?.textContent
     ).toBe("Document legend")
     expect(
-      view.container.querySelector('[data-slot="docx-viewer-left"]')?.textContent
+      view.container.querySelector('[data-slot="docx-viewer-left"]')
+        ?.textContent
     ).toBe("Page rail")
     expect(screen.getByText("Target cell")).toBeTruthy()
   })
@@ -1395,7 +1396,7 @@ describe("DocxViewer", () => {
     })
 
     cleanup()
-    resetDocxResourceCacheForTests()
+    resetDocxDocumentResourceCacheForTests()
     clearViewerResourceRegistryForTests()
     onScrollProgressChange.mockClear()
 

@@ -33,8 +33,8 @@ const SAMPLES: FormatSample[] = [
   },
   {
     label: "PDF",
-    url: "/samples/attention.pdf",
-    fileName: "attention.pdf",
+    url: "/samples/an-image-is-worth-16x16-words.pdf",
+    fileName: "an-image-is-worth-16x16-words.pdf",
     mimeType: "application/pdf",
   },
   {
@@ -96,8 +96,8 @@ const SAMPLES: FormatSample[] = [
   },
   {
     label: "TIFF",
-    url: "/samples/nvidia-10q-scan.tiff",
-    fileName: "nvidia-10q-scan.tiff",
+    url: "/samples/entropy.tiff",
+    fileName: "entropy.tiff",
     mimeType: "image/tiff",
   },
 ]
@@ -172,8 +172,8 @@ export function PdfThumbnail() {
     <DocumentThumbnail
       source={{
         kind: "url",
-        url: "/attention.pdf",
-        fileName: "attention.pdf",
+        url: "/an-image-is-worth-16x16-words.pdf",
+        fileName: "an-image-is-worth-16x16-words.pdf",
         mimeType: "application/pdf",
       }}
       previewAspectRatio={1}

@@ -1,7 +1,4 @@
-import {
-  normalizeLayoutQuad,
-  quadToRect,
-} from "./layout-blocks-geometry"
+import { normalizeLayoutQuad, quadToRect } from "./layout-blocks-geometry"
 import type {
   LayoutDocument,
   LayoutItem,
@@ -239,10 +236,7 @@ function documentAiLayoutItemId({
   return `document-ai:p${page.pageNumber}:${level}:${index}:${spanKey}`
 }
 
-function documentAiLayoutKind(
-  level: LayoutLevel,
-  text: string
-): LayoutKind {
+function documentAiLayoutKind(level: LayoutLevel, text: string): LayoutKind {
   const trimmedText = text.trim()
   if (/^\d+$/.test(trimmedText)) return "pageNumber"
   if (level === "paragraph" || level === "block") return "paragraph"
@@ -266,11 +260,12 @@ function documentAiOrientationToRotation(
 }
 
 function normalizeConfidence(confidence: number | undefined) {
-  if (!Number.isFinite(confidence)) return undefined
+  if (confidence == null || !Number.isFinite(confidence)) return undefined
   return Math.min(1, Math.max(0, confidence))
 }
 
 function finitePositiveNumber(value: number | undefined) {
+  if (value == null || !Number.isFinite(value)) return undefined
   return Number.isFinite(value) && value > 0 ? value : undefined
 }
 

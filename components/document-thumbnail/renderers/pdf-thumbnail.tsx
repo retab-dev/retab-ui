@@ -3,16 +3,14 @@
 import * as React from "react"
 import type { PDFDocumentProxy } from "pdfjs-dist"
 
+import {
+  getPdfDocumentResource,
+  getPdfPageResource,
+} from "@/lib/pdf-document-resource"
 import { cn } from "@/lib/utils"
 import type { ViewerResource } from "@/lib/viewer-resource"
-import {
-  getDocumentResource,
-  getPageResource,
-} from "@/components/ui/pdf-viewer"
-import {
-  useThumbnailResource,
-  withThumbnailFormatError,
-} from "@/components/document-thumbnail/cache"
+import { withThumbnailFormatError } from "@/components/document-thumbnail/thumbnail-errors"
+import { useThumbnailResource } from "@/components/document-thumbnail/thumbnail-resource"
 import type { ThumbnailAnchor } from "@/components/document-thumbnail/types"
 import { ANCHOR_CORNER } from "@/components/document-thumbnail/types"
 
@@ -25,9 +23,9 @@ export function PdfFirstPage({
   anchor: ThumbnailAnchor
 }) {
   const doc = useThumbnailResource(
-    getDocumentResource(resource.content)
+    getPdfDocumentResource(resource.content)
   ) as PDFDocumentProxy
-  const page = useThumbnailResource(getPageResource(doc, 1))
+  const page = useThumbnailResource(getPdfPageResource(doc, 1))
   const [renderError, setRenderError] = React.useState<unknown>(null)
 
   const RENDER_W = 520

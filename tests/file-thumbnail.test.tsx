@@ -18,25 +18,29 @@ import {
   hasRenderablePreviewContent,
   resolveFileThumbnailState,
 } from "@/components/ui/file-thumbnail"
+import { DocumentThumbnail } from "@/components/document-thumbnail"
 import {
-  DocumentThumbnail,
   getThumbnailKey,
   getThumbnailRenderKey,
-} from "@/components/document-thumbnail"
+  thumbnailOption,
+} from "@/components/document-thumbnail/keys"
+import { useObjectUrl } from "@/components/document-thumbnail/renderers/use-object-url"
 import {
   cachedThumbnailResource,
-  clearThumbnailCachesForTests,
   createThumbnailArtifactCache,
-  getThumbnailText,
+  type ThumbnailCacheEntry,
+} from "@/components/document-thumbnail/thumbnail-cache"
+import { withThumbnailFormatError } from "@/components/document-thumbnail/thumbnail-errors"
+import {
   TEXT_THUMBNAIL_CACHE_MAX_ENTRIES,
   TEXT_THUMBNAIL_MAX_BYTES,
+} from "@/components/document-thumbnail/thumbnail-limits"
+import { clearThumbnailCachesForTests } from "@/components/document-thumbnail/thumbnail-test-reset"
+import {
+  getThumbnailText,
   thumbnailFileMeta,
-  withThumbnailFormatError,
-  type ThumbnailCacheEntry,
   type ThumbnailTextContent,
-} from "@/components/document-thumbnail/cache"
-import { thumbnailOption } from "@/components/document-thumbnail/keys"
-import { useObjectUrl } from "@/components/document-thumbnail/renderers/use-object-url"
+} from "@/components/document-thumbnail/thumbnail-text"
 import { createViewerResource } from "@/registry/new-york-v4/lib/viewer-resource"
 
 afterEach(() => {
@@ -88,7 +92,10 @@ describe("DocumentThumbnail helpers", () => {
   it("keeps thumbnail live code on the canonical resource API", () => {
     const liveFiles = [
       "components/document-thumbnail.tsx",
-      "components/document-thumbnail/cache.ts",
+      "components/document-thumbnail/thumbnail-cache.ts",
+      "components/document-thumbnail/thumbnail-direct-image.tsx",
+      "components/document-thumbnail/thumbnail-text.ts",
+      "components/document-thumbnail/thumbnail-resource.ts",
       "components/document-thumbnail/descriptor.ts",
       "components/document-thumbnail/errors.tsx",
       "components/document-thumbnail/keys.ts",
@@ -124,7 +131,8 @@ describe("DocumentThumbnail helpers", () => {
 
   it("keeps expensive thumbnail helpers on narrow content contracts", () => {
     const helperFiles = [
-      "components/document-thumbnail/cache.ts",
+      "components/document-thumbnail/thumbnail-cache.ts",
+      "components/document-thumbnail/thumbnail-text.ts",
       "components/document-thumbnail/renderers/markdown-thumbnail.tsx",
       "components/document-thumbnail/renderers/pptx-thumbnail.tsx",
       "components/document-thumbnail/renderers/tiff-thumbnail.tsx",
@@ -146,7 +154,9 @@ describe("DocumentThumbnail helpers", () => {
       }
     }
     for (const file of helperFiles.filter(
-      (file) => file !== "components/document-thumbnail/cache.ts"
+      (file) =>
+        file !== "components/document-thumbnail/thumbnail-cache.ts" &&
+        file !== "components/document-thumbnail/thumbnail-text.ts"
     )) {
       expect(readFileSync(file, "utf8"), file).not.toContain(
         unboundedArtifactCache
@@ -851,6 +861,11 @@ describe("FileThumbnail registry item", () => {
 
     expect(item?.files?.map((file) => file.path)).toEqual([
       "registry/new-york-v4/ui/file-thumbnail.tsx",
+      "registry/new-york-v4/ui/file-thumbnail-types.ts",
+      "registry/new-york-v4/ui/file-thumbnail-extension.ts",
+      "registry/new-york-v4/ui/file-thumbnail-fallback.tsx",
+      "registry/new-york-v4/ui/file-thumbnail-shimmer.tsx",
+      "registry/new-york-v4/ui/file-thumbnail-image.tsx",
     ])
     expect(item?.registryDependencies).toEqual(["utils"])
     expect(item?.dependencies ?? []).toEqual([])

@@ -33,9 +33,9 @@ export interface SegmentedDocumentViewerProps {
  *   - SegmentLegend   (color key, top)
  *   - PageTimeline    (page strip) + an optional source PDF
  *
- * Hover and focus are shared across surfaces. The current PDF page marks the
- * segment that owns it, and clicking a segment scrolls the document to its first
- * page.
+ * Pointer preview is shared across surfaces. When nothing is previewed, the
+ * current PDF page highlights the segment that contains it. Clicking a segment
+ * scrolls the document to its first page.
  */
 export function SegmentedDocumentViewer({
   segments,

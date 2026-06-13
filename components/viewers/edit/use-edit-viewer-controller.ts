@@ -119,7 +119,8 @@ export function useEditViewerController({
       setSelectedFieldKey(nextSelectedFieldKey)
       const field = fieldByKey.get(nextSelectedFieldKey)
       if (!field?.bbox) return
-      viewerRef.current?.scrollToPageTarget(field.bbox.page, {
+      viewerRef.current?.scrollToPageArea({
+        pageNumber: field.bbox.page,
         top: field.bbox.top * 100,
       })
     },

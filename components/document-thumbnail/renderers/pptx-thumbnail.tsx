@@ -8,15 +8,19 @@ import type { ViewerResource } from "@/lib/viewer-resource"
 import {
   cachedThumbnailResource,
   createThumbnailArtifactCache,
+} from "@/components/document-thumbnail/thumbnail-cache"
+import { withThumbnailDecodeSlot } from "@/components/document-thumbnail/thumbnail-decode-queue"
+import { withThumbnailFormatError } from "@/components/document-thumbnail/thumbnail-errors"
+import {
   shortName,
+  timedThumbnail,
+} from "@/components/document-thumbnail/thumbnail-profile"
+import { useThumbnailResource } from "@/components/document-thumbnail/thumbnail-resource"
+import {
   thumbnailFileMeta,
-  timed,
-  useThumbnailResource,
-  withThumbnailDecodeSlot,
-  withThumbnailFormatError,
   type ThumbnailBytesContent,
   type ThumbnailFileMeta,
-} from "@/components/document-thumbnail/cache"
+} from "@/components/document-thumbnail/thumbnail-text"
 import type { ThumbnailAnchor } from "@/components/document-thumbnail/types"
 import { ANCHOR_CORNER } from "@/components/document-thumbnail/types"
 
@@ -51,7 +55,7 @@ function getPptxFirstSlide(
         meta.fileName,
         "Failed to parse presentation thumbnail",
         () =>
-          timed(`pptx:total ${shortName(meta)}`, async () => {
+          timedThumbnail(`pptx:total ${shortName(meta)}`, async () => {
             const [buf, mod] = await Promise.all([
               content.readBytes(),
               loadPptx(),

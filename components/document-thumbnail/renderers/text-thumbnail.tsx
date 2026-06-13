@@ -3,11 +3,11 @@
 import * as React from "react"
 
 import type { ViewerResource } from "@/lib/viewer-resource"
+import { useThumbnailResource } from "@/components/document-thumbnail/thumbnail-resource"
 import {
   getThumbnailText,
   thumbnailFileMeta,
-  useThumbnailResource,
-} from "@/components/document-thumbnail/cache"
+} from "@/components/document-thumbnail/thumbnail-text"
 
 export function TextFirstLines({
   resource,

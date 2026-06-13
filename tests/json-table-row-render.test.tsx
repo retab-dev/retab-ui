@@ -123,7 +123,7 @@ function SingleFileFormRowHarness({
   }, [])
   const setEditSessionOverlayOpen = React.useCallback((open: boolean) => {
     setEditSession((currentSession) =>
-      currentSession
+      currentSession && currentSession.isOverlayOpen !== open
         ? { ...currentSession, isOverlayOpen: open }
         : currentSession
     )

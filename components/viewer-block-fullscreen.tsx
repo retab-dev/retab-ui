@@ -3,22 +3,24 @@
 import * as React from "react"
 
 import { getViewerBlock, type ViewerBlockId } from "@/lib/viewer-blocks"
+import { CsvSourcesBlock } from "@/registry/new-york-v4/blocks/csv-sources-block"
+import { DocxSourcesBlock } from "@/registry/new-york-v4/blocks/docx-sources-block"
+import { EditViewerBlock } from "@/registry/new-york-v4/blocks/edit-viewer-block"
 import { ExtractViewerBlock } from "@/registry/new-york-v4/blocks/extract-viewer-block"
 import { ExtractionViewerBlock } from "@/registry/new-york-v4/blocks/extraction-viewer-block"
 import { ImageSourcesBlock } from "@/registry/new-york-v4/blocks/image-sources-block"
-import { TextSourcesBlock } from "@/registry/new-york-v4/blocks/text-sources-block"
-import { CsvSourcesBlock } from "@/registry/new-york-v4/blocks/csv-sources-block"
-import { XlsxSourcesBlock } from "@/registry/new-york-v4/blocks/xlsx-sources-block"
-import { DocxSourcesBlock } from "@/registry/new-york-v4/blocks/docx-sources-block"
-import { EditViewerBlock } from "@/registry/new-york-v4/blocks/edit-viewer-block"
-import { ParseViewerBlock } from "@/registry/new-york-v4/blocks/parse-viewer-block"
 import { LegendVariantsBlock } from "@/registry/new-york-v4/blocks/legend-variants-block"
+import { OcrBlock } from "@/registry/new-york-v4/blocks/ocr-block"
+import { ParseViewerBlock } from "@/registry/new-york-v4/blocks/parse-viewer-block"
 import { PartitionViewerBlock } from "@/registry/new-york-v4/blocks/partition-viewer-block"
 import { PdfThumbnailsBlock } from "@/registry/new-york-v4/blocks/pdf-thumbnails-block"
 import { PrimitiveCardsBlock } from "@/registry/new-york-v4/blocks/primitive-cards-block"
 import { SplitViewerBlock } from "@/registry/new-york-v4/blocks/split-viewer-block"
+import { TextSourcesBlock } from "@/registry/new-york-v4/blocks/text-sources-block"
+import { XlsxSourcesBlock } from "@/registry/new-york-v4/blocks/xlsx-sources-block"
 
 const blockComponents = {
+  ocr: OcrBlock,
   split: SplitViewerBlock,
   partition: PartitionViewerBlock,
   parse: ParseViewerBlock,

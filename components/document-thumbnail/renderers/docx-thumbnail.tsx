@@ -3,19 +3,19 @@
 import * as React from "react"
 import type * as DocxPreview from "docx-preview"
 
+import { getDocxDocumentResource } from "@/lib/docx-document-resource"
 import type { ViewerResource } from "@/lib/viewer-resource"
-import { getDocxResource } from "@/components/ui/docx-viewer"
-import {
-  shortName,
-  timed,
-  useThumbnailResource,
-  withThumbnailDecodeSlot,
-  withThumbnailFormatError,
-} from "@/components/document-thumbnail/cache"
 import {
   Surface,
   useElementWidth,
 } from "@/components/document-thumbnail/renderers/layout"
+import { withThumbnailDecodeSlot } from "@/components/document-thumbnail/thumbnail-decode-queue"
+import { withThumbnailFormatError } from "@/components/document-thumbnail/thumbnail-errors"
+import {
+  shortName,
+  timedThumbnail,
+} from "@/components/document-thumbnail/thumbnail-profile"
+import { useThumbnailResource } from "@/components/document-thumbnail/thumbnail-resource"
 
 let docxLib: Promise<typeof DocxPreview> | null = null
 function loadDocxPreview() {
@@ -26,7 +26,7 @@ function loadDocxPreview() {
 const DOCX_PAGE_W = 816 // US Letter at 96dpi
 
 export function DocxFirstPage({ resource }: { resource: ViewerResource }) {
-  const bytes = useThumbnailResource(getDocxResource(resource.content))
+  const bytes = useThumbnailResource(getDocxDocumentResource(resource.content))
   const { ref: frameRef, width: frameWidth } = useElementWidth()
   const [renderError, setRenderError] = React.useState<unknown>(null)
 
@@ -41,7 +41,7 @@ export function DocxFirstPage({ resource }: { resource: ViewerResource }) {
           resource.fileName,
           "Failed to render DOCX thumbnail",
           () =>
-            timed(`docx:render ${shortName(resource)}`, async () => {
+            timedThumbnail(`docx:render ${shortName(resource)}`, async () => {
               if (!active) return
               const docx = await loadDocxPreview()
               if (!active) return

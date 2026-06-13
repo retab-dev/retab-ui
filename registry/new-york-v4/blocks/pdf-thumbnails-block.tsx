@@ -21,7 +21,7 @@ export function PdfThumbnailsBlock() {
   const viewerRef = React.useRef<PdfViewerHandle>(null)
 
   const jumpToPage = React.useCallback((page: number) => {
-    viewerRef.current?.scrollToPageTarget(page, { top: 0 })
+    viewerRef.current?.scrollToPage(page)
   }, [])
 
   return (

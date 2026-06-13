@@ -34,6 +34,7 @@ import { getIconForLanguageExtension } from "@/components/icons"
 import { ImageViewerDemo } from "@/components/image-viewer-demo"
 import { JsonFormDemo } from "@/components/json-form-demo"
 import { JsonTableDemo } from "@/components/json-table/json-table-demo"
+import { DocumentAiLayoutBlocksDemo } from "@/components/layout-blocks-document-ai-demo"
 import { MermaidDiagram } from "@/components/mermaid-diagram"
 import { PdfViewerDemo } from "@/components/pdf-viewer-demo"
 import { PptxViewerDemo } from "@/components/pptx-viewer-demo"
@@ -373,6 +374,7 @@ export const mdxComponents = {
   FileViewerDemo,
   JsonFormDemo,
   JsonTableDemo,
+  DocumentAiLayoutBlocksDemo,
   ParseViewerDemo,
   ExtractViewerDemo,
   JsonFormSourcesDemo,

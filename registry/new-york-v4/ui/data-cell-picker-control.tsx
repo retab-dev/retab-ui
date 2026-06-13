@@ -47,7 +47,7 @@ export function DataCellPickerControl({
   formatValue: _formatValue,
   draftValue,
   autoFocus,
-  activationIntent: _activationIntent,
+  activationIntent,
   isPickerOpen,
   onDraftValueChange,
   onCommit,
@@ -68,7 +68,17 @@ export function DataCellPickerControl({
   )
   const triggerRef = React.useRef<HTMLButtonElement>(null)
   const popupRef = React.useRef<HTMLDivElement>(null)
-  const skipAutoFocusClickRef = React.useRef(Boolean(autoFocus))
+  const shouldSkipAutoFocusClick =
+    Boolean(autoFocus) && activationIntent?.type === "pointer"
+  const skipAutoFocusClickRef = React.useRef(shouldSkipAutoFocusClick)
+  const openingPointerDownRef = React.useRef(
+    activationIntent?.type === "pointer"
+      ? { clientX: activationIntent.clientX, clientY: activationIntent.clientY }
+      : null
+  )
+  const openingPointerDownTimerRef = React.useRef<ReturnType<
+    typeof globalThis.setTimeout
+  > | null>(null)
   const [popupStyle, setPopupStyle] = React.useState<React.CSSProperties>()
   const popupId = React.useId()
   const open = isPickerOpen ?? uncontrolledOpen
@@ -91,8 +101,8 @@ export function DataCellPickerControl({
   }, [draftValue, kind, value])
 
   React.useEffect(() => {
-    if (autoFocus) skipAutoFocusClickRef.current = true
-  }, [autoFocus])
+    skipAutoFocusClickRef.current = shouldSkipAutoFocusClick
+  }, [shouldSkipAutoFocusClick])
 
   const closePopup = React.useCallback(() => {
     setOpen(false)
@@ -120,10 +130,40 @@ export function DataCellPickerControl({
 
   React.useLayoutEffect(() => {
     if (!autoFocus) return
-    skipAutoFocusClickRef.current = true
+    if (openingPointerDownTimerRef.current !== null) {
+      globalThis.clearTimeout(openingPointerDownTimerRef.current)
+      openingPointerDownTimerRef.current = null
+    }
+    skipAutoFocusClickRef.current = shouldSkipAutoFocusClick
+    openingPointerDownRef.current =
+      activationIntent?.type === "pointer"
+        ? {
+            clientX: activationIntent.clientX,
+            clientY: activationIntent.clientY,
+          }
+        : null
+    openingPointerDownTimerRef.current = globalThis.setTimeout(() => {
+      openingPointerDownRef.current = null
+      openingPointerDownTimerRef.current = null
+    }, 0)
     updatePopupPosition()
     setOpen(true)
-  }, [autoFocus, setOpen, updatePopupPosition])
+  }, [
+    activationIntent,
+    autoFocus,
+    setOpen,
+    shouldSkipAutoFocusClick,
+    updatePopupPosition,
+  ])
+
+  React.useEffect(
+    () => () => {
+      if (openingPointerDownTimerRef.current === null) return
+      globalThis.clearTimeout(openingPointerDownTimerRef.current)
+      openingPointerDownTimerRef.current = null
+    },
+    []
+  )
 
   React.useLayoutEffect(() => {
     if (open) updatePopupPosition()
@@ -135,6 +175,15 @@ export function DataCellPickerControl({
     const handlePointerDown = (event: PointerEvent) => {
       const target = event.target
       if (!(target instanceof Node)) return
+      const openingPointerDown = openingPointerDownRef.current
+      if (
+        openingPointerDown &&
+        openingPointerDown.clientX === event.clientX &&
+        openingPointerDown.clientY === event.clientY
+      ) {
+        openingPointerDownRef.current = null
+        return
+      }
       if (triggerRef.current?.contains(target)) return
       if (popupRef.current?.contains(target)) return
       closePopup()

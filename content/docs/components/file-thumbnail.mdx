@@ -17,6 +17,12 @@ shimmer, fade-in, and fallback state.
 npx shadcn@latest add @retab/file-thumbnail
 ```
 
+For the first-unit document renderer stack:
+
+```bash
+npx shadcn@latest add @retab/document-thumbnail
+```
+
 ## States
 
 `FileThumbnail` is just the preview shell — it tracks loading, fade-in, and
@@ -43,11 +49,14 @@ renderer wraps a standard React library (`pdfjs-dist`, `@e965/xlsx`,
 first sheet, or the first slide — never the whole document, so there is no
 scrolling, no sheet tabs, and no toolbar. A raster image needs no renderer at all.
 
-The Retab app uses `DocumentThumbnail` as an app-side helper around
-`FileThumbnail` for the docs demo. It does the first-unit render per format;
-it suspends (showing the shimmer) while the library parses, and falls back to the
-muted surface if a parse fails. It is not part of the `@retab/file-thumbnail`
-registry install.
+`DocumentThumbnail` is the optional renderer stack around `FileThumbnail`. It
+does the first-unit render per format; it suspends (showing the shimmer) while
+the library parses, and falls back to the muted surface if a parse fails. Install
+`@retab/file-thumbnail` for only the dependency-free shell, or
+`@retab/document-thumbnail` when you want the complete PDF, DOCX, XLSX, PPTX,
+CSV, text, markdown, HTML, TIFF, and direct-image thumbnail path.
+The document thumbnail install uses shared PDF/DOCX resource loaders, not the
+full PDF or DOCX viewer chrome.
 
 ```tsx
 import { DocumentThumbnail } from "@/components/document-thumbnail"
@@ -56,8 +65,8 @@ import { DocumentThumbnail } from "@/components/document-thumbnail"
 <DocumentThumbnail
   source={{
     kind: "url",
-    url: "/attention.pdf",
-    fileName: "attention.pdf",
+    url: "/an-image-is-worth-16x16-words.pdf",
+    fileName: "an-image-is-worth-16x16-words.pdf",
     mimeType: "application/pdf",
   }}
 />
@@ -120,7 +129,7 @@ is kept stable for styling and tests.
 `0` and an empty string. `null`, `undefined`, and `false` are treated as absent,
 so the component can fall back to `previewImageUrl` or the muted fallback surface.
 
-### DocumentThumbnail App Helper
+### DocumentThumbnail
 
 | Prop                 | Type                                         | Default      | Required |
 | -------------------- | -------------------------------------------- | ------------ | -------- |

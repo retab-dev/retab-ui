@@ -1,427 +1,696 @@
-# DataCell and JSON Table Joint Blueprint
+# DataCell and JSON Table Bare-Metal Blueprint
 
-## Premise
+## Verdict
 
-`DataCell` and JSON table cannot be perfected independently.
+The current JSON table is not at the ideal architecture.
 
-JSON table needs cells that are fast, inert, editable, accessible, and
-schema-aware. `DataCell` provides the visual and native-control vocabulary for
-those cells. If `DataCell` owns too much lifecycle, JSON table becomes bloated.
-If JSON table reimplements too much cell behavior, `DataCell` becomes decorative
-instead of foundational.
+`DataCell` is close. It has a direct contract:
 
-The joint ideal is:
+- `display` renders formatted inert content.
+- `edit` renders the native-ish control for the kind.
+- parsing, formatting, draft changes, commit, and picker open state have one
+  obvious path.
 
-> JSON table owns grid semantics. DataCell owns cell primitives. Editors compose
-> those primitives into field-specific interactions.
+JSON table should be just as direct. It is not. It currently spreads cell
+interaction across table cells, edit sessions, per-kind editor wrappers,
+display wrappers, row elevation, overlay booleans, draft coercion, special
+cases, and memo comparators. That is why small interaction fixes keep feeling
+like they miss the underlying problem.
 
-## Current State
+The rebuild should not make JSON table "use DataCell more" by mounting one
+`DataCell` in every table cell. That is still too much React on the hot path.
 
-The current architecture has completed the hard cutover:
-
-- JSON table owns one `editSession`.
-- Hover no longer mounts editors.
-- Editors consume activation intent.
-- `DataCell` has no `auto` mode.
-- JSON table editors receive direct `cell`, `editSession`, draft, overlay,
-  close, and commit props.
-- `JsonTableScalarCell` is deleted.
-- Picker overlay state can be controlled by the table edit session.
-- DataCell public types and pure value formatting/parsing live outside the
-  React component file.
-
-The remaining impurity is not legacy compatibility. It is module granularity.
-`DataCell` is still a broad rendering component with several responsibilities:
-
-- display shell rendering
-- edit shell rendering
-- native input rendering
-- checkbox rendering
-- picker rendering
-- popup positioning
-
-The next idealization pass should split those control renderers only if the
-split makes ownership clearer without creating ornamental barrels.
-
-## Joint One-Sentence Model
+The pure architecture is:
 
 ```txt
-JSON table projects schema-backed values into grid cells.
-DataCell renders display and control primitives for those cells.
-Editors translate edit-session intent into native control behavior.
-The commit pipeline normalizes values back into document data.
+The table renders plain cells.
+A single DataCell-shaped overlay appears over the hovered or active cell.
+The overlay is display-only on hover and edit-mode on activation.
+Commits patch document data and the overlay disappears.
 ```
 
-Anything outside that flow is suspect.
+This makes `DataCell` a trompe-l'oeil: visually it looks like the cell, but it
+is an overlay owned by the table interaction layer, not the table body itself.
 
-## Ownership Rules
+## Design Standard
 
-### JSON Table Owns Grid Semantics
+The target implementation must be:
 
-JSON table owns:
+- simple: one projection path, one active cell, one overlay component
+- fast: no per-cell controls, no hover-mounted editors, no per-cell React churn
+- complete: text, number, integer, boolean, date, time, date-time, enum, object,
+  array, keyboard, pointer, blur, commit, cancel, virtualization
+- bare-bones: table cells are inert DOM until one cell is hovered or active
+- modular: table owns grid mechanics, DataCell owns scalar cell behavior
+- consistent: the same concepts keep the same names everywhere
 
-- row and column projection
-- virtualization
-- selected cell identity
-- one edit session
-- activation intent
-- document patch dispatch
-- schema-derived field metadata
+## First Principles
 
-JSON table does not own:
+### What A Table Cell Is
 
-- how a text input positions a caret
-- how a checkbox toggles
-- how a select opens
-- how a date picker manages its popup
-- how a primitive cell is styled internally
-
-### DataCell Owns Cell Primitives
-
-DataCell owns:
-
-- display shell styling
-- edit/control shell styling
-- consistent density, borders, typography, truncation, and focus rings
-- native control composition
-- primitive formatting/parsing helpers
-- primitive accessibility attributes
-
-DataCell does not own:
-
-- grid selection
-- edit-session identity
-- hover-to-edit lifecycle
-- document paths
-- schema traversal
-- document commits
-
-### Editors Own Field Interaction
-
-Editors own:
-
-- interpreting `ActivationIntent`
-- mapping schema kind to the right primitive
-- field-specific draft behavior
-- field-specific commit semantics
-- overlay lifetime for the current edit session
-
-Editors do not own:
-
-- virtualization
-- row projection
-- sibling cell rendering
-- global table state
-
-## Target Module Shape
-
-```txt
-components/ui/data-cell/
-  data-cell-display.tsx
-  data-cell-text-control.tsx
-  data-cell-number-control.tsx
-  data-cell-boolean-control.tsx
-  data-cell-picker-control.tsx
-  data-cell-format.ts
-  data-cell-parse.ts
-  data-cell-types.ts
-
-components/json-table/
-  json-table-edit-session.ts
-  json-table-cell-types.ts
-  editable-json-table-cell.tsx
-  json-table-display-cell.tsx
-  cell-editors/
-    cell-editor.tsx
-    text-editor.tsx
-    number-editor.tsx
-    boolean-editor.tsx
-    enum-editor.tsx
-    date-editor.tsx
-    time-editor.tsx
-    datetime-editor.tsx
-    object-editor.tsx
-    array-editor.tsx
-```
-
-The important point is not the exact filenames. The important point is that
-`DataCell` exports primitives, not a second editing lifecycle.
-
-## DataCell Primitive API
-
-### Display Primitive
-
-```tsx
-<DataCellDisplay
-  kind={kind}
-  value={value}
-  placeholder="—"
-  formatValue={formatValue}
-/>
-```
-
-Responsibilities:
-
-- render formatted value
-- render empty placeholder
-- expose read-only accessibility state
-- never start editing
-- never own draft state
-- never commit
-
-### Text Control Primitive
-
-```tsx
-<DataCellTextControl
-  value={draftValue}
-  disabled={disabled}
-  activationIntent={activationIntent}
-  onDraftChange={setDraftValue}
-  onCommit={commitValue}
-  onCancel={closeSession}
-/>
-```
-
-Responsibilities:
-
-- focus from activation intent
-- place caret from pointer intent
-- seed first typed key from keyboard intent
-- emit draft changes
-- commit on blur/Enter
-- cancel on Escape if that is the editor contract
-
-### Number Control Primitive
-
-```tsx
-<DataCellNumberControl
-  kind="number"
-  value={draftValue}
-  activationIntent={activationIntent}
-  onDraftChange={setDraftValue}
-  onCommit={commitParsedNumber}
-/>
-```
-
-Responsibilities:
-
-- preserve invalid raw drafts
-- expose parse metadata
-- commit parsed values through the editor
-
-### Boolean Control Primitive
-
-```tsx
-<DataCellBooleanControl
-  checked={checked}
-  activationIntent={activationIntent}
-  onToggle={commitBoolean}
-/>
-```
-
-Responsibilities:
-
-- toggle from pointer intent
-- toggle from Space
-- expose checkbox semantics
-
-### Picker Control Primitive
-
-```tsx
-<DataCellPickerControl
-  kind="date"
-  value={draftValue}
-  isOpen={isOverlayOpen}
-  activationIntent={activationIntent}
-  onOpenChange={setOverlayOpen}
-  onDraftChange={setDraftValue}
-  onCommit={commitDate}
-/>
-```
-
-Responsibilities:
-
-- open/focus from activation intent
-- manage primitive picker accessibility
-- emit raw draft values and selected values
-
-## JSON Table Editor API
-
-The ideal editor props should collapse to:
+A JSON table body cell is a coordinate:
 
 ```ts
-type JsonTableCellEditorProps = {
-  cell: ProjectedCell
-  fieldMetadata: FieldMetadata
-  session: JsonTableEditSession
-  commit: (value: unknown) => void
-  updateDraft: (value: unknown) => void
-  setOverlayOpen: (open: boolean) => void
-  close: () => void
+type JsonTableCellKey = {
+  docId: string
+  fieldPath: string
 }
 ```
 
-The editor then composes DataCell primitives:
+It is not an editor. It is not a state owner. It is not a DataCell instance.
+It is an addressable rectangle with a formatted value.
+
+### What DataCell Is
+
+`DataCell` is the scalar cell primitive. It knows how to:
+
+- display scalar values
+- focus text and number inputs
+- position a text caret from pointer intent
+- toggle booleans
+- open date/time pickers
+- parse primitive input
+- commit primitive values
+
+It must not know:
+
+- JSON Schema
+- document paths
+- rows or columns
+- virtualization
+- selected cell identity
+- source citations
+- table hover state
+
+### What JSON Table Is
+
+JSON table knows how to:
+
+- project schema and document data into rows and columns
+- virtualize rows and columns
+- format display strings for inert cells
+- track hovered cell identity
+- track one active edit identity
+- convert a projected cell into DataCell props
+- patch committed values back into document data
+
+It must not know:
+
+- input caret math
+- checkbox internals
+- date picker internals
+- text/number DOM control behavior
+- popup control behavior beyond active overlay placement
+
+## Runtime Architecture
+
+```mermaid
+flowchart TD
+  Schema[JSON Schema] --> Projection[projection model]
+  Data[Document data] --> Projection
+  Projection --> Rows[projected rows]
+  Projection --> Columns[projected columns]
+
+  Rows --> Body[bare table body]
+  Columns --> Body
+  Body --> PlainCell[plain td + text span]
+
+  PlainCell --> HoverState[hoveredCellKey]
+  PlainCell --> ActiveState[activeCellSession]
+
+  HoverState --> Overlay[JsonTableCellOverlay]
+  ActiveState --> Overlay
+
+  Overlay --> Adapter[jsonTableDataCellAdapter]
+  Adapter --> DataCell[DataCell display/edit]
+  Adapter --> EnumSelect[table-local enum select]
+  Adapter --> NestedPreview[object/array preview]
+
+  DataCell --> Commit[commitCellValue]
+  EnumSelect --> Commit
+  Commit --> Patch[document patch]
+  Patch --> Data
+```
+
+## The Hot Path
+
+The table body renders this and almost nothing else:
 
 ```tsx
-function TextJsonTableEditor(props: JsonTableCellEditorProps) {
-  return (
-    <DataCellTextControl
-      value={String(props.session.draftValue ?? "")}
-      activationIntent={props.session.intent}
-      onDraftChange={props.updateDraft}
-      onCommit={props.commit}
-      onCancel={props.close}
-    />
-  )
+<td
+  data-cell-id={cellId}
+  data-field-path={fieldPath}
+  data-json-table-cell
+>
+  <span>{displayText}</span>
+</td>
+```
+
+Allowed hot-path responsibilities:
+
+- stable `data-*` identity
+- width and height
+- alignment
+- background confidence color
+- selected/hovered CSS attribute
+- pointer and keyboard event delegation
+- formatted text
+
+Forbidden hot-path responsibilities:
+
+- `DataCell`
+- `DataCellDisplay`
+- inputs
+- select triggers
+- date pickers
+- per-cell editor dispatch
+- per-cell draft state
+- per-cell overlay state
+- per-cell `useEffect`
+- per-cell `useLayoutEffect`
+
+This is the main performance win. The table becomes a grid of inert cells, and
+React only mounts interactive UI for the one cell the user is touching.
+
+## Overlay Architecture
+
+There is one overlay layer per table viewport:
+
+```tsx
+<JsonTableCellOverlayLayer
+  hoveredCell={hoveredCell}
+  activeSession={activeSession}
+  viewportRef={viewportRef}
+  commitCellValue={commitCellValue}
+  closeActiveSession={closeActiveSession}
+/>
+```
+
+The overlay layer renders nothing when there is no hovered or active cell.
+
+It renders display mode when a cell is hovered:
+
+```tsx
+<DataCell mode="display" {...adapter.displayProps} />
+```
+
+It renders edit mode when a cell is active:
+
+```tsx
+<DataCell mode="edit" {...adapter.editProps} />
+```
+
+For enum it renders one table-local select, using the same visual density as
+DataCell. `DataCell` should not be bloated with enum until enum becomes a
+general primitive needed outside JSON table.
+
+For object and array it renders a display preview plus the existing nested
+viewer/editor only on activation. Object/array are not DataCell primitives.
+
+## Overlay Rects
+
+The overlay rect is read from the real table cell:
+
+```ts
+type JsonTableCellRect = {
+  top: number
+  left: number
+  width: number
+  height: number
 }
 ```
 
-No `focus` group. No `overlays` group. No `textDraft` group. Those are
-coordination artifacts from the old architecture.
+The table stores identity, not rectangles. Rects are measured at the boundary:
+
+- pointer enter
+- pointer move only when the hovered cell identity changes or the viewport
+  scrolls
+- active session start
+- viewport scroll
+- column resize
+- row virtualization change
+
+The overlay should use `position: fixed` or viewport-local absolute positioning,
+never change table layout, and never force the row to grow.
+
+## State Model
+
+The table needs only this state:
+
+```ts
+type JsonTableCellKey = {
+  docId: string
+  fieldPath: string
+}
+
+type JsonTableActivationIntent =
+  | { type: "pointer"; clientX: number; clientY: number; detail: number }
+  | { type: "keyboard"; key: string }
+  | { type: "programmatic" }
+
+type JsonTableActiveSession = {
+  id: number
+  cellKey: JsonTableCellKey
+  intent: JsonTableActivationIntent
+  initialValue: unknown
+  draftValue: string
+  isPopupOpen: boolean
+}
+
+type JsonTableInteractionState = {
+  hoveredCellKey: JsonTableCellKey | null
+  activeSession: JsonTableActiveSession | null
+}
+```
+
+Remove:
+
+- `status: "editing" | "committing" | "closing"`
+- separate overlay state names
+- editor-specific session shapes
+- session fields that duplicate `cellKey`
+- draft values typed as `unknown`
+
+Drafts are strings because DOM controls edit strings. Boolean and enum can
+commit directly and do not need long-lived drafts.
+
+## Naming
+
+Use these names everywhere:
+
+- `cellKey`: stable `{ docId, fieldPath }`
+- `cellId`: serialized key for DOM and maps
+- `fieldPath`: materialized document path
+- `fieldMetadata`: schema-derived metadata for one field
+- `displayValue`: formatted display string or React node
+- `draftValue`: raw input string
+- `activeSession`: the one editing session
+- `isPopupOpen`: select/date/time popup state
+- `activationIntent`: pointer, keyboard, or programmatic activation
+- `commitCellValue`: table-level document patch entry point
+
+Do not use parallel names like `editSession`, `overlayOpen`,
+`isSelectOpen`, `textDraft`, `materializedFieldPath` in the interaction layer.
+`materializedFieldPath` may exist inside projection code only.
+
+## Module Shape
+
+```txt
+components/json-table/
+  json-table.tsx
+  json-table-body.tsx
+  json-table-cell.tsx
+  json-table-overlay-layer.tsx
+  json-table-overlay.tsx
+  json-table-data-cell-adapter.ts
+  json-table-interaction-state.ts
+  json-table-value-commit.ts
+  json-table-display-value.ts
+  json-table-enum-select.tsx
+  json-table-nested-overlay.tsx
+
+components/json-table/lib/
+  document-projection.ts
+  document-patches.ts
+  schema-field-metadata.ts
+  value-normalization.ts
+```
+
+Delete after cutover:
+
+```txt
+components/json-table/cell-editors/
+components/json-table/editable-json-table-cell.tsx
+components/json-table/read-only-json-table-cell.tsx
+components/json-table/json-table-display-cell.tsx
+components/json-table/json-table-data-cell.tsx
+components/json-table/use-cell-controller.ts
+components/json-table/use-elevated-virtual-row.ts
+```
+
+If a deleted module still contains useful logic, move the logic into one of the
+new modules. Do not keep wrapper modules as compatibility shims.
+
+## DataCell Adapter
+
+The adapter is the only place that knows both JSON Schema metadata and
+`DataCell` props.
+
+```ts
+type JsonTableDataCellAdapter = {
+  kind: "data-cell"
+  displayProps: DataCellProps
+  editProps: DataCellProps
+}
+
+type JsonTableEnumAdapter = {
+  kind: "enum"
+  value: string | null
+  options: JsonTableEnumOption[]
+}
+
+type JsonTableNestedAdapter = {
+  kind: "nested"
+  value: unknown
+  preview: string
+}
+```
+
+Adapter rules:
+
+- string -> `DataCell kind="text"`
+- number -> `DataCell kind="number"`
+- integer -> `DataCell kind="integer"`
+- boolean -> `DataCell kind="boolean"`
+- date -> `DataCell kind="date"`
+- time -> `DataCell kind="time"`
+- date-time -> `DataCell kind="date-time"`
+- enum -> `JsonTableEnumSelect`
+- object -> `JsonTableNestedOverlay`
+- array -> `JsonTableNestedOverlay`
+- unknown scalar -> `DataCell kind="text"`
+- unknown object/array -> nested preview
+
+Value conversion rules:
+
+- `null` and `undefined` display as empty placeholder
+- numbers stay numbers until a DOM draft is needed
+- invalid number drafts stay in `draftValue` and do not patch the document
+- dates preserve the table's existing date parsing policy
+- enum options keep their original JSON value, not their display string
+- object/array commits replace the value at `fieldPath`
 
 ## Interaction Contract
 
 ### Hover
 
-Hover may:
+Hover does:
 
-- highlight a cell
-- show source mapping
-- update hover metadata
+- set `hoveredCellKey`
+- measure the hovered cell rect
+- render one display overlay
+- optionally show source/citation affordances
 
-Hover must not:
+Hover does not:
 
-- mount an editor
-- focus a control
+- create `activeSession`
+- mount an input
+- focus anything
 - open a popup
-- create draft state
+- create a draft
+- patch document data
 
-### Pointer Activation
+This satisfies the trompe-l'oeil model. The user sees a DataCell-shaped cell on
+hover, but the table body remains inert.
 
-Pointer activation creates one edit session:
+### Pointer Down
 
-```ts
-startEditSession(projectedCell, {
-  type: "pointer",
-  clientX,
-  clientY,
-  detail,
-})
-```
+Pointer down on an editable plain cell:
 
-The editor decides what this means.
+1. Commit the previous active session if it has a valid dirty draft.
+2. Close the previous active session.
+3. Create a new `activeSession`.
+4. Measure the cell rect.
+5. Render the overlay in edit mode.
+6. Let `DataCell` focus/control itself from `activationIntent`.
 
-### Keyboard Activation
+Pointer down must not depend on double click.
 
-Keyboard activation creates one edit session:
+### Text Editing
 
-```ts
-startEditSession(projectedCell, {
-  type: "keyboard",
-  key,
-})
-```
+Text cell pointer activation:
 
-The editor decides what this means.
+- opens edit overlay on the first click
+- focuses the input
+- places the caret based on pointer x
+- typing immediately edits the input
 
-### Commit
+Text cell keyboard activation:
 
-Primitive controls emit raw or primitive values.
+- printable key opens edit overlay
+- printable key seeds `draftValue`
+- Enter or F2 opens edit overlay without replacing content
 
-Editors apply field-specific semantics.
+Text commit:
 
-JSON table applies schema/document normalization.
+- blur commits
+- Enter commits by blurring
+- switching cells commits before the next session starts
 
-The commit path is:
+Text cancel:
+
+- Escape should close without committing the current dirty draft
+- if `DataCell` currently blurs and commits on Escape, JSON table must intercept
+  Escape at the overlay boundary before blur commit
+
+### Number Editing
+
+Number editing follows text editing, with parsing:
+
+- valid number commits a number
+- valid integer commits an integer
+- empty nullable number commits `null`
+- empty required number keeps previous value or rejects commit
+- invalid number draft remains visible while active
+- invalid number blur closes without patching or leaves the session active with
+  invalid state, but it must never patch invalid data
+
+The preferred simplest behavior is: invalid blur closes and reverts.
+
+### Boolean Editing
+
+Pointer activation on a boolean cell:
+
+- creates active session
+- renders boolean edit overlay
+- toggles exactly once
+- commits immediately
+- closes immediately
+
+Keyboard activation:
+
+- Space toggles exactly once
+- Enter toggles exactly once
+
+There should be no hidden first click consumed by mounting.
+
+### Enum Editing
+
+Pointer activation on enum:
+
+- creates active session
+- renders table-local select overlay
+- opens select immediately
+- first option click commits
+- close without selection closes without patching
+
+Keyboard activation:
+
+- Enter opens select
+- Space opens select
+- Arrow keys may open/select according to select behavior
+- Escape closes without patching
+
+The select close event must never be able to unmount before value commit. The
+enum overlay owns the ordering:
 
 ```txt
-DataCell primitive
-  -> JSON table field editor
-  -> formatValueForCommit
-  -> useCellController
-  -> onDocumentDataChange
+value selection wins over popup close
+popup close without value closes session
 ```
 
-## Modularity Tests
+### Date, Time, Date-Time Editing
 
-The architecture is pure only if these tests are true:
+Pointer activation:
 
-- `DataCellDisplay` can render outside JSON table without importing JSON table.
-- JSON table can render inactive cells without importing control primitives.
-- A text editor can change caret behavior without touching table virtualization.
-- A boolean editor can change toggle semantics without touching
-  `EditableJsonTableCell`.
-- Date parsing can change without touching display shell styling.
-- Row virtualization can change without touching primitive controls.
-- `DataCell` tests never need document paths.
-- JSON table tests never need `DataCell` internal implementation details.
+- renders `DataCell` picker control in edit mode
+- opens picker immediately
+- first click on picker control must not close the popup opened by activation
 
-## Anti-Patterns
+Commit:
 
-Forbidden in the final architecture:
+- date selection commits date and closes
+- time selection commits time and may stay open if the control needs it
+- date-time commits each valid selected piece
+- outside pointer closes and commits only already selected valid values
 
-- `DataCell` owning hover-to-edit behavior in the JSON table path.
-- JSON table branching on field kind to perform native control behavior.
-- Per-cell local edit lifecycle state.
-- Focus state whose only purpose is to keep a cell mounted.
-- Overlay state outside the edit session unless it is cross-cell product state.
-- Editor props named after implementation mechanics rather than domain concepts.
-- A generic `mode="auto"` path inside JSON table editing.
+### Object And Array
 
-## Migration From Current State
+Hover:
 
-1. Keep current `JsonTableEditSession`.
+- display preview only
 
-2. Keep `DataCellDisplay` and `DataCellControl` as the public composition
-   points.
+Activation:
 
-3. Extract control primitives from the current `DataCellControl` branches only
-   when the split reduces real complexity:
-   - text
-   - number/integer
-   - boolean
-   - date/time/date-time
+- render nested overlay
+- no nested editor in the table body
+- nested overlay patches through `commitCellValue`
 
-4. Keep `JsonTableScalarCell` deleted.
+Object/array must not participate in DataCell scalar parsing.
 
-5. Keep editor props collapsed:
-   - `cell`
-   - `editSession`
-   - `draftValue`
-   - `setDraftValue`
-   - `setOverlayOpen`
-   - `closeEditSession`
-   - `commitValue`
+### Virtualization
 
-6. Keep `DataCell` as a convenience composition only if needed for demos or
-   external consumers. It must become a wrapper around the primitives, not the
-   owner of the primitive lifecycle.
+If the hovered cell scrolls out:
 
-7. Keep `mode="auto"` deleted permanently.
+- clear `hoveredCellKey`
+- unmount hover overlay
 
-8. Reprofile:
-   - hover sweep
-   - first click text
-   - first click checkbox
-   - first click select
-   - typing latency
-   - blur commit
-   - scroll while not editing
-   - scroll while one overlay is open
+If the active cell scrolls out:
 
-## Success Criteria
+- keep active session while the overlay can remain anchored to a measured rect,
+  or close and commit on virtualization detach
 
-The joint system reaches its ideal when:
+The simplest rule is:
 
-- JSON table has one edit-session owner.
-- `DataCell` exports primitive display/control building blocks.
-- No JSON table code depends on `DataCell` auto activation.
-- No `DataCell` code depends on JSON table paths, schema, or documents.
-- Editors are the only layer that interprets activation intent.
-- Primitive controls are the only layer that owns native control mechanics.
-- Commit normalization has one path.
-- Every prop name maps to a domain concept.
+```txt
+active cell leaving the mounted range commits valid draft and closes
+```
 
-At that point the modularity is real: JSON table and `DataCell` are co-designed,
-but neither is bloated by owning the other's responsibility.
+That avoids floating editors disconnected from real rows.
+
+## Event Delegation
+
+The table body should use delegated handlers at the row group or viewport level
+where practical:
+
+```tsx
+<tbody
+  onPointerMove={handleBodyPointerMove}
+  onPointerLeave={handleBodyPointerLeave}
+  onPointerDown={handleBodyPointerDown}
+  onKeyDown={handleBodyKeyDown}
+/>
+```
+
+Handlers find the closest `[data-json-table-cell]`.
+
+This removes per-cell callback allocation and makes behavior easier to reason
+about. If React event delegation is not enough for scroll/resize measurement,
+use one viewport listener, not one listener per cell.
+
+## Commit Pipeline
+
+There is exactly one commit function:
+
+```ts
+function commitCellValue(args: {
+  cellKey: JsonTableCellKey
+  fieldMetadata: FieldMetadata
+  value: unknown
+}): void
+```
+
+Pipeline:
+
+```txt
+overlay value
+  -> normalize for JSON Schema
+  -> compare with current value
+  -> patch document
+  -> close active session
+```
+
+Rules:
+
+- no patch if normalized value is equal to current value
+- no patch for invalid drafts
+- no patch for cancel
+- no patch from hover
+- no per-editor document patch logic
+
+## Performance Budget
+
+For a visible viewport with N cells:
+
+- mounted table cells: N plain `td`
+- mounted DataCell displays: 0 or 1
+- mounted DataCell controls: 0 or 1
+- mounted enum selects: 0 or 1
+- mounted object/array editors: 0 or 1
+- active React effects per idle table: zero cell-level effects
+
+Scrolling should not mount controls.
+Hovering should mount at most one display overlay.
+Editing should mount at most one control overlay.
+
+## Accessibility
+
+Plain table cells keep grid/table semantics:
+
+- `td`
+- `tabIndex={0}` only when editable/focusable
+- `aria-selected` for active coordinate if needed
+- `aria-readonly` for read-only mode
+
+Overlay controls own control semantics:
+
+- text/number input semantics come from `DataCell`
+- boolean checkbox semantics come from `DataCell`
+- picker dialog semantics come from `DataCell`
+- enum select semantics come from table-local select
+
+The overlay should be labelled by the column header and row identity when
+available.
+
+## Testing Contract
+
+Integration tests should assert behavior, not implementation details:
+
+- hover shows display overlay without mounting input/select/picker
+- moving hover moves one overlay, not many
+- text first click focuses input and typing edits immediately
+- text blur commits
+- text Enter commits
+- text Escape cancels
+- switching from dirty text to another cell commits once
+- number invalid draft does not patch
+- boolean first click toggles once
+- enum first click opens options
+- enum option click commits once
+- enum outside click closes without patch
+- date first click opens picker
+- date selection commits once
+- popup first click is not eaten by activation
+- active cell virtualized out commits valid draft and closes
+- read-only cells never create active sessions
+- scroll performance does not mount per-cell controls
+
+Architecture tests should assert:
+
+- table body cells do not render `data-slot="data-cell"` in idle state
+- idle table has no inputs, comboboxes, or picker popups
+- hover state renders at most one `data-slot="data-cell"`
+- active state renders at most one control
+- scalar editors do not exist as per-kind JSON table components
+
+## Cutover Plan
+
+1. Add `json-table-interaction-state.ts`.
+2. Add `json-table-display-value.ts`.
+3. Add `json-table-data-cell-adapter.ts`.
+4. Add `json-table-overlay-layer.tsx`.
+5. Add `json-table-overlay.tsx`.
+6. Add `json-table-enum-select.tsx`.
+7. Replace body cells with plain `JsonTableCell`.
+8. Move interaction handlers to the viewport/body boundary.
+9. Wire active sessions to the overlay.
+10. Delete `cell-editors/` and old editable/read-only cell wrappers.
+11. Replace tests that assert old editor internals with overlay behavior tests.
+12. Profile idle render, hover, edit activation, and scroll.
+
+No compatibility adapter. No old path kept alive.
+
+## The Ideal End State
+
+The table body is boring. It is just projected data in table cells.
+
+The interaction layer is small. It knows hovered cell, active cell, rect, and
+commit.
+
+The overlay is the only place where a cell becomes a DataCell.
+
+`DataCell` stays pure. JSON table stays close to the metal.
+
+That is the architecture that matches the component at
+`/docs/components/data-cell` instead of rebuilding it badly inside every table
+cell.

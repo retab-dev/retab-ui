@@ -133,9 +133,10 @@ describe("usePdfSourceTarget", () => {
   }
 
   it("forwards a pdf anchor's page and top to the viewer handle", () => {
-    const scrollToPageTarget = vi.fn()
+    const scrollToPageArea = vi.fn()
     const target = renderTarget({
-      scrollToPageTarget,
+      scrollToPage: vi.fn(),
+      scrollToPageArea,
       getViewportElement: () => null,
     })
 
@@ -143,24 +144,24 @@ describe("usePdfSourceTarget", () => {
       behavior: "auto",
     })
 
-    expect(scrollToPageTarget).toHaveBeenCalledWith(
-      3,
-      { top: 25 },
+    expect(scrollToPageArea).toHaveBeenCalledWith(
+      { pageNumber: 3, top: 25 },
       { behavior: "auto" }
     )
   })
 
   it("does not call the handle for anchors with no pdf location", () => {
-    const scrollToPageTarget = vi.fn()
+    const scrollToPageArea = vi.fn()
     const target = renderTarget({
-      scrollToPageTarget,
+      scrollToPage: vi.fn(),
+      scrollToPageArea,
       getViewportElement: () => null,
     })
 
     target.scrollTo?.(makeSource({ kind: "csv_cell", row: 1, column: "A" }), {
       behavior: "auto",
     })
-    expect(scrollToPageTarget).not.toHaveBeenCalled()
+    expect(scrollToPageArea).not.toHaveBeenCalled()
   })
 
   it("is a no-op when the viewer ref is empty", () => {

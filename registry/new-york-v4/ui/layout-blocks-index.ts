@@ -1,8 +1,4 @@
-import type {
-  LayoutItem,
-  LayoutLevel,
-  LayoutPage,
-} from "./layout-blocks-types"
+import type { LayoutItem, LayoutLevel, LayoutPage } from "./layout-blocks-types"
 
 export type LayoutItemIndex = {
   itemsById: Map<string, LayoutItem>

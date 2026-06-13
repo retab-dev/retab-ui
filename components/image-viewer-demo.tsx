@@ -8,8 +8,8 @@ export function ImageViewerDemo() {
       <ImageViewer
         source={{
           kind: "url",
-          url: "/samples/nvidia-10q-scan.tiff",
-          fileName: "nvidia-10q-scan.tiff",
+          url: "/samples/entropy.tiff",
+          fileName: "entropy.tiff",
         }}
         fallbackFrameSize={{ width: 1275, height: 1650 }}
         className="h-full"

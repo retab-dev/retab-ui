@@ -97,9 +97,8 @@ export function usePdfSourceTarget(
       scrollTo: (source: Source, options) => {
         const target = pdfAnchorToTarget(source.anchor)
         if (target) {
-          viewerRef.current?.scrollToPageTarget(
-            target.page,
-            { top: target.area.top },
+          viewerRef.current?.scrollToPageArea(
+            { pageNumber: target.page, top: target.area.top },
             options
           )
         }

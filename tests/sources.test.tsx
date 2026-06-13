@@ -861,30 +861,29 @@ describe("source adapters", () => {
   })
 
   it("bridges PDF sources to the viewer imperative target", () => {
-    const scrollToPageTarget = vi.fn()
+    const scrollToPageArea = vi.fn()
     const { rerender } = render(
       <PdfSourceTargetHarness
         source={pdfSource}
-        onScroll={scrollToPageTarget}
+        onScroll={scrollToPageArea}
       />
     )
 
     fireEvent.click(screen.getByRole("button", { name: "scroll pdf source" }))
-    expect(scrollToPageTarget).toHaveBeenCalledWith(
-      3,
-      { top: 20 },
+    expect(scrollToPageArea).toHaveBeenCalledWith(
+      { pageNumber: 3, top: 20 },
       { behavior: "smooth" }
     )
 
-    scrollToPageTarget.mockClear()
+    scrollToPageArea.mockClear()
     rerender(
       <PdfSourceTargetHarness
         source={csvSource}
-        onScroll={scrollToPageTarget}
+        onScroll={scrollToPageArea}
       />
     )
     fireEvent.click(screen.getByRole("button", { name: "scroll pdf source" }))
-    expect(scrollToPageTarget).not.toHaveBeenCalled()
+    expect(scrollToPageArea).not.toHaveBeenCalled()
 
     rerender(
       <PdfSourceTargetHarness
@@ -896,11 +895,11 @@ describe("source adapters", () => {
           width: 0.3,
           height: 0.4,
         })}
-        onScroll={scrollToPageTarget}
+        onScroll={scrollToPageArea}
       />
     )
     fireEvent.click(screen.getByRole("button", { name: "scroll pdf source" }))
-    expect(scrollToPageTarget).not.toHaveBeenCalled()
+    expect(scrollToPageArea).not.toHaveBeenCalled()
   })
 
   it("bridges image sources to the viewer imperative target", () => {
@@ -1092,11 +1091,12 @@ function PdfSourceTargetHarness({
   onScroll,
 }: {
   source: Source
-  onScroll: PdfViewerHandle["scrollToPageTarget"]
+  onScroll: PdfViewerHandle["scrollToPageArea"]
 }) {
   const handle = React.useMemo<PdfViewerHandle>(
     () => ({
-      scrollToPageTarget: onScroll,
+      scrollToPage: vi.fn(),
+      scrollToPageArea: onScroll,
       getViewportElement: () => null,
     }),
     [onScroll]

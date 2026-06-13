@@ -1,17 +1,18 @@
 "use client"
 
-import { useCallback, useMemo, useRef, useState, type ReactNode } from "react"
+import { useMemo, type ReactNode } from "react"
 import { Loader2, Scissors } from "lucide-react"
 
 import { segmentsPageCount, toSegments } from "@/lib/segments"
-import { PageRibbon } from "@/components/ui/page-ribbon"
 import {
   type PdfViewerHandle,
   type PdfViewerSlots,
 } from "@/components/ui/pdf-viewer"
 import { SegmentLegend } from "@/components/ui/segment-legend"
-import { useSegmentInteraction } from "@/components/ui/use-segment-interaction"
 import { type SplitView } from "@/components/viewers/lib/split-types"
+
+import { SegmentPageRail } from "./segment-page-rail"
+import { useSegmentViewportController } from "./use-segment-viewport-controller"
 
 /**
  * Slots a document surface receives: the legend in `top`, the page ribbon as a
@@ -36,11 +37,6 @@ export function SplitViewer({
   isProcessing = false,
   renderDocument,
 }: SplitViewerProps) {
-  const [currentPage, setCurrentPage] = useState(1)
-  const [scrollProgress, setScrollProgress] = useState(0)
-  const [viewerHandle, setViewerHandle] = useState<PdfViewerHandle | null>(null)
-  const interaction = useSegmentInteraction()
-  const previewRef = useRef<HTMLDivElement | null>(null)
   const hasOutput = !!result && result.output.length > 0
 
   const segments = useMemo(
@@ -48,22 +44,7 @@ export function SplitViewer({
     [result?.output]
   )
   const pageCount = useMemo(() => segmentsPageCount(segments), [segments])
-
-  const handleJumpToPage = useCallback(
-    (page: number) => {
-      setCurrentPage(page)
-
-      if (viewerHandle) {
-        viewerHandle.scrollToPageTarget(page, { top: 0 })
-        return
-      }
-
-      previewRef.current
-        ?.querySelector<HTMLElement>(`[data-page-number="${page}"]`)
-        ?.scrollIntoView({ behavior: "smooth", block: "start" })
-    },
-    [viewerHandle]
-  )
+  const controller = useSegmentViewportController({ segments })
 
   if (!hasOutput) {
     return (
@@ -95,41 +76,37 @@ export function SplitViewer({
     top: (
       <SegmentLegend
         segments={segments}
-        currentPage={currentPage}
-        interaction={interaction}
-        onSelect={(segment) => {
-          if (segment.pages.length) handleJumpToPage(segment.pages[0])
-        }}
+        currentPage={controller.model.currentPage}
+        interaction={controller.interaction}
+        onSelect={controller.navigation.scrollToSegmentStart}
         columns={4}
         showUnusedToggle
       />
     ),
     left:
       pageCount > 0 ? (
-        <div className="h-full overflow-auto border-r border-border bg-background px-3 py-6">
-          <PageRibbon
-            orientation="vertical"
-            rows={[{ id: "split", segments }]}
-            pageCount={pageCount}
-            currentPage={currentPage}
-            scrollProgress={scrollProgress}
-            interaction={interaction}
-            onSelectPage={handleJumpToPage}
-            showTicks
-          />
-        </div>
+        <SegmentPageRail
+          segments={segments}
+          pageCount={pageCount}
+          currentPage={controller.model.currentPage}
+          scrollProgress={controller.model.scrollProgress}
+          interaction={controller.interaction}
+          railApi={controller.rail}
+          onSelectPage={controller.navigation.scrollToPage}
+          showTicks
+        />
       ) : undefined,
   }
 
   return (
-    <div ref={previewRef} className="flex min-h-0 flex-1 bg-background">
+    <div className="flex min-h-0 min-w-0 flex-1 bg-background">
       {renderDocument ? (
-        renderDocument({
-          onCurrentPageChange: setCurrentPage,
-          onScrollProgressChange: setScrollProgress,
-          setViewerHandle,
-          slots,
-        })
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          {renderDocument({
+            ...controller.documentHandlers,
+            slots,
+          })}
+        </div>
       ) : (
         <div className="flex h-full flex-1 items-center justify-center">
           <span className="text-sm text-muted-foreground">

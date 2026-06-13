@@ -22,7 +22,7 @@ flowchart TB
 
   subgraph "Registry implementation"
     DocxViewerFile["registry/new-york-v4/ui/docx-viewer.tsx"]
-    DocxResourceFile["registry/new-york-v4/ui/docx-viewer-resource.ts"]
+    DocxResourceFile["registry/new-york-v4/lib/docx-document-resource.ts"]
     DocxSourceFile["registry/new-york-v4/ui/docx-source.tsx"]
   end
 
@@ -49,8 +49,8 @@ flowchart TB
 
   subgraph "DOCX byte and library caching"
     DocxByteCache["bufferCache\nMap loadKey -> Promise<ArrayBuffer>"]
-    GetDocxResource["getDocxResource(content)\ndedup readBytes()"]
-    ClearDocxResource["clearDocxResource(content)\ndelete retained failure/cache"]
+    GetDocxResource["getDocxDocumentResource(content)\ndedup readBytes()"]
+    ClearDocxResource["clearDocxDocumentResource(content)\ndelete retained failure/cache"]
     DocxPreviewPromise["docxPromise\nlazy import docx-preview\nreset on import failure"]
     DocxPreview["docx-preview + jszip\nbrowser-only"]
   end
@@ -111,7 +111,7 @@ flowchart TB
 
   subgraph "Thumbnail system"
     DocxFirstPage["components/document-thumbnail/renderers/docx-thumbnail.tsx\nDocxFirstPage"]
-    ThumbnailResource["useThumbnailResource(getDocxResource())"]
+    ThumbnailResource["useThumbnailResource(getDocxDocumentResource())"]
     ThumbnailSlot["withThumbnailDecodeSlot()"]
     ThumbnailErrors["withThumbnailFormatError(docx, render_failed)"]
     ThumbnailRender["docx-preview renderAsync(bytes.slice(0))\nwrapper true, pages true,\nno headers/footer options"]
@@ -256,7 +256,7 @@ sequenceDiagram
   participant EB as ViewerErrorBoundary
   participant S as React Suspense
   participant I as DocxViewerInner
-  participant DC as getDocxResource
+  participant DC as getDocxDocumentResource
   participant RC as ViewerResourceContent
   participant F as fetch
   participant L as loadDocxPreview
@@ -276,7 +276,7 @@ sequenceDiagram
     RV->>EB: resetKey resource.keys.resource, format docx
     EB->>S: fallback DocxViewerFallback
     S->>I: mount inner
-    I->>DC: React.use(getDocxResource(resource.content, retainRejected true))
+    I->>DC: React.use(getDocxDocumentResource(resource.content, retainRejected true))
     DC->>DC: bufferCache lookup by content.key
     alt cache miss
       DC->>RC: readBytes()
@@ -359,7 +359,7 @@ sequenceDiagram
 
 ```mermaid
 flowchart TB
-  Start["load or render starts"] --> ByteRead["getDocxResource(content, retainRejected true)"]
+  Start["load or render starts"] --> ByteRead["getDocxDocumentResource(content, retainRejected true)"]
   ByteRead --> ReadOK{"readBytes succeeds?"}
   ReadOK -- "no, fetch/http/read/abort" --> ResourceError["ResourceError\nfetch_failed, http_error,\naborted, partial_content"]
   ReadOK -- "yes" --> Import["lazy import docx-preview"]
@@ -381,7 +381,7 @@ flowchart TB
   Info --> RetryPolicy["retry policy\ndocx format errors retryable\nunknown docx retryable\nresource retryable for URL\nabort not retryable"]
   Info --> Download["download remains useful\nexcept aborted resource"]
   Boundary --> RetryClick{"user retries?"}
-  RetryClick -- "yes and resource/unknown" --> Clear["clearDocxResource(resource.content)"]
+  RetryClick -- "yes and resource/unknown" --> Clear["clearDocxDocumentResource(resource.content)"]
   Clear --> ByteRead
   RetryClick -- "yes and retained render failure" --> Render
   RetryClick -- "source changes" --> ResetKey["resetKey = resource.keys.resource\nnew boundary state"]
@@ -393,7 +393,7 @@ flowchart TB
 ```mermaid
 flowchart TB
   FileThumbnail["FileThumbnail selects DOCX renderer"] --> DocxFirstPage["DocxFirstPage({ resource })"]
-  DocxFirstPage --> SharedBytes["useThumbnailResource(getDocxResource(resource.content))"]
+  DocxFirstPage --> SharedBytes["useThumbnailResource(getDocxDocumentResource(resource.content))"]
   SharedBytes --> DocxByteCache["same DOCX byte cache as full viewer"]
   DocxFirstPage --> FrameMeasure["useElementWidth() on thumbnail frame"]
   FrameMeasure --> Scale["scale = frameWidth / 816"]
@@ -416,11 +416,11 @@ flowchart TB
 flowchart LR
   SourceFiles["registry/new-york-v4 source files"] --> RegistryJson["registry.json item: docx-viewer"]
   RegistryJson --> PublicItem["public/r/docx-viewer.json"]
-  RegistryJson --> Files["files\nui/docx-viewer.tsx\nui/docx-viewer-resource.ts\nlib/viewer-source.ts\nlib/viewer-resource.ts\nlib/viewer-errors.ts\nviewer-download/viewer-error deps"]
+  RegistryJson --> Files["files\nui/docx-viewer.tsx\nui/docx-document-resource.ts\nlib/viewer-source.ts\nlib/viewer-resource.ts\nlib/viewer-errors.ts\nviewer-download/viewer-error deps"]
   RegistryJson --> RegistryDependencies["registryDependencies\nutils, button, scroll-area,\nseparator, skeleton"]
   RegistryJson --> PackageDependencies["dependencies\nlucide-react\ndocx-preview"]
   PublicItem --> Install["npx shadcn@latest add @retab/docx-viewer"]
-  Install --> ConsumerApp["@/components/ui/docx-viewer\n@/components/ui/docx-viewer-resource\n@/lib/viewer-resource\n@/lib/viewer-source"]
+  Install --> ConsumerApp["@/components/ui/docx-viewer\n@/lib/docx-document-resource\n@/lib/viewer-resource\n@/lib/viewer-source"]
 ```
 
 ## Important Contracts
@@ -431,8 +431,8 @@ flowchart LR
 - `resource.keys.resource` is the boundary reset identity. Changing it resets `ViewerErrorBoundary` state.
 - URL resources fetch `source.url`; downloads use `source.downloadUrl ?? source.url`.
 - Blob resources read directly from `blob.arrayBuffer()` and download either through `downloadUrl` or an object URL.
-- `getDocxResource()` caches the `readBytes()` promise by `content.key`. By default it removes rejected promises; `DocxViewerInner` passes `retainRejected: true` so Suspense error boundaries can display and retry consistently.
-- `ViewerErrorBoundary` calls `clearDocxResource()` on retry for resource errors and non-viewer-format errors, giving failed byte reads another chance.
+- `getDocxDocumentResource()` caches the `readBytes()` promise by `content.key`. By default it removes rejected promises; `DocxViewerInner` passes `retainRejected: true` so Suspense error boundaries can display and retry consistently.
+- `ViewerErrorBoundary` calls `clearDocxDocumentResource()` on retry for resource errors and non-viewer-format errors, giving failed byte reads another chance.
 - `docx-preview` is imported only on the client. The type import is erased at compile time; `useIsClient()` renders fallback markup during SSR.
 - A transient `docx-preview` chunk import failure clears `docxPromise` so the next render can import again.
 - `renderAsync()` writes to a temporary host first. Only after successful rendering are child nodes moved into the live `hostRef`, avoiding partial DOM commits.

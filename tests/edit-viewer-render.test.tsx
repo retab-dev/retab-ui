@@ -7,7 +7,7 @@ import { EditViewer } from "@/components/viewers/edit/edit-viewer"
 import type { EditViewerField } from "@/components/viewers/edit/edit-viewer-types"
 
 const viewerMocks = vi.hoisted(() => ({
-  scrollToPageTarget: vi.fn(),
+  scrollToPageArea: vi.fn(),
 }))
 
 vi.mock("@/components/ui/pdf-viewer", () => ({
@@ -23,12 +23,14 @@ vi.mock("@/components/ui/pdf-viewer", () => ({
       }) => React.ReactNode
     },
     ref: React.ForwardedRef<{
-      scrollToPageTarget: typeof viewerMocks.scrollToPageTarget
+      scrollToPage: (pageNumber: number, options?: ScrollToOptions) => void
+      scrollToPageArea: typeof viewerMocks.scrollToPageArea
       getViewportElement: () => HTMLDivElement | null
     }>
   ) {
     React.useImperativeHandle(ref, () => ({
-      scrollToPageTarget: viewerMocks.scrollToPageTarget,
+      scrollToPage: vi.fn(),
+      scrollToPageArea: viewerMocks.scrollToPageArea,
       getViewportElement: () => null,
     }))
     return (
@@ -57,7 +59,7 @@ vi.mock("@/components/ui/file-viewer", () => ({
 
 afterEach(() => {
   cleanup()
-  viewerMocks.scrollToPageTarget.mockClear()
+  viewerMocks.scrollToPageArea.mockClear()
 })
 
 const fields: EditViewerField[] = [
@@ -197,7 +199,8 @@ describe("EditViewer", () => {
 
     fireEvent.click(screen.getByText("name"))
 
-    expect(viewerMocks.scrollToPageTarget).toHaveBeenCalledWith(1, {
+    expect(viewerMocks.scrollToPageArea).toHaveBeenCalledWith({
+      pageNumber: 1,
       top: 20,
     })
   })
@@ -281,6 +284,6 @@ describe("EditViewer", () => {
 
     expect(screen.queryByLabelText("bad_location, text, Ignored")).toBeNull()
     fireEvent.click(screen.getByText("bad_location"))
-    expect(viewerMocks.scrollToPageTarget).not.toHaveBeenCalled()
+    expect(viewerMocks.scrollToPageArea).not.toHaveBeenCalled()
   })
 })

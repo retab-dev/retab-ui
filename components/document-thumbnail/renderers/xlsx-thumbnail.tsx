@@ -3,71 +3,70 @@
 import * as React from "react"
 
 import type { ViewerResource } from "@/lib/viewer-resource"
+import { GridTable } from "@/components/document-thumbnail/renderers/layout"
 import {
   cachedThumbnailResource,
   createThumbnailArtifactCache,
-  shortName,
-  thumbnailFileMeta,
-  timed,
-  useThumbnailResource,
-  withThumbnailDecodeSlot,
-  withThumbnailFormatError,
+} from "@/components/document-thumbnail/thumbnail-cache"
+import { withThumbnailDecodeSlot } from "@/components/document-thumbnail/thumbnail-decode-queue"
+import { withThumbnailFormatError } from "@/components/document-thumbnail/thumbnail-errors"
+import {
   XLSX_THUMBNAIL_MAX_COLUMNS,
   XLSX_THUMBNAIL_MAX_ROWS,
+} from "@/components/document-thumbnail/thumbnail-limits"
+import {
+  shortName,
+  timedThumbnail,
+} from "@/components/document-thumbnail/thumbnail-profile"
+import { useThumbnailResource } from "@/components/document-thumbnail/thumbnail-resource"
+import {
+  thumbnailFileMeta,
   type ThumbnailBytesContent,
   type ThumbnailFileMeta,
-} from "@/components/document-thumbnail/cache"
-import { GridTable } from "@/components/document-thumbnail/renderers/layout"
+} from "@/components/document-thumbnail/thumbnail-text"
+import {
+  createThumbnailWorkerClient,
+  type ThumbnailWorkerMessage,
+} from "@/components/document-thumbnail/thumbnail-worker-client"
 
 interface XlsxPreview {
   rows: string[][]
 }
 
-interface XlsxWorkerReply {
+interface XlsxWorkerRequest extends ThumbnailWorkerMessage {
+  buffer: ArrayBuffer
+  maxRows: number
+  maxCols: number
+}
+
+interface XlsxWorkerReply extends ThumbnailWorkerMessage {
   id: number
   ok: boolean
   rows?: string[][]
   error?: string
 }
 
-let xlsxWorker: Worker | null = null
-let xlsxReqId = 0
-const xlsxPending = new Map<
-  number,
-  { resolve: (r: string[][]) => void; reject: (e: Error) => void }
->()
-
-function getXlsxWorker(): Worker {
-  if (!xlsxWorker) {
-    xlsxWorker = new Worker(
+const xlsxWorkerClient = createThumbnailWorkerClient<
+  XlsxWorkerRequest,
+  XlsxWorkerReply
+>({
+  createWorker: () =>
+    new Worker(
       new URL("../../document-thumbnail-xlsx.worker", import.meta.url)
-    )
-    xlsxWorker.onmessage = (e: MessageEvent<XlsxWorkerReply>) => {
-      const { id, ok, rows, error } = e.data
-      const entry = xlsxPending.get(id)
-      if (!entry) return
-      xlsxPending.delete(id)
-      if (ok && rows) entry.resolve(rows)
-      else entry.reject(new Error(error ?? "XLSX parse failed"))
-    }
-  }
-  return xlsxWorker
-}
+    ),
+  resolve: (response) =>
+    response.ok && response.rows ? response.rows : undefined,
+  reject: (response) => response.error ?? "XLSX parse failed",
+})
 
 function parseXlsxInWorker(buffer: ArrayBuffer): Promise<string[][]> {
-  const worker = getXlsxWorker()
-  const id = ++xlsxReqId
-  return new Promise<string[][]>((resolve, reject) => {
-    xlsxPending.set(id, { resolve, reject })
-    worker.postMessage(
-      {
-        id,
-        buffer,
-        maxRows: XLSX_THUMBNAIL_MAX_ROWS,
-        maxCols: XLSX_THUMBNAIL_MAX_COLUMNS,
-      },
-      [buffer]
-    )
+  return xlsxWorkerClient.request<string[][]>({
+    request: {
+      buffer,
+      maxRows: XLSX_THUMBNAIL_MAX_ROWS,
+      maxCols: XLSX_THUMBNAIL_MAX_COLUMNS,
+    },
+    transfer: [buffer],
   })
 }
 
@@ -82,7 +81,7 @@ function getXlsxPreview(
 ): Promise<XlsxPreview> {
   return cachedThumbnailResource(xlsxCache, thumbnailKey, () =>
     withThumbnailDecodeSlot(() =>
-      timed(`xlsx:total ${shortName(meta)}`, async () => {
+      timedThumbnail(`xlsx:total ${shortName(meta)}`, async () => {
         const rows = await withThumbnailFormatError(
           "xlsx",
           "parse_failed",
@@ -90,7 +89,9 @@ function getXlsxPreview(
           "Failed to parse spreadsheet thumbnail",
           async () => {
             const buf = await content.readBytes()
-            return timed("xlsx:worker-parse", () => parseXlsxInWorker(buf))
+            return timedThumbnail("xlsx:worker-parse", () =>
+              parseXlsxInWorker(buf)
+            )
           }
         )
         return { rows }

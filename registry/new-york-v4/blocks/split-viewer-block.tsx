@@ -4,17 +4,17 @@ import { PdfViewer } from "@/components/ui/pdf-viewer"
 import type { SplitView } from "@/components/viewers/lib/split-types"
 import { SplitViewer } from "@/components/viewers/split/split-viewer"
 
-const PDF_URL = "/samples/attention.pdf"
+const PDF_URL = "/samples/an-image-is-worth-16x16-words.pdf"
 
 // A split result: named subdocuments, each owning a 1-indexed page range.
 const SPLIT_RESULT: SplitView = {
   output: [
-    { name: "Title & Abstract", pages: [1] },
-    { name: "Introduction", pages: [2, 3] },
-    { name: "Model Architecture", pages: [4, 5, 6] },
-    { name: "Results", pages: [7, 8, 9] },
-    { name: "References", pages: [10, 11] },
-    { name: "Attention Visualizations", pages: [12, 13, 14, 15] },
+    { name: "Title, Abstract & Introduction", pages: [1] },
+    { name: "Related Work", pages: [2] },
+    { name: "Method", pages: [3] },
+    { name: "Experiments", pages: [4, 5, 6, 7, 8] },
+    { name: "Conclusion & References", pages: [9, 10, 11, 12] },
+    { name: "Appendix", pages: [13, 14, 15, 16, 17, 18, 19, 20, 21, 22] },
   ],
 }
 
@@ -35,7 +35,7 @@ export function SplitViewerBlock() {
             source={{
               kind: "url",
               url: PDF_URL,
-              fileName: "attention.pdf",
+              fileName: "an-image-is-worth-16x16-words.pdf",
             }}
             bare
             slots={handlers.slots}

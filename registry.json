@@ -616,6 +616,48 @@
       ]
     },
     {
+      "name": "pdf-document-resource",
+      "type": "registry:lib",
+      "title": "PDF Document Resource",
+      "description": "Load and cache PDF.js documents and pages without viewer chrome.",
+      "dependencies": ["pdfjs-dist@5.4.296"],
+      "files": [
+        {
+          "path": "registry/new-york-v4/lib/pdf-document-resource.ts",
+          "type": "registry:lib",
+          "target": "@lib/pdf-document-resource.ts"
+        },
+        {
+          "path": "registry/new-york-v4/lib/viewer-errors.ts",
+          "type": "registry:lib",
+          "target": "@lib/viewer-errors.ts"
+        },
+        {
+          "path": "registry/new-york-v4/lib/viewer-resource.ts",
+          "type": "registry:lib",
+          "target": "@lib/viewer-resource.ts"
+        }
+      ]
+    },
+    {
+      "name": "docx-document-resource",
+      "type": "registry:lib",
+      "title": "DOCX Document Resource",
+      "description": "Load and cache DOCX bytes without viewer chrome.",
+      "files": [
+        {
+          "path": "registry/new-york-v4/lib/docx-document-resource.ts",
+          "type": "registry:lib",
+          "target": "@lib/docx-document-resource.ts"
+        },
+        {
+          "path": "registry/new-york-v4/lib/viewer-resource.ts",
+          "type": "registry:lib",
+          "target": "@lib/viewer-resource.ts"
+        }
+      ]
+    },
+    {
       "name": "csv-viewer",
       "type": "registry:ui",
       "title": "CSV Viewer",
@@ -749,9 +791,10 @@
       "name": "pdf-viewer",
       "type": "registry:ui",
       "title": "PDF Viewer",
-      "description": "A pdfjs-backed PDF viewer: continuous scroll, controlled or uncontrolled zoom, rotate, fit-to-width, download, a per-page overlay slot for bounding-box citations, a PdfHighlight overlay, and an imperative scrollToPageTarget handle for driving source highlights.",
-      "dependencies": ["lucide-react", "pdfjs-dist@5.4.296"],
+      "description": "A pdfjs-backed PDF viewer: continuous scroll, controlled or uncontrolled zoom, rotate, fit-to-width, download, a per-page overlay slot for bounding-box citations, a PdfHighlight overlay, and imperative scrollToPage / scrollToPageArea handles for driving source highlights.",
+      "dependencies": ["lucide-react"],
       "registryDependencies": [
+        "pdf-document-resource",
         "utils",
         "button",
         "scroll-area",
@@ -773,11 +816,6 @@
           "path": "registry/new-york-v4/ui/pdf-viewer-types.ts",
           "type": "registry:ui",
           "target": "@ui/pdf-viewer-types.ts"
-        },
-        {
-          "path": "registry/new-york-v4/ui/pdf-viewer-resource.ts",
-          "type": "registry:ui",
-          "target": "@ui/pdf-viewer-resource.ts"
         },
         {
           "path": "registry/new-york-v4/ui/pdf-viewer-scale.ts",
@@ -835,6 +873,11 @@
           "target": "@ui/pdf-viewer-states.tsx"
         },
         {
+          "path": "registry/new-york-v4/lib/viewer-source.ts",
+          "type": "registry:lib",
+          "target": "@lib/viewer-source.ts"
+        },
+        {
           "path": "registry/new-york-v4/ui/use-is-client.ts",
           "type": "registry:ui",
           "target": "@ui/use-is-client.ts"
@@ -853,6 +896,7 @@
       "description": "A docx-preview-backed Word viewer: faithful paginated pages, continuous scroll, zoom, fit-to-width, and download. Off-screen pages are skipped via CSS content-visibility.",
       "dependencies": ["lucide-react", "docx-preview"],
       "registryDependencies": [
+        "docx-document-resource",
         "utils",
         "button",
         "scroll-area",
@@ -909,11 +953,6 @@
           "path": "registry/new-york-v4/ui/docx-viewer-content.tsx",
           "type": "registry:ui",
           "target": "@ui/docx-viewer-content.tsx"
-        },
-        {
-          "path": "registry/new-york-v4/ui/docx-viewer-resource.ts",
-          "type": "registry:ui",
-          "target": "@ui/docx-viewer-resource.ts"
         },
         {
           "path": "registry/new-york-v4/ui/viewer-download.tsx",
@@ -1020,6 +1059,61 @@
           "path": "registry/new-york-v4/ui/viewer-slots.ts",
           "type": "registry:ui",
           "target": "@ui/viewer-slots.ts"
+        }
+      ]
+    },
+    {
+      "name": "layout-blocks",
+      "type": "registry:ui",
+      "title": "Layout Blocks",
+      "description": "A layout inspection component for OCR output: normalize Google Document AI blocks, lines, and tokens, then review them over the source image with virtualized rows, confidence filtering, and precise overlays.",
+      "dependencies": ["@tanstack/react-virtual@^3.13.12"],
+      "registryDependencies": ["pdf-viewer", "scroll-area", "utils"],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/layout-blocks.tsx",
+          "type": "registry:ui",
+          "target": "@ui/layout-blocks.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/layout-blocks-types.ts",
+          "type": "registry:ui",
+          "target": "@ui/layout-blocks-types.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/layout-blocks-document-ai.ts",
+          "type": "registry:ui",
+          "target": "@ui/layout-blocks-document-ai.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/layout-blocks-document-ai-pdf.ts",
+          "type": "registry:ui",
+          "target": "@ui/layout-blocks-document-ai-pdf.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/layout-blocks-geometry.ts",
+          "type": "registry:ui",
+          "target": "@ui/layout-blocks-geometry.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/layout-blocks-index.ts",
+          "type": "registry:ui",
+          "target": "@ui/layout-blocks-index.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/use-layout-block-selection.ts",
+          "type": "registry:ui",
+          "target": "@ui/use-layout-block-selection.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/layout-overlay-layer.tsx",
+          "type": "registry:ui",
+          "target": "@ui/layout-overlay-layer.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/layout-blocks-panel.tsx",
+          "type": "registry:ui",
+          "target": "@ui/layout-blocks-panel.tsx"
         }
       ]
     },
@@ -1667,6 +1761,225 @@
           "path": "registry/new-york-v4/ui/file-thumbnail.tsx",
           "type": "registry:ui",
           "target": "@ui/file-thumbnail.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-thumbnail-types.ts",
+          "type": "registry:ui",
+          "target": "@ui/file-thumbnail-types.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-thumbnail-extension.ts",
+          "type": "registry:ui",
+          "target": "@ui/file-thumbnail-extension.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-thumbnail-fallback.tsx",
+          "type": "registry:ui",
+          "target": "@ui/file-thumbnail-fallback.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-thumbnail-shimmer.tsx",
+          "type": "registry:ui",
+          "target": "@ui/file-thumbnail-shimmer.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-thumbnail-image.tsx",
+          "type": "registry:ui",
+          "target": "@ui/file-thumbnail-image.tsx"
+        }
+      ]
+    },
+    {
+      "name": "document-thumbnail",
+      "type": "registry:component",
+      "title": "Document Thumbnail",
+      "description": "Render first-page document thumbnails through the dependency-free FileThumbnail shell.",
+      "registryDependencies": [
+        "file-thumbnail",
+        "pdf-document-resource",
+        "docx-document-resource",
+        "csv",
+        "xlsx-worker-protocol",
+        "utils"
+      ],
+      "dependencies": [
+        "@e965/xlsx",
+        "dompurify",
+        "jszip",
+        "marked",
+        "pptxviewjs",
+        "utif"
+      ],
+      "files": [
+        {
+          "path": "components/document-thumbnail.tsx",
+          "type": "registry:component",
+          "target": "@components/document-thumbnail.tsx"
+        },
+        {
+          "path": "components/document-thumbnail/descriptor.ts",
+          "type": "registry:component",
+          "target": "@components/document-thumbnail/descriptor.ts"
+        },
+        {
+          "path": "components/document-thumbnail/errors.tsx",
+          "type": "registry:component",
+          "target": "@components/document-thumbnail/errors.tsx"
+        },
+        {
+          "path": "components/document-thumbnail/keys.ts",
+          "type": "registry:component",
+          "target": "@components/document-thumbnail/keys.ts"
+        },
+        {
+          "path": "components/document-thumbnail/renderer-registry.tsx",
+          "type": "registry:component",
+          "target": "@components/document-thumbnail/renderer-registry.tsx"
+        },
+        {
+          "path": "components/document-thumbnail/thumbnail-cache.ts",
+          "type": "registry:component",
+          "target": "@components/document-thumbnail/thumbnail-cache.ts"
+        },
+        {
+          "path": "components/document-thumbnail/thumbnail-client-preview.tsx",
+          "type": "registry:component",
+          "target": "@components/document-thumbnail/thumbnail-client-preview.tsx"
+        },
+        {
+          "path": "components/document-thumbnail/thumbnail-decode-queue.ts",
+          "type": "registry:component",
+          "target": "@components/document-thumbnail/thumbnail-decode-queue.ts"
+        },
+        {
+          "path": "components/document-thumbnail/thumbnail-direct-image.tsx",
+          "type": "registry:component",
+          "target": "@components/document-thumbnail/thumbnail-direct-image.tsx"
+        },
+        {
+          "path": "components/document-thumbnail/thumbnail-error-state.ts",
+          "type": "registry:component",
+          "target": "@components/document-thumbnail/thumbnail-error-state.ts"
+        },
+        {
+          "path": "components/document-thumbnail/thumbnail-errors.ts",
+          "type": "registry:component",
+          "target": "@components/document-thumbnail/thumbnail-errors.ts"
+        },
+        {
+          "path": "components/document-thumbnail/thumbnail-in-view.ts",
+          "type": "registry:component",
+          "target": "@components/document-thumbnail/thumbnail-in-view.ts"
+        },
+        {
+          "path": "components/document-thumbnail/thumbnail-limits.ts",
+          "type": "registry:component",
+          "target": "@components/document-thumbnail/thumbnail-limits.ts"
+        },
+        {
+          "path": "components/document-thumbnail/thumbnail-options.ts",
+          "type": "registry:component",
+          "target": "@components/document-thumbnail/thumbnail-options.ts"
+        },
+        {
+          "path": "components/document-thumbnail/thumbnail-profile.ts",
+          "type": "registry:component",
+          "target": "@components/document-thumbnail/thumbnail-profile.ts"
+        },
+        {
+          "path": "components/document-thumbnail/thumbnail-resource.ts",
+          "type": "registry:component",
+          "target": "@components/document-thumbnail/thumbnail-resource.ts"
+        },
+        {
+          "path": "components/document-thumbnail/thumbnail-test-reset.ts",
+          "type": "registry:component",
+          "target": "@components/document-thumbnail/thumbnail-test-reset.ts"
+        },
+        {
+          "path": "components/document-thumbnail/thumbnail-text.ts",
+          "type": "registry:component",
+          "target": "@components/document-thumbnail/thumbnail-text.ts"
+        },
+        {
+          "path": "components/document-thumbnail/thumbnail-worker-client.ts",
+          "type": "registry:component",
+          "target": "@components/document-thumbnail/thumbnail-worker-client.ts"
+        },
+        {
+          "path": "components/document-thumbnail/types.ts",
+          "type": "registry:component",
+          "target": "@components/document-thumbnail/types.ts"
+        },
+        {
+          "path": "components/document-thumbnail/renderers/csv-thumbnail.tsx",
+          "type": "registry:component",
+          "target": "@components/document-thumbnail/renderers/csv-thumbnail.tsx"
+        },
+        {
+          "path": "components/document-thumbnail/renderers/docx-thumbnail.tsx",
+          "type": "registry:component",
+          "target": "@components/document-thumbnail/renderers/docx-thumbnail.tsx"
+        },
+        {
+          "path": "components/document-thumbnail/renderers/html-thumbnail.tsx",
+          "type": "registry:component",
+          "target": "@components/document-thumbnail/renderers/html-thumbnail.tsx"
+        },
+        {
+          "path": "components/document-thumbnail/renderers/image-thumbnail.tsx",
+          "type": "registry:component",
+          "target": "@components/document-thumbnail/renderers/image-thumbnail.tsx"
+        },
+        {
+          "path": "components/document-thumbnail/renderers/layout.tsx",
+          "type": "registry:component",
+          "target": "@components/document-thumbnail/renderers/layout.tsx"
+        },
+        {
+          "path": "components/document-thumbnail/renderers/markdown-thumbnail.tsx",
+          "type": "registry:component",
+          "target": "@components/document-thumbnail/renderers/markdown-thumbnail.tsx"
+        },
+        {
+          "path": "components/document-thumbnail/renderers/pdf-thumbnail.tsx",
+          "type": "registry:component",
+          "target": "@components/document-thumbnail/renderers/pdf-thumbnail.tsx"
+        },
+        {
+          "path": "components/document-thumbnail/renderers/pptx-thumbnail.tsx",
+          "type": "registry:component",
+          "target": "@components/document-thumbnail/renderers/pptx-thumbnail.tsx"
+        },
+        {
+          "path": "components/document-thumbnail/renderers/text-thumbnail.tsx",
+          "type": "registry:component",
+          "target": "@components/document-thumbnail/renderers/text-thumbnail.tsx"
+        },
+        {
+          "path": "components/document-thumbnail/renderers/tiff-thumbnail.tsx",
+          "type": "registry:component",
+          "target": "@components/document-thumbnail/renderers/tiff-thumbnail.tsx"
+        },
+        {
+          "path": "components/document-thumbnail/renderers/use-object-url.ts",
+          "type": "registry:component",
+          "target": "@components/document-thumbnail/renderers/use-object-url.ts"
+        },
+        {
+          "path": "components/document-thumbnail/renderers/xlsx-thumbnail.tsx",
+          "type": "registry:component",
+          "target": "@components/document-thumbnail/renderers/xlsx-thumbnail.tsx"
+        },
+        {
+          "path": "components/document-thumbnail-tiff.worker.ts",
+          "type": "registry:component",
+          "target": "@components/document-thumbnail-tiff.worker.ts"
+        },
+        {
+          "path": "components/document-thumbnail-xlsx.worker.ts",
+          "type": "registry:component",
+          "target": "@components/document-thumbnail-xlsx.worker.ts"
         }
       ]
     },
@@ -1684,6 +1997,26 @@
           "target": "@ui/run-card.tsx"
         }
       ]
+    },
+    {
+      "name": "ocr-block",
+      "type": "registry:block",
+      "title": "OCR",
+      "description": "OCR review for a scanned document: source image, detected text blocks, confidence filtering, and matching polygon overlays from Google Document AI output.",
+      "registryDependencies": ["layout-blocks"],
+      "files": [
+        {
+          "path": "registry/new-york-v4/blocks/ocr-block.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ocr-block.tsx"
+        },
+        {
+          "path": "sample/documentai-output.json",
+          "type": "registry:file",
+          "target": "sample/documentai-output.json"
+        }
+      ],
+      "categories": ["featured"]
     },
     {
       "name": "split-viewer-block",
@@ -2127,7 +2460,7 @@
       "name": "legend-variants-block",
       "type": "registry:block",
       "title": "Legend Variants",
-      "description": "The split viewer shown with every legend placement — bar, floating, and a vertical rail — over one attention.pdf split result, all sharing one interaction state.",
+      "description": "The split viewer shown with every legend placement — bar, floating, and a vertical rail — over one ViT paper split result, all sharing one interaction state.",
       "registryDependencies": [
         "pdf-viewer",
         "segment-legend",
