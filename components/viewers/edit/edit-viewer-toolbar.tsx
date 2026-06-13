@@ -29,7 +29,7 @@ export function EditViewerToolbar({
   if (modes.length === 0) return null
 
   return (
-    <div className="flex min-h-10 flex-shrink-0 flex-wrap items-center gap-3 border-b bg-background px-3 py-1.5">
+    <div className="flex min-h-10 flex-wrap items-center gap-3 px-3 py-1.5">
       {modes.length > 1 && mode ? (
         <Tabs
           value={mode}

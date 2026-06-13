@@ -50,12 +50,14 @@ const MODELED_NODE_KEYS = new Set<string>([
 ])
 
 type RefMap = Map<string, string> // json-pointer string -> definition NodeId
+type CreateDocumentId = (prefix?: string) => string
 
 // ---------------------------------------------------------------------------
 // Import: JSON Schema -> Document
 // ---------------------------------------------------------------------------
 
 export function fromJsonSchema(schema: JSONSchema7): SchemaDocument {
+  const createImportId = createDeterministicImportIdFactory()
   const hasDefsKeyword = schema.$defs !== undefined
   const hasDefinitionsKeyword = schema.definitions !== undefined
   const defsKeyword = schema.$defs
@@ -70,9 +72,9 @@ export function fromJsonSchema(schema: JSONSchema7): SchemaDocument {
 
   // First pass: give every top-level definition an id so refs can resolve to it.
   const defEntries: DefinitionEntry[] = Object.keys(rawDefs).map((name) => ({
-    id: createId("def"),
+    id: createImportId("def"),
     name,
-    node: { id: createId(), rest: {} }, // placeholder, filled in second pass
+    node: { id: createImportId(), rest: {} }, // placeholder, filled in second pass
   }))
   const refMap: RefMap = new Map()
   for (const def of defEntries) {
@@ -85,12 +87,17 @@ export function fromJsonSchema(schema: JSONSchema7): SchemaDocument {
 
   // Second pass: build each definition's node now that the ref map exists.
   for (const def of defEntries) {
-    def.node = nodeFromSchema(rawDefs[def.name], refMap)
+    def.node = nodeFromSchema(rawDefs[def.name], refMap, {
+      createDocumentId: createImportId,
+    })
   }
 
   // Strip only the PRIMARY defs keyword from the root; if the (unusual) other
   // keyword is also present, it's carried verbatim in `rest` so it isn't lost.
-  const root = nodeFromSchema(schema, refMap, defsKeyword)
+  const root = nodeFromSchema(schema, refMap, {
+    stripKeyword: defsKeyword,
+    createDocumentId: createImportId,
+  })
 
   return {
     root,
@@ -102,14 +109,19 @@ export function fromJsonSchema(schema: JSONSchema7): SchemaDocument {
 function nodeFromSchema(
   schema: JSONSchema7Definition,
   refMap: RefMap,
-  stripKeyword?: string
+  options: {
+    createDocumentId?: CreateDocumentId
+    stripKeyword?: string
+  } = {}
 ): DocumentNode {
+  const createDocumentId = options.createDocumentId ?? createId
+
   // A boolean schema (`true` / `false`) has no structure to model — preserve it.
   if (typeof schema === "boolean") {
-    return { id: createId(), rest: {}, booleanSchema: schema }
+    return { id: createDocumentId(), rest: {}, booleanSchema: schema }
   }
 
-  const node: DocumentNode = { id: createId(), rest: {} }
+  const node: DocumentNode = { id: createDocumentId(), rest: {} }
 
   // Record the source key order so the projection can replay it exactly,
   // keeping round-trips byte-faithful (no $defs/keyword reshuffling on edit).
@@ -129,7 +141,7 @@ function nodeFromSchema(
   if (schema.description !== undefined) node.description = schema.description
 
   if (Array.isArray(schema.enum)) {
-    node.enum = enumFromSchema(schema)
+    node.enum = enumFromSchema(schema, createDocumentId)
   }
 
   const required = Array.isArray(schema.required) ? schema.required : []
@@ -140,10 +152,10 @@ function nodeFromSchema(
   if (schema.properties) {
     node.properties = Object.entries(schema.properties).map(
       ([key, child]): PropertyEntry => ({
-        id: createId("prop"),
+        id: createDocumentId("prop"),
         key,
         required: required.includes(key),
-        node: nodeFromSchema(child, refMap),
+        node: nodeFromSchema(child, refMap, { createDocumentId }),
       })
     )
   }
@@ -160,32 +172,45 @@ function nodeFromSchema(
       // verbatim in `rest` so it survives the round-trip losslessly.
       setRecordValue(node.rest, "items", schema.items)
     } else {
-      node.items = nodeFromSchema(schema.items, refMap)
+      node.items = nodeFromSchema(schema.items, refMap, { createDocumentId })
     }
   }
 
   for (const key of ["anyOf", "oneOf", "allOf"] as const) {
     const value = schema[key]
     if (Array.isArray(value)) {
-      node[key] = value.map((sub) => nodeFromSchema(sub, refMap))
+      node[key] = value.map((sub) =>
+        nodeFromSchema(sub, refMap, { createDocumentId })
+      )
     }
   }
 
   // Carry every keyword we don't model.
   for (const [key, value] of Object.entries(schema)) {
     if (MODELED_NODE_KEYS.has(key)) continue
-    if (stripKeyword && key === stripKeyword) continue
+    if (options.stripKeyword && key === options.stripKeyword) continue
     setRecordValue(node.rest, key, value)
   }
 
   return node
 }
 
-function enumFromSchema(schema: JSONSchema7): EnumValue[] {
+function enumFromSchema(
+  schema: JSONSchema7,
+  createDocumentId: CreateDocumentId = createId
+): EnumValue[] {
   return (schema.enum ?? []).map((value): EnumValue => ({
-    id: createId("enum"),
+    id: createDocumentId("enum"),
     value: value as JsonValue,
   }))
+}
+
+function createDeterministicImportIdFactory(): CreateDocumentId {
+  let nextId = 0
+  return (prefix = "node") => {
+    nextId += 1
+    return `${prefix}-import-${nextId}`
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -257,7 +282,7 @@ export function nodeFromJson(
   // Strip the document's primary defs keyword — definitions live at the document
   // level, not on a node; this keeps a root-level edit (whose JSON still carries
   // `$defs`) from duplicating them into the root node's `rest`.
-  return nodeFromSchema(schema, refMap, defsKeyword)
+  return nodeFromSchema(schema, refMap, { stripKeyword: defsKeyword })
 }
 
 function addDefinitionRefMapEntries(

@@ -13,13 +13,13 @@ leaking virtual chunks as visible pages.
    subset.
 4. Footnote polish beyond initial GFM references and backrefs.
 5. Math / KaTeX polish beyond initial inline and block rendering.
-6. Syntax highlighting for fenced code.
+6. Syntax highlighting polish beyond initial `rehype-pretty-code` rendering.
 7. Code block copy polish beyond the initial copy button.
-8. Raw HTML policy polish beyond the current inert text/code fallback.
+8. Raw HTML sanitizer schema polish beyond the initial safe HTML rendering.
 9. Full GitHub alert visual styling; currently normalized into quoted prose only.
 10. More complete emoji shortcode vocabulary.
 11. More complete typography rules.
-12. Heading levels beyond the current h1/h2-style variants.
+12. Heading visual polish beyond the current h1-h6 renderer coverage.
 13. Nested list/callout/table visual polish audit.
 14. Table polish parity with the old markdown viewer.
 15. Table copy polish beyond current rendered-cell TSV copy.
@@ -60,13 +60,13 @@ leaking virtual chunks as visible pages.
 44. Blockquote alert title/body separation, not just textual prefix normalization.
 45. Alert variants for `note`, `tip`, `important`, `warning`, and `caution`.
 46. Thematic break visual polish.
-47. Autolink literal support parity with GFM.
-48. Strikethrough visual parity and tests.
+47. Autolink literal polish beyond initial GFM link rendering.
+48. Strikethrough visual polish beyond initial renderer coverage.
 49. Escaped Markdown character fidelity.
-50. Hard break vs soft break behavior audit.
+50. Hard break vs soft break polish beyond initial `remark-breaks` coverage.
 51. Reference links and reference images.
 52. Definition list support decision.
-53. Task-list checkbox accessibility and styling polish.
+53. Task-list checkbox accessibility and styling polish beyond initial read-only controls.
 54. Frontmatter policy: render, hide, summarize, or expose as metadata.
 55. Frontmatter source fidelity tests.
 56. HTML entity decoding policy.
@@ -157,7 +157,7 @@ leaking virtual chunks as visible pages.
 126. Unit tests for the forked Markdown parser.
 127. Unit tests for the forked block layout.
 128. Unit tests for the forked virtualizer/windowing behavior.
-129. Regression tests proving there are no visible page shells, page gaps, or page labels.
+129. Browser regression tests proving there are no visible page shells, page gaps, or page labels beyond the current DOM/unit test.
 130. Fragment navigation tests in the new viewer.
 131. Source-line highlight tests in the new viewer.
 132. Browser visual verification for continuous rendering.

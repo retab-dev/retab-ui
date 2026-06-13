@@ -2,7 +2,10 @@ import { JSDOM } from "jsdom"
 import { vi } from "vitest"
 
 export function installJsonTableDom() {
-  const dom = new JSDOM("<!doctype html><html><body></body></html>")
+  const dom =
+    globalThis.window && globalThis.document
+      ? { window: globalThis.window }
+      : new JSDOM("<!doctype html><html><body></body></html>")
   Object.assign(globalThis, {
     window: dom.window,
     document: dom.window.document,

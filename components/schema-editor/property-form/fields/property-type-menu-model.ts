@@ -11,12 +11,16 @@ import {
 } from "@/components/schema-editor/draft/draft-node-edits"
 import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
 import { getEffectiveNode } from "@/components/schema-editor/lib/json-schema-utils"
+import { createObjectTemplateTypeTrailingContent } from "@/components/schema-editor/object-template-type-section"
 import type {
   SchemaTypeMenuSection,
   SchemaTypeMenuValue,
 } from "@/components/schema-editor/primitives/schema-type-menu"
 import type { SchemaTypeOptionId } from "@/components/schema-editor/primitives/schema-type-options"
-import type { PropertyFormSchemaContext } from "@/components/schema-editor/property-form/types"
+import type {
+  PropertyFormSchemaContext,
+  PropertyTypeFieldModel,
+} from "@/components/schema-editor/property-form/types"
 import {
   createDefinitionTypeSubmenu,
   createPrimitiveTypeItems,
@@ -36,6 +40,33 @@ export interface PropertyTypeMenu {
   selectObjectTemplate: (templateName: string) => void
 }
 
+export function createPropertyTypeField({
+  disabled,
+  schemaContext,
+  schemaNode,
+  onChange,
+}: PropertyTypeMenuModelInput): PropertyTypeFieldModel {
+  const selectObjectTemplate = createObjectTemplateSelector({
+    disabled,
+    schemaContext,
+    schemaNode,
+    onChange,
+  })
+
+  return {
+    schemaNode,
+    schemaContext,
+    fieldPath: schemaContext.fieldPath,
+    editable: !disabled,
+    trailingContent: schemaContext.objectTemplatesEnabled
+      ? createObjectTemplateTypeTrailingContent({
+          onSelectTemplate: selectObjectTemplate,
+        })
+      : undefined,
+    onChange,
+  }
+}
+
 export function createPropertyTypeMenu({
   disabled,
   schemaContext,
@@ -44,12 +75,6 @@ export function createPropertyTypeMenu({
 }: PropertyTypeMenuModelInput): PropertyTypeMenu {
   const effectiveType = getEffectiveType(schemaNode)
   const effectiveSchemaNode = getEffectiveNode(schemaNode)
-
-  const replaceEffectiveNode = (replacement: ExtendedJSONSchema7) => {
-    onChange(
-      updateEffectiveNode(schemaNode, preserveMetadata(schemaNode, replacement))
-    )
-  }
 
   const selectType = (type: SchemaTypeOptionId) => {
     if (disabled) return
@@ -62,17 +87,19 @@ export function createPropertyTypeMenu({
       type: "selectDefinition",
       definitionName,
     })
-    replaceEffectiveNode({ $ref: definitionRef("$defs", definitionName) })
+    replaceEffectiveSchemaNode({
+      schemaNode,
+      replacement: { $ref: definitionRef("$defs", definitionName) },
+      onChange,
+    })
   }
 
-  const selectObjectTemplate = (templateName: string) => {
-    if (disabled) return
-    void schemaContext.onCommand?.({
-      type: "installObjectTemplate",
-      templateName,
-    })
-    replaceEffectiveNode({ $ref: definitionRef("$defs", templateName) })
-  }
+  const selectObjectTemplate = createObjectTemplateSelector({
+    disabled,
+    schemaContext,
+    schemaNode,
+    onChange,
+  })
 
   const refName =
     effectiveType.type === "$ref" && effectiveSchemaNode.$ref
@@ -100,6 +127,42 @@ export function createPropertyTypeMenu({
   }
 }
 
+function createObjectTemplateSelector({
+  disabled,
+  schemaContext,
+  schemaNode,
+  onChange,
+}: PropertyTypeMenuModelInput) {
+  return (templateName: string) => {
+    if (disabled) return
+    void schemaContext.onCommand?.({
+      type: "installObjectTemplate",
+      templateName,
+    })
+    replaceEffectiveSchemaNode({
+      schemaNode,
+      replacement: {
+        $ref: definitionRef("$defs", templateName),
+      },
+      onChange,
+    })
+  }
+}
+
+function replaceEffectiveSchemaNode({
+  schemaNode,
+  replacement,
+  onChange,
+}: {
+  schemaNode: ExtendedJSONSchema7
+  replacement: ExtendedJSONSchema7
+  onChange: (schemaNode: ExtendedJSONSchema7) => void
+}) {
+  onChange(
+    updateEffectiveNode(schemaNode, preserveMetadata(schemaNode, replacement))
+  )
+}
+
 function createDefinitionSection({
   definitionNames,
   onCreateDefinition,
@@ -121,10 +184,11 @@ function preserveMetadata(
   schemaNode: ExtendedJSONSchema7,
   replacement: ExtendedJSONSchema7
 ): ExtendedJSONSchema7 {
-  if (schemaNode.anyOf && Array.isArray(schemaNode.anyOf)) return replacement
+  const { anyOf, description, title } = schemaNode
+  if (anyOf && Array.isArray(anyOf)) return replacement
   return {
     ...replacement,
-    ...(schemaNode.title ? { title: schemaNode.title } : {}),
-    ...(schemaNode.description ? { description: schemaNode.description } : {}),
+    ...(title ? { title } : {}),
+    ...(description ? { description } : {}),
   }
 }

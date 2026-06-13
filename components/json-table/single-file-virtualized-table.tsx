@@ -32,15 +32,21 @@ import type {
   JsonTableStructuredEditSession,
 } from "@/components/json-table/json-table-edit-session"
 import { jsonTableCellId } from "@/components/json-table/json-table-edit-session"
+import { createJsonTablePrimitiveActiveCellStore } from "@/components/json-table/json-table-primitive-active-cell-store"
 import {
   markJsonTableProfile,
   recordJsonTableRender,
 } from "@/components/json-table/json-table-profiler"
 import { setValueAtMaterializedPath } from "@/components/json-table/lib/document-patches"
-import { getValueAtPath } from "@/components/json-table/lib/document-paths"
 import type { ProjectedRow } from "@/components/json-table/lib/document-projection"
 import { buildHeaderGridRows } from "@/components/json-table/lib/header-nodes"
 import type { JsonTableHeaderNode } from "@/components/json-table/lib/header-nodes"
+import {
+  indexProjectedCells,
+  projectedRowWithPendingPrimitivePatch,
+  type PendingPrimitivePatch,
+  type ProjectedCellIndexEntry,
+} from "@/components/json-table/lib/projected-cell-patch"
 import type { TableDocument } from "@/components/json-table/lib/projects-types"
 import {
   useReadOnlyJsonRowPatcher,
@@ -78,34 +84,6 @@ interface SingleFileVirtualizedTableProps {
   overscan?: number
   /** Rows to render beyond the viewport after large scroll jumps. Defaults to overscan. */
   jumpOverscan?: number
-}
-
-type PendingDocumentData = {
-  data: Record<string, unknown>
-}
-
-function projectedRowWithPendingData(
-  projectedRow: ProjectedRow,
-  pendingDocument: PendingDocumentData
-): ProjectedRow {
-  let didPatchCell = false
-  const cells = projectedRow.cells.map((cell) => {
-    if (!cell?.materializedFieldPath) return cell
-
-    const nextValue = getValueAtPath(
-      pendingDocument.data,
-      cell.materializedFieldPath
-    )
-    if (Object.is(cell.value, nextValue)) return cell
-
-    didPatchCell = true
-    return {
-      ...cell,
-      value: nextValue,
-    }
-  })
-
-  return didPatchCell ? { ...projectedRow, cells } : projectedRow
 }
 
 const SingleFileTableHeader = React.memo(
@@ -222,17 +200,18 @@ export const SingleFileVirtualizedTable =
         useSheetOptionsStore()
       const columnWidth = propColumnWidth ?? storeColumnWidth
 
-      const [primitiveActiveCell, setPrimitiveActiveCellState] =
-        React.useState<JsonTablePrimitiveActiveCell | null>(null)
       const [structuredEditSession, setStructuredEditSession] =
         React.useState<JsonTableStructuredEditSession | null>(null)
+      const primitiveActiveCellStoreRef = useRef(
+        createJsonTablePrimitiveActiveCellStore()
+      )
       const primitiveEditorHandleRef = useRef<DataCellEditorHandle | null>(null)
       const structuredEditSessionIdRef = useRef(0)
       const documentDataRef = useRef(document.data)
-      const pendingDocumentPatchRef = useRef<PendingDocumentData | null>(null)
+      const pendingDocumentPatchRef = useRef<PendingPrimitivePatch | null>(null)
       const onUpdateDocumentRef = useRef(onUpdateDocument)
       const [pendingDocumentPatch, setPendingDocumentPatch] =
-        React.useState<PendingDocumentData | null>(null)
+        React.useState<PendingPrimitivePatch | null>(null)
 
       React.useLayoutEffect(() => {
         onUpdateDocumentRef.current = onUpdateDocument
@@ -253,6 +232,25 @@ export const SingleFileVirtualizedTable =
 
       const rowHeightPx = getRowHeightPx(rowHeight)
       const isJsonEditable = jsonEditMode === "editable"
+      const projectedCellIndex = React.useMemo(
+        () => indexProjectedCells(projectedRows),
+        [projectedRows]
+      )
+      const pendingCellIndexEntriesByRow = React.useMemo(() => {
+        const entriesByRow = new Map<number, ProjectedCellIndexEntry[]>()
+        if (!pendingDocumentPatch) return entriesByRow
+
+        for (const fieldPath of pendingDocumentPatch.fieldPaths) {
+          const indexEntry = projectedCellIndex.get(fieldPath)
+          if (!indexEntry) continue
+
+          const rowEntries = entriesByRow.get(indexEntry.rowIndex)
+          if (rowEntries) rowEntries.push(indexEntry)
+          else entriesByRow.set(indexEntry.rowIndex, [indexEntry])
+        }
+
+        return entriesByRow
+      }, [pendingDocumentPatch, projectedCellIndex])
       const scrollRef = useRef<HTMLDivElement>(null)
       const headerScrollRef = useRef<HTMLDivElement>(null)
       const rowWindowRef = useRef<HTMLTableSectionElement>(null)
@@ -293,7 +291,8 @@ export const SingleFileVirtualizedTable =
       }, [rowPatcher, virtualRows, visibleColumns, projectedRows])
       recordJsonTableRender("SingleFileVirtualizedTable", document.id, {
         columnCount: visibleColumns.length,
-        primitiveActiveFieldPath: primitiveActiveCell?.fieldPath ?? null,
+        primitiveActiveFieldPath:
+          primitiveActiveCellStoreRef.current.getSnapshot()?.fieldPath ?? null,
         structuredEditSessionFieldPath:
           structuredEditSession?.fieldPath ?? null,
         isJsonEditable,
@@ -302,7 +301,7 @@ export const SingleFileVirtualizedTable =
       })
       const setPrimitiveActiveCell = React.useCallback(
         (activeCell: JsonTablePrimitiveActiveCell | null) => {
-          setPrimitiveActiveCellState(activeCell)
+          primitiveActiveCellStoreRef.current.setSnapshot(activeCell)
           if (activeCell) setStructuredEditSession(null)
         },
         []
@@ -335,8 +334,13 @@ export const SingleFileVirtualizedTable =
             materializedFieldPath,
             value
           )
+          const fieldPaths = new Set(
+            pendingDocumentPatchRef.current?.fieldPaths
+          )
+          fieldPaths.add(materializedFieldPath)
           const nextPatch = {
             data: nextData,
+            fieldPaths,
           }
           pendingDocumentPatchRef.current = nextPatch
           setPendingDocumentPatch(nextPatch)
@@ -365,7 +369,7 @@ export const SingleFileVirtualizedTable =
           )
           const nextSessionId = structuredEditSessionIdRef.current + 1
           structuredEditSessionIdRef.current = nextSessionId
-          setPrimitiveActiveCellState(null)
+          primitiveActiveCellStoreRef.current.setSnapshot(null)
           setStructuredEditSession({
             id: nextSessionId,
             cellId: nextCellId,
@@ -449,10 +453,12 @@ export const SingleFileVirtualizedTable =
                   const projectedRow = projectedRows[rowIdx]
                   const effectiveProjectedRow =
                     pendingDocumentPatch && projectedRow
-                      ? projectedRowWithPendingData(
+                      ? projectedRowWithPendingPrimitivePatch({
                           projectedRow,
-                          pendingDocumentPatch
-                        )
+                          patch: pendingDocumentPatch,
+                          indexEntries:
+                            pendingCellIndexEntriesByRow.get(rowIdx) ?? [],
+                        })
                       : projectedRow
                   return (
                     <SingleFileFormRow
@@ -464,7 +470,7 @@ export const SingleFileVirtualizedTable =
                       schema={schema}
                       visibleColumns={visibleColumns}
                       rowHeightPx={rowHeightPx}
-                      primitiveActiveCell={primitiveActiveCell}
+                      primitiveActiveCellStore={primitiveActiveCellStoreRef.current}
                       setPrimitiveActiveCell={setPrimitiveActiveCell}
                       primitiveEditorHandleRef={primitiveEditorHandleRef}
                       structuredEditSession={structuredEditSession}

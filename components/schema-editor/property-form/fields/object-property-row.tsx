@@ -152,18 +152,9 @@ export function ObjectPropertyRow({
             />
           </>
         }
-        type={
-          <TypeField
-            schemaNode={row.typeField.schemaNode}
-            schemaContext={row.typeField.schemaContext}
-            fieldPath={row.typeField.fieldPath}
-            editable={row.typeField.editable}
-            variant="row"
-            onChange={row.typeField.onChange}
-          />
-        }
+        type={<TypeField field={row.typeField} variant="row" />}
       />
-      {renderSchemaDetails(row.rowDetails)}
+      {renderSchemaDetails(row.rowSchemaDetails)}
     </div>
   )
 }

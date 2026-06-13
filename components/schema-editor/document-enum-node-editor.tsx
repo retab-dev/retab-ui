@@ -8,8 +8,8 @@ import type {
 } from "@/components/schema-editor/document-node-editor-types"
 import {
   addEnumValue,
-  removeEnumValueAtIndex,
-  updateEnumValueAtIndex,
+  removeEnumValue,
+  updateEnumValue,
 } from "@/components/schema-editor/document/enum-operations"
 import type { EnumValue } from "@/components/schema-editor/document/types"
 import { SchemaChipList } from "@/components/schema-editor/primitives/schema-chip-list"
@@ -37,13 +37,13 @@ export function DocumentEnumNodeEditor({
     setNewEnumValue("")
   }
 
-  const handleRemoveEnum = (index: number) => {
-    dispatch((current) => removeEnumValueAtIndex(current, nodeId, index))
+  const handleRemoveEnum = (id: string) => {
+    dispatch((current) => removeEnumValue(current, nodeId, id))
   }
 
-  const handleEditEnum = (index: number, newValue: string) => {
+  const handleEditEnum = (id: string, newValue: string) => {
     dispatch((current) =>
-      updateEnumValueAtIndex(current, nodeId, index, newValue)
+      updateEnumValue(current, nodeId, id, { value: newValue })
     )
   }
 
@@ -51,18 +51,31 @@ export function DocumentEnumNodeEditor({
     <div className="ml-6">
       <div className="mt-1 mb-2">
         <SchemaChipList
+          addRow={
+            editable
+              ? {
+                  focusAfterSubmit: true,
+                  inputLabel: "New choice",
+                  placeholder: "New choice",
+                  submitLabel: "Add",
+                  value: newEnumValue,
+                  onChange: setNewEnumValue,
+                  onSubmit: handleAddEnum,
+                }
+              : undefined
+          }
           editable={editable}
-          focusInputAfterSubmit
-          getKey={(index) => enumEntries[index]?.id ?? String(index)}
-          pendingValue={newEnumValue}
-          placeholder="New choice"
-          showSubmitInput={editable}
-          submitLabel="Add"
-          values={enumEntries.map((entry) => String(entry.value))}
-          onPendingValueChange={setNewEnumValue}
-          onRemoveValue={handleRemoveEnum}
-          onReplaceValue={(index, value) => handleEditEnum(index, value)}
-          onSubmitPendingValue={handleAddEnum}
+          items={enumEntries.map((entry, index) => {
+            const value = String(entry.value)
+            return {
+              id: entry.id,
+              inputLabel: `Option ${index + 1}: ${value || "empty"}`,
+              removeLabel: `Remove option ${value}`,
+              value,
+            }
+          })}
+          onRemove={handleRemoveEnum}
+          onReplace={handleEditEnum}
         />
       </div>
 

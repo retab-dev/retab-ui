@@ -394,9 +394,19 @@
           "target": "@ui/data-cell-picker-position.ts"
         },
         {
+          "path": "registry/new-york-v4/ui/data-cell-select-activation.ts",
+          "type": "registry:ui",
+          "target": "@ui/data-cell-select-activation.ts"
+        },
+        {
           "path": "registry/new-york-v4/ui/data-cell-select-control.tsx",
           "type": "registry:ui",
           "target": "@ui/data-cell-select-control.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/data-cell-select-keyboard.ts",
+          "type": "registry:ui",
+          "target": "@ui/data-cell-select-keyboard.ts"
         },
         {
           "path": "registry/new-york-v4/ui/data-cell-select-navigation.ts",
@@ -417,6 +427,11 @@
           "path": "registry/new-york-v4/ui/data-cell-select-popup.tsx",
           "type": "registry:ui",
           "target": "@ui/data-cell-select-popup.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/data-cell-select-state.ts",
+          "type": "registry:ui",
+          "target": "@ui/data-cell-select-state.ts"
         },
         {
           "path": "registry/new-york-v4/ui/data-cell-text-control.tsx",

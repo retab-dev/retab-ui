@@ -3,7 +3,9 @@ import type { JsonTableCellProps } from "@/components/json-table/json-table-cell
 import {
   jsonTableCellId,
   type JsonTableCellId,
+  type JsonTablePrimitiveActiveCell,
 } from "@/components/json-table/json-table-edit-session"
+import { useJsonTablePrimitiveActiveCell } from "@/components/json-table/json-table-primitive-active-cell-store"
 import { jsonTablePrimitiveKind } from "@/components/json-table/json-table-primitive-kind"
 import {
   getFieldMetadata,
@@ -22,6 +24,7 @@ export type JsonTableCellField = {
   isPrimitiveCell: boolean
   isStructuredActive: boolean
   materializedFieldPath: string | undefined
+  primitiveActiveCell: JsonTablePrimitiveActiveCell | null
 }
 
 export function useJsonTableCellField(
@@ -41,9 +44,11 @@ export function useJsonTableCellField(
     : null
   const isPrimitiveCell = Boolean(dataCellKind)
   const isJsonEditable = props.isJsonEditable
-  const isPrimitiveActive = Boolean(
-    isJsonEditable && cellId && props.primitiveActiveCell?.cellId === cellId
-  )
+  const primitiveActiveCell = useJsonTablePrimitiveActiveCell({
+    cellId,
+    store: props.primitiveActiveCellStore,
+  })
+  const isPrimitiveActive = Boolean(isJsonEditable && primitiveActiveCell)
   const isStructuredActive = Boolean(
     isJsonEditable && cellId && props.structuredEditSession?.cellId === cellId
   )
@@ -60,5 +65,6 @@ export function useJsonTableCellField(
     isPrimitiveCell,
     isStructuredActive,
     materializedFieldPath,
+    primitiveActiveCell,
   }
 }

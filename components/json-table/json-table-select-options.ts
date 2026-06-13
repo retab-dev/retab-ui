@@ -8,6 +8,7 @@ export function jsonTableSelectOptions(
 ): DataCellSelectOption[] {
   if (fieldMetadata.kind !== "enum") return []
 
+  const disabledEnumValues = disabledJsonTableEnumValues(fieldMetadata)
   const nullOption: DataCellSelectOption[] = fieldMetadata.isNullable
     ? [
         {
@@ -34,9 +35,25 @@ export function jsonTableSelectOptions(
       .map(({ optionJsonValue, optionIndex }) => ({
         value: selectOptionValue(optionIndex),
         label: String(optionJsonValue),
+        disabled: disabledEnumValues.some((disabledJsonValue) =>
+          jsonValuesEqual(disabledJsonValue, optionJsonValue)
+        ),
         className: "text-xs",
       })),
   ]
+}
+
+function disabledJsonTableEnumValues(fieldMetadata: FieldMetadata): unknown[] {
+  const rawSchema = fieldMetadata.rawSchema as Record<string, unknown>
+  const effectiveSchema = fieldMetadata.effectiveSchema as Record<
+    string,
+    unknown
+  >
+  const disabledValues =
+    rawSchema["x-disabled-enum-values"] ??
+    effectiveSchema["x-disabled-enum-values"]
+
+  return Array.isArray(disabledValues) ? disabledValues : []
 }
 
 export function jsonTableSelectValue({

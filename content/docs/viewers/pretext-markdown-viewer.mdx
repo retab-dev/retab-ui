@@ -73,18 +73,21 @@ remain stable while the Pretext path iterates toward feature completeness.
 
 ## Implemented So Far
 
-- Headings, paragraphs, emphasis, inline code, lists, task markers, blockquotes, rules, tables, images, and fenced code render through React Markdown/GFM.
+- Headings `h1` through `h6`, paragraphs, emphasis, inline code, lists, task markers, blockquotes, rules, tables, images, and fenced code render through React Markdown/GFM.
+- Virtual chunks are projected as continuous document content, without visible page shells, page labels, or inter-page gutters.
 - GitHub blockquote alert markers such as `> [!IMPORTANT]` render as alert surfaces.
 - Directive callouts such as `:::warning{title="Careful"}` render as callout surfaces.
 - YAML frontmatter is a first-class frontmatter chunk instead of being rewritten into a fenced code block.
 - Heading IDs support duplicate suffixes and local `#fragment` links scroll through the virtual document model.
 - Links and images use the same safe URL policy as the Markdown Document Viewer; unsafe links become text and unsafe images become accessible placeholders.
+- Safe raw HTML is parsed through `rehype-raw` and narrowed by a local `rehype-sanitize` schema; unsafe tags and attributes are removed before React rendering.
 - Common typography and emoji shortcode transforms apply to normal prose text while inline code stays literal.
+- GFM autolink literals, strikethrough, soft line breaks, and task-list checkboxes render through explicit Pretext Markdown components.
 - Restricted component markdown supports `<Metric label="Accuracy" value="98%" />` and `<Badge label="Stable" tone="success" />`; unknown JSX-like syntax renders as inert `mdx` code.
 - Mermaid fenced blocks render as diagram surfaces for simple `graph` and `flowchart` diagrams, with unsupported syntax shown as a non-crashing error state.
 - Inline and block math render through `remark-math` and KaTeX.
 - GFM footnotes render with references and backrefs.
-- Fenced code blocks show language headers and copy controls.
+- Fenced code blocks show language headers, copy controls, and `rehype-pretty-code` syntax highlighting.
 - GFM tables include a copy action that writes rendered cells as TSV.
 - URL, Blob, and inline text sources load through the existing bounded text resource layer.
 - The registry item is separate: `pretext-markdown-viewer`.
@@ -95,8 +98,8 @@ The missing work is tracked in the repository file
 `design/pretext-markdown-viewer-missing-inventory.md`. The largest gaps are
 full Mermaid syntax, arbitrary MDX execution, richer GitHub alert visuals,
 directive semantics beyond callouts, full accessibility verification, syntax
-highlighting, hostile-block inner virtualization, and migration rules for File
-Viewer routing.
+highlighting polish, raw HTML schema polish, hostile-block inner virtualization,
+and migration rules for File Viewer routing.
 
 ## Props
 

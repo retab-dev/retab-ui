@@ -15,6 +15,26 @@ const outputPath =
   "tmp/json-table-primitive-interactions-profile.json"
 
 const enumFieldPath = "transactions.0.transaction_type"
+const dateFieldPath = "transactions.0.date"
+
+function profileTargets() {
+  return [
+    {
+      name: "default",
+      url: profileUrl,
+    },
+    {
+      name: "large",
+      url: urlWithSearchParam(profileUrl, "variant", "large"),
+    },
+  ]
+}
+
+function urlWithSearchParam(url, key, value) {
+  const parsed = new URL(url)
+  parsed.searchParams.set(key, value)
+  return parsed.toString()
+}
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms))
@@ -86,7 +106,8 @@ async function evaluate(send, expression) {
       const message = error instanceof Error ? error.message : String(error)
       const isTransientContextError =
         message.includes("Cannot find default execution context") ||
-        message.includes("Inspected target navigated")
+        message.includes("Inspected target navigated") ||
+        message.includes("Execution context was destroyed")
       if (!isTransientContextError || attempt === 49) throw error
       await sleep(100)
     }
@@ -327,10 +348,13 @@ async function summarizeScenario(send, beforeMetrics, startedAt, wait) {
       const profiler = window.__jsonTableProfiler;
       const reactCommits = profiler.events.filter((event) => event.type === "react-commit");
       const popup = document.querySelector('[data-slot="data-cell-select-popup"]');
+      const pickerPopup = document.querySelector('[data-slot="data-cell-picker-popup"]');
       const baseUiSelect = document.querySelector('[data-slot="select-popup"], [data-slot="select-positioner"], [data-slot="select-list"]');
       const topEntries = ${topEntries.toString()};
       return {
         popupMounted: Boolean(popup),
+        pickerPopupMounted: Boolean(pickerPopup),
+        calendarMounted: Boolean(document.querySelector('[data-slot="calendar"]')),
         popupOptions: popup ? popup.querySelectorAll('[role="option"]').length : 0,
         baseUiSelectMounted: Boolean(baseUiSelect),
         activeEditableCells: document.querySelectorAll('[data-json-table-editable-cell="true"][data-active="true"]').length,
@@ -377,89 +401,21 @@ async function runScenario(send, name, action, waitExpression) {
   return { name, ...summary }
 }
 
-function assertScenario(condition, message) {
-  if (!condition) throw new Error(message)
-}
-
-function editableCellRenderNames(scenario) {
-  return scenario.profiler.renders.byInstance
-    .map((entry) => entry.name)
-    .filter((name) => name.startsWith("EditableJsonTableCell:"))
-}
-
-function assertOnlyTargetEditableCellRendered(scenario, targetFieldPath) {
-  const unexpected = editableCellRenderNames(scenario).filter(
-    (name) => name !== `EditableJsonTableCell:${targetFieldPath}`
+async function runProfileTarget(chromeEndpoint, targetConfig) {
+  console.error(`Profiling target: ${targetConfig.name} (${targetConfig.url})`)
+  const newTargetResponse = await fetch(
+    `${chromeEndpoint}/json/new?${encodeURIComponent(targetConfig.url)}`,
+    { method: "PUT" }
   )
-  assertScenario(
-    unexpected.length === 0,
-    `${scenario.name}: unrelated editable cells rendered: ${unexpected.join(", ")}`
-  )
-}
+  if (!newTargetResponse.ok) {
+    throw new Error(`/json/new failed: ${newTargetResponse.status}`)
+  }
 
-function assertReport(report) {
-  const open = report.scenarios.find(
-    (scenario) => scenario.name === "open-enum"
-  )
-  const commit = report.scenarios.find(
-    (scenario) => scenario.name === "open-and-commit-enum"
-  )
-  const checkbox = report.scenarios.find(
-    (scenario) => scenario.name === "toggle-checkbox"
-  )
+  const target = await newTargetResponse.json()
+  const page = await connectCdp(target.webSocketDebuggerUrl)
+  const send = page.send
 
-  assertScenario(open?.wait.ok, "open-enum did not complete")
-  assertScenario(open.popupMounted, "open-enum did not mount select popup")
-  assertScenario(!open.baseUiSelectMounted, "open-enum mounted Base UI select")
-  assertScenario(
-    open.rectProbe.count <= 1,
-    `open-enum expected <= 1 rect read, got ${open.rectProbe.count}`
-  )
-  assertOnlyTargetEditableCellRendered(open, enumFieldPath)
-
-  assertScenario(commit?.wait.ok, "open-and-commit-enum did not complete")
-  assertScenario(!commit.popupMounted, "open-and-commit-enum left popup open")
-  assertScenario(
-    !commit.baseUiSelectMounted,
-    "open-and-commit-enum mounted Base UI select"
-  )
-  assertOnlyTargetEditableCellRendered(commit, enumFieldPath)
-
-  assertScenario(checkbox?.wait.ok, "toggle-checkbox did not complete")
-  assertOnlyTargetEditableCellRendered(checkbox, "transactions.0.is_reconciled")
-}
-
-async function main() {
-  const chromeEndpoint = `http://127.0.0.1:${chromePort}`
-  const userDataDir = await mkdtemp(join(tmpdir(), "json-table-primitive-"))
-  const chrome = spawn(
-    chromePath,
-    [
-      "--headless=new",
-      `--remote-debugging-port=${chromePort}`,
-      `--user-data-dir=${userDataDir}`,
-      "--disable-gpu",
-      "--no-first-run",
-      "--no-default-browser-check",
-      "about:blank",
-    ],
-    { stdio: "ignore" }
-  )
-
-  let page
   try {
-    await waitForDevToolsEndpoint(chromeEndpoint)
-    const newTargetResponse = await fetch(
-      `${chromeEndpoint}/json/new?${encodeURIComponent(profileUrl)}`,
-      { method: "PUT" }
-    )
-    if (!newTargetResponse.ok) {
-      throw new Error(`/json/new failed: ${newTargetResponse.status}`)
-    }
-    const target = await newTargetResponse.json()
-    page = await connectCdp(target.webSocketDebuggerUrl)
-    const send = page.send
-
     await send("Page.enable")
     await send("Runtime.enable")
     await send("Performance.enable")
@@ -542,10 +498,144 @@ async function main() {
       )
     )
 
+    return {
+      name: targetConfig.name,
+      route: targetConfig.url,
+      scenarios,
+    }
+  } finally {
+    try {
+      page.socket.close()
+    } catch {}
+  }
+}
+
+function assertScenario(condition, message) {
+  if (!condition) throw new Error(message)
+}
+
+function editableCellRenderNames(scenario) {
+  return scenario.profiler.renders.byInstance
+    .map((entry) => entry.name)
+    .filter((name) => name.startsWith("EditableJsonTableCell:"))
+}
+
+function assertOnlyTargetEditableCellRendered(scenario, targetFieldPath) {
+  const unexpected = editableCellRenderNames(scenario).filter(
+    (name) => name !== `EditableJsonTableCell:${targetFieldPath}`
+  )
+  assertScenario(
+    unexpected.length === 0,
+    `${scenario.name}: unrelated editable cells rendered: ${unexpected.join(", ")}`
+  )
+}
+
+function assertNoTableOrRowRender(scenario) {
+  const unexpected = scenario.profiler.renders.byComponent.filter((entry) =>
+    [
+      "SingleFileTableView",
+      "SingleFileVirtualizedTable",
+      "SingleFileFormRow",
+    ].includes(entry.name)
+  )
+  assertScenario(
+    unexpected.length === 0,
+    `${scenario.name}: table or row rendered during editor-local interaction: ${unexpected
+      .map((entry) => `${entry.name}(${entry.count})`)
+      .join(", ")}`
+  )
+}
+
+function assertReport(report) {
+  const profiles = report.profiles ?? [
+    {
+      name: "default",
+      scenarios: report.scenarios,
+    },
+  ]
+
+  for (const profile of profiles) {
+    assertProfile(profile)
+  }
+}
+
+function assertProfile(profile) {
+  const open = profile.scenarios.find(
+    (scenario) => scenario.name === "open-enum"
+  )
+  const commit = profile.scenarios.find(
+    (scenario) => scenario.name === "open-and-commit-enum"
+  )
+  const checkbox = profile.scenarios.find(
+    (scenario) => scenario.name === "toggle-checkbox"
+  )
+  const date = profile.scenarios.find(
+    (scenario) => scenario.name === "open-date-picker"
+  )
+  const label = `${profile.name}: `
+
+  assertScenario(open?.wait.ok, `${label}open-enum did not complete`)
+  assertScenario(open.popupMounted, `${label}open-enum did not mount select popup`)
+  assertScenario(!open.baseUiSelectMounted, `${label}open-enum mounted Base UI select`)
+  assertScenario(
+    open.rectProbe.count <= 1,
+    `${label}open-enum expected <= 1 rect read, got ${open.rectProbe.count}`
+  )
+  assertOnlyTargetEditableCellRendered(open, enumFieldPath)
+  assertNoTableOrRowRender(open)
+
+  assertScenario(commit?.wait.ok, `${label}open-and-commit-enum did not complete`)
+  assertScenario(!commit.popupMounted, `${label}open-and-commit-enum left popup open`)
+  assertScenario(
+    !commit.baseUiSelectMounted,
+    `${label}open-and-commit-enum mounted Base UI select`
+  )
+  assertOnlyTargetEditableCellRendered(commit, enumFieldPath)
+
+  assertScenario(checkbox?.wait.ok, `${label}toggle-checkbox did not complete`)
+  assertOnlyTargetEditableCellRendered(checkbox, "transactions.0.is_reconciled")
+
+  assertScenario(date?.wait.ok, `${label}open-date-picker did not complete`)
+  assertScenario(date.pickerPopupMounted, `${label}open-date-picker did not mount picker popup`)
+  assertScenario(date.calendarMounted, `${label}open-date-picker did not mount calendar`)
+  assertScenario(
+    (date.rectProbe.bySlot["data-cell"] ?? 0) <= 1,
+    `${label}open-date-picker expected <= 1 data-cell rect read, got ${
+      date.rectProbe.bySlot["data-cell"] ?? 0
+    }`
+  )
+  assertOnlyTargetEditableCellRendered(date, dateFieldPath)
+  assertNoTableOrRowRender(date)
+}
+
+async function main() {
+  const chromeEndpoint = `http://127.0.0.1:${chromePort}`
+  const userDataDir = await mkdtemp(join(tmpdir(), "json-table-primitive-"))
+  const chrome = spawn(
+    chromePath,
+    [
+      "--headless=new",
+      `--remote-debugging-port=${chromePort}`,
+      `--user-data-dir=${userDataDir}`,
+      "--disable-gpu",
+      "--no-first-run",
+      "--no-default-browser-check",
+      "about:blank",
+    ],
+    { stdio: "ignore" }
+  )
+
+  try {
+    await waitForDevToolsEndpoint(chromeEndpoint)
+    const profiles = []
+    for (const target of profileTargets()) {
+      profiles.push(await runProfileTarget(chromeEndpoint, target))
+    }
+
     const report = {
       measuredAt: new Date().toISOString(),
-      route: profileUrl,
-      scenarios,
+      profiles,
+      scenarios: profiles[0]?.scenarios ?? [],
     }
 
     if (assertMode) assertReport(report)
@@ -555,9 +645,6 @@ async function main() {
     console.log(JSON.stringify(report, null, 2))
     console.error(`Wrote ${outputPath}`)
   } finally {
-    try {
-      page?.socket.close()
-    } catch {}
     chrome.kill("SIGTERM")
     await new Promise((resolve) => chrome.once("exit", resolve))
     await rm(userDataDir, { recursive: true, force: true }).catch(() => {})

@@ -31,10 +31,10 @@ The target viewer should be:
 markdown source
   -> markdown document model
   -> semantic blocks with source ranges
-  -> page groups
+  -> virtual chunks
   -> Pretext-informed height estimates
   -> custom virtualizer window
-  -> React/GFM renders visible pages
+  -> React/GFM renders visible chunks
   -> ResizeObserver records actual heights
   -> anchor-preserving offset update
 ```
@@ -68,6 +68,13 @@ rich Markdown component styling.
 Before implementing another custom Markdown feature from scratch, clone the
 libraries that already solve the hard parts and use their implementation and
 test suites as the basis for our own narrowed version.
+
+This is the default implementation workflow for the Pretext Markdown viewer.
+Start by reading the relevant upstream package and the existing Retab viewer
+component that already uses the same idea, then translate the smallest useful
+piece into the new component. For example, React/GFM behavior should be based on
+`react-markdown` plus `remark-gfm` and compared against the current Markdown
+document renderer before adding local code.
 
 Use a local research folder outside the shipped source tree. These repos are
 not vendored product code; they are reference implementations that we can grep,
@@ -121,6 +128,16 @@ Local reference inventory:
 | GitHub emoji             | `tmp/markdown-upstreams/remark-gemoji`                  | [remarkjs/remark-gemoji](https://github.com/remarkjs/remark-gemoji)                                       |
 | Emoji shortcodes         | `tmp/markdown-upstreams/remark-emoji`                   | [rhysd/remark-emoji](https://github.com/rhysd/remark-emoji)                                               |
 | Typography               | `tmp/markdown-upstreams/remark-smartypants`             | [silvenon/remark-smartypants](https://github.com/silvenon/remark-smartypants)                             |
+
+Existing Retab references to compare before implementing:
+
+| Area                    | Existing local reference                                                                                                                        |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Plugin pipeline         | [`registry/new-york-v4/ui/markdown-document-plugins.ts`](/Users/sachaichbiah/Local/retab-ui/registry/new-york-v4/ui/markdown-document-plugins.ts) |
+| React render overrides  | [`registry/new-york-v4/ui/markdown-document-renderers.tsx`](/Users/sachaichbiah/Local/retab-ui/registry/new-york-v4/ui/markdown-document-renderers.tsx) |
+| URL safety policy       | [`registry/new-york-v4/ui/markdown-document-url-policy.ts`](/Users/sachaichbiah/Local/retab-ui/registry/new-york-v4/ui/markdown-document-url-policy.ts) |
+| Copy controls           | [`registry/new-york-v4/ui/markdown-document-copy.tsx`](/Users/sachaichbiah/Local/retab-ui/registry/new-york-v4/ui/markdown-document-copy.tsx) |
+| Diagram rendering       | [`registry/new-york-v4/ui/markdown-document-diagram.tsx`](/Users/sachaichbiah/Local/retab-ui/registry/new-york-v4/ui/markdown-document-diagram.tsx) |
 
 Implementation rule: start from the upstream source and tests for the feature
 being implemented, then keep only the minimal behavior that belongs in our
@@ -225,7 +242,7 @@ Rules for upstream-derived work:
 
 ### Custom Virtualizer Owns
 
-- visible page range
+- visible chunk range
 - total canvas height
 - measured height map
 - anchor capture and restore
@@ -241,10 +258,10 @@ Owns source parsing and stable document records.
 Exports:
 
 - `createMarkdownDocument(text)`
-- `findMarkdownPageForLine(pages, sourceLine)`
-- `markdownPageIntersectsLineRange({ page, range })`
+- `findMarkdownChunkForLine(chunks, sourceLine)`
+- `markdownChunkIntersectsLineRange({ chunk, range })`
 - `serializeMarkdownTableForClipboard(markdown)`
-- document, page, block, and source range types
+- document, chunk, block, and source range types
 
 Rules:
 
@@ -252,7 +269,7 @@ Rules:
 - no DOM imports
 - no virtualizer imports
 - source lines are always 1-based
-- pages use `pageStartLine` and `pageEndLine`
+- chunks use `chunkStartLine` and `chunkEndLine`
 - blocks use `blockStartLine` and `blockEndLine`
 
 ### `markdown-document-layout.ts`
@@ -263,11 +280,11 @@ Exports:
 
 - `createMarkdownLayoutEstimate(document, options)`
 - `estimateMarkdownBlockHeight(block, layoutStyle)`
-- `estimateMarkdownPageHeight(page, layoutStyle)`
+- `estimateMarkdownChunkHeight(chunk, layoutStyle)`
 
 Inputs:
 
-- page width
+- content width
 - zoom
 - font shorthand
 - line height
@@ -306,14 +323,14 @@ Rules:
 
 ### `markdown-document-renderer.tsx`
 
-Owns one visible page render lifecycle.
+Owns one visible chunk render lifecycle.
 
 Responsibilities:
 
 - invoke React Markdown through the configured plugin pipeline
 - isolate async render readiness
 - call measurement notification after render/mutation
-- expose page root refs for table accessibility patches
+- expose chunk root refs for table accessibility patches
 
 Rules:
 
@@ -467,16 +484,18 @@ Pretext should improve geometry. React/GFM should preserve document fidelity.
 
 ## Virtualization Unit
 
-Use page virtualization first.
+Use chunk virtualization first.
 
-A page is a grouped set of top-level Markdown blocks with a stable source-line
-range and a readable document width.
+A chunk is a grouped set of top-level Markdown blocks with a stable source-line
+range. Chunks are an internal virtualization unit only: they must not create
+visible page frames, page labels, page gutters, or page boundaries in the user
+experience.
 
-Why pages:
+Why chunks:
 
 - fewer mounted React roots
 - closer to parse viewer visual quality
-- natural place for page padding and document styling
+- clean boundary for source-line lookup and measurement
 - simpler table and list containment
 
 Rules:
@@ -484,9 +503,10 @@ Rules:
 - keep headings with following blocks when possible
 - do not split tables initially
 - do not split fenced code blocks initially
-- allow over-height pages for hostile blocks
-- measure actual page height after render
-- page estimates are only the starting geometry
+- allow over-height chunks for hostile blocks
+- measure actual chunk height after render
+- chunk estimates are only the starting geometry
+- apply document styling on the continuous canvas, not as per-chunk page chrome
 
 ## Hostile Blocks
 
@@ -501,11 +521,11 @@ Examples:
 
 Initial strategy:
 
-- cap mounted pages, not source lines
+- cap mounted chunks, not source lines
 - detect hostile blocks during modeling
-- keep hostile blocks in their own page
+- keep hostile blocks in their own chunk
 - estimate conservatively with Pretext where possible
-- render only the hostile page when visible
+- render only the hostile chunk when visible
 
 Future strategy:
 
@@ -519,7 +539,7 @@ Use estimates first and measurements second.
 Rules:
 
 - Pretext estimates feed the first virtual frame.
-- `ResizeObserver` records actual rendered page heights.
+- `ResizeObserver` records actual rendered chunk heights.
 - measured heights replace estimates.
 - updating heights must preserve the current scroll anchor.
 - zoom and width changes rebuild estimates and clear incompatible
@@ -546,7 +566,7 @@ The tabs should say what the user is choosing:
 
 - frontmatter line accounting
 - heading ids and duplicate suffixes
-- page grouping
+- chunk grouping
 - block source ranges
 - table source preservation
 - hostile block detection
@@ -563,7 +583,7 @@ The tabs should say what the user is choosing:
 
 - visible range uses binary search
 - overscan is pixel-based
-- mounted page count remains bounded
+- mounted chunk count remains bounded
 - measured heights replace estimates
 - anchor restore prevents jumps
 - scroll-to-line works before and after measurement
@@ -589,7 +609,7 @@ The tabs should say what the user is choosing:
 - File Viewer routes prose to Text Viewer
 - File Viewer routes logs/code to Code Viewer
 - stale async resource loads do not win
-- large Markdown mounts a bounded number of pages
+- large Markdown mounts a bounded number of chunks
 
 ## Acceptance Criteria
 

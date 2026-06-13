@@ -20,11 +20,14 @@ const dataCellRuntimeFiles = [
   "registry/new-york-v4/ui/data-cell-number-control.tsx",
   "registry/new-york-v4/ui/data-cell-picker-control.tsx",
   "registry/new-york-v4/ui/data-cell-picker-position.ts",
+  "registry/new-york-v4/ui/data-cell-select-activation.ts",
   "registry/new-york-v4/ui/data-cell-select-control.tsx",
+  "registry/new-york-v4/ui/data-cell-select-keyboard.ts",
   "registry/new-york-v4/ui/data-cell-select-navigation.ts",
   "registry/new-york-v4/ui/data-cell-select-popup-dismissal.ts",
   "registry/new-york-v4/ui/data-cell-select-popup-position.ts",
   "registry/new-york-v4/ui/data-cell-select-popup.tsx",
+  "registry/new-york-v4/ui/data-cell-select-state.ts",
   "registry/new-york-v4/ui/data-cell-text-control.tsx",
   "registry/new-york-v4/ui/data-cell-text-hit-test.ts",
   "registry/new-york-v4/ui/data-cell-types.ts",
@@ -324,6 +327,10 @@ describe("json table and DataCell architecture", () => {
   it("keeps DataCell independent from json-table", () => {
     const selectControlFile =
       "registry/new-york-v4/ui/data-cell-select-control.tsx"
+    const selectActivationFile =
+      "registry/new-york-v4/ui/data-cell-select-activation.ts"
+    const selectKeyboardFile =
+      "registry/new-york-v4/ui/data-cell-select-keyboard.ts"
     const selectNavigationFile =
       "registry/new-york-v4/ui/data-cell-select-navigation.ts"
     const selectPopupFile = "registry/new-york-v4/ui/data-cell-select-popup.tsx"
@@ -331,6 +338,7 @@ describe("json table and DataCell architecture", () => {
       "registry/new-york-v4/ui/data-cell-select-popup-dismissal.ts"
     const selectPopupPositionFile =
       "registry/new-york-v4/ui/data-cell-select-popup-position.ts"
+    const selectStateFile = "registry/new-york-v4/ui/data-cell-select-state.ts"
     const deletedJsonTablePopupFile =
       "components/json-table/json-table-enum-popup.tsx"
 
@@ -363,10 +371,13 @@ describe("json table and DataCell architecture", () => {
 
     const dataCellSelectFiles = [
       selectControlFile,
+      selectActivationFile,
+      selectKeyboardFile,
       selectNavigationFile,
       selectPopupFile,
       selectPopupDismissalFile,
       selectPopupPositionFile,
+      selectStateFile,
     ]
 
     for (const file of dataCellSelectFiles) {
@@ -383,6 +394,36 @@ describe("json table and DataCell architecture", () => {
       join(repoRoot, selectPopupFile),
       "utf8"
     )
+    const selectControlContent = readFileSync(
+      join(repoRoot, selectControlFile),
+      "utf8"
+    )
+    for (const pattern of [
+      "_editable",
+      "_active",
+      "_mode",
+      "_name",
+      "_dateTimeZone",
+      "_showPickerIcon",
+      "_draftValue",
+      "_onDraftValueChange",
+      "_onFocus",
+      "_onBlur",
+      "_onKeyDown",
+      "_onClick",
+      "_onDoubleClick",
+      "cancelDismissDuringOpening",
+      "firstEnabledDataCellSelectOptionIndex",
+      "lastEnabledDataCellSelectOptionIndex",
+      "nextEnabledDataCellSelectOptionIndex",
+      "selectedDataCellSelectOptionIndex",
+    ]) {
+      expect(
+        selectControlContent.includes(pattern),
+        `${selectControlFile} contains uncompressed select control detail ${pattern}`
+      ).toBe(false)
+    }
+
     for (const pattern of [
       "getBoundingClientRect",
       "window.addEventListener",
@@ -404,6 +445,17 @@ describe("json table and DataCell architecture", () => {
           `${file} contains impure primitive dependency ${pattern}`
         ).toBe(false)
       }
+    }
+
+    const selectKeyboardContent = readFileSync(
+      join(repoRoot, selectKeyboardFile),
+      "utf8"
+    )
+    for (const pattern of ["document", "window", "getBoundingClientRect"]) {
+      expect(
+        selectKeyboardContent.includes(pattern),
+        `${selectKeyboardFile} contains browser or popup policy ${pattern}`
+      ).toBe(false)
     }
   })
 
@@ -623,10 +675,16 @@ describe("json table and DataCell architecture", () => {
       }
     }
 
-    const selectFile = "registry/new-york-v4/ui/data-cell-select-control.tsx"
-    const selectContent = readFileSync(join(repoRoot, selectFile), "utf8")
-    expect(selectContent.includes("useDataCellOpeningContext")).toBe(true)
-    expect(selectContent.includes("DataCellDismissCause")).toBe(true)
+    const selectActivationFile =
+      "registry/new-york-v4/ui/data-cell-select-activation.ts"
+    const selectActivationContent = readFileSync(
+      join(repoRoot, selectActivationFile),
+      "utf8"
+    )
+    expect(selectActivationContent.includes("useDataCellOpeningContext")).toBe(
+      true
+    )
+    expect(selectActivationContent.includes("DataCellDismissCause")).toBe(true)
 
     const pickerFile = "registry/new-york-v4/ui/data-cell-picker-control.tsx"
     const pickerContent = readFileSync(join(repoRoot, pickerFile), "utf8")

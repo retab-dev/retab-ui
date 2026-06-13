@@ -13,7 +13,7 @@ export function useJsonTableCellProfiler({
     "EditableJsonTableCell",
     cellField.materializedFieldPath ?? props.column.key,
     {
-      primitiveActiveFieldPath: props.primitiveActiveCell?.fieldPath ?? null,
+      primitiveActiveFieldPath: cellField.primitiveActiveCell?.fieldPath ?? null,
       structuredEditSessionFieldPath:
         props.structuredEditSession?.fieldPath ?? null,
       fieldKind: cellField.fieldMetadata?.kind ?? null,

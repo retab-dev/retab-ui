@@ -1,48 +1,33 @@
 "use client"
 
-import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
-import { createObjectTemplateTypeTrailingContent } from "@/components/schema-editor/object-template-type-section"
 import {
   SchemaTypeMenu,
   type SchemaTypeMenuVariant,
 } from "@/components/schema-editor/primitives/schema-type-menu"
-import type { PropertyFormSchemaContext } from "@/components/schema-editor/property-form/types"
+import type { PropertyTypeFieldModel } from "@/components/schema-editor/property-form/types"
 
 import { createPropertyTypeMenu } from "./property-type-menu-model"
 
 export function TypeField({
-  schemaNode,
-  schemaContext,
-  fieldPath,
-  editable,
+  field,
   variant = "form",
-  onChange,
 }: {
-  schemaNode: ExtendedJSONSchema7
-  schemaContext: PropertyFormSchemaContext
-  fieldPath?: string
-  editable: boolean
+  field: PropertyTypeFieldModel
   variant?: SchemaTypeMenuVariant
-  onChange: (schemaNode: ExtendedJSONSchema7) => void
 }) {
   const menu = createPropertyTypeMenu({
-    disabled: !editable,
-    schemaContext,
-    schemaNode,
-    onChange,
+    disabled: !field.editable,
+    schemaContext: field.schemaContext,
+    schemaNode: field.schemaNode,
+    onChange: field.onChange,
   })
-  const trailingContent = schemaContext.objectTemplatesEnabled
-    ? createObjectTemplateTypeTrailingContent({
-        onSelectTemplate: menu.selectObjectTemplate,
-      })
-    : undefined
 
   return (
     <SchemaTypeMenu
-      ariaLabel={`Data type${fieldPath ? ` for ${fieldPath}` : ""}`}
-      editable={editable}
+      ariaLabel={`Data type${field.fieldPath ? ` for ${field.fieldPath}` : ""}`}
+      editable={field.editable}
       sections={menu.sections}
-      trailingContent={trailingContent}
+      trailingContent={field.trailingContent}
       value={menu.value}
       variant={variant}
     />

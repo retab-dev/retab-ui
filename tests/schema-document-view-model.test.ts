@@ -30,6 +30,25 @@ describe("schema document view model", () => {
     expect(view.properties[1].isRequired).toBe(false)
   })
 
+  it("imports the same schema with deterministic property ids", () => {
+    const schema = {
+      type: "object",
+      properties: {
+        invoice_number: { type: "string" },
+        total: { type: "number" },
+      },
+    } satisfies JSONSchema7
+
+    const firstDoc = fromJsonSchema(schema)
+    const first = getDocumentNodeView(firstDoc, firstDoc.root)
+    const secondDoc = fromJsonSchema(schema)
+    const second = getDocumentNodeView(secondDoc, secondDoc.root)
+
+    expect(first.properties.map((property) => property.propertyId)).toEqual(
+      second.properties.map((property) => property.propertyId)
+    )
+  })
+
   it("derives arrays, enum entries, nullable state, and formatted strings", () => {
     const doc = fromJsonSchema({
       type: "object",

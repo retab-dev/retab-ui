@@ -7,14 +7,14 @@ import type { ViewerResource } from "@/lib/viewer-resource"
 import {
   createPretextMarkdownDocument,
   findPretextMarkdownHeadingById,
-  findPretextMarkdownPageForLine,
-  getPretextMarkdownVisiblePageFrames,
+  findPretextMarkdownChunkForLine,
+  getPretextMarkdownVisibleChunkFrames,
   layoutPretextMarkdownDocument,
-  markdownPageIntersectsLineRange,
+  markdownChunkIntersectsLineRange,
   type PretextMarkdownDocumentFrame,
-  type PretextMarkdownPageFrame,
+  type PretextMarkdownChunkFrame,
 } from "./pretext-markdown-document-model"
-import { PretextMarkdownPageRenderer } from "./pretext-markdown-renderer"
+import { PretextMarkdownChunkRenderer } from "./pretext-markdown-renderer"
 import { ScrollArea } from "./scroll-area"
 import { TextViewerFrame, TextViewerToolbar } from "./text-viewer-chrome"
 import { normalizeTextLineRange } from "./text-viewer-ranges"
@@ -37,8 +37,8 @@ type ViewportSize = {
 }
 
 type ScrollAnchor = {
-  offsetWithinPage: number
-  pageIndex: number
+  offsetWithinChunk: number
+  chunkIndex: number
 }
 
 export function PretextMarkdownViewerContent({
@@ -116,13 +116,13 @@ export function PretextMarkdownViewerContent({
   )
   const visibleFrames = React.useMemo(
     () =>
-      getPretextMarkdownVisiblePageFrames({
-        frames: frame.pages,
+      getPretextMarkdownVisibleChunkFrames({
+        frames: frame.chunks,
         overscanPx: OVERSCAN_PX,
         scrollTop,
         viewportHeight,
       }),
-    [frame.pages, scrollTop, viewportHeight]
+    [frame.chunks, scrollTop, viewportHeight]
   )
 
   const captureScrollAnchor = React.useCallback(() => {
@@ -180,26 +180,26 @@ export function PretextMarkdownViewerContent({
     if (!anchor || !scrollElement) return
 
     pendingScrollAnchorRef.current = null
-    const nextFrame = frame.pages[anchor.pageIndex]
+    const nextFrame = frame.chunks[anchor.chunkIndex]
     if (!nextFrame) return
 
     scrollElement.scrollTop = Math.max(
       0,
       nextFrame.top +
-        Math.min(anchor.offsetWithinPage, Math.max(0, nextFrame.height - 1))
+        Math.min(anchor.offsetWithinChunk, Math.max(0, nextFrame.height - 1))
     )
-  }, [frame.pages])
+  }, [frame.chunks])
 
   const recordMeasuredHeight = React.useCallback(
-    (pageIndex: number, height: number) => {
+    (chunkIndex: number, height: number) => {
       if (!Number.isFinite(height) || height <= 0) return
       setMeasuredHeights((current) => {
-        if (Math.abs((current.get(pageIndex) ?? 0) - height) < 1) {
+        if (Math.abs((current.get(chunkIndex) ?? 0) - height) < 1) {
           return current
         }
         captureScrollAnchor()
         const next = new Map(current)
-        next.set(pageIndex, height)
+        next.set(chunkIndex, height)
         return next
       })
     },
@@ -214,10 +214,10 @@ export function PretextMarkdownViewerContent({
       const scrollElement = viewportRef.current
       if (!scrollElement || !range) return
 
-      const page =
-        findPretextMarkdownPageForLine(document.pages, range.start) ??
-        document.pages[0]
-      const targetFrame = page ? frame.pages[page.index] : null
+      const chunk =
+        findPretextMarkdownChunkForLine(document.chunks, range.start) ??
+        document.chunks[0]
+      const targetFrame = chunk ? frame.chunks[chunk.index] : null
       if (!targetFrame) return
 
       const targetTop =
@@ -232,13 +232,13 @@ export function PretextMarkdownViewerContent({
         ...options,
       })
     },
-    [document.pages, frame.pages]
+    [document.chunks, frame.chunks]
   )
 
-  const scrollToPageFrame = React.useCallback(
-    (pageIndex: number, options?: ScrollToOptions) => {
+  const scrollToChunkFrame = React.useCallback(
+    (chunkIndex: number, options?: ScrollToOptions) => {
       const scrollElement = viewportRef.current
-      const targetFrame = frame.pages[pageIndex]
+      const targetFrame = frame.chunks[chunkIndex]
       if (!scrollElement || !targetFrame) return false
 
       scrollElement.scrollTo({
@@ -248,7 +248,7 @@ export function PretextMarkdownViewerContent({
       })
       return true
     },
-    [frame.pages]
+    [frame.chunks]
   )
 
   const handleFragmentClick = React.useCallback(
@@ -261,13 +261,13 @@ export function PretextMarkdownViewerContent({
       if (!heading) return
 
       event.preventDefault()
-      if (scrollToPageFrame(heading.pageIndex)) {
+      if (scrollToChunkFrame(heading.chunkIndex)) {
         if (window.location.hash !== href) {
           window.history.replaceState(null, "", href)
         }
       }
     },
-    [document, scrollToPageFrame]
+    [document, scrollToChunkFrame]
   )
 
   const zoom = (factor: number) => {
@@ -331,21 +331,21 @@ export function PretextMarkdownViewerContent({
             minWidth: viewportWidth,
           }}
         >
-          {visibleFrames.map((pageFrame) => {
-            const page = document.pages[pageFrame.index]
-            if (!page) return null
+          {visibleFrames.map((chunkFrame) => {
+            const chunk = document.chunks[chunkFrame.index]
+            if (!chunk) return null
             return (
-              <PretextMarkdownPage
-                key={page.index}
-                frame={pageFrame}
-                highlighted={markdownPageIntersectsLineRange({
-                  page,
+              <PretextMarkdownChunk
+                key={chunk.index}
+                frame={chunkFrame}
+                highlighted={markdownChunkIntersectsLineRange({
+                  chunk,
                   range: highlightRange,
                 })}
                 onMeasuredHeight={recordMeasuredHeight}
               >
-                <PretextMarkdownPageRenderer page={page} />
-              </PretextMarkdownPage>
+                <PretextMarkdownChunkRenderer chunk={chunk} />
+              </PretextMarkdownChunk>
             )
           })}
         </div>
@@ -354,16 +354,16 @@ export function PretextMarkdownViewerContent({
   )
 }
 
-function PretextMarkdownPage({
+function PretextMarkdownChunk({
   children,
   frame,
   highlighted,
   onMeasuredHeight,
 }: {
   children: React.ReactNode
-  frame: PretextMarkdownPageFrame
+  frame: PretextMarkdownChunkFrame
   highlighted: boolean
-  onMeasuredHeight: (pageIndex: number, height: number) => void
+  onMeasuredHeight: (chunkIndex: number, height: number) => void
 }) {
   const ref = React.useRef<HTMLDivElement | null>(null)
 
@@ -385,10 +385,10 @@ function PretextMarkdownPage({
     <div
       ref={ref}
       className={[
-        "absolute right-4 left-4 rounded-md px-12 py-10",
+        "absolute right-4 left-4 px-12",
         highlighted ? "bg-primary/10 ring-1 ring-primary/25" : "",
       ].join(" ")}
-      data-pretext-markdown-page=""
+      data-pretext-markdown-chunk=""
       data-source-end-line={frame.sourceEndLine}
       data-source-start-line={frame.sourceStartLine}
       style={{
@@ -408,14 +408,14 @@ function getFrameScrollAnchor({
   frame: PretextMarkdownDocumentFrame
   scrollTop: number
 }): ScrollAnchor | null {
-  if (!frame.pages.length) return null
-  const page =
-    frame.pages.find((item) => item.bottom > scrollTop) ??
-    frame.pages[frame.pages.length - 1]
-  if (!page) return null
+  if (!frame.chunks.length) return null
+  const chunk =
+    frame.chunks.find((item) => item.bottom > scrollTop) ??
+    frame.chunks[frame.chunks.length - 1]
+  if (!chunk) return null
   return {
-    offsetWithinPage: Math.max(0, scrollTop - page.top),
-    pageIndex: page.index,
+    offsetWithinChunk: Math.max(0, scrollTop - chunk.top),
+    chunkIndex: chunk.index,
   }
 }
 

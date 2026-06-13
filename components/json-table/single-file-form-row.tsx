@@ -11,10 +11,8 @@ import type {
   JsonTableCellProps,
   VisibleColumn,
 } from "@/components/json-table/json-table-cell-types"
-import type {
-  JsonTablePrimitiveActiveCell,
-  JsonTableStructuredEditSession,
-} from "@/components/json-table/json-table-edit-session"
+import type { JsonTableStructuredEditSession } from "@/components/json-table/json-table-edit-session"
+import type { JsonTablePrimitiveActiveCellStore } from "@/components/json-table/json-table-primitive-active-cell-store"
 import { recordJsonTableRender } from "@/components/json-table/json-table-profiler"
 import type { ProjectedRow } from "@/components/json-table/lib/document-projection"
 import type { TableDocument } from "@/components/json-table/lib/projects-types"
@@ -39,7 +37,7 @@ interface SingleFileFormRowProps {
   rowIdx: number
   rowTopPx: number
   rowHeightPx: number
-  primitiveActiveCell?: JsonTablePrimitiveActiveCell | null
+  primitiveActiveCellStore: JsonTablePrimitiveActiveCellStore
   setPrimitiveActiveCell?: JsonTableCellProps["setPrimitiveActiveCell"]
   primitiveEditorHandleRef?: React.RefObject<DataCellEditorHandle | null>
   structuredEditSession?: JsonTableStructuredEditSession | null
@@ -66,8 +64,6 @@ function interactionPathsAffectRow(
   next: SingleFileFormRowProps
 ) {
   const paths = [
-    prev.primitiveActiveCell?.fieldPath,
-    next.primitiveActiveCell?.fieldPath,
     prev.structuredEditSession?.fieldPath,
     next.structuredEditSession?.fieldPath,
   ]
@@ -91,6 +87,7 @@ function areSingleFileFormRowPropsEqual(
     prev.rowIdx !== next.rowIdx ||
     prev.rowTopPx !== next.rowTopPx ||
     prev.rowHeightPx !== next.rowHeightPx ||
+    prev.primitiveActiveCellStore !== next.primitiveActiveCellStore ||
     prev.setPrimitiveActiveCell !== next.setPrimitiveActiveCell ||
     prev.primitiveEditorHandleRef !== next.primitiveEditorHandleRef ||
     prev.startStructuredEditSession !== next.startStructuredEditSession ||
@@ -117,7 +114,7 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
     rowIdx,
     rowTopPx,
     rowHeightPx,
-    primitiveActiveCell = null,
+    primitiveActiveCellStore,
     setPrimitiveActiveCell = () => {},
     primitiveEditorHandleRef,
     structuredEditSession = null,
@@ -134,7 +131,8 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
       React.useRef<DataCellEditorHandle | null>(null)
     recordJsonTableRender("SingleFileFormRow", String(rowIdx), {
       cellCount: projectedRow?.cells.length ?? 0,
-      primitiveActiveFieldPath: primitiveActiveCell?.fieldPath ?? null,
+      primitiveActiveFieldPath:
+        primitiveActiveCellStore.getSnapshot()?.fieldPath ?? null,
       structuredEditSessionFieldPath: structuredEditSession?.fieldPath ?? null,
       isJsonEditable,
       rowIdx,
@@ -182,7 +180,7 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
             schema,
             document,
             docId: documentId,
-            primitiveActiveCell,
+            primitiveActiveCellStore,
             setPrimitiveActiveCell,
             primitiveEditorHandleRef:
               primitiveEditorHandleRef ?? fallbackPrimitiveEditorHandleRef,

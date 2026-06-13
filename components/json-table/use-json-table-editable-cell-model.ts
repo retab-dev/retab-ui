@@ -23,7 +23,7 @@ export function useJsonTableEditableCellModel(
   useJsonTableFocusReturn({
     shellRef,
     isCellEditing: cellField.isCellEditing,
-    primitiveActiveCell: props.primitiveActiveCell,
+    primitiveActiveCell: cellField.primitiveActiveCell,
     structuredEditSession: props.structuredEditSession,
   })
 

@@ -2,6 +2,7 @@ import type * as React from "react"
 import type { JSONSchema7Definition, JSONSchema7Type } from "json-schema"
 
 import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
+import type { SchemaTypeMenuTrailingContent } from "@/components/schema-editor/primitives/schema-type-menu"
 
 export type PropertyFormMode = "descriptionOnly" | "readOnly" | "editable"
 
@@ -86,7 +87,9 @@ export interface PropertyFormFooterModel {
 export interface PropertyTypeFieldModel {
   schemaNode: ExtendedJSONSchema7
   schemaContext: PropertyFormSchemaContext
+  fieldPath?: string
   editable: boolean
+  trailingContent?: SchemaTypeMenuTrailingContent
   onChange: (schemaNode: ExtendedJSONSchema7) => void
 }
 

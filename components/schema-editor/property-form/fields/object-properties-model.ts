@@ -18,10 +18,12 @@ import type {
   PropertyFormSchemaContext,
   PropertySchemaDetailAccess,
   PropertySchemaDetailsModel,
+  PropertyTypeFieldModel,
 } from "@/components/schema-editor/property-form/types"
 import { validatePropertyFormName } from "@/components/schema-editor/property-form/validation"
 
 import { createObjectPropertyRowDetails } from "./object-property-row-details"
+import { createPropertyTypeField } from "./property-type-menu-model"
 
 interface UseObjectPropertiesModelInput {
   access: PropertySchemaDetailAccess
@@ -41,11 +43,11 @@ export interface ObjectPropertiesModel {
 export interface ObjectPropertyRowModel {
   id: string
   name: string
-  rowDetails: PropertySchemaDetailsModel
+  rowSchemaDetails: PropertySchemaDetailsModel
   nameField: ObjectPropertyNameFieldModel
   descriptionField: ObjectPropertyDescriptionFieldModel
   reorder: ObjectPropertyRowReorderModel
-  typeField: ObjectPropertyTypeFieldModel
+  typeField: PropertyTypeFieldModel
   deleteAction: {
     label: string
     onDelete: () => void
@@ -65,14 +67,6 @@ export interface ObjectPropertyDescriptionFieldModel {
   value: string
   editable: boolean
   onCommit: (description: string) => void
-}
-
-export interface ObjectPropertyTypeFieldModel {
-  schemaNode: ExtendedJSONSchema7
-  schemaContext: PropertyFormSchemaContext
-  fieldPath?: string
-  editable: boolean
-  onChange: (schemaNode: ExtendedJSONSchema7) => void
 }
 
 export interface ObjectPropertyRowReorderModel {
@@ -214,7 +208,7 @@ export function useObjectPropertiesModel({
       return [
         {
           id,
-          rowDetails: createObjectPropertyRowDetails({
+          rowSchemaDetails: createObjectPropertyRowDetails({
             access,
             editable,
             mode,
@@ -275,13 +269,12 @@ export function useObjectPropertiesModel({
             position: index + 1,
             rowCount: propertyNames.length,
           },
-          typeField: {
+          typeField: createPropertyTypeField({
             schemaNode: propertySchema,
             schemaContext: rowSchemaContext,
-            fieldPath: rowSchemaContext.fieldPath,
-            editable: editable && access.type,
+            disabled: !editable || !access.type,
             onChange: replaceSchemaNode,
-          },
+          }),
           deleteAction: {
             label: `Remove field ${name}`,
             onDelete: () => {

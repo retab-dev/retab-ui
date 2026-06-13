@@ -4,6 +4,13 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 import type { PageOverlayProps } from "@/components/ui/pdf-viewer"
+import {
+  ViewerBody,
+  ViewerHeader,
+  ViewerRoot,
+  ViewerSidebar,
+  ViewerSurface,
+} from "@/components/ui/viewer"
 
 import { EditViewerDocumentPane } from "./edit-viewer-document-pane"
 import { EditViewerFieldPanel } from "./edit-viewer-field-panel"
@@ -73,12 +80,10 @@ export function EditViewer({
   )
 
   return (
-    <div
+    <ViewerRoot
+      bare
       data-edit-viewer-root
-      className={cn(
-        "relative flex min-h-0 w-full flex-1 flex-col overflow-hidden bg-background md:flex-row",
-        className
-      )}
+      className={cn("h-full w-full flex-1 bg-background", className)}
     >
       {status.state === "detecting" || status.state === "filling" ? (
         <EditViewerBusyOverlay status={status} />
@@ -88,16 +93,21 @@ export function EditViewer({
         <EmptyEditViewerState />
       ) : (
         <>
-          <div className="relative flex min-w-0 flex-1 flex-col">
-            <EditViewerToolbar
-              modes={controller.availableModes}
-              mode={controller.activeMode}
-              onModeChange={controller.changeMode}
-              filledCount={controller.filledCount}
-              fieldCount={controller.fields.length}
-              status={controller.activeStatus}
-            />
-            <div className="relative min-h-0 flex-1">
+          {controller.availableModes.length > 0 ? (
+            <ViewerHeader className="bg-background">
+              <EditViewerToolbar
+                modes={controller.availableModes}
+                mode={controller.activeMode}
+                onModeChange={controller.changeMode}
+                filledCount={controller.filledCount}
+                fieldCount={controller.fields.length}
+                status={controller.activeStatus}
+              />
+            </ViewerHeader>
+          ) : null}
+
+          <ViewerBody className="flex-col md:flex-row">
+            <ViewerSurface className="relative">
               <EditViewerDocumentPane
                 mode={controller.activeMode}
                 sourceDocument={sourceDocument}
@@ -106,27 +116,29 @@ export function EditViewer({
                 viewerRef={controller.viewerRef}
                 status={status}
               />
-            </div>
-          </div>
+            </ViewerSurface>
 
-          {controller.resolvedOptions.fieldPanel ? (
-            <EditViewerFieldPanel
-              fields={controller.fields}
-              filledCount={controller.filledCount}
-              effectiveFieldKey={controller.effectiveFieldKey}
-              selectedFieldKey={controller.selectedFieldKey}
-              query={controller.query}
-              onQueryChange={controller.setQuery}
-              filter={controller.filter}
-              onFilterChange={controller.setFilter}
-              onFieldHover={controller.setHoveredFieldKey}
-              onFieldSelect={controller.selectField}
-              showSearch={controller.resolvedOptions.search}
-              showFilters={controller.resolvedOptions.filters}
-            />
-          ) : null}
+            {controller.resolvedOptions.fieldPanel ? (
+              <ViewerSidebar className="max-h-[42%] min-h-[220px] border-t bg-background md:max-h-none md:w-[320px] md:max-w-[50%] md:border-t-0 md:border-l">
+                <EditViewerFieldPanel
+                  fields={controller.fields}
+                  filledCount={controller.filledCount}
+                  effectiveFieldKey={controller.effectiveFieldKey}
+                  selectedFieldKey={controller.selectedFieldKey}
+                  query={controller.query}
+                  onQueryChange={controller.setQuery}
+                  filter={controller.filter}
+                  onFilterChange={controller.setFilter}
+                  onFieldHover={controller.setHoveredFieldKey}
+                  onFieldSelect={controller.selectField}
+                  showSearch={controller.resolvedOptions.search}
+                  showFilters={controller.resolvedOptions.filters}
+                />
+              </ViewerSidebar>
+            ) : null}
+          </ViewerBody>
         </>
       )}
-    </div>
+    </ViewerRoot>
   )
 }

@@ -27,28 +27,44 @@ export function EnumValuesField({
     setNextValue("")
   }, [resetKey])
 
+  const items = values.map((value, index) => {
+    const inputValue = formatEnumValueInput(value)
+    return {
+      id: `enum-value-${index}`,
+      inputLabel: `Option ${index + 1}: ${inputValue || "empty"}`,
+      removeLabel: `Remove option ${inputValue}`,
+      value: inputValue,
+    }
+  })
+
+  const indexFromId = (id: string) => Number(id.replace("enum-value-", ""))
+
   return (
     <div className="space-y-2">
       <Label className="text-xs text-muted-foreground">Enabled options</Label>
       <SchemaChipList
+        addRow={{
+          inputLabel: "Add new value",
+          placeholder: "Add new value",
+          submitLabel: "Add",
+          value: nextValue,
+          onChange: setNextValue,
+          onSubmit: () => {
+            onChange([...values, parseEnumValueInput(nextValue)])
+            setNextValue("")
+          },
+        }}
         editable={!disabled}
-        getKey={(index) => `enum-value-${index}`}
-        pendingValue={nextValue}
-        placeholder="Add new value"
-        submitLabel="Add"
-        values={values.map(formatEnumValueInput)}
-        onPendingValueChange={setNextValue}
-        onRemoveValue={(index) =>
+        items={items}
+        onRemove={(id) => {
+          const index = indexFromId(id)
           onChange(values.filter((_value, current) => current !== index))
-        }
-        onReplaceValue={(index, value) => {
+        }}
+        onReplace={(id, value) => {
+          const index = indexFromId(id)
           const nextValues = values.slice()
           nextValues[index] = parseEnumValueInput(value)
           onChange(nextValues)
-        }}
-        onSubmitPendingValue={() => {
-          onChange([...values, parseEnumValueInput(nextValue)])
-          setNextValue("")
         }}
       />
     </div>

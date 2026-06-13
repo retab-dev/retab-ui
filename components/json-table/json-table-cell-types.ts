@@ -5,9 +5,9 @@ import type { DataCellEditorHandle } from "@/components/ui/data-cell"
 import type { FixedGridColumn } from "@/components/ui/fixed-grid-columns"
 import type {
   JsonTableActivationIntent,
-  JsonTablePrimitiveActiveCell,
   JsonTableStructuredEditSession,
 } from "@/components/json-table/json-table-edit-session"
+import type { JsonTablePrimitiveActiveCellStore } from "@/components/json-table/json-table-primitive-active-cell-store"
 import type { ProjectedCell } from "@/components/json-table/lib/document-projection"
 import type { TableDocument } from "@/components/json-table/lib/projects-types"
 import type { FieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
@@ -28,9 +28,9 @@ export interface JsonTableCellProps {
   schema: JSONSchema7
   document: TableDocument
   docId: string
-  primitiveActiveCell: JsonTablePrimitiveActiveCell | null
+  primitiveActiveCellStore: JsonTablePrimitiveActiveCellStore
   setPrimitiveActiveCell: (
-    activeCell: JsonTablePrimitiveActiveCell | null
+    activeCell: ReturnType<JsonTablePrimitiveActiveCellStore["getSnapshot"]>
   ) => void
   primitiveEditorHandleRef: React.RefObject<DataCellEditorHandle | null>
   structuredEditSession: JsonTableStructuredEditSession | null

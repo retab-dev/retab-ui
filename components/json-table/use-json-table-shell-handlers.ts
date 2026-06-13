@@ -38,7 +38,6 @@ export function useJsonTableShellHandlers({
     docId,
     onCellHoverEnd,
     onCellHoverStart,
-    primitiveActiveCell,
     primitiveEditorHandleRef,
     projectedCell,
     setPrimitiveActiveCell,
@@ -64,7 +63,7 @@ export function useJsonTableShellHandlers({
   const finishPreviousPrimitive = useRefCallback(() => {
     finishPreviousPrimitiveEditor({
       currentCellId: cellId,
-      primitiveActiveCell,
+      primitiveActiveCell: props.primitiveActiveCellStore.getSnapshot(),
       primitiveEditorHandleRef,
       setPrimitiveActiveCell,
     })

@@ -7,6 +7,7 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable"
+import { ViewerBody, ViewerRoot, ViewerSurface } from "@/components/ui/viewer"
 import {
   PageMarkdownDocumentPane,
   type PageMarkdownDocumentPaneHandle,
@@ -110,10 +111,16 @@ export function PageMarkdownViewer({
 
   if (!hasPages) {
     return (
-      <PageMarkdownEmptyState
-        isProcessing={isProcessing}
-        processingLabel={processingLabel}
-      />
+      <ViewerRoot bare className="h-full flex-1 bg-background">
+        <ViewerBody>
+          <ViewerSurface>
+            <PageMarkdownEmptyState
+              isProcessing={isProcessing}
+              processingLabel={processingLabel}
+            />
+          </ViewerSurface>
+        </ViewerBody>
+      </ViewerRoot>
     )
   }
 
@@ -137,23 +144,38 @@ export function PageMarkdownViewer({
   )
 
   if (!renderDocument) {
-    return <div className="flex min-h-0 flex-1 flex-col">{markdownPane}</div>
+    return (
+      <ViewerRoot bare className="h-full flex-1 bg-background">
+        <ViewerBody>
+          <ViewerSurface>{markdownPane}</ViewerSurface>
+        </ViewerBody>
+      </ViewerRoot>
+    )
   }
 
   return (
-    <ResizablePanelGroup orientation="horizontal" className="min-h-0 flex-1">
-      <ResizablePanel defaultSize={52} minSize={28}>
-        <PageMarkdownDocumentPane
-          ref={documentPaneRef}
-          renderDocument={renderDocument}
-          onCurrentPageChange={handleDocumentPageChange}
-          onScrollProgressChange={handleDocumentScrollProgressChange}
-        />
-      </ResizablePanel>
-      <ResizableHandle withHandle />
-      <ResizablePanel defaultSize={48} minSize={28}>
-        {markdownPane}
-      </ResizablePanel>
-    </ResizablePanelGroup>
+    <ViewerRoot bare className="h-full flex-1 bg-background">
+      <ViewerBody>
+        <ResizablePanelGroup
+          orientation="horizontal"
+          className="min-h-0 flex-1"
+        >
+          <ResizablePanel defaultSize={52} minSize={28}>
+            <ViewerSurface className="h-full">
+              <PageMarkdownDocumentPane
+                ref={documentPaneRef}
+                renderDocument={renderDocument}
+                onCurrentPageChange={handleDocumentPageChange}
+                onScrollProgressChange={handleDocumentScrollProgressChange}
+              />
+            </ViewerSurface>
+          </ResizablePanel>
+          <ResizableHandle withHandle />
+          <ResizablePanel defaultSize={48} minSize={28}>
+            <ViewerSurface className="h-full">{markdownPane}</ViewerSurface>
+          </ResizablePanel>
+        </ResizablePanelGroup>
+      </ViewerBody>
+    </ViewerRoot>
   )
 }

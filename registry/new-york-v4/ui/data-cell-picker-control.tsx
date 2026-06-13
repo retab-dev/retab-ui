@@ -95,15 +95,16 @@ export function DataCellPickerControl({
   const initialPickerValue = formatDataCellEditValue(kind, value)
   const [uncontrolledDraftValue, setUncontrolledDraftValue] =
     React.useState(initialPickerValue)
-  const [uncontrolledOpen, setUncontrolledOpen] = React.useState(
-    Boolean(autoFocus)
-  )
+  const [uncontrolledOpen, setUncontrolledOpen] = React.useState(false)
   const triggerRef = React.useRef<HTMLButtonElement>(null)
   const popupRef = React.useRef<HTMLDivElement>(null)
+  const popupStyleRef = React.useRef<React.CSSProperties | null>(null)
   const openingContext = useDataCellOpeningContext(activationSource, {
     enabled: Boolean(autoFocus),
   })
-  const [popupStyle, setPopupStyle] = React.useState<React.CSSProperties>()
+  const [popupStyle, setPopupStyle] = React.useState<React.CSSProperties | null>(
+    null
+  )
   const popupId = React.useId()
   const open = isPickerOpen ?? uncontrolledOpen
   const pickerValue = draftValue ?? uncontrolledDraftValue
@@ -115,6 +116,10 @@ export function DataCellPickerControl({
   const isEmpty = content === ""
   const setOpen = React.useCallback(
     (open: boolean) => {
+      if (!open) {
+        popupStyleRef.current = null
+        setPopupStyle(null)
+      }
       if (isPickerOpen === undefined) setUncontrolledOpen(open)
       onPickerOpenChange?.(open)
     },
@@ -132,24 +137,27 @@ export function DataCellPickerControl({
     onEditingEnd?.()
   }, [onEditingEnd, openingContext, setOpen])
 
-  const updatePopupPosition = React.useCallback(() => {
+  const measurePopupStyle = React.useCallback(() => {
     const trigger = triggerRef.current
-    if (!trigger) return
+    if (!trigger) return null
 
-    setPopupStyle(
-      getDataCellPickerPopupStyle({
-        kind,
-        rect: trigger.getBoundingClientRect(),
-        viewportWidth: window.innerWidth,
-        viewportHeight: window.innerHeight,
-      })
-    )
+    return getDataCellPickerPopupStyle({
+      kind,
+      rect: trigger.getBoundingClientRect(),
+      viewportWidth: window.innerWidth,
+      viewportHeight: window.innerHeight,
+    })
   }, [kind])
 
   const openPopup = React.useCallback(() => {
-    updatePopupPosition()
+    if (!popupStyleRef.current) {
+      popupStyleRef.current = measurePopupStyle()
+    }
+    if (!popupStyleRef.current) return
+
+    setPopupStyle(popupStyleRef.current)
     setOpen(true)
-  }, [setOpen, updatePopupPosition])
+  }, [measurePopupStyle, setOpen])
 
   React.useLayoutEffect(() => {
     onEditorHandleChange?.({
@@ -161,13 +169,15 @@ export function DataCellPickerControl({
 
   React.useLayoutEffect(() => {
     if (!autoFocus) return
-    updatePopupPosition()
-    setOpen(true)
-  }, [autoFocus, setOpen, updatePopupPosition])
+    triggerRef.current?.focus({ preventScroll: true })
+    openPopup()
+  }, [autoFocus, openPopup])
 
   React.useLayoutEffect(() => {
-    if (open) updatePopupPosition()
-  }, [open, updatePopupPosition])
+    if (!open || popupStyleRef.current) return
+    popupStyleRef.current = measurePopupStyle()
+    if (popupStyleRef.current) setPopupStyle(popupStyleRef.current)
+  }, [measurePopupStyle, open])
 
   React.useEffect(() => {
     if (!open) return
@@ -195,7 +205,7 @@ export function DataCellPickerControl({
         closePopup()
       }
     }
-    const handleViewportChange = () => updatePopupPosition()
+    const handleViewportChange = () => closePopup()
 
     globalThis.document.addEventListener("pointerdown", handlePointerDown)
     globalThis.document.addEventListener("keydown", handleKeyDown)
@@ -207,7 +217,7 @@ export function DataCellPickerControl({
       window.removeEventListener("resize", handleViewportChange)
       window.removeEventListener("scroll", handleViewportChange, true)
     }
-  }, [closePopup, open, openingContext, updatePopupPosition])
+  }, [closePopup, open, openingContext])
 
   const updatePickerValue = (nextValue: string, commit = false) => {
     if (draftValue === undefined) setUncontrolledDraftValue(nextValue)
@@ -227,7 +237,7 @@ export function DataCellPickerControl({
   }
 
   const pickerPopup =
-    open && typeof globalThis.document !== "undefined"
+    open && popupStyle && typeof globalThis.document !== "undefined"
       ? createPortal(
           <div
             ref={popupRef}

@@ -4,6 +4,7 @@ import * as React from "react"
 
 import { getEffectiveType } from "@/components/schema-editor/draft/draft-node-edits"
 import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
+import { createPropertyTypeField } from "@/components/schema-editor/property-form/fields/property-type-menu-model"
 import { resolvePropertyCapabilities } from "@/components/schema-editor/property-form/model/property-capabilities"
 import { createPropertySchemaDetails } from "@/components/schema-editor/property-form/model/property-schema-details"
 import { normalizeValidationForCapabilities } from "@/components/schema-editor/property-form/model/property-validation"
@@ -153,6 +154,7 @@ export function usePropertyFormController({
         schemaNode,
       }),
   })
+  const { description } = propertyDraft.schemaNode
 
   return {
     validation,
@@ -168,16 +170,16 @@ export function usePropertyFormController({
             name,
           }),
       },
-      type: {
+      type: createPropertyTypeField({
         schemaNode: propertyDraft.schemaNode,
         schemaContext,
-        editable: capabilities.canEditType,
+        disabled: !capabilities.canEditType,
         onChange: (schemaNode: ExtendedJSONSchema7) =>
           updatePropertyDraft({
             type: "replacePropertySchemaNode",
             schemaNode,
           }),
-      },
+      }),
       nullable: {
         isNullable: effectiveType.isNullable,
         disabled: !capabilities.canEditNullable,
@@ -188,7 +190,7 @@ export function usePropertyFormController({
           }),
       },
       description: {
-        value: propertyDraft.schemaNode.description || "",
+        value: description || "",
         disabled: !capabilities.canEditDescription,
         onChange: (description) =>
           updatePropertyDraft({

@@ -53,9 +53,9 @@ export function EditViewerFieldPanel({
   )
 
   return (
-    <aside
+    <div
       data-edit-viewer-fields-panel
-      className="flex max-h-[42%] min-h-[220px] flex-shrink-0 flex-col border-t bg-background md:max-h-none md:w-[320px] md:max-w-[50%] md:border-t-0 md:border-l"
+      className="flex h-full min-h-0 flex-col bg-background"
     >
       <div className="flex h-10 flex-shrink-0 items-center gap-2 border-b px-3">
         <h2 className="px-1 text-sm font-medium">Form fields</h2>
@@ -130,7 +130,7 @@ export function EditViewerFieldPanel({
           ))
         )}
       </ScrollArea>
-    </aside>
+    </div>
   )
 }
 

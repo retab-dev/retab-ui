@@ -3,6 +3,7 @@
 import { updateEffectiveNode } from "@/components/schema-editor/draft/draft-node-edits"
 import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
 import { getEffectiveNode } from "@/components/schema-editor/lib/json-schema-utils"
+import { createPropertyTypeField } from "@/components/schema-editor/property-form/fields/property-type-menu-model"
 import { getArrayItemsForDraft } from "@/components/schema-editor/property-form/model/effective-node-edits"
 import type {
   PropertyFormMode,
@@ -40,12 +41,12 @@ export function createPropertySchemaDetails({
 
   return {
     type: showTypeSelector
-      ? {
+      ? createPropertyTypeField({
           schemaNode,
           schemaContext,
-          editable: !disabled && access.type,
+          disabled: disabled || !access.type,
           onChange,
-        }
+        })
       : undefined,
     enumValues:
       access.enumValues && Array.isArray(effectiveSchemaNode.enum)

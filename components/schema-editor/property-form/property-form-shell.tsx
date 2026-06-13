@@ -48,13 +48,7 @@ export function PropertyFormShell({
                 onChange={fields.nullable.onChange}
               />
             </div>
-            <TypeField
-              editable={fields.type.editable}
-              schemaNode={fields.type.schemaNode}
-              onChange={fields.type.onChange}
-              schemaContext={fields.type.schemaContext}
-              fieldPath={fields.type.schemaContext.fieldPath}
-            />
+            <TypeField field={fields.type} />
             {validation.schemaNode.message && (
               <p className="mt-2 flex items-center gap-1 text-sm font-medium text-destructive">
                 <AlertCircle className="h-3 w-3" />

@@ -58,7 +58,7 @@ export function useJsonTablePrimitiveControl({
       if (nextActive) {
         finishPreviousPrimitiveEditor({
           currentCellId: cellField.cellId,
-          primitiveActiveCell: props.primitiveActiveCell,
+          primitiveActiveCell: props.primitiveActiveCellStore.getSnapshot(),
           primitiveEditorHandleRef: props.primitiveEditorHandleRef,
           setPrimitiveActiveCell: props.setPrimitiveActiveCell,
         })
@@ -77,7 +77,7 @@ export function useJsonTablePrimitiveControl({
       cellField.isPrimitiveCell,
       cellField.materializedFieldPath,
       props.docId,
-      props.primitiveActiveCell,
+      props.primitiveActiveCellStore,
       props.primitiveEditorHandleRef,
       props.setPrimitiveActiveCell,
     ]

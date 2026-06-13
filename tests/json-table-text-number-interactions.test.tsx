@@ -13,6 +13,7 @@ import type {
   JsonTableStructuredEditSession,
 } from "@/components/json-table/json-table-edit-session"
 import { jsonTableCellId } from "@/components/json-table/json-table-edit-session"
+import { createJsonTablePrimitiveActiveCellStore } from "@/components/json-table/json-table-primitive-active-cell-store"
 import type { ProjectedCell } from "@/components/json-table/lib/document-projection"
 import { projectDocumentRows } from "@/components/json-table/lib/document-projection"
 import type { TableDocument } from "@/components/json-table/lib/projects-types"
@@ -71,7 +72,7 @@ function SingleFileFormRowHarness({
   ...props
 }: Omit<
   React.ComponentProps<typeof SingleFileFormRow>,
-  | "primitiveActiveCell"
+  | "primitiveActiveCellStore"
   | "setPrimitiveActiveCell"
   | "structuredEditSession"
   | "startStructuredEditSession"
@@ -84,15 +85,16 @@ function SingleFileFormRowHarness({
   >["onDocumentDataChange"]
   onEditSessionChange?: (activeCell: JsonTableActiveCell | null) => void
 }) {
-  const [primitiveActiveCell, setPrimitiveActiveCellState] =
-    React.useState<JsonTablePrimitiveActiveCell | null>(null)
+  const primitiveActiveCellStoreRef = React.useRef(
+    createJsonTablePrimitiveActiveCellStore()
+  )
   const [structuredEditSession, setStructuredEditSessionState] =
     React.useState<JsonTableStructuredEditSession | null>(null)
   const sessionIdRef = React.useRef(0)
 
   const setPrimitiveActiveCell = React.useCallback(
     (activeCell: JsonTablePrimitiveActiveCell | null) => {
-      setPrimitiveActiveCellState(activeCell)
+      primitiveActiveCellStoreRef.current.setSnapshot(activeCell)
       if (activeCell) setStructuredEditSessionState(null)
       onEditSessionChange?.(activeCell)
     },
@@ -114,7 +116,7 @@ function SingleFileFormRowHarness({
         intent,
         isOverlayOpen: false,
       }
-      setPrimitiveActiveCellState(null)
+      primitiveActiveCellStoreRef.current.setSnapshot(null)
       setStructuredEditSessionState(nextSession)
       onEditSessionChange?.(nextSession)
     },
@@ -135,13 +137,13 @@ function SingleFileFormRowHarness({
   )
   const closeStructuredEditSession = React.useCallback(() => {
     setStructuredEditSessionState(null)
-    onEditSessionChange?.(primitiveActiveCell)
-  }, [onEditSessionChange, primitiveActiveCell])
+    onEditSessionChange?.(primitiveActiveCellStoreRef.current.getSnapshot())
+  }, [onEditSessionChange])
 
   return (
     <SingleFileFormRow
       {...props}
-      primitiveActiveCell={primitiveActiveCell}
+      primitiveActiveCellStore={primitiveActiveCellStoreRef.current}
       setPrimitiveActiveCell={setPrimitiveActiveCell}
       structuredEditSession={structuredEditSession}
       startStructuredEditSession={startStructuredEditSession}

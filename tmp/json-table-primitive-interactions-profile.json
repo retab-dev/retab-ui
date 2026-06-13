@@ -1,10 +1,12 @@
 {
-  "measuredAt": "2026-06-13T22:16:23.323Z",
+  "measuredAt": "2026-06-13T22:47:52.112Z",
   "route": "http://localhost:3100/json-table-profile",
   "scenarios": [
     {
       "name": "open-enum",
       "popupMounted": true,
+      "pickerPopupMounted": false,
+      "calendarMounted": false,
       "popupOptions": 2,
       "baseUiSelectMounted": false,
       "activeEditableCells": 1,
@@ -17,55 +19,23 @@
       },
       "profiler": {
         "renders": {
-          "total": 10,
+          "total": 4,
           "byComponent": [
-            {
-              "name": "SingleFileVirtualizedTable",
-              "count": 4
-            },
             {
               "name": "EditableJsonTableCell",
               "count": 4
-            },
-            {
-              "name": "SingleFileFormRow",
-              "count": 2
             }
           ],
           "byInstance": [
             {
-              "name": "SingleFileVirtualizedTable:doc_1",
-              "count": 4
-            },
-            {
               "name": "EditableJsonTableCell:transactions.0.transaction_type",
               "count": 4
-            },
-            {
-              "name": "SingleFileFormRow:0",
-              "count": 2
             }
           ],
           "changedProps": [
             {
-              "name": "SingleFileVirtualizedTable.same-props",
-              "count": 3
-            },
-            {
               "name": "EditableJsonTableCell.same-props",
               "count": 3
-            },
-            {
-              "name": "SingleFileVirtualizedTable.primitiveActiveFieldPath",
-              "count": 1
-            },
-            {
-              "name": "SingleFileFormRow.primitiveActiveFieldPath",
-              "count": 1
-            },
-            {
-              "name": "SingleFileFormRow.same-props",
-              "count": 1
             },
             {
               "name": "EditableJsonTableCell.primitiveActiveFieldPath",
@@ -79,28 +49,30 @@
         },
         "reactCommits": {
           "count": 3,
-          "totalActualDurationMs": 1.7999999970197678,
-          "maxActualDurationMs": 1.0999999940395355
+          "totalActualDurationMs": 3.0999999940395355,
+          "maxActualDurationMs": 1.3999999985098839
         }
       },
       "wait": {
         "ok": true,
-        "elapsedMs": 32.899999998509884
+        "elapsedMs": 33.399999998509884
       },
-      "elapsedMs": 131.5,
+      "elapsedMs": 136.5,
       "metricsDelta": {
         "Nodes": 16,
         "LayoutCount": 2,
-        "RecalcStyleCount": 13,
-        "LayoutDurationMs": 0.4299999999999997,
-        "RecalcStyleDurationMs": 86.42199999999997,
-        "ScriptDurationMs": 5.634999999999991,
-        "TaskDurationMs": 95.58000000000004
+        "RecalcStyleCount": 12,
+        "LayoutDurationMs": 0.3990000000000009,
+        "RecalcStyleDurationMs": 89.40600000000003,
+        "ScriptDurationMs": 6.969000000000051,
+        "TaskDurationMs": 99.83600000000001
       }
     },
     {
       "name": "open-and-commit-enum",
       "popupMounted": false,
+      "pickerPopupMounted": false,
+      "calendarMounted": false,
       "popupOptions": 0,
       "baseUiSelectMounted": false,
       "activeEditableCells": 0,
@@ -115,63 +87,51 @@
       },
       "profiler": {
         "renders": {
-          "total": 28,
+          "total": 18,
           "byComponent": [
             {
               "name": "EditableJsonTableCell",
-              "count": 12
+              "count": 10
             },
             {
               "name": "SingleFileVirtualizedTable",
-              "count": 8
-            },
-            {
-              "name": "SingleFileFormRow",
-              "count": 6
+              "count": 4
             },
             {
               "name": "SingleFileTableView",
+              "count": 2
+            },
+            {
+              "name": "SingleFileFormRow",
               "count": 2
             }
           ],
           "byInstance": [
             {
               "name": "EditableJsonTableCell:transactions.0.transaction_type",
-              "count": 12
+              "count": 10
             },
             {
               "name": "SingleFileVirtualizedTable:doc_1",
-              "count": 8
-            },
-            {
-              "name": "SingleFileFormRow:0",
-              "count": 6
+              "count": 4
             },
             {
               "name": "SingleFileTableView:doc_1",
+              "count": 2
+            },
+            {
+              "name": "SingleFileFormRow:0",
               "count": 2
             }
           ],
           "changedProps": [
             {
               "name": "EditableJsonTableCell.same-props",
-              "count": 10
+              "count": 8
             },
             {
               "name": "SingleFileVirtualizedTable.same-props",
-              "count": 6
-            },
-            {
-              "name": "SingleFileFormRow.same-props",
               "count": 4
-            },
-            {
-              "name": "SingleFileVirtualizedTable.primitiveActiveFieldPath",
-              "count": 2
-            },
-            {
-              "name": "SingleFileFormRow.primitiveActiveFieldPath",
-              "count": 2
             },
             {
               "name": "EditableJsonTableCell.primitiveActiveFieldPath",
@@ -184,33 +144,39 @@
             {
               "name": "SingleFileTableView.same-props",
               "count": 2
+            },
+            {
+              "name": "SingleFileFormRow.same-props",
+              "count": 2
             }
           ]
         },
         "reactCommits": {
           "count": 7,
-          "totalActualDurationMs": 8,
-          "maxActualDurationMs": 2.0999999940395355
+          "totalActualDurationMs": 6.200000002980232,
+          "maxActualDurationMs": 2.600000001490116
         }
       },
       "wait": {
         "ok": true,
-        "elapsedMs": 32.70000000298023
+        "elapsedMs": 33.20000000298023
       },
-      "elapsedMs": 249.70000000298023,
+      "elapsedMs": 282.6000000014901,
       "metricsDelta": {
         "Nodes": 20,
         "LayoutCount": 3,
-        "RecalcStyleCount": 23,
-        "LayoutDurationMs": 0.32700000000000173,
-        "RecalcStyleDurationMs": 131.825,
-        "ScriptDurationMs": 28.81099999999998,
-        "TaskDurationMs": 167.6780000000001
+        "RecalcStyleCount": 21,
+        "LayoutDurationMs": 0.40000000000000036,
+        "RecalcStyleDurationMs": 132.46399999999994,
+        "ScriptDurationMs": 27.00799999999998,
+        "TaskDurationMs": 166.23500000000013
       }
     },
     {
       "name": "toggle-checkbox",
       "popupMounted": false,
+      "pickerPopupMounted": false,
+      "calendarMounted": false,
       "popupOptions": 0,
       "baseUiSelectMounted": false,
       "activeEditableCells": 0,
@@ -236,84 +202,54 @@
       },
       "wait": {
         "ok": true,
-        "elapsedMs": 32.600000001490116
+        "elapsedMs": 33.19999999552965
       },
-      "elapsedMs": 43.79999999701977,
+      "elapsedMs": 45.099999994039536,
       "metricsDelta": {
         "Nodes": 0,
         "LayoutCount": 0,
         "RecalcStyleCount": 6,
         "LayoutDurationMs": 0,
-        "RecalcStyleDurationMs": 0.7180000000000177,
-        "ScriptDurationMs": 0.6340000000000146,
-        "TaskDurationMs": 13.569999999999936
+        "RecalcStyleDurationMs": 0.67999999999995,
+        "ScriptDurationMs": 0.49900000000002365,
+        "TaskDurationMs": 12.719000000000051
       }
     },
     {
       "name": "open-date-picker",
       "popupMounted": false,
+      "pickerPopupMounted": true,
+      "calendarMounted": true,
       "popupOptions": 0,
       "baseUiSelectMounted": false,
       "activeEditableCells": 1,
       "totalDomNodes": 1487,
       "rectProbe": {
-        "count": 6,
+        "count": 3,
         "bySlot": {
           "table-cell": 2,
-          "data-cell": 4
+          "data-cell": 1
         }
       },
       "profiler": {
         "renders": {
-          "total": 8,
+          "total": 4,
           "byComponent": [
             {
               "name": "EditableJsonTableCell",
               "count": 4
-            },
-            {
-              "name": "SingleFileVirtualizedTable",
-              "count": 2
-            },
-            {
-              "name": "SingleFileFormRow",
-              "count": 2
             }
           ],
           "byInstance": [
             {
               "name": "EditableJsonTableCell:transactions.0.date",
               "count": 4
-            },
-            {
-              "name": "SingleFileVirtualizedTable:doc_1",
-              "count": 2
-            },
-            {
-              "name": "SingleFileFormRow:0",
-              "count": 2
             }
           ],
           "changedProps": [
             {
               "name": "EditableJsonTableCell.same-props",
               "count": 3
-            },
-            {
-              "name": "SingleFileVirtualizedTable.primitiveActiveFieldPath",
-              "count": 1
-            },
-            {
-              "name": "SingleFileVirtualizedTable.same-props",
-              "count": 1
-            },
-            {
-              "name": "SingleFileFormRow.primitiveActiveFieldPath",
-              "count": 1
-            },
-            {
-              "name": "SingleFileFormRow.same-props",
-              "count": 1
             },
             {
               "name": "EditableJsonTableCell.primitiveActiveFieldPath",
@@ -326,24 +262,24 @@
           ]
         },
         "reactCommits": {
-          "count": 3,
-          "totalActualDurationMs": 28.399999998509884,
-          "maxActualDurationMs": 19.400000005960464
+          "count": 4,
+          "totalActualDurationMs": 25.399999998509884,
+          "maxActualDurationMs": 17.799999997019768
         }
       },
       "wait": {
         "ok": true,
-        "elapsedMs": 33.79999999701977
+        "elapsedMs": 33
       },
-      "elapsedMs": 171.89999999850988,
+      "elapsedMs": 163.79999999701977,
       "metricsDelta": {
-        "Nodes": 360,
+        "Nodes": 182,
         "LayoutCount": 2,
-        "RecalcStyleCount": 9,
-        "LayoutDurationMs": 0.9719999999999995,
-        "RecalcStyleDurationMs": 91.88299999999992,
-        "ScriptDurationMs": 33.424000000000035,
-        "TaskDurationMs": 129.57000000000005
+        "RecalcStyleCount": 10,
+        "LayoutDurationMs": 0.7969999999999988,
+        "RecalcStyleDurationMs": 90.69100000000009,
+        "ScriptDurationMs": 31.278999999999996,
+        "TaskDurationMs": 126.97599999999989
       }
     }
   ]

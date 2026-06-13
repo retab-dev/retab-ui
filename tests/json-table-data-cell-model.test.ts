@@ -8,21 +8,28 @@ import type {
 } from "@/components/json-table/lib/schema-field-metadata"
 
 function fieldMetadata({
+  disabledEnumValues,
   enumValues = [],
   isNullable = false,
   kind,
 }: {
+  disabledEnumValues?: unknown[]
   enumValues?: unknown[]
   isNullable?: boolean
   kind: FieldKind
 }): FieldMetadata {
+  const rawSchema =
+    disabledEnumValues === undefined
+      ? {}
+      : { "x-disabled-enum-values": disabledEnumValues }
+
   return {
-    effectiveSchema: {},
+    effectiveSchema: rawSchema,
     enumValues,
     fieldPath: "field",
     isNullable,
     kind,
-    rawSchema: {},
+    rawSchema,
     schema: {},
   }
 }
@@ -65,6 +72,26 @@ describe("json table DataCell model", () => {
     expect(model.value).toBe("option:0")
     expect(model.commitValue("option:0")).toBe(approved)
     expect(model.commitValue("option:1")).toBe(rejected)
+  })
+
+  it("marks schema-disabled enum values as disabled select options", () => {
+    const metadata = fieldMetadata({
+      disabledEnumValues: ["archived"],
+      enumValues: ["draft", "archived", "approved"],
+      kind: "enum",
+    })
+    const model = createJsonTableDataCellModel({
+      fieldMetadata: metadata,
+      value: "draft",
+    })
+
+    expect(model.kind).toBe("select")
+    if (model.kind !== "select") throw new Error("Expected select model")
+    expect(model.selectOptions.map((option) => option.disabled ?? false)).toEqual([
+      false,
+      true,
+      false,
+    ])
   })
 
   it("maps nullable enum null through a table-local select sentinel", () => {

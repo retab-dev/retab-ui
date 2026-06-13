@@ -15,15 +15,7 @@ export function PropertySchemaDetailsField({
 
   return (
     <div className="space-y-3">
-      {type && (
-        <TypeField
-          schemaNode={type.schemaNode}
-          schemaContext={type.schemaContext}
-          fieldPath={type.schemaContext.fieldPath}
-          editable={type.editable}
-          onChange={type.onChange}
-        />
-      )}
+      {type && <TypeField field={type} />}
       {enumValues && (
         <EnumValuesField
           values={enumValues.values}

@@ -77,6 +77,10 @@ describe("PretextMarkdownViewer", () => {
     expect(
       container.querySelector('[data-slot="markdown-document-page"]')
     ).toBeNull()
+    expect(container.querySelector("[data-pretext-markdown-page]")).toBeNull()
+    expect(
+      container.querySelector("[data-pretext-markdown-chunk]")
+    ).toBeTruthy()
     expect(container.textContent).not.toContain("Page 1 of")
   })
 
@@ -152,6 +156,46 @@ describe("PretextMarkdownViewer", () => {
     expect(await screen.findByText(/“quotes”/)).toBeTruthy()
     expect(screen.getByText(/→ arrows ✨/)).toBeTruthy()
     expect(screen.getByText("literal -> :sparkles:")).toBeTruthy()
+  })
+
+  it("renders GFM inline semantics for breaks, strike, and autolinks", async () => {
+    const { container } = render(
+      <PretextMarkdownViewer
+        source={markdownSource(
+          [
+            "First line",
+            "Second line with ~~removed~~ text and www.retab.com.",
+          ].join("\n")
+        )}
+        toolbar={false}
+      />
+    )
+
+    expect(await screen.findByText(/First line/)).toBeTruthy()
+    expect(container.querySelector("p br")).toBeTruthy()
+    expect(container.querySelector("del")?.textContent).toBe("removed")
+    expect(
+      screen.getByRole("link", { name: "www.retab.com" }).getAttribute("href")
+    ).toBe("http://www.retab.com")
+  })
+
+  it("renders GFM task list checkboxes as read-only controls", async () => {
+    render(
+      <PretextMarkdownViewer
+        source={markdownSource(["- [x] Done", "- [ ] Pending"].join("\n"))}
+        toolbar={false}
+      />
+    )
+
+    const completed = await screen.findByRole("checkbox", {
+      name: "Completed task",
+    })
+    const pending = screen.getByRole("checkbox", { name: "Incomplete task" })
+
+    expect((completed as HTMLInputElement).checked).toBe(true)
+    expect(completed.hasAttribute("readonly")).toBe(true)
+    expect((pending as HTMLInputElement).checked).toBe(false)
+    expect(pending.hasAttribute("readonly")).toBe(true)
   })
 
   it("renders whitelisted component markdown through safe React components", async () => {
@@ -288,6 +332,31 @@ describe("PretextMarkdownViewer", () => {
     })
   })
 
+  it("syntax-highlights fenced code without changing copied source", async () => {
+    const { container } = render(
+      <PretextMarkdownViewer
+        source={markdownSource(
+          "```ts\nexport const viewer = 'markdown'\n```"
+        )}
+        toolbar={false}
+      />
+    )
+
+    expect(await screen.findByText("ts")).toBeTruthy()
+    expect(
+      container.querySelector("[data-rehype-pretty-code-figure]")
+    ).toBeTruthy()
+    expect(container.querySelector("[data-line]")).toBeTruthy()
+
+    fireEvent.click(screen.getByLabelText("Copy code block"))
+
+    await waitFor(() => {
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+        "export const viewer = 'markdown'"
+      )
+    })
+  })
+
   it("copies rendered table cells as TSV", async () => {
     render(
       <PretextMarkdownViewer
@@ -310,6 +379,30 @@ describe("PretextMarkdownViewer", () => {
         ["Name\tLink", "Bold code\tSite"].join("\n")
       )
     })
+  })
+
+  it("renders safe raw HTML through the Pretext sanitizer", async () => {
+    const { container } = render(
+      <PretextMarkdownViewer
+        source={markdownSource(
+          [
+            '<details open class="raw" onclick="bad()">',
+            "<summary>More</summary>",
+            '<mark style="color:red">Safe</mark><script>alert(1)</script>',
+            "</details>",
+          ].join("\n")
+        )}
+        toolbar={false}
+      />
+    )
+
+    expect(await screen.findByText("More")).toBeTruthy()
+    expect(screen.getByText("Safe").tagName).toBe("MARK")
+    expect(container.querySelector("details")).toBeTruthy()
+    expect(container.querySelector("script")).toBeNull()
+    expect(container.querySelector("details")?.getAttribute("onclick")).toBeNull()
+    expect(container.querySelector("details")?.className).not.toContain("raw")
+    expect(container.querySelector("mark")?.getAttribute("style")).toBeNull()
   })
 
   it("sanitizes links and images without mounting unsafe DOM", async () => {
@@ -338,7 +431,7 @@ describe("PretextMarkdownViewer", () => {
     expect(container.querySelector("[src='javascript:alert(1)']")).toBeNull()
   })
 
-  it("keeps YAML frontmatter as a first-class page", async () => {
+  it("keeps YAML frontmatter as a first-class chunk", async () => {
     const { container } = render(
       <PretextMarkdownViewer
         source={markdownSource(
@@ -373,6 +466,23 @@ describe("PretextMarkdownViewer", () => {
       "api_v2-sdk",
       "api_v2-sdk-1",
     ])
+  })
+
+  it("renders lower heading levels with stable ids", async () => {
+    render(
+      <PretextMarkdownViewer
+        source={markdownSource(["##### Deep", "", "###### Small"].join("\n"))}
+        toolbar={false}
+      />
+    )
+
+    const deep = await screen.findByRole("heading", { name: "Deep" })
+    const small = await screen.findByRole("heading", { name: "Small" })
+
+    expect(deep.tagName).toBe("H5")
+    expect(deep.id).toBe("deep")
+    expect(small.tagName).toBe("H6")
+    expect(small.id).toBe("small")
   })
 
   it("resolves local heading fragments through the virtual document model", async () => {

@@ -4,327 +4,166 @@ import * as React from "react"
 import { ChevronDown } from "lucide-react"
 
 import { cn } from "@/lib/utils"
-import {
-  useDataCellOpeningContext,
-  type DataCellDismissCause,
-} from "@/registry/new-york-v4/ui/data-cell-activation"
 import { dataCellPickerTriggerClass } from "@/registry/new-york-v4/ui/data-cell-classes"
-import {
-  firstEnabledDataCellSelectOptionIndex,
-  lastEnabledDataCellSelectOptionIndex,
-  nextEnabledDataCellSelectOptionIndex,
-  selectedDataCellSelectOptionIndex,
-} from "@/registry/new-york-v4/ui/data-cell-select-navigation"
+import { useDataCellSelectActivation } from "@/registry/new-york-v4/ui/data-cell-select-activation"
+import { useDataCellSelectKeyboard } from "@/registry/new-york-v4/ui/data-cell-select-keyboard"
 import { DataCellSelectPopup } from "@/registry/new-york-v4/ui/data-cell-select-popup"
-import {
-  getDataCellSelectPopupPosition,
-  type DataCellSelectPopupPosition,
-} from "@/registry/new-york-v4/ui/data-cell-select-popup-position"
+import { useDataCellSelectState } from "@/registry/new-york-v4/ui/data-cell-select-state"
 import type {
-  DataCellProps,
+  DataCellActivationSource,
+  DataCellEditorHandle,
+  DataCellSelectOption,
   DataCellValueMeta,
 } from "@/registry/new-york-v4/ui/data-cell-types"
 
-export type DataCellSelectControlProps = DataCellProps & { kind: "select" }
+type DataCellSelectFormatValue = (
+  value: string | null | undefined,
+  meta: { kind: "select" }
+) => React.ReactNode
 
-function selectValueMeta(value: string | null): DataCellValueMeta {
-  return {
-    kind: "select",
-    rawValue: value ?? "",
-    isEmpty: value === null || value === "",
-    isValid: true,
-  }
-}
-
-function dataCellSelectDismissCause(
-  kind: DataCellDismissCause["kind"],
-  event: Event | undefined
-): DataCellDismissCause {
-  if (kind === "outside-pointer" && event instanceof PointerEvent) {
-    return { kind, event }
-  }
-  if (kind === "escape" && event instanceof KeyboardEvent)
-    return { kind, event }
-  if (kind === "trigger-press") return { kind, event }
-  if (kind === "focus-out") return { kind, event }
-  if (kind === "cancel-open") return { kind, event }
-  return { kind: "unknown", event }
+export type DataCellSelectControlProps = {
+  value?: string | null
+  disabled?: boolean
+  placeholder?: string
+  className?: string
+  formatValue?: DataCellSelectFormatValue
+  autoFocus?: boolean
+  activationSource?: DataCellActivationSource
+  isPickerOpen?: boolean
+  selectOptions: DataCellSelectOption[]
+  onCommit?: (value: string | null, meta: DataCellValueMeta) => void
+  onEditingEnd?: () => void
+  onPickerOpenChange?: (open: boolean) => void
+  onEditorHandleChange?: (handle: DataCellEditorHandle | null) => void
 }
 
 export function DataCellSelectControl({
-  kind,
   value,
-  editable: _editable,
-  active: _active,
-  mode: _mode,
   disabled = false,
-  name: _name,
   placeholder = "Select...",
-  dateTimeZone: _dateTimeZone,
-  showPickerIcon: _showPickerIcon,
   className,
   formatValue,
-  draftValue: _draftValue,
   autoFocus,
   activationSource,
   isPickerOpen,
   selectOptions,
-  onDraftValueChange: _onDraftValueChange,
   onCommit,
   onEditingEnd,
-  onActiveChange: _onActiveChange,
   onPickerOpenChange,
   onEditorHandleChange,
-  onFocus: _onFocus,
-  onBlur: _onBlur,
-  onKeyDown: _onKeyDown,
-  onClick: _onClick,
-  onDoubleClick: _onDoubleClick,
-  ...props
 }: DataCellSelectControlProps) {
   const triggerRef = React.useRef<HTMLButtonElement>(null)
   const popupId = React.useId()
-  const openingContext = useDataCellOpeningContext(activationSource, {
-    enabled: Boolean(autoFocus),
+  const select = useDataCellSelectState({
+    popupId,
+    value,
+    placeholder,
+    formatValue,
+    isPickerOpen,
+    selectOptions,
+    onCommit,
+    onEditingEnd,
+    onPickerOpenChange,
   })
-  const lastCommittedValueRef = React.useRef<string | null>(null)
-  const didFinishEditingRef = React.useRef(false)
-  const popupPositionRef = React.useRef<DataCellSelectPopupPosition | null>(
-    null
-  )
-  const [uncontrolledOpen, setUncontrolledOpen] = React.useState(false)
-  const [activeOptionIndex, setActiveOptionIndex] = React.useState(-1)
-  const [popupPosition, setPopupPosition] =
-    React.useState<DataCellSelectPopupPosition | null>(null)
-  const open = isPickerOpen ?? uncontrolledOpen
-  const selectedValue = value ?? null
-  const selectedOption = selectOptions.find((option) => option.value === value)
-  const activeOption = selectOptions[activeOptionIndex]
-  const activeDescendantId =
-    open && activeOptionIndex >= 0
-      ? `${popupId}-option-${activeOptionIndex}`
-      : undefined
-  const displayValue =
-    formatValue?.(selectedValue, { kind }) ?? selectedOption?.label ?? ""
-  const isEmpty = displayValue === ""
-
-  const setOpen = React.useCallback(
-    (nextOpen: boolean) => {
-      if (!nextOpen) {
-        popupPositionRef.current = null
-        setPopupPosition(null)
-      }
-      if (isPickerOpen === undefined) setUncontrolledOpen(nextOpen)
-      onPickerOpenChange?.(nextOpen)
-    },
-    [isPickerOpen, onPickerOpenChange]
-  )
-
-  const openSelectEditor = React.useCallback(() => {
-    const trigger = triggerRef.current
-    if (!trigger) return
-
-    if (!popupPositionRef.current) {
-      popupPositionRef.current = getDataCellSelectPopupPosition({
-        anchorRect: trigger.getBoundingClientRect(),
-        viewport: {
-          width: window.innerWidth,
-          height: window.innerHeight,
-        },
-      })
-    }
-    setPopupPosition(popupPositionRef.current)
-    setActiveOptionIndex(
-      selectedDataCellSelectOptionIndex({
-        options: selectOptions,
-        value: selectedValue,
-      })
-    )
-    setOpen(true)
-  }, [selectOptions, selectedValue, setOpen])
-
-  const finishSelectEditing = React.useCallback(() => {
-    if (didFinishEditingRef.current) return
-    didFinishEditingRef.current = true
-    onEditingEnd?.()
-  }, [onEditingEnd])
-
-  const closeSelectEditor = React.useCallback(() => {
-    openingContext.release()
-    setOpen(false)
-    finishSelectEditing()
-  }, [finishSelectEditing, openingContext, setOpen])
-
-  const commitSelectValue = React.useCallback(
+  const openEditor = React.useCallback(() => {
+    select.openEditor(triggerRef.current)
+  }, [select.openEditor])
+  const activation = useDataCellSelectActivation({
+    activationSource,
+    autoFocus,
+    triggerRef,
+    openEditor,
+    closeEditor: select.closeEditor,
+    keepOpen: select.keepOpen,
+    onEditorHandleChange,
+  })
+  const {
+    shouldCancelDismiss,
+    closeEditor: closeActivatedEditor,
+    openEditor: openActivatedEditor,
+    release,
+  } = activation
+  const commitValue = React.useCallback(
     (nextValue: string) => {
-      if (selectedValue === nextValue) {
-        closeSelectEditor()
-        return
-      }
-      if (lastCommittedValueRef.current === nextValue) return
-      lastCommittedValueRef.current = nextValue
-      openingContext.release()
-      setOpen(false)
-      onCommit?.(nextValue, selectValueMeta(nextValue))
-      finishSelectEditing()
+      release()
+      select.commitValue(nextValue)
     },
-    [
-      closeSelectEditor,
-      finishSelectEditing,
-      onCommit,
-      openingContext,
-      selectedValue,
-      setOpen,
-    ]
+    [release, select.commitValue]
   )
-
-  const cancelDismissDuringOpening = React.useCallback(
-    (kind: DataCellDismissCause["kind"], event: Event | undefined) => {
-      if (
-        !openingContext.shouldCancelDismiss(
-          dataCellSelectDismissCause(kind, event)
-        )
-      ) {
-        return false
-      }
-
-      event?.preventDefault()
-      setOpen(true)
-      return true
-    },
-    [openingContext, setOpen]
-  )
-
-  React.useLayoutEffect(() => {
-    onEditorHandleChange?.({
-      finish: closeSelectEditor,
-      cancel: closeSelectEditor,
-    })
-    return () => onEditorHandleChange?.(null)
-  }, [closeSelectEditor, onEditorHandleChange])
-
-  React.useLayoutEffect(() => {
-    if (!autoFocus) return
-    lastCommittedValueRef.current = null
-    didFinishEditingRef.current = false
-    triggerRef.current?.focus({ preventScroll: true })
-    openSelectEditor()
-  }, [autoFocus, openSelectEditor])
+  const onKeyDown = useDataCellSelectKeyboard({
+    activeOption: select.activeOption,
+    open: select.open,
+    options: selectOptions,
+    openEditor: openActivatedEditor,
+    closeEditor: closeActivatedEditor,
+    commitValue,
+    setActiveOptionIndex: select.setActiveOptionIndex,
+    shouldCancelDismiss,
+  })
 
   return (
     <>
       <button
-        {...props}
         ref={triggerRef}
         type="button"
         role="combobox"
-        aria-expanded={open}
-        aria-controls={open ? popupId : undefined}
+        aria-expanded={select.open}
+        aria-controls={select.open ? popupId : undefined}
         aria-haspopup="listbox"
-        aria-activedescendant={activeDescendantId}
+        aria-activedescendant={select.activeDescendantId}
         disabled={disabled}
         data-slot="data-cell"
-        data-kind={kind}
+        data-kind="select"
         data-mode="edit"
         className={cn(dataCellPickerTriggerClass, className)}
         onBlur={(event) => {
           const nextFocusTarget = event.relatedTarget
-          if (
+          const isPopupFocus =
             nextFocusTarget instanceof Node &&
             document.getElementById(popupId)?.contains(nextFocusTarget)
-          ) {
-            return
+          if (!isPopupFocus && !shouldCancelDismiss("focus-out", undefined)) {
+            closeActivatedEditor()
           }
-          if (cancelDismissDuringOpening("focus-out", undefined)) return
-          closeSelectEditor()
         }}
         onClick={(event) => {
-          if (open) {
-            if (
-              cancelDismissDuringOpening("trigger-press", event.nativeEvent)
-            ) {
-              return
-            }
-            closeSelectEditor()
+          if (!select.open) {
+            openActivatedEditor()
             return
           }
-
-          openSelectEditor()
-        }}
-        onKeyDown={(event) => {
-          if (event.key === "Escape") {
-            event.preventDefault()
-            if (!cancelDismissDuringOpening("escape", event.nativeEvent)) {
-              closeSelectEditor()
-            }
-            return
-          }
-
-          if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-            event.preventDefault()
-            if (!open) {
-              openSelectEditor()
-              return
-            }
-            setActiveOptionIndex((currentIndex) =>
-              nextEnabledDataCellSelectOptionIndex({
-                options: selectOptions,
-                currentIndex,
-                direction: event.key === "ArrowDown" ? 1 : -1,
-              })
-            )
-            return
-          }
-
-          if (event.key === "Home" || event.key === "End") {
-            event.preventDefault()
-            if (!open) {
-              openSelectEditor()
-              return
-            }
-            const nextOptionIndex =
-              event.key === "Home"
-                ? firstEnabledDataCellSelectOptionIndex(selectOptions)
-                : lastEnabledDataCellSelectOptionIndex(selectOptions)
-            setActiveOptionIndex(nextOptionIndex)
-            return
-          }
-
-          if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault()
-            if (!open) {
-              openSelectEditor()
-              return
-            }
-            if (activeOption && !activeOption.disabled) {
-              commitSelectValue(activeOption.value)
-            }
+          if (!shouldCancelDismiss("trigger-press", event.nativeEvent)) {
+            closeActivatedEditor()
           }
         }}
+        onKeyDown={onKeyDown}
       >
         <span
           data-slot="select-value"
-          className={cn("flex-1 truncate", isEmpty && "text-muted-foreground")}
+          className={cn(
+            "flex-1 truncate",
+            select.isEmpty && "text-muted-foreground"
+          )}
         >
-          {isEmpty ? placeholder : displayValue}
+          {select.isEmpty ? select.placeholder : select.displayValue}
         </span>
         <ChevronDown className="-me-1 size-4.5 opacity-80 sm:size-4" />
       </button>
-      {open && triggerRef.current && popupPosition ? (
+      {select.open && triggerRef.current && select.popupPosition ? (
         <DataCellSelectPopup
           anchor={triggerRef.current}
           id={popupId}
-          position={popupPosition}
-          activeDescendantId={activeDescendantId}
-          value={selectedValue}
-          activeIndex={activeOptionIndex}
+          position={select.popupPosition}
+          activeDescendantId={select.activeDescendantId}
+          value={select.selectedValue}
+          activeIndex={select.activeOptionIndex}
           options={selectOptions}
-          onActiveIndexChange={setActiveOptionIndex}
-          onCommit={commitSelectValue}
-          onCancel={closeSelectEditor}
+          onActiveIndexChange={select.setActiveOptionIndex}
+          onCommit={commitValue}
+          onCancel={closeActivatedEditor}
           onOutsidePointerDown={(event) => {
-            if (cancelDismissDuringOpening("outside-pointer", event)) return
-            closeSelectEditor()
+            if (shouldCancelDismiss("outside-pointer", event)) {
+              return
+            }
+            closeActivatedEditor()
           }}
         />
       ) : null}

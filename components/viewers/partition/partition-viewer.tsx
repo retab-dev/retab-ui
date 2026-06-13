@@ -11,6 +11,12 @@ import {
 import { PageRibbon, type RibbonRow } from "@/components/ui/page-ribbon"
 import { SegmentLegend } from "@/components/ui/segment-legend"
 import { useSegmentInteraction } from "@/components/ui/use-segment-interaction"
+import {
+  ViewerBody,
+  ViewerHeader,
+  ViewerRoot,
+  ViewerSurface,
+} from "@/components/ui/viewer"
 import type {
   PartitionChunk,
   PartitionResult,
@@ -98,9 +104,66 @@ export function PartitionViewer({
 
   const currentPageInt = Math.max(1, Math.floor(currentPdfPage))
 
+  return (
+    <ViewerRoot
+      bare
+      ref={previewPanelRef}
+      className="h-full flex-1 bg-background"
+    >
+      {hasOutput ? (
+        <ViewerHeader className="space-y-2 bg-background px-3 py-2">
+          <SegmentLegend
+            variant="plain"
+            segments={legendSegments}
+            currentPage={currentPageInt}
+            interaction={interaction}
+            onSelect={(segment) => {
+              if (segment.pages.length) handleJumpToPage(segment.pages[0])
+            }}
+            columns={4}
+          />
+          <PageRibbon
+            orientation="horizontal"
+            rows={rows}
+            pageCount={pageCount}
+            currentPage={currentPageInt}
+            scrollProgress={scrollProgress}
+            interaction={interaction}
+            onSelectPage={handleJumpToPage}
+          />
+        </ViewerHeader>
+      ) : null}
+      <ViewerBody>
+        <ViewerSurface>
+          <PartitionViewerDocument
+            hasOutput={hasOutput}
+            isProcessing={isProcessing}
+            renderDocument={renderDocument}
+            onCurrentPageChange={setCurrentPdfPage}
+            onScrollProgressChange={setScrollProgress}
+          />
+        </ViewerSurface>
+      </ViewerBody>
+    </ViewerRoot>
+  )
+}
+
+function PartitionViewerDocument({
+  hasOutput,
+  isProcessing,
+  renderDocument,
+  onCurrentPageChange,
+  onScrollProgressChange,
+}: {
+  hasOutput: boolean
+  isProcessing: boolean
+  renderDocument?: (handlers: PartitionDocumentHandlers) => ReactNode
+  onCurrentPageChange: (page: number) => void
+  onScrollProgressChange: (progress: number) => void
+}) {
   if (!hasOutput) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-4 bg-muted px-8 text-muted-foreground">
+      <div className="flex h-full flex-1 flex-col items-center justify-center gap-4 bg-muted px-8 text-muted-foreground">
         {isProcessing ? (
           <>
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -124,44 +187,18 @@ export function PartitionViewer({
     )
   }
 
-  return (
-    <div
-      ref={previewPanelRef}
-      className="flex min-h-0 flex-1 flex-col bg-background"
-    >
-      <div className="space-y-2 border-b border-border bg-background px-3 py-2">
-        <SegmentLegend
-          variant="plain"
-          segments={legendSegments}
-          currentPage={currentPageInt}
-          interaction={interaction}
-          onSelect={(segment) => {
-            if (segment.pages.length) handleJumpToPage(segment.pages[0])
-          }}
-          columns={4}
-        />
-        <PageRibbon
-          orientation="horizontal"
-          rows={rows}
-          pageCount={pageCount}
-          currentPage={currentPageInt}
-          scrollProgress={scrollProgress}
-          interaction={interaction}
-          onSelectPage={handleJumpToPage}
-        />
-      </div>
-      {renderDocument ? (
-        renderDocument({
-          onCurrentPageChange: setCurrentPdfPage,
-          onScrollProgressChange: setScrollProgress,
-        })
-      ) : (
-        <div className="flex h-full items-center justify-center">
-          <span className="text-sm text-muted-foreground">
-            No document available
-          </span>
-        </div>
-      )}
+  return renderDocument ? (
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      {renderDocument({
+        onCurrentPageChange,
+        onScrollProgressChange,
+      })}
+    </div>
+  ) : (
+    <div className="flex h-full flex-1 items-center justify-center">
+      <span className="text-sm text-muted-foreground">
+        No document available
+      </span>
     </div>
   )
 }

@@ -24,7 +24,10 @@ import {
   DataCellNumberControl,
 } from "@/registry/new-york-v4/ui/data-cell-number-control"
 import { DataCellPickerControl } from "@/registry/new-york-v4/ui/data-cell-picker-control"
-import { DataCellSelectControl } from "@/registry/new-york-v4/ui/data-cell-select-control"
+import {
+  DataCellSelectControl,
+  type DataCellSelectControlProps,
+} from "@/registry/new-york-v4/ui/data-cell-select-control"
 import {
   DataCellTextControl,
   getDataCellTextPointerActivationSource,
@@ -127,7 +130,7 @@ const booleanControlAdapter: DataCellControlAdapter = {
 }
 
 const selectControlAdapter: DataCellControlAdapter = {
-  Control: DataCellSelectControl as React.ComponentType<DataCellProps>,
+  Control: DataCellSelectControlAdapter,
   activatePointer: noneDataCellControlAction,
   activateClick: createDefaultClickEditAction,
   activateKey: createKeyboardOpenAction,
@@ -159,6 +162,34 @@ export function getDataCellControlAdapter(
 export function DataCellControl(props: DataCellProps) {
   const Control = getDataCellControlAdapter(props.kind).Control
   return <Control {...props} />
+}
+
+function DataCellSelectControlAdapter(props: DataCellProps) {
+  return <DataCellSelectControl {...dataCellSelectControlProps(props)} />
+}
+
+function dataCellSelectControlProps(
+  props: DataCellProps
+): DataCellSelectControlProps {
+  if (props.kind !== "select") {
+    throw new Error("DataCell select control received non-select props")
+  }
+
+  return {
+    value: props.value,
+    disabled: props.disabled,
+    placeholder: props.placeholder,
+    className: props.className,
+    formatValue: props.formatValue,
+    autoFocus: props.autoFocus,
+    activationSource: props.activationSource,
+    isPickerOpen: props.isPickerOpen,
+    selectOptions: props.selectOptions,
+    onCommit: props.onCommit,
+    onEditingEnd: props.onEditingEnd,
+    onPickerOpenChange: props.onPickerOpenChange,
+    onEditorHandleChange: props.onEditorHandleChange,
+  }
 }
 
 export function getDataCellPointerControlAction(

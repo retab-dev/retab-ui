@@ -18,6 +18,7 @@ import type {
   JsonTableStructuredEditSession,
 } from "@/components/json-table/json-table-edit-session"
 import { jsonTableCellId } from "@/components/json-table/json-table-edit-session"
+import { createJsonTablePrimitiveActiveCellStore } from "@/components/json-table/json-table-primitive-active-cell-store"
 import type {
   ProjectedCell,
   ProjectedRow,
@@ -141,7 +142,7 @@ function SingleFileFormRowHarness({
   ...props
 }: Omit<
   React.ComponentProps<typeof SingleFileFormRow>,
-  | "primitiveActiveCell"
+  | "primitiveActiveCellStore"
   | "setPrimitiveActiveCell"
   | "structuredEditSession"
   | "startStructuredEditSession"
@@ -153,15 +154,16 @@ function SingleFileFormRowHarness({
     typeof SingleFileFormRow
   >["onDocumentDataChange"]
 }) {
-  const [primitiveActiveCell, setPrimitiveActiveCell] =
-    React.useState<JsonTablePrimitiveActiveCell | null>(null)
+  const primitiveActiveCellStoreRef = React.useRef(
+    createJsonTablePrimitiveActiveCellStore()
+  )
   const [structuredEditSession, setStructuredEditSession] =
     React.useState<JsonTableStructuredEditSession | null>(null)
   const sessionIdRef = React.useRef(0)
 
   const setNextPrimitiveActiveCell = React.useCallback(
     (activeCell: JsonTablePrimitiveActiveCell | null) => {
-      setPrimitiveActiveCell(activeCell)
+      primitiveActiveCellStoreRef.current.setSnapshot(activeCell)
       if (activeCell) setStructuredEditSession(null)
     },
     []
@@ -171,7 +173,7 @@ function SingleFileFormRowHarness({
     (projectedCell: ProjectedCell, intent: JsonTableActivationIntent) => {
       const nextSessionId = sessionIdRef.current + 1
       sessionIdRef.current = nextSessionId
-      setPrimitiveActiveCell(null)
+      primitiveActiveCellStoreRef.current.setSnapshot(null)
       setStructuredEditSession({
         id: nextSessionId,
         cellId: jsonTableCellId(
@@ -203,7 +205,7 @@ function SingleFileFormRowHarness({
   return (
     <SingleFileFormRow
       {...props}
-      primitiveActiveCell={primitiveActiveCell}
+      primitiveActiveCellStore={primitiveActiveCellStoreRef.current}
       setPrimitiveActiveCell={setNextPrimitiveActiveCell}
       structuredEditSession={structuredEditSession}
       startStructuredEditSession={startStructuredEditSession}

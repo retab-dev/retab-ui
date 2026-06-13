@@ -5,25 +5,25 @@ import { marked, type Token } from "marked"
 
 import { splitTextLines } from "./text-viewer-resource"
 
-const MARKDOWN_PAGE_TARGET_SOURCE_LINES = 36
-const MARKDOWN_PAGE_MAX_SOURCE_LINES = 54
-const DOCUMENT_PADDING_Y = 48
-const PAGE_GAP = 28
-const PAGE_PADDING_X = 48
-const PAGE_PADDING_Y = 40
+const MARKDOWN_CHUNK_TARGET_SOURCE_LINES = 36
+const MARKDOWN_CHUNK_MAX_SOURCE_LINES = 54
+const DOCUMENT_PADDING_Y = 32
+const CHUNK_GAP = 0
+const CHUNK_PADDING_X = 48
+const CHUNK_PADDING_Y = 0
 const BODY_LINE_HEIGHT = 24
 const CODE_LINE_HEIGHT = 21
-const MIN_PAGE_HEIGHT = 120
+const MIN_CHUNK_HEIGHT = 120
 const BODY_FONT_FAMILY =
   'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
 const CODE_FONT_FAMILY =
   'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace'
 
-export type PretextMarkdownPageKind = "frontmatter" | "markdown"
+export type PretextMarkdownChunkKind = "frontmatter" | "markdown"
 
 export interface PretextMarkdownDocument {
   headings: PretextMarkdownHeading[]
-  pages: PretextMarkdownPage[]
+  chunks: PretextMarkdownChunk[]
   sourceLineCount: number
   text: string
   wordCount: number
@@ -31,32 +31,32 @@ export interface PretextMarkdownDocument {
 
 export interface PretextMarkdownHeading {
   id: string
-  pageIndex: number
+  chunkIndex: number
   sourceLine: number
   text: string
 }
 
-export interface PretextMarkdownPage {
+export interface PretextMarkdownChunk {
   headingIds: string[]
   index: number
-  kind: PretextMarkdownPageKind
+  kind: PretextMarkdownChunkKind
   markdown: string
   sourceEndLine: number
   sourceStartLine: number
 }
 
 export interface PretextMarkdownDocumentFrame {
-  pages: PretextMarkdownPageFrame[]
+  chunks: PretextMarkdownChunkFrame[]
   totalHeight: number
   width: number
 }
 
-export interface PretextMarkdownPageFrame {
+export interface PretextMarkdownChunkFrame {
   bottom: number
   estimatedHeight: number
   height: number
   index: number
-  kind: PretextMarkdownPageKind
+  kind: PretextMarkdownChunkKind
   measuredHeight: number | null
   sourceEndLine: number
   sourceStartLine: number
@@ -76,14 +76,14 @@ export function createPretextMarkdownDocument(
   markdown: string
 ): PretextMarkdownDocument {
   const sourceLineCount = splitTextLines(markdown).length
-  const { headings, pages } = createPretextMarkdownPages(
+  const { headings, chunks } = createPretextMarkdownChunks(
     markdown,
     sourceLineCount
   )
 
   return {
     headings,
-    pages,
+    chunks,
     sourceLineCount,
     text: markdown,
     wordCount: countWords(markdown),
@@ -102,49 +102,49 @@ export function layoutPretextMarkdownDocument({
   measuredHeights?: PretextMarkdownMeasuredHeights
 }): PretextMarkdownDocumentFrame {
   const width = Math.max(1, contentWidth)
-  const frames: PretextMarkdownPageFrame[] = []
+  const frames: PretextMarkdownChunkFrame[] = []
   let y = DOCUMENT_PADDING_Y
 
-  for (const page of document.pages) {
-    const measuredHeight = measuredHeights?.get(page.index)
-    const estimatedHeight = estimatePretextMarkdownPageHeight({
+  for (const chunk of document.chunks) {
+    const measuredHeight = measuredHeights?.get(chunk.index)
+    const estimatedHeight = estimatePretextMarkdownChunkHeight({
       fontScale,
-      page,
+      chunk,
       width,
     })
     const height =
       measuredHeight == null
         ? estimatedHeight
-        : Math.max(MIN_PAGE_HEIGHT, measuredHeight)
-    const frame: PretextMarkdownPageFrame = {
+        : Math.max(MIN_CHUNK_HEIGHT, measuredHeight)
+    const frame: PretextMarkdownChunkFrame = {
       bottom: y + height,
       estimatedHeight,
       height,
-      index: page.index,
-      kind: page.kind,
+      index: chunk.index,
+      kind: chunk.kind,
       measuredHeight: measuredHeight ?? null,
-      sourceEndLine: page.sourceEndLine,
-      sourceStartLine: page.sourceStartLine,
+      sourceEndLine: chunk.sourceEndLine,
+      sourceStartLine: chunk.sourceStartLine,
       top: y,
     }
     frames.push(frame)
-    y = frame.bottom + PAGE_GAP
+    y = frame.bottom + CHUNK_GAP
   }
 
   return {
-    pages: frames,
-    totalHeight: frames.length ? y - PAGE_GAP + DOCUMENT_PADDING_Y : 0,
+    chunks: frames,
+    totalHeight: frames.length ? y - CHUNK_GAP + DOCUMENT_PADDING_Y : 0,
     width,
   }
 }
 
-export function getPretextMarkdownVisiblePageFrames({
+export function getPretextMarkdownVisibleChunkFrames({
   frames,
   overscanPx,
   scrollTop,
   viewportHeight,
 }: {
-  frames: readonly PretextMarkdownPageFrame[]
+  frames: readonly PretextMarkdownChunkFrame[]
   overscanPx: number
   scrollTop: number
   viewportHeight: number
@@ -153,29 +153,29 @@ export function getPretextMarkdownVisiblePageFrames({
 
   const minY = Math.max(0, scrollTop - overscanPx)
   const maxY = scrollTop + viewportHeight + overscanPx
-  const start = firstPageWithBottomAfter(frames, minY)
-  const end = firstPageWithTopAtOrAfter(frames, maxY)
+  const start = firstChunkWithBottomAfter(frames, minY)
+  const end = firstChunkWithTopAtOrAfter(frames, maxY)
   return frames.slice(start, Math.max(start, end))
 }
 
-export function markdownPageIntersectsLineRange({
-  page,
+export function markdownChunkIntersectsLineRange({
+  chunk,
   range,
 }: {
-  page: Pick<PretextMarkdownPage, "sourceEndLine" | "sourceStartLine">
+  chunk: Pick<PretextMarkdownChunk, "sourceEndLine" | "sourceStartLine">
   range: PretextMarkdownLineRange | null
 }) {
   if (!range) return false
-  return page.sourceStartLine <= range.end && page.sourceEndLine >= range.start
+  return chunk.sourceStartLine <= range.end && chunk.sourceEndLine >= range.start
 }
 
-export function findPretextMarkdownPageForLine(
-  pages: readonly PretextMarkdownPage[],
+export function findPretextMarkdownChunkForLine(
+  chunks: readonly PretextMarkdownChunk[],
   sourceLine: number
 ) {
-  return pages.find(
-    (page) =>
-      page.sourceStartLine <= sourceLine && page.sourceEndLine >= sourceLine
+  return chunks.find(
+    (chunk) =>
+      chunk.sourceStartLine <= sourceLine && chunk.sourceEndLine >= sourceLine
   )
 }
 
@@ -186,11 +186,11 @@ export function findPretextMarkdownHeadingById(
   return document.headings.find((heading) => heading.id === headingId)
 }
 
-function createPretextMarkdownPages(
+function createPretextMarkdownChunks(
   markdown: string,
   sourceLineCount: number
-): Pick<PretextMarkdownDocument, "headings" | "pages"> {
-  const pages: PretextMarkdownPage[] = []
+): Pick<PretextMarkdownDocument, "headings" | "chunks"> {
+  const chunks: PretextMarkdownChunk[] = []
   const headings: PretextMarkdownHeading[] = []
   const headingIds: HeadingIdRegistry = new Map()
   const frontmatter = extractYamlFrontmatter(markdown)
@@ -198,9 +198,9 @@ function createPretextMarkdownPages(
   const bodyStartLine = frontmatter ? frontmatter.endLine + 1 : 1
 
   if (frontmatter) {
-    pages.push({
+    chunks.push({
       headingIds: [],
-      index: pages.length,
+      index: chunks.length,
       kind: "frontmatter",
       markdown: frontmatter.text,
       sourceEndLine: frontmatter.endLine,
@@ -208,18 +208,18 @@ function createPretextMarkdownPages(
     })
   }
 
-  const bodyPages = createMarkdownBodyPages({
+  const bodyChunks = createMarkdownBodyChunks({
     headingIds,
     headings,
     markdown: body,
     sourceEndLine: sourceLineCount,
     sourceStartLine: bodyStartLine,
-    startIndex: pages.length,
+    startIndex: chunks.length,
   })
-  pages.push(...bodyPages)
+  chunks.push(...bodyChunks)
 
-  if (!pages.length) {
-    pages.push({
+  if (!chunks.length) {
+    chunks.push({
       headingIds: [],
       index: 0,
       kind: "markdown",
@@ -229,10 +229,10 @@ function createPretextMarkdownPages(
     })
   }
 
-  return { headings, pages }
+  return { headings, chunks }
 }
 
-function createMarkdownBodyPages({
+function createMarkdownBodyChunks({
   headingIds,
   headings,
   markdown,
@@ -247,37 +247,37 @@ function createMarkdownBodyPages({
   sourceStartLine: number
   startIndex: number
 }) {
-  const pages: PretextMarkdownPage[] = []
-  if (!markdown.trim()) return pages
+  const chunks: PretextMarkdownChunk[] = []
+  if (!markdown.trim()) return chunks
 
   try {
     const tokens = marked.lexer(markdown, { gfm: true })
     let cursorLine = sourceStartLine
-    let pageStartLine = sourceStartLine
-    let pageHeadingIds: string[] = []
-    let pageRaw = ""
-    let pageLineCount = 0
+    let chunkStartLine = sourceStartLine
+    let chunkHeadingIds: string[] = []
+    let chunkRaw = ""
+    let chunkLineCount = 0
 
-    const flushPage = (endLine: number) => {
-      if (!pageRaw.trim()) {
-        pageRaw = ""
-        pageLineCount = 0
-        pageStartLine = endLine + 1
+    const flushChunk = (endLine: number) => {
+      if (!chunkRaw.trim()) {
+        chunkRaw = ""
+        chunkLineCount = 0
+        chunkStartLine = endLine + 1
         return
       }
-      const pageIndex = startIndex + pages.length
-      pages.push({
-        headingIds: pageHeadingIds,
-        index: pageIndex,
+      const chunkIndex = startIndex + chunks.length
+      chunks.push({
+        headingIds: chunkHeadingIds,
+        index: chunkIndex,
         kind: "markdown",
-        markdown: pageRaw.replace(/\n+$/g, ""),
-        sourceEndLine: Math.max(pageStartLine, endLine),
-        sourceStartLine: pageStartLine,
+        markdown: chunkRaw.replace(/\n+$/g, ""),
+        sourceEndLine: Math.max(chunkStartLine, endLine),
+        sourceStartLine: chunkStartLine,
       })
-      pageRaw = ""
-      pageLineCount = 0
-      pageHeadingIds = []
-      pageStartLine = endLine + 1
+      chunkRaw = ""
+      chunkLineCount = 0
+      chunkHeadingIds = []
+      chunkStartLine = endLine + 1
     }
 
     for (const token of tokens) {
@@ -294,50 +294,50 @@ function createMarkdownBodyPages({
       cursorLine += tokenBreaks
 
       if (token.type === "space") {
-        pageRaw += raw
-        pageLineCount += tokenBreaks
+        chunkRaw += raw
+        chunkLineCount += tokenBreaks
         continue
       }
 
-      const shouldStartNewPage =
-        pageRaw.trim().length > 0 &&
-        isPageLeadToken(token) &&
-        pageLineCount >= MARKDOWN_PAGE_TARGET_SOURCE_LINES
+      const shouldStartNewChunk =
+        chunkRaw.trim().length > 0 &&
+        isChunkLeadToken(token) &&
+        chunkLineCount >= MARKDOWN_CHUNK_TARGET_SOURCE_LINES
       const wouldExceedMax =
-        pageRaw.trim().length > 0 &&
-        pageLineCount + Math.max(1, tokenBreaks) >
-          MARKDOWN_PAGE_MAX_SOURCE_LINES
+        chunkRaw.trim().length > 0 &&
+        chunkLineCount + Math.max(1, tokenBreaks) >
+          MARKDOWN_CHUNK_MAX_SOURCE_LINES
 
-      if (shouldStartNewPage || wouldExceedMax) {
-        flushPage(Math.max(pageStartLine, tokenStartLine - 1))
-        pageStartLine = tokenStartLine
+      if (shouldStartNewChunk || wouldExceedMax) {
+        flushChunk(Math.max(chunkStartLine, tokenStartLine - 1))
+        chunkStartLine = tokenStartLine
       }
 
       if (token.type === "heading") {
         const text = normalizeHeadingText(token.text)
         const id = createMarkdownHeadingId(text, headingIds)
-        const pageIndex = startIndex + pages.length
-        pageHeadingIds.push(id)
+        const chunkIndex = startIndex + chunks.length
+        chunkHeadingIds.push(id)
         headings.push({
           id,
-          pageIndex,
+          chunkIndex,
           sourceLine: tokenStartLine,
           text,
         })
       }
 
-      pageRaw += raw
-      pageLineCount += Math.max(1, tokenBreaks)
-      if (pageLineCount >= MARKDOWN_PAGE_MAX_SOURCE_LINES) {
-        flushPage(tokenEndLine)
+      chunkRaw += raw
+      chunkLineCount += Math.max(1, tokenBreaks)
+      if (chunkLineCount >= MARKDOWN_CHUNK_MAX_SOURCE_LINES) {
+        flushChunk(tokenEndLine)
       }
     }
 
-    if (pageRaw.trim()) {
-      flushPage(sourceEndLine)
+    if (chunkRaw.trim()) {
+      flushChunk(sourceEndLine)
     }
   } catch {
-    pages.push({
+    chunks.push({
       headingIds: [],
       index: startIndex,
       kind: "markdown",
@@ -347,41 +347,41 @@ function createMarkdownBodyPages({
     })
   }
 
-  return pages
+  return chunks
 }
 
-function estimatePretextMarkdownPageHeight({
+function estimatePretextMarkdownChunkHeight({
   fontScale,
-  page,
+  chunk,
   width,
 }: {
   fontScale: number
-  page: PretextMarkdownPage
+  chunk: PretextMarkdownChunk
   width: number
 }) {
-  const textWidth = Math.max(1, width - PAGE_PADDING_X * 2)
-  const fontSize = page.kind === "frontmatter" ? 13 : 16
+  const textWidth = Math.max(1, width - CHUNK_PADDING_X * 2)
+  const fontSize = chunk.kind === "frontmatter" ? 13 : 16
   const lineHeight =
-    page.kind === "frontmatter" ? CODE_LINE_HEIGHT : BODY_LINE_HEIGHT
+    chunk.kind === "frontmatter" ? CODE_LINE_HEIGHT : BODY_LINE_HEIGHT
   const fontFamily =
-    page.kind === "frontmatter" ? CODE_FONT_FAMILY : BODY_FONT_FAMILY
+    chunk.kind === "frontmatter" ? CODE_FONT_FAMILY : BODY_FONT_FAMILY
   const font = `${Math.round(fontSize * fontScale)}px ${fontFamily}`
-  const prepared = prepareWithSegments(page.markdown || " ", font, {
+  const prepared = prepareWithSegments(chunk.markdown || " ", font, {
     whiteSpace: "pre-wrap",
   })
   const stats = measureLineStats(prepared, textWidth / fontScale)
   const lineCount = Math.max(1, stats.lineCount)
-  const syntaxAllowance = estimateMarkdownSyntaxAllowance(page)
+  const syntaxAllowance = estimateMarkdownSyntaxAllowance(chunk)
   return Math.max(
-    MIN_PAGE_HEIGHT,
-    PAGE_PADDING_Y * 2 + lineCount * lineHeight * fontScale + syntaxAllowance
+    MIN_CHUNK_HEIGHT,
+    CHUNK_PADDING_Y * 2 + lineCount * lineHeight * fontScale + syntaxAllowance
   )
 }
 
-function estimateMarkdownSyntaxAllowance(page: PretextMarkdownPage) {
-  if (page.kind === "frontmatter") return 0
+function estimateMarkdownSyntaxAllowance(chunk: PretextMarkdownChunk) {
+  if (chunk.kind === "frontmatter") return 0
   let allowance = 0
-  for (const line of splitTextLines(page.markdown)) {
+  for (const line of splitTextLines(chunk.markdown)) {
     if (/^#{1,6}\s+/.test(line)) allowance += 18
     if (/^\s*[-*+]\s+/.test(line)) allowance += 3
     if (/^\s*>/.test(line)) allowance += 4
@@ -437,12 +437,12 @@ function normalizeHeadingText(text: string) {
   return text.replace(/\s+/g, " ").trim()
 }
 
-function isPageLeadToken(token: Token) {
+function isChunkLeadToken(token: Token) {
   return token.type === "heading" || token.type === "hr"
 }
 
-function firstPageWithBottomAfter(
-  frames: readonly PretextMarkdownPageFrame[],
+function firstChunkWithBottomAfter(
+  frames: readonly PretextMarkdownChunkFrame[],
   y: number
 ) {
   let low = 0
@@ -455,8 +455,8 @@ function firstPageWithBottomAfter(
   return low
 }
 
-function firstPageWithTopAtOrAfter(
-  frames: readonly PretextMarkdownPageFrame[],
+function firstChunkWithTopAtOrAfter(
+  frames: readonly PretextMarkdownChunkFrame[],
   y: number
 ) {
   let low = 0

@@ -2,17 +2,25 @@
 
 import * as React from "react"
 import { Check, Copy } from "lucide-react"
-import ReactMarkdown, { type Components } from "react-markdown"
+import { MarkdownHooks, type Components } from "react-markdown"
 import rehypeKatex from "rehype-katex"
+import rehypePrettyCode from "rehype-pretty-code"
+import rehypeRaw from "rehype-raw"
+import rehypeSanitize, {
+  defaultSchema,
+  type Options as RehypeSanitizeOptions,
+} from "rehype-sanitize"
+import remarkBreaks from "remark-breaks"
 import remarkDirective from "remark-directive"
 import remarkGfm from "remark-gfm"
 import remarkMath from "remark-math"
+import type { PluggableList } from "unified"
 import { visit } from "unist-util-visit"
 
 import { cn } from "@/lib/utils"
 
 import { Button } from "./button"
-import type { PretextMarkdownPage } from "./pretext-markdown-document-model"
+import type { PretextMarkdownChunk } from "./pretext-markdown-document-model"
 
 const ALERT_LABELS = {
   caution: "Caution:",
@@ -68,26 +76,43 @@ const EMOJI_SHORTCODES: Record<string, string> = {
   ":x:": "✕",
 }
 
-export function PretextMarkdownPageRenderer({
-  page,
+const PRETEXT_MARKDOWN_REHYPE_PLUGINS: PluggableList = [
+  rehypeRaw,
+  [rehypeSanitize, createPretextMarkdownSanitizeSchema()],
+  rehypeKatex,
+  [
+    rehypePrettyCode,
+    {
+      keepBackground: false,
+      theme: {
+        dark: "github-dark",
+        light: "github-light-default",
+      },
+    },
+  ],
+]
+
+export function PretextMarkdownChunkRenderer({
+  chunk,
 }: {
-  page: PretextMarkdownPage
+  chunk: PretextMarkdownChunk
 }) {
-  const remarkPlugins = React.useMemo(
+  const remarkPlugins = React.useMemo<PluggableList>(
     () => [
       remarkDirective,
-      remarkPretextHeadingIds(page.headingIds),
+      remarkPretextHeadingIds(chunk.headingIds),
       remarkPretextComponentMarkdown,
       remarkPretextDirectiveCallouts,
       remarkPretextGithubAlerts,
       remarkPretextProseTransforms,
       remarkGfm,
+      remarkBreaks,
       remarkMath,
     ],
-    [page.headingIds]
+    [chunk.headingIds]
   )
 
-  if (page.kind === "frontmatter") {
+  if (chunk.kind === "frontmatter") {
     return (
       <section
         aria-label="Frontmatter"
@@ -95,21 +120,23 @@ export function PretextMarkdownPageRenderer({
         data-pretext-markdown-frontmatter=""
       >
         <pre className="m-0 whitespace-pre-wrap">
-          <code>{page.markdown}</code>
+          <code>{chunk.markdown}</code>
         </pre>
       </section>
     )
   }
 
   return (
-    <div className="pretext-markdown-page-content min-w-0 text-[16px] leading-7 text-foreground">
-      <ReactMarkdown
+    <div className="pretext-markdown-chunk-content min-w-0 text-[16px] leading-7 text-foreground">
+      <MarkdownHooks
         components={markdownComponents}
-        rehypePlugins={[rehypeKatex]}
+        rehypePlugins={PRETEXT_MARKDOWN_REHYPE_PLUGINS}
+        remarkRehypeOptions={{ allowDangerousHtml: true }}
         remarkPlugins={remarkPlugins}
+        urlTransform={sanitizePretextMarkdownUrl}
       >
-        {page.markdown}
-      </ReactMarkdown>
+        {chunk.markdown}
+      </MarkdownHooks>
     </div>
   )
 }
@@ -143,6 +170,7 @@ const markdownComponents = {
         className
       )}
       {...props}
+      id={readPretextHeadingId(props)}
     >
       {children}
     </h1>
@@ -154,6 +182,7 @@ const markdownComponents = {
         className
       )}
       {...props}
+      id={readPretextHeadingId(props)}
     >
       {children}
     </h2>
@@ -165,6 +194,7 @@ const markdownComponents = {
         className
       )}
       {...props}
+      id={readPretextHeadingId(props)}
     >
       {children}
     </h3>
@@ -176,9 +206,34 @@ const markdownComponents = {
         className
       )}
       {...props}
+      id={readPretextHeadingId(props)}
     >
       {children}
     </h4>
+  ),
+  h5: ({ className, children, node: _node, ...props }) => (
+    <h5
+      className={cn(
+        "mt-5 mb-2 text-base font-semibold tracking-normal text-foreground first:mt-0",
+        className
+      )}
+      {...props}
+      id={readPretextHeadingId(props)}
+    >
+      {children}
+    </h5>
+  ),
+  h6: ({ className, children, node: _node, ...props }) => (
+    <h6
+      className={cn(
+        "mt-5 mb-2 text-sm font-semibold tracking-normal text-muted-foreground first:mt-0",
+        className
+      )}
+      {...props}
+      id={readPretextHeadingId(props)}
+    >
+      {children}
+    </h6>
   ),
   p: ({ className, node: _node, ...props }) => (
     <p className={cn("my-4 leading-7 first:mt-0", className)} {...props} />
@@ -242,6 +297,28 @@ const markdownComponents = {
       </blockquote>
     )
   },
+  br: ({ node: _node, ...props }) => <br {...props} />,
+  del: ({ className, node: _node, ...props }) => (
+    <del className={cn("text-muted-foreground", className)} {...props} />
+  ),
+  details: ({ className, node: _node, ...props }) => (
+    <details
+      className={cn("my-5 rounded-md border bg-muted/25 px-4 py-3", className)}
+      {...props}
+    />
+  ),
+  summary: ({ className, node: _node, ...props }) => (
+    <summary
+      className={cn("cursor-pointer font-medium text-foreground", className)}
+      {...props}
+    />
+  ),
+  mark: ({ className, node: _node, ...props }) => (
+    <mark
+      className={cn("rounded bg-yellow-200/70 px-1 text-foreground", className)}
+      {...props}
+    />
+  ),
   ul: ({ className, node: _node, ...props }) => (
     <ul className={cn("my-4 ml-6 list-disc space-y-1", className)} {...props} />
   ),
@@ -254,6 +331,25 @@ const markdownComponents = {
   li: ({ className, node: _node, ...props }) => (
     <li className={cn("pl-1 leading-7", className)} {...props} />
   ),
+  input: ({ className, checked, node: _node, type, ...props }) => {
+    if (type !== "checkbox") {
+      return <input className={className} type={type} {...props} />
+    }
+
+    return (
+      <input
+        aria-label={checked ? "Completed task" : "Incomplete task"}
+        checked={checked}
+        className={cn(
+          "mr-2 size-3.5 rounded border-border align-[-0.15em]",
+          className
+        )}
+        readOnly
+        type="checkbox"
+        {...props}
+      />
+    )
+  },
   table: ({ className, node: _node, ...props }) => (
     <PretextMarkdownTable className={className} {...props} />
   ),
@@ -961,6 +1057,46 @@ function sanitizePretextMarkdownImageUrl(value: string) {
   return safeUrl
 }
 
+function createPretextMarkdownSanitizeSchema(): RehypeSanitizeOptions {
+  return {
+    ...defaultSchema,
+    attributes: {
+      ...defaultSchema.attributes,
+      "*": [
+        ...(defaultSchema.attributes?.["*"] ?? []),
+        "ariaDescribedBy",
+        "ariaHidden",
+        "ariaLabel",
+        "ariaLabelledBy",
+        "dataFootnoteBackref",
+        "dataFootnoteRef",
+        "dataPretextAlertKind",
+        "dataPretextCalloutKind",
+        "dataPretextCalloutTitle",
+        "dataPretextComponentName",
+        "dataPretextComponentProps",
+        "dataPretextHeadingId",
+      ],
+      div: [
+        ...(defaultSchema.attributes?.div ?? []),
+        "dataPretextCalloutKind",
+        "dataPretextCalloutTitle",
+        "dataPretextComponentName",
+        "dataPretextComponentProps",
+      ],
+      mark: ["title"],
+    },
+    tagNames: [
+      ...(defaultSchema.tagNames ?? []),
+      "details",
+      "figcaption",
+      "figure",
+      "mark",
+      "summary",
+    ],
+  }
+}
+
 function serializePretextMarkdownTable(table: HTMLTableElement) {
   return Array.from(table.rows)
     .map((row) =>
@@ -977,6 +1113,11 @@ function isPretextFootnoteRef(props: Record<string, unknown>) {
 
 function isPretextFootnoteBackref(props: Record<string, unknown>) {
   return Boolean(props.dataFootnoteBackref ?? props["data-footnote-backref"])
+}
+
+function readPretextHeadingId(props: Record<string, unknown>) {
+  const id = props.dataPretextHeadingId ?? props["data-pretext-heading-id"]
+  return typeof id === "string" ? id : undefined
 }
 
 function extractReactText(node: React.ReactNode): string {
@@ -1021,6 +1162,7 @@ function remarkPretextHeadingIds(headingIds: readonly string[]) {
           hProperties: {
             ...node.data?.hProperties,
             id,
+            dataPretextHeadingId: id,
           },
         }
       })
@@ -1093,9 +1235,11 @@ function remarkPretextComponentMarkdown() {
 
       const component = parsePretextComponentMarkdown(node.value)
       if (!component) {
-        node.type = "code"
-        node.lang = "mdx"
-        node.value = node.value.trim()
+        if (isPretextMdxLikeHtml(node.value)) {
+          node.type = "code"
+          node.lang = "mdx"
+          node.value = node.value.trim()
+        }
         return
       }
 
@@ -1111,6 +1255,11 @@ function remarkPretextComponentMarkdown() {
       delete node.value
     })
   }
+}
+
+function isPretextMdxLikeHtml(value: string) {
+  const trimmed = value.trim()
+  return /^<\/?[A-Z][A-Za-z0-9.]*(?:\s|\/?>)/.test(trimmed) || /\s\w+=\{/.test(trimmed)
 }
 
 function remarkPretextProseTransforms() {
