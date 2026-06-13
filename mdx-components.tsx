@@ -18,6 +18,7 @@ import { Callout } from "@/components/callout"
 import { CodeBlockCommand } from "@/components/code-block-command"
 import { CodeCollapsibleWrapper } from "@/components/code-collapsible-wrapper"
 import { CodeTabs } from "@/components/code-tabs"
+import { CodeViewerDemo } from "@/components/code-viewer-demo"
 import { ComponentSource } from "@/components/component-source"
 import { CopyButton } from "@/components/copy-button"
 import {
@@ -389,6 +390,7 @@ export const mdxComponents = {
   FileThumbnailDemo,
   FileThumbnailFormatsDemo,
   TextViewerDemo,
+  CodeViewerDemo,
   Link: ({ className, ...props }: React.ComponentProps<typeof Link>) => (
     <Link
       className={cn("font-medium underline underline-offset-4", className)}

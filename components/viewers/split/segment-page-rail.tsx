@@ -9,8 +9,6 @@ import { PageRibbon } from "@/components/ui/page-ribbon"
 
 import { type SegmentViewportController } from "./use-segment-viewport-controller"
 
-const DEFAULT_PAGE_HEIGHT = 48
-
 export interface SegmentPageRailProps {
   segments: Segment[]
   pageCount: number
@@ -21,7 +19,6 @@ export interface SegmentPageRailProps {
   onSelectPage?: (page: number) => void
   onSelect?: (segment: Segment) => void
   showTicks?: boolean
-  pageHeight?: number
   className?: string
 }
 
@@ -35,17 +32,11 @@ export function SegmentPageRail({
   onSelectPage,
   onSelect,
   showTicks = true,
-  pageHeight = DEFAULT_PAGE_HEIGHT,
   className,
 }: SegmentPageRailProps) {
   const total = normalizePageCount(pageCount)
   if (total <= 0) return null
 
-  const safePageHeight =
-    Number.isFinite(pageHeight) && pageHeight > 0
-      ? pageHeight
-      : DEFAULT_PAGE_HEIGHT
-  const contentHeight = Math.max(total * safePageHeight, safePageHeight)
   const {
     onPointerEnter,
     onPointerLeave,
@@ -62,14 +53,13 @@ export function SegmentPageRail({
       onPointerLeave={onPointerLeave}
       onScroll={onScroll}
       className={cn(
-        "h-full overflow-auto border-r border-border bg-background px-3 py-6",
+        "flex h-full min-h-0 flex-col overflow-hidden border-r border-border bg-background px-3 py-6",
         className
       )}
     >
       <div
         data-slot="segment-page-rail-content"
-        className="relative min-h-full"
-        style={{ height: contentHeight }}
+        className="relative min-h-0 flex-1"
       >
         <PageRibbon
           orientation="vertical"
@@ -81,7 +71,7 @@ export function SegmentPageRail({
           onSelectPage={onSelectPage}
           onSelect={onSelect}
           showTicks={showTicks}
-          className="h-full"
+          className="h-full min-h-0"
         />
         {Array.from({ length: total }, (_, index) => {
           const page = index + 1

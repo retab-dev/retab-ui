@@ -9,7 +9,11 @@ import {
   thumbnailFileMeta,
 } from "@/components/document-thumbnail/thumbnail-text"
 
-export function TextFirstLines({
+const TEXT_THUMBNAIL_MAX_PARAGRAPHS = 12
+const TEXT_THUMBNAIL_FONT_SIZE = 7
+const TEXT_THUMBNAIL_LINE_HEIGHT = 1.55
+
+export function TextThumbnail({
   resource,
   thumbnailKey,
 }: {
@@ -23,43 +27,46 @@ export function TextFirstLines({
       thumbnailKey
     )
   )
-  const text = React.useMemo(() => {
-    if (/\.(json|json5|ndjson|jsonl)$/i.test(resource.fileName)) {
-      try {
-        return JSON.stringify(JSON.parse(raw), null, 2)
-      } catch {
-        /* not strict JSON — show as-is */
-      }
-    }
-    return raw
-  }, [raw, resource.fileName])
+  const paragraphs = React.useMemo(() => proseThumbnailParagraphs(raw), [raw])
 
-  const lines = React.useMemo(
-    () => text.replace(/\n$/, "").split("\n").slice(0, 60),
-    [text]
-  )
+  if (!paragraphs.length) return <EmptyTextThumbnail />
 
   return (
-    <div className="absolute inset-0 overflow-hidden bg-card">
-      <div
-        aria-hidden
-        className="absolute inset-y-0 left-0 w-2.5 bg-slate-50"
-      />
-      <div
-        className="relative font-mono"
-        style={{ fontSize: 5, lineHeight: 1.5 }}
-      >
-        {lines.map((line, i) => (
-          <div key={i} className="flex">
-            <span className="w-2.5 shrink-0 pr-px text-right text-slate-300 select-none">
-              {i + 1}
-            </span>
-            <span className="pl-0.5 whitespace-pre text-foreground/80">
-              {line || " "}
-            </span>
-          </div>
+    <div
+      data-slot="text-thumbnail"
+      className="absolute inset-0 overflow-hidden bg-card p-3 font-sans text-foreground/80"
+      style={{
+        fontSize: TEXT_THUMBNAIL_FONT_SIZE,
+        lineHeight: TEXT_THUMBNAIL_LINE_HEIGHT,
+      }}
+    >
+      <div className="space-y-1.5">
+        {paragraphs.map((paragraph, i) => (
+          <p key={i} className="text-pretty break-words">
+            {paragraph}
+          </p>
         ))}
       </div>
     </div>
   )
+}
+
+function EmptyTextThumbnail() {
+  return (
+    <div
+      aria-label="Empty text file"
+      data-slot="text-thumbnail-empty"
+      className="absolute inset-0 bg-card"
+    />
+  )
+}
+
+function proseThumbnailParagraphs(text: string) {
+  return text
+    .replace(/\r\n?/g, "\n")
+    .trim()
+    .split(/\n{2,}/)
+    .map((paragraph) => paragraph.replace(/\s*\n\s*/g, " ").trim())
+    .filter(Boolean)
+    .slice(0, TEXT_THUMBNAIL_MAX_PARAGRAPHS)
 }

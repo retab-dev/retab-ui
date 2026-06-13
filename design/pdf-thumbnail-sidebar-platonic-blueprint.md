@@ -1,29 +1,31 @@
-# PDF Thumbnail Sidebar Platonic Blueprint
+# PDF Thumbnail Sidebar Blueprint
 
 ## Standard
 
-The PDF thumbnail sidebar is complete when it has:
+The PDF thumbnail sidebar is a navigation rail for `PdfResourceViewer`. It
+receives the same `ViewerResource` as the viewer, mirrors the viewer's current
+page, emits page navigation intent, and co-scrolls only when that helps the user
+keep the active page in view.
 
-- one explicit thumbnail layout model
-- one explicit rail follow controller
-- one active page input
-- one page navigation output
-- page-size-aware geometry
-- virtualized rendering
-- accessible listbox semantics
-- no sticky selected state unless selection is a real operation
-- no duplicated scroll math
-- no implicit coupling to the PDF viewer internals
+The component has exactly these responsibilities:
 
-The sidebar is a document navigation surface. It does not own document scroll.
-It receives `currentPage`, renders the active page, and emits
-`onSelectPage(page)` when the user chooses a thumbnail.
+- share the viewer's document resource
+- retain and release that document while mounted
+- derive a sparse page-metric model from PDF metadata
+- derive thumbnail geometry from that metric model
+- mount only the visible thumbnail rows plus overscan
+- highlight the current page
+- scroll the rail to the current page when appropriate
+- let users activate a page by click or keyboard
 
-## Inputs And Outputs
+It does not own document scroll, selected-page state, canvas-derived geometry,
+or duplicate source loading.
+
+## Public API
 
 ```ts
 type PdfThumbnailSidebarProps = {
-  src: string
+  resource: ViewerResource
   currentPage?: number | null
   onSelectPage?: (page: number) => void
   width?: number
@@ -31,230 +33,62 @@ type PdfThumbnailSidebarProps = {
 }
 ```
 
-Inputs:
+Rules:
 
-```txt
-src           PDF URL shared with PdfViewer resource cache
-currentPage   1-based page reported by the document viewport
-width         thumbnail image width in CSS pixels
-```
+- `resource` is the same object passed to `PdfResourceViewer`.
+- `currentPage` is 1-based and comes from the document viewport.
+- `onSelectPage(page)` is the only output; the parent decides how to scroll the
+  PDF document.
+- The sidebar does not accept `src`; callers create one resource and share it.
 
-Outputs:
-
-```txt
-onSelectPage(page)  user requested document navigation
-```
-
-No other state crosses the component boundary.
-
-## Current Gap
-
-The current implementation works, but it is not perfect.
-
-Correct:
-
-- shared PDF resource cache
-- Suspense and inline error boundary
-- retained document lifecycle
-- fixed-row virtualization
-- active thumbnail highlight
-- click-to-page navigation
-- nearest-visible co-scrolling
-- pointer and user-scroll suspension
-
-Not perfect:
-
-- resource lifecycle, layout, follow policy, rendering, and canvas rendering live
-  in one component
-- row height is estimated from `THUMBNAIL_DEFAULT_ASPECT`
-- follow math depends on fixed row height instead of page-size-aware layout
-- thumbnail rail lacks listbox keyboard semantics
-- tests verify the follow outcome, but not the full geometry contract
-
-## Target Architecture
+## Composition
 
 ```mermaid
 flowchart TD
-  props["PdfThumbnailSidebar props"] --> shell["PdfThumbnailSidebar"]
-  shell --> resource["usePdfThumbnailDocument"]
-  resource --> layout["usePdfThumbnailLayout"]
-  layout --> virtualWindow["usePdfThumbnailWindow"]
-  props --> follow["useThumbnailRailFollow"]
-  virtualWindow --> follow
-  follow --> rail["PdfThumbnailRail"]
-  virtualWindow --> rail
-  resource --> thumb["PdfThumbnail"]
-  rail --> thumb
-  thumb --> canvas["PdfThumbnailCanvas"]
-  rail -->|"onSelectPage(page)"| props
+  parent["Parent integration"] --> resource["ViewerResource"]
+  resource --> viewer["PdfResourceViewer"]
+  resource --> sidebar["PdfThumbnailSidebar"]
+  viewer --> current["currentPage"]
+  current --> sidebar
+  sidebar --> doc["usePdfThumbnailDocument"]
+  doc --> metrics["usePdfThumbnailPageMetrics"]
+  metrics --> layout["buildPdfThumbnailLayout"]
+  layout --> window["usePdfThumbnailWindow"]
+  current --> follow["useThumbnailRailFollow"]
+  layout --> follow
+  window --> rail["PdfThumbnailRail"]
+  follow --> rail
+  rail --> item["PdfThumbnailItem"]
+  item --> canvas["PdfThumbnailCanvas"]
+  rail -->|"onSelectPage(page)"| parent
+  parent -->|"viewerRef.scrollToPage(page)"| viewer
 ```
 
-Each module gets one reason to change.
-
-## Module Boundaries
-
-### `pdf-thumbnail-sidebar.tsx`
-
-Composition only:
-
-- create viewer resource from `src`
-- mount error boundary and Suspense
-- retain/release PDF document
-- call the layout/window/follow hooks
-- render `PdfThumbnailRail`
-
-It contains no scroll math and no canvas render code.
-
-### `pdf-thumbnail-layout.ts`
-
-Pure layout model:
-
-```ts
-type PdfThumbnailLayoutItem = {
-  pageNumber: number
-  pageIndex: number
-  top: number
-  height: number
-  imageWidth: number
-  imageHeight: number
-}
-
-type PdfThumbnailLayout = {
-  items: readonly PdfThumbnailLayoutItem[]
-  totalHeight: number
-}
-```
-
-Inputs:
-
-- page count
-- page viewport sizes and rotations
-- thumbnail width
-- row gap
-- label height
-- padding
-
-Rules:
-
-- use real PDF page dimensions when available
-- fall back to a deterministic default before page dimensions resolve
-- include label and row gap in every row height
-- expose `itemByPageNumber` lookup
-- expose `getEstimatedItem(pageNumber)` for pages not yet measured
-
-### `use-pdf-thumbnail-window.ts`
-
-Virtualization only:
-
-```ts
-type PdfThumbnailWindow = {
-  items: readonly PdfThumbnailLayoutItem[]
-  totalHeight: number
-}
-```
-
-Rules:
-
-- derive visible items from rail scrollTop and clientHeight
-- overscan by a fixed page count
-- never render all pages for large PDFs
-- expose stable item positions for follow math
-
-### `use-thumbnail-rail-follow.ts`
-
-Co-scrolling policy only:
-
-```ts
-type ThumbnailRailFollowApi = {
-  viewportRef: React.RefCallback<HTMLDivElement>
-  onPointerEnter: () => void
-  onPointerLeave: () => void
-  onScroll: () => void
-}
-```
-
-Inputs:
-
-- `currentPage`
-- `layout`
-- `isEnabled`
-
-Rules:
-
-1. If `currentPage` is invalid, do nothing.
-2. If the active row is visible with margin, do nothing.
-3. If the active row is outside the rail viewport, center it.
-4. If the pointer is inside the rail, suspend follow.
-5. If the user is scrolling the rail, suspend follow.
-6. Programmatic scroll does not mark user scrolling.
-7. Follow resumes after user-scroll idle timeout.
-8. On document change, reset rail follow state.
-
-Constants:
-
-```ts
-const THUMBNAIL_FOLLOW_MARGIN = 24
-const THUMBNAIL_PROGRAMMATIC_SCROLL_WINDOW_MS = 120
-const THUMBNAIL_USER_SCROLL_IDLE_MS = 400
-```
-
-### `pdf-thumbnail-rail.tsx`
-
-Accessible rail only:
-
-- `role="listbox"`
-- `aria-label="PDF pages"`
-- `aria-activedescendant` points to the current thumbnail option
-- each thumbnail is `role="option"`
-- current thumbnail uses `aria-current="page"`
-- selected state is absent unless multi-page operation selection exists
-- supports ArrowUp, ArrowDown, Home, End, Enter, and Space
-- keyboard navigation calls `onSelectPage`
-- pointer click calls `onSelectPage`
-
-### `pdf-thumbnail.tsx`
-
-Thumbnail button only:
-
-- render active/current state
-- render page label
-- call `onSelectPage(page)`
-- no resource loading
-- no rail scroll policy
-
-### `pdf-thumbnail-canvas.tsx`
-
-Canvas render only:
-
-- read page resource
-- compute scaled viewport
-- cap DPR
-- render page to canvas
-- cancel stale render task
-- surface render failures as PDF render errors
-
-## State Model
-
-Mutable state:
+## Modules
 
 ```txt
-rail scrollTop             DOM-owned
-rail clientHeight          measured
-isPointerInsideRail        ref
-isUserScrollingRail        ref
-lastProgrammaticScrollAt   ref
-idleTimer                  ref
+pdf-thumbnail-sidebar.tsx         public API, error boundary, composition
+use-pdf-thumbnail-document.ts     document read/retain/release
+use-pdf-thumbnail-page-metrics.ts lazy metadata loading for requested pages
+pdf-thumbnail-layout.ts           sparse pure thumbnail geometry
+use-pdf-thumbnail-window.ts       visible row window from rail scroll metrics
+use-thumbnail-rail-follow.ts      active-page rail follow controller
+pdf-thumbnail-rail.tsx            navigation semantics, keyboard, row placement
+pdf-thumbnail-item.tsx            current-page thumbnail button
+pdf-thumbnail-canvas.tsx          mounted-page canvas rendering only
 ```
 
-Derived state:
+Each module owns one concept and exports the smallest surface needed by its
+neighbors.
+
+## Data Model
 
 ```txt
-activePage                 normalized currentPage
-activePageIndex            activePage - 1
-activeThumbnailItem        layout lookup
-visibleThumbnailItems      virtualization window
-activeDescendantId         id for active option
-targetScrollTop            layout-derived center offset
+ViewerResource -> PDFDocumentProxy -> pageCount
+requested page numbers -> PdfThumbnailPageMetric map
+pageCount + metric map + width -> PdfThumbnailLayout
+rail scrollTop + clientHeight + layout -> visible layout items
+currentPage + layout + rail viewport -> follow decision
 ```
 
 Forbidden state:
@@ -264,147 +98,183 @@ selectedPage
 activeThumbnailPage
 highlightedPage
 scrollSyncedPage
+pageSizeByMountedCanvas
+followEpoch
+imperativeResetRef
 ```
 
-The document viewer owns `currentPage`. The thumbnail sidebar derives from it.
+## Lazy Page Metrics
 
-## Follow Algorithm
+`usePdfThumbnailPageMetrics` exposes a sparse metric map and an explicit
+`requestPageMetrics(pageNumbers)` function.
 
 ```ts
-function followActiveThumbnail() {
-  const page = normalizePage(currentPage, pageCount)
-  if (page == null) return
-  if (state.isPointerInsideRail) return
-  if (state.isUserScrollingRail) return
+type PdfThumbnailPageMetric = {
+  pageNumber: number
+  width: number
+  height: number
+}
 
-  const viewport = viewportRef.current
-  if (!viewport) return
-
-  const item = layout.itemByPageNumber.get(page)
-  if (!item) return
-
-  const top = item.top - viewport.scrollTop
-  const bottom = top + item.height
-  const minTop = THUMBNAIL_FOLLOW_MARGIN
-  const maxBottom = viewport.clientHeight - THUMBNAIL_FOLLOW_MARGIN
-  const isAtDocumentStart =
-    item.top <= THUMBNAIL_FOLLOW_MARGIN &&
-    viewport.scrollTop <= THUMBNAIL_FOLLOW_MARGIN
-
-  if ((top >= minTop || isAtDocumentStart) && bottom <= maxBottom) return
-
-  const targetTop = clamp(
-    item.top - viewport.clientHeight / 2 + item.height / 2,
-    0,
-    layout.totalHeight - viewport.clientHeight
-  )
-
-  state.lastProgrammaticScrollAt = performance.now()
-  viewport.scrollTo({ top: targetTop, behavior: "smooth" })
+type PdfThumbnailPageMetrics = {
+  pageCount: number
+  metricByPageNumber: ReadonlyMap<number, PdfThumbnailPageMetric>
+  requestPageMetrics: (pageNumbers: Iterable<number>) => void
+  status: "idle" | "loading"
 }
 ```
 
-## Extend Comparison
+Rules:
 
-Extend gets these right:
+- no page metric is loaded until requested by the sidebar
+- requests include the visible thumbnail window plus the active page
+- metrics come from `page.getViewport({ scale: 1 })`
+- duplicate and in-flight page requests are ignored
+- document switches clear metrics and in-flight guards
+- stale async results are ignored by document generation
+- rendering never waits for full-document metadata
 
-- thumbnail rail owns its viewport/window state
-- document scroll owns active page
-- thumbnail click drives document scroll
-- thumbnail virtualization is independent from document virtualization
-- programmatic thumbnail scroll is a narrow API
-- listbox semantics are present
+This keeps startup cost proportional to the visible rail, not `doc.numPages`.
 
-Extend is not the final target because:
+## Sparse Layout
 
-- co-scroll policy is implicit in effects and plugin refs
-- active page and selected page indexes are coupled
-- behavior is distributed across plugin, rail, and viewer effects
-- continuous follow is not explicit
+`pdf-thumbnail-layout.ts` is pure and DOM-free. It never reads PDF pages and
+never renders canvases.
 
-The local target keeps Extend's separations but names the follow policy directly.
-
-## Tests
-
-Layout:
-
-- computes row height from real page aspect ratio
-- accounts for label height, gap, and padding
-- falls back deterministically before dimensions are known
-- creates stable `pageNumber -> item` lookup
-- handles rotated pages
-
-Virtualization:
-
-- renders a bounded window
-- overscans above and below
-- updates window on scroll
-- keeps total height equal to layout total height
-
-Follow:
-
-- does nothing when active thumbnail is visible
-- scrolls when active thumbnail is above viewport
-- scrolls when active thumbnail is below viewport
-- clamps target scroll to document start and end
-- suspends while pointer is inside rail
-- suspends while user is scrolling rail
-- ignores programmatic scroll events
-- resumes after idle timeout
-- resets on source/document change
-
-Accessibility:
-
-- rail has `role="listbox"`
-- active option id matches `aria-activedescendant`
-- active thumbnail has `aria-current="page"`
-- ArrowUp and ArrowDown navigate one page
-- Home and End navigate document bounds
-- Enter and Space navigate selected active descendant
-
-Integration:
-
-- document scroll updates active thumbnail
-- active thumbnail remains visible after document scroll
-- thumbnail click calls `onSelectPage(page)`
-- manual rail scroll is not overwritten immediately by document scroll
-
-## Implementation Order
-
-1. Extract `PdfThumbnailCanvas`.
-2. Extract `PdfThumbnail`.
-3. Extract pure `pdf-thumbnail-layout.ts`.
-4. Replace fixed aspect row math with page-size-aware layout.
-5. Extract `usePdfThumbnailWindow`.
-6. Extract `useThumbnailRailFollow`.
-7. Add listbox keyboard semantics to `PdfThumbnailRail`.
-8. Move existing sidebar tests into layout, follow, accessibility, and
-   integration groups.
-9. Run browser smoke on `/view/blocks/pdf-thumbnails`.
-
-## Final Shape
-
-```txt
-PdfThumbnailSidebar
-  resource boundary and composition
-
-usePdfThumbnailLayout
-  page-size-aware row geometry
-
-usePdfThumbnailWindow
-  visible thumbnail window
-
-useThumbnailRailFollow
-  currentPage -> rail scroll policy
-
-PdfThumbnailRail
-  accessible navigation rail
-
-PdfThumbnail
-  page option rendering
-
-PdfThumbnailCanvas
-  pdfjs canvas rendering
+```ts
+type PdfThumbnailLayout = {
+  pageCount: number
+  width: number
+  estimatedImageHeight: number
+  estimatedItemHeight: number
+  labelAndGapHeight: number
+  metricByPageNumber: ReadonlyMap<number, PdfThumbnailPageMetric>
+  prefixHeightDeltas: readonly PdfThumbnailHeightDelta[]
+  totalHeight: number
+}
 ```
 
-That is the whole component. Anything outside those responsibilities is excess.
+The layout does not materialize every row. It exposes accessors:
+
+```ts
+getPdfThumbnailLayoutItem(layout, pageNumber)
+getVisiblePdfThumbnailItems({ layout, scrollTop, viewportHeight, overscan })
+findPdfThumbnailPageByOffset(layout, offset)
+```
+
+Rules:
+
+- missing page metrics use deterministic fallback geometry
+- page 1's metric, once known, becomes the estimate for unknown pages
+- exact metrics contribute sparse prefix-height deltas
+- `totalHeight` is estimated height plus all known sparse corrections
+- follow and virtualization use accessors, not an all-pages array
+
+This makes the layout fast for ordinary PDFs and structurally ready for very
+large PDFs.
+
+## Render Window
+
+`usePdfThumbnailWindow` owns rail scroll metrics only.
+
+```ts
+type PdfThumbnailWindow = {
+  visibleItems: readonly PdfThumbnailLayoutItem[]
+  totalHeight: number
+}
+```
+
+Rules:
+
+- read rail `scrollTop` and `clientHeight`
+- derive visible items through `getVisiblePdfThumbnailItems`
+- overscan by page count above and below the viewport
+- expose one spacer height from `layout.totalHeight`
+- never request metrics
+- never render canvases
+
+## Follow Controller
+
+`useThumbnailRailFollow` is the only owner of thumbnail co-scrolling.
+
+```ts
+type ThumbnailFollowSuspension = "none" | "pointer" | "user-scroll"
+```
+
+Rules:
+
+1. Normalize `currentPage`; invalid pages do nothing.
+2. If the current thumbnail is visible with margin, do nothing.
+3. If pointer suspension is active, do nothing.
+4. If user-scroll suspension is active, do nothing until the idle timer expires.
+5. Programmatic scrolls stamp `lastProgrammaticScrollAt` so the rail's own
+   `scroll` event does not self-classify as user input.
+6. Pointer leave resumes follow immediately.
+7. Thumbnail activation clears suspension and scrolls that thumbnail into view.
+8. Document reset clears suspension; the normal derived follow effect runs.
+
+The controller has no epoch and no imperative latest-callback reset path.
+
+## Rail Semantics
+
+The rail is navigation, not selection.
+
+```txt
+nav[aria-label="PDF pages"]
+  ol
+    li[data-index]
+      button[aria-label="Page N"][aria-current="page" when current]
+```
+
+Rules:
+
+- no `role="listbox"`
+- no `role="option"`
+- no `aria-selected`
+- ArrowUp and ArrowDown activate previous/next page
+- Home and End activate first/last page
+- Enter and Space use native button behavior
+
+## Canvas Renderer
+
+`PdfThumbnailCanvas` renders only mounted pages. It is not a geometry feedback
+channel.
+
+Rules:
+
+- read one page resource for the mounted page
+- render at thumbnail width with capped DPR
+- cancel render tasks on unmount
+- surface render failures through the viewer error boundary
+- never report page size to the layout
+
+## Browser Regression
+
+The permanent browser test is `e2e/pdf-thumbnail-sidebar.spec.ts`.
+
+It verifies:
+
+- the PDF thumbnails demo opens
+- document scroll changes the active page
+- the matching thumbnail is visible in the rail
+- clicking a later thumbnail scrolls the document
+- moving the pointer out of the rail does not leave stale hover/follow state
+- the active thumbnail uses `aria-current`
+- no thumbnail uses `aria-selected`
+
+Command:
+
+```sh
+pnpm test:e2e e2e/pdf-thumbnail-sidebar.spec.ts
+```
+
+## Invariants
+
+- One shared `ViewerResource` enters the viewer and sidebar.
+- `currentPage` is the only highlight driver.
+- `onSelectPage` is the only navigation output.
+- Page metrics are sparse and requested, never eagerly loaded for every page.
+- Layout is pure and sparse.
+- Rendered thumbnail rows are bounded by viewport plus overscan.
+- Canvas rendering is not a measurement system.
+- Follow state has explicit suspension and resume paths.
+- Browser behavior is covered by a real e2e regression.

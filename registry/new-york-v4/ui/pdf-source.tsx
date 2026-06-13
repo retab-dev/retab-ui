@@ -98,7 +98,13 @@ export function usePdfSourceTarget(
         const target = pdfAnchorToTarget(source.anchor)
         if (target) {
           viewerRef.current?.scrollToPageArea(
-            { pageNumber: target.page, top: target.area.top },
+            {
+              pageNumber: target.page,
+              left: target.area.left,
+              top: target.area.top,
+              width: target.area.width,
+              height: target.area.height,
+            },
             options
           )
         }

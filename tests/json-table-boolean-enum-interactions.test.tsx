@@ -200,7 +200,7 @@ async function activateEnumCell(fieldPath: string) {
   const view = renderJsonTableField({ fieldPath })
   const cell = await view.findCell()
 
-  fireEvent.pointerDown(cell, { button: 0 })
+  fireEvent.click(cell, { button: 0, clientX: 0, clientY: 0, detail: 1 })
 
   const trigger = await view.findByRole("combobox")
   await waitFor(() =>

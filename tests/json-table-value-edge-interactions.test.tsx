@@ -95,7 +95,13 @@ async function activateEnumCell({
     onDocumentDataChange,
   })
 
-  await activateCell(view, fieldPath)
+  const cell = await editableCell(view, fieldPath)
+  fireEvent.click(cell, {
+    button: 0,
+    clientX: 0,
+    clientY: 0,
+    detail: 1,
+  })
 
   const trigger = await view.findByRole("combobox")
   await waitFor(() =>

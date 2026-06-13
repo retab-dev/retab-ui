@@ -7,8 +7,6 @@ import {
   type ViewerContentIdentity,
   type ViewerResource,
 } from "@/lib/viewer-resource"
-import { TextViewerFallback } from "@/components/ui/text-viewer-chrome"
-import { TextViewerContent } from "@/components/ui/text-viewer-content"
 import {
   DEFAULT_MAX_BYTES,
   DEFAULT_MAX_LINES,
@@ -17,8 +15,10 @@ import type {
   TextViewerHandle,
   TextViewerProps,
 } from "@/components/ui/text-viewer-types"
-import { useIsClient } from "@/components/ui/use-is-client"
 import { ViewerErrorBoundary } from "@/components/ui/viewer-error"
+
+import { TextViewerFallback } from "./text-viewer-chrome"
+import { TextViewerContent } from "./text-viewer-content"
 
 export type {
   TextDocumentSource,
@@ -33,7 +33,7 @@ export const TextViewer = React.forwardRef<TextViewerHandle, TextViewerProps>(
       contentKey: "",
       version: 0,
     })
-    const isClient = useIsClient()
+    const [isMounted, setIsMounted] = React.useState(false)
     const { source } = props
     const resource = React.useMemo(() => createViewerResource(source), [source])
     const contentBaseKey = textViewerContentBaseKey(resource.content, props)
@@ -45,7 +45,11 @@ export const TextViewer = React.forwardRef<TextViewerHandle, TextViewerProps>(
       retryVersion
     )
 
-    if (source.kind !== "text" && !isClient) {
+    React.useEffect(() => {
+      setIsMounted(true)
+    }, [])
+
+    if (!isMounted) {
       return (
         <TextViewerFallback
           className={props.className}

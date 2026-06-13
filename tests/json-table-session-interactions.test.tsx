@@ -774,8 +774,11 @@ describe("json table edit-session interactions", () => {
     fireEvent.change(view.getByRole("textbox"), {
       target: { value: "Globex" },
     })
-    fireEvent.pointerDown(cellByFieldPath(view.container, "status"), {
+    fireEvent.click(cellByFieldPath(view.container, "status"), {
       button: 0,
+      clientX: 0,
+      clientY: 0,
+      detail: 1,
     })
     await chooseOption(view, "paid")
 
@@ -811,18 +814,6 @@ describe("json table edit-session interactions", () => {
     )
 
     const cell = cellByFieldPath(view.container, "lines.0.transaction_type")
-    fireEvent.pointerDown(cell, {
-      button: 0,
-      clientX: 0,
-      clientY: 0,
-      detail: 1,
-    })
-    fireEvent.pointerUp(cell, {
-      button: 0,
-      clientX: 0,
-      clientY: 0,
-      detail: 1,
-    })
     fireEvent.click(cell, { button: 0, clientX: 0, clientY: 0, detail: 1 })
 
     const trigger = await view.findByRole("combobox")

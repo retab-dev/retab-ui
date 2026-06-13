@@ -4,6 +4,7 @@ export interface ThumbnailCacheEntry<T> {
   promise: Promise<T>
   status: "pending" | "resolved" | "rejected"
   value?: T
+  onResolve?: (value: T) => void
 }
 
 export interface ThumbnailCacheStore<T> {
@@ -42,6 +43,7 @@ export function cachedThumbnailResource<T>(
       (value) => {
         entry.status = "resolved"
         entry.value = value
+        entry.onResolve?.(value)
         cache.prune?.()
         return value
       },
@@ -74,6 +76,9 @@ export function createThumbnailArtifactCache<T>({
     },
     set(key, entry) {
       entries.set(key, entry)
+      entry.onResolve = (value) => {
+        if (entries.get(key) !== entry) dispose?.(value)
+      }
       cache.prune?.()
     },
     delete(key) {

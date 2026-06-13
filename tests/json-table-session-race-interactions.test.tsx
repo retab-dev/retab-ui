@@ -214,6 +214,17 @@ async function activateCell(view: RenderResult, fieldPath: string) {
   return cell
 }
 
+async function activateEnumCell(view: RenderResult, fieldPath: string) {
+  const cell = cellByFieldPath(view.container, fieldPath)
+  fireEvent.click(cell, {
+    button: 0,
+    clientX: 0,
+    clientY: 0,
+    detail: 1,
+  })
+  return cell
+}
+
 async function chooseOption(view: RenderResult, optionName: string) {
   const option = await view.findByRole("option", { name: optionName })
   fireEvent.pointerDown(option, {
@@ -252,9 +263,19 @@ describe("json table session and overlay race interactions", () => {
     await waitForEditableCells(view.container, 1)
     const statusCell = cellByFieldPath(view.container, "status")
 
-    fireEvent.pointerDown(statusCell, { button: 0 })
+    fireEvent.click(statusCell, {
+      button: 0,
+      clientX: 0,
+      clientY: 0,
+      detail: 1,
+    })
     expect(await view.findByRole("option", { name: "paid" })).toBeTruthy()
-    fireEvent.pointerDown(statusCell, { button: 0 })
+    fireEvent.click(statusCell, {
+      button: 0,
+      clientX: 0,
+      clientY: 0,
+      detail: 1,
+    })
 
     await waitFor(() =>
       expect(activeCells(view.container).length).toBeLessThanOrEqual(1)
@@ -262,9 +283,7 @@ describe("json table session and overlay race interactions", () => {
     expect(onUpdateDocument).not.toHaveBeenCalled()
 
     if (!view.queryByRole("option", { name: "paid" })) {
-      fireEvent.pointerDown(cellByFieldPath(view.container, "status"), {
-        button: 0,
-      })
+      await activateEnumCell(view, "status")
       expect(await view.findByRole("option", { name: "paid" })).toBeTruthy()
     }
 
@@ -288,7 +307,7 @@ describe("json table session and overlay race interactions", () => {
     })
 
     await waitForEditableCells(view.container, 2)
-    await activateCell(view, "status")
+    await activateEnumCell(view, "status")
 
     expect(await view.findByRole("option", { name: "paid" })).toBeTruthy()
 
@@ -315,7 +334,7 @@ describe("json table session and overlay race interactions", () => {
 
     expect(await view.findByRole("dialog")).toBeTruthy()
 
-    await activateCell(view, "status")
+    await activateEnumCell(view, "status")
 
     await waitFor(() => expect(pickerPopup()).toBeNull())
     expect(await view.findByRole("option", { name: "paid" })).toBeTruthy()
@@ -332,7 +351,7 @@ describe("json table session and overlay race interactions", () => {
     })
 
     await waitForEditableCells(view.container, 1)
-    await activateCell(view, "status")
+    await activateEnumCell(view, "status")
 
     expect(await view.findByRole("option", { name: "paid" })).toBeTruthy()
 

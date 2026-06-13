@@ -17,10 +17,11 @@ import {
 } from "@/components/ui/select"
 
 const statusOptions = ["pending", "approved", "rejected"]
+type DemoDataCellKind = Exclude<DataCellKind, "select">
 
 const rows: Array<{
   id: string
-  kind: DataCellKind
+  kind: DemoDataCellKind
   label: string
   value: DataCellValue
   enumValues?: string[]
@@ -66,7 +67,7 @@ function DemoDataCell({
   onDraftValueChange,
   onCommit,
 }: {
-  kind: DataCellKind
+  kind: DemoDataCellKind
   value: DataCellValue
   editable?: boolean
   draftValue?: string

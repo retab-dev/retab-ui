@@ -2269,7 +2269,7 @@ function formatTableCellValue({
   return String(value)
 }
 
-function dataCellKindForColumn(column: Column): DataCellKind {
+function dataCellKindForColumn(column: Column): Exclude<DataCellKind, "select"> {
   if (column.kind === "number" || column.kind === "integer") return column.kind
   if (column.kind === "boolean") return "boolean"
   if (column.schema.format === "date-time") return "date-time"

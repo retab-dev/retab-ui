@@ -124,10 +124,10 @@ export const VIEWERS: readonly ViewerOption[] = [
   },
   {
     id: "text",
-    label: "Text",
+    label: "Code",
     sample: "generated 30k line log",
     scrollerSelector:
-      '[data-slot="text-viewer"] [data-slot="scroll-area-viewport"]',
+      '[data-slot="code-viewer"] [data-slot="scroll-area-viewport"]',
   },
   {
     id: "docx",

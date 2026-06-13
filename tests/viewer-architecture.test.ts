@@ -62,6 +62,7 @@ const staleSourceAdapterNames = [
 ].map((parts) => parts.join(""))
 
 const canonicalViewerNames = new Set([
+  "code-viewer",
   "csv-viewer",
   "pdf-viewer",
   "docx-viewer",

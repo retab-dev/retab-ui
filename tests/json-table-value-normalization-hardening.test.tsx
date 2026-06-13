@@ -200,7 +200,13 @@ async function openEnumCell(
   view: ReturnType<typeof renderNormalizationRow>,
   fieldPath: string
 ) {
-  await activateCell(view, fieldPath)
+  const cell = await editableCell(view, fieldPath)
+  fireEvent.click(cell, {
+    button: 0,
+    clientX: 18,
+    clientY: 12,
+    detail: 1,
+  })
   const trigger = await view.findByRole("combobox")
   await waitFor(() =>
     expect(trigger.getAttribute("aria-expanded")).toBe("true")

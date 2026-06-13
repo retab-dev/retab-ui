@@ -8,6 +8,7 @@ import {
 } from "@/registry/new-york-v4/ui/data-cell-format"
 import { DataCellNumberControl } from "@/registry/new-york-v4/ui/data-cell-number-control"
 import { DataCellPickerControl } from "@/registry/new-york-v4/ui/data-cell-picker-control"
+import { DataCellSelectControl } from "@/registry/new-york-v4/ui/data-cell-select-control"
 import { DataCellTextControl } from "@/registry/new-york-v4/ui/data-cell-text-control"
 import type { DataCellProps } from "@/registry/new-york-v4/ui/data-cell-types"
 
@@ -18,6 +19,7 @@ type DataCellPickerControlProps = DataCellProps & {
 type DataCellNumberControlProps = DataCellProps & {
   kind: "number" | "integer"
 }
+type DataCellSelectControlProps = DataCellProps & { kind: "select" }
 type DataCellTextControlProps = DataCellProps & { kind: "text" }
 
 export type {
@@ -27,6 +29,7 @@ export type {
   DataCellKind,
   DataCellMode,
   DataCellProps,
+  DataCellSelectOption,
   DataCellValue,
   DataCellValueMeta,
 } from "@/registry/new-york-v4/ui/data-cell-types"
@@ -35,6 +38,7 @@ export { DataCellBooleanControl }
 export { DataCellDisplay }
 export { DataCellNumberControl }
 export { DataCellPickerControl }
+export { DataCellSelectControl }
 export { DataCellTextControl }
 
 export function DataCell({ mode = "display", ...props }: DataCellProps) {
@@ -57,6 +61,9 @@ export function DataCellControl(props: DataCellProps) {
   }
   if (props.kind === "number" || props.kind === "integer") {
     return <DataCellNumberControl {...(props as DataCellNumberControlProps)} />
+  }
+  if (props.kind === "select") {
+    return <DataCellSelectControl {...(props as DataCellSelectControlProps)} />
   }
   return <DataCellTextControl {...(props as DataCellTextControlProps)} />
 }

@@ -50,6 +50,22 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
+interface Deferred<T> {
+  promise: Promise<T>
+  resolve: (value: T | PromiseLike<T>) => void
+  reject: (error: unknown) => void
+}
+
+function deferred<T>(): Deferred<T> {
+  let resolve!: Deferred<T>["resolve"]
+  let reject!: Deferred<T>["reject"]
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res
+    reject = rej
+  })
+  return { promise, resolve, reject }
+}
+
 describe("FileThumbnail helpers", () => {
   it("resolves explicit state before inferred preview state", () => {
     expect(
@@ -365,6 +381,46 @@ describe("DocumentThumbnail helpers", () => {
 
     expect(cache.size).toBe(1)
     expect(dispose).toHaveBeenCalledWith(first)
+  })
+
+  it("disposes a pending artifact when it resolves after cache clear", async () => {
+    const dispose = vi.fn()
+    const pending = deferred<{ id: string }>()
+    const artifact = { id: "late" }
+    const cache = createThumbnailArtifactCache<{ id: string }>({
+      maxEntries: 1,
+      dispose,
+    })
+
+    const promise = cachedThumbnailResource(cache, "late", () => pending.promise)
+    expect(cache.size).toBe(1)
+
+    cache.clear()
+    expect(cache.size).toBe(0)
+
+    pending.resolve(artifact)
+    await expect(promise).resolves.toBe(artifact)
+    expect(dispose).toHaveBeenCalledTimes(1)
+    expect(dispose).toHaveBeenCalledWith(artifact)
+  })
+
+  it("disposes a pending artifact when it resolves after cache delete", async () => {
+    const dispose = vi.fn()
+    const pending = deferred<{ id: string }>()
+    const artifact = { id: "deleted" }
+    const cache = createThumbnailArtifactCache<{ id: string }>({
+      maxEntries: 1,
+      dispose,
+    })
+
+    const promise = cachedThumbnailResource(cache, "deleted", () => pending.promise)
+    expect(cache.delete("deleted")).toBe(true)
+    expect(cache.size).toBe(0)
+
+    pending.resolve(artifact)
+    await expect(promise).resolves.toBe(artifact)
+    expect(dispose).toHaveBeenCalledTimes(1)
+    expect(dispose).toHaveBeenCalledWith(artifact)
   })
 
   it("bounds the shared text thumbnail cache", async () => {

@@ -88,7 +88,7 @@ function numberInput(view: RenderedView) {
 
 async function openEnum(view: RenderedView, fieldPath: string) {
   const cell = await editableCell(view, fieldPath)
-  pointerActivate(cell)
+  browserClick(cell)
 
   const trigger = await view.findByRole("combobox")
   await waitFor(() =>
@@ -291,7 +291,7 @@ describe("json table browser sequence hardening", () => {
     expect(onDocumentDataChange).not.toHaveBeenCalled()
   })
 
-  it("keeps pointer-opened enum dropdowns open after the trigger receives the activation click", async () => {
+  it("keeps click-opened enum dropdowns open after the activation sequence settles", async () => {
     const onDocumentDataChange = vi.fn()
     const view = renderInteractionRow({
       visiblePaths: ["status"],
@@ -299,9 +299,8 @@ describe("json table browser sequence hardening", () => {
     })
     const cell = await editableCell(view, "status")
 
-    pointerActivate(cell)
+    browserClick(cell)
     const trigger = await view.findByRole("combobox")
-    finishBrowserClick(trigger)
     await new Promise((resolve) => setTimeout(resolve, 80))
 
     expect(trigger.getAttribute("aria-expanded")).toBe("true")
@@ -330,7 +329,7 @@ describe("json table browser sequence hardening", () => {
     await waitFor(() => expect(view.queryByRole("combobox")).toBeNull())
   })
 
-  it("closes an enum dropdown cleanly when outside pointerdown lands before the original click completes", async () => {
+  it("does not open an enum dropdown when the pointerdown is abandoned outside the cell", async () => {
     const onDocumentDataChange = vi.fn()
     const view = renderInteractionRow({
       visiblePaths: ["status"],
@@ -339,10 +338,8 @@ describe("json table browser sequence hardening", () => {
     const cell = await editableCell(view, "status")
 
     fireEvent.pointerDown(cell, browserPointerEventInit())
-    expect(await view.findByRole("combobox")).toBeTruthy()
-
     outsidePointerDown()
-    finishBrowserClick(cell)
+    finishBrowserClick(document.body)
 
     await waitFor(() => expect(view.queryByRole("combobox")).toBeNull())
     expect(onDocumentDataChange).not.toHaveBeenCalled()

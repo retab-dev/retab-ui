@@ -418,7 +418,12 @@ describe("json table row rendering", () => {
       return editableCell
     })
 
-    fireEvent.pointerDown(cell, { button: 0 })
+    fireEvent.click(cell, {
+      button: 0,
+      clientX: 0,
+      clientY: 0,
+      detail: 1,
+    })
 
     expect(
       (await view.findByRole("combobox")).getAttribute("aria-expanded")

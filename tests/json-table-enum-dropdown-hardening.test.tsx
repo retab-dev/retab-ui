@@ -84,13 +84,22 @@ function pointerDown(target: Element | Document | Window) {
   })
 }
 
+function clickCell(target: Element | Document | Window) {
+  fireEvent.click(target, {
+    button: 0,
+    clientX: 24,
+    clientY: 12,
+    detail: 1,
+  })
+}
+
 async function openEnumCell(
   view: ReturnType<typeof renderEnumRow>,
   fieldPath: string
 ) {
   const cell = await waitFor(() => findEditableCell(view.container, fieldPath))
 
-  pointerDown(cell)
+  clickCell(cell)
 
   const trigger = await view.findByRole("combobox")
   await waitFor(() =>
@@ -297,7 +306,7 @@ describe("json table enum dropdown hardening", () => {
     expect(await view.findByRole("option", { name: "paid" })).toBeTruthy()
 
     const secondCell = findEditableCell(view.container, "payment_type")
-    pointerDown(secondCell)
+    clickCell(secondCell)
 
     const trigger = await view.findByRole("combobox")
     await waitFor(() =>

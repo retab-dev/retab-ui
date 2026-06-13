@@ -5,7 +5,8 @@ import * as React from "react"
 import type { ViewerResource } from "@/lib/viewer-resource"
 import type { FileCategory, ViewerDescriptor } from "@/lib/viewer-source"
 
-import { isTiffDescriptor } from "./descriptor"
+import { isCodeThumbnailDescriptor, isTiffDescriptor } from "./descriptor"
+import { CodeThumbnail } from "./renderers/code-thumbnail"
 import { CsvFirstRows } from "./renderers/csv-thumbnail"
 import { DocxFirstPage } from "./renderers/docx-thumbnail"
 import { HtmlFirstPage } from "./renderers/html-thumbnail"
@@ -13,7 +14,7 @@ import { ImageFirstFrame } from "./renderers/image-thumbnail"
 import { MarkdownFirstPage } from "./renderers/markdown-thumbnail"
 import { PdfFirstPage } from "./renderers/pdf-thumbnail"
 import { PptxFirstSlide } from "./renderers/pptx-thumbnail"
-import { TextFirstLines } from "./renderers/text-thumbnail"
+import { TextThumbnail } from "./renderers/text-thumbnail"
 import { TiffFirstPage } from "./renderers/tiff-thumbnail"
 import { XlsxFirstSheet } from "./renderers/xlsx-thumbnail"
 import type { ThumbnailAnchor } from "./types"
@@ -64,9 +65,12 @@ const DOCUMENT_RENDERERS: Record<
   html: ({ resource, thumbnailKey }) => (
     <HtmlFirstPage resource={resource} thumbnailKey={thumbnailKey} />
   ),
-  text: ({ resource, thumbnailKey }) => (
-    <TextFirstLines resource={resource} thumbnailKey={thumbnailKey} />
-  ),
+  text: ({ resource, descriptor, thumbnailKey }) =>
+    isCodeThumbnailDescriptor(descriptor) ? (
+      <CodeThumbnail resource={resource} thumbnailKey={thumbnailKey} />
+    ) : (
+      <TextThumbnail resource={resource} thumbnailKey={thumbnailKey} />
+    ),
 }
 
 export function FirstThumbnailUnit({

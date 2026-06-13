@@ -78,4 +78,62 @@ describe("thumbnail decode queue", () => {
       queuedDecodes: 0,
     })
   })
+
+  it("ignores stale releases from work that was active before a test reset", async () => {
+    const gate = deferred()
+    const task = withThumbnailDecodeSlot(async () => {
+      await gate.promise
+      return "done"
+    })
+
+    await nextTick()
+    expect(getThumbnailDecodeQueueSnapshot()).toMatchObject({
+      activeDecodes: 1,
+      queuedDecodes: 0,
+    })
+
+    clearThumbnailCachesForTests()
+    expect(getThumbnailDecodeQueueSnapshot()).toMatchObject({
+      activeDecodes: 0,
+      queuedDecodes: 0,
+    })
+
+    gate.resolve()
+    await expect(task).resolves.toBe("done")
+    expect(getThumbnailDecodeQueueSnapshot()).toMatchObject({
+      activeDecodes: 0,
+      queuedDecodes: 0,
+    })
+  })
+
+  it("does not start queued work from before a test reset", async () => {
+    const gates = Array.from({ length: 3 }, () => deferred())
+    let staleQueuedStarted = false
+
+    const activeTasks = gates.map((gate) =>
+      withThumbnailDecodeSlot(async () => {
+        await gate.promise
+      })
+    )
+    void withThumbnailDecodeSlot(async () => {
+      staleQueuedStarted = true
+    })
+
+    await nextTick()
+    expect(getThumbnailDecodeQueueSnapshot()).toMatchObject({
+      activeDecodes: 3,
+      queuedDecodes: 1,
+    })
+
+    clearThumbnailCachesForTests()
+    for (const gate of gates) gate.resolve()
+    await Promise.all(activeTasks)
+    await nextTick()
+
+    expect(staleQueuedStarted).toBe(false)
+    expect(getThumbnailDecodeQueueSnapshot()).toMatchObject({
+      activeDecodes: 0,
+      queuedDecodes: 0,
+    })
+  })
 })

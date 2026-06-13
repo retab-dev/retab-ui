@@ -34,7 +34,7 @@ export function LayoutBlocksPanel({
   emptyLabel?: string
   items: LayoutItem[]
   onActiveItemIdChange?: (itemId: string | null) => void
-  onNavigateItem?: (item: LayoutItem) => void
+  onNavigateItem?: (item: LayoutItem, options?: ScrollToOptions) => void
   onSelectedItemIdChange?: (itemId: string | null) => void
   renderItemContent?: (item: LayoutItem) => React.ReactNode
   selectedItemId?: string | null
@@ -121,7 +121,7 @@ function LayoutItemRow({
   isSelected: boolean
   item: LayoutItem
   onActiveItemIdChange?: (itemId: string | null) => void
-  onNavigateItem?: (item: LayoutItem) => void
+  onNavigateItem?: (item: LayoutItem, options?: ScrollToOptions) => void
   onSelectedItemIdChange?: (itemId: string | null) => void
   renderItemContent?: (item: LayoutItem) => React.ReactNode
 }) {
@@ -132,7 +132,12 @@ function LayoutItemRow({
 
   function selectItem() {
     onSelectedItemIdChange?.(item.id)
-    onNavigateItem?.(item)
+    onNavigateItem?.(item, { behavior: "smooth" })
+  }
+
+  function previewItem() {
+    onActiveItemIdChange?.(item.id)
+    onNavigateItem?.(item, { behavior: "auto" })
   }
 
   return (
@@ -148,7 +153,7 @@ function LayoutItemRow({
       )}
       onBlur={() => onActiveItemIdChange?.(null)}
       onClick={selectItem}
-      onFocus={() => onActiveItemIdChange?.(item.id)}
+      onFocus={previewItem}
       onKeyDown={(event) => {
         if (event.key === "Escape") {
           event.preventDefault()
@@ -156,7 +161,7 @@ function LayoutItemRow({
           if (isSelected) onSelectedItemIdChange?.(null)
         }
       }}
-      onMouseEnter={() => onActiveItemIdChange?.(item.id)}
+      onMouseEnter={previewItem}
       onMouseLeave={() => onActiveItemIdChange?.(null)}
     >
       <div className="flex min-w-0 items-center gap-2">

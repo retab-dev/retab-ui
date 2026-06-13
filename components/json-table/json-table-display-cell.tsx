@@ -6,10 +6,14 @@ import {
   formatDataCellDisplayValue,
   type DataCellCommitValue,
   type DataCellKind,
+  type DataCellSelectOption,
   type DataCellValueMeta,
   type DataCellValue,
 } from "@/components/ui/data-cell"
-import { jsonTableDataCellClass } from "@/components/json-table/json-table-data-cell"
+import {
+  jsonTableDataCellClass,
+  jsonTableSelectDataCellClass,
+} from "@/components/json-table/json-table-data-cell"
 import { parseDateStringAsLocal } from "@/components/json-table/lib/date-parsing"
 import { dateStringToFormat } from "@/components/json-table/lib/date-display-formatting"
 import type { FieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
@@ -29,8 +33,9 @@ export function dataCellKindForField(
   fieldMetadata: FieldMetadata
 ): DataCellKind | null {
   switch (fieldMetadata.kind) {
-    case "string":
     case "enum":
+      return "select"
+    case "string":
     case "unknown":
       return "text"
     case "number":
@@ -43,6 +48,111 @@ export function dataCellKindForField(
     default:
       return null
   }
+}
+
+const JSON_TABLE_NULL_SELECT_VALUE = "__json_table_null__"
+
+function enumOptionValue(index: number): string {
+  return `option:${index}`
+}
+
+function areJsonValuesEqual(left: unknown, right: unknown): boolean {
+  if (Object.is(left, right)) return true
+  if (typeof left !== typeof right) return false
+  if (left === null || right === null) return false
+  if (typeof left !== "object" || typeof right !== "object") return false
+
+  if (Array.isArray(left) || Array.isArray(right)) {
+    if (!Array.isArray(left) || !Array.isArray(right)) return false
+    return (
+      left.length === right.length &&
+      left.every((item, index) => areJsonValuesEqual(item, right[index]))
+    )
+  }
+
+  const leftRecord = left as Record<string, unknown>
+  const rightRecord = right as Record<string, unknown>
+  const leftKeys = Object.keys(leftRecord)
+  const rightKeys = Object.keys(rightRecord)
+  return (
+    leftKeys.length === rightKeys.length &&
+    leftKeys.every((key) =>
+      Object.prototype.hasOwnProperty.call(rightRecord, key)
+    ) &&
+    leftKeys.every((key) =>
+      areJsonValuesEqual(leftRecord[key], rightRecord[key])
+    )
+  )
+}
+
+function enumDataCellValue(value: unknown, enumValues: unknown[]): string {
+  if (value === null || value === undefined) {
+    return JSON_TABLE_NULL_SELECT_VALUE
+  }
+  const matchingIndex = enumValues.findIndex((enumValue) =>
+    areJsonValuesEqual(enumValue, value)
+  )
+  return matchingIndex === -1 ? String(value) : enumOptionValue(matchingIndex)
+}
+
+function enumCommitValue(
+  value: string,
+  fieldMetadata: FieldMetadata
+): unknown {
+  if (
+    value === JSON_TABLE_NULL_SELECT_VALUE &&
+    fieldMetadata.kind === "enum" &&
+    fieldMetadata.isNullable
+  ) {
+    return null
+  }
+  if (!value.startsWith("option:")) return value
+  const optionIndex = Number(value.slice("option:".length))
+  return fieldMetadata.kind === "enum" &&
+    Number.isInteger(optionIndex) &&
+    optionIndex in fieldMetadata.enumValues
+    ? fieldMetadata.enumValues[optionIndex]
+    : value
+}
+
+function enumDisplayValue(value: unknown, isNullable: boolean): string {
+  if (value === null || value === undefined) {
+    return isNullable ? "No selection" : ""
+  }
+  return String(value)
+}
+
+function enumDataCellOptions(
+  fieldMetadata: FieldMetadata
+): DataCellSelectOption[] {
+  if (fieldMetadata.kind !== "enum") return []
+
+  const nullOption: DataCellSelectOption[] = fieldMetadata.isNullable
+    ? [
+        {
+          value: JSON_TABLE_NULL_SELECT_VALUE,
+          label: <em>No selection</em>,
+          className: "text-xs text-muted-foreground",
+        },
+      ]
+    : []
+
+  return [
+    ...nullOption,
+    ...fieldMetadata.enumValues
+      .map((option, optionIndex) => ({ option, optionIndex }))
+      .filter(
+        ({ option }) =>
+          option !== undefined &&
+          option !== null &&
+          !(typeof option === "string" && option === "")
+      )
+      .map(({ option, optionIndex }) => ({
+        value: enumOptionValue(optionIndex),
+        label: String(option),
+        className: "text-xs",
+      })),
+  ]
 }
 
 function dataCellValue(value: unknown): DataCellValue {
@@ -162,7 +272,7 @@ export function JsonTableDataCell({
   isEditable?: boolean
   isPickerOpen?: boolean
   mode: "display" | "edit"
-  onCommit?: (value: DataCellCommitValue, meta: DataCellValueMeta) => void
+  onCommit?: (value: unknown, meta: DataCellValueMeta) => void
   onDraftValueChange?: (value: string, meta: DataCellValueMeta) => void
   onEditingEnd?: () => void
   onKeyDown?: React.KeyboardEventHandler<HTMLElement>
@@ -188,6 +298,48 @@ export function JsonTableDataCell({
     },
     [fieldMetadata, onCommit]
   )
+  const handleSelectCommit = React.useCallback(
+    (nextValue: string | null, meta: DataCellValueMeta) => {
+      onCommit?.(
+        typeof nextValue === "string"
+          ? enumCommitValue(nextValue, fieldMetadata)
+          : nextValue,
+        meta
+      )
+    },
+    [fieldMetadata, onCommit]
+  )
+
+  if (dataCellKind === "select") {
+    const selectValue =
+      fieldMetadata.kind === "enum"
+        ? enumDataCellValue(value, fieldMetadata.enumValues)
+        : textDataCellValue(value)
+
+    return (
+      <DataCell
+        kind="select"
+        mode={mode}
+        value={selectValue}
+        selectOptions={enumDataCellOptions(fieldMetadata)}
+        editable={isEditable}
+        activationIntent={activationIntent}
+        autoFocus={autoFocus}
+        isPickerOpen={isPickerOpen}
+        onCommit={handleSelectCommit}
+        onEditingEnd={onEditingEnd}
+        onPickerOpenChange={onPickerOpenChange}
+        onKeyDown={onKeyDown}
+        placeholder="Select..."
+        className={jsonTableSelectDataCellClass}
+        formatValue={
+          fieldMetadata.kind === "enum"
+            ? () => enumDisplayValue(value, fieldMetadata.isNullable)
+            : undefined
+        }
+      />
+    )
+  }
 
   if (dataCellKind === "number" || dataCellKind === "integer") {
     return (

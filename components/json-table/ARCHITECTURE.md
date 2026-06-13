@@ -4,8 +4,8 @@
 
 JSON table owns document structure, schema interpretation, virtualization, and
 the single active edit session. DataCell owns primitive display and primitive
-controls. Editors are the narrow adapters between schema field kinds and
-DataCell controls.
+controls. JSON table has only three active control families: DataCell-backed
+primitive cells, enum cells, and structured cells.
 
 ```txt
 document + schema
@@ -13,7 +13,7 @@ document + schema
   -> visible rows and columns
   -> display cells
   -> one edit session
-  -> one editor
+  -> one active cell control
   -> one primitive control
   -> one commit path
 ```
@@ -27,9 +27,9 @@ Anything outside that line must justify itself.
 JSON table owns:
 
 - projected rows, visible columns, and field paths
-- schema metadata and editor selection
+- schema metadata and active-control selection
 - one `JsonTableEditSession`
-- draft value and overlay-open state for the active editor
+- draft value and overlay-open state for the active control
 - document mutation through the table commit boundary
 - cell activation from pointer and keyboard intent
 
@@ -56,7 +56,8 @@ DataCell does not own:
 - table edit sessions
 - document mutation
 - schema traversal
-- enum/object/array editors
+- enum select semantics
+- structured object/array popovers
 - hover-to-edit behavior
 
 ## Runtime Files
@@ -77,16 +78,18 @@ registry/new-york-v4/ui/data-cell-picker-position.ts
 `data-cell.tsx` is only the public router and barrel. It contains no rendering
 mechanics. The focused files each have one reason to change.
 
-## Editor Contract
+## Active Control Contract
 
-Editors receive the same small contract:
+The active cell receives the smallest possible control-specific contract.
+Scalar, date, boolean, and enum controls use `JsonTableDataCell`. Objects and
+arrays use `JsonTableStructuredCell`.
 
 ```ts
-type CellEditorProps = {
-  cell: JsonTableEditorCell
+type JsonTableActiveControlProps = {
+  fieldPath: string
+  fieldMetadata: FieldMetadata
+  effectiveValue: unknown
   editSession: JsonTableEditSession
-  draftValue: string
-  setDraftValue: (draftValue: string) => void
   setOverlayOpen: (isOverlayOpen: boolean) => void
   closeEditSession: () => void
   commitValue: (value: unknown) => void
@@ -99,8 +102,8 @@ and auto mode.
 
 ## Interaction Contract
 
-- Hover never mounts an editor.
-- Pointer activation mounts the editor for the clicked cell only.
+- Hover never mounts an active control.
+- Pointer activation mounts the active control for the clicked cell only.
 - Text cells focus and accept typing on the first click.
 - Typeable keys start text editing.
 - Boolean cells toggle on the first click and close the edit session.
@@ -108,36 +111,36 @@ and auto mode.
 - Date cells open the picker on the first click.
 - Text blur commits once and closes the edit session.
 - Only one edit session exists at a time.
-- Only the active editor receives draft updates.
+- Only the active control receives draft updates.
 
 ## Commit Path
 
 ```txt
 primitive control
-  -> editor commitValue
+  -> active control commitValue
   -> EditableJsonTableCell formatValueForCommit
   -> useCellController
   -> onDocumentDataChange
 ```
 
-No editor writes to the document directly.
+No active control writes to the document directly.
 
 ## Performance Contract
 
 Inactive cells are cheap because they render inert display only. Hover is cheap
 because it does not mount inputs, selects, calendars, popovers, or local draft
 state. Editing is localized because the table has exactly one edit session and
-only one editor at a time.
+only one active control at a time.
 
 The protected measurements are:
 
-- hover sweep editor mounts
+- hover sweep active-control mounts
 - click-to-input focus latency
 - first keypress latency
 - checkbox toggle latency
 - enum open latency
 - date picker open latency
-- scroll with no active editor
+- scroll with no active control
 - scroll with one active overlay
 
 ## Regression Guards

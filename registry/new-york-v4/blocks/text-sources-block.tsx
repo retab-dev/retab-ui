@@ -4,6 +4,7 @@ import * as React from "react"
 
 import type { Source, SourceMap } from "@/lib/document-source"
 import { useSourceLink } from "@/hooks/use-source-link"
+import { CodeViewer, type CodeViewerHandle } from "@/components/ui/code-viewer"
 import {
   SourceFieldList,
   type SourceField,
@@ -13,7 +14,6 @@ import {
   sourceToTextHighlight,
   useTextSourceTarget,
 } from "@/components/ui/text-source"
-import { TextViewer, type TextViewerHandle } from "@/components/ui/text-viewer"
 import textSample from "@/components/viewers/sample-data/text-sources.json"
 
 const TEXT_URL = "/samples/extraction-run.log"
@@ -37,7 +37,7 @@ const SOURCES: SourceMap = Object.fromEntries(
  * Same source-link abstraction, with the text viewer + its line-span adapter.
  */
 export function TextSourcesBlock() {
-  const viewerRef = React.useRef<TextViewerHandle>(null)
+  const viewerRef = React.useRef<CodeViewerHandle>(null)
   const target = useTextSourceTarget(viewerRef)
   const link = useSourceLink({
     sources: SOURCES,
@@ -48,7 +48,7 @@ export function TextSourcesBlock() {
   return (
     <div className="flex h-full min-h-[680px] bg-background">
       <div className="relative min-w-0 flex-1">
-        <TextViewer
+        <CodeViewer
           ref={viewerRef}
           source={{
             kind: "url",

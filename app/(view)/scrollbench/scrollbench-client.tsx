@@ -4,6 +4,7 @@ import * as React from "react"
 import type { JSONSchema7 } from "json-schema"
 
 import { cn } from "@/lib/utils"
+import { CodeViewer, type CodeViewerHandle } from "@/components/ui/code-viewer"
 import { CsvViewer, type CsvViewerHandle } from "@/components/ui/csv-viewer"
 import { DocxViewer, type DocxViewerHandle } from "@/components/ui/docx-viewer"
 import {
@@ -16,7 +17,6 @@ import {
   type PptxSlideRenderTiming,
   type PptxSourceLoadTiming,
 } from "@/components/ui/pptx-viewer"
-import { TextViewer, type TextViewerHandle } from "@/components/ui/text-viewer"
 import { XlsxViewer, type XlsxViewerHandle } from "@/components/ui/xlsx-viewer"
 import type { TableDocument } from "@/components/json-table/lib/projects-types"
 import { SingleFileTableView } from "@/components/json-table/single-file-table-view"
@@ -48,7 +48,7 @@ type ViewportHandle =
   | PdfViewerHandle
   | CsvViewerHandle
   | XlsxViewerHandle
-  | TextViewerHandle
+  | CodeViewerHandle
   | DocxViewerHandle
   | ImageViewerHandle
 
@@ -433,8 +433,8 @@ function renderViewer({
       )
     case "text":
       return (
-        <TextViewer
-          ref={setViewportHandle as React.Ref<TextViewerHandle>}
+        <CodeViewer
+          ref={setViewportHandle as React.Ref<CodeViewerHandle>}
           source={{
             kind: "text",
             text: textValue,

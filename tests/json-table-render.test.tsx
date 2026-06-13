@@ -3,16 +3,16 @@
 import { cleanup, fireEvent } from "@testing-library/react"
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
 
-import { baseField, renderEditor } from "./json-table-editor-test-utils"
+import { baseField, renderCell } from "./json-table-cell-test-utils"
 import { installJsonTableDom } from "./json-table-test-dom"
 
 beforeAll(() => installJsonTableDom())
 afterEach(() => cleanup())
 
-describe("json table cell editor dispatch", () => {
-  it("renders scalar editors through the DataCell control primitive", () => {
-    const view = renderEditor("string", {
-      cell: { ...baseField("string"), effectiveValue: "0628" },
+describe("json table active cell controls", () => {
+  it("renders scalar controls through the DataCell primitive", () => {
+    const view = renderCell("string", {
+      effectiveValue: "0628",
       draftValue: "0628",
     })
 
@@ -28,7 +28,7 @@ describe("json table cell editor dispatch", () => {
   it("commits empty text as null and closes on blur", () => {
     const commitValue = vi.fn()
     const closeEditSession = vi.fn()
-    const view = renderEditor("string", {
+    const view = renderCell("string", {
       draftValue: "",
       commitValue,
       closeEditSession,
@@ -43,41 +43,38 @@ describe("json table cell editor dispatch", () => {
     expect(closeEditSession).toHaveBeenCalled()
   })
 
-  it("renders number, boolean, and enum editors", () => {
-    let view = renderEditor("number", { draftValue: "42" })
+  it("renders number, boolean, and enum controls", () => {
+    let view = renderCell("number", { draftValue: "42" })
     expect(view.getByRole("spinbutton")).toBeTruthy()
     cleanup()
 
-    view = renderEditor("boolean", {
-      cell: { ...baseField("boolean"), effectiveValue: true },
+    view = renderCell("boolean", {
+      effectiveValue: true,
     })
     expect(view.getByRole("checkbox").getAttribute("aria-checked")).toBe("true")
     cleanup()
 
-    view = renderEditor("enum", {
-      cell: {
-        ...baseField("enum"),
-        effectiveValue: "approved",
-        fieldMetadata: {
-          fieldPath: "field",
-          rawSchema: { enum: ["approved", "rejected"] },
-          schema: { enum: ["approved", "rejected"] },
-          effectiveSchema: { enum: ["approved", "rejected"] },
-          isNullable: false,
-          kind: "enum",
-          enumValues: ["approved", "rejected"],
-        },
+    view = renderCell("enum", {
+      effectiveValue: "approved",
+      fieldMetadata: {
+        fieldPath: "field",
+        rawSchema: { enum: ["approved", "rejected"] },
+        schema: { enum: ["approved", "rejected"] },
+        effectiveSchema: { enum: ["approved", "rejected"] },
+        isNullable: false,
+        kind: "enum",
+        enumValues: ["approved", "rejected"],
       },
     })
     const enumTrigger = view.getByRole("combobox")
     expect(enumTrigger.getAttribute("data-slot")).toBe("data-cell")
     expect(enumTrigger.getAttribute("data-mode")).toBe("edit")
-    expect(enumTrigger.getAttribute("data-kind")).toBe("text")
+    expect(enumTrigger.getAttribute("data-kind")).toBe("select")
   })
 
   it("reports invalid integer inputs without lossy coercion", () => {
     const commitValue = vi.fn()
-    const view = renderEditor("integer", {
+    const view = renderCell("integer", {
       draftValue: "12.7",
       commitValue,
     })
@@ -94,12 +91,12 @@ describe("json table cell editor dispatch", () => {
     )
   })
 
-  it("renders date, date-time, and time editors", () => {
-    let view = renderEditor("date", { draftValue: "2024-01-02" })
+  it("renders date, date-time, and time controls", () => {
+    let view = renderCell("date", { draftValue: "2024-01-02" })
     expect(view.getByText("02/01/2024")).toBeTruthy()
     cleanup()
 
-    view = renderEditor("date-time", {
+    view = renderCell("date-time", {
       draftValue: "2024-01-02T03:04:00",
     })
     const dateTimeTrigger = view.container.querySelector<HTMLElement>(
@@ -112,7 +109,7 @@ describe("json table cell editor dispatch", () => {
     expect(dateTimeTrigger.textContent).toContain("02/01/2024, 03:04")
     cleanup()
 
-    view = renderEditor("time", { draftValue: "03:04:00" })
+    view = renderCell("time", { draftValue: "03:04:00" })
     const timeTrigger = view.container.querySelector<HTMLElement>(
       'button[data-slot="data-cell"]'
     )
@@ -123,47 +120,41 @@ describe("json table cell editor dispatch", () => {
     expect(timeTrigger.textContent).toContain("03:04:00")
   })
 
-  it("renders object and array editor triggers", () => {
-    let view = renderEditor("object", {
-      cell: {
-        ...baseField("object"),
-        effectiveValue: { name: "ACME" },
-        fieldMetadata: {
-          fieldPath: "field",
-          rawSchema: { type: "object", title: "Vendor" },
-          schema: { type: "object", title: "Vendor" },
-          effectiveSchema: { type: "object", title: "Vendor" },
-          isNullable: false,
-          kind: "object",
-          enumValues: [],
-        },
+  it("renders object and array structured triggers", () => {
+    let view = renderCell("object", {
+      effectiveValue: { name: "ACME" },
+      fieldMetadata: {
+        fieldPath: "field",
+        rawSchema: { type: "object", title: "Vendor" },
+        schema: { type: "object", title: "Vendor" },
+        effectiveSchema: { type: "object", title: "Vendor" },
+        isNullable: false,
+        kind: "object",
+        enumValues: [],
       },
     })
     expect(view.getByRole("button").textContent).toContain("ACME")
     expect(view.container.querySelector('[data-slot="data-cell"]')).toBeNull()
     cleanup()
 
-    view = renderEditor("array", {
-      cell: {
-        ...baseField("array"),
-        effectiveValue: ["one", "two"],
-        fieldMetadata: {
-          fieldPath: "field",
-          rawSchema: {
-            type: "array",
-            title: "Lines",
-            items: { type: "string" },
-          },
-          schema: { type: "array", title: "Lines", items: { type: "string" } },
-          effectiveSchema: {
-            type: "array",
-            title: "Lines",
-            items: { type: "string" },
-          },
-          isNullable: false,
-          kind: "array",
-          enumValues: [],
+    view = renderCell("array", {
+      effectiveValue: ["one", "two"],
+      fieldMetadata: {
+        fieldPath: "field",
+        rawSchema: {
+          type: "array",
+          title: "Lines",
+          items: { type: "string" },
         },
+        schema: { type: "array", title: "Lines", items: { type: "string" } },
+        effectiveSchema: {
+          type: "array",
+          title: "Lines",
+          items: { type: "string" },
+        },
+        isNullable: false,
+        kind: "array",
+        enumValues: [],
       },
     })
     expect(view.getByRole("button").textContent).toContain("[2 items]")

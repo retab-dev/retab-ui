@@ -21,9 +21,11 @@ class MockWorker {
   onerror: ((event: ErrorEvent) => void) | null = null
   messages: unknown[] = []
   transfers: Transferable[][] = []
+  postMessageError: Error | null = null
   terminate = vi.fn()
 
   postMessage(message: unknown, transfer?: Transferable[]) {
+    if (this.postMessageError) throw this.postMessageError
     this.messages.push(message)
     this.transfers.push(transfer ?? [])
   }
@@ -97,6 +99,68 @@ describe("createThumbnailWorkerClient", () => {
     expect(client.pendingCount()).toBe(0)
   })
 
+  it("creates a fresh worker for requests after a worker error", async () => {
+    const { client, workers } = createClient()
+
+    const failed = client.request<string>({ request: { payload: "first" } })
+    workers[0]!.onerror?.({
+      message: "crashed",
+    } as ErrorEvent)
+
+    await expect(failed).rejects.toThrow("crashed")
+
+    const recovered = client.request<string>({
+      request: { payload: "second" },
+    })
+
+    expect(workers).toHaveLength(2)
+    expect(workers[0]!.terminate).toHaveBeenCalledTimes(1)
+    expect(workers[1]!.messages[0]).toEqual({ id: 1, payload: "second" })
+
+    workers[1]!.onmessage?.({
+      data: { id: 1, ok: true, value: "recovered" },
+    } as MessageEvent<TestResponse>)
+
+    await expect(recovered).resolves.toBe("recovered")
+    expect(client.pendingCount()).toBe(0)
+  })
+
+  it("clears pending state when worker creation throws", async () => {
+    const failure = new Error("worker unavailable")
+    const client = createThumbnailWorkerClient<TestRequest, TestResponse>({
+      createWorker: () => {
+        throw failure
+      },
+      resolve: (response) =>
+        response.ok && response.value !== undefined
+          ? response.value
+          : undefined,
+      reject: (response) => response.error ?? "worker failed",
+    })
+
+    await expect(
+      client.request<string>({ request: { payload: "parse" } })
+    ).rejects.toBe(failure)
+    expect(client.pendingCount()).toBe(0)
+  })
+
+  it("clears pending state when posting to the worker throws", async () => {
+    const { client, workers } = createClient()
+    const failure = new Error("post failed")
+
+    const first = client.request<string>({ request: { payload: "first" } })
+    workers[0]!.onmessage?.({
+      data: { id: 1, ok: true, value: "ready" },
+    } as MessageEvent<TestResponse>)
+    await expect(first).resolves.toBe("ready")
+
+    workers[0]!.postMessageError = failure
+    await expect(
+      client.request<string>({ request: { payload: "second" } })
+    ).rejects.toBe(failure)
+    expect(client.pendingCount()).toBe(0)
+  })
+
   it("resets the worker and rejects pending requests", async () => {
     const { client, workers } = createClient()
 
@@ -123,6 +187,75 @@ describe("createThumbnailWorkerClient", () => {
       data: { id: 1, ok: true, value: "late" },
     } as MessageEvent<TestResponse>)
 
+    expect(client.pendingCount()).toBe(0)
+  })
+
+  it("ignores late old-worker responses that reuse a new request id after reset", async () => {
+    const { client, workers } = createClient()
+
+    const first = client.request<string>({
+      request: { payload: "first" },
+    })
+    client.reset()
+    await expect(first).rejects.toThrow("Thumbnail worker reset")
+
+    const second = client.request<string>({
+      request: { payload: "second" },
+    })
+    expect(workers[1]!.messages[0]).toEqual({ id: 1, payload: "second" })
+
+    let secondValue: string | undefined
+    void second.then((value) => {
+      secondValue = value
+    })
+
+    workers[0]!.onmessage?.({
+      data: { id: 1, ok: true, value: "stale" },
+    } as MessageEvent<TestResponse>)
+    await Promise.resolve()
+
+    expect(secondValue).toBeUndefined()
+    expect(client.pendingCount()).toBe(1)
+
+    workers[1]!.onmessage?.({
+      data: { id: 1, ok: true, value: "current" },
+    } as MessageEvent<TestResponse>)
+
+    await expect(second).resolves.toBe("current")
+    expect(client.pendingCount()).toBe(0)
+  })
+
+  it("ignores late old-worker errors after reset once a new worker is active", async () => {
+    const { client, workers } = createClient()
+
+    const first = client.request<string>({
+      request: { payload: "first" },
+    })
+    client.reset()
+    await expect(first).rejects.toThrow("Thumbnail worker reset")
+
+    const second = client.request<string>({
+      request: { payload: "second" },
+    })
+
+    let rejectedError: unknown
+    void second.catch((error) => {
+      rejectedError = error
+    })
+
+    workers[0]!.onerror?.({
+      message: "stale crash",
+    } as ErrorEvent)
+    await Promise.resolve()
+
+    expect(rejectedError).toBeUndefined()
+    expect(client.pendingCount()).toBe(1)
+
+    workers[1]!.onmessage?.({
+      data: { id: 1, ok: true, value: "current" },
+    } as MessageEvent<TestResponse>)
+
+    await expect(second).resolves.toBe("current")
     expect(client.pendingCount()).toBe(0)
   })
 

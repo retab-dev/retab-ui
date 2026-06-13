@@ -315,9 +315,22 @@ function pointerDownCell(container: HTMLElement, fieldPath: string) {
   return cell
 }
 
+function clickCell(container: HTMLElement, fieldPath: string) {
+  const cell = cellByFieldPath(container, fieldPath)
+  fireEvent.click(cell, {
+    button: 0,
+    clientX: 0,
+    clientY: 0,
+    detail: 1,
+  })
+  return cell
+}
+
 function sessionId(fieldPath: string) {
   const snapshot =
-    window.__jsonTableProfiler?.snapshots[`CellEditor:${fieldPath}`]
+    window.__jsonTableProfiler?.snapshots[
+      `JsonTableActiveControl:${fieldPath}`
+    ]
   const value = snapshot?.editSessionId
   if (typeof value !== "number") {
     throw new Error(`Missing session id for ${fieldPath}`)
@@ -402,17 +415,17 @@ describe("json table session and virtualization hardening", () => {
 
     await waitFor(() => expect(editableCells(view.container)).toHaveLength(1))
 
-    const statusCell = pointerDownCell(view.container, "status")
+    const statusCell = clickCell(view.container, "status")
     const combobox = await view.findByRole("combobox")
     await waitFor(() =>
       expect(combobox.getAttribute("aria-expanded")).toBe("true")
     )
     const firstSessionId = sessionId("status")
     const editorSnapshot =
-      window.__jsonTableProfiler?.snapshots["CellEditor:status"]
+      window.__jsonTableProfiler?.snapshots["JsonTableActiveControl:status"]
 
     expect(statusCell.dataset.active).toBe("true")
-    expect(editorSnapshot?.isSelectOpen).toBe(true)
+    expect(editorSnapshot?.isOverlayOpen).toBe(true)
     expect(sessionId("status")).toBe(firstSessionId)
     expect(activeCells(view.container)).toHaveLength(1)
     expect(view.getByRole("combobox").getAttribute("aria-expanded")).toBe(
@@ -455,7 +468,7 @@ describe("json table session and virtualization hardening", () => {
 
     await waitForField(view.container, "lines.0.status")
 
-    pointerDownCell(view.container, "lines.0.status")
+    clickCell(view.container, "lines.0.status")
     const combobox = await view.findByRole("combobox")
     await waitFor(() =>
       expect(combobox.getAttribute("aria-expanded")).toBe("true")
@@ -481,7 +494,7 @@ describe("json table session and virtualization hardening", () => {
     )
   })
 
-  it("removes active editors and row elevation when virtualization unmounts the active row", async () => {
+  it("removes active controls and row elevation when virtualization unmounts the active row", async () => {
     const restoreAnimationFrame = installSynchronousAnimationFrame()
     const view = renderVirtualTable({
       tableDocument: linesDocument(80),
@@ -740,7 +753,7 @@ describe("json table session and virtualization hardening", () => {
     )
   })
 
-  it("does not mount active editors or activate cells for unrelated mounted rows", async () => {
+  it("does not mount active controls or activate cells for unrelated mounted rows", async () => {
     installProfiler()
     const view = renderVirtualTable({
       tableDocument: linesDocument(12),
@@ -755,14 +768,14 @@ describe("json table session and virtualization hardening", () => {
     pointerDownCell(view.container, "lines.0.name")
     expect(view.getByRole("textbox")).toHaveProperty("value", "line 0")
 
-    const activeEditorIds = window.__jsonTableProfiler?.events
+    const activeControlIds = window.__jsonTableProfiler?.events
       .filter((event) => event.type === "render")
-      .filter((event) => event.name === "ActiveEditableJsonTableCell")
+      .filter((event) => event.name === "JsonTableActiveCell")
       .map((event) => event.id)
 
-    expect(activeEditorIds).toContain("lines.0.name")
-    expect(activeEditorIds).not.toContain("lines.1.name")
-    expect(activeEditorIds).not.toContain("lines.5.name")
+    expect(activeControlIds).toContain("lines.0.name")
+    expect(activeControlIds).not.toContain("lines.1.name")
+    expect(activeControlIds).not.toContain("lines.5.name")
     expect(cellByFieldPath(view.container, "lines.1.name").dataset.active).toBe(
       undefined
     )

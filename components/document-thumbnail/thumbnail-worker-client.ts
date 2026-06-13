@@ -41,8 +41,10 @@ export function createThumbnailWorkerClient<
 
   const getWorker = () => {
     if (!worker) {
-      worker = createWorker()
-      worker.onmessage = (event: MessageEvent<Response>) => {
+      const nextWorker = createWorker()
+      worker = nextWorker
+      nextWorker.onmessage = (event: MessageEvent<Response>) => {
+        if (worker !== nextWorker) return
         const response = event.data
         const entry = pending.get(response.id)
         if (!entry) return
@@ -55,7 +57,11 @@ export function createThumbnailWorkerClient<
           entry.reject(toWorkerError(error))
         }
       }
-      worker.onerror = (event) => {
+      nextWorker.onerror = (event) => {
+        if (worker !== nextWorker) return
+        nextWorker.terminate()
+        worker = null
+        requestId = 0
         rejectPendingRequests(
           event.error instanceof Error
             ? event.error
@@ -89,7 +95,12 @@ export function createThumbnailWorkerClient<
           resolve: (value) => resolveRequest(value as T),
           reject: rejectRequest,
         })
-        getWorker().postMessage({ id, ...request }, transfer ?? [])
+        try {
+          getWorker().postMessage({ id, ...request }, transfer ?? [])
+        } catch (error) {
+          pending.delete(id)
+          rejectRequest(toWorkerError(error))
+        }
       })
     },
     reset,

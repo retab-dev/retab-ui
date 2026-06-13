@@ -163,7 +163,7 @@ Forbidden hot-path responsibilities:
 - inputs
 - select triggers
 - date pickers
-- per-cell editor dispatch
+- per-cell active-control dispatch
 - per-cell draft state
 - per-cell overlay state
 - per-cell `useEffect`
@@ -316,20 +316,16 @@ components/json-table/lib/
   value-normalization.ts
 ```
 
-Delete after cutover:
+Deleted during hard cutover: the historical editor-dispatch directory.
+
+Useful enum and structured-cell logic moved into:
 
 ```txt
-components/json-table/cell-editors/
-components/json-table/editable-json-table-cell.tsx
-components/json-table/read-only-json-table-cell.tsx
 components/json-table/json-table-display-cell.tsx
-components/json-table/json-table-data-cell.tsx
-components/json-table/use-cell-controller.ts
-components/json-table/use-elevated-virtual-row.ts
+components/json-table/json-table-structured-cell.tsx
 ```
 
-If a deleted module still contains useful logic, move the logic into one of the
-new modules. Do not keep wrapper modules as compatibility shims.
+Do not keep wrapper modules as compatibility shims.
 
 ## DataCell Adapter
 
@@ -674,8 +670,8 @@ Architecture tests should assert:
 7. Replace body cells with plain `JsonTableCell`.
 8. Move interaction handlers to the viewport/body boundary.
 9. Wire active sessions to the overlay.
-10. Delete `cell-editors/` and old editable/read-only cell wrappers.
-11. Replace tests that assert old editor internals with overlay behavior tests.
+10. Delete the historical editor-dispatch directory and tests.
+11. Replace tests that assert old internals with active-control behavior tests.
 12. Profile idle render, hover, edit activation, and scroll.
 
 No compatibility adapter. No old path kept alive.

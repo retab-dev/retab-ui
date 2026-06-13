@@ -9,6 +9,7 @@ import { clamp } from "./pdf-viewer-scale"
 import type { PdfPageAreaTarget } from "./pdf-viewer-types"
 
 const PDF_SCROLL_TARGET_HEADROOM = 48
+const PDF_SCROLL_TARGET_INLINE_HEADROOM = 32
 
 export function usePdfScroll({
   pageCount,
@@ -128,13 +129,36 @@ export function usePdfScroll({
 
       const requestedTop = Number.isNaN(target.top) ? 0 : target.top
       const targetTopPercent = clamp(requestedTop, 0, 100)
-      const targetTop =
-        pageLayout.offsetTop +
-        (targetTopPercent / 100) * pageLayout.height -
+      const targetHeightPercent = normalizeOptionalPercent(target.height)
+      const areaTop =
+        pageLayout.offsetTop + (targetTopPercent / 100) * pageLayout.height
+      const areaBottom =
+        areaTop + ((targetHeightPercent ?? 0) / 100) * pageLayout.height
+      const visibleTop = viewportElement.scrollTop + PDF_SCROLL_TARGET_HEADROOM
+      const visibleBottom =
+        viewportElement.scrollTop +
+        viewportElement.clientHeight -
         PDF_SCROLL_TARGET_HEADROOM
+      let targetTop = areaTop - PDF_SCROLL_TARGET_HEADROOM
+
+      if (targetHeightPercent != null && areaTop >= visibleTop) {
+        targetTop =
+          areaBottom > visibleBottom
+            ? areaBottom -
+              viewportElement.clientHeight +
+              PDF_SCROLL_TARGET_HEADROOM
+            : viewportElement.scrollTop
+      }
+
+      const targetLeft = getPdfPageAreaScrollLeft(viewportElement, {
+        pageNumber,
+        left: target.left,
+        width: target.width,
+      })
 
       viewportElement.scrollTo({
         top: Math.max(0, targetTop),
+        ...(targetLeft == null ? null : { left: targetLeft }),
         behavior: "smooth",
         ...options,
       })
@@ -176,4 +200,53 @@ export function usePdfScroll({
     scrollToPageArea,
     getViewportElement,
   }
+}
+
+function getPdfPageAreaScrollLeft(
+  viewportElement: HTMLDivElement,
+  target: {
+    pageNumber: number
+    left?: number
+    width?: number
+  }
+) {
+  const targetLeftPercent = normalizeOptionalPercent(target.left)
+  const targetWidthPercent = normalizeOptionalPercent(target.width)
+  if (targetLeftPercent == null || targetWidthPercent == null) return undefined
+
+  const pageElement = viewportElement.querySelector<HTMLElement>(
+    `[data-slot="pdf-page-slot"][data-page-number="${target.pageNumber}"]`
+  )
+  if (!pageElement) return undefined
+
+  const viewportRect = viewportElement.getBoundingClientRect()
+  const pageRect = pageElement.getBoundingClientRect()
+  const pageLeft =
+    pageRect.left - viewportRect.left + viewportElement.scrollLeft
+  const areaLeft = pageLeft + (targetLeftPercent / 100) * pageRect.width
+  const areaRight = areaLeft + (targetWidthPercent / 100) * pageRect.width
+  const visibleLeft =
+    viewportElement.scrollLeft + PDF_SCROLL_TARGET_INLINE_HEADROOM
+  const visibleRight =
+    viewportElement.scrollLeft +
+    viewportElement.clientWidth -
+    PDF_SCROLL_TARGET_INLINE_HEADROOM
+
+  if (areaLeft < visibleLeft) {
+    return Math.max(0, areaLeft - PDF_SCROLL_TARGET_INLINE_HEADROOM)
+  }
+  if (areaRight > visibleRight) {
+    return Math.max(
+      0,
+      areaRight -
+        viewportElement.clientWidth +
+        PDF_SCROLL_TARGET_INLINE_HEADROOM
+    )
+  }
+  return viewportElement.scrollLeft
+}
+
+function normalizeOptionalPercent(value: number | undefined) {
+  if (value == null || !Number.isFinite(value)) return undefined
+  return clamp(value, 0, 100)
 }

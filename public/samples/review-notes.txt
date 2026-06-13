@@ -1,0 +1,5 @@
+Text and code want different surfaces. Code wants stable columns, visible line numbers, and horizontal fidelity. Prose wants rhythm, wrapping, and a readable measure.
+
+The Text Viewer uses Pretext to predict wrapped line heights without mounting every row. Each source line can still be highlighted and scrolled into view, but the text stays inside the viewport instead of forcing horizontal scrolling.
+
+This sample is intentionally plain text rather than a log. It demonstrates the prose-oriented surface beside the Code tab in the File Viewer demo.

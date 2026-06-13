@@ -1,0 +1,91 @@
+---
+title: Code Viewer
+description: A virtualized code and log viewer with line numbers, source-linked highlights, zoom, retry, and download.
+---
+
+The Code Viewer renders code-like plain text, logs, and source-linked extraction
+text with stable line numbers. It loads a bounded text resource up front so
+every line can be addressed, then renders a virtualized fixed-height line window
+so large logs stay scrollable.
+
+<CodeViewerDemo />
+
+## Installation
+
+```bash
+npx shadcn@latest add @retab/code-viewer
+```
+
+## Usage
+
+```tsx
+import { CodeViewer } from "@/components/ui/code-viewer"
+
+export function Example() {
+  return (
+    <CodeViewer
+      source={{
+        kind: "url",
+        url: "/samples/extraction-run.log",
+        fileName: "extraction-run.log",
+      }}
+      highlight={{ start: 12, end: 14 }}
+    />
+  )
+}
+```
+
+Inline text is supported too:
+
+```tsx
+<CodeViewer
+  source={{
+    kind: "text",
+    text: "first line\nsecond line",
+    fileName: "inline.log",
+  }}
+/>
+```
+
+## Features
+
+- **Virtualized line rendering** — only the visible line window plus overscan is mounted, so large logs do not create thousands of DOM nodes.
+- **Stable line addressing** — `highlight` and `scrollToLineRange` use 1-based inclusive line ranges.
+- **Resource-based sources** — URL, Blob, and inline text sources share the same bounded loading path.
+- **Local error states** — failed URL loads can retry without tearing down the surrounding page.
+- **Zoom and download** — the toolbar exposes text scale controls and downloads from the source resource.
+
+## Props
+
+| Prop        | Type                    | Description                                                                |
+| ----------- | ----------------------- | -------------------------------------------------------------------------- |
+| `source`    | `CodeDocumentSource`    | Required source descriptor. Supports URL, Blob, and inline text resources. |
+| `className` | `string`                | Optional class on the viewer container.                                    |
+| `toolbar`   | `boolean`               | Show line count, zoom controls, and download action. Defaults to `true`.   |
+| `highlight` | `CodeLineRange \| null` | 1-based inclusive line range to highlight.                                 |
+| `bare`      | `boolean`               | Drop the outer border/background so the viewer fills its container.        |
+| `maxBytes`  | `number`                | Maximum text payload size accepted by the viewer.                          |
+| `maxLines`  | `number`                | Maximum number of lines accepted by the viewer.                            |
+
+## Ref
+
+```tsx
+import * as React from "react"
+
+import { CodeViewer, type CodeViewerHandle } from "@/components/ui/code-viewer"
+
+export function Example() {
+  const viewerRef = React.useRef<CodeViewerHandle>(null)
+
+  return (
+    <CodeViewer
+      ref={viewerRef}
+      source={{ kind: "text", text: "alpha\nbeta\ngamma" }}
+      highlight={{ start: 2, end: 2 }}
+    />
+  )
+}
+```
+
+`scrollToLineRange(range, options?)` scrolls any normalized line range into
+view, even when that line is outside the currently mounted virtual window.

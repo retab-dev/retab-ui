@@ -39,6 +39,7 @@ export function DataCellDisplay({
   autoFocus: _autoFocus,
   onDraftValueChange: _onDraftValueChange,
   onCommit: _onCommit,
+  selectOptions: _selectOptions,
   activationIntent: _activationIntent,
   isPickerOpen: _isPickerOpen,
   onEditingEnd: _onEditingEnd,
@@ -111,7 +112,7 @@ export function DataCellDisplay({
       className={cn(
         dataCellDisplayClass,
         disabled && "pointer-events-none opacity-64",
-        editable && !disabled && "cursor-text",
+        editable && !disabled && (kind === "select" ? "cursor-pointer" : "cursor-text"),
         className
       )}
     >

@@ -1,12 +1,12 @@
 ---
 title: Text Viewer
-description: A virtualized text and log viewer with line numbers, source-linked highlights, zoom, retry, and download.
+description: A Pretext-powered wrapped text viewer with variable-height virtualization, prose chrome, source-line highlights, zoom, retry, and download.
 ---
 
-The Text Viewer renders plain text, logs, and source-linked extraction text with
-stable line numbers. It loads a bounded text resource up front so every line can
-be addressed, then renders a virtualized fixed-height line window so large logs
-stay scrollable.
+The Text Viewer is for prose and markdown-like text. It uses Pretext to predict
+wrapped line heights without measuring DOM nodes, then renders a custom
+variable-height virtual window so long documents stay responsive while text
+wraps naturally inside the viewport.
 
 <TextViewerDemo />
 
@@ -25,35 +25,35 @@ export function Example() {
   return (
     <TextViewer
       source={{
-        kind: "url",
-        url: "/samples/extraction-run.log",
-        fileName: "extraction-run.log",
+        kind: "text",
+        text: "Text and code want different surfaces. Prose wants wrapping.",
+        fileName: "notes.md",
       }}
-      highlight={{ start: 12, end: 14 }}
+      highlight={{ start: 1, end: 1 }}
     />
   )
 }
 ```
 
-Inline text is supported too:
+URL and Blob sources use the same bounded text resource path as the Code Viewer:
 
 ```tsx
 <TextViewer
   source={{
-    kind: "text",
-    text: "first line\nsecond line",
-    fileName: "inline.log",
+    kind: "url",
+    url: "/samples/notes.md",
+    fileName: "notes.md",
   }}
 />
 ```
 
 ## Features
 
-- **Virtualized line rendering** — only the visible line window plus overscan is mounted, so large logs do not create thousands of DOM nodes.
-- **Stable line addressing** — `highlight` and `scrollToLineRange` use 1-based inclusive line ranges.
-- **Resource-based sources** — URL, Blob, and inline text sources share the same bounded loading path.
-- **Local error states** — failed URL loads can retry without tearing down the surrounding page.
-- **Zoom and download** — the toolbar exposes text scale controls and downloads from the source resource.
+- **Natural wrapping** — prose stays within the viewport instead of forcing horizontal scrolling.
+- **Pretext layout** — line heights are predicted from text, font, width, and line-height without mounting rows for measurement.
+- **Custom virtualization** — variable-height source lines are windowed with local offset math, not TanStack Virtual.
+- **Stable source-line addressing** — `highlight` and `scrollToLineRange` still use 1-based inclusive source-line ranges.
+- **Prose chrome** — the toolbar shows word count, text scale controls, and downloads from the source resource.
 
 ## Props
 
@@ -61,11 +61,11 @@ Inline text is supported too:
 | ----------- | ----------------------- | -------------------------------------------------------------------------- |
 | `source`    | `TextDocumentSource`    | Required source descriptor. Supports URL, Blob, and inline text resources. |
 | `className` | `string`                | Optional class on the viewer container.                                    |
-| `toolbar`   | `boolean`               | Show line count, zoom controls, and download action. Defaults to `true`.   |
-| `highlight` | `TextLineRange \| null` | 1-based inclusive line range to highlight.                                 |
+| `toolbar`   | `boolean`               | Show word count, zoom controls, and download action. Defaults to `true`.   |
+| `highlight` | `TextLineRange \| null` | 1-based inclusive source-line range to highlight.                          |
 | `bare`      | `boolean`               | Drop the outer border/background so the viewer fills its container.        |
 | `maxBytes`  | `number`                | Maximum text payload size accepted by the viewer.                          |
-| `maxLines`  | `number`                | Maximum number of lines accepted by the viewer.                            |
+| `maxLines`  | `number`                | Maximum number of source lines accepted by the viewer.                     |
 
 ## Ref
 
@@ -80,12 +80,12 @@ export function Example() {
   return (
     <TextViewer
       ref={viewerRef}
-      source={{ kind: "text", text: "alpha\nbeta\ngamma" }}
+      source={{ kind: "text", text: "alpha\nlong prose paragraph\nomega" }}
       highlight={{ start: 2, end: 2 }}
     />
   )
 }
 ```
 
-`scrollToLineRange(range, options?)` scrolls any normalized line range into
-view, even when that line is outside the currently mounted virtual window.
+`scrollToLineRange(range, options?)` scrolls any normalized source-line range
+into view, even when that line is outside the currently mounted virtual window.

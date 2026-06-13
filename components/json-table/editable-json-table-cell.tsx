@@ -3,7 +3,6 @@ import { flushSync } from "react-dom"
 
 import { DataCellDisplay } from "@/components/ui/data-cell"
 import { TableCell } from "@/components/ui/table"
-import { CellEditor } from "@/components/json-table/cell-editors/cell-editor"
 import {
   getCellWidthStyle,
   getSelectableCellWidthStyle,
@@ -20,6 +19,7 @@ import {
   markJsonTableProfile,
   recordJsonTableRender,
 } from "@/components/json-table/json-table-profiler"
+import { JsonTableStructuredCell } from "@/components/json-table/json-table-structured-cell"
 import { getFieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
 import type { FieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
 import { formatValueForCommit } from "@/components/json-table/lib/value-normalization"
@@ -85,7 +85,7 @@ function canStartEditFromKey(
   return fieldMetadata.kind === "string"
 }
 
-function ActiveEditableJsonTableCell({
+function JsonTableActiveCell({
   docId,
   document,
   fieldMetadata,
@@ -110,7 +110,7 @@ function ActiveEditableJsonTableCell({
   setEditSessionOverlayOpen: JsonTableCellProps["setEditSessionOverlayOpen"]
   updateEditSessionDraft: JsonTableCellProps["updateEditSessionDraft"]
 }) {
-  recordJsonTableRender("ActiveEditableJsonTableCell", materializedFieldPath, {
+  recordJsonTableRender("JsonTableActiveCell", materializedFieldPath, {
     editSessionId: session.id,
     fieldKind: fieldMetadata.kind,
     isOverlayOpen: session.isOverlayOpen,
@@ -132,16 +132,13 @@ function ActiveEditableJsonTableCell({
       ? ""
       : String(session.draftValue)
   const dataCellKind = dataCellKindForField(fieldMetadata)
-  const usesDataCellEditor =
-    Boolean(dataCellKind) && fieldMetadata.kind !== "enum"
-  if (usesDataCellEditor) {
-    recordJsonTableRender("CellEditor", materializedFieldPath, {
-      editSessionId: session.id,
-      fieldKind: fieldMetadata.kind,
-      isEditable: true,
-      isSelectOpen: session.isOverlayOpen,
-    })
-  }
+  const usesDataCell = Boolean(dataCellKind)
+  recordJsonTableRender("JsonTableActiveControl", materializedFieldPath, {
+    editSessionId: session.id,
+    fieldKind: fieldMetadata.kind,
+    isEditable: true,
+    isOverlayOpen: session.isOverlayOpen,
+  })
 
   useElevatedVirtualRow({
     cellRootRef,
@@ -150,7 +147,7 @@ function ActiveEditableJsonTableCell({
   })
 
   React.useEffect(() => {
-    markJsonTableProfile("active-editor-mounted", {
+    markJsonTableProfile("active-control-mounted", {
       fieldPath: materializedFieldPath,
       fieldKind: fieldMetadata.kind,
     })
@@ -224,7 +221,7 @@ function ActiveEditableJsonTableCell({
       ref={cellRootRef}
       className="h-full w-full focus-within:overflow-visible"
     >
-      {usesDataCellEditor ? (
+      {usesDataCell ? (
         <JsonTableDataCell
           fieldMetadata={fieldMetadata}
           value={effectiveValue}
@@ -241,19 +238,13 @@ function ActiveEditableJsonTableCell({
           onPickerOpenChange={setEditSessionOverlayOpen}
         />
       ) : (
-        <CellEditor
-          cell={{
-            docId,
-            fieldPath: materializedFieldPath,
-            schema,
-            fieldMetadata,
-            value,
-            effectiveValue,
-            isEditable: true,
-          }}
+        <JsonTableStructuredCell
+          fieldPath={materializedFieldPath}
+          fieldMetadata={fieldMetadata}
+          schema={schema}
+          effectiveValue={effectiveValue}
+          isEditable={true}
           editSession={session}
-          draftValue={draftTextValue}
-          setDraftValue={setDraftTextValue}
           setOverlayOpen={setEditSessionOverlayOpen}
           closeEditSession={closeEditSession}
           commitValue={commitValue}
@@ -335,12 +326,8 @@ function EditableJsonTableCellContent(props: JsonTableCellProps) {
       ) {
         return
       }
-      if (isEditing) {
-        if (fieldMetadata.kind === "enum") {
-          props.setEditSessionOverlayOpen(true)
-        }
-        return
-      }
+      if (fieldMetadata.kind === "enum") return
+      if (isEditing) return
 
       flushSync(() => {
         startEditSession(props.projectedCell!, {
@@ -349,6 +336,40 @@ function EditableJsonTableCellContent(props: JsonTableCellProps) {
           clientY: event.clientY,
           detail: event.detail,
         })
+      })
+    },
+    [
+      editSession?.isOverlayOpen,
+      fieldMetadata,
+      isEditable,
+      isEditing,
+      materializedFieldPath,
+      props.projectedCell,
+      props.setEditSessionOverlayOpen,
+      startEditSession,
+    ]
+  )
+  const handleClick = React.useCallback(
+    (event: React.MouseEvent<HTMLTableCellElement>) => {
+      if (
+        !props.projectedCell ||
+        !materializedFieldPath ||
+        !fieldMetadata ||
+        !isEditable ||
+        fieldMetadata.kind !== "enum"
+      ) {
+        return
+      }
+      if (isEditing) {
+        if (!editSession?.isOverlayOpen) props.setEditSessionOverlayOpen(true)
+        return
+      }
+
+      startEditSession(props.projectedCell, {
+        type: "pointer",
+        clientX: event.clientX,
+        clientY: event.clientY,
+        detail: event.detail,
       })
     },
     [
@@ -439,6 +460,7 @@ function EditableJsonTableCellContent(props: JsonTableCellProps) {
       onPointerEnter={handlePointerEnter}
       onPointerMove={handlePointerEnter}
       onPointerDown={handlePointerDown}
+      onClick={handleClick}
       onMouseDownCapture={handleOverlayActivationTail}
       onPointerLeave={handlePointerLeave}
       onKeyDown={handleKeyDown}
@@ -450,7 +472,7 @@ function EditableJsonTableCellContent(props: JsonTableCellProps) {
       style={getSelectableCellWidthStyle(cellWidth)}
     >
       {isEditing && editSession ? (
-        <ActiveEditableJsonTableCell
+        <JsonTableActiveCell
           docId={docId}
           document={props.document}
           fieldMetadata={fieldMetadata}

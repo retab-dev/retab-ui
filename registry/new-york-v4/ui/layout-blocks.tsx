@@ -47,6 +47,7 @@ export function DocumentAiLayoutBlocks({
   )
   const pdfSource = useDocumentAiPdfSource(output)
   const viewerRef = React.useRef<PdfViewerHandle>(null)
+  const lastAutoNavigatedItemIdRef = React.useRef<string | null>(null)
   const selection = useLayoutBlockSelection()
   const [lowConfidenceOnly, setLowConfidenceOnly] = React.useState(false)
   const visibleItems = React.useMemo(
@@ -62,13 +63,29 @@ export function DocumentAiLayoutBlocks({
   )
 
   const navigateItem = React.useCallback(
-    (item: LayoutItem) => {
+    (item: LayoutItem, options: ScrollToOptions = { behavior: "smooth" }) => {
+      if (
+        options.behavior === "auto" &&
+        lastAutoNavigatedItemIdRef.current === item.id
+      ) {
+        return
+      }
+      if (options.behavior === "auto") {
+        lastAutoNavigatedItemIdRef.current = item.id
+      }
+
       const page = index.pagesByNumber.get(item.pageNumber)
       if (!page) return
       const target = getScrollTarget(item, page)
       viewerRef.current?.scrollToPageArea(
-        { pageNumber: item.pageNumber, top: target.top },
-        { behavior: "smooth" }
+        {
+          pageNumber: item.pageNumber,
+          left: target.left,
+          top: target.top,
+          width: target.width,
+          height: target.height,
+        },
+        options
       )
     },
     [index.pagesByNumber]

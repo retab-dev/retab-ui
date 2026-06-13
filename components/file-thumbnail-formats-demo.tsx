@@ -89,6 +89,12 @@ const SAMPLES: FormatSample[] = [
     mimeType: "text/plain",
   },
   {
+    label: "Text",
+    url: "/samples/review-notes.txt",
+    fileName: "review-notes.txt",
+    mimeType: "text/plain",
+  },
+  {
     label: "Log",
     url: "/samples/server.log",
     fileName: "server.log",

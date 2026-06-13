@@ -105,7 +105,7 @@ export function HomeShowcase() {
 
           {/* Soft edges — match the shadcn/ui homepage gray gradient. */}
           <div className="absolute inset-x-0 top-0 z-1 h-120 bg-linear-to-b from-background via-muted/30 to-transparent dark:hidden" />
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-[60px] bg-linear-to-t from-background via-muted/20 to-transparent dark:via-background/80" />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-[80px] bg-linear-to-t from-background via-muted/20 to-transparent dark:via-background/80" />
         </div>
       </div>
     </div>

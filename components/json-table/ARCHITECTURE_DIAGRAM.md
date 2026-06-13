@@ -16,17 +16,13 @@ flowchart TD
     VirtualTable["SingleFileVirtualizedTable"]
     EditSession["JsonTableEditSession<br/>one edited cell"]
     Row["SingleFileFormRow"]
-    Cell["EditableJsonTableCell<br/>display/editor switch"]
+    Cell["EditableJsonTableCell<br/>display/active switch"]
   end
 
-  subgraph Editors["Editor layer"]
-    Dispatch["CellEditor"]
-    Text["TextEditor"]
-    Number["NumberEditor"]
-    Boolean["BooleanEditor"]
-    Enum["EnumEditor"]
-    DateTime["Date / Time / DateTime editors"]
-    Nested["Object / Array editors"]
+  subgraph Active["Active control layer"]
+    ActiveCell["JsonTableActiveCell"]
+    DataCellControl["JsonTableDataCell"]
+    StructuredCell["JsonTableStructuredCell"]
   end
 
   subgraph DataCell["DataCell primitive layer"]
@@ -54,22 +50,17 @@ flowchart TD
   Cell -->|not editing| Display
   Cell -->|startEditSession with ActivationIntent| EditSession
   EditSession -->|matching cellId| Cell
-  Cell -->|editing| Dispatch
+  Cell -->|editing| ActiveCell
 
-  Dispatch --> Text
-  Dispatch --> Number
-  Dispatch --> Boolean
-  Dispatch --> Enum
-  Dispatch --> DateTime
-  Dispatch --> Nested
+  ActiveCell --> DataCellControl
+  ActiveCell --> StructuredCell
 
   Display --> DataDisplay
-  Text --> TextControl
-  Number --> NumberControl
-  Boolean --> BooleanControl
-  DateTime --> PickerControl
-  Enum --> Commit
-  Nested --> Commit
+  DataCellControl --> TextControl
+  DataCellControl --> NumberControl
+  DataCellControl --> BooleanControl
+  DataCellControl --> PickerControl
+  StructuredCell --> Commit
 
   TextControl --> Normalize
   NumberControl --> Normalize
@@ -86,31 +77,31 @@ sequenceDiagram
   participant Cell as EditableJsonTableCell
   participant Table as SingleFileVirtualizedTable
   participant Session as JsonTableEditSession
-  participant Editor as Kind editor
+  participant Active as JsonTableActiveCell
   participant Control as Native control
   participant Commit as Commit pipeline
 
   U->>Cell: pointerdown / keydown
   Cell->>Table: startEditSession(projectedCell, intent)
   Table->>Session: create one session
-  Session->>Cell: matching cellId renders editor
-  Cell->>Editor: pass session + ActivationIntent
+  Session->>Cell: matching cellId renders active control
+  Cell->>Active: pass session + ActivationIntent
 
   alt text or number
-    Editor->>Control: focus, place caret, seed typed key if needed
+    Active->>Control: focus, place caret, seed typed key if needed
   else boolean
-    Editor->>Commit: toggle once from activation intent
-    Editor->>Table: closeEditSession()
+    Active->>Commit: toggle once from activation intent
+    Active->>Table: closeEditSession()
   else enum
-    Editor->>Control: open select
+    Active->>Control: open select
   else object or array
-    Editor->>Control: open popover for this session
+    Active->>Control: open popover for this session
   end
 
-  Control->>Editor: draft / change / blur
-  Editor->>Commit: normalize value
+  Control->>Active: draft / change / blur
+  Active->>Commit: normalize value
   Commit->>Table: document patch
-  Editor->>Table: closeEditSession()
+  Active->>Table: closeEditSession()
 ```
 
 ## DataCell Boundary
@@ -119,18 +110,18 @@ sequenceDiagram
 flowchart LR
   Table["JSON table"]
   Display["JsonTableDisplayCell<br/>display only"]
-  Editor["Kind editor"]
+  Active["JsonTableActiveCell"]
   DataCell["DataCell primitive controls"]
   Native["Input / checkbox / picker trigger"]
 
   Table -->|inactive| Display
-  Table -->|editing session| Editor
+  Table -->|editing session| Active
   Display --> DataCell
-  Editor --> DataCell --> Native
+  Active --> DataCell --> Native
 ```
 
 The JSON table uses inert display cells until a table-owned edit session exists.
-The active editor renders exactly one primitive control from the DataCell layer.
+The active control renders exactly one primitive control from the DataCell layer.
 
 ## Ownership Rule
 
@@ -139,10 +130,11 @@ flowchart LR
   Projection["Projection<br/>what cells exist"]
   Grid["Grid<br/>which session exists"]
   Intent["ActivationIntent<br/>why editing started"]
-  Editor["Editor<br/>what intent means"]
+  Active["Active control<br/>what intent means"]
   Commit["Commit<br/>persist normalized value"]
 
-  Projection --> Grid --> Intent --> Editor --> Commit
+  Projection --> Grid --> Intent --> Active --> Commit
 ```
 
-The table owns session identity. Editors own native interaction semantics.
+The table owns session identity. Active controls own native interaction
+semantics.

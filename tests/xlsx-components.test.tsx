@@ -4,6 +4,7 @@ import * as React from "react"
 import { cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import type { XlsxSheetMeta } from "@/lib/xlsx-workbook"
 import { XlsxGrid } from "@/registry/new-york-v4/ui/xlsx-grid"
 import { XlsxGridRow } from "@/registry/new-york-v4/ui/xlsx-grid-row"
 import { XlsxSheetTabs } from "@/registry/new-york-v4/ui/xlsx-sheet-tabs"
@@ -49,6 +50,66 @@ function mockElementMetrics({
     value: scrollTo,
   })
   return { clientHeightSpy, clientWidthSpy, scrollTo }
+}
+
+function makeSheet(name: string): XlsxSheetMeta {
+  return {
+    name,
+    rowCount: 1,
+    columnCount: 1,
+    nonEmptyCellCount: 1,
+  }
+}
+
+function mockSheetTabMetrics({
+  clientWidth,
+  scrollWidth,
+  tabWidth,
+}: {
+  clientWidth: number
+  scrollWidth: number
+  tabWidth: number
+}) {
+  vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(
+    function (this: HTMLElement) {
+      return this.className.toString().includes("overflow-x-auto")
+        ? clientWidth
+        : tabWidth
+    }
+  )
+  vi.spyOn(HTMLElement.prototype, "scrollWidth", "get").mockImplementation(
+    function (this: HTMLElement) {
+      return this.className.toString().includes("overflow-x-auto")
+        ? scrollWidth
+        : tabWidth
+    }
+  )
+  vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockReturnValue(
+    tabWidth
+  )
+  vi.spyOn(HTMLElement.prototype, "offsetLeft", "get").mockImplementation(
+    function (this: HTMLElement) {
+      if (this.getAttribute("role") !== "tab") return 0
+      const siblings = Array.from(this.parentElement?.children ?? [])
+      return Math.max(0, siblings.indexOf(this)) * tabWidth
+    }
+  )
+
+  const scrollTo = vi.fn(function (
+    this: HTMLElement,
+    options?: ScrollToOptions | number
+  ) {
+    const left =
+      typeof options === "number" ? options : Number(options?.left ?? 0)
+    this.scrollLeft = left
+    this.dispatchEvent(new Event("scroll"))
+  })
+  Object.defineProperty(HTMLElement.prototype, "scrollTo", {
+    configurable: true,
+    value: scrollTo,
+  })
+
+  return { scrollTo }
 }
 
 describe("XlsxSheetTabs", () => {
@@ -100,6 +161,192 @@ describe("XlsxSheetTabs", () => {
     )
 
     expect(screen.queryByRole("tablist")).toBeNull()
+  })
+
+  it("keeps overflow inside one native-like tab strip with compact tab widths", () => {
+    mockSheetTabMetrics({
+      clientWidth: 240,
+      scrollWidth: 720,
+      tabWidth: 96,
+    })
+
+    render(
+      <XlsxSheetTabs
+        sheets={Array.from({ length: 8 }, (_, index) =>
+          makeSheet(`Sheet ${index + 1}`)
+        )}
+        activeSheetIndex={0}
+        onSelectSheet={vi.fn()}
+      />
+    )
+
+    const tablist = screen.getByRole("tablist", { name: "Workbook sheets" })
+    expect(tablist.getAttribute("data-overflowing")).toBe("true")
+    expect(screen.queryByLabelText("Scroll sheets left")).toBeNull()
+    expect(screen.queryByLabelText("Scroll sheets right")).toBeNull()
+    expect(screen.getByRole("tab", { name: "Sheet 1" }).style.width).toBe(
+      "92px"
+    )
+  })
+
+  it("expands tabs across the strip before they overflow", () => {
+    mockSheetTabMetrics({
+      clientWidth: 640,
+      scrollWidth: 640,
+      tabWidth: 156,
+    })
+
+    render(
+      <XlsxSheetTabs
+        sheets={Array.from({ length: 4 }, (_, index) =>
+          makeSheet(`Sheet ${index + 1}`)
+        )}
+        activeSheetIndex={0}
+        onSelectSheet={vi.fn()}
+      />
+    )
+
+    const tablist = screen.getByRole("tablist", { name: "Workbook sheets" })
+    expect(tablist.getAttribute("data-overflowing")).toBe("false")
+    expect(screen.getByRole("tab", { name: "Sheet 1" }).style.width).toBe(
+      "156px"
+    )
+  })
+
+  it("reveals the active sheet with nearest-edge scroll math", () => {
+    const { scrollTo } = mockSheetTabMetrics({
+      clientWidth: 240,
+      scrollWidth: 720,
+      tabWidth: 96,
+    })
+    const sheets = Array.from({ length: 8 }, (_, index) =>
+      makeSheet(`Sheet ${index + 1}`)
+    )
+
+    const { rerender } = render(
+      <XlsxSheetTabs
+        sheets={sheets}
+        activeSheetIndex={0}
+        onSelectSheet={vi.fn()}
+      />
+    )
+
+    scrollTo.mockClear()
+    rerender(
+      <XlsxSheetTabs
+        sheets={sheets}
+        activeSheetIndex={5}
+        onSelectSheet={vi.fn()}
+      />
+    )
+
+    expect(scrollTo).toHaveBeenLastCalledWith({
+      left: 346,
+      behavior: "auto",
+    })
+  })
+
+  it("maps wheel movement to horizontal tab scrolling while overflowing", () => {
+    mockSheetTabMetrics({
+      clientWidth: 240,
+      scrollWidth: 720,
+      tabWidth: 96,
+    })
+
+    render(
+      <XlsxSheetTabs
+        sheets={Array.from({ length: 8 }, (_, index) =>
+          makeSheet(`Sheet ${index + 1}`)
+        )}
+        activeSheetIndex={0}
+        onSelectSheet={vi.fn()}
+      />
+    )
+
+    const tablist = screen.getByRole("tablist", { name: "Workbook sheets" })
+    const scroller = tablist.querySelector(".overflow-x-auto") as HTMLElement
+
+    fireEvent.wheel(scroller, { deltaY: 120 })
+
+    expect(scroller.scrollLeft).toBe(120)
+    expect(tablist.getAttribute("data-can-scroll-left")).toBe("true")
+  })
+
+  it("supports wrapped keyboard selection for crowded sheet tabs", () => {
+    mockSheetTabMetrics({
+      clientWidth: 240,
+      scrollWidth: 720,
+      tabWidth: 96,
+    })
+    const onSelectSheet = vi.fn()
+
+    render(
+      <XlsxSheetTabs
+        sheets={Array.from({ length: 8 }, (_, index) =>
+          makeSheet(`Sheet ${index + 1}`)
+        )}
+        activeSheetIndex={3}
+        onSelectSheet={onSelectSheet}
+      />
+    )
+
+    fireEvent.keyDown(screen.getByRole("tab", { name: "Sheet 4" }), {
+      key: "ArrowRight",
+    })
+    fireEvent.keyDown(screen.getByRole("tab", { name: "Sheet 4" }), {
+      key: "Home",
+    })
+    fireEvent.keyDown(screen.getByRole("tab", { name: "Sheet 4" }), {
+      key: "End",
+    })
+    fireEvent.keyDown(screen.getByRole("tab", { name: "Sheet 4" }), {
+      key: "ArrowLeft",
+    })
+
+    expect(onSelectSheet).toHaveBeenNthCalledWith(1, 4)
+    expect(onSelectSheet).toHaveBeenNthCalledWith(2, 0)
+    expect(onSelectSheet).toHaveBeenNthCalledWith(3, 7)
+    expect(onSelectSheet).toHaveBeenNthCalledWith(4, 2)
+  })
+
+  it("wraps previous and next selection at the ends of a crowded sheet strip", () => {
+    mockSheetTabMetrics({
+      clientWidth: 240,
+      scrollWidth: 720,
+      tabWidth: 96,
+    })
+    const onSelectSheet = vi.fn()
+
+    const { rerender } = render(
+      <XlsxSheetTabs
+        sheets={Array.from({ length: 8 }, (_, index) =>
+          makeSheet(`Sheet ${index + 1}`)
+        )}
+        activeSheetIndex={0}
+        onSelectSheet={onSelectSheet}
+      />
+    )
+
+    fireEvent.keyDown(screen.getByRole("tab", { name: "Sheet 1" }), {
+      key: "ArrowLeft",
+    })
+
+    rerender(
+      <XlsxSheetTabs
+        sheets={Array.from({ length: 8 }, (_, index) =>
+          makeSheet(`Sheet ${index + 1}`)
+        )}
+        activeSheetIndex={7}
+        onSelectSheet={onSelectSheet}
+      />
+    )
+
+    fireEvent.keyDown(screen.getByRole("tab", { name: "Sheet 8" }), {
+      key: "ArrowRight",
+    })
+
+    expect(onSelectSheet).toHaveBeenNthCalledWith(1, 7)
+    expect(onSelectSheet).toHaveBeenNthCalledWith(2, 0)
   })
 })
 

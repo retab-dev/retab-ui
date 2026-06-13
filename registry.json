@@ -1481,7 +1481,7 @@
         "pptx-viewer",
         "xlsx-viewer",
         "csv-viewer",
-        "text-viewer",
+        "code-viewer",
         "skeleton"
       ],
       "files": [
@@ -2330,7 +2330,7 @@
         "pdf-source",
         "image-viewer",
         "image-source",
-        "text-viewer",
+        "code-viewer",
         "text-source",
         "csv-viewer",
         "csv-source",
@@ -2416,13 +2416,52 @@
       "type": "registry:ui",
       "title": "PDF Thumbnail Sidebar",
       "description": "A page-thumbnail rail for the PdfViewer left slot: lazy pdfjs thumbnails, active-page highlight, click-to-jump. Reuses the viewer’s cached document.",
-      "dependencies": ["@tanstack/react-virtual"],
       "registryDependencies": ["pdf-viewer", "utils", "spinner"],
       "files": [
         {
           "path": "registry/new-york-v4/ui/pdf-thumbnail-sidebar.tsx",
           "type": "registry:ui",
           "target": "@ui/pdf-thumbnail-sidebar.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/pdf-thumbnail-layout.ts",
+          "type": "registry:ui",
+          "target": "@ui/pdf-thumbnail-layout.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/use-pdf-thumbnail-document.ts",
+          "type": "registry:ui",
+          "target": "@ui/use-pdf-thumbnail-document.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/use-pdf-thumbnail-page-metrics.ts",
+          "type": "registry:ui",
+          "target": "@ui/use-pdf-thumbnail-page-metrics.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/use-pdf-thumbnail-window.ts",
+          "type": "registry:ui",
+          "target": "@ui/use-pdf-thumbnail-window.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/use-thumbnail-rail-follow.ts",
+          "type": "registry:ui",
+          "target": "@ui/use-thumbnail-rail-follow.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/pdf-thumbnail-rail.tsx",
+          "type": "registry:ui",
+          "target": "@ui/pdf-thumbnail-rail.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/pdf-thumbnail-item.tsx",
+          "type": "registry:ui",
+          "target": "@ui/pdf-thumbnail-item.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/pdf-thumbnail-canvas.tsx",
+          "type": "registry:ui",
+          "target": "@ui/pdf-thumbnail-canvas.tsx"
         }
       ]
     },
@@ -2499,6 +2538,46 @@
           "path": "registry/new-york-v4/ui/pdf-thumbnail-sidebar.tsx",
           "type": "registry:ui",
           "target": "@ui/pdf-thumbnail-sidebar.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/pdf-thumbnail-layout.ts",
+          "type": "registry:ui",
+          "target": "@ui/pdf-thumbnail-layout.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/use-pdf-thumbnail-document.ts",
+          "type": "registry:ui",
+          "target": "@ui/use-pdf-thumbnail-document.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/use-pdf-thumbnail-page-metrics.ts",
+          "type": "registry:ui",
+          "target": "@ui/use-pdf-thumbnail-page-metrics.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/use-pdf-thumbnail-window.ts",
+          "type": "registry:ui",
+          "target": "@ui/use-pdf-thumbnail-window.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/use-thumbnail-rail-follow.ts",
+          "type": "registry:ui",
+          "target": "@ui/use-thumbnail-rail-follow.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/pdf-thumbnail-rail.tsx",
+          "type": "registry:ui",
+          "target": "@ui/pdf-thumbnail-rail.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/pdf-thumbnail-item.tsx",
+          "type": "registry:ui",
+          "target": "@ui/pdf-thumbnail-item.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/pdf-thumbnail-canvas.tsx",
+          "type": "registry:ui",
+          "target": "@ui/pdf-thumbnail-canvas.tsx"
         }
       ]
     },
@@ -2540,11 +2619,91 @@
       ]
     },
     {
+      "name": "code-viewer",
+      "type": "registry:ui",
+      "title": "Code Viewer",
+      "description": "A fixed-line code and log viewer with line numbers, TanStack virtualization, source-line highlights, retry, zoom, and download.",
+      "dependencies": ["@tanstack/react-virtual", "lucide-react"],
+      "registryDependencies": ["button", "scroll-area", "skeleton", "utils"],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/code-viewer.tsx",
+          "type": "registry:ui",
+          "target": "@ui/code-viewer.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/code-viewer-chrome.tsx",
+          "type": "registry:ui",
+          "target": "@ui/code-viewer-chrome.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/code-viewer-content.tsx",
+          "type": "registry:ui",
+          "target": "@ui/code-viewer-content.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/code-viewer-line.tsx",
+          "type": "registry:ui",
+          "target": "@ui/code-viewer-line.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/code-viewer-layout.ts",
+          "type": "registry:ui",
+          "target": "@ui/code-viewer-layout.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/code-viewer-scale.ts",
+          "type": "registry:ui",
+          "target": "@ui/code-viewer-scale.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/code-viewer-types.ts",
+          "type": "registry:ui",
+          "target": "@ui/code-viewer-types.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/code-viewer-virtualization.ts",
+          "type": "registry:ui",
+          "target": "@ui/code-viewer-virtualization.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/viewer-download.tsx",
+          "type": "registry:ui",
+          "target": "@ui/viewer-download.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/text-viewer-ranges.ts",
+          "type": "registry:ui",
+          "target": "@ui/text-viewer-ranges.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/text-viewer-resource.ts",
+          "type": "registry:ui",
+          "target": "@ui/text-viewer-resource.ts"
+        },
+        {
+          "path": "registry/new-york-v4/lib/viewer-source.ts",
+          "type": "registry:lib",
+          "target": "@lib/viewer-source.ts"
+        },
+        {
+          "path": "registry/new-york-v4/lib/viewer-resource.ts",
+          "type": "registry:lib",
+          "target": "@lib/viewer-resource.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/use-is-client.ts",
+          "type": "registry:ui",
+          "target": "@ui/use-is-client.ts"
+        }
+      ]
+    },
+    {
       "name": "text-viewer",
       "type": "registry:ui",
       "title": "Text Viewer",
-      "description": "A bounded line-numbered text viewer for source-linked line ranges, with local load errors, explicit retry, and an imperative scrollToLineRange handle.",
-      "dependencies": ["lucide-react"],
+      "description": "A Pretext-powered prose viewer with natural wrapping, custom variable-height virtualization, source-line highlights, retry, zoom, and download.",
+      "dependencies": ["@chenglou/pretext", "lucide-react"],
       "registryDependencies": ["button", "scroll-area", "skeleton", "utils"],
       "files": [
         {
@@ -2561,11 +2720,6 @@
           "path": "registry/new-york-v4/ui/text-viewer-content.tsx",
           "type": "registry:ui",
           "target": "@ui/text-viewer-content.tsx"
-        },
-        {
-          "path": "registry/new-york-v4/ui/text-viewer-line.tsx",
-          "type": "registry:ui",
-          "target": "@ui/text-viewer-line.tsx"
         },
         {
           "path": "registry/new-york-v4/ui/viewer-download.tsx",
@@ -2591,11 +2745,6 @@
           "path": "registry/new-york-v4/ui/text-viewer-types.ts",
           "type": "registry:ui",
           "target": "@ui/text-viewer-types.ts"
-        },
-        {
-          "path": "registry/new-york-v4/ui/text-viewer-layout.ts",
-          "type": "registry:ui",
-          "target": "@ui/text-viewer-layout.ts"
         },
         {
           "path": "registry/new-york-v4/ui/text-viewer-virtualization.ts",
@@ -2624,16 +2773,17 @@
       "type": "registry:ui",
       "title": "Text source adapter",
       "description": "Bridges the document-source model to the text viewer: textAnchorToTarget, useTextSourceTarget, and sourceToTextHighlight for text_span anchors.",
-      "registryDependencies": [
-        "text-viewer",
-        "document-source",
-        "use-source-link"
-      ],
+      "registryDependencies": ["document-source", "use-source-link"],
       "files": [
         {
           "path": "registry/new-york-v4/ui/text-source.tsx",
           "type": "registry:ui",
           "target": "@ui/text-source.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/text-viewer-ranges.ts",
+          "type": "registry:ui",
+          "target": "@ui/text-viewer-ranges.ts"
         }
       ]
     },
@@ -2724,7 +2874,7 @@
       "title": "Text Sources",
       "description": "Values extracted from a log file linked to the lines they came from — hover to highlight a line range.",
       "registryDependencies": [
-        "text-viewer",
+        "code-viewer",
         "text-source",
         "use-source-link",
         "document-source",

@@ -5,6 +5,7 @@ export type DataCellKind =
   | "number"
   | "integer"
   | "boolean"
+  | "select"
   | "date"
   | "time"
   | "date-time"
@@ -36,6 +37,13 @@ export type DataCellValueMeta = {
   isValid: boolean
 }
 
+export type DataCellSelectOption = {
+  value: string
+  label: React.ReactNode
+  disabled?: boolean
+  className?: string
+}
+
 export type DataCellCommitHandler = (
   value: DataCellCommitValue,
   meta: DataCellValueMeta
@@ -52,6 +60,7 @@ type DataCellBaseProps<Kind extends DataCellKind, Value> = Omit<
   disabled?: boolean
   name?: string
   placeholder?: string
+  selectOptions?: DataCellSelectOption[]
   dateTimeZone?: DataCellDateTimeZone
   showPickerIcon?: boolean
   activationIntent?: DataCellActivationIntent
@@ -73,6 +82,10 @@ export type DataCellProps =
     })
   | (DataCellBaseProps<"boolean", boolean | null> & {
       onCommit?: (value: boolean, meta: DataCellValueMeta) => void
+    })
+  | (DataCellBaseProps<"select", string | null> & {
+      selectOptions: DataCellSelectOption[]
+      onCommit?: (value: string | null, meta: DataCellValueMeta) => void
     })
   | (DataCellBaseProps<
       "text" | "date" | "time" | "date-time",

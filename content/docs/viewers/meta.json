@@ -5,6 +5,7 @@
     "pdf-viewer",
     "image-viewer",
     "csv-viewer",
+    "code-viewer",
     "text-viewer",
     "xlsx-viewer",
     "docx-viewer",

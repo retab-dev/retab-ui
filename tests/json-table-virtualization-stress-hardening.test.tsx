@@ -313,6 +313,17 @@ function pointerDownCell(container: HTMLElement, fieldPath: string) {
   return element
 }
 
+function clickCell(container: HTMLElement, fieldPath: string) {
+  const element = cell(container, fieldPath)
+  fireEvent.click(element, {
+    button: 0,
+    clientX: 16,
+    clientY: 16,
+    detail: 1,
+  })
+  return element
+}
+
 function activeCells(container: HTMLElement) {
   return Array.from(
     container.querySelectorAll<HTMLElement>('[data-active="true"]')
@@ -526,7 +537,7 @@ describe("json table virtualization stress hardening", () => {
       await waitForCell(view.container, "lines.0.status")
       setViewportHeight(view.container, 64)
 
-      pointerDownCell(view.container, "lines.0.status")
+      clickCell(view.container, "lines.0.status")
       const combobox = await view.findByRole("combobox")
       await waitFor(() =>
         expect(combobox.getAttribute("aria-expanded")).toBe("true")

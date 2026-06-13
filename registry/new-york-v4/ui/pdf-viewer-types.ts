@@ -12,11 +12,17 @@ export interface PageOverlayProps {
 export type PdfPageAreaTarget = {
   pageNumber: number
   top: number
+  left?: number
+  width?: number
+  height?: number
 }
 
 export interface PdfViewerHandle {
   scrollToPage: (pageNumber: number, options?: ScrollToOptions) => void
-  scrollToPageArea: (target: PdfPageAreaTarget, options?: ScrollToOptions) => void
+  scrollToPageArea: (
+    target: PdfPageAreaTarget,
+    options?: ScrollToOptions
+  ) => void
   getViewportElement: () => HTMLDivElement | null
 }
 

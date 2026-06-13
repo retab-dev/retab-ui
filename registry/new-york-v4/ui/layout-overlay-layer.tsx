@@ -7,56 +7,11 @@ import { cn } from "@/lib/utils"
 import { itemToQuad, toSvgPoints } from "./layout-blocks-geometry"
 import type { LayoutItem, LayoutLevel, LayoutPage } from "./layout-blocks-types"
 
-const OVERLAY_PALETTES = [
-  {
-    fill: "rgb(139 92 246 / 0.05)",
-    stroke: "rgb(139 92 246 / 0.35)",
-    activeFill: "rgb(139 92 246 / 0.1)",
-    activeStroke: "rgb(139 92 246 / 0.7)",
-  },
-  {
-    fill: "rgb(59 130 246 / 0.05)",
-    stroke: "rgb(59 130 246 / 0.35)",
-    activeFill: "rgb(59 130 246 / 0.1)",
-    activeStroke: "rgb(59 130 246 / 0.7)",
-  },
-  {
-    fill: "rgb(16 185 129 / 0.05)",
-    stroke: "rgb(16 185 129 / 0.35)",
-    activeFill: "rgb(16 185 129 / 0.1)",
-    activeStroke: "rgb(16 185 129 / 0.7)",
-  },
-  {
-    fill: "rgb(245 158 11 / 0.05)",
-    stroke: "rgb(245 158 11 / 0.35)",
-    activeFill: "rgb(245 158 11 / 0.1)",
-    activeStroke: "rgb(245 158 11 / 0.7)",
-  },
-  {
-    fill: "rgb(244 63 94 / 0.05)",
-    stroke: "rgb(244 63 94 / 0.35)",
-    activeFill: "rgb(244 63 94 / 0.1)",
-    activeStroke: "rgb(244 63 94 / 0.7)",
-  },
-  {
-    fill: "rgb(6 182 212 / 0.05)",
-    stroke: "rgb(6 182 212 / 0.35)",
-    activeFill: "rgb(6 182 212 / 0.1)",
-    activeStroke: "rgb(6 182 212 / 0.7)",
-  },
-  {
-    fill: "rgb(100 116 139 / 0.05)",
-    stroke: "rgb(100 116 139 / 0.35)",
-    activeFill: "rgb(100 116 139 / 0.1)",
-    activeStroke: "rgb(100 116 139 / 0.7)",
-  },
-  {
-    fill: "rgb(113 113 122 / 0.05)",
-    stroke: "rgb(113 113 122 / 0.35)",
-    activeFill: "rgb(113 113 122 / 0.1)",
-    activeStroke: "rgb(113 113 122 / 0.7)",
-  },
-] as const
+const OVERLAY_BLUE = "rgb(37 99 235)"
+const OVERLAY_ACTIVE_PURPLE = "rgb(147 51 234)"
+const OVERLAY_ACTIVE_PURPLE_FILL = "rgb(147 51 234 / 0.12)"
+const OVERLAY_STROKE_WIDTH = 1.6
+const OVERLAY_ACTIVE_STROKE_WIDTH = 2.2
 
 export function LayoutOverlayLayer({
   activeItemId,
@@ -113,7 +68,6 @@ export function LayoutOverlayLayer({
         const isActive = item.id === activeItemId
         const isSelected = item.id === selectedItemId
         const isEmphasized = isActive || isSelected
-        const palette = getOverlayPalette(item.id)
 
         return (
           <polygon
@@ -129,15 +83,17 @@ export function LayoutOverlayLayer({
                 : undefined
             }
             className={cn(
-              "transition-[fill,stroke]",
+              "transition-[fill,stroke,stroke-width]",
               interactive && "cursor-pointer outline-none",
               interactive && "focus-visible:outline-none"
             )}
             style={{
-              fill: isEmphasized ? palette.activeFill : palette.fill,
-              stroke: isEmphasized ? palette.activeStroke : palette.stroke,
+              fill: isEmphasized ? OVERLAY_ACTIVE_PURPLE_FILL : "transparent",
+              stroke: isEmphasized ? OVERLAY_ACTIVE_PURPLE : OVERLAY_BLUE,
             }}
-            strokeWidth={1}
+            strokeWidth={
+              isEmphasized ? OVERLAY_ACTIVE_STROKE_WIDTH : OVERLAY_STROKE_WIDTH
+            }
             onClick={() => onItemClick?.(item)}
             onKeyDown={(event) => {
               if (!interactive) return
@@ -153,16 +109,4 @@ export function LayoutOverlayLayer({
       })}
     </svg>
   )
-}
-
-function getOverlayPalette(itemId: string) {
-  return OVERLAY_PALETTES[hashString(itemId) % OVERLAY_PALETTES.length]
-}
-
-function hashString(value: string) {
-  let hash = 0
-  for (let index = 0; index < value.length; index += 1) {
-    hash = (hash * 31 + value.charCodeAt(index)) >>> 0
-  }
-  return hash
 }

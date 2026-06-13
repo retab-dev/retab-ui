@@ -8,11 +8,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import type { ViewerResource } from "@/lib/viewer-resource"
 import { FileThumbnail } from "@/components/ui/file-thumbnail"
 import { DocumentThumbnail } from "@/components/document-thumbnail"
+import { FirstThumbnailUnit } from "@/components/document-thumbnail/renderer-registry"
+import { CodeThumbnail } from "@/components/document-thumbnail/renderers/code-thumbnail"
 import { DocxFirstPage } from "@/components/document-thumbnail/renderers/docx-thumbnail"
 import { IframeDoc } from "@/components/document-thumbnail/renderers/layout"
+import { MarkdownFirstPage } from "@/components/document-thumbnail/renderers/markdown-thumbnail"
 import { PdfFirstPage } from "@/components/document-thumbnail/renderers/pdf-thumbnail"
 import { PptxFirstSlide } from "@/components/document-thumbnail/renderers/pptx-thumbnail"
-import { TextFirstLines } from "@/components/document-thumbnail/renderers/text-thumbnail"
+import { TextThumbnail } from "@/components/document-thumbnail/renderers/text-thumbnail"
 import { TiffFirstPage } from "@/components/document-thumbnail/renderers/tiff-thumbnail"
 import { XlsxFirstSheet } from "@/components/document-thumbnail/renderers/xlsx-thumbnail"
 import { clearThumbnailCachesForTests } from "@/components/document-thumbnail/thumbnail-test-reset"
@@ -33,6 +36,10 @@ const rendererMocks = vi.hoisted(() => ({
     renderSlide: vi.fn(),
     dispose: vi.fn(),
     loadZipAsync: vi.fn(),
+  },
+  markdown: {
+    parse: vi.fn(),
+    sanitize: vi.fn(),
   },
 }))
 
@@ -62,6 +69,19 @@ vi.mock("jszip", () => ({
     loadAsync: rendererMocks.pptx.loadZipAsync,
   },
   loadAsync: rendererMocks.pptx.loadZipAsync,
+}))
+
+vi.mock("marked", () => ({
+  marked: {
+    parse: rendererMocks.markdown.parse,
+  },
+}))
+
+vi.mock("dompurify", () => ({
+  default: {
+    sanitize: rendererMocks.markdown.sanitize,
+  },
+  sanitize: rendererMocks.markdown.sanitize,
 }))
 
 interface Deferred<T> {
@@ -140,19 +160,40 @@ function textThumbnailResource({
   fileName,
   key,
   readRange,
+  mimeType = "text/plain",
 }: {
   fileName: string
   key: string
   readRange: ViewerResource["content"]["readRange"]
+  mimeType?: string
 }) {
   return thumbnailResource({
     fileName,
-    mimeType: "text/plain",
+    mimeType,
     content: {
       key,
       sourceKind: "blob",
       readRange,
       readStream: vi.fn(),
+    } as unknown as ViewerResource["content"],
+  })
+}
+
+function bytesThumbnailResource({
+  fileName,
+  key,
+  readBytes,
+}: {
+  fileName: string
+  key: string
+  readBytes: ViewerResource["content"]["readBytes"]
+}) {
+  return thumbnailResource({
+    fileName,
+    content: {
+      key,
+      sourceKind: "blob",
+      readBytes,
     } as unknown as ViewerResource["content"],
   })
 }
@@ -165,6 +206,7 @@ function encodedRange(text: string) {
       end: Math.max(text.length - 1, 0),
       total: text.length,
     },
+    isComplete: true,
   }
 }
 
@@ -256,6 +298,12 @@ beforeEach(() => {
       async: async () => '<p:sldSz cx="9144000" cy="6858000"/>',
     }),
   })
+  rendererMocks.markdown.parse.mockReset()
+  rendererMocks.markdown.parse.mockImplementation(
+    async (text: string) => `<p>${text}</p>`
+  )
+  rendererMocks.markdown.sanitize.mockReset()
+  rendererMocks.markdown.sanitize.mockImplementation((html: string) => html)
 
   vi.stubGlobal("ResizeObserver", ResizeObserverMock)
   vi.stubGlobal("Worker", ThumbnailWorkerMock)
@@ -275,10 +323,227 @@ afterEach(() => {
 })
 
 describe("thumbnail stale async regressions", () => {
+  it("renders plain text thumbnails as wrapped prose", async () => {
+    const resource = textThumbnailResource({
+      fileName: "review-notes.txt",
+      key: "text-prose",
+      readRange: vi.fn(async () =>
+        encodedRange(
+          "Text and code want different surfaces.\n\nProse wants rhythm, wrapping, and a readable measure."
+        )
+      ),
+    })
+
+    renderWithBoundary(
+      <TextThumbnail resource={resource} thumbnailKey="text-prose" />
+    )
+
+    const prose = await screen.findByText(
+      "Text and code want different surfaces."
+    )
+
+    expect(prose.closest('[data-slot="text-thumbnail"]')).not.toBeNull()
+    expect(screen.queryByText("1")).toBeNull()
+  })
+
+  it("normalizes CRLF prose in text thumbnails", async () => {
+    const resource = textThumbnailResource({
+      fileName: "windows-notes.txt",
+      key: "text-crlf",
+      readRange: vi.fn(async () =>
+        encodedRange("First line\r\nsecond line\r\n\r\nNext paragraph")
+      ),
+    })
+
+    renderWithBoundary(
+      <TextThumbnail resource={resource} thumbnailKey="text-crlf" />
+    )
+
+    expect(await screen.findByText("First line second line")).not.toBeNull()
+    expect(screen.getByText("Next paragraph")).not.toBeNull()
+  })
+
+  it("renders an intentional empty state for empty text thumbnails", async () => {
+    const resource = textThumbnailResource({
+      fileName: "empty.txt",
+      key: "text-empty",
+      readRange: vi.fn(async () => encodedRange(" \n\t ")),
+    })
+    const { view } = renderWithBoundary(
+      <TextThumbnail resource={resource} thumbnailKey="text-empty" />
+    )
+
+    await screen.findByLabelText("Empty text file")
+
+    expect(
+      view.container.querySelector('[data-slot="text-thumbnail-empty"]')
+    ).not.toBeNull()
+    expect(screen.queryByText("1")).toBeNull()
+  })
+
+  it("keeps code thumbnails monospaced with line numbers", async () => {
+    const resource = textThumbnailResource({
+      fileName: "use-debounced-value.ts",
+      key: "text-code",
+      readRange: vi.fn(async () =>
+        encodedRange(
+          'import * as React from "react"\n\nexport function useX() {}'
+        )
+      ),
+    })
+
+    renderWithBoundary(
+      <CodeThumbnail resource={resource} thumbnailKey="text-code" />
+    )
+
+    const code = await screen.findByText('import * as React from "react"')
+
+    expect(code.closest('[data-slot="code-thumbnail"]')).not.toBeNull()
+    expect(screen.getByText("1")).not.toBeNull()
+  })
+
+  it("preserves whitespace in code thumbnails", async () => {
+    const resource = textThumbnailResource({
+      fileName: "indented.ts",
+      key: "code-whitespace",
+      readRange: vi.fn(async () =>
+        encodedRange("if (ready) {\n  const answer = 42\n}")
+      ),
+    })
+    const { view } = renderWithBoundary(
+      <CodeThumbnail resource={resource} thumbnailKey="code-whitespace" />
+    )
+
+    await screen.findByText("if (ready) {")
+
+    expect(view.container.textContent).toContain("  const answer = 42")
+  })
+
+  it("pretty-prints strict JSON in code thumbnails", async () => {
+    const resource = textThumbnailResource({
+      fileName: "app-config.json",
+      key: "code-json",
+      readRange: vi.fn(async () =>
+        encodedRange('{"name":"retab","enabled":true}')
+      ),
+    })
+
+    renderWithBoundary(
+      <CodeThumbnail resource={resource} thumbnailKey="code-json" />
+    )
+
+    expect(await screen.findByText('"name": "retab",')).not.toBeNull()
+    expect(screen.getByText('"enabled": true')).not.toBeNull()
+  })
+
+  it("keeps invalid JSON as raw code text", async () => {
+    const resource = textThumbnailResource({
+      fileName: "broken.json",
+      key: "code-invalid-json",
+      readRange: vi.fn(async () => encodedRange('{"name":')),
+    })
+
+    renderWithBoundary(
+      <CodeThumbnail resource={resource} thumbnailKey="code-invalid-json" />
+    )
+
+    expect(await screen.findByText('{"name":')).not.toBeNull()
+  })
+
+  it("renders JSONL and NDJSON as line-oriented code", async () => {
+    const jsonl = textThumbnailResource({
+      fileName: "events.jsonl",
+      key: "code-jsonl",
+      mimeType: "application/json",
+      readRange: vi.fn(async () => encodedRange('{"a":1}\n{"b":2}')),
+    })
+    const ndjson = textThumbnailResource({
+      fileName: "events.ndjson",
+      key: "code-ndjson",
+      readRange: vi.fn(async () => encodedRange('{"c":3}\n{"d":4}')),
+    })
+
+    const { view } = renderWithBoundary(
+      <>
+        <CodeThumbnail resource={jsonl} thumbnailKey="code-jsonl" />
+        <CodeThumbnail resource={ndjson} thumbnailKey="code-ndjson" />
+      </>
+    )
+
+    expect(await screen.findByText('{"a":1}')).not.toBeNull()
+    expect(screen.getByText('{"b":2}')).not.toBeNull()
+    expect(screen.getByText('{"c":3}')).not.toBeNull()
+    expect(screen.getByText('{"d":4}')).not.toBeNull()
+    expect(
+      view.container.querySelectorAll('[data-slot="code-thumbnail"]')
+    ).toHaveLength(2)
+  })
+
+  it("routes text category descriptors to text or code thumbnails", async () => {
+    const notes = textThumbnailResource({
+      fileName: "notes.txt",
+      key: "route-text",
+      readRange: vi.fn(async () => encodedRange("plain text")),
+    })
+    const config = textThumbnailResource({
+      fileName: "config.json",
+      key: "route-code",
+      readRange: vi.fn(async () => encodedRange('{"mode":"fast"}')),
+    })
+
+    const { view } = renderWithBoundary(
+      <>
+        <FirstThumbnailUnit
+          resource={notes}
+          descriptor={{
+            source: { kind: "text", text: "plain text", fileName: "notes.txt" },
+            category: "text",
+            identityKey: "route-text",
+            displayName: "notes.txt",
+            fileName: "notes.txt",
+            mimeType: "text/plain",
+          }}
+          thumbnailKey="route-text"
+          anchor="top-left"
+          onError={vi.fn()}
+        />
+        <FirstThumbnailUnit
+          resource={config}
+          descriptor={{
+            source: {
+              kind: "text",
+              text: '{"mode":"fast"}',
+              fileName: "config.json",
+            },
+            category: "text",
+            identityKey: "route-code",
+            displayName: "config.json",
+            fileName: "config.json",
+            mimeType: "application/json",
+          }}
+          thumbnailKey="route-code"
+          anchor="top-left"
+          onError={vi.fn()}
+        />
+      </>
+    )
+
+    expect(await screen.findByText("plain text")).not.toBeNull()
+    expect(screen.getByText('"mode": "fast"')).not.toBeNull()
+    expect(
+      view.container.querySelector('[data-slot="text-thumbnail"]')
+    ).not.toBeNull()
+    expect(
+      view.container.querySelector('[data-slot="code-thumbnail"]')
+    ).not.toBeNull()
+  })
+
   it("ignores a late text range response after the thumbnail resource changes", async () => {
     const onError = vi.fn()
-    const firstRead = deferred<Awaited<ReturnType<ViewerResource["content"]["readRange"]>>>()
-    const secondRead = deferred<Awaited<ReturnType<ViewerResource["content"]["readRange"]>>>()
+    const firstRead =
+      deferred<Awaited<ReturnType<ViewerResource["content"]["readRange"]>>>()
+    const secondRead =
+      deferred<Awaited<ReturnType<ViewerResource["content"]["readRange"]>>>()
     const firstResource = textThumbnailResource({
       fileName: "first.txt",
       key: "text-first",
@@ -291,7 +556,7 @@ describe("thumbnail stale async regressions", () => {
     })
 
     const { view } = renderWithBoundary(
-      <TextFirstLines
+      <TextThumbnail
         key="text-first"
         resource={firstResource}
         thumbnailKey="text-first"
@@ -301,7 +566,7 @@ describe("thumbnail stale async regressions", () => {
 
     view.rerender(
       boundaryTree(
-        <TextFirstLines
+        <TextThumbnail
           key="text-second"
           resource={secondResource}
           thumbnailKey="text-second"
@@ -330,8 +595,10 @@ describe("thumbnail stale async regressions", () => {
 
   it("ignores a late text range rejection after the thumbnail resource changes", async () => {
     const onError = vi.fn()
-    const firstRead = deferred<Awaited<ReturnType<ViewerResource["content"]["readRange"]>>>()
-    const secondRead = deferred<Awaited<ReturnType<ViewerResource["content"]["readRange"]>>>()
+    const firstRead =
+      deferred<Awaited<ReturnType<ViewerResource["content"]["readRange"]>>>()
+    const secondRead =
+      deferred<Awaited<ReturnType<ViewerResource["content"]["readRange"]>>>()
     const firstResource = textThumbnailResource({
       fileName: "first-reject.txt",
       key: "text-first-reject",
@@ -344,7 +611,7 @@ describe("thumbnail stale async regressions", () => {
     })
 
     const { view } = renderWithBoundary(
-      <TextFirstLines
+      <TextThumbnail
         key="text-first-reject"
         resource={firstResource}
         thumbnailKey="text-first-reject"
@@ -354,7 +621,7 @@ describe("thumbnail stale async regressions", () => {
 
     view.rerender(
       boundaryTree(
-        <TextFirstLines
+        <TextThumbnail
           key="text-second-reject"
           resource={secondResource}
           thumbnailKey="text-second-reject"
@@ -378,6 +645,176 @@ describe("thumbnail stale async regressions", () => {
 
     expect(screen.getByText("current after reject")).not.toBeNull()
     expect(screen.queryByTestId("thumbnail-error")).toBeNull()
+    expect(onError).not.toHaveBeenCalled()
+  })
+
+  it("ignores a late text range response after unmount", async () => {
+    const onError = vi.fn()
+    const readRange =
+      deferred<Awaited<ReturnType<ViewerResource["content"]["readRange"]>>>()
+    const resource = textThumbnailResource({
+      fileName: "unmounted.txt",
+      key: "text-unmounted",
+      readRange: vi.fn(() => readRange.promise),
+    })
+
+    const { view } = renderWithBoundary(
+      <TextThumbnail resource={resource} thumbnailKey="text-unmounted" />,
+      onError
+    )
+
+    view.unmount()
+    await act(async () => {
+      readRange.resolve(encodedRange("late unmounted text"))
+      await readRange.promise
+    })
+
+    expect(onError).not.toHaveBeenCalled()
+  })
+
+  it("ignores a late text range rejection after unmount", async () => {
+    const onError = vi.fn()
+    const readRange =
+      deferred<Awaited<ReturnType<ViewerResource["content"]["readRange"]>>>()
+    const resource = textThumbnailResource({
+      fileName: "unmounted-reject.txt",
+      key: "text-unmounted-reject",
+      readRange: vi.fn(() => readRange.promise),
+    })
+
+    const { view } = renderWithBoundary(
+      <TextThumbnail
+        resource={resource}
+        thumbnailKey="text-unmounted-reject"
+      />,
+      onError
+    )
+
+    const swallowed = readRange.promise.catch(() => undefined)
+    view.unmount()
+    await act(async () => {
+      readRange.reject(new Error("late unmounted text failure"))
+      await swallowed
+    })
+
+    expect(onError).not.toHaveBeenCalled()
+  })
+
+  it("ignores a late markdown render response after the thumbnail resource changes", async () => {
+    const onError = vi.fn()
+    const firstRead =
+      deferred<Awaited<ReturnType<ViewerResource["content"]["readRange"]>>>()
+    const secondRead =
+      deferred<Awaited<ReturnType<ViewerResource["content"]["readRange"]>>>()
+    const firstParse = deferred<string>()
+    const firstResource = textThumbnailResource({
+      fileName: "first.md",
+      key: "markdown-first",
+      readRange: vi.fn(() => firstRead.promise),
+    })
+    const secondResource = textThumbnailResource({
+      fileName: "second.md",
+      key: "markdown-second",
+      readRange: vi.fn(() => secondRead.promise),
+    })
+    rendererMocks.markdown.parse.mockImplementation((text: string) =>
+      text.includes("stale")
+        ? firstParse.promise
+        : Promise.resolve("<p>current markdown</p>")
+    )
+
+    const { view } = renderWithBoundary(
+      <MarkdownFirstPage
+        key="markdown-first"
+        resource={firstResource}
+        thumbnailKey="markdown-first"
+      />,
+      onError
+    )
+
+    await act(async () => {
+      firstRead.resolve(encodedRange("stale markdown"))
+      await firstRead.promise
+    })
+
+    await waitFor(() => {
+      expect(rendererMocks.markdown.parse).toHaveBeenCalledWith(
+        "stale markdown"
+      )
+    })
+
+    view.rerender(
+      boundaryTree(
+        <MarkdownFirstPage
+          key="markdown-second"
+          resource={secondResource}
+          thumbnailKey="markdown-second"
+        />,
+        onError
+      )
+    )
+
+    await act(async () => {
+      secondRead.resolve(encodedRange("current markdown"))
+      await secondRead.promise
+    })
+
+    await waitFor(() => {
+      expect(view.container.querySelector("iframe")?.srcdoc).toContain(
+        "current markdown"
+      )
+    })
+
+    await act(async () => {
+      firstParse.resolve("<p>stale markdown</p>")
+      await firstParse.promise
+    })
+
+    expect(view.container.querySelector("iframe")?.srcdoc).toContain(
+      "current markdown"
+    )
+    expect(view.container.querySelector("iframe")?.srcdoc).not.toContain(
+      "stale markdown"
+    )
+    expect(onError).not.toHaveBeenCalled()
+  })
+
+  it("ignores a late markdown render rejection after unmount", async () => {
+    const onError = vi.fn()
+    const readRange =
+      deferred<Awaited<ReturnType<ViewerResource["content"]["readRange"]>>>()
+    const parse = deferred<string>()
+    const resource = textThumbnailResource({
+      fileName: "unmounted.md",
+      key: "markdown-unmounted",
+      readRange: vi.fn(() => readRange.promise),
+    })
+    rendererMocks.markdown.parse.mockReturnValue(parse.promise)
+
+    const { view } = renderWithBoundary(
+      <MarkdownFirstPage
+        resource={resource}
+        thumbnailKey="markdown-unmounted"
+      />,
+      onError
+    )
+
+    await act(async () => {
+      readRange.resolve(encodedRange("late markdown"))
+      await readRange.promise
+    })
+
+    await waitFor(() => {
+      expect(rendererMocks.markdown.parse).toHaveBeenCalledWith("late markdown")
+    })
+
+    const swallowed = parse.promise.catch(() => undefined)
+    view.unmount()
+    await act(async () => {
+      parse.reject(new Error("late markdown render failed"))
+      await swallowed
+    })
+
     expect(onError).not.toHaveBeenCalled()
   })
 
@@ -474,6 +911,255 @@ describe("thumbnail stale async regressions", () => {
       await swallowed
     })
 
+    expect(onError).not.toHaveBeenCalled()
+  })
+
+  it("ignores a late XLSX worker response after unmount", async () => {
+    const onError = vi.fn()
+    const resource = bytesThumbnailResource({
+      fileName: "unmounted.xlsx",
+      key: "xlsx-unmounted",
+      readBytes: vi.fn(async () => new ArrayBuffer(8)),
+    })
+
+    const { view } = renderWithBoundary(
+      <XlsxFirstSheet resource={resource} thumbnailKey="xlsx-unmounted" />,
+      onError
+    )
+
+    await waitFor(() => {
+      expect(ThumbnailWorkerMock.instances[0]?.messages).toHaveLength(1)
+    })
+
+    const request = ThumbnailWorkerMock.instances[0].messages[0] as {
+      id: number
+    }
+
+    view.unmount()
+    await act(async () => {
+      ThumbnailWorkerMock.instances[0].deliver({
+        id: request.id,
+        ok: true,
+        rows: [["late unmounted"]],
+      })
+    })
+
+    expect(onError).not.toHaveBeenCalled()
+  })
+
+  it("ignores a late XLSX worker error after unmount", async () => {
+    const onError = vi.fn()
+    const resource = bytesThumbnailResource({
+      fileName: "unmounted-error.xlsx",
+      key: "xlsx-unmounted-error",
+      readBytes: vi.fn(async () => new ArrayBuffer(8)),
+    })
+
+    const { view } = renderWithBoundary(
+      <XlsxFirstSheet
+        resource={resource}
+        thumbnailKey="xlsx-unmounted-error"
+      />,
+      onError
+    )
+
+    await waitFor(() => {
+      expect(ThumbnailWorkerMock.instances[0]?.messages).toHaveLength(1)
+    })
+
+    const request = ThumbnailWorkerMock.instances[0].messages[0] as {
+      id: number
+    }
+
+    view.unmount()
+    await act(async () => {
+      ThumbnailWorkerMock.instances[0].deliver({
+        id: request.id,
+        ok: false,
+        error: "late unmounted XLSX failure",
+      })
+    })
+
+    expect(onError).not.toHaveBeenCalled()
+  })
+
+  it("ignores a late XLSX byte read that starts a worker request after unmount", async () => {
+    const onError = vi.fn()
+    const readBytes = deferred<ArrayBuffer>()
+    const resource = bytesThumbnailResource({
+      fileName: "unmounted-read.xlsx",
+      key: "xlsx-unmounted-read",
+      readBytes: vi.fn(() => readBytes.promise),
+    })
+
+    const { view } = renderWithBoundary(
+      <XlsxFirstSheet resource={resource} thumbnailKey="xlsx-unmounted-read" />,
+      onError
+    )
+
+    view.unmount()
+    await act(async () => {
+      readBytes.resolve(new ArrayBuffer(8))
+      await readBytes.promise
+    })
+
+    await waitFor(() => {
+      expect(ThumbnailWorkerMock.instances[0]?.messages).toHaveLength(1)
+    })
+
+    const request = ThumbnailWorkerMock.instances[0].messages[0] as {
+      id: number
+    }
+
+    await act(async () => {
+      ThumbnailWorkerMock.instances[0].deliver({
+        id: request.id,
+        ok: true,
+        rows: [["late unmounted read"]],
+      })
+    })
+
+    expect(onError).not.toHaveBeenCalled()
+  })
+
+  it("ignores a late TIFF worker response after unmount without creating an object URL", async () => {
+    const onError = vi.fn()
+    const createObjectURL = vi.fn((_blob: Blob) => "blob:unmounted")
+    const revokeObjectURL = vi.fn()
+    stubUrlStatic("createObjectURL", createObjectURL)
+    stubUrlStatic("revokeObjectURL", revokeObjectURL)
+
+    const resource = bytesThumbnailResource({
+      fileName: "unmounted.tiff",
+      key: "tiff-unmounted",
+      readBytes: vi.fn(async () => new ArrayBuffer(8)),
+    })
+
+    const { view } = renderWithBoundary(
+      <TiffFirstPage
+        resource={resource}
+        thumbnailKey="tiff-unmounted"
+        anchor="top-left"
+        onError={onError}
+      />,
+      onError
+    )
+
+    await waitFor(() => {
+      expect(ThumbnailWorkerMock.instances[0]?.messages).toHaveLength(1)
+    })
+
+    const request = ThumbnailWorkerMock.instances[0].messages[0] as {
+      id: number
+    }
+
+    view.unmount()
+    await act(async () => {
+      ThumbnailWorkerMock.instances[0].deliver({
+        id: request.id,
+        ok: true,
+        blob: new Blob(["late"], { type: "image/png" }),
+      })
+    })
+
+    expect(createObjectURL).not.toHaveBeenCalled()
+    expect(revokeObjectURL).not.toHaveBeenCalled()
+    expect(onError).not.toHaveBeenCalled()
+  })
+
+  it("ignores a late TIFF worker error after unmount", async () => {
+    const onError = vi.fn()
+    const createObjectURL = vi.fn((_blob: Blob) => "blob:unmounted-error")
+    const revokeObjectURL = vi.fn()
+    stubUrlStatic("createObjectURL", createObjectURL)
+    stubUrlStatic("revokeObjectURL", revokeObjectURL)
+
+    const resource = bytesThumbnailResource({
+      fileName: "unmounted-error.tiff",
+      key: "tiff-unmounted-error",
+      readBytes: vi.fn(async () => new ArrayBuffer(8)),
+    })
+
+    const { view } = renderWithBoundary(
+      <TiffFirstPage
+        resource={resource}
+        thumbnailKey="tiff-unmounted-error"
+        anchor="top-left"
+        onError={onError}
+      />,
+      onError
+    )
+
+    await waitFor(() => {
+      expect(ThumbnailWorkerMock.instances[0]?.messages).toHaveLength(1)
+    })
+
+    const request = ThumbnailWorkerMock.instances[0].messages[0] as {
+      id: number
+    }
+
+    view.unmount()
+    await act(async () => {
+      ThumbnailWorkerMock.instances[0].deliver({
+        id: request.id,
+        ok: false,
+        error: "late unmounted TIFF failure",
+      })
+    })
+
+    expect(createObjectURL).not.toHaveBeenCalled()
+    expect(revokeObjectURL).not.toHaveBeenCalled()
+    expect(onError).not.toHaveBeenCalled()
+  })
+
+  it("ignores a late TIFF byte read that starts a worker request after unmount", async () => {
+    const onError = vi.fn()
+    const readBytes = deferred<ArrayBuffer>()
+    const createObjectURL = vi.fn((_blob: Blob) => "blob:unmounted-read")
+    const revokeObjectURL = vi.fn()
+    stubUrlStatic("createObjectURL", createObjectURL)
+    stubUrlStatic("revokeObjectURL", revokeObjectURL)
+
+    const resource = bytesThumbnailResource({
+      fileName: "unmounted-read.tiff",
+      key: "tiff-unmounted-read",
+      readBytes: vi.fn(() => readBytes.promise),
+    })
+
+    const { view } = renderWithBoundary(
+      <TiffFirstPage
+        resource={resource}
+        thumbnailKey="tiff-unmounted-read"
+        anchor="top-left"
+        onError={onError}
+      />,
+      onError
+    )
+
+    view.unmount()
+    await act(async () => {
+      readBytes.resolve(new ArrayBuffer(8))
+      await readBytes.promise
+    })
+
+    await waitFor(() => {
+      expect(ThumbnailWorkerMock.instances[0]?.messages).toHaveLength(1)
+    })
+
+    const request = ThumbnailWorkerMock.instances[0].messages[0] as {
+      id: number
+    }
+
+    await act(async () => {
+      ThumbnailWorkerMock.instances[0].deliver({
+        id: request.id,
+        ok: true,
+        blob: new Blob(["late"], { type: "image/png" }),
+      })
+    })
+
+    expect(createObjectURL).not.toHaveBeenCalled()
+    expect(revokeObjectURL).not.toHaveBeenCalled()
     expect(onError).not.toHaveBeenCalled()
   })
 
@@ -634,6 +1320,97 @@ describe("thumbnail stale async regressions", () => {
     expect(onError).not.toHaveBeenCalled()
   })
 
+  it("ignores a late XLSX byte read that starts a stale worker request", async () => {
+    const onError = vi.fn()
+    const firstRead = deferred<ArrayBuffer>()
+    const secondRead = deferred<ArrayBuffer>()
+    const firstResource = thumbnailResource({
+      fileName: "first-read.xlsx",
+      content: {
+        key: "xlsx-first-read",
+        sourceKind: "blob",
+        readBytes: vi.fn(() => firstRead.promise),
+      } as unknown as ViewerResource["content"],
+    })
+    const secondResource = thumbnailResource({
+      fileName: "second-read.xlsx",
+      content: {
+        key: "xlsx-second-read",
+        sourceKind: "blob",
+        readBytes: vi.fn(() => secondRead.promise),
+      } as unknown as ViewerResource["content"],
+    })
+
+    const { view } = renderWithBoundary(
+      <XlsxFirstSheet
+        key="xlsx-first-read"
+        resource={firstResource}
+        thumbnailKey="xlsx-first-read"
+      />,
+      onError
+    )
+
+    view.rerender(
+      boundaryTree(
+        <XlsxFirstSheet
+          key="xlsx-second-read"
+          resource={secondResource}
+          thumbnailKey="xlsx-second-read"
+        />,
+        onError
+      )
+    )
+
+    await act(async () => {
+      secondRead.resolve(new ArrayBuffer(8))
+      await secondRead.promise
+    })
+
+    await waitFor(() => {
+      expect(ThumbnailWorkerMock.instances[0]?.messages).toHaveLength(1)
+    })
+
+    const currentRequest = ThumbnailWorkerMock.instances[0].messages[0] as {
+      id: number
+    }
+
+    await act(async () => {
+      ThumbnailWorkerMock.instances[0].deliver({
+        id: currentRequest.id,
+        ok: true,
+        rows: [["current from bytes"]],
+      })
+    })
+
+    expect(await screen.findByText("current from bytes")).not.toBeNull()
+
+    await act(async () => {
+      firstRead.resolve(new ArrayBuffer(8))
+      await firstRead.promise
+    })
+
+    await waitFor(() => {
+      expect(ThumbnailWorkerMock.instances[0]?.messages).toHaveLength(2)
+    })
+
+    const staleRequest = ThumbnailWorkerMock.instances[0].messages[1] as {
+      id: number
+    }
+
+    await act(async () => {
+      ThumbnailWorkerMock.instances[0].deliver({
+        id: staleRequest.id,
+        ok: true,
+        rows: [["stale from bytes"]],
+      })
+    })
+
+    expect(screen.getByText("current from bytes")).not.toBeNull()
+    expect(screen.queryByText("stale from bytes")).toBeNull()
+    expect(screen.queryByTestId("thumbnail-error")).toBeNull()
+    expect(onError).not.toHaveBeenCalled()
+  })
+
   it("ignores a late TIFF worker response after the thumbnail resource changes", async () => {
     const onError = vi.fn()
     const firstBlob = new Blob(["first"], { type: "image/png" })
@@ -735,7 +1512,7 @@ describe("thumbnail stale async regressions", () => {
   it("ignores a late TIFF worker error after the thumbnail resource changes", async () => {
     const onError = vi.fn()
     const secondBlob = new Blob(["second"], { type: "image/png" })
-    const createObjectURL = vi.fn(() => "blob:current")
+    const createObjectURL = vi.fn((_blob: Blob) => "blob:current")
     const revokeObjectURL = vi.fn()
     stubUrlStatic("createObjectURL", createObjectURL)
     stubUrlStatic("revokeObjectURL", revokeObjectURL)

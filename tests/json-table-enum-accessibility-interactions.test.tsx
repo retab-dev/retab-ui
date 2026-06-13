@@ -37,7 +37,7 @@ function optionNames(view: {
   return view.getAllByRole("option").map((option) => option.textContent)
 }
 
-async function openEnumFromPointer({
+async function openEnumFromClick({
   fieldPath = "status",
   onDocumentDataChange = vi.fn(),
   onEditSessionChange = vi.fn(),
@@ -53,7 +53,7 @@ async function openEnumFromPointer({
   })
   const cell = await editableCell(view, fieldPath)
 
-  fireEvent.pointerDown(cell, {
+  fireEvent.click(cell, {
     button: 0,
     clientX: 0,
     clientY: 0,
@@ -83,9 +83,9 @@ async function chooseOption(option: HTMLElement) {
 }
 
 describe("json table enum accessibility interactions", () => {
-  it("focuses the combobox and opens options on the first pointer activation", async () => {
+  it("focuses the combobox and opens options on the first click activation", async () => {
     const focusSpy = vi.spyOn(HTMLElement.prototype, "focus")
-    const view = await openEnumFromPointer()
+    const view = await openEnumFromClick()
 
     expect(view.trigger.getAttribute("role")).toBe("combobox")
     expect(focusSpy.mock.contexts).toContain(view.trigger)
@@ -94,7 +94,7 @@ describe("json table enum accessibility interactions", () => {
   })
 
   it("exposes combobox and option roles while open", async () => {
-    const view = await openEnumFromPointer()
+    const view = await openEnumFromClick()
 
     expect(view.trigger.getAttribute("role")).toBe("combobox")
     expect(view.trigger.getAttribute("aria-expanded")).toBe("true")
@@ -107,7 +107,7 @@ describe("json table enum accessibility interactions", () => {
   it("closes on Escape without committing and removes the active session", async () => {
     const sessions: Array<JsonTableEditSession | null> = []
     const onDocumentDataChange = vi.fn()
-    const view = await openEnumFromPointer({
+    const view = await openEnumFromClick({
       onDocumentDataChange,
       onEditSessionChange: (editSession) => sessions.push(editSession),
     })
@@ -123,7 +123,7 @@ describe("json table enum accessibility interactions", () => {
   it("closes on outside pointer without committing and removes the active session", async () => {
     const sessions: Array<JsonTableEditSession | null> = []
     const onDocumentDataChange = vi.fn()
-    const view = await openEnumFromPointer({
+    const view = await openEnumFromClick({
       onDocumentDataChange,
       onEditSessionChange: (editSession) => sessions.push(editSession),
     })
@@ -158,7 +158,7 @@ describe("json table enum accessibility interactions", () => {
   it("commits a selected option exactly once and closes", async () => {
     const sessions: Array<JsonTableEditSession | null> = []
     const onDocumentDataChange = vi.fn()
-    const view = await openEnumFromPointer({
+    const view = await openEnumFromClick({
       onDocumentDataChange,
       onEditSessionChange: (editSession) => sessions.push(editSession),
     })
@@ -181,7 +181,7 @@ describe("json table enum accessibility interactions", () => {
   it("closes without committing when reselecting the current option", async () => {
     const sessions: Array<JsonTableEditSession | null> = []
     const onDocumentDataChange = vi.fn()
-    const view = await openEnumFromPointer({
+    const view = await openEnumFromClick({
       onDocumentDataChange,
       onEditSessionChange: (editSession) => sessions.push(editSession),
     })

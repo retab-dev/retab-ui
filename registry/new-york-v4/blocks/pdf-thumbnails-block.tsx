@@ -2,10 +2,19 @@
 
 import * as React from "react"
 
+import { createViewerResource } from "@/lib/viewer-resource"
 import { PdfThumbnailSidebar } from "@/components/ui/pdf-thumbnail-sidebar"
-import { PdfViewer, type PdfViewerHandle } from "@/components/ui/pdf-viewer"
+import {
+  PdfResourceViewer,
+  type PdfViewerHandle,
+} from "@/components/ui/pdf-viewer"
 
 const PDF_URL = "/samples/nvidia-10k-fy2024.pdf"
+const PDF_SOURCE = {
+  kind: "url" as const,
+  url: PDF_URL,
+  fileName: "nvidia-10k-fy2024.pdf",
+}
 
 /**
  * PDF viewer with a page-thumbnail sidebar.
@@ -19,6 +28,7 @@ const PDF_URL = "/samples/nvidia-10k-fy2024.pdf"
 export function PdfThumbnailsBlock() {
   const [currentPage, setCurrentPage] = React.useState(1)
   const viewerRef = React.useRef<PdfViewerHandle>(null)
+  const resource = React.useMemo(() => createViewerResource(PDF_SOURCE), [])
 
   const jumpToPage = React.useCallback((page: number) => {
     viewerRef.current?.scrollToPage(page)
@@ -26,19 +36,15 @@ export function PdfThumbnailsBlock() {
 
   return (
     <div className="h-full min-h-[680px] bg-background">
-      <PdfViewer
+      <PdfResourceViewer
         ref={viewerRef}
-        source={{
-          kind: "url",
-          url: PDF_URL,
-          fileName: "nvidia-10k-fy2024.pdf",
-        }}
+        resource={resource}
         bare
         onVisiblePageChange={setCurrentPage}
         slots={{
           left: (
             <PdfThumbnailSidebar
-              src={PDF_URL}
+              resource={resource}
               currentPage={currentPage}
               onSelectPage={jumpToPage}
               className="w-36 border-r"

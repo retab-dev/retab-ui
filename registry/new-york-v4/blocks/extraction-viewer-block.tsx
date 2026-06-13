@@ -14,6 +14,7 @@ import {
   useSourceLink,
   type UseSourceLinkResult,
 } from "@/hooks/use-source-link"
+import { CodeViewer, type CodeViewerHandle } from "@/components/ui/code-viewer"
 import { sourceToCsvCell, useCsvSourceTarget } from "@/components/ui/csv-source"
 import { CsvViewer, type CsvViewerHandle } from "@/components/ui/csv-viewer"
 import {
@@ -40,7 +41,6 @@ import {
   sourceToTextHighlight,
   useTextSourceTarget,
 } from "@/components/ui/text-source"
-import { TextViewer, type TextViewerHandle } from "@/components/ui/text-viewer"
 import {
   sourceToXlsxCell,
   useXlsxSourceTarget,
@@ -218,12 +218,12 @@ function ImageTab() {
 }
 
 function TextTab() {
-  const viewerRef = React.useRef<TextViewerHandle>(null)
+  const viewerRef = React.useRef<CodeViewerHandle>(null)
   const target = useTextSourceTarget(viewerRef)
   const link = useSourceLink({ sources: TEXT_EXTRACTION.sources, target })
   return (
     <ExtractionShell link={link} extraction={TEXT_EXTRACTION}>
-      <TextViewer
+      <CodeViewer
         ref={viewerRef}
         source={{
           kind: "url",

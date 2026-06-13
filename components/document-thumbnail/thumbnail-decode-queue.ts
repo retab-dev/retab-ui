@@ -2,16 +2,20 @@ import { registerThumbnailTestReset } from "./thumbnail-test-reset"
 
 const MAX_CONCURRENT_DECODES = 3
 let activeDecodes = 0
+let decodeGeneration = 0
 const decodeQueue: Array<() => void> = []
 
 function acquireThumbnailDecodeSlot(): Promise<() => void> {
   return new Promise((resolve) => {
+    const generation = decodeGeneration
     const grant = () => {
+      if (generation !== decodeGeneration) return
       activeDecodes++
       let hasReleased = false
       resolve(() => {
         if (hasReleased) return
         hasReleased = true
+        if (generation !== decodeGeneration) return
         activeDecodes--
         decodeQueue.shift()?.()
       })
@@ -41,6 +45,7 @@ export function getThumbnailDecodeQueueSnapshot() {
 }
 
 function resetThumbnailDecodeQueueForTests() {
+  decodeGeneration++
   activeDecodes = 0
   decodeQueue.splice(0)
 }

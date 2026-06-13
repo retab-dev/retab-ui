@@ -1,6 +1,7 @@
 "use client"
 
 import { PdfViewer } from "@/components/ui/pdf-viewer"
+import { TextViewerDemo } from "@/components/text-viewer-demo"
 import { ClassifierViewer } from "@/components/viewers/classify/classifier-viewer"
 import { EditViewer } from "@/components/viewers/edit/edit-viewer"
 import type { FormField } from "@/components/viewers/lib/edit-types"
@@ -239,6 +240,10 @@ export function EditViewerDemo() {
 export function ViewersDemo() {
   return (
     <div className="flex flex-col gap-8">
+      <section className="flex flex-col gap-2">
+        <h2 className="text-lg font-semibold">Text viewer</h2>
+        <TextViewerDemo />
+      </section>
       <section className="flex flex-col gap-2">
         <h2 className="text-lg font-semibold">Partition viewer</h2>
         <PartitionViewerDemo />
