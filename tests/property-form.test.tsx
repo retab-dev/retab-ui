@@ -116,7 +116,7 @@ function createDragDataTransfer(): DataTransfer {
     },
     getData: (format: string) => data.get(format) ?? "",
     setDragImage: () => undefined,
-  } as DataTransfer
+  } as unknown as DataTransfer
 }
 
 function getPropertyFormRow(propertyName: string) {

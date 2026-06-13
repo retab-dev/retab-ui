@@ -1,0 +1,472 @@
+{
+  "target": {
+    "x": 491,
+    "y": 290,
+    "fieldPath": "transactions.0.transaction_type"
+  },
+  "summary": {
+    "rectCount": 65,
+    "focusCount": 4,
+    "rect": [
+      {
+        "count": 5,
+        "totalMs": 132.69999999552965,
+        "maxMs": 45.70000000298023,
+        "sample": {
+          "tag": "BUTTON",
+          "role": "combobox",
+          "slot": "data-cell",
+          "kind": "select",
+          "className": "border-input text-left ring-ring/24 select-none not-dark:bg-clip-padding before:pointer-events-none before:absolute befo"
+        },
+        "stack": [
+          "at InternalBackdrop (/_next/static/chunks/0wd2_%40base-ui_react_esm_1zl3xx-._.js:1807:29)",
+          "at Object.react_stack_bottom_frame (/_next/static/chunks/09h6_next_dist_compiled_react-dom_1yj1j_x._.js:15037:24)",
+          "at renderWithHooks (/_next/static/chunks/09h6_next_dist_compiled_react-dom_1yj1j_x._.js:4620:24)",
+          "at updateForwardRef (/_next/static/chunks/09h6_next_dist_compiled_react-dom_1yj1j_x._.js:5908:21)",
+          "at beginWork (/_next/static/chunks/09h6_next_dist_compiled_react-dom_1yj1j_x._.js:6766:24)",
+          "at runWithFiberInDEV (/_next/static/chunks/09h6_next_dist_compiled_react-dom_1yj1j_x._.js:965:74)",
+          "at performUnitOfWork (/_next/static/chunks/09h6_next_dist_compiled_react-dom_1yj1j_x._.js:9555:97)"
+        ]
+      },
+      {
+        "count": 1,
+        "totalMs": 0.10000000149011612,
+        "maxMs": 0.10000000149011612,
+        "sample": {
+          "tag": "BUTTON",
+          "role": "combobox",
+          "slot": "data-cell",
+          "kind": "select",
+          "className": "border-input text-left ring-ring/24 select-none not-dark:bg-clip-padding before:pointer-events-none before:absolute befo"
+        },
+        "stack": [
+          "at Object.getScale (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:5809:29)",
+          "at getScale (/_next/static/chunks/0wd2_%40base-ui_react_esm_0hpy9-f._.js:5304:281)",
+          "at SelectPopup.SelectPopup.useIsoLayoutEffect (/_next/static/chunks/0wd2_%40base-ui_react_esm_0hpy9-f._.js:5111:31)",
+          "at Object.react_stack_bottom_frame (/_next/static/chunks/09h6_next_dist_compiled_react-dom_1yj1j_x._.js:15087:22)",
+          "at runWithFiberInDEV (/_next/static/chunks/09h6_next_dist_compiled_react-dom_1yj1j_x._.js:965:74)",
+          "at commitHookEffectListMount (/_next/static/chunks/09h6_next_dist_compiled_react-dom_1yj1j_x._.js:7255:167)",
+          "at commitHookLayoutEffects (/_next/static/chunks/09h6_next_dist_compiled_react-dom_1yj1j_x._.js:7243:60)"
+        ]
+      },
+      {
+        "count": 5,
+        "totalMs": 0,
+        "maxMs": 0,
+        "sample": {
+          "tag": "BUTTON",
+          "role": "combobox",
+          "slot": "data-cell",
+          "kind": "select",
+          "className": "border-input text-left ring-ring/24 select-none not-dark:bg-clip-padding before:pointer-events-none before:absolute befo"
+        },
+        "stack": [
+          "at InternalBackdrop (/_next/static/chunks/0wd2_%40base-ui_react_esm_1zl3xx-._.js:1807:29)",
+          "at Object.react_stack_bottom_frame (/_next/static/chunks/09h6_next_dist_compiled_react-dom_1yj1j_x._.js:15037:24)",
+          "at renderWithHooksAgain (/_next/static/chunks/09h6_next_dist_compiled_react-dom_1yj1j_x._.js:4675:24)",
+          "at renderWithHooks (/_next/static/chunks/09h6_next_dist_compiled_react-dom_1yj1j_x._.js:4626:28)",
+          "at updateForwardRef (/_next/static/chunks/09h6_next_dist_compiled_react-dom_1yj1j_x._.js:5908:21)",
+          "at beginWork (/_next/static/chunks/09h6_next_dist_compiled_react-dom_1yj1j_x._.js:6766:24)",
+          "at runWithFiberInDEV (/_next/static/chunks/09h6_next_dist_compiled_react-dom_1yj1j_x._.js:965:74)"
+        ]
+      },
+      {
+        "count": 2,
+        "totalMs": 0,
+        "maxMs": 0,
+        "sample": {
+          "tag": "BUTTON",
+          "role": "combobox",
+          "slot": "data-cell",
+          "kind": "select",
+          "className": "border-input text-left ring-ring/24 select-none not-dark:bg-clip-padding before:pointer-events-none before:absolute befo"
+        },
+        "stack": [
+          "at getBoundingClientRect (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:5852:32)",
+          "at getRectRelativeToOffsetParent (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:6132:18)",
+          "at Object.getElementRects (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:6219:20)",
+          "at async computePosition (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:4954:17)"
+        ]
+      },
+      {
+        "count": 4,
+        "totalMs": 0,
+        "maxMs": 0,
+        "sample": {
+          "tag": "HTML",
+          "role": null,
+          "slot": null,
+          "kind": null,
+          "className": "geist_798ff10f-module__HGtJha__variable geist_mono_3f173115-module__-5hxnG__variable inter_67b4815f-module__2iy6kW__vari"
+        },
+        "stack": [
+          "at getBoundingClientRect (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:5852:32)",
+          "at getWindowScrollBarX (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:5902:16)",
+          "at setLeftRTLScrollbarOffset (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:6141:21)",
+          "at getRectRelativeToOffsetParent (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:6152:13)",
+          "at Object.getElementRects (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:6219:20)",
+          "at async computePosition (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:4954:17)"
+        ]
+      },
+      {
+        "count": 2,
+        "totalMs": 0,
+        "maxMs": 0,
+        "sample": {
+          "tag": "HTML",
+          "role": null,
+          "slot": null,
+          "kind": null,
+          "className": "geist_798ff10f-module__HGtJha__variable geist_mono_3f173115-module__-5hxnG__variable inter_67b4815f-module__2iy6kW__vari"
+        },
+        "stack": [
+          "at getHTMLOffset (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:5907:38)",
+          "at getRectRelativeToOffsetParent (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:6158:82)",
+          "at Object.getElementRects (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:6219:20)",
+          "at async computePosition (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:4954:17)"
+        ]
+      },
+      {
+        "count": 14,
+        "totalMs": 0,
+        "maxMs": 0,
+        "sample": {
+          "tag": "HTML",
+          "role": null,
+          "slot": null,
+          "kind": null,
+          "className": "geist_798ff10f-module__HGtJha__variable geist_mono_3f173115-module__-5hxnG__variable inter_67b4815f-module__2iy6kW__vari"
+        },
+        "stack": [
+          "at getBoundingClientRect (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:5852:32)",
+          "at getWindowScrollBarX (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:5902:16)",
+          "at getViewportRect (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:5993:30)",
+          "at getClientRectFromClippingAncestor (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:6038:16)",
+          "at Object.getClippingRect (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:6102:23)",
+          "at Object.detectOverflow (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:4906:320)",
+          "at async fn (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:5216:30)"
+        ]
+      },
+      {
+        "count": 4,
+        "totalMs": 0,
+        "maxMs": 0,
+        "sample": {
+          "tag": "HTML",
+          "role": null,
+          "slot": null,
+          "kind": null,
+          "className": "geist_798ff10f-module__HGtJha__variable geist_mono_3f173115-module__-5hxnG__variable inter_67b4815f-module__2iy6kW__vari"
+        },
+        "stack": [
+          "at getHTMLOffset (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:5907:38)",
+          "at Object.convertOffsetParentRelativeRectToViewportRelativeRect (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:5941:82)",
+          "at Object.detectOverflow (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:4926:384)",
+          "at async fn (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:5216:30)",
+          "at async computePosition (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:4969:53)"
+        ]
+      },
+      {
+        "count": 4,
+        "totalMs": 0,
+        "maxMs": 0,
+        "sample": {
+          "tag": "HTML",
+          "role": null,
+          "slot": null,
+          "kind": null,
+          "className": "geist_798ff10f-module__HGtJha__variable geist_mono_3f173115-module__-5hxnG__variable inter_67b4815f-module__2iy6kW__vari"
+        },
+        "stack": [
+          "at getHTMLOffset (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:5907:38)",
+          "at Object.convertOffsetParentRelativeRectToViewportRelativeRect (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:5941:82)",
+          "at Object.detectOverflow (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:4926:384)",
+          "at async fn (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:5575:30)",
+          "at async computePosition (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:4969:53)"
+        ]
+      },
+      {
+        "count": 4,
+        "totalMs": 0,
+        "maxMs": 0,
+        "sample": {
+          "tag": "HTML",
+          "role": null,
+          "slot": null,
+          "kind": null,
+          "className": "geist_798ff10f-module__HGtJha__variable geist_mono_3f173115-module__-5hxnG__variable inter_67b4815f-module__2iy6kW__vari"
+        },
+        "stack": [
+          "at getHTMLOffset (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:5907:38)",
+          "at Object.convertOffsetParentRelativeRectToViewportRelativeRect (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:5941:82)",
+          "at Object.detectOverflow (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:4926:384)",
+          "at async fn (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:5686:30)",
+          "at async computePosition (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:4969:53)"
+        ]
+      },
+      {
+        "count": 2,
+        "totalMs": 0,
+        "maxMs": 0,
+        "sample": {
+          "tag": "BUTTON",
+          "role": "combobox",
+          "slot": "data-cell",
+          "kind": "select",
+          "className": "border-input text-left ring-ring/24 select-none not-dark:bg-clip-padding before:pointer-events-none before:absolute befo"
+        },
+        "stack": [
+          "at getBoundingClientRect (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:5852:32)",
+          "at getRectRelativeToOffsetParent (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:6132:18)",
+          "at Object.getElementRects (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:6219:20)",
+          "at async computePosition (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:4996:52)"
+        ]
+      },
+      {
+        "count": 2,
+        "totalMs": 0,
+        "maxMs": 0,
+        "sample": {
+          "tag": "HTML",
+          "role": null,
+          "slot": null,
+          "kind": null,
+          "className": "geist_798ff10f-module__HGtJha__variable geist_mono_3f173115-module__-5hxnG__variable inter_67b4815f-module__2iy6kW__vari"
+        },
+        "stack": [
+          "at getHTMLOffset (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:5907:38)",
+          "at getRectRelativeToOffsetParent (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:6158:82)",
+          "at Object.getElementRects (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:6219:20)",
+          "at async computePosition (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:4996:52)"
+        ]
+      },
+      {
+        "count": 2,
+        "totalMs": 0,
+        "maxMs": 0,
+        "sample": {
+          "tag": "DIV",
+          "role": null,
+          "slot": "json-table-scroll",
+          "kind": null,
+          "className": "w-full flex-1 overflow-auto"
+        },
+        "stack": [
+          "at getBoundingClientRect (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:5852:32)",
+          "at getInnerBoundingClientRect (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:6020:24)",
+          "at getClientRectFromClippingAncestor (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:6042:16)",
+          "at Object.getClippingRect (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:6102:23)",
+          "at Object.detectOverflow (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:4906:320)",
+          "at async Object.fn (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:5326:42)",
+          "at async fn (/_next/static/chunks/0wd2_%40base-ui_react_esm_1po7mvj._.js:5860:34)"
+        ]
+      },
+      {
+        "count": 4,
+        "totalMs": 0,
+        "maxMs": 0,
+        "sample": {
+          "tag": "DIV",
+          "role": null,
+          "slot": "json-table-scroll",
+          "kind": null,
+          "className": "w-full flex-1 overflow-auto"
+        },
+        "stack": [
+          "at getScale (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:5809:29)",
+          "at getBoundingClientRect (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:5861:21)",
+          "at getInnerBoundingClientRect (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:6020:24)",
+          "at getClientRectFromClippingAncestor (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:6042:16)",
+          "at Object.getClippingRect (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:6102:23)",
+          "at Object.detectOverflow (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:4906:320)",
+          "at async Object.fn (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:5326:42)"
+        ]
+      },
+      {
+        "count": 2,
+        "totalMs": 0,
+        "maxMs": 0,
+        "sample": {
+          "tag": "DIV",
+          "role": null,
+          "slot": "json-table-scroll",
+          "kind": null,
+          "className": "w-full flex-1 overflow-auto"
+        },
+        "stack": [
+          "at getScale (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:5809:29)",
+          "at getInnerBoundingClientRect (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:6023:307)",
+          "at getClientRectFromClippingAncestor (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:6042:16)",
+          "at Object.getClippingRect (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:6102:23)",
+          "at Object.detectOverflow (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:4906:320)",
+          "at async Object.fn (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:5326:42)",
+          "at async fn (/_next/static/chunks/0wd2_%40base-ui_react_esm_1po7mvj._.js:5860:34)"
+        ]
+      },
+      {
+        "count": 2,
+        "totalMs": 0,
+        "maxMs": 0,
+        "sample": {
+          "tag": "DIV",
+          "role": null,
+          "slot": null,
+          "kind": null,
+          "className": "flex h-[480px] flex-col overflow-hidden rounded-xl border bg-background shadow-sm"
+        },
+        "stack": [
+          "at getBoundingClientRect (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:5852:32)",
+          "at getInnerBoundingClientRect (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:6020:24)",
+          "at getClientRectFromClippingAncestor (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:6042:16)",
+          "at Object.getClippingRect (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:6108:22)",
+          "at Object.detectOverflow (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:4906:320)",
+          "at async Object.fn (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:5326:42)",
+          "at async fn (/_next/static/chunks/0wd2_%40base-ui_react_esm_1po7mvj._.js:5860:34)"
+        ]
+      },
+      {
+        "count": 2,
+        "totalMs": 0,
+        "maxMs": 0,
+        "sample": {
+          "tag": "DIV",
+          "role": null,
+          "slot": null,
+          "kind": null,
+          "className": "flex h-[480px] flex-col overflow-hidden rounded-xl border bg-background shadow-sm"
+        },
+        "stack": [
+          "at getScale (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:5809:29)",
+          "at getInnerBoundingClientRect (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:6023:307)",
+          "at getClientRectFromClippingAncestor (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:6042:16)",
+          "at Object.getClippingRect (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:6108:22)",
+          "at Object.detectOverflow (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:4906:320)",
+          "at async Object.fn (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:5326:42)",
+          "at async fn (/_next/static/chunks/0wd2_%40base-ui_react_esm_1po7mvj._.js:5860:34)"
+        ]
+      },
+      {
+        "count": 2,
+        "totalMs": 0,
+        "maxMs": 0,
+        "sample": {
+          "tag": "HTML",
+          "role": null,
+          "slot": null,
+          "kind": null,
+          "className": "geist_798ff10f-module__HGtJha__variable geist_mono_3f173115-module__-5hxnG__variable inter_67b4815f-module__2iy6kW__vari"
+        },
+        "stack": [
+          "at getHTMLOffset (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:5907:38)",
+          "at Object.convertOffsetParentRelativeRectToViewportRelativeRect (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:5941:82)",
+          "at Object.detectOverflow (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:4926:384)",
+          "at async Object.fn (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:5326:42)",
+          "at async fn (/_next/static/chunks/0wd2_%40base-ui_react_esm_1po7mvj._.js:5860:34)",
+          "at async computePosition (/_next/static/chunks/node_modules__pnpm_1h9_nqp._.js:4969:53)"
+        ]
+      },
+      {
+        "count": 1,
+        "totalMs": 0,
+        "maxMs": 0,
+        "sample": {
+          "tag": "BUTTON",
+          "role": "combobox",
+          "slot": "data-cell",
+          "kind": "select",
+          "className": "border-input text-left ring-ring/24 select-none not-dark:bg-clip-padding before:pointer-events-none before:absolute befo"
+        },
+        "stack": [
+          "at SelectPopup.SelectPopup.useIsoLayoutEffect (/_next/static/chunks/0wd2_%40base-ui_react_esm_0hpy9-f._.js:5112:66)",
+          "at Object.react_stack_bottom_frame (/_next/static/chunks/09h6_next_dist_compiled_react-dom_1yj1j_x._.js:15087:22)",
+          "at runWithFiberInDEV (/_next/static/chunks/09h6_next_dist_compiled_react-dom_1yj1j_x._.js:965:74)",
+          "at commitHookEffectListMount (/_next/static/chunks/09h6_next_dist_compiled_react-dom_1yj1j_x._.js:7255:167)",
+          "at commitHookLayoutEffects (/_next/static/chunks/09h6_next_dist_compiled_react-dom_1yj1j_x._.js:7243:60)",
+          "at commitLayoutEffectOnFiber (/_next/static/chunks/09h6_next_dist_compiled_react-dom_1yj1j_x._.js:7851:30)",
+          "at recursivelyTraverseLayoutEffects (/_next/static/chunks/09h6_next_dist_compiled_react-dom_1yj1j_x._.js:8530:105)"
+        ]
+      },
+      {
+        "count": 1,
+        "totalMs": 0,
+        "maxMs": 0,
+        "sample": {
+          "tag": "DIV",
+          "role": "presentation",
+          "slot": "select-positioner",
+          "kind": null,
+          "className": "z-50 select-none"
+        },
+        "stack": [
+          "at SelectPopup.SelectPopup.useIsoLayoutEffect (/_next/static/chunks/0wd2_%40base-ui_react_esm_0hpy9-f._.js:5113:72)",
+          "at Object.react_stack_bottom_frame (/_next/static/chunks/09h6_next_dist_compiled_react-dom_1yj1j_x._.js:15087:22)",
+          "at runWithFiberInDEV (/_next/static/chunks/09h6_next_dist_compiled_react-dom_1yj1j_x._.js:965:74)",
+          "at commitHookEffectListMount (/_next/static/chunks/09h6_next_dist_compiled_react-dom_1yj1j_x._.js:7255:167)",
+          "at commitHookLayoutEffects (/_next/static/chunks/09h6_next_dist_compiled_react-dom_1yj1j_x._.js:7243:60)",
+          "at commitLayoutEffectOnFiber (/_next/static/chunks/09h6_next_dist_compiled_react-dom_1yj1j_x._.js:7851:30)",
+          "at recursivelyTraverseLayoutEffects (/_next/static/chunks/09h6_next_dist_compiled_react-dom_1yj1j_x._.js:8530:105)"
+        ]
+      }
+    ],
+    "focus": [
+      {
+        "count": 1,
+        "totalMs": 44.400000005960464,
+        "maxMs": 44.400000005960464,
+        "sample": {
+          "tag": "BUTTON",
+          "role": "combobox",
+          "slot": "data-cell",
+          "kind": "select",
+          "className": "border-input text-left ring-ring/24 select-none not-dark:bg-clip-padding before:pointer-events-none before:absolute befo"
+        },
+        "stack": [
+          "at commitMount (/_next/static/chunks/09h6_next_dist_compiled_react-dom_1yj1j_x._.js:11886:50)",
+          "at runWithFiberInDEV (/_next/static/chunks/09h6_next_dist_compiled_react-dom_1yj1j_x._.js:965:74)",
+          "at commitHostMount (/_next/static/chunks/09h6_next_dist_compiled_react-dom_1yj1j_x._.js:7414:13)",
+          "at commitLayoutEffectOnFiber (/_next/static/chunks/09h6_next_dist_compiled_react-dom_1yj1j_x._.js:7892:36)",
+          "at recursivelyTraverseLayoutEffects (/_next/static/chunks/09h6_next_dist_compiled_react-dom_1yj1j_x._.js:8530:105)",
+          "at commitLayoutEffectOnFiber (/_next/static/chunks/09h6_next_dist_compiled_react-dom_1yj1j_x._.js:7850:17)",
+          "at recursivelyTraverseLayoutEffects (/_next/static/chunks/09h6_next_dist_compiled_react-dom_1yj1j_x._.js:8530:105)"
+        ]
+      },
+      {
+        "count": 1,
+        "totalMs": 0.4000000059604645,
+        "maxMs": 0.4000000059604645,
+        "sample": {
+          "tag": "DIV",
+          "role": "option",
+          "slot": "select-item",
+          "kind": null,
+          "className": "grid min-h-8 cursor-default grid-cols-[1rem_1fr] items-center gap-2 rounded-sm py-1 ps-2 pe-4 outline-none in-data-[side"
+        },
+        "stack": [
+          "at exec (/_next/static/chunks/0wd2_%40base-ui_react_esm_1zl3xx-._.js:492:26)"
+        ]
+      },
+      {
+        "count": 2,
+        "totalMs": 0,
+        "maxMs": 0,
+        "sample": {
+          "tag": "BUTTON",
+          "role": "combobox",
+          "slot": "data-cell",
+          "kind": "select",
+          "className": "border-input text-left ring-ring/24 select-none not-dark:bg-clip-padding before:pointer-events-none before:absolute befo"
+        },
+        "stack": [
+          "at DataCellSelectControl.useLayoutEffect (/_next/static/chunks/_20ksk1o._.js:2393:33)",
+          "at Object.react_stack_bottom_frame (/_next/static/chunks/09h6_next_dist_compiled_react-dom_1yj1j_x._.js:15087:22)",
+          "at runWithFiberInDEV (/_next/static/chunks/09h6_next_dist_compiled_react-dom_1yj1j_x._.js:965:74)",
+          "at commitHookEffectListMount (/_next/static/chunks/09h6_next_dist_compiled_react-dom_1yj1j_x._.js:7255:167)",
+          "at commitHookLayoutEffects (/_next/static/chunks/09h6_next_dist_compiled_react-dom_1yj1j_x._.js:7243:60)",
+          "at commitLayoutEffectOnFiber (/_next/static/chunks/09h6_next_dist_compiled_react-dom_1yj1j_x._.js:7851:30)",
+          "at recursivelyTraverseLayoutEffects (/_next/static/chunks/09h6_next_dist_compiled_react-dom_1yj1j_x._.js:8530:105)"
+        ]
+      }
+    ]
+  }
+}

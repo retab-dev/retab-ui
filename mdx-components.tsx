@@ -30,9 +30,9 @@ import { DocsMdxCodeBlock } from "@/components/docs-code-block"
 import { DocxViewerDemo } from "@/components/docx-viewer-demo"
 import { DropzoneDemo, FileUploaderDemo } from "@/components/dropzone-demo"
 import { EmailViewerDemo } from "@/components/email-viewer-demo"
+import { FileSystemDemo } from "@/components/file-system-demo"
 import { FileThumbnailDemo } from "@/components/file-thumbnail-demo"
 import { FileThumbnailFormatsDemo } from "@/components/file-thumbnail-formats-demo"
-import { FileSystemDemo } from "@/components/file-system-demo"
 import { FileViewerDemo } from "@/components/file-viewer-demo"
 import { HtmlViewerDemo } from "@/components/html-viewer-demo"
 import { getIconForLanguageExtension } from "@/components/icons"
@@ -44,6 +44,7 @@ import { MarkdownViewerDemo } from "@/components/markdown-viewer-demo"
 import { MermaidDiagram } from "@/components/mermaid-diagram"
 import { PdfViewerDemo } from "@/components/pdf-viewer-demo"
 import { PptxViewerDemo } from "@/components/pptx-viewer-demo"
+import { PretextMarkdownViewerDemo } from "@/components/pretext-markdown-viewer-demo"
 import { PropertyFormDemo } from "@/components/property-form-demo"
 import { RetabSchemaBuilderDemo } from "@/components/retab-schema-builder-demo"
 import {
@@ -402,6 +403,7 @@ export const mdxComponents = {
   FileSystemDemo,
   TextViewerDemo,
   MarkdownViewerDemo,
+  PretextMarkdownViewerDemo,
   HtmlViewerDemo,
   CodeViewerDemo,
   Link: ({ className, ...props }: React.ComponentProps<typeof Link>) => (

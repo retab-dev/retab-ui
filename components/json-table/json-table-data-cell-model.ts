@@ -73,17 +73,6 @@ export type JsonTableDataCellModel =
   | JsonTableBooleanDataCellModel
   | JsonTableSelectDataCellModel
 
-export function jsonValueText(jsonValue: unknown): string {
-  if (Array.isArray(jsonValue)) return `[${jsonValue.length} items]`
-  if (jsonValue === null || jsonValue === undefined) return ""
-  if (typeof jsonValue !== "object") return String(jsonValue)
-  try {
-    return JSON.stringify(jsonValue)
-  } catch {
-    return String(jsonValue)
-  }
-}
-
 export function primitiveKindForField(
   fieldMetadata: FieldMetadata
 ): DataCellKind | null {
@@ -248,6 +237,17 @@ function fallbackTextDataCellModel(
 
 const nullSelectOptionValue = "__json_table_null__"
 
+function jsonValueText(jsonValue: unknown): string {
+  if (Array.isArray(jsonValue)) return `[${jsonValue.length} items]`
+  if (jsonValue === null || jsonValue === undefined) return ""
+  if (typeof jsonValue !== "object") return String(jsonValue)
+  try {
+    return JSON.stringify(jsonValue)
+  } catch {
+    return String(jsonValue)
+  }
+}
+
 function selectOptionValue(index: number): string {
   return `option:${index}`
 }
@@ -280,43 +280,45 @@ function jsonValuesEqual(left: unknown, right: unknown): boolean {
 }
 
 function dataCellSelectValue(
-  value: unknown,
-  candidateJsonValues: unknown[]
+  jsonValue: unknown,
+  optionJsonValues: unknown[]
 ): string {
-  if (value === null || value === undefined) {
+  if (jsonValue === null || jsonValue === undefined) {
     return nullSelectOptionValue
   }
-  const matchingIndex = candidateJsonValues.findIndex((candidateJsonValue) =>
-    jsonValuesEqual(candidateJsonValue, value)
+  const matchingIndex = optionJsonValues.findIndex((optionJsonValue) =>
+    jsonValuesEqual(optionJsonValue, jsonValue)
   )
-  return matchingIndex === -1 ? String(value) : selectOptionValue(matchingIndex)
+  return matchingIndex === -1
+    ? String(jsonValue)
+    : selectOptionValue(matchingIndex)
 }
 
 function jsonSelectCommitValue(
-  value: string,
+  commitValue: string,
   fieldMetadata: FieldMetadata
 ): unknown {
   if (
-    value === nullSelectOptionValue &&
+    commitValue === nullSelectOptionValue &&
     fieldMetadata.kind === "enum" &&
     fieldMetadata.isNullable
   ) {
     return null
   }
-  if (!value.startsWith("option:")) return value
-  const optionIndex = Number(value.slice("option:".length))
+  if (!commitValue.startsWith("option:")) return commitValue
+  const optionIndex = Number(commitValue.slice("option:".length))
   return fieldMetadata.kind === "enum" &&
     Number.isInteger(optionIndex) &&
     optionIndex in fieldMetadata.enumValues
     ? fieldMetadata.enumValues[optionIndex]
-    : value
+    : commitValue
 }
 
-function selectDisplayText(value: unknown, isNullable: boolean): string {
-  if (value === null || value === undefined) {
+function selectDisplayText(jsonValue: unknown, isNullable: boolean): string {
+  if (jsonValue === null || jsonValue === undefined) {
     return isNullable ? "No selection" : ""
   }
-  return String(value)
+  return String(jsonValue)
 }
 
 function dataCellSelectOptions(
@@ -337,16 +339,16 @@ function dataCellSelectOptions(
   return [
     ...nullOption,
     ...fieldMetadata.enumValues
-      .map((option, optionIndex) => ({ option, optionIndex }))
+      .map((jsonOption, optionIndex) => ({ jsonOption, optionIndex }))
       .filter(
-        ({ option }) =>
-          option !== undefined &&
-          option !== null &&
-          !(typeof option === "string" && option === "")
+        ({ jsonOption }) =>
+          jsonOption !== undefined &&
+          jsonOption !== null &&
+          !(typeof jsonOption === "string" && jsonOption === "")
       )
-      .map(({ option, optionIndex }) => ({
+      .map(({ jsonOption, optionIndex }) => ({
         value: selectOptionValue(optionIndex),
-        label: String(option),
+        label: String(jsonOption),
         className: "text-xs",
       })),
   ]

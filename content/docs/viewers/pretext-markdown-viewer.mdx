@@ -1,0 +1,124 @@
+---
+title: Pretext Markdown Viewer
+description: An experimental Pretext-based Markdown viewer with continuous virtual rendering and a separate implementation path from the existing Markdown Viewer.
+---
+
+The Pretext Markdown Viewer is the new Markdown experiment built from the
+Chenglou/Pretext text viewer path. It renders Markdown as a single continuous
+document surface instead of exposing pages as a user-facing model.
+
+<PretextMarkdownViewerDemo />
+
+## Installation
+
+```bash
+npx shadcn@latest add @retab/pretext-markdown-viewer
+```
+
+## Usage
+
+```tsx
+import { PretextMarkdownViewer } from "@/components/ui/pretext-markdown-viewer"
+
+export function Example() {
+  return (
+    <PretextMarkdownViewer
+      source={{
+        kind: "text",
+        text: "# Notes\n\nMarkdown should read in one continuous flow.",
+        fileName: "notes.md",
+        mimeType: "text/markdown",
+      }}
+    />
+  )
+}
+```
+
+URL and Blob sources use the same bounded text resource path as the Text Viewer:
+
+```tsx
+<PretextMarkdownViewer
+  source={{
+    kind: "url",
+    url: "/samples/release-notes.md",
+    fileName: "release-notes.md",
+    mimeType: "text/markdown",
+  }}
+/>
+```
+
+## Why This Exists
+
+The existing Markdown Viewer is React-Markdown based and accumulated a document
+pagination model that was useful as a virtualization strategy but leaked into
+the user experience. The Pretext Markdown Viewer starts from the opposite
+direction: one continuous text/document layout, with virtualization as an
+internal implementation detail.
+
+This page documents the new component separately so the old Markdown Viewer can
+remain stable while the Pretext path iterates toward feature completeness.
+
+## Current Contract
+
+- **Continuous rendering** - no page count, page frame, or page delimiter should be part of the Markdown user experience.
+- **Pretext layout** - text and Markdown blocks use predicted layout and custom virtual windowing instead of full-document DOM measurement.
+- **Markdown-first parsing** - sources are parsed as Markdown even when the file extension is generic text.
+- **Source-line addressing** - `highlight` and `scrollToLineRange` keep using 1-based inclusive source-line ranges.
+- **Safe output** - unsupported Markdown should degrade to inert text or code output rather than executable DOM.
+- **Separate implementation** - this component lives apart from `MarkdownDocumentViewer` and can make hard cutovers without compatibility shims.
+
+## Implemented So Far
+
+- Headings, paragraphs, emphasis, inline code, lists, task markers, blockquotes, rules, tables, images, and fenced code block frames.
+- GitHub blockquote alert markers such as `> [!IMPORTANT]` normalize into readable quoted prose.
+- Common typography and emoji shortcode transforms apply to normal prose text while inline code stays literal.
+- URL, Blob, and inline text sources load through the existing bounded text resource layer.
+- The registry item is separate: `pretext-markdown-viewer`.
+
+## Not Complete Yet
+
+The missing work is tracked in the repository file
+`design/pretext-markdown-viewer-missing-inventory.md`. The largest gaps are
+first-class frontmatter, reliable heading anchors, Mermaid and diagram
+rendering, MDX/component markdown, richer GitHub alert visuals, directive
+semantics beyond callouts, full accessibility verification, and migration rules
+for File Viewer routing.
+
+## Props
+
+| Prop        | Type                    | Description                                                                |
+| ----------- | ----------------------- | -------------------------------------------------------------------------- |
+| `source`    | `TextDocumentSource`    | Required source descriptor. Supports URL, Blob, and inline text resources. |
+| `className` | `string`                | Optional class on the viewer container.                                    |
+| `toolbar`   | `boolean`               | Show word count, zoom controls, and download action. Defaults to `true`.   |
+| `highlight` | `TextLineRange \| null` | 1-based inclusive source-line range to highlight.                          |
+| `bare`      | `boolean`               | Drop the outer border/background so the viewer fills its container.        |
+| `maxBytes`  | `number`                | Maximum text payload size accepted by the viewer.                          |
+| `maxLines`  | `number`                | Maximum number of source lines accepted by the viewer.                     |
+
+## Ref
+
+```tsx
+import * as React from "react"
+
+import {
+  PretextMarkdownViewer,
+  type TextViewerHandle,
+} from "@/components/ui/pretext-markdown-viewer"
+
+export function Example() {
+  const viewerRef = React.useRef<TextViewerHandle>(null)
+
+  return (
+    <PretextMarkdownViewer
+      ref={viewerRef}
+      source={{ kind: "text", text: "# Alpha\n\n## Beta\n\nGamma" }}
+      highlight={{ start: 3, end: 3 }}
+    />
+  )
+}
+```
+
+`scrollToLineRange(range, options?)` scrolls any normalized source-line range
+into view, even when that source line is outside the currently mounted virtual
+window.

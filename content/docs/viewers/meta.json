@@ -8,6 +8,7 @@
     "code-viewer",
     "text-viewer",
     "markdown-viewer",
+    "pretext-markdown-viewer",
     "html-viewer",
     "email-viewer",
     "xlsx-viewer",

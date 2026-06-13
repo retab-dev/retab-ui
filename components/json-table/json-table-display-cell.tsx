@@ -15,8 +15,6 @@ import {
 } from "@/components/json-table/json-table-data-cell-model"
 import type { FieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
 
-export { JsonTableReadOnlyPrimitiveDisplayCell } from "@/components/json-table/json-table-read-only-primitive-cell"
-
 export type JsonTableDisplayCellProps = {
   fieldMetadata: FieldMetadata
   value: unknown
