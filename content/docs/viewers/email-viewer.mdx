@@ -1,12 +1,13 @@
 ---
 title: Email Viewer
-description: Compose HTML email bodies, CID inline files, and independently previewable attachments with the shared File Viewer and File Thumbnail primitives.
+description: Compose HTML email bodies, CID inline files, and independently previewable attachments with the shared File Viewer, File Thumbnail, and Sidebar primitives.
 ---
 
-The Email Viewer is a composition layer over the existing preview primitives. It
+The Email Viewer is a compound viewer over the existing preview primitives. It
 renders the message body as HTML when available, falls back to plain text, maps
 `cid:` references to inline attachment resources, and keeps non-inline
-attachments in a sidebar where each file can be opened independently.
+attachments in the shared sidebar primitive where each file can be opened
+independently.
 
 <EmailViewerDemo />
 
@@ -67,7 +68,7 @@ export function Example() {
   `cid:` URLs in the HTML body, including bracketed values like
   `cid:<logo@example.com>`.
 - **Attachment sidebar** — non-inline attachments stay out of the email body and
-  can be selected independently in the sidebar.
+  are rendered with the shared `Sidebar` menu primitives.
 - **Shared preview stack** — attachment thumbnails use `FileThumbnail`; selected
   attachments open through `FileViewer`.
 

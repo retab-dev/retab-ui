@@ -167,6 +167,9 @@ export function SidebarProvider({
   defaultOpen = true,
   open: openProp,
   onOpenChange: setOpenProp,
+  persist = true,
+  keyboardShortcut = SIDEBAR_KEYBOARD_SHORTCUT,
+  scope = "app",
   className,
   style,
   children,
@@ -175,6 +178,9 @@ export function SidebarProvider({
   defaultOpen?: boolean
   open?: boolean
   onOpenChange?: (open: boolean) => void
+  persist?: boolean
+  keyboardShortcut?: string | false
+  scope?: "app" | "container"
 }): React.ReactElement {
   const isMobile = useMediaQuery("max-md")
   const [openMobile, setOpenMobile] = React.useState(false)
@@ -201,10 +207,11 @@ export function SidebarProvider({
       }
       setOpenProp?.(openState)
 
-      // This sets the cookie to keep the sidebar state.
-      persistSidebarState(openState)
+      if (persist) {
+        persistSidebarState(openState)
+      }
     },
-    [isControlled, open, setOpenProp]
+    [isControlled, open, persist, setOpenProp]
   )
 
   // Helper to toggle the sidebar.
@@ -220,9 +227,11 @@ export function SidebarProvider({
 
   // Adds a keyboard shortcut to toggle the sidebar.
   React.useEffect(() => {
+    if (!keyboardShortcut) return
+
     const handleKeyDown = (event: KeyboardEvent): void => {
       if (
-        event.key.toLowerCase() === SIDEBAR_KEYBOARD_SHORTCUT &&
+        event.key.toLowerCase() === keyboardShortcut.toLowerCase() &&
         (event.metaKey || event.ctrlKey) &&
         !event.altKey &&
         !event.shiftKey &&
@@ -237,7 +246,7 @@ export function SidebarProvider({
 
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [toggleSidebar])
+  }, [keyboardShortcut, toggleSidebar])
 
   // We add a state so that we can do data-state="expanded" or "collapsed".
   // This makes it easier to style the sidebar with Tailwind classes.
@@ -263,6 +272,7 @@ export function SidebarProvider({
           "group/sidebar-wrapper flex min-h-svh w-full has-data-[variant=inset]:bg-sidebar",
           className
         )}
+        data-sidebar-scope={scope}
         data-slot="sidebar-wrapper"
         style={
           {
@@ -276,6 +286,37 @@ export function SidebarProvider({
         {children}
       </div>
     </SidebarContext.Provider>
+  )
+}
+
+export function EmbeddedSidebarProvider({
+  width = SIDEBAR_WIDTH,
+  className,
+  style,
+  ...props
+}: Omit<
+  React.ComponentProps<typeof SidebarProvider>,
+  "keyboardShortcut" | "persist" | "scope"
+> & {
+  width?: string
+}): React.ReactElement {
+  return (
+    <SidebarProvider
+      className={cn(
+        "h-full min-h-0! w-full flex-shrink-0 bg-transparent",
+        className
+      )}
+      keyboardShortcut={false}
+      persist={false}
+      scope="container"
+      style={
+        {
+          "--sidebar-width": width,
+          ...style,
+        } as React.CSSProperties
+      }
+      {...props}
+    />
   )
 }
 
@@ -400,7 +441,9 @@ export function SidebarTrigger({
 }: React.ComponentProps<typeof Button>): React.ReactElement {
   const { toggleSidebar } = useSidebar()
   const ariaDisabled = props["aria-disabled"]
-  const isDisabled = Boolean(disabled || loading || isAriaDisabled(ariaDisabled))
+  const isDisabled = Boolean(
+    disabled || loading || isAriaDisabled(ariaDisabled)
+  )
   const triggerAriaDisabled = isDisabled ? true : ariaDisabled
 
   return (

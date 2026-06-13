@@ -28,6 +28,8 @@ export interface FileThumbnailProps
   as?: FileCategory
   /** Corner pinned when rendered content overflows the frame. */
   anchor?: ThumbnailAnchor
+  /** Hide rich preview internals from assistive tech when the parent row owns the accessible name. */
+  presentation?: "document" | "decorative"
   /** Change to retry a failed generated thumbnail for the same source. */
   retryKey?: React.Key
   /** Receives generated thumbnail failures with canonical viewer error info. */

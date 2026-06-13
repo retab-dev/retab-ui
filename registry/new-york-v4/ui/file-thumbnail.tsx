@@ -40,11 +40,19 @@ export function FileThumbnail({
   file,
   as,
   anchor,
+  presentation = "document",
   retryKey,
   onError,
   ...frameProps
 }: FileThumbnailProps) {
   const resolvedSource = resolveFileThumbnailSource(source, file)
+  const accessibilityProps =
+    presentation === "decorative"
+      ? ({
+          "aria-hidden": true,
+          role: "presentation",
+        } as const)
+      : {}
   const {
     previewClassName: _previewClassName,
     previewContent: _previewContent,
@@ -58,6 +66,7 @@ export function FileThumbnail({
     return (
       <FileThumbnailFrame
         {...frameProps}
+        {...accessibilityProps}
         file={file ?? fileFromSource(resolvedSource)}
       />
     )
@@ -66,6 +75,7 @@ export function FileThumbnail({
   return (
     <GeneratedFileThumbnail
       {...thumbnailProps}
+      {...accessibilityProps}
       source={resolvedSource}
       as={as}
       anchor={anchor ?? "top-left"}

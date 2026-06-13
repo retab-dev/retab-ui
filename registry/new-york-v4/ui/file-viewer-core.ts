@@ -8,6 +8,8 @@ import {
   type ViewerSource,
 } from "@/lib/viewer-source"
 
+import type { ViewerSlots } from "./viewer-slots"
+
 export type { FileCategory, ViewerSource }
 
 export interface FileViewerProps {
@@ -16,6 +18,7 @@ export interface FileViewerProps {
   className?: string
   bare?: boolean
   isolateStyles?: boolean
+  slots?: ViewerSlots
 }
 
 export type FileDescriptor = ViewerDescriptor

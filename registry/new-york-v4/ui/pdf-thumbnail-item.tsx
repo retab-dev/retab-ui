@@ -38,7 +38,7 @@ export function PdfThumbnailItem({
       <div
         className={cn(
           "overflow-hidden rounded-sm bg-white ring-2 transition-shadow",
-          active ? "ring-primary" : "ring-border"
+          active ? "ring-primary" : "ring-sidebar-border"
         )}
         style={{ width: item.imageWidth }}
       >
@@ -53,7 +53,9 @@ export function PdfThumbnailItem({
       <span
         className={cn(
           "text-[10px] tabular-nums",
-          active ? "font-semibold text-foreground" : "text-muted-foreground"
+          active
+            ? "font-semibold text-sidebar-foreground"
+            : "text-sidebar-foreground/70"
         )}
       >
         {item.pageNumber}

@@ -1059,10 +1059,14 @@ describe("Dropzone registry split", () => {
     ])
     expect(dropzoneBlock?.files.map((file) => file.path)).toEqual([
       "registry/new-york-v4/blocks/dropzone-block.tsx",
+      "registry/new-york-v4/blocks/dropzone-showcase.tsx",
       "registry/new-york-v4/blocks/dropzone-example-shared.tsx",
+      "registry/new-york-v4/blocks/dropzone-file-uploader-example.tsx",
+      "registry/new-york-v4/blocks/dropzone-file-viewer-example.tsx",
       "registry/new-york-v4/blocks/dropzone-trigger-examples.tsx",
       "registry/new-york-v4/blocks/dropzone-file-examples.tsx",
       "registry/new-york-v4/blocks/dropzone-uploader-viewer.tsx",
+      "registry/new-york-v4/blocks/dropzone-uploader-viewer-parts.tsx",
       "registry/new-york-v4/blocks/dropzone-workflow-examples.tsx",
     ])
   })

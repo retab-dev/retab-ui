@@ -1541,6 +1541,25 @@
       ]
     },
     {
+      "name": "viewer-shell",
+      "type": "registry:ui",
+      "title": "Viewer Shell",
+      "description": "Format-neutral frame for compound viewer composition with header, toolbar, rail, strip, overlay, and document content slots.",
+      "registryDependencies": ["utils"],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/viewer-shell.tsx",
+          "type": "registry:ui",
+          "target": "@ui/viewer-shell.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/viewer-slots.ts",
+          "type": "registry:ui",
+          "target": "@ui/viewer-slots.ts"
+        }
+      ]
+    },
+    {
       "name": "file-viewer",
       "type": "registry:ui",
       "title": "File Viewer",
@@ -1558,6 +1577,7 @@
         "code-viewer",
         "text-viewer-chenglou",
         "markdown-document-viewer",
+        "viewer-shell",
         "skeleton"
       ],
       "files": [
@@ -1893,16 +1913,36 @@
       ]
     },
     {
-      "name": "email-viewer",
+      "name": "attachment-sidebar",
       "type": "registry:ui",
-      "title": "Email Viewer",
-      "description": "Render HTML email bodies with CID inline files and independently previewable attachments in a sidebar.",
+      "title": "Attachment Sidebar",
+      "description": "File attachment navigator built from Sidebar primitives and FileThumbnail.",
       "dependencies": ["lucide-react"],
       "registryDependencies": [
         "utils",
-        "button",
+        "sidebar",
         "file-size-format",
-        "file-thumbnail",
+        "file-thumbnail"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/attachment-sidebar.tsx",
+          "type": "registry:ui",
+          "target": "@ui/attachment-sidebar.tsx"
+        }
+      ]
+    },
+    {
+      "name": "email-viewer",
+      "type": "registry:ui",
+      "title": "Email Viewer",
+      "description": "Render HTML email bodies with CID inline files and independently previewable attachments in the shared sidebar primitive.",
+      "dependencies": ["lucide-react"],
+      "registryDependencies": [
+        "utils",
+        "sidebar",
+        "attachment-sidebar",
+        "viewer-shell",
         "file-viewer"
       ],
       "files": [
@@ -2673,9 +2713,24 @@
           "target": "@components/blocks/dropzone-block.tsx"
         },
         {
+          "path": "registry/new-york-v4/blocks/dropzone-showcase.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dropzone-showcase.tsx"
+        },
+        {
           "path": "registry/new-york-v4/blocks/dropzone-example-shared.tsx",
           "type": "registry:component",
           "target": "@components/blocks/dropzone-example-shared.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/blocks/dropzone-file-uploader-example.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dropzone-file-uploader-example.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/blocks/dropzone-file-viewer-example.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dropzone-file-viewer-example.tsx"
         },
         {
           "path": "registry/new-york-v4/blocks/dropzone-trigger-examples.tsx",
@@ -2691,6 +2746,11 @@
           "path": "registry/new-york-v4/blocks/dropzone-uploader-viewer.tsx",
           "type": "registry:component",
           "target": "@components/blocks/dropzone-uploader-viewer.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/blocks/dropzone-uploader-viewer-parts.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dropzone-uploader-viewer-parts.tsx"
         },
         {
           "path": "registry/new-york-v4/blocks/dropzone-workflow-examples.tsx",
