@@ -17,7 +17,7 @@ interface DocumentArrayNodeEditorProps {
   setDefsAccordionOpen: (open: boolean) => void
   draggedParentRef: DocumentSchemaNodeEditorProps["draggedParentRef"]
   draggedPropertyRef: DocumentSchemaNodeEditorProps["draggedPropertyRef"]
-  editMode: SchemaEditorMode
+  mode: SchemaEditorMode
   features: ResolvedSchemaBuilderFeatures
   renderNode: RenderDocumentNodeEditor
   dispatch: DocumentSchemaNodeEditorProps["dispatch"]
@@ -32,7 +32,7 @@ export function DocumentArrayNodeEditor({
   setDefsAccordionOpen,
   draggedParentRef,
   draggedPropertyRef,
-  editMode,
+  mode,
   features,
   renderNode,
 }: DocumentArrayNodeEditorProps) {
@@ -49,7 +49,7 @@ export function DocumentArrayNodeEditor({
           doc,
           draggedParentRef,
           draggedPropertyRef,
-          editMode,
+          mode,
           features,
           name: "items",
           nodeId: itemView.nodeId,

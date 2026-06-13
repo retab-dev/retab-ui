@@ -1,10 +1,10 @@
 "use client"
 
 import { validateName } from "@/components/schema-editor/lib/json-schema-utils"
-import { SchemaFieldName } from "@/components/schema-editor/primitives/schema-field-name"
+import { SchemaInlineName } from "@/components/schema-editor/primitives/schema-inline-name"
 
 interface DocumentNodeNameControlProps {
-  isEditable: boolean
+  editable: boolean
   name: string
   siblingNames: string[]
   canRename: boolean
@@ -15,7 +15,7 @@ interface DocumentNodeNameControlProps {
 }
 
 export function DocumentNodeNameControl({
-  isEditable,
+  editable,
   name,
   siblingNames,
   canRename,
@@ -25,9 +25,10 @@ export function DocumentNodeNameControl({
   onShowDefinition,
 }: DocumentNodeNameControlProps) {
   return (
-    <SchemaFieldName
+    <SchemaInlineName
+      ariaLabel={`Field name ${name}`}
       value={name}
-      editable={isEditable}
+      editable={editable}
       canRename={canRename}
       validate={(value) => validateName(value, siblingNames, name, "property")}
       reference={

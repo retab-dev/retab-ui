@@ -22,9 +22,9 @@ interface DocumentPropertyRowProps {
   setDefsAccordionOpen: (open: boolean) => void
   draggedParentRef: DocumentSchemaNodeEditorProps["draggedParentRef"]
   draggedPropertyRef: DocumentSchemaNodeEditorProps["draggedPropertyRef"]
-  editMode: SchemaEditorMode
+  mode: SchemaEditorMode
   features: ResolvedSchemaBuilderFeatures
-  isEditable: boolean
+  editable: boolean
   isRequired: boolean
   siblingNames: string[]
   renderNode: RenderDocumentNodeEditor
@@ -48,9 +48,9 @@ export function DocumentPropertyRow({
   setDefsAccordionOpen,
   draggedParentRef,
   draggedPropertyRef,
-  editMode,
+  mode,
   features,
-  isEditable,
+  editable,
   isRequired,
   siblingNames,
   renderNode,
@@ -65,7 +65,7 @@ export function DocumentPropertyRow({
   return (
     <div
       className={rootLayout ? "" : "ml-4 border-l border-border"}
-      draggable={isEditable}
+      draggable={editable}
       onDragStart={onDragStart}
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
@@ -78,7 +78,7 @@ export function DocumentPropertyRow({
         doc,
         draggedParentRef,
         draggedPropertyRef,
-        editMode,
+        mode,
         features,
         isRequired,
         siblingNames,

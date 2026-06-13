@@ -21,7 +21,7 @@ interface DocumentSchemaEditorProps {
   schema: ExtendedJSONSchema7
   validation: SchemaValidationResult
   dispatch: SchemaDispatch
-  editMode?: SchemaEditorMode
+  mode?: SchemaEditorMode
   features?: ResolvedSchemaBuilderFeatures
 }
 
@@ -30,7 +30,7 @@ export function DocumentSchemaEditor({
   schema,
   validation,
   dispatch,
-  editMode = "editable",
+  mode = "editable",
   features: featuresProp,
 }: DocumentSchemaEditorProps) {
   const controller = useDocumentSchemaEditorController({
@@ -49,7 +49,7 @@ export function DocumentSchemaEditor({
         />
         <TopLevelEditor
           node={schema}
-          editMode={editMode}
+          mode={mode}
           showImportExportActions={controller.features.importExport}
           onTitleChange={controller.setRootTitle}
           onDescriptionChange={controller.setRootDescription}
@@ -67,7 +67,7 @@ export function DocumentSchemaEditor({
           nodeId={doc.root.id}
           nodeView={controller.rootNodeView}
           path="#"
-          editMode={editMode}
+          mode={mode}
           features={controller.features}
           canDelete={false}
           setDefsAccordionOpen={controller.setDefsAccordionOpen}
@@ -77,7 +77,7 @@ export function DocumentSchemaEditor({
         <DocumentDefinitionsEditor
           dispatch={dispatch}
           doc={doc}
-          editMode={editMode}
+          mode={mode}
           definitionsEnabled={controller.features.definitions}
           features={controller.features}
           accordionOpen={controller.defsAccordionOpen}

@@ -5,7 +5,7 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 import type { XlsxSheetMeta } from "@/lib/xlsx-workbook"
 
-const TAB_STRIP_HEIGHT_PX = 36
+export const XLSX_SHEET_TABS_HEIGHT_PX = 36
 const TAB_HEIGHT_PX = 28
 const SCROLL_EPSILON_PX = 1
 const TAB_MIN_WIDTH_PX = 92
@@ -328,7 +328,7 @@ export function XlsxSheetTabs({
       data-can-scroll-left={scrollState.canScrollLeft}
       data-can-scroll-right={scrollState.canScrollRight}
       data-overflowing={scrollState.isOverflowing}
-      style={{ height: TAB_STRIP_HEIGHT_PX }}
+      style={{ height: XLSX_SHEET_TABS_HEIGHT_PX }}
       className="relative flex-shrink-0 overflow-hidden border-t bg-card"
     >
       <div

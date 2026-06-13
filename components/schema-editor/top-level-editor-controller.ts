@@ -5,7 +5,7 @@ import type { SchemaEditorMode } from "@/components/schema-editor/schema-editor-
 
 export type TopLevelEditorProps = {
   node: ExtendedJSONSchema7
-  editMode: SchemaEditorMode
+  mode: SchemaEditorMode
   showImportExportActions?: boolean
   onTitleChange: (title: string) => void
   onDescriptionChange: (description: string) => void

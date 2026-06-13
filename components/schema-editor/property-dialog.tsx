@@ -53,7 +53,7 @@ export function PropertyEditor({
   setDropdownOpen,
   schema,
   replaceSchema,
-  editMode = "editable",
+  mode = "editable",
   onDelete,
 }: {
   property: ExtendedJSONSchema7
@@ -61,7 +61,7 @@ export function PropertyEditor({
   setDropdownOpen: (open: boolean) => void
   schema: JSONSchema7
   replaceSchema: (schema: JSONSchema7) => void
-  editMode?: "descriptionOnly" | "readOnly" | "editable"
+  mode?: "descriptionOnly" | "readOnly" | "editable"
   onDelete?: () => void
 }) {
   const initialName = propertyKey.split(".")?.pop() || propertyKey
@@ -123,7 +123,7 @@ export function PropertyEditor({
         onCancel={() => setDropdownOpen(false)}
         onDelete={onDelete}
         submitLabel="Save Changes"
-        mode={editMode}
+        mode={mode}
       />
     </>
   )

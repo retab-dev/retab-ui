@@ -1,5 +1,5 @@
 import type * as React from "react"
-import type { JSONSchema7Definition } from "json-schema"
+import type { JSONSchema7Definition, JSONSchema7Type } from "json-schema"
 
 import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
 
@@ -83,6 +83,48 @@ export interface PropertyFormFooterModel {
   onDelete?: () => void
 }
 
+export interface PropertyTypeFieldModel {
+  schemaNode: ExtendedJSONSchema7
+  schemaContext: PropertyFormSchemaContext
+  mode: PropertyFormMode
+  disabled: boolean
+  onChange: (schemaNode: ExtendedJSONSchema7) => void
+}
+
+export interface PropertyEnumValuesFieldModel {
+  values: JSONSchema7Type[]
+  resetKey: string
+  disabled: boolean
+  onChange: (values: JSONSchema7Type[]) => void
+}
+
+export interface PropertyObjectPropertiesFieldModel {
+  schemaNode: ExtendedJSONSchema7
+  schemaContext: PropertyFormSchemaContext
+  mode: PropertyFormMode
+  canEditPropertyType: boolean
+  capabilities: Pick<
+    PropertyCapabilities,
+    | "canEditType"
+    | "canEditNestedObject"
+    | "canEditArrayItems"
+    | "canEditEnumValues"
+  >
+  disabled: boolean
+  onChange: (schemaNode: ExtendedJSONSchema7) => void
+}
+
+export interface PropertyArrayItemsFieldModel {
+  itemDetails: PropertySchemaDetailsModel
+}
+
+export interface PropertySchemaDetailsModel {
+  type?: PropertyTypeFieldModel
+  enumValues?: PropertyEnumValuesFieldModel
+  objectProperties?: PropertyObjectPropertiesFieldModel
+  arrayItems?: PropertyArrayItemsFieldModel
+}
+
 export interface PropertyFormViewModel {
   validation: PropertyValidation
   capabilities: PropertyCapabilities
@@ -93,13 +135,7 @@ export interface PropertyFormViewModel {
       disabled: boolean
       onChange: (name: string) => void
     }
-    type: {
-      schemaNode: ExtendedJSONSchema7
-      schemaContext: PropertyFormSchemaContext
-      mode: PropertyFormMode
-      disabled: boolean
-      onChange: (schemaNode: ExtendedJSONSchema7) => void
-    }
+    type: PropertyTypeFieldModel
     nullable: {
       isNullable: boolean
       disabled: boolean
@@ -110,20 +146,9 @@ export interface PropertyFormViewModel {
       disabled: boolean
       onChange: (description: string) => void
     }
-    schemaNodeDetails?: {
-      schemaNode: ExtendedJSONSchema7
-      schemaContext: PropertyFormSchemaContext
-      mode: PropertyFormMode
-      capabilities: Pick<
-        PropertyCapabilities,
-        | "canEditType"
-        | "canEditNestedObject"
-        | "canEditArrayItems"
-        | "canEditEnumValues"
-      >
-      disabled: boolean
-      onChange: (schemaNode: ExtendedJSONSchema7) => void
-    }
+    enumValues?: PropertyEnumValuesFieldModel
+    objectProperties?: PropertyObjectPropertiesFieldModel
+    arrayItems?: PropertyArrayItemsFieldModel
   }
   footer: PropertyFormFooterModel
   events: {

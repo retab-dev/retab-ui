@@ -235,8 +235,8 @@ describe("gutter sizing", () => {
         toolbar={false}
       />
     )
-    // 1 digit + 1 padding char.
-    expect(gutterWidth(nine.container, 1)).toBe("2ch")
+    // 1 digit + 1 spare char + horizontal gutter padding.
+    expect(gutterWidth(nine.container, 1)).toBe("calc(2ch + 1.25rem)")
     cleanup()
 
     const ten = render(
@@ -245,13 +245,13 @@ describe("gutter sizing", () => {
         toolbar={false}
       />
     )
-    // 2 digits + 1 padding char.
-    expect(gutterWidth(ten.container, 1)).toBe("3ch")
+    // 2 digits + 1 spare char + horizontal gutter padding.
+    expect(gutterWidth(ten.container, 1)).toBe("calc(3ch + 1.25rem)")
   })
 
-  it("uses a 2ch gutter for a single empty line", () => {
+  it("uses a padded 2ch gutter for a single empty line", () => {
     const { container } = render(<CodeViewer source={textSource("")} />)
-    expect(gutterWidth(container, 1)).toBe("2ch")
+    expect(gutterWidth(container, 1)).toBe("calc(2ch + 1.25rem)")
   })
 })
 
@@ -355,6 +355,29 @@ describe("bare chrome variant", () => {
     expect(className).toContain("rounded-xl")
     expect(className).toContain("border")
     expect(className).toContain("bg-muted/30")
+  })
+})
+
+describe("code viewer surface colors", () => {
+  it("keeps the code canvas on background while the line gutter stays muted", () => {
+    const { container } = render(<CodeViewer source={textSource("alpha")} />)
+
+    const viewport = container.querySelector<HTMLElement>(
+      '[data-slot="scroll-area-viewport"]'
+    )
+    const gutter = container.querySelector<HTMLElement>(
+      '[data-line-number="1"] span:first-child'
+    )
+    const code = container.querySelector<HTMLElement>(
+      '[data-line-number="1"] span:last-child'
+    )
+
+    expect(viewport?.className).toContain("bg-background")
+    expect(gutter?.className).toContain("sticky")
+    expect(gutter?.className).toContain("left-0")
+    expect(gutter?.className).toContain("bg-muted/30")
+    expect(gutter?.className).toContain("border-r")
+    expect(code?.className).not.toContain("bg-muted")
   })
 })
 

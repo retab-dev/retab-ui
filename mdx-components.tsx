@@ -32,6 +32,7 @@ import { DropzoneDemo, FileUploaderDemo } from "@/components/dropzone-demo"
 import { EmailViewerDemo } from "@/components/email-viewer-demo"
 import { FileThumbnailDemo } from "@/components/file-thumbnail-demo"
 import { FileThumbnailFormatsDemo } from "@/components/file-thumbnail-formats-demo"
+import { FileSystemDemo } from "@/components/file-system-demo"
 import { FileViewerDemo } from "@/components/file-viewer-demo"
 import { HtmlViewerDemo } from "@/components/html-viewer-demo"
 import { getIconForLanguageExtension } from "@/components/icons"
@@ -398,6 +399,7 @@ export const mdxComponents = {
   SegmentLegendSplitDemo,
   FileThumbnailDemo,
   FileThumbnailFormatsDemo,
+  FileSystemDemo,
   TextViewerDemo,
   MarkdownViewerDemo,
   HtmlViewerDemo,

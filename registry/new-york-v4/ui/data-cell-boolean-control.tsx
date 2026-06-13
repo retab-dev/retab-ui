@@ -15,6 +15,19 @@ import type {
 
 export type DataCellBooleanControlProps = DataCellProps & { kind: "boolean" }
 
+export function commitDataCellBooleanToggle(
+  value: DataCellBooleanControlProps["value"],
+  onCommit: DataCellCommitHandler | undefined
+) {
+  const nextValue = !Boolean(value)
+  onCommit?.(nextValue, {
+    kind: "boolean",
+    rawValue: String(nextValue),
+    isEmpty: false,
+    isValid: true,
+  })
+}
+
 export function DataCellBooleanIndicator({ checked }: { checked: boolean }) {
   return (
     <span
@@ -47,7 +60,7 @@ export function DataCellBooleanControl({
   placeholder: _placeholder,
   dateTimeZone: _dateTimeZone,
   showPickerIcon: _showPickerIcon,
-  activationIntent: _activationIntent,
+  activationSource: _activationSource,
   isPickerOpen: _isPickerOpen,
   autoFocus,
   onDraftValueChange: _onDraftValueChange,
@@ -111,13 +124,10 @@ export function DataCellBooleanControl({
         onClick={(event) => {
           event.stopPropagation()
           if (disabled) return
-          const nextValue = !checked
-          ;(onCommit as DataCellCommitHandler | undefined)?.(nextValue, {
-            kind,
-            rawValue: String(nextValue),
-            isEmpty: false,
-            isValid: true,
-          })
+          commitDataCellBooleanToggle(
+            value,
+            onCommit as DataCellCommitHandler | undefined
+          )
           onClick?.(event)
         }}
         onFocus={onFocus}

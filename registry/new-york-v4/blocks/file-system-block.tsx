@@ -1,126 +1,92 @@
 "use client"
 
-import { FileSystem, type FileSystemItem } from "@/components/ui/file-system"
+import * as React from "react"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 
-const ITEMS: FileSystemItem[] = [
-  {
-    kind: "folder",
-    path: "financials/",
-    updatedAt: "2026-04-11T15:20:00Z",
-  },
-  {
-    kind: "folder",
-    path: "research/",
-    updatedAt: "2026-05-02T10:10:00Z",
-  },
-  {
-    kind: "folder",
-    path: "workspace/",
-    updatedAt: "2026-05-14T08:30:00Z",
-  },
-  {
-    kind: "file",
-    path: "financials/nvidia-financials-fy2024.xlsx",
-    mimeType:
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    size: 231_482,
-    source: {
-      kind: "url",
-      url: "/samples/nvidia-financials-fy2024.xlsx",
-      fileName: "nvidia-financials-fy2024.xlsx",
-      mimeType:
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    },
-    updatedAt: "2026-04-11T15:20:00Z",
-  },
-  {
-    kind: "file",
-    path: "financials/sales.csv",
-    mimeType: "text/csv",
-    size: 18_420,
-    source: {
-      kind: "url",
-      url: "/samples/sales.csv",
-      fileName: "sales.csv",
-      mimeType: "text/csv",
-    },
-    updatedAt: "2026-04-08T09:12:00Z",
-  },
-  {
-    kind: "file",
-    path: "research/attention.pdf",
-    mimeType: "application/pdf",
-    previewImageUrl: "/samples/attention-page-1.png",
-    size: 516_280,
-    source: {
-      kind: "url",
-      url: "/samples/attention.pdf",
-      fileName: "attention.pdf",
-      mimeType: "application/pdf",
-    },
-    updatedAt: "2026-05-02T10:10:00Z",
-  },
-  {
-    kind: "file",
-    path: "research/an-image-is-worth-16x16-words.pdf",
-    mimeType: "application/pdf",
-    previewImageUrl: "/samples/an-image-is-worth-16x16-words-page-1.png",
-    size: 298_114,
-    source: {
-      kind: "url",
-      url: "/samples/an-image-is-worth-16x16-words.pdf",
-      fileName: "an-image-is-worth-16x16-words.pdf",
-      mimeType: "application/pdf",
-    },
-    updatedAt: "2026-04-19T13:45:00Z",
-  },
-  {
-    kind: "file",
-    path: "workspace/quarterly-business-review.docx",
-    mimeType:
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    size: 129_030,
-    source: {
-      kind: "url",
-      url: "/samples/quarterly-business-review.docx",
-      fileName: "quarterly-business-review.docx",
-      mimeType:
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    },
-    updatedAt: "2026-05-14T08:30:00Z",
-  },
-  {
-    kind: "file",
-    path: "workspace/release-notes.md",
-    mimeType: "text/markdown",
-    size: 4_812,
-    source: {
-      kind: "url",
-      url: "/samples/release-notes.md",
-      fileName: "release-notes.md",
-      mimeType: "text/markdown",
-    },
-    updatedAt: "2026-05-10T17:05:00Z",
-  },
-  {
-    kind: "file",
-    path: "workspace/use-debounced-value.ts",
-    mimeType: "text/typescript",
-    size: 2_190,
-    source: {
-      kind: "url",
-      url: "/samples/use-debounced-value.ts",
-      fileName: "use-debounced-value.ts",
-      mimeType: "text/typescript",
-    },
-    updatedAt: "2026-05-09T11:15:00Z",
-  },
-]
+import { FileSystem } from "@/components/ui/file-system"
+
+import {
+  DEFAULT_FILE_SYSTEM_DEMO_QUERY,
+  FILE_SYSTEM_DEMO_ITEMS,
+  LARGE_FILE_SYSTEM_DEMO_ITEMS,
+  collectFileSystemDemoFolderPaths,
+  collectFileSystemDemoItemPaths,
+  formatFileSystemDemoState,
+  parseFileSystemDemoState,
+  type FileSystemDemoState,
+} from "./file-system-demo-state"
+
+const DEFAULT_FILE_SYSTEM_DEMO_STATE: FileSystemDemoState = {
+  path: "",
+  query: DEFAULT_FILE_SYSTEM_DEMO_QUERY,
+  selectedPath: null,
+  view: "list",
+}
 
 export function FileSystemBlock() {
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const isLarge = searchParams.get("large") === "true"
+  const items = isLarge ? LARGE_FILE_SYSTEM_DEMO_ITEMS : FILE_SYSTEM_DEMO_ITEMS
+  const folderPaths = React.useMemo(
+    () => collectFileSystemDemoFolderPaths(items),
+    [items]
+  )
+  const itemPaths = React.useMemo(
+    () => collectFileSystemDemoItemPaths(items),
+    [items]
+  )
+  const parsedState = React.useMemo(
+    () =>
+      parseFileSystemDemoState(searchParams, {
+        fallbackState: DEFAULT_FILE_SYSTEM_DEMO_STATE,
+        folderPaths,
+        itemPaths,
+      }),
+    [folderPaths, itemPaths, searchParams]
+  )
+  const [state, setState] = React.useState(parsedState)
+  const stateRef = React.useRef(parsedState)
+
+  React.useEffect(() => {
+    stateRef.current = parsedState
+    setState(parsedState)
+  }, [parsedState])
+
+  const replaceState = React.useCallback(
+    (patch: Partial<FileSystemDemoState>) => {
+      const nextState = { ...stateRef.current, ...patch }
+      const nextParams = new URLSearchParams(
+        formatFileSystemDemoState(nextState, DEFAULT_FILE_SYSTEM_DEMO_STATE)
+      )
+
+      if (isLarge) nextParams.set("large", "true")
+      stateRef.current = nextState
+      setState(nextState)
+      router.replace(`${pathname}?${nextParams.toString()}`, {
+        scroll: false,
+      })
+    },
+    [isLarge, pathname, router]
+  )
+
   return (
     <div className="h-full min-h-[680px] bg-background p-4">
-      <FileSystem className="mx-auto h-full max-w-7xl" items={ITEMS} />
+      <FileSystem
+        className="mx-auto h-full max-w-7xl"
+        items={items}
+        onPathChange={(path) => replaceState({ path, selectedPath: null })}
+        onQueryChange={(query) => replaceState({ query })}
+        onSelectionChange={(entry) =>
+          replaceState({ selectedPath: entry?.path ?? null })
+        }
+        onViewChange={(view) => replaceState({ view })}
+        path={state.path}
+        query={state.query}
+        selectedPath={state.selectedPath}
+        view={state.view}
+      />
     </div>
   )
 }

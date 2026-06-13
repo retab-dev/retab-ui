@@ -16,19 +16,19 @@ import { SchemaChipList } from "@/components/schema-editor/primitives/schema-chi
 
 interface DocumentEnumNodeEditorProps {
   dispatch: DocumentSchemaNodeEditorProps["dispatch"]
-  editMode: SchemaEditorMode
+  mode: SchemaEditorMode
   nodeId: string
   enumEntries: EnumValue[]
 }
 
 export function DocumentEnumNodeEditor({
   dispatch,
-  editMode,
+  mode,
   nodeId,
   enumEntries,
 }: DocumentEnumNodeEditorProps) {
   const [newEnumValue, setNewEnumValue] = useState("")
-  const isEditable = editMode === "editable"
+  const editable = mode === "editable"
   const canAddEnumValue = newEnumValue.trim().length > 0
 
   const handleAddEnum = () => {
@@ -51,12 +51,12 @@ export function DocumentEnumNodeEditor({
     <div className="ml-6">
       <div className="mt-1 mb-2">
         <SchemaChipList
-          editable={isEditable}
+          editable={editable}
           focusInputAfterSubmit
           getKey={(index) => enumEntries[index]?.id ?? String(index)}
           pendingValue={newEnumValue}
           placeholder="New choice"
-          showSubmitInput={isEditable}
+          showSubmitInput={editable}
           submitLabel="Add"
           values={enumEntries.map((entry) => String(entry.value))}
           onPendingValueChange={setNewEnumValue}
@@ -66,7 +66,7 @@ export function DocumentEnumNodeEditor({
         />
       </div>
 
-      {enumEntries.length === 0 && !isEditable && (
+      {enumEntries.length === 0 && !editable && (
         <div className="mb-2 text-sm text-muted-foreground">
           No enum values defined.
         </div>

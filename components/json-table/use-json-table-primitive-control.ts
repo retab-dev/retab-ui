@@ -1,6 +1,6 @@
 import * as React from "react"
 
-import type { DataCellActivationIntent } from "@/components/ui/data-cell"
+import type { DataCellActivationSource } from "@/components/ui/data-cell"
 import type { JsonTableCellProps } from "@/components/json-table/json-table-cell-types"
 import type { JsonTablePrimitiveCellProps } from "@/components/json-table/json-table-primitive-cell"
 import { finishPreviousPrimitiveEditor } from "@/components/json-table/json-table-primitive-handoff"
@@ -10,11 +10,11 @@ import { useCellController } from "@/components/json-table/use-cell-controller"
 import type { JsonTableCellField } from "@/components/json-table/use-json-table-cell-field"
 
 export type JsonTablePrimitiveControl = {
-  activationRequest: DataCellActivationIntent | undefined
+  activationSource: DataCellActivationSource | undefined
   commitPrimitiveValue: (value: unknown) => void
   primitiveEffectiveValue: unknown
-  setActivationRequest: React.Dispatch<
-    React.SetStateAction<DataCellActivationIntent | undefined>
+  setActivationSource: React.Dispatch<
+    React.SetStateAction<DataCellActivationSource | undefined>
   >
   setPrimitiveActive: (active: boolean) => void
   setPrimitiveEditorHandle: JsonTablePrimitiveCellProps["onEditorHandleChange"]
@@ -27,8 +27,8 @@ export function useJsonTablePrimitiveControl({
   props: JsonTableCellProps
   cellField: JsonTableCellField
 }): JsonTablePrimitiveControl {
-  const [activationRequest, setActivationRequest] =
-    React.useState<DataCellActivationIntent>()
+  const [activationSource, setActivationSource] =
+    React.useState<DataCellActivationSource>()
   const { commitValueChange, effectiveValue: primitiveEffectiveValue } =
     useCellController({
       document: props.document,
@@ -84,7 +84,7 @@ export function useJsonTablePrimitiveControl({
   )
 
   React.useEffect(() => {
-    if (!cellField.isPrimitiveActive) setActivationRequest(undefined)
+    if (!cellField.isPrimitiveActive) setActivationSource(undefined)
   }, [cellField.isPrimitiveActive])
 
   const setPrimitiveEditorHandle = React.useCallback<
@@ -98,10 +98,10 @@ export function useJsonTablePrimitiveControl({
   )
 
   return {
-    activationRequest,
+    activationSource,
     commitPrimitiveValue,
     primitiveEffectiveValue,
-    setActivationRequest,
+    setActivationSource,
     setPrimitiveActive,
     setPrimitiveEditorHandle,
   }

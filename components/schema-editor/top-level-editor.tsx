@@ -49,7 +49,7 @@ const LazyImportExportMenuItems = React.lazy(() =>
 
 export function TopLevelEditor({
   node,
-  editMode,
+  mode,
   showImportExportActions = true,
   onTitleChange,
   onDescriptionChange,
@@ -81,7 +81,7 @@ export function TopLevelEditor({
             onKeyDown={(event) => {
               if (event.key === "Enter") controller.commitTitle()
             }}
-            disabled={editMode === "readOnly" || editMode === "descriptionOnly"}
+            disabled={mode === "readOnly" || mode === "descriptionOnly"}
           />
         </div>
 
@@ -99,7 +99,7 @@ export function TopLevelEditor({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              {editMode === "editable" && (
+              {mode === "editable" && (
                 <DropdownMenuItem
                   onClick={() => controller.setConfirmAction("eraseAll")}
                 >
@@ -108,7 +108,7 @@ export function TopLevelEditor({
                 </DropdownMenuItem>
               )}
 
-              {(editMode === "editable" || editMode === "descriptionOnly") && (
+              {(mode === "editable" || mode === "descriptionOnly") && (
                 <DropdownMenuItem
                   onClick={() =>
                     controller.setConfirmAction("eraseDescriptions")
@@ -148,7 +148,7 @@ export function TopLevelEditor({
                 controller.commitDescription()
               }
             }}
-            disabled={editMode === "readOnly"}
+            disabled={mode === "readOnly"}
           />
 
           <Tooltip>
@@ -158,14 +158,14 @@ export function TopLevelEditor({
                 variant="ghost"
                 size="icon"
                 aria-label={
-                  editMode === "readOnly"
+                  mode === "readOnly"
                     ? "View schema properties"
                     : "Edit schema properties"
                 }
                 className="m-0 p-0"
                 onClick={controller.openMetadataDialog}
               >
-                {editMode === "readOnly" ? (
+                {mode === "readOnly" ? (
                   <Eye className="h-1 w-1 text-muted-foreground opacity-0 group-hover:opacity-100" />
                 ) : (
                   <Pencil className="h-1 w-1 text-muted-foreground opacity-0 group-hover:opacity-100" />
@@ -174,7 +174,7 @@ export function TopLevelEditor({
             </TooltipTrigger>
             <TooltipContent className="max-w-xs">
               <p>
-                {editMode === "readOnly"
+                {mode === "readOnly"
                   ? "View schema properties"
                   : "Edit schema properties"}
               </p>
@@ -195,7 +195,7 @@ export function TopLevelEditor({
           onTitleChange(metadata.title)
           onDescriptionChange(metadata.description)
         }}
-        editMode={editMode}
+        mode={mode}
       />
 
       <AlertDialog

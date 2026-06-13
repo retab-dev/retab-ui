@@ -27,7 +27,7 @@ import type {
 interface DocumentDefinitionsEditorProps {
   dispatch: SchemaDispatch
   doc: SchemaDocument
-  editMode: SchemaEditorMode
+  mode: SchemaEditorMode
   definitionsEnabled: boolean
   features: ResolvedSchemaBuilderFeatures
   accordionOpen: boolean
@@ -39,7 +39,7 @@ interface DocumentDefinitionsEditorProps {
 export function DocumentDefinitionsEditor({
   dispatch,
   doc,
-  editMode,
+  mode,
   definitionsEnabled,
   features,
   accordionOpen,
@@ -50,14 +50,14 @@ export function DocumentDefinitionsEditor({
   const controller = useDocumentDefinitionsEditorController({
     dispatch,
     doc,
-    editMode,
+    mode,
     definitionsEnabled,
     accordionOpen,
     setAccordionOpen,
   })
 
   if (controller.shouldShowClosedPrompt) {
-    return editMode === "descriptionOnly" ? null : (
+    return mode === "descriptionOnly" ? null : (
       <div className="mt-6 flex pb-4">
         <div
           className="rounded-md transition-colors duration-300"
@@ -113,7 +113,7 @@ export function DocumentDefinitionsEditor({
                     doc={doc}
                     draggedParentRef={draggedParentRef}
                     draggedPropertyRef={draggedPropertyRef}
-                    editMode={definitionsEnabled ? editMode : "readOnly"}
+                    mode={definitionsEnabled ? mode : "readOnly"}
                     features={features}
                     name={definition.name}
                     nodeId={definition.node.id}
@@ -133,7 +133,7 @@ export function DocumentDefinitionsEditor({
                 </div>
               )
             })}
-            {controller.isEditable && definitionsEnabled && (
+            {controller.editable && definitionsEnabled && (
               <div className="flex items-center gap-3">
                 <Input
                   placeholder="New definition name"

@@ -114,8 +114,3 @@ export type FileSystemIndex = {
   files: Map<string, FileSystemFileEntry>
   folders: Map<string, FileSystemFolderEntry>
 }
-
-export type FileSystemTreeRow = {
-  depth: number
-  entry: FileSystemEntry
-}

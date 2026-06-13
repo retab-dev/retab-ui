@@ -32,7 +32,7 @@ interface RootDialogProps {
   metadataValues: RootMetadataValues;
   setMetadataValues: (values: RootMetadataValues) => void;
   onSave: (values: RootMetadataValues) => void;
-  editMode?: "descriptionOnly" | "readOnly" | "editable";
+  mode?: "descriptionOnly" | "readOnly" | "editable";
 }
 
 export function RootDialog({
@@ -44,17 +44,17 @@ export function RootDialog({
   metadataValues,
   setMetadataValues,
   onSave,
-  editMode = "editable",
+  mode = "editable",
 }: RootDialogProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>
-            {editMode === "readOnly" ? "View Schema" : "Edit Schema"}
+            {mode === "readOnly" ? "View Schema" : "Edit Schema"}
           </DialogTitle>
           <DialogDescription>
-            {editMode === "readOnly"
+            {mode === "readOnly"
               ? "View schema title and description."
               : "Modify schema title and description."}
           </DialogDescription>
@@ -79,7 +79,7 @@ export function RootDialog({
               value={schemaTitle}
               onChange={(e) => setSchemaTitle(e.target.value)}
               placeholder="Enter schema title"
-              disabled={editMode === "readOnly" || editMode === "descriptionOnly"}
+              disabled={mode === "readOnly" || mode === "descriptionOnly"}
             />
           </div>
           <div className="grid gap-2">
@@ -94,7 +94,7 @@ export function RootDialog({
                 })
               }
               placeholder="Add a description to your schema"
-              disabled={editMode === "readOnly"}
+              disabled={mode === "readOnly"}
             />
           </div>
         </div>
@@ -112,7 +112,7 @@ export function RootDialog({
               });
               onClose();
             }}
-            disabled={editMode === "readOnly"}
+            disabled={mode === "readOnly"}
           >
             Save
           </Button>

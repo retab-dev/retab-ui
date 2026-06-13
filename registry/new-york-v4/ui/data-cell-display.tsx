@@ -43,7 +43,7 @@ export const DataCellDisplay = React.forwardRef<HTMLElement, DataCellProps>(
       onDraftValueChange: _onDraftValueChange,
       onCommit: _onCommit,
       selectOptions: _selectOptions,
-      activationIntent: _activationIntent,
+      activationSource: _activationSource,
       isPickerOpen: _isPickerOpen,
       onEditingEnd: _onEditingEnd,
       onActiveChange: _onActiveChange,

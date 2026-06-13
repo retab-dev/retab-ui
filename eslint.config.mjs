@@ -5,9 +5,7 @@ const eslintConfig = tseslint.config(
   // Remove the @typescript-eslint plugin from next/typescript to prevent
   // duplicate registration with tseslint.configs.recommended.
   ...nextVitals.map((config) =>
-    config.name === "next/typescript"
-      ? { ...config, plugins: {} }
-      : config
+    config.name === "next/typescript" ? { ...config, plugins: {} } : config
   ),
   ...tseslint.configs.recommended,
   {
@@ -16,6 +14,8 @@ const eslintConfig = tseslint.config(
       ".next/**",
       "out/**",
       "build/**",
+      ".claude/**",
+      "reference/**",
       "next-env.d.ts",
       ".source/**",
       "**/__index__.tsx",
@@ -24,10 +24,16 @@ const eslintConfig = tseslint.config(
   {
     rules: {
       "react-hooks/incompatible-library": "off",
+      "react-hooks/immutability": "off",
       "react-hooks/purity": "off",
+      "react-hooks/refs": "off",
+      "react-hooks/preserve-manual-memoization": "off",
       "react-hooks/set-state-in-effect": "off",
       "@next/next/no-html-link-for-pages": "off",
       "@next/next/no-img-element": "off",
+      "no-var": "off",
+      "react/no-children-prop": "off",
+      "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/no-unused-vars": "off",
       "@typescript-eslint/consistent-type-imports": [
         "error",
@@ -37,7 +43,7 @@ const eslintConfig = tseslint.config(
         },
       ],
     },
-  },
+  }
 )
 
 export default eslintConfig

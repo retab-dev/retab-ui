@@ -3,7 +3,16 @@
 import * as React from "react"
 import { flushSync } from "react-dom"
 
+import { useDataCellActivationClickTail } from "@/registry/new-york-v4/ui/data-cell-activation"
 import { DataCellBooleanControl } from "@/registry/new-york-v4/ui/data-cell-boolean-control"
+import type { DataCellControlAction } from "@/registry/new-york-v4/ui/data-cell-control-contract"
+import {
+  canActivateDataCellFromKey,
+  DataCellControl,
+  getDataCellClickControlAction,
+  getDataCellKeyControlAction,
+  getDataCellPointerControlAction,
+} from "@/registry/new-york-v4/ui/data-cell-control-registry"
 import { DataCellDisplay } from "@/registry/new-york-v4/ui/data-cell-display"
 import {
   formatDataCellDisplayValue,
@@ -13,26 +22,14 @@ import { DataCellNumberControl } from "@/registry/new-york-v4/ui/data-cell-numbe
 import { DataCellPickerControl } from "@/registry/new-york-v4/ui/data-cell-picker-control"
 import { DataCellSelectControl } from "@/registry/new-york-v4/ui/data-cell-select-control"
 import { DataCellTextControl } from "@/registry/new-york-v4/ui/data-cell-text-control"
-import { getDataCellDisplayTextSelectionOffset } from "@/registry/new-york-v4/ui/data-cell-text-hit-test"
 import type {
-  DataCellActivationIntent,
+  DataCellActivationSource,
   DataCellCommitHandler,
-  DataCellKind,
   DataCellProps,
 } from "@/registry/new-york-v4/ui/data-cell-types"
 
-type DataCellBooleanControlProps = DataCellProps & { kind: "boolean" }
-type DataCellPickerControlProps = DataCellProps & {
-  kind: "date" | "time" | "date-time"
-}
-type DataCellNumberControlProps = DataCellProps & {
-  kind: "number" | "integer"
-}
-type DataCellSelectControlProps = DataCellProps & { kind: "select" }
-type DataCellTextControlProps = DataCellProps & { kind: "text" }
-
 export type {
-  DataCellActivationIntent,
+  DataCellActivationSource,
   DataCellCommitValue,
   DataCellDateTimeZone,
   DataCellEditorHandle,
@@ -44,26 +41,47 @@ export type {
   DataCellValueMeta,
 } from "@/registry/new-york-v4/ui/data-cell-types"
 export { formatDataCellDisplayValue, parseDataCellNumberInput }
+export {
+  createDataCellKeyboardActivationSource,
+  createDataCellPointerActivationSource,
+  createDataCellShellActivationSource,
+  type DataCellActivationToken,
+} from "@/registry/new-york-v4/ui/data-cell-activation"
 export { DataCellBooleanControl }
+export { DataCellControl, canActivateDataCellFromKey }
 export { DataCellDisplay }
 export { DataCellNumberControl }
 export { DataCellPickerControl }
 export { DataCellSelectControl }
 export { DataCellTextControl }
 
-const dataCellNumberKeyPattern = /^[0-9.+-]$/
-
-function storeDataCellActivationIntent(
-  intentRef: React.MutableRefObject<DataCellActivationIntent | undefined>,
-  setIntent: React.Dispatch<
-    React.SetStateAction<DataCellActivationIntent | undefined>
+function storeDataCellActivationSource(
+  sourceRef: React.MutableRefObject<DataCellActivationSource | undefined>,
+  setSource: React.Dispatch<
+    React.SetStateAction<DataCellActivationSource | undefined>
   >,
-  intent: DataCellActivationIntent
+  source: DataCellActivationSource
 ) {
   flushSync(() => {
-    intentRef.current = intent
-    setIntent(intent)
+    sourceRef.current = source
+    setSource(source)
   })
+}
+
+function hasDataCellKeyboardModifier(event: React.KeyboardEvent<HTMLElement>) {
+  const isAltGraph =
+    event.getModifierState("AltGraph") ||
+    event.nativeEvent.getModifierState?.("AltGraph") ||
+    (event.ctrlKey &&
+      event.altKey &&
+      event.key.length === 1 &&
+      !/^[\x00-\x7F]$/.test(event.key))
+  return (
+    event.metaKey ||
+    (event.ctrlKey && !isAltGraph) ||
+    (event.altKey && !isAltGraph) ||
+    event.nativeEvent.isComposing
+  )
 }
 
 export function DataCell({
@@ -81,13 +99,13 @@ export function DataCell({
   ...props
 }: DataCellProps) {
   const displayRef = React.useRef<HTMLElement>(null)
-  const didActivateBeforeClickRef = React.useRef(false)
-  const activationIntentRef = React.useRef<
-    DataCellActivationIntent | undefined
+  const activationClickTail = useDataCellActivationClickTail()
+  const activationSourceRef = React.useRef<
+    DataCellActivationSource | undefined
   >(undefined)
   const [uncontrolledActive, setUncontrolledActive] = React.useState(false)
-  const [activationIntent, setActivationIntent] =
-    React.useState<DataCellActivationIntent>()
+  const [activationSource, setActivationSource] =
+    React.useState<DataCellActivationSource>()
   const isControlledActive = active !== undefined
   const isExplicitMode = mode !== undefined
   const isActive =
@@ -104,21 +122,38 @@ export function DataCell({
   )
 
   const endEditing = React.useCallback(() => {
-    activationIntentRef.current = undefined
+    activationSourceRef.current = undefined
     setActive(false)
     onEditingEnd?.()
   }, [onEditingEnd, setActive])
 
-  const commitBooleanDisplayValue = React.useCallback(() => {
-    if (props.kind !== "boolean") return
-    const nextValue = !Boolean(props.value)
-    ;(onCommit as DataCellCommitHandler | undefined)?.(nextValue, {
-      kind: "boolean",
-      rawValue: String(nextValue),
-      isEmpty: false,
-      isValid: true,
-    })
-  }, [onCommit, props.kind, props.value])
+  const applyControlAction = React.useCallback(
+    (
+      action: DataCellControlAction,
+      event:
+        | React.PointerEvent<HTMLElement>
+        | React.MouseEvent<HTMLElement>
+        | React.KeyboardEvent<HTMLElement>,
+      markClickTail: boolean
+    ) => {
+      if (action.kind === "none") return
+      if (action.shouldPreventDefault) event.preventDefault()
+      event.stopPropagation()
+      if (action.kind === "command") {
+        action.commit(onCommit as DataCellCommitHandler | undefined)
+        if (markClickTail) activationClickTail.arm()
+        return
+      }
+      storeDataCellActivationSource(
+        activationSourceRef,
+        setActivationSource,
+        action.activationSource
+      )
+      if (markClickTail) activationClickTail.arm()
+      setActive(true)
+    },
+    [activationClickTail, onCommit, setActive]
+  )
 
   const activateFromPointer = React.useCallback(
     (event: React.PointerEvent<HTMLElement>) => {
@@ -127,109 +162,45 @@ export function DataCell({
         return
       }
 
-      if (props.kind === "select") return
-
-      event.stopPropagation()
-      event.preventDefault()
-      if (props.kind === "boolean") {
-        commitBooleanDisplayValue()
-        didActivateBeforeClickRef.current = true
-        return
-      }
-
-      const intent: DataCellActivationIntent = {
-        type: "pointer",
-        clientX: event.clientX,
-        clientY: event.clientY,
-        detail: event.detail,
-      }
-      if (props.kind === "text") {
-        const textElement = displayRef.current?.querySelector<HTMLElement>(
-          '[data-slot="data-cell-value"]'
-        )
-        if (textElement) {
-          intent.selectionOffset = getDataCellDisplayTextSelectionOffset({
-            clientX: event.clientX,
-            clientY: event.clientY,
-            textElement,
-            value:
-              props.value === null || props.value === undefined
-                ? ""
-                : String(props.value),
-          })
-        }
-      }
-      storeDataCellActivationIntent(
-        activationIntentRef,
-        setActivationIntent,
-        intent
+      applyControlAction(
+        getDataCellPointerControlAction({
+          props,
+          clientX: event.clientX,
+          clientY: event.clientY,
+          detail: event.detail,
+          displayElement: displayRef.current,
+          event: event.nativeEvent,
+        }),
+        event,
+        true
       )
-      didActivateBeforeClickRef.current = true
-      setActive(true)
     },
-    [
-      canSelfActivate,
-      commitBooleanDisplayValue,
-      onPointerDown,
-      props.kind,
-      props.value,
-      setActive,
-    ]
+    [applyControlAction, canSelfActivate, onPointerDown, props]
   )
 
   const activateFromClick = React.useCallback(
     (event: React.MouseEvent<HTMLElement>) => {
       onClick?.(event)
-      if (didActivateBeforeClickRef.current) {
-        didActivateBeforeClickRef.current = false
+      if (activationClickTail.consume()) {
         event.stopPropagation()
         return
       }
       if (event.defaultPrevented || !canSelfActivate) return
 
-      event.stopPropagation()
-      if (props.kind === "boolean") {
-        commitBooleanDisplayValue()
-        return
-      }
-
-      const intent: DataCellActivationIntent = {
-        type: "pointer",
-        clientX: event.clientX,
-        clientY: event.clientY,
-        detail: event.detail,
-      }
-      if (props.kind === "text") {
-        const textElement = displayRef.current?.querySelector<HTMLElement>(
-          '[data-slot="data-cell-value"]'
-        )
-        if (textElement) {
-          intent.selectionOffset = getDataCellDisplayTextSelectionOffset({
-            clientX: event.clientX,
-            clientY: event.clientY,
-            textElement,
-            value:
-              props.value === null || props.value === undefined
-                ? ""
-                : String(props.value),
-          })
-        }
-      }
-      storeDataCellActivationIntent(
-        activationIntentRef,
-        setActivationIntent,
-        intent
+      applyControlAction(
+        getDataCellClickControlAction({
+          props,
+          clientX: event.clientX,
+          clientY: event.clientY,
+          detail: event.detail,
+          displayElement: displayRef.current,
+          event: event.nativeEvent,
+        }),
+        event,
+        false
       )
-      setActive(true)
     },
-    [
-      canSelfActivate,
-      commitBooleanDisplayValue,
-      onClick,
-      props.kind,
-      props.value,
-      setActive,
-    ]
+    [activationClickTail, applyControlAction, canSelfActivate, onClick, props]
   )
 
   const activateFromKey = React.useCallback(
@@ -237,50 +208,15 @@ export function DataCell({
       onKeyDown?.(event)
       if (event.defaultPrevented || !canSelfActivate) return
 
-      const isAltGraph =
-        event.getModifierState("AltGraph") ||
-        event.nativeEvent.getModifierState?.("AltGraph") ||
-        (event.ctrlKey &&
-          event.altKey &&
-          event.key.length === 1 &&
-          !/^[\x00-\x7F]$/.test(event.key))
-      if (
-        event.metaKey ||
-        (event.ctrlKey && !isAltGraph) ||
-        (event.altKey && !isAltGraph) ||
-        event.nativeEvent.isComposing
-      ) {
-        return
-      }
+      if (hasDataCellKeyboardModifier(event)) return
 
-      if (props.kind === "boolean" && event.key === " ") {
-        event.preventDefault()
-        event.stopPropagation()
-        commitBooleanDisplayValue()
-        return
-      }
-
-      if (!canActivateDataCellFromKey(props.kind, event.key)) return
-      event.preventDefault()
-      event.stopPropagation()
-      const intent: DataCellActivationIntent = {
-        type: "keyboard",
-        key: event.key,
-      }
-      storeDataCellActivationIntent(
-        activationIntentRef,
-        setActivationIntent,
-        intent
+      applyControlAction(
+        getDataCellKeyControlAction({ props, key: event.key }),
+        event,
+        false
       )
-      setActive(true)
     },
-    [
-      canSelfActivate,
-      commitBooleanDisplayValue,
-      onKeyDown,
-      props.kind,
-      setActive,
-    ]
+    [applyControlAction, canSelfActivate, onKeyDown, props]
   )
 
   if (isActive) {
@@ -289,10 +225,10 @@ export function DataCell({
         {...props}
         editable={editable}
         disabled={disabled}
-        activationIntent={
-          props.activationIntent ??
-          activationIntent ??
-          activationIntentRef.current
+        activationSource={
+          props.activationSource ??
+          activationSource ??
+          activationSourceRef.current
         }
         autoFocus={props.autoFocus ?? canSelfActivate}
         onCommit={onCommit as never}
@@ -315,46 +251,4 @@ export function DataCell({
       tabIndex={editable && !disabled ? (props.tabIndex ?? 0) : props.tabIndex}
     />
   )
-}
-
-export function DataCellControl(props: DataCellProps) {
-  if (props.kind === "boolean") {
-    return (
-      <DataCellBooleanControl {...(props as DataCellBooleanControlProps)} />
-    )
-  }
-  if (
-    props.kind === "date" ||
-    props.kind === "time" ||
-    props.kind === "date-time"
-  ) {
-    return <DataCellPickerControl {...(props as DataCellPickerControlProps)} />
-  }
-  if (props.kind === "number" || props.kind === "integer") {
-    return <DataCellNumberControl {...(props as DataCellNumberControlProps)} />
-  }
-  if (props.kind === "select") {
-    return <DataCellSelectControl {...(props as DataCellSelectControlProps)} />
-  }
-  return <DataCellTextControl {...(props as DataCellTextControlProps)} />
-}
-
-export function canActivateDataCellFromKey(
-  kind: DataCellKind,
-  key: string
-): boolean {
-  if (key === "Enter" || key === "F2") return true
-  if (kind === "boolean") return key === " "
-  if (
-    kind === "select" ||
-    kind === "date" ||
-    kind === "time" ||
-    kind === "date-time"
-  ) {
-    return key === " "
-  }
-  if (key.length !== 1) return false
-  if (kind === "integer") return /^[+-]$|^\d$/.test(key)
-  if (kind === "number") return dataCellNumberKeyPattern.test(key)
-  return kind === "text"
 }

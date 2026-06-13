@@ -144,8 +144,15 @@ async function selectOption(label: string, option: string) {
   fireEvent.focus(trigger)
   fireEvent.keyDown(trigger, { key: "ArrowDown" })
   const optionElement = await screen.findByText(option)
-  fireEvent.pointerDown(optionElement, { button: 0, ctrlKey: false })
-  fireEvent.click(optionElement)
+  const optionItem = optionElement.closest<HTMLElement>(
+    '[data-slot="select-item"]'
+  )
+  expect(optionItem).toBeTruthy()
+  fireEvent.pointerEnter(optionItem!, { pointerType: "mouse" })
+  fireEvent.mouseMove(optionItem!)
+  fireEvent.pointerDown(optionItem!, { button: 0, ctrlKey: false })
+  fireEvent.pointerUp(optionItem!, { button: 0, ctrlKey: false })
+  fireEvent.click(optionItem!)
 }
 
 function selectCalendarDay(day: number) {
@@ -410,8 +417,15 @@ describe("JsonForm scalar fields", () => {
 
     const nullOptions = await screen.findAllByText("No value")
     expect(nullOptions).toHaveLength(1)
-    fireEvent.pointerDown(nullOptions[0], { button: 0, ctrlKey: false })
-    fireEvent.click(nullOptions[0])
+    const nullOptionItem = nullOptions[0].closest<HTMLElement>(
+      '[data-slot="select-item"]'
+    )
+    expect(nullOptionItem).toBeTruthy()
+    fireEvent.pointerEnter(nullOptionItem!, { pointerType: "mouse" })
+    fireEvent.mouseMove(nullOptionItem!)
+    fireEvent.pointerDown(nullOptionItem!, { button: 0, ctrlKey: false })
+    fireEvent.pointerUp(nullOptionItem!, { button: 0, ctrlKey: false })
+    fireEvent.click(nullOptionItem!)
 
     await expect(submit()).resolves.toEqual({
       status: null,
@@ -1254,21 +1268,43 @@ describe("JsonForm arrays", () => {
     let trigger = screen.getByRole("combobox")
     fireEvent.focus(trigger)
     fireEvent.keyDown(trigger, { key: "ArrowDown" })
-    fireEvent.pointerDown(await screen.findByText("3"), {
+    const scoreOption = await screen.findByText("3")
+    const scoreOptionItem = scoreOption.closest<HTMLElement>(
+      '[data-slot="select-item"]'
+    )
+    expect(scoreOptionItem).toBeTruthy()
+    fireEvent.pointerEnter(scoreOptionItem!, { pointerType: "mouse" })
+    fireEvent.mouseMove(scoreOptionItem!)
+    fireEvent.pointerDown(scoreOptionItem!, {
       button: 0,
       ctrlKey: false,
     })
-    fireEvent.click(screen.getByText("3"))
+    fireEvent.pointerUp(scoreOptionItem!, {
+      button: 0,
+      ctrlKey: false,
+    })
+    fireEvent.click(scoreOptionItem!)
 
     fireEvent.click(screen.getByRole("button", { name: "Accepted true" }))
     trigger = screen.getByRole("combobox")
     fireEvent.focus(trigger)
     fireEvent.keyDown(trigger, { key: "ArrowDown" })
-    fireEvent.pointerDown(await screen.findByText("false"), {
+    const acceptedOption = await screen.findByText("false")
+    const acceptedOptionItem = acceptedOption.closest<HTMLElement>(
+      '[data-slot="select-item"]'
+    )
+    expect(acceptedOptionItem).toBeTruthy()
+    fireEvent.pointerEnter(acceptedOptionItem!, { pointerType: "mouse" })
+    fireEvent.mouseMove(acceptedOptionItem!)
+    fireEvent.pointerDown(acceptedOptionItem!, {
       button: 0,
       ctrlKey: false,
     })
-    fireEvent.click(screen.getByText("false"))
+    fireEvent.pointerUp(acceptedOptionItem!, {
+      button: 0,
+      ctrlKey: false,
+    })
+    fireEvent.click(acceptedOptionItem!)
 
     await expect(submit()).resolves.toEqual({
       rows: [{ score: 3, accepted: false }],

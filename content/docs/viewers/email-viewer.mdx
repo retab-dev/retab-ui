@@ -1,13 +1,12 @@
 ---
 title: Email Viewer
-description: Compose HTML email bodies, CID inline files, and independently previewable attachments with the shared File Viewer, File Thumbnail, and Sidebar primitives.
+description: Render recursive MIME messages with headers, CID inline resources, nested messages, and file leaves powered by File Viewer.
 ---
 
-The Email Viewer is a compound viewer over the existing preview primitives. It
-renders the message body as HTML when available, falls back to plain text, maps
-`cid:` references to inline attachment resources, and keeps non-inline
-attachments in the shared sidebar primitive where each file can be opened
-independently.
+The Email Viewer is a recursive MIME viewer built on the shared viewer stack.
+It treats email as a tree of MIME parts, renders selected leaf parts through
+`FileViewer`, rewrites `cid:` URLs from `multipart/related` resources, and shows
+message structure in an embedded sidebar.
 
 <EmailViewerDemo />
 
@@ -29,31 +28,54 @@ export function Example() {
         subject: "Contract packet ready for review",
         from: "Mina Patel <mina@example.com>",
         to: "Avery Lee <avery@example.com>",
-        htmlBody:
-          '<main><img src="cid:<logo@example.com>" alt="Logo" /><p>See attached.</p></main>',
-        textBody: "See attached.",
-        attachments: [
-          {
-            id: "logo",
-            contentId: "<logo@example.com>",
-            contentDisposition: "inline",
-            source: {
-              kind: "url",
-              url: "/brand/logo.png",
-              fileName: "logo.png",
-              mimeType: "image/png",
+        root: {
+          id: "root",
+          mimeType: "multipart/mixed",
+          children: [
+            {
+              id: "related",
+              mimeType: "multipart/related",
+              children: [
+                {
+                  id: "html",
+                  mimeType: "text/html",
+                  source: {
+                    kind: "text",
+                    text: '<main><img src="cid:<logo@example.com>" alt="Logo" /><p>See attached.</p></main>',
+                    fileName: "message.html",
+                    mimeType: "text/html",
+                    identityKey: "message:html",
+                  },
+                },
+                {
+                  id: "logo",
+                  mimeType: "image/png",
+                  contentId: "<logo@example.com>",
+                  disposition: "inline",
+                  fileName: "logo.png",
+                  source: {
+                    kind: "url",
+                    url: "/brand/logo.png",
+                    fileName: "logo.png",
+                    mimeType: "image/png",
+                  },
+                },
+              ],
             },
-          },
-          {
-            id: "contract",
-            source: {
-              kind: "url",
-              url: "/files/contract.pdf",
-              fileName: "contract.pdf",
+            {
+              id: "contract",
               mimeType: "application/pdf",
+              disposition: "attachment",
+              fileName: "contract.pdf",
+              source: {
+                kind: "url",
+                url: "/files/contract.pdf",
+                fileName: "contract.pdf",
+                mimeType: "application/pdf",
+              },
             },
-          },
-        ],
+          ],
+        },
       }}
     />
   )
@@ -62,20 +84,27 @@ export function Example() {
 
 ## Behavior
 
-- **HTML body first** — `htmlBody` routes through the sandboxed HTML File Viewer.
-- **Text fallback** — `textBody` renders when no HTML body is present.
-- **CID inline files** — inline attachments with `contentId` replace matching
-  `cid:` URLs in the HTML body, including bracketed values like
-  `cid:<logo@example.com>`.
-- **Attachment sidebar** — non-inline attachments stay out of the email body and
-  are rendered with the shared `Sidebar` menu primitives.
-- **Shared preview stack** — attachment thumbnails use `FileThumbnail`; selected
-  attachments open through `FileViewer`.
+- **Recursive MIME tree** — `multipart/*` parts group children, and
+  `message/rfc822` parts render as nested email viewers.
+- **Preferred body projection** — `multipart/alternative` prefers HTML, then
+  plain text, then the first previewable child.
+- **CID inline resources** — `multipart/related` siblings with `contentId`
+  replace matching `cid:` URLs before HTML routes through the sandboxed HTML
+  file viewer.
+- **Part sidebar** — the right sidebar shows the MIME tree, including body
+  candidates, inline resources, attachments, and nested messages.
+- **Part headers** — the message header is a document-attached top strip; the
+  selected part gets a second header directly above the leaf viewer.
+- **Shared preview stack** — renderable leaves use `FileViewer`; thumbnails use
+  `FileThumbnail`.
 
 ## Props
 
-| Prop           | Type                 | Description                                                            |
-| -------------- | -------------------- | ---------------------------------------------------------------------- |
-| `message`      | `EmailViewerMessage` | Email subject, participants, body fields, and attachment resources.    |
-| `bodyFileName` | `string`             | Base file name used for body download metadata. Defaults to `message`. |
-| `className`    | `string`             | Optional class on the outer email viewer shell.                        |
+| Prop                   | Type                 | Description                                      |
+| ---------------------- | -------------------- | ------------------------------------------------ |
+| `message`              | `EmailViewerMessage` | Message metadata and recursive MIME `root`.      |
+| `selectedPath`         | `MimePartPath`       | Controlled selected MIME part path.              |
+| `defaultSelectedPath`  | `MimePartPath`       | Initial selected MIME part path.                 |
+| `onSelectedPathChange` | `function`           | Called with the selected path and MIME node.     |
+| `className`            | `string`             | Optional class on the outer email viewer shell.  |
+| `bare`                 | `boolean`            | Removes the outer shell border/background style. |

@@ -5,7 +5,11 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 import { Skeleton } from "@/components/ui/skeleton"
 import { XlsxGridSkeleton } from "@/components/ui/xlsx-grid"
-import { XlsxToolbarSkeleton } from "@/components/ui/xlsx-toolbar"
+import { XLSX_SHEET_TABS_HEIGHT_PX } from "@/components/ui/xlsx-sheet-tabs"
+import {
+  XLSX_TOOLBAR_HEIGHT_PX,
+  XlsxToolbarSkeleton,
+} from "@/components/ui/xlsx-toolbar"
 
 import type { XlsxViewerSlots } from "./xlsx-viewer-types"
 
@@ -51,7 +55,12 @@ export function XlsxViewerBody({
       )}
       style={
         fallbackSheetTabs
-          ? { height: `calc(100% - ${toolbar ? 73 : 33}px)` }
+          ? {
+              height: `calc(100% - ${
+                XLSX_SHEET_TABS_HEIGHT_PX +
+                (toolbar ? XLSX_TOOLBAR_HEIGHT_PX : 0)
+              }px)`,
+            }
           : undefined
       }
     >
@@ -61,9 +70,7 @@ export function XlsxViewerBody({
         </div>
       ) : null}
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        {slots?.top ? (
-          <div data-slot="xlsx-viewer-top">{slots.top}</div>
-        ) : null}
+        {slots?.top ? <div data-slot="xlsx-viewer-top">{slots.top}</div> : null}
         {children}
         {slots?.bottom ? (
           <div data-slot="xlsx-viewer-bottom">{slots.bottom}</div>
@@ -87,11 +94,7 @@ export function XlsxViewerBody({
 }
 
 export function XlsxGridColumn({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      {children}
-    </div>
-  )
+  return <div className="flex min-h-0 min-w-0 flex-1 flex-col">{children}</div>
 }
 
 export function XlsxViewerFallback({
@@ -128,6 +131,7 @@ export function XlsxSheetTabsSkeleton() {
       aria-hidden
       className="flex flex-shrink-0 items-stretch gap-0.5 overflow-hidden border-t bg-card px-1.5 py-1"
       data-slot="xlsx-viewer-tabs-skeleton"
+      style={{ height: XLSX_SHEET_TABS_HEIGHT_PX }}
     >
       {[96, 144, 136, 128].map((width, index) => (
         <div

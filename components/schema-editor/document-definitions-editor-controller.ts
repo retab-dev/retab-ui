@@ -24,7 +24,7 @@ import type { SchemaDispatch } from "@/components/schema-editor/schema-builder-t
 interface DocumentDefinitionsEditorControllerOptions {
   dispatch: SchemaDispatch
   doc: SchemaDocument
-  editMode: SchemaEditorMode
+  mode: SchemaEditorMode
   definitionsEnabled: boolean
   accordionOpen: boolean
   setAccordionOpen: (open: boolean) => void
@@ -33,13 +33,13 @@ interface DocumentDefinitionsEditorControllerOptions {
 export function useDocumentDefinitionsEditorController({
   dispatch,
   doc,
-  editMode,
+  mode,
   definitionsEnabled,
   accordionOpen,
   setAccordionOpen,
 }: DocumentDefinitionsEditorControllerOptions) {
   const [newDefinitionName, setNewDefinitionName] = React.useState("")
-  const isEditable = editMode === "editable"
+  const editable = mode === "editable"
   const shouldShowClosedPrompt =
     doc.defs.length === 0 && (!accordionOpen || !definitionsEnabled)
   const accordionValue = accordionOpen ? "defs" : ""
@@ -127,7 +127,7 @@ export function useDocumentDefinitionsEditorController({
   return {
     accordionValue,
     definitionViews,
-    isEditable,
+    editable,
     newDefinitionName,
     setNewDefinitionName,
     shouldShowClosedPrompt,

@@ -8,8 +8,8 @@ import {
   canActivateStructuredFromShellKey,
   consumeShellActivationGuard,
   isJsonTableDataCellEventTarget,
-  keyboardActivationRequest,
-  shellActivationRequest,
+  keyboardActivationSource,
+  shellActivationSource,
   structuredKeyboardActivationIntent,
   structuredPointerActivationIntent,
 } from "@/components/json-table/json-table-primitive-activation"
@@ -57,7 +57,7 @@ export function useJsonTableShellHandlers({
   const {
     commitPrimitiveValue,
     primitiveEffectiveValue,
-    setActivationRequest,
+    setActivationSource,
     setPrimitiveActive,
   } = primitiveControl
 
@@ -108,7 +108,7 @@ export function useJsonTableShellHandlers({
         return
       }
 
-      setActivationRequest(shellActivationRequest())
+      setActivationSource(shellActivationSource(event.nativeEvent))
       armShellActivationGuard(shellActivationGuardRef)
       setPrimitiveActive(true)
       return
@@ -147,7 +147,7 @@ export function useJsonTableShellHandlers({
       return
     }
 
-    setActivationRequest(shellActivationRequest())
+    setActivationSource(shellActivationSource(event.nativeEvent))
     setPrimitiveActive(true)
   })
 
@@ -187,7 +187,7 @@ export function useJsonTableShellHandlers({
         return
       }
 
-      setActivationRequest(keyboardActivationRequest(event))
+      setActivationSource(keyboardActivationSource(event))
       setPrimitiveActive(true)
       return
     }

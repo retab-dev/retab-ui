@@ -4,15 +4,19 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
+import { createDataCellPointerActivationSource } from "@/registry/new-york-v4/ui/data-cell-activation"
 import { dataCellDisplayClass } from "@/registry/new-york-v4/ui/data-cell-classes"
 import {
   formatDataCellEditValue,
   getDataCellValueMeta,
   parseDataCellInputValue,
 } from "@/registry/new-york-v4/ui/data-cell-format"
-import { getDataCellTextSelectionOffset } from "@/registry/new-york-v4/ui/data-cell-text-hit-test"
+import {
+  getDataCellDisplayTextSelectionOffset,
+  getDataCellTextSelectionOffset,
+} from "@/registry/new-york-v4/ui/data-cell-text-hit-test"
 import type {
-  DataCellActivationIntent,
+  DataCellActivationSource,
   DataCellCommitHandler,
   DataCellKind,
   DataCellProps,
@@ -27,13 +31,47 @@ export type DataCellInputControlProps =
   | DataCellTextControlProps
   | DataCellNumberControlProps
 
+export function getDataCellTextPointerActivationSource({
+  clientX,
+  clientY,
+  detail,
+  displayElement,
+  event,
+  value,
+}: {
+  clientX: number
+  clientY: number
+  detail: number
+  displayElement: HTMLElement | null
+  event?: Event
+  value: DataCellTextControlProps["value"]
+}): Extract<DataCellActivationSource, { kind: "pointer" }> {
+  const activationSource = createDataCellPointerActivationSource({
+    clientX,
+    clientY,
+    detail,
+    event,
+  })
+  const textElement = displayElement?.querySelector<HTMLElement>(
+    '[data-slot="data-cell-value"]'
+  )
+  if (!textElement) return activationSource
+  activationSource.selectionOffset = getDataCellDisplayTextSelectionOffset({
+    clientX,
+    clientY,
+    textElement,
+    value: value === null || value === undefined ? "" : String(value),
+  })
+  return activationSource
+}
+
 export function DataCellTextControl(props: DataCellTextControlProps) {
   return <DataCellInputControl {...props} />
 }
 
 function focusDataCellTextInput(
   input: HTMLInputElement | null,
-  intent: DataCellActivationIntent | undefined
+  activationSource: DataCellActivationSource | undefined
 ) {
   if (!input) return null
   input.focus({ preventScroll: true })
@@ -41,10 +79,10 @@ function focusDataCellTextInput(
   if (input.type !== "text" && input.type !== "search") return
 
   const selectionIndex =
-    intent?.type === "pointer"
-      ? (intent.selectionOffset ??
+    activationSource?.kind === "pointer"
+      ? (activationSource.selectionOffset ??
         getDataCellTextSelectionOffset({
-          clientX: intent.clientX,
+          clientX: activationSource.clientX,
           input,
           value: input.value,
         }))
@@ -53,26 +91,26 @@ function focusDataCellTextInput(
 }
 
 function initialInputValueForActivation({
-  activationIntent,
+  activationSource,
   kind,
   value,
 }: {
-  activationIntent: DataCellActivationIntent | undefined
+  activationSource: DataCellActivationSource | undefined
   kind: DataCellKind
   value: DataCellProps["value"]
 }) {
   if (
-    activationIntent?.type !== "keyboard" ||
-    activationIntent.key.length !== 1
+    activationSource?.kind !== "keyboard" ||
+    activationSource.key.length !== 1
   ) {
     return formatDataCellEditValue(kind, value)
   }
-  if (kind === "text") return activationIntent.key
+  if (kind === "text") return activationSource.key
   if (
     (kind === "number" || kind === "integer") &&
-    /^[0-9.+-]$/.test(activationIntent.key)
+    /^[0-9.+-]$/.test(activationSource.key)
   ) {
-    return activationIntent.key
+    return activationSource.key
   }
   return formatDataCellEditValue(kind, value)
 }
@@ -92,7 +130,7 @@ export function DataCellInputControl({
   formatValue: _formatValue,
   draftValue,
   autoFocus,
-  activationIntent,
+  activationSource,
   isPickerOpen: _isPickerOpen,
   onDraftValueChange,
   onCommit,
@@ -109,7 +147,7 @@ export function DataCellInputControl({
   ...props
 }: DataCellInputControlProps) {
   const initialInputValue = initialInputValueForActivation({
-    activationIntent,
+    activationSource,
     kind,
     value,
   })
@@ -125,21 +163,21 @@ export function DataCellInputControl({
     if (draftValue !== undefined) return
     setUncontrolledDraftValue(
       initialInputValueForActivation({
-        activationIntent,
+        activationSource,
         kind,
         value,
       })
     )
-  }, [activationIntent, draftValue, kind, value])
+  }, [activationSource, draftValue, kind, value])
 
   React.useEffect(() => {
     lastInputValueRef.current = inputValue
   }, [inputValue])
 
   React.useLayoutEffect(() => {
-    if (!autoFocus && !activationIntent) return
-    focusDataCellTextInput(inputRef.current, activationIntent)
-  }, [activationIntent, autoFocus])
+    if (!autoFocus && !activationSource) return
+    focusDataCellTextInput(inputRef.current, activationSource)
+  }, [activationSource, autoFocus])
 
   const commitCurrentInputValue = React.useCallback(
     (

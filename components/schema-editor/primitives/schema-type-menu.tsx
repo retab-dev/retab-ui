@@ -44,13 +44,13 @@ export type SchemaTypeMenuSection =
       icon?: React.ReactNode
       items: SchemaTypeMenuItem[]
     }
-  | {
-      id: string
-      kind: "custom"
-      render: (context: { editable: boolean }) => React.ReactNode
-    }
+
+export type SchemaTypeMenuAccessory = (context: {
+  editable: boolean
+}) => React.ReactNode
 
 interface SchemaTypeMenuProps {
+  accessory?: SchemaTypeMenuAccessory
   ariaLabel?: string
   editable: boolean
   sections: SchemaTypeMenuSection[]
@@ -59,6 +59,7 @@ interface SchemaTypeMenuProps {
 }
 
 export function SchemaTypeMenu({
+  accessory,
   ariaLabel,
   editable,
   sections,
@@ -117,14 +118,6 @@ export function SchemaTypeMenu({
       </DropdownMenuTrigger>
       <DropdownMenuContent className={variant === "form" ? "w-full" : ""}>
         {sections.map((section) => {
-          if (section.kind === "custom") {
-            return (
-              <React.Fragment key={section.id}>
-                {section.render({ editable })}
-              </React.Fragment>
-            )
-          }
-
           if (section.kind === "submenu") {
             return (
               <DropdownMenuSub key={section.id}>
@@ -157,6 +150,7 @@ export function SchemaTypeMenu({
             />
           ))
         })}
+        {accessory?.({ editable })}
       </DropdownMenuContent>
     </DropdownMenu>
   )

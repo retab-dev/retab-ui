@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import * as React from "react"
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -27,6 +28,7 @@ import {
   renameObjectProperty,
   replaceObjectProperty,
 } from "@/components/schema-editor/property-form/model/object-property-edits"
+import { useObjectPropertiesModel } from "@/components/schema-editor/property-form/fields/object-properties-model"
 import { PropertyForm } from "@/components/schema-editor/property-form/property-form"
 import type {
   PropertyCapabilities,
@@ -92,8 +94,9 @@ async function selectDataType(label: string, triggerIndex = 0) {
 }
 
 function openInlineFieldName(name: string) {
-  fireEvent.click(screen.getByText(name))
-  return screen.getByLabelText(`Field name ${name}`)
+  const input = screen.getByLabelText(`Field name ${name}`)
+  fireEvent.focus(input)
+  return input
 }
 
 function renameInlineField(name: string, nextName: string) {
@@ -179,6 +182,134 @@ describe("property form models", () => {
     ).toBe(true)
     expect(Object.keys(renamed.properties || {})).toEqual(["__proto__"])
     expect(renamed.required).toEqual(["__proto__"])
+  })
+
+  it("preserves object property row ids and reset keys across local row edits", () => {
+    let schemaNode: ExtendedJSONSchema7 = {
+      type: "object",
+      properties: {
+        street: { type: "string" },
+        city: { type: "string" },
+      },
+      required: ["street", "city"],
+    }
+    const onChange = vi.fn((nextSchemaNode: ExtendedJSONSchema7) => {
+      schemaNode = nextSchemaNode
+    })
+    let model: ReturnType<typeof useObjectPropertiesModel> | undefined
+    const captureModel = (
+      nextModel: ReturnType<typeof useObjectPropertiesModel>
+    ) => {
+      model = nextModel
+    }
+
+    function Harness({ node }: { node: ExtendedJSONSchema7 }) {
+      const nextModel = useObjectPropertiesModel({
+        schemaNode: node,
+        schemaContext: {
+          siblingNames: [],
+          originalName: "address",
+          fieldPath: "address",
+          schemaDefinitions: {},
+        },
+        onChange,
+      })
+      React.useEffect(() => {
+        captureModel(nextModel)
+      }, [nextModel])
+      return null
+    }
+
+    const view = render(<Harness node={schemaNode} />)
+
+    expect(model?.rows.map((row) => [row.name, row.id])).toEqual([
+      ["street", "draft-property-0"],
+      ["city", "draft-property-1"],
+    ])
+
+    act(() => {
+      model?.rows[0]?.actions.rename("road")
+    })
+    view.rerender(<Harness node={schemaNode} />)
+
+    expect(model?.rows.map((row) => [row.name, row.id])).toEqual([
+      ["road", "draft-property-0"],
+      ["city", "draft-property-1"],
+    ])
+    expect(model?.rows[0]?.schemaContext.resetKey).toBe(
+      "address.draft-property-0"
+    )
+
+    act(() => {
+      model?.addRow.onChange("zip")
+    })
+    act(() => {
+      model?.addRow.onSubmit()
+    })
+    view.rerender(<Harness node={schemaNode} />)
+
+    expect(model?.rows.map((row) => [row.name, row.id])).toEqual([
+      ["road", "draft-property-0"],
+      ["city", "draft-property-1"],
+      ["zip", "draft-property-2"],
+    ])
+    expect(model?.addRow.value).toBe("")
+  })
+
+  it("clears pending object property input after external schema resets", () => {
+    let model: ReturnType<typeof useObjectPropertiesModel> | undefined
+    const captureModel = (
+      nextModel: ReturnType<typeof useObjectPropertiesModel>
+    ) => {
+      model = nextModel
+    }
+
+    function Harness({ node }: { node: ExtendedJSONSchema7 }) {
+      const nextModel = useObjectPropertiesModel({
+        schemaNode: node,
+        schemaContext: {
+          siblingNames: [],
+          originalName: "address",
+          fieldPath: "address",
+          schemaDefinitions: {},
+        },
+        onChange: () => {},
+      })
+      React.useEffect(() => {
+        captureModel(nextModel)
+      }, [nextModel])
+      return null
+    }
+
+    const view = render(
+      <Harness
+        node={{
+          type: "object",
+          properties: {
+            street: { type: "string" },
+          },
+        }}
+      />
+    )
+
+    act(() => {
+      model?.addRow.onChange("zip")
+    })
+    expect(model?.addRow.value).toBe("zip")
+
+    view.rerender(
+      <Harness
+        node={{
+          type: "object",
+          properties: {
+            street: { type: "string" },
+            country: { type: "string" },
+          },
+        }}
+      />
+    )
+
+    expect(model?.addRow.value).toBe("")
   })
 })
 
@@ -637,7 +768,7 @@ describe("PropertyForm", () => {
       />
     )
 
-    expect(screen.getByText("status")).toBeTruthy()
+    expect(screen.getByDisplayValue("status")).toBeTruthy()
     expect(screen.queryByPlaceholderText("Add new value")).toBeNull()
     expect(screen.queryByDisplayValue("draft")).toBeNull()
   })
@@ -1430,7 +1561,7 @@ describe("PropertyForm", () => {
     fireEvent.keyDown(newFieldInput, { key: "Enter" })
 
     expect(onCommitPropertyDraft).not.toHaveBeenCalled()
-    expect(screen.getByText("country")).toBeTruthy()
+    expect(screen.getByDisplayValue("country")).toBeTruthy()
   })
 
   it("does not submit the form when Enter is pressed in an existing object field name", async () => {
@@ -2341,7 +2472,7 @@ describe("PropertyForm", () => {
       "value",
       ""
     )
-    expect(screen.getByText("line1")).toBeTruthy()
+    expect(screen.getByDisplayValue("line1")).toBeTruthy()
   })
 
   it("resets pending enum option input when switching between enum drafts", () => {

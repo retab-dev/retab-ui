@@ -26,7 +26,7 @@ interface DocumentNodeHeaderProps
   > {
   doc: SchemaDocument
   nodeView: DocumentNodeView
-  editMode: SchemaEditorMode
+  mode: SchemaEditorMode
   features: NonNullable<DocumentSchemaNodeEditorProps["features"]>
   onChange: (newNode: ExtendedJSONSchema7) => void
 }
@@ -42,13 +42,13 @@ export function DocumentNodeHeader({
   onDelete,
   onNameChange,
   setDefsAccordionOpen,
-  editMode,
+  mode,
   hidePencilButton = false,
   siblingNames = [],
   features,
   onChange,
 }: DocumentNodeHeaderProps) {
-  const isEditable = editMode === "editable"
+  const editable = mode === "editable"
   const controller = useDocumentNodeHeaderController({
     dispatch,
     doc,
@@ -62,10 +62,10 @@ export function DocumentNodeHeader({
       {path !== "#" && (
         <SchemaFieldRow
           id={`schema-field-${path.replace(/^#\.?/, "").split(".").join("-")}`}
-          grip={isEditable ? "drag" : "empty"}
+          grip={editable ? "drag" : "empty"}
           name={
             <DocumentNodeNameControl
-              isEditable={isEditable}
+              editable={editable}
               name={name}
               siblingNames={siblingNames}
               canRename={Boolean(onNameChange)}
@@ -78,7 +78,7 @@ export function DocumentNodeHeader({
           description={
             <DocumentNodeDescriptionControl
               description={controller.description}
-              editMode={editMode}
+              mode={mode}
               onOpenMetadata={() => controller.setMetadataDialogOpen(true)}
               onSubmitDescription={controller.submitDescription}
             />
@@ -86,9 +86,9 @@ export function DocumentNodeHeader({
           actions={
             <DocumentNodeActions
               canDelete={canDelete}
-              editMode={editMode}
+              editable={editable}
+              mode={mode}
               hidePencilButton={hidePencilButton}
-              isEditable={isEditable}
               onDelete={onDelete}
               onOpenMetadata={() => controller.setMetadataDialogOpen(true)}
             />
@@ -96,8 +96,8 @@ export function DocumentNodeHeader({
           type={
             <DocumentNodeTypeMenu
               defs={controller.defs}
+              editable={editable}
               features={features}
-              isEditable={isEditable}
               localType={controller.localType}
               refName={controller.refName}
               onCreateDefinition={controller.showDefinitionsSection}
@@ -116,7 +116,7 @@ export function DocumentNodeHeader({
           onChange={onChange}
           onNameChange={onNameChange || (() => {})}
           onDelete={
-            isEditable && canDelete
+            editable && canDelete
               ? () => {
                   if (onDelete) {
                     onDelete()
@@ -127,7 +127,7 @@ export function DocumentNodeHeader({
           }
           node={controller.schemaNode}
           name={name}
-          editMode={editMode}
+          mode={mode}
           siblingNames={siblingNames}
           formContext={{
             schemaDefinitions: controller.defs || {},

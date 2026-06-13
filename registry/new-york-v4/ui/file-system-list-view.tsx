@@ -1,320 +1,294 @@
 "use client"
 
 import * as React from "react"
-import { useVirtualizer } from "@tanstack/react-virtual"
-import { ChevronDown, ChevronRight, File, Folder } from "lucide-react"
+import {
+  FileTree as PierreFileTreeModel,
+  type FileTreeDirectoryHandle,
+  type FileTreeItemHandle,
+  type FileTreeRowDecoration,
+} from "@pierre/trees"
+import { FileTree as PierreFileTree } from "@pierre/trees/react"
 
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
 
 import type { FileSystemController } from "./file-system-controller"
-import { folderHasChildren } from "./file-system-index"
 import {
-  fileSystemBoundaryEntry,
-  fileSystemEntryAtOffset,
-  fileSystemTypeAheadMatch,
-} from "./file-system-navigation"
-import { FileSystemThumbnail } from "./file-system-preview"
-import {
-  entryKindLabel,
-  flattenFileSystemRows,
-  getFileSystemCategoryLabel,
-} from "./file-system-query"
+  buildFileSystemPierreListInput,
+  fileSystemPathToPierrePath,
+  fileSystemPierrePathToEntry,
+} from "./file-system-pierre-list-adapter"
+import { entryKindLabel, fileSystemFilterIsEmpty } from "./file-system-query"
 import type {
   FileSystemEntry,
+  FileSystemFileEntry,
   FileSystemSortKey,
-  FileSystemTreeRow,
 } from "./file-system-types"
-import { formatFileSystemDate, formatFileSystemSize } from "./file-system-utils"
+import { formatFileSystemSize } from "./file-system-utils"
 
 const ROW_HEIGHT = 36
+const useIsomorphicLayoutEffect =
+  typeof window === "undefined" ? React.useEffect : React.useLayoutEffect
 
 export function FileSystemListView({
   controller,
   onOpenFile,
 }: {
   controller: FileSystemController
-  onOpenFile: (file: Extract<FileSystemEntry, { kind: "file" }>) => void
+  onOpenFile: (file: FileSystemFileEntry) => void
 }) {
-  const viewportRef = React.useRef<HTMLDivElement | null>(null)
-  const rowRefs = React.useRef(new Map<string, HTMLButtonElement>())
-  const rows = React.useMemo(
-    () =>
-      flattenFileSystemRows({
-        currentPath: controller.currentPath,
-        expandedPaths: controller.expandedPaths,
-        index: controller.index,
-      }),
-    [controller.currentPath, controller.expandedPaths, controller.index]
+  const { currentPath, index } = controller
+  const { paths, pathEntries } = React.useMemo(
+    () => buildFileSystemPierreListInput(index, currentPath),
+    [currentPath, index]
   )
-  const virtualizer = useVirtualizer({
-    count: rows.length,
-    estimateSize: () => ROW_HEIGHT,
-    getScrollElement: () => viewportRef.current,
-    overscan: 12,
-  })
-  const virtualRows = virtualizer.getVirtualItems()
-  const renderedRows = virtualRows.length
-    ? virtualRows.map((virtualRow) => ({
-        row: rows[virtualRow.index],
-        start: virtualRow.start,
-      }))
-    : rows.map((row, index) => ({ row, start: index * ROW_HEIGHT }))
-  const totalSize = virtualRows.length
-    ? virtualizer.getTotalSize()
-    : rows.length * ROW_HEIGHT
+  const expansionByCurrentPathRef = React.useRef(
+    new Map<string, FileSystemPierreExpansionSnapshot>()
+  )
 
-  const focusRow = React.useCallback((entry: FileSystemEntry) => {
-    requestAnimationFrame(() => rowRefs.current.get(entry.path)?.focus())
-  }, [])
-  const rowEntries = React.useMemo(() => rows.map((row) => row.entry), [rows])
-
-  const selectByOffset = (offset: number) => {
-    const nextEntry = fileSystemEntryAtOffset(
-      rowEntries,
-      controller.selectedPath,
-      offset
+  const hasQuery =
+    controller.query.search.length > 0 ||
+    !fileSystemFilterIsEmpty(controller.query.filters)
+  const selectedPath = controller.selectedPath
+    ? fileSystemPathToPierrePath(controller.selectedPath, currentPath)
+    : null
+  const selectedPaths = React.useMemo(
+    () => (selectedPath && pathEntries.has(selectedPath) ? [selectedPath] : []),
+    [pathEntries, selectedPath]
+  )
+  const getState = useLatestFileSystemListState(
+    React.useMemo(
+      () => ({ controller, pathEntries }),
+      [controller, pathEntries]
     )
+  )
+  // Pierre exposes no decoration-only invalidation, so loading/error rows revise the model.
+  const modelDecorationRevision = React.useMemo(
+    () =>
+      [
+        [...controller.loadingFolders].sort().join("|"),
+        [...controller.folderErrors].sort(([left], [right]) =>
+          left.localeCompare(right)
+        ),
+      ].join("::"),
+    [controller.folderErrors, controller.loadingFolders]
+  )
+  const pierreModelInput = React.useMemo(
+    () => ({ hasQuery, modelDecorationRevision, paths }),
+    [hasQuery, modelDecorationRevision, paths]
+  )
 
-    if (!nextEntry) return
-    controller.selectEntry(nextEntry)
-    focusRow(nextEntry)
-  }
+  const model = React.useMemo(
+    () =>
+      new PierreFileTreeModel({
+        flattenEmptyDirectories: false,
+        icons: "complete",
+        initialExpansion: pierreModelInput.hasQuery ? "open" : "closed",
+        itemHeight: ROW_HEIGHT,
+        onSelectionChange: (nextSelectedPaths) => {
+          const path = nextSelectedPaths.at(-1) ?? null
+          const state = getState()
+          const entry = fileSystemPierrePathToEntry(path, state.pathEntries)
 
-  const handleKeyDown = (event: React.KeyboardEvent) => {
-    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-      selectByOffset(event.key === "ArrowDown" ? 1 : -1)
-      event.preventDefault()
-      return
-    }
-    if (event.key === "Home") {
-      const entry = fileSystemBoundaryEntry(rowEntries, "first")
-      if (entry) {
-        controller.selectEntry(entry)
-        focusRow(entry)
-        event.preventDefault()
-      }
-      return
-    }
-    if (event.key === "End") {
-      const entry = fileSystemBoundaryEntry(rowEntries, "last")
-      if (entry) {
-        controller.selectEntry(entry)
-        focusRow(entry)
-        event.preventDefault()
-      }
-      return
-    }
-    if (event.key === "Enter" && controller.selectedEntry) {
-      openEntry(controller.selectedEntry)
-      event.preventDefault()
-      return
-    }
-    if (
-      event.key === "ArrowRight" &&
-      controller.selectedEntry?.kind === "folder"
-    ) {
-      const folder = controller.selectedEntry
-      if (!controller.expandedPaths.has(folder.path)) {
-        controller.toggleExpanded(folder.path)
-        void controller.ensureChildren(folder.path)
-        event.preventDefault()
-      }
-      return
-    }
-    if (
-      event.key === "ArrowLeft" &&
-      controller.selectedEntry?.kind === "folder"
-    ) {
-      const folder = controller.selectedEntry
-      if (controller.expandedPaths.has(folder.path)) {
-        controller.toggleExpanded(folder.path)
-        event.preventDefault()
-      }
-      return
-    }
+          state.controller.selectEntry(entry)
+          if (entry?.kind === "folder") {
+            void state.controller.ensureChildren(entry.path)
+          }
+        },
+        overscan: 12,
+        paths: pierreModelInput.paths,
+        renderRowDecoration: ({ item }) => {
+          const state = getState()
+          const entry = fileSystemPierrePathToEntry(
+            item.path,
+            state.pathEntries
+          )
 
-    const match = fileSystemTypeAheadMatch(
-      event,
-      rowEntries,
-      controller.selectedPath
-    )
-    if (match) {
-      controller.selectEntry(match)
-      focusRow(match)
-    }
-  }
+          return entry ? fileSystemRowDecoration(entry, state.controller) : null
+        },
+        search: false,
+        stickyFolders: false,
+        unsafeCSS: FILE_TREE_CSS,
+      }),
+    [getState, pierreModelInput]
+  )
 
-  const openEntry = (entry: FileSystemEntry) => {
+  useIsomorphicLayoutEffect(() => {
+    if (hasQuery) return
+
+    const snapshot = expansionByCurrentPathRef.current.get(currentPath)
+
+    if (snapshot && !snapshot.wasQueryActive) {
+      restoreOpenPierrePaths(model, snapshot.openPaths)
+    }
+  }, [currentPath, hasQuery, model])
+  React.useEffect(
+    () => () => {
+      const openPaths = collectOpenPierrePaths(model, paths)
+      const previousSnapshot =
+        expansionByCurrentPathRef.current.get(currentPath)
+
+      if (!hasQuery || !previousSnapshot || previousSnapshot.wasQueryActive) {
+        expansionByCurrentPathRef.current.set(currentPath, {
+          openPaths,
+          wasQueryActive: hasQuery,
+        })
+      }
+      model.cleanUp()
+    },
+    [currentPath, hasQuery, model, paths]
+  )
+  React.useEffect(() => {
+    const selectedPathSet = new Set(selectedPaths)
+
+    for (const path of model.getSelectedPaths()) {
+      if (!selectedPathSet.has(path)) model.getItem(path)?.deselect()
+    }
+    for (const path of selectedPaths) {
+      if (!model.getSelectedPaths().includes(path)) {
+        model.getItem(path)?.select()
+      }
+    }
+  }, [model, selectedPaths])
+
+  const openPierrePath = React.useCallback((path: string | null) => {
+    if (!path) return
+    const entry = fileSystemPierrePathToEntry(path, pathEntries)
+
+    if (!entry) return
     if (entry.kind === "folder") {
+      if (controller.folderErrors.has(entry.path)) {
+        void controller.ensureChildren(entry.path, { retry: true })
+      }
       controller.navigateTo(entry.path)
-    } else {
-      onOpenFile(entry)
+      return
     }
-  }
 
-  if (!rows.length) {
+    onOpenFile(entry)
+  }, [controller, onOpenFile, pathEntries])
+
+  const handleDoubleClick = React.useCallback(
+    (event: React.MouseEvent<HTMLElement>) => {
+      openPierrePath(pierrePathFromEvent(event))
+    },
+    [openPierrePath]
+  )
+
+  const handleKeyDown = React.useCallback(
+    (event: React.KeyboardEvent<HTMLElement>) => {
+      if (event.key !== "Enter") return
+
+      openPierrePath(
+        model.getFocusedPath() ?? model.getSelectedPaths().at(-1) ?? null
+      )
+      event.preventDefault()
+    },
+    [model, openPierrePath]
+  )
+
+  if (!paths.length) {
     return <FileSystemEmptyRows label="This folder is empty" />
   }
 
   return (
     <div className="flex size-full flex-col">
-      <div className="grid h-9 shrink-0 grid-cols-[minmax(16rem,1fr)_9rem_7rem_9rem] items-center border-b bg-muted/30 px-3 text-xs font-medium text-muted-foreground">
+      <div className="grid h-9 shrink-0 grid-cols-[minmax(16rem,1fr)_9rem] items-center border-b bg-muted/30 px-3 text-xs font-medium text-muted-foreground">
         <SortHeader controller={controller} label="Name" sortKey="name" />
         <SortHeader controller={controller} label="Type" sortKey="kind" />
-        <SortHeader controller={controller} label="Size" sortKey="size" />
-        <SortHeader
-          controller={controller}
-          label="Modified"
-          sortKey="updatedAt"
+      </div>
+      <div className="min-h-0 flex-1">
+        <PierreFileTree
+          aria-label="Files"
+          className="block size-full"
+          data-slot="file-system-pierre-tree"
+          model={model}
+          onDoubleClick={handleDoubleClick}
+          onKeyDown={handleKeyDown}
         />
       </div>
-      <ScrollArea
-        orientation="vertical"
-        viewportRef={viewportRef}
-        viewportProps={{
-          onKeyDown: handleKeyDown,
-          role: "tree",
-          tabIndex: 0,
-          "aria-label": "Files",
-        }}
-      >
-        <div className="relative min-w-[41rem]" style={{ height: totalSize }}>
-          {renderedRows.map(({ row, start }) => (
-            <FileSystemListRow
-              key={row.entry.path}
-              controller={controller}
-              onOpen={openEntry}
-              ref={(element) => {
-                if (element) {
-                  rowRefs.current.set(row.entry.path, element)
-                } else {
-                  rowRefs.current.delete(row.entry.path)
-                }
-              }}
-              row={row}
-              style={{ transform: `translateY(${start}px)` }}
-            />
-          ))}
-        </div>
-      </ScrollArea>
     </div>
   )
 }
 
-const FileSystemListRow = React.forwardRef<
-  HTMLButtonElement,
-  {
-    controller: FileSystemController
-    onOpen: (entry: FileSystemEntry) => void
-    row: FileSystemTreeRow
-    style: React.CSSProperties
-  }
->(function FileSystemListRow({ controller, onOpen, row, style }, ref) {
-  const { entry } = row
-  const isSelected = entry.path === controller.selectedPath
-  const canExpand =
-    entry.kind === "folder" && folderHasChildren(controller.rawIndex, entry)
-  const isExpanded =
-    entry.kind === "folder" && controller.expandedPaths.has(entry.path)
-  const folderError =
-    entry.kind === "folder" ? controller.folderErrors.get(entry.path) : null
-  const isLoading =
-    entry.kind === "folder" && controller.loadingFolders.has(entry.path)
+type FileSystemListState = {
+  controller: FileSystemController
+  pathEntries: Map<string, FileSystemEntry>
+}
 
-  return (
-    <button
-      ref={ref}
-      type="button"
-      role="treeitem"
-      aria-selected={isSelected}
-      aria-level={row.depth + 1}
-      aria-expanded={canExpand ? isExpanded : undefined}
-      tabIndex={isSelected ? 0 : -1}
-      onClick={() => {
-        controller.selectEntry(entry)
-        if (entry.kind === "folder") void controller.ensureChildren(entry.path)
-      }}
-      onDoubleClick={() => onOpen(entry)}
-      className={cn(
-        "absolute inset-x-0 grid h-9 grid-cols-[minmax(16rem,1fr)_9rem_7rem_9rem] items-center px-3 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        isSelected ? "bg-primary text-primary-foreground" : "hover:bg-accent/60"
-      )}
-      style={style}
-    >
-      <span className="flex min-w-0 items-center gap-2">
-        <span style={{ width: row.depth * 18 }} />
-        {canExpand ? (
-          <span
-            className="flex size-5 shrink-0 items-center justify-center"
-            onClick={(event) => {
-              event.stopPropagation()
-              controller.toggleExpanded(entry.path)
-              void controller.ensureChildren(entry.path)
-            }}
-          >
-            {isExpanded ? (
-              <ChevronDown className="size-3.5" aria-hidden />
-            ) : (
-              <ChevronRight className="size-3.5" aria-hidden />
-            )}
-          </span>
-        ) : (
-          <span className="size-5 shrink-0" />
-        )}
-        {entry.kind === "folder" ? (
-          <Folder className="size-4 shrink-0 text-sky-500" aria-hidden />
-        ) : (
-          <FileSystemThumbnail
-            file={entry}
-            resolveFileSource={controller.resolveFileSource}
-            className="w-5 shrink-0"
-          />
-        )}
-        <span className="min-w-0 truncate">{entry.name}</span>
-        {isLoading ? (
-          <span className="text-xs text-muted-foreground">Loading</span>
-        ) : null}
-        {folderError ? (
-          <span
-            className="text-xs text-destructive underline-offset-2 hover:underline"
-            onClick={(event) => {
-              event.stopPropagation()
-              void controller.ensureChildren(entry.path, { retry: true })
-            }}
-          >
-            {folderError}
-          </span>
-        ) : null}
-      </span>
-      <span
-        className={cn(
-          "truncate text-xs",
-          isSelected ? "text-primary-foreground/80" : "text-muted-foreground"
-        )}
-      >
-        {entryKindLabel(entry)}
-      </span>
-      <span
-        className={cn(
-          "truncate text-xs",
-          isSelected ? "text-primary-foreground/80" : "text-muted-foreground"
-        )}
-      >
-        {entry.kind === "file" ? formatFileSystemSize(entry.size) : ""}
-      </span>
-      <span
-        className={cn(
-          "truncate text-xs",
-          isSelected ? "text-primary-foreground/80" : "text-muted-foreground"
-        )}
-      >
-        {formatFileSystemDate(entry.updatedAt ?? entry.createdAt)}
-      </span>
-    </button>
-  )
-})
+type FileSystemPierreExpansionSnapshot = {
+  openPaths: string[]
+  wasQueryActive: boolean
+}
+
+function useLatestFileSystemListState(state: FileSystemListState) {
+  const stateRef = React.useRef(state)
+
+  useIsomorphicLayoutEffect(() => {
+    stateRef.current = state
+  }, [state])
+
+  return React.useCallback(() => stateRef.current, [])
+}
+
+function pierrePathFromEvent(event: React.SyntheticEvent<HTMLElement>) {
+  for (const target of event.nativeEvent.composedPath()) {
+    if (
+      target instanceof HTMLElement &&
+      target.dataset.type === "item" &&
+      target.dataset.itemPath
+    ) {
+      return target.dataset.itemPath
+    }
+  }
+
+  return null
+}
+
+function collectOpenPierrePaths(
+  model: PierreFileTreeModel,
+  paths: readonly string[]
+) {
+  return paths.filter((path) => {
+    const item = model.getItem(path)
+
+    return isPierreDirectoryItem(item) && item.isExpanded()
+  })
+}
+
+function restoreOpenPierrePaths(
+  model: PierreFileTreeModel,
+  openPaths: readonly string[]
+) {
+  for (const path of openPaths) {
+    const item = model.getItem(path)
+
+    if (isPierreDirectoryItem(item) && !item.isExpanded()) item.expand()
+  }
+}
+
+function isPierreDirectoryItem(
+  item: FileTreeItemHandle | null
+): item is FileTreeDirectoryHandle {
+  return item?.isDirectory() === true
+}
+
+function fileSystemRowDecoration(
+  entry: FileSystemEntry,
+  controller: FileSystemController
+): FileTreeRowDecoration {
+  if (entry.kind === "folder") {
+    const loading = controller.loadingFolders.has(entry.path)
+    const error = controller.folderErrors.get(entry.path)
+
+    if (loading) return { text: "Loading" }
+    if (error) return { text: error, title: error }
+    return { text: "Folder" }
+  }
+
+  const size = formatFileSystemSize(entry.size)
+  const type = entryKindLabel(entry)
+
+  return { text: size ? `${type} · ${size}` : type }
+}
 
 function SortHeader({
   controller,
@@ -353,3 +327,23 @@ export function FileSystemEmptyRows({ label }: { label: string }) {
     </div>
   )
 }
+
+const FILE_TREE_CSS = `
+  :host {
+    --trees-bg-override: transparent;
+    --trees-fg-override: var(--foreground);
+    --trees-fg-muted-override: var(--muted-foreground);
+    --trees-bg-muted-override: var(--accent);
+    --trees-border-color-override: transparent;
+    --trees-focus-ring-color-override: var(--ring);
+    --trees-selected-bg-override: var(--primary);
+    --trees-selected-fg-override: var(--primary-foreground);
+    --trees-font-family-override: inherit;
+    --trees-font-size-override: 0.875rem;
+    --trees-item-height: ${ROW_HEIGHT}px;
+    --trees-item-padding-x-override: 0.75rem;
+    --trees-item-margin-x-override: 0;
+    --trees-padding-inline-override: 0;
+    --trees-border-radius-override: 0;
+  }
+`

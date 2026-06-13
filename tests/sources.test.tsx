@@ -863,24 +863,18 @@ describe("source adapters", () => {
   it("bridges PDF sources to the viewer imperative target", () => {
     const scrollToPageArea = vi.fn()
     const { rerender } = render(
-      <PdfSourceTargetHarness
-        source={pdfSource}
-        onScroll={scrollToPageArea}
-      />
+      <PdfSourceTargetHarness source={pdfSource} onScroll={scrollToPageArea} />
     )
 
     fireEvent.click(screen.getByRole("button", { name: "scroll pdf source" }))
     expect(scrollToPageArea).toHaveBeenCalledWith(
-      { pageNumber: 3, top: 20 },
+      { pageNumber: 3, left: 10, top: 20, width: 30, height: 40 },
       { behavior: "smooth" }
     )
 
     scrollToPageArea.mockClear()
     rerender(
-      <PdfSourceTargetHarness
-        source={csvSource}
-        onScroll={scrollToPageArea}
-      />
+      <PdfSourceTargetHarness source={csvSource} onScroll={scrollToPageArea} />
     )
     fireEvent.click(screen.getByRole("button", { name: "scroll pdf source" }))
     expect(scrollToPageArea).not.toHaveBeenCalled()

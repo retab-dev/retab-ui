@@ -112,7 +112,7 @@ function DefinitionsControllerCapture({
   const controller = useDocumentDefinitionsEditorController({
     dispatch: () => {},
     doc,
-    editMode: "editable",
+    mode: "editable",
     definitionsEnabled: true,
     accordionOpen: true,
     setAccordionOpen: () => {},

@@ -40,7 +40,7 @@ describe("markdown document policy", () => {
       data: {
         hName: "div",
         hProperties: {
-          dataCalloutKind: "warning",
+          dataCalloutKind: "caution",
           dataCalloutTitle: "Careful",
         },
       },
@@ -63,13 +63,15 @@ describe("markdown document policy", () => {
       "remarkMath",
       "remarkDirective",
       "remarkMarkdownCallouts",
+      "remarkMarkdownComponents",
+      "remarkMarkdownProseTransforms",
     ])
     expect(
       MARKDOWN_DOCUMENT_REHYPE_PLUGINS?.map((plugin) => pluginName(plugin))
     ).toEqual([
       "rehypeRaw",
+      "rehypeMarkdownComponents",
       "rehypeSanitize",
-      "rehypeSlug",
       "rehypeKatex",
       "rehypePrettyCode",
     ])

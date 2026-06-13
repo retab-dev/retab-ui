@@ -56,6 +56,7 @@ export function SchemaChipList({
                 className="flex items-center gap-1 rounded-md border border-border bg-muted px-1 shadow-none"
               >
                 <InputPrimitive
+                  aria-label={`Option ${index + 1}: ${value || "empty"}`}
                   data-slot="schema-chip-input"
                   disabled={!editable}
                   value={value}
@@ -89,6 +90,7 @@ export function SchemaChipList({
       {showSubmitInput && (
         <div className="flex items-center gap-2">
           <Input
+            aria-label={placeholder}
             ref={addInputRef}
             disabled={!editable}
             placeholder={placeholder}

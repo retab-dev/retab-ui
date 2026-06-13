@@ -91,7 +91,7 @@ export function SchemaBuilder({
           schema={state.schema}
           validation={state.validation}
           dispatch={state.dispatch}
-          editMode={readOnly ? "readOnly" : "editable"}
+          mode={readOnly ? "readOnly" : "editable"}
           features={resolvedFeatures}
         />
       )}

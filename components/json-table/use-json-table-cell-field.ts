@@ -1,6 +1,6 @@
 import type { DataCellKind } from "@/components/ui/data-cell"
 import type { JsonTableCellProps } from "@/components/json-table/json-table-cell-types"
-import { dataCellKindForField } from "@/components/json-table/json-table-display-cell"
+import { dataCellKindForField } from "@/components/json-table/json-table-data-cell-model"
 import {
   jsonTableCellId,
   type JsonTableCellId,

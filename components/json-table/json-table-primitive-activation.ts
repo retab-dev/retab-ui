@@ -1,10 +1,12 @@
 import type * as React from "react"
 
-import { canActivateDataCellFromKey } from "@/components/ui/data-cell"
-import type {
-  DataCellActivationIntent,
-  DataCellKind,
+import {
+  canActivateDataCellFromKey,
+  createDataCellKeyboardActivationSource,
+  createDataCellShellActivationSource,
+  type DataCellActivationSource,
 } from "@/components/ui/data-cell"
+import type { DataCellKind } from "@/components/ui/data-cell"
 import type { JsonTableActivationIntent } from "@/components/json-table/json-table-edit-session"
 
 const dataCellEventTargetSelector =
@@ -17,8 +19,8 @@ export function isJsonTableDataCellEventTarget(target: EventTarget | null) {
   )
 }
 
-export function shellActivationRequest(): DataCellActivationIntent {
-  return { type: "programmatic" }
+export function shellActivationSource(event?: Event): DataCellActivationSource {
+  return createDataCellShellActivationSource(event)
 }
 
 export function structuredPointerActivationIntent(
@@ -68,13 +70,10 @@ export function canActivatePrimitiveFromShellKey({
   )
 }
 
-export function keyboardActivationRequest(
+export function keyboardActivationSource(
   event: React.KeyboardEvent<HTMLElement>
-): DataCellActivationIntent {
-  return {
-    type: "keyboard",
-    key: event.key,
-  }
+): DataCellActivationSource {
+  return createDataCellKeyboardActivationSource(event.key)
 }
 
 export function canActivateStructuredFromShellKey(

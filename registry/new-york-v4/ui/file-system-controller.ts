@@ -16,12 +16,12 @@ import type {
   FileSystemEntry,
   FileSystemFileEntry,
   FileSystemItem,
-  FileSystemLoadChildrenResult,
   FileSystemProps,
   FileSystemQueryState,
   FileSystemSortKey,
   FileSystemView,
 } from "./file-system-types"
+import { useFileSystemChildrenLoader } from "./use-file-system-children-loader"
 
 export type FileSystemController = ReturnType<typeof useFileSystemController>
 
@@ -154,13 +154,28 @@ export function useFileSystemController({
       null
     )
   }, [rawIndex, selectedPath])
+  const childSelectionRequestRef = React.useRef(0)
+  const selectionStateRef = React.useRef({ currentPath, selectedPath })
+
+  React.useLayoutEffect(() => {
+    selectionStateRef.current = { currentPath, selectedPath }
+  }, [currentPath, selectedPath])
+
+  const invalidateChildSelectionRequest = React.useCallback(() => {
+    childSelectionRequestRef.current += 1
+  }, [])
 
   const selectEntry = React.useCallback(
     (entry: FileSystemEntry | null) => {
+      const path = entry?.path ?? null
+
+      if (path !== selectionStateRef.current.selectedPath) {
+        invalidateChildSelectionRequest()
+      }
       if (!isSelectionControlled) setInternalSelectedPath(entry?.path ?? null)
       onSelectionChange?.(entry)
     },
-    [isSelectionControlled, onSelectionChange]
+    [invalidateChildSelectionRequest, isSelectionControlled, onSelectionChange]
   )
 
   React.useEffect(() => {
@@ -183,28 +198,17 @@ export function useFileSystemController({
     selectEntry(null)
   }, [query, selectEntry, selectedEntry, visibleIndex.folders])
 
-  const [expandedPaths, setExpandedPaths] = React.useState<Set<string>>(
-    () => new Set()
-  )
-  const [loadingFolders, setLoadingFolders] = React.useState<Set<string>>(
-    () => new Set()
-  )
-  const [folderErrors, setFolderErrors] = React.useState(
-    new Map<string, string>()
-  )
-  const folderRequests = React.useRef(new Map<string, AbortController>())
-  const folderPromises = React.useRef(new Map<string, Promise<FileSystemEntry[]>>())
   const sourceCache = React.useRef(new Map<string, ViewerSource | null>())
-
-  React.useEffect(() => {
-    const requests = folderRequests.current
-
-    return () => {
-      for (const controller of requests.values()) {
-        controller.abort()
-      }
-    }
-  }, [])
+  const { ensureChildren, folderErrors, loadingFolders } =
+    useFileSystemChildrenLoader({
+      allItems,
+      currentPath,
+      loadChildren,
+      query,
+      rawIndex,
+      setLoadedItems,
+      visibleIndex,
+    })
 
   const setSearch = React.useCallback(
     (search: string) => {
@@ -271,114 +275,25 @@ export function useFileSystemController({
     }))
   }, [setQuery])
 
-  const toggleExpanded = React.useCallback((path: string) => {
-    setExpandedPaths((previous) => {
-      const next = new Set(previous)
-
-      if (next.has(path)) {
-        next.delete(path)
-      } else {
-        next.add(path)
-      }
-
-      return next
-    })
-  }, [])
-
-  const ensureChildren = React.useCallback(
-    async (path: string, { retry = false }: { retry?: boolean } = {}) => {
-      const folderPath = normalizeFolderPath(path)
-      const folder = rawIndex.folders.get(folderPath)
-      const rawChildren = rawIndex.children.get(folderPath) ?? []
-      const currentChildren = visibleIndex.children.get(folderPath) ?? []
-
-      if (!loadChildren || !folder?.hasChildren) return currentChildren
-      if (!retry && rawChildren.length > 0) return currentChildren
-      if (!retry && folderPromises.current.has(folderPath)) {
-        return folderPromises.current.get(folderPath)!
-      }
-
-      const controller = new AbortController()
-      const loadPromise = (async () => {
-        folderRequests.current.set(folderPath, controller)
-        setLoadingFolders((previous) => new Set(previous).add(folderPath))
-        setFolderErrors((previous) => {
-          const next = new Map(previous)
-
-          next.delete(folderPath)
-          return next
-        })
-
-        try {
-          let cursor: string | null = null
-          const nextItems: FileSystemItem[] = []
-
-          do {
-            const result: FileSystemLoadChildrenResult = await loadChildren({
-              cursor,
-              path: folderPath,
-              signal: controller.signal,
-            })
-
-            nextItems.push(...result.items)
-            cursor = result.nextCursor ?? null
-          } while (cursor && !controller.signal.aborted)
-
-          if (controller.signal.aborted) return currentChildren
-          if (!nextItems.length) return currentChildren
-
-          const nextRawIndex = buildFileSystemIndex([...allItems, ...nextItems])
-          const nextVisibleIndex = deriveVisibleIndex(
-            nextRawIndex,
-            currentPath,
-            query
-          )
-
-          setLoadedItems((previous) => [...previous, ...nextItems])
-          return nextVisibleIndex.children.get(folderPath) ?? []
-        } catch (error) {
-          if (!controller.signal.aborted) {
-            setFolderErrors((previous) =>
-              new Map(previous).set(folderPath, errorMessage(error))
-            )
-          }
-          return currentChildren
-        } finally {
-          folderRequests.current.delete(folderPath)
-          folderPromises.current.delete(folderPath)
-          setLoadingFolders((previous) => {
-            const next = new Set(previous)
-
-            next.delete(folderPath)
-            return next
-          })
-        }
-      })()
-
-      folderPromises.current.set(folderPath, loadPromise)
-      return loadPromise
-    },
-    [
-      allItems,
-      currentPath,
-      loadChildren,
-      query,
-      rawIndex.children,
-      rawIndex.folders,
-      visibleIndex.children,
-    ]
-  )
-
   const navigateTo = React.useCallback(
     (path: string) => {
       const folderPath = normalizeFolderPath(path)
 
+      if (folderPath !== selectionStateRef.current.currentPath) {
+        invalidateChildSelectionRequest()
+      }
       setCurrentPath(folderPath)
       setSearch("")
       selectEntry(null)
       void ensureChildren(folderPath)
     },
-    [ensureChildren, selectEntry, setCurrentPath, setSearch]
+    [
+      ensureChildren,
+      invalidateChildSelectionRequest,
+      selectEntry,
+      setCurrentPath,
+      setSearch,
+    ]
   )
 
   const goBack = React.useCallback(() => {
@@ -390,10 +305,13 @@ export function useFileSystemController({
       nextPath = previous.stack[index] ?? ""
       return { ...previous, index }
     })
+    if (nextPath !== selectionStateRef.current.currentPath) {
+      invalidateChildSelectionRequest()
+    }
     onPathChange?.(nextPath)
     selectEntry(null)
     setSearch("")
-  }, [onPathChange, selectEntry, setSearch])
+  }, [invalidateChildSelectionRequest, onPathChange, selectEntry, setSearch])
 
   const goForward = React.useCallback(() => {
     let nextPath = ""
@@ -404,10 +322,13 @@ export function useFileSystemController({
       nextPath = previous.stack[index] ?? ""
       return { ...previous, index }
     })
+    if (nextPath !== selectionStateRef.current.currentPath) {
+      invalidateChildSelectionRequest()
+    }
     onPathChange?.(nextPath)
     selectEntry(null)
     setSearch("")
-  }, [onPathChange, selectEntry, setSearch])
+  }, [invalidateChildSelectionRequest, onPathChange, selectEntry, setSearch])
 
   const openEntry = React.useCallback(
     (entry: FileSystemEntry) => {
@@ -421,15 +342,20 @@ export function useFileSystemController({
   const selectFirstChildAfterEnsure = React.useCallback(
     async (path: string) => {
       const folderPath = normalizeFolderPath(path)
-      const currentChildren = visibleIndex.children.get(folderPath) ?? []
-      const children = currentChildren.length
-        ? currentChildren
-        : await ensureChildren(folderPath)
-      const entry = children[0] ?? null
+      const requestedCurrentPath = selectionStateRef.current.currentPath
+      const requestId = childSelectionRequestRef.current + 1
 
+      childSelectionRequestRef.current = requestId
+      const children = await ensureChildren(folderPath)
+      const entry = children[0] ?? null
+      const state = selectionStateRef.current
+
+      if (childSelectionRequestRef.current !== requestId) return
+      if (state.selectedPath !== folderPath) return
+      if (state.currentPath !== requestedCurrentPath) return
       if (entry) selectEntry(entry)
     },
-    [ensureChildren, selectEntry, visibleIndex.children]
+    [ensureChildren, selectEntry]
   )
 
   const resolveFileSource = React.useCallback(
@@ -472,7 +398,6 @@ export function useFileSystemController({
     currentFolder,
     currentPath,
     ensureChildren,
-    expandedPaths,
     folderErrors,
     goBack,
     goForward,
@@ -492,16 +417,10 @@ export function useFileSystemController({
     setSortKey,
     setView,
     toggleCategory,
-    toggleExpanded,
     view,
   }
 }
 
 function sourceCacheKey(file: FileSystemFileEntry) {
   return [file.path, file.key, file.etag ?? "", file.updatedAt ?? ""].join("\0")
-}
-
-function errorMessage(error: unknown) {
-  if (error instanceof Error && error.message) return error.message
-  return "Couldn't load this folder."
 }

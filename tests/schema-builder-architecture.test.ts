@@ -72,6 +72,12 @@ const executableFilesToCheck = [
   "components/schema-editor/property-form/fields/type-field.tsx",
   "components/schema-editor/property-form/fields/object-properties-field.tsx",
   "components/schema-editor/property-form/fields/array-items-field.tsx",
+  "components/schema-editor/property-form/fields/enum-values-field.tsx",
+  "components/schema-editor/property-form/fields/property-schema-details-field.tsx",
+  "components/schema-editor/property-form/model/property-schema-details.ts",
+  "components/schema-editor/property-form/fields/property-type-menu-model.ts",
+  "components/schema-editor/schema-type-menu-sections.tsx",
+  "components/schema-editor/object-template-type-section.tsx",
 ]
 
 const forbiddenExecutablePatterns = [
@@ -354,6 +360,18 @@ describe("schema builder architecture", () => {
         defaultSource
       )
     ).toBe(true)
+
+    const objectTemplateMenuImportFiles = schemaEditorSourceFiles.filter(
+      (file) => {
+        const content = readFileSync(join(repoRoot, file), "utf8")
+        return content.includes(
+          "@/components/schema-editor/optional/object-templates/object-template-menu"
+        )
+      }
+    )
+    expect(objectTemplateMenuImportFiles).toEqual([
+      "components/schema-editor/object-template-type-section.tsx",
+    ])
   })
 
   it("keeps schema editor primitives model and feature agnostic", () => {
@@ -388,14 +406,221 @@ describe("schema builder architecture", () => {
   })
 
   it("keeps renamed schema editor primitive files as hard cutovers", () => {
+    const legacyTypeMenuModelFile = "schema-type-menu-" + "model.tsx"
     const removedPrimitiveFiles = [
-      "components/schema-editor/primitives/schema-inline-name.tsx",
-      "components/schema-editor/primitives/schema-inline-description.tsx",
+      "components/schema-editor/primitives/schema-field-name.tsx",
+      "components/schema-editor/primitives/schema-field-description.tsx",
+      "components/schema-editor/" + legacyTypeMenuModelFile,
+      "components/schema-editor/property-form/fields/" + legacyTypeMenuModelFile,
+      "components/schema-editor/property-form/fields/schema-node-" + "field.tsx",
     ]
 
     for (const file of removedPrimitiveFiles) {
       expect(existsSync(join(repoRoot, file)), file).toBe(false)
     }
+
+    const requiredPrimitiveFiles = [
+      "components/schema-editor/primitives/schema-inline-text.tsx",
+      "components/schema-editor/primitives/schema-inline-name.tsx",
+      "components/schema-editor/primitives/schema-inline-description.tsx",
+    ]
+
+    for (const file of requiredPrimitiveFiles) {
+      expect(existsSync(join(repoRoot, file)), file).toBe(true)
+    }
+  })
+
+  it("keeps schema editor editability naming layer-specific", () => {
+    const adapterModeName = "edit" + "Mode"
+    for (const file of schemaEditorSourceFiles) {
+      const content = readFileSync(join(repoRoot, file), "utf8")
+      expect(content.includes("isEditable"), file).toBe(false)
+      expect(content.includes(adapterModeName), file).toBe(false)
+    }
+  })
+
+  it("keeps object property mechanics out of the object properties view", () => {
+    const content = readFileSync(
+      join(
+        repoRoot,
+        "components/schema-editor/property-form/fields/object-properties-field.tsx"
+      ),
+      "utf8"
+    )
+
+    for (const forbidden of [
+      "draftPropertyIdsByName",
+      "localPropertyNamesKeyRef",
+      "createObjectPropertySchema",
+      "listObjectPropertyNames",
+      "renameObjectProperty",
+      "removeObjectProperty",
+      "replaceObjectProperty",
+    ]) {
+      expect(content.includes(forbidden), forbidden).toBe(false)
+    }
+    expect(content.includes("useObjectPropertiesModel")).toBe(true)
+  })
+
+  it("keeps property type field model-driven", () => {
+    const content = readFileSync(
+      join(
+        repoRoot,
+        "components/schema-editor/property-form/fields/type-field.tsx"
+      ),
+      "utf8"
+    )
+
+    for (const forbidden of [
+      "React.lazy",
+      "updateType",
+      "updateEffectiveNode",
+      "definitionRef",
+      "withReplacementMetadata",
+      "schemaTypeOptions.map",
+    ]) {
+      expect(content.includes(forbidden), forbidden).toBe(false)
+    }
+    expect(content.includes("createPropertyTypeMenu")).toBe(true)
+  })
+
+  it("keeps primitive type menu section builders shared by adapters", () => {
+    const sharedContent = readFileSync(
+      join(repoRoot, "components/schema-editor/schema-type-menu-sections.tsx"),
+      "utf8"
+    )
+    const adapterFiles = [
+      "components/schema-editor/document-node-type-menu.tsx",
+      "components/schema-editor/property-form/fields/property-type-menu-model.ts",
+    ]
+
+    expect(sharedContent.includes("schemaTypeOptions.map")).toBe(true)
+    expect(sharedContent.includes("createDefinitionTypeSubmenu")).toBe(true)
+
+    for (const file of adapterFiles) {
+      const content = readFileSync(join(repoRoot, file), "utf8")
+      for (const forbidden of [
+        "schemaTypeOptions.map",
+        "getTemplateIcon",
+        "getTypeIcon",
+        "PlusIcon",
+      ]) {
+        expect(
+          content.includes(forbidden),
+          `${file} includes ${forbidden}`
+        ).toBe(false)
+      }
+      expect(content.includes("createPrimitiveTypeItems"), file).toBe(true)
+      expect(content.includes("createDefinitionTypeSubmenu"), file).toBe(true)
+    }
+  })
+
+  it("keeps SchemaTypeMenu free of optional feature knowledge", () => {
+    const primitiveContent = readFileSync(
+      join(
+        repoRoot,
+        "components/schema-editor/primitives/schema-type-menu.tsx"
+      ),
+      "utf8"
+    )
+    const objectTemplateAccessoryContent = readFileSync(
+      join(repoRoot, "components/schema-editor/object-template-type-section.tsx"),
+      "utf8"
+    )
+
+    expect(primitiveContent.includes(["kind: ", '"custom"'].join(""))).toBe(
+      false
+    )
+    expect(
+      primitiveContent.includes(["section.kind === ", '"custom"'].join(""))
+    ).toBe(false)
+    expect(primitiveContent.includes("object-template")).toBe(false)
+    expect(primitiveContent.includes("React.lazy")).toBe(false)
+    expect(primitiveContent.includes("SchemaTypeMenuAccessory")).toBe(true)
+    expect(objectTemplateAccessoryContent.includes("React.lazy")).toBe(true)
+    expect(objectTemplateAccessoryContent.includes("object-template-menu")).toBe(
+      true
+    )
+  })
+
+  it("keeps property schema details split by concrete field model", () => {
+    const legacyDetailsName = ["schema", "NodeDetails"].join("")
+    const files = [
+      "components/schema-editor/property-form/types.ts",
+      "components/schema-editor/property-form/property-form-controller.ts",
+      "components/schema-editor/property-form/property-form-shell.tsx",
+      "components/schema-editor/property-form/fields/property-schema-details-field.tsx",
+      "components/schema-editor/property-form/model/property-schema-details.ts",
+    ]
+
+    for (const file of files) {
+      const content = readFileSync(join(repoRoot, file), "utf8")
+      expect(content.includes(legacyDetailsName), file).toBe(false)
+    }
+
+    const typeContent = readFileSync(
+      join(repoRoot, "components/schema-editor/property-form/types.ts"),
+      "utf8"
+    )
+    const shellContent = readFileSync(
+      join(
+        repoRoot,
+        "components/schema-editor/property-form/property-form-shell.tsx"
+      ),
+      "utf8"
+    )
+
+    expect(typeContent.includes("enumValues?: PropertyEnumValuesFieldModel")).toBe(
+      true
+    )
+    expect(
+      typeContent.includes("objectProperties?: PropertyObjectPropertiesFieldModel")
+    ).toBe(true)
+    expect(typeContent.includes("arrayItems?: PropertyArrayItemsFieldModel")).toBe(
+      true
+    )
+    expect(shellContent.includes("PropertySchemaDetailsField")).toBe(true)
+    expect(shellContent.includes("SchemaNode" + "Field")).toBe(false)
+  })
+
+  it("keeps property form validation and submit lifecycle outside the controller", () => {
+    const controllerContent = readFileSync(
+      join(
+        repoRoot,
+        "components/schema-editor/property-form/property-form-controller.ts"
+      ),
+      "utf8"
+    )
+
+    for (const forbidden of [
+      "buildCommittedDraft",
+      "isSubmittingRef",
+      "setIsSubmitting",
+      "function normalizeValidationForCapabilities",
+    ]) {
+      expect(controllerContent.includes(forbidden), forbidden).toBe(false)
+    }
+
+    expect(controllerContent.includes("usePropertyFormSubmit")).toBe(true)
+    expect(
+      controllerContent.includes("normalizeValidationForCapabilities")
+    ).toBe(true)
+    expect(
+      existsSync(
+        join(
+          repoRoot,
+          "components/schema-editor/property-form/property-form-submit.ts"
+        )
+      )
+    ).toBe(true)
+    expect(
+      existsSync(
+        join(
+          repoRoot,
+          "components/schema-editor/property-form/model/property-validation.ts"
+        )
+      )
+    ).toBe(true)
   })
 
   it("uses one shared SchemaEditorMode definition", () => {

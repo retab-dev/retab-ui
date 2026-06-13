@@ -10,6 +10,8 @@ import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ViewerDownloadControl } from "@/components/ui/viewer-download"
 
+export const XLSX_TOOLBAR_HEIGHT_PX = 40
+
 export function XlsxToolbar({
   downloadActions,
   sheet,
@@ -28,7 +30,10 @@ export function XlsxToolbar({
   onResetZoom: () => void
 }) {
   return (
-    <div className="flex h-10 flex-shrink-0 items-center gap-1 border-b bg-card px-2">
+    <div
+      className="flex flex-shrink-0 items-center gap-1 border-b bg-card px-2"
+      style={{ height: XLSX_TOOLBAR_HEIGHT_PX }}
+    >
       <span className="truncate px-1 text-xs font-medium">
         {isReady ? (
           (sheet?.name ?? "-")
@@ -69,7 +74,10 @@ export function XlsxToolbar({
 
 export function XlsxToolbarSkeleton() {
   return (
-    <div className="flex h-10 flex-shrink-0 items-center gap-1 border-b bg-card px-2">
+    <div
+      className="flex flex-shrink-0 items-center gap-1 border-b bg-card px-2"
+      style={{ height: XLSX_TOOLBAR_HEIGHT_PX }}
+    >
       <span className="truncate px-1">
         <Skeleton className="inline-block h-3 w-24 align-middle" />
       </span>

@@ -82,7 +82,7 @@ export function buildJsonTableEditableCellModel({
     return {
       kind: "primitive",
       primitiveProps: {
-        activationRequest: primitiveControl.activationRequest,
+        activationSource: primitiveControl.activationSource,
         effectiveValue: primitiveControl.primitiveEffectiveValue,
         fieldMetadata: cellField.fieldMetadata,
         isActive: cellField.isPrimitiveActive,

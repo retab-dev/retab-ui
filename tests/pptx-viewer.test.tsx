@@ -2904,6 +2904,39 @@ describe("PptxViewer", () => {
     ).toBeTruthy()
   })
 
+  it("measures fit-width from the stable scroll viewport instead of the virtual canvas", () => {
+    const source = createFakePptxSource()
+    const activity = createManualPptxActivity(false).activity
+    const containerRef = vi.fn()
+    const viewportRef = vi.fn()
+
+    render(
+      <PptxSlideScroller
+        source={source}
+        zoomScale={1}
+        rotation={0}
+        eager={false}
+        activity={activity}
+        containerRef={containerRef}
+        viewportRef={viewportRef}
+        onScroll={vi.fn()}
+      />
+    )
+
+    const viewport = document.querySelector<HTMLElement>(
+      '[data-slot="scroll-area-viewport"]'
+    )
+    const canvas = document.querySelector<HTMLElement>(
+      '[data-slot="pptx-slide-virtual-canvas"]'
+    )
+
+    expect(viewport).toBeTruthy()
+    expect(canvas).toBeTruthy()
+    expect(containerRef).toHaveBeenLastCalledWith(viewport)
+    expect(viewportRef).toHaveBeenLastCalledWith(viewport)
+    expect(containerRef).not.toHaveBeenCalledWith(canvas)
+  })
+
   it("mounts a bounded virtual slide window instead of every slide shell", async () => {
     const source = createFakePptxSource({ slideCount: 20 })
     const activity = createManualPptxActivity(false).activity
