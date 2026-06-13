@@ -9,6 +9,10 @@ import {
   markdownCalloutTitleFromProps,
 } from "./markdown-document-callouts"
 import {
+  MarkdownComponent,
+  markdownComponentNameFromProps,
+} from "./markdown-document-components"
+import {
   MarkdownCodeCopyButton,
   MarkdownTableCopyButton,
 } from "./markdown-document-copy"
@@ -86,19 +90,33 @@ export function createMarkdownDocumentRenderers({
     ),
     div: ({ node, children, ...props }) => {
       const calloutKind = markdownCalloutKindFromProps(props)
-      if (!calloutKind) {
-        return <div {...props}>{children}</div>
+      if (calloutKind) {
+        return (
+          <MarkdownCallout
+            kind={calloutKind}
+            title={markdownCalloutTitleFromProps(props)}
+            className={highlightedClassName(node)}
+            sourceLine={sourceLineFromNode(node)}
+          >
+            {children}
+          </MarkdownCallout>
+        )
       }
-      return (
-        <MarkdownCallout
-          kind={calloutKind}
-          title={markdownCalloutTitleFromProps(props)}
-          className={highlightedClassName(node)}
-          sourceLine={sourceLineFromNode(node)}
-        >
-          {children}
-        </MarkdownCallout>
-      )
+
+      const componentName = markdownComponentNameFromProps(props)
+      if (componentName) {
+        return (
+          <MarkdownComponent
+            name={componentName}
+            props={props}
+            sourceLine={sourceLineFromNode(node)}
+          >
+            {children}
+          </MarkdownComponent>
+        )
+      }
+
+      return <div {...props}>{children}</div>
     },
     figure: ({ node, ...props }) => (
       <figure
@@ -109,60 +127,60 @@ export function createMarkdownDocumentRenderers({
     ),
     h1: ({ node, children, ...props }) => (
       <h1
-        id={headingId(node, children)}
         className={`mt-4 mb-2 text-[1.55em] leading-tight font-semibold first:mt-0${highlightedClassName(node)}`}
         data-source-line={sourceLineFromNode(node)}
         {...props}
+        id={headingId(node, children)}
       >
         {children}
       </h1>
     ),
     h2: ({ node, children, ...props }) => (
       <h2
-        id={headingId(node, children)}
         className={`mt-4 mb-2 text-[1.3em] leading-snug font-semibold first:mt-0${highlightedClassName(node)}`}
         data-source-line={sourceLineFromNode(node)}
         {...props}
+        id={headingId(node, children)}
       >
         {children}
       </h2>
     ),
     h3: ({ node, children, ...props }) => (
       <h3
-        id={headingId(node, children)}
         className={`mt-3 mb-1.5 text-[1.1em] leading-snug font-semibold first:mt-0${highlightedClassName(node)}`}
         data-source-line={sourceLineFromNode(node)}
         {...props}
+        id={headingId(node, children)}
       >
         {children}
       </h3>
     ),
     h4: ({ node, children, ...props }) => (
       <h4
-        id={headingId(node, children)}
         className={`mt-3 mb-1.5 text-[1em] leading-snug font-medium first:mt-0${highlightedClassName(node)}`}
         data-source-line={sourceLineFromNode(node)}
         {...props}
+        id={headingId(node, children)}
       >
         {children}
       </h4>
     ),
     h5: ({ node, children, ...props }) => (
       <h5
-        id={headingId(node, children)}
         className={`mt-3 mb-1.5 text-[0.95em] leading-snug font-medium first:mt-0${highlightedClassName(node)}`}
         data-source-line={sourceLineFromNode(node)}
         {...props}
+        id={headingId(node, children)}
       >
         {children}
       </h5>
     ),
     h6: ({ node, children, ...props }) => (
       <h6
-        id={headingId(node, children)}
         className={`mt-3 mb-1.5 text-[0.9em] leading-snug font-medium text-muted-foreground first:mt-0${highlightedClassName(node)}`}
         data-source-line={sourceLineFromNode(node)}
         {...props}
+        id={headingId(node, children)}
       >
         {children}
       </h6>
@@ -228,6 +246,15 @@ export function createMarkdownDocumentRenderers({
       const sourceLine = sourceLineFromNode(node)
       const text = extractReactText(children).replace(/\n$/, "")
       const language = codeLanguage(children)
+      if (language === "mermaid") {
+        return (
+          <MarkdownDiagram
+            className={highlightedClassName(node)}
+            source={text}
+            sourceLine={sourceLine}
+          />
+        )
+      }
       return (
         <div
           className={`group relative my-3 overflow-hidden rounded-lg border bg-muted/50${highlightedClassName(node)}`}
@@ -314,6 +341,212 @@ export function createMarkdownDocumentRenderers({
   }
 }
 
+function MarkdownDiagram({
+  className,
+  source,
+  sourceLine,
+}: {
+  className: string
+  source: string
+  sourceLine: number
+}) {
+  const [state, setState] = React.useState<
+    | { status: "failed"; message: string }
+    | { status: "loading" }
+    | { status: "ready"; svg: string }
+    | { status: "unavailable" }
+  >({ status: "loading" })
+  const diagramId = React.useId().replace(/:/g, "")
+
+  React.useEffect(() => {
+    let isMounted = true
+    void renderMermaidDiagram(source, `markdown-diagram-${diagramId}`).then(
+      (result) => {
+        if (isMounted) setState(result)
+      }
+    )
+    return () => {
+      isMounted = false
+    }
+  }, [diagramId, source])
+
+  return (
+    <figure
+      className={`my-3 min-h-40 overflow-hidden rounded-lg border bg-muted/30${className}`}
+      data-diagram-language="mermaid"
+      data-diagram-state={state.status}
+      data-source-line={sourceLine}
+    >
+      <div className="flex h-8 items-center gap-2 border-b bg-muted/60 px-3">
+        <span className="text-xs font-medium text-muted-foreground">
+          mermaid
+        </span>
+        <MarkdownCodeCopyButton text={source} />
+      </div>
+      {state.status === "ready" ? (
+        <div
+          className="overflow-x-auto p-3"
+          dangerouslySetInnerHTML={{ __html: state.svg }}
+        />
+      ) : (
+        <pre className="overflow-x-auto p-3 font-mono text-[0.82em] leading-relaxed text-muted-foreground">
+          {state.status === "failed"
+            ? state.message
+            : state.status === "loading"
+              ? "Rendering diagram..."
+              : source}
+        </pre>
+      )}
+    </figure>
+  )
+}
+
+async function renderMermaidDiagram(source: string, id: string): Promise<
+  | { status: "failed"; message: string }
+  | { status: "ready"; svg: string }
+> {
+  try {
+    const loadMermaid = new Function(
+      "specifier",
+      "return import(specifier)"
+    ) as (specifier: string) => Promise<{
+      default?: {
+        initialize?: (options: Record<string, unknown>) => void
+        render?: (id: string, source: string) => Promise<{ svg: string }>
+      }
+    }>
+    const mermaidModule = await loadMermaid("mermaid")
+    const mermaid = mermaidModule.default
+    if (!mermaid?.render) return renderBasicMermaidDiagram(source)
+
+    mermaid.initialize?.({
+      securityLevel: "strict",
+      startOnLoad: false,
+      theme: "default",
+    })
+    const result = await mermaid.render(id, source)
+    return { status: "ready", svg: result.svg }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Invalid diagram"
+    return message.includes("Cannot find") || message.includes("module")
+      ? renderBasicMermaidDiagram(source)
+      : { status: "failed", message }
+  }
+}
+
+function renderBasicMermaidDiagram(
+  source: string
+): { status: "failed"; message: string } | { status: "ready"; svg: string } {
+  const lines = source
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith("%%"))
+  const header = lines[0]?.match(/^(?:graph|flowchart)\s+(TD|TB|BT|LR|RL)$/i)
+  if (!header) {
+    return {
+      status: "failed",
+      message: "Unsupported Mermaid diagram. Only graph/flowchart diagrams are rendered.",
+    }
+  }
+
+  const direction = header[1]!.toUpperCase()
+  const edges: Array<{ from: string; to: string }> = []
+  const labels = new Map<string, string>()
+
+  for (const line of lines.slice(1)) {
+    const edge = line.match(/^(.+?)\s*(?:-->|---|==>|-.->)\s*(.+?)$/)
+    if (!edge) continue
+    const from = parseMermaidNode(edge[1]!)
+    const to = parseMermaidNode(edge[2]!)
+    labels.set(from.id, from.label)
+    labels.set(to.id, to.label)
+    edges.push({ from: from.id, to: to.id })
+  }
+
+  if (edges.length === 0) {
+    return {
+      status: "failed",
+      message: "Unsupported Mermaid diagram. Add at least one graph edge.",
+    }
+  }
+
+  const nodeIds = Array.from(labels.keys())
+  const isHorizontal = direction === "LR" || direction === "RL"
+  const nodeWidth = 132
+  const nodeHeight = 42
+  const gap = 56
+  const width = isHorizontal
+    ? nodeIds.length * nodeWidth + Math.max(0, nodeIds.length - 1) * gap + 48
+    : 420
+  const height = isHorizontal
+    ? 132
+    : nodeIds.length * nodeHeight + Math.max(0, nodeIds.length - 1) * gap + 48
+  const positions = new Map(
+    nodeIds.map((nodeId, index) => {
+      const orderedIndex =
+        direction === "RL" || direction === "BT"
+          ? nodeIds.length - index - 1
+          : index
+      return [
+        nodeId,
+        {
+          x: isHorizontal
+            ? 24 + orderedIndex * (nodeWidth + gap)
+            : (width - nodeWidth) / 2,
+          y: isHorizontal
+            ? (height - nodeHeight) / 2
+            : 24 + orderedIndex * (nodeHeight + gap),
+        },
+      ] as const
+    })
+  )
+
+  const edgeSvg = edges
+    .map((edge) => {
+      const from = positions.get(edge.from)!
+      const to = positions.get(edge.to)!
+      const x1 = isHorizontal ? from.x + nodeWidth : from.x + nodeWidth / 2
+      const y1 = isHorizontal ? from.y + nodeHeight / 2 : from.y + nodeHeight
+      const x2 = isHorizontal ? to.x : to.x + nodeWidth / 2
+      const y2 = isHorizontal ? to.y + nodeHeight / 2 : to.y
+      return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="currentColor" stroke-width="1.5" marker-end="url(#arrow)" opacity="0.65" />`
+    })
+    .join("")
+  const nodeSvg = nodeIds
+    .map((nodeId) => {
+      const position = positions.get(nodeId)!
+      return `<g><rect x="${position.x}" y="${position.y}" width="${nodeWidth}" height="${nodeHeight}" rx="8" fill="var(--card)" stroke="currentColor" opacity="0.9" /><text x="${position.x + nodeWidth / 2}" y="${position.y + 26}" text-anchor="middle" font-size="13" fill="currentColor">${escapeSvg(labels.get(nodeId) ?? nodeId)}</text></g>`
+    })
+    .join("")
+
+  return {
+    status: "ready",
+    svg: `<svg role="img" aria-label="Mermaid diagram" viewBox="0 0 ${width} ${height}" width="100%" height="${height}" xmlns="http://www.w3.org/2000/svg"><defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="currentColor" opacity="0.65"/></marker></defs>${edgeSvg}${nodeSvg}</svg>`,
+  }
+}
+
+function parseMermaidNode(value: string) {
+  const trimmed = value.trim()
+  const match =
+    trimmed.match(/^([A-Za-z0-9_-]+)\s*\["(.+)"\]$/) ??
+    trimmed.match(/^([A-Za-z0-9_-]+)\s*\[(.+)\]$/) ??
+    trimmed.match(/^([A-Za-z0-9_-]+)\s*\((.+)\)$/)
+  if (match) {
+    return { id: match[1]!, label: match[2]!.trim() }
+  }
+
+  const id = trimmed.replace(/[^A-Za-z0-9_-].*$/, "")
+  return { id: id || trimmed, label: id || trimmed }
+}
+
+function escapeSvg(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+}
+
 function MarkdownImage({
   alt,
   className,
@@ -381,7 +614,7 @@ function slugifyHeading(text: string) {
   return text
     .toLowerCase()
     .replace(/<[^>]*>/g, "")
-    .replace(/[^\p{Letter}\p{Number}\s-]/gu, "")
+    .replace(/[^\p{Letter}\p{Number}_\s-]/gu, "")
     .trim()
     .replace(/\s+/g, "-")
 }

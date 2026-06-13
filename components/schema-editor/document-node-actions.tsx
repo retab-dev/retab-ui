@@ -4,9 +4,9 @@ import { SchemaRowActions } from "@/components/schema-editor/primitives/schema-r
 
 interface DocumentNodeActionsProps {
   canDelete: boolean
-  editMode: "descriptionOnly" | "readOnly" | "editable"
+  mode: "descriptionOnly" | "readOnly" | "editable"
+  editable: boolean
   hidePencilButton: boolean
-  isEditable: boolean
   onDelete?: () => void
   onOpenMetadata: () => void
 }
@@ -15,7 +15,7 @@ export function DocumentNodeActions(props: DocumentNodeActionsProps) {
   const details =
     props.hidePencilButton || !props.onOpenMetadata
       ? undefined
-      : props.editMode === "readOnly"
+      : props.mode === "readOnly"
         ? {
             label: "View field properties",
             mode: "view" as const,
@@ -30,7 +30,7 @@ export function DocumentNodeActions(props: DocumentNodeActionsProps) {
   return (
     <SchemaRowActions
       canDelete={props.canDelete}
-      editable={props.isEditable}
+      editable={props.editable}
       details={details}
       onDelete={props.onDelete}
     />

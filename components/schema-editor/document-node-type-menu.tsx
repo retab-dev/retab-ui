@@ -1,37 +1,24 @@
 "use client"
 
-import * as React from "react"
 import type { JSONSchema7Definition } from "json-schema"
-import { PlusIcon } from "lucide-react"
 
 import type { SchemaEditorType } from "@/components/schema-editor/document/type-operations"
+import { createObjectTemplateTypeAccessory } from "@/components/schema-editor/object-template-type-section"
 import {
   SchemaTypeMenu,
   type SchemaTypeMenuSection,
 } from "@/components/schema-editor/primitives/schema-type-menu"
-import {
-  schemaTypeIcon,
-  schemaTypeLabel,
-  schemaTypeOptions,
-} from "@/components/schema-editor/primitives/schema-type-options"
 import type { ResolvedSchemaBuilderFeatures } from "@/components/schema-editor/schema-builder-types"
 import {
-  getTemplateIcon,
-  getTypeIcon,
-} from "@/components/schema-editor/type-icons"
-
-const LazyObjectTemplateSubmenu = React.lazy(() =>
-  import(
-    "@/components/schema-editor/optional/object-templates/object-template-menu"
-  ).then((module) => ({
-    default: module.ObjectTemplateSubmenu,
-  }))
-)
+  createDefinitionTypeSubmenu,
+  createPrimitiveTypeItems,
+  createTypeMenuValue,
+} from "@/components/schema-editor/schema-type-menu-sections"
 
 interface DocumentNodeTypeMenuProps {
   defs: Record<string, JSONSchema7Definition>
+  editable: boolean
   features: ResolvedSchemaBuilderFeatures
-  isEditable: boolean
   localType: string
   refName?: string
   onCreateDefinition: () => void
@@ -42,8 +29,8 @@ interface DocumentNodeTypeMenuProps {
 
 export function DocumentNodeTypeMenu({
   defs,
+  editable,
   features,
-  isEditable,
   localType,
   refName,
   onCreateDefinition,
@@ -56,67 +43,36 @@ export function DocumentNodeTypeMenu({
     {
       id: "types",
       kind: "items",
-      items: schemaTypeOptions.map((option) => ({
-        id: option.id,
-        label: option.label,
-        icon: option.icon,
-        onSelect: () => onSelectType(option.id as SchemaEditorType | "enum"),
-      })),
+      items: createPrimitiveTypeItems({
+        onSelectType: (type) => onSelectType(type as SchemaEditorType | "enum"),
+      }),
     },
   ]
 
   if (features.definitions) {
-    sections.push({
-      id: "definitions",
-      kind: "submenu",
-      label: "definition",
-      icon: getTypeIcon("$ref"),
-      items:
-        definitionNames.length === 0
-          ? [
-              {
-                id: "create-definition",
-                label: "Create a new definition to get started",
-                icon: <PlusIcon className="h-4 w-4" />,
-                onSelect: onCreateDefinition,
-              },
-            ]
-          : definitionNames.map((definitionName) => ({
-              id: definitionName,
-              label: definitionName,
-              icon: getTemplateIcon(definitionName),
-              onSelect: () => onSelectDefinition(definitionName),
-            })),
-    })
+    sections.push(
+      createDefinitionTypeSubmenu({
+        createDefinitionLabel: "Create a new definition to get started",
+        definitionNames,
+        onCreateDefinition,
+        onSelectDefinition,
+      })
+    )
   }
 
-  if (features.objectTemplates) {
-    sections.push({
-      id: "object-templates",
-      kind: "custom",
-      render: ({ editable }) => (
-        <React.Suspense fallback={null}>
-          <LazyObjectTemplateSubmenu
-            onSelectTemplate={(templateName) => {
-              if (!editable) return
-              onSelectObjectTemplate(templateName)
-            }}
-          />
-        </React.Suspense>
-      ),
-    })
-  }
+  const accessory = features.objectTemplates
+    ? createObjectTemplateTypeAccessory({
+        onSelectTemplate: onSelectObjectTemplate,
+      })
+    : undefined
 
   return (
     <SchemaTypeMenu
+      accessory={accessory}
       variant="row"
-      editable={isEditable}
+      editable={editable}
       sections={sections}
-      value={{
-        id: localType,
-        label: schemaTypeLabel(localType, refName),
-        icon: schemaTypeIcon(localType, refName),
-      }}
+      value={createTypeMenuValue({ type: localType, refName })}
     />
   )
 }

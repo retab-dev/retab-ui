@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import * as React from "react"
 import { cleanup, fireEvent, render, screen } from "@testing-library/react"
-import { afterEach, describe, expect, it, vi } from "vitest"
 import type { JSONSchema7 } from "json-schema"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { SchemaBuilder } from "@/components/ui/schema-builder"
 
@@ -58,14 +58,14 @@ describe("SchemaBuilder public API", () => {
     const { container } = renderPublicBuilder()
 
     expect(container.querySelector('[data-slot="schema-builder"]')).toBeTruthy()
-    expect(screen.getByText("invoice_number")).toBeTruthy()
+    expect(screen.getByDisplayValue("invoice_number")).toBeTruthy()
     expect(screen.queryByRole("button", { name: "JSON" })).toBeNull()
   })
 
   it("ignores json view when the jsonMode feature is disabled", () => {
     renderPublicBuilder({ view: "json", features: { jsonMode: false } })
 
-    expect(screen.getByText("invoice_number")).toBeTruthy()
+    expect(screen.getByDisplayValue("invoice_number")).toBeTruthy()
     expect(screen.queryByRole("button", { name: "Apply" })).toBeNull()
     expect(screen.queryByRole("button", { name: "Discard" })).toBeNull()
   })
@@ -113,13 +113,13 @@ describe("SchemaBuilder public API", () => {
       onViewChange,
     })
 
-    expect(screen.getByText("invoice_number")).toBeTruthy()
+    expect(screen.getByDisplayValue("invoice_number")).toBeTruthy()
     fireEvent.click(screen.getByRole("button", { name: "JSON" }))
     expect(await screen.findByRole("textbox")).toBeTruthy()
     expect(onViewChange).toHaveBeenLastCalledWith("json")
 
     fireEvent.click(screen.getByRole("button", { name: "Fields" }))
-    expect(screen.getByText("invoice_number")).toBeTruthy()
+    expect(screen.getByDisplayValue("invoice_number")).toBeTruthy()
     expect(onViewChange).toHaveBeenLastCalledWith("fields")
   })
 

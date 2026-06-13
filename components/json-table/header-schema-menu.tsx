@@ -210,7 +210,7 @@ export function HeaderSchemaMenu({
           setDropdownOpen={onOpenChange}
           schema={schema}
           replaceSchema={setSchema}
-          editMode={schemaEditMode}
+          mode={schemaEditMode}
           onDelete={deleteProperty}
         />
       </PopoverDialogContent>

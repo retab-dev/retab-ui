@@ -14,8 +14,15 @@ import { installJsonTableDom } from "./json-table-test-dom"
 
 const selectContext = {
   onValueChange: (_value: string) => {},
-  onOpenChange: (_open: boolean) => {},
+  onOpenChange: (_open: boolean, _details = selectOpenChangeDetails()) => {},
   value: "",
+}
+
+function selectOpenChangeDetails(reason = "none") {
+  return {
+    reason,
+    cancel: vi.fn(),
+  }
 }
 
 vi.mock("@/components/ui/select", () => ({
@@ -26,7 +33,10 @@ vi.mock("@/components/ui/select", () => ({
     value,
   }: {
     children: ReactNode
-    onOpenChange: (open: boolean) => void
+    onOpenChange: (
+      open: boolean,
+      details?: ReturnType<typeof selectOpenChangeDetails>
+    ) => void
     onValueChange: (value: string) => void
     value: string
   }) => {
@@ -308,60 +318,42 @@ describe("json table enum cell", () => {
   })
 
   it("lets value selection win when the dropdown reports close before value", () => {
-    vi.useFakeTimers()
-    try {
-      const onEditingEnd = vi.fn()
-      const onCommit = vi.fn()
-      renderEnumCellForTest({
-        effectiveValue: "draft",
-        fieldMetadata: {
-          fieldPath: "status",
-          rawSchema: { enum: ["draft", "paid"] },
-          schema: { enum: ["draft", "paid"] },
-          effectiveSchema: { enum: ["draft", "paid"] },
-          isNullable: false,
-          kind: "enum",
-          enumValues: ["draft", "paid"],
-        },
-        onEditingEnd,
-        commitValue: onCommit,
-      })
+    const onEditingEnd = vi.fn()
+    const onCommit = vi.fn()
+    renderEnumCellForTest({
+      effectiveValue: "draft",
+      fieldMetadata: {
+        fieldPath: "status",
+        rawSchema: { enum: ["draft", "paid"] },
+        schema: { enum: ["draft", "paid"] },
+        effectiveSchema: { enum: ["draft", "paid"] },
+        isNullable: false,
+        kind: "enum",
+        enumValues: ["draft", "paid"],
+      },
+      onEditingEnd,
+      commitValue: onCommit,
+    })
 
-      act(() => {
-        selectContext.onOpenChange(false)
-        selectContext.onValueChange("option:1")
-      })
+    act(() => {
+      selectContext.onOpenChange(false)
+      selectContext.onValueChange("option:1")
+    })
 
-      expect(onCommit).toHaveBeenCalledWith(
-        "paid",
-        expect.objectContaining({ kind: "select", rawValue: "option:1" })
-      )
-      expect(onEditingEnd).toHaveBeenCalledTimes(1)
-
-      act(() => vi.runAllTimers())
-
-      expect(onEditingEnd).toHaveBeenCalledTimes(1)
-    } finally {
-      vi.useRealTimers()
-    }
+    expect(onCommit).toHaveBeenCalledWith(
+      "paid",
+      expect.objectContaining({ kind: "select", rawValue: "option:1" })
+    )
+    expect(onEditingEnd).toHaveBeenCalledTimes(1)
   })
 
-  it("closes after a dropdown dismisses without selecting a value", () => {
-    vi.useFakeTimers()
-    try {
-      const onEditingEnd = vi.fn()
-      const onPickerOpenChange = vi.fn()
-      renderEnumCellForTest({ onEditingEnd, onPickerOpenChange })
+  it("closes immediately after a dropdown dismisses without selecting a value", () => {
+    const onEditingEnd = vi.fn()
+    const onPickerOpenChange = vi.fn()
+    renderEnumCellForTest({ onEditingEnd, onPickerOpenChange })
 
-      act(() => selectContext.onOpenChange(false))
+    act(() => selectContext.onOpenChange(false))
 
-      expect(onEditingEnd).not.toHaveBeenCalled()
-
-      act(() => vi.runAllTimers())
-
-      expect(onEditingEnd).toHaveBeenCalledTimes(1)
-    } finally {
-      vi.useRealTimers()
-    }
+    expect(onEditingEnd).toHaveBeenCalledTimes(1)
   })
 })

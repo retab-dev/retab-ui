@@ -129,65 +129,118 @@ export function createFakeEmailMessage(): EmailViewerMessage {
     from: "Mina Patel <mina@retab.example>",
     to: ["Avery Lee <avery@retab.example>", "Ops Review <ops@retab.example>"],
     sentAt: "2026-06-13T09:42:00-04:00",
-    htmlBody: BODY_HTML,
-    textBody: TEXT_FALLBACK,
-    attachments: [
-      {
-        id: "inline-retab-logo",
-        contentId: `<${INLINE_LOGO_CONTENT_ID}>`,
-        contentDisposition: "inline",
-        source: {
-          kind: "text",
-          text: INLINE_LOGO_SVG,
-          fileName: "retab-logo.svg",
-          mimeType: "image/svg+xml",
-          identityKey: "fake-email:inline-logo",
+    root: {
+      id: "root",
+      mimeType: "multipart/mixed",
+      children: [
+        {
+          id: "alternative",
+          mimeType: "multipart/alternative",
+          children: [
+            {
+              id: "text-body",
+              mimeType: "text/plain",
+              source: {
+                kind: "text",
+                text: TEXT_FALLBACK,
+                fileName: "message.txt",
+                mimeType: "text/plain",
+                identityKey: "fake-email:text-body",
+              },
+              size: TEXT_FALLBACK.length,
+            },
+            {
+              id: "related",
+              mimeType: "multipart/related",
+              children: [
+                {
+                  id: "html-body",
+                  mimeType: "text/html",
+                  source: {
+                    kind: "text",
+                    text: BODY_HTML,
+                    fileName: "message.html",
+                    mimeType: "text/html",
+                    identityKey: "fake-email:html-body",
+                  },
+                  size: BODY_HTML.length,
+                },
+                {
+                  id: "inline-retab-logo",
+                  mimeType: "image/svg+xml",
+                  contentId: `<${INLINE_LOGO_CONTENT_ID}>`,
+                  disposition: "inline",
+                  fileName: "retab-logo.svg",
+                  source: {
+                    kind: "text",
+                    text: INLINE_LOGO_SVG,
+                    fileName: "retab-logo.svg",
+                    mimeType: "image/svg+xml",
+                    identityKey: "fake-email:inline-logo",
+                  },
+                  size: INLINE_LOGO_SVG.length,
+                },
+              ],
+            },
+          ],
         },
-        size: INLINE_LOGO_SVG.length,
-      },
-      {
-        id: "prospectus",
-        source: {
-          kind: "url",
-          url: "/samples/spacex-prospectus.pdf",
-          fileName: "spacex-prospectus.pdf",
+        {
+          id: "prospectus",
           mimeType: "application/pdf",
+          disposition: "attachment",
+          fileName: "spacex-prospectus.pdf",
+          source: {
+            kind: "url",
+            url: "/samples/spacex-prospectus.pdf",
+            fileName: "spacex-prospectus.pdf",
+            mimeType: "application/pdf",
+          },
+          size: 1_220_000,
         },
-        size: 1_220_000,
-      },
-      {
-        id: "sales-csv",
-        source: {
-          kind: "url",
-          url: "/samples/sales.csv",
-          fileName: "sales.csv",
+        {
+          id: "sales-csv",
           mimeType: "text/csv",
+          disposition: "attachment",
+          fileName: "sales.csv",
+          source: {
+            kind: "url",
+            url: "/samples/sales.csv",
+            fileName: "sales.csv",
+            mimeType: "text/csv",
+          },
+          size: 18_432,
         },
-        size: 18_432,
-      },
-      {
-        id: "financials-xlsx",
-        source: {
-          kind: "url",
-          url: "/samples/nvidia-financials-fy2024.xlsx",
-          fileName: "nvidia-financials-fy2024.xlsx",
+        {
+          id: "financials-xlsx",
           mimeType:
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          disposition: "attachment",
+          fileName: "nvidia-financials-fy2024.xlsx",
+          source: {
+            kind: "url",
+            url: "/samples/nvidia-financials-fy2024.xlsx",
+            fileName: "nvidia-financials-fy2024.xlsx",
+            mimeType:
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          },
+          size: 148_900,
         },
-        size: 148_900,
-      },
-      {
-        id: "review-note",
-        source: {
-          kind: "text",
-          text: REVIEW_NOTE_HTML,
-          fileName: "review-note.html",
+        {
+          id: "review-note",
           mimeType: "text/html",
-          identityKey: "fake-email:review-note-html",
+          disposition: "attachment",
+          fileName: "review-note.html",
+          source: {
+            kind: "text",
+            text: REVIEW_NOTE_HTML,
+            fileName: "review-note.html",
+            mimeType: "text/html",
+            identityKey: "fake-email:review-note-html",
+          },
+          size: REVIEW_NOTE_HTML.length,
         },
-        size: REVIEW_NOTE_HTML.length,
-      },
-    ],
+      ],
+    },
   }
 }
 

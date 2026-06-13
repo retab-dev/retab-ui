@@ -14,9 +14,9 @@ import {
 } from "@/components/json-table/cell-style"
 import type { JsonTableCellProps } from "@/components/json-table/json-table-cell-types"
 import {
-  getJsonTableCellDisplayValue,
   JsonTableReadOnlyPrimitiveDisplayCell,
 } from "@/components/json-table/json-table-display-cell"
+import { getJsonTableCellDisplayValue } from "@/components/json-table/json-table-data-cell-model"
 import { getFieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
 import type { FieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
 

@@ -7,6 +7,10 @@ import { createPortal } from "react-dom"
 import { cn } from "@/lib/utils"
 import { Calendar } from "@/components/ui/calendar"
 import { Input } from "@/components/ui/input"
+import {
+  useDataCellOpeningContext,
+  type DataCellDismissCause,
+} from "@/registry/new-york-v4/ui/data-cell-activation"
 import { dataCellPickerTriggerClass } from "@/registry/new-york-v4/ui/data-cell-classes"
 import {
   dateFromPickerValue,
@@ -33,6 +37,31 @@ export type DataCellPickerControlProps = DataCellProps & {
   value?: string | null
 }
 
+function dataCellOutsidePointerDismissCause(
+  event: PointerEvent
+): DataCellDismissCause {
+  return {
+    kind: "outside-pointer",
+    event,
+  }
+}
+
+function dataCellTriggerPressDismissCause(event: Event): DataCellDismissCause {
+  return {
+    kind: "trigger-press",
+    event,
+  }
+}
+
+function dataCellEscapeDismissCause(
+  event: KeyboardEvent
+): DataCellDismissCause {
+  return {
+    kind: "escape",
+    event,
+  }
+}
+
 export function DataCellPickerControl({
   kind,
   value,
@@ -48,7 +77,7 @@ export function DataCellPickerControl({
   formatValue,
   draftValue,
   autoFocus,
-  activationIntent,
+  activationSource,
   isPickerOpen,
   onDraftValueChange,
   onCommit,
@@ -71,19 +100,9 @@ export function DataCellPickerControl({
   )
   const triggerRef = React.useRef<HTMLButtonElement>(null)
   const popupRef = React.useRef<HTMLDivElement>(null)
-  const shouldSkipAutoFocusClick =
-    Boolean(autoFocus) &&
-    activationIntent !== undefined &&
-    activationIntent.type !== "keyboard"
-  const skipAutoFocusClickRef = React.useRef(shouldSkipAutoFocusClick)
-  const openingPointerDownRef = React.useRef(
-    activationIntent?.type === "pointer"
-      ? { clientX: activationIntent.clientX, clientY: activationIntent.clientY }
-      : null
-  )
-  const openingPointerDownTimerRef = React.useRef<ReturnType<
-    typeof globalThis.setTimeout
-  > | null>(null)
+  const openingContext = useDataCellOpeningContext(activationSource, {
+    enabled: Boolean(autoFocus),
+  })
   const [popupStyle, setPopupStyle] = React.useState<React.CSSProperties>()
   const popupId = React.useId()
   const open = isPickerOpen ?? uncontrolledOpen
@@ -107,14 +126,11 @@ export function DataCellPickerControl({
     setUncontrolledDraftValue(formatDataCellEditValue(kind, value))
   }, [draftValue, kind, value])
 
-  React.useEffect(() => {
-    skipAutoFocusClickRef.current = shouldSkipAutoFocusClick
-  }, [shouldSkipAutoFocusClick])
-
   const closePopup = React.useCallback(() => {
+    openingContext.release()
     setOpen(false)
     onEditingEnd?.()
-  }, [onEditingEnd, setOpen])
+  }, [onEditingEnd, openingContext, setOpen])
 
   const updatePopupPosition = React.useCallback(() => {
     const trigger = triggerRef.current
@@ -145,40 +161,9 @@ export function DataCellPickerControl({
 
   React.useLayoutEffect(() => {
     if (!autoFocus) return
-    if (openingPointerDownTimerRef.current !== null) {
-      globalThis.clearTimeout(openingPointerDownTimerRef.current)
-      openingPointerDownTimerRef.current = null
-    }
-    skipAutoFocusClickRef.current = shouldSkipAutoFocusClick
-    openingPointerDownRef.current =
-      activationIntent?.type === "pointer"
-        ? {
-            clientX: activationIntent.clientX,
-            clientY: activationIntent.clientY,
-          }
-        : null
-    openingPointerDownTimerRef.current = globalThis.setTimeout(() => {
-      openingPointerDownRef.current = null
-      openingPointerDownTimerRef.current = null
-    }, 0)
     updatePopupPosition()
     setOpen(true)
-  }, [
-    activationIntent,
-    autoFocus,
-    setOpen,
-    shouldSkipAutoFocusClick,
-    updatePopupPosition,
-  ])
-
-  React.useEffect(
-    () => () => {
-      if (openingPointerDownTimerRef.current === null) return
-      globalThis.clearTimeout(openingPointerDownTimerRef.current)
-      openingPointerDownTimerRef.current = null
-    },
-    []
-  )
+  }, [autoFocus, setOpen, updatePopupPosition])
 
   React.useLayoutEffect(() => {
     if (open) updatePopupPosition()
@@ -190,13 +175,11 @@ export function DataCellPickerControl({
     const handlePointerDown = (event: PointerEvent) => {
       const target = event.target
       if (!(target instanceof Node)) return
-      const openingPointerDown = openingPointerDownRef.current
       if (
-        openingPointerDown &&
-        openingPointerDown.clientX === event.clientX &&
-        openingPointerDown.clientY === event.clientY
+        openingContext.shouldCancelDismiss(
+          dataCellOutsidePointerDismissCause(event)
+        )
       ) {
-        openingPointerDownRef.current = null
         return
       }
       if (triggerRef.current?.contains(target)) return
@@ -204,7 +187,13 @@ export function DataCellPickerControl({
       closePopup()
     }
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") closePopup()
+      if (event.key !== "Escape") return
+      openingContext.release()
+      if (
+        !openingContext.shouldCancelDismiss(dataCellEscapeDismissCause(event))
+      ) {
+        closePopup()
+      }
     }
     const handleViewportChange = () => updatePopupPosition()
 
@@ -218,7 +207,7 @@ export function DataCellPickerControl({
       window.removeEventListener("resize", handleViewportChange)
       window.removeEventListener("scroll", handleViewportChange, true)
     }
-  }, [closePopup, open, updatePopupPosition])
+  }, [closePopup, open, openingContext, updatePopupPosition])
 
   const updatePickerValue = (nextValue: string, commit = false) => {
     if (draftValue === undefined) setUncontrolledDraftValue(nextValue)
@@ -307,8 +296,11 @@ export function DataCellPickerControl({
         onClick={(event) => {
           onClick?.(event)
           if (event.defaultPrevented || disabled) return
-          if (skipAutoFocusClickRef.current) {
-            skipAutoFocusClickRef.current = false
+          if (
+            openingContext.shouldCancelDismiss(
+              dataCellTriggerPressDismissCause(event.nativeEvent)
+            )
+          ) {
             return
           }
           if (open) closePopup()

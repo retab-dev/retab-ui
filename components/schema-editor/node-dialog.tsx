@@ -23,7 +23,7 @@ interface NodeDialogProps {
   onDelete?: () => void
   node: ExtendedJSONSchema7
   name: string
-  editMode: PropertyFormMode
+  mode: PropertyFormMode
   siblingNames: string[]
   formContext: Omit<PropertyFormSchemaContext, "siblingNames" | "originalName">
 }
@@ -36,7 +36,7 @@ export function NodeDialog({
   onDelete,
   node,
   name,
-  editMode,
+  mode,
   siblingNames,
   formContext,
 }: NodeDialogProps) {
@@ -55,10 +55,10 @@ export function NodeDialog({
       <DialogContent className="max-h-[90vh] gap-2 overflow-y-auto p-0 sm:max-w-xl">
         <DialogHeader className="px-4 pt-4">
           <DialogTitle>
-            {editMode === "readOnly" ? "View Property" : "Edit Property"}
+            {mode === "readOnly" ? "View Property" : "Edit Property"}
           </DialogTitle>
           <DialogDescription>
-            {editMode === "readOnly"
+            {mode === "readOnly"
               ? "View property name, type, description, and other characteristics."
               : "Modify property name, type, description, and other characteristics."}
           </DialogDescription>
@@ -75,7 +75,7 @@ export function NodeDialog({
           onCancel={onClose}
           onDelete={onDelete}
           submitLabel="Save"
-          mode={editMode}
+          mode={mode}
         />
       </DialogContent>
     </Dialog>

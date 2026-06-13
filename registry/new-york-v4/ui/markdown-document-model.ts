@@ -40,6 +40,7 @@ export interface MarkdownDocumentPage {
   pageEndLine: number
   pageNumber: number
   pageStartLine: number
+  sourceText: string
   sourceLineByRenderedLine: ReadonlyMap<number, number>
 }
 
@@ -69,7 +70,7 @@ export function createMarkdownDocument(text: string): MarkdownDocument {
   const normalizedText = text.length === 0 ? " " : text
   const headingRegistry: HeadingRegistry = new Map()
   const blocks = createMarkdownBlocks(normalizedText, headingRegistry)
-  const pages = createMarkdownPages(blocks)
+  const pages = createMarkdownPages(blocks, normalizedText)
   const headingIdsByLine = new Map<number, string>()
 
   for (const block of blocks) {
@@ -206,9 +207,11 @@ function createMarkdownBlocks(
 }
 
 function createMarkdownPages(
-  blocks: readonly MarkdownDocumentBlock[]
+  blocks: readonly MarkdownDocumentBlock[],
+  text: string
 ): MarkdownDocumentPage[] {
   const pages: MarkdownDocumentPage[] = []
+  const sourceLineOffsets = createSourceLineOffsets(text)
   let currentBlocks: MarkdownDocumentBlock[] = []
   let currentHeight = pageChromeHeight()
 
@@ -226,6 +229,12 @@ function createMarkdownPages(
       pageEndLine,
       pageNumber: pages.length + 1,
       pageStartLine,
+      sourceText: sourceTextForLineRange({
+        endLine: pageEndLine,
+        lineOffsets: sourceLineOffsets,
+        startLine: pageStartLine,
+        text,
+      }),
       sourceLineByRenderedLine,
     })
     currentBlocks = []
@@ -303,6 +312,38 @@ function createMarkdownPageContent(blocks: readonly MarkdownDocumentBlock[]): {
     markdown: parts.join("\n"),
     sourceLineByRenderedLine,
   }
+}
+
+function createSourceLineOffsets(text: string) {
+  const offsets = [0]
+  for (const match of text.matchAll(/\r\n|[\n\r\u2028\u2029]/g)) {
+    offsets.push(match.index + match[0].length)
+  }
+  offsets.push(text.length)
+  return offsets
+}
+
+function sourceTextForLineRange({
+  endLine,
+  lineOffsets,
+  startLine,
+  text,
+}: {
+  endLine: number
+  lineOffsets: readonly number[]
+  startLine: number
+  text: string
+}) {
+  const safeStartLine = Math.max(1, startLine)
+  const safeEndLine = Math.max(safeStartLine, endLine)
+  const startOffset = lineOffsets[safeStartLine - 1] ?? 0
+  let endOffset = lineOffsets[safeEndLine] ?? text.length
+
+  while (endOffset > startOffset && /[\n\r\u2028\u2029]/.test(text[endOffset - 1]!)) {
+    endOffset -= 1
+  }
+
+  return text.slice(startOffset, endOffset)
 }
 
 function extractYamlFrontmatter(text: string) {
@@ -387,7 +428,7 @@ function slugifyHeading(text: string) {
   return text
     .toLowerCase()
     .replace(/<[^>]*>/g, "")
-    .replace(/[^\p{Letter}\p{Number}\s-]/gu, "")
+    .replace(/[^\p{Letter}\p{Number}_\s-]/gu, "")
     .trim()
     .replace(/\s+/g, "-")
 }

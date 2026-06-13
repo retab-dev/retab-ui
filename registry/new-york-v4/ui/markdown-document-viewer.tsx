@@ -61,6 +61,11 @@ type ViewportSize = {
   width: number
 }
 
+type MarkdownViewportAnchor = {
+  anchor: ReturnType<typeof getMarkdownScrollAnchor>
+  topPaddingScroll: number
+}
+
 const MarkdownProjectionCanvas = React.forwardRef<HTMLDivElement>(
   function MarkdownProjectionCanvas(_, ref) {
     return (
@@ -135,9 +140,7 @@ function MarkdownDocumentViewerContent({
     measurementKey: "",
     pages: new Map(),
   })
-  const pendingAnchorRef = React.useRef<ReturnType<
-    typeof getMarkdownScrollAnchor
-  > | null>(null)
+  const pendingAnchorRef = React.useRef<MarkdownViewportAnchor | null>(null)
   const viewportHeight =
     viewportSize.height || MARKDOWN_VIEWER_DEFAULT_VIEWPORT_HEIGHT
   const viewportWidth =
@@ -206,23 +209,29 @@ function MarkdownDocumentViewerContent({
   }, [])
 
   const captureScrollAnchor = React.useCallback(() => {
-    pendingAnchorRef.current = getMarkdownScrollAnchor({
-      geometry: virtualGeometry,
-      scrollTop: readVirtualScrollTop(),
-    })
+    const scrollTop = viewportRef.current?.scrollTop ?? scrollTopRef.current
+    pendingAnchorRef.current = {
+      anchor: getMarkdownScrollAnchor({
+        geometry: virtualGeometry,
+        scrollTop: readVirtualScrollTop(),
+      }),
+      topPaddingScroll: Math.min(scrollTop, MARKDOWN_VIEWER_CANVAS_PADDING_Y),
+    }
   }, [readVirtualScrollTop, virtualGeometry])
 
   React.useLayoutEffect(() => {
-    const anchor = pendingAnchorRef.current
+    const pendingAnchor = pendingAnchorRef.current
     const viewport = viewportRef.current
-    if (!anchor || !viewport) return
+    if (!pendingAnchor || !viewport) return
 
     pendingAnchorRef.current = null
+    if (!pendingAnchor.anchor) return
+
     const nextVirtualScrollTop = scrollTopForMarkdownAnchor({
-      anchor,
+      anchor: pendingAnchor.anchor,
       geometry: virtualGeometry,
     })
-    viewport.scrollTop = nextVirtualScrollTop + MARKDOWN_VIEWER_CANVAS_PADDING_Y
+    viewport.scrollTop = nextVirtualScrollTop + pendingAnchor.topPaddingScroll
     scrollTopRef.current = viewport.scrollTop
   }, [virtualGeometry])
 
@@ -785,6 +794,7 @@ function renderMarkdownProjectedPage({
     mode,
     page.id,
     page.markdown,
+    page.sourceText,
     highlightRange?.start ?? "",
     highlightRange?.end ?? "",
   ].join("\u0000")
@@ -824,12 +834,49 @@ function syncMarkdownProjectedPage({
   const content = projectedPage.shell.querySelector<HTMLElement>(
     '[data-slot="markdown-document-rendered-content"], [data-slot="markdown-document-text-content"]'
   )
-  const measuredElement = content ?? projectedPage.shell
-  const height =
-    measuredElement.offsetHeight ||
-    measuredElement.getBoundingClientRect().height
+  const height = measureMarkdownProjectedPageHeight({
+    content,
+    shell: projectedPage.shell,
+  })
   if (!Number.isFinite(height) || height <= 0) return
   measurePage(pageMeasurementKey, height + MARKDOWN_VIEWER_PAGE_GAP)
+}
+
+function measureMarkdownProjectedPageHeight({
+  content,
+  shell,
+}: {
+  content: HTMLElement | null
+  shell: HTMLElement
+}) {
+  const contentHeight = content ? measuredElementHeight(content) : 0
+  const contentBoxHeight =
+    contentHeight > 0
+      ? contentHeight + elementVerticalPadding(shell)
+      : measuredElementHeight(shell)
+  const shellScrollHeight = shell.scrollHeight
+  const shellMinHeight = cssPixels(shell.style.minHeight)
+  const overflowingShellHeight =
+    shellScrollHeight > shellMinHeight + 0.5 ? shellScrollHeight : 0
+
+  return Math.max(contentBoxHeight, overflowingShellHeight)
+}
+
+function measuredElementHeight(element: HTMLElement) {
+  return element.offsetHeight || element.getBoundingClientRect().height
+}
+
+function elementVerticalPadding(element: HTMLElement) {
+  const style = window.getComputedStyle(element)
+  const physicalPadding = cssPixels(style.paddingTop) + cssPixels(style.paddingBottom)
+  if (physicalPadding > 0) return physicalPadding
+  const logicalPadding = cssPixels(element.style.paddingBlock)
+  return logicalPadding > 0 ? logicalPadding * 2 : 0
+}
+
+function cssPixels(value: string) {
+  const pixels = Number.parseFloat(value)
+  return Number.isFinite(pixels) ? pixels : 0
 }
 
 function disposeMarkdownProjectionCache(cache: MarkdownProjectionCache) {
@@ -876,7 +923,7 @@ function MarkdownVirtualPageContent({
       className="font-mono leading-relaxed whitespace-pre-wrap text-foreground/90"
       data-slot="markdown-document-text-content"
     >
-      {page.markdown}
+      {page.sourceText}
     </pre>
   ) : (
     <MarkdownDocumentPageRenderer

@@ -25,7 +25,9 @@ pnpm dlx shadcn@latest add @retab/file-system-block
 
 ## Example
 
-Open the full demo at [/view/blocks/file-system](/view/blocks/file-system).
+<FileSystemDemo />
+
+Open the full-page demo at [/view/blocks/file-system](/view/blocks/file-system).
 
 ```tsx
 import { FileSystem, type FileSystemItem } from "@/components/ui/file-system"
@@ -54,6 +56,8 @@ export function Documents() {
 - Accepts a flat manifest and infers missing parent folders.
 - Shares selection, preview, search, filters, and sort state across list, grid,
   columns, and gallery views.
+- Renders the list view with Pierre Trees for virtualized tree navigation,
+  keyboard behavior, and icon handling.
 - Uses `FileThumbnail` for compact previews and `FileViewer` for the selected
   file preview.
 - Supports controlled `view`, `selectedPath`, and `query` state.

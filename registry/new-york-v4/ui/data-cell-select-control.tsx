@@ -9,13 +9,15 @@ import {
   SelectItem,
   SelectTrigger,
 } from "@/components/ui/select"
+import {
+  useDataCellOpeningContext,
+  type DataCellDismissCause,
+} from "@/registry/new-york-v4/ui/data-cell-activation"
 import { dataCellPickerTriggerClass } from "@/registry/new-york-v4/ui/data-cell-classes"
 import type {
   DataCellProps,
   DataCellValueMeta,
 } from "@/registry/new-york-v4/ui/data-cell-types"
-
-const DATA_CELL_SELECT_CLOSE_DELAY_MS = 24
 
 export type DataCellSelectControlProps = DataCellProps & { kind: "select" }
 
@@ -26,6 +28,29 @@ function selectValueMeta(value: string | null): DataCellValueMeta {
     isEmpty: value === null || value === "",
     isValid: true,
   }
+}
+
+function dataCellSelectDismissCause(
+  eventDetails:
+    | {
+        event?: Event
+        reason?: string
+      }
+    | undefined
+): DataCellDismissCause {
+  const event = eventDetails?.event
+  const reason = eventDetails?.reason
+  if (reason === "focus-out") return { kind: "focus-out", event }
+  if (reason === "trigger-press") return { kind: "trigger-press", event }
+  if (reason === "cancel-open") return { kind: "cancel-open", event }
+  if (
+    reason === "escape-key" &&
+    event instanceof KeyboardEvent &&
+    event.key === "Escape"
+  ) {
+    return { kind: "escape", event }
+  }
+  return { kind: "unknown", event }
 }
 
 export function DataCellSelectControl({
@@ -43,7 +68,7 @@ export function DataCellSelectControl({
   formatValue,
   draftValue: _draftValue,
   autoFocus,
-  activationIntent,
+  activationSource,
   isPickerOpen,
   selectOptions,
   onDraftValueChange: _onDraftValueChange,
@@ -60,18 +85,11 @@ export function DataCellSelectControl({
   ...props
 }: DataCellSelectControlProps) {
   const triggerRef = React.useRef<HTMLButtonElement>(null)
-  const closeTimerRef = React.useRef<ReturnType<
-    typeof globalThis.setTimeout
-  > | null>(null)
-  const clearSkipAutoFocusCloseTimerRef = React.useRef<ReturnType<
-    typeof globalThis.setTimeout
-  > | null>(null)
-  const shouldSkipAutoFocusClose =
-    Boolean(autoFocus) &&
-    activationIntent !== undefined &&
-    activationIntent.type !== "keyboard"
-  const skipAutoFocusCloseRef = React.useRef(shouldSkipAutoFocusClose)
+  const openingContext = useDataCellOpeningContext(activationSource, {
+    enabled: Boolean(autoFocus),
+  })
   const lastCommittedValueRef = React.useRef<string | null>(null)
+  const didFinishEditingRef = React.useRef(false)
   const [uncontrolledOpen, setUncontrolledOpen] = React.useState(false)
   const open = isPickerOpen ?? uncontrolledOpen
   const selectedValue = value ?? null
@@ -79,18 +97,6 @@ export function DataCellSelectControl({
   const displayValue =
     formatValue?.(selectedValue, { kind }) ?? selectedOption?.label ?? ""
   const isEmpty = displayValue === ""
-
-  const cancelScheduledClose = React.useCallback(() => {
-    if (closeTimerRef.current === null) return
-    globalThis.clearTimeout(closeTimerRef.current)
-    closeTimerRef.current = null
-  }, [])
-
-  const cancelScheduledSkipAutoFocusCloseClear = React.useCallback(() => {
-    if (clearSkipAutoFocusCloseTimerRef.current === null) return
-    globalThis.clearTimeout(clearSkipAutoFocusCloseTimerRef.current)
-    clearSkipAutoFocusCloseTimerRef.current = null
-  }, [])
 
   const setOpen = React.useCallback(
     (nextOpen: boolean) => {
@@ -100,30 +106,28 @@ export function DataCellSelectControl({
     [isPickerOpen, onPickerOpenChange]
   )
 
-  const closeAfterDismiss = React.useCallback(() => {
-    cancelScheduledClose()
-    closeTimerRef.current = globalThis.setTimeout(() => {
-      closeTimerRef.current = null
-      onEditingEnd?.()
-    }, DATA_CELL_SELECT_CLOSE_DELAY_MS)
-  }, [cancelScheduledClose, onEditingEnd])
+  const finishSelectEditing = React.useCallback(() => {
+    if (didFinishEditingRef.current) return
+    didFinishEditingRef.current = true
+    onEditingEnd?.()
+  }, [onEditingEnd])
 
   const commitSelectValue = React.useCallback(
     (nextValue: string) => {
       if (lastCommittedValueRef.current === nextValue) return
       lastCommittedValueRef.current = nextValue
-      cancelScheduledClose()
+      openingContext.release()
       onCommit?.(nextValue, selectValueMeta(nextValue))
-      onEditingEnd?.()
+      finishSelectEditing()
     },
-    [cancelScheduledClose, onCommit, onEditingEnd]
+    [finishSelectEditing, onCommit, openingContext]
   )
 
   const closeSelectEditor = React.useCallback(() => {
-    cancelScheduledClose()
+    openingContext.release()
     setOpen(false)
-    onEditingEnd?.()
-  }, [cancelScheduledClose, onEditingEnd, setOpen])
+    finishSelectEditing()
+  }, [finishSelectEditing, openingContext, setOpen])
 
   React.useLayoutEffect(() => {
     onEditorHandleChange?.({
@@ -136,49 +140,35 @@ export function DataCellSelectControl({
   React.useLayoutEffect(() => {
     if (!autoFocus) return
     lastCommittedValueRef.current = null
-    cancelScheduledSkipAutoFocusCloseClear()
-    skipAutoFocusCloseRef.current = shouldSkipAutoFocusClose
+    didFinishEditingRef.current = false
     triggerRef.current?.focus({ preventScroll: true })
     setOpen(true)
-    clearSkipAutoFocusCloseTimerRef.current = globalThis.setTimeout(() => {
-      skipAutoFocusCloseRef.current = false
-      clearSkipAutoFocusCloseTimerRef.current = null
-    }, DATA_CELL_SELECT_CLOSE_DELAY_MS)
-  }, [
-    autoFocus,
-    cancelScheduledSkipAutoFocusCloseClear,
-    setOpen,
-    shouldSkipAutoFocusClose,
-  ])
-
-  React.useEffect(() => {
-    if (open) cancelScheduledClose()
-  }, [cancelScheduledClose, open])
-
-  React.useEffect(() => cancelScheduledClose, [cancelScheduledClose])
-
-  React.useEffect(
-    () => cancelScheduledSkipAutoFocusCloseClear,
-    [cancelScheduledSkipAutoFocusCloseClear]
-  )
+  }, [autoFocus, setOpen])
 
   return (
     <Select
       open={open}
       value={selectedValue ?? undefined}
       disabled={disabled}
-      onOpenChange={(nextOpen) => {
+      onOpenChange={(nextOpen, eventDetails) => {
         if (nextOpen) {
           setOpen(true)
-          cancelScheduledClose()
           return
         }
-        if (skipAutoFocusCloseRef.current) {
-          skipAutoFocusCloseRef.current = false
+
+        if (
+          openingContext.shouldCancelDismiss(
+            dataCellSelectDismissCause(eventDetails)
+          )
+        ) {
+          eventDetails.cancel()
           setOpen(true)
           return
         }
-        closeAfterDismiss()
+
+        openingContext.release()
+        setOpen(false)
+        finishSelectEditing()
       }}
       onValueChange={(nextValue) => {
         if (nextValue === null) return

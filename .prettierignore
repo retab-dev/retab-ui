@@ -1,8 +1,11 @@
 dist
 node_modules
 .next
+.claude
 build
 .contentlayer
+reference
+tmp
 registry/__index__.tsx
 content/docs/components/calendar.mdx
 registry/styles/**/*.css

@@ -13,8 +13,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
   createHrefDownloadAction,
-  ViewerDownloadError,
   type ViewerDownloadAction,
+  type ViewerDownloadError,
   type ViewerDownloadPayload,
 } from "@/registry/new-york-v4/lib/viewer-download"
 import {

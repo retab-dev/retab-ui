@@ -71,7 +71,10 @@ export function FileSystemGalleryView({
       return
     }
 
-    rovingFocus.selectTypeAhead(event, activeEntry?.path ?? controller.selectedPath)
+    rovingFocus.selectTypeAhead(
+      event,
+      activeEntry?.path ?? controller.selectedPath
+    )
   }
 
   return (

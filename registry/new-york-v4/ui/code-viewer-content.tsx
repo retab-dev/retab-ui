@@ -270,8 +270,8 @@ function createCodeRow(): CodeRowCache {
   row.style.left = "0"
 
   gutterSpan.className =
-    "flex-shrink-0 pr-3 text-right text-muted-foreground/60 select-none"
-  contentSpan.className = "whitespace-pre"
+    "sticky left-0 z-10 flex-shrink-0 border-r bg-muted/30 px-2 pr-3 text-right text-muted-foreground/60 select-none"
+  contentSpan.className = "whitespace-pre px-2"
 
   row.append(gutterSpan, contentSpan)
 
@@ -337,7 +337,7 @@ function replaceCodeContent(
 
 function codeRowClassName(isHighlighted: boolean) {
   return [
-    "absolute top-0 left-0 flex min-w-full px-2",
+    "absolute top-0 left-0 flex min-w-full",
     isHighlighted ? "bg-primary/12 ring-1 ring-primary/30 ring-inset" : "",
   ]
     .filter(Boolean)
@@ -369,12 +369,12 @@ function renderStaticCodeRows({
         }}
       >
         <span
-          className="flex-shrink-0 pr-3 text-right text-muted-foreground/60 select-none"
+          className="sticky left-0 z-10 flex-shrink-0 border-r bg-muted/30 px-2 pr-3 text-right text-muted-foreground/60 select-none"
           style={{ width: gutterWidth }}
         >
           {lineNumber}
         </span>
-        <span className="whitespace-pre">{text || " "}</span>
+        <span className="whitespace-pre px-2">{text || " "}</span>
       </span>
     )
   })
@@ -481,7 +481,7 @@ export function CodeViewerContent({
     })
   }, [highlightRange, lineHeight])
 
-  const gutterWidth = `${String(textLines.length).length + 1}ch`
+  const gutterWidth = `calc(${String(textLines.length).length + 1}ch + 1.25rem)`
   const totalHeight = getCodeVirtualTotalSize({
     lineCount: textLines.length,
     lineHeight,
@@ -549,20 +549,33 @@ export function CodeViewerContent({
         />
       ) : null}
       {grammar ? <style>{CODE_VIEWER_SYNTAX_STYLE}</style> : null}
-      <ScrollArea className="min-h-0 flex-1" viewportRef={viewportElementRef}>
-        <pre
-          ref={preRef}
-          className="relative w-max min-w-full font-mono"
-          suppressHydrationWarning
+      <ScrollArea
+        className="min-h-0 flex-1 bg-background"
+        viewportClassName="bg-background"
+        viewportRef={viewportElementRef}
+      >
+        <div
+          className="relative w-max min-w-full bg-background font-mono"
           style={{
             fontSize: `${CODE_VIEWER_BASE_FONT_PX * fontScale}px`,
-            lineHeight: `${lineHeight}px`,
             height: totalHeight,
+            lineHeight: `${lineHeight}px`,
             minWidth: CODE_VIEWER_DEFAULT_VIEWPORT_WIDTH,
           }}
         >
-          {staticRows}
-        </pre>
+          <pre
+            ref={preRef}
+            className="relative w-full"
+            suppressHydrationWarning
+            style={{
+              fontSize: `${CODE_VIEWER_BASE_FONT_PX * fontScale}px`,
+              height: totalHeight,
+              lineHeight: `${lineHeight}px`,
+            }}
+          >
+            {staticRows}
+          </pre>
+        </div>
       </ScrollArea>
     </CodeViewerFrame>
   )

@@ -1,188 +1,208 @@
 "use client"
 
 import * as React from "react"
-import { FileText, Mail } from "lucide-react"
+import { FileText, Layers3, Mail, Paperclip } from "lucide-react"
 
 import { cn } from "@/lib/utils"
-import { createViewerResource } from "@/lib/viewer-resource"
 import type { ViewerSource } from "@/lib/viewer-source"
 
 import {
-  AttachmentSidebar,
-  type AttachmentSidebarItem,
-} from "./attachment-sidebar"
+  buildMimeTree,
+  collectInlineResourceParts,
+  findMimeNodeByPath,
+  getDefaultMimeSelectionPath,
+  getInlineResourceScope,
+  getMimeDisplayPart,
+  messageIdentity,
+  mimePartLabel,
+  normalizeContentId,
+} from "./email-viewer-model"
+import type {
+  EmailViewerMessage,
+  EmailViewerProps,
+  MimeDisplayPart,
+  MimePartNode,
+  MimePartPath,
+} from "./email-viewer-types"
+import { formatFileSize } from "./file-size-format"
+import { FileThumbnail } from "./file-thumbnail"
 import { FileViewer } from "./file-viewer"
 import {
+  EmbeddedSidebarProvider,
+  Sidebar,
+  SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
+  SidebarHeader,
   SidebarMenu,
-  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
 } from "./sidebar"
 import { ViewerShell } from "./viewer-shell"
 
-export interface EmailViewerAttachment {
-  id: string
-  source: ViewerSource
-  contentId?: string | null
-  contentDisposition?: "inline" | "attachment" | string | null
-  isInline?: boolean
-  size?: number | null
-}
+export type {
+  EmailViewerMessage,
+  EmailViewerProps,
+  MimeDisplayPart,
+  MimeHeader,
+  MimeMessage,
+  MimePart,
+  MimePartDisposition,
+  MimePartNode,
+  MimePartPath,
+} from "./email-viewer-types"
 
-export interface EmailViewerMessage {
-  id?: string
-  subject?: string | null
-  from?: string | null
-  to?: string | readonly string[] | null
-  sentAt?: string | Date | null
-  htmlBody?: string | null
-  textBody?: string | null
-  attachments?: readonly EmailViewerAttachment[]
-}
-
-export interface EmailViewerProps {
-  message: EmailViewerMessage
-  className?: string
-  bodyFileName?: string
-}
-
-type Selection = { kind: "body" } | { kind: "attachment"; attachmentId: string }
-
-const EMPTY_ATTACHMENTS: readonly EmailViewerAttachment[] = []
+export {
+  buildMimeTree,
+  findMimeNodeByPath,
+  getDefaultMimeSelectionPath,
+  getInlineResourceScope,
+  getMimeDisplayPart,
+  replaceCidUrls,
+} from "./email-viewer-model"
 
 export function EmailViewer({
   message,
+  selectedPath,
+  defaultSelectedPath,
+  onSelectedPathChange,
   className,
-  bodyFileName = "message",
+  bare = false,
 }: EmailViewerProps) {
-  const attachments = message.attachments ?? EMPTY_ATTACHMENTS
-  const inlineAttachments = React.useMemo(
-    () => attachments.filter(isInlineAttachment),
-    [attachments]
+  const rootNode = React.useMemo(
+    () => buildMimeTree(message.root),
+    [message.root]
   )
-  const sidebarAttachments = React.useMemo(
-    () => attachments.filter((attachment) => !isInlineAttachment(attachment)),
-    [attachments]
+  const defaultPath = React.useMemo(
+    () =>
+      defaultSelectedPath && findMimeNodeByPath(rootNode, defaultSelectedPath)
+        ? defaultSelectedPath
+        : getDefaultMimeSelectionPath(rootNode),
+    [defaultSelectedPath, rootNode]
   )
-  const [selection, setSelection] = React.useState<Selection>({
-    kind: "body",
-  })
+  const [internalSelectedPath, setInternalSelectedPath] =
+    React.useState<MimePartPath>(defaultPath)
+  const controlled = selectedPath !== undefined
+  const activePath = controlled
+    ? (selectedPath ?? defaultPath)
+    : internalSelectedPath
+  const selectedNode =
+    findMimeNodeByPath(rootNode, activePath) ??
+    findMimeNodeByPath(rootNode, defaultPath) ??
+    rootNode
 
   React.useEffect(() => {
-    if (selection.kind === "body") return
-    if (
-      sidebarAttachments.some(
-        (attachment) => attachment.id === selection.attachmentId
-      )
-    ) {
-      return
-    }
-    setSelection({ kind: "body" })
-  }, [selection, sidebarAttachments])
+    if (controlled) return
+    if (findMimeNodeByPath(rootNode, internalSelectedPath)) return
+    setInternalSelectedPath(defaultPath)
+  }, [controlled, defaultPath, internalSelectedPath, rootNode])
 
-  const inlineUrls = useInlineAttachmentUrls(inlineAttachments)
-  const bodySource = React.useMemo(
-    () =>
-      createEmailBodySource({
-        message,
-        fileName: bodyFileName,
-        inlineUrls,
-      }),
-    [bodyFileName, inlineUrls, message]
+  const setSelectedNode = React.useCallback(
+    (node: MimePartNode) => {
+      if (!controlled) setInternalSelectedPath(node.path)
+      onSelectedPathChange?.(node.path, node)
+    },
+    [controlled, onSelectedPathChange]
   )
-  const attachmentItems = React.useMemo<AttachmentSidebarItem[]>(
-    () =>
-      sidebarAttachments.map((attachment) => ({
-        id: attachment.id,
-        source: attachment.source,
-        size: attachment.size,
-      })),
-    [sidebarAttachments]
+  const inlineResourceUrls = useInlineMimeResourceUrls(
+    getInlineResourceScope(selectedNode)
   )
-  const selectedAttachment =
-    selection.kind === "attachment"
-      ? (sidebarAttachments.find(
-          (attachment) => attachment.id === selection.attachmentId
-        ) ?? null)
-      : null
-  const selectedSource = selectedAttachment?.source ?? bodySource.source
-  const selectedCategory = selectedAttachment ? undefined : bodySource.category
-  const title =
-    selection.kind === "attachment" && selectedAttachment
-      ? attachmentFileName(selectedAttachment)
-      : "Message body"
-  const bodyFormat = bodySource.category === "html" ? "HTML" : "Text"
+  const display = React.useMemo(
+    () => getMimeDisplayPart(selectedNode, inlineResourceUrls),
+    [inlineResourceUrls, selectedNode]
+  )
 
   return (
     <div data-slot="email-viewer" className={cn("min-h-0", className)}>
       <ViewerShell
+        bare={bare}
         className="h-full"
         bodyClassName="flex-col md:flex-row"
-        contentClassName="min-h-[26rem] p-3 md:min-h-0"
+        contentClassName="min-h-[26rem] md:min-h-0"
         slots={{
-          header: <EmailHeader message={message} title={title} />,
-          right: (
-            <AttachmentSidebar
-              items={attachmentItems}
-              selectedId={
-                selection.kind === "attachment" ? selection.attachmentId : null
-              }
-              onSelect={(attachmentId) =>
-                setSelection({ kind: "attachment", attachmentId })
-              }
-              emptyLabel="No regular attachments."
-              providerClassName="h-72 md:h-full md:w-(--sidebar-width)"
+          header: <MimeMessageHeader message={message} />,
+          left: (
+            <MimePartSidebar
+              root={rootNode}
+              selectedPath={selectedNode.path}
+              onSelectNode={setSelectedNode}
               className="border-t md:border-t-0"
-            >
-              <EmailBodySidebarGroup
-                bodyFormat={bodyFormat}
-                isBodySelected={selection.kind === "body"}
-                onSelectBody={() => setSelection({ kind: "body" })}
-              />
-            </AttachmentSidebar>
+            />
           ),
         }}
       >
-        <FileViewer
-          key={
-            selectedAttachment
-              ? `attachment:${selectedAttachment.id}`
-              : bodySource.key
-          }
-          source={selectedSource}
-          as={selectedCategory}
-          bare
-          className="h-full rounded-lg border"
+        <MimeViewerContent
+          message={message}
+          selectedNode={selectedNode}
+          display={display}
         />
       </ViewerShell>
     </div>
   )
 }
 
-function EmailHeader({
+function MimeViewerContent({
   message,
-  title,
+  selectedNode,
+  display,
 }: {
   message: EmailViewerMessage
-  title: string
+  selectedNode: MimePartNode
+  display: MimeDisplayPart | null
 }) {
+  if (selectedNode.isMessage && selectedNode.children.length > 0) {
+    return (
+      <EmailViewer
+        bare
+        className="h-full"
+        message={{
+          id: `${messageIdentity(message)}:${selectedNode.part.id}`,
+          headers: selectedNode.part.headers,
+          subject: headerValue(selectedNode.part.headers, "subject"),
+          from: headerValue(selectedNode.part.headers, "from"),
+          to: headerValue(selectedNode.part.headers, "to"),
+          sentAt: headerValue(selectedNode.part.headers, "date"),
+          root: selectedNode.part,
+        }}
+      />
+    )
+  }
+
+  if (!display) {
+    return (
+      <div className="flex size-full items-center justify-center px-6 text-center text-sm text-muted-foreground">
+        This MIME part does not have a previewable body.
+      </div>
+    )
+  }
+
+  return (
+    <FileViewer
+      key={display.node.path.join("/")}
+      source={display.source}
+      as={display.category}
+      bare
+      className="size-full min-h-0"
+    />
+  )
+}
+
+function MimeMessageHeader({ message }: { message: EmailViewerMessage }) {
   const subject = message.subject?.trim() || "(no subject)"
   const recipients = normalizeAddressList(message.to)
   const sentAt = formatSentAt(message.sentAt)
 
   return (
-    <div className="flex min-h-0 flex-shrink-0 flex-col gap-1 border-b bg-card px-3 py-2">
+    <div
+      data-slot="email-message-header"
+      className="flex min-h-0 flex-shrink-0 flex-col gap-1 border-b bg-card px-3 py-2"
+    >
       <div className="flex min-w-0 items-center gap-2">
         <Mail className="size-4 flex-shrink-0 text-muted-foreground" />
         <h2 className="min-w-0 flex-1 truncate text-sm font-medium">
           {subject}
         </h2>
-        <span className="min-w-0 flex-shrink truncate text-xs text-muted-foreground">
-          {title}
-        </span>
       </div>
       <div className="flex min-w-0 flex-wrap gap-x-3 gap-y-1 pl-6 text-xs text-muted-foreground">
         {message.from ? (
@@ -197,42 +217,201 @@ function EmailHeader({
   )
 }
 
-function EmailBodySidebarGroup({
-  bodyFormat,
-  isBodySelected,
-  onSelectBody,
+function MimePartSidebar({
+  root,
+  selectedPath,
+  onSelectNode,
+  className,
 }: {
-  bodyFormat: string
-  isBodySelected: boolean
-  onSelectBody: () => void
+  root: MimePartNode
+  selectedPath: MimePartPath
+  onSelectNode: (node: MimePartNode) => void
+  className?: string
 }) {
+  const { bodyNodes, attachmentNodes } = React.useMemo(
+    () => getSidebarSections(root),
+    [root]
+  )
+  const partCount = bodyNodes.length + attachmentNodes.length
+
   return (
-    <SidebarGroup>
-      <SidebarGroupLabel>Message</SidebarGroupLabel>
-      <SidebarGroupContent>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              aria-current={isBodySelected ? "page" : undefined}
-              aria-label="Message body"
-              className="border border-transparent data-[active=true]:border-sidebar-border"
-              isActive={isBodySelected}
-              onClick={onSelectBody}
-            >
-              <FileText className="text-sidebar-accent-foreground" />
-              <span className="min-w-0 flex-1 truncate">Message body</span>
-              <SidebarMenuBadge>{bodyFormat}</SidebarMenuBadge>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarGroupContent>
-    </SidebarGroup>
+    <EmbeddedSidebarProvider
+      width="19rem"
+      className="h-72 md:h-full md:w-(--sidebar-width)"
+    >
+      <Sidebar
+        side="left"
+        collapsible="none"
+        data-slot="mime-part-sidebar"
+        className={cn(
+          "h-full w-full border-sidebar-border bg-background md:border-r",
+          className
+        )}
+      >
+        <SidebarHeader className="border-b px-3 py-2">
+          <div className="flex h-6 items-center gap-2 text-xs font-medium text-sidebar-foreground">
+            <Paperclip className="size-3.5 text-sidebar-accent-foreground" />
+            <span>
+              {partCount} item{partCount === 1 ? "" : "s"}
+            </span>
+          </div>
+        </SidebarHeader>
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarGroupLabel>Body</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu className="gap-1">
+                {bodyNodes.map((node) => (
+                  <MimePartSidebarItem
+                    key={node.path.join("/")}
+                    label="Body"
+                    node={node}
+                    selectedPath={selectedPath}
+                    onSelectNode={onSelectNode}
+                  />
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+          <SidebarGroup className="min-h-0 flex-1">
+            <SidebarGroupLabel>Attachments</SidebarGroupLabel>
+            <SidebarGroupContent>
+              {attachmentNodes.length === 0 ? (
+                <p className="px-2 py-3 text-xs text-sidebar-foreground/70">
+                  No attachments.
+                </p>
+              ) : (
+                <SidebarMenu className="gap-1">
+                  {attachmentNodes.map((node) => (
+                    <MimePartSidebarItem
+                      key={node.path.join("/")}
+                      node={node}
+                      selectedPath={selectedPath}
+                      onSelectNode={onSelectNode}
+                    />
+                  ))}
+                </SidebarMenu>
+              )}
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </SidebarContent>
+      </Sidebar>
+    </EmbeddedSidebarProvider>
   )
 }
 
-function useInlineAttachmentUrls(
-  inlineAttachments: readonly EmailViewerAttachment[]
-) {
+function getSidebarSections(root: MimePartNode): {
+  bodyNodes: MimePartNode[]
+  attachmentNodes: MimePartNode[]
+} {
+  const attachmentNodes: MimePartNode[] = []
+
+  walkMimeNodes(root, (node) => {
+    if (node.isMultipart) return
+    if (node.isInlineResource) return
+    if (node.isAttachment || node.isMessage) {
+      attachmentNodes.push(node)
+      return
+    }
+  })
+
+  const bodyNode = getBodyNode(root)
+  const bodyNodes = bodyNode ? [bodyNode] : [root]
+  return { attachmentNodes, bodyNodes }
+}
+
+function getBodyNode(root: MimePartNode) {
+  const candidates: MimePartNode[] = []
+
+  walkMimeNodes(root, (node) => {
+    if (!node.isRenderable) return
+    if (node.isInlineResource || node.isAttachment || node.isMessage) return
+    candidates.push(node)
+  })
+
+  return (
+    candidates.find(
+      (node) => normalizedMimeType(node.part.mimeType) === "text/html"
+    ) ??
+    candidates.find(
+      (node) => normalizedMimeType(node.part.mimeType) === "text/plain"
+    ) ??
+    candidates[0] ??
+    null
+  )
+}
+
+function MimePartSidebarItem({
+  label,
+  node,
+  selectedPath,
+  onSelectNode,
+}: {
+  label?: string
+  node: MimePartNode
+  selectedPath: MimePartPath
+  onSelectNode: (node: MimePartNode) => void
+}) {
+  const isSelected = pathsEqual(node.path, selectedPath)
+  const canRenderThumbnail = Boolean(node.part.source && !node.isInlineResource)
+  const meta = sidebarMeta(node)
+  const title = label ?? mimePartLabel(node.part)
+
+  return (
+    <>
+      <SidebarMenuItem>
+        <SidebarMenuButton
+          aria-current={isSelected ? "page" : undefined}
+          aria-label={`${title} ${meta}`}
+          className="h-auto items-center gap-3 rounded-lg border border-transparent p-2 data-[active=true]:border-sidebar-border"
+          isActive={isSelected}
+          onClick={() => onSelectNode(node)}
+        >
+          {canRenderThumbnail && node.part.source ? (
+            <FileThumbnail
+              source={node.part.source}
+              presentation="decorative"
+              className="size-12 flex-shrink-0"
+              previewAspectRatio={1}
+            />
+          ) : (
+            <span className="flex size-12 flex-shrink-0 items-center justify-center rounded-md text-sidebar-accent-foreground">
+              <PartIcon node={node} className="size-4" />
+            </span>
+          )}
+          <span className="flex min-w-0 flex-1 flex-col gap-1">
+            <span className="truncate text-sm font-medium">{title}</span>
+            <span className="truncate text-xs text-sidebar-foreground/70">
+              {meta}
+            </span>
+          </span>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    </>
+  )
+}
+
+function PartIcon({
+  node,
+  className,
+}: {
+  node: MimePartNode
+  className?: string
+}) {
+  if (node.isMultipart || node.isMessage) {
+    return <Layers3 className={className} aria-hidden />
+  }
+  if (node.isAttachment) {
+    return <Paperclip className={className} aria-hidden />
+  }
+  return <FileText className={className} aria-hidden />
+}
+
+function useInlineMimeResourceUrls(node: MimePartNode) {
+  const inlineParts = React.useMemo(
+    () => collectInlineResourceParts(node),
+    [node]
+  )
   const [urls, setUrls] = React.useState<ReadonlyMap<string, string>>(
     () => new Map()
   )
@@ -241,25 +420,13 @@ function useInlineAttachmentUrls(
     const nextUrls = new Map<string, string>()
     const objectUrls: string[] = []
 
-    for (const attachment of inlineAttachments) {
-      const cid = normalizeContentId(attachment.contentId)
-      if (!cid) continue
+    for (const inlinePart of inlineParts) {
+      const cid = normalizeContentId(inlinePart.part.contentId)
+      const source = inlinePart.part.source
+      if (!cid || !source) continue
 
-      const source = attachment.source
-      if (source.kind === "url") {
-        nextUrls.set(cid, source.url)
-      } else if (source.kind === "blob") {
-        const url = URL.createObjectURL(source.blob)
-        objectUrls.push(url)
-        nextUrls.set(cid, url)
-      } else {
-        const blob = new Blob([source.text], {
-          type: source.mimeType ?? "text/plain;charset=utf-8",
-        })
-        const url = URL.createObjectURL(blob)
-        objectUrls.push(url)
-        nextUrls.set(cid, url)
-      }
+      const url = sourceToInlineUrl(source, objectUrls)
+      if (url) nextUrls.set(cid, url)
     }
 
     setUrls(nextUrls)
@@ -267,89 +434,51 @@ function useInlineAttachmentUrls(
     return () => {
       for (const url of objectUrls) URL.revokeObjectURL(url)
     }
-  }, [inlineAttachments])
+  }, [inlineParts])
 
   return urls
 }
 
-function createEmailBodySource({
-  message,
-  fileName,
-  inlineUrls,
-}: {
-  message: EmailViewerMessage
-  fileName: string
-  inlineUrls: ReadonlyMap<string, string>
-}) {
-  const baseIdentity = message.id ?? "message"
-  const htmlBody = message.htmlBody?.trim() ? message.htmlBody : null
-
-  if (htmlBody) {
-    const html = replaceCidUrls(htmlBody, inlineUrls)
-    return {
-      key: `body:html:${baseIdentity}:${html.length}`,
-      category: "html" as const,
-      source: {
-        kind: "text" as const,
-        text: html,
-        fileName: `${fileName}.html`,
-        mimeType: "text/html",
-        identityKey: `email:${baseIdentity}:html`,
-      },
-    }
+function sourceToInlineUrl(source: ViewerSource, objectUrls: string[]) {
+  if (source.kind === "url") return source.url
+  if (source.kind === "blob") {
+    const url = URL.createObjectURL(source.blob)
+    objectUrls.push(url)
+    return url
   }
 
-  const text = message.textBody ?? ""
-  return {
-    key: `body:text:${baseIdentity}:${text.length}`,
-    category: "text" as const,
-    source: {
-      kind: "text" as const,
-      text: text || "No message body.",
-      fileName: `${fileName}.txt`,
-      mimeType: "text/plain",
-      identityKey: `email:${baseIdentity}:text`,
-    },
+  const blob = new Blob([source.text], {
+    type: source.mimeType ?? "text/plain;charset=utf-8",
+  })
+  const url = URL.createObjectURL(blob)
+  objectUrls.push(url)
+  return url
+}
+
+function sidebarMeta(node: MimePartNode) {
+  if (node.part.size != null) {
+    return `${node.part.mimeType} · ${formatFileSize(node.part.size)}`
   }
+  if (node.isInlineResource) return `${node.part.mimeType} · inline`
+  if (node.isAttachment) return `${node.part.mimeType} · attachment`
+  return node.part.mimeType
 }
 
-function replaceCidUrls(html: string, inlineUrls: ReadonlyMap<string, string>) {
-  if (inlineUrls.size === 0) return html
-  return html.replace(
-    /\bcid:(?:<([^>"'\s)]+)>|([^"'\s>)]+))/gi,
-    (match, bracketedContentId, plainContentId) => {
-      const rawContentId = bracketedContentId ?? plainContentId
-      const cid = normalizeContentId(decodeCid(rawContentId))
-      return cid ? (inlineUrls.get(cid) ?? match) : match
-    }
-  )
+function walkMimeNodes(
+  node: MimePartNode,
+  visit: (node: MimePartNode) => void
+) {
+  visit(node)
+  for (const child of node.children) walkMimeNodes(child, visit)
 }
 
-function decodeCid(value: string) {
-  try {
-    return decodeURIComponent(value)
-  } catch {
-    return value
-  }
+function pathsEqual(left: MimePartPath, right: MimePartPath) {
+  if (left.length !== right.length) return false
+  return left.every((part, index) => part === right[index])
 }
 
-function isInlineAttachment(attachment: EmailViewerAttachment) {
-  if (attachment.isInline != null) return attachment.isInline
-  if (attachment.contentDisposition?.toLowerCase() === "attachment") {
-    return false
-  }
-  if (attachment.contentDisposition?.toLowerCase() === "inline") return true
-  return Boolean(attachment.contentId)
-}
-
-function normalizeContentId(contentId: string | null | undefined) {
-  const trimmed = contentId?.trim()
-  if (!trimmed) return null
-  return trimmed.replace(/^<|>$/g, "").toLowerCase()
-}
-
-function attachmentFileName(attachment: EmailViewerAttachment) {
-  return createViewerResource(attachment.source).fileName
+function normalizedMimeType(mimeType: string) {
+  return mimeType.toLowerCase().split(";")[0].trim()
 }
 
 function normalizeAddressList(
@@ -368,4 +497,14 @@ function formatSentAt(value: string | Date | null | undefined) {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date)
+}
+
+function headerValue(
+  headers: readonly { name: string; value: string }[] | undefined,
+  name: string
+) {
+  return (
+    headers?.find((header) => header.name.toLowerCase() === name.toLowerCase())
+      ?.value ?? null
+  )
 }

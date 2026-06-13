@@ -8,7 +8,6 @@ import type {
   FileSystemIndex,
   FileSystemQueryState,
   FileSystemSortState,
-  FileSystemTreeRow,
 } from "./file-system-types"
 
 export const DEFAULT_FILE_SYSTEM_SORT: FileSystemSortState = {
@@ -214,30 +213,6 @@ export function compareEntries(
 
   if (result === 0) result = compareEntryNames(left, right)
   return sort.direction === "asc" ? result : -result
-}
-
-export function flattenFileSystemRows({
-  currentPath,
-  expandedPaths,
-  index,
-}: {
-  currentPath: string
-  expandedPaths: ReadonlySet<string>
-  index: FileSystemIndex
-}): FileSystemTreeRow[] {
-  const rows: FileSystemTreeRow[] = []
-
-  const walk = (folderPath: string, depth: number) => {
-    for (const entry of index.children.get(folderPath) ?? []) {
-      rows.push({ depth, entry })
-      if (entry.kind === "folder" && expandedPaths.has(entry.path)) {
-        walk(entry.path, depth + 1)
-      }
-    }
-  }
-
-  walk(currentPath, 0)
-  return rows
 }
 
 export function collectFileSystemCategories(index: FileSystemIndex) {

@@ -4,7 +4,6 @@ import { buildFileSystemIndex } from "@/registry/new-york-v4/ui/file-system-inde
 import {
   DEFAULT_FILE_SYSTEM_SORT,
   deriveVisibleIndex,
-  flattenFileSystemRows,
   getFileSystemCategory,
 } from "@/registry/new-york-v4/ui/file-system-query"
 import type { FileSystemItem } from "@/registry/new-york-v4/ui/file-system-types"
@@ -51,20 +50,6 @@ describe("file-system index", () => {
     expect(index.folders.get("invoices/")?.updatedAt).toBe(
       "2026-01-04T00:00:00Z"
     )
-  })
-
-  it("flattens expanded tree rows", () => {
-    const index = buildFileSystemIndex(items)
-    const rows = flattenFileSystemRows({
-      currentPath: "",
-      expandedPaths: new Set(["invoices/", "invoices/2026/"]),
-      index,
-    })
-
-    expect(rows.map((row) => [row.depth, row.entry.path])).toContainEqual([
-      2,
-      "invoices/2026/january.pdf",
-    ])
   })
 
   it("search keeps matching files and ancestors visible", () => {

@@ -10,8 +10,11 @@ const runtimeRoots = ["components/json-table"]
 
 const dataCellRuntimeFiles = [
   "registry/new-york-v4/ui/data-cell.tsx",
+  "registry/new-york-v4/ui/data-cell-activation.ts",
   "registry/new-york-v4/ui/data-cell-boolean-control.tsx",
   "registry/new-york-v4/ui/data-cell-classes.ts",
+  "registry/new-york-v4/ui/data-cell-control-contract.ts",
+  "registry/new-york-v4/ui/data-cell-control-registry.tsx",
   "registry/new-york-v4/ui/data-cell-display.tsx",
   "registry/new-york-v4/ui/data-cell-format.ts",
   "registry/new-york-v4/ui/data-cell-number-control.tsx",
@@ -95,6 +98,55 @@ const forbiddenPrimitiveShellHandlerPatterns = [
   "clientX",
   "clientY",
 ]
+
+const forbiddenDataCellShellPatterns = [
+  "getDataCellDisplayTextSelectionOffset",
+  "dataCellNumberKeyPattern",
+  "commitBooleanDisplayValue",
+  "didActivateBeforeClickRef",
+  'props.kind === "boolean"',
+  'props.kind === "select"',
+  'props.kind === "text"',
+  'props.kind === "number"',
+  'props.kind === "integer"',
+  'props.kind === "date"',
+  'props.kind === "time"',
+  'props.kind === "date-time"',
+]
+
+const forbiddenDataCellActivationPatterns = [
+  "activationIntent",
+  "activationRequest",
+  "ActivationOutcome",
+  "activationOutcome",
+  "programmatic",
+  "eventType",
+]
+
+const forbiddenSelectOpeningPatterns = [
+  "skipAutoFocus",
+  "closeTimer",
+  "closeDelay",
+  "setTimeout",
+]
+
+const forbiddenPickerOpeningPatterns = [
+  "skipAutoFocus",
+  "openingPointerDown",
+  "closeTimer",
+  "closeDelay",
+  "setTimeout",
+]
+
+const forbiddenOverlayOpeningPolicyPatterns = [
+  "token.ownsEvent",
+  "openingActivationRef",
+  "holdDataCellActivationThroughOpeningEvent",
+]
+
+const dataCellRegistryRuntimeFiles = dataCellRuntimeFiles.filter((file) =>
+  file.startsWith("registry/new-york-v4/ui/")
+)
 
 const jsonTableLineCountLimits = [
   {
@@ -232,12 +284,132 @@ describe("json table and DataCell architecture", () => {
 
     const activationFile =
       "components/json-table/json-table-primitive-activation.ts"
-    const activationContent = readFileSync(join(repoRoot, activationFile), "utf8")
+    const activationContent = readFileSync(
+      join(repoRoot, activationFile),
+      "utf8"
+    )
 
     for (const pattern of forbiddenPrimitiveShellActivationPatterns) {
       expect(
         activationContent.includes(pattern),
         `${activationFile} contains ${pattern}`
+      ).toBe(false)
+    }
+  })
+
+  it("keeps DataCell as a control-contract shell", () => {
+    const shellFile = "registry/new-york-v4/ui/data-cell.tsx"
+    const shellContent = readFileSync(join(repoRoot, shellFile), "utf8")
+
+    for (const pattern of forbiddenDataCellShellPatterns) {
+      expect(
+        shellContent.includes(pattern),
+        `${shellFile} contains ${pattern}`
+      ).toBe(false)
+    }
+
+    const contractFile = "registry/new-york-v4/ui/data-cell-control-contract.ts"
+    const registryFile =
+      "registry/new-york-v4/ui/data-cell-control-registry.tsx"
+
+    expect(existsSync(join(repoRoot, contractFile)), contractFile).toBe(true)
+    expect(existsSync(join(repoRoot, registryFile)), registryFile).toBe(true)
+  })
+
+  it("keeps json-table DataCell adaptation pure and outside the renderer", () => {
+    const modelFile = "components/json-table/json-table-data-cell-model.ts"
+    const displayFile = "components/json-table/json-table-display-cell.tsx"
+    const modelContent = readFileSync(join(repoRoot, modelFile), "utf8")
+    const displayContent = readFileSync(join(repoRoot, displayFile), "utf8")
+
+    expect(existsSync(join(repoRoot, modelFile)), modelFile).toBe(true)
+    expect(modelContent.includes("createJsonTableDataCellModel")).toBe(true)
+    expect(modelContent.includes("JSON_TABLE_NULL_SELECT_VALUE")).toBe(true)
+    expect(modelContent.includes("enumCommitValue")).toBe(true)
+    expect(modelContent.includes("normalizeDataCellCommitValue")).toBe(true)
+
+    for (const pattern of [
+      "JSON_TABLE_NULL_SELECT_VALUE",
+      "enumCommitValue",
+      "enumDataCellValue",
+      "normalizeDataCellCommitValue",
+      "numberDataCellValue",
+      "textDataCellValue",
+    ]) {
+      expect(
+        displayContent.includes(pattern),
+        `${displayFile} contains ${pattern}`
+      ).toBe(false)
+    }
+  })
+
+  it("keeps primitive DataCell activation on the source/action vocabulary", () => {
+    for (const file of dataCellRuntimeFiles) {
+      const content = readFileSync(join(repoRoot, file), "utf8")
+      for (const pattern of forbiddenDataCellActivationPatterns) {
+        expect(content.includes(pattern), `${file} contains ${pattern}`).toBe(
+          false
+        )
+      }
+    }
+
+    const selectFile = "registry/new-york-v4/ui/data-cell-select-control.tsx"
+    const selectContent = readFileSync(join(repoRoot, selectFile), "utf8")
+    for (const pattern of forbiddenSelectOpeningPatterns) {
+      expect(
+        selectContent.includes(pattern),
+        `${selectFile} contains ${pattern}`
+      ).toBe(false)
+    }
+
+    const pickerFile = "registry/new-york-v4/ui/data-cell-picker-control.tsx"
+    const pickerContent = readFileSync(join(repoRoot, pickerFile), "utf8")
+    for (const pattern of forbiddenPickerOpeningPatterns) {
+      expect(
+        pickerContent.includes(pattern),
+        `${pickerFile} contains ${pattern}`
+      ).toBe(false)
+    }
+  })
+
+  it("keeps overlay opening policy centralized in data-cell-activation", () => {
+    const activationFile = "registry/new-york-v4/ui/data-cell-activation.ts"
+
+    for (const file of dataCellRuntimeFiles) {
+      if (file === activationFile) continue
+      const content = readFileSync(join(repoRoot, file), "utf8")
+      for (const pattern of forbiddenOverlayOpeningPolicyPatterns) {
+        expect(content.includes(pattern), `${file} contains ${pattern}`).toBe(
+          false
+        )
+      }
+    }
+
+    const selectFile = "registry/new-york-v4/ui/data-cell-select-control.tsx"
+    const selectContent = readFileSync(join(repoRoot, selectFile), "utf8")
+    expect(selectContent.includes("useDataCellOpeningContext")).toBe(true)
+    expect(selectContent.includes("DataCellDismissCause")).toBe(true)
+
+    const pickerFile = "registry/new-york-v4/ui/data-cell-picker-control.tsx"
+    const pickerContent = readFileSync(join(repoRoot, pickerFile), "utf8")
+    expect(pickerContent.includes("useDataCellOpeningContext")).toBe(true)
+    expect(pickerContent.includes("DataCellDismissCause")).toBe(true)
+  })
+
+  it("keeps the generated DataCell registry artifact complete and clean", () => {
+    const artifactFile = "public/r/data-cell.json"
+    const content = readFileSync(join(repoRoot, artifactFile), "utf8")
+
+    for (const file of dataCellRegistryRuntimeFiles) {
+      expect(content.includes(file), `${artifactFile} includes ${file}`).toBe(
+        true
+      )
+    }
+
+    for (const pattern of forbiddenDataCellActivationPatterns) {
+      expect(
+        content.includes(pattern),
+        `${artifactFile} contains ${pattern}`
       ).toBe(false)
     }
   })

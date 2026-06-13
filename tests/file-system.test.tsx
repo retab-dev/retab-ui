@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
 import * as React from "react"
 import {
+  act,
   cleanup,
   fireEvent,
   render,
   screen,
   waitFor,
-  within,
 } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
@@ -64,13 +64,81 @@ const items: FileSystemItem[] = [
     },
   },
 ]
+const defaultQuery: FileSystemQueryState = {
+  filters: { categories: [], updatedAfter: null },
+  search: "",
+  sort: { direction: "asc", key: "name" },
+}
+
+function createDeferred<T>() {
+  let resolve!: (value: T) => void
+  let reject!: (error: unknown) => void
+  const promise = new Promise<T>((resolve_, reject_) => {
+    resolve = resolve_
+    reject = reject_
+  })
+
+  return { promise, reject, resolve }
+}
+
+function fileTreeShadowRoot() {
+  const host = document.querySelector<HTMLElement>(
+    "[data-slot='file-system-pierre-tree']"
+  )
+
+  if (!host?.shadowRoot) {
+    throw new Error("Pierre file tree shadow root was not mounted")
+  }
+
+  return host.shadowRoot
+}
+
+function queryFileTreeItem(name: RegExp | string) {
+  const matcher = typeof name === "string" ? new RegExp(`^${name}$`, "i") : name
+
+  return [
+    ...fileTreeShadowRoot().querySelectorAll<HTMLButtonElement>(
+      "[role='treeitem']"
+    ),
+  ].find((item) =>
+    matcher.test(item.getAttribute("aria-label") ?? item.textContent ?? "")
+  )
+}
+
+async function findFileTreeItem(name: RegExp | string) {
+  let item: HTMLButtonElement | undefined
+
+  await waitFor(() => {
+    item = queryFileTreeItem(name)
+    expect(item).toBeTruthy()
+  })
+
+  if (!item) {
+    throw new Error(`Pierre file tree item was not found: ${name.toString()}`)
+  }
+
+  return item
+}
+
+async function expandFileTreeItem(name: RegExp | string) {
+  const item = await findFileTreeItem(name)
+
+  if (item.getAttribute("aria-expanded") !== "true") {
+    fireEvent.click(item)
+  }
+
+  await waitFor(() => {
+    expect(queryFileTreeItem(name)?.getAttribute("aria-expanded")).toBe("true")
+  })
+  return item
+}
 
 describe("FileSystem", () => {
   it("renders inferred folders and previews the selected file", async () => {
     render(<FileSystem items={items} />)
 
-    fireEvent.doubleClick(screen.getByRole("treeitem", { name: /reports/i }))
-    fireEvent.click(screen.getByRole("treeitem", { name: /report.pdf/i }))
+    fireEvent.doubleClick(await findFileTreeItem(/reports/i))
+    fireEvent.click(await findFileTreeItem(/report.pdf/i))
 
     await waitFor(() => {
       expect(screen.getByTestId("file-viewer").textContent).toBe(
@@ -79,16 +147,18 @@ describe("FileSystem", () => {
     })
   })
 
-  it("filters by file category", () => {
-    render(<FileSystem defaultPath="reports/" items={items} />)
+  it("filters by file category", async () => {
+    render(
+      <FileSystem defaultPath="reports/" defaultView="grid" items={items} />
+    )
 
     fireEvent.click(screen.getByRole("button", { name: "CSV" }))
 
-    expect(screen.getByRole("treeitem", { name: /table.csv/i })).toBeTruthy()
-    expect(screen.queryByRole("treeitem", { name: /report.pdf/i })).toBeNull()
+    expect(await screen.findByRole("option", { name: /table.csv/i })).toBeTruthy()
+    expect(screen.queryByRole("option", { name: /report.pdf/i })).toBeNull()
   })
 
-  it("filters by modified date preset", () => {
+  it("filters by modified date preset", async () => {
     const recentIso = new Date().toISOString()
     const datedItems: FileSystemItem[] = [
       {
@@ -105,18 +175,20 @@ describe("FileSystem", () => {
       },
     ]
 
-    render(<FileSystem defaultPath="dated/" items={datedItems} />)
+    render(
+      <FileSystem defaultPath="dated/" defaultView="grid" items={datedItems} />
+    )
 
     fireEvent.click(screen.getByRole("button", { name: "Modified 30d" }))
 
-    expect(screen.getByRole("treeitem", { name: /recent.txt/i })).toBeTruthy()
-    expect(screen.queryByRole("treeitem", { name: /old.txt/i })).toBeNull()
+    expect(await screen.findByRole("option", { name: /recent.txt/i })).toBeTruthy()
+    expect(screen.queryByRole("option", { name: /old.txt/i })).toBeNull()
   })
 
   it("preserves selection and preview when switching views", async () => {
     render(<FileSystem defaultPath="reports/" items={items} />)
 
-    fireEvent.click(screen.getByRole("treeitem", { name: /report.pdf/i }))
+    fireEvent.click(await findFileTreeItem(/report.pdf/i))
     await screen.findByText("report.pdf selected")
 
     fireEvent.click(screen.getByRole("tab", { name: "Grid view" }))
@@ -145,7 +217,7 @@ describe("FileSystem", () => {
       />
     )
 
-    fireEvent.doubleClick(screen.getByRole("treeitem", { name: /report.pdf/i }))
+    fireEvent.doubleClick(await findFileTreeItem(/report.pdf/i))
 
     await waitFor(() => {
       expect(onFileOpen).toHaveBeenCalledWith(
@@ -156,15 +228,17 @@ describe("FileSystem", () => {
     expect(screen.queryByRole("dialog")).toBeNull()
   })
 
-  it("supports controlled query state", () => {
+  it("supports controlled query state", async () => {
     function ControlledFileSystem() {
-      const [query, setQuery] = React.useState<Partial<FileSystemQueryState>>({
+      const [query, setQuery] = React.useState<FileSystemQueryState>({
+        ...defaultQuery,
         search: "report.pdf",
       })
 
       return (
         <FileSystem
           defaultPath="reports/"
+          defaultView="grid"
           items={items}
           query={query}
           onQueryChange={setQuery}
@@ -174,15 +248,29 @@ describe("FileSystem", () => {
 
     render(<ControlledFileSystem />)
 
-    expect(screen.getByRole("treeitem", { name: /report.pdf/i })).toBeTruthy()
-    expect(screen.queryByRole("treeitem", { name: /table.csv/i })).toBeNull()
+    expect(await screen.findByRole("option", { name: /report.pdf/i })).toBeTruthy()
+    expect(screen.queryByRole("option", { name: /table.csv/i })).toBeNull()
 
     fireEvent.change(screen.getByRole("searchbox", { name: "Search files" }), {
       target: { value: "table" },
     })
 
-    expect(screen.getByRole("treeitem", { name: /table.csv/i })).toBeTruthy()
-    expect(screen.queryByRole("treeitem", { name: /report.pdf/i })).toBeNull()
+    expect(await screen.findByRole("option", { name: /table.csv/i })).toBeTruthy()
+    expect(screen.queryByRole("option", { name: /report.pdf/i })).toBeNull()
+  })
+
+  it("accepts partial default query state", async () => {
+    render(
+      <FileSystem
+        defaultPath="reports/"
+        defaultView="grid"
+        defaultQuery={{ search: "report.pdf" }}
+        items={items}
+      />
+    )
+
+    expect(await screen.findByRole("option", { name: /report.pdf/i })).toBeTruthy()
+    expect(screen.queryByRole("option", { name: /table.csv/i })).toBeNull()
   })
 
   it("moves selection with grid keyboard controls", () => {
@@ -232,15 +320,229 @@ describe("FileSystem", () => {
 
     render(<FileSystem items={lazyItems} loadChildren={loadChildren} />)
 
-    fireEvent.click(screen.getByRole("treeitem", { name: /lazy/i }))
-    await screen.findByText("first failure")
+    fireEvent.click(await findFileTreeItem(/lazy/i))
+    await waitFor(() => {
+      expect(fileTreeShadowRoot().textContent ?? "").toContain("first failure")
+    })
 
-    const row = screen.getByRole("treeitem", { name: /lazy/i })
-    fireEvent.click(within(row).getByText("first failure"))
+    const row = await findFileTreeItem(/lazy/i)
     fireEvent.doubleClick(row)
 
+    expect(await findFileTreeItem(/loaded.txt/i)).toBeTruthy()
+  })
+
+  it("preserves list expansion across folder decoration changes", async () => {
+    const loadChildren = vi.fn().mockRejectedValue(new Error("load failed"))
+    const lazyItems: FileSystemItem[] = [
+      { kind: "file", path: "reports/report.pdf", mimeType: "application/pdf" },
+      { kind: "folder", path: "lazy/", hasChildren: true },
+    ]
+
+    render(<FileSystem items={lazyItems} loadChildren={loadChildren} />)
+
+    await expandFileTreeItem(/reports/i)
+    expect(await findFileTreeItem(/report.pdf/i)).toBeTruthy()
+
+    fireEvent.click(await findFileTreeItem(/lazy/i))
     await waitFor(() => {
-      expect(screen.getByRole("treeitem", { name: /loaded.txt/i })).toBeTruthy()
+      expect(fileTreeShadowRoot().textContent ?? "").toContain("load failed")
     })
+
+    await waitFor(() => {
+      expect(queryFileTreeItem(/reports/i)?.getAttribute("aria-expanded")).toBe(
+        "true"
+      )
+    })
+    expect(queryFileTreeItem(/report.pdf/i)).toBeTruthy()
+  })
+
+  it("restores list expansion after clearing search", async () => {
+    const searchableItems: FileSystemItem[] = [
+      { kind: "file", path: "reports/report.pdf", mimeType: "application/pdf" },
+      { kind: "file", path: "archive/archive.txt", mimeType: "text/plain" },
+    ]
+
+    render(<FileSystem items={searchableItems} />)
+
+    await expandFileTreeItem(/reports/i)
+    expect(await findFileTreeItem(/report.pdf/i)).toBeTruthy()
+
+    fireEvent.change(screen.getByRole("searchbox", { name: "Search files" }), {
+      target: { value: "archive" },
+    })
+    expect(await findFileTreeItem(/archive.txt/i)).toBeTruthy()
+    expect(queryFileTreeItem(/report.pdf/i)).toBeUndefined()
+
+    fireEvent.change(screen.getByRole("searchbox", { name: "Search files" }), {
+      target: { value: "" },
+    })
+
+    await waitFor(() => {
+      expect(queryFileTreeItem(/reports/i)?.getAttribute("aria-expanded")).toBe(
+        "true"
+      )
+    })
+    expect(queryFileTreeItem(/report.pdf/i)).toBeTruthy()
+  })
+
+  it("selects the first lazy child from columns keyboard navigation", async () => {
+    const loadChildren = vi.fn().mockResolvedValue({
+      items: [
+        {
+          kind: "file",
+          path: "lazy/loaded.txt",
+          mimeType: "text/plain",
+        },
+      ],
+    })
+    const lazyItems: FileSystemItem[] = [
+      { kind: "folder", path: "lazy/", hasChildren: true },
+    ]
+
+    render(
+      <FileSystem
+        defaultView="columns"
+        items={lazyItems}
+        loadChildren={loadChildren}
+      />
+    )
+
+    fireEvent.click(screen.getByRole("option", { name: /lazy/i }))
+    fireEvent.keyDown(screen.getByRole("listbox", { name: "Files" }), {
+      key: "ArrowRight",
+    })
+
+    await waitFor(() => {
+      expect(
+        screen
+          .getByRole("option", { name: /loaded.txt/i })
+          .getAttribute("aria-selected")
+      ).toBe("true")
+    })
+  })
+
+  it("does not select a lazy child after selection changes before load resolves", async () => {
+    const deferred = createDeferred<{ items: FileSystemItem[] }>()
+    const loadChildren = vi.fn().mockReturnValue(deferred.promise)
+    const onSelectionChange = vi.fn()
+    const lazyItems: FileSystemItem[] = [
+      { kind: "folder", path: "lazy/", hasChildren: true },
+      { kind: "file", path: "other.txt", mimeType: "text/plain" },
+    ]
+
+    render(
+      <FileSystem
+        defaultView="columns"
+        items={lazyItems}
+        loadChildren={loadChildren}
+        onSelectionChange={onSelectionChange}
+      />
+    )
+
+    fireEvent.click(screen.getByRole("option", { name: /lazy/i }))
+    fireEvent.keyDown(screen.getByRole("listbox", { name: "Files" }), {
+      key: "ArrowRight",
+    })
+    fireEvent.click(screen.getByRole("option", { name: /other.txt/i }))
+
+    await screen.findByText("other.txt selected")
+    await act(async () => {
+      deferred.resolve({
+        items: [
+          {
+            kind: "file",
+            path: "lazy/loaded.txt",
+            mimeType: "text/plain",
+          },
+        ],
+      })
+      await deferred.promise
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText("other.txt selected")).toBeTruthy()
+    })
+    expect(onSelectionChange).not.toHaveBeenCalledWith(
+      expect.objectContaining({ path: "lazy/loaded.txt" })
+    )
+  })
+
+  it("does not select a lazy child after navigation changes before load resolves", async () => {
+    const deferred = createDeferred<{ items: FileSystemItem[] }>()
+    const loadChildren = vi.fn().mockReturnValue(deferred.promise)
+    const onSelectionChange = vi.fn()
+    const lazyItems: FileSystemItem[] = [
+      { kind: "folder", path: "lazy/", hasChildren: true },
+      { kind: "file", path: "stable/stable.txt", mimeType: "text/plain" },
+    ]
+
+    render(
+      <FileSystem
+        defaultView="columns"
+        items={lazyItems}
+        loadChildren={loadChildren}
+        onSelectionChange={onSelectionChange}
+      />
+    )
+
+    fireEvent.click(screen.getByRole("option", { name: /lazy/i }))
+    fireEvent.keyDown(screen.getByRole("listbox", { name: "Files" }), {
+      key: "ArrowRight",
+    })
+    fireEvent.doubleClick(screen.getByRole("option", { name: /stable/i }))
+
+    expect(await screen.findByRole("option", { name: /stable.txt/i })).toBeTruthy()
+    await act(async () => {
+      deferred.resolve({
+        items: [
+          {
+            kind: "file",
+            path: "lazy/loaded.txt",
+            mimeType: "text/plain",
+          },
+        ],
+      })
+      await deferred.promise
+    })
+
+    await waitFor(() => {
+      expect(screen.queryByText("loaded.txt selected")).toBeNull()
+    })
+    expect(onSelectionChange).not.toHaveBeenCalledWith(
+      expect.objectContaining({ path: "lazy/loaded.txt" })
+    )
+  })
+
+  it("keeps the lazy folder selected when column child loading fails", async () => {
+    const loadChildren = vi.fn().mockRejectedValue(new Error("load failed"))
+    const lazyItems: FileSystemItem[] = [
+      { kind: "folder", path: "lazy/", hasChildren: true },
+    ]
+
+    render(
+      <FileSystem
+        defaultView="columns"
+        items={lazyItems}
+        loadChildren={loadChildren}
+      />
+    )
+
+    fireEvent.click(screen.getByRole("option", { name: /lazy/i }))
+    fireEvent.keyDown(screen.getByRole("listbox", { name: "Files" }), {
+      key: "ArrowRight",
+    })
+
+    await waitFor(() => {
+      expect(
+        screen
+          .getByRole("option", { name: /lazy/i })
+          .getAttribute("aria-selected")
+      ).toBe("true")
+    })
+    fireEvent.click(screen.getByRole("tab", { name: "List view" }))
+    await waitFor(() => {
+      expect(fileTreeShadowRoot().textContent ?? "").toContain("load failed")
+    })
+    expect(loadChildren).toHaveBeenCalled()
   })
 })

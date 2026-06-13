@@ -3,7 +3,12 @@
 // registry item named `<id>-viewer-block` (see registry.json), whose source
 // files feed the Code view.
 
-type ViewerBlockCategoryId = "primitives" | "dropzone" | "legends" | "run-cards"
+type ViewerBlockCategoryId =
+  | "primitives"
+  | "dropzone"
+  | "file-system"
+  | "legends"
+  | "run-cards"
 
 type ViewerBlockConfig = {
   id: string
@@ -27,6 +32,7 @@ export const VIEWER_BLOCK_CATEGORIES = [
   { id: "featured", label: "Featured" },
   { id: "primitives", label: "Primitives" },
   { id: "dropzone", label: "Dropzone" },
+  { id: "file-system", label: "File System" },
   { id: "legends", label: "Legends" },
   { id: "run-cards", label: "Run Cards" },
 ] as const
@@ -201,7 +207,7 @@ export const VIEWER_BLOCKS = [
     viewHref: "/view/blocks/file-system",
     previewHeightClassName: "h-[680px]",
     featured: true,
-    categories: ["primitives"],
+    categories: ["file-system"],
   },
   {
     id: "primitive-cards",

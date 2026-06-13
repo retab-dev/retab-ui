@@ -134,16 +134,16 @@ export function PptxSlideScroller({
     (element: HTMLDivElement | null) => {
       viewportElementRef.current = element
       assignPptxRef(viewportRef, element)
+      assignPptxRef(containerRef, element)
     },
-    [viewportRef]
+    [containerRef, viewportRef]
   )
 
   const setCanvasRef = React.useCallback(
     (element: HTMLDivElement | null) => {
       canvasRef.current = element
-      assignPptxRef(containerRef, element)
     },
-    [containerRef]
+    []
   )
 
   const handleScroll = React.useCallback(() => {

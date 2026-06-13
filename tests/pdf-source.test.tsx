@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import * as React from "react"
-import { cleanup, render } from "@testing-library/react"
+import { cleanup, render, renderHook } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import type { Source, SourceAnchor } from "@/lib/document-source"
@@ -123,13 +123,7 @@ describe("usePdfSourceTarget", () => {
 
   function renderTarget(handle: PdfViewerHandle | null) {
     const ref = { current: handle } as React.RefObject<PdfViewerHandle | null>
-    let target!: ReturnType<typeof usePdfSourceTarget>
-    function Harness() {
-      target = usePdfSourceTarget(ref)
-      return null
-    }
-    render(<Harness />)
-    return target
+    return renderHook(() => usePdfSourceTarget(ref)).result.current
   }
 
   it("forwards a pdf anchor's page and top to the viewer handle", () => {
@@ -145,7 +139,7 @@ describe("usePdfSourceTarget", () => {
     })
 
     expect(scrollToPageArea).toHaveBeenCalledWith(
-      { pageNumber: 3, top: 25 },
+      { pageNumber: 3, left: 10, top: 25, width: 30, height: 40 },
       { behavior: "auto" }
     )
   })

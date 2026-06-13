@@ -11,7 +11,7 @@ import {
 import type { JSONSchema7 } from "json-schema"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import { SchemaFieldDescription } from "@/components/schema-editor/primitives/schema-field-description"
+import { SchemaInlineDescription } from "@/components/schema-editor/primitives/schema-inline-description"
 import { SchemaBuilder } from "@/components/schema-editor/schema-builder"
 
 afterEach(cleanup)
@@ -64,8 +64,8 @@ const sample: JSONSchema7 = {
 describe("SchemaBuilder renders (integration smoke)", () => {
   it("mounts the full editor and shows the property names", () => {
     renderEditor(sample)
-    expect(screen.getByText("invoice_number")).toBeTruthy()
-    expect(screen.getByText("total")).toBeTruthy()
+    expect(screen.getByDisplayValue("invoice_number")).toBeTruthy()
+    expect(screen.getByDisplayValue("total")).toBeTruthy()
   })
 
   it("keeps root properties padded inside the section shell", () => {
@@ -106,8 +106,8 @@ describe("SchemaBuilder renders (integration smoke)", () => {
         cost: { $ref: "#/$defs/Money" },
       },
     })
-    expect(screen.getByText("vendor")).toBeTruthy()
-    expect(screen.getByText("name")).toBeTruthy()
+    expect(screen.getByDisplayValue("vendor")).toBeTruthy()
+    expect(screen.getByDisplayValue("name")).toBeTruthy()
     // $defs section header
     expect(screen.getByText(/Definitions/)).toBeTruthy()
   })
@@ -121,12 +121,12 @@ describe("SchemaBuilder renders (integration smoke)", () => {
       properties: {},
     })
 
-    expect(screen.getByText("Money")).toBeTruthy()
+    expect(screen.getByDisplayValue("Money")).toBeTruthy()
 
     fireEvent.click(screen.getByRole("button", { name: /Definitions/ }))
 
     await waitFor(() => {
-      expect(screen.queryByText("Money")).toBeNull()
+      expect(screen.queryByDisplayValue("Money")).toBeNull()
     })
   })
 
@@ -140,7 +140,7 @@ describe("SchemaBuilder renders (integration smoke)", () => {
       properties: {},
     } as JSONSchema7)
 
-    const moneySection = screen.getByText("Money").closest("[id]")!
+    const moneySection = screen.getByDisplayValue("Money").closest("[id]")!
 
     expect(
       within(moneySection as HTMLElement).queryByRole("button", {
@@ -159,7 +159,7 @@ describe("SchemaBuilder renders (integration smoke)", () => {
       })
     ).not.toThrow()
 
-    expect(screen.getByText("rows")).toBeTruthy()
+    expect(screen.getByDisplayValue("rows")).toBeTruthy()
     expect(screen.getByText("list")).toBeTruthy()
   })
 })
@@ -412,7 +412,7 @@ describe("SchemaBuilder interactions (doc-routed)", () => {
   it("edits a property description inline and emits it", () => {
     const { last } = renderEditor(sample)
     // total has no description -> its row shows the "Add description" input placeholder
-    const totalRow = screen.getByText("total").closest("div")!
+    const totalRow = screen.getByDisplayValue("total").closest("div")!
     const input = within(totalRow.parentElement as HTMLElement)
       .getAllByPlaceholderText("Add description")[0] as HTMLInputElement
     fireEvent.focus(input)
@@ -466,8 +466,8 @@ describe("SchemaBuilder interactions (doc-routed)", () => {
 
   it("renames a property inline (parent-level op) and required follows", () => {
     const { last } = renderEditor(sample)
-    fireEvent.click(screen.getByText("invoice_number")) // enter edit mode
     const input = screen.getByDisplayValue("invoice_number") as HTMLInputElement
+    fireEvent.focus(input)
     fireEvent.change(input, { target: { value: "inv_no" } })
     fireEvent.keyDown(input, { key: "Enter" })
     const out = last()!
@@ -514,6 +514,7 @@ describe("SchemaBuilder interactions (doc-routed)", () => {
     expect(chip?.className).toContain("bg-muted")
     expect(chip?.className).toContain("px-1")
     expect(chip?.className).not.toContain("py-1")
+    expect(screen.getByLabelText("Option 1: draft")).toBeTruthy()
 
     const input = screen.getByPlaceholderText("New choice") as HTMLInputElement
     input.focus()
@@ -526,12 +527,13 @@ describe("SchemaBuilder interactions (doc-routed)", () => {
   })
 })
 
-describe("SchemaFieldDescription", () => {
+describe("SchemaInlineDescription", () => {
   it("renders editable descriptions as native inputs before they are clicked", () => {
     const onCommit = vi.fn()
 
     render(
-      <SchemaFieldDescription
+      <SchemaInlineDescription
+        ariaLabel="Description"
         editable
         value="The invoice identifier"
         onCommit={onCommit}

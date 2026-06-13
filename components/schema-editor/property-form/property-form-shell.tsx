@@ -5,7 +5,7 @@ import { AlertCircle } from "lucide-react"
 import { DescriptionField } from "@/components/schema-editor/property-form/fields/description-field"
 import { NameField } from "@/components/schema-editor/property-form/fields/name-field"
 import { NullableField } from "@/components/schema-editor/property-form/fields/nullable-field"
-import { SchemaNodeField } from "@/components/schema-editor/property-form/fields/schema-node-field"
+import { PropertySchemaDetailsField } from "@/components/schema-editor/property-form/fields/property-schema-details-field"
 import { TypeField } from "@/components/schema-editor/property-form/fields/type-field"
 import { PropertyFormFooter } from "@/components/schema-editor/property-form/property-form-footer"
 import type { PropertyFormViewModel } from "@/components/schema-editor/property-form/types"
@@ -18,6 +18,13 @@ export function PropertyFormShell({
 }) {
   const { fields, footer, capabilities, events, validation } = viewModel
   const isReadOnly = capabilities.mode === "readOnly"
+  const hasSchemaDetails =
+    fields.enumValues || fields.objectProperties || fields.arrayItems
+  const schemaDetails = {
+    enumValues: fields.enumValues,
+    objectProperties: fields.objectProperties,
+    arrayItems: fields.arrayItems,
+  }
 
   return (
     <form
@@ -57,16 +64,8 @@ export function PropertyFormShell({
             )}
           </div>
 
-          {fields.schemaNodeDetails && (
-            <SchemaNodeField
-              schemaNode={fields.schemaNodeDetails.schemaNode}
-              schemaContext={fields.schemaNodeDetails.schemaContext}
-              mode={fields.schemaNodeDetails.mode}
-              capabilities={fields.schemaNodeDetails.capabilities}
-              disabled={fields.schemaNodeDetails.disabled}
-              showTypeSelector={false}
-              onChange={fields.schemaNodeDetails.onChange}
-            />
+          {hasSchemaDetails && (
+            <PropertySchemaDetailsField details={schemaDetails} />
           )}
         </div>
         <div className="space-y-4 p-4">

@@ -1,7 +1,7 @@
 import * as React from "react"
 
 import type {
-  DataCellActivationIntent,
+  DataCellActivationSource,
   DataCellEditorHandle,
   DataCellValueMeta,
 } from "@/components/ui/data-cell"
@@ -10,7 +10,7 @@ import type { FieldMetadata } from "@/components/json-table/lib/schema-field-met
 import { useElevatedVirtualRow } from "@/components/json-table/use-elevated-virtual-row"
 
 export type JsonTablePrimitiveCellProps = {
-  activationRequest?: DataCellActivationIntent
+  activationSource?: DataCellActivationSource
   effectiveValue: unknown
   fieldMetadata: FieldMetadata
   isActive: boolean
@@ -22,7 +22,7 @@ export type JsonTablePrimitiveCellProps = {
 }
 
 export function JsonTablePrimitiveCell({
-  activationRequest,
+  activationSource,
   effectiveValue,
   fieldMetadata,
   isActive,
@@ -48,7 +48,7 @@ export function JsonTablePrimitiveCell({
         mode={isActive ? "edit" : "display"}
         active={isActive}
         isEditable={isEditable}
-        activationIntent={activationRequest}
+        activationSource={activationSource}
         autoFocus={isActive}
         onActiveChange={onActiveChange}
         onEditorHandleChange={onEditorHandleChange}

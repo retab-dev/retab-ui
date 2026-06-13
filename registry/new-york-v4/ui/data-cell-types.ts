@@ -1,5 +1,7 @@
 import type * as React from "react"
 
+import type { DataCellActivationSource } from "@/registry/new-york-v4/ui/data-cell-activation"
+
 export type DataCellKind =
   | "text"
   | "number"
@@ -15,21 +17,7 @@ export type DataCellValue = string | number | boolean | null | undefined
 export type DataCellCommitValue = string | number | boolean | null
 export type DataCellDateTimeZone = "local" | "preserve" | "utc"
 
-export type DataCellActivationIntent =
-  | {
-      type: "pointer"
-      clientX: number
-      clientY: number
-      detail: number
-      selectionOffset?: number
-    }
-  | {
-      type: "keyboard"
-      key: string
-    }
-  | {
-      type: "programmatic"
-    }
+export type { DataCellActivationSource }
 
 export type DataCellValueMeta = {
   kind: DataCellKind
@@ -70,7 +58,7 @@ type DataCellBaseProps<Kind extends DataCellKind, Value> = Omit<
   selectOptions?: DataCellSelectOption[]
   dateTimeZone?: DataCellDateTimeZone
   showPickerIcon?: boolean
-  activationIntent?: DataCellActivationIntent
+  activationSource?: DataCellActivationSource
   isPickerOpen?: boolean
   formatValue?: (
     value: Value | undefined,

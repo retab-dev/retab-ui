@@ -24,7 +24,7 @@ export interface DocumentSchemaNodeEditorProps {
   setDefsAccordionOpen: (open: boolean) => void
   draggedParentRef: React.RefObject<string | null>
   draggedPropertyRef: React.RefObject<string | null>
-  editMode?: SchemaEditorMode
+  mode?: SchemaEditorMode
   hidePencilButton?: boolean
   isRequired?: boolean
   onRequiredChange?: (required: boolean) => void

@@ -36,7 +36,7 @@ export function DocumentSchemaNodeEditor({
   setDefsAccordionOpen,
   draggedParentRef,
   draggedPropertyRef,
-  editMode = "editable",
+  mode = "editable",
   hidePencilButton = false,
   isRequired,
   onRequiredChange,
@@ -78,7 +78,7 @@ export function DocumentSchemaNodeEditor({
         onDelete={onDelete}
         onNameChange={onNameChange}
         setDefsAccordionOpen={setDefsAccordionOpen}
-        editMode={editMode}
+        mode={mode}
         hidePencilButton={hidePencilButton}
         isRequired={isRequired}
         onRequiredChange={onRequiredChange}
@@ -97,7 +97,7 @@ export function DocumentSchemaNodeEditor({
           setDefsAccordionOpen={setDefsAccordionOpen}
           draggedParentRef={draggedParentRef}
           draggedPropertyRef={draggedPropertyRef}
-          editMode={editMode}
+          mode={mode}
           features={features}
           renderNode={renderNode}
         />
@@ -113,7 +113,7 @@ export function DocumentSchemaNodeEditor({
           setDefsAccordionOpen={setDefsAccordionOpen}
           draggedParentRef={draggedParentRef}
           draggedPropertyRef={draggedPropertyRef}
-          editMode={editMode}
+          mode={mode}
           features={features}
           renderNode={renderNode}
         />
@@ -122,7 +122,7 @@ export function DocumentSchemaNodeEditor({
       {localType === "enum" && (
         <DocumentEnumNodeEditor
           dispatch={dispatch}
-          editMode={editMode}
+          mode={mode}
           nodeId={nodeId}
           enumEntries={nodeView.enumEntries}
         />

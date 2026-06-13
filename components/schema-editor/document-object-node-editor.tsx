@@ -32,7 +32,7 @@ interface DocumentObjectNodeEditorProps {
   setDefsAccordionOpen: (open: boolean) => void
   draggedParentRef: DocumentSchemaNodeEditorProps["draggedParentRef"]
   draggedPropertyRef: DocumentSchemaNodeEditorProps["draggedPropertyRef"]
-  editMode: SchemaEditorMode
+  mode: SchemaEditorMode
   features: ResolvedSchemaBuilderFeatures
   renderNode: RenderDocumentNodeEditor
 }
@@ -46,11 +46,11 @@ export function DocumentObjectNodeEditor({
   setDefsAccordionOpen,
   draggedParentRef,
   draggedPropertyRef,
-  editMode,
+  mode,
   features,
   renderNode,
 }: DocumentObjectNodeEditorProps) {
-  const isEditable = editMode === "editable"
+  const editable = mode === "editable"
   const objectNodeId = nodeView.effectiveNode.id ?? nodeId
   const properties = nodeView.properties
   const controller = useDocumentObjectNodeEditorController({
@@ -79,9 +79,9 @@ export function DocumentObjectNodeEditor({
         setDefsAccordionOpen={setDefsAccordionOpen}
         draggedParentRef={draggedParentRef}
         draggedPropertyRef={draggedPropertyRef}
-        editMode={editMode}
+        mode={mode}
         features={features}
-        isEditable={isEditable}
+        editable={editable}
         isRequired={property.isRequired}
         siblingNames={controller.propertyNames}
         renderNode={renderNode}
@@ -101,7 +101,7 @@ export function DocumentObjectNodeEditor({
   }
 
   const addPropertyControl = (rootLayout: boolean) =>
-    isEditable ? (
+    editable ? (
       <DocumentPropertyAddRow
         rootLayout={rootLayout}
         siblingNames={controller.propertyNames}

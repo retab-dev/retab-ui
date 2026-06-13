@@ -62,7 +62,9 @@ export function FileSystemGridView({
   const rovingFocus = useFileSystemRovingFocus({
     entries,
     getScrollIndex: (entry) => {
-      const index = entries.findIndex((candidate) => candidate.path === entry.path)
+      const index = entries.findIndex(
+        (candidate) => candidate.path === entry.path
+      )
 
       return index === -1 ? -1 : Math.floor(index / columnCount)
     },

@@ -279,7 +279,7 @@ async function getPickerState(client, label) {
       const row = Array.from(document.querySelectorAll('.grid.items-center')).find((element) => element.children[0]?.textContent?.trim() === ${JSON.stringify(label)});
       const trigger = row?.children[2]?.querySelector('[data-mode="edit"][data-slot="data-cell"]');
       const calendar = document.querySelector('[data-slot="calendar"]');
-      const timeInput = document.querySelector('[data-slot="popover-popup"] input[type="time"]');
+      const timeInput = document.querySelector('[data-slot="data-cell-picker-popup"] input[type="time"], [data-slot="popover-popup"] input[type="time"]');
       return {
         trigger: Boolean(trigger),
         expanded: trigger?.getAttribute('aria-expanded'),
