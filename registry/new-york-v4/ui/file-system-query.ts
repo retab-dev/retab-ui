@@ -1,0 +1,244 @@
+import { detectCategory } from "@/lib/viewer-source"
+
+import { compareEntryNames } from "./file-system-index"
+import type {
+  FileSystemEntry,
+  FileSystemFileEntry,
+  FileSystemFilterState,
+  FileSystemIndex,
+  FileSystemQueryState,
+  FileSystemSortState,
+  FileSystemTreeRow,
+} from "./file-system-types"
+
+export const DEFAULT_FILE_SYSTEM_SORT: FileSystemSortState = {
+  direction: "asc",
+  key: "name",
+}
+
+export function normalizeFileSystemSearch(value: string): string {
+  return value.trim().toLowerCase()
+}
+
+export function getFileSystemCategory(file: FileSystemFileEntry) {
+  return detectCategory(file.name, file.mimeType)
+}
+
+export function getFileSystemCategoryLabel(category: string) {
+  switch (category) {
+    case "csv":
+      return "CSV"
+    case "docx":
+      return "Word"
+    case "html":
+      return "HTML"
+    case "image":
+      return "Image"
+    case "markdown":
+      return "Markdown"
+    case "pdf":
+      return "PDF"
+    case "pptx":
+      return "PowerPoint"
+    case "text":
+      return "Text"
+    case "xlsx":
+      return "Excel"
+    default:
+      return "Unsupported"
+  }
+}
+
+export function fileMatchesQuery(
+  file: FileSystemFileEntry,
+  query: FileSystemQueryState
+) {
+  const search = normalizeFileSystemSearch(query.search)
+  if (
+    search &&
+    !file.path.toLowerCase().includes(search) &&
+    !file.name.toLowerCase().includes(search)
+  ) {
+    return false
+  }
+
+  if (
+    query.filters.categories.length &&
+    !query.filters.categories.includes(getFileSystemCategory(file))
+  ) {
+    return false
+  }
+
+  return true
+}
+
+export function deriveVisibleIndex(
+  index: FileSystemIndex,
+  currentPath: string,
+  query: FileSystemQueryState
+): FileSystemIndex {
+  const search = normalizeFileSystemSearch(query.search)
+  const hasCategoryFilter = query.filters.categories.length > 0
+
+  if (!search && !hasCategoryFilter)
+    return sortFileSystemIndex(index, query.sort)
+
+  const visiblePaths = new Set<string>()
+  const markVisible = (path: string) => {
+    let nextPath = path
+
+    while (
+      nextPath &&
+      nextPath !== currentPath &&
+      !visiblePaths.has(nextPath)
+    ) {
+      visiblePaths.add(nextPath)
+      const trimmed = nextPath.endsWith("/") ? nextPath.slice(0, -1) : nextPath
+      const separatorIndex = trimmed.lastIndexOf("/")
+
+      nextPath =
+        separatorIndex === -1 ? "" : `${trimmed.slice(0, separatorIndex)}/`
+    }
+  }
+
+  for (const [path, file] of index.files) {
+    if (currentPath && !path.startsWith(currentPath)) continue
+    if (!fileMatchesQuery(file, query)) continue
+    visiblePaths.add(path)
+    markVisible(file.parentPath)
+  }
+
+  if (!hasCategoryFilter) {
+    for (const [path, folder] of index.folders) {
+      if (currentPath && !path.startsWith(currentPath)) continue
+      if (
+        search &&
+        !path.toLowerCase().includes(search) &&
+        !folder.name.toLowerCase().includes(search)
+      ) {
+        continue
+      }
+      visiblePaths.add(path)
+      markVisible(folder.parentPath)
+    }
+  }
+
+  const children = new Map<string, FileSystemEntry[]>()
+
+  for (const [parentPath, entries] of index.children) {
+    const visibleEntries = entries.filter((entry) =>
+      visiblePaths.has(entry.path)
+    )
+    if (visibleEntries.length) children.set(parentPath, visibleEntries)
+  }
+
+  return sortFileSystemIndex({ ...index, children }, query.sort)
+}
+
+export function sortFileSystemIndex(
+  index: FileSystemIndex,
+  sort: FileSystemSortState
+) {
+  if (
+    sort.key === DEFAULT_FILE_SYSTEM_SORT.key &&
+    sort.direction === DEFAULT_FILE_SYSTEM_SORT.direction
+  ) {
+    return index
+  }
+
+  const children = new Map<string, FileSystemEntry[]>()
+
+  for (const [parentPath, entries] of index.children) {
+    children.set(
+      parentPath,
+      [...entries].sort((left, right) => compareEntries(left, right, sort))
+    )
+  }
+
+  return { ...index, children } satisfies FileSystemIndex
+}
+
+export function compareEntries(
+  left: FileSystemEntry,
+  right: FileSystemEntry,
+  sort: FileSystemSortState
+) {
+  if (left.kind !== right.kind) return left.kind === "folder" ? -1 : 1
+
+  let result = 0
+
+  switch (sort.key) {
+    case "kind":
+      result = entryKindLabel(left).localeCompare(entryKindLabel(right))
+      break
+    case "size":
+      result = (entrySize(left) ?? -1) - (entrySize(right) ?? -1)
+      break
+    case "updatedAt":
+      result = entryTime(left) - entryTime(right)
+      break
+    case "name":
+      result = compareEntryNames(left, right)
+      break
+  }
+
+  if (result === 0) result = compareEntryNames(left, right)
+  return sort.direction === "asc" ? result : -result
+}
+
+export function flattenFileSystemRows({
+  currentPath,
+  expandedPaths,
+  index,
+}: {
+  currentPath: string
+  expandedPaths: ReadonlySet<string>
+  index: FileSystemIndex
+}): FileSystemTreeRow[] {
+  const rows: FileSystemTreeRow[] = []
+
+  const walk = (folderPath: string, depth: number) => {
+    for (const entry of index.children.get(folderPath) ?? []) {
+      rows.push({ depth, entry })
+      if (entry.kind === "folder" && expandedPaths.has(entry.path)) {
+        walk(entry.path, depth + 1)
+      }
+    }
+  }
+
+  walk(currentPath, 0)
+  return rows
+}
+
+export function collectFileSystemCategories(index: FileSystemIndex) {
+  const categories = new Set<string>()
+
+  for (const file of index.files.values()) {
+    categories.add(getFileSystemCategory(file))
+  }
+
+  return [...categories].sort((left, right) =>
+    getFileSystemCategoryLabel(left).localeCompare(
+      getFileSystemCategoryLabel(right)
+    )
+  )
+}
+
+export function entryKindLabel(entry: FileSystemEntry) {
+  return entry.kind === "folder"
+    ? "Folder"
+    : getFileSystemCategoryLabel(getFileSystemCategory(entry))
+}
+
+function entrySize(entry: FileSystemEntry) {
+  return entry.kind === "file" ? entry.size : undefined
+}
+
+function entryTime(entry: FileSystemEntry) {
+  const time = Date.parse(entry.updatedAt ?? entry.createdAt ?? "")
+  return Number.isNaN(time) ? Number.NEGATIVE_INFINITY : time
+}
+
+export function fileSystemFilterIsEmpty(filters: FileSystemFilterState) {
+  return filters.categories.length === 0
+}

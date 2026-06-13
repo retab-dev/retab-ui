@@ -14,32 +14,67 @@ export function useElementWidth<T extends HTMLElement = HTMLDivElement>(): [
     cleanupRef.current = null
 
     if (!element) return
-
-    setWidth(element.clientWidth)
-    if (typeof ResizeObserver !== "function") return
+    const target = element
 
     let frame = 0
-    let nextWidth = element.clientWidth
-    const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        nextWidth = (entry.target as HTMLElement).clientWidth
+    let timeout = 0
+    let isReadScheduled = false
+    let lastReadWidth: number | null = null
+
+    function scheduleRead() {
+      if (isReadScheduled) return
+
+      isReadScheduled = true
+      const run = () => {
+        if (!isReadScheduled) return
+        isReadScheduled = false
+        if (frame > 0 && typeof cancelAnimationFrame === "function") {
+          cancelAnimationFrame(frame)
+        }
+        if (timeout) window.clearTimeout(timeout)
+        frame = 0
+        timeout = 0
+        readStableWidth()
       }
-      if (frame) return
-      if (typeof requestAnimationFrame !== "function") {
+
+      timeout = window.setTimeout(run, 50)
+      if (typeof requestAnimationFrame !== "function") return
+
+      frame = -1
+      const requestedFrame = requestAnimationFrame(run)
+      if (frame === -1) frame = requestedFrame
+    }
+
+    function readStableWidth() {
+      const nextWidth = target.clientWidth
+      if (lastReadWidth === nextWidth) {
         setWidth(nextWidth)
         return
       }
-      frame = requestAnimationFrame(() => {
-        frame = 0
-        setWidth(nextWidth)
-      })
+      lastReadWidth = nextWidth
+      scheduleRead()
+    }
+
+    scheduleRead()
+    const cleanupScheduledRead = () => {
+      if (frame > 0 && typeof cancelAnimationFrame === "function") {
+        cancelAnimationFrame(frame)
+      }
+      if (timeout) window.clearTimeout(timeout)
+    }
+    if (typeof ResizeObserver !== "function") {
+      cleanupRef.current = cleanupScheduledRead
+      return
+    }
+
+    const observer = new ResizeObserver(() => {
+      lastReadWidth = null
+      scheduleRead()
     })
 
     observer.observe(element)
     cleanupRef.current = () => {
-      if (frame && typeof cancelAnimationFrame === "function") {
-        cancelAnimationFrame(frame)
-      }
+      cleanupScheduledRead()
       observer.disconnect()
     }
   }, [])

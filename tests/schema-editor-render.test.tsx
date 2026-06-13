@@ -514,8 +514,8 @@ describe("SchemaBuilder interactions (doc-routed)", () => {
 
     const chip = screen.getByDisplayValue("draft").parentElement
     expect(chip?.className).toContain("shadow-none")
-    expect(chip?.className).not.toContain("bg-muted")
-    expect(chip?.className).not.toContain("px-2")
+    expect(chip?.className).toContain("bg-muted")
+    expect(chip?.className).toContain("px-1")
     expect(chip?.className).not.toContain("py-1")
 
     const input = screen.getByPlaceholderText("New choice") as HTMLInputElement

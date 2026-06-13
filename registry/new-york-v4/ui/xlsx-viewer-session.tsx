@@ -56,7 +56,7 @@ export function XlsxViewerSession({
   })
 
   React.useImperativeHandle(
-    forwardedRef,
+    forwardedRef ?? null,
     () => ({
       scrollToCell,
       getViewportElement: () => viewportElementRef.current,

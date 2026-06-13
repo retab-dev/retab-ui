@@ -8,10 +8,12 @@ import {
   fireEvent,
   render,
   screen,
+  within,
 } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { DropzoneBlock } from "@/registry/new-york-v4/blocks/dropzone-block"
+import { DropzoneUploaderViewer } from "@/registry/new-york-v4/blocks/dropzone-uploader-viewer"
 import {
   matchesDropzoneAccept,
   parseDropzoneAccept,
@@ -857,6 +859,65 @@ describe("FileUploader", () => {
 })
 
 describe("DropzoneBlock", () => {
+  it("switches the uploader-viewer showcase from empty upload state to viewer state", () => {
+    const viewerSources: Array<{
+      fileName?: string
+      identityKey: string
+      kind: string
+      mimeType?: string
+    }> = []
+
+    render(
+      <DropzoneUploaderViewer
+        renderViewer={(source) => {
+          viewerSources.push(source)
+          return <div data-testid="viewer">{source.fileName}</div>
+        }}
+      />
+    )
+
+    const viewerSection = screen
+      .getByText("Uploader + viewer")
+      .closest("section") as HTMLElement
+    const input = viewerSection.querySelector(
+      'input[type="file"]'
+    ) as HTMLInputElement
+
+    expect(within(viewerSection).getByText("No file selected")).toBeTruthy()
+    expect(
+      within(viewerSection).getAllByText("Upload file").length
+    ).toBeGreaterThanOrEqual(2)
+
+    fireEvent.change(input, {
+      target: {
+        files: [file("preview.txt", "text/plain", "hello")],
+      },
+    })
+
+    expect(within(viewerSection).queryByText("No file selected")).toBeNull()
+    expect(
+      within(viewerSection).getAllByText("preview.txt").length
+    ).toBeGreaterThanOrEqual(2)
+    expect(within(viewerSection).getByText(formatFileSize(5))).toBeTruthy()
+    expect(within(viewerSection).getByText("text/plain")).toBeTruthy()
+    expect(screen.getByTestId("viewer").textContent).toBe("preview.txt")
+    expect(viewerSources.at(-1)).toEqual(
+      expect.objectContaining({
+        fileName: "preview.txt",
+        kind: "blob",
+        mimeType: "text/plain",
+      })
+    )
+    expect(viewerSources.at(-1)?.identityKey).toContain("preview.txt-5")
+
+    fireEvent.click(
+      within(viewerSection).getByRole("button", { name: "Remove preview.txt" })
+    )
+
+    expect(within(viewerSection).getByText("No file selected")).toBeTruthy()
+    expect(screen.queryByTestId("viewer")).toBeNull()
+  })
+
   it("renders focused primitive proofs", () => {
     const { container } = render(<DropzoneBlock />)
 
@@ -874,6 +935,7 @@ describe("DropzoneBlock", () => {
       "Controlled queue",
       "Validation only",
       "Custom thumbnail grid",
+      "Uploader + viewer",
       "Audio transcript queue",
       "Avatar image slot",
       "Spreadsheet mapper",
@@ -906,6 +968,10 @@ describe("Dropzone registry split", () => {
     )
     const fileUploaderSource = readFileSync(
       "registry/new-york-v4/ui/file-uploader.tsx",
+      "utf8"
+    )
+    const dropzoneUploaderViewerSource = readFileSync(
+      "registry/new-york-v4/blocks/dropzone-uploader-viewer.tsx",
       "utf8"
     )
     const registry = JSON.parse(readFileSync("registry.json", "utf8")) as {
@@ -947,6 +1013,10 @@ describe("Dropzone registry split", () => {
     expect(dropzoneSource).not.toContain("DropzoneContext")
     expect(dropzoneCoreSource).not.toContain("message:")
     expect(dropzoneCoreSource).not.toContain("formatDropzoneBytes")
+    expect(dropzoneUploaderViewerSource).not.toContain(
+      "@/components/ui/file-viewer"
+    )
+    expect(dropzoneUploaderViewerSource).toContain("renderViewer")
     expect(fileUploaderSource).toContain(
       "This file type is not supported here."
     )
@@ -963,6 +1033,20 @@ describe("Dropzone registry split", () => {
       "file-size-format",
       "utils",
     ])
-    expect(dropzoneBlock?.registryDependencies).toContain("file-size-format")
+    expect(dropzoneBlock?.registryDependencies).toEqual([
+      "dropzone",
+      "file-viewer",
+      "file-size-format",
+      "file-uploader",
+      "file-thumbnail",
+    ])
+    expect(dropzoneBlock?.files.map((file) => file.path)).toEqual([
+      "registry/new-york-v4/blocks/dropzone-block.tsx",
+      "registry/new-york-v4/blocks/dropzone-example-shared.tsx",
+      "registry/new-york-v4/blocks/dropzone-trigger-examples.tsx",
+      "registry/new-york-v4/blocks/dropzone-file-examples.tsx",
+      "registry/new-york-v4/blocks/dropzone-uploader-viewer.tsx",
+      "registry/new-york-v4/blocks/dropzone-workflow-examples.tsx",
+    ])
   })
 })

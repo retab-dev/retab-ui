@@ -2,261 +2,288 @@
 
 ## Context
 
-`design/viewer-performance-fixes-audit.md` already covers the primary viewer
-performance work:
+`design/viewer-performance-fixes-audit.md` covers these viewer performance
+tracks:
 
 - XLSX grid DOM row patching.
 - Image/TIFF frame virtualization.
 - JSON inspector line virtualization.
 - JSON table read-only row patching.
 - PPTX math-based visible-slide tracking.
+- PDF, CSV, and DOCX as lower-priority or already mostly fine surfaces.
 
-This blueprint covers the remaining viewer work not covered by that audit. The
-same principle applies: predictable geometry should be projected from scroll
-math, hot scroll paths should stay out of React, and mounted DOM should be
-reused where the content model allows it.
+This blueprint covers the performance and architecture work outside that audit.
+It is intentionally separate so the audit can stay a narrow fix list, while
+this document tracks the remaining Chenglou-style projection work, shared
+instrumentation, and explicit non-goals.
 
-## 1. Code Viewer: Replace TanStack Virtual With The Shared Fixed-Line Engine
+The shared rule is simple: if the viewer owns predictable geometry, scrolling
+should be driven by math, a passive scroll listener, one RAF scheduler, and a
+small DOM projection cache. React can still own semantic content, toolbar state,
+and first materialization. It should not be the hot scroll loop.
+
+## 1. Text Viewer: Finish The Pretext Cutover As The Reference Path
 
 ### Current State
 
-The Code Viewer still uses TanStack Virtual directly:
+The new text viewer is the Chenglou-inspired path:
+
+- `registry/new-york-v4/ui/text-viewer.tsx`
+- `registry/new-york-v4/ui/text-viewer-layout.ts`
+- `registry/new-york-v4/ui/text-viewer-chenglou.tsx`
+
+The old fixed-line text/code surface has been renamed Code Viewer. The text
+viewer is for prose, logs, and markdown-like wrapping where visual lines are not
+the same thing as source lines.
+
+### Work Not Covered By The Audit
+
+- Make the Pretext-based text viewer the only text route in File Viewer.
+- Keep line numbers out of Text Viewer. They belong to Code Viewer.
+- Treat wrapping as the default text behavior, not an edge case.
+- Keep virtual items as block records, not source lines.
+- Keep scroll projection outside React state.
+- Remove any leftover dual-path naming such as `pretext viewer` from runtime UI
+  once the cutover is complete. The component can be implemented with Pretext;
+  the product-facing name is Text Viewer.
+
+### Acceptance
+
+- Text files and markdown-like text open in Text Viewer.
+- Source-code-like files open in Code Viewer.
+- Text Viewer has no gutter or line-number column.
+- Large wrapped files scroll with bounded DOM and no React render per wheel tick.
+- Selection, copy, zoom, and download behavior remain intact.
+
+## 2. Code Viewer: Replace TanStack Virtual With A Fixed-Line Projector
+
+### Current State
+
+Code still has a simpler geometry model than text:
+
+- every source line maps to one visual row,
+- line height is fixed for a given zoom,
+- gutter width is fixed for a given line count,
+- horizontal overflow is expected.
+
+The audit does not cover Code Viewer, because it focuses on table and document
+surfaces.
+
+Relevant files:
 
 - `registry/new-york-v4/ui/code-viewer-content.tsx`
 - `registry/new-york-v4/ui/code-viewer-virtualization.ts`
 - `registry/new-york-v4/ui/code-viewer-line.tsx`
 
-The workload is simpler than markdown text: fixed-height source lines, stable
-line count, fixed gutter width for a given file, and no wrapping. TanStack works,
-but it is now the odd one out after the text viewer work.
+### Work Not Covered By The Audit
 
-### Problem
-
-Every scroll range update is still a React virtualizer update. For code this is
-usually acceptable, but it leaves three inconsistencies:
-
-- The code path depends on TanStack while the text path now has custom engines.
-- The render loop still maps visible rows through React during scroll.
-- Prism tokenization is cached by line text, but line rendering still happens as
-  React row projection.
-
-### Fix
-
-Build a small fixed-line code projector:
-
+- Remove `@tanstack/react-virtual` from Code Viewer.
+- Add a small fixed-line projection engine.
 - Precompute line height, gutter width, total height, and line count.
-- Use passive scroll listener plus one `requestAnimationFrame` scheduler.
-- Compute visible line range with fixed-height math.
-- Reuse mounted row nodes by line index or by pool slot.
-- Patch row transform, line number text, highlight class, and tokenized content.
-- Keep Prism token cache, but render token leaves into DOM fragments outside
-  React during row materialization.
-
-### Cutover
-
-Replace the TanStack path outright. Do not keep a compatibility branch.
+- Use passive scroll plus one RAF scheduler.
+- Compute visible rows with fixed-height math.
+- Reuse mounted row nodes by pool slot or line index.
+- Patch row transform, line number, active highlight, and tokenized code DOM.
+- Keep Prism tokenization cached by line text.
+- Keep code-specific behavior separate from Text Viewer wrapping behavior.
 
 ### Acceptance
 
 - Large code files scroll without React commits per wheel tick.
-- Highlight scroll-to-line still works.
-- Zoom preserves anchor and reprojects visible rows.
-- Syntax highlighting output matches existing tests.
-- `@tanstack/react-virtual` is no longer imported by the Code Viewer.
+- Syntax highlighting output remains stable.
+- Scroll-to-line and active-line highlighting still work.
+- Zoom preserves the viewport anchor.
+- No Code Viewer module imports TanStack Virtual.
 
-## 2. Markdown Document Viewer: Move Page Projection Out Of React
+## 3. Markdown Document Viewer: Move Page Projection Out Of React
 
 ### Current State
 
-There are two markdown-document surfaces in active use or in flight:
+The markdown document surfaces already have page geometry and virtual windows,
+but the remaining performance question is whether visible page projection still
+flows through React on scroll.
+
+Relevant files:
 
 - `registry/new-york-v4/ui/markdown-document-viewer.tsx`
+- `registry/new-york-v4/ui/markdown-document-model.ts`
+- `registry/new-york-v4/ui/markdown-document-renderers.tsx`
 - `components/viewers/page-markdown/page-markdown-viewer.tsx`
 - `components/viewers/page-markdown/page-markdown-pane.tsx`
 
-The registry Markdown Document Viewer already has custom page geometry and a
-virtual page window. It still stores `scrollTop` in React state and maps
-`virtualWindow.items` through React on scroll.
+### Work Not Covered By The Audit
 
-### Problem
-
-This is the same remaining gap the text viewer had before the Chenglou work:
-the virtual range math is custom, but visible projection still flows through
-React. For a paged markdown document, each visible page can contain expensive
-rendered markdown trees, measurements, copy controls, and syntax-highlighted
-blocks.
-
-### Fix
-
-Split the viewer into model, scheduler, and projector:
-
-- Keep `createMarkdownDocument` and markdown page layout as the document model.
-- Keep page geometry and measured-height correction.
-- Replace React `scrollTop` state as the hot path with a passive scroll listener
-  and RAF scheduler.
-- Maintain a DOM cache keyed by page measurement key.
-- Project page shells imperatively: insert, remove, and move page containers.
-- Let React render page content only when a page shell is first materialized or
-  when its render key changes.
-- Preserve anchor capture on zoom and after measured-height correction.
-
-The page content can stay React-rendered inside a mounted root per page. The
-important part is that scroll projection should not re-render the parent viewer.
-
-### Page Markdown Consolidation
-
-The `components/viewers/page-markdown/*` implementation should not grow a
-separate virtualization architecture. It should either:
-
-- consume the same markdown page projector, or
-- be hard-cut over to the registry Markdown Document Viewer internals.
-
-No duplicate page virtualizers should survive.
+- Keep the markdown document model pure: parsing, source-line mapping, page
+  grouping, and estimated heights.
+- Keep page geometry pure: offsets, visible windows, anchors, and scroll targets.
+- Replace root viewer scroll state with passive scroll plus RAF projection where
+  it still exists.
+- Project page shells imperatively.
+- Mount a React root inside a page shell only when the page first materializes or
+  its render key changes.
+- Reuse page roots while the page remains in the cache.
+- Preserve scroll anchors through zoom and measured-height correction.
+- Consolidate Page Markdown and Markdown Document onto one page projection
+  model. Do not keep two virtualizers for the same concept.
 
 ### Acceptance
 
-- Scrolling a long rendered markdown document does not update React state per
-  scroll frame in the root viewer.
-- Page measurement still corrects estimates without jumping the reading anchor.
-- Rendered/text mode switch remains correct.
-- Fragment links and line-range scroll remain correct.
-- Page Markdown and registry Markdown Document Viewer share the same projection
-  engine or one implementation is removed.
+- Scrolling long rendered markdown does not update root React state per frame.
+- Mounted pages remain bounded.
+- Measured page heights correct estimates without jumping the reader.
+- Rendered/text mode switching stays correct.
+- Fragment links, source-line ranges, and scroll-to-page work for unmounted
+  pages.
+- Page Markdown and Markdown Document share the same projector or one path is
+  removed.
 
-## 3. PPTX Viewer: Virtualize Slide Shells, Not Only Canvas Rendering
+## 4. PPTX Viewer: Virtualize Slide Shells
 
 ### Current State
 
-The audit covers replacing DOM scanning in visible-slide tracking. It does not
-cover slide shell virtualization.
+The audit covers replacing DOM scans in visible-slide tracking with geometry.
+It does not cover the larger shell-level issue: `PptxSlideScroller` can still
+create one wrapper component and observer target per slide.
 
-`PptxSlideScroller` currently creates one `PptxSlideFrame` per slide:
+Relevant files:
 
+- `registry/new-york-v4/ui/pptx-viewer.tsx`
 - `registry/new-york-v4/ui/pptx-viewer-slide.tsx`
+- `registry/new-york-v4/ui/pptx-viewer-visible-slide.ts`
 
-Each frame installs an `IntersectionObserver`. Canvas rendering is gated by
-intersection, which is good, but the wrapper DOM and observers are still created
-for the whole deck.
+### Work Not Covered By The Audit
 
-### Problem
-
-For ordinary decks this is fine. For very large decks, the viewer pays upfront
-for:
-
-- one React component per slide,
-- one wrapper DOM subtree per slide,
-- one observer target per slide,
-- overlay component setup per slide when overlays are enabled.
-
-This is not as bad as rendering every canvas, but it is still not Chenglou-style
-projection.
-
-### Fix
-
-Build slide geometry and a virtual slide window:
-
-- Compute slide width, height, visible width, visible height, gap, and padding
-  from base size, zoom, and rotation.
-- Render a fixed-height virtual canvas.
-- Mount only visible plus near-visible slide shells.
+- Build one slide layout model from slide size, zoom, rotation, gap, and
+  viewport padding.
+- Use that model for current-slide math, virtual slide windows, and future
+  scroll-to-slide behavior.
+- Render a fixed-height slide canvas.
+- Mount only visible plus overscanned slide shells.
 - Replace per-slide `IntersectionObserver` with virtual-window membership.
-- Keep `createPptxScrollActivity` so non-eager rendering can wait until scroll
-  idle.
-- Keep bitmap cache behavior unchanged.
-
-### Relationship To The Audit
-
-This complements the audit's PPTX visible-slide math. The same slide layout
-model should drive both:
-
-- current slide from `scrollTop`,
-- virtual shell window from `scrollTop`,
-- scroll-to-slide behavior if added later.
+- Keep non-eager rendering tied to scroll-idle activity.
+- Keep bitmap cache and cancellation behavior unchanged.
+- Render overlays only for mounted slide shells.
 
 ### Acceptance
 
-- Large decks mount a bounded number of slide frames.
-- Eager and non-eager render modes still behave correctly.
-- Rotation and zoom preserve layout.
-- Overlays render only for mounted slide frames.
-- Current slide tracking uses the shared slide geometry model.
+- Large decks mount a bounded number of slide shells.
+- Eager and non-eager rendering remain correct.
+- Fast scrolls do not surface stale render errors from slides that left the
+  window.
+- Rotation and zoom preserve slide layout and current-slide reporting.
+- No per-slide `IntersectionObserver` is required for slide membership.
 
-## 4. PDF Thumbnail Sidebar: Optional Imperative Rail Projection
+## 5. PDF Thumbnail Rail: Optional Imperative Projection
 
 ### Current State
 
-The main PDF viewer is already covered by the audit as mostly fine. The PDF
-thumbnail sidebar is separate:
+The main PDF viewer is already strong. The thumbnail rail is separate and
+already virtualized, but its visible thumbnail window can still be React state
+driven during scroll.
+
+Relevant files:
 
 - `registry/new-york-v4/ui/pdf-thumbnail-sidebar.tsx`
 - `registry/new-york-v4/ui/use-pdf-thumbnail-window.ts`
 - `registry/new-york-v4/ui/pdf-thumbnail-rail.tsx`
 - `registry/new-york-v4/ui/pdf-thumbnail-item.tsx`
 
-It is already virtualized and RAF-coalesced, so this is not urgent.
+### Work Not Covered By The Audit
 
-### Problem
-
-The thumbnail rail still updates React state for visible thumbnail items during
-scroll. Each visible item can render a canvas thumbnail, and current-page follow
-behavior can compete with user scroll behavior.
-
-### Fix
-
-Only do this if profiling shows the thumbnail rail is material:
+Only do this after profiling proves the rail is material:
 
 - Keep the existing thumbnail layout model.
 - Replace visible-item React state with a passive scroll plus RAF projector.
 - Reuse thumbnail item shells.
-- Keep canvas render resources keyed by page number and thumbnail size.
-- Patch current-page state separately from scroll projection so changing the
-  active page does not remount the rail.
+- Keep thumbnail canvas resources keyed by page number and thumbnail size.
+- Patch current-page state separately from scroll projection.
 
 ### Acceptance
 
-- Large PDF rails scroll with no React commits per scroll tick.
-- Current-page highlight changes patch existing nodes where possible.
-- Thumbnail canvas cache and cancellation behavior remain correct.
-- Keyboard/click page selection remains accessible.
+- Large PDF thumbnail rails scroll with no React commit per wheel tick.
+- Current-page highlight patches existing nodes where possible.
+- Thumbnail cache, cancellation, keyboard navigation, and click selection remain
+  correct.
 
-## 5. HTML Viewer: Explicitly Do Not Apply Chenglou Projection
+## 6. Performance Harness: Add Shared Viewer Profiling Fixtures
 
 ### Current State
 
-The HTML viewer is an embedded document surface:
+The audit names fixes, but it does not define a repeatable proof harness across
+viewers.
+
+### Work Not Covered By The Audit
+
+- Add deterministic large fixtures for:
+  - wrapped text,
+  - fixed-line code,
+  - markdown document,
+  - large PPTX,
+  - large PDF thumbnail rail.
+- Measure:
+  - initial open time,
+  - mounted node count,
+  - scroll-frame React commits,
+  - scroll scripting time,
+  - peak mounted canvas count,
+  - cache hit/miss behavior where relevant.
+- Keep the measurement harness outside production viewer code.
+- Prefer browser-level profiling for scroll behavior, because jsdom cannot
+  prove frame-time behavior.
+
+### Acceptance
+
+- Each uncovered viewer has one repeatable large-file scenario.
+- The harness can compare before/after projection changes.
+- Results are stored as short artifacts or console summaries, not committed
+  screenshots unless visually useful.
+
+## 7. HTML Viewer: Keep It Out Of The Projection Program
+
+### Current State
+
+The HTML viewer renders arbitrary document content:
 
 - `registry/new-york-v4/ui/file-viewer-html-viewer.tsx`
 
 ### Decision
 
-Do not apply Chenglou-style projection here. Browser HTML layout is not our
-geometry model, and arbitrary HTML can have CSS, intrinsic layout, images, and
-scripts or sandbox constraints. Virtualizing arbitrary HTML would either be
-incorrect or require a full document layout engine.
+Do not apply Chenglou-style projection to arbitrary HTML. Browser layout owns
+the geometry, and arbitrary HTML can include images, intrinsic sizing, CSS, and
+sandbox constraints. Pretending we own that layout would make virtualization
+incorrect.
 
-### Work
+### Work Not Covered By The Audit
 
-The only performance work here should be containment and sandbox hygiene:
+- Keep HTML isolated in an iframe or sandboxed surface.
+- Avoid injecting large HTML trees directly into React.
+- Avoid resize loops.
+- Keep security and containment policies explicit.
 
-- ensure iframe or sandboxed rendering is isolated,
-- avoid resizing loops,
-- avoid injecting large HTML into React trees.
+### Acceptance
 
-This is not part of the Chenglou-style viewer work.
+- HTML Viewer does not participate in custom geometry projection.
+- Large HTML documents do not create React-owned document trees.
+- Sandbox and sizing behavior remain predictable.
 
 ## Recommended Order
 
-1. Code Viewer fixed-line projector.
-2. Markdown Document Viewer imperative page projector.
-3. Consolidate Page Markdown onto the same projector.
-4. PPTX slide shell virtualization.
-5. PDF thumbnail rail imperative projection only if profiling justifies it.
+1. Finish Text Viewer routing and naming cleanup.
+2. Replace Code Viewer TanStack usage with a fixed-line projector.
+3. Move Markdown Document and Page Markdown projection fully out of React.
+4. Virtualize PPTX slide shells using the shared slide layout model.
+5. Add shared profiling fixtures for the uncovered viewers.
+6. Consider PDF thumbnail imperative projection only if the fixture proves it
+   matters.
+7. Leave HTML Viewer as a containment surface, not a virtualized document model.
 
 ## Non-Goals
 
 - Do not duplicate work from `viewer-performance-fixes-audit.md`.
-- Do not add compatibility branches or parallel runtime paths once a cutover is
-  chosen.
-- Do not force Chenglou projection onto viewers without predictable geometry.
-- Do not optimize DOCX here; the audit already covers the only plausible DOCX
-  direction.
+- Do not add compatibility shims or parallel runtime paths after a cutover.
+- Do not force line-based virtualization onto wrapped prose.
+- Do not force Chenglou projection onto content whose layout is owned by the
+  browser or an opaque renderer.
+- Do not keep old labels such as `pretext viewer` in user-facing navigation
+  after Text Viewer becomes the Pretext implementation.
+

@@ -280,7 +280,7 @@ function PdfViewerInner({
   }, [handleScroll, measureVisiblePages])
 
   React.useImperativeHandle(
-    forwardedRef,
+    forwardedRef ?? null,
     () => ({
       scrollToPage,
       scrollToPageArea,
@@ -337,41 +337,47 @@ function PdfViewerInner({
             >
               <div
                 ref={containerRef}
-                className="relative mx-auto"
-                style={{
-                  height: pageLayout.totalHeight,
-                  minWidth: pageLayout.maxPageWidth,
-                }}
+                data-slot="pdf-viewer-fit-width-measure"
+                className="relative min-w-0"
               >
-                {visiblePageNumbers.map((pageNumber) => {
-                  const page = getPdfPageLayout(pageLayout, pageNumber)
-                  if (!page) return null
+                <div
+                  data-slot="pdf-viewer-document"
+                  className="relative mx-auto"
+                  style={{
+                    height: pageLayout.totalHeight,
+                    minWidth: pageLayout.maxPageWidth,
+                  }}
+                >
+                  {visiblePageNumbers.map((pageNumber) => {
+                    const page = getPdfPageLayout(pageLayout, pageNumber)
+                    if (!page) return null
 
-                  return (
-                    <div
-                      key={pageNumber}
-                      data-slot="pdf-page-slot"
-                      data-page-number={pageNumber}
-                      className="absolute left-1/2 flex -translate-x-1/2 items-center justify-center"
-                      style={{
-                        top: page.offsetTop,
-                        width: page.width,
-                        minHeight: page.height,
-                      }}
-                    >
-                      <React.Suspense fallback={<PageSkeleton />}>
-                        <PdfPage
-                          document={document}
-                          pageNumber={pageNumber}
-                          scale={resolvedScale}
-                          rotation={rotation}
-                          renderOverlay={renderPageOverlay}
-                          onSize={setPageSize}
-                        />
-                      </React.Suspense>
-                    </div>
-                  )
-                })}
+                    return (
+                      <div
+                        key={pageNumber}
+                        data-slot="pdf-page-slot"
+                        data-page-number={pageNumber}
+                        className="absolute left-1/2 flex -translate-x-1/2 items-center justify-center"
+                        style={{
+                          top: page.offsetTop,
+                          width: page.width,
+                          minHeight: page.height,
+                        }}
+                      >
+                        <React.Suspense fallback={<PageSkeleton />}>
+                          <PdfPage
+                            document={document}
+                            pageNumber={pageNumber}
+                            scale={resolvedScale}
+                            rotation={rotation}
+                            renderOverlay={renderPageOverlay}
+                            onSize={setPageSize}
+                          />
+                        </React.Suspense>
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
             </ScrollArea>
             {overlaySlot ? (

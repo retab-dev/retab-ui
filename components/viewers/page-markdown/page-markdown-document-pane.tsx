@@ -28,7 +28,7 @@ export const PageMarkdownDocumentPane = React.forwardRef<
   const documentPaneRef = React.useRef<HTMLDivElement | null>(null)
 
   React.useImperativeHandle(
-    ref,
+    ref ?? null,
     () => ({
       scrollToPage(pageNumber) {
         scrollDocumentPageIntoView(documentPaneRef.current, pageNumber)

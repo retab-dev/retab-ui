@@ -370,7 +370,7 @@ function MarkdownDocumentViewerContent({
   )
 
   React.useImperativeHandle(
-    forwardedRef,
+    forwardedRef ?? null,
     () => ({
       getViewportElement: () => viewportRef.current,
       scrollToLineRange: (range, options) => {

@@ -1,0 +1,25 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "file-system-block",
+  "title": "File System",
+  "description": "A document workspace over a flat object-store manifest with list, grid, columns, gallery, generated thumbnails, and persistent file previews.",
+  "dependencies": [
+    "lucide-react",
+    "@tanstack/react-virtual"
+  ],
+  "registryDependencies": [
+    "file-system"
+  ],
+  "files": [
+    {
+      "path": "registry/new-york-v4/blocks/file-system-block.tsx",
+      "content": "\"use client\"\n\nimport { FileSystem, type FileSystemItem } from \"@/components/ui/file-system\"\n\nconst ITEMS: FileSystemItem[] = [\n  {\n    kind: \"folder\",\n    path: \"financials/\",\n    updatedAt: \"2026-04-11T15:20:00Z\",\n  },\n  {\n    kind: \"folder\",\n    path: \"research/\",\n    updatedAt: \"2026-05-02T10:10:00Z\",\n  },\n  {\n    kind: \"folder\",\n    path: \"workspace/\",\n    updatedAt: \"2026-05-14T08:30:00Z\",\n  },\n  {\n    kind: \"file\",\n    path: \"financials/nvidia-financials-fy2024.xlsx\",\n    mimeType:\n      \"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\",\n    size: 231_482,\n    source: {\n      kind: \"url\",\n      url: \"/samples/nvidia-financials-fy2024.xlsx\",\n      fileName: \"nvidia-financials-fy2024.xlsx\",\n      mimeType:\n        \"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\",\n    },\n    updatedAt: \"2026-04-11T15:20:00Z\",\n  },\n  {\n    kind: \"file\",\n    path: \"financials/sales.csv\",\n    mimeType: \"text/csv\",\n    size: 18_420,\n    source: {\n      kind: \"url\",\n      url: \"/samples/sales.csv\",\n      fileName: \"sales.csv\",\n      mimeType: \"text/csv\",\n    },\n    updatedAt: \"2026-04-08T09:12:00Z\",\n  },\n  {\n    kind: \"file\",\n    path: \"research/attention.pdf\",\n    mimeType: \"application/pdf\",\n    previewImageUrl: \"/samples/attention-page-1.png\",\n    size: 516_280,\n    source: {\n      kind: \"url\",\n      url: \"/samples/attention.pdf\",\n      fileName: \"attention.pdf\",\n      mimeType: \"application/pdf\",\n    },\n    updatedAt: \"2026-05-02T10:10:00Z\",\n  },\n  {\n    kind: \"file\",\n    path: \"research/an-image-is-worth-16x16-words.pdf\",\n    mimeType: \"application/pdf\",\n    previewImageUrl: \"/samples/an-image-is-worth-16x16-words-page-1.png\",\n    size: 298_114,\n    source: {\n      kind: \"url\",\n      url: \"/samples/an-image-is-worth-16x16-words.pdf\",\n      fileName: \"an-image-is-worth-16x16-words.pdf\",\n      mimeType: \"application/pdf\",\n    },\n    updatedAt: \"2026-04-19T13:45:00Z\",\n  },\n  {\n    kind: \"file\",\n    path: \"workspace/quarterly-business-review.docx\",\n    mimeType:\n      \"application/vnd.openxmlformats-officedocument.wordprocessingml.document\",\n    size: 129_030,\n    source: {\n      kind: \"url\",\n      url: \"/samples/quarterly-business-review.docx\",\n      fileName: \"quarterly-business-review.docx\",\n      mimeType:\n        \"application/vnd.openxmlformats-officedocument.wordprocessingml.document\",\n    },\n    updatedAt: \"2026-05-14T08:30:00Z\",\n  },\n  {\n    kind: \"file\",\n    path: \"workspace/release-notes.md\",\n    mimeType: \"text/markdown\",\n    size: 4_812,\n    source: {\n      kind: \"url\",\n      url: \"/samples/release-notes.md\",\n      fileName: \"release-notes.md\",\n      mimeType: \"text/markdown\",\n    },\n    updatedAt: \"2026-05-10T17:05:00Z\",\n  },\n  {\n    kind: \"file\",\n    path: \"workspace/use-debounced-value.ts\",\n    mimeType: \"text/typescript\",\n    size: 2_190,\n    source: {\n      kind: \"url\",\n      url: \"/samples/use-debounced-value.ts\",\n      fileName: \"use-debounced-value.ts\",\n      mimeType: \"text/typescript\",\n    },\n    updatedAt: \"2026-05-09T11:15:00Z\",\n  },\n]\n\nexport function FileSystemBlock() {\n  return (\n    <div className=\"h-full min-h-[680px] bg-background p-4\">\n      <FileSystem className=\"mx-auto h-full max-w-7xl\" items={ITEMS} />\n    </div>\n  )\n}\n",
+      "type": "registry:component",
+      "target": "@components/blocks/file-system-block.tsx"
+    }
+  ],
+  "categories": [
+    "primitives"
+  ],
+  "type": "registry:block"
+}

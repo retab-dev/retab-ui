@@ -82,9 +82,9 @@ export function DataCell({
 }: DataCellProps) {
   const displayRef = React.useRef<HTMLElement>(null)
   const didActivateBeforeClickRef = React.useRef(false)
-  const activationIntentRef = React.useRef<DataCellActivationIntent | undefined>(
-    undefined
-  )
+  const activationIntentRef = React.useRef<
+    DataCellActivationIntent | undefined
+  >(undefined)
   const [uncontrolledActive, setUncontrolledActive] = React.useState(false)
   const [activationIntent, setActivationIntent] =
     React.useState<DataCellActivationIntent>()
@@ -126,6 +126,8 @@ export function DataCell({
       if (event.defaultPrevented || !canSelfActivate || event.button !== 0) {
         return
       }
+
+      if (props.kind === "select") return
 
       event.stopPropagation()
       event.preventDefault()

@@ -136,7 +136,6 @@ export function useJsonTableShellHandlers({
       return
     }
 
-    if (isJsonTableDataCellEventTarget(event.target)) return
     finishPreviousPrimitive()
     if (
       commitPrimitiveCommand({

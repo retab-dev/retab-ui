@@ -1,7 +1,4 @@
-import {
-  measureNaturalWidth,
-  prepareWithSegments,
-} from "@chenglou/pretext"
+import { measureNaturalWidth, prepareWithSegments } from "@chenglou/pretext"
 
 type MeasurePrefixWidth = (value: string) => number
 type CachedTextMeasurement = {

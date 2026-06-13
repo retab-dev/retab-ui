@@ -394,7 +394,10 @@ function relativeSourceLine(node: unknown) {
 }
 
 function absoluteSourceLine(page: MarkdownDocumentPage, relativeLine: number) {
-  return page.pageStartLine + relativeLine - 1
+  return (
+    page.sourceLineByRenderedLine?.get(relativeLine) ??
+    page.pageStartLine + relativeLine - 1
+  )
 }
 
 function isSourceLineHighlighted(

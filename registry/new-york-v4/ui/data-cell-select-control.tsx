@@ -143,7 +143,7 @@ export function DataCellSelectControl({
     clearSkipAutoFocusCloseTimerRef.current = globalThis.setTimeout(() => {
       skipAutoFocusCloseRef.current = false
       clearSkipAutoFocusCloseTimerRef.current = null
-    }, 0)
+    }, DATA_CELL_SELECT_CLOSE_DELAY_MS)
   }, [
     autoFocus,
     cancelScheduledSkipAutoFocusCloseClear,

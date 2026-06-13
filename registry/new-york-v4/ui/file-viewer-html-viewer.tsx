@@ -32,6 +32,7 @@ export function HtmlDocViewer({
   if (resource.content.payload.kind === "text") {
     return (
       <HtmlDocViewerContent
+        key={resource.content.key}
         resource={resource}
         html={resource.content.payload.text}
         className={className}
@@ -119,6 +120,7 @@ function HtmlDocViewerResource({
   const { html } = state
   return (
     <HtmlDocViewerContent
+      key={contentKey}
       resource={resource}
       html={html}
       className={className}

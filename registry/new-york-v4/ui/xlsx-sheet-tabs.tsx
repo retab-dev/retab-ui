@@ -60,10 +60,7 @@ function resolveOverflowRevealPx(viewportWidth: number, tabWidth: number) {
     Math.floor(tabWidth * 0.35)
   )
 
-  return Math.max(
-    OVERFLOW_REVEAL_MIN_PX,
-    Math.min(targetReveal, maxTabReveal)
-  )
+  return Math.max(OVERFLOW_REVEAL_MIN_PX, Math.min(targetReveal, maxTabReveal))
 }
 
 function resolveOverflowRevealTargetPx(viewportWidth: number) {
@@ -246,16 +243,20 @@ export function XlsxSheetTabs({
     const listElement = listRef.current
     if (!scrollElement) return
 
-    const resizeObserver = new ResizeObserver(updateScrollState)
-    resizeObserver.observe(scrollElement)
-    if (listElement) resizeObserver.observe(listElement)
+    const ResizeObserverCtor = globalThis.ResizeObserver
+    const resizeObserver =
+      typeof ResizeObserverCtor === "function"
+        ? new ResizeObserverCtor(updateScrollState)
+        : null
+    resizeObserver?.observe(scrollElement)
+    if (listElement) resizeObserver?.observe(listElement)
 
     scrollElement.addEventListener("scroll", updateScrollState, {
       passive: true,
     })
     scrollElement.addEventListener("wheel", onTabsWheel, { passive: false })
     return () => {
-      resizeObserver.disconnect()
+      resizeObserver?.disconnect()
       scrollElement.removeEventListener("scroll", updateScrollState)
       scrollElement.removeEventListener("wheel", onTabsWheel)
     }
@@ -281,8 +282,7 @@ export function XlsxSheetTabs({
       scrollTabsTo(
         scrollElement,
         nextLeft,
-        distance >
-          scrollElement.clientWidth * LARGE_REVEAL_DISTANCE_MULTIPLIER
+        distance > scrollElement.clientWidth * LARGE_REVEAL_DISTANCE_MULTIPLIER
           ? "auto"
           : "smooth"
       )
@@ -334,7 +334,7 @@ export function XlsxSheetTabs({
       <div
         ref={scrollRef}
         data-slot="xlsx-viewer-tabs-scroll"
-        className="h-full overflow-x-auto overflow-y-hidden px-1.5 py-1 overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="h-full overflow-x-auto overflow-y-hidden overscroll-x-contain px-1.5 py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         <div
           ref={listRef}
@@ -360,7 +360,7 @@ export function XlsxSheetTabs({
               title={sheet.name}
               data-active={sheetIndex === activeSheetIndex}
               className={cn(
-                "relative flex flex-shrink-0 select-none items-center justify-center overflow-hidden rounded-md border border-transparent px-2.5 text-xs leading-none font-medium whitespace-nowrap outline-none transition-[background-color,border-color,color,box-shadow]",
+                "relative flex flex-shrink-0 items-center justify-center overflow-hidden rounded-md border border-transparent px-2.5 text-xs leading-none font-medium whitespace-nowrap transition-[background-color,border-color,color,box-shadow] outline-none select-none",
                 "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-card",
                 sheetIndex === activeSheetIndex
                   ? "border-border/70 bg-background text-foreground shadow-xs"

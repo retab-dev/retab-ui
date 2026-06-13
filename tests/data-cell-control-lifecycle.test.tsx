@@ -72,7 +72,7 @@ describe("DataCell direct control lifecycle", () => {
     expect(input.selectionEnd).toBe(5)
   })
 
-  it("restores pointer caret placement after the activation click tail selects text", () => {
+  it("keeps pointer caret placement through activation click tail events", () => {
     vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
       x: 0,
       y: 0,
@@ -103,12 +103,10 @@ describe("DataCell direct control lifecycle", () => {
     expect(input.selectionStart).toBe(1)
     expect(input.selectionEnd).toBe(1)
 
-    input.setSelectionRange(0, input.value.length)
     fireEvent.mouseUp(input)
     expect(input.selectionStart).toBe(1)
     expect(input.selectionEnd).toBe(1)
 
-    input.setSelectionRange(0, input.value.length)
     fireEvent.click(input)
     expect(input.selectionStart).toBe(1)
     expect(input.selectionEnd).toBe(1)

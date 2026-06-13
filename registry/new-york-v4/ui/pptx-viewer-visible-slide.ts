@@ -14,8 +14,18 @@ export interface PptxSlideLayout {
   slideTopPadding: number
   slideGap: number
   slideHeight: number
+  slideWidth: number
   slideStride: number
   totalHeight: number
+}
+
+export interface PptxVirtualSlide {
+  height: number
+  index: number
+  key: string
+  slideNumber: number
+  top: number
+  width: number
 }
 
 export interface PptxSlideLayoutInput {
@@ -57,6 +67,7 @@ export function createPptxSlideLayout({
     slideTopPadding: normalizedSlidePadding,
     slideGap: normalizedSlideGap,
     slideHeight: visibleSize.height,
+    slideWidth: visibleSize.width,
     slideStride: visibleSize.height + normalizedSlideGap,
     totalHeight:
       normalizedSlidePadding * 2 +
@@ -75,6 +86,74 @@ export function getPptxSlideAtScrollMarker(
     (markerScrollTop - layout.slideTopPadding) / layout.slideStride
   )
   return clamp(slideIndex + 1, 1, layout.slideCount)
+}
+
+export function getPptxSlideTop(layout: PptxSlideLayout, slideIndex: number) {
+  return layout.slideTopPadding + slideIndex * layout.slideStride
+}
+
+export function getPptxVirtualSlides({
+  layout,
+  overscanSlides = 2,
+  scrollTop,
+  viewportHeight,
+}: {
+  layout: PptxSlideLayout
+  overscanSlides?: number
+  scrollTop: number
+  viewportHeight: number
+}): PptxVirtualSlide[] {
+  if (layout.slideCount === 0) return []
+
+  const safeViewportHeight =
+    Number.isFinite(viewportHeight) && viewportHeight > 0
+      ? viewportHeight
+      : layout.slideHeight
+  const safeScrollTop =
+    Number.isFinite(scrollTop) && scrollTop > 0 ? scrollTop : 0
+  const safeOverscanSlides =
+    Number.isFinite(overscanSlides) && overscanSlides > 0
+      ? Math.floor(overscanSlides)
+      : 0
+  const firstVisibleIndex =
+    layout.slideStride > 0
+      ? Math.floor(
+          (safeScrollTop - layout.slideTopPadding) / layout.slideStride
+        )
+      : 0
+  const lastVisibleIndex =
+    layout.slideStride > 0
+      ? Math.floor(
+          (safeScrollTop + safeViewportHeight - layout.slideTopPadding) /
+            layout.slideStride
+        )
+      : 0
+  const firstIndex = clamp(
+    firstVisibleIndex - safeOverscanSlides,
+    0,
+    layout.slideCount - 1
+  )
+  const lastIndex = clamp(
+    lastVisibleIndex + safeOverscanSlides,
+    0,
+    layout.slideCount - 1
+  )
+
+  return Array.from(
+    { length: lastIndex - firstIndex + 1 },
+    (_, offset): PptxVirtualSlide => {
+      const index = firstIndex + offset
+      const slideNumber = index + 1
+      return {
+        height: layout.slideHeight,
+        index,
+        key: String(slideNumber),
+        slideNumber,
+        top: getPptxSlideTop(layout, index),
+        width: layout.slideWidth,
+      }
+    }
+  )
 }
 
 export function usePptxVisibleSlide({

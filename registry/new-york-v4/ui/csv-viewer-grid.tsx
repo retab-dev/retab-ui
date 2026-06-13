@@ -200,7 +200,7 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
     }, [columnItems])
 
     React.useImperativeHandle(
-      ref,
+      ref ?? null,
       () => ({
         scrollToCell: (cellAddress, options) => {
           const behavior = options?.behavior ?? "smooth"

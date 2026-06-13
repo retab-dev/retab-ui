@@ -644,13 +644,20 @@ function parseBlockTokens(
   let cursorLine = sourceStartLine
 
   for (const token of tokens) {
-    const tokenLineCount = markdownRawLineCount(token.raw)
-    const tokenStartLine = cursorLine
+    // Advance by the number of line breaks the token's raw spans. `marked`
+    // concatenates token raws to reconstruct the source, so this keeps the
+    // cursor aligned even when a block's trailing newline is absorbed into the
+    // following `space` token (a "\n\n" gap is two breaks, i.e. one blank line).
+    const breaks = countSourceLineBreaks(token.raw)
+    const tokenStartLine = Math.min(cursorLine, sourceEndLine)
     const tokenEndLine = Math.min(
       sourceEndLine,
-      cursorLine + tokenLineCount - 1
+      Math.max(
+        tokenStartLine,
+        cursorLine + breaks - (endsWithSourceLineBreak(token.raw) ? 1 : 0)
+      )
     )
-    cursorLine = tokenEndLine + 1
+    cursorLine += breaks
 
     switch (token.type) {
       case "space":
@@ -1037,13 +1044,16 @@ function buildListBlocks({
   let itemCursorLine = sourceStartLine
   for (let index = 0; index < token.items.length; index++) {
     const item = token.items[index]!
-    const itemLineCount = markdownRawLineCount(item.raw)
+    const breaks = countSourceLineBreaks(item.raw)
     const itemStartLine = Math.min(sourceEndLine, itemCursorLine)
     const itemEndLine = Math.min(
       sourceEndLine,
-      itemStartLine + itemLineCount - 1
+      Math.max(
+        itemStartLine,
+        itemCursorLine + breaks - (endsWithSourceLineBreak(item.raw) ? 1 : 0)
+      )
     )
-    itemCursorLine = itemEndLine + 1
+    itemCursorLine += breaks
 
     let itemBlocks = parseBlockTokens(item.tokens, {
       ctx: itemCtx,
@@ -1861,11 +1871,14 @@ function fallbackTextForToken(token: Token) {
   return token.raw ?? ""
 }
 
-function markdownRawLineCount(raw: string | null | undefined) {
-  return Math.max(
-    1,
-    splitTextLines(stripSingleTrailingNewline(raw ?? "")).length
-  )
+function countSourceLineBreaks(raw: string | null | undefined) {
+  if (!raw) return 0
+  const matches = raw.match(/\r\n|[\n\r\u2028\u2029]/g)
+  return matches ? matches.length : 0
+}
+
+function endsWithSourceLineBreak(raw: string | null | undefined) {
+  return raw ? /(?:\r\n|[\n\r\u2028\u2029])$/.test(raw) : false
 }
 
 function tableCellFromTokens(tokens: readonly Token[]): PreparedTableCell {

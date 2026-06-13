@@ -172,7 +172,7 @@ export function DocxViewerContent({
   })
 
   React.useImperativeHandle(
-    forwardedRef,
+    forwardedRef ?? null,
     () => ({
       scrollToTarget: (target, options) => {
         const index = renderIndexRef.current

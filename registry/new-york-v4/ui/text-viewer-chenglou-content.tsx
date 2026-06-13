@@ -352,7 +352,7 @@ export function ChenglouTextViewerContent({
   }
 
   React.useImperativeHandle(
-    forwardedRef,
+    forwardedRef ?? null,
     () => ({
       getViewportElement: () => viewportRef.current,
       scrollToLineRange: (range, options) => {

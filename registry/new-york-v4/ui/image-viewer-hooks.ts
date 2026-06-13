@@ -188,7 +188,7 @@ export function useImageViewerHandle(
   layout: ImageFrameLayoutModel
 ) {
   React.useImperativeHandle(
-    forwardedRef,
+    forwardedRef ?? null,
     () => ({
       scrollToFrameArea: (frameNumber, area, options) => {
         const areaTop = normalizeFrameAreaPercent(area.top)

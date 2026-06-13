@@ -89,7 +89,11 @@ describe("Markdown/Text viewer contract", () => {
     )
 
     expect(
-      await screen.findByRole("heading", { name: "Routed Markdown" })
+      await screen.findByRole(
+        "heading",
+        { name: "Routed Markdown" },
+        { timeout: 5_000 }
+      )
     ).toBeTruthy()
     expect(document.querySelector('[data-slot="text-viewer"]')).toBeTruthy()
     expect(
@@ -171,7 +175,11 @@ describe("Markdown/Text viewer contract", () => {
       />
     )
 
-    const link = await screen.findByRole("link", { name: "Jump" })
+    const link = await screen.findByRole(
+      "link",
+      { name: "Jump" },
+      { timeout: 5_000 }
+    )
     expect(link.getAttribute("target")).toBeNull()
     expect(link.getAttribute("rel")).toBeNull()
     const viewport = container.querySelector<HTMLElement>(

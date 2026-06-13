@@ -191,6 +191,19 @@ export const VIEWER_BLOCKS = [
     categories: ["dropzone"],
   },
   {
+    id: "file-system",
+    registryName: "file-system-block",
+    title: "File System",
+    description:
+      "A document workspace over a flat object-store manifest — list, grid, columns, and gallery views share selection, lazy folders, generated thumbnails, and a persistent FileViewer preview.",
+    command: getRegistryAddCommand("file-system-block"),
+    docsHref: "/docs/components/file-system",
+    viewHref: "/view/blocks/file-system",
+    previewHeightClassName: "h-[680px]",
+    featured: true,
+    categories: ["primitives"],
+  },
+  {
     id: "primitive-cards",
     registryName: "primitive-cards-block",
     title: "Primitive Run Cards",

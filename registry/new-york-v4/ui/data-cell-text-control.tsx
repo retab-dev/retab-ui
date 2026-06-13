@@ -116,6 +116,7 @@ export function DataCellInputControl({
   const [uncontrolledDraftValue, setUncontrolledDraftValue] =
     React.useState(initialInputValue)
   const inputRef = React.useRef<HTMLInputElement>(null)
+  const initialInputValueRef = React.useRef(initialInputValue)
   const lastInputValueRef = React.useRef(initialInputValue)
   const didFinishEditingRef = React.useRef(false)
   const inputValue = draftValue ?? uncontrolledDraftValue
@@ -141,10 +142,22 @@ export function DataCellInputControl({
   }, [activationIntent, autoFocus])
 
   const commitCurrentInputValue = React.useCallback(
-    (input: HTMLInputElement | null, endEditing = true) => {
+    (
+      input: HTMLInputElement | null,
+      {
+        endEditing = true,
+        markFinished = true,
+        onlyIfChanged = false,
+      }: {
+        endEditing?: boolean
+        markFinished?: boolean
+        onlyIfChanged?: boolean
+      } = {}
+    ) => {
       if (didFinishEditingRef.current) return
-      didFinishEditingRef.current = true
       const rawValue = input?.value ?? lastInputValueRef.current
+      if (onlyIfChanged && rawValue === initialInputValueRef.current) return
+      if (markFinished) didFinishEditingRef.current = true
       ;(onCommit as DataCellCommitHandler | undefined)?.(
         parseDataCellInputValue({
           kind,
@@ -179,7 +192,11 @@ export function DataCellInputControl({
 
   React.useEffect(
     () => () => {
-      commitCurrentInputValue(inputRef.current, false)
+      commitCurrentInputValue(inputRef.current, {
+        endEditing: false,
+        markFinished: false,
+        onlyIfChanged: true,
+      })
     },
     [commitCurrentInputValue]
   )

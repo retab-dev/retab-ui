@@ -69,6 +69,17 @@ function scrollMarkdownViewportToPage(
   fireEvent.scroll(viewport)
 }
 
+async function findReadyMarkdownViewport(container: HTMLElement) {
+  let viewport: HTMLElement | null = null
+  await waitFor(() => {
+    viewport = container.querySelector<HTMLElement>(
+      '[data-slot="scroll-area-viewport"][aria-label="Markdown pages"]'
+    )
+    expect(viewport).toBeTruthy()
+  })
+  return viewport!
+}
+
 beforeEach(() => {
   vi.stubGlobal(
     "ResizeObserver",
@@ -437,7 +448,7 @@ describe("ParseViewer", () => {
     ).not.toThrow()
   })
 
-  it("reports visible markdown page changes to consumers", () => {
+  it("reports visible markdown page changes to consumers", async () => {
     const onVisiblePageChange = vi.fn()
     const { container } = render(
       <ParseViewer
@@ -445,13 +456,9 @@ describe("ParseViewer", () => {
         onVisiblePageChange={onVisiblePageChange}
       />
     )
-    const viewport = container.querySelector<HTMLElement>(
-      '[data-slot="scroll-area-viewport"]'
-    )
+    const viewport = await findReadyMarkdownViewport(container)
 
-    expect(viewport).toBeTruthy()
-
-    scrollMarkdownViewportToPage(viewport!, PAGES, 2)
+    scrollMarkdownViewportToPage(viewport, PAGES, 2)
 
     expect(onVisiblePageChange).toHaveBeenCalledWith(2)
   })
@@ -468,11 +475,9 @@ describe("ParseViewer", () => {
         onVisiblePageChange={onVisiblePageChange}
       />
     )
-    const viewport = container.querySelector<HTMLElement>(
-      '[data-slot="scroll-area-viewport"]'
-    )
+    let viewport = await findReadyMarkdownViewport(container)
 
-    scrollMarkdownViewportToPage(viewport!, PAGES, 2)
+    scrollMarkdownViewportToPage(viewport, PAGES, 2)
     await waitFor(() => {
       expect(onVisiblePageChange).toHaveBeenCalledWith(2)
     })
@@ -489,8 +494,9 @@ describe("ParseViewer", () => {
       />
     )
     expect(await screen.findByText("Replacement second")).toBeTruthy()
+    viewport = await findReadyMarkdownViewport(container)
 
-    scrollMarkdownViewportToPage(viewport!, replacementPages, 2)
+    scrollMarkdownViewportToPage(viewport, replacementPages, 2)
 
     await waitFor(() => {
       expect(onVisiblePageChange).toHaveBeenCalledWith(2)
@@ -509,11 +515,9 @@ describe("ParseViewer", () => {
         onVisiblePageChange={onVisiblePageChange}
       />
     )
-    const viewport = container.querySelector<HTMLElement>(
-      '[data-slot="scroll-area-viewport"]'
-    )
+    let viewport = await findReadyMarkdownViewport(container)
 
-    scrollMarkdownViewportToPage(viewport!, PAGES, 2)
+    scrollMarkdownViewportToPage(viewport, PAGES, 2)
     await waitFor(() => {
       expect(onVisiblePageChange).toHaveBeenCalledWith(2)
     })
@@ -528,8 +532,9 @@ describe("ParseViewer", () => {
     await waitFor(() => {
       expect(screen.getByText("Page 1 of 2")).toBeTruthy()
     })
+    viewport = await findReadyMarkdownViewport(container)
 
-    scrollMarkdownViewportToPage(viewport!, PAGES, 2)
+    scrollMarkdownViewportToPage(viewport, PAGES, 2)
 
     await waitFor(() => {
       expect(onVisiblePageChange).toHaveBeenCalledWith(2)

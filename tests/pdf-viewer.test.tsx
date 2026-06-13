@@ -699,6 +699,29 @@ describe("PdfViewer", () => {
     expect(await screen.findByText("500%")).toBeTruthy()
   })
 
+  it("fits width from a stable viewport wrapper instead of the scaled document", async () => {
+    pdfjsMock.docs.set("/stable-fit-width.pdf", makeDoc([[400, 800]]))
+
+    Object.defineProperty(HTMLElement.prototype, "clientWidth", {
+      configurable: true,
+      get() {
+        if (this.dataset.slot === "pdf-viewer-fit-width-measure") {
+          return 332
+        }
+        if (this.dataset.slot === "pdf-viewer-document") {
+          return 800
+        }
+        return 832
+      },
+    })
+
+    await act(async () => {
+      render(<PdfViewer source={pdfUrlSource("/stable-fit-width.pdf")} />)
+    })
+
+    expect(await screen.findByText("75%")).toBeTruthy()
+  })
+
   it("returns uncontrolled manual zoom back to fit width", async () => {
     pdfjsMock.docs.set("/uncontrolled-fit.pdf", makeDoc([[400, 800]]))
 

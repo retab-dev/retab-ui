@@ -3,16 +3,14 @@
 // markdown-document-viewer.test.tsx; this file targets the deterministic units
 // underneath it, where subtle correctness bugs hide.
 //
-// Most cases pin *correct* behavior so they act as regression guards for the
-// perf refactor on this branch. One case (`BUG:`) asserts behavior the
-// implementation currently gets wrong, so the failure is an executable repro.
-// See the summary at the bottom of this file.
+// These cases pin correct behavior so they act as regression guards for the
+// perf refactor on this branch. See the summary at the bottom of this file.
 
 import { describe, expect, it } from "vitest"
 
 import {
-  createMarkdownLayoutStyle,
   clampMarkdownPageHeight,
+  createMarkdownLayoutStyle,
   estimateMarkdownBlockHeight,
   isHostileMarkdownBlock,
   MARKDOWN_DOCUMENT_MAX_ESTIMATED_PAGE_HEIGHT,
@@ -53,11 +51,8 @@ const geometry = (heights: number[]) =>
     measuredHeights: new Map(),
   })
 
-// The page renderer feeds `page.markdown` (blocks joined with "\n\n") to
-// react-markdown and derives each node's source line as
-// `pageStartLine + nodeLineWithinPageMarkdown - 1`. This recomputes that exact
-// absolute line per block from the reconstructed markdown — validated to match
-// the real rendered `data-source-line` attributes in the DOM.
+// The page renderer feeds compact `page.markdown` to react-markdown, then maps
+// rendered line positions back to true source lines through the page model.
 const rendererSourceLines = (page: MarkdownDocumentPage) =>
   page.blocks.map((block, index) => {
     const prefix =
@@ -66,7 +61,10 @@ const rendererSourceLines = (page: MarkdownDocumentPage) =>
         .map((b) => b.markdown)
         .join("\n\n") + (index > 0 ? "\n\n" : "")
     const lineWithinPage = prefix.length === 0 ? 1 : prefix.split("\n").length
-    return page.pageStartLine + lineWithinPage - 1
+    return (
+      page.sourceLineByRenderedLine.get(lineWithinPage) ??
+      page.pageStartLine + lineWithinPage - 1
+    )
   })
 
 // ---------------------------------------------------------------------------
@@ -89,11 +87,9 @@ describe("markdown model — heading ids", () => {
   })
 
   it("disambiguates repeated identical headings", () => {
-    expect(headingIds(["# Intro", "", "# Intro", "", "# Intro"].join("\n"))).toEqual([
-      "intro",
-      "intro-1",
-      "intro-2",
-    ])
+    expect(
+      headingIds(["# Intro", "", "# Intro", "", "# Intro"].join("\n"))
+    ).toEqual(["intro", "intro-1", "intro-2"])
   })
 
   it("produces collision-free ids when a natural slug clashes with a de-dup suffix", () => {
@@ -101,12 +97,16 @@ describe("markdown model — heading ids", () => {
     // and `# Section 1` *naturally* slugifies to `section-1`. createHeadingId
     // must keep bumping (`section-1-1`) so no two headings share a DOM id —
     // otherwise the HTML is invalid and `#section-1` jumps to the wrong heading.
-    const ids = headingIds(["# Section", "", "# Section", "", "# Section 1"].join("\n"))
+    const ids = headingIds(
+      ["# Section", "", "# Section", "", "# Section 1"].join("\n")
+    )
     expect(new Set(ids).size).toBe(ids.length)
   })
 
   it("maps heading ids to their source line", () => {
-    const document = createMarkdownDocument(["# A", "", "text", "", "## B"].join("\n"))
+    const document = createMarkdownDocument(
+      ["# A", "", "text", "", "## B"].join("\n")
+    )
     expect(document.headingIdsByLine.get(1)).toBe("a")
     expect(document.headingIdsByLine.get(5)).toBe("b")
   })
@@ -118,7 +118,9 @@ describe("markdown model — heading ids", () => {
 
 describe("markdown model — source line attribution", () => {
   it("tracks lines across blank gaps", () => {
-    expect(blockShape(["# Title", "", "Paragraph one", "", "Second"].join("\n"))).toEqual([
+    expect(
+      blockShape(["# Title", "", "Paragraph one", "", "Second"].join("\n"))
+    ).toEqual([
       { kind: "heading", start: 1, end: 1 },
       { kind: "paragraph", start: 3, end: 3 },
       { kind: "paragraph", start: 5, end: 5 },
@@ -126,7 +128,9 @@ describe("markdown model — source line attribution", () => {
   })
 
   it("spans multi-line blocks (code, lists, blockquotes)", () => {
-    expect(blockShape(["# H", "", "```", "a", "b", "```", "", "after"].join("\n"))).toEqual([
+    expect(
+      blockShape(["# H", "", "```", "a", "b", "```", "", "after"].join("\n"))
+    ).toEqual([
       { kind: "heading", start: 1, end: 1 },
       { kind: "code", start: 3, end: 6 },
       { kind: "paragraph", start: 8, end: 8 },
@@ -176,13 +180,8 @@ describe("markdown model — source line attribution", () => {
   })
 
   it("keeps rendered source lines aligned with true source lines across wide gaps", () => {
-    // page.markdown is rebuilt as blocks.join("\n\n"), collapsing multi-blank
-    // gaps. The renderer then derives data-source-line / highlight rings from
-    // positions in that compressed string, so every block after a wide gap is
-    // attributed to the wrong source line. Observed in the DOM: with
-    //   # First (1) / <gap> / Paragraph (5) / <gap> / ## Second (8)
-    // and highlight={start:5,end:5}, the "Second" heading (true line 8) renders
-    // data-source-line="5" and steals the highlight ring meant for "Paragraph".
+    // page.markdown stays compact for render performance, but the page model
+    // preserves the original source line for each rendered markdown line.
     const document = createMarkdownDocument(
       ["# First", "", "", "", "Paragraph", "", "", "## Second"].join("\n")
     )
@@ -214,11 +213,16 @@ describe("markdown model — frontmatter", () => {
   it("handles frontmatter at end-of-file with no trailing newline", () => {
     const document = createMarkdownDocument(["---", "a: 1", "---"].join("\n"))
     expect(document.blocks).toHaveLength(1)
-    expect(document.blocks[0]).toMatchObject({ kind: "code", blockStartLine: 1 })
+    expect(document.blocks[0]).toMatchObject({
+      kind: "code",
+      blockStartLine: 1,
+    })
   })
 
   it("offsets the body heading correctly with no blank line after frontmatter", () => {
-    const document = createMarkdownDocument(["---", "a: 1", "---", "# Body"].join("\n"))
+    const document = createMarkdownDocument(
+      ["---", "a: 1", "---", "# Body"].join("\n")
+    )
     expect(document.headingIdsByLine.get(4)).toBe("body")
   })
 
@@ -292,7 +296,9 @@ describe("markdown model — pages", () => {
       Array.from({ length: 40 }, (_, i) => `Paragraph ${i}`).join("\n\n")
     )
     const page = document.pages[0]!
-    expect(findMarkdownPageForLine(document.pages, page.pageStartLine)).toBe(page)
+    expect(findMarkdownPageForLine(document.pages, page.pageStartLine)).toBe(
+      page
+    )
     expect(findMarkdownPageForLine(document.pages, page.pageEndLine)).toBe(page)
     expect(findMarkdownPageForLine(document.pages, 100000)).toBeUndefined()
   })
@@ -310,11 +316,21 @@ describe("markdown model — line-range intersection", () => {
   })
 
   it("detects overlap inclusively at both edges", () => {
-    expect(markdownPageIntersectsLineRange({ page, range: { start: 1, end: 4 } })).toBe(false)
-    expect(markdownPageIntersectsLineRange({ page, range: { start: 1, end: 5 } })).toBe(true)
-    expect(markdownPageIntersectsLineRange({ page, range: { start: 10, end: 12 } })).toBe(true)
-    expect(markdownPageIntersectsLineRange({ page, range: { start: 11, end: 12 } })).toBe(false)
-    expect(markdownPageIntersectsLineRange({ page, range: { start: 1, end: 99 } })).toBe(true)
+    expect(
+      markdownPageIntersectsLineRange({ page, range: { start: 1, end: 4 } })
+    ).toBe(false)
+    expect(
+      markdownPageIntersectsLineRange({ page, range: { start: 1, end: 5 } })
+    ).toBe(true)
+    expect(
+      markdownPageIntersectsLineRange({ page, range: { start: 10, end: 12 } })
+    ).toBe(true)
+    expect(
+      markdownPageIntersectsLineRange({ page, range: { start: 11, end: 12 } })
+    ).toBe(false)
+    expect(
+      markdownPageIntersectsLineRange({ page, range: { start: 1, end: 99 } })
+    ).toBe(true)
   })
 })
 
@@ -326,7 +342,12 @@ describe("markdown model — table clipboard", () => {
   it("serializes a GFM table to TSV", () => {
     expect(
       serializeMarkdownTableForClipboard(
-        ["| Name | Amount |", "| --- | ---: |", "| Alpha | 1 |", "| Beta | 2 |"].join("\n")
+        [
+          "| Name | Amount |",
+          "| --- | ---: |",
+          "| Alpha | 1 |",
+          "| Beta | 2 |",
+        ].join("\n")
       )
     ).toBe(["Name\tAmount", "Alpha\t1", "Beta\t2"].join("\n"))
   })
@@ -365,7 +386,9 @@ describe("markdown model — table clipboard", () => {
 
 describe("markdown layout — estimates", () => {
   it("clamps page heights to the configured envelope", () => {
-    expect(clampMarkdownPageHeight(-100)).toBe(MARKDOWN_DOCUMENT_MIN_PAGE_HEIGHT)
+    expect(clampMarkdownPageHeight(-100)).toBe(
+      MARKDOWN_DOCUMENT_MIN_PAGE_HEIGHT
+    )
     expect(clampMarkdownPageHeight(10)).toBe(MARKDOWN_DOCUMENT_MIN_PAGE_HEIGHT)
     expect(clampMarkdownPageHeight(99999)).toBe(
       MARKDOWN_DOCUMENT_MAX_ESTIMATED_PAGE_HEIGHT
@@ -373,9 +396,18 @@ describe("markdown layout — estimates", () => {
   })
 
   it("scales block estimates with zoom", () => {
-    const block = { kind: "paragraph" as const, markdown: "hello world ".repeat(40) }
-    const small = estimateMarkdownBlockHeight(block, createMarkdownLayoutStyle({ zoom: 1 }))
-    const large = estimateMarkdownBlockHeight(block, createMarkdownLayoutStyle({ zoom: 2 }))
+    const block = {
+      kind: "paragraph" as const,
+      markdown: "hello world ".repeat(40),
+    }
+    const small = estimateMarkdownBlockHeight(
+      block,
+      createMarkdownLayoutStyle({ zoom: 1 })
+    )
+    const large = estimateMarkdownBlockHeight(
+      block,
+      createMarkdownLayoutStyle({ zoom: 2 })
+    )
     expect(large).toBeGreaterThan(small)
   })
 
@@ -404,12 +436,29 @@ describe("markdown layout — estimates", () => {
   })
 
   it("flags only oversized payloads as hostile", () => {
-    const lines = (n: number) => Array.from({ length: n }, (_, i) => `l${i}`).join("\n")
-    expect(isHostileMarkdownBlock({ kind: "code", markdown: lines(400) })).toBe(false)
-    expect(isHostileMarkdownBlock({ kind: "code", markdown: lines(401) })).toBe(true)
-    expect(isHostileMarkdownBlock({ kind: "paragraph", markdown: "x".repeat(20_000) })).toBe(false)
-    expect(isHostileMarkdownBlock({ kind: "paragraph", markdown: "x".repeat(20_001) })).toBe(true)
-    expect(isHostileMarkdownBlock({ kind: "heading", markdown: lines(9999) })).toBe(false)
+    const lines = (n: number) =>
+      Array.from({ length: n }, (_, i) => `l${i}`).join("\n")
+    expect(isHostileMarkdownBlock({ kind: "code", markdown: lines(400) })).toBe(
+      false
+    )
+    expect(isHostileMarkdownBlock({ kind: "code", markdown: lines(401) })).toBe(
+      true
+    )
+    expect(
+      isHostileMarkdownBlock({
+        kind: "paragraph",
+        markdown: "x".repeat(20_000),
+      })
+    ).toBe(false)
+    expect(
+      isHostileMarkdownBlock({
+        kind: "paragraph",
+        markdown: "x".repeat(20_001),
+      })
+    ).toBe(true)
+    expect(
+      isHostileMarkdownBlock({ kind: "heading", markdown: lines(9999) })
+    ).toBe(false)
   })
 })
 
@@ -446,7 +495,9 @@ describe("markdown virtualizer", () => {
     const g = geometry([100, 200, 300])
     const anchor = getMarkdownScrollAnchor({ geometry: g, scrollTop: 100_000 })!
     expect(anchor.index).toBe(2)
-    expect(scrollTopForMarkdownAnchor({ anchor, geometry: g })).toBeLessThanOrEqual(600)
+    expect(
+      scrollTopForMarkdownAnchor({ anchor, geometry: g })
+    ).toBeLessThanOrEqual(600)
   })
 
   it("windows only the visible items plus overscan", () => {
@@ -472,7 +523,14 @@ describe("markdown virtualizer", () => {
     const g = geometry([])
     expect(getMarkdownScrollAnchor({ geometry: g, scrollTop: 10 })).toBeNull()
     expect(topForMarkdownIndex({ geometry: g, index: 0 })).toBe(0)
-    expect(getMarkdownVirtualItems({ geometry: g, overscanPx: 0, scrollTop: 0, viewportHeight: 100 })).toEqual({
+    expect(
+      getMarkdownVirtualItems({
+        geometry: g,
+        overscanPx: 0,
+        scrollTop: 0,
+        viewportHeight: 100,
+      })
+    ).toEqual({
       items: [],
       totalHeight: 0,
     })
@@ -497,19 +555,11 @@ describe("markdown virtualizer", () => {
 // updated to match — only a problem when that fallback path is hit, which BUG 2
 // makes more likely.
 //
-// BUG 2 (OPEN — backed by the failing test above) — Source-line drift for
-// rendered elements. createMarkdownPages rebuilds
-// each page's markdown as blocks.join("\n\n"), collapsing any multi-blank gap to
-// a single blank line. The renderer derives data-source-line and the per-block
-// highlight ring from node positions *within that rebuilt string* (plus
-// pageStartLine), so every block after a wide gap is attributed to the wrong
-// source line. Confirmed in the DOM: for
-//     # First (1) / <gap> / Paragraph (5) / <gap> / ## Second (8)
-// with highlight={start:5,end:5}, "Paragraph" (true line 5) renders
-// data-source-line="3" with no ring, while "## Second" (true line 8) renders
-// data-source-line="5" and wrongly receives the highlight ring. Fix: carry each
-// block's true source offset through to the rendered nodes instead of trusting
-// positions in the normalized page markdown.
+// BUG 2 (FIXED during this session) — Source-line drift for rendered elements.
+// createMarkdownPages keeps page markdown compact, but now also carries a
+// rendered-line -> source-line map. The renderer uses that map for
+// data-source-line and highlight rings, so wide blank gaps no longer make later
+// blocks steal earlier lines.
 //
 // Everything else in this file pins behavior that is currently correct and
 // serves as a regression guard for the perf refactor on this branch.

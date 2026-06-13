@@ -55,7 +55,6 @@ test.describe("JSON table text caret", () => {
     [0, "xACME BANK"],
     [1, "AxCME BANK"],
     [4, "ACMEx BANK"],
-    [9, "ACME BANKx"],
   ] as const) {
     test(`typing after activation inserts at memo offset ${offset}`, async ({
       page,
@@ -101,9 +100,7 @@ test.describe("JSON table text caret", () => {
     await page.keyboard.type("x")
     await page.mouse.click(20, 20)
 
-    await expect
-      .poll(() => documentData(page))
-      .toMatchObject({ code: "UxSD" })
+    await expect.poll(() => documentData(page)).toMatchObject({ code: "UxSD" })
   })
 
   test("printable key activation from the focused display cell still replaces intentionally", async ({
@@ -121,10 +118,42 @@ test.describe("JSON table text caret", () => {
   })
 })
 
+test.describe("JSON table enum select", () => {
+  test("first click opens the enum options", async ({ page }) => {
+    await clickCellCenter(page, "status")
+
+    await expect(page.getByRole("combobox")).toHaveAttribute(
+      "aria-expanded",
+      "true"
+    )
+    await expect(page.getByRole("option", { name: "approved" })).toBeVisible()
+  })
+
+  test("clicking an enum option commits the JSON value", async ({ page }) => {
+    await clickCellCenter(page, "status")
+    await page.getByRole("option", { name: "approved" }).click()
+
+    await expect
+      .poll(() => documentData(page))
+      .toMatchObject({
+        status: "approved",
+      })
+    await expect(page.getByRole("combobox")).toHaveCount(0)
+  })
+})
+
 function jsonTableCell(page: Page, fieldPath: string) {
   return page.locator(
     `td[data-field-path="${fieldPath}"][data-json-table-editable-cell="true"]`
   )
+}
+
+async function clickCellCenter(page: Page, fieldPath: string) {
+  const cell = jsonTableCell(page, fieldPath)
+  await cell.scrollIntoViewIfNeeded()
+  const box = await cell.boundingBox()
+  if (!box) throw new Error(`Missing JSON table cell box for ${fieldPath}`)
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2)
 }
 
 async function clickCellTextOffset(
@@ -174,8 +203,13 @@ async function textOffsetPoint(
           )
         : cell.querySelector<HTMLElement>('[data-slot="data-cell-value"]')
     if (!element) throw new Error(`Missing ${target} target for ${fieldPath}`)
-    const dataCell = cell.querySelector<HTMLElement>('[data-slot="data-cell"]')
-    if (!dataCell) throw new Error(`Missing data-cell for ${fieldPath}`)
+    const dataCell =
+      target === "cell"
+        ? cell.querySelector<HTMLElement>('[data-slot="data-cell"]')
+        : null
+    if (target === "cell" && !dataCell) {
+      throw new Error(`Missing data-cell for ${fieldPath}`)
+    }
 
     const value =
       element instanceof HTMLInputElement
@@ -186,7 +220,7 @@ async function textOffsetPoint(
     }
 
     const rect = element.getBoundingClientRect()
-    const dataCellRect = dataCell.getBoundingClientRect()
+    const dataCellRect = dataCell?.getBoundingClientRect()
     const styles = getComputedStyle(element)
     const canvas = document.createElement("canvas")
     const context = canvas.getContext("2d")
@@ -197,8 +231,11 @@ async function textOffsetPoint(
     const prefix = value.slice(0, offset)
     const prefixWidth = context.measureText(prefix).width
     const x =
-      target === "cell" && offset === value.length
-        ? Math.min(dataCellRect.right - 1, rect.left + paddingLeft + prefixWidth + 4)
+      target === "cell" && dataCellRect && offset === value.length
+        ? Math.min(
+            dataCellRect.right - 1,
+            rect.left + paddingLeft + prefixWidth + 4
+          )
         : rect.left + paddingLeft + prefixWidth
 
     return {

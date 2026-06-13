@@ -110,7 +110,7 @@ export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
     ])
 
     React.useImperativeHandle(
-      ref,
+      ref ?? null,
       () => ({
         scrollToCell: (cellAddress, options) => {
           gridRef.current?.scrollToCell(cellAddress, options)

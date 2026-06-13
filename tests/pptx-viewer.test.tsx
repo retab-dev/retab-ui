@@ -226,6 +226,12 @@ function createFakePptxSource({
   }
 }
 
+function renderedSlideIndexes(source: ReturnType<typeof createFakePptxSource>) {
+  return (
+    source.renderSlide.mock.calls as unknown as Array<[{ slideIndex: number }]>
+  ).map(([call]) => call.slideIndex)
+}
+
 function createManualPptxActivity(isScrolling = true) {
   const waiters = new Set<() => void>()
   return {
@@ -2156,9 +2162,11 @@ describe("PptxViewer", () => {
       )
     })
 
+    fireEvent.click(screen.getByLabelText("Rotate"))
+
     await waitFor(() => {
       expect(renderSlideOverlay).toHaveBeenCalledWith(
-        expect.objectContaining({ rotation: 90 })
+        expect.objectContaining({ rotation: 180 })
       )
     })
   })
@@ -2818,10 +2826,8 @@ describe("PptxViewer", () => {
     expect(cachedSource.renderSlide).toHaveBeenCalledTimes(1)
   })
 
-  it("keeps offscreen slides as skeletons until the intersection observer reports them near", async () => {
-    ManualIntersectionObserver.instances.length = 0
-    vi.stubGlobal("IntersectionObserver", ManualIntersectionObserver)
-    const source = createFakePptxSource()
+  it("mounts a bounded virtual slide window instead of every slide shell", async () => {
+    const source = createFakePptxSource({ slideCount: 20 })
     const activity = createManualPptxActivity(false).activity
 
     render(
@@ -2837,20 +2843,15 @@ describe("PptxViewer", () => {
       />
     )
 
-    expect(source.renderSlide).not.toHaveBeenCalled()
-    const observer = ManualIntersectionObserver.instances[0]
-    expect(observer?.observe).toHaveBeenCalledTimes(1)
-
-    await act(async () => {
-      observer?.setIntersecting(true)
-    })
-
     await waitFor(() => {
-      expect(source.renderSlide).toHaveBeenCalledTimes(1)
+      const slides = document.querySelectorAll('[data-slot="pptx-slide"]')
+      expect(slides.length).toBeGreaterThan(0)
+      expect(slides.length).toBeLessThan(20)
     })
+    expect(new Set(renderedSlideIndexes(source))).toEqual(new Set([0, 1, 2]))
   })
 
-  it("renders slides when IntersectionObserver is unavailable", async () => {
+  it("renders virtual slides without constructing IntersectionObserver", async () => {
     vi.stubGlobal("IntersectionObserver", undefined)
     const source = createFakePptxSource()
     const activity = createManualPptxActivity(false).activity
@@ -2873,7 +2874,7 @@ describe("PptxViewer", () => {
     })
   })
 
-  it("renders slides when IntersectionObserver throws", async () => {
+  it("ignores throwing IntersectionObserver constructors because slide membership is math-based", async () => {
     vi.stubGlobal(
       "IntersectionObserver",
       class {
@@ -2903,23 +2904,8 @@ describe("PptxViewer", () => {
     })
   })
 
-  it("renders slides and disconnects when IntersectionObserver observe throws", async () => {
-    class ObserveThrowingIntersectionObserver {
-      static instances: ObserveThrowingIntersectionObserver[] = []
-
-      disconnect = vi.fn()
-      observe = vi.fn(() => {
-        throw new Error("intersection observer observe failed")
-      })
-      unobserve = vi.fn()
-      takeRecords = vi.fn(() => [])
-
-      constructor() {
-        ObserveThrowingIntersectionObserver.instances.push(this)
-      }
-    }
-    vi.stubGlobal("IntersectionObserver", ObserveThrowingIntersectionObserver)
-    const source = createFakePptxSource()
+  it("moves the virtual slide window on scroll", async () => {
+    const source = createFakePptxSource({ slideCount: 20 })
     const activity = createManualPptxActivity(false).activity
 
     render(
@@ -2935,18 +2921,75 @@ describe("PptxViewer", () => {
       />
     )
 
+    const viewport = document.querySelector<HTMLElement>(
+      '[data-slot="scroll-area-viewport"]'
+    )
+    expect(viewport).toBeTruthy()
+    setElementNumberProperty(viewport!, "clientHeight", 720)
+    setElementNumberProperty(viewport!, "scrollTop", 16 + 9 * 736)
+    fireEvent.scroll(viewport!)
+
     await waitFor(() => {
-      expect(source.renderSlide).toHaveBeenCalledTimes(1)
+      expect(
+        document.querySelector(
+          '[data-slot="pptx-slide"][data-slide-number="10"]'
+        )
+      ).toBeTruthy()
+      expect(
+        document.querySelector(
+          '[data-slot="pptx-slide"][data-slide-number="1"]'
+        )
+      ).toBeNull()
     })
-    expect(
-      ObserveThrowingIntersectionObserver.instances[0]?.disconnect
-    ).toHaveBeenCalledTimes(1)
   })
 
-  it("disconnects slide intersection observers when frames unmount", () => {
-    ManualIntersectionObserver.instances.length = 0
-    vi.stubGlobal("IntersectionObserver", ManualIntersectionObserver)
-    const source = createFakePptxSource()
+  it("does not render slides after a virtual shell leaves the window", async () => {
+    const { activity, runIdle } = createManualPptxActivity()
+    const source = createFakePptxSource({ slideCount: 20 })
+
+    render(
+      <PptxSlideScroller
+        source={source}
+        zoomScale={1}
+        rotation={0}
+        eager={false}
+        activity={activity}
+        containerRef={vi.fn()}
+        viewportRef={vi.fn()}
+        onScroll={vi.fn()}
+      />
+    )
+
+    const viewport = document.querySelector<HTMLElement>(
+      '[data-slot="scroll-area-viewport"]'
+    )
+    expect(viewport).toBeTruthy()
+    setElementNumberProperty(viewport!, "clientHeight", 720)
+    setElementNumberProperty(viewport!, "scrollTop", 16 + 9 * 736)
+    fireEvent.scroll(viewport!)
+
+    await waitFor(() => {
+      expect(
+        document.querySelector(
+          '[data-slot="pptx-slide"][data-slide-number="10"]'
+        )
+      ).toBeTruthy()
+      expect(
+        document.querySelector(
+          '[data-slot="pptx-slide"][data-slide-number="1"]'
+        )
+      ).toBeNull()
+    })
+
+    await act(async () => {
+      runIdle()
+    })
+
+    expect(renderedSlideIndexes(source)).not.toContain(0)
+  })
+
+  it("removes virtual slide shells when the scroller unmounts", async () => {
+    const source = createFakePptxSource({ slideCount: 20 })
     const activity = createManualPptxActivity(false).activity
 
     const view = render(
@@ -2962,12 +3005,13 @@ describe("PptxViewer", () => {
       />
     )
 
-    const observer = ManualIntersectionObserver.instances[0]
-    expect(observer?.disconnect).not.toHaveBeenCalled()
+    await waitFor(() => {
+      expect(document.querySelector('[data-slot="pptx-slide"]')).toBeTruthy()
+    })
 
     view.unmount()
 
-    expect(observer?.disconnect).toHaveBeenCalledTimes(1)
+    expect(document.querySelector('[data-slot="pptx-slide"]')).toBeNull()
   })
 
   it("sizes slide frames from scaled rotated visible dimensions", () => {
@@ -2994,10 +3038,8 @@ describe("PptxViewer", () => {
     expect(frame?.style.height).toBe("1440px")
   })
 
-  it("does not surface a pending render error after a slide leaves the viewport", async () => {
-    ManualIntersectionObserver.instances.length = 0
-    vi.stubGlobal("IntersectionObserver", ManualIntersectionObserver)
-    const source = createFakePptxSource()
+  it("does not surface a pending render error after a slide leaves the virtual window", async () => {
+    const source = createFakePptxSource({ slideCount: 20 })
     const renderResult = deferred<PptxRenderResult>()
     source.renderSlide.mockReturnValueOnce(renderResult.promise)
     const activity = createManualPptxActivity(false).activity
@@ -3015,19 +3057,21 @@ describe("PptxViewer", () => {
       />
     )
 
-    expect(source.renderSlide).not.toHaveBeenCalled()
-    const observer = ManualIntersectionObserver.instances[0]
-    expect(observer).toBeTruthy()
-
-    await act(async () => {
-      observer?.setIntersecting(true)
-    })
     await waitFor(() => {
-      expect(source.renderSlide).toHaveBeenCalledTimes(1)
+      expect(source.renderSlide).toHaveBeenCalledWith(
+        expect.objectContaining({ slideIndex: 0 })
+      )
     })
 
+    const viewport = document.querySelector<HTMLElement>(
+      '[data-slot="scroll-area-viewport"]'
+    )
+    expect(viewport).toBeTruthy()
+    setElementNumberProperty(viewport!, "clientHeight", 720)
+    setElementNumberProperty(viewport!, "scrollTop", 16 + 9 * 736)
+    fireEvent.scroll(viewport!)
+
     await act(async () => {
-      observer?.setIntersecting(false)
       renderResult.resolve({
         status: "failed",
         error: new PptxRendererError("render_failed", "late failure"),

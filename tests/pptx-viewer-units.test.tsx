@@ -148,6 +148,7 @@ describe("pptx slide scroll layout", () => {
       slideCount: 3,
       slideGap: 16,
       slideHeight: 1920,
+      slideWidth: 1440,
       slideStride: 1936,
       slideTopPadding: 16,
       totalHeight: 5824,

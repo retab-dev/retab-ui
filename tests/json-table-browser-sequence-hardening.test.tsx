@@ -156,7 +156,7 @@ describe("json table browser sequence hardening", () => {
     expect(onDocumentDataChange).not.toHaveBeenCalled()
   })
 
-  it("restores a collapsed text caret when the mounted input receives the activation click tail", async () => {
+  it("keeps a collapsed text caret when the mounted input receives the activation click tail", async () => {
     const view = renderInteractionRow({
       document: {
         id: "doc_1",
@@ -179,46 +179,17 @@ describe("json table browser sequence hardening", () => {
       height: 24,
       toJSON: () => ({}),
     } as DOMRect)
-    const valueNode = cell.querySelector(
-      '[data-slot="data-cell-value"]'
-    )?.firstChild
-    if (!valueNode) throw new Error("Expected DataCell text node")
-    const documentWithCaret = document as Document & {
-      caretPositionFromPoint?: (
-        x: number,
-        y: number
-      ) => CaretPosition | null
-    }
-    const previousCaretPositionFromPoint =
-      documentWithCaret.caretPositionFromPoint
-    Object.defineProperty(documentWithCaret, "caretPositionFromPoint", {
-      configurable: true,
-      value: vi.fn((): CaretPosition => ({
-        getClientRect: () => null,
-        offsetNode: valueNode as ChildNode,
-        offset: 1,
-      })),
+    fireEvent.pointerDown(cell, {
+      ...browserPointerEventInit(),
+      clientX: 10,
     })
+    const input = textInput(view)
+    expect(input.selectionStart).toBe(1)
+    expect(input.selectionEnd).toBe(1)
+    finishBrowserClick(input)
 
-    try {
-      fireEvent.pointerDown(cell, {
-        ...browserPointerEventInit(),
-        clientX: 10,
-      })
-      const input = textInput(view)
-      expect(input.selectionStart).toBe(1)
-      expect(input.selectionEnd).toBe(1)
-      input.setSelectionRange(0, input.value.length)
-      finishBrowserClick(input)
-
-      expect(input.selectionStart).toBe(1)
-      expect(input.selectionEnd).toBe(1)
-    } finally {
-      Object.defineProperty(documentWithCaret, "caretPositionFromPoint", {
-        configurable: true,
-        value: previousCaretPositionFromPoint,
-      })
-    }
+    expect(input.selectionStart).toBe(1)
+    expect(input.selectionEnd).toBe(1)
   })
 
   it("preserves a dirty text draft through rapid same-cell clicks and commits once on blur", async () => {

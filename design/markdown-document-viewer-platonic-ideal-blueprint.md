@@ -1,578 +1,349 @@
 # Markdown Document Viewer Platonic Ideal Blueprint
 
-## Purpose
+## Verdict
 
-Bring the Markdown document viewer from "feature-complete and fast" to the
-smallest, sharpest version of itself.
+The Markdown document viewer is strong, but it has not reached the platonic
+ideal.
 
-The target is not more features. The target is inevitability:
+It has the right architecture: React/GFM renders Markdown, Pretext informs
+initial geometry, a custom virtualizer bounds mounted content, and measured
+heights become authoritative. The remaining work is not a feature scramble. It
+is a precision pass: fewer responsibilities per module, sharper names, measured
+performance budgets, and removal of every ambiguous boundary.
 
-- simple boundaries
-- fast scrolling
-- complete Markdown behavior
-- no duplicated rendering policy
-- no speculative abstractions
-- names that mean one thing everywhere
-- tests that lock the contract without testing implementation trivia
+## North Star
 
-## Current State
+One sentence should explain the component:
 
-The viewer is now a real document viewer:
+React/GFM renders visible Markdown pages; Pretext-informed layout gives the
+custom virtualizer accurate first-frame geometry; measured pages keep scrolling
+stable.
 
-- File Viewer routes Markdown through `MarkdownDocumentViewer`.
-- Rendering uses `react-markdown`.
-- GFM, hard breaks, math, callouts, footnotes, safe HTML, safe links, images,
-  tables, and highlighted code are supported.
-- Virtualization is custom and page-based.
-- Table accessibility is patched after async Markdown rendering.
-- The File Viewer Markdown sample exercises rich syntax.
+Everything in the implementation should support that sentence. Anything else is
+excess.
 
-This is a strong component, but not yet the platonic version.
+## Non-Negotiable Qualities
 
-## Remaining Imperfections
+- Simple: one owner for each concept.
+- Fast: bounded mounting, RAF-batched scroll work, no full-document DOM.
+- Complete: GFM, code, tables, math, callouts, footnotes, images, links, safe
+  HTML, text mode, copy, download, zoom, highlights, and scroll-to-line.
+- Minimal: no duplicate render paths, compatibility shims, speculative APIs, or
+  unused options.
+- Modular: parser, layout, virtualizer, renderer, plugins, sanitizer, copy, URL
+  policy, and table accessibility are separate.
+- High entropy: every line carries behavior, state, policy, or a tested
+  contract.
+- Consistent names: the same concept has the same name in every file.
+- Measured: performance claims are backed by a repeatable fixture or browser
+  profile.
 
-### `markdown-document-components.tsx` Owns Too Much
+## Current Shape
 
-It currently owns:
+The viewer currently has the correct major pieces:
 
-- Markdown plugin lists
-- sanitizer schema
-- callout directive transform
-- every rendered Markdown component
-- copy button implementation
-- URL policy
-- image fallback policy
-- heading id fallback logic
-- text extraction helpers
-- code-language extraction helpers
+- `markdown-document-model.ts` parses source into blocks and pages.
+- `markdown-document-layout.ts` owns Pretext-informed estimates.
+- `markdown-document-virtualizer.ts` owns geometry and anchors.
+- `markdown-document-viewer.tsx` owns the shell, viewport, measurement, and
+  mounted pages.
+- `markdown-document-renderer.tsx` owns React Markdown rendering readiness.
+- `markdown-document-renderers.tsx` owns visual Markdown element overrides.
+- `markdown-document-plugins.ts` owns language plugin policy.
+- `markdown-document-sanitize.ts` owns raw HTML sanitization.
+- `markdown-document-table-accessibility.ts` owns table header/cell patching.
+- File Viewer routes Markdown through this component.
 
-This is dense, but the module boundary is not precise.
+This is production-grade. It is not yet inevitable.
 
-### Async Rendering Is Correct But Implicit
+## Remaining Gaps
 
-`rehype-pretty-code` is async, so the viewer uses `MarkdownHooks`.
+### 1. Viewer Orchestration Is Still Too Wide
 
-That is the right API, but the component currently treats async rendering as an
-incidental detail. The ideal version makes this explicit:
+`markdown-document-viewer.tsx` still coordinates many responsibilities:
 
-- one renderer component owns the async Markdown lifecycle
-- empty first paint is intentional and tested
-- measurement sync is tied to renderer readiness and DOM mutation
+- resource text loading
+- mode and zoom state
+- viewport sizing
+- scroll position
+- virtual window computation
+- page measurement
+- scroll anchor preservation
+- toolbar wiring
+- imperative viewer handle
 
-### Sanitization Policy Is Hidden Inside Rendering
+That is acceptable, but not ideal. The ideal viewer should read like a
+composition root, not a workflow engine.
 
-Safe raw HTML is a product decision and a security boundary. It should not live
-as an inline helper beside visual JSX.
+Target:
 
-The ideal version gives sanitization a named module and a focused test file.
+- extract page measurement into a hook
+- extract scroll anchor lifecycle into a hook
+- extract toolbar state wiring where it reduces noise
+- keep the viewer as the only React component that knows all pieces exist
 
-### Plugin Policy Is Hidden Inside Rendering
+Do not create abstractions for their own sake. Extract only boundaries that make
+the file shorter, clearer, and easier to test.
 
-The Markdown language contract should be inspectable in one place:
+### 2. Runtime Projection Needs One Chosen Shape
 
-- GFM
-- hard breaks
-- math
-- directives
-- raw HTML
-- sanitize
-- slug
-- KaTeX
-- Pretty Code
+There are two viable render strategies:
 
-The renderer should consume this policy, not define it.
+- React-windowed pages: React maps `virtualWindow.items` to mounted page
+  components.
+- Imperative projected pages: the canvas owns stable DOM slots and individual
+  React roots.
 
-### Height Estimation Is Useful But Not Formal
+Both can be fast. The ideal component has exactly one. The chosen strategy
+should be documented in the file and covered by tests.
 
-The virtualizer is fast because it estimates page heights, measures mounted
-pages, and preserves scroll anchors.
+Decision rule:
 
-The ideal version makes the estimation contract explicit:
+- use React-windowed pages if simplicity wins and profiling shows no scroll
+  hitching
+- use imperative projection only if it measurably improves scroll or mount
+  churn
 
-- estimates are allowed to be wrong
-- measurements are authoritative
-- scroll anchor preservation is mandatory
-- source-line navigation lands deterministically even before measurement
+No hybrid state. No dead projection helpers. No duplicate page lifecycle.
 
-### Naming Is Good But Not Perfect
+### 3. Performance Is Proven Functionally, Not Quantitatively
 
-Some concepts need stricter names:
+The current tests prove bounded mounting. They do not prove runtime budget.
 
-- `sourceLine`: 1-based line in the full Markdown source
-- `relativeLine`: 1-based line inside the rendered page Markdown
+Add a repeatable performance fixture:
+
+- 6,000-line prose Markdown
+- 6,000-line mixed Markdown with tables, code, headings, and lists
+- one hostile fenced code block
+- one hostile table
+- zoom change while scrolled
+- scroll-to-line while measurements are still settling
+
+Record:
+
+- initial render time
+- mounted page count
+- measurement update count
+- dropped-frame risk during scroll
+- time from scroll event to projected window update
+- number of React roots or mounted page components
+
+Budgets should be concrete. Example:
+
+- initial mount under 150 ms in local Chromium for 6,000 ordinary lines
+- mounted pages under 40 for normal viewport sizes
+- one scheduled scroll projection per animation frame
+- no full-document Markdown DOM
+- no page-height correction loop after readiness settles
+
+### 4. Naming Needs A Final Pass
+
+The component has mostly good names, but the ideal version should make these
+terms exact everywhere:
+
+- `sourceLine`: 1-based line in the full source file
+- `renderedLine`: 1-based line in page-local rendered Markdown
 - `pageStartLine`: first source line owned by a page
 - `pageEndLine`: last source line owned by a page
-- `pageKey`: stable measurement key for one page in one render mode
 - `pageId`: stable semantic page identity
-- `virtualItem`: offset/height/window projection, not document data
+- `pageKey`: render/measurement key for one page in one mode, width, and scale
+- `virtualItem`: virtualizer output, never document data
+- `estimatedHeight`: layout estimate before DOM measurement
+- `measuredHeight`: DOM-derived authoritative height
+- `renderState`: renderer lifecycle, not virtualizer state
 
-No name should drift across modules.
+Ban near-synonyms unless they describe different things.
 
-## Target Architecture
+### 5. Hostile Blocks Need A Final Policy
+
+Hostile block detection exists, but the policy should be explicit.
+
+Define:
+
+- what counts as hostile
+- whether hostile pages are isolated
+- whether hostile code gets inner line virtualization
+- whether hostile tables get row virtualization
+- whether hostile paragraphs are allowed to wrap naturally or need chunking
+
+Default ideal:
+
+- isolate hostile blocks as their own pages
+- keep ordinary pages simple
+- add inner virtualization only after profiling proves a real problem
+- never make normal Markdown pay complexity tax for pathological input
+
+### 6. Pretext Must Stay In Its Lane
+
+Pretext is valuable because it gives fast, deterministic text-flow estimates.
+It should not become a second Markdown renderer.
+
+Use Pretext for:
+
+- prose line estimates
+- heading estimates
+- list and blockquote text estimates
+- callout body estimates
+- pre-wrap code estimates
+
+Do not use Pretext for:
+
+- table rendering
+- math rendering
+- HTML rendering
+- final Markdown layout
+- source-of-truth page height
+
+The browser remains the final layout engine for mounted Markdown pages.
+
+### 7. Sanitization And Plugin Policy Need Contract Tests
+
+The feature surface is now broad enough that security and plugin behavior should
+be locked independently from the visual viewer tests.
+
+Add or maintain tests for:
+
+- unsafe `javascript:` links are inert
+- unsafe image protocols are inert
+- raw event handlers are stripped
+- user classes and inline styles are stripped unless explicitly allowed
+- safe HTML tags survive
+- math renders through KaTeX
+- directives render only supported callout kinds
+- footnotes keep accessible backrefs
+- heading IDs are stable and duplicate-safe
+
+The renderer should not become the security policy.
+
+## Ideal Module Map
 
 ```text
 markdown-document-viewer.tsx
-  owns shell state, scrolling, measurement, toolbar integration
+  composition root: resource, toolbar, viewport, mounted page orchestration
 
 markdown-document-model.ts
-  owns source parsing, block records, page grouping, heading ids
+  source parsing, block identity, page grouping, line mapping
+
+markdown-document-layout.ts
+  Pretext-informed estimates and hostile-block classification
 
 markdown-document-virtualizer.ts
-  owns offset math, visible window, anchor preservation
+  offsets, binary search, visible window, anchors, scroll target math
 
 markdown-document-renderer.tsx
-  owns one rendered page lifecycle and React Markdown invocation
+  React Markdown invocation and render readiness lifecycle
 
 markdown-document-renderers.tsx
-  owns React component overrides for Markdown tags
+  visual element overrides only
 
 markdown-document-plugins.ts
-  owns remark/rehype plugin lists and ordering
+  remark/rehype plugin order and Markdown language policy
 
 markdown-document-sanitize.ts
-  owns raw HTML sanitizer schema
+  safe raw HTML schema
 
-markdown-document-callouts.ts
-  owns directive transform, callout kinds, labels, and UI
+markdown-document-table-accessibility.ts
+  post-render table header/cell relationships
 
-markdown-document-copy.ts
-  owns code/table copy helpers and copy buttons
+markdown-document-copy.tsx
+  copy buttons and clipboard serialization
 
 markdown-document-url-policy.ts
-  owns safe link and image URL handling
+  URL protocol policy for links and images
+
+markdown-document-performance.ts
+  test or benchmark helpers only, no runtime product dependency
 ```
-
-## Module Contracts
-
-### `markdown-document-model.ts`
-
-Owns document data.
-
-Must export:
-
-- `createMarkdownDocument(text)`
-- `findMarkdownPageForLine(pages, sourceLine)`
-- `markdownPageIntersectsLineRange({ page, range })`
-- `serializeMarkdownTableForClipboard(markdown)`
-- document, page, and block types
-
-Must not import React.
-
-Must not know about DOM measurement.
-
-Must not know about viewport size.
-
-### `markdown-document-virtualizer.ts`
-
-Owns scroll math.
-
-Must export:
-
-- visible window calculation
-- page offset lookup
-- scroll anchor capture
-- scroll anchor restore
-
-Must not import React.
-
-Must not parse Markdown.
-
-Must not inspect DOM.
-
-### `markdown-document-viewer.tsx`
-
-Owns viewer orchestration.
-
-Must own:
-
-- resource read
-- bounds errors
-- rendered/text mode
-- scale
-- fit width
-- scroll area
-- page measurement
-- table accessibility sync
-- viewer handle
-
-Must not define Markdown tag rendering.
-
-Must not define sanitizer schema.
-
-Must not define parser plugins.
-
-### `markdown-document-renderer.tsx`
-
-Owns async page rendering.
-
-Must own:
-
-- `MarkdownHooks`
-- renderer fallback while async plugins resolve
-- call to `MarkdownDocumentPageContent`
-- mutation and measurement notification surface
-
-Must keep each rendered page isolated.
-
-### `markdown-document-renderers.tsx`
-
-Owns Markdown element rendering.
-
-Must own components for:
-
-- headings
-- paragraphs and hard breaks
-- lists and task inputs
-- blockquotes
-- links
-- images
-- code and pre
-- tables
-- footnotes
-- details, summary, kbd, mark, sub, sup
-- horizontal rules
-
-Must not define plugin order.
-
-Must not define sanitizer schema.
-
-### `markdown-document-plugins.ts`
-
-Owns Markdown language policy.
-
-Recommended order:
-
-```text
-remark-gfm
-remark-breaks
-remark-math
-remark-directive
-remark-callouts
-rehype-raw
-rehype-sanitize
-rehype-slug
-rehype-katex
-rehype-pretty-code
-```
-
-Rules:
-
-- User-authored raw HTML is sanitized before renderer-generated KaTeX and Shiki
-  markup is added.
-- Pretty Code stays async and is rendered through `MarkdownHooks`.
-- Plugin arrays are stable constants.
-
-### `markdown-document-sanitize.ts`
-
-Owns safe HTML.
-
-Must allow:
-
-- basic document tags already allowed by `rehype-sanitize`
-- GFM footnote attributes
-- task-list checkboxes
-- safe `details` and `summary`
-- `kbd`, `mark`, `sub`, `sup`
-- callout data attributes generated by our directive transform
-- tightly scoped Pretty Code and KaTeX generated attributes if needed
-
-Must not allow:
-
-- script tags
-- event handler attributes
-- unsafe URL protocols
-- arbitrary inline `style` from user HTML
-- arbitrary user-authored class names
-
-### `markdown-document-callouts.ts`
-
-Owns callout semantics.
-
-Supported directive names:
-
-- `note`
-- `info`
-- `tip`
-- `success`
-- `warning`
-- `caution`
-- `danger`
-- `error`
-- `failure`
-
-Normalized kinds:
-
-- `note`
-- `info`
-- `tip`
-- `warning`
-- `danger`
-
-Syntax:
-
-```md
-:::warning{title="Migration note"}
-This is rendered as a warning callout.
-:::
-```
-
-The transform must generate neutral HAST properties:
-
-- `dataCalloutKind`
-- `dataCalloutTitle`
-
-The React renderer converts those into the final visual component.
-
-## Rendering Policy
-
-### Markdown Is A Document
-
-Markdown should wrap naturally. Do not virtualize wrapped text lines.
-
-Virtualize pages first. A page is a display unit, not a source unit.
-
-### Code Is A Tool Surface
-
-Code blocks need:
-
-- syntax highlighting
-- language label
-- horizontal scroll
-- copy button
-- stable measured height
-
-Inline code stays lightweight.
-
-### Tables Are Documents And Data
-
-Tables need:
-
-- native table semantics
-- horizontal overflow
-- deterministic header ids
-- `scope="col"`
-- `headers` on data cells after async render
-- copy button that copies the source table as TSV
-
-### Raw HTML Is Allowed Only After Sanitization
-
-Raw HTML is useful for imported Markdown documents, but it is never trusted.
-
-Allowed safe examples:
-
-```md
-<details>
-  <summary>More</summary>
-  <mark>Safe text</mark>
-</details>
-```
-
-Blocked examples:
-
-```md
-<script>alert(1)</script>
-<img src="x" onerror="alert(1)">
-[bad](javascript:alert(1))
-```
-
-## Virtualization Policy
-
-### Inputs
-
-- page count
-- estimated page height
-- measured page height map
-- scroll top
-- viewport height
-- overscan pixels
-
-### Outputs
-
-- visible virtual items
-- total canvas height
-- stable item top/bottom
-
-### Invariants
-
-- Mounted page count remains bounded for large files.
-- Measurements replace estimates without scroll jumps.
-- Zoom changes preserve the user's relative position.
-- Switching documents resets page measurements.
-- Switching render/text mode resets measurements but keeps behavior predictable.
-- `scrollToLineRange` works before and after measurement.
-
-## Performance Budget
-
-For a 6,000-line Markdown file:
-
-- initial mount should render only the first virtual window
-- mounted page count should remain small
-- scroll should not mount the full document
-- async code highlighting must not block shell/chrome rendering
-- measurement updates must not cause repeated full-page reflows
-- table accessibility patching must run only for mounted pages
-
-## Tests
-
-### Pure Model Tests
-
-Cover:
-
-- frontmatter conversion
-- heading ids and duplicate suffixes
-- line counting
-- page grouping
-- table serialization
-- math/callout estimate classification
-
-### Pure Virtualizer Tests
-
-Cover:
-
-- visible window calculation
-- overscan
-- measured height replacement
-- anchor capture/restore
-- scroll-to-page/line offset
-
-### Sanitizer Tests
-
-Cover:
-
-- script removal
-- event handler removal
-- unsafe protocol removal
-- safe `details` rendering
-- safe callout data attributes
-- footnote attributes
-- no arbitrary user class/style leakage
-
-### Renderer Tests
-
-Cover:
-
-- GFM tables
-- task lists
-- hard breaks
-- math
-- callouts
-- footnotes
-- safe HTML
-- highlighted code
-- code copy
-- table copy
-- image blocked and failed states
-- local fragment links
-
-### File Viewer Contract Tests
-
-Cover:
-
-- Markdown routes to `MarkdownDocumentViewer`
-- prose text routes to text viewer
-- logs and JSON route to code viewer
-- stale async text loads do not win after source changes
 
 ## Implementation Plan
 
-### Phase 1: Extract Policy Modules
+### Phase 1: Choose One Projection Strategy
 
-Create:
+Audit `markdown-document-viewer.tsx`.
 
-- `markdown-document-plugins.ts`
-- `markdown-document-sanitize.ts`
-- `markdown-document-callouts.ts`
-- `markdown-document-url-policy.ts`
+Deliverables:
 
-Move code without changing behavior.
+- one mounted-page strategy
+- no dead projection helpers
+- no duplicate page component lifecycle
+- one measurement path
+- one readiness path
 
-Run focused tests after each move.
+Acceptance:
 
-### Phase 2: Extract Renderers
+- focused Markdown tests pass
+- 6,000-line bounded mount test passes
+- no `rg` hits for obsolete projection helpers if React-windowed pages are the
+  chosen strategy
+- no `virtualWindow.items.map` page rendering if imperative projection is the
+  chosen strategy
 
-Create:
+### Phase 2: Extract Real Ownership From The Viewer
 
-- `markdown-document-renderers.tsx`
-- `markdown-document-copy.tsx`
-- `markdown-document-renderer.tsx`
+Extract only where it removes meaningful complexity.
 
-Keep `markdown-document-components.tsx` as a temporary composition module only
-if needed, then delete it once call sites are updated.
+Candidates:
 
-### Phase 3: Formalize Async Rendering
+- `useMarkdownPageMeasurements`
+- `useMarkdownScrollAnchor`
+- `useMarkdownViewportSize`
+- `MarkdownDocumentViewport`
+- `MarkdownDocumentToolbar`
 
-Make `MarkdownDocumentPageRenderer` expose a single readiness path:
+Acceptance:
 
-- initial placeholder
-- rendered content
-- measurement callback after content mutation
+- `markdown-document-viewer.tsx` reads top-down
+- no hook hides Markdown policy
+- no hook imports parser or renderer policy unless it owns that concern
+- all extracted hooks have focused tests when they contain logic
 
-Ensure page measurement and table accessibility patching are triggered by the
-same page lifecycle.
+### Phase 3: Make Performance Measurable
 
-### Phase 4: Tighten Naming
+Add performance fixtures and a repeatable profiling script or test helper.
 
-Rename concepts consistently:
+Acceptance:
 
-- `sourceStartLine` -> `pageStartLine` on pages
-- `sourceEndLine` -> `pageEndLine` on pages
-- `sourceStartLine` -> `blockStartLine` on blocks
-- `sourceEndLine` -> `blockEndLine` on blocks
-- `measurementKey` -> `pageMeasurementKey`
-- `item` -> `virtualItem`
+- fixtures cover ordinary and hostile Markdown
+- output reports mount count and measurement churn
+- browser trace or scripted profile is documented
+- thresholds fail loudly when violated
 
-Only do this when tests are already green. This is mechanical but high-risk
-because it touches many call sites.
+### Phase 4: Naming And Contract Sweep
 
-### Phase 5: Remove Transitional Surfaces
+Rename only for precision, not style.
 
-Delete any compatibility wrappers introduced during extraction.
+Acceptance:
 
-No legacy adapters.
+- glossary terms are used consistently
+- old names are absent
+- tests describe behavior using the same vocabulary as source
+- no compatibility aliases remain
 
-No duplicate plugin arrays.
+### Phase 5: Security And Markdown Feature Contract
 
-No fallback Markdown renderer.
+Move security expectations into dedicated tests.
 
-## Acceptance Criteria
+Acceptance:
 
-The component reaches the target when all of this is true:
+- sanitizer policy has isolated tests
+- URL policy has isolated tests
+- plugin behavior has isolated tests
+- viewer tests focus on integration, not every plugin edge case
 
-- `markdown-document-components.tsx` no longer exists or is only a tiny barrel
-  removed before merge.
-- Plugin order is declared once.
-- Sanitizer schema is declared once and has dedicated tests.
-- Callout syntax is declared once and has dedicated tests.
-- Rendering components are visual only.
-- Viewer orchestration contains no Markdown syntax policy.
-- Model and virtualizer import no React.
-- Large Markdown files mount a bounded number of pages.
-- Tables remain accessible after async rendering.
-- Raw HTML is useful but not dangerous.
-- File Viewer uses this path for Markdown.
-- Focused tests, registry build, and typecheck pass.
+## Done Definition
 
-## Non-Goals
+The component reaches the local platonic ideal when all of these are true:
 
-- Full MDX support.
-- User-authored React components.
-- Mermaid execution.
-- Arbitrary raw HTML styling.
-- Exact browser pagination.
-- Line-level virtualization for wrapped prose.
-- Replacing the parse viewer.
+- the architecture can be explained in one sentence
+- every module has one owner and one reason to change
+- only visible pages mount
+- measurements are authoritative
+- scroll remains stable while measurements arrive
+- Markdown feature support is complete for the product surface
+- unsafe input stays inert
+- hostile input is isolated
+- performance has numeric budgets
+- tests cover contracts, not implementation accidents
+- there is no dead code, duplicate path, compatibility shim, or vague name
 
-## Final Shape
-
-The final viewer should feel boring in the best way:
-
-- one parser policy
-- one sanitizer policy
-- one renderer surface
-- one virtualizer
-- one viewer orchestration component
-- no surprising fallbacks
-- no duplicated Markdown semantics
-
-The code should read as if there was no other reasonable place for any line to
-go.
+Until then, the component is strong, but not perfect.

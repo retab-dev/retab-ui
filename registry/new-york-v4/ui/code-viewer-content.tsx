@@ -27,6 +27,7 @@ import {
   splitTextLines,
 } from "./plain-text-resource"
 import { ScrollArea } from "./scroll-area"
+import { useIsClient } from "./use-is-client"
 
 Prism.manual = true
 
@@ -343,6 +344,42 @@ function codeRowClassName(isHighlighted: boolean) {
     .join(" ")
 }
 
+function renderStaticCodeRows({
+  gutterWidth,
+  highlightRange,
+  lineHeight,
+  textLines,
+}: {
+  gutterWidth: string
+  highlightRange: ReturnType<typeof normalizeTextLineRange>
+  lineHeight: number
+  textLines: string[]
+}) {
+  return textLines.map((text, index) => {
+    const lineNumber = index + 1
+    const isHighlighted = isLineInRange(lineNumber, highlightRange)
+    return (
+      <span
+        key={lineNumber}
+        className={codeRowClassName(isHighlighted)}
+        data-line-number={lineNumber}
+        style={{
+          height: lineHeight,
+          transform: `translateY(${CODE_VIEWER_BLOCK_PADDING + index * lineHeight}px)`,
+        }}
+      >
+        <span
+          className="flex-shrink-0 pr-3 text-right text-muted-foreground/60 select-none"
+          style={{ width: gutterWidth }}
+        >
+          {lineNumber}
+        </span>
+        <span className="whitespace-pre">{text || " "}</span>
+      </span>
+    )
+  })
+}
+
 export function CodeViewerContent({
   resource,
   className,
@@ -358,6 +395,7 @@ export function CodeViewerContent({
   retryVersion: number
   forwardedRef?: React.ForwardedRef<CodeViewerHandle>
 }) {
+  const isClient = useIsClient()
   const bounds = resolvedTextViewerBounds({ maxBytes, maxLines })
   const text = readTextResource({
     content: resource.content,
@@ -418,7 +456,7 @@ export function CodeViewerContent({
     setFontScale((scale) => clampCodeViewerScale(scale * factor))
 
   React.useImperativeHandle(
-    forwardedRef,
+    forwardedRef ?? null,
     () => ({
       scrollToLineRange: (range, options) => {
         scrollLineRangeMetricsIntoView({
@@ -448,6 +486,14 @@ export function CodeViewerContent({
     lineCount: textLines.length,
     lineHeight,
   })
+  const staticRows = isClient
+    ? null
+    : renderStaticCodeRows({
+        gutterWidth,
+        highlightRange,
+        lineHeight,
+        textLines,
+      })
   const projectRows = React.useCallback(() => {
     scheduledProjectionRef.current = 0
     projectCodeRows({
@@ -507,13 +553,16 @@ export function CodeViewerContent({
         <pre
           ref={preRef}
           className="relative w-max min-w-full font-mono"
+          suppressHydrationWarning
           style={{
             fontSize: `${CODE_VIEWER_BASE_FONT_PX * fontScale}px`,
             lineHeight: `${lineHeight}px`,
             height: totalHeight,
             minWidth: CODE_VIEWER_DEFAULT_VIEWPORT_WIDTH,
           }}
-        />
+        >
+          {staticRows}
+        </pre>
       </ScrollArea>
     </CodeViewerFrame>
   )

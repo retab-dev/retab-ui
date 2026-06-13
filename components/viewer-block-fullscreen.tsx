@@ -9,6 +9,7 @@ import { DropzoneBlock } from "@/registry/new-york-v4/blocks/dropzone-block"
 import { EditViewerBlock } from "@/registry/new-york-v4/blocks/edit-viewer-block"
 import { ExtractViewerBlock } from "@/registry/new-york-v4/blocks/extract-viewer-block"
 import { ExtractionViewerBlock } from "@/registry/new-york-v4/blocks/extraction-viewer-block"
+import { FileSystemBlock } from "@/registry/new-york-v4/blocks/file-system-block"
 import { ImageSourcesBlock } from "@/registry/new-york-v4/blocks/image-sources-block"
 import { LegendVariantsBlock } from "@/registry/new-york-v4/blocks/legend-variants-block"
 import { OcrBlock } from "@/registry/new-york-v4/blocks/ocr-block"
@@ -34,6 +35,7 @@ const blockComponents = {
   "xlsx-sources": XlsxSourcesBlock,
   "docx-sources": DocxSourcesBlock,
   dropzone: DropzoneBlock,
+  "file-system": FileSystemBlock,
   "primitive-cards": PrimitiveCardsBlock,
   "legend-variants": LegendVariantsBlock,
   "pdf-thumbnails": PdfThumbnailsBlock,

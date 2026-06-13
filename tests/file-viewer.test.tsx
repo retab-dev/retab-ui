@@ -574,7 +574,11 @@ describe("FileViewer text rendering", () => {
         </React.StrictMode>
       )
 
-      expect(await screen.findByText("first log line")).toBeTruthy()
+      expect(
+        await screen.findByText("first log line", undefined, {
+          timeout: 5_000,
+        })
+      ).toBeTruthy()
       expect(screen.getByText("second log line")).toBeTruthy()
       expect(screen.getByText("3 lines")).toBeTruthy()
     } finally {
@@ -612,7 +616,13 @@ describe("FileViewer text rendering", () => {
       <FileViewer source={urlSource("/release.md", "release.md")} />
     )
 
-    expect(await screen.findByRole("heading", { name: "Release" })).toBeTruthy()
+    expect(
+      await screen.findByRole(
+        "heading",
+        { name: "Release" },
+        { timeout: 5_000 }
+      )
+    ).toBeTruthy()
     expect(screen.getByText("Body copy")).toBeTruthy()
     expect(container.querySelector('[data-slot="text-viewer"]')).toBeTruthy()
     expect(

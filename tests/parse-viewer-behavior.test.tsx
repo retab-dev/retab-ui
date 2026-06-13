@@ -2,9 +2,11 @@
 
 import * as React from "react"
 import {
+  act,
   cleanup,
   fireEvent,
   render,
+  renderHook,
   screen,
   waitFor,
 } from "@testing-library/react"
@@ -21,6 +23,7 @@ import {
 import {
   initialPageMarkdownSyncState,
   resolvePageMarkdownSyncReport,
+  usePageMarkdownSync,
 } from "@/components/viewers/page-markdown/page-markdown-sync"
 import {
   ParseViewer,
@@ -1070,5 +1073,377 @@ describe("page markdown layout edge cases", () => {
     })
 
     expect(layout.measuredPages).toEqual([])
+  })
+})
+
+describe("usePageMarkdownSync live clamping", () => {
+  it("clamps the current page when the page count shrinks", () => {
+    const onMarkdownPageChange = vi.fn()
+    const { result, rerender } = renderHook(
+      ({ pageCount }) =>
+        usePageMarkdownSync({
+          onMarkdownPageChange,
+          pageCount,
+          resetKey: "stable",
+        }),
+      { initialProps: { pageCount: 5 } }
+    )
+
+    let scrollTarget: unknown
+    act(() => {
+      scrollTarget = result.current.reportDocumentPage(5)
+    })
+    expect(result.current.currentPage).toBe(5)
+    expect(scrollTarget).toMatchObject({ pane: "markdown", pageNumber: 5 })
+
+    act(() => {
+      rerender({ pageCount: 2 })
+    })
+    expect(result.current.currentPage).toBe(2)
+  })
+
+  it("resets to the first page when the reset key changes", () => {
+    const { result, rerender } = renderHook(
+      ({ resetKey }) =>
+        usePageMarkdownSync({ pageCount: 5, resetKey }),
+      { initialProps: { resetKey: "a" } }
+    )
+
+    act(() => {
+      result.current.reportDocumentPage(4)
+    })
+    expect(result.current.currentPage).toBe(4)
+
+    act(() => {
+      rerender({ resetKey: "b" })
+    })
+    expect(result.current.currentPage).toBe(1)
+  })
+
+  it("does not emit a markdown callback for document-pane reports", () => {
+    const onMarkdownPageChange = vi.fn()
+    const { result } = renderHook(() =>
+      usePageMarkdownSync({ onMarkdownPageChange, pageCount: 5, resetKey: "k" })
+    )
+
+    act(() => {
+      result.current.reportDocumentPage(3)
+    })
+
+    expect(onMarkdownPageChange).not.toHaveBeenCalled()
+    expect(result.current.currentPage).toBe(3)
+  })
+
+  it("emits a markdown callback for markdown-pane reports", () => {
+    const onMarkdownPageChange = vi.fn()
+    const { result } = renderHook(() =>
+      usePageMarkdownSync({ onMarkdownPageChange, pageCount: 5, resetKey: "k" })
+    )
+
+    act(() => {
+      result.current.reportMarkdownPage(3)
+    })
+
+    expect(onMarkdownPageChange).toHaveBeenCalledWith(3)
+  })
+})
+
+describe("ParseViewer text mode rendering", () => {
+  it("renders each visible page as its own preformatted block", async () => {
+    const { container } = render(<ParseViewer result={parseResult()} />)
+
+    fireEvent.click(screen.getByRole("tab", { name: "Text" }))
+
+    await waitFor(() => {
+      const blocks = Array.from(container.querySelectorAll("pre")).map(
+        (pre) => pre.textContent
+      )
+      expect(blocks).toContain(PAGES[0])
+      expect(blocks).toContain(PAGES[1])
+    })
+  })
+
+  it("survives rapid mode toggling and lands back in rendered mode", async () => {
+    render(<ParseViewer result={parseResult()} />)
+
+    for (let toggle = 0; toggle < 6; toggle += 1) {
+      fireEvent.click(screen.getByRole("tab", { name: "Text" }))
+      fireEvent.click(screen.getByRole("tab", { name: "Rendered" }))
+    }
+
+    expect((await screen.findByText("Invoice")).tagName).toBe("H1")
+  })
+})
+
+describe("ParseViewer two-pane layout", () => {
+  it("renders both the source document pane and the markdown toolbar", () => {
+    render(
+      <ParseViewer
+        result={parseResult()}
+        renderDocument={() => <div data-testid="source-doc">Document body</div>}
+      />
+    )
+
+    expect(screen.getByTestId("source-doc")).toBeTruthy()
+    expect(screen.getByText("Page 1 of 2")).toBeTruthy()
+    expect(screen.getByRole("tab", { name: "Rendered" })).toBeTruthy()
+    expect(screen.getByRole("tab", { name: "Text" })).toBeTruthy()
+  })
+})
+
+describe("page markdown fuzz invariants", () => {
+  type SyncPane = "markdown" | "document"
+  type SyncState = ReturnType<typeof initialPageMarkdownSyncState>
+  type Pending = NonNullable<
+    ReturnType<typeof resolvePageMarkdownSyncReport>["pending"]
+  >
+
+  function makeRng(seed: number) {
+    let state = seed >>> 0
+    return () => {
+      state = (Math.imul(state, 1664525) + 1013904223) >>> 0
+      return state / 0x100000000
+    }
+  }
+
+  function pick<T>(random: () => number, options: readonly T[]): T {
+    return options[Math.floor(random() * options.length)]!
+  }
+
+  it("keeps the sync reducer invariant and deadlock-free across random sequences", () => {
+    for (let seed = 1; seed <= 200; seed += 1) {
+      const random = makeRng(seed)
+      let state: SyncState = initialPageMarkdownSyncState()
+      let pending: Pending | null = null
+      let lastVersion = state.version
+      const maxPage = 1 + Math.floor(random() * 8)
+
+      for (let step = 0; step < 60; step += 1) {
+        let pane: SyncPane
+        let pageNumber: number
+        // 60% of the time, simulate the target pane confirming our scroll.
+        if (pending && random() < 0.6) {
+          pane = pending.pane
+          pageNumber = pending.pageNumber
+        } else {
+          pane = pick(random, ["markdown", "document"] as const)
+          pageNumber = 1 + Math.floor(random() * maxPage)
+          if (random() < 0.1) pageNumber = 0
+          if (random() < 0.05) pageNumber = Number.NaN
+        }
+
+        const transition = resolvePageMarkdownSyncReport({
+          state,
+          pending,
+          pane,
+          pageNumber,
+        })
+
+        expect(transition.state.pageNumber).toBeGreaterThanOrEqual(1)
+        expect(transition.state.version).toBeGreaterThanOrEqual(lastVersion)
+        if (transition.pending) {
+          expect(transition.pending.pageNumber).toBeGreaterThanOrEqual(1)
+        }
+        if (transition.confirmed) {
+          expect(transition.pending).toBeNull()
+          expect(transition.scrollTarget).toBeNull()
+        }
+        if (transition.scrollTarget) {
+          expect(transition.scrollTarget).toEqual(transition.pending)
+        }
+
+        lastVersion = transition.state.version
+        state = transition.state
+        pending = transition.pending
+      }
+
+      // A cooperative target pane must let any outstanding scroll settle.
+      let drains = 0
+      while (pending && drains < 5) {
+        const transition = resolvePageMarkdownSyncReport({
+          state,
+          pending,
+          pane: pending.pane,
+          pageNumber: pending.pageNumber,
+        })
+        state = transition.state
+        pending = transition.pending
+        drains += 1
+      }
+      expect(pending).toBeNull()
+    }
+  })
+
+  it("keeps layout offsets monotonic, lookups round-tripping, and the window bounded", () => {
+    for (let seed = 1; seed <= 200; seed += 1) {
+      const random = makeRng(seed)
+      const pageCount = 1 + Math.floor(random() * 30)
+      const pages = Array.from(
+        { length: pageCount },
+        (_, index) => `# Page ${index}\n${"word ".repeat(Math.floor(random() * 40))}`
+      )
+
+      const measuredHeightByPageNumber = new Map<number, number>()
+      for (let index = 0; index < pageCount; index += 1) {
+        const roll = random()
+        if (roll < 0.5) {
+          measuredHeightByPageNumber.set(index + 1, 1 + Math.floor(random() * 1500))
+        } else if (roll < 0.55) {
+          measuredHeightByPageNumber.set(index + 1, 0)
+        } else if (roll < 0.6) {
+          measuredHeightByPageNumber.set(index + 1, Number.NaN)
+        }
+      }
+      // Inject out-of-range keys that must be ignored.
+      if (random() < 0.3) measuredHeightByPageNumber.set(0, 500)
+      if (random() < 0.3) measuredHeightByPageNumber.set(pageCount + 5, 500)
+
+      const mode = pick(random, ["rendered", "text"] as const)
+      const scale = pick(random, [0.35, 1, 1.5, 3])
+      const layout = createPageMarkdownLayout({
+        measuredHeightByPageNumber,
+        mode,
+        pages,
+        scale,
+      })
+
+      expect(Number.isFinite(layout.totalHeight)).toBe(true)
+      expect(layout.totalHeight).toBeGreaterThan(0)
+
+      let previousOffset = -Infinity
+      for (let pageNumber = 1; pageNumber <= pageCount; pageNumber += 1) {
+        const pageLayout = getPageMarkdownPageLayout(layout, pageNumber)!
+        expect(pageLayout.offsetTop).toBeGreaterThan(previousOffset)
+        previousOffset = pageLayout.offsetTop
+        expect(findPageMarkdownPageByOffset(layout, pageLayout.offsetTop)).toBe(
+          pageNumber
+        )
+        expect(
+          findPageMarkdownPageByOffset(
+            layout,
+            pageLayout.offsetTop + pageLayout.height - 1
+          )
+        ).toBe(pageNumber)
+      }
+
+      for (let query = 0; query < 5; query += 1) {
+        const scrollTop = (random() - 0.2) * layout.totalHeight * 1.5
+        const viewportHeight = random() * 1000
+        const visible = getPageMarkdownVisiblePageNumbers({
+          layout,
+          scrollTop,
+          viewportHeight,
+        })
+        visible.forEach((pageNumber, index) => {
+          expect(pageNumber).toBeGreaterThanOrEqual(1)
+          expect(pageNumber).toBeLessThanOrEqual(pageCount)
+          if (index > 0) {
+            expect(pageNumber).toBe(visible[index - 1]! + 1)
+          }
+        })
+      }
+    }
+  })
+})
+
+describe("ParseViewer copy status lifecycle", () => {
+  it("resets the failed copy label to idle after the timeout", () => {
+    vi.useFakeTimers()
+    // Fake timers replace rAF too; restore the synchronous stub so the
+    // toolbar leaves its skeleton state.
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      callback(0)
+      return 1
+    })
+    vi.stubGlobal("cancelAnimationFrame", vi.fn())
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {},
+    })
+
+    render(<ParseViewer result={parseResult()} />)
+    // Flush React's scheduler so width measurement commits the real toolbar.
+    act(() => {
+      vi.runOnlyPendingTimers()
+    })
+
+    fireEvent.click(screen.getByLabelText("Copy markdown"))
+    expect(screen.getByLabelText("Copy failed")).toBeTruthy()
+
+    act(() => {
+      vi.advanceTimersByTime(1300)
+    })
+    expect(screen.getByLabelText("Copy markdown")).toBeTruthy()
+    expect(screen.queryByLabelText("Copy failed")).toBeNull()
+  })
+
+  it("ignores a stale rejection when a newer copy attempt succeeds", async () => {
+    const writeText = vi
+      .fn()
+      .mockImplementationOnce(() => Promise.reject(new Error("stale")))
+      .mockImplementationOnce(() => Promise.resolve())
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    })
+
+    render(<ParseViewer result={parseResult()} />)
+
+    fireEvent.click(screen.getByLabelText(/Copy/))
+    fireEvent.click(screen.getByLabelText(/Copy/))
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalledTimes(2)
+    })
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(screen.queryByLabelText("Copy failed")).toBeNull()
+  })
+
+  it("does not throw when the copy promise settles after unmount", async () => {
+    let reject: (error: unknown) => void = () => {}
+    const writeText = vi.fn(
+      () =>
+        new Promise((_resolve, rejectPromise) => {
+          reject = rejectPromise
+        })
+    )
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    })
+
+    const { unmount } = render(<ParseViewer result={parseResult()} />)
+    fireEvent.click(screen.getByLabelText("Copy markdown"))
+    unmount()
+
+    expect(() => reject(new Error("late"))).not.toThrow()
+    await Promise.resolve()
+  })
+})
+
+describe("ParseViewer download failure without a handler", () => {
+  it("does not crash when createObjectURL throws and no error handler is wired", async () => {
+    Object.defineProperty(URL, "createObjectURL", {
+      configurable: true,
+      value: vi.fn(() => {
+        throw new Error("blocked")
+      }),
+    })
+    Object.defineProperty(URL, "revokeObjectURL", {
+      configurable: true,
+      value: vi.fn(),
+    })
+
+    render(<ParseViewer result={parseResult()} />)
+
+    expect(() =>
+      fireEvent.click(screen.getByLabelText("Download markdown"))
+    ).not.toThrow()
+
+    await waitFor(() => {
+      expect(screen.getByText("Page 1 of 2")).toBeTruthy()
+    })
   })
 })

@@ -148,7 +148,7 @@ export const PageMarkdownPane = React.forwardRef<
   }, [projectPages])
 
   React.useImperativeHandle(
-    ref,
+    ref ?? null,
     () => ({
       scrollToPage: (pageNumber) => {
         scrollToPage(pageNumber)

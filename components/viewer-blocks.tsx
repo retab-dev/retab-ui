@@ -16,6 +16,12 @@ import { useMediaQuery } from "@/hooks/use-media-query"
 import { useMounted } from "@/hooks/use-mounted"
 import { Button } from "@/components/ui/button"
 import {
+  NavigationMenu,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+} from "@/components/ui/navigation-menu"
+import {
   CodeHeaderCopyButton,
   CopyButtonIcon,
   copyToClipboardWithMeta,
@@ -27,6 +33,7 @@ import { DropzoneBlock } from "@/registry/new-york-v4/blocks/dropzone-block"
 import { EditViewerBlock } from "@/registry/new-york-v4/blocks/edit-viewer-block"
 import { ExtractViewerBlock } from "@/registry/new-york-v4/blocks/extract-viewer-block"
 import { ExtractionViewerBlock } from "@/registry/new-york-v4/blocks/extraction-viewer-block"
+import { FileSystemBlock } from "@/registry/new-york-v4/blocks/file-system-block"
 import { ImageSourcesBlock } from "@/registry/new-york-v4/blocks/image-sources-block"
 import { LegendVariantsBlock } from "@/registry/new-york-v4/blocks/legend-variants-block"
 import { OcrBlock } from "@/registry/new-york-v4/blocks/ocr-block"
@@ -58,6 +65,7 @@ type BlockView = "preview" | "code"
 
 const BLOCK_VIEWPORT_HEIGHT_CLASS = "h-[680px]"
 const BLOCK_PREVIEW_LAZY_ROOT_MARGIN = "900px 0px"
+const BLOCK_CATEGORY_HASH_PREFIX = "category-"
 
 const blockComponents = {
   ocr: OcrBlock,
@@ -73,6 +81,7 @@ const blockComponents = {
   "xlsx-sources": XlsxSourcesBlock,
   "docx-sources": DocxSourcesBlock,
   dropzone: DropzoneBlock,
+  "file-system": FileSystemBlock,
   "primitive-cards": PrimitiveCardsBlock,
   "legend-variants": () => <LegendVariantsBlock columns={3} />,
   "pdf-thumbnails": PdfThumbnailsBlock,
@@ -93,8 +102,7 @@ const PAIRED_BLOCK_IDS: Partial<
 }
 
 export function ViewerBlocks() {
-  const [activeCategory, setActiveCategory] =
-    React.useState<ViewerBlockCategoryTabId>("featured")
+  const [activeCategory, setActiveCategory] = useBlockCategoryState()
 
   const visibleBlocks = viewerBlocks.filter((block) =>
     activeCategory === "featured"
@@ -119,7 +127,10 @@ export function ViewerBlocks() {
 
   return (
     <section className="space-y-8">
-      <BlockCategoryTabs active={activeCategory} onChange={setActiveCategory} />
+      <BlockCategoryNavigation
+        active={activeCategory}
+        onSelect={setActiveCategory}
+      />
       {visibleBlocks.length ? (
         <div className="space-y-12">
           {showPaired ? (
@@ -138,42 +149,53 @@ export function ViewerBlocks() {
   )
 }
 
-function BlockCategoryTabs({
+function BlockCategoryNavigation({
   active,
-  onChange,
+  onSelect,
 }: {
   active: ViewerBlockCategoryTabId
-  onChange: (category: ViewerBlockCategoryTabId) => void
+  onSelect: (category: ViewerBlockCategoryTabId) => void
 }) {
   return (
     <div className="flex flex-wrap items-center gap-x-6 gap-y-3 pb-3">
-      <div
-        role="tablist"
+      <NavigationMenu
         aria-label="Block categories"
-        className="flex flex-wrap items-center"
-        style={{ columnGap: "2rem", rowGap: "0.25rem" }}
+        className="max-w-none flex-none justify-start"
+        viewport={false}
       >
-        {VIEWER_BLOCK_CATEGORIES.map((category) => {
-          const isActive = active === category.id
-          return (
-            <button
-              key={category.id}
-              type="button"
-              role="tab"
-              aria-selected={isActive}
-              onClick={() => onChange(category.id)}
-              className={cn(
-                "text-base font-medium tracking-tight transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                isActive
-                  ? "text-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              {category.label}
-            </button>
-          )
-        })}
-      </div>
+        <NavigationMenuList
+          className="flex flex-wrap items-center justify-start gap-0"
+          style={{ columnGap: "2rem", rowGap: "0.25rem" }}
+        >
+          {VIEWER_BLOCK_CATEGORIES.map((category) => {
+            const isActive = active === category.id
+            return (
+              <NavigationMenuItem key={category.id}>
+                <NavigationMenuLink
+                  active={isActive}
+                  asChild
+                  className={cn(
+                    "flex-row gap-0 rounded-none bg-transparent p-0 text-base font-medium tracking-tight transition-colors",
+                    "hover:bg-transparent focus:bg-transparent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0 focus-visible:outline-none",
+                    "data-[active=true]:bg-transparent data-[active=true]:hover:bg-transparent data-[active=true]:focus:bg-transparent",
+                    isActive
+                      ? "text-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <Link
+                    href={getBlockCategoryHref(category.id)}
+                    onClick={() => onSelect(category.id)}
+                    aria-current={isActive ? "page" : undefined}
+                  >
+                    {category.label}
+                  </Link>
+                </NavigationMenuLink>
+              </NavigationMenuItem>
+            )
+          })}
+        </NavigationMenuList>
+      </NavigationMenu>
       <Button
         variant="secondary"
         size="sm"
@@ -186,11 +208,45 @@ function BlockCategoryTabs({
   )
 }
 
-function ViewerBlockPreview({
-  block,
-}: {
-  block: ViewerBlock
-}) {
+function useBlockCategoryState() {
+  const [activeCategory, setActiveCategory] =
+    React.useState<ViewerBlockCategoryTabId>("featured")
+
+  React.useEffect(() => {
+    function syncActiveCategory() {
+      setActiveCategory(getBlockCategoryFromLocation())
+    }
+
+    syncActiveCategory()
+    window.addEventListener("hashchange", syncActiveCategory)
+    window.addEventListener("popstate", syncActiveCategory)
+    return () => {
+      window.removeEventListener("hashchange", syncActiveCategory)
+      window.removeEventListener("popstate", syncActiveCategory)
+    }
+  }, [])
+
+  return [activeCategory, setActiveCategory] as const
+}
+
+function getBlockCategoryFromLocation(): ViewerBlockCategoryTabId {
+  const hash = window.location.hash.slice(1)
+  if (!hash.startsWith(BLOCK_CATEGORY_HASH_PREFIX)) return "featured"
+  return getViewerBlockCategoryTabId(
+    hash.slice(BLOCK_CATEGORY_HASH_PREFIX.length)
+  )
+}
+
+function getViewerBlockCategoryTabId(value: string): ViewerBlockCategoryTabId {
+  const category = VIEWER_BLOCK_CATEGORIES.find(({ id }) => id === value)
+  return category?.id ?? "featured"
+}
+
+function getBlockCategoryHref(category: ViewerBlockCategoryTabId) {
+  return `/blocks#${BLOCK_CATEGORY_HASH_PREFIX}${category}`
+}
+
+function ViewerBlockPreview({ block }: { block: ViewerBlock }) {
   const [previewKey] = React.useState(0)
   const [view, setView] = React.useState<BlockView>("preview")
   const [hasOpenedCode, setHasOpenedCode] = React.useState(false)

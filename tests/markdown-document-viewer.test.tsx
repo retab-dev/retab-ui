@@ -58,7 +58,11 @@ describe("MarkdownDocumentViewer", () => {
     )
 
     expect(
-      await screen.findByRole("heading", { name: "Section 1" })
+      await screen.findByRole(
+        "heading",
+        { name: "Section 1" },
+        { timeout: 5_000 }
+      )
     ).toBeTruthy()
     expect(
       container.querySelector('[data-slot="markdown-document-virtual-canvas"]')

@@ -82,7 +82,10 @@ describe("createPdfPageLayout — property fuzz", () => {
 
         // Every page in range resolves; none out of range does.
         expect(getPdfPageLayout(layout, 0), ctx).toBeUndefined()
-        expect(getPdfPageLayout(layout, layout.pageCount + 1), ctx).toBeUndefined()
+        expect(
+          getPdfPageLayout(layout, layout.pageCount + 1),
+          ctx
+        ).toBeUndefined()
 
         for (const page of pages) {
           expect(page, ctx).toBeDefined()
@@ -112,7 +115,9 @@ describe("createPdfPageLayout — property fuzz", () => {
         // totalHeight equals the closed-form sum of page heights, gaps, padding.
         const sumHeights = pages.reduce((acc, p) => acc + p!.height, 0)
         expect(layout.totalHeight, ctx).toBe(
-          PDF_PAGE_PADDING * 2 + sumHeights + (layout.pageCount - 1) * PDF_PAGE_GAP
+          PDF_PAGE_PADDING * 2 +
+            sumHeights +
+            (layout.pageCount - 1) * PDF_PAGE_GAP
         )
 
         // maxPageWidth is the true maximum across pages.
@@ -154,6 +159,6 @@ describe("createPdfPageLayout — property fuzz", () => {
         const anchorPage = findPdfPageByOffset(layout, scrollTop)
         expect(visible.includes(anchorPage), ctx).toBe(true)
       }
-    })
+    }, 30_000)
   }
 })

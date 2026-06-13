@@ -212,6 +212,7 @@ function PptxViewerContent({
               source={source}
               zoomScale={zoomScale}
               rotation={rotation}
+              layout={slideLayout}
               eager={eager}
               activity={scrollActivity}
               renderSlideOverlay={renderSlideOverlay}

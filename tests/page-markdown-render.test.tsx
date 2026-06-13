@@ -550,6 +550,10 @@ describe("PageMarkdownViewer", () => {
 
   it("does not schedule copy status work after unmount", async () => {
     vi.useFakeTimers()
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      callback(0)
+      return 1
+    })
     let resolveCopy!: () => void
     const writeText = vi.fn(
       () =>
@@ -705,6 +709,49 @@ describe("PageMarkdownViewer", () => {
     expect(screen.getByText("79%")).toBeTruthy()
     expect(screen.queryByText("100%")).toBeNull()
     expect(pageWidth(container)).toBeCloseTo(PAGE_WIDTH * fitScaleForWidth(638), 1)
+  })
+
+  it("waits for a stable viewport width before mounting pages", async () => {
+    installTrackedResizeObserver()
+    const frameCallbacks: FrameRequestCallback[] = []
+    let measuredWidth = 760
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      frameCallbacks.push(callback)
+      return frameCallbacks.length
+    })
+    Object.defineProperty(HTMLElement.prototype, "clientWidth", {
+      configurable: true,
+      get: () => measuredWidth,
+    })
+
+    const { container } = render(<PageMarkdownViewer pages={PAGES} />)
+
+    expect(screen.queryByText("Page 1 of 2")).toBeNull()
+    expect(pageWidth(container)).toBeNull()
+
+    act(() => {
+      frameCallbacks.shift()?.(0)
+    })
+    measuredWidth = 638
+    act(() => {
+      frameCallbacks.shift()?.(16)
+    })
+
+    expect(screen.queryByText("Page 1 of 2")).toBeNull()
+    expect(screen.queryByText("95%")).toBeNull()
+    expect(pageWidth(container)).toBeNull()
+
+    act(() => {
+      frameCallbacks.shift()?.(32)
+    })
+
+    expect(await screen.findByText("Page 1 of 2")).toBeTruthy()
+    expect(screen.getByText("79%")).toBeTruthy()
+    expect(screen.queryByText("95%")).toBeNull()
+    expect(pageWidth(container)).toBeCloseTo(
+      PAGE_WIDTH * fitScaleForWidth(638),
+      1
+    )
   })
 
   it("observes a stable viewport-width wrapper instead of the scaled canvas", async () => {

@@ -274,9 +274,7 @@ function createMarkdownPages(
   return pages
 }
 
-function createMarkdownPageContent(
-  blocks: readonly MarkdownDocumentBlock[]
-): {
+function createMarkdownPageContent(blocks: readonly MarkdownDocumentBlock[]): {
   markdown: string
   sourceLineByRenderedLine: ReadonlyMap<number, number>
 } {

@@ -17,9 +17,15 @@ import {
   getInlineVisibleLineWindow,
   getTableVisibleRowWindow,
   layoutTextDocument,
+  materializeCodeVisibleLines,
+  materializeInlineVisibleLines,
   resolveTextViewerMode,
   serializeMarkdownTableForClipboard,
   textFrameIntersectsLineRange,
+  type CodeTextBlockFrame,
+  type InlineTextBlockFrame,
+  type PreparedCodeTextBlock,
+  type PreparedInlineTextBlock,
   type PreparedTableTextBlock,
   type TableTextBlockFrame,
 } from "@/registry/new-york-v4/ui/text-viewer-layout"
@@ -419,38 +425,25 @@ describe("createPreparedTextDocument markdown source lines", () => {
 })
 
 // ---------------------------------------------------------------------------
-// KNOWN BUG — markdown source-line drift across blank lines.
+// Markdown source-line attribution across blank lines (regression guard).
 //
-// `parseBlockTokens` advances a per-token line cursor using
-// `markdownRawLineCount(token.raw)`. For a blank-line gap, marked emits a
-// `space` token whose raw is "\n\n". `markdownRawLineCount` strips a single
-// trailing newline ("\n\n" -> "\n") and then splits, yielding 2 — so a single
-// blank line is counted as TWO source lines. Every block that follows a
-// blank-line gap is therefore mis-attributed by +1, and the error ACCUMULATES
-// with each gap.
-//
-// Real-world impact (markdown mode only):
-//   * `data-source-line` is wrong for every block after the first blank line.
-//   * highlight={{start,end}} targets the wrong row (or none).
-//   * scrollToLineRange() scrolls to the wrong block.
-//   * blocks can end up with sourceStartLine > sourceEndLine (inverted) and
-//     sourceStartLine > sourceLineCount (past the end of the document).
-//
-// These are written with `it.fails` so they stay green while documenting the
-// defect. When the parser is fixed, `it.fails` will start failing — that is the
-// signal to flip them back to `it`.
+// `parseBlockTokens` previously advanced its per-token line cursor with
+// `markdownRawLineCount`, which counted a blank-gap `space` token ("\n\n") as
+// TWO source lines, drifting every following block forward by +1 and
+// accumulating with each gap. The cursor now advances by the number of line
+// breaks in each token's raw, so attribution stays exact. These tests lock the
+// fix in place — if the drift returns they fail.
 // ---------------------------------------------------------------------------
 
-describe("KNOWN BUG: markdown blank-line source drift", () => {
-  it.fails("attributes a paragraph after a blank line to its real line", () => {
+describe("markdown blank-line source attribution", () => {
+  it("attributes a paragraph after a blank line to its real line", () => {
     const inlines = prepareMarkdown(
       "First para.\n\nSecond para."
     ).blocks.filter((b) => b.kind === "inline")
-    // Real source line of "Second para." is 3, not 4.
     expect(inlines[inlines.length - 1]?.sourceStartLine).toBe(3)
   })
 
-  it.fails("maps a fenced code block after a blank line to its real span", () => {
+  it("maps a fenced code block after a blank line to its real span", () => {
     const code = prepareMarkdown(
       ["intro", "", "```ts", "const x = 1", "const y = 2", "```"].join("\n")
     ).blocks.find((b) => b.kind === "code")
@@ -458,30 +451,48 @@ describe("KNOWN BUG: markdown blank-line source drift", () => {
     expect(code?.sourceEndLine).toBe(6)
   })
 
-  it.fails(
-    "never inverts a source range or runs past the document line count",
-    () => {
-      const markdown = [
-        "# Heading",
-        "",
-        "- item one",
-        "- item two",
-        "",
-        "> quote line",
-        "",
-        "| A | B |",
-        "| --- | --- |",
-        "| 1 | 2 |",
-      ].join("\n")
-      const doc = prepareMarkdown(markdown)
-      for (const block of doc.blocks) {
-        expect(block.sourceEndLine).toBeGreaterThanOrEqual(
-          block.sourceStartLine
-        )
-        expect(block.sourceStartLine).toBeLessThanOrEqual(doc.sourceLineCount)
-      }
+  it("keeps cumulative gaps from drifting later blocks", () => {
+    const blocks = prepareMarkdown(
+      ["# Heading", "", "para two", "", "para four"].join("\n")
+    ).blocks.filter((b) => b.kind === "inline")
+    expect(blocks[0]?.sourceStartLine).toBe(1) // # Heading
+    expect(blocks[1]?.sourceStartLine).toBe(3) // para two
+    expect(blocks[2]?.sourceStartLine).toBe(5) // para four
+  })
+
+  it("never inverts a source range or runs past the document line count", () => {
+    const markdown = [
+      "# Heading",
+      "",
+      "- item one",
+      "- item two",
+      "",
+      "> quote line",
+      "",
+      "| A | B |",
+      "| --- | --- |",
+      "| 1 | 2 |",
+    ].join("\n")
+    const doc = prepareMarkdown(markdown)
+    for (const block of doc.blocks) {
+      expect(block.sourceEndLine).toBeGreaterThanOrEqual(block.sourceStartLine)
+      expect(block.sourceStartLine).toBeLessThanOrEqual(doc.sourceLineCount)
+      expect(block.sourceEndLine).toBeLessThanOrEqual(doc.sourceLineCount)
     }
-  )
+  })
+
+  it("anchors a table and its rows to real source lines after gaps", () => {
+    // # H (1), blank (2), table header (3), separator (4), rows (5,6).
+    const block = prepareMarkdown(
+      ["# H", "", "| A | B |", "| --- | --- |", "| 1 | 2 |", "| 3 | 4 |"].join(
+        "\n"
+      )
+    ).blocks.find((b) => b.kind === "table") as
+      | PreparedTableTextBlock
+      | undefined
+    expect(block?.sourceStartLine).toBe(3)
+    expect(block?.rowSourceStartLines).toEqual([5, 6])
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -918,6 +929,228 @@ describe("markdown heading ids", () => {
 })
 
 // ---------------------------------------------------------------------------
+// blockquote + list nesting (source lines and geometry)
+// ---------------------------------------------------------------------------
+
+describe("blockquote and list nesting", () => {
+  it("attributes nested blockquote lines and stacks quote rails", () => {
+    const blocks = prepareMarkdown(
+      ["> outer", "> > inner", "", "after"].join("\n")
+    ).blocks
+    expect(blocks.map((b) => b.sourceStartLine)).toEqual([1, 2, 4])
+    expect(blocks[0]).toMatchObject({ quoteDepth: 1 })
+    expect(blocks[1]).toMatchObject({ quoteDepth: 2 })
+    // Inner quote is indented further and carries two rails.
+    expect(blocks[1]!.quoteRailLefts).toHaveLength(2)
+    expect(blocks[1]!.contentLeft).toBeGreaterThan(blocks[0]!.contentLeft)
+    // Content returns to the left margin after the quote.
+    expect(blocks[2]).toMatchObject({ quoteDepth: 0, contentLeft: 0 })
+  })
+
+  it("attributes nested list items to their lines and depths", () => {
+    const blocks = prepareMarkdown(
+      ["- a", "  - b", "  - c", "- d"].join("\n")
+    ).blocks
+    expect(blocks.map((b) => b.sourceStartLine)).toEqual([1, 2, 3, 4])
+    expect(blocks.map((b) => b.listDepth)).toEqual([1, 2, 2, 1])
+    expect(blocks.every((b) => b.markerText)).toBe(true)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// frontmatter edge cases
+// ---------------------------------------------------------------------------
+
+describe("frontmatter", () => {
+  it("handles CRLF frontmatter and keeps body source lines", () => {
+    const doc = prepareMarkdown("---\r\ntitle: x\r\n---\r\n\r\n# Body")
+    expect(doc.sourceLineCount).toBe(5)
+    const frontmatter = doc.blocks.find((b) => b.kind === "code")
+    expect(frontmatter).toMatchObject({ sourceStartLine: 1, sourceEndLine: 3 })
+    const heading = doc.blocks.find((b) => b.kind === "inline" && b.headingId)
+    expect(heading?.sourceStartLine).toBe(5)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// materialize fallback paths (no canvas measurement available)
+// ---------------------------------------------------------------------------
+
+describe("materialize visible lines (fallback paths)", () => {
+  it("renders inline text as a single fallback line when flow is unavailable", () => {
+    // jsdom has no canvas, so @chenglou/pretext can't measure and flow is null.
+    const doc = prepareText("Hello world this is a paragraph.")
+    const frame = layoutTextDocument({ contentWidth: 600, document: doc })
+    const index = doc.blocks.findIndex((b) => b.kind === "inline")
+    const block = doc.blocks[index] as PreparedInlineTextBlock
+    expect(block.flow).toBeNull()
+    const lines = materializeInlineVisibleLines({
+      block,
+      frame: frame.frames[index] as InlineTextBlockFrame,
+      maxWidth: 600,
+      viewportTop: -1000,
+      viewportBottom: 10000,
+    })
+    expect(lines).toHaveLength(1)
+    expect(lines[0]!.top).toBe(0)
+    expect(lines[0]!.fragments.map((f) => f.text).join("")).toContain(
+      "Hello world"
+    )
+  })
+
+  it("returns no lines when the inline block is offscreen", () => {
+    const doc = prepareText("offscreen text")
+    const frame = layoutTextDocument({ contentWidth: 600, document: doc })
+    const index = doc.blocks.findIndex((b) => b.kind === "inline")
+    const lines = materializeInlineVisibleLines({
+      block: doc.blocks[index] as PreparedInlineTextBlock,
+      frame: frame.frames[index] as InlineTextBlockFrame,
+      maxWidth: 600,
+      viewportTop: 100000,
+      viewportBottom: 200000,
+    })
+    expect(lines).toEqual([])
+  })
+
+  it("renders code as a single fallback line preserving the full text", () => {
+    const doc = prepareMarkdown(
+      ["```", "line1", "line2", "line3", "```"].join("\n")
+    )
+    const frame = layoutTextDocument({ contentWidth: 600, document: doc })
+    const index = doc.blocks.findIndex((b) => b.kind === "code")
+    const block = doc.blocks[index] as PreparedCodeTextBlock
+    expect(block.prepared).toBeNull()
+    const lines = materializeCodeVisibleLines({
+      block,
+      contentWidth: 600,
+      frame: frame.frames[index] as CodeTextBlockFrame,
+      viewportTop: -1000,
+      viewportBottom: 10000,
+    })
+    expect(lines).toHaveLength(1)
+    expect(lines[0]!.line.text).toContain("line1")
+    expect(lines[0]!.line.text).toContain("line3")
+  })
+})
+
+// ---------------------------------------------------------------------------
+// table row windowing math (binary search exactness)
+// ---------------------------------------------------------------------------
+
+describe("getTableVisibleRowWindow (50-row exactness)", () => {
+  function fiftyRowFrame(): TableTextBlockFrame {
+    const rowHeights = Array.from({ length: 50 }, () => 20)
+    const rowOffsets = [0]
+    for (const h of rowHeights) {
+      rowOffsets.push(rowOffsets[rowOffsets.length - 1]! + h)
+    }
+    return {
+      blockIndex: 0,
+      bottom: 0,
+      columnWidths: [100],
+      contentLeft: 0,
+      headerHeight: 38,
+      height: 0,
+      kind: "table",
+      listDepth: 0,
+      markerClassName: null,
+      markerLeft: null,
+      markerText: null,
+      quoteDepth: 0,
+      quoteRailLefts: [],
+      rowCount: 50,
+      rowHeights,
+      rowOffsets,
+      rowSourceStartLines: [],
+      scale: 1,
+      sourceEndLine: 1,
+      sourceStartLine: 1,
+      tableWidth: 100,
+      top: 100,
+    }
+  }
+
+  const frame = fiftyRowFrame()
+  const bodyHeight = frame.rowOffsets[frame.rowOffsets.length - 1]!
+
+  it("windows a mid-table viewport with 4-row overscan on each side", () => {
+    expect(
+      getTableVisibleRowWindow({ frame, viewportTop: 338, viewportBottom: 438 })
+    ).toEqual({
+      startIndex: 6,
+      endIndex: 19,
+      beforeHeight: 120,
+      afterHeight: 620,
+    })
+  })
+
+  it("clamps the window to the table bounds at the extremes", () => {
+    expect(
+      getTableVisibleRowWindow({
+        frame,
+        viewportTop: 1200,
+        viewportBottom: 1400,
+      })
+    ).toMatchObject({ endIndex: 50, afterHeight: 0 })
+    expect(
+      getTableVisibleRowWindow({ frame, viewportTop: -100, viewportBottom: 50 })
+    ).toMatchObject({ startIndex: 0, beforeHeight: 0 })
+  })
+
+  it("conserves total height: before + visible + after = bodyHeight", () => {
+    for (const [vt, vb] of [
+      [338, 438],
+      [100, 200],
+      [700, 1100],
+    ]) {
+      const w = getTableVisibleRowWindow({
+        frame,
+        viewportTop: vt!,
+        viewportBottom: vb!,
+      })
+      const visible = frame.rowHeights
+        .slice(w.startIndex, w.endIndex)
+        .reduce((a, b) => a + b, 0)
+      expect(w.beforeHeight + visible + w.afterHeight).toBe(bodyHeight)
+    }
+  })
+})
+
+// ---------------------------------------------------------------------------
+// table column widths + rich cell extraction
+// ---------------------------------------------------------------------------
+
+describe("markdown table measurement and clipboard", () => {
+  it("clamps column widths to the configured min and max", () => {
+    const longCell = "x".repeat(200)
+    const table = prepareMarkdown(
+      ["| Short | Wide |", "| --- | --- |", `| a | ${longCell} |`].join("\n")
+    ).blocks.find((b) => b.kind === "table") as PreparedTableTextBlock
+    // Min width floor is 72, max ceiling is 320.
+    expect(table.columnWidths[0]).toBeGreaterThanOrEqual(72)
+    expect(table.columnWidths[1]).toBeLessThanOrEqual(320)
+    expect(table.columnWidths[1]).toBeGreaterThan(table.columnWidths[0]!)
+  })
+
+  it("extracts plain text from formatted and linked table cells for the clipboard", () => {
+    const table = prepareMarkdown(
+      [
+        "| Name | Link |",
+        "| --- | --- |",
+        "| **Bold** `code` | [Site](https://example.com) |",
+      ].join("\n")
+    ).blocks.find((b) => b.kind === "table") as PreparedTableTextBlock
+    const serialized = serializeMarkdownTableForClipboard(table)
+    expect(serialized).toContain("Bold")
+    expect(serialized).toContain("code")
+    expect(serialized).toContain("Site")
+    // The raw markdown syntax must not leak into the clipboard text.
+    expect(serialized).not.toContain("**")
+    expect(serialized).not.toContain("https://example.com")
+  })
+})
+
+// ---------------------------------------------------------------------------
 // component behavior
 // ---------------------------------------------------------------------------
 
@@ -1088,27 +1321,24 @@ describe("TextViewer component behavior", () => {
     expect(target.className).toContain("bg-primary/12")
   })
 
-  // KNOWN BUG (user-facing fallout of the source-line drift): highlighting the
-  // true source line of a markdown block that follows a blank line fails to
-  // highlight it, because the block's frame is mis-attributed by +1.
-  it.fails(
-    "highlights the markdown paragraph at its real source line after a blank line",
-    async () => {
-      const { container } = render(
-        <TextViewer
-          source={markdownSource("Para one.\n\nPara three.")}
-          highlight={{ start: 3, end: 3 }}
-          toolbar={false}
-        />
-      )
-      const target = await waitFor(() => {
-        const block = Array.from(
-          container.querySelectorAll<HTMLElement>('[data-slot="text-line"]')
-        ).find((el) => el.textContent?.includes("Para three."))
-        expect(block).toBeTruthy()
-        return block as HTMLElement
-      })
-      expect(target.className).toContain("bg-primary/12")
-    }
-  )
+  // User-facing payoff of the source-line fix: highlighting the true source
+  // line of a markdown block that follows a blank line now lands on it.
+  it("highlights the markdown paragraph at its real source line after a blank line", async () => {
+    const { container } = render(
+      <TextViewer
+        source={markdownSource("Para one.\n\nPara three.")}
+        highlight={{ start: 3, end: 3 }}
+        toolbar={false}
+      />
+    )
+    const target = await waitFor(() => {
+      const block = Array.from(
+        container.querySelectorAll<HTMLElement>('[data-slot="text-line"]')
+      ).find((el) => el.textContent?.includes("Para three."))
+      expect(block).toBeTruthy()
+      return block as HTMLElement
+    })
+    expect(target.getAttribute("data-source-line")).toBe("3")
+    expect(target.className).toContain("bg-primary/12")
+  })
 })
