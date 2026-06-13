@@ -2,53 +2,40 @@
 
 import * as React from "react"
 
-import { resolveCsvDialect, type CsvDialect, type CsvTable } from "@/lib/csv"
-import { cn } from "@/lib/utils"
-import type { ViewerDownloadAction } from "@/lib/viewer-download"
+import type { CsvDialect, CsvTable } from "@/lib/csv"
 import {
   createViewerResource,
   type ViewerResource,
 } from "@/lib/viewer-resource"
 
 import {
-  createCsvExportAction,
+  CsvViewerFrame,
+  CsvViewerHeader,
+  csvViewerStatusNode,
+} from "./csv-viewer-chrome"
+import {
+  csvViewerDownloadActions,
   defaultCsvDownloadName,
 } from "./csv-viewer-download"
 import { CsvGrid, type CsvGridHandle } from "./csv-viewer-grid"
 import {
+  csvViewerExportFileName,
+  csvViewerSortResetKey,
   isCsvDocumentSource,
+  resolveCsvViewerDialect,
   type CsvDocumentSource,
   type CsvTableSource,
   type CsvViewerSource,
 } from "./csv-viewer-resource"
 import { useCsvResourceState, type CsvCellAddress } from "./csv-viewer-state"
-import { CsvViewerToolbar, useCsvViewerZoom } from "./csv-viewer-toolbar"
-import { ViewerErrorState } from "./viewer-error"
+import { useCsvViewerZoom } from "./csv-viewer-toolbar"
+import type { CsvViewerHandle, CsvViewerProps } from "./csv-viewer-types"
 
-const BASE_FONT_SIZE = 13
-
-export interface CsvScrollOptions {
-  behavior?: ScrollBehavior
-}
-
-export interface CsvViewerHandle {
-  scrollToCell: (
-    cellAddress: CsvCellAddress,
-    options?: CsvScrollOptions
-  ) => void
-  getViewportElement: () => HTMLDivElement | null
-}
-
-export interface CsvViewerProps {
-  source?: CsvViewerSource
-  dialect?: CsvDialect
-  className?: string
-  toolbar?: boolean
-  height?: number
-  fillHeight?: boolean
-  activeCell?: CsvCellAddress | null
-  isolateStyles?: boolean
-}
+export type {
+  CsvScrollOptions,
+  CsvViewerHandle,
+  CsvViewerProps,
+} from "./csv-viewer-types"
 
 export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
   function CsvViewer(
@@ -72,18 +59,15 @@ export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
           : null,
       [source]
     )
-    const tableDialect = source?.kind === "table" ? source.dialect : undefined
-    const tableFileName = source?.kind === "table" ? source.fileName : undefined
-    const dialect = React.useMemo(() => {
-      return resolveCsvDialect({
-        dialect: dialectProp ?? tableDialect,
-        descriptor: {
-          src: resource?.content.directUrl ?? undefined,
-          fileName: resource?.fileName ?? tableFileName,
-          mimeType: resource?.mimeType,
-        },
-      })
-    }, [dialectProp, resource, tableDialect, tableFileName])
+    const dialect = React.useMemo(
+      () =>
+        resolveCsvViewerDialect({
+          dialect: dialectProp,
+          source,
+          resource,
+        }),
+      [dialectProp, source, resource]
+    )
     const resourceState = useCsvResourceState({
       source,
       resource,
@@ -96,38 +80,32 @@ export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
     const sourceRows = resourceState.sourceRows
     const canExportTable =
       resourceState.status === "ready" || resourceState.status === "empty"
-    const parseDialectKey = `${dialect.delimiter}\u0000${dialect.hasHeader}`
-    const sortResetKey =
-      (resource ? `${resource.keys.load}\u0000${parseDialectKey}` : null) ??
-      (source?.kind === "table"
-        ? (source.identityKey ?? source.table)
-        : "empty")
-    const resolvedExportFileName =
-      resource?.fileName ?? tableFileName ?? defaultCsvDownloadName(dialect)
+    const sortResetKey = csvViewerSortResetKey({
+      dialect,
+      source,
+      resource,
+    })
+    const exportFileName = csvViewerExportFileName({
+      dialect,
+      source,
+      resource,
+      fallback: defaultCsvDownloadName,
+    })
     const downloadActions = React.useMemo(() => {
-      const actions: ViewerDownloadAction[] = []
-      if (resource) {
-        actions.push({
-          ...resource.originalDownload,
-          label: "Download original",
-        })
-      }
-      actions.push(
-        createCsvExportAction({
-          columns,
-          sourceRows,
-          dialect,
-          fileName: resolvedExportFileName,
-          isDisabled: !canExportTable,
-        })
-      )
-      return actions
+      return csvViewerDownloadActions({
+        resource,
+        columns,
+        sourceRows,
+        dialect,
+        fileName: exportFileName,
+        canExportTable,
+      })
     }, [
       canExportTable,
       columns,
       dialect,
+      exportFileName,
       resource,
-      resolvedExportFileName,
       sourceRows,
     ])
 
@@ -142,49 +120,28 @@ export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
       []
     )
 
-    const statusNode = React.useMemo(() => {
-      if (resourceState.status === "error") {
-        return (
-          <ViewerErrorState
-            error={resourceState.error}
-            format="csv"
-            sourceKind={resource?.sourceKind}
-            download={resource?.originalDownload}
-            variant="inline"
-            onRetry={() => setRetryVersion((version) => version + 1)}
-          />
-        )
-      }
-      if (sourceRows.length === 0 && resourceState.status !== "loading") {
-        return (
-          <div className="flex h-24 items-center justify-center text-xs text-muted-foreground">
-            No rows
-          </div>
-        )
-      }
-      return null
-    }, [resource, resourceState, sourceRows.length])
+    const statusNode = React.useMemo(
+      () =>
+        csvViewerStatusNode({
+          resourceState,
+          resource,
+          rowCount: sourceRows.length,
+          onRetry: () => setRetryVersion((version) => version + 1),
+        }),
+      [resource, resourceState, sourceRows.length]
+    )
 
     return (
-      <div
-        data-slot="csv-viewer"
-        className={cn(
-          "flex flex-col overflow-hidden rounded-xl border bg-card",
-          fillHeight && "h-full min-h-0 flex-1",
-          className
-        )}
-        style={{ fontSize: BASE_FONT_SIZE * zoom }}
-      >
-        {toolbar ? (
-          <CsvViewerToolbar
-            rowCount={sourceRows.length}
-            columnCount={columns.length}
-            isLoading={resourceState.status === "loading"}
-            zoom={zoom}
-            onZoomChange={setZoom}
-            downloadActions={downloadActions}
-          />
-        ) : null}
+      <CsvViewerFrame className={className} fillHeight={fillHeight} zoom={zoom}>
+        <CsvViewerHeader
+          toolbar={toolbar}
+          rowCount={sourceRows.length}
+          columnCount={columns.length}
+          isLoading={resourceState.status === "loading"}
+          zoom={zoom}
+          onZoomChange={setZoom}
+          downloadActions={downloadActions}
+        />
         <CsvGrid
           ref={gridRef}
           columns={columns}
@@ -197,7 +154,7 @@ export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
           sortResetKey={sortResetKey}
           statusNode={statusNode}
         />
-      </div>
+      </CsvViewerFrame>
     )
   }
 )

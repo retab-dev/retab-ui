@@ -5,7 +5,10 @@ import { Loader2, Scissors } from "lucide-react"
 
 import { segmentsPageCount, toSegments } from "@/lib/segments"
 import { PageRibbon } from "@/components/ui/page-ribbon"
-import { type PdfViewerSlots } from "@/components/ui/pdf-viewer"
+import {
+  type PdfViewerHandle,
+  type PdfViewerSlots,
+} from "@/components/ui/pdf-viewer"
 import { SegmentLegend } from "@/components/ui/segment-legend"
 import { useSegmentInteraction } from "@/components/ui/use-segment-interaction"
 import { type SplitView } from "@/components/viewers/lib/split-types"
@@ -18,6 +21,7 @@ import { type SplitView } from "@/components/viewers/lib/split-types"
 export interface SplitDocumentHandlers {
   onCurrentPageChange: (page: number) => void
   onScrollProgressChange: (progress: number) => void
+  setViewerHandle: (handle: PdfViewerHandle | null) => void
   slots: PdfViewerSlots
 }
 
@@ -34,6 +38,7 @@ export function SplitViewer({
 }: SplitViewerProps) {
   const [currentPage, setCurrentPage] = useState(1)
   const [scrollProgress, setScrollProgress] = useState(0)
+  const [viewerHandle, setViewerHandle] = useState<PdfViewerHandle | null>(null)
   const interaction = useSegmentInteraction()
   const previewRef = useRef<HTMLDivElement | null>(null)
   const hasOutput = !!result && result.output.length > 0
@@ -44,11 +49,21 @@ export function SplitViewer({
   )
   const pageCount = useMemo(() => segmentsPageCount(segments), [segments])
 
-  const handleJumpToPage = useCallback((page: number) => {
-    previewRef.current
-      ?.querySelector<HTMLElement>(`[data-page-number="${page}"]`)
-      ?.scrollIntoView({ behavior: "smooth", block: "start" })
-  }, [])
+  const handleJumpToPage = useCallback(
+    (page: number) => {
+      setCurrentPage(page)
+
+      if (viewerHandle) {
+        viewerHandle.scrollToPageTarget(page, { top: 0 })
+        return
+      }
+
+      previewRef.current
+        ?.querySelector<HTMLElement>(`[data-page-number="${page}"]`)
+        ?.scrollIntoView({ behavior: "smooth", block: "start" })
+    },
+    [viewerHandle]
+  )
 
   if (!hasOutput) {
     return (
@@ -112,6 +127,7 @@ export function SplitViewer({
         renderDocument({
           onCurrentPageChange: setCurrentPage,
           onScrollProgressChange: setScrollProgress,
+          setViewerHandle,
           slots,
         })
       ) : (

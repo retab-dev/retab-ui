@@ -4,7 +4,7 @@ import * as React from "react"
 
 import {
   getSegmentSurfaceProps,
-  resolveHighlightedSegmentId,
+  resolvePreviewedSegmentId,
   scopeSegmentInteraction,
   type SegmentInteraction,
 } from "@/lib/segment-interaction"
@@ -20,13 +20,13 @@ export interface PageTimelineProps {
   segments: Segment[]
   /** Total pages; defaults to the max page across segments. */
   pageCount?: number
-  /** Shared hover/focus/selection state. */
+  /** Shared hover/focus state. */
   interaction?: SegmentInteraction
   /** 1-based current page to mark (e.g. synced to a PDF scroll position). */
   currentPage?: number | null
   /** Fired when a page cell is clicked. */
   onSelectPage?: (page: number) => void
-  /** Fired when a segment surface is clicked, after shared selection is requested. */
+  /** Fired when a segment-owned page cell is clicked. */
   onSelect?: (segment: Segment) => void
   className?: string
 }
@@ -39,10 +39,11 @@ interface TimelinePageSegment {
 
 /**
  * A horizontal strip of page cells colored by the segment mapped to each page.
- * It ties the legend and sidebar to the document: hovering a cell highlights its
- * segment, highlighting a segment elsewhere dims unrelated pages, and clicking
+ * It ties the legend and sidebar to the document: hovering a cell previews its
+ * segment, previewing a segment elsewhere dims unrelated pages, and clicking
  * a cell jumps the document. If multiple segments map to a page, the first
- * segment in document order is selected and the page label calls out the overlap.
+ * segment in document order owns the hover/focus state and the page label calls
+ * out the overlap.
  */
 export function PageTimeline({
   segments,
@@ -82,15 +83,16 @@ export function PageTimeline({
   )
 
   if (total <= 0) return null
-  const highlightedSegmentId = resolveHighlightedSegmentId(scopedInteraction)
-  const highlightedSegmentIndex = getHighlightedSegmentIndex({
-    highlightedSegmentId,
+  const previewedSegmentId = resolvePreviewedSegmentId(scopedInteraction)
+  const previewedSegmentIndex = getPreviewedSegmentIndex({
+    previewedSegmentId,
     segmentIndexById,
   })
 
   return (
     <div
       data-slot="page-timeline"
+      onMouseLeave={() => scopedInteraction?.clearPreview()}
       className={cn(
         "flex items-stretch gap-px overflow-hidden rounded-md",
         className
@@ -113,8 +115,8 @@ export function PageTimeline({
             })
           : null
         const dimmed =
-          highlightedSegmentIndex != null
-            ? !segmentIndexes.includes(highlightedSegmentIndex)
+          previewedSegmentIndex != null
+            ? !segmentIndexes.includes(previewedSegmentIndex)
             : false
         const isCurrent = currentPage === page
         return (
@@ -122,7 +124,6 @@ export function PageTimeline({
             key={page}
             type="button"
             aria-current={isCurrent ? "page" : undefined}
-            aria-pressed={surfaceProps?.state.isSelected ?? false}
             aria-label={pageSegment.label}
             title={pageSegment.label}
             onMouseEnter={surfaceProps?.eventHandlers.onMouseEnter}
@@ -133,9 +134,9 @@ export function PageTimeline({
               surfaceProps?.eventHandlers.onClick()
               onSelectPage?.(page)
             }}
-            data-highlighted={surfaceProps?.state.isHighlighted ?? false}
+            data-previewed={surfaceProps?.state.isPreviewed ?? false}
             data-current={isCurrent}
-            data-selected={surfaceProps?.state.isSelected ?? false}
+            data-active={surfaceProps?.state.isActive ?? isCurrent}
             className={cn(
               "group relative h-7 flex-1 transition-opacity focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
               dimmed ? "opacity-25" : "opacity-100"
@@ -208,14 +209,14 @@ function getTimelinePageSegment({
   }
 }
 
-function getHighlightedSegmentIndex({
-  highlightedSegmentId,
+function getPreviewedSegmentIndex({
+  previewedSegmentId,
   segmentIndexById,
 }: {
-  highlightedSegmentId: string | null
+  previewedSegmentId: string | null
   segmentIndexById: Map<string, number>
 }): number | undefined {
-  return highlightedSegmentId
-    ? segmentIndexById.get(highlightedSegmentId)
+  return previewedSegmentId
+    ? segmentIndexById.get(previewedSegmentId)
     : undefined
 }

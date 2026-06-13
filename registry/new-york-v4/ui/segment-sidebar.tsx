@@ -17,9 +17,9 @@ import { cn } from "@/lib/utils"
 
 export interface SegmentSidebarProps {
   segments: Segment[]
-  /** Shared hover/focus/selection state. */
+  /** Shared hover/focus state. */
   interaction?: SegmentInteraction
-  /** Fired when a segment surface is clicked, after shared selection is requested. */
+  /** Fired when a segment surface is clicked. */
   onSelect?: (segment: Segment) => void
   /** 1-based current page; owning segments receive current-page state. */
   currentPage?: number | null
@@ -31,10 +31,10 @@ export interface SegmentSidebarProps {
 }
 
 /**
- * A selectable list of segments — the "sidebar" surface. Each row shows the
+ * A navigable list of segments — the "sidebar" surface. Each row shows the
  * color swatch, label, page ranges, page count, and (when present) a confidence
- * bar. Hovering and focusing highlight the segment; clicking requests shared
- * selection and fires `onSelect` for host side effects like document scrolling.
+ * bar. Hovering and focusing preview the segment; clicking fires `onSelect`
+ * for host side effects like document scrolling.
  */
 export function SegmentSidebar({
   segments,
@@ -60,6 +60,7 @@ export function SegmentSidebar({
   return (
     <div
       data-slot="segment-sidebar"
+      onMouseLeave={() => scopedInteraction?.clearPreview()}
       className={cn("flex min-h-0 flex-col", className)}
     >
       <div className="flex-shrink-0 px-3 py-2 text-xs font-medium text-muted-foreground">
@@ -68,26 +69,24 @@ export function SegmentSidebar({
       </div>
       <ul className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-auto px-2 pb-2">
         {visible.map((segment, segmentPosition) => {
-          const { state, eventHandlers, ariaProps, dataProps } =
-            getSegmentSurfaceProps({
-              segment,
-              interaction: scopedInteraction,
-              currentPage,
-              onSelect,
-            })
+          const { state, eventHandlers, dataProps } = getSegmentSurfaceProps({
+            segment,
+            interaction: scopedInteraction,
+            currentPage,
+            onSelect,
+          })
           const label = segmentDisplayLabel(segment.label)
           const pageCount = segmentPageCount(segment.pages)
           return (
             <li key={`${segment.id}-${segmentPosition}`}>
               <button
                 type="button"
-                {...ariaProps}
                 {...dataProps}
                 {...eventHandlers}
                 aria-current={state.isCurrent ? "page" : undefined}
                 className={cn(
                   "flex w-full items-start gap-2.5 rounded-md border px-2.5 py-2 text-left transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-                  state.isHighlighted || state.isSelected || state.isCurrent
+                  state.isActive
                     ? "border-border bg-muted"
                     : "border-transparent hover:bg-muted/50",
                   state.isDimmed && "opacity-60"

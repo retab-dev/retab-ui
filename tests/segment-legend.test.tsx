@@ -1,6 +1,12 @@
 // @vitest-environment jsdom
 import * as React from "react"
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react"
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { type SegmentInteraction } from "@/lib/segment-interaction"
@@ -26,14 +32,12 @@ function createInteraction(
   overrides: Partial<SegmentInteraction> = {}
 ): SegmentInteraction {
   return {
-    hoveredId: null,
-    focusedId: null,
-    selectedId: null,
-    setHoveredId: vi.fn(),
-    setFocusedId: vi.fn(),
-    setSelectedId: vi.fn(),
-    clearSelection: vi.fn(),
-    selectSegment: vi.fn(),
+    hoveredSegmentId: null,
+    focusedSegmentId: null,
+    previewSegment: vi.fn(),
+    clearPreview: vi.fn(),
+    focusSegment: vi.fn(),
+    clearFocus: vi.fn(),
     ...overrides,
   }
 }
@@ -129,7 +133,9 @@ describe("SegmentLegend — layout", () => {
   })
 
   it("lays vertical entries out as a column rail", () => {
-    render(<SegmentLegend segments={segments} showUnused orientation="vertical" />)
+    render(
+      <SegmentLegend segments={segments} showUnused orientation="vertical" />
+    )
     const cls = entriesContainer()?.className ?? ""
     expect(cls).toContain("flex-col")
     expect(cls).not.toContain("grid")
@@ -273,9 +279,7 @@ describe("SegmentLegend — empty & unused", () => {
       />
     )
     expect(screen.queryByRole("button", { name: "Only" })).toBeNull()
-    expect(
-      screen.getByRole("button", { name: /show 1 unused/i })
-    ).toBeTruthy()
+    expect(screen.getByRole("button", { name: /show 1 unused/i })).toBeTruthy()
   })
 
   it("hides zero-page segments by default", () => {
@@ -319,9 +323,7 @@ describe("SegmentLegend — empty & unused", () => {
   })
 
   it("does not render a toggle when every segment owns pages", () => {
-    render(
-      <SegmentLegend segments={segments.slice(0, 2)} showUnusedToggle />
-    )
+    render(<SegmentLegend segments={segments.slice(0, 2)} showUnusedToggle />)
     expect(screen.queryByRole("button", { name: /unused/i })).toBeNull()
   })
 
@@ -428,9 +430,7 @@ describe("SegmentLegend — empty & unused", () => {
     )
     expect(screen.queryByRole("button", { name: "Unused" })).toBeNull()
 
-    rerender(
-      <SegmentLegend segments={segments} showUnused showUnusedToggle />
-    )
+    rerender(<SegmentLegend segments={segments} showUnused showUnusedToggle />)
     expect(screen.getByRole("button", { name: "Unused" })).toBeTruthy()
 
     rerender(
@@ -473,10 +473,11 @@ describe("SegmentLegend — empty & unused", () => {
 // ---------------------------------------------------------------------------
 
 describe("SegmentLegend — interaction", () => {
-  it("routes hover, focus, click and clear events to the interaction controller", () => {
-    const setHoveredId = vi.fn()
-    const setFocusedId = vi.fn()
-    const selectSegment = vi.fn()
+  it("routes hover, focus, and click events without persistent selection", () => {
+    const previewSegment = vi.fn()
+    const clearPreview = vi.fn()
+    const focusSegment = vi.fn()
+    const clearFocus = vi.fn()
     const onSelect = vi.fn()
     const intro = segments[0]
     render(
@@ -484,9 +485,10 @@ describe("SegmentLegend — interaction", () => {
         segments={segments}
         showUnused
         interaction={createInteraction({
-          setHoveredId,
-          setFocusedId,
-          selectSegment,
+          previewSegment,
+          clearPreview,
+          focusSegment,
+          clearFocus,
         })}
         onSelect={onSelect}
       />
@@ -498,12 +500,13 @@ describe("SegmentLegend — interaction", () => {
     fireEvent.mouseLeave(button)
     fireEvent.blur(button)
 
-    expect(setHoveredId).toHaveBeenNthCalledWith(1, intro.id)
-    expect(setHoveredId).toHaveBeenLastCalledWith(null)
-    expect(setFocusedId).toHaveBeenNthCalledWith(1, intro.id)
-    expect(setFocusedId).toHaveBeenLastCalledWith(null)
-    expect(selectSegment).toHaveBeenCalledWith(intro)
+    expect(previewSegment).toHaveBeenCalledWith(intro.id)
+    expect(clearPreview).toHaveBeenCalled()
+    expect(focusSegment).toHaveBeenCalledWith(intro.id)
+    expect(clearFocus).toHaveBeenCalled()
     expect(onSelect).toHaveBeenCalledWith(intro)
+    expect(button.hasAttribute("aria-pressed")).toBe(false)
+    expect(button.hasAttribute("data-selected")).toBe(false)
   })
 
   it("fires onSelect even without an interaction controller", () => {
@@ -518,25 +521,23 @@ describe("SegmentLegend — interaction", () => {
     expect(() => fireEvent.click(legendButton("Intro"))).not.toThrow()
   })
 
-  it("dims the non-highlighted entries when one is hovered", () => {
+  it("dims the non-previewed entries when one is hovered", () => {
     render(
       <SegmentLegend
         segments={segments}
         showUnused
-        interaction={createInteraction({ hoveredId: segments[0].id })}
+        interaction={createInteraction({ hoveredSegmentId: segments[0].id })}
       />
     )
     expect(legendButton("Intro").className).toContain("opacity-100")
     expect(legendButton("Results").className).toContain("opacity-40")
   })
 
-  it("does not dim anything when the highlighted id is not visible (scoped out)", () => {
-    // selectedId points at the hidden 'Unused' segment; once scoped to the
-    // visible set it resolves to null, so nothing should dim.
+  it("does not dim anything when a hovered id is not visible (scoped out)", () => {
     render(
       <SegmentLegend
         segments={segments}
-        interaction={createInteraction({ selectedId: segments[2].id })}
+        interaction={createInteraction({ hoveredSegmentId: segments[2].id })}
       />
     )
     expect(legendButton("Intro").className).toContain("opacity-100")
@@ -547,106 +548,88 @@ describe("SegmentLegend — interaction", () => {
     render(
       <SegmentLegend
         segments={segments.slice(0, 2)}
-        interaction={createInteraction({ selectedId: "removed#99" })}
+        interaction={createInteraction({ hoveredSegmentId: "removed#99" })}
       />
     )
     expect(legendButton("Intro").className).toContain("opacity-100")
     expect(legendButton("Results").className).toContain("opacity-100")
   })
 
-  it("re-scopes selection when a hidden selected segment is revealed via the toggle", () => {
-    // 'Unused' is selected but hidden: nothing dims. After revealing it, it
-    // must become the highlighted entry and dim the others.
+  it("scopes hovered segment ids when hidden segments are revealed via the toggle", () => {
     render(
       <SegmentLegend
         segments={segments}
         showUnusedToggle
-        interaction={createInteraction({ selectedId: segments[2].id })}
+        interaction={createInteraction({ hoveredSegmentId: segments[2].id })}
       />
     )
     expect(legendButton("Intro").className).toContain("opacity-100")
 
     fireEvent.click(screen.getByRole("button", { name: /show 1 unused/i }))
 
-    expect(legendButton("Unused").getAttribute("aria-pressed")).toBe("true")
+    expect(legendButton("Unused").getAttribute("data-previewed")).toBe("true")
     expect(legendButton("Unused").className).toContain("opacity-100")
     expect(legendButton("Intro").className).toContain("opacity-40")
     expect(legendButton("Results").className).toContain("opacity-40")
   })
 
-  it("reflects selection via aria-pressed and data-selected", () => {
-    render(
-      <SegmentLegend
-        segments={segments}
-        showUnused
-        interaction={createInteraction({ selectedId: segments[0].id })}
-      />
-    )
+  it("does not expose segment buttons as pressed or selected controls", () => {
+    render(<SegmentLegend segments={segments} showUnused />)
     const intro = legendButton("Intro")
-    expect(intro.getAttribute("aria-pressed")).toBe("true")
-    expect(intro.getAttribute("data-selected")).toBe("true")
-    expect(legendButton("Results").getAttribute("aria-pressed")).toBe("false")
+    expect(intro.hasAttribute("aria-pressed")).toBe(false)
+    expect(intro.hasAttribute("data-selected")).toBe(false)
+    expect(legendButton("Results").hasAttribute("aria-pressed")).toBe(false)
   })
 
-  it("gives hover precedence over focus and selection when dimming entries", () => {
+  it("gives hover priority over focus for the interaction preview", () => {
     render(
       <SegmentLegend
         segments={segments}
         showUnused
         interaction={createInteraction({
-          hoveredId: segments[1].id,
-          focusedId: segments[0].id,
-          selectedId: segments[2].id,
+          hoveredSegmentId: segments[1].id,
+          focusedSegmentId: segments[0].id,
         })}
       />
     )
 
-    expect(legendButton("Results").getAttribute("data-highlighted")).toBe(
-      "true"
-    )
-    expect(legendButton("Intro").getAttribute("data-highlighted")).toBe(
-      "false"
-    )
-    expect(legendButton("Unused").getAttribute("data-highlighted")).toBe(
-      "false"
-    )
+    expect(legendButton("Results").getAttribute("data-previewed")).toBe("true")
+    expect(legendButton("Intro").getAttribute("data-previewed")).toBe("false")
+    expect(legendButton("Unused").getAttribute("data-previewed")).toBe("false")
     expect(legendButton("Results").className).toContain("opacity-100")
     expect(legendButton("Intro").className).toContain("opacity-40")
     expect(legendButton("Unused").className).toContain("opacity-40")
   })
 
-  it("gives focus precedence over selection when nothing is hovered", () => {
+  it("gives focus the interaction preview when nothing is hovered", () => {
     render(
       <SegmentLegend
         segments={segments}
         showUnused
         interaction={createInteraction({
-          focusedId: segments[1].id,
-          selectedId: segments[0].id,
+          focusedSegmentId: segments[1].id,
         })}
       />
     )
 
-    expect(legendButton("Results").getAttribute("data-highlighted")).toBe(
-      "true"
-    )
-    expect(legendButton("Intro").getAttribute("aria-pressed")).toBe("true")
-    expect(legendButton("Intro").getAttribute("data-highlighted")).toBe(
-      "false"
-    )
+    expect(legendButton("Results").getAttribute("data-previewed")).toBe("true")
+    expect(legendButton("Intro").getAttribute("data-previewed")).toBe("false")
     expect(legendButton("Intro").className).toContain("opacity-40")
+    expect(legendButton("Results").className).toContain("opacity-100")
   })
 
-  it("preserves persistent selection after hover leaves", () => {
+  it("clears hover preview after hover leaves", () => {
     function Harness() {
-      const [hoveredId, setHoveredId] = React.useState<string | null>(null)
+      const [hoveredSegmentId, setHoveredSegmentId] = React.useState<
+        string | null
+      >(null)
       return (
         <SegmentLegend
           segments={segments}
           interaction={createInteraction({
-            hoveredId,
-            selectedId: segments[0].id,
-            setHoveredId,
+            hoveredSegmentId,
+            previewSegment: setHoveredSegmentId,
+            clearPreview: () => setHoveredSegmentId(null),
           })}
         />
       )
@@ -656,46 +639,48 @@ describe("SegmentLegend — interaction", () => {
     const results = legendButton("Results")
 
     fireEvent.mouseEnter(results)
-    expect(results.getAttribute("data-highlighted")).toBe("true")
+    expect(results.getAttribute("data-previewed")).toBe("true")
+    expect(legendButton("Intro").getAttribute("data-previewed")).toBe("false")
     expect(legendButton("Intro").className).toContain("opacity-40")
 
     fireEvent.mouseLeave(results)
-    expect(legendButton("Intro").getAttribute("data-highlighted")).toBe("true")
+    expect(legendButton("Intro").getAttribute("data-previewed")).toBe("false")
     expect(legendButton("Intro").className).toContain("opacity-100")
-    expect(results.className).toContain("opacity-40")
+    expect(results.className).toContain("opacity-100")
   })
 
-  it("re-scopes highlighted state after selected segments are removed", () => {
+  it("scopes hovered segment ids after segments are removed", () => {
     const { rerender } = render(
       <SegmentLegend
         segments={segments}
-        interaction={createInteraction({ selectedId: segments[0].id })}
+        interaction={createInteraction({ hoveredSegmentId: segments[0].id })}
       />
     )
+    expect(legendButton("Intro").getAttribute("data-previewed")).toBe("true")
     expect(legendButton("Results").className).toContain("opacity-40")
 
     rerender(
       <SegmentLegend
         segments={segments.slice(1, 2)}
-        interaction={createInteraction({ selectedId: segments[0].id })}
+        interaction={createInteraction({ hoveredSegmentId: segments[0].id })}
       />
     )
 
     expect(legendButton("Results").className).toContain("opacity-100")
-    expect(legendButton("Results").getAttribute("aria-pressed")).toBe("false")
+    expect(legendButton("Results").getAttribute("data-previewed")).toBe("false")
   })
 
-  it("does not clear hover or focus owned by another segment from stale leave/blur events", () => {
-    const setHoveredId = vi.fn()
-    const setFocusedId = vi.fn()
+  it("clears transient hover and focus on leave and blur", () => {
+    const clearPreview = vi.fn()
+    const clearFocus = vi.fn()
     render(
       <SegmentLegend
         segments={segments}
         interaction={createInteraction({
-          hoveredId: segments[1].id,
-          focusedId: segments[1].id,
-          setHoveredId,
-          setFocusedId,
+          hoveredSegmentId: segments[1].id,
+          focusedSegmentId: segments[1].id,
+          clearPreview,
+          clearFocus,
         })}
       />
     )
@@ -703,8 +688,8 @@ describe("SegmentLegend — interaction", () => {
     fireEvent.mouseLeave(legendButton("Intro"))
     fireEvent.blur(legendButton("Intro"))
 
-    expect(setHoveredId).not.toHaveBeenCalled()
-    expect(setFocusedId).not.toHaveBeenCalled()
+    expect(clearPreview).toHaveBeenCalled()
+    expect(clearFocus).toHaveBeenCalled()
   })
 })
 
@@ -720,21 +705,21 @@ describe("SegmentLegend — current page", () => {
     expect(legendButton("Intro").getAttribute("data-current")).toBe("false")
   })
 
-  it("treats current and selected as independent signals", () => {
+  it("treats current as independent from hovered segment state", () => {
     render(
       <SegmentLegend
         segments={segments}
         showUnused
         currentPage={3}
-        interaction={createInteraction({ selectedId: segments[0].id })}
+        interaction={createInteraction({ hoveredSegmentId: segments[0].id })}
       />
     )
     const intro = legendButton("Intro")
     const results = legendButton("Results")
-    expect(intro.getAttribute("aria-pressed")).toBe("true")
     expect(intro.getAttribute("data-current")).toBe("false")
-    expect(results.getAttribute("aria-pressed")).toBe("false")
     expect(results.getAttribute("data-current")).toBe("true")
+    expect(intro.getAttribute("data-previewed")).toBe("true")
+    expect(results.getAttribute("data-previewed")).toBe("false")
   })
 
   it("marks every overlapping owner of the current page", () => {
@@ -835,7 +820,9 @@ describe("SegmentLegend — caption", () => {
   })
 
   it("does not render an empty caption container for an empty string", () => {
-    const { container } = render(<SegmentLegend segments={segments} caption="" />)
+    const { container } = render(
+      <SegmentLegend segments={segments} caption="" />
+    )
     expect(container.querySelector(".line-clamp-2")).toBeNull()
   })
 
@@ -874,9 +861,7 @@ describe("SegmentLegend — caption", () => {
 
 describe("SegmentLegend — robustness", () => {
   it("renders duplicate ids without React duplicate-key warnings", () => {
-    const consoleError = vi
-      .spyOn(console, "error")
-      .mockImplementation(() => {})
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {})
     render(
       <SegmentLegend
         segments={[

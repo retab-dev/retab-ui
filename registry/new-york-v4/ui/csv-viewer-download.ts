@@ -4,6 +4,7 @@ import {
   type CsvDialect,
 } from "@/lib/csv"
 import type { ViewerDownloadAction } from "@/lib/viewer-download"
+import type { ViewerResource } from "@/lib/viewer-resource"
 
 export function escapeDelimitedField(value: string, delimiter: string): string {
   const text = value ?? ""
@@ -74,4 +75,38 @@ export function createCsvExportAction({
         : "text/csv;charset=utf-8",
     }),
   }
+}
+
+export function csvViewerDownloadActions({
+  resource,
+  columns,
+  sourceRows,
+  dialect,
+  fileName,
+  canExportTable,
+}: {
+  resource: ViewerResource | null
+  columns: string[]
+  sourceRows: string[][]
+  dialect: CsvDialect
+  fileName: string
+  canExportTable: boolean
+}): ViewerDownloadAction[] {
+  const actions: ViewerDownloadAction[] = []
+  if (resource) {
+    actions.push({
+      ...resource.originalDownload,
+      label: "Download original",
+    })
+  }
+  actions.push(
+    createCsvExportAction({
+      columns,
+      sourceRows,
+      dialect,
+      fileName,
+      isDisabled: !canExportTable,
+    })
+  )
+  return actions
 }

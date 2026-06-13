@@ -33,28 +33,40 @@ export function ImageViewerContent({
   resource,
   className,
   scale: controlledScale,
+  defaultScale,
+  onScaleChange,
   toolbar = true,
   renderFrameOverlay,
   onVisibleFrameChange,
   onScrollProgressChange,
   bare = false,
-  header,
-  aside,
+  slots,
   forwardedRef,
 }: Omit<ImageViewerProps, "source"> & {
   forwardedRef?: React.ForwardedRef<ImageViewerHandle>
   resource: ViewerResource
 }) {
+  const topSlot = slots?.top
+  const bottomSlot = slots?.bottom
+  const leftRailSlot = slots?.left
+  const rightRailSlot = slots?.right
+  const overlaySlot = slots?.overlay
   const frameSource = React.use(getImageSource(resource.content))
   const sourceLeaseRef = useFrameSourceLease(resource.content, frameSource)
   const { frameListRef, frameListWidth } = useFrameListWidth()
   const {
-    isScaleControlled,
     rotateClockwise,
     rotation,
     scale,
+    scaleControlsDisabled,
     setViewerScale,
-  } = useImageViewerScale(frameSource, controlledScale, frameListWidth)
+  } = useImageViewerScale(
+    frameSource,
+    controlledScale,
+    defaultScale,
+    onScaleChange,
+    frameListWidth
+  )
   const { currentFrameNumber, handleScroll, scrollViewportRef } =
     useVisibleFrame(frameSource, onScrollProgressChange, onVisibleFrameChange)
   useImageViewerHandle(forwardedRef, scrollViewportRef)
@@ -80,7 +92,7 @@ export function ImageViewerContent({
           countLabel={countLabel}
           scale={scale}
           downloadAction={resource.originalDownload}
-          isScaleControlled={isScaleControlled}
+          scaleControlsDisabled={scaleControlsDisabled}
           onZoomOut={() =>
             setViewerScale(
               clamp(scale / 1.2, MIN_VIEWER_SCALE, MAX_VIEWER_SCALE)
@@ -97,46 +109,64 @@ export function ImageViewerContent({
       ) : null}
 
       <div className="flex min-h-0 flex-1">
-        {aside ? (
-          <div data-slot="image-viewer-aside" className="flex-shrink-0">
-            {aside}
+        {leftRailSlot ? (
+          <div data-slot="image-viewer-left" className="flex-shrink-0">
+            {leftRailSlot}
           </div>
         ) : null}
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          {header ? <div data-slot="image-viewer-header">{header}</div> : null}
-          <ScrollArea
-            className="min-h-0 flex-1"
-            viewportRef={scrollViewportRef}
-            viewportProps={{ onScroll: handleScroll }}
-          >
-            <div
-              ref={frameListRef}
-              className="flex flex-col items-center gap-4 p-4"
+        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+          {topSlot ? <div data-slot="image-viewer-top">{topSlot}</div> : null}
+          <div className="relative flex min-h-0 flex-1 flex-col">
+            <ScrollArea
+              className="min-h-0 flex-1"
+              viewportRef={scrollViewportRef}
+              viewportProps={{ onScroll: handleScroll }}
             >
-              {frameSource.frames.map((_, frameIndex) => (
-                <ImageFrame
-                  key={frameIndex}
-                  source={frameSource}
-                  frameIndex={frameIndex}
-                  scale={scale}
-                  rotation={rotation}
-                  renderOverlay={
-                    renderFrameOverlay
-                      ? ({ frameNumber, frameRect, scale, rotation }) =>
-                          renderFrameOverlay({
-                            frameNumber,
-                            width: frameRect.width,
-                            height: frameRect.height,
-                            scale,
-                            rotation,
-                          })
-                      : undefined
-                  }
-                />
-              ))}
-            </div>
-          </ScrollArea>
+              <div
+                ref={frameListRef}
+                className="flex flex-col items-center gap-4 p-4"
+              >
+                {frameSource.frames.map((_, frameIndex) => (
+                  <ImageFrame
+                    key={frameIndex}
+                    source={frameSource}
+                    frameIndex={frameIndex}
+                    scale={scale}
+                    rotation={rotation}
+                    renderOverlay={
+                      renderFrameOverlay
+                        ? ({ frameNumber, frameRect, scale, rotation }) =>
+                            renderFrameOverlay({
+                              frameNumber,
+                              width: frameRect.width,
+                              height: frameRect.height,
+                              scale,
+                              rotation,
+                            })
+                        : undefined
+                    }
+                  />
+                ))}
+              </div>
+            </ScrollArea>
+            {overlaySlot ? (
+              <div
+                data-slot="image-viewer-overlay"
+                className="pointer-events-none absolute inset-0 z-10 [&>*]:pointer-events-auto"
+              >
+                {overlaySlot}
+              </div>
+            ) : null}
+          </div>
+          {bottomSlot ? (
+            <div data-slot="image-viewer-bottom">{bottomSlot}</div>
+          ) : null}
         </div>
+        {rightRailSlot ? (
+          <div data-slot="image-viewer-right" className="flex-shrink-0">
+            {rightRailSlot}
+          </div>
+        ) : null}
       </div>
     </div>
   )

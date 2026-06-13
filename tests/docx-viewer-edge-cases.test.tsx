@@ -439,6 +439,74 @@ describe("DocxViewer imperative handle before render", () => {
 })
 
 describe("DocxViewer highlight target keys", () => {
+  it("reuses the committed text index for imperative target scrolling", async () => {
+    const createTreeWalker = vi.spyOn(document, "createTreeWalker")
+    const ref = React.createRef<DocxViewerHandle>()
+
+    await renderDocx(
+      <DocxViewer ref={ref} source={docxUrlSource("/indexed-scroll.docx")} />
+    )
+    await waitForRenderedDocx()
+    const committedRenderWalks = createTreeWalker.mock.calls.length
+    expect(committedRenderWalks).toBeGreaterThan(0)
+
+    const scrollIntoView = vi.spyOn(HTMLElement.prototype, "scrollIntoView")
+    ref.current?.scrollToTarget(
+      { kind: "text", text: "revenue increased" },
+      { behavior: "auto" }
+    )
+    ref.current?.scrollToTarget(
+      { kind: "cell", table: 0, row: 0, column: 1 },
+      { behavior: "auto" }
+    )
+
+    expect(scrollIntoView).toHaveBeenCalledTimes(2)
+    expect(createTreeWalker).toHaveBeenCalledTimes(committedRenderWalks)
+  })
+
+  it("builds the text index once for a committed render and reuses it for highlight changes", async () => {
+    const highlights = new Map<string, MockHighlight>()
+    installHighlightApi(highlights)
+    const createTreeWalker = vi.spyOn(document, "createTreeWalker")
+
+    const view = await renderDocx(
+      <DocxViewer source={docxUrlSource("/indexed-highlight.docx")} />
+    )
+    await waitForRenderedDocx()
+    const committedRenderWalks = createTreeWalker.mock.calls.length
+    expect(committedRenderWalks).toBeGreaterThan(0)
+
+    await act(async () => {
+      view.rerender(
+        <DocxViewer
+          source={docxUrlSource("/indexed-highlight.docx")}
+          highlight={{ kind: "text", text: "revenue increased" }}
+        />
+      )
+    })
+    await waitFor(() => {
+      expect([...highlights.values()][0]?.ranges[0]?.toString()).toBe(
+        "revenue increased"
+      )
+    })
+
+    await act(async () => {
+      view.rerender(
+        <DocxViewer
+          source={docxUrlSource("/indexed-highlight.docx")}
+          highlight={{ kind: "text", text: "Target cell" }}
+        />
+      )
+    })
+    await waitFor(() => {
+      expect([...highlights.values()][0]?.ranges[0]?.toString()).toBe(
+        "Target cell"
+      )
+    })
+
+    expect(createTreeWalker).toHaveBeenCalledTimes(committedRenderWalks)
+  })
+
   it("does not recreate a cell highlight across re-renders with an equal target", async () => {
     const highlights = new Map<string, MockHighlight>()
     const set = vi.spyOn(highlights, "set")

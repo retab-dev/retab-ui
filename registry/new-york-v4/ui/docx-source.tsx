@@ -2,39 +2,44 @@
 
 import * as React from "react"
 
-import type { Source } from "@/lib/document-source"
+import type { Source, SourceAnchor } from "@/lib/document-source"
 import type { SourceTarget } from "@/hooks/use-source-link"
 import type { DocxTarget, DocxViewerHandle } from "@/components/ui/docx-viewer"
 
 /**
- * A docx source → a viewer-ready `DocxTarget`, or null when the anchor isn't a
- * docx anchor. Text spans carry the quoted `content` (the viewer locates it by
- * match); table cells carry their index. Mirrors the PDF adapter's
- * `pdfAnchorToLocation` — the adapter resolves the anchor, the viewer the DOM.
+ * A docx anchor + source payload -> a viewer-ready `DocxTarget`, or null when
+ * the anchor is not a docx anchor. Text spans carry the quoted `content` from
+ * the source; table cells carry their index. The adapter resolves the source
+ * model, while the viewer resolves the rendered DOM.
  */
-export function docxSourceToTarget(
-  source: Source | undefined
+export function docxAnchorToTarget(
+  anchor: SourceAnchor | undefined,
+  source?: Source
 ): DocxTarget | null {
-  if (!source) return null
-  const a = source.anchor
-  if (a.kind === "docx_text_span") {
+  if (!anchor) return null
+  if (anchor.kind === "docx_text_span") {
     if (
-      !isNonNegativeInteger(a.paragraph) ||
-      !isValidOptionalRange(a.char_start, a.char_end)
+      !isNonNegativeInteger(anchor.paragraph) ||
+      !isValidOptionalRange(anchor.char_start, anchor.char_end)
     )
       return null
-    const text = source.content.trim()
+    const text = source?.content.trim()
     return text ? { kind: "text", text } : null
   }
-  if (a.kind === "docx_table_cell") {
+  if (anchor.kind === "docx_table_cell") {
     if (
-      !isNonNegativeInteger(a.table) ||
-      !isNonNegativeInteger(a.row) ||
-      !isNonNegativeInteger(a.column) ||
-      !isValidOptionalRange(a.char_start, a.char_end)
+      !isNonNegativeInteger(anchor.table) ||
+      !isNonNegativeInteger(anchor.row) ||
+      !isNonNegativeInteger(anchor.column) ||
+      !isValidOptionalRange(anchor.char_start, anchor.char_end)
     )
       return null
-    return { kind: "cell", table: a.table, row: a.row, column: a.column }
+    return {
+      kind: "cell",
+      table: anchor.table,
+      row: anchor.row,
+      column: anchor.column,
+    }
   }
   return null
 }
@@ -61,7 +66,7 @@ export function useDocxSourceTarget(
   return React.useMemo<SourceTarget>(
     () => ({
       scrollTo: (source: Source, options) => {
-        const target = docxSourceToTarget(source)
+        const target = docxAnchorToTarget(source.anchor, source)
         if (target) viewerRef.current?.scrollToTarget(target, options)
       },
     }),
@@ -76,5 +81,5 @@ export function useDocxSourceTarget(
 export function sourceToDocxHighlight(
   source: Source | undefined
 ): DocxTarget | null {
-  return docxSourceToTarget(source)
+  return source ? docxAnchorToTarget(source.anchor, source) : null
 }

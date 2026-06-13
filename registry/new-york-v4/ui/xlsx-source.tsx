@@ -21,7 +21,7 @@ export function spreadsheetColumnToIndex(letter: string): number | null {
  * A `spreadsheet_cell` anchor to the viewer's public compatibility coordinates.
  * Internals convert this shape to `{ sheetIndex, rowIndex, columnIndex }`.
  */
-export function spreadsheetAnchorToCell(
+export function xlsxAnchorToTarget(
   anchor: SourceAnchor
 ): { sheet: number; row: number; col: number } | undefined {
   if (anchor.kind === "spreadsheet_cell") {
@@ -51,12 +51,12 @@ export function useXlsxSourceTarget(
   return React.useMemo<SourceTarget>(
     () => ({
       scrollTo: (source: Source, options) => {
-        const cell = spreadsheetAnchorToCell(source.anchor)
-        if (cell) {
+        const target = xlsxAnchorToTarget(source.anchor)
+        if (target) {
           viewerRef.current?.scrollToCell(
-            cell.sheet,
-            cell.row,
-            cell.col,
+            target.sheet,
+            target.row,
+            target.col,
             options
           )
         }
@@ -73,5 +73,5 @@ export function useXlsxSourceTarget(
 export function sourceToXlsxCell(
   source: Source | undefined
 ): { sheet: number; row: number; col: number } | null {
-  return (source && spreadsheetAnchorToCell(source.anchor)) || null
+  return source ? xlsxAnchorToTarget(source.anchor) || null : null
 }

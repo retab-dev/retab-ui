@@ -1,3 +1,5 @@
+import * as React from "react"
+
 import { resolveXlsxSheetChange, type XlsxSheetMeta } from "@/lib/xlsx-workbook"
 
 export interface PublicXlsxCellRef {
@@ -91,6 +93,82 @@ export function resolveLoadedScrollTarget({
     sheetIndex: change.sheetIndex,
     request: target,
     changed: change.changed,
+  }
+}
+
+export function useXlsxScrollController({
+  activeSheetIndex,
+  sheets,
+  activateSheet,
+}: {
+  activeSheetIndex: number
+  sheets: XlsxSheetMeta[] | null
+  activateSheet: (sheetIndex: number) => void
+}) {
+  const [scrollRequest, setScrollRequest] =
+    React.useState<XlsxScrollRequest | null>(null)
+  const [pendingScrollTarget, setPendingScrollTarget] =
+    React.useState<PendingXlsxScrollTarget | null>(null)
+  const scrollNonce = React.useRef(0)
+
+  const issueLoadedScrollTarget = React.useCallback(
+    (target: PendingXlsxScrollTarget) => {
+      if (!sheets) return false
+
+      const resolved = resolveLoadedScrollTarget({
+        activeSheetIndex,
+        target,
+        sheets,
+      })
+      if (!resolved) return false
+
+      if (resolved.changed) {
+        activateSheet(resolved.sheetIndex)
+      }
+
+      scrollNonce.current += 1
+      setScrollRequest({
+        ...resolved.request,
+        nonce: scrollNonce.current,
+      })
+      return true
+    },
+    [activateSheet, activeSheetIndex, sheets]
+  )
+
+  React.useEffect(() => {
+    if (!pendingScrollTarget || !sheets) return
+    setPendingScrollTarget(null)
+    issueLoadedScrollTarget(pendingScrollTarget)
+  }, [issueLoadedScrollTarget, pendingScrollTarget, sheets])
+
+  const scrollToCell = React.useCallback(
+    (
+      sheet: number,
+      row: number,
+      col: number,
+      options?: { behavior?: ScrollBehavior }
+    ) => {
+      const target = toInternalCellRef({ sheet, row, col })
+      if (!target) return
+
+      const pendingTarget = {
+        ...target,
+        behavior: options?.behavior ?? "smooth",
+      }
+      if (!sheets) {
+        setPendingScrollTarget(pendingTarget)
+        return
+      }
+
+      issueLoadedScrollTarget(pendingTarget)
+    },
+    [issueLoadedScrollTarget, sheets]
+  )
+
+  return {
+    scrollRequest,
+    scrollToCell,
   }
 }
 

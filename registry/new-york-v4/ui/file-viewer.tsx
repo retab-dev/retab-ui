@@ -6,6 +6,7 @@ import {
   createViewerResource,
   type ViewerResource,
 } from "@/lib/viewer-resource"
+import { useIsClient } from "@/components/ui/use-is-client"
 
 import {
   FileErrorBoundary,
@@ -51,14 +52,6 @@ const XlsxResourceViewer = React.lazy(() =>
     default: m.XlsxResourceViewer,
   }))
 )
-
-function useIsClient() {
-  return React.useSyncExternalStore(
-    () => () => {},
-    () => true,
-    () => false
-  )
-}
 
 const useIsomorphicLayoutEffect =
   typeof window !== "undefined" ? React.useLayoutEffect : React.useEffect

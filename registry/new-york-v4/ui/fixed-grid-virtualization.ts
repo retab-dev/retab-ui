@@ -22,6 +22,12 @@ export interface FixedGridVirtualItem {
   end: number
 }
 
+export interface FixedGridRowPoolSlot {
+  slotIndex: number
+  virtualRow: FixedGridVirtualItem | null
+  isHidden: boolean
+}
+
 export interface FixedGridScrollTarget {
   rowIndex: number
   columnIndex: number
@@ -35,6 +41,45 @@ export interface FixedRowScrollTarget {
   behavior?: ScrollBehavior
 }
 
+export type FixedGridJumpViewportResult = "handled" | "pass"
+
+export interface FixedGridRowScrollStrategy {
+  settleAfterMs?: number
+  handleViewport: (viewport: FixedGridViewport) => FixedGridJumpViewportResult
+}
+
+export function useFixedRowPool({
+  minimumPoolSize = 0,
+  rowCount,
+  virtualRows,
+}: {
+  minimumPoolSize?: number
+  rowCount: number
+  virtualRows: FixedGridVirtualItem[]
+}): FixedGridRowPoolSlot[] {
+  const poolSizeRef = React.useRef(0)
+  const safeRowCount = fixedItemCount(rowCount)
+  const safeMinimumPoolSize = fixedItemCount(minimumPoolSize)
+  const nextPoolSize = Math.min(
+    safeRowCount,
+    Math.max(poolSizeRef.current, virtualRows.length, safeMinimumPoolSize)
+  )
+  poolSizeRef.current = nextPoolSize
+
+  return React.useMemo(
+    () =>
+      Array.from({ length: nextPoolSize }, (_, slotIndex) => {
+        const virtualRow = virtualRows[slotIndex] ?? null
+        return {
+          slotIndex,
+          virtualRow,
+          isHidden: !virtualRow,
+        }
+      }),
+    [nextPoolSize, virtualRows]
+  )
+}
+
 export function useFixedGridVirtualization({
   rowCount,
   columnCount,
@@ -44,8 +89,8 @@ export function useFixedGridVirtualization({
   columnOverscan,
   jumpRowOverscan = rowOverscan,
   jumpColumnOverscan = columnOverscan,
-  minimumRowWindow = MINIMUM_ROW_WINDOW,
-  onJumpRowsViewport,
+  minimumRenderedRows = MINIMUM_ROW_WINDOW,
+  rowScrollStrategy,
   scrollRef,
   scrollElement,
   virtualizeColumns = true,
@@ -58,8 +103,8 @@ export function useFixedGridVirtualization({
   columnOverscan: number
   jumpRowOverscan?: number
   jumpColumnOverscan?: number
-  minimumRowWindow?: number
-  onJumpRowsViewport?: (viewport: FixedGridViewport) => boolean
+  minimumRenderedRows?: number
+  rowScrollStrategy?: FixedGridRowScrollStrategy
   scrollRef: React.RefObject<HTMLElement | null>
   scrollElement?: HTMLElement | null
   virtualizeColumns?: boolean
@@ -70,7 +115,7 @@ export function useFixedGridVirtualization({
   })
   const viewport = useFixedGridViewport(
     resolvedScrollElement,
-    onJumpRowsViewport
+    rowScrollStrategy
   )
 
   const totalRowSize = fixedTotalSize(rowCount, rowSize)
@@ -91,7 +136,7 @@ export function useFixedGridVirtualization({
         scrollOffset: viewport.scrollTop,
         viewportSize: viewport.clientHeight,
         overscan: activeRowOverscan,
-        minimumVisibleCount: minimumRowWindow,
+        minimumVisibleCount: minimumRenderedRows,
       }),
     [
       rowCount,
@@ -99,7 +144,7 @@ export function useFixedGridVirtualization({
       viewport.scrollTop,
       viewport.clientHeight,
       activeRowOverscan,
-      minimumRowWindow,
+      minimumRenderedRows,
     ]
   )
 
@@ -192,6 +237,7 @@ export function useFixedGridVirtualization({
     scrollToCell,
     isJumpingRows: viewport.isJumpingRows,
     isJumpingColumns: viewport.isJumpingColumns,
+    viewportClientHeight: viewport.clientHeight,
     ...columnWindow,
   }
 }
@@ -413,7 +459,7 @@ function useResolvedScrollElement({
 
 function useFixedGridViewport(
   scrollElement: HTMLElement | null | undefined,
-  onJumpRowsViewport?: (viewport: FixedGridViewport) => boolean
+  rowScrollStrategy?: FixedGridRowScrollStrategy
 ) {
   const [viewport, setViewport] = React.useState<FixedGridViewport>(
     emptyFixedGridViewport
@@ -460,12 +506,15 @@ function useFixedGridViewport(
         isJumpingColumns: columnDelta > clientWidth * 0.45,
       }
 
-      if (next.isJumpingRows && onJumpRowsViewport?.(next)) {
+      if (
+        rowDelta > 0 &&
+        rowScrollStrategy?.handleViewport(next) === "handled"
+      ) {
         if (settleTimeout) window.clearTimeout(settleTimeout)
         settleTimeout = window.setTimeout(() => {
           settleTimeout = 0
           commitViewport(next)
-        }, 80)
+        }, rowScrollStrategy.settleAfterMs ?? 80)
         return
       }
 
@@ -495,7 +544,7 @@ function useFixedGridViewport(
       scrollElement.removeEventListener("scroll", scheduleRead)
       observer?.disconnect()
     }
-  }, [scrollElement, onJumpRowsViewport])
+  }, [scrollElement, rowScrollStrategy])
 
   return viewport
 }

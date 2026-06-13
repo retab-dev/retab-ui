@@ -29,13 +29,13 @@ export interface SegmentedDocumentViewerProps {
 /**
  * The shared engine behind the partition and split viewers. Composes three
  * reusable surfaces over one `Segment[]` model:
- *   - SegmentSidebar  (selectable list, left)
+ *   - SegmentSidebar  (navigable list, left)
  *   - SegmentLegend   (color key, top)
  *   - PageTimeline    (page strip) + an optional source PDF
  *
- * Hover, focus, and persistent selection are shared: a segment highlighted in
- * one surface is reflected everywhere, and clicking a segment scrolls the
- * document to its first page.
+ * Hover and focus are shared across surfaces. The current PDF page marks the
+ * segment that owns it, and clicking a segment scrolls the document to its first
+ * page.
  */
 export function SegmentedDocumentViewer({
   segments,

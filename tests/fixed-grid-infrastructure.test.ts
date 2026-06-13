@@ -7,6 +7,7 @@ import {
   fireEvent,
   render,
   renderHook,
+  screen,
   waitFor,
 } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
@@ -49,6 +50,7 @@ import {
   fixedScrollOffset,
   fixedVirtualItems,
   useFixedGridVirtualization,
+  useFixedRowPool,
   useFixedRowVirtualization,
 } from "@/registry/new-york-v4/ui/fixed-grid-virtualization"
 import { HeaderAwareScrollbar } from "@/registry/new-york-v4/ui/header-aware-scrollbar"
@@ -111,6 +113,7 @@ describe("fixed grid public entrypoints", () => {
     expect(PublicFixedGridVirtualization.useFixedGridVirtualization).toBe(
       useFixedGridVirtualization
     )
+    expect(PublicFixedGridVirtualization.useFixedRowPool).toBe(useFixedRowPool)
     expect(PublicFixedGridVirtualization.useFixedRowVirtualization).toBe(
       useFixedRowVirtualization
     )
@@ -1611,6 +1614,94 @@ describe("fixed grid virtualization math", () => {
     ])
   })
 
+  it("keeps fixed row pool slots stable and hides surplus rows", () => {
+    const firstRows = fixedVirtualItems({
+      count: 100,
+      size: 10,
+      scrollOffset: 0,
+      viewportSize: 30,
+      overscan: 0,
+    })
+    const nextRows = fixedVirtualItems({
+      count: 100,
+      size: 10,
+      scrollOffset: 50,
+      viewportSize: 10,
+      overscan: 0,
+    })
+
+    const { result, rerender } = renderHook(
+      ({ rowCount, virtualRows }) => useFixedRowPool({ rowCount, virtualRows }),
+      {
+        initialProps: {
+          rowCount: 100,
+          virtualRows: firstRows,
+        },
+      }
+    )
+
+    expect(result.current.map((slot) => slot.slotIndex)).toEqual([0, 1, 2, 3])
+    expect(
+      result.current.map((slot) => slot.virtualRow?.index ?? null)
+    ).toEqual([0, 1, 2, 3])
+
+    rerender({ rowCount: 100, virtualRows: nextRows })
+
+    expect(result.current.map((slot) => slot.slotIndex)).toEqual([0, 1, 2, 3])
+    expect(
+      result.current.map((slot) => slot.virtualRow?.index ?? null)
+    ).toEqual([5, 6, null, null])
+    expect(result.current.map((slot) => slot.isHidden)).toEqual([
+      false,
+      false,
+      true,
+      true,
+    ])
+
+    rerender({ rowCount: 2, virtualRows: nextRows.slice(0, 1) })
+
+    expect(result.current.map((slot) => slot.slotIndex)).toEqual([0, 1])
+  })
+
+  it("preallocates fixed row pool reserve slots without exceeding row count", () => {
+    const virtualRows = fixedVirtualItems({
+      count: 10,
+      size: 10,
+      scrollOffset: 0,
+      viewportSize: 20,
+      overscan: 0,
+    })
+
+    const { result, rerender } = renderHook(
+      ({ minimumPoolSize, rowCount }) =>
+        useFixedRowPool({
+          minimumPoolSize,
+          rowCount,
+          virtualRows,
+        }),
+      {
+        initialProps: {
+          minimumPoolSize: 6,
+          rowCount: 10,
+        },
+      }
+    )
+
+    expect(result.current).toHaveLength(6)
+    expect(result.current.map((slot) => slot.isHidden)).toEqual([
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+    ])
+
+    rerender({ minimumPoolSize: 6, rowCount: 2 })
+
+    expect(result.current).toHaveLength(2)
+  })
+
   it("updates grid windows from scroll events using jump overscan", () => {
     const scroller = document.createElement("div")
     defineViewportMetric(scroller, "clientHeight", 20)
@@ -1672,7 +1763,8 @@ describe("fixed grid virtualization math", () => {
       return 1
     })
     vi.stubGlobal("cancelAnimationFrame", vi.fn())
-    const onJumpRowsViewport = vi.fn(() => true)
+    const handleViewport = vi.fn(() => "handled" as const)
+    const rowScrollStrategy = { handleViewport }
 
     const scrollRef = {
       current: scroller,
@@ -1687,7 +1779,7 @@ describe("fixed grid virtualization math", () => {
         columnOverscan: 5,
         jumpRowOverscan: 0,
         jumpColumnOverscan: 0,
-        onJumpRowsViewport,
+        rowScrollStrategy,
         scrollRef,
         scrollElement: scroller,
       })
@@ -1700,7 +1792,7 @@ describe("fixed grid virtualization math", () => {
       scroller.dispatchEvent(new Event("scroll"))
     })
 
-    expect(onJumpRowsViewport).toHaveBeenCalledWith(
+    expect(handleViewport).toHaveBeenCalledWith(
       expect.objectContaining({
         scrollTop: 500,
         isJumpingRows: true,
@@ -1714,6 +1806,141 @@ describe("fixed grid virtualization math", () => {
 
     expect(result.current.virtualRows[0]?.index).toBe(50)
     expect(result.current.virtualRows.at(-1)?.index).toBe(82)
+  })
+
+  it("lets handled small row-scroll viewports use the same deferred React update path", () => {
+    vi.useFakeTimers()
+    const scroller = document.createElement("div")
+    defineViewportMetric(scroller, "clientHeight", 20)
+    defineHorizontalViewportMetric(scroller, "clientWidth", 30)
+    defineScrollMetric(scroller, "scrollTop", 0)
+    defineScrollMetric(scroller, "scrollLeft", 0)
+    vi.stubGlobal("ResizeObserver", StubResizeObserver)
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      callback(performance.now())
+      return 1
+    })
+    vi.stubGlobal("cancelAnimationFrame", vi.fn())
+    const handleViewport = vi.fn(() => "handled" as const)
+    const rowScrollStrategy = { handleViewport }
+
+    const scrollRef = {
+      current: scroller,
+    } as React.RefObject<HTMLElement | null>
+    const { result } = renderHook(() =>
+      useFixedGridVirtualization({
+        rowCount: 100,
+        columnCount: 100,
+        rowSize: 10,
+        columnSize: 10,
+        rowOverscan: 5,
+        columnOverscan: 5,
+        jumpRowOverscan: 0,
+        jumpColumnOverscan: 0,
+        rowScrollStrategy,
+        scrollRef,
+        scrollElement: scroller,
+      })
+    )
+
+    expect(result.current.virtualRows[0]?.index).toBe(0)
+
+    defineScrollMetric(scroller, "scrollTop", 5)
+    act(() => {
+      scroller.dispatchEvent(new Event("scroll"))
+    })
+
+    expect(handleViewport).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scrollTop: 5,
+        isJumpingRows: false,
+      })
+    )
+    expect(result.current.virtualRows[0]?.index).toBe(0)
+
+    act(() => {
+      vi.advanceTimersByTime(80)
+    })
+
+    expect(result.current.virtualRows[0]?.index).toBe(0)
+  })
+
+  it("restores row aria indexes when a handled jump-row viewport settles", () => {
+    vi.useFakeTimers()
+    const scroller = document.createElement("div")
+    defineViewportMetric(scroller, "clientHeight", 20)
+    defineHorizontalViewportMetric(scroller, "clientWidth", 30)
+    defineScrollMetric(scroller, "scrollTop", 0)
+    defineScrollMetric(scroller, "scrollLeft", 0)
+    vi.stubGlobal("ResizeObserver", StubResizeObserver)
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      callback(performance.now())
+      return 1
+    })
+    vi.stubGlobal("cancelAnimationFrame", vi.fn())
+
+    function Harness() {
+      const scrollRef = React.useRef<HTMLElement | null>(scroller)
+      const { virtualRows } = useFixedGridVirtualization({
+        rowCount: 100,
+        columnCount: 1,
+        rowSize: 10,
+        columnSize: 10,
+        rowOverscan: 0,
+        columnOverscan: 0,
+        jumpRowOverscan: 0,
+        jumpColumnOverscan: 0,
+        minimumRenderedRows: 1,
+        rowScrollStrategy: { handleViewport: () => "handled" },
+        scrollRef,
+        scrollElement: scroller,
+      })
+
+      return React.createElement(
+        "div",
+        null,
+        virtualRows.map((row) =>
+          React.createElement(
+            "div",
+            {
+              key: row.index,
+              "data-testid": "virtual-row",
+              "aria-rowindex": row.index + 2,
+            },
+            row.index
+          )
+        )
+      )
+    }
+
+    render(React.createElement(Harness))
+
+    expect(
+      screen
+        .getAllByTestId("virtual-row")
+        .map((row) => row.getAttribute("aria-rowindex"))
+    ).toEqual(["2", "3", "4"])
+
+    defineScrollMetric(scroller, "scrollTop", 500)
+    act(() => {
+      scroller.dispatchEvent(new Event("scroll"))
+    })
+
+    expect(
+      screen
+        .getAllByTestId("virtual-row")
+        .map((row) => row.getAttribute("aria-rowindex"))
+    ).toEqual(["2", "3", "4"])
+
+    act(() => {
+      vi.advanceTimersByTime(80)
+    })
+
+    expect(
+      screen
+        .getAllByTestId("virtual-row")
+        .map((row) => row.getAttribute("aria-rowindex"))
+    ).toEqual(["52", "53", "54"])
   })
 
   it("switches the measured grid viewport when the scroll element changes", () => {

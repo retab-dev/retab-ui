@@ -2435,6 +2435,36 @@ describe("ImageViewer scale semantics", () => {
     ).toBeTruthy()
   })
 
+  it("reports controlled scale changes through onScaleChange", async () => {
+    const onScaleChange = vi.fn()
+    stubImageLoading(bitmap(20, 10))
+    stubViewerLayout()
+
+    await act(async () => {
+      render(
+        <ImageViewer
+          source={imageUrlSource("/controlled-scale-change.png")}
+          scale={1}
+          onScaleChange={onScaleChange}
+        />
+      )
+    })
+
+    expect(
+      ((await screen.findByLabelText("Zoom in")) as HTMLButtonElement).disabled
+    ).toBe(false)
+
+    await act(async () => {
+      fireEvent.click(screen.getByLabelText("Zoom in"))
+    })
+    await act(async () => {
+      fireEvent.click(screen.getByLabelText("Fit width"))
+    })
+
+    expect(onScaleChange).toHaveBeenCalledWith(1.2)
+    expect(onScaleChange).toHaveBeenCalledWith(null)
+  })
+
   it("normalizes invalid controlled scale values before rendering frame geometry", async () => {
     stubImageLoading(bitmap(100, 50))
     stubObservableLayout({ frameListWidth: 432, isIntersecting: false })
@@ -2655,7 +2685,7 @@ describe("ImageViewer interactions", () => {
     expect(download.getAttribute("download")).toBe("second-name.png")
   })
 
-  it("renders header and aside slots while allowing the toolbar to be hidden", async () => {
+  it("renders document slots while allowing the toolbar to be hidden", async () => {
     stubImageLoading(bitmap(20, 20))
     stubObservableLayout({ isIntersecting: false })
 
@@ -2665,8 +2695,10 @@ describe("ImageViewer interactions", () => {
         <ImageViewer
           source={imageUrlSource("/slotted.png")}
           toolbar={false}
-          header={<div>Image header</div>}
-          aside={<nav>Image rail</nav>}
+          slots={{
+            top: <div>Image header</div>,
+            left: <nav>Image rail</nav>,
+          }}
         />
       )
     })
@@ -2676,10 +2708,10 @@ describe("ImageViewer interactions", () => {
     expect(screen.getByText("Image rail")).toBeTruthy()
     expect(screen.queryByLabelText("Zoom in")).toBeNull()
     expect(
-      container.querySelector('[data-slot="image-viewer-header"]')?.textContent
+      container.querySelector('[data-slot="image-viewer-top"]')?.textContent
     ).toBe("Image header")
     expect(
-      container.querySelector('[data-slot="image-viewer-aside"]')?.textContent
+      container.querySelector('[data-slot="image-viewer-left"]')?.textContent
     ).toBe("Image rail")
     expect(container.querySelector('[data-frame-number="1"]')).toBeTruthy()
   })

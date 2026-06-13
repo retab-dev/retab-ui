@@ -1892,25 +1892,30 @@ describe("PdfViewer", () => {
 
   it("marks the active thumbnail and reports selected page clicks", async () => {
     const onSelectPage = vi.fn()
-    pdfjsMock.docs.set(
-      "/thumbnail-select.pdf",
-      makeDoc([
-        [100, 200],
-        [100, 200],
-        [100, 200],
-      ])
-    )
+    const doc = makeDoc([
+      [100, 200],
+      [100, 200],
+      [100, 200],
+    ])
+    for (const page of doc.pages) {
+      page.render.mockImplementation(() => {
+        const task = {
+          promise: Promise.resolve(),
+          cancel: vi.fn(),
+        }
+        pdfjsMock.renderTasks.push(task)
+        return task
+      })
+    }
+    pdfjsMock.docs.set("/thumbnail-select.pdf", doc)
 
-    let view!: ReturnType<typeof render>
-    await act(async () => {
-      view = render(
-        <PdfThumbnailSidebar
-          src="/thumbnail-select.pdf"
-          currentPage={2}
-          onSelectPage={onSelectPage}
-        />
-      )
-    })
+    const view = render(
+      <PdfThumbnailSidebar
+        src="/thumbnail-select.pdf"
+        currentPage={2}
+        onSelectPage={onSelectPage}
+      />
+    )
     await screen.findByText("3")
 
     expect(screen.getByRole("button", { current: "page" }).textContent).toBe(
@@ -1931,6 +1936,28 @@ describe("PdfViewer", () => {
     expect(screen.getByRole("button", { current: "page" }).textContent).toBe(
       "3"
     )
+
+    view.unmount()
+  })
+
+  it("virtualizes thumbnail rows for large documents", async () => {
+    vi.stubGlobal("IntersectionObserver", undefined)
+    const doc = makeDoc(
+      Array.from({ length: 96 }, () => [100, 200] as [number, number])
+    )
+    pdfjsMock.docs.set("/thumbnail-virtualized.pdf", doc)
+
+    await act(async () => {
+      render(
+        <PdfThumbnailSidebar src="/thumbnail-virtualized.pdf" width={50} />
+      )
+    })
+
+    await screen.findByText("1")
+    await waitFor(() => expect(doc.getPage).toHaveBeenCalled())
+
+    expect(document.querySelectorAll("[data-index]").length).toBeLessThan(96)
+    expect(doc.getPage.mock.calls.length).toBeLessThan(96)
   })
 
   it("cancels thumbnail render tasks when thumbnails unmount", async () => {
@@ -1970,7 +1997,7 @@ describe("PdfViewer", () => {
     expect(firstTask.cancel).toHaveBeenCalledTimes(1)
   })
 
-  it("renders thumbnails immediately when IntersectionObserver is unavailable", async () => {
+  it("renders mounted thumbnails immediately when IntersectionObserver is unavailable", async () => {
     vi.stubGlobal("IntersectionObserver", undefined)
     const doc = makeDoc([[100, 200]])
     pdfjsMock.docs.set("/thumbnail-no-observer.pdf", doc)
@@ -1988,41 +2015,17 @@ describe("PdfViewer", () => {
     expect(canvas?.style.height).toBe("100px")
   })
 
-  it("does not load thumbnail pages until their observer marks them visible", async () => {
-    const doc = makeDoc([
-      [100, 200],
-      [100, 200],
-    ])
-    pdfjsMock.docs.set("/thumbnail-lazy.pdf", doc)
-
-    vi.stubGlobal(
-      "IntersectionObserver",
-      class IntersectionObserver {
-        observe() {}
-        unobserve() {}
-        disconnect() {}
-      }
+  it("loads only the mounted virtual thumbnail window without IntersectionObserver", async () => {
+    const doc = makeDoc(
+      Array.from({ length: 96 }, () => [100, 200] as [number, number])
     )
-
-    await act(async () => {
-      render(<PdfThumbnailSidebar src="/thumbnail-lazy.pdf" />)
-    })
-    await screen.findByText("2")
-
-    expect(doc.getPage).not.toHaveBeenCalled()
-    expect(document.querySelector("canvas")).toBeNull()
-  })
-
-  it("keeps thumbnail pages unloaded for non-intersecting entries and loads after intersection", async () => {
-    const doc = makeDoc([[100, 200]])
-    pdfjsMock.docs.set("/thumbnail-intersection.pdf", doc)
-    const callbacks: IntersectionObserverCallback[] = []
+    pdfjsMock.docs.set("/thumbnail-no-observer-window.pdf", doc)
 
     vi.stubGlobal(
       "IntersectionObserver",
       class IntersectionObserver {
-        constructor(callback: IntersectionObserverCallback) {
-          callbacks.push(callback)
+        constructor() {
+          throw new Error("IntersectionObserver should not be used")
         }
         observe() {}
         unobserve() {}
@@ -2031,57 +2034,33 @@ describe("PdfViewer", () => {
     )
 
     await act(async () => {
-      render(<PdfThumbnailSidebar src="/thumbnail-intersection.pdf" />)
+      render(<PdfThumbnailSidebar src="/thumbnail-no-observer-window.pdf" />)
     })
     await screen.findByText("1")
+    await waitFor(() => expect(doc.getPage).toHaveBeenCalled())
 
-    act(() => {
-      callbacks[0]?.(
-        [{ isIntersecting: false } as IntersectionObserverEntry],
-        {} as IntersectionObserver
-      )
-    })
-    expect(doc.getPage).not.toHaveBeenCalled()
-
-    act(() => {
-      callbacks[0]?.(
-        [{ isIntersecting: true } as IntersectionObserverEntry],
-        {} as IntersectionObserver
-      )
-    })
-
-    await waitFor(() => expect(doc.getPage).toHaveBeenCalledWith(1))
+    expect(document.querySelectorAll("[data-index]").length).toBeLessThan(96)
+    expect(doc.getPage.mock.calls.length).toBeLessThan(96)
   })
 
-  it("disconnects thumbnail observers when unmounted before thumbnails become visible", async () => {
-    const doc = makeDoc([
-      [100, 200],
-      [100, 200],
-    ])
-    pdfjsMock.docs.set("/thumbnail-observer-cleanup.pdf", doc)
-    const disconnect = vi.fn()
-
-    vi.stubGlobal(
-      "IntersectionObserver",
-      class IntersectionObserver {
-        observe() {}
-        unobserve() {}
-        disconnect = disconnect
-      }
+  it("cancels thumbnail render tasks when virtual rows unmount", async () => {
+    const doc = makeDoc(
+      Array.from({ length: 96 }, () => [100, 200] as [number, number])
     )
+    pdfjsMock.docs.set("/thumbnail-virtual-unmount.pdf", doc)
 
     let view!: ReturnType<typeof render>
     await act(async () => {
       view = render(
-        <PdfThumbnailSidebar src="/thumbnail-observer-cleanup.pdf" />
+        <PdfThumbnailSidebar src="/thumbnail-virtual-unmount.pdf" width={50} />
       )
     })
-    await screen.findByText("2")
+    await waitFor(() => expect(pdfjsMock.renderTasks.length).toBeGreaterThan(0))
+    const tasks = [...pdfjsMock.renderTasks]
 
     view.unmount()
 
-    expect(disconnect).toHaveBeenCalled()
-    expect(doc.getPage).not.toHaveBeenCalled()
+    expect(tasks.some((task) => task.cancel.mock.calls.length > 0)).toBe(true)
   })
 
   it("sizes thumbnails from intrinsically rotated page viewports", async () => {

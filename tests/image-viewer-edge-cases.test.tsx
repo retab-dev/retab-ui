@@ -21,8 +21,7 @@ import {
 } from "@/registry/new-york-v4/lib/image-geometry"
 import { clearViewerResourceRegistryForTests } from "@/registry/new-york-v4/lib/viewer-resource"
 import {
-  imageAnchorToArea,
-  imageAnchorToFrame,
+  imageAnchorToTarget,
   rotateImageArea,
 } from "@/registry/new-york-v4/ui/image-source"
 import {
@@ -209,22 +208,22 @@ describe("rotateNormalizedBox", () => {
 // image-source anchor mapping
 // ──────────────────────────────────────────────────────────────────────────
 
-describe("imageAnchorToArea", () => {
-  it("converts a valid image bbox to a percentage area", () => {
+describe("imageAnchorToTarget", () => {
+  it("converts a valid image bbox to a frame target with a percentage area", () => {
     expect(
-      imageAnchorToArea({
+      imageAnchorToTarget({
         kind: "image_bbox",
         left: 0.1,
         top: 0.2,
         width: 0.3,
         height: 0.4,
       })
-    ).toEqual({ left: 10, top: 20, width: 30, height: 40 })
+    ).toEqual({ frame: 1, area: { left: 10, top: 20, width: 30, height: 40 } })
   })
 
   it("converts a pdf bbox the same way", () => {
     expect(
-      imageAnchorToArea({
+      imageAnchorToTarget({
         kind: "pdf_bbox",
         page: 1,
         left: 0,
@@ -232,19 +231,19 @@ describe("imageAnchorToArea", () => {
         width: 1,
         height: 1,
       })
-    ).toEqual({ left: 0, top: 0, width: 100, height: 100 })
+    ).toEqual({ frame: 1, area: { left: 0, top: 0, width: 100, height: 100 } })
   })
 
   it("accepts boxes whose edges touch the frame boundary", () => {
     expect(
-      imageAnchorToArea({
+      imageAnchorToTarget({
         kind: "image_bbox",
         left: 0.5,
         top: 0.5,
         width: 0.5,
         height: 0.5,
       })
-    ).toEqual({ left: 50, top: 50, width: 50, height: 50 })
+    ).toEqual({ frame: 1, area: { left: 50, top: 50, width: 50, height: 50 } })
   })
 
   it.each([
@@ -255,44 +254,42 @@ describe("imageAnchorToArea", () => {
     ["NaN value", { left: Number.NaN, top: 0, width: 0.5, height: 0.5 }],
   ])("rejects %s", (_label, partial) => {
     expect(
-      imageAnchorToArea({ kind: "image_bbox", ...partial })
+      imageAnchorToTarget({ kind: "image_bbox", ...partial })
     ).toBeUndefined()
   })
 
   it("ignores non-raster anchors", () => {
     expect(
-      imageAnchorToArea({
+      imageAnchorToTarget({
         kind: "csv_cell",
         row: 1,
         column: "A",
       } as never)
     ).toBeUndefined()
   })
-})
 
-describe("imageAnchorToFrame", () => {
   it("defaults an image bbox without a page to frame 1", () => {
     expect(
-      imageAnchorToFrame({
+      imageAnchorToTarget({
         kind: "image_bbox",
         left: 0,
         top: 0,
         width: 1,
         height: 1,
-      })
+      })?.frame
     ).toBe(1)
   })
 
   it("uses the explicit page for multi-frame rasters", () => {
     expect(
-      imageAnchorToFrame({
+      imageAnchorToTarget({
         kind: "image_bbox",
         page: 3,
         left: 0,
         top: 0,
         width: 1,
         height: 1,
-      })
+      })?.frame
     ).toBe(3)
   })
 
@@ -302,7 +299,7 @@ describe("imageAnchorToFrame", () => {
     ["fractional", 1.5],
   ])("rejects a %s page", (_label, page) => {
     expect(
-      imageAnchorToFrame({
+      imageAnchorToTarget({
         kind: "image_bbox",
         page,
         left: 0,
@@ -315,14 +312,14 @@ describe("imageAnchorToFrame", () => {
 
   it("reads the pdf page for pdf bboxes", () => {
     expect(
-      imageAnchorToFrame({
+      imageAnchorToTarget({
         kind: "pdf_bbox",
         page: 4,
         left: 0,
         top: 0,
         width: 1,
         height: 1,
-      })
+      })?.frame
     ).toBe(4)
   })
 })

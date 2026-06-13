@@ -29,6 +29,11 @@ import {
   normalizeTextLineRange,
 } from "@/registry/new-york-v4/ui/text-viewer-ranges"
 import {
+  TEXT_VIEWER_BASE_LINE_PX,
+  TEXT_VIEWER_INITIAL_VIEWPORT_HEIGHT,
+  TEXT_VIEWER_OVERSCAN,
+} from "@/registry/new-york-v4/ui/text-viewer-scale"
+import {
   assertTextWithinBounds,
   clearTextViewerResourceCacheForTests,
   DEFAULT_MAX_BYTES,
@@ -1716,9 +1721,13 @@ describe("TextViewer", () => {
       />
     )
 
-    expect(
-      container.querySelectorAll("[data-line-number]").length
-    ).toBeLessThan(200)
+    const expectedInitialWindow =
+      Math.ceil(TEXT_VIEWER_INITIAL_VIEWPORT_HEIGHT / TEXT_VIEWER_BASE_LINE_PX) +
+      TEXT_VIEWER_OVERSCAN * 2
+
+    expect(container.querySelectorAll("[data-line-number]")).toHaveLength(
+      expectedInitialWindow
+    )
   })
 
   it("scrolls to a virtualized line that is not currently mounted", () => {

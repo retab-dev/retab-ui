@@ -31,11 +31,11 @@ export interface PageRibbonProps {
   currentPage?: number | null
   /** 0..1 fine-grained scroll cursor (horizontal only); overrides the page line. */
   scrollProgress?: number | null
-  /** Shared hover/focus/selection state. */
+  /** Shared hover/focus state. */
   interaction?: SegmentInteraction
   /** Click a segment → jump the document to its first page. */
   onSelectPage?: (page: number) => void
-  /** Fired when a segment surface is clicked, after shared selection is requested. */
+  /** Fired when a segment surface is clicked. */
   onSelect?: (segment: Segment) => void
   showTicks?: boolean
   /** Thickness of each row: column width (vertical) or row height (horizontal), px. */
@@ -47,8 +47,8 @@ export interface PageRibbonProps {
  * A page-axis ribbon: every segment is drawn as a block spanning its pages.
  * One vertical row with tiled segments is the split sidebar; many horizontal
  * rows (consensus + votes) is the partition waterfall — same component, same
- * `Segment[]` model. Driven by shared interaction state so hovering, focusing,
- * or selecting a segment here dims the others in the legend too.
+ * `Segment[]` model. Driven by shared interaction state so hovering or focusing
+ * a segment here dims the others in the legend too.
  */
 export function PageRibbon({
   rows,
@@ -98,6 +98,7 @@ export function PageRibbon({
     <div
       data-slot="page-ribbon"
       data-orientation={orientation}
+      onMouseLeave={() => scopedInteraction?.clearPreview()}
       className={cn(
         "relative flex",
         vertical ? "h-full flex-row gap-1" : "w-full flex-col gap-px",
@@ -122,7 +123,7 @@ export function PageRibbon({
                   currentPage != null &&
                   currentPage >= start &&
                   currentPage <= end
-                const { state, eventHandlers, ariaProps, dataProps } =
+                const { state, eventHandlers, dataProps } =
                   getSegmentSurfaceProps({
                     segment,
                     interaction: scopedInteraction,
@@ -146,7 +147,6 @@ export function PageRibbon({
                   <button
                     key={`${segment.id}-${segmentPosition}-${i}`}
                     type="button"
-                    {...ariaProps}
                     {...dataProps}
                     title={`${label} · pages ${start}${end > start ? `–${end}` : ""}`}
                     onClick={() => {
@@ -168,10 +168,9 @@ export function PageRibbon({
                     style={{
                       ...style,
                       backgroundColor: segment.color,
-                      boxShadow:
-                        state.isHighlighted || state.isSelected || isCurrent
-                          ? "inset 0 0 0 1.5px rgb(24 24 27)"
-                          : undefined,
+                      boxShadow: state.isActive
+                        ? "inset 0 0 0 1.5px rgb(24 24 27)"
+                        : undefined,
                     }}
                     aria-label={`${label} pages ${start} to ${end}`}
                   />

@@ -8,9 +8,7 @@ import {
   SelectTrigger,
 } from "@/components/ui/select"
 import type { CellEditorProps } from "@/components/json-table/cell-editors/editor-types"
-import { fieldFocusId } from "@/components/json-table/cell-editors/editor-types"
 import { jsonTableSelectDataCellClass } from "@/components/json-table/json-table-data-cell"
-import { JsonTableScalarCell } from "@/components/json-table/json-table-scalar-cell"
 
 const NULL_SELECT_VALUE = "__json_table_null__"
 
@@ -71,80 +69,53 @@ function getEnumDisplayValue(value: unknown, isNullable: boolean): string {
 }
 
 export function EnumEditor({
-  identity,
-  field,
-  focus,
-  overlays,
-  commit,
+  cell,
+  editSession,
+  setOverlayOpen,
+  closeEditSession,
+  commitValue,
 }: CellEditorProps) {
-  const { fieldMetadata, effectiveValue } = field
+  const { fieldMetadata, effectiveValue } = cell
   const displayValue = getEnumDisplayValue(
     effectiveValue,
     fieldMetadata.isNullable
   )
-  const { autoFocus, setIsSelectOpen } = overlays
-  const { setFocusedField, setIsInputFocused } = focus
 
   React.useLayoutEffect(() => {
-    if (!autoFocus || !field.isEditable) return
-    setIsSelectOpen(true)
-    setFocusedField(fieldFocusId(identity))
-    setIsInputFocused(true)
-  }, [
-    autoFocus,
-    field.isEditable,
-    identity.docId,
-    identity.fieldPath,
-    setFocusedField,
-    setIsInputFocused,
-    setIsSelectOpen,
-  ])
-
-  if (!overlays.showInput) {
-    return (
-      <JsonTableScalarCell
-        kind="text"
-        value={effectiveValue == null ? "" : String(effectiveValue)}
-      />
-    )
-  }
+    if (!cell.isEditable) return
+    setOverlayOpen(true)
+  }, [cell.isEditable, editSession.id, setOverlayOpen])
 
   return (
     <Select
-      key={`${identity.fieldPath}-${field.value}`}
-      open={overlays.isSelectOpen}
+      key={`${cell.fieldPath}-${cell.value}`}
+      open={editSession.isOverlayOpen}
       onOpenChange={(open) => {
-        overlays.setIsSelectOpen(open)
-        focus.setFocusedField(open ? fieldFocusId(identity) : null)
-        focus.setIsInputFocused(open)
+        setOverlayOpen(open)
+        if (!open) closeEditSession()
       }}
       value={getEnumSelectValue(effectiveValue, fieldMetadata.enumValues)}
-      disabled={!field.isEditable}
+      disabled={!cell.isEditable}
       onValueChange={(newValue) => {
         if (newValue === null) return
         if (newValue === NULL_SELECT_VALUE && fieldMetadata.isNullable) {
-          commit.onCommit(null)
+          commitValue(null)
+          closeEditSession()
           return
         }
 
-        commit.onCommit(getEnumCommitValue(newValue, fieldMetadata.enumValues))
+        commitValue(getEnumCommitValue(newValue, fieldMetadata.enumValues))
+        closeEditSession()
       }}
     >
       <SelectTrigger
         data-slot="data-cell"
         data-kind="text"
         data-mode="edit"
-        autoFocus={overlays.autoFocus}
+        autoFocus
         className={cn(jsonTableSelectDataCellClass, "disabled:opacity-100")}
-        onFocus={() => {
-          focus.setFocusedField(fieldFocusId(identity))
-          focus.setIsInputFocused(true)
-        }}
         onBlur={() => {
-          if (!overlays.isSelectOpen) {
-            focus.setFocusedField(null)
-            focus.setIsInputFocused(false)
-          }
+          if (!editSession.isOverlayOpen) closeEditSession()
         }}
       >
         <span

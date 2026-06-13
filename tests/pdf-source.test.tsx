@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 
 import type { Source, SourceAnchor } from "@/lib/document-source"
 import {
-  pdfAnchorToLocation,
+  pdfAnchorToTarget,
   renderPdfSourceOverlay,
   usePdfSourceTarget,
 } from "@/registry/new-york-v4/ui/pdf-source"
@@ -42,9 +42,9 @@ function imageBbox(
   }
 }
 
-describe("pdfAnchorToLocation", () => {
+describe("pdfAnchorToTarget", () => {
   it("scales a normalized pdf bbox into page percentages", () => {
-    expect(pdfAnchorToLocation(pdfBbox())).toEqual({
+    expect(pdfAnchorToTarget(pdfBbox())).toEqual({
       page: 2,
       area: { left: 10, top: 20, width: 30, height: 40 },
     })
@@ -52,7 +52,7 @@ describe("pdfAnchorToLocation", () => {
 
   it("accepts a box that fills the whole page", () => {
     expect(
-      pdfAnchorToLocation(pdfBbox({ left: 0, top: 0, width: 1, height: 1 }))
+      pdfAnchorToTarget(pdfBbox({ left: 0, top: 0, width: 1, height: 1 }))
     ).toEqual({
       page: 2,
       area: { left: 0, top: 0, width: 100, height: 100 },
@@ -60,59 +60,59 @@ describe("pdfAnchorToLocation", () => {
   })
 
   it("rejects pdf pages that are not positive integers", () => {
-    expect(pdfAnchorToLocation(pdfBbox({ page: 0 }))).toBeUndefined()
-    expect(pdfAnchorToLocation(pdfBbox({ page: -1 }))).toBeUndefined()
-    expect(pdfAnchorToLocation(pdfBbox({ page: 1.5 }))).toBeUndefined()
-    expect(pdfAnchorToLocation(pdfBbox({ page: Number.NaN }))).toBeUndefined()
+    expect(pdfAnchorToTarget(pdfBbox({ page: 0 }))).toBeUndefined()
+    expect(pdfAnchorToTarget(pdfBbox({ page: -1 }))).toBeUndefined()
+    expect(pdfAnchorToTarget(pdfBbox({ page: 1.5 }))).toBeUndefined()
+    expect(pdfAnchorToTarget(pdfBbox({ page: Number.NaN }))).toBeUndefined()
   })
 
   it("rejects boxes that escape the unit square", () => {
     expect(
-      pdfAnchorToLocation(pdfBbox({ left: 0.8, width: 0.5 }))
+      pdfAnchorToTarget(pdfBbox({ left: 0.8, width: 0.5 }))
     ).toBeUndefined()
     expect(
-      pdfAnchorToLocation(pdfBbox({ top: 0.8, height: 0.5 }))
+      pdfAnchorToTarget(pdfBbox({ top: 0.8, height: 0.5 }))
     ).toBeUndefined()
-    expect(pdfAnchorToLocation(pdfBbox({ left: -0.1 }))).toBeUndefined()
-    expect(pdfAnchorToLocation(pdfBbox({ top: -0.1 }))).toBeUndefined()
+    expect(pdfAnchorToTarget(pdfBbox({ left: -0.1 }))).toBeUndefined()
+    expect(pdfAnchorToTarget(pdfBbox({ top: -0.1 }))).toBeUndefined()
   })
 
   it("rejects zero-area boxes", () => {
-    expect(pdfAnchorToLocation(pdfBbox({ width: 0 }))).toBeUndefined()
-    expect(pdfAnchorToLocation(pdfBbox({ height: 0 }))).toBeUndefined()
+    expect(pdfAnchorToTarget(pdfBbox({ width: 0 }))).toBeUndefined()
+    expect(pdfAnchorToTarget(pdfBbox({ height: 0 }))).toBeUndefined()
   })
 
   it("rejects non-finite box coordinates", () => {
-    expect(pdfAnchorToLocation(pdfBbox({ left: Number.NaN }))).toBeUndefined()
+    expect(pdfAnchorToTarget(pdfBbox({ left: Number.NaN }))).toBeUndefined()
     expect(
-      pdfAnchorToLocation(pdfBbox({ width: Number.POSITIVE_INFINITY }))
+      pdfAnchorToTarget(pdfBbox({ width: Number.POSITIVE_INFINITY }))
     ).toBeUndefined()
   })
 
   it("maps any valid image bbox onto page 1", () => {
-    expect(pdfAnchorToLocation(imageBbox())).toEqual({
+    expect(pdfAnchorToTarget(imageBbox())).toEqual({
       page: 1,
       area: { left: 10, top: 20, width: 30, height: 40 },
     })
     // Documented behavior: a multi-frame image still collapses to page 1, even
     // when a frame index is supplied.
-    expect(pdfAnchorToLocation(imageBbox({ page: 5 }))?.page).toBe(1)
+    expect(pdfAnchorToTarget(imageBbox({ page: 5 }))?.page).toBe(1)
   })
 
   it("rejects image bboxes with an invalid frame index", () => {
-    expect(pdfAnchorToLocation(imageBbox({ page: 0 }))).toBeUndefined()
-    expect(pdfAnchorToLocation(imageBbox({ page: 2.5 }))).toBeUndefined()
+    expect(pdfAnchorToTarget(imageBbox({ page: 0 }))).toBeUndefined()
+    expect(pdfAnchorToTarget(imageBbox({ page: 2.5 }))).toBeUndefined()
   })
 
   it("accepts an image bbox without an explicit frame index", () => {
-    expect(pdfAnchorToLocation(imageBbox({ page: undefined }))?.page).toBe(1)
+    expect(pdfAnchorToTarget(imageBbox({ page: undefined }))?.page).toBe(1)
   })
 
   it("returns undefined for non-bbox anchors", () => {
     const csv: SourceAnchor = { kind: "csv_cell", row: 1, column: "A" }
     const text: SourceAnchor = { kind: "text_span", line_start: 1, line_end: 2 }
-    expect(pdfAnchorToLocation(csv)).toBeUndefined()
-    expect(pdfAnchorToLocation(text)).toBeUndefined()
+    expect(pdfAnchorToTarget(csv)).toBeUndefined()
+    expect(pdfAnchorToTarget(text)).toBeUndefined()
   })
 })
 

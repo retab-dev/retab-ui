@@ -2,11 +2,12 @@ import * as React from "react"
 import { format } from "date-fns"
 
 import {
+  DataCellDisplay,
   formatDataCellDisplayValue,
   type DataCellKind,
   type DataCellValue,
 } from "@/components/ui/data-cell"
-import { JsonTableScalarCell } from "@/components/json-table/json-table-scalar-cell"
+import { jsonTableDataCellClass } from "@/components/json-table/json-table-data-cell"
 import { parseDateStringAsLocal } from "@/components/json-table/lib/date-parsing"
 import type { FieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
 
@@ -108,28 +109,31 @@ export function JsonTableDisplayCell({
 
   if (dataCellKind === "number" || dataCellKind === "integer") {
     return (
-      <JsonTableScalarCell
+      <DataCellDisplay
         kind={dataCellKind}
         value={numberDataCellValue(value)}
+        className={jsonTableDataCellClass}
       />
     )
   }
 
   if (dataCellKind === "boolean") {
     return (
-      <JsonTableScalarCell
+      <DataCellDisplay
         kind="boolean"
         value={typeof value === "boolean" ? value : null}
+        className={jsonTableDataCellClass}
       />
     )
   }
 
   if (dataCellKind) {
     return (
-      <JsonTableScalarCell
+      <DataCellDisplay
         kind={dataCellKind}
         value={textDataCellValue(value)}
         showPickerIcon={false}
+        className={jsonTableDataCellClass}
         formatValue={
           fieldMetadata.kind === "date"
             ? () => dateDisplayValue(value) ?? ""
@@ -140,9 +144,10 @@ export function JsonTableDisplayCell({
   }
 
   return (
-    <JsonTableScalarCell
+    <DataCellDisplay
       kind="text"
       value={formatJsonTableNestedValue(value)}
+      className={jsonTableDataCellClass}
     />
   )
 }

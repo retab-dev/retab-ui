@@ -32,6 +32,7 @@ import type {
   PdfViewerSlots,
 } from "./pdf-viewer-types"
 import { usePdfPageVirtualization } from "./pdf-viewer-virtualization"
+import { useIsClient } from "./use-is-client"
 import { ViewerErrorBoundary } from "./viewer-error"
 
 export { getDocumentResource, getPageResource } from "./pdf-viewer-resource"
@@ -43,14 +44,6 @@ export type {
 } from "./pdf-viewer-types"
 
 export type PdfDocumentSource = UrlViewerSource | BlobViewerSource
-
-function useIsClient() {
-  return React.useSyncExternalStore(
-    () => () => {},
-    () => true,
-    () => false
-  )
-}
 
 export interface PdfHighlightProps extends React.ComponentProps<"div"> {
   /** Normalized box, each field a percentage [0, 100] of the page. */

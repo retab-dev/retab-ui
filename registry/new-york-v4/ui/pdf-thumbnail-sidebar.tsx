@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useVirtualizer } from "@tanstack/react-virtual"
 import type { PDFDocumentProxy } from "pdfjs-dist"
 
 import { cn } from "@/lib/utils"
@@ -18,6 +19,19 @@ import {
 } from "./pdf-viewer-resource"
 import { ViewerErrorBoundary } from "./viewer-error"
 
+const THUMBNAIL_OVERSCAN = 16
+const THUMBNAIL_INITIAL_VIEWPORT_HEIGHT = 680
+const THUMBNAIL_DEFAULT_ASPECT = 4 / 3
+const THUMBNAIL_LABEL_AND_GAP_HEIGHT = 22
+const THUMBNAIL_MAX_DEVICE_PIXEL_RATIO = 1
+
+interface ThumbnailVirtualItem {
+  index: number
+  key: React.Key
+  start: number
+  size: number
+}
+
 export interface PdfThumbnailSidebarProps {
   /** Same URL as the PdfViewer; the document load is shared by resource cache key. */
   src: string
@@ -32,9 +46,9 @@ export interface PdfThumbnailSidebarProps {
 
 /**
  * A page-thumbnail rail for the PdfViewer `slots.left` rail. Each thumbnail is a
- * small pdfjs render of the page, rendered lazily as it scrolls into view (no
- * `useEffect` — an IntersectionObserver in a ref callback gates rendering), so
- * it scales to large documents. Reuses the PdfViewer's cached document.
+ * small pdfjs render of the page. The rail is virtualized, so only the visible
+ * rows plus overscan mount and render, even for large documents. Reuses the
+ * PdfViewer's cached document.
  */
 export function PdfThumbnailSidebar(props: PdfThumbnailSidebarProps) {
   const resource = React.useMemo(
@@ -72,31 +86,85 @@ function PdfThumbnailSidebarInner({
 }) {
   const content = resource.content
   const doc = readDocumentResource(content)
+  const viewportRef = React.useRef<HTMLDivElement | null>(null)
+  const estimatedRowHeight =
+    Math.ceil(width * THUMBNAIL_DEFAULT_ASPECT) + THUMBNAIL_LABEL_AND_GAP_HEIGHT
+  const virtualizer = useVirtualizer({
+    count: doc.numPages,
+    getScrollElement: () => viewportRef.current,
+    estimateSize: () => estimatedRowHeight,
+    overscan: THUMBNAIL_OVERSCAN,
+    initialRect: {
+      width,
+      height: THUMBNAIL_INITIAL_VIEWPORT_HEIGHT,
+    },
+  })
+
   React.useEffect(() => {
     retainDocumentResource(content, doc)
     return () => releaseDocumentResource(content, doc)
   }, [content, doc])
 
+  const measuredVirtualItems = virtualizer.getVirtualItems()
+  const virtualItems =
+    measuredVirtualItems.length > 0
+      ? measuredVirtualItems
+      : createInitialThumbnailVirtualItems(doc.numPages, estimatedRowHeight)
+
   return (
     <div
+      ref={viewportRef}
       data-slot="pdf-thumbnail-sidebar"
-      className={cn(
-        "flex h-full flex-col items-center gap-2 overflow-auto bg-muted/30 p-2",
-        className
-      )}
+      className={cn("h-full overflow-auto bg-muted/30 p-2", className)}
     >
-      {Array.from({ length: doc.numPages }, (_, i) => (
-        <Thumbnail
-          key={i}
-          doc={doc}
-          pageNumber={i + 1}
-          width={width}
-          active={currentPage === i + 1}
-          onSelect={() => onSelectPage?.(i + 1)}
-        />
-      ))}
+      <div
+        className="relative w-full"
+        style={{ height: virtualizer.getTotalSize() }}
+      >
+        {virtualItems.map((item) => {
+          const pageNumber = item.index + 1
+
+          return (
+            <div
+              key={item.key}
+              data-index={item.index}
+              className="absolute top-0 left-0 flex w-full justify-center pb-2"
+              style={{
+                height: item.size,
+                transform: `translateY(${item.start}px)`,
+              }}
+            >
+              <Thumbnail
+                doc={doc}
+                pageNumber={pageNumber}
+                width={width}
+                active={currentPage === pageNumber}
+                onSelect={() => onSelectPage?.(pageNumber)}
+              />
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
+}
+
+function createInitialThumbnailVirtualItems(
+  pageCount: number,
+  estimatedRowHeight: number
+): ThumbnailVirtualItem[] {
+  const rowCount = Math.min(
+    pageCount,
+    Math.ceil(THUMBNAIL_INITIAL_VIEWPORT_HEIGHT / estimatedRowHeight) +
+      THUMBNAIL_OVERSCAN * 2
+  )
+
+  return Array.from({ length: rowCount }, (_, index) => ({
+    index,
+    key: index,
+    start: index * estimatedRowHeight,
+    size: estimatedRowHeight,
+  }))
 }
 
 function Thumbnail({
@@ -112,34 +180,8 @@ function Thumbnail({
   active: boolean
   onSelect: () => void
 }) {
-  const [visible, setVisible] = React.useState(false)
-
-  // Render only once the thumbnail nears the viewport (no effect).
-  const observerRef = React.useCallback(
-    (el: HTMLButtonElement | null) => {
-      if (!el || visible) return
-      if (typeof IntersectionObserver === "undefined") {
-        setVisible(true)
-        return
-      }
-      const observer = new IntersectionObserver(
-        ([entry]) => {
-          if (entry.isIntersecting) {
-            setVisible(true)
-            observer.disconnect()
-          }
-        },
-        { rootMargin: "400px 0px" }
-      )
-      observer.observe(el)
-      return () => observer.disconnect()
-    },
-    [visible]
-  )
-
   return (
     <button
-      ref={observerRef}
       type="button"
       onClick={onSelect}
       data-active={active}
@@ -151,15 +193,11 @@ function Thumbnail({
           "overflow-hidden rounded-sm bg-white ring-2 transition-shadow",
           active ? "ring-primary" : "ring-border"
         )}
-        style={{ width, aspectRatio: visible ? undefined : "3 / 4" }}
+        style={{ width }}
       >
-        {visible ? (
-          <React.Suspense fallback={<ThumbSkeleton />}>
-            <ThumbnailCanvas doc={doc} pageNumber={pageNumber} width={width} />
-          </React.Suspense>
-        ) : (
-          <ThumbSkeleton />
-        )}
+        <React.Suspense fallback={<ThumbSkeleton />}>
+          <ThumbnailCanvas doc={doc} pageNumber={pageNumber} width={width} />
+        </React.Suspense>
       </div>
       <span
         className={cn(
@@ -188,7 +226,10 @@ function ThumbnailCanvas({
     const base = page.getViewport({ scale: 1 })
     return page.getViewport({ scale: width / base.width })
   }, [page, width])
-  const dpr = (typeof window !== "undefined" ? window.devicePixelRatio : 1) || 1
+  const dpr = Math.min(
+    (typeof window !== "undefined" ? window.devicePixelRatio : 1) || 1,
+    THUMBNAIL_MAX_DEVICE_PIXEL_RATIO
+  )
   const [renderError, setRenderError] = React.useState<unknown>(null)
   if (renderError) throw renderError
 
@@ -238,11 +279,7 @@ function ThumbnailCanvas({
 }
 
 function ThumbSkeleton() {
-  return (
-    <div className="flex aspect-[3/4] w-full items-center justify-center bg-muted">
-      <Spinner className="size-3 text-muted-foreground" />
-    </div>
-  )
+  return <div className="aspect-[3/4] w-full bg-muted" />
 }
 
 function SidebarFallback({ className }: { className?: string }) {

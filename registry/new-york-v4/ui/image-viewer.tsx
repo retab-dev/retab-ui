@@ -22,6 +22,7 @@ import type {
   ImageViewerHandle,
   ImageViewerProps,
 } from "@/components/ui/image-viewer-types"
+import { useIsClient } from "@/components/ui/use-is-client"
 import { ViewerErrorBoundary } from "@/components/ui/viewer-error"
 
 export type {
@@ -29,6 +30,7 @@ export type {
   ImageFrameOverlayProps,
   ImageViewerHandle,
   ImageViewerProps,
+  ImageViewerSlots,
 } from "@/components/ui/image-viewer-types"
 export type { FrameDescriptor, FrameSource }
 export { getImageSource, resetImageSourceCacheForTests }
@@ -60,7 +62,7 @@ export const ImageResourceViewer = React.forwardRef<
         bare={props.bare}
         className={props.className}
         fallbackFrameSize={props.fallbackFrameSize}
-        scale={props.scale}
+        scale={props.scale ?? props.defaultScale}
         toolbar={props.toolbar}
       />
     )
@@ -79,7 +81,7 @@ export const ImageResourceViewer = React.forwardRef<
             bare={props.bare}
             className={props.className}
             fallbackFrameSize={props.fallbackFrameSize}
-            scale={props.scale}
+            scale={props.scale ?? props.defaultScale}
             toolbar={props.toolbar}
           />
         }
@@ -113,12 +115,4 @@ export function createImageSourceForTests(
     maxDecodedFrames: 16,
     onDispose,
   })
-}
-
-function useIsClient() {
-  return React.useSyncExternalStore(
-    () => () => {},
-    () => true,
-    () => false
-  )
 }

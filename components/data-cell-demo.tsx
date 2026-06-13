@@ -77,7 +77,7 @@ function DemoDataCell({
     return (
       <DataCell
         kind={kind}
-        editable={editable}
+        mode={editable ? "edit" : "display"}
         value={numberCellValue(value)}
         draftValue={draftValue}
         onDraftValueChange={onDraftValueChange}
@@ -90,7 +90,7 @@ function DemoDataCell({
     return (
       <DataCell
         kind="boolean"
-        editable={editable}
+        mode={editable ? "edit" : "display"}
         value={booleanCellValue(value)}
         onCommit={onCommit}
       />
@@ -100,7 +100,7 @@ function DemoDataCell({
   return (
     <DataCell
       kind={kind}
-      editable={editable}
+      mode={editable ? "edit" : "display"}
       value={textCellValue(value)}
       draftValue={draftValue}
       onDraftValueChange={onDraftValueChange}
@@ -210,48 +210,15 @@ function EnumDataCell({
   options: string[]
   onValueChange: (value: string) => void
 }) {
-  const [isPointerOver, setIsPointerOver] = React.useState(false)
-  const [isFocused, setIsFocused] = React.useState(false)
-  const [isOpen, setIsOpen] = React.useState(false)
-  const [isActivated, setIsActivated] = React.useState(false)
   const selectedValue = typeof value === "string" ? value : ""
-  const isEditing = isPointerOver || isFocused || isOpen || isActivated
-
-  if (!isEditing) {
-    return (
-      <div
-        data-slot="data-cell"
-        data-kind="enum"
-        data-mode="display"
-        className={enumCellClassName}
-        tabIndex={0}
-        onMouseEnter={() => setIsPointerOver(true)}
-        onFocus={() => setIsFocused(true)}
-        onClick={() => setIsActivated(true)}
-      >
-        <span className="flex-1 truncate in-data-placeholder:text-muted-foreground/72">
-          {selectedValue}
-        </span>
-        <ChevronDown className="-me-1 size-4.5 opacity-80 sm:size-4" />
-      </div>
-    )
-  }
 
   return (
-    <div
-      onMouseEnter={() => setIsPointerOver(true)}
-      onMouseLeave={() => setIsPointerOver(false)}
-    >
+    <div>
       <Select
         value={selectedValue}
-        onOpenChange={(open) => {
-          setIsOpen(open)
-          if (!open) setIsActivated(false)
-        }}
         onValueChange={(nextValue) => {
           if (typeof nextValue !== "string") return
           onValueChange(nextValue)
-          setIsActivated(false)
         }}
       >
         <SelectPrimitive.Trigger
@@ -259,8 +226,6 @@ function EnumDataCell({
           data-mode="edit"
           data-slot="select-trigger"
           className={enumCellClassName}
-          onBlur={() => setIsFocused(false)}
-          onFocus={() => setIsFocused(true)}
         >
           <SelectValue>{selectedValue}</SelectValue>
           <SelectPrimitive.Icon data-slot="select-icon">

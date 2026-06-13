@@ -12,7 +12,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 
 import type { Source, SourceAnchor } from "@/lib/document-source"
 import {
-  docxSourceToTarget,
+  docxAnchorToTarget,
   sourceToDocxHighlight,
   useDocxSourceTarget,
 } from "@/registry/new-york-v4/ui/docx-source"
@@ -38,9 +38,9 @@ function tableCell(
   return { kind: "docx_table_cell", table: 0, row: 1, column: 2, ...overrides }
 }
 
-describe("docxSourceToTarget — non-docx and missing sources", () => {
-  it("returns null for an undefined source", () => {
-    expect(docxSourceToTarget(undefined)).toBeNull()
+describe("docxAnchorToTarget - non-docx and missing anchors", () => {
+  it("returns null for an undefined anchor", () => {
+    expect(docxAnchorToTarget(undefined)).toBeNull()
   })
 
   it("returns null for non-docx anchors", () => {
@@ -52,77 +52,85 @@ describe("docxSourceToTarget — non-docx and missing sources", () => {
       { kind: "text_span", line_start: 1, line_end: 2 },
     ]
     for (const anchor of anchors) {
-      expect(docxSourceToTarget(source(anchor))).toBeNull()
+      expect(docxAnchorToTarget(anchor, source(anchor))).toBeNull()
     }
   })
 })
 
-describe("docxSourceToTarget — docx_text_span", () => {
+describe("docxAnchorToTarget - docx_text_span", () => {
   it("resolves a valid text span to a trimmed text target", () => {
+    const input = source(textSpan(), "  Quarterly revenue increased  ")
     expect(
-      docxSourceToTarget(source(textSpan(), "  Quarterly revenue increased  "))
+      docxAnchorToTarget(input.anchor, input)
     ).toEqual({ kind: "text", text: "Quarterly revenue increased" })
   })
 
   it("accepts paragraph index 0", () => {
-    expect(docxSourceToTarget(source(textSpan({ paragraph: 0 })))).toEqual({
+    const input = source(textSpan({ paragraph: 0 }))
+    expect(docxAnchorToTarget(input.anchor, input)).toEqual({
       kind: "text",
       text: "Quarterly revenue increased",
     })
   })
 
   it("returns null when the quoted content is empty or whitespace-only", () => {
-    expect(docxSourceToTarget(source(textSpan(), ""))).toBeNull()
-    expect(docxSourceToTarget(source(textSpan(), "   \n\t "))).toBeNull()
+    const empty = source(textSpan(), "")
+    const whitespace = source(textSpan(), "   \n\t ")
+    expect(docxAnchorToTarget(empty.anchor, empty)).toBeNull()
+    expect(docxAnchorToTarget(whitespace.anchor, whitespace)).toBeNull()
   })
 
   it("rejects a negative or non-integer paragraph index", () => {
-    expect(docxSourceToTarget(source(textSpan({ paragraph: -1 })))).toBeNull()
-    expect(docxSourceToTarget(source(textSpan({ paragraph: 1.5 })))).toBeNull()
-    expect(
-      docxSourceToTarget(source(textSpan({ paragraph: Number.NaN })))
-    ).toBeNull()
+    const negative = source(textSpan({ paragraph: -1 }))
+    const float = source(textSpan({ paragraph: 1.5 }))
+    const nan = source(textSpan({ paragraph: Number.NaN }))
+    expect(docxAnchorToTarget(negative.anchor, negative)).toBeNull()
+    expect(docxAnchorToTarget(float.anchor, float)).toBeNull()
+    expect(docxAnchorToTarget(nan.anchor, nan)).toBeNull()
   })
 
   it("accepts a valid char range and an equal start/end range", () => {
-    expect(
-      docxSourceToTarget(source(textSpan({ char_start: 0, char_end: 10 })))
-    ).toEqual({ kind: "text", text: "Quarterly revenue increased" })
-    expect(
-      docxSourceToTarget(source(textSpan({ char_start: 5, char_end: 5 })))
-    ).toEqual({ kind: "text", text: "Quarterly revenue increased" })
+    const range = source(textSpan({ char_start: 0, char_end: 10 }))
+    const equalRange = source(textSpan({ char_start: 5, char_end: 5 }))
+    expect(docxAnchorToTarget(range.anchor, range)).toEqual({
+      kind: "text",
+      text: "Quarterly revenue increased",
+    })
+    expect(docxAnchorToTarget(equalRange.anchor, equalRange)).toEqual({
+      kind: "text",
+      text: "Quarterly revenue increased",
+    })
   })
 
   it("accepts a span with no char range", () => {
-    expect(docxSourceToTarget(source(textSpan({})))).toEqual({
+    const input = source(textSpan({}))
+    expect(docxAnchorToTarget(input.anchor, input)).toEqual({
       kind: "text",
       text: "Quarterly revenue increased",
     })
   })
 
   it("rejects a partial char range (only one bound present)", () => {
-    expect(
-      docxSourceToTarget(source(textSpan({ char_start: 3 })))
-    ).toBeNull()
-    expect(docxSourceToTarget(source(textSpan({ char_end: 3 })))).toBeNull()
+    const startOnly = source(textSpan({ char_start: 3 }))
+    const endOnly = source(textSpan({ char_end: 3 }))
+    expect(docxAnchorToTarget(startOnly.anchor, startOnly)).toBeNull()
+    expect(docxAnchorToTarget(endOnly.anchor, endOnly)).toBeNull()
   })
 
   it("rejects an inverted or negative char range", () => {
-    expect(
-      docxSourceToTarget(source(textSpan({ char_start: 8, char_end: 4 })))
-    ).toBeNull()
-    expect(
-      docxSourceToTarget(source(textSpan({ char_start: -1, char_end: 4 })))
-    ).toBeNull()
-    expect(
-      docxSourceToTarget(source(textSpan({ char_start: 1.5, char_end: 4 })))
-    ).toBeNull()
+    const inverted = source(textSpan({ char_start: 8, char_end: 4 }))
+    const negative = source(textSpan({ char_start: -1, char_end: 4 }))
+    const float = source(textSpan({ char_start: 1.5, char_end: 4 }))
+    expect(docxAnchorToTarget(inverted.anchor, inverted)).toBeNull()
+    expect(docxAnchorToTarget(negative.anchor, negative)).toBeNull()
+    expect(docxAnchorToTarget(float.anchor, float)).toBeNull()
   })
 })
 
-describe("docxSourceToTarget — docx_table_cell", () => {
+describe("docxAnchorToTarget - docx_table_cell", () => {
   it("resolves a valid table cell to a cell target", () => {
-    expect(docxSourceToTarget(source(tableCell()))).toEqual({
+    const input = source(tableCell())
+    expect(docxAnchorToTarget(input.anchor, input)).toEqual({
       kind: "cell",
       table: 0,
       row: 1,
@@ -131,7 +139,8 @@ describe("docxSourceToTarget — docx_table_cell", () => {
   })
 
   it("resolves a cell target regardless of content (cells locate by index)", () => {
-    expect(docxSourceToTarget(source(tableCell(), ""))).toEqual({
+    const input = source(tableCell(), "")
+    expect(docxAnchorToTarget(input.anchor, input)).toEqual({
       kind: "cell",
       table: 0,
       row: 1,
@@ -140,32 +149,37 @@ describe("docxSourceToTarget — docx_table_cell", () => {
   })
 
   it("rejects negative or non-integer table/row/column indices", () => {
-    expect(docxSourceToTarget(source(tableCell({ table: -1 })))).toBeNull()
-    expect(docxSourceToTarget(source(tableCell({ row: -1 })))).toBeNull()
-    expect(docxSourceToTarget(source(tableCell({ column: -1 })))).toBeNull()
-    expect(docxSourceToTarget(source(tableCell({ column: 1.5 })))).toBeNull()
-    expect(
-      docxSourceToTarget(source(tableCell({ table: Number.NaN })))
-    ).toBeNull()
+    const badTable = source(tableCell({ table: -1 }))
+    const badRow = source(tableCell({ row: -1 }))
+    const badColumn = source(tableCell({ column: -1 }))
+    const floatColumn = source(tableCell({ column: 1.5 }))
+    const nanTable = source(tableCell({ table: Number.NaN }))
+    expect(docxAnchorToTarget(badTable.anchor, badTable)).toBeNull()
+    expect(docxAnchorToTarget(badRow.anchor, badRow)).toBeNull()
+    expect(docxAnchorToTarget(badColumn.anchor, badColumn)).toBeNull()
+    expect(docxAnchorToTarget(floatColumn.anchor, floatColumn)).toBeNull()
+    expect(docxAnchorToTarget(nanTable.anchor, nanTable)).toBeNull()
   })
 
   it("rejects an invalid char range on a cell anchor", () => {
-    expect(
-      docxSourceToTarget(source(tableCell({ char_start: 5, char_end: 1 })))
-    ).toBeNull()
-    expect(
-      docxSourceToTarget(source(tableCell({ char_start: 5 })))
-    ).toBeNull()
+    const inverted = source(tableCell({ char_start: 5, char_end: 1 }))
+    const partial = source(tableCell({ char_start: 5 }))
+    expect(docxAnchorToTarget(inverted.anchor, inverted)).toBeNull()
+    expect(docxAnchorToTarget(partial.anchor, partial)).toBeNull()
   })
 })
 
 describe("sourceToDocxHighlight", () => {
-  it("matches docxSourceToTarget for text spans, cells, and non-docx anchors", () => {
+  it("matches docxAnchorToTarget for text spans, cells, and non-docx anchors", () => {
     const text = source(textSpan())
     const cell = source(tableCell())
     const csv = source({ kind: "csv_cell", row: 1, column: "A" })
-    expect(sourceToDocxHighlight(text)).toEqual(docxSourceToTarget(text))
-    expect(sourceToDocxHighlight(cell)).toEqual(docxSourceToTarget(cell))
+    expect(sourceToDocxHighlight(text)).toEqual(
+      docxAnchorToTarget(text.anchor, text)
+    )
+    expect(sourceToDocxHighlight(cell)).toEqual(
+      docxAnchorToTarget(cell.anchor, cell)
+    )
     expect(sourceToDocxHighlight(csv)).toBeNull()
     expect(sourceToDocxHighlight(undefined)).toBeNull()
   })
@@ -174,12 +188,18 @@ describe("sourceToDocxHighlight", () => {
 describe("useDocxSourceTarget", () => {
   function renderTarget(handle: DocxViewerHandle | null) {
     const ref = { current: handle } as React.RefObject<DocxViewerHandle | null>
-    let target!: ReturnType<typeof useDocxSourceTarget>
+    const targetRef: { current: ReturnType<typeof useDocxSourceTarget> | null } =
+      { current: null }
     function Harness() {
-      target = useDocxSourceTarget(ref)
+      const target = useDocxSourceTarget(ref)
+      React.useEffect(() => {
+        targetRef.current = target
+      }, [target])
       return null
     }
     const view = render(<Harness />)
+    const target = targetRef.current
+    if (!target) throw new Error("useDocxSourceTarget did not initialize")
     return { target, ref, view }
   }
 
@@ -244,7 +264,10 @@ describe("useDocxSourceTarget", () => {
     const ref = { current: handle() } as React.RefObject<DocxViewerHandle | null>
     const seen: ReturnType<typeof useDocxSourceTarget>[] = []
     function Harness() {
-      seen.push(useDocxSourceTarget(ref))
+      const target = useDocxSourceTarget(ref)
+      React.useEffect(() => {
+        seen.push(target)
+      })
       return null
     }
     const view = render(<Harness />)

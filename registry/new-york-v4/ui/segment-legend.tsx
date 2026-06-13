@@ -36,9 +36,9 @@ export interface SegmentLegendProps {
   side?: SegmentLegendSide
   /** Swatch + label scale. @default "comfortable" */
   density?: SegmentLegendDensity
-  /** Shared hover/focus/selection state. */
+  /** Shared hover/focus state. */
   interaction?: SegmentInteraction
-  /** Fired when a segment surface is clicked, after shared selection is requested. */
+  /** Fired when a segment surface is clicked. */
   onSelect?: (segment: Segment) => void
   /** 1-based current page; owning segments receive current-page styling. */
   currentPage?: number | null
@@ -76,8 +76,8 @@ const FLOAT_ANCHOR: Record<SegmentLegendSide, string> = {
 }
 
 /**
- * Compact color legend: one swatch + label per segment. Hovering, focusing, or
- * selecting highlights that segment and dims the others. Segments containing
+ * Compact color legend: one swatch + label per segment. Hovering or focusing
+ * previews that segment and dims the others. Segments containing
  * `currentPage` receive separate current-page styling.
  * Zero-page segments are hidden unless shown via the toggle.
  *
@@ -134,10 +134,7 @@ export function SegmentLegend({
   // `grid-template-columns` and silently collapse the row into one column,
   // so fall back to the wrapping flex layout instead.
   const gridColumns =
-    !isVertical &&
-    columns != null &&
-    Number.isInteger(columns) &&
-    columns > 0
+    !isVertical && columns != null && Number.isInteger(columns) && columns > 0
       ? columns
       : null
 
@@ -162,6 +159,7 @@ export function SegmentLegend({
     <div
       data-slot="segment-legend"
       data-variant={variant}
+      onMouseLeave={() => scopedInteraction?.clearPreview()}
       className={cn(chrome, className)}
     >
       {visible.length > 0 ? (
@@ -176,18 +174,19 @@ export function SegmentLegend({
           )}
           style={
             gridColumns
-              ? { gridTemplateColumns: `repeat(${gridColumns}, minmax(0, 1fr))` }
+              ? {
+                  gridTemplateColumns: `repeat(${gridColumns}, minmax(0, 1fr))`,
+                }
               : undefined
           }
         >
           {visible.map((segment, segmentPosition) => {
-            const { state, eventHandlers, ariaProps, dataProps } =
-              getSegmentSurfaceProps({
-                segment,
-                interaction: scopedInteraction,
-                currentPage,
-                onSelect,
-              })
+            const { state, eventHandlers, dataProps } = getSegmentSurfaceProps({
+              segment,
+              interaction: scopedInteraction,
+              currentPage,
+              onSelect,
+            })
             const label = segmentDisplayLabel(segment.label)
             const hasExplicitLabel =
               typeof segment.label === "string" &&
@@ -196,7 +195,6 @@ export function SegmentLegend({
               <button
                 key={`${segment.id}-${segmentPosition}`}
                 type="button"
-                {...ariaProps}
                 {...dataProps}
                 {...eventHandlers}
                 title={label}
@@ -213,7 +211,7 @@ export function SegmentLegend({
                 />
                 {/* Reserve the bold width up front: an always-semibold but
                     invisible copy sizes the slot, and the visible label overlays
-                    it so highlighted/current labels cannot shift the layout. */}
+                    it so active labels cannot shift the layout. */}
                 <span className="grid min-w-0">
                   <span
                     aria-hidden
@@ -225,7 +223,7 @@ export function SegmentLegend({
                     className={cn(
                       "col-start-1 row-start-1 truncate",
                       !hasExplicitLabel && "italic",
-                      state.isHighlighted || state.isCurrent || state.isSelected
+                      state.isActive
                         ? "font-semibold text-foreground"
                         : "font-normal text-muted-foreground"
                     )}

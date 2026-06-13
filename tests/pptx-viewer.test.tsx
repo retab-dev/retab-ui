@@ -1948,14 +1948,16 @@ describe("PptxViewer", () => {
     expect(createObjectURL).not.toHaveBeenCalled()
   })
 
-  it("supports bare layout, custom header and aside, and hidden toolbar", async () => {
+  it("supports bare layout, document slots, and hidden toolbar", async () => {
     await renderPptx(
       <PptxViewer
         source={pptxUrlSource("/structured.pptx")}
         bare
         toolbar={false}
-        header={<div data-testid="pptx-header">header</div>}
-        aside={<div data-testid="pptx-aside">aside</div>}
+        slots={{
+          top: <div data-testid="pptx-header">header</div>,
+          left: <div data-testid="pptx-aside">aside</div>,
+        }}
       />
     )
 

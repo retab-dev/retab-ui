@@ -152,6 +152,7 @@ export function SplitViewerDemo() {
         result={splitResult}
         renderDocument={(handlers) => (
           <PdfViewer
+            ref={handlers.setViewerHandle}
             source={{
               kind: "url",
               url: SPLIT_PDF_URL,

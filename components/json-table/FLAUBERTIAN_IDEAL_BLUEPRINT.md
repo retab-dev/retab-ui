@@ -16,8 +16,8 @@ Perfection here means:
 
 ## Current Verdict
 
-The component has reached the intended structural ideal for its current product
-requirements.
+The component is moving toward the intended structural ideal, but the editing
+architecture is now governed by `EDITING_ARCHITECTURE_BLUEPRINT.md`.
 
 - No TanStack Table runtime model remains.
 - Fixed-size shared row virtualization is the deliberate viewport primitive.
@@ -29,19 +29,20 @@ requirements.
   owners.
 - Date parsing, date display formatting, schema date detection, and commit
   normalization are separate concepts.
-- Cell editors receive grouped semantic props instead of a flat compatibility
-  bag.
+- Cell editors receive a direct cell/session/commit API instead of grouped
+  compatibility props.
 - Field paths use exact names: `templateFieldPath` for schema templates and
   `materializedFieldPath` for document paths.
-- Table-level object and array editor state is named `openEditorPath`.
+- Table-level editing state is one `editSession`.
 - Test DOM setup is centralized in `tests/json-table-test-dom.ts`.
 - Focused model, controller, editor dispatch, and header menu interaction tests
   exist.
 - Focused lint, scoped typecheck scan, legacy scan, compatibility scan, and
   line-count gates are clean.
 
-The next architecture change should require a concrete product bug, measured
-performance issue, or new user-facing requirement.
+The next architecture change should preserve the edit-session ownership model
+unless a concrete product bug, measured performance issue, or new user-facing
+requirement proves otherwise.
 
 ## One-Sentence Model
 
@@ -61,7 +62,7 @@ The component is ideal only while all of these remain true:
 - Header drag behavior can be reasoned about without rendering React.
 - Date parsing can be reasoned about without knowing schema traversal.
 - Date display formatting can be reasoned about without knowing commit logic.
-- Object and array editor state has one table-level owner.
+- Editing state has one table-level `editSession` owner.
 - Every value sent upward has passed through the same normalization boundary.
 - Every mutable product action has either an immutable model helper or an
   explicit controller owner.
@@ -174,18 +175,18 @@ the narrowest pure model file.
 
 Use these exact terms:
 
-| Concept                              | Required Name           |
-| ------------------------------------ | ----------------------- |
-| Schema path that may include `*`     | `templateFieldPath`     |
-| Concrete document path               | `materializedFieldPath` |
-| Schema-derived field facts           | `fieldMetadata`         |
-| Document-derived visible cell        | `projectedCell`         |
-| Table-level object/array editor path | `openEditorPath`        |
-| Setter for table-level editor path   | `setOpenEditorPath`     |
-| Committed/effective string value     | `committedTextValue`    |
-| Currently displayed string value     | `activeTextValue`       |
-| Local editor draft string            | `draftTextValue`        |
-| Commit callback from editor          | `onCommit`              |
+| Concept                          | Required Name           |
+| -------------------------------- | ----------------------- |
+| Schema path that may include `*` | `templateFieldPath`     |
+| Concrete document path           | `materializedFieldPath` |
+| Schema-derived field facts       | `fieldMetadata`         |
+| Document-derived visible cell    | `projectedCell`         |
+| Table-level edit lifecycle       | `editSession`           |
+| Edit activation cause            | `activationIntent`      |
+| Committed/effective string value | `committedTextValue`    |
+| Currently displayed string value | `activeTextValue`       |
+| Local editor draft string        | `draftTextValue`        |
+| Commit callback from editor      | `onCommit`              |
 
 Forbidden names in JSON table runtime code:
 
@@ -200,32 +201,32 @@ Forbidden names in JSON table runtime code:
 
 ## Editor Prop Contract
 
-`CellEditorProps` is grouped by concept:
+`CellEditorProps` is one direct editing contract:
 
 ```ts
 type CellEditorProps = {
-  identity: CellIdentity
-  field: CellFieldState
-  textDraft: CellTextDraft
-  focus: CellFocusState
-  overlays: CellOverlayState
-  commit: CellCommitHandlers
+  cell: JsonTableEditorCell
+  editSession: JsonTableEditSession
+  draftValue: string
+  setDraftValue: (draftValue: string) => void
+  setOverlayOpen: (isOverlayOpen: boolean) => void
+  closeEditSession: () => void
+  commitValue: (value: unknown) => void
 }
 ```
 
-These groups are the contract:
+Rules:
 
-- `CellIdentity`: `docId`, `fieldPath`.
-- `CellFieldState`: `schema`, `fieldMetadata`, `value`, `effectiveValue`,
-  `isEditable`.
-- `CellTextDraft`: `committedTextValue`, `activeTextValue`, `draftTextValue`,
-  `setDraftTextValue`.
-- `CellFocusState`: `focusedField`, `setFocusedField`, `setIsInputFocused`.
-- `CellOverlayState`: select/date/object-array open state.
-- `CellCommitHandlers`: `onCommit`.
+- `cell` contains document/schema facts for the active cell.
+- `editSession` contains activation intent, draft identity, and overlay state.
+- `draftValue` is the active scalar draft string.
+- `setDraftValue` is the only scalar draft mutation.
+- `setOverlayOpen` is the only overlay visibility mutation.
+- `closeEditSession` is the only session close command.
+- `commitValue` is the only editor-to-table commit command.
 
-Do not replace this with context unless prop threading becomes a measured product
-problem. Explicit grouped props keep editor ownership visible.
+Do not add prop groups for focus, overlays, text drafts, or compatibility. If an
+editor needs a new concept, name that concept directly.
 
 ## Entropy Standard
 

@@ -224,4 +224,49 @@ describe("XlsxViewer real grid integration", () => {
     fireEvent.click(screen.getByRole("button", { name: "Actual size" }))
     expect(screen.getByText("100%")).toBeTruthy()
   })
+
+  it("switches sheets without reparsing the workbook and exposes tab state", async () => {
+    await act(async () => {
+      render(<XlsxViewer source={workbookSource("sheet-cache")} />)
+    })
+
+    const worker = await waitForWorker()
+    await emitWorkbook(worker, [
+      {
+        name: "Summary",
+        rowCount: 1,
+        columnCount: 1,
+        entries: [{ cellIndex: 0, text: "summary total" }],
+      },
+      {
+        name: "Details",
+        rowCount: 1,
+        columnCount: 1,
+        entries: [{ cellIndex: 0, text: "detail total" }],
+      },
+    ])
+
+    expect(await screen.findByRole("grid", { name: "Summary" })).toBeTruthy()
+    expect(screen.getByRole("tablist", { name: "Workbook sheets" })).toBeTruthy()
+    expect(
+      screen.getByRole("tab", { name: "Summary" }).getAttribute("aria-selected")
+    ).toBe("true")
+    expect(
+      screen.getByRole("tab", { name: "Details" }).getAttribute("aria-selected")
+    ).toBe("false")
+    expect(FakeXlsxWorker.instances).toHaveLength(1)
+    expect(worker.postMessage).toHaveBeenCalledTimes(1)
+
+    fireEvent.click(screen.getByRole("tab", { name: "Details" }))
+
+    expect(await screen.findByRole("grid", { name: "Details" })).toBeTruthy()
+    expect(
+      screen.getByRole("tab", { name: "Summary" }).getAttribute("aria-selected")
+    ).toBe("false")
+    expect(
+      screen.getByRole("tab", { name: "Details" }).getAttribute("aria-selected")
+    ).toBe("true")
+    expect(FakeXlsxWorker.instances).toHaveLength(1)
+    expect(worker.postMessage).toHaveBeenCalledTimes(1)
+  })
 })

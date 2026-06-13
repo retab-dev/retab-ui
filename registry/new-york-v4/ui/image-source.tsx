@@ -13,17 +13,27 @@ import {
 const HIGHLIGHT_CLASS =
   "pointer-events-none absolute z-10 rounded-[2px] border border-primary/70 bg-primary/12 shadow-[0_4px_16px_rgb(0_0_0_/_8%)]"
 
-/** A normalized image/pdf bbox anchor → a percentage box on the frame. */
-export function imageAnchorToArea(
+export interface ImageSourceTarget {
+  frame: number
+  area: SourceArea
+}
+
+/** A normalized image/pdf bbox anchor → the frame and percentage box to target. */
+export function imageAnchorToTarget(
   anchor: SourceAnchor
-): SourceArea | undefined {
+): ImageSourceTarget | undefined {
   if (anchor.kind === "image_bbox" || anchor.kind === "pdf_bbox") {
+    const frame = imageAnchorFrame(anchor)
     if (!isValidNormalizedBox(anchor)) return undefined
+    if (frame === undefined) return undefined
     return {
-      left: anchor.left * 100,
-      top: anchor.top * 100,
-      width: anchor.width * 100,
-      height: anchor.height * 100,
+      frame,
+      area: {
+        left: anchor.left * 100,
+        top: anchor.top * 100,
+        width: anchor.width * 100,
+        height: anchor.height * 100,
+      },
     }
   }
   return undefined
@@ -34,7 +44,7 @@ export function imageAnchorToArea(
  * bbox. `image_bbox` defaults to frame 1 (single image); a multi-frame TIFF (or
  * a rasterized slide deck) sets `page` explicitly.
  */
-export function imageAnchorToFrame(anchor: SourceAnchor): number | undefined {
+function imageAnchorFrame(anchor: SourceAnchor): number | undefined {
   if (anchor.kind === "image_bbox") {
     const frame = anchor.page ?? 1
     return isPositiveInteger(frame) ? frame : undefined
@@ -106,10 +116,14 @@ export function useImageSourceTarget(
   return React.useMemo<SourceTarget>(
     () => ({
       scrollTo: (source: Source, options) => {
-        const area = imageAnchorToArea(source.anchor)
-        const frame = imageAnchorToFrame(source.anchor)
-        if (area && frame)
-          viewerRef.current?.scrollToFrameArea(frame, area, options)
+        const target = imageAnchorToTarget(source.anchor)
+        if (target) {
+          viewerRef.current?.scrollToFrameArea(
+            target.frame,
+            target.area,
+            options
+          )
+        }
       },
     }),
     [viewerRef]
@@ -123,14 +137,13 @@ export function useImageSourceTarget(
 export function renderImageSourceOverlay(
   source: Source | undefined
 ): (props: ImageFrameOverlayProps) => React.ReactNode {
-  const area = source ? imageAnchorToArea(source.anchor) : undefined
-  const frame = source ? imageAnchorToFrame(source.anchor) : undefined
+  const target = source ? imageAnchorToTarget(source.anchor) : undefined
   return function ImageSourceOverlay({
     frameNumber,
     rotation,
   }: ImageFrameOverlayProps) {
-    if (!area || frameNumber !== frame) return null
-    const renderedArea = rotateImageArea(area, rotation)
+    if (!target || frameNumber !== target.frame) return null
+    const renderedArea = rotateImageArea(target.area, rotation)
     return (
       <div
         className={HIGHLIGHT_CLASS}

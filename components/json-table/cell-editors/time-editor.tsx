@@ -1,31 +1,29 @@
+import { DataCellControl } from "@/components/ui/data-cell"
 import type { CellEditorProps } from "@/components/json-table/cell-editors/editor-types"
-import { fieldFocusId } from "@/components/json-table/cell-editors/editor-types"
-import { JsonTableScalarCell } from "@/components/json-table/json-table-scalar-cell"
+import { jsonTableDataCellClass } from "@/components/json-table/json-table-data-cell"
 import { dateStringToFormat } from "@/components/json-table/lib/date-display-formatting"
 
 export function TimeEditor({
-  identity,
-  field,
-  textDraft,
-  focus,
-  overlays,
-  commit,
+  cell,
+  editSession,
+  draftValue,
+  setDraftValue,
+  setOverlayOpen,
+  closeEditSession,
+  commitValue,
 }: CellEditorProps) {
-  const focusId = fieldFocusId(identity)
-
   return (
-    <JsonTableScalarCell
+    <DataCellControl
       kind="time"
-      editable={field.isEditable}
-      mode={
-        overlays.forceEditMode && overlays.showInput && field.isEditable
-          ? "edit"
-          : undefined
-      }
-      value={textDraft.activeTextValue ?? null}
-      draftValue={textDraft.activeTextValue}
-      autoFocus={overlays.autoFocus}
-      onDraftValueChange={textDraft.setDraftTextValue}
+      value={draftValue || null}
+      draftValue={draftValue}
+      activationIntent={editSession.intent}
+      isPickerOpen={editSession.isOverlayOpen}
+      autoFocus
+      className={jsonTableDataCellClass}
+      disabled={!cell.isEditable}
+      onDraftValueChange={setDraftValue}
+      onPickerOpenChange={setOverlayOpen}
       onCommit={(value) => {
         const rawValue = typeof value === "string" ? value : ""
         const finalValue =
@@ -33,19 +31,10 @@ export function TimeEditor({
             ? `${rawValue}:00`
             : rawValue
         const convertedDate = dateStringToFormat(finalValue, "00:00")
-        commit.onCommit(convertedDate || null)
-        textDraft.setDraftTextValue(convertedDate || "")
+        commitValue(convertedDate || null)
+        setDraftValue(convertedDate || "")
       }}
-      onBlur={() => {
-        focus.setFocusedField(null)
-        focus.setIsInputFocused(false)
-      }}
-      onFocus={() => {
-        textDraft.setDraftTextValue(textDraft.committedTextValue)
-        focus.setFocusedField(focusId)
-        focus.setIsInputFocused(true)
-      }}
-      disabled={!field.isEditable}
+      onEditingEnd={closeEditSession}
     />
   )
 }

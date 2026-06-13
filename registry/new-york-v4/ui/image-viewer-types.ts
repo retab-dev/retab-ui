@@ -2,6 +2,8 @@ import type * as React from "react"
 
 import type { BlobViewerSource, UrlViewerSource } from "@/lib/viewer-source"
 
+import type { ViewerSlots } from "./viewer-slots"
+
 export interface ImageFrameOverlayProps {
   /** 1-based frame index (a TIFF page; always 1 for single images). */
   frameNumber: number
@@ -33,14 +35,20 @@ export interface ImageViewerHandle {
 
 export type ImageDocumentSource = UrlViewerSource | BlobViewerSource
 
+export type ImageViewerSlots = ViewerSlots
+
 export interface ImageViewerProps {
   /** Canonical image source. PNG/JPEG/WebP/GIF/AVIF/BMP/ICO or TIFF. */
   source: ImageDocumentSource
   className?: string
   /** Fixed scale; when omitted the viewer fits frame width to the container. */
   scale?: number
+  /** Initial uncontrolled scale. When omitted, uncontrolled mode starts fit-width. */
+  defaultScale?: number
   /** Intrinsic size used to reserve the first frame while image metadata loads. */
   fallbackFrameSize?: { width: number; height: number }
+  /** Called by zoom controls. `null` means return to fit-width mode. */
+  onScaleChange?: (scale: number | null) => void
   toolbar?: boolean
   /** Render absolutely-positioned overlays (e.g. bbox citations) on each frame. */
   renderFrameOverlay?: (props: ImageFrameOverlayProps) => React.ReactNode
@@ -50,8 +58,9 @@ export interface ImageViewerProps {
   onScrollProgressChange?: (progress: number) => void
   /** Drop the outer border/rounded/background so the viewer fills its container. */
   bare?: boolean
-  /** Rendered as a full-width strip directly below the toolbar (e.g. a legend). */
-  header?: React.ReactNode
-  /** Rendered as a left rail alongside the scrolling frames (e.g. a page ribbon). */
-  aside?: React.ReactNode
+  /**
+   * Chrome mounted around the document. `top`/`bottom` are document-column
+   * strips, `left`/`right` are rails, and `overlay` floats over the scroller.
+   */
+  slots?: ImageViewerSlots
 }

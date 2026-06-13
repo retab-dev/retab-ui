@@ -10,6 +10,7 @@ import type {
   JsonTableCellProps,
   VisibleColumn,
 } from "@/components/json-table/json-table-cell-types"
+import type { JsonTableEditSession } from "@/components/json-table/json-table-edit-session"
 import { recordJsonTableRender } from "@/components/json-table/json-table-profiler"
 import type { ProjectedRow } from "@/components/json-table/lib/document-projection"
 import type { TableDocument } from "@/components/json-table/lib/projects-types"
@@ -34,17 +35,21 @@ interface SingleFileFormRowProps {
   rowIdx: number
   rowTopPx: number
   rowHeightPx: number
-  /** Which object/array cell editor is open, keyed by materialized field path. */
-  openEditorPath: string | null
-  setOpenEditorPath: (key: string | null) => void
+  editSession: JsonTableEditSession | null
+  startEditSession: JsonTableCellProps["startEditSession"]
+  updateEditSessionDraft: JsonTableCellProps["updateEditSessionDraft"]
+  setEditSessionOverlayOpen: JsonTableCellProps["setEditSessionOverlayOpen"]
+  closeEditSession: JsonTableCellProps["closeEditSession"]
   onCellHoverStart?: JsonTableCellProps["onCellHoverStart"]
   onCellHoverEnd?: JsonTableCellProps["onCellHoverEnd"]
-  onCellActivityLockChange?: (fieldPath: string, locked: boolean) => void
   onDocumentDataChange: JsonTableCellProps["onDocumentDataChange"]
   isJsonEditable: boolean
 }
 
-function rowHasFieldPath(row: ProjectedRow | undefined, path: string | null) {
+function rowHasFieldPath(
+  row: ProjectedRow | undefined,
+  path: string | null | undefined
+) {
   return Boolean(
     path && row?.cells.some((cell) => cell?.materializedFieldPath === path)
   )
@@ -54,7 +59,7 @@ function interactionPathsAffectRow(
   prev: SingleFileFormRowProps,
   next: SingleFileFormRowProps
 ) {
-  const paths = [prev.openEditorPath, next.openEditorPath]
+  const paths = [prev.editSession?.fieldPath, next.editSession?.fieldPath]
 
   return paths.some(
     (path) =>
@@ -75,10 +80,12 @@ function areSingleFileFormRowPropsEqual(
     prev.rowIdx !== next.rowIdx ||
     prev.rowTopPx !== next.rowTopPx ||
     prev.rowHeightPx !== next.rowHeightPx ||
-    prev.setOpenEditorPath !== next.setOpenEditorPath ||
+    prev.startEditSession !== next.startEditSession ||
+    prev.updateEditSessionDraft !== next.updateEditSessionDraft ||
+    prev.setEditSessionOverlayOpen !== next.setEditSessionOverlayOpen ||
+    prev.closeEditSession !== next.closeEditSession ||
     prev.onCellHoverStart !== next.onCellHoverStart ||
     prev.onCellHoverEnd !== next.onCellHoverEnd ||
-    prev.onCellActivityLockChange !== next.onCellActivityLockChange ||
     prev.onDocumentDataChange !== next.onDocumentDataChange ||
     prev.isJsonEditable !== next.isJsonEditable
   ) {
@@ -97,19 +104,21 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
     rowIdx,
     rowTopPx,
     rowHeightPx,
-    openEditorPath,
-    setOpenEditorPath,
+    editSession,
+    startEditSession,
+    updateEditSessionDraft,
+    setEditSessionOverlayOpen,
+    closeEditSession,
     onCellHoverStart,
     onCellHoverEnd,
-    onCellActivityLockChange: _onCellActivityLockChange,
     onDocumentDataChange,
     isJsonEditable,
   }) => {
     const documentId = document.id
     recordJsonTableRender("SingleFileFormRow", String(rowIdx), {
       cellCount: projectedRow?.cells.length ?? 0,
+      editSessionFieldPath: editSession?.fieldPath ?? null,
       isJsonEditable,
-      openEditorPath,
       rowIdx,
       rowTopPx,
     })
@@ -154,8 +163,11 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
             schema,
             document,
             docId: documentId,
-            setOpenEditorPath,
-            openEditorPath,
+            editSession,
+            startEditSession,
+            updateEditSessionDraft,
+            setEditSessionOverlayOpen,
+            closeEditSession,
             onDocumentDataChange: handleDataChange,
             isJsonEditable,
             onCellHoverStart,

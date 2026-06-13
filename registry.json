@@ -629,6 +629,16 @@
           "target": "@ui/csv-viewer.tsx"
         },
         {
+          "path": "registry/new-york-v4/ui/csv-viewer-chrome.tsx",
+          "type": "registry:ui",
+          "target": "@ui/csv-viewer-chrome.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/viewer-error.tsx",
+          "type": "registry:ui",
+          "target": "@ui/viewer-error.tsx"
+        },
+        {
           "path": "registry/new-york-v4/ui/csv-viewer-download.ts",
           "type": "registry:ui",
           "target": "@ui/csv-viewer-download.ts"
@@ -637,6 +647,11 @@
           "path": "registry/new-york-v4/ui/csv-viewer-grid.tsx",
           "type": "registry:ui",
           "target": "@ui/csv-viewer-grid.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/csv-viewer-row-patcher.ts",
+          "type": "registry:ui",
+          "target": "@ui/csv-viewer-row-patcher.ts"
         },
         {
           "path": "registry/new-york-v4/ui/csv-viewer-sort.ts",
@@ -714,6 +729,11 @@
           "target": "@ui/csv-viewer-toolbar.tsx"
         },
         {
+          "path": "registry/new-york-v4/ui/csv-viewer-types.ts",
+          "type": "registry:ui",
+          "target": "@ui/csv-viewer-types.ts"
+        },
+        {
           "path": "registry/new-york-v4/ui/csv-viewer-worker.ts",
           "type": "registry:ui",
           "target": "@ui/csv-viewer-worker.ts"
@@ -743,6 +763,11 @@
           "path": "registry/new-york-v4/ui/pdf-viewer.tsx",
           "type": "registry:ui",
           "target": "@ui/pdf-viewer.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/viewer-error.tsx",
+          "type": "registry:ui",
+          "target": "@ui/viewer-error.tsx"
         },
         {
           "path": "registry/new-york-v4/ui/pdf-viewer-types.ts",
@@ -785,6 +810,16 @@
           "target": "@ui/pdf-viewer-page.tsx"
         },
         {
+          "path": "registry/new-york-v4/ui/pdf-viewer-canvas.ts",
+          "type": "registry:ui",
+          "target": "@ui/pdf-viewer-canvas.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/pdf-viewer-render-error.ts",
+          "type": "registry:ui",
+          "target": "@ui/pdf-viewer-render-error.ts"
+        },
+        {
           "path": "registry/new-york-v4/ui/pdf-viewer-toolbar.tsx",
           "type": "registry:ui",
           "target": "@ui/pdf-viewer-toolbar.tsx"
@@ -798,6 +833,16 @@
           "path": "registry/new-york-v4/ui/pdf-viewer-states.tsx",
           "type": "registry:ui",
           "target": "@ui/pdf-viewer-states.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/use-is-client.ts",
+          "type": "registry:ui",
+          "target": "@ui/use-is-client.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/viewer-slots.ts",
+          "type": "registry:ui",
+          "target": "@ui/viewer-slots.ts"
         }
       ]
     },
@@ -821,6 +866,51 @@
           "target": "@ui/docx-viewer.tsx"
         },
         {
+          "path": "registry/new-york-v4/ui/docx-viewer-types.ts",
+          "type": "registry:ui",
+          "target": "@ui/docx-viewer-types.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/docx-viewer-core.ts",
+          "type": "registry:ui",
+          "target": "@ui/docx-viewer-core.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/docx-viewer-render.ts",
+          "type": "registry:ui",
+          "target": "@ui/docx-viewer-render.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/docx-viewer-scale.ts",
+          "type": "registry:ui",
+          "target": "@ui/docx-viewer-scale.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/docx-viewer-scroll.ts",
+          "type": "registry:ui",
+          "target": "@ui/docx-viewer-scroll.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/docx-viewer-targets.ts",
+          "type": "registry:ui",
+          "target": "@ui/docx-viewer-targets.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/docx-viewer-highlight.ts",
+          "type": "registry:ui",
+          "target": "@ui/docx-viewer-highlight.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/docx-viewer-chrome.tsx",
+          "type": "registry:ui",
+          "target": "@ui/docx-viewer-chrome.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/docx-viewer-content.tsx",
+          "type": "registry:ui",
+          "target": "@ui/docx-viewer-content.tsx"
+        },
+        {
           "path": "registry/new-york-v4/ui/docx-viewer-resource.ts",
           "type": "registry:ui",
           "target": "@ui/docx-viewer-resource.ts"
@@ -839,6 +929,16 @@
           "path": "registry/new-york-v4/lib/viewer-resource.ts",
           "type": "registry:lib",
           "target": "@lib/viewer-resource.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/use-is-client.ts",
+          "type": "registry:ui",
+          "target": "@ui/use-is-client.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/viewer-slots.ts",
+          "type": "registry:ui",
+          "target": "@ui/viewer-slots.ts"
         }
       ]
     },
@@ -910,6 +1010,16 @@
           "path": "registry/new-york-v4/ui/image-viewer.worker.ts",
           "type": "registry:ui",
           "target": "@ui/image-viewer.worker.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/use-is-client.ts",
+          "type": "registry:ui",
+          "target": "@ui/use-is-client.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/viewer-slots.ts",
+          "type": "registry:ui",
+          "target": "@ui/viewer-slots.ts"
         }
       ]
     },
@@ -931,6 +1041,16 @@
           "path": "registry/new-york-v4/ui/pptx-viewer.tsx",
           "type": "registry:ui",
           "target": "@ui/pptx-viewer.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/viewer-error.tsx",
+          "type": "registry:ui",
+          "target": "@ui/viewer-error.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/pptx-viewer-types.ts",
+          "type": "registry:ui",
+          "target": "@ui/pptx-viewer-types.ts"
         },
         {
           "path": "registry/new-york-v4/lib/viewer-source.ts",
@@ -961,6 +1081,11 @@
           "path": "registry/new-york-v4/ui/pptx-viewer-cache.ts",
           "type": "registry:ui",
           "target": "@ui/pptx-viewer-cache.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/viewer-lru-cache.ts",
+          "type": "registry:ui",
+          "target": "@ui/viewer-lru-cache.ts"
         },
         {
           "path": "registry/new-york-v4/ui/pptx-viewer-hooks.ts",
@@ -1011,6 +1136,16 @@
           "path": "registry/new-york-v4/ui/pptx-viewer-fallback.tsx",
           "type": "registry:ui",
           "target": "@ui/pptx-viewer-fallback.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/use-is-client.ts",
+          "type": "registry:ui",
+          "target": "@ui/use-is-client.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/viewer-slots.ts",
+          "type": "registry:ui",
+          "target": "@ui/viewer-slots.ts"
         }
       ]
     },
@@ -1074,6 +1209,36 @@
           "path": "registry/new-york-v4/ui/xlsx-viewer.tsx",
           "type": "registry:ui",
           "target": "@ui/xlsx-viewer.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/xlsx-viewer-chrome.tsx",
+          "type": "registry:ui",
+          "target": "@ui/xlsx-viewer-chrome.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/xlsx-viewer-resource.ts",
+          "type": "registry:ui",
+          "target": "@ui/xlsx-viewer-resource.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/xlsx-viewer-session.tsx",
+          "type": "registry:ui",
+          "target": "@ui/xlsx-viewer-session.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/xlsx-viewer-types.ts",
+          "type": "registry:ui",
+          "target": "@ui/xlsx-viewer-types.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/xlsx-viewer-download.ts",
+          "type": "registry:ui",
+          "target": "@ui/xlsx-viewer-download.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/csv-viewer-download.ts",
+          "type": "registry:ui",
+          "target": "@ui/csv-viewer-download.ts"
         },
         {
           "path": "registry/new-york-v4/ui/xlsx-grid.tsx",
@@ -1169,6 +1334,36 @@
           "path": "registry/new-york-v4/ui/xlsx-viewer.worker.ts",
           "type": "registry:ui",
           "target": "@ui/xlsx-viewer.worker.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/use-is-client.ts",
+          "type": "registry:ui",
+          "target": "@ui/use-is-client.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/viewer-slots.ts",
+          "type": "registry:ui",
+          "target": "@ui/viewer-slots.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/xlsx-viewer-sheet-state.ts",
+          "type": "registry:ui",
+          "target": "@ui/xlsx-viewer-sheet-state.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/xlsx-viewer-scale.ts",
+          "type": "registry:ui",
+          "target": "@ui/xlsx-viewer-scale.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/xlsx-viewer-active-cell.ts",
+          "type": "registry:ui",
+          "target": "@ui/xlsx-viewer-active-cell.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/xlsx-viewer-sheet.tsx",
+          "type": "registry:ui",
+          "target": "@ui/xlsx-viewer-sheet.tsx"
         }
       ]
     },
@@ -1275,6 +1470,11 @@
           "path": "registry/new-york-v4/lib/viewer-source.ts",
           "type": "registry:lib",
           "target": "@lib/viewer-source.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/use-is-client.ts",
+          "type": "registry:ui",
+          "target": "@ui/use-is-client.ts"
         }
       ]
     },
@@ -1309,7 +1509,7 @@
       "name": "pdf-source",
       "type": "registry:ui",
       "title": "PDF source adapter",
-      "description": "Bridges the document-source model to the PDF viewer: pdfAnchorToLocation (normalized bbox → page %), usePdfSourceTarget (a SourceTarget over a PdfViewer ref), and renderPdfSourceOverlay (draws a PdfHighlight on the active source's page).",
+      "description": "Bridges the document-source model to the PDF viewer: pdfAnchorToTarget (normalized bbox to page %), usePdfSourceTarget, and renderPdfSourceOverlay.",
       "registryDependencies": [
         "pdf-viewer",
         "document-source",
@@ -1883,6 +2083,7 @@
       "type": "registry:ui",
       "title": "PDF Thumbnail Sidebar",
       "description": "A page-thumbnail rail for the PdfViewer left slot: lazy pdfjs thumbnails, active-page highlight, click-to-jump. Reuses the viewer’s cached document.",
+      "dependencies": ["@tanstack/react-virtual"],
       "registryDependencies": ["pdf-viewer", "utils", "spinner"],
       "files": [
         {
@@ -1986,7 +2187,7 @@
       "name": "image-source",
       "type": "registry:ui",
       "title": "Image source adapter",
-      "description": "Bridges the document-source model to the image viewer: imageAnchorToArea, useImageSourceTarget, and renderImageSourceOverlay for image_bbox anchors.",
+      "description": "Bridges the document-source model to the image viewer: imageAnchorToTarget, useImageSourceTarget, and renderImageSourceOverlay for image_bbox anchors.",
       "registryDependencies": [
         "image-viewer",
         "document-source",
@@ -2024,6 +2225,16 @@
           "target": "@ui/text-viewer-chrome.tsx"
         },
         {
+          "path": "registry/new-york-v4/ui/text-viewer-content.tsx",
+          "type": "registry:ui",
+          "target": "@ui/text-viewer-content.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/text-viewer-line.tsx",
+          "type": "registry:ui",
+          "target": "@ui/text-viewer-line.tsx"
+        },
+        {
           "path": "registry/new-york-v4/ui/viewer-download.tsx",
           "type": "registry:ui",
           "target": "@ui/viewer-download.tsx"
@@ -2039,9 +2250,24 @@
           "target": "@ui/text-viewer-resource.ts"
         },
         {
+          "path": "registry/new-york-v4/ui/text-viewer-scale.ts",
+          "type": "registry:ui",
+          "target": "@ui/text-viewer-scale.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/text-viewer-types.ts",
+          "type": "registry:ui",
+          "target": "@ui/text-viewer-types.ts"
+        },
+        {
           "path": "registry/new-york-v4/ui/text-viewer-layout.ts",
           "type": "registry:ui",
           "target": "@ui/text-viewer-layout.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/text-viewer-virtualization.ts",
+          "type": "registry:ui",
+          "target": "@ui/text-viewer-virtualization.ts"
         },
         {
           "path": "registry/new-york-v4/lib/viewer-source.ts",
@@ -2052,6 +2278,11 @@
           "path": "registry/new-york-v4/lib/viewer-resource.ts",
           "type": "registry:lib",
           "target": "@lib/viewer-resource.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/use-is-client.ts",
+          "type": "registry:ui",
+          "target": "@ui/use-is-client.ts"
         }
       ]
     },
@@ -2059,7 +2290,7 @@
       "name": "text-source",
       "type": "registry:ui",
       "title": "Text source adapter",
-      "description": "Bridges the document-source model to the text viewer: textAnchorToLines, useTextSourceTarget, and sourceToTextHighlight for text_span anchors.",
+      "description": "Bridges the document-source model to the text viewer: textAnchorToTarget, useTextSourceTarget, and sourceToTextHighlight for text_span anchors.",
       "registryDependencies": [
         "text-viewer",
         "document-source",
@@ -2077,7 +2308,7 @@
       "name": "csv-source",
       "type": "registry:ui",
       "title": "CSV source adapter",
-      "description": "Bridges the document-source model to the CSV viewer: csvAnchorToCell, useCsvSourceTarget, and sourceToCsvCell for csv_cell anchors.",
+      "description": "Bridges the document-source model to the CSV viewer: csvAnchorToTarget, useCsvSourceTarget, and sourceToCsvCell for csv_cell anchors.",
       "registryDependencies": [
         "csv-viewer",
         "document-source",
@@ -2095,7 +2326,7 @@
       "name": "xlsx-source",
       "type": "registry:ui",
       "title": "Excel source adapter",
-      "description": "Bridges the document-source model to the xlsx viewer: spreadsheetAnchorToCell, useXlsxSourceTarget, and sourceToXlsxCell for spreadsheet_cell anchors (sheet-aware).",
+      "description": "Bridges the document-source model to the XLSX viewer: xlsxAnchorToTarget, useXlsxSourceTarget, and sourceToXlsxCell for spreadsheet_cell anchors.",
       "registryDependencies": [
         "xlsx-viewer",
         "document-source",

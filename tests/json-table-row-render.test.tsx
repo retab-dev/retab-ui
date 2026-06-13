@@ -1,10 +1,17 @@
 // @vitest-environment jsdom
 
+import * as React from "react"
 import { cleanup, fireEvent, render, waitFor } from "@testing-library/react"
 import type { JSONSchema7 } from "json-schema"
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
 
 import type { VisibleColumn } from "@/components/json-table/json-table-cell-types"
+import type {
+  JsonTableActivationIntent,
+  JsonTableEditSession,
+} from "@/components/json-table/json-table-edit-session"
+import { jsonTableCellId } from "@/components/json-table/json-table-edit-session"
+import type { ProjectedCell } from "@/components/json-table/lib/document-projection"
 import { projectDocumentRows } from "@/components/json-table/lib/document-projection"
 import type { TableDocument } from "@/components/json-table/lib/projects-types"
 import { getFieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
@@ -66,6 +73,78 @@ function visibleColumn(key: string): VisibleColumn {
   }
 }
 
+function SingleFileFormRowHarness({
+  onDocumentDataChange,
+  ...props
+}: Omit<
+  React.ComponentProps<typeof SingleFileFormRow>,
+  | "editSession"
+  | "startEditSession"
+  | "updateEditSessionDraft"
+  | "setEditSessionOverlayOpen"
+  | "closeEditSession"
+  | "onDocumentDataChange"
+> & {
+  onDocumentDataChange?: React.ComponentProps<
+    typeof SingleFileFormRow
+  >["onDocumentDataChange"]
+}) {
+  const [editSession, setEditSession] =
+    React.useState<JsonTableEditSession | null>(null)
+  const sessionIdRef = React.useRef(0)
+
+  const startEditSession = React.useCallback(
+    (projectedCell: ProjectedCell, intent: JsonTableActivationIntent) => {
+      const nextSessionId = sessionIdRef.current + 1
+      sessionIdRef.current = nextSessionId
+      setEditSession({
+        id: nextSessionId,
+        cellId: jsonTableCellId(
+          props.document.id,
+          projectedCell.materializedFieldPath
+        ),
+        docId: props.document.id,
+        fieldPath: projectedCell.materializedFieldPath,
+        intent,
+        initialValue: projectedCell.value,
+        draftValue: projectedCell.value,
+        status: "editing",
+        isOverlayOpen: false,
+      })
+    },
+    [props.document.id]
+  )
+  const updateEditSessionDraft = React.useCallback((value: unknown) => {
+    setEditSession((currentSession) =>
+      currentSession && !Object.is(currentSession.draftValue, value)
+        ? { ...currentSession, draftValue: value }
+        : currentSession
+    )
+  }, [])
+  const setEditSessionOverlayOpen = React.useCallback((open: boolean) => {
+    setEditSession((currentSession) =>
+      currentSession
+        ? { ...currentSession, isOverlayOpen: open }
+        : currentSession
+    )
+  }, [])
+  const closeEditSession = React.useCallback(() => {
+    setEditSession(null)
+  }, [])
+
+  return (
+    <SingleFileFormRow
+      {...props}
+      editSession={editSession}
+      startEditSession={startEditSession}
+      updateEditSessionDraft={updateEditSessionDraft}
+      setEditSessionOverlayOpen={setEditSessionOverlayOpen}
+      closeEditSession={closeEditSession}
+      onDocumentDataChange={onDocumentDataChange ?? vi.fn()}
+    />
+  )
+}
+
 describe("json table row rendering", () => {
   it("formats read-only scalar, date, array, object, null, and invalid cells", () => {
     const visiblePaths = [
@@ -86,7 +165,7 @@ describe("json table row rendering", () => {
     const view = render(
       <table>
         <tbody>
-          <SingleFileFormRow
+          <SingleFileFormRowHarness
             document={document}
             schema={schema}
             projectedRow={rows[0]}
@@ -94,8 +173,6 @@ describe("json table row rendering", () => {
             rowIdx={0}
             rowTopPx={0}
             rowHeightPx={32}
-            openEditorPath={null}
-            setOpenEditorPath={vi.fn()}
             onDocumentDataChange={vi.fn()}
             isJsonEditable={false}
           />
@@ -138,7 +215,7 @@ describe("json table row rendering", () => {
     const view = render(
       <table>
         <tbody>
-          <SingleFileFormRow
+          <SingleFileFormRowHarness
             document={document}
             schema={schema}
             projectedRow={rows[0]}
@@ -146,8 +223,6 @@ describe("json table row rendering", () => {
             rowIdx={0}
             rowTopPx={0}
             rowHeightPx={32}
-            openEditorPath={null}
-            setOpenEditorPath={vi.fn()}
             onDocumentDataChange={vi.fn()}
             isJsonEditable={false}
           />
@@ -176,7 +251,7 @@ describe("json table row rendering", () => {
     const view = render(
       <table>
         <tbody>
-          <SingleFileFormRow
+          <SingleFileFormRowHarness
             document={document}
             schema={schema}
             projectedRow={rows[0]}
@@ -184,8 +259,6 @@ describe("json table row rendering", () => {
             rowIdx={0}
             rowTopPx={0}
             rowHeightPx={32}
-            openEditorPath={null}
-            setOpenEditorPath={vi.fn()}
             onDocumentDataChange={onDocumentDataChange}
             isJsonEditable
           />
@@ -232,7 +305,7 @@ describe("json table row rendering", () => {
     const view = render(
       <table>
         <tbody>
-          <SingleFileFormRow
+          <SingleFileFormRowHarness
             document={document}
             schema={schema}
             projectedRow={rows[0]}
@@ -240,8 +313,6 @@ describe("json table row rendering", () => {
             rowIdx={0}
             rowTopPx={0}
             rowHeightPx={32}
-            openEditorPath={null}
-            setOpenEditorPath={vi.fn()}
             onDocumentDataChange={onDocumentDataChange}
             isJsonEditable
           />
@@ -268,6 +339,49 @@ describe("json table row rendering", () => {
     )
   })
 
+  it("starts text edit sessions from a typeable key", async () => {
+    const visiblePaths = ["vendor"]
+    const rows = projectDocumentRows({
+      document,
+      visiblePaths,
+      includeArrayAddRows: true,
+    })
+
+    const view = render(
+      <table>
+        <tbody>
+          <SingleFileFormRowHarness
+            document={document}
+            schema={schema}
+            projectedRow={rows[0]}
+            visibleColumns={visiblePaths.map(visibleColumn)}
+            rowIdx={0}
+            rowTopPx={0}
+            rowHeightPx={32}
+            onDocumentDataChange={vi.fn()}
+            isJsonEditable
+          />
+        </tbody>
+      </table>
+    )
+
+    const cell = await waitFor(() => {
+      const editableCell = view.container.querySelector(
+        '[data-json-table-editable-cell="true"]'
+      )
+      if (!(editableCell instanceof HTMLElement)) {
+        throw new Error("Expected editable vendor cell to render")
+      }
+      return editableCell
+    })
+
+    cell.focus()
+    fireEvent.keyDown(cell, { key: "Z" })
+
+    const input = view.getByRole("textbox")
+    expect((input as HTMLInputElement).value).toBe("Z")
+  })
+
   it("opens enum selects on the first click", async () => {
     const visiblePaths = ["status"]
     const rows = projectDocumentRows({
@@ -279,7 +393,7 @@ describe("json table row rendering", () => {
     const view = render(
       <table>
         <tbody>
-          <SingleFileFormRow
+          <SingleFileFormRowHarness
             document={document}
             schema={schema}
             projectedRow={rows[0]}
@@ -287,8 +401,6 @@ describe("json table row rendering", () => {
             rowIdx={0}
             rowTopPx={0}
             rowHeightPx={32}
-            openEditorPath={null}
-            setOpenEditorPath={vi.fn()}
             onDocumentDataChange={vi.fn()}
             isJsonEditable
           />
@@ -311,5 +423,46 @@ describe("json table row rendering", () => {
     expect(
       (await view.findByRole("combobox")).getAttribute("aria-expanded")
     ).toBe("true")
+  })
+
+  it("opens date pickers on the first click", async () => {
+    const visiblePaths = ["shipped_at"]
+    const rows = projectDocumentRows({
+      document,
+      visiblePaths,
+      includeArrayAddRows: true,
+    })
+
+    const view = render(
+      <table>
+        <tbody>
+          <SingleFileFormRowHarness
+            document={document}
+            schema={schema}
+            projectedRow={rows[0]}
+            visibleColumns={visiblePaths.map(visibleColumn)}
+            rowIdx={0}
+            rowTopPx={0}
+            rowHeightPx={32}
+            onDocumentDataChange={vi.fn()}
+            isJsonEditable
+          />
+        </tbody>
+      </table>
+    )
+
+    const cell = await waitFor(() => {
+      const editableCell = view.container.querySelector(
+        '[data-json-table-editable-cell="true"]'
+      )
+      if (!(editableCell instanceof HTMLElement)) {
+        throw new Error("Expected editable date cell to render")
+      }
+      return editableCell
+    })
+
+    fireEvent.pointerDown(cell, { button: 0 })
+
+    expect(await view.findByRole("dialog")).toBeTruthy()
   })
 })

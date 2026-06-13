@@ -1,4 +1,4 @@
-import type * as React from "react"
+import type { ViewerSlots } from "./viewer-slots"
 
 export interface PageOverlayProps {
   pageNumber: number
@@ -22,18 +22,7 @@ export interface PdfViewerHandle {
   getViewportElement: () => HTMLDivElement | null
 }
 
-export interface PdfViewerSlots {
-  /** Full-width strip directly below the toolbar (e.g. a legend). */
-  top?: React.ReactNode
-  /** Full-width strip at the bottom of the document column (e.g. a waterfall). */
-  bottom?: React.ReactNode
-  /** Collapsible rail to the left of the pages (e.g. a vertical page ribbon). */
-  left?: React.ReactNode
-  /** Collapsible rail to the right of the pages. */
-  right?: React.ReactNode
-  /** Absolutely-positioned layer over the scrolling pages (e.g. a floating legend). */
-  overlay?: React.ReactNode
-}
+export type PdfViewerSlots = ViewerSlots
 
 export type PdfPageSize = {
   width: number

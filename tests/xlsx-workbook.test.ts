@@ -13,8 +13,8 @@ import {
 } from "@/registry/new-york-v4/lib/xlsx-workbook"
 import {
   sourceToXlsxCell,
-  spreadsheetAnchorToCell,
   spreadsheetColumnToIndex,
+  xlsxAnchorToTarget,
 } from "@/registry/new-york-v4/ui/xlsx-source"
 
 function source(name = "Sheet1"): XlsxSource {
@@ -232,7 +232,7 @@ describe("xlsx source adapter", () => {
     expect(spreadsheetColumnToIndex("ZZZZZZZZZZZZ")).toBeNull()
 
     expect(
-      spreadsheetAnchorToCell({
+      xlsxAnchorToTarget({
         kind: "spreadsheet_cell",
         sheet_index: 2,
         row: 7,
@@ -255,7 +255,7 @@ describe("xlsx source adapter", () => {
 
   it("rejects spreadsheet anchors with unsafe integer coordinates", () => {
     expect(
-      spreadsheetAnchorToCell({
+      xlsxAnchorToTarget({
         kind: "spreadsheet_cell",
         sheet_index: Number.MAX_SAFE_INTEGER + 1,
         row: 1,
@@ -264,7 +264,7 @@ describe("xlsx source adapter", () => {
     ).toBeUndefined()
 
     expect(
-      spreadsheetAnchorToCell({
+      xlsxAnchorToTarget({
         kind: "spreadsheet_cell",
         sheet_index: 0,
         row: Number.MAX_SAFE_INTEGER + 1,

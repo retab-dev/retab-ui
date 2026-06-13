@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useRef, useState } from "react"
+import React, { useRef } from "react"
 import type { JSONSchema7 } from "json-schema"
 
 import { fixedGridColumnWidths } from "@/components/ui/fixed-grid-columns"
@@ -22,6 +22,11 @@ import type {
   JsonTableJsonEditMode,
   JsonTableSchemaEditMode,
 } from "@/components/json-table/json-table-edit-modes"
+import type {
+  JsonTableActivationIntent,
+  JsonTableEditSession,
+} from "@/components/json-table/json-table-edit-session"
+import { jsonTableCellId } from "@/components/json-table/json-table-edit-session"
 import {
   markJsonTableProfile,
   recordJsonTableRender,
@@ -183,9 +188,9 @@ export const SingleFileVirtualizedTable =
         useSheetOptionsStore()
       const columnWidth = propColumnWidth ?? storeColumnWidth
 
-      // Which object/array cell editor is open. Held at the table level so it
-      // survives row virtualization.
-      const [openEditorPath, setOpenEditorPath] = useState<string | null>(null)
+      const [editSession, setEditSession] =
+        React.useState<JsonTableEditSession | null>(null)
+      const editSessionIdRef = useRef(0)
       const documentDataRef = useRef(document.data)
       const pendingDocumentDataRef = useRef<Record<string, unknown> | null>(
         null
@@ -216,11 +221,53 @@ export const SingleFileVirtualizedTable =
       const isJsonEditable = jsonEditMode === "editable"
       recordJsonTableRender("SingleFileVirtualizedTable", document.id, {
         columnCount: visibleColumns.length,
+        editSessionFieldPath: editSession?.fieldPath ?? null,
         isJsonEditable,
-        openEditorPath,
         rowCount,
         virtualRows: virtualRows.length,
       })
+      const startEditSession = React.useCallback(
+        (
+          projectedCell: ProjectedRow["cells"][number],
+          intent: JsonTableActivationIntent
+        ) => {
+          if (!projectedCell?.materializedFieldPath) return
+          const nextSessionId = editSessionIdRef.current + 1
+          editSessionIdRef.current = nextSessionId
+          setEditSession({
+            id: nextSessionId,
+            cellId: jsonTableCellId(
+              document.id,
+              projectedCell.materializedFieldPath
+            ),
+            docId: document.id,
+            fieldPath: projectedCell.materializedFieldPath,
+            intent,
+            initialValue: projectedCell.value,
+            draftValue: projectedCell.value,
+            status: "editing",
+            isOverlayOpen: false,
+          })
+        },
+        [document.id]
+      )
+      const updateEditSessionDraft = React.useCallback((value: unknown) => {
+        setEditSession((currentSession) =>
+          currentSession && !Object.is(currentSession.draftValue, value)
+            ? { ...currentSession, draftValue: value }
+            : currentSession
+        )
+      }, [])
+      const setEditSessionOverlayOpen = React.useCallback((open: boolean) => {
+        setEditSession((currentSession) =>
+          currentSession
+            ? { ...currentSession, isOverlayOpen: open }
+            : currentSession
+        )
+      }, [])
+      const closeEditSession = React.useCallback(() => {
+        setEditSession(null)
+      }, [])
       const handleDocumentDataChange = React.useCallback(
         (_docId: string, materializedFieldPath: string, value: unknown) => {
           if (!onUpdateDocument) return
@@ -321,8 +368,11 @@ export const SingleFileVirtualizedTable =
                       schema={schema}
                       visibleColumns={visibleColumns}
                       rowHeightPx={rowHeightPx}
-                      openEditorPath={openEditorPath}
-                      setOpenEditorPath={setOpenEditorPath}
+                      editSession={editSession}
+                      startEditSession={startEditSession}
+                      updateEditSessionDraft={updateEditSessionDraft}
+                      setEditSessionOverlayOpen={setEditSessionOverlayOpen}
+                      closeEditSession={closeEditSession}
                       onCellHoverStart={onCellHoverStart}
                       onCellHoverEnd={onCellHoverEnd}
                       onDocumentDataChange={handleDocumentDataChange}

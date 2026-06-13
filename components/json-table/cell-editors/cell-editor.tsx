@@ -8,18 +8,18 @@ import { NumberEditor } from "@/components/json-table/cell-editors/number-editor
 import { ObjectCellEditor } from "@/components/json-table/cell-editors/object-editor"
 import { TextEditor } from "@/components/json-table/cell-editors/text-editor"
 import { TimeEditor } from "@/components/json-table/cell-editors/time-editor"
-import { JsonTableScalarCell } from "@/components/json-table/json-table-scalar-cell"
+import { JsonTableDisplayCell } from "@/components/json-table/json-table-display-cell"
 import { recordJsonTableRender } from "@/components/json-table/json-table-profiler"
 
 export function CellEditor(props: CellEditorProps) {
-  recordJsonTableRender("CellEditor", props.identity.fieldPath, {
-    fieldKind: props.field.fieldMetadata.kind,
-    isEditable: props.field.isEditable,
-    isSelectOpen: props.overlays.isSelectOpen,
-    openEditorPath: props.overlays.openEditorPath,
+  recordJsonTableRender("CellEditor", props.cell.fieldPath, {
+    editSessionId: props.editSession.id,
+    fieldKind: props.cell.fieldMetadata.kind,
+    isEditable: props.cell.isEditable,
+    isSelectOpen: props.editSession.isOverlayOpen,
   })
 
-  switch (props.field.fieldMetadata.kind) {
+  switch (props.cell.fieldMetadata.kind) {
     case "object":
       return <ObjectCellEditor {...props} />
     case "array":
@@ -41,13 +41,9 @@ export function CellEditor(props: CellEditorProps) {
       return <TextEditor {...props} />
     default:
       return (
-        <JsonTableScalarCell
-          kind="text"
-          value={
-            props.field.effectiveValue == null
-              ? ""
-              : String(props.field.effectiveValue)
-          }
+        <JsonTableDisplayCell
+          fieldMetadata={props.cell.fieldMetadata}
+          value={props.cell.effectiveValue}
         />
       )
   }

@@ -2,8 +2,15 @@
 
 export {
   DataCell,
+  DataCellBooleanControl,
+  DataCellControl,
+  DataCellDisplay,
+  DataCellNumberControl,
+  DataCellPickerControl,
+  DataCellTextControl,
   formatDataCellDisplayValue,
   parseDataCellNumberInput,
+  type DataCellActivationIntent,
   type DataCellCommitValue,
   type DataCellDateTimeZone,
   type DataCellKind,

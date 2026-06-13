@@ -1,27 +1,25 @@
 import { type Segment } from "@/lib/segments"
 
 export interface SegmentInteraction {
-  hoveredId: string | null
-  focusedId: string | null
-  selectedId: string | null
-  setHoveredId: (id: string | null) => void
-  setFocusedId: (id: string | null) => void
-  setSelectedId: (id: string | null) => void
-  clearSelection: () => void
-  selectSegment: (segment: Segment) => void
+  hoveredSegmentId: string | null
+  focusedSegmentId: string | null
+  previewSegment: (segmentId: string) => void
+  clearPreview: () => void
+  focusSegment: (segmentId: string) => void
+  clearFocus: () => void
 }
 
-export interface SegmentInteractionSnapshot {
+export interface SegmentViewState {
   isHovered: boolean
   isFocused: boolean
-  isSelected: boolean
-  isHighlighted: boolean
+  isPreviewed: boolean
   isCurrent: boolean
+  isActive: boolean
   isDimmed: boolean
 }
 
 export interface SegmentSurfaceProps {
-  state: SegmentInteractionSnapshot
+  state: SegmentViewState
   eventHandlers: {
     onMouseEnter: () => void
     onMouseLeave: () => void
@@ -29,27 +27,19 @@ export interface SegmentSurfaceProps {
     onBlur: () => void
     onClick: () => void
   }
-  ariaProps: {
-    "aria-pressed": boolean
-  }
   dataProps: {
-    "data-highlighted": boolean
+    "data-previewed": boolean
     "data-current": boolean
-    "data-selected": boolean
+    "data-active": boolean
   }
 }
 
-export function resolveHighlightedSegmentId(
+export function resolvePreviewedSegmentId(
   interaction?: Partial<
-    Pick<SegmentInteraction, "hoveredId" | "focusedId" | "selectedId">
+    Pick<SegmentInteraction, "hoveredSegmentId" | "focusedSegmentId">
   > | null
 ): string | null {
-  return (
-    interaction?.hoveredId ??
-    interaction?.focusedId ??
-    interaction?.selectedId ??
-    null
-  )
+  return interaction?.hoveredSegmentId ?? interaction?.focusedSegmentId ?? null
 }
 
 export function scopeSegmentInteraction(
@@ -59,23 +49,26 @@ export function scopeSegmentInteraction(
   if (!interaction) return interaction
 
   const knownIds = new Set(segmentIds)
-  const hoveredId = knownSegmentId(interaction.hoveredId, knownIds)
-  const focusedId = knownSegmentId(interaction.focusedId, knownIds)
-  const selectedId = knownSegmentId(interaction.selectedId, knownIds)
+  const hoveredSegmentId = knownSegmentId(
+    interaction.hoveredSegmentId,
+    knownIds
+  )
+  const focusedSegmentId = knownSegmentId(
+    interaction.focusedSegmentId,
+    knownIds
+  )
 
   if (
-    hoveredId === interaction.hoveredId &&
-    focusedId === interaction.focusedId &&
-    selectedId === interaction.selectedId
+    hoveredSegmentId === interaction.hoveredSegmentId &&
+    focusedSegmentId === interaction.focusedSegmentId
   ) {
     return interaction
   }
 
   return {
     ...interaction,
-    hoveredId,
-    focusedId,
-    selectedId,
+    hoveredSegmentId,
+    focusedSegmentId,
   }
 }
 
@@ -99,7 +92,7 @@ export function isSegmentCurrentPage(
   )
 }
 
-export function getSegmentInteractionState({
+export function getSegmentViewState({
   segment,
   interaction,
   currentPage,
@@ -109,21 +102,20 @@ export function getSegmentInteractionState({
   interaction?: SegmentInteraction | null
   currentPage?: number | null
   isCurrent?: boolean
-}): SegmentInteractionSnapshot {
-  const highlightedSegmentId = resolveHighlightedSegmentId(interaction)
+}): SegmentViewState {
+  const previewedSegmentId = resolvePreviewedSegmentId(interaction)
   const current = isCurrent ?? isSegmentCurrentPage(segment, currentPage)
-  const isHovered = interaction?.hoveredId === segment.id
-  const isFocused = interaction?.focusedId === segment.id
-  const isSelected = interaction?.selectedId === segment.id
-  const isHighlighted = highlightedSegmentId === segment.id
+  const isHovered = interaction?.hoveredSegmentId === segment.id
+  const isFocused = interaction?.focusedSegmentId === segment.id
+  const isPreviewed = previewedSegmentId === segment.id
 
   return {
     isHovered,
     isFocused,
-    isSelected,
-    isHighlighted,
+    isPreviewed,
     isCurrent: current,
-    isDimmed: highlightedSegmentId != null && !isHighlighted,
+    isActive: current || isPreviewed,
+    isDimmed: previewedSegmentId != null && !isPreviewed,
   }
 }
 
@@ -140,7 +132,7 @@ export function getSegmentSurfaceProps({
   isCurrent?: boolean
   onSelect?: (segment: Segment) => void
 }): SegmentSurfaceProps {
-  const state = getSegmentInteractionState({
+  const state = getSegmentViewState({
     segment,
     interaction,
     currentPage,
@@ -150,36 +142,20 @@ export function getSegmentSurfaceProps({
   return {
     state,
     eventHandlers: {
-      onMouseEnter: () => interaction?.setHoveredId(segment.id),
-      onMouseLeave: () => {
-        if (
-          interaction?.hoveredId === null ||
-          interaction?.hoveredId === segment.id
-        ) {
-          interaction.setHoveredId(null)
-        }
-      },
-      onFocus: () => interaction?.setFocusedId(segment.id),
-      onBlur: () => {
-        if (
-          interaction?.focusedId === null ||
-          interaction?.focusedId === segment.id
-        ) {
-          interaction.setFocusedId(null)
-        }
-      },
+      onMouseEnter: () => interaction?.previewSegment(segment.id),
+      onMouseLeave: () => interaction?.clearPreview(),
+      onFocus: () => interaction?.focusSegment(segment.id),
+      onBlur: () => interaction?.clearFocus(),
       onClick: () => {
-        interaction?.selectSegment(segment)
+        interaction?.clearPreview()
+        interaction?.clearFocus()
         onSelect?.(segment)
       },
     },
-    ariaProps: {
-      "aria-pressed": state.isSelected,
-    },
     dataProps: {
-      "data-highlighted": state.isHighlighted,
+      "data-previewed": state.isPreviewed,
       "data-current": state.isCurrent,
-      "data-selected": state.isSelected,
+      "data-active": state.isActive,
     },
   }
 }

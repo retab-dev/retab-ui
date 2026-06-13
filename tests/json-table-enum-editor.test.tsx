@@ -7,11 +7,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
 import type { CellEditorProps } from "@/components/json-table/cell-editors/editor-types"
 import { EnumEditor } from "@/components/json-table/cell-editors/enum-editor"
 
-import {
-  baseField,
-  baseOverlays,
-  baseTextDraft,
-} from "./json-table-editor-test-utils"
+import { baseField, baseSession } from "./json-table-editor-test-utils"
 import { installJsonTableDom } from "./json-table-test-dom"
 
 const selectContext = {
@@ -63,19 +59,13 @@ function renderEnumEditor(
   overrides: Partial<CellEditorProps> = {}
 ): ReturnType<typeof render> {
   const props: CellEditorProps = {
-    identity: {
-      docId: "doc_1",
-      fieldPath: "status",
-    },
-    field: baseField("enum"),
-    textDraft: baseTextDraft(),
-    focus: {
-      focusedField: null,
-      setFocusedField: vi.fn(),
-      setIsInputFocused: vi.fn(),
-    },
-    overlays: { ...baseOverlays(), showInput: true },
-    commit: { onCommit: vi.fn() },
+    cell: { ...baseField("enum"), fieldPath: "status" },
+    editSession: baseSession({ fieldPath: "status" }),
+    draftValue: "value",
+    setDraftValue: vi.fn(),
+    setOverlayOpen: vi.fn(),
+    closeEditSession: vi.fn(),
+    commitValue: vi.fn(),
     ...overrides,
   }
 
@@ -86,7 +76,7 @@ describe("json table enum editor", () => {
   it("commits integer enum values as numbers", () => {
     const onCommit = vi.fn()
     const view = renderEnumEditor({
-      field: {
+      cell: {
         ...baseField("enum"),
         effectiveValue: 1,
         fieldMetadata: {
@@ -99,7 +89,7 @@ describe("json table enum editor", () => {
           enumValues: [1, 2],
         },
       },
-      commit: { onCommit },
+      commitValue: onCommit,
     })
 
     fireEvent.click(view.getByRole("button", { name: "2" }))
@@ -110,7 +100,7 @@ describe("json table enum editor", () => {
   it("commits number enum values as numbers", () => {
     const onCommit = vi.fn()
     const view = renderEnumEditor({
-      field: {
+      cell: {
         ...baseField("enum"),
         effectiveValue: 1.5,
         fieldMetadata: {
@@ -123,7 +113,7 @@ describe("json table enum editor", () => {
           enumValues: [1.5, 2.25],
         },
       },
-      commit: { onCommit },
+      commitValue: onCommit,
     })
 
     fireEvent.click(view.getByRole("button", { name: "2.25" }))
@@ -134,7 +124,7 @@ describe("json table enum editor", () => {
   it("commits boolean enum values as booleans", () => {
     const onCommit = vi.fn()
     const view = renderEnumEditor({
-      field: {
+      cell: {
         ...baseField("enum"),
         effectiveValue: false,
         fieldMetadata: {
@@ -147,7 +137,7 @@ describe("json table enum editor", () => {
           enumValues: [false, true],
         },
       },
-      commit: { onCommit },
+      commitValue: onCommit,
     })
 
     fireEvent.click(view.getByRole("button", { name: "true" }))
@@ -157,7 +147,7 @@ describe("json table enum editor", () => {
 
   it("renders the selected option label in the trigger, not the internal option id", () => {
     const view = renderEnumEditor({
-      field: {
+      cell: {
         ...baseField("enum"),
         effectiveValue: "DEBIT",
         fieldMetadata: {
@@ -183,7 +173,7 @@ describe("json table enum editor", () => {
 
   it("renders literal sentinel-like string enum values", () => {
     const view = renderEnumEditor({
-      field: {
+      cell: {
         ...baseField("enum"),
         effectiveValue: "__null__",
         fieldMetadata: {
@@ -196,16 +186,15 @@ describe("json table enum editor", () => {
           enumValues: ["__null__", "approved"],
         },
       },
-      overlays: { ...baseOverlays(), showInput: false },
     })
 
-    expect(view.getByText("__null__")).toBeTruthy()
+    expect(view.getAllByText("__null__")).toHaveLength(2)
   })
 
   it("distinguishes nullable null from a literal sentinel-like string option", () => {
     const onCommit = vi.fn()
     const view = renderEnumEditor({
-      field: {
+      cell: {
         ...baseField("enum"),
         effectiveValue: "__null__",
         fieldMetadata: {
@@ -218,7 +207,7 @@ describe("json table enum editor", () => {
           enumValues: ["__null__", null],
         },
       },
-      commit: { onCommit },
+      commitValue: onCommit,
     })
 
     fireEvent.click(view.getAllByRole("button", { name: "__null__" }).at(-1)!)
@@ -231,7 +220,7 @@ describe("json table enum editor", () => {
   it("commits the null sentinel only for nullable enum fields", () => {
     const onNullableCommit = vi.fn()
     const nullableView = renderEnumEditor({
-      field: {
+      cell: {
         ...baseField("enum"),
         effectiveValue: null,
         fieldMetadata: {
@@ -244,7 +233,7 @@ describe("json table enum editor", () => {
           enumValues: ["approved", null],
         },
       },
-      commit: { onCommit: onNullableCommit },
+      commitValue: onNullableCommit,
     })
 
     fireEvent.click(
@@ -255,7 +244,7 @@ describe("json table enum editor", () => {
 
     const onRequiredCommit = vi.fn()
     const requiredView = renderEnumEditor({
-      field: {
+      cell: {
         ...baseField("enum"),
         effectiveValue: "approved",
         fieldMetadata: {
@@ -268,7 +257,7 @@ describe("json table enum editor", () => {
           enumValues: ["approved"],
         },
       },
-      commit: { onCommit: onRequiredCommit },
+      commitValue: onRequiredCommit,
     })
 
     expect(
@@ -278,7 +267,7 @@ describe("json table enum editor", () => {
 
   it("selects structurally equal object enum values", () => {
     renderEnumEditor({
-      field: {
+      cell: {
         ...baseField("enum"),
         effectiveValue: { code: "approved" },
         fieldMetadata: {

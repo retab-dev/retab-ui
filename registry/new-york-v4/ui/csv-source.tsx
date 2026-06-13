@@ -24,7 +24,7 @@ export function columnLetterToIndex(letter: string): number | null {
  * A `csv_cell` anchor → 0-based data coordinates. `row` is the 1-based data
  * row (the header is not a data row); `column` is a letter.
  */
-export function csvAnchorToCell(anchor: SourceAnchor): CsvCellAddress | null {
+export function csvAnchorToTarget(anchor: SourceAnchor): CsvCellAddress | null {
   if (anchor.kind === "csv_cell") {
     const columnIndex = columnLetterToIndex(anchor.column)
     if (
@@ -49,8 +49,8 @@ export function useCsvSourceTarget(
   return React.useMemo<SourceTarget>(
     () => ({
       scrollTo: (source: Source, options) => {
-        const cell = csvAnchorToCell(source.anchor)
-        if (cell) viewerRef.current?.scrollToCell(cell, options)
+        const target = csvAnchorToTarget(source.anchor)
+        if (target) viewerRef.current?.scrollToCell(target, options)
       },
     }),
     [viewerRef]
@@ -64,5 +64,5 @@ export function useCsvSourceTarget(
 export function sourceToCsvCell(
   source: Source | undefined
 ): CsvCellAddress | null {
-  return (source && csvAnchorToCell(source.anchor)) || null
+  return source ? csvAnchorToTarget(source.anchor) : null
 }

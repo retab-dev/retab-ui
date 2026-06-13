@@ -503,15 +503,17 @@ describe("DocxViewer", () => {
     const html = renderToStaticMarkup(
       <DocxViewer
         source={docxUrlSource("/server.docx")}
-        header={<div>Server header</div>}
-        aside={<div>Server aside</div>}
+        slots={{
+          top: <div>Server header</div>,
+          left: <div>Server aside</div>,
+        }}
       />
     )
 
     expect(html).toContain('data-slot="docx-viewer"')
-    expect(html).toContain('data-slot="docx-viewer-header"')
+    expect(html).toContain('data-slot="docx-viewer-top"')
     expect(html).toContain("Server header")
-    expect(html).toContain('data-slot="docx-viewer-aside"')
+    expect(html).toContain('data-slot="docx-viewer-left"')
     expect(html).toContain("Server aside")
     expect(html).toContain('data-slot="docx-page-skeleton"')
     expect(html).toContain("<button")
@@ -1152,37 +1154,39 @@ describe("DocxViewer", () => {
     expect(screen.getByText("100%")).toBeTruthy()
   })
 
-  it("renders header and aside slots without blocking document render", async () => {
+  it("renders top and left slots without blocking document render", async () => {
     const view = await renderDocx(
       <DocxViewer
         source={docxUrlSource("/slots.docx")}
-        header={<div>Document legend</div>}
-        aside={<nav aria-label="Pages">Page rail</nav>}
+        slots={{
+          top: <div>Document legend</div>,
+          left: <nav aria-label="Pages">Page rail</nav>,
+        }}
       />
     )
 
     await waitForRenderedDocx()
 
     expect(
-      view.container.querySelector('[data-slot="docx-viewer-header"]')
-        ?.textContent
+      view.container.querySelector('[data-slot="docx-viewer-top"]')?.textContent
     ).toBe("Document legend")
     expect(
-      view.container.querySelector('[data-slot="docx-viewer-aside"]')
-        ?.textContent
+      view.container.querySelector('[data-slot="docx-viewer-left"]')?.textContent
     ).toBe("Page rail")
     expect(screen.getByText("Target cell")).toBeTruthy()
   })
 
-  it("keeps header and aside slots visible while resource bytes are loading", async () => {
+  it("keeps top and left slots visible while resource bytes are loading", async () => {
     const pendingResponse = deferred<Response>()
     vi.mocked(fetch).mockImplementation(() => pendingResponse.promise)
 
     await renderDocx(
       <DocxViewer
         source={docxUrlSource("/loading-slots.docx")}
-        header={<div>Loading legend</div>}
-        aside={<nav>Loading rail</nav>}
+        slots={{
+          top: <div>Loading legend</div>,
+          left: <nav>Loading rail</nav>,
+        }}
       />
     )
 
@@ -1198,7 +1202,7 @@ describe("DocxViewer", () => {
     expect(await screen.findByText("Target cell")).toBeTruthy()
   })
 
-  it("keeps header and aside slots visible while rendering is pending", async () => {
+  it("keeps top and left slots visible while rendering is pending", async () => {
     const pending = deferred<void>()
     docxMock.renderAsync.mockImplementation(async (_buffer, host) => {
       installRenderedDocument(host)
@@ -1208,8 +1212,10 @@ describe("DocxViewer", () => {
     await renderDocx(
       <DocxViewer
         source={docxUrlSource("/pending-slots.docx")}
-        header={<div>Pending legend</div>}
-        aside={<nav>Pending rail</nav>}
+        slots={{
+          top: <div>Pending legend</div>,
+          left: <nav>Pending rail</nav>,
+        }}
       />
     )
 
@@ -1587,6 +1593,43 @@ describe("DocxViewer", () => {
         "content-visibility"
       )
     ).not.toBe("hidden")
+  })
+
+  it("does not rebuild the render index when only the highlight target changes", async () => {
+    const highlights = new Map<string, MockHighlight>()
+    installHighlightApi(highlights)
+    const createTreeWalker = vi.spyOn(document, "createTreeWalker")
+
+    const view = await renderDocx(
+      <DocxViewer
+        source={docxUrlSource("/highlight-index.docx")}
+        highlight={{ kind: "text", text: "revenue increased" }}
+      />
+    )
+
+    await waitForRenderedDocx()
+    await waitFor(() => {
+      expect(highlights.size).toBe(1)
+    })
+    expect(createTreeWalker).toHaveBeenCalled()
+    createTreeWalker.mockClear()
+
+    await act(async () => {
+      view.rerender(
+        <DocxViewer
+          source={docxUrlSource("/highlight-index.docx")}
+          highlight={{ kind: "cell", table: 0, row: 0, column: 1 }}
+        />
+      )
+    })
+
+    await waitFor(() => {
+      expect([...highlights.values()][0]?.ranges[0]?.toString()).toBe(
+        "Target cell"
+      )
+    })
+    expect(createTreeWalker).not.toHaveBeenCalled()
+    expect(docxMock.renderAsync).toHaveBeenCalledTimes(1)
   })
 
   it("does not recreate CSS highlights for equivalent target values", async () => {
@@ -2523,8 +2566,10 @@ describe("DocxViewer", () => {
     await renderDocx(
       <DocxViewer
         source={docxUrlSource("/retry-loading-slots.docx")}
-        header={<div>Retry legend</div>}
-        aside={<nav>Retry rail</nav>}
+        slots={{
+          top: <div>Retry legend</div>,
+          left: <nav>Retry rail</nav>,
+        }}
       />
     )
 

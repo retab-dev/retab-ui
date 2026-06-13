@@ -1,46 +1,35 @@
+import * as React from "react"
+
+import { DataCellControl } from "@/components/ui/data-cell"
 import type { CellEditorProps } from "@/components/json-table/cell-editors/editor-types"
-import { fieldFocusId } from "@/components/json-table/cell-editors/editor-types"
-import { JsonTableScalarCell } from "@/components/json-table/json-table-scalar-cell"
+import { jsonTableDataCellClass } from "@/components/json-table/json-table-data-cell"
 
 export function TextEditor({
-  identity,
-  field,
-  textDraft,
-  focus,
-  overlays,
-  commit,
+  cell,
+  editSession,
+  draftValue,
+  setDraftValue,
+  closeEditSession,
+  commitValue,
 }: CellEditorProps) {
-  const focusId = fieldFocusId(identity)
+  React.useEffect(() => {
+    if (editSession.intent.type !== "keyboard") return
+    if (editSession.intent.key.length !== 1) return
+    setDraftValue(editSession.intent.key)
+  }, [editSession.id, editSession.intent, setDraftValue])
 
   return (
-    <JsonTableScalarCell
+    <DataCellControl
       kind="text"
-      editable={field.isEditable}
-      mode={
-        overlays.forceEditMode && overlays.showInput && field.isEditable
-          ? "edit"
-          : undefined
-      }
-      value={textDraft.activeTextValue ?? null}
-      autoFocus={overlays.autoFocus}
-      formatValue={() =>
-        field.effectiveValue === null || field.effectiveValue === undefined
-          ? ""
-          : String(field.effectiveValue)
-      }
-      draftValue={textDraft.activeTextValue}
-      onDraftValueChange={textDraft.setDraftTextValue}
-      onCommit={commit.onCommit}
-      onBlur={() => {
-        focus.setFocusedField(null)
-        focus.setIsInputFocused(false)
-      }}
-      onFocus={() => {
-        textDraft.setDraftTextValue(textDraft.committedTextValue)
-        focus.setFocusedField(focusId)
-        focus.setIsInputFocused(true)
-      }}
-      disabled={!field.isEditable}
+      value={draftValue || null}
+      draftValue={draftValue}
+      activationIntent={editSession.intent}
+      autoFocus
+      className={jsonTableDataCellClass}
+      disabled={!cell.isEditable}
+      onDraftValueChange={setDraftValue}
+      onCommit={commitValue}
+      onEditingEnd={closeEditSession}
     />
   )
 }

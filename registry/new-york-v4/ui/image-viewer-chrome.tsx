@@ -14,7 +14,7 @@ export interface ImageViewerToolbarProps {
   countLabel: string
   scale: number
   downloadAction: ViewerDownloadAction
-  isScaleControlled?: boolean
+  scaleControlsDisabled?: boolean
   onZoomOut(): void
   onZoomIn(): void
   onFitWidth(): void
@@ -25,7 +25,7 @@ export function ImageViewerToolbar({
   countLabel,
   scale,
   downloadAction,
-  isScaleControlled = false,
+  scaleControlsDisabled = false,
   onZoomOut,
   onZoomIn,
   onFitWidth,
@@ -40,7 +40,7 @@ export function ImageViewerToolbar({
         <ToolbarIconButton
           label="Zoom out"
           onClick={onZoomOut}
-          disabled={isScaleControlled}
+          disabled={scaleControlsDisabled}
         >
           <Minus />
         </ToolbarIconButton>
@@ -50,14 +50,14 @@ export function ImageViewerToolbar({
         <ToolbarIconButton
           label="Zoom in"
           onClick={onZoomIn}
-          disabled={isScaleControlled}
+          disabled={scaleControlsDisabled}
         >
           <Plus />
         </ToolbarIconButton>
         <ToolbarIconButton
           label="Fit width"
           onClick={onFitWidth}
-          disabled={isScaleControlled}
+          disabled={scaleControlsDisabled}
         >
           <Maximize />
         </ToolbarIconButton>

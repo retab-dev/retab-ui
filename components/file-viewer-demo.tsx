@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils"
 import { FileViewer } from "@/components/ui/file-viewer"
 
 const FILES = [
-  { label: "PDF", file: "big-911-report.pdf" },
+  { label: "PDF", file: "spacex-prospectus.pdf" },
   { label: "Image", file: "attention-page-1.png" },
   { label: "TIFF", file: "nvidia-10q-scan.tiff" },
   { label: "XLSX", file: "nvidia-financials-fy2024.xlsx" },
@@ -29,7 +29,7 @@ function FileTabs({
   className?: string
 }) {
   return (
-    <div className={cn("flex flex-wrap gap-px", className)}>
+    <div className={cn("flex flex-wrap gap-[3px]", className)}>
       {FILES.map((f, i) => (
         <button
           key={f.file}

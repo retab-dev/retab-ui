@@ -1,7 +1,6 @@
 import { cn } from "@/lib/utils"
-import { jsonTableScalarDataCellClass } from "@/components/json-table/json-table-scalar-cell"
 
-export const jsonTableDataCellClass = jsonTableScalarDataCellClass
+export const jsonTableDataCellClass = "h-full rounded-none border-0 !text-xs"
 
 export const jsonTableSelectDataCellClass = cn(
   jsonTableDataCellClass,

@@ -15,12 +15,12 @@ import {
 } from "@/components/ui/pdf-viewer"
 
 /**
- * Turn a source anchor into a PDF location, or `undefined` when the anchor isn't
+ * Turn a source anchor into a PDF target, or `undefined` when the anchor isn't
  * a page region (a spreadsheet cell, a text span, …). PDF/image bbox anchors are
  * normalized [0, 1]; the viewer wants percentages, so scale by 100. An image
  * lands on the single page 1.
  */
-export function pdfAnchorToLocation(
+export function pdfAnchorToTarget(
   anchor: SourceAnchor
 ): SourceLocation | undefined {
   if (anchor.kind === "pdf_bbox") {
@@ -95,11 +95,11 @@ export function usePdfSourceTarget(
   return React.useMemo<SourceTarget>(
     () => ({
       scrollTo: (source: Source, options) => {
-        const location = pdfAnchorToLocation(source.anchor)
-        if (location) {
+        const target = pdfAnchorToTarget(source.anchor)
+        if (target) {
           viewerRef.current?.scrollToPageTarget(
-            location.page,
-            { top: location.area.top },
+            target.page,
+            { top: target.area.top },
             options
           )
         }
@@ -116,10 +116,10 @@ export function usePdfSourceTarget(
 export function renderPdfSourceOverlay(
   source: Source | undefined
 ): (props: PageOverlayProps) => React.ReactNode {
-  const location = source ? pdfAnchorToLocation(source.anchor) : undefined
+  const target = source ? pdfAnchorToTarget(source.anchor) : undefined
   return function PdfSourceOverlay({ pageNumber }: PageOverlayProps) {
-    return location && location.page === pageNumber ? (
-      <PdfHighlight area={location.area} />
+    return target && target.page === pageNumber ? (
+      <PdfHighlight area={target.area} />
     ) : null
   }
 }

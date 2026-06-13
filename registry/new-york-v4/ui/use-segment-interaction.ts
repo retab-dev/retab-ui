@@ -3,29 +3,27 @@
 import * as React from "react"
 
 import { type SegmentInteraction } from "@/lib/segment-interaction"
-import { type Segment } from "@/lib/segments"
 
 export interface ControlledSegmentInteractionOptions {
-  hoveredId: string | null
-  focusedId: string | null
-  selectedId: string | null
-  setHoveredId: (id: string | null) => void
-  setFocusedId: (id: string | null) => void
-  setSelectedId: (id: string | null) => void
+  hoveredSegmentId: string | null
+  focusedSegmentId: string | null
+  setHoveredSegmentId: (segmentId: string | null) => void
+  setFocusedSegmentId: (segmentId: string | null) => void
 }
 
 export function useSegmentInteraction(): SegmentInteraction {
-  const [hoveredId, setHoveredId] = React.useState<string | null>(null)
-  const [focusedId, setFocusedId] = React.useState<string | null>(null)
-  const [selectedId, setSelectedId] = React.useState<string | null>(null)
+  const [hoveredSegmentId, setHoveredSegmentId] = React.useState<string | null>(
+    null
+  )
+  const [focusedSegmentId, setFocusedSegmentId] = React.useState<string | null>(
+    null
+  )
 
   return useSegmentInteractionObject({
-    hoveredId,
-    focusedId,
-    selectedId,
-    setHoveredId,
-    setFocusedId,
-    setSelectedId,
+    hoveredSegmentId,
+    focusedSegmentId,
+    setHoveredSegmentId,
+    setFocusedSegmentId,
   })
 }
 
@@ -36,44 +34,44 @@ export function useControlledSegmentInteraction(
 }
 
 function useSegmentInteractionObject({
-  hoveredId,
-  focusedId,
-  selectedId,
-  setHoveredId,
-  setFocusedId,
-  setSelectedId,
+  hoveredSegmentId,
+  focusedSegmentId,
+  setHoveredSegmentId,
+  setFocusedSegmentId,
 }: ControlledSegmentInteractionOptions): SegmentInteraction {
-  const selectSegment = React.useCallback(
-    (segment: Segment) => {
-      setSelectedId(segment.id)
-    },
-    [setSelectedId]
+  const previewSegment = React.useCallback(
+    (segmentId: string) => setHoveredSegmentId(segmentId),
+    [setHoveredSegmentId]
   )
-
-  const clearSelection = React.useCallback(() => {
-    setSelectedId(null)
-  }, [setSelectedId])
+  const clearPreview = React.useCallback(
+    () => setHoveredSegmentId(null),
+    [setHoveredSegmentId]
+  )
+  const focusSegment = React.useCallback(
+    (segmentId: string) => setFocusedSegmentId(segmentId),
+    [setFocusedSegmentId]
+  )
+  const clearFocus = React.useCallback(
+    () => setFocusedSegmentId(null),
+    [setFocusedSegmentId]
+  )
 
   return React.useMemo(
     () => ({
-      hoveredId,
-      focusedId,
-      selectedId,
-      setHoveredId,
-      setFocusedId,
-      setSelectedId,
-      selectSegment,
-      clearSelection,
+      hoveredSegmentId,
+      focusedSegmentId,
+      previewSegment,
+      clearPreview,
+      focusSegment,
+      clearFocus,
     }),
     [
-      clearSelection,
-      focusedId,
-      hoveredId,
-      selectedId,
-      selectSegment,
-      setFocusedId,
-      setHoveredId,
-      setSelectedId,
+      clearFocus,
+      clearPreview,
+      focusSegment,
+      focusedSegmentId,
+      hoveredSegmentId,
+      previewSegment,
     ]
   )
 }

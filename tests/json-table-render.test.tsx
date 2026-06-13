@@ -3,42 +3,20 @@
 import { cleanup, fireEvent } from "@testing-library/react"
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
 
-import {
-  baseField,
-  baseOverlays,
-  baseTextDraft,
-  renderEditor,
-} from "./json-table-editor-test-utils"
+import { baseField, renderEditor } from "./json-table-editor-test-utils"
 import { installJsonTableDom } from "./json-table-test-dom"
 
 beforeAll(() => installJsonTableDom())
 afterEach(() => cleanup())
 
-function activateDataCell(container: HTMLElement) {
-  const cell = container.querySelector('[data-slot="data-cell"]')
-  expect(cell).toBeTruthy()
-  fireEvent.mouseEnter(cell as HTMLElement)
-}
-
 describe("json table cell editor dispatch", () => {
-  it("keeps scalar layout owned by DataCell instead of editor overrides", () => {
-    const displayView = renderEditor("string", {
-      field: { ...baseField("string"), effectiveValue: "0628" },
+  it("renders scalar editors through the DataCell control primitive", () => {
+    const view = renderEditor("string", {
+      cell: { ...baseField("string"), effectiveValue: "0628" },
+      draftValue: "0628",
     })
-    const displayCell = displayView.container.querySelector(
-      '[data-slot="data-cell"]'
-    )
-    expect(displayCell?.getAttribute("class")).toContain("h-full")
-    expect(displayCell?.getAttribute("class")).not.toContain("py-2")
-    expect(displayCell?.getAttribute("class")).not.toContain("items-start")
-    expect(displayCell?.getAttribute("class")).not.toContain("leading-none")
-    cleanup()
 
-    const editView = renderEditor("string", {
-      overlays: { ...baseOverlays(), showInput: true, forceEditMode: true },
-      textDraft: { ...baseTextDraft(), activeTextValue: "0628" },
-    })
-    const inputControl = editView
+    const inputControl = view
       .getByRole("textbox")
       .closest('[data-slot="input-control"]')
     expect(inputControl?.getAttribute("class")).toContain("h-full")
@@ -47,75 +25,37 @@ describe("json table cell editor dispatch", () => {
     expect(inputControl?.getAttribute("class")).not.toContain("leading-none")
   })
 
-  it("renders string display and edit states", () => {
-    let view = renderEditor("string", {
-      field: { ...baseField("string"), effectiveValue: "hello" },
-    })
-    expect(view.getByText("hello")).toBeTruthy()
-    cleanup()
-
-    view = renderEditor("string")
-    activateDataCell(view.container)
-    expect(view.getByRole("textbox")).toBeTruthy()
-  })
-
-  it("starts text editing from the display state", () => {
+  it("commits empty text as null and closes on blur", () => {
+    const commitValue = vi.fn()
+    const closeEditSession = vi.fn()
     const view = renderEditor("string", {
-      field: { ...baseField("string"), effectiveValue: "hello" },
+      draftValue: "",
+      commitValue,
+      closeEditSession,
     })
 
-    fireEvent.click(view.getByText("hello"))
-
-    expect(view.getByRole("textbox")).toBeTruthy()
-  })
-
-  it("commits empty text as null and exits edit mode on blur", () => {
-    const onCommit = vi.fn()
-    const setFocusedField = vi.fn()
-    const setIsInputFocused = vi.fn()
-    const view = renderEditor("string", {
-      textDraft: {
-        ...baseTextDraft(),
-        activeTextValue: "",
-        draftTextValue: "",
-      },
-      focus: {
-        focusedField: "doc_1-field",
-        setFocusedField,
-        setIsInputFocused,
-      },
-      commit: { onCommit },
-    })
-
-    activateDataCell(view.container)
     fireEvent.blur(view.getByRole("textbox"))
 
-    expect(onCommit).toHaveBeenCalledWith(
+    expect(commitValue).toHaveBeenCalledWith(
       null,
       expect.objectContaining({ kind: "text", rawValue: "", isValid: true })
     )
-    expect(setFocusedField).toHaveBeenCalledWith(null)
-    expect(setIsInputFocused).toHaveBeenCalledWith(false)
+    expect(closeEditSession).toHaveBeenCalled()
   })
 
   it("renders number, boolean, and enum editors", () => {
-    let view = renderEditor("number", {
-      overlays: { ...baseOverlays(), showInput: true },
-      textDraft: { ...baseTextDraft(), activeTextValue: "42" },
-    })
-    activateDataCell(view.container)
+    let view = renderEditor("number", { draftValue: "42" })
     expect(view.getByRole("spinbutton")).toBeTruthy()
     cleanup()
 
     view = renderEditor("boolean", {
-      field: { ...baseField("boolean"), effectiveValue: true },
+      cell: { ...baseField("boolean"), effectiveValue: true },
     })
     expect(view.getByRole("checkbox").getAttribute("aria-checked")).toBe("true")
     cleanup()
 
     view = renderEditor("enum", {
-      overlays: { ...baseOverlays(), showInput: true },
-      field: {
+      cell: {
         ...baseField("enum"),
         effectiveValue: "approved",
         fieldMetadata: {
@@ -136,28 +76,15 @@ describe("json table cell editor dispatch", () => {
   })
 
   it("reports invalid integer inputs without lossy coercion", () => {
-    const onCommit = vi.fn()
-    const setFocusedField = vi.fn()
-    const setIsInputFocused = vi.fn()
+    const commitValue = vi.fn()
     const view = renderEditor("integer", {
-      overlays: { ...baseOverlays(), showInput: true },
-      textDraft: {
-        ...baseTextDraft(),
-        activeTextValue: "12.7",
-        draftTextValue: "12.7",
-      },
-      focus: {
-        focusedField: "doc_1-field",
-        setFocusedField,
-        setIsInputFocused,
-      },
-      commit: { onCommit },
+      draftValue: "12.7",
+      commitValue,
     })
 
-    activateDataCell(view.container)
     fireEvent.blur(view.getByRole("spinbutton"))
 
-    expect(onCommit).toHaveBeenCalledWith(
+    expect(commitValue).toHaveBeenCalledWith(
       null,
       expect.objectContaining({
         kind: "integer",
@@ -165,38 +92,31 @@ describe("json table cell editor dispatch", () => {
         isValid: false,
       })
     )
-    expect(setFocusedField).toHaveBeenCalledWith(null)
-    expect(setIsInputFocused).toHaveBeenCalledWith(false)
   })
 
   it("renders date, date-time, and time editors", () => {
-    let view = renderEditor("date", {
-      textDraft: { ...baseTextDraft(), activeTextValue: "2024-01-02" },
-    })
-    expect(view.getByText("Jan 2, 2024")).toBeTruthy()
+    let view = renderEditor("date", { draftValue: "2024-01-02" })
+    expect(view.getByText("02/01/2024")).toBeTruthy()
     cleanup()
 
     view = renderEditor("date-time", {
-      overlays: { ...baseOverlays(), showInput: true },
-      textDraft: {
-        ...baseTextDraft(),
-        activeTextValue: "2024-01-02T03:04:00",
-      },
+      draftValue: "2024-01-02T03:04:00",
     })
-    activateDataCell(view.container)
-    const dateTimeTrigger = view.getByRole("button")
+    const dateTimeTrigger = view.container.querySelector<HTMLElement>(
+      'button[data-slot="data-cell"]'
+    )
+    if (!dateTimeTrigger) throw new Error("Missing date-time trigger")
     expect(dateTimeTrigger.getAttribute("data-slot")).toBe("data-cell")
     expect(dateTimeTrigger.getAttribute("data-mode")).toBe("edit")
     expect(dateTimeTrigger.getAttribute("data-kind")).toBe("date-time")
     expect(dateTimeTrigger.textContent).toContain("02/01/2024, 03:04")
     cleanup()
 
-    view = renderEditor("time", {
-      overlays: { ...baseOverlays(), showInput: true },
-      textDraft: { ...baseTextDraft(), activeTextValue: "03:04:00" },
-    })
-    activateDataCell(view.container)
-    const timeTrigger = view.getByRole("button")
+    view = renderEditor("time", { draftValue: "03:04:00" })
+    const timeTrigger = view.container.querySelector<HTMLElement>(
+      'button[data-slot="data-cell"]'
+    )
+    if (!timeTrigger) throw new Error("Missing time trigger")
     expect(timeTrigger.getAttribute("data-slot")).toBe("data-cell")
     expect(timeTrigger.getAttribute("data-mode")).toBe("edit")
     expect(timeTrigger.getAttribute("data-kind")).toBe("time")
@@ -205,7 +125,7 @@ describe("json table cell editor dispatch", () => {
 
   it("renders object and array editor triggers", () => {
     let view = renderEditor("object", {
-      field: {
+      cell: {
         ...baseField("object"),
         effectiveValue: { name: "ACME" },
         fieldMetadata: {
@@ -224,7 +144,7 @@ describe("json table cell editor dispatch", () => {
     cleanup()
 
     view = renderEditor("array", {
-      field: {
+      cell: {
         ...baseField("array"),
         effectiveValue: ["one", "two"],
         fieldMetadata: {

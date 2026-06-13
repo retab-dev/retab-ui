@@ -1,12 +1,13 @@
+import * as React from "react"
 import type { JSONSchema7, JSONSchema7Definition } from "json-schema"
 
-import type { CellEditorProps } from "@/components/json-table/cell-editors/editor-types"
-import { ObjectEditor as JsonObjectEditor } from "@/components/json-table/object-editor"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import type { CellEditorProps } from "@/components/json-table/cell-editors/editor-types"
+import { ObjectEditor as JsonObjectEditor } from "@/components/json-table/object-editor"
 
 type SchemaWithDefs = JSONSchema7 & {
   $defs?: Record<string, JSONSchema7Definition>
@@ -61,29 +62,35 @@ export function transferContext(
 }
 
 export function ObjectCellEditor({
-  identity,
-  field,
-  overlays,
-  commit,
+  cell,
+  editSession,
+  setOverlayOpen,
+  closeEditSession,
+  commitValue,
 }: CellEditorProps) {
-  const property = field.fieldMetadata.rawSchema
+  const property = cell.fieldMetadata.rawSchema
+
+  React.useLayoutEffect(() => {
+    setOverlayOpen(true)
+  }, [editSession.id, setOverlayOpen])
 
   return (
     <Popover
-      open={overlays.openEditorPath === identity.fieldPath}
+      open={editSession.isOverlayOpen}
       onOpenChange={(open) => {
-        overlays.setOpenEditorPath(open ? identity.fieldPath : null)
+        setOverlayOpen(open)
+        if (!open) closeEditSession()
       }}
     >
       <PopoverTrigger asChild>
         <button className="h-full w-full justify-start overflow-hidden px-1 text-xs leading-none text-inherit select-none hover:bg-accent/50 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none">
-          {field.effectiveValue ? (
+          {cell.effectiveValue ? (
             <div className="max-w-[80px] truncate text-left">
-              {formatObjectSummary(field.effectiveValue)}
+              {formatObjectSummary(cell.effectiveValue)}
             </div>
           ) : (
             <div className="max-w-[80px] truncate text-left text-muted-foreground">
-              {`Edit ${property.title || identity.fieldPath}`}
+              {`Edit ${property.title || cell.fieldPath}`}
             </div>
           )}
         </button>
@@ -95,17 +102,17 @@ export function ObjectCellEditor({
         sideOffset={0}
         alignOffset={-1}
       >
-        {overlays.openEditorPath === identity.fieldPath && (
+        {editSession.isOverlayOpen && (
           <JsonObjectEditor
-            disabled={!field.isEditable}
+            disabled={!cell.isEditable}
             property={{
-              ...transferContext(property, field.schema),
+              ...transferContext(property, cell.schema),
               additionalProperties: true,
             }}
-            currentValue={field.effectiveValue}
+            currentValue={cell.effectiveValue}
             onSubmit={(values) => {
-              commit.onCommit(values)
-              overlays.setOpenEditorPath(null)
+              commitValue(values)
+              closeEditSession()
             }}
           />
         )}

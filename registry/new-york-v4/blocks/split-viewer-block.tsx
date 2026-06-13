@@ -31,6 +31,7 @@ export function SplitViewerBlock() {
         result={SPLIT_RESULT}
         renderDocument={(handlers) => (
           <PdfViewer
+            ref={handlers.setViewerHandle}
             source={{
               kind: "url",
               url: PDF_URL,

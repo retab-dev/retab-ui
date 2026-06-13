@@ -3,7 +3,7 @@
 import * as React from "react"
 
 import { PdfThumbnailSidebar } from "@/components/ui/pdf-thumbnail-sidebar"
-import { PdfViewer } from "@/components/ui/pdf-viewer"
+import { PdfViewer, type PdfViewerHandle } from "@/components/ui/pdf-viewer"
 
 const PDF_URL = "/samples/nvidia-10k-fy2024.pdf"
 
@@ -18,17 +18,16 @@ const PDF_URL = "/samples/nvidia-10k-fy2024.pdf"
  */
 export function PdfThumbnailsBlock() {
   const [currentPage, setCurrentPage] = React.useState(1)
-  const previewRef = React.useRef<HTMLDivElement | null>(null)
+  const viewerRef = React.useRef<PdfViewerHandle>(null)
 
   const jumpToPage = React.useCallback((page: number) => {
-    previewRef.current
-      ?.querySelector<HTMLElement>(`[data-page-number="${page}"]`)
-      ?.scrollIntoView({ behavior: "smooth", block: "start" })
+    viewerRef.current?.scrollToPageTarget(page, { top: 0 })
   }, [])
 
   return (
-    <div ref={previewRef} className="h-full min-h-[680px] bg-background">
+    <div className="h-full min-h-[680px] bg-background">
       <PdfViewer
+        ref={viewerRef}
         source={{
           kind: "url",
           url: PDF_URL,

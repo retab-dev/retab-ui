@@ -10,7 +10,7 @@ import type {
 } from "@/components/ui/text-viewer"
 
 /** A text_span anchor → a 1-based inclusive line range. */
-export function textAnchorToLines(
+export function textAnchorToTarget(
   anchor: SourceAnchor
 ): TextLineRange | undefined {
   if (anchor.kind === "text_span") {
@@ -46,8 +46,8 @@ export function useTextSourceTarget(
   return React.useMemo<SourceTarget>(
     () => ({
       scrollTo: (source: Source, options) => {
-        const range = textAnchorToLines(source.anchor)
-        if (range) viewerRef.current?.scrollToLineRange(range, options)
+        const target = textAnchorToTarget(source.anchor)
+        if (target) viewerRef.current?.scrollToLineRange(target, options)
       },
     }),
     [viewerRef]
@@ -61,5 +61,5 @@ export function useTextSourceTarget(
 export function sourceToTextHighlight(
   source: Source | undefined
 ): TextLineRange | null {
-  return (source && textAnchorToLines(source.anchor)) || null
+  return source ? textAnchorToTarget(source.anchor) || null : null
 }

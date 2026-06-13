@@ -378,7 +378,7 @@ describe("DataCell", () => {
     expect(screen.queryByRole("spinbutton")).toBeNull()
   })
 
-  it("keeps editable cells display-only until activation", () => {
+  it("keeps editable display cells display-only on hover", () => {
     render(<DataCell kind="number" value={42} editable />)
 
     expect(screen.getByText("42")).toBeTruthy()
@@ -386,20 +386,17 @@ describe("DataCell", () => {
 
     fireEvent.mouseEnter(screen.getByText("42"))
 
-    const input = screen.getByRole("spinbutton") as HTMLInputElement
-    expect(input.type).toBe("number")
-    expect(input.value).toBe("42")
+    expect(screen.queryByRole("spinbutton")).toBeNull()
   })
 
-  it("activates editable cells on click", () => {
-    render(<DataCell kind="text" value="Vendor" editable />)
+  it("renders edit controls only when mode is explicit", () => {
+    render(<DataCell kind="text" value="Vendor" mode="edit" />)
 
-    fireEvent.click(screen.getByText("Vendor"))
-
-    expect(screen.getByRole("textbox")).toBeTruthy()
+    const input = screen.getByRole("textbox") as HTMLInputElement
+    expect(input.value).toBe("Vendor")
   })
 
-  it("does not activate auto cells when caller prevents the click", () => {
+  it("does not activate display cells when caller prevents the click", () => {
     render(
       <DataCell
         kind="text"
@@ -415,7 +412,7 @@ describe("DataCell", () => {
     expect(screen.getByText("Vendor")).toBeTruthy()
   })
 
-  it("suppresses disabled auto-cell activation callbacks", () => {
+  it("keeps disabled display cells inert and disabled", () => {
     const onClick = vi.fn()
     const onMouseEnter = vi.fn()
     const onMouseLeave = vi.fn()
@@ -436,24 +433,24 @@ describe("DataCell", () => {
     fireEvent.mouseLeave(cell)
     fireEvent.click(cell)
 
-    expect(onClick).not.toHaveBeenCalled()
-    expect(onMouseEnter).not.toHaveBeenCalled()
-    expect(onMouseLeave).not.toHaveBeenCalled()
     expect(screen.queryByRole("textbox")).toBeNull()
+    expect(cell.getAttribute("aria-disabled")).toBe("true")
+    expect(cell.getAttribute("class")).toContain("pointer-events-none")
+    expect(cell.getAttribute("class")).toContain("opacity-64")
+    expect(onClick).toHaveBeenCalled()
+    expect(onMouseEnter).toHaveBeenCalled()
+    expect(onMouseLeave).toHaveBeenCalled()
   })
 
-  it("focuses the real control when auto cells are activated by click", () => {
-    render(<DataCell kind="text" value="Vendor" editable />)
-
-    fireEvent.click(screen.getByText("Vendor"))
+  it("focuses the real control when edit controls autofocus", () => {
+    render(<DataCell kind="text" value="Vendor" mode="edit" autoFocus />)
 
     expect(document.activeElement).toBe(screen.getByRole("textbox"))
   })
 
-  it("keeps auto text cells editing while the input remains focused", () => {
-    render(<DataCell kind="text" value="Vendor" editable />)
+  it("keeps explicit text controls mounted while the input remains focused", () => {
+    render(<DataCell kind="text" value="Vendor" mode="edit" />)
 
-    fireEvent.mouseEnter(screen.getByText("Vendor"))
     const input = screen.getByRole("textbox") as HTMLInputElement
     fireEvent.focus(input)
     fireEvent.mouseLeave(input)
@@ -461,10 +458,9 @@ describe("DataCell", () => {
     expect(screen.getByRole("textbox")).toBe(input)
   })
 
-  it("keeps auto picker cells editing while the trigger remains focused", () => {
-    render(<DataCell kind="date" value="2026-06-12" editable />)
+  it("keeps explicit picker controls mounted while the trigger remains focused", () => {
+    render(<DataCell kind="date" value="2026-06-12" mode="edit" />)
 
-    fireEvent.mouseEnter(getDataCell(screen.getByText("12/06/2026")))
     const trigger = getPickerTrigger()
     fireEvent.focus(trigger)
     fireEvent.mouseLeave(trigger)
@@ -786,6 +782,42 @@ describe("DataCell", () => {
     expect(onCommit).not.toHaveBeenCalled()
   })
 
+  it("can control picker popup state from the caller", () => {
+    const onPickerOpenChange = vi.fn()
+    const { rerender } = render(
+      <DataCell
+        kind="date"
+        mode="edit"
+        value="2026-06-12"
+        isPickerOpen={false}
+        onPickerOpenChange={onPickerOpenChange}
+      />
+    )
+
+    const trigger = getPickerTrigger()
+    fireEvent.click(trigger)
+
+    expect(onPickerOpenChange).toHaveBeenCalledWith(true)
+    expect(
+      document.querySelector('[data-slot="data-cell-picker-popup"]')
+    ).toBeNull()
+
+    rerender(
+      <DataCell
+        kind="date"
+        mode="edit"
+        value="2026-06-12"
+        isPickerOpen
+        onPickerOpenChange={onPickerOpenChange}
+      />
+    )
+
+    expect(
+      document.querySelector('[data-slot="data-cell-picker-popup"]')
+    ).toBeTruthy()
+    expect(getPickerTrigger().getAttribute("aria-expanded")).toBe("true")
+  })
+
   it("closes picker popups on outside pointer down and Escape", () => {
     const { unmount } = render(
       <div>
@@ -1029,51 +1061,28 @@ describe("DataCell", () => {
     expect(displayCell?.getAttribute("data-mode")).toBe("display")
   })
 
-  it("keeps every demo edit cell as a display shell until hover", () => {
+  it("renders every demo edit cell as an explicit control", () => {
     render(<DataCellDemo />)
 
-    for (const label of [
-      "Text",
-      "Number",
-      "Integer",
-      "Boolean",
-      "Date",
-      "Time",
-      "Date Time",
-      "Enum",
-    ]) {
-      const row = screen.getByText(label).parentElement
-      const editCell = row?.children[2] as HTMLElement
-      const displayCell = editCell.querySelector('[data-slot="data-cell"]')
-      expect(displayCell?.getAttribute("data-mode")).toBe("display")
-      expectNoBorderOrShadow(displayCell)
-      expectTransparentBackground(displayCell)
-      expect(editCell.querySelector("input")).toBeNull()
-      expect(editCell.querySelector('[data-slot="select-trigger"]')).toBeNull()
-    }
-  })
-
-  it("turns demo edit cells into real controls on hover", () => {
-    const { unmount } = render(<DataCellDemo />)
+    const textRow = screen.getByText("Text").parentElement
+    const textEditCell = textRow?.children[2] as HTMLElement
+    expect(textEditCell.querySelector('input[type="text"]')).toBeTruthy()
 
     const numberRow = screen.getByText("Number").parentElement
     const numberEditCell = numberRow?.children[2] as HTMLElement
-    fireEvent.mouseEnter(
-      numberEditCell.querySelector('[data-slot="data-cell"]') as HTMLElement
-    )
-
     expect(numberEditCell.querySelector('[data-mode="edit"]')).toBeTruthy()
     expect(numberEditCell.querySelector('input[type="number"]')).toBeTruthy()
 
-    unmount()
-    render(<DataCellDemo />)
+    const booleanRow = screen.getByText("Boolean").parentElement
+    const booleanEditCell = booleanRow?.children[2] as HTMLElement
+    expect(booleanEditCell.querySelector('[role="checkbox"]')).toBeTruthy()
+
+    const dateRow = screen.getByText("Date").parentElement
+    const dateEditCell = dateRow?.children[2] as HTMLElement
+    expect(dateEditCell.querySelector('button[data-mode="edit"]')).toBeTruthy()
 
     const enumRow = screen.getByText("Enum").parentElement
     const enumEditCell = enumRow?.children[2] as HTMLElement
-    fireEvent.mouseEnter(
-      enumEditCell.querySelector('[data-slot="data-cell"]') as HTMLElement
-    )
-
     const enumTrigger = enumEditCell.querySelector(
       '[data-slot="select-trigger"]'
     )

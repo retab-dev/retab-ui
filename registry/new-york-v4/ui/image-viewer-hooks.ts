@@ -38,18 +38,24 @@ export function useFrameListWidth() {
 export function useImageViewerScale(
   source: FrameSource,
   controlledScale: number | undefined,
+  defaultScale: number | undefined,
+  onScaleChange: ImageViewerProps["onScaleChange"],
   frameListWidth: number | null
 ) {
   const isScaleControlled = controlledScale !== undefined
   const [uncontrolledScale, setUncontrolledScale] = React.useState<
     number | null
-  >(null)
+  >(() =>
+    defaultScale === undefined ? null : normalizeViewerScale(defaultScale)
+  )
   const [rawRotation, setRawRotation] = React.useState(0)
 
   React.useLayoutEffect(() => {
     setRawRotation(0)
-    setUncontrolledScale(null)
-  }, [source])
+    setUncontrolledScale(
+      defaultScale === undefined ? null : normalizeViewerScale(defaultScale)
+    )
+  }, [defaultScale, source])
 
   const rotation = normalizeRotation(rawRotation)
   const widestFrameWidth = Math.max(
@@ -68,22 +74,28 @@ export function useImageViewerScale(
         ? normalizeViewerScale(uncontrolledScale)
         : Math.min(MAX_VIEWER_SCALE, Math.max(MIN_VIEWER_SCALE, fitWidthScale))
 
+  const scaleControlsDisabled = isScaleControlled && !onScaleChange
   const setViewerScale = React.useCallback(
     (nextScale: number | null) => {
-      if (isScaleControlled) return
-      setUncontrolledScale(nextScale)
+      const normalized =
+        nextScale == null ? null : normalizeViewerScale(nextScale)
+      if (isScaleControlled) {
+        onScaleChange?.(normalized)
+        return
+      }
+      setUncontrolledScale(normalized)
     },
-    [isScaleControlled]
+    [isScaleControlled, onScaleChange]
   )
   const rotateClockwise = React.useCallback(() => {
     setRawRotation((value) => (value + 90) % 360)
   }, [])
 
   return {
-    isScaleControlled,
     rotateClockwise,
     rotation,
     scale,
+    scaleControlsDisabled,
     setViewerScale,
   }
 }

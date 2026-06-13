@@ -1,8 +1,15 @@
+import * as React from "react"
+
 import type { ViewerDownloadAction } from "@/lib/viewer-download"
+import type {
+  ViewerResource,
+  ViewerResourceContent,
+} from "@/lib/viewer-resource"
 import type { XlsxSource } from "@/lib/xlsx-workbook"
-import { xlsxColumnLabel } from "@/lib/xlsx-workbook"
+import { type XlsxSheetMeta, xlsxColumnLabel } from "@/lib/xlsx-workbook"
 
 import { serializeCsvTable } from "./csv-viewer-download"
+import { getXlsxSource } from "./xlsx-viewer-resource"
 
 const CSV_DIALECT = { delimiter: ",", hasHeader: true } as const
 const MAX_DENSE_CSV_EXPORT_CELLS = 1_000_000
@@ -51,6 +58,47 @@ export function xlsxSheetCsvFileName({
     return `${baseName}.csv`
   }
   return `${baseName}.${sanitizeFileNamePart(sheetName)}.csv`
+}
+
+export function useXlsxDownloadActions({
+  resource,
+  activeSheet,
+  activeSheetIndex,
+  sheets,
+  content,
+}: {
+  resource: ViewerResource
+  activeSheet: XlsxSheetMeta | null
+  activeSheetIndex: number
+  sheets: XlsxSheetMeta[] | null
+  content: ViewerResourceContent
+}) {
+  return React.useMemo(() => {
+    const originalDownloadAction = {
+      ...resource.originalDownload,
+      label: activeSheet ? "Download original" : "Download",
+    }
+    if (!activeSheet || !sheets) return [originalDownloadAction]
+    return [
+      originalDownloadAction,
+      createXlsxSheetCsvExportAction({
+        fileName: xlsxSheetCsvFileName({
+          fileName: resource.fileName,
+          sheetName: activeSheet.name,
+          sheetCount: sheets.length,
+        }),
+        sheetIndex: activeSheetIndex,
+        getSource: () => getXlsxSource(content),
+      }),
+    ]
+  }, [
+    activeSheet,
+    activeSheetIndex,
+    content,
+    resource.fileName,
+    resource.originalDownload,
+    sheets,
+  ])
 }
 
 function serializeXlsxSheetAsCsv({

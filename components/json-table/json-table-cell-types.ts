@@ -1,6 +1,10 @@
 import type { JSONSchema7 } from "json-schema"
 
 import type { FixedGridColumn } from "@/components/ui/fixed-grid-columns"
+import type {
+  JsonTableActivationIntent,
+  JsonTableEditSession,
+} from "@/components/json-table/json-table-edit-session"
 import type { ProjectedCell } from "@/components/json-table/lib/document-projection"
 import type { TableDocument } from "@/components/json-table/lib/projects-types"
 import type { FieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
@@ -15,8 +19,14 @@ export interface JsonTableCellProps {
   schema: JSONSchema7
   document: TableDocument
   docId: string
-  setOpenEditorPath: (key: string | null) => void
-  openEditorPath: string | null
+  editSession: JsonTableEditSession | null
+  startEditSession: (
+    projectedCell: ProjectedCell,
+    intent: JsonTableActivationIntent
+  ) => void
+  updateEditSessionDraft: (value: unknown) => void
+  setEditSessionOverlayOpen: (open: boolean) => void
+  closeEditSession: () => void
   onDocumentDataChange: (
     docId: string,
     materializedFieldPath: string,
@@ -28,6 +38,5 @@ export interface JsonTableCellProps {
     rect: DOMRect
   }) => void
   onCellHoverEnd?: () => void
-  onCellActivityLockChange?: (fieldPath: string, locked: boolean) => void
   isJsonEditable: boolean
 }

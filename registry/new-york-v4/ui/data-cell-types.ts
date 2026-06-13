@@ -1,0 +1,82 @@
+import type * as React from "react"
+
+export type DataCellKind =
+  | "text"
+  | "number"
+  | "integer"
+  | "boolean"
+  | "date"
+  | "time"
+  | "date-time"
+
+export type DataCellMode = "display" | "edit"
+export type DataCellValue = string | number | boolean | null | undefined
+export type DataCellCommitValue = string | number | boolean | null
+export type DataCellDateTimeZone = "local" | "preserve" | "utc"
+
+export type DataCellActivationIntent =
+  | {
+      type: "pointer"
+      clientX: number
+      clientY: number
+      detail: number
+    }
+  | {
+      type: "keyboard"
+      key: string
+    }
+  | {
+      type: "programmatic"
+    }
+
+export type DataCellValueMeta = {
+  kind: DataCellKind
+  rawValue: string
+  isEmpty: boolean
+  isValid: boolean
+}
+
+export type DataCellCommitHandler = (
+  value: DataCellCommitValue,
+  meta: DataCellValueMeta
+) => void
+
+type DataCellBaseProps<Kind extends DataCellKind, Value> = Omit<
+  React.HTMLAttributes<HTMLElement>,
+  "children" | "defaultValue" | "onChange"
+> & {
+  kind: Kind
+  value?: Value
+  mode?: DataCellMode
+  editable?: boolean
+  disabled?: boolean
+  name?: string
+  placeholder?: string
+  dateTimeZone?: DataCellDateTimeZone
+  showPickerIcon?: boolean
+  activationIntent?: DataCellActivationIntent
+  isPickerOpen?: boolean
+  formatValue?: (
+    value: Value | undefined,
+    meta: { kind: Kind }
+  ) => React.ReactNode
+  draftValue?: string
+  autoFocus?: boolean
+  onDraftValueChange?: (value: string, meta: DataCellValueMeta) => void
+  onEditingEnd?: () => void
+  onPickerOpenChange?: (open: boolean) => void
+}
+
+export type DataCellProps =
+  | (DataCellBaseProps<"number" | "integer", number | string | null> & {
+      onCommit?: (value: number | null, meta: DataCellValueMeta) => void
+    })
+  | (DataCellBaseProps<"boolean", boolean | null> & {
+      onCommit?: (value: boolean, meta: DataCellValueMeta) => void
+    })
+  | (DataCellBaseProps<
+      "text" | "date" | "time" | "date-time",
+      string | null
+    > & {
+      onCommit?: (value: string | null, meta: DataCellValueMeta) => void
+    })

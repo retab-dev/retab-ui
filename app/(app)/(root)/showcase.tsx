@@ -45,13 +45,13 @@ function ShowcaseItem({
  */
 export function HomeShowcase() {
   return (
-    <div className="container-wrapper">
-      <div className="container px-6 pb-12 md:pb-16 lg:pb-20">
-        {/* Floating island — the demos fade into the page. */}
-        <div className="relative isolate overflow-hidden rounded-3xl px-4 py-10 sm:px-8 md:p-12">
-          <div className="relative z-10 flex flex-col gap-8">
+    <div className="container-wrapper flex-1 p-0">
+      <div className="container overflow-hidden px-0 lg:max-w-none">
+        {/* Floating island — the demos sit in the same muted gray wash as shadcn/ui. */}
+        <div className="theme-neutral relative flex w-full max-w-none flex-col gap-(--gap) overflow-hidden bg-muted/30 p-12 pb-0! [--gap:--spacing(8)] 3xl:[--gap:--spacing(8)] min-[1900px]:p-12 min-[1900px]:[--gap:--spacing(10)]! lg:p-6 lg:[--gap:--spacing(6)] dark:bg-background">
+          <div className="relative z-10 mx-auto flex w-full max-w-7xl flex-col gap-(--gap)">
             <div
-              className="grid items-start gap-8 md:grid-cols-2"
+              className="grid items-start gap-(--gap) md:grid-cols-2"
               style={{ "--showcase-header-h": "4rem" } as React.CSSProperties}
             >
               <ShowcaseItem
@@ -82,7 +82,7 @@ export function HomeShowcase() {
             </div>
 
             {/* Row 3 — JSON Table (2/5) · Sources (3/5) */}
-            <div className="grid items-start gap-8 md:grid-cols-5">
+            <div className="grid items-start gap-(--gap) md:grid-cols-5">
               <ShowcaseItem
                 className="md:col-span-2"
                 title="JSON Table"
@@ -103,9 +103,9 @@ export function HomeShowcase() {
             </div>
           </div>
 
-          {/* Soft edges — fade the island into the page background. */}
-          <div className="pointer-events-none absolute inset-x-0 top-0 z-20 h-24 bg-gradient-to-b from-background to-transparent" />
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-20 bg-gradient-to-t from-background to-transparent" />
+          {/* Soft edges — match the shadcn/ui homepage gray gradient. */}
+          <div className="absolute inset-x-0 top-0 z-1 h-120 bg-linear-to-b from-background via-muted/30 to-transparent dark:hidden" />
+          <div className="absolute inset-x-0 bottom-0 z-20 h-48 bg-linear-to-t from-background via-muted/20 to-transparent lg:h-80 xl:h-64 dark:via-background/80" />
         </div>
       </div>
     </div>

@@ -18,27 +18,26 @@ import {
 } from "@/registry/new-york-v4/lib/document-source"
 import {
   columnLetterToIndex,
-  csvAnchorToCell,
+  csvAnchorToTarget,
   sourceToCsvCell,
   useCsvSourceTarget,
 } from "@/registry/new-york-v4/ui/csv-source"
 import type { CsvViewerHandle } from "@/registry/new-york-v4/ui/csv-viewer"
 import {
-  docxSourceToTarget,
+  docxAnchorToTarget,
   sourceToDocxHighlight,
   useDocxSourceTarget,
 } from "@/registry/new-york-v4/ui/docx-source"
 import type { DocxViewerHandle } from "@/registry/new-york-v4/ui/docx-viewer"
 import {
-  imageAnchorToArea,
-  imageAnchorToFrame,
+  imageAnchorToTarget,
   renderImageSourceOverlay,
   rotateImageArea,
   useImageSourceTarget,
 } from "@/registry/new-york-v4/ui/image-source"
 import type { ImageViewerHandle } from "@/registry/new-york-v4/ui/image-viewer-types"
 import {
-  pdfAnchorToLocation,
+  pdfAnchorToTarget,
   renderPdfSourceOverlay,
   usePdfSourceTarget,
 } from "@/registry/new-york-v4/ui/pdf-source"
@@ -47,15 +46,15 @@ import { SourceFieldList } from "@/registry/new-york-v4/ui/source-field-list"
 import { SourceIndicator } from "@/registry/new-york-v4/ui/source-indicator"
 import {
   sourceToTextHighlight,
-  textAnchorToLines,
+  textAnchorToTarget,
   useTextSourceTarget,
 } from "@/registry/new-york-v4/ui/text-source"
 import type { TextViewerHandle } from "@/registry/new-york-v4/ui/text-viewer"
 import {
   sourceToXlsxCell,
-  spreadsheetAnchorToCell,
   spreadsheetColumnToIndex,
   useXlsxSourceTarget,
+  xlsxAnchorToTarget,
 } from "@/registry/new-york-v4/ui/xlsx-source"
 import type { XlsxViewerHandle } from "@/registry/new-york-v4/ui/xlsx-viewer"
 
@@ -163,26 +162,24 @@ const sourceFieldSamples = [
 function expectSourceToResolve(source: Source) {
   switch (source.anchor.kind) {
     case "pdf_bbox":
-      expect(pdfAnchorToLocation(source.anchor)).toBeDefined()
-      expect(imageAnchorToArea(source.anchor)).toBeDefined()
-      expect(imageAnchorToFrame(source.anchor)).toBeDefined()
+      expect(pdfAnchorToTarget(source.anchor)).toBeDefined()
+      expect(imageAnchorToTarget(source.anchor)).toBeDefined()
       return
     case "image_bbox":
-      expect(imageAnchorToArea(source.anchor)).toBeDefined()
-      expect(imageAnchorToFrame(source.anchor)).toBeDefined()
+      expect(imageAnchorToTarget(source.anchor)).toBeDefined()
       return
     case "csv_cell":
-      expect(csvAnchorToCell(source.anchor)).not.toBeNull()
+      expect(csvAnchorToTarget(source.anchor)).not.toBeNull()
       return
     case "spreadsheet_cell":
-      expect(spreadsheetAnchorToCell(source.anchor)).toBeDefined()
+      expect(xlsxAnchorToTarget(source.anchor)).toBeDefined()
       return
     case "docx_text_span":
     case "docx_table_cell":
-      expect(docxSourceToTarget(source)).not.toBeNull()
+      expect(docxAnchorToTarget(source.anchor, source)).not.toBeNull()
       return
     case "text_span":
-      expect(textAnchorToLines(source.anchor)).toBeDefined()
+      expect(textAnchorToTarget(source.anchor)).toBeDefined()
       return
   }
 }
@@ -438,21 +435,23 @@ describe("source sample fixtures", () => {
 
 describe("source adapters", () => {
   it("converts PDF and image anchors into viewer percentage regions", () => {
-    expect(pdfAnchorToLocation(pdfSource.anchor)).toEqual({
+    expect(pdfAnchorToTarget(pdfSource.anchor)).toEqual({
       page: 3,
       area: { left: 10, top: 20, width: 30, height: 40 },
     })
-    expect(pdfAnchorToLocation(csvSource.anchor)).toBeUndefined()
+    expect(pdfAnchorToTarget(csvSource.anchor)).toBeUndefined()
 
-    expect(imageAnchorToArea(imageSource.anchor)).toEqual({
-      left: 15,
-      top: 25,
-      width: 35,
-      height: 45,
+    expect(imageAnchorToTarget(imageSource.anchor)).toEqual({
+      frame: 2,
+      area: {
+        left: 15,
+        top: 25,
+        width: 35,
+        height: 45,
+      },
     })
-    expect(imageAnchorToFrame(imageSource.anchor)).toBe(2)
     expect(
-      imageAnchorToFrame(
+      imageAnchorToTarget(
         source({
           kind: "image_bbox",
           left: 0,
@@ -460,13 +459,13 @@ describe("source adapters", () => {
           width: 1,
           height: 1,
         }).anchor
-      )
+      )?.frame
     ).toBe(1)
   })
 
   it("rejects invalid PDF and image geometry instead of rendering impossible boxes", () => {
     expect(
-      pdfAnchorToLocation({
+      pdfAnchorToTarget({
         kind: "pdf_bbox",
         page: 0,
         left: 0.1,
@@ -476,7 +475,7 @@ describe("source adapters", () => {
       })
     ).toBeUndefined()
     expect(
-      pdfAnchorToLocation({
+      pdfAnchorToTarget({
         kind: "pdf_bbox",
         page: 1,
         left: -0.1,
@@ -486,7 +485,7 @@ describe("source adapters", () => {
       })
     ).toBeUndefined()
     expect(
-      imageAnchorToArea({
+      imageAnchorToTarget({
         kind: "image_bbox",
         left: 0.1,
         top: 0.1,
@@ -495,7 +494,7 @@ describe("source adapters", () => {
       })
     ).toBeUndefined()
     expect(
-      imageAnchorToArea({
+      imageAnchorToTarget({
         kind: "image_bbox",
         left: 0.9,
         top: 0.1,
@@ -504,7 +503,7 @@ describe("source adapters", () => {
       })
     ).toBeUndefined()
     expect(
-      imageAnchorToArea({
+      imageAnchorToTarget({
         kind: "image_bbox",
         left: Number.NaN,
         top: 0.1,
@@ -513,7 +512,7 @@ describe("source adapters", () => {
       })
     ).toBeUndefined()
     expect(
-      imageAnchorToFrame({
+      imageAnchorToTarget({
         kind: "image_bbox",
         page: 0,
         left: 0.1,
@@ -523,7 +522,7 @@ describe("source adapters", () => {
       })
     ).toBeUndefined()
     expect(
-      pdfAnchorToLocation({
+      pdfAnchorToTarget({
         kind: "image_bbox",
         page: 0,
         left: 0.1,
@@ -630,14 +629,14 @@ describe("source adapters", () => {
     expect(columnLetterToIndex("AA")).toBe(26)
     expect(columnLetterToIndex("az")).toBe(51)
 
-    expect(csvAnchorToCell(csvSource.anchor)).toEqual({
+    expect(csvAnchorToTarget(csvSource.anchor)).toEqual({
       rowIndex: 3,
       columnIndex: 26,
     })
     expect(sourceToCsvCell(textSource)).toBeNull()
 
     expect(spreadsheetColumnToIndex("AZ")).toBe(51)
-    expect(spreadsheetAnchorToCell(xlsxSource.anchor)).toEqual({
+    expect(xlsxAnchorToTarget(xlsxSource.anchor)).toEqual({
       sheet: 2,
       row: 7,
       col: 51,
@@ -656,28 +655,28 @@ describe("source adapters", () => {
     expect(spreadsheetColumnToIndex(oversizedColumn)).toBeNull()
 
     expect(
-      csvAnchorToCell({
+      csvAnchorToTarget({
         kind: "csv_cell",
         row: 0,
         column: "A",
       })
     ).toBeNull()
     expect(
-      csvAnchorToCell({
+      csvAnchorToTarget({
         kind: "csv_cell",
         row: 1,
         column: "",
       })
     ).toBeNull()
     expect(
-      csvAnchorToCell({
+      csvAnchorToTarget({
         kind: "csv_cell",
         row: 1,
         column: oversizedColumn,
       })
     ).toBeNull()
     expect(
-      spreadsheetAnchorToCell({
+      xlsxAnchorToTarget({
         kind: "spreadsheet_cell",
         sheet_index: -1,
         row: 1,
@@ -685,7 +684,7 @@ describe("source adapters", () => {
       })
     ).toBeUndefined()
     expect(
-      spreadsheetAnchorToCell({
+      xlsxAnchorToTarget({
         kind: "spreadsheet_cell",
         sheet_index: 0,
         row: 0,
@@ -693,7 +692,7 @@ describe("source adapters", () => {
       })
     ).toBeUndefined()
     expect(
-      spreadsheetAnchorToCell({
+      xlsxAnchorToTarget({
         kind: "spreadsheet_cell",
         sheet_index: 0,
         row: 1,
@@ -701,7 +700,7 @@ describe("source adapters", () => {
       })
     ).toBeUndefined()
     expect(
-      spreadsheetAnchorToCell({
+      xlsxAnchorToTarget({
         kind: "spreadsheet_cell",
         sheet_index: 0,
         row: 1,
@@ -711,18 +710,18 @@ describe("source adapters", () => {
   })
 
   it("converts text and docx anchors into viewer-native targets", () => {
-    expect(textAnchorToLines(textSource.anchor)).toEqual({
+    expect(textAnchorToTarget(textSource.anchor)).toEqual({
       start: 12,
       end: 14,
     })
     expect(sourceToTextHighlight(textSource)).toEqual({ start: 12, end: 14 })
     expect(sourceToTextHighlight(csvSource)).toBeNull()
 
-    expect(docxSourceToTarget(docxTextSource)).toEqual({
+    expect(docxAnchorToTarget(docxTextSource.anchor, docxTextSource)).toEqual({
       kind: "text",
       text: "ACME Corp",
     })
-    expect(docxSourceToTarget(docxCellSource)).toEqual({
+    expect(docxAnchorToTarget(docxCellSource.anchor, docxCellSource)).toEqual({
       kind: "cell",
       table: 1,
       row: 2,
@@ -733,28 +732,28 @@ describe("source adapters", () => {
 
   it("rejects invalid text spans instead of producing impossible line ranges", () => {
     expect(
-      textAnchorToLines({
+      textAnchorToTarget({
         kind: "text_span",
         line_start: 0,
         line_end: 2,
       })
     ).toBeUndefined()
     expect(
-      textAnchorToLines({
+      textAnchorToTarget({
         kind: "text_span",
         line_start: 3,
         line_end: 2,
       })
     ).toBeUndefined()
     expect(
-      textAnchorToLines({
+      textAnchorToTarget({
         kind: "text_span",
         line_start: 1.5,
         line_end: 2,
       })
     ).toBeUndefined()
     expect(
-      textAnchorToLines({
+      textAnchorToTarget({
         kind: "text_span",
         line_start: 1,
         line_end: 2,
@@ -762,7 +761,7 @@ describe("source adapters", () => {
       })
     ).toBeUndefined()
     expect(
-      textAnchorToLines({
+      textAnchorToTarget({
         kind: "text_span",
         line_start: 1,
         line_end: 2,
@@ -773,86 +772,42 @@ describe("source adapters", () => {
   })
 
   it("rejects invalid docx anchors instead of producing impossible viewer targets", () => {
-    expect(
-      docxSourceToTarget(
-        source({
-          kind: "docx_table_cell",
-          table: -1,
-          row: 0,
-          column: 0,
-        })
-      )
-    ).toBeNull()
-    expect(
-      docxSourceToTarget(
-        source({
-          kind: "docx_table_cell",
-          table: 0,
-          row: 1.5,
-          column: 0,
-        })
-      )
-    ).toBeNull()
-    expect(
-      docxSourceToTarget(
-        source({
-          kind: "docx_table_cell",
-          table: 0,
-          row: 0,
-          column: 0,
+    const invalidSources = [
+      source({ kind: "docx_table_cell", table: -1, row: 0, column: 0 }),
+      source({ kind: "docx_table_cell", table: 0, row: 1.5, column: 0 }),
+      source({
+        kind: "docx_table_cell",
+        table: 0,
+        row: 0,
+        column: 0,
+        char_start: 4,
+        char_end: 2,
+      }),
+      source(
+        {
+          kind: "docx_text_span",
+          paragraph: 0,
+          char_start: 0,
+          char_end: 0,
+        },
+        "   "
+      ),
+      source({ kind: "docx_text_span", paragraph: -1 }, "ACME"),
+      source({ kind: "docx_text_span", paragraph: 1.5 }, "ACME"),
+      source(
+        {
+          kind: "docx_text_span",
+          paragraph: 0,
           char_start: 4,
           char_end: 2,
-        })
-      )
-    ).toBeNull()
-    expect(
-      docxSourceToTarget(
-        source(
-          {
-            kind: "docx_text_span",
-            paragraph: 0,
-            char_start: 0,
-            char_end: 0,
-          },
-          "   "
-        )
-      )
-    ).toBeNull()
-    expect(
-      docxSourceToTarget(
-        source(
-          {
-            kind: "docx_text_span",
-            paragraph: -1,
-          },
-          "ACME"
-        )
-      )
-    ).toBeNull()
-    expect(
-      docxSourceToTarget(
-        source(
-          {
-            kind: "docx_text_span",
-            paragraph: 1.5,
-          },
-          "ACME"
-        )
-      )
-    ).toBeNull()
-    expect(
-      docxSourceToTarget(
-        source(
-          {
-            kind: "docx_text_span",
-            paragraph: 0,
-            char_start: 4,
-            char_end: 2,
-          },
-          "ACME"
-        )
-      )
-    ).toBeNull()
+        },
+        "ACME"
+      ),
+    ]
+
+    for (const invalidSource of invalidSources) {
+      expect(docxAnchorToTarget(invalidSource.anchor, invalidSource)).toBeNull()
+    }
   })
 
   it("bridges docx sources to the viewer imperative target", () => {
@@ -1119,8 +1074,7 @@ function DocxSourceTargetHarness({
     }),
     [onScroll]
   )
-  const viewerRef = React.useRef<DocxViewerHandle | null>(handle)
-  viewerRef.current = handle
+  const viewerRef = useLatestTestRef<DocxViewerHandle>(handle)
   const target = useDocxSourceTarget(viewerRef)
 
   return (
@@ -1147,8 +1101,7 @@ function PdfSourceTargetHarness({
     }),
     [onScroll]
   )
-  const viewerRef = React.useRef<PdfViewerHandle | null>(handle)
-  viewerRef.current = handle
+  const viewerRef = useLatestTestRef<PdfViewerHandle>(handle)
   const target = usePdfSourceTarget(viewerRef)
 
   return (
@@ -1175,8 +1128,7 @@ function ImageSourceTargetHarness({
     }),
     [onScroll]
   )
-  const viewerRef = React.useRef<ImageViewerHandle | null>(handle)
-  viewerRef.current = handle
+  const viewerRef = useLatestTestRef<ImageViewerHandle>(handle)
   const target = useImageSourceTarget(viewerRef)
 
   return (
@@ -1203,8 +1155,7 @@ function CsvSourceTargetHarness({
     }),
     [onScroll]
   )
-  const viewerRef = React.useRef<CsvViewerHandle | null>(handle)
-  viewerRef.current = handle
+  const viewerRef = useLatestTestRef<CsvViewerHandle>(handle)
   const target = useCsvSourceTarget(viewerRef)
 
   return (
@@ -1231,8 +1182,7 @@ function XlsxSourceTargetHarness({
     }),
     [onScroll]
   )
-  const viewerRef = React.useRef<XlsxViewerHandle | null>(handle)
-  viewerRef.current = handle
+  const viewerRef = useLatestTestRef<XlsxViewerHandle>(handle)
   const target = useXlsxSourceTarget(viewerRef)
 
   return (
@@ -1259,8 +1209,7 @@ function TextSourceTargetHarness({
     }),
     [onScroll]
   )
-  const viewerRef = React.useRef<TextViewerHandle | null>(handle)
-  viewerRef.current = handle
+  const viewerRef = useLatestTestRef<TextViewerHandle>(handle)
   const target = useTextSourceTarget(viewerRef)
 
   return (
@@ -1271,6 +1220,14 @@ function TextSourceTargetHarness({
       scroll text source
     </button>
   )
+}
+
+function useLatestTestRef<T>(value: T): React.RefObject<T | null> {
+  const ref = React.useRef<T | null>(value)
+  React.useLayoutEffect(() => {
+    ref.current = value
+  }, [value])
+  return ref
 }
 
 function SourceFieldListHarness({
