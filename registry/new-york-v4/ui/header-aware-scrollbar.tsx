@@ -10,14 +10,16 @@ export function HeaderAwareScrollbar({
   headerHeight: number
 }) {
   const scrollElement = useResolvedScrollbarElement(scrollRef)
-  const [thumb, setThumb] = React.useState({ height: 0, top: 0, show: false })
+  const [isVisible, setIsVisible] = React.useState(false)
+  const thumbRef = React.useRef<HTMLDivElement>(null)
+  const thumbMetrics = React.useRef({ height: 0, top: 0 })
   const drag = React.useRef<{ y: number; scroll: number } | null>(null)
   const frame = React.useRef(0)
 
   const measure = React.useCallback(() => {
     frame.current = 0
     if (!scrollElement) {
-      hideThumb(setThumb)
+      hideThumb(setIsVisible)
       return
     }
     const { scrollHeight, clientHeight, scrollTop } = scrollElement
@@ -27,12 +29,12 @@ export function HeaderAwareScrollbar({
       !Number.isFinite(scrollTop) ||
       !Number.isFinite(headerHeight)
     ) {
-      hideThumb(setThumb)
+      hideThumb(setIsVisible)
       return
     }
     const track = clientHeight - headerHeight
     if (scrollHeight <= clientHeight + 1 || track <= 0) {
-      hideThumb(setThumb)
+      hideThumb(setIsVisible)
       return
     }
     const height = Math.max(28, (clientHeight / scrollHeight) * track)
@@ -42,10 +44,9 @@ export function HeaderAwareScrollbar({
       maxScroll > 0
         ? clampScrollTop((scrollTop / maxScroll) * maxTop, maxTop)
         : 0
-    setThumb((current) => {
-      const next = { height, top, show: true }
-      return thumbEqual(current, next) ? current : next
-    })
+    thumbMetrics.current = { height, top }
+    applyThumbStyle(thumbRef.current, thumbMetrics.current)
+    setIsVisible((current) => (current ? current : true))
   }, [scrollElement, headerHeight])
 
   const scheduleMeasure = React.useCallback(() => {
@@ -55,7 +56,7 @@ export function HeaderAwareScrollbar({
 
   React.useEffect(() => {
     if (!scrollElement) {
-      hideThumb(setThumb)
+      hideThumb(setIsVisible)
       return
     }
     measure()
@@ -73,6 +74,10 @@ export function HeaderAwareScrollbar({
       observer?.disconnect()
     }
   }, [scrollElement, measure, scheduleMeasure])
+
+  React.useLayoutEffect(() => {
+    applyThumbStyle(thumbRef.current, thumbMetrics.current)
+  }, [isVisible])
 
   const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     if (!scrollElement) return
@@ -104,7 +109,7 @@ export function HeaderAwareScrollbar({
     event.currentTarget.releasePointerCapture?.(event.pointerId)
   }
 
-  if (!thumb.show) return null
+  if (!isVisible) return null
   return (
     <div
       aria-hidden
@@ -112,8 +117,12 @@ export function HeaderAwareScrollbar({
       style={{ top: headerHeight, bottom: 0 }}
     >
       <div
+        ref={thumbRef}
         className="pointer-events-auto absolute right-0.5 w-1.5 rounded-full bg-foreground/25 transition-colors hover:bg-foreground/40"
-        style={{ height: thumb.height, top: thumb.top }}
+        style={{
+          top: thumbMetrics.current.top,
+          height: thumbMetrics.current.height,
+        }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={endDrag}
@@ -140,10 +149,10 @@ function useResolvedScrollbarElement(
 
 function hideThumb(
   setThumb: React.Dispatch<
-    React.SetStateAction<{ height: number; top: number; show: boolean }>
+    React.SetStateAction<boolean>
   >
 ) {
-  setThumb((current) => (current.show ? { ...current, show: false } : current))
+  setThumb((current) => (current ? false : current))
 }
 
 function clampScrollTop(value: number, maxScroll: number) {
@@ -152,13 +161,11 @@ function clampScrollTop(value: number, maxScroll: number) {
   return Math.min(maxScroll, Math.max(0, value))
 }
 
-function thumbEqual(
-  left: { height: number; top: number; show: boolean },
-  right: { height: number; top: number; show: boolean }
+function applyThumbStyle(
+  element: HTMLDivElement | null,
+  metrics: { height: number; top: number }
 ) {
-  return (
-    left.show === right.show &&
-    Math.abs(left.height - right.height) < 0.5 &&
-    Math.abs(left.top - right.top) < 0.5
-  )
+  if (!element) return
+  element.style.height = `${metrics.height}px`
+  element.style.top = `${metrics.top}px`
 }

@@ -64,6 +64,7 @@ export function useSourceLink({
   const [pinnedPath, setPinnedPath] = React.useState<string | null>(
     initialField
   )
+  const hoverPathRef = React.useRef<string | null>(null)
 
   const activePath = hoverPath ?? pinnedPath
   const activeSource = activePath != null ? sources[activePath] : undefined
@@ -101,6 +102,12 @@ export function useSourceLink({
     },
     [sources, target]
   )
+  const updateHoverPath = React.useCallback((path: string | null) => {
+    if (hoverPathRef.current === path) return false
+    hoverPathRef.current = path
+    setHoverPath(path)
+    return true
+  }, [])
 
   React.useLayoutEffect(() => {
     if (activePath == null) return
@@ -135,12 +142,13 @@ export function useSourceLink({
 
   const onFieldHover = React.useCallback(
     (path: string | null) => {
-      setHoverPath(path)
       if (path == null) {
+        const changed = updateHoverPath(null)
         if (suppressNextHoverClearRef.current) {
           suppressNextHoverClearRef.current = false
           return
         }
+        if (!changed) return
         const lastScrolled = lastScrolledRef.current
         lastScrolledRef.current = null
         for (const [pendingPath, behavior] of pendingScrollsRef.current) {
@@ -162,28 +170,29 @@ export function useSourceLink({
         }
         return
       }
+      if (!updateHoverPath(path)) return
       suppressNextHoverClearRef.current = false
       if (path != null) scrollToPath(path, "auto")
     },
-    [pinnedPath, scrollToPath, sources]
+    [pinnedPath, scrollToPath, sources, updateHoverPath]
   )
 
   const selectField = React.useCallback(
     (path: string) => {
       suppressNextHoverClearRef.current = true
-      setHoverPath(null)
+      updateHoverPath(null)
       setPinnedPath(path)
       scrollToPath(path, "smooth")
     },
-    [scrollToPath]
+    [scrollToPath, updateHoverPath]
   )
 
   const clear = React.useCallback(() => {
-    setHoverPath(null)
+    updateHoverPath(null)
     setPinnedPath(null)
     lastScrolledRef.current = null
     pendingScrollsRef.current.clear()
-  }, [])
+  }, [updateHoverPath])
 
   return {
     hoverPath,

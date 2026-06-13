@@ -19,6 +19,7 @@ export function BooleanEditor({
           : undefined
       }
       value={Boolean(field.effectiveValue)}
+      autoFocus={overlays.autoFocus}
       disabled={!field.isEditable}
       onCommit={(value) => {
         if (field.isEditable) commit.onCommit(value)

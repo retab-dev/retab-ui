@@ -8,6 +8,7 @@ import type { TableDocument } from "@/components/json-table/lib/projects-types"
 export interface ProjectedCell {
   key: FieldPath
   value: unknown
+  displayValue?: string
   templateFieldPath: FieldPath
   materializedFieldPath: MaterializedFieldPath
   arrayIndexes: number[]

@@ -19,9 +19,8 @@ import {
 import { TextViewer, type TextViewerHandle } from "@/components/ui/text-viewer"
 import { XlsxViewer, type XlsxViewerHandle } from "@/components/ui/xlsx-viewer"
 import type { TableDocument } from "@/components/json-table/lib/projects-types"
-import sampleData from "@/components/json-table/sample/data.json"
-import sampleSchema from "@/components/json-table/sample/schema.json"
 import { SingleFileTableView } from "@/components/json-table/single-file-table-view"
+import { JsonFormSourcesBlock } from "@/registry/new-york-v4/blocks/json-form-sources-block"
 
 import {
   normalizeViewerId,
@@ -55,11 +54,25 @@ type ViewportHandle =
 
 type RunStatus = "idle" | "running" | "done" | "failed"
 
-const jsonTableDocument = {
-  id: "scrollbench-json",
-  data: sampleData as Record<string, unknown>,
-} satisfies TableDocument
-const jsonTableSchema = sampleSchema as unknown as JSONSchema7
+const SCROLLBENCH_JSON_ROW_COUNT = 20_000
+const SCROLLBENCH_JSON_OVERSCAN = 12
+const SCROLLBENCH_JSON_JUMP_OVERSCAN = 4
+const SCROLLBENCH_JSON_MAX_ROW_COUNT = 100_000
+const SCROLLBENCH_JSON_MAX_OVERSCAN = 200
+const JSON_FORM_SOURCES_DEFAULT_OPEN_PATHS = ["transactions"] as const
+const jsonTableSchema = createScrollBenchJsonSchema()
+
+interface ScrollBenchJsonSettings {
+  rowCount: number
+  overscan: number
+  jumpOverscan: number
+}
+
+interface InitialScrollBenchJsonSettings {
+  jumpOverscan?: string
+  overscan?: string
+  rows?: string
+}
 
 interface ScrollBenchController {
   getScroller: () => HTMLElement | null
@@ -74,8 +87,10 @@ declare global {
 }
 
 export function ScrollBenchClient({
+  initialJsonSettings,
   initialViewer,
 }: {
+  initialJsonSettings?: InitialScrollBenchJsonSettings
   initialViewer?: string
 }) {
   const rootRef = React.useRef<HTMLDivElement | null>(null)
@@ -93,6 +108,14 @@ export function ScrollBenchClient({
   const [result, setResult] = React.useState<ScrollBenchResult | null>(null)
 
   const csvValue = React.useMemo(() => createScrollBenchCsv(), [])
+  const jsonSettings = React.useMemo(
+    () => readScrollBenchJsonSettings(initialJsonSettings),
+    [initialJsonSettings]
+  )
+  const jsonTableDocument = React.useMemo(
+    () => createScrollBenchJsonDocument(jsonSettings.rowCount),
+    [jsonSettings.rowCount]
+  )
   const textValue = React.useMemo(() => createScrollBenchText(), [])
 
   const setViewportHandle = React.useCallback(
@@ -277,6 +300,8 @@ export function ScrollBenchClient({
           {renderViewer({
             viewer,
             csvValue,
+            jsonTableDocument,
+            jsonSettings,
             pptxFile,
             textValue,
             onPptxSourceLoadTiming: handlePptxSourceLoadTiming,
@@ -293,7 +318,9 @@ export function ScrollBenchClient({
             <div className="mt-1 text-sm">
               {viewer === "pptx" && pptxFile
                 ? pptxFile.name
-                : VIEWERS.find((option) => option.id === viewer)?.sample}
+                : viewer === "json"
+                  ? `${formatNumber(jsonSettings.rowCount)} generated rows; overscan ${jsonSettings.overscan}; jump ${jsonSettings.jumpOverscan}`
+                  : VIEWERS.find((option) => option.id === viewer)?.sample}
             </div>
             {viewer === "pptx" ? (
               <label className="mt-3 block">
@@ -320,6 +347,8 @@ export function ScrollBenchClient({
 function renderViewer({
   viewer,
   csvValue,
+  jsonTableDocument,
+  jsonSettings,
   pptxFile,
   textValue,
   setViewportHandle,
@@ -328,6 +357,8 @@ function renderViewer({
 }: {
   viewer: ViewerId
   csvValue: string
+  jsonTableDocument: TableDocument
+  jsonSettings: ScrollBenchJsonSettings
   pptxFile: File | null
   textValue: string
   setViewportHandle: (handle: ViewportHandle | null) => void
@@ -374,8 +405,16 @@ function renderViewer({
             schema={jsonTableSchema}
             jsonEditMode="readOnly"
             schemaEditMode="readOnly"
+            overscan={jsonSettings.overscan}
+            jumpOverscan={jsonSettings.jumpOverscan}
           />
         </div>
+      )
+    case "json-form-sources":
+      return (
+        <JsonFormSourcesBlock
+          defaultOpenPaths={JSON_FORM_SOURCES_DEFAULT_OPEN_PATHS}
+        />
       )
     case "xlsx":
       return (
@@ -649,6 +688,51 @@ function writeViewerToUrl(viewer: ViewerId) {
   window.history.replaceState(null, "", url)
 }
 
+function readScrollBenchJsonSettings(
+  initialSettings: InitialScrollBenchJsonSettings | undefined
+): ScrollBenchJsonSettings {
+  const overscan = readBoundedIntegerParam({
+    rawValue: initialSettings?.overscan,
+    fallback: SCROLLBENCH_JSON_OVERSCAN,
+    min: 0,
+    max: SCROLLBENCH_JSON_MAX_OVERSCAN,
+  })
+  return {
+    rowCount: readBoundedIntegerParam({
+      rawValue: initialSettings?.rows,
+      fallback: SCROLLBENCH_JSON_ROW_COUNT,
+      min: 1,
+      max: SCROLLBENCH_JSON_MAX_ROW_COUNT,
+    }),
+    overscan,
+    jumpOverscan: readBoundedIntegerParam({
+      rawValue: initialSettings?.jumpOverscan,
+      fallback: Math.min(SCROLLBENCH_JSON_JUMP_OVERSCAN, overscan),
+      min: 0,
+      max: SCROLLBENCH_JSON_MAX_OVERSCAN,
+    }),
+  }
+}
+
+function readBoundedIntegerParam({
+  rawValue,
+  fallback,
+  min,
+  max,
+}: {
+  rawValue: string | undefined
+  fallback: number
+  min: number
+  max: number
+}) {
+  if (rawValue === undefined) return fallback
+
+  const value = Number(rawValue)
+  if (!Number.isFinite(value)) return fallback
+
+  return Math.min(max, Math.max(min, Math.floor(value)))
+}
+
 function createScrollBenchCsv() {
   const headers = Array.from(
     { length: 18 },
@@ -671,4 +755,101 @@ function createScrollBenchText() {
     const worker = `worker-${(lineIndex % 16) + 1}`
     return `${sequence} ${worker} processed scrollbench event in ${latency}ms`
   }).join("\n")
+}
+
+function createScrollBenchJsonSchema(): JSONSchema7 {
+  return {
+    title: "Scrollbench Rows",
+    type: "object",
+    properties: {
+      rows: {
+        type: "array",
+        title: "Rows",
+        items: {
+          type: "object",
+          title: "Row",
+          additionalProperties: false,
+          properties: {
+            record_id: { type: "string", title: "Record" },
+            posted_at: { type: "string", format: "date", title: "Posted" },
+            merchant: { type: "string", title: "Merchant" },
+            category: { type: "string", title: "Category" },
+            status: { type: "string", title: "Status" },
+            account: { type: "string", title: "Account" },
+            amount: { type: "number", title: "Amount" },
+            balance: { type: "number", title: "Balance" },
+            currency: { type: "string", title: "Currency" },
+            region: { type: "string", title: "Region" },
+            channel: { type: "string", title: "Channel" },
+            risk_score: { type: "integer", title: "Risk" },
+            is_reconciled: { type: "boolean", title: "Reconciled" },
+            reference: { type: "string", title: "Reference" },
+            description: { type: "string", title: "Description" },
+            batch_id: { type: "string", title: "Batch" },
+            source: { type: "string", title: "Source" },
+            confidence: { type: "number", title: "Confidence" },
+          },
+          required: [
+            "record_id",
+            "posted_at",
+            "merchant",
+            "category",
+            "status",
+            "account",
+            "amount",
+            "balance",
+            "currency",
+            "region",
+            "channel",
+            "risk_score",
+            "is_reconciled",
+            "reference",
+            "description",
+            "batch_id",
+            "source",
+            "confidence",
+          ],
+        },
+      },
+    },
+    required: ["rows"],
+  }
+}
+
+function createScrollBenchJsonDocument(rowCount: number): TableDocument {
+  const merchants = ["Acme", "Globex", "Initech", "Umbrella", "Soylent"]
+  const categories = ["travel", "software", "payroll", "office", "tax"]
+  const statuses = ["posted", "pending", "reviewed", "matched"]
+  const regions = ["na", "eu", "apac", "latam"]
+  const channels = ["card", "wire", "ach", "check"]
+
+  return {
+    id: "scrollbench-json",
+    data: {
+      rows: Array.from({ length: rowCount }, (_, rowIndex) => {
+        const sequence = rowIndex + 1
+        const amount = ((sequence * 37) % 20_000) / 100
+        return {
+          record_id: `txn_${String(sequence).padStart(6, "0")}`,
+          posted_at: `2025-${String((rowIndex % 12) + 1).padStart(2, "0")}-${String((rowIndex % 28) + 1).padStart(2, "0")}`,
+          merchant: merchants[rowIndex % merchants.length],
+          category: categories[rowIndex % categories.length],
+          status: statuses[rowIndex % statuses.length],
+          account: `acct_${String((rowIndex % 32) + 1).padStart(2, "0")}`,
+          amount,
+          balance: 10_000 + amount + rowIndex * 0.13,
+          currency: "USD",
+          region: regions[rowIndex % regions.length],
+          channel: channels[rowIndex % channels.length],
+          risk_score: (rowIndex * 17) % 100,
+          is_reconciled: rowIndex % 3 !== 0,
+          reference: `ref-${String((rowIndex * 7919) % 1_000_000).padStart(6, "0")}`,
+          description: `Generated scrollbench transaction ${sequence}`,
+          batch_id: `batch_${String(Math.floor(rowIndex / 250) + 1).padStart(3, "0")}`,
+          source: rowIndex % 2 === 0 ? "statement" : "api",
+          confidence: ((rowIndex * 19) % 100) / 100,
+        }
+      }),
+    },
+  }
 }

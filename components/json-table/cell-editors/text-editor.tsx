@@ -22,6 +22,7 @@ export function TextEditor({
           : undefined
       }
       value={textDraft.activeTextValue ?? null}
+      autoFocus={overlays.autoFocus}
       formatValue={() =>
         field.effectiveValue === null || field.effectiveValue === undefined
           ? ""

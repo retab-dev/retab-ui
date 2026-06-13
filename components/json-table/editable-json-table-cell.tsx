@@ -10,22 +10,22 @@ import {
 } from "@/components/json-table/cell-style"
 import type { JsonTableCellProps } from "@/components/json-table/json-table-cell-types"
 import { JsonTableDisplayCell } from "@/components/json-table/json-table-display-cell"
+import {
+  markJsonTableProfile,
+  recordJsonTableRender,
+} from "@/components/json-table/json-table-profiler"
 import { JsonTableScalarCell } from "@/components/json-table/json-table-scalar-cell"
 import { getFieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
 import type { FieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
 import { formatValueForCommit } from "@/components/json-table/lib/value-normalization"
 import { cmp, useRefCallback } from "@/components/json-table/path-utils"
-import {
-  markJsonTableProfile,
-  recordJsonTableRender,
-} from "@/components/json-table/json-table-profiler"
 import { useCellController } from "@/components/json-table/use-cell-controller"
 import { useElevatedVirtualRow } from "@/components/json-table/use-elevated-virtual-row"
 
 function editableCellMemoVariables(props: JsonTableCellProps) {
-  const { document, ...rest } = props
+  const { document: _document, ...rest } = props
   const materializedFieldPath = props.projectedCell?.materializedFieldPath
-  return { ...rest, materializedFieldPath, document }
+  return { ...rest, materializedFieldPath }
 }
 
 function ActiveEditableJsonTableCell({
@@ -39,6 +39,7 @@ function ActiveEditableJsonTableCell({
   value,
   onActivityLockChange,
   onDocumentDataChange,
+  shouldAutoFocus,
 }: {
   docId: string
   document: JsonTableCellProps["document"]
@@ -50,6 +51,7 @@ function ActiveEditableJsonTableCell({
   value: unknown
   onActivityLockChange: (locked: boolean) => void
   onDocumentDataChange: JsonTableCellProps["onDocumentDataChange"]
+  shouldAutoFocus: boolean
 }) {
   recordJsonTableRender("ActiveEditableJsonTableCell", materializedFieldPath, {
     fieldKind: fieldMetadata.kind,
@@ -139,6 +141,7 @@ function ActiveEditableJsonTableCell({
         overlays={{
           forceEditMode: true,
           showInput: true,
+          autoFocus: shouldAutoFocus,
           isSelectOpen,
           setIsSelectOpen,
           openEditorPath,
@@ -159,8 +162,8 @@ function EditableJsonTableCellContent(props: JsonTableCellProps) {
     openEditorPath,
     onDocumentDataChange,
     document,
-    isCellActive = false,
-    onCellActivityLockChange,
+    onCellHoverStart,
+    onCellHoverEnd,
   } = props
 
   const value = props.projectedCell?.value
@@ -171,27 +174,70 @@ function EditableJsonTableCellContent(props: JsonTableCellProps) {
       ? getFieldMetadata(schema, materializedFieldPath)
       : undefined)
   const isEditable = props.isJsonEditable
+  const [isPointerActive, setIsPointerActive] = React.useState(false)
+  const [isActivityLocked, setIsActivityLocked] = React.useState(false)
+  const [shouldAutoFocus, setShouldAutoFocus] = React.useState(false)
+  const pointerOverRef = React.useRef(false)
   const isNestedEditorOpen =
     Boolean(materializedFieldPath) && openEditorPath === materializedFieldPath
-  const isActive = isEditable && (isCellActive || isNestedEditorOpen)
+  const isActive =
+    isEditable && (isPointerActive || isActivityLocked || isNestedEditorOpen)
   recordJsonTableRender(
     "EditableJsonTableCell",
     materializedFieldPath ?? props.column.key,
     {
       fieldKind: fieldMetadata?.kind ?? null,
       isActive,
-      isCellActive,
+      isActivityLocked,
       isEditable,
       isNestedEditorOpen,
+      isPointerActive,
+      shouldAutoFocus,
       openEditorPath,
       valueType: value === null ? "null" : typeof value,
     }
   )
   const handleActivityLockChange = useRefCallback((locked: boolean) => {
-    if (materializedFieldPath) {
-      onCellActivityLockChange?.(materializedFieldPath, locked)
+    setIsActivityLocked(locked)
+    if (!locked) {
+      setShouldAutoFocus(false)
+    }
+    if (!locked && !pointerOverRef.current) {
+      setIsPointerActive(false)
     }
   })
+  const handlePointerEnter = React.useCallback(
+    (event: React.PointerEvent<HTMLTableCellElement>) => {
+      if (!materializedFieldPath || !isEditable) return
+      if (pointerOverRef.current) return
+      pointerOverRef.current = true
+      markJsonTableProfile("pointer-enter-cell", {
+        fieldPath: materializedFieldPath,
+      })
+      onCellHoverStart?.({
+        docId,
+        fieldPath: materializedFieldPath,
+        rect: event.currentTarget.getBoundingClientRect(),
+      })
+    },
+    [docId, isEditable, materializedFieldPath, onCellHoverStart]
+  )
+  const handlePointerDown = React.useCallback(
+    (event: React.PointerEvent<HTMLTableCellElement>) => {
+      if (!materializedFieldPath || !isEditable || event.button !== 0) return
+      setIsPointerActive(true)
+      setShouldAutoFocus(true)
+    },
+    [isEditable, materializedFieldPath]
+  )
+  const handlePointerLeave = React.useCallback(() => {
+    pointerOverRef.current = false
+    onCellHoverEnd?.()
+    setShouldAutoFocus(false)
+    if (!isActivityLocked) {
+      setIsPointerActive(false)
+    }
+  }, [isActivityLocked, onCellHoverEnd])
 
   if (!materializedFieldPath || !fieldMetadata) {
     return (
@@ -210,6 +256,10 @@ function EditableJsonTableCellContent(props: JsonTableCellProps) {
       data-field-path={materializedFieldPath}
       data-json-table-editable-cell="true"
       data-active={isActive || undefined}
+      onPointerEnter={handlePointerEnter}
+      onPointerMove={handlePointerEnter}
+      onPointerDown={handlePointerDown}
+      onPointerLeave={handlePointerLeave}
       className={[
         "relative m-0 border-t-0 border-r border-b border-l-0 p-0 select-none",
         interactiveCellOverlayClass,
@@ -226,6 +276,7 @@ function EditableJsonTableCellContent(props: JsonTableCellProps) {
           schema={schema}
           setOpenEditorPath={setOpenEditorPath}
           value={value}
+          shouldAutoFocus={shouldAutoFocus}
           onActivityLockChange={handleActivityLockChange}
           onDocumentDataChange={onDocumentDataChange}
         />

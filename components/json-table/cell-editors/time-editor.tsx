@@ -24,6 +24,7 @@ export function TimeEditor({
       }
       value={textDraft.activeTextValue ?? null}
       draftValue={textDraft.activeTextValue}
+      autoFocus={overlays.autoFocus}
       onDraftValueChange={textDraft.setDraftTextValue}
       onCommit={(value) => {
         const rawValue = typeof value === "string" ? value : ""

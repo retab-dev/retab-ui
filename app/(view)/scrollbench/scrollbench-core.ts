@@ -4,6 +4,7 @@ export type ViewerId =
   | "pdf"
   | "csv"
   | "json"
+  | "json-form-sources"
   | "xlsx"
   | "text"
   | "docx"
@@ -106,8 +107,14 @@ export const VIEWERS: readonly ViewerOption[] = [
   {
     id: "json",
     label: "JSON table",
-    sample: "1.5k projected JSON rows",
+    sample: "generated 20k row JSON table",
     scrollerSelector: '[data-slot="json-table-scroll"]',
+  },
+  {
+    id: "json-form-sources",
+    label: "JSON form sources",
+    sample: "homepage bank statement transactions",
+    scrollerSelector: '[data-slot="json-form-table-scroll"]',
   },
   {
     id: "xlsx",

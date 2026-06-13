@@ -45,6 +45,7 @@ type DataCellBaseProps<Kind extends DataCellKind, Value> = Omit<
   name?: string
   placeholder?: string
   dateTimeZone?: DataCellDateTimeZone
+  showPickerIcon?: boolean
   formatValue?: (
     value: Value | undefined,
     meta: { kind: Kind }
@@ -74,7 +75,7 @@ type DataCellFormatValue = (
 ) => React.ReactNode
 
 const dataCellDisplayClass =
-  "relative inline-flex w-full rounded-lg bg-transparent text-base text-foreground ring-ring/24 transition-shadow has-disabled:opacity-64 sm:text-sm"
+  "relative inline-flex w-full rounded-lg bg-transparent text-base text-foreground ring-ring/24 transition-shadow sm:text-sm"
 
 const dataCellDisplayValueClass =
   "flex h-8.5 w-full min-w-0 items-center rounded-[inherit] px-3 leading-8.5 sm:h-7.5 sm:leading-7.5"
@@ -87,6 +88,21 @@ const dataCellBooleanDisplayClass =
 
 const dataCellCheckboxDisplayClass =
   "peer bg-transparent data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground dark:data-[state=checked]:bg-primary focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 size-4 shrink-0 rounded-[4px] transition-shadow outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50"
+
+const dataCellIntegerInputPattern = /^[+-]?\d+$/
+const dataCellNumberInputPattern =
+  /^[+-]?(?:(?:\d+\.?\d*)|(?:\d*\.\d+))(?:e[+-]?\d+)?$/i
+const dataCellNativeNumberDisplayPattern = /^([+-]?\d+)\.(\d+)$/
+const dataCellDateDisplayPattern = /^(\d{4})-(\d{2})-(\d{2})/
+const dataCellDateTimeDisplayPattern =
+  /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/
+const dataCellTimeDisplayPattern = /^(\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?/
+const dataCellDateValuePattern = /^\d{4}-\d{2}-\d{2}/
+const dataCellExactDateValuePattern = /^(\d{4})-(\d{2})-(\d{2})$/
+const dataCellTimeValuePattern = /\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?/
+const dataCellDateTimeInputPattern =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?/
+const dataCellDateTimeZoneSuffixPattern = /(?:Z|[+-]\d{2}:\d{2})$/
 
 function DataCellBooleanIndicator({ checked }: { checked: boolean }) {
   return (
@@ -199,6 +215,7 @@ function DataCellEdit({
   name,
   placeholder,
   dateTimeZone = "local",
+  showPickerIcon = true,
   className,
   formatValue: _formatValue,
   draftValue,
@@ -303,6 +320,7 @@ function DataCellEdit({
         className={className}
         draftValue={draftValue}
         autoFocus={autoFocus}
+        showPickerIcon={showPickerIcon}
         onDraftValueChange={onDraftValueChange}
         onCommit={onCommit as DataCellCommitHandler | undefined}
         onInputFocusChange={onInputFocusChange}
@@ -330,7 +348,11 @@ function DataCellEdit({
     <Input
       {...rootProps}
       type={inputType}
-      className={cn(dataCellDisplayClass, className)}
+      className={cn(
+        dataCellDisplayClass,
+        disabled && "pointer-events-none opacity-64",
+        className
+      )}
       id={id}
       name={name}
       aria-describedby={ariaDescribedBy}
@@ -409,6 +431,7 @@ function DataCellDisplay({
   placeholder,
   className,
   dateTimeZone: _dateTimeZone,
+  showPickerIcon = true,
   formatValue,
   draftValue: _draftValue,
   autoFocus: _autoFocus,
@@ -460,6 +483,7 @@ function DataCellDisplay({
         disabled={disabled}
         placeholder={placeholder}
         formatValue={formatValue as DataCellFormatValue | undefined}
+        showPickerIcon={showPickerIcon}
         className={className}
       />
     )
@@ -501,6 +525,7 @@ function DataCellPickerDisplay({
   disabled,
   placeholder,
   formatValue,
+  showPickerIcon,
   className,
   ...props
 }: Omit<React.HTMLAttributes<HTMLElement>, "children"> & {
@@ -510,6 +535,7 @@ function DataCellPickerDisplay({
   disabled?: boolean
   placeholder?: string
   formatValue?: DataCellFormatValue
+  showPickerIcon: boolean
 }) {
   const content =
     formatValue?.(value, { kind }) ?? formatDataCellDisplayValue(kind, value)
@@ -533,7 +559,7 @@ function DataCellPickerDisplay({
       <span className={cn("truncate", isEmpty && "text-muted-foreground")}>
         {isEmpty ? (placeholder ?? "—") : content}
       </span>
-      <DataCellPickerIcon kind={kind} />
+      {showPickerIcon ? <DataCellPickerIcon kind={kind} /> : null}
     </div>
   )
 }
@@ -544,6 +570,7 @@ function DataCellPickerEdit({
   disabled,
   placeholder,
   dateTimeZone,
+  showPickerIcon,
   className,
   draftValue,
   autoFocus,
@@ -563,6 +590,7 @@ function DataCellPickerEdit({
   disabled?: boolean
   placeholder?: string
   dateTimeZone: DataCellDateTimeZone
+  showPickerIcon: boolean
   draftValue?: string
   autoFocus?: boolean
   onDraftValueChange?: (value: string, meta: DataCellValueMeta) => void
@@ -576,6 +604,7 @@ function DataCellPickerEdit({
   const [open, setOpen] = React.useState(Boolean(autoFocus))
   const triggerRef = React.useRef<HTMLButtonElement>(null)
   const popupRef = React.useRef<HTMLDivElement>(null)
+  const skipAutoFocusClickRef = React.useRef(Boolean(autoFocus))
   const [popupStyle, setPopupStyle] = React.useState<React.CSSProperties>()
   const popupId = React.useId()
   const pickerValue = draftValue ?? uncontrolledDraftValue
@@ -588,6 +617,10 @@ function DataCellPickerEdit({
     if (draftValue !== undefined) return
     setUncontrolledDraftValue(formatDataCellEditValue(kind, value))
   }, [draftValue, kind, value])
+
+  React.useEffect(() => {
+    if (autoFocus) skipAutoFocusClickRef.current = true
+  }, [autoFocus])
 
   const closePopup = React.useCallback(() => {
     setOpen(false)
@@ -620,6 +653,14 @@ function DataCellPickerEdit({
     setOpen(true)
     onInputFocusChange?.(true)
   }, [onInputFocusChange, updatePopupPosition])
+
+  React.useLayoutEffect(() => {
+    if (!autoFocus) return
+    skipAutoFocusClickRef.current = true
+    updatePopupPosition()
+    setOpen(true)
+    onInputFocusChange?.(true)
+  }, [autoFocus, onInputFocusChange, updatePopupPosition])
 
   React.useLayoutEffect(() => {
     if (open) updatePopupPosition()
@@ -743,6 +784,10 @@ function DataCellPickerEdit({
         onClick={(event) => {
           onClick?.(event)
           if (event.defaultPrevented || disabled) return
+          if (skipAutoFocusClickRef.current) {
+            skipAutoFocusClickRef.current = false
+            return
+          }
           if (open) closePopup()
           else openPopup()
         }}
@@ -751,7 +796,7 @@ function DataCellPickerEdit({
         <span className={cn("truncate", isEmpty && "text-muted-foreground")}>
           {isEmpty ? (placeholder ?? "—") : content}
         </span>
-        <DataCellPickerIcon kind={kind} />
+        {showPickerIcon ? <DataCellPickerIcon kind={kind} /> : null}
       </button>
       {pickerPopup}
     </>
@@ -808,13 +853,10 @@ export function parseDataCellNumberInput({
 }): { value: number | null; isEmpty: boolean; isValid: boolean } {
   const rawValue = value.trim()
   if (rawValue === "") return { value: null, isEmpty: true, isValid: true }
-  if (kind === "integer" && !/^[+-]?\d+$/.test(rawValue)) {
+  if (kind === "integer" && !dataCellIntegerInputPattern.test(rawValue)) {
     return { value: null, isEmpty: false, isValid: false }
   }
-  if (
-    kind === "number" &&
-    !/^[+-]?(?:(?:\d+\.?\d*)|(?:\d*\.\d+))(?:e[+-]?\d+)?$/i.test(rawValue)
-  ) {
+  if (kind === "number" && !dataCellNumberInputPattern.test(rawValue)) {
     return { value: null, isEmpty: false, isValid: false }
   }
   const parsed = Number(rawValue)
@@ -839,24 +881,24 @@ export function formatDataCellDisplayValue(
 }
 
 function formatNativeNumberDisplayValue(value: string): string {
-  return value.replace(/^([+-]?\d+)\.(\d+)$/, "$1,$2")
+  return value.replace(dataCellNativeNumberDisplayPattern, "$1,$2")
 }
 
 function formatDateDisplayValue(value: string): string {
-  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  const match = value.match(dataCellDateDisplayPattern)
   if (!match) return value
   return `${match[3]}/${match[2]}/${match[1]}`
 }
 
 function formatDateTimeDisplayValue(value: string): string {
   const inputValue = dateTimeInputValue(value)
-  const match = inputValue.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/)
+  const match = inputValue.match(dataCellDateTimeDisplayPattern)
   if (!match) return inputValue || value
   return `${match[3]}/${match[2]}/${match[1]}, ${match[4]}:${match[5]}`
 }
 
 function formatTimeDisplayValue(value: string): string {
-  const match = value.match(/^(\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?/)
+  const match = value.match(dataCellTimeDisplayPattern)
   if (!match) return value
   return [match[1], match[2], match[3]].filter(Boolean).join(":")
 }
@@ -891,9 +933,9 @@ function dateFromPickerValue(
 ): Date | undefined {
   if (kind === "time" || value === "") return undefined
   const dateValue =
-    kind === "date-time" ? value.match(/^\d{4}-\d{2}-\d{2}/)?.[0] : value
+    kind === "date-time" ? value.match(dataCellDateValuePattern)?.[0] : value
   if (!dateValue) return undefined
-  const match = dateValue.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  const match = dateValue.match(dataCellExactDateValuePattern)
   if (!match) return undefined
   return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
 }
@@ -903,7 +945,7 @@ function timeFromPickerValue(
   value: string
 ): string {
   if (kind === "date") return ""
-  return value.match(/\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?/)?.[0] ?? ""
+  return value.match(dataCellTimeValuePattern)?.[0] ?? ""
 }
 
 function pickerValueWithDate(
@@ -923,7 +965,8 @@ function pickerValueWithTime(
 ): string {
   if (kind === "time") return time
   const dateValue =
-    value.match(/^\d{4}-\d{2}-\d{2}/)?.[0] ?? formatPickerDateValue(new Date())
+    value.match(dataCellDateValuePattern)?.[0] ??
+    formatPickerDateValue(new Date())
   return `${dateValue}T${time || "00:00"}`
 }
 
@@ -981,23 +1024,21 @@ function formatDataCellEditValue(kind: DataCellKind, value: DataCellValue) {
   if (value === null || value === undefined) return ""
   const text = String(value)
   if (kind === "date-time") return dateTimeInputValue(text)
-  if (kind === "date") return text.match(/^\d{4}-\d{2}-\d{2}/)?.[0] ?? text
+  if (kind === "date") return text.match(dataCellDateValuePattern)?.[0] ?? text
   if (kind === "time") {
-    return text.match(/^\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?/)?.[0] ?? text
+    return text.match(dataCellTimeDisplayPattern)?.[0] ?? text
   }
   return text
 }
 
 function dateTimeInputValue(value: string): string {
-  const withoutTimezone = value.trim().replace(/(?:Z|[+-]\d{2}:\d{2})$/, "")
-  return (
-    withoutTimezone.match(
-      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?/
-    )?.[0] ?? value
-  )
+  const withoutTimezone = value
+    .trim()
+    .replace(dataCellDateTimeZoneSuffixPattern, "")
+  return withoutTimezone.match(dataCellDateTimeInputPattern)?.[0] ?? value
 }
 
 function dateTimeSuffix(value: DataCellValue): string {
   if (typeof value !== "string") return ""
-  return value.trim().match(/(?:Z|[+-]\d{2}:\d{2})$/)?.[0] ?? ""
+  return value.trim().match(dataCellDateTimeZoneSuffixPattern)?.[0] ?? ""
 }

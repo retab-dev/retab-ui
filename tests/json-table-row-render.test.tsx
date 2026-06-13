@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render } from "@testing-library/react"
+import { cleanup, fireEvent, render, waitFor } from "@testing-library/react"
 import type { JSONSchema7 } from "json-schema"
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
 
@@ -160,5 +160,61 @@ describe("json table row rendering", () => {
     expect(cells[1].textContent).toContain("one")
     expect(cells[2].getAttribute("data-field-path")).toBe("vendor")
     expect(cells[2].textContent).toContain("ACME")
+  })
+
+  it("activates and commits edits from a hovered text cell", async () => {
+    const visiblePaths = ["vendor"]
+    const rows = projectDocumentRows({
+      document,
+      visiblePaths,
+      includeArrayAddRows: true,
+    })
+    const onDocumentDataChange = vi.fn()
+
+    const view = render(
+      <table>
+        <tbody>
+          <SingleFileFormRow
+            document={document}
+            schema={schema}
+            projectedRow={rows[0]}
+            visibleColumns={visiblePaths.map(visibleColumn)}
+            rowIdx={0}
+            rowTopPx={0}
+            rowHeightPx={32}
+            openEditorPath={null}
+            setOpenEditorPath={vi.fn()}
+            onDocumentDataChange={onDocumentDataChange}
+            isJsonEditable
+          />
+        </tbody>
+      </table>
+    )
+
+    const cell = await waitFor(() => {
+      const editableCell = view.container.querySelector(
+        '[data-json-table-editable-cell="true"]'
+      )
+      if (!(editableCell instanceof HTMLElement)) {
+        throw new Error("Expected editable vendor cell to render")
+      }
+      return editableCell
+    })
+    fireEvent.pointerEnter(cell)
+    expect(view.queryByRole("textbox")).toBeNull()
+
+    fireEvent.pointerDown(cell, { button: 0 })
+
+    const input = await view.findByRole("textbox")
+    expect(globalThis.document.activeElement).toBe(input)
+
+    fireEvent.change(input, { target: { value: "Globex" } })
+    fireEvent.blur(input)
+
+    expect(onDocumentDataChange).toHaveBeenCalledWith(
+      document.id,
+      "vendor",
+      "Globex"
+    )
   })
 })

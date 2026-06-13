@@ -15,6 +15,7 @@ describe("scrollbench core", () => {
   it("normalizes viewer ids", () => {
     expect(normalizeViewerId("csv")).toBe("csv")
     expect(normalizeViewerId("image")).toBe("image")
+    expect(normalizeViewerId("json-form-sources")).toBe("json-form-sources")
     expect(normalizeViewerId("missing")).toBe(DEFAULT_VIEWER)
     expect(normalizeViewerId(null)).toBe(DEFAULT_VIEWER)
   })

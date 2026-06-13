@@ -22,15 +22,15 @@ import type {
   JsonTableJsonEditMode,
   JsonTableSchemaEditMode,
 } from "@/components/json-table/json-table-edit-modes"
-import type { ProjectedRow } from "@/components/json-table/lib/document-projection"
-import { setValueAtMaterializedPath } from "@/components/json-table/lib/document-patches"
-import { buildHeaderGridRows } from "@/components/json-table/lib/header-nodes"
-import type { JsonTableHeaderNode } from "@/components/json-table/lib/header-nodes"
-import type { TableDocument } from "@/components/json-table/lib/projects-types"
 import {
   markJsonTableProfile,
   recordJsonTableRender,
 } from "@/components/json-table/json-table-profiler"
+import { setValueAtMaterializedPath } from "@/components/json-table/lib/document-patches"
+import type { ProjectedRow } from "@/components/json-table/lib/document-projection"
+import { buildHeaderGridRows } from "@/components/json-table/lib/header-nodes"
+import type { JsonTableHeaderNode } from "@/components/json-table/lib/header-nodes"
+import type { TableDocument } from "@/components/json-table/lib/projects-types"
 
 import { SingleFileFormRow } from "./single-file-form-row"
 import {
@@ -65,6 +65,8 @@ interface SingleFileVirtualizedTableProps {
   onCellHoverEnd?: () => void
   /** Rows to render beyond the viewport on each side (virtualization buffer). Default 12. */
   overscan?: number
+  /** Rows to render beyond the viewport after large scroll jumps. Defaults to overscan. */
+  jumpOverscan?: number
 }
 
 const SingleFileTableHeader = React.memo(
@@ -175,6 +177,7 @@ export const SingleFileVirtualizedTable =
       onCellHoverStart,
       onCellHoverEnd,
       overscan = 12,
+      jumpOverscan = overscan,
     }) => {
       const { rowHeight, columnWidth: storeColumnWidth } =
         useSheetOptionsStore()
@@ -183,10 +186,6 @@ export const SingleFileVirtualizedTable =
       // Which object/array cell editor is open. Held at the table level so it
       // survives row virtualization.
       const [openEditorPath, setOpenEditorPath] = useState<string | null>(null)
-      const [activeCellPath, setActiveCellPath] = useState<string | null>(null)
-      const activeCellPathRef = useRef<string | null>(null)
-      const lockedCellPathRef = useRef<string | null>(null)
-      const hoveredCellElementRef = useRef<HTMLElement | null>(null)
       const documentDataRef = useRef(document.data)
       const pendingDocumentDataRef = useRef<Record<string, unknown> | null>(
         null
@@ -211,11 +210,11 @@ export const SingleFileVirtualizedTable =
         rowCount,
         rowSize: rowHeightPx,
         rowOverscan: overscan,
+        jumpRowOverscan: jumpOverscan,
         scrollRef,
       })
       const isJsonEditable = jsonEditMode === "editable"
       recordJsonTableRender("SingleFileVirtualizedTable", document.id, {
-        activeCellPath,
         columnCount: visibleColumns.length,
         isJsonEditable,
         openEditorPath,
@@ -223,11 +222,7 @@ export const SingleFileVirtualizedTable =
         virtualRows: virtualRows.length,
       })
       const handleDocumentDataChange = React.useCallback(
-        (
-          _docId: string,
-          materializedFieldPath: string,
-          value: unknown
-        ) => {
+        (_docId: string, materializedFieldPath: string, value: unknown) => {
           if (!onUpdateDocument) return
 
           markJsonTableProfile("document-patch-start", {
@@ -248,113 +243,14 @@ export const SingleFileVirtualizedTable =
         },
         [onUpdateDocument]
       )
-      const setActiveCellElement = React.useCallback(
-        (cell: HTMLElement | null) => {
-          const activeElement = cell?.isConnected ? cell : null
-          const fieldPath = activeElement?.dataset.fieldPath ?? null
 
-          if (activeCellPathRef.current === fieldPath) return
-
-          markJsonTableProfile("active-cell-change", {
-            previousFieldPath: activeCellPathRef.current,
-            nextFieldPath: fieldPath,
-          })
-          activeCellPathRef.current = fieldPath
-          setActiveCellPath(fieldPath)
-
-          if (fieldPath && activeElement) {
-            onCellHoverStart?.({
-              docId: document.id,
-              fieldPath,
-              rect: activeElement.getBoundingClientRect(),
-            })
-          } else {
-            onCellHoverEnd?.()
+      const handleBodyScroll = React.useCallback(
+        (event: React.UIEvent<HTMLDivElement>) => {
+          if (headerScrollRef.current) {
+            headerScrollRef.current.scrollLeft = event.currentTarget.scrollLeft
           }
         },
-        [document.id, onCellHoverEnd, onCellHoverStart]
-      )
-
-      const handleBodyPointerMove = React.useCallback(
-        (event: React.PointerEvent<HTMLDivElement>) => {
-          if (!isJsonEditable) return
-
-          const target = event.target instanceof Element ? event.target : null
-          const cell = target?.closest('[data-json-table-editable-cell="true"]')
-          const editableCell =
-            cell instanceof HTMLElement && event.currentTarget.contains(cell)
-              ? cell
-              : null
-
-          const fieldPath = editableCell?.dataset.fieldPath ?? null
-          if (fieldPath && fieldPath !== activeCellPathRef.current) {
-            markJsonTableProfile("pointer-enter-cell", { fieldPath })
-          }
-          hoveredCellElementRef.current = editableCell
-
-          if (lockedCellPathRef.current) return
-
-          setActiveCellElement(editableCell)
-        },
-        [isJsonEditable, setActiveCellElement]
-      )
-
-      const handleBodyPointerLeave = React.useCallback(() => {
-        hoveredCellElementRef.current = null
-
-        if (lockedCellPathRef.current) return
-
-        setActiveCellElement(null)
-      }, [setActiveCellElement])
-
-      React.useEffect(() => {
-        if (!isJsonEditable) return
-
-        const handleDocumentPointerMove = (event: PointerEvent) => {
-          const scroller = scrollRef.current
-          const target = event.target
-
-          if (!scroller || !(target instanceof Node)) return
-          if (scroller.contains(target)) return
-
-          hoveredCellElementRef.current = null
-
-          if (lockedCellPathRef.current) return
-
-          setActiveCellElement(null)
-        }
-
-        globalThis.document.addEventListener(
-          "pointermove",
-          handleDocumentPointerMove
-        )
-        return () => {
-          globalThis.document.removeEventListener(
-            "pointermove",
-            handleDocumentPointerMove
-          )
-        }
-      }, [isJsonEditable, setActiveCellElement])
-
-      const handleCellActivityLockChange = React.useCallback(
-        (fieldPath: string, locked: boolean) => {
-          if (locked) {
-            lockedCellPathRef.current = fieldPath
-
-            if (activeCellPathRef.current !== fieldPath) {
-              activeCellPathRef.current = fieldPath
-              setActiveCellPath(fieldPath)
-            }
-
-            return
-          }
-
-          if (lockedCellPathRef.current !== fieldPath) return
-
-          lockedCellPathRef.current = null
-          setActiveCellElement(hoveredCellElementRef.current)
-        },
-        [setActiveCellElement]
+        []
       )
 
       return (
@@ -392,17 +288,7 @@ export const SingleFileVirtualizedTable =
             scrollRef={scrollRef}
             dataSlot="json-table-scroll"
             className="w-full flex-1 overflow-auto"
-            onPointerMove={handleBodyPointerMove}
-            onPointerLeave={handleBodyPointerLeave}
-            onScroll={(e) => {
-              if (headerScrollRef.current) {
-                headerScrollRef.current.scrollLeft = e.currentTarget.scrollLeft
-              }
-              if (!lockedCellPathRef.current) {
-                hoveredCellElementRef.current = null
-                setActiveCellElement(null)
-              }
-            }}
+            onScroll={handleBodyScroll}
           >
             <table
               data-slot="table"
@@ -437,8 +323,8 @@ export const SingleFileVirtualizedTable =
                       rowHeightPx={rowHeightPx}
                       openEditorPath={openEditorPath}
                       setOpenEditorPath={setOpenEditorPath}
-                      activeCellPath={activeCellPath}
-                      onCellActivityLockChange={handleCellActivityLockChange}
+                      onCellHoverStart={onCellHoverStart}
+                      onCellHoverEnd={onCellHoverEnd}
                       onDocumentDataChange={handleDocumentDataChange}
                       isJsonEditable={isJsonEditable}
                     />

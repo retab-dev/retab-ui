@@ -182,6 +182,8 @@ export function useFixedGridVirtualization({
     totalRowSize,
     totalColumnSize,
     scrollToCell,
+    isJumpingRows: viewport.isJumpingRows,
+    isJumpingColumns: viewport.isJumpingColumns,
     ...columnWindow,
   }
 }

@@ -114,6 +114,7 @@ export function EnumEditor({
         data-slot="data-cell"
         data-kind="text"
         data-mode="edit"
+        autoFocus={overlays.autoFocus}
         className={cn(jsonTableSelectDataCellClass, "disabled:opacity-100")}
         onFocus={() => {
           focus.setFocusedField(fieldFocusId(identity))

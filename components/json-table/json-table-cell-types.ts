@@ -22,7 +22,12 @@ export interface JsonTableCellProps {
     materializedFieldPath: string,
     value: unknown
   ) => void
-  isCellActive?: boolean
+  onCellHoverStart?: (info: {
+    docId: string
+    fieldPath: string
+    rect: DOMRect
+  }) => void
+  onCellHoverEnd?: () => void
   onCellActivityLockChange?: (fieldPath: string, locked: boolean) => void
   isJsonEditable: boolean
 }

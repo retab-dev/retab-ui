@@ -25,6 +25,7 @@ export function DateTimeEditor({
       value={textDraft.activeTextValue ?? null}
       dateTimeZone="preserve"
       draftValue={textDraft.activeTextValue}
+      autoFocus={overlays.autoFocus}
       onDraftValueChange={textDraft.setDraftTextValue}
       onCommit={(value) => {
         const convertedDate = dateStringToFormat(

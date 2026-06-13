@@ -23,6 +23,7 @@ export function NumberEditor({
           : undefined
       }
       value={textDraft.activeTextValue ?? null}
+      autoFocus={overlays.autoFocus}
       draftValue={textDraft.activeTextValue}
       onDraftValueChange={textDraft.setDraftTextValue}
       onCommit={commit.onCommit}

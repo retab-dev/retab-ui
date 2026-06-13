@@ -1,7 +1,11 @@
 import * as React from "react"
 import { format } from "date-fns"
 
-import type { DataCellKind, DataCellValue } from "@/components/ui/data-cell"
+import {
+  formatDataCellDisplayValue,
+  type DataCellKind,
+  type DataCellValue,
+} from "@/components/ui/data-cell"
 import { JsonTableScalarCell } from "@/components/json-table/json-table-scalar-cell"
 import { parseDateStringAsLocal } from "@/components/json-table/lib/date-parsing"
 import type { FieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
@@ -66,6 +70,33 @@ function dateDisplayValue(value: unknown): React.ReactNode | undefined {
   return date ? format(date, "PP") : undefined
 }
 
+export function getJsonTableCellDisplayValue({
+  fieldMetadata,
+  value,
+}: {
+  fieldMetadata: FieldMetadata
+  value: unknown
+}): string {
+  const dataCellKind = dataCellKindForField(fieldMetadata)
+
+  if (dataCellKind === "number" || dataCellKind === "integer") {
+    return formatDataCellDisplayValue(dataCellKind, numberDataCellValue(value))
+  }
+
+  if (dataCellKind === "boolean") {
+    return typeof value === "boolean" ? String(value) : ""
+  }
+
+  if (dataCellKind) {
+    if (fieldMetadata.kind === "date") {
+      return String(dateDisplayValue(value) ?? "")
+    }
+    return formatDataCellDisplayValue(dataCellKind, textDataCellValue(value))
+  }
+
+  return formatJsonTableNestedValue(value)
+}
+
 export function JsonTableDisplayCell({
   fieldMetadata,
   value,
@@ -98,6 +129,7 @@ export function JsonTableDisplayCell({
       <JsonTableScalarCell
         kind={dataCellKind}
         value={textDataCellValue(value)}
+        showPickerIcon={false}
         formatValue={
           fieldMetadata.kind === "date"
             ? () => dateDisplayValue(value) ?? ""

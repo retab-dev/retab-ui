@@ -10,9 +10,9 @@ import type {
   JsonTableCellProps,
   VisibleColumn,
 } from "@/components/json-table/json-table-cell-types"
+import { recordJsonTableRender } from "@/components/json-table/json-table-profiler"
 import type { ProjectedRow } from "@/components/json-table/lib/document-projection"
 import type { TableDocument } from "@/components/json-table/lib/projects-types"
-import { recordJsonTableRender } from "@/components/json-table/json-table-profiler"
 import { ReadOnlyJsonTableCell } from "@/components/json-table/read-only-json-table-cell"
 
 const EditableJsonTableCell = dynamic(
@@ -37,7 +37,8 @@ interface SingleFileFormRowProps {
   /** Which object/array cell editor is open, keyed by materialized field path. */
   openEditorPath: string | null
   setOpenEditorPath: (key: string | null) => void
-  activeCellPath?: string | null
+  onCellHoverStart?: JsonTableCellProps["onCellHoverStart"]
+  onCellHoverEnd?: JsonTableCellProps["onCellHoverEnd"]
   onCellActivityLockChange?: (fieldPath: string, locked: boolean) => void
   onDocumentDataChange: JsonTableCellProps["onDocumentDataChange"]
   isJsonEditable: boolean
@@ -53,12 +54,7 @@ function interactionPathsAffectRow(
   prev: SingleFileFormRowProps,
   next: SingleFileFormRowProps
 ) {
-  const paths = [
-    prev.openEditorPath,
-    next.openEditorPath,
-    prev.activeCellPath ?? null,
-    next.activeCellPath ?? null,
-  ]
+  const paths = [prev.openEditorPath, next.openEditorPath]
 
   return paths.some(
     (path) =>
@@ -72,7 +68,7 @@ function areSingleFileFormRowPropsEqual(
   next: SingleFileFormRowProps
 ) {
   if (
-    prev.document !== next.document ||
+    prev.document.id !== next.document.id ||
     prev.schema !== next.schema ||
     prev.projectedRow !== next.projectedRow ||
     prev.visibleColumns !== next.visibleColumns ||
@@ -80,6 +76,8 @@ function areSingleFileFormRowPropsEqual(
     prev.rowTopPx !== next.rowTopPx ||
     prev.rowHeightPx !== next.rowHeightPx ||
     prev.setOpenEditorPath !== next.setOpenEditorPath ||
+    prev.onCellHoverStart !== next.onCellHoverStart ||
+    prev.onCellHoverEnd !== next.onCellHoverEnd ||
     prev.onCellActivityLockChange !== next.onCellActivityLockChange ||
     prev.onDocumentDataChange !== next.onDocumentDataChange ||
     prev.isJsonEditable !== next.isJsonEditable
@@ -101,14 +99,14 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
     rowHeightPx,
     openEditorPath,
     setOpenEditorPath,
-    activeCellPath = null,
-    onCellActivityLockChange,
+    onCellHoverStart,
+    onCellHoverEnd,
+    onCellActivityLockChange: _onCellActivityLockChange,
     onDocumentDataChange,
     isJsonEditable,
   }) => {
     const documentId = document.id
     recordJsonTableRender("SingleFileFormRow", String(rowIdx), {
-      activeCellPath,
       cellCount: projectedRow?.cells.length ?? 0,
       isJsonEditable,
       openEditorPath,
@@ -119,11 +117,7 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
     // Stable callback identity so projected-cell memoization holds across the
     // parent's per-scroll re-renders.
     const handleDataChange = React.useCallback(
-      (
-        docId: string,
-        materializedFieldPath: string,
-        value: unknown
-      ) => {
+      (docId: string, materializedFieldPath: string, value: unknown) => {
         onDocumentDataChange(docId, materializedFieldPath, value)
       },
       [onDocumentDataChange]
@@ -153,12 +147,6 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
         {/* Data cells */}
         {visibleColumns.map((column, colIdx) => {
           const projectedCell = projectedRow?.cells[colIdx]
-          const materializedFieldPath = projectedCell?.materializedFieldPath
-          const isCellActive = Boolean(
-            materializedFieldPath &&
-            (activeCellPath === materializedFieldPath ||
-              openEditorPath === materializedFieldPath)
-          )
 
           const cellProps = {
             column,
@@ -170,8 +158,8 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
             openEditorPath,
             onDocumentDataChange: handleDataChange,
             isJsonEditable,
-            isCellActive,
-            onCellActivityLockChange,
+            onCellHoverStart,
+            onCellHoverEnd,
           }
 
           return isJsonEditable ? (

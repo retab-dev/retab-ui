@@ -145,6 +145,7 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
       leftPad,
       rightPad,
       scrollToCell,
+      isJumpingRows,
     } = useFixedGridVirtualization({
       rowCount: sourceRows.length,
       columnCount,
@@ -190,6 +191,7 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
       [effectiveRowNumberWidth, leftPad, columnItems, rightPad]
     )
     const totalWidth = effectiveRowNumberWidth + totalColumnSize
+    const firstVirtualRowIndex = virtualRows[0]?.index ?? 0
 
     return (
       <div
@@ -260,7 +262,11 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
                 >
                   {virtualRows.map((virtualRow) => (
                     <CsvRow
-                      key={virtualRow.index}
+                      key={
+                        isJumpingRows
+                          ? virtualRow.index - firstVirtualRowIndex
+                          : virtualRow.index
+                      }
                       cells={rowAt(virtualRow.index)}
                       displayRowIndex={virtualRow.index}
                       rowIndex={rowIndexAt(virtualRow.index)}

@@ -107,12 +107,14 @@ import {
 const AUTO_COLLAPSE_DEPTH = 1
 /** Card-mode arrays longer than this are virtualized. */
 const CARD_VIRTUALIZE_THRESHOLD = 30
+const TABLE_MAX_HEIGHT = 420
+const TABLE_ROW_HEIGHT = 44
+/** Table-mode arrays longer than this keep a fixed-height internal scroll body. */
+const TABLE_SCROLL_THRESHOLD = Math.floor(TABLE_MAX_HEIGHT / TABLE_ROW_HEIGHT)
 /** Table-mode arrays longer than this are virtualized. */
-const TABLE_VIRTUALIZE_THRESHOLD = 30
+const TABLE_VIRTUALIZE_THRESHOLD = 500
 /** Arrays longer than this start collapsed regardless of depth. */
 const LONG_ARRAY_THRESHOLD = 8
-const TABLE_ROW_HEIGHT = 44
-const TABLE_MAX_HEIGHT = 420
 const TABLE_ROW_OVERSCAN = 3
 const TABLE_JUMP_ROW_OVERSCAN = 6
 
@@ -138,6 +140,9 @@ type FieldSourceLinkActions = Omit<FieldSourceLink, "activePath">
 const FieldSourceActivePathContext = React.createContext<string | null>(null)
 const FieldSourceActionsContext =
   React.createContext<FieldSourceLinkActions | null>(null)
+const DefaultOpenPathsContext = React.createContext<ReadonlySet<string> | null>(
+  null
+)
 
 /**
  * Wraps a scalar leaf so it reports its path on hover/focus and lights up as a
@@ -1240,7 +1245,10 @@ function JsonFormObject({
     [currentValue, schema, staticKeys]
   )
   const fieldCount = entries.length + dynamicEntries.length
-  const [open, setOpen] = React.useState(depth < AUTO_COLLAPSE_DEPTH)
+  const defaultOpenPaths = React.useContext(DefaultOpenPathsContext)
+  const [open, setOpen] = React.useState(
+    () => defaultOpenPaths?.has(sourcePath) ?? depth < AUTO_COLLAPSE_DEPTH
+  )
 
   return (
     <div className={cn("rounded-lg border", className)}>
@@ -1375,7 +1383,10 @@ function JsonFormArray({
 
   const startOpen =
     depth < AUTO_COLLAPSE_DEPTH && renderedFields.length <= LONG_ARRAY_THRESHOLD
-  const [open, setOpen] = React.useState(startOpen)
+  const defaultOpenPaths = React.useContext(DefaultOpenPathsContext)
+  const [open, setOpen] = React.useState(
+    () => defaultOpenPaths?.has(sourcePath) ?? startOpen
+  )
   const canAddItem = canAppendArrayItem(schema, renderedFields.length)
   const canRemoveItem = canRemoveArrayItem(schema, renderedFields.length)
 
@@ -1614,20 +1625,43 @@ function ArrayTable({
   const sourceActions = React.useContext(FieldSourceActionsContext)
   const sourceLinked = Boolean(sourceActions)
   const tableRef = React.useRef<HTMLDivElement>(null)
+  const activeSourceCellRef = React.useRef<Element | null>(null)
+  const hoveredSourcePathRef = React.useRef<string | null>(null)
+  const pendingHoverPathRef = React.useRef<string | null>(null)
+  const pendingHoverFrameRef = React.useRef<number | null>(null)
+  const isScrollingRef = React.useRef(false)
+  const virtualize = fields.length > TABLE_VIRTUALIZE_THRESHOLD
+
+  const setActiveSourceCell = React.useCallback((cell: Element | null) => {
+    if (activeSourceCellRef.current === cell) return
+    activeSourceCellRef.current?.removeAttribute("data-source-active")
+    if (cell) cell.setAttribute("data-source-active", "true")
+    activeSourceCellRef.current = cell
+  }, [])
 
   React.useEffect(() => {
+    if (!sourceLinked || !activePath) {
+      setActiveSourceCell(null)
+      return
+    }
+    if (
+      hoveredSourcePathRef.current === activePath &&
+      activeSourceCellRef.current?.getAttribute("data-source-path") ===
+        activePath
+    ) {
+      return
+    }
+
     const table = tableRef.current
     if (!table) return
-    for (const cell of table.querySelectorAll("[data-source-active='true']")) {
-      cell.removeAttribute("data-source-active")
-    }
-    if (!activePath) return
     for (const cell of table.querySelectorAll("[data-source-path]")) {
       if (cell.getAttribute("data-source-path") === activePath) {
-        cell.setAttribute("data-source-active", "true")
+        setActiveSourceCell(cell)
+        return
       }
     }
-  }, [activePath, fields.length])
+    setActiveSourceCell(null)
+  }, [activePath, fields.length, setActiveSourceCell, sourceLinked])
 
   const findEventCell = React.useCallback(
     (target: EventTarget | null): HTMLElement | null => {
@@ -1661,7 +1695,13 @@ function ArrayTable({
       const cell = findEventCell(event.target)
       if (!cell) return
       const sourceCellPath = cell.dataset.sourcePath
-      if (sourceCellPath) sourceActions?.selectField?.(sourceCellPath)
+      if (sourceCellPath) {
+        if (pendingHoverFrameRef.current !== null) {
+          cancelAnimationFrame(pendingHoverFrameRef.current)
+          pendingHoverFrameRef.current = null
+        }
+        sourceActions?.selectField?.(sourceCellPath)
+      }
       if (cell.dataset.tableCellEditable !== "true") return
       const path = cell.dataset.tableCellPath
       if (path) setActiveEditorPath(path)
@@ -1677,40 +1717,87 @@ function ArrayTable({
       const path = cell.dataset.tableCellPath
       if (!path) return
       const sourceCellPath = cell.dataset.sourcePath
-      if (sourceCellPath) sourceActions?.selectField?.(sourceCellPath)
+      if (sourceCellPath) {
+        if (pendingHoverFrameRef.current !== null) {
+          cancelAnimationFrame(pendingHoverFrameRef.current)
+          pendingHoverFrameRef.current = null
+        }
+        sourceActions?.selectField?.(sourceCellPath)
+      }
       event.preventDefault()
       setActiveEditorPath(path)
     },
     [findEventCell, sourceActions]
   )
 
-  const handleTableMouseOver = React.useCallback(
-    (event: React.MouseEvent<HTMLDivElement>) => {
+  const reportHoveredSourcePath = React.useCallback(
+    (path: string | null) => {
       if (!sourceActions) return
-      const cell = findEventCell(event.target)
-      if (!cell || cell.contains(event.relatedTarget as Node | null)) return
-      sourceActions.onFieldHover(cell.dataset.sourcePath ?? null)
+      pendingHoverPathRef.current = path
+      if (pendingHoverFrameRef.current !== null) return
+      pendingHoverFrameRef.current = requestAnimationFrame(() => {
+        pendingHoverFrameRef.current = null
+        sourceActions.onFieldHover(pendingHoverPathRef.current)
+      })
     },
-    [findEventCell, sourceActions]
+    [sourceActions]
   )
 
-  const handleTableMouseOut = React.useCallback(
-    (event: React.MouseEvent<HTMLDivElement>) => {
+  const setHoveredSourcePath = React.useCallback(
+    (path: string | null, cell: Element | null) => {
       if (!sourceActions) return
-      const cell = findEventCell(event.target)
-      if (!cell || cell.contains(event.relatedTarget as Node | null)) return
-      sourceActions.onFieldHover(null)
+      if (hoveredSourcePathRef.current === path) return
+      hoveredSourcePathRef.current = path
+      setActiveSourceCell(cell)
+      reportHoveredSourcePath(path)
     },
-    [findEventCell, sourceActions]
+    [reportHoveredSourcePath, setActiveSourceCell, sourceActions]
   )
+
+  React.useEffect(
+    () => () => {
+      if (pendingHoverFrameRef.current !== null) {
+        cancelAnimationFrame(pendingHoverFrameRef.current)
+      }
+    },
+    []
+  )
+
+  const handleTablePointerMove = React.useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      if (!sourceActions) return
+      if (isScrollingRef.current) return
+      const cell = findEventCell(event.target)
+      setHoveredSourcePath(cell?.dataset.sourcePath ?? null, cell)
+    },
+    [findEventCell, setHoveredSourcePath, sourceActions]
+  )
+
+  const handleTablePointerLeave = React.useCallback(
+    () => setHoveredSourcePath(null, null),
+    [setHoveredSourcePath]
+  )
+
+  const handleBodyScrollStart = React.useCallback(() => {
+    isScrollingRef.current = true
+    setHoveredSourcePath(null, null)
+  }, [setHoveredSourcePath])
+
+  const handleBodyScrollEnd = React.useCallback(() => {
+    isScrollingRef.current = false
+  }, [])
 
   const handleTableFocus = React.useCallback(
     (event: React.FocusEvent<HTMLDivElement>) => {
       if (!sourceActions) return
       const cell = findEventCell(event.target)
-      if (cell) sourceActions.onFieldHover(cell.dataset.sourcePath ?? null)
+      if (cell) {
+        hoveredSourcePathRef.current = cell.dataset.sourcePath ?? null
+        setActiveSourceCell(cell)
+        sourceActions.onFieldHover(cell.dataset.sourcePath ?? null)
+      }
     },
-    [findEventCell, sourceActions]
+    [findEventCell, setActiveSourceCell, sourceActions]
   )
 
   const handleTableBlur = React.useCallback(
@@ -1718,9 +1805,11 @@ function ArrayTable({
       if (!sourceActions) return
       const cell = findEventCell(event.target)
       if (!cell || cell.contains(event.relatedTarget as Node | null)) return
+      hoveredSourcePathRef.current = null
+      setActiveSourceCell(null)
       sourceActions.onFieldHover(null)
     },
-    [findEventCell, sourceActions]
+    [findEventCell, setActiveSourceCell, sourceActions]
   )
 
   const renderRow = React.useCallback(
@@ -1741,6 +1830,7 @@ function ArrayTable({
             ? activeEditorPath
             : null
         }
+        subscribeToRow={!virtualize}
         setActiveEditorPath={setActiveEditorPath}
       />
     ),
@@ -1754,10 +1844,9 @@ function ArrayTable({
       sourceLinked,
       template,
       activeEditorPath,
+      virtualize,
     ]
   )
-
-  const virtualize = fields.length > TABLE_VIRTUALIZE_THRESHOLD
 
   return (
     <div
@@ -1765,8 +1854,8 @@ function ArrayTable({
       onClickCapture={handleTableClickCapture}
       onClick={handleTableClick}
       onKeyDown={handleTableKeyDown}
-      onMouseOver={handleTableMouseOver}
-      onMouseOut={handleTableMouseOut}
+      onPointerMove={sourceActions ? handleTablePointerMove : undefined}
+      onPointerLeave={sourceActions ? handleTablePointerLeave : undefined}
       onFocus={handleTableFocus}
       onBlur={handleTableBlur}
       className="overflow-x-auto bg-background"
@@ -1798,7 +1887,15 @@ function ArrayTable({
             name={name}
             fields={fields}
             activeEditorPath={activeEditorPath}
-            activeSourcePath={activePath}
+            onScrollStart={handleBodyScrollStart}
+            onScrollEnd={handleBodyScrollEnd}
+            renderItem={renderRow}
+          />
+        ) : fields.length > TABLE_SCROLL_THRESHOLD ? (
+          <StaticArrayTableBody
+            fields={fields}
+            onScrollStart={handleBodyScrollStart}
+            onScrollEnd={handleBodyScrollEnd}
             renderItem={renderRow}
           />
         ) : (
@@ -1825,6 +1922,7 @@ const ArrayTableRow = React.memo(function ArrayTableRow({
   template,
   rowTopPx,
   activeEditorPath,
+  subscribeToRow,
   setActiveEditorPath,
 }: {
   name: string
@@ -1838,12 +1936,18 @@ const ArrayTableRow = React.memo(function ArrayTableRow({
   template: string
   rowTopPx?: number
   activeEditorPath: string | null
+  subscribeToRow: boolean
   setActiveEditorPath: (path: string | null) => void
 }) {
-  const { control, setValue } = useFormContext()
+  const { control, getValues, setValue } = useFormContext()
   const rowPath = joinFormPath(name, index)
   const rowSourcePath = joinSourcePath(sourcePath, index)
-  const rowValue = useWatch({ control, name: rowPath }) as
+  const watchedRowValue = useWatch({
+    control,
+    name: rowPath,
+    disabled: !subscribeToRow,
+  }) as Record<string, unknown> | undefined
+  const rowValue = (subscribeToRow ? watchedRowValue : getValues(rowPath)) as
     | Record<string, unknown>
     | undefined
   const rowStyle = React.useMemo(
@@ -1860,8 +1964,9 @@ const ArrayTableRow = React.memo(function ArrayTableRow({
 
   return (
     <div
+      data-index={index}
       className={cn(
-        "grid items-center gap-1 border-b px-2 py-1 transition-colors hover:bg-muted/25",
+        "grid items-center gap-1 border-b px-2 py-1 [contain:layout_paint_style] hover:bg-muted/25",
         isLastRow && "border-b-0"
       )}
       style={rowStyle}
@@ -1883,7 +1988,7 @@ const ArrayTableRow = React.memo(function ArrayTableRow({
             ? datetimeLocalInputValue(textValue)
             : textValue
         const cellClassName = cn(
-          "min-w-0 rounded transition-colors data-[source-active=true]:bg-primary/5 data-[source-active=true]:ring-1 data-[source-active=true]:ring-primary/30",
+          "min-w-0 rounded data-[source-active=true]:bg-primary/5 data-[source-active=true]:ring-1 data-[source-active=true]:ring-primary/30",
           !isEditing && !isScalarEditing
             ? "hover:bg-background focus-visible:bg-background focus-visible:ring-1 focus-visible:ring-ring/30"
             : "px-1 py-0.5",
@@ -2151,17 +2256,88 @@ function dataCellTextValue(value: unknown): string | null {
   return value === null || value === undefined ? null : String(value)
 }
 
+function useArrayTableScrollActivity(
+  scrollRef: React.RefObject<HTMLElement | null>,
+  {
+    onScrollStart,
+    onScrollEnd,
+  }: {
+    onScrollStart: () => void
+    onScrollEnd: () => void
+  }
+) {
+  const isScrollingRef = React.useRef(false)
+  const scrollEndTimeoutRef = React.useRef(0)
+
+  const handleScroll = React.useCallback(() => {
+    if (!isScrollingRef.current) {
+      isScrollingRef.current = true
+      onScrollStart()
+    }
+    window.clearTimeout(scrollEndTimeoutRef.current)
+    scrollEndTimeoutRef.current = window.setTimeout(() => {
+      isScrollingRef.current = false
+      onScrollEnd()
+    }, 120)
+  }, [onScrollEnd, onScrollStart])
+
+  React.useEffect(() => {
+    const scrollElement = scrollRef.current
+    if (!scrollElement) return
+    scrollElement.addEventListener("scroll", handleScroll, { passive: true })
+    return () => {
+      window.clearTimeout(scrollEndTimeoutRef.current)
+      scrollElement.removeEventListener("scroll", handleScroll)
+    }
+  }, [handleScroll, scrollRef])
+}
+
+function StaticArrayTableBody({
+  fields,
+  onScrollStart,
+  onScrollEnd,
+  renderItem,
+}: {
+  fields: { id: string }[]
+  onScrollStart: () => void
+  onScrollEnd: () => void
+  renderItem: (index: number) => React.ReactNode
+}) {
+  const scrollRef = React.useRef<HTMLDivElement>(null)
+  useArrayTableScrollActivity(scrollRef, {
+    onScrollStart,
+    onScrollEnd,
+  })
+
+  return (
+    <div
+      ref={scrollRef}
+      data-slot="json-form-table-scroll"
+      className="overflow-y-auto"
+      style={{ maxHeight: TABLE_MAX_HEIGHT }}
+    >
+      <div className="[contain:layout_paint_style]">
+        {fields.map((entry, index) => (
+          <React.Fragment key={entry.id}>{renderItem(index)}</React.Fragment>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function FixedArrayTableBody({
   name,
   fields,
   activeEditorPath,
-  activeSourcePath,
+  onScrollStart,
+  onScrollEnd,
   renderItem,
 }: {
   name: string
   fields: { id: string }[]
   activeEditorPath: string | null
-  activeSourcePath: string | null
+  onScrollStart: () => void
+  onScrollEnd: () => void
   renderItem: (index: number, rowTopPx: number) => React.ReactNode
 }) {
   const scrollRef = React.useRef<HTMLDivElement>(null)
@@ -2172,22 +2348,10 @@ function FixedArrayTableBody({
     jumpRowOverscan: TABLE_JUMP_ROW_OVERSCAN,
     scrollRef,
   })
-
-  React.useEffect(() => {
-    const scrollElement = scrollRef.current
-    if (!scrollElement) return
-    for (const cell of scrollElement.querySelectorAll(
-      "[data-source-active='true']"
-    )) {
-      cell.removeAttribute("data-source-active")
-    }
-    if (!activeSourcePath) return
-    for (const cell of scrollElement.querySelectorAll("[data-source-path]")) {
-      if (cell.getAttribute("data-source-path") === activeSourcePath) {
-        cell.setAttribute("data-source-active", "true")
-      }
-    }
-  }, [activeSourcePath, virtualRows])
+  useArrayTableScrollActivity(scrollRef, {
+    onScrollStart,
+    onScrollEnd,
+  })
 
   return (
     <div
@@ -2201,6 +2365,7 @@ function FixedArrayTableBody({
           height: totalRowSize,
           minWidth: "100%",
         })}
+        className="[contain:layout_paint_style]"
       >
         {virtualRows.map((virtualRow, slotIndex) => {
           const isEditingRow = activeEditorPath?.startsWith(
@@ -2286,6 +2451,11 @@ export interface JsonFormProps {
    * straight from a `useSourceLink` result.
    */
   sourceLink?: FieldSourceLink
+  /**
+   * Source/logical paths that should start expanded. Intended for controlled
+   * demos and benchmarks that need a deep virtualized body mounted immediately.
+   */
+  defaultOpenPaths?: readonly string[]
   /** Rendered after the fields, e.g. a submit button. */
   children?: React.ReactNode
 }
@@ -2296,6 +2466,7 @@ export function JsonForm({
   onSubmit,
   className,
   sourceLink,
+  defaultOpenPaths,
   children,
 }: JsonFormProps) {
   const expandedSchema = React.useMemo(() => expandRefs(schema), [schema])
@@ -2308,6 +2479,13 @@ export function JsonForm({
   const sourceActions = React.useMemo<FieldSourceLinkActions | null>(
     () => (onFieldHover ? { onFieldHover, selectField } : null),
     [onFieldHover, selectField]
+  )
+  const defaultOpenPathSet = React.useMemo(
+    () =>
+      defaultOpenPaths && defaultOpenPaths.length > 0
+        ? new Set(defaultOpenPaths)
+        : null,
+    [defaultOpenPaths]
   )
   const normalizedInitialValuesRef = React.useRef<Schema | null>(null)
 
@@ -2358,12 +2536,17 @@ export function JsonForm({
       <FieldSourceActivePathContext.Provider
         value={sourceLink?.activePath ?? null}
       >
-        <Form {...form}>
-          <form onSubmit={handleSubmit} className={cn("space-y-4", className)}>
-            <JsonFormRootFields schema={expandedSchema} />
-            {children}
-          </form>
-        </Form>
+        <DefaultOpenPathsContext.Provider value={defaultOpenPathSet}>
+          <Form {...form}>
+            <form
+              onSubmit={handleSubmit}
+              className={cn("space-y-4", className)}
+            >
+              <JsonFormRootFields schema={expandedSchema} />
+              {children}
+            </form>
+          </Form>
+        </DefaultOpenPathsContext.Provider>
       </FieldSourceActivePathContext.Provider>
     </FieldSourceActionsContext.Provider>
   )

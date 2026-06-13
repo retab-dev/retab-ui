@@ -1,0 +1,2433 @@
+{
+  "measuredAt": "2026-06-12T22:12:29.473Z",
+  "route": "http://localhost:3100/json-table-profile",
+  "mode": "headless Chrome CDP + json-table render profiler",
+  "initial": {
+    "url": "http://localhost:3100/json-table-profile",
+    "elapsedWallMs": 1418,
+    "navigation": {
+      "domContentLoaded": 428.9000000000233,
+      "load": 458.4000000000233,
+      "responseEnd": 410.9000000000233,
+      "transferSize": 37778,
+      "encodedBodySize": 37478
+    },
+    "scroll": {
+      "scrollHeight": 48032,
+      "clientHeight": 367,
+      "scrollTop": 0,
+      "scrollLeft": 0,
+      "scrollWidth": 768,
+      "clientWidth": 706
+    },
+    "mountedRows": 27,
+    "mountedEditableCells": 192,
+    "totalDomNodes": 1150,
+    "warmRenderSnapshotCount": 222
+  },
+  "scenarios": [
+    {
+      "name": "hover-date-cell",
+      "elapsedMs": 124.70000000006985,
+      "wait": {
+        "ok": true,
+        "elapsedMs": 34.800000000046566
+      },
+      "dom": {
+        "nodes": 1156,
+        "rows": 27,
+        "editableCells": 192,
+        "activeCells": 1,
+        "dataCells": 192,
+        "calendar": false,
+        "popovers": 0
+      },
+      "longTasks": [],
+      "metricsDelta": {
+        "JSHeapUsedSize": 904848,
+        "Nodes": 9,
+        "LayoutCount": 1,
+        "RecalcStyleCount": 4,
+        "LayoutDurationMs": 0.3080000000000016,
+        "RecalcStyleDurationMs": 32.593999999999994,
+        "ScriptDurationMs": 5.932999999999993,
+        "TaskDurationMs": 43.841999999999985
+      },
+      "profiler": {
+        "renders": {
+          "total": 12,
+          "byComponent": [
+            {
+              "name": "SingleFileVirtualizedTable",
+              "count": 2
+            },
+            {
+              "name": "SingleFileFormRow",
+              "count": 2
+            },
+            {
+              "name": "EditableJsonTableCell",
+              "count": 2
+            },
+            {
+              "name": "ActiveEditableJsonTableCell",
+              "count": 2
+            },
+            {
+              "name": "CellEditor",
+              "count": 2
+            },
+            {
+              "name": "JsonTableScalarCell",
+              "count": 2
+            }
+          ],
+          "byInstance": [
+            {
+              "name": "SingleFileVirtualizedTable:doc_1",
+              "count": 2
+            },
+            {
+              "name": "SingleFileFormRow:0",
+              "count": 2
+            },
+            {
+              "name": "EditableJsonTableCell:transactions.0.date",
+              "count": 2
+            },
+            {
+              "name": "ActiveEditableJsonTableCell:transactions.0.date",
+              "count": 2
+            },
+            {
+              "name": "CellEditor:transactions.0.date",
+              "count": 2
+            },
+            {
+              "name": "JsonTableScalarCell:date:edit",
+              "count": 2
+            }
+          ],
+          "changedProps": [
+            {
+              "name": "SingleFileVirtualizedTable.activeCellPath",
+              "count": 1
+            },
+            {
+              "name": "SingleFileVirtualizedTable.same-props",
+              "count": 1
+            },
+            {
+              "name": "SingleFileFormRow.activeCellPath",
+              "count": 1
+            },
+            {
+              "name": "SingleFileFormRow.same-props",
+              "count": 1
+            },
+            {
+              "name": "EditableJsonTableCell.isActive",
+              "count": 1
+            },
+            {
+              "name": "EditableJsonTableCell.isCellActive",
+              "count": 1
+            },
+            {
+              "name": "EditableJsonTableCell.same-props",
+              "count": 1
+            },
+            {
+              "name": "ActiveEditableJsonTableCell.mount",
+              "count": 1
+            },
+            {
+              "name": "ActiveEditableJsonTableCell.same-props",
+              "count": 1
+            },
+            {
+              "name": "CellEditor.mount",
+              "count": 1
+            },
+            {
+              "name": "CellEditor.same-props",
+              "count": 1
+            },
+            {
+              "name": "JsonTableScalarCell.mount",
+              "count": 1
+            },
+            {
+              "name": "JsonTableScalarCell.same-props",
+              "count": 1
+            }
+          ]
+        },
+        "reactCommits": {
+          "count": 1,
+          "totalActualDurationMs": 2.900000000023283,
+          "maxActualDurationMs": 2.900000000023283,
+          "commits": [
+            {
+              "phase": "update",
+              "actualDurationMs": 2.900000000023283,
+              "baseDurationMs": 31.00000000046566
+            }
+          ]
+        },
+        "marks": [
+          {
+            "at": 1417.3000000000466,
+            "name": "scenario-start",
+            "detail": {
+              "name": "hover-date-cell"
+            }
+          },
+          {
+            "at": 1531.5,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.0.date"
+            }
+          },
+          {
+            "at": 1531.5,
+            "name": "active-cell-change",
+            "detail": {
+              "previousFieldPath": null,
+              "nextFieldPath": "transactions.0.date"
+            }
+          },
+          {
+            "at": 1535.9000000000233,
+            "name": "edit-dom-mounted"
+          },
+          {
+            "at": 1570,
+            "name": "active-editor-mounted",
+            "detail": {
+              "fieldPath": "transactions.0.date",
+              "fieldKind": "date"
+            }
+          },
+          {
+            "at": 1570,
+            "name": "cell-activity-lock-change",
+            "detail": {
+              "fieldPath": "transactions.0.date",
+              "locked": false
+            }
+          },
+          {
+            "at": 1570.2000000000698,
+            "name": "active-editor-mounted",
+            "detail": {
+              "fieldPath": "transactions.0.date",
+              "fieldKind": "date"
+            }
+          },
+          {
+            "at": 1570.2000000000698,
+            "name": "cell-activity-lock-change",
+            "detail": {
+              "fieldPath": "transactions.0.date",
+              "locked": false
+            }
+          },
+          {
+            "at": 1572.1000000000931,
+            "name": "scenario-end",
+            "detail": {
+              "name": "hover-date-cell"
+            }
+          }
+        ]
+      },
+      "trace": {
+        "EventDispatch": {
+          "count": 17,
+          "totalMs": 1.482,
+          "maxMs": 0.609
+        },
+        "FunctionCall": {
+          "count": 44,
+          "totalMs": 5.958,
+          "maxMs": 3.539
+        },
+        "UpdateLayoutTree": {
+          "count": 4,
+          "totalMs": 32.591,
+          "maxMs": 32.234
+        },
+        "Layout": {
+          "count": 1,
+          "totalMs": 0.294,
+          "maxMs": 0.294
+        },
+        "Paint": {
+          "count": 6,
+          "totalMs": 0.355,
+          "maxMs": 0.142
+        },
+        "MinorGC": {
+          "count": 0,
+          "totalMs": 0,
+          "maxMs": 0
+        },
+        "topEvents": [
+          {
+            "name": "RunTask",
+            "ms": 33.337,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "UpdateLayoutTree",
+            "ms": 32.234,
+            "category": "blink,devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 3.648,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "FunctionCall",
+            "ms": 3.539,
+            "category": "devtools.timeline",
+            "url": "http://localhost:3100/_next/static/chunks/0f4w_next_dist_compiled_1lhvvfx._.js"
+          },
+          {
+            "name": "RunTask",
+            "ms": 1.735,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 1.066,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 1.031,
+            "category": "disabled-by-default-devtools.timeline"
+          }
+        ]
+      }
+    },
+    {
+      "name": "hover-first-20-mounted-cells",
+      "elapsedMs": 895.5,
+      "wait": {
+        "ok": true,
+        "elapsedMs": 10.300000000046566
+      },
+      "dom": {
+        "nodes": 1150,
+        "rows": 27,
+        "editableCells": 192,
+        "activeCells": 1,
+        "dataCells": 191,
+        "calendar": false,
+        "popovers": 0
+      },
+      "longTasks": [],
+      "metricsDelta": {
+        "JSHeapUsedSize": 3575164,
+        "Nodes": 204,
+        "LayoutCount": 27,
+        "RecalcStyleCount": 73,
+        "LayoutDurationMs": 4.004999999999999,
+        "RecalcStyleDurationMs": 677.825,
+        "ScriptDurationMs": 74.85000000000002,
+        "TaskDurationMs": 795.3390000000002
+      },
+      "profiler": {
+        "renders": {
+          "total": 296,
+          "byComponent": [
+            {
+              "name": "EditableJsonTableCell",
+              "count": 72
+            },
+            {
+              "name": "JsonTableScalarCell",
+              "count": 68
+            },
+            {
+              "name": "SingleFileVirtualizedTable",
+              "count": 42
+            },
+            {
+              "name": "SingleFileFormRow",
+              "count": 42
+            },
+            {
+              "name": "ActiveEditableJsonTableCell",
+              "count": 36
+            },
+            {
+              "name": "CellEditor",
+              "count": 36
+            }
+          ],
+          "byInstance": [
+            {
+              "name": "SingleFileVirtualizedTable:doc_1",
+              "count": 42
+            },
+            {
+              "name": "JsonTableScalarCell:text:undefined",
+              "count": 22
+            },
+            {
+              "name": "JsonTableScalarCell:text:edit",
+              "count": 20
+            },
+            {
+              "name": "SingleFileFormRow:0",
+              "count": 18
+            },
+            {
+              "name": "SingleFileFormRow:1",
+              "count": 16
+            },
+            {
+              "name": "JsonTableScalarCell:date:undefined",
+              "count": 8
+            },
+            {
+              "name": "SingleFileFormRow:2",
+              "count": 8
+            },
+            {
+              "name": "EditableJsonTableCell:transactions.0.date",
+              "count": 6
+            },
+            {
+              "name": "JsonTableScalarCell:date:edit",
+              "count": 6
+            },
+            {
+              "name": "JsonTableScalarCell:number:edit",
+              "count": 6
+            },
+            {
+              "name": "JsonTableScalarCell:number:undefined",
+              "count": 6
+            },
+            {
+              "name": "EditableJsonTableCell:transactions.0.amount.amount",
+              "count": 4
+            },
+            {
+              "name": "EditableJsonTableCell:transactions.0.amount.iso_4217_currency_code",
+              "count": 4
+            },
+            {
+              "name": "EditableJsonTableCell:transactions.0.description",
+              "count": 4
+            },
+            {
+              "name": "EditableJsonTableCell:transactions.0.check_number",
+              "count": 4
+            },
+            {
+              "name": "EditableJsonTableCell:transactions.0.transaction_type",
+              "count": 4
+            }
+          ],
+          "changedProps": [
+            {
+              "name": "JsonTableScalarCell.same-props",
+              "count": 62
+            },
+            {
+              "name": "EditableJsonTableCell.isActive",
+              "count": 36
+            },
+            {
+              "name": "EditableJsonTableCell.isCellActive",
+              "count": 36
+            },
+            {
+              "name": "EditableJsonTableCell.same-props",
+              "count": 36
+            },
+            {
+              "name": "SingleFileVirtualizedTable.activeCellPath",
+              "count": 21
+            },
+            {
+              "name": "SingleFileVirtualizedTable.same-props",
+              "count": 21
+            },
+            {
+              "name": "SingleFileFormRow.activeCellPath",
+              "count": 21
+            },
+            {
+              "name": "SingleFileFormRow.same-props",
+              "count": 21
+            },
+            {
+              "name": "ActiveEditableJsonTableCell.same-props",
+              "count": 19
+            },
+            {
+              "name": "CellEditor.same-props",
+              "count": 19
+            },
+            {
+              "name": "ActiveEditableJsonTableCell.mount",
+              "count": 17
+            },
+            {
+              "name": "CellEditor.mount",
+              "count": 17
+            },
+            {
+              "name": "JsonTableScalarCell.valueType",
+              "count": 4
+            },
+            {
+              "name": "JsonTableScalarCell.mount",
+              "count": 2
+            }
+          ]
+        },
+        "reactCommits": {
+          "count": 25,
+          "totalActualDurationMs": 46.9000000001397,
+          "maxActualDurationMs": 8.100000000093132,
+          "commits": [
+            {
+              "phase": "update",
+              "actualDurationMs": 1.5,
+              "baseDurationMs": 29.50000000046566
+            },
+            {
+              "phase": "update",
+              "actualDurationMs": 1.8000000000465661,
+              "baseDurationMs": 29.900000000488944
+            },
+            {
+              "phase": "update",
+              "actualDurationMs": 8.100000000093132,
+              "baseDurationMs": 29.800000000628643
+            },
+            {
+              "phase": "update",
+              "actualDurationMs": 1.8000000000465661,
+              "baseDurationMs": 29.800000000512227
+            },
+            {
+              "phase": "update",
+              "actualDurationMs": 1.900000000023283,
+              "baseDurationMs": 30.20000000053551
+            },
+            {
+              "phase": "update",
+              "actualDurationMs": 1.6999999999534339,
+              "baseDurationMs": 30.100000000442378
+            },
+            {
+              "phase": "update",
+              "actualDurationMs": 4.600000000093132,
+              "baseDurationMs": 33.00000000058208
+            },
+            {
+              "phase": "update",
+              "actualDurationMs": 0.30000000004656613,
+              "baseDurationMs": 31.700000000651926
+            },
+            {
+              "phase": "nested-update",
+              "actualDurationMs": 0.2999999999301508,
+              "baseDurationMs": 31.70000000053551
+            },
+            {
+              "phase": "update",
+              "actualDurationMs": 1.900000000023283,
+              "baseDurationMs": 30.400000000488944
+            },
+            {
+              "phase": "update",
+              "actualDurationMs": 1.400000000023283,
+              "baseDurationMs": 30.100000000442378
+            },
+            {
+              "phase": "update",
+              "actualDurationMs": 1.8999999999068677,
+              "baseDurationMs": 30.50000000023283
+            },
+            {
+              "phase": "update",
+              "actualDurationMs": 1.7000000000698492,
+              "baseDurationMs": 30.600000000442378
+            },
+            {
+              "phase": "update",
+              "actualDurationMs": 1.8000000000465661,
+              "baseDurationMs": 30.600000000442378
+            },
+            {
+              "phase": "update",
+              "actualDurationMs": 1.8000000000465661,
+              "baseDurationMs": 30.700000000651926
+            },
+            {
+              "phase": "update",
+              "actualDurationMs": 1.599999999976717,
+              "baseDurationMs": 30.600000000442378
+            },
+            {
+              "phase": "update",
+              "actualDurationMs": 2.5,
+              "baseDurationMs": 31.50000000046566
+            },
+            {
+              "phase": "update",
+              "actualDurationMs": 0.40000000002328306,
+              "baseDurationMs": 31.70000000053551
+            },
+            {
+              "phase": "nested-update",
+              "actualDurationMs": 0.30000000004656613,
+              "baseDurationMs": 31.500000000582077
+            },
+            {
+              "phase": "update",
+              "actualDurationMs": 1.6999999999534339,
+              "baseDurationMs": 31.100000000325963
+            },
+            {
+              "phase": "update",
+              "actualDurationMs": 1.2999999999301508,
+              "baseDurationMs": 30.800000000279397
+            },
+            {
+              "phase": "update",
+              "actualDurationMs": 1.599999999976717,
+              "baseDurationMs": 30.90000000037253
+            },
+            {
+              "phase": "update",
+              "actualDurationMs": 1.6999999999534339,
+              "baseDurationMs": 31.100000000209548
+            },
+            {
+              "phase": "update",
+              "actualDurationMs": 1.6999999999534339,
+              "baseDurationMs": 31.200000000186265
+            },
+            {
+              "phase": "update",
+              "actualDurationMs": 1.599999999976717,
+              "baseDurationMs": 31.30000000016298
+            }
+          ]
+        },
+        "marks": [
+          {
+            "at": 1601.5,
+            "name": "scenario-start",
+            "detail": {
+              "name": "hover-first-20-mounted-cells"
+            }
+          },
+          {
+            "at": 1606.7000000000698,
+            "name": "active-cell-change",
+            "detail": {
+              "previousFieldPath": "transactions.0.date",
+              "nextFieldPath": null
+            }
+          },
+          {
+            "at": 1690.4000000000233,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.0.date"
+            }
+          },
+          {
+            "at": 1690.4000000000233,
+            "name": "active-cell-change",
+            "detail": {
+              "previousFieldPath": null,
+              "nextFieldPath": "transactions.0.date"
+            }
+          },
+          {
+            "at": 1693.6000000000931,
+            "name": "edit-dom-mounted"
+          },
+          {
+            "at": 1726.3000000000466,
+            "name": "active-editor-mounted",
+            "detail": {
+              "fieldPath": "transactions.0.date",
+              "fieldKind": "date"
+            }
+          },
+          {
+            "at": 1726.4000000000233,
+            "name": "cell-activity-lock-change",
+            "detail": {
+              "fieldPath": "transactions.0.date",
+              "locked": false
+            }
+          },
+          {
+            "at": 1726.4000000000233,
+            "name": "active-editor-mounted",
+            "detail": {
+              "fieldPath": "transactions.0.date",
+              "fieldKind": "date"
+            }
+          },
+          {
+            "at": 1726.4000000000233,
+            "name": "cell-activity-lock-change",
+            "detail": {
+              "fieldPath": "transactions.0.date",
+              "locked": false
+            }
+          },
+          {
+            "at": 1726.8000000000466,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.0.amount.amount"
+            }
+          },
+          {
+            "at": 1726.8000000000466,
+            "name": "active-cell-change",
+            "detail": {
+              "previousFieldPath": "transactions.0.date",
+              "nextFieldPath": "transactions.0.amount.amount"
+            }
+          },
+          {
+            "at": 1736.6000000000931,
+            "name": "edit-dom-mounted"
+          },
+          {
+            "at": 1770.1000000000931,
+            "name": "active-editor-mounted",
+            "detail": {
+              "fieldPath": "transactions.0.amount.amount",
+              "fieldKind": "number"
+            }
+          },
+          {
+            "at": 1770.1000000000931,
+            "name": "cell-activity-lock-change",
+            "detail": {
+              "fieldPath": "transactions.0.amount.amount",
+              "locked": false
+            }
+          },
+          {
+            "at": 1770.2000000000698,
+            "name": "active-editor-mounted",
+            "detail": {
+              "fieldPath": "transactions.0.amount.amount",
+              "fieldKind": "number"
+            }
+          },
+          {
+            "at": 1770.2000000000698,
+            "name": "cell-activity-lock-change",
+            "detail": {
+              "fieldPath": "transactions.0.amount.amount",
+              "locked": false
+            }
+          },
+          {
+            "at": 1770.5,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.0.amount.iso_4217_currency_code"
+            }
+          },
+          {
+            "at": 1770.5,
+            "name": "active-cell-change",
+            "detail": {
+              "previousFieldPath": "transactions.0.amount.amount",
+              "nextFieldPath": "transactions.0.amount.iso_4217_currency_code"
+            }
+          },
+          {
+            "at": 1773.9000000000233,
+            "name": "edit-dom-mounted"
+          },
+          {
+            "at": 1807.1000000000931,
+            "name": "active-editor-mounted",
+            "detail": {
+              "fieldPath": "transactions.0.amount.iso_4217_currency_code",
+              "fieldKind": "string"
+            }
+          },
+          {
+            "at": 1807.2000000000698,
+            "name": "cell-activity-lock-change",
+            "detail": {
+              "fieldPath": "transactions.0.amount.iso_4217_currency_code",
+              "locked": false
+            }
+          },
+          {
+            "at": 1807.2000000000698,
+            "name": "active-editor-mounted",
+            "detail": {
+              "fieldPath": "transactions.0.amount.iso_4217_currency_code",
+              "fieldKind": "string"
+            }
+          },
+          {
+            "at": 1807.2000000000698,
+            "name": "cell-activity-lock-change",
+            "detail": {
+              "fieldPath": "transactions.0.amount.iso_4217_currency_code",
+              "locked": false
+            }
+          },
+          {
+            "at": 1807.7000000000698,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.0.description"
+            }
+          },
+          {
+            "at": 1807.7000000000698,
+            "name": "active-cell-change",
+            "detail": {
+              "previousFieldPath": "transactions.0.amount.iso_4217_currency_code",
+              "nextFieldPath": "transactions.0.description"
+            }
+          },
+          {
+            "at": 1810.8000000000466,
+            "name": "edit-dom-mounted"
+          },
+          {
+            "at": 1844,
+            "name": "active-editor-mounted",
+            "detail": {
+              "fieldPath": "transactions.0.description",
+              "fieldKind": "string"
+            }
+          },
+          {
+            "at": 1844.1000000000931,
+            "name": "cell-activity-lock-change",
+            "detail": {
+              "fieldPath": "transactions.0.description",
+              "locked": false
+            }
+          },
+          {
+            "at": 1844.1000000000931,
+            "name": "active-editor-mounted",
+            "detail": {
+              "fieldPath": "transactions.0.description",
+              "fieldKind": "string"
+            }
+          },
+          {
+            "at": 1844.1000000000931,
+            "name": "cell-activity-lock-change",
+            "detail": {
+              "fieldPath": "transactions.0.description",
+              "locked": false
+            }
+          },
+          {
+            "at": 1844.5,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.0.check_number"
+            }
+          },
+          {
+            "at": 1844.5,
+            "name": "active-cell-change",
+            "detail": {
+              "previousFieldPath": "transactions.0.description",
+              "nextFieldPath": "transactions.0.check_number"
+            }
+          },
+          {
+            "at": 1847.7000000000698,
+            "name": "edit-dom-mounted"
+          },
+          {
+            "at": 1879.6000000000931,
+            "name": "active-editor-mounted",
+            "detail": {
+              "fieldPath": "transactions.0.check_number",
+              "fieldKind": "string"
+            }
+          },
+          {
+            "at": 1879.6000000000931,
+            "name": "cell-activity-lock-change",
+            "detail": {
+              "fieldPath": "transactions.0.check_number",
+              "locked": false
+            }
+          },
+          {
+            "at": 1879.6000000000931,
+            "name": "active-editor-mounted",
+            "detail": {
+              "fieldPath": "transactions.0.check_number",
+              "fieldKind": "string"
+            }
+          },
+          {
+            "at": 1879.6000000000931,
+            "name": "cell-activity-lock-change",
+            "detail": {
+              "fieldPath": "transactions.0.check_number",
+              "locked": false
+            }
+          },
+          {
+            "at": 1879.9000000000233,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.0.transaction_type"
+            }
+          },
+          {
+            "at": 1879.9000000000233,
+            "name": "active-cell-change",
+            "detail": {
+              "previousFieldPath": "transactions.0.check_number",
+              "nextFieldPath": "transactions.0.transaction_type"
+            }
+          },
+          {
+            "at": 1886.2000000000698,
+            "name": "edit-dom-mounted"
+          },
+          {
+            "at": 1921.4000000000233,
+            "name": "active-editor-mounted",
+            "detail": {
+              "fieldPath": "transactions.0.transaction_type",
+              "fieldKind": "enum"
+            }
+          },
+          {
+            "at": 1921.4000000000233,
+            "name": "cell-activity-lock-change",
+            "detail": {
+              "fieldPath": "transactions.0.transaction_type",
+              "locked": false
+            }
+          },
+          {
+            "at": 1921.8000000000466,
+            "name": "active-editor-mounted",
+            "detail": {
+              "fieldPath": "transactions.0.transaction_type",
+              "fieldKind": "enum"
+            }
+          },
+          {
+            "at": 1921.8000000000466,
+            "name": "cell-activity-lock-change",
+            "detail": {
+              "fieldPath": "transactions.0.transaction_type",
+              "locked": false
+            }
+          },
+          {
+            "at": 1923.9000000000233,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.0.account_number_last4"
+            }
+          },
+          {
+            "at": 1923.9000000000233,
+            "name": "active-cell-change",
+            "detail": {
+              "previousFieldPath": "transactions.0.transaction_type",
+              "nextFieldPath": "transactions.0.account_number_last4"
+            }
+          },
+          {
+            "at": 1927.5,
+            "name": "active-editor-mounted",
+            "detail": {
+              "fieldPath": "transactions.0.account_number_last4",
+              "fieldKind": "string"
+            }
+          },
+          {
+            "at": 1927.5,
+            "name": "cell-activity-lock-change",
+            "detail": {
+              "fieldPath": "transactions.0.account_number_last4",
+              "locked": false
+            }
+          },
+          {
+            "at": 1927.6000000000931,
+            "name": "active-editor-mounted",
+            "detail": {
+              "fieldPath": "transactions.0.account_number_last4",
+              "fieldKind": "string"
+            }
+          },
+          {
+            "at": 1927.6000000000931,
+            "name": "cell-activity-lock-change",
+            "detail": {
+              "fieldPath": "transactions.0.account_number_last4",
+              "locked": false
+            }
+          },
+          {
+            "at": 1927.7000000000698,
+            "name": "edit-dom-mounted"
+          },
+          {
+            "at": 1959.9000000000233,
+            "name": "active-cell-change",
+            "detail": {
+              "previousFieldPath": "transactions.0.account_number_last4",
+              "nextFieldPath": null
+            }
+          },
+          {
+            "at": 1996.8000000000466,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.1.date"
+            }
+          },
+          {
+            "at": 1996.8000000000466,
+            "name": "active-cell-change",
+            "detail": {
+              "previousFieldPath": null,
+              "nextFieldPath": "transactions.1.date"
+            }
+          },
+          {
+            "at": 1999.8000000000466,
+            "name": "edit-dom-mounted"
+          },
+          {
+            "at": 2033.7000000000698,
+            "name": "active-editor-mounted",
+            "detail": {
+              "fieldPath": "transactions.1.date",
+              "fieldKind": "date"
+            }
+          },
+          {
+            "at": 2033.7000000000698,
+            "name": "cell-activity-lock-change",
+            "detail": {
+              "fieldPath": "transactions.1.date",
+              "locked": false
+            }
+          },
+          {
+            "at": 2033.7000000000698,
+            "name": "active-editor-mounted",
+            "detail": {
+              "fieldPath": "transactions.1.date",
+              "fieldKind": "date"
+            }
+          },
+          {
+            "at": 2033.7000000000698,
+            "name": "cell-activity-lock-change",
+            "detail": {
+              "fieldPath": "transactions.1.date",
+              "locked": false
+            }
+          },
+          {
+            "at": 2034.1000000000931,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.1.amount.amount"
+            }
+          },
+          {
+            "at": 2034.1000000000931,
+            "name": "active-cell-change",
+            "detail": {
+              "previousFieldPath": "transactions.1.date",
+              "nextFieldPath": "transactions.1.amount.amount"
+            }
+          },
+          {
+            "at": 2037,
+            "name": "edit-dom-mounted"
+          },
+          {
+            "at": 2070.3000000000466,
+            "name": "active-editor-mounted",
+            "detail": {
+              "fieldPath": "transactions.1.amount.amount",
+              "fieldKind": "number"
+            }
+          },
+          {
+            "at": 2070.3000000000466,
+            "name": "cell-activity-lock-change",
+            "detail": {
+              "fieldPath": "transactions.1.amount.amount",
+              "locked": false
+            }
+          },
+          {
+            "at": 2070.5,
+            "name": "active-editor-mounted",
+            "detail": {
+              "fieldPath": "transactions.1.amount.amount",
+              "fieldKind": "number"
+            }
+          },
+          {
+            "at": 2070.5,
+            "name": "cell-activity-lock-change",
+            "detail": {
+              "fieldPath": "transactions.1.amount.amount",
+              "locked": false
+            }
+          },
+          {
+            "at": 2070.9000000000233,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.1.amount.iso_4217_currency_code"
+            }
+          },
+          {
+            "at": 2070.9000000000233,
+            "name": "active-cell-change",
+            "detail": {
+              "previousFieldPath": "transactions.1.amount.amount",
+              "nextFieldPath": "transactions.1.amount.iso_4217_currency_code"
+            }
+          },
+          {
+            "at": 2074.3000000000466,
+            "name": "edit-dom-mounted"
+          },
+          {
+            "at": 2108.70000000007,
+            "name": "active-editor-mounted",
+            "detail": {
+              "fieldPath": "transactions.1.amount.iso_4217_currency_code",
+              "fieldKind": "string"
+            }
+          },
+          {
+            "at": 2108.70000000007,
+            "name": "cell-activity-lock-change",
+            "detail": {
+              "fieldPath": "transactions.1.amount.iso_4217_currency_code",
+              "locked": false
+            }
+          },
+          {
+            "at": 2108.8000000000466,
+            "name": "active-editor-mounted",
+            "detail": {
+              "fieldPath": "transactions.1.amount.iso_4217_currency_code",
+              "fieldKind": "string"
+            }
+          },
+          {
+            "at": 2108.8000000000466,
+            "name": "cell-activity-lock-change",
+            "detail": {
+              "fieldPath": "transactions.1.amount.iso_4217_currency_code",
+              "locked": false
+            }
+          },
+          {
+            "at": 2123.600000000093,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.1.description"
+            }
+          },
+          {
+            "at": 2123.600000000093,
+            "name": "active-cell-change",
+            "detail": {
+              "previousFieldPath": "transactions.1.amount.iso_4217_currency_code",
+              "nextFieldPath": "transactions.1.description"
+            }
+          },
+          {
+            "at": 2126.9000000000233,
+            "name": "edit-dom-mounted"
+          },
+          {
+            "at": 2159.9000000000233,
+            "name": "active-editor-mounted",
+            "detail": {
+              "fieldPath": "transactions.1.description",
+              "fieldKind": "string"
+            }
+          },
+          {
+            "at": 2160,
+            "name": "cell-activity-lock-change",
+            "detail": {
+              "fieldPath": "transactions.1.description",
+              "locked": false
+            }
+          },
+          {
+            "at": 2160.100000000093,
+            "name": "active-editor-mounted",
+            "detail": {
+              "fieldPath": "transactions.1.description",
+              "fieldKind": "string"
+            }
+          },
+          {
+            "at": 2160.100000000093,
+            "name": "cell-activity-lock-change",
+            "detail": {
+              "fieldPath": "transactions.1.description",
+              "locked": false
+            }
+          },
+          {
+            "at": 2160.4000000000233,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.1.check_number"
+            }
+          },
+          {
+            "at": 2160.4000000000233,
+            "name": "active-cell-change",
+            "detail": {
+              "previousFieldPath": "transactions.1.description",
+              "nextFieldPath": "transactions.1.check_number"
+            }
+          },
+          {
+            "at": 2163.5,
+            "name": "edit-dom-mounted"
+          },
+          {
+            "at": 2197.100000000093,
+            "name": "active-editor-mounted",
+            "detail": {
+              "fieldPath": "transactions.1.check_number",
+              "fieldKind": "string"
+            }
+          },
+          {
+            "at": 2197.100000000093,
+            "name": "cell-activity-lock-change",
+            "detail": {
+              "fieldPath": "transactions.1.check_number",
+              "locked": false
+            }
+          },
+          {
+            "at": 2197.20000000007,
+            "name": "active-editor-mounted",
+            "detail": {
+              "fieldPath": "transactions.1.check_number",
+              "fieldKind": "string"
+            }
+          },
+          {
+            "at": 2197.20000000007,
+            "name": "cell-activity-lock-change",
+            "detail": {
+              "fieldPath": "transactions.1.check_number",
+              "locked": false
+            }
+          },
+          {
+            "at": 2201.5,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.1.transaction_type"
+            }
+          },
+          {
+            "at": 2201.5,
+            "name": "active-cell-change",
+            "detail": {
+              "previousFieldPath": "transactions.1.check_number",
+              "nextFieldPath": "transactions.1.transaction_type"
+            }
+          },
+          {
+            "at": 2205.4000000000233,
+            "name": "edit-dom-mounted"
+          },
+          {
+            "at": 2239,
+            "name": "active-editor-mounted",
+            "detail": {
+              "fieldPath": "transactions.1.transaction_type",
+              "fieldKind": "enum"
+            }
+          },
+          {
+            "at": 2239,
+            "name": "cell-activity-lock-change",
+            "detail": {
+              "fieldPath": "transactions.1.transaction_type",
+              "locked": false
+            }
+          },
+          {
+            "at": 2239.100000000093,
+            "name": "active-editor-mounted",
+            "detail": {
+              "fieldPath": "transactions.1.transaction_type",
+              "fieldKind": "enum"
+            }
+          },
+          {
+            "at": 2239.100000000093,
+            "name": "cell-activity-lock-change",
+            "detail": {
+              "fieldPath": "transactions.1.transaction_type",
+              "locked": false
+            }
+          },
+          {
+            "at": 2248.5,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.1.account_number_last4"
+            }
+          },
+          {
+            "at": 2248.600000000093,
+            "name": "active-cell-change",
+            "detail": {
+              "previousFieldPath": "transactions.1.transaction_type",
+              "nextFieldPath": "transactions.1.account_number_last4"
+            }
+          },
+          {
+            "at": 2252.20000000007,
+            "name": "active-editor-mounted",
+            "detail": {
+              "fieldPath": "transactions.1.account_number_last4",
+              "fieldKind": "string"
+            }
+          },
+          {
+            "at": 2252.20000000007,
+            "name": "cell-activity-lock-change",
+            "detail": {
+              "fieldPath": "transactions.1.account_number_last4",
+              "locked": false
+            }
+          },
+          {
+            "at": 2252.20000000007,
+            "name": "active-editor-mounted",
+            "detail": {
+              "fieldPath": "transactions.1.account_number_last4",
+              "fieldKind": "string"
+            }
+          },
+          {
+            "at": 2252.20000000007,
+            "name": "cell-activity-lock-change",
+            "detail": {
+              "fieldPath": "transactions.1.account_number_last4",
+              "locked": false
+            }
+          },
+          {
+            "at": 2252.3000000000466,
+            "name": "edit-dom-mounted"
+          },
+          {
+            "at": 2286.100000000093,
+            "name": "active-cell-change",
+            "detail": {
+              "previousFieldPath": "transactions.1.account_number_last4",
+              "nextFieldPath": null
+            }
+          },
+          {
+            "at": 2340.4000000000233,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.2.date"
+            }
+          },
+          {
+            "at": 2340.4000000000233,
+            "name": "active-cell-change",
+            "detail": {
+              "previousFieldPath": null,
+              "nextFieldPath": "transactions.2.date"
+            }
+          },
+          {
+            "at": 2343.4000000000233,
+            "name": "edit-dom-mounted"
+          },
+          {
+            "at": 2376.3000000000466,
+            "name": "active-editor-mounted",
+            "detail": {
+              "fieldPath": "transactions.2.date",
+              "fieldKind": "date"
+            }
+          },
+          {
+            "at": 2376.4000000000233,
+            "name": "cell-activity-lock-change",
+            "detail": {
+              "fieldPath": "transactions.2.date",
+              "locked": false
+            }
+          },
+          {
+            "at": 2376.5,
+            "name": "active-editor-mounted",
+            "detail": {
+              "fieldPath": "transactions.2.date",
+              "fieldKind": "date"
+            }
+          },
+          {
+            "at": 2376.5,
+            "name": "cell-activity-lock-change",
+            "detail": {
+              "fieldPath": "transactions.2.date",
+              "locked": false
+            }
+          },
+          {
+            "at": 2376.8000000000466,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.2.amount.amount"
+            }
+          },
+          {
+            "at": 2376.8000000000466,
+            "name": "active-cell-change",
+            "detail": {
+              "previousFieldPath": "transactions.2.date",
+              "nextFieldPath": "transactions.2.amount.amount"
+            }
+          },
+          {
+            "at": 2379.70000000007,
+            "name": "edit-dom-mounted"
+          },
+          {
+            "at": 2412.70000000007,
+            "name": "active-editor-mounted",
+            "detail": {
+              "fieldPath": "transactions.2.amount.amount",
+              "fieldKind": "number"
+            }
+          },
+          {
+            "at": 2412.70000000007,
+            "name": "cell-activity-lock-change",
+            "detail": {
+              "fieldPath": "transactions.2.amount.amount",
+              "locked": false
+            }
+          },
+          {
+            "at": 2412.8000000000466,
+            "name": "active-editor-mounted",
+            "detail": {
+              "fieldPath": "transactions.2.amount.amount",
+              "fieldKind": "number"
+            }
+          },
+          {
+            "at": 2412.8000000000466,
+            "name": "cell-activity-lock-change",
+            "detail": {
+              "fieldPath": "transactions.2.amount.amount",
+              "locked": false
+            }
+          },
+          {
+            "at": 2413.20000000007,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.2.amount.iso_4217_currency_code"
+            }
+          },
+          {
+            "at": 2413.20000000007,
+            "name": "active-cell-change",
+            "detail": {
+              "previousFieldPath": "transactions.2.amount.amount",
+              "nextFieldPath": "transactions.2.amount.iso_4217_currency_code"
+            }
+          },
+          {
+            "at": 2416.70000000007,
+            "name": "edit-dom-mounted"
+          },
+          {
+            "at": 2450.600000000093,
+            "name": "active-editor-mounted",
+            "detail": {
+              "fieldPath": "transactions.2.amount.iso_4217_currency_code",
+              "fieldKind": "string"
+            }
+          },
+          {
+            "at": 2450.600000000093,
+            "name": "cell-activity-lock-change",
+            "detail": {
+              "fieldPath": "transactions.2.amount.iso_4217_currency_code",
+              "locked": false
+            }
+          },
+          {
+            "at": 2450.600000000093,
+            "name": "active-editor-mounted",
+            "detail": {
+              "fieldPath": "transactions.2.amount.iso_4217_currency_code",
+              "fieldKind": "string"
+            }
+          },
+          {
+            "at": 2450.70000000007,
+            "name": "cell-activity-lock-change",
+            "detail": {
+              "fieldPath": "transactions.2.amount.iso_4217_currency_code",
+              "locked": false
+            }
+          },
+          {
+            "at": 2451.100000000093,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.2.description"
+            }
+          },
+          {
+            "at": 2451.100000000093,
+            "name": "active-cell-change",
+            "detail": {
+              "previousFieldPath": "transactions.2.amount.iso_4217_currency_code",
+              "nextFieldPath": "transactions.2.description"
+            }
+          },
+          {
+            "at": 2454,
+            "name": "edit-dom-mounted"
+          },
+          {
+            "at": 2486.70000000007,
+            "name": "active-editor-mounted",
+            "detail": {
+              "fieldPath": "transactions.2.description",
+              "fieldKind": "string"
+            }
+          },
+          {
+            "at": 2486.70000000007,
+            "name": "cell-activity-lock-change",
+            "detail": {
+              "fieldPath": "transactions.2.description",
+              "locked": false
+            }
+          },
+          {
+            "at": 2486.8000000000466,
+            "name": "active-editor-mounted",
+            "detail": {
+              "fieldPath": "transactions.2.description",
+              "fieldKind": "string"
+            }
+          },
+          {
+            "at": 2486.8000000000466,
+            "name": "cell-activity-lock-change",
+            "detail": {
+              "fieldPath": "transactions.2.description",
+              "locked": false
+            }
+          },
+          {
+            "at": 2499.4000000000233,
+            "name": "scenario-end",
+            "detail": {
+              "name": "hover-first-20-mounted-cells"
+            }
+          }
+        ]
+      },
+      "trace": {
+        "EventDispatch": {
+          "count": 142,
+          "totalMs": 7.165,
+          "maxMs": 0.782
+        },
+        "FunctionCall": {
+          "count": 403,
+          "totalMs": 76.148,
+          "maxMs": 8.744
+        },
+        "UpdateLayoutTree": {
+          "count": 73,
+          "totalMs": 677.766,
+          "maxMs": 33.006
+        },
+        "Layout": {
+          "count": 27,
+          "totalMs": 3.851,
+          "maxMs": 0.311
+        },
+        "Paint": {
+          "count": 139,
+          "totalMs": 5.59,
+          "maxMs": 0.184
+        },
+        "MinorGC": {
+          "count": 1,
+          "totalMs": 1.072,
+          "maxMs": 1.072
+        },
+        "topEvents": [
+          {
+            "name": "RunTask",
+            "ms": 34.112,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 33.989,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 33.301,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 33.288,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 33.243,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 33.093,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 33.081,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "UpdateLayoutTree",
+            "ms": 33.006,
+            "category": "blink,devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 33.006,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 32.794,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 32.688,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 32.655,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "UpdateLayoutTree",
+            "ms": 32.616,
+            "category": "blink,devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 32.606,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "UpdateLayoutTree",
+            "ms": 32.573,
+            "category": "blink,devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 32.55,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 32.428,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 32.338,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "UpdateLayoutTree",
+            "ms": 32.322,
+            "category": "blink,devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 32.294,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "UpdateLayoutTree",
+            "ms": 32.285,
+            "category": "blink,devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 32.27,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 32.229,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "UpdateLayoutTree",
+            "ms": 32.198,
+            "category": "blink,devtools.timeline"
+          }
+        ]
+      }
+    },
+    {
+      "name": "open-date-picker",
+      "elapsedMs": 159.59999999997672,
+      "wait": {
+        "ok": true,
+        "elapsedMs": 1.599999999976717
+      },
+      "dom": {
+        "nodes": 1255,
+        "rows": 33,
+        "editableCells": 192,
+        "activeCells": 1,
+        "dataCells": 192,
+        "calendar": true,
+        "popovers": 0
+      },
+      "longTasks": [
+        {
+          "startTime": 2709.3000000000466,
+          "duration": 100
+        }
+      ],
+      "metricsDelta": {
+        "JSHeapUsedSize": 7559656,
+        "Nodes": 357,
+        "LayoutCount": 4,
+        "RecalcStyleCount": 14,
+        "LayoutDurationMs": 1.0859999999999985,
+        "RecalcStyleDurationMs": 69.25099999999998,
+        "ScriptDurationMs": 32.218999999999994,
+        "TaskDurationMs": 108.61700000000019
+      },
+      "profiler": {
+        "renders": {
+          "total": 8,
+          "byComponent": [
+            {
+              "name": "ActiveEditableJsonTableCell",
+              "count": 4
+            },
+            {
+              "name": "CellEditor",
+              "count": 2
+            },
+            {
+              "name": "JsonTableScalarCell",
+              "count": 2
+            }
+          ],
+          "byInstance": [
+            {
+              "name": "ActiveEditableJsonTableCell:transactions.0.date",
+              "count": 4
+            },
+            {
+              "name": "CellEditor:transactions.0.date",
+              "count": 2
+            },
+            {
+              "name": "JsonTableScalarCell:date:edit",
+              "count": 2
+            }
+          ],
+          "changedProps": [
+            {
+              "name": "ActiveEditableJsonTableCell.same-props",
+              "count": 4
+            },
+            {
+              "name": "CellEditor.same-props",
+              "count": 2
+            },
+            {
+              "name": "JsonTableScalarCell.same-props",
+              "count": 2
+            }
+          ]
+        },
+        "reactCommits": {
+          "count": 3,
+          "totalActualDurationMs": 26.800000000046566,
+          "maxActualDurationMs": 17.599999999976717,
+          "commits": [
+            {
+              "phase": "update",
+              "actualDurationMs": 0.5,
+              "baseDurationMs": 31.600000000093132
+            },
+            {
+              "phase": "nested-update",
+              "actualDurationMs": 17.599999999976717,
+              "baseDurationMs": 47.700000000186265
+            },
+            {
+              "phase": "nested-update",
+              "actualDurationMs": 8.70000000006985,
+              "baseDurationMs": 39.400000000256114
+            }
+          ]
+        },
+        "marks": [
+          {
+            "at": 2658,
+            "name": "scenario-start",
+            "detail": {
+              "name": "open-date-picker"
+            }
+          },
+          {
+            "at": 2708.8000000000466,
+            "name": "cell-activity-lock-change",
+            "detail": {
+              "fieldPath": "transactions.0.date",
+              "locked": true
+            }
+          },
+          {
+            "at": 2775,
+            "name": "calendar-mounted"
+          },
+          {
+            "at": 2775,
+            "name": "calendar-mounted"
+          },
+          {
+            "at": 2820.8000000000466,
+            "name": "scenario-end",
+            "detail": {
+              "name": "open-date-picker"
+            }
+          }
+        ]
+      },
+      "trace": {
+        "EventDispatch": {
+          "count": 20,
+          "totalMs": 67.454,
+          "maxMs": 65.578
+        },
+        "FunctionCall": {
+          "count": 53,
+          "totalMs": 67.331,
+          "maxMs": 65.164
+        },
+        "UpdateLayoutTree": {
+          "count": 14,
+          "totalMs": 69.252,
+          "maxMs": 34.263
+        },
+        "Layout": {
+          "count": 4,
+          "totalMs": 1.066,
+          "maxMs": 0.563
+        },
+        "Paint": {
+          "count": 23,
+          "totalMs": 1.667,
+          "maxMs": 0.321
+        },
+        "MinorGC": {
+          "count": 0,
+          "totalMs": 0,
+          "maxMs": 0
+        },
+        "topEvents": [
+          {
+            "name": "RunTask",
+            "ms": 101.603,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "EventDispatch",
+            "ms": 65.578,
+            "category": "devtools.timeline",
+            "type": "click"
+          },
+          {
+            "name": "RunMicrotasks",
+            "ms": 65.227,
+            "category": "v8.execute"
+          },
+          {
+            "name": "FunctionCall",
+            "ms": 65.164,
+            "category": "devtools.timeline",
+            "url": "http://localhost:3100/_next/static/chunks/0f4w_next_dist_compiled_react-dom_1fpdgb7._.js"
+          },
+          {
+            "name": "UpdateLayoutTree",
+            "ms": 34.263,
+            "category": "blink,devtools.timeline"
+          },
+          {
+            "name": "UpdateLayoutTree",
+            "ms": 33.927,
+            "category": "blink,devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 2.233,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 1.636,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "EventDispatch",
+            "ms": 1.152,
+            "category": "devtools.timeline",
+            "type": "focusin"
+          },
+          {
+            "name": "RunTask",
+            "ms": 1.071,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "EvaluateScript",
+            "ms": 1.064,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunMicrotasks",
+            "ms": 1.039,
+            "category": "v8.execute"
+          },
+          {
+            "name": "FunctionCall",
+            "ms": 1.031,
+            "category": "devtools.timeline",
+            "url": "http://localhost:3100/_next/static/chunks/0f4w_next_dist_compiled_react-dom_1fpdgb7._.js"
+          }
+        ]
+      }
+    },
+    {
+      "name": "toggle-checkbox",
+      "elapsedMs": 102.19999999995343,
+      "wait": {
+        "ok": true,
+        "elapsedMs": 13.70000000006985
+      },
+      "dom": {
+        "nodes": 1152,
+        "rows": 27,
+        "editableCells": 192,
+        "activeCells": 1,
+        "dataCells": 192,
+        "calendar": false,
+        "popovers": 0
+      },
+      "longTasks": [],
+      "metricsDelta": {
+        "JSHeapUsedSize": 2068608,
+        "Nodes": 3,
+        "LayoutCount": 2,
+        "RecalcStyleCount": 11,
+        "LayoutDurationMs": 0.19200000000000017,
+        "RecalcStyleDurationMs": 31.769000000000005,
+        "ScriptDurationMs": 27.787000000000006,
+        "TaskDurationMs": 64.805
+      },
+      "profiler": {
+        "renders": {
+          "total": 224,
+          "byComponent": [
+            {
+              "name": "JsonTableScalarCell",
+              "count": 100
+            },
+            {
+              "name": "EditableJsonTableCell",
+              "count": 96
+            },
+            {
+              "name": "SingleFileFormRow",
+              "count": 12
+            },
+            {
+              "name": "ActiveEditableJsonTableCell",
+              "count": 6
+            },
+            {
+              "name": "CellEditor",
+              "count": 6
+            },
+            {
+              "name": "SingleFileTableView",
+              "count": 2
+            },
+            {
+              "name": "SingleFileVirtualizedTable",
+              "count": 2
+            }
+          ],
+          "byInstance": [
+            {
+              "name": "JsonTableScalarCell:text:undefined",
+              "count": 60
+            },
+            {
+              "name": "JsonTableScalarCell:date:undefined",
+              "count": 12
+            },
+            {
+              "name": "JsonTableScalarCell:number:undefined",
+              "count": 12
+            },
+            {
+              "name": "JsonTableScalarCell:boolean:undefined",
+              "count": 10
+            },
+            {
+              "name": "ActiveEditableJsonTableCell:transactions.0.is_reconciled",
+              "count": 6
+            },
+            {
+              "name": "CellEditor:transactions.0.is_reconciled",
+              "count": 6
+            },
+            {
+              "name": "JsonTableScalarCell:boolean:edit",
+              "count": 6
+            },
+            {
+              "name": "SingleFileTableView:doc_1",
+              "count": 2
+            },
+            {
+              "name": "SingleFileVirtualizedTable:doc_1",
+              "count": 2
+            },
+            {
+              "name": "SingleFileFormRow:0",
+              "count": 2
+            },
+            {
+              "name": "EditableJsonTableCell:transactions.0.date",
+              "count": 2
+            },
+            {
+              "name": "EditableJsonTableCell:transactions.0.amount.amount",
+              "count": 2
+            },
+            {
+              "name": "EditableJsonTableCell:transactions.0.amount.iso_4217_currency_code",
+              "count": 2
+            },
+            {
+              "name": "EditableJsonTableCell:transactions.0.description",
+              "count": 2
+            },
+            {
+              "name": "EditableJsonTableCell:transactions.0.check_number",
+              "count": 2
+            },
+            {
+              "name": "EditableJsonTableCell:transactions.0.transaction_type",
+              "count": 2
+            }
+          ],
+          "changedProps": [
+            {
+              "name": "EditableJsonTableCell.same-props",
+              "count": 96
+            },
+            {
+              "name": "JsonTableScalarCell.same-props",
+              "count": 88
+            },
+            {
+              "name": "JsonTableScalarCell.valueType",
+              "count": 12
+            },
+            {
+              "name": "SingleFileFormRow.same-props",
+              "count": 7
+            },
+            {
+              "name": "ActiveEditableJsonTableCell.same-props",
+              "count": 6
+            },
+            {
+              "name": "CellEditor.same-props",
+              "count": 6
+            },
+            {
+              "name": "SingleFileFormRow.activeCellPath",
+              "count": 5
+            },
+            {
+              "name": "SingleFileTableView.same-props",
+              "count": 2
+            },
+            {
+              "name": "SingleFileVirtualizedTable.same-props",
+              "count": 2
+            }
+          ]
+        },
+        "reactCommits": {
+          "count": 3,
+          "totalActualDurationMs": 1.0000000001164153,
+          "maxActualDurationMs": 0.40000000002328306,
+          "commits": [
+            {
+              "phase": "update",
+              "actualDurationMs": 0.30000000004656613,
+              "baseDurationMs": 46.10000000009313
+            },
+            {
+              "phase": "nested-update",
+              "actualDurationMs": 0.40000000002328306,
+              "baseDurationMs": 46.09999999997672
+            },
+            {
+              "phase": "update",
+              "actualDurationMs": 0.30000000004656613,
+              "baseDurationMs": 46.10000000009313
+            }
+          ]
+        },
+        "marks": [
+          {
+            "at": 1556.6999999999534,
+            "name": "scenario-start",
+            "detail": {
+              "name": "toggle-checkbox"
+            }
+          },
+          {
+            "at": 1606.3999999999069,
+            "name": "cell-activity-lock-change",
+            "detail": {
+              "fieldPath": "transactions.0.is_reconciled",
+              "locked": true
+            }
+          },
+          {
+            "at": 1607.2999999999302,
+            "name": "cell-commit-local-start",
+            "detail": {
+              "fieldPath": "transactions.0.is_reconciled"
+            }
+          },
+          {
+            "at": 1607.2999999999302,
+            "name": "cell-commit-local-end",
+            "detail": {
+              "fieldPath": "transactions.0.is_reconciled"
+            }
+          },
+          {
+            "at": 1607.2999999999302,
+            "name": "cell-commit-transition-start",
+            "detail": {
+              "fieldPath": "transactions.0.is_reconciled"
+            }
+          },
+          {
+            "at": 1607.3999999999069,
+            "name": "document-patch-start",
+            "detail": {
+              "fieldPath": "transactions.0.is_reconciled"
+            }
+          },
+          {
+            "at": 1607.5,
+            "name": "document-patch-end",
+            "detail": {
+              "fieldPath": "transactions.0.is_reconciled"
+            }
+          },
+          {
+            "at": 1607.5,
+            "name": "cell-commit-transition-end",
+            "detail": {
+              "fieldPath": "transactions.0.is_reconciled"
+            }
+          },
+          {
+            "at": 1608.5,
+            "name": "checkbox-aria-change",
+            "detail": {
+              "checked": "false"
+            }
+          },
+          {
+            "at": 1642.3999999999069,
+            "name": "project-rows-start",
+            "detail": {
+              "visiblePaths": 8,
+              "isJsonEditable": true
+            }
+          },
+          {
+            "at": 1646.5999999999767,
+            "name": "project-rows-end",
+            "detail": {
+              "rowCount": 1501
+            }
+          },
+          {
+            "at": 1646.5999999999767,
+            "name": "project-rows-start",
+            "detail": {
+              "visiblePaths": 8,
+              "isJsonEditable": true
+            }
+          },
+          {
+            "at": 1650,
+            "name": "project-rows-end",
+            "detail": {
+              "rowCount": 1501
+            }
+          },
+          {
+            "at": 1666.1999999999534,
+            "name": "scenario-end",
+            "detail": {
+              "name": "toggle-checkbox"
+            }
+          }
+        ]
+      },
+      "trace": {
+        "EventDispatch": {
+          "count": 23,
+          "totalMs": 3.56,
+          "maxMs": 1.425
+        },
+        "FunctionCall": {
+          "count": 57,
+          "totalMs": 27.45,
+          "maxMs": 8.375
+        },
+        "UpdateLayoutTree": {
+          "count": 11,
+          "totalMs": 31.769,
+          "maxMs": 31.178
+        },
+        "Layout": {
+          "count": 2,
+          "totalMs": 0.181,
+          "maxMs": 0.095
+        },
+        "Paint": {
+          "count": 3,
+          "totalMs": 0.213,
+          "maxMs": 0.099
+        },
+        "MinorGC": {
+          "count": 1,
+          "totalMs": 1.833,
+          "maxMs": 1.833
+        },
+        "topEvents": [
+          {
+            "name": "RunTask",
+            "ms": 33.082,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "UpdateLayoutTree",
+            "ms": 31.178,
+            "category": "blink,devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 8.488,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "FunctionCall",
+            "ms": 8.375,
+            "category": "devtools.timeline",
+            "url": "http://localhost:3100/_next/static/chunks/0f4w_next_dist_compiled_1lhvvfx._.js"
+          },
+          {
+            "name": "RunTask",
+            "ms": 5.154,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "FunctionCall",
+            "ms": 5.121,
+            "category": "devtools.timeline",
+            "url": "http://localhost:3100/_next/static/chunks/0f4w_next_dist_compiled_1lhvvfx._.js"
+          },
+          {
+            "name": "RunTask",
+            "ms": 5.011,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "FunctionCall",
+            "ms": 4.984,
+            "category": "devtools.timeline",
+            "url": "http://localhost:3100/_next/static/chunks/0f4w_next_dist_compiled_1lhvvfx._.js"
+          },
+          {
+            "name": "RunTask",
+            "ms": 4.942,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "FunctionCall",
+            "ms": 4.894,
+            "category": "devtools.timeline",
+            "url": "http://localhost:3100/_next/static/chunks/0f4w_next_dist_compiled_1lhvvfx._.js"
+          },
+          {
+            "name": "RunTask",
+            "ms": 2.009,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "MinorGC",
+            "ms": 1.833,
+            "category": "devtools.timeline,v8"
+          },
+          {
+            "name": "V8.GC_SCAVENGER",
+            "ms": 1.813,
+            "category": "devtools.timeline,disabled-by-default-v8.gc"
+          },
+          {
+            "name": "RunTask",
+            "ms": 1.736,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "EvaluateScript",
+            "ms": 1.725,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "V8.GC_SCAVENGER_SCAVENGE",
+            "ms": 1.595,
+            "category": "devtools.timeline,disabled-by-default-v8.gc"
+          },
+          {
+            "name": "RunMicrotasks",
+            "ms": 1.544,
+            "category": "v8.execute"
+          },
+          {
+            "name": "EventDispatch",
+            "ms": 1.425,
+            "category": "devtools.timeline",
+            "type": "click"
+          },
+          {
+            "name": "V8.GC_SCAVENGER_SCAVENGE_PARALLEL_PHASE",
+            "ms": 1.34,
+            "category": "devtools.timeline,disabled-by-default-v8.gc"
+          },
+          {
+            "name": "V8.GC_SCAVENGER_BACKGROUND_SCAVENGE_PARALLEL",
+            "ms": 1.297,
+            "category": "devtools.timeline,disabled-by-default-v8.gc"
+          },
+          {
+            "name": "V8.GC_SCAVENGER_BACKGROUND_SCAVENGE_PARALLEL",
+            "ms": 1.235,
+            "category": "devtools.timeline,disabled-by-default-v8.gc"
+          },
+          {
+            "name": "V8.GC_SCAVENGER_BACKGROUND_SCAVENGE_PARALLEL",
+            "ms": 1.227,
+            "category": "devtools.timeline,disabled-by-default-v8.gc"
+          },
+          {
+            "name": "V8.GC_SCAVENGER_BACKGROUND_SCAVENGE_PARALLEL",
+            "ms": 1.197,
+            "category": "devtools.timeline,disabled-by-default-v8.gc"
+          },
+          {
+            "name": "V8.GC_SCAVENGER_BACKGROUND_SCAVENGE_PARALLEL",
+            "ms": 1.196,
+            "category": "devtools.timeline,disabled-by-default-v8.gc"
+          }
+        ]
+      }
+    }
+  ]
+}

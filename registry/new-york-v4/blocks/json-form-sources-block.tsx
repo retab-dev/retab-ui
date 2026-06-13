@@ -36,7 +36,11 @@ const SOURCES = extractionSourcesToSourceMap(sourcesSample.sources)
  * flattened `SourceMap` keys) on hover; the PDF adapter is the target. No
  * bespoke wiring between form and viewer.
  */
-export function JsonFormSourcesBlock() {
+export function JsonFormSourcesBlock({
+  defaultOpenPaths,
+}: {
+  defaultOpenPaths?: readonly string[]
+} = {}) {
   const viewerRef = React.useRef<PdfViewerHandle>(null)
   const target = usePdfSourceTarget(viewerRef)
   const link = useSourceLink({ sources: SOURCES, target })
@@ -68,7 +72,12 @@ export function JsonFormSourcesBlock() {
         </div>
         <ScrollArea className="min-h-0 flex-1">
           <div className="p-4">
-            <JsonForm form={form} schema={schema} sourceLink={link} />
+            <JsonForm
+              form={form}
+              schema={schema}
+              sourceLink={link}
+              defaultOpenPaths={defaultOpenPaths}
+            />
           </div>
         </ScrollArea>
       </aside>

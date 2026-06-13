@@ -78,10 +78,12 @@ function renderJsonForm({
   schema,
   defaultValues = {},
   sourceLink,
+  defaultOpenPaths,
 }: {
   schema: JSONSchema7
   defaultValues?: FormValues
   sourceLink?: FieldSourceLink
+  defaultOpenPaths?: readonly string[]
 }) {
   const submissions: FormValues[] = []
   let formApi: UseFormReturn<FormValues> | null = null
@@ -99,6 +101,7 @@ function renderJsonForm({
         form={form}
         schema={schema}
         sourceLink={sourceLink}
+        defaultOpenPaths={defaultOpenPaths}
         onSubmit={(data) => submissions.push(cloneJson(data) as FormValues)}
       >
         <button type="submit">Submit</button>
@@ -1019,6 +1022,39 @@ describe("JsonForm arrays", () => {
     )
   })
 
+  it("opens configured long arrays on first render", () => {
+    renderJsonForm({
+      schema: {
+        type: "object",
+        properties: {
+          transactions: {
+            type: "array",
+            title: "Transactions",
+            items: {
+              type: "object",
+              properties: {
+                date: { type: "string", title: "Date" },
+              },
+            },
+          },
+        },
+      },
+      defaultValues: {
+        transactions: Array.from({ length: 9 }, (_, index) => ({
+          date: `2003-06-${String(index + 1).padStart(2, "0")}`,
+        })),
+      },
+      defaultOpenPaths: ["transactions"],
+    })
+
+    expect(
+      screen
+        .getByRole("button", { name: /Transactions 9 items/ })
+        .getAttribute("aria-expanded")
+    ).toBe("true")
+    expect(getTableDataCell("Date 2003-06-01")).toBeTruthy()
+  })
+
   it("shows an empty array state and appends the correct empty object", async () => {
     const { submit } = renderJsonForm({
       schema: {
@@ -1483,6 +1519,7 @@ describe("JsonForm source linking", () => {
     expect(cell).toBeTruthy()
 
     fireEvent.focus(cell)
+    expect(cell.getAttribute("data-source-active")).toBe("true")
     fireEvent.blur(cell)
     fireEvent.click(cell)
 
@@ -1491,7 +1528,7 @@ describe("JsonForm source linking", () => {
     expect(selectField).toHaveBeenCalledWith("rows.0.value")
   })
 
-  it("keeps source-linked table cells in display mode on hover", () => {
+  it("keeps source-linked table cells in display mode on hover", async () => {
     const onFieldHover = vi.fn()
     const selectField = vi.fn()
     renderJsonForm({
@@ -1519,11 +1556,13 @@ describe("JsonForm source linking", () => {
     })
 
     const cell = getTableDataCell("Amount 1875.24")
-    fireEvent.mouseOver(cell)
+    fireEvent.pointerMove(cell)
 
     expect(cell.getAttribute("data-mode")).toBe("display")
     expect(screen.queryByRole("spinbutton")).toBeNull()
-    expect(onFieldHover).toHaveBeenCalledWith("rows.0.amount")
+    await waitFor(() =>
+      expect(onFieldHover).toHaveBeenCalledWith("rows.0.amount")
+    )
 
     fireEvent.click(cell)
 

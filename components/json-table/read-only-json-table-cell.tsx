@@ -1,27 +1,46 @@
 import * as React from "react"
-import { format } from "date-fns"
+import dynamic from "next/dynamic"
+import type { JSONSchema7, JSONSchema7Definition } from "json-schema"
 
-import type { DataCellKind, DataCellValue } from "@/components/ui/data-cell"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { TableCell } from "@/components/ui/table"
-import { transferContext } from "@/components/json-table/cell-editors/object-editor"
 import {
   getCellWidthStyle,
   getSelectableCellWidthStyle,
 } from "@/components/json-table/cell-style"
 import type { JsonTableCellProps } from "@/components/json-table/json-table-cell-types"
-import { JsonTableScalarCell } from "@/components/json-table/json-table-scalar-cell"
-import { parseDateStringAsLocal } from "@/components/json-table/lib/date-parsing"
+import { getJsonTableCellDisplayValue } from "@/components/json-table/json-table-display-cell"
 import { getFieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
 import type { FieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
-import {
-  ArrayEditor as JsonArrayEditor,
-  ObjectEditor as JsonObjectEditor,
-} from "@/components/json-table/object-editor"
+
+type SchemaWithDefs = JSONSchema7 & {
+  $defs?: Record<string, JSONSchema7Definition>
+}
+
+const ReadOnlyJsonNestedEditor = dynamic(
+  () =>
+    import("./read-only-json-nested-editor").then((module) => ({
+      default: module.ReadOnlyJsonNestedEditor,
+    })),
+  { ssr: false }
+)
+
+function transferContext(type: JSONSchema7, context: JSONSchema7): JSONSchema7 {
+  const contextDefs = (context as SchemaWithDefs).$defs || {}
+  const typeDefs = (type as SchemaWithDefs).$defs || {}
+
+  return {
+    ...type,
+    $defs: {
+      ...contextDefs,
+      ...typeDefs,
+    },
+  }
+}
 
 function formatNestedValue(value: unknown): string {
   if (Array.isArray(value)) return `[${value.length} items]`
@@ -34,9 +53,7 @@ function formatNestedValue(value: unknown): string {
   }
 }
 
-function dataCellKindForField(
-  fieldMetadata: FieldMetadata
-): DataCellKind | null {
+function readOnlyCellKindForField(fieldMetadata: FieldMetadata) {
   switch (fieldMetadata.kind) {
     case "string":
     case "enum":
@@ -54,40 +71,61 @@ function dataCellKindForField(
   }
 }
 
-function dataCellValue(value: unknown): DataCellValue {
-  if (
-    value === null ||
-    value === undefined ||
-    typeof value === "string" ||
-    typeof value === "number" ||
-    typeof value === "boolean"
-  ) {
-    return value
-  }
-  return formatNestedValue(value)
-}
+const readOnlyScalarCellClass =
+  "flex h-full w-full min-w-0 items-center overflow-hidden rounded-none border-0 bg-transparent px-3 text-xs leading-none text-foreground"
 
-function numberDataCellValue(value: unknown): string | number | null {
-  return typeof value === "number" || typeof value === "string" ? value : null
-}
+function ReadOnlyScalarCell({
+  emptyText = String.fromCharCode(8212),
+  kind,
+  value,
+}: {
+  emptyText?: string
+  kind: string
+  value: string
+}) {
+  const isEmpty = value === ""
 
-function textDataCellValue(value: unknown): string | null {
-  return value === null || value === undefined
-    ? null
-    : String(dataCellValue(value))
-}
-
-function dateDisplayValue(value: unknown): React.ReactNode | undefined {
-  const date =
-    typeof value === "string" ? parseDateStringAsLocal(value) : undefined
-  return date ? format(date, "PP") : undefined
+  return (
+    <div
+      data-slot="data-cell"
+      data-kind={kind}
+      data-mode="display"
+      aria-readonly
+      className={readOnlyScalarCellClass}
+    >
+      {kind === "boolean" ? (
+        <span
+          role="checkbox"
+          data-slot="checkbox"
+          data-state={value === "true" ? "checked" : "unchecked"}
+          aria-checked={value === "true"}
+          aria-label={value || "false"}
+          className="min-w-0 truncate"
+        >
+          {value || "false"}
+        </span>
+      ) : (
+        <span
+          className={
+            isEmpty
+              ? "min-w-0 truncate text-muted-foreground"
+              : "min-w-0 truncate"
+          }
+        >
+          {isEmpty ? emptyText : value}
+        </span>
+      )}
+    </div>
+  )
 }
 
 function ReadOnlyJsonFormCell({
+  displayValue,
   fieldMetadata,
   rootSchema,
   value,
 }: {
+  displayValue: string
   fieldMetadata: FieldMetadata
   rootSchema: JsonTableCellProps["schema"]
   value: unknown
@@ -100,9 +138,9 @@ function ReadOnlyJsonFormCell({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button className="h-full w-full justify-start overflow-hidden px-1 text-xs leading-none text-inherit select-none hover:bg-accent/50 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none">
-          {value ? (
+          {displayValue ? (
             <div className="max-w-[80px] truncate text-left">
-              {formatNestedValue(value)}
+              {displayValue}
             </div>
           ) : (
             <div className="max-w-[80px] truncate text-left text-muted-foreground">
@@ -119,22 +157,21 @@ function ReadOnlyJsonFormCell({
         alignOffset={-1}
       >
         {open && fieldMetadata.kind === "array" ? (
-          <JsonArrayEditor
+          <ReadOnlyJsonNestedEditor
+            kind="array"
             name={fieldMetadata.fieldPath}
-            disabled
             property={transferContext(property, rootSchema)}
             currentValue={value}
-            onSubmit={() => {}}
           />
         ) : open ? (
-          <JsonObjectEditor
-            disabled
+          <ReadOnlyJsonNestedEditor
+            kind="object"
+            name={fieldMetadata.fieldPath}
             property={{
               ...transferContext(property, rootSchema),
               additionalProperties: true,
             }}
             currentValue={value}
-            onSubmit={() => {}}
           />
         ) : null}
       </PopoverContent>
@@ -159,14 +196,17 @@ function ReadOnlyJsonTableCellContent(props: JsonTableCellProps) {
         className="relative cursor-not-allowed bg-muted/60 p-0"
         style={getCellWidthStyle(cellWidth)}
       >
-        <JsonTableScalarCell kind="text" value={null} placeholder="" />
+        <ReadOnlyScalarCell emptyText="" kind="text" value="" />
       </TableCell>
     )
   }
 
-  const dataCellKind = dataCellKindForField(fieldMetadata)
+  const dataCellKind = readOnlyCellKindForField(fieldMetadata)
   const isJsonFormCell =
     fieldMetadata.kind === "object" || fieldMetadata.kind === "array"
+  const displayValue =
+    props.projectedCell?.displayValue ??
+    getJsonTableCellDisplayValue({ fieldMetadata, value })
 
   return (
     <TableCell
@@ -176,32 +216,15 @@ function ReadOnlyJsonTableCellContent(props: JsonTableCellProps) {
     >
       {isJsonFormCell ? (
         <ReadOnlyJsonFormCell
+          displayValue={displayValue}
           fieldMetadata={fieldMetadata}
           rootSchema={props.schema}
           value={value}
         />
-      ) : dataCellKind === "number" || dataCellKind === "integer" ? (
-        <JsonTableScalarCell
-          kind={dataCellKind}
-          value={numberDataCellValue(value)}
-        />
-      ) : dataCellKind === "boolean" ? (
-        <JsonTableScalarCell
-          kind="boolean"
-          value={typeof value === "boolean" ? value : null}
-        />
       ) : dataCellKind ? (
-        <JsonTableScalarCell
-          kind={dataCellKind}
-          value={textDataCellValue(value)}
-          formatValue={
-            fieldMetadata.kind === "date"
-              ? () => dateDisplayValue(value) ?? ""
-              : undefined
-          }
-        />
+        <ReadOnlyScalarCell kind={dataCellKind} value={displayValue} />
       ) : (
-        <JsonTableScalarCell kind="text" value={formatNestedValue(value)} />
+        <ReadOnlyScalarCell kind="text" value={displayValue} />
       )}
     </TableCell>
   )
@@ -216,6 +239,7 @@ export const ReadOnlyJsonTableCell = React.memo(
     prev.projectedCell?.materializedFieldPath ===
       next.projectedCell?.materializedFieldPath &&
     Object.is(prev.projectedCell?.value, next.projectedCell?.value) &&
+    prev.projectedCell?.displayValue === next.projectedCell?.displayValue &&
     prev.schema === next.schema
 )
 ReadOnlyJsonTableCell.displayName = "ReadOnlyJsonTableCell"

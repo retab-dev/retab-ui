@@ -32,6 +32,7 @@ export function DateEditor({
       }
       value={textDraft.activeTextValue ?? null}
       draftValue={textDraft.activeTextValue}
+      autoFocus={overlays.autoFocus}
       formatValue={() => (date ? format(date, "PP") : "")}
       placeholder="Pick a date"
       onDraftValueChange={textDraft.setDraftTextValue}
