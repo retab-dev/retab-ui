@@ -31,6 +31,25 @@ export interface TextScrollAnchor {
   offsetWithinLine: number
 }
 
+export interface TextFrameVirtualItem {
+  end: number
+  index: number
+  key: React.Key
+  size: number
+  start: number
+}
+
+export interface TextFrameGeometry {
+  bottom: number
+  height: number
+  top: number
+}
+
+export interface TextFrameScrollAnchor {
+  index: number
+  offsetWithinFrame: number
+}
+
 export function buildTextVirtualOffsets({
   itemSizes,
   paddingStart = 0,
@@ -208,7 +227,68 @@ export function useTextVariableVirtualizer({
   }
 }
 
-function useTextVirtualViewport(
+export function getTextFrameVirtualItems({
+  frames,
+  maxItems = MAX_VIRTUAL_ITEMS,
+  overscanPx = 0,
+  scrollTop,
+  viewportHeight,
+}: {
+  frames: readonly TextFrameGeometry[]
+  maxItems?: number
+  overscanPx?: number
+  scrollTop: number
+  viewportHeight: number
+}): TextFrameVirtualItem[] {
+  if (frames.length === 0) return []
+
+  const minY = Math.max(0, safeOffset(scrollTop) - safeSize(overscanPx))
+  const maxY =
+    safeOffset(scrollTop) +
+    Math.max(1, safeSize(viewportHeight)) +
+    safeSize(overscanPx)
+  const start = findFirstFrameEndingAfter(frames, minY)
+  const end = findFirstFrameStartingAtOrAfter(frames, maxY, start)
+  const cappedEnd = Math.min(
+    frames.length,
+    Math.max(start + 1, end),
+    start + maxItems
+  )
+
+  return Array.from({ length: cappedEnd - start }, (_, localIndex) => {
+    const index = start + localIndex
+    const frame = frames[index]!
+    return {
+      end: frame.bottom,
+      index,
+      key: index,
+      size: safeSize(frame.height),
+      start: frame.top,
+    }
+  })
+}
+
+export function getTextFrameScrollAnchor({
+  frames,
+  scrollTop,
+}: {
+  frames: readonly TextFrameGeometry[]
+  scrollTop: number
+}): TextFrameScrollAnchor | null {
+  if (frames.length === 0) return null
+
+  const safeScrollTop = safeOffset(scrollTop)
+  const index = findFirstFrameEndingAfter(frames, safeScrollTop)
+  const frame = frames[index] ?? frames[frames.length - 1]
+  if (!frame) return null
+
+  return {
+    index,
+    offsetWithinFrame: Math.max(0, safeScrollTop - frame.top),
+  }
+}
+
+export function useTextVirtualViewport(
   scrollRef: React.RefObject<HTMLElement | null>
 ): TextVirtualViewport {
   const [viewport, setViewport] = React.useState<TextVirtualViewport>({
@@ -258,6 +338,49 @@ function useTextVirtualViewport(
   }, [scrollRef])
 
   return viewport
+}
+
+function findFirstFrameEndingAfter(
+  frames: readonly TextFrameGeometry[],
+  offset: number
+) {
+  let low = 0
+  let high = frames.length - 1
+  let result = frames.length - 1
+
+  while (low <= high) {
+    const mid = Math.floor((low + high) / 2)
+    if ((frames[mid]?.bottom ?? 0) > offset) {
+      result = mid
+      high = mid - 1
+    } else {
+      low = mid + 1
+    }
+  }
+
+  return result
+}
+
+function findFirstFrameStartingAtOrAfter(
+  frames: readonly TextFrameGeometry[],
+  offset: number,
+  start: number
+) {
+  let low = Math.max(0, start)
+  let high = frames.length - 1
+  let result = frames.length
+
+  while (low <= high) {
+    const mid = Math.floor((low + high) / 2)
+    if ((frames[mid]?.top ?? 0) >= offset) {
+      result = mid
+      high = mid - 1
+    } else {
+      low = mid + 1
+    }
+  }
+
+  return result
 }
 
 function findFirstItemEndingAfter({

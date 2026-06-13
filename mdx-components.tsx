@@ -28,6 +28,7 @@ import {
 import { DataCellDemo } from "@/components/data-cell-demo"
 import { DocsMdxCodeBlock } from "@/components/docs-code-block"
 import { DocxViewerDemo } from "@/components/docx-viewer-demo"
+import { DropzoneDemo } from "@/components/dropzone-demo"
 import { FileThumbnailDemo } from "@/components/file-thumbnail-demo"
 import { FileThumbnailFormatsDemo } from "@/components/file-thumbnail-formats-demo"
 import { FileViewerDemo } from "@/components/file-viewer-demo"
@@ -369,6 +370,7 @@ export const mdxComponents = {
   DataCellDemo,
   PdfViewerDemo,
   DocxViewerDemo,
+  DropzoneDemo,
   ImageViewerDemo,
   PptxViewerDemo,
   XlsxViewerDemo,

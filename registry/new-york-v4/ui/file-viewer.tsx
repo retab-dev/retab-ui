@@ -15,7 +15,6 @@ import {
 } from "./file-viewer-chrome"
 import {
   descriptorResetKey,
-  isCodeTextDescriptor,
   isProseTextDescriptor,
   resolveFileDescriptor,
   type FileCategory,
@@ -24,8 +23,6 @@ import {
 } from "./file-viewer-core"
 import { CsvDocViewer } from "./file-viewer-csv-viewer"
 import { HtmlDocViewer } from "./file-viewer-html-viewer"
-import { MarkdownDocViewer } from "./file-viewer-markdown-viewer"
-import { TextDocViewer } from "./file-viewer-text-viewer"
 
 export { type FileCategory, type FileViewerProps } from "./file-viewer-core"
 
@@ -167,11 +164,10 @@ function FileViewerRoute({
     }
     if (category === "markdown") {
       return (
-        <MarkdownDocViewer
-          resource={resource}
+        <ProseTextViewer
+          source={resource.descriptor.source}
           className={className}
           bare={bare}
-          descriptorSignal={descriptorSignal}
         />
       )
     }
@@ -186,34 +182,7 @@ function FileViewerRoute({
       )
     }
     if (category === "text") {
-      if (isProseTextDescriptor(descriptor)) {
-        const proseTextSource = resource.descriptor.source
-        return (
-          <ProseTextViewer
-            source={proseTextSource}
-            className={className}
-            bare={bare}
-          />
-        )
-      }
-      if (isCodeTextDescriptor(descriptor)) {
-        return (
-          <CodeTextViewer
-            source={resource.descriptor.source}
-            className={className}
-            bare={bare}
-          />
-        )
-      }
-      return (
-        <TextDocViewer
-          resource={resource}
-          className={className}
-          bare={bare}
-          isolateStyles={isolateStyles}
-          descriptorSignal={descriptorSignal}
-        />
-      )
+      return renderTextViewer({ descriptor, resource, className, bare })
     }
     return (
       <UnsupportedCard resource={resource} className={className} bare={bare} />
@@ -345,11 +314,10 @@ function FileViewerRoute({
       )
     case "markdown":
       return (
-        <MarkdownDocViewer
-          resource={resource}
+        <ProseTextViewer
+          source={resource.descriptor.source}
           className={className}
           bare={bare}
-          descriptorSignal={descriptorSignal}
         />
       )
     case "html":
@@ -362,34 +330,7 @@ function FileViewerRoute({
         />
       )
     case "text":
-      if (isProseTextDescriptor(descriptor)) {
-        const proseTextSource = resource.descriptor.source
-        return (
-          <ProseTextViewer
-            source={proseTextSource}
-            className={className}
-            bare={bare}
-          />
-        )
-      }
-      if (isCodeTextDescriptor(descriptor)) {
-        return (
-          <CodeTextViewer
-            source={resource.descriptor.source}
-            className={className}
-            bare={bare}
-          />
-        )
-      }
-      return (
-        <TextDocViewer
-          resource={resource}
-          className={className}
-          bare={bare}
-          isolateStyles={isolateStyles}
-          descriptorSignal={descriptorSignal}
-        />
-      )
+      return renderTextViewer({ descriptor, resource, className, bare })
     default:
       return (
         <UnsupportedCard
@@ -399,4 +340,22 @@ function FileViewerRoute({
         />
       )
   }
+}
+
+function renderTextViewer({
+  descriptor,
+  resource,
+  className,
+  bare,
+}: {
+  descriptor: FileDescriptor
+  resource: ViewerResource
+  className?: string
+  bare: boolean
+}) {
+  const source = resource.descriptor.source
+  if (isProseTextDescriptor(descriptor)) {
+    return <ProseTextViewer source={source} className={className} bare={bare} />
+  }
+  return <CodeTextViewer source={source} className={className} bare={bare} />
 }

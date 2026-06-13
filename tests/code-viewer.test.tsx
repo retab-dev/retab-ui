@@ -2423,13 +2423,13 @@ describe("code-viewer implementation boundaries", () => {
   })
 
   it("uses exact reset keys instead of fingerprints", () => {
-    const viewerModuleSource = readRegistryFile(
-      "registry/new-york-v4/ui/code-viewer.tsx"
+    const shellModuleSource = readRegistryFile(
+      "registry/new-york-v4/ui/plain-text-viewer-shell.tsx"
     )
 
-    expect(viewerModuleSource).toContain("codeViewerResetKey")
-    expect(viewerModuleSource).not.toContain("fingerprint")
-    expect(viewerModuleSource).not.toContain("resourceVersion")
+    expect(shellModuleSource).toContain("plainTextViewerResetKey")
+    expect(shellModuleSource).not.toContain("fingerprint")
+    expect(shellModuleSource).not.toContain("resourceVersion")
   })
 
   it("keeps source IO out of the component module", () => {

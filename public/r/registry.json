@@ -678,7 +678,7 @@
       "title": "CSV Viewer",
       "description": "A fixed-window virtualized CSV/TSV table: sortable columns, sticky header, row numbers, horizontal scroll. Renders straight from raw rows (no table row model) so it stays flat in memory on huge files.",
       "dependencies": ["lucide-react"],
-      "registryDependencies": ["csv", "utils", "button"],
+      "registryDependencies": ["csv", "utils", "button", "dropdown-menu"],
       "files": [
         {
           "path": "registry/new-york-v4/ui/csv-viewer.tsx",
@@ -799,6 +799,11 @@
           "path": "registry/new-york-v4/ui/csv-viewer.worker.ts",
           "type": "registry:ui",
           "target": "@ui/csv-viewer.worker.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/viewer-download.tsx",
+          "type": "registry:ui",
+          "target": "@ui/viewer-download.tsx"
         }
       ]
     },
@@ -814,7 +819,8 @@
         "button",
         "scroll-area",
         "separator",
-        "skeleton"
+        "skeleton",
+        "dropdown-menu"
       ],
       "files": [
         {
@@ -901,6 +907,11 @@
           "path": "registry/new-york-v4/ui/viewer-slots.ts",
           "type": "registry:ui",
           "target": "@ui/viewer-slots.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/viewer-download.tsx",
+          "type": "registry:ui",
+          "target": "@ui/viewer-download.tsx"
         }
       ]
     },
@@ -916,7 +927,8 @@
         "button",
         "scroll-area",
         "separator",
-        "skeleton"
+        "skeleton",
+        "dropdown-menu"
       ],
       "files": [
         {
@@ -983,6 +995,16 @@
           "path": "registry/new-york-v4/lib/viewer-resource.ts",
           "type": "registry:lib",
           "target": "@lib/viewer-resource.ts"
+        },
+        {
+          "path": "registry/new-york-v4/lib/viewer-download.ts",
+          "type": "registry:lib",
+          "target": "@lib/viewer-download.ts"
+        },
+        {
+          "path": "registry/new-york-v4/lib/viewer-errors.ts",
+          "type": "registry:lib",
+          "target": "@lib/viewer-errors.ts"
         },
         {
           "path": "registry/new-york-v4/ui/use-is-client.ts",
@@ -1143,7 +1165,8 @@
         "button",
         "scroll-area",
         "separator",
-        "skeleton"
+        "skeleton",
+        "dropdown-menu"
       ],
       "files": [
         {
@@ -1481,12 +1504,7 @@
       "type": "registry:ui",
       "title": "File Viewer",
       "description": "One viewer for any file: detects the type and lazy-loads the matching renderer (PDF, DOCX, XLSX, PPTX, CSV, images) plus inline, virtualized text/code/JSON, Markdown (sandboxed), and HTML (sandboxed). Only the needed parser is ever downloaded.",
-      "dependencies": [
-        "lucide-react",
-        "marked@18.0.5",
-        "@tanstack/react-virtual@^3.13.12",
-        "prismjs@^1.30.0"
-      ],
+      "dependencies": ["lucide-react", "marked@18.0.5", "dompurify@3.4.9"],
       "registryDependencies": [
         "utils",
         "button",
@@ -1530,21 +1548,6 @@
           "path": "registry/new-york-v4/ui/file-viewer-text-resource.ts",
           "type": "registry:ui",
           "target": "@ui/file-viewer-text-resource.ts"
-        },
-        {
-          "path": "registry/new-york-v4/ui/file-viewer-text-errors.ts",
-          "type": "registry:ui",
-          "target": "@ui/file-viewer-text-errors.ts"
-        },
-        {
-          "path": "registry/new-york-v4/ui/file-viewer-text-loader.ts",
-          "type": "registry:ui",
-          "target": "@ui/file-viewer-text-loader.ts"
-        },
-        {
-          "path": "registry/new-york-v4/ui/file-viewer-text-viewer.tsx",
-          "type": "registry:ui",
-          "target": "@ui/file-viewer-text-viewer.tsx"
         },
         {
           "path": "registry/new-york-v4/ui/file-viewer-markdown-viewer.tsx",
@@ -2640,7 +2643,13 @@
       "title": "Code Viewer",
       "description": "A fixed-line code and log viewer with line numbers, TanStack virtualization, source-line highlights, retry, zoom, and download.",
       "dependencies": ["@tanstack/react-virtual", "lucide-react"],
-      "registryDependencies": ["button", "scroll-area", "skeleton", "utils"],
+      "registryDependencies": [
+        "button",
+        "dropdown-menu",
+        "scroll-area",
+        "skeleton",
+        "utils"
+      ],
       "files": [
         {
           "path": "registry/new-york-v4/ui/code-viewer.tsx",
@@ -2651,6 +2660,16 @@
           "path": "registry/new-york-v4/ui/code-viewer-chrome.tsx",
           "type": "registry:ui",
           "target": "@ui/code-viewer-chrome.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/text-code-viewer-chrome.tsx",
+          "type": "registry:ui",
+          "target": "@ui/text-code-viewer-chrome.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/plain-text-viewer-shell.tsx",
+          "type": "registry:ui",
+          "target": "@ui/plain-text-viewer-shell.tsx"
         },
         {
           "path": "registry/new-york-v4/ui/code-viewer-content.tsx",
@@ -2688,14 +2707,29 @@
           "target": "@ui/viewer-download.tsx"
         },
         {
+          "path": "registry/new-york-v4/ui/viewer-error.tsx",
+          "type": "registry:ui",
+          "target": "@ui/viewer-error.tsx"
+        },
+        {
           "path": "registry/new-york-v4/ui/text-viewer-ranges.ts",
           "type": "registry:ui",
           "target": "@ui/text-viewer-ranges.ts"
         },
         {
+          "path": "registry/new-york-v4/ui/line-ranges.ts",
+          "type": "registry:ui",
+          "target": "@ui/line-ranges.ts"
+        },
+        {
           "path": "registry/new-york-v4/ui/text-viewer-resource.ts",
           "type": "registry:ui",
           "target": "@ui/text-viewer-resource.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/plain-text-resource.ts",
+          "type": "registry:ui",
+          "target": "@ui/plain-text-resource.ts"
         },
         {
           "path": "registry/new-york-v4/lib/viewer-source.ts",
@@ -2706,6 +2740,16 @@
           "path": "registry/new-york-v4/lib/viewer-resource.ts",
           "type": "registry:lib",
           "target": "@lib/viewer-resource.ts"
+        },
+        {
+          "path": "registry/new-york-v4/lib/viewer-download.ts",
+          "type": "registry:lib",
+          "target": "@lib/viewer-download.ts"
+        },
+        {
+          "path": "registry/new-york-v4/lib/viewer-errors.ts",
+          "type": "registry:lib",
+          "target": "@lib/viewer-errors.ts"
         },
         {
           "path": "registry/new-york-v4/ui/use-is-client.ts",
@@ -2720,7 +2764,13 @@
       "title": "Text Viewer",
       "description": "A Pretext-powered prose viewer with natural wrapping, custom variable-height virtualization, source-line highlights, retry, zoom, and download.",
       "dependencies": ["@chenglou/pretext", "lucide-react"],
-      "registryDependencies": ["button", "scroll-area", "skeleton", "utils"],
+      "registryDependencies": [
+        "button",
+        "dropdown-menu",
+        "scroll-area",
+        "skeleton",
+        "utils"
+      ],
       "files": [
         {
           "path": "registry/new-york-v4/ui/text-viewer.tsx",
@@ -2731,6 +2781,16 @@
           "path": "registry/new-york-v4/ui/text-viewer-chrome.tsx",
           "type": "registry:ui",
           "target": "@ui/text-viewer-chrome.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/text-code-viewer-chrome.tsx",
+          "type": "registry:ui",
+          "target": "@ui/text-code-viewer-chrome.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/plain-text-viewer-shell.tsx",
+          "type": "registry:ui",
+          "target": "@ui/plain-text-viewer-shell.tsx"
         },
         {
           "path": "registry/new-york-v4/ui/text-viewer-content.tsx",
@@ -2748,14 +2808,29 @@
           "target": "@ui/viewer-download.tsx"
         },
         {
+          "path": "registry/new-york-v4/ui/viewer-error.tsx",
+          "type": "registry:ui",
+          "target": "@ui/viewer-error.tsx"
+        },
+        {
           "path": "registry/new-york-v4/ui/text-viewer-ranges.ts",
           "type": "registry:ui",
           "target": "@ui/text-viewer-ranges.ts"
         },
         {
+          "path": "registry/new-york-v4/ui/line-ranges.ts",
+          "type": "registry:ui",
+          "target": "@ui/line-ranges.ts"
+        },
+        {
           "path": "registry/new-york-v4/ui/text-viewer-resource.ts",
           "type": "registry:ui",
           "target": "@ui/text-viewer-resource.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/plain-text-resource.ts",
+          "type": "registry:ui",
+          "target": "@ui/plain-text-resource.ts"
         },
         {
           "path": "registry/new-york-v4/ui/text-viewer-scale.ts",

@@ -4,6 +4,7 @@
     "index",
     "data-cell",
     "json-form",
+    "dropzone",
     "json-table",
     "schema-builder",
     "property-form",

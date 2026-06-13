@@ -4,23 +4,10 @@ import * as React from "react"
 import { useVirtualizer } from "@tanstack/react-virtual"
 
 import type { ViewerResource } from "@/lib/viewer-resource"
-import {
-  CodeViewerFrame,
-  CodeViewerToolbar,
-} from "@/components/ui/code-viewer-chrome"
-import { scrollLineRangeMetricsIntoView } from "@/components/ui/code-viewer-layout"
-import { CodeLine } from "@/components/ui/code-viewer-line"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import {
-  isLineInRange,
-  normalizeTextLineRange,
-} from "@/components/ui/text-viewer-ranges"
-import {
-  readTextResource,
-  resolvedTextViewerBounds,
-  splitTextLines,
-} from "@/components/ui/text-viewer-resource"
 
+import { CodeViewerFrame, CodeViewerToolbar } from "./code-viewer-chrome"
+import { scrollLineRangeMetricsIntoView } from "./code-viewer-layout"
+import { CodeLine } from "./code-viewer-line"
 import {
   clampCodeViewerScale,
   CODE_VIEWER_BASE_FONT_PX,
@@ -31,6 +18,13 @@ import {
 } from "./code-viewer-scale"
 import type { CodeViewerHandle, CodeViewerProps } from "./code-viewer-types"
 import { createInitialCodeVirtualLines } from "./code-viewer-virtualization"
+import { isLineInRange, normalizeTextLineRange } from "./line-ranges"
+import {
+  readTextResource,
+  resolvedTextViewerBounds,
+  splitTextLines,
+} from "./plain-text-resource"
+import { ScrollArea } from "./scroll-area"
 
 export function CodeViewerContent({
   resource,

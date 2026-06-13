@@ -44,7 +44,7 @@ export function DataCellPickerControl({
   dateTimeZone = "local",
   showPickerIcon = true,
   className,
-  formatValue: _formatValue,
+  formatValue,
   draftValue,
   autoFocus,
   activationIntent,
@@ -85,7 +85,9 @@ export function DataCellPickerControl({
   const pickerValue = draftValue ?? uncontrolledDraftValue
   const selectedDate = dateFromPickerValue(kind, pickerValue)
   const timeValue = timeFromPickerValue(kind, pickerValue)
-  const content = formatDataCellDisplayValue(kind, pickerValue)
+  const content =
+    formatValue?.(pickerValue, { kind }) ??
+    formatDataCellDisplayValue(kind, pickerValue)
   const isEmpty = content === ""
   const setOpen = React.useCallback(
     (open: boolean) => {
@@ -330,6 +332,7 @@ function DataCellPickerPopupContent({
         <Calendar
           mode="single"
           selected={selectedDate}
+          defaultMonth={selectedDate}
           onSelect={onDateSelect}
         />
       )}

@@ -1,13 +1,16 @@
 "use client"
 
 import * as React from "react"
-import { Maximize, Minus, Plus } from "lucide-react"
 
-import { cn } from "@/lib/utils"
 import { type ViewerDownloadAction } from "@/lib/viewer-download"
-import { Button } from "@/components/ui/button"
-import { Skeleton } from "@/components/ui/skeleton"
-import { ViewerDownloadControl } from "@/components/ui/viewer-download"
+
+import { Skeleton } from "./skeleton"
+import {
+  TextCodeViewerFrame,
+  TextCodeViewerToolbarFrame,
+  TextCodeViewerZoomControls,
+} from "./text-code-viewer-chrome"
+import { ViewerDownloadControl } from "./viewer-download"
 
 export function TextViewerFrame({
   className,
@@ -19,16 +22,15 @@ export function TextViewerFrame({
   children: React.ReactNode
 }) {
   return (
-    <div
-      className={cn(
-        "flex min-h-0 flex-col overflow-hidden",
-        bare ? "h-full bg-background" : "rounded-xl border bg-background",
-        className
-      )}
-      data-slot="text-viewer"
+    <TextCodeViewerFrame
+      bare={bare}
+      bareClassName="h-full bg-background"
+      className={className}
+      dataSlot="text-viewer"
+      framedClassName="rounded-xl border bg-background"
     >
       {children}
-    </div>
+    </TextCodeViewerFrame>
   )
 }
 
@@ -85,11 +87,11 @@ export function TextViewerToolbar({
   onResetZoom: () => void
 }) {
   return (
-    <TextViewerToolbarFrame
+    <TextCodeViewerToolbarFrame
       leading={`${wordCount} word${wordCount === 1 ? "" : "s"}`}
       trailing={
         <>
-          <TextViewerZoomControls
+          <TextCodeViewerZoomControls
             fontScale={fontScale}
             onZoomOut={onZoomOut}
             onZoomIn={onZoomIn}
@@ -100,88 +102,5 @@ export function TextViewerToolbar({
         </>
       }
     />
-  )
-}
-
-function TextViewerToolbarFrame({
-  leading,
-  trailing,
-}: {
-  leading: React.ReactNode
-  trailing: React.ReactNode
-}) {
-  return (
-    <div className="flex h-10 flex-shrink-0 items-center gap-1 border-b bg-card px-2">
-      <span className="px-1 text-xs text-muted-foreground tabular-nums">
-        {leading}
-      </span>
-      <div className="ml-auto flex items-center gap-1">{trailing}</div>
-    </div>
-  )
-}
-
-function TextViewerZoomControls({
-  fontScale,
-  disabled = false,
-  onZoomOut,
-  onZoomIn,
-  onResetZoom,
-}: {
-  fontScale: number
-  disabled?: boolean
-  onZoomOut?: () => void
-  onZoomIn?: () => void
-  onResetZoom?: () => void
-}) {
-  const disabledProps = disabled
-    ? ({ disabled: true, tabIndex: -1, "aria-hidden": true } as const)
-    : {}
-
-  return (
-    <>
-      <IconButton
-        label="Zoom out"
-        onClick={disabled ? undefined : onZoomOut}
-        {...disabledProps}
-      >
-        <Minus />
-      </IconButton>
-      <span className="w-12 text-center text-xs text-muted-foreground tabular-nums">
-        {Math.round(fontScale * 100)}%
-      </span>
-      <IconButton
-        label="Zoom in"
-        onClick={disabled ? undefined : onZoomIn}
-        {...disabledProps}
-      >
-        <Plus />
-      </IconButton>
-      <IconButton
-        label="Reset zoom"
-        onClick={disabled ? undefined : onResetZoom}
-        {...disabledProps}
-      >
-        <Maximize />
-      </IconButton>
-    </>
-  )
-}
-
-function IconButton({
-  label,
-  children,
-  ...props
-}: React.ComponentProps<typeof Button> & { label: string }) {
-  return (
-    <Button
-      variant="ghost"
-      size="icon-sm"
-      className="size-7"
-      aria-label={label}
-      title={label}
-      {...props}
-    >
-      {children}
-    </Button>
   )
 }

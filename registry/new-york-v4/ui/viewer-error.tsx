@@ -10,8 +10,9 @@ import {
   type ViewerErrorContext,
   type ViewerFormat,
 } from "@/lib/viewer-errors"
-import { Button } from "@/components/ui/button"
-import { ViewerDownloadButton } from "@/components/ui/viewer-download"
+
+import { Button } from "./button"
+import { ViewerDownloadButton } from "./viewer-download"
 
 export interface ViewerErrorStateProps extends ViewerErrorContext {
   error: unknown

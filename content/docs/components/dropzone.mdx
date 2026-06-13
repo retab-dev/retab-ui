@@ -1,0 +1,73 @@
+---
+title: Dropzone
+description: Upload files through a click target or drag-and-drop area with accept validation and rejection feedback.
+component: true
+---
+
+Dropzone gives document upload flows a single, reusable drop target. It combines
+the Extend UI upload interaction pattern with Retab's file-drag guardrails:
+keyboard activation, nested drag tracking, MIME/extension accept matching, file
+size rejection, and callbacks for accepted and rejected files.
+
+## Installation
+
+```bash
+npx shadcn@latest add @retab/dropzone
+```
+
+## Example
+
+<DropzoneDemo />
+
+```tsx
+import { Dropzone } from "@/components/ui/dropzone"
+
+export function UploadTarget() {
+  return (
+    <Dropzone
+      accept="application/pdf,image/*,.docx,.xlsx,.csv"
+      description="PDF, DOCX, XLSX, CSV, PNG, or JPG"
+      multiple={false}
+      onFilesAccepted={(files) => {
+        console.log(files[0])
+      }}
+    />
+  )
+}
+```
+
+## Behavior
+
+- Opens the native file picker on click, Enter, or Space.
+- Highlights only when the drag payload contains files.
+- Tracks nested drag enter/leave events so the active state does not flicker.
+- Accepts MIME types, wildcard MIME types such as `image/*`, and extensions.
+- Reports rejected files through `onFilesRejected` and shows the first rejection
+  message inline.
+
+## API Reference
+
+### Dropzone
+
+| Prop                | Type                                            | Default                               | Required |
+| ------------------- | ----------------------------------------------- | ------------------------------------- | -------- |
+| `accept`            | `string`                                        | `-`                                   | No       |
+| `acceptedFileTypes` | `{ label: string; icon: LucideIcon }[]`         | image, PDF, sheet                     | No       |
+| `browseLabel`       | `string`                                        | `"Browse files"`                      | No       |
+| `className`         | `string`                                        | `-`                                   | No       |
+| `description`       | `string`                                        | `"PDF, DOCX, XLSX, CSV, PNG, or JPG"` | No       |
+| `disabled`          | `boolean`                                       | `false`                               | No       |
+| `draggingLabel`     | `string`                                        | `"Drop to add"`                       | No       |
+| `maxSize`           | `number`                                        | `-`                                   | No       |
+| `multiple`          | `boolean`                                       | `true`                                | No       |
+| `title`             | `string`                                        | `"Click to upload or drop files"`     | No       |
+| `onFilesAccepted`   | `(files: File[]) => void`                       | `-`                                   | No       |
+| `onFilesRejected`   | `(rejections: DropzoneFileRejection[]) => void` | `-`                                   | No       |
+
+`Dropzone` also forwards standard `div` props except `children` and `onDrop`.
+Its internal `data-slot="dropzone"` and `data-dragging` attributes are stable
+styling hooks.
+
+## Source
+
+<ComponentSource src="registry/new-york-v4/ui/dropzone.tsx" />

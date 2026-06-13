@@ -199,10 +199,19 @@ describe("viewer architecture", () => {
 
   it("lists every relative internal module imported by registry viewer entries", () => {
     const registry = readJson<Registry>("registry.json")
+    const registryItemsByName = new Map(
+      registry.items.map((item) => [item.name, item])
+    )
     const missingModules: string[] = []
 
     for (const item of viewerRegistryItems(registry)) {
       const listedFiles = new Set(item.files.map((file) => file.path))
+      const dependencyFiles = new Set(
+        (item.registryDependencies ?? []).flatMap(
+          (name) =>
+            registryItemsByName.get(name)?.files.map((file) => file.path) ?? []
+        )
+      )
 
       for (const file of item.files) {
         const content = fileContent(file.path)
@@ -210,6 +219,7 @@ describe("viewer architecture", () => {
           const importedFile = resolveRelativeImport(file.path, specifier)
           if (!importedFile?.startsWith("registry/new-york-v4/")) continue
           if (listedFiles.has(importedFile)) continue
+          if (dependencyFiles.has(importedFile)) continue
           missingModules.push(
             `${item.name}: ${file.path} imports ${importedFile}`
           )

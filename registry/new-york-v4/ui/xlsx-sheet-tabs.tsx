@@ -7,17 +7,29 @@ import type { XlsxSheetMeta } from "@/lib/xlsx-workbook"
 
 const TAB_STRIP_HEIGHT_PX = 36
 const TAB_HEIGHT_PX = 28
-const TAB_REVEAL_PADDING_PX = 10
 const SCROLL_EPSILON_PX = 1
 const TAB_MIN_WIDTH_PX = 92
 const TAB_MAX_WIDTH_PX = 184
 const PREFERRED_VISIBLE_TABS = 6
 const LARGE_REVEAL_DISTANCE_MULTIPLIER = 1.25
+const OVERFLOW_REVEAL_DESKTOP_PX = 22
+const OVERFLOW_REVEAL_MOBILE_PX = 16
+const OVERFLOW_REVEAL_MIN_PX = 8
 
 interface SheetTabScrollState {
   canScrollLeft: boolean
   canScrollRight: boolean
   isOverflowing: boolean
+  viewportWidth: number
+}
+
+interface TabRevealGeometry {
+  activeIndex: number
+  activeLeft: number
+  activeWidth: number
+  scrollLeft: number
+  scrollWidth: number
+  sheetCount: number
   viewportWidth: number
 }
 
@@ -37,6 +49,53 @@ function scrollTabsTo(
   } else {
     scrollElement.scrollLeft = clampedLeft
   }
+}
+
+function resolveOverflowRevealPx(viewportWidth: number, tabWidth: number) {
+  const targetReveal =
+    viewportWidth <= 420
+      ? OVERFLOW_REVEAL_MOBILE_PX
+      : OVERFLOW_REVEAL_DESKTOP_PX
+  const maxTabReveal = Math.max(
+    OVERFLOW_REVEAL_MIN_PX,
+    Math.floor(tabWidth * 0.35)
+  )
+
+  return Math.max(
+    OVERFLOW_REVEAL_MIN_PX,
+    Math.min(targetReveal, maxTabReveal)
+  )
+}
+
+function resolveTabRevealScrollLeft({
+  activeIndex,
+  activeLeft,
+  activeWidth,
+  scrollLeft,
+  scrollWidth,
+  sheetCount,
+  viewportWidth,
+}: TabRevealGeometry) {
+  const maxScrollLeft = Math.max(0, scrollWidth - viewportWidth)
+  if (maxScrollLeft <= SCROLL_EPSILON_PX) return 0
+
+  if (activeIndex <= 0) return 0
+  if (activeIndex >= sheetCount - 1) return maxScrollLeft
+
+  const activeRight = activeLeft + activeWidth
+  const overflowRevealPx = resolveOverflowRevealPx(viewportWidth, activeWidth)
+  const visibleLeft = scrollLeft + overflowRevealPx
+  const visibleRight = scrollLeft + viewportWidth - overflowRevealPx
+
+  let nextScrollLeft = scrollLeft
+
+  if (activeLeft < visibleLeft) {
+    nextScrollLeft = activeLeft - overflowRevealPx
+  } else if (activeRight > visibleRight) {
+    nextScrollLeft = activeRight - viewportWidth + overflowRevealPx
+  }
+
+  return Math.min(maxScrollLeft, Math.max(0, nextScrollLeft))
 }
 
 function readScrollState(scrollElement: HTMLElement): SheetTabScrollState {
@@ -128,19 +187,17 @@ export function XlsxSheetTabs({
     const activeTab = tabRefs.current[activeSheetIndex]
     if (!scrollElement || !activeTab) return
 
-    const tabLeft = activeTab.offsetLeft - TAB_REVEAL_PADDING_PX
-    const tabRight =
-      activeTab.offsetLeft + activeTab.offsetWidth + TAB_REVEAL_PADDING_PX
-    const viewportLeft = scrollElement.scrollLeft
-    const viewportRight = viewportLeft + scrollElement.clientWidth
-    const nextLeft =
-      tabLeft < viewportLeft
-        ? tabLeft
-        : tabRight > viewportRight
-          ? tabRight - scrollElement.clientWidth
-          : null
+    const nextLeft = resolveTabRevealScrollLeft({
+      activeIndex: activeSheetIndex,
+      activeLeft: activeTab.offsetLeft,
+      activeWidth: activeTab.offsetWidth,
+      scrollLeft: scrollElement.scrollLeft,
+      scrollWidth: scrollElement.scrollWidth,
+      sheetCount: sheets.length,
+      viewportWidth: scrollElement.clientWidth,
+    })
 
-    if (nextLeft != null) {
+    if (Math.abs(nextLeft - scrollElement.scrollLeft) > SCROLL_EPSILON_PX) {
       const distance = Math.abs(nextLeft - scrollElement.scrollLeft)
       scrollTabsTo(
         scrollElement,
@@ -153,7 +210,7 @@ export function XlsxSheetTabs({
     }
 
     window.requestAnimationFrame(updateScrollState)
-  }, [activeSheetIndex, tabWidth, updateScrollState])
+  }, [activeSheetIndex, sheets.length, tabWidth, updateScrollState])
 
   if (sheets.length <= 1) return null
 
@@ -240,7 +297,7 @@ export function XlsxSheetTabs({
       >
         <div
           ref={listRef}
-          data-slot="xlsx-viewer-tabs-list"
+          data-slot="xlsx-viewer-tabs-track"
           className="flex min-w-max items-stretch gap-0.5"
         >
           {sheets.map((sheet, sheetIndex) => (

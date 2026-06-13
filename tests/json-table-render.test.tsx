@@ -93,7 +93,7 @@ describe("json table active cell controls", () => {
 
   it("renders date, date-time, and time controls", () => {
     let view = renderCell("date", { draftValue: "2024-01-02" })
-    expect(view.getByText("02/01/2024")).toBeTruthy()
+    expect(view.getByText("Jan 2, 2024")).toBeTruthy()
     cleanup()
 
     view = renderCell("date-time", {

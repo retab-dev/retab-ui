@@ -360,14 +360,14 @@ describe("json table value normalization hardening", () => {
     expect(view.onDocumentDataChange).not.toHaveBeenCalled()
   })
 
-  it("keeps malformed date and date-time values editable while exposing current display drift", async () => {
+  it("keeps malformed date and date-time values editable without display drift", async () => {
     const dateView = renderNormalizationRow({ visiblePaths: ["shipped_at"] })
     expect((await editableCell(dateView, "shipped_at")).textContent).toContain(
-      "Jun 7, 2032"
+      "2024-99-99"
     )
 
     const dateTrigger = await openPickerCell(dateView, "shipped_at")
-    expect(dateTrigger.textContent).toContain("99/99/2024")
+    expect(dateTrigger.textContent).toContain("2024-99-99")
     expect(dateView.onDocumentDataChange).not.toHaveBeenCalled()
     cleanup()
 

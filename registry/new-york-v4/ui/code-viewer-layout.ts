@@ -1,4 +1,4 @@
-import type { NormalizedTextLineRange } from "@/components/ui/text-viewer-ranges"
+import type { NormalizedTextLineRange } from "./line-ranges"
 
 export const LINE_SCROLL_HEADROOM = 64
 

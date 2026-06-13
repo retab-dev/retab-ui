@@ -269,6 +269,24 @@ function pdfUrlResource(url: string, fileName?: string) {
   return createViewerResource(pdfUrlSource(url, fileName))
 }
 
+type PdfMetricDocument = Parameters<typeof usePdfThumbnailPageMetrics>[0]
+
+class TestMetricErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { error: unknown }
+> {
+  state = { error: null }
+
+  static getDerivedStateFromError(error: unknown) {
+    return { error }
+  }
+
+  render() {
+    if (this.state.error) return <div role="alert">metric failed</div>
+    return this.props.children
+  }
+}
+
 describe("PdfViewer", () => {
   it("builds page-size-aware thumbnail layout with deterministic fallbacks", () => {
     const layout = buildPdfThumbnailLayout({
@@ -313,11 +331,14 @@ describe("PdfViewer", () => {
       ),
       destroy: vi.fn(() => Promise.resolve()),
     }
+    const metricDoc = doc as unknown as Parameters<
+      typeof usePdfThumbnailPageMetrics
+    >[0]
     const pageNumbers = pages.map((_, index) => index + 1)
 
     function MetricRequestHarness() {
       const { metricByPageNumber, requestPageMetrics, status } =
-        usePdfThumbnailPageMetrics(doc as never, doc)
+        usePdfThumbnailPageMetrics(metricDoc, doc)
 
       React.useEffect(() => {
         requestPageMetrics(pageNumbers)
@@ -347,6 +368,234 @@ describe("PdfViewer", () => {
         PDF_THUMBNAIL_PAGE_METRIC_CONCURRENCY + 1
       )
     )
+  })
+
+  it("ignores invalid thumbnail page metric requests", async () => {
+    const doc = {
+      numPages: 3,
+      getPage: vi.fn(),
+      destroy: vi.fn(() => Promise.resolve()),
+    }
+
+    function MetricRequestHarness() {
+      const { requestPageMetrics, status } = usePdfThumbnailPageMetrics(
+        doc as unknown as PdfMetricDocument,
+        doc
+      )
+
+      React.useEffect(() => {
+        requestPageMetrics([0, -1, 1.5, 4])
+      }, [requestPageMetrics])
+
+      return <div data-status={status} />
+    }
+
+    render(<MetricRequestHarness />)
+
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    expect(doc.getPage).not.toHaveBeenCalled()
+  })
+
+  it("deduplicates queued, loading, and loaded thumbnail page metric requests", async () => {
+    const pages = Array.from({ length: 6 }, () => makePage(100, 200))
+    const pageRequests = pages.map(() => pdfjsMock.deferred<MockPage>())
+    const doc = {
+      numPages: pages.length,
+      getPage: vi.fn(
+        (pageNumber: number) => pageRequests[pageNumber - 1].promise
+      ),
+      destroy: vi.fn(() => Promise.resolve()),
+    }
+
+    function MetricRequestHarness() {
+      const { metricByPageNumber, requestPageMetrics } =
+        usePdfThumbnailPageMetrics(doc as unknown as PdfMetricDocument, doc)
+
+      React.useEffect(() => {
+        requestPageMetrics([1, 1, 2, 3, 4, 5, 5, 6, 6])
+        requestPageMetrics([1, 2, 5, 6])
+      }, [requestPageMetrics])
+
+      return <div data-loaded={metricByPageNumber.size} />
+    }
+
+    render(<MetricRequestHarness />)
+
+    await waitFor(() =>
+      expect(doc.getPage).toHaveBeenCalledTimes(
+        PDF_THUMBNAIL_PAGE_METRIC_CONCURRENCY
+      )
+    )
+
+    await act(async () => {
+      pageRequests[0].resolve(pages[0])
+      pageRequests[1].resolve(pages[1])
+      await Promise.resolve()
+    })
+
+    await waitFor(() => expect(doc.getPage).toHaveBeenCalledTimes(6))
+
+    await act(async () => {
+      for (const [index, request] of pageRequests.entries()) {
+        request.resolve(pages[index])
+      }
+      await Promise.resolve()
+    })
+
+    await waitFor(() =>
+      expect(
+        document.querySelector("[data-loaded]")?.getAttribute("data-loaded")
+      ).toBe("6")
+    )
+
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    expect(doc.getPage).toHaveBeenCalledTimes(6)
+  })
+
+  it("clears thumbnail page metric state and ignores stale resolves on document reset", async () => {
+    const firstPageRequest = pdfjsMock.deferred<MockPage>()
+    const secondPageRequest = pdfjsMock.deferred<MockPage>()
+    const firstDoc = {
+      numPages: 1,
+      getPage: vi.fn(() => firstPageRequest.promise),
+      destroy: vi.fn(() => Promise.resolve()),
+    }
+    const secondDoc = {
+      numPages: 1,
+      getPage: vi.fn(() => secondPageRequest.promise),
+      destroy: vi.fn(() => Promise.resolve()),
+    }
+
+    function MetricRequestHarness({ doc }: { doc: typeof firstDoc }) {
+      const { metricByPageNumber, requestPageMetrics } =
+        usePdfThumbnailPageMetrics(doc as unknown as PdfMetricDocument, doc)
+
+      React.useEffect(() => {
+        requestPageMetrics([1])
+      }, [requestPageMetrics])
+
+      return (
+        <div
+          data-loaded={metricByPageNumber.size}
+          data-width={metricByPageNumber.get(1)?.width ?? ""}
+        />
+      )
+    }
+
+    const view = render(<MetricRequestHarness doc={firstDoc} />)
+    await waitFor(() => expect(firstDoc.getPage).toHaveBeenCalledWith(1))
+
+    view.rerender(<MetricRequestHarness doc={secondDoc} />)
+    await waitFor(() =>
+      expect(
+        document.querySelector("[data-loaded]")?.getAttribute("data-loaded")
+      ).toBe("0")
+    )
+    await waitFor(() => expect(secondDoc.getPage).toHaveBeenCalledWith(1))
+
+    await act(async () => {
+      firstPageRequest.resolve(makePage(111, 200))
+      secondPageRequest.resolve(makePage(222, 200))
+      await Promise.resolve()
+    })
+
+    await waitFor(() =>
+      expect(
+        document.querySelector("[data-width]")?.getAttribute("data-width")
+      ).toBe("222")
+    )
+  })
+
+  it("throws rejected thumbnail page metric requests to the nearest boundary", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {})
+    const doc = {
+      numPages: 1,
+      getPage: vi.fn(() => Promise.reject(new Error("metric failed"))),
+      destroy: vi.fn(() => Promise.resolve()),
+    }
+
+    function MetricRequestHarness() {
+      const { requestPageMetrics } = usePdfThumbnailPageMetrics(
+        doc as unknown as PdfMetricDocument,
+        doc
+      )
+
+      React.useEffect(() => {
+        requestPageMetrics([1])
+      }, [requestPageMetrics])
+
+      return <div />
+    }
+
+    render(
+      <TestMetricErrorBoundary>
+        <MetricRequestHarness />
+      </TestMetricErrorBoundary>
+    )
+
+    expect((await screen.findByRole("alert")).textContent).toBe("metric failed")
+  })
+
+  it("exposes immutable thumbnail page metric map snapshots", async () => {
+    const firstPageRequest = pdfjsMock.deferred<MockPage>()
+    const secondPageRequest = pdfjsMock.deferred<MockPage>()
+    const doc = {
+      numPages: 2,
+      getPage: vi.fn((pageNumber: number) =>
+        pageNumber === 1 ? firstPageRequest.promise : secondPageRequest.promise
+      ),
+      destroy: vi.fn(() => Promise.resolve()),
+    }
+    const metricMaps: ReadonlyMap<number, unknown>[] = []
+
+    function MetricRequestHarness() {
+      const { metricByPageNumber, requestPageMetrics } =
+        usePdfThumbnailPageMetrics(doc as unknown as PdfMetricDocument, doc)
+
+      React.useEffect(() => {
+        metricMaps.push(metricByPageNumber)
+      }, [metricByPageNumber])
+      React.useEffect(() => {
+        requestPageMetrics([1, 2])
+      }, [requestPageMetrics])
+
+      return <div data-loaded={metricByPageNumber.size} />
+    }
+
+    render(<MetricRequestHarness />)
+    await waitFor(() => expect(doc.getPage).toHaveBeenCalledTimes(2))
+
+    await act(async () => {
+      firstPageRequest.resolve(makePage(100, 200))
+      await Promise.resolve()
+    })
+    await waitFor(() =>
+      expect(
+        document.querySelector("[data-loaded]")?.getAttribute("data-loaded")
+      ).toBe("1")
+    )
+    const firstLoadedMap = metricMaps.at(-1)!
+
+    await act(async () => {
+      secondPageRequest.resolve(makePage(200, 200))
+      await Promise.resolve()
+    })
+    await waitFor(() =>
+      expect(
+        document.querySelector("[data-loaded]")?.getAttribute("data-loaded")
+      ).toBe("2")
+    )
+    const secondLoadedMap = metricMaps.at(-1)!
+
+    expect(firstLoadedMap).not.toBe(secondLoadedMap)
+    expect(firstLoadedMap.size).toBe(1)
+    expect(secondLoadedMap.size).toBe(2)
   })
 
   it("does not render toolbar chrome in the fallback when toolbar is false", async () => {

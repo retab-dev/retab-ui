@@ -9,13 +9,14 @@ import {
   type ViewerDownloadAction,
   type ViewerDownloadPayload,
 } from "@/lib/viewer-download"
-import { Button, buttonVariants } from "@/components/ui/button"
+
+import { Button, buttonVariants } from "./button"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "./dropdown-menu"
 
 export interface TriggerViewerDownloadOptions {
   signal?: AbortSignal
@@ -117,17 +118,13 @@ export interface ViewerDownloadControlProps {
   onError?: ViewerDownloadErrorHandler
 }
 
-export interface ViewerDownloadButtonProps extends Omit<
-  ViewerDownloadControlProps,
-  "actions"
-> {
+export interface ViewerDownloadButtonProps
+  extends Omit<ViewerDownloadControlProps, "actions"> {
   action: ViewerDownloadAction | null
 }
 
-export interface ViewerDownloadMenuProps extends Omit<
-  ViewerDownloadControlProps,
-  "actions"
-> {
+export interface ViewerDownloadMenuProps
+  extends Omit<ViewerDownloadControlProps, "actions"> {
   actions: ViewerDownloadAction[]
 }
 

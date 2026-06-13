@@ -139,7 +139,15 @@ export function dateFromPickerValue(
   if (!dateValue) return undefined
   const match = dateValue.match(dataCellExactDateValuePattern)
   if (!match) return undefined
-  return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
+  const year = Number(match[1])
+  const monthIndex = Number(match[2]) - 1
+  const day = Number(match[3])
+  const date = new Date(year, monthIndex, day)
+  return date.getFullYear() === year &&
+    date.getMonth() === monthIndex &&
+    date.getDate() === day
+    ? date
+    : undefined
 }
 
 export function timeFromPickerValue(

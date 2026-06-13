@@ -856,7 +856,7 @@ describe("json table edit-session interactions", () => {
     })
     expect(await view.findByRole("dialog")).toBeTruthy()
 
-    fireEvent.click(dayButton("6/15/2026"))
+    fireEvent.click(dayButton("1/15/2024"))
 
     await waitFor(() => expect(onUpdateDocument).toHaveBeenCalledTimes(2))
     expect(onUpdateDocument).toHaveBeenNthCalledWith(1, {
@@ -866,7 +866,7 @@ describe("json table edit-session interactions", () => {
       data: {
         ...document.data,
         vendor: "Globex",
-        shipped_at: "2026-06-15",
+        shipped_at: "2024-01-15",
       },
     })
     expect(view.queryByRole("dialog")).toBeNull()

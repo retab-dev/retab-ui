@@ -178,10 +178,11 @@ export function textDataCellValue(value: unknown): string | null {
     : String(dataCellValue(value))
 }
 
-function dateDisplayValue(value: unknown): React.ReactNode | undefined {
-  const date =
-    typeof value === "string" ? parseDateStringAsLocal(value) : undefined
-  return date ? format(date, "PP") : undefined
+function dateDisplayValue(value: unknown): string {
+  if (value === null || value === undefined || value === "") return ""
+  if (typeof value !== "string") return String(value)
+  const date = parseDateStringAsLocal(value)
+  return date ? format(date, "PP") : value
 }
 
 function normalizeDataCellCommitValue(
@@ -226,7 +227,7 @@ export function getJsonTableCellDisplayValue({
 
   if (dataCellKind) {
     if (fieldMetadata.kind === "date") {
-      return String(dateDisplayValue(value) ?? "")
+      return dateDisplayValue(value)
     }
     return formatDataCellDisplayValue(dataCellKind, textDataCellValue(value))
   }
@@ -397,7 +398,7 @@ export function JsonTableDataCell({
         className={jsonTableDataCellClass}
         formatValue={
           fieldMetadata.kind === "date"
-            ? () => dateDisplayValue(value) ?? ""
+            ? (nextValue) => dateDisplayValue(nextValue)
             : undefined
         }
       />

@@ -1,13 +1,18 @@
 "use client"
 
 import * as React from "react"
-import { Maximize, Minus, Plus, RotateCcw } from "lucide-react"
+import { RotateCcw } from "lucide-react"
 
-import { cn } from "@/lib/utils"
 import { type ViewerDownloadAction } from "@/lib/viewer-download"
-import { Button } from "@/components/ui/button"
-import { Skeleton } from "@/components/ui/skeleton"
-import { ViewerDownloadControl } from "@/components/ui/viewer-download"
+
+import { Button } from "./button"
+import { Skeleton } from "./skeleton"
+import {
+  TextCodeViewerFrame,
+  TextCodeViewerToolbarFrame,
+  TextCodeViewerZoomControls,
+} from "./text-code-viewer-chrome"
+import { ViewerDownloadControl } from "./viewer-download"
 
 export function CodeViewerFrame({
   className,
@@ -19,16 +24,15 @@ export function CodeViewerFrame({
   children: React.ReactNode
 }) {
   return (
-    <div
-      className={cn(
-        "flex min-h-0 flex-col overflow-hidden",
-        bare ? "h-full bg-muted/20" : "rounded-xl border bg-muted/30",
-        className
-      )}
-      data-slot="code-viewer"
+    <TextCodeViewerFrame
+      bare={bare}
+      bareClassName="h-full bg-muted/20"
+      className={className}
+      dataSlot="code-viewer"
+      framedClassName="rounded-xl border bg-muted/30"
     >
       {children}
-    </div>
+    </TextCodeViewerFrame>
   )
 }
 
@@ -48,11 +52,11 @@ export function CodeViewerToolbar({
   onResetZoom: () => void
 }) {
   return (
-    <CodeViewerToolbarFrame
+    <TextCodeViewerToolbarFrame
       leading={`${lineCount} line${lineCount === 1 ? "" : "s"}`}
       trailing={
         <>
-          <CodeViewerZoomControls
+          <TextCodeViewerZoomControls
             fontScale={fontScale}
             onZoomOut={onZoomOut}
             onZoomIn={onZoomIn}
@@ -78,9 +82,9 @@ export function CodeViewerFallback({
   return (
     <CodeViewerFrame className={className} bare={bare}>
       {toolbar ? (
-        <CodeViewerToolbarFrame
+        <TextCodeViewerToolbarFrame
           leading={<Skeleton className="inline-block h-3 w-16 align-middle" />}
-          trailing={<CodeViewerZoomControls disabled fontScale={1} />}
+          trailing={<TextCodeViewerZoomControls disabled fontScale={1} />}
         />
       ) : null}
       <div
@@ -135,88 +139,5 @@ export function CodeViewerErrorState({
         </div>
       </div>
     </CodeViewerFrame>
-  )
-}
-
-function CodeViewerToolbarFrame({
-  leading,
-  trailing,
-}: {
-  leading: React.ReactNode
-  trailing: React.ReactNode
-}) {
-  return (
-    <div className="flex h-10 flex-shrink-0 items-center gap-1 border-b bg-card px-2">
-      <span className="px-1 text-xs text-muted-foreground tabular-nums">
-        {leading}
-      </span>
-      <div className="ml-auto flex items-center gap-1">{trailing}</div>
-    </div>
-  )
-}
-
-function CodeViewerZoomControls({
-  fontScale,
-  disabled = false,
-  onZoomOut,
-  onZoomIn,
-  onResetZoom,
-}: {
-  fontScale: number
-  disabled?: boolean
-  onZoomOut?: () => void
-  onZoomIn?: () => void
-  onResetZoom?: () => void
-}) {
-  const disabledProps = disabled
-    ? ({ disabled: true, tabIndex: -1, "aria-hidden": true } as const)
-    : {}
-
-  return (
-    <>
-      <IconButton
-        label="Zoom out"
-        onClick={disabled ? undefined : onZoomOut}
-        {...disabledProps}
-      >
-        <Minus />
-      </IconButton>
-      <span className="w-12 text-center text-xs text-muted-foreground tabular-nums">
-        {Math.round(fontScale * 100)}%
-      </span>
-      <IconButton
-        label="Zoom in"
-        onClick={disabled ? undefined : onZoomIn}
-        {...disabledProps}
-      >
-        <Plus />
-      </IconButton>
-      <IconButton
-        label="Reset zoom"
-        onClick={disabled ? undefined : onResetZoom}
-        {...disabledProps}
-      >
-        <Maximize />
-      </IconButton>
-    </>
-  )
-}
-
-function IconButton({
-  label,
-  children,
-  ...props
-}: React.ComponentProps<typeof Button> & { label: string }) {
-  return (
-    <Button
-      variant="ghost"
-      size="icon-sm"
-      className="size-7"
-      aria-label={label}
-      title={label}
-      {...props}
-    >
-      {children}
-    </Button>
   )
 }

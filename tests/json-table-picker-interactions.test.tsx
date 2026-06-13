@@ -59,6 +59,7 @@ async function activatePickerCell(
 describe("json table date and time picker interactions", () => {
   it("opens date pickers on first click with table-controlled overlay state", async () => {
     const view = renderInteractionRow({ visiblePaths: ["shipped_at"] })
+    const displayText = (await editableCell(view, "shipped_at")).textContent
 
     await activatePickerCell(view, "shipped_at")
 
@@ -70,6 +71,7 @@ describe("json table date and time picker interactions", () => {
     expect(trigger.getAttribute("aria-controls")).toBe(
       pickerPopup()?.getAttribute("id")
     )
+    expect(trigger.textContent).toBe(displayText)
   })
 
   it("closes date pickers on outside click and Escape without committing", async () => {
@@ -111,13 +113,13 @@ describe("json table date and time picker interactions", () => {
 
     await activatePickerCell(view, "shipped_at")
     expect(await view.findByRole("dialog")).toBeTruthy()
-    fireEvent.click(dayButton("6/15/2026"))
+    fireEvent.click(dayButton("1/15/2024"))
 
     await waitFor(() => {
       expect(onDocumentDataChange).toHaveBeenCalledWith(
         "doc_1",
         "shipped_at",
-        "2026-06-15"
+        "2024-01-15"
       )
     })
     expect(pickerPopup()).toBeNull()
@@ -155,13 +157,13 @@ describe("json table date and time picker interactions", () => {
 
     await activatePickerCell(view, "reviewed_at")
     expect(await view.findByRole("dialog")).toBeTruthy()
-    fireEvent.click(dayButton("6/15/2026"))
+    fireEvent.click(dayButton("1/15/2024"))
 
     await waitFor(() => {
       expect(onDocumentDataChange).toHaveBeenCalledWith(
         "doc_1",
         "reviewed_at",
-        "2026-06-15T09:30"
+        "2024-01-15T09:30"
       )
     })
     expect(pickerPopup()).toBeTruthy()

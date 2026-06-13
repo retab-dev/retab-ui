@@ -188,7 +188,7 @@ describe("XlsxSheetTabs", () => {
     const scroller = tablist.querySelector(
       '[data-slot="xlsx-viewer-tabs-scroll"]'
     )
-    const list = tablist.querySelector('[data-slot="xlsx-viewer-tabs-list"]')
+    const list = tablist.querySelector('[data-slot="xlsx-viewer-tabs-track"]')
 
     expect(tablist.getAttribute("data-overflowing")).toBe("true")
     expect(tablist.style.height).toBe("36px")
@@ -260,7 +260,7 @@ describe("XlsxSheetTabs", () => {
     expect(scrollTo).not.toHaveBeenCalled()
   })
 
-  it("reveals the active sheet with nearest-edge scroll math", () => {
+  it("reveals a far active sheet while preserving a clipped overflow sliver", () => {
     const { scrollTo } = mockSheetTabMetrics({
       clientWidth: 240,
       scrollWidth: 720,
@@ -288,12 +288,12 @@ describe("XlsxSheetTabs", () => {
     )
 
     expect(scrollTo).toHaveBeenLastCalledWith({
-      left: 346,
+      left: 352,
       behavior: "auto",
     })
   })
 
-  it("uses smooth nearest-edge reveal for nearby active sheets", () => {
+  it("uses smooth clipped-overflow reveal for nearby active sheets", () => {
     const { scrollTo } = mockSheetTabMetrics({
       clientWidth: 240,
       scrollWidth: 720,
@@ -321,8 +321,92 @@ describe("XlsxSheetTabs", () => {
     )
 
     expect(scrollTo).toHaveBeenLastCalledWith({
-      left: 58,
+      left: 64,
       behavior: "smooth",
+    })
+  })
+
+  it("uses the mobile clipped-overflow reveal size on narrow tab strips", () => {
+    const { scrollTo } = mockSheetTabMetrics({
+      clientWidth: 200,
+      scrollWidth: 720,
+      tabWidth: 96,
+    })
+    const sheets = Array.from({ length: 8 }, (_, index) =>
+      makeSheet(`Sheet ${index + 1}`)
+    )
+
+    const { rerender } = render(
+      <XlsxSheetTabs
+        sheets={sheets}
+        activeSheetIndex={0}
+        onSelectSheet={vi.fn()}
+      />
+    )
+
+    scrollTo.mockClear()
+    rerender(
+      <XlsxSheetTabs
+        sheets={sheets}
+        activeSheetIndex={2}
+        onSelectSheet={vi.fn()}
+      />
+    )
+
+    expect(scrollTo).toHaveBeenLastCalledWith({
+      left: 104,
+      behavior: "smooth",
+    })
+  })
+
+  it("clamps the first and last sheets to the native tab strip edges", () => {
+    const { scrollTo } = mockSheetTabMetrics({
+      clientWidth: 240,
+      scrollWidth: 720,
+      tabWidth: 96,
+    })
+    const sheets = Array.from({ length: 8 }, (_, index) =>
+      makeSheet(`Sheet ${index + 1}`)
+    )
+
+    const { rerender } = render(
+      <XlsxSheetTabs
+        sheets={sheets}
+        activeSheetIndex={0}
+        onSelectSheet={vi.fn()}
+      />
+    )
+    const scroller = screen
+      .getByRole("tablist", { name: "Workbook sheets" })
+      .querySelector(".overflow-x-auto") as HTMLElement
+
+    scrollTo.mockClear()
+    rerender(
+      <XlsxSheetTabs
+        sheets={sheets}
+        activeSheetIndex={7}
+        onSelectSheet={vi.fn()}
+      />
+    )
+
+    expect(scrollTo).toHaveBeenLastCalledWith({
+      left: 480,
+      behavior: "auto",
+    })
+
+    scroller.scrollLeft = 480
+    scrollTo.mockClear()
+    rerender(
+      <XlsxSheetTabs
+        sheets={sheets}
+        activeSheetIndex={0}
+        onSelectSheet={vi.fn()}
+      />
+    )
+
+    expect(scrollTo).toHaveBeenLastCalledWith({
+      left: 0,
+      behavior: "auto",
     })
   })
 
@@ -358,7 +442,7 @@ describe("XlsxSheetTabs", () => {
     )
 
     expect(scrollTo).toHaveBeenLastCalledWith({
-      left: 86,
+      left: 80,
       behavior: "smooth",
     })
   })
@@ -392,7 +476,7 @@ describe("XlsxSheetTabs", () => {
 
     expect(scrollTo).toHaveBeenLastCalledWith({
       left: 190,
-      behavior: "auto",
+      behavior: "smooth",
     })
   })
 

@@ -124,5 +124,10 @@ export function parseDateStringAsLocal(
   ) {
     return null
   }
-  return new Date(info.year, info.month, info.day)
+  const date = new Date(info.year, info.month, info.day)
+  return date.getFullYear() === info.year &&
+    date.getMonth() === info.month &&
+    date.getDate() === info.day
+    ? date
+    : null
 }

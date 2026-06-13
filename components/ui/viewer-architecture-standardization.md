@@ -199,7 +199,7 @@ The resource viewer should also be boring when the format has a single loaded do
 5. Clear or evict format caches on retry.
 6. Mount `FormatViewerContent`.
 
-This pattern is already clear in PDF, image, PPTX, text, DOCX, and XLSX. It should be made consistent and shared where it reduces duplication. CSV and file-level text previews should keep progressive state rather than pretending every load is a single Suspense resource.
+This pattern is already clear in PDF, image, PPTX, text, DOCX, and XLSX. It should be made consistent and shared where it reduces duplication. CSV should keep progressive state rather than pretending every load is a single Suspense resource.
 
 ## FileViewer Standard
 
@@ -210,13 +210,13 @@ This pattern is already clear in PDF, image, PPTX, text, DOCX, and XLSX. It shou
 3. Render a descriptor-aware fallback.
 4. Route by category and source kind.
 5. Lazy-load heavyweight standalone viewers.
-6. Use file-level preview adapters for text, markdown, html, and CSV.
+6. Use file-level preview adapters for markdown, html, and CSV.
 7. Use standalone `ResourceViewer` components for PDF, DOCX, image, PPTX, and XLSX when possible.
 
 The file-specific preview components are not substitutes for standalone viewers:
 
-- `file-viewer-text-viewer.tsx` is a progressive preview with range loading, JSON formatting, syntax highlighting, chunk loading, and optional style isolation.
-- `text-viewer.tsx` is a bounded whole-file source-link viewer where every line is addressable.
+- `text-viewer.tsx` owns prose text such as `.txt`.
+- `code-viewer.tsx` owns preformatted text such as code, JSON, and logs; syntax highlighting is optional.
 - `file-viewer-markdown-viewer.tsx` renders markdown through marked and DOMPurify into file chrome.
 - `file-viewer-html-viewer.tsx` renders sandboxed HTML in an iframe.
 - `file-viewer-csv-viewer.tsx` adapts the standalone CSV grid into file chrome.
@@ -387,10 +387,10 @@ text-viewer-line.tsx
 
 The top-level viewer should not own row virtualization and line rendering directly. It should compose a loaded content module the way image and PDF do.
 
-Do not merge it with `file-viewer-text-viewer.tsx`. They solve different problems:
+Do not grow a separate file-level text viewer. Text routing should stay binary:
 
-- Standalone `TextViewer`: bounded, source-linkable, whole-file line model.
-- File preview text viewer: progressive range loading, JSON syntax highlighting, chunk append, and file chrome.
+- Standalone `TextViewer`: prose text.
+- Standalone `CodeViewer`: code, JSON, logs, and other preformatted text.
 
 ### CSV
 

@@ -164,6 +164,22 @@ describe("DataCell", () => {
     expect(formatValue).toHaveBeenCalledWith(12.5, { kind: "number" })
   })
 
+  it("uses custom picker formatting with the draft value in edit mode", () => {
+    const formatValue = vi.fn((value) => `Date ${value}`)
+    render(
+      <DataCell
+        kind="date"
+        mode="edit"
+        value="2026-06-12"
+        draftValue="2026-06-13"
+        formatValue={formatValue}
+      />
+    )
+
+    expect(screen.getByText("Date 2026-06-13")).toBeTruthy()
+    expect(formatValue).toHaveBeenCalledWith("2026-06-13", { kind: "date" })
+  })
+
   it("forwards display props without leaking form-only props to the DOM", () => {
     render(
       <DataCell

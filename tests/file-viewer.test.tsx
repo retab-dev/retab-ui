@@ -6,27 +6,16 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { inferCsvDialect } from "@/lib/csv"
 import { createViewerResource } from "@/lib/viewer-resource"
-import {
-  ResourceError,
-  ViewerFormatError,
-  ViewerStateError,
-} from "@/registry/new-york-v4/lib/viewer-errors"
 import * as FileViewerModule from "@/registry/new-york-v4/ui/file-viewer"
 import { FileViewer } from "@/registry/new-york-v4/ui/file-viewer"
 import {
   descriptorResetKey,
   detectCategory,
+  isProseTextDescriptor,
   resolveFileDescriptor,
 } from "@/registry/new-york-v4/ui/file-viewer-core"
 import { createMarkdownHtmlCache } from "@/registry/new-york-v4/ui/file-viewer-markdown-viewer"
-import { toFileViewerTextError } from "@/registry/new-york-v4/ui/file-viewer-text-errors"
-import {
-  createTextLoader,
-  isSameTextView,
-  textKeyForContent,
-} from "@/registry/new-york-v4/ui/file-viewer-text-loader"
 import { createTextResourceCache } from "@/registry/new-york-v4/ui/file-viewer-text-resource"
-import { isAbortError } from "@/registry/new-york-v4/ui/viewer-abortable-request"
 
 const docxRouteMock = vi.hoisted(() => ({
   props: [] as Array<Record<string, unknown>>,
@@ -112,14 +101,12 @@ function blobFileSource(
   }
 }
 
-function textSubscription(url: string, mode: "stream" | "full" = "stream") {
+function textSubscription(url: string) {
   const controller = new AbortController()
   const resource = createViewerResource(urlSource(url))
   return {
-    textKey: textKeyForContent(resource.content, mode),
     content: resource.content,
     fileName: resource.fileName,
-    mode,
     signal: controller.signal,
     controller,
   }
@@ -204,25 +191,43 @@ describe("FileViewer detection helpers", () => {
     expect(createViewerResource(source).content.directUrl).toBeNull()
   })
 
-  it("separates text cache entries by loading mode", () => {
-    const resource = createViewerResource(urlSource("/same-url"))
-    expect(textKeyForContent(resource.content, "stream")).not.toBe(
-      textKeyForContent(resource.content, "full")
-    )
-  })
-
-  it("identifies stale text requests by request key", () => {
-    const oldKey = textKeyForContent(
-      createViewerResource(urlSource("/old.log")).content,
-      "stream"
-    )
-    const newKey = textKeyForContent(
-      createViewerResource(urlSource("/new.log")).content,
-      "stream"
-    )
-
-    expect(isSameTextView(oldKey, oldKey)).toBe(true)
-    expect(isSameTextView(newKey, oldKey)).toBe(false)
+  it("keeps prose as the only text subtype", () => {
+    expect(
+      isProseTextDescriptor(
+        resolveFileDescriptor({
+          source: urlSource("/notes.txt", "notes.txt", "text/plain"),
+        })
+      )
+    ).toBe(true)
+    expect(
+      isProseTextDescriptor(
+        resolveFileDescriptor({
+          source: urlSource("/events.log", "events.log", "text/plain"),
+        })
+      )
+    ).toBe(false)
+    expect(
+      isProseTextDescriptor(
+        resolveFileDescriptor({
+          source: urlSource("/download", "download", "application/json"),
+        })
+      )
+    ).toBe(false)
+    expect(
+      resolveFileDescriptor({
+        source: urlSource("/notes.txt", "notes.txt", "text/plain"),
+      }).category
+    ).toBe("text")
+    expect(
+      resolveFileDescriptor({
+        source: urlSource("/events.log", "events.log", "text/plain"),
+      }).category
+    ).toBe("text")
+    expect(
+      resolveFileDescriptor({
+        source: urlSource("/download", "download", "application/json"),
+      }).category
+    ).toBe("text")
   })
 
   it("resolves CSV and TSV dialects", () => {
@@ -327,131 +332,11 @@ describe("FileViewer detection helpers", () => {
       "registry/new-york-v4/ui/file-viewer-text-resource.ts",
       "utf8"
     )
-    const textLoaderSource = readFileSync(
-      "registry/new-york-v4/ui/file-viewer-text-loader.ts",
-      "utf8"
-    )
 
     expect(asyncSource).toContain("subscribeToAbortableRequest")
     expect(lruCacheSource).not.toContain("AbortController")
     expect(lruCacheSource).not.toContain("subscribeToAbortableRequest")
-    expect(textResourceSource).not.toContain("./file-viewer-text-loader")
     expect(textResourceSource).toContain("subscribeToAbortableRequest")
-    expect(textLoaderSource).toContain("subscribeToAbortableRequest")
-  })
-})
-
-describe("FileViewer text cache", () => {
-  it("evicts paired first-chunk and loader entries", async () => {
-    const cache = createTextLoader(1)
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(() => Promise.resolve(response("content\n", { status: 200 })))
-    )
-
-    const first = textSubscription("/first.log")
-    const second = textSubscription("/second.log")
-
-    await cache.loadFirstChunk(first)
-    expect(cache.snapshot(first.textKey)?.text).toBe("content\n")
-
-    await cache.loadFirstChunk(second)
-    expect(cache.snapshot(first.textKey)).toBeNull()
-    expect(cache.snapshot(second.textKey)?.text).toBe("content\n")
-  })
-
-  it("removes failed first-chunk requests so retry can work", async () => {
-    const cache = createTextLoader()
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(response("nope", { status: 500 }))
-      .mockResolvedValueOnce(response("ok\n", { status: 200 }))
-    vi.stubGlobal("fetch", fetchMock)
-
-    const request = textSubscription("/retry.log", "full")
-
-    await expect(cache.loadFirstChunk(request)).rejects.toThrow(
-      "Failed to load resource: 500"
-    )
-    expect(cache.size()).toBe(0)
-
-    await expect(
-      cache.loadFirstChunk(textSubscription("/retry.log", "full"))
-    ).resolves.toMatchObject({
-      text: "ok\n",
-      done: true,
-    })
-    expect(fetchMock).toHaveBeenCalledTimes(2)
-  })
-
-  it("uses byte counts, not UTF-16 string length, in full text mode", async () => {
-    const cache = createTextLoader()
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(() => Promise.resolve(response("é\n", { status: 200 })))
-    )
-
-    await expect(
-      cache.loadFirstChunk(textSubscription("/unicode.json", "full"))
-    ).resolves.toMatchObject({
-      text: "é\n",
-      bytesLoaded: 3,
-      totalBytes: 3,
-      done: true,
-    })
-  })
-
-  it("does not cache aborted first-chunk requests", async () => {
-    const cache = createTextLoader()
-    const pending = deferred<Response>()
-    let sharedFetchSignal: AbortSignal | undefined
-    vi.stubGlobal(
-      "fetch",
-      vi.fn((_src: string, init?: RequestInit) => {
-        sharedFetchSignal = init?.signal ?? undefined
-        sharedFetchSignal?.addEventListener("abort", () => {
-          pending.reject(new DOMException("Aborted", "AbortError"))
-        })
-        return pending.promise
-      })
-    )
-
-    const request = textSubscription("/abort.log")
-    const promise = cache.loadFirstChunk(request)
-    request.controller.abort()
-
-    await expect(promise).rejects.toMatchObject({ name: "AbortError" })
-    expect(isAbortError(new DOMException("Aborted", "AbortError"))).toBe(true)
-    expect(
-      isAbortError(new DOMException("Quota exceeded", "QuotaExceededError"))
-    ).toBe(false)
-    expect(sharedFetchSignal?.aborted).toBe(true)
-    expect(cache.size()).toBe(0)
-  })
-
-  it("does not abort a shared first chunk while another subscriber is active", async () => {
-    const cache = createTextLoader()
-    let fetchSignal: AbortSignal | undefined
-    const pending = deferred<Response>()
-    vi.stubGlobal(
-      "fetch",
-      vi.fn((_src: string, init?: RequestInit) => {
-        fetchSignal = init?.signal ?? undefined
-        return pending.promise
-      })
-    )
-
-    const first = textSubscription("/shared.log")
-    const second = textSubscription("/shared.log")
-    const firstPromise = cache.loadFirstChunk(first)
-    const secondPromise = cache.loadFirstChunk(second)
-
-    first.controller.abort()
-    await expect(firstPromise).rejects.toMatchObject({ name: "AbortError" })
-    expect(fetchSignal?.aborted).toBe(false)
-
-    pending.resolve(response("shared\n", { status: 200 }))
-    await expect(secondPromise).resolves.toMatchObject({ text: "shared\n" })
   })
 })
 
@@ -718,46 +603,6 @@ describe("FileViewer text rendering", () => {
     expect("source" in docxRouteMock.props[0]!).toBe(false)
   })
 
-  it("maps text route fallback failures through the FileViewer text boundary", () => {
-    const resourceError = new ResourceError({
-      kind: "fetch_failed",
-      message: "Network failed.",
-    })
-    const formatError = new ViewerFormatError({
-      format: "text",
-      kind: "bounds",
-      message: "Too large.",
-    })
-    const stateError = new ViewerStateError({
-      format: "file",
-      kind: "stale_resource",
-      message: "Stale.",
-    })
-
-    expect(toFileViewerTextError(resourceError)).toBe(resourceError)
-    expect(toFileViewerTextError(formatError)).toBe(formatError)
-    expect(toFileViewerTextError(stateError)).toBe(stateError)
-
-    const nonError = { reason: "loader returned a sentinel" }
-    const mappedNonError = toFileViewerTextError(nonError)
-    expect(mappedNonError).toBeInstanceOf(ViewerFormatError)
-    expect(mappedNonError).toMatchObject({
-      format: "text",
-      kind: "load_failed",
-      message: "Failed to load text preview.",
-      cause: nonError,
-    })
-
-    const genericError = new Error("plain loader failure")
-    const mappedGenericError = toFileViewerTextError(genericError)
-    expect(mappedGenericError).toBeInstanceOf(ViewerFormatError)
-    expect(mappedGenericError).toMatchObject({
-      format: "text",
-      kind: "load_failed",
-      cause: genericError,
-    })
-  })
-
   it("loads and renders text content under React StrictMode", async () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {})
     try {
@@ -778,7 +623,7 @@ describe("FileViewer text rendering", () => {
 
       expect(await screen.findByText("first log line")).toBeTruthy()
       expect(screen.getByText("second log line")).toBeTruthy()
-      expect(screen.getByText("2 lines")).toBeTruthy()
+      expect(screen.getByText("3 lines")).toBeTruthy()
     } finally {
       consoleError.mockRestore()
     }
@@ -799,6 +644,52 @@ describe("FileViewer text rendering", () => {
     expect(screen.getByText("second note")).toBeTruthy()
     expect(container.querySelector('[data-slot="text-viewer"]')).toBeTruthy()
     expect(container.querySelector("[data-line-number]")).toBeNull()
+  })
+
+  it("routes source-code text files through the standalone Code Viewer", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(response("export const answer = 42")))
+    )
+
+    const { container } = render(
+      <FileViewer source={urlSource("/use-answer.ts", "use-answer.ts")} />
+    )
+
+    await waitFor(() => {
+      expect(container.querySelector('[data-slot="code-viewer"]')).toBeTruthy()
+    })
+  })
+
+  it("routes logs through the standalone Code Viewer", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(response("first log line\nsecond log line")))
+    )
+
+    const { container } = render(
+      <FileViewer source={urlSource("/events.log", "events.log")} />
+    )
+
+    expect(await screen.findByText("first log line")).toBeTruthy()
+    expect(screen.getByText("second log line")).toBeTruthy()
+    expect(container.querySelector('[data-slot="code-viewer"]')).toBeTruthy()
+    expect(container.querySelector('[data-slot="text-viewer"]')).toBeNull()
+  })
+
+  it("routes JSON through the standalone Code Viewer", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(response('{"answer":42}')))
+    )
+
+    const { container } = render(
+      <FileViewer source={urlSource("/data.json", "data.json")} />
+    )
+
+    expect(await screen.findByText('{"answer":42}')).toBeTruthy()
+    expect(container.querySelector('[data-slot="code-viewer"]')).toBeTruthy()
+    expect(container.querySelector('[data-slot="text-viewer"]')).toBeNull()
   })
 
   it.each([
@@ -827,7 +718,7 @@ describe("FileViewer text rendering", () => {
     expect(screen.getByText(expectedMeta)).toBeTruthy()
   })
 
-  it("keeps the download action in the toolbar for long filenames", async () => {
+  it("keeps the download action in the code toolbar", async () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {})
     try {
       vi.stubGlobal(
@@ -835,19 +726,18 @@ describe("FileViewer text rendering", () => {
         vi.fn(() => Promise.resolve(response("content\n", { status: 200 })))
       )
 
-      const longName = "very-long-file-name-that-should-truncate-in-toolbar.log"
-      render(<FileViewer source={urlSource("/long-name.log", longName)} />)
-
-      expect((await screen.findByTitle(longName)).className).toContain(
-        "truncate"
+      render(
+        <FileViewer source={urlSource("/long-name.log", "long-name.log")} />
       )
+
+      await screen.findByText("content")
       expect(screen.getByRole("link", { name: "Download" })).toBeTruthy()
     } finally {
       consoleError.mockRestore()
     }
   })
 
-  it("aborts a pending first chunk when switching files", async () => {
+  it("keeps stale code loads from rendering after switching files", async () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {})
     try {
       const oldResponse = deferred<Response>()
@@ -864,10 +754,7 @@ describe("FileViewer text rendering", () => {
       await waitFor(() => expect(fetchMock).toHaveBeenCalled())
       rerender(<FileViewer source={urlSource("/new.log", "new.log")} />)
 
-      await screen.findByTitle("new.log")
-
-      const oldSignal = fetchMock.mock.calls[0]?.[1]?.signal
-      expect(oldSignal?.aborted).toBe(true)
+      await screen.findByText("new")
 
       oldResponse.resolve(response("old\n", { status: 200 }))
       await Promise.resolve()
@@ -878,7 +765,6 @@ describe("FileViewer text rendering", () => {
   })
 
   it.each([
-    { fileName: "old.md", nextFileName: "new.md", nextBody: "# New\n" },
     {
       fileName: "old.html",
       nextFileName: "new.html",
@@ -946,7 +832,7 @@ describe("FileViewer text rendering", () => {
 
       rerender(<FileViewer source={urlSource("/good.log", "good.log")} />)
 
-      expect(await screen.findByTitle("good.log")).toBeTruthy()
+      expect(await screen.findByText("good")).toBeTruthy()
       expect(screen.queryByText("Failed to load file: 500.")).toBeNull()
     } finally {
       consoleError.mockRestore()
@@ -969,6 +855,7 @@ describe("FileViewer text rendering", () => {
 
     expect(await screen.findByText("Inline note")).toBeTruthy()
     expect(screen.getByText("Body copy")).toBeTruthy()
+    expect(document.querySelector('[data-slot="text-viewer"]')).toBeTruthy()
     expect(screen.getByRole("button", { name: "Download" })).toBeTruthy()
   })
 
