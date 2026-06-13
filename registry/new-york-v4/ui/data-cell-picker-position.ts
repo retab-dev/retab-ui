@@ -1,5 +1,20 @@
 import type * as React from "react"
 
+export function getDataCellPickerPopupStyleFromAnchor({
+  anchor,
+  kind,
+}: {
+  anchor: HTMLElement
+  kind: "date" | "time" | "date-time"
+}): React.CSSProperties {
+  return getDataCellPickerPopupStyle({
+    kind,
+    rect: anchor.getBoundingClientRect(),
+    viewportWidth: window.innerWidth,
+    viewportHeight: window.innerHeight,
+  })
+}
+
 export function getDataCellPickerPopupStyle({
   kind,
   rect,

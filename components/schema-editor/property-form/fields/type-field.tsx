@@ -6,8 +6,6 @@ import {
 } from "@/components/schema-editor/primitives/schema-type-menu"
 import type { PropertyTypeFieldModel } from "@/components/schema-editor/property-form/types"
 
-import { createPropertyTypeMenu } from "./property-type-menu-model"
-
 export function TypeField({
   field,
   variant = "form",
@@ -15,20 +13,13 @@ export function TypeField({
   field: PropertyTypeFieldModel
   variant?: SchemaTypeMenuVariant
 }) {
-  const menu = createPropertyTypeMenu({
-    disabled: !field.editable,
-    schemaContext: field.schemaContext,
-    schemaNode: field.schemaNode,
-    onChange: field.onChange,
-  })
-
   return (
     <SchemaTypeMenu
-      ariaLabel={`Data type${field.fieldPath ? ` for ${field.fieldPath}` : ""}`}
+      ariaLabel={field.ariaLabel}
       editable={field.editable}
-      sections={menu.sections}
+      sections={field.sections}
       trailingContent={field.trailingContent}
-      value={menu.value}
+      value={field.value}
       variant={variant}
     />
   )

@@ -324,8 +324,8 @@ describe("property form models", () => {
       ["road", "draft-property-0"],
       ["city", "draft-property-1"],
     ])
-    expect(model?.rows[0]?.typeField.schemaContext.resetKey).toBe(
-      "address.draft-property-0"
+    expect(model?.rows[0]?.typeField.ariaLabel).toBe(
+      "Data type for address.draft-property-0"
     )
 
     act(() => {

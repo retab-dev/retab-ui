@@ -1087,10 +1087,19 @@ describe("Dropzone registry split", () => {
       "registry/new-york-v4/blocks/dropzone-file-viewer-example.tsx",
       "registry/new-york-v4/blocks/dropzone-trigger-examples.tsx",
       "registry/new-york-v4/blocks/dropzone-file-examples.tsx",
+      "registry/new-york-v4/blocks/dropzone-avatar-image-slot.tsx",
+      "registry/new-york-v4/blocks/dropzone-custom-thumbnail-grid.tsx",
+      "registry/new-york-v4/blocks/dropzone-evidence-timeline.tsx",
+      "registry/new-york-v4/blocks/dropzone-media-transcript-queue.tsx",
+      "registry/new-york-v4/blocks/dropzone-spreadsheet-import-card.tsx",
       "registry/new-york-v4/blocks/dropzone-uploader-viewer.tsx",
       "registry/new-york-v4/blocks/dropzone-uploader-viewer-parts.tsx",
       "registry/new-york-v4/ui/viewer.tsx",
       "registry/new-york-v4/blocks/dropzone-workflow-examples.tsx",
+      "registry/new-york-v4/blocks/dropzone-comparison-pair-upload.tsx",
+      "registry/new-york-v4/blocks/dropzone-intake-router.tsx",
+      "registry/new-york-v4/blocks/dropzone-pinboard-drop-surface.tsx",
+      "registry/new-york-v4/blocks/dropzone-required-packet-slots.tsx",
     ])
   })
 })

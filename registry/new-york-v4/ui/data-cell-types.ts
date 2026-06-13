@@ -59,7 +59,7 @@ type DataCellBaseProps<Kind extends DataCellKind, Value> = Omit<
   dateTimeZone?: DataCellDateTimeZone
   showPickerIcon?: boolean
   activationSource?: DataCellActivationSource
-  isPickerOpen?: boolean
+  open?: boolean
   formatValue?: (
     value: Value | undefined,
     meta: { kind: Kind }
@@ -69,7 +69,7 @@ type DataCellBaseProps<Kind extends DataCellKind, Value> = Omit<
   onDraftValueChange?: (value: string, meta: DataCellValueMeta) => void
   onEditingEnd?: () => void
   onActiveChange?: (active: boolean) => void
-  onPickerOpenChange?: (open: boolean) => void
+  onOpenChange?: (open: boolean) => void
   onEditorHandleChange?: (handle: DataCellEditorHandle | null) => void
 }
 

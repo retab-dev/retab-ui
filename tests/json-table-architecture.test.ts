@@ -690,6 +690,21 @@ describe("json table and DataCell architecture", () => {
     const pickerContent = readFileSync(join(repoRoot, pickerFile), "utf8")
     expect(pickerContent.includes("useDataCellOpeningContext")).toBe(true)
     expect(pickerContent.includes("DataCellDismissCause")).toBe(true)
+    expect(pickerContent.includes("getBoundingClientRect")).toBe(false)
+    expect(
+      pickerContent.includes("getDataCellPickerPopupStyleFromAnchor")
+    ).toBe(true)
+
+    const pickerPositionFile =
+      "registry/new-york-v4/ui/data-cell-picker-position.ts"
+    const pickerPositionContent = readFileSync(
+      join(repoRoot, pickerPositionFile),
+      "utf8"
+    )
+    expect(
+      pickerPositionContent.includes("getDataCellPickerPopupStyleFromAnchor")
+    ).toBe(true)
+    expect(pickerPositionContent.includes("getBoundingClientRect")).toBe(true)
   })
 
   it("keeps the generated DataCell registry artifact complete and clean", () => {

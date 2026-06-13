@@ -44,10 +44,10 @@ export const DataCellDisplay = React.forwardRef<HTMLElement, DataCellProps>(
       onCommit: _onCommit,
       selectOptions: _selectOptions,
       activationSource: _activationSource,
-      isPickerOpen: _isPickerOpen,
+      open: _open,
       onEditingEnd: _onEditingEnd,
       onActiveChange: _onActiveChange,
-      onPickerOpenChange: _onPickerOpenChange,
+      onOpenChange: _onOpenChange,
       onEditorHandleChange: _onEditorHandleChange,
       ...props
     },

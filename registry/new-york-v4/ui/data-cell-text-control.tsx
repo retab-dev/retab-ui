@@ -17,14 +17,53 @@ import {
 } from "@/registry/new-york-v4/ui/data-cell-text-hit-test"
 import type {
   DataCellActivationSource,
-  DataCellCommitHandler,
+  DataCellEditorHandle,
   DataCellKind,
-  DataCellProps,
+  DataCellValue,
+  DataCellValueMeta,
 } from "@/registry/new-york-v4/ui/data-cell-types"
 
-export type DataCellTextControlProps = DataCellProps & { kind: "text" }
-export type DataCellNumberControlProps = DataCellProps & {
-  kind: "number" | "integer"
+type DataCellInputNativeProps = Omit<
+  React.InputHTMLAttributes<HTMLInputElement>,
+  | "children"
+  | "className"
+  | "defaultValue"
+  | "disabled"
+  | "name"
+  | "onChange"
+  | "placeholder"
+  | "type"
+  | "value"
+>
+
+type DataCellInputControlBaseProps<Kind extends DataCellKind, Value> =
+  DataCellInputNativeProps & {
+    kind: Kind
+    value?: Value
+    disabled?: boolean
+    name?: string
+    placeholder?: string
+    className?: string
+    draftValue?: string
+    autoFocus?: boolean
+    activationSource?: DataCellActivationSource
+    onDraftValueChange?: (value: string, meta: DataCellValueMeta) => void
+    onEditingEnd?: () => void
+    onEditorHandleChange?: (handle: DataCellEditorHandle | null) => void
+  }
+
+export type DataCellTextControlProps = DataCellInputControlBaseProps<
+  "text",
+  string | null
+> & {
+  onCommit?: (value: string | null, meta: DataCellValueMeta) => void
+}
+
+export type DataCellNumberControlProps = DataCellInputControlBaseProps<
+  "number" | "integer",
+  number | string | null
+> & {
+  onCommit?: (value: number | null, meta: DataCellValueMeta) => void
 }
 
 export type DataCellInputControlProps =
@@ -97,7 +136,7 @@ function initialInputValueForActivation({
 }: {
   activationSource: DataCellActivationSource | undefined
   kind: DataCellKind
-  value: DataCellProps["value"]
+  value: DataCellValue
 }) {
   if (
     activationSource?.kind !== "keyboard" ||
@@ -118,25 +157,16 @@ function initialInputValueForActivation({
 export function DataCellInputControl({
   kind,
   value,
-  editable: _editable,
-  active: _active,
-  mode: _mode,
   disabled = false,
   name,
   placeholder,
-  dateTimeZone = "local",
-  showPickerIcon: _showPickerIcon,
   className,
-  formatValue: _formatValue,
   draftValue,
   autoFocus,
   activationSource,
-  isPickerOpen: _isPickerOpen,
   onDraftValueChange,
   onCommit,
   onEditingEnd,
-  onActiveChange: _onActiveChange,
-  onPickerOpenChange: _onPickerOpenChange,
   onEditorHandleChange,
   onFocus,
   onBlur,
@@ -196,13 +226,18 @@ export function DataCellInputControl({
       const rawValue = input?.value ?? lastInputValueRef.current
       if (onlyIfChanged && rawValue === initialInputValueRef.current) return
       if (markFinished) didFinishEditingRef.current = true
-      ;(onCommit as DataCellCommitHandler | undefined)?.(
-        parseDataCellInputValue({
+      const commitValue = parseDataCellInputValue({
           kind,
           value: rawValue,
-          dateTimeZone,
+          dateTimeZone: "local",
           previousValue: value,
-        }),
+        }) as string | number | null
+      ;(
+        onCommit as
+          | ((value: string | number | null, meta: DataCellValueMeta) => void)
+          | undefined
+      )?.(
+        commitValue,
         getDataCellValueMeta({
           kind,
           value: rawValue,
@@ -211,7 +246,7 @@ export function DataCellInputControl({
       )
       if (endEditing) onEditingEnd?.()
     },
-    [dateTimeZone, kind, onCommit, onEditingEnd, value]
+    [kind, onCommit, onEditingEnd, value]
   )
 
   const cancelCurrentInputValue = React.useCallback(() => {

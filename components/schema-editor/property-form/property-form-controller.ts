@@ -4,7 +4,7 @@ import * as React from "react"
 
 import { getEffectiveType } from "@/components/schema-editor/draft/draft-node-edits"
 import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
-import { createPropertyTypeField } from "@/components/schema-editor/property-form/fields/property-type-menu-model"
+import { createPropertyTypeFieldWithObjectTemplates } from "@/components/schema-editor/property-form/fields/property-object-template-type-field"
 import { resolvePropertyCapabilities } from "@/components/schema-editor/property-form/model/property-capabilities"
 import { createPropertySchemaDetails } from "@/components/schema-editor/property-form/model/property-schema-details"
 import { normalizeValidationForCapabilities } from "@/components/schema-editor/property-form/model/property-validation"
@@ -143,10 +143,10 @@ export function usePropertyFormController({
       objectProperties: capabilities.canEditNestedObject,
       type: capabilities.canEditType,
     },
-    disabled:
-      !capabilities.canEditEnumValues &&
-      !capabilities.canEditNestedObject &&
-      !capabilities.canEditArrayItems,
+    editable:
+      capabilities.canEditEnumValues ||
+      capabilities.canEditNestedObject ||
+      capabilities.canEditArrayItems,
     showTypeSelector: false,
     onChange: (schemaNode) =>
       updatePropertyDraft({
@@ -154,6 +154,10 @@ export function usePropertyFormController({
         schemaNode,
       }),
   })
+  const hasSchemaDetails =
+    schemaDetails.enumValues ||
+    schemaDetails.objectProperties ||
+    schemaDetails.arrayItems
   const { description } = propertyDraft.schemaNode
 
   return {
@@ -170,10 +174,10 @@ export function usePropertyFormController({
             name,
           }),
       },
-      type: createPropertyTypeField({
+      type: createPropertyTypeFieldWithObjectTemplates({
         schemaNode: propertyDraft.schemaNode,
         schemaContext,
-        disabled: !capabilities.canEditType,
+        editable: capabilities.canEditType,
         onChange: (schemaNode: ExtendedJSONSchema7) =>
           updatePropertyDraft({
             type: "replacePropertySchemaNode",
@@ -198,9 +202,7 @@ export function usePropertyFormController({
             description,
           }),
       },
-      enumValues: schemaDetails.enumValues,
-      objectProperties: schemaDetails.objectProperties,
-      arrayItems: schemaDetails.arrayItems,
+      schemaDetails: hasSchemaDetails ? schemaDetails : undefined,
     },
     footer: {
       canDelete: capabilities.canDelete,

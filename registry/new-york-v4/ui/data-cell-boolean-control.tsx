@@ -9,15 +9,48 @@ import {
   dataCellCheckboxDisplayClass,
 } from "@/registry/new-york-v4/ui/data-cell-classes"
 import type {
-  DataCellCommitHandler,
-  DataCellProps,
+  DataCellEditorHandle,
+  DataCellValueMeta,
 } from "@/registry/new-york-v4/ui/data-cell-types"
 
-export type DataCellBooleanControlProps = DataCellProps & { kind: "boolean" }
+type DataCellBooleanRootProps = Omit<
+  React.HTMLAttributes<HTMLDivElement>,
+  | "children"
+  | "className"
+  | "defaultValue"
+  | "id"
+  | "onBlur"
+  | "onChange"
+  | "onClick"
+  | "onDoubleClick"
+  | "onFocus"
+  | "onKeyDown"
+>
+
+export type DataCellBooleanControlProps = DataCellBooleanRootProps & {
+  kind: "boolean"
+  value?: boolean | null
+  disabled?: boolean
+  name?: string
+  className?: string
+  autoFocus?: boolean
+  id?: string
+  "aria-label"?: string
+  "aria-describedby"?: string
+  "aria-invalid"?: boolean | "false" | "true" | "grammar" | "spelling"
+  onCommit?: (value: boolean, meta: DataCellValueMeta) => void
+  onEditingEnd?: () => void
+  onEditorHandleChange?: (handle: DataCellEditorHandle | null) => void
+  onFocus?: React.FocusEventHandler<HTMLButtonElement>
+  onBlur?: React.FocusEventHandler<HTMLButtonElement>
+  onKeyDown?: React.KeyboardEventHandler<HTMLButtonElement>
+  onClick?: React.MouseEventHandler<HTMLButtonElement>
+  onDoubleClick?: React.MouseEventHandler<HTMLButtonElement>
+}
 
 export function commitDataCellBooleanToggle(
   value: DataCellBooleanControlProps["value"],
-  onCommit: DataCellCommitHandler | undefined
+  onCommit: DataCellBooleanControlProps["onCommit"]
 ) {
   const nextValue = !Boolean(value)
   onCommit?.(nextValue, {
@@ -49,25 +82,12 @@ export function DataCellBooleanIndicator({ checked }: { checked: boolean }) {
 export function DataCellBooleanControl({
   kind,
   value,
-  editable: _editable,
-  active: _active,
-  mode: _mode,
   disabled = false,
   name,
   className,
-  formatValue: _formatValue,
-  draftValue: _draftValue,
-  placeholder: _placeholder,
-  dateTimeZone: _dateTimeZone,
-  showPickerIcon: _showPickerIcon,
-  activationSource: _activationSource,
-  isPickerOpen: _isPickerOpen,
   autoFocus,
-  onDraftValueChange: _onDraftValueChange,
   onCommit,
   onEditingEnd,
-  onActiveChange: _onActiveChange,
-  onPickerOpenChange: _onPickerOpenChange,
   onEditorHandleChange,
   onFocus,
   onBlur,
@@ -124,10 +144,7 @@ export function DataCellBooleanControl({
         onClick={(event) => {
           event.stopPropagation()
           if (disabled) return
-          commitDataCellBooleanToggle(
-            value,
-            onCommit as DataCellCommitHandler | undefined
-          )
+          commitDataCellBooleanToggle(value, onCommit)
           onClick?.(event)
         }}
         onFocus={onFocus}

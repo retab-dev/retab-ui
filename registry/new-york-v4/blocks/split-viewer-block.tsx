@@ -2,7 +2,10 @@
 
 import { PdfViewer } from "@/components/ui/pdf-viewer"
 import type { SplitView } from "@/components/viewers/lib/split-types"
-import { SplitViewer } from "@/components/viewers/split/split-viewer"
+import {
+  SplitViewer,
+  useSplitViewerDocumentControls,
+} from "@/components/viewers/split/split-viewer"
 
 const PDF_URL = "/samples/an-image-is-worth-16x16-words.pdf"
 
@@ -20,29 +23,34 @@ const SPLIT_RESULT: SplitView = {
 
 /**
  * Split viewer block — the file + sidebar + legend system over a split result.
- * `SplitViewer` owns the legend and page rail; the document renderer only
- * receives page and scroll handlers.
+ * `SplitViewer` owns the legend and page rail; the document child reads page
+ * and scroll controls from the split provider.
  */
 export function SplitViewerBlock() {
   return (
     <div className="flex h-full min-h-[680px] flex-col bg-background">
-      <SplitViewer
-        result={SPLIT_RESULT}
-        renderDocument={(handlers) => (
-          <PdfViewer
-            ref={handlers.setViewerHandle}
-            source={{
-              kind: "url",
-              url: PDF_URL,
-              fileName: "an-image-is-worth-16x16-words.pdf",
-            }}
-            bare
-            onVisiblePageChange={handlers.onCurrentPageChange}
-            onScrollProgressChange={handlers.onScrollProgressChange}
-            className="h-full"
-          />
-        )}
-      />
+      <SplitViewer result={SPLIT_RESULT}>
+        <SplitViewerPdfDocument />
+      </SplitViewer>
     </div>
+  )
+}
+
+function SplitViewerPdfDocument() {
+  const controls = useSplitViewerDocumentControls()
+
+  return (
+    <PdfViewer
+      ref={controls.setViewerHandle}
+      source={{
+        kind: "url",
+        url: PDF_URL,
+        fileName: "an-image-is-worth-16x16-words.pdf",
+      }}
+      bare
+      onVisiblePageChange={controls.onCurrentPageChange}
+      onScrollProgressChange={controls.onScrollProgressChange}
+      className="h-full"
+    />
   )
 }

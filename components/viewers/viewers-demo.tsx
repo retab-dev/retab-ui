@@ -15,7 +15,10 @@ import editSample from "@/components/viewers/sample-data/edit.json"
 import parseSample from "@/components/viewers/sample-data/parse.json"
 import partitionSample from "@/components/viewers/sample-data/partition.json"
 import splitSample from "@/components/viewers/sample-data/split.json"
-import { SplitViewer } from "@/components/viewers/split/split-viewer"
+import {
+  SplitViewer,
+  useSplitViewerDocumentControls,
+} from "@/components/viewers/split/split-viewer"
 import { ExtractViewerBlock } from "@/registry/new-york-v4/blocks/extract-viewer-block"
 import { JsonFormSourcesBlock } from "@/registry/new-york-v4/blocks/json-form-sources-block"
 
@@ -177,24 +180,29 @@ export function SplitViewerDemo() {
       className="not-prose flex flex-col overflow-hidden rounded-xl border"
       style={{ height: 640 }}
     >
-      <SplitViewer
-        result={splitResult}
-        renderDocument={(handlers) => (
-          <PdfViewer
-            ref={handlers.setViewerHandle}
-            source={{
-              kind: "url",
-              url: SPLIT_PDF_URL,
-              fileName: "harris_2023_federal_state_returns.pdf",
-            }}
-            bare
-            onVisiblePageChange={handlers.onCurrentPageChange}
-            onScrollProgressChange={handlers.onScrollProgressChange}
-            className="h-full"
-          />
-        )}
-      />
+      <SplitViewer result={splitResult}>
+        <SplitViewerDemoDocument />
+      </SplitViewer>
     </div>
+  )
+}
+
+function SplitViewerDemoDocument() {
+  const controls = useSplitViewerDocumentControls()
+
+  return (
+    <PdfViewer
+      ref={controls.setViewerHandle}
+      source={{
+        kind: "url",
+        url: SPLIT_PDF_URL,
+        fileName: "harris_2023_federal_state_returns.pdf",
+      }}
+      bare
+      onVisiblePageChange={controls.onCurrentPageChange}
+      onScrollProgressChange={controls.onScrollProgressChange}
+      className="h-full"
+    />
   )
 }
 

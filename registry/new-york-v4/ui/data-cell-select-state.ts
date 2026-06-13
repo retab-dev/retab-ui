@@ -39,21 +39,21 @@ export function useDataCellSelectState({
   value,
   placeholder = "Select...",
   formatValue,
-  isPickerOpen,
+  open: controlledOpen,
   selectOptions,
   onCommit,
   onEditingEnd,
-  onPickerOpenChange,
+  onOpenChange,
 }: {
   popupId: string
   value?: string | null
   placeholder?: string
   formatValue?: DataCellSelectFormatValue
-  isPickerOpen?: boolean
+  open?: boolean
   selectOptions: DataCellSelectOption[]
   onCommit?: (value: string | null, meta: DataCellValueMeta) => void
   onEditingEnd?: () => void
-  onPickerOpenChange?: (open: boolean) => void
+  onOpenChange?: (open: boolean) => void
 }): DataCellSelectState {
   const [uncontrolledOpen, setUncontrolledOpen] = React.useState(false)
   const [activeOptionIndex, setActiveOptionIndex] = React.useState(-1)
@@ -65,7 +65,7 @@ export function useDataCellSelectState({
   const lastCommittedValueRef = React.useRef<string | null>(null)
   const didFinishEditingRef = React.useRef(false)
 
-  const open = isPickerOpen ?? uncontrolledOpen
+  const open = controlledOpen ?? uncontrolledOpen
   const selectedValue = value ?? null
   const selectedOption = selectOptions.find((option) => option.value === value)
   const activeOption = selectOptions[activeOptionIndex]
@@ -85,16 +85,16 @@ export function useDataCellSelectState({
         popupPositionRef.current = null
         setPopupPosition(null)
       }
-      if (isPickerOpen === undefined) setUncontrolledOpen(nextOpen)
-      onPickerOpenChange?.(nextOpen)
+      if (controlledOpen === undefined) setUncontrolledOpen(nextOpen)
+      onOpenChange?.(nextOpen)
     },
-    [isPickerOpen, onPickerOpenChange]
+    [controlledOpen, onOpenChange]
   )
 
   const keepOpen = React.useCallback(() => {
-    if (isPickerOpen === undefined) setUncontrolledOpen(true)
-    onPickerOpenChange?.(true)
-  }, [isPickerOpen, onPickerOpenChange])
+    if (controlledOpen === undefined) setUncontrolledOpen(true)
+    onOpenChange?.(true)
+  }, [controlledOpen, onOpenChange])
 
   const finishEditing = React.useCallback(() => {
     if (didFinishEditingRef.current) return

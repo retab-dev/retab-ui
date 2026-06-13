@@ -35,7 +35,6 @@ import {
 } from "@/lib/segments"
 import { PageRibbon } from "@/components/ui/page-ribbon"
 import { PageTimeline } from "@/components/ui/page-timeline"
-import type { PdfViewerHandle } from "@/components/ui/pdf-viewer"
 import { SegmentLegend } from "@/components/ui/segment-legend"
 import { SegmentSidebar } from "@/components/ui/segment-sidebar"
 import { SegmentedDocumentViewer } from "@/components/ui/segmented-document-viewer"
@@ -44,7 +43,10 @@ import {
   useSegmentInteraction,
 } from "@/components/ui/use-segment-interaction"
 import { PartitionViewer } from "@/components/viewers/partition/partition-viewer"
-import { SplitViewer } from "@/components/viewers/split/split-viewer"
+import {
+  SplitViewer,
+  useSplitViewerDocumentControls,
+} from "@/components/viewers/split/split-viewer"
 import { useSegmentViewportController } from "@/components/viewers/split/use-segment-viewport-controller"
 
 vi.mock("@/components/ui/pdf-viewer", () => ({
@@ -1798,10 +1800,9 @@ describe("segment viewport controller", () => {
 describe("split segment composition", () => {
   it("gives the rendered document pane the full flex width", () => {
     render(
-      <SplitViewer
-        result={{ output: [{ name: "Invoices", pages: [1] }] }}
-        renderDocument={() => <div data-testid="split-document-pane" />}
-      />
+      <SplitViewer result={{ output: [{ name: "Invoices", pages: [1] }] }}>
+        <div data-testid="split-document-pane" />
+      </SplitViewer>
     )
 
     const wrapperClassName =
@@ -1818,11 +1819,9 @@ describe("split segment composition", () => {
   it("jumps through the PDF viewer handle when a legend segment page is virtualized", () => {
     const scrollToPage = vi.fn()
 
-    function DocumentWithHandle({
-      setViewerHandle,
-    }: {
-      setViewerHandle: (handle: PdfViewerHandle | null) => void
-    }) {
+    function DocumentWithHandle() {
+      const { setViewerHandle } = useSplitViewerDocumentControls()
+
       React.useEffect(() => {
         setViewerHandle({
           scrollToPage,
@@ -1836,12 +1835,9 @@ describe("split segment composition", () => {
     }
 
     render(
-      <SplitViewer
-        result={{ output: [{ name: "Invoices", pages: [5] }] }}
-        renderDocument={({ setViewerHandle }) => (
-          <DocumentWithHandle setViewerHandle={setViewerHandle} />
-        )}
-      />
+      <SplitViewer result={{ output: [{ name: "Invoices", pages: [5] }] }}>
+        <DocumentWithHandle />
+      </SplitViewer>
     )
 
     fireEvent.click(screen.getByRole("button", { name: "Invoices" }))
@@ -1850,13 +1846,10 @@ describe("split segment composition", () => {
   })
 
   it("clears clicked category previewing when scrolling outside its pages", () => {
-    function DocumentHarness({
-      onCurrentPageChange,
-      setViewerHandle,
-    }: {
-      onCurrentPageChange: (page: number) => void
-      setViewerHandle: (handle: PdfViewerHandle | null) => void
-    }) {
+    function DocumentHarness() {
+      const { onCurrentPageChange, setViewerHandle } =
+        useSplitViewerDocumentControls()
+
       React.useEffect(() => {
         setViewerHandle({
           scrollToPage: (page) => onCurrentPageChange(page),
@@ -1883,13 +1876,9 @@ describe("split segment composition", () => {
             { name: "Results", pages: [7, 8, 9] },
           ],
         }}
-        renderDocument={({ onCurrentPageChange, setViewerHandle }) => (
-          <DocumentHarness
-            onCurrentPageChange={onCurrentPageChange}
-            setViewerHandle={setViewerHandle}
-          />
-        )}
-      />
+      >
+        <DocumentHarness />
+      </SplitViewer>
     )
 
     fireEvent.click(screen.getByRole("button", { name: "Results" }))

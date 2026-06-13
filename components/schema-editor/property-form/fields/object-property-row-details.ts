@@ -27,7 +27,7 @@ export function createObjectPropertyRowDetails({
     schemaContext,
     mode,
     access,
-    disabled: !editable,
+    editable,
     showTypeSelector: false,
     onChange,
   })

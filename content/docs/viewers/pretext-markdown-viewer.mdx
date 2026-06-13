@@ -81,6 +81,7 @@ remain stable while the Pretext path iterates toward feature completeness.
 - Heading IDs support duplicate suffixes and local `#fragment` links scroll through the virtual document model.
 - Links and images use the same safe URL policy as the Markdown Document Viewer; unsafe links become text and unsafe images become accessible placeholders.
 - Safe raw HTML is parsed through `rehype-raw` and narrowed by a local `rehype-sanitize` schema; unsafe tags and attributes are removed before React rendering.
+- Markdown language policy, URL policy, alert/callout transforms, restricted component parsing, prose transforms, and the sanitizer schema live in the dedicated `pretext-markdown-policy` module.
 - Common typography and emoji shortcode transforms apply to normal prose text while inline code stays literal.
 - GFM autolink literals, strikethrough, soft line breaks, and task-list checkboxes render through explicit Pretext Markdown components.
 - Restricted component markdown supports `<Metric label="Accuracy" value="98%" />` and `<Badge label="Stable" tone="success" />`; unknown JSX-like syntax renders as inert `mdx` code.

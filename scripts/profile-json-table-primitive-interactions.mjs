@@ -282,6 +282,16 @@ async function resetProfiler(send) {
   )
 }
 
+async function resetRectProbeCounts(send) {
+  await evaluate(
+    send,
+    `(() => {
+      window.__jsonTableRectProbe.count = 0;
+      window.__jsonTableRectProbe.bySlot = {};
+    })()`
+  )
+}
+
 async function restoreRectProbe(send) {
   await evaluate(
     send,
@@ -425,16 +435,38 @@ async function runProfileTarget(chromeEndpoint, targetConfig) {
 
     const scenarios = []
     const enumPoint = await editableCellPoint(send, enumFieldPath)
+    const checkboxPoint = await firstVisibleCellPoint(
+      send,
+      '[data-field-path="transactions.0.is_reconciled"] [data-kind="boolean"][data-mode="display"]'
+    )
+    const datePoint = await firstVisibleCellPoint(
+      send,
+      '[data-kind="date"][data-mode="display"]'
+    )
+    if (!checkboxPoint) throw new Error("No checkbox cell found")
+    if (!datePoint) throw new Error("No date cell found")
+
+    scenarios.push(
+      await runScenario(
+        send,
+        "hover-enum",
+        async () => {
+          await send("Input.dispatchMouseEvent", {
+            type: "mouseMoved",
+            x: enumPoint.x,
+            y: enumPoint.y,
+            button: "none",
+          })
+        },
+        "true"
+      )
+    )
 
     scenarios.push(
       await runScenario(
         send,
         "open-enum",
         async () => {
-          await evaluate(
-            send,
-            `window.__jsonTableRectProbe.count = 0; window.__jsonTableRectProbe.bySlot = {};`
-          )
           await clickPoint(send, enumPoint)
         },
         `Boolean(document.querySelector('[data-slot="data-cell-select-popup"] [role="option"]'))`
@@ -460,7 +492,9 @@ async function runProfileTarget(chromeEndpoint, targetConfig) {
             `Boolean(document.querySelector('[data-slot="data-cell-select-popup"] [role="option"]'))`,
             3_000
           )
-          await clickPoint(send, await selectCommitOptionPoint(send))
+          const optionPoint = await selectCommitOptionPoint(send)
+          await resetRectProbeCounts(send)
+          await clickPoint(send, optionPoint)
         },
         `!document.querySelector('[data-slot="data-cell-select-popup"]')`
       )
@@ -471,12 +505,7 @@ async function runProfileTarget(chromeEndpoint, targetConfig) {
         send,
         "toggle-checkbox",
         async () => {
-          const point = await firstVisibleCellPoint(
-            send,
-            '[data-field-path="transactions.0.is_reconciled"] [data-kind="boolean"][data-mode="display"]'
-          )
-          if (!point) throw new Error("No checkbox cell found")
-          await clickPoint(send, point)
+          await clickPoint(send, checkboxPoint)
         },
         `document.querySelector('[data-field-path="transactions.0.is_reconciled"] [data-kind="boolean"][data-mode="display"]')`
       )
@@ -487,12 +516,7 @@ async function runProfileTarget(chromeEndpoint, targetConfig) {
         send,
         "open-date-picker",
         async () => {
-          const point = await firstVisibleCellPoint(
-            send,
-            '[data-kind="date"][data-mode="display"]'
-          )
-          if (!point) throw new Error("No date cell found")
-          await clickPoint(send, point)
+          await clickPoint(send, datePoint)
         },
         `Boolean(document.querySelector('[data-slot="calendar"]'))`
       )
@@ -560,6 +584,9 @@ function assertReport(report) {
 }
 
 function assertProfile(profile) {
+  const hover = profile.scenarios.find(
+    (scenario) => scenario.name === "hover-enum"
+  )
   const open = profile.scenarios.find(
     (scenario) => scenario.name === "open-enum"
   )
@@ -574,12 +601,19 @@ function assertProfile(profile) {
   )
   const label = `${profile.name}: `
 
+  assertScenario(hover?.wait.ok, `${label}hover-enum did not complete`)
+  assertScenario(
+    hover.rectProbe.count === 0,
+    `${label}hover-enum expected 0 rect reads, got ${hover.rectProbe.count}`
+  )
+  assertNoTableOrRowRender(hover)
+
   assertScenario(open?.wait.ok, `${label}open-enum did not complete`)
   assertScenario(open.popupMounted, `${label}open-enum did not mount select popup`)
   assertScenario(!open.baseUiSelectMounted, `${label}open-enum mounted Base UI select`)
   assertScenario(
-    open.rectProbe.count <= 1,
-    `${label}open-enum expected <= 1 rect read, got ${open.rectProbe.count}`
+    open.rectProbe.count === 1,
+    `${label}open-enum expected exactly 1 rect read, got ${open.rectProbe.count}`
   )
   assertOnlyTargetEditableCellRendered(open, enumFieldPath)
   assertNoTableOrRowRender(open)
@@ -590,6 +624,10 @@ function assertProfile(profile) {
     !commit.baseUiSelectMounted,
     `${label}open-and-commit-enum mounted Base UI select`
   )
+  assertScenario(
+    commit.rectProbe.count === 0,
+    `${label}open-and-commit-enum expected 0 commit rect reads, got ${commit.rectProbe.count}`
+  )
   assertOnlyTargetEditableCellRendered(commit, enumFieldPath)
 
   assertScenario(checkbox?.wait.ok, `${label}toggle-checkbox did not complete`)
@@ -599,8 +637,12 @@ function assertProfile(profile) {
   assertScenario(date.pickerPopupMounted, `${label}open-date-picker did not mount picker popup`)
   assertScenario(date.calendarMounted, `${label}open-date-picker did not mount calendar`)
   assertScenario(
-    (date.rectProbe.bySlot["data-cell"] ?? 0) <= 1,
-    `${label}open-date-picker expected <= 1 data-cell rect read, got ${
+    date.rectProbe.count === 1,
+    `${label}open-date-picker expected exactly 1 rect read, got ${date.rectProbe.count}`
+  )
+  assertScenario(
+    (date.rectProbe.bySlot["data-cell"] ?? 0) === 1,
+    `${label}open-date-picker expected exactly 1 data-cell rect read, got ${
       date.rectProbe.bySlot["data-cell"] ?? 0
     }`
   )

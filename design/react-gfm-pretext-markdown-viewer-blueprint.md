@@ -366,6 +366,11 @@ Rules:
 
 Owns Markdown language policy.
 
+In the Pretext implementation this starts as `pretext-markdown-policy.ts`,
+which owns plugin order, sanitizer schema, URL policy, GitHub alert transforms,
+directive callout transforms, restricted component parsing, and prose transforms
+until the surface is stable enough to split further.
+
 Order:
 
 ```text

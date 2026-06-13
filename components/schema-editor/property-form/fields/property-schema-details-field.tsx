@@ -34,7 +34,7 @@ export function PropertySchemaDetailsField({
       )}
       {arrayItems && (
         <ArrayItemsField>
-          <PropertySchemaDetailsField details={arrayItems.itemDetails} />
+          <PropertySchemaDetailsField details={arrayItems.itemSchemaDetails} />
         </ArrayItemsField>
       )}
     </div>

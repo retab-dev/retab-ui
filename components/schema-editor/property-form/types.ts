@@ -2,7 +2,11 @@ import type * as React from "react"
 import type { JSONSchema7Definition, JSONSchema7Type } from "json-schema"
 
 import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
-import type { SchemaTypeMenuTrailingContent } from "@/components/schema-editor/primitives/schema-type-menu"
+import type {
+  SchemaTypeMenuSection,
+  SchemaTypeMenuTrailingContent,
+  SchemaTypeMenuValue,
+} from "@/components/schema-editor/primitives/schema-type-menu"
 
 export type PropertyFormMode = "descriptionOnly" | "readOnly" | "editable"
 
@@ -85,12 +89,11 @@ export interface PropertyFormFooterModel {
 }
 
 export interface PropertyTypeFieldModel {
-  schemaNode: ExtendedJSONSchema7
-  schemaContext: PropertyFormSchemaContext
-  fieldPath?: string
+  ariaLabel: string
   editable: boolean
+  sections: SchemaTypeMenuSection[]
   trailingContent?: SchemaTypeMenuTrailingContent
-  onChange: (schemaNode: ExtendedJSONSchema7) => void
+  value: SchemaTypeMenuValue
 }
 
 export interface PropertyEnumValuesFieldModel {
@@ -117,7 +120,7 @@ export interface PropertyObjectPropertiesFieldModel {
 }
 
 export interface PropertyArrayItemsFieldModel {
-  itemDetails: PropertySchemaDetailsModel
+  itemSchemaDetails: PropertySchemaDetailsModel
 }
 
 export interface PropertySchemaDetailsModel {
@@ -148,9 +151,7 @@ export interface PropertyFormViewModel {
       disabled: boolean
       onChange: (description: string) => void
     }
-    enumValues?: PropertyEnumValuesFieldModel
-    objectProperties?: PropertyObjectPropertiesFieldModel
-    arrayItems?: PropertyArrayItemsFieldModel
+    schemaDetails?: PropertySchemaDetailsModel
   }
   footer: PropertyFormFooterModel
   events: {

@@ -18,13 +18,6 @@ export function PropertyFormShell({
 }) {
   const { fields, footer, capabilities, events, validation } = viewModel
   const isReadOnly = capabilities.mode === "readOnly"
-  const hasSchemaDetails =
-    fields.enumValues || fields.objectProperties || fields.arrayItems
-  const schemaDetails = {
-    enumValues: fields.enumValues,
-    objectProperties: fields.objectProperties,
-    arrayItems: fields.arrayItems,
-  }
 
   return (
     <form
@@ -57,8 +50,8 @@ export function PropertyFormShell({
             )}
           </div>
 
-          {hasSchemaDetails && (
-            <PropertySchemaDetailsField details={schemaDetails} />
+          {fields.schemaDetails && (
+            <PropertySchemaDetailsField details={fields.schemaDetails} />
           )}
         </div>
         <div className="space-y-4 p-4">

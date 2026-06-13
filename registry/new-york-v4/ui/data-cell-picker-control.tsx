@@ -22,7 +22,7 @@ import {
   pickerValueWithTime,
   timeFromPickerValue,
 } from "@/registry/new-york-v4/ui/data-cell-format"
-import { getDataCellPickerPopupStyle } from "@/registry/new-york-v4/ui/data-cell-picker-position"
+import { getDataCellPickerPopupStyleFromAnchor } from "@/registry/new-york-v4/ui/data-cell-picker-position"
 import type {
   DataCellCommitHandler,
   DataCellDateTimeZone,
@@ -141,11 +141,9 @@ export function DataCellPickerControl({
     const trigger = triggerRef.current
     if (!trigger) return null
 
-    return getDataCellPickerPopupStyle({
+    return getDataCellPickerPopupStyleFromAnchor({
+      anchor: trigger,
       kind,
-      rect: trigger.getBoundingClientRect(),
-      viewportWidth: window.innerWidth,
-      viewportHeight: window.innerHeight,
     })
   }, [kind])
 

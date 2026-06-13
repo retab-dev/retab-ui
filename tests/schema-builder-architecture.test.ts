@@ -31,6 +31,7 @@ const deletedFiles = [
   "components/schema-editor/document-property-reorder.ts",
   "components/schema-editor/property-form/fields/object-property-order-focus.ts",
   "components/schema-editor/property-form/fields/object-property-rows.tsx",
+  "components/schema-editor/property-form/fields/property-type-menu-model.ts",
 ]
 
 const executableFilesToCheck = [
@@ -81,7 +82,8 @@ const executableFilesToCheck = [
   "components/schema-editor/property-form/fields/property-schema-details-field.tsx",
   "components/schema-editor/property-form/model/property-schema-details.ts",
   "components/schema-editor/property-form/model/object-property-edits.ts",
-  "components/schema-editor/property-form/fields/property-type-menu-model.ts",
+  "components/schema-editor/property-form/fields/property-type-field-model.ts",
+  "components/schema-editor/property-form/fields/property-object-template-type-field.tsx",
   "components/schema-editor/property-form/fields/object-properties-drag.ts",
   "components/schema-editor/property-form/fields/object-property-row-details.ts",
   "components/schema-editor/primitives/schema-row-reorder-actions.tsx",
@@ -177,6 +179,48 @@ function interfaceProperties({
       for (const member of node.members) {
         if (ts.isPropertySignature(member) && member.name) {
           propertyNames.push(member.name.getText(sourceFile))
+        }
+      }
+    }
+    ts.forEachChild(node, visit)
+  })
+
+  return propertyNames
+}
+
+function interfaceTypeLiteralPropertyProperties({
+  file,
+  interfaceName,
+  propertyName,
+}: {
+  file: string
+  interfaceName: string
+  propertyName: string
+}) {
+  const content = readFileSync(join(repoRoot, file), "utf8")
+  const sourceFile = ts.createSourceFile(
+    file,
+    content,
+    ts.ScriptTarget.Latest,
+    true,
+    file.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS
+  )
+  const propertyNames: string[] = []
+
+  ts.forEachChild(sourceFile, function visit(node: ts.Node) {
+    if (ts.isInterfaceDeclaration(node) && node.name.text === interfaceName) {
+      for (const member of node.members) {
+        if (
+          ts.isPropertySignature(member) &&
+          member.name.getText(sourceFile) === propertyName &&
+          member.type &&
+          ts.isTypeLiteralNode(member.type)
+        ) {
+          for (const field of member.type.members) {
+            if (ts.isPropertySignature(field) && field.name) {
+              propertyNames.push(field.name.getText(sourceFile))
+            }
+          }
         }
       }
     }
@@ -680,7 +724,16 @@ describe("schema builder architecture", () => {
     ]) {
       expect(content.includes(forbidden), forbidden).toBe(false)
     }
-    expect(content.includes("createPropertyTypeMenu")).toBe(true)
+    for (const forbidden of [
+      "schemaNode",
+      "schemaContext",
+      "onChange",
+      "createPropertyTypeMenu",
+    ]) {
+      expect(content.includes(forbidden), forbidden).toBe(false)
+    }
+    expect(content.includes("SchemaTypeMenu")).toBe(true)
+    expect(content.includes("field.sections")).toBe(true)
   })
 
   it("keeps primitive type menu section builders shared by adapters", () => {
@@ -690,7 +743,7 @@ describe("schema builder architecture", () => {
     )
     const adapterFiles = [
       "components/schema-editor/document-node-type-menu.tsx",
-      "components/schema-editor/property-form/fields/property-type-menu-model.ts",
+      "components/schema-editor/property-form/fields/property-type-field-model.ts",
     ]
 
     expect(sharedContent.includes("schemaTypeOptions.map")).toBe(true)
@@ -751,6 +804,7 @@ describe("schema builder architecture", () => {
 
   it("keeps property schema details split by concrete field model", () => {
     const legacyDetailsName = ["schema", "NodeDetails"].join("")
+    const legacyItemDetailsName = ["item", "Details"].join("")
     const files = [
       "components/schema-editor/property-form/types.ts",
       "components/schema-editor/property-form/property-form-controller.ts",
@@ -762,12 +816,9 @@ describe("schema builder architecture", () => {
     for (const file of files) {
       const content = readFileSync(join(repoRoot, file), "utf8")
       expect(content.includes(legacyDetailsName), file).toBe(false)
+      expect(content.includes(legacyItemDetailsName), file).toBe(false)
     }
 
-    const typeContent = readFileSync(
-      join(repoRoot, "components/schema-editor/property-form/types.ts"),
-      "utf8"
-    )
     const shellContent = readFileSync(
       join(
         repoRoot,
@@ -791,17 +842,21 @@ describe("schema builder architecture", () => {
     )
 
     expect(
-      typeContent.includes("enumValues?: PropertyEnumValuesFieldModel")
-    ).toBe(true)
+      interfaceTypeLiteralPropertyProperties({
+        file: "components/schema-editor/property-form/types.ts",
+        interfaceName: "PropertyFormViewModel",
+        propertyName: "fields",
+      })
+    ).toEqual(["name", "type", "nullable", "description", "schemaDetails"])
     expect(
-      typeContent.includes(
-        "objectProperties?: PropertyObjectPropertiesFieldModel"
-      )
-    ).toBe(true)
-    expect(
-      typeContent.includes("arrayItems?: PropertyArrayItemsFieldModel")
-    ).toBe(true)
+      interfaceProperties({
+        file: "components/schema-editor/property-form/types.ts",
+        interfaceName: "PropertyArrayItemsFieldModel",
+      })
+    ).toEqual(["itemSchemaDetails"])
     expect(shellContent.includes("PropertySchemaDetailsField")).toBe(true)
+    expect(shellContent.includes("fields.schemaDetails")).toBe(true)
+    expect(shellContent.includes("const schemaDetails = {")).toBe(false)
     expect(shellContent.includes("SchemaNode" + "Field")).toBe(false)
     expect(detailsFieldContent.includes("createPropertySchemaDetails")).toBe(
       false
@@ -887,11 +942,42 @@ describe("schema builder architecture", () => {
 
     expect(typeFieldContent.includes("mode:")).toBe(false)
     expect(typeFieldContent.includes("mode ===")).toBe(false)
+    expect(typeFieldContent.includes("schemaNode")).toBe(false)
+    expect(typeFieldContent.includes("schemaContext")).toBe(false)
+    expect(typeFieldContent.includes("onChange")).toBe(false)
+    expect(typeFieldContent.includes("createPropertyTypeMenu")).toBe(false)
     expect(typeFieldContent.includes("object-template")).toBe(false)
     expect(typeFieldContent.includes("ObjectTemplate")).toBe(false)
-    expect(typeFieldContent.includes("trailingContent={field.trailingContent}")).toBe(
-      true
-    )
+    expect(typeFieldContent.includes("trailingContent={field.trailingContent}"))
+      .toBe(true)
+  })
+
+  it("keeps property type field model a complete UI model", () => {
+    expect(
+      interfaceProperties({
+        file: "components/schema-editor/property-form/types.ts",
+        interfaceName: "PropertyTypeFieldModel",
+      })
+    ).toEqual([
+      "ariaLabel",
+      "editable",
+      "sections",
+      "trailingContent",
+      "value",
+    ])
+
+    expect(
+      interfaceProperties({
+        file: "components/schema-editor/property-form/fields/property-type-field-model.ts",
+        interfaceName: "PropertyTypeFieldModelInput",
+      })
+    ).toEqual([
+      "editable",
+      "schemaContext",
+      "schemaNode",
+      "trailingContent",
+      "onChange",
+    ])
   })
 
   it("keeps schema chips item-model driven", () => {
@@ -969,11 +1055,12 @@ describe("schema builder architecture", () => {
     expect(fieldContent.includes("schemaNode:")).toBe(false)
     expect(fieldContent.includes("row.typeField")).toBe(false)
     expect(rowContent.includes("TypeField field={row.typeField}")).toBe(true)
-    expect(modelContent.includes("typeField: createPropertyTypeField")).toBe(
-      true
-    )
+    expect(
+      modelContent.includes("typeField: createPropertyTypeFieldWithObjectTemplates")
+    ).toBe(true)
+    expect(modelContent.includes("editable: editable && access.type")).toBe(true)
     expect(modelContent.includes("disabled: !editable || !access.type")).toBe(
-      true
+      false
     )
   })
 

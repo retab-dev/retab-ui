@@ -23,7 +23,7 @@ export interface SchemaChipAddRow {
   onSubmit: () => void
 }
 
-interface SchemaChipListProps {
+export interface SchemaChipListProps {
   addRow?: SchemaChipAddRow
   editable: boolean
   items: SchemaChipItem[]

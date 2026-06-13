@@ -23,7 +23,7 @@ import type {
 import { validatePropertyFormName } from "@/components/schema-editor/property-form/validation"
 
 import { createObjectPropertyRowDetails } from "./object-property-row-details"
-import { createPropertyTypeField } from "./property-type-menu-model"
+import { createPropertyTypeFieldWithObjectTemplates } from "./property-object-template-type-field"
 
 interface UseObjectPropertiesModelInput {
   access: PropertySchemaDetailAccess
@@ -269,10 +269,10 @@ export function useObjectPropertiesModel({
             position: index + 1,
             rowCount: propertyNames.length,
           },
-          typeField: createPropertyTypeField({
+          typeField: createPropertyTypeFieldWithObjectTemplates({
             schemaNode: propertySchema,
             schemaContext: rowSchemaContext,
-            disabled: !editable || !access.type,
+            editable: editable && access.type,
             onChange: replaceSchemaNode,
           }),
           deleteAction: {

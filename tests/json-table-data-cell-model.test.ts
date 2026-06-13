@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import type { JSONSchema7 } from "json-schema"
 
 import { createJsonTableDataCellModel } from "@/components/json-table/json-table-data-cell-model"
 import { jsonTableDisplayText } from "@/components/json-table/json-table-display-value"
@@ -18,10 +19,10 @@ function fieldMetadata({
   isNullable?: boolean
   kind: FieldKind
 }): FieldMetadata {
-  const rawSchema =
+  const rawSchema: JSONSchema7 =
     disabledEnumValues === undefined
       ? {}
-      : { "x-disabled-enum-values": disabledEnumValues }
+      : ({ "x-disabled-enum-values": disabledEnumValues } as JSONSchema7)
 
   return {
     effectiveSchema: rawSchema,

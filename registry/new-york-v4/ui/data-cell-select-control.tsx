@@ -29,11 +29,11 @@ export type DataCellSelectControlProps = {
   formatValue?: DataCellSelectFormatValue
   autoFocus?: boolean
   activationSource?: DataCellActivationSource
-  isPickerOpen?: boolean
+  open?: boolean
   selectOptions: DataCellSelectOption[]
   onCommit?: (value: string | null, meta: DataCellValueMeta) => void
   onEditingEnd?: () => void
-  onPickerOpenChange?: (open: boolean) => void
+  onOpenChange?: (open: boolean) => void
   onEditorHandleChange?: (handle: DataCellEditorHandle | null) => void
 }
 
@@ -45,11 +45,11 @@ export function DataCellSelectControl({
   formatValue,
   autoFocus,
   activationSource,
-  isPickerOpen,
+  open,
   selectOptions,
   onCommit,
   onEditingEnd,
-  onPickerOpenChange,
+  onOpenChange,
   onEditorHandleChange,
 }: DataCellSelectControlProps) {
   const triggerRef = React.useRef<HTMLButtonElement>(null)
@@ -59,11 +59,11 @@ export function DataCellSelectControl({
     value,
     placeholder,
     formatValue,
-    isPickerOpen,
+    open,
     selectOptions,
     onCommit,
     onEditingEnd,
-    onPickerOpenChange,
+    onOpenChange,
   })
   const openEditor = React.useCallback(() => {
     select.openEditor(triggerRef.current)

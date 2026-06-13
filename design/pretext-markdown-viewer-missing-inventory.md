@@ -25,8 +25,8 @@ leaking virtual chunks as visible pages.
 15. Table copy polish beyond current rendered-cell TSV copy.
 16. Image loading/error polish parity.
 17. Component-specific stable block heights for rich blocks.
-18. Browser verification page/demo for the new component.
-19. Docs page for `pretext-markdown-viewer`.
+18. Browser regression coverage beyond the current docs/demo smoke check.
+19. Docs page expansion for migration, threat model, performance limits, and known gaps.
 20. FileViewer routing experiment or flag to try it on Markdown files.
 21. Registry install smoke test for the new component.
 22. Accessibility audit for generated block roles/labels.
@@ -38,7 +38,7 @@ leaking virtual chunks as visible pages.
 ## Missing Architecture Work
 
 27. A first-class Markdown block model owned by `PretextMarkdownViewer`, rather than a copied and lightly edited Text Viewer model.
-28. Explicit public/private boundaries between parser, layout, virtualization, and render projection modules.
+28. Complete public/private boundaries between parser, layout, virtualization, policy, and render projection modules. The first policy extraction now lives in `pretext-markdown-policy`.
 29. Stable block IDs for headings, tables, diagrams, callouts, footnotes, and component blocks.
 30. Stable source-line mapping for every block type, including multi-line tables, nested lists, blockquotes, and fenced blocks.
 31. A single slug algorithm shared by block model, DOM IDs, and fragment navigation.

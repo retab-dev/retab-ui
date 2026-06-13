@@ -28,19 +28,19 @@ export interface SplitDocumentHandlers {
 export interface SplitViewerProps {
   result: SplitView | null
   isProcessing?: boolean
-  renderDocument?: (handlers: SplitDocumentHandlers) => ReactNode
+  children?: ReactNode
 }
 
 export function SplitViewer({
   result,
   isProcessing = false,
-  renderDocument,
+  children,
 }: SplitViewerProps) {
   return (
     <SplitViewerProvider result={result} isProcessing={isProcessing}>
       <ViewerRoot bare className="h-full flex-1 bg-background">
         <SplitViewerHeader />
-        <SplitViewerBody renderDocument={renderDocument} />
+        <SplitViewerBody>{children}</SplitViewerBody>
       </ViewerRoot>
     </SplitViewerProvider>
   )
@@ -64,6 +64,10 @@ export function useSplitViewer() {
     throw new Error("useSplitViewer must be used within SplitViewerProvider.")
   }
   return context
+}
+
+export function useSplitViewerDocumentControls(): SplitDocumentHandlers {
+  return useSplitViewer().controller.documentHandlers
 }
 
 export function SplitViewerProvider({
@@ -128,11 +132,7 @@ export function SplitViewerHeader() {
   )
 }
 
-function SplitViewerBody({
-  renderDocument,
-}: {
-  renderDocument?: (handlers: SplitDocumentHandlers) => ReactNode
-}) {
+function SplitViewerBody({ children }: { children?: ReactNode }) {
   const { hasOutput, pageCount } = useSplitViewer()
   return (
     <ViewerBody>
@@ -142,7 +142,7 @@ function SplitViewerBody({
         </ViewerSidebar>
       ) : null}
       <ViewerSurface>
-        <SplitViewerDocument renderDocument={renderDocument} />
+        <SplitViewerDocument>{children}</SplitViewerDocument>
       </ViewerSurface>
     </ViewerBody>
   )
@@ -184,12 +184,8 @@ export function SplitViewerLegend({ className }: { className?: string }) {
   )
 }
 
-export function SplitViewerDocument({
-  renderDocument,
-}: {
-  renderDocument?: (handlers: SplitDocumentHandlers) => ReactNode
-}) {
-  const { controller, hasOutput, isProcessing } = useSplitViewer()
+export function SplitViewerDocument({ children }: { children?: ReactNode }) {
+  const { hasOutput, isProcessing } = useSplitViewer()
 
   if (!hasOutput) {
     return (
@@ -216,12 +212,8 @@ export function SplitViewerDocument({
     )
   }
 
-  return renderDocument ? (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      {renderDocument({
-        ...controller.documentHandlers,
-      })}
-    </div>
+  return children ? (
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col">{children}</div>
   ) : (
     <div className="flex h-full flex-1 items-center justify-center">
       <span className="text-sm text-muted-foreground">

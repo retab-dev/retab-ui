@@ -3,7 +3,7 @@
 import { updateEffectiveNode } from "@/components/schema-editor/draft/draft-node-edits"
 import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
 import { getEffectiveNode } from "@/components/schema-editor/lib/json-schema-utils"
-import { createPropertyTypeField } from "@/components/schema-editor/property-form/fields/property-type-menu-model"
+import { createPropertyTypeFieldWithObjectTemplates } from "@/components/schema-editor/property-form/fields/property-object-template-type-field"
 import { getArrayItemsForDraft } from "@/components/schema-editor/property-form/model/effective-node-edits"
 import type {
   PropertyFormMode,
@@ -17,7 +17,7 @@ interface CreatePropertySchemaDetailsInput {
   schemaContext: PropertyFormSchemaContext
   mode: PropertyFormMode
   access: PropertySchemaDetailAccess
-  disabled: boolean
+  editable: boolean
   showTypeSelector?: boolean
   onChange: (schemaNode: ExtendedJSONSchema7) => void
 }
@@ -27,7 +27,7 @@ export function createPropertySchemaDetails({
   schemaContext,
   mode,
   access,
-  disabled,
+  editable,
   showTypeSelector = true,
   onChange,
 }: CreatePropertySchemaDetailsInput): PropertySchemaDetailsModel {
@@ -41,10 +41,10 @@ export function createPropertySchemaDetails({
 
   return {
     type: showTypeSelector
-      ? createPropertyTypeField({
+      ? createPropertyTypeFieldWithObjectTemplates({
           schemaNode,
           schemaContext,
-          disabled: disabled || !access.type,
+          editable: editable && access.type,
           onChange,
         })
       : undefined,
@@ -53,7 +53,7 @@ export function createPropertySchemaDetails({
         ? {
             values: effectiveSchemaNode.enum,
             resetKey,
-            disabled: disabled || !access.enumValues,
+            disabled: !editable || !access.enumValues,
             onChange: (values) => {
               updateEffectiveSchemaNode({
                 ...effectiveSchemaNode,
@@ -71,19 +71,19 @@ export function createPropertySchemaDetails({
             schemaContext,
             mode,
             access,
-            editable: !disabled && access.objectProperties,
+            editable: editable && access.objectProperties,
             onChange: updateEffectiveSchemaNode,
           }
         : undefined,
     arrayItems:
       access.arrayItems && effectiveSchemaNode.type === "array"
         ? {
-            itemDetails: createPropertySchemaDetails({
+            itemSchemaDetails: createPropertySchemaDetails({
               schemaNode: getArrayItemsForDraft(schemaNode),
               schemaContext,
               mode,
               access,
-              disabled,
+              editable,
               onChange: (items) => {
                 updateEffectiveSchemaNode({
                   ...effectiveSchemaNode,

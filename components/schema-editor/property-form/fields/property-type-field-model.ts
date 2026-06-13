@@ -11,10 +11,9 @@ import {
 } from "@/components/schema-editor/draft/draft-node-edits"
 import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
 import { getEffectiveNode } from "@/components/schema-editor/lib/json-schema-utils"
-import { createObjectTemplateTypeTrailingContent } from "@/components/schema-editor/object-template-type-section"
 import type {
   SchemaTypeMenuSection,
-  SchemaTypeMenuValue,
+  SchemaTypeMenuTrailingContent,
 } from "@/components/schema-editor/primitives/schema-type-menu"
 import type { SchemaTypeOptionId } from "@/components/schema-editor/primitives/schema-type-options"
 import type {
@@ -27,79 +26,41 @@ import {
   createTypeMenuValue,
 } from "@/components/schema-editor/schema-type-menu-sections"
 
-interface PropertyTypeMenuModelInput {
-  disabled: boolean
+interface PropertyTypeFieldModelInput {
+  editable: boolean
   schemaContext: PropertyFormSchemaContext
   schemaNode: ExtendedJSONSchema7
+  trailingContent?: SchemaTypeMenuTrailingContent
   onChange: (schemaNode: ExtendedJSONSchema7) => void
 }
 
-export interface PropertyTypeMenu {
-  sections: SchemaTypeMenuSection[]
-  value: SchemaTypeMenuValue
-  selectObjectTemplate: (templateName: string) => void
-}
-
 export function createPropertyTypeField({
-  disabled,
+  editable,
   schemaContext,
   schemaNode,
+  trailingContent,
   onChange,
-}: PropertyTypeMenuModelInput): PropertyTypeFieldModel {
-  const selectObjectTemplate = createObjectTemplateSelector({
-    disabled,
-    schemaContext,
-    schemaNode,
-    onChange,
-  })
-
-  return {
-    schemaNode,
-    schemaContext,
-    fieldPath: schemaContext.fieldPath,
-    editable: !disabled,
-    trailingContent: schemaContext.objectTemplatesEnabled
-      ? createObjectTemplateTypeTrailingContent({
-          onSelectTemplate: selectObjectTemplate,
-        })
-      : undefined,
-    onChange,
-  }
-}
-
-export function createPropertyTypeMenu({
-  disabled,
-  schemaContext,
-  schemaNode,
-  onChange,
-}: PropertyTypeMenuModelInput): PropertyTypeMenu {
+}: PropertyTypeFieldModelInput): PropertyTypeFieldModel {
   const effectiveType = getEffectiveType(schemaNode)
   const effectiveSchemaNode = getEffectiveNode(schemaNode)
 
   const selectType = (type: SchemaTypeOptionId) => {
-    if (disabled) return
+    if (!editable) return
     onChange(updateType(type, effectiveType.isNullable, schemaNode))
   }
 
   const selectDefinition = (definitionName: string) => {
-    if (disabled) return
+    if (!editable) return
     void schemaContext.onCommand?.({
       type: "selectDefinition",
       definitionName,
     })
-    replaceEffectiveSchemaNode({
+    replacePropertyTypeSchemaNode({
       schemaNode,
       replacement: { $ref: definitionRef("$defs", definitionName) },
       onChange,
     })
   }
-
-  const selectObjectTemplate = createObjectTemplateSelector({
-    disabled,
-    schemaContext,
-    schemaNode,
-    onChange,
-  })
 
   const refName =
     effectiveType.type === "$ref" && effectiveSchemaNode.$ref
@@ -107,7 +68,10 @@ export function createPropertyTypeMenu({
       : undefined
 
   return {
-    value: createTypeMenuValue({ type: effectiveType.type, refName }),
+    ariaLabel: `Data type${
+      schemaContext.fieldPath ? ` for ${schemaContext.fieldPath}` : ""
+    }`,
+    editable,
     sections: [
       {
         id: "types",
@@ -117,39 +81,18 @@ export function createPropertyTypeMenu({
       createDefinitionSection({
         definitionNames: Object.keys(schemaContext.schemaDefinitions),
         onCreateDefinition: () => {
-          if (disabled) return
+          if (!editable) return
           void schemaContext.onCommand?.({ type: "createDefinition" })
         },
         onSelectDefinition: selectDefinition,
       }),
     ],
-    selectObjectTemplate,
+    trailingContent,
+    value: createTypeMenuValue({ type: effectiveType.type, refName }),
   }
 }
 
-function createObjectTemplateSelector({
-  disabled,
-  schemaContext,
-  schemaNode,
-  onChange,
-}: PropertyTypeMenuModelInput) {
-  return (templateName: string) => {
-    if (disabled) return
-    void schemaContext.onCommand?.({
-      type: "installObjectTemplate",
-      templateName,
-    })
-    replaceEffectiveSchemaNode({
-      schemaNode,
-      replacement: {
-        $ref: definitionRef("$defs", templateName),
-      },
-      onChange,
-    })
-  }
-}
-
-function replaceEffectiveSchemaNode({
+export function replacePropertyTypeSchemaNode({
   schemaNode,
   replacement,
   onChange,

@@ -2894,6 +2894,31 @@
           "target": "@components/blocks/dropzone-file-examples.tsx"
         },
         {
+          "path": "registry/new-york-v4/blocks/dropzone-avatar-image-slot.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dropzone-avatar-image-slot.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/blocks/dropzone-custom-thumbnail-grid.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dropzone-custom-thumbnail-grid.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/blocks/dropzone-evidence-timeline.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dropzone-evidence-timeline.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/blocks/dropzone-media-transcript-queue.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dropzone-media-transcript-queue.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/blocks/dropzone-spreadsheet-import-card.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dropzone-spreadsheet-import-card.tsx"
+        },
+        {
           "path": "registry/new-york-v4/blocks/dropzone-uploader-viewer.tsx",
           "type": "registry:component",
           "target": "@components/blocks/dropzone-uploader-viewer.tsx"
@@ -2912,6 +2937,26 @@
           "path": "registry/new-york-v4/blocks/dropzone-workflow-examples.tsx",
           "type": "registry:component",
           "target": "@components/blocks/dropzone-workflow-examples.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/blocks/dropzone-comparison-pair-upload.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dropzone-comparison-pair-upload.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/blocks/dropzone-intake-router.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dropzone-intake-router.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/blocks/dropzone-pinboard-drop-surface.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dropzone-pinboard-drop-surface.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/blocks/dropzone-required-packet-slots.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dropzone-required-packet-slots.tsx"
         }
       ],
       "categories": ["dropzone"]
@@ -3372,6 +3417,11 @@
           "path": "registry/new-york-v4/ui/pretext-markdown-document-model.ts",
           "type": "registry:ui",
           "target": "@ui/pretext-markdown-document-model.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/pretext-markdown-policy.ts",
+          "type": "registry:ui",
+          "target": "@ui/pretext-markdown-policy.ts"
         },
         {
           "path": "registry/new-york-v4/ui/pretext-markdown-renderer.tsx",

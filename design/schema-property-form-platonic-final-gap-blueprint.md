@@ -2,7 +2,8 @@
 
 ## Objective
 
-Move the schema component system from excellent to the practical platonic ideal:
+Move the schema property form and schema-builder primitives from excellent to
+the practical platonic ideal:
 
 - simplicity
 - speed
@@ -13,231 +14,276 @@ Move the schema component system from excellent to the practical platonic ideal:
 - perfectly consistent variable names
 - Flaubertian precision
 
-The previous terminal blueprint finished the object-row compression. This
-blueprint is narrower: it targets the final surfaces that still require
-explanation.
+This blueprint is a last-mile plan. It assumes the object builder, row grips,
+shared enum chips, description caret placement, deterministic import IDs, and
+basic primitive reuse are already in place.
 
 ## Current State
 
-The property-form object builder is now strong.
+The system is strong.
 
-- `ObjectPropertiesField` creates the model, renders `ObjectPropertyRows`, and
-  renders the add-row control.
-- `ObjectPropertyRows` owns drag, focus restoration, live reorder
-  announcements, and row rendering.
-- `ObjectPropertyRowModel` exposes view-ready fields:
-  `nameField`, `descriptionField`, `typeField`, `deleteAction`, `reorder`, and
-  `rowDetails`.
-- Raw schema mutation is in the model layer, not row JSX.
-- `SchemaRowReorderActions` owns reorder buttons.
-- Native drag DOM mutation is isolated and intentional.
-- Type-menu primitives do not import object-template code.
-- Enum chip styling is compact and shared.
-- Tests and e2e coverage verify object rows, reorder, enum chips, description
-  caret placement, and type-menu behavior.
+- `ObjectPropertiesField` delegates row state and mutation to
+  `useObjectPropertiesModel`.
+- Object rows consume view-ready fields:
+  `nameField`, `descriptionField`, `typeField`, `rowSchemaDetails`,
+  `reorder`, and `deleteAction`.
+- `SchemaChipList` is shared by property-form enum values and document enum
+  editing.
+- `SchemaTypeMenu` is optional-feature agnostic and accepts typed sections plus
+  trailing content.
+- `TypeField` accepts `{ field, variant }`, so call sites no longer assemble
+  renderer internals.
+- The property-form view model exposes explicit top-level detail slots:
+  `enumValues`, `objectProperties`, and `arrayItems`.
+- Architecture tests protect many deleted APIs and import boundaries.
 
-This is not yet perfect because a few APIs still expose too much construction
-detail to their callers.
+The remaining gap is not visual. It is exactness: a few modules still expose
+construction details, a few names still need surrounding context, and some tests
+still protect smells more than they protect the positive shape.
 
 ## Non-Negotiable Invariants
 
-- No compatibility shims, old prop names, or dual APIs.
-- No primitive imports from property form, document editor, object templates,
-  JSON table, or schema-provider code.
+- No compatibility aliases, fallback APIs, or old/new prop pairs.
+- No optional-feature imports from schema-editor primitives.
 - No schema mutation in JSX.
-- No render-prop escape hatch except the recursive schema-detail renderer.
-- No optional feature branches inside generic fields or primitives.
+- No raw schema/domain inputs in pure renderers.
+- No component receives both `editable` and `disabled` unless it is explicitly
+  adapting a primitive to a native control.
+- No index-keyed list identity for chips, rows, or imported properties.
+- No broad render escape hatch unless recursive schema-detail rendering truly
+  requires it.
 - No weakening tests to make the refactor pass.
-- No visual regression of object rows, enum chips, grips, or description caret
-  placement.
-- No partial naming migration. Rename a concept once, everywhere, or leave it
-  alone.
+- No partial naming migration. Rename a concept once, everywhere.
 
 ## Target Shape
 
-### 1. Collapse `TypeField` To A Field-Model Renderer
+### 1. Make `TypeField` A Pure Renderer
 
-`TypeField` still accepts individual pieces of a type field:
+`TypeField` currently receives a field model, then recreates the menu from
+`schemaNode`, `schemaContext`, and `onChange`.
 
-- `schemaNode`
-- `schemaContext`
-- `fieldPath`
-- `editable`
-- `onChange`
-- `variant`
-
-That is too much API. Callers already have a field model. The renderer should
-receive that model.
-
-Target:
-
-```ts
-interface TypeFieldProps {
-  field: PropertyTypeFieldModel
-  variant?: SchemaTypeMenuVariant
-}
-```
-
-Usage:
-
-```tsx
-<TypeField field={fields.type} />
-<TypeField field={row.typeField} variant="row" />
-<TypeField field={details.type} />
-```
-
-Rules:
-
-- `TypeField` is the only renderer that destructures
-  `PropertyTypeFieldModel`.
-- Call sites do not pass `schemaNode`, `schemaContext`, `editable`, or
-  `onChange` separately.
-- `fieldPath` remains model data if the menu label needs it.
-
-Exit criteria:
-
-- `functionFirstParameterTypeProperties(TypeField)` returns
-  `["field", "variant"]`.
-- `rg -n "<TypeField[\\s\\S]*schemaNode=|schemaContext=|editable=|onChange=" components/schema-editor/property-form` has no relevant hits.
-- Typecheck and property-form tests pass.
-
-### 2. Move Object-Template Injection Out Of `TypeField`
-
-`SchemaTypeMenu` is clean, but `TypeField` still imports
-`createObjectTemplateTypeTrailingContent`. That makes a generic field aware of
-an optional feature.
+That means `PropertyTypeFieldModel` is not yet a true view model. It is a
+construction packet.
 
 Target:
 
 ```ts
 interface PropertyTypeFieldModel {
-  schemaNode: ExtendedJSONSchema7
-  schemaContext: PropertyFormSchemaContext
-  fieldPath?: string
+  ariaLabel: string
   editable: boolean
+  sections: SchemaTypeMenuSection[]
   trailingContent?: SchemaTypeMenuTrailingContent
-  onChange: (schemaNode: ExtendedJSONSchema7) => void
+  value: SchemaTypeMenuValue
 }
 ```
 
-Ownership:
+Renderer:
 
-- `TypeField` passes `field.trailingContent` to `SchemaTypeMenu`.
-- Property-form model factories attach object-template trailing content only
-  when `schemaContext.objectTemplatesEnabled` is true.
-- Document-node adapters keep their current adapter-level injection.
-- `createPropertyTypeMenu` may keep the command function for selecting an
-  object template, but it must not import the lazy submenu.
-
-Exit criteria:
-
-- `TypeField` has no `object-template` or `ObjectTemplate` import or symbol.
-- `SchemaTypeMenu` remains optional-feature agnostic.
-- `object-template-type-section.tsx` remains the only lazy import boundary for
-  the object-template menu.
-- E2E still installs an object template from the property type menu.
-
-### 3. Make Schema Detail Naming Final
-
-Current vocabulary is close but not exact:
-
-- `details`
-- `schemaDetails`
-- `rowDetails`
-- `renderSchemaDetails`
-
-The only weak name is `rowDetails`. It says where the model lives, not what it
-is.
-
-Target vocabulary:
-
-- `schemaDetails`: recursive type-specific details for the current schema node.
-- `objectProperties`: object-specific property collection details.
-- `rowSchemaDetails`: recursive details for one object-property row.
-- `renderSchemaDetails`: recursive renderer.
-- `details`: allowed only when the component name supplies the domain, such as
-  `PropertySchemaDetailsField`.
-
-Preferred rename:
-
-```ts
-ObjectPropertyRowModel.rowDetails -> rowSchemaDetails
+```tsx
+export function TypeField({
+  field,
+  variant = "form",
+}: {
+  field: PropertyTypeFieldModel
+  variant?: SchemaTypeMenuVariant
+}) {
+  return <SchemaTypeMenu {...field} variant={variant} />
+}
 ```
 
 Rules:
 
-- Do not rename `PropertySchemaDetailsField`'s `details` prop. The component
-  name makes the domain unambiguous.
-- Do not invent separate names for array item details unless the array model
-  grows beyond one recursive details model.
+- `TypeField` must not import `createPropertyTypeMenu`.
+- `TypeField` must not know about schema nodes, contexts, definitions, object
+  templates, metadata preservation, or callbacks.
+- All menu construction belongs in property-form model factories or document
+  adapters.
+- `PropertyTypeFieldModel` should contain only what `SchemaTypeMenu` needs.
 
 Exit criteria:
 
-- Object row JSX reads `row.rowSchemaDetails`.
-- No `row.details`, `rowDetails`, or `renderPropertyDetails` remains in
-  property-form fields or architecture tests.
-- No scope contains both `details` and `schemaDetails` unless it is explicitly
-  translating between public prop names and local model names.
+- `rg -n "schemaNode|schemaContext|onChange|createPropertyTypeMenu" components/schema-editor/property-form/fields/type-field.tsx`
+  has no hits.
+- `functionFirstParameterTypeProperties(TypeField)` remains
+  `["field", "variant"]`.
+- Architecture tests assert the exact `PropertyTypeFieldModel` interface shape.
 
-### 4. Freeze Reorder Vocabulary
+### 2. Split Pure Type-Menu Construction From Optional Object Templates
 
-The current reorder vocabulary is coherent:
+`property-type-menu-model.ts` is doing two jobs:
 
-- `reorder`
-- `move`
-- `moveUp`
-- `moveDown`
-- `position`
-- `rowCount`
+- building the property type menu from schema/domain inputs
+- attaching object-template trailing content
 
-Do not chase a prettier noun unless the whole API gets clearer.
+That is acceptable adapter code, but not inevitable. The cleaner shape is a
+pure type-field factory plus a small optional-feature adapter.
 
-Decision:
+Target modules:
 
-- Keep `reorder` as the final field name.
-- Keep `move` unless `moveTo` removes ambiguity in every call site.
-- Keep `rowCount` unless `total` improves announcements and tests.
+- `property-type-field-model.ts`
+  - builds `PropertyTypeFieldModel`
+  - preserves title/description metadata
+  - creates primitive and definition sections
+  - contains no object-template imports
+- `property-object-template-type-field.tsx`
+  - creates the object-template trailing content
+  - wires `installObjectTemplate`
+  - calls the pure factory with `trailingContent`
+
+Target API:
+
+```ts
+createPropertyTypeField({
+  editable,
+  schemaContext,
+  schemaNode,
+  trailingContent,
+  onChange,
+})
+```
+
+Rules:
+
+- Object-template code is injected by the caller that knows
+  `schemaContext.objectTemplatesEnabled`.
+- The pure type-field model factory can be used without loading optional
+  feature code.
+- Do not create compatibility re-exports from old file names.
 
 Exit criteria:
 
-- Architecture tests explicitly treat `reorder` as final.
-- No `ObjectPropertyRowOrderModel` compatibility name exists.
-- No mixed `order` and `reorder` vocabulary in object-property rows.
+- `rg -n "object-template|ObjectTemplate" components/schema-editor/property-form/fields/property-type-field-model.ts components/schema-editor/property-form/fields/type-field.tsx components/schema-editor/primitives/schema-type-menu.tsx`
+  has no hits.
+- Only the object-template adapter imports
+  `createObjectTemplateTypeTrailingContent`.
+- Property-form object template e2e coverage still passes.
 
-### 5. Refactor `SchemaChipList` Into A True Primitive
+### 3. Collapse Top-Level Schema Details To One Exact Field
 
-`SchemaChipList` is visually correct, but its props still leak enum-editor
-assumptions:
+`PropertyFormViewModel.fields` currently has:
 
-- `values: string[]`
-- `getKey(index)`
-- `showSubmitInput`
-- `focusInputAfterSubmit`
+- `enumValues`
+- `objectProperties`
+- `arrayItems`
+
+Then `PropertyFormShell` reconstructs a `schemaDetails` object so it can render
+`PropertySchemaDetailsField`.
+
+That is a small duplication of shape. The model already knows the recursive
+schema-detail shape; the shell should not rebuild it.
 
 Target:
 
 ```ts
-interface SchemaChipItem {
-  id: string
-  value: string
-  inputLabel: string
-  removeLabel: string
+interface PropertyFormViewModel {
+  fields: {
+    name: PropertyNameFieldModel
+    type: PropertyTypeFieldModel
+    nullable: PropertyNullableFieldModel
+    description: PropertyDescriptionFieldModel
+    schemaDetails?: PropertySchemaDetailsModel
+  }
 }
+```
 
-interface SchemaChipAddRow {
-  inputLabel: string
-  placeholder: string
-  submitLabel: string
-  value: string
-  focusAfterSubmit?: boolean
-  onChange: (value: string) => void
-  onSubmit: () => void
-}
+Rules:
 
-interface SchemaChipListProps {
+- The controller decides whether details exist.
+- `PropertyFormShell` renders `fields.schemaDetails` directly.
+- `PropertySchemaDetailsModel` remains explicit internally:
+  `type`, `enumValues`, `objectProperties`, `arrayItems`.
+- Do not restore the old `schemaNodeDetails` name.
+
+Exit criteria:
+
+- No `const schemaDetails = { enumValues, objectProperties, arrayItems }`
+  exists in shell JSX.
+- No top-level `fields.enumValues`, `fields.objectProperties`, or
+  `fields.arrayItems` remains.
+- `PropertySchemaDetailsField` is the only recursive detail renderer.
+
+### 4. Finish Detail Naming
+
+Most naming is now exact. Two names still carry a little ambiguity:
+
+- `PropertyArrayItemsFieldModel.itemDetails`
+- `PropertySchemaDetailsField` prop name `details`
+
+Target vocabulary:
+
+- `schemaDetails`: recursive details for the current schema node.
+- `rowSchemaDetails`: recursive details for an object-property row.
+- `itemSchemaDetails`: recursive details for an array item.
+- `renderSchemaDetails`: recursive renderer.
+
+Preferred rename:
+
+```ts
+PropertyArrayItemsFieldModel.itemDetails -> itemSchemaDetails
+```
+
+Keep:
+
+```tsx
+<PropertySchemaDetailsField details={schemaDetails} />
+```
+
+The component name makes `details` unambiguous at the prop boundary.
+
+Exit criteria:
+
+- No `itemDetails` remains in property-form code or architecture tests.
+- No `rowDetails`, `schemaNodeDetails`, or `renderPropertyDetails` remains.
+- Any local variable named `details` lives inside a component whose name already
+  supplies the domain.
+
+### 5. Normalize `editable` And `disabled` At The Correct Layers
+
+The current model layer still accepts `disabled` in places where the concept is
+actually editability.
+
+Target language:
+
+- domain mode: `mode`
+- capability booleans: `canEditName`, `canEditType`, etc.
+- model and primitive booleans: `editable`
+- native-control props: `disabled`
+
+Rules:
+
+- `createPropertySchemaDetails` receives `editable`, not `disabled`.
+- `createPropertyTypeField` receives `editable`, not `disabled`.
+- Field renderers that directly wrap native controls may still expose
+  `disabled`.
+- Adapters convert `editable` to native `disabled` at the last possible layer.
+
+Exit criteria:
+
+- No model factory input interface has a `disabled` property unless the factory
+  builds a native-control field model.
+- `TypeField` and `SchemaTypeMenu` speak only `editable`.
+- Architecture tests distinguish allowed native-control `disabled` from
+  forbidden domain/model-layer `disabled`.
+
+### 6. Keep `SchemaChipList` Generic, But Finish Its Contract
+
+`SchemaChipList` is close to ideal. Its current API is already item-based and
+shared.
+
+Remaining exactness:
+
+- The primitive prop interface is not exported, so tests can inspect it only by
+  source shape.
+- The add-row model name is good, but the primitive owns both chip editing and
+  add-row layout. That is acceptable only if the add row remains generic.
+
+Target:
+
+```ts
+export interface SchemaChipListProps {
+  addRow?: SchemaChipAddRow
   editable: boolean
   items: SchemaChipItem[]
-  addRow?: SchemaChipAddRow
   onRemove: (id: string) => void
   onReplace: (id: string, value: string) => void
 }
@@ -245,83 +291,89 @@ interface SchemaChipListProps {
 
 Rules:
 
-- Parsing and formatting stay in enum adapters.
-- The primitive owns chip layout, inline chip editing, and optional add-row UI.
-- The primitive does not know about enum indexes.
-- The compact visual contract stays unchanged:
+- The primitive never parses enum values.
+- The primitive never receives indexes.
+- The compact visual contract stays fixed:
   `bg-muted`, `px-1`, `shadow-none`.
+- Export the props interface if architecture tests need to assert the shape
+  without brittle parsing.
 
 Exit criteria:
 
-- No `getKey(index)` API remains.
-- No `showSubmitInput` prop remains.
-- No primitive-level `focusInputAfterSubmit` prop remains.
-- Property-form enum values and document enum values both build
+- No `values`, `getKey`, `showSubmitInput`, or
+  `focusInputAfterSubmit` primitive API remains.
+- Document enum editing and property-form enum editing both pass stable
   `SchemaChipItem[]`.
-- E2E enum chip assertions still pass.
+- Browser verification asserts the shared chip shape.
 
-### 6. Fix The Hydration Mismatch Around Schema-Builder Property IDs
+### 7. Make Object Row Identity A Named Responsibility
 
-The e2e run passed but emitted a React hydration mismatch where schema-builder
-property IDs differed between server and client.
+`useObjectPropertiesModel` handles row IDs correctly, but identity logic is
+embedded beside row construction.
 
-This is not part of the object-builder refactor, but perfection cannot leave a
-known mismatch in the same component family.
+Target extraction:
 
-Target:
+- `object-property-row-identity.ts`
+  - creates initial row IDs
+  - creates next draft row IDs
+  - renames row IDs
+  - removes row IDs
+  - preserves local add-row input across local property-order changes
 
-- Property row IDs must be deterministic across SSR and hydration.
-- IDs should derive from stable schema paths or schema node identity, not a
-  client-only counter that advances differently on the server and client.
-- Drag and focus behavior must continue to use stable IDs.
+Rules:
+
+- Extract only if the resulting module has a coherent identity responsibility.
+- Do not move row rendering or schema mutation into the identity module.
+- Keep deterministic fallback IDs for external schema changes.
 
 Exit criteria:
 
-- `pnpm test:e2e -- e2e/schema-property-form.spec.ts` emits no hydration
-  mismatch for schema-builder property IDs.
-- Reorder, focus restoration, and row selection still pass.
-- Architecture tests document the stable-ID source.
+- `useObjectPropertiesModel` reads as: names, identity, operations, rows,
+  add-row.
+- Row identity tests cover add, rename, remove, reorder, and external reset.
+- No JSX imports identity helpers.
 
-### 7. Upgrade Architecture Tests From String Guards Where Worth It
+### 8. Tighten Architecture Tests Around Positive Shape
 
-String guards are acceptable for known smells, but exact APIs deserve shape
-tests.
+The tests currently combine good shape assertions with string-smell guards.
+Keep smell guards for deleted APIs, but encode the final APIs directly.
 
 Upgrade targets:
 
-- `TypeField` prop surface.
-- `ObjectPropertiesField` prop surface.
-- `SchemaChipList` prop surface.
-- Import boundaries:
-  - primitives do not import feature code
-  - `TypeField` does not import object-template code
-  - object-row JSX does not import schema edit helpers
+- `PropertyTypeFieldModel` exact interface keys.
+- `TypeField` as pure renderer.
+- `createPropertyTypeField` input keys.
+- `PropertyFormViewModel.fields` exact keys.
+- `PropertyArrayItemsFieldModel.itemSchemaDetails`.
+- `SchemaChipListProps` exact keys.
+- Object-template import boundary.
 
 Keep string guards for:
 
-- deleted compatibility names
-- optional feature imports in primitives
-- raw schema mutation in row JSX
-- forbidden old detail names
+- old names: `rowDetails`, `itemDetails`, `schemaNodeDetails`
+- deleted chip props: `getKey`, `showSubmitInput`, `focusInputAfterSubmit`
+- forbidden optional-feature imports in primitives
+- raw object-row schema mutation in JSX
 
 Exit criteria:
 
-- Tests fail because a boundary changed, not because formatting changed.
-- Forbidden-string tests concatenate forbidden names when the test file itself
-  would otherwise trip audit searches.
+- A wrong prop name fails a shape test.
+- A forbidden legacy name fails a smell guard.
+- Tests do not trip their own audit strings.
 
 ## Implementation Order
 
-1. Collapse `TypeField` to `{ field, variant }`.
-2. Move object-template trailing-content ownership out of `TypeField`.
-3. Rename `rowDetails` to `rowSchemaDetails`.
-4. Freeze and document reorder vocabulary in architecture tests.
-5. Refactor `SchemaChipList` to item/add-row models.
-6. Fix deterministic schema-builder property IDs and remove the hydration
-   warning.
-7. Replace brittle architecture assertions with prop-surface and import-boundary
-   checks where practical.
-8. Run the full verification matrix.
+1. Convert `PropertyTypeFieldModel` into a complete UI model.
+2. Make `TypeField` a pure `SchemaTypeMenu` renderer.
+3. Split pure property type-field construction from object-template injection.
+4. Collapse top-level schema details to `fields.schemaDetails`.
+5. Rename `itemDetails` to `itemSchemaDetails`.
+6. Normalize model factory inputs from `disabled` to `editable`.
+7. Export and freeze `SchemaChipListProps`.
+8. Extract object-row identity only if it makes `useObjectPropertiesModel`
+   shorter and more obvious.
+9. Replace brittle architecture checks with positive shape tests.
+10. Run the full verification matrix.
 
 ## Verification Matrix
 
@@ -329,8 +381,8 @@ Run:
 
 ```bash
 pnpm typecheck
-pnpm vitest run tests/schema-builder-architecture.test.ts tests/schema-editor-context.test.tsx tests/property-form.test.tsx tests/schema-editor-render.test.tsx tests/schema-property-reorder.test.ts
-pnpm eslint components/schema-editor/primitives/schema-chip-list.tsx components/schema-editor/primitives/schema-row-actions.tsx components/schema-editor/primitives/schema-row-drag.ts components/schema-editor/primitives/schema-row-reorder-actions.tsx components/schema-editor/primitives/schema-type-menu.tsx components/schema-editor/property-form/fields/enum-values-field.tsx components/schema-editor/property-form/fields/object-properties-field.tsx components/schema-editor/property-form/fields/object-properties-model.ts components/schema-editor/property-form/fields/object-property-row.tsx components/schema-editor/property-form/fields/property-schema-details-field.tsx components/schema-editor/property-form/fields/type-field.tsx components/schema-editor/property-form/model/property-schema-details.ts components/schema-editor/property-form/property-form-controller.ts components/schema-editor/property-form/property-form-shell.tsx components/schema-editor/property-form/types.ts tests/schema-builder-architecture.test.ts tests/property-form.test.tsx tests/schema-property-reorder.test.ts e2e/schema-property-form.spec.ts
+pnpm vitest run tests/schema-builder-architecture.test.ts tests/schema-editor-context.test.tsx tests/property-form.test.tsx tests/schema-editor-render.test.tsx tests/schema-property-reorder.test.ts tests/schema-document-view-model.test.ts
+pnpm eslint components/schema-editor/primitives/schema-chip-list.tsx components/schema-editor/primitives/schema-type-menu.tsx components/schema-editor/schema-type-menu-sections.tsx components/schema-editor/property-form/fields/enum-values-field.tsx components/schema-editor/property-form/fields/object-properties-field.tsx components/schema-editor/property-form/fields/object-properties-model.ts components/schema-editor/property-form/fields/object-property-row.tsx components/schema-editor/property-form/fields/property-schema-details-field.tsx components/schema-editor/property-form/fields/type-field.tsx components/schema-editor/property-form/model/property-schema-details.ts components/schema-editor/property-form/property-form-controller.ts components/schema-editor/property-form/property-form-shell.tsx components/schema-editor/property-form/types.ts tests/schema-builder-architecture.test.ts tests/property-form.test.tsx tests/schema-property-reorder.test.ts e2e/schema-property-form.spec.ts
 pnpm test:e2e -- e2e/schema-property-form.spec.ts
 ```
 
@@ -338,14 +390,16 @@ Audit:
 
 ```bash
 rg -n "object-template|ObjectTemplate" components/schema-editor/property-form/fields/type-field.tsx components/schema-editor/primitives/schema-type-menu.tsx -S
-rg -n "renderPropertyDetails|row\\.details|rowDetails|getKey\\(|showSubmitInput|focusInputAfterSubmit|schemaNode\\.description|row\\.schemaNode|PropertySchemaDetailsCapabilities|canEditPropertyType" components/schema-editor tests/schema-builder-architecture.test.ts -S
+rg -n "schemaNode|schemaContext|onChange|createPropertyTypeMenu" components/schema-editor/property-form/fields/type-field.tsx -S
+rg -n "renderPropertyDetails|row\\.details|rowDetails|itemDetails|schemaNodeDetails|getKey\\(|showSubmitInput|focusInputAfterSubmit|schemaNode\\.description|row\\.schemaNode|PropertySchemaDetailsCapabilities|canEditPropertyType" components/schema-editor tests/schema-builder-architecture.test.ts -S
 ```
 
 Expected audit result:
 
 - no optional object-template knowledge in `TypeField` or `SchemaTypeMenu`
+- no schema/domain construction inputs in `TypeField`
 - no raw object-row schema reads in JSX
-- no old recursive detail renderer names
+- no old recursive-detail names
 - no index-keyed chip-list API
 - no legacy duplicate capability names
 
@@ -354,11 +408,13 @@ Expected audit result:
 The component reaches the practical platonic ideal when this sentence is true
 without footnotes:
 
-> Property-form factories build exact field models; field renderers consume
-> those models directly; schema-editor primitives own only generic row, chip,
-> drag, and type-menu mechanics; optional features are injected by adapters; row
-> IDs are deterministic across SSR and hydration; tests protect the exact shape.
+> Property-form factories build complete field models; field renderers consume
+> only those models; schema-editor primitives own only generic row, chip, drag,
+> and type-menu mechanics; optional features are injected by explicit adapters;
+> recursive details have one exact shape; mutability vocabulary reveals the
+> layer immediately; tests protect the positive API shape and the visual
+> interaction contract.
 
-If a caller still assembles renderer internals, if a generic field still imports
-optional feature code, or if a known hydration warning remains, the system is
-excellent but not perfect.
+If a renderer still constructs its own model, if a model factory still exposes
+domain construction details to JSX, or if the shell rebuilds a shape the
+controller already knows, the system is excellent but not perfect.
