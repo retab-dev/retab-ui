@@ -24,17 +24,47 @@ import {
 } from "@/registry/new-york-v4/ui/data-cell-format"
 import { getDataCellPickerPopupStyleFromAnchor } from "@/registry/new-york-v4/ui/data-cell-picker-position"
 import type {
-  DataCellCommitHandler,
+  DataCellActivationSource,
   DataCellDateTimeZone,
+  DataCellEditorHandle,
   DataCellKind,
-  DataCellProps,
   DataCellValue,
   DataCellValueMeta,
 } from "@/registry/new-york-v4/ui/data-cell-types"
 
-export type DataCellPickerControlProps = DataCellProps & {
+type DataCellPickerNativeProps = Omit<
+  React.ButtonHTMLAttributes<HTMLButtonElement>,
+  | "children"
+  | "className"
+  | "defaultValue"
+  | "disabled"
+  | "name"
+  | "onChange"
+  | "type"
+  | "value"
+>
+
+export type DataCellPickerControlProps = DataCellPickerNativeProps & {
   kind: "date" | "time" | "date-time"
   value?: string | null
+  disabled?: boolean
+  placeholder?: string
+  dateTimeZone?: DataCellDateTimeZone
+  showPickerIcon?: boolean
+  className?: string
+  formatValue?: (
+    value: string | null | undefined,
+    meta: { kind: "date" | "time" | "date-time" }
+  ) => React.ReactNode
+  draftValue?: string
+  autoFocus?: boolean
+  activationSource?: DataCellActivationSource
+  open?: boolean
+  onDraftValueChange?: (value: string, meta: DataCellValueMeta) => void
+  onCommit?: (value: string | null, meta: DataCellValueMeta) => void
+  onOpenChange?: (open: boolean) => void
+  onEditingEnd?: () => void
+  onEditorHandleChange?: (handle: DataCellEditorHandle | null) => void
 }
 
 function dataCellOutsidePointerDismissCause(
@@ -65,11 +95,7 @@ function dataCellEscapeDismissCause(
 export function DataCellPickerControl({
   kind,
   value,
-  editable: _editable,
-  active: _active,
-  mode: _mode,
   disabled = false,
-  name: _name,
   placeholder,
   dateTimeZone = "local",
   showPickerIcon = true,
@@ -78,11 +104,10 @@ export function DataCellPickerControl({
   draftValue,
   autoFocus,
   activationSource,
-  isPickerOpen,
+  open: controlledOpen,
   onDraftValueChange,
   onCommit,
-  onActiveChange: _onActiveChange,
-  onPickerOpenChange,
+  onOpenChange,
   onEditingEnd,
   onEditorHandleChange,
   onFocus,
@@ -106,7 +131,7 @@ export function DataCellPickerControl({
     null
   )
   const popupId = React.useId()
-  const open = isPickerOpen ?? uncontrolledOpen
+  const open = controlledOpen ?? uncontrolledOpen
   const pickerValue = draftValue ?? uncontrolledDraftValue
   const selectedDate = dateFromPickerValue(kind, pickerValue)
   const timeValue = timeFromPickerValue(kind, pickerValue)
@@ -120,10 +145,10 @@ export function DataCellPickerControl({
         popupStyleRef.current = null
         setPopupStyle(null)
       }
-      if (isPickerOpen === undefined) setUncontrolledOpen(open)
-      onPickerOpenChange?.(open)
+      if (controlledOpen === undefined) setUncontrolledOpen(open)
+      onOpenChange?.(open)
     },
-    [isPickerOpen, onPickerOpenChange]
+    [controlledOpen, onOpenChange]
   )
 
   React.useEffect(() => {
@@ -222,15 +247,13 @@ export function DataCellPickerControl({
     const meta = getDataCellValueMeta({ kind, value: nextValue })
     onDraftValueChange?.(nextValue, meta)
     if (commit) {
-      ;(onCommit as DataCellCommitHandler | undefined)?.(
-        parseDataCellInputValue({
+      const commitValue = parseDataCellInputValue({
           kind,
           value: nextValue,
-          dateTimeZone: dateTimeZone as DataCellDateTimeZone,
+          dateTimeZone,
           previousValue: value as DataCellValue,
-        }),
-        meta
-      )
+        }) as string | null
+      onCommit?.(commitValue, meta)
     }
   }
 

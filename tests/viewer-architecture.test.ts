@@ -182,6 +182,14 @@ describe("viewer architecture", () => {
     }
   })
 
+  it("keeps split viewer document composition explicit", () => {
+    const content = fileContent("components/viewers/split/split-viewer.tsx")
+
+    expect(content).not.toContain("renderDocument")
+    expect(content).toContain("children?: ReactNode")
+    expect(content).toContain("useSplitViewerDocumentControls")
+  })
+
   it("lists every relative internal module imported by registry viewer entries", () => {
     const registry = readJson<Registry>("registry.json")
     const registryItemsByName = new Map(
