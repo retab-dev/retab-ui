@@ -77,6 +77,9 @@ export type FileSystemProps = {
   defaultView?: FileSystemView
   view?: FileSystemView
   onViewChange?: (view: FileSystemView) => void
+  defaultQuery?: Partial<FileSystemQueryState>
+  query?: Partial<FileSystemQueryState>
+  onQueryChange?: (query: FileSystemQueryState) => void
   selectedPath?: string | null
   defaultSelectedPath?: string | null
   onSelectionChange?: (item: FileSystemItem | null) => void

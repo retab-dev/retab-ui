@@ -7,7 +7,7 @@ import type { ViewerSource } from "@/lib/viewer-source"
 import { buildFileSystemIndex, normalizeFolderPath } from "./file-system-index"
 import {
   collectFileSystemCategories,
-  DEFAULT_FILE_SYSTEM_SORT,
+  createFileSystemQueryState,
   deriveVisibleIndex,
   fileMatchesQuery,
   fileSystemFilterIsEmpty,
@@ -28,23 +28,29 @@ export type FileSystemController = ReturnType<typeof useFileSystemController>
 export function useFileSystemController({
   items,
   defaultPath = "",
+  defaultQuery,
   defaultSelectedPath = null,
   defaultView = "list",
   loadChildren,
+  onQueryChange,
   onSelectionChange,
   onViewChange,
+  query: queryProp,
   resolveSource,
   selectedPath: selectedPathProp,
   view: viewProp,
 }: Pick<
   FileSystemProps,
+  | "defaultQuery"
   | "items"
   | "defaultPath"
   | "defaultSelectedPath"
   | "defaultView"
   | "loadChildren"
+  | "onQueryChange"
   | "onSelectionChange"
   | "onViewChange"
+  | "query"
   | "resolveSource"
   | "selectedPath"
   | "view"
@@ -58,11 +64,32 @@ export function useFileSystemController({
     () => buildFileSystemIndex(allItems),
     [allItems]
   )
-  const [query, setQuery] = React.useState<FileSystemQueryState>({
-    filters: { categories: [], updatedAfter: null },
-    search: "",
-    sort: DEFAULT_FILE_SYSTEM_SORT,
-  })
+  const defaultQueryState = React.useMemo(
+    () => createFileSystemQueryState(defaultQuery),
+    [defaultQuery]
+  )
+  const [internalQuery, setInternalQuery] =
+    React.useState<FileSystemQueryState>(defaultQueryState)
+  const query = React.useMemo(
+    () => createFileSystemQueryState(queryProp ?? internalQuery),
+    [internalQuery, queryProp]
+  )
+  const isQueryControlled = queryProp !== undefined
+  const setQuery = React.useCallback(
+    (
+      updater:
+        | FileSystemQueryState
+        | ((previous: FileSystemQueryState) => FileSystemQueryState)
+    ) => {
+      const nextQuery = createFileSystemQueryState(
+        typeof updater === "function" ? updater(query) : updater
+      )
+
+      if (!isQueryControlled) setInternalQuery(nextQuery)
+      onQueryChange?.(nextQuery)
+    },
+    [isQueryControlled, onQueryChange, query]
+  )
   const [history, setHistory] = React.useState(() => ({
     index: 0,
     stack: [normalizeFolderPath(defaultPath)],

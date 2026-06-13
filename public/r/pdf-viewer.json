@@ -3,7 +3,9 @@
   "name": "pdf-viewer",
   "title": "PDF Viewer",
   "description": "A pdfjs-backed PDF viewer: continuous scroll, controlled or uncontrolled zoom, rotate, fit-to-width, download, a per-page overlay slot for bounding-box citations, a PdfHighlight overlay, and imperative scrollToPage / scrollToPageArea handles for driving source highlights.",
-  "dependencies": ["lucide-react"],
+  "dependencies": [
+    "lucide-react"
+  ],
   "registryDependencies": [
     "pdf-document-resource",
     "utils",

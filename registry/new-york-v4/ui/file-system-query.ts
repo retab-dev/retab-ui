@@ -16,6 +16,28 @@ export const DEFAULT_FILE_SYSTEM_SORT: FileSystemSortState = {
   key: "name",
 }
 
+export const DEFAULT_FILE_SYSTEM_QUERY: FileSystemQueryState = {
+  filters: { categories: [], updatedAfter: null },
+  search: "",
+  sort: DEFAULT_FILE_SYSTEM_SORT,
+}
+
+export function createFileSystemQueryState(
+  query: Partial<FileSystemQueryState> | undefined
+): FileSystemQueryState {
+  return {
+    filters: {
+      categories: query?.filters?.categories ?? [],
+      updatedAfter: query?.filters?.updatedAfter ?? null,
+    },
+    search: query?.search ?? "",
+    sort: {
+      direction: query?.sort?.direction ?? DEFAULT_FILE_SYSTEM_SORT.direction,
+      key: query?.sort?.key ?? DEFAULT_FILE_SYSTEM_SORT.key,
+    },
+  }
+}
+
 export function normalizeFileSystemSearch(value: string): string {
   return value.trim().toLowerCase()
 }

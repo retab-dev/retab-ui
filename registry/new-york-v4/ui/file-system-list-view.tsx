@@ -10,6 +10,11 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 
 import type { FileSystemController } from "./file-system-controller"
 import { folderHasChildren } from "./file-system-index"
+import {
+  fileSystemBoundaryEntry,
+  fileSystemEntryAtOffset,
+  fileSystemTypeAheadMatch,
+} from "./file-system-navigation"
 import { FileSystemThumbnail } from "./file-system-preview"
 import {
   entryKindLabel,
@@ -63,16 +68,17 @@ export function FileSystemListView({
   const focusRow = React.useCallback((entry: FileSystemEntry) => {
     requestAnimationFrame(() => rowRefs.current.get(entry.path)?.focus())
   }, [])
+  const rowEntries = React.useMemo(
+    () => rows.map((row) => row.entry),
+    [rows]
+  )
 
   const selectByOffset = (offset: number) => {
-    const currentIndex = rows.findIndex(
-      (row) => row.entry.path === controller.selectedPath
+    const nextEntry = fileSystemEntryAtOffset(
+      rowEntries,
+      controller.selectedPath,
+      offset
     )
-    const nextIndex = Math.min(
-      rows.length - 1,
-      Math.max(0, currentIndex === -1 ? 0 : currentIndex + offset)
-    )
-    const nextEntry = rows[nextIndex]?.entry
 
     if (!nextEntry) return
     controller.selectEntry(nextEntry)
@@ -86,7 +92,7 @@ export function FileSystemListView({
       return
     }
     if (event.key === "Home") {
-      const entry = rows[0]?.entry
+      const entry = fileSystemBoundaryEntry(rowEntries, "first")
       if (entry) {
         controller.selectEntry(entry)
         focusRow(entry)
@@ -95,7 +101,7 @@ export function FileSystemListView({
       return
     }
     if (event.key === "End") {
-      const entry = rows[rows.length - 1]?.entry
+      const entry = fileSystemBoundaryEntry(rowEntries, "last")
       if (entry) {
         controller.selectEntry(entry)
         focusRow(entry)
@@ -132,7 +138,11 @@ export function FileSystemListView({
       return
     }
 
-    const match = typeAheadMatch(event, rows, controller.selectedPath)
+    const match = fileSystemTypeAheadMatch(
+      event,
+      rowEntries,
+      controller.selectedPath
+    )
     if (match) {
       controller.selectEntry(match)
       focusRow(match)
@@ -344,37 +354,4 @@ export function FileSystemEmptyRows({ label }: { label: string }) {
       {label}
     </div>
   )
-}
-
-function typeAheadMatch(
-  event: React.KeyboardEvent,
-  rows: FileSystemTreeRow[],
-  selectedPath: string | null
-) {
-  if (
-    event.key.length !== 1 ||
-    event.altKey ||
-    event.ctrlKey ||
-    event.metaKey ||
-    !/^[\p{L}\p{N}]$/u.test(event.key)
-  ) {
-    return null
-  }
-
-  const search = event.key.toLowerCase()
-  const startIndex = Math.max(
-    0,
-    rows.findIndex((row) => row.entry.path === selectedPath) + 1
-  )
-
-  for (let step = 0; step < rows.length; step += 1) {
-    const entry = rows[(startIndex + step) % rows.length].entry
-
-    if (entry.name.toLowerCase().startsWith(search)) {
-      event.preventDefault()
-      return entry
-    }
-  }
-
-  return null
 }
