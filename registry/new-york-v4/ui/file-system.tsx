@@ -36,6 +36,7 @@ import { pathName } from "./file-system-index"
 import { FileSystemListView } from "./file-system-list-view"
 import { FileSystemPreview } from "./file-system-preview"
 import {
+  dateModifiedFilterLabel,
   getFileSystemCategoryLabel,
   normalizeFileSystemSearch,
 } from "./file-system-query"
@@ -135,7 +136,9 @@ export function FileSystem({
   const itemCount = controller.currentEntries.length
   const isSearching =
     normalizeFileSystemSearch(controller.query.search).length > 0
-  const hasFilters = controller.query.filters.categories.length > 0
+  const hasFilters =
+    controller.query.filters.categories.length > 0 ||
+    controller.query.filters.updatedAfter !== null
 
   return (
     <section
@@ -233,6 +236,25 @@ export function FileSystem({
                   )}
                 >
                   {getFileSystemCategoryLabel(category)}
+                </button>
+              )
+            })}
+            {(["last7", "last30"] as const).map((preset) => {
+              const isActive = controller.query.filters.updatedAfter === preset
+
+              return (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => controller.setModifiedAfter(preset)}
+                  className={cn(
+                    "h-6 shrink-0 rounded-md border px-2 text-xs outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring",
+                    isActive
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-input bg-background text-muted-foreground"
+                  )}
+                >
+                  {dateModifiedFilterLabel(preset)}
                 </button>
               )
             })}

@@ -14,6 +14,7 @@ export function PdfViewerRail({
   children: React.ReactNode
 }) {
   const [width, setWidth] = React.useState<number | null>(null)
+  const [canAnimateWidth, setCanAnimateWidth] = React.useState(false)
   const measureRef = React.useCallback((element: HTMLDivElement | null) => {
     if (!element) return
     setWidth(Math.round(element.offsetWidth))
@@ -26,6 +27,23 @@ export function PdfViewerRail({
     return () => observer.disconnect()
   }, [])
 
+  React.useEffect(() => {
+    if (!animate || width == null) {
+      setCanAnimateWidth(false)
+      return
+    }
+    if (
+      typeof requestAnimationFrame === "undefined" ||
+      typeof cancelAnimationFrame === "undefined"
+    ) {
+      setCanAnimateWidth(true)
+      return
+    }
+
+    const frame = requestAnimationFrame(() => setCanAnimateWidth(true))
+    return () => cancelAnimationFrame(frame)
+  }, [animate, width])
+
   return (
     <div
       data-slot="pdf-viewer-rail"
@@ -33,7 +51,7 @@ export function PdfViewerRail({
       data-state={open ? "open" : "closed"}
       className={cn(
         "h-full flex-shrink-0 overflow-hidden",
-        animate && "transition-[width] duration-200 ease-out"
+        canAnimateWidth && "transition-[width] duration-200 ease-out"
       )}
       style={animate ? { width: open ? (width ?? undefined) : 0 } : undefined}
     >

@@ -11,6 +11,7 @@ import {
 import type { JSONSchema7 } from "json-schema"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
+import { SchemaFieldDescription } from "@/components/schema-editor/primitives/schema-field-description"
 import { SchemaBuilder } from "@/components/schema-editor/schema-builder"
 
 afterEach(cleanup)
@@ -410,15 +411,11 @@ describe("SchemaBuilder interactions (doc-routed)", () => {
 
   it("edits a property description inline and emits it", () => {
     const { last } = renderEditor(sample)
-    // total has no description → its row shows the "Add description" placeholder
+    // total has no description -> its row shows the "Add description" input placeholder
     const totalRow = screen.getByText("total").closest("div")!
-    const placeholder = within(
-      totalRow.parentElement as HTMLElement
-    ).getAllByText("Add description")[0]
-    fireEvent.click(placeholder) // switch to edit mode
-    const input = screen.getByPlaceholderText(
-      "Add description"
-    ) as HTMLInputElement
+    const input = within(totalRow.parentElement as HTMLElement)
+      .getAllByPlaceholderText("Add description")[0] as HTMLInputElement
+    fireEvent.focus(input)
     fireEvent.change(input, { target: { value: "amount due" } })
     fireEvent.blur(input)
     const out = last()!
@@ -526,5 +523,24 @@ describe("SchemaBuilder interactions (doc-routed)", () => {
     expect(document.activeElement).toBe(input)
     const status = last()!.properties!.status as JSONSchema7
     expect(status.enum).toEqual(["draft", "paid"])
+  })
+})
+
+describe("SchemaFieldDescription", () => {
+  it("renders editable descriptions as native inputs before they are clicked", () => {
+    const onCommit = vi.fn()
+
+    render(
+      <SchemaFieldDescription
+        editable
+        value="The invoice identifier"
+        onCommit={onCommit}
+      />
+    )
+
+    const input = screen.getByDisplayValue(
+      "The invoice identifier"
+    ) as HTMLInputElement
+    expect(input.tagName).toBe("INPUT")
   })
 })

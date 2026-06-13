@@ -92,6 +92,14 @@ function workbookSource(identityKey: string) {
   })
 }
 
+function xlsxCellByText(text: string) {
+  const cell = screen
+    .getByText(text)
+    .closest('[data-slot="xlsx-cell"]') as HTMLElement | null
+  expect(cell).toBeTruthy()
+  return cell!
+}
+
 describe("XlsxViewer real grid integration", () => {
   it("does not render toolbar fallback chrome in toolbar-free server markup", () => {
     const html = renderToStaticMarkup(
@@ -134,8 +142,8 @@ describe("XlsxViewer real grid integration", () => {
     const grid = await screen.findByRole("grid", { name: "Sheet A" })
     expect(grid.getAttribute("aria-rowcount")).toBe("2")
     expect(grid.getAttribute("aria-colcount")).toBe("2")
-    expect(screen.getByTitle("name")).toBeTruthy()
-    expect(screen.getByTitle("42").className).toContain("justify-end")
+    expect(xlsxCellByText("name")).toBeTruthy()
+    expect(xlsxCellByText("42").className).toContain("justify-end")
     expect(viewerRef.current?.getViewportElement()).toBe(grid)
   })
 
@@ -184,7 +192,7 @@ describe("XlsxViewer real grid integration", () => {
     ])
 
     await screen.findByRole("grid", { name: "Active" })
-    expect(screen.getByTitle("B1").className).toContain("ring-primary")
+    expect(xlsxCellByText("B1").className).toContain("ring-primary")
 
     await act(async () => {
       rerender(
@@ -196,8 +204,8 @@ describe("XlsxViewer real grid integration", () => {
       )
     })
 
-    expect(screen.getByTitle("B1").className).not.toContain("ring-primary")
-    expect(screen.getByTitle("A2").className).toContain("ring-primary")
+    expect(xlsxCellByText("B1").className).not.toContain("ring-primary")
+    expect(xlsxCellByText("A2").className).toContain("ring-primary")
   })
 
   it("updates toolbar sheet metadata and zoom display after load", async () => {
@@ -247,7 +255,9 @@ describe("XlsxViewer real grid integration", () => {
     ])
 
     expect(await screen.findByRole("grid", { name: "Summary" })).toBeTruthy()
-    expect(screen.getByRole("tablist", { name: "Workbook sheets" })).toBeTruthy()
+    expect(
+      screen.getByRole("tablist", { name: "Workbook sheets" })
+    ).toBeTruthy()
     expect(
       screen.getByRole("tab", { name: "Summary" }).getAttribute("aria-selected")
     ).toBe("true")

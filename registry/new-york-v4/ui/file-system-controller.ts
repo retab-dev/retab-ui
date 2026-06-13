@@ -59,7 +59,7 @@ export function useFileSystemController({
     [allItems]
   )
   const [query, setQuery] = React.useState<FileSystemQueryState>({
-    filters: { categories: [] },
+    filters: { categories: [], updatedAfter: null },
     search: "",
     sort: DEFAULT_FILE_SYSTEM_SORT,
   })
@@ -176,12 +176,34 @@ export function useFileSystemController({
         ? previous.filters.categories.filter((entry) => entry !== category)
         : [...previous.filters.categories, category]
 
-      return { ...previous, filters: { categories } }
+      return {
+        ...previous,
+        filters: { ...previous.filters, categories },
+      }
     })
   }, [])
 
+  const setModifiedAfter = React.useCallback(
+    (updatedAfter: FileSystemQueryState["filters"]["updatedAfter"]) => {
+      setQuery((previous) => ({
+        ...previous,
+        filters: {
+          ...previous.filters,
+          updatedAfter:
+            previous.filters.updatedAfter === updatedAfter
+              ? null
+              : updatedAfter,
+        },
+      }))
+    },
+    []
+  )
+
   const clearFilters = React.useCallback(() => {
-    setQuery((previous) => ({ ...previous, filters: { categories: [] } }))
+    setQuery((previous) => ({
+      ...previous,
+      filters: { categories: [], updatedAfter: null },
+    }))
   }, [])
 
   const toggleExpanded = React.useCallback((path: string) => {
@@ -357,6 +379,7 @@ export function useFileSystemController({
     selectEntry,
     selectedEntry,
     selectedPath,
+    setModifiedAfter,
     setSearch,
     setSortKey,
     setView,

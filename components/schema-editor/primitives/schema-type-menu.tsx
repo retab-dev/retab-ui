@@ -90,14 +90,14 @@ export function SchemaTypeMenu({
           variant={variant === "row" ? "ghost" : "outline"}
           className={
             variant === "row"
-              ? "w-40 justify-between pr-4 pl-2 text-xs font-normal text-muted-foreground"
-              : "mt-2 w-full justify-between pr-4 pl-2"
+              ? "w-40 justify-between pr-1 pl-2 text-xs font-normal text-muted-foreground"
+              : "mt-2 w-full justify-between pr-1 pl-2"
           }
         >
           <div
             className={
               variant === "row"
-                ? "flex min-w-0 items-center gap-1"
+                ? "flex min-w-0 items-center gap-2"
                 : "flex items-center gap-2"
             }
           >
@@ -109,8 +109,8 @@ export function SchemaTypeMenu({
           <ChevronDown
             className={
               variant === "row"
-                ? "mr-1 h-4 w-4 shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100"
-                : "mr-1 h-4 w-4"
+                ? "mr-1! h-4 w-4 shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100"
+                : "mr-1! h-4 w-4"
             }
           />
         </Button>

@@ -15,7 +15,7 @@ import {
 import type { JsonTableCellProps } from "@/components/json-table/json-table-cell-types"
 import {
   getJsonTableCellDisplayValue,
-  JsonTableDisplayCell,
+  JsonTableReadOnlyPrimitiveDisplayCell,
 } from "@/components/json-table/json-table-display-cell"
 import { getFieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
 import type { FieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
@@ -166,7 +166,10 @@ function ReadOnlyJsonTableCellContent(props: JsonTableCellProps) {
           value={value}
         />
       ) : (
-        <JsonTableDisplayCell fieldMetadata={fieldMetadata} value={value} />
+        <JsonTableReadOnlyPrimitiveDisplayCell
+          displayValue={displayValue}
+          fieldMetadata={fieldMetadata}
+        />
       )}
     </TableCell>
   )

@@ -124,13 +124,16 @@ function SingleFileFormRowHarness({
     },
     [props.document.id]
   )
-  const setStructuredEditSessionOverlayOpen = React.useCallback((open: boolean) => {
-    setStructuredEditSession((currentSession) =>
-      currentSession && currentSession.isOverlayOpen !== open
-        ? { ...currentSession, isOverlayOpen: open }
-        : currentSession
-    )
-  }, [])
+  const setStructuredEditSessionOverlayOpen = React.useCallback(
+    (open: boolean) => {
+      setStructuredEditSession((currentSession) =>
+        currentSession && currentSession.isOverlayOpen !== open
+          ? { ...currentSession, isOverlayOpen: open }
+          : currentSession
+      )
+    },
+    []
+  )
   const closeStructuredEditSession = React.useCallback(() => {
     setStructuredEditSession(null)
   }, [])
@@ -154,6 +157,7 @@ describe("json table row rendering", () => {
     const visiblePaths = [
       "vendor",
       "shipped_at",
+      "is_paid",
       "lines",
       "metadata",
       "nullable_note",
@@ -188,17 +192,25 @@ describe("json table row rendering", () => {
     expect(view.getByText("Jan 2, 2024")).toBeTruthy()
     expect(view.getByText("[2 items]")).toBeTruthy()
     expect(view.getByText(JSON.stringify({ source: "upload" }))).toBeTruthy()
+    expect(view.getByRole("checkbox").getAttribute("aria-checked")).toBe(
+      "false"
+    )
 
     const cells = Array.from(view.container.querySelectorAll("td"))
-    expect(cells).toHaveLength(7)
+    expect(cells).toHaveLength(8)
     expect(
       view.container.querySelectorAll('[data-slot="data-cell"]')
-    ).toHaveLength(5)
+    ).toHaveLength(6)
+    expect(
+      cells[0].querySelector('[data-slot="json-table-read-only-cell-text"]')
+        ?.textContent
+    ).toBe("ACME")
+    expect(cells[0].querySelector('[data-slot="data-cell-value"]')).toBeNull()
     expect(view.getAllByRole("button")).toHaveLength(2)
-    expect(cells[4].textContent).toBe(String.fromCharCode(8212))
-    expect(cells[5].textContent).toBe("__null__")
-    expect(cells[6].textContent).toBe("")
-    expect(cells[6].getAttribute("data-field-path")).toBe("missing")
+    expect(cells[5].textContent).toBe(String.fromCharCode(8212))
+    expect(cells[6].textContent).toBe("__null__")
+    expect(cells[7].textContent).toBe("")
+    expect(cells[7].getAttribute("data-field-path")).toBe("missing")
   })
 
   it("keeps read-only cells aligned when an earlier array is empty", () => {

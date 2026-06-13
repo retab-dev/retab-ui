@@ -974,6 +974,10 @@ describe("Dropzone registry split", () => {
       "registry/new-york-v4/blocks/dropzone-uploader-viewer.tsx",
       "utf8"
     )
+    const dropzoneDocsSource = readFileSync(
+      "content/docs/components/dropzone.mdx",
+      "utf8"
+    )
     const registry = JSON.parse(readFileSync("registry.json", "utf8")) as {
       items: Array<{
         name: string
@@ -1017,6 +1021,19 @@ describe("Dropzone registry split", () => {
       "@/components/ui/file-viewer"
     )
     expect(dropzoneUploaderViewerSource).toContain("renderViewer")
+    expect(dropzoneDocsSource).toContain("Browser file intake is not upload.")
+    expect(dropzoneDocsSource).toContain("`files` is selected-file state.")
+    expect(dropzoneDocsSource).toContain(
+      "`lastIntake` is the latest file-intake attempt."
+    )
+    expect(dropzoneDocsSource).toContain(
+      "`getButtonProps` is for real `<button>` elements."
+    )
+    expect(dropzoneDocsSource).toContain(
+      "`getTriggerProps` is for anything else that opens the file dialog."
+    )
+    expect(dropzoneDocsSource).toContain("export function FileIntakeTarget")
+    expect(dropzoneDocsSource).not.toContain("export function UploadTarget")
     expect(fileUploaderSource).toContain(
       "This file type is not supported here."
     )

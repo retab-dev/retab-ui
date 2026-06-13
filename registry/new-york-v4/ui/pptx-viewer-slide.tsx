@@ -3,7 +3,6 @@
 import * as React from "react"
 import { createRoot, type Root } from "react-dom/client"
 
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { Skeleton } from "@/components/ui/skeleton"
 
 import {
@@ -135,18 +134,16 @@ export function PptxSlideScroller({
     (element: HTMLDivElement | null) => {
       viewportElementRef.current = element
       assignPptxRef(viewportRef, element)
-      projectSlides()
     },
-    [projectSlides, viewportRef]
+    [viewportRef]
   )
 
   const setCanvasRef = React.useCallback(
     (element: HTMLDivElement | null) => {
       canvasRef.current = element
       assignPptxRef(containerRef, element)
-      projectSlides()
     },
-    [containerRef, projectSlides]
+    [containerRef]
   )
 
   const handleScroll = React.useCallback(() => {
@@ -155,17 +152,20 @@ export function PptxSlideScroller({
   }, [onScroll, scheduleProjectSlides])
 
   return (
-    <ScrollArea
-      className="min-h-0 flex-1"
-      viewportRef={setViewportRef}
-      viewportProps={{ onScroll: handleScroll }}
-    >
+    <div className="size-full min-h-0 flex-1">
       <div
-        ref={setCanvasRef}
-        className="relative mx-auto min-w-0"
-        data-slot="pptx-slide-virtual-canvas"
-      />
-    </ScrollArea>
+        ref={setViewportRef}
+        className="h-full overflow-auto rounded-[inherit] outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
+        data-slot="scroll-area-viewport"
+        onScroll={handleScroll}
+      >
+        <div
+          ref={setCanvasRef}
+          className="relative mx-auto min-w-0"
+          data-slot="pptx-slide-virtual-canvas"
+        />
+      </div>
+    </div>
   )
 }
 
@@ -256,77 +256,81 @@ function PptxSlideCanvas({
   const dpr = Number.isFinite(rawDpr) && rawDpr > 0 ? rawDpr : 1
   const slideSize = getScaledSlideSize(source.baseSize, zoomScale)
   const [renderState, setRenderState] = React.useState<SlideRenderState>("idle")
+  const canvasElementRef = React.useRef<HTMLCanvasElement | null>(null)
 
-  const canvasRef = React.useCallback(
-    (canvas: HTMLCanvasElement | null) => {
-      if (!canvas) return
-      let cancelled = false
-      const renderScale = zoomScale * dpr
-      const immediateCached = source.hasBitmap({ slideIndex, renderScale })
-      setRenderState("rendering")
+  const canvasRef = React.useCallback((canvas: HTMLCanvasElement | null) => {
+    canvasElementRef.current = canvas
+  }, [])
 
-      const start = () => {
-        if (isProjectedLive && !isProjectedLive()) return
-        const startedAt = now()
-        const startedCached = source.hasBitmap({ slideIndex, renderScale })
-        source
-          .renderSlide({
-            slideIndex,
-            canvas,
+  React.useEffect(() => {
+    const canvas = canvasElementRef.current
+    if (!canvas) return
+
+    let cancelled = false
+    const renderScale = zoomScale * dpr
+    const immediateCached = source.hasBitmap({ slideIndex, renderScale })
+    setRenderState("rendering")
+
+    const start = () => {
+      if (isProjectedLive && !isProjectedLive()) return
+      const startedAt = now()
+      const startedCached = source.hasBitmap({ slideIndex, renderScale })
+      source
+        .renderSlide({
+          slideIndex,
+          canvas,
+          renderScale,
+          isLive: () => !cancelled,
+        })
+        .then((result) => {
+          if (cancelled || (isProjectedLive && !isProjectedLive())) return
+          notifySlideRenderTiming(getSlideRenderTiming?.(), {
+            cached: startedCached,
+            durationMs: now() - startedAt,
             renderScale,
-            isLive: () => !cancelled,
+            slideNumber: slideIndex + 1,
+            status: result.status,
           })
-          .then((result) => {
-            if (cancelled || (isProjectedLive && !isProjectedLive())) return
-            notifySlideRenderTiming(getSlideRenderTiming?.(), {
-              cached: startedCached,
-              durationMs: now() - startedAt,
-              renderScale,
-              slideNumber: slideIndex + 1,
-              status: result.status,
-            })
-            if (result.status === "cancelled") return
-            setRenderState(result.status === "failed" ? "failed" : "rendered")
+          if (result.status === "cancelled") return
+          setRenderState(result.status === "failed" ? "failed" : "rendered")
+        })
+        .catch(() => {
+          if (cancelled || (isProjectedLive && !isProjectedLive())) return
+          notifySlideRenderTiming(getSlideRenderTiming?.(), {
+            cached: startedCached,
+            durationMs: now() - startedAt,
+            renderScale,
+            slideNumber: slideIndex + 1,
+            status: "failed",
           })
-          .catch(() => {
-            if (cancelled || (isProjectedLive && !isProjectedLive())) return
-            notifySlideRenderTiming(getSlideRenderTiming?.(), {
-              cached: startedCached,
-              durationMs: now() - startedAt,
-              renderScale,
-              slideNumber: slideIndex + 1,
-              status: "failed",
-            })
-            setRenderState("failed")
-          })
-      }
+          setRenderState("failed")
+        })
+    }
 
-      if (eager || immediateCached || !activity.isScrolling()) {
-        start()
-        return () => {
-          cancelled = true
-        }
-      }
-
-      const off = activity.onIdle(() => {
-        if (!cancelled && (!isProjectedLive || isProjectedLive())) start()
-      })
+    if (eager || immediateCached || !activity.isScrolling()) {
+      start()
       return () => {
         cancelled = true
-        off()
       }
-    },
-    [
-      activity,
-      dpr,
-      eager,
-      getSlideRenderTiming,
-      isProjectedLive,
-      zoomScale,
-      slideIndex,
-      source,
-    ]
-  )
+    }
+
+    const off = activity.onIdle(() => {
+      if (!cancelled && (!isProjectedLive || isProjectedLive())) start()
+    })
+    return () => {
+      cancelled = true
+      off()
+    }
+  }, [
+    activity,
+    dpr,
+    eager,
+    getSlideRenderTiming,
+    isProjectedLive,
+    zoomScale,
+    slideIndex,
+    source,
+  ])
 
   return (
     <>
@@ -417,8 +421,8 @@ function projectPptxSlides({
   if (!canvas) return
 
   const sourceKey = getPptxProjectionSourceKey(source)
-  canvas.style.height = `${layout.totalHeight}px`
-  canvas.style.minWidth = `${layout.slideWidth}px`
+  setPptxPixelStyle(canvas, "height", layout.totalHeight)
+  setPptxPixelStyle(canvas, "min-width", layout.slideWidth)
 
   if (cache.resetKey !== `${sourceKey}:${resetKey}`) {
     disposePptxSlideProjectionCache(cache)
@@ -442,6 +446,7 @@ function projectPptxSlides({
     cache.slides.delete(slideIndex)
   }
 
+  let previousShell: HTMLElement | null = null
   for (const virtualSlide of virtualSlides) {
     const projectedSlide =
       cache.slides.get(virtualSlide.index) ??
@@ -459,13 +464,14 @@ function projectPptxSlides({
       zoomScale,
     })
     cache.slides.set(virtualSlide.index, projectedSlide)
-    canvas.append(projectedSlide.shell)
+    placePptxProjectedSlide(canvas, projectedSlide.shell, previousShell)
+    previousShell = projectedSlide.shell
   }
 }
 
 function createPptxProjectedSlide(virtualSlide: PptxVirtualSlide) {
   const shell = document.createElement("div")
-  shell.className = "absolute left-1/2 -translate-x-1/2"
+  shell.className = "absolute top-0 left-1/2"
   shell.dataset.slot = "pptx-slide-slot"
   shell.dataset.virtualSlideNumber = String(virtualSlide.slideNumber)
   return {
@@ -484,9 +490,38 @@ function patchPptxProjectedSlide(
   shell: HTMLElement,
   virtualSlide: PptxVirtualSlide
 ) {
-  shell.style.top = `${virtualSlide.top}px`
-  shell.style.width = `${virtualSlide.width}px`
-  shell.style.height = `${virtualSlide.height}px`
+  setPptxStyle(shell, "transform", `translate(-50%, ${virtualSlide.top}px)`)
+  setPptxPixelStyle(shell, "width", virtualSlide.width)
+  setPptxPixelStyle(shell, "height", virtualSlide.height)
+}
+
+function placePptxProjectedSlide(
+  canvas: HTMLElement,
+  shell: HTMLElement,
+  previousShell: HTMLElement | null
+) {
+  const nextSibling = previousShell
+    ? previousShell.nextSibling
+    : canvas.firstChild
+  if (shell === nextSibling) return
+  canvas.insertBefore(shell, nextSibling)
+}
+
+function setPptxPixelStyle(
+  element: HTMLElement,
+  property: "height" | "min-width" | "width",
+  value: number
+) {
+  setPptxStyle(element, property, `${value}px`)
+}
+
+function setPptxStyle(
+  element: HTMLElement,
+  property: "height" | "min-width" | "transform" | "width",
+  value: string
+) {
+  if (element.style.getPropertyValue(property) === value) return
+  element.style.setProperty(property, value)
 }
 
 function renderPptxProjectedSlide({

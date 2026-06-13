@@ -1,6 +1,7 @@
 import * as React from "react"
 import { format } from "date-fns"
 
+import { cn } from "@/lib/utils"
 import {
   DataCell,
   formatDataCellDisplayValue,
@@ -18,6 +19,8 @@ import {
 import { dateStringToFormat } from "@/components/json-table/lib/date-display-formatting"
 import { parseDateStringAsLocal } from "@/components/json-table/lib/date-parsing"
 import type { FieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
+import { DataCellBooleanIndicator } from "@/registry/new-york-v4/ui/data-cell-boolean-control"
+import { dataCellCheckboxDisplayClass } from "@/registry/new-york-v4/ui/data-cell-classes"
 
 export function formatJsonTableNestedValue(value: unknown): string {
   if (Array.isArray(value)) return `[${value.length} items]`
@@ -236,6 +239,70 @@ export function getJsonTableCellDisplayValue({
 export type JsonTableDisplayCellProps = {
   fieldMetadata: FieldMetadata
   value: unknown
+}
+
+export function JsonTableReadOnlyPrimitiveDisplayCell({
+  displayValue,
+  fieldMetadata,
+}: {
+  displayValue: string
+  fieldMetadata: FieldMetadata
+}) {
+  const isEmpty = displayValue === ""
+  const text = isEmpty ? "—" : displayValue
+
+  if (fieldMetadata.kind === "boolean") {
+    const checked = displayValue === "true"
+    return (
+      <div
+        data-slot="data-cell"
+        data-kind="boolean"
+        data-mode="display"
+        aria-readonly
+        className={cn(
+          jsonTableDataCellClass,
+          "flex items-center justify-center"
+        )}
+      >
+        <span
+          role="checkbox"
+          data-slot="checkbox"
+          data-state={checked ? "checked" : "unchecked"}
+          aria-checked={checked}
+          aria-label={checked ? "true" : "false"}
+          className={cn(
+            dataCellCheckboxDisplayClass,
+            "pointer-events-none flex items-center justify-center"
+          )}
+        >
+          <DataCellBooleanIndicator checked={checked} />
+        </span>
+        <span data-slot="json-table-read-only-cell-text" className="sr-only">
+          {text}
+        </span>
+      </div>
+    )
+  }
+
+  return (
+    <div
+      data-slot="data-cell"
+      data-kind={dataCellKindForField(fieldMetadata) ?? "text"}
+      data-mode="display"
+      aria-readonly
+      className={cn(
+        jsonTableDataCellClass,
+        "relative inline-flex w-full items-center overflow-hidden bg-transparent px-3 text-inherit"
+      )}
+    >
+      <span
+        data-slot="json-table-read-only-cell-text"
+        className={cn("truncate", isEmpty && "text-muted-foreground")}
+      >
+        {text}
+      </span>
+    </div>
+  )
 }
 
 export function JsonTableDisplayCell({

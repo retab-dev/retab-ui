@@ -32,7 +32,6 @@ interface XlsxCellHandle {
   columnIndex: number | null
   isNumeric: boolean
   isActive: boolean
-  title: string
 }
 
 interface XlsxRowHandle {
@@ -174,13 +173,11 @@ function patchCells(
       state.activeCell?.rowIndex === rowIndex &&
       state.activeCell.columnIndex === columnIndex
 
+    setTextNodeValue(cellHandle.textNode, cell.text)
     if (cellHandle.columnIndex !== columnIndex) {
       cellHandle.columnIndex = columnIndex
       cellHandle.element.setAttribute("aria-colindex", String(columnIndex + 1))
     }
-    cellHandle.element.setAttribute("aria-rowindex", String(rowIndex + 1))
-    setTextNodeValue(cellHandle.textNode, cell.text)
-    setCellTitle(cellHandle, cell.text)
     setCellNumeric(cellHandle, cell.numeric)
     setCellActive(cellHandle, isActive)
   }
@@ -246,7 +243,6 @@ function readRowHandles(
       columnIndex: numberAttribute(cell, "aria-colindex", -1),
       isNumeric: cell.classList.contains("tabular-nums"),
       isActive: cell.classList.contains("ring-primary/50"),
-      title: cell.getAttribute("title") ?? "",
     }))
 
     return {
@@ -311,12 +307,6 @@ function setRowHidden(row: XlsxRowHandle, isHidden: boolean) {
   if (row.isHidden === isHidden) return
   row.element.hidden = isHidden
   row.isHidden = isHidden
-}
-
-function setCellTitle(cell: XlsxCellHandle, title: string) {
-  if (cell.title === title) return
-  cell.element.title = title
-  cell.title = title
 }
 
 function setCellNumeric(cell: XlsxCellHandle, isNumeric: boolean) {

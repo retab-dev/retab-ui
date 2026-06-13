@@ -1,7 +1,14 @@
 // @vitest-environment jsdom
 
 import * as React from "react"
-import { cleanup, fireEvent, render, screen } from "@testing-library/react"
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import type { XlsxSheetMeta } from "@/lib/xlsx-workbook"
@@ -59,6 +66,14 @@ function makeSheet(name: string): XlsxSheetMeta {
     columnCount: 1,
     nonEmptyCellCount: 1,
   }
+}
+
+function xlsxCellByText(text: string) {
+  const cell = screen
+    .getByText(text)
+    .closest('[data-slot="xlsx-cell"]') as HTMLElement | null
+  expect(cell).toBeTruthy()
+  return cell!
 }
 
 function mockSheetTabMetrics({
@@ -198,9 +213,9 @@ describe("XlsxSheetTabs", () => {
     expect(screen.queryByLabelText("Scroll sheets left")).toBeNull()
     expect(screen.queryByLabelText("Scroll sheets right")).toBeNull()
     expect(tablist.querySelector("[aria-hidden='true']")).toBeNull()
-    expect(
-      screen.getByRole("tab", { name: "Sheet 1" }).style.height
-    ).toBe("28px")
+    expect(screen.getByRole("tab", { name: "Sheet 1" }).style.height).toBe(
+      "28px"
+    )
     expect(screen.getByRole("tab", { name: "Sheet 1" }).style.width).toBe(
       "104px"
     )
@@ -716,9 +731,124 @@ describe("XlsxGrid", () => {
 
     expect(screen.getByRole("row").getAttribute("aria-rowindex")).toBe("3")
     const cells = screen.getAllByRole("gridcell")
+    expect(cells[0].getAttribute("aria-rowindex")).toBeNull()
     expect(cells[0].getAttribute("aria-colindex")).toBe("1")
     expect(cells[1].getAttribute("aria-colindex")).toBe("2")
+    expect(cells[1].hasAttribute("title")).toBe(false)
     expect(cells[1].className).toContain("ring-primary")
+  })
+
+  it("keeps XLSX virtualization compact while preserving sticky row semantics", async () => {
+    mockElementMetrics({
+      clientHeight: 96,
+      clientWidth: 360,
+    })
+
+    const { container } = render(
+      <XlsxGrid
+        rowCount={1000}
+        columnCount={1000}
+        sheetName="Large"
+        getCell={(rowIndex, columnIndex) => ({
+          text: `${rowIndex}:${columnIndex}`,
+          numeric: columnIndex % 2 === 1,
+        })}
+        scale={1}
+        isolateStyles={false}
+      />
+    )
+
+    await waitFor(() => {
+      expect(container.querySelectorAll('[data-slot="xlsx-row"]')).toHaveLength(
+        14
+      )
+    })
+
+    const cells = container.querySelectorAll('[data-slot="xlsx-cell"]')
+    expect(cells.length).toBeLessThan(200)
+    expect(cells.length).toBeGreaterThan(0)
+    expect(container.querySelector('[data-slot="xlsx-cell"][title]')).toBeNull()
+    expect(
+      container.querySelector('[data-slot="xlsx-cell"][aria-rowindex]')
+    ).toBeNull()
+
+    const canvas = container.querySelector<HTMLElement>(
+      '[data-slot="xlsx-body"] > div'
+    )
+    const header = container.querySelector<HTMLElement>(".sticky.top-0")
+    const firstRow = container.querySelector<HTMLElement>(
+      '[data-slot="xlsx-row"]'
+    )
+    const rowNumber = firstRow?.querySelector<HTMLElement>(
+      '[data-slot="xlsx-row-number"]'
+    )
+
+    expect(canvas?.style.contain).toBe("layout paint style")
+    expect(header).toBeTruthy()
+    expect(firstRow?.getAttribute("aria-rowindex")).toBe("1")
+    expect(rowNumber?.className).toContain("sticky")
+    expect(rowNumber?.className).toContain("left-0")
+    expect(
+      firstRow
+        ?.querySelector('[data-slot="xlsx-cell"]')
+        ?.getAttribute("aria-colindex")
+    ).toBe("1")
+  })
+
+  it("uses near-zero overscan when a large XLSX scroll jump settles", async () => {
+    vi.useFakeTimers()
+    mockElementMetrics({
+      clientHeight: 96,
+      clientWidth: 360,
+    })
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      return window.setTimeout(() => callback(performance.now()), 0)
+    })
+    vi.stubGlobal("cancelAnimationFrame", (id: number) => {
+      window.clearTimeout(id)
+    })
+
+    try {
+      const { container } = render(
+        <XlsxGrid
+          rowCount={1000}
+          columnCount={1000}
+          sheetName="Jump"
+          getCell={(rowIndex, columnIndex) => ({
+            text: `${rowIndex}:${columnIndex}`,
+            numeric: false,
+          })}
+          scale={1}
+          isolateStyles={false}
+        />
+      )
+
+      const viewport = screen.getByRole("grid", { name: "Jump" })
+      expect(
+        container.querySelector('[data-slot="xlsx-row"]')?.textContent
+      ).toContain("10:0")
+
+      viewport.scrollTop = 28 * 500
+      fireEvent.scroll(viewport)
+
+      await act(async () => {
+        await vi.runOnlyPendingTimersAsync()
+      })
+
+      expect(
+        container.querySelector('[data-slot="xlsx-row"]')?.textContent
+      ).toContain("501500:0")
+      expect(
+        Array.from(
+          container.querySelectorAll<HTMLElement>(
+            '[data-slot="xlsx-row"]:not([hidden])'
+          )
+        ).map((row) => row.getAttribute("aria-rowindex"))
+      ).toEqual(["501", "502", "503", "504", "505"])
+    } finally {
+      vi.unstubAllGlobals()
+      vi.useRealTimers()
+    }
   })
 
   it("marks the active cell only when the active row is visible", () => {
@@ -737,9 +867,9 @@ describe("XlsxGrid", () => {
       />
     )
 
-    const activeCell = screen.getByTitle("1:2")
+    const activeCell = xlsxCellByText("1:2")
     expect(activeCell.className).toContain("ring-primary")
-    expect(screen.getByTitle("0:2").className).not.toContain("ring-primary")
+    expect(xlsxCellByText("0:2").className).not.toContain("ring-primary")
 
     rerender(
       <XlsxGrid
@@ -756,8 +886,8 @@ describe("XlsxGrid", () => {
       />
     )
 
-    expect(screen.getByTitle("1:2").className).not.toContain("ring-primary")
-    expect(screen.getByTitle("2:2").className).toContain("ring-primary")
+    expect(xlsxCellByText("1:2").className).not.toContain("ring-primary")
+    expect(xlsxCellByText("2:2").className).toContain("ring-primary")
   })
 
   it("scrolls requested cells to the viewport center using the scaled grid size", () => {

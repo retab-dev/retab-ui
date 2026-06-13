@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import * as React from "react"
-import { cleanup, render, screen } from "@testing-library/react"
+import { act, cleanup, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { PdfViewerRail } from "@/registry/new-york-v4/ui/pdf-viewer-rail"
@@ -76,6 +76,58 @@ describe("PdfViewerRail", () => {
     expect(rail.style.width).toBe("240px")
     cleanup()
     expect(disconnect).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not animate the initial measured width", () => {
+    const frames = new Map<number, FrameRequestCallback>()
+    let nextFrameId = 1
+
+    vi.stubGlobal(
+      "ResizeObserver",
+      class ResizeObserver {
+        observe() {}
+        disconnect() {}
+      }
+    )
+    vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
+      const frameId = nextFrameId++
+      frames.set(frameId, callback)
+      return frameId
+    })
+    vi.spyOn(window, "cancelAnimationFrame").mockImplementation((frameId) => {
+      frames.delete(frameId)
+    })
+    Object.defineProperty(HTMLElement.prototype, "offsetWidth", {
+      configurable: true,
+      get() {
+        return Number(
+          this.dataset.width ??
+            (this.firstElementChild as HTMLElement | null)?.dataset.width ??
+            0
+        )
+      },
+    })
+
+    render(
+      <PdfViewerRail side="left" open animate>
+        <div data-testid="rail-content" data-width="180" />
+      </PdfViewerRail>
+    )
+
+    const rail = screen.getByTestId("rail-content").parentElement!
+      .parentElement as HTMLElement
+
+    expect(rail.style.width).toBe("180px")
+    expect(rail.className).not.toContain("transition-[width]")
+
+    act(() => {
+      for (const [frameId, callback] of frames) {
+        frames.delete(frameId)
+        callback(performance.now())
+      }
+    })
+
+    expect(rail.className).toContain("transition-[width]")
   })
 
   it("does not force a width style when rail animation is disabled", () => {

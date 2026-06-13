@@ -69,6 +69,13 @@ export function fileMatchesQuery(
     return false
   }
 
+  const cutoff = dateModifiedCutoff(query.filters.updatedAfter)
+  if (cutoff) {
+    const fileTime = Date.parse(file.updatedAt ?? file.createdAt ?? "")
+
+    if (Number.isNaN(fileTime) || fileTime < cutoff.getTime()) return false
+  }
+
   return true
 }
 
@@ -79,8 +86,9 @@ export function deriveVisibleIndex(
 ): FileSystemIndex {
   const search = normalizeFileSystemSearch(query.search)
   const hasCategoryFilter = query.filters.categories.length > 0
+  const hasDateFilter = query.filters.updatedAfter !== null
 
-  if (!search && !hasCategoryFilter)
+  if (!search && !hasCategoryFilter && !hasDateFilter)
     return sortFileSystemIndex(index, query.sort)
 
   const visiblePaths = new Set<string>()
@@ -240,5 +248,23 @@ function entryTime(entry: FileSystemEntry) {
 }
 
 export function fileSystemFilterIsEmpty(filters: FileSystemFilterState) {
-  return filters.categories.length === 0
+  return filters.categories.length === 0 && filters.updatedAfter === null
+}
+
+export function dateModifiedCutoff(
+  preset: FileSystemFilterState["updatedAfter"]
+) {
+  if (!preset) return null
+
+  const cutoff = new Date()
+  cutoff.setDate(cutoff.getDate() - (preset === "last7" ? 7 : 30))
+  return cutoff
+}
+
+export function dateModifiedFilterLabel(
+  preset: FileSystemFilterState["updatedAfter"]
+) {
+  if (preset === "last7") return "Modified 7d"
+  if (preset === "last30") return "Modified 30d"
+  return "Modified"
 }

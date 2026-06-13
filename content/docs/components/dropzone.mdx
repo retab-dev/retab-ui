@@ -8,6 +8,10 @@ Dropzone is the headless file-intake primitive. It owns drag/drop mechanics,
 file input wiring, accept validation, max-size and max-file rejection,
 controlled/uncontrolled file state, and accessibility prop getters.
 
+Browser file intake is not upload. Dropzone decides which local files enter
+React state; your application decides whether, when, and how those files are
+uploaded.
+
 It does not render icons, thumbnails, copy, grids, cards, progress rows, or
 upload transport. Use [File Uploader](/docs/components/file-uploader) for the
 default Retab visual upload area.
@@ -25,7 +29,7 @@ npx shadcn@latest add @retab/dropzone
 ```tsx
 import { useDropzone } from "@/components/ui/dropzone"
 
-export function UploadTarget() {
+export function FileIntakeTarget() {
   const dropzone = useDropzone({
     accept: "application/pdf,image/*,.docx,.xlsx,.csv",
     maxFiles: 3,
@@ -52,13 +56,13 @@ into React state and prop getters.
 - `lastIntake` is the latest file-intake attempt.
 - `onFilesChange` reports selected-file state changes.
 - `onIntake` reports accepted and rejected files from one attempt.
-- `getTriggerProps` is for custom elements that need button semantics.
 - `getButtonProps` is for real `<button>` elements.
+- `getTriggerProps` is for anything else that opens the file dialog.
 
 ## Native Button Trigger
 
 ```tsx
-export function ToolbarUpload() {
+export function ToolbarAttachment() {
   const dropzone = useDropzone()
 
   return (

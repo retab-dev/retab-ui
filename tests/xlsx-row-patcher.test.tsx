@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { cleanup, renderHook } from "@testing-library/react"
-import { afterEach, describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
 import type { FixedGridViewport } from "@/registry/new-york-v4/ui/fixed-grid-virtualization"
 import {
@@ -71,9 +71,69 @@ describe("XLSX row patcher", () => {
     expect(firstRowCells[1]!.className).toContain("justify-end")
     expect(firstRowCells[1]!.className).toContain("tabular-nums")
     expect(firstRowCells[1]!.className).toContain("ring-primary")
-    expect(firstRowCells[1]!.title).toBe("500")
-    expect(firstRowCells[1]!.getAttribute("aria-rowindex")).toBe("6")
+    expect(firstRowCells[1]!.hasAttribute("title")).toBe(false)
+    expect(firstRowCells[1]!.getAttribute("aria-rowindex")).toBeNull()
     expect(firstRowCells[1]!.getAttribute("aria-colindex")).toBe("2")
+  })
+
+  it("does not mutate per-cell row indexes, titles, or stable classes during fast scroll patches", () => {
+    const rowWindow = buildRowWindow([
+      {
+        ariaRowIndex: "1",
+        rowNumber: "1",
+        cells: [
+          { text: "r0c0", numeric: false, active: false },
+          { text: "r0c1", numeric: true, active: false },
+        ],
+      },
+      {
+        ariaRowIndex: "2",
+        rowNumber: "2",
+        cells: [
+          { text: "r1c0", numeric: false, active: false },
+          { text: "r1c1", numeric: true, active: false },
+        ],
+      },
+      {
+        ariaRowIndex: "3",
+        rowNumber: "3",
+        cells: [
+          { text: "r2c0", numeric: false, active: false },
+          { text: "r2c1", numeric: true, active: false },
+        ],
+      },
+    ])
+    const cells = Array.from(
+      rowWindow.querySelectorAll<HTMLElement>('[data-slot="xlsx-cell"]')
+    )
+    const setAttributeSpies = cells.map((cell) =>
+      vi.spyOn(cell, "setAttribute")
+    )
+    const classToggleSpies = cells.map((cell) =>
+      vi.spyOn(cell.classList, "toggle")
+    )
+    const state = createPatchState()
+    const { result } = renderHook(() =>
+      useXlsxRowPatcher({
+        rowWindowRef: { current: rowWindow },
+        getState: () => state,
+      })
+    )
+
+    expect(result.current.patch(createViewport())).toBe("handled")
+
+    expect(
+      setAttributeSpies.flatMap((spy) =>
+        spy.mock.calls.map(([attribute]) => attribute)
+      )
+    ).toEqual([])
+    expect(
+      classToggleSpies.reduce((count, spy) => count + spy.mock.calls.length, 0)
+    ).toBe(0)
+    for (const cell of cells) {
+      expect(cell.getAttribute("aria-rowindex")).toBeNull()
+      expect(cell.hasAttribute("title")).toBe(false)
+    }
   })
 
   it("declines the fast path after the active cell changes", () => {
@@ -221,7 +281,6 @@ function buildRowWindow(
       const cell = document.createElement("div")
       cell.dataset.slot = "xlsx-cell"
       cell.setAttribute("role", "gridcell")
-      cell.setAttribute("aria-rowindex", row.ariaRowIndex)
       cell.setAttribute("aria-colindex", String(cellIndex + 1))
       cell.className = [
         "flex",
@@ -232,7 +291,6 @@ function buildRowWindow(
           ? "bg-primary/12 ring-1 ring-primary/50 ring-inset"
           : "",
       ].join(" ")
-      cell.title = cellData.text
 
       const span = document.createElement("span")
       span.append(cellData.text)

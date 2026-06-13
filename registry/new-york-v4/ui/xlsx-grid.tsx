@@ -37,8 +37,10 @@ import {
 
 export { XlsxGridSkeleton } from "@/components/ui/xlsx-grid-skeleton"
 
-const ROW_OVERSCAN = 30
-const COLUMN_OVERSCAN = 30
+const ROW_OVERSCAN = 4
+const JUMP_ROW_OVERSCAN = 0
+const COLUMN_OVERSCAN = 2
+const JUMP_COLUMN_OVERSCAN = 0
 
 export interface XlsxScrollRequest {
   sheetIndex: number
@@ -126,6 +128,9 @@ export function XlsxGrid({
     columnSize: columnWidth,
     rowOverscan: ROW_OVERSCAN,
     columnOverscan: COLUMN_OVERSCAN,
+    jumpRowOverscan: JUMP_ROW_OVERSCAN,
+    jumpColumnOverscan: JUMP_COLUMN_OVERSCAN,
+    minimumRenderedRows: 1,
     rowScrollStrategy,
     scrollRef,
   })
@@ -224,6 +229,7 @@ export function XlsxGrid({
           <div
             style={getFixedGridCanvasStyle({
               width: totalWidth,
+              contain: true,
             })}
           >
             <div

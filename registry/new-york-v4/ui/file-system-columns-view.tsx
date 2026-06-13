@@ -1,7 +1,8 @@
 "use client"
 
 import * as React from "react"
-import { ChevronRight, File, Folder } from "lucide-react"
+import { useVirtualizer } from "@tanstack/react-virtual"
+import { ChevronRight, Folder } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -10,6 +11,8 @@ import type { FileSystemController } from "./file-system-controller"
 import { folderHasChildren, pathParent } from "./file-system-index"
 import { FileSystemThumbnail } from "./file-system-preview"
 import type { FileSystemEntry, FileSystemFileEntry } from "./file-system-types"
+
+const COLUMN_ROW_HEIGHT = 32
 
 export function FileSystemColumnsView({
   controller,
@@ -76,7 +79,27 @@ function FileSystemColumn({
   onOpenFile: (file: FileSystemFileEntry) => void
   path: string
 }) {
+  const viewportRef = React.useRef<HTMLDivElement | null>(null)
   const entries = controller.index.children.get(path) ?? []
+  const virtualizer = useVirtualizer({
+    count: entries.length,
+    estimateSize: () => COLUMN_ROW_HEIGHT,
+    getScrollElement: () => viewportRef.current,
+    overscan: 10,
+  })
+  const virtualRows = virtualizer.getVirtualItems()
+  const renderedRows = virtualRows.length
+    ? virtualRows.map((row) => ({
+        entry: entries[row.index],
+        start: row.start,
+      }))
+    : entries.map((entry, index) => ({
+        entry,
+        start: index * COLUMN_ROW_HEIGHT,
+      }))
+  const totalSize = virtualRows.length
+    ? virtualizer.getTotalSize()
+    : entries.length * COLUMN_ROW_HEIGHT
 
   return (
     <div
@@ -84,16 +107,19 @@ function FileSystemColumn({
       role="listbox"
       aria-label={path || "Files"}
     >
-      <div className="flex h-full flex-col gap-px overflow-auto p-1.5">
+      <div ref={viewportRef} className="h-full overflow-auto p-1.5">
         {entries.length ? (
-          entries.map((entry) => (
-            <FileSystemColumnRow
-              key={entry.path}
-              controller={controller}
-              entry={entry}
-              onOpenFile={onOpenFile}
-            />
-          ))
+          <div className="relative" style={{ height: totalSize }}>
+            {renderedRows.map(({ entry, start }) => (
+              <FileSystemColumnRow
+                key={entry.path}
+                controller={controller}
+                entry={entry}
+                onOpenFile={onOpenFile}
+                style={{ transform: `translateY(${start}px)` }}
+              />
+            ))}
+          </div>
         ) : (
           <div className="px-2 py-1.5 text-xs text-muted-foreground">
             This folder is empty
@@ -108,10 +134,12 @@ function FileSystemColumnRow({
   controller,
   entry,
   onOpenFile,
+  style,
 }: {
   controller: FileSystemController
   entry: FileSystemEntry
   onOpenFile: (file: FileSystemFileEntry) => void
+  style: React.CSSProperties
 }) {
   const isSelected = entry.path === controller.selectedPath
   const isOnTrail =
@@ -137,13 +165,14 @@ function FileSystemColumnRow({
         }
       }}
       className={cn(
-        "flex h-8 shrink-0 items-center gap-2 rounded-md px-2 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "absolute inset-x-0 flex h-8 shrink-0 items-center gap-2 rounded-md px-2 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring",
         isSelected
           ? "bg-primary text-primary-foreground"
           : isOnTrail
             ? "bg-accent"
             : "hover:bg-accent/50"
       )}
+      style={style}
     >
       {entry.kind === "folder" ? (
         <Folder className="size-4 shrink-0 text-sky-500" aria-hidden />

@@ -60,6 +60,7 @@ export type FileSystemSortState = {
 
 export type FileSystemFilterState = {
   categories: string[]
+  updatedAfter: "last7" | "last30" | null
 }
 
 export type FileSystemQueryState = {

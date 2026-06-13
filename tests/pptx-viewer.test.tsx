@@ -1771,6 +1771,54 @@ describe("PptxViewer", () => {
     )
   })
 
+  it("keeps the same canvas lifecycle when scroller props rerender unchanged", async () => {
+    const renderResult = deferred<PptxRenderResult>()
+    const source = createFakePptxSource()
+    source.renderSlide.mockReturnValueOnce(renderResult.promise)
+    const activity = createManualPptxActivity(false).activity
+
+    const view = render(
+      <PptxSlideScroller
+        source={source}
+        zoomScale={1}
+        rotation={0}
+        eager={false}
+        activity={activity}
+        containerRef={vi.fn()}
+        viewportRef={vi.fn()}
+        onScroll={vi.fn()}
+      />
+    )
+
+    await waitFor(() => {
+      expect(source.renderSlide).toHaveBeenCalledTimes(1)
+    })
+
+    const canvas = document.querySelector("canvas")
+
+    await act(async () => {
+      view.rerender(
+        <PptxSlideScroller
+          source={source}
+          zoomScale={1}
+          rotation={0}
+          eager={false}
+          activity={activity}
+          containerRef={vi.fn()}
+          viewportRef={vi.fn()}
+          onScroll={vi.fn()}
+        />
+      )
+    })
+
+    expect(document.querySelector("canvas")).toBe(canvas)
+    expect(source.renderSlide).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      renderResult.resolve({ status: "rendered" })
+    })
+  })
+
   it("shares one loaded source across viewers with the same source identity", async () => {
     const fetchMock = vi.fn(okPptxResponse)
     vi.stubGlobal("fetch", fetchMock)
@@ -2826,6 +2874,36 @@ describe("PptxViewer", () => {
     expect(cachedSource.renderSlide).toHaveBeenCalledTimes(1)
   })
 
+  it("uses a native PPTX scroll viewport while preserving the viewport slot", () => {
+    const source = createFakePptxSource()
+    const activity = createManualPptxActivity(false).activity
+
+    render(
+      <PptxSlideScroller
+        source={source}
+        zoomScale={1}
+        rotation={0}
+        eager={false}
+        activity={activity}
+        containerRef={vi.fn()}
+        viewportRef={vi.fn()}
+        onScroll={vi.fn()}
+      />
+    )
+
+    const viewport = document.querySelector<HTMLElement>(
+      '[data-slot="scroll-area-viewport"]'
+    )
+    expect(viewport).toBeTruthy()
+    expect(viewport?.classList.contains("overflow-auto")).toBe(true)
+    expect(
+      document.querySelector('[data-slot="scroll-area-scrollbar"]')
+    ).toBeNull()
+    expect(
+      viewport?.querySelector('[data-slot="pptx-slide-virtual-canvas"]')
+    ).toBeTruthy()
+  })
+
   it("mounts a bounded virtual slide window instead of every slide shell", async () => {
     const source = createFakePptxSource({ slideCount: 20 })
     const activity = createManualPptxActivity(false).activity
@@ -2941,6 +3019,76 @@ describe("PptxViewer", () => {
         )
       ).toBeNull()
     })
+  })
+
+  it("does not rewrite unchanged projection styles or reorder stable shells on scroll", async () => {
+    const source = createFakePptxSource({ slideCount: 20 })
+    const activity = createManualPptxActivity(false).activity
+    const setProperty = vi.spyOn(CSSStyleDeclaration.prototype, "setProperty")
+    const insertBefore = vi.spyOn(Node.prototype, "insertBefore")
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      callback(0)
+      return 1
+    })
+
+    render(
+      <PptxSlideScroller
+        source={source}
+        zoomScale={1}
+        rotation={0}
+        eager={false}
+        activity={activity}
+        containerRef={vi.fn()}
+        viewportRef={vi.fn()}
+        onScroll={vi.fn()}
+      />
+    )
+
+    await waitFor(() => {
+      expect(document.querySelector('[data-slot="pptx-slide"]')).toBeTruthy()
+    })
+
+    const viewport = document.querySelector<HTMLElement>(
+      '[data-slot="scroll-area-viewport"]'
+    )
+    expect(viewport).toBeTruthy()
+    setElementNumberProperty(viewport!, "clientHeight", 720)
+    setElementNumberProperty(viewport!, "scrollTop", 0)
+    setProperty.mockClear()
+    insertBefore.mockClear()
+
+    fireEvent.scroll(viewport!)
+
+    expect(setProperty).not.toHaveBeenCalled()
+    expect(insertBefore).not.toHaveBeenCalled()
+  })
+
+  it("positions virtual slide shells with transforms instead of top writes", async () => {
+    const source = createFakePptxSource({ slideCount: 20 })
+    const activity = createManualPptxActivity(false).activity
+
+    render(
+      <PptxSlideScroller
+        source={source}
+        zoomScale={1}
+        rotation={0}
+        eager={false}
+        activity={activity}
+        containerRef={vi.fn()}
+        viewportRef={vi.fn()}
+        onScroll={vi.fn()}
+      />
+    )
+
+    await waitFor(() => {
+      expect(document.querySelector('[data-slot="pptx-slide"]')).toBeTruthy()
+    })
+
+    const shell = document.querySelector<HTMLElement>(
+      '[data-slot="pptx-slide-slot"]'
+    )
+    expect(shell?.style.top).toBe("")
+    expect(shell?.style.transform).toBe("translate(-50%, 16px)")
   })
 
   it("does not render slides after a virtual shell leaves the window", async () => {

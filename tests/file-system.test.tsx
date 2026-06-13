@@ -85,6 +85,31 @@ describe("FileSystem", () => {
     expect(screen.queryByRole("treeitem", { name: /report.pdf/i })).toBeNull()
   })
 
+  it("filters by modified date preset", () => {
+    const recentIso = new Date().toISOString()
+    const datedItems: FileSystemItem[] = [
+      {
+        kind: "file",
+        path: "dated/recent.txt",
+        mimeType: "text/plain",
+        updatedAt: recentIso,
+      },
+      {
+        kind: "file",
+        path: "dated/old.txt",
+        mimeType: "text/plain",
+        updatedAt: "2020-01-01T00:00:00Z",
+      },
+    ]
+
+    render(<FileSystem defaultPath="dated/" items={datedItems} />)
+
+    fireEvent.click(screen.getByRole("button", { name: "Modified 30d" }))
+
+    expect(screen.getByRole("treeitem", { name: /recent.txt/i })).toBeTruthy()
+    expect(screen.queryByRole("treeitem", { name: /old.txt/i })).toBeNull()
+  })
+
   it("loads lazy folders and retries failed folder loads", async () => {
     const loadChildren = vi
       .fn()

@@ -65,7 +65,6 @@ export const XlsxGridRow = React.memo(function XlsxGridRow({
           <div
             key={item.key}
             role="gridcell"
-            aria-rowindex={rowIndex + 1}
             aria-colindex={columnIndex + 1}
             data-slot="xlsx-cell"
             className={cn(
@@ -73,7 +72,6 @@ export const XlsxGridRow = React.memo(function XlsxGridRow({
               cell.numeric ? "justify-end tabular-nums" : "justify-start",
               isActive && "bg-primary/12 ring-1 ring-primary/50 ring-inset"
             )}
-            title={cell.text}
           >
             <span className="truncate">{cell.text}</span>
           </div>

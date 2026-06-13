@@ -4,6 +4,7 @@ import { cleanup, renderHook } from "@testing-library/react"
 import type { JSONSchema7 } from "json-schema"
 import { afterEach, describe, expect, it } from "vitest"
 
+import type { FixedGridViewport } from "@/components/ui/fixed-grid-virtualization"
 import type { VisibleColumn } from "@/components/json-table/json-table-cell-types"
 import type { ProjectedRow } from "@/components/json-table/lib/document-projection"
 import { getFieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
@@ -11,7 +12,6 @@ import {
   useReadOnlyJsonRowPatcher,
   type ReadOnlyJsonRowPatchState,
 } from "@/components/json-table/read-only-json-row-patcher"
-import type { FixedGridViewport } from "@/components/ui/fixed-grid-virtualization"
 
 afterEach(() => {
   cleanup()
@@ -55,6 +55,41 @@ describe("read-only JSON row patcher", () => {
     expect(rowText(rows[2]!)).toEqual(["row 5", "6"])
   })
 
+  it("patches boolean cells instead of rejecting the row", () => {
+    const rowWindow = buildRowWindow([
+      { rowIndex: 0, cells: ["row 0", "1", "false"] },
+      { rowIndex: 1, cells: ["row 1", "2", "true"] },
+      { rowIndex: 2, cells: ["row 2", "3", "false"] },
+    ])
+    const state = createPatchState({
+      visibleColumns: [
+        visibleColumn("name"),
+        visibleColumn("amount"),
+        visibleColumn("is_paid"),
+      ],
+    })
+    const { result } = renderHook(() =>
+      useReadOnlyJsonRowPatcher({
+        rowWindowRef: { current: rowWindow },
+        getState: () => state,
+      })
+    )
+
+    expect(result.current.patch(createJumpViewport())).toBe("handled")
+
+    const rows = rowHandles(rowWindow)
+    expect(rowText(rows[0]!)).toEqual(["row 3", "4", "true"])
+    expect(rowText(rows[1]!)).toEqual(["row 4", "5", "false"])
+    expect(rowText(rows[2]!)).toEqual(["row 5", "6", "true"])
+    expect(booleanCheckboxes(rows[0]!)[0]?.getAttribute("aria-checked")).toBe(
+      "true"
+    )
+    expect(booleanCheckboxes(rows[1]!)[0]?.dataset.state).toBe("unchecked")
+    expect(booleanCheckboxes(rows[2]!)[0]?.getAttribute("aria-label")).toBe(
+      "true"
+    )
+  })
+
   it("falls back to React when a required read-only text node is missing", () => {
     const rowWindow = buildRowWindow([
       { rowIndex: 0, cells: ["row 0", "1"] },
@@ -92,7 +127,9 @@ function createPatchState(
   }
 }
 
-function visibleColumn(fieldPath: "name" | "amount" | "is_paid"): VisibleColumn {
+function visibleColumn(
+  fieldPath: "name" | "amount" | "is_paid"
+): VisibleColumn {
   const fieldMetadata = getFieldMetadata(schema, fieldPath)
   if (!fieldMetadata) throw new Error(`Missing metadata for ${fieldPath}`)
   return {
@@ -109,6 +146,7 @@ function projectedRow(rowIndex: number): ProjectedRow {
       {
         key: "name",
         value: `row ${rowIndex}`,
+        displayValue: `row ${rowIndex}`,
         templateFieldPath: "name",
         materializedFieldPath: "name",
         arrayIndexes: [],
@@ -116,8 +154,17 @@ function projectedRow(rowIndex: number): ProjectedRow {
       {
         key: "amount",
         value: rowIndex + 1,
+        displayValue: String(rowIndex + 1),
         templateFieldPath: "amount",
         materializedFieldPath: "amount",
+        arrayIndexes: [],
+      },
+      {
+        key: "is_paid",
+        value: rowIndex % 2 === 1,
+        displayValue: rowIndex % 2 === 1 ? "true" : "false",
+        templateFieldPath: "is_paid",
+        materializedFieldPath: "is_paid",
         arrayIndexes: [],
       },
     ],
@@ -135,9 +182,7 @@ function createJumpViewport(): FixedGridViewport {
   }
 }
 
-function buildRowWindow(
-  rows: Array<{ rowIndex: number; cells: [string, string] }>
-) {
+function buildRowWindow(rows: Array<{ rowIndex: number; cells: string[] }>) {
   const rowWindow = document.createElement("tbody")
   for (const row of rows) {
     const rowElement = document.createElement("tr")
@@ -147,7 +192,16 @@ function buildRowWindow(
     for (const [cellIndex, text] of row.cells.entries()) {
       const cell = document.createElement("td")
       cell.dataset.slot = "json-table-read-only-cell"
-      cell.dataset.fieldPath = cellIndex === 0 ? "name" : "amount"
+      cell.dataset.fieldPath =
+        cellIndex === 0 ? "name" : cellIndex === 1 ? "amount" : "is_paid"
+      if (cellIndex === 2) {
+        const checkbox = document.createElement("span")
+        checkbox.setAttribute("role", "checkbox")
+        checkbox.setAttribute("aria-checked", text)
+        checkbox.setAttribute("aria-label", text)
+        checkbox.dataset.state = text === "true" ? "checked" : "unchecked"
+        cell.append(checkbox)
+      }
       const span = document.createElement("span")
       span.dataset.slot = "data-cell-value"
       span.append(text)
@@ -168,8 +222,10 @@ function rowHandles(rowWindow: HTMLElement) {
 
 function rowText(row: HTMLElement) {
   return Array.from(
-    row.querySelectorAll<HTMLElement>(
-      '[data-slot="json-table-read-only-cell"]'
-    )
+    row.querySelectorAll<HTMLElement>('[data-slot="json-table-read-only-cell"]')
   ).map((cell) => cell.textContent ?? "")
+}
+
+function booleanCheckboxes(row: HTMLElement) {
+  return Array.from(row.querySelectorAll<HTMLElement>('[role="checkbox"]'))
 }

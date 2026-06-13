@@ -70,7 +70,7 @@ describe("file-system index", () => {
   it("search keeps matching files and ancestors visible", () => {
     const index = buildFileSystemIndex(items)
     const visible = deriveVisibleIndex(index, "", {
-      filters: { categories: [] },
+      filters: { categories: [], updatedAfter: null },
       search: "january",
       sort: DEFAULT_FILE_SYSTEM_SORT,
     })
@@ -89,7 +89,7 @@ describe("file-system index", () => {
   it("filters by detected file category", () => {
     const index = buildFileSystemIndex(items)
     const visible = deriveVisibleIndex(index, "", {
-      filters: { categories: ["csv"] },
+      filters: { categories: ["csv"], updatedAfter: null },
       search: "",
       sort: DEFAULT_FILE_SYSTEM_SORT,
     })

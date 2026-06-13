@@ -8,7 +8,6 @@ import {
   type FixedGridViewport,
 } from "@/components/ui/fixed-grid-virtualization"
 import type { VisibleColumn } from "@/components/json-table/json-table-cell-types"
-import { getJsonTableCellDisplayValue } from "@/components/json-table/json-table-display-cell"
 import type { ProjectedRow } from "@/components/json-table/lib/document-projection"
 
 export interface ReadOnlyJsonRowPatchState {
@@ -25,6 +24,7 @@ export interface ReadOnlyJsonRowPatcher {
 
 interface JsonCellHandle {
   element: HTMLElement
+  checkboxElement: HTMLElement | null
   textNode: Text | null
   fieldPath: string | null
 }
@@ -141,10 +141,12 @@ function patchCells(
       cellHandle.element.dataset.fieldPath = fieldPath
       cellHandle.fieldPath = fieldPath
     }
-    setTextNodeValue(
-      cellHandle?.textNode ?? null,
-      displayTextForCell(projectedCell, visibleColumns[cellIndex])
-    )
+    const column = visibleColumns[cellIndex]
+    const displayText = displayTextForCell(projectedCell, column)
+    setTextNodeValue(cellHandle?.textNode ?? null, displayText)
+    if (column?.fieldMetadata?.kind === "boolean") {
+      setBooleanCellState(cellHandle?.checkboxElement ?? null, displayText)
+    }
   }
 }
 
@@ -156,15 +158,7 @@ function displayTextForCell(
   const fieldMetadata = column?.fieldMetadata
   if (!materializedFieldPath || !fieldMetadata) return ""
 
-  if (projectedCell.displayValue !== undefined) {
-    return projectedCell.displayValue || emptyDisplayText(fieldMetadata.kind)
-  }
-
-  const displayValue = getJsonTableCellDisplayValue({
-    fieldMetadata,
-    value: projectedCell.value,
-  })
-  return displayValue || emptyDisplayText(fieldMetadata.kind)
+  return projectedCell.displayValue || emptyDisplayText(fieldMetadata.kind)
 }
 
 function emptyDisplayText(kind: string) {
@@ -195,19 +189,25 @@ function canPatchRowHandles(
     }
 
     const projectedRow = state.projectedRows[virtualRows[handleIndex].index]
-    for (let cellIndex = 0; cellIndex < state.visibleColumns.length; cellIndex++) {
+    for (
+      let cellIndex = 0;
+      cellIndex < state.visibleColumns.length;
+      cellIndex++
+    ) {
       const column = state.visibleColumns[cellIndex]
       const projectedCell = projectedRow?.cells[cellIndex]
       const fieldMetadata = column?.fieldMetadata
       if (!projectedCell?.materializedFieldPath || !fieldMetadata) continue
-      if (
-        fieldMetadata.kind === "boolean" ||
-        fieldMetadata.kind === "object" ||
-        fieldMetadata.kind === "array"
-      ) {
+      if (fieldMetadata.kind === "object" || fieldMetadata.kind === "array") {
         return false
       }
       if (!rowHandle.cells[cellIndex]?.textNode) return false
+      if (
+        fieldMetadata.kind === "boolean" &&
+        !rowHandle.cells[cellIndex]?.checkboxElement
+      ) {
+        return false
+      }
     }
   }
   return true
@@ -227,6 +227,7 @@ function readRowHandles(rowWindow: HTMLElement): JsonRowHandleCache {
       )
       return {
         element: cell,
+        checkboxElement: cell.querySelector<HTMLElement>('[role="checkbox"]'),
         textNode: firstTextNode(textElement),
         fieldPath: cell.dataset.fieldPath ?? null,
       }
@@ -256,6 +257,25 @@ function numericDataIndex(element: HTMLElement): number | null {
 
 function setTextNodeValue(textNode: Text | null, value: string) {
   if (textNode && textNode.nodeValue !== value) textNode.nodeValue = value
+}
+
+function setBooleanCellState(
+  checkboxElement: HTMLElement | null,
+  value: string
+) {
+  if (!checkboxElement) return
+  const checked = value === "true"
+  const ariaChecked = checked ? "true" : "false"
+  const state = checked ? "checked" : "unchecked"
+  if (checkboxElement.getAttribute("aria-checked") !== ariaChecked) {
+    checkboxElement.setAttribute("aria-checked", ariaChecked)
+  }
+  if (checkboxElement.getAttribute("aria-label") !== ariaChecked) {
+    checkboxElement.setAttribute("aria-label", ariaChecked)
+  }
+  if (checkboxElement.dataset.state !== state) {
+    checkboxElement.dataset.state = state
+  }
 }
 
 function setRowTransform(row: JsonRowHandle, transform: string) {
