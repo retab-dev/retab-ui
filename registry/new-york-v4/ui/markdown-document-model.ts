@@ -274,6 +274,39 @@ function createMarkdownPages(
   return pages
 }
 
+function createMarkdownPageContent(
+  blocks: readonly MarkdownDocumentBlock[]
+): {
+  markdown: string
+  sourceLineByRenderedLine: ReadonlyMap<number, number>
+} {
+  const sourceLineByRenderedLine = new Map<number, number>()
+  const parts: string[] = []
+  let renderedLine = 1
+
+  for (const block of blocks) {
+    if (parts.length > 0) {
+      parts.push("")
+      renderedLine += 1
+    }
+
+    parts.push(block.markdown)
+    const blockLines = splitTextLines(block.markdown)
+    for (let index = 0; index < blockLines.length; index++) {
+      sourceLineByRenderedLine.set(
+        renderedLine + index,
+        Math.min(block.blockEndLine, block.blockStartLine + index)
+      )
+    }
+    renderedLine += blockLines.length
+  }
+
+  return {
+    markdown: parts.join("\n"),
+    sourceLineByRenderedLine,
+  }
+}
+
 function extractYamlFrontmatter(text: string) {
   const match = text.match(/^---(?:\r?\n)([\s\S]*?)(?:\r?\n)---(?:\r?\n|$)/)
   if (!match) return null
