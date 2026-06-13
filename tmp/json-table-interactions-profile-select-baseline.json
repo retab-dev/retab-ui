@@ -1,0 +1,1258 @@
+{
+  "measuredAt": "2026-06-13T21:21:01.460Z",
+  "route": "http://localhost:3100/json-table-profile",
+  "mode": "headless Chrome CDP + json-table render profiler",
+  "initial": {
+    "url": "http://localhost:3100/json-table-profile",
+    "elapsedWallMs": 2745,
+    "navigation": {
+      "domContentLoaded": 1326.5,
+      "load": 1401.8999999985099,
+      "responseEnd": 1277.6999999955297,
+      "transferSize": 41530,
+      "encodedBodySize": 41230
+    },
+    "scroll": {
+      "scrollHeight": 48032,
+      "clientHeight": 367,
+      "scrollTop": 0,
+      "scrollLeft": 0,
+      "scrollWidth": 768,
+      "clientWidth": 706
+    },
+    "mountedRows": 28,
+    "mountedEditableCells": 200,
+    "totalDomNodes": 1392,
+    "warmRenderSnapshotCount": 227
+  },
+  "scenarios": [
+    {
+      "name": "hover-date-cell",
+      "elapsedMs": 103.89999999850988,
+      "wait": {
+        "ok": true,
+        "elapsedMs": 16.5
+      },
+      "dom": {
+        "nodes": 1392,
+        "rows": 28,
+        "editableCells": 200,
+        "activeCells": 0,
+        "dataCells": 200,
+        "calendar": false,
+        "popovers": 0
+      },
+      "longTasks": [],
+      "metricsDelta": {
+        "JSHeapUsedSize": 104988,
+        "Nodes": 0,
+        "LayoutCount": 0,
+        "RecalcStyleCount": 3,
+        "LayoutDurationMs": 0,
+        "RecalcStyleDurationMs": 0.39500000000001023,
+        "ScriptDurationMs": 0.7080000000000268,
+        "TaskDurationMs": 5.809999999999945
+      },
+      "profiler": {
+        "renders": {
+          "total": 0,
+          "byComponent": [],
+          "byInstance": [],
+          "changedProps": []
+        },
+        "reactCommits": {
+          "count": 0,
+          "totalActualDurationMs": 0,
+          "maxActualDurationMs": 0,
+          "commits": []
+        },
+        "marks": [
+          {
+            "at": 2745,
+            "name": "scenario-start",
+            "detail": {
+              "name": "hover-date-cell"
+            }
+          },
+          {
+            "at": 2867.1999999955297,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.0.date"
+            }
+          },
+          {
+            "at": 2867.2999999970198,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.0.date"
+            }
+          },
+          {
+            "at": 2886.10000000149,
+            "name": "scenario-end",
+            "detail": {
+              "name": "hover-date-cell"
+            }
+          }
+        ]
+      },
+      "trace": {
+        "EventDispatch": {
+          "count": 14,
+          "totalMs": 0.843,
+          "maxMs": 0.275
+        },
+        "FunctionCall": {
+          "count": 30,
+          "totalMs": 0.779,
+          "maxMs": 0.228
+        },
+        "UpdateLayoutTree": {
+          "count": 3,
+          "totalMs": 0.396,
+          "maxMs": 0.313
+        },
+        "Layout": {
+          "count": 0,
+          "totalMs": 0,
+          "maxMs": 0
+        },
+        "Paint": {
+          "count": 2,
+          "totalMs": 0.131,
+          "maxMs": 0.108
+        },
+        "MinorGC": {
+          "count": 0,
+          "totalMs": 0,
+          "maxMs": 0
+        },
+        "topEvents": [
+          {
+            "name": "RunTask",
+            "ms": 1.824,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 1.647,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 1.602,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 1.105,
+            "category": "disabled-by-default-devtools.timeline"
+          }
+        ]
+      }
+    },
+    {
+      "name": "hover-first-20-mounted-cells",
+      "elapsedMs": 593.3999999985099,
+      "wait": {
+        "ok": true,
+        "elapsedMs": 11.299999997019768
+      },
+      "dom": {
+        "nodes": 1392,
+        "rows": 28,
+        "editableCells": 200,
+        "activeCells": 0,
+        "dataCells": 200,
+        "calendar": false,
+        "popovers": 0
+      },
+      "longTasks": [],
+      "metricsDelta": {
+        "JSHeapUsedSize": 418124,
+        "Nodes": 0,
+        "LayoutCount": 0,
+        "RecalcStyleCount": 70,
+        "LayoutDurationMs": 0,
+        "RecalcStyleDurationMs": 7.538999999999987,
+        "ScriptDurationMs": 5.7479999999999905,
+        "TaskDurationMs": 47.155000000000086
+      },
+      "profiler": {
+        "renders": {
+          "total": 0,
+          "byComponent": [],
+          "byInstance": [],
+          "changedProps": []
+        },
+        "reactCommits": {
+          "count": 0,
+          "totalActualDurationMs": 0,
+          "maxActualDurationMs": 0,
+          "commits": []
+        },
+        "marks": [
+          {
+            "at": 2915,
+            "name": "scenario-start",
+            "detail": {
+              "name": "hover-first-20-mounted-cells"
+            }
+          },
+          {
+            "at": 3002.39999999851,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.0.date"
+            }
+          },
+          {
+            "at": 3002.5,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.0.date"
+            }
+          },
+          {
+            "at": 3027.10000000149,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.0.amount.amount"
+            }
+          },
+          {
+            "at": 3027.1999999955297,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.0.amount.amount"
+            }
+          },
+          {
+            "at": 3052.10000000149,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.0.amount.iso_4217_currency_code"
+            }
+          },
+          {
+            "at": 3052.1999999955297,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.0.amount.iso_4217_currency_code"
+            }
+          },
+          {
+            "at": 3077.10000000149,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.0.description"
+            }
+          },
+          {
+            "at": 3077.10000000149,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.0.description"
+            }
+          },
+          {
+            "at": 3102.10000000149,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.0.check_number"
+            }
+          },
+          {
+            "at": 3102.1999999955297,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.0.check_number"
+            }
+          },
+          {
+            "at": 3127.5,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.0.transaction_type"
+            }
+          },
+          {
+            "at": 3127.60000000149,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.0.transaction_type"
+            }
+          },
+          {
+            "at": 3152,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.0.account_number_last4"
+            }
+          },
+          {
+            "at": 3152.10000000149,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.0.account_number_last4"
+            }
+          },
+          {
+            "at": 3202.39999999851,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.1.date"
+            }
+          },
+          {
+            "at": 3202.5,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.1.date"
+            }
+          },
+          {
+            "at": 3226.6999999955297,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.1.amount.amount"
+            }
+          },
+          {
+            "at": 3226.7999999970198,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.1.amount.amount"
+            }
+          },
+          {
+            "at": 3252.10000000149,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.1.amount.iso_4217_currency_code"
+            }
+          },
+          {
+            "at": 3252.2999999970198,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.1.amount.iso_4217_currency_code"
+            }
+          },
+          {
+            "at": 3277.1999999955297,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.1.description"
+            }
+          },
+          {
+            "at": 3277.2999999970198,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.1.description"
+            }
+          },
+          {
+            "at": 3302.10000000149,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.1.check_number"
+            }
+          },
+          {
+            "at": 3302.1999999955297,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.1.check_number"
+            }
+          },
+          {
+            "at": 3326.60000000149,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.1.transaction_type"
+            }
+          },
+          {
+            "at": 3326.7999999970198,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.1.transaction_type"
+            }
+          },
+          {
+            "at": 3351.60000000149,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.1.account_number_last4"
+            }
+          },
+          {
+            "at": 3351.6999999955297,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.1.account_number_last4"
+            }
+          },
+          {
+            "at": 3402.39999999851,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.2.date"
+            }
+          },
+          {
+            "at": 3402.5,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.2.date"
+            }
+          },
+          {
+            "at": 3427.10000000149,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.2.amount.amount"
+            }
+          },
+          {
+            "at": 3427.1999999955297,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.2.amount.amount"
+            }
+          },
+          {
+            "at": 3452,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.2.amount.iso_4217_currency_code"
+            }
+          },
+          {
+            "at": 3452.1999999955297,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.2.amount.iso_4217_currency_code"
+            }
+          },
+          {
+            "at": 3477.10000000149,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.2.description"
+            }
+          },
+          {
+            "at": 3477.1999999955297,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.2.description"
+            }
+          },
+          {
+            "at": 3511.1999999955297,
+            "name": "scenario-end",
+            "detail": {
+              "name": "hover-first-20-mounted-cells"
+            }
+          }
+        ]
+      },
+      "trace": {
+        "EventDispatch": {
+          "count": 143,
+          "totalMs": 6.781,
+          "maxMs": 0.21
+        },
+        "FunctionCall": {
+          "count": 297,
+          "totalMs": 6.785,
+          "maxMs": 0.573
+        },
+        "UpdateLayoutTree": {
+          "count": 70,
+          "totalMs": 7.558,
+          "maxMs": 0.418
+        },
+        "Layout": {
+          "count": 0,
+          "totalMs": 0,
+          "maxMs": 0
+        },
+        "Paint": {
+          "count": 126,
+          "totalMs": 5.465,
+          "maxMs": 0.14
+        },
+        "MinorGC": {
+          "count": 0,
+          "totalMs": 0,
+          "maxMs": 0
+        },
+        "topEvents": [
+          {
+            "name": "RunTask",
+            "ms": 1.505,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 1.496,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 1.449,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 1.441,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 1.386,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 1.362,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 1.338,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 1.329,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 1.319,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 1.31,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 1.29,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 1.284,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 1.28,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 1.279,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 1.268,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 1.266,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 1.258,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 1.249,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 1.229,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 1.212,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 1.194,
+            "category": "disabled-by-default-devtools.timeline"
+          }
+        ]
+      }
+    },
+    {
+      "name": "open-date-picker",
+      "elapsedMs": 142.5,
+      "wait": {
+        "ok": true,
+        "elapsedMs": 6.300000004470348
+      },
+      "dom": {
+        "nodes": 1491,
+        "rows": 34,
+        "editableCells": 200,
+        "activeCells": 1,
+        "dataCells": 200,
+        "calendar": true,
+        "popovers": 1
+      },
+      "longTasks": [
+        {
+          "startTime": 3568.7999999970198,
+          "duration": 87
+        }
+      ],
+      "metricsDelta": {
+        "JSHeapUsedSize": 8684196,
+        "Nodes": 360,
+        "LayoutCount": 2,
+        "RecalcStyleCount": 7,
+        "LayoutDurationMs": 1.0210000000000008,
+        "RecalcStyleDurationMs": 91.066,
+        "ScriptDurationMs": 40.27600000000007,
+        "TaskDurationMs": 137.71299999999997
+      },
+      "profiler": {
+        "renders": {
+          "total": 10,
+          "byComponent": [
+            {
+              "name": "SingleFileVirtualizedTable",
+              "count": 4
+            },
+            {
+              "name": "EditableJsonTableCell",
+              "count": 4
+            },
+            {
+              "name": "SingleFileFormRow",
+              "count": 2
+            }
+          ],
+          "byInstance": [
+            {
+              "name": "SingleFileVirtualizedTable:doc_1",
+              "count": 4
+            },
+            {
+              "name": "EditableJsonTableCell:transactions.0.date",
+              "count": 4
+            },
+            {
+              "name": "SingleFileFormRow:0",
+              "count": 2
+            }
+          ],
+          "changedProps": [
+            {
+              "name": "SingleFileVirtualizedTable.same-props",
+              "count": 3
+            },
+            {
+              "name": "EditableJsonTableCell.same-props",
+              "count": 3
+            },
+            {
+              "name": "SingleFileVirtualizedTable.primitiveActiveFieldPath",
+              "count": 1
+            },
+            {
+              "name": "SingleFileFormRow.primitiveActiveFieldPath",
+              "count": 1
+            },
+            {
+              "name": "SingleFileFormRow.same-props",
+              "count": 1
+            },
+            {
+              "name": "EditableJsonTableCell.primitiveActiveFieldPath",
+              "count": 1
+            },
+            {
+              "name": "EditableJsonTableCell.isEditing",
+              "count": 1
+            }
+          ]
+        },
+        "reactCommits": {
+          "count": 2,
+          "totalActualDurationMs": 32.49999999254942,
+          "maxActualDurationMs": 23.899999998509884,
+          "commits": [
+            {
+              "phase": "update",
+              "actualDurationMs": 23.899999998509884,
+              "baseDurationMs": 79.80000004172325
+            },
+            {
+              "phase": "nested-update",
+              "actualDurationMs": 8.599999994039536,
+              "baseDurationMs": 66.30000003427267
+            }
+          ]
+        },
+        "marks": [
+          {
+            "at": 3565.6999999955297,
+            "name": "scenario-start",
+            "detail": {
+              "name": "open-date-picker"
+            }
+          },
+          {
+            "at": 3569.1999999955297,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.0.date"
+            }
+          },
+          {
+            "at": 3569.1999999955297,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.0.date"
+            }
+          },
+          {
+            "at": 3655,
+            "name": "calendar-mounted"
+          },
+          {
+            "at": 3655,
+            "name": "edit-dom-mounted"
+          },
+          {
+            "at": 3655,
+            "name": "calendar-mounted"
+          },
+          {
+            "at": 3711.2999999970198,
+            "name": "scenario-end",
+            "detail": {
+              "name": "open-date-picker"
+            }
+          }
+        ]
+      },
+      "trace": {
+        "EventDispatch": {
+          "count": 16,
+          "totalMs": 0.69,
+          "maxMs": 0.178
+        },
+        "FunctionCall": {
+          "count": 23,
+          "totalMs": 86.151,
+          "maxMs": 85.45
+        },
+        "UpdateLayoutTree": {
+          "count": 7,
+          "totalMs": 91.065,
+          "maxMs": 45.507
+        },
+        "Layout": {
+          "count": 2,
+          "totalMs": 1.006,
+          "maxMs": 0.69
+        },
+        "Paint": {
+          "count": 7,
+          "totalMs": 0.861,
+          "maxMs": 0.317
+        },
+        "MinorGC": {
+          "count": 0,
+          "totalMs": 0,
+          "maxMs": 0
+        },
+        "topEvents": [
+          {
+            "name": "RunTask",
+            "ms": 87.519,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "EvaluateScript",
+            "ms": 87.493,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunMicrotasks",
+            "ms": 85.552,
+            "category": "v8.execute"
+          },
+          {
+            "name": "FunctionCall",
+            "ms": 85.45,
+            "category": "devtools.timeline",
+            "url": "http://localhost:3100/_next/static/chunks/09h6_next_dist_compiled_react-dom_1yj1j_x._.js"
+          },
+          {
+            "name": "RunTask",
+            "ms": 47.098,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "UpdateLayoutTree",
+            "ms": 45.507,
+            "category": "blink,devtools.timeline"
+          },
+          {
+            "name": "UpdateLayoutTree",
+            "ms": 45.173,
+            "category": "blink,devtools.timeline"
+          },
+          {
+            "name": "RunMicrotasks",
+            "ms": 1.226,
+            "category": "v8.execute"
+          }
+        ]
+      }
+    },
+    {
+      "name": "toggle-checkbox",
+      "elapsedMs": 85.60000000149012,
+      "wait": {
+        "ok": true,
+        "elapsedMs": 10.200000002980232
+      },
+      "dom": {
+        "nodes": 1393,
+        "rows": 28,
+        "editableCells": 200,
+        "activeCells": 0,
+        "dataCells": 200,
+        "calendar": false,
+        "popovers": 0
+      },
+      "longTasks": [],
+      "metricsDelta": {
+        "JSHeapUsedSize": 4666240,
+        "Nodes": 3,
+        "LayoutCount": 1,
+        "RecalcStyleCount": 1,
+        "LayoutDurationMs": 0.11599999999999966,
+        "RecalcStyleDurationMs": 44.19999999999993,
+        "ScriptDurationMs": 45.15299999999996,
+        "TaskDurationMs": 93.75999999999999
+      },
+      "profiler": {
+        "renders": {
+          "total": 228,
+          "byComponent": [
+            {
+              "name": "EditableJsonTableCell",
+              "count": 198
+            },
+            {
+              "name": "SingleFileFormRow",
+              "count": 26
+            },
+            {
+              "name": "SingleFileTableView",
+              "count": 2
+            },
+            {
+              "name": "SingleFileVirtualizedTable",
+              "count": 2
+            }
+          ],
+          "byInstance": [
+            {
+              "name": "EditableJsonTableCell:transactions.0.is_reconciled",
+              "count": 6
+            },
+            {
+              "name": "SingleFileTableView:doc_1",
+              "count": 2
+            },
+            {
+              "name": "SingleFileVirtualizedTable:doc_1",
+              "count": 2
+            },
+            {
+              "name": "SingleFileFormRow:0",
+              "count": 2
+            },
+            {
+              "name": "EditableJsonTableCell:transactions.0.date",
+              "count": 2
+            },
+            {
+              "name": "EditableJsonTableCell:transactions.0.amount.amount",
+              "count": 2
+            },
+            {
+              "name": "EditableJsonTableCell:transactions.0.amount.iso_4217_currency_code",
+              "count": 2
+            },
+            {
+              "name": "EditableJsonTableCell:transactions.0.description",
+              "count": 2
+            },
+            {
+              "name": "EditableJsonTableCell:transactions.0.check_number",
+              "count": 2
+            },
+            {
+              "name": "EditableJsonTableCell:transactions.0.transaction_type",
+              "count": 2
+            },
+            {
+              "name": "EditableJsonTableCell:transactions.0.account_number_last4",
+              "count": 2
+            },
+            {
+              "name": "SingleFileFormRow:1",
+              "count": 2
+            },
+            {
+              "name": "EditableJsonTableCell:transactions.1.date",
+              "count": 2
+            },
+            {
+              "name": "EditableJsonTableCell:transactions.1.amount.amount",
+              "count": 2
+            },
+            {
+              "name": "EditableJsonTableCell:transactions.1.amount.iso_4217_currency_code",
+              "count": 2
+            },
+            {
+              "name": "EditableJsonTableCell:transactions.1.description",
+              "count": 2
+            }
+          ],
+          "changedProps": [
+            {
+              "name": "EditableJsonTableCell.same-props",
+              "count": 198
+            },
+            {
+              "name": "SingleFileFormRow.same-props",
+              "count": 26
+            },
+            {
+              "name": "SingleFileTableView.same-props",
+              "count": 2
+            },
+            {
+              "name": "SingleFileVirtualizedTable.same-props",
+              "count": 2
+            }
+          ]
+        },
+        "reactCommits": {
+          "count": 2,
+          "totalActualDurationMs": 0.6000000014901161,
+          "maxActualDurationMs": 0.6000000014901161,
+          "commits": [
+            {
+              "phase": "update",
+              "actualDurationMs": 0.6000000014901161,
+              "baseDurationMs": 60.59999996423721
+            },
+            {
+              "phase": "update",
+              "actualDurationMs": 0,
+              "baseDurationMs": 60.59999996423721
+            }
+          ]
+        },
+        "marks": [
+          {
+            "at": 1831.4000000059605,
+            "name": "scenario-start",
+            "detail": {
+              "name": "toggle-checkbox"
+            }
+          },
+          {
+            "at": 1834.1000000014901,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.0.is_reconciled"
+            }
+          },
+          {
+            "at": 1834.2000000029802,
+            "name": "pointer-enter-cell",
+            "detail": {
+              "fieldPath": "transactions.0.is_reconciled"
+            }
+          },
+          {
+            "at": 1834.3000000044703,
+            "name": "cell-commit-local-start",
+            "detail": {
+              "fieldPath": "transactions.0.is_reconciled"
+            }
+          },
+          {
+            "at": 1834.4000000059605,
+            "name": "cell-commit-local-end",
+            "detail": {
+              "fieldPath": "transactions.0.is_reconciled"
+            }
+          },
+          {
+            "at": 1834.4000000059605,
+            "name": "cell-commit-transition-start",
+            "detail": {
+              "fieldPath": "transactions.0.is_reconciled"
+            }
+          },
+          {
+            "at": 1834.4000000059605,
+            "name": "document-patch-start",
+            "detail": {
+              "fieldPath": "transactions.0.is_reconciled"
+            }
+          },
+          {
+            "at": 1834.6000000014901,
+            "name": "document-patch-end",
+            "detail": {
+              "fieldPath": "transactions.0.is_reconciled"
+            }
+          },
+          {
+            "at": 1834.6000000014901,
+            "name": "cell-commit-transition-end",
+            "detail": {
+              "fieldPath": "transactions.0.is_reconciled"
+            }
+          },
+          {
+            "at": 1835.9000000059605,
+            "name": "checkbox-aria-change",
+            "detail": {
+              "checked": "false"
+            }
+          },
+          {
+            "at": 1882.3000000044703,
+            "name": "project-rows-start",
+            "detail": {
+              "visiblePaths": 8,
+              "isJsonEditable": true
+            }
+          },
+          {
+            "at": 1888.2000000029802,
+            "name": "project-rows-end",
+            "detail": {
+              "rowCount": 1501
+            }
+          },
+          {
+            "at": 1888.2000000029802,
+            "name": "project-rows-start",
+            "detail": {
+              "visiblePaths": 8,
+              "isJsonEditable": true
+            }
+          },
+          {
+            "at": 1892.8000000044703,
+            "name": "project-rows-end",
+            "detail": {
+              "rowCount": 1501
+            }
+          },
+          {
+            "at": 1924.7000000029802,
+            "name": "scenario-end",
+            "detail": {
+              "name": "toggle-checkbox"
+            }
+          }
+        ]
+      },
+      "trace": {
+        "EventDispatch": {
+          "count": 8,
+          "totalMs": 0.634,
+          "maxMs": 0.386
+        },
+        "FunctionCall": {
+          "count": 23,
+          "totalMs": 43.453,
+          "maxMs": 11.151
+        },
+        "UpdateLayoutTree": {
+          "count": 1,
+          "totalMs": 44.196,
+          "maxMs": 44.196
+        },
+        "Layout": {
+          "count": 1,
+          "totalMs": 0.108,
+          "maxMs": 0.108
+        },
+        "Paint": {
+          "count": 2,
+          "totalMs": 0.093,
+          "maxMs": 0.081
+        },
+        "MinorGC": {
+          "count": 1,
+          "totalMs": 1.473,
+          "maxMs": 1.473
+        },
+        "topEvents": [
+          {
+            "name": "RunTask",
+            "ms": 45.063,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "UpdateLayoutTree",
+            "ms": 44.196,
+            "category": "blink,devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 11.247,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "FunctionCall",
+            "ms": 11.151,
+            "category": "devtools.timeline",
+            "url": "http://localhost:3100/_next/static/chunks/09h6_next_dist_compiled_1j8x27e._.js"
+          },
+          {
+            "name": "RunTask",
+            "ms": 5.541,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "FunctionCall",
+            "ms": 5.497,
+            "category": "devtools.timeline",
+            "url": "http://localhost:3100/_next/static/chunks/09h6_next_dist_compiled_1j8x27e._.js"
+          },
+          {
+            "name": "RunTask",
+            "ms": 5.084,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 5.082,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "FunctionCall",
+            "ms": 5.033,
+            "category": "devtools.timeline",
+            "url": "http://localhost:3100/_next/static/chunks/09h6_next_dist_compiled_1j8x27e._.js"
+          },
+          {
+            "name": "FunctionCall",
+            "ms": 5.017,
+            "category": "devtools.timeline",
+            "url": "http://localhost:3100/_next/static/chunks/09h6_next_dist_compiled_1j8x27e._.js"
+          },
+          {
+            "name": "RunTask",
+            "ms": 5.003,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 4.998,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "FunctionCall",
+            "ms": 4.966,
+            "category": "devtools.timeline",
+            "url": "http://localhost:3100/_next/static/chunks/09h6_next_dist_compiled_1j8x27e._.js"
+          },
+          {
+            "name": "FunctionCall",
+            "ms": 4.957,
+            "category": "devtools.timeline",
+            "url": "http://localhost:3100/_next/static/chunks/09h6_next_dist_compiled_1j8x27e._.js"
+          },
+          {
+            "name": "RunTask",
+            "ms": 4.951,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "FunctionCall",
+            "ms": 4.921,
+            "category": "devtools.timeline",
+            "url": "http://localhost:3100/_next/static/chunks/09h6_next_dist_compiled_1j8x27e._.js"
+          },
+          {
+            "name": "RunTask",
+            "ms": 2.245,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "EvaluateScript",
+            "ms": 2.227,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "RunTask",
+            "ms": 1.716,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "EvaluateScript",
+            "ms": 1.696,
+            "category": "disabled-by-default-devtools.timeline"
+          },
+          {
+            "name": "MinorGC",
+            "ms": 1.473,
+            "category": "devtools.timeline,v8"
+          },
+          {
+            "name": "RunMicrotasks",
+            "ms": 1.46,
+            "category": "v8.execute"
+          },
+          {
+            "name": "RunMicrotasks",
+            "ms": 1.269,
+            "category": "v8.execute"
+          },
+          {
+            "name": "FunctionCall",
+            "ms": 1.224,
+            "category": "devtools.timeline",
+            "url": "http://localhost:3100/_next/static/chunks/09h6_next_dist_compiled_react-dom_1yj1j_x._.js"
+          }
+        ]
+      }
+    }
+  ]
+}

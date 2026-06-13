@@ -86,4 +86,33 @@ describe("PretextMarkdownViewer", () => {
       await screen.findByRole("heading", { name: "Parsed Heading" })
     ).toBeTruthy()
   })
+
+  it("normalizes GitHub alerts into continuous quoted prose", async () => {
+    const { container } = render(
+      <PretextMarkdownViewer
+        source={markdownSource("> [!IMPORTANT]\n> Ship **carefully**.")}
+        toolbar={false}
+      />
+    )
+
+    expect(await screen.findByText(/Important:/)).toBeTruthy()
+    expect(screen.getByText("carefully")).toBeTruthy()
+    expect(container.textContent).not.toContain("[!IMPORTANT]")
+    expect(container.querySelector('[data-quote-depth="1"]')).toBeTruthy()
+  })
+
+  it("applies prose transforms without rewriting inline code", async () => {
+    render(
+      <PretextMarkdownViewer
+        source={markdownSource(
+          'Use "quotes" -> arrows :sparkles: and `literal -> :sparkles:`.'
+        )}
+        toolbar={false}
+      />
+    )
+
+    expect(await screen.findByText(/“quotes”/)).toBeTruthy()
+    expect(screen.getByText(/→ arrows ✨/)).toBeTruthy()
+    expect(screen.getByText("literal -> :sparkles:")).toBeTruthy()
+  })
 })

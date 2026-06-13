@@ -56,9 +56,7 @@ export function DocumentObjectNodeEditor({
   const controller = useDocumentObjectNodeEditorController({
     dispatch,
     objectNodeId,
-    path,
     properties,
-    draggedParentRef,
     draggedPropertyRef,
   })
 

@@ -112,24 +112,28 @@ export function getJsonTableCellDisplayValue({
   fieldMetadata: FieldMetadata
   value: unknown
 }): string {
-  const dataCellKind = primitiveKindForField(fieldMetadata)
+  const primitiveKind = primitiveKindForField(fieldMetadata)
 
-  if (dataCellKind === "number" || dataCellKind === "integer") {
+  if (primitiveKind === "select") {
+    return formatDataCellDisplayValue("select", dataCellTextValue(jsonValue))
+  }
+
+  if (primitiveKind === "number" || primitiveKind === "integer") {
     return formatDataCellDisplayValue(
-      dataCellKind,
-      numberDataCellValue(jsonValue)
+      primitiveKind,
+      dataCellNumberValue(jsonValue)
     )
   }
 
-  if (dataCellKind === "boolean") {
+  if (primitiveKind === "boolean") {
     return typeof jsonValue === "boolean" ? String(jsonValue) : ""
   }
 
-  if (dataCellKind) {
-    if (fieldMetadata.kind === "date") return dateDisplayValue(jsonValue)
+  if (primitiveKind) {
+    if (fieldMetadata.kind === "date") return dateDisplayText(jsonValue)
     return formatDataCellDisplayValue(
-      dataCellKind,
-      textDataCellValue(jsonValue)
+      primitiveKind,
+      dataCellTextValue(jsonValue)
     )
   }
 
@@ -143,24 +147,28 @@ export function createJsonTableDataCellModel({
   fieldMetadata: FieldMetadata
   value: unknown
 }): JsonTableDataCellModel {
-  const dataCellKind = primitiveKindForField(fieldMetadata)
+  const primitiveKind = primitiveKindForField(fieldMetadata)
 
-  if (dataCellKind === "select") return enumModel(fieldMetadata, jsonValue)
-
-  if (dataCellKind === "number" || dataCellKind === "integer") {
-    return numberModel(jsonValue, dataCellKind)
+  if (primitiveKind === "select") {
+    return selectDataCellModel(fieldMetadata, jsonValue)
   }
 
-  if (dataCellKind === "boolean") return booleanModel(fieldMetadata, jsonValue)
-
-  if (dataCellKind) {
-    return stringModel(fieldMetadata, jsonValue, dataCellKind)
+  if (primitiveKind === "number" || primitiveKind === "integer") {
+    return numberDataCellModel(jsonValue, primitiveKind)
   }
 
-  return fallbackTextModel(fieldMetadata, jsonValue)
+  if (primitiveKind === "boolean") {
+    return booleanDataCellModel(fieldMetadata, jsonValue)
+  }
+
+  if (primitiveKind) {
+    return textDataCellModel(fieldMetadata, jsonValue, primitiveKind)
+  }
+
+  return fallbackTextDataCellModel(fieldMetadata, jsonValue)
 }
 
-function enumModel(
+function selectDataCellModel(
   fieldMetadata: FieldMetadata,
   jsonValue: unknown
 ): JsonTableSelectDataCellModel {
@@ -168,33 +176,35 @@ function enumModel(
     className: jsonTableSelectDataCellClass,
     formatValue:
       fieldMetadata.kind === "enum"
-        ? () => enumDisplayValue(jsonValue, fieldMetadata.isNullable)
+        ? () => selectDisplayText(jsonValue, fieldMetadata.isNullable)
         : undefined,
     kind: "select",
     placeholder: "Select...",
-    selectOptions: enumDataCellOptions(fieldMetadata),
+    selectOptions: dataCellSelectOptions(fieldMetadata),
     value:
       fieldMetadata.kind === "enum"
-        ? enumDataCellValue(jsonValue, fieldMetadata.enumValues)
-        : textDataCellValue(jsonValue),
+        ? dataCellSelectValue(jsonValue, fieldMetadata.enumValues)
+        : dataCellTextValue(jsonValue),
     commitValue: (commitValue) =>
-      commitValue === null ? null : enumCommitValue(commitValue, fieldMetadata),
+      commitValue === null
+        ? null
+        : jsonSelectCommitValue(commitValue, fieldMetadata),
   }
 }
 
-function numberModel(
+function numberDataCellModel(
   jsonValue: unknown,
   kind: "number" | "integer"
 ): JsonTableNumberDataCellModel {
   return {
     className: jsonTableDataCellClass,
     kind,
-    value: numberDataCellValue(jsonValue),
+    value: dataCellNumberValue(jsonValue),
     commitValue: (commitValue) => commitValue,
   }
 }
 
-function booleanModel(
+function booleanDataCellModel(
   fieldMetadata: FieldMetadata,
   jsonValue: unknown
 ): JsonTableBooleanDataCellModel {
@@ -206,7 +216,7 @@ function booleanModel(
   }
 }
 
-function stringModel(
+function textDataCellModel(
   fieldMetadata: FieldMetadata,
   jsonValue: unknown,
   kind: JsonTableTextDataCellKind
@@ -215,16 +225,16 @@ function stringModel(
     className: jsonTableDataCellClass,
     formatValue:
       fieldMetadata.kind === "date"
-        ? (dataCellValue) => dateDisplayValue(dataCellValue)
+        ? (dataCellValue) => dateDisplayText(dataCellValue)
         : undefined,
     kind,
     showPickerIcon: false,
-    value: textDataCellValue(jsonValue),
+    value: dataCellTextValue(jsonValue),
     commitValue: (commitValue) => jsonCommitValue(fieldMetadata, commitValue),
   }
 }
 
-function fallbackTextModel(
+function fallbackTextDataCellModel(
   fieldMetadata: FieldMetadata,
   jsonValue: unknown
 ): JsonTableTextDataCellModelFor<"text"> {
@@ -236,13 +246,13 @@ function fallbackTextModel(
   }
 }
 
-const JSON_TABLE_NULL_SELECT_VALUE = "__json_table_null__"
+const nullSelectOptionValue = "__json_table_null__"
 
-function enumOptionValue(index: number): string {
+function selectOptionValue(index: number): string {
   return `option:${index}`
 }
 
-function areJsonValuesEqual(left: unknown, right: unknown): boolean {
+function jsonValuesEqual(left: unknown, right: unknown): boolean {
   if (Object.is(left, right)) return true
   if (typeof left !== typeof right) return false
   if (left === null || right === null) return false
@@ -252,7 +262,7 @@ function areJsonValuesEqual(left: unknown, right: unknown): boolean {
     if (!Array.isArray(left) || !Array.isArray(right)) return false
     return (
       left.length === right.length &&
-      left.every((item, index) => areJsonValuesEqual(item, right[index]))
+      left.every((item, index) => jsonValuesEqual(item, right[index]))
     )
   }
 
@@ -265,25 +275,29 @@ function areJsonValuesEqual(left: unknown, right: unknown): boolean {
     leftKeys.every((key) =>
       Object.prototype.hasOwnProperty.call(rightRecord, key)
     ) &&
-    leftKeys.every((key) =>
-      areJsonValuesEqual(leftRecord[key], rightRecord[key])
-    )
+    leftKeys.every((key) => jsonValuesEqual(leftRecord[key], rightRecord[key]))
   )
 }
 
-function enumDataCellValue(value: unknown, enumValues: unknown[]): string {
+function dataCellSelectValue(
+  value: unknown,
+  candidateJsonValues: unknown[]
+): string {
   if (value === null || value === undefined) {
-    return JSON_TABLE_NULL_SELECT_VALUE
+    return nullSelectOptionValue
   }
-  const matchingIndex = enumValues.findIndex((enumValue) =>
-    areJsonValuesEqual(enumValue, value)
+  const matchingIndex = candidateJsonValues.findIndex((candidateJsonValue) =>
+    jsonValuesEqual(candidateJsonValue, value)
   )
-  return matchingIndex === -1 ? String(value) : enumOptionValue(matchingIndex)
+  return matchingIndex === -1 ? String(value) : selectOptionValue(matchingIndex)
 }
 
-function enumCommitValue(value: string, fieldMetadata: FieldMetadata): unknown {
+function jsonSelectCommitValue(
+  value: string,
+  fieldMetadata: FieldMetadata
+): unknown {
   if (
-    value === JSON_TABLE_NULL_SELECT_VALUE &&
+    value === nullSelectOptionValue &&
     fieldMetadata.kind === "enum" &&
     fieldMetadata.isNullable
   ) {
@@ -298,14 +312,14 @@ function enumCommitValue(value: string, fieldMetadata: FieldMetadata): unknown {
     : value
 }
 
-function enumDisplayValue(value: unknown, isNullable: boolean): string {
+function selectDisplayText(value: unknown, isNullable: boolean): string {
   if (value === null || value === undefined) {
     return isNullable ? "No selection" : ""
   }
   return String(value)
 }
 
-function enumDataCellOptions(
+function dataCellSelectOptions(
   fieldMetadata: FieldMetadata
 ): DataCellSelectOption[] {
   if (fieldMetadata.kind !== "enum") return []
@@ -313,7 +327,7 @@ function enumDataCellOptions(
   const nullOption: DataCellSelectOption[] = fieldMetadata.isNullable
     ? [
         {
-          value: JSON_TABLE_NULL_SELECT_VALUE,
+          value: nullSelectOptionValue,
           label: "No selection",
           className: "text-xs text-muted-foreground",
         },
@@ -331,14 +345,14 @@ function enumDataCellOptions(
           !(typeof option === "string" && option === "")
       )
       .map(({ option, optionIndex }) => ({
-        value: enumOptionValue(optionIndex),
+        value: selectOptionValue(optionIndex),
         label: String(option),
         className: "text-xs",
       })),
   ]
 }
 
-function primitiveJsonValue(jsonValue: unknown) {
+function jsonPrimitiveTextValue(jsonValue: unknown) {
   if (
     jsonValue === null ||
     jsonValue === undefined ||
@@ -351,19 +365,19 @@ function primitiveJsonValue(jsonValue: unknown) {
   return jsonValueText(jsonValue)
 }
 
-function numberDataCellValue(jsonValue: unknown): string | number | null {
+function dataCellNumberValue(jsonValue: unknown): string | number | null {
   return typeof jsonValue === "number" || typeof jsonValue === "string"
     ? jsonValue
     : null
 }
 
-function textDataCellValue(jsonValue: unknown): string | null {
+function dataCellTextValue(jsonValue: unknown): string | null {
   return jsonValue === null || jsonValue === undefined
     ? null
-    : String(primitiveJsonValue(jsonValue))
+    : String(jsonPrimitiveTextValue(jsonValue))
 }
 
-function dateDisplayValue(jsonValue: unknown): string {
+function dateDisplayText(jsonValue: unknown): string {
   if (jsonValue === null || jsonValue === undefined || jsonValue === "") {
     return ""
   }

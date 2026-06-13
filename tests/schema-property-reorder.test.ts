@@ -1,82 +1,80 @@
 // @vitest-environment jsdom
+import type * as React from "react"
 import { describe, expect, it } from "vitest"
 
 import {
-  resolvePropertyDrop,
-  type PropertyDropEvent,
-} from "@/components/schema-editor/document-property-drag"
-import {
-  getPropertyDropClasses,
-  getPropertyDropIndicator,
-  getPropertyDropTargetIndex,
-} from "@/components/schema-editor/document-property-reorder"
+  getSchemaRowDropClasses,
+  getSchemaRowDropIndicator,
+  getSchemaRowDropTargetIndex,
+  resolveSchemaRowDrop,
+} from "@/components/schema-editor/primitives/schema-row-drag"
 
-describe("document property reorder helpers", () => {
-  const propertyIds = ["prop_a", "prop_b", "prop_c"]
+describe("schema row reorder helpers", () => {
+  const rowIds = ["prop_a", "prop_b", "prop_c"]
 
   it("returns before when the source is after the target", () => {
     expect(
-      getPropertyDropIndicator({
-        propertyIds,
-        sourcePropertyId: "prop_c",
-        targetPropertyId: "prop_a",
+      getSchemaRowDropIndicator({
+        rowIds,
+        sourceRowId: "prop_c",
+        targetRowId: "prop_a",
       })
     ).toBe("before")
   })
 
   it("returns after when the source is before the target", () => {
     expect(
-      getPropertyDropIndicator({
-        propertyIds,
-        sourcePropertyId: "prop_a",
-        targetPropertyId: "prop_c",
+      getSchemaRowDropIndicator({
+        rowIds,
+        sourceRowId: "prop_a",
+        targetRowId: "prop_c",
       })
     ).toBe("after")
   })
 
   it("returns null for same, missing, or unknown source", () => {
     expect(
-      getPropertyDropIndicator({
-        propertyIds,
-        sourcePropertyId: "prop_b",
-        targetPropertyId: "prop_b",
+      getSchemaRowDropIndicator({
+        rowIds,
+        sourceRowId: "prop_b",
+        targetRowId: "prop_b",
       })
     ).toBeNull()
     expect(
-      getPropertyDropIndicator({
-        propertyIds,
-        sourcePropertyId: null,
-        targetPropertyId: "prop_b",
+      getSchemaRowDropIndicator({
+        rowIds,
+        sourceRowId: null,
+        targetRowId: "prop_b",
       })
     ).toBeNull()
     expect(
-      getPropertyDropIndicator({
-        propertyIds,
-        sourcePropertyId: "prop_x",
-        targetPropertyId: "prop_b",
+      getSchemaRowDropIndicator({
+        rowIds,
+        sourceRowId: "prop_x",
+        targetRowId: "prop_b",
       })
     ).toBeNull()
   })
 
   it("maps indicators to stable CSS classes", () => {
-    expect(getPropertyDropClasses("before")).toEqual([
+    expect(getSchemaRowDropClasses("before")).toEqual([
       "border-t-2",
       "border-grey-700",
       "border-dashed",
     ])
-    expect(getPropertyDropClasses("after")).toEqual([
+    expect(getSchemaRowDropClasses("after")).toEqual([
       "border-b-2",
       "border-grey-700",
       "border-dashed",
     ])
-    expect(getPropertyDropClasses(null)).toEqual([])
+    expect(getSchemaRowDropClasses(null)).toEqual([])
   })
 
-  it("resolves target index by property id", () => {
+  it("resolves target index by row id", () => {
     expect(
-      getPropertyDropTargetIndex({
-        propertyIds,
-        targetPropertyId: "prop_b",
+      getSchemaRowDropTargetIndex({
+        rowIds,
+        targetRowId: "prop_b",
       })
     ).toBe(1)
   })
@@ -91,18 +89,17 @@ describe("document property reorder helpers", () => {
       dataTransfer: {
         getData: () => "prop_a",
       },
-    } satisfies PropertyDropEvent
+    } as unknown as React.DragEvent<HTMLElement>
 
     expect(
-      resolvePropertyDrop({
+      resolveSchemaRowDrop({
         event,
-        path: "#",
-        targetPropertyId: "prop_c",
-        propertyIds,
-        draggedParentRef: { current: "#" },
+        targetRowId: "prop_c",
+        rowIds,
+        draggedRowIdRef: { current: "prop_a" },
       })
     ).toEqual({
-      sourcePropertyId: "prop_a",
+      sourceRowId: "prop_a",
       targetIndex: 2,
     })
     expect(target.classList.contains("border-t-2")).toBe(false)

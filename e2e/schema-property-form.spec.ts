@@ -15,6 +15,14 @@ test("property form object fields reuse schema-builder row mechanics", async ({
   const streetRow = schemaRowForInput(page.getByLabel("Field name street"))
   await expect(streetRow).toBeVisible()
   await expect(rowGrip(streetRow)).toBeVisible()
+  await expect(rowGrip(streetRow)).toHaveCSS("cursor", "pointer")
+
+  await propertyFormRowForInput(page.getByLabel("Field name city")).dragTo(
+    propertyFormRowForInput(page.getByLabel("Field name street"))
+  )
+  await expectPropertyFieldOrder(page, ["city", "street"])
+  await page.getByRole("button", { exact: true, name: "Save" }).click()
+  await expectPropertyFieldOrder(page, ["city", "street"])
 
   await page.getByLabel("Field name street").fill("road")
   await page.getByLabel("Field name street").press("Enter")
@@ -69,8 +77,26 @@ function rowGrip(row: Locator) {
   return row.locator("svg").first()
 }
 
+function propertyFormRowForInput(input: Locator) {
+  return input.locator(
+    'xpath=ancestor::*[@data-property-form-property-name][1]'
+  )
+}
+
 function enumChipForInput(input: Locator) {
   return input.locator('xpath=ancestor::*[@data-slot="schema-chip"][1]')
+}
+
+async function expectPropertyFieldOrder(page: Page, expected: string[]) {
+  await expect
+    .poll(() =>
+      page.locator('input[aria-label^="Field name "]').evaluateAll((inputs) =>
+        inputs.map((input) =>
+          input instanceof HTMLInputElement ? input.value : ""
+        )
+      )
+    )
+    .toEqual(expected)
 }
 
 async function clickInputTextOffset(

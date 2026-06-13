@@ -1,16 +1,16 @@
 export function markdownTableHeaderId(
-  pageId: string,
+  chunkId: string,
   tableIndex: number,
   columnIndex: number
 ) {
-  return `${pageId}-table-${tableIndex}-column-${columnIndex}`
+  return `${chunkId}-table-${tableIndex}-column-${columnIndex}`
 }
 
-export function patchMarkdownPageTables({
-  pageId,
+export function patchMarkdownChunkTables({
+  chunkId,
   root,
 }: {
-  pageId: string
+  chunkId: string
   root: HTMLElement | null
 }) {
   if (!root) return
@@ -21,7 +21,7 @@ export function patchMarkdownPageTables({
       const headers = Array.from(table.querySelectorAll("thead th"))
 
       headers.forEach((header, columnIndex) => {
-        header.id = markdownTableHeaderId(pageId, tableIndex, columnIndex)
+        header.id = markdownTableHeaderId(chunkId, tableIndex, columnIndex)
         header.setAttribute("scope", "col")
       })
 

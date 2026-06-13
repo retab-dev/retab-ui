@@ -30,7 +30,7 @@ import {
   type TableTextBlockFrame,
   type TextBlockFrame,
   type TextDocumentFrame,
-} from "./text-viewer-layout"
+} from "./pretext-markdown-viewer-layout"
 import { isLineInRange, normalizeTextLineRange } from "./text-viewer-ranges"
 import {
   readTextResource,

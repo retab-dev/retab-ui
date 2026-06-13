@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest"
 
 import {
   markdownTableHeaderId,
-  patchMarkdownPageTables,
+  patchMarkdownChunkTables,
 } from "@/registry/new-york-v4/ui/markdown-document-table-accessibility"
 
 describe("markdown document table accessibility", () => {
@@ -21,8 +21,8 @@ describe("markdown document table accessibility", () => {
       </table>
     `
 
-    patchMarkdownPageTables({ pageId: "chunk-3-12", root })
-    patchMarkdownPageTables({ pageId: "chunk-3-12", root })
+    patchMarkdownChunkTables({ chunkId: "chunk-3-12", root })
+    patchMarkdownChunkTables({ chunkId: "chunk-3-12", root })
 
     expect(markdownTableHeaderId("chunk-3-12", 1, 0)).toBe(
       "chunk-3-12-table-1-column-0"

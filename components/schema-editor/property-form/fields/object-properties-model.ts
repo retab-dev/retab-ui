@@ -7,6 +7,7 @@ import {
   createObjectPropertySchema,
   isSchemaNode,
   listObjectPropertyNames,
+  moveObjectProperty,
   removeObjectProperty,
   renameObjectProperty,
   replaceObjectProperty,
@@ -46,6 +47,7 @@ export interface ObjectPropertyRowModel {
     rename: (name: string) => void
     remove: () => void
     replaceSchemaNode: (schemaNode: ExtendedJSONSchema7) => void
+    move: (targetIndex: number) => void
   }
 }
 
@@ -207,6 +209,22 @@ export function useObjectPropertiesModel({
             onChange(removeObjectProperty({ schemaNode, propertyName: name }))
           },
           replaceSchemaNode,
+          move: (targetIndex: number) => {
+            preserveNewPropertyNameForLocalProperties(
+              movePropertyName({
+                propertyNames,
+                propertyName: name,
+                targetIndex,
+              })
+            )
+            onChange(
+              moveObjectProperty({
+                schemaNode,
+                propertyName: name,
+                targetIndex,
+              })
+            )
+          },
         },
       },
     ]
@@ -251,6 +269,28 @@ function createRowIdsByName(propertyNames: string[]) {
     setRecordValue(rowIdsByName, propertyName, `draft-property-${index}`)
   })
   return rowIdsByName
+}
+
+function movePropertyName({
+  propertyNames,
+  propertyName,
+  targetIndex,
+}: {
+  propertyNames: string[]
+  propertyName: string
+  targetIndex: number
+}) {
+  const nextPropertyNames = propertyNames.slice()
+  const sourceIndex = nextPropertyNames.indexOf(propertyName)
+  if (sourceIndex < 0) return propertyNames
+
+  const [movedPropertyName] = nextPropertyNames.splice(sourceIndex, 1)
+  const clampedTargetIndex = Math.max(
+    0,
+    Math.min(targetIndex, nextPropertyNames.length)
+  )
+  nextPropertyNames.splice(clampedTargetIndex, 0, movedPropertyName)
+  return nextPropertyNames
 }
 
 function setRecordValue<T>(record: Record<string, T>, key: string, value: T) {

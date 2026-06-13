@@ -10,9 +10,9 @@ import { splitTextLines } from "./text-viewer-resource"
 
 export const MARKDOWN_DOCUMENT_COLUMN_WIDTH = 768
 export const MARKDOWN_DOCUMENT_CHUNK_PADDING_X = 36
-export const MARKDOWN_DOCUMENT_CHUNK_PADDING_Y = 28
+export const MARKDOWN_DOCUMENT_CHUNK_PADDING_Y = 0
 export const MARKDOWN_DOCUMENT_TARGET_CHUNK_HEIGHT = 980
-export const MARKDOWN_DOCUMENT_MIN_CHUNK_HEIGHT = 220
+export const MARKDOWN_DOCUMENT_MIN_CHUNK_HEIGHT = 1
 export const MARKDOWN_DOCUMENT_MAX_ESTIMATED_CHUNK_HEIGHT = 2200
 
 const MARKDOWN_DOCUMENT_BODY_FONT =
@@ -28,8 +28,8 @@ export type MarkdownDocumentLayoutStyle = {
   codeFont: string
   codeLineHeight: number
   contentWidth: number
-  pagePaddingX: number
-  pagePaddingY: number
+  chunkPaddingX: number
+  chunkPaddingY: number
   styleVersion: string
   zoom: number
 }
@@ -48,8 +48,8 @@ export function createMarkdownLayoutStyle({
     codeFont: MARKDOWN_DOCUMENT_CODE_FONT,
     codeLineHeight: 22 * zoom,
     contentWidth: Math.max(1, contentWidth),
-    pagePaddingX: MARKDOWN_DOCUMENT_CHUNK_PADDING_X * zoom,
-    pagePaddingY: MARKDOWN_DOCUMENT_CHUNK_PADDING_Y * zoom,
+    chunkPaddingX: MARKDOWN_DOCUMENT_CHUNK_PADDING_X * zoom,
+    chunkPaddingY: MARKDOWN_DOCUMENT_CHUNK_PADDING_Y * zoom,
     styleVersion: MARKDOWN_DOCUMENT_STYLE_VERSION,
     zoom,
   }
@@ -113,7 +113,7 @@ export function estimateMarkdownChunkHeight(
   style: MarkdownDocumentLayoutStyle
 ) {
   return clampMarkdownChunkHeight(
-    style.pagePaddingY * 2 +
+    style.chunkPaddingY * 2 +
       chunk.blocks.reduce(
         (height, block) =>
           height +
@@ -148,7 +148,7 @@ export function createEstimatedMarkdownBlock({
 }
 
 export function chunkChromeHeight() {
-  return MARKDOWN_DOCUMENT_CHUNK_PADDING_Y * 2
+  return 0
 }
 
 export function clampMarkdownChunkHeight(height: number) {
@@ -186,7 +186,7 @@ function estimateFlowTextHeight(
   lineHeightMultiplier: number
 ) {
   const text = markdown.replace(/\s+/g, " ").trim() || " "
-  const width = Math.max(1, style.contentWidth - style.pagePaddingX * 2)
+  const width = Math.max(1, style.contentWidth - style.chunkPaddingX * 2)
   const lineHeight = style.bodyLineHeight * lineHeightMultiplier
   return (
     measurePretextLineCount({
@@ -203,7 +203,7 @@ function estimateCodeHeight(
   style: MarkdownDocumentLayoutStyle
 ) {
   const code = fencedCodeBody(markdown)
-  const width = Math.max(1, style.contentWidth - style.pagePaddingX * 2 - 32)
+  const width = Math.max(1, style.contentWidth - style.chunkPaddingX * 2 - 32)
   return (
     Math.max(
       1,

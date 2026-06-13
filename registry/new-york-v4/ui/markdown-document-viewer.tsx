@@ -22,7 +22,7 @@ import {
   type MarkdownDocumentChunk,
 } from "./markdown-document-model"
 import { MarkdownDocumentChunkRenderer } from "./markdown-document-renderer"
-import { patchMarkdownPageTables } from "./markdown-document-table-accessibility"
+import { patchMarkdownChunkTables } from "./markdown-document-table-accessibility"
 import {
   createMarkdownVirtualGeometry,
   getMarkdownScrollAnchor,
@@ -153,11 +153,11 @@ function MarkdownDocumentViewerContent({
     () => normalizeTextLineRange(highlight, document.lineCount),
     [document.lineCount, highlight]
   )
-  const pageMeasurementKey = React.useMemo(
+  const chunkMeasurementKey = React.useMemo(
     () => `${mode}:${scale.toFixed(3)}:${viewportWidth}:${text.length}`,
     [mode, scale, text.length, viewportWidth]
   )
-  const pageEstimates = React.useMemo(
+  const chunkEstimates = React.useMemo(
     () =>
       createMarkdownChunkEstimates(
         document,
@@ -169,13 +169,13 @@ function MarkdownDocumentViewerContent({
     [document, scale]
   )
   const estimateHeight = React.useCallback(
-    (index: number) => (pageEstimates[index] ?? 1) + MARKDOWN_VIEWER_CHUNK_GAP,
-    [pageEstimates]
+    (index: number) => (chunkEstimates[index] ?? 1) + MARKDOWN_VIEWER_CHUNK_GAP,
+    [chunkEstimates]
   )
   const getKey = React.useCallback(
     (index: number) =>
-      `${pageMeasurementKey}:${document.chunks[index]?.id ?? index}`,
-    [document.chunks, pageMeasurementKey]
+      `${chunkMeasurementKey}:${document.chunks[index]?.id ?? index}`,
+    [document.chunks, chunkMeasurementKey]
   )
   const virtualGeometry = React.useMemo(
     () =>
@@ -189,7 +189,7 @@ function MarkdownDocumentViewerContent({
   )
   React.useEffect(() => {
     setMeasuredHeights(new Map())
-  }, [pageMeasurementKey])
+  }, [chunkMeasurementKey])
 
   React.useEffect(() => {
     pendingAnchorRef.current = null
@@ -258,7 +258,7 @@ function MarkdownDocumentViewerContent({
     return () => observer?.disconnect()
   }, [])
 
-  const measurePage = React.useCallback(
+  const measureChunk = React.useCallback(
     (key: string, height: number) => {
       if (!Number.isFinite(height) || height <= 0) return
 
@@ -273,16 +273,16 @@ function MarkdownDocumentViewerContent({
     [captureScrollAnchor]
   )
 
-  const projectPages = React.useCallback(() => {
+  const projectChunks = React.useCallback(() => {
     scrollFrameRef.current = null
-    projectMarkdownPages({
+    projectMarkdownChunks({
       cache: projectionCacheRef.current,
       canvas: canvasRef.current,
       document,
       geometry: virtualGeometry,
       highlightRange,
-      measurePage,
-      measurementKey: pageMeasurementKey,
+      measureChunk,
+      measurementKey: chunkMeasurementKey,
       mode,
       scale,
       viewport: viewportRef.current,
@@ -292,30 +292,30 @@ function MarkdownDocumentViewerContent({
     document,
     virtualGeometry,
     highlightRange,
-    measurePage,
+    measureChunk,
     mode,
-    pageMeasurementKey,
+    chunkMeasurementKey,
     scale,
     viewportHeight,
   ])
 
-  const scheduleProjectPages = React.useCallback(() => {
+  const scheduleProjectChunks = React.useCallback(() => {
     if (scrollFrameRef.current !== null) return
     if (typeof requestAnimationFrame === "undefined") {
-      projectPages()
+      projectChunks()
       return
     }
-    scrollFrameRef.current = requestAnimationFrame(projectPages)
-  }, [projectPages])
+    scrollFrameRef.current = requestAnimationFrame(projectChunks)
+  }, [projectChunks])
 
   const handleScroll = React.useCallback(() => {
     scrollTopRef.current = viewportRef.current?.scrollTop ?? 0
-    scheduleProjectPages()
-  }, [scheduleProjectPages])
+    scheduleProjectChunks()
+  }, [scheduleProjectChunks])
 
   React.useLayoutEffect(() => {
-    projectPages()
-  }, [projectPages])
+    projectChunks()
+  }, [projectChunks])
 
   React.useEffect(
     () => () => {
@@ -330,7 +330,7 @@ function MarkdownDocumentViewerContent({
     []
   )
 
-  const scrollToPageIndex = React.useCallback(
+  const scrollToChunkIndex = React.useCallback(
     (index: number, options?: ScrollToOptions, sourceLine?: number) => {
       const viewport = viewportRef.current
       if (!viewport || document.chunks.length === 0) return
@@ -356,9 +356,9 @@ function MarkdownDocumentViewerContent({
         ...options,
       })
       scrollTopRef.current = top
-      projectPages()
+      projectChunks()
     },
-    [document.chunks, projectPages, scale, virtualGeometry]
+    [document.chunks, projectChunks, scale, virtualGeometry]
   )
 
   const scrollToLineRange = React.useCallback(
@@ -369,9 +369,9 @@ function MarkdownDocumentViewerContent({
       if (!range) return
       const chunk = findMarkdownChunkForLine(document.chunks, range.start)
       if (!chunk) return
-      scrollToPageIndex(chunk.chunkIndex - 1, options, range.start)
+      scrollToChunkIndex(chunk.chunkIndex, options, range.start)
     },
-    [document.chunks, scrollToPageIndex]
+    [document.chunks, scrollToChunkIndex]
   )
 
   React.useImperativeHandle(
@@ -410,21 +410,21 @@ function MarkdownDocumentViewerContent({
       if (!href) return
 
       const targetId = decodeFragmentHref(href)
-      const targetPage = document.chunks.find((chunk) =>
+      const targetChunk = document.chunks.find((chunk) =>
         chunk.blocks.some((block) => block.headingId === targetId)
       )
-      if (!targetPage) return
+      if (!targetChunk) return
 
       event.preventDefault()
       const targetLine =
-        targetPage.blocks.find((block) => block.headingId === targetId)
-          ?.blockStartLine ?? targetPage.chunkStartLine
-      scrollToPageIndex(targetPage.chunkIndex - 1, undefined, targetLine)
+        targetChunk.blocks.find((block) => block.headingId === targetId)
+          ?.blockStartLine ?? targetChunk.chunkStartLine
+      scrollToChunkIndex(targetChunk.chunkIndex, undefined, targetLine)
       if (window.location.hash !== href) {
         window.history.replaceState(null, "", href)
       }
     },
-    [document.chunks, scrollToPageIndex]
+    [document.chunks, scrollToChunkIndex]
   )
 
   return (
@@ -581,23 +581,23 @@ function ToolbarIconButton({
 
 type MarkdownProjectionCache = {
   measurementKey: string
-  chunks: Map<string, MarkdownProjectedPage>
+  chunks: Map<string, MarkdownProjectedChunk>
 }
 
-type MarkdownProjectedPage = {
+type MarkdownProjectedChunk = {
   renderKey: string
   resizeObserver: ResizeObserver | null
   root: Root
   shell: HTMLElement
 }
 
-function projectMarkdownPages({
+function projectMarkdownChunks({
   cache,
   canvas,
   document,
   geometry,
   highlightRange,
-  measurePage,
+  measureChunk,
   measurementKey,
   mode,
   scale,
@@ -609,7 +609,7 @@ function projectMarkdownPages({
   document: MarkdownDocument
   geometry: ReturnType<typeof createMarkdownVirtualGeometry>
   highlightRange: ReturnType<typeof normalizeTextLineRange>
-  measurePage: (key: string, height: number) => void
+  measureChunk: (key: string, height: number) => void
   measurementKey: string
   mode: MarkdownDocumentViewMode
   scale: number
@@ -642,88 +642,88 @@ function projectMarkdownPages({
     virtualWindow.items.map((virtualItem) => virtualItem.key)
   )
 
-  for (const [key, projectedPage] of cache.chunks) {
+  for (const [key, projectedChunk] of cache.chunks) {
     if (visibleKeys.has(key)) continue
-    disposeMarkdownProjectedPage(projectedPage)
+    disposeMarkdownProjectedChunk(projectedChunk)
     cache.chunks.delete(key)
   }
 
   for (const virtualItem of virtualWindow.items) {
     const chunk = document.chunks[virtualItem.index]
     if (!chunk) continue
-    const projectedPage =
+    const projectedChunk =
       cache.chunks.get(virtualItem.key) ??
-      createMarkdownProjectedPage({
+      createMarkdownProjectedChunk({
         cache,
         key: virtualItem.key,
-        measurePage,
+        measureChunk,
         chunk,
       })
 
-    patchMarkdownPageShell({
+    patchMarkdownChunkShell({
       highlightRange,
       chunk,
-      projectedPage,
+      projectedChunk,
       scale,
       virtualItem,
     })
-    renderMarkdownProjectedPage({
+    renderMarkdownProjectedChunk({
       document,
       highlightRange,
-      measurePage,
+      measureChunk,
       mode,
       chunk,
-      projectedPage,
+      projectedChunk,
       virtualItem,
     })
-    canvas.append(projectedPage.shell)
+    canvas.append(projectedChunk.shell)
   }
 
 }
 
-function createMarkdownProjectedPage({
+function createMarkdownProjectedChunk({
   cache,
   key,
-  measurePage,
+  measureChunk,
   chunk,
 }: {
   cache: MarkdownProjectionCache
   key: string
-  measurePage: (key: string, height: number) => void
+  measureChunk: (key: string, height: number) => void
   chunk: MarkdownDocumentChunk
 }) {
   const shell = document.createElement("article")
-  const projectedPage: MarkdownProjectedPage = {
+  const projectedChunk: MarkdownProjectedChunk = {
     renderKey: "",
     resizeObserver:
       typeof ResizeObserver === "undefined"
         ? null
         : new ResizeObserver(() =>
-            syncMarkdownProjectedPage({
-              measurePage,
+            syncMarkdownProjectedChunk({
+              measureChunk,
               chunk,
-              pageMeasurementKey: key,
-              projectedPage,
+              chunkMeasurementKey: key,
+              projectedChunk,
             })
           ),
     root: createRoot(shell),
     shell,
   }
-  projectedPage.resizeObserver?.observe(shell)
-  cache.chunks.set(key, projectedPage)
-  return projectedPage
+  projectedChunk.resizeObserver?.observe(shell)
+  cache.chunks.set(key, projectedChunk)
+  return projectedChunk
 }
 
-function patchMarkdownPageShell({
+function patchMarkdownChunkShell({
   highlightRange,
   chunk,
-  projectedPage,
+  projectedChunk,
   scale,
   virtualItem,
 }: {
   highlightRange: ReturnType<typeof normalizeTextLineRange>
   chunk: MarkdownDocumentChunk
-  projectedPage: MarkdownProjectedPage
+  projectedChunk: MarkdownProjectedChunk
   scale: number
   virtualItem: MarkdownVirtualItem
 }) {
@@ -731,43 +731,43 @@ function patchMarkdownPageShell({
     chunk,
     range: highlightRange,
   })
-  projectedPage.shell.ariaCurrent = isHighlighted ? "true" : null
-  projectedPage.shell.className = `absolute text-card-foreground ${
+  projectedChunk.shell.ariaCurrent = isHighlighted ? "true" : null
+  projectedChunk.shell.className = `absolute text-card-foreground ${
     isHighlighted ? "bg-primary/5 ring-1 ring-primary/30" : ""
   }`
-  delete projectedPage.shell.dataset.chunkIndex
-  projectedPage.shell.dataset.chunkIndex = String(chunk.chunkIndex - 1)
-  projectedPage.shell.dataset.slot = "markdown-document-chunk"
-  projectedPage.shell.dataset.sourceEndLine = String(chunk.chunkEndLine)
-  projectedPage.shell.dataset.sourceLine = String(chunk.chunkStartLine)
-  projectedPage.shell.style.fontSize = `${14 * scale}px`
-  projectedPage.shell.style.left = "50%"
-  projectedPage.shell.style.minHeight = ""
-  projectedPage.shell.style.paddingBlock = "0px"
-  projectedPage.shell.style.paddingInline = `${
+  delete projectedChunk.shell.dataset.chunkIndex
+  projectedChunk.shell.dataset.chunkIndex = String(chunk.chunkIndex)
+  projectedChunk.shell.dataset.slot = "markdown-document-chunk"
+  projectedChunk.shell.dataset.sourceEndLine = String(chunk.chunkEndLine)
+  projectedChunk.shell.dataset.sourceLine = String(chunk.chunkStartLine)
+  projectedChunk.shell.style.fontSize = `${14 * scale}px`
+  projectedChunk.shell.style.left = "50%"
+  projectedChunk.shell.style.minHeight = ""
+  projectedChunk.shell.style.paddingBlock = "0px"
+  projectedChunk.shell.style.paddingInline = `${
     MARKDOWN_DOCUMENT_CHUNK_PADDING_X * scale
   }px`
-  projectedPage.shell.style.transform = `translate(-50%, ${
+  projectedChunk.shell.style.transform = `translate(-50%, ${
     virtualItem.top + MARKDOWN_VIEWER_CANVAS_PADDING_Y
   }px)`
-  projectedPage.shell.style.width = `${MARKDOWN_DOCUMENT_COLUMN_WIDTH * scale}px`
+  projectedChunk.shell.style.width = `${MARKDOWN_DOCUMENT_COLUMN_WIDTH * scale}px`
 }
 
-function renderMarkdownProjectedPage({
+function renderMarkdownProjectedChunk({
   document,
   highlightRange,
-  measurePage,
+  measureChunk,
   mode,
   chunk,
-  projectedPage,
+  projectedChunk,
   virtualItem,
 }: {
   document: MarkdownDocument
   highlightRange: ReturnType<typeof normalizeTextLineRange>
-  measurePage: (key: string, height: number) => void
+  measureChunk: (key: string, height: number) => void
   mode: MarkdownDocumentViewMode
   chunk: MarkdownDocumentChunk
-  projectedPage: MarkdownProjectedPage
+  projectedChunk: MarkdownProjectedChunk
   virtualItem: MarkdownVirtualItem
 }) {
   const renderKey = [
@@ -779,51 +779,51 @@ function renderMarkdownProjectedPage({
     highlightRange?.start ?? "",
     highlightRange?.end ?? "",
   ].join("\u0000")
-  if (projectedPage.renderKey === renderKey) return
+  if (projectedChunk.renderKey === renderKey) return
 
-  projectedPage.renderKey = renderKey
-  const syncPage = () =>
-    syncMarkdownProjectedPage({
-      measurePage,
+  projectedChunk.renderKey = renderKey
+  const syncChunk = () =>
+    syncMarkdownProjectedChunk({
+      measureChunk,
       chunk,
-      pageMeasurementKey: virtualItem.key,
-      projectedPage,
+      chunkMeasurementKey: virtualItem.key,
+      projectedChunk,
     })
-  projectedPage.root.render(
-    <MarkdownVirtualPageContent
+  projectedChunk.root.render(
+    <MarkdownVirtualChunkContent
       document={document}
       highlightRange={highlightRange}
       mode={mode}
       chunk={chunk}
-      onContentReady={syncPage}
+      onContentReady={syncChunk}
     />
   )
 }
 
-function syncMarkdownProjectedPage({
-  measurePage,
+function syncMarkdownProjectedChunk({
+  measureChunk,
   chunk,
-  pageMeasurementKey,
-  projectedPage,
+  chunkMeasurementKey,
+  projectedChunk,
 }: {
-  measurePage: (key: string, height: number) => void
+  measureChunk: (key: string, height: number) => void
   chunk: MarkdownDocumentChunk
-  pageMeasurementKey: string
-  projectedPage: MarkdownProjectedPage
+  chunkMeasurementKey: string
+  projectedChunk: MarkdownProjectedChunk
 }) {
-  patchMarkdownPageTables({ pageId: chunk.id, root: projectedPage.shell })
-  const content = projectedPage.shell.querySelector<HTMLElement>(
+  patchMarkdownChunkTables({ chunkId: chunk.id, root: projectedChunk.shell })
+  const content = projectedChunk.shell.querySelector<HTMLElement>(
     '[data-slot="markdown-document-rendered-content"], [data-slot="markdown-document-text-content"]'
   )
-  const height = measureMarkdownProjectedPageHeight({
+  const height = measureMarkdownProjectedChunkHeight({
     content,
-    shell: projectedPage.shell,
+    shell: projectedChunk.shell,
   })
   if (!Number.isFinite(height) || height <= 0) return
-  measurePage(pageMeasurementKey, height + MARKDOWN_VIEWER_CHUNK_GAP)
+  measureChunk(chunkMeasurementKey, height + MARKDOWN_VIEWER_CHUNK_GAP)
 }
 
-function measureMarkdownProjectedPageHeight({
+function measureMarkdownProjectedChunkHeight({
   content,
   shell,
 }: {
@@ -849,7 +849,8 @@ function measuredElementHeight(element: HTMLElement) {
 
 function elementVerticalPadding(element: HTMLElement) {
   const style = window.getComputedStyle(element)
-  const physicalPadding = cssPixels(style.paddingTop) + cssPixels(style.paddingBottom)
+  const physicalPadding =
+    cssPixels(style.paddingTop) + cssPixels(style.paddingBottom)
   if (physicalPadding > 0) return physicalPadding
   const logicalPadding = cssPixels(element.style.paddingBlock)
   return logicalPadding > 0 ? logicalPadding * 2 : 0
@@ -861,16 +862,16 @@ function cssPixels(value: string) {
 }
 
 function disposeMarkdownProjectionCache(cache: MarkdownProjectionCache) {
-  for (const projectedPage of cache.chunks.values()) {
-    disposeMarkdownProjectedPage(projectedPage)
+  for (const projectedChunk of cache.chunks.values()) {
+    disposeMarkdownProjectedChunk(projectedChunk)
   }
   cache.chunks.clear()
 }
 
-function disposeMarkdownProjectedPage(projectedPage: MarkdownProjectedPage) {
-  projectedPage.resizeObserver?.disconnect()
-  deferMarkdownRootUnmount(projectedPage.root)
-  projectedPage.shell.remove()
+function disposeMarkdownProjectedChunk(projectedChunk: MarkdownProjectedChunk) {
+  projectedChunk.resizeObserver?.disconnect()
+  deferMarkdownRootUnmount(projectedChunk.root)
+  projectedChunk.shell.remove()
 }
 
 function deferMarkdownRootUnmount(root: Root) {
@@ -882,7 +883,7 @@ function deferMarkdownRootUnmount(root: Root) {
   window.setTimeout(unmount, 0)
 }
 
-function MarkdownVirtualPageContent({
+function MarkdownVirtualChunkContent({
   document,
   highlightRange,
   mode,

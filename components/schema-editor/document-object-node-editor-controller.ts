@@ -2,11 +2,11 @@ import type * as React from "react"
 
 import type { DocumentSchemaNodeEditorProps } from "@/components/schema-editor/document-node-editor-types"
 import {
-  beginPropertyDrag,
-  leavePropertyDragTarget,
-  resolvePropertyDrop,
-  updatePropertyDragTarget,
-} from "@/components/schema-editor/document-property-drag"
+  beginSchemaRowDrag,
+  leaveSchemaRowDragTarget,
+  resolveSchemaRowDrop,
+  updateSchemaRowDragTarget,
+} from "@/components/schema-editor/primitives/schema-row-drag"
 import { replaceNodeJson } from "@/components/schema-editor/document/json-node"
 import {
   addProperty,
@@ -22,18 +22,14 @@ import { formatTitle } from "@/components/schema-editor/schema-title"
 interface DocumentObjectNodeEditorControllerOptions {
   dispatch: DocumentSchemaNodeEditorProps["dispatch"]
   objectNodeId: string
-  path: string
   properties: DocumentPropertyView[]
-  draggedParentRef: DocumentSchemaNodeEditorProps["draggedParentRef"]
   draggedPropertyRef: DocumentSchemaNodeEditorProps["draggedPropertyRef"]
 }
 
 export function useDocumentObjectNodeEditorController({
   dispatch,
   objectNodeId,
-  path,
   properties,
-  draggedParentRef,
   draggedPropertyRef,
 }: DocumentObjectNodeEditorControllerOptions) {
   const propertyNames = properties.map((property) => property.propertyName)
@@ -83,13 +79,13 @@ export function useDocumentObjectNodeEditorController({
     event: React.DragEvent<HTMLDivElement>,
     property: DocumentPropertyView
   ) => {
-    beginPropertyDrag({
+    beginSchemaRowDrag({
       event,
-      path,
-      propertyId: property.propertyId,
-      propertyName: property.propertyName,
-      draggedParentRef,
-      draggedPropertyRef,
+      item: {
+        id: property.propertyId,
+        label: property.propertyName,
+      },
+      draggedRowIdRef: draggedPropertyRef,
     })
   }
 
@@ -97,13 +93,11 @@ export function useDocumentObjectNodeEditorController({
     event: React.DragEvent<HTMLDivElement>,
     property: DocumentPropertyView
   ) => {
-    updatePropertyDragTarget({
+    updateSchemaRowDragTarget({
       event,
-      path,
-      targetPropertyId: property.propertyId,
-      propertyIds,
-      draggedParentRef,
-      draggedPropertyRef,
+      rowIds: propertyIds,
+      targetRowId: property.propertyId,
+      draggedRowIdRef: draggedPropertyRef,
     })
   }
 
@@ -111,18 +105,17 @@ export function useDocumentObjectNodeEditorController({
     event: React.DragEvent<HTMLDivElement>,
     property: DocumentPropertyView
   ) => {
-    const move = resolvePropertyDrop({
+    const move = resolveSchemaRowDrop({
       event,
-      path,
-      targetPropertyId: property.propertyId,
-      propertyIds,
-      draggedParentRef,
+      rowIds: propertyIds,
+      targetRowId: property.propertyId,
+      draggedRowIdRef: draggedPropertyRef,
     })
     if (!move) return
     dispatch((current) =>
       moveProperty(
         current,
-        move.sourcePropertyId,
+        move.sourceRowId,
         objectNodeId,
         move.targetIndex
       )
@@ -137,7 +130,7 @@ export function useDocumentObjectNodeEditorController({
     deleteProperty,
     startDrag,
     dragOver,
-    leaveDragTarget: leavePropertyDragTarget,
+    leaveDragTarget: leaveSchemaRowDragTarget,
     drop,
   }
 }

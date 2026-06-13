@@ -27,6 +27,8 @@ const deletedFiles = [
   "components/schema-editor/document/index.ts",
   "components/schema-editor/document/operations.ts",
   "components/schema-editor/document/tree.ts",
+  "components/schema-editor/document-property-drag.ts",
+  "components/schema-editor/document-property-reorder.ts",
 ]
 
 const executableFilesToCheck = [
@@ -40,10 +42,8 @@ const executableFilesToCheck = [
   "components/schema-editor/document-node-type-menu.tsx",
   "components/schema-editor/document-object-node-editor-controller.ts",
   "components/schema-editor/document-object-node-editor.tsx",
-  "components/schema-editor/document-property-drag.ts",
   "components/schema-editor/document-property-row.tsx",
   "components/schema-editor/document-property-add-row.tsx",
-  "components/schema-editor/document-property-reorder.ts",
   "components/schema-editor/document-array-node-editor.tsx",
   "components/schema-editor/document-enum-node-editor.tsx",
   "components/schema-editor/document-node-editor-types.ts",
@@ -76,7 +76,10 @@ const executableFilesToCheck = [
   "components/schema-editor/property-form/fields/enum-values-field.tsx",
   "components/schema-editor/property-form/fields/property-schema-details-field.tsx",
   "components/schema-editor/property-form/model/property-schema-details.ts",
+  "components/schema-editor/property-form/model/object-property-edits.ts",
   "components/schema-editor/property-form/fields/property-type-menu-model.ts",
+  "components/schema-editor/property-form/fields/object-properties-drag.ts",
+  "components/schema-editor/primitives/schema-row-drag.ts",
   "components/schema-editor/schema-type-menu-sections.tsx",
   "components/schema-editor/object-template-type-section.tsx",
 ]
@@ -295,8 +298,8 @@ describe("schema builder architecture", () => {
   it("keeps DOM side effects confined to named browser helpers", () => {
     const approvedDomFiles = [
       "components/schema-editor/document-node-reveal.ts",
-      "components/schema-editor/document-property-drag.ts",
       "components/schema-editor/optional/import-export/import-export-menu-items.tsx",
+      "components/schema-editor/primitives/schema-row-drag.ts",
     ]
     const domEffectPattern =
       /\b(document\.|window\.|setTimeout|requestAnimationFrame)\b/

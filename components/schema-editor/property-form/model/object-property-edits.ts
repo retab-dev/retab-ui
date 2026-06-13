@@ -74,19 +74,6 @@ export function renameObjectProperty({
   }
 }
 
-function setRecordValue<T>(
-  record: Record<string, T>,
-  key: string,
-  value: T
-) {
-  Object.defineProperty(record, key, {
-    value,
-    enumerable: true,
-    configurable: true,
-    writable: true,
-  })
-}
-
 export function removeObjectProperty({
   schemaNode,
   propertyName,
@@ -103,4 +90,49 @@ export function removeObjectProperty({
       (name) => name !== propertyName
     ),
   }
+}
+
+export function moveObjectProperty({
+  schemaNode,
+  propertyName,
+  targetIndex,
+}: {
+  schemaNode: ExtendedJSONSchema7
+  propertyName: string
+  targetIndex: number
+}): ExtendedJSONSchema7 {
+  const properties = schemaNode.properties || {}
+  const propertyEntries = Object.entries(properties)
+  const sourceIndex = propertyEntries.findIndex(([name]) => name === propertyName)
+  if (sourceIndex < 0) return schemaNode
+
+  const [movedProperty] = propertyEntries.splice(sourceIndex, 1)
+  const clampedTargetIndex = Math.max(
+    0,
+    Math.min(targetIndex, propertyEntries.length)
+  )
+  propertyEntries.splice(clampedTargetIndex, 0, movedProperty)
+
+  const nextProperties: NonNullable<ExtendedJSONSchema7["properties"]> = {}
+  for (const [name, propertySchema] of propertyEntries) {
+    setRecordValue(nextProperties, name, propertySchema)
+  }
+
+  return {
+    ...schemaNode,
+    properties: nextProperties,
+  }
+}
+
+function setRecordValue<T>(
+  record: Record<string, T>,
+  key: string,
+  value: T
+) {
+  Object.defineProperty(record, key, {
+    value,
+    enumerable: true,
+    configurable: true,
+    writable: true,
+  })
 }

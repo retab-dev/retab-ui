@@ -328,17 +328,27 @@ describe("json table and DataCell architecture", () => {
     expect(modelContent.includes("JsonTableBooleanDataCellModel")).toBe(true)
     expect(modelContent.includes("JsonTableNumberDataCellModel")).toBe(true)
     expect(modelContent.includes("JsonTableTextDataCellModel")).toBe(true)
-    expect(modelContent.includes("JSON_TABLE_NULL_SELECT_VALUE")).toBe(true)
-    expect(modelContent.includes("enumCommitValue")).toBe(true)
+    expect(modelContent.includes("nullSelectOptionValue")).toBe(true)
+    expect(modelContent.includes("selectDataCellModel")).toBe(true)
+    expect(modelContent.includes("numberDataCellModel")).toBe(true)
+    expect(modelContent.includes("booleanDataCellModel")).toBe(true)
+    expect(modelContent.includes("textDataCellModel")).toBe(true)
+    expect(modelContent.includes("fallbackTextDataCellModel")).toBe(true)
+    expect(modelContent.includes("jsonSelectCommitValue")).toBe(true)
     expect(modelContent.includes("jsonCommitValue")).toBe(true)
 
     for (const pattern of [
-      "JSON_TABLE_NULL_SELECT_VALUE",
-      "enumCommitValue",
-      "enumDataCellValue",
+      "nullSelectOptionValue",
+      "JSON_TABLE_",
+      "dateStringToFormat",
+      "parseDateStringAsLocal",
+      "jsonValuesEqual",
+      "jsonSelectCommitValue",
+      "dataCellSelectValue",
       "jsonCommitValue",
-      "numberDataCellValue",
-      "textDataCellValue",
+      "dataCellNumberValue",
+      "dataCellTextValue",
+      "primitiveKindForField",
       "as DataCellProps",
       "as never",
       "selectOptions: []",
@@ -346,6 +356,22 @@ describe("json table and DataCell architecture", () => {
       expect(
         displayContent.includes(pattern),
         `${displayFile} contains ${pattern}`
+      ).toBe(false)
+    }
+
+    for (const pattern of [
+      "enumModel",
+      "numberModel",
+      "booleanModel",
+      "stringModel",
+      "fallbackTextModel",
+      "enumOptionValue",
+      "dateDisplayValue",
+      "primitiveJsonValue",
+    ]) {
+      expect(
+        modelContent.includes(pattern),
+        `${modelFile} contains compatibility alias ${pattern}`
       ).toBe(false)
     }
   })

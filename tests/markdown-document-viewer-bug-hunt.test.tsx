@@ -60,10 +60,10 @@ const rendererSourceLines = (chunk: MarkdownDocumentChunk) =>
         .slice(0, index)
         .map((b) => b.markdown)
         .join("\n\n") + (index > 0 ? "\n\n" : "")
-    const lineWithinPage = prefix.length === 0 ? 1 : prefix.split("\n").length
+    const lineWithinChunk = prefix.length === 0 ? 1 : prefix.split("\n").length
     return (
-      chunk.sourceLineByRenderedLine.get(lineWithinPage) ??
-      chunk.chunkStartLine + lineWithinPage - 1
+      chunk.sourceLineByRenderedLine.get(lineWithinChunk) ??
+      chunk.chunkStartLine + lineWithinChunk - 1
     )
   })
 
@@ -285,10 +285,10 @@ describe("markdown model — chunks", () => {
         "After",
       ].join("\n")
     )
-    const hostilePage = document.chunks.find((chunk) =>
+    const hostileChunk = document.chunks.find((chunk) =>
       chunk.blocks.some((block) => block.isHostile)
     )
-    expect(hostilePage?.blocks).toHaveLength(1)
+    expect(hostileChunk?.blocks).toHaveLength(1)
   })
 
   it("finds the owning chunk for any in-range line", () => {
@@ -389,7 +389,7 @@ describe("markdown layout — estimates", () => {
     expect(clampMarkdownChunkHeight(-100)).toBe(
       MARKDOWN_DOCUMENT_MIN_CHUNK_HEIGHT
     )
-    expect(clampMarkdownChunkHeight(10)).toBe(MARKDOWN_DOCUMENT_MIN_CHUNK_HEIGHT)
+    expect(clampMarkdownChunkHeight(10)).toBe(10)
     expect(clampMarkdownChunkHeight(99999)).toBe(
       MARKDOWN_DOCUMENT_MAX_ESTIMATED_CHUNK_HEIGHT
     )

@@ -227,7 +227,7 @@ function createMarkdownChunks(
       id: `chunk-${chunks.length + 1}-${chunkStartLine}`,
       markdown,
       chunkEndLine,
-      chunkIndex: chunks.length + 1,
+      chunkIndex: chunks.length,
       chunkStartLine,
       sourceText: sourceTextForLineRange({
         endLine: chunkEndLine,

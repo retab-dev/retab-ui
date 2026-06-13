@@ -24,6 +24,7 @@ import {
   parseEnumValueInput,
 } from "@/components/schema-editor/property-form/model/enum-values"
 import {
+  moveObjectProperty,
   removeObjectProperty,
   renameObjectProperty,
   replaceObjectProperty,
@@ -105,6 +106,27 @@ function renameInlineField(name: string, nextName: string) {
   fireEvent.keyDown(input, { key: "Enter" })
 }
 
+function createDragDataTransfer(): DataTransfer {
+  const data = new Map<string, string>()
+  return {
+    effectAllowed: "uninitialized",
+    dropEffect: "none",
+    setData: (format: string, value: string) => {
+      data.set(format, value)
+    },
+    getData: (format: string) => data.get(format) ?? "",
+    setDragImage: () => undefined,
+  } as DataTransfer
+}
+
+function getPropertyFormRow(propertyName: string) {
+  const row = document.querySelector(
+    `[data-property-form-property-name="${propertyName}"]`
+  )
+  expect(row).toBeTruthy()
+  return row as HTMLElement
+}
+
 describe("property form models", () => {
   it("parses enum input as JSON when possible and as strings otherwise", () => {
     expect(parseEnumValueInput("paid")).toBe("paid")
@@ -162,6 +184,50 @@ describe("property form models", () => {
     expect(removed.required).toEqual(["country"])
   })
 
+  it("moves object properties without changing required semantics", () => {
+    const street = { type: "string" } satisfies ExtendedJSONSchema7
+    const city = { type: "string" } satisfies ExtendedJSONSchema7
+    const zip = { type: "string" } satisfies ExtendedJSONSchema7
+    const schemaNode: ExtendedJSONSchema7 = {
+      type: "object",
+      description: "Address",
+      properties: { street, city, zip },
+      required: ["street", "zip"],
+    }
+
+    const firstToEnd = moveObjectProperty({
+      schemaNode,
+      propertyName: "street",
+      targetIndex: 99,
+    })
+    expect(Object.keys(firstToEnd.properties || {})).toEqual([
+      "city",
+      "zip",
+      "street",
+    ])
+    expect(firstToEnd.required).toEqual(["street", "zip"])
+    expect(firstToEnd.description).toBe("Address")
+    expect(firstToEnd.properties?.street).toBe(street)
+
+    const lastToStart = moveObjectProperty({
+      schemaNode,
+      propertyName: "zip",
+      targetIndex: 0,
+    })
+    expect(Object.keys(lastToStart.properties || {})).toEqual([
+      "zip",
+      "street",
+      "city",
+    ])
+
+    const missing = moveObjectProperty({
+      schemaNode,
+      propertyName: "country",
+      targetIndex: 0,
+    })
+    expect(missing).toBe(schemaNode)
+  })
+
   it("keeps object properties whose names collide with object prototype keys", () => {
     const schemaNode: ExtendedJSONSchema7 = {
       type: "object",
@@ -182,6 +248,20 @@ describe("property form models", () => {
     ).toBe(true)
     expect(Object.keys(renamed.properties || {})).toEqual(["__proto__"])
     expect(renamed.required).toEqual(["__proto__"])
+
+    const moved = moveObjectProperty({
+      schemaNode: replaceObjectProperty({
+        schemaNode: renamed,
+        propertyName: "safe",
+        propertySchema: { type: "number" },
+      }),
+      propertyName: "__proto__",
+      targetIndex: 1,
+    })
+    expect(
+      Object.prototype.hasOwnProperty.call(moved.properties, "__proto__")
+    ).toBe(true)
+    expect(Object.keys(moved.properties || {})).toEqual(["safe", "__proto__"])
   })
 
   it("preserves object property row ids and reset keys across local row edits", () => {
@@ -262,6 +342,26 @@ describe("property form models", () => {
       ["zip", "draft-property-2"],
     ])
     expect(model?.addRow.value).toBe("")
+
+    act(() => {
+      model?.addRow.onChange("country")
+    })
+    act(() => {
+      model?.rows[2]?.actions.move(0)
+    })
+    view.rerender(<Harness node={schemaNode} />)
+
+    expect(model?.rows.map((row) => [row.name, row.id])).toEqual([
+      ["zip", "draft-property-2"],
+      ["road", "draft-property-0"],
+      ["city", "draft-property-1"],
+    ])
+    expect(Object.keys(schemaNode.properties || {})).toEqual([
+      "zip",
+      "road",
+      "city",
+    ])
+    expect(model?.addRow.value).toBe("country")
   })
 
   it("clears pending object property input after external schema resets", () => {
@@ -441,6 +541,56 @@ describe("PropertyForm", () => {
         title: "Invoice Id",
       },
     })
+  })
+
+  it("reorders nested object properties by drag before committing", async () => {
+    const onCommitPropertyDraft = vi.fn()
+    render(
+      <PropertyForm
+        propertyDraft={{
+          name: "address",
+          schemaNode: {
+            type: "object",
+            properties: {
+              street: { type: "string" },
+              city: { type: "string" },
+              zip: { type: "string" },
+            },
+            required: ["street", "zip"],
+          },
+        }}
+        schemaContext={{
+          siblingNames: [],
+          originalName: "address",
+          schemaDefinitions: {},
+        }}
+        onCommitPropertyDraft={onCommitPropertyDraft}
+      />
+    )
+
+    const dataTransfer = createDragDataTransfer()
+    fireEvent.dragStart(getPropertyFormRow("zip"), { dataTransfer })
+    fireEvent.dragOver(getPropertyFormRow("street"), { dataTransfer })
+    fireEvent.drop(getPropertyFormRow("street"), { dataTransfer })
+
+    await waitFor(() =>
+      expect(
+        screen
+          .getAllByLabelText(/^Field name /)
+          .map((input) => (input as HTMLInputElement).value)
+      ).toEqual(["zip", "street", "city"])
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "Save Changes" }))
+
+    await waitFor(() => expect(onCommitPropertyDraft).toHaveBeenCalledTimes(1))
+    const committed = onCommitPropertyDraft.mock.calls[0]?.[0]
+    expect(Object.keys(committed.schemaNode.properties || {})).toEqual([
+      "zip",
+      "street",
+      "city",
+    ])
+    expect(committed.schemaNode.required).toEqual(["street", "zip"])
   })
 
   it("does not start a second commit while submit is pending", async () => {

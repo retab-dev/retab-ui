@@ -49,12 +49,13 @@ describe("markdown document model", () => {
       (_, index) => `## Section ${index + 1}\n\nParagraph ${index + 1}`
     ).join("\n\n")
     const document = createMarkdownDocument(markdown)
-    const firstPage = document.chunks[0]!
+    const firstChunk = document.chunks[0]!
 
     expect(document.chunks.length).toBeGreaterThan(1)
-    expect(firstPage.chunkStartLine).toBe(1)
-    expect(firstPage.chunkEndLine).toBeGreaterThan(firstPage.chunkStartLine)
-    expect(findMarkdownChunkForLine(document.chunks, 1)).toBe(firstPage)
+    expect(firstChunk.chunkIndex).toBe(0)
+    expect(firstChunk.chunkStartLine).toBe(1)
+    expect(firstChunk.chunkEndLine).toBeGreaterThan(firstChunk.chunkStartLine)
+    expect(findMarkdownChunkForLine(document.chunks, 1)).toBe(firstChunk)
   })
 
   it("isolates hostile blocks into their own chunks", () => {
@@ -68,13 +69,13 @@ describe("markdown document model", () => {
       "After",
     ].join("\n")
     const document = createMarkdownDocument(hostileCode)
-    const hostilePage = document.chunks.find((chunk) =>
+    const hostileChunk = document.chunks.find((chunk) =>
       chunk.blocks.some((block) => block.isHostile)
     )
 
-    expect(hostilePage).toBeTruthy()
-    expect(hostilePage?.blocks).toHaveLength(1)
-    expect(hostilePage?.blocks[0]).toMatchObject({
+    expect(hostileChunk).toBeTruthy()
+    expect(hostileChunk?.blocks).toHaveLength(1)
+    expect(hostileChunk?.blocks[0]).toMatchObject({
       isHostile: true,
       kind: "code",
     })

@@ -15,6 +15,7 @@ import type {
   PropertySchemaDetailsModel,
 } from "@/components/schema-editor/property-form/types"
 
+import { useObjectPropertiesDrag } from "./object-properties-drag"
 import { useObjectPropertiesModel } from "./object-properties-model"
 import { TypeField } from "./type-field"
 
@@ -43,13 +44,23 @@ export function ObjectPropertiesField({
     schemaContext,
     onChange,
   })
+  const drag = useObjectPropertiesDrag({
+    rows: model.rows,
+    editable,
+  })
 
   return (
     <div className="space-y-2 pl-2">
       {model.rows.map((row) => (
-        <div key={row.id} className="ml-4 border-l border-border">
+        <div
+          key={row.id}
+          className="ml-4 border-l border-border"
+          data-property-form-row-id={row.id}
+          data-property-form-property-name={row.name}
+          {...drag.getRowDragProps(row)}
+        >
           <SchemaFieldRow
-            grip={editable ? "static" : "empty"}
+            grip={editable ? "drag" : "empty"}
             name={
               <SchemaInlineName
                 ariaLabel={`Field name ${row.name}`}
