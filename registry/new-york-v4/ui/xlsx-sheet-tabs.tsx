@@ -5,11 +5,21 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 import type { XlsxSheetMeta } from "@/lib/xlsx-workbook"
 
+const TAB_STRIP_HEIGHT_PX = 36
+const TAB_HEIGHT_PX = 28
 const TAB_REVEAL_PADDING_PX = 10
 const SCROLL_EPSILON_PX = 1
 const TAB_MIN_WIDTH_PX = 92
 const TAB_MAX_WIDTH_PX = 184
 const PREFERRED_VISIBLE_TABS = 6
+const LARGE_REVEAL_DISTANCE_MULTIPLIER = 1.25
+
+interface SheetTabScrollState {
+  canScrollLeft: boolean
+  canScrollRight: boolean
+  isOverflowing: boolean
+  viewportWidth: number
+}
 
 function scrollTabsTo(
   scrollElement: HTMLDivElement,
@@ -26,6 +36,21 @@ function scrollTabsTo(
     scrollElement.scrollTo({ left: clampedLeft, behavior })
   } else {
     scrollElement.scrollLeft = clampedLeft
+  }
+}
+
+function readScrollState(scrollElement: HTMLElement): SheetTabScrollState {
+  const maxScrollLeft = Math.max(
+    0,
+    scrollElement.scrollWidth - scrollElement.clientWidth
+  )
+
+  return {
+    canScrollLeft: scrollElement.scrollLeft > SCROLL_EPSILON_PX,
+    canScrollRight:
+      scrollElement.scrollLeft < maxScrollLeft - SCROLL_EPSILON_PX,
+    isOverflowing: maxScrollLeft > SCROLL_EPSILON_PX,
+    viewportWidth: scrollElement.clientWidth,
   }
 }
 
@@ -54,7 +79,7 @@ export function XlsxSheetTabs({
   const scrollRef = React.useRef<HTMLDivElement>(null)
   const listRef = React.useRef<HTMLDivElement>(null)
   const tabRefs = React.useRef<(HTMLButtonElement | null)[]>([])
-  const [scrollState, setScrollState] = React.useState({
+  const [scrollState, setScrollState] = React.useState<SheetTabScrollState>({
     canScrollLeft: false,
     canScrollRight: false,
     isOverflowing: false,
@@ -66,19 +91,7 @@ export function XlsxSheetTabs({
     const scrollElement = scrollRef.current
     if (!scrollElement) return
 
-    const maxScrollLeft = Math.max(
-      0,
-      scrollElement.scrollWidth - scrollElement.clientWidth
-    )
-    const canScrollLeft = scrollElement.scrollLeft > SCROLL_EPSILON_PX
-    const canScrollRight =
-      scrollElement.scrollLeft < maxScrollLeft - SCROLL_EPSILON_PX
-    const nextScrollState = {
-      canScrollLeft,
-      canScrollRight,
-      isOverflowing: maxScrollLeft > SCROLL_EPSILON_PX,
-      viewportWidth: scrollElement.clientWidth,
-    }
+    const nextScrollState = readScrollState(scrollElement)
 
     setScrollState((current) =>
       current.canScrollLeft === nextScrollState.canScrollLeft &&
@@ -132,7 +145,10 @@ export function XlsxSheetTabs({
       scrollTabsTo(
         scrollElement,
         nextLeft,
-        distance > scrollElement.clientWidth * 1.25 ? "auto" : "smooth"
+        distance >
+          scrollElement.clientWidth * LARGE_REVEAL_DISTANCE_MULTIPLIER
+          ? "auto"
+          : "smooth"
       )
     }
 
@@ -213,14 +229,20 @@ export function XlsxSheetTabs({
       data-can-scroll-left={scrollState.canScrollLeft}
       data-can-scroll-right={scrollState.canScrollRight}
       data-overflowing={scrollState.isOverflowing}
-      className="relative h-9 flex-shrink-0 overflow-hidden border-t bg-card"
+      style={{ height: TAB_STRIP_HEIGHT_PX }}
+      className="relative flex-shrink-0 overflow-hidden border-t bg-card"
     >
       <div
         ref={scrollRef}
+        data-slot="xlsx-viewer-tabs-scroll"
         className="h-full overflow-x-auto overflow-y-hidden px-1.5 py-1 overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         onWheel={onTabsWheel}
       >
-        <div ref={listRef} className="flex min-w-max items-stretch gap-0.5">
+        <div
+          ref={listRef}
+          data-slot="xlsx-viewer-tabs-list"
+          className="flex min-w-max items-stretch gap-0.5"
+        >
           {sheets.map((sheet, sheetIndex) => (
             <button
               key={`${sheetIndex}:${sheet.name}`}
@@ -233,11 +255,14 @@ export function XlsxSheetTabs({
               tabIndex={sheetIndex === activeSheetIndex ? 0 : -1}
               onClick={() => selectSheet(sheetIndex)}
               onKeyDown={(event) => onTabKeyDown(event, sheetIndex)}
-              style={tabWidth ? { width: tabWidth } : undefined}
+              style={{
+                height: TAB_HEIGHT_PX,
+                ...(tabWidth ? { width: tabWidth } : null),
+              }}
               title={sheet.name}
               data-active={sheetIndex === activeSheetIndex}
               className={cn(
-                "relative flex h-7 flex-shrink-0 select-none items-center justify-center overflow-hidden rounded-md border border-transparent px-2.5 text-xs leading-none font-medium whitespace-nowrap outline-none transition-[background-color,border-color,color,box-shadow]",
+                "relative flex flex-shrink-0 select-none items-center justify-center overflow-hidden rounded-md border border-transparent px-2.5 text-xs leading-none font-medium whitespace-nowrap outline-none transition-[background-color,border-color,color,box-shadow]",
                 "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-card",
                 sheetIndex === activeSheetIndex
                   ? "border-border/70 bg-background text-foreground shadow-xs"

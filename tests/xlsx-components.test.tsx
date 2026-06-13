@@ -143,10 +143,14 @@ describe("XlsxSheetTabs", () => {
     expect(
       screen.getByRole("tab", { name: "Details" }).getAttribute("aria-selected")
     ).toBe("false")
+    expect(screen.getByRole("tab", { name: "Summary" }).tabIndex).toBe(0)
+    expect(screen.getByRole("tab", { name: "Details" }).tabIndex).toBe(-1)
 
+    fireEvent.click(screen.getByRole("tab", { name: "Summary" }))
     fireEvent.click(screen.getByRole("tab", { name: "Details" }))
 
     expect(onSelectSheet).toHaveBeenCalledWith(1)
+    expect(onSelectSheet).toHaveBeenCalledTimes(1)
   })
 
   it("does not render a tablist for a single-sheet workbook", () => {
@@ -181,9 +185,22 @@ describe("XlsxSheetTabs", () => {
     )
 
     const tablist = screen.getByRole("tablist", { name: "Workbook sheets" })
+    const scroller = tablist.querySelector(
+      '[data-slot="xlsx-viewer-tabs-scroll"]'
+    )
+    const list = tablist.querySelector('[data-slot="xlsx-viewer-tabs-list"]')
+
     expect(tablist.getAttribute("data-overflowing")).toBe("true")
+    expect(tablist.style.height).toBe("36px")
+    expect(scroller).toBeTruthy()
+    expect(list).toBeTruthy()
+    expect(tablist.querySelectorAll(".overflow-x-auto")).toHaveLength(1)
     expect(screen.queryByLabelText("Scroll sheets left")).toBeNull()
     expect(screen.queryByLabelText("Scroll sheets right")).toBeNull()
+    expect(tablist.querySelector("[aria-hidden='true']")).toBeNull()
+    expect(
+      screen.getByRole("tab", { name: "Sheet 1" }).style.height
+    ).toBe("28px")
     expect(screen.getByRole("tab", { name: "Sheet 1" }).style.width).toBe(
       "92px"
     )
@@ -211,6 +228,36 @@ describe("XlsxSheetTabs", () => {
     expect(screen.getByRole("tab", { name: "Sheet 1" }).style.width).toBe(
       "156px"
     )
+  })
+
+  it("does not reveal the active sheet when it is already fully visible", () => {
+    const { scrollTo } = mockSheetTabMetrics({
+      clientWidth: 240,
+      scrollWidth: 720,
+      tabWidth: 96,
+    })
+    const sheets = Array.from({ length: 8 }, (_, index) =>
+      makeSheet(`Sheet ${index + 1}`)
+    )
+
+    const { rerender } = render(
+      <XlsxSheetTabs
+        sheets={sheets}
+        activeSheetIndex={0}
+        onSelectSheet={vi.fn()}
+      />
+    )
+
+    scrollTo.mockClear()
+    rerender(
+      <XlsxSheetTabs
+        sheets={sheets}
+        activeSheetIndex={1}
+        onSelectSheet={vi.fn()}
+      />
+    )
+
+    expect(scrollTo).not.toHaveBeenCalled()
   })
 
   it("reveals the active sheet with nearest-edge scroll math", () => {
@@ -246,6 +293,109 @@ describe("XlsxSheetTabs", () => {
     })
   })
 
+  it("uses smooth nearest-edge reveal for nearby active sheets", () => {
+    const { scrollTo } = mockSheetTabMetrics({
+      clientWidth: 240,
+      scrollWidth: 720,
+      tabWidth: 96,
+    })
+    const sheets = Array.from({ length: 8 }, (_, index) =>
+      makeSheet(`Sheet ${index + 1}`)
+    )
+
+    const { rerender } = render(
+      <XlsxSheetTabs
+        sheets={sheets}
+        activeSheetIndex={0}
+        onSelectSheet={vi.fn()}
+      />
+    )
+
+    scrollTo.mockClear()
+    rerender(
+      <XlsxSheetTabs
+        sheets={sheets}
+        activeSheetIndex={2}
+        onSelectSheet={vi.fn()}
+      />
+    )
+
+    expect(scrollTo).toHaveBeenLastCalledWith({
+      left: 58,
+      behavior: "smooth",
+    })
+  })
+
+  it("reveals active sheets clipped on the left edge", () => {
+    const { scrollTo } = mockSheetTabMetrics({
+      clientWidth: 240,
+      scrollWidth: 720,
+      tabWidth: 96,
+    })
+    const sheets = Array.from({ length: 8 }, (_, index) =>
+      makeSheet(`Sheet ${index + 1}`)
+    )
+
+    const { rerender } = render(
+      <XlsxSheetTabs
+        sheets={sheets}
+        activeSheetIndex={5}
+        onSelectSheet={vi.fn()}
+      />
+    )
+    const scroller = screen
+      .getByRole("tablist", { name: "Workbook sheets" })
+      .querySelector(".overflow-x-auto") as HTMLElement
+    scroller.scrollLeft = 250
+
+    scrollTo.mockClear()
+    rerender(
+      <XlsxSheetTabs
+        sheets={sheets}
+        activeSheetIndex={1}
+        onSelectSheet={vi.fn()}
+      />
+    )
+
+    expect(scrollTo).toHaveBeenLastCalledWith({
+      left: 86,
+      behavior: "smooth",
+    })
+  })
+
+  it("clamps active sheet reveal to the max scroll edge", () => {
+    const { scrollTo } = mockSheetTabMetrics({
+      clientWidth: 240,
+      scrollWidth: 430,
+      tabWidth: 96,
+    })
+    const sheets = Array.from({ length: 8 }, (_, index) =>
+      makeSheet(`Sheet ${index + 1}`)
+    )
+
+    const { rerender } = render(
+      <XlsxSheetTabs
+        sheets={sheets}
+        activeSheetIndex={0}
+        onSelectSheet={vi.fn()}
+      />
+    )
+
+    scrollTo.mockClear()
+    rerender(
+      <XlsxSheetTabs
+        sheets={sheets}
+        activeSheetIndex={5}
+        onSelectSheet={vi.fn()}
+      />
+    )
+
+    expect(scrollTo).toHaveBeenLastCalledWith({
+      left: 190,
+      behavior: "auto",
+    })
+  })
+
   it("maps wheel movement to horizontal tab scrolling while overflowing", () => {
     mockSheetTabMetrics({
       clientWidth: 240,
@@ -270,6 +420,59 @@ describe("XlsxSheetTabs", () => {
 
     expect(scroller.scrollLeft).toBe(120)
     expect(tablist.getAttribute("data-can-scroll-left")).toBe("true")
+  })
+
+  it("does not trap wheel movement at tab strip scroll edges", () => {
+    mockSheetTabMetrics({
+      clientWidth: 240,
+      scrollWidth: 720,
+      tabWidth: 96,
+    })
+
+    render(
+      <XlsxSheetTabs
+        sheets={Array.from({ length: 8 }, (_, index) =>
+          makeSheet(`Sheet ${index + 1}`)
+        )}
+        activeSheetIndex={0}
+        onSelectSheet={vi.fn()}
+      />
+    )
+
+    const tablist = screen.getByRole("tablist", { name: "Workbook sheets" })
+    const scroller = tablist.querySelector(".overflow-x-auto") as HTMLElement
+
+    expect(fireEvent.wheel(scroller, { deltaY: -120 })).toBe(true)
+    expect(scroller.scrollLeft).toBe(0)
+
+    scroller.scrollLeft = 480
+    expect(fireEvent.wheel(scroller, { deltaY: 120 })).toBe(true)
+    expect(scroller.scrollLeft).toBe(480)
+  })
+
+  it("does not trap wheel movement when tabs do not overflow", () => {
+    mockSheetTabMetrics({
+      clientWidth: 640,
+      scrollWidth: 640,
+      tabWidth: 156,
+    })
+
+    render(
+      <XlsxSheetTabs
+        sheets={Array.from({ length: 4 }, (_, index) =>
+          makeSheet(`Sheet ${index + 1}`)
+        )}
+        activeSheetIndex={0}
+        onSelectSheet={vi.fn()}
+      />
+    )
+
+    const scroller = screen
+      .getByRole("tablist", { name: "Workbook sheets" })
+      .querySelector(".overflow-x-auto") as HTMLElement
+
+    expect(fireEvent.wheel(scroller, { deltaY: 120 })).toBe(true)
+    expect(scroller.scrollLeft).toBe(0)
   })
 
   it("supports wrapped keyboard selection for crowded sheet tabs", () => {
@@ -307,6 +510,9 @@ describe("XlsxSheetTabs", () => {
     expect(onSelectSheet).toHaveBeenNthCalledWith(2, 0)
     expect(onSelectSheet).toHaveBeenNthCalledWith(3, 7)
     expect(onSelectSheet).toHaveBeenNthCalledWith(4, 2)
+    expect(document.activeElement).toBe(
+      screen.getByRole("tab", { name: "Sheet 3" })
+    )
   })
 
   it("wraps previous and next selection at the ends of a crowded sheet strip", () => {

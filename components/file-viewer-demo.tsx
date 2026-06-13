@@ -4,24 +4,17 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 import { FileViewer } from "@/components/ui/file-viewer"
-import { TextViewer } from "@/components/ui/text-viewer"
 import {
   LONG_TEXT_SAMPLE,
   LONG_TEXT_SAMPLE_FILE_NAME,
   LONG_TEXT_SAMPLE_MIME_TYPE,
 } from "@/components/long-text-sample"
 
-type DemoFile =
-  | {
-      label: string
-      file: string
-      viewer?: "file"
-    }
-  | {
-      label: string
-      file: string
-      viewer: "text"
-    }
+type DemoFile = {
+  label: string
+  file: string
+  source?: "inline-text"
+}
 
 const FILES = [
   { label: "PDF", file: "spacex-prospectus.pdf" },
@@ -35,7 +28,7 @@ const FILES = [
   { label: "HTML", file: "welcome.html" },
   { label: "JSON", file: "app-config.json" },
   { label: "Code", file: "use-debounced-value.ts" },
-  { label: "Text", file: "review-notes.txt", viewer: "text" },
+  { label: "Text", file: "review-notes.txt", source: "inline-text" },
 ] as const satisfies readonly DemoFile[]
 
 const SHOWCASE_FILES = FILES.filter((file) => file.label !== "Code").map(
@@ -83,35 +76,30 @@ function FileTabs({
 }
 
 function FileCanvas({ file }: { file: DemoFile }) {
-  const urlSource = {
-    kind: "url" as const,
-    url: `/samples/${file.file}`,
-    fileName: file.file,
-  }
+  const source =
+    file.source === "inline-text"
+      ? {
+          kind: "text" as const,
+          text: LONG_TEXT_SAMPLE,
+          fileName: LONG_TEXT_SAMPLE_FILE_NAME,
+          mimeType: LONG_TEXT_SAMPLE_MIME_TYPE,
+        }
+      : {
+          kind: "url" as const,
+          url: `/samples/${file.file}`,
+          fileName: file.file,
+        }
 
   return (
     <div className="h-[min(680px,calc(100svh-10rem))] min-h-[420px] w-full rounded-xl shadow-sm">
       {/* Bounded viewport keeps long documents scrolling inside the viewer.
           key forces a fresh viewer per file so state (zoom, sheet, scroll) resets */}
-      {file.viewer === "text" ? (
-        <TextViewer
-          key={file.file}
-          source={{
-            kind: "text",
-            text: LONG_TEXT_SAMPLE,
-            fileName: LONG_TEXT_SAMPLE_FILE_NAME,
-            mimeType: LONG_TEXT_SAMPLE_MIME_TYPE,
-          }}
-          className="h-full"
-        />
-      ) : (
-        <FileViewer
-          key={file.file}
-          source={urlSource}
-          className="h-full"
-          isolateStyles
-        />
-      )}
+      <FileViewer
+        key={file.file}
+        source={source}
+        className="h-full"
+        isolateStyles
+      />
     </div>
   )
 }

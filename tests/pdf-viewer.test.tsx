@@ -31,6 +31,10 @@ import {
   PdfViewer,
   type PdfViewerHandle,
 } from "@/registry/new-york-v4/ui/pdf-viewer"
+import {
+  PDF_THUMBNAIL_PAGE_METRIC_CONCURRENCY,
+  usePdfThumbnailPageMetrics,
+} from "@/registry/new-york-v4/ui/use-pdf-thumbnail-page-metrics"
 
 const pdfjsMock = vi.hoisted(() => {
   type Deferred<T> = {
@@ -297,6 +301,52 @@ describe("PdfViewer", () => {
       pageIndex: 2,
       top: 89 + 150 + PDF_THUMBNAIL_LABEL_AND_GAP_HEIGHT,
     })
+  })
+
+  it("bounds concurrent thumbnail page metric requests", async () => {
+    const pages = Array.from({ length: 12 }, () => makePage(100, 200))
+    const pageRequests = pages.map(() => pdfjsMock.deferred<MockPage>())
+    const doc = {
+      numPages: pages.length,
+      getPage: vi.fn(
+        (pageNumber: number) => pageRequests[pageNumber - 1].promise
+      ),
+      destroy: vi.fn(() => Promise.resolve()),
+    }
+    const pageNumbers = pages.map((_, index) => index + 1)
+
+    function MetricRequestHarness() {
+      const { metricByPageNumber, requestPageMetrics, status } =
+        usePdfThumbnailPageMetrics(doc as never, doc)
+
+      React.useEffect(() => {
+        requestPageMetrics(pageNumbers)
+      }, [requestPageMetrics])
+
+      return <div data-loaded={metricByPageNumber.size} data-status={status} />
+    }
+
+    render(<MetricRequestHarness />)
+
+    await waitFor(() =>
+      expect(doc.getPage).toHaveBeenCalledTimes(
+        PDF_THUMBNAIL_PAGE_METRIC_CONCURRENCY
+      )
+    )
+    expect(doc.getPage).not.toHaveBeenCalledWith(
+      PDF_THUMBNAIL_PAGE_METRIC_CONCURRENCY + 1
+    )
+
+    await act(async () => {
+      pageRequests[0].resolve(pages[0])
+      await Promise.resolve()
+    })
+
+    await waitFor(() =>
+      expect(doc.getPage).toHaveBeenCalledWith(
+        PDF_THUMBNAIL_PAGE_METRIC_CONCURRENCY + 1
+      )
+    )
   })
 
   it("does not render toolbar chrome in the fallback when toolbar is false", async () => {

@@ -6,8 +6,10 @@ import Prism from "prismjs"
 import { createPortal } from "react-dom"
 
 import type { ViewerResource } from "@/lib/viewer-resource"
+import { TextViewer } from "@/components/ui/text-viewer"
 
 import { ResourceDocShell, useZoom, ZoomActions } from "./file-viewer-chrome"
+import { isProseTextDescriptor } from "./file-viewer-core"
 import { toFileViewerTextError } from "./file-viewer-text-errors"
 import {
   formatBytes,
@@ -275,6 +277,40 @@ export function TextDocViewer({
   isolateStyles?: boolean
   descriptorSignal: AbortSignal
 }) {
+  if (isProseTextResource(resource)) {
+    return (
+      <TextViewer
+        source={resource.descriptor.source}
+        className={className}
+        bare={bare}
+      />
+    )
+  }
+
+  return (
+    <CodeDocViewer
+      resource={resource}
+      className={className}
+      bare={bare}
+      isolateStyles={isolateStyles}
+      descriptorSignal={descriptorSignal}
+    />
+  )
+}
+
+function CodeDocViewer({
+  resource,
+  className,
+  bare,
+  isolateStyles,
+  descriptorSignal,
+}: {
+  resource: ViewerResource
+  className?: string
+  bare?: boolean
+  isolateStyles?: boolean
+  descriptorSignal: AbortSignal
+}) {
   const fileName = resource.fileName
   const content = resource.content
   const isJson = /\.(json|json5)$/i.test(fileName)
@@ -508,6 +544,10 @@ export function TextDocViewer({
       </ScrollerShell>
     </ResourceDocShell>
   )
+}
+
+function isProseTextResource(resource: ViewerResource) {
+  return isProseTextDescriptor(resource.descriptor)
 }
 
 function createInitialTextVirtualLines(

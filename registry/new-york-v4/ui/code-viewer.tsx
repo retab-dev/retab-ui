@@ -7,25 +7,23 @@ import {
   type ViewerContentIdentity,
   type ViewerResource,
 } from "@/lib/viewer-resource"
-import { CodeViewerFallback } from "@/components/ui/code-viewer-chrome"
-import { CodeViewerContent } from "@/components/ui/code-viewer-content"
-import type {
-  CodeViewerHandle,
-  CodeViewerProps,
-} from "@/components/ui/code-viewer-types"
 import {
   DEFAULT_MAX_BYTES,
   DEFAULT_MAX_LINES,
-} from "@/components/ui/text-viewer-resource"
-import { useIsClient } from "@/components/ui/use-is-client"
-import { ViewerErrorBoundary } from "@/components/ui/viewer-error"
+} from "./text-viewer-resource"
+import { useIsClient } from "./use-is-client"
+import { ViewerErrorBoundary } from "./viewer-error"
+
+import { CodeViewerFallback } from "./code-viewer-chrome"
+import { CodeViewerContent } from "./code-viewer-content"
+import type { CodeViewerHandle, CodeViewerProps } from "./code-viewer-types"
 
 export type {
   CodeDocumentSource,
   TextLineRange,
   CodeViewerHandle,
   CodeViewerProps,
-} from "@/components/ui/code-viewer-types"
+} from "./code-viewer-types"
 
 export const CodeViewer = React.forwardRef<CodeViewerHandle, CodeViewerProps>(
   function CodeViewer(props, ref) {

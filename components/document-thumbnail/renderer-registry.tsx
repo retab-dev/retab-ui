@@ -5,7 +5,7 @@ import * as React from "react"
 import type { ViewerResource } from "@/lib/viewer-resource"
 import type { FileCategory, ViewerDescriptor } from "@/lib/viewer-source"
 
-import { isCodeThumbnailDescriptor, isTiffDescriptor } from "./descriptor"
+import { isTiffDescriptor } from "./descriptor"
 import { CodeThumbnail } from "./renderers/code-thumbnail"
 import { CsvFirstRows } from "./renderers/csv-thumbnail"
 import { DocxFirstPage } from "./renderers/docx-thumbnail"
@@ -17,6 +17,7 @@ import { PptxFirstSlide } from "./renderers/pptx-thumbnail"
 import { TextThumbnail } from "./renderers/text-thumbnail"
 import { TiffFirstPage } from "./renderers/tiff-thumbnail"
 import { XlsxFirstSheet } from "./renderers/xlsx-thumbnail"
+import { isCodeThumbnailDescriptor } from "./thumbnail-code"
 import type { ThumbnailAnchor } from "./types"
 
 type DocumentRenderer = (props: {

@@ -5,6 +5,7 @@ import * as React from "react"
 const DEFAULT_VIEWPORT_HEIGHT = 600
 const DEFAULT_VIEWPORT_WIDTH = 800
 const DEFAULT_OVERSCAN = 6
+const MAX_VIRTUAL_ITEMS = 500
 
 export interface TextVirtualItem {
   index: number
@@ -23,6 +24,11 @@ export interface TextVirtualViewport {
   scrollTop: number
   clientHeight: number
   clientWidth: number
+}
+
+export interface TextScrollAnchor {
+  index: number
+  offsetWithinLine: number
 }
 
 export function buildTextVirtualOffsets({
@@ -81,19 +87,23 @@ export function getTextVirtualItems({
     count,
     Math.max(visibleStartIndex + 1, visibleEndExclusive) + safeOverscan
   )
+  const cappedEnd = Math.min(count, start + MAX_VIRTUAL_ITEMS)
 
-  return Array.from({ length: end - start }, (_, localIndex) => {
-    const index = start + localIndex
-    const size = safeSize(itemSizes[index])
-    const itemStart = offsets.starts[index] ?? 0
-    return {
-      index,
-      key: index,
-      start: itemStart,
-      size,
-      end: itemStart + size,
+  return Array.from(
+    { length: Math.min(end, cappedEnd) - start },
+    (_, localIndex) => {
+      const index = start + localIndex
+      const size = safeSize(itemSizes[index])
+      const itemStart = offsets.starts[index] ?? 0
+      return {
+        index,
+        key: index,
+        start: itemStart,
+        size,
+        end: itemStart + size,
+      }
     }
-  })
+  )
 }
 
 export function textScrollTopForItem({
@@ -107,7 +117,7 @@ export function textScrollTopForItem({
   itemSizes: readonly number[]
   offsets: TextVirtualOffsets
   viewportHeight: number
-  align?: "start" | "center" | "end" | "auto"
+  align?: "start" | "center" | "end"
 }) {
   if (!Number.isSafeInteger(itemIndex) || itemIndex < 0) return 0
   const itemStart = offsets.starts[itemIndex]
@@ -122,6 +132,40 @@ export function textScrollTopForItem({
     return Math.max(0, itemStart - safeViewportHeight / 2 + itemSize / 2)
   }
   return Math.max(0, itemStart)
+}
+
+export function getTextScrollAnchor({
+  itemSizes,
+  offsets,
+  scrollTop,
+}: {
+  itemSizes: readonly number[]
+  offsets: Pick<TextVirtualOffsets, "starts">
+  scrollTop: number
+}): TextScrollAnchor | null {
+  if (itemSizes.length === 0) return null
+
+  const safeScrollTop = safeOffset(scrollTop)
+  let low = 0
+  let high = itemSizes.length - 1
+  let index = 0
+
+  while (low <= high) {
+    const mid = Math.floor((low + high) / 2)
+    const start = offsets.starts[mid] ?? 0
+    const end = start + safeSize(itemSizes[mid])
+    if (end > safeScrollTop) {
+      index = mid
+      high = mid - 1
+    } else {
+      low = mid + 1
+    }
+  }
+
+  return {
+    index,
+    offsetWithinLine: Math.max(0, safeScrollTop - (offsets.starts[index] ?? 0)),
+  }
 }
 
 export function useTextVariableVirtualizer({

@@ -15,6 +15,8 @@ import {
 } from "./file-viewer-chrome"
 import {
   descriptorResetKey,
+  isCodeTextDescriptor,
+  isProseTextDescriptor,
   resolveFileDescriptor,
   type FileCategory,
   type FileDescriptor,
@@ -50,6 +52,16 @@ const PptxResourceViewer = React.lazy(() =>
 const XlsxResourceViewer = React.lazy(() =>
   import("@/components/ui/xlsx-viewer").then((m) => ({
     default: m.XlsxResourceViewer,
+  }))
+)
+const ProseTextViewer = React.lazy(() =>
+  import("@/components/ui/text-viewer").then((m) => ({
+    default: m.TextViewer,
+  }))
+)
+const CodeTextViewer = React.lazy(() =>
+  import("@/components/ui/code-viewer").then((m) => ({
+    default: m.CodeViewer,
   }))
 )
 
@@ -174,6 +186,25 @@ function FileViewerRoute({
       )
     }
     if (category === "text") {
+      if (isProseTextDescriptor(descriptor)) {
+        const proseTextSource = resource.descriptor.source
+        return (
+          <ProseTextViewer
+            source={proseTextSource}
+            className={className}
+            bare={bare}
+          />
+        )
+      }
+      if (isCodeTextDescriptor(descriptor)) {
+        return (
+          <CodeTextViewer
+            source={resource.descriptor.source}
+            className={className}
+            bare={bare}
+          />
+        )
+      }
       return (
         <TextDocViewer
           resource={resource}
@@ -331,6 +362,25 @@ function FileViewerRoute({
         />
       )
     case "text":
+      if (isProseTextDescriptor(descriptor)) {
+        const proseTextSource = resource.descriptor.source
+        return (
+          <ProseTextViewer
+            source={proseTextSource}
+            className={className}
+            bare={bare}
+          />
+        )
+      }
+      if (isCodeTextDescriptor(descriptor)) {
+        return (
+          <CodeTextViewer
+            source={resource.descriptor.source}
+            className={className}
+            bare={bare}
+          />
+        )
+      }
       return (
         <TextDocViewer
           resource={resource}

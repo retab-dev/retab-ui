@@ -22,6 +22,8 @@ export interface ThumbnailArtifactCacheOptions<T> {
 
 export interface ThumbnailArtifactCache<T> extends ThumbnailCacheStore<T> {
   readonly size: number
+  clear(): void
+  prune(): void
 }
 
 export function cachedThumbnailResource<T>(

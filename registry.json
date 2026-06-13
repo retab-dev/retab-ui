@@ -230,6 +230,21 @@
       ]
     },
     {
+      "name": "dropzone",
+      "type": "registry:ui",
+      "title": "Dropzone",
+      "description": "A document upload dropzone with drag-and-drop, file picker entrypoint, accept validation, and rejection feedback.",
+      "dependencies": ["lucide-react"],
+      "registryDependencies": ["utils"],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/dropzone.tsx",
+          "type": "registry:ui",
+          "target": "@ui/dropzone.tsx"
+        }
+      ]
+    },
+    {
       "name": "input",
       "type": "registry:ui",
       "title": "Input",
@@ -1482,6 +1497,7 @@
         "xlsx-viewer",
         "csv-viewer",
         "code-viewer",
+        "text-viewer",
         "skeleton"
       ],
       "files": [
@@ -2720,6 +2736,11 @@
           "path": "registry/new-york-v4/ui/text-viewer-content.tsx",
           "type": "registry:ui",
           "target": "@ui/text-viewer-content.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/text-viewer-layout.ts",
+          "type": "registry:ui",
+          "target": "@ui/text-viewer-layout.ts"
         },
         {
           "path": "registry/new-york-v4/ui/viewer-download.tsx",

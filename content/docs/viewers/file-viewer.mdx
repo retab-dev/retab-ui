@@ -22,9 +22,9 @@ npx shadcn@latest add @retab/file-viewer
 ```
 
 This pulls in the format-specific viewers it delegates to, plus `marked` for
-Markdown rendering, `@tanstack/react-virtual` for the text viewer, and `prismjs`
-for JSON syntax highlighting. `DOMPurify` (Markdown sanitizing) is loaded lazily
-at runtime, only when a Markdown file is opened.
+Markdown rendering, `@tanstack/react-virtual` for the Code Viewer, and
+`@chenglou/pretext` for the wrapped Text Viewer. `DOMPurify` (Markdown
+sanitizing) is loaded lazily at runtime, only when a Markdown file is opened.
 
 ## Usage
 
@@ -57,7 +57,8 @@ force a category.
 | Image        | `png`, `jpg`, `jpeg`, `gif`, `webp`, `avif`, `svg`, `bmp`, `ico`, `tif`, `tiff` | Image Viewer                 |
 | Markdown     | `md`, `markdown`, `mdx`                                                         | `marked` → sanitized, inline |
 | HTML         | `html`, `htm`                                                                   | sandboxed iframe             |
-| Text & code  | `txt`, `log`, `json`, `xml`, `yaml`, `ts`, `py`, `go`, …                        | virtualized text viewer      |
+| Text         | `txt`, `text`                                                                   | Pretext Text Viewer          |
+| Code & logs  | `log`, `json`, `xml`, `yaml`, `ts`, `py`, `go`, …                               | Code Viewer                  |
 
 Anything unrecognized falls back to a download card.
 
@@ -65,12 +66,10 @@ Anything unrecognized falls back to a download card.
 
 - **Code-split delegation.** Each format-specific viewer is a `React.lazy`
   import — opening a PDF never loads SheetJS, pptxviewjs, or the others.
-- **Virtualized text.** Plain text, code, and JSON render through a windowed
-  line list (`@tanstack/react-virtual`) with a sticky line-number gutter, and
-  large files are byte-range streamed (the next page loads as you near the end),
-  so a 200 MB log stays smooth and never sits whole in memory. JSON is
-  pretty-printed automatically, and syntax-highlighted with `prismjs` — only the
-  visible lines are tokenized, so cost is bounded by the viewport, not file size.
+- **Code and text split.** Code-like files render as fixed lines through the
+  Code Viewer (`@tanstack/react-virtual`) with line numbers. Prose text renders
+  through the Pretext Text Viewer with natural wrapping and custom
+  variable-height virtualization.
 - **Markdown, themed.** Markdown is parsed with `marked`, sanitized with
   `DOMPurify`, and rendered inline with a stylesheet built on the app's own theme
   tokens — so it matches the surrounding UI and follows light/dark automatically.

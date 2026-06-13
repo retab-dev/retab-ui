@@ -101,7 +101,7 @@ describe("public TextViewer prose cutover", () => {
     const textElement = line.querySelector<HTMLElement>("span")
     expect(textElement?.textContent).toBe(longWord)
     expect(textElement?.className).toContain("whitespace-pre-wrap")
-    expect(textElement?.className).toContain("break-words")
+    expect(textElement?.className).toContain("wrap-break-word")
     expect(viewer.querySelector("pre")).toBeNull()
   })
 

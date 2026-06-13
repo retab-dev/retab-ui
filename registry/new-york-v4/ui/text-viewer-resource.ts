@@ -117,10 +117,9 @@ export function assertTextWithinBounds(
   }
 }
 
-// Split on the same line terminators a browser honors in `white-space: pre`,
-// which is also the ECMAScript LineTerminator set: LF, CR, CRLF, LINE SEPARATOR
-// (U+2028), and PARAGRAPH SEPARATOR (U+2029). Keeping this in sync with how the
-// content visually wraps is what keeps gutter line numbers aligned with the text.
+// Split into stable source lines. The prose viewer may wrap each source line
+// into several visual lines, but highlighting and scroll APIs stay source-line
+// based.
 export function splitTextLines(text: string) {
   return text.split(/\r\n|[\n\r\u2028\u2029]/g)
 }

@@ -10,22 +10,19 @@ import {
 import {
   DEFAULT_MAX_BYTES,
   DEFAULT_MAX_LINES,
-} from "@/components/ui/text-viewer-resource"
-import type {
-  TextViewerHandle,
-  TextViewerProps,
-} from "@/components/ui/text-viewer-types"
-import { ViewerErrorBoundary } from "@/components/ui/viewer-error"
+} from "./text-viewer-resource"
+import { ViewerErrorBoundary } from "./viewer-error"
 
 import { TextViewerFallback } from "./text-viewer-chrome"
 import { TextViewerContent } from "./text-viewer-content"
+import type { TextViewerHandle, TextViewerProps } from "./text-viewer-types"
 
 export type {
   TextDocumentSource,
   TextLineRange,
   TextViewerHandle,
   TextViewerProps,
-} from "@/components/ui/text-viewer-types"
+} from "./text-viewer-types"
 
 export const TextViewer = React.forwardRef<TextViewerHandle, TextViewerProps>(
   function TextViewer(props, ref) {

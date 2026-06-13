@@ -95,12 +95,6 @@ const SAMPLES: FormatSample[] = [
     mimeType: "text/plain",
   },
   {
-    label: "Log",
-    url: "/samples/server.log",
-    fileName: "server.log",
-    mimeType: "text/plain",
-  },
-  {
     label: "TIFF",
     url: "/samples/entropy.tiff",
     fileName: "entropy.tiff",

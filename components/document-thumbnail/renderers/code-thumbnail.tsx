@@ -3,7 +3,7 @@
 import * as React from "react"
 
 import type { ViewerResource } from "@/lib/viewer-resource"
-import { extensionOf } from "@/lib/viewer-source"
+import { formatCodeThumbnailText } from "@/components/document-thumbnail/thumbnail-code"
 import { useThumbnailResource } from "@/components/document-thumbnail/thumbnail-resource"
 import {
   getThumbnailText,
@@ -73,33 +73,4 @@ export function CodeThumbnail({
       </div>
     </div>
   )
-}
-
-function formatCodeThumbnailText(
-  text: string,
-  fileName: string,
-  mimeType?: string
-) {
-  if (!isStrictJson(fileName, mimeType)) return text
-
-  try {
-    return JSON.stringify(JSON.parse(text), null, 2)
-  } catch {
-    return text
-  }
-}
-
-function isStrictJson(fileName: string, mimeType?: string) {
-  const extension = extensionOf(fileName)
-  if (extension === "json") return true
-  if (
-    extension === "json5" ||
-    extension === "jsonl" ||
-    extension === "ndjson"
-  ) {
-    return false
-  }
-
-  const mime = mimeType?.toLowerCase().split(";")[0].trim()
-  return mime === "application/json" || Boolean(mime?.endsWith("+json"))
 }

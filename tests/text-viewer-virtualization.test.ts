@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import {
   buildTextVirtualOffsets,
+  getTextScrollAnchor,
   getTextVirtualItems,
   textScrollTopForItem,
 } from "@/registry/new-york-v4/ui/text-viewer-virtualization"
@@ -66,6 +67,20 @@ describe("text viewer variable virtualization", () => {
     ).toEqual([{ index: 0, key: 0, start: 0, size: 20, end: 20 }])
   })
 
+  it("caps the rendered window for hostile viewport sizes", () => {
+    const itemSizes = Array.from({ length: 2_000 }, () => 20)
+    const offsets = buildTextVirtualOffsets({ itemSizes })
+
+    expect(
+      getTextVirtualItems({
+        itemSizes,
+        offsets,
+        scrollTop: 0,
+        viewportHeight: 1_000_000,
+      })
+    ).toHaveLength(500)
+  })
+
   it("computes aligned scroll offsets for variable rows", () => {
     const itemSizes = [20, 40, 30]
     const offsets = buildTextVirtualOffsets({
@@ -100,5 +115,24 @@ describe("text viewer variable virtualization", () => {
         align: "end",
       })
     ).toBe(48)
+  })
+
+  it("captures the source item and intra-item offset for scroll preservation", () => {
+    const itemSizes = [20, 40, 30]
+    const offsets = buildTextVirtualOffsets({
+      itemSizes,
+      paddingStart: 8,
+    })
+
+    expect(
+      getTextScrollAnchor({
+        itemSizes,
+        offsets,
+        scrollTop: 35,
+      })
+    ).toEqual({
+      index: 1,
+      offsetWithinLine: 7,
+    })
   })
 })

@@ -39,6 +39,88 @@ export function descriptorResetKey(descriptor: FileDescriptor): string {
   ].join("\u0000")
 }
 
+const CODE_TEXT_EXTENSIONS = new Set([
+  "bash",
+  "c",
+  "cc",
+  "cjs",
+  "cpp",
+  "cs",
+  "css",
+  "env",
+  "go",
+  "graphql",
+  "h",
+  "ini",
+  "java",
+  "js",
+  "json",
+  "json5",
+  "jsonl",
+  "jsx",
+  "kt",
+  "less",
+  "lua",
+  "mjs",
+  "ndjson",
+  "php",
+  "pl",
+  "proto",
+  "py",
+  "r",
+  "rb",
+  "rs",
+  "scala",
+  "scss",
+  "sh",
+  "sql",
+  "svelte",
+  "swift",
+  "toml",
+  "ts",
+  "tsx",
+  "vue",
+  "xml",
+  "yaml",
+  "yml",
+  "zsh",
+])
+
+const CODE_TEXT_MIME_TYPES = new Set([
+  "application/json",
+  "application/javascript",
+  "application/x-javascript",
+  "application/x-ndjson",
+  "application/xml",
+  "application/yaml",
+  "application/x-yaml",
+  "text/css",
+  "text/javascript",
+  "text/jsx",
+  "text/tsx",
+  "text/xml",
+  "text/yaml",
+  "text/x-yaml",
+])
+
+export function isProseTextDescriptor(descriptor: FileDescriptor): boolean {
+  if (descriptor.category !== "text") return false
+
+  const extension = extensionOf(descriptor.fileName)
+  if (extension === "txt" || extension === "text") return true
+  return !extension && descriptor.mimeType?.toLowerCase() === "text/plain"
+}
+
+export function isCodeTextDescriptor(descriptor: FileDescriptor): boolean {
+  if (descriptor.category !== "text") return false
+
+  const extension = extensionOf(descriptor.fileName)
+  if (extension) return CODE_TEXT_EXTENSIONS.has(extension)
+
+  const mimeType = descriptor.mimeType?.toLowerCase().split(";")[0].trim()
+  return mimeType ? CODE_TEXT_MIME_TYPES.has(mimeType) : false
+}
+
 export { detectCategory, extensionOf, extractName }
 
 export async function timed<T>(

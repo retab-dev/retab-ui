@@ -7,6 +7,8 @@ import { getPdfPageResource } from "@/lib/pdf-document-resource"
 
 import { normalizeThumbnailPage } from "./pdf-thumbnail-layout"
 
+export const PDF_THUMBNAIL_PAGE_METRIC_CONCURRENCY = 4
+
 export interface PdfThumbnailPageMetric {
   pageNumber: number
   width: number
@@ -33,6 +35,8 @@ export function usePdfThumbnailPageMetrics(
   resetKey: unknown
 ): PdfThumbnailPageMetrics {
   const generationRef = React.useRef(0)
+  const activeRequestCountRef = React.useRef(0)
+  const queuedPageNumbersRef = React.useRef<number[]>([])
   const pendingPageNumbersRef = React.useRef(new Set<number>())
   const metricByPageNumberRef = React.useRef(
     new Map<number, PdfThumbnailPageMetric>()
@@ -61,6 +65,8 @@ export function usePdfThumbnailPageMetrics(
 
   React.useEffect(() => {
     generationRef.current += 1
+    activeRequestCountRef.current = 0
+    queuedPageNumbersRef.current = []
     pendingPageNumbersRef.current.clear()
     metricByPageNumberRef.current = new Map()
     setState({
@@ -72,28 +78,49 @@ export function usePdfThumbnailPageMetrics(
     })
   }, [doc, resetKey])
 
-  const requestPageMetrics = React.useCallback(
-    (pageNumbers: Iterable<number>) => {
-      const generation = generationRef.current
-      const nextPageNumbers = Array.from(pageNumbers)
-        .map((pageNumber) => normalizeThumbnailPage(pageNumber, doc.numPages))
-        .filter((pageNumber): pageNumber is number => pageNumber != null)
+  const getPageMetricStatus = React.useCallback(
+    () =>
+      queuedPageNumbersRef.current.length > 0 ||
+      activeRequestCountRef.current > 0 ||
+      pendingPageNumbersRef.current.size > 0
+        ? "loading"
+        : "idle",
+    []
+  )
 
-      setState((current) => {
-        if (!Object.is(current.resetKey, resetKey)) return current
-        const hasMissingPage = nextPageNumbers.some(
-          (pageNumber) =>
-            !metricByPageNumberRef.current.has(pageNumber) &&
-            !pendingPageNumbersRef.current.has(pageNumber)
-        )
-        return hasMissingPage ? { ...current, status: "loading" } : current
-      })
+  const finishPageMetricRequest = React.useCallback(
+    (generation: number, pageNumber: number) => {
+      if (generationRef.current !== generation) return
 
-      for (const pageNumber of nextPageNumbers) {
-        if (metricByPageNumberRef.current.has(pageNumber)) continue
-        if (pendingPageNumbersRef.current.has(pageNumber)) continue
+      activeRequestCountRef.current = Math.max(
+        0,
+        activeRequestCountRef.current - 1
+      )
+      pendingPageNumbersRef.current.delete(pageNumber)
+      setState((current) =>
+        Object.is(current.resetKey, resetKey)
+          ? {
+              ...current,
+              status: getPageMetricStatus(),
+            }
+          : current
+      )
+    },
+    [getPageMetricStatus, resetKey]
+  )
 
-        pendingPageNumbersRef.current.add(pageNumber)
+  const drainPageMetricQueue = React.useMemo(
+    () =>
+      function drain(generation: number) {
+      if (generationRef.current !== generation) return
+
+      while (
+        activeRequestCountRef.current < PDF_THUMBNAIL_PAGE_METRIC_CONCURRENCY
+      ) {
+        const pageNumber = queuedPageNumbersRef.current.shift()
+        if (pageNumber == null) return
+
+        activeRequestCountRef.current += 1
         void getPdfPageResource(doc, pageNumber, {
           retainRejected: true,
         })
@@ -117,8 +144,7 @@ export function usePdfThumbnailPageMetrics(
               return {
                 ...current,
                 metricByPageNumber,
-                status:
-                  pendingPageNumbersRef.current.size > 1 ? "loading" : "idle",
+                status: getPageMetricStatus(),
               }
             })
           })
@@ -131,12 +157,42 @@ export function usePdfThumbnailPageMetrics(
             )
           })
           .finally(() => {
-            if (generationRef.current !== generation) return
-            pendingPageNumbersRef.current.delete(pageNumber)
+            finishPageMetricRequest(generation, pageNumber)
+            drain(generation)
           })
       }
     },
-    [doc, resetKey]
+    [doc, finishPageMetricRequest, getPageMetricStatus, resetKey]
+  )
+
+  const requestPageMetrics = React.useCallback(
+    (pageNumbers: Iterable<number>) => {
+      const generation = generationRef.current
+      const nextPageNumbers = Array.from(pageNumbers)
+        .map((pageNumber) => normalizeThumbnailPage(pageNumber, doc.numPages))
+        .filter((pageNumber): pageNumber is number => pageNumber != null)
+
+      setState((current) => {
+        if (!Object.is(current.resetKey, resetKey)) return current
+        const hasMissingPage = nextPageNumbers.some(
+          (pageNumber) =>
+            !metricByPageNumberRef.current.has(pageNumber) &&
+            !pendingPageNumbersRef.current.has(pageNumber)
+        )
+        return hasMissingPage ? { ...current, status: "loading" } : current
+      })
+
+      for (const pageNumber of nextPageNumbers) {
+        if (metricByPageNumberRef.current.has(pageNumber)) continue
+        if (pendingPageNumbersRef.current.has(pageNumber)) continue
+
+        pendingPageNumbersRef.current.add(pageNumber)
+        queuedPageNumbersRef.current.push(pageNumber)
+      }
+
+      drainPageMetricQueue(generation)
+    },
+    [doc, drainPageMetricQueue, resetKey]
   )
 
   if (currentState.error) throw currentState.error

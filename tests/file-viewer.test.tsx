@@ -784,6 +784,23 @@ describe("FileViewer text rendering", () => {
     }
   })
 
+  it("routes prose text files through the wrapped Text Viewer without line numbers", async () => {
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null)
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(response("first note\nsecond note\n")))
+    )
+
+    const { container } = render(
+      <FileViewer source={urlSource("/notes.txt", "notes.txt")} />
+    )
+
+    expect(await screen.findByText("first note")).toBeTruthy()
+    expect(screen.getByText("second note")).toBeTruthy()
+    expect(container.querySelector('[data-slot="text-viewer"]')).toBeTruthy()
+    expect(container.querySelector("[data-line-number]")).toBeNull()
+  })
+
   it.each([
     {
       name: "lone CR",
