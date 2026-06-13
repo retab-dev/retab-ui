@@ -3,7 +3,7 @@ import type { JSONSchema7 } from "json-schema"
 import { vi } from "vitest"
 
 import { JsonTableDataCell } from "@/components/json-table/json-table-display-cell"
-import type { JsonTableEditSession } from "@/components/json-table/json-table-edit-session"
+import type { JsonTableStructuredEditSession } from "@/components/json-table/json-table-edit-session"
 import { JsonTableStructuredCell } from "@/components/json-table/json-table-structured-cell"
 import type {
   FieldKind,
@@ -21,11 +21,11 @@ export interface JsonTableCellHarnessProps {
   schema?: JSONSchema7
   value?: unknown
   effectiveValue?: unknown
-  editSession?: JsonTableEditSession
-  draftValue?: string
-  setDraftValue?: (value: string) => void
-  setOverlayOpen?: (open: boolean) => void
-  closeEditSession?: () => void
+  structuredEditSession?: JsonTableStructuredEditSession
+  setStructuredEditSessionOverlayOpen?: (open: boolean) => void
+  closeStructuredEditSession?: () => void
+  onPickerOpenChange?: (open: boolean) => void
+  onEditingEnd?: () => void
   commitValue?: (value: unknown, meta?: unknown) => void
 }
 
@@ -54,8 +54,8 @@ export function renderDataCell(
       active
       isEditable
       autoFocus
-      onPickerOpenChange={overrides.setOverlayOpen ?? vi.fn()}
-      onEditingEnd={overrides.closeEditSession ?? vi.fn()}
+      onPickerOpenChange={overrides.onPickerOpenChange ?? vi.fn()}
+      onEditingEnd={overrides.onEditingEnd ?? vi.fn()}
       onCommit={(value, meta) => overrides.commitValue?.(value, meta)}
     />
   )
@@ -63,8 +63,6 @@ export function renderDataCell(
 
 export function renderEnumCell(overrides: JsonTableCellHarnessProps = {}) {
   const fieldMetadata = overrides.fieldMetadata ?? baseField("enum")
-  const fieldPath = overrides.fieldPath ?? "field"
-  const editSession = overrides.editSession ?? baseSession({ fieldPath })
   return render(
     <JsonTableDataCell
       fieldMetadata={fieldMetadata}
@@ -73,8 +71,8 @@ export function renderEnumCell(overrides: JsonTableCellHarnessProps = {}) {
       active
       isEditable={true}
       autoFocus
-      onPickerOpenChange={overrides.setOverlayOpen ?? vi.fn()}
-      onEditingEnd={overrides.closeEditSession ?? vi.fn()}
+      onPickerOpenChange={overrides.onPickerOpenChange ?? vi.fn()}
+      onEditingEnd={overrides.onEditingEnd ?? vi.fn()}
       onCommit={(value, meta) => overrides.commitValue?.(value, meta)}
     />
   )
@@ -93,26 +91,29 @@ export function renderStructuredCell(
       schema={overrides.schema ?? schema}
       effectiveValue={overrides.effectiveValue ?? overrides.value ?? "value"}
       isEditable
-      editSession={overrides.editSession ?? baseSession({ fieldPath })}
-      setOverlayOpen={overrides.setOverlayOpen ?? vi.fn()}
-      closeEditSession={overrides.closeEditSession ?? vi.fn()}
+      structuredEditSession={
+        overrides.structuredEditSession ?? baseSession({ fieldPath })
+      }
+      setStructuredEditSessionOverlayOpen={
+        overrides.setStructuredEditSessionOverlayOpen ?? vi.fn()
+      }
+      closeStructuredEditSession={
+        overrides.closeStructuredEditSession ?? vi.fn()
+      }
       commitValue={overrides.commitValue ?? vi.fn()}
     />
   )
 }
 
 export function baseSession(
-  overrides: Partial<JsonTableEditSession> = {}
-): JsonTableEditSession {
+  overrides: Partial<JsonTableStructuredEditSession> = {}
+): JsonTableStructuredEditSession {
   return {
     id: 1,
     cellId: "doc_1:field",
     docId: "doc_1",
     fieldPath: "field",
     intent: { type: "programmatic" },
-    initialValue: "value",
-    draftValue: "value",
-    status: "editing",
     isOverlayOpen: false,
     ...overrides,
   }

@@ -11,9 +11,47 @@ import {
 } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import {
+  createPageMarkdownLayout,
+  getPageMarkdownPageLayout,
+} from "@/components/viewers/page-markdown/page-markdown-layout"
 import { PageMarkdownViewer } from "@/components/viewers/page-markdown/page-markdown-viewer"
 
 const PAGES = ["# First page\n\nAlpha", "## Second page\n\nBeta"]
+
+function rect(top: number, height = 500): DOMRect {
+  return {
+    x: 0,
+    y: top,
+    top,
+    left: 0,
+    width: 100,
+    height,
+    right: 100,
+    bottom: top + height,
+    toJSON: () => ({}),
+  } as DOMRect
+}
+
+function markdownPageOffset(pages: readonly string[], pageNumber: number) {
+  const layout = createPageMarkdownLayout({
+    measuredHeightByPageNumber: new Map(),
+    mode: "rendered",
+    pages,
+    scale: 1,
+  })
+  return getPageMarkdownPageLayout(layout, pageNumber)!.offsetTop
+}
+
+function scrollMarkdownViewportToPage(
+  viewport: HTMLElement,
+  pages: readonly string[],
+  pageNumber: number
+) {
+  vi.spyOn(viewport, "getBoundingClientRect").mockReturnValue(rect(0, 500))
+  viewport.scrollTop = markdownPageOffset(pages, pageNumber)
+  fireEvent.scroll(viewport)
+}
 
 beforeEach(() => {
   vi.stubGlobal(
@@ -62,6 +100,17 @@ beforeEach(() => {
   })
   HTMLElement.prototype.getAnimations = vi.fn(() => [])
   HTMLElement.prototype.scrollIntoView = vi.fn()
+  Object.defineProperty(HTMLElement.prototype, "scrollTo", {
+    configurable: true,
+    value: vi.fn(function (
+      this: HTMLElement,
+      options?: ScrollToOptions | number,
+      y?: number
+    ) {
+      this.scrollTop =
+        typeof options === "number" ? (y ?? options) : Number(options?.top ?? 0)
+    }),
+  })
   vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
     callback(0)
     return 1

@@ -2,6 +2,49 @@
 
 A complete history of the Retab component registry. Newest first.
 
+> This sample is intentionally mixed: prose, GFM tables, task lists, code,
+> links, and long release notes all render through the File Viewer Markdown path.
+
+## Viewer Coverage
+
+| Format | Primary renderer | Virtualized | Notes |
+| --- | --- | :---: | --- |
+| Markdown | Markdown document viewer | Yes | React GFM rendering inside a custom page virtualizer. |
+| CSV | CSV viewer | Yes | Large tables keep headers and selection state stable. |
+| XLSX | Workbook viewer | Yes | Sheets, merged cells, and numeric alignment share the table infrastructure. |
+| JSON | Code viewer | Yes | Structured text stays fast for long configuration files. |
+| PDF | PDF viewer | Page based | Canvas pages, thumbnails, and zoom stay synchronized. |
+
+## Markdown Checklist
+
+- [x] Render GitHub-flavored Markdown tables.
+- [x] Preserve readable wrapped prose for document content.
+- [x] Keep code blocks copyable.
+- [x] Keep long documents fast while scrolling.
+- [ ] Add inline citations when source spans are available.
+
+## Example Configuration
+
+```json
+{
+  "viewer": "markdown-document",
+  "renderer": "react-markdown-gfm",
+  "virtualization": "page-window",
+  "lineNumbers": false
+}
+```
+
+## Rollout Metrics
+
+| Metric | Before | After |
+| --- | ---: | ---: |
+| Mounted Markdown nodes | 2,400+ | 120 |
+| First useful paint | 820ms | 190ms |
+| Long-document scroll hitching | visible | none |
+| Table copy support | partial | complete |
+
+Read more in the [File Viewer docs](/docs/viewers/file-viewer).
+
 
 ## 3.9.0
 
@@ -359,4 +402,3 @@ _2024-06-27_
 - Fixed fit-to-width zoom in the **PPTX viewer**.
 - Shipped merged-cell handling in the **CSV viewer**.
 - Shipped keyboard navigation in the **Extract viewer**.
-

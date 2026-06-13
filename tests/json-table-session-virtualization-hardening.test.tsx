@@ -326,18 +326,6 @@ function clickCell(container: HTMLElement, fieldPath: string) {
   return cell
 }
 
-function sessionId(fieldPath: string) {
-  const snapshot =
-    window.__jsonTableProfiler?.snapshots[
-      `JsonTableActiveControl:${fieldPath}`
-    ]
-  const value = snapshot?.editSessionId
-  if (typeof value !== "number") {
-    throw new Error(`Missing session id for ${fieldPath}`)
-  }
-  return value
-}
-
 async function waitForField(
   container: HTMLElement,
   fieldPath: string
@@ -372,7 +360,7 @@ function installSynchronousAnimationFrame() {
 }
 
 describe("json table session and virtualization hardening", () => {
-  it("keeps one active session and monotonically increases session ids across cell switches", async () => {
+  it("keeps one primitive active cell across cell switches", async () => {
     installProfiler()
     const view = renderVirtualTable({
       visiblePaths: ["vendor", "amount", "status"],
@@ -386,7 +374,6 @@ describe("json table session and virtualization hardening", () => {
     expect(cellByFieldPath(view.container, "vendor").dataset.active).toBe(
       "true"
     )
-    const vendorSessionId = sessionId("vendor")
 
     pointerDownCell(view.container, "amount")
     expect(view.getByRole("spinbutton")).toHaveProperty("value", "12")
@@ -394,7 +381,6 @@ describe("json table session and virtualization hardening", () => {
     expect(cellByFieldPath(view.container, "amount").dataset.active).toBe(
       "true"
     )
-    const amountSessionId = sessionId("amount")
 
     pointerDownCell(view.container, "vendor")
     expect(view.getByRole("textbox")).toHaveProperty("value", "ACME")
@@ -402,14 +388,13 @@ describe("json table session and virtualization hardening", () => {
     expect(cellByFieldPath(view.container, "vendor").dataset.active).toBe(
       "true"
     )
-    const reopenedVendorSessionId = sessionId("vendor")
 
-    expect([vendorSessionId, amountSessionId, reopenedVendorSessionId]).toEqual(
-      [1, 2, 3]
+    expect(cellByFieldPath(view.container, "amount").dataset.active).toBe(
+      undefined
     )
   })
 
-  it("opens a dropdown overlay inside the current session without session churn", async () => {
+  it("opens a primitive dropdown overlay without active-cell churn", async () => {
     installProfiler()
     const view = renderVirtualTable({ visiblePaths: ["status"] })
 
@@ -420,13 +405,8 @@ describe("json table session and virtualization hardening", () => {
     await waitFor(() =>
       expect(combobox.getAttribute("aria-expanded")).toBe("true")
     )
-    const firstSessionId = sessionId("status")
-    const editorSnapshot =
-      window.__jsonTableProfiler?.snapshots["JsonTableActiveControl:status"]
 
     expect(statusCell.dataset.active).toBe("true")
-    expect(editorSnapshot?.isOverlayOpen).toBe(true)
-    expect(sessionId("status")).toBe(firstSessionId)
     expect(activeCells(view.container)).toHaveLength(1)
     expect(view.getByRole("combobox").getAttribute("aria-expanded")).toBe(
       "true"
@@ -768,14 +748,7 @@ describe("json table session and virtualization hardening", () => {
     pointerDownCell(view.container, "lines.0.name")
     expect(view.getByRole("textbox")).toHaveProperty("value", "line 0")
 
-    const activeControlIds = window.__jsonTableProfiler?.events
-      .filter((event) => event.type === "render")
-      .filter((event) => event.name === "JsonTableActiveCell")
-      .map((event) => event.id)
-
-    expect(activeControlIds).toContain("lines.0.name")
-    expect(activeControlIds).not.toContain("lines.1.name")
-    expect(activeControlIds).not.toContain("lines.5.name")
+    expect(activeCells(view.container)).toHaveLength(1)
     expect(cellByFieldPath(view.container, "lines.1.name").dataset.active).toBe(
       undefined
     )

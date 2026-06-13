@@ -3,7 +3,7 @@
 // registry item named `<id>-viewer-block` (see registry.json), whose source
 // files feed the Code view.
 
-type ViewerBlockCategoryId = "primitives" | "legends" | "run-cards"
+type ViewerBlockCategoryId = "primitives" | "dropzone" | "legends" | "run-cards"
 
 type ViewerBlockConfig = {
   id: string
@@ -26,6 +26,7 @@ type ViewerBlockConfig = {
 export const VIEWER_BLOCK_CATEGORIES = [
   { id: "featured", label: "Featured" },
   { id: "primitives", label: "Primitives" },
+  { id: "dropzone", label: "Dropzone" },
   { id: "legends", label: "Legends" },
   { id: "run-cards", label: "Run Cards" },
 ] as const
@@ -175,6 +176,19 @@ export const VIEWER_BLOCKS = [
     docsHref: "/docs/components/extract-viewer",
     viewHref: "/view/blocks/docx-sources",
     categories: [],
+  },
+  {
+    id: "dropzone",
+    registryName: "dropzone-block",
+    title: "Dropzone",
+    description:
+      "A file-uploader lab with document, single PDF, image-only, size-limited, disabled, and callback-only dropzones sharing the same primitive.",
+    command: getRegistryAddCommand("dropzone-block"),
+    docsHref: "/docs/components/dropzone",
+    viewHref: "/view/blocks/dropzone",
+    previewHeightClassName: "h-[760px]",
+    featured: true,
+    categories: ["dropzone"],
   },
   {
     id: "primitive-cards",

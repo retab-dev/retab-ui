@@ -2,12 +2,71 @@
 
 import * as React from "react"
 
-import { Dropzone } from "@/registry/new-york-v4/ui/dropzone"
+import { cn } from "@/lib/utils"
+import {
+  formatDropzoneBytes,
+  useDropzone,
+  type DropzoneFileItem,
+} from "@/registry/new-york-v4/ui/dropzone"
+import { FileUploader } from "@/registry/new-york-v4/ui/file-uploader"
 
 export function DropzoneDemo() {
+  const [files, setFiles] = React.useState<DropzoneFileItem[]>([])
+  const dropzone = useDropzone({
+    accept: "application/pdf,image/*,.docx,.xlsx,.csv",
+    files,
+    maxFiles: 3,
+    onFilesChange: setFiles,
+  })
+
   return (
     <div className="not-prose rounded-xl border bg-card p-4 shadow-sm sm:p-6">
-      <Dropzone
+      <div
+        {...dropzone.getRootProps(
+          dropzone.getTriggerProps({
+            "data-slot": "dropzone",
+            className: cn(
+              "flex min-h-44 cursor-pointer flex-col justify-center rounded-lg border border-dashed bg-background p-5 outline-none focus-visible:ring-[3px] focus-visible:ring-ring/24",
+              dropzone.isDragging && "border-foreground/40 bg-accent/35"
+            ),
+          })
+        )}
+      >
+        <input {...dropzone.getInputProps({ className: "hidden" })} />
+        <div className="text-sm font-medium">Drop or browse files</div>
+        <div className="mt-1 text-xs text-muted-foreground">
+          Headless useDropzone controls this custom surface.
+        </div>
+        <div className="mt-4 space-y-1">
+          {files.length ? (
+            files.map((item) => (
+              <div
+                key={item.id}
+                className="flex items-center gap-2 rounded-md border px-2 py-1.5 text-xs"
+              >
+                <span className="min-w-0 flex-1 truncate">
+                  {item.file.name}
+                </span>
+                <span className="text-muted-foreground">
+                  {formatDropzoneBytes(item.file.size)}
+                </span>
+              </div>
+            ))
+          ) : (
+            <div className="text-xs text-muted-foreground">
+              No files selected.
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export function FileUploaderDemo() {
+  return (
+    <div className="not-prose rounded-xl border bg-card p-4 shadow-sm sm:p-6">
+      <FileUploader
         accept="application/pdf,image/*,.docx,.xlsx,.csv"
         description="PDF, DOCX, XLSX, CSV, PNG, or JPG"
       />

@@ -1,26 +1,10 @@
 "use client"
 
 import * as React from "react"
-import {
-  FileImage,
-  FileSpreadsheet,
-  FileText,
-  Upload,
-  X,
-  type LucideIcon,
-} from "lucide-react"
-
-import { cn } from "@/lib/utils"
-import { FileThumbnail } from "@/components/ui/file-thumbnail"
-
-export type DropzoneAcceptedFileType = {
-  label: string
-  icon: LucideIcon
-}
 
 export type DropzoneFileRejection = {
   file: File
-  reason: "file-invalid-type" | "file-too-large"
+  reason: "file-invalid-type" | "file-too-large" | "too-many-files"
   message: string
 }
 
@@ -29,350 +13,335 @@ export type DropzoneFileItem = {
   file: File
 }
 
-export type DropzoneProps = Omit<
-  React.ComponentPropsWithoutRef<"div">,
-  "children" | "onDrop"
-> & {
+export type DropzoneDataAttributes = {
+  [key: `data-${string}`]: string | undefined
+}
+
+export type DropzoneRootGetterProps<T extends HTMLElement> =
+  React.HTMLAttributes<T> & Partial<DropzoneDataAttributes>
+
+export type DropzoneInputGetterProps = React.ComponentPropsWithRef<"input"> &
+  Partial<DropzoneDataAttributes>
+
+export type DropzoneState = {
+  files: DropzoneFileItem[]
+  acceptedFiles: File[]
+  rejectedFiles: DropzoneFileRejection[]
+  isDragging: boolean
+  isFocused: boolean
+  isDisabled: boolean
+  hasFiles: boolean
+}
+
+export type UseDropzoneProps = {
   accept?: string
-  acceptedFileTypes?: DropzoneAcceptedFileType[]
-  browseLabel?: string
-  description?: string
   disabled?: boolean
-  draggingLabel?: string
+  files?: DropzoneFileItem[]
+  defaultFiles?: DropzoneFileItem[]
+  maxFiles?: number
   maxSize?: number
   multiple?: boolean
-  showFileList?: boolean
-  title?: string
   onFilesAccepted?: (files: File[]) => void
-  onFilesChange?: (files: File[]) => void
+  onFilesChange?: (files: DropzoneFileItem[]) => void
   onFilesRejected?: (rejections: DropzoneFileRejection[]) => void
 }
 
-const ACCEPTED_FILE_TYPES: DropzoneAcceptedFileType[] = [
-  { label: "Image", icon: FileImage },
-  { label: "PDF", icon: FileText },
-  { label: "Sheet", icon: FileSpreadsheet },
-]
+export type UseDropzoneReturn = DropzoneState & {
+  clearFiles: () => void
+  openFileDialog: () => void
+  removeFile: (fileId: string) => void
+  getRootProps: <T extends HTMLElement>(
+    props?: DropzoneRootGetterProps<T>
+  ) => DropzoneRootGetterProps<T>
+  getInputProps: (props?: DropzoneInputGetterProps) => DropzoneInputGetterProps
+  getTriggerProps: <T extends HTMLElement>(
+    props?: DropzoneRootGetterProps<T>
+  ) => DropzoneRootGetterProps<T>
+}
 
-const STATIC_ICON_OFFSETS = [
-  "translate(-78%, -50%) rotate(-8deg)",
-  "translate(-50%, -50%)",
-  "translate(-22%, -50%) rotate(8deg)",
-]
+export type DropzoneRootProps = UseDropzoneProps &
+  Omit<React.ComponentPropsWithoutRef<"div">, "children" | "onDrop"> & {
+    children?:
+      | React.ReactNode
+      | ((dropzone: UseDropzoneReturn) => React.ReactNode)
+  }
 
-export function Dropzone({
+type DropzoneContextValue = UseDropzoneReturn
+
+const DropzoneContext = React.createContext<DropzoneContextValue | null>(null)
+
+export function useDropzone({
   accept,
-  acceptedFileTypes = ACCEPTED_FILE_TYPES,
-  browseLabel = "Browse files",
-  className,
-  description = "PDF, DOCX, XLSX, CSV, PNG, or JPG",
+  defaultFiles = [],
   disabled = false,
-  draggingLabel = "Drop to add",
+  files,
+  maxFiles,
   maxSize,
   multiple = true,
-  showFileList = true,
-  title = "Click to upload or drop files",
   onFilesAccepted,
   onFilesChange,
   onFilesRejected,
-  ...props
-}: DropzoneProps) {
+}: UseDropzoneProps = {}): UseDropzoneReturn {
+  const inputRef = React.useRef<HTMLInputElement | null>(null)
   const dragDepthRef = React.useRef(0)
-  const inputRef = React.useRef<HTMLInputElement>(null)
+  const isControlled = files !== undefined
+  const [uncontrolledFiles, setUncontrolledFiles] =
+    React.useState<DropzoneFileItem[]>(defaultFiles)
+  const [acceptedFiles, setAcceptedFiles] = React.useState<File[]>([])
+  const [rejectedFiles, setRejectedFiles] = React.useState<
+    DropzoneFileRejection[]
+  >([])
   const [isDragging, setIsDragging] = React.useState(false)
-  const [files, setFiles] = React.useState<DropzoneFileItem[]>([])
-  const [rejectionMessage, setRejectionMessage] = React.useState<string | null>(
-    null
-  )
+  const [isFocused, setIsFocused] = React.useState(false)
+  const currentFiles = files ?? uncontrolledFiles
 
-  const commitFiles = React.useCallback(
-    (nextFiles: FileList | File[]) => {
-      const incomingFiles = Array.from(nextFiles).slice(
-        0,
-        multiple ? undefined : 1
-      )
-      const acceptedFiles: File[] = []
-      const rejections: DropzoneFileRejection[] = []
-
-      for (const file of incomingFiles) {
-        const rejection = validateDropzoneFile(file, { accept, maxSize })
-        if (rejection) rejections.push(rejection)
-        else acceptedFiles.push(file)
-      }
-
-      if (rejections.length > 0) {
-        setRejectionMessage(rejections[0]?.message ?? null)
-        onFilesRejected?.(rejections)
-      } else {
-        setRejectionMessage(null)
-      }
-
-      if (acceptedFiles.length > 0) {
-        const acceptedItems = acceptedFiles.map((file) => ({
-          id: createDropzoneFileId(file),
-          file,
-        }))
-        const nextFiles = multiple
-          ? [...files, ...acceptedItems]
-          : acceptedItems
-
-        setFiles(nextFiles)
-        onFilesChange?.(nextFiles.map((item) => item.file))
-        onFilesAccepted?.(acceptedFiles)
-      }
+  const commitFileItems = React.useCallback(
+    (nextFiles: DropzoneFileItem[]) => {
+      if (!isControlled) setUncontrolledFiles(nextFiles)
+      onFilesChange?.(nextFiles)
     },
-    [
-      accept,
-      files,
-      maxSize,
-      multiple,
-      onFilesAccepted,
-      onFilesChange,
-      onFilesRejected,
-    ]
+    [isControlled, onFilesChange]
   )
-
-  const openFileDialog = React.useCallback(() => {
-    if (!disabled) inputRef.current?.click()
-  }, [disabled])
 
   const resetDragState = React.useCallback(() => {
     dragDepthRef.current = 0
     setIsDragging(false)
   }, [])
 
-  const removeFile = React.useCallback(
-    (fileId: string) => {
-      setFiles((currentFiles) => {
-        const nextFiles = currentFiles.filter((item) => item.id !== fileId)
-        onFilesChange?.(nextFiles.map((item) => item.file))
-        return nextFiles
+  const commitFiles = React.useCallback(
+    (nextFiles: FileList | File[]) => {
+      if (disabled) return
+
+      const incomingFiles = Array.from(nextFiles).slice(
+        0,
+        multiple ? undefined : 1
+      )
+      const currentCount = multiple ? currentFiles.length : 0
+      const { accepted, rejected } = validateDropzoneFiles(incomingFiles, {
+        accept,
+        currentCount,
+        maxFiles,
+        maxSize,
       })
+
+      setAcceptedFiles(accepted)
+      setRejectedFiles(rejected)
+      if (rejected.length > 0) onFilesRejected?.(rejected)
+      if (accepted.length === 0) return
+
+      const acceptedItems = accepted.map((file) => ({
+        id: createDropzoneFileId(file),
+        file,
+      }))
+      const nextItems = multiple
+        ? [...currentFiles, ...acceptedItems]
+        : acceptedItems
+
+      commitFileItems(nextItems)
+      onFilesAccepted?.(accepted)
     },
-    [onFilesChange]
+    [
+      accept,
+      commitFileItems,
+      currentFiles,
+      disabled,
+      maxFiles,
+      maxSize,
+      multiple,
+      onFilesAccepted,
+      onFilesRejected,
+    ]
   )
 
-  return (
-    <div
-      {...props}
-      role="button"
-      tabIndex={disabled ? -1 : 0}
-      aria-disabled={disabled || undefined}
-      data-dragging={isDragging ? "" : undefined}
-      data-slot="dropzone"
-      className={cn(
-        "relative flex min-h-64 cursor-pointer flex-col items-center justify-center gap-5 overflow-hidden rounded-lg border border-dashed bg-background px-6 py-10 text-center outline-none",
-        "focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/24",
-        isDragging
-          ? "border-foreground/40 bg-accent/35"
-          : "border-foreground/20 hover:border-foreground/35 hover:bg-muted/35 dark:border-foreground/25 dark:hover:border-foreground/40",
-        disabled &&
-          "pointer-events-none cursor-not-allowed opacity-60 hover:border-foreground/20 hover:bg-background",
-        className
-      )}
-      onClick={(event) => {
-        props.onClick?.(event)
-        if (!event.defaultPrevented) openFileDialog()
-      }}
-      onDragEnter={(event) => {
-        props.onDragEnter?.(event)
-        if (event.defaultPrevented || disabled) return
+  const clearFiles = React.useCallback(() => {
+    if (disabled) return
+    commitFileItems([])
+  }, [commitFileItems, disabled])
+
+  const removeFile = React.useCallback(
+    (fileId: string) => {
+      if (disabled) return
+      commitFileItems(currentFiles.filter((item) => item.id !== fileId))
+    },
+    [commitFileItems, currentFiles, disabled]
+  )
+
+  const openFileDialog = React.useCallback(() => {
+    if (!disabled) inputRef.current?.click()
+  }, [disabled])
+
+  React.useEffect(() => {
+    if (disabled) {
+      resetDragState()
+      setIsFocused(false)
+    }
+  }, [disabled, resetDragState])
+
+  const getRootProps = React.useCallback(
+    <T extends HTMLElement>(
+      props: DropzoneRootGetterProps<T> = {}
+    ): DropzoneRootGetterProps<T> => ({
+      ...props,
+      "aria-disabled": disabled || props["aria-disabled"] || undefined,
+      "data-dragging": isDragging ? "" : undefined,
+      "data-slot": props["data-slot"] ?? "dropzone",
+      onDragEnter: composeEventHandlers(props.onDragEnter, (event) => {
+        if (disabled || !hasDraggedFiles(event.dataTransfer)) return
         event.preventDefault()
-        if (!hasDraggedFiles(event.dataTransfer)) return
         dragDepthRef.current += 1
         setIsDragging(true)
-      }}
-      onDragLeave={(event) => {
-        props.onDragLeave?.(event)
-        if (event.defaultPrevented || disabled) return
+      }),
+      onDragLeave: composeEventHandlers(props.onDragLeave, (event) => {
+        if (disabled || !hasDraggedFiles(event.dataTransfer)) return
         event.preventDefault()
         dragDepthRef.current = Math.max(0, dragDepthRef.current - 1)
         if (dragDepthRef.current === 0) setIsDragging(false)
-      }}
-      onDragOver={(event) => {
-        props.onDragOver?.(event)
-        if (event.defaultPrevented || disabled) return
-        if (!hasDraggedFiles(event.dataTransfer)) return
+      }),
+      onDragOver: composeEventHandlers(props.onDragOver, (event) => {
+        if (disabled || !hasDraggedFiles(event.dataTransfer)) return
         event.preventDefault()
         event.dataTransfer.dropEffect = "copy"
-      }}
-      onDrop={(event) => {
-        if (disabled) return
+      }),
+      onDrop: composeEventHandlers(props.onDrop, (event) => {
+        if (disabled || !hasDraggedFiles(event.dataTransfer)) return
         event.preventDefault()
         resetDragState()
         if (event.dataTransfer.files.length > 0) {
           commitFiles(event.dataTransfer.files)
         }
-      }}
-      onKeyDown={(event) => {
-        props.onKeyDown?.(event)
-        if (event.defaultPrevented || disabled) return
+      }),
+    }),
+    [commitFiles, disabled, isDragging, resetDragState]
+  )
+
+  const getInputProps = React.useCallback(
+    (props: DropzoneInputGetterProps = {}): DropzoneInputGetterProps => ({
+      ...props,
+      accept,
+      disabled,
+      multiple,
+      ref: composeRefs(inputRef, props.ref),
+      type: "file",
+      "data-slot": props["data-slot"] ?? "dropzone-input",
+      onChange: composeEventHandlers(props.onChange, (event) => {
+        if (disabled) return
+        if (event.currentTarget.files) {
+          commitFiles(event.currentTarget.files)
+          event.currentTarget.value = ""
+        }
+      }),
+    }),
+    [accept, commitFiles, disabled, multiple]
+  )
+
+  const getTriggerProps = React.useCallback(
+    <T extends HTMLElement>(
+      props: DropzoneRootGetterProps<T> = {}
+    ): DropzoneRootGetterProps<T> => ({
+      ...props,
+      "aria-disabled": disabled || props["aria-disabled"] || undefined,
+      "data-focused": isFocused ? "" : undefined,
+      "data-slot": props["data-slot"] ?? "dropzone-trigger",
+      role: props.role ?? "button",
+      tabIndex: disabled ? -1 : (props.tabIndex ?? 0),
+      onBlur: composeEventHandlers(props.onBlur, () => {
+        setIsFocused(false)
+      }),
+      onClick: composeEventHandlers(props.onClick, () => {
+        openFileDialog()
+      }),
+      onFocus: composeEventHandlers(props.onFocus, () => {
+        if (!disabled) setIsFocused(true)
+      }),
+      onKeyDown: composeEventHandlers(props.onKeyDown, (event) => {
+        if (disabled) return
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault()
           openFileDialog()
         }
-      }}
-    >
-      <DropzoneIconCluster
-        acceptedFileTypes={acceptedFileTypes}
-        isDragging={isDragging}
-      />
-      <div className="space-y-1">
-        <div className="text-sm font-medium">{title}</div>
-        <div className="text-xs text-muted-foreground">{description}</div>
-        {rejectionMessage ? (
-          <div className="text-xs text-destructive">{rejectionMessage}</div>
-        ) : null}
-      </div>
-      <div className="inline-flex items-center gap-2 rounded-full border bg-background px-3 py-1 text-xs text-muted-foreground">
-        <Upload className="size-3.5" aria-hidden />
-        <span>{isDragging ? draggingLabel : browseLabel}</span>
-      </div>
-      {showFileList && files.length > 0 ? (
-        <DropzoneFileList files={files} onRemoveFile={removeFile} />
-      ) : null}
-      <input
-        ref={inputRef}
-        type="file"
-        accept={accept}
-        multiple={multiple}
-        disabled={disabled}
-        className="hidden"
-        aria-label={title}
-        onChange={(event) => {
-          if (event.target.files) {
-            commitFiles(event.target.files)
-            event.currentTarget.value = ""
-          }
-        }}
-      />
-    </div>
+      }),
+    }),
+    [disabled, isFocused, openFileDialog]
   )
+
+  return {
+    files: currentFiles,
+    acceptedFiles,
+    rejectedFiles,
+    isDragging,
+    isFocused,
+    isDisabled: disabled,
+    hasFiles: currentFiles.length > 0,
+    clearFiles,
+    openFileDialog,
+    removeFile,
+    getRootProps,
+    getInputProps,
+    getTriggerProps,
+  }
 }
 
-function DropzoneFileList({
+export function DropzoneRoot({
+  accept,
+  children,
+  defaultFiles,
+  disabled,
   files,
-  onRemoveFile,
-}: {
-  files: DropzoneFileItem[]
-  onRemoveFile: (fileId: string) => void
-}) {
+  maxFiles,
+  maxSize,
+  multiple,
+  onFilesAccepted,
+  onFilesChange,
+  onFilesRejected,
+  ...props
+}: DropzoneRootProps) {
+  const dropzone = useDropzone({
+    accept,
+    defaultFiles,
+    disabled,
+    files,
+    maxFiles,
+    maxSize,
+    multiple,
+    onFilesAccepted,
+    onFilesChange,
+    onFilesRejected,
+  })
+
   return (
-    <div
-      data-slot="dropzone-file-list"
-      className="w-full max-w-xl rounded-lg border bg-background/80 p-3 text-left shadow-xs"
-    >
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <div className="text-sm font-medium">
-          {files.length} file{files.length === 1 ? "" : "s"} ready
-        </div>
-        <div className="text-xs text-muted-foreground">
-          {formatDropzoneBytes(
-            files.reduce((totalSize, item) => totalSize + item.file.size, 0)
-          )}
-        </div>
+    <DropzoneContext.Provider value={dropzone}>
+      <div {...dropzone.getRootProps(props)}>
+        {typeof children === "function" ? children(dropzone) : children}
       </div>
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] gap-x-2 gap-y-4">
-        {files.map((item) => (
-          <DropzoneFileTile
-            key={item.id}
-            item={item}
-            onRemoveFile={onRemoveFile}
-          />
-        ))}
-      </div>
-    </div>
+    </DropzoneContext.Provider>
   )
 }
 
-function DropzoneFileTile({
-  item,
-  onRemoveFile,
-}: {
-  item: DropzoneFileItem
-  onRemoveFile: (fileId: string) => void
-}) {
-  return (
-    <div
-      data-slot="dropzone-file-item"
-      className="flex min-w-0 flex-col items-center gap-2"
-    >
-      <div className="relative">
-        <DropzoneFileThumbnail file={item.file} />
-        <button
-          type="button"
-          aria-label={`Remove ${item.file.name}`}
-          className="absolute -top-1 -right-1 grid size-5 place-items-center rounded-[4px] border bg-background text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/24 focus-visible:outline-none"
-          onClick={(event) => {
-            event.preventDefault()
-            event.stopPropagation()
-            onRemoveFile(item.id)
-          }}
-          onKeyDown={(event) => {
-            event.stopPropagation()
-          }}
-        >
-          <X className="size-3" aria-hidden />
-        </button>
-      </div>
-      <div className="max-w-full text-center">
-        <div className="line-clamp-2 text-xs leading-tight break-words text-foreground">
-          {item.file.name}
-        </div>
-        <div className="mt-0.5 truncate text-[0.6875rem] leading-none text-muted-foreground">
-          {formatDropzoneBytes(item.file.size)}
-        </div>
-      </div>
-    </div>
-  )
+export function Dropzone(props: DropzoneRootProps) {
+  return <DropzoneRoot {...props} />
 }
 
-function DropzoneFileThumbnail({ file }: { file: File }) {
-  return (
-    <FileThumbnail
-      file={file}
-      previewAspectRatio={1}
-      className="size-16 shrink-0 bg-background shadow-sm ring-1 ring-black/5"
-    />
-  )
+export function DropzoneInput(props: DropzoneInputGetterProps = {}) {
+  const dropzone = useDropzoneContext()
+  return <input {...dropzone.getInputProps(props)} />
 }
 
-function DropzoneIconCluster({
-  acceptedFileTypes,
-  isDragging,
-}: {
-  acceptedFileTypes: DropzoneAcceptedFileType[]
-  isDragging: boolean
+export function DropzoneTrigger({
+  children,
+  ...props
+}: DropzoneRootGetterProps<HTMLDivElement> & {
+  children?: React.ReactNode
 }) {
-  const visibleTypes = acceptedFileTypes.slice(0, 3)
+  const dropzone = useDropzoneContext()
+  return <div {...dropzone.getTriggerProps(props)}>{children}</div>
+}
 
-  return (
-    <div className="relative h-14 w-36" aria-hidden>
-      {visibleTypes.map((item, index) => {
-        const Icon = item.icon
-
-        return (
-          <div
-            key={item.label}
-            className={cn(
-              "absolute top-1/2 left-1/2 grid size-12 place-items-center rounded-lg border bg-background text-muted-foreground shadow-xs",
-              index === 1 && "z-10",
-              isDragging &&
-                "bg-popover text-foreground shadow-md shadow-black/10 dark:shadow-black/25"
-            )}
-            style={{
-              transform:
-                visibleTypes.length === 1
-                  ? "translate(-50%, -50%)"
-                  : STATIC_ICON_OFFSETS[index],
-            }}
-          >
-            <Icon className="size-5" />
-          </div>
-        )
-      })}
-    </div>
-  )
+export function useDropzoneContext() {
+  const context = React.useContext(DropzoneContext)
+  if (!context) {
+    throw new Error("useDropzoneContext must be used within DropzoneRoot.")
+  }
+  return context
 }
 
 export function validateDropzoneFile(
@@ -402,6 +371,53 @@ export function validateDropzoneFile(
   }
 
   return null
+}
+
+export function validateDropzoneFiles(
+  files: File[],
+  {
+    accept,
+    currentCount = 0,
+    maxFiles,
+    maxSize,
+  }: {
+    accept?: string
+    currentCount?: number
+    maxFiles?: number
+    maxSize?: number
+  }
+): {
+  accepted: File[]
+  rejected: DropzoneFileRejection[]
+} {
+  const accepted: File[] = []
+  const rejected: DropzoneFileRejection[] = []
+  const availableSlots =
+    maxFiles === undefined ? Number.POSITIVE_INFINITY : maxFiles - currentCount
+
+  for (const file of files) {
+    const rejection = validateDropzoneFile(file, { accept, maxSize })
+    if (rejection) {
+      rejected.push(rejection)
+      continue
+    }
+
+    if (accepted.length >= availableSlots) {
+      rejected.push({
+        file,
+        reason: "too-many-files",
+        message:
+          maxFiles === 1
+            ? "Only one file can be selected."
+            : `Only ${maxFiles} files can be selected.`,
+      })
+      continue
+    }
+
+    accepted.push(file)
+  }
+
+  return { accepted, rejected }
 }
 
 export function matchesDropzoneAccept(file: File, accept?: string): boolean {
@@ -450,4 +466,29 @@ function hasDraggedFiles(dataTransfer: DataTransfer | null): boolean {
   }
 
   return Array.from(dataTransfer.types).includes("Files")
+}
+
+function composeEventHandlers<Event extends { defaultPrevented: boolean }>(
+  externalHandler: ((event: Event) => void) | undefined,
+  internalHandler: (event: Event) => void
+) {
+  return (event: Event) => {
+    externalHandler?.(event)
+    if (!event.defaultPrevented) internalHandler(event)
+  }
+}
+
+function composeRefs<T>(
+  internalRef: React.MutableRefObject<T | null>,
+  externalRef: React.Ref<T> | undefined
+) {
+  return (node: T | null) => {
+    internalRef.current = node
+    if (!externalRef) return
+    if (typeof externalRef === "function") {
+      externalRef(node)
+      return
+    }
+    externalRef.current = node
+  }
 }

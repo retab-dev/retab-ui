@@ -78,12 +78,15 @@ export function SchemaNodeField({
           <ObjectPropertiesField
             schemaNode={effectiveSchemaNode}
             schemaContext={schemaContext}
+            mode={mode}
+            canEditPropertyType={capabilities.canEditType}
             disabled={disabled || !capabilities.canEditNestedObject}
             onChange={updateEffectiveSchemaNode}
             renderPropertyEditor={({
               propertySchema,
               propertySchemaContext,
               onPropertySchemaChange,
+              showTypeSelector,
             }) => (
               <SchemaNodeField
                 schemaNode={propertySchema}
@@ -91,6 +94,7 @@ export function SchemaNodeField({
                 mode={mode}
                 capabilities={capabilities}
                 disabled={disabled}
+                showTypeSelector={showTypeSelector}
                 onChange={onPropertySchemaChange}
               />
             )}

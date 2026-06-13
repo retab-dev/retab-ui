@@ -55,6 +55,7 @@ export function DataCellPickerControl({
   onActiveChange: _onActiveChange,
   onPickerOpenChange,
   onEditingEnd,
+  onEditorHandleChange,
   onFocus,
   onBlur,
   onKeyDown,
@@ -131,6 +132,14 @@ export function DataCellPickerControl({
     updatePopupPosition()
     setOpen(true)
   }, [setOpen, updatePopupPosition])
+
+  React.useLayoutEffect(() => {
+    onEditorHandleChange?.({
+      finish: closePopup,
+      cancel: closePopup,
+    })
+    return () => onEditorHandleChange?.(null)
+  }, [closePopup, onEditorHandleChange])
 
   React.useLayoutEffect(() => {
     if (!autoFocus) return

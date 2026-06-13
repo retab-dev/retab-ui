@@ -1,13 +1,16 @@
 ---
 title: Dropzone
-description: Upload files through a click target or drag-and-drop area with accept validation and rejection feedback.
+description: Build custom file intake surfaces with a headless drag/drop and file input primitive.
 component: true
 ---
 
-Dropzone gives document upload flows a single, reusable drop target. It combines
-the Extend UI upload interaction pattern with Retab's file-drag guardrails:
-keyboard activation, nested drag tracking, MIME/extension accept matching, file
-size rejection, and callbacks for accepted and rejected files.
+Dropzone is the headless file-intake primitive. It owns drag/drop mechanics,
+file input wiring, accept validation, max-size and max-file rejection,
+controlled/uncontrolled file state, and accessibility prop getters.
+
+It does not render icons, thumbnails, copy, grids, cards, progress rows, or
+upload transport. Use [File Uploader](/docs/components/file-uploader) for the
+default Retab visual upload area.
 
 ## Installation
 
@@ -20,59 +23,76 @@ npx shadcn@latest add @retab/dropzone
 <DropzoneDemo />
 
 ```tsx
-import { Dropzone } from "@/components/ui/dropzone"
+import { useDropzone } from "@/components/ui/dropzone"
 
 export function UploadTarget() {
+  const dropzone = useDropzone({
+    accept: "application/pdf,image/*,.docx,.xlsx,.csv",
+    maxFiles: 3,
+    onFilesAccepted(files) {
+      console.log(files)
+    },
+  })
+
   return (
-    <Dropzone
-      accept="application/pdf,image/*,.docx,.xlsx,.csv"
-      description="PDF, DOCX, XLSX, CSV, PNG, or JPG"
-      multiple={false}
-      onFilesAccepted={(files) => {
-        console.log(files[0])
-      }}
-    />
+    <div {...dropzone.getRootProps(dropzone.getTriggerProps())}>
+      <input {...dropzone.getInputProps()} />
+      Drop or browse files
+    </div>
   )
 }
 ```
 
 ## Behavior
 
-- Opens the native file picker on click, Enter, or Space.
+- Uses the same commit path for drag/drop and native file input selection.
+- Opens the native file picker through `openFileDialog` or trigger props.
+- Tracks nested drag enter/leave events so active state does not flicker.
 - Highlights only when the drag payload contains files.
-- Tracks nested drag enter/leave events so the active state does not flicker.
 - Accepts MIME types, wildcard MIME types such as `image/*`, and extensions.
-- Renders accepted files inside the drop area as a compact thumbnail grid.
-- Uses `FileThumbnail` for selected files so PDFs and other supported document
-  formats render first-page previews.
-- Lets users remove selected files from the thumbnail grid.
-- Reports rejected files through `onFilesRejected` and shows the first rejection
-  message inline.
+- Supports controlled and uncontrolled file state.
+- Supports `multiple`, `maxFiles`, and `maxSize`.
+- Exposes `removeFile` and `clearFiles`.
+- Composes consumer event handlers and respects `event.defaultPrevented`.
 
 ## API Reference
 
-### Dropzone
+### `useDropzone`
 
-| Prop                | Type                                            | Default                               | Required |
-| ------------------- | ----------------------------------------------- | ------------------------------------- | -------- |
-| `accept`            | `string`                                        | `-`                                   | No       |
-| `acceptedFileTypes` | `{ label: string; icon: LucideIcon }[]`         | image, PDF, sheet                     | No       |
-| `browseLabel`       | `string`                                        | `"Browse files"`                      | No       |
-| `className`         | `string`                                        | `-`                                   | No       |
-| `description`       | `string`                                        | `"PDF, DOCX, XLSX, CSV, PNG, or JPG"` | No       |
-| `disabled`          | `boolean`                                       | `false`                               | No       |
-| `draggingLabel`     | `string`                                        | `"Drop to add"`                       | No       |
-| `maxSize`           | `number`                                        | `-`                                   | No       |
-| `multiple`          | `boolean`                                       | `true`                                | No       |
-| `showFileList`      | `boolean`                                       | `true`                                | No       |
-| `title`             | `string`                                        | `"Click to upload or drop files"`     | No       |
-| `onFilesAccepted`   | `(files: File[]) => void`                       | `-`                                   | No       |
-| `onFilesChange`     | `(files: File[]) => void`                       | `-`                                   | No       |
-| `onFilesRejected`   | `(rejections: DropzoneFileRejection[]) => void` | `-`                                   | No       |
+| Prop              | Type                                            | Default | Required |
+| ----------------- | ----------------------------------------------- | ------- | -------- |
+| `accept`          | `string`                                        | `-`     | No       |
+| `defaultFiles`    | `DropzoneFileItem[]`                            | `[]`    | No       |
+| `disabled`        | `boolean`                                       | `false` | No       |
+| `files`           | `DropzoneFileItem[]`                            | `-`     | No       |
+| `maxFiles`        | `number`                                        | `-`     | No       |
+| `maxSize`         | `number`                                        | `-`     | No       |
+| `multiple`        | `boolean`                                       | `true`  | No       |
+| `onFilesAccepted` | `(files: File[]) => void`                       | `-`     | No       |
+| `onFilesChange`   | `(files: DropzoneFileItem[]) => void`           | `-`     | No       |
+| `onFilesRejected` | `(rejections: DropzoneFileRejection[]) => void` | `-`     | No       |
 
-`Dropzone` also forwards standard `div` props except `children` and `onDrop`.
-Its internal `data-slot="dropzone"` and `data-dragging` attributes are stable
-styling hooks.
+### Return Value
+
+| Field             | Type                                                      |
+| ----------------- | --------------------------------------------------------- |
+| `files`           | `DropzoneFileItem[]`                                      |
+| `acceptedFiles`   | `File[]`                                                  |
+| `rejectedFiles`   | `DropzoneFileRejection[]`                                 |
+| `isDragging`      | `boolean`                                                 |
+| `isFocused`       | `boolean`                                                 |
+| `isDisabled`      | `boolean`                                                 |
+| `hasFiles`        | `boolean`                                                 |
+| `clearFiles`      | `() => void`                                              |
+| `openFileDialog`  | `() => void`                                              |
+| `removeFile`      | `(fileId: string) => void`                                |
+| `getRootProps`    | `(props?) => React.HTMLAttributes<HTMLElement>`           |
+| `getInputProps`   | `(props?) => React.InputHTMLAttributes<HTMLInputElement>` |
+| `getTriggerProps` | `(props?) => React.HTMLAttributes<HTMLElement>`           |
+
+The package also exports `DropzoneRoot`, `DropzoneInput`, `DropzoneTrigger`,
+`useDropzoneContext`, `matchesDropzoneAccept`, `validateDropzoneFile`,
+`validateDropzoneFiles`, and `formatDropzoneBytes`.
 
 ## Source
 

@@ -50,6 +50,11 @@ export type DataCellCommitHandler = (
   meta: DataCellValueMeta
 ) => void
 
+export type DataCellEditorHandle = {
+  finish: () => void
+  cancel: () => void
+}
+
 type DataCellBaseProps<Kind extends DataCellKind, Value> = Omit<
   React.HTMLAttributes<HTMLElement>,
   "children" | "defaultValue" | "onChange"
@@ -77,6 +82,7 @@ type DataCellBaseProps<Kind extends DataCellKind, Value> = Omit<
   onEditingEnd?: () => void
   onActiveChange?: (active: boolean) => void
   onPickerOpenChange?: (open: boolean) => void
+  onEditorHandleChange?: (handle: DataCellEditorHandle | null) => void
 }
 
 export type DataCellProps =

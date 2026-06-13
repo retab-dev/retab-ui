@@ -59,6 +59,7 @@ export interface PreparedInlineTextBlock extends PreparedTextBlockBase {
   fallbackText: string
   flow: PreparedRichInline | null
   fonts: string[]
+  headingId: string | null
   hrefs: Array<string | null>
   kind: "inline"
   lineHeight: number
@@ -94,7 +95,6 @@ export interface PreparedTableTextBlock extends PreparedTextBlockBase {
   columnWidths: number[]
   header: PreparedTableCell[]
   kind: "table"
-  rowHeight: number
   rowSourceStartLines: number[]
   rows: PreparedTableCell[][]
 }
@@ -167,8 +167,9 @@ export interface TableTextBlockFrame extends TextBlockFrameBase {
   columnWidths: number[]
   headerHeight: number
   kind: "table"
+  rowHeights: number[]
+  rowOffsets: number[]
   rowCount: number
-  rowHeight: number
   rowSourceStartLines: number[]
   tableWidth: number
 }
@@ -222,6 +223,8 @@ type ParseContext = {
   quoteDepth: number
 }
 
+type HeadingIdRegistry = Map<string, number>
+
 type InlinePiece = {
   breakMode: "never" | "normal"
   className: string
@@ -265,7 +268,8 @@ const TABLE_CELL_PADDING_X = 14
 const TABLE_COLUMN_MIN_WIDTH = 72
 const TABLE_COLUMN_MAX_WIDTH = 320
 const TABLE_HEADER_HEIGHT = 38
-const TABLE_ROW_HEIGHT = 34
+const TABLE_ROW_MIN_HEIGHT = 34
+const TABLE_ROW_LINE_HEIGHT = 20
 const TABLE_ROW_OVERSCAN = 4
 const HARD_WRAPPED_LINE_MIN_LENGTH = 52
 const HARD_WRAPPED_RUN_AVERAGE_LENGTH = 64
@@ -525,17 +529,19 @@ export function getTableVisibleRowWindow({
 }): TableRowWindow {
   const relativeTop = viewportTop - frame.top - frame.headerHeight
   const relativeBottom = viewportBottom - frame.top - frame.headerHeight
+  const bodyHeight = frame.rowOffsets[frame.rowOffsets.length - 1] ?? 0
   const startIndex = Math.max(
     0,
-    Math.floor(relativeTop / frame.rowHeight) - TABLE_ROW_OVERSCAN
+    findTableRowAtOffset(frame.rowOffsets, relativeTop) - TABLE_ROW_OVERSCAN
   )
   const endIndex = Math.min(
     frame.rowCount,
-    Math.ceil(relativeBottom / frame.rowHeight) + TABLE_ROW_OVERSCAN
+    findTableRowEndAtOffset(frame.rowOffsets, relativeBottom) +
+      TABLE_ROW_OVERSCAN
   )
   return {
-    afterHeight: Math.max(0, (frame.rowCount - endIndex) * frame.rowHeight),
-    beforeHeight: startIndex * frame.rowHeight,
+    afterHeight: Math.max(0, bodyHeight - (frame.rowOffsets[endIndex] ?? 0)),
+    beforeHeight: frame.rowOffsets[startIndex] ?? 0,
     endIndex,
     startIndex,
   }
@@ -555,14 +561,60 @@ export function textFrameIntersectsLineRange({
   )
 }
 
+export function serializeMarkdownTableForClipboard(
+  block: PreparedTableTextBlock
+) {
+  const rows = [block.header, ...block.rows]
+  return rows
+    .map((row) => {
+      return block.header
+        .map((_headerCell, index) => tableClipboardCell(row[index]?.text ?? ""))
+        .join("\t")
+    })
+    .join("\n")
+}
+
 function parseMarkdownBlocks(
   markdown: string,
   style: TextStyleConfig
 ): PreparedTextBlock[] {
   const sourceEndLine = splitTextLines(markdown).length
   try {
+    const headingIds: HeadingIdRegistry = new Map()
+    const frontmatter = extractMarkdownFrontmatter(markdown)
+    if (frontmatter) {
+      const blocks: PreparedTextBlock[] = []
+      appendBlockGroup(
+        blocks,
+        [
+          buildCodeBlock({
+            ctx: { listDepth: 0, quoteDepth: 0 },
+            language: "yaml",
+            sourceEndLine: frontmatter.endLine,
+            sourceStartLine: 1,
+            style,
+            text: frontmatter.text,
+          }),
+        ],
+        0
+      )
+      appendBlockGroup(
+        blocks,
+        parseBlockTokens(marked.lexer(frontmatter.body, { gfm: true }), {
+          ctx: { listDepth: 0, quoteDepth: 0 },
+          headingIds,
+          sourceEndLine,
+          sourceStartLine: frontmatter.endLine + 1,
+          style,
+        }),
+        BLOCK_GAP
+      )
+      return blocks
+    }
+
     return parseBlockTokens(marked.lexer(markdown, { gfm: true }), {
       ctx: { listDepth: 0, quoteDepth: 0 },
+      headingIds,
       sourceEndLine,
       sourceStartLine: 1,
       style,
@@ -576,11 +628,13 @@ function parseBlockTokens(
   tokens: readonly Token[],
   {
     ctx,
+    headingIds,
     sourceEndLine,
     sourceStartLine,
     style,
   }: {
     ctx: ParseContext
+    headingIds: HeadingIdRegistry
     sourceEndLine: number
     sourceStartLine: number
     style: TextStyleConfig
@@ -635,11 +689,17 @@ function parseBlockTokens(
 
       case "heading": {
         const variant = headingVariant(token.depth)
+        const lines = collectInlinePieceLines(
+          token.tokens ?? [],
+          variant,
+          style
+        )
         appendBlockGroup(
           blocks,
           buildInlineBlocks({
             ctx,
-            lines: collectInlinePieceLines(token.tokens ?? [], variant, style),
+            headingId: createMarkdownHeadingId(lines, headingIds),
+            lines,
             sourceEndLine: tokenEndLine,
             sourceStartLine: tokenStartLine,
             style,
@@ -672,6 +732,7 @@ function parseBlockTokens(
           blocks,
           buildListBlocks({
             ctx,
+            headingIds,
             sourceEndLine: tokenEndLine,
             sourceStartLine: tokenStartLine,
             style,
@@ -689,6 +750,7 @@ function parseBlockTokens(
               listDepth: ctx.listDepth,
               quoteDepth: ctx.quoteDepth + 1,
             },
+            headingIds,
             sourceEndLine: tokenEndLine,
             sourceStartLine: tokenStartLine,
             style,
@@ -953,12 +1015,14 @@ function appendPlainTextFallback({
 
 function buildListBlocks({
   ctx,
+  headingIds,
   sourceEndLine,
   sourceStartLine,
   style,
   token,
 }: {
   ctx: ParseContext
+  headingIds: HeadingIdRegistry
   sourceEndLine: number
   sourceStartLine: number
   style: TextStyleConfig
@@ -983,6 +1047,7 @@ function buildListBlocks({
 
     let itemBlocks = parseBlockTokens(item.tokens, {
       ctx: itemCtx,
+      headingIds,
       sourceEndLine: itemEndLine,
       sourceStartLine: itemStartLine,
       style,
@@ -1038,6 +1103,7 @@ function decorateListItemBlocks(
 
 function buildInlineBlocks({
   ctx,
+  headingId = null,
   lines,
   sourceEndLine,
   sourceStartLine,
@@ -1045,6 +1111,7 @@ function buildInlineBlocks({
   variant,
 }: {
   ctx: ParseContext
+  headingId?: string | null
   lines: InlinePiece[][]
   sourceEndLine: number
   sourceStartLine: number
@@ -1054,6 +1121,7 @@ function buildInlineBlocks({
   const blocks: PreparedTextBlock[] = []
   for (const pieces of lines) {
     if (pieces.length === 0) continue
+    const isFirstBlock = blocks.length === 0
     blocks.push({
       ...buildInlineBlock({
         ctx,
@@ -1063,7 +1131,8 @@ function buildInlineBlocks({
         style,
         variant,
       }),
-      marginTop: blocks.length === 0 ? 0 : HARD_BREAK_GAP,
+      headingId: isFirstBlock ? headingId : null,
+      marginTop: isFirstBlock ? 0 : HARD_BREAK_GAP,
     })
   }
   return blocks
@@ -1090,6 +1159,7 @@ function buildInlineBlock({
     fallbackText: pieces.map((piece) => piece.text).join(""),
     flow: prepareRichInlineSafe(pieces),
     fonts: pieces.map((piece) => piece.font),
+    headingId: null,
     hrefs: pieces.map((piece) => piece.href),
     kind: "inline",
     lineHeight: lineHeightForVariant(variant, style),
@@ -1194,7 +1264,6 @@ function buildTableBlock({
     columnWidths: measureTableColumnWidths(header, rows),
     header,
     kind: "table",
-    rowHeight: TABLE_ROW_HEIGHT,
     rowSourceStartLines,
     rows,
   }
@@ -1463,15 +1532,18 @@ function layoutTextBlock({
         0
       )
       const tableWidth = Math.max(availableWidth, intrinsicWidth)
-      const height =
-        TABLE_HEADER_HEIGHT + block.rows.length * block.rowHeight + 2
+      const rowHeights = measureTableRowHeights(block.rows, block.columnWidths)
+      const rowOffsets = buildRowOffsets(rowHeights)
+      const bodyHeight = rowOffsets[rowOffsets.length - 1] ?? 0
+      const height = TABLE_HEADER_HEIGHT + bodyHeight + 2
       return {
         ...frameBase(block, blockIndex, top, height, scale),
         columnWidths: block.columnWidths,
         headerHeight: TABLE_HEADER_HEIGHT,
         kind: "table",
+        rowHeights,
+        rowOffsets,
         rowCount: block.rows.length,
-        rowHeight: block.rowHeight,
         rowSourceStartLines: block.rowSourceStartLines,
         tableWidth,
       }
@@ -1647,6 +1719,48 @@ function appendBlockGroup(
         index === 0 ? (target.length === 0 ? 0 : firstMargin) : block.marginTop,
     } satisfies PreparedTextBlock)
   }
+}
+
+function extractMarkdownFrontmatter(markdown: string) {
+  const lines = splitTextLines(markdown)
+  if (lines[0]?.trim() !== "---") return null
+
+  for (let index = 1; index < lines.length; index++) {
+    if (lines[index]!.trim() !== "---") continue
+    if (index === 1) return null
+
+    return {
+      body: lines.slice(index + 1).join("\n"),
+      endLine: index + 1,
+      text: lines.slice(1, index).join("\n"),
+    }
+  }
+
+  return null
+}
+
+function createMarkdownHeadingId(
+  lines: readonly InlinePiece[][],
+  headingIds: HeadingIdRegistry
+) {
+  const text = lines
+    .flatMap((line) => line.map((piece) => piece.text))
+    .join(" ")
+  const base = slugifyMarkdownHeading(text) || "section"
+  const count = headingIds.get(base) ?? 0
+  headingIds.set(base, count + 1)
+  return count === 0 ? base : `${base}-${count}`
+}
+
+function slugifyMarkdownHeading(text: string) {
+  return text
+    .trim()
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[^\p{Letter}\p{Number}\s-]/gu, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
 }
 
 function shiftBlock(
@@ -1836,11 +1950,81 @@ function measureTableColumnWidths(
   })
 }
 
+function measureTableRowHeights(
+  rows: readonly PreparedTableCell[][],
+  columnWidths: readonly number[]
+) {
+  return rows.map((row) => {
+    const lineCount = Math.max(
+      1,
+      ...row.map((cell, index) =>
+        measureTableCellLineCount(cell.text, columnWidths[index] ?? 0)
+      )
+    )
+    return Math.max(
+      TABLE_ROW_MIN_HEIGHT,
+      lineCount * TABLE_ROW_LINE_HEIGHT + 12
+    )
+  })
+}
+
+function measureTableCellLineCount(text: string, columnWidth: number) {
+  const innerWidth = Math.max(1, columnWidth - TABLE_CELL_PADDING_X * 2)
+  const charsPerLine = Math.max(
+    1,
+    Math.floor(innerWidth / (TABLE_CELL_FONT_PX * 0.58))
+  )
+  return splitTextLines(text || " ").reduce((count, line) => {
+    return count + Math.max(1, Math.ceil((line || " ").length / charsPerLine))
+  }, 0)
+}
+
+function buildRowOffsets(rowHeights: readonly number[]) {
+  const offsets = [0]
+  for (const height of rowHeights) {
+    offsets.push(offsets[offsets.length - 1]! + height)
+  }
+  return offsets
+}
+
+function findTableRowAtOffset(rowOffsets: readonly number[], offset: number) {
+  if (offset <= 0) return 0
+  const rowCount = Math.max(0, rowOffsets.length - 1)
+  let low = 0
+  let high = rowCount
+  while (low < high) {
+    const mid = Math.floor((low + high) / 2)
+    if ((rowOffsets[mid + 1] ?? 0) <= offset) low = mid + 1
+    else high = mid
+  }
+  return low
+}
+
+function findTableRowEndAtOffset(
+  rowOffsets: readonly number[],
+  offset: number
+) {
+  if (offset <= 0) return 0
+  const rowCount = Math.max(0, rowOffsets.length - 1)
+  let low = 0
+  let high = rowCount
+  while (low < high) {
+    const mid = Math.floor((low + high) / 2)
+    if ((rowOffsets[mid] ?? 0) < offset) low = mid + 1
+    else high = mid
+  }
+  return low
+}
+
 function tableColumnAlignment(
   alignment: "center" | "left" | "right" | null
 ): TableColumnAlignment {
   if (alignment === "center" || alignment === "right") return alignment
   return "left"
+}
+
+function tableClipboardCell(text: string) {
+  return text.replace(/[\t\r\n]+/g, " ").trim()
 }
 
 function cnClassNames(...classes: Array<string | null | undefined>) {

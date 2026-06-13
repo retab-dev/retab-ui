@@ -1,9 +1,13 @@
 "use client"
 
 import * as React from "react"
-import { PlusIcon, Trash2 } from "lucide-react"
 
 import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
+import { SchemaAddRow } from "@/components/schema-editor/primitives/schema-add-row"
+import { SchemaFieldRow } from "@/components/schema-editor/primitives/schema-field-row"
+import { SchemaInlineDescription } from "@/components/schema-editor/primitives/schema-inline-description"
+import { SchemaInlineName } from "@/components/schema-editor/primitives/schema-inline-name"
+import { SchemaRowActions } from "@/components/schema-editor/primitives/schema-row-actions"
 import {
   createObjectPropertySchema,
   isSchemaNode,
@@ -12,11 +16,13 @@ import {
   renameObjectProperty,
   replaceObjectProperty,
 } from "@/components/schema-editor/property-form/model/object-property-edits"
-import type { PropertyFormSchemaContext } from "@/components/schema-editor/property-form/types"
+import type {
+  PropertyFormMode,
+  PropertyFormSchemaContext,
+} from "@/components/schema-editor/property-form/types"
 import { validatePropertyFormName } from "@/components/schema-editor/property-form/validation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+
+import { TypeField } from "./type-field"
 
 function getPropertyNamesKey(propertyNames: string[]) {
   return propertyNames.join("\0")
@@ -25,12 +31,16 @@ function getPropertyNamesKey(propertyNames: string[]) {
 export function ObjectPropertiesField({
   schemaNode,
   schemaContext,
+  mode,
+  canEditPropertyType,
   disabled,
   onChange,
   renderPropertyEditor,
 }: {
   schemaNode: ExtendedJSONSchema7
   schemaContext: PropertyFormSchemaContext
+  mode: PropertyFormMode
+  canEditPropertyType: boolean
   disabled: boolean
   onChange: (schemaNode: ExtendedJSONSchema7) => void
   renderPropertyEditor: (props: {
@@ -38,6 +48,7 @@ export function ObjectPropertiesField({
     propertySchema: ExtendedJSONSchema7
     propertySchemaContext: PropertyFormSchemaContext
     onPropertySchemaChange: (schemaNode: ExtendedJSONSchema7) => void
+    showTypeSelector: boolean
   }) => React.ReactNode
 }) {
   const [newPropertyName, setNewPropertyName] = React.useState("")
@@ -120,9 +131,7 @@ export function ObjectPropertiesField({
   }
 
   return (
-    <div className="space-y-3 rounded-md border p-3">
-      <Label className="text-xs text-muted-foreground">Object fields</Label>
-
+    <div className="space-y-2 pl-2">
       {propertyNames.map((propertyName) => {
         const propertyId =
           draftPropertyIdsByName[propertyName] ??
@@ -146,59 +155,93 @@ export function ObjectPropertiesField({
         }
 
         return (
-          <div key={propertyId} className="space-y-2 rounded-md border p-2">
-            <div className="flex items-center gap-2">
-              <Input
-                aria-label={`Field name ${propertyName}`}
-                disabled={disabled}
-                value={propertyName}
-                onChange={(event) => {
-                  const nextName = event.target.value
-                  const nameError = validatePropertyFormName({
-                    name: nextName,
-                    siblingNames: propertyNames,
-                    originalName: propertyName,
-                  })
-                  if (nameError) return
-                  preserveNewPropertyNameForLocalProperties(
-                    propertyNames.map((name) =>
-                      name === propertyName ? nextName : name
-                    )
-                  )
-                  renameDraftPropertyId(propertyName, nextName)
-                  onChange(
-                    renameObjectProperty({
-                      schemaNode,
-                      oldName: propertyName,
-                      newName: nextName,
+          <div key={propertyId} className="ml-4 border-l border-border">
+            <SchemaFieldRow
+              grip={disabled ? "empty" : "static"}
+              name={
+                <SchemaInlineName
+                  value={propertyName}
+                  editable={!disabled}
+                  siblingValues={propertyNames}
+                  canRename={true}
+                  validate={(nextName) =>
+                    validatePropertyFormName({
+                      name: nextName,
+                      siblingNames: propertyNames,
+                      originalName: propertyName,
                     })
-                  )
-                }}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.preventDefault()
-                    event.stopPropagation()
                   }
-                }}
-                className="h-8"
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                disabled={disabled}
-                aria-label={`Remove field ${propertyName}`}
-                onClick={() => {
-                  preserveNewPropertyNameForLocalProperties(
-                    propertyNames.filter((name) => name !== propertyName)
-                  )
-                  removeDraftPropertyId(propertyName)
-                  onChange(removeObjectProperty({ schemaNode, propertyName }))
-                }}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
+                  onCommit={(nextName) => {
+                    preserveNewPropertyNameForLocalProperties(
+                      propertyNames.map((name) =>
+                        name === propertyName ? nextName : name
+                      )
+                    )
+                    renameDraftPropertyId(propertyName, nextName)
+                    onChange(
+                      renameObjectProperty({
+                        schemaNode,
+                        oldName: propertyName,
+                        newName: nextName,
+                      })
+                    )
+                  }}
+                />
+              }
+              description={
+                <SchemaInlineDescription
+                  value={propertySchema.description || ""}
+                  editMode={disabled ? "readOnly" : "editable"}
+                  onCommit={(description) => {
+                    onChange(
+                      replaceObjectProperty({
+                        schemaNode,
+                        propertyName,
+                        propertySchema: {
+                          ...propertySchema,
+                          description: description || undefined,
+                        },
+                      })
+                    )
+                  }}
+                />
+              }
+              actions={
+                <SchemaRowActions
+                  canDelete={true}
+                  editMode={disabled ? "readOnly" : "editable"}
+                  isEditable={!disabled}
+                  hidePencilButton={true}
+                  deleteLabel={`Remove field ${propertyName}`}
+                  onDelete={() => {
+                    preserveNewPropertyNameForLocalProperties(
+                      propertyNames.filter((name) => name !== propertyName)
+                    )
+                    removeDraftPropertyId(propertyName)
+                    onChange(removeObjectProperty({ schemaNode, propertyName }))
+                  }}
+                />
+              }
+              type={
+                <TypeField
+                  schemaNode={propertySchema}
+                  schemaContext={propertySchemaContext}
+                  fieldPath={propertySchemaContext.fieldPath}
+                  mode={disabled || !canEditPropertyType ? "readOnly" : mode}
+                  disabled={disabled || !canEditPropertyType}
+                  variant="compact"
+                  onChange={(nextPropertySchema) =>
+                    onChange(
+                      replaceObjectProperty({
+                        schemaNode,
+                        propertyName,
+                        propertySchema: nextPropertySchema,
+                      })
+                    )
+                  }
+                />
+              }
+            />
             {renderPropertyEditor({
               propertyName,
               propertySchema,
@@ -211,40 +254,22 @@ export function ObjectPropertiesField({
                     propertySchema: nextPropertySchema,
                   })
                 ),
+              showTypeSelector: false,
             })}
           </div>
         )
       })}
 
-      <div className="flex items-center gap-2">
-        <Input
-          aria-label="New object field"
-          placeholder="New field name"
-          disabled={disabled}
-          value={newPropertyName}
-          onChange={(event) => setNewPropertyName(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              event.preventDefault()
-              event.stopPropagation()
-              addProperty()
-            }
-          }}
-          className="h-8"
-        />
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={
-            disabled || !trimmedNewPropertyName || Boolean(newPropertyNameError)
-          }
-          onClick={addProperty}
-        >
-          <PlusIcon className="h-4 w-4" />
-          Add
-        </Button>
-      </div>
+      <SchemaAddRow
+        ariaLabel="New object field"
+        className="ml-4 border-l border-border pl-4"
+        disabled={disabled}
+        error={newPropertyNameError}
+        placeholder="New property name"
+        value={newPropertyName}
+        onAdd={addProperty}
+        onChange={setNewPropertyName}
+      />
     </div>
   )
 }
@@ -261,11 +286,7 @@ function createDraftPropertyIdsByName(propertyNames: string[]) {
   return draftPropertyIdsByName
 }
 
-function setRecordValue<T>(
-  record: Record<string, T>,
-  key: string,
-  value: T
-) {
+function setRecordValue<T>(record: Record<string, T>, key: string, value: T) {
   Object.defineProperty(record, key, {
     value,
     enumerable: true,

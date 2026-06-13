@@ -1,9 +1,7 @@
 "use client"
 
-import * as React from "react"
-
 import type { ViewerSource } from "@/lib/viewer-source"
-import { DocumentThumbnail } from "@/components/document-thumbnail"
+import { GeneratedFileThumbnail } from "@/components/file-thumbnail/generated-preview"
 
 import {
   FileThumbnailFrame,
@@ -66,13 +64,13 @@ export function FileThumbnail({
   }
 
   return (
-    <DocumentThumbnail
+    <GeneratedFileThumbnail
+      {...thumbnailProps}
       source={resolvedSource}
       as={as}
-      anchor={anchor}
+      anchor={anchor ?? "top-left"}
       retryKey={retryKey}
       onError={onError}
-      {...thumbnailProps}
     />
   )
 }
@@ -118,7 +116,6 @@ function fileSource(file: File): ViewerSource {
 
 function fileFromSource(source: ViewerSource | null): ThumbnailFile {
   if (!source) return { name: "file", type: "" }
-  if (isFile(source)) return source
   return {
     name: source.fileName ?? "file",
     type: source.mimeType ?? "",

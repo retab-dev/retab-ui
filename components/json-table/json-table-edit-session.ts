@@ -15,17 +15,24 @@ export type JsonTableActivationIntent =
       type: "programmatic"
     }
 
-export interface JsonTableEditSession {
+export interface JsonTablePrimitiveActiveCell {
+  cellId: JsonTableCellId
+  docId: string
+  fieldPath: string
+}
+
+export interface JsonTableStructuredEditSession {
   id: number
   cellId: JsonTableCellId
   docId: string
   fieldPath: string
   intent: JsonTableActivationIntent
-  initialValue: unknown
-  draftValue: unknown
-  status: "editing" | "committing" | "closing"
   isOverlayOpen: boolean
 }
+
+export type JsonTableActiveCell =
+  | JsonTablePrimitiveActiveCell
+  | JsonTableStructuredEditSession
 
 export function jsonTableCellId(
   docId: string,

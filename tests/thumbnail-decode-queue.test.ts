@@ -3,8 +3,8 @@ import { afterEach, describe, expect, it } from "vitest"
 import {
   getThumbnailDecodeQueueSnapshot,
   withThumbnailDecodeSlot,
-} from "@/components/document-thumbnail/thumbnail-decode-queue"
-import { clearThumbnailCachesForTests } from "@/components/document-thumbnail/thumbnail-test-reset"
+} from "@/components/file-thumbnail/thumbnail-decode-queue"
+import { clearThumbnailCachesForTests } from "@/components/file-thumbnail/thumbnail-test-reset"
 
 function deferred() {
   let resolve!: () => void

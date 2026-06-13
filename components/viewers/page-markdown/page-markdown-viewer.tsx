@@ -13,15 +13,16 @@ import {
 } from "@/components/viewers/page-markdown/page-markdown-document-pane"
 import { PageMarkdownEmptyState } from "@/components/viewers/page-markdown/page-markdown-empty-state"
 import { usePagePaneSync } from "@/components/viewers/page-markdown/page-markdown-hooks"
-import {
-  fitPageScale,
-  joinMarkdownPages,
-  zoomPageScale,
-} from "@/components/viewers/page-markdown/page-markdown-model"
+import { PAGE_MARKDOWN_PAGE_WIDTH } from "@/components/viewers/page-markdown/page-markdown-layout"
+import { joinMarkdownPages } from "@/components/viewers/page-markdown/page-markdown-model"
 import {
   PageMarkdownPane,
   type PageMarkdownPaneHandle,
 } from "@/components/viewers/page-markdown/page-markdown-pane"
+import {
+  usePageMarkdownScale,
+  zoomPageScale,
+} from "@/components/viewers/page-markdown/page-markdown-scale"
 import {
   type PageMarkdownViewerProps,
   type PageMarkdownViewMode,
@@ -39,7 +40,6 @@ export function PageMarkdownViewer({
 }: PageMarkdownViewerProps) {
   const hasPages = pages.length > 0
   const [mode, setMode] = React.useState<PageMarkdownViewMode>("rendered")
-  const [manualScale, setManualScale] = React.useState<number | null>(null)
   const [markdownContainerWidth, setMarkdownContainerWidth] = React.useState<
     number | null
   >(null)
@@ -61,7 +61,6 @@ export function PageMarkdownViewer({
 
   React.useEffect(() => {
     setMode("rendered")
-    setManualScale(null)
     setDocumentPageReport(null)
   }, [resetKey])
 
@@ -100,8 +99,11 @@ export function PageMarkdownViewer({
     [reportMarkdownPage]
   )
 
-  const fitScale = fitPageScale(markdownContainerWidth)
-  const scale = manualScale ?? fitScale
+  const { fitWidth, scale, setViewerScale } = usePageMarkdownScale({
+    containerWidth: markdownContainerWidth,
+    pageWidth: PAGE_MARKDOWN_PAGE_WIDTH,
+    resetKey,
+  })
 
   if (!hasPages) {
     return (
@@ -123,8 +125,8 @@ export function PageMarkdownViewer({
       fileName={fileName}
       resetKey={resetKey}
       onModeChange={setMode}
-      onZoom={(factor) => setManualScale(zoomPageScale(scale, factor))}
-      onFitWidth={() => setManualScale(null)}
+      onZoom={(factor) => setViewerScale(zoomPageScale(scale, factor))}
+      onFitWidth={fitWidth}
       onContainerWidthChange={setMarkdownContainerWidth}
       onVisiblePageChange={handleVisibleMarkdownPageChange}
     />

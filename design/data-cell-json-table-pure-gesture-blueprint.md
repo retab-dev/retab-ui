@@ -16,7 +16,8 @@ click text where the user wants the caret
 ```
 
 No table-layer caret math. No table-layer event-tail repair. No display/edit
-geometry drift.
+geometry drift. A table shell may activate the cell only when the event target
+misses the `DataCell` itself, such as a click on empty cell chrome.
 
 ## Verdict
 
@@ -24,8 +25,8 @@ The current implementation has not reached the platonic ideal.
 
 The reason is precise: primitive interaction is still divided between table
 session code and `DataCell` control code. That split forces repair logic. A
-perfect primitive cell should not need the table to remember pointer
-coordinates, pass activation intent, own text drafts, or reopen overlays.
+perfect primitive cell should not need the table to own pointer coordinates,
+own text drafts, or reopen overlays.
 
 The platonic shape is:
 
@@ -77,6 +78,117 @@ The bloat is not file count. The bloat is ownership ambiguity:
 
 The pure architecture removes that ambiguity.
 
+## Layer Diagram
+
+```mermaid
+flowchart TB
+  subgraph Browser["Browser and User Event Layer"]
+    User["User gesture<br/>pointer, click, key, blur"]
+    NativeText["Native text APIs<br/>caretPositionFromPoint<br/>caretRangeFromPoint"]
+  end
+
+  subgraph TableShell["Table Shell Layer"]
+    Viewport["FixedGridViewport<br/>scroll and virtualization window"]
+    Row["SingleFileFormRow<br/>row identity"]
+    Cell["EditableJsonTableCell<br/>cell chrome, focus, active marker"]
+    ShellFallback["Shell fallback<br/>only when target misses DataCell"]
+  end
+
+  subgraph Adapter["Primitive JSON Adapter Layer"]
+    Kind["dataCellKindForField<br/>schema kind to DataCell kind"]
+    ValueIn["JSON value to primitive value<br/>enum sentinel, date display, number value"]
+    CommitOut["primitive commit to JSON value<br/>normalization and enum identity"]
+    ActiveId["active cell identity<br/>docId plus fieldPath"]
+  end
+
+  subgraph DataCell["DataCell Primitive Ownership Layer"]
+    Display["DataCellDisplay<br/>trompe-l'oeil surface"]
+    Activate["activation owner<br/>pointer, click fallback, keyboard"]
+    Draft["local primitive draft<br/>only while active"]
+    Lifecycle["edit lifecycle<br/>blur, Enter, Escape"]
+    Commit["onCommit<br/>final primitive value"]
+  end
+
+  subgraph Controls["Concrete Control Layer"]
+    TextControl["DataCellTextControl<br/>input, selection, draft"]
+    NumberControl["DataCellNumberControl<br/>native number input"]
+    BooleanControl["DataCellBooleanControl<br/>checkbox semantics"]
+    SelectControl["DataCellSelectControl<br/>combobox, option commit"]
+    PickerControl["DataCellPickerControl<br/>date, time, date-time"]
+  end
+
+  subgraph Geometry["Text Geometry Layer"]
+    SharedMetrics["shared display/input metrics<br/>font, padding, line height"]
+    HitTest["data-cell-text-hit-test<br/>native -> Pretext -> linear"]
+  end
+
+  subgraph Document["Document Mutation Layer"]
+    Controller["useCellController<br/>effective value and commit"]
+    Patch["onDocumentDataChange<br/>field path update"]
+    Data["TableDocument.data"]
+  end
+
+  subgraph Structured["Structured Exception Layer"]
+    StructuredCell["JsonTableStructuredCell<br/>object and array editors"]
+    StructuredSession["table-owned structured session<br/>draft and overlay"]
+  end
+
+  User --> Display
+  User --> Cell
+  Cell --> ShellFallback
+  ShellFallback --> ActiveId
+
+  Viewport --> Row --> Cell --> Kind
+  Kind --> ValueIn --> Display
+  ActiveId --> DataCell
+
+  Display --> Activate
+  Activate --> NativeText
+  Activate --> HitTest
+  NativeText --> HitTest
+  SharedMetrics --> HitTest
+  HitTest --> TextControl
+
+  Activate --> Draft
+  Draft --> TextControl
+  Draft --> NumberControl
+  Activate --> BooleanControl
+  Activate --> SelectControl
+  Activate --> PickerControl
+
+  TextControl --> Lifecycle
+  NumberControl --> Lifecycle
+  BooleanControl --> Commit
+  SelectControl --> Commit
+  PickerControl --> Commit
+  Lifecycle --> Commit
+
+  Commit --> CommitOut --> Controller --> Patch --> Data
+
+  Cell --> StructuredCell
+  StructuredCell --> StructuredSession
+  StructuredSession --> Controller
+
+  classDef table fill:#eef2ff,stroke:#4f46e5,color:#111827
+  classDef adapter fill:#ecfeff,stroke:#0891b2,color:#111827
+  classDef primitive fill:#f0fdf4,stroke:#16a34a,color:#111827
+  classDef geometry fill:#fff7ed,stroke:#ea580c,color:#111827
+  classDef document fill:#fef2f2,stroke:#dc2626,color:#111827
+  classDef structured fill:#f5f3ff,stroke:#7c3aed,color:#111827
+
+  class Viewport,Row,Cell,ShellFallback table
+  class Kind,ValueIn,CommitOut,ActiveId adapter
+  class Display,Activate,Draft,Lifecycle,Commit,TextControl,NumberControl,BooleanControl,SelectControl,PickerControl primitive
+  class SharedMetrics,HitTest,NativeText geometry
+  class Controller,Patch,Data document
+  class StructuredCell,StructuredSession structured
+```
+
+The green layer is the primitive owner. The blue table layer may identify a
+cell and request activation, but it must not own primitive draft, caret,
+overlay, or activation-tail behavior. The purple layer is the explicit
+exception for structured object and array editors.
+
 ## First Principle
 
 A primitive cell is not a table concern.
@@ -103,6 +215,8 @@ the visual display and the edit control that replaces it.
 - There is one primitive overlay owner: the active `DataCell`.
 - There is one text geometry contract shared by display and edit surfaces.
 - `json-table` never passes pointer coordinates to primitive controls.
+- If a pointer/click lands on table chrome instead of the `DataCell`,
+  `json-table` may request `active=true`; it must not calculate text geometry.
 - `json-table` never stores primitive text drafts.
 - `json-table` never stores primitive overlay-open state.
 - `json-table` never special-cases primitive click tails.
@@ -195,23 +309,27 @@ Structured cells may still need richer table-owned state because object and
 array editors are table-specific. That state should not leak into primitive
 cells.
 
-If structured cells need richer state, represent that explicitly:
+Structured cells represent that state explicitly:
 
 ```ts
 type JsonTableActiveCell =
-  | {
-      kind: "primitive"
-      docId: string
-      fieldPath: string
-    }
-  | {
-      kind: "structured"
-      docId: string
-      fieldPath: string
-      draftValue: unknown
-      isOverlayOpen: boolean
-    }
-  | null
+  | JsonTablePrimitiveActiveCell
+  | JsonTableStructuredEditSession
+
+type JsonTablePrimitiveActiveCell = {
+  cellId: JsonTableCellId
+  docId: string
+  fieldPath: string
+}
+
+type JsonTableStructuredEditSession = {
+  id: number
+  cellId: JsonTableCellId
+  docId: string
+  fieldPath: string
+  intent: JsonTableActivationIntent
+  isOverlayOpen: boolean
+}
 ```
 
 Primitive and structured editing should not share a bloated session type.
@@ -231,8 +349,8 @@ type DataCellEditState = {
 This state exists only while the cell is active. Inactive cells are display-only
 and cheap.
 
-`activation` is internal to `DataCell`. It is not a prop from the table. It is a
-short-lived record captured from the actual display surface:
+`activation` is internal to `DataCell` for normal display-surface gestures. It
+is a short-lived record captured from the actual display surface:
 
 ```ts
 type DataCellActivation =
@@ -270,6 +388,19 @@ onActiveChange(true)
 
 The table must not observe, transform, or replay the pointer event for primitive
 editing. The event belongs to the primitive component.
+
+### Click Fallback
+
+`DataCell` also handles `click` as a fallback activation event. This is not a
+second architecture; it is the same gesture owner accepting a less specific
+browser event. A short-lived guard prevents the normal `pointerdown -> click`
+sequence from toggling booleans twice or opening overlays twice.
+
+`json-table` has one allowed fallback: if the target is the table-cell shell and
+not `[data-slot="data-cell"]` or `[data-slot="input-control"]`, it may request
+primitive activation. That covers cell chrome, accessibility test drivers, and
+synthetic click-only environments. It must not calculate text caret geometry
+for DataCell-owned clicks.
 
 For boolean:
 
@@ -384,9 +515,12 @@ type DataCellProps = {
 }
 ```
 
-The API deliberately has no `activationIntent`, no `draftValue`, and no
-`isPickerOpen` for primitive table use. Those concepts are internal primitive
-state.
+The table-facing API deliberately has no `draftValue` and no `isPickerOpen` for
+primitive table use. Those concepts are internal primitive state.
+
+`activationIntent` is an implementation escape hatch for controlled activation
+from table chrome or keyboard focus. It is not a table draft channel, and it
+must not be used for ordinary DataCell display clicks.
 
 Implementation modules:
 
@@ -435,7 +569,7 @@ Allowed responsibilities:
 
 Forbidden responsibilities:
 
-- handling primitive `pointerdown`
+- handling primitive `pointerdown` inside `DataCell`
 - calculating text caret offsets
 - storing primitive draft values
 - storing primitive overlay-open state
@@ -532,13 +666,15 @@ The pure cutover should remove:
 
 - table-owned primitive `draftValue`
 - table-owned primitive `isOverlayOpen`
-- table-owned primitive `activationIntent`
-- primitive fields in `JsonTableEditSession`
-- `flushSync` as the normal pointer activation mechanism
-- table pointer handlers that special-case primitive kinds
+- table-owned primitive `activationIntent` for normal DataCell display clicks
+- primitive fields in a shared table edit session
+- `flushSync` as the normal pointer activation mechanism; it may still be used
+  narrowly to finish a previous mounted primitive editor before a different
+  cell handles the same user gesture
+- table pointer handlers that intercept events inside `DataCell`
 - table repair logic for primitive activation tails
 - duplicated display/edit text geometry
-- primitive-specific branches in `EditableJsonTableCell`
+- primitive draft/parsing branches in `EditableJsonTableCell`
 - primitive draft commit parsing in the virtualized table
 
 The table may keep richer edit state only for structured cells.
@@ -557,8 +693,9 @@ architecture has not changed.
 7. Replace primitive `JsonTableActiveCell` with a thin
    `JsonTablePrimitiveCell`.
 8. Keep structured object/array editor on the table-owned path.
-9. Delete primitive activation intent from `JsonTableEditSession`.
-10. Delete table primitive pointer handlers.
+9. Delete primitive activation intent from the shared table session.
+10. Delete table primitive pointer handlers for events inside `DataCell`; keep
+    only a shell fallback for table chrome.
 11. Delete table primitive draft parsing.
 12. Add browser integration tests for first-click caret on real mounted table
     cells.
@@ -626,11 +763,12 @@ Table:
 Architecture:
 
 - no primitive `activationIntent` prop in `JsonTablePrimitiveCell`
+- no primitive `activationIntent` prop for normal DataCell display clicks
 - no primitive `draftValue` stored in table state
 - no primitive `isOverlayOpen` stored in table state
-- no table `pointerdown` branch for text, number, boolean, select, date, time,
-  or date-time cells
-- no `flushSync` needed for primitive activation
+- no table `pointerdown` branch that steals events from nested DataCells
+- no `flushSync` needed for normal primitive activation
+- synchronous previous-editor finish exists only for cross-cell handoff
 - no table-level primitive activation-tail handler
 - display and edit text share one geometry module
 - primitive DataCell tests pass outside json-table
@@ -651,7 +789,7 @@ question is "no":
 - Does the table know a primitive pointer coordinate?
 - Does the table know a primitive text draft?
 - Does the table know whether a primitive picker is open?
-- Does a primitive text click need `flushSync` to feel native?
+- Does a normal primitive text click need `flushSync` to feel native?
 - Does first-click caret placement depend on table code?
 - Do display and edit text have separate metric definitions?
 - Is there more than one path for primitive commit semantics?

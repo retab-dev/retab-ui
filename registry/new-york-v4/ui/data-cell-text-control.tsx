@@ -62,7 +62,10 @@ function initialInputValueForActivation({
   kind: DataCellKind
   value: DataCellProps["value"]
 }) {
-  if (activationIntent?.type !== "keyboard" || activationIntent.key.length !== 1) {
+  if (
+    activationIntent?.type !== "keyboard" ||
+    activationIntent.key.length !== 1
+  ) {
     return formatDataCellEditValue(kind, value)
   }
   if (kind === "text") return activationIntent.key
@@ -97,6 +100,7 @@ export function DataCellInputControl({
   onEditingEnd,
   onActiveChange: _onActiveChange,
   onPickerOpenChange: _onPickerOpenChange,
+  onEditorHandleChange,
   onFocus,
   onBlur,
   onKeyDown,
@@ -206,6 +210,14 @@ export function DataCellInputControl({
     didFinishEditingRef.current = true
     onEditingEnd?.()
   }, [onEditingEnd])
+
+  React.useLayoutEffect(() => {
+    onEditorHandleChange?.({
+      finish: () => commitCurrentInputValue(inputRef.current),
+      cancel: cancelCurrentInputValue,
+    })
+    return () => onEditorHandleChange?.(null)
+  }, [cancelCurrentInputValue, commitCurrentInputValue, onEditorHandleChange])
 
   React.useEffect(
     () => () => {

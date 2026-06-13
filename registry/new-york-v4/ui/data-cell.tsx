@@ -34,6 +34,7 @@ export type {
   DataCellActivationIntent,
   DataCellCommitValue,
   DataCellDateTimeZone,
+  DataCellEditorHandle,
   DataCellKind,
   DataCellMode,
   DataCellProps,
@@ -59,6 +60,7 @@ export function DataCell({
   onActiveChange,
   onCommit,
   onEditingEnd,
+  onEditorHandleChange,
   onClick,
   onKeyDown,
   onPointerDown,
@@ -103,11 +105,7 @@ export function DataCell({
   const activateFromPointer = React.useCallback(
     (event: React.PointerEvent<HTMLElement>) => {
       onPointerDown?.(event)
-      if (
-        event.defaultPrevented ||
-        !canSelfActivate ||
-        event.button !== 0
-      ) {
+      if (event.defaultPrevented || !canSelfActivate || event.button !== 0) {
         return
       }
 
@@ -133,9 +131,10 @@ export function DataCell({
             clientX: event.clientX,
             clientY: event.clientY,
             textElement,
-            value: props.value === null || props.value === undefined
-              ? ""
-              : String(props.value),
+            value:
+              props.value === null || props.value === undefined
+                ? ""
+                : String(props.value),
           })
         }
       }
@@ -256,6 +255,7 @@ export function DataCell({
         autoFocus={props.autoFocus ?? canSelfActivate}
         onCommit={onCommit as never}
         onEditingEnd={endEditing}
+        onEditorHandleChange={onEditorHandleChange}
         onKeyDown={onKeyDown}
       />
     )
@@ -297,8 +297,12 @@ export function DataCellControl(props: DataCellProps) {
   return <DataCellTextControl {...(props as DataCellTextControlProps)} />
 }
 
-function canActivateDataCellFromKey(kind: DataCellKind, key: string): boolean {
+export function canActivateDataCellFromKey(
+  kind: DataCellKind,
+  key: string
+): boolean {
   if (key === "Enter" || key === "F2") return true
+  if (kind === "boolean") return key === " "
   if (
     kind === "select" ||
     kind === "date" ||

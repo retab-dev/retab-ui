@@ -52,8 +52,13 @@ const XlsxResourceViewer = React.lazy(() =>
   }))
 )
 const ProseTextViewer = React.lazy(() =>
-  import("@/components/ui/text-viewer").then((m) => ({
-    default: m.TextViewer,
+  import("@/components/ui/text-viewer-chenglou").then((m) => ({
+    default: m.ChenglouTextViewer,
+  }))
+)
+const MarkdownDocumentViewer = React.lazy(() =>
+  import("@/components/ui/markdown-document-viewer").then((m) => ({
+    default: m.MarkdownDocumentViewer,
   }))
 )
 const CodeTextViewer = React.lazy(() =>
@@ -164,7 +169,7 @@ function FileViewerRoute({
     }
     if (category === "markdown") {
       return (
-        <ProseTextViewer
+        <MarkdownDocumentViewer
           source={resource.descriptor.source}
           className={className}
           bare={bare}
@@ -315,7 +320,7 @@ function FileViewerRoute({
       )
     case "markdown":
       return (
-        <ProseTextViewer
+        <MarkdownDocumentViewer
           source={resource.descriptor.source}
           className={className}
           bare={bare}

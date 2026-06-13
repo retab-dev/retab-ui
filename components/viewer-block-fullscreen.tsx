@@ -5,6 +5,7 @@ import * as React from "react"
 import { getViewerBlock, type ViewerBlockId } from "@/lib/viewer-blocks"
 import { CsvSourcesBlock } from "@/registry/new-york-v4/blocks/csv-sources-block"
 import { DocxSourcesBlock } from "@/registry/new-york-v4/blocks/docx-sources-block"
+import { DropzoneBlock } from "@/registry/new-york-v4/blocks/dropzone-block"
 import { EditViewerBlock } from "@/registry/new-york-v4/blocks/edit-viewer-block"
 import { ExtractViewerBlock } from "@/registry/new-york-v4/blocks/extract-viewer-block"
 import { ExtractionViewerBlock } from "@/registry/new-york-v4/blocks/extraction-viewer-block"
@@ -32,6 +33,7 @@ const blockComponents = {
   "csv-sources": CsvSourcesBlock,
   "xlsx-sources": XlsxSourcesBlock,
   "docx-sources": DocxSourcesBlock,
+  dropzone: DropzoneBlock,
   "primitive-cards": PrimitiveCardsBlock,
   "legend-variants": LegendVariantsBlock,
   "pdf-thumbnails": PdfThumbnailsBlock,

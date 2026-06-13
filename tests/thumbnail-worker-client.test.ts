@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import { clearThumbnailCachesForTests } from "@/components/document-thumbnail/thumbnail-test-reset"
+import { clearThumbnailCachesForTests } from "@/components/file-thumbnail/thumbnail-test-reset"
 import {
   createThumbnailWorkerClient,
   type ThumbnailWorkerMessage,
-} from "@/components/document-thumbnail/thumbnail-worker-client"
+} from "@/components/file-thumbnail/thumbnail-worker-client"
 
 interface TestRequest extends ThumbnailWorkerMessage {
   payload: string

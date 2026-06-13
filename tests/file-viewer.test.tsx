@@ -302,7 +302,12 @@ describe("FileViewer detection helpers", () => {
     expect(fileViewerSource).toContain("DocxResourceViewer")
     expect(fileViewerSource).toContain("PptxResourceViewer")
     expect(fileViewerSource).toContain("XlsxResourceViewer")
-    expect(fileViewerSource).toContain('import("@/components/ui/text-viewer")')
+    expect(fileViewerSource).toContain(
+      'import("@/components/ui/text-viewer-chenglou")'
+    )
+    expect(fileViewerSource).toContain(
+      'import("@/components/ui/markdown-document-viewer")'
+    )
     expect(fileViewerSource).toContain('import("@/components/ui/code-viewer")')
     expect(fileViewerSource).toContain('mode="markdown"')
     expect(fileViewerSource).toContain('mode="text"')
@@ -610,6 +615,9 @@ describe("FileViewer text rendering", () => {
     expect(await screen.findByRole("heading", { name: "Release" })).toBeTruthy()
     expect(screen.getByText("Body copy")).toBeTruthy()
     expect(container.querySelector('[data-slot="text-viewer"]')).toBeTruthy()
+    expect(
+      container.querySelector('[data-slot="markdown-document-virtual-canvas"]')
+    ).toBeTruthy()
     expect(container.querySelector('[data-slot="code-viewer"]')).toBeNull()
     expect(container.querySelector(".fv-markdown")).toBeNull()
     expect(container.querySelector("iframe")).toBeNull()

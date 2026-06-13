@@ -3,7 +3,7 @@
 import { cleanup, fireEvent, waitFor } from "@testing-library/react"
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
 
-import type { JsonTableEditSession } from "@/components/json-table/json-table-edit-session"
+import type { JsonTableActiveCell } from "@/components/json-table/json-table-edit-session"
 
 import {
   findEditableCell,
@@ -27,7 +27,7 @@ async function editableCell(
   })
 }
 
-function latestSession(sessions: Array<JsonTableEditSession | null>) {
+function latestSession(sessions: Array<JsonTableActiveCell | null>) {
   return sessions[sessions.length - 1]
 }
 
@@ -44,7 +44,7 @@ async function openEnumFromClick({
 }: {
   fieldPath?: string
   onDocumentDataChange?: ReturnType<typeof vi.fn>
-  onEditSessionChange?: (editSession: JsonTableEditSession | null) => void
+  onEditSessionChange?: (activeCell: JsonTableActiveCell | null) => void
 } = {}) {
   const view = renderInteractionRow({
     visiblePaths: [fieldPath],
@@ -105,7 +105,7 @@ describe("json table enum accessibility interactions", () => {
   })
 
   it("closes on Escape without committing and removes the active session", async () => {
-    const sessions: Array<JsonTableEditSession | null> = []
+    const sessions: Array<JsonTableActiveCell | null> = []
     const onDocumentDataChange = vi.fn()
     const view = await openEnumFromClick({
       onDocumentDataChange,
@@ -121,7 +121,7 @@ describe("json table enum accessibility interactions", () => {
   })
 
   it("closes on outside pointer without committing and removes the active session", async () => {
-    const sessions: Array<JsonTableEditSession | null> = []
+    const sessions: Array<JsonTableActiveCell | null> = []
     const onDocumentDataChange = vi.fn()
     const view = await openEnumFromClick({
       onDocumentDataChange,
@@ -156,7 +156,7 @@ describe("json table enum accessibility interactions", () => {
   )
 
   it("commits a selected option exactly once and closes", async () => {
-    const sessions: Array<JsonTableEditSession | null> = []
+    const sessions: Array<JsonTableActiveCell | null> = []
     const onDocumentDataChange = vi.fn()
     const view = await openEnumFromClick({
       onDocumentDataChange,
@@ -179,7 +179,7 @@ describe("json table enum accessibility interactions", () => {
   })
 
   it("closes without committing when reselecting the current option", async () => {
-    const sessions: Array<JsonTableEditSession | null> = []
+    const sessions: Array<JsonTableActiveCell | null> = []
     const onDocumentDataChange = vi.fn()
     const view = await openEnumFromClick({
       onDocumentDataChange,

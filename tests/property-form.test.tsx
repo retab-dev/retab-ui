@@ -91,6 +91,17 @@ async function selectDataType(label: string, triggerIndex = 0) {
   fireEvent.click(await screen.findByText(label))
 }
 
+function openInlineFieldName(name: string) {
+  fireEvent.click(screen.getByText(name))
+  return screen.getByLabelText(`Field name ${name}`)
+}
+
+function renameInlineField(name: string, nextName: string) {
+  const input = openInlineFieldName(name)
+  fireEvent.change(input, { target: { value: nextName } })
+  fireEvent.keyDown(input, { key: "Enter" })
+}
+
 describe("property form models", () => {
   it("parses enum input as JSON when possible and as strings otherwise", () => {
     expect(parseEnumValueInput("paid")).toBe("paid")
@@ -626,7 +637,7 @@ describe("PropertyForm", () => {
       />
     )
 
-    expect(screen.getByLabelText("Field name status")).toBeTruthy()
+    expect(screen.getByText("status")).toBeTruthy()
     expect(screen.queryByPlaceholderText("Add new value")).toBeNull()
     expect(screen.queryByDisplayValue("draft")).toBeNull()
   })
@@ -656,10 +667,9 @@ describe("PropertyForm", () => {
     )
 
     const typeButtons = screen.getAllByRole("button", { name: "Data type" })
-    expect(typeButtons).toHaveLength(2)
-    expect(typeButtons.every((button) => button.hasAttribute("disabled"))).toBe(
-      true
-    )
+    expect(typeButtons).toHaveLength(1)
+    expect(typeButtons[0]).toHaveProperty("disabled", true)
+    expect(screen.getAllByText("string").length).toBeGreaterThan(0)
   })
 
   it("does not select a definition from an already open menu after type editing is disabled", async () => {
@@ -1293,9 +1303,7 @@ describe("PropertyForm", () => {
     fireEvent.change(screen.getByPlaceholderText("Add new value"), {
       target: { value: "paid" },
     })
-    fireEvent.change(screen.getByLabelText("Field name status"), {
-      target: { value: "state" },
-    })
+    renameInlineField("status", "state")
 
     expect(screen.getByPlaceholderText("Add new value")).toHaveProperty(
       "value",
@@ -1330,9 +1338,7 @@ describe("PropertyForm", () => {
       target: { value: "country" },
     })
     fireEvent.click(screen.getByRole("button", { name: "Add" }))
-    fireEvent.change(screen.getByLabelText("Field name zip"), {
-      target: { value: "postal_code" },
-    })
+    renameInlineField("zip", "postal_code")
     fireEvent.click(screen.getByRole("button", { name: "Remove field city" }))
     fireEvent.click(screen.getByRole("button", { name: "Save Changes" }))
 
@@ -1380,9 +1386,7 @@ describe("PropertyForm", () => {
       target: { value: "__proto__" },
     })
     fireEvent.click(screen.getByRole("button", { name: "Add" }))
-    fireEvent.change(screen.getByLabelText("Field name safe"), {
-      target: { value: "constructor" },
-    })
+    renameInlineField("safe", "constructor")
     fireEvent.click(screen.getByRole("button", { name: "Save Changes" }))
 
     await waitFor(() => expect(onCommitPropertyDraft).toHaveBeenCalledTimes(1))
@@ -1426,7 +1430,7 @@ describe("PropertyForm", () => {
     fireEvent.keyDown(newFieldInput, { key: "Enter" })
 
     expect(onCommitPropertyDraft).not.toHaveBeenCalled()
-    expect(screen.getByLabelText("Field name country")).toBeTruthy()
+    expect(screen.getByText("country")).toBeTruthy()
   })
 
   it("does not submit the form when Enter is pressed in an existing object field name", async () => {
@@ -1451,7 +1455,7 @@ describe("PropertyForm", () => {
       />
     )
 
-    fireEvent.keyDown(screen.getByLabelText("Field name city"), {
+    fireEvent.keyDown(openInlineFieldName("city"), {
       key: "Enter",
     })
 
@@ -1483,9 +1487,7 @@ describe("PropertyForm", () => {
     fireEvent.change(screen.getByLabelText("New object field"), {
       target: { value: "country" },
     })
-    fireEvent.change(screen.getByLabelText("Field name zip"), {
-      target: { value: "postal_code" },
-    })
+    renameInlineField("zip", "postal_code")
 
     expect(screen.getByLabelText("New object field")).toHaveProperty(
       "value",
@@ -1524,21 +1526,13 @@ describe("PropertyForm", () => {
       true
     )
 
-    fireEvent.change(screen.getByLabelText("Field name city"), {
-      target: { value: "zip" },
-    })
-    expect(screen.getByLabelText("Field name city")).toHaveProperty(
-      "value",
-      "city"
-    )
+    let nameInput = openInlineFieldName("city")
+    fireEvent.change(nameInput, { target: { value: "zip" } })
+    fireEvent.keyDown(nameInput, { key: "Escape" })
 
-    fireEvent.change(screen.getByLabelText("Field name city"), {
-      target: { value: "1bad" },
-    })
-    expect(screen.getByLabelText("Field name city")).toHaveProperty(
-      "value",
-      "city"
-    )
+    nameInput = openInlineFieldName("city")
+    fireEvent.change(nameInput, { target: { value: "1bad" } })
+    fireEvent.keyDown(nameInput, { key: "Escape" })
 
     fireEvent.click(screen.getByRole("button", { name: "Save Changes" }))
 
@@ -2347,7 +2341,7 @@ describe("PropertyForm", () => {
       "value",
       ""
     )
-    expect(screen.getByLabelText("Field name line1")).toBeTruthy()
+    expect(screen.getByText("line1")).toBeTruthy()
   })
 
   it("resets pending enum option input when switching between enum drafts", () => {

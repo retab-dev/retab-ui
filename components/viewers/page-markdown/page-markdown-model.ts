@@ -1,11 +1,24 @@
-export const PAGE_MARKDOWN_PAGE_WIDTH = 768
-export const PAGE_MARKDOWN_PAGE_PADDING_X = 36
-export const PAGE_MARKDOWN_PAGE_PADDING_Y = 28
-export const PAGE_MARKDOWN_SCALE_MIN = 0.35
-export const PAGE_MARKDOWN_SCALE_MAX = 3
-export const PAGE_MARKDOWN_FIT_SCALE_MAX = 1.5
-export const PAGE_MARKDOWN_FIT_HORIZONTAL_PADDING = 32
 export const PAGE_MARKDOWN_COMPACT_ACTIONS_WIDTH = 460
+
+export {
+  createPageMeasurementKey,
+  estimateMarkdownPageHeight,
+  PAGE_MARKDOWN_PAGE_GAP,
+  PAGE_MARKDOWN_PAGE_PADDING,
+  PAGE_MARKDOWN_PAGE_PADDING_X,
+  PAGE_MARKDOWN_PAGE_PADDING_Y,
+  PAGE_MARKDOWN_PAGE_WIDTH,
+} from "./page-markdown-layout"
+export {
+  clamp,
+  clampPageScale,
+  fitPageScale,
+  PAGE_MARKDOWN_FIT_HORIZONTAL_PADDING,
+  PAGE_MARKDOWN_FIT_SCALE_MAX,
+  PAGE_MARKDOWN_SCALE_MAX,
+  PAGE_MARKDOWN_SCALE_MIN,
+  zoomPageScale,
+} from "./page-markdown-scale"
 
 export type PagePane = "markdown" | "document"
 
@@ -28,64 +41,8 @@ export interface PagePaneTransition {
   confirmed: boolean
 }
 
-export function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value))
-}
-
-export function clampPageScale(scale: number): number {
-  if (!Number.isFinite(scale)) return 1
-  return clamp(scale, PAGE_MARKDOWN_SCALE_MIN, PAGE_MARKDOWN_SCALE_MAX)
-}
-
-export function fitPageScale(containerWidth: number | null): number {
-  if (!containerWidth || !Number.isFinite(containerWidth)) return 1
-  return clamp(
-    (containerWidth - PAGE_MARKDOWN_FIT_HORIZONTAL_PADDING) /
-      PAGE_MARKDOWN_PAGE_WIDTH,
-    PAGE_MARKDOWN_SCALE_MIN,
-    PAGE_MARKDOWN_FIT_SCALE_MAX
-  )
-}
-
-export function zoomPageScale(scale: number, factor: number): number {
-  return clampPageScale(scale * factor)
-}
-
-export function estimateMarkdownPageHeight(
-  markdown: string,
-  scale: number
-): number {
-  const safeScale = clampPageScale(scale)
-  const lineCount = markdown.split("\n").length
-  return Math.min(
-    1800 * safeScale,
-    Math.max(180 * safeScale, lineCount * 26 * safeScale + 80 * safeScale)
-  )
-}
-
 export function joinMarkdownPages(pages: string[]): string {
   return pages.join("\n\n")
-}
-
-export function createPageMeasurementKey({
-  markdown,
-  mode,
-  scale,
-}: {
-  markdown: string
-  mode: string
-  scale: number
-}): string {
-  return `${mode}:${scale.toFixed(3)}:${markdown.length}:${hashMarkdown(markdown)}`
-}
-
-function hashMarkdown(markdown: string): string {
-  let hash = 2166136261
-  for (let index = 0; index < markdown.length; index += 1) {
-    hash ^= markdown.charCodeAt(index)
-    hash = Math.imul(hash, 16777619)
-  }
-  return (hash >>> 0).toString(36)
 }
 
 export function initialPagePaneState(): PagePaneState {

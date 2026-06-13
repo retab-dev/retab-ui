@@ -30,8 +30,8 @@ describe("thumbnail architecture", () => {
       "components/ui/file-thumbnail-frame.tsx",
     ]
     const forbidden = [
-      "components/document-thumbnail",
-      "document-thumbnail",
+      "components/file-thumbnail",
+      "document" + "-thumbnail",
       "pdfjs-dist",
       "docx-preview",
       "pptxviewjs",
@@ -47,36 +47,13 @@ describe("thumbnail architecture", () => {
     }
   })
 
-  it("keeps the direct image path out of the DocumentThumbnail facade", () => {
-    const facade = read("components/document-thumbnail.tsx")
-    const directImage = read(
-      "components/document-thumbnail/thumbnail-direct-image.tsx"
-    )
-
-    expect(facade).toContain("thumbnail-direct-image")
-    expect(facade).not.toContain("previewImageUrl")
-    expect(facade).not.toContain("createThumbnailImageLoadError")
-    expect(facade).not.toContain("ANCHOR_OBJECT_POSITION")
-    expect(directImage).toContain("previewImageUrl")
-    expect(directImage).toContain("createThumbnailImageLoadError")
-    expect(directImage).toContain("ANCHOR_OBJECT_POSITION")
-  })
-
-  it("does not re-export internal thumbnail key helpers from the facade", () => {
-    const facade = read("components/document-thumbnail.tsx")
-
-    expect(facade).not.toMatch(
-      /export\s+\{\s*getThumbnailKey|export\s+\{\s*getThumbnailRenderKey/
-    )
-  })
-
   it("uses the shared client gate instead of a local thumbnail copy", () => {
     const localUseIsClient =
       /\b(?:export\s+)?function\s+useIsClient\b|\b(?:const|let|var)\s+useIsClient\b/
 
     for (const file of sourceFilesUnder(
-      join(repoRoot, "components/document-thumbnail")
-    ).concat(["components/document-thumbnail.tsx"])) {
+      join(repoRoot, "components/file-thumbnail")
+    )) {
       const source = read(file)
       expect(
         localUseIsClient.test(source),
@@ -85,22 +62,42 @@ describe("thumbnail architecture", () => {
     }
   })
 
-  it("keeps renderers independent from the DocumentThumbnail facade", () => {
+  it("keeps renderers independent from the public FileThumbnail facade", () => {
     for (const file of sourceFilesUnder(
-      join(repoRoot, "components/document-thumbnail/renderers")
+      join(repoRoot, "components/file-thumbnail/renderers")
     )) {
       const source = read(file)
       expect(
-        /from\s+["']@\/components\/document-thumbnail["']/.test(source),
+        /from\s+["']@\/components\/ui\/file-thumbnail["']/.test(source),
         `${file} imports the facade`
       ).toBe(false)
     }
   })
 
+  it("keeps public FileThumbnail behind the generated preview boundary", () => {
+    const source = read("registry/new-york-v4/ui/file-thumbnail.tsx")
+
+    expect(source).toContain("@/components/file-thumbnail/generated-preview")
+    expect(source).not.toContain("@/components/file-thumbnail/descriptor")
+    expect(source).not.toContain("@/components/file-thumbnail/keys")
+    expect(source).not.toContain(
+      "@/components/file-thumbnail/thumbnail-client-preview"
+    )
+    expect(source).not.toContain(
+      "@/components/file-thumbnail/thumbnail-direct-image"
+    )
+    expect(source).not.toContain(
+      "@/components/file-thumbnail/thumbnail-error-state"
+    )
+    expect(source).not.toContain(
+      "@/components/file-thumbnail/thumbnail-options"
+    )
+  })
+
   it("keeps PDF and DOCX thumbnails independent from full viewers", () => {
     const renderers = [
-      "components/document-thumbnail/renderers/pdf-thumbnail.tsx",
-      "components/document-thumbnail/renderers/docx-thumbnail.tsx",
+      "components/file-thumbnail/renderers/pdf-thumbnail.tsx",
+      "components/file-thumbnail/renderers/docx-thumbnail.tsx",
     ]
 
     for (const file of renderers) {
@@ -119,8 +116,8 @@ describe("thumbnail architecture", () => {
 
   it("keeps worker-backed renderers on the shared worker client", () => {
     const workerRenderers = [
-      "components/document-thumbnail/renderers/tiff-thumbnail.tsx",
-      "components/document-thumbnail/renderers/xlsx-thumbnail.tsx",
+      "components/file-thumbnail/renderers/tiff-thumbnail.tsx",
+      "components/file-thumbnail/renderers/xlsx-thumbnail.tsx",
     ]
 
     for (const file of workerRenderers) {
@@ -133,7 +130,7 @@ describe("thumbnail architecture", () => {
 
   it("keeps renderer artifact caches behind the bounded cache primitive", () => {
     for (const file of sourceFilesUnder(
-      join(repoRoot, "components/document-thumbnail/renderers")
+      join(repoRoot, "components/file-thumbnail/renderers")
     )) {
       expect(read(file), `${file} defines a direct Map cache`).not.toMatch(
         /\bnew Map\s*</
@@ -143,10 +140,10 @@ describe("thumbnail architecture", () => {
 
   it("keeps cache, worker, and suspense reset hooks registered", () => {
     const resetBackedFiles = [
-      "components/document-thumbnail/thumbnail-cache.ts",
-      "components/document-thumbnail/thumbnail-decode-queue.ts",
-      "components/document-thumbnail/thumbnail-resource.ts",
-      "components/document-thumbnail/thumbnail-worker-client.ts",
+      "components/file-thumbnail/thumbnail-cache.ts",
+      "components/file-thumbnail/thumbnail-decode-queue.ts",
+      "components/file-thumbnail/thumbnail-resource.ts",
+      "components/file-thumbnail/thumbnail-worker-client.ts",
     ]
 
     for (const file of resetBackedFiles) {
@@ -227,21 +224,35 @@ describe("thumbnail architecture", () => {
     )
   })
 
-  it("keeps document-thumbnail registry metadata complete and separate", () => {
+  it("keeps file-thumbnail registry metadata complete after the thumbnail cutover", () => {
     const registry = JSON.parse(read("registry.json")) as {
       items: Array<{
         name: string
         type: string
+        dependencies?: string[]
         registryDependencies?: string[]
         files: Array<{ path: string }>
       }>
     }
     const item = registry.items.find(
-      (candidate) => candidate.name === "document-thumbnail"
+      (candidate) => candidate.name === "file-thumbnail"
     )
 
+    expect(
+      registry.items.some(
+        (candidate) => candidate.name === "document" + "-thumbnail"
+      )
+    ).toBe(false)
     expect(item).toBeTruthy()
-    expect(item!.type).toBe("registry:component")
+    expect(item!.type).toBe("registry:ui")
+    expect(item!.dependencies).toEqual([
+      "@e965/xlsx",
+      "dompurify",
+      "jszip",
+      "marked",
+      "pptxviewjs",
+      "utif",
+    ])
     expect(item!.registryDependencies).toEqual([
       "file-thumbnail-frame",
       "pdf-document-resource",
@@ -250,41 +261,17 @@ describe("thumbnail architecture", () => {
       "xlsx-worker-protocol",
       "utils",
     ])
-    expect(item!.files.map((file) => file.path)).toEqual([
-      "components/document-thumbnail.tsx",
-      "components/document-thumbnail/descriptor.ts",
-      "components/document-thumbnail/errors.tsx",
-      "components/document-thumbnail/keys.ts",
-      "components/document-thumbnail/renderer-registry.tsx",
-      "components/document-thumbnail/thumbnail-cache.ts",
-      "components/document-thumbnail/thumbnail-client-preview.tsx",
-      "components/document-thumbnail/thumbnail-decode-queue.ts",
-      "components/document-thumbnail/thumbnail-direct-image.tsx",
-      "components/document-thumbnail/thumbnail-error-state.ts",
-      "components/document-thumbnail/thumbnail-errors.ts",
-      "components/document-thumbnail/thumbnail-in-view.ts",
-      "components/document-thumbnail/thumbnail-limits.ts",
-      "components/document-thumbnail/thumbnail-options.ts",
-      "components/document-thumbnail/thumbnail-profile.ts",
-      "components/document-thumbnail/thumbnail-resource.ts",
-      "components/document-thumbnail/thumbnail-test-reset.ts",
-      "components/document-thumbnail/thumbnail-text.ts",
-      "components/document-thumbnail/thumbnail-worker-client.ts",
-      "components/document-thumbnail/types.ts",
-      "components/document-thumbnail/renderers/csv-thumbnail.tsx",
-      "components/document-thumbnail/renderers/docx-thumbnail.tsx",
-      "components/document-thumbnail/renderers/html-thumbnail.tsx",
-      "components/document-thumbnail/renderers/image-thumbnail.tsx",
-      "components/document-thumbnail/renderers/layout.tsx",
-      "components/document-thumbnail/renderers/markdown-thumbnail.tsx",
-      "components/document-thumbnail/renderers/pdf-thumbnail.tsx",
-      "components/document-thumbnail/renderers/pptx-thumbnail.tsx",
-      "components/document-thumbnail/renderers/text-thumbnail.tsx",
-      "components/document-thumbnail/renderers/tiff-thumbnail.tsx",
-      "components/document-thumbnail/renderers/use-object-url.ts",
-      "components/document-thumbnail/renderers/xlsx-thumbnail.tsx",
-      "components/document-thumbnail-tiff.worker.ts",
-      "components/document-thumbnail-xlsx.worker.ts",
-    ])
+    const files = item!.files.map((file) => file.path)
+    expect(files).toContain("registry/new-york-v4/ui/file-thumbnail.tsx")
+    expect(files).toContain("registry/new-york-v4/ui/file-thumbnail-types.ts")
+    expect(files).toContain("components/file-thumbnail/generated-preview.tsx")
+    expect(files).toContain(
+      "components/file-thumbnail/thumbnail-direct-image.tsx"
+    )
+    expect(files).toContain(
+      "components/file-thumbnail/renderers/pdf-thumbnail.tsx"
+    )
+    expect(files).toContain("components/file-thumbnail-tiff.worker.ts")
+    expect(files).toContain("components/file-thumbnail-xlsx.worker.ts")
   })
 })

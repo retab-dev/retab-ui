@@ -1,8 +1,15 @@
 import * as React from "react"
+import { flushSync } from "react-dom"
 
-import { DataCellDisplay } from "@/components/ui/data-cell"
+import {
+  canActivateDataCellFromKey,
+  DataCellDisplay,
+} from "@/components/ui/data-cell"
+import type {
+  DataCellActivationIntent,
+  DataCellEditorHandle,
+} from "@/components/ui/data-cell"
 import { TableCell } from "@/components/ui/table"
-import { getDataCellDisplayTextSelectionOffset } from "@/registry/new-york-v4/ui/data-cell-text-hit-test"
 import {
   getCellWidthStyle,
   getSelectableCellWidthStyle,
@@ -11,10 +18,10 @@ import {
 import type { JsonTableCellProps } from "@/components/json-table/json-table-cell-types"
 import {
   dataCellKindForField,
-  JsonTableDataCell,
   JsonTableDisplayCell,
 } from "@/components/json-table/json-table-display-cell"
 import { jsonTableCellId } from "@/components/json-table/json-table-edit-session"
+import { JsonTablePrimitiveCell } from "@/components/json-table/json-table-primitive-cell"
 import {
   markJsonTableProfile,
   recordJsonTableRender,
@@ -26,77 +33,72 @@ import { formatValueForCommit } from "@/components/json-table/lib/value-normaliz
 import { cmp, useRefCallback } from "@/components/json-table/path-utils"
 import { useCellController } from "@/components/json-table/use-cell-controller"
 import { useElevatedVirtualRow } from "@/components/json-table/use-elevated-virtual-row"
-import type { DataCellActivationIntent } from "@/components/ui/data-cell"
 
 function editableCellMemoVariables(props: JsonTableCellProps) {
-  const { document: _document, editSession: _editSession, ...rest } = props
+  const {
+    document: _document,
+    primitiveActiveCell: _primitiveActiveCell,
+    structuredEditSession: _structuredEditSession,
+    ...rest
+  } = props
   const materializedFieldPath = props.projectedCell?.materializedFieldPath
-  const isSessionCell =
+  const isPrimitiveActiveCell =
     Boolean(materializedFieldPath) &&
-    props.editSession?.fieldPath === materializedFieldPath
-  const editSessionId = isSessionCell ? (props.editSession?.id ?? null) : null
-  const editSessionOverlayOpen = isSessionCell
-    ? (props.editSession?.isOverlayOpen ?? false)
+    props.primitiveActiveCell?.fieldPath === materializedFieldPath
+  const isStructuredSessionCell =
+    Boolean(materializedFieldPath) &&
+    props.structuredEditSession?.fieldPath === materializedFieldPath
+  const structuredEditSessionId = isStructuredSessionCell
+    ? (props.structuredEditSession?.id ?? null)
+    : null
+  const structuredEditSessionOverlayOpen = isStructuredSessionCell
+    ? (props.structuredEditSession?.isOverlayOpen ?? false)
     : false
   return {
     ...rest,
-    editSessionId,
-    editSessionOverlayOpen,
+    primitiveActiveCellId: props.primitiveActiveCell?.cellId ?? null,
+    isPrimitiveActiveCell,
+    structuredEditSessionId,
+    structuredEditSessionOverlayOpen,
     materializedFieldPath,
   }
 }
 
-const jsonTableNumberKeyPattern = /^[0-9.+-]$/
-
-function canActivatePrimitiveFromKey(
-  fieldMetadata: FieldMetadata,
-  key: string
-) {
-  if (key === "Enter" || key === "F2") return true
-  if (fieldMetadata.kind === "boolean") return key === " "
-  if (
-    fieldMetadata.kind === "enum" ||
-    fieldMetadata.kind === "date" ||
-    fieldMetadata.kind === "time" ||
-    fieldMetadata.kind === "date-time"
-  ) {
-    return key === " "
-  }
-  if (key.length !== 1) return false
-  if (fieldMetadata.kind === "integer") return /^[+-]$|^\d$/.test(key)
-  if (fieldMetadata.kind === "number") return jsonTableNumberKeyPattern.test(key)
-  return fieldMetadata.kind === "string"
-}
-
-function JsonTableActiveCell({
+function JsonTableStructuredActiveCell({
   docId,
   document,
   fieldMetadata,
   materializedFieldPath,
   schema,
-  session,
+  structuredEditSession,
   value,
-  closeEditSession,
+  closeStructuredEditSession,
   onDocumentDataChange,
-  setEditSessionOverlayOpen,
+  setStructuredEditSessionOverlayOpen,
 }: {
   docId: string
   document: JsonTableCellProps["document"]
   fieldMetadata: FieldMetadata
   materializedFieldPath: string
   schema: JsonTableCellProps["schema"]
-  session: NonNullable<JsonTableCellProps["editSession"]>
+  structuredEditSession: NonNullable<
+    JsonTableCellProps["structuredEditSession"]
+  >
   value: unknown
-  closeEditSession: JsonTableCellProps["closeEditSession"]
+  closeStructuredEditSession: JsonTableCellProps["closeStructuredEditSession"]
   onDocumentDataChange: JsonTableCellProps["onDocumentDataChange"]
-  setEditSessionOverlayOpen: JsonTableCellProps["setEditSessionOverlayOpen"]
+  setStructuredEditSessionOverlayOpen: JsonTableCellProps["setStructuredEditSessionOverlayOpen"]
 }) {
-  recordJsonTableRender("JsonTableActiveCell", materializedFieldPath, {
-    editSessionId: session.id,
-    fieldKind: fieldMetadata.kind,
-    isOverlayOpen: session.isOverlayOpen,
-    valueType: value === null ? "null" : typeof value,
-  })
+  recordJsonTableRender(
+    "JsonTableStructuredActiveCell",
+    materializedFieldPath,
+    {
+      structuredEditSessionId: structuredEditSession.id,
+      fieldKind: fieldMetadata.kind,
+      isOverlayOpen: structuredEditSession.isOverlayOpen,
+      valueType: value === null ? "null" : typeof value,
+    }
+  )
 
   const { effectiveValue, commitValueChange } = useCellController({
     document,
@@ -108,17 +110,21 @@ function JsonTableActiveCell({
   })
 
   const cellRootRef = React.useRef<HTMLDivElement>(null)
-  recordJsonTableRender("JsonTableActiveControl", materializedFieldPath, {
-    editSessionId: session.id,
-    fieldKind: fieldMetadata.kind,
-    isEditable: true,
-    isOverlayOpen: session.isOverlayOpen,
-  })
+  recordJsonTableRender(
+    "JsonTableStructuredActiveControl",
+    materializedFieldPath,
+    {
+      structuredEditSessionId: structuredEditSession.id,
+      fieldKind: fieldMetadata.kind,
+      isEditable: true,
+      isOverlayOpen: structuredEditSession.isOverlayOpen,
+    }
+  )
 
   useElevatedVirtualRow({
     cellRootRef,
     isInputFocused: true,
-    isSelectOpen: session.isOverlayOpen,
+    isSelectOpen: structuredEditSession.isOverlayOpen,
   })
 
   React.useEffect(() => {
@@ -143,9 +149,11 @@ function JsonTableActiveCell({
         schema={schema}
         effectiveValue={effectiveValue}
         isEditable={true}
-        editSession={session}
-        setOverlayOpen={setEditSessionOverlayOpen}
-        closeEditSession={closeEditSession}
+        structuredEditSession={structuredEditSession}
+        setStructuredEditSessionOverlayOpen={
+          setStructuredEditSessionOverlayOpen
+        }
+        closeStructuredEditSession={closeStructuredEditSession}
         commitValue={commitValue}
       />
     </div>
@@ -157,8 +165,10 @@ function EditableJsonTableCellContent(props: JsonTableCellProps) {
   const {
     schema,
     docId,
-    editSession,
-    startEditSession,
+    primitiveActiveCell,
+    setPrimitiveActiveCell,
+    structuredEditSession,
+    startStructuredEditSession,
     onCellHoverStart,
     onCellHoverEnd,
   } = props
@@ -170,19 +180,25 @@ function EditableJsonTableCellContent(props: JsonTableCellProps) {
     (materializedFieldPath
       ? getFieldMetadata(schema, materializedFieldPath)
       : undefined)
-  const dataCellKind = fieldMetadata ? dataCellKindForField(fieldMetadata) : null
+  const dataCellKind = fieldMetadata
+    ? dataCellKindForField(fieldMetadata)
+    : null
   const isPrimitiveCell = Boolean(dataCellKind)
   const isEditable = props.isJsonEditable
   const cellId = materializedFieldPath
     ? jsonTableCellId(docId, materializedFieldPath)
     : null
-  const isEditing = Boolean(
-    isEditable && cellId && editSession?.cellId === cellId
+  const isPrimitiveActive = Boolean(
+    isEditable && cellId && primitiveActiveCell?.cellId === cellId
   )
+  const isStructuredEditing = Boolean(
+    isEditable && cellId && structuredEditSession?.cellId === cellId
+  )
+  const isEditing = isPrimitiveCell ? isPrimitiveActive : isStructuredEditing
   const tableCellRef = React.useRef<HTMLTableCellElement>(null)
   const wasEditingRef = React.useRef(isEditing)
   const didActivateBeforeClickRef = React.useRef(false)
-  const [primitiveActivationIntent, setPrimitiveActivationIntent] =
+  const [primitiveActivationRequest, setPrimitiveActivationRequest] =
     React.useState<DataCellActivationIntent>()
   const { effectiveValue, commitValueChange } = useCellController({
     document: props.document,
@@ -200,34 +216,71 @@ function EditableJsonTableCellContent(props: JsonTableCellProps) {
 
   const setPrimitiveActive = React.useCallback(
     (nextActive: boolean) => {
-      if (!props.projectedCell || !isPrimitiveCell) return
+      if (!cellId || !materializedFieldPath || !isPrimitiveCell) return
       if (nextActive) {
-        startEditSession(props.projectedCell, { type: "programmatic" })
+        setPrimitiveActiveCell({
+          cellId,
+          docId,
+          fieldPath: materializedFieldPath,
+        })
         return
       }
-      if (isEditing) props.closeEditSession()
+      if (isPrimitiveActive) setPrimitiveActiveCell(null)
     },
     [
-      isEditing,
+      cellId,
+      docId,
+      isPrimitiveActive,
       isPrimitiveCell,
-      props.closeEditSession,
-      props.projectedCell,
-      startEditSession,
+      materializedFieldPath,
+      setPrimitiveActiveCell,
     ]
   )
 
+  React.useEffect(() => {
+    if (!isPrimitiveActive) setPrimitiveActivationRequest(undefined)
+  }, [isPrimitiveActive])
+
+  const finishPreviousPrimitiveCell = React.useCallback(() => {
+    if (!primitiveActiveCell || primitiveActiveCell.cellId === cellId) return
+    flushSync(() => {
+      props.primitiveEditorHandleRef.current?.finish()
+      props.primitiveEditorHandleRef.current = null
+      setPrimitiveActiveCell(null)
+    })
+  }, [
+    cellId,
+    primitiveActiveCell,
+    props.primitiveEditorHandleRef,
+    setPrimitiveActiveCell,
+  ])
+
+  const setPrimitiveEditorHandle = React.useCallback(
+    (handle: DataCellEditorHandle | null) => {
+      if (!isPrimitiveActive) return
+      props.primitiveEditorHandleRef.current = handle
+    },
+    [isPrimitiveActive, props.primitiveEditorHandleRef]
+  )
+
   React.useLayoutEffect(() => {
-    if (wasEditingRef.current && !isEditing && !editSession) {
+    if (
+      wasEditingRef.current &&
+      !isEditing &&
+      !primitiveActiveCell &&
+      !structuredEditSession
+    ) {
       tableCellRef.current?.focus({ preventScroll: true })
     }
     wasEditingRef.current = isEditing
-  }, [editSession, isEditing])
+  }, [isEditing, primitiveActiveCell, structuredEditSession])
 
   recordJsonTableRender(
     "EditableJsonTableCell",
     materializedFieldPath ?? props.column.key,
     {
-      editSessionFieldPath: editSession?.fieldPath ?? null,
+      primitiveActiveFieldPath: primitiveActiveCell?.fieldPath ?? null,
+      structuredEditSessionFieldPath: structuredEditSession?.fieldPath ?? null,
       fieldKind: fieldMetadata?.kind ?? null,
       isEditable,
       isEditing,
@@ -260,6 +313,7 @@ function EditableJsonTableCellContent(props: JsonTableCellProps) {
       ) {
         return
       }
+      finishPreviousPrimitiveCell()
       if (isPrimitiveCell) {
         if (isEditing) return
         const target = event.target
@@ -275,37 +329,19 @@ function EditableJsonTableCellContent(props: JsonTableCellProps) {
           didActivateBeforeClickRef.current = true
           return
         }
-        const intent: DataCellActivationIntent = {
+        setPrimitiveActivationRequest({
           type: "pointer",
           clientX: event.clientX,
           clientY: event.clientY,
           detail: event.detail,
-        }
-        if (fieldMetadata.kind === "string") {
-          const textElement =
-            tableCellRef.current?.querySelector<HTMLElement>(
-              '[data-slot="data-cell-value"]'
-            )
-          if (textElement) {
-            intent.selectionOffset = getDataCellDisplayTextSelectionOffset({
-              clientX: event.clientX,
-              clientY: event.clientY,
-              textElement,
-              value:
-                effectiveValue === null || effectiveValue === undefined
-                  ? ""
-                  : String(effectiveValue),
-            })
-          }
-        }
-        setPrimitiveActivationIntent(intent)
+        })
         didActivateBeforeClickRef.current = true
         setPrimitiveActive(true)
         return
       }
-      if (isEditing) return
+      if (isStructuredEditing) return
 
-      startEditSession(props.projectedCell, {
+      startStructuredEditSession(props.projectedCell, {
         type: "pointer",
         clientX: event.clientX,
         clientY: event.clientY,
@@ -317,12 +353,13 @@ function EditableJsonTableCellContent(props: JsonTableCellProps) {
       isPrimitiveCell,
       commitPrimitiveValue,
       effectiveValue,
+      finishPreviousPrimitiveCell,
       isEditable,
       isEditing,
       materializedFieldPath,
       props.projectedCell,
       setPrimitiveActive,
-      startEditSession,
+      startStructuredEditSession,
     ]
   )
   const handleClick = React.useCallback(
@@ -342,6 +379,7 @@ function EditableJsonTableCellContent(props: JsonTableCellProps) {
       ) {
         return
       }
+      finishPreviousPrimitiveCell()
       const target = event.target
       if (
         target instanceof Element &&
@@ -354,13 +392,19 @@ function EditableJsonTableCellContent(props: JsonTableCellProps) {
         commitPrimitiveValue(!Boolean(effectiveValue))
         return
       }
-      setPrimitiveActivationIntent({ type: "programmatic" })
+      setPrimitiveActivationRequest({
+        type: "pointer",
+        clientX: event.clientX,
+        clientY: event.clientY,
+        detail: event.detail,
+      })
       setPrimitiveActive(true)
     },
     [
       commitPrimitiveValue,
       effectiveValue,
       fieldMetadata,
+      finishPreviousPrimitiveCell,
       isEditable,
       isEditing,
       isPrimitiveCell,
@@ -379,6 +423,7 @@ function EditableJsonTableCellContent(props: JsonTableCellProps) {
       ) {
         return
       }
+      finishPreviousPrimitiveCell()
       if (isPrimitiveCell) {
         if (isEditing) return
         const isAltGraph =
@@ -394,7 +439,8 @@ function EditableJsonTableCellContent(props: JsonTableCellProps) {
           (event.ctrlKey && !isAltGraph) ||
           (event.altKey && !isAltGraph) ||
           event.nativeEvent.isComposing ||
-          !canActivatePrimitiveFromKey(fieldMetadata, event.key)
+          !dataCellKind ||
+          !canActivateDataCellFromKey(dataCellKind, event.key)
         ) {
           return
         }
@@ -405,14 +451,14 @@ function EditableJsonTableCellContent(props: JsonTableCellProps) {
           didActivateBeforeClickRef.current = true
           return
         }
-        setPrimitiveActivationIntent({
+        setPrimitiveActivationRequest({
           type: "keyboard",
           key: event.key,
         })
         setPrimitiveActive(true)
         return
       }
-      if (isEditing) return
+      if (isStructuredEditing) return
       const isAltGraph =
         event.getModifierState("AltGraph") ||
         event.nativeEvent.getModifierState?.("AltGraph") ||
@@ -434,7 +480,7 @@ function EditableJsonTableCellContent(props: JsonTableCellProps) {
       }
 
       event.preventDefault()
-      startEditSession(props.projectedCell, {
+      startStructuredEditSession(props.projectedCell, {
         type: "keyboard",
         key: event.key,
       })
@@ -446,10 +492,12 @@ function EditableJsonTableCellContent(props: JsonTableCellProps) {
       commitPrimitiveValue,
       effectiveValue,
       fieldMetadata,
+      finishPreviousPrimitiveCell,
       materializedFieldPath,
+      dataCellKind,
       props.projectedCell,
       setPrimitiveActive,
-      startEditSession,
+      startStructuredEditSession,
     ]
   )
   const handlePointerLeave = React.useCallback(() => {
@@ -488,30 +536,31 @@ function EditableJsonTableCellContent(props: JsonTableCellProps) {
       style={getSelectableCellWidthStyle(cellWidth)}
     >
       {isPrimitiveCell ? (
-        <JsonTableDataCell
+        <JsonTablePrimitiveCell
           fieldMetadata={fieldMetadata}
-          value={effectiveValue}
-          mode={isEditing ? "edit" : "display"}
-          active={isEditing}
+          effectiveValue={effectiveValue}
+          isActive={isPrimitiveActive}
           isEditable={isEditable}
-          activationIntent={primitiveActivationIntent}
-          autoFocus={isEditing}
+          activationRequest={primitiveActivationRequest}
           onActiveChange={setPrimitiveActive}
+          onEditorHandleChange={setPrimitiveEditorHandle}
           onCommit={commitPrimitiveValue}
-          onEditingEnd={props.closeEditSession}
+          onEditingEnd={() => setPrimitiveActive(false)}
         />
-      ) : isEditing && editSession ? (
-        <JsonTableActiveCell
+      ) : isStructuredEditing && structuredEditSession ? (
+        <JsonTableStructuredActiveCell
           docId={docId}
           document={props.document}
           fieldMetadata={fieldMetadata}
           materializedFieldPath={materializedFieldPath}
           schema={schema}
-          session={editSession}
+          structuredEditSession={structuredEditSession}
           value={value}
-          closeEditSession={props.closeEditSession}
+          closeStructuredEditSession={props.closeStructuredEditSession}
           onDocumentDataChange={props.onDocumentDataChange}
-          setEditSessionOverlayOpen={props.setEditSessionOverlayOpen}
+          setStructuredEditSessionOverlayOpen={
+            props.setStructuredEditSessionOverlayOpen
+          }
         />
       ) : (
         <JsonTableDisplayCell fieldMetadata={fieldMetadata} value={value} />

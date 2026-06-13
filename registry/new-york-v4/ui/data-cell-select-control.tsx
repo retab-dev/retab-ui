@@ -51,6 +51,7 @@ export function DataCellSelectControl({
   onEditingEnd,
   onActiveChange: _onActiveChange,
   onPickerOpenChange,
+  onEditorHandleChange,
   onFocus: _onFocus,
   onBlur: _onBlur,
   onKeyDown: _onKeyDown,
@@ -60,6 +61,9 @@ export function DataCellSelectControl({
 }: DataCellSelectControlProps) {
   const triggerRef = React.useRef<HTMLButtonElement>(null)
   const closeTimerRef = React.useRef<ReturnType<
+    typeof globalThis.setTimeout
+  > | null>(null)
+  const clearSkipAutoFocusCloseTimerRef = React.useRef<ReturnType<
     typeof globalThis.setTimeout
   > | null>(null)
   const skipAutoFocusCloseRef = React.useRef(
@@ -78,6 +82,12 @@ export function DataCellSelectControl({
     if (closeTimerRef.current === null) return
     globalThis.clearTimeout(closeTimerRef.current)
     closeTimerRef.current = null
+  }, [])
+
+  const cancelScheduledSkipAutoFocusCloseClear = React.useCallback(() => {
+    if (clearSkipAutoFocusCloseTimerRef.current === null) return
+    globalThis.clearTimeout(clearSkipAutoFocusCloseTimerRef.current)
+    clearSkipAutoFocusCloseTimerRef.current = null
   }, [])
 
   const setOpen = React.useCallback(
@@ -107,19 +117,48 @@ export function DataCellSelectControl({
     [cancelScheduledClose, onCommit, onEditingEnd]
   )
 
+  const closeSelectEditor = React.useCallback(() => {
+    cancelScheduledClose()
+    setOpen(false)
+    onEditingEnd?.()
+  }, [cancelScheduledClose, onEditingEnd, setOpen])
+
+  React.useLayoutEffect(() => {
+    onEditorHandleChange?.({
+      finish: closeSelectEditor,
+      cancel: closeSelectEditor,
+    })
+    return () => onEditorHandleChange?.(null)
+  }, [closeSelectEditor, onEditorHandleChange])
+
   React.useLayoutEffect(() => {
     if (!autoFocus) return
     lastCommittedValueRef.current = null
+    cancelScheduledSkipAutoFocusCloseClear()
     skipAutoFocusCloseRef.current = activationIntent?.type === "pointer"
     triggerRef.current?.focus({ preventScroll: true })
     setOpen(true)
-  }, [activationIntent, autoFocus, setOpen])
+    clearSkipAutoFocusCloseTimerRef.current = globalThis.setTimeout(() => {
+      skipAutoFocusCloseRef.current = false
+      clearSkipAutoFocusCloseTimerRef.current = null
+    }, 0)
+  }, [
+    activationIntent,
+    autoFocus,
+    cancelScheduledSkipAutoFocusCloseClear,
+    setOpen,
+  ])
 
   React.useEffect(() => {
     if (open) cancelScheduledClose()
   }, [cancelScheduledClose, open])
 
   React.useEffect(() => cancelScheduledClose, [cancelScheduledClose])
+
+  React.useEffect(
+    () => cancelScheduledSkipAutoFocusCloseClear,
+    [cancelScheduledSkipAutoFocusCloseClear]
+  )
 
   return (
     <Select
@@ -155,10 +194,7 @@ export function DataCellSelectControl({
       >
         <span
           data-slot="select-value"
-          className={cn(
-            "flex-1 truncate",
-            isEmpty && "text-muted-foreground"
-          )}
+          className={cn("flex-1 truncate", isEmpty && "text-muted-foreground")}
         >
           {isEmpty ? placeholder : displayValue}
         </span>

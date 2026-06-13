@@ -6,12 +6,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import type { JsonTableEditSession } from "@/components/json-table/json-table-edit-session"
+import type { JsonTableStructuredEditSession } from "@/components/json-table/json-table-edit-session"
+import type { FieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
 import {
   ArrayEditor as JsonArrayEditor,
   ObjectEditor as JsonObjectEditor,
 } from "@/components/json-table/object-editor"
-import type { FieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
 
 type SchemaWithDefs = JSONSchema7 & {
   $defs?: Record<string, JSONSchema7Definition>
@@ -77,45 +77,47 @@ function schemaWithContext(
 
 export function JsonTableStructuredCell({
   effectiveValue,
-  editSession,
+  structuredEditSession,
   fieldMetadata,
   fieldPath,
   isEditable,
   schema,
-  closeEditSession,
+  closeStructuredEditSession,
   commitValue,
-  setOverlayOpen,
+  setStructuredEditSessionOverlayOpen,
 }: {
   effectiveValue: unknown
-  editSession: JsonTableEditSession
+  structuredEditSession: JsonTableStructuredEditSession
   fieldMetadata: FieldMetadata
   fieldPath: string
   isEditable: boolean
   schema: JSONSchema7
-  closeEditSession: () => void
+  closeStructuredEditSession: () => void
   commitValue: (value: unknown) => void
-  setOverlayOpen: (open: boolean) => void
+  setStructuredEditSessionOverlayOpen: (open: boolean) => void
 }) {
   const fieldSchema = fieldMetadata.rawSchema
   const isArray = fieldMetadata.kind === "array"
 
   React.useLayoutEffect(() => {
-    setOverlayOpen(true)
-  }, [editSession.id, setOverlayOpen])
+    setStructuredEditSessionOverlayOpen(true)
+  }, [structuredEditSession.id, setStructuredEditSessionOverlayOpen])
 
   return (
     <Popover
-      open={editSession.isOverlayOpen}
+      open={structuredEditSession.isOverlayOpen}
       onOpenChange={(open) => {
-        setOverlayOpen(open)
-        if (!open) closeEditSession()
+        setStructuredEditSessionOverlayOpen(open)
+        if (!open) closeStructuredEditSession()
       }}
     >
       <PopoverTrigger asChild>
         <button className="h-full w-full justify-start overflow-hidden px-1 text-xs leading-none text-inherit select-none hover:bg-accent/50 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none">
           {effectiveValue ? (
             <div className="max-w-[80px] truncate text-left">
-              {isArray ? arraySummary(effectiveValue) : objectSummary(effectiveValue)}
+              {isArray
+                ? arraySummary(effectiveValue)
+                : objectSummary(effectiveValue)}
             </div>
           ) : (
             <div className="max-w-[80px] truncate text-left text-muted-foreground">
@@ -133,7 +135,7 @@ export function JsonTableStructuredCell({
         sideOffset={0}
         alignOffset={-1}
       >
-        {editSession.isOverlayOpen &&
+        {structuredEditSession.isOverlayOpen &&
           (isArray ? (
             <JsonArrayEditor
               name={fieldPath}
@@ -142,7 +144,7 @@ export function JsonTableStructuredCell({
               currentValue={effectiveValue}
               onSubmit={(values) => {
                 commitValue(values)
-                closeEditSession()
+                closeStructuredEditSession()
               }}
             />
           ) : (
@@ -155,7 +157,7 @@ export function JsonTableStructuredCell({
               currentValue={effectiveValue}
               onSubmit={(values) => {
                 commitValue(values)
-                closeEditSession()
+                closeStructuredEditSession()
               }}
             />
           ))}

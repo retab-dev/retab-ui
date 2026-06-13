@@ -8,7 +8,8 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
 import type { VisibleColumn } from "@/components/json-table/json-table-cell-types"
 import type {
   JsonTableActivationIntent,
-  JsonTableEditSession,
+  JsonTablePrimitiveActiveCell,
+  JsonTableStructuredEditSession,
 } from "@/components/json-table/json-table-edit-session"
 import { jsonTableCellId } from "@/components/json-table/json-table-edit-session"
 import type { ProjectedCell } from "@/components/json-table/lib/document-projection"
@@ -76,26 +77,38 @@ function SingleFileFormRowHarness({
   ...props
 }: Omit<
   React.ComponentProps<typeof SingleFileFormRow>,
-  | "editSession"
-  | "startEditSession"
-  | "updateEditSessionDraft"
-  | "setEditSessionOverlayOpen"
-  | "closeEditSession"
+  | "primitiveActiveCell"
+  | "setPrimitiveActiveCell"
+  | "structuredEditSession"
+  | "startStructuredEditSession"
+  | "setStructuredEditSessionOverlayOpen"
+  | "closeStructuredEditSession"
   | "onDocumentDataChange"
 > & {
   onDocumentDataChange?: React.ComponentProps<
     typeof SingleFileFormRow
   >["onDocumentDataChange"]
 }) {
-  const [editSession, setEditSession] =
-    React.useState<JsonTableEditSession | null>(null)
+  const [primitiveActiveCell, setPrimitiveActiveCell] =
+    React.useState<JsonTablePrimitiveActiveCell | null>(null)
+  const [structuredEditSession, setStructuredEditSession] =
+    React.useState<JsonTableStructuredEditSession | null>(null)
   const sessionIdRef = React.useRef(0)
 
-  const startEditSession = React.useCallback(
+  const setNextPrimitiveActiveCell = React.useCallback(
+    (activeCell: JsonTablePrimitiveActiveCell | null) => {
+      setPrimitiveActiveCell(activeCell)
+      if (activeCell) setStructuredEditSession(null)
+    },
+    []
+  )
+
+  const startStructuredEditSession = React.useCallback(
     (projectedCell: ProjectedCell, intent: JsonTableActivationIntent) => {
       const nextSessionId = sessionIdRef.current + 1
       sessionIdRef.current = nextSessionId
-      setEditSession({
+      setPrimitiveActiveCell(null)
+      setStructuredEditSession({
         id: nextSessionId,
         cellId: jsonTableCellId(
           props.document.id,
@@ -104,40 +117,31 @@ function SingleFileFormRowHarness({
         docId: props.document.id,
         fieldPath: projectedCell.materializedFieldPath,
         intent,
-        initialValue: projectedCell.value,
-        draftValue: projectedCell.value,
-        status: "editing",
         isOverlayOpen: false,
       })
     },
     [props.document.id]
   )
-  const updateEditSessionDraft = React.useCallback((value: unknown) => {
-    setEditSession((currentSession) =>
-      currentSession && !Object.is(currentSession.draftValue, value)
-        ? { ...currentSession, draftValue: value }
-        : currentSession
-    )
-  }, [])
-  const setEditSessionOverlayOpen = React.useCallback((open: boolean) => {
-    setEditSession((currentSession) =>
+  const setStructuredEditSessionOverlayOpen = React.useCallback((open: boolean) => {
+    setStructuredEditSession((currentSession) =>
       currentSession && currentSession.isOverlayOpen !== open
         ? { ...currentSession, isOverlayOpen: open }
         : currentSession
     )
   }, [])
-  const closeEditSession = React.useCallback(() => {
-    setEditSession(null)
+  const closeStructuredEditSession = React.useCallback(() => {
+    setStructuredEditSession(null)
   }, [])
 
   return (
     <SingleFileFormRow
       {...props}
-      editSession={editSession}
-      startEditSession={startEditSession}
-      updateEditSessionDraft={updateEditSessionDraft}
-      setEditSessionOverlayOpen={setEditSessionOverlayOpen}
-      closeEditSession={closeEditSession}
+      primitiveActiveCell={primitiveActiveCell}
+      setPrimitiveActiveCell={setNextPrimitiveActiveCell}
+      structuredEditSession={structuredEditSession}
+      startStructuredEditSession={startStructuredEditSession}
+      setStructuredEditSessionOverlayOpen={setStructuredEditSessionOverlayOpen}
+      closeStructuredEditSession={closeStructuredEditSession}
       onDocumentDataChange={onDocumentDataChange ?? vi.fn()}
     />
   )

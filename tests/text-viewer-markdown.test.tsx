@@ -70,10 +70,63 @@ describe("TextViewer Markdown mode", () => {
     const itemLink = screen.getByRole("link", { name: "Item" })
     expect(itemLink.closest("th")).toBeTruthy()
     expect(itemLink.getAttribute("title")).toBe("Items title")
-    expect(screen.getByRole("columnheader", { name: "Amount" })).toBeTruthy()
-    expect(screen.getByText("Row 1")).toBeTruthy()
+    const amountHeader = screen.getByRole("columnheader", { name: "Amount" })
+    expect(amountHeader).toBeTruthy()
+    const rowOne = screen.getByText("Row 1").closest("tr")
+    expect(rowOne).toBeTruthy()
+    expect(rowOne?.querySelectorAll("td")[1]?.headers).toBe(amountHeader.id)
     expect(container.querySelector("pre")).toBeNull()
     expect(container.querySelectorAll("tbody tr").length).toBeLessThan(80)
+
+    fireEvent.click(screen.getByLabelText("Copy table"))
+    await waitFor(() => {
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+        expect.stringContaining("Row 240\t240")
+      )
+    })
+  })
+
+  it("expands Markdown table rows for wrapped cell content", async () => {
+    const longCell = Array.from({ length: 24 }, () => "wrapped-cell").join(" ")
+    const { container } = render(
+      <TextViewer
+        className="h-80 w-[360px]"
+        source={markdownSource(
+          ["| A | B |", "| --- | --- |", `| ${longCell} | short |`].join("\n")
+        )}
+        toolbar={false}
+      />
+    )
+
+    expect(await screen.findByRole("table")).toBeTruthy()
+    const row = container.querySelector("tbody tr[data-source-line='3']")
+    expect(row).toBeTruthy()
+    expect(
+      Number.parseFloat((row as HTMLElement).style.height)
+    ).toBeGreaterThan(34)
+  })
+
+  it("renders YAML frontmatter as inert code and keeps body source lines", async () => {
+    const { container } = render(
+      <TextViewer
+        source={markdownSource(
+          ["---", "title: Demo", "tags: [viewer]", "---", "", "# Body"].join(
+            "\n"
+          )
+        )}
+        toolbar={false}
+      />
+    )
+
+    expect(await screen.findByText("yaml")).toBeTruthy()
+    expect(screen.getByText(/title: Demo/)).toBeTruthy()
+    const heading = await screen.findByRole("heading", { name: "Body" })
+    expect(
+      heading
+        .closest('[data-slot="text-line"]')
+        ?.getAttribute("data-source-line")
+    ).toBe("6")
+    expect(container.querySelector("script")).toBeNull()
   })
 
   it("renders standalone safe images and keeps unsafe image URLs inert", async () => {
@@ -115,6 +168,10 @@ describe("TextViewer Markdown mode", () => {
             "Inline <button onclick=\"alert('xss')\">button</button> text.",
             "",
             "<script>alert('xss')</script>",
+            '<form><input name="token" /></form>',
+            '<iframe src="https://example.com"></iframe>',
+            "<style>body{display:none}</style>",
+            "<svg><script>alert('xss')</script></svg>",
           ].join("\n")
         )}
         toolbar={false}
@@ -124,6 +181,14 @@ describe("TextViewer Markdown mode", () => {
     expect(await screen.findByText(/Inline/)).toBeTruthy()
     expect(container.querySelector("span button")).toBeNull()
     expect(container.querySelector("script")).toBeNull()
+    expect(container.querySelector("form")).toBeNull()
+    expect(container.querySelector("iframe")).toBeNull()
+    expect(container.querySelector("style")).toBeNull()
+    expect(
+      Array.from(container.querySelectorAll("svg")).every((svg) =>
+        svg.classList.contains("lucide")
+      )
+    ).toBe(true)
     expect(container.querySelector("[onclick]")).toBeNull()
   })
 
@@ -132,12 +197,17 @@ describe("TextViewer Markdown mode", () => {
       <TextViewer
         source={markdownSource(
           [
-            "[Retab](https://retab.com)",
-            '[Titled](https://example.com "Example title")',
-            "[Docs](/docs)",
-            "[Mail](mailto:team@example.com)",
-            "[Unsafe](javascript:alert('xss'))",
-          ].join(" ")
+            "# Docs",
+            "",
+            [
+              "[Retab](https://retab.com)",
+              '[Titled](https://example.com "Example title")',
+              "[Docs](/docs)",
+              "[Mail](mailto:team@example.com)",
+              "[Section](#docs)",
+              "[Unsafe](javascript:alert('xss'))",
+            ].join(" "),
+          ].join("\n")
         )}
         toolbar={false}
       />
@@ -146,22 +216,58 @@ describe("TextViewer Markdown mode", () => {
     await waitFor(() => {
       expect(screen.getByRole("link", { name: "Retab" })).toBeTruthy()
     })
+    expect(screen.getByRole("heading", { name: "Docs" }).id).toBe("docs")
     const safeLinks = Array.from(container.querySelectorAll("a"))
     expect(safeLinks.map((link) => link.textContent)).toEqual([
       "Retab",
       "Titled",
       "Docs",
       "Mail",
+      "Section",
     ])
     expect(
       screen.getByRole("link", { name: "Titled" }).getAttribute("title")
     ).toBe("Example title")
-    for (const link of safeLinks) {
+    for (const link of safeLinks.filter(
+      (link) => link.textContent !== "Section"
+    )) {
       expect(link.getAttribute("target")).toBe("_blank")
       expect(link.getAttribute("rel")).toBe("noopener noreferrer")
     }
+    const sectionLink = screen.getByRole("link", { name: "Section" })
+    expect(sectionLink.getAttribute("target")).toBeNull()
+    expect(sectionLink.getAttribute("rel")).toBeNull()
     expect(screen.getByText("Unsafe")).toBeTruthy()
     expect(safeLinks.some((link) => link.textContent === "Unsafe")).toBe(false)
+  })
+
+  it("scrolls local fragment links to virtualized Markdown headings", async () => {
+    const filler = Array.from(
+      { length: 80 },
+      (_, index) => `Paragraph ${index}`
+    )
+    const { container } = render(
+      <TextViewer
+        className="h-40 w-[360px]"
+        source={markdownSource(
+          [
+            "[Jump](#target-section)",
+            "",
+            ...filler,
+            "",
+            "## Target Section",
+          ].join("\n")
+        )}
+        toolbar={false}
+      />
+    )
+
+    const viewport = container.querySelector<HTMLElement>(
+      '[data-slot="scroll-area-viewport"]'
+    )
+    expect(viewport).toBeTruthy()
+    fireEvent.click(await screen.findByRole("link", { name: "Jump" }))
+    expect(viewport!.scrollTop).toBeGreaterThan(0)
   })
 
   it("shows fenced code language and copies the code block", async () => {

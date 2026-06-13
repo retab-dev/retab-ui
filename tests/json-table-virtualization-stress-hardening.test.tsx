@@ -407,7 +407,7 @@ describe("json table virtualization stress hardening", () => {
     }
   )
 
-  it("does not patch the visible row when a dirty text editor is scrolled out and another row starts editing", async () => {
+  it("commits a dirty text editor when it scrolls out and does not patch the next visible row", async () => {
     const restoreAnimationFrame = installSynchronousAnimationFrame()
     const onPatch = vi.fn()
     const view = renderStressTable({ applyPatches: false, onPatch })
@@ -426,10 +426,6 @@ describe("json table virtualization stress hardening", () => {
       expect(queryCell(view.container, "lines.0.name")).toBeNull()
       expect(view.queryByRole("textbox")).toBeNull()
       expect(activeCells(view.container)).toHaveLength(0)
-      expect(onPatch).not.toHaveBeenCalled()
-
-      pointerDownCell(view.container, "lines.20.amount")
-
       await waitFor(() => expect(onPatch).toHaveBeenCalledTimes(1))
       expectOnlyLineChanged({
         patch: onPatch.mock.calls[0][0],
@@ -437,6 +433,10 @@ describe("json table virtualization stress hardening", () => {
         field: "name",
         value: "dirty zero",
       })
+
+      pointerDownCell(view.container, "lines.20.amount")
+
+      expect(onPatch).toHaveBeenCalledTimes(1)
       expect(view.getByRole("spinbutton")).toHaveProperty("value", "21")
     } finally {
       restoreAnimationFrame()

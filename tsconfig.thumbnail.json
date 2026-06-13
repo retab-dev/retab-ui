@@ -8,11 +8,10 @@
     "next-env.d.ts",
     "registry/new-york-v4/ui/file-thumbnail.tsx",
     "components/ui/file-thumbnail.tsx",
-    "components/document-thumbnail.tsx",
-    "components/document-thumbnail/**/*.ts",
-    "components/document-thumbnail/**/*.tsx",
-    "components/document-thumbnail-tiff.worker.ts",
-    "components/document-thumbnail-xlsx.worker.ts",
+    "components/file-thumbnail/**/*.ts",
+    "components/file-thumbnail/**/*.tsx",
+    "components/file-thumbnail-tiff.worker.ts",
+    "components/file-thumbnail-xlsx.worker.ts",
     "tests/file-thumbnail.test.tsx"
   ],
   "exclude": ["node_modules"]

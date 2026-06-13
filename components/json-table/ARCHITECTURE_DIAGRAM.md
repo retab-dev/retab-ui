@@ -1,6 +1,6 @@
 # JSON Table and DataCell Architecture
 
-## Implemented Editing Architecture
+## Implemented Layers
 
 ```mermaid
 flowchart TD
@@ -12,26 +12,29 @@ flowchart TD
   end
 
   subgraph Grid["Grid layer"]
-    TableView["SingleFileTableView"]
     VirtualTable["SingleFileVirtualizedTable"]
-    EditSession["JsonTableEditSession<br/>one edited cell"]
+    PrimitiveActive["JsonTablePrimitiveActiveCell<br/>identity only"]
+    StructuredSession["JsonTableStructuredEditSession<br/>object/array popover"]
     Row["SingleFileFormRow"]
-    Cell["EditableJsonTableCell<br/>display/active switch"]
+    Cell["EditableJsonTableCell"]
   end
 
-  subgraph Active["Active control layer"]
-    ActiveCell["JsonTableActiveCell"]
-    DataCellControl["JsonTableDataCell"]
+  subgraph Primitive["Primitive DataCell path"]
+    PrimitiveAdapter["JsonTablePrimitiveCell"]
+    JsonDataCell["JsonTableDataCell"]
+    EditorHandle["DataCellEditorHandle"]
+    DataCell["DataCell"]
+    Display["DataCellDisplay"]
+    Text["DataCellTextControl"]
+    Number["DataCellNumberControl"]
+    Boolean["DataCellBooleanControl"]
+    Select["DataCellSelectControl"]
+    Picker["DataCellPickerControl"]
+  end
+
+  subgraph Structured["Structured path"]
+    ActiveStructured["JsonTableStructuredActiveCell"]
     StructuredCell["JsonTableStructuredCell"]
-  end
-
-  subgraph DataCell["DataCell primitive layer"]
-    Display["JsonTableDisplayCell<br/>inert display"]
-    DataDisplay["DataCellDisplay"]
-    TextControl["DataCellTextControl"]
-    NumberControl["DataCellNumberControl"]
-    BooleanControl["DataCellBooleanControl"]
-    PickerControl["DataCellPickerControl"]
   end
 
   subgraph Commit["Commit pipeline"]
@@ -41,100 +44,86 @@ flowchart TD
   end
 
   User --> Cell
-  TableView --> ProjectRows --> ProjectedCell
-  TableView --> VirtualTable
-  VirtualTable --> EditSession
+  ProjectRows --> ProjectedCell --> Row
+  VirtualTable --> ProjectRows
+  VirtualTable --> PrimitiveActive
+  VirtualTable --> StructuredSession
   VirtualTable --> Row --> Cell
-  ProjectedCell --> Row
 
-  Cell -->|not editing| Display
-  Cell -->|startEditSession with ActivationIntent| EditSession
-  EditSession -->|matching cellId| Cell
-  Cell -->|editing| ActiveCell
+  Cell -->|primitive display/edit| PrimitiveAdapter --> JsonDataCell --> DataCell
+  DataCell -. "finish / cancel handle" .-> EditorHandle
+  EditorHandle -. "cross-cell handoff" .-> VirtualTable
+  DataCell -->|inactive| Display
+  DataCell -->|text| Text
+  DataCell -->|number/integer| Number
+  DataCell -->|boolean| Boolean
+  DataCell -->|enum select| Select
+  DataCell -->|date/time| Picker
 
-  ActiveCell --> DataCellControl
-  ActiveCell --> StructuredCell
+  Cell -->|object/array editing| ActiveStructured --> StructuredCell
 
-  Display --> DataDisplay
-  DataCellControl --> TextControl
-  DataCellControl --> NumberControl
-  DataCellControl --> BooleanControl
-  DataCellControl --> PickerControl
-  StructuredCell --> Commit
-
-  TextControl --> Normalize
-  NumberControl --> Normalize
-  BooleanControl --> Normalize
-  PickerControl --> Normalize
+  Text --> Normalize
+  Number --> Normalize
+  Boolean --> Normalize
+  Select --> Normalize
+  Picker --> Normalize
+  StructuredCell --> Normalize
   Normalize --> Controller --> Patch
 ```
 
-## Session Interaction Flow
+## Primitive Handoff
+
+```mermaid
+sequenceDiagram
+  participant U as User
+  participant Next as Next EditableJsonTableCell
+  participant Table as SingleFileVirtualizedTable
+  participant Old as Previous DataCell
+  participant New as Next DataCell
+  participant Commit as Commit pipeline
+
+  U->>Next: pointerdown / keydown
+  Next->>Old: DataCellEditorHandle.finish()
+  Old->>Commit: commit through DataCell's own rules
+  Next->>Table: set primitive active identity
+  Table->>New: active=true
+  New->>New: focus, place caret, own draft/overlay
+```
+
+## Structured Session
 
 ```mermaid
 sequenceDiagram
   participant U as User
   participant Cell as EditableJsonTableCell
   participant Table as SingleFileVirtualizedTable
-  participant Session as JsonTableEditSession
-  participant Active as JsonTableActiveCell
-  participant Control as Native control
+  participant Session as JsonTableStructuredEditSession
+  participant Structured as JsonTableStructuredCell
   participant Commit as Commit pipeline
 
-  U->>Cell: pointerdown / keydown
-  Cell->>Table: startEditSession(projectedCell, intent)
-  Table->>Session: create one session
-  Session->>Cell: matching cellId renders active control
-  Cell->>Active: pass session + ActivationIntent
-
-  alt text or number
-    Active->>Control: focus, place caret, seed typed key if needed
-  else boolean
-    Active->>Commit: toggle once from activation intent
-    Active->>Table: closeEditSession()
-  else enum
-    Active->>Control: open select
-  else object or array
-    Active->>Control: open popover for this session
-  end
-
-  Control->>Active: draft / change / blur
-  Active->>Commit: normalize value
-  Commit->>Table: document patch
-  Active->>Table: closeEditSession()
+  U->>Cell: pointerdown / Enter / F2
+  Cell->>Table: startStructuredEditSession(projectedCell, intent)
+  Table->>Session: create session with id + field identity + overlay state
+  Session->>Structured: render object/array editor
+  Structured->>Commit: commit normalized JSON value
+  Structured->>Table: closeStructuredEditSession()
 ```
-
-## DataCell Boundary
-
-```mermaid
-flowchart LR
-  Table["JSON table"]
-  Display["JsonTableDisplayCell<br/>display only"]
-  Active["JsonTableActiveCell"]
-  DataCell["DataCell primitive controls"]
-  Native["Input / checkbox / picker trigger"]
-
-  Table -->|inactive| Display
-  Table -->|editing session| Active
-  Display --> DataCell
-  Active --> DataCell --> Native
-```
-
-The JSON table uses inert display cells until a table-owned edit session exists.
-The active control renders exactly one primitive control from the DataCell layer.
 
 ## Ownership Rule
 
 ```mermaid
 flowchart LR
   Projection["Projection<br/>what cells exist"]
-  Grid["Grid<br/>which session exists"]
-  Intent["ActivationIntent<br/>why editing started"]
-  Active["Active control<br/>what intent means"]
+  Grid["Grid<br/>which cell is active"]
+  Primitive["DataCell<br/>primitive draft + overlay"]
+  Structured["JsonTableStructuredCell<br/>object/array popover"]
   Commit["Commit<br/>persist normalized value"]
 
-  Projection --> Grid --> Intent --> Active --> Commit
+  Projection --> Grid
+  Grid --> Primitive --> Commit
+  Grid --> Structured --> Commit
 ```
 
-The table owns session identity. Active controls own native interaction
-semantics.
+The table owns identity and document commits. DataCell owns primitive editing
+mechanics. Structured cells keep the richer table-owned popover state because
+they are not primitive controls.

@@ -1,0 +1,71 @@
+---
+title: File Uploader
+description: A polished Retab document upload area built from Dropzone and File Thumbnail.
+component: true
+---
+
+File Uploader is the styled upload composition. It uses the headless
+[Dropzone](/docs/components/dropzone) primitive for behavior and
+[File Thumbnail](/docs/components/file-thumbnail) for selected-file previews.
+
+Use this when you want the default Retab upload area. Use Dropzone directly
+when the product needs a toolbar button, table attachment cell, modal queue, or
+another custom surface.
+
+## Installation
+
+```bash
+npx shadcn@latest add @retab/file-uploader
+```
+
+## Example
+
+<FileUploaderDemo />
+
+```tsx
+import { FileUploader } from "@/components/ui/file-uploader"
+
+export function UploadTarget() {
+  return (
+    <FileUploader
+      accept="application/pdf,image/*,.docx,.xlsx,.csv"
+      description="PDF, DOCX, XLSX, CSV, PNG, or JPG"
+      multiple={false}
+      onFilesAccepted={(files) => {
+        console.log(files[0])
+      }}
+    />
+  )
+}
+```
+
+## Behavior
+
+- Renders the Retab upload area with icon cluster, title, description, and
+  browse pill.
+- Stores selected files through `useDropzone`.
+- Renders accepted files inside the upload area as a compact thumbnail grid.
+- Uses `FileThumbnail` for selected files.
+- Lets users remove selected files from the grid.
+- Shows the first rejection message inline.
+- Accepts `renderFileList` and `renderFileItem` for custom presentation.
+
+## API Reference
+
+`FileUploader` accepts every `useDropzone` option plus:
+
+| Prop                | Type                                       | Default                               | Required |
+| ------------------- | ------------------------------------------ | ------------------------------------- | -------- |
+| `acceptedFileTypes` | `{ label: string; icon: LucideIcon }[]`    | image, PDF, sheet                     | No       |
+| `browseLabel`       | `React.ReactNode`                          | `"Browse files"`                      | No       |
+| `className`         | `string`                                   | `-`                                   | No       |
+| `description`       | `React.ReactNode`                          | `"PDF, DOCX, XLSX, CSV, PNG, or JPG"` | No       |
+| `draggingLabel`     | `React.ReactNode`                          | `"Drop to add"`                       | No       |
+| `renderFileItem`    | `(item: DropzoneFileItem) => ReactNode`    | `-`                                   | No       |
+| `renderFileList`    | `(items: DropzoneFileItem[]) => ReactNode` | `-`                                   | No       |
+| `showFileList`      | `boolean`                                  | `true`                                | No       |
+| `title`             | `React.ReactNode`                          | `"Click to upload or drop files"`     | No       |
+
+## Source
+
+<ComponentSource src="registry/new-york-v4/ui/file-uploader.tsx" />

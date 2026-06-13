@@ -13,11 +13,18 @@ Implemented:
 - Paragraphs, headings, emphasis, strike, inline code, lists, task markers,
   blockquotes, rules, fenced/indented code blocks, standalone images, and
   tables.
+- YAML frontmatter rendered as inert `yaml` code, preserving body source-line
+  mapping.
 - Safe `http:`, `https:`, relative, fragment, and `mailto:` links.
+- Heading IDs with local fragment links that scroll through the custom
+  virtualizer.
 - Safe standalone image URLs for `http:`, `https:`, `blob:`, and relative
   paths.
 - Standalone image loading/error state with inert alt-text fallback.
 - Fenced code language labels and per-block copy.
+- Table-level copy to TSV, including rows that are not currently mounted by
+  table row virtualization.
+- Table column header IDs and visible body-cell `headers` associations.
 - Inert fallback for unsafe links, unsafe images, and raw HTML.
 - Semantic table DOM with visible body-row materialization.
 - File Viewer routing separation: Markdown/Text use Text Viewer; logs, JSON,
@@ -29,7 +36,8 @@ Implemented:
 
 - `.mdx` routes to Code Viewer rather than Markdown mode; MDX preview rendering
   is intentionally unsupported.
-- Frontmatter is not explicitly parsed, hidden, or rendered.
+- YAML frontmatter is displayed as inert code; it is not parsed into document
+  metadata.
 - Math, footnotes, definition lists, admonitions, directives, and Mermaid-style
   blocks are not supported.
 - The actual contract is "whatever `marked` GFM emits plus our projection
@@ -52,15 +60,14 @@ Implemented:
 
 - Table cells are flattened to mostly plain text; nested inline structure is not
   preserved per fragment.
-- Long cell text uses a fixed row height and can clip instead of expanding or
-  wrapping with measured height.
+- Long cell text expands row height through the table row virtualization model.
 - There is row virtualization, but no column virtualization for very wide
   tables.
 - No caption support.
-- No table-level copy behavior.
 - Horizontal scrolling has not been browser-tested on narrow/mobile viewports.
-- Table accessibility has basic table DOM, but no explicit tests for screen
-  reader navigation, header association, or keyboard horizontal scrolling.
+- Table accessibility has semantic table DOM and tested column header
+  association, but no screen-reader navigation or keyboard horizontal scrolling
+  tests.
 
 ### 4. Images
 
@@ -78,8 +85,8 @@ Implemented:
 - Raw HTML is inert, but there is no sanitized HTML subset.
 - Unsupported block HTML height is based on code/text fallback, not a deliberate
   HTML fallback design.
-- Tests cover scripts, inline event handlers, and unsafe image-like HTML, but
-  not forms, iframes, embeds, style tags, SVG HTML, or mixed raw/Markdown edge
+- Tests cover scripts, inline event handlers, forms, iframes, style tags, SVG
+  HTML, and unsafe image-like HTML, but not embeds or mixed raw/Markdown edge
   cases.
 
 ### 6. Code Fences
@@ -104,10 +111,7 @@ Implemented:
 
 ### 8. Links And Navigation
 
-- Links always open in a new tab; there is no host interception hook.
-- Link titles are sanitized in the model but not surfaced consistently for
-  inline links.
-- Heading slugs and in-document fragment navigation are not implemented.
+- External links open in a new tab; there is no host interception hook.
 - Reference-style links may work through `marked`, but we have no explicit
   projection tests for them.
 - Autolinks and email autolinks are not explicitly tested.
@@ -118,7 +122,7 @@ Implemented:
 - Copy behavior is undefined: rendered text, original Markdown, or mixed.
 - Browser find cannot find unmounted content reliably.
 - No application-level find index exists.
-- Table copy, link copy, and image alt-copy behavior are undefined.
+- Link copy and image alt-copy behavior are undefined.
 
 ### 10. Large Document Performance
 

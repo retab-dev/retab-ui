@@ -5,10 +5,10 @@ import { cleanup, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import type { ViewerResource } from "@/lib/viewer-resource"
-import { FirstThumbnailUnit } from "@/components/document-thumbnail/renderer-registry"
-import { CodeThumbnail } from "@/components/document-thumbnail/renderers/code-thumbnail"
-import { TextThumbnail } from "@/components/document-thumbnail/renderers/text-thumbnail"
-import { clearThumbnailCachesForTests } from "@/components/document-thumbnail/thumbnail-test-reset"
+import { FirstThumbnailUnit } from "@/components/file-thumbnail/renderer-registry"
+import { CodeThumbnail } from "@/components/file-thumbnail/renderers/code-thumbnail"
+import { TextThumbnail } from "@/components/file-thumbnail/renderers/text-thumbnail"
+import { clearThumbnailCachesForTests } from "@/components/file-thumbnail/thumbnail-test-reset"
 
 class ErrorBoundary extends React.Component<
   { children: React.ReactNode },

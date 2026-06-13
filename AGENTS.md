@@ -1,5 +1,8 @@
 # Repository Guidelines
 
+## Response Instructions
+- When asked to write a blueprint, create or update a Markdown file instead of writing the blueprint in chat.
+
 ## Design Principles
 - Aim for the platonic ideal of every component: the version that feels complete, inevitable, and exact.
 - Platonic ideal means perfection. The implementation should be simple, fast, complete, and free of anything unnecessary.

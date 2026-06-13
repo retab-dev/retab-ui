@@ -5,17 +5,18 @@ import {
   DataCell,
   formatDataCellDisplayValue,
   type DataCellCommitValue,
+  type DataCellEditorHandle,
   type DataCellKind,
   type DataCellSelectOption,
-  type DataCellValueMeta,
   type DataCellValue,
+  type DataCellValueMeta,
 } from "@/components/ui/data-cell"
 import {
   jsonTableDataCellClass,
   jsonTableSelectDataCellClass,
 } from "@/components/json-table/json-table-data-cell"
-import { parseDateStringAsLocal } from "@/components/json-table/lib/date-parsing"
 import { dateStringToFormat } from "@/components/json-table/lib/date-display-formatting"
+import { parseDateStringAsLocal } from "@/components/json-table/lib/date-parsing"
 import type { FieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
 
 export function formatJsonTableNestedValue(value: unknown): string {
@@ -95,10 +96,7 @@ function enumDataCellValue(value: unknown, enumValues: unknown[]): string {
   return matchingIndex === -1 ? String(value) : enumOptionValue(matchingIndex)
 }
 
-function enumCommitValue(
-  value: string,
-  fieldMetadata: FieldMetadata
-): unknown {
+function enumCommitValue(value: string, fieldMetadata: FieldMetadata): unknown {
   if (
     value === JSON_TABLE_NULL_SELECT_VALUE &&
     fieldMetadata.kind === "enum" &&
@@ -262,6 +260,7 @@ export function JsonTableDataCell({
   onEditingEnd,
   onKeyDown,
   onActiveChange,
+  onEditorHandleChange,
   onPickerOpenChange,
   value,
 }: {
@@ -275,6 +274,7 @@ export function JsonTableDataCell({
   onEditingEnd?: () => void
   onKeyDown?: React.KeyboardEventHandler<HTMLElement>
   onActiveChange?: (active: boolean) => void
+  onEditorHandleChange?: (handle: DataCellEditorHandle | null) => void
   onPickerOpenChange?: (open: boolean) => void
   value: unknown
 }) {
@@ -328,6 +328,7 @@ export function JsonTableDataCell({
         onCommit={handleSelectCommit}
         onEditingEnd={onEditingEnd}
         onActiveChange={onActiveChange}
+        onEditorHandleChange={onEditorHandleChange}
         onPickerOpenChange={onPickerOpenChange}
         onKeyDown={onKeyDown}
         placeholder="Select..."
@@ -354,6 +355,7 @@ export function JsonTableDataCell({
         onCommit={handleNumberCommit}
         onEditingEnd={onEditingEnd}
         onActiveChange={onActiveChange}
+        onEditorHandleChange={onEditorHandleChange}
         onKeyDown={onKeyDown}
         className={jsonTableDataCellClass}
       />
@@ -373,6 +375,7 @@ export function JsonTableDataCell({
         onCommit={handleBooleanCommit}
         onEditingEnd={onEditingEnd}
         onActiveChange={onActiveChange}
+        onEditorHandleChange={onEditorHandleChange}
         onKeyDown={onKeyDown}
         className={jsonTableDataCellClass}
       />
@@ -392,6 +395,7 @@ export function JsonTableDataCell({
         onCommit={handleTextCommit}
         onEditingEnd={onEditingEnd}
         onActiveChange={onActiveChange}
+        onEditorHandleChange={onEditorHandleChange}
         onPickerOpenChange={onPickerOpenChange}
         onKeyDown={onKeyDown}
         showPickerIcon={false}
@@ -417,6 +421,7 @@ export function JsonTableDataCell({
       onCommit={handleTextCommit}
       onEditingEnd={onEditingEnd}
       onActiveChange={onActiveChange}
+      onEditorHandleChange={onEditorHandleChange}
       onKeyDown={onKeyDown}
       className={jsonTableDataCellClass}
     />

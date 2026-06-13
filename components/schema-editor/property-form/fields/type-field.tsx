@@ -1,20 +1,5 @@
 "use client"
 
-import * as React from "react"
-import { ChevronDown, PlusIcon } from "lucide-react"
-
-import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuPortal,
-  DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import {
   definitionNameFromRef,
   definitionRef,
@@ -26,19 +11,8 @@ import {
 } from "@/components/schema-editor/draft/draft-node-edits"
 import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
 import { getEffectiveNode } from "@/components/schema-editor/lib/json-schema-utils"
+import { SchemaTypeMenu } from "@/components/schema-editor/primitives/schema-type-menu"
 import type { PropertyFormSchemaContext } from "@/components/schema-editor/property-form/types"
-import {
-  getTemplateIcon,
-  getTypeIcon,
-} from "@/components/schema-editor/type-icons"
-
-const LazyObjectTemplateSubmenu = React.lazy(() =>
-  import("@/components/schema-editor/optional/object-templates/object-template-menu").then(
-    (module) => ({
-      default: module.ObjectTemplateSubmenu,
-    })
-  )
-)
 
 const primitiveTypes = [
   ["string", "string"],
@@ -53,24 +27,13 @@ const primitiveTypes = [
   ["object", "object"],
 ] as const
 
-function typeLabel(type: string, node: ExtendedJSONSchema7) {
-  if (type === "$ref") {
-    const ref = node.$ref
-    return ref ? definitionNameFromRef(ref) : "$ref"
-  }
-  if (type === "datetime") return "timestamp"
-  if (type === "boolean") return "true/false"
-  if (type === "enum") return "multiple choice"
-  if (type === "array") return "list"
-  return type
-}
-
 export function TypeField({
   schemaNode,
   schemaContext,
   fieldPath,
   mode,
   disabled,
+  variant = "outline",
   onChange,
 }: {
   schemaNode: ExtendedJSONSchema7
@@ -78,11 +41,11 @@ export function TypeField({
   fieldPath?: string
   mode: "descriptionOnly" | "readOnly" | "editable"
   disabled: boolean
+  variant?: "outline" | "compact"
   onChange: (schemaNode: ExtendedJSONSchema7) => void
 }) {
   const effectiveType = getEffectiveType(schemaNode)
   const effectiveSchemaNode = getEffectiveNode(schemaNode)
-  const definitionNames = Object.keys(schemaContext.schemaDefinitions)
   const isDisabled = disabled || mode === "readOnly"
 
   const setType = (type: (typeof primitiveTypes)[number][0]) => {
@@ -140,81 +103,31 @@ export function TypeField({
     )
   }
 
+  const refName =
+    effectiveType.type === "$ref" && effectiveSchemaNode.$ref
+      ? definitionNameFromRef(effectiveSchemaNode.$ref)
+      : undefined
+
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          aria-label={`Data type${fieldPath ? ` for ${fieldPath}` : ""}`}
-          disabled={isDisabled}
-          variant="outline"
-          className={`mt-2 w-full justify-between pr-1 pl-2 ${isDisabled ? "disabled:opacity-100" : ""}`}
-        >
-          <div className="flex items-center gap-2">
-            {effectiveType.type === "$ref" && effectiveSchemaNode.$ref
-              ? getTemplateIcon(definitionNameFromRef(effectiveSchemaNode.$ref))
-              : getTypeIcon(effectiveType.type)}
-            <span>{typeLabel(effectiveType.type, effectiveSchemaNode)}</span>
-          </div>
-          <ChevronDown className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-full">
-        {primitiveTypes.map(([type, label]) => (
-          <DropdownMenuItem
-            key={type}
-            disabled={isDisabled}
-            onClick={() => setType(type)}
-          >
-            <div className="flex items-center gap-2">
-              {getTypeIcon(type)}
-              <span>{label}</span>
-            </div>
-          </DropdownMenuItem>
-        ))}
-
-        <DropdownMenuSub>
-          <DropdownMenuSubTrigger disabled={isDisabled}>
-            <div className="flex items-center gap-2">
-              {getTypeIcon("$ref")}
-              <span>definition</span>
-            </div>
-          </DropdownMenuSubTrigger>
-          <DropdownMenuPortal>
-            <DropdownMenuSubContent>
-              {definitionNames.map((definitionName) => (
-                <DropdownMenuItem
-                  key={definitionName}
-                  disabled={isDisabled}
-                  onClick={() => setDefinition(definitionName)}
-                >
-                  <div className="flex items-center gap-2">
-                    {getTemplateIcon(definitionName)}
-                    <span>{definitionName}</span>
-                  </div>
-                </DropdownMenuItem>
-              ))}
-              {definitionNames.length > 0 ? <DropdownMenuSeparator /> : null}
-              <DropdownMenuItem
-                disabled={isDisabled}
-                onClick={() => {
-                  void schemaContext.onCommand?.({ type: "createDefinition" })
-                }}
-              >
-                <div className="flex items-center gap-2">
-                  <PlusIcon className="h-4 w-4" />
-                  <span>Create new definition</span>
-                </div>
-              </DropdownMenuItem>
-            </DropdownMenuSubContent>
-          </DropdownMenuPortal>
-        </DropdownMenuSub>
-
-        {schemaContext.objectTemplatesEnabled && !isDisabled && (
-          <React.Suspense fallback={null}>
-            <LazyObjectTemplateSubmenu onSelectTemplate={setObjectTemplate} />
-          </React.Suspense>
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <SchemaTypeMenu
+      ariaLabel={`Data type${fieldPath ? ` for ${fieldPath}` : ""}`}
+      defs={schemaContext.schemaDefinitions}
+      definitionsEnabled={true}
+      definitionCreateLabel="Create new definition"
+      isEditable={!isDisabled}
+      localType={effectiveType.type}
+      objectTemplatesEnabled={Boolean(schemaContext.objectTemplatesEnabled)}
+      refName={refName}
+      variant={variant === "compact" ? "row" : "form"}
+      onCreateDefinition={() => {
+        if (isDisabled) return
+        void schemaContext.onCommand?.({ type: "createDefinition" })
+      }}
+      onSelectDefinition={setDefinition}
+      onSelectObjectTemplate={setObjectTemplate}
+      onSelectType={(type) =>
+        setType(type as (typeof primitiveTypes)[number][0])
+      }
+    />
   )
 }

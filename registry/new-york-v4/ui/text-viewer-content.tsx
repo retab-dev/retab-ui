@@ -17,6 +17,7 @@ import {
   materializeCodeVisibleLines,
   materializeInlineVisibleLines,
   resolveTextViewerMode,
+  serializeMarkdownTableForClipboard,
   textFrameIntersectsLineRange,
   type CodeTextBlockFrame,
   type ImageTextBlockFrame,
@@ -234,6 +235,32 @@ export function TextViewerContent({
     scrollLineRange(highlightRange)
   }, [highlightRange, scrollLineRange])
 
+  const scrollMarkdownFragment = React.useCallback(
+    (event: React.MouseEvent) => {
+      const href = localFragmentHrefFromEventTarget(event.target)
+      if (!href) return
+
+      const targetId = decodeMarkdownFragmentHref(href)
+      const targetIndex = markdownHeadingBlockIndex(
+        preparedDocument.blocks,
+        targetId
+      )
+      const targetFrame = frame.frames[targetIndex]
+      const scrollElement = viewportRef.current
+      if (!targetFrame || !scrollElement) return
+
+      event.preventDefault()
+      scrollElement.scrollTo({
+        behavior: "smooth",
+        top: Math.max(0, targetFrame.top),
+      })
+      if (window.location.hash !== href) {
+        window.history.replaceState(null, "", href)
+      }
+    },
+    [frame.frames, preparedDocument.blocks]
+  )
+
   return (
     <TextViewerFrame className={className} bare={bare}>
       {toolbar ? (
@@ -250,6 +277,7 @@ export function TextViewerContent({
         className="min-h-0 flex-1 bg-background"
         orientation="vertical"
         viewportClassName="bg-background"
+        viewportProps={{ onClickCapture: scrollMarkdownFragment }}
         viewportRef={viewportRef}
       >
         <TextVirtualCanvas
@@ -586,6 +614,8 @@ function InlineTextBlock({
       data-quote-depth={frame.quoteDepth || undefined}
       role={role}
       aria-level={ariaLevel}
+      id={block.headingId ?? undefined}
+      data-heading-id={block.headingId ?? undefined}
       style={{
         height: frame.height,
         transform: `translateY(${frame.top}px)`,
@@ -614,14 +644,15 @@ function InlineTextBlock({
                   }
                 : { font: fragment.font, letterSpacing: 0 }
             if (fragment.href) {
+              const isFragment = isLocalFragmentHref(fragment.href)
               return (
                 <a
                   key={fragmentIndex}
                   className={fragment.className}
                   href={fragment.href}
-                  rel="noopener noreferrer"
+                  rel={isFragment ? undefined : "noopener noreferrer"}
                   style={style}
-                  target="_blank"
+                  target={isFragment ? undefined : "_blank"}
                   title={fragment.title ?? undefined}
                 >
                   {fragment.text}
@@ -935,6 +966,7 @@ function TableTextBlock({
     viewportTop,
   })
   const visibleRows = block.rows.slice(rowWindow.startIndex, rowWindow.endIndex)
+  const headerIdPrefix = `markdown-table-${frame.sourceStartLine}-${frame.sourceEndLine}`
 
   return (
     <div
@@ -955,70 +987,89 @@ function TableTextBlock({
     >
       <BlockChrome frame={frame} />
       <div
-        className="absolute max-w-[calc(100%-32px)] overflow-x-auto rounded-md border"
+        className="absolute max-w-[calc(100%-32px)] overflow-hidden rounded-md border"
         style={{
           height: frame.height,
           left: 16 + frame.contentLeft,
           width: frame.tableWidth,
         }}
       >
-        <table
-          className="border-collapse text-left text-[13px]"
-          style={{ width: frame.tableWidth }}
-        >
-          <colgroup>
-            {frame.columnWidths.map((width, index) => (
-              <col key={index} style={{ width }} />
-            ))}
-          </colgroup>
-          <thead className="bg-muted">
-            <tr style={{ height: frame.headerHeight }}>
-              {block.header.map((cell, index) => (
-                <th
-                  key={index}
-                  className="border-b px-3.5 py-2 font-semibold text-foreground"
-                  scope="col"
-                  style={{ textAlign: block.alignments[index] ?? "left" }}
-                >
-                  <TableCellContent cell={cell} />
-                </th>
+        <div className="absolute top-1 right-1 z-10">
+          <CopyTextButton
+            label="Copy table"
+            text={serializeMarkdownTableForClipboard(block)}
+          />
+        </div>
+        <div className="h-full overflow-x-auto">
+          <table
+            className="border-collapse text-left text-[13px]"
+            style={{ width: frame.tableWidth }}
+          >
+            <colgroup>
+              {frame.columnWidths.map((width, index) => (
+                <col key={index} style={{ width }} />
               ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rowWindow.beforeHeight > 0 ? (
-              <tr aria-hidden="true" style={{ height: rowWindow.beforeHeight }}>
-                <td colSpan={block.header.length || 1} />
-              </tr>
-            ) : null}
-            {visibleRows.map((row, rowIndex) => (
-              <tr
-                key={rowWindow.startIndex + rowIndex}
-                data-source-line={
-                  frame.rowSourceStartLines[rowWindow.startIndex + rowIndex]
-                }
-                style={{ height: frame.rowHeight }}
-              >
-                {block.header.map((_, cellIndex) => (
-                  <td
-                    key={cellIndex}
-                    className="border-t px-3.5 py-1.5 align-top text-foreground"
-                    style={{
-                      textAlign: block.alignments[cellIndex] ?? "left",
-                    }}
+            </colgroup>
+            <thead className="bg-muted">
+              <tr style={{ height: frame.headerHeight }}>
+                {block.header.map((cell, index) => (
+                  <th
+                    key={index}
+                    className="border-b px-3.5 py-2 font-semibold text-foreground"
+                    id={`${headerIdPrefix}-column-${index}`}
+                    scope="col"
+                    style={{ textAlign: block.alignments[index] ?? "left" }}
                   >
-                    <TableCellContent cell={row[cellIndex]} />
-                  </td>
+                    <TableCellContent cell={cell} />
+                  </th>
                 ))}
               </tr>
-            ))}
-            {rowWindow.afterHeight > 0 ? (
-              <tr aria-hidden="true" style={{ height: rowWindow.afterHeight }}>
-                <td colSpan={block.header.length || 1} />
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {rowWindow.beforeHeight > 0 ? (
+                <tr
+                  aria-hidden="true"
+                  style={{ height: rowWindow.beforeHeight }}
+                >
+                  <td colSpan={block.header.length || 1} />
+                </tr>
+              ) : null}
+              {visibleRows.map((row, rowIndex) => (
+                <tr
+                  key={rowWindow.startIndex + rowIndex}
+                  data-source-line={
+                    frame.rowSourceStartLines[rowWindow.startIndex + rowIndex]
+                  }
+                  style={{
+                    height:
+                      frame.rowHeights[rowWindow.startIndex + rowIndex] ?? 0,
+                  }}
+                >
+                  {block.header.map((_, cellIndex) => (
+                    <td
+                      key={cellIndex}
+                      className="border-t px-3.5 py-1.5 align-top text-foreground"
+                      headers={`${headerIdPrefix}-column-${cellIndex}`}
+                      style={{
+                        textAlign: block.alignments[cellIndex] ?? "left",
+                      }}
+                    >
+                      <TableCellContent cell={row[cellIndex]} />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+              {rowWindow.afterHeight > 0 ? (
+                <tr
+                  aria-hidden="true"
+                  style={{ height: rowWindow.afterHeight }}
+                >
+                  <td colSpan={block.header.length || 1} />
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   )
@@ -1031,12 +1082,13 @@ function TableCellContent({
 }) {
   if (!cell) return null
   if (cell.href) {
+    const isFragment = isLocalFragmentHref(cell.href)
     return (
       <a
         className={cn("wrap-break-word", cell.className)}
         href={cell.href}
-        rel="noopener noreferrer"
-        target="_blank"
+        rel={isFragment ? undefined : "noopener noreferrer"}
+        target={isFragment ? undefined : "_blank"}
         title={cell.title ?? undefined}
       >
         {cell.text}
@@ -1079,4 +1131,32 @@ function BlockChrome({ frame }: { frame: TextBlockFrame }) {
       ) : null}
     </>
   )
+}
+
+function localFragmentHrefFromEventTarget(target: EventTarget | null) {
+  if (!(target instanceof Element)) return null
+  const link = target.closest<HTMLAnchorElement>('a[href^="#"]')
+  const href = link?.getAttribute("href") ?? null
+  return href && href.length > 1 ? href : null
+}
+
+function decodeMarkdownFragmentHref(href: string) {
+  try {
+    return decodeURIComponent(href.slice(1))
+  } catch {
+    return href.slice(1)
+  }
+}
+
+function markdownHeadingBlockIndex(
+  blocks: readonly PreparedTextBlock[],
+  headingId: string
+) {
+  return blocks.findIndex((block) => {
+    return block.kind === "inline" && block.headingId === headingId
+  })
+}
+
+function isLocalFragmentHref(href: string) {
+  return href.startsWith("#")
 }

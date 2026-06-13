@@ -7,8 +7,10 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
 
 import type { VisibleColumn } from "@/components/json-table/json-table-cell-types"
 import type {
+  JsonTableActiveCell,
   JsonTableActivationIntent,
-  JsonTableEditSession,
+  JsonTablePrimitiveActiveCell,
+  JsonTableStructuredEditSession,
 } from "@/components/json-table/json-table-edit-session"
 import { jsonTableCellId } from "@/components/json-table/json-table-edit-session"
 import type { ProjectedCell } from "@/components/json-table/lib/document-projection"
@@ -69,46 +71,39 @@ function SingleFileFormRowHarness({
   ...props
 }: Omit<
   React.ComponentProps<typeof SingleFileFormRow>,
-  | "editSession"
-  | "startEditSession"
-  | "updateEditSessionDraft"
-  | "setEditSessionOverlayOpen"
-  | "closeEditSession"
+  | "primitiveActiveCell"
+  | "setPrimitiveActiveCell"
+  | "structuredEditSession"
+  | "startStructuredEditSession"
+  | "setStructuredEditSessionOverlayOpen"
+  | "closeStructuredEditSession"
   | "onDocumentDataChange"
 > & {
   onDocumentDataChange?: React.ComponentProps<
     typeof SingleFileFormRow
   >["onDocumentDataChange"]
-  onEditSessionChange?: (editSession: JsonTableEditSession | null) => void
+  onEditSessionChange?: (activeCell: JsonTableActiveCell | null) => void
 }) {
-  const [editSession, setEditSessionState] =
-    React.useState<JsonTableEditSession | null>(null)
+  const [primitiveActiveCell, setPrimitiveActiveCellState] =
+    React.useState<JsonTablePrimitiveActiveCell | null>(null)
+  const [structuredEditSession, setStructuredEditSessionState] =
+    React.useState<JsonTableStructuredEditSession | null>(null)
   const sessionIdRef = React.useRef(0)
 
-  const setEditSession = React.useCallback(
-    (
-      updater:
-        | JsonTableEditSession
-        | null
-        | ((
-            currentSession: JsonTableEditSession | null
-          ) => JsonTableEditSession | null)
-    ) => {
-      setEditSessionState((currentSession) => {
-        const nextSession =
-          typeof updater === "function" ? updater(currentSession) : updater
-        onEditSessionChange?.(nextSession)
-        return nextSession
-      })
+  const setPrimitiveActiveCell = React.useCallback(
+    (activeCell: JsonTablePrimitiveActiveCell | null) => {
+      setPrimitiveActiveCellState(activeCell)
+      if (activeCell) setStructuredEditSessionState(null)
+      onEditSessionChange?.(activeCell)
     },
     [onEditSessionChange]
   )
 
-  const startEditSession = React.useCallback(
+  const startStructuredEditSession = React.useCallback(
     (projectedCell: ProjectedCell, intent: JsonTableActivationIntent) => {
       const nextSessionId = sessionIdRef.current + 1
       sessionIdRef.current = nextSessionId
-      setEditSession({
+      const nextSession: JsonTableStructuredEditSession = {
         id: nextSessionId,
         cellId: jsonTableCellId(
           props.document.id,
@@ -117,46 +112,41 @@ function SingleFileFormRowHarness({
         docId: props.document.id,
         fieldPath: projectedCell.materializedFieldPath,
         intent,
-        initialValue: projectedCell.value,
-        draftValue: projectedCell.value,
-        status: "editing",
         isOverlayOpen: false,
+      }
+      setPrimitiveActiveCellState(null)
+      setStructuredEditSessionState(nextSession)
+      onEditSessionChange?.(nextSession)
+    },
+    [onEditSessionChange, props.document.id]
+  )
+  const setStructuredEditSessionOverlayOpen = React.useCallback(
+    (open: boolean) => {
+      setStructuredEditSessionState((currentSession) => {
+        const nextSession =
+          currentSession && currentSession.isOverlayOpen !== open
+            ? { ...currentSession, isOverlayOpen: open }
+            : currentSession
+        if (nextSession !== currentSession) onEditSessionChange?.(nextSession)
+        return nextSession
       })
     },
-    [props.document.id, setEditSession]
+    [onEditSessionChange]
   )
-  const updateEditSessionDraft = React.useCallback(
-    (value: unknown) => {
-      setEditSession((currentSession) =>
-        currentSession && !Object.is(currentSession.draftValue, value)
-          ? { ...currentSession, draftValue: value }
-          : currentSession
-      )
-    },
-    [setEditSession]
-  )
-  const setEditSessionOverlayOpen = React.useCallback(
-    (open: boolean) => {
-      setEditSession((currentSession) =>
-        currentSession && currentSession.isOverlayOpen !== open
-          ? { ...currentSession, isOverlayOpen: open }
-          : currentSession
-      )
-    },
-    [setEditSession]
-  )
-  const closeEditSession = React.useCallback(() => {
-    setEditSession(null)
-  }, [setEditSession])
+  const closeStructuredEditSession = React.useCallback(() => {
+    setStructuredEditSessionState(null)
+    onEditSessionChange?.(primitiveActiveCell)
+  }, [onEditSessionChange, primitiveActiveCell])
 
   return (
     <SingleFileFormRow
       {...props}
-      editSession={editSession}
-      startEditSession={startEditSession}
-      updateEditSessionDraft={updateEditSessionDraft}
-      setEditSessionOverlayOpen={setEditSessionOverlayOpen}
-      closeEditSession={closeEditSession}
+      primitiveActiveCell={primitiveActiveCell}
+      setPrimitiveActiveCell={setPrimitiveActiveCell}
+      structuredEditSession={structuredEditSession}
+      startStructuredEditSession={startStructuredEditSession}
+      setStructuredEditSessionOverlayOpen={setStructuredEditSessionOverlayOpen}
+      closeStructuredEditSession={closeStructuredEditSession}
       onDocumentDataChange={onDocumentDataChange ?? vi.fn()}
     />
   )
@@ -171,7 +161,7 @@ function renderInteractionRow({
   onDocumentDataChange?: React.ComponentProps<
     typeof SingleFileFormRow
   >["onDocumentDataChange"]
-  onEditSessionChange?: (editSession: JsonTableEditSession | null) => void
+  onEditSessionChange?: (activeCell: JsonTableActiveCell | null) => void
 }) {
   const rows = projectDocumentRows({
     document: tableDocument,
@@ -222,7 +212,7 @@ async function activateCell(
   return cell
 }
 
-function latestSession(sessions: Array<JsonTableEditSession | null>) {
+function latestSession(sessions: Array<JsonTableActiveCell | null>) {
   return sessions[sessions.length - 1]
 }
 
@@ -367,7 +357,7 @@ describe("json table text and number interactions", () => {
   })
 
   it("does not edit on right click", async () => {
-    const sessions: Array<JsonTableEditSession | null> = []
+    const sessions: Array<JsonTableActiveCell | null> = []
     const view = renderInteractionRow({
       visiblePaths: ["vendor", "amount"],
       onEditSessionChange: (session) => sessions.push(session),
@@ -382,13 +372,13 @@ describe("json table text and number interactions", () => {
   })
 
   it("does not reset the draft when clicking an already-active cell", async () => {
-    const sessions: Array<JsonTableEditSession | null> = []
+    const sessions: Array<JsonTableActiveCell | null> = []
     const view = renderInteractionRow({
       visiblePaths: ["vendor"],
       onEditSessionChange: (session) => sessions.push(session),
     })
     const cell = await activateCell(view, "vendor")
-    const startedSessionId = latestSession(sessions)?.id
+    const startedActiveFieldPath = latestSession(sessions)?.fieldPath
 
     fireEvent.change(view.getByRole("textbox"), {
       target: { value: "draft vendor" },
@@ -401,6 +391,6 @@ describe("json table text and number interactions", () => {
     })
 
     expect(view.getByRole("textbox")).toHaveProperty("value", "draft vendor")
-    expect(latestSession(sessions)?.id).toBe(startedSessionId)
+    expect(latestSession(sessions)?.fieldPath).toBe(startedActiveFieldPath)
   })
 })

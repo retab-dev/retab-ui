@@ -48,11 +48,68 @@ export const DataCellDisplay = React.forwardRef<HTMLElement, DataCellProps>(
       onEditingEnd: _onEditingEnd,
       onActiveChange: _onActiveChange,
       onPickerOpenChange: _onPickerOpenChange,
+      onEditorHandleChange: _onEditorHandleChange,
       ...props
     },
     ref
   ) {
-  if (kind === "boolean") {
+    if (kind === "boolean") {
+      return (
+        <div
+          {...props}
+          ref={ref as React.Ref<HTMLDivElement>}
+          data-slot="data-cell"
+          data-kind={kind}
+          data-mode="display"
+          aria-disabled={disabled || undefined}
+          aria-readonly={!editable || undefined}
+          className={cn(
+            dataCellBooleanDisplayClass,
+            "justify-center px-1",
+            disabled && "pointer-events-none opacity-64",
+            editable && !disabled && "cursor-pointer",
+            className
+          )}
+        >
+          <span
+            role="checkbox"
+            data-slot="checkbox"
+            data-state={Boolean(value) ? "checked" : "unchecked"}
+            aria-checked={Boolean(value)}
+            aria-label={Boolean(value) ? "true" : "false"}
+            className={cn(
+              dataCellCheckboxDisplayClass,
+              "pointer-events-none flex items-center justify-center"
+            )}
+          >
+            <DataCellBooleanIndicator checked={Boolean(value)} />
+          </span>
+        </div>
+      )
+    }
+
+    if (kind === "date" || kind === "time" || kind === "date-time") {
+      return (
+        <DataCellPickerDisplay
+          {...props}
+          ref={ref as React.Ref<HTMLDivElement>}
+          kind={kind}
+          value={value}
+          editable={editable}
+          disabled={disabled}
+          placeholder={placeholder}
+          formatValue={formatValue as DataCellFormatValue | undefined}
+          showPickerIcon={showPickerIcon}
+          className={className}
+        />
+      )
+    }
+
+    const content =
+      (formatValue as DataCellFormatValue | undefined)?.(value, { kind }) ??
+      formatDataCellDisplayValue(kind, value)
+    const isEmpty = content === ""
+
     return (
       <div
         {...props}
@@ -63,78 +120,24 @@ export const DataCellDisplay = React.forwardRef<HTMLElement, DataCellProps>(
         aria-disabled={disabled || undefined}
         aria-readonly={!editable || undefined}
         className={cn(
-          dataCellBooleanDisplayClass,
-          "justify-center px-1",
+          dataCellDisplayClass,
           disabled && "pointer-events-none opacity-64",
-          editable && !disabled && "cursor-pointer",
+          editable &&
+            !disabled &&
+            (kind === "select" ? "cursor-pointer" : "cursor-text"),
           className
         )}
       >
-        <span
-          role="checkbox"
-          data-slot="checkbox"
-          data-state={Boolean(value) ? "checked" : "unchecked"}
-          aria-checked={Boolean(value)}
-          aria-label={Boolean(value) ? "true" : "false"}
-          className={cn(
-            dataCellCheckboxDisplayClass,
-            "pointer-events-none flex items-center justify-center"
-          )}
-        >
-          <DataCellBooleanIndicator checked={Boolean(value)} />
+        <span className={dataCellDisplayValueClass}>
+          <span
+            data-slot="data-cell-value"
+            className={cn("truncate", isEmpty && "text-muted-foreground")}
+          >
+            {isEmpty ? (placeholder ?? "—") : content}
+          </span>
         </span>
       </div>
     )
-  }
-
-  if (kind === "date" || kind === "time" || kind === "date-time") {
-    return (
-      <DataCellPickerDisplay
-        {...props}
-        ref={ref as React.Ref<HTMLDivElement>}
-        kind={kind}
-        value={value}
-        editable={editable}
-        disabled={disabled}
-        placeholder={placeholder}
-        formatValue={formatValue as DataCellFormatValue | undefined}
-        showPickerIcon={showPickerIcon}
-        className={className}
-      />
-    )
-  }
-
-  const content =
-    (formatValue as DataCellFormatValue | undefined)?.(value, { kind }) ??
-    formatDataCellDisplayValue(kind, value)
-  const isEmpty = content === ""
-
-  return (
-    <div
-      {...props}
-      ref={ref as React.Ref<HTMLDivElement>}
-      data-slot="data-cell"
-      data-kind={kind}
-      data-mode="display"
-      aria-disabled={disabled || undefined}
-      aria-readonly={!editable || undefined}
-      className={cn(
-        dataCellDisplayClass,
-        disabled && "pointer-events-none opacity-64",
-        editable && !disabled && (kind === "select" ? "cursor-pointer" : "cursor-text"),
-        className
-      )}
-    >
-      <span className={dataCellDisplayValueClass}>
-        <span
-          data-slot="data-cell-value"
-          className={cn("truncate", isEmpty && "text-muted-foreground")}
-        >
-          {isEmpty ? (placeholder ?? "—") : content}
-        </span>
-      </span>
-    </div>
-  )
   }
 )
 DataCellDisplay.displayName = "DataCellDisplay"

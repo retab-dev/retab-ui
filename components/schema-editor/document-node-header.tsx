@@ -1,7 +1,6 @@
 "use client"
 
 import * as React from "react"
-import { GripVertical } from "lucide-react"
 
 import { DocumentNodeActions } from "@/components/schema-editor/document-node-actions"
 import { DocumentNodeDescriptionControl } from "@/components/schema-editor/document-node-description-control"
@@ -16,14 +15,15 @@ import type { SchemaDocument } from "@/components/schema-editor/document/types"
 import type { DocumentNodeView } from "@/components/schema-editor/document/view-model"
 import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types"
 import { NodeDialog } from "@/components/schema-editor/node-dialog"
-import { Tooltip, TooltipTrigger } from "@/components/ui/tooltip"
+import { SchemaFieldRow } from "@/components/schema-editor/primitives/schema-field-row"
 
 import { EnumCreationDialog } from "./enum-creation-dialog"
 
-interface DocumentNodeHeaderProps extends Omit<
-  DocumentSchemaNodeEditorProps,
-  "draggedParentRef" | "draggedPropertyRef"
-> {
+interface DocumentNodeHeaderProps
+  extends Omit<
+    DocumentSchemaNodeEditorProps,
+    "draggedParentRef" | "draggedPropertyRef"
+  > {
   doc: SchemaDocument
   nodeView: DocumentNodeView
   editMode: SchemaEditorMode
@@ -60,21 +60,10 @@ export function DocumentNodeHeader({
   return (
     <>
       {path !== "#" && (
-        <div
+        <SchemaFieldRow
           id={`schema-field-${path.replace(/^#\.?/, "").split(".").join("-")}`}
-          className="group flex flex-col items-start justify-between py-0 pl-0 hover:bg-accent sm:flex-row sm:items-center"
-        >
-          {isEditable ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <GripVertical className="h-12 w-6 cursor-pointer px-1 py-4 text-transparent group-hover:text-muted-foreground" />
-              </TooltipTrigger>
-            </Tooltip>
-          ) : (
-            <div className="h-12 w-6 px-1 py-4" />
-          )}
-
-          <div className="flex min-w-0 flex-1 items-center space-x-2">
+          grip={isEditable ? "drag" : "empty"}
+          name={
             <DocumentNodeNameControl
               isEditable={isEditable}
               name={name}
@@ -85,17 +74,16 @@ export function DocumentNodeHeader({
               onNameChange={onNameChange}
               onShowDefinition={controller.showDefinition}
             />
-            <div className="flex min-w-0 flex-1 items-center gap-1">
-              <DocumentNodeDescriptionControl
-                description={controller.description}
-                editMode={editMode}
-                onOpenMetadata={() => controller.setMetadataDialogOpen(true)}
-                onSubmitDescription={controller.submitDescription}
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 pr-1">
+          }
+          description={
+            <DocumentNodeDescriptionControl
+              description={controller.description}
+              editMode={editMode}
+              onOpenMetadata={() => controller.setMetadataDialogOpen(true)}
+              onSubmitDescription={controller.submitDescription}
+            />
+          }
+          actions={
             <DocumentNodeActions
               canDelete={canDelete}
               editMode={editMode}
@@ -104,6 +92,8 @@ export function DocumentNodeHeader({
               onDelete={onDelete}
               onOpenMetadata={() => controller.setMetadataDialogOpen(true)}
             />
+          }
+          type={
             <DocumentNodeTypeMenu
               defs={controller.defs}
               features={features}
@@ -115,8 +105,8 @@ export function DocumentNodeHeader({
               onSelectObjectTemplate={controller.selectObjectTemplate}
               onSelectType={controller.selectType}
             />
-          </div>
-        </div>
+          }
+        />
       )}
 
       {path !== "#" && controller.metadataDialogOpen ? (

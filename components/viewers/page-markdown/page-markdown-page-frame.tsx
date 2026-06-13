@@ -2,86 +2,67 @@
 
 import * as React from "react"
 
-import { Spinner } from "@/components/ui/spinner"
 import { PageMarkdownContent } from "@/components/viewers/page-markdown/page-markdown-content"
-import { useMarkdownPageMeasurement } from "@/components/viewers/page-markdown/page-markdown-hooks"
 import {
   PAGE_MARKDOWN_PAGE_PADDING_X,
   PAGE_MARKDOWN_PAGE_PADDING_Y,
   PAGE_MARKDOWN_PAGE_WIDTH,
-} from "@/components/viewers/page-markdown/page-markdown-model"
+} from "@/components/viewers/page-markdown/page-markdown-layout"
 import { type PageMarkdownViewMode } from "@/components/viewers/page-markdown/page-markdown-types"
 
 export const PageMarkdownPageFrame = React.memo(function PageMarkdownPageFrame({
+  estimatedHeight,
   page,
   markdown,
   mode,
+  onSize,
   scale,
 }: {
-  page: number
+  estimatedHeight: number
   markdown: string
   mode: PageMarkdownViewMode
+  onSize: (page: number, height: number) => void
+  page: number
   scale: number
 }) {
-  const [isNearViewport, setIsNearViewport] = React.useState(false)
-  const { reservedHeight, measureRef } = useMarkdownPageMeasurement({
-    markdown,
-    mode,
-    scale,
-  })
-
   const pageRef = React.useCallback(
     (pageElement: HTMLDivElement | null) => {
       if (!pageElement) return
 
-      const cleanupMeasurement = measureRef(pageElement)
-      const root = pageElement.closest<HTMLElement>(
-        '[data-slot="scroll-area-viewport"]'
-      )
-      if (typeof IntersectionObserver !== "function") {
-        setIsNearViewport(true)
-        return () => cleanupMeasurement?.()
+      const reportSize = () => {
+        const height = pageElement.offsetHeight
+        if (height > 0) onSize(page, height)
       }
+      reportSize()
 
-      const observer = new IntersectionObserver(
-        (entries) => {
-          for (const entry of entries) {
-            setIsNearViewport(entry.isIntersecting)
-          }
-        },
-        { root, rootMargin: "200% 0px" }
-      )
+      if (typeof ResizeObserver !== "function") return
 
+      const observer = new ResizeObserver(reportSize)
       observer.observe(pageElement)
-      return () => {
-        observer.disconnect()
-        cleanupMeasurement?.()
-      }
+      return () => observer.disconnect()
     },
-    [measureRef]
+    [onSize, page]
   )
+
+  const pageWidth = PAGE_MARKDOWN_PAGE_WIDTH * scale
+  const pagePaddingX = PAGE_MARKDOWN_PAGE_PADDING_X * scale
+  const pagePaddingY = PAGE_MARKDOWN_PAGE_PADDING_Y * scale
 
   return (
     <div
       ref={pageRef}
       data-slot="page-markdown-page"
-      data-page-number={page}
+      data-page={page}
       className="relative w-full max-w-3xl bg-card shadow-sm ring-1 ring-border"
       style={{
-        width: `${PAGE_MARKDOWN_PAGE_WIDTH * scale}px`,
+        minHeight: estimatedHeight,
+        width: `${pageWidth}px`,
         maxWidth: scale <= 1 ? "100%" : "none",
-        paddingInline: `${PAGE_MARKDOWN_PAGE_PADDING_X * scale}px`,
-        paddingBlock: `${PAGE_MARKDOWN_PAGE_PADDING_Y * scale}px`,
-        ...(isNearViewport ? null : { height: reservedHeight }),
+        paddingInline: `${pagePaddingX}px`,
+        paddingBlock: `${pagePaddingY}px`,
       }}
     >
-      {isNearViewport ? (
-        <PageMarkdownContent markdown={markdown} mode={mode} scale={scale} />
-      ) : (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <Spinner className="size-4 text-muted-foreground" />
-        </div>
-      )}
+      <PageMarkdownContent markdown={markdown} mode={mode} scale={scale} />
     </div>
   )
 })

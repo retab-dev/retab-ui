@@ -2,7 +2,13 @@
 
 import { readFileSync } from "node:fs"
 import * as React from "react"
-import { cleanup, render, screen, waitFor } from "@testing-library/react"
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { CodeViewer } from "@/components/ui/code-viewer"
@@ -42,6 +48,12 @@ beforeEach(() => {
   vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
     measureText: (text: string) => ({ width: text.length * 8 }),
   } as CanvasRenderingContext2D)
+  Object.defineProperty(navigator, "clipboard", {
+    configurable: true,
+    value: {
+      writeText: vi.fn(() => Promise.resolve()),
+    },
+  })
 })
 
 afterEach(() => {
@@ -50,14 +62,17 @@ afterEach(() => {
 })
 
 describe("Markdown/Text viewer contract", () => {
-  it("routes FileViewer Markdown through TextViewer markdown mode, not the old HTML markdown document viewer", async () => {
+  it("routes FileViewer Markdown through MarkdownDocumentViewer, not the old HTML markdown document viewer", async () => {
     const fileViewerSource = readFileSync(
       "registry/new-york-v4/ui/file-viewer.tsx",
       "utf8"
     )
 
     expect(fileViewerSource).toContain('mode="markdown"')
-    expect(fileViewerSource).toContain("<ProseTextViewer")
+    expect(fileViewerSource).toContain("<MarkdownDocumentViewer")
+    expect(fileViewerSource).toContain(
+      'import("@/components/ui/markdown-document-viewer")'
+    )
     expect(fileViewerSource).not.toContain("MarkdownDocViewer")
     expect(fileViewerSource).not.toContain("MarkdownHtml")
     expect(fileViewerSource).not.toContain("file-viewer-markdown-viewer")
@@ -78,7 +93,7 @@ describe("Markdown/Text viewer contract", () => {
     ).toBeTruthy()
     expect(document.querySelector('[data-slot="text-viewer"]')).toBeTruthy()
     expect(
-      document.querySelector('[data-slot="text-virtual-canvas"]')
+      document.querySelector('[data-slot="markdown-document-virtual-canvas"]')
     ).toBeTruthy()
     expect(document.querySelector("[data-line-number]")).toBeNull()
   })
@@ -112,7 +127,11 @@ describe("Markdown/Text viewer contract", () => {
     expect(document.blocks.length).toBeGreaterThanOrEqual(6)
     expect(document.blocks).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ kind: "inline", variant: "heading-1" }),
+        expect.objectContaining({
+          headingId: "title",
+          kind: "inline",
+          variant: "heading-1",
+        }),
         expect.objectContaining({ kind: "rule" }),
         expect.objectContaining({ kind: "code" }),
       ])
@@ -128,6 +147,71 @@ describe("Markdown/Text viewer contract", () => {
     )
     expect(frame.frames).toHaveLength(document.blocks.length)
     expect(frame.totalHeight).toBeGreaterThan(0)
+  })
+
+  it("scrolls FileViewer Markdown fragment links through the custom virtualizer", async () => {
+    const filler = Array.from(
+      { length: 90 },
+      (_, index) => `Paragraph ${index}`
+    )
+    const { container } = render(
+      <FileViewer
+        source={textSource(
+          [
+            "[Jump](#target-section)",
+            "",
+            ...filler,
+            "",
+            "## Target Section",
+          ].join("\n"),
+          "fragment.md",
+          "text/markdown"
+        )}
+        bare
+      />
+    )
+
+    const link = await screen.findByRole("link", { name: "Jump" })
+    expect(link.getAttribute("target")).toBeNull()
+    expect(link.getAttribute("rel")).toBeNull()
+    const viewport = container.querySelector<HTMLElement>(
+      '[data-slot="scroll-area-viewport"]'
+    )
+    expect(viewport).toBeTruthy()
+
+    fireEvent.click(link)
+    expect(viewport!.scrollTop).toBeGreaterThan(0)
+  })
+
+  it("copies complete FileViewer Markdown tables from the document projection", async () => {
+    render(
+      <FileViewer
+        source={textSource(
+          [
+            "| Name | Amount |",
+            "| --- | ---: |",
+            "| Alpha | 1 |",
+            "| Beta | 2 |",
+          ].join("\n"),
+          "table.md",
+          "text/markdown"
+        )}
+        bare
+      />
+    )
+
+    expect(await screen.findByRole("table")).toBeTruthy()
+    const amountHeader = screen.getByRole("columnheader", { name: "Amount" })
+    expect(
+      screen.getByText("Alpha").closest("tr")?.querySelectorAll("td")[1]
+        ?.headers
+    ).toBe(amountHeader.id)
+    fireEvent.click(screen.getByLabelText("Copy table"))
+    await waitFor(() => {
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+        ["Name\tAmount", "Alpha\t1", "Beta\t2"].join("\n")
+      )
+    })
   })
 
   it("renders safe Markdown without turning raw HTML into live DOM", async () => {

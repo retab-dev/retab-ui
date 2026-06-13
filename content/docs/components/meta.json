@@ -5,6 +5,7 @@
     "data-cell",
     "json-form",
     "dropzone",
+    "file-uploader",
     "json-table",
     "schema-builder",
     "property-form",

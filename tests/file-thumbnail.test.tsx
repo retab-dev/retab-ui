@@ -18,29 +18,28 @@ import {
   hasRenderablePreviewContent,
   resolveFileThumbnailState,
 } from "@/components/ui/file-thumbnail"
-import { DocumentThumbnail } from "@/components/document-thumbnail"
 import {
   getThumbnailKey,
   getThumbnailRenderKey,
   thumbnailOption,
-} from "@/components/document-thumbnail/keys"
-import { useObjectUrl } from "@/components/document-thumbnail/renderers/use-object-url"
+} from "@/components/file-thumbnail/keys"
+import { useObjectUrl } from "@/components/file-thumbnail/renderers/use-object-url"
 import {
   cachedThumbnailResource,
   createThumbnailArtifactCache,
   type ThumbnailCacheEntry,
-} from "@/components/document-thumbnail/thumbnail-cache"
-import { withThumbnailFormatError } from "@/components/document-thumbnail/thumbnail-errors"
+} from "@/components/file-thumbnail/thumbnail-cache"
+import { withThumbnailFormatError } from "@/components/file-thumbnail/thumbnail-errors"
 import {
   TEXT_THUMBNAIL_CACHE_MAX_ENTRIES,
   TEXT_THUMBNAIL_MAX_BYTES,
-} from "@/components/document-thumbnail/thumbnail-limits"
-import { clearThumbnailCachesForTests } from "@/components/document-thumbnail/thumbnail-test-reset"
+} from "@/components/file-thumbnail/thumbnail-limits"
+import { clearThumbnailCachesForTests } from "@/components/file-thumbnail/thumbnail-test-reset"
 import {
   getThumbnailText,
   thumbnailFileMeta,
   type ThumbnailTextContent,
-} from "@/components/document-thumbnail/thumbnail-text"
+} from "@/components/file-thumbnail/thumbnail-text"
 import { createViewerResource } from "@/registry/new-york-v4/lib/viewer-resource"
 
 afterEach(() => {
@@ -91,7 +90,7 @@ describe("FileThumbnail helpers", () => {
   })
 })
 
-describe("DocumentThumbnail helpers", () => {
+describe("FileThumbnail helpers", () => {
   function resource(
     url: string,
     fileName = "same.txt",
@@ -107,25 +106,26 @@ describe("DocumentThumbnail helpers", () => {
 
   it("keeps thumbnail live code on the canonical resource API", () => {
     const liveFiles = [
-      "components/document-thumbnail.tsx",
-      "components/document-thumbnail/thumbnail-cache.ts",
-      "components/document-thumbnail/thumbnail-direct-image.tsx",
-      "components/document-thumbnail/thumbnail-text.ts",
-      "components/document-thumbnail/thumbnail-resource.ts",
-      "components/document-thumbnail/descriptor.ts",
-      "components/document-thumbnail/errors.tsx",
-      "components/document-thumbnail/keys.ts",
-      "components/document-thumbnail/types.ts",
-      "components/document-thumbnail/renderers/csv-thumbnail.tsx",
-      "components/document-thumbnail/renderers/docx-thumbnail.tsx",
-      "components/document-thumbnail/renderers/html-thumbnail.tsx",
-      "components/document-thumbnail/renderers/image-thumbnail.tsx",
-      "components/document-thumbnail/renderers/markdown-thumbnail.tsx",
-      "components/document-thumbnail/renderers/pdf-thumbnail.tsx",
-      "components/document-thumbnail/renderers/pptx-thumbnail.tsx",
-      "components/document-thumbnail/renderers/text-thumbnail.tsx",
-      "components/document-thumbnail/renderers/tiff-thumbnail.tsx",
-      "components/document-thumbnail/renderers/xlsx-thumbnail.tsx",
+      "registry/new-york-v4/ui/file-thumbnail.tsx",
+      "components/file-thumbnail/thumbnail-cache.ts",
+      "components/file-thumbnail/generated-preview.tsx",
+      "components/file-thumbnail/thumbnail-direct-image.tsx",
+      "components/file-thumbnail/thumbnail-text.ts",
+      "components/file-thumbnail/thumbnail-resource.ts",
+      "components/file-thumbnail/descriptor.ts",
+      "components/file-thumbnail/errors.tsx",
+      "components/file-thumbnail/keys.ts",
+      "components/file-thumbnail/types.ts",
+      "components/file-thumbnail/renderers/csv-thumbnail.tsx",
+      "components/file-thumbnail/renderers/docx-thumbnail.tsx",
+      "components/file-thumbnail/renderers/html-thumbnail.tsx",
+      "components/file-thumbnail/renderers/image-thumbnail.tsx",
+      "components/file-thumbnail/renderers/markdown-thumbnail.tsx",
+      "components/file-thumbnail/renderers/pdf-thumbnail.tsx",
+      "components/file-thumbnail/renderers/pptx-thumbnail.tsx",
+      "components/file-thumbnail/renderers/text-thumbnail.tsx",
+      "components/file-thumbnail/renderers/tiff-thumbnail.tsx",
+      "components/file-thumbnail/renderers/xlsx-thumbnail.tsx",
     ]
     const forbiddenNames = [
       "get" + "DirectLoad",
@@ -147,12 +147,12 @@ describe("DocumentThumbnail helpers", () => {
 
   it("keeps expensive thumbnail helpers on narrow content contracts", () => {
     const helperFiles = [
-      "components/document-thumbnail/thumbnail-cache.ts",
-      "components/document-thumbnail/thumbnail-text.ts",
-      "components/document-thumbnail/renderers/markdown-thumbnail.tsx",
-      "components/document-thumbnail/renderers/pptx-thumbnail.tsx",
-      "components/document-thumbnail/renderers/tiff-thumbnail.tsx",
-      "components/document-thumbnail/renderers/xlsx-thumbnail.tsx",
+      "components/file-thumbnail/thumbnail-cache.ts",
+      "components/file-thumbnail/thumbnail-text.ts",
+      "components/file-thumbnail/renderers/markdown-thumbnail.tsx",
+      "components/file-thumbnail/renderers/pptx-thumbnail.tsx",
+      "components/file-thumbnail/renderers/tiff-thumbnail.tsx",
+      "components/file-thumbnail/renderers/xlsx-thumbnail.tsx",
     ]
     const broadHelperSignatures = [
       "function getThumbnailText(\n  resource: ViewerResource",
@@ -171,8 +171,8 @@ describe("DocumentThumbnail helpers", () => {
     }
     for (const file of helperFiles.filter(
       (file) =>
-        file !== "components/document-thumbnail/thumbnail-cache.ts" &&
-        file !== "components/document-thumbnail/thumbnail-text.ts"
+        file !== "components/file-thumbnail/thumbnail-cache.ts" &&
+        file !== "components/file-thumbnail/thumbnail-text.ts"
     )) {
       expect(readFileSync(file, "utf8"), file).not.toContain(
         unboundedArtifactCache
@@ -182,8 +182,8 @@ describe("DocumentThumbnail helpers", () => {
 
   it("does not swallow async canvas renderer failures", () => {
     const files = [
-      "components/document-thumbnail/renderers/pdf-thumbnail.tsx",
-      "components/document-thumbnail/renderers/pptx-thumbnail.tsx",
+      "components/file-thumbnail/renderers/pdf-thumbnail.tsx",
+      "components/file-thumbnail/renderers/pptx-thumbnail.tsx",
     ]
 
     for (const file of files) {
@@ -923,19 +923,38 @@ describe("FileThumbnail registry item", () => {
     }
     const item = registry.items.find((entry) => entry.name === "file-thumbnail")
 
-    expect(item?.files?.map((file) => file.path)).toEqual([
-      "registry/new-york-v4/ui/file-thumbnail.tsx",
-      "registry/new-york-v4/ui/file-thumbnail-types.ts",
-    ])
+    const files = item?.files?.map((file) => file.path) ?? []
+    expect(files).toContain("registry/new-york-v4/ui/file-thumbnail.tsx")
+    expect(files).toContain("registry/new-york-v4/ui/file-thumbnail-types.ts")
+    expect(files).toContain("components/file-thumbnail/generated-preview.tsx")
+    expect(files).toContain(
+      "components/file-thumbnail/thumbnail-direct-image.tsx"
+    )
+    expect(files).toContain(
+      "components/file-thumbnail/renderers/pdf-thumbnail.tsx"
+    )
+    expect(files).toContain("components/file-thumbnail-tiff.worker.ts")
+    expect(files).toContain("components/file-thumbnail-xlsx.worker.ts")
     expect(item?.registryDependencies).toEqual([
-      "document-thumbnail",
       "file-thumbnail-frame",
+      "pdf-document-resource",
+      "docx-document-resource",
+      "csv",
+      "xlsx-worker-protocol",
+      "utils",
     ])
-    expect(item?.dependencies ?? []).toEqual([])
+    expect(item?.dependencies ?? []).toEqual([
+      "@e965/xlsx",
+      "dompurify",
+      "jszip",
+      "marked",
+      "pptxviewjs",
+      "utif",
+    ])
   })
 })
 
-describe("DocumentThumbnail renderers", () => {
+describe("FileThumbnail renderers", () => {
   function ObjectUrlProbe({ blob }: { blob: Blob | null }) {
     const url = useObjectUrl(blob)
     return <span data-testid="object-url">{url}</span>
@@ -959,7 +978,7 @@ describe("DocumentThumbnail renderers", () => {
   })
 })
 
-describe("DocumentThumbnail", () => {
+describe("FileThumbnail", () => {
   async function renderAsync(ui: React.ReactElement) {
     let view!: ReturnType<typeof render>
     await act(async () => {
@@ -1027,7 +1046,7 @@ describe("DocumentThumbnail", () => {
     vi.stubGlobal("fetch", fetchMock)
 
     const { container } = render(
-      <DocumentThumbnail
+      <FileThumbnail
         source={{
           kind: "url",
           url: "/page.png",
@@ -1051,7 +1070,7 @@ describe("DocumentThumbnail", () => {
     vi.stubGlobal("fetch", fetchMock)
 
     const view = render(
-      <DocumentThumbnail source={urlTextSource("/lazy.txt", "lazy.txt")} />
+      <FileThumbnail source={urlTextSource("/lazy.txt", "lazy.txt")} />
     )
 
     await waitFor(() => {
@@ -1079,7 +1098,7 @@ describe("DocumentThumbnail", () => {
   it("surfaces direct URL image failures through canonical thumbnail errors", async () => {
     const onError = vi.fn()
     const { container } = render(
-      <DocumentThumbnail
+      <FileThumbnail
         source={{
           kind: "url",
           url: "/broken-image.png",
@@ -1128,7 +1147,7 @@ describe("DocumentThumbnail", () => {
   it("clears direct URL image error state when retryKey changes", async () => {
     const onError = vi.fn()
     const view = render(
-      <DocumentThumbnail
+      <FileThumbnail
         source={{
           kind: "url",
           url: "/retry-image.png",
@@ -1154,7 +1173,7 @@ describe("DocumentThumbnail", () => {
     ).toBe("load_failed")
 
     view.rerender(
-      <DocumentThumbnail
+      <FileThumbnail
         source={{
           kind: "url",
           url: "/retry-image.png",
@@ -1203,7 +1222,7 @@ describe("DocumentThumbnail", () => {
     vi.stubGlobal("fetch", fetchMock)
 
     await renderAsync(
-      <DocumentThumbnail
+      <FileThumbnail
         source={{
           kind: "url",
           url: "/samples/sales.csv",
@@ -1249,7 +1268,7 @@ describe("DocumentThumbnail", () => {
     vi.stubGlobal("fetch", fetchMock)
 
     await renderAsync(
-      <DocumentThumbnail
+      <FileThumbnail
         source={{
           kind: "url",
           url: "/samples/sales.csv",
@@ -1283,7 +1302,7 @@ describe("DocumentThumbnail", () => {
     })
 
     const view = await renderAsync(
-      <DocumentThumbnail
+      <FileThumbnail
         source={{
           kind: "blob",
           blob: new Blob(["not an image"], { type: "image/png" }),
@@ -1328,7 +1347,7 @@ describe("DocumentThumbnail", () => {
     vi.stubGlobal("fetch", fetchMock)
 
     await renderAsync(
-      <DocumentThumbnail
+      <FileThumbnail
         source={{
           kind: "text",
           text: "Inline source line",
@@ -1349,7 +1368,7 @@ describe("DocumentThumbnail", () => {
     vi.stubGlobal("fetch", fetchMock)
 
     await renderAsync(
-      <DocumentThumbnail
+      <FileThumbnail
         source={{
           kind: "text",
           text: `Prefix survives\n${"x".repeat(TEXT_THUMBNAIL_MAX_BYTES + 1)}`,
@@ -1370,7 +1389,7 @@ describe("DocumentThumbnail", () => {
     vi.stubGlobal("fetch", fetchMock)
 
     await renderAsync(
-      <DocumentThumbnail
+      <FileThumbnail
         source={{
           kind: "blob",
           blob: new Blob(["Blob source line"], { type: "text/plain" }),
@@ -1395,7 +1414,7 @@ describe("DocumentThumbnail", () => {
     )
 
     const view = render(
-      <DocumentThumbnail source={urlTextSource("/broken.txt", "broken.txt")} />
+      <FileThumbnail source={urlTextSource("/broken.txt", "broken.txt")} />
     )
 
     await waitFor(() => {
@@ -1419,7 +1438,7 @@ describe("DocumentThumbnail", () => {
     const onError = vi.fn()
 
     const view = render(
-      <DocumentThumbnail
+      <FileThumbnail
         source={urlTextSource("/metadata-error.txt", "metadata.txt")}
         onError={onError}
       />
@@ -1470,7 +1489,7 @@ describe("DocumentThumbnail", () => {
     vi.stubGlobal("fetch", fetchMock)
 
     const view = render(
-      <DocumentThumbnail
+      <FileThumbnail
         source={urlTextSource("/broken-reset.txt", "broken.txt")}
       />
     )
@@ -1483,7 +1502,7 @@ describe("DocumentThumbnail", () => {
 
     await act(async () => {
       view.rerender(
-        <DocumentThumbnail
+        <FileThumbnail
           source={urlTextSource("/working-reset.txt", "working.txt")}
         />
       )
@@ -1509,9 +1528,7 @@ describe("DocumentThumbnail", () => {
     vi.stubGlobal("fetch", fetchMock)
 
     const view = render(
-      <DocumentThumbnail
-        source={urlTextSource("/first-lazy.txt", "first.txt")}
-      />
+      <FileThumbnail source={urlTextSource("/first-lazy.txt", "first.txt")} />
     )
 
     await waitFor(() => {
@@ -1519,9 +1536,7 @@ describe("DocumentThumbnail", () => {
     })
 
     view.rerender(
-      <DocumentThumbnail
-        source={urlTextSource("/second-lazy.txt", "second.txt")}
-      />
+      <FileThumbnail source={urlTextSource("/second-lazy.txt", "second.txt")} />
     )
 
     await waitFor(() => {
@@ -1554,7 +1569,7 @@ describe("DocumentThumbnail", () => {
     vi.stubGlobal("fetch", fetchMock)
 
     const view = render(
-      <DocumentThumbnail
+      <FileThumbnail
         source={urlTextSource("/same-retry.txt", "same.txt")}
         retryKey={0}
       />
@@ -1569,7 +1584,7 @@ describe("DocumentThumbnail", () => {
     shouldFail = false
     await act(async () => {
       view.rerender(
-        <DocumentThumbnail
+        <FileThumbnail
           source={urlTextSource("/same-retry.txt", "same.txt")}
           retryKey={1}
         />

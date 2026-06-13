@@ -5,7 +5,11 @@ import { act, cleanup, fireEvent } from "@testing-library/react"
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
 
 import type { JsonTableCellHarnessProps } from "./json-table-cell-test-utils"
-import { baseField, baseSession, renderEnumCell } from "./json-table-cell-test-utils"
+import {
+  baseField,
+  baseSession,
+  renderEnumCell,
+} from "./json-table-cell-test-utils"
 import { installJsonTableDom } from "./json-table-test-dom"
 
 const selectContext = {
@@ -57,15 +61,13 @@ vi.mock("@/components/ui/select", () => ({
 beforeAll(() => installJsonTableDom())
 afterEach(() => cleanup())
 
-function renderEnumCellForTest(
-  overrides: JsonTableCellHarnessProps = {}
-) {
+function renderEnumCellForTest(overrides: JsonTableCellHarnessProps = {}) {
   return renderEnumCell({
     fieldMetadata: baseField("enum"),
     fieldPath: "status",
-    editSession: baseSession({ fieldPath: "status" }),
-    setOverlayOpen: vi.fn(),
-    closeEditSession: vi.fn(),
+    structuredEditSession: baseSession({ fieldPath: "status" }),
+    onPickerOpenChange: vi.fn(),
+    onEditingEnd: vi.fn(),
     commitValue: vi.fn(),
     ...overrides,
   })
@@ -185,15 +187,15 @@ describe("json table enum cell", () => {
   })
 
   it("does not close from trigger blur while the table is opening the dropdown", () => {
-    const closeEditSession = vi.fn()
-    const setOverlayOpen = vi.fn()
+    const onEditingEnd = vi.fn()
+    const onPickerOpenChange = vi.fn()
     const view = renderEnumCellForTest({
-      closeEditSession,
-      editSession: baseSession({
+      onEditingEnd,
+      structuredEditSession: baseSession({
         fieldPath: "status",
         isOverlayOpen: false,
       }),
-      setOverlayOpen,
+      onPickerOpenChange,
     })
 
     const trigger = view.container.querySelector<HTMLElement>(
@@ -202,8 +204,8 @@ describe("json table enum cell", () => {
     if (!trigger) throw new Error("Missing enum trigger")
     fireEvent.blur(trigger)
 
-    expect(closeEditSession).not.toHaveBeenCalled()
-    expect(setOverlayOpen).toHaveBeenCalledWith(true)
+    expect(onEditingEnd).not.toHaveBeenCalled()
+    expect(onPickerOpenChange).toHaveBeenCalledWith(true)
   })
 
   it("distinguishes nullable null from a literal sentinel-like string option", () => {
@@ -308,7 +310,7 @@ describe("json table enum cell", () => {
   it("lets value selection win when the dropdown reports close before value", () => {
     vi.useFakeTimers()
     try {
-      const closeEditSession = vi.fn()
+      const onEditingEnd = vi.fn()
       const onCommit = vi.fn()
       renderEnumCellForTest({
         effectiveValue: "draft",
@@ -321,7 +323,7 @@ describe("json table enum cell", () => {
           kind: "enum",
           enumValues: ["draft", "paid"],
         },
-        closeEditSession,
+        onEditingEnd,
         commitValue: onCommit,
       })
 
@@ -334,11 +336,11 @@ describe("json table enum cell", () => {
         "paid",
         expect.objectContaining({ kind: "select", rawValue: "option:1" })
       )
-      expect(closeEditSession).toHaveBeenCalledTimes(1)
+      expect(onEditingEnd).toHaveBeenCalledTimes(1)
 
       act(() => vi.runAllTimers())
 
-      expect(closeEditSession).toHaveBeenCalledTimes(1)
+      expect(onEditingEnd).toHaveBeenCalledTimes(1)
     } finally {
       vi.useRealTimers()
     }
@@ -347,17 +349,17 @@ describe("json table enum cell", () => {
   it("closes after a dropdown dismisses without selecting a value", () => {
     vi.useFakeTimers()
     try {
-      const closeEditSession = vi.fn()
-      const setOverlayOpen = vi.fn()
-      renderEnumCellForTest({ closeEditSession, setOverlayOpen })
+      const onEditingEnd = vi.fn()
+      const onPickerOpenChange = vi.fn()
+      renderEnumCellForTest({ onEditingEnd, onPickerOpenChange })
 
       act(() => selectContext.onOpenChange(false))
 
-      expect(closeEditSession).not.toHaveBeenCalled()
+      expect(onEditingEnd).not.toHaveBeenCalled()
 
       act(() => vi.runAllTimers())
 
-      expect(closeEditSession).toHaveBeenCalledTimes(1)
+      expect(onEditingEnd).toHaveBeenCalledTimes(1)
     } finally {
       vi.useRealTimers()
     }

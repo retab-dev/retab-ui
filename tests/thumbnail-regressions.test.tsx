@@ -7,16 +7,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import type { ViewerResource } from "@/lib/viewer-resource"
 import { FileThumbnail } from "@/components/ui/file-thumbnail"
-import { DocumentThumbnail } from "@/components/document-thumbnail"
-import { DocxFirstPage } from "@/components/document-thumbnail/renderers/docx-thumbnail"
-import { IframeDoc } from "@/components/document-thumbnail/renderers/layout"
-import { MarkdownFirstPage } from "@/components/document-thumbnail/renderers/markdown-thumbnail"
-import { PdfFirstPage } from "@/components/document-thumbnail/renderers/pdf-thumbnail"
-import { PptxFirstSlide } from "@/components/document-thumbnail/renderers/pptx-thumbnail"
-import { TextThumbnail } from "@/components/document-thumbnail/renderers/text-thumbnail"
-import { TiffFirstPage } from "@/components/document-thumbnail/renderers/tiff-thumbnail"
-import { XlsxFirstSheet } from "@/components/document-thumbnail/renderers/xlsx-thumbnail"
-import { clearThumbnailCachesForTests } from "@/components/document-thumbnail/thumbnail-test-reset"
+import { DocxFirstPage } from "@/components/file-thumbnail/renderers/docx-thumbnail"
+import { IframeDoc } from "@/components/file-thumbnail/renderers/layout"
+import { MarkdownFirstPage } from "@/components/file-thumbnail/renderers/markdown-thumbnail"
+import { PdfFirstPage } from "@/components/file-thumbnail/renderers/pdf-thumbnail"
+import { PptxFirstSlide } from "@/components/file-thumbnail/renderers/pptx-thumbnail"
+import { TextThumbnail } from "@/components/file-thumbnail/renderers/text-thumbnail"
+import { TiffFirstPage } from "@/components/file-thumbnail/renderers/tiff-thumbnail"
+import { XlsxFirstSheet } from "@/components/file-thumbnail/renderers/xlsx-thumbnail"
+import { clearThumbnailCachesForTests } from "@/components/file-thumbnail/thumbnail-test-reset"
 
 const rendererMocks = vi.hoisted(() => ({
   pdf: {
@@ -1407,7 +1406,7 @@ describe("thumbnail accessibility regressions", () => {
 
   it("uses the file name as direct image alt text", () => {
     const { container } = render(
-      <DocumentThumbnail
+      <FileThumbnail
         source={{
           kind: "url",
           url: "/scan.png",
@@ -1436,15 +1435,10 @@ describe("thumbnail accessibility regressions", () => {
 })
 
 describe("thumbnail generated registry regressions", () => {
-  it("generates install-safe imports for file-thumbnail and document-thumbnail", () => {
+  it("generates install-safe imports for file-thumbnail", () => {
     const fileThumbnail = readFileSync("public/r/file-thumbnail.json", "utf8")
-    const documentThumbnail = readFileSync(
-      "public/r/document-thumbnail.json",
-      "utf8"
-    )
 
     expect(fileThumbnail).not.toContain("@/registry/new-york-v4")
-    expect(documentThumbnail).not.toContain("@/registry/new-york-v4")
   })
 
   it("keeps the frame package free of renderer dependencies", () => {
@@ -1459,9 +1453,9 @@ describe("thumbnail generated registry regressions", () => {
     )
   })
 
-  it("ships the direct-image module and worker files in document-thumbnail", () => {
+  it("ships the direct-image module and worker files in file-thumbnail", () => {
     const item = JSON.parse(
-      readFileSync("public/r/document-thumbnail.json", "utf8")
+      readFileSync("public/r/file-thumbnail.json", "utf8")
     ) as {
       files: Array<{ target?: string; path: string }>
       registryDependencies: string[]
@@ -1485,12 +1479,11 @@ describe("thumbnail generated registry regressions", () => {
       "pptxviewjs",
       "utif",
     ])
-    expect(files).toContain("@components/document-thumbnail.tsx")
     expect(files).toContain(
-      "@components/document-thumbnail/thumbnail-direct-image.tsx"
+      "@components/file-thumbnail/thumbnail-direct-image.tsx"
     )
-    expect(files).toContain("@components/document-thumbnail-tiff.worker.ts")
-    expect(files).toContain("@components/document-thumbnail-xlsx.worker.ts")
+    expect(files).toContain("@components/file-thumbnail-tiff.worker.ts")
+    expect(files).toContain("@components/file-thumbnail-xlsx.worker.ts")
     expect(files).not.toContain("@ui/pdf-viewer.tsx")
     expect(files).not.toContain("@ui/docx-viewer.tsx")
   })

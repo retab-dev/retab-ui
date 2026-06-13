@@ -3,7 +3,7 @@
 import { cleanup, fireEvent, waitFor } from "@testing-library/react"
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
 
-import type { JsonTableEditSession } from "@/components/json-table/json-table-edit-session"
+import type { JsonTableActiveCell } from "@/components/json-table/json-table-edit-session"
 
 import {
   findEditableCell,
@@ -117,7 +117,7 @@ function expectAriaControlsTarget(trigger: HTMLElement, target: HTMLElement) {
   expect(document.getElementById(controls ?? "")).toBe(target)
 }
 
-function latestSession(sessions: Array<JsonTableEditSession | null>) {
+function latestSession(sessions: Array<JsonTableActiveCell | null>) {
   return sessions.at(-1)
 }
 
@@ -237,7 +237,7 @@ describe("json table a11y and keyboard hardening", () => {
 
   it("closes a focused boolean checkbox on Escape without committing", async () => {
     const onDocumentDataChange = vi.fn()
-    const sessions: Array<JsonTableEditSession | null> = []
+    const sessions: Array<JsonTableActiveCell | null> = []
     const view = renderInteractionRow({
       visiblePaths: ["is_paid"],
       onDocumentDataChange,
@@ -321,7 +321,7 @@ describe("json table a11y and keyboard hardening", () => {
 
   it("closes enum on Escape without committing and returns focus to the table cell", async () => {
     const onDocumentDataChange = vi.fn()
-    const sessions: Array<JsonTableEditSession | null> = []
+    const sessions: Array<JsonTableActiveCell | null> = []
     const view = renderInteractionRow({
       visiblePaths: ["status"],
       onDocumentDataChange,
@@ -372,7 +372,7 @@ describe("json table a11y and keyboard hardening", () => {
 
   it("closes picker on Escape without committing and returns focus to the table cell", async () => {
     const onDocumentDataChange = vi.fn()
-    const sessions: Array<JsonTableEditSession | null> = []
+    const sessions: Array<JsonTableActiveCell | null> = []
     const view = renderInteractionRow({
       visiblePaths: ["shipped_at"],
       onDocumentDataChange,

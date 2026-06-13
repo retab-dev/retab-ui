@@ -41,6 +41,16 @@ const forbiddenRuntimePatterns = [
   "overlays",
 ]
 
+const forbiddenJsonTableRuntimePatterns = [
+  "blurActiveElement",
+  "canActivatePrimitiveFromKey",
+  "fieldPathAttributeSelector",
+  "finishPrimitiveEditor",
+  "getDataCellDisplayTextSelectionOffset",
+  "JsonTableActiveControl",
+  "primitiveActivationIntent",
+]
+
 const forbiddenRuntimeRegexes = [
   /\bprops\.session\b/,
   /\bprops\.commit\b/,
@@ -72,12 +82,10 @@ describe("json table and DataCell architecture", () => {
   })
 
   it("keeps runtime source off legacy edit architecture names", () => {
-    const runtimeFiles = [
-      ...runtimeRoots.flatMap((root) =>
-        sourceFilesUnder(join(repoRoot, root)).filter(isJsonTableRuntimeFile)
-      ),
-      ...dataCellRuntimeFiles,
-    ]
+    const jsonTableRuntimeFiles = runtimeRoots.flatMap((root) =>
+      sourceFilesUnder(join(repoRoot, root)).filter(isJsonTableRuntimeFile)
+    )
+    const runtimeFiles = [...jsonTableRuntimeFiles, ...dataCellRuntimeFiles]
 
     for (const file of runtimeFiles) {
       const content = readFileSync(join(repoRoot, file), "utf8")
@@ -88,6 +96,15 @@ describe("json table and DataCell architecture", () => {
       }
       for (const pattern of forbiddenRuntimeRegexes) {
         expect(pattern.test(content), `${file} matches ${pattern}`).toBe(false)
+      }
+    }
+
+    for (const file of jsonTableRuntimeFiles) {
+      const content = readFileSync(join(repoRoot, file), "utf8")
+      for (const pattern of forbiddenJsonTableRuntimePatterns) {
+        expect(content.includes(pattern), `${file} contains ${pattern}`).toBe(
+          false
+        )
       }
     }
   })

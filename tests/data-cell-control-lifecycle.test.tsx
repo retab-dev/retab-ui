@@ -2,7 +2,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import { DataCell } from "@/components/ui/data-cell"
+import { DataCell, type DataCellEditorHandle } from "@/components/ui/data-cell"
 
 afterEach(() => {
   cleanup()
@@ -299,6 +299,105 @@ describe("DataCell direct control lifecycle", () => {
 
     expect(document.activeElement).not.toBe(input)
     expect(onCommit).not.toHaveBeenCalled()
+  })
+
+  it("exposes editor handles that finish or cancel text edits exactly once", () => {
+    const onCommit = vi.fn()
+    const onEditingEnd = vi.fn()
+    const onEditorHandleChange = vi.fn()
+    render(
+      <DataCell
+        kind="text"
+        mode="edit"
+        value="old"
+        onCommit={onCommit}
+        onEditingEnd={onEditingEnd}
+        onEditorHandleChange={onEditorHandleChange}
+      />
+    )
+
+    const input = screen.getByRole("textbox") as HTMLInputElement
+    const handle = onEditorHandleChange.mock.calls.at(-1)?.[0] as
+      | DataCellEditorHandle
+      | undefined
+    expect(handle).toBeTruthy()
+
+    fireEvent.change(input, { target: { value: "finished" } })
+    handle?.finish()
+    fireEvent.blur(input)
+
+    expect(onCommit).toHaveBeenCalledTimes(1)
+    expect(onCommit).toHaveBeenCalledWith(
+      "finished",
+      expect.objectContaining({
+        kind: "text",
+        rawValue: "finished",
+        isValid: true,
+      })
+    )
+    expect(onEditingEnd).toHaveBeenCalledTimes(1)
+  })
+
+  it("exposes editor handles that cancel number edits without committing", () => {
+    const onCommit = vi.fn()
+    const onEditingEnd = vi.fn()
+    const onEditorHandleChange = vi.fn()
+    render(
+      <DataCell
+        kind="number"
+        mode="edit"
+        value={1}
+        onCommit={onCommit}
+        onEditingEnd={onEditingEnd}
+        onEditorHandleChange={onEditorHandleChange}
+      />
+    )
+
+    const input = screen.getByRole("spinbutton") as HTMLInputElement
+    const handle = onEditorHandleChange.mock.calls.at(-1)?.[0] as
+      | DataCellEditorHandle
+      | undefined
+    expect(handle).toBeTruthy()
+
+    fireEvent.change(input, { target: { value: "3.25" } })
+    handle?.cancel()
+    fireEvent.blur(input)
+
+    expect(onCommit).not.toHaveBeenCalled()
+    expect(onEditingEnd).toHaveBeenCalledTimes(1)
+  })
+
+  it("finishes invalid integer drafts through the editor handle with invalid metadata", () => {
+    const onCommit = vi.fn()
+    const onEditorHandleChange = vi.fn()
+    render(
+      <DataCell
+        kind="integer"
+        mode="edit"
+        value={1}
+        onCommit={onCommit}
+        onEditorHandleChange={onEditorHandleChange}
+      />
+    )
+
+    const input = screen.getByRole("spinbutton") as HTMLInputElement
+    const handle = onEditorHandleChange.mock.calls.at(-1)?.[0] as
+      | DataCellEditorHandle
+      | undefined
+    expect(handle).toBeTruthy()
+
+    fireEvent.change(input, { target: { value: "1.5" } })
+    handle?.finish()
+
+    expect(onCommit).toHaveBeenCalledWith(
+      null,
+      expect.objectContaining({
+        kind: "integer",
+        rawValue: "1.5",
+        isEmpty: false,
+        isValid: false,
+      })
+    )
   })
 
   it("opens date pickers from autofocus and activation, then closes on outside pointer and Escape", () => {

@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "registry/new-york-v4/ui/dropzone.tsx",
+    "registry/new-york-v4/ui/file-uploader.tsx",
+    "registry/new-york-v4/blocks/dropzone-block.tsx",
+    "components/dropzone-demo.tsx",
+    "tests/dropzone.test.tsx"
+  ]
+}

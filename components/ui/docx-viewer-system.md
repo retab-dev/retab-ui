@@ -110,7 +110,7 @@ flowchart TB
   end
 
   subgraph "Thumbnail system"
-    DocxFirstPage["components/document-thumbnail/renderers/docx-thumbnail.tsx\nDocxFirstPage"]
+    DocxFirstPage["components/file-thumbnail/renderers/docx-thumbnail.tsx\nDocxFirstPage"]
     ThumbnailResource["useThumbnailResource(getDocxDocumentResource())"]
     ThumbnailSlot["withThumbnailDecodeSlot()"]
     ThumbnailErrors["withThumbnailFormatError(docx, render_failed)"]

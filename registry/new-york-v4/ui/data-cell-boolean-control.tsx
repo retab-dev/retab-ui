@@ -1,5 +1,6 @@
 "use client"
 
+import * as React from "react"
 import { CheckIcon, XIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -54,6 +55,7 @@ export function DataCellBooleanControl({
   onEditingEnd,
   onActiveChange: _onActiveChange,
   onPickerOpenChange: _onPickerOpenChange,
+  onEditorHandleChange,
   onFocus,
   onBlur,
   onKeyDown,
@@ -69,6 +71,14 @@ export function DataCellBooleanControl({
     "aria-invalid": ariaInvalid,
     ...rootProps
   } = props
+
+  React.useLayoutEffect(() => {
+    onEditorHandleChange?.({
+      finish: () => onEditingEnd?.(),
+      cancel: () => onEditingEnd?.(),
+    })
+    return () => onEditorHandleChange?.(null)
+  }, [onEditingEnd, onEditorHandleChange])
 
   return (
     <div
@@ -115,7 +125,13 @@ export function DataCellBooleanControl({
           onEditingEnd?.()
           onBlur?.(event)
         }}
-        onKeyDown={onKeyDown}
+        onKeyDown={(event) => {
+          onKeyDown?.(event)
+          if (event.defaultPrevented || event.key !== "Escape") return
+          onEditingEnd?.()
+          event.currentTarget.blur()
+          event.preventDefault()
+        }}
         onDoubleClick={onDoubleClick}
       >
         <DataCellBooleanIndicator checked={checked} />

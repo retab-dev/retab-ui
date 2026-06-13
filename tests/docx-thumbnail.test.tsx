@@ -16,8 +16,8 @@ import {
   resetDocxDocumentResourceCacheForTests,
 } from "@/lib/docx-document-resource"
 import { isViewerFormatError } from "@/lib/viewer-errors"
-import { DocxFirstPage } from "@/components/document-thumbnail/renderers/docx-thumbnail"
-import { clearThumbnailCachesForTests } from "@/components/document-thumbnail/thumbnail-test-reset"
+import { DocxFirstPage } from "@/components/file-thumbnail/renderers/docx-thumbnail"
+import { clearThumbnailCachesForTests } from "@/components/file-thumbnail/thumbnail-test-reset"
 import {
   clearViewerResourceRegistryForTests,
   createViewerResource,

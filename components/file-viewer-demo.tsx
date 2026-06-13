@@ -31,39 +31,102 @@ const FILES = [
   { label: "Text", file: "review-notes.txt", source: "inline-text" },
 ] as const satisfies readonly DemoFile[]
 
+type DemoFileKey = DemoFile["file"]
+
 const SHOWCASE_FILES = FILES.filter((file) => file.label !== "Code").map(
   (file) => (file.label === "JSON" ? { ...file, label: "Code" } : file)
 )
-const TEXT_FILE_INDEX = SHOWCASE_FILES.findIndex(
-  (file) => file.label === "Text"
-)
-const SHOWCASE_INITIAL_FILE_INDEX = TEXT_FILE_INDEX === -1 ? 0 : TEXT_FILE_INDEX
+const SHOWCASE_INITIAL_FILE_KEY =
+  SHOWCASE_FILES.find((file) => file.label === "Text")?.file ??
+  SHOWCASE_FILES[0].file
 
-function getActiveFile(files: readonly DemoFile[], active: number) {
-  return files[active] ?? files[0]
+function getActiveFile(files: readonly DemoFile[], active: DemoFileKey) {
+  return files.find((file) => file.file === active) ?? files[0]
 }
 
 function FileTabs({
-  active,
+  activeFileKey,
+  idPrefix,
   files = FILES,
   onChange,
   className,
 }: {
-  active: number
+  activeFileKey: DemoFileKey
+  idPrefix: string
   files?: readonly DemoFile[]
-  onChange: (i: number) => void
+  onChange: (file: DemoFileKey) => void
   className?: string
 }) {
+  const tabRefs = React.useRef(new Map<DemoFileKey, HTMLButtonElement>())
+
+  const selectFile = React.useCallback(
+    (file: DemoFileKey, focus = false) => {
+      onChange(file)
+      if (focus) tabRefs.current.get(file)?.focus()
+    },
+    [onChange]
+  )
+
+  const onKeyDown = React.useCallback(
+    (event: React.KeyboardEvent<HTMLButtonElement>, file: DemoFileKey) => {
+      const index = files.findIndex((item) => item.file === file)
+      if (index === -1) return
+
+      const lastIndex = files.length - 1
+      let nextIndex: number | null = null
+
+      switch (event.key) {
+        case "ArrowRight":
+        case "ArrowDown":
+          nextIndex = index === lastIndex ? 0 : index + 1
+          break
+        case "ArrowLeft":
+        case "ArrowUp":
+          nextIndex = index === 0 ? lastIndex : index - 1
+          break
+        case "Home":
+          nextIndex = 0
+          break
+        case "End":
+          nextIndex = lastIndex
+          break
+        default:
+          return
+      }
+
+      event.preventDefault()
+      const nextFile = files[nextIndex]
+      if (nextFile) selectFile(nextFile.file, true)
+    },
+    [files, selectFile]
+  )
+
   return (
-    <div className={cn("flex flex-wrap gap-[3px]", className)}>
-      {files.map((f, i) => (
+    <div
+      role="tablist"
+      aria-label="File format"
+      className={cn("flex flex-wrap gap-[3px]", className)}
+    >
+      {files.map((f) => (
         <button
           key={f.file}
+          ref={(node) => {
+            if (node) tabRefs.current.set(f.file, node)
+            else tabRefs.current.delete(f.file)
+          }}
           type="button"
-          onClick={() => onChange(i)}
+          id={`${idPrefix}-${f.file}-tab`}
+          role="tab"
+          aria-selected={f.file === activeFileKey}
+          aria-controls={
+            f.file === activeFileKey ? `${idPrefix}-${f.file}-panel` : undefined
+          }
+          tabIndex={f.file === activeFileKey ? 0 : -1}
+          onClick={() => selectFile(f.file)}
+          onKeyDown={(event) => onKeyDown(event, f.file)}
           className={cn(
             "rounded-md border px-2.5 py-1 text-xs transition-colors",
-            i === active
+            f.file === activeFileKey
               ? "border-primary bg-primary text-primary-foreground"
               : "bg-background text-muted-foreground hover:bg-muted"
           )}
@@ -75,26 +138,34 @@ function FileTabs({
   )
 }
 
-function FileCanvas({ file }: { file: DemoFile }) {
-  const source =
-    file.source === "inline-text"
-      ? {
-          kind: "text" as const,
-          text: LONG_TEXT_SAMPLE,
-          fileName: LONG_TEXT_SAMPLE_FILE_NAME,
-          mimeType: LONG_TEXT_SAMPLE_MIME_TYPE,
-        }
-      : {
-          kind: "url" as const,
-          url: `/samples/${file.file}`,
-          fileName: file.file,
-        }
+function getFileSource(file: DemoFile) {
+  return file.source === "inline-text"
+    ? {
+        kind: "text" as const,
+        text: LONG_TEXT_SAMPLE,
+        fileName: LONG_TEXT_SAMPLE_FILE_NAME,
+        mimeType: LONG_TEXT_SAMPLE_MIME_TYPE,
+      }
+    : {
+        kind: "url" as const,
+        url: `/samples/${file.file}`,
+        fileName: file.file,
+      }
+}
+
+function FileCanvas({ file, idPrefix }: { file: DemoFile; idPrefix: string }) {
+  const source = React.useMemo(() => getFileSource(file), [file])
 
   return (
-    <div className="h-[min(680px,calc(100svh-10rem))] min-h-[420px] w-full rounded-xl shadow-sm">
-      {/* Bounded viewport keeps long documents scrolling inside the viewer.
-          key forces a fresh viewer per file so state (zoom, sheet, scroll) resets */}
+    <div
+      id={`${idPrefix}-${file.file}-panel`}
+      role="tabpanel"
+      aria-labelledby={`${idPrefix}-${file.file}-tab`}
+      className="h-[min(680px,calc(100svh-10rem))] min-h-[420px] w-full rounded-xl shadow-sm"
+    >
       <FileViewer
+        // Changing files is a hard viewer boundary: format-local zoom, sheet,
+        // and scroll state should not leak between unrelated sample documents.
         key={file.file}
         source={source}
         className="h-full"
@@ -106,13 +177,18 @@ function FileCanvas({ file }: { file: DemoFile }) {
 
 /** Standalone demo (docs): format tabs stacked above the viewer. */
 export function FileViewerDemo() {
-  const [active, setActive] = React.useState(0)
+  const idPrefix = React.useId()
+  const [active, setActive] = React.useState<DemoFileKey>(FILES[0].file)
   const activeFile = getActiveFile(FILES, active)
 
   return (
     <div className="not-prose my-6 flex flex-col gap-3">
-      <FileTabs active={active} onChange={setActive} />
-      <FileCanvas file={activeFile} />
+      <FileTabs
+        activeFileKey={active}
+        idPrefix={idPrefix}
+        onChange={setActive}
+      />
+      <FileCanvas file={activeFile} idPrefix={idPrefix} />
     </div>
   )
 }
@@ -123,16 +199,24 @@ export function FileViewerDemo() {
  * Schema Builder card. The header is given a fixed height shared with that card.
  */
 export function FileViewerShowcase() {
-  const [active, setActive] = React.useState(SHOWCASE_INITIAL_FILE_INDEX)
+  const idPrefix = React.useId()
+  const [active, setActive] = React.useState<DemoFileKey>(
+    SHOWCASE_INITIAL_FILE_KEY
+  )
   const activeFile = getActiveFile(SHOWCASE_FILES, active)
 
   return (
     <div className="flex flex-col gap-3">
       <div className="flex min-h-(--showcase-header-h) flex-col gap-1.5">
         <h3 className="text-sm font-medium text-foreground">File Viewer</h3>
-        <FileTabs active={active} files={SHOWCASE_FILES} onChange={setActive} />
+        <FileTabs
+          activeFileKey={active}
+          idPrefix={idPrefix}
+          files={SHOWCASE_FILES}
+          onChange={setActive}
+        />
       </div>
-      <FileCanvas file={activeFile} />
+      <FileCanvas file={activeFile} idPrefix={idPrefix} />
     </div>
   )
 }

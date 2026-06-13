@@ -15,6 +15,7 @@ import {
   materializeCodeVisibleLines,
   materializeInlineVisibleLines,
   resolveTextViewerMode,
+  serializeMarkdownTableForClipboard,
   textFrameIntersectsLineRange,
   type CodeTextBlockFrame,
   type ImageTextBlockFrame,
@@ -89,10 +90,12 @@ export function ChenglouTextViewerContent({
   retryVersion,
   forwardedRef,
   mode: forcedMode,
+  projection = "chenglou",
 }: TextViewerProps & {
   resource: ViewerResource
   retryVersion: number
   forwardedRef?: React.ForwardedRef<TextViewerHandle>
+  projection?: "chenglou" | "vanillacheng"
 }) {
   const bounds = React.useMemo(
     () => resolvedTextViewerBounds({ maxBytes, maxLines }),
@@ -187,8 +190,9 @@ export function ChenglouTextViewerContent({
 
   const projectCurrentRows = React.useCallback(() => {
     const state = projectionStateRef.current
+    if (!state) return
+
     const scrollElement = viewportRef.current
-    if (!state || !scrollElement) return
 
     projectRows({
       cache: state.cache,
@@ -197,8 +201,8 @@ export function ChenglouTextViewerContent({
       frame: state.frame,
       highlightRange: state.highlightRange,
       preparedDocument: state.preparedDocument,
-      scrollTop: scrollElement.scrollTop,
-      viewportHeight: scrollElement.clientHeight || state.viewportHeight,
+      scrollTop: scrollElement?.scrollTop ?? 0,
+      viewportHeight: scrollElement?.clientHeight || state.viewportHeight,
     })
   }, [])
 
@@ -365,6 +369,32 @@ export function ChenglouTextViewerContent({
     scrollLineRange(highlightRange)
   }, [highlightRange, scrollLineRange])
 
+  const scrollMarkdownFragment = React.useCallback(
+    (event: React.MouseEvent) => {
+      const href = localFragmentHrefFromEventTarget(event.target)
+      if (!href) return
+
+      const targetId = decodeMarkdownFragmentHref(href)
+      const targetIndex = markdownHeadingBlockIndex(
+        preparedDocument.blocks,
+        targetId
+      )
+      const targetFrame = frame.frames[targetIndex]
+      const scrollElement = viewportRef.current
+      if (!targetFrame || !scrollElement) return
+
+      event.preventDefault()
+      scrollElement.scrollTo({
+        behavior: "smooth",
+        top: Math.max(0, targetFrame.top),
+      })
+      if (window.location.hash !== href) {
+        window.history.replaceState(null, "", href)
+      }
+    },
+    [frame.frames, preparedDocument.blocks]
+  )
+
   return (
     <TextViewerFrame className={className} bare={bare}>
       {toolbar ? (
@@ -381,13 +411,14 @@ export function ChenglouTextViewerContent({
         className="min-h-0 flex-1 bg-background"
         orientation="vertical"
         viewportClassName="bg-background"
+        viewportProps={{ onClickCapture: scrollMarkdownFragment }}
         viewportRef={viewportRef}
       >
         <div
           ref={canvasRef}
           className="relative min-w-0"
           data-slot="text-virtual-canvas"
-          data-projection="chenglou"
+          data-projection={projection}
           style={{
             height: frame.totalHeight,
             minWidth: viewportWidth,
@@ -618,6 +649,24 @@ function renderRowContent({
   row.className = rowClassName(frame, highlightRange)
   row.dataset.slot = "text-line"
   row.dataset.sourceLine = String(frame.sourceStartLine)
+  if (block.kind === "inline" && block.headingId) {
+    row.id = block.headingId
+    row.dataset.headingId = block.headingId
+  } else {
+    row.removeAttribute("id")
+    delete row.dataset.headingId
+  }
+  if (frame.listDepth) {
+    row.dataset.listDepth = String(frame.listDepth)
+  } else {
+    delete row.dataset.listDepth
+  }
+  if (frame.quoteDepth) {
+    row.dataset.quoteDepth = String(frame.quoteDepth)
+  } else {
+    delete row.dataset.quoteDepth
+  }
+  applyRowSemantics(row, block, frame)
   row.style.position = "absolute"
   row.style.left = "0"
   row.style.width = "100%"
@@ -674,6 +723,35 @@ function renderRowContent({
   }
 }
 
+function applyRowSemantics(
+  row: HTMLDivElement,
+  block: PreparedTextBlock,
+  frame: TextBlockFrame
+) {
+  row.removeAttribute("role")
+  row.removeAttribute("aria-level")
+
+  if (block.kind === "inline") {
+    const headingLevel = inlineHeadingLevel(block)
+    if (headingLevel != null) {
+      row.setAttribute("role", "heading")
+      row.setAttribute("aria-level", String(headingLevel))
+      return
+    }
+  }
+
+  if (frame.markerText) {
+    row.setAttribute("role", "listitem")
+    row.setAttribute("aria-level", String(frame.listDepth))
+  }
+}
+
+function inlineHeadingLevel(block: PreparedInlineTextBlock) {
+  if (block.variant === "heading-1") return 1
+  if (block.variant === "heading-2") return 2
+  return null
+}
+
 function renderInlineBlock({
   block,
   contentWidth,
@@ -725,8 +803,10 @@ function renderInlineBlock({
       }
       if (node instanceof HTMLAnchorElement && fragment.href) {
         node.href = fragment.href
-        node.rel = "noopener noreferrer"
-        node.target = "_blank"
+        if (!isLocalFragmentHref(fragment.href)) {
+          node.rel = "noopener noreferrer"
+          node.target = "_blank"
+        }
         if (fragment.title) node.title = fragment.title
       }
       lineRow.append(node)
@@ -786,6 +866,90 @@ function renderCodeBlock({
 
   pre.append(code)
   row.append(pre)
+  appendCodeBlockToolbar({ block, frame, row })
+}
+
+function appendCodeBlockToolbar({
+  block,
+  frame,
+  row,
+}: {
+  block: PreparedCodeTextBlock
+  frame: CodeTextBlockFrame
+  row: HTMLDivElement
+}) {
+  const toolbar = document.createElement("div")
+  toolbar.className = "absolute z-10 flex items-center gap-1"
+  toolbar.style.left = `${16 + frame.contentLeft + Math.max(0, frame.width - 66)}px`
+  toolbar.style.top = "6px"
+
+  if (block.language) {
+    const language = document.createElement("span")
+    language.className =
+      "rounded bg-background/90 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground shadow-sm"
+    language.textContent = block.language
+    toolbar.append(language)
+  }
+
+  const copyButton = document.createElement("button")
+  copyButton.type = "button"
+  copyButton.className =
+    "rounded bg-background/90 p-1 text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground"
+  copyButton.setAttribute("aria-label", "Copy code block")
+  appendCopyIcon(copyButton)
+  copyButton.addEventListener("click", () => {
+    void navigator.clipboard?.writeText(block.fallbackText).then(() => {
+      copyButton.setAttribute("aria-label", "Copied")
+      copyButton.replaceChildren()
+      appendCheckIcon(copyButton)
+      window.setTimeout(() => {
+        copyButton.setAttribute("aria-label", "Copy code block")
+        copyButton.replaceChildren()
+        appendCopyIcon(copyButton)
+      }, 1200)
+    })
+  })
+  toolbar.append(copyButton)
+  row.append(toolbar)
+}
+
+function appendCopyIcon(parent: HTMLElement) {
+  const svg = createIconSvg()
+  const back = document.createElementNS("http://www.w3.org/2000/svg", "rect")
+  back.setAttribute("x", "8")
+  back.setAttribute("y", "8")
+  back.setAttribute("width", "8")
+  back.setAttribute("height", "8")
+  back.setAttribute("rx", "1")
+  const front = document.createElementNS("http://www.w3.org/2000/svg", "rect")
+  front.setAttribute("x", "4")
+  front.setAttribute("y", "4")
+  front.setAttribute("width", "8")
+  front.setAttribute("height", "8")
+  front.setAttribute("rx", "1")
+  svg.append(back, front)
+  parent.append(svg)
+}
+
+function appendCheckIcon(parent: HTMLElement) {
+  const svg = createIconSvg()
+  svg.classList.add("text-emerald-600", "dark:text-emerald-400")
+  const path = document.createElementNS("http://www.w3.org/2000/svg", "path")
+  path.setAttribute("d", "m5 10 3 3 7-7")
+  svg.append(path)
+  parent.append(svg)
+}
+
+function createIconSvg() {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg")
+  svg.setAttribute("viewBox", "0 0 20 20")
+  svg.setAttribute("fill", "none")
+  svg.setAttribute("stroke", "currentColor")
+  svg.setAttribute("stroke-width", "1.7")
+  svg.setAttribute("stroke-linecap", "round")
+  svg.setAttribute("stroke-linejoin", "round")
+  svg.classList.add("size-3")
+  return svg
 }
 
 function renderImageBlock({
@@ -856,12 +1020,29 @@ function renderTableBlock({
     viewportBottom,
     viewportTop,
   })
+  const headerIdPrefix = `markdown-table-${frame.sourceStartLine}-${frame.sourceEndLine}`
   const wrapper = document.createElement("div")
   wrapper.className =
-    "absolute max-w-[calc(100%-32px)] overflow-x-auto rounded-md border"
+    "absolute max-w-[calc(100%-32px)] overflow-hidden rounded-md border"
   wrapper.style.height = `${frame.height}px`
   wrapper.style.left = `${16 + frame.contentLeft}px`
   wrapper.style.width = `${frame.tableWidth}px`
+
+  const copyButton = document.createElement("button")
+  copyButton.type = "button"
+  copyButton.className =
+    "absolute top-1 right-1 z-10 rounded bg-background/90 px-1.5 py-1 text-[10px] text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground"
+  copyButton.setAttribute("aria-label", "Copy table")
+  copyButton.textContent = "Copy"
+  copyButton.addEventListener("click", () => {
+    void navigator.clipboard?.writeText(
+      serializeMarkdownTableForClipboard(block)
+    )
+  })
+  wrapper.append(copyButton)
+
+  const scroller = document.createElement("div")
+  scroller.className = "h-full overflow-x-auto"
 
   const table = document.createElement("table")
   table.className = "border-collapse text-left text-[13px]"
@@ -882,6 +1063,7 @@ function renderTableBlock({
   for (let index = 0; index < block.header.length; index++) {
     const th = document.createElement("th")
     th.className = "border-b px-3.5 py-2 font-semibold text-foreground"
+    th.id = `${headerIdPrefix}-column-${index}`
     th.scope = "col"
     th.style.textAlign = block.alignments[index] ?? "left"
     appendTableCellContent(th, block.header[index])
@@ -898,11 +1080,13 @@ function renderTableBlock({
     rowIndex++
   ) {
     const tableRow = document.createElement("tr")
-    tableRow.style.height = `${frame.rowHeight}px`
+    tableRow.dataset.sourceLine = String(frame.rowSourceStartLines[rowIndex])
+    tableRow.style.height = `${frame.rowHeights[rowIndex] ?? 0}px`
     const sourceRow = block.rows[rowIndex] ?? []
     for (let cellIndex = 0; cellIndex < block.header.length; cellIndex++) {
       const td = document.createElement("td")
       td.className = "border-t px-3.5 py-1.5 align-top text-foreground"
+      td.headers = `${headerIdPrefix}-column-${cellIndex}`
       td.style.textAlign = block.alignments[cellIndex] ?? "left"
       appendTableCellContent(td, sourceRow[cellIndex])
       tableRow.append(td)
@@ -911,7 +1095,8 @@ function renderTableBlock({
   }
   appendSpacerRow(tbody, rowWindow.afterHeight, block.header.length)
   table.append(tbody)
-  wrapper.append(table)
+  scroller.append(table)
+  wrapper.append(scroller)
   row.append(wrapper)
 }
 
@@ -942,8 +1127,10 @@ function appendTableCellContent(
   node.textContent = cell.text
   if (node instanceof HTMLAnchorElement && cell.href) {
     node.href = cell.href
-    node.rel = "noopener noreferrer"
-    node.target = "_blank"
+    if (!isLocalFragmentHref(cell.href)) {
+      node.rel = "noopener noreferrer"
+      node.target = "_blank"
+    }
     if (cell.title) node.title = cell.title
   }
   parent.append(node)
@@ -970,6 +1157,34 @@ function appendBlockChrome(row: HTMLDivElement, frame: TextBlockFrame) {
       : "10px"
   marker.setAttribute("aria-hidden", "true")
   row.append(marker)
+}
+
+function localFragmentHrefFromEventTarget(target: EventTarget | null) {
+  if (!(target instanceof Element)) return null
+  const link = target.closest<HTMLAnchorElement>('a[href^="#"]')
+  const href = link?.getAttribute("href") ?? null
+  return href && href.length > 1 ? href : null
+}
+
+function decodeMarkdownFragmentHref(href: string) {
+  try {
+    return decodeURIComponent(href.slice(1))
+  } catch {
+    return href.slice(1)
+  }
+}
+
+function markdownHeadingBlockIndex(
+  blocks: readonly PreparedTextBlock[],
+  headingId: string
+) {
+  return blocks.findIndex((block) => {
+    return block.kind === "inline" && block.headingId === headingId
+  })
+}
+
+function isLocalFragmentHref(href: string) {
+  return href.startsWith("#")
 }
 
 function rowClassName(

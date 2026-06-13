@@ -13,7 +13,6 @@ describe("json table active cell controls", () => {
   it("renders scalar controls through the DataCell primitive", () => {
     const view = renderCell("string", {
       effectiveValue: "0628",
-      draftValue: "0628",
     })
 
     const inputControl = view
@@ -27,24 +26,26 @@ describe("json table active cell controls", () => {
 
   it("commits empty text as null and closes on blur", () => {
     const commitValue = vi.fn()
-    const closeEditSession = vi.fn()
+    const onEditingEnd = vi.fn()
     const view = renderCell("string", {
-      draftValue: "",
+      effectiveValue: "value",
       commitValue,
-      closeEditSession,
+      onEditingEnd,
     })
 
-    fireEvent.blur(view.getByRole("textbox"))
+    const input = view.getByRole("textbox")
+    fireEvent.change(input, { target: { value: "" } })
+    fireEvent.blur(input)
 
     expect(commitValue).toHaveBeenCalledWith(
       null,
       expect.objectContaining({ kind: "text", rawValue: "", isValid: true })
     )
-    expect(closeEditSession).toHaveBeenCalled()
+    expect(onEditingEnd).toHaveBeenCalled()
   })
 
   it("renders number, boolean, and enum controls", () => {
-    let view = renderCell("number", { draftValue: "42" })
+    let view = renderCell("number", { effectiveValue: 42 })
     expect(view.getByRole("spinbutton")).toBeTruthy()
     cleanup()
 
@@ -75,11 +76,13 @@ describe("json table active cell controls", () => {
   it("reports invalid integer inputs without lossy coercion", () => {
     const commitValue = vi.fn()
     const view = renderCell("integer", {
-      draftValue: "12.7",
+      effectiveValue: 12,
       commitValue,
     })
 
-    fireEvent.blur(view.getByRole("spinbutton"))
+    const input = view.getByRole("spinbutton")
+    fireEvent.change(input, { target: { value: "12.7" } })
+    fireEvent.blur(input)
 
     expect(commitValue).toHaveBeenCalledWith(
       null,
@@ -92,12 +95,12 @@ describe("json table active cell controls", () => {
   })
 
   it("renders date, date-time, and time controls", () => {
-    let view = renderCell("date", { draftValue: "2024-01-02" })
+    let view = renderCell("date", { effectiveValue: "2024-01-02" })
     expect(view.getByText("Jan 2, 2024")).toBeTruthy()
     cleanup()
 
     view = renderCell("date-time", {
-      draftValue: "2024-01-02T03:04:00",
+      effectiveValue: "2024-01-02T03:04:00",
     })
     const dateTimeTrigger = view.container.querySelector<HTMLElement>(
       'button[data-slot="data-cell"]'
@@ -109,7 +112,7 @@ describe("json table active cell controls", () => {
     expect(dateTimeTrigger.textContent).toContain("02/01/2024, 03:04")
     cleanup()
 
-    view = renderCell("time", { draftValue: "03:04:00" })
+    view = renderCell("time", { effectiveValue: "03:04:00" })
     const timeTrigger = view.container.querySelector<HTMLElement>(
       'button[data-slot="data-cell"]'
     )
