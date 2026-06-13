@@ -7,17 +7,13 @@ import { cn } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
 import type { FileSystemController } from "./file-system-controller"
-import {
-  fileSystemBoundaryEntry,
-  fileSystemEntryAtOffset,
-  fileSystemTypeAheadMatch,
-} from "./file-system-navigation"
 import { FileSystemPreview, FileSystemThumbnail } from "./file-system-preview"
 import type {
   FileSystemEntry,
   FileSystemFileEntry,
   FileSystemFileItem,
 } from "./file-system-types"
+import { useFileSystemRovingFocus } from "./use-file-system-roving-focus"
 
 export function FileSystemGalleryView({
   controller,
@@ -30,7 +26,6 @@ export function FileSystemGalleryView({
   renderFileActions?: (file: FileSystemFileItem) => React.ReactNode
   renderMetadata?: (item: FileSystemEntry) => React.ReactNode
 }) {
-  const thumbnailRefs = React.useRef(new Map<string, HTMLButtonElement>())
   const activeEntry =
     controller.selectedEntry ?? controller.currentEntries[0] ?? null
 
@@ -39,17 +34,11 @@ export function FileSystemGalleryView({
       controller.selectEntry(activeEntry)
     }
   }, [activeEntry, controller])
-  const focusEntry = React.useCallback((entry: FileSystemEntry) => {
-    requestAnimationFrame(() => thumbnailRefs.current.get(entry.path)?.focus())
-  }, [])
-  const selectEntry = React.useCallback(
-    (entry: FileSystemEntry | null) => {
-      if (!entry) return
-      controller.selectEntry(entry)
-      focusEntry(entry)
-    },
-    [controller, focusEntry]
-  )
+  const rovingFocus = useFileSystemRovingFocus({
+    entries: controller.currentEntries,
+    onSelect: controller.selectEntry,
+    selectedPath: activeEntry?.path ?? controller.selectedPath,
+  })
   const openEntry = React.useCallback(
     (entry: FileSystemEntry) => {
       if (entry.kind === "folder") {
@@ -62,34 +51,17 @@ export function FileSystemGalleryView({
   )
   const handleKeyDown = (event: React.KeyboardEvent) => {
     if (event.key === "ArrowRight" || event.key === "ArrowDown") {
-      selectEntry(
-        fileSystemEntryAtOffset(
-          controller.currentEntries,
-          activeEntry?.path ?? controller.selectedPath,
-          1
-        )
-      )
+      rovingFocus.selectByOffset(1)
       event.preventDefault()
       return
     }
     if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
-      selectEntry(
-        fileSystemEntryAtOffset(
-          controller.currentEntries,
-          activeEntry?.path ?? controller.selectedPath,
-          -1
-        )
-      )
+      rovingFocus.selectByOffset(-1)
       event.preventDefault()
       return
     }
     if (event.key === "Home" || event.key === "End") {
-      selectEntry(
-        fileSystemBoundaryEntry(
-          controller.currentEntries,
-          event.key === "Home" ? "first" : "last"
-        )
-      )
+      rovingFocus.selectBoundary(event.key === "Home" ? "first" : "last")
       event.preventDefault()
       return
     }
@@ -99,13 +71,7 @@ export function FileSystemGalleryView({
       return
     }
 
-    selectEntry(
-      fileSystemTypeAheadMatch(
-        event,
-        controller.currentEntries,
-        activeEntry?.path ?? controller.selectedPath
-      )
-    )
+    rovingFocus.selectTypeAhead(event, activeEntry?.path ?? controller.selectedPath)
   }
 
   return (
@@ -134,11 +100,7 @@ export function FileSystemGalleryView({
           {controller.currentEntries.map((entry) => (
             <button
               ref={(element) => {
-                if (element) {
-                  thumbnailRefs.current.set(entry.path, element)
-                } else {
-                  thumbnailRefs.current.delete(entry.path)
-                }
+                rovingFocus.registerEntryRef(entry.path, element)
               }}
               key={entry.path}
               type="button"

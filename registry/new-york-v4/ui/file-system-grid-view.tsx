@@ -8,13 +8,9 @@ import { cn } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
 import type { FileSystemController } from "./file-system-controller"
-import {
-  fileSystemBoundaryEntry,
-  fileSystemEntryAtOffset,
-  fileSystemTypeAheadMatch,
-} from "./file-system-navigation"
 import { FileSystemThumbnail } from "./file-system-preview"
 import type { FileSystemEntry, FileSystemFileEntry } from "./file-system-types"
+import { useFileSystemRovingFocus } from "./use-file-system-roving-focus"
 
 const TILE_MIN_WIDTH = 124
 const TILE_HEIGHT = 132
@@ -28,7 +24,6 @@ export function FileSystemGridView({
   onOpenFile: (file: FileSystemFileEntry) => void
 }) {
   const viewportRef = React.useRef<HTMLDivElement | null>(null)
-  const tileRefs = React.useRef(new Map<string, HTMLButtonElement>())
   const [columnCount, setColumnCount] = React.useState(1)
   const entries = controller.currentEntries
 
@@ -64,28 +59,19 @@ export function FileSystemGridView({
   const totalSize = virtualRows.length
     ? virtualizer.getTotalSize()
     : rowCount * TILE_HEIGHT
-  const focusEntry = React.useCallback(
-    (entry: FileSystemEntry) => {
-      const index = entries.findIndex(
-        (candidate) => candidate.path === entry.path
-      )
-      if (index !== -1)
-        virtualizer.scrollToIndex(Math.floor(index / columnCount))
+  const rovingFocus = useFileSystemRovingFocus({
+    entries,
+    getScrollIndex: (entry) => {
+      const index = entries.findIndex((candidate) => candidate.path === entry.path)
 
-      requestAnimationFrame(() => {
-        tileRefs.current.get(entry.path)?.focus()
-      })
+      return index === -1 ? -1 : Math.floor(index / columnCount)
     },
-    [columnCount, entries, virtualizer]
-  )
-  const selectEntry = React.useCallback(
-    (entry: FileSystemEntry | null) => {
-      if (!entry) return
-      controller.selectEntry(entry)
-      focusEntry(entry)
+    onSelect: controller.selectEntry,
+    scrollToIndex: (index) => {
+      if (index !== -1) virtualizer.scrollToIndex(index)
     },
-    [controller, focusEntry]
-  )
+    selectedPath: controller.selectedPath,
+  })
   const openEntry = React.useCallback(
     (entry: FileSystemEntry) => {
       if (entry.kind === "folder") {
@@ -98,34 +84,19 @@ export function FileSystemGridView({
   )
   const handleKeyDown = (event: React.KeyboardEvent) => {
     if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
-      selectEntry(
-        fileSystemEntryAtOffset(
-          entries,
-          controller.selectedPath,
-          event.key === "ArrowRight" ? 1 : -1
-        )
-      )
+      rovingFocus.selectByOffset(event.key === "ArrowRight" ? 1 : -1)
       event.preventDefault()
       return
     }
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-      selectEntry(
-        fileSystemEntryAtOffset(
-          entries,
-          controller.selectedPath,
-          event.key === "ArrowDown" ? columnCount : -columnCount
-        )
+      rovingFocus.selectByOffset(
+        event.key === "ArrowDown" ? columnCount : -columnCount
       )
       event.preventDefault()
       return
     }
     if (event.key === "Home" || event.key === "End") {
-      selectEntry(
-        fileSystemBoundaryEntry(
-          entries,
-          event.key === "Home" ? "first" : "last"
-        )
-      )
+      rovingFocus.selectBoundary(event.key === "Home" ? "first" : "last")
       event.preventDefault()
       return
     }
@@ -135,12 +106,7 @@ export function FileSystemGridView({
       return
     }
 
-    const match = fileSystemTypeAheadMatch(
-      event,
-      entries,
-      controller.selectedPath
-    )
-    selectEntry(match)
+    rovingFocus.selectTypeAhead(event)
   }
 
   if (!entries.length) {
@@ -186,11 +152,7 @@ export function FileSystemGridView({
                   entry={entry}
                   onOpenFile={onOpenFile}
                   ref={(element) => {
-                    if (element) {
-                      tileRefs.current.set(entry.path, element)
-                    } else {
-                      tileRefs.current.delete(entry.path)
-                    }
+                    rovingFocus.registerEntryRef(entry.path, element)
                   }}
                 />
               ))}

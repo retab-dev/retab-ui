@@ -9,13 +9,9 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 
 import type { FileSystemController } from "./file-system-controller"
 import { folderHasChildren, pathParent } from "./file-system-index"
-import {
-  fileSystemBoundaryEntry,
-  fileSystemEntryAtOffset,
-  fileSystemTypeAheadMatch,
-} from "./file-system-navigation"
 import { FileSystemThumbnail } from "./file-system-preview"
 import type { FileSystemEntry, FileSystemFileEntry } from "./file-system-types"
+import { useFileSystemRovingFocus } from "./use-file-system-roving-focus"
 
 const COLUMN_ROW_HEIGHT = 32
 
@@ -85,7 +81,6 @@ function FileSystemColumn({
   path: string
 }) {
   const viewportRef = React.useRef<HTMLDivElement | null>(null)
-  const rowRefs = React.useRef(new Map<string, HTMLButtonElement>())
   const entries = React.useMemo(
     () => controller.index.children.get(path) ?? [],
     [controller.index.children, path]
@@ -109,41 +104,19 @@ function FileSystemColumn({
   const totalSize = virtualRows.length
     ? virtualizer.getTotalSize()
     : entries.length * COLUMN_ROW_HEIGHT
-  const focusEntry = React.useCallback(
-    (entry: FileSystemEntry) => {
-      const index = entries.findIndex(
-        (candidate) => candidate.path === entry.path
-      )
-      if (index !== -1) virtualizer.scrollToIndex(index)
-
-      requestAnimationFrame(() => {
-        const localRow = rowRefs.current.get(entry.path)
-        if (localRow) {
-          localRow.focus()
-          return
-        }
-
-        for (const row of document.querySelectorAll<HTMLButtonElement>(
-          "[data-file-system-entry-path]"
-        )) {
-          if (row.dataset.fileSystemEntryPath === entry.path) {
-            row.focus()
-            return
-          }
-        }
-      })
-    },
-    [entries, virtualizer]
-  )
-  const selectEntry = React.useCallback(
-    (entry: FileSystemEntry | null) => {
-      if (!entry) return
+  const rovingFocus = useFileSystemRovingFocus({
+    entries,
+    getScrollIndex: (entry) =>
+      entries.findIndex((candidate) => candidate.path === entry.path),
+    onSelect: (entry) => {
       controller.selectEntry(entry)
       if (entry.kind === "folder") void controller.ensureChildren(entry.path)
-      focusEntry(entry)
     },
-    [controller, focusEntry]
-  )
+    scrollToIndex: (index) => {
+      if (index !== -1) virtualizer.scrollToIndex(index)
+    },
+    selectedPath: controller.selectedPath,
+  })
   const openEntry = React.useCallback(
     (entry: FileSystemEntry) => {
       if (entry.kind === "folder") {
@@ -166,39 +139,22 @@ function FileSystemColumn({
       ? (controller.rawIndex.folders.get(parentPath) ?? null)
       : null
 
-    selectEntry(parent)
-  }, [controller.rawIndex.folders, controller.selectedEntry, selectEntry])
+    if (parent) controller.selectEntry(parent)
+  }, [controller])
   const selectChild = React.useCallback(() => {
     const selectedEntry = controller.selectedEntry
     if (selectedEntry?.kind !== "folder") return
 
-    void controller.ensureChildren(selectedEntry.path)
-    selectEntry(
-      fileSystemBoundaryEntry(
-        controller.index.children.get(selectedEntry.path) ?? [],
-        "first"
-      )
-    )
-  }, [controller, selectEntry])
+    void controller.selectFirstChildAfterEnsure(selectedEntry.path)
+  }, [controller])
   const handleKeyDown = (event: React.KeyboardEvent) => {
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-      selectEntry(
-        fileSystemEntryAtOffset(
-          entries,
-          controller.selectedPath,
-          event.key === "ArrowDown" ? 1 : -1
-        )
-      )
+      rovingFocus.selectByOffset(event.key === "ArrowDown" ? 1 : -1)
       event.preventDefault()
       return
     }
     if (event.key === "Home" || event.key === "End") {
-      selectEntry(
-        fileSystemBoundaryEntry(
-          entries,
-          event.key === "Home" ? "first" : "last"
-        )
-      )
+      rovingFocus.selectBoundary(event.key === "Home" ? "first" : "last")
       event.preventDefault()
       return
     }
@@ -218,9 +174,7 @@ function FileSystemColumn({
       return
     }
 
-    selectEntry(
-      fileSystemTypeAheadMatch(event, entries, controller.selectedPath)
-    )
+    rovingFocus.selectTypeAhead(event)
   }
 
   return (
@@ -241,11 +195,7 @@ function FileSystemColumn({
                 entry={entry}
                 onOpenFile={onOpenFile}
                 ref={(element) => {
-                  if (element) {
-                    rowRefs.current.set(entry.path, element)
-                  } else {
-                    rowRefs.current.delete(entry.path)
-                  }
+                  rovingFocus.registerEntryRef(entry.path, element)
                 }}
                 style={{ transform: `translateY(${start}px)` }}
               />
@@ -280,7 +230,6 @@ const FileSystemColumnRow = React.forwardRef<
     <button
       ref={ref}
       type="button"
-      data-file-system-entry-path={entry.path}
       role="option"
       aria-selected={isSelected}
       tabIndex={isSelected || !controller.selectedPath ? 0 : -1}

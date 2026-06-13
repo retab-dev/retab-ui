@@ -74,11 +74,13 @@ export type FileSystemProps = {
   title?: string
   className?: string
   defaultPath?: string
+  path?: string
+  onPathChange?: (path: string) => void
   defaultView?: FileSystemView
   view?: FileSystemView
   onViewChange?: (view: FileSystemView) => void
   defaultQuery?: Partial<FileSystemQueryState>
-  query?: Partial<FileSystemQueryState>
+  query?: FileSystemQueryState
   onQueryChange?: (query: FileSystemQueryState) => void
   selectedPath?: string | null
   defaultSelectedPath?: string | null

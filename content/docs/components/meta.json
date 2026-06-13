@@ -9,6 +9,7 @@
     "json-table",
     "schema-builder",
     "property-form",
+    "file-system",
     "extract-viewer",
     "layout-blocks",
     "edit-viewer",

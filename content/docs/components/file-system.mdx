@@ -1,0 +1,90 @@
+---
+title: File System
+description: A document workspace over a flat object-store manifest with list, grid, columns, gallery, thumbnails, lazy folders, and FileViewer previews.
+component: true
+---
+
+File System turns an object-store manifest into a navigable document workspace.
+It accepts flat file and folder records, infers folder chains, and presents the
+same source set through list, grid, columns, and gallery views.
+
+Use it when users need to browse generated documents, uploaded files, extraction
+artifacts, or case workspaces without leaving the document viewer surface.
+
+## Installation
+
+```bash
+pnpm dlx shadcn@latest add @retab/file-system
+```
+
+For the demo block:
+
+```bash
+pnpm dlx shadcn@latest add @retab/file-system-block
+```
+
+## Example
+
+Open the full demo at [/view/blocks/file-system](/view/blocks/file-system).
+
+```tsx
+import { FileSystem, type FileSystemItem } from "@/components/ui/file-system"
+
+const items: FileSystemItem[] = [
+  {
+    kind: "file",
+    path: "research/attention.pdf",
+    mimeType: "application/pdf",
+    source: {
+      kind: "url",
+      url: "/samples/attention.pdf",
+      fileName: "attention.pdf",
+      mimeType: "application/pdf",
+    },
+  },
+]
+
+export function Documents() {
+  return <FileSystem items={items} title="Workspace" />
+}
+```
+
+## Useful Behaviors
+
+- Accepts a flat manifest and infers missing parent folders.
+- Shares selection, preview, search, filters, and sort state across list, grid,
+  columns, and gallery views.
+- Uses `FileThumbnail` for compact previews and `FileViewer` for the selected
+  file preview.
+- Supports controlled `view`, `selectedPath`, and `query` state.
+- Supports lazy folders through `loadChildren`.
+- Resolves file sources on demand through `resolveSource`.
+
+## API Reference
+
+### FileSystem
+
+| Prop                  | Type                                              | Default | Required |
+| --------------------- | ------------------------------------------------- | ------- | -------- |
+| `items`               | `FileSystemItem[]`                                | `-`     | Yes      |
+| `title`               | `string`                                          | `Files` | No       |
+| `className`           | `string`                                          | `-`     | No       |
+| `defaultPath`         | `string`                                          | `""`    | No       |
+| `defaultView`         | `"list" \| "grid" \| "columns" \| "gallery"`      | `list`  | No       |
+| `view`                | `"list" \| "grid" \| "columns" \| "gallery"`      | `-`     | No       |
+| `onViewChange`        | `(view) => void`                                  | `-`     | No       |
+| `defaultQuery`        | `Partial<FileSystemQueryState>`                   | `-`     | No       |
+| `query`               | `Partial<FileSystemQueryState>`                   | `-`     | No       |
+| `onQueryChange`       | `(query) => void`                                 | `-`     | No       |
+| `selectedPath`        | `string \| null`                                  | `-`     | No       |
+| `defaultSelectedPath` | `string \| null`                                  | `null`  | No       |
+| `onSelectionChange`   | `(item) => void`                                  | `-`     | No       |
+| `loadChildren`        | `(args) => Promise<FileSystemLoadChildrenResult>` | `-`     | No       |
+| `resolveSource`       | `(args) => Promise<ViewerSource \| null>`         | `-`     | No       |
+| `onFileOpen`          | `(file, source) => void`                          | `-`     | No       |
+| `renderFileActions`   | `(file) => React.ReactNode`                       | `-`     | No       |
+| `renderMetadata`      | `(item) => React.ReactNode`                       | `-`     | No       |
+
+## Source
+
+<ComponentSource src="registry/new-york-v4/ui/file-system.tsx" />
