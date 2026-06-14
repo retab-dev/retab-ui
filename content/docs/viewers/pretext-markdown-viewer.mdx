@@ -89,7 +89,7 @@ remain stable while the Pretext path iterates toward feature completeness.
 - Component directives such as `::metric{label="Accuracy" value="98%"}` and `:badge[Stable]{tone="success"}` render through the same restricted component policy as component markdown.
 - GitHub alerts and directive callouts render as labelled `note` regions; code blocks and Mermaid diagrams expose accessible labels for the generated block and source fallback.
 - YAML and TOML frontmatter are first-class frontmatter chunks instead of being rewritten into fenced code blocks.
-- Heading IDs support duplicate suffixes, reserve DOM-clobbering names, and local `#fragment` links, direct hash loads, and hash changes scroll through the virtual document model.
+- Heading IDs support duplicate suffixes, reserve DOM-clobbering names, decode common HTML entities before slugging, and local `#fragment` links, direct hash loads, and hash changes scroll through the virtual document model.
 - Links and images use a dedicated safe URL policy; protocol-relative URLs, control-character tricks, encoded unsafe schemes, and non-HTTP image schemes are rejected.
 - Absolute HTTP(S) links open with `noopener noreferrer`; fragments, relative links, root-relative links, and email links stay in the current browsing context.
 - Safe raw HTML is parsed through `rehype-raw` and narrowed by local policy before `rehype-sanitize`; unsafe tags, active raw inputs, SVG/script/style surfaces, and unsafe attributes are removed before React rendering.

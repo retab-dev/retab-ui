@@ -69,7 +69,7 @@ leaking virtual chunks as visible pages.
 53. Task-list checkbox accessibility and styling polish beyond initial read-only controls.
 54. Broader frontmatter metadata policy beyond current visible YAML/TOML chunks: render, hide, summarize, or expose as metadata.
 55. Broader malformed/frontmatter source fidelity tests beyond current YAML/TOML chunk coverage.
-56. HTML entity decoding policy.
+56. Broader HTML entity decoding policy beyond current entity-aware heading text and anchor IDs.
 57. Broader Unicode heading slug edge cases beyond current accent normalization coverage.
 58. Broader duplicate heading collision tests beyond the current rendered/model ID parity coverage.
 59. Long-word wrapping and overflow behavior for prose, code, tables, links, and component labels.

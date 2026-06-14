@@ -1165,6 +1165,22 @@ describe("PretextMarkdownViewer", () => {
     ])
   })
 
+  it("uses visible decoded heading text for rendered heading ids", async () => {
+    render(
+      <PretextMarkdownViewer
+        source={markdownSource(
+          ["# Tom &amp; Jerry", "", "## AT&amp;T &copy;"].join("\n")
+        )}
+        toolbar={false}
+      />
+    )
+
+    const tom = await screen.findByRole("heading", { name: "Tom & Jerry" })
+    const att = screen.getByRole("heading", { name: "AT&T ©" })
+    expect(tom.id).toBe("tom-jerry")
+    expect(att.id).toBe("att")
+  })
+
   it("prefixes DOM-clobbering heading ids without losing collision suffixes", async () => {
     render(
       <PretextMarkdownViewer

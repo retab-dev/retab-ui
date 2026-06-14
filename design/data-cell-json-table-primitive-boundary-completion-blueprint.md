@@ -39,12 +39,12 @@ Already clean:
 - `DataCellControl` receives `DataCellEditModel`, not public `DataCellProps`.
 - edit models no longer carry a broad `nativeProps` remainder.
 - primitive controls do not import public `DataCellProps`.
+- `DataCell` no longer imports leaf controls just to re-export them; runtime
+  shell imports are closer to the code it actually executes.
 - generated registry output includes the primitive runtime files.
 
 Still not perfect:
 
-- `DataCell` still imports primitive controls directly for re-export, which
-  makes the public entrypoint heavier than the runtime shell needs to be.
 - `DataCellControl` still has explicit kind branches for render/action
   dispatch. They are type-safe, but the adapter map is not the single visible
   source of all control ownership.
@@ -410,9 +410,10 @@ Add positive tests that require:
 
 ### Phase 2: Split Public Exports From Runtime Shell
 
-Current issue: `data-cell.tsx` imports primitive controls to re-export them.
-That is convenient, but it makes the primitive shell file look like it owns the
-controls directly.
+Current status: the worst version of this issue is fixed. `data-cell.tsx` no
+longer imports primitive controls into local bindings just to re-export them.
+The remaining question is whether the public barrel should be physically split
+from the runtime shell.
 
 Target:
 
@@ -565,4 +566,3 @@ Absolute platonic status requires one more bar: repo-wide typecheck and test
 health must be green or every failure must be proven unrelated. A component can
 be architecturally clean in isolation, but it is not Flaubertian perfection
 while the surrounding system cannot verify it without caveats.
-
