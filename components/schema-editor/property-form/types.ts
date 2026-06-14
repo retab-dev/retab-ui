@@ -7,6 +7,10 @@ import type {
   SchemaTypeMenuTrailingContent,
   SchemaTypeMenuValue,
 } from "@/components/schema-editor/primitives/schema-type-menu"
+import type {
+  ObjectPropertyAddRowModel,
+  ObjectPropertyRowModel,
+} from "@/components/schema-editor/property-form/fields/object-properties-model"
 
 export type PropertyFormMode = "descriptionOnly" | "readOnly" | "editable"
 
@@ -110,13 +114,19 @@ export interface PropertySchemaDetailAccess {
   type: boolean
 }
 
-export interface PropertyObjectPropertiesFieldModel {
+export interface PropertyObjectPropertiesSourceModel {
   schemaNode: ExtendedJSONSchema7
   schemaContext: PropertyFormSchemaContext
   mode: PropertyFormMode
   access: PropertySchemaDetailAccess
   editable: boolean
   onChange: (schemaNode: ExtendedJSONSchema7) => void
+}
+
+export interface PropertyObjectPropertiesFieldModel {
+  addRow: ObjectPropertyAddRowModel
+  editable: boolean
+  rows: ObjectPropertyRowModel[]
 }
 
 export interface PropertyArrayItemsFieldModel {
@@ -126,7 +136,7 @@ export interface PropertyArrayItemsFieldModel {
 export interface PropertySchemaDetailsModel {
   type?: PropertyTypeFieldModel
   enumValues?: PropertyEnumValuesFieldModel
-  objectProperties?: PropertyObjectPropertiesFieldModel
+  objectProperties?: PropertyObjectPropertiesSourceModel
   arrayItems?: PropertyArrayItemsFieldModel
 }
 

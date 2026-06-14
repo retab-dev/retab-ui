@@ -49,6 +49,7 @@ const pdfjsMock = vi.hoisted(() => {
 })
 
 vi.mock("pdfjs-dist", () => pdfjsMock)
+vi.mock("pdfjs-dist/legacy/build/pdf.mjs", () => pdfjsMock)
 
 function makeDoc() {
   return {

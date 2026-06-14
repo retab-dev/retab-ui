@@ -20,6 +20,7 @@ import {
   getFieldMetadata,
   type FieldMetadata,
 } from "@/components/json-table/lib/schema-field-metadata"
+import { createJsonTablePrimitiveEditStore } from "@/components/json-table/json-table-primitive-edit-store"
 import { SingleFileVirtualizedTable } from "@/components/json-table/single-file-virtualized-table"
 
 import { installJsonTableDom } from "./json-table-test-dom"
@@ -130,6 +131,7 @@ function renderVirtualTable({
       projectedRows={projectedRows}
       visibleColumns={visiblePaths.map(visibleColumn)}
       rowCount={projectedRows.length}
+      primitiveEditStore={createJsonTablePrimitiveEditStore()}
       onUpdateDocument={onUpdateDocument}
       columnWidth="xxl"
       overscan={overscan}
@@ -378,6 +380,7 @@ describe("json table session and overlay race interactions", () => {
             })}
             visibleColumns={["status"].map(visibleColumn)}
             rowCount={1}
+      primitiveEditStore={createJsonTablePrimitiveEditStore()}
             onUpdateDocument={vi.fn()}
             columnWidth="xxl"
           />

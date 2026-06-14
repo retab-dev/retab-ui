@@ -8,7 +8,7 @@ import type {
   JsonTableStructuredEditSession,
 } from "@/components/json-table/json-table-edit-session"
 import type { JsonTablePrimitiveActiveCellStore } from "@/components/json-table/json-table-primitive-active-cell-store"
-import type { JsonTablePrimitivePatchStore } from "@/components/json-table/json-table-primitive-patch-store"
+import type { JsonTablePrimitiveEditStore } from "@/components/json-table/json-table-primitive-edit-store"
 import type { ProjectedCell } from "@/components/json-table/lib/document-projection"
 import type { TableDocument } from "@/components/json-table/lib/projects-types"
 import type { FieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
@@ -30,7 +30,7 @@ export interface JsonTableCellProps {
   document: TableDocument
   docId: string
   primitiveActiveCellStore: JsonTablePrimitiveActiveCellStore
-  primitivePatchStore?: JsonTablePrimitivePatchStore
+  primitiveEditStore?: JsonTablePrimitiveEditStore
   setPrimitiveActiveCell: (
     activeCell: ReturnType<JsonTablePrimitiveActiveCellStore["getSnapshot"]>
   ) => void

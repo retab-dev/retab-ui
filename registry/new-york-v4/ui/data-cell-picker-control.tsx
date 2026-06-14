@@ -1,7 +1,6 @@
 "use client"
 
 import * as React from "react"
-import { CalendarIcon, ClockIcon } from "lucide-react"
 import { createPortal } from "react-dom"
 
 import { cn } from "@/lib/utils"
@@ -22,12 +21,12 @@ import {
   pickerValueWithTime,
   timeFromPickerValue,
 } from "@/registry/new-york-v4/ui/data-cell-format"
+import { DataCellPickerIcon } from "@/registry/new-york-v4/ui/data-cell-picker-icon"
 import { getDataCellPickerPopupStyleFromAnchor } from "@/registry/new-york-v4/ui/data-cell-picker-position"
 import type {
   DataCellActivationSource,
   DataCellDateTimeZone,
   DataCellEditorHandle,
-  DataCellKind,
   DataCellValue,
   DataCellValueMeta,
 } from "@/registry/new-york-v4/ui/data-cell-types"
@@ -386,9 +385,4 @@ function DataCellPickerPopupContent({
       )}
     </>
   )
-}
-
-export function DataCellPickerIcon({ kind }: { kind: DataCellKind }) {
-  if (kind === "time") return <ClockIcon />
-  return <CalendarIcon />
 }

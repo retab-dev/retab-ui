@@ -12,48 +12,62 @@ import {
   dataCellPickerTriggerClass,
 } from "@/registry/new-york-v4/ui/data-cell-classes"
 import { formatDataCellDisplayValue } from "@/registry/new-york-v4/ui/data-cell-format"
-import { DataCellPickerIcon } from "@/registry/new-york-v4/ui/data-cell-picker-control"
-import type { DataCellKind } from "@/registry/new-york-v4/ui/data-cell-types"
+import { DataCellPickerIcon } from "@/registry/new-york-v4/ui/data-cell-picker-icon"
+import type {
+  DataCellKind,
+  DataCellValueForKind,
+} from "@/registry/new-york-v4/ui/data-cell-types"
 
 type DataCellDisplayNativeProps = Omit<
   React.HTMLAttributes<HTMLDivElement>,
   "children" | "defaultValue" | "onChange"
 >
 
-type DataCellDisplayFormatValue<Kind extends DataCellKind, Value> = (
-  value: Value | undefined,
+type DataCellDisplayFormatValue<Kind extends DataCellKind> = (
+  value: DataCellValueForKind<Kind> | undefined,
   meta: { kind: Kind }
 ) => React.ReactNode
 
-type DataCellDisplayBaseProps<
-  Kind extends DataCellKind,
-  Value,
-> = DataCellDisplayNativeProps & {
-  kind: Kind
-  value?: Value
-  editable?: boolean
-  disabled?: boolean
+type DataCellDisplayBaseProps<Kind extends DataCellKind> =
+  DataCellDisplayNativeProps & {
+    kind: Kind
+    value?: DataCellValueForKind<Kind>
+    editable?: boolean
+    disabled?: boolean
+    className?: string
+  }
+
+type DataCellDisplayPlaceholderProps = {
   placeholder?: string
-  className?: string
-  showPickerIcon?: boolean
-  formatValue?: DataCellDisplayFormatValue<Kind, Value>
 }
 
-type DataCellScalarDisplayProps =
-  | DataCellDisplayBaseProps<"text", string | null>
-  | DataCellDisplayBaseProps<"number", number | string | null>
-  | DataCellDisplayBaseProps<"integer", number | string | null>
-  | DataCellDisplayBaseProps<"select", string | null>
+type DataCellDisplayPickerProps = {
+  showPickerIcon?: boolean
+}
 
-type DataCellPickerDisplayProps =
-  | DataCellDisplayBaseProps<"date", string | null>
-  | DataCellDisplayBaseProps<"time", string | null>
-  | DataCellDisplayBaseProps<"date-time", string | null>
+type DataCellDisplayFormatProps<Kind extends DataCellKind> = {
+  formatValue?: DataCellDisplayFormatValue<Kind>
+}
 
-export type DataCellDisplayProps =
-  | DataCellScalarDisplayProps
-  | DataCellDisplayBaseProps<"boolean", boolean | null>
-  | DataCellPickerDisplayProps
+type DataCellPickerKind = "date" | "time" | "date-time"
+type DataCellScalarKind = "text" | "number" | "integer" | "select"
+
+type DataCellDisplayPropsForKind<Kind extends DataCellKind> =
+  DataCellDisplayBaseProps<Kind> &
+    (Kind extends "boolean"
+      ? {}
+      : DataCellDisplayPlaceholderProps & DataCellDisplayFormatProps<Kind>) &
+    (Kind extends DataCellPickerKind ? DataCellDisplayPickerProps : {})
+
+export type DataCellDisplayPropsByKind = {
+  [Kind in DataCellKind]: DataCellDisplayPropsForKind<Kind>
+}
+
+type DataCellScalarDisplayProps = DataCellDisplayPropsByKind[DataCellScalarKind]
+
+type DataCellPickerDisplayProps = DataCellDisplayPropsByKind[DataCellPickerKind]
+
+export type DataCellDisplayProps = DataCellDisplayPropsByKind[DataCellKind]
 
 export const DataCellDisplay = React.forwardRef<
   HTMLDivElement,
@@ -65,9 +79,6 @@ export const DataCellDisplay = React.forwardRef<
       value,
       editable = false,
       disabled = false,
-      placeholder: _placeholder,
-      showPickerIcon: omittedPickerIcon,
-      formatValue: _formatValue,
       className,
       ...props
     } = displayProps
@@ -125,7 +136,6 @@ export const DataCellDisplay = React.forwardRef<
     disabled = false,
     placeholder,
     className,
-    showPickerIcon: omittedPickerIcon,
     formatValue: _formatValue,
     ...props
   } = displayProps

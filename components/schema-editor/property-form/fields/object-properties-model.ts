@@ -15,6 +15,8 @@ import {
 } from "@/components/schema-editor/property-form/model/object-property-edits"
 import type {
   PropertyFormMode,
+  PropertyObjectPropertiesFieldModel,
+  PropertyObjectPropertiesSourceModel,
   PropertyFormSchemaContext,
   PropertySchemaDetailAccess,
   PropertySchemaDetailsModel,
@@ -25,21 +27,6 @@ import { validatePropertyFormName } from "@/components/schema-editor/property-fo
 import { createObjectPropertyRowDetails } from "./object-property-row-details"
 import { useObjectPropertyRowIdentity } from "./object-property-row-identity"
 import { createPropertyTypeFieldWithObjectTemplates } from "./property-object-template-type-field"
-
-interface UseObjectPropertiesModelInput {
-  access: PropertySchemaDetailAccess
-  editable: boolean
-  mode: PropertyFormMode
-  schemaNode: ExtendedJSONSchema7
-  schemaContext: PropertyFormSchemaContext
-  onChange: (schemaNode: ExtendedJSONSchema7) => void
-}
-
-export interface ObjectPropertiesModel {
-  addRow: ObjectPropertyAddRowModel
-  editable: boolean
-  rows: ObjectPropertyRowModel[]
-}
 
 export interface ObjectPropertyRowModel {
   id: string
@@ -84,6 +71,9 @@ export interface ObjectPropertyRowReorderModel {
 
 export interface ObjectPropertyAddRowModel {
   error: string | null
+  inputLabel: string
+  placeholder: string
+  submitLabel: string
   value: string
   onChange: (value: string) => void
   onSubmit: () => void
@@ -96,7 +86,7 @@ export function useObjectPropertiesModel({
   schemaNode,
   schemaContext,
   onChange,
-}: UseObjectPropertiesModelInput): ObjectPropertiesModel {
+}: PropertyObjectPropertiesSourceModel): PropertyObjectPropertiesFieldModel {
   const [newPropertyName, setNewPropertyName] = React.useState("")
   const propertyNames = listObjectPropertyNames(schemaNode)
   const resetNewPropertyName = React.useCallback(() => {
@@ -257,6 +247,9 @@ export function useObjectPropertiesModel({
 
   const addRow: ObjectPropertyAddRowModel = {
     error: newPropertyNameError,
+    inputLabel: "New object field",
+    placeholder: "New property name",
+    submitLabel: "Add",
     value: newPropertyName,
     onChange: setNewPropertyName,
     onSubmit: () => {

@@ -1,10 +1,9 @@
 "use client"
 
-import * as React from "react"
-import { PlusIcon, X } from "lucide-react"
+import { X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Input, InputPrimitive } from "@/components/ui/input"
+import { InputPrimitive } from "@/components/ui/input"
 
 export interface SchemaChipItem {
   id: string
@@ -13,18 +12,7 @@ export interface SchemaChipItem {
   value: string
 }
 
-export interface SchemaChipAddRow {
-  focusAfterSubmit?: boolean
-  inputLabel: string
-  placeholder: string
-  submitLabel: string
-  value: string
-  onChange: (value: string) => void
-  onSubmit: () => void
-}
-
 export interface SchemaChipListProps {
-  addRow?: SchemaChipAddRow
   editable: boolean
   items: SchemaChipItem[]
   onRemove: (id: string) => void
@@ -32,22 +20,11 @@ export interface SchemaChipListProps {
 }
 
 export function SchemaChipList({
-  addRow,
   editable,
   items,
   onRemove,
   onReplace,
 }: SchemaChipListProps) {
-  const addInputRef = React.useRef<HTMLInputElement>(null)
-
-  const submitAddRow = () => {
-    if (!addRow?.value.trim()) return
-    addRow.onSubmit()
-    if (addRow.focusAfterSubmit) {
-      addInputRef.current?.focus()
-    }
-  }
-
   return (
     <div data-slot="schema-chip-list" className="space-y-2">
       {items.length > 0 ? (
@@ -90,37 +67,6 @@ export function SchemaChipList({
           })}
         </div>
       ) : null}
-
-      {addRow && (
-        <div className="flex items-center gap-2">
-          <Input
-            aria-label={addRow.inputLabel}
-            ref={addInputRef}
-            disabled={!editable}
-            placeholder={addRow.placeholder}
-            value={addRow.value}
-            onChange={(event) => addRow.onChange(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.preventDefault()
-                event.stopPropagation()
-                submitAddRow()
-              }
-            }}
-            className="w-40"
-          />
-          <Button
-            disabled={!editable || !addRow.value.trim()}
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={submitAddRow}
-          >
-            <PlusIcon className="mr-1 h-4 w-4" />
-            {addRow.submitLabel}
-          </Button>
-        </div>
-      )}
     </div>
   )
 }

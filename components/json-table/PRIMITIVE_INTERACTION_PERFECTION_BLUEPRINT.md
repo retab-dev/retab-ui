@@ -155,18 +155,19 @@ Select already follows this shape. Date picker should be moved to it next.
 
 ### Problem
 
-The primitive commit path now preserves visible render containment in the profiled select case. The deeper requirement is stronger: a primitive value patch should preserve row and cell identity everywhere outside the changed path.
+The primitive commit path now preserves visible render containment in the profiled select case. The deeper requirement is stronger: a primitive value edit should preserve row and cell identity everywhere outside the changed path.
 
-The current pending-data reuse avoids cloning unchanged cells, but it still compares all cells in the pending row. That is acceptable as an intermediate state; perfection is path-aware reuse with no broad scan on every primitive patch.
+The current edit-store overlay avoids cloning unchanged cells, but the rule must stay path-aware: scalar edit lifecycle belongs to the primitive edit store, while structural document changes belong to projection.
 
 ### Design
 
-Track the changed materialized field path with pending document data:
+Track the changed materialized field path with primitive edit-store state:
 
 ```ts
-type PendingPrimitivePatch = {
-  data: Record<string, unknown>
+type PrimitiveEditState = {
+  status: "idle" | "pending" | "confirmed" | "stale"
   fieldPath: string
+  value: unknown
 }
 ```
 
@@ -390,4 +391,3 @@ For a primitive cell editor:
 - committing a scalar value edits one value, not the projected document
 - measuring layout happens once, at the boundary where geometry is needed
 - every remaining render has a clear reason visible in profiler output
-

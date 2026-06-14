@@ -197,7 +197,7 @@ describe("EmailViewer", () => {
 
     await waitFor(() => {
       expect(iframe(container).getAttribute("srcdoc")).toContain(
-        'src="blob:inline-1"'
+        'src="data:image/svg+xml;base64,'
       )
     })
     expect(iframe(container).getAttribute("srcdoc")).toContain(
@@ -293,6 +293,47 @@ describe("EmailViewer", () => {
     expect(iframe(container).getAttribute("srcdoc")).toContain("HTML body")
     expect(iframe(container).getAttribute("srcdoc")).not.toContain("cid:")
     expect(screen.queryByRole("button", { name: /logo\.png/i })).toBeNull()
+  })
+
+  it("rewrites text-backed cid resources as sandbox-safe data URLs", async () => {
+    const root: MimePart = {
+      id: "root",
+      mimeType: "multipart/related",
+      children: [
+        htmlPart(
+          "html",
+          '<main><img alt="Logo" src="cid:logo@example.com"></main>',
+          "message.html"
+        ),
+        {
+          id: "logo",
+          mimeType: "image/svg+xml",
+          contentId: "<logo@example.com>",
+          disposition: "inline",
+          fileName: "logo.svg",
+          source: {
+            kind: "text",
+            text: '<svg xmlns="http://www.w3.org/2000/svg"></svg>',
+            fileName: "logo.svg",
+            mimeType: "image/svg+xml",
+            identityKey: "text:logo.svg",
+          },
+        },
+      ],
+    }
+
+    const { container } = render(
+      <EmailViewer message={message(root)} className="h-[600px]" />
+    )
+
+    await waitFor(() => {
+      expect(iframe(container).getAttribute("srcdoc")).toContain(
+        'src="data:image/svg+xml;base64,'
+      )
+    })
+    expect(iframe(container).getAttribute("srcdoc")).not.toContain("cid:")
+    expect(URL.createObjectURL).not.toHaveBeenCalled()
+    expect(screen.queryByRole("button", { name: /logo\.svg/i })).toBeNull()
   })
 
   it("does not inline content-id files marked as attachments", async () => {

@@ -9,15 +9,15 @@ leaking virtual chunks as visible pages.
 
 1. Full Mermaid / diagram syntax beyond the current graph/flowchart surface.
 2. Broader directive semantics beyond current callouts and restricted component directives.
-3. Broader MDX/component markdown beyond the restricted `Metric` and `Badge`
-   subset.
+3. Broader MDX/component markdown beyond the restricted `Metric`, `Badge`,
+   `Image`, `Callout`, `Accordion`, and `Tabs` / `Tab` subset.
 4. Footnote polish beyond current labelled GFM references, labelled backrefs, and bidirectional fragment targets.
 5. Math / KaTeX polish beyond initial inline and block rendering.
 6. Syntax highlighting polish beyond initial `rehype-pretty-code` rendering.
 7. Code block copy polish beyond the initial copy button.
 8. Raw HTML sanitizer schema polish beyond the current safe static HTML and inline `kbd`/`sub`/`sup` rendering.
 9. Full GitHub alert visual styling; currently normalized into quoted prose only.
-10. More complete emoji shortcode vocabulary.
+10. Full GitHub gemoji shortcode parity beyond the current curated docs-style vocabulary.
 11. More complete typography rules.
 12. Heading visual polish beyond the current h1-h6 renderer coverage.
 13. Nested list/callout/table visual polish audit.
@@ -65,14 +65,14 @@ leaking virtual chunks as visible pages.
 49. Escaped Markdown character fidelity.
 50. Hard break vs soft break polish beyond initial `remark-breaks` coverage.
 51. Reference link/image polish beyond current document-wide definition resolution across virtual chunks.
-52. Definition list support decision.
-53. Task-list checkbox accessibility and styling polish beyond initial read-only controls.
+52. Markdown definition-list syntax decision beyond current safe raw HTML `dl`/`dt`/`dd` rendering.
+53. Task-list checkbox visual styling polish beyond current disabled/read-only accessibility semantics.
 54. Broader frontmatter metadata policy beyond current visible YAML/TOML chunks: render, hide, summarize, or expose as metadata.
 55. Broader malformed/frontmatter source fidelity tests beyond current YAML/TOML chunk coverage.
 56. Broader HTML entity decoding policy beyond current entity-aware heading text and anchor IDs.
 57. Broader Unicode heading slug edge cases beyond current accent normalization coverage.
 58. Broader duplicate heading collision tests beyond the current rendered/model ID parity coverage.
-59. Long-word wrapping and overflow behavior for prose, code, tables, links, and component labels.
+59. Browser-level long-word wrapping and overflow verification beyond current explicit containment classes for prose, links, inline code, tables, definition lists, and component labels.
 60. Inline image/chip rendering policy inside prose.
 
 ## Missing Rich Block Work
@@ -126,7 +126,7 @@ leaking virtual chunks as visible pages.
 
 101. Heading semantics for all heading levels.
 102. Proper list semantics for nested lists, not only `role="listitem"` rows.
-103. Accessible task-list checkbox semantics.
+103. Browser/screen-reader verification for task-list checkbox semantics beyond current disabled/read-only DOM contract.
 104. Broader table accessibility beyond the current deterministic header/cell associations for rendered rows.
 105. Broader code block accessibility beyond current labelled code block/source regions, including line-level navigation if line numbers are added.
 106. Broader diagram accessibility beyond current labelled Mermaid group/image/source fallback, including richer descriptions for full Mermaid output.
@@ -249,7 +249,7 @@ leaking virtual chunks as visible pages.
 205. Blockquote plus list nesting.
 206. Blockquote plus table nesting.
 207. Blockquote plus code nesting.
-208. Code fence language normalization.
+208. Broader code fence language alias policy beyond current lowercasing and Mermaid `mmd`/`mermaid-js` aliases.
 209. Code fence title/meta parsing decision.
 210. Code fence diff highlighting decision.
 211. Code fence line number decision.
@@ -281,7 +281,7 @@ leaking virtual chunks as visible pages.
 234. Broader expression prop rejection coverage beyond current inert `mdx` fallback tests.
 235. Import/export rejection.
 236. Remote component rejection.
-237. Component child markdown parsing.
+237. Broader component child Markdown parsing beyond current safe paired `Callout`/`Accordion` blocks and directive-based `Tabs` / `Tab` blocks.
 238. Component child source mapping.
 239. Component fallback heights.
 240. Component measured growth policy.
@@ -291,12 +291,12 @@ leaking virtual chunks as visible pages.
 244. Component virtualization lifecycle.
 245. Component hydration behavior.
 246. Component registry docs.
-247. Initial components: `Callout`.
+247. Initial components beyond the current restricted `Callout`.
 248. Initial components beyond the current restricted `Metric`.
 249. Initial components beyond the current restricted `Badge`.
-250. Initial components: `Tabs`.
-251. Initial components: `Accordion`.
-252. Initial components: `Image`.
+250. Initial components beyond the current restricted `Tabs` / `Tab`.
+251. Initial components beyond the current restricted `Accordion`.
+252. Initial components beyond the current restricted `Image`.
 253. Initial components: `Video`.
 254. Initial components: `Diagram`.
 255. Unknown component visual design.
@@ -362,7 +362,7 @@ leaking virtual chunks as visible pages.
 306. Pinch zoom interaction decision.
 307. Device pixel ratio behavior for diagrams/canvas/SVG.
 308. Orientation change scroll-anchor preservation.
-309. Very narrow viewport long-word handling.
+309. Very narrow viewport long-word browser verification beyond current explicit containment classes.
 310. Responsive max content width.
 
 ## Missing Integration Work

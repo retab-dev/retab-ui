@@ -4,6 +4,7 @@ import * as React from "react"
 import type { JSONSchema7Type } from "json-schema"
 
 import { Label } from "@/components/ui/label"
+import { SchemaChipAddRow } from "@/components/schema-editor/primitives/schema-chip-add-row"
 import { SchemaChipList } from "@/components/schema-editor/primitives/schema-chip-list"
 import {
   formatEnumValueInput,
@@ -38,22 +39,22 @@ export function EnumValuesField({
   })
 
   const indexFromId = (id: string) => Number(id.replace("enum-value-", ""))
+  const addRow = {
+    inputLabel: "Add new value",
+    placeholder: "Add new value",
+    submitLabel: "Add",
+    value: nextValue,
+    onChange: setNextValue,
+    onSubmit: () => {
+      onChange([...values, parseEnumValueInput(nextValue)])
+      setNextValue("")
+    },
+  }
 
   return (
     <div className="space-y-2">
       <Label className="text-xs text-muted-foreground">Enabled options</Label>
       <SchemaChipList
-        addRow={{
-          inputLabel: "Add new value",
-          placeholder: "Add new value",
-          submitLabel: "Add",
-          value: nextValue,
-          onChange: setNextValue,
-          onSubmit: () => {
-            onChange([...values, parseEnumValueInput(nextValue)])
-            setNextValue("")
-          },
-        }}
         editable={!disabled}
         items={items}
         onRemove={(id) => {
@@ -66,6 +67,10 @@ export function EnumValuesField({
           nextValues[index] = parseEnumValueInput(value)
           onChange(nextValues)
         }}
+      />
+      <SchemaChipAddRow
+        editable={!disabled}
+        row={addRow}
       />
     </div>
   )

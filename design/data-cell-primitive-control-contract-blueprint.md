@@ -4,91 +4,227 @@
 
 Not platonic yet.
 
-The dependency direction is now fundamentally right:
+The high-level dependency direction is now right:
 
 ```txt
 json-table -> DataCell -> primitive controls
 ```
 
-`DataCell` no longer needs table-specific code to render enum/select behavior.
-That is the important architectural threshold.
+`DataCell` no longer depends on `components/json-table/*`, enum/select editing
+is delegated to primitive select behavior, and primitive controls receive exact
+control props from the registry. That crosses the important ownership line.
 
-The remaining impurity is inside the primitive layer:
+The remaining imperfection is subtler:
 
 ```txt
-DataCell public props are still being used as the internal control contract.
+DataCellProps is still too close to the internal edit model.
 ```
 
-That is too wide. `DataCellProps` is a consumer-facing API. A primitive control
-should not receive fields it cannot use, then ignore them through underscore
-aliases. That makes each control harder to audit, makes dependency mistakes
-easier, and lets table-adapter vocabulary leak into places that should be pure
-native interaction code.
+`DataCellProps` is a public consumer API. It should be convenient. Internal
+control state should be exact. Today the internals are cleaner than before, but
+public props, edit models, activation state, editor attributes, and control
+props still sit close enough that one wide prop can leak across several layers.
 
-The next architecture should make the control boundary exact.
+The next pass should separate the primitive into four narrow contracts:
+
+```txt
+public props -> display model
+             -> edit model
+             -> activation state
+             -> control props
+```
+
+Each contract should contain only the facts needed by the next arrow.
 
 ## Target
 
-Make `DataCell` read as one narrow pipeline:
+Make `DataCell` a pure primitive shell:
 
 ```txt
-public DataCell props
-  -> display model
-  -> control adapter
-  -> kind-specific control props
-  -> primitive control
+consumer DataCellProps
+  -> exact display projection
+  -> exact edit projection
+  -> exact activation decision
+  -> exact primitive control props
   -> primitive commit
 ```
 
-The public component can stay convenient. The internals should be precise.
+No table vocabulary. No compatibility shims. No broad internal prop bags. No
+control receiving facts it cannot render.
 
-## Principle
+## Architecture
 
-There are three different contracts, and they must not collapse into one:
+```mermaid
+flowchart TD
+  A["json-table JSON value + field metadata"] --> B["JsonTableDataCellModel"]
+  B --> C["DataCellProps"]
+  C --> D["DataCell shell"]
+  D --> E["DataCellDisplayModel"]
+  D --> F["DataCellEditModel"]
+  D --> G["DataCellControlState"]
+  G --> H["DataCellControlAction"]
+  F --> I["DataCellControlAdapter"]
+  I --> J["Exact control props"]
+  J --> K["Primitive control"]
+  K --> L["Primitive commit"]
+  L --> M["json-table commit projection"]
+  M --> N["JSON patch"]
+```
 
-1. `DataCellProps`: the public consumer API.
-2. `DataCellControlModel`: the minimal internal facts shared by all controls.
-3. `DataCell*ControlProps`: the exact props each kind-specific control needs.
+The arrows matter:
 
-The current smell comes from using contract 1 where contract 3 belongs.
+- `json-table` owns JSON meaning.
+- `DataCellProps` owns public primitive configuration.
+- `DataCellDisplayModel` owns inert trompe-l'oeil display.
+- `DataCellEditModel` owns mounted edit-session facts.
+- `DataCellControlState` owns cheap activation facts for inactive cells.
+- `DataCellControlAdapter` owns kind-specific behavior and prop projection.
+- primitive controls own native interaction only.
 
-## Dependency Rule
+## Dependency Rules
 
 Allowed:
 
 ```mermaid
 flowchart TD
-  A["consumer"] --> B["DataCellProps"]
-  B --> C["DataCell"]
-  C --> D["DataCellControlAdapter"]
-  D --> E["kind-specific control props"]
-  E --> F["primitive control"]
+  A["components/json-table/*"] --> B["registry/.../ui/data-cell"]
+  B --> C["data-cell-display-model"]
+  B --> D["data-cell-edit-model"]
+  B --> E["data-cell-control-registry"]
+  E --> F["data-cell-*-control"]
 ```
 
 Forbidden:
 
 ```mermaid
 flowchart TD
-  A["primitive control"] --> B["DataCellProps"]
-  C["primitive control"] --> D["components/json-table/*"]
-  E["primitive control"] --> F["unused underscore props"]
+  A["data-cell-*"] --> B["components/json-table/*"]
+  C["primitive control"] --> D["DataCellProps"]
+  E["primitive control"] --> F["JsonTable / Enum / schema / sentinel"]
+  G["control adapter"] --> H["as never / as DataCellProps"]
 ```
 
-`DataCellProps` should stop at the registry boundary.
+`json-table` may adapt into `DataCell`. `DataCell` must never adapt back into
+`json-table`.
 
-## Final Vocabulary
+## Contract Separation
 
-Keep these names:
+### Public Props
 
-- `DataCellProps`: public component props.
-- `DataCellControlModel`: internal normalized state for the active cell.
-- `DataCellControlAdapter`: kind-specific activation and prop projection.
-- `DataCellControlPropsByKind`: type map from kind to exact control props.
-- `DataCellControlAction`: activation result.
-- `DataCellActivationSource`: why an editor mounted.
-- `DataCellEditorHandle`: finish/cancel handle exposed to parent coordination.
+`DataCellProps` should be exact at the public boundary.
 
-Avoid these names inside primitive controls:
+The base props should contain only facts that genuinely apply to every kind:
+
+- `kind`
+- `value`
+- `mode`
+- `editable`
+- `active`
+- `disabled`
+- `className`
+- `activationSource`
+- `autoFocus`
+- `onEditingEnd`
+- `onActiveChange`
+- `onEditorHandleChange`
+- safe shell HTML attributes
+
+Kind-specific props should move to kind-specific branches:
+
+- `placeholder`: text, number, integer, select, date, time, date-time
+- `name`: controls that render a native named form control
+- `draftValue`: text, number, integer, date, time, date-time
+- `onDraftValueChange`: same as `draftValue`
+- `open`: select, date, time, date-time
+- `onOpenChange`: select, date, time, date-time
+- `selectOptions`: select only
+- `dateTimeZone`: date, time, date-time only
+- `showPickerIcon`: date, time, date-time only
+- `formatValue`: only branches that display formatted content
+- `onCommit`: exact value type per branch
+
+This is a hard cutover. Do not preserve a wide base for compatibility.
+
+### Display Model
+
+`DataCellDisplayModel` should be a discriminated union built from public props.
+
+It should contain only inert display facts:
+
+- kind
+- formatted content
+- empty state
+- placeholder
+- class name
+- disabled state
+- picker affordance where applicable
+- shell attributes needed by the display element
+
+It should not contain:
+
+- draft state
+- open state
+- commit handlers
+- editor handles
+- JSON values
+- select option arrays except when needed to derive displayed select content
+
+### Edit Model
+
+`DataCellEditModel` should be a discriminated union built from public props plus
+shell edit state.
+
+It should contain only facts needed after the editor is mounted:
+
+- exact primitive value
+- disabled state
+- native control identity props
+- draft state where the kind supports draft editing
+- open state where the kind supports popup editing
+- exact commit handler
+- exact draft handler
+- editor lifecycle hooks
+- quarantined `aria-*` and `data-*` editor attributes
+
+It should not be treated as public API. It is an internal normalized state
+object.
+
+### Activation State
+
+`DataCellControlState` should be cheaper and narrower than `DataCellEditModel`.
+
+Inactive cells need activation facts without constructing an editor model:
+
+- kind
+- current primitive value
+- disabled
+- boolean commit handler for command toggle
+
+Text activation may use the current string for caret hit-testing. Boolean
+activation may use the commit handler for single-click toggle. Select and
+picker activation do not need option lists or popup props just to decide whether
+activation is possible.
+
+### Control Props
+
+Primitive controls should receive exact props projected by the registry.
+
+Allowed control imports:
+
+- React
+- local primitive helpers
+- local primitive value types
+- exact control prop types
+
+Forbidden control imports:
+
+- `DataCellProps`
+- `components/json-table/*`
+- JSON schema types
+- table session types
+- table utility functions
+
+Forbidden control language:
 
 - `JsonTable`
 - `Enum`
@@ -96,333 +232,173 @@ Avoid these names inside primitive controls:
 - `fieldMetadata`
 - `jsonValue`
 - `sentinel`
-- `_editable`
-- `_active`
-- `_mode`
-- `_showPickerIcon`
-- `_onActiveChange`
-- any ignored prop alias
+- ignored underscore prop aliases
 
-## Target Module Shape
+## Final Module Shape
 
 ```txt
 registry/new-york-v4/ui/
   data-cell.tsx
-    public component, display/edit switch, commit routing
+    public shell, active/display switch, commit routing
 
   data-cell-types.ts
-    public API types and shared primitive value types
+    exact public prop union and shared primitive value types
+
+  data-cell-display-model.ts
+    public props -> exact display model
+
+  data-cell-display.tsx
+    inert trompe-l'oeil display only
+
+  data-cell-edit-model.ts
+    public props + shell edit state -> exact edit model
+    public props -> cheap activation state
+    quarantined aria/data editor attribute projection
 
   data-cell-control-contract.ts
-    internal control model, action, adapter, and kind prop map
+    control state, control action, adapter type, control prop map
 
   data-cell-control-registry.tsx
     kind -> adapter
-    public props -> exact control props projection
+    edit model -> exact control props
+    activation state -> exact control action
 
   data-cell-text-control.tsx
-    text-only native input control
+    text input, caret placement, draft commit/cancel
 
   data-cell-number-control.tsx
-    number/integer native input control
+    number/integer input grammar and commit parsing
 
   data-cell-boolean-control.tsx
-    checkbox command/edit control
+    checkbox command/edit behavior
 
   data-cell-select-control.tsx
-    combobox trigger and popup composition
+    primitive select trigger, popup lifecycle, option commit
+
+  data-cell-select-popup.tsx
+    generic listbox popup mechanics
 
   data-cell-picker-control.tsx
-    date/time trigger and picker composition
+    date/time/date-time input and picker lifecycle
 ```
 
-## Internal Control Model
+## Implementation Plan
 
-The registry should normalize public props into a small shared model:
+1. Shrink `DataCellBaseProps` to truly shared public props.
+2. Move every kind-specific public prop into the exact branch that owns it.
+3. Keep `DataCellProps` as the only public component API; do not introduce a
+   legacy alias.
+4. Split `DataCellControlState` construction away from full edit-model
+   construction if it is still coupled.
+5. Ensure inactive activation reads only `DataCellControlState`, not
+   `DataCellEditModel`.
+6. Keep `DataCellEditModel` exact by kind and private to the primitive runtime.
+7. Keep `DataCellControlAdapter.controlProps` as the only control prop
+   projection point.
+8. Remove any broad casts introduced to satisfy TypeScript. Prefer explicit
+   discriminated branches over unsafe generic cleverness.
+9. Regenerate registry output.
+10. Add architecture ratchets before behavior changes are trusted.
 
-```ts
-type DataCellControlModel<Kind extends DataCellKind> = {
-  kind: Kind
-  value: DataCellValueForKind<Kind>
-  disabled: boolean
-  className?: string
-  autoFocus?: boolean
-  activationSource?: DataCellActivationSource
-  onCommit?: DataCellCommitHandlerForKind<Kind>
-  onEditingEnd?: () => void
-  onEditorHandleChange?: (handle: DataCellEditorHandle | null) => void
-}
-```
+## Type Rules
 
-This model is not necessarily an exported public type. The important property is
-that every field is genuinely shared by controls.
+Forbidden:
 
-Kind-specific data stays outside the shared model.
+- `as never`
+- `as DataCellProps`
+- `React.ComponentType<DataCellProps>` for primitive controls
+- public grouped branches such as `"number" | "integer"` when exact branches
+  are possible
+- public grouped picker branches when exact branches are possible
+- control props derived by spreading all public props
+- model construction by re-kind-spreading `{ ...props, kind }`
 
-## Kind-Specific Control Props
+Allowed:
 
-### Text
+- explicit `if (model.kind === "...")` branches for TypeScript correlation
+- exact helper types like `Extract<DataCellProps, { kind: "select" }>`
+- a quarantined editor-attribute projector for open-ended `aria-*` and
+  `data-*`
+- one adapter map checked with `satisfies`
 
-Text control receives only:
+The bias should be toward code that TypeScript can prove without casts, even if
+that means a small explicit branch.
 
-- `kind: "text"`
-- `value`
-- `disabled`
-- `name`
-- `placeholder`
-- `className`
-- `draftValue`
-- `autoFocus`
-- `activationSource`
-- `onDraftValueChange`
-- `onCommit`
-- `onEditingEnd`
-- `onEditorHandleChange`
-- native input event handlers that are actually forwarded
-- native input ARIA/id props that are actually rendered
+## Interaction Contract
 
-Text does not receive:
+The architectural cleanup must preserve the primitive behavior:
 
-- `selectOptions`
-- `dateTimeZone`
-- `showPickerIcon`
-- `isPickerOpen`
-- picker callbacks
-- boolean-only state
-
-### Number And Integer
-
-Number/integer control receives only:
-
-- text-input props needed for native input rendering
-- `kind: "number" | "integer"`
-- `dateTimeZone` never appears
-- `selectOptions` never appears
-
-Number parsing remains primitive-format logic, not table logic.
-
-### Boolean
-
-Boolean control receives only:
-
-- `kind: "boolean"`
-- `value`
-- `disabled`
-- `name`
-- `className`
-- `autoFocus`
-- `onCommit`
-- `onEditingEnd`
-- `onEditorHandleChange`
-- native button ARIA/id props that are actually rendered
-- native button handlers that are actually forwarded
-
-Boolean does not receive:
-
-- `placeholder`
-- `draftValue`
-- `formatValue`
-- `selectOptions`
-- `dateTimeZone`
-- `showPickerIcon`
-- `isPickerOpen`
-- picker callbacks
-
-Boolean toggle command should accept a boolean value and a boolean commit
-handler, not a broad public commit handler.
-
-### Select
-
-Select is already closest to the target.
-
-Select receives only:
-
-- `value`
-- `disabled`
-- `placeholder`
-- `className`
-- `formatValue`
-- `autoFocus`
-- `activationSource`
-- `isPickerOpen`
-- `selectOptions`
-- `onCommit`
-- `onEditingEnd`
-- `onPickerOpenChange`
-- `onEditorHandleChange`
-
-This narrow shape should become the pattern, not the exception.
-
-### Date, Time, And Date-Time
-
-Picker control receives only:
-
-- `kind: "date" | "time" | "date-time"`
-- `value`
-- `disabled`
-- `placeholder`
-- `dateTimeZone`
-- `showPickerIcon`
-- `className`
-- `formatValue`
-- `draftValue`
-- `autoFocus`
-- `activationSource`
-- `isPickerOpen`
-- `onDraftValueChange`
-- `onCommit`
-- `onPickerOpenChange`
-- `onEditingEnd`
-- `onEditorHandleChange`
-- native trigger ARIA/id props that are actually rendered
-- native trigger handlers that are actually forwarded
-
-Picker should not receive select options or boolean-only props.
-
-## Registry Contract
-
-The registry should be the only place where public `DataCellProps` are split
-into kind-specific internals.
-
-Target shape:
-
-```ts
-type DataCellControlAdapter<Kind extends DataCellKind> = {
-  Control: React.ComponentType<DataCellControlPropsByKind[Kind]>
-  controlProps: (
-    props: Extract<DataCellProps, { kind: Kind }>
-  ) => DataCellControlPropsByKind[Kind]
-  activatePointer: (
-    args: DataCellControlPointerActionArgs<Kind>
-  ) => DataCellControlAction
-  activateClick: (
-    args: DataCellControlPointerActionArgs<Kind>
-  ) => DataCellControlAction
-  activateKey: (
-    args: DataCellControlKeyActionArgs<Kind>
-  ) => DataCellControlAction
-  canActivateFromKey: (key: string) => boolean
-}
-```
-
-`DataCellControl` then becomes:
-
-```tsx
-const adapter = getDataCellControlAdapter(props.kind)
-return <adapter.Control {...adapter.controlProps(props)} />
-```
-
-No control casts itself from `DataCellProps`.
-No control destructures fields it does not own.
-
-## Activation Contract
-
-Activation should also stop receiving broad public props.
-
-Current smell:
-
-```txt
-activatePointer(args) gets props: DataCellProps
-```
-
-Target:
-
-```ts
-type DataCellControlActivationModel<Kind extends DataCellKind> = {
-  kind: Kind
-  value: DataCellValueForKind<Kind>
-  disabled: boolean
-}
-```
-
-Pointer and keyboard activation should receive:
-
-- activation model
-- key or pointer geometry
-- display element when hit testing needs it
-- original event only when opening-token ownership needs it
-
-That lets text activation use `value` for caret hit-testing without seeing
-select options, date settings, or table-origin props.
-
-## Public Props
-
-Do not prematurely shrink the public API.
-
-The public `DataCellProps` union can stay ergonomic and somewhat broad because
-it is the component boundary consumed by app code and registry examples. The
-platonic issue is not that consumers can pass convenient props. The issue is
-that internal controls currently receive props they do not own.
-
-Public compatibility is not the goal, but public API compression should be a
-separate pass. This pass is about internal exactness.
+- first click in text places the caret at the pointer location
+- typing after first click inserts text instead of replacing the whole value
+- type-to-edit works for text, number, and integer
+- Enter and F2 activate editable scalar cells
+- Escape cancels draft edits where draft editing exists
+- Enter commits draft edits where draft editing exists
+- blur commits or finishes according to the native control policy
+- boolean click toggles exactly once
+- Space toggles boolean from keyboard
+- select first click opens the popup
+- select option click commits exactly once and closes
+- select opening click does not immediately trigger outside-dismiss
+- date, time, and date-time first click show matching display/editor text
+- picker opening click does not immediately dismiss the popup
+- controlled `open` and uncontrolled `open` both work for popup kinds
+- controlled `active` and uncontrolled `active` both work for edit lifecycle
+- table enum identity and nullable sentinel handling remain in `json-table`
 
 ## Tests
 
-Add architecture tests that fail if the boundary widens again:
+Architecture tests should fail if impurity returns:
 
+- `DataCell` and primitive files do not import `components/json-table/*`
 - primitive controls do not import `DataCellProps`
-- primitive controls contain no ignored underscore props
-- primitive controls contain no `components/json-table`
-- primitive controls contain no `JsonTable`, `Enum`, `schema`, `jsonValue`,
-  `fieldMetadata`, or `sentinel`
-- `DataCellControlAdapter.Control` is not typed as
-  `React.ComponentType<DataCellProps>`
+- primitive controls contain no ignored underscore prop aliases
+- primitive controls contain no JSON-table vocabulary
+- `DataCellBaseProps` does not contain select-only or picker-only props
+- `selectOptions` appears only on the select public branch
+- `dateTimeZone` and `showPickerIcon` appear only on picker public branches
+- `open` and `onOpenChange` appear only on popup-capable branches
+- no `as never` or `as DataCellProps` appears in DataCell runtime files
+- no model construction uses `{ ...props, kind }`
 - every adapter has a `controlProps` projector
-- select, picker, text, number, and boolean receive only their exact prop types
+- generated `public/r/data-cell.json` contains the same boundaries
 
-Add interaction regression tests that prove the narrower contract did not alter
-behavior:
+Interaction tests should cover:
 
-- first click in text cell places the caret at the pointer position
-- typing after first click inserts text instead of replacing the full value
-- first click on select opens the popup
-- option click commits once and closes
-- opening click does not immediately dismiss select or picker popups
-- boolean click toggles once
-- number keyboard activation preserves numeric edit grammar
-- date display text and mounted date input stay visually identical
-- blur from a dirty text input commits according to the existing edit policy
-
-## Implementation Steps
-
-1. Define exact control prop types for every primitive control.
-2. Move all `DataCellProps` casts and broad destructuring into
-   `data-cell-control-registry.tsx`.
-3. Add one `controlProps` projector per adapter.
-4. Replace broad activation args with kind-specific activation models.
-5. Remove ignored underscore prop aliases from controls.
-6. Tighten boolean commit types so boolean toggle does not use a broad commit
-   handler.
-7. Run architecture tests before interaction tests so boundary regressions fail
-   with clear errors.
-8. Run the full DataCell/json-table interaction suite.
-9. Rebuild and validate registry output.
+- text caret placement by pointer coordinate
+- text type-to-edit and click-to-edit paths
+- number and integer keyboard edit grammar
+- boolean pointer and keyboard toggle
+- select open, keyboard navigation, commit, cancel, outside click, and blur
+- date, time, date-time display/editor parity
+- popup controlled/uncontrolled state
+- json-table enum object identity after select commit
+- json-table nullable enum null commit
+- virtualization survival while a popup is open
 
 ## Non-Goals
 
 - Do not reintroduce a table-owned enum editor.
 - Do not make `DataCell` import JSON-table files.
-- Do not rewrite Base UI, Calendar, or the popup primitives.
-- Do not add a compatibility adapter that preserves the old broad internal
-  contract.
-- Do not move JSON value projection into DataCell.
+- Do not rewrite Base UI, Calendar, or third-party primitives.
+- Do not add compatibility wrappers around the old broad public shape.
+- Do not move JSON normalization into `DataCell`.
+- Do not split files merely to make the tree look more modular.
 
 ## Completion Criteria
 
 This pass is complete when:
 
-- no primitive control imports `DataCellProps`
-- no primitive control has ignored underscore props
-- every control receives a kind-specific prop object
-- activation receives a minimal activation model instead of public props
-- `json-table` remains the only owner of JSON value projection
-- `DataCell` remains the only owner of primitive interaction
-- registry artifacts include the exact new files
-- architecture tests prove the dependency direction
-- interaction tests prove text, boolean, select, number, date, time, and
-  date-time behavior did not regress
+- public props are exact by kind
+- edit models are exact by kind
+- activation state is minimal and separate from mounted edit state
+- primitive controls receive only exact control props
+- JSON projection exists only in `json-table`
+- primitive interaction exists only in `DataCell`
+- architecture tests lock the boundary
+- integration tests prove the interaction matrix
+- registry output is regenerated and checked
 
-At that point the primitive layer will be meaningfully closer to the ideal:
-convenient at the public boundary, exact at the internal boundary, and free of
-consumer-specific vocabulary.
+At that point the primitive layer would be close to the ideal: a convenient
+public trompe-l'oeil API, a narrow internal state machine, and no consumer-owned
+meaning inside primitive controls.

@@ -169,10 +169,10 @@ export function useFileSystemController({
     (entry: FileSystemEntry | null) => {
       const path = entry?.path ?? null
 
-      if (path !== selectionStateRef.current.selectedPath) {
-        invalidateChildSelectionRequest()
-      }
-      if (!isSelectionControlled) setInternalSelectedPath(entry?.path ?? null)
+      if (path === selectionStateRef.current.selectedPath) return
+
+      invalidateChildSelectionRequest()
+      if (!isSelectionControlled) setInternalSelectedPath(path)
       onSelectionChange?.(entry)
     },
     [invalidateChildSelectionRequest, isSelectionControlled, onSelectionChange]

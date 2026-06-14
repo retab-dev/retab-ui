@@ -17,6 +17,7 @@ import { Button } from "./button"
 import type { PretextMarkdownChunk } from "./pretext-markdown-document-model"
 import {
   ALERT_LABELS,
+  CALLOUT_LABELS,
   createPretextMarkdownRemarkPlugins,
   PRETEXT_MARKDOWN_REHYPE_PLUGINS,
   readPretextAlertKind,
@@ -86,6 +87,27 @@ function createPretextMarkdownRenderSource({
   return `${referenceDefinitionsMarkdown.trimEnd()}\n\n${markdown}`
 }
 
+const PRETEXT_MARKDOWN_WRAP_CLASS_NAME =
+  "min-w-0 [overflow-wrap:anywhere] [word-break:normal]"
+const PRETEXT_MARKDOWN_CODE_LANGUAGE_ALIASES: Record<string, string> = {
+  "mermaid-js": "mermaid",
+  mmd: "mermaid",
+}
+
+type PretextMarkdownTabRegistration = {
+  id: string
+  title: string
+}
+
+type PretextMarkdownTabsContextValue = {
+  selectedId: string | null
+  registerTab: (tab: PretextMarkdownTabRegistration) => () => void
+  selectTab: (id: string) => void
+}
+
+const PretextMarkdownTabsContext =
+  React.createContext<PretextMarkdownTabsContextValue | null>(null)
+
 const markdownComponents = {
   div: ({ className, children, node, ...props }) => {
     const callout = readPretextCallout(node)
@@ -99,7 +121,11 @@ const markdownComponents = {
 
     const component = readPretextComponent(node)
     if (component) {
-      return <PretextMarkdownComponent component={component} />
+      return (
+        <PretextMarkdownComponent component={component}>
+          {children}
+        </PretextMarkdownComponent>
+      )
     }
 
     return (
@@ -169,7 +195,14 @@ const markdownComponents = {
     </PretextMarkdownHeading>
   ),
   p: ({ className, node: _node, ...props }) => (
-    <p className={cn("my-4 leading-7 first:mt-0", className)} {...props} />
+    <p
+      className={cn(
+        "my-4 leading-7 first:mt-0",
+        PRETEXT_MARKDOWN_WRAP_CLASS_NAME,
+        className
+      )}
+      {...props}
+    />
   ),
   a: ({ className, href, children, node: _node, title, ...props }) => {
     const safeHref = sanitizePretextMarkdownUrl(href ?? "")
@@ -193,6 +226,7 @@ const markdownComponents = {
       <a
         className={cn(
           "font-medium underline underline-offset-4",
+          PRETEXT_MARKDOWN_WRAP_CLASS_NAME,
           footnoteRef && "ml-0.5 rounded px-1 text-[0.72em] leading-none",
           footnoteBackref && "ml-1 text-muted-foreground no-underline",
           className
@@ -242,6 +276,7 @@ const markdownComponents = {
       <blockquote
         className={cn(
           "my-5 border-l-4 border-border pl-4 text-muted-foreground",
+          PRETEXT_MARKDOWN_WRAP_CLASS_NAME,
           className
         )}
         {...props}
@@ -257,6 +292,29 @@ const markdownComponents = {
   details: ({ className, node: _node, ...props }) => (
     <details
       className={cn("my-5 rounded-md border bg-muted/25 px-4 py-3", className)}
+      {...props}
+    />
+  ),
+  dl: ({ className, node: _node, ...props }) => (
+    <dl className={cn("my-5 space-y-2", className)} {...props} />
+  ),
+  dt: ({ className, node: _node, ...props }) => (
+    <dt
+      className={cn(
+        "font-semibold text-foreground",
+        PRETEXT_MARKDOWN_WRAP_CLASS_NAME,
+        className
+      )}
+      {...props}
+    />
+  ),
+  dd: ({ className, node: _node, ...props }) => (
+    <dd
+      className={cn(
+        "ml-5 text-muted-foreground",
+        PRETEXT_MARKDOWN_WRAP_CLASS_NAME,
+        className
+      )}
       {...props}
     />
   ),
@@ -291,7 +349,14 @@ const markdownComponents = {
     />
   ),
   li: ({ className, node: _node, ...props }) => (
-    <li className={cn("pl-1 leading-7", className)} {...props} />
+    <li
+      className={cn(
+        "pl-1 leading-7",
+        PRETEXT_MARKDOWN_WRAP_CLASS_NAME,
+        className
+      )}
+      {...props}
+    />
   ),
   input: ({ className, checked, node: _node, type, ...props }) => {
     if (type !== "checkbox") {
@@ -300,15 +365,17 @@ const markdownComponents = {
 
     return (
       <input
+        {...props}
         aria-label={checked ? "Completed task" : "Incomplete task"}
+        aria-readonly="true"
         checked={checked}
         className={cn(
-          "mr-2 size-3.5 rounded border-border align-[-0.15em]",
+          "mr-2 size-3.5 rounded border-border align-[-0.15em] disabled:cursor-default disabled:opacity-100",
           className
         )}
+        disabled
         readOnly
         type="checkbox"
-        {...props}
       />
     )
   },
@@ -337,6 +404,7 @@ const markdownComponents = {
         className={cn(
           "px-3 py-2 align-top font-semibold",
           tableCellAlignmentClassName(resolvedAlign),
+          PRETEXT_MARKDOWN_WRAP_CLASS_NAME,
           className
         )}
         align={resolvedAlign}
@@ -351,6 +419,7 @@ const markdownComponents = {
         className={cn(
           "px-3 py-2 align-top",
           tableCellAlignmentClassName(resolvedAlign),
+          PRETEXT_MARKDOWN_WRAP_CLASS_NAME,
           className
         )}
         align={resolvedAlign}
@@ -388,7 +457,7 @@ const markdownComponents = {
         </div>
         <pre
           aria-label={`${language ? `${language} ` : ""}code source`}
-          className="overflow-x-auto p-4 text-sm leading-6"
+          className="overflow-x-auto p-4 text-sm leading-6 [overflow-wrap:normal]"
           tabIndex={0}
           {...props}
         >
@@ -401,6 +470,7 @@ const markdownComponents = {
     <code
       className={cn(
         "rounded bg-muted px-1 py-0.5 font-mono text-[0.9em]",
+        PRETEXT_MARKDOWN_WRAP_CLASS_NAME,
         className
       )}
       {...props}
@@ -491,6 +561,7 @@ function PretextMarkdownCallout({
   callout,
   children,
   className,
+  componentName,
 }: {
   callout: {
     kind: CalloutKind
@@ -498,6 +569,7 @@ function PretextMarkdownCallout({
   }
   children: React.ReactNode
   className: string | undefined
+  componentName?: string
 }) {
   return (
     <aside
@@ -508,6 +580,7 @@ function PretextMarkdownCallout({
         className
       )}
       data-pretext-callout-kind={callout.kind}
+      data-pretext-component={componentName}
       role="note"
     >
       <p className="mb-2 font-semibold">{callout.title}</p>
@@ -595,17 +668,39 @@ function PretextMarkdownTable({
 }
 
 function PretextMarkdownComponent({
+  children,
   component,
 }: {
+  children?: React.ReactNode
   component: PretextComponent
 }) {
   switch (component.name) {
+    case "Accordion":
+      return (
+        <details
+          className="my-5 rounded-md border bg-muted/20"
+          data-pretext-component="Accordion"
+        >
+          <summary
+            className={cn(
+              "cursor-pointer px-4 py-3 font-medium text-foreground",
+              PRETEXT_MARKDOWN_WRAP_CLASS_NAME
+            )}
+          >
+            {component.props.title || "Details"}
+          </summary>
+          <div className="border-t px-4 py-3 [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+            {children}
+          </div>
+        </details>
+      )
     case "Badge": {
       const label = component.props.label ?? component.props.value ?? "Badge"
       return (
         <span
           className={cn(
-            "my-3 inline-flex w-fit items-center rounded-md border px-2 py-1 text-sm font-medium",
+            "my-3 inline-flex max-w-full items-center rounded-md border px-2 py-1 text-sm font-medium",
+            PRETEXT_MARKDOWN_WRAP_CLASS_NAME,
             componentToneClassName(component.props.tone)
           )}
           data-pretext-component="Badge"
@@ -614,20 +709,208 @@ function PretextMarkdownComponent({
         </span>
       )
     }
+    case "Callout": {
+      const kind = readPretextComponentCalloutKind(component)
+      return (
+        <PretextMarkdownCallout
+          callout={{
+            kind,
+            title: component.props.title || CALLOUT_LABELS[kind],
+          }}
+          className={undefined}
+          componentName="Callout"
+        >
+          {children}
+        </PretextMarkdownCallout>
+      )
+    }
+    case "Image":
+      return (
+        <PretextMarkdownImage
+          alt={component.props.alt ?? component.props.label ?? ""}
+          componentName="Image"
+          src={component.props.src ?? ""}
+          title={component.props.title}
+        />
+      )
     case "Metric":
       return (
         <div
-          className="my-5 flex max-w-lg items-center justify-between rounded-md border bg-muted/20 px-4 py-3"
+          className="my-5 flex max-w-lg min-w-0 items-center justify-between gap-4 rounded-md border bg-muted/20 px-4 py-3"
           data-pretext-component="Metric"
         >
-          <span className="text-muted-foreground">
+          <span
+            className={cn(
+              "min-w-0 text-muted-foreground",
+              PRETEXT_MARKDOWN_WRAP_CLASS_NAME
+            )}
+          >
             {component.props.label ?? "Metric"}
           </span>
-          <span className="text-2xl font-semibold tracking-normal">
+          <span
+            className={cn(
+              "min-w-0 text-right text-2xl font-semibold tracking-normal",
+              PRETEXT_MARKDOWN_WRAP_CLASS_NAME
+            )}
+          >
             {component.props.value ?? "-"}
           </span>
         </div>
       )
+    case "Tab":
+      return (
+        <PretextMarkdownTab title={component.props.title || "Tab"}>
+          {children}
+        </PretextMarkdownTab>
+      )
+    case "Tabs":
+      return (
+        <PretextMarkdownTabs label={component.props.label || "Tabs"}>
+          {children}
+        </PretextMarkdownTabs>
+      )
+  }
+}
+
+function PretextMarkdownTabs({
+  children,
+  label,
+}: {
+  children: React.ReactNode
+  label: string
+}) {
+  const [tabs, setTabs] = React.useState<PretextMarkdownTabRegistration[]>([])
+  const [selectedId, setSelectedId] = React.useState<string | null>(null)
+
+  const registerTab = React.useCallback(
+    (tab: PretextMarkdownTabRegistration) => {
+      setTabs((current) => {
+        if (current.some((item) => item.id === tab.id)) return current
+        return [...current, tab]
+      })
+      setSelectedId((current) => current ?? tab.id)
+
+      return () => {
+        setTabs((current) => current.filter((item) => item.id !== tab.id))
+        setSelectedId((current) => (current === tab.id ? null : current))
+      }
+    },
+    []
+  )
+
+  const contextValue = React.useMemo<PretextMarkdownTabsContextValue>(
+    () => ({
+      selectedId,
+      registerTab,
+      selectTab: setSelectedId,
+    }),
+    [registerTab, selectedId]
+  )
+
+  return (
+    <PretextMarkdownTabsContext.Provider value={contextValue}>
+      <div
+        aria-label={label}
+        className="my-5 rounded-md border bg-muted/15"
+        data-pretext-component="Tabs"
+        role="group"
+      >
+        {tabs.length ? (
+          <div
+            aria-label={label}
+            className="flex flex-wrap gap-1 border-b bg-muted/30 p-1"
+            role="tablist"
+          >
+            {tabs.map((tab) => {
+              const selected = tab.id === selectedId
+              return (
+                <button
+                  key={tab.id}
+                  aria-controls={`${tab.id}-panel`}
+                  aria-selected={selected}
+                  className={cn(
+                    "rounded px-3 py-1.5 text-sm font-medium",
+                    "focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                    selected
+                      ? "bg-background text-foreground shadow-xs"
+                      : "text-muted-foreground hover:bg-background/70 hover:text-foreground"
+                  )}
+                  id={`${tab.id}-tab`}
+                  role="tab"
+                  type="button"
+                  onClick={() => setSelectedId(tab.id)}
+                >
+                  {tab.title}
+                </button>
+              )
+            })}
+          </div>
+        ) : null}
+        <div className="px-4 py-3">{children}</div>
+      </div>
+    </PretextMarkdownTabsContext.Provider>
+  )
+}
+
+function PretextMarkdownTab({
+  children,
+  title,
+}: {
+  children: React.ReactNode
+  title: string
+}) {
+  const tabsContext = React.useContext(PretextMarkdownTabsContext)
+  const registerTab = tabsContext?.registerTab
+  const reactId = React.useId()
+  const id = `pretext-markdown-tab-${reactId.replace(/:/g, "")}`
+
+  React.useEffect(() => {
+    return registerTab?.({ id, title })
+  }, [id, registerTab, title])
+
+  if (!tabsContext) {
+    return (
+      <section
+        aria-label={title}
+        className="my-5 rounded-md border bg-muted/15 px-4 py-3"
+        data-pretext-component="Tab"
+      >
+        <p className="mb-2 font-medium">{title}</p>
+        <div className="[&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+          {children}
+        </div>
+      </section>
+    )
+  }
+
+  const selected =
+    tabsContext.selectedId === null || tabsContext.selectedId === id
+  return (
+    <section
+      aria-labelledby={`${id}-tab`}
+      className="[&>*:first-child]:mt-0 [&>*:last-child]:mb-0"
+      data-pretext-component="Tab"
+      hidden={!selected}
+      id={`${id}-panel`}
+      role="tabpanel"
+    >
+      {children}
+    </section>
+  )
+}
+
+function readPretextComponentCalloutKind(component: PretextComponent) {
+  switch (component.props.kind) {
+    case "caution":
+    case "danger":
+    case "important":
+    case "info":
+    case "note":
+    case "tip":
+    case "warning":
+      return component.props.kind
+    default:
+      return "note"
   }
 }
 
@@ -806,10 +1089,13 @@ function PretextMarkdownCopyButton({
 function PretextMarkdownImage({
   alt,
   className,
+  componentName,
   title,
   src,
   ...props
-}: React.ImgHTMLAttributes<HTMLImageElement>) {
+}: React.ImgHTMLAttributes<HTMLImageElement> & {
+  componentName?: string
+}) {
   const safeSrc =
     typeof src === "string" ? sanitizePretextMarkdownImageUrl(src) : ""
   const [state, setState] = React.useState<{
@@ -829,6 +1115,7 @@ function PretextMarkdownImage({
     return (
       <PretextMarkdownImagePlaceholder
         className={className}
+        componentName={componentName}
         label={label}
         state="blocked"
       />
@@ -839,6 +1126,7 @@ function PretextMarkdownImage({
     return (
       <PretextMarkdownImagePlaceholder
         className={className}
+        componentName={componentName}
         label={label}
         state="failed"
         onRetry={() => {
@@ -858,6 +1146,7 @@ function PretextMarkdownImage({
         "my-5 inline-block w-fit max-w-full overflow-hidden rounded-md border bg-muted/20 align-top",
         className
       )}
+      data-pretext-component={componentName}
       data-pretext-image-state={state.status}
       style={{ aspectRatio }}
     >
@@ -903,11 +1192,13 @@ function PretextMarkdownImage({
 
 function PretextMarkdownImagePlaceholder({
   className,
+  componentName,
   label,
   onRetry,
   state,
 }: {
   className: string | undefined
+  componentName?: string
   label: string
   onRetry?: () => void
   state: "blocked" | "failed"
@@ -920,6 +1211,7 @@ function PretextMarkdownImagePlaceholder({
           "my-5 flex min-h-24 max-w-full items-center justify-between gap-3 rounded-md border border-dashed bg-muted/40 px-4 py-3 text-sm text-muted-foreground",
           className
         )}
+        data-pretext-component={componentName}
         data-pretext-image-state="failed"
         role="group"
       >
@@ -949,6 +1241,7 @@ function PretextMarkdownImagePlaceholder({
         "my-5 flex min-h-24 max-w-full items-center rounded-md border border-dashed bg-muted/40 px-4 text-sm text-muted-foreground",
         className
       )}
+      data-pretext-component={componentName}
       data-pretext-image-state={state}
       role="img"
     >
@@ -1178,11 +1471,19 @@ function codeLanguage(node: React.ReactNode): string | null {
   }
 
   const className = node.props.className ?? ""
-  return (
-    node.props["data-language"] ??
-    className.match(/language-([^\s]+)/)?.[1] ??
-    null
+  return normalizePretextMarkdownCodeLanguage(
+    node.props["data-language"] ?? className.match(/language-([^\s]+)/)?.[1]
   )
+}
+
+function normalizePretextMarkdownCodeLanguage(value: string | undefined) {
+  const language = value
+    ?.trim()
+    .replace(/^language-/i, "")
+    .split(/\s+/)[0]
+    ?.toLowerCase()
+  if (!language) return null
+  return PRETEXT_MARKDOWN_CODE_LANGUAGE_ALIASES[language] ?? language
 }
 
 function alertClassName(kind: AlertKind) {

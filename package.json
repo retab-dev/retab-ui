@@ -23,6 +23,7 @@
     "registry:validate": "shadcn registry validate",
     "profile:json-table-primitives": "node scripts/profile-json-table-primitive-interactions.mjs --assert",
     "verify:data-cell": "node scripts/verify-data-cell-parity.mjs",
+    "verify:data-cell-registry": "node scripts/verify-data-cell-registry-determinism.mjs",
     "verify:viewer-skeletons": "node scripts/verify-viewer-skeletons.mjs",
     "verify:xlsx-viewer": "node scripts/verify-xlsx-viewer.mjs",
     "postinstall": "fumadocs-mdx",

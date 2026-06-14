@@ -9,6 +9,7 @@ import { projectDocumentRows } from "@/components/json-table/lib/document-projec
 import type { JsonTableHeaderNode } from "@/components/json-table/lib/header-nodes"
 import type { TableDocument } from "@/components/json-table/lib/projects-types"
 import type { FieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
+import { createJsonTablePrimitiveEditStore } from "@/components/json-table/json-table-primitive-edit-store"
 import { SingleFileVirtualizedTable } from "@/components/json-table/single-file-virtualized-table"
 
 import {
@@ -157,6 +158,7 @@ function renderVirtualTable({
           interactionVisibleColumn(path, normalizationSchema)
         )}
         rowCount={projectedRows.length}
+      primitiveEditStore={createJsonTablePrimitiveEditStore()}
         onUpdateDocument={onUpdateDocument}
         columnWidth="xxl"
         overscan={4}

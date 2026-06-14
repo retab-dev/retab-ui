@@ -37,7 +37,7 @@ export function useJsonTablePrimitiveControl({
       value: cellField.cellValue,
       isEditable: cellField.isJsonEditable && cellField.isPrimitiveCell,
       onDocumentDataChange: props.onDocumentDataChange,
-      primitivePatchStore: props.primitivePatchStore,
+      primitiveEditStore: props.primitiveEditStore,
     })
 
   const commitPrimitiveValue = useRefCallback((nextValue: unknown) => {

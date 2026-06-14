@@ -13,9 +13,11 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import {
   FileSystem,
   FileSystemViewerHeader,
+  FileSystemViewerOpenDialog,
   FileSystemViewerProvider,
   FileSystemViewerSelectedFile,
   FileSystemViewerTree,
+  useFileSystemViewer,
 } from "@/registry/new-york-v4/ui/file-system"
 import type {
   FileSystemItem,
@@ -117,6 +119,28 @@ function queryFileTreeItem(name: RegExp | string) {
   )
 }
 
+function fileTreeItemLabels() {
+  return [
+    ...fileTreeShadowRoot().querySelectorAll<HTMLButtonElement>(
+      "[role='treeitem']"
+    ),
+  ].map((item) => item.getAttribute("aria-label") ?? item.textContent ?? "")
+}
+
+async function expectFileTreeOrder(names: readonly string[]) {
+  await waitFor(() => {
+    const labels = fileTreeItemLabels()
+    const indexes = names.map((name) =>
+      labels.findIndex((label) => label.toLowerCase().includes(name))
+    )
+
+    for (const index of indexes) {
+      expect(index).toBeGreaterThanOrEqual(0)
+    }
+    expect(indexes).toEqual([...indexes].sort((left, right) => left - right))
+  })
+}
+
 async function findFileTreeItem(name: RegExp | string) {
   let item: HTMLButtonElement | undefined
 
@@ -196,6 +220,33 @@ describe("FileSystem", () => {
     })
   })
 
+  it("opens files from composed provider parts with the exported dialog", async () => {
+    render(
+      <FileSystemViewerProvider defaultPath="reports/" items={items}>
+        <ViewerRoot data-viewer="file-system" bare>
+          <FileSystemViewerHeader />
+          <ViewerBody>
+            <ViewerSidebar>
+              <FileSystemViewerTree />
+            </ViewerSidebar>
+            <ViewerSurface>
+              <FileSystemViewerSelectedFile />
+            </ViewerSurface>
+          </ViewerBody>
+          <FileSystemViewerOpenDialog />
+        </ViewerRoot>
+      </FileSystemViewerProvider>
+    )
+
+    fireEvent.doubleClick(await findFileTreeItem(/report.pdf/i))
+
+    const dialog = await screen.findByRole("dialog")
+    expect(dialog.textContent).toContain("report.pdf")
+    expect(screen.getByTestId("file-viewer").textContent).toBe(
+      "viewer:report.pdf"
+    )
+  })
+
   it("renders inferred folders and previews the selected file", async () => {
     render(<FileSystem items={items} />)
 
@@ -249,6 +300,68 @@ describe("FileSystem", () => {
       await screen.findByRole("option", { name: /recent.txt/i })
     ).toBeTruthy()
     expect(screen.queryByRole("option", { name: /old.txt/i })).toBeNull()
+  })
+
+  it("sorts the list by size in both directions", async () => {
+    const sortableItems: FileSystemItem[] = [
+      {
+        kind: "file",
+        path: "alpha.txt",
+        mimeType: "text/plain",
+        size: 300,
+      },
+      {
+        kind: "file",
+        path: "bravo.txt",
+        mimeType: "text/plain",
+        size: 100,
+      },
+      {
+        kind: "file",
+        path: "charlie.txt",
+        mimeType: "text/plain",
+        size: 200,
+      },
+    ]
+
+    render(<FileSystem items={sortableItems} />)
+
+    fireEvent.click(screen.getByRole("button", { name: "Size" }))
+    await expectFileTreeOrder(["alpha.txt", "charlie.txt", "bravo.txt"])
+
+    fireEvent.click(screen.getByRole("button", { name: /Size/i }))
+    await expectFileTreeOrder(["bravo.txt", "charlie.txt", "alpha.txt"])
+  })
+
+  it("sorts the list by modified date in both directions", async () => {
+    const sortableItems: FileSystemItem[] = [
+      {
+        kind: "file",
+        path: "alpha.txt",
+        mimeType: "text/plain",
+        updatedAt: "2026-01-01T00:00:00Z",
+      },
+      {
+        kind: "file",
+        path: "bravo.txt",
+        mimeType: "text/plain",
+        updatedAt: "2026-03-01T00:00:00Z",
+      },
+      {
+        kind: "file",
+        path: "charlie.txt",
+        mimeType: "text/plain",
+        updatedAt: "2025-01-01T00:00:00Z",
+      },
+    ]
+
+    render(<FileSystem items={sortableItems} />)
+
+    fireEvent.click(screen.getByRole("button", { name: "Modified" }))
+    await expectFileTreeOrder(["bravo.txt", "alpha.txt", "charlie.txt"])
+
+    fireEvent.click(screen.getByRole("button", { name: /^Modified$/i }))
+    await expectFileTreeOrder(["charlie.txt", "alpha.txt", "bravo.txt"])
   })
 
   it("preserves selection and preview when switching views", async () => {
@@ -426,6 +539,60 @@ describe("FileSystem", () => {
       )
     })
     expect(queryFileTreeItem(/report.pdf/i)).toBeTruthy()
+  })
+
+  it("does not re-emit same-path selection after Pierre model recreation", async () => {
+    function LoadLazyFolderButton() {
+      const { controller } = useFileSystemViewer()
+
+      return (
+        <button
+          type="button"
+          onClick={() => {
+            void controller.ensureChildren("lazy/")
+          }}
+        >
+          Load lazy
+        </button>
+      )
+    }
+
+    const deferred = createDeferred<{ items: FileSystemItem[] }>()
+    const loadChildren = vi.fn().mockReturnValue(deferred.promise)
+    const onSelectionChange = vi.fn()
+    const lazyItems: FileSystemItem[] = [
+      { kind: "file", path: "report.pdf", mimeType: "application/pdf" },
+      { kind: "folder", path: "lazy/", hasChildren: true },
+    ]
+
+    render(
+      <FileSystemViewerProvider
+        defaultSelectedPath="report.pdf"
+        items={lazyItems}
+        loadChildren={loadChildren}
+        onSelectionChange={onSelectionChange}
+      >
+        <ViewerRoot>
+          <FileSystemViewerTree />
+          <LoadLazyFolderButton />
+        </ViewerRoot>
+      </FileSystemViewerProvider>
+    )
+
+    expect(await findFileTreeItem(/report.pdf/i)).toBeTruthy()
+    onSelectionChange.mockClear()
+
+    fireEvent.click(screen.getByRole("button", { name: "Load lazy" }))
+
+    await waitFor(() => {
+      expect(fileTreeShadowRoot().textContent ?? "").toContain("Loading")
+    })
+    expect(onSelectionChange).not.toHaveBeenCalled()
+
+    await act(async () => {
+      deferred.resolve({ items: [] })
+      await deferred.promise
+    })
   })
 
   it("restores list expansion after clearing search", async () => {

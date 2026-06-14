@@ -90,7 +90,7 @@ export type FileSystemViewerSelectedFileState = {
   renderMetadata?: FileSystemProps["renderMetadata"]
 }
 
-type FileSystemOpenDialogState = {
+type FileSystemViewerOpenDialogState = {
   openedFile: FileSystemViewerContextValue["openedFile"]
   setOpenedFile: FileSystemViewerContextValue["setOpenedFile"]
 }
@@ -127,7 +127,7 @@ export function useFileSystemViewerSelectedFile(): FileSystemViewerSelectedFileS
   return { controller, renderFileActions, renderMetadata }
 }
 
-function useFileSystemOpenDialog(): FileSystemOpenDialogState {
+export function useFileSystemViewerOpenDialog(): FileSystemViewerOpenDialogState {
   const { openedFile, setOpenedFile } = useFileSystemViewer()
   return { openedFile, setOpenedFile }
 }
@@ -281,7 +281,7 @@ export function FileSystem({
             <FileSystemViewerSelectedFile />
           </ViewerSurface>
         </ViewerBody>
-        <FileSystemOpenDialog />
+        <FileSystemViewerOpenDialog />
       </ViewerRoot>
     </FileSystemViewerProvider>
   )
@@ -343,8 +343,8 @@ export function FileSystemViewerSelectedFile() {
   )
 }
 
-function FileSystemOpenDialog() {
-  const { openedFile, setOpenedFile } = useFileSystemOpenDialog()
+export function FileSystemViewerOpenDialog() {
+  const { openedFile, setOpenedFile } = useFileSystemViewerOpenDialog()
 
   return (
     <Dialog

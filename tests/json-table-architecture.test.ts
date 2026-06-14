@@ -15,12 +15,14 @@ const dataCellRuntimeFiles = [
   "registry/new-york-v4/ui/data-cell-classes.ts",
   "registry/new-york-v4/ui/data-cell-control-contract.ts",
   "registry/new-york-v4/ui/data-cell-control-registry.tsx",
+  "registry/new-york-v4/ui/data-cell-control-state.ts",
   "registry/new-york-v4/ui/data-cell-display.tsx",
   "registry/new-york-v4/ui/data-cell-display-model.ts",
   "registry/new-york-v4/ui/data-cell-edit-model.ts",
   "registry/new-york-v4/ui/data-cell-format.ts",
   "registry/new-york-v4/ui/data-cell-number-control.tsx",
   "registry/new-york-v4/ui/data-cell-picker-control.tsx",
+  "registry/new-york-v4/ui/data-cell-picker-icon.tsx",
   "registry/new-york-v4/ui/data-cell-picker-position.ts",
   "registry/new-york-v4/ui/data-cell-select-activation.ts",
   "registry/new-york-v4/ui/data-cell-select-control.tsx",
@@ -523,9 +525,20 @@ describe("json table and DataCell architecture", () => {
       join(repoRoot, displayModelFile),
       "utf8"
     )
+    const pickerIconFile = "registry/new-york-v4/ui/data-cell-picker-icon.tsx"
+    const pickerIconContent = readFileSync(
+      join(repoRoot, pickerIconFile),
+      "utf8"
+    )
     const shellContent = readFileSync(join(repoRoot, shellFile), "utf8")
     const typesContent = readFileSync(join(repoRoot, typesFile), "utf8")
     const registryContent = readFileSync(join(repoRoot, registryFile), "utf8")
+    const controlStateFile =
+      "registry/new-york-v4/ui/data-cell-control-state.ts"
+    const controlStateContent = readFileSync(
+      join(repoRoot, controlStateFile),
+      "utf8"
+    )
     const editModelFile = "registry/new-york-v4/ui/data-cell-edit-model.ts"
     const editModelContent = readFileSync(join(repoRoot, editModelFile), "utf8")
 
@@ -563,26 +576,87 @@ describe("json table and DataCell architecture", () => {
     expect(registryContent.includes("model: DataCellEditModel")).toBe(true)
     expect(displayContent.includes("DataCellProps")).toBe(false)
     expect(displayContent.includes("DataCellDisplayProps")).toBe(true)
+    expect(displayContent.includes("data-cell-picker-control")).toBe(false)
+    expect(displayContent.includes("data-cell-picker-icon")).toBe(true)
+    expect(pickerIconContent.includes("DataCellPickerIcon")).toBe(true)
+    expect(pickerIconContent.includes("CalendarIcon")).toBe(true)
     expect(
       typesContent.includes(`DataCellBaseProps<"number" | "integer"`)
     ).toBe(false)
     expect(
-      typesContent.includes(
-        `DataCellBaseProps<"date" | "time" | "date-time"`
-      )
+      typesContent.includes(`DataCellBaseProps<"date" | "time" | "date-time"`)
     ).toBe(false)
+    const basePropsMatch = typesContent.match(
+      /type DataCellBaseProps[\s\S]*?^}/m
+    )
+    expect(basePropsMatch, "DataCellBaseProps exists").not.toBeNull()
+    const basePropsContent = basePropsMatch?.[0] ?? ""
+    for (const propName of [
+      "placeholder?:",
+      "selectOptions?:",
+      "dateTimeZone?:",
+      "showPickerIcon?:",
+      "open?:",
+      "formatValue?:",
+      "draftValue?:",
+      "onDraftValueChange?:",
+      "onOpenChange?:",
+    ]) {
+      expect(
+        basePropsContent.includes(propName),
+        `DataCellBaseProps contains kind-specific ${propName}`
+      ).toBe(false)
+    }
+    expect(typesContent.includes("type DataCellSelectProps")).toBe(true)
+    expect(typesContent.includes("selectOptions: DataCellSelectOption[]")).toBe(
+      true
+    )
+    expect(typesContent.includes("type DataCellPickerProps")).toBe(true)
+    expect(typesContent.includes("dateTimeZone?: DataCellDateTimeZone")).toBe(
+      true
+    )
+    expect(typesContent.includes("showPickerIcon?: boolean")).toBe(true)
     expect(
-      displayContent.includes(
-        `DataCellDisplayBaseProps<"number" | "integer"`
-      )
+      displayContent.includes(`DataCellDisplayBaseProps<"number" | "integer"`)
     ).toBe(false)
     expect(
       displayContent.includes(
         `DataCellDisplayBaseProps<"date" | "time" | "date-time"`
       )
     ).toBe(false)
+    const displayBasePropsMatch = displayContent.match(
+      /type DataCellDisplayBaseProps[\s\S]*?^}/m
+    )
+    expect(
+      displayBasePropsMatch,
+      "DataCellDisplayBaseProps exists"
+    ).not.toBeNull()
+    const displayBasePropsContent = displayBasePropsMatch?.[0] ?? ""
+    for (const propName of [
+      "placeholder?:",
+      "showPickerIcon?:",
+      "formatValue?:",
+    ]) {
+      expect(
+        displayBasePropsContent.includes(propName),
+        `DataCellDisplayBaseProps contains kind-specific ${propName}`
+      ).toBe(false)
+    }
+    expect(displayContent.includes("DataCellDisplayPlaceholderProps")).toBe(
+      true
+    )
+    expect(displayContent.includes("DataCellDisplayPickerProps")).toBe(true)
+    expect(displayContent.includes("DataCellDisplayFormatProps")).toBe(true)
     expect(editModelContent.includes("createDataCellEditModel")).toBe(true)
-    expect(editModelContent.includes("controlState")).toBe(true)
+    expect(editModelContent.includes("createDataCellControlState")).toBe(false)
+    expect(editModelContent.includes("DataCellControlState")).toBe(false)
+    expect(controlStateContent.includes("createDataCellControlState")).toBe(
+      true
+    )
+    expect(controlStateContent.includes("DataCellControlState")).toBe(true)
+    expect(editModelContent.includes("controlState:")).toBe(false)
+    expect(shellContent.includes("createDataCellControlState")).toBe(true)
+    expect(shellContent.includes("editModel.controlState")).toBe(false)
     expect(editModelContent.includes("DataCellEditorProps")).toBe(true)
     expect(editModelContent.includes("DataCellNativePropsForKind")).toBe(false)
     expect(editModelContent.includes("DataCellEditSource")).toBe(false)
@@ -621,9 +695,7 @@ describe("json table and DataCell architecture", () => {
     expect(registryContent.includes("textControlAdapter[actionName]")).toBe(
       true
     )
-    expect(registryContent.includes("dataCellControlAdapterByKind")).toBe(
-      true
-    )
+    expect(registryContent.includes("dataCellControlAdapterByKind")).toBe(true)
     expect(registryContent.includes("canActivateDataCellFromKeyByKind")).toBe(
       false
     )

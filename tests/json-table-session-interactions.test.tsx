@@ -19,7 +19,7 @@ import type {
 } from "@/components/json-table/json-table-edit-session"
 import { jsonTableCellId } from "@/components/json-table/json-table-edit-session"
 import { createJsonTablePrimitiveActiveCellStore } from "@/components/json-table/json-table-primitive-active-cell-store"
-import { createJsonTablePrimitivePatchStore } from "@/components/json-table/json-table-primitive-patch-store"
+import { createJsonTablePrimitiveEditStore } from "@/components/json-table/json-table-primitive-edit-store"
 import type {
   ProjectedCell,
   ProjectedRow,
@@ -144,7 +144,7 @@ function SingleFileFormRowHarness({
 }: Omit<
   React.ComponentProps<typeof SingleFileFormRow>,
   | "primitiveActiveCellStore"
-  | "primitivePatchStore"
+  | "primitiveEditStore"
   | "setPrimitiveActiveCell"
   | "structuredEditSession"
   | "startStructuredEditSession"
@@ -159,7 +159,7 @@ function SingleFileFormRowHarness({
   const primitiveActiveCellStoreRef = React.useRef(
     createJsonTablePrimitiveActiveCellStore()
   )
-  const primitivePatchStoreRef = React.useRef(createJsonTablePrimitivePatchStore())
+  const primitiveEditStoreRef = React.useRef(createJsonTablePrimitiveEditStore())
   const [structuredEditSession, setStructuredEditSession] =
     React.useState<JsonTableStructuredEditSession | null>(null)
   const sessionIdRef = React.useRef(0)
@@ -209,7 +209,7 @@ function SingleFileFormRowHarness({
     <SingleFileFormRow
       {...props}
       primitiveActiveCellStore={primitiveActiveCellStoreRef.current}
-      primitivePatchStore={primitivePatchStoreRef.current}
+      primitiveEditStore={primitiveEditStoreRef.current}
       setPrimitiveActiveCell={setNextPrimitiveActiveCell}
       structuredEditSession={structuredEditSession}
       startStructuredEditSession={startStructuredEditSession}
@@ -291,6 +291,7 @@ function renderVirtualTable({
       projectedRows={projectedRows}
       visibleColumns={visiblePaths.map(visibleColumn)}
       rowCount={projectedRows.length}
+      primitiveEditStore={createJsonTablePrimitiveEditStore()}
       onUpdateDocument={onUpdateDocument}
       columnWidth="xxl"
       overscan={overscan}
@@ -345,6 +346,7 @@ function StatefulVirtualTableHarness({
       projectedRows={projectedRows}
       visibleColumns={visiblePaths.map(visibleColumn)}
       rowCount={projectedRows.length}
+      primitiveEditStore={createJsonTablePrimitiveEditStore()}
       onUpdateDocument={onUpdateDocument}
       columnWidth="xxl"
     />

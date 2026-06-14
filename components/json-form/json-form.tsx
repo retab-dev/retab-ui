@@ -2127,7 +2127,6 @@ const ArrayTableRow = React.memo(function ArrayTableRow({
                 mode={isScalarEditing ? "edit" : "display"}
                 editable={isScalarEditing}
                 value={Boolean(value)}
-                placeholder=""
                 role={!isScalarEditing ? "button" : undefined}
                 aria-label={`${displayLabel} ${displayText}`}
                 tabIndex={0}
@@ -2264,7 +2263,9 @@ function formatTableCellValue({
   return String(value)
 }
 
-function dataCellKindForColumn(column: Column): Exclude<DataCellKind, "select"> {
+function dataCellKindForColumn(
+  column: Column
+): Exclude<DataCellKind, "select"> {
   if (column.kind === "number" || column.kind === "integer") return column.kind
   if (column.kind === "boolean") return "boolean"
   if (column.schema.format === "date-time") return "date-time"

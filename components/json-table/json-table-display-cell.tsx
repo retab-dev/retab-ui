@@ -74,7 +74,6 @@ export function JsonTableDataCell({
     onEditingEnd,
     onActiveChange,
     onEditorHandleChange,
-    onOpenChange,
     onKeyDown,
   }
 
@@ -83,6 +82,7 @@ export function JsonTableDataCell({
       <JsonTableSelectDataCell
         model={model}
         onCommit={onCommit}
+        onOpenChange={onOpenChange}
         sharedProps={sharedProps}
       />
     )
@@ -112,6 +112,7 @@ export function JsonTableDataCell({
     <JsonTableTextDataCell
       model={model}
       onCommit={onCommit}
+      onOpenChange={onOpenChange}
       sharedProps={sharedProps}
     />
   )
@@ -127,7 +128,6 @@ type JsonTableDataCellSharedProps = {
   onEditingEnd?: () => void
   onEditorHandleChange?: (handle: DataCellEditorHandle | null) => void
   onKeyDown?: React.KeyboardEventHandler<HTMLElement>
-  onOpenChange?: (open: boolean) => void
 }
 
 type JsonTableDataCellCommitHandler = (
@@ -138,10 +138,12 @@ type JsonTableDataCellCommitHandler = (
 function JsonTableSelectDataCell({
   model,
   onCommit,
+  onOpenChange,
   sharedProps,
 }: {
   model: JsonTableSelectDataCellModel
   onCommit?: JsonTableDataCellCommitHandler
+  onOpenChange?: (open: boolean) => void
   sharedProps: JsonTableDataCellSharedProps
 }) {
   return (
@@ -153,6 +155,7 @@ function JsonTableSelectDataCell({
       placeholder={model.placeholder}
       className={model.className}
       formatValue={model.formatValue}
+      onOpenChange={onOpenChange}
       onCommit={(commitValue, meta) =>
         onCommit?.(model.commitValue(commitValue), meta)
       }
@@ -207,12 +210,35 @@ function JsonTableNumberDataCell({
 function JsonTableTextDataCell({
   model,
   onCommit,
+  onOpenChange,
   sharedProps,
 }: {
   model: JsonTableTextDataCellModel
   onCommit?: JsonTableDataCellCommitHandler
+  onOpenChange?: (open: boolean) => void
   sharedProps: JsonTableDataCellSharedProps
 }) {
+  if (
+    model.kind === "date" ||
+    model.kind === "time" ||
+    model.kind === "date-time"
+  ) {
+    return (
+      <DataCell
+        {...sharedProps}
+        kind={model.kind}
+        value={model.value}
+        className={model.className}
+        formatValue={model.formatValue}
+        showPickerIcon={model.showPickerIcon}
+        onOpenChange={onOpenChange}
+        onCommit={(commitValue, meta) =>
+          onCommit?.(model.commitValue(commitValue), meta)
+        }
+      />
+    )
+  }
+
   return (
     <DataCell
       {...sharedProps}
@@ -220,7 +246,6 @@ function JsonTableTextDataCell({
       value={model.value}
       className={model.className}
       formatValue={model.formatValue}
-      showPickerIcon={model.showPickerIcon}
       onCommit={(commitValue, meta) =>
         onCommit?.(model.commitValue(commitValue), meta)
       }

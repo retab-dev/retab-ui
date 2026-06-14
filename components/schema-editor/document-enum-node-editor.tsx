@@ -12,6 +12,7 @@ import {
   updateEnumValue,
 } from "@/components/schema-editor/document/enum-operations"
 import type { EnumValue } from "@/components/schema-editor/document/types"
+import { SchemaChipAddRow } from "@/components/schema-editor/primitives/schema-chip-add-row"
 import { SchemaChipList } from "@/components/schema-editor/primitives/schema-chip-list"
 
 interface DocumentEnumNodeEditorProps {
@@ -46,24 +47,20 @@ export function DocumentEnumNodeEditor({
       updateEnumValue(current, nodeId, id, { value: newValue })
     )
   }
+  const addRow = {
+    focusAfterSubmit: true,
+    inputLabel: "New choice",
+    placeholder: "New choice",
+    submitLabel: "Add",
+    value: newEnumValue,
+    onChange: setNewEnumValue,
+    onSubmit: handleAddEnum,
+  }
 
   return (
     <div className="ml-6">
       <div className="mt-1 mb-2">
         <SchemaChipList
-          addRow={
-            editable
-              ? {
-                  focusAfterSubmit: true,
-                  inputLabel: "New choice",
-                  placeholder: "New choice",
-                  submitLabel: "Add",
-                  value: newEnumValue,
-                  onChange: setNewEnumValue,
-                  onSubmit: handleAddEnum,
-                }
-              : undefined
-          }
           editable={editable}
           items={enumEntries.map((entry, index) => {
             const value = String(entry.value)
@@ -77,6 +74,12 @@ export function DocumentEnumNodeEditor({
           onRemove={handleRemoveEnum}
           onReplace={handleEditEnum}
         />
+        {editable && (
+          <SchemaChipAddRow
+            editable={editable}
+            row={addRow}
+          />
+        )}
       </div>
 
       {enumEntries.length === 0 && !editable && (

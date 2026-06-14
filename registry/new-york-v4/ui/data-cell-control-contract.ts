@@ -1,10 +1,8 @@
 import type * as React from "react"
 
 import type { DataCellBooleanControlProps } from "@/registry/new-york-v4/ui/data-cell-boolean-control"
-import type {
-  DataCellControlState,
-  DataCellEditModelByKind,
-} from "@/registry/new-york-v4/ui/data-cell-edit-model"
+import type { DataCellControlState } from "@/registry/new-york-v4/ui/data-cell-control-state"
+import type { DataCellEditModelByKind } from "@/registry/new-york-v4/ui/data-cell-edit-model"
 import type { DataCellPickerControlProps } from "@/registry/new-york-v4/ui/data-cell-picker-control"
 import type { DataCellSelectControlProps } from "@/registry/new-york-v4/ui/data-cell-select-control"
 import type {

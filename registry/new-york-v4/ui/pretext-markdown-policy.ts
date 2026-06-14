@@ -46,6 +46,12 @@ type PretextComponentRegistryEntry = {
 }
 
 export const PRETEXT_COMPONENT_REGISTRY = {
+  Accordion: {
+    directiveName: "accordion",
+    props: {
+      title: {},
+    },
+  },
   Badge: {
     directiveName: "badge",
     props: {
@@ -54,11 +60,49 @@ export const PRETEXT_COMPONENT_REGISTRY = {
       value: {},
     },
   },
+  Callout: {
+    directiveName: "callout",
+    props: {
+      kind: {
+        values: [
+          "caution",
+          "danger",
+          "important",
+          "info",
+          "note",
+          "tip",
+          "warning",
+        ],
+      },
+      title: {},
+    },
+  },
+  Image: {
+    directiveName: "image",
+    props: {
+      alt: {},
+      label: {},
+      src: {},
+      title: {},
+    },
+  },
   Metric: {
     directiveName: "metric",
     props: {
       label: {},
       value: {},
+    },
+  },
+  Tab: {
+    directiveName: "tab",
+    props: {
+      title: {},
+    },
+  },
+  Tabs: {
+    directiveName: "tabs",
+    props: {
+      label: {},
     },
   },
 } as const satisfies Record<string, PretextComponentRegistryEntry>
@@ -76,11 +120,33 @@ export type PretextComponent = {
 }
 
 const EMOJI_SHORTCODES: Record<string, string> = {
+  ":+1:": "👍",
+  ":-1:": "👎",
+  ":book:": "📖",
+  ":books:": "📚",
+  ":boom:": "💥",
+  ":bug:": "🐛",
+  ":bulb:": "💡",
   ":check:": "✓",
+  ":construction:": "🚧",
+  ":eyes:": "👀",
+  ":fire:": "🔥",
+  ":gear:": "⚙",
+  ":heart:": "❤️",
+  ":key:": "🔑",
+  ":link:": "🔗",
+  ":lock:": "🔒",
+  ":mag:": "🔍",
+  ":memo:": "📝",
+  ":package:": "📦",
+  ":pushpin:": "📌",
+  ":rocket:": "🚀",
   ":sparkles:": "✨",
+  ":tada:": "🎉",
   ":warning:": "⚠",
   ":white_check_mark:": "✅",
   ":x:": "✕",
+  ":zap:": "⚡",
 }
 
 const URL_CONTROL_CHARACTER_PATTERN = /[\u0000-\u001F\u007F]/
@@ -309,6 +375,9 @@ export function createPretextMarkdownSanitizeSchema(): RehypeSanitizeOptions {
       ...(defaultSchema.tagNames ?? []),
       "caption",
       "details",
+      "dd",
+      "dl",
+      "dt",
       "figcaption",
       "figure",
       "kbd",
@@ -353,6 +422,44 @@ function parsePretextComponentMarkdown(value: string): PretextComponent | null {
   if (!isPretextComponentKind(name)) return null
 
   const attributes = componentMatch[2] ?? ""
+  const rawProps = parsePretextComponentAttributeString(attributes)
+  if (!rawProps) return null
+  const props = parsePretextComponentProps(name, rawProps)
+  if (!props) return null
+
+  return {
+    name,
+    props,
+  }
+}
+
+function parsePretextComponentOpeningMarkdown(
+  value: string
+): PretextComponent | null {
+  const source = value.trim()
+  const componentMatch = /^<([A-Z][A-Za-z0-9]*)\s*([^<>/]*?)>$/.exec(source)
+  if (!componentMatch) return null
+
+  const name = componentMatch[1]
+  if (!isPretextComponentKind(name)) return null
+
+  const attributes = componentMatch[2] ?? ""
+  const rawProps = parsePretextComponentAttributeString(attributes)
+  if (!rawProps) return null
+  const props = parsePretextComponentProps(name, rawProps)
+  if (!props) return null
+
+  return {
+    name,
+    props,
+  }
+}
+
+function readPretextComponentClosingMarkdown(value: string) {
+  return /^<\/([A-Z][A-Za-z0-9]*)\s*>$/.exec(value.trim())?.[1] ?? null
+}
+
+function parsePretextComponentAttributeString(attributes: string) {
   const rawProps: Record<string, string> = {}
   const propPattern = /\s*([A-Za-z][A-Za-z0-9_]*)=(?:"([^"]*)"|'([^']*)')/gy
   let index = 0
@@ -371,13 +478,7 @@ function parsePretextComponentMarkdown(value: string): PretextComponent | null {
     index = propPattern.lastIndex
   }
 
-  const props = parsePretextComponentProps(name, rawProps)
-  if (!props) return null
-
-  return {
-    name,
-    props,
-  }
+  return rawProps
 }
 
 function parsePretextDirectiveComponent(node: any): PretextComponent | null {
@@ -568,36 +669,48 @@ function remarkPretextDirectiveCallouts() {
 
 function remarkPretextComponentDirectives() {
   return function transform(tree: unknown) {
-    visit(tree as any, ["leafDirective", "textDirective"], (node: any) => {
-      const component = parsePretextDirectiveComponent(node)
-      if (!component) {
-        if (isPretextDirectiveComponentName(node.name)) {
-          node.type = "text"
-          node.value = serializePretextDirectiveFallback(node)
-          node.children = []
-          delete node.data
+    visit(
+      tree as any,
+      ["containerDirective", "leafDirective", "textDirective"],
+      (node: any) => {
+        const keepsChildren = node.type === "containerDirective"
+        const component = parsePretextDirectiveComponent(node)
+        if (!component) {
+          if (isPretextDirectiveComponentName(node.name)) {
+            node.type = "text"
+            node.value = serializePretextDirectiveFallback(node)
+            node.children = []
+            delete node.data
+          }
+          return
         }
-        return
-      }
 
-      node.type = "pretextComponentDirective"
-      node.data = {
-        ...node.data,
-        hName: "div",
-        hProperties: {
-          ...node.data?.hProperties,
-          dataPretextComponentName: component.name,
-          dataPretextComponentProps: JSON.stringify(component.props),
-        },
+        node.type = "pretextComponentDirective"
+        node.data = {
+          ...node.data,
+          hName: "div",
+          hProperties: {
+            ...node.data?.hProperties,
+            dataPretextComponentName: component.name,
+            dataPretextComponentProps: JSON.stringify(component.props),
+          },
+        }
+        if (!keepsChildren) {
+          node.children = []
+        }
+        delete node.value
       }
-      node.children = []
-      delete node.value
-    })
+    )
   }
 }
 
 function serializePretextDirectiveFallback(node: any) {
-  const prefix = node.type === "textDirective" ? ":" : "::"
+  const prefix =
+    node.type === "textDirective"
+      ? ":"
+      : node.type === "containerDirective"
+        ? ":::"
+        : "::"
   const text = extractPretextDirectiveText(node)
   const label = text ? `[${text}]` : ""
   return `${prefix}${node.name ?? ""}${label}${serializePretextDirectiveAttributes(
@@ -617,30 +730,101 @@ function serializePretextDirectiveAttributes(
 
 function remarkPretextComponentMarkdown() {
   return function transform(tree: any) {
-    visit(tree, "html", (node: any) => {
-      if (typeof node.value !== "string") return
+    transformPretextComponentMarkdownChildren(tree)
+  }
+}
 
+function transformPretextComponentMarkdownChildren(parent: any) {
+  const children = Array.isArray(parent?.children) ? parent.children : null
+  if (!children) return
+
+  for (let index = 0; index < children.length; index += 1) {
+    const node = children[index]
+
+    if (node?.type === "html" && typeof node.value === "string") {
       const component = parsePretextComponentMarkdown(node.value)
-      if (!component) {
-        if (isPretextMdxLikeHtml(node.value)) {
-          node.type = "code"
-          node.lang = "mdx"
-          node.value = node.value.trim()
-        }
-        return
+      if (component) {
+        children[index] = createPretextComponentMarkdownNode(component, [])
+        continue
       }
 
-      node.type = "pretextComponent"
-      node.data = {
-        hName: "div",
-        hProperties: {
-          dataPretextComponentName: component.name,
-          dataPretextComponentProps: JSON.stringify(component.props),
-        },
+      const opening = parsePretextComponentOpeningMarkdown(node.value)
+      if (opening) {
+        const closingIndex = findPretextComponentClosingIndex(
+          children,
+          index + 1,
+          opening.name
+        )
+        if (closingIndex !== -1) {
+          const componentChildren = children.slice(index + 1, closingIndex)
+          const componentNode = createPretextComponentMarkdownNode(
+            opening,
+            componentChildren
+          )
+          children.splice(index, closingIndex - index + 1, componentNode)
+          transformPretextComponentMarkdownChildren(componentNode)
+          continue
+        }
       }
-      node.children = []
-      delete node.value
-    })
+
+      if (isPretextMdxLikeHtml(node.value)) {
+        children[index] = createPretextComponentMarkdownFallbackNode(node.value)
+        continue
+      }
+    }
+
+    transformPretextComponentMarkdownChildren(node)
+  }
+}
+
+function findPretextComponentClosingIndex(
+  siblings: any[],
+  startIndex: number,
+  name: PretextComponentKind
+) {
+  let depth = 0
+
+  for (let index = startIndex; index < siblings.length; index += 1) {
+    const sibling = siblings[index]
+    if (sibling?.type !== "html" || typeof sibling.value !== "string") continue
+
+    const opening = parsePretextComponentOpeningMarkdown(sibling.value)
+    if (opening?.name === name) {
+      depth += 1
+      continue
+    }
+
+    if (readPretextComponentClosingMarkdown(sibling.value) === name) {
+      if (depth === 0) return index
+      depth -= 1
+    }
+  }
+
+  return -1
+}
+
+function createPretextComponentMarkdownNode(
+  component: PretextComponent,
+  children: any[]
+) {
+  return {
+    type: "pretextComponent",
+    data: {
+      hName: "div",
+      hProperties: {
+        dataPretextComponentName: component.name,
+        dataPretextComponentProps: JSON.stringify(component.props),
+      },
+    },
+    children,
+  }
+}
+
+function createPretextComponentMarkdownFallbackNode(value: string) {
+  return {
+    type: "code",
+    lang: "mdx",
+    value: value.trim(),
   }
 }
 

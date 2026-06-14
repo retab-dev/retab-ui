@@ -3,8 +3,12 @@
 import { ArrayItemsField } from "@/components/schema-editor/property-form/fields/array-items-field"
 import { EnumValuesField } from "@/components/schema-editor/property-form/fields/enum-values-field"
 import { ObjectPropertiesField } from "@/components/schema-editor/property-form/fields/object-properties-field"
+import { useObjectPropertiesModel } from "@/components/schema-editor/property-form/fields/object-properties-model"
 import { TypeField } from "@/components/schema-editor/property-form/fields/type-field"
-import type { PropertySchemaDetailsModel } from "@/components/schema-editor/property-form/types"
+import type {
+  PropertyObjectPropertiesSourceModel,
+  PropertySchemaDetailsModel,
+} from "@/components/schema-editor/property-form/types"
 
 export function PropertySchemaDetailsField({
   details,
@@ -25,12 +29,7 @@ export function PropertySchemaDetailsField({
         />
       )}
       {objectProperties && (
-        <ObjectPropertiesField
-          details={objectProperties}
-          renderSchemaDetails={(schemaDetails) => (
-            <PropertySchemaDetailsField details={schemaDetails} />
-          )}
-        />
+        <PropertyObjectPropertiesDetailsField details={objectProperties} />
       )}
       {arrayItems && (
         <ArrayItemsField>
@@ -39,4 +38,13 @@ export function PropertySchemaDetailsField({
       )}
     </div>
   )
+}
+
+function PropertyObjectPropertiesDetailsField({
+  details,
+}: {
+  details: PropertyObjectPropertiesSourceModel
+}) {
+  const objectProperties = useObjectPropertiesModel(details)
+  return <ObjectPropertiesField details={objectProperties} />
 }

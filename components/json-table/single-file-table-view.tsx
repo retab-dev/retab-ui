@@ -15,7 +15,10 @@ import {
   recordJsonTableReactCommit,
   recordJsonTableRender,
 } from "@/components/json-table/json-table-profiler"
-import { isRegisteredJsonTableScalarDocumentData } from "@/components/json-table/json-table-primitive-patch-store"
+import {
+  createJsonTablePrimitiveEditStore,
+  type JsonTablePrimitiveEditStore,
+} from "@/components/json-table/json-table-primitive-edit-store"
 import {
   projectDocumentRows,
   type ProjectedCell,
@@ -51,6 +54,24 @@ interface SingleFileTableViewProps {
   overscan?: number
   /** Rows to render beyond the viewport after large scroll jumps. Defaults to overscan. */
   jumpOverscan?: number
+}
+
+type SingleFileTableProjectionViewProps = SingleFileTableViewProps & {
+  primitiveEditStore: JsonTablePrimitiveEditStore
+}
+
+function useStableOptionalCallback<Args extends unknown[], Result>(
+  callback: ((...args: Args) => Result) | undefined
+) {
+  const callbackRef = React.useRef(callback)
+
+  React.useLayoutEffect(() => {
+    callbackRef.current = callback
+  }, [callback])
+
+  return React.useCallback((...args: Args) => {
+    return callbackRef.current?.(...args)
+  }, [])
 }
 
 function shareProjectedRows(
@@ -115,34 +136,25 @@ function sameArrayIndexes(previous: number[], next: number[]) {
   return previous.every((value, index) => value === next[index])
 }
 
-function areSingleFileTableViewPropsEqual(
-  previousProps: SingleFileTableViewProps,
-  nextProps: SingleFileTableViewProps
+function areSingleFileTableProjectionViewPropsEqual(
+  previousProps: SingleFileTableProjectionViewProps,
+  nextProps: SingleFileTableProjectionViewProps
 ) {
-  const stableNonDocumentProps =
+  return (
+    previousProps.document === nextProps.document &&
     previousProps.schema === nextProps.schema &&
     previousProps.setSchema === nextProps.setSchema &&
     previousProps.columnWidth === nextProps.columnWidth &&
-    previousProps.onUpdateDocument === nextProps.onUpdateDocument &&
     previousProps.jsonEditMode === nextProps.jsonEditMode &&
     previousProps.schemaEditMode === nextProps.schemaEditMode &&
-    previousProps.onCellHoverStart === nextProps.onCellHoverStart &&
-    previousProps.onCellHoverEnd === nextProps.onCellHoverEnd &&
     previousProps.overscan === nextProps.overscan &&
-    previousProps.jumpOverscan === nextProps.jumpOverscan
-
-  if (!stableNonDocumentProps) return false
-
-  if (previousProps.document === nextProps.document) return true
-
-  return (
-    previousProps.document.id === nextProps.document.id &&
-    previousProps.document.data !== nextProps.document.data &&
-    isRegisteredJsonTableScalarDocumentData(nextProps.document.data)
+    previousProps.jumpOverscan === nextProps.jumpOverscan &&
+    previousProps.primitiveEditStore === nextProps.primitiveEditStore
   )
 }
 
-export const SingleFileTableView = React.memo<SingleFileTableViewProps>(
+const SingleFileTableProjectionView =
+  React.memo<SingleFileTableProjectionViewProps>(
   ({
     document,
     schema,
@@ -155,6 +167,7 @@ export const SingleFileTableView = React.memo<SingleFileTableViewProps>(
     onCellHoverEnd,
     overscan,
     jumpOverscan,
+    primitiveEditStore,
   }) => {
     recordJsonTableRender("SingleFileTableView", document.id, {
       columnWidth: propColumnWidth ?? null,
@@ -262,6 +275,7 @@ export const SingleFileTableView = React.memo<SingleFileTableViewProps>(
               projectedRows={projectedRows}
               visibleColumns={visibleColumns}
               rowCount={rowCount}
+              primitiveEditStore={primitiveEditStore}
               onUpdateDocument={onUpdateDocument}
               columnWidth={columnWidth}
               onCellHoverStart={onCellHoverStart}
@@ -274,6 +288,61 @@ export const SingleFileTableView = React.memo<SingleFileTableViewProps>(
       </div>
     )
   },
-  areSingleFileTableViewPropsEqual
+  areSingleFileTableProjectionViewPropsEqual
 )
-SingleFileTableView.displayName = "SingleFileTableView"
+SingleFileTableProjectionView.displayName = "SingleFileTableProjectionView"
+
+export function SingleFileTableView({
+  document,
+  setSchema,
+  onUpdateDocument,
+  onCellHoverStart,
+  onCellHoverEnd,
+  ...props
+}: SingleFileTableViewProps) {
+  const primitiveEditStoreRef = React.useRef(createJsonTablePrimitiveEditStore())
+  const projectedDocumentRef = React.useRef(document)
+  const previousDocumentIdRef = React.useRef(document.id)
+  const stableUpdateDocument = useStableOptionalCallback<
+    [Record<string, unknown>],
+    Promise<void>
+  >(onUpdateDocument)
+  const stableSetSchema = useStableOptionalCallback<[JSONSchema7], void>(
+    setSchema
+  )
+  const stableCellHoverStart = useStableOptionalCallback<
+    [JsonTableCellHoverInfo],
+    void
+  >(onCellHoverStart)
+  const stableCellHoverEnd = useStableOptionalCallback<[], void>(
+    onCellHoverEnd
+  )
+
+  if (previousDocumentIdRef.current !== document.id) {
+    primitiveEditStoreRef.current.reset()
+    projectedDocumentRef.current = document
+    previousDocumentIdRef.current = document.id
+  } else if (projectedDocumentRef.current !== document) {
+    const reconciliation =
+      primitiveEditStoreRef.current.reconcileDocumentData(document.data)
+    if (!reconciliation.isPrimitiveDocumentEcho) {
+      projectedDocumentRef.current = document
+    }
+  }
+
+  return (
+    <SingleFileTableProjectionView
+      {...props}
+      document={projectedDocumentRef.current}
+      setSchema={setSchema ? stableSetSchema : undefined}
+      primitiveEditStore={primitiveEditStoreRef.current}
+      onUpdateDocument={
+        onUpdateDocument
+          ? (stableUpdateDocument as (patch: Record<string, unknown>) => Promise<void>)
+          : undefined
+      }
+      onCellHoverStart={onCellHoverStart ? stableCellHoverStart : undefined}
+      onCellHoverEnd={onCellHoverEnd ? stableCellHoverEnd : undefined}
+    />
+  )
+}

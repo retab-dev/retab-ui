@@ -552,12 +552,17 @@ function sourceToInlineUrl(source: ViewerSource, objectUrls: string[]) {
     return url
   }
 
-  const blob = new Blob([source.text], {
-    type: source.mimeType ?? "text/plain;charset=utf-8",
-  })
-  const url = URL.createObjectURL(blob)
-  objectUrls.push(url)
-  return url
+  return textSourceToDataUrl(source.text, source.mimeType)
+}
+
+function textSourceToDataUrl(text: string, mimeType: string | undefined) {
+  const bytes = new TextEncoder().encode(text)
+  const chunkSize = 0x8000
+  let binary = ""
+  for (let index = 0; index < bytes.length; index += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize))
+  }
+  return `data:${mimeType ?? "text/plain;charset=utf-8"};base64,${btoa(binary)}`
 }
 
 function sidebarMeta(node: MimePartNode) {

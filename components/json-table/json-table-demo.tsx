@@ -276,6 +276,7 @@ export function JsonTableDemo({
     React.useState<JsonTableJsonEditMode>("readOnly")
   const [schemaEditMode, setSchemaEditMode] =
     React.useState<JsonTableSchemaEditMode>("descriptionOnly")
+  const [profileCallbackVersion, setProfileCallbackVersion] = React.useState(0)
   const updateDocument = React.useCallback(
     async (patch: Record<string, unknown>) => {
       if (patch.data && typeof patch.data === "object") {
@@ -285,7 +286,7 @@ export function JsonTableDemo({
         }))
       }
     },
-    []
+    [profileCallbackVersion]
   )
 
   return (
@@ -305,6 +306,14 @@ export function JsonTableDemo({
           value={schemaEditMode}
           onChange={setSchemaEditMode}
         />
+        <button
+          type="button"
+          data-json-table-profile-callback-version={profileCallbackVersion}
+          className="sr-only"
+          onClick={() => setProfileCallbackVersion((version) => version + 1)}
+        >
+          Callback churn
+        </button>
       </div>
       <div className="flex h-[480px] flex-col overflow-hidden rounded-xl border bg-background shadow-sm">
         <SingleFileTableView

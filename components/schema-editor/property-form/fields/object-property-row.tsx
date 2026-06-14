@@ -8,26 +8,22 @@ import { SchemaInlineDescription } from "@/components/schema-editor/primitives/s
 import { SchemaInlineName } from "@/components/schema-editor/primitives/schema-inline-name"
 import { SchemaRowActions } from "@/components/schema-editor/primitives/schema-row-actions"
 import { SchemaRowReorderActions } from "@/components/schema-editor/primitives/schema-row-reorder-actions"
-import type { PropertySchemaDetailsModel } from "@/components/schema-editor/property-form/types"
+import type { PropertyObjectPropertiesFieldModel } from "@/components/schema-editor/property-form/types"
 
 import { useObjectPropertiesRowDrag } from "./object-properties-drag"
-import type {
-  ObjectPropertiesModel,
-  ObjectPropertyRowModel,
-} from "./object-properties-model"
+import type { ObjectPropertyRowModel } from "./object-properties-model"
 import type { ObjectPropertyReorderFocusController } from "./object-properties-reorder-focus"
 import { useObjectPropertyReorderFocus } from "./object-properties-reorder-focus"
+import { renderPropertySchemaDetails } from "./property-schema-details-renderer"
 import { TypeField } from "./type-field"
 
 interface ObjectPropertyRowsProps {
-  model: ObjectPropertiesModel
-  renderSchemaDetails: (details: PropertySchemaDetailsModel) => React.ReactNode
+  details: PropertyObjectPropertiesFieldModel
 }
 
 interface ObjectPropertyRowProps {
   editable: boolean
   reorderFocus: ObjectPropertyReorderFocusController
-  renderSchemaDetails: (details: PropertySchemaDetailsModel) => React.ReactNode
   row: ObjectPropertyRowModel
   rowDragProps: React.HTMLAttributes<HTMLDivElement>
   onReorderAnnouncement: (
@@ -37,14 +33,13 @@ interface ObjectPropertyRowProps {
 }
 
 export function ObjectPropertyRows({
-  model,
-  renderSchemaDetails,
+  details,
 }: ObjectPropertyRowsProps) {
   const rowDrag = useObjectPropertiesRowDrag({
-    rows: model.rows,
-    editable: model.editable,
+    rows: details.rows,
+    editable: details.editable,
   })
-  const reorderFocus = useObjectPropertyReorderFocus(model.rows)
+  const reorderFocus = useObjectPropertyReorderFocus(details.rows)
   const [reorderAnnouncement, setReorderAnnouncement] = React.useState("")
 
   const announceReorder = (
@@ -61,12 +56,11 @@ export function ObjectPropertyRows({
       <div className="sr-only" aria-live="polite" aria-atomic="true">
         {reorderAnnouncement}
       </div>
-      {model.rows.map((row) => (
+      {details.rows.map((row) => (
         <ObjectPropertyRow
           key={row.id}
-          editable={model.editable}
+          editable={details.editable}
           reorderFocus={reorderFocus}
-          renderSchemaDetails={renderSchemaDetails}
           row={row}
           rowDragProps={rowDrag.getRowDragProps(row)}
           onReorderAnnouncement={announceReorder}
@@ -79,7 +73,6 @@ export function ObjectPropertyRows({
 export function ObjectPropertyRow({
   editable,
   reorderFocus,
-  renderSchemaDetails,
   row,
   rowDragProps,
   onReorderAnnouncement,
@@ -154,7 +147,7 @@ export function ObjectPropertyRow({
         }
         type={<TypeField field={row.typeField} variant="row" />}
       />
-      {renderSchemaDetails(row.rowSchemaDetails)}
+      {renderPropertySchemaDetails(row.rowSchemaDetails)}
     </div>
   )
 }

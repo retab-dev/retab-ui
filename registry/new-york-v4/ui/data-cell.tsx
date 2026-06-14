@@ -11,6 +11,7 @@ import {
   getDataCellKeyControlAction,
   getDataCellPointerControlAction,
 } from "@/registry/new-york-v4/ui/data-cell-control-registry"
+import { createDataCellControlState } from "@/registry/new-york-v4/ui/data-cell-control-state"
 import { DataCellDisplay } from "@/registry/new-york-v4/ui/data-cell-display"
 import { createDataCellDisplayProps } from "@/registry/new-york-v4/ui/data-cell-display-model"
 import { createDataCellEditModel } from "@/registry/new-york-v4/ui/data-cell-edit-model"
@@ -122,14 +123,7 @@ export function DataCell(props: DataCellProps) {
     onEditingEnd?.()
   }, [onEditingEnd, setActive])
 
-  const editModel = createDataCellEditModel(props, {
-    disabled,
-    activationSource:
-      props.activationSource ?? activationSource ?? activationSourceRef.current,
-    autoFocus: props.autoFocus ?? canSelfActivate,
-    onEditingEnd: endEditing,
-    onEditorHandleChange: props.onEditorHandleChange,
-  })
+  const controlState = createDataCellControlState(props, { disabled })
 
   const applyControlAction = React.useCallback(
     (
@@ -168,7 +162,7 @@ export function DataCell(props: DataCellProps) {
 
       applyControlAction(
         getDataCellPointerControlAction({
-          controlState: editModel.controlState,
+          controlState,
           clientX: event.clientX,
           clientY: event.clientY,
           detail: event.detail,
@@ -179,7 +173,7 @@ export function DataCell(props: DataCellProps) {
         true
       )
     },
-    [applyControlAction, canSelfActivate, editModel, onPointerDown]
+    [applyControlAction, canSelfActivate, controlState, onPointerDown]
   )
 
   const activateFromClick = React.useCallback(
@@ -193,7 +187,7 @@ export function DataCell(props: DataCellProps) {
 
       applyControlAction(
         getDataCellClickControlAction({
-          controlState: editModel.controlState,
+          controlState,
           clientX: event.clientX,
           clientY: event.clientY,
           detail: event.detail,
@@ -208,7 +202,7 @@ export function DataCell(props: DataCellProps) {
       activationClickTail,
       applyControlAction,
       canSelfActivate,
-      editModel,
+      controlState,
       onClick,
     ]
   )
@@ -222,17 +216,27 @@ export function DataCell(props: DataCellProps) {
 
       applyControlAction(
         getDataCellKeyControlAction({
-          controlState: editModel.controlState,
+          controlState,
           key: event.key,
         }),
         event,
         false
       )
     },
-    [applyControlAction, canSelfActivate, editModel, onKeyDown]
+    [applyControlAction, canSelfActivate, controlState, onKeyDown]
   )
 
   if (isActive) {
+    const editModel = createDataCellEditModel(props, {
+      disabled,
+      activationSource:
+        props.activationSource ??
+        activationSource ??
+        activationSourceRef.current,
+      autoFocus: props.autoFocus ?? canSelfActivate,
+      onEditingEnd: endEditing,
+      onEditorHandleChange: props.onEditorHandleChange,
+    })
     return <DataCellControl model={editModel} />
   }
 

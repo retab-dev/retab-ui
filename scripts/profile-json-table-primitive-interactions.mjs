@@ -399,6 +399,40 @@ async function calendarCommitDatePoint(send) {
   )
 }
 
+async function clickCallbackChurnButton(send) {
+  await evaluate(
+    send,
+    `(() => {
+      const button = document.querySelector('[data-json-table-profile-callback-version]');
+      if (!(button instanceof HTMLElement)) throw new Error("No callback churn button found");
+      button.click();
+    })()`
+  )
+}
+
+async function clickOutsideTable(send) {
+  await send("Input.dispatchMouseEvent", {
+    type: "mouseMoved",
+    x: 4,
+    y: 4,
+    button: "none",
+  })
+  await send("Input.dispatchMouseEvent", {
+    type: "mousePressed",
+    x: 4,
+    y: 4,
+    button: "left",
+    clickCount: 1,
+  })
+  await send("Input.dispatchMouseEvent", {
+    type: "mouseReleased",
+    x: 4,
+    y: 4,
+    button: "left",
+    clickCount: 1,
+  })
+}
+
 async function setFocusedInputValue(send, value) {
   await evaluate(
     send,
@@ -437,6 +471,21 @@ async function pressEnter(send) {
     key: "Enter",
     code: "Enter",
     windowsVirtualKeyCode: 13,
+  })
+}
+
+async function pressEscape(send) {
+  await send("Input.dispatchKeyEvent", {
+    type: "keyDown",
+    key: "Escape",
+    code: "Escape",
+    windowsVirtualKeyCode: 27,
+  })
+  await send("Input.dispatchKeyEvent", {
+    type: "keyUp",
+    key: "Escape",
+    code: "Escape",
+    windowsVirtualKeyCode: 27,
   })
 }
 
@@ -587,13 +636,26 @@ async function runProfileTarget(chromeEndpoint, targetConfig) {
       )
     )
 
-    await send("Input.dispatchKeyEvent", {
-      type: "keyDown",
-      key: "Escape",
-      code: "Escape",
-      windowsVirtualKeyCode: 27,
-    })
+    await pressEscape(send)
     await sleep(200)
+    scenarios.push(
+      await runScenario(
+        send,
+        "close-select-with-escape",
+        async () => {
+          const point = await editableCellPoint(send, enumFieldPath)
+          await clickPoint(send, point)
+          await waitInPage(
+            send,
+            `Boolean(document.querySelector('[data-slot="data-cell-select-popup"] [role="option"]'))`,
+            3_000
+          )
+          await pressEscape(send)
+        },
+        `!document.querySelector('[data-slot="data-cell-select-popup"]')`
+      )
+    )
+
     scenarios.push(
       await runScenario(
         send,
@@ -611,6 +673,25 @@ async function runProfileTarget(chromeEndpoint, targetConfig) {
           await clickPoint(send, optionPoint)
         },
         `!document.querySelector('[data-slot="data-cell-select-popup"]')`
+      )
+    )
+
+    scenarios.push(
+      await runScenario(
+        send,
+        "cancel-text-edit",
+        async () => {
+          const point = await editableCellPoint(send, textFieldPath)
+          await clickPoint(send, point)
+          await waitInPage(
+            send,
+            `document.activeElement instanceof HTMLInputElement && document.activeElement.getAttribute("data-kind") === "text"`,
+            3_000
+          )
+          await setFocusedInputValue(send, "profile cancelled text")
+          await pressEscape(send)
+        },
+        `document.querySelectorAll('[data-json-table-editable-cell="true"][data-active="true"]').length === 0`
       )
     )
 
@@ -636,6 +717,58 @@ async function runProfileTarget(chromeEndpoint, targetConfig) {
     scenarios.push(
       await runScenario(
         send,
+        "blur-commit-number",
+        async () => {
+          const point = await editableCellPoint(send, numberFieldPath)
+          await clickPoint(send, point)
+          await waitInPage(
+            send,
+            `document.activeElement instanceof HTMLInputElement && document.activeElement.getAttribute("data-kind") === "number"`,
+            3_000
+          )
+          await setFocusedInputValue(send, "1001.25")
+          await clickOutsideTable(send)
+        },
+        `(window.__jsonTableProfiler?.events ?? []).some((event) => event.type === "mark" && event.name === "document-patch-start") && document.querySelectorAll('[data-json-table-editable-cell="true"][data-active="true"]').length === 0`
+      )
+    )
+
+    scenarios.push(
+      await runScenario(
+        send,
+        "rapid-text-commits",
+        async () => {
+          const firstPoint = await editableCellPoint(send, textFieldPath)
+          await clickPoint(send, firstPoint)
+          await waitInPage(
+            send,
+            `document.activeElement instanceof HTMLInputElement && document.activeElement.getAttribute("data-kind") === "text"`,
+            3_000
+          )
+          await setFocusedInputValue(send, "profile rapid text one")
+          await pressEnter(send)
+          await waitInPage(
+            send,
+            `document.querySelectorAll('[data-json-table-editable-cell="true"][data-active="true"]').length === 0`,
+            3_000
+          )
+          const secondPoint = await editableCellPoint(send, textFieldPath)
+          await clickPoint(send, secondPoint)
+          await waitInPage(
+            send,
+            `document.activeElement instanceof HTMLInputElement && document.activeElement.getAttribute("data-kind") === "text"`,
+            3_000
+          )
+          await setFocusedInputValue(send, "profile rapid text two")
+          await pressEnter(send)
+        },
+        `((window.__jsonTableProfiler?.events ?? []).filter((event) => event.type === "mark" && event.name === "document-patch-start").length === 2) && document.querySelectorAll('[data-json-table-editable-cell="true"][data-active="true"]').length === 0`
+      )
+    )
+
+    scenarios.push(
+      await runScenario(
+        send,
         "open-and-commit-number",
         async () => {
           const point = await editableCellPoint(send, numberFieldPath)
@@ -649,6 +782,24 @@ async function runProfileTarget(chromeEndpoint, targetConfig) {
           await pressEnter(send)
         },
         `document.querySelectorAll('[data-json-table-editable-cell="true"][data-active="true"]').length === 0`
+      )
+    )
+
+    scenarios.push(
+      await runScenario(
+        send,
+        "close-date-with-outside-click",
+        async () => {
+          const point = await editableCellPoint(send, dateFieldPath)
+          await clickPoint(send, point)
+          await waitInPage(
+            send,
+            `Boolean(document.querySelector('[data-slot="calendar"]'))`,
+            3_000
+          )
+          await clickOutsideTable(send)
+        },
+        `!document.querySelector('[data-slot="data-cell-picker-popup"]')`
       )
     )
 
@@ -707,6 +858,38 @@ async function runProfileTarget(chromeEndpoint, targetConfig) {
       )
     )
 
+    await pressEscape(send)
+    await sleep(200)
+    scenarios.push(
+      await runScenario(
+        send,
+        "parent-callback-churn",
+        async () => {
+          await clickCallbackChurnButton(send)
+        },
+        `document.querySelector('[data-json-table-profile-callback-version]')?.getAttribute('data-json-table-profile-callback-version') !== "0"`
+      )
+    )
+
+    scenarios.push(
+      await runScenario(
+        send,
+        "post-churn-text-commit",
+        async () => {
+          const point = await editableCellPoint(send, textFieldPath)
+          await clickPoint(send, point)
+          await waitInPage(
+            send,
+            `document.activeElement instanceof HTMLInputElement && document.activeElement.getAttribute("data-kind") === "text"`,
+            3_000
+          )
+          await setFocusedInputValue(send, "profile post churn text")
+          await pressEnter(send)
+        },
+        `document.querySelectorAll('[data-json-table-editable-cell="true"][data-active="true"]').length === 0`
+      )
+    )
+
     return {
       name: targetConfig.name,
       route: targetConfig.url,
@@ -756,11 +939,15 @@ function assertNoTableOrRowRender(scenario) {
 }
 
 function assertSingleDocumentPatch(profileLabel, scenario) {
+  assertDocumentPatchCount(profileLabel, scenario, 1)
+}
+
+function assertDocumentPatchCount(profileLabel, scenario, expectedCount) {
   const startCount = scenario.profiler.markCounts["document-patch-start"] ?? 0
   const endCount = scenario.profiler.markCounts["document-patch-end"] ?? 0
   assertScenario(
-    startCount === 1 && endCount === 1,
-    `${profileLabel}${scenario.name}: expected exactly one document patch, got start=${startCount}, end=${endCount}`
+    startCount === expectedCount && endCount === expectedCount,
+    `${profileLabel}${scenario.name}: expected ${expectedCount} document patch(es), got start=${startCount}, end=${endCount}`
   )
 }
 
@@ -772,6 +959,16 @@ function assertScalarCommitScenario(profileLabel, scenario, fieldPath) {
   assertOnlyTargetEditableCellRendered(scenario, fieldPath)
   assertNoTableOrRowRender(scenario)
   assertSingleDocumentPatch(profileLabel, scenario)
+}
+
+function assertLocalNoCommitScenario(profileLabel, scenario, fieldPath) {
+  assertScenario(
+    scenario?.wait.ok,
+    `${profileLabel}${scenario?.name ?? fieldPath} did not complete`
+  )
+  assertOnlyTargetEditableCellRendered(scenario, fieldPath)
+  assertNoTableOrRowRender(scenario)
+  assertDocumentPatchCount(profileLabel, scenario, 0)
 }
 
 function assertReport(report) {
@@ -797,14 +994,29 @@ function assertProfile(profile) {
   const commit = profile.scenarios.find(
     (scenario) => scenario.name === "open-and-commit-enum"
   )
+  const closeSelect = profile.scenarios.find(
+    (scenario) => scenario.name === "close-select-with-escape"
+  )
+  const cancelText = profile.scenarios.find(
+    (scenario) => scenario.name === "cancel-text-edit"
+  )
   const textCommit = profile.scenarios.find(
     (scenario) => scenario.name === "open-and-commit-text"
   )
   const numberCommit = profile.scenarios.find(
     (scenario) => scenario.name === "open-and-commit-number"
   )
+  const blurNumberCommit = profile.scenarios.find(
+    (scenario) => scenario.name === "blur-commit-number"
+  )
+  const rapidTextCommit = profile.scenarios.find(
+    (scenario) => scenario.name === "rapid-text-commits"
+  )
   const dateCommit = profile.scenarios.find(
     (scenario) => scenario.name === "open-and-commit-date"
+  )
+  const closeDate = profile.scenarios.find(
+    (scenario) => scenario.name === "close-date-with-outside-click"
   )
   const checkbox = profile.scenarios.find(
     (scenario) => scenario.name === "toggle-checkbox"
@@ -814,6 +1026,12 @@ function assertProfile(profile) {
   )
   const dateMonth = profile.scenarios.find(
     (scenario) => scenario.name === "navigate-date-month"
+  )
+  const parentCallbackChurn = profile.scenarios.find(
+    (scenario) => scenario.name === "parent-callback-churn"
+  )
+  const postChurnTextCommit = profile.scenarios.find(
+    (scenario) => scenario.name === "post-churn-text-commit"
   )
   const label = `${profile.name}: `
 
@@ -834,6 +1052,8 @@ function assertProfile(profile) {
   assertOnlyTargetEditableCellRendered(open, enumFieldPath)
   assertNoTableOrRowRender(open)
 
+  assertLocalNoCommitScenario(label, closeSelect, enumFieldPath)
+
   assertScenario(commit?.wait.ok, `${label}open-and-commit-enum did not complete`)
   assertScenario(!commit.popupMounted, `${label}open-and-commit-enum left popup open`)
   assertScenario(
@@ -848,9 +1068,19 @@ function assertProfile(profile) {
   assertNoTableOrRowRender(commit)
   assertSingleDocumentPatch(label, commit)
 
+  assertLocalNoCommitScenario(label, cancelText, textFieldPath)
   assertScalarCommitScenario(label, textCommit, textFieldPath)
   assertScalarCommitScenario(label, numberCommit, numberFieldPath)
+  assertScalarCommitScenario(label, blurNumberCommit, numberFieldPath)
+  assertScenario(
+    rapidTextCommit?.wait.ok,
+    `${label}rapid-text-commits did not complete`
+  )
+  assertOnlyTargetEditableCellRendered(rapidTextCommit, textFieldPath)
+  assertNoTableOrRowRender(rapidTextCommit)
+  assertDocumentPatchCount(label, rapidTextCommit, 2)
   assertScalarCommitScenario(label, dateCommit, dateFieldPath)
+  assertLocalNoCommitScenario(label, closeDate, dateFieldPath)
 
   assertScenario(checkbox?.wait.ok, `${label}toggle-checkbox did not complete`)
   assertOnlyTargetEditableCellRendered(checkbox, "transactions.0.is_reconciled")
@@ -902,6 +1132,19 @@ function assertProfile(profile) {
     ).join(", ")}`
   )
   assertNoTableOrRowRender(dateMonth)
+
+  assertScenario(
+    parentCallbackChurn?.wait.ok,
+    `${label}parent-callback-churn did not complete`
+  )
+  assertScenario(
+    parentCallbackChurn.profiler.renders.total === 0,
+    `${label}parent-callback-churn rendered JSON table components: ${JSON.stringify(
+      parentCallbackChurn.profiler.renders.byComponent
+    )}`
+  )
+  assertNoTableOrRowRender(parentCallbackChurn)
+  assertScalarCommitScenario(label, postChurnTextCommit, textFieldPath)
 }
 
 async function main() {

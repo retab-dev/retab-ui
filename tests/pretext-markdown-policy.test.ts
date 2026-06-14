@@ -12,6 +12,9 @@ describe("Pretext Markdown policy", () => {
 
     expect(schema.tagNames).toContain("caption")
     expect(schema.tagNames).toContain("details")
+    expect(schema.tagNames).toContain("dd")
+    expect(schema.tagNames).toContain("dl")
+    expect(schema.tagNames).toContain("dt")
     expect(schema.tagNames).toContain("kbd")
     expect(schema.tagNames).toContain("mark")
     expect(schema.tagNames).toContain("sub")

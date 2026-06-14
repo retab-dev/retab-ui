@@ -491,6 +491,20 @@ describe("PretextMarkdownViewer", () => {
     expect(screen.getByText("literal -> :sparkles:")).toBeTruthy()
   })
 
+  it("renders common GitHub emoji shortcodes while keeping code literal", async () => {
+    render(
+      <PretextMarkdownViewer
+        source={markdownSource(
+          "Ship :rocket: fixes :bug: docs :memo: and `literal :rocket: :bug:`."
+        )}
+        toolbar={false}
+      />
+    )
+
+    expect(await screen.findByText(/Ship 🚀 fixes 🐛 docs 📝/)).toBeTruthy()
+    expect(screen.getByText("literal :rocket: :bug:")).toBeTruthy()
+  })
+
   it("renders GFM inline semantics for breaks, strike, and autolinks", async () => {
     const { container } = render(
       <PretextMarkdownViewer
@@ -548,6 +562,49 @@ describe("PretextMarkdownViewer", () => {
         .querySelector(".lucide-external-link")
         ?.getAttribute("aria-hidden")
     ).toBe("true")
+  })
+
+  it("keeps long prose, links, tables, and component labels inside the viewer width", async () => {
+    const longToken =
+      "superlongidentifierwithoutnaturalbreakpoints0123456789abcdefghijklmnopqrstuvwxyz"
+    const { container } = render(
+      <PretextMarkdownViewer
+        source={markdownSource(
+          [
+            `${longToken} [${longToken}](https://example.com/${longToken}).`,
+            "",
+            "| Key | Value |",
+            "| --- | --- |",
+            `| ${longToken} | ${longToken} |`,
+            "",
+            `<Metric label="${longToken}" value="${longToken}" />`,
+            "",
+            `<Badge label="${longToken}" />`,
+          ].join("\n")
+        )}
+        toolbar={false}
+      />
+    )
+
+    const paragraph = await screen.findByText((_, element) => {
+      return element?.tagName === "P" &&
+        element.textContent?.includes(longToken)
+        ? true
+        : false
+    })
+    const link = screen.getByRole("link", { name: longToken })
+    const tableCells = Array.from(container.querySelectorAll("td"))
+    const metric = container.querySelector('[data-pretext-component="Metric"]')
+    const badge = container.querySelector('[data-pretext-component="Badge"]')
+
+    expect(paragraph.className).toContain("[overflow-wrap:anywhere]")
+    expect(link.className).toContain("[overflow-wrap:anywhere]")
+    expect(tableCells).toHaveLength(2)
+    expect(tableCells[0]?.className).toContain("[overflow-wrap:anywhere]")
+    expect(tableCells[1]?.className).toContain("[overflow-wrap:anywhere]")
+    expect(metric?.className).toContain("min-w-0")
+    expect(metric?.textContent).toContain(longToken)
+    expect(badge?.className).toContain("[overflow-wrap:anywhere]")
   })
 
   it("resolves reference links from definitions outside the visible chunk", async () => {
@@ -616,8 +673,12 @@ describe("PretextMarkdownViewer", () => {
 
     expect((completed as HTMLInputElement).checked).toBe(true)
     expect(completed.hasAttribute("readonly")).toBe(true)
+    expect(completed.getAttribute("aria-readonly")).toBe("true")
+    expect((completed as HTMLInputElement).disabled).toBe(true)
     expect((pending as HTMLInputElement).checked).toBe(false)
     expect(pending.hasAttribute("readonly")).toBe(true)
+    expect(pending.getAttribute("aria-readonly")).toBe("true")
+    expect((pending as HTMLInputElement).disabled).toBe(true)
   })
 
   it("preserves ordered list start values", async () => {
@@ -671,6 +732,64 @@ describe("PretextMarkdownViewer", () => {
     ).toBeTruthy()
   })
 
+  it("renders whitelisted component markdown with safe Markdown children", async () => {
+    const { container } = render(
+      <PretextMarkdownViewer
+        source={markdownSource(
+          [
+            '<Callout kind="warning" title="Review">',
+            "",
+            "Check **nested** Markdown before shipping.",
+            "",
+            "</Callout>",
+          ].join("\n")
+        )}
+        toolbar={false}
+      />
+    )
+
+    expect(await screen.findByRole("note", { name: "Review" })).toBeTruthy()
+    expect(screen.getByText("nested").tagName).toBe("STRONG")
+    expect(container.textContent).not.toContain("<Callout")
+    expect(container.textContent).not.toContain("</Callout>")
+    expect(
+      container.querySelector('[data-pretext-component="Callout"]')
+    ).toBeTruthy()
+    expect(
+      container.querySelector('[data-pretext-callout-kind="warning"]')
+    ).toBeTruthy()
+  })
+
+  it("renders Accordion component markdown with safe Markdown children", async () => {
+    const { container } = render(
+      <PretextMarkdownViewer
+        source={markdownSource(
+          [
+            '<Accordion title="More details">',
+            "",
+            "- **Nested** item",
+            "- Second item",
+            "",
+            "</Accordion>",
+          ].join("\n")
+        )}
+        toolbar={false}
+      />
+    )
+
+    expect(await screen.findByText("More details")).toBeTruthy()
+    expect(screen.getByText("Nested").tagName).toBe("STRONG")
+    expect(screen.getByRole("list")).toBeTruthy()
+    expect(container.textContent).not.toContain("<Accordion")
+    expect(container.textContent).not.toContain("</Accordion>")
+    expect(
+      container.querySelector('[data-pretext-component="Accordion"]')
+    ).toBeTruthy()
+    expect(container.querySelector("details summary")?.textContent).toBe(
+      "More details"
+    )
+  })
+
   it("renders whitelisted component directives through safe React components", async () => {
     const { container } = render(
       <PretextMarkdownViewer
@@ -698,6 +817,108 @@ describe("PretextMarkdownViewer", () => {
     expect(container.textContent).not.toContain(":badge")
   })
 
+  it("renders container component directives with safe Markdown children", async () => {
+    const { container } = render(
+      <PretextMarkdownViewer
+        source={markdownSource(
+          [
+            ':::accordion{title="Directive details"}',
+            "Directive **body**.",
+            ":::",
+          ].join("\n")
+        )}
+        toolbar={false}
+      />
+    )
+
+    expect(await screen.findByText("Directive details")).toBeTruthy()
+    expect(screen.getByText("body").tagName).toBe("STRONG")
+    expect(container.textContent).not.toContain(":::accordion")
+    expect(
+      container.querySelector('[data-pretext-component="Accordion"]')
+    ).toBeTruthy()
+  })
+
+  it("renders Tabs container directives with selectable safe Markdown panels", async () => {
+    const { container } = render(
+      <PretextMarkdownViewer
+        source={markdownSource(
+          [
+            '::::tabs{label="Directive modes"}',
+            ':::tab{title="Preview"}',
+            "Preview **body**.",
+            ":::",
+            ':::tab{title="Raw"}',
+            "`raw` body.",
+            ":::",
+            "::::",
+          ].join("\n")
+        )}
+        toolbar={false}
+      />
+    )
+
+    const previewTab = await screen.findByRole("tab", { name: "Preview" })
+    const rawTab = screen.getByRole("tab", { name: "Raw" })
+    const rawPanel = document.getElementById(
+      rawTab.getAttribute("aria-controls") ?? ""
+    )
+
+    expect(
+      screen.getByRole("tablist", { name: "Directive modes" })
+    ).toBeTruthy()
+    expect(previewTab.getAttribute("aria-selected")).toBe("true")
+    expect(rawPanel?.hidden).toBe(true)
+
+    fireEvent.click(rawTab)
+
+    expect(rawTab.getAttribute("aria-selected")).toBe("true")
+    expect(rawPanel?.hidden).toBe(false)
+    expect(rawPanel?.querySelector("code")?.textContent).toBe("raw")
+    expect(container.textContent).not.toContain(":::tabs")
+    expect(container.textContent).not.toContain(":::tab")
+  })
+
+  it("renders restricted Image components through the safe image surface", async () => {
+    const { container } = render(
+      <PretextMarkdownViewer
+        source={markdownSource(
+          [
+            '<Image src="/chart.png" alt="Chart" title="Quarterly chart" />',
+            "",
+            '::image{src="/directive-chart.png" alt="Directive chart" title="Directive title"}',
+            "",
+            '<Image src="javascript:alert(1)" alt="Blocked chart" />',
+          ].join("\n")
+        )}
+        toolbar={false}
+      />
+    )
+
+    const chart = await screen.findByRole("img", { name: "Chart" })
+    const directiveChart = screen.getByRole("img", {
+      name: "Directive chart",
+    })
+    const blocked = screen.getByRole("img", { name: "Blocked chart" })
+
+    expect(chart.getAttribute("src")).toBe("/chart.png")
+    expect(chart.getAttribute("title")).toBe("Quarterly chart")
+    expect(screen.getByText("Quarterly chart")).toBeTruthy()
+    expect(directiveChart.getAttribute("src")).toBe("/directive-chart.png")
+    expect(screen.getByText("Directive title")).toBeTruthy()
+    expect(chart.closest('[data-pretext-component="Image"]')).toBeTruthy()
+    expect(
+      directiveChart.closest('[data-pretext-component="Image"]')
+    ).toBeTruthy()
+    expect(
+      blocked
+        .closest("[data-pretext-image-state]")
+        ?.getAttribute("data-pretext-image-state")
+    ).toBe("blocked")
+    expect(container.textContent).not.toContain("<Image")
+    expect(container.textContent).not.toContain("::image")
+  })
+
   it("keeps unsafe component markdown inert", async () => {
     const { container } = render(
       <PretextMarkdownViewer
@@ -711,9 +932,41 @@ describe("PretextMarkdownViewer", () => {
             "",
             '<Badge label="Invalid" tone="purple" />',
             "",
+            '<Image src="/chart.png" alt="Unsafe chart" onClick="steal" />',
+            "",
+            '<Callout kind="warning" onClick="steal">',
+            "",
+            "Unsafe body.",
+            "",
+            "</Callout>",
+            "",
+            '<Accordion title="Unsafe" onClick="steal">',
+            "",
+            "Unsafe details.",
+            "",
+            "</Accordion>",
+            "",
+            '<Tabs label="Unsafe" onClick="steal">',
+            '<Tab title="Unsafe">',
+            "Unsafe tab.",
+            "</Tab>",
+            "</Tabs>",
+            "",
             '::metric{label="Unsafe" onClick="steal"}',
             "",
+            ':::accordion{title="Unsafe" onClick="steal"}',
+            "Unsafe directive.",
+            ":::",
+            "",
+            ':::tabs{label="Unsafe" onClick="steal"}',
+            ':::tab{title="Unsafe"}',
+            "Unsafe tab directive.",
+            ":::",
+            ":::",
+            "",
             ':badge[Invalid directive]{tone="purple"}',
+            "",
+            '::image{src="/chart.png" alt="Unsafe directive chart" onClick="steal"}',
           ].join("\n")
         )}
         toolbar={false}
@@ -732,8 +985,31 @@ describe("PretextMarkdownViewer", () => {
     expect(
       screen.getByText('<Badge label="Invalid" tone="purple" />')
     ).toBeTruthy()
+    expect(
+      screen.getByText(
+        '<Image src="/chart.png" alt="Unsafe chart" onClick="steal" />'
+      )
+    ).toBeTruthy()
+    expect(
+      screen.getByText('<Callout kind="warning" onClick="steal">')
+    ).toBeTruthy()
+    expect(
+      screen.getByText('<Accordion title="Unsafe" onClick="steal">')
+    ).toBeTruthy()
+    expect(
+      screen.getByText('<Tabs label="Unsafe" onClick="steal">')
+    ).toBeTruthy()
     expect(container.textContent).toContain("::metric")
+    expect(container.textContent).toContain(
+      '::accordion{title="Unsafe" onClick="steal"}'
+    )
+    expect(container.textContent).toContain(
+      '::tabs{label="Unsafe" onClick="steal"}'
+    )
     expect(container.textContent).toContain("Invalid directive")
+    expect(container.textContent).toContain(
+      '::image{src="/chart.png" alt="Unsafe directive chart" onClick="steal"}'
+    )
     expect(container.querySelector("[data-pretext-component]")).toBeNull()
   })
 
@@ -755,6 +1031,24 @@ describe("PretextMarkdownViewer", () => {
     await waitFor(() => expect(diagram?.dataset.diagramState).toBe("ready"))
     expect(screen.getByRole("img", { name: "Mermaid diagram" })).toBeTruthy()
     expect(diagram?.querySelector("svg")).toBeTruthy()
+  })
+
+  it("normalizes Mermaid fence aliases before choosing the render surface", async () => {
+    const { container } = render(
+      <PretextMarkdownViewer
+        source={markdownSource("```MMD\ngraph TD\n  A-->B\n```")}
+        toolbar={false}
+      />
+    )
+
+    await screen.findByText("mermaid")
+    expect(screen.queryByText("MMD")).toBeNull()
+    const diagram = container.querySelector<HTMLElement>(
+      '[data-diagram-language="mermaid"]'
+    )
+
+    expect(diagram).toBeTruthy()
+    await waitFor(() => expect(diagram?.dataset.diagramState).toBe("ready"))
   })
 
   it("renders unsupported mermaid fences as non-crashing errors", async () => {
@@ -843,6 +1137,28 @@ describe("PretextMarkdownViewer", () => {
     await waitFor(() => {
       expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
         "const answer = 42"
+      )
+    })
+  })
+
+  it("normalizes code block language labels without changing copied source", async () => {
+    render(
+      <PretextMarkdownViewer
+        source={markdownSource("```TSX\n<Component />\n```")}
+        toolbar={false}
+      />
+    )
+
+    expect(await screen.findByText("tsx")).toBeTruthy()
+    expect(screen.queryByText("TSX")).toBeNull()
+    expect(screen.getByRole("group", { name: "tsx code block" })).toBeTruthy()
+    expect(screen.getByLabelText("tsx code source")).toBeTruthy()
+
+    fireEvent.click(screen.getByLabelText("Copy code block"))
+
+    await waitFor(() => {
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+        "<Component />"
       )
     })
   })
@@ -1005,6 +1321,32 @@ describe("PretextMarkdownViewer", () => {
     ).toBeNull()
     expect(container.querySelector("details")?.className).not.toContain("raw")
     expect(container.querySelector("mark")?.getAttribute("style")).toBeNull()
+  })
+
+  it("renders safe raw HTML definition lists", async () => {
+    const { container } = render(
+      <PretextMarkdownViewer
+        source={markdownSource(
+          [
+            "<dl>",
+            '<dt onclick="bad()">API</dt>',
+            '<dd class="raw">Application programming interface.</dd>',
+            "</dl>",
+          ].join("\n")
+        )}
+        toolbar={false}
+      />
+    )
+
+    expect(await screen.findByText("API")).toBeTruthy()
+    expect(screen.getByText("Application programming interface.")).toBeTruthy()
+    expect(container.querySelector("dl")?.className).toContain("space-y-2")
+    expect(container.querySelector("dt")?.getAttribute("onclick")).toBeNull()
+    expect(container.querySelector("dt")?.className).toContain("font-semibold")
+    expect(container.querySelector("dd")?.className).not.toContain("raw")
+    expect(container.querySelector("dd")?.className).toContain(
+      "text-muted-foreground"
+    )
   })
 
   it("renders safe inline raw HTML elements with styled components", async () => {

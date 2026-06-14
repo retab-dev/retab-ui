@@ -17,107 +17,296 @@ export function createDataCellDisplayProps(
   props: DataCellProps,
   shellProps: DataCellDisplayShellProps
 ): DataCellDisplayProps {
-  const {
-    kind,
-    value,
-    placeholder,
-    className,
-    showPickerIcon,
-    formatValue,
-    mode,
-    editable,
-    active,
-    disabled,
-    name,
-    selectOptions,
-    dateTimeZone,
-    activationSource,
-    open,
-    draftValue,
-    autoFocus,
-    onDraftValueChange,
-    onCommit,
-    onEditingEnd,
-    onActiveChange,
-    onOpenChange,
-    onEditorHandleChange,
-    onClick,
-    onKeyDown,
-    onPointerDown,
-    ...surfaceDomProps
-  } = props
-  const displayProps: Pick<
-    DataCellDisplayProps,
-    "className" | "placeholder" | "showPickerIcon"
-  > &
-    DataCellDisplayShellProps &
-    React.HTMLAttributes<HTMLDivElement> = {
-    ...surfaceDomProps,
-    ...shellProps,
-    placeholder,
-    className,
-    showPickerIcon,
-  }
-
   switch (props.kind) {
-    case "text":
+    case "text": {
+      const {
+        kind,
+        value,
+        placeholder,
+        className,
+        formatValue,
+        mode,
+        editable,
+        active,
+        disabled,
+        name,
+        activationSource,
+        draftValue,
+        autoFocus,
+        onDraftValueChange,
+        onCommit,
+        onEditingEnd,
+        onActiveChange,
+        onEditorHandleChange,
+        onClick,
+        onKeyDown,
+        onPointerDown,
+        ...surfaceDomProps
+      } = props
       return {
-        ...displayProps,
-        kind: props.kind,
-        value: props.value,
-        formatValue: props.formatValue,
+        ...surfaceDomProps,
+        ...shellProps,
+        kind,
+        value,
+        placeholder,
+        className,
+        formatValue,
       }
-    case "number":
+    }
+    case "number": {
+      const {
+        kind,
+        value,
+        placeholder,
+        className,
+        formatValue,
+        mode,
+        editable,
+        active,
+        disabled,
+        name,
+        activationSource,
+        draftValue,
+        autoFocus,
+        onDraftValueChange,
+        onCommit,
+        onEditingEnd,
+        onActiveChange,
+        onEditorHandleChange,
+        onClick,
+        onKeyDown,
+        onPointerDown,
+        ...surfaceDomProps
+      } = props
       return {
-        ...displayProps,
-        kind: props.kind,
-        value: props.value,
-        formatValue: props.formatValue,
+        ...surfaceDomProps,
+        ...shellProps,
+        kind,
+        value,
+        placeholder,
+        className,
+        formatValue,
       }
-    case "integer":
+    }
+    case "integer": {
+      const {
+        kind,
+        value,
+        placeholder,
+        className,
+        formatValue,
+        mode,
+        editable,
+        active,
+        disabled,
+        name,
+        activationSource,
+        draftValue,
+        autoFocus,
+        onDraftValueChange,
+        onCommit,
+        onEditingEnd,
+        onActiveChange,
+        onEditorHandleChange,
+        onClick,
+        onKeyDown,
+        onPointerDown,
+        ...surfaceDomProps
+      } = props
       return {
-        ...displayProps,
-        kind: props.kind,
-        value: props.value,
-        formatValue: props.formatValue,
+        ...surfaceDomProps,
+        ...shellProps,
+        kind,
+        value,
+        placeholder,
+        className,
+        formatValue,
       }
-    case "boolean":
+    }
+    case "boolean": {
+      const {
+        kind,
+        value,
+        className,
+        mode,
+        editable,
+        active,
+        disabled,
+        name,
+        activationSource,
+        autoFocus,
+        onCommit,
+        onEditingEnd,
+        onActiveChange,
+        onEditorHandleChange,
+        onClick,
+        onKeyDown,
+        onPointerDown,
+        ...surfaceDomProps
+      } = props
       return {
-        ...displayProps,
-        kind: props.kind,
-        value: props.value,
-        formatValue: props.formatValue,
+        ...surfaceDomProps,
+        ...shellProps,
+        kind,
+        value,
+        className,
       }
-    case "select":
+    }
+    case "select": {
+      const {
+        kind,
+        value,
+        placeholder,
+        className,
+        formatValue,
+        mode,
+        editable,
+        active,
+        disabled,
+        name,
+        selectOptions,
+        activationSource,
+        open,
+        autoFocus,
+        onCommit,
+        onEditingEnd,
+        onActiveChange,
+        onOpenChange,
+        onEditorHandleChange,
+        onClick,
+        onKeyDown,
+        onPointerDown,
+        ...surfaceDomProps
+      } = props
       return {
-        ...displayProps,
-        kind: props.kind,
-        value: props.value,
-        formatValue: props.formatValue,
+        ...surfaceDomProps,
+        ...shellProps,
+        kind,
+        value,
+        placeholder,
+        className,
+        formatValue,
       }
-    case "date":
+    }
+    case "date": {
+      const {
+        kind,
+        value,
+        placeholder,
+        className,
+        showPickerIcon,
+        formatValue,
+        mode,
+        editable,
+        active,
+        disabled,
+        name,
+        dateTimeZone,
+        activationSource,
+        open,
+        draftValue,
+        autoFocus,
+        onDraftValueChange,
+        onCommit,
+        onEditingEnd,
+        onActiveChange,
+        onOpenChange,
+        onEditorHandleChange,
+        onClick,
+        onKeyDown,
+        onPointerDown,
+        ...surfaceDomProps
+      } = props
       return {
-        ...displayProps,
-        kind: props.kind,
-        value: props.value,
-        formatValue: props.formatValue,
-        showPickerIcon: props.showPickerIcon ?? true,
+        ...surfaceDomProps,
+        ...shellProps,
+        kind,
+        value,
+        placeholder,
+        className,
+        formatValue,
+        showPickerIcon: showPickerIcon ?? true,
       }
-    case "time":
+    }
+    case "time": {
+      const {
+        kind,
+        value,
+        placeholder,
+        className,
+        showPickerIcon,
+        formatValue,
+        mode,
+        editable,
+        active,
+        disabled,
+        name,
+        dateTimeZone,
+        activationSource,
+        open,
+        draftValue,
+        autoFocus,
+        onDraftValueChange,
+        onCommit,
+        onEditingEnd,
+        onActiveChange,
+        onOpenChange,
+        onEditorHandleChange,
+        onClick,
+        onKeyDown,
+        onPointerDown,
+        ...surfaceDomProps
+      } = props
       return {
-        ...displayProps,
-        kind: props.kind,
-        value: props.value,
-        formatValue: props.formatValue,
-        showPickerIcon: props.showPickerIcon ?? true,
+        ...surfaceDomProps,
+        ...shellProps,
+        kind,
+        value,
+        placeholder,
+        className,
+        formatValue,
+        showPickerIcon: showPickerIcon ?? true,
       }
-    case "date-time":
+    }
+    case "date-time": {
+      const {
+        kind,
+        value,
+        placeholder,
+        className,
+        showPickerIcon,
+        formatValue,
+        mode,
+        editable,
+        active,
+        disabled,
+        name,
+        dateTimeZone,
+        activationSource,
+        open,
+        draftValue,
+        autoFocus,
+        onDraftValueChange,
+        onCommit,
+        onEditingEnd,
+        onActiveChange,
+        onOpenChange,
+        onEditorHandleChange,
+        onClick,
+        onKeyDown,
+        onPointerDown,
+        ...surfaceDomProps
+      } = props
       return {
-        ...displayProps,
-        kind: props.kind,
-        value: props.value,
-        formatValue: props.formatValue,
-        showPickerIcon: props.showPickerIcon ?? true,
+        ...surfaceDomProps,
+        ...shellProps,
+        kind,
+        value,
+        placeholder,
+        className,
+        formatValue,
+        showPickerIcon: showPickerIcon ?? true,
       }
+    }
   }
 }

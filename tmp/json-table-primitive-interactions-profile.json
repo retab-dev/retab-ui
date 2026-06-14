@@ -1,9 +1,9 @@
 {
-  "measuredAt": "2026-06-14T01:11:47.703Z",
+  "measuredAt": "2026-06-14T06:14:15.330Z",
   "profiles": [
     {
       "name": "default",
-      "route": "http://localhost:3200/json-table-profile",
+      "route": "http://localhost:3100/json-table-profile",
       "scenarios": [
         {
           "name": "hover-enum",
@@ -13,7 +13,7 @@
           "popupOptions": 0,
           "baseUiSelectMounted": false,
           "activeEditableCells": 0,
-          "totalDomNodes": 1389,
+          "totalDomNodes": 1390,
           "rectProbe": {
             "count": 0,
             "bySlot": {}
@@ -36,17 +36,17 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 32.29999999701977
+            "elapsedMs": 33
           },
-          "elapsedMs": 40.19999998807907,
+          "elapsedMs": 37,
           "metricsDelta": {
             "Nodes": 0,
             "LayoutCount": 0,
             "RecalcStyleCount": 3,
             "LayoutDurationMs": 0,
-            "RecalcStyleDurationMs": 0.5700000000000216,
-            "ScriptDurationMs": 0.5260000000000673,
-            "TaskDurationMs": 2.6099999999999
+            "RecalcStyleDurationMs": 0.578000000000003,
+            "ScriptDurationMs": 0.5340000000000487,
+            "TaskDurationMs": 2.560000000000059
           }
         },
         {
@@ -57,7 +57,7 @@
           "popupOptions": 2,
           "baseUiSelectMounted": false,
           "activeEditableCells": 1,
-          "totalDomNodes": 1399,
+          "totalDomNodes": 1400,
           "rectProbe": {
             "count": 1,
             "bySlot": {
@@ -97,7 +97,7 @@
             "reactCommits": {
               "count": 3,
               "totalActualDurationMs": 2.7000000029802322,
-              "maxActualDurationMs": 1.2000000029802322
+              "maxActualDurationMs": 1.300000011920929
             },
             "markCounts": {
               "pointer-enter-cell": 1
@@ -105,31 +105,34 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 33.29999999701977
+            "elapsedMs": 32.70000000298023
           },
-          "elapsedMs": 132.29999999701977,
+          "elapsedMs": 137,
           "metricsDelta": {
             "Nodes": 16,
             "LayoutCount": 2,
             "RecalcStyleCount": 12,
-            "LayoutDurationMs": 0.4499999999999993,
-            "RecalcStyleDurationMs": 87.16300000000001,
-            "ScriptDurationMs": 6.178999999999974,
-            "TaskDurationMs": 96.904
+            "LayoutDurationMs": 0.42300000000000004,
+            "RecalcStyleDurationMs": 88.22300000000004,
+            "ScriptDurationMs": 6.675999999999931,
+            "TaskDurationMs": 98.33399999999995
           }
         },
         {
-          "name": "open-and-commit-enum",
+          "name": "close-select-with-escape",
           "popupMounted": false,
           "pickerPopupMounted": false,
           "calendarMounted": false,
           "popupOptions": 0,
           "baseUiSelectMounted": false,
           "activeEditableCells": 0,
-          "totalDomNodes": 1389,
+          "totalDomNodes": 1390,
           "rectProbe": {
-            "count": 0,
-            "bySlot": {}
+            "count": 2,
+            "bySlot": {
+              "table-cell": 1,
+              "data-cell": 1
+            }
           },
           "profiler": {
             "renders": {
@@ -163,8 +166,75 @@
             },
             "reactCommits": {
               "count": 5,
-              "totalActualDurationMs": 1.9000000059604645,
-              "maxActualDurationMs": 0.699999988079071
+              "totalActualDurationMs": 2.000000014901161,
+              "maxActualDurationMs": 0.6000000089406967
+            },
+            "markCounts": {
+              "pointer-enter-cell": 1
+            }
+          },
+          "wait": {
+            "ok": true,
+            "elapsedMs": 32.79999999701977
+          },
+          "elapsedMs": 276.70000000298023,
+          "metricsDelta": {
+            "Nodes": 20,
+            "LayoutCount": 3,
+            "RecalcStyleCount": 15,
+            "LayoutDurationMs": 0.37400000000000233,
+            "RecalcStyleDurationMs": 135.07000000000005,
+            "ScriptDurationMs": 5.830000000000041,
+            "TaskDurationMs": 146.04200000000003
+          }
+        },
+        {
+          "name": "open-and-commit-enum",
+          "popupMounted": false,
+          "pickerPopupMounted": false,
+          "calendarMounted": false,
+          "popupOptions": 0,
+          "baseUiSelectMounted": false,
+          "activeEditableCells": 0,
+          "totalDomNodes": 1390,
+          "rectProbe": {
+            "count": 0,
+            "bySlot": {}
+          },
+          "profiler": {
+            "renders": {
+              "total": 8,
+              "byComponent": [
+                {
+                  "name": "EditableJsonTableCell",
+                  "count": 8
+                }
+              ],
+              "byInstance": [
+                {
+                  "name": "EditableJsonTableCell:transactions.0.transaction_type",
+                  "count": 8
+                }
+              ],
+              "changedProps": [
+                {
+                  "name": "EditableJsonTableCell.same-props",
+                  "count": 6
+                },
+                {
+                  "name": "EditableJsonTableCell.primitiveActiveFieldPath",
+                  "count": 2
+                },
+                {
+                  "name": "EditableJsonTableCell.isEditing",
+                  "count": 2
+                }
+              ]
+            },
+            "reactCommits": {
+              "count": 6,
+              "totalActualDurationMs": 2.5,
+              "maxActualDurationMs": 0.6000000089406967
             },
             "markCounts": {
               "cell-commit-local-end": 1,
@@ -178,28 +248,28 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 32.5
+            "elapsedMs": 32.8999999910593
           },
-          "elapsedMs": 316.8999999910593,
+          "elapsedMs": 227.5,
           "metricsDelta": {
-            "Nodes": 20,
-            "LayoutCount": 3,
+            "Nodes": 349,
+            "LayoutCount": 6,
             "RecalcStyleCount": 22,
-            "LayoutDurationMs": 0.375,
-            "RecalcStyleDurationMs": 132.43,
-            "ScriptDurationMs": 7.76400000000001,
-            "TaskDurationMs": 148.22199999999998
+            "LayoutDurationMs": 3.036999999999999,
+            "RecalcStyleDurationMs": 134.10999999999996,
+            "ScriptDurationMs": 17.12299999999999,
+            "TaskDurationMs": 163.86900000000003
           }
         },
         {
-          "name": "open-and-commit-text",
+          "name": "cancel-text-edit",
           "popupMounted": false,
           "pickerPopupMounted": false,
           "calendarMounted": false,
           "popupOptions": 0,
           "baseUiSelectMounted": false,
           "activeEditableCells": 0,
-          "totalDomNodes": 1389,
+          "totalDomNodes": 1390,
           "rectProbe": {
             "count": 2,
             "bySlot": {
@@ -239,8 +309,153 @@
             },
             "reactCommits": {
               "count": 7,
-              "totalActualDurationMs": 2.0999999940395355,
-              "maxActualDurationMs": 1
+              "totalActualDurationMs": 2,
+              "maxActualDurationMs": 1.0999999940395355
+            },
+            "markCounts": {
+              "pointer-enter-cell": 2
+            }
+          },
+          "wait": {
+            "ok": true,
+            "elapsedMs": 32.79999999701977
+          },
+          "elapsedMs": 184.29999999701977,
+          "metricsDelta": {
+            "Nodes": 10,
+            "LayoutCount": 14,
+            "RecalcStyleCount": 21,
+            "LayoutDurationMs": 1.088000000000001,
+            "RecalcStyleDurationMs": 91.73300000000006,
+            "ScriptDurationMs": 14.774999999999977,
+            "TaskDurationMs": 116.37200000000007
+          }
+        },
+        {
+          "name": "open-and-commit-text",
+          "popupMounted": false,
+          "pickerPopupMounted": false,
+          "calendarMounted": false,
+          "popupOptions": 0,
+          "baseUiSelectMounted": false,
+          "activeEditableCells": 0,
+          "totalDomNodes": 1390,
+          "rectProbe": {
+            "count": 2,
+            "bySlot": {
+              "table-cell": 1,
+              "data-cell-value": 1
+            }
+          },
+          "profiler": {
+            "renders": {
+              "total": 8,
+              "byComponent": [
+                {
+                  "name": "EditableJsonTableCell",
+                  "count": 8
+                }
+              ],
+              "byInstance": [
+                {
+                  "name": "EditableJsonTableCell:transactions.0.description",
+                  "count": 8
+                }
+              ],
+              "changedProps": [
+                {
+                  "name": "EditableJsonTableCell.same-props",
+                  "count": 6
+                },
+                {
+                  "name": "EditableJsonTableCell.primitiveActiveFieldPath",
+                  "count": 2
+                },
+                {
+                  "name": "EditableJsonTableCell.isEditing",
+                  "count": 2
+                }
+              ]
+            },
+            "reactCommits": {
+              "count": 7,
+              "totalActualDurationMs": 1.899999976158142,
+              "maxActualDurationMs": 0.5
+            },
+            "markCounts": {
+              "cell-commit-local-end": 1,
+              "cell-commit-local-start": 1,
+              "cell-commit-transition-end": 1,
+              "cell-commit-transition-start": 1,
+              "document-patch-end": 1,
+              "document-patch-start": 1,
+              "pointer-enter-cell": 1
+            }
+          },
+          "wait": {
+            "ok": true,
+            "elapsedMs": 34.099999994039536
+          },
+          "elapsedMs": 178,
+          "metricsDelta": {
+            "Nodes": 160,
+            "LayoutCount": 7,
+            "RecalcStyleCount": 13,
+            "LayoutDurationMs": 0.6129999999999978,
+            "RecalcStyleDurationMs": 90.1339999999999,
+            "ScriptDurationMs": 9.919999999999959,
+            "TaskDurationMs": 106.33699999999976
+          }
+        },
+        {
+          "name": "blur-commit-number",
+          "popupMounted": false,
+          "pickerPopupMounted": false,
+          "calendarMounted": false,
+          "popupOptions": 0,
+          "baseUiSelectMounted": false,
+          "activeEditableCells": 0,
+          "totalDomNodes": 1390,
+          "rectProbe": {
+            "count": 1,
+            "bySlot": {
+              "table-cell": 1
+            }
+          },
+          "profiler": {
+            "renders": {
+              "total": 10,
+              "byComponent": [
+                {
+                  "name": "EditableJsonTableCell",
+                  "count": 10
+                }
+              ],
+              "byInstance": [
+                {
+                  "name": "EditableJsonTableCell:transactions.0.amount.amount",
+                  "count": 10
+                }
+              ],
+              "changedProps": [
+                {
+                  "name": "EditableJsonTableCell.same-props",
+                  "count": 8
+                },
+                {
+                  "name": "EditableJsonTableCell.primitiveActiveFieldPath",
+                  "count": 2
+                },
+                {
+                  "name": "EditableJsonTableCell.isEditing",
+                  "count": 2
+                }
+              ]
+            },
+            "reactCommits": {
+              "count": 8,
+              "totalActualDurationMs": 8.100000008940697,
+              "maxActualDurationMs": 6.700000002980232
             },
             "markCounts": {
               "cell-commit-local-end": 1,
@@ -254,17 +469,93 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 33.3999999910593
+            "elapsedMs": 32.900000005960464
           },
-          "elapsedMs": 195.20000000298023,
+          "elapsedMs": 184,
           "metricsDelta": {
-            "Nodes": 10,
+            "Nodes": 13,
             "LayoutCount": 3,
             "RecalcStyleCount": 17,
-            "LayoutDurationMs": 0.4690000000000012,
-            "RecalcStyleDurationMs": 89.12,
-            "ScriptDurationMs": 15.824000000000012,
-            "TaskDurationMs": 113.08399999999983
+            "LayoutDurationMs": 0.4410000000000007,
+            "RecalcStyleDurationMs": 90.86800000000005,
+            "ScriptDurationMs": 14.591000000000008,
+            "TaskDurationMs": 114.00499999999988
+          }
+        },
+        {
+          "name": "rapid-text-commits",
+          "popupMounted": false,
+          "pickerPopupMounted": false,
+          "calendarMounted": false,
+          "popupOptions": 0,
+          "baseUiSelectMounted": false,
+          "activeEditableCells": 0,
+          "totalDomNodes": 1390,
+          "rectProbe": {
+            "count": 4,
+            "bySlot": {
+              "table-cell": 2,
+              "data-cell-value": 2
+            }
+          },
+          "profiler": {
+            "renders": {
+              "total": 16,
+              "byComponent": [
+                {
+                  "name": "EditableJsonTableCell",
+                  "count": 16
+                }
+              ],
+              "byInstance": [
+                {
+                  "name": "EditableJsonTableCell:transactions.0.description",
+                  "count": 16
+                }
+              ],
+              "changedProps": [
+                {
+                  "name": "EditableJsonTableCell.same-props",
+                  "count": 12
+                },
+                {
+                  "name": "EditableJsonTableCell.primitiveActiveFieldPath",
+                  "count": 4
+                },
+                {
+                  "name": "EditableJsonTableCell.isEditing",
+                  "count": 4
+                }
+              ]
+            },
+            "reactCommits": {
+              "count": 14,
+              "totalActualDurationMs": 3.5,
+              "maxActualDurationMs": 0.5999999940395355
+            },
+            "markCounts": {
+              "cell-commit-local-end": 2,
+              "cell-commit-local-start": 2,
+              "cell-commit-transition-end": 2,
+              "cell-commit-transition-start": 2,
+              "document-patch-end": 2,
+              "document-patch-start": 2,
+              "pointer-enter-cell": 3
+            }
+          },
+          "wait": {
+            "ok": true,
+            "elapsedMs": 34
+          },
+          "elapsedMs": 361.70000000298023,
+          "metricsDelta": {
+            "Nodes": 20,
+            "LayoutCount": 6,
+            "RecalcStyleCount": 26,
+            "LayoutDurationMs": 0.875,
+            "RecalcStyleDurationMs": 178.7840000000001,
+            "ScriptDurationMs": 15.087000000000046,
+            "TaskDurationMs": 205.64400000000023
           }
         },
         {
@@ -275,7 +566,7 @@
           "popupOptions": 0,
           "baseUiSelectMounted": false,
           "activeEditableCells": 0,
-          "totalDomNodes": 1389,
+          "totalDomNodes": 1390,
           "rectProbe": {
             "count": 1,
             "bySlot": {
@@ -314,8 +605,8 @@
             },
             "reactCommits": {
               "count": 7,
-              "totalActualDurationMs": 7.700000017881393,
-              "maxActualDurationMs": 6.700000002980232
+              "totalActualDurationMs": 1.899999976158142,
+              "maxActualDurationMs": 0.5
             },
             "markCounts": {
               "cell-commit-local-end": 1,
@@ -329,17 +620,87 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 33.29999999701977
+            "elapsedMs": 33.70000000298023
           },
-          "elapsedMs": 219.40000000596046,
+          "elapsedMs": 189.30000001192093,
           "metricsDelta": {
             "Nodes": 13,
             "LayoutCount": 3,
             "RecalcStyleCount": 11,
-            "LayoutDurationMs": 0.4549999999999983,
-            "RecalcStyleDurationMs": 88.70299999999997,
-            "ScriptDurationMs": 13.884999999999991,
-            "TaskDurationMs": 109.21899999999982
+            "LayoutDurationMs": 0.44599999999999795,
+            "RecalcStyleDurationMs": 88.29599999999982,
+            "ScriptDurationMs": 7.338999999999999,
+            "TaskDurationMs": 101.27199999999993
+          }
+        },
+        {
+          "name": "close-date-with-outside-click",
+          "popupMounted": false,
+          "pickerPopupMounted": false,
+          "calendarMounted": false,
+          "popupOptions": 0,
+          "baseUiSelectMounted": false,
+          "activeEditableCells": 0,
+          "totalDomNodes": 1390,
+          "rectProbe": {
+            "count": 2,
+            "bySlot": {
+              "table-cell": 1,
+              "data-cell": 1
+            }
+          },
+          "profiler": {
+            "renders": {
+              "total": 8,
+              "byComponent": [
+                {
+                  "name": "EditableJsonTableCell",
+                  "count": 8
+                }
+              ],
+              "byInstance": [
+                {
+                  "name": "EditableJsonTableCell:transactions.0.date",
+                  "count": 8
+                }
+              ],
+              "changedProps": [
+                {
+                  "name": "EditableJsonTableCell.same-props",
+                  "count": 6
+                },
+                {
+                  "name": "EditableJsonTableCell.primitiveActiveFieldPath",
+                  "count": 2
+                },
+                {
+                  "name": "EditableJsonTableCell.isEditing",
+                  "count": 2
+                }
+              ]
+            },
+            "reactCommits": {
+              "count": 6,
+              "totalActualDurationMs": 22.900000005960464,
+              "maxActualDurationMs": 14.599999994039536
+            },
+            "markCounts": {
+              "pointer-enter-cell": 2
+            }
+          },
+          "wait": {
+            "ok": true,
+            "elapsedMs": 33.3999999910593
+          },
+          "elapsedMs": 248.6000000089407,
+          "metricsDelta": {
+            "Nodes": 185,
+            "LayoutCount": 3,
+            "RecalcStyleCount": 18,
+            "LayoutDurationMs": 0.9040000000000035,
+            "RecalcStyleDurationMs": 135.15600000000018,
+            "ScriptDurationMs": 31.00799999999998,
+            "TaskDurationMs": 176.48900000000026
           }
         },
         {
@@ -350,7 +711,7 @@
           "popupOptions": 0,
           "baseUiSelectMounted": false,
           "activeEditableCells": 0,
-          "totalDomNodes": 1389,
+          "totalDomNodes": 1390,
           "rectProbe": {
             "count": 0,
             "bySlot": {}
@@ -386,9 +747,9 @@
               ]
             },
             "reactCommits": {
-              "count": 7,
-              "totalActualDurationMs": 34.79999998211861,
-              "maxActualDurationMs": 19.5
+              "count": 8,
+              "totalActualDurationMs": 23.099999994039536,
+              "maxActualDurationMs": 7.499999985098839
             },
             "markCounts": {
               "cell-commit-local-end": 1,
@@ -402,17 +763,17 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 32.79999999701977
+            "elapsedMs": 33.1000000089407
           },
-          "elapsedMs": 482.40000000596046,
+          "elapsedMs": 291.20000000298023,
           "metricsDelta": {
             "Nodes": 185,
             "LayoutCount": 5,
-            "RecalcStyleCount": 22,
-            "LayoutDurationMs": 1.2510000000000012,
-            "RecalcStyleDurationMs": 183.01800000000003,
-            "ScriptDurationMs": 46.809000000000026,
-            "TaskDurationMs": 249.86400000000003
+            "RecalcStyleCount": 21,
+            "LayoutDurationMs": 0.7639999999999993,
+            "RecalcStyleDurationMs": 180.0089999999998,
+            "ScriptDurationMs": 32.69799999999998,
+            "TaskDurationMs": 221.46400000000017
           }
         },
         {
@@ -423,37 +784,37 @@
           "popupOptions": 0,
           "baseUiSelectMounted": false,
           "activeEditableCells": 0,
-          "totalDomNodes": 1390,
+          "totalDomNodes": 1391,
           "rectProbe": {
             "count": 0,
             "bySlot": {}
           },
           "profiler": {
             "renders": {
-              "total": 4,
+              "total": 6,
               "byComponent": [
                 {
                   "name": "EditableJsonTableCell",
-                  "count": 4
+                  "count": 6
                 }
               ],
               "byInstance": [
                 {
                   "name": "EditableJsonTableCell:transactions.0.is_reconciled",
-                  "count": 4
+                  "count": 6
                 }
               ],
               "changedProps": [
                 {
                   "name": "EditableJsonTableCell.same-props",
-                  "count": 4
+                  "count": 6
                 }
               ]
             },
             "reactCommits": {
-              "count": 2,
-              "totalActualDurationMs": 0.5,
-              "maxActualDurationMs": 0.5
+              "count": 3,
+              "totalActualDurationMs": 1.4000000059604645,
+              "maxActualDurationMs": 0.7000000029802322
             },
             "markCounts": {
               "cell-commit-local-end": 1,
@@ -466,17 +827,17 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 33.599999994039536
+            "elapsedMs": 33
           },
-          "elapsedMs": 101.3999999910593,
+          "elapsedMs": 139.5,
           "metricsDelta": {
             "Nodes": 3,
             "LayoutCount": 1,
-            "RecalcStyleCount": 11,
-            "LayoutDurationMs": 0.11399999999999899,
-            "RecalcStyleDurationMs": 45.13499999999999,
-            "ScriptDurationMs": 2.9489999999999554,
-            "TaskDurationMs": 54.45600000000013
+            "RecalcStyleCount": 12,
+            "LayoutDurationMs": 0.10500000000000043,
+            "RecalcStyleDurationMs": 44.01300000000015,
+            "ScriptDurationMs": 3.966000000000008,
+            "TaskDurationMs": 52.78099999999995
           }
         },
         {
@@ -487,7 +848,7 @@
           "popupOptions": 0,
           "baseUiSelectMounted": false,
           "activeEditableCells": 1,
-          "totalDomNodes": 1489,
+          "totalDomNodes": 1490,
           "rectProbe": {
             "count": 1,
             "bySlot": {
@@ -526,8 +887,8 @@
             },
             "reactCommits": {
               "count": 4,
-              "totalActualDurationMs": 15.500000014901161,
-              "maxActualDurationMs": 8.200000002980232
+              "totalActualDurationMs": 17.49999998509884,
+              "maxActualDurationMs": 9.199999988079071
             },
             "markCounts": {
               "pointer-enter-cell": 2
@@ -535,17 +896,17 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 32.900000005960464
+            "elapsedMs": 32.6000000089407
           },
-          "elapsedMs": 248.3999999910593,
+          "elapsedMs": 180.59999999403954,
           "metricsDelta": {
             "Nodes": 182,
             "LayoutCount": 2,
             "RecalcStyleCount": 13,
-            "LayoutDurationMs": 0.5240000000000009,
-            "RecalcStyleDurationMs": 91.96800000000007,
-            "ScriptDurationMs": 20.06400000000002,
-            "TaskDurationMs": 119.0619999999999
+            "LayoutDurationMs": 0.4889999999999972,
+            "RecalcStyleDurationMs": 91.03700000000003,
+            "ScriptDurationMs": 22.025000000000034,
+            "TaskDurationMs": 118.58800000000019
           }
         },
         {
@@ -556,7 +917,7 @@
           "popupOptions": 0,
           "baseUiSelectMounted": false,
           "activeEditableCells": 1,
-          "totalDomNodes": 1489,
+          "totalDomNodes": 1490,
           "rectProbe": {
             "count": 0,
             "bySlot": {}
@@ -570,8 +931,8 @@
             },
             "reactCommits": {
               "count": 1,
-              "totalActualDurationMs": 8.900000005960464,
-              "maxActualDurationMs": 8.900000005960464
+              "totalActualDurationMs": 8.400000005960464,
+              "maxActualDurationMs": 8.400000005960464
             },
             "markCounts": {
               "pointer-enter-cell": 1
@@ -579,24 +940,142 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 32.900000005960464
+            "elapsedMs": 33.3999999910593
           },
-          "elapsedMs": 103.20000000298023,
+          "elapsedMs": 97,
           "metricsDelta": {
             "Nodes": 144,
             "LayoutCount": 2,
             "RecalcStyleCount": 4,
-            "LayoutDurationMs": 0.32599999999999874,
-            "RecalcStyleDurationMs": 46.56799999999987,
-            "ScriptDurationMs": 12.153999999999996,
-            "TaskDurationMs": 62.57100000000014
+            "LayoutDurationMs": 0.3290000000000006,
+            "RecalcStyleDurationMs": 46.35799999999995,
+            "ScriptDurationMs": 11,
+            "TaskDurationMs": 60.27300000000014
+          }
+        },
+        {
+          "name": "parent-callback-churn",
+          "popupMounted": false,
+          "pickerPopupMounted": false,
+          "calendarMounted": false,
+          "popupOptions": 0,
+          "baseUiSelectMounted": false,
+          "activeEditableCells": 0,
+          "totalDomNodes": 1391,
+          "rectProbe": {
+            "count": 0,
+            "bySlot": {}
+          },
+          "profiler": {
+            "renders": {
+              "total": 0,
+              "byComponent": [],
+              "byInstance": [],
+              "changedProps": []
+            },
+            "reactCommits": {
+              "count": 0,
+              "totalActualDurationMs": 0,
+              "maxActualDurationMs": 0
+            },
+            "markCounts": {}
+          },
+          "wait": {
+            "ok": true,
+            "elapsedMs": 33.5
+          },
+          "elapsedMs": 36.80000001192093,
+          "metricsDelta": {
+            "Nodes": 0,
+            "LayoutCount": 0,
+            "RecalcStyleCount": 0,
+            "LayoutDurationMs": 0,
+            "RecalcStyleDurationMs": 0,
+            "ScriptDurationMs": 0.8940000000001191,
+            "TaskDurationMs": 1.3619999999996253
+          }
+        },
+        {
+          "name": "post-churn-text-commit",
+          "popupMounted": false,
+          "pickerPopupMounted": false,
+          "calendarMounted": false,
+          "popupOptions": 0,
+          "baseUiSelectMounted": false,
+          "activeEditableCells": 0,
+          "totalDomNodes": 1391,
+          "rectProbe": {
+            "count": 2,
+            "bySlot": {
+              "table-cell": 1,
+              "data-cell-value": 1
+            }
+          },
+          "profiler": {
+            "renders": {
+              "total": 8,
+              "byComponent": [
+                {
+                  "name": "EditableJsonTableCell",
+                  "count": 8
+                }
+              ],
+              "byInstance": [
+                {
+                  "name": "EditableJsonTableCell:transactions.0.description",
+                  "count": 8
+                }
+              ],
+              "changedProps": [
+                {
+                  "name": "EditableJsonTableCell.same-props",
+                  "count": 6
+                },
+                {
+                  "name": "EditableJsonTableCell.primitiveActiveFieldPath",
+                  "count": 2
+                },
+                {
+                  "name": "EditableJsonTableCell.isEditing",
+                  "count": 2
+                }
+              ]
+            },
+            "reactCommits": {
+              "count": 7,
+              "totalActualDurationMs": 1.7999999821186066,
+              "maxActualDurationMs": 0.5
+            },
+            "markCounts": {
+              "cell-commit-local-end": 1,
+              "cell-commit-local-start": 1,
+              "cell-commit-transition-end": 1,
+              "cell-commit-transition-start": 1,
+              "document-patch-end": 1,
+              "document-patch-start": 1,
+              "pointer-enter-cell": 2
+            }
+          },
+          "wait": {
+            "ok": true,
+            "elapsedMs": 32.29999999701977
+          },
+          "elapsedMs": 172.29999999701977,
+          "metricsDelta": {
+            "Nodes": 10,
+            "LayoutCount": 3,
+            "RecalcStyleCount": 21,
+            "LayoutDurationMs": 0.44799999999999685,
+            "RecalcStyleDurationMs": 88.42900000000009,
+            "ScriptDurationMs": 6.903999999999996,
+            "TaskDurationMs": 105.04900000000043
           }
         }
       ]
     },
     {
       "name": "large",
-      "route": "http://localhost:3200/json-table-profile?variant=large",
+      "route": "http://localhost:3100/json-table-profile?variant=large",
       "scenarios": [
         {
           "name": "hover-enum",
@@ -606,7 +1085,7 @@
           "popupOptions": 0,
           "baseUiSelectMounted": false,
           "activeEditableCells": 0,
-          "totalDomNodes": 5432,
+          "totalDomNodes": 5433,
           "rectProbe": {
             "count": 0,
             "bySlot": {}
@@ -629,17 +1108,17 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 32.70000000298023
+            "elapsedMs": 33.6000000089407
           },
-          "elapsedMs": 80.40000000596046,
+          "elapsedMs": 38.1000000089407,
           "metricsDelta": {
             "Nodes": 0,
             "LayoutCount": 0,
             "RecalcStyleCount": 3,
             "LayoutDurationMs": 0,
-            "RecalcStyleDurationMs": 0.6330000000000382,
-            "ScriptDurationMs": 0.4680000000000746,
-            "TaskDurationMs": 3.8230000000000928
+            "RecalcStyleDurationMs": 0.5850000000000364,
+            "ScriptDurationMs": 0.4740000000000464,
+            "TaskDurationMs": 3.0529999999998836
           }
         },
         {
@@ -650,7 +1129,7 @@
           "popupOptions": 4,
           "baseUiSelectMounted": false,
           "activeEditableCells": 1,
-          "totalDomNodes": 5448,
+          "totalDomNodes": 5449,
           "rectProbe": {
             "count": 1,
             "bySlot": {
@@ -689,8 +1168,8 @@
             },
             "reactCommits": {
               "count": 3,
-              "totalActualDurationMs": 2.8999999910593033,
-              "maxActualDurationMs": 1.4000000059604645
+              "totalActualDurationMs": 3,
+              "maxActualDurationMs": 1.2000000029802322
             },
             "markCounts": {
               "pointer-enter-cell": 1
@@ -700,29 +1179,32 @@
             "ok": true,
             "elapsedMs": 33.29999999701977
           },
-          "elapsedMs": 439.79999999701977,
+          "elapsedMs": 423.29999999701977,
           "metricsDelta": {
             "Nodes": 24,
             "LayoutCount": 2,
-            "RecalcStyleCount": 12,
-            "LayoutDurationMs": 0.5949999999999989,
-            "RecalcStyleDurationMs": 373.3560000000002,
-            "ScriptDurationMs": 8.20399999999995,
-            "TaskDurationMs": 387.02999999999975
+            "RecalcStyleCount": 11,
+            "LayoutDurationMs": 0.5800000000000018,
+            "RecalcStyleDurationMs": 369.8849999999999,
+            "ScriptDurationMs": 6.713999999999942,
+            "TaskDurationMs": 381.2640000000001
           }
         },
         {
-          "name": "open-and-commit-enum",
+          "name": "close-select-with-escape",
           "popupMounted": false,
           "pickerPopupMounted": false,
           "calendarMounted": false,
           "popupOptions": 0,
           "baseUiSelectMounted": false,
           "activeEditableCells": 0,
-          "totalDomNodes": 5432,
+          "totalDomNodes": 5433,
           "rectProbe": {
-            "count": 0,
-            "bySlot": {}
+            "count": 2,
+            "bySlot": {
+              "table-cell": 1,
+              "data-cell": 1
+            }
           },
           "profiler": {
             "renders": {
@@ -755,9 +1237,76 @@
               ]
             },
             "reactCommits": {
+              "count": 5,
+              "totalActualDurationMs": 1.7999999821186066,
+              "maxActualDurationMs": 0.7000000029802322
+            },
+            "markCounts": {
+              "pointer-enter-cell": 1
+            }
+          },
+          "wait": {
+            "ok": true,
+            "elapsedMs": 34.099999994039536
+          },
+          "elapsedMs": 650.1000000089407,
+          "metricsDelta": {
+            "Nodes": 28,
+            "LayoutCount": 3,
+            "RecalcStyleCount": 15,
+            "LayoutDurationMs": 0.47600000000000087,
+            "RecalcStyleDurationMs": 557.4809999999998,
+            "ScriptDurationMs": 6.201999999999998,
+            "TaskDurationMs": 570.9050000000002
+          }
+        },
+        {
+          "name": "open-and-commit-enum",
+          "popupMounted": false,
+          "pickerPopupMounted": false,
+          "calendarMounted": false,
+          "popupOptions": 0,
+          "baseUiSelectMounted": false,
+          "activeEditableCells": 0,
+          "totalDomNodes": 5433,
+          "rectProbe": {
+            "count": 0,
+            "bySlot": {}
+          },
+          "profiler": {
+            "renders": {
+              "total": 8,
+              "byComponent": [
+                {
+                  "name": "EditableJsonTableCell",
+                  "count": 8
+                }
+              ],
+              "byInstance": [
+                {
+                  "name": "EditableJsonTableCell:transactions.0.transaction_type",
+                  "count": 8
+                }
+              ],
+              "changedProps": [
+                {
+                  "name": "EditableJsonTableCell.same-props",
+                  "count": 6
+                },
+                {
+                  "name": "EditableJsonTableCell.primitiveActiveFieldPath",
+                  "count": 2
+                },
+                {
+                  "name": "EditableJsonTableCell.isEditing",
+                  "count": 2
+                }
+              ]
+            },
+            "reactCommits": {
               "count": 6,
-              "totalActualDurationMs": 2.5,
-              "maxActualDurationMs": 0.699999988079071
+              "totalActualDurationMs": 2.2000000327825546,
+              "maxActualDurationMs": 0.6000000089406967
             },
             "markCounts": {
               "cell-commit-local-end": 1,
@@ -771,28 +1320,28 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 33.1000000089407
+            "elapsedMs": 33.8999999910593
           },
-          "elapsedMs": 676.5999999940395,
+          "elapsedMs": 664.7000000029802,
           "metricsDelta": {
-            "Nodes": 28,
-            "LayoutCount": 3,
-            "RecalcStyleCount": 22,
-            "LayoutDurationMs": 0.5039999999999996,
-            "RecalcStyleDurationMs": 562.6179999999999,
-            "ScriptDurationMs": 9.360000000000014,
-            "TaskDurationMs": 584.9319999999998
+            "Nodes": 654,
+            "LayoutCount": 5,
+            "RecalcStyleCount": 20,
+            "LayoutDurationMs": 8.711999999999998,
+            "RecalcStyleDurationMs": 570.6450000000004,
+            "ScriptDurationMs": 21.219999999999914,
+            "TaskDurationMs": 624.2910000000002
           }
         },
         {
-          "name": "open-and-commit-text",
+          "name": "cancel-text-edit",
           "popupMounted": false,
           "pickerPopupMounted": false,
           "calendarMounted": false,
           "popupOptions": 0,
           "baseUiSelectMounted": false,
           "activeEditableCells": 0,
-          "totalDomNodes": 5432,
+          "totalDomNodes": 5433,
           "rectProbe": {
             "count": 2,
             "bySlot": {
@@ -831,9 +1380,154 @@
               ]
             },
             "reactCommits": {
-              "count": 6,
-              "totalActualDurationMs": 1.9000000059604645,
-              "maxActualDurationMs": 1
+              "count": 7,
+              "totalActualDurationMs": 2.19999997317791,
+              "maxActualDurationMs": 1.2000000029802322
+            },
+            "markCounts": {
+              "pointer-enter-cell": 2
+            }
+          },
+          "wait": {
+            "ok": true,
+            "elapsedMs": 33.29999999701977
+          },
+          "elapsedMs": 493.09999999403954,
+          "metricsDelta": {
+            "Nodes": 10,
+            "LayoutCount": 9,
+            "RecalcStyleCount": 15,
+            "LayoutDurationMs": 0.9270000000000032,
+            "RecalcStyleDurationMs": 385.18499999999995,
+            "ScriptDurationMs": 16.660000000000082,
+            "TaskDurationMs": 420.15700000000015
+          }
+        },
+        {
+          "name": "open-and-commit-text",
+          "popupMounted": false,
+          "pickerPopupMounted": false,
+          "calendarMounted": false,
+          "popupOptions": 0,
+          "baseUiSelectMounted": false,
+          "activeEditableCells": 0,
+          "totalDomNodes": 5433,
+          "rectProbe": {
+            "count": 2,
+            "bySlot": {
+              "table-cell": 1,
+              "data-cell-value": 1
+            }
+          },
+          "profiler": {
+            "renders": {
+              "total": 8,
+              "byComponent": [
+                {
+                  "name": "EditableJsonTableCell",
+                  "count": 8
+                }
+              ],
+              "byInstance": [
+                {
+                  "name": "EditableJsonTableCell:transactions.0.description",
+                  "count": 8
+                }
+              ],
+              "changedProps": [
+                {
+                  "name": "EditableJsonTableCell.same-props",
+                  "count": 6
+                },
+                {
+                  "name": "EditableJsonTableCell.primitiveActiveFieldPath",
+                  "count": 2
+                },
+                {
+                  "name": "EditableJsonTableCell.isEditing",
+                  "count": 2
+                }
+              ]
+            },
+            "reactCommits": {
+              "count": 7,
+              "totalActualDurationMs": 2.2000000029802322,
+              "maxActualDurationMs": 0.7000000029802322
+            },
+            "markCounts": {
+              "cell-commit-local-end": 1,
+              "cell-commit-local-start": 1,
+              "cell-commit-transition-end": 1,
+              "cell-commit-transition-start": 1,
+              "document-patch-end": 1,
+              "document-patch-start": 1,
+              "pointer-enter-cell": 1
+            }
+          },
+          "wait": {
+            "ok": true,
+            "elapsedMs": 33.20000000298023
+          },
+          "elapsedMs": 597.9000000059605,
+          "metricsDelta": {
+            "Nodes": 10,
+            "LayoutCount": 3,
+            "RecalcStyleCount": 9,
+            "LayoutDurationMs": 0.6589999999999989,
+            "RecalcStyleDurationMs": 380.15700000000015,
+            "ScriptDurationMs": 9.567000000000007,
+            "TaskDurationMs": 399.3600000000001
+          }
+        },
+        {
+          "name": "blur-commit-number",
+          "popupMounted": false,
+          "pickerPopupMounted": false,
+          "calendarMounted": false,
+          "popupOptions": 0,
+          "baseUiSelectMounted": false,
+          "activeEditableCells": 0,
+          "totalDomNodes": 5433,
+          "rectProbe": {
+            "count": 1,
+            "bySlot": {
+              "table-cell": 1
+            }
+          },
+          "profiler": {
+            "renders": {
+              "total": 10,
+              "byComponent": [
+                {
+                  "name": "EditableJsonTableCell",
+                  "count": 10
+                }
+              ],
+              "byInstance": [
+                {
+                  "name": "EditableJsonTableCell:transactions.0.amount.amount",
+                  "count": 10
+                }
+              ],
+              "changedProps": [
+                {
+                  "name": "EditableJsonTableCell.same-props",
+                  "count": 8
+                },
+                {
+                  "name": "EditableJsonTableCell.primitiveActiveFieldPath",
+                  "count": 2
+                },
+                {
+                  "name": "EditableJsonTableCell.isEditing",
+                  "count": 2
+                }
+              ]
+            },
+            "reactCommits": {
+              "count": 8,
+              "totalActualDurationMs": 8.400000020861626,
+              "maxActualDurationMs": 6.9000000059604645
             },
             "markCounts": {
               "cell-commit-local-end": 1,
@@ -847,17 +1541,93 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 33.599999994039536
+            "elapsedMs": 33.29999999701977
           },
-          "elapsedMs": 476,
+          "elapsedMs": 519.3999999910593,
           "metricsDelta": {
-            "Nodes": 10,
+            "Nodes": 13,
             "LayoutCount": 3,
-            "RecalcStyleCount": 11,
-            "LayoutDurationMs": 0.5220000000000002,
-            "RecalcStyleDurationMs": 370.22699999999986,
-            "ScriptDurationMs": 15.97199999999998,
-            "TaskDurationMs": 403.5749999999998
+            "RecalcStyleCount": 13,
+            "LayoutDurationMs": 0.5879999999999974,
+            "RecalcStyleDurationMs": 386.56799999999976,
+            "ScriptDurationMs": 16.220000000000027,
+            "TaskDurationMs": 415.71099999999933
+          }
+        },
+        {
+          "name": "rapid-text-commits",
+          "popupMounted": false,
+          "pickerPopupMounted": false,
+          "calendarMounted": false,
+          "popupOptions": 0,
+          "baseUiSelectMounted": false,
+          "activeEditableCells": 0,
+          "totalDomNodes": 5433,
+          "rectProbe": {
+            "count": 4,
+            "bySlot": {
+              "table-cell": 2,
+              "data-cell-value": 2
+            }
+          },
+          "profiler": {
+            "renders": {
+              "total": 16,
+              "byComponent": [
+                {
+                  "name": "EditableJsonTableCell",
+                  "count": 16
+                }
+              ],
+              "byInstance": [
+                {
+                  "name": "EditableJsonTableCell:transactions.0.description",
+                  "count": 16
+                }
+              ],
+              "changedProps": [
+                {
+                  "name": "EditableJsonTableCell.same-props",
+                  "count": 12
+                },
+                {
+                  "name": "EditableJsonTableCell.primitiveActiveFieldPath",
+                  "count": 4
+                },
+                {
+                  "name": "EditableJsonTableCell.isEditing",
+                  "count": 4
+                }
+              ]
+            },
+            "reactCommits": {
+              "count": 12,
+              "totalActualDurationMs": 3.7999999821186066,
+              "maxActualDurationMs": 0.5999999940395355
+            },
+            "markCounts": {
+              "cell-commit-local-end": 2,
+              "cell-commit-local-start": 2,
+              "cell-commit-transition-end": 2,
+              "cell-commit-transition-start": 2,
+              "document-patch-end": 2,
+              "document-patch-start": 2,
+              "pointer-enter-cell": 3
+            }
+          },
+          "wait": {
+            "ok": true,
+            "elapsedMs": 32.3999999910593
+          },
+          "elapsedMs": 967.4000000059605,
+          "metricsDelta": {
+            "Nodes": 20,
+            "LayoutCount": 6,
+            "RecalcStyleCount": 20,
+            "LayoutDurationMs": 1.1700000000000017,
+            "RecalcStyleDurationMs": 761.6939999999995,
+            "ScriptDurationMs": 17.273000000000025,
+            "TaskDurationMs": 799.7430000000004
           }
         },
         {
@@ -868,7 +1638,7 @@
           "popupOptions": 0,
           "baseUiSelectMounted": false,
           "activeEditableCells": 0,
-          "totalDomNodes": 5432,
+          "totalDomNodes": 5433,
           "rectProbe": {
             "count": 1,
             "bySlot": {
@@ -906,9 +1676,9 @@
               ]
             },
             "reactCommits": {
-              "count": 7,
-              "totalActualDurationMs": 7.699999988079071,
-              "maxActualDurationMs": 6.699999988079071
+              "count": 6,
+              "totalActualDurationMs": 2.000000014901161,
+              "maxActualDurationMs": 0.6000000089406967
             },
             "markCounts": {
               "cell-commit-local-end": 1,
@@ -922,17 +1692,87 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 32.29999999701977
+            "elapsedMs": 33.3999999910593
           },
-          "elapsedMs": 520.3999999910593,
+          "elapsedMs": 473.20000000298023,
           "metricsDelta": {
             "Nodes": 13,
             "LayoutCount": 3,
             "RecalcStyleCount": 11,
-            "LayoutDurationMs": 0.4939999999999998,
-            "RecalcStyleDurationMs": 370.5220000000004,
-            "ScriptDurationMs": 14.35200000000009,
-            "TaskDurationMs": 394.94900000000007
+            "LayoutDurationMs": 0.5309999999999988,
+            "RecalcStyleDurationMs": 377.4539999999997,
+            "ScriptDurationMs": 7.927000000000021,
+            "TaskDurationMs": 395.71199999999953
+          }
+        },
+        {
+          "name": "close-date-with-outside-click",
+          "popupMounted": false,
+          "pickerPopupMounted": false,
+          "calendarMounted": false,
+          "popupOptions": 0,
+          "baseUiSelectMounted": false,
+          "activeEditableCells": 0,
+          "totalDomNodes": 5433,
+          "rectProbe": {
+            "count": 2,
+            "bySlot": {
+              "table-cell": 1,
+              "data-cell": 1
+            }
+          },
+          "profiler": {
+            "renders": {
+              "total": 8,
+              "byComponent": [
+                {
+                  "name": "EditableJsonTableCell",
+                  "count": 8
+                }
+              ],
+              "byInstance": [
+                {
+                  "name": "EditableJsonTableCell:transactions.0.date",
+                  "count": 8
+                }
+              ],
+              "changedProps": [
+                {
+                  "name": "EditableJsonTableCell.same-props",
+                  "count": 6
+                },
+                {
+                  "name": "EditableJsonTableCell.primitiveActiveFieldPath",
+                  "count": 2
+                },
+                {
+                  "name": "EditableJsonTableCell.isEditing",
+                  "count": 2
+                }
+              ]
+            },
+            "reactCommits": {
+              "count": 6,
+              "totalActualDurationMs": 23.399999991059303,
+              "maxActualDurationMs": 15.200000002980232
+            },
+            "markCounts": {
+              "pointer-enter-cell": 2
+            }
+          },
+          "wait": {
+            "ok": true,
+            "elapsedMs": 32.69999998807907
+          },
+          "elapsedMs": 741.5999999940395,
+          "metricsDelta": {
+            "Nodes": 185,
+            "LayoutCount": 3,
+            "RecalcStyleCount": 17,
+            "LayoutDurationMs": 1.1940000000000026,
+            "RecalcStyleDurationMs": 577.5570000000007,
+            "ScriptDurationMs": 32.6339999999999,
+            "TaskDurationMs": 625.6390000000001
           }
         },
         {
@@ -943,7 +1783,7 @@
           "popupOptions": 0,
           "baseUiSelectMounted": false,
           "activeEditableCells": 0,
-          "totalDomNodes": 5432,
+          "totalDomNodes": 5433,
           "rectProbe": {
             "count": 0,
             "bySlot": {}
@@ -979,9 +1819,9 @@
               ]
             },
             "reactCommits": {
-              "count": 7,
-              "totalActualDurationMs": 28.200000047683716,
-              "maxActualDurationMs": 14.400000020861626
+              "count": 8,
+              "totalActualDurationMs": 24.799999997019768,
+              "maxActualDurationMs": 8.200000002980232
             },
             "markCounts": {
               "cell-commit-local-end": 1,
@@ -995,17 +1835,17 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 33.5
+            "elapsedMs": 32.69999998807907
           },
-          "elapsedMs": 874.2000000029802,
+          "elapsedMs": 1008.5,
           "metricsDelta": {
-            "Nodes": -11816,
+            "Nodes": -12191,
             "LayoutCount": 5,
             "RecalcStyleCount": 20,
-            "LayoutDurationMs": 1.1690000000000005,
-            "RecalcStyleDurationMs": 746.0570000000002,
-            "ScriptDurationMs": 40.26299999999992,
-            "TaskDurationMs": 818.6689999999999
+            "LayoutDurationMs": 0.8019999999999996,
+            "RecalcStyleDurationMs": 768.2069999999994,
+            "ScriptDurationMs": 35.84299999999996,
+            "TaskDurationMs": 856.4259999999995
           }
         },
         {
@@ -1016,37 +1856,37 @@
           "popupOptions": 0,
           "baseUiSelectMounted": false,
           "activeEditableCells": 0,
-          "totalDomNodes": 5433,
+          "totalDomNodes": 5434,
           "rectProbe": {
             "count": 0,
             "bySlot": {}
           },
           "profiler": {
             "renders": {
-              "total": 4,
+              "total": 6,
               "byComponent": [
                 {
                   "name": "EditableJsonTableCell",
-                  "count": 4
+                  "count": 6
                 }
               ],
               "byInstance": [
                 {
                   "name": "EditableJsonTableCell:transactions.0.is_reconciled",
-                  "count": 4
+                  "count": 6
                 }
               ],
               "changedProps": [
                 {
                   "name": "EditableJsonTableCell.same-props",
-                  "count": 4
+                  "count": 6
                 }
               ]
             },
             "reactCommits": {
-              "count": 2,
-              "totalActualDurationMs": 0.5,
-              "maxActualDurationMs": 0.5
+              "count": 3,
+              "totalActualDurationMs": 1.0999999940395355,
+              "maxActualDurationMs": 0.5999999940395355
             },
             "markCounts": {
               "cell-commit-local-end": 1,
@@ -1059,17 +1899,17 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 33
+            "elapsedMs": 33.29999999701977
           },
-          "elapsedMs": 223.59999999403954,
+          "elapsedMs": 240.70000000298023,
           "metricsDelta": {
             "Nodes": 3,
             "LayoutCount": 1,
             "RecalcStyleCount": 4,
-            "LayoutDurationMs": 0.11500000000000021,
-            "RecalcStyleDurationMs": 182.29700000000003,
-            "ScriptDurationMs": 2.68100000000004,
-            "TaskDurationMs": 188.688000000001
+            "LayoutDurationMs": 0.12599999999999767,
+            "RecalcStyleDurationMs": 191.46000000000004,
+            "ScriptDurationMs": 4.045000000000073,
+            "TaskDurationMs": 198.84400000000005
           }
         },
         {
@@ -1080,7 +1920,7 @@
           "popupOptions": 0,
           "baseUiSelectMounted": false,
           "activeEditableCells": 1,
-          "totalDomNodes": 5532,
+          "totalDomNodes": 5533,
           "rectProbe": {
             "count": 1,
             "bySlot": {
@@ -1119,8 +1959,8 @@
             },
             "reactCommits": {
               "count": 4,
-              "totalActualDurationMs": 14.499999985098839,
-              "maxActualDurationMs": 7.700000002980232
+              "totalActualDurationMs": 16.700000002980232,
+              "maxActualDurationMs": 8.900000005960464
             },
             "markCounts": {
               "pointer-enter-cell": 2
@@ -1128,17 +1968,17 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 33.79999999701977
+            "elapsedMs": 33.29999999701977
           },
-          "elapsedMs": 432.29999999701977,
+          "elapsedMs": 466,
           "metricsDelta": {
             "Nodes": 182,
             "LayoutCount": 2,
             "RecalcStyleCount": 6,
-            "LayoutDurationMs": 0.4689999999999994,
-            "RecalcStyleDurationMs": 370.66100000000006,
-            "ScriptDurationMs": 19.448000000000093,
-            "TaskDurationMs": 396.3319999999994
+            "LayoutDurationMs": 0.5660000000000025,
+            "RecalcStyleDurationMs": 382.59699999999975,
+            "ScriptDurationMs": 20.978999999999928,
+            "TaskDurationMs": 409.2350000000006
           }
         },
         {
@@ -1149,7 +1989,7 @@
           "popupOptions": 0,
           "baseUiSelectMounted": false,
           "activeEditableCells": 1,
-          "totalDomNodes": 5532,
+          "totalDomNodes": 5533,
           "rectProbe": {
             "count": 0,
             "bySlot": {}
@@ -1163,8 +2003,8 @@
             },
             "reactCommits": {
               "count": 1,
-              "totalActualDurationMs": 7.799999997019768,
-              "maxActualDurationMs": 7.799999997019768
+              "totalActualDurationMs": 7.9000000059604645,
+              "maxActualDurationMs": 7.9000000059604645
             },
             "markCounts": {
               "pointer-enter-cell": 1
@@ -1172,17 +2012,135 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 33
+            "elapsedMs": 33.400000005960464
           },
-          "elapsedMs": 240.40000000596046,
+          "elapsedMs": 257.80000001192093,
           "metricsDelta": {
             "Nodes": 144,
             "LayoutCount": 2,
             "RecalcStyleCount": 4,
-            "LayoutDurationMs": 0.33699999999999974,
-            "RecalcStyleDurationMs": 188.82400000000007,
-            "ScriptDurationMs": 10.048999999999978,
-            "TaskDurationMs": 204.53299999999945
+            "LayoutDurationMs": 0.3639999999999972,
+            "RecalcStyleDurationMs": 193.51500000000124,
+            "ScriptDurationMs": 10.236000000000104,
+            "TaskDurationMs": 208.59500000000116
+          }
+        },
+        {
+          "name": "parent-callback-churn",
+          "popupMounted": false,
+          "pickerPopupMounted": false,
+          "calendarMounted": false,
+          "popupOptions": 0,
+          "baseUiSelectMounted": false,
+          "activeEditableCells": 0,
+          "totalDomNodes": 5434,
+          "rectProbe": {
+            "count": 0,
+            "bySlot": {}
+          },
+          "profiler": {
+            "renders": {
+              "total": 0,
+              "byComponent": [],
+              "byInstance": [],
+              "changedProps": []
+            },
+            "reactCommits": {
+              "count": 0,
+              "totalActualDurationMs": 0,
+              "maxActualDurationMs": 0
+            },
+            "markCounts": {}
+          },
+          "wait": {
+            "ok": true,
+            "elapsedMs": 33.29999999701977
+          },
+          "elapsedMs": 69.5,
+          "metricsDelta": {
+            "Nodes": 0,
+            "LayoutCount": 0,
+            "RecalcStyleCount": 0,
+            "LayoutDurationMs": 0,
+            "RecalcStyleDurationMs": 0,
+            "ScriptDurationMs": 0.8299999999999272,
+            "TaskDurationMs": 1.4809999999997672
+          }
+        },
+        {
+          "name": "post-churn-text-commit",
+          "popupMounted": false,
+          "pickerPopupMounted": false,
+          "calendarMounted": false,
+          "popupOptions": 0,
+          "baseUiSelectMounted": false,
+          "activeEditableCells": 0,
+          "totalDomNodes": 5434,
+          "rectProbe": {
+            "count": 2,
+            "bySlot": {
+              "table-cell": 1,
+              "data-cell-value": 1
+            }
+          },
+          "profiler": {
+            "renders": {
+              "total": 8,
+              "byComponent": [
+                {
+                  "name": "EditableJsonTableCell",
+                  "count": 8
+                }
+              ],
+              "byInstance": [
+                {
+                  "name": "EditableJsonTableCell:transactions.0.description",
+                  "count": 8
+                }
+              ],
+              "changedProps": [
+                {
+                  "name": "EditableJsonTableCell.same-props",
+                  "count": 6
+                },
+                {
+                  "name": "EditableJsonTableCell.primitiveActiveFieldPath",
+                  "count": 2
+                },
+                {
+                  "name": "EditableJsonTableCell.isEditing",
+                  "count": 2
+                }
+              ]
+            },
+            "reactCommits": {
+              "count": 7,
+              "totalActualDurationMs": 1.9000000059604645,
+              "maxActualDurationMs": 0.5999999940395355
+            },
+            "markCounts": {
+              "cell-commit-local-end": 1,
+              "cell-commit-local-start": 1,
+              "cell-commit-transition-end": 1,
+              "cell-commit-transition-start": 1,
+              "document-patch-end": 1,
+              "document-patch-start": 1,
+              "pointer-enter-cell": 2
+            }
+          },
+          "wait": {
+            "ok": true,
+            "elapsedMs": 33.3999999910593
+          },
+          "elapsedMs": 475.90000000596046,
+          "metricsDelta": {
+            "Nodes": 10,
+            "LayoutCount": 3,
+            "RecalcStyleCount": 11,
+            "LayoutDurationMs": 0.5850000000000044,
+            "RecalcStyleDurationMs": 380.34400000000005,
+            "ScriptDurationMs": 8.673999999999978,
+            "TaskDurationMs": 399.0799999999999
           }
         }
       ]
@@ -1197,7 +2155,7 @@
       "popupOptions": 0,
       "baseUiSelectMounted": false,
       "activeEditableCells": 0,
-      "totalDomNodes": 1389,
+      "totalDomNodes": 1390,
       "rectProbe": {
         "count": 0,
         "bySlot": {}
@@ -1220,17 +2178,17 @@
       },
       "wait": {
         "ok": true,
-        "elapsedMs": 32.29999999701977
+        "elapsedMs": 33
       },
-      "elapsedMs": 40.19999998807907,
+      "elapsedMs": 37,
       "metricsDelta": {
         "Nodes": 0,
         "LayoutCount": 0,
         "RecalcStyleCount": 3,
         "LayoutDurationMs": 0,
-        "RecalcStyleDurationMs": 0.5700000000000216,
-        "ScriptDurationMs": 0.5260000000000673,
-        "TaskDurationMs": 2.6099999999999
+        "RecalcStyleDurationMs": 0.578000000000003,
+        "ScriptDurationMs": 0.5340000000000487,
+        "TaskDurationMs": 2.560000000000059
       }
     },
     {
@@ -1241,7 +2199,7 @@
       "popupOptions": 2,
       "baseUiSelectMounted": false,
       "activeEditableCells": 1,
-      "totalDomNodes": 1399,
+      "totalDomNodes": 1400,
       "rectProbe": {
         "count": 1,
         "bySlot": {
@@ -1281,7 +2239,7 @@
         "reactCommits": {
           "count": 3,
           "totalActualDurationMs": 2.7000000029802322,
-          "maxActualDurationMs": 1.2000000029802322
+          "maxActualDurationMs": 1.300000011920929
         },
         "markCounts": {
           "pointer-enter-cell": 1
@@ -1289,31 +2247,34 @@
       },
       "wait": {
         "ok": true,
-        "elapsedMs": 33.29999999701977
+        "elapsedMs": 32.70000000298023
       },
-      "elapsedMs": 132.29999999701977,
+      "elapsedMs": 137,
       "metricsDelta": {
         "Nodes": 16,
         "LayoutCount": 2,
         "RecalcStyleCount": 12,
-        "LayoutDurationMs": 0.4499999999999993,
-        "RecalcStyleDurationMs": 87.16300000000001,
-        "ScriptDurationMs": 6.178999999999974,
-        "TaskDurationMs": 96.904
+        "LayoutDurationMs": 0.42300000000000004,
+        "RecalcStyleDurationMs": 88.22300000000004,
+        "ScriptDurationMs": 6.675999999999931,
+        "TaskDurationMs": 98.33399999999995
       }
     },
     {
-      "name": "open-and-commit-enum",
+      "name": "close-select-with-escape",
       "popupMounted": false,
       "pickerPopupMounted": false,
       "calendarMounted": false,
       "popupOptions": 0,
       "baseUiSelectMounted": false,
       "activeEditableCells": 0,
-      "totalDomNodes": 1389,
+      "totalDomNodes": 1390,
       "rectProbe": {
-        "count": 0,
-        "bySlot": {}
+        "count": 2,
+        "bySlot": {
+          "table-cell": 1,
+          "data-cell": 1
+        }
       },
       "profiler": {
         "renders": {
@@ -1347,8 +2308,75 @@
         },
         "reactCommits": {
           "count": 5,
-          "totalActualDurationMs": 1.9000000059604645,
-          "maxActualDurationMs": 0.699999988079071
+          "totalActualDurationMs": 2.000000014901161,
+          "maxActualDurationMs": 0.6000000089406967
+        },
+        "markCounts": {
+          "pointer-enter-cell": 1
+        }
+      },
+      "wait": {
+        "ok": true,
+        "elapsedMs": 32.79999999701977
+      },
+      "elapsedMs": 276.70000000298023,
+      "metricsDelta": {
+        "Nodes": 20,
+        "LayoutCount": 3,
+        "RecalcStyleCount": 15,
+        "LayoutDurationMs": 0.37400000000000233,
+        "RecalcStyleDurationMs": 135.07000000000005,
+        "ScriptDurationMs": 5.830000000000041,
+        "TaskDurationMs": 146.04200000000003
+      }
+    },
+    {
+      "name": "open-and-commit-enum",
+      "popupMounted": false,
+      "pickerPopupMounted": false,
+      "calendarMounted": false,
+      "popupOptions": 0,
+      "baseUiSelectMounted": false,
+      "activeEditableCells": 0,
+      "totalDomNodes": 1390,
+      "rectProbe": {
+        "count": 0,
+        "bySlot": {}
+      },
+      "profiler": {
+        "renders": {
+          "total": 8,
+          "byComponent": [
+            {
+              "name": "EditableJsonTableCell",
+              "count": 8
+            }
+          ],
+          "byInstance": [
+            {
+              "name": "EditableJsonTableCell:transactions.0.transaction_type",
+              "count": 8
+            }
+          ],
+          "changedProps": [
+            {
+              "name": "EditableJsonTableCell.same-props",
+              "count": 6
+            },
+            {
+              "name": "EditableJsonTableCell.primitiveActiveFieldPath",
+              "count": 2
+            },
+            {
+              "name": "EditableJsonTableCell.isEditing",
+              "count": 2
+            }
+          ]
+        },
+        "reactCommits": {
+          "count": 6,
+          "totalActualDurationMs": 2.5,
+          "maxActualDurationMs": 0.6000000089406967
         },
         "markCounts": {
           "cell-commit-local-end": 1,
@@ -1362,28 +2390,28 @@
       },
       "wait": {
         "ok": true,
-        "elapsedMs": 32.5
+        "elapsedMs": 32.8999999910593
       },
-      "elapsedMs": 316.8999999910593,
+      "elapsedMs": 227.5,
       "metricsDelta": {
-        "Nodes": 20,
-        "LayoutCount": 3,
+        "Nodes": 349,
+        "LayoutCount": 6,
         "RecalcStyleCount": 22,
-        "LayoutDurationMs": 0.375,
-        "RecalcStyleDurationMs": 132.43,
-        "ScriptDurationMs": 7.76400000000001,
-        "TaskDurationMs": 148.22199999999998
+        "LayoutDurationMs": 3.036999999999999,
+        "RecalcStyleDurationMs": 134.10999999999996,
+        "ScriptDurationMs": 17.12299999999999,
+        "TaskDurationMs": 163.86900000000003
       }
     },
     {
-      "name": "open-and-commit-text",
+      "name": "cancel-text-edit",
       "popupMounted": false,
       "pickerPopupMounted": false,
       "calendarMounted": false,
       "popupOptions": 0,
       "baseUiSelectMounted": false,
       "activeEditableCells": 0,
-      "totalDomNodes": 1389,
+      "totalDomNodes": 1390,
       "rectProbe": {
         "count": 2,
         "bySlot": {
@@ -1423,8 +2451,153 @@
         },
         "reactCommits": {
           "count": 7,
-          "totalActualDurationMs": 2.0999999940395355,
-          "maxActualDurationMs": 1
+          "totalActualDurationMs": 2,
+          "maxActualDurationMs": 1.0999999940395355
+        },
+        "markCounts": {
+          "pointer-enter-cell": 2
+        }
+      },
+      "wait": {
+        "ok": true,
+        "elapsedMs": 32.79999999701977
+      },
+      "elapsedMs": 184.29999999701977,
+      "metricsDelta": {
+        "Nodes": 10,
+        "LayoutCount": 14,
+        "RecalcStyleCount": 21,
+        "LayoutDurationMs": 1.088000000000001,
+        "RecalcStyleDurationMs": 91.73300000000006,
+        "ScriptDurationMs": 14.774999999999977,
+        "TaskDurationMs": 116.37200000000007
+      }
+    },
+    {
+      "name": "open-and-commit-text",
+      "popupMounted": false,
+      "pickerPopupMounted": false,
+      "calendarMounted": false,
+      "popupOptions": 0,
+      "baseUiSelectMounted": false,
+      "activeEditableCells": 0,
+      "totalDomNodes": 1390,
+      "rectProbe": {
+        "count": 2,
+        "bySlot": {
+          "table-cell": 1,
+          "data-cell-value": 1
+        }
+      },
+      "profiler": {
+        "renders": {
+          "total": 8,
+          "byComponent": [
+            {
+              "name": "EditableJsonTableCell",
+              "count": 8
+            }
+          ],
+          "byInstance": [
+            {
+              "name": "EditableJsonTableCell:transactions.0.description",
+              "count": 8
+            }
+          ],
+          "changedProps": [
+            {
+              "name": "EditableJsonTableCell.same-props",
+              "count": 6
+            },
+            {
+              "name": "EditableJsonTableCell.primitiveActiveFieldPath",
+              "count": 2
+            },
+            {
+              "name": "EditableJsonTableCell.isEditing",
+              "count": 2
+            }
+          ]
+        },
+        "reactCommits": {
+          "count": 7,
+          "totalActualDurationMs": 1.899999976158142,
+          "maxActualDurationMs": 0.5
+        },
+        "markCounts": {
+          "cell-commit-local-end": 1,
+          "cell-commit-local-start": 1,
+          "cell-commit-transition-end": 1,
+          "cell-commit-transition-start": 1,
+          "document-patch-end": 1,
+          "document-patch-start": 1,
+          "pointer-enter-cell": 1
+        }
+      },
+      "wait": {
+        "ok": true,
+        "elapsedMs": 34.099999994039536
+      },
+      "elapsedMs": 178,
+      "metricsDelta": {
+        "Nodes": 160,
+        "LayoutCount": 7,
+        "RecalcStyleCount": 13,
+        "LayoutDurationMs": 0.6129999999999978,
+        "RecalcStyleDurationMs": 90.1339999999999,
+        "ScriptDurationMs": 9.919999999999959,
+        "TaskDurationMs": 106.33699999999976
+      }
+    },
+    {
+      "name": "blur-commit-number",
+      "popupMounted": false,
+      "pickerPopupMounted": false,
+      "calendarMounted": false,
+      "popupOptions": 0,
+      "baseUiSelectMounted": false,
+      "activeEditableCells": 0,
+      "totalDomNodes": 1390,
+      "rectProbe": {
+        "count": 1,
+        "bySlot": {
+          "table-cell": 1
+        }
+      },
+      "profiler": {
+        "renders": {
+          "total": 10,
+          "byComponent": [
+            {
+              "name": "EditableJsonTableCell",
+              "count": 10
+            }
+          ],
+          "byInstance": [
+            {
+              "name": "EditableJsonTableCell:transactions.0.amount.amount",
+              "count": 10
+            }
+          ],
+          "changedProps": [
+            {
+              "name": "EditableJsonTableCell.same-props",
+              "count": 8
+            },
+            {
+              "name": "EditableJsonTableCell.primitiveActiveFieldPath",
+              "count": 2
+            },
+            {
+              "name": "EditableJsonTableCell.isEditing",
+              "count": 2
+            }
+          ]
+        },
+        "reactCommits": {
+          "count": 8,
+          "totalActualDurationMs": 8.100000008940697,
+          "maxActualDurationMs": 6.700000002980232
         },
         "markCounts": {
           "cell-commit-local-end": 1,
@@ -1438,17 +2611,93 @@
       },
       "wait": {
         "ok": true,
-        "elapsedMs": 33.3999999910593
+        "elapsedMs": 32.900000005960464
       },
-      "elapsedMs": 195.20000000298023,
+      "elapsedMs": 184,
       "metricsDelta": {
-        "Nodes": 10,
+        "Nodes": 13,
         "LayoutCount": 3,
         "RecalcStyleCount": 17,
-        "LayoutDurationMs": 0.4690000000000012,
-        "RecalcStyleDurationMs": 89.12,
-        "ScriptDurationMs": 15.824000000000012,
-        "TaskDurationMs": 113.08399999999983
+        "LayoutDurationMs": 0.4410000000000007,
+        "RecalcStyleDurationMs": 90.86800000000005,
+        "ScriptDurationMs": 14.591000000000008,
+        "TaskDurationMs": 114.00499999999988
+      }
+    },
+    {
+      "name": "rapid-text-commits",
+      "popupMounted": false,
+      "pickerPopupMounted": false,
+      "calendarMounted": false,
+      "popupOptions": 0,
+      "baseUiSelectMounted": false,
+      "activeEditableCells": 0,
+      "totalDomNodes": 1390,
+      "rectProbe": {
+        "count": 4,
+        "bySlot": {
+          "table-cell": 2,
+          "data-cell-value": 2
+        }
+      },
+      "profiler": {
+        "renders": {
+          "total": 16,
+          "byComponent": [
+            {
+              "name": "EditableJsonTableCell",
+              "count": 16
+            }
+          ],
+          "byInstance": [
+            {
+              "name": "EditableJsonTableCell:transactions.0.description",
+              "count": 16
+            }
+          ],
+          "changedProps": [
+            {
+              "name": "EditableJsonTableCell.same-props",
+              "count": 12
+            },
+            {
+              "name": "EditableJsonTableCell.primitiveActiveFieldPath",
+              "count": 4
+            },
+            {
+              "name": "EditableJsonTableCell.isEditing",
+              "count": 4
+            }
+          ]
+        },
+        "reactCommits": {
+          "count": 14,
+          "totalActualDurationMs": 3.5,
+          "maxActualDurationMs": 0.5999999940395355
+        },
+        "markCounts": {
+          "cell-commit-local-end": 2,
+          "cell-commit-local-start": 2,
+          "cell-commit-transition-end": 2,
+          "cell-commit-transition-start": 2,
+          "document-patch-end": 2,
+          "document-patch-start": 2,
+          "pointer-enter-cell": 3
+        }
+      },
+      "wait": {
+        "ok": true,
+        "elapsedMs": 34
+      },
+      "elapsedMs": 361.70000000298023,
+      "metricsDelta": {
+        "Nodes": 20,
+        "LayoutCount": 6,
+        "RecalcStyleCount": 26,
+        "LayoutDurationMs": 0.875,
+        "RecalcStyleDurationMs": 178.7840000000001,
+        "ScriptDurationMs": 15.087000000000046,
+        "TaskDurationMs": 205.64400000000023
       }
     },
     {
@@ -1459,7 +2708,7 @@
       "popupOptions": 0,
       "baseUiSelectMounted": false,
       "activeEditableCells": 0,
-      "totalDomNodes": 1389,
+      "totalDomNodes": 1390,
       "rectProbe": {
         "count": 1,
         "bySlot": {
@@ -1498,8 +2747,8 @@
         },
         "reactCommits": {
           "count": 7,
-          "totalActualDurationMs": 7.700000017881393,
-          "maxActualDurationMs": 6.700000002980232
+          "totalActualDurationMs": 1.899999976158142,
+          "maxActualDurationMs": 0.5
         },
         "markCounts": {
           "cell-commit-local-end": 1,
@@ -1513,17 +2762,87 @@
       },
       "wait": {
         "ok": true,
-        "elapsedMs": 33.29999999701977
+        "elapsedMs": 33.70000000298023
       },
-      "elapsedMs": 219.40000000596046,
+      "elapsedMs": 189.30000001192093,
       "metricsDelta": {
         "Nodes": 13,
         "LayoutCount": 3,
         "RecalcStyleCount": 11,
-        "LayoutDurationMs": 0.4549999999999983,
-        "RecalcStyleDurationMs": 88.70299999999997,
-        "ScriptDurationMs": 13.884999999999991,
-        "TaskDurationMs": 109.21899999999982
+        "LayoutDurationMs": 0.44599999999999795,
+        "RecalcStyleDurationMs": 88.29599999999982,
+        "ScriptDurationMs": 7.338999999999999,
+        "TaskDurationMs": 101.27199999999993
+      }
+    },
+    {
+      "name": "close-date-with-outside-click",
+      "popupMounted": false,
+      "pickerPopupMounted": false,
+      "calendarMounted": false,
+      "popupOptions": 0,
+      "baseUiSelectMounted": false,
+      "activeEditableCells": 0,
+      "totalDomNodes": 1390,
+      "rectProbe": {
+        "count": 2,
+        "bySlot": {
+          "table-cell": 1,
+          "data-cell": 1
+        }
+      },
+      "profiler": {
+        "renders": {
+          "total": 8,
+          "byComponent": [
+            {
+              "name": "EditableJsonTableCell",
+              "count": 8
+            }
+          ],
+          "byInstance": [
+            {
+              "name": "EditableJsonTableCell:transactions.0.date",
+              "count": 8
+            }
+          ],
+          "changedProps": [
+            {
+              "name": "EditableJsonTableCell.same-props",
+              "count": 6
+            },
+            {
+              "name": "EditableJsonTableCell.primitiveActiveFieldPath",
+              "count": 2
+            },
+            {
+              "name": "EditableJsonTableCell.isEditing",
+              "count": 2
+            }
+          ]
+        },
+        "reactCommits": {
+          "count": 6,
+          "totalActualDurationMs": 22.900000005960464,
+          "maxActualDurationMs": 14.599999994039536
+        },
+        "markCounts": {
+          "pointer-enter-cell": 2
+        }
+      },
+      "wait": {
+        "ok": true,
+        "elapsedMs": 33.3999999910593
+      },
+      "elapsedMs": 248.6000000089407,
+      "metricsDelta": {
+        "Nodes": 185,
+        "LayoutCount": 3,
+        "RecalcStyleCount": 18,
+        "LayoutDurationMs": 0.9040000000000035,
+        "RecalcStyleDurationMs": 135.15600000000018,
+        "ScriptDurationMs": 31.00799999999998,
+        "TaskDurationMs": 176.48900000000026
       }
     },
     {
@@ -1534,7 +2853,7 @@
       "popupOptions": 0,
       "baseUiSelectMounted": false,
       "activeEditableCells": 0,
-      "totalDomNodes": 1389,
+      "totalDomNodes": 1390,
       "rectProbe": {
         "count": 0,
         "bySlot": {}
@@ -1570,9 +2889,9 @@
           ]
         },
         "reactCommits": {
-          "count": 7,
-          "totalActualDurationMs": 34.79999998211861,
-          "maxActualDurationMs": 19.5
+          "count": 8,
+          "totalActualDurationMs": 23.099999994039536,
+          "maxActualDurationMs": 7.499999985098839
         },
         "markCounts": {
           "cell-commit-local-end": 1,
@@ -1586,17 +2905,17 @@
       },
       "wait": {
         "ok": true,
-        "elapsedMs": 32.79999999701977
+        "elapsedMs": 33.1000000089407
       },
-      "elapsedMs": 482.40000000596046,
+      "elapsedMs": 291.20000000298023,
       "metricsDelta": {
         "Nodes": 185,
         "LayoutCount": 5,
-        "RecalcStyleCount": 22,
-        "LayoutDurationMs": 1.2510000000000012,
-        "RecalcStyleDurationMs": 183.01800000000003,
-        "ScriptDurationMs": 46.809000000000026,
-        "TaskDurationMs": 249.86400000000003
+        "RecalcStyleCount": 21,
+        "LayoutDurationMs": 0.7639999999999993,
+        "RecalcStyleDurationMs": 180.0089999999998,
+        "ScriptDurationMs": 32.69799999999998,
+        "TaskDurationMs": 221.46400000000017
       }
     },
     {
@@ -1607,37 +2926,37 @@
       "popupOptions": 0,
       "baseUiSelectMounted": false,
       "activeEditableCells": 0,
-      "totalDomNodes": 1390,
+      "totalDomNodes": 1391,
       "rectProbe": {
         "count": 0,
         "bySlot": {}
       },
       "profiler": {
         "renders": {
-          "total": 4,
+          "total": 6,
           "byComponent": [
             {
               "name": "EditableJsonTableCell",
-              "count": 4
+              "count": 6
             }
           ],
           "byInstance": [
             {
               "name": "EditableJsonTableCell:transactions.0.is_reconciled",
-              "count": 4
+              "count": 6
             }
           ],
           "changedProps": [
             {
               "name": "EditableJsonTableCell.same-props",
-              "count": 4
+              "count": 6
             }
           ]
         },
         "reactCommits": {
-          "count": 2,
-          "totalActualDurationMs": 0.5,
-          "maxActualDurationMs": 0.5
+          "count": 3,
+          "totalActualDurationMs": 1.4000000059604645,
+          "maxActualDurationMs": 0.7000000029802322
         },
         "markCounts": {
           "cell-commit-local-end": 1,
@@ -1650,17 +2969,17 @@
       },
       "wait": {
         "ok": true,
-        "elapsedMs": 33.599999994039536
+        "elapsedMs": 33
       },
-      "elapsedMs": 101.3999999910593,
+      "elapsedMs": 139.5,
       "metricsDelta": {
         "Nodes": 3,
         "LayoutCount": 1,
-        "RecalcStyleCount": 11,
-        "LayoutDurationMs": 0.11399999999999899,
-        "RecalcStyleDurationMs": 45.13499999999999,
-        "ScriptDurationMs": 2.9489999999999554,
-        "TaskDurationMs": 54.45600000000013
+        "RecalcStyleCount": 12,
+        "LayoutDurationMs": 0.10500000000000043,
+        "RecalcStyleDurationMs": 44.01300000000015,
+        "ScriptDurationMs": 3.966000000000008,
+        "TaskDurationMs": 52.78099999999995
       }
     },
     {
@@ -1671,7 +2990,7 @@
       "popupOptions": 0,
       "baseUiSelectMounted": false,
       "activeEditableCells": 1,
-      "totalDomNodes": 1489,
+      "totalDomNodes": 1490,
       "rectProbe": {
         "count": 1,
         "bySlot": {
@@ -1710,8 +3029,8 @@
         },
         "reactCommits": {
           "count": 4,
-          "totalActualDurationMs": 15.500000014901161,
-          "maxActualDurationMs": 8.200000002980232
+          "totalActualDurationMs": 17.49999998509884,
+          "maxActualDurationMs": 9.199999988079071
         },
         "markCounts": {
           "pointer-enter-cell": 2
@@ -1719,17 +3038,17 @@
       },
       "wait": {
         "ok": true,
-        "elapsedMs": 32.900000005960464
+        "elapsedMs": 32.6000000089407
       },
-      "elapsedMs": 248.3999999910593,
+      "elapsedMs": 180.59999999403954,
       "metricsDelta": {
         "Nodes": 182,
         "LayoutCount": 2,
         "RecalcStyleCount": 13,
-        "LayoutDurationMs": 0.5240000000000009,
-        "RecalcStyleDurationMs": 91.96800000000007,
-        "ScriptDurationMs": 20.06400000000002,
-        "TaskDurationMs": 119.0619999999999
+        "LayoutDurationMs": 0.4889999999999972,
+        "RecalcStyleDurationMs": 91.03700000000003,
+        "ScriptDurationMs": 22.025000000000034,
+        "TaskDurationMs": 118.58800000000019
       }
     },
     {
@@ -1740,7 +3059,7 @@
       "popupOptions": 0,
       "baseUiSelectMounted": false,
       "activeEditableCells": 1,
-      "totalDomNodes": 1489,
+      "totalDomNodes": 1490,
       "rectProbe": {
         "count": 0,
         "bySlot": {}
@@ -1754,8 +3073,8 @@
         },
         "reactCommits": {
           "count": 1,
-          "totalActualDurationMs": 8.900000005960464,
-          "maxActualDurationMs": 8.900000005960464
+          "totalActualDurationMs": 8.400000005960464,
+          "maxActualDurationMs": 8.400000005960464
         },
         "markCounts": {
           "pointer-enter-cell": 1
@@ -1763,17 +3082,135 @@
       },
       "wait": {
         "ok": true,
-        "elapsedMs": 32.900000005960464
+        "elapsedMs": 33.3999999910593
       },
-      "elapsedMs": 103.20000000298023,
+      "elapsedMs": 97,
       "metricsDelta": {
         "Nodes": 144,
         "LayoutCount": 2,
         "RecalcStyleCount": 4,
-        "LayoutDurationMs": 0.32599999999999874,
-        "RecalcStyleDurationMs": 46.56799999999987,
-        "ScriptDurationMs": 12.153999999999996,
-        "TaskDurationMs": 62.57100000000014
+        "LayoutDurationMs": 0.3290000000000006,
+        "RecalcStyleDurationMs": 46.35799999999995,
+        "ScriptDurationMs": 11,
+        "TaskDurationMs": 60.27300000000014
+      }
+    },
+    {
+      "name": "parent-callback-churn",
+      "popupMounted": false,
+      "pickerPopupMounted": false,
+      "calendarMounted": false,
+      "popupOptions": 0,
+      "baseUiSelectMounted": false,
+      "activeEditableCells": 0,
+      "totalDomNodes": 1391,
+      "rectProbe": {
+        "count": 0,
+        "bySlot": {}
+      },
+      "profiler": {
+        "renders": {
+          "total": 0,
+          "byComponent": [],
+          "byInstance": [],
+          "changedProps": []
+        },
+        "reactCommits": {
+          "count": 0,
+          "totalActualDurationMs": 0,
+          "maxActualDurationMs": 0
+        },
+        "markCounts": {}
+      },
+      "wait": {
+        "ok": true,
+        "elapsedMs": 33.5
+      },
+      "elapsedMs": 36.80000001192093,
+      "metricsDelta": {
+        "Nodes": 0,
+        "LayoutCount": 0,
+        "RecalcStyleCount": 0,
+        "LayoutDurationMs": 0,
+        "RecalcStyleDurationMs": 0,
+        "ScriptDurationMs": 0.8940000000001191,
+        "TaskDurationMs": 1.3619999999996253
+      }
+    },
+    {
+      "name": "post-churn-text-commit",
+      "popupMounted": false,
+      "pickerPopupMounted": false,
+      "calendarMounted": false,
+      "popupOptions": 0,
+      "baseUiSelectMounted": false,
+      "activeEditableCells": 0,
+      "totalDomNodes": 1391,
+      "rectProbe": {
+        "count": 2,
+        "bySlot": {
+          "table-cell": 1,
+          "data-cell-value": 1
+        }
+      },
+      "profiler": {
+        "renders": {
+          "total": 8,
+          "byComponent": [
+            {
+              "name": "EditableJsonTableCell",
+              "count": 8
+            }
+          ],
+          "byInstance": [
+            {
+              "name": "EditableJsonTableCell:transactions.0.description",
+              "count": 8
+            }
+          ],
+          "changedProps": [
+            {
+              "name": "EditableJsonTableCell.same-props",
+              "count": 6
+            },
+            {
+              "name": "EditableJsonTableCell.primitiveActiveFieldPath",
+              "count": 2
+            },
+            {
+              "name": "EditableJsonTableCell.isEditing",
+              "count": 2
+            }
+          ]
+        },
+        "reactCommits": {
+          "count": 7,
+          "totalActualDurationMs": 1.7999999821186066,
+          "maxActualDurationMs": 0.5
+        },
+        "markCounts": {
+          "cell-commit-local-end": 1,
+          "cell-commit-local-start": 1,
+          "cell-commit-transition-end": 1,
+          "cell-commit-transition-start": 1,
+          "document-patch-end": 1,
+          "document-patch-start": 1,
+          "pointer-enter-cell": 2
+        }
+      },
+      "wait": {
+        "ok": true,
+        "elapsedMs": 32.29999999701977
+      },
+      "elapsedMs": 172.29999999701977,
+      "metricsDelta": {
+        "Nodes": 10,
+        "LayoutCount": 3,
+        "RecalcStyleCount": 21,
+        "LayoutDurationMs": 0.44799999999999685,
+        "RecalcStyleDurationMs": 88.42900000000009,
+        "ScriptDurationMs": 6.903999999999996,
+        "TaskDurationMs": 105.04900000000043
       }
     }
   ]

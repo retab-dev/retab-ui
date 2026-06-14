@@ -3,9 +3,11 @@
 import * as React from "react"
 import {
   FileTree as PierreFileTreeModel,
+  prepareFileTreeInput,
   type FileTreeDirectoryHandle,
   type FileTreeItemHandle,
   type FileTreeRowDecoration,
+  type FileTreeSortComparator,
 } from "@pierre/trees"
 import { FileTree as PierreFileTree } from "@pierre/trees/react"
 
@@ -72,10 +74,19 @@ export function FileSystemListView({
       ].join("::"),
     [controller.folderErrors, controller.loadingFolders]
   )
-  const pierreModelInput = React.useMemo(
-    () => ({ hasQuery, modelDecorationRevision, paths }),
-    [hasQuery, modelDecorationRevision, paths]
-  )
+  const pierreModelInput = React.useMemo(() => {
+    const sortOrder = new Map(paths.map((path, index) => [path, index]))
+    const sortByInputOrder: FileTreeSortComparator = (left, right) =>
+      (sortOrder.get(left.path) ?? 0) - (sortOrder.get(right.path) ?? 0)
+
+    return {
+      hasQuery,
+      modelDecorationRevision,
+      paths,
+      preparedInput: prepareFileTreeInput(paths, { sort: sortByInputOrder }),
+      sortByInputOrder,
+    }
+  }, [hasQuery, modelDecorationRevision, paths])
 
   const model = React.useMemo(
     () =>
@@ -95,7 +106,7 @@ export function FileSystemListView({
           }
         },
         overscan: 12,
-        paths: pierreModelInput.paths,
+        preparedInput: pierreModelInput.preparedInput,
         renderRowDecoration: ({ item }) => {
           const state = getState()
           const entry = fileSystemPierrePathToEntry(
@@ -106,6 +117,7 @@ export function FileSystemListView({
           return entry ? fileSystemRowDecoration(entry, state.controller) : null
         },
         search: false,
+        sort: pierreModelInput.sortByInputOrder,
         stickyFolders: false,
         unsafeCSS: FILE_TREE_CSS,
       }),
@@ -191,9 +203,15 @@ export function FileSystemListView({
 
   return (
     <div className="flex size-full flex-col">
-      <div className="grid h-9 shrink-0 grid-cols-[minmax(16rem,1fr)_9rem] items-center border-b bg-muted/30 px-3 text-xs font-medium text-muted-foreground">
+      <div className="flex h-9 shrink-0 items-center gap-3 overflow-x-auto border-b bg-muted/30 px-3 text-xs font-medium text-muted-foreground">
         <SortHeader controller={controller} label="Name" sortKey="name" />
         <SortHeader controller={controller} label="Type" sortKey="kind" />
+        <SortHeader controller={controller} label="Size" sortKey="size" />
+        <SortHeader
+          controller={controller}
+          label="Modified"
+          sortKey="updatedAt"
+        />
       </div>
       <div className="min-h-0 flex-1">
         <PierreFileTree

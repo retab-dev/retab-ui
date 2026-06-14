@@ -34,15 +34,15 @@ import type {
 import { jsonTableCellId } from "@/components/json-table/json-table-edit-session"
 import { createJsonTablePrimitiveActiveCellStore } from "@/components/json-table/json-table-primitive-active-cell-store"
 import {
-  createJsonTablePrimitivePatchStore,
-  registerJsonTableScalarDocumentData,
-} from "@/components/json-table/json-table-primitive-patch-store"
+  createJsonTablePrimitiveEditStore,
+  type JsonTablePrimitiveEditStore,
+} from "@/components/json-table/json-table-primitive-edit-store"
 import {
   markJsonTableProfile,
   recordJsonTableRender,
 } from "@/components/json-table/json-table-profiler"
-import { getValueAtPath } from "@/components/json-table/lib/document-paths"
 import { setValueAtMaterializedPath } from "@/components/json-table/lib/document-patches"
+import { getValueAtPath } from "@/components/json-table/lib/document-paths"
 import type { ProjectedRow } from "@/components/json-table/lib/document-projection"
 import { buildHeaderGridRows } from "@/components/json-table/lib/header-nodes"
 import type { JsonTableHeaderNode } from "@/components/json-table/lib/header-nodes"
@@ -75,6 +75,7 @@ interface SingleFileVirtualizedTableProps {
   projectedRows: ProjectedRow[]
   visibleColumns: VisibleColumn[]
   rowCount: number
+  primitiveEditStore?: JsonTablePrimitiveEditStore
   onUpdateDocument?: (patch: Record<string, unknown>) => Promise<void>
   columnWidth?: ColumnWidth
   onCellHoverStart?: (info: JsonTableCellHoverInfo) => void
@@ -188,6 +189,7 @@ export const SingleFileVirtualizedTable =
       projectedRows,
       visibleColumns,
       rowCount,
+      primitiveEditStore,
       onUpdateDocument,
       columnWidth: propColumnWidth,
       onCellHoverStart,
@@ -204,7 +206,11 @@ export const SingleFileVirtualizedTable =
       const primitiveActiveCellStoreRef = useRef(
         createJsonTablePrimitiveActiveCellStore()
       )
-      const primitivePatchStoreRef = useRef(createJsonTablePrimitivePatchStore())
+      const fallbackPrimitiveEditStoreRef = useRef(
+        createJsonTablePrimitiveEditStore()
+      )
+      const tablePrimitiveEditStore =
+        primitiveEditStore ?? fallbackPrimitiveEditStoreRef.current
       const primitiveEditorHandleRef = useRef<DataCellEditorHandle | null>(null)
       const structuredEditSessionIdRef = useRef(0)
       const documentDataRef = useRef(document.data)
@@ -216,8 +222,8 @@ export const SingleFileVirtualizedTable =
 
       React.useEffect(() => {
         documentDataRef.current = document.data
-        primitivePatchStoreRef.current.reconcileDocumentData(document.data)
-      }, [document.data])
+        tablePrimitiveEditStore.reconcileDocumentData(document.data)
+      }, [document.data, tablePrimitiveEditStore])
 
       const totalWidth = fixedGridColumnWidths(visibleColumns).reduce(
         (total, widthPx) => total + widthPx,
@@ -310,18 +316,18 @@ export const SingleFileVirtualizedTable =
             value
           )
           documentDataRef.current = nextData
-          primitivePatchStoreRef.current.setValue(
+          tablePrimitiveEditStore.commitValue(
             materializedFieldPath,
             value,
             previousValue
           )
-          registerJsonTableScalarDocumentData(nextData)
+          tablePrimitiveEditStore.recordDocumentEcho(nextData)
           updateDocument({ data: nextData })
           markJsonTableProfile("document-patch-end", {
             fieldPath: materializedFieldPath,
           })
         },
-        []
+        [tablePrimitiveEditStore]
       )
       const handleDocumentDataChange = React.useCallback(
         (_docId: string, materializedFieldPath: string, value: unknown) => {
@@ -433,8 +439,10 @@ export const SingleFileVirtualizedTable =
                       schema={schema}
                       visibleColumns={visibleColumns}
                       rowHeightPx={rowHeightPx}
-                      primitiveActiveCellStore={primitiveActiveCellStoreRef.current}
-                      primitivePatchStore={primitivePatchStoreRef.current}
+                      primitiveActiveCellStore={
+                        primitiveActiveCellStoreRef.current
+                      }
+                      primitiveEditStore={tablePrimitiveEditStore}
                       setPrimitiveActiveCell={setPrimitiveActiveCell}
                       primitiveEditorHandleRef={primitiveEditorHandleRef}
                       structuredEditSession={structuredEditSession}

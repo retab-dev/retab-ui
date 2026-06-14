@@ -9,7 +9,7 @@ import {
   getHeaderDropSide,
 } from "@/components/json-table/lib/header-drag-model"
 import type { JsonTableHeaderNode } from "@/components/json-table/lib/header-nodes"
-import { createJsonTablePrimitivePatchStore } from "@/components/json-table/json-table-primitive-patch-store"
+import { createJsonTablePrimitiveEditStore } from "@/components/json-table/json-table-primitive-edit-store"
 import { useCellController } from "@/components/json-table/use-cell-controller"
 import { useHeaderController } from "@/components/json-table/use-header-controller"
 
@@ -143,7 +143,7 @@ const paymentBankNameNode: JsonTableHeaderNode = {
 describe("json table cell controller", () => {
   it("skips no-op commits", () => {
     const onDocumentDataChange = vi.fn()
-    const primitivePatchStore = createJsonTablePrimitivePatchStore()
+    const primitiveEditStore = createJsonTablePrimitiveEditStore()
     const { result } = renderHook(() =>
       useCellController({
         document,
@@ -152,7 +152,7 @@ describe("json table cell controller", () => {
         value: "ACME",
         isEditable: true,
         onDocumentDataChange,
-        primitivePatchStore,
+        primitiveEditStore,
       })
     )
 
@@ -162,9 +162,9 @@ describe("json table cell controller", () => {
     expect(result.current.effectiveValue).toBe("ACME")
   })
 
-  it("commits changed values optimistically", () => {
+  it("commits changed values through local edit state", () => {
     const onDocumentDataChange = vi.fn()
-    const primitivePatchStore = createJsonTablePrimitivePatchStore()
+    const primitiveEditStore = createJsonTablePrimitiveEditStore()
     const { result } = renderHook(() =>
       useCellController({
         document,
@@ -173,7 +173,7 @@ describe("json table cell controller", () => {
         value: "ACME",
         isEditable: true,
         onDocumentDataChange,
-        primitivePatchStore,
+        primitiveEditStore,
       })
     )
 
@@ -190,7 +190,7 @@ describe("json table cell controller", () => {
 
   it("commits when projected value is stale but document data differs", () => {
     const onDocumentDataChange = vi.fn()
-    const primitivePatchStore = createJsonTablePrimitivePatchStore()
+    const primitiveEditStore = createJsonTablePrimitiveEditStore()
     const { result } = renderHook(() =>
       useCellController({
         document,
@@ -199,7 +199,7 @@ describe("json table cell controller", () => {
         value: "Globex",
         isEditable: true,
         onDocumentDataChange,
-        primitivePatchStore,
+        primitiveEditStore,
       })
     )
 
@@ -221,7 +221,7 @@ describe("json table cell controller", () => {
       },
     }
     const onDocumentDataChange = vi.fn()
-    const primitivePatchStore = createJsonTablePrimitivePatchStore()
+    const primitiveEditStore = createJsonTablePrimitiveEditStore()
     const { result } = renderHook(() =>
       useCellController({
         document: nestedDocument,
@@ -230,7 +230,7 @@ describe("json table cell controller", () => {
         value: 1,
         isEditable: true,
         onDocumentDataChange,
-        primitivePatchStore,
+        primitiveEditStore,
       })
     )
 
@@ -244,9 +244,9 @@ describe("json table cell controller", () => {
     expect(result.current.effectiveValue).toBe(2)
   })
 
-  it("clears optimistic state when authoritative field data changes", () => {
+  it("clears local edit state when authoritative field data changes", () => {
     const onDocumentDataChange = vi.fn()
-    const primitivePatchStore = createJsonTablePrimitivePatchStore()
+    const primitiveEditStore = createJsonTablePrimitiveEditStore()
     const { result, rerender } = renderHook(
       ({ currentDocument, currentValue }) =>
         useCellController({
@@ -256,7 +256,7 @@ describe("json table cell controller", () => {
           value: currentValue,
           isEditable: true,
           onDocumentDataChange,
-          primitivePatchStore,
+          primitiveEditStore,
         }),
       {
         initialProps: {
@@ -274,7 +274,7 @@ describe("json table cell controller", () => {
       data: { ...document.data, vendor: "Initech" },
     }
     act(() => {
-      primitivePatchStore.reconcileDocumentData(nextDocument.data)
+      primitiveEditStore.reconcileDocumentData(nextDocument.data)
     })
     rerender({
       currentDocument: nextDocument,
@@ -286,7 +286,7 @@ describe("json table cell controller", () => {
 
   it("treats null and empty strings as equivalent no-op commits", () => {
     const onDocumentDataChange = vi.fn()
-    const primitivePatchStore = createJsonTablePrimitivePatchStore()
+    const primitiveEditStore = createJsonTablePrimitiveEditStore()
     const { result } = renderHook(() =>
       useCellController({
         document: {
@@ -298,7 +298,7 @@ describe("json table cell controller", () => {
         value: null,
         isEditable: true,
         onDocumentDataChange,
-        primitivePatchStore,
+        primitiveEditStore,
       })
     )
 
@@ -310,7 +310,7 @@ describe("json table cell controller", () => {
 
   it("does not commit when disabled", () => {
     const onDocumentDataChange = vi.fn()
-    const primitivePatchStore = createJsonTablePrimitivePatchStore()
+    const primitiveEditStore = createJsonTablePrimitiveEditStore()
     const { result } = renderHook(() =>
       useCellController({
         document,
@@ -319,7 +319,7 @@ describe("json table cell controller", () => {
         value: "ACME",
         isEditable: false,
         onDocumentDataChange,
-        primitivePatchStore,
+        primitiveEditStore,
       })
     )
 
@@ -330,7 +330,7 @@ describe("json table cell controller", () => {
 
   it("does not commit when the projected cell has no materialized path", () => {
     const onDocumentDataChange = vi.fn()
-    const primitivePatchStore = createJsonTablePrimitivePatchStore()
+    const primitiveEditStore = createJsonTablePrimitiveEditStore()
     const { result } = renderHook(() =>
       useCellController({
         document,
@@ -339,7 +339,7 @@ describe("json table cell controller", () => {
         value: "ACME",
         isEditable: true,
         onDocumentDataChange,
-        primitivePatchStore,
+        primitiveEditStore,
       })
     )
 
