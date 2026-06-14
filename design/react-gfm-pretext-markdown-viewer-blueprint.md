@@ -131,19 +131,43 @@ Local reference inventory:
 
 Existing Retab references to compare before implementing:
 
-| Area                    | Existing local reference                                                                                                                        |
-| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| Plugin pipeline         | [`registry/new-york-v4/ui/markdown-document-plugins.ts`](/Users/sachaichbiah/Local/retab-ui/registry/new-york-v4/ui/markdown-document-plugins.ts) |
-| React render overrides  | [`registry/new-york-v4/ui/markdown-document-renderers.tsx`](/Users/sachaichbiah/Local/retab-ui/registry/new-york-v4/ui/markdown-document-renderers.tsx) |
-| URL safety policy       | [`registry/new-york-v4/ui/markdown-document-url-policy.ts`](/Users/sachaichbiah/Local/retab-ui/registry/new-york-v4/ui/markdown-document-url-policy.ts) |
-| Copy controls           | [`registry/new-york-v4/ui/markdown-document-copy.tsx`](/Users/sachaichbiah/Local/retab-ui/registry/new-york-v4/ui/markdown-document-copy.tsx) |
-| Diagram rendering       | [`registry/new-york-v4/ui/markdown-document-diagram.tsx`](/Users/sachaichbiah/Local/retab-ui/registry/new-york-v4/ui/markdown-document-diagram.tsx) |
+| Area                   | Existing local reference                                                                                                                                |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Plugin pipeline        | [`registry/new-york-v4/ui/markdown-document-plugins.ts`](/Users/sachaichbiah/Local/retab-ui/registry/new-york-v4/ui/markdown-document-plugins.ts)       |
+| React render overrides | [`registry/new-york-v4/ui/markdown-document-renderers.tsx`](/Users/sachaichbiah/Local/retab-ui/registry/new-york-v4/ui/markdown-document-renderers.tsx) |
+| URL safety policy      | [`registry/new-york-v4/ui/markdown-document-url-policy.ts`](/Users/sachaichbiah/Local/retab-ui/registry/new-york-v4/ui/markdown-document-url-policy.ts) |
+| Copy controls          | [`registry/new-york-v4/ui/markdown-document-copy.tsx`](/Users/sachaichbiah/Local/retab-ui/registry/new-york-v4/ui/markdown-document-copy.tsx)           |
+| Diagram rendering      | [`registry/new-york-v4/ui/markdown-document-diagram.tsx`](/Users/sachaichbiah/Local/retab-ui/registry/new-york-v4/ui/markdown-document-diagram.tsx)     |
+
+Local clone status: the upstream repositories above are expected to exist in
+`tmp/markdown-upstreams`. They are deliberately outside the registry/component
+source tree, but implementation work should treat them as the first reference.
+Before adding a feature, grep the matching clone, read its tests, and copy the
+smallest proven behavior into our model or use the package directly when that is
+cleaner.
 
 Implementation rule: start from the upstream source and tests for the feature
 being implemented, then keep only the minimal behavior that belongs in our
 viewer. This should make the custom component simpler than accumulating local
 remark tricks, because each feature starts from a proven parser or renderer and
 is narrowed deliberately.
+
+Implementation basis by feature:
+
+| Feature                    | Start from local clone                                       | Upstream link                                                                                                                                      | Retab output                                                            |
+| -------------------------- | ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Continuous geometry        | `tmp/markdown-upstreams/pretext`                             | [chenglou/pretext](https://github.com/chenglou/pretext)                                                                                            | Width-sensitive chunk estimates and visible-window projection.          |
+| Rendered Markdown surface  | `tmp/markdown-upstreams/react-markdown`                      | [remarkjs/react-markdown](https://github.com/remarkjs/react-markdown)                                                                              | Component override boundary for visible chunks.                         |
+| GFM tables/tasks/footnotes | `tmp/markdown-upstreams/remark-gfm`                          | [remarkjs/remark-gfm](https://github.com/remarkjs/remark-gfm)                                                                                      | GFM behavior copied from upstream tests, not hand-rolled parsing.       |
+| Frontmatter model          | `tmp/markdown-upstreams/remark-frontmatter`                  | [remarkjs/remark-frontmatter](https://github.com/remarkjs/remark-frontmatter)                                                                      | First-class YAML/TOML frontmatter blocks with source fidelity.          |
+| Directive callouts         | `tmp/markdown-upstreams/remark-directive`                    | [remarkjs/remark-directive](https://github.com/remarkjs/remark-directive)                                                                          | Safe directive AST projection into Retab callouts/components.           |
+| GitHub alerts              | `tmp/markdown-upstreams/remark-github-blockquote-alert`      | [jaywcjlove/remark-github-blockquote-alert](https://github.com/jaywcjlove/remark-github-blockquote-alert)                                          | `> [!NOTE]`-style alerts normalized to the same internal callout model. |
+| Mermaid diagrams           | `tmp/markdown-upstreams/mermaid`                             | [mermaid-js/mermaid](https://github.com/mermaid-js/mermaid)                                                                                        | Diagram rendering states, errors, sizing, and source fallback.          |
+| MDX syntax                 | `tmp/markdown-upstreams/mdx`                                 | [mdx-js/mdx](https://github.com/mdx-js/mdx)                                                                                                        | Restricted component markdown, never arbitrary executable MDX.          |
+| Sanitized raw HTML         | `tmp/markdown-upstreams/rehype-raw`, `rehype-sanitize`       | [rehypejs/rehype-raw](https://github.com/rehypejs/rehype-raw), [rehypejs/rehype-sanitize](https://github.com/rehypejs/rehype-sanitize)             | Narrow viewer schema and URL policy.                                    |
+| Heading anchors            | `tmp/markdown-upstreams/rehype-slug`                         | [rehypejs/rehype-slug](https://github.com/rehypejs/rehype-slug)                                                                                    | One shared slug algorithm for model IDs and DOM IDs.                    |
+| Code highlighting          | `tmp/markdown-upstreams/rehype-pretty-code`, `shiki`         | [rehype-pretty/rehype-pretty-code](https://github.com/rehype-pretty/rehype-pretty-code), [shikijs/shiki](https://github.com/shikijs/shiki)         | Tokenized code blocks without a local highlighter.                      |
+| Emoji and typography       | `tmp/markdown-upstreams/remark-gemoji`, `remark-smartypants` | [remarkjs/remark-gemoji](https://github.com/remarkjs/remark-gemoji), [silvenon/remark-smartypants](https://github.com/silvenon/remark-smartypants) | Docs polish transforms backed by upstream behavior and tests.           |
 
 Study these repos by responsibility:
 

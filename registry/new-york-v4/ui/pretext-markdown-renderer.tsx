@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Check, Copy } from "lucide-react"
+import { AlertCircle, Check, Copy, RefreshCcw } from "lucide-react"
 import { MarkdownHooks, type Components } from "react-markdown"
 
 import { cn } from "@/lib/utils"
@@ -10,23 +10,25 @@ import { Button } from "./button"
 import type { PretextMarkdownChunk } from "./pretext-markdown-document-model"
 import {
   ALERT_LABELS,
-  PRETEXT_MARKDOWN_REHYPE_PLUGINS,
-  type AlertKind,
-  type CalloutKind,
-  type PretextComponent,
   createPretextMarkdownRemarkPlugins,
+  PRETEXT_MARKDOWN_REHYPE_PLUGINS,
   readPretextAlertKind,
   readPretextCallout,
   readPretextComponent,
   readPretextHeadingId,
   sanitizePretextMarkdownImageUrl,
   sanitizePretextMarkdownUrl,
+  type AlertKind,
+  type CalloutKind,
+  type PretextComponent,
 } from "./pretext-markdown-policy"
 
 export function PretextMarkdownChunkRenderer({
   chunk,
+  referenceDefinitionsMarkdown = "",
 }: {
   chunk: PretextMarkdownChunk
+  referenceDefinitionsMarkdown?: string
 }) {
   const remarkPlugins = React.useMemo(
     () => createPretextMarkdownRemarkPlugins(chunk.headingIds),
@@ -34,11 +36,12 @@ export function PretextMarkdownChunkRenderer({
   )
 
   if (chunk.kind === "frontmatter") {
+    const language = chunk.frontmatterLanguage ?? "yaml"
     return (
       <section
-        aria-label="Frontmatter"
+        aria-label={`${language.toUpperCase()} frontmatter`}
         className="rounded-md border bg-muted/40 p-4 font-mono text-[13px] leading-6 text-muted-foreground"
-        data-pretext-markdown-frontmatter=""
+        data-pretext-markdown-frontmatter={language}
       >
         <pre className="m-0 whitespace-pre-wrap">
           <code>{chunk.markdown}</code>
@@ -56,10 +59,24 @@ export function PretextMarkdownChunkRenderer({
         remarkPlugins={remarkPlugins}
         urlTransform={sanitizePretextMarkdownUrl}
       >
-        {chunk.markdown}
+        {createPretextMarkdownRenderSource({
+          markdown: chunk.markdown,
+          referenceDefinitionsMarkdown,
+        })}
       </MarkdownHooks>
     </div>
   )
+}
+
+function createPretextMarkdownRenderSource({
+  markdown,
+  referenceDefinitionsMarkdown,
+}: {
+  markdown: string
+  referenceDefinitionsMarkdown: string
+}) {
+  if (!referenceDefinitionsMarkdown.trim()) return markdown
+  return `${referenceDefinitionsMarkdown.trimEnd()}\n\n${markdown}`
 }
 
 const markdownComponents = {
@@ -165,21 +182,30 @@ const markdownComponents = {
       return <span>{children}</span>
     }
 
-    const external = !safeHref.startsWith("#")
+    const external = isPretextMarkdownExternalLink(safeHref)
+    const footnoteRef =
+      isPretextFootnoteRef(props) || isPretextFootnoteRefHref(safeHref)
+    const footnoteBackref =
+      isPretextFootnoteBackref(props) || isPretextFootnoteBackrefHref(safeHref)
+    const footnoteText = extractReactText(children).trim()
+    const ariaLabel = footnoteRef
+      ? `Footnote ${footnoteText || "reference"}`
+      : footnoteBackref
+        ? `Back to footnote reference${footnoteText ? ` ${footnoteText}` : ""}`
+        : undefined
     return (
       <a
         className={cn(
           "font-medium underline underline-offset-4",
-          isPretextFootnoteRef(props) &&
-            "ml-0.5 rounded px-1 text-[0.72em] leading-none",
-          isPretextFootnoteBackref(props) &&
-            "ml-1 text-muted-foreground no-underline",
+          footnoteRef && "ml-0.5 rounded px-1 text-[0.72em] leading-none",
+          footnoteBackref && "ml-1 text-muted-foreground no-underline",
           className
         )}
         href={safeHref}
         rel={external ? "noopener noreferrer" : undefined}
         target={external ? "_blank" : undefined}
         {...props}
+        {...(ariaLabel ? { "aria-label": ariaLabel } : {})}
       >
         {children}
       </a>
@@ -190,12 +216,14 @@ const markdownComponents = {
     if (kind) {
       return (
         <aside
+          aria-label={ALERT_LABELS[kind].replace(/:$/, "")}
           className={cn(
             "my-5 rounded-md border border-l-4 bg-muted/30 px-4 py-3",
             alertClassName(kind),
             className
           )}
           data-pretext-alert-kind={kind}
+          role="note"
           {...props}
         >
           <p className="mb-2 font-semibold">{ALERT_LABELS[kind]}</p>
@@ -280,15 +308,34 @@ const markdownComponents = {
   tr: ({ className, node: _node, ...props }) => (
     <tr className={cn("border-b last:border-b-0", className)} {...props} />
   ),
-  th: ({ className, node: _node, ...props }) => (
-    <th
-      className={cn("px-3 py-2 align-top font-semibold", className)}
-      {...props}
-    />
-  ),
-  td: ({ className, node: _node, ...props }) => (
-    <td className={cn("px-3 py-2 align-top", className)} {...props} />
-  ),
+  th: ({ align, className, node: _node, style, ...props }) => {
+    const resolvedAlign = resolveTableCellAlignment({ align, style })
+    return (
+      <th
+        className={cn(
+          "px-3 py-2 align-top font-semibold",
+          tableCellAlignmentClassName(resolvedAlign),
+          className
+        )}
+        align={resolvedAlign}
+        {...props}
+      />
+    )
+  },
+  td: ({ align, className, node: _node, style, ...props }) => {
+    const resolvedAlign = resolveTableCellAlignment({ align, style })
+    return (
+      <td
+        className={cn(
+          "px-3 py-2 align-top",
+          tableCellAlignmentClassName(resolvedAlign),
+          className
+        )}
+        align={resolvedAlign}
+        {...props}
+      />
+    )
+  },
   pre: ({ className, children, node: _node, ...props }) => {
     const language = codeLanguage(children)
     const text = extractReactText(children).replace(/\n$/, "")
@@ -298,10 +345,12 @@ const markdownComponents = {
 
     return (
       <div
+        aria-label={`${language ? `${language} ` : ""}code block`}
         className={cn(
           "group my-5 overflow-hidden rounded-md border bg-muted/50",
           className
         )}
+        role="group"
       >
         <div className="flex h-9 items-center gap-2 border-b bg-muted/60 px-3">
           {language ? (
@@ -315,7 +364,12 @@ const markdownComponents = {
             text={text}
           />
         </div>
-        <pre className="overflow-x-auto p-4 text-sm leading-6" {...props}>
+        <pre
+          aria-label={`${language ? `${language} ` : ""}code source`}
+          className="overflow-x-auto p-4 text-sm leading-6"
+          tabIndex={0}
+          {...props}
+        >
           {children}
         </pre>
       </div>
@@ -332,15 +386,19 @@ const markdownComponents = {
       {children}
     </code>
   ),
-  section: ({ className, node: _node, ...props }) => (
-    <section
-      className={cn(
-        "mt-8 border-t pt-4 text-sm leading-6 text-muted-foreground",
-        className
-      )}
-      {...props}
-    />
-  ),
+  section: ({ className, node: _node, ...props }) => {
+    const footnoteSection = isPretextFootnoteSection(props)
+    return (
+      <section
+        className={cn(
+          "mt-8 border-t pt-4 text-sm leading-6 text-muted-foreground",
+          className
+        )}
+        {...props}
+        {...(footnoteSection ? { "aria-label": "Footnotes" } : {})}
+      />
+    )
+  },
   sup: ({ className, node: _node, ...props }) => (
     <sup
       className={cn("align-super text-[0.72em] leading-none", className)}
@@ -374,12 +432,14 @@ function PretextMarkdownCallout({
 }) {
   return (
     <aside
+      aria-label={callout.title}
       className={cn(
         "my-5 rounded-md border px-4 py-3",
         calloutClassName(callout.kind),
         className
       )}
       data-pretext-callout-kind={callout.kind}
+      role="note"
     >
       <p className="mb-2 font-semibold">{callout.title}</p>
       <div className="[&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
@@ -387,6 +447,38 @@ function PretextMarkdownCallout({
       </div>
     </aside>
   )
+}
+
+function isPretextMarkdownExternalLink(href: string) {
+  return /^https?:/i.test(href)
+}
+
+type PretextTableCellAlignment = "center" | "left" | "right" | undefined
+
+function resolveTableCellAlignment({
+  align,
+  style,
+}: {
+  align: React.ThHTMLAttributes<HTMLTableCellElement>["align"]
+  style: React.CSSProperties | undefined
+}): PretextTableCellAlignment {
+  if (align === "center" || align === "left" || align === "right") return align
+
+  const textAlign = style?.textAlign
+  return textAlign === "center" || textAlign === "left" || textAlign === "right"
+    ? textAlign
+    : undefined
+}
+
+function tableCellAlignmentClassName(align: PretextTableCellAlignment) {
+  switch (align) {
+    case "center":
+      return "text-center"
+    case "right":
+      return "text-right tabular-nums"
+    default:
+      return "text-left"
+  }
 }
 
 function PretextMarkdownTable({
@@ -407,7 +499,10 @@ function PretextMarkdownTable({
 
   return (
     <div
+      aria-label="Markdown table"
       className="group relative my-5 overflow-x-auto rounded-md border"
+      role="region"
+      tabIndex={0}
       onFocusCapture={updateCopyText}
       onMouseEnter={updateCopyText}
     >
@@ -520,12 +615,14 @@ function PretextMarkdownDiagram({
 
   return (
     <figure
+      aria-label="Mermaid diagram"
       className={cn(
         "my-5 min-h-40 overflow-hidden rounded-md border bg-muted/30",
         className
       )}
       data-diagram-language="mermaid"
       data-diagram-state={state.status}
+      role="group"
     >
       <div className="flex h-9 items-center border-b bg-muted/60 px-3">
         <span className="text-xs font-medium text-muted-foreground">
@@ -543,7 +640,11 @@ function PretextMarkdownDiagram({
           dangerouslySetInnerHTML={{ __html: state.svg }}
         />
       ) : (
-        <pre className="overflow-x-auto p-4 font-mono text-[0.82em] leading-relaxed text-muted-foreground">
+        <pre
+          aria-label="Mermaid diagram source"
+          className="overflow-x-auto p-4 font-mono text-[0.82em] leading-relaxed text-muted-foreground"
+          tabIndex={0}
+        >
           {state.status === "failed" ? state.message : source}
         </pre>
       )}
@@ -560,7 +661,9 @@ function PretextMarkdownCopyButton({
   className?: string
   text: string
 }) {
-  const [isCopied, setIsCopied] = React.useState(false)
+  const [status, setStatus] = React.useState<"copied" | "failed" | "idle">(
+    "idle"
+  )
   const timeoutRef = React.useRef<number | null>(null)
 
   React.useEffect(
@@ -573,31 +676,54 @@ function PretextMarkdownCopyButton({
   const copyText = () => {
     if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current)
 
+    const resetStatus = () => {
+      timeoutRef.current = window.setTimeout(() => {
+        timeoutRef.current = null
+        setStatus("idle")
+      }, 1200)
+    }
+
     try {
       const result = navigator.clipboard?.writeText(text)
-      void Promise.resolve(result).then(() => {
-        setIsCopied(true)
-        timeoutRef.current = window.setTimeout(() => {
-          timeoutRef.current = null
-          setIsCopied(false)
-        }, 1200)
-      })
+      void Promise.resolve(result)
+        .then(() => {
+          setStatus("copied")
+          resetStatus()
+        })
+        .catch(() => {
+          setStatus("failed")
+          resetStatus()
+        })
     } catch {
-      setIsCopied(false)
+      setStatus("failed")
+      resetStatus()
     }
   }
 
+  const label =
+    status === "copied"
+      ? "Copied"
+      : status === "failed"
+        ? "Copy failed"
+        : ariaLabel
+
   return (
     <Button
-      aria-label={isCopied ? "Copied" : ariaLabel}
+      aria-label={label}
       className={className}
       size="icon-sm"
-      title={ariaLabel}
+      title={label}
       type="button"
       variant="ghost"
       onClick={copyText}
     >
-      {isCopied ? <Check /> : <Copy />}
+      {status === "copied" ? (
+        <Check />
+      ) : status === "failed" ? (
+        <AlertCircle />
+      ) : (
+        <Copy />
+      )}
     </Button>
   )
 }
@@ -605,39 +731,154 @@ function PretextMarkdownCopyButton({
 function PretextMarkdownImage({
   alt,
   className,
+  title,
   src,
   ...props
 }: React.ImgHTMLAttributes<HTMLImageElement>) {
-  const [status, setStatus] = React.useState<"failed" | "idle">("idle")
   const safeSrc =
     typeof src === "string" ? sanitizePretextMarkdownImageUrl(src) : ""
+  const [state, setState] = React.useState<{
+    height: number | null
+    status: "failed" | "loading" | "ready"
+    width: number | null
+  }>({ height: null, status: "loading", width: null })
+  const [retryVersion, setRetryVersion] = React.useState(0)
   const label = alt || safeSrc || "Markdown image"
+  const caption = title || null
 
-  if (!safeSrc || status === "failed") {
+  React.useEffect(() => {
+    setState({ height: null, status: "loading", width: null })
+  }, [safeSrc])
+
+  if (!safeSrc) {
+    return (
+      <PretextMarkdownImagePlaceholder
+        className={className}
+        label={label}
+        state="blocked"
+      />
+    )
+  }
+
+  if (state.status === "failed") {
+    return (
+      <PretextMarkdownImagePlaceholder
+        className={className}
+        label={label}
+        state="failed"
+        onRetry={() => {
+          setState({ height: null, status: "loading", width: null })
+          setRetryVersion((version) => version + 1)
+        }}
+      />
+    )
+  }
+
+  const aspectRatio =
+    state.width && state.height ? `${state.width} / ${state.height}` : undefined
+
+  return (
+    <span
+      className={cn(
+        "my-5 inline-block w-fit max-w-full overflow-hidden rounded-md border bg-muted/20 align-top",
+        className
+      )}
+      data-pretext-image-state={state.status}
+      style={{ aspectRatio }}
+    >
+      <span className="relative block max-w-full">
+        {state.status === "loading" ? (
+          <span
+            aria-hidden="true"
+            className="absolute inset-0 block min-h-32 animate-pulse bg-muted/45"
+          />
+        ) : null}
+        <img
+          key={`${safeSrc}:${retryVersion}`}
+          {...props}
+          alt={alt ?? ""}
+          className={cn(
+            "block max-h-[70vh] max-w-full bg-card object-contain",
+            state.status === "loading" && "min-h-32 opacity-0"
+          )}
+          loading="lazy"
+          src={safeSrc}
+          title={title}
+          onError={() =>
+            setState((current) => ({ ...current, status: "failed" }))
+          }
+          onLoad={(event) => {
+            const image = event.currentTarget
+            setState({
+              height: image.naturalHeight || null,
+              status: "ready",
+              width: image.naturalWidth || null,
+            })
+          }}
+        />
+      </span>
+      {caption ? (
+        <span className="block border-t bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+          {caption}
+        </span>
+      ) : null}
+    </span>
+  )
+}
+
+function PretextMarkdownImagePlaceholder({
+  className,
+  label,
+  onRetry,
+  state,
+}: {
+  className: string | undefined
+  label: string
+  onRetry?: () => void
+  state: "blocked" | "failed"
+}) {
+  if (state === "failed") {
     return (
       <span
+        aria-label={`Image failed: ${label}`}
         className={cn(
-          "my-5 flex min-h-20 items-center rounded-md border bg-muted/40 px-4 text-sm text-muted-foreground",
+          "my-5 flex min-h-24 max-w-full items-center justify-between gap-3 rounded-md border border-dashed bg-muted/40 px-4 py-3 text-sm text-muted-foreground",
           className
         )}
-        data-pretext-image-state={safeSrc ? "failed" : "blocked"}
-        role="img"
-        aria-label={label}
+        data-pretext-image-state="failed"
+        role="group"
       >
-        {label}
+        <span aria-label={label} data-pretext-image-state="failed" role="img">
+          Image failed to load: {label}
+        </span>
+        {onRetry ? (
+          <Button
+            aria-label="Retry image"
+            size="xs"
+            type="button"
+            variant="outline"
+            onClick={onRetry}
+          >
+            <RefreshCcw />
+            Retry
+          </Button>
+        ) : null}
       </span>
     )
   }
 
   return (
-    <img
-      className={cn("my-5 max-w-full rounded-md border", className)}
-      alt={alt ?? ""}
-      loading="lazy"
-      src={safeSrc}
-      onError={() => setStatus("failed")}
-      {...props}
-    />
+    <span
+      aria-label={label}
+      className={cn(
+        "my-5 flex min-h-24 max-w-full items-center rounded-md border border-dashed bg-muted/40 px-4 text-sm text-muted-foreground",
+        className
+      )}
+      data-pretext-image-state={state}
+      role="img"
+    >
+      {label}
+    </span>
   )
 }
 
@@ -820,11 +1061,25 @@ function serializePretextMarkdownTable(table: HTMLTableElement) {
 }
 
 function isPretextFootnoteRef(props: Record<string, unknown>) {
-  return Boolean(props.dataFootnoteRef ?? props["data-footnote-ref"])
+  return props.dataFootnoteRef != null || props["data-footnote-ref"] != null
 }
 
 function isPretextFootnoteBackref(props: Record<string, unknown>) {
-  return Boolean(props.dataFootnoteBackref ?? props["data-footnote-backref"])
+  return (
+    props.dataFootnoteBackref != null || props["data-footnote-backref"] != null
+  )
+}
+
+function isPretextFootnoteSection(props: Record<string, unknown>) {
+  return props.dataFootnotes != null || props["data-footnotes"] != null
+}
+
+function isPretextFootnoteRefHref(href: string) {
+  return /^#(?:user-content-)?fn-[^#]+$/i.test(href)
+}
+
+function isPretextFootnoteBackrefHref(href: string) {
+  return /^#(?:user-content-)?fnref-[^#]+$/i.test(href)
 }
 
 function extractReactText(node: React.ReactNode): string {

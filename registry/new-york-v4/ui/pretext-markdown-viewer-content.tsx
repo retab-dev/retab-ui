@@ -7,20 +7,31 @@ import type { ViewerResource } from "@/lib/viewer-resource"
 import {
   createPretextMarkdownDocument,
   findPretextMarkdownHeadingById,
-  findPretextMarkdownChunkForLine,
-  getPretextMarkdownVisibleChunkFrames,
-  layoutPretextMarkdownDocument,
-  markdownChunkIntersectsLineRange,
-  type PretextMarkdownDocumentFrame,
-  type PretextMarkdownChunkFrame,
 } from "./pretext-markdown-document-model"
+import {
+  layoutPretextMarkdownDocument,
+  type PretextMarkdownChunkFrame,
+} from "./pretext-markdown-layout"
 import { PretextMarkdownChunkRenderer } from "./pretext-markdown-renderer"
+import {
+  patchPretextMarkdownChunkTables,
+  pretextMarkdownChunkId,
+} from "./pretext-markdown-table-accessibility"
+import {
+  getPretextMarkdownFrameScrollAnchor,
+  getPretextMarkdownScrollTopForLineRange,
+  getPretextMarkdownVisibleChunkFrames,
+  markdownChunkIntersectsLineRange,
+  resolvePretextMarkdownScrollAnchor,
+  type PretextMarkdownScrollAnchor,
+} from "./pretext-markdown-virtualizer"
 import { ScrollArea } from "./scroll-area"
 import { TextViewerFrame, TextViewerToolbar } from "./text-viewer-chrome"
 import { normalizeTextLineRange } from "./text-viewer-ranges"
 import {
   readTextResource,
   resolvedTextViewerBounds,
+  splitTextLines,
 } from "./text-viewer-resource"
 import { clampTextViewerScale } from "./text-viewer-scale"
 import type { TextViewerHandle, TextViewerProps } from "./text-viewer-types"
@@ -30,15 +41,15 @@ const DEFAULT_VIEWPORT_HEIGHT = 600
 const DEFAULT_VIEWPORT_WIDTH = 800
 const INITIAL_CONTENT_WIDTH = 768
 const OVERSCAN_PX = 640
+const SOURCE_FONT_SIZE = 13
+const SOURCE_LINE_HEIGHT = 22
+const SOURCE_OVERSCAN_LINES = 24
+
+type PretextMarkdownViewMode = "rendered" | "source"
 
 type ViewportSize = {
   height: number
   width: number
-}
-
-type ScrollAnchor = {
-  offsetWithinChunk: number
-  chunkIndex: number
 }
 
 export function PretextMarkdownViewerContent({
@@ -74,11 +85,15 @@ export function PretextMarkdownViewerContent({
     [resource]
   )
   const [fontScale, setFontScale] = React.useState(1)
+  const [viewMode, setViewMode] =
+    React.useState<PretextMarkdownViewMode>("rendered")
   const [scrollTop, setScrollTop] = React.useState(0)
   const [measuredHeights, setMeasuredHeights] = React.useState(
     () => new Map<number, number>()
   )
-  const pendingScrollAnchorRef = React.useRef<ScrollAnchor | null>(null)
+  const pendingScrollAnchorRef =
+    React.useRef<PretextMarkdownScrollAnchor | null>(null)
+  const resolvedHashRef = React.useRef<string | null>(null)
   const viewportRef = React.useRef<HTMLDivElement | null>(null)
   const fontEpoch = useTextViewerFontEpoch()
   const [contentWidth, setContentWidth] = React.useState(INITIAL_CONTENT_WIDTH)
@@ -93,6 +108,8 @@ export function PretextMarkdownViewerContent({
     () => createPretextMarkdownDocument(text),
     [text]
   )
+  const sourceLines = React.useMemo(() => splitTextLines(text), [text])
+  const sourceLineHeight = SOURCE_LINE_HEIGHT * fontScale
   const frame = React.useMemo(() => {
     void fontEpoch
     return layoutPretextMarkdownDocument({
@@ -126,11 +143,11 @@ export function PretextMarkdownViewerContent({
   )
 
   const captureScrollAnchor = React.useCallback(() => {
-    pendingScrollAnchorRef.current = getFrameScrollAnchor({
-      frame,
+    pendingScrollAnchorRef.current = getPretextMarkdownFrameScrollAnchor({
+      frames: frame.chunks,
       scrollTop: viewportRef.current?.scrollTop ?? scrollTop,
     })
-  }, [frame, scrollTop])
+  }, [frame.chunks, scrollTop])
 
   React.useLayoutEffect(() => {
     setMeasuredHeights(new Map())
@@ -180,14 +197,11 @@ export function PretextMarkdownViewerContent({
     if (!anchor || !scrollElement) return
 
     pendingScrollAnchorRef.current = null
-    const nextFrame = frame.chunks[anchor.chunkIndex]
-    if (!nextFrame) return
-
-    scrollElement.scrollTop = Math.max(
-      0,
-      nextFrame.top +
-        Math.min(anchor.offsetWithinChunk, Math.max(0, nextFrame.height - 1))
-    )
+    const nextScrollTop = resolvePretextMarkdownScrollAnchor({
+      anchor,
+      frames: frame.chunks,
+    })
+    if (nextScrollTop != null) scrollElement.scrollTop = nextScrollTop
   }, [frame.chunks])
 
   const recordMeasuredHeight = React.useCallback(
@@ -214,25 +228,30 @@ export function PretextMarkdownViewerContent({
       const scrollElement = viewportRef.current
       if (!scrollElement || !range) return
 
-      const chunk =
-        findPretextMarkdownChunkForLine(document.chunks, range.start) ??
-        document.chunks[0]
-      const targetFrame = chunk ? frame.chunks[chunk.index] : null
-      if (!targetFrame) return
+      if (viewMode === "source") {
+        scrollElement.scrollTo({
+          behavior: "smooth",
+          top: Math.max(0, (range.start - 1) * sourceLineHeight),
+          ...options,
+        })
+        return
+      }
 
-      const targetTop =
-        targetFrame.height <= scrollElement.clientHeight
-          ? targetFrame.top -
-            (scrollElement.clientHeight - targetFrame.height) / 2
-          : targetFrame.top
+      const targetTop = getPretextMarkdownScrollTopForLineRange({
+        chunks: document.chunks,
+        frames: frame.chunks,
+        range,
+        viewportHeight: scrollElement.clientHeight,
+      })
+      if (targetTop == null) return
 
       scrollElement.scrollTo({
         behavior: "smooth",
-        top: Math.max(0, targetTop),
+        top: targetTop,
         ...options,
       })
     },
-    [document.chunks, frame.chunks]
+    [document.chunks, frame.chunks, sourceLineHeight, viewMode]
   )
 
   const scrollToChunkFrame = React.useCallback(
@@ -251,23 +270,46 @@ export function PretextMarkdownViewerContent({
     [frame.chunks]
   )
 
+  const resolveFragmentHref = React.useCallback(
+    (href: string, options?: ScrollToOptions) => {
+      if (href.length <= 1) return false
+
+      const headingId = decodeMarkdownFragmentHref(href)
+      const heading = findPretextMarkdownHeadingById(document, headingId)
+      if (!heading) return false
+
+      return scrollToChunkFrame(heading.chunkIndex, options)
+    },
+    [document, scrollToChunkFrame]
+  )
+
+  const resolveCurrentHash = React.useCallback(
+    (options?: ScrollToOptions) => {
+      const href = window.location.hash
+      if (!href || href.length <= 1) return false
+      if (resolvedHashRef.current === href) return true
+      if (!resolveFragmentHref(href, options)) return false
+
+      resolvedHashRef.current = href
+      return true
+    },
+    [resolveFragmentHref]
+  )
+
   const handleFragmentClick = React.useCallback(
     (event: React.MouseEvent) => {
       const href = localFragmentHrefFromEventTarget(event.target)
       if (!href) return
 
-      const headingId = decodeMarkdownFragmentHref(href)
-      const heading = findPretextMarkdownHeadingById(document, headingId)
-      if (!heading) return
+      if (!resolveFragmentHref(href)) return
 
       event.preventDefault()
-      if (scrollToChunkFrame(heading.chunkIndex)) {
-        if (window.location.hash !== href) {
-          window.history.replaceState(null, "", href)
-        }
+      resolvedHashRef.current = href
+      if (window.location.hash !== href) {
+        window.history.replaceState(null, "", href)
       }
     },
-    [document, scrollToChunkFrame]
+    [resolveFragmentHref]
   )
 
   const zoom = (factor: number) => {
@@ -298,12 +340,45 @@ export function PretextMarkdownViewerContent({
     scrollLineRange(highlightRange)
   }, [highlightRange, scrollLineRange])
 
+  React.useEffect(() => {
+    resolvedHashRef.current = null
+  }, [document])
+
+  React.useEffect(() => {
+    resolveCurrentHash({ behavior: "auto" })
+  }, [resolveCurrentHash])
+
+  React.useEffect(() => {
+    const handleHashChange = () => {
+      resolvedHashRef.current = null
+      resolveCurrentHash({ behavior: "auto" })
+    }
+
+    window.addEventListener("hashchange", handleHashChange)
+    return () => {
+      window.removeEventListener("hashchange", handleHashChange)
+    }
+  }, [resolveCurrentHash])
+
   return (
     <TextViewerFrame className={className} bare={bare}>
       {toolbar ? (
         <TextViewerToolbar
           wordCount={document.wordCount}
           fontScale={fontScale}
+          leading={
+            <PretextMarkdownViewModeControl
+              mode={viewMode}
+              wordCount={document.wordCount}
+              onModeChange={(nextMode) => {
+                setViewMode(nextMode)
+                setScrollTop(0)
+                viewportRef.current?.scrollTo({ behavior: "auto", top: 0 })
+              }}
+            />
+          }
+          copyLabel="Copy Markdown"
+          copyText={document.text}
           downloadAction={downloadAction}
           onZoomOut={() => zoom(1 / 1.2)}
           onZoomIn={() => zoom(1.2)}
@@ -316,41 +391,177 @@ export function PretextMarkdownViewerContent({
         viewportClassName="bg-background"
         viewportRef={viewportRef}
         viewportProps={{
-          onClickCapture: handleFragmentClick,
+          onClickCapture:
+            viewMode === "rendered" ? handleFragmentClick : undefined,
           onScroll: (event) => {
             setScrollTop(event.currentTarget.scrollTop)
           },
         }}
       >
-        <div
-          className="relative min-w-0"
-          data-projection="react-gfm-pretext-markdown"
-          data-slot="pretext-markdown-virtual-canvas"
-          style={{
-            height: frame.totalHeight,
-            minWidth: viewportWidth,
-          }}
-        >
-          {visibleFrames.map((chunkFrame) => {
-            const chunk = document.chunks[chunkFrame.index]
-            if (!chunk) return null
-            return (
-              <PretextMarkdownChunk
-                key={chunk.index}
-                frame={chunkFrame}
-                highlighted={markdownChunkIntersectsLineRange({
-                  chunk,
-                  range: highlightRange,
-                })}
-                onMeasuredHeight={recordMeasuredHeight}
-              >
-                <PretextMarkdownChunkRenderer chunk={chunk} />
-              </PretextMarkdownChunk>
-            )
-          })}
-        </div>
+        {viewMode === "source" ? (
+          <PretextMarkdownSourceCanvas
+            fontScale={fontScale}
+            highlightRange={highlightRange}
+            lines={sourceLines}
+            scrollTop={scrollTop}
+            viewportHeight={viewportHeight}
+            viewportWidth={viewportWidth}
+          />
+        ) : (
+          <div
+            className="relative min-w-0"
+            data-projection="react-gfm-pretext-markdown"
+            data-slot="pretext-markdown-virtual-canvas"
+            style={{
+              height: frame.totalHeight,
+              minWidth: viewportWidth,
+            }}
+          >
+            {visibleFrames.map((chunkFrame) => {
+              const chunk = document.chunks[chunkFrame.index]
+              if (!chunk) return null
+              return (
+                <PretextMarkdownChunk
+                  key={chunk.index}
+                  frame={chunkFrame}
+                  highlighted={markdownChunkIntersectsLineRange({
+                    chunk,
+                    range: highlightRange,
+                  })}
+                  onMeasuredHeight={recordMeasuredHeight}
+                >
+                  <PretextMarkdownChunkRenderer
+                    chunk={chunk}
+                    referenceDefinitionsMarkdown={
+                      document.referenceDefinitionsMarkdown
+                    }
+                  />
+                </PretextMarkdownChunk>
+              )
+            })}
+          </div>
+        )}
       </ScrollArea>
     </TextViewerFrame>
+  )
+}
+
+function PretextMarkdownViewModeControl({
+  mode,
+  wordCount,
+  onModeChange,
+}: {
+  mode: PretextMarkdownViewMode
+  wordCount: number
+  onModeChange: (mode: PretextMarkdownViewMode) => void
+}) {
+  return (
+    <span className="flex min-w-0 items-center gap-2">
+      <span className="hidden text-xs text-muted-foreground tabular-nums sm:inline">
+        {wordCount} word{wordCount === 1 ? "" : "s"}
+      </span>
+      <span
+        aria-label="Markdown view mode"
+        className="inline-flex overflow-hidden rounded-md border bg-muted/35 p-0.5"
+        role="group"
+      >
+        {(["rendered", "source"] as const).map((item) => (
+          <button
+            key={item}
+            aria-pressed={mode === item}
+            className={[
+              "h-6 px-2 text-xs font-medium capitalize transition-colors",
+              mode === item
+                ? "rounded-sm bg-background text-foreground shadow-xs"
+                : "text-muted-foreground hover:text-foreground",
+            ].join(" ")}
+            type="button"
+            onClick={() => onModeChange(item)}
+          >
+            {item === "source" ? "Text" : "Rendered"}
+          </button>
+        ))}
+      </span>
+    </span>
+  )
+}
+
+function PretextMarkdownSourceCanvas({
+  fontScale,
+  highlightRange,
+  lines,
+  scrollTop,
+  viewportHeight,
+  viewportWidth,
+}: {
+  fontScale: number
+  highlightRange: ReturnType<typeof normalizeTextLineRange>
+  lines: readonly string[]
+  scrollTop: number
+  viewportHeight: number
+  viewportWidth: number
+}) {
+  const lineHeight = SOURCE_LINE_HEIGHT * fontScale
+  const fontSize = SOURCE_FONT_SIZE * fontScale
+  const lineCount = Math.max(1, lines.length)
+  const startLineIndex = Math.max(
+    0,
+    Math.floor(scrollTop / lineHeight) - SOURCE_OVERSCAN_LINES
+  )
+  const endLineIndex = Math.min(
+    lineCount,
+    Math.ceil((scrollTop + viewportHeight) / lineHeight) + SOURCE_OVERSCAN_LINES
+  )
+  const visibleLines = lines.slice(startLineIndex, endLineIndex)
+  const gutterWidth = Math.max(44, String(lineCount).length * 8 + 24)
+
+  return (
+    <div
+      className="relative min-w-0 overflow-x-auto bg-background font-mono text-foreground"
+      data-slot="pretext-markdown-source-canvas"
+      style={{
+        fontSize,
+        height: lineCount * lineHeight,
+        lineHeight: `${lineHeight}px`,
+        minWidth: viewportWidth,
+        tabSize: 2,
+      }}
+    >
+      <div
+        aria-hidden="true"
+        className="pointer-events-none sticky left-0 z-10 h-full border-r bg-muted/35"
+        style={{ width: gutterWidth }}
+      />
+      {visibleLines.map((line, offset) => {
+        const lineIndex = startLineIndex + offset
+        const lineNumber = lineIndex + 1
+        const highlighted =
+          highlightRange != null &&
+          lineNumber >= highlightRange.start &&
+          lineNumber <= highlightRange.end
+
+        return (
+          <div
+            key={lineNumber}
+            className={[
+              "absolute right-0 left-0 grid whitespace-pre",
+              highlighted ? "bg-primary/10 ring-1 ring-primary/20" : "",
+            ].join(" ")}
+            data-source-line={lineNumber}
+            style={{
+              gridTemplateColumns: `${gutterWidth}px max-content`,
+              height: lineHeight,
+              transform: `translateY(${lineIndex * lineHeight}px)`,
+            }}
+          >
+            <span className="sticky left-0 border-r bg-muted/35 pr-3 text-right text-muted-foreground select-none">
+              {lineNumber}
+            </span>
+            <span className="px-4">{line || " "}</span>
+          </div>
+        )
+      })}
+    </div>
   )
 }
 
@@ -366,20 +577,46 @@ function PretextMarkdownChunk({
   onMeasuredHeight: (chunkIndex: number, height: number) => void
 }) {
   const ref = React.useRef<HTMLDivElement | null>(null)
+  const chunkId = pretextMarkdownChunkId({
+    index: frame.index,
+    sourceStartLine: frame.sourceStartLine,
+  })
 
   React.useLayoutEffect(() => {
     const element = ref.current
-    if (!element || typeof ResizeObserver === "undefined") return
+    if (!element) return
+
+    const patchTables = () => {
+      patchPretextMarkdownChunkTables({ chunkId, root: element })
+    }
+
+    patchTables()
+    const mutationObserver =
+      typeof MutationObserver === "undefined"
+        ? null
+        : new MutationObserver(patchTables)
+    mutationObserver?.observe(element, {
+      childList: true,
+      subtree: true,
+    })
+
+    if (typeof ResizeObserver === "undefined") {
+      return () => {
+        mutationObserver?.disconnect()
+      }
+    }
 
     const resizeObserver = new ResizeObserver((entries) => {
       const height = entries[0]?.contentRect.height
+      patchTables()
       if (height != null) onMeasuredHeight(frame.index, height)
     })
     resizeObserver.observe(element)
     return () => {
+      mutationObserver?.disconnect()
       resizeObserver.disconnect()
     }
-  }, [frame.index, onMeasuredHeight])
+  }, [chunkId, frame.index, onMeasuredHeight])
 
   return (
     <div
@@ -388,7 +625,9 @@ function PretextMarkdownChunk({
         "absolute right-4 left-4 px-12",
         highlighted ? "bg-primary/10 ring-1 ring-primary/25" : "",
       ].join(" ")}
+      id={chunkId}
       data-pretext-markdown-chunk=""
+      data-pretext-markdown-hostile={frame.isHostile ? "" : undefined}
       data-source-end-line={frame.sourceEndLine}
       data-source-start-line={frame.sourceStartLine}
       style={{
@@ -399,24 +638,6 @@ function PretextMarkdownChunk({
       {children}
     </div>
   )
-}
-
-function getFrameScrollAnchor({
-  frame,
-  scrollTop,
-}: {
-  frame: PretextMarkdownDocumentFrame
-  scrollTop: number
-}): ScrollAnchor | null {
-  if (!frame.chunks.length) return null
-  const chunk =
-    frame.chunks.find((item) => item.bottom > scrollTop) ??
-    frame.chunks[frame.chunks.length - 1]
-  if (!chunk) return null
-  return {
-    offsetWithinChunk: Math.max(0, scrollTop - chunk.top),
-    chunkIndex: chunk.index,
-  }
 }
 
 function localFragmentHrefFromEventTarget(target: EventTarget | null) {

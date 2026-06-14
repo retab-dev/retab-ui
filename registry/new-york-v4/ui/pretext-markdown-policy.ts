@@ -36,29 +36,44 @@ export const CALLOUT_LABELS = {
 
 export type CalloutKind = keyof typeof CALLOUT_LABELS
 
-export type PretextComponentKind = "Badge" | "Metric"
-
-export type PretextComponentProps = {
-  label?: string
-  tone?: string
-  value?: string
+type PretextComponentPropSchema = {
+  values?: readonly string[]
 }
 
+type PretextComponentRegistryEntry = {
+  directiveName: string
+  props: Record<string, PretextComponentPropSchema>
+}
+
+export const PRETEXT_COMPONENT_REGISTRY = {
+  Badge: {
+    directiveName: "badge",
+    props: {
+      label: {},
+      tone: { values: ["danger", "info", "success", "warning"] },
+      value: {},
+    },
+  },
+  Metric: {
+    directiveName: "metric",
+    props: {
+      label: {},
+      value: {},
+    },
+  },
+} as const satisfies Record<string, PretextComponentRegistryEntry>
+
+export type PretextComponentKind = keyof typeof PRETEXT_COMPONENT_REGISTRY
+type PretextComponentPropName = {
+  [Kind in PretextComponentKind]: keyof (typeof PRETEXT_COMPONENT_REGISTRY)[Kind]["props"]
+}[PretextComponentKind]
+export type PretextComponentProps = Partial<
+  Record<PretextComponentPropName, string>
+>
 export type PretextComponent = {
   name: PretextComponentKind
   props: PretextComponentProps
 }
-
-const PRETEXT_COMPONENT_KINDS = new Set<PretextComponentKind>([
-  "Badge",
-  "Metric",
-])
-
-const PRETEXT_COMPONENT_PROPS = new Set<keyof PretextComponentProps>([
-  "label",
-  "tone",
-  "value",
-])
 
 const EMOJI_SHORTCODES: Record<string, string> = {
   ":check:": "✓",
@@ -68,8 +83,13 @@ const EMOJI_SHORTCODES: Record<string, string> = {
   ":x:": "✕",
 }
 
+const URL_CONTROL_CHARACTER_PATTERN = /[\u0000-\u001F\u007F]/
+const URL_SCHEME_PATTERN = /^([A-Za-z][A-Za-z0-9+.-]*):/
+const ALLOWED_LINK_PROTOCOLS = new Set(["http", "https", "mailto"])
+
 export const PRETEXT_MARKDOWN_REHYPE_PLUGINS: PluggableList = [
   rehypeRaw,
+  rehypePretextMarkdownInputPolicy,
   [rehypeSanitize, createPretextMarkdownSanitizeSchema()],
   rehypeKatex,
   [
@@ -92,6 +112,7 @@ export function createPretextMarkdownRemarkPlugins(
     remarkPretextHeadingIds(headingIds),
     remarkPretextComponentMarkdown,
     remarkPretextDirectiveCallouts,
+    remarkPretextComponentDirectives,
     remarkPretextGithubAlerts,
     remarkPretextProseTransforms,
     remarkGfm,
@@ -103,15 +124,22 @@ export function createPretextMarkdownRemarkPlugins(
 export function sanitizePretextMarkdownUrl(value: string) {
   const trimmed = value.trim()
   if (!trimmed) return ""
-  if (trimmed.startsWith("#") || trimmed.startsWith("/")) return trimmed
+  if (URL_CONTROL_CHARACTER_PATTERN.test(trimmed)) return ""
+
+  const decoded = decodePretextMarkdownUrl(trimmed).trim()
+  if (!decoded || URL_CONTROL_CHARACTER_PATTERN.test(decoded)) return ""
+
+  const decodedScheme = getPretextMarkdownUrlScheme(decoded)
+  const rawScheme = getPretextMarkdownUrlScheme(trimmed)
+  if (decodedScheme && decodedScheme !== rawScheme) return ""
+  if (decodedScheme && !ALLOWED_LINK_PROTOCOLS.has(decodedScheme)) return ""
+
+  if (trimmed.startsWith("#")) return trimmed
+  if (trimmed.startsWith("/")) return trimmed.startsWith("//") ? "" : trimmed
 
   try {
     const url = new URL(trimmed, "https://retab.local")
-    if (
-      url.protocol === "http:" ||
-      url.protocol === "https:" ||
-      url.protocol === "mailto:"
-    ) {
+    if (ALLOWED_LINK_PROTOCOLS.has(url.protocol.slice(0, -1))) {
       return trimmed
     }
   } catch {
@@ -127,6 +155,53 @@ export function sanitizePretextMarkdownImageUrl(value: string) {
     return ""
   }
   return safeUrl
+}
+
+function decodePretextMarkdownUrl(value: string) {
+  try {
+    return decodeURIComponent(value)
+  } catch {
+    return value
+  }
+}
+
+function getPretextMarkdownUrlScheme(value: string) {
+  return URL_SCHEME_PATTERN.exec(value)?.[1]?.toLowerCase() ?? null
+}
+
+function rehypePretextMarkdownInputPolicy() {
+  return function transform(tree: unknown) {
+    removeUnsafePretextMarkdownInputs(tree)
+  }
+}
+
+function removeUnsafePretextMarkdownInputs(node: unknown) {
+  if (!node || typeof node !== "object" || !("children" in node)) return
+
+  const parent = node as { children?: unknown[] }
+  if (!Array.isArray(parent.children)) return
+
+  parent.children = parent.children.filter(
+    (child) => !isUnsafePretextMarkdownInput(child)
+  )
+  for (const child of parent.children) {
+    removeUnsafePretextMarkdownInputs(child)
+  }
+}
+
+function isUnsafePretextMarkdownInput(node: unknown) {
+  if (!node || typeof node !== "object") return false
+
+  const element = node as {
+    tagName?: string
+    properties?: Record<string, unknown>
+  }
+  if (element.tagName !== "input") return false
+
+  return !(
+    element.properties?.type === "checkbox" &&
+    element.properties.disabled === true
+  )
 }
 
 export function readPretextHeadingId(props: Record<string, unknown>) {
@@ -179,10 +254,7 @@ export function readPretextComponent(node: unknown): PretextComponent | null {
   const name =
     properties.dataPretextComponentName ??
     properties["data-pretext-component-name"]
-  if (
-    typeof name !== "string" ||
-    !PRETEXT_COMPONENT_KINDS.has(name as PretextComponentKind)
-  ) {
+  if (typeof name !== "string" || !isPretextComponentKind(name)) {
     return null
   }
 
@@ -193,17 +265,10 @@ export function readPretextComponent(node: unknown): PretextComponent | null {
 
   try {
     const parsed = JSON.parse(serializedProps) as Record<string, unknown>
-    const props: PretextComponentProps = {}
-    for (const [propName, propValue] of Object.entries(parsed)) {
-      if (
-        isSafePretextComponentProp(propName) &&
-        typeof propValue === "string"
-      ) {
-        props[propName] = propValue
-      }
-    }
+    const props = parsePretextComponentProps(name, parsed)
+    if (!props) return null
     return {
-      name: name as PretextComponentKind,
+      name,
       props,
     }
   } catch {
@@ -211,7 +276,7 @@ export function readPretextComponent(node: unknown): PretextComponent | null {
   }
 }
 
-function createPretextMarkdownSanitizeSchema(): RehypeSanitizeOptions {
+export function createPretextMarkdownSanitizeSchema(): RehypeSanitizeOptions {
   return {
     ...defaultSchema,
     attributes: {
@@ -281,10 +346,10 @@ function parsePretextComponentMarkdown(value: string): PretextComponent | null {
   if (!componentMatch) return null
 
   const name = componentMatch[1]
-  if (!PRETEXT_COMPONENT_KINDS.has(name as PretextComponentKind)) return null
+  if (!isPretextComponentKind(name)) return null
 
   const attributes = componentMatch[2] ?? ""
-  const props: PretextComponentProps = {}
+  const rawProps: Record<string, string> = {}
   const propPattern = /\s*([A-Za-z][A-Za-z0-9_]*)=(?:"([^"]*)"|'([^']*)')/gy
   let index = 0
 
@@ -296,24 +361,116 @@ function parsePretextComponentMarkdown(value: string): PretextComponent | null {
     if (!propMatch) return null
 
     const propName = propMatch[1]
-    if (!isSafePretextComponentProp(propName)) return null
+    if (!isSafePretextComponentPropName(propName)) return null
 
-    props[propName] = propMatch[2] ?? propMatch[3] ?? ""
+    rawProps[propName] = propMatch[2] ?? propMatch[3] ?? ""
     index = propPattern.lastIndex
   }
 
+  const props = parsePretextComponentProps(name, rawProps)
+  if (!props) return null
+
   return {
-    name: name as PretextComponentKind,
+    name,
     props,
   }
 }
 
-function isSafePretextComponentProp(
-  propName: string
-): propName is keyof PretextComponentProps {
-  if (!PRETEXT_COMPONENT_PROPS.has(propName as keyof PretextComponentProps)) {
-    return false
+function parsePretextDirectiveComponent(node: any): PretextComponent | null {
+  const name = normalizePretextDirectiveComponentName(node.name)
+  if (!name) return null
+
+  const props = parsePretextComponentAttributes(node.attributes)
+  if (!props) return null
+
+  if (node.type === "textDirective") {
+    const label = extractPretextDirectiveText(node)
+    if (label) props.label ??= label
   }
+
+  const validatedProps = parsePretextComponentProps(name, props)
+  if (!validatedProps) return null
+
+  return { name, props: validatedProps }
+}
+
+function extractPretextDirectiveText(node: any) {
+  if (typeof node.value === "string" && node.value.trim()) {
+    return node.value.trim()
+  }
+
+  const children = Array.isArray(node.children) ? node.children : []
+  const text = children
+    .map((child: { value?: unknown }) =>
+      typeof child.value === "string" ? child.value : ""
+    )
+    .join("")
+    .trim()
+  return text || null
+}
+
+function normalizePretextDirectiveComponentName(
+  name: unknown
+): PretextComponentKind | null {
+  const normalized = String(name ?? "").toLowerCase()
+  for (const [componentName, definition] of Object.entries(
+    PRETEXT_COMPONENT_REGISTRY
+  )) {
+    if (definition.directiveName === normalized) {
+      return componentName as PretextComponentKind
+    }
+  }
+  return null
+}
+
+function isPretextDirectiveComponentName(name: unknown) {
+  return normalizePretextDirectiveComponentName(name) != null
+}
+
+function parsePretextComponentAttributes(
+  attributes: Record<string, unknown> | null | undefined
+): PretextComponentProps | null {
+  const props: PretextComponentProps = {}
+  const parsedProps = props as Record<string, string>
+
+  for (const [propName, propValue] of Object.entries(attributes ?? {})) {
+    if (!isSafePretextComponentPropName(propName)) return null
+    if (typeof propValue !== "string") return null
+    parsedProps[propName] = propValue
+  }
+
+  return props
+}
+
+function parsePretextComponentProps(
+  name: PretextComponentKind,
+  props: Record<string, unknown>
+): PretextComponentProps | null {
+  const definition = PRETEXT_COMPONENT_REGISTRY[name]
+  const parsed: PretextComponentProps = {}
+  const parsedProps = parsed as Record<string, string>
+
+  for (const [propName, propValue] of Object.entries(props)) {
+    if (!isSafePretextComponentPropName(propName)) return null
+    const propDefinition = (
+      definition.props as Record<string, PretextComponentPropSchema>
+    )[propName]
+    if (!propDefinition) return null
+    if (typeof propValue !== "string") return null
+    if (propDefinition.values && !propDefinition.values.includes(propValue)) {
+      return null
+    }
+    parsedProps[propName] = propValue
+  }
+
+  return parsed
+}
+
+function isPretextComponentKind(name: string): name is PretextComponentKind {
+  return name in PRETEXT_COMPONENT_REGISTRY
+}
+
+function isSafePretextComponentPropName(propName: string) {
   if (/^on/i.test(propName)) return false
 
   return ![
@@ -403,6 +560,55 @@ function remarkPretextDirectiveCallouts() {
       }
     })
   }
+}
+
+function remarkPretextComponentDirectives() {
+  return function transform(tree: unknown) {
+    visit(tree as any, ["leafDirective", "textDirective"], (node: any) => {
+      const component = parsePretextDirectiveComponent(node)
+      if (!component) {
+        if (isPretextDirectiveComponentName(node.name)) {
+          node.type = "text"
+          node.value = serializePretextDirectiveFallback(node)
+          node.children = []
+          delete node.data
+        }
+        return
+      }
+
+      node.type = "pretextComponentDirective"
+      node.data = {
+        ...node.data,
+        hName: "div",
+        hProperties: {
+          ...node.data?.hProperties,
+          dataPretextComponentName: component.name,
+          dataPretextComponentProps: JSON.stringify(component.props),
+        },
+      }
+      node.children = []
+      delete node.value
+    })
+  }
+}
+
+function serializePretextDirectiveFallback(node: any) {
+  const prefix = node.type === "textDirective" ? ":" : "::"
+  const text = extractPretextDirectiveText(node)
+  const label = text ? `[${text}]` : ""
+  return `${prefix}${node.name ?? ""}${label}${serializePretextDirectiveAttributes(
+    node.attributes
+  )}`
+}
+
+function serializePretextDirectiveAttributes(
+  attributes: Record<string, unknown> | null | undefined
+) {
+  const entries = Object.entries(attributes ?? {})
+    .filter((entry): entry is [string, string] => typeof entry[1] === "string")
+    .map(([name, value]) => `${name}="${value.replace(/"/g, '\\"')}"`)
+
+  return entries.length ? `{${entries.join(" ")}}` : ""
 }
 
 function remarkPretextComponentMarkdown() {

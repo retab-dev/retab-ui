@@ -2,16 +2,7 @@
 
 import * as React from "react"
 
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "@/components/ui/resizable"
 import { ViewerBody, ViewerRoot, ViewerSurface } from "@/components/ui/viewer"
-import {
-  PageMarkdownDocumentPane,
-  type PageMarkdownDocumentPaneHandle,
-} from "@/components/viewers/page-markdown/page-markdown-document-pane"
 import { PageMarkdownEmptyState } from "@/components/viewers/page-markdown/page-markdown-empty-state"
 import { PAGE_MARKDOWN_PAGE_WIDTH } from "@/components/viewers/page-markdown/page-markdown-layout"
 import { joinMarkdownPages } from "@/components/viewers/page-markdown/page-markdown-model"
@@ -24,26 +15,128 @@ import {
   zoomPageScale,
 } from "@/components/viewers/page-markdown/page-markdown-scale"
 import { usePageMarkdownSync } from "@/components/viewers/page-markdown/page-markdown-sync"
+import { PageMarkdownToolbar } from "@/components/viewers/page-markdown/page-markdown-toolbar"
 import {
+  type PageMarkdownDocumentScrollRequest,
+  type PageMarkdownDocumentState,
   type PageMarkdownViewerProps,
   type PageMarkdownViewMode,
 } from "@/components/viewers/page-markdown/page-markdown-types"
 
-export function PageMarkdownViewer({
+type PageMarkdownViewerContextValue = {
+  currentPage: number
+  document: PageMarkdownDocumentState
+  fileName: string
+  hasPages: boolean
+  isMarkdownScaleReady: boolean
+  isProcessing: boolean
+  markdownPaneRef: React.RefObject<PageMarkdownPaneHandle | null>
+  mode: PageMarkdownViewMode
+  pages: string[]
+  processingLabel: string
+  resetKey?: string
+  scale: number
+  setMarkdownContainerWidth: (width: number | null) => void
+  setMode: (mode: PageMarkdownViewMode) => void
+  setViewerScale: (scale: number | null) => void
+  text: string
+  fitWidth: () => void
+  onMarkdownVisiblePageChange: (pageNumber: number) => void
+}
+
+const PageMarkdownViewerContext =
+  React.createContext<PageMarkdownViewerContextValue | null>(null)
+
+export function usePageMarkdownViewer() {
+  const context = React.useContext(PageMarkdownViewerContext)
+  if (!context) {
+    throw new Error(
+      "usePageMarkdownViewer must be used within PageMarkdownViewerProvider."
+    )
+  }
+  return context
+}
+
+export function usePageMarkdownViewerContent() {
+  const {
+    currentPage,
+    fileName,
+    fitWidth,
+    hasPages,
+    isMarkdownScaleReady,
+    isProcessing,
+    markdownPaneRef,
+    mode,
+    onMarkdownVisiblePageChange,
+    pages,
+    processingLabel,
+    resetKey,
+    scale,
+    setMarkdownContainerWidth,
+    setMode,
+    setViewerScale,
+    text,
+  } = usePageMarkdownViewer()
+
+  return {
+    currentPage,
+    fileName,
+    fitWidth,
+    hasPages,
+    isMarkdownScaleReady,
+    isProcessing,
+    markdownPaneRef,
+    mode,
+    onMarkdownVisiblePageChange,
+    pages,
+    processingLabel,
+    resetKey,
+    scale,
+    setMarkdownContainerWidth,
+    setMode,
+    setViewerScale,
+    text,
+  }
+}
+
+export function usePageMarkdownViewerDocument(): PageMarkdownDocumentState {
+  return usePageMarkdownViewer().document
+}
+
+export function usePageMarkdownViewerToolbar() {
+  const { currentPage, fileName, fitWidth, mode, pages, scale, setMode, text } =
+    usePageMarkdownViewer()
+
+  return {
+    currentPage,
+    fileName,
+    fitWidth,
+    mode,
+    pageCount: pages.length,
+    scale,
+    setMode,
+    text,
+  }
+}
+
+export function PageMarkdownViewerProvider({
+  children,
   pages,
   text = joinMarkdownPages(pages),
   isProcessing = false,
-  renderDocument,
   onVisiblePageChange,
   fileName = "document.md",
   resetKey,
   processingLabel = "Preparing document...",
-}: PageMarkdownViewerProps) {
+}: PageMarkdownViewerProps & { children: React.ReactNode }) {
   const hasPages = pages.length > 0
   const [mode, setMode] = React.useState<PageMarkdownViewMode>("rendered")
   const [markdownContainerWidth, setMarkdownContainerWidth] = React.useState<
     number | null
   >(null)
+  const markdownPaneRef = React.useRef<PageMarkdownPaneHandle | null>(null)
+  const [documentScrollRequest, setDocumentScrollRequest] =
+    React.useState<PageMarkdownDocumentScrollRequest | null>(null)
   const pagePaneResetKey = hasPages ? `pages:${resetKey ?? ""}` : "empty"
   const { currentPage, reportDocumentPage, reportMarkdownPage } =
     usePageMarkdownSync({
@@ -52,17 +145,9 @@ export function PageMarkdownViewer({
       resetKey: pagePaneResetKey,
     })
 
-  const markdownPaneRef = React.useRef<PageMarkdownPaneHandle | null>(null)
-  const documentPaneRef = React.useRef<PageMarkdownDocumentPaneHandle | null>(
-    null
-  )
-  const [documentPageReport, setDocumentPageReport] = React.useState<{
-    pageNumber: number
-  } | null>(null)
-
   React.useEffect(() => {
     setMode("rendered")
-    setDocumentPageReport(null)
+    setDocumentScrollRequest(null)
   }, [resetKey])
 
   const handleDocumentPageChange = React.useCallback(
@@ -71,12 +156,16 @@ export function PageMarkdownViewer({
         ? Math.floor(pageNumber)
         : 1
       const pageCount = Math.max(1, pages.length)
-      setDocumentPageReport({
-        pageNumber: Math.min(pageCount, Math.max(1, normalizedPage)),
-      })
+      const target = reportDocumentPage(
+        Math.min(pageCount, Math.max(1, normalizedPage))
+      )
+      if (target?.pane === "markdown") {
+        markdownPaneRef.current?.scrollToPage(target.pageNumber)
+      }
     },
-    [pages.length]
+    [pages.length, reportDocumentPage]
   )
+
   const handleDocumentScrollProgressChange = React.useCallback(
     (progress: number) => {
       void progress
@@ -84,19 +173,14 @@ export function PageMarkdownViewer({
     []
   )
 
-  React.useEffect(() => {
-    if (!documentPageReport) return
-    const target = reportDocumentPage(documentPageReport.pageNumber)
-    if (target?.pane === "markdown") {
-      markdownPaneRef.current?.scrollToPage(target.pageNumber)
-    }
-  }, [documentPageReport, reportDocumentPage])
-
   const handleMarkdownPageChange = React.useCallback(
     (pageNumber: number) => {
       const target = reportMarkdownPage(pageNumber)
       if (target?.pane === "document") {
-        documentPaneRef.current?.scrollToPage(target.pageNumber)
+        setDocumentScrollRequest({
+          pageNumber: target.pageNumber,
+          version: target.version,
+        })
       }
     },
     [reportMarkdownPage]
@@ -109,22 +193,97 @@ export function PageMarkdownViewer({
   })
   const isMarkdownScaleReady = markdownContainerWidth !== null
 
+  const document = React.useMemo<PageMarkdownDocumentState>(
+    () => ({
+      onCurrentPageChange: handleDocumentPageChange,
+      onScrollProgressChange: handleDocumentScrollProgressChange,
+      scrollRequest: documentScrollRequest,
+    }),
+    [
+      documentScrollRequest,
+      handleDocumentPageChange,
+      handleDocumentScrollProgressChange,
+    ]
+  )
+
+  const value = React.useMemo<PageMarkdownViewerContextValue>(
+    () => ({
+      currentPage,
+      document,
+      fileName,
+      fitWidth,
+      hasPages,
+      isMarkdownScaleReady,
+      isProcessing,
+      markdownPaneRef,
+      mode,
+      onMarkdownVisiblePageChange: handleMarkdownPageChange,
+      pages,
+      processingLabel,
+      resetKey,
+      scale,
+      setMarkdownContainerWidth,
+      setMode,
+      setViewerScale,
+      text,
+    }),
+    [
+      currentPage,
+      document,
+      fileName,
+      fitWidth,
+      handleMarkdownPageChange,
+      hasPages,
+      isMarkdownScaleReady,
+      isProcessing,
+      mode,
+      pages,
+      processingLabel,
+      resetKey,
+      scale,
+      setViewerScale,
+      text,
+    ]
+  )
+
+  return (
+    <PageMarkdownViewerContext.Provider value={value}>
+      {children}
+    </PageMarkdownViewerContext.Provider>
+  )
+}
+
+export function PageMarkdownViewerContent() {
+  const {
+    currentPage,
+    fileName,
+    fitWidth,
+    hasPages,
+    isMarkdownScaleReady,
+    isProcessing,
+    markdownPaneRef,
+    mode,
+    onMarkdownVisiblePageChange,
+    pages,
+    processingLabel,
+    resetKey,
+    scale,
+    setMarkdownContainerWidth,
+    setMode,
+    setViewerScale,
+    text,
+  } = usePageMarkdownViewerContent()
+
   if (!hasPages) {
     return (
-      <ViewerRoot bare className="h-full flex-1 bg-background">
-        <ViewerBody>
-          <ViewerSurface>
-            <PageMarkdownEmptyState
-              isProcessing={isProcessing}
-              processingLabel={processingLabel}
-            />
-          </ViewerSurface>
-        </ViewerBody>
-      </ViewerRoot>
+      <PageMarkdownEmptyState
+        isProcessing={isProcessing}
+        processingLabel={processingLabel}
+      />
     )
   }
 
-  const markdownPane = (
+  return (
     <PageMarkdownPane
       ref={markdownPaneRef}
       pages={pages}
@@ -139,43 +298,49 @@ export function PageMarkdownViewer({
       onZoom={(factor) => setViewerScale(zoomPageScale(scale, factor))}
       onFitWidth={fitWidth}
       onContainerWidthChange={setMarkdownContainerWidth}
-      onVisiblePageChange={handleMarkdownPageChange}
+      onVisiblePageChange={onMarkdownVisiblePageChange}
     />
   )
+}
 
-  if (!renderDocument) {
-    return (
-      <ViewerRoot bare className="h-full flex-1 bg-background">
-        <ViewerBody>
-          <ViewerSurface>{markdownPane}</ViewerSurface>
-        </ViewerBody>
-      </ViewerRoot>
-    )
-  }
+export function PageMarkdownViewerToolbar() {
+  const {
+    currentPage,
+    fileName,
+    fitWidth,
+    mode,
+    pages,
+    scale,
+    setMode,
+    setViewerScale,
+    text,
+  } = usePageMarkdownViewerContent()
 
   return (
-    <ViewerRoot bare className="h-full flex-1 bg-background">
-      <ViewerBody>
-        <ResizablePanelGroup
-          orientation="horizontal"
-          className="min-h-0 flex-1"
-        >
-          <ResizablePanel defaultSize={52} minSize={28}>
-            <ViewerSurface className="h-full">
-              <PageMarkdownDocumentPane
-                ref={documentPaneRef}
-                renderDocument={renderDocument}
-                onCurrentPageChange={handleDocumentPageChange}
-                onScrollProgressChange={handleDocumentScrollProgressChange}
-              />
-            </ViewerSurface>
-          </ResizablePanel>
-          <ResizableHandle withHandle />
-          <ResizablePanel defaultSize={48} minSize={28}>
-            <ViewerSurface className="h-full">{markdownPane}</ViewerSurface>
-          </ResizablePanel>
-        </ResizablePanelGroup>
-      </ViewerBody>
-    </ViewerRoot>
+    <PageMarkdownToolbar
+      currentPage={Math.min(currentPage, pages.length)}
+      pageCount={pages.length}
+      mode={mode}
+      scale={scale}
+      text={text}
+      fileName={fileName}
+      onModeChange={setMode}
+      onZoom={(factor) => setViewerScale(zoomPageScale(scale, factor))}
+      onFitWidth={fitWidth}
+    />
+  )
+}
+
+export function PageMarkdownViewer(props: PageMarkdownViewerProps) {
+  return (
+    <PageMarkdownViewerProvider {...props}>
+      <ViewerRoot bare className="h-full flex-1 bg-background">
+        <ViewerBody>
+          <ViewerSurface>
+            <PageMarkdownViewerContent />
+          </ViewerSurface>
+        </ViewerBody>
+      </ViewerRoot>
+    </PageMarkdownViewerProvider>
   )
 }

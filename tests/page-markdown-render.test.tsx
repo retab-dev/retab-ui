@@ -15,7 +15,12 @@ import {
   createPageMarkdownLayout,
   getPageMarkdownPageLayout,
 } from "@/components/viewers/page-markdown/page-markdown-layout"
-import { PageMarkdownViewer } from "@/components/viewers/page-markdown/page-markdown-viewer"
+import {
+  PageMarkdownViewer,
+  PageMarkdownViewerContent,
+  PageMarkdownViewerProvider,
+  usePageMarkdownViewerDocument,
+} from "@/components/viewers/page-markdown/page-markdown-viewer"
 
 const PAGES = ["# First page\n\nAlpha", "## Second page\n\nBeta"]
 const LARGE_PAGE_COUNT = 1000
@@ -63,6 +68,59 @@ function pageSlotNumbers(container: ParentNode = document) {
       '[data-slot="page-markdown-page-slot"]'
     )
   ).map((slot) => Number(slot.dataset.pageNumber))
+}
+
+function PageMarkdownSyncHarness({
+  children,
+  onVisiblePageChange,
+  pages,
+  resetKey,
+}: {
+  children: React.ReactNode
+  onVisiblePageChange?: (pageNumber: number) => void
+  pages: string[]
+  resetKey?: string
+}) {
+  return (
+    <PageMarkdownViewerProvider
+      pages={pages}
+      onVisiblePageChange={onVisiblePageChange}
+      resetKey={resetKey}
+    >
+      {children}
+      <PageMarkdownViewerContent />
+    </PageMarkdownViewerProvider>
+  )
+}
+
+function ReportDocumentPageButton({
+  label,
+  pageNumber,
+}: {
+  label: string
+  pageNumber: number
+}) {
+  const document = usePageMarkdownViewerDocument()
+
+  return (
+    <button
+      type="button"
+      onClick={() => document.onCurrentPageChange(pageNumber)}
+    >
+      {label}
+    </button>
+  )
+}
+
+function DocumentScrollSpy({ onScroll }: { onScroll: (page: number) => void }) {
+  const document = usePageMarkdownViewerDocument()
+
+  React.useEffect(() => {
+    if (!document.scrollRequest) return
+    onScroll(document.scrollRequest.pageNumber)
+  }, [document.scrollRequest, onScroll])
+
+  return null
 }
 
 function pageWidth(container: ParentNode = document) {
@@ -865,14 +923,12 @@ describe("PageMarkdownViewer", () => {
 
   it("scrolls the markdown pane when the document pane reports a new page", async () => {
     render(
-      <PageMarkdownViewer
-        pages={PAGES}
-        renderDocument={({ onCurrentPageChange }) => (
-          <button type="button" onClick={() => onCurrentPageChange(2)}>
-            Show document page 2
-          </button>
-        )}
-      />
+      <PageMarkdownSyncHarness pages={PAGES}>
+        <ReportDocumentPageButton
+          label="Show document page 2"
+          pageNumber={2}
+        />
+      </PageMarkdownSyncHarness>
     )
 
     await screen.findByText("Second page")
@@ -896,15 +952,15 @@ describe("PageMarkdownViewer", () => {
     const pages = [...PAGES, "## Third page\n\nGamma"]
 
     render(
-      <PageMarkdownViewer
+      <PageMarkdownSyncHarness
         pages={pages}
         onVisiblePageChange={onVisiblePageChange}
-        renderDocument={({ onCurrentPageChange }) => (
-          <button type="button" onClick={() => onCurrentPageChange(2)}>
-            Show document page 2
-          </button>
-        )}
-      />
+      >
+        <ReportDocumentPageButton
+          label="Show document page 2"
+          pageNumber={2}
+        />
+      </PageMarkdownSyncHarness>
     )
 
     await screen.findByText("Second page")
@@ -925,27 +981,16 @@ describe("PageMarkdownViewer", () => {
   })
 
   it("scrolls the document pane when the visible markdown page changes", async () => {
-    const scrollIntoView = vi.fn()
+    const onDocumentScroll = vi.fn()
     const onVisiblePageChange = vi.fn()
 
     render(
-      <PageMarkdownViewer
+      <PageMarkdownSyncHarness
         pages={PAGES}
         onVisiblePageChange={onVisiblePageChange}
-        renderDocument={() => (
-          <div>
-            <section data-page-number="1">Document page 1</section>
-            <section
-              data-page-number="2"
-              ref={(node) => {
-                if (node) node.scrollIntoView = scrollIntoView
-              }}
-            >
-              Document page 2
-            </section>
-          </div>
-        )}
-      />
+      >
+        <DocumentScrollSpy onScroll={onDocumentScroll} />
+      </PageMarkdownSyncHarness>
     )
 
     await screen.findByText("Second page")
@@ -958,10 +1003,7 @@ describe("PageMarkdownViewer", () => {
 
     await waitFor(() => {
       expect(onVisiblePageChange).toHaveBeenCalledWith(2)
-      expect(scrollIntoView).toHaveBeenCalledWith({
-        behavior: "smooth",
-        block: "start",
-      })
+      expect(onDocumentScroll).toHaveBeenCalledWith(2)
     })
     expect(screen.getByText("Page 2 of 2")).toBeTruthy()
   })
@@ -1037,14 +1079,12 @@ describe("PageMarkdownViewer", () => {
   it("clamps the current page when the page list shrinks", async () => {
     const pages = [...PAGES, "## Third page\n\nGamma"]
     const { rerender } = render(
-      <PageMarkdownViewer
-        pages={pages}
-        renderDocument={({ onCurrentPageChange }) => (
-          <button type="button" onClick={() => onCurrentPageChange(3)}>
-            Show document page 3
-          </button>
-        )}
-      />
+      <PageMarkdownSyncHarness pages={pages}>
+        <ReportDocumentPageButton
+          label="Show document page 3"
+          pageNumber={3}
+        />
+      </PageMarkdownSyncHarness>
     )
 
     fireEvent.click(
@@ -1056,14 +1096,12 @@ describe("PageMarkdownViewer", () => {
     })
 
     rerender(
-      <PageMarkdownViewer
-        pages={PAGES}
-        renderDocument={({ onCurrentPageChange }) => (
-          <button type="button" onClick={() => onCurrentPageChange(2)}>
-            Show document page 2
-          </button>
-        )}
-      />
+      <PageMarkdownSyncHarness pages={PAGES}>
+        <ReportDocumentPageButton
+          label="Show document page 2"
+          pageNumber={2}
+        />
+      </PageMarkdownSyncHarness>
     )
 
     await waitFor(() => {

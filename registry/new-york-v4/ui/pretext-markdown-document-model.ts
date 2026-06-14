@@ -1,70 +1,93 @@
 "use client"
 
-import { measureLineStats, prepareWithSegments } from "@chenglou/pretext"
-import { marked, type Token } from "marked"
-
+import {
+  parsePretextMarkdownTokens,
+  type PretextMarkdownToken,
+} from "./pretext-markdown-parser"
 import { splitTextLines } from "./text-viewer-resource"
 
 const MARKDOWN_CHUNK_TARGET_SOURCE_LINES = 36
 const MARKDOWN_CHUNK_MAX_SOURCE_LINES = 54
-const DOCUMENT_PADDING_Y = 32
-const CHUNK_GAP = 0
-const CHUNK_PADDING_X = 48
-const CHUNK_PADDING_Y = 0
-const BODY_LINE_HEIGHT = 24
-const CODE_LINE_HEIGHT = 21
-const MIN_CHUNK_HEIGHT = 120
-const BODY_FONT_FAMILY =
-  'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
-const CODE_FONT_FAMILY =
-  'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace'
+const DOM_CLOBBERING_HEADING_IDS = new Set([
+  "__proto__",
+  "attributes",
+  "children",
+  "constructor",
+  "content",
+  "cookie",
+  "document",
+  "forms",
+  "history",
+  "id",
+  "images",
+  "length",
+  "links",
+  "location",
+  "name",
+  "navigator",
+  "parent",
+  "prototype",
+  "scripts",
+  "self",
+  "top",
+  "window",
+])
 
 export type PretextMarkdownChunkKind = "frontmatter" | "markdown"
+export type PretextMarkdownFrontmatterLanguage = "toml" | "yaml"
+export type PretextMarkdownBlockKind =
+  | "code"
+  | "comment"
+  | "definition"
+  | "frontmatter"
+  | "heading"
+  | "html"
+  | "list"
+  | "paragraph"
+  | "table"
+  | "thematicBreak"
+  | "unknown"
 
 export interface PretextMarkdownDocument {
+  blocks: PretextMarkdownBlock[]
   headings: PretextMarkdownHeading[]
   chunks: PretextMarkdownChunk[]
+  referenceDefinitionsMarkdown: string
   sourceLineCount: number
   text: string
   wordCount: number
 }
 
 export interface PretextMarkdownHeading {
+  blockId: string
   id: string
   chunkIndex: number
   sourceLine: number
   text: string
 }
 
-export interface PretextMarkdownChunk {
-  headingIds: string[]
+export interface PretextMarkdownBlock {
+  chunkIndex: number
+  headingId?: string
+  id: string
   index: number
-  kind: PretextMarkdownChunkKind
+  isHostile: boolean
+  kind: PretextMarkdownBlockKind
   markdown: string
   sourceEndLine: number
   sourceStartLine: number
 }
 
-export interface PretextMarkdownDocumentFrame {
-  chunks: PretextMarkdownChunkFrame[]
-  totalHeight: number
-  width: number
-}
-
-export interface PretextMarkdownChunkFrame {
-  bottom: number
-  estimatedHeight: number
-  height: number
+export interface PretextMarkdownChunk {
+  blockIds: string[]
+  frontmatterLanguage?: PretextMarkdownFrontmatterLanguage
+  headingIds: string[]
   index: number
+  isHostile: boolean
   kind: PretextMarkdownChunkKind
-  measuredHeight: number | null
+  markdown: string
   sourceEndLine: number
   sourceStartLine: number
-  top: number
-}
-
-export interface PretextMarkdownMeasuredHeights {
-  get(index: number): number | undefined
 }
 
 export interface PretextMarkdownLineRange {
@@ -76,97 +99,22 @@ export function createPretextMarkdownDocument(
   markdown: string
 ): PretextMarkdownDocument {
   const sourceLineCount = splitTextLines(markdown).length
-  const { headings, chunks } = createPretextMarkdownChunks(
+  const { blocks, headings, chunks } = createPretextMarkdownChunks(
     markdown,
     sourceLineCount
   )
+  const referenceDefinitionsMarkdown =
+    collectPretextMarkdownReferenceDefinitions(markdown)
 
   return {
+    blocks,
     headings,
     chunks,
+    referenceDefinitionsMarkdown,
     sourceLineCount,
     text: markdown,
     wordCount: countWords(markdown),
   }
-}
-
-export function layoutPretextMarkdownDocument({
-  contentWidth,
-  document,
-  fontScale,
-  measuredHeights,
-}: {
-  contentWidth: number
-  document: PretextMarkdownDocument
-  fontScale: number
-  measuredHeights?: PretextMarkdownMeasuredHeights
-}): PretextMarkdownDocumentFrame {
-  const width = Math.max(1, contentWidth)
-  const frames: PretextMarkdownChunkFrame[] = []
-  let y = DOCUMENT_PADDING_Y
-
-  for (const chunk of document.chunks) {
-    const measuredHeight = measuredHeights?.get(chunk.index)
-    const estimatedHeight = estimatePretextMarkdownChunkHeight({
-      fontScale,
-      chunk,
-      width,
-    })
-    const height =
-      measuredHeight == null
-        ? estimatedHeight
-        : Math.max(MIN_CHUNK_HEIGHT, measuredHeight)
-    const frame: PretextMarkdownChunkFrame = {
-      bottom: y + height,
-      estimatedHeight,
-      height,
-      index: chunk.index,
-      kind: chunk.kind,
-      measuredHeight: measuredHeight ?? null,
-      sourceEndLine: chunk.sourceEndLine,
-      sourceStartLine: chunk.sourceStartLine,
-      top: y,
-    }
-    frames.push(frame)
-    y = frame.bottom + CHUNK_GAP
-  }
-
-  return {
-    chunks: frames,
-    totalHeight: frames.length ? y - CHUNK_GAP + DOCUMENT_PADDING_Y : 0,
-    width,
-  }
-}
-
-export function getPretextMarkdownVisibleChunkFrames({
-  frames,
-  overscanPx,
-  scrollTop,
-  viewportHeight,
-}: {
-  frames: readonly PretextMarkdownChunkFrame[]
-  overscanPx: number
-  scrollTop: number
-  viewportHeight: number
-}) {
-  if (!frames.length) return []
-
-  const minY = Math.max(0, scrollTop - overscanPx)
-  const maxY = scrollTop + viewportHeight + overscanPx
-  const start = firstChunkWithBottomAfter(frames, minY)
-  const end = firstChunkWithTopAtOrAfter(frames, maxY)
-  return frames.slice(start, Math.max(start, end))
-}
-
-export function markdownChunkIntersectsLineRange({
-  chunk,
-  range,
-}: {
-  chunk: Pick<PretextMarkdownChunk, "sourceEndLine" | "sourceStartLine">
-  range: PretextMarkdownLineRange | null
-}) {
-  if (!range) return false
-  return chunk.sourceStartLine <= range.end && chunk.sourceEndLine >= range.start
 }
 
 export function findPretextMarkdownChunkForLine(
@@ -189,18 +137,34 @@ export function findPretextMarkdownHeadingById(
 function createPretextMarkdownChunks(
   markdown: string,
   sourceLineCount: number
-): Pick<PretextMarkdownDocument, "headings" | "chunks"> {
+): Pick<PretextMarkdownDocument, "blocks" | "headings" | "chunks"> {
+  const blockIds: BlockIdRegistry = new Map()
+  const blocks: PretextMarkdownBlock[] = []
   const chunks: PretextMarkdownChunk[] = []
   const headings: PretextMarkdownHeading[] = []
   const headingIds: HeadingIdRegistry = new Map()
-  const frontmatter = extractYamlFrontmatter(markdown)
+  const frontmatter = extractFrontmatter(markdown)
   const body = frontmatter ? frontmatter.body : markdown
   const bodyStartLine = frontmatter ? frontmatter.endLine + 1 : 1
 
   if (frontmatter) {
+    const chunkIndex = chunks.length
+    const block = createPretextMarkdownBlock({
+      blockIds,
+      blocks,
+      chunkIndex,
+      isHostile: false,
+      kind: "frontmatter",
+      markdown: frontmatter.text,
+      sourceEndLine: frontmatter.endLine,
+      sourceStartLine: 1,
+    })
     chunks.push({
+      blockIds: [block.id],
       headingIds: [],
-      index: chunks.length,
+      index: chunkIndex,
+      frontmatterLanguage: frontmatter.language,
+      isHostile: false,
       kind: "frontmatter",
       markdown: frontmatter.text,
       sourceEndLine: frontmatter.endLine,
@@ -209,6 +173,8 @@ function createPretextMarkdownChunks(
   }
 
   const bodyChunks = createMarkdownBodyChunks({
+    blockIds,
+    blocks,
     headingIds,
     headings,
     markdown: body,
@@ -220,8 +186,10 @@ function createPretextMarkdownChunks(
 
   if (!chunks.length) {
     chunks.push({
+      blockIds: [],
       headingIds: [],
       index: 0,
+      isHostile: false,
       kind: "markdown",
       markdown,
       sourceEndLine: sourceLineCount,
@@ -229,10 +197,12 @@ function createPretextMarkdownChunks(
     })
   }
 
-  return { headings, chunks }
+  return { blocks, headings, chunks }
 }
 
 function createMarkdownBodyChunks({
+  blockIds,
+  blocks,
   headingIds,
   headings,
   markdown,
@@ -240,6 +210,8 @@ function createMarkdownBodyChunks({
   sourceStartLine,
   startIndex,
 }: {
+  blockIds: BlockIdRegistry
+  blocks: PretextMarkdownBlock[]
   headingIds: HeadingIdRegistry
   headings: PretextMarkdownHeading[]
   markdown: string
@@ -251,10 +223,12 @@ function createMarkdownBodyChunks({
   if (!markdown.trim()) return chunks
 
   try {
-    const tokens = marked.lexer(markdown, { gfm: true })
+    const tokens = parsePretextMarkdownTokens(markdown)
     let cursorLine = sourceStartLine
+    let chunkBlockIds: string[] = []
     let chunkStartLine = sourceStartLine
     let chunkHeadingIds: string[] = []
+    let chunkIsHostile = false
     let chunkRaw = ""
     let chunkLineCount = 0
 
@@ -262,13 +236,16 @@ function createMarkdownBodyChunks({
       if (!chunkRaw.trim()) {
         chunkRaw = ""
         chunkLineCount = 0
+        chunkIsHostile = false
         chunkStartLine = endLine + 1
         return
       }
       const chunkIndex = startIndex + chunks.length
       chunks.push({
+        blockIds: chunkBlockIds,
         headingIds: chunkHeadingIds,
         index: chunkIndex,
+        isHostile: chunkIsHostile,
         kind: "markdown",
         markdown: chunkRaw.replace(/\n+$/g, ""),
         sourceEndLine: Math.max(chunkStartLine, endLine),
@@ -276,49 +253,65 @@ function createMarkdownBodyChunks({
       })
       chunkRaw = ""
       chunkLineCount = 0
+      chunkIsHostile = false
+      chunkBlockIds = []
       chunkHeadingIds = []
       chunkStartLine = endLine + 1
     }
 
     for (const token of tokens) {
       const raw = token.raw ?? ""
-      const tokenBreaks = countLineBreaks(raw)
+      const tokenLineCount = countLineBreaks(raw)
+      const tokenLineBreaks = countLineSeparators(raw)
       const tokenStartLine = cursorLine
       const tokenEndLine = Math.min(
         sourceEndLine,
-        Math.max(
-          tokenStartLine,
-          cursorLine + tokenBreaks - (raw.endsWith("\n") ? 1 : 0)
-        )
+        Math.max(tokenStartLine, cursorLine + Math.max(0, tokenLineCount - 1))
       )
-      cursorLine += tokenBreaks
+      cursorLine += tokenLineBreaks
 
-      if (token.type === "space") {
+      if (token.kind === "space") {
         chunkRaw += raw
-        chunkLineCount += tokenBreaks
+        chunkLineCount += tokenLineBreaks
         continue
       }
 
+      const tokenIsHostile = isHostilePretextMarkdownToken(token, raw)
       const shouldStartNewChunk =
         chunkRaw.trim().length > 0 &&
         isChunkLeadToken(token) &&
         chunkLineCount >= MARKDOWN_CHUNK_TARGET_SOURCE_LINES
       const wouldExceedMax =
         chunkRaw.trim().length > 0 &&
-        chunkLineCount + Math.max(1, tokenBreaks) >
+        chunkLineCount + Math.max(1, tokenLineCount) >
           MARKDOWN_CHUNK_MAX_SOURCE_LINES
 
-      if (shouldStartNewChunk || wouldExceedMax) {
+      if (shouldStartNewChunk || wouldExceedMax || tokenIsHostile) {
         flushChunk(Math.max(chunkStartLine, tokenStartLine - 1))
         chunkStartLine = tokenStartLine
       }
 
-      if (token.type === "heading") {
+      const chunkIndex = startIndex + chunks.length
+      const blockKind = pretextMarkdownBlockKindForToken(token)
+      const block = createPretextMarkdownBlock({
+        blockIds,
+        blocks,
+        chunkIndex,
+        isHostile: tokenIsHostile,
+        kind: blockKind,
+        markdown: raw,
+        sourceEndLine: tokenEndLine,
+        sourceStartLine: tokenStartLine,
+      })
+      chunkBlockIds.push(block.id)
+
+      if (token.kind === "heading") {
         const text = normalizeHeadingText(token.text)
         const id = createMarkdownHeadingId(text, headingIds)
-        const chunkIndex = startIndex + chunks.length
+        block.headingId = id
         chunkHeadingIds.push(id)
         headings.push({
+          blockId: block.id,
           id,
           chunkIndex,
           sourceLine: tokenStartLine,
@@ -327,8 +320,9 @@ function createMarkdownBodyChunks({
       }
 
       chunkRaw += raw
-      chunkLineCount += Math.max(1, tokenBreaks)
-      if (chunkLineCount >= MARKDOWN_CHUNK_MAX_SOURCE_LINES) {
+      chunkLineCount += Math.max(1, tokenLineCount)
+      chunkIsHostile = chunkIsHostile || tokenIsHostile
+      if (tokenIsHostile || chunkLineCount >= MARKDOWN_CHUNK_MAX_SOURCE_LINES) {
         flushChunk(tokenEndLine)
       }
     }
@@ -337,9 +331,21 @@ function createMarkdownBodyChunks({
       flushChunk(sourceEndLine)
     }
   } catch {
+    const block = createPretextMarkdownBlock({
+      blockIds,
+      blocks,
+      chunkIndex: startIndex,
+      isHostile: isHostilePretextMarkdownChunk(markdown),
+      kind: "unknown",
+      markdown,
+      sourceEndLine,
+      sourceStartLine,
+    })
     chunks.push({
+      blockIds: [block.id],
       headingIds: [],
       index: startIndex,
+      isHostile: block.isHostile,
       kind: "markdown",
       markdown,
       sourceEndLine,
@@ -350,57 +356,19 @@ function createMarkdownBodyChunks({
   return chunks
 }
 
-function estimatePretextMarkdownChunkHeight({
-  fontScale,
-  chunk,
-  width,
-}: {
-  fontScale: number
-  chunk: PretextMarkdownChunk
-  width: number
-}) {
-  const textWidth = Math.max(1, width - CHUNK_PADDING_X * 2)
-  const fontSize = chunk.kind === "frontmatter" ? 13 : 16
-  const lineHeight =
-    chunk.kind === "frontmatter" ? CODE_LINE_HEIGHT : BODY_LINE_HEIGHT
-  const fontFamily =
-    chunk.kind === "frontmatter" ? CODE_FONT_FAMILY : BODY_FONT_FAMILY
-  const font = `${Math.round(fontSize * fontScale)}px ${fontFamily}`
-  const prepared = prepareWithSegments(chunk.markdown || " ", font, {
-    whiteSpace: "pre-wrap",
-  })
-  const stats = measureLineStats(prepared, textWidth / fontScale)
-  const lineCount = Math.max(1, stats.lineCount)
-  const syntaxAllowance = estimateMarkdownSyntaxAllowance(chunk)
-  return Math.max(
-    MIN_CHUNK_HEIGHT,
-    CHUNK_PADDING_Y * 2 + lineCount * lineHeight * fontScale + syntaxAllowance
-  )
-}
-
-function estimateMarkdownSyntaxAllowance(chunk: PretextMarkdownChunk) {
-  if (chunk.kind === "frontmatter") return 0
-  let allowance = 0
-  for (const line of splitTextLines(chunk.markdown)) {
-    if (/^#{1,6}\s+/.test(line)) allowance += 18
-    if (/^\s*[-*+]\s+/.test(line)) allowance += 3
-    if (/^\s*>/.test(line)) allowance += 4
-    if (/^\s*\|.*\|\s*$/.test(line)) allowance += 8
-    if (/^\s*```/.test(line)) allowance += 16
-  }
-  return allowance
-}
-
-function extractYamlFrontmatter(markdown: string) {
+function extractFrontmatter(markdown: string) {
   const lines = splitTextLines(markdown)
-  if (lines[0]?.trim() !== "---") return null
+  const openingFence = lines[0]?.trim()
+  const language = frontmatterLanguageForFence(openingFence)
+  if (!language || !openingFence) return null
 
   for (let index = 1; index < lines.length; index++) {
-    if (lines[index]!.trim() !== "---") continue
+    if (lines[index]!.trim() !== openingFence) continue
     if (index === 1) return null
     return {
       body: lines.slice(index + 1).join("\n"),
       endLine: index + 1,
+      language,
       text: lines.slice(1, index).join("\n"),
     }
   }
@@ -408,18 +376,129 @@ function extractYamlFrontmatter(markdown: string) {
   return null
 }
 
+function frontmatterLanguageForFence(
+  fence: string | undefined
+): PretextMarkdownFrontmatterLanguage | null {
+  switch (fence) {
+    case "---":
+      return "yaml"
+    case "+++":
+      return "toml"
+    default:
+      return null
+  }
+}
+
+function collectPretextMarkdownReferenceDefinitions(markdown: string) {
+  const frontmatter = extractFrontmatter(markdown)
+  const body = frontmatter ? frontmatter.body : markdown
+
+  try {
+    return parsePretextMarkdownTokens(body)
+      .filter((token) => token.kind === "definition")
+      .map((token) => token.raw.trimEnd())
+      .filter(Boolean)
+      .join("\n")
+  } catch {
+    return ""
+  }
+}
+
 function countLineBreaks(text: string) {
   if (!text) return 1
   return text.split(/\r\n|[\n\r\u2028\u2029]/).length
 }
 
+function countLineSeparators(text: string) {
+  if (!text) return 0
+  return Math.max(0, countLineBreaks(text) - 1)
+}
+
 type HeadingIdRegistry = Map<string, number>
+type BlockIdRegistry = Map<string, number>
+
+function createPretextMarkdownBlock({
+  blockIds,
+  blocks,
+  chunkIndex,
+  isHostile,
+  kind,
+  markdown,
+  sourceEndLine,
+  sourceStartLine,
+}: {
+  blockIds: BlockIdRegistry
+  blocks: PretextMarkdownBlock[]
+  chunkIndex: number
+  isHostile: boolean
+  kind: PretextMarkdownBlockKind
+  markdown: string
+  sourceEndLine: number
+  sourceStartLine: number
+}) {
+  const block: PretextMarkdownBlock = {
+    chunkIndex,
+    id: createMarkdownBlockId({ blockIds, kind, sourceStartLine }),
+    index: blocks.length,
+    isHostile,
+    kind,
+    markdown,
+    sourceEndLine,
+    sourceStartLine,
+  }
+  blocks.push(block)
+  return block
+}
+
+function createMarkdownBlockId({
+  blockIds,
+  kind,
+  sourceStartLine,
+}: {
+  blockIds: BlockIdRegistry
+  kind: PretextMarkdownBlockKind
+  sourceStartLine: number
+}) {
+  const base = `block-${sourceStartLine}-${kind}`
+  const count = blockIds.get(base) ?? 0
+  blockIds.set(base, count + 1)
+  return count === 0 ? base : `${base}-${count}`
+}
+
+function pretextMarkdownBlockKindForToken(
+  token: PretextMarkdownToken
+): PretextMarkdownBlockKind {
+  switch (token.kind) {
+    case "code":
+    case "comment":
+    case "definition":
+    case "heading":
+    case "html":
+    case "list":
+    case "paragraph":
+    case "table":
+      return token.kind
+    case "hr":
+      return "thematicBreak"
+    default:
+      return "unknown"
+  }
+}
 
 function createMarkdownHeadingId(text: string, headingIds: HeadingIdRegistry) {
-  const base = slugifyMarkdownHeading(text) || "section"
+  const base = createPretextMarkdownHeadingSlug(text)
   const count = headingIds.get(base) ?? 0
   headingIds.set(base, count + 1)
   return count === 0 ? base : `${base}-${count}`
+}
+
+export function createPretextMarkdownHeadingSlug(text: string) {
+  return namespaceMarkdownHeadingId(slugifyMarkdownHeading(text))
+}
+
+function namespaceMarkdownHeadingId(slug: string) {
+  const base = slug || "section"
+  return DOM_CLOBBERING_HEADING_IDS.has(base) ? `section-${base}` : base
 }
 
 function slugifyMarkdownHeading(text: string) {
@@ -437,36 +516,42 @@ function normalizeHeadingText(text: string) {
   return text.replace(/\s+/g, " ").trim()
 }
 
-function isChunkLeadToken(token: Token) {
-  return token.type === "heading" || token.type === "hr"
+function isChunkLeadToken(token: PretextMarkdownToken) {
+  return token.kind === "heading" || token.kind === "hr"
 }
 
-function firstChunkWithBottomAfter(
-  frames: readonly PretextMarkdownChunkFrame[],
-  y: number
-) {
-  let low = 0
-  let high = frames.length
-  while (low < high) {
-    const mid = Math.floor((low + high) / 2)
-    if (frames[mid]!.bottom > y) high = mid
-    else low = mid + 1
+export function isHostilePretextMarkdownChunk(markdown: string) {
+  try {
+    return parsePretextMarkdownTokens(markdown).some((token) =>
+      token.kind === "space"
+        ? false
+        : isHostilePretextMarkdownToken(token, token.raw)
+    )
+  } catch {
+    return markdown.length > 20_000
   }
-  return low
 }
 
-function firstChunkWithTopAtOrAfter(
-  frames: readonly PretextMarkdownChunkFrame[],
-  y: number
+function isHostilePretextMarkdownToken(
+  token: PretextMarkdownToken,
+  raw: string
 ) {
-  let low = 0
-  let high = frames.length
-  while (low < high) {
-    const mid = Math.floor((low + high) / 2)
-    if (frames[mid]!.top >= y) high = mid
-    else low = mid + 1
+  const lineCount = countLineBreaks(raw)
+
+  switch (token.kind) {
+    case "code":
+      return lineCount > 400
+    case "table":
+      return Math.max(0, lineCount - 2) > 200
+    case "paragraph":
+      return raw.length > 20_000
+    case "list":
+      return lineCount > 500
+    case "html":
+      return raw.length > 20_000
+    default:
+      return false
   }
-  return low
 }
 
 function countWords(text: string) {
