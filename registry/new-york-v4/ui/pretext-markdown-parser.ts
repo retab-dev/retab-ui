@@ -16,6 +16,8 @@ export type PretextMarkdownTokenKind =
   | "other"
 
 export interface PretextMarkdownToken {
+  isOrderedList?: boolean
+  listStart?: number
   kind: PretextMarkdownTokenKind
   raw: string
   text: string
@@ -39,10 +41,22 @@ export function parsePretextMarkdownTokens(markdown: string) {
 
 function normalizeMarkedToken(token: Token): PretextMarkdownToken {
   return {
+    isOrderedList: readMarkedListOrdered(token),
     kind: normalizeMarkedTokenKind(token),
+    listStart: readMarkedListStart(token),
     raw: token.raw ?? "",
     text: "text" in token && typeof token.text === "string" ? token.text : "",
   }
+}
+
+function readMarkedListOrdered(token: Token) {
+  return token.type === "list" ? token.ordered : undefined
+}
+
+function readMarkedListStart(token: Token) {
+  return token.type === "list" && token.ordered && token.start !== ""
+    ? Number(token.start)
+    : undefined
 }
 
 function normalizeMarkedTokenKind(token: Token): PretextMarkdownTokenKind {

@@ -66,6 +66,18 @@ describe("Pretext Markdown parser adapter", () => {
     })
   })
 
+  it("normalizes ordered list start metadata", () => {
+    const tokens = parsePretextMarkdownTokens(
+      ["3. Third", "4. Fourth"].join("\n")
+    )
+
+    expect(tokens[0]).toMatchObject({
+      isOrderedList: true,
+      kind: "list",
+      listStart: 3,
+    })
+  })
+
   it("keeps malformed HTML and links inert at the model boundary", () => {
     expect(parsePretextMarkdownTokens("<div><span>open")[0]).toMatchObject({
       kind: "html",

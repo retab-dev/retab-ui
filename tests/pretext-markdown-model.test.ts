@@ -187,6 +187,21 @@ describe("pretext markdown document model", () => {
     )
   })
 
+  it("keeps ordered-list numbering metadata in the block model", () => {
+    const document = createPretextMarkdownDocument(
+      ["3. Third", "4. Fourth"].join("\n")
+    )
+    const listBlock = document.blocks.find((block) => block.kind === "list")
+
+    expect(listBlock).toMatchObject({
+      id: "block-1-list",
+      isOrderedList: true,
+      listStart: 3,
+      sourceEndLine: 2,
+      sourceStartLine: 1,
+    })
+  })
+
   it("keeps Markdown comments in the source model without visible layout height", () => {
     const document = createPretextMarkdownDocument(
       ["# Public", "", "<!-- internal note -->", "", "Visible text."].join("\n")

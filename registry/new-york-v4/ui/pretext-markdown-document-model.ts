@@ -92,8 +92,10 @@ export interface PretextMarkdownBlock {
   headingId?: string
   id: string
   index: number
+  isOrderedList?: boolean
   isHostile: boolean
   kind: PretextMarkdownBlockKind
+  listStart?: number
   markdown: string
   sourceEndLine: number
   sourceStartLine: number
@@ -338,6 +340,10 @@ function createMarkdownBodyChunks({
           sourceLine: tokenStartLine,
           text,
         })
+      }
+      if (token.kind === "list") {
+        block.isOrderedList = token.isOrderedList
+        block.listStart = token.listStart
       }
 
       chunkRaw += raw
