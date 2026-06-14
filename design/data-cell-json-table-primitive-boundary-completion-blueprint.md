@@ -36,6 +36,9 @@ Already clean:
 - `DataCell` owns text caret placement, checkbox toggling, select opening,
   picker opening, primitive draft state, and edit lifecycle.
 - `DataCellDisplay` has its own discriminated display prop type.
+- display prop projection lives in `data-cell-display-model.ts`, so the
+  runtime shell no longer branches over `props.kind` just to render the inert
+  trompe-l'oeil surface.
 - `DataCellControl` receives `DataCellEditModel`, not public `DataCellProps`.
 - edit models no longer carry a broad `nativeProps` remainder.
 - primitive controls do not import public `DataCellProps`.
@@ -462,9 +465,13 @@ If render dispatch still needs branches for discriminated narrowing, each branch
 must be a one-line adapter call. The branch is allowed; duplicated policy is
 not.
 
-### Phase 4: Shrink Edit Model Projection
+### Phase 4: Shrink Projection Modules
 
-Keep the current explicit constructors, but make them easier to audit:
+Current status: display projection is now isolated. The shell calls
+`createDataCellDisplayProps` instead of owning display branches inline.
+
+Keep the current explicit constructors and display projection, but make them
+easy to audit:
 
 - one constructor per semantic control family
 - no unknown remainder

@@ -450,6 +450,11 @@
           "target": "@ui/data-cell-display.tsx"
         },
         {
+          "path": "registry/new-york-v4/ui/data-cell-display-model.ts",
+          "type": "registry:ui",
+          "target": "@ui/data-cell-display-model.ts"
+        },
+        {
           "path": "registry/new-york-v4/ui/data-cell-edit-model.ts",
           "type": "registry:ui",
           "target": "@ui/data-cell-edit-model.ts"

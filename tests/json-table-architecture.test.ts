@@ -16,6 +16,7 @@ const dataCellRuntimeFiles = [
   "registry/new-york-v4/ui/data-cell-control-contract.ts",
   "registry/new-york-v4/ui/data-cell-control-registry.tsx",
   "registry/new-york-v4/ui/data-cell-display.tsx",
+  "registry/new-york-v4/ui/data-cell-display-model.ts",
   "registry/new-york-v4/ui/data-cell-edit-model.ts",
   "registry/new-york-v4/ui/data-cell-format.ts",
   "registry/new-york-v4/ui/data-cell-number-control.tsx",
@@ -510,11 +511,17 @@ describe("json table and DataCell architecture", () => {
 
     const contractFile = "registry/new-york-v4/ui/data-cell-control-contract.ts"
     const displayFile = "registry/new-york-v4/ui/data-cell-display.tsx"
+    const displayModelFile =
+      "registry/new-york-v4/ui/data-cell-display-model.ts"
     const shellFile = "registry/new-york-v4/ui/data-cell.tsx"
     const registryFile =
       "registry/new-york-v4/ui/data-cell-control-registry.tsx"
     const contractContent = readFileSync(join(repoRoot, contractFile), "utf8")
     const displayContent = readFileSync(join(repoRoot, displayFile), "utf8")
+    const displayModelContent = readFileSync(
+      join(repoRoot, displayModelFile),
+      "utf8"
+    )
     const shellContent = readFileSync(join(repoRoot, shellFile), "utf8")
     const registryContent = readFileSync(join(repoRoot, registryFile), "utf8")
     const editModelFile = "registry/new-york-v4/ui/data-cell-edit-model.ts"
@@ -530,6 +537,12 @@ describe("json table and DataCell architecture", () => {
     expect(contractContent.includes(`on${"Picker"}OpenChange`)).toBe(false)
     expect(registryContent.includes("DataCellProps")).toBe(false)
     expect(registryContent.includes("DataCellPublicPropsByKind")).toBe(false)
+    expect(shellContent.includes("type DataCellDisplayProps")).toBe(false)
+    expect(shellContent.includes("props.kind")).toBe(false)
+    expect(displayModelContent.includes("createDataCellDisplayProps")).toBe(
+      true
+    )
+    expect(displayModelContent.includes("DataCellDisplayProps")).toBe(true)
     for (const controlName of [
       "DataCellBooleanControl",
       "DataCellNumberControl",
