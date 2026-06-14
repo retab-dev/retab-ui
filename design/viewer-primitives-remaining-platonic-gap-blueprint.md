@@ -293,6 +293,9 @@ Public parts:
 PdfViewer
 PdfViewerProvider
 usePdfViewer
+usePdfViewerHeader
+usePdfViewerPages
+usePdfViewerThumbnails
 PdfViewerHeader
 PdfViewerThumbnails
 PdfViewerPages
@@ -300,7 +303,9 @@ PdfViewerPages
 
 Remaining perfection work:
 
-- reduce `usePdfViewer` to the smallest stable contract;
+- keep named PDF parts on narrow hooks:
+  `usePdfViewerHeader`, `usePdfViewerPages`, and
+  `usePdfViewerThumbnails`;
 - ensure thumbnail/page coordination has one owner;
 - ensure toolbar controls do not leak layout assumptions;
 - keep `PdfViewerPages` a renderer, not a layout manager;
@@ -340,6 +345,9 @@ generic viewer primitives.
 
 Remaining perfection work:
 
+- keep named parts on narrow hooks:
+  `useEmailViewerHeader`, `useEmailViewerPartsList`, and
+  `useEmailViewerSelectedPart`;
 - make `EmailViewerPartsList` vocabulary body/attachments only;
 - ensure inline body parts and attachments produce the same selected-source
   shape;
@@ -360,6 +368,11 @@ Public parts:
 SplitViewer
 SplitViewerProvider
 useSplitViewer
+useSplitViewerHeader
+useSplitViewerPageRail
+useSplitViewerLegend
+useSplitViewerDocument
+useSplitViewerDocumentControls
 SplitViewerHeader
 SplitViewerLegend
 SplitViewerPageRail
@@ -370,6 +383,9 @@ Remaining perfection work:
 
 - keep legend/header composition explicit;
 - keep page rail/sidebar composition explicit;
+- keep named split parts on narrow hooks:
+  `useSplitViewerHeader`, `useSplitViewerPageRail`,
+  `useSplitViewerLegend`, and `useSplitViewerDocument`;
 - remove any hidden document-render callback shape that smuggles layout;
 - ensure `SplitViewerDocument` is a domain overlay/projection, not a PDF clone.
 
@@ -387,6 +403,9 @@ Public parts:
 FileSystem
 FileSystemViewerProvider
 useFileSystemViewer
+useFileSystemViewerHeader
+useFileSystemViewerTree
+useFileSystemViewerSelectedFile
 FileSystemViewerHeader
 FileSystemViewerTree
 FileSystemViewerSelectedFile
@@ -394,7 +413,11 @@ FileSystemViewerSelectedFile
 
 Remaining perfection work:
 
-- decide whether the easy API is named `FileSystem` or `FileSystemViewer`;
+- keep the easy API named `FileSystem`; reserve `FileSystemViewer*` for
+  provider parts;
+- keep named file-system parts on narrow hooks:
+  `useFileSystemViewerHeader`, `useFileSystemViewerTree`, and
+  `useFileSystemViewerSelectedFile`;
 - keep tree state inside the provider;
 - ensure selected file resolution ends at `ViewerSource`;
 - ensure selected file rendering is delegated to `FileViewer`.
@@ -412,7 +435,11 @@ Public parts:
 ```txt
 UploadableFileViewerProvider
 useUploadableFileViewer
-UploadableFileViewerFrame
+useUploadableFileViewerRoot
+useUploadableFileViewerHeader
+useUploadableFileViewerSummary
+useUploadableFileViewerContent
+UploadableFileViewerRoot
 UploadableFileViewerHeader
 UploadableFileViewerSummary
 UploadableFileViewerContent
@@ -421,10 +448,15 @@ DropzoneUploaderViewer
 
 Remaining perfection work:
 
-- decide if `Frame` is necessary or if `ViewerRoot` fully replaces it;
+- keep `UploadableFileViewerRoot` as the drag-aware domain root composed over
+  `ViewerRoot`; do not reintroduce `UploadableFileViewerFrame`;
+- keep named uploadable parts on narrow hooks:
+  `useUploadableFileViewerRoot`, `useUploadableFileViewerHeader`,
+  `useUploadableFileViewerSummary`, and `useUploadableFileViewerContent`;
 - ensure dropzone DOM/input behavior lives in acquisition code, not viewer
   primitives;
-- make selected upload content converge to `FileViewer`;
+- keep `DropzoneUploaderViewer` usable without custom render props by defaulting
+  selected upload content to `FileViewer`;
 - keep `FileUploader` separate from viewer composition.
 
 ## Deletion And Compression Pass
@@ -558,4 +590,3 @@ We can call the viewer system platonic only when all of these are true:
 - deleting compatibility code does not remove any desired behavior.
 
 Until then, the design is good, not perfect.
-
