@@ -54,6 +54,36 @@ type SplitViewerContextValue = {
   segments: ReturnType<typeof toSegments>
 }
 
+export type SplitViewerHeaderState = {
+  hasOutput: boolean
+  isProcessing: boolean
+  pageCount: number
+  segments: ReturnType<typeof toSegments>
+}
+
+type SplitViewerBodyState = {
+  hasOutput: boolean
+  pageCount: number
+}
+
+export type SplitViewerPageRailState = {
+  controller: ReturnType<typeof useSegmentViewportController>
+  hasOutput: boolean
+  pageCount: number
+  segments: ReturnType<typeof toSegments>
+}
+
+export type SplitViewerLegendState = {
+  controller: ReturnType<typeof useSegmentViewportController>
+  hasOutput: boolean
+  segments: ReturnType<typeof toSegments>
+}
+
+export type SplitViewerDocumentState = {
+  hasOutput: boolean
+  isProcessing: boolean
+}
+
 const SplitViewerContext = React.createContext<SplitViewerContextValue | null>(
   null
 )
@@ -64,6 +94,31 @@ export function useSplitViewer() {
     throw new Error("useSplitViewer must be used within SplitViewerProvider.")
   }
   return context
+}
+
+export function useSplitViewerHeader(): SplitViewerHeaderState {
+  const { hasOutput, isProcessing, pageCount, segments } = useSplitViewer()
+  return { hasOutput, isProcessing, pageCount, segments }
+}
+
+function useSplitViewerBody(): SplitViewerBodyState {
+  const { hasOutput, pageCount } = useSplitViewer()
+  return { hasOutput, pageCount }
+}
+
+export function useSplitViewerPageRail(): SplitViewerPageRailState {
+  const { controller, hasOutput, pageCount, segments } = useSplitViewer()
+  return { controller, hasOutput, pageCount, segments }
+}
+
+export function useSplitViewerLegend(): SplitViewerLegendState {
+  const { controller, hasOutput, segments } = useSplitViewer()
+  return { controller, hasOutput, segments }
+}
+
+export function useSplitViewerDocument(): SplitViewerDocumentState {
+  const { hasOutput, isProcessing } = useSplitViewer()
+  return { hasOutput, isProcessing }
 }
 
 export function useSplitViewerDocumentControls(): SplitDocumentHandlers {
@@ -107,7 +162,8 @@ export function SplitViewerProvider({
 }
 
 export function SplitViewerHeader() {
-  const { hasOutput, isProcessing, pageCount, segments } = useSplitViewer()
+  const { hasOutput, isProcessing, pageCount, segments } =
+    useSplitViewerHeader()
   const title = hasOutput
     ? `${segments.length} segment${segments.length === 1 ? "" : "s"}`
     : isProcessing
@@ -133,7 +189,7 @@ export function SplitViewerHeader() {
 }
 
 function SplitViewerBody({ children }: { children?: ReactNode }) {
-  const { hasOutput, pageCount } = useSplitViewer()
+  const { hasOutput, pageCount } = useSplitViewerBody()
   return (
     <ViewerBody>
       {hasOutput && pageCount > 0 ? (
@@ -149,7 +205,8 @@ function SplitViewerBody({ children }: { children?: ReactNode }) {
 }
 
 export function SplitViewerPageRail() {
-  const { controller, hasOutput, pageCount, segments } = useSplitViewer()
+  const { controller, hasOutput, pageCount, segments } =
+    useSplitViewerPageRail()
   if (!hasOutput || pageCount <= 0) return null
 
   return (
@@ -167,7 +224,7 @@ export function SplitViewerPageRail() {
 }
 
 export function SplitViewerLegend({ className }: { className?: string }) {
-  const { controller, hasOutput, segments } = useSplitViewer()
+  const { controller, hasOutput, segments } = useSplitViewerLegend()
   if (!hasOutput) return null
 
   return (
@@ -185,7 +242,7 @@ export function SplitViewerLegend({ className }: { className?: string }) {
 }
 
 export function SplitViewerDocument({ children }: { children?: ReactNode }) {
-  const { hasOutput, isProcessing } = useSplitViewer()
+  const { hasOutput, isProcessing } = useSplitViewerDocument()
 
   if (!hasOutput) {
     return (

@@ -1,8 +1,8 @@
 "use client"
 
 import * as React from "react"
-import type { PDFDocumentProxy } from "pdfjs-dist"
 
+import type { PdfDocumentProxy } from "@/lib/pdf-document-types"
 import { cn } from "@/lib/utils"
 
 import { PdfThumbnailItem } from "./pdf-thumbnail-item"
@@ -29,7 +29,7 @@ export function PdfThumbnailRail({
   onScroll,
   className,
 }: {
-  doc: PDFDocumentProxy
+  doc: PdfDocumentProxy
   layout: PdfThumbnailLayout
   visibleItems: readonly PdfThumbnailLayoutItem[]
   currentPage: number | null | undefined

@@ -190,7 +190,7 @@ describe("EmailViewer MIME model", () => {
 })
 
 describe("EmailViewer", () => {
-  it("renders the fake recursive MIME fixture with message and part headers", async () => {
+  it("renders the fake recursive MIME fixture without duplicated part headers", async () => {
     const { container } = render(
       <EmailViewer message={createFakeEmailMessage()} className="h-[720px]" />
     )
@@ -213,11 +213,21 @@ describe("EmailViewer", () => {
     expect(
       container.querySelector('[data-slot="mime-part-sidebar"]')
     ).toBeTruthy()
-    expect(container.querySelector('[data-slot="viewer-root"]')).toBeTruthy()
-    expect(container.querySelector('[data-slot="viewer-header"]')).toBeTruthy()
-    expect(container.querySelector('[data-slot="viewer-body"]')).toBeTruthy()
-    expect(container.querySelector('[data-slot="viewer-sidebar"]')).toBeTruthy()
-    expect(container.querySelector('[data-slot="viewer-surface"]')).toBeTruthy()
+    expect(
+      container.querySelectorAll('[data-slot="viewer-root"]')
+    ).toHaveLength(1)
+    const root = container.querySelector<HTMLElement>(
+      '[data-slot="viewer-root"]'
+    )
+    expect(root?.children[0]?.getAttribute("data-slot")).toBe("viewer-header")
+    expect(root?.children[1]?.getAttribute("data-slot")).toBe("viewer-body")
+    const body = root?.querySelector<HTMLElement>('[data-slot="viewer-body"]')
+    expect(
+      body?.querySelector(':scope > [data-slot="viewer-sidebar"]')
+    ).toBeTruthy()
+    expect(
+      body?.querySelector(':scope > [data-slot="viewer-surface"]')
+    ).toBeTruthy()
     expect(
       container.querySelector('[data-slot="attachment-sidebar"]')
     ).toBeNull()

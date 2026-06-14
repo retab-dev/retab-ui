@@ -86,6 +86,12 @@ function urlSource(url: string, fileName?: string, mimeType?: string) {
   return { kind: "url" as const, url, fileName, mimeType }
 }
 
+function mockPretextCanvasMeasurement() {
+  vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
+    measureText: (text: string) => ({ width: text.length * 8 }),
+  } as CanvasRenderingContext2D)
+}
+
 function blobFileSource(
   fileName: string,
   mimeType: string,
@@ -309,10 +315,13 @@ describe("FileViewer detection helpers", () => {
       'import("@/components/ui/text-viewer-chenglou")'
     )
     expect(fileViewerSource).toContain(
+      'import("@/components/ui/pretext-markdown-viewer")'
+    )
+    expect(fileViewerSource).not.toContain(
       'import("@/components/ui/markdown-document-viewer")'
     )
     expect(fileViewerSource).toContain('import("@/components/ui/code-viewer")')
-    expect(fileViewerSource).toContain('mode="markdown"')
+    expect(fileViewerSource).not.toContain('mode="markdown"')
     expect(fileViewerSource).toContain('mode="text"')
     expect(fileViewerSource).not.toContain("MarkdownDocViewer")
     expect(fileViewerSource).not.toContain("file-viewer-markdown-viewer")
@@ -608,8 +617,8 @@ describe("FileViewer text rendering", () => {
     expect(container.querySelector("[data-line-number]")).toBeNull()
   })
 
-  it("routes markdown files through the wrapped Text Viewer markdown mode", async () => {
-    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null)
+  it("routes markdown files through the Pretext Markdown Viewer", async () => {
+    mockPretextCanvasMeasurement()
     vi.stubGlobal(
       "fetch",
       vi.fn(() => Promise.resolve(response("# Release\n\nBody copy\n")))
@@ -629,8 +638,11 @@ describe("FileViewer text rendering", () => {
     expect(screen.getByText("Body copy")).toBeTruthy()
     expect(container.querySelector('[data-slot="text-viewer"]')).toBeTruthy()
     expect(
-      container.querySelector('[data-slot="markdown-document-virtual-canvas"]')
+      container.querySelector('[data-slot="pretext-markdown-virtual-canvas"]')
     ).toBeTruthy()
+    expect(
+      container.querySelector('[data-slot="markdown-document-virtual-canvas"]')
+    ).toBeNull()
     expect(container.querySelector('[data-slot="code-viewer"]')).toBeNull()
     expect(container.querySelector(".fv-markdown")).toBeNull()
     expect(container.querySelector("iframe")).toBeNull()
@@ -872,6 +884,7 @@ describe("FileViewer text rendering", () => {
   })
 
   it("renders inline markdown text sources through the resource route", async () => {
+    mockPretextCanvasMeasurement()
     await act(async () => {
       render(
         <FileViewer
@@ -888,6 +901,9 @@ describe("FileViewer text rendering", () => {
     expect(await screen.findByText("Inline note")).toBeTruthy()
     expect(screen.getByText("Body copy")).toBeTruthy()
     expect(document.querySelector('[data-slot="text-viewer"]')).toBeTruthy()
+    expect(
+      document.querySelector('[data-slot="pretext-markdown-virtual-canvas"]')
+    ).toBeTruthy()
     expect(document.querySelector('[data-slot="code-viewer"]')).toBeNull()
     expect(document.querySelector(".fv-markdown")).toBeNull()
     expect(screen.getByRole("button", { name: "Download" })).toBeTruthy()

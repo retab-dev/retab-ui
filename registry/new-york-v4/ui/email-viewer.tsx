@@ -96,6 +96,29 @@ export function useEmailViewer() {
   return context
 }
 
+export function useEmailViewerHeader() {
+  const { message } = useEmailViewer()
+  return { message }
+}
+
+export function useEmailViewerPartsList() {
+  const { rootNode, selectedNode, setSelectedNode } = useEmailViewer()
+  return {
+    rootNode,
+    selectedPath: selectedNode.path,
+    setSelectedNode,
+  }
+}
+
+export function useEmailViewerSelectedPart() {
+  const { display, message, selectedNode } = useEmailViewer()
+  return {
+    display,
+    message,
+    selectedNode,
+  }
+}
+
 export function EmailViewerProvider({
   message,
   selectedPath,
@@ -196,23 +219,23 @@ export function EmailViewer({
 }
 
 export function EmailViewerHeader() {
-  const { message } = useEmailViewer()
+  const { message } = useEmailViewerHeader()
   return <MimeMessageHeader message={message} />
 }
 
 export function EmailViewerPartsList() {
-  const { rootNode, selectedNode, setSelectedNode } = useEmailViewer()
+  const { rootNode, selectedPath, setSelectedNode } = useEmailViewerPartsList()
   return (
     <MimePartSidebar
       root={rootNode}
-      selectedPath={selectedNode.path}
+      selectedPath={selectedPath}
       onSelectNode={setSelectedNode}
     />
   )
 }
 
 export function EmailViewerSelectedPart() {
-  const { display, message, selectedNode } = useEmailViewer()
+  const { display, message, selectedNode } = useEmailViewerSelectedPart()
   return (
     <MimeViewerContent
       message={message}

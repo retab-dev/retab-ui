@@ -13,7 +13,9 @@ const { pageMarkdownViewerMock } = vi.hoisted(() => ({
 }))
 
 vi.mock("@/components/viewers/page-markdown/page-markdown-viewer", () => ({
-  PageMarkdownViewer: (props: PageMarkdownViewerProps) => {
+  PageMarkdownViewerProvider: (
+    props: PageMarkdownViewerProps & { children: React.ReactNode }
+  ) => {
     pageMarkdownViewerMock(props)
 
     return (
@@ -22,9 +24,13 @@ vi.mock("@/components/viewers/page-markdown/page-markdown-viewer", () => ({
         <span data-testid="text">{props.text}</span>
         <span data-testid="download">{props.fileName}</span>
         <span data-testid="processing">{props.processingLabel}</span>
+        {props.children}
       </div>
     )
   },
+  PageMarkdownViewerContent: () => <div data-testid="markdown-content" />,
+  usePageMarkdownViewerContent: () => ({}),
+  usePageMarkdownViewerDocument: () => ({}),
 }))
 
 afterEach(() => {
@@ -113,8 +119,7 @@ describe("ParseViewer adapter", () => {
     })
   })
 
-  it("forwards processing state and document synchronization hooks", () => {
-    const renderDocument = vi.fn(() => <div>Document pane</div>)
+  it("forwards processing state and visible page changes", () => {
     const onVisiblePageChange = vi.fn()
 
     render(
@@ -126,14 +131,12 @@ describe("ParseViewer adapter", () => {
           },
         }}
         isProcessing
-        renderDocument={renderDocument}
         onVisiblePageChange={onVisiblePageChange}
       />
     )
 
     expect(getLastMarkdownProps()).toMatchObject({
       isProcessing: true,
-      renderDocument,
       onVisiblePageChange,
     })
   })

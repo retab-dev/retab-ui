@@ -22,13 +22,13 @@ import {
   ViewerSurface,
 } from "@/components/ui/viewer"
 
+import { FileSystemColumnsView } from "./file-system-columns-view"
+import { useFileSystemController } from "./file-system-controller"
 import {
   FileSystemFilterBar,
   FileSystemStatusBar,
   FileSystemToolbar,
-} from "./file-system-chrome"
-import { FileSystemColumnsView } from "./file-system-columns-view"
-import { useFileSystemController } from "./file-system-controller"
+} from "./file-system-controls"
 import { FileSystemGalleryView } from "./file-system-gallery-view"
 import { FileSystemGridView } from "./file-system-grid-view"
 import { FileSystemListView } from "./file-system-list-view"
@@ -72,6 +72,29 @@ type FileSystemViewerContextValue = {
   title: string
 }
 
+export type FileSystemViewerHeaderState = {
+  controller: ReturnType<typeof useFileSystemController>
+  title: string
+}
+
+export type FileSystemViewerTreeState = {
+  controller: ReturnType<typeof useFileSystemController>
+  openFile: (file: FileSystemFileEntry) => void
+  renderFileActions?: FileSystemProps["renderFileActions"]
+  renderMetadata?: FileSystemProps["renderMetadata"]
+}
+
+export type FileSystemViewerSelectedFileState = {
+  controller: ReturnType<typeof useFileSystemController>
+  renderFileActions?: FileSystemProps["renderFileActions"]
+  renderMetadata?: FileSystemProps["renderMetadata"]
+}
+
+type FileSystemOpenDialogState = {
+  openedFile: FileSystemViewerContextValue["openedFile"]
+  setOpenedFile: FileSystemViewerContextValue["setOpenedFile"]
+}
+
 const FileSystemViewerContext =
   React.createContext<FileSystemViewerContextValue | null>(null)
 
@@ -83,6 +106,30 @@ export function useFileSystemViewer() {
     )
   }
   return context
+}
+
+export function useFileSystemViewerHeader(): FileSystemViewerHeaderState {
+  const { controller, title } = useFileSystemViewer()
+  return { controller, title }
+}
+
+export function useFileSystemViewerTree(): FileSystemViewerTreeState {
+  const { controller, openFile, renderFileActions, renderMetadata } =
+    useFileSystemViewer()
+
+  return { controller, openFile, renderFileActions, renderMetadata }
+}
+
+export function useFileSystemViewerSelectedFile(): FileSystemViewerSelectedFileState {
+  const { controller, renderFileActions, renderMetadata } =
+    useFileSystemViewer()
+
+  return { controller, renderFileActions, renderMetadata }
+}
+
+function useFileSystemOpenDialog(): FileSystemOpenDialogState {
+  const { openedFile, setOpenedFile } = useFileSystemViewer()
+  return { openedFile, setOpenedFile }
 }
 
 export function FileSystemViewerProvider({
@@ -241,7 +288,7 @@ export function FileSystem({
 }
 
 export function FileSystemViewerHeader() {
-  const { controller, title } = useFileSystemViewer()
+  const { controller, title } = useFileSystemViewerHeader()
 
   return (
     <ViewerHeader className="flex flex-col">
@@ -253,7 +300,7 @@ export function FileSystemViewerHeader() {
 
 export function FileSystemViewerTree() {
   const { controller, openFile, renderFileActions, renderMetadata } =
-    useFileSystemViewer()
+    useFileSystemViewerTree()
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -283,7 +330,7 @@ export function FileSystemViewerTree() {
 
 export function FileSystemViewerSelectedFile() {
   const { controller, renderFileActions, renderMetadata } =
-    useFileSystemViewer()
+    useFileSystemViewerSelectedFile()
 
   return (
     <FileSystemPreview
@@ -297,7 +344,7 @@ export function FileSystemViewerSelectedFile() {
 }
 
 function FileSystemOpenDialog() {
-  const { openedFile, setOpenedFile } = useFileSystemViewer()
+  const { openedFile, setOpenedFile } = useFileSystemOpenDialog()
 
   return (
     <Dialog

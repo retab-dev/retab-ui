@@ -1,8 +1,8 @@
 "use client"
 
 import * as React from "react"
-import type { PDFDocumentProxy } from "pdfjs-dist"
 
+import type { PdfDocumentProxy } from "@/lib/pdf-document-types"
 import { getPdfPageResource } from "@/lib/pdf-document-resource"
 
 import { normalizeThumbnailPage } from "./pdf-thumbnail-layout"
@@ -44,7 +44,7 @@ type MetricAction =
   | { type: "reject"; documentKey: unknown; error: unknown }
 
 export function usePdfThumbnailPageMetrics(
-  doc: PDFDocumentProxy,
+  doc: PdfDocumentProxy,
   resetKey: unknown
 ): PdfThumbnailPageMetrics {
   const workerSequenceRef = React.useRef(0)

@@ -1,8 +1,15 @@
 "use client"
 
-import { PdfViewer } from "@/components/ui/pdf-viewer"
+import * as React from "react"
+
+import { PdfViewer, type PdfViewerHandle } from "@/components/ui/pdf-viewer"
+import { ViewerBody, ViewerRoot, ViewerSurface } from "@/components/ui/viewer"
 import type { PartitionResult } from "@/components/viewers/lib/partition-types"
-import { PartitionViewer } from "@/components/viewers/partition/partition-viewer"
+import {
+  PartitionViewerHeader,
+  PartitionViewerProvider,
+  usePartitionViewerDocument,
+} from "@/components/viewers/partition/partition-viewer"
 
 const PDF_URL = "/samples/an-image-is-worth-16x16-words.pdf"
 
@@ -24,28 +31,47 @@ const PARTITION_RESULT: PartitionResult = {
 
 /**
  * Partition viewer block — the file + legend + waterfall ribbon over keyed
- * chunks. `PartitionViewer` owns the key and ribbon; the document renderer only
- * receives page and scroll handlers.
+ * chunks. The provider owns the key and ribbon state; the document surface is
+ * visible JSX.
  */
 export function PartitionViewerBlock() {
   return (
     <div className="flex h-full min-h-[680px] flex-col bg-background">
-      <PartitionViewer
-        result={PARTITION_RESULT}
-        renderDocument={(handlers) => (
-          <PdfViewer
-            source={{
-              kind: "url",
-              url: PDF_URL,
-              fileName: "an-image-is-worth-16x16-words.pdf",
-            }}
-            bare
-            onVisiblePageChange={handlers.onCurrentPageChange}
-            onScrollProgressChange={handlers.onScrollProgressChange}
-            className="h-full"
-          />
-        )}
-      />
+      <PartitionViewerProvider result={PARTITION_RESULT}>
+        <ViewerRoot bare className="h-full flex-1 bg-background">
+          <PartitionViewerHeader />
+          <ViewerBody>
+            <ViewerSurface>
+              <PartitionSourceDocument />
+            </ViewerSurface>
+          </ViewerBody>
+        </ViewerRoot>
+      </PartitionViewerProvider>
     </div>
+  )
+}
+
+function PartitionSourceDocument() {
+  const document = usePartitionViewerDocument()
+  const viewerRef = React.useRef<PdfViewerHandle | null>(null)
+
+  React.useEffect(() => {
+    if (!document.scrollRequest) return
+    viewerRef.current?.scrollToPage(document.scrollRequest.pageNumber)
+  }, [document.scrollRequest])
+
+  return (
+    <PdfViewer
+      ref={viewerRef}
+      source={{
+        kind: "url",
+        url: PDF_URL,
+        fileName: "an-image-is-worth-16x16-words.pdf",
+      }}
+      bare
+      onVisiblePageChange={document.onCurrentPageChange}
+      onScrollProgressChange={document.onScrollProgressChange}
+      className="h-full"
+    />
   )
 }

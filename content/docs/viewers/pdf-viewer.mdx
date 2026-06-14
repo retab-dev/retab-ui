@@ -26,7 +26,31 @@ npx shadcn@latest add @retab/pdf-viewer
 This pulls in `pdfjs-dist`. The worker is resolved from the installed package by
 your bundler (Vite, webpack, or Turbopack) — there is no runtime CDN call.
 
+## Viewer composition
+
+```tsx
+<PdfViewerProvider source={{ kind: "url", url, fileName: "document.pdf" }}>
+  <ViewerRoot>
+    <PdfViewerHeader />
+    <ViewerBody>
+      <ViewerSidebar>
+        <PdfViewerThumbnails />
+      </ViewerSidebar>
+      <ViewerSurface>
+        <PdfViewerPages />
+      </ViewerSurface>
+    </ViewerBody>
+  </ViewerRoot>
+</PdfViewerProvider>
+```
+
+The hierarchy is visible in JSX: viewer primitives own layout, the PDF provider
+owns shared PDF state, and `PdfViewerPages` renders the document pages.
+
 ## Usage
+
+`PdfViewer` is the easy API. It is the preassembled version of the composition
+above.
 
 ```tsx
 import { PdfViewer } from "@/components/ui/pdf-viewer"
@@ -43,6 +67,24 @@ export function Example() {
     />
   )
 }
+```
+
+You can compose workflow chrome around the PDF surface with the same primitives:
+
+```tsx
+<PdfViewerProvider source={{ kind: "url", url, fileName: "document.pdf" }}>
+  <ViewerRoot>
+    <WorkflowHeader />
+    <ViewerBody>
+      <ViewerSidebar>
+        <PageRibbon />
+      </ViewerSidebar>
+      <ViewerSurface>
+        <PdfViewerPages bare className="h-full" />
+      </ViewerSurface>
+    </ViewerBody>
+  </ViewerRoot>
+</PdfViewerProvider>
 ```
 
 ### Bounding-box overlays
@@ -74,48 +116,6 @@ The exported `PdfHighlight` component is a percentage-positioned box for use
 inside `renderPageOverlay` (the overlay layer is already `position: absolute`):
 `<PdfHighlight area={{ left, top, width, height }} />`, each field a percentage
 `[0, 100]` of the page. Style it via `className`/`style`.
-
-## Viewer composition
-
-`PdfViewer` is the easy API. For compound layouts, compose the named PDF parts
-inside the viewer primitives.
-
-```tsx
-<PdfViewerProvider source={{ kind: "url", url, fileName: "document.pdf" }}>
-  <ViewerRoot>
-    <PdfViewerHeader />
-    <ViewerBody>
-      <ViewerSidebar>
-        <PdfViewerThumbnails />
-      </ViewerSidebar>
-      <ViewerSurface>
-        <PdfViewerPages />
-      </ViewerSurface>
-    </ViewerBody>
-  </ViewerRoot>
-</PdfViewerProvider>
-```
-
-The hierarchy is visible in JSX: viewer primitives own layout, the PDF provider
-owns shared PDF state, and `PdfViewerPages` renders the document pages.
-
-You can also compose workflow chrome around the PDF surface:
-
-```tsx
-<PdfViewerProvider source={{ kind: "url", url, fileName: "document.pdf" }}>
-  <ViewerRoot>
-    <WorkflowHeader />
-    <ViewerBody>
-      <ViewerSidebar>
-        <PageRibbon />
-      </ViewerSidebar>
-      <ViewerSurface>
-        <PdfViewerPages bare className="h-full" />
-      </ViewerSurface>
-    </ViewerBody>
-  </ViewerRoot>
-</PdfViewerProvider>
-```
 
 ## Scale control
 
@@ -159,4 +159,4 @@ needs the vertical target.
 | `onVisiblePageChange`    | `(page: number) => void`                 | Fired with the 1-based page nearest the top of the viewport.                     |
 | `onScrollProgressChange` | `(progress: number) => void`             | Fired with scroll progress in `[0, 1]`.                                          |
 | `bare`                   | `boolean`                                | Drop the outer border/background so the viewer fills its container.              |
-| `className`              | `string`                                 | Optional class on the viewer shell.                                              |
+| `className`              | `string`                                 | Optional class on the viewer root element.                                       |

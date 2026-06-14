@@ -144,8 +144,8 @@ export interface ExtractionSourcesResponse {
 /**
  * The join key between a field-rendering component and its source. Dotted path,
  * matching both Retab's field-location keys and react-hook-form's field names
- * (`owner.name`, `properties.0.gas_volume`) — so json-form's `setSourcesFieldPath`
- * plugs straight in with no conversion.
+ * (`owner.name`, `properties.0.gas_volume`) — so json-form field-anchor links
+ * plug straight in with no conversion.
  */
 export type SourcePath = string
 

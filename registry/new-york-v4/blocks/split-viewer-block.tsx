@@ -1,6 +1,9 @@
 "use client"
 
-import { PdfViewer } from "@/components/ui/pdf-viewer"
+import {
+  PdfViewerPages,
+  PdfViewerProvider,
+} from "@/components/ui/pdf-viewer"
 import type { SplitView } from "@/components/viewers/lib/split-types"
 import {
   SplitViewer,
@@ -40,17 +43,20 @@ function SplitViewerPdfDocument() {
   const controls = useSplitViewerDocumentControls()
 
   return (
-    <PdfViewer
-      ref={controls.setViewerHandle}
+    <PdfViewerProvider
       source={{
         kind: "url",
         url: PDF_URL,
         fileName: "an-image-is-worth-16x16-words.pdf",
       }}
-      bare
-      onVisiblePageChange={controls.onCurrentPageChange}
-      onScrollProgressChange={controls.onScrollProgressChange}
-      className="h-full"
-    />
+    >
+      <PdfViewerPages
+        ref={controls.setViewerHandle}
+        bare
+        onVisiblePageChange={controls.onCurrentPageChange}
+        onScrollProgressChange={controls.onScrollProgressChange}
+        className="h-full"
+      />
+    </PdfViewerProvider>
   )
 }

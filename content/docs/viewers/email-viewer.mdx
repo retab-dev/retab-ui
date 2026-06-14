@@ -6,7 +6,7 @@ description: Render recursive MIME messages with headers, CID inline resources, 
 The Email Viewer is a recursive MIME viewer built on the shared viewer stack.
 It treats email as a tree of MIME parts, renders selected leaf parts through
 `FileViewer`, rewrites `cid:` URLs from `multipart/related` resources, and shows
-message structure in an embedded sidebar.
+body candidates and attachments in an embedded sidebar.
 
 <EmailViewerDemo />
 
@@ -16,7 +16,32 @@ message structure in an embedded sidebar.
 npx shadcn@latest add @retab/email-viewer
 ```
 
+## Viewer composition
+
+```tsx
+<EmailViewerProvider message={message}>
+  <ViewerRoot>
+    <EmailViewerHeader />
+    <ViewerBody>
+      <ViewerSidebar>
+        <EmailViewerPartsList />
+      </ViewerSidebar>
+      <ViewerSurface>
+        <EmailViewerSelectedPart />
+      </ViewerSurface>
+    </ViewerBody>
+  </ViewerRoot>
+</EmailViewerProvider>
+```
+
+The visible sidebar is a product projection: body candidates first, then
+attachments. The raw MIME recursion stays inside the provider and selected part
+projection.
+
 ## Usage
+
+`EmailViewer` is the easy API. It is the preassembled version of the composition
+above.
 
 ```tsx
 import { EmailViewer } from "@/components/ui/email-viewer"
@@ -91,10 +116,11 @@ export function Example() {
 - **CID inline resources** — `multipart/related` siblings with `contentId`
   replace matching `cid:` URLs before HTML routes through the sandboxed HTML
   file viewer.
-- **Part sidebar** — the right sidebar shows the MIME tree, including body
-  candidates, inline resources, attachments, and nested messages.
-- **Part headers** — the message header is a document-attached top strip; the
-  selected part gets a second header directly above the leaf viewer.
+- **Parts sidebar** — the sidebar groups body candidates and attachments rather
+  than exposing the raw MIME tree as the primary UI.
+- **Single viewer header** — the message header is the viewer header; selected
+  leaf parts render directly in the surface without a duplicated attachment
+  header.
 - **Shared preview stack** — renderable leaves use `FileViewer`; thumbnails use
   `FileThumbnail`.
 
@@ -106,5 +132,5 @@ export function Example() {
 | `selectedPath`         | `MimePartPath`       | Controlled selected MIME part path.              |
 | `defaultSelectedPath`  | `MimePartPath`       | Initial selected MIME part path.                 |
 | `onSelectedPathChange` | `function`           | Called with the selected path and MIME node.     |
-| `className`            | `string`             | Optional class on the outer email viewer shell.  |
-| `bare`                 | `boolean`            | Removes the outer shell border/background style. |
+| `className`            | `string`             | Optional class on the email viewer root element. |
+| `bare`                 | `boolean`            | Removes the outer border/background style.       |

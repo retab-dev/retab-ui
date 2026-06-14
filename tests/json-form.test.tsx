@@ -22,8 +22,8 @@ import {
 
 import {
   JsonForm,
-  type FieldSourceLink,
 } from "@/components/json-form/json-form"
+import type { FieldAnchorLink } from "@/components/ui/anchored-document-viewer"
 
 const originalResizeObserver = globalThis.ResizeObserver
 
@@ -77,12 +77,12 @@ function findAncestorWithClass(
 function renderJsonForm({
   schema,
   defaultValues = {},
-  sourceLink,
+  anchorLink,
   defaultOpenPaths,
 }: {
   schema: JSONSchema7
   defaultValues?: FormValues
-  sourceLink?: FieldSourceLink
+  anchorLink?: FieldAnchorLink
   defaultOpenPaths?: readonly string[]
 }) {
   const submissions: FormValues[] = []
@@ -100,7 +100,7 @@ function renderJsonForm({
       <JsonForm
         form={form}
         schema={schema}
-        sourceLink={sourceLink}
+        anchorLink={anchorLink}
         defaultOpenPaths={defaultOpenPaths}
         onSubmit={(data) => submissions.push(cloneJson(data) as FormValues)}
       >
@@ -1492,7 +1492,7 @@ describe("JsonForm arrays", () => {
   })
 })
 
-describe("JsonForm source linking", () => {
+describe("JsonForm anchor linking", () => {
   it("reports scalar hover, focus, blur, and selection by field path", () => {
     const onFieldHover = vi.fn()
     const selectField = vi.fn()
@@ -1504,7 +1504,7 @@ describe("JsonForm source linking", () => {
         },
       },
       defaultValues: { customer_name: "Jane" },
-      sourceLink: {
+      anchorLink: {
         activePath: "customer_name",
         onFieldHover,
         selectField,
@@ -1544,7 +1544,7 @@ describe("JsonForm source linking", () => {
         },
       },
       defaultValues: { rows: [{ value: "A" }] },
-      sourceLink: {
+      anchorLink: {
         activePath: "rows.0.value",
         onFieldHover,
         selectField,
@@ -1555,7 +1555,7 @@ describe("JsonForm source linking", () => {
     expect(cell).toBeTruthy()
 
     fireEvent.focus(cell)
-    expect(cell.getAttribute("data-source-active")).toBe("true")
+    expect(cell.getAttribute("data-anchor-active")).toBe("true")
     fireEvent.blur(cell)
     fireEvent.click(cell)
 
@@ -1584,7 +1584,7 @@ describe("JsonForm source linking", () => {
         },
       },
       defaultValues: { rows: [{ amount: 1875.24 }] },
-      sourceLink: {
+      anchorLink: {
         activePath: null,
         onFieldHover,
         selectField,

@@ -103,7 +103,7 @@ function JsonFormSourcesContent({
             <JsonForm
               form={form}
               schema={schema}
-              sourceLink={link}
+              anchorLink={link}
               defaultOpenPaths={defaultOpenPaths}
             />
           </div>

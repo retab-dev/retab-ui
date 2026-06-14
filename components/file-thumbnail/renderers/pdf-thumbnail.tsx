@@ -1,8 +1,8 @@
 "use client"
 
 import * as React from "react"
-import type { PDFDocumentProxy } from "pdfjs-dist"
 
+import type { PdfDocumentProxy } from "@/lib/pdf-document-types"
 import {
   getPdfDocumentResource,
   getPdfPageResource,
@@ -24,7 +24,7 @@ export function PdfFirstPage({
 }) {
   const doc = useThumbnailResource(
     getPdfDocumentResource(resource.content)
-  ) as PDFDocumentProxy
+  ) as PdfDocumentProxy
   const page = useThumbnailResource(getPdfPageResource(doc, 1))
   const [renderError, setRenderError] = React.useState<unknown>(null)
 

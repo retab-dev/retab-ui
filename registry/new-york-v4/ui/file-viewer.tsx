@@ -56,9 +56,9 @@ const ProseTextViewer = React.lazy(() =>
     default: m.ChenglouTextViewer,
   }))
 )
-const MarkdownDocumentViewer = React.lazy(() =>
-  import("@/components/ui/markdown-document-viewer").then((m) => ({
-    default: m.MarkdownDocumentViewer,
+const PretextMarkdownViewer = React.lazy(() =>
+  import("@/components/ui/pretext-markdown-viewer").then((m) => ({
+    default: m.PretextMarkdownViewer,
   }))
 )
 const CodeTextViewer = React.lazy(() =>
@@ -169,11 +169,10 @@ function FileViewerRoute({
     }
     if (category === "markdown") {
       return (
-        <MarkdownDocumentViewer
+        <PretextMarkdownViewer
           source={resource.descriptor.source}
           className={className}
           bare={bare}
-          mode="markdown"
         />
       )
     }
@@ -320,11 +319,10 @@ function FileViewerRoute({
       )
     case "markdown":
       return (
-        <MarkdownDocumentViewer
+        <PretextMarkdownViewer
           source={resource.descriptor.source}
           className={className}
           bare={bare}
-          mode="markdown"
         />
       )
     case "html":

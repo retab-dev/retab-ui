@@ -2,7 +2,6 @@ import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
 
 const imperativeHandleFiles = [
-  "components/viewers/page-markdown/page-markdown-document-pane.tsx",
   "components/viewers/page-markdown/page-markdown-pane.tsx",
   "registry/new-york-v4/ui/code-viewer-content.tsx",
   "registry/new-york-v4/ui/csv-viewer-grid.tsx",

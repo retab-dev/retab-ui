@@ -1,81 +1,106 @@
 ---
 title: Extract Viewer
-description: Link extracted fields to their sources — hover a field to highlight where its value came from in the document and scroll to it.
+description: Link extracted fields to document anchors — hover or select a field to highlight where its value came from.
 ---
 
 A **source** is the provenance of an extracted value: where in the document it
-was found. This page covers the source system — a small, composable abstraction
-that links any field-rendering component to any document viewer — and the two
-blocks built on it.
+was found. Extract and extraction viewers use the anchored-document model to
+turn those source locations into interactive anchors.
 
-Hover or select a field; its source highlights in the PDF and scrolls into view.
+Hover or select a field; its anchor highlights in the PDF and scrolls into view.
 
 <ExtractViewerDemo />
 
-## The abstraction
+## Viewer Composition
 
-Three decoupled pieces. The field component and the viewer never import each
-other — they're joined by a **field path** and a tiny mediator.
+Extraction is not a special PDF viewer. It is a domain composition:
 
-| Piece             | Role                                                             |
-| ----------------- | ---------------------------------------------------------------- |
-| `document-source` | the data model + `extractionSourcesToSourceMap`                  |
-| `useSourceLink`   | the mediator: hover/pin state, drives the viewer                 |
-| `pdf-source`      | the PDF adapter (`usePdfSourceTarget`, `renderPdfSourceOverlay`) |
+```tsx
+<AnchoredDocumentProvider items={items} target={target}>
+  <ViewerRoot>
+    <ViewerBody>
+      <ViewerSurface>
+        <PdfViewer renderPageOverlay={renderPageOverlay} />
+      </ViewerSurface>
+      <ViewerSidebar>
+        <JsonForm anchorLink={link} />
+      </ViewerSidebar>
+    </ViewerBody>
+  </ViewerRoot>
+</AnchoredDocumentProvider>
+```
+
+The pieces stay separate:
+
+| Piece                      | Role                                                                 |
+| -------------------------- | -------------------------------------------------------------------- |
+| `document-source`          | Retab source response types and flattening helpers.                  |
+| `AnchoredDocumentProvider` | preview, selected, active item state, and target navigation.         |
+| `JsonForm`                 | field renderer that reports field paths through `anchorLink`.        |
+| `pdf-anchor-target`        | PDF adapter: source-to-anchor projection, scroll target, and overlay. |
+| `PdfViewer`                | leaf viewer that renders the PDF source.                             |
 
 <MermaidDiagram
   chart={`
 flowchart LR
-  field["Field component<br/>json-form or custom list"]
-  path["Field path<br/>owner.name"]
-  link["useSourceLink<br/>hover + pinned state"]
-  map[("SourceMap<br/>path to source")]
-  adapter["PDF source adapter<br/>scroll target + overlay"]
-  viewer["Viewer<br/>highlight + scroll"]
+  response["Extraction sources response"]
+  flat["Field path lookup"]
+  items["AnchoredItem[]"]
+  provider["AnchoredDocumentProvider"]
+  form["JsonForm<br/>anchorLink"]
+  adapter["PDF anchor target<br/>overlay"]
+  viewer["PdfViewer"]
 
-field -->|"hover or select"| path
-path --> link
-map -->|"lookup active path"| link
-link -->|"active source"| adapter
+response --> flat
+flat --> items
+items --> provider
+provider --> form
+provider --> adapter
 adapter --> viewer
 
 classDef input fill:#f8fafc,stroke:#94a3b8,color:#0f172a
 classDef state fill:#ecfeff,stroke:#0891b2,color:#164e63
 classDef output fill:#f0fdf4,stroke:#16a34a,color:#14532d
 
-class field,path input
-class link,map state
-class adapter,viewer output
+class response,flat input
+class items,provider state
+class form,adapter,viewer output
 `}
 />
 
-The flow is **unidirectional**: fields drive the viewer, never the reverse.
+The flow is still unidirectional: fields report paths to the anchored provider;
+the target adapter navigates the leaf viewer.
 
-## Source data
+## Source Data
 
 Sources come from Retab's `GET /v1/extractions/{id}/sources`
-(`ExtractionSourcesResponse`): the extracted value tree plus a parallel `sources`
-tree whose leaves are `{ value, source }`. A `Source` is `{ content, anchor }`,
-where the `anchor` is a discriminated union per document format — for PDFs,
-`pdf_bbox` with a page and a normalized `[0, 1]` box.
+(`ExtractionSourcesResponse`): the extracted value tree plus a parallel
+`sources` tree whose leaves are `{ value, source }`. A `Source` is
+`{ content, anchor }`, where the `anchor` is a discriminated union per document
+format. For PDFs, the source anchor is a normalized page bounding box.
 
-`extractionSourcesToSourceMap` flattens that tree into a flat, path-keyed
-`SourceMap`. The keys are **dotted paths** (`owner.name`,
-`properties.0.gas_volume`) — the same encoding react-hook-form (and json-form)
-use for field names, so they join with no conversion.
+`extractionSourcesToSourceMap` flattens that tree into a path-keyed lookup. The
+keys are dotted paths (`owner.name`, `properties.0.gas_volume`) — the same paths
+used by `JsonForm`, so each field path can also be an anchored item id.
 
 ```ts
 import { extractionSourcesToSourceMap } from "@/lib/document-source"
+import type { AnchoredItem } from "@/components/ui/anchored-document-viewer"
+import { sourceToPdfAnchor } from "@/components/ui/pdf-anchor-target"
 
 const sources = extractionSourcesToSourceMap(response.sources)
-// { "owner.name": { content: "L3 RESOURCES LLC", anchor: { kind: "pdf_bbox", page: 1, … } }, … }
+const items: AnchoredItem[] = Object.entries(sources).map(([id, source]) => ({
+  id,
+  anchor: sourceToPdfAnchor(source),
+}))
 ```
 
-## Composing json-form with the PDF viewer
+## Composing JSON Form With The PDF Viewer
 
-Because json-form already emits the hovered field path through
-`setSourcesFieldPath`, linking it to the viewer is just wiring `useSourceLink`
-between them — no per-field glue.
+`JsonForm` accepts a `FieldAnchorLink`. Inside an
+`AnchoredDocumentProvider`, get that link from `useAnchoredFieldLink` and pass
+it to `anchorLink`. The PDF adapter reads the same provider to render the active
+highlight.
 
 <JsonFormSourcesDemo />
 
@@ -83,22 +108,49 @@ between them — no per-field glue.
 import * as React from "react"
 
 import { extractionSourcesToSourceMap } from "@/lib/document-source"
-import { useSourceLink } from "@/hooks/use-source-link"
 import {
-  renderPdfSourceOverlay,
-  usePdfSourceTarget,
-} from "@/components/ui/pdf-source"
+  AnchoredDocumentProvider,
+  type AnchoredItem,
+  useAnchoredFieldLink,
+} from "@/components/ui/anchored-document-viewer"
+import {
+  sourceToPdfAnchor,
+  usePdfAnchoredOverlay,
+  usePdfAnchoredTarget,
+} from "@/components/ui/pdf-anchor-target"
 import { PdfViewer, type PdfViewerHandle } from "@/components/ui/pdf-viewer"
 import { JsonForm } from "@/components/json-form/json-form"
 
 export function Example({ response, form }) {
   const viewerRef = React.useRef<PdfViewerHandle>(null)
-  const target = usePdfSourceTarget(viewerRef)
+  const target = usePdfAnchoredTarget(viewerRef)
   const sources = React.useMemo(
     () => extractionSourcesToSourceMap(response.sources),
-    [response]
+    [response.sources]
   )
-  const link = useSourceLink({ sources, target })
+  const items = React.useMemo<AnchoredItem[]>(
+    () =>
+      Object.entries(sources).map(([id, source]) => ({
+        id,
+        anchor: sourceToPdfAnchor(source),
+      })),
+    [sources]
+  )
+
+  return (
+    <AnchoredDocumentProvider items={items} target={target}>
+      <ExampleContent
+        form={form}
+        schema={response.schema}
+        viewerRef={viewerRef}
+      />
+    </AnchoredDocumentProvider>
+  )
+}
+
+function ExampleContent({ form, schema, viewerRef }) {
+  const link = useAnchoredFieldLink()
+  const renderPageOverlay = usePdfAnchoredOverlay({ mode: "active" })
 
   return (
     <div className="flex h-full">
@@ -107,53 +159,50 @@ export function Example({ response, form }) {
         source={{ kind: "url", url: "/document.pdf" }}
         bare
         className="min-w-0 flex-1"
-        renderPageOverlay={renderPdfSourceOverlay(link.activeSource)}
+        renderPageOverlay={renderPageOverlay}
       />
-      <JsonForm form={form} schema={response.schema} sourceLink={link} />
+      <JsonForm form={form} schema={schema} anchorLink={link} />
     </div>
   )
 }
 ```
 
-To link a different field component, point its hover at `link.onFieldHover` and
-its click at `link.selectField` (that's all `extract-viewer-block` does with its
-own field list). To support a different viewer, write one adapter — a
-`SourceTarget` (a `scrollTo`) and an overlay renderer.
+To link a different field component, call `previewItem`, `selectItem`, or
+`activateItem` from `useAnchoredDocument`. To support a different viewer, write
+one target adapter that translates the shared document anchor into that viewer's
+native scroll and overlay APIs.
 
 ## API
 
 ### `document-source`
 
-| Export                          | Description                                                                                                                                |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `Source`                        | `{ content, anchor }` — a value's provenance.                                                                                              |
-| `SourceAnchor`                  | discriminated union on `kind`: `pdf_bbox`, `image_bbox`, `csv_cell`, `spreadsheet_cell`, `docx_text_span`, `docx_table_cell`, `text_span`. |
-| `ExtractionSourcesResponse`     | the `/v1/extractions/{id}/sources` shape.                                                                                                  |
-| `SourceMap`                     | `Record<path, Source>` — flat, dotted-path keyed.                                                                                          |
-| `extractionSourcesToSourceMap`  | `(sources) => SourceMap` — flatten the sources tree.                                                                                       |
-| `SourceLocation` / `SourceArea` | a normalized page region (`page` + `%` box).                                                                                               |
-| `sourceLocationKey`             | stable key for dedupe.                                                                                                                     |
+| Export                         | Description                                                                                                                                |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `Source`                       | `{ content, anchor }` — a value's provenance.                                                                                              |
+| `SourceAnchor`                 | Discriminated union on `kind`: `pdf_bbox`, `image_bbox`, `csv_cell`, `spreadsheet_cell`, `docx_text_span`, `docx_table_cell`, `text_span`. |
+| `ExtractionSourcesResponse`    | The `/v1/extractions/{id}/sources` shape.                                                                                                  |
+| `extractionSourcesToSourceMap` | Flatten the nested sources tree into a dotted-path lookup.                                                                                 |
+| `SourceLocation` / `SourceArea` | A normalized page region (`page` + percent box).                                                                                          |
+| `sourceLocationKey`            | Stable key for dedupe.                                                                                                                     |
 
-### `useSourceLink`
+### `anchored-document-viewer`
 
-`useSourceLink({ sources, target })` →
+| Export                     | Description                                                                 |
+| -------------------------- | --------------------------------------------------------------------------- |
+| `AnchoredDocumentProvider` | Owns item-anchor preview, selection, activation, and target navigation.     |
+| `AnchoredItem`             | `{ id, anchor, disabled? }`; use the field path as `id` for extraction UI.  |
+| `FieldAnchorLink`          | Link shape accepted by `JsonForm`'s `anchorLink` prop.                     |
+| `useAnchoredFieldLink`     | Returns a `FieldAnchorLink` from the active anchored-document provider.     |
+| `useAnchoredDocument`      | Low-level access to active item, preview, select, activate, and clear APIs. |
 
-| Member                       | Description                                               |
-| ---------------------------- | --------------------------------------------------------- |
-| `onFieldHover(path \| null)` | report the hovered field — wire to `setSourcesFieldPath`. |
-| `selectField(path)`          | pin a field (e.g. on click).                              |
-| `clear()`                    | clear hover and pin.                                      |
-| `activeSource`               | the active field's source — feed to the overlay.          |
-| `activePath`                 | the effective active path (hover wins over pin).          |
-| `hoverPath` / `pinnedPath`   | the transient hovered and persisted pinned paths.         |
+### `pdf-anchor-target`
 
-### `pdf-source`
+| Export                  | Description                                                                         |
+| ----------------------- | ----------------------------------------------------------------------------------- |
+| `sourceToPdfAnchor`     | Converts a Retab PDF source into the shared PDF document anchor.                    |
+| `usePdfAnchoredTarget`  | Creates an `AnchoredDocumentTarget` over a `PdfViewer` ref.                         |
+| `usePdfAnchoredOverlay` | Creates a `renderPageOverlay` callback for active or interactive anchored regions. |
 
-| Export                           | Description                                                                    |
-| -------------------------------- | ------------------------------------------------------------------------------ |
-| `usePdfSourceTarget(ref)`        | a stable `SourceTarget` over a `PdfViewer` ref.                                |
-| `renderPdfSourceOverlay(source)` | a `renderPageOverlay` drawing the highlight on its page — pass `activeSource`. |
-| `pdfAnchorToTarget(anchor)`      | normalized bbox -> page `%` target.                                            |
-
-Both compositions ship as blocks: the [Extract Viewer](/blocks#extract) (a field
-list) and [JSON Form Sources](/blocks#json-form-sources) (json-form).
+The [Extract Viewer](/blocks#extract), [Extraction Viewer](/blocks#extraction-viewer),
+and [JSON Form Sources](/blocks#json-form-sources) blocks are all compositions of
+the same anchored-document system.

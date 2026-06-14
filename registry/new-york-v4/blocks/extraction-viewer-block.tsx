@@ -37,9 +37,19 @@ import {
   usePdfAnchoredOverlay,
   usePdfAnchoredTarget,
 } from "@/components/ui/pdf-anchor-target"
-import { PdfViewer, type PdfViewerHandle } from "@/components/ui/pdf-viewer"
+import {
+  PdfViewerPages,
+  PdfViewerProvider,
+  type PdfViewerHandle,
+} from "@/components/ui/pdf-viewer"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { SourceIndicator } from "@/components/ui/source-indicator"
+import {
+  ViewerBody,
+  ViewerRoot,
+  ViewerSidebar,
+  ViewerSurface,
+} from "@/components/ui/viewer"
 import { textAnchorToTarget } from "@/components/ui/text-source"
 import { xlsxAnchorToTarget } from "@/components/ui/xlsx-source"
 import { XlsxViewer, type XlsxViewerHandle } from "@/components/ui/xlsx-viewer"
@@ -212,13 +222,17 @@ function ExtractionShell({
   const { activeItem } = useAnchoredDocument()
 
   return (
-    <div className="flex h-full bg-background">
-      <div className="relative min-w-0 flex-1">
+    <ViewerRoot bare className="h-full bg-background">
+      <ViewerBody>
+        <ViewerSurface className="relative">
         {children}
         <SourceIndicator path={link.activePath} found={!!activeItem?.anchor} />
-      </div>
-      <ExtractionForm extraction={extraction} link={link} />
-    </div>
+        </ViewerSurface>
+        <ViewerSidebar className="flex w-[420px] flex-shrink-0 flex-col border-l md:w-[420px]">
+          <ExtractionForm extraction={extraction} link={link} />
+        </ViewerSidebar>
+      </ViewerBody>
+    </ViewerRoot>
   )
 }
 
@@ -236,7 +250,7 @@ function ExtractionForm({
   // `json-form` is field-anchor-aware: pass the link and every field becomes a
   // hoverable card that reports its path. No per-field wiring needed.
   return (
-    <aside className="flex w-[420px] flex-shrink-0 flex-col border-l">
+    <>
       <div className="flex h-10 flex-shrink-0 items-center gap-2 border-b px-4">
         <h2 className="text-sm font-medium">Extracted data</h2>
         <span className="ml-auto text-xs text-muted-foreground">
@@ -245,10 +259,10 @@ function ExtractionForm({
       </div>
       <ScrollArea className="min-h-0 flex-1">
         <div className="p-4">
-          <JsonForm form={form} schema={extraction.schema} sourceLink={link} />
+          <JsonForm form={form} schema={extraction.schema} anchorLink={link} />
         </div>
       </ScrollArea>
-    </aside>
+    </>
   )
 }
 
@@ -447,17 +461,20 @@ function PdfTabContent({
 
   return (
     <ExtractionShell extraction={PDF_EXTRACTION}>
-      <PdfViewer
-        ref={viewerRef}
+      <PdfViewerProvider
         source={{
           kind: "url",
           url: PDF_URL,
           fileName: "jane-doe-bank-statement-5-pages.pdf",
         }}
-        bare
-        className="h-full"
-        renderPageOverlay={renderPageOverlay}
-      />
+      >
+        <PdfViewerPages
+          ref={viewerRef}
+          bare
+          className="h-full"
+          renderPageOverlay={renderPageOverlay}
+        />
+      </PdfViewerProvider>
     </ExtractionShell>
   )
 }

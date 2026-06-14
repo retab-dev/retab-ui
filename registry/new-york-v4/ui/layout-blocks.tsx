@@ -13,7 +13,8 @@ import {
   usePdfAnchoredTarget,
 } from "@/components/ui/pdf-anchor-target"
 import {
-  PdfViewer,
+  PdfViewerPages,
+  PdfViewerProvider,
   type PdfDocumentSource,
   type PdfViewerHandle,
 } from "@/components/ui/pdf-viewer"
@@ -152,7 +153,7 @@ function DocumentAiLayoutBlocksContent({
 
   return (
     <ViewerRoot
-      data-slot="layout-blocks"
+      data-layout-blocks=""
       className={cn("bg-background", heightClassName, className)}
       bare
     >
@@ -180,13 +181,14 @@ function DocumentAiLayoutBlocksContent({
       <ViewerBody>
         <ViewerSurface>
           {pdfSource.source ? (
-            <PdfViewer
-              ref={viewerRef}
-              bare
-              className="h-full"
-              renderPageOverlay={renderPageOverlay}
-              source={pdfSource.source}
-            />
+            <PdfViewerProvider source={pdfSource.source}>
+              <PdfViewerPages
+                ref={viewerRef}
+                bare
+                className="h-full"
+                renderPageOverlay={renderPageOverlay}
+              />
+            </PdfViewerProvider>
           ) : (
             <div className="grid h-full place-items-center bg-muted/20 p-6 text-sm text-muted-foreground">
               {pdfSource.error ?? "Preparing OCR pages..."}

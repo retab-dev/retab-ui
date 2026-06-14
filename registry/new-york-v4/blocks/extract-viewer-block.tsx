@@ -17,7 +17,8 @@ import {
   usePdfAnchoredTarget,
 } from "@/components/ui/pdf-anchor-target"
 import {
-  PdfViewer,
+  PdfViewerPages,
+  PdfViewerProvider,
   type PdfDocumentSource,
   type PdfViewerHandle,
 } from "@/components/ui/pdf-viewer"
@@ -108,13 +109,14 @@ function ExtractViewerContent({
     <ViewerRoot bare className="h-full min-h-[680px] bg-background">
       <ViewerBody>
         <ViewerSurface className="relative">
-          <PdfViewer
-            ref={viewerRef}
-            source={PDF_SOURCE}
-            bare
-            className="h-full"
-            renderPageOverlay={renderPageOverlay}
-          />
+          <PdfViewerProvider source={PDF_SOURCE}>
+            <PdfViewerPages
+              ref={viewerRef}
+              bare
+              className="h-full"
+              renderPageOverlay={renderPageOverlay}
+            />
+          </PdfViewerProvider>
           <SourceIndicator path={link.activePath} found={!!activeItem?.anchor} />
         </ViewerSurface>
         <ViewerSidebar className="flex w-[240px] flex-shrink-0 flex-col border-l md:w-[240px]">
@@ -126,7 +128,7 @@ function ExtractViewerContent({
           </div>
           <ScrollArea className="min-h-0 flex-1">
             <div className="p-4">
-              <JsonForm form={form} schema={schema} sourceLink={link} />
+              <JsonForm form={form} schema={schema} anchorLink={link} />
             </div>
           </ScrollArea>
         </ViewerSidebar>

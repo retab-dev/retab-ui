@@ -1,16 +1,26 @@
 "use client"
 
-import { PdfViewer } from "@/components/ui/pdf-viewer"
+import * as React from "react"
+
+import { PdfViewer, type PdfViewerHandle } from "@/components/ui/pdf-viewer"
+import { ViewerBody, ViewerRoot, ViewerSurface } from "@/components/ui/viewer"
 import { EmailViewerDemo } from "@/components/email-viewer-demo"
 import { TextViewerDemo } from "@/components/text-viewer-demo"
-import { ClassifierViewer } from "@/components/viewers/classify/classifier-viewer"
+import {
+  ClassifierViewerHeader,
+  ClassifierViewerProvider,
+} from "@/components/viewers/classify/classifier-viewer"
 import { EditViewer } from "@/components/viewers/edit/edit-viewer"
 import type { FormField } from "@/components/viewers/lib/edit-types"
 import type { ParseResponse } from "@/components/viewers/lib/parse-types"
 import type { PartitionResult } from "@/components/viewers/lib/partition-types"
 import type { SplitView } from "@/components/viewers/lib/split-types"
 import { ParseViewer } from "@/components/viewers/parse/parse-viewer"
-import { PartitionViewer } from "@/components/viewers/partition/partition-viewer"
+import {
+  PartitionViewerHeader,
+  PartitionViewerProvider,
+  usePartitionViewerDocument,
+} from "@/components/viewers/partition/partition-viewer"
 import editSample from "@/components/viewers/sample-data/edit.json"
 import parseSample from "@/components/viewers/sample-data/parse.json"
 import partitionSample from "@/components/viewers/sample-data/partition.json"
@@ -88,36 +98,6 @@ const EDIT_PDF_URL = "/samples/fidelity-edit/fidelity_original.pdf"
 const EDIT_FILLED_PDF_URL = "/samples/fidelity-edit/fidelity_filled.pdf"
 const editFields = editSample as FormField[]
 
-function FakeDocument({
-  onCurrentPageChange,
-  onScrollProgressChange,
-}: {
-  onCurrentPageChange: (pageNumber: number) => void
-  onScrollProgressChange?: (progress: number) => void
-}) {
-  return (
-    <div
-      className="h-full overflow-auto bg-muted p-4"
-      onScroll={(e) => {
-        const el = e.currentTarget
-        const progress = el.scrollTop / (el.scrollHeight - el.clientHeight || 1)
-        onScrollProgressChange?.(progress)
-        onCurrentPageChange(Math.max(1, Math.round(progress * 6)))
-      }}
-    >
-      {Array.from({ length: 6 }, (_, i) => (
-        <div
-          key={i}
-          data-page-number={i + 1}
-          className="mx-auto mb-4 flex aspect-[3/4] w-64 items-center justify-center rounded border bg-background text-sm text-muted-foreground shadow-sm"
-        >
-          Page {i + 1}
-        </div>
-      ))}
-    </div>
-  )
-}
-
 // ── Per-viewer demos (used by the docs MDX pages) ───────────────────────────
 
 export function PartitionViewerDemo() {
@@ -126,51 +106,80 @@ export function PartitionViewerDemo() {
       className="not-prose flex flex-col overflow-hidden rounded-xl border"
       style={{ height: 640 }}
     >
-      <PartitionViewer
-        result={partitionResult}
-        renderDocument={(handlers) => (
-          <PdfViewer
-            source={{
-              kind: "url",
-              url: PARTITION_PDF_URL,
-              fileName: "an-image-is-worth-16x16-words.pdf",
-            }}
-            bare
-            onVisiblePageChange={handlers.onCurrentPageChange}
-            onScrollProgressChange={handlers.onScrollProgressChange}
-            className="h-full"
-          />
-        )}
-      />
+      <PartitionViewerProvider result={partitionResult}>
+        <ViewerRoot bare className="h-full flex-1 bg-background">
+          <PartitionViewerHeader />
+          <ViewerBody>
+            <ViewerSurface>
+              <PartitionDemoDocument />
+            </ViewerSurface>
+          </ViewerBody>
+        </ViewerRoot>
+      </PartitionViewerProvider>
     </div>
   )
 }
 
 export function ClassificationViewerDemo() {
+  const viewerRef = React.useRef<PdfViewerHandle | null>(null)
+
   return (
     <div
       className="not-prose flex flex-col overflow-hidden rounded-xl border"
       style={{ height: 520 }}
     >
-      <ClassifierViewer
+      <ClassifierViewerProvider
         result={{
           category: "Loan Application",
           reasoning:
             "The document is a Uniform Residential Loan Application (Form 1003): it collects borrower, employment, and property details for a mortgage request, which matches the Loan Application category.",
         }}
-        renderDocument={() => (
-          <PdfViewer
-            source={{
-              kind: "url",
-              url: "/samples/loan-application.pdf",
-              fileName: "loan-application.pdf",
-            }}
-            bare
-            className="h-full"
-          />
-        )}
-      />
+        onSelectDocumentStart={() => viewerRef.current?.scrollToPage(1)}
+      >
+        <ViewerRoot bare className="h-full flex-1 bg-background">
+          <ClassifierViewerHeader />
+          <ViewerBody>
+            <ViewerSurface>
+              <PdfViewer
+                ref={viewerRef}
+                source={{
+                  kind: "url",
+                  url: "/samples/loan-application.pdf",
+                  fileName: "loan-application.pdf",
+                }}
+                bare
+                className="h-full"
+              />
+            </ViewerSurface>
+          </ViewerBody>
+        </ViewerRoot>
+      </ClassifierViewerProvider>
     </div>
+  )
+}
+
+function PartitionDemoDocument() {
+  const document = usePartitionViewerDocument()
+  const viewerRef = React.useRef<PdfViewerHandle | null>(null)
+
+  React.useEffect(() => {
+    if (!document.scrollRequest) return
+    viewerRef.current?.scrollToPage(document.scrollRequest.pageNumber)
+  }, [document.scrollRequest])
+
+  return (
+    <PdfViewer
+      ref={viewerRef}
+      source={{
+        kind: "url",
+        url: PARTITION_PDF_URL,
+        fileName: "an-image-is-worth-16x16-words.pdf",
+      }}
+      bare
+      onVisiblePageChange={document.onCurrentPageChange}
+      onScrollProgressChange={document.onScrollProgressChange}
+      className="h-full"
+    />
   )
 }
 

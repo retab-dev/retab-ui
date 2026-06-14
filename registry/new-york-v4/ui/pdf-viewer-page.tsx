@@ -1,6 +1,6 @@
 import * as React from "react"
-import type { PDFDocumentProxy } from "pdfjs-dist"
 
+import type { PdfDocumentProxy } from "@/lib/pdf-document-types"
 import { readPdfPageResource } from "@/lib/pdf-document-resource"
 
 import { getPdfCanvasPixelSize } from "./pdf-viewer-canvas"
@@ -15,7 +15,7 @@ export function PdfPage({
   renderOverlay,
   onSize,
 }: {
-  document: PDFDocumentProxy
+  document: PdfDocumentProxy
   pageNumber: number
   scale: number
   rotation: number

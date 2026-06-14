@@ -1,12 +1,14 @@
-import type * as Pdfjs from "pdfjs-dist"
-import type { PDFDocumentProxy, PDFPageProxy } from "pdfjs-dist"
-
 import {
   isResourceError,
   isViewerFormatError,
   ViewerFormatError,
   type ViewerFormatErrorMapperOptions,
 } from "@/lib/viewer-errors"
+import type {
+  PdfDocumentProxy,
+  PdfjsModule,
+  PdfPageProxy,
+} from "@/lib/pdf-document-types"
 import type {
   ViewerContentBytes,
   ViewerContentDirectUrl,
@@ -21,20 +23,20 @@ type PdfDocumentContent = ViewerContentIdentity &
 
 type DocumentCacheEntry = {
   loadKey: string
-  promise: Promise<PDFDocumentProxy>
+  promise: Promise<PdfDocumentProxy>
   consumers: number
   lastUsedAt: number
   retainRejected: boolean
   status: "pending" | "resolved" | "rejected"
-  document?: PDFDocumentProxy
+  document?: PdfDocumentProxy
   error?: unknown
 }
 
 type PageCacheEntry = {
-  promise: Promise<PDFPageProxy>
+  promise: Promise<PdfPageProxy>
   retainRejected: boolean
   status: "pending" | "resolved" | "rejected"
-  page?: PDFPageProxy
+  page?: PdfPageProxy
   error?: unknown
 }
 
@@ -42,22 +44,23 @@ type PdfResourceOptions = {
   retainRejected?: boolean
 }
 
-let pdfjsPromise: Promise<typeof Pdfjs> | null = null
+let pdfjsPromise: Promise<PdfjsModule> | null = null
 const documentCache = new Map<string, DocumentCacheEntry>()
-const pageCache = new WeakMap<PDFDocumentProxy, Map<number, PageCacheEntry>>()
+const pageCache = new WeakMap<PdfDocumentProxy, Map<number, PageCacheEntry>>()
 const detachedDocumentEntries = new Set<DocumentCacheEntry>()
 let pruneTimer = 0
 
-function loadPdfjs() {
+function loadPdfjs(): Promise<PdfjsModule> {
   if (!pdfjsPromise) {
     pdfjsPromise = import("pdfjs-dist").then((pdfjs) => {
-      if (!pdfjs.GlobalWorkerOptions.workerSrc) {
-        pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+      const pdfjsModule = pdfjs as unknown as PdfjsModule
+      if (!pdfjsModule.GlobalWorkerOptions.workerSrc) {
+        pdfjsModule.GlobalWorkerOptions.workerSrc = new URL(
           "pdfjs-dist/build/pdf.worker.min.mjs",
           import.meta.url
         ).toString()
       }
-      return pdfjs
+      return pdfjsModule
     })
   }
   return pdfjsPromise
@@ -97,13 +100,13 @@ function pruneDocumentCache() {
 export function getPdfDocumentResource(
   content: PdfDocumentContent,
   options: PdfResourceOptions = {}
-): Promise<PDFDocumentProxy> {
+): Promise<PdfDocumentProxy> {
   return getDocumentCacheEntry(content, options).promise
 }
 
 export function readPdfDocumentResource(
   content: PdfDocumentContent
-): PDFDocumentProxy {
+): PdfDocumentProxy {
   const documentEntry = getDocumentCacheEntry(content, {
     retainRejected: true,
   })
@@ -188,7 +191,7 @@ export function clearPdfDocumentResource(content: ViewerContentIdentity) {
 
 export function retainPdfDocumentResource(
   content: ViewerContentIdentity,
-  document: PDFDocumentProxy
+  document: PdfDocumentProxy
 ) {
   const documentEntry = documentCache.get(content.key)
   if (!documentEntry || documentEntry.document !== document) return
@@ -198,7 +201,7 @@ export function retainPdfDocumentResource(
 
 export function releasePdfDocumentResource(
   content: ViewerContentIdentity,
-  document: PDFDocumentProxy
+  document: PdfDocumentProxy
 ) {
   const documentEntry =
     findDetachedDocumentEntry(content, document) ??
@@ -224,7 +227,7 @@ export function resetPdfDocumentResourceCacheForTests() {
     window.clearTimeout(pruneTimer)
     pruneTimer = 0
   }
-  const destroyedDocuments = new Set<PDFDocumentProxy>()
+  const destroyedDocuments = new Set<PdfDocumentProxy>()
   for (const documentEntry of documentCache.values()) {
     if (documentEntry.status === "resolved") {
       destroyPdfDocumentOnce(documentEntry.document, destroyedDocuments)
@@ -241,7 +244,7 @@ export function resetPdfDocumentResourceCacheForTests() {
 
 function findAttachedDocumentEntry(
   content: ViewerContentIdentity,
-  document: PDFDocumentProxy
+  document: PdfDocumentProxy
 ) {
   const documentEntry = documentCache.get(content.key)
   return documentEntry?.document === document ? documentEntry : undefined
@@ -249,7 +252,7 @@ function findAttachedDocumentEntry(
 
 function findDetachedDocumentEntry(
   content: ViewerContentIdentity,
-  document: PDFDocumentProxy
+  document: PdfDocumentProxy
 ) {
   for (const documentEntry of detachedDocumentEntries) {
     if (
@@ -262,14 +265,14 @@ function findDetachedDocumentEntry(
   return undefined
 }
 
-function hasAttachedDocument(document: PDFDocumentProxy | undefined) {
+function hasAttachedDocument(document: PdfDocumentProxy | undefined) {
   for (const documentEntry of documentCache.values()) {
     if (documentEntry.document === document) return true
   }
   return false
 }
 
-function hasDetachedDocument(document: PDFDocumentProxy | undefined) {
+function hasDetachedDocument(document: PdfDocumentProxy | undefined) {
   for (const documentEntry of detachedDocumentEntries) {
     if (documentEntry.document === document) return true
   }
@@ -277,7 +280,7 @@ function hasDetachedDocument(document: PDFDocumentProxy | undefined) {
 }
 
 export function getPdfPageResource(
-  document: PDFDocumentProxy,
+  document: PdfDocumentProxy,
   pageNumber: number,
   options: PdfResourceOptions = {}
 ) {
@@ -285,9 +288,9 @@ export function getPdfPageResource(
 }
 
 export function readPdfPageResource(
-  document: PDFDocumentProxy,
+  document: PdfDocumentProxy,
   pageNumber: number
-): PDFPageProxy {
+): PdfPageProxy {
   const pageEntry = getPageCacheEntry(document, pageNumber, {
     retainRejected: true,
   })
@@ -297,7 +300,7 @@ export function readPdfPageResource(
 }
 
 function getPageCacheEntry(
-  document: PDFDocumentProxy,
+  document: PdfDocumentProxy,
   pageNumber: number,
   options: PdfResourceOptions
 ) {
@@ -342,8 +345,8 @@ function getPageCacheEntry(
 
 async function getPdfDocument(
   content: PdfDocumentContent,
-  pdfjs: typeof Pdfjs
-): Promise<PDFDocumentProxy> {
+  pdfjs: PdfjsModule
+): Promise<PdfDocumentProxy> {
   try {
     if (content.directUrl) {
       return await pdfjs.getDocument(content.directUrl).promise
@@ -373,20 +376,20 @@ function toPdfFormatError(
   })
 }
 
-function destroyPdfDocument(document: PDFDocumentProxy | undefined) {
+function destroyPdfDocument(document: PdfDocumentProxy | undefined) {
   clearPageCache(document)
   void document?.destroy().catch(() => {})
 }
 
 function destroyPdfDocumentOnce(
-  document: PDFDocumentProxy | undefined,
-  destroyedDocuments: Set<PDFDocumentProxy>
+  document: PdfDocumentProxy | undefined,
+  destroyedDocuments: Set<PdfDocumentProxy>
 ) {
   if (!document || destroyedDocuments.has(document)) return
   destroyedDocuments.add(document)
   destroyPdfDocument(document)
 }
 
-function clearPageCache(document: PDFDocumentProxy | undefined) {
+function clearPageCache(document: PdfDocumentProxy | undefined) {
   if (document) pageCache.delete(document)
 }

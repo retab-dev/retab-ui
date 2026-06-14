@@ -14,6 +14,7 @@ import {
 } from "react-hook-form"
 
 import { cn } from "@/lib/utils"
+import type { FieldAnchorLink } from "@/components/ui/anchored-document-viewer"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import {
@@ -113,54 +114,48 @@ const TABLE_ROW_OVERSCAN = 3
 const TABLE_JUMP_ROW_OVERSCAN = 6
 
 // ---------------------------------------------------------------------------
-// Source linking — opt-in field-level hover/highlight
+// Anchor linking — opt-in field-level hover/highlight
 // ---------------------------------------------------------------------------
 
 /**
- * Optional source linking. When a form is given a `sourceLink`, every scalar
- * field (including array-table cells) becomes a hoverable card à la
- * `SourceFieldList`: hovering or focusing it reports the field's path, and the
+ * Optional anchor linking. When a form is given an `anchorLink`, every scalar
+ * field (including array-table cells) becomes a hoverable card: hovering or
+ * focusing it reports the field's path, and the
  * field whose path matches `activePath` gets the highlighted-card treatment.
  * Wire `onFieldHover` + `activePath` from a field anchor link.
  */
-export interface FieldSourceLink {
-  activePath: string | null
-  onFieldHover: (path: string | null) => void
-  selectField?: (path: string) => void
-}
+type FieldAnchorLinkActions = Omit<FieldAnchorLink, "activePath">
 
-type FieldSourceLinkActions = Omit<FieldSourceLink, "activePath">
-
-const FieldSourceActivePathContext = React.createContext<string | null>(null)
-const FieldSourceActionsContext =
-  React.createContext<FieldSourceLinkActions | null>(null)
+const FieldAnchorActivePathContext = React.createContext<string | null>(null)
+const FieldAnchorActionsContext =
+  React.createContext<FieldAnchorLinkActions | null>(null)
 const DefaultOpenPathsContext = React.createContext<ReadonlySet<string> | null>(
   null
 )
 
 /**
  * Wraps a scalar leaf so it reports its path on hover/focus and lights up as a
- * card when active. A no-op (renders children untouched) outside a source-linked
+ * card when active. A no-op (renders children untouched) outside an anchor-linked
  * form, so other `JsonFormField` usages are unaffected.
  */
-function SourceFieldShell({
+function FieldAnchorShell({
   name,
   children,
 }: {
   name: string
   children: React.ReactNode
 }) {
-  const activePath = React.useContext(FieldSourceActivePathContext)
-  const sourceActions = React.useContext(FieldSourceActionsContext)
-  if (!sourceActions) return <>{children}</>
+  const activePath = React.useContext(FieldAnchorActivePathContext)
+  const anchorActions = React.useContext(FieldAnchorActionsContext)
+  if (!anchorActions) return <>{children}</>
   const active = activePath === name
   return (
     <div
-      onMouseEnter={() => sourceActions.onFieldHover(name)}
-      onMouseLeave={() => sourceActions.onFieldHover(null)}
-      onFocus={() => sourceActions.onFieldHover(name)}
-      onBlur={() => sourceActions.onFieldHover(null)}
-      onClick={() => sourceActions.selectField?.(name)}
+      onMouseEnter={() => anchorActions.onFieldHover(name)}
+      onMouseLeave={() => anchorActions.onFieldHover(null)}
+      onFocus={() => anchorActions.onFieldHover(name)}
+      onBlur={() => anchorActions.onFieldHover(null)}
+      onClick={() => anchorActions.selectField?.(name)}
       className={cn(
         "rounded-md border px-3 py-2 transition-colors",
         active
@@ -248,7 +243,7 @@ export function JsonFormField({
   if (kind === "boolean") {
     if (nullable) {
       return (
-        <SourceFieldShell name={logicalPath}>
+        <FieldAnchorShell name={logicalPath}>
           <FormField
             name={name}
             render={({ field }) => (
@@ -271,12 +266,12 @@ export function JsonFormField({
               </FormItem>
             )}
           />
-        </SourceFieldShell>
+        </FieldAnchorShell>
       )
     }
 
     return (
-      <SourceFieldShell name={logicalPath}>
+      <FieldAnchorShell name={logicalPath}>
         <FormField
           name={name}
           render={({ field }) => (
@@ -301,12 +296,12 @@ export function JsonFormField({
             </FormItem>
           )}
         />
-      </SourceFieldShell>
+      </FieldAnchorShell>
     )
   }
 
   return (
-    <SourceFieldShell name={logicalPath}>
+    <FieldAnchorShell name={logicalPath}>
       <FormField
         name={name}
         render={({ field }) => (
@@ -330,7 +325,7 @@ export function JsonFormField({
           </FormItem>
         )}
       />
-    </SourceFieldShell>
+    </FieldAnchorShell>
   )
 }
 
@@ -1664,32 +1659,32 @@ function ArrayTable({
   const [activeEditorPath, setActiveEditorPath] = React.useState<string | null>(
     null
   )
-  const activePath = React.useContext(FieldSourceActivePathContext)
-  const sourceActions = React.useContext(FieldSourceActionsContext)
-  const sourceLinked = Boolean(sourceActions)
+  const activePath = React.useContext(FieldAnchorActivePathContext)
+  const anchorActions = React.useContext(FieldAnchorActionsContext)
+  const anchorLinked = Boolean(anchorActions)
   const tableRef = React.useRef<HTMLDivElement>(null)
-  const activeSourceCellRef = React.useRef<Element | null>(null)
-  const hoveredSourcePathRef = React.useRef<string | null>(null)
+  const activeAnchorCellRef = React.useRef<Element | null>(null)
+  const hoveredAnchorPathRef = React.useRef<string | null>(null)
   const pendingHoverPathRef = React.useRef<string | null>(null)
   const pendingHoverFrameRef = React.useRef<number | null>(null)
   const isScrollingRef = React.useRef(false)
   const virtualize = fields.length > TABLE_VIRTUALIZE_THRESHOLD
 
-  const setActiveSourceCell = React.useCallback((cell: Element | null) => {
-    if (activeSourceCellRef.current === cell) return
-    activeSourceCellRef.current?.removeAttribute("data-source-active")
-    if (cell) cell.setAttribute("data-source-active", "true")
-    activeSourceCellRef.current = cell
+  const setActiveAnchorCell = React.useCallback((cell: Element | null) => {
+    if (activeAnchorCellRef.current === cell) return
+    activeAnchorCellRef.current?.removeAttribute("data-anchor-active")
+    if (cell) cell.setAttribute("data-anchor-active", "true")
+    activeAnchorCellRef.current = cell
   }, [])
 
   React.useEffect(() => {
-    if (!sourceLinked || !activePath) {
-      setActiveSourceCell(null)
+    if (!anchorLinked || !activePath) {
+      setActiveAnchorCell(null)
       return
     }
     if (
-      hoveredSourcePathRef.current === activePath &&
-      activeSourceCellRef.current?.getAttribute("data-source-path") ===
+      hoveredAnchorPathRef.current === activePath &&
+      activeAnchorCellRef.current?.getAttribute("data-anchor-path") ===
         activePath
     ) {
       return
@@ -1697,14 +1692,14 @@ function ArrayTable({
 
     const table = tableRef.current
     if (!table) return
-    for (const cell of table.querySelectorAll("[data-source-path]")) {
-      if (cell.getAttribute("data-source-path") === activePath) {
-        setActiveSourceCell(cell)
+    for (const cell of table.querySelectorAll("[data-anchor-path]")) {
+      if (cell.getAttribute("data-anchor-path") === activePath) {
+        setActiveAnchorCell(cell)
         return
       }
     }
-    setActiveSourceCell(null)
-  }, [activePath, fields.length, setActiveSourceCell, sourceLinked])
+    setActiveAnchorCell(null)
+  }, [activePath, anchorLinked, fields.length, setActiveAnchorCell])
 
   const findEventCell = React.useCallback(
     (target: EventTarget | null): HTMLElement | null => {
@@ -1737,19 +1732,19 @@ function ArrayTable({
     (event: React.MouseEvent<HTMLDivElement>) => {
       const cell = findEventCell(event.target)
       if (!cell) return
-      const sourceCellPath = cell.dataset.sourcePath
-      if (sourceCellPath) {
+      const anchorCellPath = cell.dataset.anchorPath
+      if (anchorCellPath) {
         if (pendingHoverFrameRef.current !== null) {
           cancelAnimationFrame(pendingHoverFrameRef.current)
           pendingHoverFrameRef.current = null
         }
-        sourceActions?.selectField?.(sourceCellPath)
+        anchorActions?.selectField?.(anchorCellPath)
       }
       if (cell.dataset.tableCellEditable !== "true") return
       const path = cell.dataset.tableCellPath
       if (path) setActiveEditorPath(path)
     },
-    [findEventCell, sourceActions]
+    [findEventCell, anchorActions]
   )
 
   const handleTableKeyDown = React.useCallback(
@@ -1759,42 +1754,42 @@ function ArrayTable({
       if (!cell || cell.dataset.tableCellEditable !== "true") return
       const path = cell.dataset.tableCellPath
       if (!path) return
-      const sourceCellPath = cell.dataset.sourcePath
-      if (sourceCellPath) {
+      const anchorCellPath = cell.dataset.anchorPath
+      if (anchorCellPath) {
         if (pendingHoverFrameRef.current !== null) {
           cancelAnimationFrame(pendingHoverFrameRef.current)
           pendingHoverFrameRef.current = null
         }
-        sourceActions?.selectField?.(sourceCellPath)
+        anchorActions?.selectField?.(anchorCellPath)
       }
       event.preventDefault()
       setActiveEditorPath(path)
     },
-    [findEventCell, sourceActions]
+    [findEventCell, anchorActions]
   )
 
-  const reportHoveredSourcePath = React.useCallback(
+  const reportHoveredAnchorPath = React.useCallback(
     (path: string | null) => {
-      if (!sourceActions) return
+      if (!anchorActions) return
       pendingHoverPathRef.current = path
       if (pendingHoverFrameRef.current !== null) return
       pendingHoverFrameRef.current = requestAnimationFrame(() => {
         pendingHoverFrameRef.current = null
-        sourceActions.onFieldHover(pendingHoverPathRef.current)
+        anchorActions.onFieldHover(pendingHoverPathRef.current)
       })
     },
-    [sourceActions]
+    [anchorActions]
   )
 
-  const setHoveredSourcePath = React.useCallback(
+  const setHoveredAnchorPath = React.useCallback(
     (path: string | null, cell: Element | null) => {
-      if (!sourceActions) return
-      if (hoveredSourcePathRef.current === path) return
-      hoveredSourcePathRef.current = path
-      setActiveSourceCell(cell)
-      reportHoveredSourcePath(path)
+      if (!anchorActions) return
+      if (hoveredAnchorPathRef.current === path) return
+      hoveredAnchorPathRef.current = path
+      setActiveAnchorCell(cell)
+      reportHoveredAnchorPath(path)
     },
-    [reportHoveredSourcePath, setActiveSourceCell, sourceActions]
+    [anchorActions, reportHoveredAnchorPath, setActiveAnchorCell]
   )
 
   React.useEffect(
@@ -1808,23 +1803,23 @@ function ArrayTable({
 
   const handleTablePointerMove = React.useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
-      if (!sourceActions) return
+      if (!anchorActions) return
       if (isScrollingRef.current) return
       const cell = findEventCell(event.target)
-      setHoveredSourcePath(cell?.dataset.sourcePath ?? null, cell)
+      setHoveredAnchorPath(cell?.dataset.anchorPath ?? null, cell)
     },
-    [findEventCell, setHoveredSourcePath, sourceActions]
+    [anchorActions, findEventCell, setHoveredAnchorPath]
   )
 
   const handleTablePointerLeave = React.useCallback(
-    () => setHoveredSourcePath(null, null),
-    [setHoveredSourcePath]
+    () => setHoveredAnchorPath(null, null),
+    [setHoveredAnchorPath]
   )
 
   const handleBodyScrollStart = React.useCallback(() => {
     isScrollingRef.current = true
-    setHoveredSourcePath(null, null)
-  }, [setHoveredSourcePath])
+    setHoveredAnchorPath(null, null)
+  }, [setHoveredAnchorPath])
 
   const handleBodyScrollEnd = React.useCallback(() => {
     isScrollingRef.current = false
@@ -1832,27 +1827,27 @@ function ArrayTable({
 
   const handleTableFocus = React.useCallback(
     (event: React.FocusEvent<HTMLDivElement>) => {
-      if (!sourceActions) return
+      if (!anchorActions) return
       const cell = findEventCell(event.target)
       if (cell) {
-        hoveredSourcePathRef.current = cell.dataset.sourcePath ?? null
-        setActiveSourceCell(cell)
-        sourceActions.onFieldHover(cell.dataset.sourcePath ?? null)
+        hoveredAnchorPathRef.current = cell.dataset.anchorPath ?? null
+        setActiveAnchorCell(cell)
+        anchorActions.onFieldHover(cell.dataset.anchorPath ?? null)
       }
     },
-    [findEventCell, setActiveSourceCell, sourceActions]
+    [anchorActions, findEventCell, setActiveAnchorCell]
   )
 
   const handleTableBlur = React.useCallback(
     (event: React.FocusEvent<HTMLDivElement>) => {
-      if (!sourceActions) return
+      if (!anchorActions) return
       const cell = findEventCell(event.target)
       if (!cell || cell.contains(event.relatedTarget as Node | null)) return
-      hoveredSourcePathRef.current = null
-      setActiveSourceCell(null)
-      sourceActions.onFieldHover(null)
+      hoveredAnchorPathRef.current = null
+      setActiveAnchorCell(null)
+      anchorActions.onFieldHover(null)
     },
-    [findEventCell, setActiveSourceCell, sourceActions]
+    [anchorActions, findEventCell, setActiveAnchorCell]
   )
 
   const renderRow = React.useCallback(
@@ -1865,7 +1860,7 @@ function ArrayTable({
         columns={columns}
         remove={remove}
         canRemove={canRemove}
-        sourceLinked={sourceLinked}
+        anchorLinked={anchorLinked}
         template={template}
         rowTopPx={rowTopPx}
         activeEditorPath={
@@ -1884,7 +1879,7 @@ function ArrayTable({
       columns,
       remove,
       canRemove,
-      sourceLinked,
+      anchorLinked,
       template,
       activeEditorPath,
       virtualize,
@@ -1897,8 +1892,8 @@ function ArrayTable({
       onClickCapture={handleTableClickCapture}
       onClick={handleTableClick}
       onKeyDown={handleTableKeyDown}
-      onPointerMove={sourceActions ? handleTablePointerMove : undefined}
-      onPointerLeave={sourceActions ? handleTablePointerLeave : undefined}
+      onPointerMove={anchorActions ? handleTablePointerMove : undefined}
+      onPointerLeave={anchorActions ? handleTablePointerLeave : undefined}
       onFocus={handleTableFocus}
       onBlur={handleTableBlur}
       className="overflow-x-auto bg-background"
@@ -1961,7 +1956,7 @@ const ArrayTableRow = React.memo(function ArrayTableRow({
   columns,
   remove,
   canRemove,
-  sourceLinked,
+  anchorLinked,
   template,
   rowTopPx,
   activeEditorPath,
@@ -1975,7 +1970,7 @@ const ArrayTableRow = React.memo(function ArrayTableRow({
   columns: Column[]
   remove: (index: number) => void
   canRemove: boolean
-  sourceLinked: boolean
+  anchorLinked: boolean
   template: string
   rowTopPx?: number
   activeEditorPath: string | null
@@ -2031,16 +2026,16 @@ const ArrayTableRow = React.memo(function ArrayTableRow({
             ? datetimeLocalInputValue(textValue)
             : textValue
         const cellClassName = cn(
-          "min-w-0 rounded data-[source-active=true]:bg-primary/5 data-[source-active=true]:ring-1 data-[source-active=true]:ring-primary/30",
+          "min-w-0 rounded data-[anchor-active=true]:bg-primary/5 data-[anchor-active=true]:ring-1 data-[anchor-active=true]:ring-primary/30",
           !isEditing && !isScalarEditing
             ? "hover:bg-background focus-visible:bg-background focus-visible:ring-1 focus-visible:ring-ring/30"
             : "px-1 py-0.5",
-          sourceLinked && (isEditing || isScalarEditing) && "hover:bg-muted/55"
+          anchorLinked && (isEditing || isScalarEditing) && "hover:bg-muted/55"
         )
         const cellProps = {
           "data-slot": "data-cell",
           "data-table-cell": "",
-          "data-source-path": sourceLinked ? logicalPath : undefined,
+          "data-anchor-path": anchorLinked ? logicalPath : undefined,
           className: cellClassName,
         }
         const commitDataCellValue = (
@@ -2491,11 +2486,11 @@ export interface JsonFormProps {
   /** Force plain string fields to render as single-line inputs or textareas. */
   textInput?: JsonFormTextInput
   /**
-   * Opt into field-level source linking. When set, every scalar field becomes a
+   * Opt into field-level anchor linking. When set, every scalar field becomes a
    * hoverable card that reports its path and highlights when active — wire it
    * straight from a field anchor link.
    */
-  sourceLink?: FieldSourceLink
+  anchorLink?: FieldAnchorLink
   /**
    * Source/logical paths that should start expanded. Intended for controlled
    * demos and benchmarks that need a deep virtualized body mounted immediately.
@@ -2511,7 +2506,7 @@ export function JsonForm({
   onSubmit,
   className,
   textInput,
-  sourceLink,
+  anchorLink,
   defaultOpenPaths,
   children,
 }: JsonFormProps) {
@@ -2520,9 +2515,9 @@ export function JsonForm({
     () => schemaUsesEncodedPaths(expandedSchema),
     [expandedSchema]
   )
-  const onFieldHover = sourceLink?.onFieldHover
-  const selectField = sourceLink?.selectField
-  const sourceActions = React.useMemo<FieldSourceLinkActions | null>(
+  const onFieldHover = anchorLink?.onFieldHover
+  const selectField = anchorLink?.selectField
+  const anchorActions = React.useMemo<FieldAnchorLinkActions | null>(
     () => (onFieldHover ? { onFieldHover, selectField } : null),
     [onFieldHover, selectField]
   )
@@ -2578,9 +2573,9 @@ export function JsonForm({
   )
 
   return (
-    <FieldSourceActionsContext.Provider value={sourceActions}>
-      <FieldSourceActivePathContext.Provider
-        value={sourceLink?.activePath ?? null}
+    <FieldAnchorActionsContext.Provider value={anchorActions}>
+      <FieldAnchorActivePathContext.Provider
+        value={anchorLink?.activePath ?? null}
       >
         <DefaultOpenPathsContext.Provider value={defaultOpenPathSet}>
           <Form {...form}>
@@ -2596,7 +2591,7 @@ export function JsonForm({
             </form>
           </Form>
         </DefaultOpenPathsContext.Provider>
-      </FieldSourceActivePathContext.Provider>
-    </FieldSourceActionsContext.Provider>
+      </FieldAnchorActivePathContext.Provider>
+    </FieldAnchorActionsContext.Provider>
   )
 }

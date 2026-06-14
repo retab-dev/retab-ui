@@ -29,7 +29,23 @@ import {
 import { HighlightedCodeBlock } from "@/components/highlighted-code-block"
 import { CsvSourcesBlock } from "@/registry/new-york-v4/blocks/csv-sources-block"
 import { DocxSourcesBlock } from "@/registry/new-york-v4/blocks/docx-sources-block"
+import { AvatarImageSlot } from "@/registry/new-york-v4/blocks/dropzone-avatar-image-slot"
 import { DropzoneBlock } from "@/registry/new-york-v4/blocks/dropzone-block"
+import { ComparisonPairUpload } from "@/registry/new-york-v4/blocks/dropzone-comparison-pair-upload"
+import { ControlledQueue } from "@/registry/new-york-v4/blocks/dropzone-controlled-queue"
+import { CustomThumbnailGrid } from "@/registry/new-york-v4/blocks/dropzone-custom-thumbnail-grid"
+import { DisabledDropzone } from "@/registry/new-york-v4/blocks/dropzone-disabled-dropzone"
+import { EvidenceTimeline } from "@/registry/new-york-v4/blocks/dropzone-evidence-timeline"
+import { DefaultFileUploaderExample } from "@/registry/new-york-v4/blocks/dropzone-file-uploader-example"
+import { DropzoneFileViewerExample } from "@/registry/new-york-v4/blocks/dropzone-file-viewer-example"
+import { IntakeRouter } from "@/registry/new-york-v4/blocks/dropzone-intake-router"
+import { MediaTranscriptQueue } from "@/registry/new-york-v4/blocks/dropzone-media-transcript-queue"
+import { NativeButtonQueue } from "@/registry/new-york-v4/blocks/dropzone-native-button-queue"
+import { NonButtonTrigger } from "@/registry/new-york-v4/blocks/dropzone-non-button-trigger"
+import { PinboardDropSurface } from "@/registry/new-york-v4/blocks/dropzone-pinboard-drop-surface"
+import { RequiredPacketSlots } from "@/registry/new-york-v4/blocks/dropzone-required-packet-slots"
+import { SpreadsheetImportCard } from "@/registry/new-york-v4/blocks/dropzone-spreadsheet-import-card"
+import { ValidationOnly } from "@/registry/new-york-v4/blocks/dropzone-validation-only"
 import { EditViewerBlock } from "@/registry/new-york-v4/blocks/edit-viewer-block"
 import { ExtractViewerBlock } from "@/registry/new-york-v4/blocks/extract-viewer-block"
 import { ExtractionViewerBlock } from "@/registry/new-york-v4/blocks/extraction-viewer-block"
@@ -81,6 +97,22 @@ const blockComponents = {
   "xlsx-sources": XlsxSourcesBlock,
   "docx-sources": DocxSourcesBlock,
   dropzone: DropzoneBlock,
+  "dropzone-file-uploader": DefaultFileUploaderExample,
+  "dropzone-file-viewer": DropzoneFileViewerExample,
+  "dropzone-non-button-trigger": NonButtonTrigger,
+  "dropzone-native-button-queue": NativeButtonQueue,
+  "dropzone-controlled-queue": ControlledQueue,
+  "dropzone-validation-only": ValidationOnly,
+  "dropzone-custom-thumbnail-grid": CustomThumbnailGrid,
+  "dropzone-media-transcript-queue": MediaTranscriptQueue,
+  "dropzone-avatar-image-slot": AvatarImageSlot,
+  "dropzone-spreadsheet-import": SpreadsheetImportCard,
+  "dropzone-evidence-timeline": EvidenceTimeline,
+  "dropzone-comparison-pair": ComparisonPairUpload,
+  "dropzone-intake-router": IntakeRouter,
+  "dropzone-required-packet": RequiredPacketSlots,
+  "dropzone-pinboard": PinboardDropSurface,
+  "dropzone-disabled": DisabledDropzone,
   "file-system": FileSystemBlock,
   "primitive-cards": PrimitiveCardsBlock,
   "legend-variants": () => <LegendVariantsBlock columns={3} />,
@@ -249,7 +281,7 @@ function getBlockCategoryHref(category: ViewerBlockCategoryTabId) {
 function ViewerBlockPreview({ block }: { block: ViewerBlock }) {
   const [previewKey] = React.useState(0)
   const [view, setView] = React.useState<BlockView>("preview")
-  const [hasOpenedCode, setHasOpenedCode] = React.useState(false)
+  const [codeRequestKey, setCodeRequestKey] = React.useState(0)
   const [codeScrollResetKey, setCodeScrollResetKey] = React.useState(0)
   const [isCommandCopied, setIsCommandCopied] = React.useState(false)
   const [codeSamplesState, setCodeSamplesState] =
@@ -270,7 +302,9 @@ function ViewerBlockPreview({ block }: { block: ViewerBlock }) {
 
   function setBlockView(nextView: BlockView) {
     if (nextView === "code") {
-      setHasOpenedCode(true)
+      if (codeSamplesState.status === "idle") {
+        setCodeRequestKey((key) => key + 1)
+      }
       setCodeScrollResetKey((key) => key + 1)
     }
     setView(nextView)
@@ -283,7 +317,7 @@ function ViewerBlockPreview({ block }: { block: ViewerBlock }) {
   }, [isCommandCopied])
 
   React.useEffect(() => {
-    if (!hasOpenedCode || codeSamplesState.status !== "idle") return
+    if (codeRequestKey === 0 || codeSamplesState.status !== "idle") return
 
     const controller = new AbortController()
 
@@ -317,7 +351,7 @@ function ViewerBlockPreview({ block }: { block: ViewerBlock }) {
 
     void loadCodeSamples()
     return () => controller.abort()
-  }, [block.id, codeSamplesState.status, hasOpenedCode])
+  }, [block.id, codeRequestKey])
 
   React.useEffect(() => {
     if (!codeSamples.length) {
@@ -339,7 +373,8 @@ function ViewerBlockPreview({ block }: { block: ViewerBlock }) {
 
   function retryCodeSamples() {
     setCodeSamplesState({ status: "idle", codeSamples: [] })
-    setHasOpenedCode(true)
+    setView("code")
+    setCodeRequestKey((key) => key + 1)
   }
 
   return (
@@ -415,7 +450,7 @@ function ViewerBlockPreview({ block }: { block: ViewerBlock }) {
           </div>
         </div>
 
-        {hasOpenedCode ? (
+        {view === "code" ? (
           <div className={view === "code" ? "block" : "hidden"}>
             <BlockCodePanel
               codeSamplesState={codeSamplesState}

@@ -7,6 +7,7 @@ import {
   render,
   renderHook,
   screen,
+  waitFor,
 } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
@@ -42,7 +43,12 @@ import {
   useControlledSegmentInteraction,
   useSegmentInteraction,
 } from "@/components/ui/use-segment-interaction"
-import { PartitionViewer } from "@/components/viewers/partition/partition-viewer"
+import {
+  PartitionViewer,
+  PartitionViewerHeader,
+  PartitionViewerProvider,
+  usePartitionViewerDocument,
+} from "@/components/viewers/partition/partition-viewer"
 import {
   SplitViewer,
   useSplitViewerDocumentControls,
@@ -71,6 +77,17 @@ const segments = toSegments([
   { name: "Results", pages: [3] },
   { name: "Unused", pages: [] },
 ])
+
+function PartitionScrollSpy({ onScroll }: { onScroll: (page: number) => void }) {
+  const document = usePartitionViewerDocument()
+
+  React.useEffect(() => {
+    if (!document.scrollRequest) return
+    onScroll(document.scrollRequest.pageNumber)
+  }, [document.scrollRequest, onScroll])
+
+  return null
+}
 
 function segment(
   overrides: Partial<Segment> & Pick<Segment, "id" | "index" | "label">
@@ -1561,7 +1578,6 @@ describe("partition segment composition", () => {
           consensus: { choices: [], likelihoods: null },
           usage: null,
         }}
-        renderDocument={() => <div data-testid="partition-document" />}
       />
     )
 
@@ -1574,36 +1590,27 @@ describe("partition segment composition", () => {
     expect(swatches[0]).toBe(swatches[1])
   })
 
-  it("jumps to the earliest normalized page when a partition legend key is selected", () => {
+  it("jumps to the earliest normalized page when a partition legend key is selected", async () => {
     const scrolledPages: string[] = []
-    const originalScrollIntoView = HTMLElement.prototype.scrollIntoView
-    HTMLElement.prototype.scrollIntoView = function scrollIntoView() {
-      scrolledPages.push(this.getAttribute("data-page-number") ?? "")
-    }
 
-    try {
-      render(
-        <PartitionViewer
-          result={{
-            output: [{ key: "Invoices", pages: [5, 1] }],
-            consensus: { choices: [], likelihoods: null },
-            usage: null,
-          }}
-          renderDocument={() => (
-            <div>
-              <div data-page-number="1" />
-              <div data-page-number="5" />
-            </div>
-          )}
-        />
-      )
+    render(
+      <PartitionViewerProvider
+        result={{
+          output: [{ key: "Invoices", pages: [5, 1] }],
+          consensus: { choices: [], likelihoods: null },
+          usage: null,
+        }}
+      >
+        <PartitionViewerHeader />
+        <PartitionScrollSpy onScroll={(page) => scrolledPages.push(`${page}`)} />
+      </PartitionViewerProvider>
+    )
 
-      fireEvent.click(screen.getByRole("button", { name: "Invoices" }))
+    fireEvent.click(screen.getByRole("button", { name: "Invoices" }))
 
+    await waitFor(() => {
       expect(scrolledPages).toEqual(["1"])
-    } finally {
-      HTMLElement.prototype.scrollIntoView = originalScrollIntoView
-    }
+    })
   })
 
   it("uses the max page, not the final input page, for unsorted partition chunks", () => {
@@ -1614,7 +1621,6 @@ describe("partition segment composition", () => {
           consensus: { choices: [], likelihoods: null },
           usage: null,
         }}
-        renderDocument={() => <div data-testid="partition-document" />}
       />
     )
 
@@ -1810,10 +1816,21 @@ describe("split segment composition", () => {
 
     expect(wrapperClassName).toContain("min-w-0")
     expect(wrapperClassName).toContain("flex-1")
-    expect(document.querySelector('[data-slot="viewer-root"]')).toBeTruthy()
-    expect(document.querySelector('[data-slot="viewer-header"]')).toBeTruthy()
-    expect(document.querySelector('[data-slot="viewer-body"]')).toBeTruthy()
-    expect(document.querySelector('[data-slot="viewer-surface"]')).toBeTruthy()
+    expect(document.querySelectorAll('[data-slot="viewer-root"]')).toHaveLength(
+      1
+    )
+    const root = document.querySelector<HTMLElement>(
+      '[data-slot="viewer-root"]'
+    )
+    expect(root?.children[0]?.getAttribute("data-slot")).toBe("viewer-header")
+    expect(root?.children[1]?.getAttribute("data-slot")).toBe("viewer-body")
+    const body = root?.querySelector<HTMLElement>('[data-slot="viewer-body"]')
+    expect(
+      body?.querySelector(':scope > [data-slot="viewer-sidebar"]')
+    ).toBeTruthy()
+    expect(
+      body?.querySelector(':scope > [data-slot="viewer-surface"]')
+    ).toBeTruthy()
   })
 
   it("jumps through the PDF viewer handle when a legend segment page is virtualized", () => {

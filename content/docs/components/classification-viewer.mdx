@@ -11,7 +11,28 @@ use, with a single segment rather than bespoke chrome.
 
 <ClassificationViewerDemo />
 
-The source document is supplied through a `renderDocument` render-prop.
-`ClassifierViewer` owns the category legend and reasoning; the render-prop
-returns the document surface, typically a [`PdfViewer`](/docs/viewers/pdf-viewer)
-rendered `bare` inside the viewer composition.
+## Viewer Composition
+
+Compose the classification surface from `ClassifierViewerProvider`,
+`ClassifierViewerHeader`, and a visible document surface. The provider owns the
+category and reasoning state; the document remains an explicit child, typically
+a [`PdfViewer`](/docs/viewers/pdf-viewer) rendered `bare`.
+
+```tsx
+<ClassifierViewerProvider result={result}>
+  <ViewerRoot>
+    <ClassifierViewerHeader />
+    <ViewerBody>
+      <ViewerSurface>
+        <SourceDocument />
+      </ViewerSurface>
+    </ViewerBody>
+  </ViewerRoot>
+</ClassifierViewerProvider>
+```
+
+## Usage
+
+Use `<ClassifierViewer result={result} />` when you only need the classification
+header and default empty document surface. Use the provider parts when a source
+document should be visible.

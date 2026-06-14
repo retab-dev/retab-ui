@@ -15,8 +15,10 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 
 import {
   PdfViewerProvider,
-  useOptionalPdfViewer,
+  useOptionalPdfViewerHeaderControls,
   usePdfViewer,
+  usePdfViewerHeader,
+  usePdfViewerPages,
   type PdfDocumentSource,
   type PdfViewerHeaderControls,
 } from "./pdf-viewer-context"
@@ -45,6 +47,9 @@ export type {
 export {
   PdfViewerProvider,
   usePdfViewer,
+  usePdfViewerHeader,
+  usePdfViewerPages,
+  usePdfViewerThumbnails,
   type PdfDocumentSource,
 } from "./pdf-viewer-context"
 export { PdfViewerThumbnails } from "./pdf-thumbnail-sidebar"
@@ -140,7 +145,7 @@ export function PdfViewerHeader({
   className?: string
   toolbar?: boolean
 }) {
-  const { currentPage, headerControls, resource } = usePdfViewer()
+  const { currentPage, headerControls, resource } = usePdfViewerHeader()
   const label = resource.fileName || "PDF"
 
   return (
@@ -163,7 +168,7 @@ export const PdfViewerPages = React.forwardRef<
   PdfViewerHandle,
   Omit<PdfViewerProps, "source">
 >(function PdfViewerPages(props, ref) {
-  const { resource, setCurrentPage, setViewerHandle } = usePdfViewer()
+  const { resource, setCurrentPage, setViewerHandle } = usePdfViewerPages()
   const handleVisiblePageChange = React.useCallback(
     (page: number) => {
       setCurrentPage(page)
@@ -251,7 +256,7 @@ function PdfViewerInner({
   forwardedRef?: React.ForwardedRef<PdfViewerHandle>
   resource: ViewerResource
 }) {
-  const pdfViewerContext = useOptionalPdfViewer()
+  const setHeaderControls = useOptionalPdfViewerHeaderControls()
   const content = resource.content
   const document = readPdfDocumentResource(content)
   React.useEffect(() => {
@@ -348,11 +353,10 @@ function PdfViewerInner({
     ]
   )
   React.useEffect(() => {
-    const setHeaderControls = pdfViewerContext?.setHeaderControls
     if (!setHeaderControls) return
     setHeaderControls(headerControls)
     return () => setHeaderControls(null)
-  }, [headerControls, pdfViewerContext?.setHeaderControls])
+  }, [headerControls, setHeaderControls])
   const { visiblePageNumbers, measureVisiblePages } = usePdfPageVirtualization({
     layout: pageLayout,
     resetKey: document,

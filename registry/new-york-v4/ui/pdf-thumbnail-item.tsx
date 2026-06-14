@@ -1,8 +1,8 @@
 "use client"
 
 import * as React from "react"
-import type { PDFDocumentProxy } from "pdfjs-dist"
 
+import type { PdfDocumentProxy } from "@/lib/pdf-document-types"
 import { cn } from "@/lib/utils"
 
 import {
@@ -18,7 +18,7 @@ export function PdfThumbnailItem({
   itemId,
   onSelectPage,
 }: {
-  doc: PDFDocumentProxy
+  doc: PdfDocumentProxy
   item: PdfThumbnailLayoutItem
   active: boolean
   itemId: string

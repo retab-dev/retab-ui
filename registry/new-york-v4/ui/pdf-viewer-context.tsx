@@ -23,6 +23,24 @@ export type PdfViewerHeaderControls = {
   scale: number
 }
 
+export type PdfViewerHeaderState = {
+  currentPage: number | null
+  headerControls: PdfViewerHeaderControls | null
+  resource: ViewerResource
+}
+
+export type PdfViewerPagesState = {
+  resource: ViewerResource
+  setCurrentPage: (page: number | null) => void
+  setViewerHandle: (handle: PdfViewerHandle | null) => void
+}
+
+export type PdfViewerThumbnailsState = {
+  currentPage: number | null
+  onSelectPage: ((page: number) => void) | undefined
+  resource: ViewerResource
+}
+
 export interface PdfViewerProviderProps {
   source: PdfDocumentSource
   children: React.ReactNode
@@ -50,6 +68,50 @@ export function usePdfViewer() {
 
 export function useOptionalPdfViewer() {
   return React.useContext(PdfViewerContext)
+}
+
+export function usePdfViewerHeader(): PdfViewerHeaderState {
+  const { currentPage, headerControls, resource } = usePdfViewer()
+  return { currentPage, headerControls, resource }
+}
+
+export function usePdfViewerPages(): PdfViewerPagesState {
+  const { resource, setCurrentPage, setViewerHandle } = usePdfViewer()
+  return { resource, setCurrentPage, setViewerHandle }
+}
+
+export function usePdfViewerThumbnails(): PdfViewerThumbnailsState {
+  const { currentPage, resource, viewerHandle } = usePdfViewer()
+  const onSelectPage = React.useCallback(
+    (page: number) => viewerHandle?.scrollToPage(page),
+    [viewerHandle]
+  )
+
+  return {
+    currentPage,
+    onSelectPage: viewerHandle ? onSelectPage : undefined,
+    resource,
+  }
+}
+
+export function useOptionalPdfViewerThumbnails(): PdfViewerThumbnailsState | null {
+  const context = React.useContext(PdfViewerContext)
+  const onSelectPage = React.useCallback(
+    (page: number) => context?.viewerHandle?.scrollToPage(page),
+    [context?.viewerHandle]
+  )
+
+  if (!context) return null
+
+  return {
+    currentPage: context.currentPage,
+    onSelectPage: context.viewerHandle ? onSelectPage : undefined,
+    resource: context.resource,
+  }
+}
+
+export function useOptionalPdfViewerHeaderControls() {
+  return React.useContext(PdfViewerContext)?.setHeaderControls ?? null
 }
 
 export function PdfViewerProvider({

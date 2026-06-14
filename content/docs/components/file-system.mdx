@@ -23,14 +23,26 @@ For the demo block:
 pnpm dlx shadcn@latest add @retab/file-system-block
 ```
 
-## Example
+## Viewer Composition
 
 <FileSystemDemo />
 
 Open the full-page demo at [/view/blocks/file-system](/view/blocks/file-system).
 
 ```tsx
-import { FileSystem, type FileSystemItem } from "@/components/ui/file-system"
+import {
+  FileSystemViewerHeader,
+  FileSystemViewerProvider,
+  FileSystemViewerSelectedFile,
+  FileSystemViewerTree,
+  type FileSystemItem,
+} from "@/components/ui/file-system"
+import {
+  ViewerBody,
+  ViewerRoot,
+  ViewerSidebar,
+  ViewerSurface,
+} from "@/components/ui/viewer"
 
 const items: FileSystemItem[] = [
   {
@@ -47,34 +59,40 @@ const items: FileSystemItem[] = [
 ]
 
 export function Documents() {
-  return <FileSystem items={items} title="Workspace" />
+  return (
+    <FileSystemViewerProvider items={items} title="Workspace">
+      <ViewerRoot>
+        <FileSystemViewerHeader />
+        <ViewerBody>
+          <ViewerSidebar>
+            <FileSystemViewerTree />
+          </ViewerSidebar>
+          <ViewerSurface>
+            <FileSystemViewerSelectedFile />
+          </ViewerSurface>
+        </ViewerBody>
+      </ViewerRoot>
+    </FileSystemViewerProvider>
+  )
 }
-```
-
-## Viewer Composition
-
-`FileSystem` is the easy API. The same viewer can be composed from named parts
-when the surrounding workflow owns the frame:
-
-```tsx
-<FileSystemViewerProvider items={items} title="Workspace">
-  <ViewerRoot>
-    <FileSystemViewerHeader />
-    <ViewerBody>
-      <ViewerSidebar>
-        <FileSystemViewerTree />
-      </ViewerSidebar>
-      <ViewerSurface>
-        <FileSystemViewerSelectedFile />
-      </ViewerSurface>
-    </ViewerBody>
-  </ViewerRoot>
-</FileSystemViewerProvider>
 ```
 
 The provider owns path, query, view, selection, lazy loading, and source
 resolution. The viewer primitives own layout. `FileSystemViewerSelectedFile`
 resolves the selected file to a `ViewerSource` and renders it with `FileViewer`.
+
+## Usage
+
+`FileSystem` is the easy API. It is the preassembled version of the composition
+above.
+
+```tsx
+import { FileSystem, type FileSystemItem } from "@/components/ui/file-system"
+
+export function EasyDocuments() {
+  return <FileSystem items={items} title="Workspace" />
+}
+```
 
 ## Useful Behaviors
 

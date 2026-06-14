@@ -6,3 +6,64 @@ description: Render a Retab split result — named subdocuments over the source 
 Renders a Retab split result: named subdocuments, each owning a set of pages.
 
 <SplitViewerDemo />
+
+## Viewer Composition
+
+Compose split results from the split provider, viewer primitives, and named
+split parts:
+
+```tsx
+function SplitDocument() {
+  const controls = useSplitViewerDocumentControls()
+
+  return (
+    <PdfViewer
+      ref={controls.setViewerHandle}
+      source={source}
+      bare
+      onVisiblePageChange={controls.onCurrentPageChange}
+      onScrollProgressChange={controls.onScrollProgressChange}
+    />
+  )
+}
+
+export function Example() {
+  return (
+    <SplitViewerProvider result={result}>
+      <ViewerRoot>
+        <SplitViewerHeader />
+        <ViewerBody>
+          <ViewerSidebar>
+            <SplitViewerPageRail />
+          </ViewerSidebar>
+          <ViewerSurface>
+            <SplitViewerDocument>
+              <SplitDocument />
+            </SplitViewerDocument>
+          </ViewerSurface>
+        </ViewerBody>
+      </ViewerRoot>
+    </SplitViewerProvider>
+  )
+}
+```
+
+`SplitViewerHeader` owns the result summary and legend. `SplitViewerPageRail`
+owns page navigation. `SplitViewerDocument` only frames the selected document
+child; it does not receive hidden layout slots.
+
+## Usage
+
+`SplitViewer` is the easy API for a split result. It preassembles the same
+provider and named parts; the source document remains an explicit child, and
+document coordination comes from `useSplitViewerDocumentControls`.
+
+```tsx
+export function EasyExample() {
+  return (
+    <SplitViewer result={result}>
+      <SplitDocument />
+    </SplitViewer>
+  )
+}
+```

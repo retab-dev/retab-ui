@@ -60,7 +60,7 @@ export function VendorNameField() {
 | `schema`     | `JSONSchema7`           | The schema describing the form's structure.                                                                                                                                    |
 | `onSubmit`   | `SubmitHandler`         | Optional submit handler for the underlying `<form>`.                                                                                                                           |
 | `textInput`  | `"input" \| "textarea"` | Optional override for plain string fields. Omit it to keep the default auto behavior (`format: "textarea"` or long strings render as textareas).                               |
-| `sourceLink` | `FieldSourceLink`       | Opt into field-level source linking — every scalar becomes a hoverable card that reports its path and highlights when active (wire it straight from a `useSourceLink` result). |
+| `anchorLink` | `FieldAnchorLink`       | Opt into field-level anchor linking — every scalar becomes a hoverable card that reports its path and highlights when active (wire it from `useAnchoredFieldLink`). |
 | `children`   | `ReactNode`             | Rendered after the fields, e.g. a submit button.                                                                                                                               |
 | `className`  | `string`                | Class names for the form container.                                                                                                                                            |
 

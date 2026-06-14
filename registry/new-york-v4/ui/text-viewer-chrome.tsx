@@ -1,12 +1,14 @@
 "use client"
 
 import * as React from "react"
+import { Check, Copy } from "lucide-react"
 
 import { type ViewerDownloadAction } from "@/lib/viewer-download"
 
 import { Skeleton } from "./skeleton"
 import {
   TextCodeViewerFrame,
+  TextCodeViewerIconButton,
   TextCodeViewerToolbarFrame,
   TextCodeViewerZoomControls,
 } from "./text-code-viewer-chrome"
@@ -74,21 +76,27 @@ export function TextViewerFallback({
 export function TextViewerToolbar({
   wordCount,
   fontScale,
+  copyText,
+  copyLabel = "Copy text",
   downloadAction,
+  leading,
   onZoomOut,
   onZoomIn,
   onResetZoom,
 }: {
   wordCount: number
   fontScale: number
+  copyText?: string
+  copyLabel?: string
   downloadAction: ViewerDownloadAction
+  leading?: React.ReactNode
   onZoomOut: () => void
   onZoomIn: () => void
   onResetZoom: () => void
 }) {
   return (
     <TextCodeViewerToolbarFrame
-      leading={`${wordCount} word${wordCount === 1 ? "" : "s"}`}
+      leading={leading ?? `${wordCount} word${wordCount === 1 ? "" : "s"}`}
       trailing={
         <>
           <TextCodeViewerZoomControls
@@ -98,9 +106,57 @@ export function TextViewerToolbar({
             onResetZoom={onResetZoom}
           />
           <div className="mx-1 h-4 w-px bg-border" />
+          {copyText == null ? null : (
+            <TextViewerCopyControl label={copyLabel} text={copyText} />
+          )}
           <ViewerDownloadControl actions={[downloadAction]} />
         </>
       }
     />
+  )
+}
+
+function TextViewerCopyControl({
+  label,
+  text,
+}: {
+  label: string
+  text: string
+}) {
+  const [isCopied, setIsCopied] = React.useState(false)
+  const timeoutRef = React.useRef<number | null>(null)
+
+  React.useEffect(
+    () => () => {
+      if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current)
+    },
+    []
+  )
+
+  const copyText = () => {
+    if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current)
+
+    try {
+      const result = navigator.clipboard?.writeText(text)
+      void Promise.resolve(result).then(() => {
+        setIsCopied(true)
+        timeoutRef.current = window.setTimeout(() => {
+          timeoutRef.current = null
+          setIsCopied(false)
+        }, 1200)
+      })
+    } catch {
+      setIsCopied(false)
+    }
+  }
+
+  return (
+    <TextCodeViewerIconButton
+      label={isCopied ? "Copied" : label}
+      onClick={copyText}
+      type="button"
+    >
+      {isCopied ? <Check /> : <Copy />}
+    </TextCodeViewerIconButton>
   )
 }

@@ -85,7 +85,7 @@ Anything unrecognized falls back to a download card.
 | `source`    | `ViewerSource` | Canonical file source. URL, Blob, and text sources carry file metadata with the payload identity. |
 | `as`        | `FileCategory` | Force a category, bypassing detection.                                                            |
 | `bare`      | `boolean`      | Drop the outer border/background so the viewer fills its container.                               |
-| `className` | `string`       | Optional class on the viewer shell.                                                               |
+| `className` | `string`       | Optional class on the viewer root element.                                                        |
 
 The `detectCategory(fileName, mimeType?)` helper is also exported if you need to
 branch on the resolved category yourself.

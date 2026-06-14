@@ -27,7 +27,9 @@ import {
 } from "@/components/viewers/page-markdown/page-markdown-sync"
 import {
   ParseViewer,
-  type ParseDocumentHandlers,
+  ParseViewerMarkdown,
+  ParseViewerProvider,
+  useParseViewerDocument,
 } from "@/components/viewers/parse/parse-viewer"
 
 const PAGES = [
@@ -49,6 +51,62 @@ function parseResult(
       ...overrides,
     },
   } satisfies ParseResponse
+}
+
+function ParseViewerSyncHarness({
+  children,
+  onVisiblePageChange,
+  result = parseResult(),
+}: {
+  children: React.ReactNode
+  onVisiblePageChange?: (pageNumber: number) => void
+  result?: ParseResponse | null
+}) {
+  return (
+    <ParseViewerProvider
+      result={result}
+      onVisiblePageChange={onVisiblePageChange}
+    >
+      {children}
+      <ParseViewerMarkdown />
+    </ParseViewerProvider>
+  )
+}
+
+function ReportParseDocumentPageButton({
+  label,
+  pageNumber,
+}: {
+  label: string
+  pageNumber: number
+}) {
+  const document = useParseViewerDocument()
+
+  return (
+    <button
+      type="button"
+      onClick={() => document.onCurrentPageChange(pageNumber)}
+    >
+      {label}
+    </button>
+  )
+}
+
+function ParseDocumentScrollSpy({
+  children,
+  onScroll,
+}: {
+  children?: React.ReactNode
+  onScroll: (pageNumber: number) => void
+}) {
+  const document = useParseViewerDocument()
+
+  React.useEffect(() => {
+    if (!document.scrollRequest) return
+    onScroll(document.scrollRequest.pageNumber)
+  }, [document.scrollRequest, onScroll])
+
+  return <>{children}</>
 }
 
 function rect(top: number, height = 100): DOMRect {
@@ -485,15 +543,14 @@ describe("ParseViewer document sync", () => {
   it("does not echo document-initiated page changes back through onVisiblePageChange", async () => {
     const onVisiblePageChange = vi.fn()
     render(
-      <ParseViewer
-        result={parseResult()}
+      <ParseViewerSyncHarness
         onVisiblePageChange={onVisiblePageChange}
-        renderDocument={(handlers: ParseDocumentHandlers) => (
-          <button type="button" onClick={() => handlers.onCurrentPageChange(2)}>
-            Source document page 2
-          </button>
-        )}
-      />
+      >
+        <ReportParseDocumentPageButton
+          label="Source document page 2"
+          pageNumber={2}
+        />
+      </ParseViewerSyncHarness>
     )
 
     onVisiblePageChange.mockClear()
@@ -509,46 +566,31 @@ describe("ParseViewer document sync", () => {
   })
 
   it("scrolls the source document to the markdown page the reader scrolls to", () => {
+    const onDocumentScroll = vi.fn()
     const { container } = render(
-      <ParseViewer
-        result={parseResult()}
-        renderDocument={() => (
+      <ParseViewerSyncHarness>
+        <ParseDocumentScrollSpy onScroll={onDocumentScroll}>
           <div>
             <div data-page-number="1">Document page 1</div>
             <div data-page-number="2">Document page 2</div>
           </div>
-        )}
-      />
+        </ParseDocumentScrollSpy>
+      </ParseViewerSyncHarness>
     )
-
-    const documentPageTwo = screen
-      .getByText("Document page 2")
-      .closest<HTMLElement>("[data-page-number]")!
-    const scrollIntoView = vi.fn()
-    documentPageTwo.scrollIntoView = scrollIntoView
 
     scrollMarkdownViewportToPage(markdownViewport(container), PAGES, 2)
 
-    expect(scrollIntoView).toHaveBeenCalledTimes(1)
-    expect(scrollIntoView).toHaveBeenCalledWith({
-      behavior: "smooth",
-      block: "start",
-    })
+    expect(onDocumentScroll).toHaveBeenCalledWith(2)
   })
 
   it("floors fractional document page reports", async () => {
     render(
-      <ParseViewer
-        result={parseResult()}
-        renderDocument={(handlers: ParseDocumentHandlers) => (
-          <button
-            type="button"
-            onClick={() => handlers.onCurrentPageChange(2.9)}
-          >
-            Source fractional page
-          </button>
-        )}
-      />
+      <ParseViewerSyncHarness>
+        <ReportParseDocumentPageButton
+          label="Source fractional page"
+          pageNumber={2.9}
+        />
+      </ParseViewerSyncHarness>
     )
 
     fireEvent.click(
@@ -562,25 +604,13 @@ describe("ParseViewer document sync", () => {
 
   it("clamps non-positive document page reports to the first page", async () => {
     render(
-      <ParseViewer
-        result={parseResult()}
-        renderDocument={(handlers: ParseDocumentHandlers) => (
-          <div>
-            <button
-              type="button"
-              onClick={() => handlers.onCurrentPageChange(2)}
-            >
-              go forward
-            </button>
-            <button
-              type="button"
-              onClick={() => handlers.onCurrentPageChange(-3)}
-            >
-              go before start
-            </button>
-          </div>
-        )}
-      />
+      <ParseViewerSyncHarness>
+        <ReportParseDocumentPageButton label="go forward" pageNumber={2} />
+        <ReportParseDocumentPageButton
+          label="go before start"
+          pageNumber={-3}
+        />
+      </ParseViewerSyncHarness>
     )
 
     fireEvent.click(screen.getByRole("button", { name: "go forward" }))
@@ -596,14 +626,14 @@ describe("ParseViewer document sync", () => {
 
   it("clamps the page indicator when a shorter document replaces a longer one", async () => {
     const { rerender } = render(
-      <ParseViewer
+      <ParseViewerSyncHarness
         result={parseResult({}, { id: "long" })}
-        renderDocument={(handlers: ParseDocumentHandlers) => (
-          <button type="button" onClick={() => handlers.onCurrentPageChange(2)}>
-            Source document page 2
-          </button>
-        )}
-      />
+      >
+        <ReportParseDocumentPageButton
+          label="Source document page 2"
+          pageNumber={2}
+        />
+      </ParseViewerSyncHarness>
     )
 
     fireEvent.click(
@@ -614,17 +644,17 @@ describe("ParseViewer document sync", () => {
     })
 
     rerender(
-      <ParseViewer
+      <ParseViewerSyncHarness
         result={parseResult(
           { pages: ["# Solo"], text: "# Solo" },
           { id: "long" }
         )}
-        renderDocument={(handlers: ParseDocumentHandlers) => (
-          <button type="button" onClick={() => handlers.onCurrentPageChange(1)}>
-            Source document page 1
-          </button>
-        )}
-      />
+      >
+        <ReportParseDocumentPageButton
+          label="Source document page 1"
+          pageNumber={1}
+        />
+      </ParseViewerSyncHarness>
     )
 
     await waitFor(() => {
@@ -1178,10 +1208,9 @@ describe("ParseViewer text mode rendering", () => {
 describe("ParseViewer two-pane layout", () => {
   it("renders both the source document pane and the markdown toolbar", () => {
     render(
-      <ParseViewer
-        result={parseResult()}
-        renderDocument={() => <div data-testid="source-doc">Document body</div>}
-      />
+      <ParseViewerSyncHarness>
+        <div data-testid="source-doc">Document body</div>
+      </ParseViewerSyncHarness>
     )
 
     expect(screen.getByTestId("source-doc")).toBeTruthy()

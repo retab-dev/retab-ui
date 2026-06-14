@@ -13,11 +13,12 @@ import {
   PDF_THUMBNAIL_OVERSCAN,
 } from "./pdf-thumbnail-layout"
 import { PdfThumbnailRail } from "./pdf-thumbnail-rail"
-import { useOptionalPdfViewer } from "./pdf-viewer-context"
+import { useOptionalPdfViewerThumbnails } from "./pdf-viewer-context"
 import { usePdfThumbnailDocument } from "./use-pdf-thumbnail-document"
 import { usePdfThumbnailPageMetrics } from "./use-pdf-thumbnail-page-metrics"
 import { usePdfThumbnailWindow } from "./use-pdf-thumbnail-window"
 import { useThumbnailRailFollow } from "./use-thumbnail-rail-follow"
+import { useIsClient } from "./use-is-client"
 import { ViewerErrorBoundary } from "./viewer-error"
 
 export interface PdfThumbnailSidebarProps {
@@ -37,19 +38,20 @@ export function PdfThumbnailSidebar(props: PdfThumbnailSidebarProps) {
 }
 
 export function PdfViewerThumbnails(props: PdfThumbnailSidebarProps) {
-  const context = useOptionalPdfViewer()
-  const resource = props.resource ?? context?.resource
-  const currentPage = props.currentPage ?? context?.currentPage
-  const onSelectPage =
-    props.onSelectPage ??
-    (context?.viewerHandle
-      ? (page: number) => context.viewerHandle?.scrollToPage(page)
-      : undefined)
+  const thumbnails = useOptionalPdfViewerThumbnails()
+  const resource = props.resource ?? thumbnails?.resource
+  const currentPage = props.currentPage ?? thumbnails?.currentPage
+  const onSelectPage = props.onSelectPage ?? thumbnails?.onSelectPage
+  const isClient = useIsClient()
 
   if (!resource) {
     throw new Error(
       "PdfViewerThumbnails requires a resource prop or PdfViewerProvider."
     )
+  }
+
+  if (!isClient) {
+    return <SidebarFallback className={props.className} />
   }
 
   return (
