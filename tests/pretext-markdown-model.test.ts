@@ -231,6 +231,29 @@ describe("pretext markdown document model", () => {
     ])
   })
 
+  it("decodes heading entities before creating model-owned ids", () => {
+    const document = createPretextMarkdownDocument(
+      [
+        "# Tom &amp; Jerry",
+        "",
+        "## 5 &lt; 6",
+        "",
+        "## AT&amp;T &copy; &#169; &#x1f680;",
+      ].join("\n")
+    )
+
+    expect(document.headings.map((heading) => heading.text)).toEqual([
+      "Tom & Jerry",
+      "5 < 6",
+      "AT&T © © 🚀",
+    ])
+    expect(document.headings.map((heading) => heading.id)).toEqual([
+      "tom-jerry",
+      "5-6",
+      "att",
+    ])
+  })
+
   it("uses semantic blocks as stable layout inputs", () => {
     const document = createPretextMarkdownDocument(
       [

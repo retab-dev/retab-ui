@@ -510,10 +510,12 @@ describe("json table and DataCell architecture", () => {
 
     const contractFile = "registry/new-york-v4/ui/data-cell-control-contract.ts"
     const displayFile = "registry/new-york-v4/ui/data-cell-display.tsx"
+    const shellFile = "registry/new-york-v4/ui/data-cell.tsx"
     const registryFile =
       "registry/new-york-v4/ui/data-cell-control-registry.tsx"
     const contractContent = readFileSync(join(repoRoot, contractFile), "utf8")
     const displayContent = readFileSync(join(repoRoot, displayFile), "utf8")
+    const shellContent = readFileSync(join(repoRoot, shellFile), "utf8")
     const registryContent = readFileSync(join(repoRoot, registryFile), "utf8")
     const editModelFile = "registry/new-york-v4/ui/data-cell-edit-model.ts"
     const editModelContent = readFileSync(join(repoRoot, editModelFile), "utf8")
@@ -528,6 +530,18 @@ describe("json table and DataCell architecture", () => {
     expect(contractContent.includes(`on${"Picker"}OpenChange`)).toBe(false)
     expect(registryContent.includes("DataCellProps")).toBe(false)
     expect(registryContent.includes("DataCellPublicPropsByKind")).toBe(false)
+    for (const controlName of [
+      "DataCellBooleanControl",
+      "DataCellNumberControl",
+      "DataCellPickerControl",
+      "DataCellSelectControl",
+      "DataCellTextControl",
+    ]) {
+      expect(
+        shellContent.includes(`import { ${controlName} }`),
+        `${shellFile} imports ${controlName} only to re-export it`
+      ).toBe(false)
+    }
     expect(
       registryContent.includes("export function DataCellControl(props")
     ).toBe(false)

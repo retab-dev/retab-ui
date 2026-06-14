@@ -4,10 +4,8 @@ import * as React from "react"
 import { flushSync } from "react-dom"
 
 import { useDataCellActivationClickTail } from "@/registry/new-york-v4/ui/data-cell-activation"
-import { DataCellBooleanControl } from "@/registry/new-york-v4/ui/data-cell-boolean-control"
 import type { DataCellControlAction } from "@/registry/new-york-v4/ui/data-cell-control-contract"
 import {
-  canActivateDataCellFromKey,
   DataCellControl,
   getDataCellClickControlAction,
   getDataCellKeyControlAction,
@@ -18,14 +16,6 @@ import {
   type DataCellDisplayProps,
 } from "@/registry/new-york-v4/ui/data-cell-display"
 import { createDataCellEditModel } from "@/registry/new-york-v4/ui/data-cell-edit-model"
-import {
-  formatDataCellDisplayValue,
-  parseDataCellNumberInput,
-} from "@/registry/new-york-v4/ui/data-cell-format"
-import { DataCellNumberControl } from "@/registry/new-york-v4/ui/data-cell-number-control"
-import { DataCellPickerControl } from "@/registry/new-york-v4/ui/data-cell-picker-control"
-import { DataCellSelectControl } from "@/registry/new-york-v4/ui/data-cell-select-control"
-import { DataCellTextControl } from "@/registry/new-york-v4/ui/data-cell-text-control"
 import type {
   DataCellActivationSource,
   DataCellProps,
@@ -43,20 +33,26 @@ export type {
   DataCellValue,
   DataCellValueMeta,
 } from "@/registry/new-york-v4/ui/data-cell-types"
-export { formatDataCellDisplayValue, parseDataCellNumberInput }
+export {
+  formatDataCellDisplayValue,
+  parseDataCellNumberInput,
+} from "@/registry/new-york-v4/ui/data-cell-format"
 export {
   createDataCellKeyboardActivationSource,
   createDataCellPointerActivationSource,
   createDataCellShellActivationSource,
   type DataCellActivationToken,
 } from "@/registry/new-york-v4/ui/data-cell-activation"
-export { DataCellBooleanControl }
-export { DataCellControl, canActivateDataCellFromKey }
+export { DataCellBooleanControl } from "@/registry/new-york-v4/ui/data-cell-boolean-control"
+export {
+  canActivateDataCellFromKey,
+  DataCellControl,
+} from "@/registry/new-york-v4/ui/data-cell-control-registry"
 export { DataCellDisplay }
-export { DataCellNumberControl }
-export { DataCellPickerControl }
-export { DataCellSelectControl }
-export { DataCellTextControl }
+export { DataCellNumberControl } from "@/registry/new-york-v4/ui/data-cell-number-control"
+export { DataCellPickerControl } from "@/registry/new-york-v4/ui/data-cell-picker-control"
+export { DataCellSelectControl } from "@/registry/new-york-v4/ui/data-cell-select-control"
+export { DataCellTextControl } from "@/registry/new-york-v4/ui/data-cell-text-control"
 
 function storeDataCellActivationSource(
   sourceRef: React.MutableRefObject<DataCellActivationSource | undefined>,
@@ -290,7 +286,7 @@ export function DataCell(props: DataCellProps) {
         true
       )
     },
-    [applyControlAction, canSelfActivate, editModel, onPointerDown, props]
+    [applyControlAction, canSelfActivate, editModel, onPointerDown]
   )
 
   const activateFromClick = React.useCallback(

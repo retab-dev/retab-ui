@@ -32,6 +32,27 @@ const DOM_CLOBBERING_HEADING_IDS = new Set([
   "top",
   "window",
 ])
+const MARKDOWN_HEADING_NAMED_ENTITIES: Record<string, string> = {
+  amp: "&",
+  apos: "'",
+  copy: "©",
+  gt: ">",
+  hellip: "…",
+  laquo: "«",
+  ldquo: "“",
+  lsquo: "‘",
+  lt: "<",
+  mdash: "—",
+  nbsp: " ",
+  ndash: "–",
+  quot: '"',
+  raquo: "»",
+  rdquo: "”",
+  reg: "®",
+  rsquo: "’",
+  shy: "",
+  trade: "™",
+}
 
 export type PretextMarkdownChunkKind = "frontmatter" | "markdown"
 export type PretextMarkdownFrontmatterLanguage = "toml" | "yaml"
@@ -513,7 +534,45 @@ function slugifyMarkdownHeading(text: string) {
 }
 
 function normalizeHeadingText(text: string) {
-  return text.replace(/\s+/g, " ").trim()
+  return decodeMarkdownHeadingEntities(text).replace(/\s+/g, " ").trim()
+}
+
+function decodeMarkdownHeadingEntities(text: string) {
+  return text.replace(
+    /&(#x[\da-f]+|#\d+|[a-z][a-z\d]+);/gi,
+    (entity, body: string) => {
+      if (body.startsWith("#x") || body.startsWith("#X")) {
+        return decodeMarkdownNumericEntity(entity, body.slice(2), 16)
+      }
+      if (body.startsWith("#")) {
+        return decodeMarkdownNumericEntity(entity, body.slice(1), 10)
+      }
+
+      return MARKDOWN_HEADING_NAMED_ENTITIES[body.toLowerCase()] ?? entity
+    }
+  )
+}
+
+function decodeMarkdownNumericEntity(
+  entity: string,
+  rawCodePoint: string,
+  radix: number
+) {
+  const codePoint = Number.parseInt(rawCodePoint, radix)
+  if (
+    !Number.isFinite(codePoint) ||
+    codePoint <= 0 ||
+    codePoint > 0x10ffff ||
+    (codePoint >= 0xd800 && codePoint <= 0xdfff)
+  ) {
+    return entity
+  }
+
+  try {
+    return String.fromCodePoint(codePoint)
+  } catch {
+    return entity
+  }
 }
 
 function isChunkLeadToken(token: PretextMarkdownToken) {
