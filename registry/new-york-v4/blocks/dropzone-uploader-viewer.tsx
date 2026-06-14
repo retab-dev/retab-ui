@@ -7,15 +7,15 @@ import { ViewerBody } from "@/components/ui/viewer"
 
 import {
   UploadableFileViewerContent,
-  UploadableFileViewerFrame,
   UploadableFileViewerHeader,
   UploadableFileViewerProvider,
+  UploadableFileViewerRoot,
   UploadableFileViewerSummary,
 } from "./dropzone-uploader-viewer-parts"
 
 export type DropzoneUploaderViewerProps = {
   className?: string
-  renderViewer: (source: BlobViewerSource) => React.ReactNode
+  renderViewer?: (source: BlobViewerSource) => React.ReactNode
 }
 
 export function DropzoneUploaderViewer({
@@ -24,13 +24,13 @@ export function DropzoneUploaderViewer({
 }: DropzoneUploaderViewerProps) {
   return (
     <UploadableFileViewerProvider>
-      <UploadableFileViewerFrame className={className}>
+      <UploadableFileViewerRoot className={className}>
         <UploadableFileViewerHeader />
         <ViewerBody className="flex-col md:flex-row">
           <UploadableFileViewerSummary />
           <UploadableFileViewerContent renderViewer={renderViewer} />
         </ViewerBody>
-      </UploadableFileViewerFrame>
+      </UploadableFileViewerRoot>
     </UploadableFileViewerProvider>
   )
 }

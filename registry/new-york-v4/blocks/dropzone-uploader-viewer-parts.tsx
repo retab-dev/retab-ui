@@ -35,6 +35,25 @@ type UploadableFileViewerContextValue = {
   viewerSource: BlobViewerSource | null
 }
 
+export type UploadableFileViewerRootState = {
+  dropzone: UseDropzoneReturn
+}
+
+export type UploadableFileViewerHeaderState = {
+  dropzone: UseDropzoneReturn
+  selectedFile: DropzoneFileItem | undefined
+}
+
+export type UploadableFileViewerSummaryState = {
+  dropzone: UseDropzoneReturn
+  selectedFile: DropzoneFileItem | undefined
+}
+
+export type UploadableFileViewerContentState = {
+  dropzone: UseDropzoneReturn
+  viewerSource: BlobViewerSource | null
+}
+
 const UploadableFileViewerContext =
   React.createContext<UploadableFileViewerContextValue | null>(null)
 
@@ -46,6 +65,26 @@ export function useUploadableFileViewer() {
     )
   }
   return context
+}
+
+export function useUploadableFileViewerRoot(): UploadableFileViewerRootState {
+  const { dropzone } = useUploadableFileViewer()
+  return { dropzone }
+}
+
+export function useUploadableFileViewerHeader(): UploadableFileViewerHeaderState {
+  const { dropzone, selectedFile } = useUploadableFileViewer()
+  return { dropzone, selectedFile }
+}
+
+export function useUploadableFileViewerSummary(): UploadableFileViewerSummaryState {
+  const { dropzone, selectedFile } = useUploadableFileViewer()
+  return { dropzone, selectedFile }
+}
+
+export function useUploadableFileViewerContent(): UploadableFileViewerContentState {
+  const { dropzone, viewerSource } = useUploadableFileViewer()
+  return { dropzone, viewerSource }
 }
 
 export function UploadableFileViewerProvider({
@@ -86,14 +125,14 @@ export function UploadableFileViewerProvider({
   )
 }
 
-export function UploadableFileViewerFrame({
+export function UploadableFileViewerRoot({
   children,
   className,
 }: {
   children: React.ReactNode
   className?: string
 }) {
-  const { dropzone } = useUploadableFileViewer()
+  const { dropzone } = useUploadableFileViewerRoot()
 
   return (
     <ViewerRoot
@@ -110,7 +149,7 @@ export function UploadableFileViewerFrame({
 }
 
 export function UploadableFileViewerHeader() {
-  const { dropzone, selectedFile } = useUploadableFileViewer()
+  const { dropzone, selectedFile } = useUploadableFileViewerHeader()
 
   return (
     <ViewerHeader className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
@@ -151,7 +190,7 @@ export function UploadableFileViewerHeader() {
 }
 
 export function UploadableFileViewerSummary() {
-  const { dropzone, selectedFile } = useUploadableFileViewer()
+  const { dropzone, selectedFile } = useUploadableFileViewerSummary()
 
   return (
     <ViewerSidebar className="border-b bg-muted/20 p-4 md:border-r md:border-b-0">
@@ -180,7 +219,7 @@ export function UploadableFileViewerContent({
 }: {
   renderViewer?: (source: BlobViewerSource) => React.ReactNode
 }) {
-  const { dropzone, viewerSource } = useUploadableFileViewer()
+  const { dropzone, viewerSource } = useUploadableFileViewerContent()
 
   return (
     <ViewerSurface className="min-h-[24rem] bg-muted/10 p-3">

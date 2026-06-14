@@ -886,17 +886,17 @@ describe("DropzoneBlock", () => {
     expect(
       viewerSection.querySelectorAll('[data-slot="viewer-root"]')
     ).toHaveLength(1)
+    const root = viewerSection.querySelector<HTMLElement>(
+      '[data-slot="viewer-root"]'
+    )
+    expect(root?.children[0]?.getAttribute("data-slot")).toBe("viewer-header")
+    expect(root?.children[1]?.getAttribute("data-slot")).toBe("viewer-body")
+    const body = root?.querySelector<HTMLElement>('[data-slot="viewer-body"]')
     expect(
-      viewerSection.querySelector('[data-slot="viewer-header"]')
+      body?.querySelector(':scope > [data-slot="viewer-sidebar"]')
     ).toBeTruthy()
     expect(
-      viewerSection.querySelector('[data-slot="viewer-body"]')
-    ).toBeTruthy()
-    expect(
-      viewerSection.querySelector('[data-slot="viewer-sidebar"]')
-    ).toBeTruthy()
-    expect(
-      viewerSection.querySelector('[data-slot="viewer-surface"]')
+      body?.querySelector(':scope > [data-slot="viewer-surface"]')
     ).toBeTruthy()
 
     expect(within(viewerSection).getByText("No file selected")).toBeTruthy()
@@ -1039,10 +1039,19 @@ describe("Dropzone registry split", () => {
     expect(dropzoneUploaderViewerSource).toContain(
       "UploadableFileViewerProvider"
     )
+    expect(dropzoneUploaderViewerSource).toContain("UploadableFileViewerRoot")
+    expect(dropzoneUploaderViewerSource).not.toContain(
+      "UploadableFileViewerFrame"
+    )
     expect(dropzoneUploaderViewerSource).toContain(
       "UploadableFileViewerContent"
     )
-    expect(dropzoneUploaderViewerSource).toContain("renderViewer")
+    expect(dropzoneUploaderViewerSource).toContain(
+      "renderViewer?: (source: BlobViewerSource) => React.ReactNode"
+    )
+    expect(dropzoneUploaderViewerSource).toContain(
+      "<UploadableFileViewerContent renderViewer={renderViewer} />"
+    )
     expect(dropzoneDocsSource).toContain("Browser file intake is not upload.")
     expect(dropzoneDocsSource).toContain("`files` is selected-file state.")
     expect(dropzoneDocsSource).toContain(
@@ -1086,6 +1095,11 @@ describe("Dropzone registry split", () => {
       "registry/new-york-v4/blocks/dropzone-file-uploader-example.tsx",
       "registry/new-york-v4/blocks/dropzone-file-viewer-example.tsx",
       "registry/new-york-v4/blocks/dropzone-trigger-examples.tsx",
+      "registry/new-york-v4/blocks/dropzone-controlled-queue.tsx",
+      "registry/new-york-v4/blocks/dropzone-disabled-dropzone.tsx",
+      "registry/new-york-v4/blocks/dropzone-native-button-queue.tsx",
+      "registry/new-york-v4/blocks/dropzone-non-button-trigger.tsx",
+      "registry/new-york-v4/blocks/dropzone-validation-only.tsx",
       "registry/new-york-v4/blocks/dropzone-file-examples.tsx",
       "registry/new-york-v4/blocks/dropzone-avatar-image-slot.tsx",
       "registry/new-york-v4/blocks/dropzone-custom-thumbnail-grid.tsx",
