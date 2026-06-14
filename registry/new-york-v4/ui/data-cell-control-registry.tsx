@@ -71,26 +71,20 @@ const textControlAdapter: DataCellControlAdapter<"text"> = {
       }),
       { shouldPreventDefault: false }
     ),
-  activateKey: ({ key }) =>
-    editDataCellControlAction(createDataCellKeyboardActivationSource(key), {
-      shouldPreventDefault: true,
-    }),
+  activateKey: createKeyboardEditAction,
   canActivateFromKey: (key) =>
     key === "Enter" || key === "F2" || key.length === 1,
 }
 
-function createInputControlAdapter(
-  kind: "number" | "integer"
-): DataCellControlAdapter<"number" | "integer"> {
+function createInputControlAdapter<Kind extends "number" | "integer">(
+  kind: Kind
+): DataCellControlAdapter<Kind> {
   return {
     Control: DataCellNumberControl,
     controlProps: dataCellNumberControlProps,
     activatePointer: createDefaultPointerEditAction,
     activateClick: createDefaultClickEditAction,
-    activateKey: ({ key }) =>
-      editDataCellControlAction(createDataCellKeyboardActivationSource(key), {
-        shouldPreventDefault: true,
-      }),
+    activateKey: createKeyboardEditAction,
     canActivateFromKey: (key) => canActivateDataCellNumberFromKey(kind, key),
   }
 }
@@ -131,66 +125,80 @@ const selectControlAdapter: DataCellControlAdapter<"select"> = {
   controlProps: dataCellSelectControlProps,
   activatePointer: noneDataCellControlAction,
   activateClick: createDefaultClickEditAction,
-  activateKey: createKeyboardOpenAction,
+  activateKey: createKeyboardEditAction,
   canActivateFromKey: (key) => keyboardOpenKeys.has(key),
 }
 
-const pickerControlAdapter: DataCellControlAdapter<
-  "date" | "time" | "date-time"
-> = {
-  Control: DataCellPickerControl,
-  controlProps: dataCellPickerControlProps,
-  activatePointer: createDefaultPointerEditAction,
-  activateClick: createDefaultClickEditAction,
-  activateKey: createKeyboardOpenAction,
-  canActivateFromKey: (key) => keyboardOpenKeys.has(key),
+function createPickerControlAdapter<
+  Kind extends "date" | "time" | "date-time",
+>(): DataCellControlAdapter<Kind> {
+  return {
+    Control: DataCellPickerControl,
+    controlProps: dataCellPickerControlProps,
+    activatePointer: createDefaultPointerEditAction,
+    activateClick: createDefaultClickEditAction,
+    activateKey: createKeyboardEditAction,
+    canActivateFromKey: (key) => keyboardOpenKeys.has(key),
+  }
 }
 
 const numberControlAdapter = createInputControlAdapter("number")
 const integerControlAdapter = createInputControlAdapter("integer")
+const dateControlAdapter: DataCellControlAdapter<"date"> =
+  createPickerControlAdapter()
+const timeControlAdapter: DataCellControlAdapter<"time"> =
+  createPickerControlAdapter()
+const dateTimeControlAdapter: DataCellControlAdapter<"date-time"> =
+  createPickerControlAdapter()
 
-const canActivateDataCellFromKeyByKind = {
-  text: textControlAdapter.canActivateFromKey,
-  number: numberControlAdapter.canActivateFromKey,
-  integer: integerControlAdapter.canActivateFromKey,
-  boolean: booleanControlAdapter.canActivateFromKey,
-  select: selectControlAdapter.canActivateFromKey,
-  date: pickerControlAdapter.canActivateFromKey,
-  time: pickerControlAdapter.canActivateFromKey,
-  "date-time": pickerControlAdapter.canActivateFromKey,
-} satisfies Record<DataCellKind, (key: string) => boolean>
+const dataCellControlAdapterByKind = {
+  text: textControlAdapter,
+  number: numberControlAdapter,
+  integer: integerControlAdapter,
+  boolean: booleanControlAdapter,
+  select: selectControlAdapter,
+  date: dateControlAdapter,
+  time: timeControlAdapter,
+  "date-time": dateTimeControlAdapter,
+} satisfies {
+  [Kind in DataCellKind]: DataCellControlAdapter<Kind>
+}
 
 export function DataCellControl({ model }: { model: DataCellEditModel }) {
   if (model.kind === "text") {
-    return <DataCellTextControl {...textControlAdapter.controlProps(model)} />
+    return renderDataCellControl(textControlAdapter, model)
   }
   if (model.kind === "number") {
-    return (
-      <DataCellNumberControl {...numberControlAdapter.controlProps(model)} />
-    )
+    return renderDataCellControl(numberControlAdapter, model)
   }
   if (model.kind === "integer") {
-    return (
-      <DataCellNumberControl {...integerControlAdapter.controlProps(model)} />
-    )
+    return renderDataCellControl(integerControlAdapter, model)
   }
   if (model.kind === "boolean") {
-    return (
-      <DataCellBooleanControl {...booleanControlAdapter.controlProps(model)} />
-    )
+    return renderDataCellControl(booleanControlAdapter, model)
   }
   if (model.kind === "select") {
-    return (
-      <DataCellSelectControl {...selectControlAdapter.controlProps(model)} />
-    )
+    return renderDataCellControl(selectControlAdapter, model)
   }
-  if (isDataCellPickerEditModel(model)) {
-    return (
-      <DataCellPickerControl {...pickerControlAdapter.controlProps(model)} />
-    )
+  if (model.kind === "date") {
+    return renderDataCellControl(dateControlAdapter, model)
+  }
+  if (model.kind === "time") {
+    return renderDataCellControl(timeControlAdapter, model)
+  }
+  if (model.kind === "date-time") {
+    return renderDataCellControl(dateTimeControlAdapter, model)
   }
 
   return null
+}
+
+function renderDataCellControl<Kind extends DataCellKind>(
+  adapter: DataCellControlAdapter<Kind>,
+  model: DataCellEditModelByKind[Kind]
+) {
+  const Control = adapter.Control
+  return <Control {...adapter.controlProps(model)} />
 }
 
 export function getDataCellPointerControlAction(
@@ -233,7 +241,13 @@ function dataCellPointerActionForKind(
   if (controlState.kind === "select") {
     return selectControlAdapter[actionName]({ ...args, controlState })
   }
-  return pickerControlAdapter[actionName]({ ...args, controlState })
+  if (controlState.kind === "date") {
+    return dateControlAdapter[actionName]({ ...args, controlState })
+  }
+  if (controlState.kind === "time") {
+    return timeControlAdapter[actionName]({ ...args, controlState })
+  }
+  return dateTimeControlAdapter[actionName]({ ...args, controlState })
 }
 
 function dataCellKeyActionForKind(
@@ -270,7 +284,19 @@ function dataCellKeyActionForKind(
       controlState,
     })
   }
-  return dataCellKeyActionWithAdapter(pickerControlAdapter, {
+  if (controlState.kind === "date") {
+    return dataCellKeyActionWithAdapter(dateControlAdapter, {
+      ...args,
+      controlState,
+    })
+  }
+  if (controlState.kind === "time") {
+    return dataCellKeyActionWithAdapter(timeControlAdapter, {
+      ...args,
+      controlState,
+    })
+  }
+  return dataCellKeyActionWithAdapter(dateTimeControlAdapter, {
     ...args,
     controlState,
   })
@@ -290,15 +316,7 @@ export function canActivateDataCellFromKey(
   kind: DataCellKind,
   key: string
 ): boolean {
-  return canActivateDataCellFromKeyByKind[kind](key)
-}
-
-function isDataCellPickerEditModel(
-  model: DataCellEditModel
-): model is DataCellEditModelByKind["date" | "time" | "date-time"] {
-  return (
-    model.kind === "date" || model.kind === "time" || model.kind === "date-time"
-  )
+  return dataCellControlAdapterByKind[kind].canActivateFromKey(key)
 }
 
 function dataCellTextControlProps(
@@ -433,18 +451,7 @@ function createDefaultClickEditAction<Kind extends DataCellKind>({
   )
 }
 
-function createKeyboardInputEditAction<Kind extends DataCellKind>({
-  key,
-}: DataCellControlKeyActionArgs<Kind>): DataCellControlAction {
-  return editDataCellControlAction(
-    createDataCellKeyboardActivationSource(key),
-    {
-      shouldPreventDefault: true,
-    }
-  )
-}
-
-function createKeyboardOpenAction<Kind extends DataCellKind>({
+function createKeyboardEditAction<Kind extends DataCellKind>({
   key,
 }: DataCellControlKeyActionArgs<Kind>): DataCellControlAction {
   return editDataCellControlAction(

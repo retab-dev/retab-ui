@@ -10,14 +10,10 @@ import type {
   DataCellValueMeta,
 } from "@/registry/new-york-v4/ui/data-cell-types"
 
+type DataCellPickerKind = "date" | "time" | "date-time"
+
 type DataCellPropsForKind<Kind extends DataCellKind> =
-  DataCellProps extends infer Props
-    ? Props extends { kind: infer PropsKind }
-      ? Kind extends PropsKind
-        ? Omit<Props, "kind"> & { kind: Kind }
-        : never
-      : never
-    : never
+  Extract<DataCellProps, { kind: Kind }>
 
 type DataCellEditShellState = {
   disabled: boolean
@@ -58,17 +54,11 @@ export type DataCellEditorProps = React.AriaAttributes &
 type DataCellTextCommitHandler = NonNullable<
   DataCellPropsForKind<"text">["onCommit"]
 >
-type DataCellNumberCommitHandler = NonNullable<
-  DataCellPropsForKind<"number">["onCommit"]
->
 type DataCellBooleanCommitHandler = NonNullable<
   DataCellPropsForKind<"boolean">["onCommit"]
 >
 type DataCellSelectCommitHandler = NonNullable<
   DataCellPropsForKind<"select">["onCommit"]
->
-type DataCellPickerCommitHandler = NonNullable<
-  DataCellPropsForKind<"date">["onCommit"]
 >
 
 type DataCellDraftHandler<Kind extends DataCellKind> = NonNullable<
@@ -81,7 +71,7 @@ type DataCellFormatValue<Kind extends DataCellKind> = NonNullable<
 
 type DataCellPickerFormatValue = (
   value: string | null | undefined,
-  meta: { kind: "date" | "time" | "date-time" }
+  meta: { kind: DataCellPickerKind }
 ) => React.ReactNode
 
 export type DataCellControlState =
@@ -133,9 +123,9 @@ export type DataCellEditModelByKind = {
   integer: DataCellIntegerEditModel
   boolean: DataCellBooleanEditModel
   select: DataCellSelectEditModel
-  date: DataCellPickerEditModel
-  time: DataCellPickerEditModel
-  "date-time": DataCellPickerEditModel
+  date: DataCellDateEditModel
+  time: DataCellTimeEditModel
+  "date-time": DataCellDateTimeEditModel
 }
 
 export type DataCellEditModel =
@@ -165,17 +155,17 @@ export type DataCellTextEditModel = DataCellEditModelBase<
   onCommit?: DataCellTextCommitHandler
 }
 
-export type DataCellNumberEditModel = DataCellEditModelBase<
-  "number" | "integer",
-  number | string | null
-> & {
-  placeholder?: string
-  draftValue?: string
-  onDraftValueChange?: DataCellDraftHandler<"number">
-  onCommit?: DataCellNumberCommitHandler
-}
+type DataCellNumericEditModel<Kind extends "number" | "integer"> =
+  DataCellEditModelBase<Kind, number | string | null> & {
+    placeholder?: string
+    draftValue?: string
+    onDraftValueChange?: DataCellDraftHandler<Kind>
+    onCommit?: NonNullable<DataCellPropsForKind<Kind>["onCommit"]>
+  }
 
-export type DataCellIntegerEditModel = DataCellNumberEditModel
+export type DataCellNumberEditModel = DataCellNumericEditModel<"number">
+
+export type DataCellIntegerEditModel = DataCellNumericEditModel<"integer">
 
 export type DataCellBooleanEditModel = DataCellEditModelBase<
   "boolean",
@@ -196,20 +186,33 @@ export type DataCellSelectEditModel = DataCellEditModelBase<
   onCommit?: DataCellSelectCommitHandler
 }
 
-export type DataCellPickerEditModel = DataCellEditModelBase<
-  "date" | "time" | "date-time",
-  string | null
-> & {
-  placeholder?: string
-  dateTimeZone?: DataCellDateTimeZone
-  showPickerIcon?: boolean
-  formatValue?: DataCellPickerFormatValue
-  draftValue?: string
-  open?: boolean
-  onDraftValueChange?: DataCellDraftHandler<"date">
-  onOpenChange?: (open: boolean) => void
-  onCommit?: DataCellPickerCommitHandler
-}
+type DataCellPickerEditModelForKind<Kind extends DataCellPickerKind> =
+  DataCellEditModelBase<
+    Kind,
+    string | null
+  > & {
+    placeholder?: string
+    dateTimeZone?: DataCellDateTimeZone
+    showPickerIcon?: boolean
+    formatValue?: DataCellPickerFormatValue
+    draftValue?: string
+    open?: boolean
+    onDraftValueChange?: DataCellDraftHandler<Kind>
+    onOpenChange?: (open: boolean) => void
+    onCommit?: NonNullable<DataCellPropsForKind<Kind>["onCommit"]>
+  }
+
+export type DataCellDateEditModel = DataCellPickerEditModelForKind<"date">
+
+export type DataCellTimeEditModel = DataCellPickerEditModelForKind<"time">
+
+export type DataCellDateTimeEditModel =
+  DataCellPickerEditModelForKind<"date-time">
+
+export type DataCellPickerEditModel =
+  | DataCellDateEditModel
+  | DataCellTimeEditModel
+  | DataCellDateTimeEditModel
 
 export function createDataCellEditModel(
   props: DataCellProps,
@@ -218,16 +221,10 @@ export function createDataCellEditModel(
   if (props.kind === "text")
     return createDataCellTextEditModel(props, shellState)
   if (props.kind === "number") {
-    return createDataCellNumericEditModel(
-      { ...props, kind: "number" },
-      shellState
-    )
+    return createDataCellNumberEditModel(props, shellState)
   }
   if (props.kind === "integer") {
-    return createDataCellNumericEditModel(
-      { ...props, kind: "integer" },
-      shellState
-    )
+    return createDataCellIntegerEditModel(props, shellState)
   }
   if (props.kind === "boolean") {
     return createDataCellBooleanEditModel(props, shellState)
@@ -236,18 +233,19 @@ export function createDataCellEditModel(
     return createDataCellSelectEditModel(props, shellState)
   }
   if (props.kind === "date") {
-    return createDataCellPickerEditModel({ ...props, kind: "date" }, shellState)
+    return createDataCellDateEditModel(props, shellState)
   }
   if (props.kind === "time") {
-    return createDataCellPickerEditModel({ ...props, kind: "time" }, shellState)
+    return createDataCellTimeEditModel(props, shellState)
   }
   if (props.kind === "date-time") {
-    return createDataCellPickerEditModel(
-      { ...props, kind: "date-time" },
-      shellState
-    )
+    return createDataCellDateTimeEditModel(props, shellState)
   }
-  throw new Error(`Unsupported DataCell kind: ${String(props.kind)}`)
+  return unsupportedDataCellProps(props)
+}
+
+function unsupportedDataCellProps(_props: never): never {
+  throw new Error("Unsupported DataCell kind")
 }
 
 function dataCellEditShellState(
@@ -361,10 +359,38 @@ function createDataCellTextEditModel(
   }
 }
 
-function createDataCellNumericEditModel(
-  props: DataCellPropsForKind<"number" | "integer">,
+function createDataCellNumberEditModel(
+  props: DataCellPropsForKind<"number">,
   shellState: DataCellEditShellState
 ): DataCellNumberEditModel {
+  const editState = dataCellEditShellState(props, shellState)
+  return {
+    kind: props.kind,
+    value: props.value,
+    disabled: editState.disabled,
+    name: props.name,
+    placeholder: props.placeholder,
+    className: props.className,
+    draftValue: props.draftValue,
+    autoFocus: editState.autoFocus,
+    activationSource: editState.activationSource,
+    controlState: {
+      kind: props.kind,
+      value: props.value,
+      disabled: editState.disabled,
+    },
+    onDraftValueChange: props.onDraftValueChange,
+    onCommit: props.onCommit,
+    onEditingEnd: editState.onEditingEnd,
+    onEditorHandleChange: editState.onEditorHandleChange,
+    editorProps: dataCellEditorProps(props),
+  }
+}
+
+function createDataCellIntegerEditModel(
+  props: DataCellPropsForKind<"integer">,
+  shellState: DataCellEditShellState
+): DataCellIntegerEditModel {
   const editState = dataCellEditShellState(props, shellState)
   return {
     kind: props.kind,
@@ -445,10 +471,10 @@ function createDataCellSelectEditModel(
   }
 }
 
-function createDataCellPickerEditModel(
-  props: DataCellPropsForKind<"date" | "time" | "date-time">,
+function createDataCellDateEditModel(
+  props: DataCellPropsForKind<"date">,
   shellState: DataCellEditShellState
-): DataCellPickerEditModel {
+): DataCellDateEditModel {
   const editState = dataCellEditShellState(props, shellState)
   return {
     kind: props.kind,
@@ -459,7 +485,79 @@ function createDataCellPickerEditModel(
     dateTimeZone: props.dateTimeZone,
     showPickerIcon: props.showPickerIcon,
     className: props.className,
-    formatValue: props.formatValue,
+    formatValue: props.formatValue
+      ? (value) => props.formatValue?.(value, { kind: "date" })
+      : undefined,
+    draftValue: props.draftValue,
+    autoFocus: editState.autoFocus,
+    activationSource: editState.activationSource,
+    controlState: {
+      kind: props.kind,
+      value: props.value,
+      disabled: editState.disabled,
+    },
+    open: props.open,
+    onDraftValueChange: props.onDraftValueChange,
+    onCommit: props.onCommit,
+    onOpenChange: props.onOpenChange,
+    onEditingEnd: editState.onEditingEnd,
+    onEditorHandleChange: editState.onEditorHandleChange,
+    editorProps: dataCellEditorProps(props),
+  }
+}
+
+function createDataCellTimeEditModel(
+  props: DataCellPropsForKind<"time">,
+  shellState: DataCellEditShellState
+): DataCellTimeEditModel {
+  const editState = dataCellEditShellState(props, shellState)
+  return {
+    kind: props.kind,
+    value: props.value,
+    disabled: editState.disabled,
+    name: props.name,
+    placeholder: props.placeholder,
+    dateTimeZone: props.dateTimeZone,
+    showPickerIcon: props.showPickerIcon,
+    className: props.className,
+    formatValue: props.formatValue
+      ? (value) => props.formatValue?.(value, { kind: "time" })
+      : undefined,
+    draftValue: props.draftValue,
+    autoFocus: editState.autoFocus,
+    activationSource: editState.activationSource,
+    controlState: {
+      kind: props.kind,
+      value: props.value,
+      disabled: editState.disabled,
+    },
+    open: props.open,
+    onDraftValueChange: props.onDraftValueChange,
+    onCommit: props.onCommit,
+    onOpenChange: props.onOpenChange,
+    onEditingEnd: editState.onEditingEnd,
+    onEditorHandleChange: editState.onEditorHandleChange,
+    editorProps: dataCellEditorProps(props),
+  }
+}
+
+function createDataCellDateTimeEditModel(
+  props: DataCellPropsForKind<"date-time">,
+  shellState: DataCellEditShellState
+): DataCellDateTimeEditModel {
+  const editState = dataCellEditShellState(props, shellState)
+  return {
+    kind: props.kind,
+    value: props.value,
+    disabled: editState.disabled,
+    name: props.name,
+    placeholder: props.placeholder,
+    dateTimeZone: props.dateTimeZone,
+    showPickerIcon: props.showPickerIcon,
+    className: props.className,
+    formatValue: props.formatValue
+      ? (value) => props.formatValue?.(value, { kind: "date-time" })
+      : undefined,
     draftValue: props.draftValue,
     autoFocus: editState.autoFocus,
     activationSource: editState.activationSource,

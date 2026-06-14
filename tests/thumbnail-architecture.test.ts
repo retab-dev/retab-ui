@@ -205,6 +205,7 @@ describe("thumbnail architecture", () => {
       dependencies: ["pdfjs-dist@5.4.296"],
     })
     expect(pdfResource!.files.map((file) => file.path)).toEqual([
+      "registry/new-york-v4/lib/pdf-document-types.ts",
       "registry/new-york-v4/lib/pdf-document-resource.ts",
       "registry/new-york-v4/lib/viewer-errors.ts",
       "registry/new-york-v4/lib/viewer-resource.ts",

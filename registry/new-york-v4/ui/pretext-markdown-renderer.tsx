@@ -1,7 +1,14 @@
 "use client"
 
 import * as React from "react"
-import { AlertCircle, Check, Copy, RefreshCcw } from "lucide-react"
+import {
+  AlertCircle,
+  Check,
+  Copy,
+  ExternalLink,
+  Link,
+  RefreshCcw,
+} from "lucide-react"
 import { MarkdownHooks, type Components } from "react-markdown"
 
 import { cn } from "@/lib/utils"
@@ -102,87 +109,76 @@ const markdownComponents = {
     )
   },
   h1: ({ className, children, node: _node, ...props }) => (
-    <h1
-      className={cn(
-        "mt-0 mb-5 text-3xl font-semibold tracking-normal text-foreground",
-        className
-      )}
+    <PretextMarkdownHeading
+      className={className}
+      level={1}
+      textClassName="mt-0 mb-5 text-3xl font-semibold tracking-normal text-foreground"
       {...props}
-      id={readPretextHeadingId(props)}
     >
       {children}
-    </h1>
+    </PretextMarkdownHeading>
   ),
   h2: ({ className, children, node: _node, ...props }) => (
-    <h2
-      className={cn(
-        "mt-9 mb-4 text-2xl font-semibold tracking-normal text-foreground first:mt-0",
-        className
-      )}
+    <PretextMarkdownHeading
+      className={className}
+      level={2}
+      textClassName="mt-9 mb-4 text-2xl font-semibold tracking-normal text-foreground first:mt-0"
       {...props}
-      id={readPretextHeadingId(props)}
     >
       {children}
-    </h2>
+    </PretextMarkdownHeading>
   ),
   h3: ({ className, children, node: _node, ...props }) => (
-    <h3
-      className={cn(
-        "mt-7 mb-3 text-xl font-semibold tracking-normal text-foreground first:mt-0",
-        className
-      )}
+    <PretextMarkdownHeading
+      className={className}
+      level={3}
+      textClassName="mt-7 mb-3 text-xl font-semibold tracking-normal text-foreground first:mt-0"
       {...props}
-      id={readPretextHeadingId(props)}
     >
       {children}
-    </h3>
+    </PretextMarkdownHeading>
   ),
   h4: ({ className, children, node: _node, ...props }) => (
-    <h4
-      className={cn(
-        "mt-6 mb-2 text-lg font-semibold tracking-normal text-foreground first:mt-0",
-        className
-      )}
+    <PretextMarkdownHeading
+      className={className}
+      level={4}
+      textClassName="mt-6 mb-2 text-lg font-semibold tracking-normal text-foreground first:mt-0"
       {...props}
-      id={readPretextHeadingId(props)}
     >
       {children}
-    </h4>
+    </PretextMarkdownHeading>
   ),
   h5: ({ className, children, node: _node, ...props }) => (
-    <h5
-      className={cn(
-        "mt-5 mb-2 text-base font-semibold tracking-normal text-foreground first:mt-0",
-        className
-      )}
+    <PretextMarkdownHeading
+      className={className}
+      level={5}
+      textClassName="mt-5 mb-2 text-base font-semibold tracking-normal text-foreground first:mt-0"
       {...props}
-      id={readPretextHeadingId(props)}
     >
       {children}
-    </h5>
+    </PretextMarkdownHeading>
   ),
   h6: ({ className, children, node: _node, ...props }) => (
-    <h6
-      className={cn(
-        "mt-5 mb-2 text-sm font-semibold tracking-normal text-muted-foreground first:mt-0",
-        className
-      )}
+    <PretextMarkdownHeading
+      className={className}
+      level={6}
+      textClassName="mt-5 mb-2 text-sm font-semibold tracking-normal text-muted-foreground first:mt-0"
       {...props}
-      id={readPretextHeadingId(props)}
     >
       {children}
-    </h6>
+    </PretextMarkdownHeading>
   ),
   p: ({ className, node: _node, ...props }) => (
     <p className={cn("my-4 leading-7 first:mt-0", className)} {...props} />
   ),
-  a: ({ className, href, children, node: _node, ...props }) => {
+  a: ({ className, href, children, node: _node, title, ...props }) => {
     const safeHref = sanitizePretextMarkdownUrl(href ?? "")
     if (!safeHref) {
       return <span>{children}</span>
     }
 
     const external = isPretextMarkdownExternalLink(safeHref)
+    const linkTitle = normalizePretextMarkdownLinkTitle(title)
     const footnoteRef =
       isPretextFootnoteRef(props) || isPretextFootnoteRefHref(safeHref)
     const footnoteBackref =
@@ -204,10 +200,18 @@ const markdownComponents = {
         href={safeHref}
         rel={external ? "noopener noreferrer" : undefined}
         target={external ? "_blank" : undefined}
+        title={linkTitle}
         {...props}
         {...(ariaLabel ? { "aria-label": ariaLabel } : {})}
       >
         {children}
+        {external ? (
+          <ExternalLink
+            aria-hidden="true"
+            className="ml-1 inline size-3 align-[-0.1em]"
+            focusable="false"
+          />
+        ) : null}
       </a>
     )
   },
@@ -268,6 +272,15 @@ const markdownComponents = {
       {...props}
     />
   ),
+  kbd: ({ className, node: _node, ...props }) => (
+    <kbd
+      className={cn(
+        "rounded border bg-muted px-1.5 py-0.5 font-mono text-[0.85em] shadow-xs",
+        className
+      )}
+      {...props}
+    />
+  ),
   ul: ({ className, node: _node, ...props }) => (
     <ul className={cn("my-4 ml-6 list-disc space-y-1", className)} {...props} />
   ),
@@ -299,6 +312,15 @@ const markdownComponents = {
       />
     )
   },
+  caption: ({ className, node: _node, ...props }) => (
+    <caption
+      className={cn(
+        "caption-top px-3 py-2 text-left text-sm font-medium text-muted-foreground",
+        className
+      )}
+      {...props}
+    />
+  ),
   table: ({ className, node: _node, ...props }) => (
     <PretextMarkdownTable className={className} {...props} />
   ),
@@ -399,6 +421,12 @@ const markdownComponents = {
       />
     )
   },
+  sub: ({ className, node: _node, ...props }) => (
+    <sub
+      className={cn("align-sub text-[0.72em] leading-none", className)}
+      {...props}
+    />
+  ),
   sup: ({ className, node: _node, ...props }) => (
     <sup
       className={cn("align-super text-[0.72em] leading-none", className)}
@@ -417,6 +445,47 @@ const markdownComponents = {
     />
   ),
 } satisfies Components
+
+function PretextMarkdownHeading({
+  children,
+  className,
+  level,
+  textClassName,
+  ...props
+}: React.HTMLAttributes<HTMLHeadingElement> & {
+  level: 1 | 2 | 3 | 4 | 5 | 6
+  textClassName: string
+}) {
+  const id = readPretextHeadingId(props)
+  const HeadingTag = `h${level}` as const
+  const headingText = extractReactText(children).trim() || "heading"
+
+  return (
+    <div className="group flex min-w-0 items-baseline gap-1.5">
+      <HeadingTag
+        className={cn(textClassName, "min-w-0", className)}
+        {...props}
+        id={id}
+      >
+        {children}
+      </HeadingTag>
+      {id ? (
+        <PretextMarkdownCopyButton
+          ariaLabel={`Copy link to ${headingText}`}
+          className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+          idleIcon={<Link />}
+          text={createPretextMarkdownHeadingUrl(id)}
+        />
+      ) : null}
+    </div>
+  )
+}
+
+function createPretextMarkdownHeadingUrl(id: string) {
+  if (typeof window === "undefined") return `#${id}`
+  const { origin, pathname, search } = window.location
+  return `${origin}${pathname}${search}#${encodeURIComponent(id)}`
+}
 
 function PretextMarkdownCallout({
   callout,
@@ -451,6 +520,10 @@ function PretextMarkdownCallout({
 
 function isPretextMarkdownExternalLink(href: string) {
   return /^https?:/i.test(href)
+}
+
+function normalizePretextMarkdownLinkTitle(title: unknown) {
+  return typeof title === "string" && title.trim() ? title : undefined
 }
 
 type PretextTableCellAlignment = "center" | "left" | "right" | undefined
@@ -655,10 +728,12 @@ function PretextMarkdownDiagram({
 function PretextMarkdownCopyButton({
   ariaLabel,
   className,
+  idleIcon,
   text,
 }: {
   ariaLabel: string
   className?: string
+  idleIcon?: React.ReactNode
   text: string
 }) {
   const [status, setStatus] = React.useState<"copied" | "failed" | "idle">(
@@ -722,7 +797,7 @@ function PretextMarkdownCopyButton({
       ) : status === "failed" ? (
         <AlertCircle />
       ) : (
-        <Copy />
+        (idleIcon ?? <Copy />)
       )}
     </Button>
   )

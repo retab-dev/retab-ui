@@ -15,7 +15,7 @@ leaking virtual chunks as visible pages.
 5. Math / KaTeX polish beyond initial inline and block rendering.
 6. Syntax highlighting polish beyond initial `rehype-pretty-code` rendering.
 7. Code block copy polish beyond the initial copy button.
-8. Raw HTML sanitizer schema polish beyond the initial safe HTML rendering.
+8. Raw HTML sanitizer schema polish beyond the current safe static HTML and inline `kbd`/`sub`/`sup` rendering.
 9. Full GitHub alert visual styling; currently normalized into quoted prose only.
 10. More complete emoji shortcode vocabulary.
 11. More complete typography rules.
@@ -54,7 +54,7 @@ leaking virtual chunks as visible pages.
 
 ## Missing Markdown Semantics
 
-41. Ordered list start values and nested ordered-list numbering audit.
+41. Nested ordered-list numbering audit beyond current ordered-list start-value preservation.
 42. Tight vs loose list spacing parity.
 43. Nested blockquote styling beyond a single rail.
 44. Blockquote alert title/body separation, not just textual prefix normalization.
@@ -222,10 +222,10 @@ leaking virtual chunks as visible pages.
 181. Inline HTML fallback styling.
 182. Inline autolink styling.
 183. Inline email autolink styling.
-184. Link title tooltip policy.
+184. Link title tooltip polish beyond current safe native `title` preservation.
 185. Link visited-state policy.
 186. Internal hash link styling.
-187. External link icon policy.
+187. External link icon polish beyond the current aria-hidden external-link cue.
 188. Bidirectional text behavior in rich inline flow.
 189. Mixed CJK/Latin wrapping audit.
 190. RTL paragraph behavior.
@@ -239,9 +239,9 @@ leaking virtual chunks as visible pages.
 
 196. Paragraph top/bottom rhythm tuning.
 197. Heading rhythm tuning.
-198. Heading anchor affordance decision.
-199. Heading copy-link interaction.
-200. Heading hover/focus states.
+198. Heading anchor affordance polish beyond the current hover/focus copy-link button.
+199. Heading copy-link polish beyond the current stable full-URL clipboard action.
+200. Broader heading hover/focus states beyond the current copy-link affordance.
 201. Multi-paragraph list item rendering.
 202. List item continuation indentation.
 203. Nested list vertical rhythm.
@@ -254,7 +254,7 @@ leaking virtual chunks as visible pages.
 210. Code fence diff highlighting decision.
 211. Code fence line number decision.
 212. Code fence highlighted-line syntax decision.
-213. Table caption support decision.
+213. Broader table caption support beyond current safe raw HTML `<caption>` rendering.
 214. Broader table cell inline Markdown parity beyond the current emphasis, code, strike, link, shortcode, and TSV copy coverage.
 215. Table cell wrapping measurement using Pretext per cell.
 216. Table row height cache.
@@ -432,7 +432,7 @@ leaking virtual chunks as visible pages.
 364. Should tables prioritize exact Markdown semantics or Retab data-table ergonomics?
 365. Should code blocks wrap by default or scroll horizontally?
 366. Should line numbers be supported in code blocks?
-367. Should heading anchor links be always visible, hover-only, or absent?
+367. Should heading anchor links stay hover/focus-only, or become always visible?
 368. Should search index virtualized offscreen content separately?
 369. Should component blocks be allowed in exported/installed registry usage?
 370. Should the old markdown-document tests be ported or rewritten around the new block model?

@@ -514,6 +514,7 @@ describe("json table and DataCell architecture", () => {
     const displayModelFile =
       "registry/new-york-v4/ui/data-cell-display-model.ts"
     const shellFile = "registry/new-york-v4/ui/data-cell.tsx"
+    const typesFile = "registry/new-york-v4/ui/data-cell-types.ts"
     const registryFile =
       "registry/new-york-v4/ui/data-cell-control-registry.tsx"
     const contractContent = readFileSync(join(repoRoot, contractFile), "utf8")
@@ -523,6 +524,7 @@ describe("json table and DataCell architecture", () => {
       "utf8"
     )
     const shellContent = readFileSync(join(repoRoot, shellFile), "utf8")
+    const typesContent = readFileSync(join(repoRoot, typesFile), "utf8")
     const registryContent = readFileSync(join(repoRoot, registryFile), "utf8")
     const editModelFile = "registry/new-york-v4/ui/data-cell-edit-model.ts"
     const editModelContent = readFileSync(join(repoRoot, editModelFile), "utf8")
@@ -561,18 +563,56 @@ describe("json table and DataCell architecture", () => {
     expect(registryContent.includes("model: DataCellEditModel")).toBe(true)
     expect(displayContent.includes("DataCellProps")).toBe(false)
     expect(displayContent.includes("DataCellDisplayProps")).toBe(true)
+    expect(
+      typesContent.includes(`DataCellBaseProps<"number" | "integer"`)
+    ).toBe(false)
+    expect(
+      typesContent.includes(
+        `DataCellBaseProps<"date" | "time" | "date-time"`
+      )
+    ).toBe(false)
+    expect(
+      displayContent.includes(
+        `DataCellDisplayBaseProps<"number" | "integer"`
+      )
+    ).toBe(false)
+    expect(
+      displayContent.includes(
+        `DataCellDisplayBaseProps<"date" | "time" | "date-time"`
+      )
+    ).toBe(false)
     expect(editModelContent.includes("createDataCellEditModel")).toBe(true)
     expect(editModelContent.includes("controlState")).toBe(true)
     expect(editModelContent.includes("DataCellEditorProps")).toBe(true)
     expect(editModelContent.includes("DataCellNativePropsForKind")).toBe(false)
     expect(editModelContent.includes("DataCellEditSource")).toBe(false)
     expect(editModelContent.includes("nativeProps")).toBe(false)
+    expect(
+      editModelContent.includes(
+        "export type DataCellIntegerEditModel = DataCellNumberEditModel"
+      )
+    ).toBe(false)
+    expect(editModelContent.includes("DataCellNumberCommitHandler")).toBe(false)
+    expect(editModelContent.includes("DataCellPickerCommitHandler")).toBe(false)
+    expect(editModelContent.includes("DataCellDateEditModel")).toBe(true)
+    expect(editModelContent.includes("DataCellTimeEditModel")).toBe(true)
+    expect(editModelContent.includes("DataCellDateTimeEditModel")).toBe(true)
+    expect(editModelContent.includes("{ ...props, kind:")).toBe(false)
     expect(editModelContent.includes("as Record<string, unknown>")).toBe(false)
     expect(editModelContent.includes("propName as keyof")).toBe(false)
     expect(editModelContent.includes("assignDataCellAriaAttribute")).toBe(true)
     expect(editModelContent.includes("assignDataCellDataAttribute")).toBe(true)
     expect(registryContent.includes("model.nativeProps")).toBe(false)
     expect(registryContent.includes("model.editorProps")).toBe(true)
+    expect(registryContent.includes("renderDataCellControl(")).toBe(true)
+    expect(registryContent.includes("const Control = adapter.Control")).toBe(
+      true
+    )
+    expect(registryContent.includes("createKeyboardEditAction")).toBe(true)
+    expect(registryContent.includes("createKeyboardInputEditAction")).toBe(
+      false
+    )
+    expect(registryContent.includes("createKeyboardOpenAction")).toBe(false)
     expect(registryContent.includes("DataCellPointerActionHandlers")).toBe(
       false
     )
@@ -581,10 +621,13 @@ describe("json table and DataCell architecture", () => {
     expect(registryContent.includes("textControlAdapter[actionName]")).toBe(
       true
     )
-    expect(registryContent.includes("canActivateDataCellFromKeyByKind")).toBe(
+    expect(registryContent.includes("dataCellControlAdapterByKind")).toBe(
       true
     )
-    expect(registryContent.includes("isDataCellPickerEditModel")).toBe(true)
+    expect(registryContent.includes("canActivateDataCellFromKeyByKind")).toBe(
+      false
+    )
+    expect(registryContent.includes("isDataCellPickerEditModel")).toBe(false)
     expect(registryContent.includes("DataCellProps &")).toBe(false)
     for (const pattern of forbiddenPrimitiveIgnoredPropAliases) {
       expect(

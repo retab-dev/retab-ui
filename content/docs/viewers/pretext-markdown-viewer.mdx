@@ -89,14 +89,14 @@ remain stable while the Pretext path iterates toward feature completeness.
 - Component directives such as `::metric{label="Accuracy" value="98%"}` and `:badge[Stable]{tone="success"}` render through the same restricted component policy as component markdown.
 - GitHub alerts and directive callouts render as labelled `note` regions; code blocks and Mermaid diagrams expose accessible labels for the generated block and source fallback.
 - YAML and TOML frontmatter are first-class frontmatter chunks instead of being rewritten into fenced code blocks.
-- Heading IDs support duplicate suffixes, reserve DOM-clobbering names, decode common HTML entities before slugging, and local `#fragment` links, direct hash loads, and hash changes scroll through the virtual document model.
+- Heading IDs support duplicate suffixes, reserve DOM-clobbering names, decode common HTML entities before slugging, expose copy-link affordances, and local `#fragment` links, direct hash loads, and hash changes scroll through the virtual document model.
 - Links and images use a dedicated safe URL policy; protocol-relative URLs, control-character tricks, encoded unsafe schemes, and non-HTTP image schemes are rejected.
-- Absolute HTTP(S) links open with `noopener noreferrer`; fragments, relative links, root-relative links, and email links stay in the current browsing context.
-- Safe raw HTML is parsed through `rehype-raw` and narrowed by local policy before `rehype-sanitize`; unsafe tags, active raw inputs, SVG/script/style surfaces, and unsafe attributes are removed before React rendering.
+- Absolute HTTP(S) links open with `noopener noreferrer` and show an aria-hidden external-link cue; fragments, relative links, root-relative links, and email links stay in the current browsing context, and safe link titles are preserved as native tooltips.
+- Safe raw HTML is parsed through `rehype-raw` and narrowed by local policy before `rehype-sanitize`; `details`, `summary`, `figure`, `figcaption`, `caption`, `mark`, `kbd`, `sub`, and `sup` render through styled components, while unsafe tags, active raw inputs, SVG/script/style surfaces, and unsafe attributes are removed before React rendering.
 - Markdown HTML comments are retained in the source model and Text mode but do not render or reserve visible layout height.
 - Markdown language policy, URL policy, alert/callout transforms, restricted component parsing, prose transforms, and the sanitizer schema live in the dedicated `pretext-markdown-policy` module.
 - Common typography and emoji shortcode transforms apply to normal prose text while inline code stays literal.
-- GFM autolink literals, strikethrough, soft line breaks, and task-list checkboxes render through explicit Pretext Markdown components.
+- GFM autolink literals, strikethrough, soft line breaks, ordered-list start values, and task-list checkboxes render through explicit Pretext Markdown components.
 - Reference links and reference images resolve from document-wide definitions even when the definition lives outside the currently rendered virtual chunk.
 - Restricted component markdown supports `<Metric label="Accuracy" value="98%" />` and `<Badge label="Stable" tone="success" />`; the component registry owns allowed names, allowed props, and enum values such as `Badge.tone`.
 - Unknown JSX-like syntax, expression props, event handlers, component-specific unknown props, and invalid enum values render as inert source-like text or `mdx` code.
@@ -104,7 +104,7 @@ remain stable while the Pretext path iterates toward feature completeness.
 - Inline and block math render through `remark-math` and KaTeX.
 - GFM footnotes render with labelled references, labelled backrefs, bidirectional fragment targets, and a labelled footnotes section.
 - Fenced code blocks show language headers, copy controls with copied/failed states, and `rehype-pretty-code` syntax highlighting.
-- GFM tables render inline cell Markdown, preserve left/center/right alignment with tabular numeric styling for right-aligned cells, use a keyboard-focusable horizontal scroll region, patch deterministic header/cell associations, and include a copy action that writes rendered cells as TSV.
+- GFM tables render inline cell Markdown, preserve left/center/right alignment with tabular numeric styling for right-aligned cells, support safe raw HTML captions, use a keyboard-focusable horizontal scroll region, patch deterministic header/cell associations, and include a copy action that writes rendered cells as TSV.
 - Images render through a safe Markdown image surface with blocked, loading, ready, failed, and retry states, optional title captions, lazy loading, and decoded aspect-ratio stabilization.
 - The toolbar includes copy and download actions for the full raw Markdown source, including inline text, URL fallback, URL download metadata, Blob download metadata, and local Blob object URLs.
 - Oversized code, table, paragraph, list, and HTML payloads are flagged as hostile chunks, isolated from neighboring prose, and given cheap deterministic layout estimates.

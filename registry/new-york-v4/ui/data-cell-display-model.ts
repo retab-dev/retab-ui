@@ -68,6 +68,12 @@ export function createDataCellDisplayProps(
         formatValue: props.formatValue,
       }
     case "number":
+      return {
+        ...displayProps,
+        kind: props.kind,
+        value: props.value,
+        formatValue: props.formatValue,
+      }
     case "integer":
       return {
         ...displayProps,
@@ -90,7 +96,21 @@ export function createDataCellDisplayProps(
         formatValue: props.formatValue,
       }
     case "date":
+      return {
+        ...displayProps,
+        kind: props.kind,
+        value: props.value,
+        formatValue: props.formatValue,
+        showPickerIcon: props.showPickerIcon ?? true,
+      }
     case "time":
+      return {
+        ...displayProps,
+        kind: props.kind,
+        value: props.value,
+        formatValue: props.formatValue,
+        showPickerIcon: props.showPickerIcon ?? true,
+      }
     case "date-time":
       return {
         ...displayProps,

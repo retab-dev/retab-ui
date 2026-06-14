@@ -10,8 +10,12 @@ describe("Pretext Markdown policy", () => {
   it("keeps the raw HTML sanitizer surface narrow", () => {
     const schema = createPretextMarkdownSanitizeSchema()
 
+    expect(schema.tagNames).toContain("caption")
     expect(schema.tagNames).toContain("details")
+    expect(schema.tagNames).toContain("kbd")
     expect(schema.tagNames).toContain("mark")
+    expect(schema.tagNames).toContain("sub")
+    expect(schema.tagNames).toContain("sup")
     expect(schema.tagNames).not.toContain("script")
     expect(schema.tagNames).not.toContain("style")
     expect(schema.tagNames).not.toContain("iframe")

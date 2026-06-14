@@ -52,11 +52,11 @@ let pruneTimer = 0
 
 function loadPdfjs(): Promise<PdfjsModule> {
   if (!pdfjsPromise) {
-    pdfjsPromise = import("pdfjs-dist").then((pdfjs) => {
+    pdfjsPromise = import("pdfjs-dist/legacy/build/pdf.mjs").then((pdfjs) => {
       const pdfjsModule = pdfjs as unknown as PdfjsModule
       if (!pdfjsModule.GlobalWorkerOptions.workerSrc) {
         pdfjsModule.GlobalWorkerOptions.workerSrc = new URL(
-          "pdfjs-dist/build/pdf.worker.min.mjs",
+          "pdfjs-dist/legacy/build/pdf.worker.min.mjs",
           import.meta.url
         ).toString()
       }

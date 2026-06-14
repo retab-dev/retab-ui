@@ -62,15 +62,18 @@ afterEach(() => {
 })
 
 describe("Markdown/Text viewer contract", () => {
-  it("routes FileViewer Markdown through MarkdownDocumentViewer, not the old HTML markdown document viewer", async () => {
+  it("routes FileViewer Markdown through PretextMarkdownViewer, not the old HTML markdown document viewer", async () => {
     const fileViewerSource = readFileSync(
       "registry/new-york-v4/ui/file-viewer.tsx",
       "utf8"
     )
 
-    expect(fileViewerSource).toContain('mode="markdown"')
-    expect(fileViewerSource).toContain("<MarkdownDocumentViewer")
     expect(fileViewerSource).toContain(
+      'import("@/components/ui/pretext-markdown-viewer")'
+    )
+    expect(fileViewerSource).toContain("<PretextMarkdownViewer")
+    expect(fileViewerSource).not.toContain('mode="markdown"')
+    expect(fileViewerSource).not.toContain(
       'import("@/components/ui/markdown-document-viewer")'
     )
     expect(fileViewerSource).not.toContain("MarkdownDocViewer")
@@ -97,8 +100,11 @@ describe("Markdown/Text viewer contract", () => {
     ).toBeTruthy()
     expect(document.querySelector('[data-slot="text-viewer"]')).toBeTruthy()
     expect(
-      document.querySelector('[data-slot="markdown-document-virtual-canvas"]')
+      document.querySelector('[data-slot="pretext-markdown-virtual-canvas"]')
     ).toBeTruthy()
+    expect(
+      document.querySelector('[data-slot="markdown-document-virtual-canvas"]')
+    ).toBeNull()
     expect(document.querySelector("[data-line-number]")).toBeNull()
   })
 

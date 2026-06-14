@@ -521,7 +521,7 @@ describe("PretextMarkdownViewer", () => {
             "[Root](/docs/viewers)",
             "[Relative](docs/viewers)",
             "[Email](mailto:hello@retab.com)",
-            "[External](https://example.com)",
+            '[External](https://example.com "External docs")',
           ].join("\n\n")
         )}
         toolbar={false}
@@ -540,6 +540,14 @@ describe("PretextMarkdownViewer", () => {
     }
     expect(external.getAttribute("target")).toBe("_blank")
     expect(external.getAttribute("rel")).toBe("noopener noreferrer")
+    expect(external.getAttribute("title")).toBe("External docs")
+    expect(external.textContent).toBe("External")
+    expect(external.querySelector(".lucide-external-link")).toBeTruthy()
+    expect(
+      external
+        .querySelector(".lucide-external-link")
+        ?.getAttribute("aria-hidden")
+    ).toBe("true")
   })
 
   it("resolves reference links from definitions outside the visible chunk", async () => {
@@ -610,6 +618,32 @@ describe("PretextMarkdownViewer", () => {
     expect(completed.hasAttribute("readonly")).toBe(true)
     expect((pending as HTMLInputElement).checked).toBe(false)
     expect(pending.hasAttribute("readonly")).toBe(true)
+  })
+
+  it("preserves ordered list start values", async () => {
+    const { container } = render(
+      <PretextMarkdownViewer
+        source={markdownSource(
+          [
+            "3. Third",
+            "4. Fourth",
+            "",
+            "Paragraph",
+            "",
+            "7. Seventh",
+            "8. Eighth",
+          ].join("\n")
+        )}
+        toolbar={false}
+      />
+    )
+
+    await screen.findByText("Third")
+    const lists = Array.from(container.querySelectorAll("ol"))
+    expect(lists).toHaveLength(2)
+    expect(lists[0]?.getAttribute("start")).toBe("3")
+    expect(lists[1]?.getAttribute("start")).toBe("7")
+    expect(screen.getByText("Eighth")).toBeTruthy()
   })
 
   it("renders whitelisted component markdown through safe React components", async () => {
@@ -913,6 +947,40 @@ describe("PretextMarkdownViewer", () => {
     })
   })
 
+  it("renders safe table captions without changing table copy output", async () => {
+    const { container } = render(
+      <PretextMarkdownViewer
+        source={markdownSource(
+          [
+            "<table>",
+            '<caption onclick="bad()">Release status</caption>',
+            "<thead><tr><th>Area</th><th>Status</th></tr></thead>",
+            "<tbody><tr><td>Markdown</td><td>Ready</td></tr></tbody>",
+            "</table>",
+          ].join("\n")
+        )}
+        toolbar={false}
+      />
+    )
+
+    const table = await screen.findByRole("table", {
+      name: "Release status",
+    })
+    const caption = container.querySelector("caption")
+    expect(table).toBeTruthy()
+    expect(caption?.textContent).toBe("Release status")
+    expect(caption?.getAttribute("onclick")).toBeNull()
+    expect(caption?.className).toContain("caption-top")
+
+    fireEvent.click(screen.getByLabelText("Copy table"))
+
+    await waitFor(() => {
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+        ["Area\tStatus", "Markdown\tReady"].join("\n")
+      )
+    })
+  })
+
   it("renders safe raw HTML through the Pretext sanitizer", async () => {
     const { container } = render(
       <PretextMarkdownViewer
@@ -937,6 +1005,26 @@ describe("PretextMarkdownViewer", () => {
     ).toBeNull()
     expect(container.querySelector("details")?.className).not.toContain("raw")
     expect(container.querySelector("mark")?.getAttribute("style")).toBeNull()
+  })
+
+  it("renders safe inline raw HTML elements with styled components", async () => {
+    const { container } = render(
+      <PretextMarkdownViewer
+        source={markdownSource(
+          'Press <kbd onclick="bad()">⌘K</kbd> for H<sub>2</sub>O and x<sup>2</sup>.'
+        )}
+        toolbar={false}
+      />
+    )
+
+    expect(await screen.findByText("⌘K")).toBeTruthy()
+    expect(container.querySelector("kbd")?.textContent).toBe("⌘K")
+    expect(container.querySelector("kbd")?.getAttribute("onclick")).toBeNull()
+    expect(container.querySelector("kbd")?.className).toContain("font-mono")
+    expect(container.querySelector("sub")?.textContent).toBe("2")
+    expect(container.querySelector("sub")?.className).toContain("align-sub")
+    expect(container.querySelector("sup")?.textContent).toBe("2")
+    expect(container.querySelector("sup")?.className).toContain("align-super")
   })
 
   it("preserves Markdown comments as source-only content", async () => {
@@ -986,15 +1074,15 @@ describe("PretextMarkdownViewer", () => {
       "embed",
       "form",
       "input",
-      "button",
       "style",
       "link",
-      "svg",
       "script",
       "meta",
     ]) {
       expect(container.querySelector(selector)).toBeNull()
     }
+    expect(screen.queryByRole("button", { name: "Send" })).toBeNull()
+    expect(container.querySelector("svg circle")).toBeNull()
   })
 
   it("sanitizes links and images without mounting unsafe DOM", async () => {
@@ -1004,7 +1092,7 @@ describe("PretextMarkdownViewer", () => {
           [
             "# Safe",
             "",
-            "[Good](https://retab.com) [Unsafe](javascript:alert(1))",
+            '[Good](https://retab.com "Retab") [Unsafe](javascript:alert(1) "Bad")',
             "",
             "![Blocked](javascript:alert(1))",
             "",
@@ -1016,8 +1104,11 @@ describe("PretextMarkdownViewer", () => {
     )
 
     expect(await screen.findByRole("heading", { name: "Safe" })).toBeTruthy()
-    expect(screen.getByRole("link", { name: "Good" })).toBeTruthy()
+    expect(
+      screen.getByRole("link", { name: "Good" }).getAttribute("title")
+    ).toBe("Retab")
     expect(screen.getByText("Unsafe").closest("a")).toBeNull()
+    expect(screen.getByText("Unsafe").closest("[title]")).toBeNull()
     expect(screen.getByRole("img", { name: "Blocked" })).toBeTruthy()
     expect(container.querySelector("script")).toBeNull()
     expect(container.querySelector("[src='javascript:alert(1)']")).toBeNull()
@@ -1179,6 +1270,33 @@ describe("PretextMarkdownViewer", () => {
     const att = screen.getByRole("heading", { name: "AT&T ©" })
     expect(tom.id).toBe("tom-jerry")
     expect(att.id).toBe("att")
+  })
+
+  it("copies a stable heading link without changing the heading name", async () => {
+    window.history.replaceState(null, "", "/docs/viewers/pretext?tab=rendered")
+
+    render(
+      <PretextMarkdownViewer
+        source={markdownSource("# Release Notes")}
+        toolbar={false}
+      />
+    )
+
+    const heading = await screen.findByRole("heading", {
+      name: "Release Notes",
+    })
+    const copyLink = screen.getByRole("button", {
+      name: "Copy link to Release Notes",
+    })
+
+    expect(heading.id).toBe("release-notes")
+    fireEvent.click(copyLink)
+
+    await waitFor(() => {
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+        "http://localhost:3000/docs/viewers/pretext?tab=rendered#release-notes"
+      )
+    })
   })
 
   it("prefixes DOM-clobbering heading ids without losing collision suffixes", async () => {

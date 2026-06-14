@@ -74,7 +74,10 @@ type DataCellBaseProps<Kind extends DataCellKind, Value> = Omit<
 }
 
 export type DataCellProps =
-  | (DataCellBaseProps<"number" | "integer", number | string | null> & {
+  | (DataCellBaseProps<"number", number | string | null> & {
+      onCommit?: (value: number | null, meta: DataCellValueMeta) => void
+    })
+  | (DataCellBaseProps<"integer", number | string | null> & {
       onCommit?: (value: number | null, meta: DataCellValueMeta) => void
     })
   | (DataCellBaseProps<"boolean", boolean | null> & {
@@ -87,6 +90,12 @@ export type DataCellProps =
   | (DataCellBaseProps<"text", string | null> & {
       onCommit?: (value: string | null, meta: DataCellValueMeta) => void
     })
-  | (DataCellBaseProps<"date" | "time" | "date-time", string | null> & {
+  | (DataCellBaseProps<"date", string | null> & {
+      onCommit?: (value: string | null, meta: DataCellValueMeta) => void
+    })
+  | (DataCellBaseProps<"time", string | null> & {
+      onCommit?: (value: string | null, meta: DataCellValueMeta) => void
+    })
+  | (DataCellBaseProps<"date-time", string | null> & {
       onCommit?: (value: string | null, meta: DataCellValueMeta) => void
     })

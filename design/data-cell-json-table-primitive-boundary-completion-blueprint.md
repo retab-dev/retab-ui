@@ -44,13 +44,27 @@ Already clean:
 - primitive controls do not import public `DataCellProps`.
 - `DataCell` no longer imports leaf controls just to re-export them; runtime
   shell imports are closer to the code it actually executes.
+- `DataCellControl` render branches now call `renderDataCellControl(adapter,
+  model)`, so the adapter's `Control` field is the source of leaf component
+  ownership.
+- keyboard activation now uses one `createKeyboardEditAction` helper for text,
+  number, select, and picker controls instead of duplicate input/open helpers.
+- key capability now reads from the exact `dataCellControlAdapterByKind` map,
+  removing the previous parallel `canActivateDataCellFromKeyByKind` table.
+- public `DataCellProps`, `DataCellDisplayProps`, and `DataCellEditModelByKind`
+  now model number/integer and date/time/date-time as exact kind entries rather
+  than grouped public branches.
+- edit-model construction no longer re-kind-spreads public props through
+  `{ ...props, kind }`; it uses exact constructors per primitive kind.
 - generated registry output includes the primitive runtime files.
 
 Still not perfect:
 
 - `DataCellControl` still has explicit kind branches for render/action
-  dispatch. They are type-safe, but the adapter map is not the single visible
-  source of all control ownership.
+  dispatch. They are type-safe and adapter-directed, but action dispatch still
+  repeats the same narrowing structure. A direct map-indexed action dispatcher
+  was rejected because TypeScript loses the correlation between
+  `controlState.kind` and the exact action arg type without an unsafe cast.
 - `DataCellEditModel` still derives from public `DataCellProps`; that is
   acceptable at the shell boundary, but the projection should become visually
   smaller and easier to audit.
@@ -461,9 +475,9 @@ All behavior should point at this map:
 - key activation
 - key capability
 
-If render dispatch still needs branches for discriminated narrowing, each branch
-must be a one-line adapter call. The branch is allowed; duplicated policy is
-not.
+Current status: render dispatch still uses branches for discriminated
+narrowing, but each branch is now a one-line adapter call. The branch is
+allowed; duplicated leaf-control ownership is not.
 
 ### Phase 4: Shrink Projection Modules
 

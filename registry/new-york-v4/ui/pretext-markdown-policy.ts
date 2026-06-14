@@ -307,11 +307,15 @@ export function createPretextMarkdownSanitizeSchema(): RehypeSanitizeOptions {
     },
     tagNames: [
       ...(defaultSchema.tagNames ?? []),
+      "caption",
       "details",
       "figcaption",
       "figure",
+      "kbd",
       "mark",
+      "sub",
       "summary",
+      "sup",
     ],
   }
 }

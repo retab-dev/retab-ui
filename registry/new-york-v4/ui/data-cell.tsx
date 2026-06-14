@@ -11,9 +11,7 @@ import {
   getDataCellKeyControlAction,
   getDataCellPointerControlAction,
 } from "@/registry/new-york-v4/ui/data-cell-control-registry"
-import {
-  DataCellDisplay,
-} from "@/registry/new-york-v4/ui/data-cell-display"
+import { DataCellDisplay } from "@/registry/new-york-v4/ui/data-cell-display"
 import { createDataCellDisplayProps } from "@/registry/new-york-v4/ui/data-cell-display-model"
 import { createDataCellEditModel } from "@/registry/new-york-v4/ui/data-cell-edit-model"
 import type {
