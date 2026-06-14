@@ -126,10 +126,7 @@ export function findDataCellSurface(cell: HTMLElement): HTMLElement {
   return surface
 }
 
-export function primitiveEventTarget(
-  target: Element | Document | Window
-): Element | Document | Window {
-  if (!(target instanceof HTMLElement)) return target
+export function primitiveEventTarget(target: HTMLElement): HTMLElement {
   if (!target.matches('[data-json-table-editable-cell="true"]')) return target
   return (
     target.querySelector<HTMLElement>(

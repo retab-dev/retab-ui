@@ -30,33 +30,35 @@ export type JsonTableCellField = {
 export function useJsonTableCellField(
   props: JsonTableCellProps
 ): JsonTableCellField {
-  const materializedFieldPath = props.projectedCell?.materializedFieldPath
+  const { cellProjection, primitiveEditing, structuredEditing } = props
+  const materializedFieldPath =
+    cellProjection.projectedCell?.materializedFieldPath
   const fieldMetadata =
-    props.column.fieldMetadata ??
+    cellProjection.column.fieldMetadata ??
     (materializedFieldPath
-      ? getFieldMetadata(props.schema, materializedFieldPath)
+      ? getFieldMetadata(cellProjection.schema, materializedFieldPath)
       : undefined)
   const dataCellKind = fieldMetadata
     ? jsonTablePrimitiveKind(fieldMetadata)
     : null
   const cellId = materializedFieldPath
-    ? jsonTableCellId(props.docId, materializedFieldPath)
+    ? jsonTableCellId(cellProjection.docId, materializedFieldPath)
     : null
   const isPrimitiveCell = Boolean(dataCellKind)
-  const isJsonEditable = props.isJsonEditable
+  const isJsonEditable = cellProjection.isJsonEditable
   const primitiveActiveCell = useJsonTablePrimitiveActiveCell({
     cellId,
-    store: props.primitiveActiveCellStore,
+    store: primitiveEditing.activeCellStore,
   })
   const isPrimitiveActive = Boolean(isJsonEditable && primitiveActiveCell)
   const isStructuredActive = Boolean(
-    isJsonEditable && cellId && props.structuredEditSession?.cellId === cellId
+    isJsonEditable && cellId && structuredEditing.session?.cellId === cellId
   )
 
   return {
     cellId,
-    cellValue: props.projectedCell?.value,
-    cellWidth: props.column.widthPx,
+    cellValue: cellProjection.projectedCell?.value,
+    cellWidth: cellProjection.column.widthPx,
     dataCellKind,
     fieldMetadata,
     isCellEditing: isPrimitiveCell ? isPrimitiveActive : isStructuredActive,

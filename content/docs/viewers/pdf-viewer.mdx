@@ -31,7 +31,9 @@ your bundler (Vite, webpack, or Turbopack) — there is no runtime CDN call.
 ```tsx
 <PdfViewerProvider source={{ kind: "url", url, fileName: "document.pdf" }}>
   <ViewerRoot>
-    <PdfViewerHeader />
+    <PdfViewerHeader>
+      <ViewerSidebarTrigger />
+    </PdfViewerHeader>
     <ViewerBody>
       <ViewerSidebar aria-label="PDF pages">
         <PdfViewerThumbnails />
@@ -46,8 +48,22 @@ your bundler (Vite, webpack, or Turbopack) — there is no runtime CDN call.
 
 The hierarchy is visible in JSX: viewer primitives own layout, the PDF provider
 owns shared PDF state, and `PdfViewerPages` renders the document pages.
-The thumbnail rail is explicit composition, not part of the default `PdfViewer`
-easy API.
+`PdfViewerThumbnails` is the provider-bound thumbnail adapter. It reads the
+resource, current page, and page-jump command from `PdfViewerProvider`.
+
+For non-provider compositions, use the controlled rail directly:
+
+```tsx
+<PdfThumbnailRail
+  resource={resource}
+  currentPage={currentPage}
+  onSelectPage={scrollToPage}
+  thumbnailWidth={120}
+/>
+```
+
+`thumbnailWidth` controls the thumbnail image width. `ViewerSidebar width`
+controls the sidebar shell.
 
 ## Usage
 

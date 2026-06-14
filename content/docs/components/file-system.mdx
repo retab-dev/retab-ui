@@ -36,15 +36,16 @@ import {
   FileSystemHeader,
   FileSystemOpenPreview,
   FileSystemProvider,
-  FileSystemPreview,
+  FileSystemSelection,
   type FileSystemItem,
 } from "@/components/ui/file-system"
+import { FileViewer } from "@/components/ui/file-viewer"
 import {
   ViewerBody,
-  ViewerSurface,
   ViewerHeader,
-  ViewerSidebar,
   ViewerRoot,
+  ViewerSidebar,
+  ViewerSurface,
 } from "@/components/ui/viewer"
 
 const items: FileSystemItem[] = [
@@ -73,7 +74,13 @@ export function Documents() {
             <FileSystemBrowser />
           </ViewerSidebar>
           <ViewerSurface>
-            <FileSystemPreview />
+            <FileSystemSelection>
+              {({ sourceState }) =>
+                sourceState.status === "ready" ? (
+                  <FileViewer source={sourceState.source} bare />
+                ) : null
+              }
+            </FileSystemSelection>
           </ViewerSurface>
         </ViewerBody>
         <FileSystemOpenPreview />
@@ -88,15 +95,16 @@ The file-system composition has three product surfaces:
 | Surface                 | Owns                                                               | Does not own           |
 | ----------------------- | ------------------------------------------------------------------ | ---------------------- |
 | `FileSystemBrowser`     | folder navigation, query, sort, view mode, lazy loading, selection | document rendering     |
-| `FileSystemPreview`     | selected-entry preview, source resolution, file actions, metadata  | browser navigation     |
+| `FileSystemSelection`   | selected entry, source resolution state, retry                     | layout, file rendering |
 | `FileSystemOpenPreview` | double-click and keyboard-open modal lifecycle                     | selected preview state |
 
 The provider owns the file-system domain state. The viewer primitives own
-layout. `FileSystemPreview` resolves the selected entry to a `ViewerSource`
-and renders files with `FileViewer`. `FileSystemOpenPreview` owns the explicit
-open lifecycle: double-click or keyboard-open a file to show it in a modal.
-`onFileOpen` observes that lifecycle; omit `FileSystemOpenPreview` when another
-shell owns file opening.
+layout. `FileSystemSelection` exposes the selected entry and selected-source
+state. The caller decides whether that source renders with `FileViewer`,
+custom metadata, a dialog, or nothing. `FileSystemOpenPreview` owns the
+explicit open lifecycle: double-click or keyboard-open a file to show it in a
+modal. `onFileOpen` observes that lifecycle; omit `FileSystemOpenPreview` when
+another shell owns file opening.
 
 ## Usage
 
@@ -114,39 +122,39 @@ export function EasyDocuments() {
 ## Useful Behaviors
 
 - Accepts a flat manifest and infers missing parent folders.
-- Shares selection, preview, search, and sort state across list, grid, and
+- Shares selection, search, and sort state across list, grid, and
   columns views.
 - Renders the list view with virtualized tree navigation, keyboard behavior,
   and icon handling.
-- Uses `FileThumbnail` for compact previews and `FileViewer` for the selected
-  file preview.
+- Uses `FileThumbnail` for compact thumbnails and exposes the selected source
+  through `FileSystemSelection`.
 - Supports controlled `view`, `selectedPath`, and `query` state.
 - Supports lazy folders through `loadChildren`.
 - Resolves file sources on demand through `resolveSource`.
-- Keeps explorer views as browsers only. The selected document preview belongs
-  to `FileSystemPreview`.
+- Keeps explorer views as browsers only. Selected document rendering belongs to
+  the caller through `FileSystemSelection`.
 - Uses `FileSystemOpenPreview` for built-in modal opening. Pass `onFileOpen`
   when app routing or analytics needs to observe file opening.
 
 ## Source Resolution
 
-`FileSystem` resolves previews lazily. If a file already has a `source`, that
+`FileSystem` resolves selected sources lazily. If a file already has a `source`, that
 source is used directly. Otherwise `resolveSource` is called when the file is
 selected or opened.
 
 Resolved sources are cached by file path for the lifetime of the current
 `items` identity. When you replace `items`, the cache is cleared before the next
-preview resolution, so same-path files can point to updated sources after an
+source resolution, so same-path files can point to updated sources after an
 item refresh.
 
 ## Boundary Rules
 
-- Use `FileSystem` for the canonical browser-plus-preview layout.
+- Use `FileSystem` for the canonical browser-plus-selected-source layout.
 - Use `FileSystemProvider` and named parts when you need a custom viewer layout.
 - Do not put file-system state into viewer primitives.
 - Do not use `FileViewer` as a file browser; it renders one resolved source.
 - Do not use `file-system-light` when folder, query, lazy loading, selected
-  preview, or named-part composition is needed.
+  source, or named-part composition is needed.
 - `file-system-light` is a separate lightweight flat-file convenience
   component, not the canonical file-system architecture.
 
@@ -176,13 +184,13 @@ entries are filtered and sorted.
 | `view`          | `"list" \| "grid" \| "columns"` | `-`     | No       |
 | `onViewChange`  | `(view) => void`                | `-`     | No       |
 | `defaultQuery`  | `Partial<FileSystemQueryState>` | `-`     | No       |
-| `query`         | `Partial<FileSystemQueryState>` | `-`     | No       |
+| `query`         | `FileSystemQueryState`          | `-`     | No       |
 | `onQueryChange` | `(query) => void`               | `-`     | No       |
 
 ### Selection Control
 
-Selection is browser state. The selected entry feeds `FileSystemPreview`, but
-preview does not own selection.
+Selection is browser state. `FileSystemSelection` exposes the selected entry
+and selected-source state, but it does not decide where `FileViewer` goes.
 
 | Prop                  | Type             | Default | Required |
 | --------------------- | ---------------- | ------- | -------- |
@@ -193,7 +201,7 @@ preview does not own selection.
 ### Loading And Source Resolution
 
 Folder loading extends the manifest. Source resolution turns a file entry into
-a `ViewerSource` only when a preview needs it.
+a `ViewerSource` only when selection or open behavior needs it.
 
 | Prop            | Type                                              | Default | Required |
 | --------------- | ------------------------------------------------- | ------- | -------- |
@@ -211,7 +219,8 @@ successful file opens after source resolution.
 
 ### Render Extensions
 
-These extension points decorate previews. They do not change browser state.
+These extension points decorate the default selected-file surface. They do not
+change browser state.
 
 | Prop                | Type                        | Default | Required |
 | ------------------- | --------------------------- | ------- | -------- |

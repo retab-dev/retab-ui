@@ -21,22 +21,22 @@ npx shadcn@latest add @retab/email-viewer
 ```tsx
 <EmailViewerProvider message={message}>
   <ViewerRoot>
-    <EmailViewerHeader />
+    <EmailHeader />
     <ViewerBody>
-      <ViewerSidebar aria-label="Email parts">
-        <EmailViewerPartsList />
-      </ViewerSidebar>
       <ViewerSurface>
-        <EmailViewerSelectedPart />
+        <EmailContent />
       </ViewerSurface>
+      <ViewerSidebar aria-label="Email parts">
+        <EmailPartsSidebar />
+      </ViewerSidebar>
     </ViewerBody>
   </ViewerRoot>
 </EmailViewerProvider>
 ```
 
 The visible sidebar is a product projection: body candidates first, then
-attachments. The raw MIME recursion stays inside the provider and selected part
-projection.
+attachments. The raw MIME recursion, message scope, header model, sidebar
+model, and content model are derived by the provider before the parts render.
 
 ## Nested ViewerRoot
 
@@ -141,7 +141,7 @@ export function Example() {
 ## Behavior
 
 - **Recursive MIME tree** — `multipart/*` parts group children, and
-  `message/rfc822` parts render as nested email viewers.
+  `message/rfc822` parts render as bounded nested email viewers.
 - **Preferred body projection** — `multipart/alternative` prefers HTML, then
   plain text, then the first previewable child.
 - **CID inline resources** — `multipart/related` siblings with `contentId`
@@ -155,13 +155,23 @@ export function Example() {
 - **Shared preview stack** — renderable leaves use `FileViewer`; thumbnails use
   `FileThumbnail`.
 
+## Controlled Selection
+
+- `selectedPath={undefined}` leaves selection uncontrolled.
+- `selectedPath={null}` clears external selection and renders the default body.
+- Invalid controlled paths fall back to the default body and do not emit
+  callbacks.
+- `onSelectedPathChange` receives normalized MIME paths, including derived
+  suffixes for duplicate sibling ids.
+
 ## Props
 
-| Prop                   | Type                 | Description                                      |
-| ---------------------- | -------------------- | ------------------------------------------------ |
-| `message`              | `EmailViewerMessage` | Message metadata and recursive MIME `root`.      |
-| `selectedPath`         | `MimePartPath`       | Controlled selected MIME part path.              |
-| `defaultSelectedPath`  | `MimePartPath`       | Initial selected MIME part path.                 |
-| `onSelectedPathChange` | `function`           | Called with the selected path and MIME node.     |
-| `className`            | `string`             | Optional class on the email viewer root element. |
-| `bare`                 | `boolean`            | Removes the outer border/background style.       |
+| Prop                    | Type                 | Description                                      |
+| ----------------------- | -------------------- | ------------------------------------------------ |
+| `message`               | `EmailViewerMessage` | Message metadata and recursive MIME `root`.      |
+| `selectedPath`          | `MimePartPath`       | Controlled selected MIME part path.              |
+| `defaultSelectedPath`   | `MimePartPath`       | Initial selected MIME part path.                 |
+| `onSelectedPathChange`  | `function`           | Called with the selected path and MIME node.     |
+| `maxNestedMessageDepth` | `number`             | Maximum nested `message/*` preview depth.        |
+| `className`             | `string`             | Optional class on the email viewer root element. |
+| `bare`                  | `boolean`            | Removes the outer border/background style.       |

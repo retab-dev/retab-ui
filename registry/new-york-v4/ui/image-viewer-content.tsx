@@ -13,7 +13,6 @@ import {
   type ViewerContentIdentity,
   type ViewerResource,
 } from "@/lib/viewer-resource"
-import { ImageViewerToolbar } from "@/components/ui/image-viewer-chrome"
 import { ImageFrame } from "@/components/ui/image-viewer-frame"
 import {
   MAX_VIEWER_SCALE,
@@ -28,6 +27,7 @@ import {
   type ImageViewerProps,
 } from "@/components/ui/image-viewer-types"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { ViewerToolbar } from "@/components/ui/viewer-toolbar"
 
 import {
   createImageFrameLayout,
@@ -117,23 +117,23 @@ export function ImageViewerContent({
       data-slot="image-viewer"
     >
       {toolbar ? (
-        <ImageViewerToolbar
-          countLabel={countLabel}
-          scale={scale}
-          downloadAction={resource.originalDownload}
-          scaleControlsDisabled={scaleControlsDisabled}
-          onZoomOut={() =>
-            setViewerScale(
-              clamp(scale / 1.2, MIN_VIEWER_SCALE, MAX_VIEWER_SCALE)
-            )
-          }
-          onZoomIn={() =>
-            setViewerScale(
-              clamp(scale * 1.2, MIN_VIEWER_SCALE, MAX_VIEWER_SCALE)
-            )
-          }
-          onFitWidth={() => setViewerScale(null)}
-          onRotate={rotateClockwise}
+        <ViewerToolbar
+          position={{ label: countLabel }}
+          zoom={{
+            scale,
+            onZoomOut: () =>
+              setViewerScale(
+                clamp(scale / 1.2, MIN_VIEWER_SCALE, MAX_VIEWER_SCALE)
+              ),
+            onZoomIn: () =>
+              setViewerScale(
+                clamp(scale * 1.2, MIN_VIEWER_SCALE, MAX_VIEWER_SCALE)
+              ),
+            onFit: () => setViewerScale(null),
+            isDisabled: scaleControlsDisabled,
+          }}
+          rotate={{ onRotate: rotateClockwise }}
+          downloads={[resource.originalDownload]}
         />
       ) : null}
 

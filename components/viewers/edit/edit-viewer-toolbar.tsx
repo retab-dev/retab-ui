@@ -19,7 +19,7 @@ export function EditViewerToolbar({
   fieldCount,
   status,
 }: {
-  modes: EditViewerMode[]
+  modes: readonly EditViewerMode[]
   mode: EditViewerMode | null
   onModeChange: (mode: EditViewerMode) => void
   filledCount: number

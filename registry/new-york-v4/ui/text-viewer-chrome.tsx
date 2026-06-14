@@ -6,13 +6,12 @@ import { Check, Copy } from "lucide-react"
 import { type ViewerDownloadAction } from "@/lib/viewer-download"
 
 import { Skeleton } from "./skeleton"
+import { TextCodeViewerFrame } from "./text-code-viewer-chrome"
 import {
-  TextCodeViewerFrame,
-  TextCodeViewerIconButton,
-  TextCodeViewerToolbarFrame,
-  TextCodeViewerZoomControls,
-} from "./text-code-viewer-chrome"
-import { ViewerDownloadControl } from "./viewer-download"
+  ViewerToolbar,
+  ViewerToolbarButton,
+  ViewerToolbarSkeleton,
+} from "./viewer-toolbar"
 
 export function TextViewerFrame({
   className,
@@ -47,16 +46,7 @@ export function TextViewerFallback({
 }) {
   return (
     <TextViewerFrame className={className} bare={bare}>
-      {toolbar ? (
-        <div className="flex h-10 flex-shrink-0 items-center gap-2 border-b bg-card px-3">
-          <Skeleton className="h-3 w-16" />
-          <div className="ml-auto flex items-center gap-2">
-            <Skeleton className="h-3 w-10" />
-            <Skeleton className="size-5" />
-            <Skeleton className="size-5" />
-          </div>
-        </div>
-      ) : null}
+      {toolbar ? <ViewerToolbarSkeleton title zoom download /> : null}
       <div
         className="min-h-0 flex-1 space-y-3 overflow-hidden p-5"
         data-slot="text-body-skeleton"
@@ -95,22 +85,20 @@ export function TextViewerToolbar({
   onResetZoom: () => void
 }) {
   return (
-    <TextCodeViewerToolbarFrame
-      leading={leading ?? `${wordCount} word${wordCount === 1 ? "" : "s"}`}
-      trailing={
-        <>
-          <TextCodeViewerZoomControls
-            fontScale={fontScale}
-            onZoomOut={onZoomOut}
-            onZoomIn={onZoomIn}
-            onResetZoom={onResetZoom}
-          />
-          <div className="mx-1 h-4 w-px bg-border" />
-          {copyText == null ? null : (
-            <TextViewerCopyControl label={copyLabel} text={copyText} />
-          )}
-          <ViewerDownloadControl actions={[downloadAction]} />
-        </>
+    <ViewerToolbar
+      title={leading ?? `${wordCount} word${wordCount === 1 ? "" : "s"}`}
+      zoom={{
+        scale: fontScale,
+        onZoomOut,
+        onZoomIn,
+        onFit: onResetZoom,
+        fitLabel: "Reset zoom",
+      }}
+      downloads={[downloadAction]}
+      extra={
+        copyText == null ? null : (
+          <TextViewerCopyControl label={copyLabel} text={copyText} />
+        )
       }
     />
   )
@@ -151,12 +139,12 @@ function TextViewerCopyControl({
   }
 
   return (
-    <TextCodeViewerIconButton
+    <ViewerToolbarButton
       label={isCopied ? "Copied" : label}
       onClick={copyText}
       type="button"
     >
       {isCopied ? <Check /> : <Copy />}
-    </TextCodeViewerIconButton>
+    </ViewerToolbarButton>
   )
 }

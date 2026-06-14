@@ -1,13 +1,14 @@
 import type { BBox } from "@/components/viewers/lib/edit-types"
 
 import type {
-  EditViewerDocument,
+  EditViewerDocumentSource,
   EditViewerField,
   EditViewerInputField,
   EditViewerInputResult,
   EditViewerMode,
   EditViewerOptions,
   EditViewerResult,
+  EditViewerStatus,
 } from "./edit-viewer-types"
 
 export type EditViewerFilter =
@@ -20,9 +21,30 @@ export type EditViewerFilter =
 
 export interface EditViewerModeInput {
   fields: readonly EditViewerField[]
-  sourceDocument?: EditViewerDocument | null
-  filledDocument?: EditViewerDocument | null
+  sourceDocument?: EditViewerDocumentSource | null
+  filledDocument?: EditViewerDocumentSource | null
   options: Required<EditViewerOptions>
+}
+
+export type EditViewerDocumentTarget =
+  | { kind: "error"; message: string }
+  | { kind: "empty"; message: string }
+  | { kind: "source"; document: EditViewerDocumentSource; showOverlay: false }
+  | { kind: "preview"; document: EditViewerDocumentSource; showOverlay: true }
+  | { kind: "filled"; document: EditViewerDocumentSource; showOverlay: false }
+
+export type EditViewerPdfAreaAnchor = {
+  kind: "pdf-area"
+  pageNumber: number
+  left: number
+  top: number
+  width: number
+  height: number
+}
+
+export type EditViewerAnchorItem = {
+  id: string
+  anchor: EditViewerPdfAreaAnchor | null
 }
 
 const DEFAULT_OPTIONS: Required<EditViewerOptions> = {
@@ -242,6 +264,73 @@ export interface EditViewerFieldGroup {
   fields: EditViewerField[]
 }
 
+export type EditViewerFieldProjection = {
+  fields: readonly EditViewerField[]
+  fieldByKey: ReadonlyMap<string, EditViewerField>
+  fieldsByPage: ReadonlyMap<number, readonly EditViewerField[]>
+  anchorItems: readonly EditViewerAnchorItem[]
+  locatedFields: readonly EditViewerField[]
+  unlocatedFields: readonly EditViewerField[]
+  visibleFields: readonly EditViewerField[]
+  fieldGroups: readonly EditViewerFieldGroup[]
+  fieldCount: number
+  visibleFieldCount: number
+  filledCount: number
+}
+
+export function createEditViewerFieldProjection({
+  fields,
+  query,
+  filter,
+}: {
+  fields: readonly EditViewerField[]
+  query: string
+  filter: EditViewerFilter
+}): EditViewerFieldProjection {
+  const visibleFields = filterEditViewerFields({ fields, query, filter })
+  return {
+    fields,
+    fieldByKey: createEditViewerFieldMap(fields),
+    fieldsByPage: groupLocatedEditViewerFieldsByPage(fields),
+    anchorItems: createEditViewerAnchorItems(fields),
+    locatedFields: fields.filter((field) => Boolean(field.bbox)),
+    unlocatedFields: fields.filter((field) => !field.bbox),
+    visibleFields,
+    fieldGroups: groupEditViewerFieldsByPage(visibleFields),
+    fieldCount: fields.length,
+    visibleFieldCount: visibleFields.length,
+    filledCount: fields.filter(isEditFieldFilled).length,
+  }
+}
+
+export function createEditViewerFieldMap(fields: readonly EditViewerField[]) {
+  const fieldByKey = new Map<string, EditViewerField>()
+  for (const field of fields) {
+    if (!fieldByKey.has(field.key)) {
+      fieldByKey.set(field.key, field)
+    }
+  }
+  return fieldByKey
+}
+
+export function createEditViewerAnchorItems(
+  fields: readonly EditViewerField[]
+): EditViewerAnchorItem[] {
+  return fields.map((field) => ({
+    id: field.key,
+    anchor: field.bbox
+      ? {
+          kind: "pdf-area",
+          pageNumber: field.bbox.page,
+          left: field.bbox.left * 100,
+          top: field.bbox.top * 100,
+          width: field.bbox.width * 100,
+          height: field.bbox.height * 100,
+        }
+      : null,
+  }))
+}
+
 export function groupEditViewerFieldsByPage(
   fields: readonly EditViewerField[]
 ): EditViewerFieldGroup[] {
@@ -290,7 +379,43 @@ export function groupLocatedEditViewerFieldsByPage(
   return pageGroups
 }
 
-export function canPreviewEditViewerDocument(document: EditViewerDocument) {
+export function resolveEditViewerDocumentTarget({
+  filledDocument,
+  mode,
+  sourceDocument,
+  status,
+}: {
+  filledDocument: EditViewerDocumentSource | null
+  mode: EditViewerMode | null
+  sourceDocument: EditViewerDocumentSource | null
+  status: EditViewerStatus
+}): EditViewerDocumentTarget {
+  if (status.state === "error") {
+    return { kind: "error", message: status.message }
+  }
+
+  if (mode === "filled" && filledDocument) {
+    return { kind: "filled", document: filledDocument, showOverlay: false }
+  }
+
+  if (mode === "preview" && sourceDocument) {
+    return { kind: "preview", document: sourceDocument, showOverlay: true }
+  }
+
+  if (mode === "source" && sourceDocument) {
+    return { kind: "source", document: sourceDocument, showOverlay: false }
+  }
+
+  if (!mode) {
+    return { kind: "empty", message: "No edit view is available." }
+  }
+
+  return { kind: "empty", message: "Document preview is unavailable." }
+}
+
+export function canPreviewEditViewerDocument(
+  document: EditViewerDocumentSource
+) {
   const filename = document.filename ?? ""
   return (
     document.mimeType.toLowerCase().includes("application/pdf") ||

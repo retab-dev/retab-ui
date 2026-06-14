@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs"
 const artifactPath = "public/r/data-cell.json"
 
 function buildDataCellRegistryItem() {
-  execFileSync("pnpm", ["registry:build:items", "data-cell"], {
+  execFileSync("node", ["scripts/build-registry-items.mjs", "data-cell"], {
     stdio: "inherit",
   })
 }

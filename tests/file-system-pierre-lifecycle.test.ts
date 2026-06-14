@@ -1,18 +1,25 @@
 import { preparePresortedFileTreeInput } from "@pierre/trees"
 import { describe, expect, it } from "vitest"
 
-import type { FileSystemPierreExpansionSnapshot } from "@/registry/new-york-v4/ui/file-system-pierre-expansion-snapshot"
+import type {
+  FileSystemListContinuityIdentity,
+  FileSystemListExpansionSnapshot,
+} from "@/registry/new-york-v4/ui/file-system-list-continuity"
+import {
+  classifyFileSystemListContinuityTransition,
+  createFileSystemListContinuityPlan,
+  createFileSystemListContinuityState,
+  reduceFileSystemListContinuity,
+} from "@/registry/new-york-v4/ui/file-system-list-continuity"
 import type { FileSystemPierreInput } from "@/registry/new-york-v4/ui/file-system-pierre-input"
 import {
   createFileSystemPierreLazyFolderCommand,
   createFileSystemPierreLazyRetryCommand,
 } from "@/registry/new-york-v4/ui/file-system-pierre-lazy-retry"
-import {
-  classifyFileSystemPierreResetTransition,
-  type FileSystemPierreResetIdentity,
-} from "@/registry/new-york-v4/ui/file-system-pierre-reset-identity"
-import { createFileSystemPierreResetPlan } from "@/registry/new-york-v4/ui/file-system-pierre-reset-plan"
 import type { FileSystemEntry } from "@/registry/new-york-v4/ui/file-system-types"
+
+type FileSystemListIdentity =
+  FileSystemListContinuityIdentity<FileSystemPierreInput>
 
 function input(pierrePaths: string[]): FileSystemPierreInput {
   return {
@@ -40,18 +47,21 @@ function identity({
   decorationVersion?: string
   hasSemanticQuery?: boolean
   pierrePaths?: string[]
-} = {}): FileSystemPierreResetIdentity {
+} = {}): FileSystemListIdentity {
+  const runtimeInput = input(pierrePaths)
+
   return {
     currentPath,
     decorationVersion,
     hasSemanticQuery,
-    input: input(pierrePaths),
+    input: {
+      itemPaths: runtimeInput.pierrePaths,
+      runtimeInput,
+    },
   }
 }
 
-function snapshots(
-  entries: Array<[string, FileSystemPierreExpansionSnapshot]>
-) {
+function snapshots(entries: Array<[string, FileSystemListExpansionSnapshot]>) {
   return new Map(entries)
 }
 
@@ -60,7 +70,7 @@ describe("file-system Pierre lifecycle", () => {
     const previous = identity()
 
     expect(
-      classifyFileSystemPierreResetTransition(previous, previous)
+      classifyFileSystemListContinuityTransition(previous, previous)
     ).toMatchObject({ kind: "same" })
   })
 
@@ -69,49 +79,50 @@ describe("file-system Pierre lifecycle", () => {
     const nextInput = identity({ pierrePaths: ["archive/", "archive/a.pdf"] })
 
     expect(
-      classifyFileSystemPierreResetTransition(
+      classifyFileSystemListContinuityTransition(
         previous,
         identity({ currentPath: "archive/" })
       ).kind
     ).toBe("path")
     expect(
-      classifyFileSystemPierreResetTransition(
+      classifyFileSystemListContinuityTransition(
         previous,
         identity({ hasSemanticQuery: true })
       ).kind
     ).toBe("query-enter")
     expect(
-      classifyFileSystemPierreResetTransition(
+      classifyFileSystemListContinuityTransition(
         identity({ hasSemanticQuery: true }),
         identity({ hasSemanticQuery: true, pierrePaths: ["reports/"] })
       ).kind
     ).toBe("query-update")
     expect(
-      classifyFileSystemPierreResetTransition(
+      classifyFileSystemListContinuityTransition(
         identity({ hasSemanticQuery: true }),
         identity({ hasSemanticQuery: false })
       ).kind
     ).toBe("query-exit")
     expect(
-      classifyFileSystemPierreResetTransition(
+      classifyFileSystemListContinuityTransition(
         previous,
         identity({ decorationVersion: "loading" })
       ).kind
     ).toBe("decoration")
     expect(
-      classifyFileSystemPierreResetTransition(previous, nextInput).kind
+      classifyFileSystemListContinuityTransition(previous, nextInput).kind
     ).toBe("input")
   })
 
-  it("creates no reset plan for an unchanged lifecycle", () => {
+  it("creates no continuity plan for an unchanged lifecycle", () => {
     const previous = identity()
-    const transition = classifyFileSystemPierreResetTransition(
+    const transition = classifyFileSystemListContinuityTransition(
       previous,
       previous
     )
 
     expect(
-      createFileSystemPierreResetPlan({
+      createFileSystemListContinuityPlan({
+        pendingRevealPath: null,
         snapshotsByCurrentPath: snapshots([]),
         transition,
       })
@@ -119,8 +130,8 @@ describe("file-system Pierre lifecycle", () => {
   })
 
   it("restores compatible normal expansion for path, input, query-exit, and decoration transitions", () => {
-    const currentSnapshot: FileSystemPierreExpansionSnapshot = {
-      expandedPierrePaths: new Set(["reports/", "removed/"]),
+    const currentSnapshot: FileSystemListExpansionSnapshot = {
+      expandedItemPaths: new Set(["reports/", "removed/"]),
       mode: "normal",
     }
     const cases = [
@@ -147,20 +158,24 @@ describe("file-system Pierre lifecycle", () => {
     ]
 
     for (const { next, previous, snapshotKey } of cases) {
-      const transition = classifyFileSystemPierreResetTransition(previous, next)
-      const plan = createFileSystemPierreResetPlan({
+      const transition = classifyFileSystemListContinuityTransition(
+        previous,
+        next
+      )
+      const plan = createFileSystemListContinuityPlan({
+        pendingRevealPath: null,
         snapshotsByCurrentPath: snapshots([[snapshotKey, currentSnapshot]]),
         transition,
       })
 
-      if (plan.kind === "reset") {
-        expect(plan.initialExpandedPaths).toEqual(["reports/"])
+      if (plan.kind === "apply") {
+        expect(plan.expandedPaths).toEqual(["reports/"])
       }
     }
   })
 
   it("opens all directories while semantic query is active without needing a normal snapshot", () => {
-    const transition = classifyFileSystemPierreResetTransition(
+    const transition = classifyFileSystemListContinuityTransition(
       identity(),
       identity({
         hasSemanticQuery: true,
@@ -169,14 +184,69 @@ describe("file-system Pierre lifecycle", () => {
     )
 
     expect(
-      createFileSystemPierreResetPlan({
+      createFileSystemListContinuityPlan({
+        pendingRevealPath: null,
         snapshotsByCurrentPath: snapshots([]),
         transition,
       })
     ).toMatchObject({
-      initialExpandedPaths: ["reports/", "archive/"],
-      kind: "reset",
+      expandedPaths: ["reports/", "archive/"],
+      kind: "apply",
     })
+  })
+
+  it("reduces the continuity phase graph directly", () => {
+    const previous = identity()
+    const next = identity({ pierrePaths: ["reports/", "reports/next.pdf"] })
+    const initial = {
+      ...createFileSystemListContinuityState<FileSystemPierreInput>(),
+      identity: previous,
+      pendingRevealPath: "reports/next.pdf",
+    }
+    const capturing = reduceFileSystemListContinuity(initial, {
+      identity: next,
+      type: "identity.requested",
+    })
+
+    expect(capturing.state.phase).toBe("capturing")
+    expect(capturing.commands).toEqual([
+      { identity: previous, type: "snapshot.capture" },
+    ])
+
+    const applying = reduceFileSystemListContinuity(capturing.state, {
+      expandedPaths: ["reports/"],
+      identity: previous,
+      type: "snapshot.captured",
+    })
+
+    expect(applying.state.phase).toBe("applying")
+    expect(applying.commands).toEqual([
+      {
+        expandedPaths: ["reports/"],
+        identity: next,
+        nextItemPaths: ["reports/", "reports/next.pdf"],
+        revealPath: "reports/next.pdf",
+        type: "model.apply",
+      },
+    ])
+
+    const revealing = reduceFileSystemListContinuity(applying.state, {
+      expandedPaths: ["reports/"],
+      identity: next,
+      type: "model.applied",
+    })
+
+    expect(revealing.state.phase).toBe("revealing")
+    expect(revealing.commands).toEqual([
+      { path: "reports/next.pdf", type: "selection.reveal" },
+    ])
+
+    const stable = reduceFileSystemListContinuity(revealing.state, {
+      type: "selection.revealed",
+    })
+
+    expect(stable.state.phase).toBe("stable")
+    expect(stable.state.pendingRevealPath).toBeNull()
   })
 
   it("creates lazy retry commands only for failed folder selections", () => {

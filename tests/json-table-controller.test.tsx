@@ -372,6 +372,78 @@ describe("json table structured cell controller", () => {
     expect(result.current.effectiveValue).toBe("Globex")
   })
 
+  it("keeps structured pending values visible before the parent echo", () => {
+    const onCellCommit = vi.fn()
+    const baseValue = { amount: 12, currency: "EUR" }
+    const committedValue = { amount: 13, currency: "EUR" }
+    const { result, rerender } = renderHook(
+      ({ value }) =>
+        useJsonTableStructuredCellController({
+          materializedFieldPath: "payment",
+          value,
+          isEditable: true,
+          onCellCommit,
+        }),
+      { initialProps: { value: baseValue } }
+    )
+
+    act(() => result.current.commitStructuredValueChange(committedValue))
+    act(() => rerender({ value: { amount: 12, currency: "EUR" } }))
+
+    expect(result.current.effectiveValue).toEqual(committedValue)
+  })
+
+  it("clears structured pending values when a cloned parent echo arrives", () => {
+    const onCellCommit = vi.fn()
+    const committedValue = { amount: 13, currency: "EUR" }
+    const { result, rerender } = renderHook(
+      ({ value }) =>
+        useJsonTableStructuredCellController({
+          materializedFieldPath: "payment",
+          value,
+          isEditable: true,
+          onCellCommit,
+        }),
+      { initialProps: { value: { amount: 12, currency: "EUR" } } }
+    )
+
+    act(() => result.current.commitStructuredValueChange(committedValue))
+    act(() => rerender({ value: { currency: "EUR", amount: 13 } }))
+    act(() => rerender({ value: { amount: 14, currency: "EUR" } }))
+
+    expect(result.current.effectiveValue).toEqual({
+      amount: 14,
+      currency: "EUR",
+    })
+  })
+
+  it("lets divergent parent values replace structured pending values", () => {
+    const onCellCommit = vi.fn()
+    const { result, rerender } = renderHook(
+      ({ value }) =>
+        useJsonTableStructuredCellController({
+          materializedFieldPath: "payment",
+          value,
+          isEditable: true,
+          onCellCommit,
+        }),
+      { initialProps: { value: { amount: 12, currency: "EUR" } } }
+    )
+
+    act(() =>
+      result.current.commitStructuredValueChange({
+        amount: 13,
+        currency: "EUR",
+      })
+    )
+    act(() => rerender({ value: { amount: 99, currency: "USD" } }))
+
+    expect(result.current.effectiveValue).toEqual({
+      amount: 99,
+      currency: "USD",
+    })
+  })
+
   it("skips structured no-op commits", () => {
     const onCellCommit = vi.fn()
     const { result } = renderHook(() =>

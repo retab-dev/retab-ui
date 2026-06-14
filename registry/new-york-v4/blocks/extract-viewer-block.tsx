@@ -8,11 +8,9 @@ import type { Source } from "@/lib/document-source"
 import {
   AnchoredDocumentProvider,
   useAnchoredDocument,
-  useAnchoredFieldLink,
-  type AnchoredItem,
 } from "@/components/ui/anchored-document-viewer"
+import { useAnchoredFieldLink } from "@/components/ui/field-anchor-link"
 import {
-  sourceToPdfAnchor,
   usePdfAnchoredOverlay,
   usePdfAnchoredTarget,
 } from "@/components/ui/pdf-anchor-target"
@@ -23,14 +21,15 @@ import {
   type PdfViewerHandle,
 } from "@/components/ui/pdf-viewer"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { sourceFieldsToEvidenceModel } from "@/components/ui/source-evidence"
 import { SourceIndicator } from "@/components/ui/source-indicator"
 import {
   ViewerBody,
-  ViewerSurface,
   ViewerHeader,
-  ViewerSidebar,
   ViewerRoot,
+  ViewerSidebar,
   ViewerSidebarTrigger,
+  ViewerSurface,
 } from "@/components/ui/viewer"
 import { JsonForm } from "@/components/json-form/json-form"
 import extractSample from "@/components/viewers/sample-data/extract.json"
@@ -68,10 +67,7 @@ const PDF_SOURCE: PdfDocumentSource = {
   url: PDF_URL,
   fileName: "jane-doe-bank-statement-5-pages.pdf",
 }
-const ANCHORED_ITEMS: AnchoredItem[] = FIELDS.map((field) => ({
-  id: field.key,
-  anchor: sourceToPdfAnchor(field.source),
-}))
+const EVIDENCE = sourceFieldsToEvidenceModel(FIELDS)
 
 /**
  * Extract viewer block — extracted fields beside the source document, linked by
@@ -88,7 +84,7 @@ export function ExtractViewerBlock() {
 
   return (
     <AnchoredDocumentProvider
-      items={ANCHORED_ITEMS}
+      items={EVIDENCE.anchoredItems}
       target={target}
       initialItemId={FIELDS[0]?.key}
     >
@@ -108,11 +104,7 @@ function ExtractViewerContent({
   const form = useForm<Record<string, unknown>>({ defaultValues })
 
   return (
-    <ViewerRoot
-      bare
-      defaultSidebarOpen
-      className="h-full min-h-[680px] bg-background"
-    >
+    <ViewerRoot bare defaultOpen className="h-full min-h-[680px] bg-background">
       <ViewerHeader className="flex min-h-10 items-center gap-2 px-2">
         <ViewerSidebarTrigger />
         <h2 className="min-w-0 truncate text-sm font-medium">Extracted data</h2>

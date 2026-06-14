@@ -7,7 +7,13 @@ import { getFixedGridRowStyle } from "@/components/ui/fixed-grid-row-style"
 import { TableRow } from "@/components/ui/table"
 import { EditableJsonTableCell } from "@/components/json-table/editable-json-table-cell"
 import type { JsonTableCellCommitHandler } from "@/components/json-table/json-table-cell-commit"
-import type { JsonTableCellProps } from "@/components/json-table/json-table-cell-types"
+import type {
+  JsonTableCellCommitProps,
+  JsonTableCellHoverProps,
+  JsonTableCellProps,
+  JsonTablePrimitiveEditingProps,
+  JsonTableStructuredEditingProps,
+} from "@/components/json-table/json-table-cell-types"
 import type { JsonTableStructuredEditSession } from "@/components/json-table/json-table-edit-session"
 import type { JsonTablePrimitiveActiveCellStore } from "@/components/json-table/json-table-primitive-active-cell-store"
 import type { JsonTablePrimitiveEditStore } from "@/components/json-table/json-table-primitive-edit-store"
@@ -28,13 +34,13 @@ interface SingleFileFormRowProps {
   rowHeightPx: number
   primitiveActiveCellStore: JsonTablePrimitiveActiveCellStore
   primitiveEditStore: JsonTablePrimitiveEditStore
-  setPrimitiveActiveCell?: JsonTableCellProps["setPrimitiveActiveCell"]
+  setPrimitiveActiveCell?: JsonTablePrimitiveEditingProps["setActiveCell"]
   structuredEditSession?: JsonTableStructuredEditSession | null
-  startStructuredEditSession?: JsonTableCellProps["startStructuredEditSession"]
-  setStructuredEditSessionOverlayOpen?: JsonTableCellProps["setStructuredEditSessionOverlayOpen"]
-  closeStructuredEditSession?: JsonTableCellProps["closeStructuredEditSession"]
-  onCellHoverStart?: JsonTableCellProps["onCellHoverStart"]
-  onCellHoverEnd?: JsonTableCellProps["onCellHoverEnd"]
+  startStructuredEditSession?: JsonTableStructuredEditingProps["startSession"]
+  setStructuredEditSessionOverlayOpen?: JsonTableStructuredEditingProps["setSessionOverlayOpen"]
+  closeStructuredEditSession?: JsonTableStructuredEditingProps["closeSession"]
+  onCellHoverStart?: JsonTableCellHoverProps["onStart"]
+  onCellHoverEnd?: JsonTableCellHoverProps["onEnd"]
   onCellCommit: JsonTableCellCommitHandler
   isJsonEditable: boolean
 }
@@ -141,6 +147,37 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
         }),
       [rowTopPx, rowHeightPx]
     )
+    const primitiveEditing = React.useMemo<JsonTablePrimitiveEditingProps>(
+      () => ({
+        activeCellStore: primitiveActiveCellStore,
+        editStore: primitiveEditStore,
+        setActiveCell: setPrimitiveActiveCell,
+      }),
+      [primitiveActiveCellStore, primitiveEditStore, setPrimitiveActiveCell]
+    )
+    const structuredEditing = React.useMemo<JsonTableStructuredEditingProps>(
+      () => ({
+        session: structuredEditSession,
+        startSession: startStructuredEditSession,
+        setSessionOverlayOpen: setStructuredEditSessionOverlayOpen,
+        closeSession: closeStructuredEditSession,
+      }),
+      [
+        closeStructuredEditSession,
+        setStructuredEditSessionOverlayOpen,
+        startStructuredEditSession,
+        structuredEditSession,
+      ]
+    )
+    const commit = React.useMemo<JsonTableCellCommitProps>(
+      () => ({ onCommit: onCellCommit }),
+      [onCellCommit]
+    )
+    const hover = React.useMemo<JsonTableCellHoverProps>(
+      () => ({ onStart: onCellHoverStart, onEnd: onCellHoverEnd }),
+      [onCellHoverEnd, onCellHoverStart]
+    )
+
     return (
       <TableRow
         aria-rowindex={rowIdx + 1}
@@ -159,24 +196,20 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
               ? undefined
               : projectedRow?.cells[projectedCellIndex]
 
-          const cellProps = {
-            column,
-            projectedCell,
-            schema,
-            document,
-            docId: documentId,
-            primitiveActiveCellStore,
-            primitiveEditStore,
-            ariaColumnIndex: (projectedCellIndex ?? colIdx) + 1,
-            setPrimitiveActiveCell,
-            structuredEditSession,
-            startStructuredEditSession,
-            setStructuredEditSessionOverlayOpen,
-            closeStructuredEditSession,
-            onCellCommit,
-            isJsonEditable,
-            onCellHoverStart,
-            onCellHoverEnd,
+          const cellProps: JsonTableCellProps = {
+            cellProjection: {
+              column,
+              projectedCell,
+              schema,
+              document,
+              docId: documentId,
+              ariaColumnIndex: (projectedCellIndex ?? colIdx) + 1,
+              isJsonEditable,
+            },
+            primitiveEditing,
+            structuredEditing,
+            commit,
+            hover,
           }
 
           return isJsonEditable ? (

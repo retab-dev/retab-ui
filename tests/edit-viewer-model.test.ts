@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  createEditViewerFieldProjection,
   deriveEditViewerModes,
   displayEditFieldValue,
   filterEditViewerFields,
@@ -8,6 +9,7 @@ import {
   groupLocatedEditViewerFieldsByPage,
   isEditFieldFilled,
   normalizeEditViewerResult,
+  resolveEditViewerDocumentTarget,
   resolveEditViewerMode,
   resolveEditViewerOptions,
 } from "@/components/viewers/edit/edit-viewer-model"
@@ -120,6 +122,24 @@ describe("edit viewer model", () => {
     expect(resolveEditViewerMode({ availableModes: [] })).toBeNull()
   })
 
+  it("treats null requested mode as an explicit fallback request", () => {
+    expect(
+      resolveEditViewerMode({
+        availableModes: ["source", "preview"],
+        requestedMode: null,
+        currentMode: "preview",
+      })
+    ).toBe("preview")
+
+    expect(
+      resolveEditViewerMode({
+        availableModes: ["source", "preview"],
+        requestedMode: null,
+        currentMode: null,
+      })
+    ).toBe("preview")
+  })
+
   it("normalizes checkbox strings and booleans", () => {
     const fields = normalizeEditViewerResult({
       fields: [
@@ -151,6 +171,21 @@ describe("edit viewer model", () => {
 
     expect(fields[0]?.maxLength).toBe(3)
     expect("max_length" in fields[0]!).toBe(false)
+  })
+
+  it("generates stable fallback keys for missing keys", () => {
+    const fields = normalizeEditViewerResult({
+      fields: [
+        { type: "text", value: "first" },
+        { type: "text", value: "second" },
+      ],
+    }).fields
+
+    expect(fields.map((field) => field.key)).toEqual(["field_0", "field_1"])
+    expect(fields.map((field) => field.description)).toEqual([
+      "field_0",
+      "field_1",
+    ])
   })
 
   it("drops malformed bboxes so fields become unlocated", () => {
@@ -224,6 +259,12 @@ describe("edit viewer model", () => {
         (field) => field.key
       )
     ).toEqual(["send_wire", "memo", "floating"])
+    expect(fields.map((field) => field.key)).toEqual([
+      "name",
+      "send_wire",
+      "memo",
+      "floating",
+    ])
   })
 
   it("groups located fields by page and preserves unlocated fields", () => {
@@ -262,5 +303,103 @@ describe("edit viewer model", () => {
     expect(
       [...fieldsByPage.values()].flat().map((field) => field.key)
     ).not.toContain("notes")
+  })
+
+  it("creates one field projection with stable first-key lookup and anchors", () => {
+    const fields: EditViewerField[] = [
+      locatedField,
+      {
+        ...locatedField,
+        key: "name",
+        value: "Duplicate",
+        bbox: { ...locatedField.bbox!, page: 3 },
+      },
+      { key: "notes", type: "text", value: "" },
+    ]
+    const projection = createEditViewerFieldProjection({
+      fields,
+      query: "",
+      filter: "all",
+    })
+
+    expect(projection.fields).toBe(fields)
+    expect(projection.fieldCount).toBe(3)
+    expect(projection.visibleFieldCount).toBe(3)
+    expect(projection.filledCount).toBe(2)
+    expect(projection.fieldByKey.get("name")).toBe(fields[0])
+    expect(projection.fieldsByPage.get(2)?.map((field) => field.key)).toEqual([
+      "name",
+    ])
+    expect(projection.locatedFields.map((field) => field.key)).toEqual([
+      "name",
+      "name",
+    ])
+    expect(projection.unlocatedFields.map((field) => field.key)).toEqual([
+      "notes",
+    ])
+    expect(projection.anchorItems[0]).toEqual({
+      id: "name",
+      anchor: {
+        kind: "pdf-area",
+        pageNumber: 2,
+        left: 10,
+        top: 20,
+        width: 30,
+        height: 4,
+      },
+    })
+    expect(projection.anchorItems[2]).toEqual({
+      id: "notes",
+      anchor: null,
+    })
+  })
+
+  it("resolves document targets as pure model state", () => {
+    expect(
+      resolveEditViewerDocumentTarget({
+        filledDocument,
+        mode: "filled",
+        sourceDocument,
+        status: { state: "error", message: "failed" },
+      })
+    ).toEqual({ kind: "error", message: "failed" })
+
+    expect(
+      resolveEditViewerDocumentTarget({
+        filledDocument,
+        mode: "filled",
+        sourceDocument,
+        status: { state: "idle" },
+      })
+    ).toEqual({
+      kind: "filled",
+      document: filledDocument,
+      showOverlay: false,
+    })
+
+    expect(
+      resolveEditViewerDocumentTarget({
+        filledDocument: null,
+        mode: "preview",
+        sourceDocument,
+        status: { state: "idle" },
+      })
+    ).toEqual({
+      kind: "preview",
+      document: sourceDocument,
+      showOverlay: true,
+    })
+
+    expect(
+      resolveEditViewerDocumentTarget({
+        filledDocument: null,
+        mode: null,
+        sourceDocument: null,
+        status: { state: "idle" },
+      })
+    ).toEqual({
+      kind: "empty",
+      message: "No edit view is available.",
+    })
   })
 })

@@ -47,7 +47,7 @@ export interface EditViewerInputResult {
   editType?: "agent" | "template"
 }
 
-export interface EditViewerDocument {
+export interface EditViewerDocumentSource {
   buffer?: ArrayBuffer | null
   src?: string | null
   mimeType: string
@@ -56,9 +56,9 @@ export interface EditViewerDocument {
 
 export interface EditViewerProps {
   result: EditViewerInputResult | null
-  sourceDocument?: EditViewerDocument | null
-  filledDocument?: EditViewerDocument | null
-  mode?: EditViewerMode
+  sourceDocument?: EditViewerDocumentSource | null
+  filledDocument?: EditViewerDocumentSource | null
+  mode?: EditViewerMode | null
   onModeChange?: (mode: EditViewerMode) => void
   selectedFieldKey?: string | null
   onSelectedFieldKeyChange?: (key: string | null) => void

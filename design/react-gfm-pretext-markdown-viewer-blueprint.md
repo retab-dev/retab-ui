@@ -715,7 +715,8 @@ The component is done when:
 - tables remain accessible after async rendering
 - safe HTML is useful but not dangerous
 - File Viewer uses this path for Markdown
-- focused tests, typecheck, and registry build pass
+- focused tests, typecheck, registry build, and local shadcn CLI registry
+  install smoke pass
 
 ## Final Shape
 

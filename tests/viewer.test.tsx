@@ -133,7 +133,7 @@ describe("viewer primitives", () => {
 
   it("scopes overlay sidebar layout to the body below the header", () => {
     const { container } = render(
-      <ViewerRoot defaultSidebarOpen sidebarMode="overlay">
+      <ViewerRoot defaultOpen mode="overlay">
         <ViewerHeader data-testid="header">Header</ViewerHeader>
         <ViewerBody data-testid="body">
           <ViewerSidebar data-testid="sidebar">Pages</ViewerSidebar>
@@ -225,7 +225,7 @@ describe("viewer primitives", () => {
 
   it("keeps inline sidebar in body flow beside the document surface", () => {
     render(
-      <ViewerRoot defaultSidebarOpen sidebarMode="inline">
+      <ViewerRoot defaultOpen mode="inline">
         <ViewerHeader data-testid="header">Header</ViewerHeader>
         <ViewerBody data-testid="body">
           <ViewerSidebar data-testid="sidebar">Pages</ViewerSidebar>
@@ -315,7 +315,6 @@ describe("viewer primitives", () => {
         "mode",
         "open",
         "setOpen",
-        "sidebarId",
         "state",
         "toggleSidebar",
       ].sort()
@@ -396,8 +395,8 @@ describe("viewer primitives", () => {
       const [open, setOpen] = React.useState(false)
       return (
         <ViewerRoot
-          sidebarOpen={open}
-          onSidebarOpenChange={(nextOpen) => {
+          open={open}
+          onOpenChange={(nextOpen) => {
             onOpenChange(nextOpen)
             setOpen(nextOpen)
           }}
@@ -452,9 +451,36 @@ describe("viewer primitives", () => {
     ).toBe("collapsed")
   })
 
+  it("uses real DOM disabled semantics for disabled, loading, and aria-disabled triggers", () => {
+    render(
+      <ViewerRoot>
+        <ViewerSidebarTrigger data-testid="disabled" disabled />
+        <ViewerSidebarTrigger data-testid="loading" loading />
+        <ViewerSidebarTrigger data-testid="aria-disabled" aria-disabled />
+        <ViewerBody>
+          <ViewerSidebar data-testid="sidebar">Sidebar</ViewerSidebar>
+          <ViewerSurface>Surface</ViewerSurface>
+        </ViewerBody>
+      </ViewerRoot>
+    )
+
+    expect((screen.getByTestId("disabled") as HTMLButtonElement).disabled).toBe(
+      true
+    )
+    expect((screen.getByTestId("loading") as HTMLButtonElement).disabled).toBe(
+      true
+    )
+    expect(
+      (screen.getByTestId("aria-disabled") as HTMLButtonElement).disabled
+    ).toBe(true)
+    expect(
+      screen.getByTestId("sidebar").getAttribute("data-viewer-sidebar-state")
+    ).toBe("collapsed")
+  })
+
   it("keeps nested viewer sidebar state isolated", () => {
     render(
-      <ViewerRoot defaultSidebarOpen>
+      <ViewerRoot defaultOpen>
         <ViewerSidebarTrigger data-testid="outer-trigger" />
         <ViewerBody>
           <ViewerSidebar data-testid="outer-sidebar">Outer</ViewerSidebar>
@@ -500,7 +526,7 @@ describe("viewer primitives", () => {
 
   it("infers trigger side from the registered sidebar", async () => {
     render(
-      <ViewerRoot defaultSidebarOpen>
+      <ViewerRoot defaultOpen>
         <ViewerHeader>
           <ViewerSidebarTrigger data-testid="trigger" />
         </ViewerHeader>
@@ -526,9 +552,56 @@ describe("viewer primitives", () => {
     ).toContain("lucide-panel-right")
   })
 
+  it("lets ViewerRoot provide the default sidebar side", async () => {
+    render(
+      <ViewerRoot defaultOpen sidebarSide="right">
+        <ViewerHeader>
+          <ViewerSidebarTrigger data-testid="trigger" />
+        </ViewerHeader>
+        <ViewerBody>
+          <ViewerSurface>Surface</ViewerSurface>
+          <ViewerSidebar data-testid="sidebar">Sidebar</ViewerSidebar>
+        </ViewerBody>
+      </ViewerRoot>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId("sidebar").getAttribute("data-side")).toBe(
+        "right"
+      )
+      expect(screen.getByTestId("trigger").getAttribute("data-side")).toBe(
+        "right"
+      )
+    })
+  })
+
+  it("lets ViewerRoot provide the default sidebar collapsibility", async () => {
+    render(
+      <ViewerRoot sidebarCollapsible="none">
+        <ViewerHeader>
+          <ViewerSidebarTrigger data-testid="trigger" />
+        </ViewerHeader>
+        <ViewerBody>
+          <ViewerSidebar data-testid="sidebar">Sidebar</ViewerSidebar>
+          <ViewerSurface>Surface</ViewerSurface>
+        </ViewerBody>
+      </ViewerRoot>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId("sidebar").getAttribute("data-collapsible")).toBe(
+        "none"
+      )
+    })
+    expect(screen.getByTestId("sidebar").getAttribute("aria-hidden")).toBeNull()
+    expect(screen.getByTestId("trigger").getAttribute("aria-disabled")).toBe(
+      "true"
+    )
+  })
+
   it("uses left trigger icon semantics for a left registered sidebar", async () => {
     render(
-      <ViewerRoot defaultSidebarOpen>
+      <ViewerRoot defaultOpen>
         <ViewerHeader>
           <ViewerSidebarTrigger data-testid="trigger" />
         </ViewerHeader>
@@ -604,7 +677,7 @@ describe("viewer primitives", () => {
     const trigger = screen.getByTestId("trigger")
 
     expect(trigger.getAttribute("aria-disabled")).toBe("true")
-    expect((trigger as HTMLButtonElement).disabled).toBe(false)
+    expect((trigger as HTMLButtonElement).disabled).toBe(true)
     expect(trigger.getAttribute("aria-controls")).toBeNull()
     expect(trigger.getAttribute("aria-expanded")).toBeNull()
     expect(
@@ -652,7 +725,7 @@ describe("viewer primitives", () => {
       "true"
     )
     expect((screen.getByTestId("trigger") as HTMLButtonElement).disabled).toBe(
-      false
+      true
     )
   })
 
@@ -739,12 +812,18 @@ describe("viewer primitives", () => {
     expect(screen.getByTestId("trigger").getAttribute("aria-disabled")).toBe(
       "true"
     )
+    expect((screen.getByTestId("trigger") as HTMLButtonElement).disabled).toBe(
+      true
+    )
     fireEvent.click(screen.getByRole("button", { name: "Show sidebar" }))
 
     await waitFor(() => {
       expect(screen.getByTestId("trigger").getAttribute("aria-disabled")).toBe(
         null
       )
+      expect(
+        (screen.getByTestId("trigger") as HTMLButtonElement).disabled
+      ).toBe(false)
     })
 
     fireEvent.click(screen.getByTestId("trigger"))
@@ -780,7 +859,7 @@ describe("viewer primitives", () => {
     }
 
     render(
-      <ViewerRoot sidebarOpen={false} onSidebarOpenChange={onOpenChange}>
+      <ViewerRoot open={false} onOpenChange={onOpenChange}>
         <CloseAgain />
         <ViewerBody>
           <ViewerSidebar>Sidebar</ViewerSidebar>
@@ -806,7 +885,7 @@ describe("viewer primitives", () => {
     }
 
     render(
-      <ViewerRoot sidebarOpen onSidebarOpenChange={onOpenChange}>
+      <ViewerRoot open onOpenChange={onOpenChange}>
         <OpenAgain />
         <ViewerBody>
           <ViewerSidebar>Sidebar</ViewerSidebar>
@@ -826,7 +905,7 @@ describe("viewer primitives", () => {
     })
 
     render(
-      <ViewerRoot sidebarOpen={false} onSidebarOpenChange={onOpenChange}>
+      <ViewerRoot open={false} onOpenChange={onOpenChange}>
         <ViewerSidebarTrigger data-testid="prevented" onClick={onClick} />
         <ViewerSidebarTrigger data-testid="disabled" disabled />
         <ViewerBody>
@@ -845,7 +924,7 @@ describe("viewer primitives", () => {
 
   it("closes an open overlay sidebar on Escape", () => {
     render(
-      <ViewerRoot defaultSidebarOpen sidebarMode="overlay">
+      <ViewerRoot defaultOpen mode="overlay">
         <ViewerSidebarTrigger data-testid="trigger" />
         <ViewerBody>
           <ViewerSidebar data-testid="sidebar">Sidebar</ViewerSidebar>
@@ -868,7 +947,7 @@ describe("viewer primitives", () => {
 
   it("returns focus to the trigger when Escape closes an overlay sidebar", () => {
     render(
-      <ViewerRoot defaultSidebarOpen sidebarMode="overlay">
+      <ViewerRoot defaultOpen mode="overlay">
         <ViewerSidebarTrigger data-testid="trigger" />
         <ViewerBody>
           <ViewerSidebar data-testid="sidebar">Sidebar</ViewerSidebar>
@@ -892,7 +971,7 @@ describe("viewer primitives", () => {
 
   it("does not trap focus inside an open overlay sidebar", () => {
     render(
-      <ViewerRoot defaultSidebarOpen sidebarMode="overlay">
+      <ViewerRoot defaultOpen mode="overlay">
         <ViewerBody>
           <ViewerSidebar>
             <button type="button">Sidebar action</button>
@@ -915,9 +994,32 @@ describe("viewer primitives", () => {
     )
   })
 
+  it("classifies open overlay sidebars as non-modal", () => {
+    render(
+      <ViewerRoot defaultOpen mode="overlay">
+        <ViewerBody>
+          <ViewerSidebar data-testid="sidebar">
+            <button type="button">Sidebar action</button>
+          </ViewerSidebar>
+          <ViewerSurface data-testid="surface">
+            <button type="button">Surface action</button>
+          </ViewerSurface>
+        </ViewerBody>
+      </ViewerRoot>
+    )
+
+    expect(screen.getByTestId("sidebar").getAttribute("aria-modal")).toBeNull()
+    expect(screen.getByTestId("surface").hasAttribute("inert")).toBe(false)
+    expect(
+      screen
+        .getByRole("button", { name: "Surface action" })
+        .closest('[aria-hidden="true"]')
+    ).toBeNull()
+  })
+
   it("does not close an inline sidebar on Escape", () => {
     render(
-      <ViewerRoot defaultSidebarOpen sidebarMode="inline">
+      <ViewerRoot defaultOpen mode="inline">
         <ViewerSidebarTrigger data-testid="trigger" />
         <ViewerBody>
           <ViewerSidebar data-testid="sidebar">Sidebar</ViewerSidebar>
@@ -936,7 +1038,7 @@ describe("viewer primitives", () => {
 
   it("lets the root trigger close an open overlay sidebar", () => {
     render(
-      <ViewerRoot defaultSidebarOpen sidebarMode="overlay">
+      <ViewerRoot defaultOpen mode="overlay">
         <ViewerSidebarTrigger data-testid="trigger" />
         <ViewerBody>
           <ViewerSidebar data-testid="sidebar">Sidebar</ViewerSidebar>
@@ -958,7 +1060,7 @@ describe("viewer primitives", () => {
 
   it("does not close an open overlay sidebar on inside pointer down", () => {
     render(
-      <ViewerRoot defaultSidebarOpen sidebarMode="overlay">
+      <ViewerRoot defaultOpen mode="overlay">
         <ViewerBody>
           <ViewerSidebar data-testid="sidebar">
             <button type="button">Sidebar action</button>
@@ -977,7 +1079,7 @@ describe("viewer primitives", () => {
 
   it("closes an open overlay sidebar on outside pointer down", () => {
     render(
-      <ViewerRoot defaultSidebarOpen sidebarMode="overlay">
+      <ViewerRoot defaultOpen mode="overlay">
         <ViewerBody>
           <ViewerSidebar data-testid="sidebar">Sidebar</ViewerSidebar>
           <ViewerSurface>
@@ -1039,7 +1141,7 @@ describe("viewer primitives", () => {
 
     try {
       render(
-        <ViewerRoot sidebarInlineBreakpoint={768}>
+        <ViewerRoot inlineBreakpoint={768}>
           <ModeProbe />
           <ViewerBody>
             <ViewerSidebar>Sidebar</ViewerSidebar>
@@ -1137,7 +1239,7 @@ describe("viewer primitives", () => {
 
     try {
       render(
-        <ViewerRoot sidebarInlineBreakpoint={768}>
+        <ViewerRoot inlineBreakpoint={768}>
           <ModeProbe />
           <ViewerBody>
             <ViewerSidebar>Sidebar</ViewerSidebar>
@@ -1209,7 +1311,7 @@ describe("viewer primitives", () => {
 
     try {
       render(
-        <ViewerRoot sidebarInlineBreakpoint={768}>
+        <ViewerRoot inlineBreakpoint={768}>
           <ModeProbe />
           <ViewerBody>
             <ViewerSidebar>Sidebar</ViewerSidebar>

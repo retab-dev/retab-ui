@@ -1,0 +1,15 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "document-anchor",
+  "title": "Document anchor",
+  "description": "Pure document location types used by anchored document interaction, evidence projection, and viewer target adapters.",
+  "files": [
+    {
+      "path": "registry/new-york-v4/ui/document-anchor.ts",
+      "content": "export type PdfAreaAnchor = {\n  kind: \"pdf-area\"\n  pageNumber: number\n  left: number\n  top: number\n  width: number\n  height: number\n}\n\nexport type ImageAreaAnchor = {\n  kind: \"image-area\"\n  frameNumber?: number\n  left: number\n  top: number\n  width: number\n  height: number\n}\n\nexport type TextRangeAnchor = {\n  kind: \"text-range\"\n  startLine: number\n  endLine: number\n}\n\nexport type CsvCellAnchor = {\n  kind: \"csv-cell\"\n  rowIndex: number\n  columnIndex: number\n}\n\nexport type XlsxCellAnchor = {\n  kind: \"xlsx-cell\"\n  sheetIndex: number\n  rowIndex: number\n  columnIndex: number\n}\n\nexport type DocxTargetAnchor = {\n  kind: \"docx-target\"\n  target:\n    | {\n        kind: \"text\"\n        text: string\n      }\n    | {\n        kind: \"cell\"\n        table: number\n        row: number\n        column: number\n      }\n}\n\nexport type DocumentAnchor =\n  | PdfAreaAnchor\n  | ImageAreaAnchor\n  | TextRangeAnchor\n  | CsvCellAnchor\n  | XlsxCellAnchor\n  | DocxTargetAnchor\n",
+      "type": "registry:ui",
+      "target": "@ui/document-anchor.ts"
+    }
+  ],
+  "type": "registry:ui"
+}

@@ -3,47 +3,34 @@
 import * as React from "react"
 import { Key, Loader2 } from "lucide-react"
 
-import {
-  buildColorMap,
-  segmentDisplayLabel,
-  type Segment,
-} from "@/lib/segments"
-import { PageRibbon, type RibbonRow } from "@/components/ui/page-ribbon"
+import { PageRibbon } from "@/components/ui/page-ribbon"
 import { SegmentLegend } from "@/components/ui/segment-legend"
-import { useSegmentInteraction } from "@/components/ui/use-segment-interaction"
+import {
+  SegmentedDocumentProvider,
+  useSegmentedDocumentViewport,
+} from "@/components/ui/segmented-document-provider"
+import { type SegmentViewportController } from "@/components/ui/use-segment-viewport-controller"
 import {
   ViewerBody,
   ViewerHeader,
   ViewerRoot,
   ViewerSurface,
 } from "@/components/ui/viewer"
-import type {
-  PartitionChunk,
-  PartitionResult,
-} from "@/components/viewers/lib/partition-types"
+import type { PartitionResult } from "@/components/viewers/lib/partition-types"
 
-export type PartitionDocumentScrollRequest = {
-  pageNumber: number
-  version: number
-}
+import {
+  createPartitionSegmentedDocumentModel,
+  createPartitionViewerModel,
+  type PartitionViewerModel,
+} from "./partition-viewer-model"
 
-export type PartitionDocumentState = {
-  onCurrentPageChange: (page: number) => void
-  onScrollProgressChange: (progress: number) => void
-  scrollRequest: PartitionDocumentScrollRequest | null
-}
+export type PartitionDocumentControls =
+  SegmentViewportController["documentHandlers"]
 
 type PartitionViewerContextValue = {
-  currentPage: number
-  document: PartitionDocumentState
-  hasOutput: boolean
   isProcessing: boolean
-  legendSegments: Segment[]
-  pageCount: number
-  result: PartitionResult | null
-  rows: RibbonRow[]
-  scrollProgress: number
-  requestPageScroll: (page: number) => void
+  model: PartitionViewerModel
+  viewport: SegmentViewportController
 }
 
 const PartitionViewerContext =
@@ -71,27 +58,25 @@ export function usePartitionViewer() {
 }
 
 export function usePartitionViewerHeader() {
-  const {
-    currentPage,
-    legendSegments,
-    pageCount,
-    requestPageScroll,
-    rows,
-    scrollProgress,
-  } = usePartitionViewer()
+  const { model, viewport } = usePartitionViewer()
 
   return {
-    currentPage,
-    legendSegments,
-    pageCount,
-    requestPageScroll,
-    rows,
-    scrollProgress,
+    currentPage: viewport.model.currentPage,
+    interaction: viewport.interaction,
+    legendSegments: model.legendSegments,
+    navigation: viewport.navigation,
+    pageCount: model.pageCount,
+    rows: model.ribbonRows,
+    scrollProgress: viewport.model.scrollProgress,
   }
 }
 
-export function usePartitionViewerDocument(): PartitionDocumentState {
-  return usePartitionViewer().document
+export function usePartitionViewerDocumentControls(): PartitionDocumentControls {
+  return usePartitionViewer().viewport.documentHandlers
+}
+
+export function usePartitionViewerModel(): PartitionViewerModel {
+  return usePartitionViewer().model
 }
 
 export function PartitionViewerProvider({
@@ -99,106 +84,42 @@ export function PartitionViewerProvider({
   isProcessing = false,
   children,
 }: PartitionViewerProviderProps) {
-  const [currentPdfPage, setCurrentPdfPage] = React.useState(1)
-  const [scrollProgress, setScrollProgress] = React.useState(0)
-  const [scrollRequest, setScrollRequest] =
-    React.useState<PartitionDocumentScrollRequest | null>(null)
-  const hasOutput = !!result && result.output.length > 0
-
-  const voteChoices = React.useMemo(
-    () => result?.consensus.choices ?? [],
-    [result?.consensus.choices]
+  const model = React.useMemo(
+    () => createPartitionViewerModel(result),
+    [result]
+  )
+  const segmentedDocumentModel = React.useMemo(
+    () => createPartitionSegmentedDocumentModel(model),
+    [model]
   )
 
-  const pageCount = React.useMemo(() => {
-    if (!result) return 0
-    return maxChunkPage([
-      ...result.output,
-      ...voteChoices.flatMap((chunks) => chunks),
-    ])
-  }, [result, voteChoices])
-
-  const { legendSegments, rows } = React.useMemo(() => {
-    if (!result)
-      return { legendSegments: [] as Segment[], rows: [] as RibbonRow[] }
-    const colors = buildColorMap([
-      ...result.output.map((c) => c.key),
-      ...voteChoices.flat().map((c) => c.key),
-    ])
-    const seg = (c: PartitionChunk): Segment => ({
-      id: c.key,
-      label: c.key,
-      pages: normalizePages(c.pages),
-      color:
-        colors.get(c.key) ??
-        colors.get(segmentDisplayLabel(c.key)) ??
-        "var(--color-muted-foreground)",
-      index: 0,
-    })
-    const legendByKey = new Map<string, Segment>()
-    for (const c of result.output) {
-      const existing = legendByKey.get(c.key)
-      legendByKey.set(
-        c.key,
-        existing
-          ? {
-              ...existing,
-              pages: normalizePages([...existing.pages, ...c.pages]),
-            }
-          : seg(c)
-      )
-    }
-    const ribbonRows: RibbonRow[] = [
-      ...result.output.map((c, i) => ({ id: `c-${i}`, segments: [seg(c)] })),
-      ...voteChoices.flatMap((chunks, vi) =>
-        chunks.map((c, i) => ({ id: `v${vi}-${i}`, segments: [seg(c)] }))
-      ),
-    ]
-    return { legendSegments: [...legendByKey.values()], rows: ribbonRows }
-  }, [result, voteChoices])
-
-  const requestPageScroll = React.useCallback((page: number) => {
-    const normalizedPage = Math.max(1, Math.floor(page))
-    setScrollRequest((current) => ({
-      pageNumber: normalizedPage,
-      version: (current?.version ?? 0) + 1,
-    }))
-  }, [])
-
-  const document = React.useMemo<PartitionDocumentState>(
-    () => ({
-      onCurrentPageChange: setCurrentPdfPage,
-      onScrollProgressChange: setScrollProgress,
-      scrollRequest,
-    }),
-    [scrollRequest]
+  return (
+    <SegmentedDocumentProvider model={segmentedDocumentModel}>
+      <PartitionViewerContextProvider isProcessing={isProcessing} model={model}>
+        {children}
+      </PartitionViewerContextProvider>
+    </SegmentedDocumentProvider>
   )
+}
+
+function PartitionViewerContextProvider({
+  children,
+  isProcessing,
+  model,
+}: {
+  children: React.ReactNode
+  isProcessing: boolean
+  model: PartitionViewerModel
+}) {
+  const viewport = useSegmentedDocumentViewport()
 
   const value = React.useMemo<PartitionViewerContextValue>(
     () => ({
-      currentPage: Math.max(1, Math.floor(currentPdfPage)),
-      document,
-      hasOutput,
       isProcessing,
-      legendSegments,
-      pageCount,
-      requestPageScroll,
-      result,
-      rows,
-      scrollProgress,
+      model,
+      viewport,
     }),
-    [
-      currentPdfPage,
-      document,
-      hasOutput,
-      isProcessing,
-      legendSegments,
-      pageCount,
-      requestPageScroll,
-      result,
-      rows,
-      scrollProgress,
-    ]
+    [isProcessing, model, viewport]
   )
 
   return (
@@ -208,17 +129,13 @@ export function PartitionViewerProvider({
   )
 }
 
-export function PartitionViewerHeader({
-  className,
-}: {
-  className?: string
-}) {
-  const interaction = useSegmentInteraction()
+export function PartitionViewerHeader({ className }: { className?: string }) {
   const {
     currentPage,
+    interaction,
     legendSegments,
+    navigation,
     pageCount,
-    requestPageScroll,
     rows,
     scrollProgress,
   } = usePartitionViewerHeader()
@@ -232,9 +149,7 @@ export function PartitionViewerHeader({
         segments={legendSegments}
         currentPage={currentPage}
         interaction={interaction}
-        onSelect={(segment) => {
-          if (segment.pages.length) requestPageScroll(segment.pages[0])
-        }}
+        onSelect={navigation.scrollToSegmentStart}
         columns={4}
       />
       <PageRibbon
@@ -244,16 +159,16 @@ export function PartitionViewerHeader({
         currentPage={currentPage}
         scrollProgress={scrollProgress}
         interaction={interaction}
-        onSelectPage={requestPageScroll}
+        onSelectPage={navigation.scrollToPage}
       />
     </ViewerHeader>
   )
 }
 
-export function PartitionViewerDocumentState() {
-  const { hasOutput } = usePartitionViewer()
+export function PartitionViewerDocument() {
+  const { model } = usePartitionViewer()
 
-  if (!hasOutput) return <PartitionViewerEmptyState />
+  if (!model.hasOutput) return <PartitionViewerEmptyState />
 
   return (
     <div className="flex h-full flex-1 items-center justify-center">
@@ -302,26 +217,10 @@ export function PartitionViewer({
         <PartitionViewerHeader />
         <ViewerBody>
           <ViewerSurface>
-            <PartitionViewerDocumentState />
+            <PartitionViewerDocument />
           </ViewerSurface>
         </ViewerBody>
       </ViewerRoot>
     </PartitionViewerProvider>
   )
-}
-
-function normalizePages(pages: number[]): number[] {
-  return Array.from(
-    new Set((pages ?? []).filter((page) => Number.isInteger(page) && page > 0))
-  ).sort((a, b) => a - b)
-}
-
-function maxChunkPage(chunks: PartitionChunk[]): number {
-  let max = 0
-  for (const chunk of chunks) {
-    for (const page of normalizePages(chunk.pages)) {
-      max = Math.max(max, page)
-    }
-  }
-  return max
 }

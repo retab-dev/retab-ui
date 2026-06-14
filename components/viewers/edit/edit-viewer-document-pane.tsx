@@ -10,53 +10,42 @@ import {
   type PdfViewerHandle,
 } from "@/components/ui/pdf-viewer"
 
-import { canPreviewEditViewerDocument } from "./edit-viewer-model"
+import {
+  canPreviewEditViewerDocument,
+  type EditViewerDocumentTarget,
+} from "./edit-viewer-model"
 import { EditViewerErrorState, NoDocumentState } from "./edit-viewer-states"
-import type {
-  EditViewerDocument,
-  EditViewerMode,
-  EditViewerStatus,
-} from "./edit-viewer-types"
+import type { EditViewerDocumentSource } from "./edit-viewer-types"
 
 export function EditViewerDocumentPane({
-  mode,
-  sourceDocument,
-  filledDocument,
+  target,
   renderPageOverlay,
   viewerRef,
-  status,
 }: {
-  mode: EditViewerMode | null
-  sourceDocument?: EditViewerDocument | null
-  filledDocument?: EditViewerDocument | null
+  target: EditViewerDocumentTarget
   renderPageOverlay: (props: PageOverlayProps) => React.ReactNode
   viewerRef: React.RefObject<PdfViewerHandle | null>
-  status: EditViewerStatus
 }) {
-  if (status.state === "error") {
-    return <EditViewerErrorState message={status.message} />
+  if (target.kind === "error") {
+    return <EditViewerErrorState message={target.message} />
   }
 
-  if (mode === "filled" && filledDocument) {
-    return <FilledDocumentRenderer document={filledDocument} />
+  if (target.kind === "filled") {
+    return <FilledDocumentRenderer document={target.document} />
   }
 
-  if ((mode === "source" || mode === "preview") && sourceDocument) {
+  if (target.kind === "source" || target.kind === "preview") {
     return (
       <SourceDocumentRenderer
-        document={sourceDocument}
+        document={target.document}
         renderPageOverlay={renderPageOverlay}
         viewerRef={viewerRef}
-        showPreview={mode === "preview"}
+        showPreview={target.showOverlay}
       />
     )
   }
 
-  if (!mode) {
-    return <NoDocumentState message="No edit view is available." />
-  }
-
-  return <NoDocumentState message="Document preview is unavailable." />
+  return <NoDocumentState message={target.message} />
 }
 
 function SourceDocumentRenderer({
@@ -65,7 +54,7 @@ function SourceDocumentRenderer({
   viewerRef,
   showPreview,
 }: {
-  document: EditViewerDocument
+  document: EditViewerDocumentSource
   renderPageOverlay: (props: PageOverlayProps) => React.ReactNode
   viewerRef: React.RefObject<PdfViewerHandle | null>
   showPreview: boolean
@@ -97,7 +86,7 @@ function SourceDocumentRenderer({
 function FilledDocumentRenderer({
   document,
 }: {
-  document: EditViewerDocument
+  document: EditViewerDocumentSource
 }) {
   const source = useDocumentViewerSource(document)
   if (!source) {
@@ -108,7 +97,7 @@ function FilledDocumentRenderer({
 }
 
 function useDocumentViewerSource(
-  document: EditViewerDocument
+  document: EditViewerDocumentSource
 ): UrlViewerSource | BlobViewerSource | null {
   return React.useMemo(() => {
     const fileName = document.filename ?? "document"

@@ -6,16 +6,15 @@ import type { Source } from "@/lib/document-source"
 import {
   AnchoredDocumentProvider,
   useAnchoredDocument,
-  useAnchoredFieldLink,
   type AnchoredDocumentTarget,
-  type AnchoredItem,
 } from "@/components/ui/anchored-document-viewer"
+import { useAnchoredFieldLink } from "@/components/ui/field-anchor-link"
+import { sourceFieldsToEvidenceModel } from "@/components/ui/source-evidence"
 import {
   SourceFieldList,
   type SourceField,
 } from "@/components/ui/source-field-list"
 import { SourceIndicator } from "@/components/ui/source-indicator"
-import { textAnchorToTarget } from "@/components/ui/text-source"
 import { TextViewer, type TextViewerHandle } from "@/components/ui/text-viewer"
 import {
   ViewerBody,
@@ -36,19 +35,7 @@ const FIELDS = (textSample as TextField[]).map((field) => ({
       ? `Line ${field.source.anchor.line_start}`
       : undefined,
 }))
-const ITEMS: AnchoredItem[] = FIELDS.map((field) => {
-  const target = textAnchorToTarget(field.source.anchor)
-  return {
-    id: field.key,
-    anchor: target
-      ? {
-          kind: "text-range",
-          startLine: target.start,
-          endLine: target.end,
-        }
-      : null,
-  }
-})
+const EVIDENCE = sourceFieldsToEvidenceModel(FIELDS)
 
 /**
  * Text sources block — values extracted from a log file, linked to the lines
@@ -62,7 +49,7 @@ export function TextSourcesBlock() {
 
   return (
     <AnchoredDocumentProvider
-      items={ITEMS}
+      items={EVIDENCE.anchoredItems}
       target={target}
       initialItemId={FIELDS[0]?.key}
     >

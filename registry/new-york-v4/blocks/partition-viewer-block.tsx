@@ -1,19 +1,16 @@
 "use client"
 
-import * as React from "react"
-
 import {
   PdfViewerHeader,
   PdfViewerPages,
   PdfViewerProvider,
-  type PdfViewerHandle,
 } from "@/components/ui/pdf-viewer"
 import { ViewerBody, ViewerRoot, ViewerSurface } from "@/components/ui/viewer"
 import type { PartitionResult } from "@/components/viewers/lib/partition-types"
 import {
   PartitionViewerHeader,
   PartitionViewerProvider,
-  usePartitionViewerDocument,
+  usePartitionViewerDocumentControls,
 } from "@/components/viewers/partition/partition-viewer"
 
 const PDF_URL = "/samples/an-image-is-worth-16x16-words.pdf"
@@ -66,20 +63,14 @@ export function PartitionViewerBlock() {
 }
 
 function PartitionSourceDocument() {
-  const document = usePartitionViewerDocument()
-  const viewerRef = React.useRef<PdfViewerHandle | null>(null)
-
-  React.useEffect(() => {
-    if (!document.scrollRequest) return
-    viewerRef.current?.scrollToPage(document.scrollRequest.pageNumber)
-  }, [document.scrollRequest])
+  const controls = usePartitionViewerDocumentControls()
 
   return (
     <PdfViewerPages
-      ref={viewerRef}
+      ref={controls.setDocumentHandle}
       bare
-      onVisiblePageChange={document.onCurrentPageChange}
-      onScrollProgressChange={document.onScrollProgressChange}
+      onVisiblePageChange={controls.onCurrentPageChange}
+      onScrollProgressChange={controls.onScrollProgressChange}
       className="h-full"
     />
   )

@@ -28,8 +28,7 @@ flowchart TD
     PropsAdapter["createJsonTableDataCellProps"]
     DataCell["DataCell"]
     Display["DataCellDisplay"]
-    Text["DataCellTextControl"]
-    Number["DataCellNumberControl"]
+    Input["DataCellInputControl"]
     Boolean["DataCellBooleanControl"]
     Select["DataCellSelectControl"]
     Picker["DataCellPickerControl"]
@@ -60,16 +59,14 @@ flowchart TD
   Cell -->|primitive display/edit| PrimitiveAdapter --> PropsAdapter --> DataCell
   DataCell -. "active change" .-> VirtualTable
   DataCell -->|inactive| Display
-  DataCell -->|text| Text
-  DataCell -->|number/integer| Number
+  DataCell -->|text / number / integer| Input
   DataCell -->|boolean| Boolean
   DataCell -->|enum select| Select
   DataCell -->|date/time| Picker
 
   Cell -->|object/array editing| ActiveStructured --> StructuredCell
 
-  Text --> Normalize
-  Number --> Normalize
+  Input --> Normalize
   Boolean --> Normalize
   Select --> Normalize
   Picker --> Normalize

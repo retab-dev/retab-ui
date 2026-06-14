@@ -46,6 +46,10 @@ type StressLine = {
   far_note: string
   far_status: "new" | "reviewed" | "archived"
   far_date: string
+  far_details: {
+    reviewer: string
+    priority: number
+  }
 }
 
 const stressSchema: JSONSchema7 = {
@@ -77,6 +81,14 @@ const stressSchema: JSONSchema7 = {
             enum: ["new", "reviewed", "archived"],
           },
           far_date: { type: "string", format: "date" },
+          far_details: {
+            type: "object",
+            title: "Far details",
+            properties: {
+              reviewer: { type: "string" },
+              priority: { type: "number" },
+            },
+          },
         },
       },
     },
@@ -128,6 +140,10 @@ function expectedStressLine(index: number): StressLine {
     far_note: `far note ${index}`,
     far_status: "new",
     far_date: "2024-01-04",
+    far_details: {
+      reviewer: `reviewer-${index % 3}`,
+      priority: index + 10,
+    },
   }
 }
 
@@ -459,6 +475,7 @@ const wideVisiblePaths = [
   "lines.*.far_note",
   "lines.*.far_status",
   "lines.*.far_date",
+  "lines.*.far_details",
 ]
 
 async function expectNoPickerPortal() {
@@ -533,6 +550,7 @@ describe("json table virtualization stress hardening", () => {
       await waitForCell(view.container, "lines.0.far_note")
       expect(queryCell(view.container, "lines.0.far_status")).toBeTruthy()
       expect(queryCell(view.container, "lines.0.far_date")).toBeTruthy()
+      expect(queryCell(view.container, "lines.0.far_details")).toBeTruthy()
       expect(queryCell(view.container, "lines.0.name")).toBeNull()
       expect(row(view.container, 0).getAttribute("aria-rowindex")).toBe("1")
       expect(
@@ -546,6 +564,11 @@ describe("json table virtualization stress hardening", () => {
       expect(
         cell(view.container, "lines.0.far_date").getAttribute("aria-colindex")
       ).toBe("15")
+      expect(
+        cell(view.container, "lines.0.far_details").getAttribute(
+          "aria-colindex"
+        )
+      ).toBe("16")
       expect(
         view.container.querySelector('thead th[aria-colindex="13"]')
       ).toBeTruthy()
@@ -650,6 +673,45 @@ describe("json table virtualization stress hardening", () => {
         "value",
         "pending far note"
       )
+    } finally {
+      restoreAnimationFrame()
+    }
+  })
+
+  it("preserves a far structured session across horizontal unmount and remount", async () => {
+    const restoreAnimationFrame = installSynchronousAnimationFrame()
+    const view = renderStressTable({
+      rowCount: 4,
+      visiblePaths: wideVisiblePaths,
+      overscan: 1,
+      jumpOverscan: 1,
+    })
+
+    try {
+      await waitForCell(view.container, "lines.0.name")
+      setViewportHeight(view.container, 64)
+      setViewportWidth(view.container, 320)
+      await scrollToColumn(view.container, 10)
+      await waitForCell(view.container, "lines.0.far_details")
+
+      pointerDownCell(view.container, "lines.0.far_details")
+      expect(await view.findByRole("dialog")).toBeTruthy()
+
+      await scrollToColumn(view.container, 0)
+      await waitFor(() =>
+        expect(queryCell(view.container, "lines.0.far_details")).toBeNull()
+      )
+      await waitFor(() => expect(view.queryByRole("dialog")).toBeNull())
+
+      await scrollToColumn(view.container, 10)
+      await waitForCell(view.container, "lines.0.far_details")
+
+      expect(await view.findByRole("dialog")).toBeTruthy()
+      expect(
+        cell(view.container, "lines.0.far_details").getAttribute(
+          "data-active"
+        )
+      ).toBe("true")
     } finally {
       restoreAnimationFrame()
     }

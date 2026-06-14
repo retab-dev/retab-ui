@@ -11,10 +11,25 @@ Renders a Retab partition result: keyed chunks, each owning a set of pages.
 
 Compose the partition surface from `PartitionViewerProvider`,
 `PartitionViewerHeader`, and a visible source document surface. Source documents
-subscribe to page and scroll synchronization with `usePartitionViewerDocument`.
+register their document handle and page callbacks with
+`usePartitionViewerDocumentControls`.
 
 ```tsx
-<PartitionViewerProvider result={result}>
+function SourceDocument() {
+  const controls = usePartitionViewerDocumentControls()
+
+  return (
+    <PdfViewer
+      ref={controls.setDocumentHandle}
+      source={source}
+      bare
+      onVisiblePageChange={controls.onCurrentPageChange}
+      onScrollProgressChange={controls.onScrollProgressChange}
+    />
+  )
+}
+
+;<PartitionViewerProvider result={result}>
   <ViewerRoot>
     <PartitionViewerHeader />
     <ViewerBody>

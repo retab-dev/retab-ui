@@ -71,6 +71,7 @@ export type PretextMarkdownBlockKind =
 
 export interface PretextMarkdownDocument {
   blocks: PretextMarkdownBlock[]
+  footnoteDefinitionsMarkdown: string
   frontmatter?: PretextMarkdownFrontmatter
   headings: PretextMarkdownHeading[]
   chunks: PretextMarkdownChunk[]
@@ -161,9 +162,12 @@ export function createPretextMarkdownDocument(
       : undefined
   const referenceDefinitionsMarkdown =
     collectPretextMarkdownReferenceDefinitions(markdown)
+  const footnoteDefinitionsMarkdown =
+    collectPretextMarkdownFootnoteDefinitions(markdown)
 
   return {
     blocks,
+    footnoteDefinitionsMarkdown,
     ...(frontmatter ? { frontmatter } : {}),
     headings,
     chunks,
@@ -602,6 +606,16 @@ function collectPretextMarkdownReferenceDefinitions(markdown: string) {
   } catch {
     return ""
   }
+}
+
+function collectPretextMarkdownFootnoteDefinitions(markdown: string) {
+  const frontmatter = extractFrontmatter(markdown)
+  const body = frontmatter ? frontmatter.body : markdown
+
+  return splitTextLines(body)
+    .map((line) => line.trimEnd())
+    .filter((line) => /^\[\^[^\]\r\n]+\]:[ \t]?.+/u.test(line))
+    .join("\n")
 }
 
 function countLineBreaks(text: string) {

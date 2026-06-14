@@ -9,6 +9,8 @@ import type { BlobViewerSource } from "@/lib/viewer-source"
 import {
   useDropzone,
   type DropzoneFileItem,
+  type DropzoneFileRejection,
+  type DropzoneIntake,
   type UseDropzoneReturn,
 } from "@/components/ui/dropzone"
 import { formatFileSize } from "@/components/ui/file-size-format"
@@ -22,136 +24,235 @@ import {
   ViewerSurface,
 } from "@/components/ui/viewer"
 
-const DEFAULT_UPLOADABLE_VIEWER_ACCEPT =
+const DEFAULT_FILE_INTAKE_VIEWER_ACCEPT =
   ".pdf,.png,.jpg,.jpeg,.csv,.txt,.md,.json,application/pdf,image/*,text/*,text/csv,application/json"
 
-export interface UploadableFileViewerProviderProps {
+export interface FileIntakeViewerProviderProps {
   accept?: string
+  defaultFiles?: DropzoneFileItem[]
+  disabled?: boolean
+  files?: DropzoneFileItem[]
+  maxSize?: number
+  onFilesChange?: (files: DropzoneFileItem[]) => void
+  onIntake?: (intake: DropzoneIntake) => void
   children: React.ReactNode
 }
 
-type UploadableFileViewerContextValue = {
-  dropzone: UseDropzoneReturn
-  selectedFile: DropzoneFileItem | undefined
+export type FileIntakeViewerModel = {
+  canClear: boolean
+  hasFile: boolean
+  isDragging: boolean
+  rejection: FileIntakeViewerRejection | null
+  selectedFile: DropzoneFileItem | null
+  selectedFileSummary: FileIntakeSummary | null
   viewerSource: BlobViewerSource | null
 }
 
-export type UploadableFileViewerRootState = {
-  dropzone: UseDropzoneReturn
+export type FileIntakeSummary = {
+  file: File
+  fileName: string
+  fileSizeLabel: string
+  fileTypeLabel: string
 }
 
-export type UploadableFileViewerHeaderState = {
-  dropzone: UseDropzoneReturn
-  selectedFile: DropzoneFileItem | undefined
+export type FileIntakeViewerRejection = {
+  title: string
+  description: string
 }
 
-export type UploadableFileViewerSummaryState = {
-  dropzone: UseDropzoneReturn
-  selectedFile: DropzoneFileItem | undefined
+export type FileIntakeViewerActions = {
+  clearFile: () => void
+  getRootDropProps: UseDropzoneReturn["getRootProps"]
+  getFileInputProps: UseDropzoneReturn["getInputProps"]
+  getUploadButtonProps: UseDropzoneReturn["getButtonProps"]
+  getReplaceButtonProps: UseDropzoneReturn["getButtonProps"]
+  getEmptySurfaceProps: UseDropzoneReturn["getTriggerProps"]
 }
 
-export type UploadableFileViewerContentState = {
-  dropzone: UseDropzoneReturn
+type FileIntakeViewerContextValue = {
+  actions: FileIntakeViewerActions
+  model: FileIntakeViewerModel
+}
+
+export type FileIntakeViewerRootState = {
+  getFileInputProps: FileIntakeViewerActions["getFileInputProps"]
+  getRootDropProps: FileIntakeViewerActions["getRootDropProps"]
+  isDragging: boolean
+}
+
+export type FileIntakeViewerHeaderState = {
+  canClear: boolean
+  clearFile: FileIntakeViewerActions["clearFile"]
+  getReplaceButtonProps: FileIntakeViewerActions["getReplaceButtonProps"]
+  getUploadButtonProps: FileIntakeViewerActions["getUploadButtonProps"]
+  selectedFileSummary: FileIntakeSummary | null
+}
+
+export type FileIntakeViewerSidebarState = {
+  getUploadButtonProps: FileIntakeViewerActions["getUploadButtonProps"]
+  selectedFileSummary: FileIntakeSummary | null
+}
+
+export type FileIntakeViewerSurfaceState = {
+  getEmptySurfaceProps: FileIntakeViewerActions["getEmptySurfaceProps"]
+  rejection: FileIntakeViewerRejection | null
   viewerSource: BlobViewerSource | null
 }
 
-const UploadableFileViewerContext =
-  React.createContext<UploadableFileViewerContextValue | null>(null)
+const FileIntakeViewerContext =
+  React.createContext<FileIntakeViewerContextValue | null>(null)
 
-export function useUploadableFileViewer() {
-  const context = React.useContext(UploadableFileViewerContext)
+export function useFileIntakeViewer() {
+  const context = React.useContext(FileIntakeViewerContext)
   if (!context) {
     throw new Error(
-      "useUploadableFileViewer must be used within UploadableFileViewerProvider."
+      "useFileIntakeViewer must be used within FileIntakeViewerProvider."
     )
   }
   return context
 }
 
-export function useUploadableFileViewerRoot(): UploadableFileViewerRootState {
-  const { dropzone } = useUploadableFileViewer()
-  return { dropzone }
+export function useFileIntakeViewerRoot(): FileIntakeViewerRootState {
+  const { actions, model } = useFileIntakeViewer()
+  return {
+    getFileInputProps: actions.getFileInputProps,
+    getRootDropProps: actions.getRootDropProps,
+    isDragging: model.isDragging,
+  }
 }
 
-export function useUploadableFileViewerHeader(): UploadableFileViewerHeaderState {
-  const { dropzone, selectedFile } = useUploadableFileViewer()
-  return { dropzone, selectedFile }
+export function useFileIntakeViewerHeader(): FileIntakeViewerHeaderState {
+  const { actions, model } = useFileIntakeViewer()
+  return {
+    canClear: model.canClear,
+    clearFile: actions.clearFile,
+    getReplaceButtonProps: actions.getReplaceButtonProps,
+    getUploadButtonProps: actions.getUploadButtonProps,
+    selectedFileSummary: model.selectedFileSummary,
+  }
 }
 
-export function useUploadableFileViewerSummary(): UploadableFileViewerSummaryState {
-  const { dropzone, selectedFile } = useUploadableFileViewer()
-  return { dropzone, selectedFile }
+export function useFileIntakeViewerSidebar(): FileIntakeViewerSidebarState {
+  const { actions, model } = useFileIntakeViewer()
+  return {
+    getUploadButtonProps: actions.getUploadButtonProps,
+    selectedFileSummary: model.selectedFileSummary,
+  }
 }
 
-export function useUploadableFileViewerContent(): UploadableFileViewerContentState {
-  const { dropzone, viewerSource } = useUploadableFileViewer()
-  return { dropzone, viewerSource }
+export function useFileIntakeViewerSurface(): FileIntakeViewerSurfaceState {
+  const { actions, model } = useFileIntakeViewer()
+  return {
+    getEmptySurfaceProps: actions.getEmptySurfaceProps,
+    rejection: model.rejection,
+    viewerSource: model.viewerSource,
+  }
 }
 
-export function UploadableFileViewerProvider({
-  accept = DEFAULT_UPLOADABLE_VIEWER_ACCEPT,
+export function FileIntakeViewerProvider({
+  accept = DEFAULT_FILE_INTAKE_VIEWER_ACCEPT,
+  defaultFiles,
+  disabled,
+  files,
+  maxSize,
+  onFilesChange,
+  onIntake,
   children,
-}: UploadableFileViewerProviderProps) {
+}: FileIntakeViewerProviderProps) {
   const dropzone = useDropzone({
     accept,
+    defaultFiles,
+    disabled,
+    files,
     maxFiles: 1,
+    maxSize,
     multiple: false,
+    onFilesChange,
+    onIntake,
   })
-  const selectedFile = dropzone.files[0]
-  const viewerSource = React.useMemo(() => {
-    if (!selectedFile) return null
-
-    return blobSource(selectedFile.file, {
-      fileName: selectedFile.file.name,
-      identityKey: selectedFile.id,
-      mimeType: selectedFile.file.type || undefined,
-    })
-  }, [selectedFile])
-  const value = React.useMemo<UploadableFileViewerContextValue>(
+  const model = React.useMemo<FileIntakeViewerModel>(
+    () =>
+      createFileIntakeViewerModel({
+        files: dropzone.files,
+        isDisabled: dropzone.isDisabled,
+        isDragging: dropzone.isDragging,
+        lastIntake: dropzone.lastIntake,
+      }),
+    [
+      dropzone.files,
+      dropzone.isDisabled,
+      dropzone.isDragging,
+      dropzone.lastIntake,
+    ]
+  )
+  const actions = React.useMemo<FileIntakeViewerActions>(
     () => ({
-      dropzone,
-      selectedFile,
-      viewerSource,
+      clearFile: dropzone.clearFiles,
+      getRootDropProps: dropzone.getRootProps,
+      getFileInputProps: dropzone.getInputProps,
+      getUploadButtonProps: dropzone.getButtonProps,
+      getReplaceButtonProps: dropzone.getButtonProps,
+      getEmptySurfaceProps: dropzone.getTriggerProps,
     }),
-    [dropzone, selectedFile, viewerSource]
+    [
+      dropzone.clearFiles,
+      dropzone.getButtonProps,
+      dropzone.getInputProps,
+      dropzone.getRootProps,
+      dropzone.getTriggerProps,
+    ]
+  )
+  const value = React.useMemo<FileIntakeViewerContextValue>(
+    () => ({
+      actions,
+      model,
+    }),
+    [actions, model]
   )
 
   return (
-    <UploadableFileViewerContext.Provider value={value}>
-      <section {...dropzone.getRootProps({ className: "contents" })}>
-        <input {...dropzone.getInputProps({ className: "hidden" })} />
-        {children}
-      </section>
-    </UploadableFileViewerContext.Provider>
+    <FileIntakeViewerContext.Provider value={value}>
+      {children}
+    </FileIntakeViewerContext.Provider>
   )
 }
 
-export function UploadableFileViewerRoot({
+export function FileIntakeViewerRoot({
   children,
   className,
 }: {
   children: React.ReactNode
   className?: string
 }) {
-  const { dropzone } = useUploadableFileViewerRoot()
+  const { getFileInputProps, getRootDropProps, isDragging } =
+    useFileIntakeViewerRoot()
 
   return (
-    <ViewerRoot
-      bare
-      defaultSidebarOpen
-      className={cn(
-        "min-h-[30rem] rounded-lg border bg-background text-foreground transition-colors",
-        dropzone.isDragging && "border-foreground/40 bg-accent/35",
-        className
-      )}
-    >
-      {children}
-    </ViewerRoot>
+    <section {...getRootDropProps({ className: "contents" })}>
+      <input {...getFileInputProps({ className: "hidden" })} />
+      <ViewerRoot
+        bare
+        defaultOpen
+        className={cn(
+          "min-h-[30rem] rounded-lg border bg-background text-foreground transition-colors",
+          isDragging && "border-foreground/40 bg-accent/35",
+          className
+        )}
+      >
+        {children}
+      </ViewerRoot>
+    </section>
   )
 }
 
-export function UploadableFileViewerHeader() {
-  const { dropzone, selectedFile } = useUploadableFileViewerHeader()
+export function FileIntakeViewerHeader() {
+  const {
+    canClear,
+    clearFile,
+    getReplaceButtonProps,
+    getUploadButtonProps,
+    selectedFileSummary,
+  } = useFileIntakeViewerHeader()
 
   return (
     <ViewerHeader className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
@@ -160,57 +261,64 @@ export function UploadableFileViewerHeader() {
         <div className="min-w-0">
           <div className="flex items-center gap-2 text-sm font-medium">
             <Eye className="size-4 text-muted-foreground" aria-hidden />
-            Uploader + viewer
+            File preview
           </div>
-          {selectedFile ? (
+          {selectedFileSummary ? (
             <div className="mt-1 truncate text-xs text-muted-foreground">
-              {selectedFile.file.name}
+              {selectedFileSummary.fileName}
             </div>
           ) : null}
         </div>
       </div>
       <div className="flex items-center gap-2">
-        {selectedFile ? (
+        {selectedFileSummary && canClear ? (
           <button
             type="button"
             className="grid size-8 place-items-center rounded-md border bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
-            aria-label={`Remove ${selectedFile.file.name}`}
-            onClick={dropzone.clearFiles}
+            aria-label={`Remove ${selectedFileSummary.fileName}`}
+            onClick={clearFile}
           >
             <X className="size-4" aria-hidden />
           </button>
         ) : null}
         <button
-          {...dropzone.getButtonProps({
+          {...(selectedFileSummary
+            ? getReplaceButtonProps
+            : getUploadButtonProps)({
+            "aria-label": selectedFileSummary
+              ? `Replace ${selectedFileSummary.fileName}`
+              : "Upload file",
             className:
               "inline-flex h-8 cursor-pointer items-center gap-2 rounded-md border bg-background px-3 text-xs font-medium outline-none hover:bg-muted focus-visible:ring-[3px] focus-visible:ring-ring/24",
           })}
         >
           <Upload className="size-3.5" aria-hidden />
-          {selectedFile ? "Replace" : "Upload file"}
+          {selectedFileSummary ? "Replace" : "Upload file"}
         </button>
       </div>
     </ViewerHeader>
   )
 }
 
-export function UploadableFileViewerSummary() {
-  const { dropzone, selectedFile } = useUploadableFileViewerSummary()
+export function FileIntakeViewerSidebar() {
+  const { getUploadButtonProps, selectedFileSummary } =
+    useFileIntakeViewerSidebar()
 
   return (
     <ViewerSidebar
       aria-label="Selected file"
       width="16rem"
-      className="border-b bg-muted/20 p-4 md:border-r md:border-b-0"
+      className="border-b bg-background p-4 md:border-r md:border-b-0"
     >
-      {selectedFile ? (
-        <UploadableFileViewerFileCard fileItem={selectedFile} />
+      {selectedFileSummary ? (
+        <FileIntakeViewerFileCard fileSummary={selectedFileSummary} />
       ) : (
-        <UploadableFileViewerNoFile />
+        <FileIntakeViewerNoFile />
       )}
-      {!selectedFile ? (
+      {!selectedFileSummary ? (
         <button
-          {...dropzone.getButtonProps({
+          {...getUploadButtonProps({
+            "aria-label": "Upload file",
             className:
               "mt-4 inline-flex h-8 w-fit cursor-pointer items-center gap-2 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground outline-none focus-visible:ring-[3px] focus-visible:ring-ring/24",
           })}
@@ -223,12 +331,13 @@ export function UploadableFileViewerSummary() {
   )
 }
 
-export function UploadableFileViewerContent({
+export function FileIntakeViewerSurface({
   renderViewer,
 }: {
   renderViewer?: (source: BlobViewerSource) => React.ReactNode
 }) {
-  const { dropzone, viewerSource } = useUploadableFileViewerContent()
+  const { getEmptySurfaceProps, rejection, viewerSource } =
+    useFileIntakeViewerSurface()
 
   return (
     <ViewerSurface className="min-h-[24rem]">
@@ -243,40 +352,43 @@ export function UploadableFileViewerContent({
           />
         )
       ) : (
-        <UploadableFileViewerEmptyState dropzone={dropzone} />
+        <FileIntakeViewerEmptyState
+          getEmptySurfaceProps={getEmptySurfaceProps}
+          rejection={rejection}
+        />
       )}
     </ViewerSurface>
   )
 }
 
-function UploadableFileViewerFileCard({
-  fileItem,
+function FileIntakeViewerFileCard({
+  fileSummary,
 }: {
-  fileItem: DropzoneFileItem
+  fileSummary: FileIntakeSummary
 }) {
   return (
     <div className="space-y-3">
       <FileThumbnail
-        file={fileItem.file}
+        file={fileSummary.file}
         previewAspectRatio={1}
         className="size-20 bg-background shadow-sm"
       />
       <div className="min-w-0">
         <div className="line-clamp-3 text-sm leading-snug font-medium break-words">
-          {fileItem.file.name}
+          {fileSummary.fileName}
         </div>
         <div className="mt-1 text-xs text-muted-foreground">
-          {formatFileSize(fileItem.file.size)}
+          {fileSummary.fileSizeLabel}
         </div>
       </div>
       <div className="rounded-md border bg-background p-2 text-xs text-muted-foreground">
-        {fileItem.file.type || "Unknown type"}
+        {fileSummary.fileTypeLabel}
       </div>
     </div>
   )
 }
 
-function UploadableFileViewerNoFile() {
+function FileIntakeViewerNoFile() {
   return (
     <div>
       <div className="text-sm font-medium">No file selected</div>
@@ -287,14 +399,17 @@ function UploadableFileViewerNoFile() {
   )
 }
 
-function UploadableFileViewerEmptyState({
-  dropzone,
+function FileIntakeViewerEmptyState({
+  getEmptySurfaceProps,
+  rejection,
 }: {
-  dropzone: UseDropzoneReturn
+  getEmptySurfaceProps: FileIntakeViewerActions["getEmptySurfaceProps"]
+  rejection: FileIntakeViewerRejection | null
 }) {
   return (
     <div
-      {...dropzone.getTriggerProps({
+      {...getEmptySurfaceProps({
+        "aria-label": "Upload file",
         className:
           "grid h-full min-h-[26rem] cursor-pointer place-items-center rounded-md border border-dashed bg-background p-6 text-center outline-none transition-colors hover:bg-muted/30 focus-visible:ring-[3px] focus-visible:ring-ring/24",
       })}
@@ -307,7 +422,100 @@ function UploadableFileViewerEmptyState({
         <div className="mt-1 text-xs text-muted-foreground">
           Drop a file here to open it in the viewer.
         </div>
+        {rejection ? (
+          <div className="mt-4 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+            <div className="font-medium">{rejection.title}</div>
+            <div className="mt-1 text-destructive/80">
+              {rejection.description}
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   )
+}
+
+function getSelectedFileIntakeFile(files: DropzoneFileItem[]) {
+  return files[0] ?? null
+}
+
+function createFileIntakeSummary(
+  fileItem: DropzoneFileItem | null
+): FileIntakeSummary | null {
+  if (!fileItem) return null
+
+  return {
+    file: fileItem.file,
+    fileName: fileItem.file.name,
+    fileSizeLabel: formatFileSize(fileItem.file.size),
+    fileTypeLabel: fileItem.file.type || "Unknown type",
+  }
+}
+
+function createFileIntakeViewerSource(
+  fileItem: DropzoneFileItem
+): BlobViewerSource {
+  return blobSource(fileItem.file, {
+    fileName: fileItem.file.name,
+    identityKey: fileItem.id,
+    mimeType: fileItem.file.type || undefined,
+  })
+}
+
+function createFileIntakeViewerModel(
+  dropzone: Pick<
+    UseDropzoneReturn,
+    "files" | "isDragging" | "isDisabled" | "lastIntake"
+  >
+): FileIntakeViewerModel {
+  const selectedFile = getSelectedFileIntakeFile(dropzone.files)
+  const selectedFileSummary = createFileIntakeSummary(selectedFile)
+  const viewerSource = selectedFile
+    ? createFileIntakeViewerSource(selectedFile)
+    : null
+
+  return {
+    canClear: selectedFile !== null && !dropzone.isDisabled,
+    hasFile: selectedFile !== null,
+    isDragging: dropzone.isDragging,
+    rejection: createFileIntakeViewerRejection(dropzone.lastIntake),
+    selectedFile,
+    selectedFileSummary,
+    viewerSource,
+  }
+}
+
+function createFileIntakeViewerRejection(
+  intake: DropzoneIntake
+): FileIntakeViewerRejection | null {
+  if (intake.acceptedFiles.length > 0 || intake.fileRejections.length === 0) {
+    return null
+  }
+
+  return describeFileIntakeRejection(intake.fileRejections[0])
+}
+
+function describeFileIntakeRejection(
+  rejection: DropzoneFileRejection
+): FileIntakeViewerRejection {
+  if (rejection.reason === "file-invalid-type") {
+    return {
+      title: "Unsupported file type",
+      description: `${rejection.file.name} cannot be opened here.`,
+    }
+  }
+
+  if (rejection.reason === "file-too-large") {
+    return {
+      title: "File is too large",
+      description: `${rejection.file.name} must be ${formatFileSize(
+        rejection.maxSize
+      )} or smaller.`,
+    }
+  }
+
+  return {
+    title: "Only one file can be previewed",
+    description: `${rejection.file.name} was not added.`,
+  }
 }

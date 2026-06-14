@@ -232,3 +232,105 @@ scenarios because the header remains a material part of the mounted surface.
 The next performance work should distinguish true header cost from body/global
 selector invalidation with trace-backed attribution before making another
 structural cut.
+
+## Implemented Cut: Trace Attribution Mode
+
+The primitive interaction profiler now supports trace capture:
+
+```sh
+JSON_TABLE_PROFILE_TRACE=1 PROFILE_OUTPUT=tmp/json-table-primitive-interactions-profile.trace.json node scripts/profile-json-table-primitive-interactions.mjs --assert
+```
+
+Trace mode wraps each measured scenario with Chrome `Tracing.start` /
+`Tracing.end` and records a compact per-scenario summary:
+
+- total timed trace duration
+- style, layout, and script buckets
+- top timed events
+- top style events
+- top layout events
+- invalidation events when Chrome reports them
+
+The budget verifier prints `traceStyle=`, `traceLayout=`, and `traceScript=`
+when the input report contains trace data. Normal elapsed timing is sampled
+before trace shutdown, so trace collection overhead does not inflate the normal
+scenario `elapsed` value.
+
+Representative trace proof from the large `open-enum` scenario:
+
+- regular profiler metrics: `elapsed=129.3ms`, `style=74.3ms`
+- trace buckets: `traceStyle=298.8ms`, `traceLayout=155.6ms`
+- top style events included Chrome style-tree work such as
+  `Blink.Style.UpdateTime`, `Document::updateStyle`, and
+  `Document::recalcStyle`
+
+The trace confirms the remaining slow path is browser style/layout work. It
+does not yet identify a single CSS selector; Chrome's exposed trace events are
+useful for event-family attribution, not exact selector blame.
+
+Focused repeated trace proof from a quiet local profile server:
+
+```sh
+PROFILE_URL=http://localhost:3100/json-table-profile \
+JSON_TABLE_PROFILE_WARMUP=1 \
+JSON_TABLE_PROFILE_REPEAT=3 \
+JSON_TABLE_PROFILE_TRACE=1 \
+JSON_TABLE_PROFILE_TARGETS=large \
+JSON_TABLE_PROFILE_SCENARIOS=open-enum,open-date,switch-dirty-cell,open-far-enum,open-far-date,commit-far-text \
+PROFILE_OUTPUT=tmp/json-table-primitive-interactions-profile.trace-repeat.json \
+node scripts/profile-json-table-primitive-interactions.mjs
+```
+
+| Profile | Scenario            | Runs | Elapsed median | Elapsed p90 | Elapsed worst | Style median | Style p90 | Style worst | Trace style p90 |
+| ------- | ------------------- | ---- | -------------- | ----------- | ------------- | ------------ | --------- | ----------- | --------------- |
+| `large` | `open-enum`         | 3    | 141.2ms        | 156.5ms     | 156.5ms       | 66.9ms       | 68.8ms    | 68.8ms      | 276.0ms         |
+| `large` | `open-date`         | 3    | 230.3ms        | 233.0ms     | 233.0ms       | 69.0ms       | 69.1ms    | 69.1ms      | 279.2ms         |
+| `large` | `switch-dirty-cell` | 3    | 151.1ms        | 152.2ms     | 152.2ms       | 69.4ms       | 69.8ms    | 69.8ms      | 209.7ms         |
+| `large` | `open-far-enum`     | 3    | 125.3ms        | 125.3ms     | 125.3ms       | 58.7ms       | 60.9ms    | 60.9ms      | 245.7ms         |
+| `large` | `open-far-date`     | 3    | 135.4ms        | 167.6ms     | 167.6ms       | 61.9ms       | 62.1ms    | 62.1ms      | 253.1ms         |
+| `large` | `commit-far-text`   | 3    | 161.0ms        | 168.0ms     | 168.0ms       | 66.3ms       | 67.9ms    | 67.9ms      | 208.4ms         |
+
+The latest repeated trace lowers the measured style bucket materially from the
+older repeated run. The normal profiler style cost is now about 61-70ms p90 on
+the targeted large interactions. The trace style bucket remains much higher
+because Chrome trace accounting double-counts nested timeline events; use it
+for attribution, not as a latency budget.
+
+Top style event families in the latest measured run are still browser style
+tree work:
+
+- `Blink.Style.UpdateTime`
+- `Document::updateStyle`
+- `Document::recalcStyle`
+- `LocalFrameView::UpdateStyleAndLayout`
+- `LocalFrameView::RunStyleAndLayoutLifecyclePhases`
+
+No measured trace points to React table rerender fanout. The next structural
+optimization needs more specific selector or mounted-surface evidence before it
+is justified.
+
+Budget consequence:
+
+- `components/json-table/json-table-performance-budget.json` now checks the
+  repeated-trace target set directly: `large/open-enum`, `large/open-date`,
+  `large/switch-dirty-cell`, `large/open-far-enum`, `large/open-far-date`, and
+  `large/commit-far-text`.
+- Each of those large-profile scenarios has `maxStyleDurationMs <= 120`, which
+  leaves headroom above the repeated p90 style bucket while rejecting the older
+  200ms-style baseline.
+- `tmp/json-table-primitive-interactions-profile.json` was refreshed from the
+  current warmed fresh profile so saved-budget verification exercises the same
+  current architecture that produced these findings.
+
+## Implemented Proof: Browser Header/Body Alignment
+
+The browser accessibility verifier now checks virtualized column geometry in
+addition to accessibility-tree semantics. On the large profile it scrolls to the
+left, middle, and far horizontal positions, then compares each mounted body
+cell against the matching non-hidden leaf header cell by absolute
+`aria-colindex`.
+
+The check fails if the header and body differ by more than two pixels in left
+edge or width. This gives a real-browser proof that the header column window
+and body column window remain aligned after horizontal virtualization, without
+depending on screenshot review.

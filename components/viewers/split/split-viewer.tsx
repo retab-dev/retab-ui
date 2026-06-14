@@ -5,25 +5,36 @@ import { type ReactNode } from "react"
 import { Loader2, Scissors } from "lucide-react"
 
 import { segmentsPageCount, toSegments } from "@/lib/segments"
-import { type PdfViewerHandle } from "@/components/ui/pdf-viewer"
+import { cn } from "@/lib/utils"
 import { SegmentLegend } from "@/components/ui/segment-legend"
+import { SegmentPageRail } from "@/components/ui/segment-page-rail"
+import {
+  createSegmentedDocumentModel,
+  type DocumentSegment,
+  type SegmentedDocumentModel,
+} from "@/components/ui/segmented-document-model"
+import {
+  SegmentedDocumentProvider,
+  useSegmentedDocumentViewport,
+} from "@/components/ui/segmented-document-provider"
+import {
+  type SegmentDocumentHandle,
+  type SegmentViewportController,
+} from "@/components/ui/use-segment-viewport-controller"
 import {
   ViewerBody,
-  ViewerSurface,
   ViewerHeader,
-  ViewerSidebar,
   ViewerRoot,
+  ViewerSidebar,
   ViewerSidebarTrigger,
+  ViewerSurface,
 } from "@/components/ui/viewer"
 import { type SplitView } from "@/components/viewers/lib/split-types"
-
-import { SegmentPageRail } from "./segment-page-rail"
-import { useSegmentViewportController } from "./use-segment-viewport-controller"
 
 export interface SplitDocumentHandlers {
   onCurrentPageChange: (page: number) => void
   onScrollProgressChange: (progress: number) => void
-  setViewerHandle: (handle: PdfViewerHandle | null) => void
+  setDocumentHandle: (handle: SegmentDocumentHandle | null) => void
 }
 
 export interface SplitViewerProps {
@@ -32,6 +43,11 @@ export interface SplitViewerProps {
   children?: ReactNode
 }
 
+export type SplitViewerRootProps = React.ComponentProps<typeof ViewerRoot>
+export type SplitViewerBodyProps = React.ComponentProps<typeof ViewerBody>
+export type SplitViewerSidebarProps = React.ComponentProps<typeof ViewerSidebar>
+export type SplitViewerSurfaceProps = React.ComponentProps<typeof ViewerSurface>
+
 export function SplitViewer({
   result,
   isProcessing = false,
@@ -39,31 +55,37 @@ export function SplitViewer({
 }: SplitViewerProps) {
   return (
     <SplitViewerProvider result={result} isProcessing={isProcessing}>
-      <ViewerRoot
-        bare
-        defaultSidebarOpen
-        className="h-full flex-1 bg-background"
-      >
+      <SplitViewerRoot>
         <SplitViewerHeader />
-        <SplitViewerBody>{children}</SplitViewerBody>
-      </ViewerRoot>
+        <SplitViewerBody>
+          <SplitViewerSidebar />
+          <SplitViewerSurface>
+            <SplitViewerLegend className="border-b px-3 py-2" />
+            <SplitViewerDocument>{children}</SplitViewerDocument>
+          </SplitViewerSurface>
+        </SplitViewerBody>
+      </SplitViewerRoot>
     </SplitViewerProvider>
   )
 }
 
 type SplitViewerContextValue = {
-  controller: ReturnType<typeof useSegmentViewportController>
+  model: SplitViewerModel
+  viewport: SegmentViewportController
+}
+
+export type SplitViewerModel = {
   hasOutput: boolean
   isProcessing: boolean
   pageCount: number
-  segments: ReturnType<typeof toSegments>
+  segments: DocumentSegment[]
 }
 
 export type SplitViewerHeaderState = {
   hasOutput: boolean
   isProcessing: boolean
   pageCount: number
-  segments: ReturnType<typeof toSegments>
+  segments: DocumentSegment[]
 }
 
 type SplitViewerBodyState = {
@@ -72,16 +94,16 @@ type SplitViewerBodyState = {
 }
 
 export type SplitViewerPageRailState = {
-  controller: ReturnType<typeof useSegmentViewportController>
   hasOutput: boolean
   pageCount: number
-  segments: ReturnType<typeof toSegments>
+  segments: DocumentSegment[]
+  viewport: SegmentViewportController
 }
 
 export type SplitViewerLegendState = {
-  controller: ReturnType<typeof useSegmentViewportController>
   hasOutput: boolean
-  segments: ReturnType<typeof toSegments>
+  segments: DocumentSegment[]
+  viewport: SegmentViewportController
 }
 
 export type SplitViewerDocumentState = {
@@ -102,32 +124,62 @@ export function useSplitViewer() {
 }
 
 export function useSplitViewerHeader(): SplitViewerHeaderState {
-  const { hasOutput, isProcessing, pageCount, segments } = useSplitViewer()
-  return { hasOutput, isProcessing, pageCount, segments }
+  return useSplitViewer().model
 }
 
 function useSplitViewerBody(): SplitViewerBodyState {
-  const { hasOutput, pageCount } = useSplitViewer()
+  const { hasOutput, pageCount } = useSplitViewer().model
   return { hasOutput, pageCount }
 }
 
 export function useSplitViewerPageRail(): SplitViewerPageRailState {
-  const { controller, hasOutput, pageCount, segments } = useSplitViewer()
-  return { controller, hasOutput, pageCount, segments }
+  const { model, viewport } = useSplitViewer()
+  return {
+    hasOutput: model.hasOutput,
+    pageCount: model.pageCount,
+    segments: model.segments,
+    viewport,
+  }
 }
 
 export function useSplitViewerLegend(): SplitViewerLegendState {
-  const { controller, hasOutput, segments } = useSplitViewer()
-  return { controller, hasOutput, segments }
+  const { model, viewport } = useSplitViewer()
+  return { hasOutput: model.hasOutput, segments: model.segments, viewport }
 }
 
 export function useSplitViewerDocument(): SplitViewerDocumentState {
-  const { hasOutput, isProcessing } = useSplitViewer()
+  const { hasOutput, isProcessing } = useSplitViewer().model
   return { hasOutput, isProcessing }
 }
 
 export function useSplitViewerDocumentControls(): SplitDocumentHandlers {
-  return useSplitViewer().controller.documentHandlers
+  return useSplitViewer().viewport.documentHandlers
+}
+
+export function createSplitViewerModel({
+  result,
+  isProcessing,
+}: {
+  result: SplitView | null
+  isProcessing: boolean
+}): SplitViewerModel {
+  const segments = toSegments(result?.output ?? []) satisfies DocumentSegment[]
+
+  return {
+    hasOutput: Boolean(result && result.output.length > 0),
+    isProcessing,
+    pageCount: segmentsPageCount(segments),
+    segments,
+  }
+}
+
+export function createSplitSegmentedDocumentModel(
+  model: Pick<SplitViewerModel, "pageCount" | "segments">
+): SegmentedDocumentModel {
+  return createSegmentedDocumentModel({
+    pageCount: model.pageCount,
+    segments: model.segments,
+  })
 }
 
 export function SplitViewerProvider({
@@ -139,30 +191,61 @@ export function SplitViewerProvider({
   isProcessing?: boolean
   children: React.ReactNode
 }) {
-  const hasOutput = !!result && result.output.length > 0
-
-  const segments = React.useMemo(
-    () => toSegments(result?.output ?? []),
-    [result?.output]
+  const model = React.useMemo(
+    () => createSplitViewerModel({ result, isProcessing }),
+    [isProcessing, result]
   )
-  const pageCount = React.useMemo(() => segmentsPageCount(segments), [segments])
-  const controller = useSegmentViewportController({ segments })
+  const segmentedDocumentModel = React.useMemo(
+    () => createSplitSegmentedDocumentModel(model),
+    [model]
+  )
+
+  return (
+    <SegmentedDocumentProvider model={segmentedDocumentModel}>
+      <SplitViewerContextProvider model={model}>
+        {children}
+      </SplitViewerContextProvider>
+    </SegmentedDocumentProvider>
+  )
+}
+
+function SplitViewerContextProvider({
+  children,
+  model,
+}: {
+  children: React.ReactNode
+  model: SplitViewerModel
+}) {
+  const viewport = useSegmentedDocumentViewport()
 
   const value = React.useMemo<SplitViewerContextValue>(
     () => ({
-      controller,
-      hasOutput,
-      isProcessing,
-      pageCount,
-      segments,
+      model,
+      viewport,
     }),
-    [controller, hasOutput, isProcessing, pageCount, segments]
+    [model, viewport]
   )
 
   return (
     <SplitViewerContext.Provider value={value}>
       {children}
     </SplitViewerContext.Provider>
+  )
+}
+
+export function SplitViewerRoot({
+  bare = true,
+  className,
+  defaultSidebarOpen = true,
+  ...props
+}: SplitViewerRootProps) {
+  return (
+    <ViewerRoot
+      bare={bare}
+      defaultOpen={defaultSidebarOpen}
+      className={cn("h-full flex-1 bg-background", className)}
+      {...props}
+    />
   )
 }
 
@@ -195,62 +278,67 @@ export function SplitViewerHeader() {
   )
 }
 
-function SplitViewerBody({ children }: { children?: ReactNode }) {
-  return (
-    <ViewerBody>
-      <SplitViewerSidebar />
-      <ViewerSurface>
-        <SplitViewerLegend className="border-b px-3 py-2" />
-        <SplitViewerDocument>{children}</SplitViewerDocument>
-      </ViewerSurface>
-    </ViewerBody>
-  )
+export function SplitViewerBody({ className, ...props }: SplitViewerBodyProps) {
+  return <ViewerBody className={className} {...props} />
 }
 
-function SplitViewerSidebar() {
+export function SplitViewerSidebar({
+  children,
+  className,
+  width = "4rem",
+  "aria-label": ariaLabel = "Split pages",
+  ...props
+}: SplitViewerSidebarProps) {
   const { hasOutput, pageCount } = useSplitViewerBody()
   if (!hasOutput || pageCount <= 0) return null
 
   return (
     <ViewerSidebar
-      aria-label="Split pages"
-      width="4rem"
-      className="border-r bg-background"
+      aria-label={ariaLabel}
+      width={width}
+      className={cn("border-r bg-background", className)}
+      {...props}
     >
-      <SplitViewerPageRail />
+      {children ?? <SplitViewerPageRail />}
     </ViewerSidebar>
   )
 }
 
+export function SplitViewerSurface({
+  className,
+  ...props
+}: SplitViewerSurfaceProps) {
+  return <ViewerSurface className={className} {...props} />
+}
+
 export function SplitViewerPageRail() {
-  const { controller, hasOutput, pageCount, segments } =
-    useSplitViewerPageRail()
+  const { hasOutput, pageCount, segments, viewport } = useSplitViewerPageRail()
   if (!hasOutput || pageCount <= 0) return null
 
   return (
     <SegmentPageRail
       segments={segments}
       pageCount={pageCount}
-      currentPage={controller.model.currentPage}
-      scrollProgress={controller.model.scrollProgress}
-      interaction={controller.interaction}
-      railApi={controller.rail}
-      onSelectPage={controller.navigation.scrollToPage}
+      currentPage={viewport.model.currentPage}
+      scrollProgress={viewport.model.scrollProgress}
+      interaction={viewport.interaction}
+      railApi={viewport.rail}
+      onSelectPage={viewport.navigation.scrollToPage}
       showTicks
     />
   )
 }
 
 export function SplitViewerLegend({ className }: { className?: string }) {
-  const { controller, hasOutput, segments } = useSplitViewerLegend()
+  const { hasOutput, segments, viewport } = useSplitViewerLegend()
   if (!hasOutput) return null
 
   return (
     <SegmentLegend
       segments={segments}
-      currentPage={controller.model.currentPage}
-      interaction={controller.interaction}
-      onSelect={controller.navigation.scrollToSegmentStart}
+      currentPage={viewport.model.currentPage}
+      interaction={viewport.interaction}
+      onSelect={viewport.navigation.scrollToSegmentStart}
       columns={4}
       variant="plain"
       showUnusedToggle
@@ -263,28 +351,7 @@ export function SplitViewerDocument({ children }: { children?: ReactNode }) {
   const { hasOutput, isProcessing } = useSplitViewerDocument()
 
   if (!hasOutput) {
-    return (
-      <div className="flex h-full flex-1 flex-col items-center justify-center gap-4 bg-muted px-8 text-muted-foreground">
-        {isProcessing ? (
-          <>
-            <Loader2 className="h-12 w-12 animate-spin text-warning-foreground" />
-            <p className="text-center text-base text-muted-foreground">
-              Splitting...
-            </p>
-          </>
-        ) : (
-          <>
-            <Scissors className="h-16 w-16 text-muted-foreground" />
-            <p className="text-center text-base text-muted-foreground">
-              Run split to see output
-            </p>
-            <p className="max-w-sm text-center text-sm text-muted-foreground">
-              Upload a document, define subdocuments, then click Run Split
-            </p>
-          </>
-        )}
-      </div>
-    )
+    return <SplitViewerEmptyState isProcessing={isProcessing} />
   }
 
   return children ? (
@@ -294,6 +361,35 @@ export function SplitViewerDocument({ children }: { children?: ReactNode }) {
       <span className="text-sm text-muted-foreground">
         No document available
       </span>
+    </div>
+  )
+}
+
+export function SplitViewerEmptyState({
+  isProcessing,
+}: {
+  isProcessing: boolean
+}) {
+  return (
+    <div className="flex h-full flex-1 flex-col items-center justify-center gap-4 bg-muted px-8 text-muted-foreground">
+      {isProcessing ? (
+        <>
+          <Loader2 className="h-12 w-12 animate-spin text-warning-foreground" />
+          <p className="text-center text-base text-muted-foreground">
+            Splitting...
+          </p>
+        </>
+      ) : (
+        <>
+          <Scissors className="h-16 w-16 text-muted-foreground" />
+          <p className="text-center text-base text-muted-foreground">
+            Run split to see output
+          </p>
+          <p className="max-w-sm text-center text-sm text-muted-foreground">
+            Upload a document, define subdocuments, then click Run Split
+          </p>
+        </>
+      )}
     </div>
   )
 }

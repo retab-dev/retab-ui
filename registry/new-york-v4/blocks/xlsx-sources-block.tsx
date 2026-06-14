@@ -6,10 +6,10 @@ import type { Source } from "@/lib/document-source"
 import {
   AnchoredDocumentProvider,
   useAnchoredDocument,
-  useAnchoredFieldLink,
   type AnchoredDocumentTarget,
-  type AnchoredItem,
 } from "@/components/ui/anchored-document-viewer"
+import { useAnchoredFieldLink } from "@/components/ui/field-anchor-link"
+import { sourceFieldsToEvidenceModel } from "@/components/ui/source-evidence"
 import {
   SourceFieldList,
   type SourceField,
@@ -21,7 +21,6 @@ import {
   ViewerSidebar,
   ViewerSurface,
 } from "@/components/ui/viewer"
-import { xlsxAnchorToTarget } from "@/components/ui/xlsx-source"
 import { XlsxViewer, type XlsxViewerHandle } from "@/components/ui/xlsx-viewer"
 import xlsxSample from "@/components/viewers/sample-data/xlsx-sources.json"
 
@@ -36,20 +35,7 @@ const FIELDS = (xlsxSample as XlsxField[]).map((field) => ({
       ? `${field.source.anchor.sheet_name ?? `Sheet ${field.source.anchor.sheet_index + 1}`} · ${field.source.anchor.coordinate ?? ""}`
       : undefined,
 }))
-const ITEMS: AnchoredItem[] = FIELDS.map((field) => {
-  const target = xlsxAnchorToTarget(field.source.anchor)
-  return {
-    id: field.key,
-    anchor: target
-      ? {
-          kind: "xlsx-cell",
-          sheetIndex: target.sheet,
-          rowIndex: target.row,
-          columnIndex: target.col,
-        }
-      : null,
-  }
-})
+const EVIDENCE = sourceFieldsToEvidenceModel(FIELDS)
 
 /**
  * Excel sources block — extracted values linked to the spreadsheet cells they
@@ -63,7 +49,7 @@ export function XlsxSourcesBlock() {
 
   return (
     <AnchoredDocumentProvider
-      items={ITEMS}
+      items={EVIDENCE.anchoredItems}
       target={target}
       initialItemId={FIELDS[0]?.key}
     >

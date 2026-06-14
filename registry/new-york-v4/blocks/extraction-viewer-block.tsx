@@ -13,26 +13,19 @@ import { cn } from "@/lib/utils"
 import {
   AnchoredDocumentProvider,
   useAnchoredDocument,
-  useAnchoredFieldLink,
   type AnchoredDocumentTarget,
   type AnchoredItem,
-  type DocumentAnchor,
 } from "@/components/ui/anchored-document-viewer"
-import { csvAnchorToTarget } from "@/components/ui/csv-source"
 import { CsvViewer, type CsvViewerHandle } from "@/components/ui/csv-viewer"
-import { docxAnchorToTarget } from "@/components/ui/docx-source"
 import { DocxViewer, type DocxViewerHandle } from "@/components/ui/docx-viewer"
-import {
-  imageAnchorToTarget,
-  rotateImageArea,
-} from "@/components/ui/image-source"
+import { useAnchoredFieldLink } from "@/components/ui/field-anchor-link"
+import { rotateImageArea } from "@/components/ui/image-source"
 import {
   ImageViewer,
   type ImageViewerHandle,
 } from "@/components/ui/image-viewer"
 import type { ImageFrameOverlayProps } from "@/components/ui/image-viewer-types"
 import {
-  sourceToPdfAnchor,
   usePdfAnchoredOverlay,
   usePdfAnchoredTarget,
 } from "@/components/ui/pdf-anchor-target"
@@ -42,18 +35,20 @@ import {
   type PdfViewerHandle,
 } from "@/components/ui/pdf-viewer"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import {
+  sourceFieldsToEvidenceModel,
+  sourceMapToEvidenceModel,
+} from "@/components/ui/source-evidence"
 import { SourceIndicator } from "@/components/ui/source-indicator"
-import { textAnchorToTarget } from "@/components/ui/text-source"
 import { TextViewer, type TextViewerHandle } from "@/components/ui/text-viewer"
 import {
   ViewerBody,
-  ViewerSurface,
   ViewerHeader,
-  ViewerSidebar,
   ViewerRoot,
+  ViewerSidebar,
   ViewerSidebarTrigger,
+  ViewerSurface,
 } from "@/components/ui/viewer"
-import { xlsxAnchorToTarget } from "@/components/ui/xlsx-source"
 import { XlsxViewer, type XlsxViewerHandle } from "@/components/ui/xlsx-viewer"
 import { JsonForm } from "@/components/json-form/json-form"
 import csvSample from "@/components/viewers/sample-data/csv-sources.json"
@@ -96,9 +91,10 @@ function flatExtraction(fields: FlatField[]): Extraction {
   const sources = Object.fromEntries(
     fields.map((field) => [field.key, field.source])
   )
+  const evidence = sourceFieldsToEvidenceModel(fields)
 
   return {
-    items: sourcesToAnchoredItems(sources),
+    items: evidence.anchoredItems,
     schema: {
       type: "object",
       properties: Object.fromEntries(
@@ -115,12 +111,16 @@ function flatExtraction(fields: FlatField[]): Extraction {
 
 // The PDF tab uses the richer, nested extraction sample (a real /sources
 // response); the rest derive a flat form from their per-format field arrays.
-const PDF_EXTRACTION: Extraction = {
-  items: sourcesToAnchoredItems(
-    extractionSourcesToSourceMap(jsonFormSample.sources)
-  ),
+const PDF_SOURCE_MAP = extractionSourcesToSourceMap(jsonFormSample.sources)
+const PDF_EVIDENCE = sourceMapToEvidenceModel({
+  sourceMap: PDF_SOURCE_MAP,
   schema: jsonFormSample.schema as JSONSchema7,
-  sources: extractionSourcesToSourceMap(jsonFormSample.sources),
+  values: jsonFormSample.extraction as Record<string, unknown>,
+})
+const PDF_EXTRACTION: Extraction = {
+  items: PDF_EVIDENCE.anchoredItems,
+  schema: jsonFormSample.schema as JSONSchema7,
+  sources: PDF_SOURCE_MAP,
   values: jsonFormSample.extraction as Record<string, unknown>,
 }
 const IMAGE_EXTRACTION = flatExtraction(imageSample as FlatField[])
@@ -128,82 +128,6 @@ const TEXT_EXTRACTION = flatExtraction(textSample as FlatField[])
 const CSV_EXTRACTION = flatExtraction(csvSample as FlatField[])
 const XLSX_EXTRACTION = flatExtraction(xlsxSample as FlatField[])
 const DOCX_EXTRACTION = flatExtraction(docxSample as FlatField[])
-
-function sourcesToAnchoredItems(sources: SourceMap): AnchoredItem[] {
-  return Object.entries(sources).map(([id, source]) => ({
-    id,
-    anchor: sourceToDocumentAnchor(source),
-  }))
-}
-
-function sourceToDocumentAnchor(source: Source): DocumentAnchor | null {
-  if (source.anchor.kind === "pdf_bbox") {
-    return sourceToPdfAnchor(source)
-  }
-
-  if (source.anchor.kind === "image_bbox") {
-    const target = imageAnchorToTarget(source.anchor)
-    return target
-      ? {
-          kind: "image-area",
-          frameNumber: target.frame,
-          left: target.area.left,
-          top: target.area.top,
-          width: target.area.width,
-          height: target.area.height,
-        }
-      : null
-  }
-
-  if (source.anchor.kind === "text_span") {
-    const target = textAnchorToTarget(source.anchor)
-    return target
-      ? {
-          kind: "text-range",
-          startLine: target.start,
-          endLine: target.end,
-        }
-      : null
-  }
-
-  if (source.anchor.kind === "csv_cell") {
-    const target = csvAnchorToTarget(source.anchor)
-    return target
-      ? {
-          kind: "csv-cell",
-          rowIndex: target.rowIndex,
-          columnIndex: target.columnIndex,
-        }
-      : null
-  }
-
-  if (source.anchor.kind === "spreadsheet_cell") {
-    const target = xlsxAnchorToTarget(source.anchor)
-    return target
-      ? {
-          kind: "xlsx-cell",
-          sheetIndex: target.sheet,
-          rowIndex: target.row,
-          columnIndex: target.col,
-        }
-      : null
-  }
-
-  if (
-    source.anchor.kind === "docx_text_span" ||
-    source.anchor.kind === "docx_table_cell"
-  ) {
-    const target = docxAnchorToTarget(source.anchor, source)
-    return target
-      ? {
-          kind: "docx-target",
-          target,
-        }
-      : null
-  }
-
-  return null
-}
 
 // ── Shared layout: viewer + json-form extraction panel ────────────────────────
 
@@ -224,7 +148,7 @@ function ExtractionShell({
   const { activeItem } = useAnchoredDocument()
 
   return (
-    <ViewerRoot bare defaultSidebarOpen className="h-full bg-background">
+    <ViewerRoot bare defaultOpen className="h-full bg-background">
       <ViewerHeader className="flex min-h-10 items-center gap-2 px-2">
         <ViewerSidebarTrigger />
         <h2 className="min-w-0 truncate text-sm font-medium">

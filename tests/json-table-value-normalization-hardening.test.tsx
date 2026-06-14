@@ -81,9 +81,7 @@ function renderNormalizationRow({
 }: {
   document?: TableDocument
   visiblePaths: string[]
-  onCellCommit?: Parameters<
-    typeof renderInteractionRow
-  >[0]["onCellCommit"]
+  onCellCommit?: Parameters<typeof renderInteractionRow>[0]["onCellCommit"]
 }) {
   return {
     document,
@@ -185,7 +183,7 @@ async function editableCell(
   })
 }
 
-function pointerDown(target: Element | Document | Window) {
+function pointerDown(target: HTMLElement) {
   fireEvent.pointerDown(primitiveEventTarget(target), {
     button: 0,
     buttons: 1,
@@ -228,14 +226,17 @@ async function openPickerCell(
   view: ReturnType<typeof renderNormalizationRow>,
   fieldPath: string
 ) {
-  fireEvent.pointerDown(primitiveEventTarget(await editableCell(view, fieldPath)), {
-    button: 0,
-    clientX: 0,
-    clientY: 0,
-    detail: 1,
-    pointerId: 1,
-    pointerType: "mouse",
-  })
+  fireEvent.pointerDown(
+    primitiveEventTarget(await editableCell(view, fieldPath)),
+    {
+      button: 0,
+      clientX: 0,
+      clientY: 0,
+      detail: 1,
+      pointerId: 1,
+      pointerType: "mouse",
+    }
+  )
   const cell = await editableCell(view, fieldPath)
   cell.focus()
   fireEvent.keyDown(cell, { key: "Enter" })

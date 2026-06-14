@@ -6,12 +6,11 @@ import type { Source } from "@/lib/document-source"
 import {
   AnchoredDocumentProvider,
   useAnchoredDocument,
-  useAnchoredFieldLink,
   type AnchoredDocumentTarget,
-  type AnchoredItem,
 } from "@/components/ui/anchored-document-viewer"
-import { csvAnchorToTarget } from "@/components/ui/csv-source"
 import { CsvViewer, type CsvViewerHandle } from "@/components/ui/csv-viewer"
+import { useAnchoredFieldLink } from "@/components/ui/field-anchor-link"
+import { sourceFieldsToEvidenceModel } from "@/components/ui/source-evidence"
 import {
   SourceFieldList,
   type SourceField,
@@ -42,19 +41,7 @@ const FIELDS = (csvSample as CsvField[]).map((field) => ({
       ? `Cell ${field.source.anchor.coordinate ?? field.source.anchor.column}`
       : undefined,
 }))
-const ITEMS: AnchoredItem[] = FIELDS.map((field) => {
-  const target = csvAnchorToTarget(field.source.anchor)
-  return {
-    id: field.key,
-    anchor: target
-      ? {
-          kind: "csv-cell",
-          rowIndex: target.rowIndex,
-          columnIndex: target.columnIndex,
-        }
-      : null,
-  }
-})
+const EVIDENCE = sourceFieldsToEvidenceModel(FIELDS)
 
 /**
  * CSV sources block — extracted values linked to the spreadsheet cells they came
@@ -67,7 +54,7 @@ export function CsvSourcesBlock() {
 
   return (
     <AnchoredDocumentProvider
-      items={ITEMS}
+      items={EVIDENCE.anchoredItems}
       target={target}
       initialItemId={FIELDS[0]?.key}
     >

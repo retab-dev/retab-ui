@@ -26,7 +26,7 @@ import type { FieldMetadata } from "@/components/json-table/lib/schema-field-met
 
 type TextDataCellKind = "text" | "date" | "time" | "date-time"
 
-type SharedDataCellProps = {
+type ShellProps = {
   active?: boolean
   autoFocus?: boolean
   editable: boolean
@@ -62,7 +62,7 @@ export function createJsonTableDataCellProps({
   onOpenChange?: (open: boolean) => void
   value: unknown
 }): DataCellProps {
-  const sharedProps: SharedDataCellProps = {
+  const shellProps: ShellProps = {
     editable: isEditable,
     active,
     autoFocus,
@@ -79,7 +79,7 @@ export function createJsonTableDataCellProps({
       jsonValue: value,
       onCommit,
       onOpenChange,
-      sharedProps,
+      shellProps,
     })
   }
 
@@ -88,7 +88,7 @@ export function createJsonTableDataCellProps({
       jsonValue: value,
       kind: primitiveKind,
       onCommit,
-      sharedProps,
+      shellProps,
     })
   }
 
@@ -97,7 +97,7 @@ export function createJsonTableDataCellProps({
       fieldMetadata,
       jsonValue: value,
       onCommit,
-      sharedProps,
+      shellProps,
     })
   }
 
@@ -108,7 +108,7 @@ export function createJsonTableDataCellProps({
       kind: primitiveKind,
       onCommit,
       onOpenChange,
-      sharedProps,
+      shellProps,
     })
   }
 
@@ -116,7 +116,7 @@ export function createJsonTableDataCellProps({
     fieldMetadata,
     jsonValue: value,
     onCommit,
-    sharedProps,
+    shellProps,
   })
 }
 
@@ -129,10 +129,9 @@ function jsonTableDataCellCommitHandler<CommitValue>(
   }
 }
 
-function jsonTableDataCellJsonCommitHandler<CommitValue extends JsonCommitValue>(
-  fieldMetadata: FieldMetadata,
-  onCommit?: CommitJsonValue
-) {
+function jsonTableDataCellJsonCommitHandler<
+  CommitValue extends JsonCommitValue,
+>(fieldMetadata: FieldMetadata, onCommit?: CommitJsonValue) {
   return jsonTableDataCellCommitHandler(
     (commitValue: CommitValue) =>
       jsonTableCommitValue({ fieldMetadata, commitValue }),
@@ -145,16 +144,16 @@ function selectDataCellProps({
   jsonValue,
   onCommit,
   onOpenChange,
-  sharedProps,
+  shellProps,
 }: {
   fieldMetadata: FieldMetadata
   jsonValue: unknown
   onCommit?: CommitJsonValue
   onOpenChange?: (open: boolean) => void
-  sharedProps: SharedDataCellProps
+  shellProps: ShellProps
 }): DataCellProps {
   return {
-    ...sharedProps,
+    ...shellProps,
     kind: "select",
     value: jsonTableSelectValue({ fieldMetadata, jsonValue }),
     selectOptions: jsonTableSelectOptions(fieldMetadata),
@@ -183,15 +182,15 @@ function numberDataCellProps({
   jsonValue,
   kind,
   onCommit,
-  sharedProps,
+  shellProps,
 }: {
   jsonValue: unknown
   kind: "number" | "integer"
   onCommit?: CommitJsonValue
-  sharedProps: SharedDataCellProps
+  shellProps: ShellProps
 }): DataCellProps {
   return {
-    ...sharedProps,
+    ...shellProps,
     kind,
     value: jsonTableNumberDataCellValue(jsonValue),
     className: jsonTableDataCellClass,
@@ -206,15 +205,15 @@ function booleanDataCellProps({
   fieldMetadata,
   jsonValue,
   onCommit,
-  sharedProps,
+  shellProps,
 }: {
   fieldMetadata: FieldMetadata
   jsonValue: unknown
   onCommit?: CommitJsonValue
-  sharedProps: SharedDataCellProps
+  shellProps: ShellProps
 }): DataCellProps {
   return {
-    ...sharedProps,
+    ...shellProps,
     kind: "boolean",
     value: jsonTableBooleanDataCellValue(jsonValue),
     className: jsonTableDataCellClass,
@@ -228,18 +227,18 @@ function textDataCellProps({
   kind,
   onCommit,
   onOpenChange,
-  sharedProps,
+  shellProps,
 }: {
   fieldMetadata: FieldMetadata
   jsonValue: unknown
   kind: TextDataCellKind
   onCommit?: CommitJsonValue
   onOpenChange?: (open: boolean) => void
-  sharedProps: SharedDataCellProps
+  shellProps: ShellProps
 }): DataCellProps {
   if (kind === "text") {
     return {
-      ...sharedProps,
+      ...shellProps,
       kind,
       value: jsonTableTextDataCellValue(jsonValue),
       className: jsonTableDataCellClass,
@@ -248,7 +247,7 @@ function textDataCellProps({
   }
 
   return {
-    ...sharedProps,
+    ...shellProps,
     kind,
     value: jsonTableTextDataCellValue(jsonValue),
     className: jsonTableDataCellClass,
@@ -267,15 +266,15 @@ function fallbackTextDataCellProps({
   fieldMetadata,
   jsonValue,
   onCommit,
-  sharedProps,
+  shellProps,
 }: {
   fieldMetadata: FieldMetadata
   jsonValue: unknown
   onCommit?: CommitJsonValue
-  sharedProps: SharedDataCellProps
+  shellProps: ShellProps
 }): DataCellProps {
   return {
-    ...sharedProps,
+    ...shellProps,
     kind: "text",
     value: jsonTableJsonText(jsonValue),
     className: jsonTableDataCellClass,

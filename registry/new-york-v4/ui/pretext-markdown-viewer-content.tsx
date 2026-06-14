@@ -525,6 +525,9 @@ export function PretextMarkdownViewerContent({
                   >
                     <PretextMarkdownChunkRenderer
                       chunk={chunk}
+                      footnoteDefinitionsMarkdown={
+                        document.footnoteDefinitionsMarkdown
+                      }
                       referenceDefinitionsMarkdown={
                         document.referenceDefinitionsMarkdown
                       }

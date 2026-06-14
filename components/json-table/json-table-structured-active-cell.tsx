@@ -24,14 +24,14 @@ export function JsonTableStructuredActiveCell({
 }: {
   fieldMetadata: FieldMetadata
   materializedFieldPath: string
-  schema: JsonTableCellProps["schema"]
+  schema: JsonTableCellProps["cellProjection"]["schema"]
   structuredEditSession: NonNullable<
-    JsonTableCellProps["structuredEditSession"]
+    JsonTableCellProps["structuredEditing"]["session"]
   >
   value: unknown
-  closeStructuredEditSession: JsonTableCellProps["closeStructuredEditSession"]
-  onCellCommit: JsonTableCellProps["onCellCommit"]
-  setStructuredEditSessionOverlayOpen: JsonTableCellProps["setStructuredEditSessionOverlayOpen"]
+  closeStructuredEditSession: JsonTableCellProps["structuredEditing"]["closeSession"]
+  onCellCommit: JsonTableCellProps["commit"]["onCommit"]
+  setStructuredEditSessionOverlayOpen: JsonTableCellProps["structuredEditing"]["setSessionOverlayOpen"]
 }) {
   recordJsonTableRender(
     "JsonTableStructuredActiveCell",

@@ -4,6 +4,37 @@
   "homepage": "https://github.com/retab-dev/ui",
   "items": [
     {
+      "name": "viewer-toolbar",
+      "type": "registry:ui",
+      "title": "Viewer Toolbar",
+      "description": "A shared controlled toolbar for viewer chrome: title, position, zoom, rotate, download, loading, and extra actions.",
+      "dependencies": ["lucide-react"],
+      "registryDependencies": [
+        "utils",
+        "button",
+        "separator",
+        "skeleton",
+        "dropdown-menu"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/viewer-toolbar.tsx",
+          "type": "registry:ui",
+          "target": "@ui/viewer-toolbar.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/viewer-download.tsx",
+          "type": "registry:ui",
+          "target": "@ui/viewer-download.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/lib/viewer-download.ts",
+          "type": "registry:lib",
+          "target": "@lib/viewer-download.ts"
+        }
+      ]
+    },
+    {
       "name": "utils",
       "type": "registry:lib",
       "title": "Utils",
@@ -409,11 +440,6 @@
           "target": "@ui/data-cell-format.ts"
         },
         {
-          "path": "registry/new-york-v4/ui/data-cell-number-control.tsx",
-          "type": "registry:ui",
-          "target": "@ui/data-cell-number-control.tsx"
-        },
-        {
           "path": "registry/new-york-v4/ui/data-cell-picker-control.tsx",
           "type": "registry:ui",
           "target": "@ui/data-cell-picker-control.tsx"
@@ -474,9 +500,9 @@
           "target": "@ui/data-cell-session.ts"
         },
         {
-          "path": "registry/new-york-v4/ui/data-cell-text-control.tsx",
+          "path": "registry/new-york-v4/ui/data-cell-input-control.tsx",
           "type": "registry:ui",
-          "target": "@ui/data-cell-text-control.tsx"
+          "target": "@ui/data-cell-input-control.tsx"
         },
         {
           "path": "registry/new-york-v4/ui/data-cell-text-activation.ts",
@@ -901,7 +927,13 @@
       "title": "CSV Viewer",
       "description": "A fixed-window virtualized CSV/TSV table: sortable columns, sticky header, row numbers, horizontal scroll. Renders straight from raw rows (no table row model) so it stays flat in memory on huge files.",
       "dependencies": ["lucide-react"],
-      "registryDependencies": ["csv", "utils", "button", "dropdown-menu"],
+      "registryDependencies": [
+        "csv",
+        "utils",
+        "button",
+        "dropdown-menu",
+        "viewer-toolbar"
+      ],
       "files": [
         {
           "path": "registry/new-york-v4/ui/csv-viewer.tsx",
@@ -1004,11 +1036,6 @@
           "target": "@ui/csv-viewer-style-scope.tsx"
         },
         {
-          "path": "registry/new-york-v4/ui/csv-viewer-toolbar.tsx",
-          "type": "registry:ui",
-          "target": "@ui/csv-viewer-toolbar.tsx"
-        },
-        {
           "path": "registry/new-york-v4/ui/csv-viewer-types.ts",
           "type": "registry:ui",
           "target": "@ui/csv-viewer-types.ts"
@@ -1044,7 +1071,8 @@
         "separator",
         "skeleton",
         "dropdown-menu",
-        "spinner"
+        "spinner",
+        "viewer-toolbar"
       ],
       "files": [
         {
@@ -1111,11 +1139,6 @@
           "path": "registry/new-york-v4/ui/pdf-viewer-render-error.ts",
           "type": "registry:ui",
           "target": "@ui/pdf-viewer-render-error.ts"
-        },
-        {
-          "path": "registry/new-york-v4/ui/pdf-viewer-toolbar.tsx",
-          "type": "registry:ui",
-          "target": "@ui/pdf-viewer-toolbar.tsx"
         },
         {
           "path": "registry/new-york-v4/ui/pdf-viewer-states.tsx",
@@ -1197,7 +1220,8 @@
         "scroll-area",
         "separator",
         "skeleton",
-        "dropdown-menu"
+        "dropdown-menu",
+        "viewer-toolbar"
       ],
       "files": [
         {
@@ -1293,7 +1317,8 @@
         "button",
         "scroll-area",
         "separator",
-        "skeleton"
+        "skeleton",
+        "viewer-toolbar"
       ],
       "files": [
         {
@@ -1370,10 +1395,11 @@
       "description": "A layout inspection component for OCR output: normalize Google Document AI blocks, lines, and tokens, then review them over the source image with virtualized rows, confidence filtering, and precise overlays.",
       "dependencies": ["@tanstack/react-virtual@^3.13.12"],
       "registryDependencies": [
-        "anchored-document-viewer",
-        "pdf-anchor-target",
+        "anchored-evidence",
+        "anchored-item-list",
         "pdf-viewer",
         "scroll-area",
+        "segmented-document",
         "utils"
       ],
       "files": [
@@ -1408,6 +1434,16 @@
           "target": "@ui/layout-blocks-index.ts"
         },
         {
+          "path": "registry/new-york-v4/ui/layout-blocks-model.ts",
+          "type": "registry:ui",
+          "target": "@ui/layout-blocks-model.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/layout-blocks-segmented-document-model.ts",
+          "type": "registry:ui",
+          "target": "@ui/layout-blocks-segmented-document-model.ts"
+        },
+        {
           "path": "registry/new-york-v4/ui/layout-overlay-layer.tsx",
           "type": "registry:ui",
           "target": "@ui/layout-overlay-layer.tsx"
@@ -1431,7 +1467,8 @@
         "scroll-area",
         "separator",
         "skeleton",
-        "dropdown-menu"
+        "dropdown-menu",
+        "viewer-toolbar"
       ],
       "files": [
         {
@@ -1520,11 +1557,6 @@
           "target": "@ui/pptx-viewer-source.ts"
         },
         {
-          "path": "registry/new-york-v4/ui/pptx-viewer-toolbar.tsx",
-          "type": "registry:ui",
-          "target": "@ui/pptx-viewer-toolbar.tsx"
-        },
-        {
           "path": "registry/new-york-v4/ui/pptx-viewer-slide.tsx",
           "type": "registry:ui",
           "target": "@ui/pptx-viewer-slide.tsx"
@@ -1594,7 +1626,8 @@
         "utils",
         "button",
         "separator",
-        "skeleton"
+        "skeleton",
+        "viewer-toolbar"
       ],
       "files": [
         {
@@ -1701,11 +1734,6 @@
           "path": "registry/new-york-v4/ui/xlsx-grid-skeleton.tsx",
           "type": "registry:ui",
           "target": "@ui/xlsx-grid-skeleton.tsx"
-        },
-        {
-          "path": "registry/new-york-v4/ui/xlsx-toolbar.tsx",
-          "type": "registry:ui",
-          "target": "@ui/xlsx-toolbar.tsx"
         },
         {
           "path": "registry/new-york-v4/ui/xlsx-sheet-tabs.tsx",
@@ -1847,11 +1875,7 @@
       "type": "registry:ui",
       "title": "File System",
       "description": "A document workspace over a flat object-store manifest with list, grid, columns, lazy folders, generated thumbnails, and FileViewer previews.",
-      "dependencies": [
-        "lucide-react",
-        "@pierre/trees",
-        "@tanstack/react-virtual"
-      ],
+      "dependencies": ["lucide-react", "@tanstack/react-virtual"],
       "registryDependencies": [
         "utils",
         "button",
@@ -1891,6 +1915,51 @@
           "target": "@ui/file-system-browser-controller.ts"
         },
         {
+          "path": "registry/new-york-v4/ui/file-system-kernel.ts",
+          "type": "registry:ui",
+          "target": "@ui/file-system-kernel.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-system-kernel-runtime.ts",
+          "type": "registry:ui",
+          "target": "@ui/file-system-kernel-runtime.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-system-kernel-command-effects.ts",
+          "type": "registry:ui",
+          "target": "@ui/file-system-kernel-command-effects.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-system-async-task.ts",
+          "type": "registry:ui",
+          "target": "@ui/file-system-async-task.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-system-folder-task.ts",
+          "type": "registry:ui",
+          "target": "@ui/file-system-folder-task.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-system-controlled-props.ts",
+          "type": "registry:ui",
+          "target": "@ui/file-system-controlled-props.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-system-kernel-selectors.ts",
+          "type": "registry:ui",
+          "target": "@ui/file-system-kernel-selectors.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-system-selection-source-task.ts",
+          "type": "registry:ui",
+          "target": "@ui/file-system-selection-source-task.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-system-open-source-task.ts",
+          "type": "registry:ui",
+          "target": "@ui/file-system-open-source-task.ts"
+        },
+        {
           "path": "registry/new-york-v4/ui/file-system-open-preview-state.ts",
           "type": "registry:ui",
           "target": "@ui/file-system-open-preview-state.ts"
@@ -1916,119 +1985,14 @@
           "target": "@ui/file-system-index.ts"
         },
         {
-          "path": "registry/new-york-v4/ui/file-system-pierre-input.ts",
-          "type": "registry:ui",
-          "target": "@ui/file-system-pierre-input.ts"
-        },
-        {
-          "path": "registry/new-york-v4/ui/file-system-pierre-adapter.ts",
-          "type": "registry:ui",
-          "target": "@ui/file-system-pierre-adapter.ts"
-        },
-        {
-          "path": "registry/new-york-v4/ui/file-system-pierre-model.ts",
-          "type": "registry:ui",
-          "target": "@ui/file-system-pierre-model.ts"
-        },
-        {
-          "path": "registry/new-york-v4/ui/file-system-pierre-reset.ts",
-          "type": "registry:ui",
-          "target": "@ui/file-system-pierre-reset.ts"
-        },
-        {
-          "path": "registry/new-york-v4/ui/file-system-pierre-reset-identity.ts",
-          "type": "registry:ui",
-          "target": "@ui/file-system-pierre-reset-identity.ts"
-        },
-        {
-          "path": "registry/new-york-v4/ui/file-system-pierre-reset-plan.ts",
-          "type": "registry:ui",
-          "target": "@ui/file-system-pierre-reset-plan.ts"
-        },
-        {
-          "path": "registry/new-york-v4/ui/file-system-pierre-expansion.ts",
-          "type": "registry:ui",
-          "target": "@ui/file-system-pierre-expansion.ts"
-        },
-        {
-          "path": "registry/new-york-v4/ui/file-system-pierre-expansion-snapshot.ts",
-          "type": "registry:ui",
-          "target": "@ui/file-system-pierre-expansion-snapshot.ts"
-        },
-        {
-          "path": "registry/new-york-v4/ui/file-system-pierre-lazy-retry.ts",
-          "type": "registry:ui",
-          "target": "@ui/file-system-pierre-lazy-retry.ts"
-        },
-        {
-          "path": "registry/new-york-v4/ui/file-system-pierre-order.ts",
-          "type": "registry:ui",
-          "target": "@ui/file-system-pierre-order.ts"
-        },
-        {
-          "path": "registry/new-york-v4/ui/file-system-pierre-selection.ts",
-          "type": "registry:ui",
-          "target": "@ui/file-system-pierre-selection.ts"
-        },
-        {
-          "path": "registry/new-york-v4/ui/file-system-pierre-decoration.ts",
-          "type": "registry:ui",
-          "target": "@ui/file-system-pierre-decoration.ts"
-        },
-        {
-          "path": "registry/new-york-v4/ui/file-system-pierre-decoration-version.ts",
-          "type": "registry:ui",
-          "target": "@ui/file-system-pierre-decoration-version.ts"
-        },
-        {
           "path": "registry/new-york-v4/ui/file-system-query.ts",
           "type": "registry:ui",
           "target": "@ui/file-system-query.ts"
         },
         {
-          "path": "registry/new-york-v4/ui/file-system-query-controller.ts",
-          "type": "registry:ui",
-          "target": "@ui/file-system-query-controller.ts"
-        },
-        {
-          "path": "registry/new-york-v4/ui/file-system-view-controller.ts",
-          "type": "registry:ui",
-          "target": "@ui/file-system-view-controller.ts"
-        },
-        {
           "path": "registry/new-york-v4/ui/file-system-source-controller.ts",
           "type": "registry:ui",
           "target": "@ui/file-system-source-controller.ts"
-        },
-        {
-          "path": "registry/new-york-v4/ui/file-system-index-state.ts",
-          "type": "registry:ui",
-          "target": "@ui/file-system-index-state.ts"
-        },
-        {
-          "path": "registry/new-york-v4/ui/file-system-path-history.ts",
-          "type": "registry:ui",
-          "target": "@ui/file-system-path-history.ts"
-        },
-        {
-          "path": "registry/new-york-v4/ui/file-system-loading-controller.ts",
-          "type": "registry:ui",
-          "target": "@ui/file-system-loading-controller.ts"
-        },
-        {
-          "path": "registry/new-york-v4/ui/file-system-selection-controller.ts",
-          "type": "registry:ui",
-          "target": "@ui/file-system-selection-controller.ts"
-        },
-        {
-          "path": "registry/new-york-v4/ui/file-system-navigation-controller.ts",
-          "type": "registry:ui",
-          "target": "@ui/file-system-navigation-controller.ts"
-        },
-        {
-          "path": "registry/new-york-v4/ui/file-system-controller.ts",
-          "type": "registry:ui",
-          "target": "@ui/file-system-controller.ts"
         },
         {
           "path": "registry/new-york-v4/ui/file-system-controls.tsx",
@@ -2046,11 +2010,6 @@
           "target": "@ui/use-file-system-roving-focus.ts"
         },
         {
-          "path": "registry/new-york-v4/ui/use-file-system-children-loader.ts",
-          "type": "registry:ui",
-          "target": "@ui/use-file-system-children-loader.ts"
-        },
-        {
           "path": "registry/new-york-v4/ui/file-system-preview.tsx",
           "type": "registry:ui",
           "target": "@ui/file-system-preview.tsx"
@@ -2059,11 +2018,6 @@
           "path": "registry/new-york-v4/ui/file-system-list-view.tsx",
           "type": "registry:ui",
           "target": "@ui/file-system-list-view.tsx"
-        },
-        {
-          "path": "registry/new-york-v4/ui/file-system-list-model.ts",
-          "type": "registry:ui",
-          "target": "@ui/file-system-list-model.ts"
         },
         {
           "path": "registry/new-york-v4/ui/file-system-grid-view.tsx",
@@ -2259,6 +2213,53 @@
       ]
     },
     {
+      "name": "segment-page-rail",
+      "type": "registry:ui",
+      "title": "Segment Page Rail",
+      "description": "Vertical page rail for Segment[] documents with current-page following, scroll progress, and page selection.",
+      "registryDependencies": [
+        "segments",
+        "segment-interaction",
+        "page-ribbon",
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/segment-page-rail.tsx",
+          "type": "registry:ui",
+          "target": "@ui/segment-page-rail.tsx"
+        }
+      ]
+    },
+    {
+      "name": "segmented-document",
+      "type": "registry:ui",
+      "title": "Segmented Document",
+      "description": "Shared segmented-document model, provider, viewport controller, and anchor navigation for split, partition, source, OCR, and bbox viewers.",
+      "registryDependencies": [
+        "segments",
+        "segment-interaction",
+        "use-segment-interaction"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/segmented-document-model.ts",
+          "type": "registry:ui",
+          "target": "@ui/segmented-document-model.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/segmented-document-provider.tsx",
+          "type": "registry:ui",
+          "target": "@ui/segmented-document-provider.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/use-segment-viewport-controller.ts",
+          "type": "registry:ui",
+          "target": "@ui/use-segment-viewport-controller.ts"
+        }
+      ]
+    },
+    {
       "name": "schema-builder",
       "type": "registry:ui",
       "title": "Schema Builder",
@@ -2319,6 +2320,11 @@
           "path": "registry/new-york-v4/ui/email-viewer-model.ts",
           "type": "registry:ui",
           "target": "@ui/email-viewer-model.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/email-viewer-inline-resources.ts",
+          "type": "registry:ui",
+          "target": "@ui/email-viewer-inline-resources.ts"
         },
         {
           "path": "registry/new-york-v4/ui/email-viewer-types.ts",
@@ -2614,7 +2620,8 @@
       "registryDependencies": [
         "pdf-viewer",
         "segment-legend",
-        "page-ribbon",
+        "segment-page-rail",
+        "segmented-document",
         "segments"
       ],
       "files": [
@@ -2651,6 +2658,7 @@
         "pdf-viewer",
         "segment-legend",
         "page-ribbon",
+        "segmented-document",
         "segments"
       ],
       "files": [
@@ -2663,6 +2671,11 @@
           "path": "components/viewers/partition/partition-viewer.tsx",
           "type": "registry:component",
           "target": "@components/viewers/partition/partition-viewer.tsx"
+        },
+        {
+          "path": "components/viewers/partition/partition-viewer-model.ts",
+          "type": "registry:component",
+          "target": "@components/viewers/partition/partition-viewer-model.ts"
         },
         {
           "path": "components/viewers/lib/partition-types.ts",
@@ -2836,9 +2849,24 @@
           "target": "@components/viewers/edit/edit-viewer-field-style.ts"
         },
         {
-          "path": "components/viewers/edit/use-edit-viewer-controller.ts",
+          "path": "components/viewers/edit/edit-viewer-provider.tsx",
           "type": "registry:component",
-          "target": "@components/viewers/edit/use-edit-viewer-controller.ts"
+          "target": "@components/viewers/edit/edit-viewer-provider.tsx"
+        },
+        {
+          "path": "components/viewers/edit/edit-viewer-document.tsx",
+          "type": "registry:component",
+          "target": "@components/viewers/edit/edit-viewer-document.tsx"
+        },
+        {
+          "path": "components/viewers/edit/edit-viewer-fields.tsx",
+          "type": "registry:component",
+          "target": "@components/viewers/edit/edit-viewer-fields.tsx"
+        },
+        {
+          "path": "components/viewers/edit/edit-viewer-header.tsx",
+          "type": "registry:component",
+          "target": "@components/viewers/edit/edit-viewer-header.tsx"
         },
         {
           "path": "components/viewers/edit/edit-viewer-states.tsx",
@@ -2890,6 +2918,8 @@
         "document-source",
         "scroll-area",
         "utils",
+        "source-evidence",
+        "field-anchor-link",
         "source-indicator"
       ],
       "files": [
@@ -2931,6 +2961,8 @@
         "docx-source",
         "document-source",
         "scroll-area",
+        "source-evidence",
+        "field-anchor-link",
         "source-indicator",
         "utils",
         "anchored-document-viewer",
@@ -2979,15 +3011,17 @@
       "name": "json-form-sources-block",
       "type": "registry:block",
       "title": "JSON Form Sources",
-      "description": "Extraction rendered as a JSON form beside the source PDF — hover a form field to highlight where its value came from through anchored-document state.",
+      "description": "Extraction rendered as a JSON form beside the source PDF — hover a form field to highlight where its value came from through segmented-document state.",
       "dependencies": ["react-hook-form"],
       "registryDependencies": [
         "pdf-viewer",
         "document-source",
         "scroll-area",
-        "source-indicator",
-        "anchored-document-viewer",
-        "pdf-anchor-target"
+        "segmented-document",
+        "source-evidence",
+        "source-segmented-document",
+        "field-anchor-link",
+        "source-indicator"
       ],
       "files": [
         {
@@ -3362,8 +3396,9 @@
       "title": "Source field list",
       "description": "A field list that drives anchored-document state: hover previews a field anchor in the viewer, click selects it.",
       "registryDependencies": [
-        "anchored-document-viewer",
-        "scroll-area",
+        "anchored-item-list",
+        "field-anchor-link",
+        "source-evidence",
         "utils"
       ],
       "files": [
@@ -3371,6 +3406,122 @@
           "path": "registry/new-york-v4/ui/source-field-list.tsx",
           "type": "registry:ui",
           "target": "@ui/source-field-list.tsx"
+        }
+      ]
+    },
+    {
+      "name": "field-anchor-link",
+      "type": "registry:ui",
+      "title": "Field anchor link",
+      "description": "A field-path adapter over the generic anchored-document item link.",
+      "registryDependencies": ["anchored-document-viewer"],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/field-anchor-link.ts",
+          "type": "registry:ui",
+          "target": "@ui/field-anchor-link.ts"
+        }
+      ]
+    },
+    {
+      "name": "document-anchor",
+      "type": "registry:ui",
+      "title": "Document anchor",
+      "description": "Pure document location types used by anchored document interaction, evidence projection, and viewer target adapters.",
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/document-anchor.ts",
+          "type": "registry:ui",
+          "target": "@ui/document-anchor.ts"
+        }
+      ]
+    },
+    {
+      "name": "anchored-evidence",
+      "type": "registry:ui",
+      "title": "Anchored evidence",
+      "description": "Projection types for semantic evidence rows that can resolve to anchored document items.",
+      "registryDependencies": ["anchored-document-viewer", "document-anchor"],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/anchored-evidence.ts",
+          "type": "registry:ui",
+          "target": "@ui/anchored-evidence.ts"
+        }
+      ]
+    },
+    {
+      "name": "anchored-item-list",
+      "type": "registry:ui",
+      "title": "Anchored item list",
+      "description": "A virtualized listbox interaction primitive for anchored evidence rows.",
+      "dependencies": ["@tanstack/react-virtual@^3.13.12"],
+      "registryDependencies": ["scroll-area", "utils"],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/anchored-item-list.tsx",
+          "type": "registry:ui",
+          "target": "@ui/anchored-item-list.tsx"
+        }
+      ]
+    },
+    {
+      "name": "source-evidence",
+      "type": "registry:ui",
+      "title": "Source evidence",
+      "description": "Projection helpers that convert document sources, source maps, and source fields into anchored evidence items.",
+      "registryDependencies": [
+        "anchored-evidence",
+        "document-source",
+        "source-anchor"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/source-evidence.ts",
+          "type": "registry:ui",
+          "target": "@ui/source-evidence.ts"
+        }
+      ]
+    },
+    {
+      "name": "source-segmented-document",
+      "type": "registry:ui",
+      "title": "Source segmented document",
+      "description": "Projection helpers that convert PDF/image bbox document sources into segmented-document segments and anchors.",
+      "registryDependencies": ["document-source", "segmented-document"],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/source-segmented-document-model.ts",
+          "type": "registry:ui",
+          "target": "@ui/source-segmented-document-model.ts"
+        }
+      ]
+    },
+    {
+      "name": "layout-blocks-segmented-document",
+      "type": "registry:ui",
+      "title": "Layout blocks segmented document",
+      "description": "Projection helpers that convert OCR/layout blocks into segmented-document segments and anchors.",
+      "registryDependencies": ["layout-blocks", "segmented-document"],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/layout-blocks-segmented-document-model.ts",
+          "type": "registry:ui",
+          "target": "@ui/layout-blocks-segmented-document-model.ts"
+        }
+      ]
+    },
+    {
+      "name": "source-anchor",
+      "type": "registry:ui",
+      "title": "Source anchor",
+      "description": "Pure conversion from document-source anchors to anchored-document viewer anchors.",
+      "registryDependencies": ["document-anchor", "document-source"],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/source-anchor.ts",
+          "type": "registry:ui",
+          "target": "@ui/source-anchor.ts"
         }
       ]
     },
@@ -3404,7 +3555,8 @@
         "dropdown-menu",
         "scroll-area",
         "skeleton",
-        "utils"
+        "utils",
+        "viewer-toolbar"
       ],
       "files": [
         {
@@ -3545,7 +3697,8 @@
         "dropdown-menu",
         "scroll-area",
         "skeleton",
-        "utils"
+        "utils",
+        "viewer-toolbar"
       ],
       "files": [
         {
@@ -3695,7 +3848,7 @@
         "unified",
         "unist-util-visit"
       ],
-      "registryDependencies": ["text-viewer", "button"],
+      "registryDependencies": ["@retab/text-viewer", "button"],
       "files": [
         {
           "path": "registry/new-york-v4/ui/pretext-markdown-viewer.tsx",
@@ -3765,7 +3918,12 @@
         "remark-math",
         "unist-util-visit"
       ],
-      "registryDependencies": ["text-viewer", "separator", "tabs"],
+      "registryDependencies": [
+        "text-viewer",
+        "separator",
+        "tabs",
+        "viewer-toolbar"
+      ],
       "files": [
         {
           "path": "registry/new-york-v4/ui/markdown-document-viewer.tsx",
@@ -3909,9 +4067,11 @@
         "image-viewer",
         "image-source",
         "document-source",
+        "segmented-document",
+        "source-segmented-document",
         "source-field-list",
-        "source-indicator",
-        "anchored-document-viewer"
+        "field-anchor-link",
+        "source-indicator"
       ],
       "files": [
         {
@@ -3937,6 +4097,8 @@
         "text-source",
         "document-source",
         "source-field-list",
+        "source-evidence",
+        "field-anchor-link",
         "source-indicator",
         "anchored-document-viewer"
       ],
@@ -3964,6 +4126,8 @@
         "docx-source",
         "document-source",
         "source-field-list",
+        "source-evidence",
+        "field-anchor-link",
         "source-indicator",
         "anchored-document-viewer"
       ],
@@ -3991,6 +4155,8 @@
         "csv-source",
         "document-source",
         "source-field-list",
+        "source-evidence",
+        "field-anchor-link",
         "source-indicator",
         "anchored-document-viewer"
       ],
@@ -4018,6 +4184,8 @@
         "xlsx-source",
         "document-source",
         "source-field-list",
+        "source-evidence",
+        "field-anchor-link",
         "source-indicator",
         "anchored-document-viewer"
       ],
@@ -4054,7 +4222,7 @@
       "type": "registry:ui",
       "title": "Anchored Document Viewer",
       "description": "Shared hover, selection, active-anchor, and target navigation state for document experiences where semantic items point into a rendered document.",
-      "registryDependencies": [],
+      "registryDependencies": ["document-anchor"],
       "files": [
         {
           "path": "registry/new-york-v4/ui/anchored-document-viewer.tsx",
@@ -4070,6 +4238,7 @@
       "description": "Bridges anchored-document pdf-area anchors to PdfViewer scrolling and page overlays without making PdfViewer own anchored item state.",
       "registryDependencies": [
         "anchored-document-viewer",
+        "document-anchor",
         "pdf-viewer",
         "pdf-source"
       ],

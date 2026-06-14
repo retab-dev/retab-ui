@@ -106,16 +106,16 @@ remain stable while the Pretext path iterates toward feature completeness.
 - Unknown JSX-like syntax, non-literal expression props, spread props, event handlers, component-specific unknown props, invalid enum values, import/export statements, and remote or namespaced components render as inert source-like text or `mdx` code.
 - Mermaid fenced blocks and restricted `Diagram` components render through the Mermaid package inside the viewer diagram surface, including common aliases such as `mmd`; rendered SVG is sanitized before mounting, parse/render failures stay contained in a non-crashing error/source state, and rendered diagrams expose source copy controls.
 - Inline and block math render through `remark-math` and KaTeX with untrusted input, bounded expansion, and bounded user-defined sizes.
-- GFM footnotes render with labelled references, labelled backrefs, bidirectional fragment targets, and a labelled footnotes section.
+- GFM footnotes render with labelled references, labelled backrefs, bidirectional fragment targets, a labelled footnotes section, and document-wide definition resolution across virtual chunks.
 - Fenced code blocks show normalized language headers, `title="..."` / `caption="..."` metadata, opt-in Pretty Code `showLineNumbers` / `showLineNumbers{n}` line numbers, highlighted lines/chars, diff add/remove line styling, full-block and selected-code copy controls with copied/failed states, a labelled keyboard-focusable horizontal source region, and `rehype-pretty-code` syntax highlighting.
 - GFM tables render inline cell Markdown, preserve left/center/right alignment with tabular numeric styling for right-aligned cells, support safe raw HTML captions, use a keyboard-focusable horizontal scroll region with Arrow/Home/End controls, patch deterministic header/cell associations, and include a copy action that writes rendered cells as TSV.
 - Images render through a safe Markdown image surface with blocked, loading, ready, failed, and retry states, title captions associated through `aria-describedby`, lazy loading, max-width containment, decoded aspect-ratio stabilization, and SVG/data/blob resource blocking; restricted videos render through the same safe media URL policy with controls, metadata preload, captions, and blocked/failed states.
 - The toolbar includes copy and download actions for the full raw Markdown source, including inline text, URL fallback, URL download metadata, Blob download metadata, and local Blob object URLs.
-- Oversized code, table, paragraph, list, and HTML payloads are flagged as hostile chunks, isolated from neighboring prose, and given cheap deterministic layout estimates.
+- Oversized code, table, paragraph, list, and HTML payloads are flagged as hostile chunks, isolated from neighboring prose, given cheap deterministic layout estimates, and rendered as bounded source previews with full-source copy instead of mounting the entire rich Markdown subtree.
 - URL, Blob, and inline text sources load through the existing bounded text resource layer.
 - File Viewer routes Markdown URL sources, Blob sources, inline text sources, and MIME-only Markdown sources through `PretextMarkdownViewer`.
-- A dedicated `/view/pretext-markdown-viewer` browser smoke route exercises the rich demo and verifies continuous rendering, bounded mounted chunks, no page chrome, no document-level horizontal overflow, rendered/source mode switching, and stable scroll after measurement.
-- The registry item is separate: `pretext-markdown-viewer`, and its generated artifact has a transitive install-tree import-closure smoke test against registry dependencies, alias imports, and declared package dependencies.
+- A dedicated `/view/pretext-markdown-viewer` browser smoke route exercises the rich demo and verifies continuous rendering, bounded mounted chunks, no page chrome, no document-level horizontal overflow, rendered/source mode switching, rendered/source highlight markers, stable scroll after measurement and async Mermaid/image settling, direct hash loads, local fragment clicks, footnote ref/backref navigation, browser back/forward fragment restoration, Markdown/raw-HTML link target and rel policy, narrow mobile layout, and dark-mode rendering.
+- The registry item is separate: `pretext-markdown-viewer`, and its generated artifact has a transitive install-tree import-closure smoke test against registry dependencies, alias imports, declared package dependencies, and a local `shadcn add @retab/pretext-markdown-viewer` CLI install smoke.
 
 ## Not Complete Yet
 
@@ -125,7 +125,7 @@ arbitrary MDX execution, broader GitHub alert visual/a11y verification,
 directive semantics beyond callouts, nested frontmatter metadata policy, full
 accessibility verification, syntax highlighting polish, raw HTML schema polish,
 hostile-block inner virtualization, source-mode search/selection polish, image
-retry/dimension metadata polish, full CLI registry CLI verification, and
+retry/dimension metadata polish, published registry endpoint verification, and
 broader integration rollout beyond File Viewer routing.
 
 ## Feature Matrix
@@ -160,10 +160,10 @@ the viewer diagram surface, then sanitizes the produced SVG before mounting it.
 Invalid diagrams or browser rendering failures stay contained in a non-crashing
 error/source surface while pre-layout dimension estimation remains open.
 
-Large hostile blocks are isolated but not internally virtualized yet. Extremely
-large code fences, generated tables, and very long paragraphs may mount as one
-visible hostile chunk while the broader large-block virtualization work remains
-open.
+Large hostile blocks are isolated and rendered through bounded source previews,
+but they are not internally virtualized as rich Markdown yet. Extremely large
+code fences, generated tables, and very long paragraphs preserve source access
+while the broader large-block virtualization work remains open.
 
 ## Migration Plan
 
@@ -177,8 +177,9 @@ continue to choose the viewer by content semantics rather than by a generic text
 fallback.
 
 The old paged Markdown Viewer can be removed only after the Pretext path has
-browser coverage for long documents, rich blocks, mobile/dark mode, registry
-installation, and source-line/fragment navigation across realistic files.
+browser coverage for long documents, rich blocks, broader mobile/dark visual
+states, registry installation, and source-line/fragment navigation across
+realistic files.
 
 ## Replacement Checklist
 

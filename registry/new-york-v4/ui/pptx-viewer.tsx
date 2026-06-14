@@ -18,7 +18,6 @@ import {
   PptxSlideScroller,
 } from "./pptx-viewer-slide"
 import { evictPptxSource } from "./pptx-viewer-source"
-import { PptxToolbar } from "./pptx-viewer-toolbar"
 import type { PptxViewerProps } from "./pptx-viewer-types"
 import { usePptxViewportWidth } from "./pptx-viewer-viewport"
 import {
@@ -28,6 +27,7 @@ import {
 import { usePptxZoom } from "./pptx-viewer-zoom"
 import { useIsClient } from "./use-is-client"
 import { ViewerErrorBoundary } from "./viewer-error"
+import { ViewerToolbar } from "./viewer-toolbar"
 
 export type { PptxDocumentSource, PptxViewerProps } from "./pptx-viewer-types"
 export type {
@@ -161,15 +161,23 @@ function PptxViewerContent({
       data-slot="pptx-viewer"
     >
       {toolbar ? (
-        <PptxToolbar
-          currentSlide={currentSlide}
-          slideCount={source.slideCount}
-          zoomScale={zoomScale}
-          scaleControlsDisabled={scaleControlsDisabled}
-          downloadAction={downloadAction}
-          onZoom={(factor) => setViewerScale(zoomScale * factor)}
-          onFitWidth={() => setViewerScale(null)}
-          onRotate={() => setRotation((value) => (value + 90) % 360)}
+        <ViewerToolbar
+          position={{
+            kind: "slide",
+            current: currentSlide,
+            total: source.slideCount,
+          }}
+          zoom={{
+            scale: zoomScale,
+            onZoomOut: () => setViewerScale(zoomScale / 1.2),
+            onZoomIn: () => setViewerScale(zoomScale * 1.2),
+            onFit: () => setViewerScale(null),
+            isDisabled: scaleControlsDisabled,
+          }}
+          rotate={{
+            onRotate: () => setRotation((value) => (value + 90) % 360),
+          }}
+          downloads={[downloadAction]}
         />
       ) : null}
 

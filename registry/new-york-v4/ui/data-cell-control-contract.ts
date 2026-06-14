@@ -2,6 +2,7 @@ import type * as React from "react"
 
 import type { DataCellActivationSource } from "@/registry/new-york-v4/ui/data-cell-activation"
 import type { DataCellEditorProps } from "@/registry/new-york-v4/ui/data-cell-edit-model"
+import type { DataCellPrimitiveSession } from "@/registry/new-york-v4/ui/data-cell-session"
 import type {
   DataCellDateTimeZone,
   DataCellKind,
@@ -9,7 +10,6 @@ import type {
   DataCellValueForKind,
   DataCellValueMeta,
 } from "@/registry/new-york-v4/ui/data-cell-types"
-import type { DataCellPrimitiveSession } from "@/registry/new-york-v4/ui/data-cell-session"
 
 export type DataCellDraftControl = {
   value?: string
@@ -37,19 +37,19 @@ type DataCellInputControlBaseProps<
   draft?: DataCellDraftControl
 }
 
-export type DataCellTextControlProps = DataCellInputControlBaseProps<
+export type DataCellTextInputControlProps = DataCellInputControlBaseProps<
   "text",
   string | null
 >
 
-export type DataCellNumberControlProps = DataCellInputControlBaseProps<
+export type DataCellNumberInputControlProps = DataCellInputControlBaseProps<
   "number" | "integer",
   number | string | null
 >
 
 export type DataCellInputControlProps =
-  | DataCellTextControlProps
-  | DataCellNumberControlProps
+  | DataCellTextInputControlProps
+  | DataCellNumberInputControlProps
 
 export type DataCellBooleanControlProps = DataCellEditorProps & {
   kind: "boolean"
@@ -106,9 +106,9 @@ export type DataCellPickerControlProps = DataCellEditorProps & {
 }
 
 export type DataCellControlPropsByKind = {
-  text: DataCellTextControlProps
-  number: DataCellNumberControlProps
-  integer: DataCellNumberControlProps
+  text: DataCellTextInputControlProps
+  number: DataCellNumberInputControlProps
+  integer: DataCellNumberInputControlProps
   boolean: DataCellBooleanControlProps
   select: DataCellSelectControlProps
   date: DataCellPickerControlProps

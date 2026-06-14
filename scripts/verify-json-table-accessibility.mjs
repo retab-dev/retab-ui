@@ -14,8 +14,11 @@ const expectedProfileText = process.env.PROFILE_EXPECTED_TEXT ?? "JSON table"
 
 const enumFieldPath = "transactions.0.transaction_type"
 const dateFieldPath = "transactions.0.date"
+const farTextFieldPath = "transactions.0.profile_far_note"
 const farEnumFieldPath = "transactions.0.profile_far_status"
 const farDateFieldPath = "transactions.0.profile_far_date"
+const farStructuredObjectFieldPath = "transactions.0.profile_far_details"
+const alignmentTolerancePx = 2
 
 function pnpmCommand() {
   return process.platform === "win32" ? "pnpm.cmd" : "pnpm"
@@ -318,7 +321,43 @@ async function activateCell(page, fieldPath) {
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2)
 }
 
+async function focusCellSurface(page, fieldPath) {
+  const surface = page.locator(
+    `${fieldSelector(fieldPath)} [data-slot="data-cell"]`
+  )
+  await surface.waitFor()
+  await surface.focus()
+  await page.waitForFunction((selector) => {
+    const cell = document.querySelector(selector)
+    return Boolean(cell && cell.contains(document.activeElement))
+  }, fieldSelector(fieldPath))
+  return surface
+}
+
+async function focusTableCell(page, fieldPath) {
+  const cell = page.locator(fieldSelector(fieldPath))
+  await cell.waitFor()
+  await cell.focus()
+  await page.waitForFunction((selector) => {
+    const cell = document.querySelector(selector)
+    return Boolean(cell && cell.contains(document.activeElement))
+  }, fieldSelector(fieldPath))
+  return cell
+}
+
+async function assertFocusWithinCell(page, fieldPath, label) {
+  const hasFocus = await page.evaluate((selector) => {
+    const cell = document.querySelector(selector)
+    return Boolean(cell && cell.contains(document.activeElement))
+  }, fieldSelector(fieldPath))
+  assert(hasFocus, `${label}: focus did not return to ${fieldPath}`)
+}
+
 async function scrollFarColumns(page) {
+  await scrollJsonTableColumns(page, 1)
+}
+
+async function scrollJsonTableColumns(page, ratio) {
   await page.evaluate(() => {
     const scroller = document.querySelector('[data-slot="json-table-scroll"]')
     if (!(scroller instanceof HTMLElement)) {
@@ -327,6 +366,89 @@ async function scrollFarColumns(page) {
     scroller.scrollLeft = scroller.scrollWidth
     scroller.dispatchEvent(new Event("scroll", { bubbles: true }))
   })
+  await page.waitForTimeout(50)
+  await page.evaluate((nextRatio) => {
+    const scroller = document.querySelector('[data-slot="json-table-scroll"]')
+    if (!(scroller instanceof HTMLElement)) {
+      throw new Error("Expected JSON table scroll container")
+    }
+    const maxScrollLeft = scroller.scrollWidth - scroller.clientWidth
+    scroller.scrollLeft = Math.max(0, maxScrollLeft * nextRatio)
+    scroller.dispatchEvent(new Event("scroll", { bubbles: true }))
+  }, ratio)
+  await page.waitForTimeout(100)
+}
+
+async function assertHeaderBodyAlignment(page, label) {
+  const summary = await page.evaluate(() => {
+    const headerCells = new Map()
+    for (const cell of document.querySelectorAll(
+      'thead th[aria-colindex]:not([aria-hidden="true"])'
+    )) {
+      if (!(cell instanceof HTMLElement)) continue
+      if (cell.colSpan !== 1) continue
+      const columnIndex = cell.getAttribute("aria-colindex")
+      if (!columnIndex) continue
+      const rect = cell.getBoundingClientRect()
+      headerCells.set(columnIndex, {
+        left: rect.left,
+        width: rect.width,
+      })
+    }
+
+    const bodyCells = Array.from(
+      document.querySelectorAll("tbody tr:first-child td[data-field-path]")
+    )
+      .map((cell) => {
+        if (!(cell instanceof HTMLElement)) return null
+        const columnIndex = cell.getAttribute("aria-colindex")
+        if (!columnIndex) return null
+        const rect = cell.getBoundingClientRect()
+        return {
+          columnIndex,
+          left: rect.left,
+          width: rect.width,
+        }
+      })
+      .filter(Boolean)
+
+    return {
+      bodyCells,
+      headerCells: Array.from(headerCells, ([columnIndex, rect]) => ({
+        columnIndex,
+        ...rect,
+      })),
+    }
+  })
+
+  assert(summary.bodyCells.length > 0, `${label}: no body cells to align`)
+  assert(summary.headerCells.length > 0, `${label}: no leaf headers to align`)
+
+  const headerByColumnIndex = new Map(
+    summary.headerCells.map((cell) => [cell.columnIndex, cell])
+  )
+
+  for (const bodyCell of summary.bodyCells) {
+    const headerCell = headerByColumnIndex.get(bodyCell.columnIndex)
+    assert(
+      headerCell,
+      `${label}: missing header for body column ${bodyCell.columnIndex}`
+    )
+
+    const leftDelta = Math.abs(headerCell.left - bodyCell.left)
+    const widthDelta = Math.abs(headerCell.width - bodyCell.width)
+    assert(
+      leftDelta <= alignmentTolerancePx &&
+        widthDelta <= alignmentTolerancePx,
+      [
+        `${label}: header/body column ${bodyCell.columnIndex} is misaligned`,
+        `left delta ${leftDelta.toFixed(2)}px`,
+        `width delta ${widthDelta.toFixed(2)}px`,
+        `header left ${headerCell.left.toFixed(2)} width ${headerCell.width.toFixed(2)}`,
+        `body left ${bodyCell.left.toFixed(2)} width ${bodyCell.width.toFixed(2)}`,
+      ].join("; ")
+    )
+  }
 }
 
 async function enterJsonEditableMode(page) {
@@ -385,6 +507,26 @@ async function assertOpenEnum(page, fieldPath, label) {
   )
 }
 
+async function assertKeyboardEnumFlow(page, fieldPath, label) {
+  await focusCellSurface(page, fieldPath)
+  await page.keyboard.press("Enter")
+
+  const trigger = page.locator(`${fieldSelector(fieldPath)} [role="combobox"]`)
+  await trigger.waitFor()
+  await page
+    .locator('[data-slot="data-cell-select-popup"] [role="option"]')
+    .first()
+    .waitFor()
+  await expectAttribute(trigger, "aria-expanded", "true", label)
+
+  await page.keyboard.press("ArrowDown")
+  await page.keyboard.press("Escape")
+  await page.locator(`${fieldSelector(fieldPath)} [role="combobox"]`).waitFor({
+    state: "detached",
+  })
+  await assertFocusWithinCell(page, fieldPath, label)
+}
+
 async function assertOpenDate(page, fieldPath, label) {
   await activateCell(page, fieldPath)
   const trigger = page.locator(
@@ -416,11 +558,153 @@ async function assertOpenDate(page, fieldPath, label) {
   )
 }
 
+async function assertKeyboardDateFlow(page, fieldPath, label) {
+  await focusCellSurface(page, fieldPath)
+  await page.keyboard.press("Enter")
+
+  const trigger = page.locator(
+    `${fieldSelector(fieldPath)} button[data-slot="data-cell"][aria-haspopup="dialog"]`
+  )
+  await trigger.waitFor()
+  await page.locator('[data-slot="calendar"]').waitFor()
+  await expectAttribute(trigger, "aria-expanded", "true", label)
+
+  await page.keyboard.press("Escape")
+  await page.locator('[data-slot="calendar"]').waitFor({ state: "detached" })
+  await assertFocusWithinCell(page, fieldPath, label)
+}
+
+async function assertKeyboardTextCommit(page, fieldPath, label) {
+  await focusCellSurface(page, fieldPath)
+  await page.keyboard.press("K")
+
+  const input = page.locator(
+    `${fieldSelector(fieldPath)} input[data-mode="edit"]`
+  )
+  await input.waitFor()
+  await page.keyboard.type("eyboard far note")
+  await expectInputValue(input, "Keyboard far note", label)
+  await page.keyboard.press("Enter")
+  await input.waitFor({ state: "detached" })
+  await assertFocusWithinCell(page, fieldPath, label)
+  await page
+    .locator(fieldSelector(fieldPath))
+    .filter({ hasText: "Keyboard far note" })
+    .waitFor()
+}
+
+function structuredDialog(page) {
+  return page.locator('[data-slot="popover-popup"][role="dialog"]')
+}
+
+async function assertStructuredDialogVisible(page, label) {
+  await structuredDialog(page).waitFor()
+  const nodes = await axTree(page)
+  assert(
+    hasAxRole(nodes, "dialog"),
+    `${label}: no structured dialog in accessibility tree`
+  )
+}
+
+async function assertStructuredObjectControls(page, label) {
+  const controls = await page.evaluate(() => {
+    const popover = document.querySelector('[data-slot="popover-popup"]')
+    if (!(popover instanceof HTMLElement)) return []
+
+    return Array.from(popover.querySelectorAll("input")).map((input) => ({
+      label: input
+        .closest('[data-slot="form-item"]')
+        ?.querySelector('[data-slot="form-label"]')
+        ?.textContent?.trim(),
+      type: input.getAttribute("type") ?? "text",
+      value: input.value,
+    }))
+  })
+
+  assert(
+    controls.some(
+      (control) =>
+        control.label === "reviewer" &&
+        control.type === "text" &&
+        control.value === "reviewer-0"
+    ),
+    `${label}: missing reviewer string control`
+  )
+  assert(
+    controls.some(
+      (control) =>
+        control.label === "priority" &&
+        control.type === "number" &&
+        control.value === "1"
+    ),
+    `${label}: missing priority number control`
+  )
+}
+
+async function assertOpenStructuredObject(page, fieldPath, label) {
+  await activateCell(page, fieldPath)
+  await assertStructuredDialogVisible(page, label)
+
+  const cell = page.locator(fieldSelector(fieldPath))
+  await expectAttribute(cell, "data-active", "true", label)
+  await page
+    .locator(`${fieldSelector(fieldPath)} [data-slot="popover-trigger"]`)
+    .waitFor()
+  await assertStructuredObjectControls(page, label)
+}
+
+async function assertStructuredHorizontalRemount(page, fieldPath, label) {
+  await assertOpenStructuredObject(page, fieldPath, label)
+
+  await scrollJsonTableColumns(page, 0)
+  await page.locator(fieldSelector(fieldPath)).waitFor({ state: "detached" })
+  await structuredDialog(page).waitFor({ state: "detached" })
+
+  await scrollFarColumns(page)
+  await page.locator(fieldSelector(fieldPath)).waitFor()
+  await assertStructuredDialogVisible(page, label)
+  await expectAttribute(
+    page.locator(fieldSelector(fieldPath)),
+    "data-active",
+    "true",
+    label
+  )
+
+  await page.keyboard.press("Escape")
+  await structuredDialog(page).waitFor({ state: "detached" })
+}
+
+async function assertKeyboardStructuredObjectFlow(page, fieldPath, label) {
+  await focusTableCell(page, fieldPath)
+  await page.keyboard.press("Enter")
+  await assertStructuredDialogVisible(page, label)
+  await expectAttribute(
+    page.locator(fieldSelector(fieldPath)),
+    "data-active",
+    "true",
+    label
+  )
+
+  await page.keyboard.press("Escape")
+  await structuredDialog(page).waitFor({ state: "detached" })
+  await assertFocusWithinCell(page, fieldPath, label)
+}
+
 async function expectAttribute(locator, attribute, expected, label) {
   const actual = await locator.getAttribute(attribute)
   assert(
     actual === expected,
     `${label}: expected ${attribute}=${JSON.stringify(
+      expected
+    )}, got ${JSON.stringify(actual)}`
+  )
+}
+
+async function expectInputValue(locator, expected, label) {
+  const actual = await locator.inputValue()
+  assert(
+    actual === expected,
+    `${label}: expected input value ${JSON.stringify(
       expected
     )}, got ${JSON.stringify(actual)}`
   )
@@ -448,14 +732,52 @@ async function main() {
     await page.goto(largeUrl.toString(), { waitUntil: "networkidle" })
     await assertTableSemantics(page, "large inactive")
     await enterJsonEditableMode(page)
+    await scrollJsonTableColumns(page, 0)
+    await assertHeaderBodyAlignment(page, "large left columns")
+    await scrollJsonTableColumns(page, 0.5)
+    await assertHeaderBodyAlignment(page, "large middle columns")
     await scrollFarColumns(page)
     await page.locator(fieldSelector(farEnumFieldPath)).waitFor()
     await assertTableSemantics(page, "large far columns")
+    await assertHeaderBodyAlignment(page, "large far columns")
     await assertOpenEnum(page, farEnumFieldPath, "large far enum")
     await page.keyboard.press("Escape")
     await scrollFarColumns(page)
     await page.locator(fieldSelector(farDateFieldPath)).waitFor()
     await assertOpenDate(page, farDateFieldPath, "large far date")
+    await page.keyboard.press("Escape")
+    await scrollFarColumns(page)
+    await page.locator(fieldSelector(farEnumFieldPath)).waitFor()
+    await assertKeyboardEnumFlow(page, farEnumFieldPath, "large keyboard far enum")
+    await scrollFarColumns(page)
+    await page.locator(fieldSelector(farDateFieldPath)).waitFor()
+    await assertKeyboardDateFlow(page, farDateFieldPath, "large keyboard far date")
+    await scrollFarColumns(page)
+    await page.locator(fieldSelector(farTextFieldPath)).waitFor()
+    await assertKeyboardTextCommit(page, farTextFieldPath, "large keyboard far text")
+    await scrollFarColumns(page)
+    await page.locator(fieldSelector(farStructuredObjectFieldPath)).waitFor()
+    await assertOpenStructuredObject(
+      page,
+      farStructuredObjectFieldPath,
+      "large far structured object"
+    )
+    await page.keyboard.press("Escape")
+    await structuredDialog(page).waitFor({ state: "detached" })
+    await scrollFarColumns(page)
+    await page.locator(fieldSelector(farStructuredObjectFieldPath)).waitFor()
+    await assertStructuredHorizontalRemount(
+      page,
+      farStructuredObjectFieldPath,
+      "large far structured object remount"
+    )
+    await scrollFarColumns(page)
+    await page.locator(fieldSelector(farStructuredObjectFieldPath)).waitFor()
+    await assertKeyboardStructuredObjectFlow(
+      page,
+      farStructuredObjectFieldPath,
+      "large keyboard far structured object"
+    )
 
     console.log(
       `ok json-table accessibility browser verification at ${profileUrl}`

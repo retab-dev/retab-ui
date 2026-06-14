@@ -33,8 +33,10 @@ export function PdfThumbnailsBlock() {
   return (
     <div className="h-full min-h-[680px] bg-background">
       <PdfViewerProvider source={PDF_SOURCE}>
-        <ViewerRoot bare defaultSidebarOpen className="h-full">
-          <PdfViewerHeader leading={<ViewerSidebarTrigger />} />
+        <ViewerRoot bare defaultOpen className="h-full">
+          <PdfViewerHeader>
+            <ViewerSidebarTrigger />
+          </PdfViewerHeader>
           <ViewerBody>
             <ViewerSidebar
               aria-label="PDF pages"

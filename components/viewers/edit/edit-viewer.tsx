@@ -4,35 +4,53 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 import {
-  AnchoredDocumentProvider,
-  useAnchoredDocument,
-  type AnchoredItem,
-} from "@/components/ui/anchored-document-viewer"
-import { usePdfAnchoredTarget } from "@/components/ui/pdf-anchor-target"
-import type { PageOverlayProps } from "@/components/ui/pdf-viewer"
-import {
   ViewerBody,
-  ViewerSurface,
-  ViewerHeader,
-  ViewerSidebar,
   ViewerRoot,
-  ViewerSidebarTrigger,
+  ViewerSidebar,
+  ViewerSurface,
 } from "@/components/ui/viewer"
 
-import { EditViewerDocumentPane } from "./edit-viewer-document-pane"
-import { EditViewerFieldPanel } from "./edit-viewer-field-panel"
-import { EditFieldOverlayLayer } from "./edit-viewer-overlays"
+import { EditViewerDocument } from "./edit-viewer-document"
+import { EditViewerFields } from "./edit-viewer-fields"
+import { EditViewerHeader } from "./edit-viewer-header"
+import { EditViewerProvider, useEditViewer } from "./edit-viewer-provider"
 import {
-  EditViewerBusyOverlay,
+  EditViewerBusyOverlay as EditViewerBusyOverlayContent,
   EmptyEditViewerState,
 } from "./edit-viewer-states"
-import { EditViewerToolbar } from "./edit-viewer-toolbar"
-import type { EditViewerField, EditViewerProps } from "./edit-viewer-types"
-import { useEditViewerController } from "./use-edit-viewer-controller"
+import type { EditViewerProps } from "./edit-viewer-types"
+
+export {
+  EditViewerProvider,
+  useEditViewer,
+  useEditViewerDocument,
+  useEditViewerFields,
+  useEditViewerHeader,
+  useEditViewerSelection,
+} from "./edit-viewer-provider"
+export type {
+  EditViewerContextValue,
+  EditViewerDocumentState,
+  EditViewerFieldsPartState,
+  EditViewerFieldsState,
+  EditViewerHeaderState,
+  EditViewerModeState,
+  EditViewerProviderProps,
+  EditViewerSelectionState,
+  EditViewerState,
+} from "./edit-viewer-provider"
+export type { EditViewerDocumentTarget } from "./edit-viewer-model"
+export { EditViewerDocument } from "./edit-viewer-document"
+export type { EditViewerDocumentProps } from "./edit-viewer-document"
+export { EditViewerFields } from "./edit-viewer-fields"
+export type { EditViewerFieldsProps } from "./edit-viewer-fields"
+export { EditViewerHeader } from "./edit-viewer-header"
+export type { EditViewerHeaderProps } from "./edit-viewer-header"
+export { EditViewerToolbar } from "./edit-viewer-toolbar"
 
 export type {
-  EditViewerDocument,
   EditViewerField,
+  EditViewerDocumentSource,
   EditViewerInputField,
   EditViewerInputResult,
   EditViewerMode,
@@ -42,207 +60,63 @@ export type {
   EditViewerStatus,
 } from "./edit-viewer-types"
 
-export function EditViewer({
-  result,
-  sourceDocument,
-  filledDocument,
-  mode,
-  onModeChange,
-  selectedFieldKey,
-  onSelectedFieldKeyChange,
-  status = { state: "idle" },
-  className,
-  options,
-}: EditViewerProps) {
-  const controller = useEditViewerController({
-    result,
-    sourceDocument,
-    filledDocument,
-    mode,
-    onModeChange,
-    status,
-    options,
-  })
-  const target = usePdfAnchoredTarget(controller.viewerRef)
-  const anchoredItems = React.useMemo(
-    () => controller.fields.map(editFieldToAnchoredItem),
-    [controller.fields]
-  )
-
+export function EditViewer({ className, ...providerProps }: EditViewerProps) {
   return (
-    <AnchoredDocumentProvider
-      items={anchoredItems}
-      target={target}
-      initialItemId={selectedFieldKey}
-    >
-      <EditViewerContent
-        className={className}
-        controller={controller}
-        filledDocument={filledDocument}
-        onSelectedFieldKeyChange={onSelectedFieldKeyChange}
-        selectedFieldKey={selectedFieldKey}
-        sourceDocument={sourceDocument}
-        status={status}
-      />
-    </AnchoredDocumentProvider>
+    <EditViewerProvider {...providerProps}>
+      <EditViewerRoot className={className} />
+    </EditViewerProvider>
   )
 }
 
-function EditViewerContent({
-  className,
-  controller,
-  filledDocument,
-  onSelectedFieldKeyChange,
-  selectedFieldKey,
-  sourceDocument,
-  status,
-}: {
-  className?: string
-  controller: ReturnType<typeof useEditViewerController>
-  filledDocument?: EditViewerProps["filledDocument"]
-  onSelectedFieldKeyChange?: EditViewerProps["onSelectedFieldKeyChange"]
-  selectedFieldKey?: EditViewerProps["selectedFieldKey"]
-  sourceDocument?: EditViewerProps["sourceDocument"]
-  status: NonNullable<EditViewerProps["status"]>
-}) {
-  const {
-    activeItemId,
-    activateItem,
-    previewItem,
-    selectedItemId,
-    selectItem,
-  } = useAnchoredDocument()
-
-  React.useEffect(() => {
-    if (selectedFieldKey === undefined) return
-    if (selectedFieldKey && !controller.fieldByKey.has(selectedFieldKey)) {
-      selectItem(null)
-      onSelectedFieldKeyChange?.(null)
-      return
-    }
-    selectItem(selectedFieldKey ?? null)
-  }, [
-    controller.fieldByKey,
-    onSelectedFieldKeyChange,
-    selectItem,
-    selectedFieldKey,
-  ])
-
-  const selectField = React.useCallback(
-    (fieldKey: string) => {
-      activateItem(fieldKey)
-      onSelectedFieldKeyChange?.(fieldKey)
-    },
-    [activateItem, onSelectedFieldKeyChange]
-  )
-
-  const renderPageOverlay = React.useCallback(
-    ({ pageNumber }: PageOverlayProps) => (
-      <EditFieldOverlayLayer
-        fieldsByPage={controller.fieldsByPage}
-        pageNumber={pageNumber}
-        mode={controller.activeMode}
-        effectiveFieldKey={activeItemId}
-        onFieldHover={previewItem}
-        onFieldSelect={selectField}
-      />
-    ),
-    [
-      activeItemId,
-      controller.activeMode,
-      controller.fieldsByPage,
-      previewItem,
-      selectField,
-    ]
-  )
+function EditViewerRoot({ className }: { className?: string }) {
+  const edit = useEditViewer()
 
   return (
     <ViewerRoot
       bare
       data-edit-viewer-root
-      defaultSidebarOpen
+      defaultOpen
       className={cn("h-full w-full flex-1 bg-background", className)}
     >
-      {status.state === "detecting" || status.state === "filling" ? (
-        <EditViewerBusyOverlay status={status} />
-      ) : null}
+      <EditViewerBusyOverlay />
+      <EditViewerEmptyState />
 
-      {!controller.hasOutput ? (
-        <EmptyEditViewerState />
-      ) : (
+      {edit.state.hasOutput ? (
         <>
-          {controller.availableModes.length > 0 ? (
-            <ViewerHeader className="bg-background">
-              <div className="flex min-w-0 items-center gap-2 px-2">
-                {controller.resolvedOptions.fieldPanel ? (
-                  <ViewerSidebarTrigger />
-                ) : null}
-                <EditViewerToolbar
-                  modes={controller.availableModes}
-                  mode={controller.activeMode}
-                  onModeChange={controller.changeMode}
-                  filledCount={controller.filledCount}
-                  fieldCount={controller.fields.length}
-                  status={controller.activeStatus}
-                />
-              </div>
-            </ViewerHeader>
-          ) : null}
-
+          <EditViewerHeader />
           <ViewerBody className="flex-col md:flex-row">
             <ViewerSurface className="relative">
-              <EditViewerDocumentPane
-                mode={controller.activeMode}
-                sourceDocument={sourceDocument}
-                filledDocument={filledDocument}
-                renderPageOverlay={renderPageOverlay}
-                viewerRef={controller.viewerRef}
-                status={status}
-              />
+              <EditViewerDocument className="h-full" />
             </ViewerSurface>
 
-            {controller.resolvedOptions.fieldPanel ? (
+            {edit.options.fieldPanel ? (
               <ViewerSidebar
                 aria-label="Document fields"
                 side="right"
                 width="320px"
                 className="max-h-[42%] min-h-[220px] border-t bg-background md:max-h-none md:max-w-[50%] md:border-t-0 md:border-l"
               >
-                <EditViewerFieldPanel
-                  fields={controller.fields}
-                  filledCount={controller.filledCount}
-                  effectiveFieldKey={activeItemId}
-                  selectedFieldKey={selectedItemId}
-                  query={controller.query}
-                  onQueryChange={controller.setQuery}
-                  filter={controller.filter}
-                  onFilterChange={controller.setFilter}
-                  onFieldHover={previewItem}
-                  onFieldSelect={selectField}
-                  showSearch={controller.resolvedOptions.search}
-                  showFilters={controller.resolvedOptions.filters}
-                />
+                <EditViewerFields />
               </ViewerSidebar>
             ) : null}
           </ViewerBody>
         </>
-      )}
+      ) : null}
     </ViewerRoot>
   )
 }
 
-function editFieldToAnchoredItem(field: EditViewerField): AnchoredItem {
-  return {
-    id: field.key,
-    anchor: field.bbox
-      ? {
-          kind: "pdf-area",
-          pageNumber: field.bbox.page,
-          left: field.bbox.left * 100,
-          top: field.bbox.top * 100,
-          width: field.bbox.width * 100,
-          height: field.bbox.height * 100,
-        }
-      : null,
-  }
+export function EditViewerBusyOverlay() {
+  const { state } = useEditViewer()
+
+  return state.status.state === "detecting" ||
+    state.status.state === "filling" ? (
+    <EditViewerBusyOverlayContent status={state.status} />
+  ) : null
+}
+
+export function EditViewerEmptyState() {
+  const { state } = useEditViewer()
+
+  return state.hasOutput ? null : <EmptyEditViewerState />
 }

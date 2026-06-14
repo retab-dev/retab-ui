@@ -1,15 +1,15 @@
 "use client"
 
 import * as React from "react"
-import { Check, Copy, Maximize, Minus, Plus } from "lucide-react"
+import { Check, Copy } from "lucide-react"
 import { createRoot, type Root } from "react-dom/client"
 
 import type { ViewerResource } from "@/lib/viewer-resource"
 
 import { Button } from "./button"
 import {
-  createMarkdownLayoutStyle,
   createMarkdownChunkEstimates,
+  createMarkdownLayoutStyle,
   MARKDOWN_DOCUMENT_CHUNK_PADDING_X,
   MARKDOWN_DOCUMENT_CHUNK_PADDING_Y,
   MARKDOWN_DOCUMENT_COLUMN_WIDTH,
@@ -33,7 +33,6 @@ import {
 } from "./markdown-document-virtualizer"
 import { PlainTextViewerFrame } from "./plain-text-viewer-frame"
 import { ScrollArea } from "./scroll-area"
-import { Separator } from "./separator"
 import { Tabs, TabsList, TabsTrigger } from "./tabs"
 import { TextViewerFallback, TextViewerFrame } from "./text-viewer-chrome"
 import { normalizeTextLineRange } from "./text-viewer-ranges"
@@ -43,7 +42,7 @@ import {
 } from "./text-viewer-resource"
 import { clampTextViewerScale } from "./text-viewer-scale"
 import type { TextViewerHandle, TextViewerProps } from "./text-viewer-types"
-import { ViewerDownloadControl } from "./viewer-download"
+import { ViewerToolbar } from "./viewer-toolbar"
 
 const MARKDOWN_VIEWER_OVERSCAN_PX = 900
 const MARKDOWN_VIEWER_DEFAULT_VIEWPORT_HEIGHT = 720
@@ -480,45 +479,34 @@ function MarkdownDocumentToolbar({
   onZoomOut: () => void
 }) {
   return (
-    <div className="no-scrollbar flex h-10 shrink-0 items-center gap-2 overflow-x-auto border-b bg-card px-2">
-      <Tabs
-        value={mode}
-        onValueChange={(value) =>
-          onModeChange(value as MarkdownDocumentViewMode)
-        }
-      >
-        <TabsList variant="underline" className="py-0">
-          <TabsTrigger value="rendered" className="h-8 text-xs sm:text-xs">
-            Rendered
-          </TabsTrigger>
-          <TabsTrigger value="text" className="h-8 text-xs sm:text-xs">
-            Text
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
-      <div className="ml-auto flex shrink-0 items-center gap-1">
-        <ToolbarIconButton label="Zoom out" onClick={onZoomOut}>
-          <Minus />
-        </ToolbarIconButton>
-        <button
-          className="w-12 text-center text-xs text-muted-foreground tabular-nums"
-          title="Reset zoom"
-          type="button"
-          onClick={onResetZoom}
+    <ViewerToolbar
+      title={
+        <Tabs
+          value={mode}
+          onValueChange={(value) =>
+            onModeChange(value as MarkdownDocumentViewMode)
+          }
         >
-          {Math.round(scale * 100)}%
-        </button>
-        <ToolbarIconButton label="Zoom in" onClick={onZoomIn}>
-          <Plus />
-        </ToolbarIconButton>
-        <ToolbarIconButton label="Fit width" onClick={onFitWidth}>
-          <Maximize />
-        </ToolbarIconButton>
-        <Separator orientation="vertical" className="mx-1 h-4" />
-        <CopyAllMarkdownButton text={document.text} />
-        <ViewerDownloadControl actions={[downloadAction]} />
-      </div>
-    </div>
+          <TabsList variant="underline" className="py-0">
+            <TabsTrigger value="rendered" className="h-8 text-xs sm:text-xs">
+              Rendered
+            </TabsTrigger>
+            <TabsTrigger value="text" className="h-8 text-xs sm:text-xs">
+              Text
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      }
+      zoom={{
+        scale,
+        onZoomOut,
+        onZoomIn,
+        onFit: onFitWidth,
+        onReset: onResetZoom,
+      }}
+      downloads={[downloadAction]}
+      extra={<CopyAllMarkdownButton text={document.text} />}
+    />
   )
 }
 
@@ -555,26 +543,6 @@ function CopyAllMarkdownButton({ text }: { text: string }) {
       onClick={copy}
     >
       {isCopied ? <Check /> : <Copy />}
-    </Button>
-  )
-}
-
-function ToolbarIconButton({
-  label,
-  children,
-  ...props
-}: React.ComponentProps<typeof Button> & { label: string }) {
-  return (
-    <Button
-      aria-label={label}
-      className="size-7"
-      size="icon-sm"
-      title={label}
-      type="button"
-      variant="ghost"
-      {...props}
-    >
-      {children}
     </Button>
   )
 }
@@ -678,7 +646,6 @@ function projectMarkdownChunks({
     })
     canvas.append(projectedChunk.shell)
   }
-
 }
 
 function createMarkdownProjectedChunk({

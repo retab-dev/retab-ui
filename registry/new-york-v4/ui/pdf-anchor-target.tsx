@@ -3,15 +3,18 @@
 import * as React from "react"
 
 import type { Source } from "@/lib/document-source"
-import type { PageOverlayProps, PdfViewerHandle } from "@/components/ui/pdf-viewer"
+import type {
+  PageOverlayProps,
+  PdfViewerHandle,
+} from "@/components/ui/pdf-viewer"
 import { PdfHighlight } from "@/components/ui/pdf-viewer"
 
 import type {
   AnchoredDocumentTarget,
   AnchoredItem,
-  PdfAreaAnchor,
 } from "./anchored-document-viewer"
 import { useAnchoredDocument } from "./anchored-document-viewer"
+import type { PdfAreaAnchor } from "./document-anchor"
 import { pdfAnchorToTarget } from "./pdf-source"
 
 export function sourceToPdfAnchor(source: Source): PdfAreaAnchor | null {
@@ -70,7 +73,9 @@ function pdfArea(anchor: PdfAreaAnchor) {
   }
 }
 
-function isPdfAreaAnchor(anchor: AnchoredItem["anchor"]): anchor is PdfAreaAnchor {
+function isPdfAreaAnchor(
+  anchor: AnchoredItem["anchor"]
+): anchor is PdfAreaAnchor {
   return anchor?.kind === "pdf-area"
 }
 
@@ -116,7 +121,7 @@ export function usePdfAnchoredOverlay(options: PdfAnchoredOverlayOptions = {}) {
             data-active={isActive ? "" : undefined}
             data-selected={isSelected ? "" : undefined}
             className={[
-              "absolute z-20 rounded-[2px] border bg-transparent outline-none transition-[background-color,border-color,box-shadow]",
+              "absolute z-20 rounded-[2px] border bg-transparent transition-[background-color,border-color,box-shadow] outline-none",
               "border-primary/35 hover:border-primary/70 hover:bg-primary/8 focus-visible:ring-2 focus-visible:ring-ring",
               isActive ? "border-primary/70 bg-primary/12" : "",
               isSelected ? "border-primary bg-primary/16 shadow-sm" : "",

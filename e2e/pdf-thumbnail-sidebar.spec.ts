@@ -9,11 +9,16 @@ test("PDF thumbnail sidebar co-scrolls with the document and thumbnail clicks", 
 }) => {
   await page.goto(DEMO_PATH)
 
-  const viewer = page.locator('[data-slot="pdf-viewer"]')
-  const documentViewport = viewer.locator('[data-slot="scroll-area-viewport"]')
-  const thumbnailRail = page.getByRole("navigation", { name: "PDF pages" })
+  const viewerRoot = page.locator('[data-slot="viewer-root"]')
+  const pdfViewer = viewerRoot.locator('[data-slot="pdf-viewer"]')
+  const documentViewport = pdfViewer.locator(
+    '[data-slot="scroll-area-viewport"]'
+  )
+  const thumbnailRail = viewerRoot.getByRole("navigation", {
+    name: "PDF pages",
+  })
 
-  await expect(viewer).toBeVisible()
+  await expect(pdfViewer).toBeVisible()
   await expect(documentViewport).toBeVisible()
   await expect(thumbnailRail).toBeVisible()
   await expect(pdfPage(page, 1)).toBeVisible()
@@ -26,28 +31,71 @@ test("PDF thumbnail sidebar co-scrolls with the document and thumbnail clicks", 
 
   await expectVisiblePdfPage(page, CLICKED_PAGE)
   await expectCurrentThumbnail(page, thumbnailRail, CLICKED_PAGE)
+
+  await thumbnailRail.focus()
+  await page.keyboard.press("ArrowDown")
+  await expectVisiblePdfPage(page, CLICKED_PAGE + 1)
+  await expectCurrentThumbnail(page, thumbnailRail, CLICKED_PAGE + 1)
+
+  await thumbnailRail.focus()
+  await page.keyboard.press("Home")
+  await expectVisiblePdfPage(page, 1)
+  await expectCurrentThumbnail(page, thumbnailRail, 1)
 })
 
-test("PDF thumbnail sidebar toggles from the viewer header", async ({
+test("PDF thumbnail sidebar toggles from the viewer header with pointer and keyboard", async ({
   page,
 }) => {
   await page.goto(DEMO_PATH)
 
-  const viewer = page.locator('[data-slot="pdf-viewer"]')
-  const trigger = viewer.getByRole("button", { name: "Toggle sidebar" })
-  const sidebar = viewer.locator('[data-slot="viewer-sidebar"]')
+  const viewerRoot = page.locator('[data-slot="viewer-root"]')
+  const trigger = viewerRoot.getByRole("button", { name: "Toggle sidebar" })
+  const sidebar = viewerRoot.locator('[data-slot="viewer-sidebar"]')
 
-  await expect(viewer).toBeVisible()
+  await expect(viewerRoot).toBeVisible()
   await expect(sidebar).toHaveAttribute("aria-label", "PDF pages")
   await expect(trigger).toHaveAttribute("aria-expanded", "true")
 
   await trigger.click()
   await expect(trigger).toHaveAttribute("aria-expanded", "false")
   await expect(sidebar).toHaveAttribute("aria-hidden", "true")
+  await expect(sidebar).toHaveAttribute("inert", "")
+
+  await trigger.focus()
+  await page.keyboard.press("Enter")
+  await expect(trigger).toHaveAttribute("aria-expanded", "true")
+  await expect(sidebar).not.toHaveAttribute("aria-hidden", "true")
+
+  await trigger.focus()
+  await page.keyboard.press("Space")
+  await expect(trigger).toHaveAttribute("aria-expanded", "false")
+  await expect(sidebar).toHaveAttribute("inert", "")
+})
+
+test("PDF thumbnail sidebar uses overlay dismissal on narrow viewports", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 520, height: 760 })
+  await page.goto(DEMO_PATH)
+
+  const viewerRoot = page.locator('[data-slot="viewer-root"]')
+  const trigger = viewerRoot.getByRole("button", { name: "Toggle sidebar" })
+  const sidebar = viewerRoot.locator('[data-slot="viewer-sidebar"]')
+
+  await expect(viewerRoot).toBeVisible()
+  await expect(sidebar).toHaveAttribute("data-viewer-sidebar-mode", "overlay")
+  await expect(trigger).toHaveAttribute("aria-expanded", "true")
+
+  await page.keyboard.press("Escape")
+  await expect(trigger).toHaveAttribute("aria-expanded", "false")
+  await expect(sidebar).toHaveAttribute("aria-hidden", "true")
 
   await trigger.click()
   await expect(trigger).toHaveAttribute("aria-expanded", "true")
-  await expect(sidebar).not.toHaveAttribute("aria-hidden", "true")
+
+  await page.mouse.click(500, 740)
+  await expect(trigger).toHaveAttribute("aria-expanded", "false")
+  await expect(sidebar).toHaveAttribute("aria-hidden", "true")
 })
 
 async function scrollDocumentToPage(
@@ -151,5 +199,8 @@ function pdfPage(page: Page, pageNumber: number) {
 }
 
 function thumbnailButton(thumbnailRail: Locator, pageNumber: number) {
-  return thumbnailRail.getByRole("button", { name: `Page ${pageNumber}` })
+  return thumbnailRail.getByRole("button", {
+    name: `Page ${pageNumber}`,
+    exact: true,
+  })
 }

@@ -28,7 +28,6 @@ import { usePdfPageSizes } from "./pdf-viewer-page-sizes"
 import { useMeasuredElementWidth, usePdfScale } from "./pdf-viewer-scale"
 import { usePdfScroll } from "./pdf-viewer-scroll"
 import { PageSkeleton, PdfViewerFallback } from "./pdf-viewer-states"
-import { PdfViewerControls, PdfViewerToolbar } from "./pdf-viewer-toolbar"
 import type {
   PageOverlayProps,
   PdfPageSize,
@@ -38,6 +37,7 @@ import { usePdfPageVirtualization } from "./pdf-viewer-virtualization"
 import { useIsClient } from "./use-is-client"
 import { ViewerBody, ViewerHeader, ViewerRoot, ViewerSurface } from "./viewer"
 import { ViewerErrorBoundary } from "./viewer-error"
+import { ViewerToolbar } from "./viewer-toolbar"
 
 export type {
   PageOverlayProps,
@@ -52,7 +52,12 @@ export {
   usePdfViewerThumbnails,
   type PdfDocumentSource,
 } from "./pdf-viewer-context"
-export { PdfViewerThumbnails } from "./pdf-viewer-thumbnails"
+export {
+  PdfThumbnailRail,
+  PdfViewerThumbnails,
+  type PdfThumbnailRailProps,
+  type PdfViewerThumbnailsProps,
+} from "./pdf-viewer-thumbnails"
 
 export interface PdfHighlightProps extends React.ComponentProps<"div"> {
   /** Normalized box, each field a percentage [0, 100] of the page. */
@@ -139,12 +144,12 @@ export const PdfViewer = React.forwardRef<PdfViewerHandle, PdfViewerProps>(
 )
 
 export function PdfViewerHeader({
+  children,
   className,
-  leading,
   toolbar = true,
 }: {
+  children?: React.ReactNode
   className?: string
-  leading?: React.ReactNode
   toolbar?: boolean
 }) {
   const { currentPage, headerControls, resource } = usePdfViewerHeader()
@@ -154,15 +159,36 @@ export function PdfViewerHeader({
     <ViewerHeader
       className={cn("flex min-h-10 items-center gap-3 px-2 py-1", className)}
     >
-      {leading}
-      <div className="min-w-0 truncate px-1 text-sm font-medium">{label}</div>
+      {children}
       {toolbar && headerControls ? (
-        <PdfViewerControls {...headerControls} />
-      ) : toolbar && currentPage ? (
-        <div className="ml-auto px-1 text-xs text-muted-foreground tabular-nums">
-          Page {currentPage}
-        </div>
-      ) : null}
+        <ViewerToolbar
+          className="h-auto flex-1 border-b-0 bg-transparent px-0"
+          title={label}
+          position={{
+            kind: "page",
+            current: headerControls.currentPage,
+            total: headerControls.pageCount,
+          }}
+          zoom={{
+            scale: headerControls.scale,
+            onZoomOut: headerControls.onZoomOut,
+            onZoomIn: headerControls.onZoomIn,
+            onFit: headerControls.onFitWidth,
+          }}
+          rotate={{ onRotate: headerControls.onRotate }}
+          downloads={[headerControls.downloadAction]}
+        />
+      ) : (
+        <ViewerToolbar
+          className="h-auto flex-1 border-b-0 bg-transparent px-0"
+          title={label}
+          position={
+            toolbar && currentPage
+              ? { kind: "page", current: currentPage }
+              : null
+          }
+        />
+      )}
     </ViewerHeader>
   )
 }
@@ -401,15 +427,20 @@ function PdfViewerInner({
       data-slot="pdf-viewer"
     >
       {toolbar ? (
-        <PdfViewerToolbar
-          currentPage={currentPage}
-          pageCount={document.numPages}
-          scale={resolvedScale}
-          downloadAction={resource.originalDownload}
-          onZoomOut={zoomOut}
-          onZoomIn={zoomIn}
-          onFitWidth={fitWidth}
-          onRotate={handleRotate}
+        <ViewerToolbar
+          position={{
+            kind: "page",
+            current: currentPage,
+            total: document.numPages,
+          }}
+          zoom={{
+            scale: resolvedScale,
+            onZoomOut: zoomOut,
+            onZoomIn: zoomIn,
+            onFit: fitWidth,
+          }}
+          rotate={{ onRotate: handleRotate }}
+          downloads={[resource.originalDownload]}
         />
       ) : null}
 

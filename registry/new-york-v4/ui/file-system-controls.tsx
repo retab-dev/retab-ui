@@ -195,7 +195,7 @@ export function FileSystemStatusBar({
 }) {
   const itemCount = browser.entries.length
   const isSearching = normalizeFileSystemSearch(browser.query.search).length > 0
-  const selectedEntry = browser.selection.selectedEntry
+  const selectedEntry = browser.selectedEntry
 
   return (
     <div

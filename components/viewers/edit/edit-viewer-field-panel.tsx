@@ -9,16 +9,18 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { EDIT_FIELD_ACCENTS } from "./edit-viewer-field-style"
 import {
   displayEditFieldValue,
-  filterEditViewerFields,
-  groupEditViewerFieldsByPage,
   isEditFieldFilled,
+  type EditViewerFieldGroup,
   type EditViewerFilter,
 } from "./edit-viewer-model"
 import type { EditViewerField } from "./edit-viewer-types"
 
 export function EditViewerFieldPanel({
-  fields,
+  className,
+  fieldGroups,
+  fieldCount,
   filledCount,
+  visibleFieldCount,
   effectiveFieldKey,
   selectedFieldKey,
   query,
@@ -29,9 +31,12 @@ export function EditViewerFieldPanel({
   onFieldSelect,
   showSearch,
   showFilters,
+  ...props
 }: {
-  fields: EditViewerField[]
+  fieldGroups: readonly EditViewerFieldGroup[]
+  fieldCount: number
   filledCount: number
+  visibleFieldCount: number
   effectiveFieldKey: string | null
   selectedFieldKey: string | null
   query: string
@@ -42,27 +47,19 @@ export function EditViewerFieldPanel({
   onFieldSelect: (key: string) => void
   showSearch: boolean
   showFilters: boolean
-}) {
-  const visibleFields = React.useMemo(
-    () => filterEditViewerFields({ fields, query, filter }),
-    [fields, filter, query]
-  )
-  const fieldGroups = React.useMemo(
-    () => groupEditViewerFieldsByPage(visibleFields),
-    [visibleFields]
-  )
-
+} & React.ComponentProps<"div">) {
   return (
     <div
+      {...props}
       data-edit-viewer-fields-panel
-      className="flex h-full min-h-0 flex-col bg-background"
+      className={cn("flex h-full min-h-0 flex-col bg-background", className)}
     >
       <div className="flex h-10 flex-shrink-0 items-center gap-2 border-b px-3">
         <h2 className="px-1 text-sm font-medium">Form fields</h2>
         <span className="ml-auto pr-1 text-xs text-muted-foreground tabular-nums">
           <span className="text-success-foreground">{filledCount}</span>
           {" / "}
-          {fields.length} filled
+          {fieldCount} filled
         </span>
       </div>
 
@@ -105,7 +102,7 @@ export function EditViewerFieldPanel({
       )}
 
       <ScrollArea className="min-h-0 flex-1">
-        {visibleFields.length === 0 ? (
+        {visibleFieldCount === 0 ? (
           <p className="px-4 py-6 text-center text-xs text-muted-foreground">
             No fields match.
           </p>

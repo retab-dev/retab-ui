@@ -1,5 +1,10 @@
-import { readFileSync } from "node:fs"
+import { execFile } from "node:child_process"
+import { existsSync, readFileSync } from "node:fs"
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
+import { createServer } from "node:http"
+import { tmpdir } from "node:os"
 import { join, posix as pathPosix } from "node:path"
+import { promisify } from "node:util"
 import { describe, expect, it } from "vitest"
 
 type RegistryFile = {
@@ -25,6 +30,7 @@ type Registry = {
 }
 
 const repoRoot = process.cwd()
+const execFileAsync = promisify(execFile)
 const pretextMarkdownFiles = [
   "registry/new-york-v4/ui/pretext-markdown-viewer.tsx",
   "registry/new-york-v4/ui/pretext-markdown-viewer-content.tsx",
@@ -77,6 +83,10 @@ function read(path: string) {
 
 function readRegistry() {
   return JSON.parse(read("registry.json")) as Registry
+}
+
+async function readJson(path: string) {
+  return JSON.parse(await readFile(join(repoRoot, path), "utf8"))
 }
 
 function readPretextMarkdownRegistryArtifact() {
@@ -136,9 +146,33 @@ function registryInstallFilesFor(
   return [
     ...item.files.map((file) => ({ ...file, itemName: item.name })),
     ...(item.registryDependencies ?? []).flatMap((dependencyName) => {
-      const dependency = itemsByName.get(dependencyName)
+      const dependency = itemsByName.get(
+        registryDependencyItemName(dependencyName)
+      )
       return dependency
         ? registryInstallFilesFor(dependency, itemsByName, visited)
+        : []
+    }),
+  ]
+}
+
+function retabCliInstallFilesFor(
+  item: RegistryItem,
+  itemsByName: Map<string, RegistryItem>,
+  visited = new Set<string>()
+): InstalledRegistryFile[] {
+  if (visited.has(item.name)) return []
+  visited.add(item.name)
+
+  return [
+    ...item.files.map((file) => ({ ...file, itemName: item.name })),
+    ...(item.registryDependencies ?? []).flatMap((dependencyName) => {
+      if (!dependencyName.startsWith("@retab/")) return []
+      const dependency = itemsByName.get(
+        registryDependencyItemName(dependencyName)
+      )
+      return dependency
+        ? retabCliInstallFilesFor(dependency, itemsByName, visited)
         : []
     }),
   ]
@@ -164,12 +198,19 @@ function registryInstallDependenciesFor(
   return [
     ...(item.dependencies ?? []),
     ...(item.registryDependencies ?? []).flatMap((dependencyName) => {
-      const dependency = itemsByName.get(dependencyName)
+      const dependency = itemsByName.get(
+        registryDependencyItemName(dependencyName)
+      )
       return dependency
         ? registryInstallDependenciesFor(dependency, itemsByName, visited)
         : []
     }),
   ]
+}
+
+function registryDependencyItemName(dependencyName: string) {
+  if (!dependencyName.startsWith("@")) return dependencyName
+  return dependencyName.split("/").slice(1).join("/")
 }
 
 function resolveInstalledRegistryImport({
@@ -268,6 +309,164 @@ function packageNameForDependency(dependency: string) {
   return dependency.replace(/@.+$/, "")
 }
 
+function installedPathForRegistryTarget(target: string) {
+  if (target.startsWith("@ui/")) {
+    return `components/ui/${target.slice("@ui/".length)}`
+  }
+  if (target.startsWith("@lib/")) {
+    return `lib/${target.slice("@lib/".length)}`
+  }
+  return target
+}
+
+function packageJsonDependencyEntry(dependency: string) {
+  const packageName = packageNameForDependency(dependency)
+  if (!packageName) return null
+  if (dependency === packageName) return [packageName, "*"] as const
+  return [packageName, dependency.slice(packageName.length + 1)] as const
+}
+
+async function createShadcnSmokeProject({
+  registryUrl,
+}: {
+  registryUrl: string
+}) {
+  const projectDir = await mkdtemp(join(tmpdir(), "pretext-shadcn-smoke-"))
+  const registry = readRegistry()
+  const itemsByName = new Map(
+    registry.items.map((registryItem) => [registryItem.name, registryItem])
+  )
+  const artifact = readPretextMarkdownRegistryArtifact()
+  const dependencies = new Map([
+    ["react", "19.2.3"],
+    ["react-dom", "19.2.3"],
+  ])
+
+  for (const dependency of registryInstallDependenciesFor(
+    artifact,
+    itemsByName
+  )) {
+    const entry = packageJsonDependencyEntry(dependency)
+    if (!entry) continue
+    dependencies.set(entry[0], entry[1])
+  }
+
+  await mkdir(join(projectDir, "app"), { recursive: true })
+  await writeFile(
+    join(projectDir, "package.json"),
+    `${JSON.stringify(
+      {
+        type: "module",
+        dependencies: Object.fromEntries(
+          Array.from(dependencies).sort(([left], [right]) =>
+            left.localeCompare(right)
+          )
+        ),
+        devDependencies: {},
+      },
+      null,
+      2
+    )}\n`
+  )
+  await writeFile(
+    join(projectDir, "tsconfig.json"),
+    `${JSON.stringify(
+      {
+        compilerOptions: {
+          baseUrl: ".",
+          paths: {
+            "@/*": ["./*"],
+          },
+          jsx: "preserve",
+        },
+      },
+      null,
+      2
+    )}\n`
+  )
+  await writeFile(
+    join(projectDir, "app/globals.css"),
+    '@import "tailwindcss";\n'
+  )
+  await writeFile(
+    join(projectDir, "components.json"),
+    `${JSON.stringify(
+      {
+        $schema: "https://ui.shadcn.com/schema.json",
+        style: "new-york",
+        rsc: true,
+        tsx: true,
+        tailwind: {
+          config: "",
+          css: "app/globals.css",
+          baseColor: "neutral",
+          cssVariables: true,
+          prefix: "",
+        },
+        iconLibrary: "lucide",
+        aliases: {
+          components: "@/components",
+          utils: "@/lib/utils",
+          ui: "@/components/ui",
+          lib: "@/lib",
+          hooks: "@/hooks",
+        },
+        registries: {
+          "@retab": registryUrl,
+        },
+      },
+      null,
+      2
+    )}\n`
+  )
+
+  return projectDir
+}
+
+async function withLocalRegistryServer<T>(
+  callback: (registryUrl: string) => Promise<T>
+) {
+  const server = createServer(async (request, response) => {
+    const requestUrl = new URL(request.url ?? "/", "http://127.0.0.1")
+    const match = requestUrl.pathname.match(/^\/r\/([a-z0-9-]+)\.json$/)
+    if (!match) {
+      response.writeHead(404).end()
+      return
+    }
+
+    try {
+      const content = await readFile(
+        join(repoRoot, "public/r", `${match[1]}.json`)
+      )
+      response
+        .writeHead(200, { "content-type": "application/json" })
+        .end(content)
+    } catch {
+      response.writeHead(404).end()
+    }
+  })
+
+  await new Promise<void>((resolve, reject) => {
+    server.once("error", reject)
+    server.listen(0, "127.0.0.1", () => {
+      server.off("error", reject)
+      resolve()
+    })
+  })
+
+  const address = server.address()
+  if (!address || typeof address === "string") {
+    await new Promise<void>((resolve) => server.close(() => resolve()))
+    throw new Error("Failed to start local registry smoke server")
+  }
+
+  try {
+    return await callback(`http://127.0.0.1:${address.port}/r/{name}.json`)
+  } finally {
+    await new Promise<void>((resolve) => server.close(() => resolve()))
+  }
+}
+
 describe("Pretext Markdown architecture", () => {
   it("keeps the implementation independent from old Markdown Document modules", () => {
     for (const file of pretextMarkdownFiles) {
@@ -303,7 +502,7 @@ describe("Pretext Markdown architecture", () => {
     expect(artifact.name).toBe("pretext-markdown-viewer")
     expect(artifact.type).toBe("registry:ui")
     expect(artifact.registryDependencies ?? []).toEqual([
-      "text-viewer",
+      "@retab/text-viewer",
       "button",
     ])
     expect(artifact.dependencies ?? []).toEqual([
@@ -410,6 +609,73 @@ describe("Pretext Markdown architecture", () => {
     expect(missingImports).toEqual([])
     expect(missingPackages).toEqual([])
   })
+
+  it("installs through the shadcn CLI from the Retab registry namespace", async () => {
+    const registry = readRegistry()
+    const itemsByName = new Map(
+      registry.items.map((registryItem) => [registryItem.name, registryItem])
+    )
+    const artifact = readPretextMarkdownRegistryArtifact()
+    const expectedRetabFiles = retabCliInstallFilesFor(artifact, itemsByName)
+      .map((file) => installedPathForRegistryTarget(file.target ?? file.path))
+      .sort()
+
+    expect(expectedRetabFiles).toContain(
+      "components/ui/pretext-markdown-viewer.tsx"
+    )
+    expect(expectedRetabFiles).toContain("components/ui/text-viewer.tsx")
+    expect(expectedRetabFiles).toContain("lib/viewer-download.ts")
+
+    await withLocalRegistryServer(async (registryUrl) => {
+      const projectDir = await createShadcnSmokeProject({ registryUrl })
+      try {
+        await execFileAsync(
+          "pnpm",
+          [
+            "exec",
+            "shadcn",
+            "add",
+            "@retab/pretext-markdown-viewer",
+            "--cwd",
+            projectDir,
+            "-y",
+            "--overwrite",
+            "--silent",
+          ],
+          {
+            cwd: repoRoot,
+            timeout: 60_000,
+            maxBuffer: 1024 * 1024 * 8,
+          }
+        )
+
+        const missingFiles = expectedRetabFiles.filter(
+          (path) => !existsSync(join(projectDir, path))
+        )
+        expect(missingFiles).toEqual([])
+        expect(existsSync(join(projectDir, "components/ui/button.tsx"))).toBe(
+          true
+        )
+        expect(
+          existsSync(join(projectDir, "components/ui/dropdown-menu.tsx"))
+        ).toBe(true)
+
+        const installedViewer = await readFile(
+          join(projectDir, "components/ui/pretext-markdown-viewer.tsx"),
+          "utf8"
+        )
+        expect(installedViewer).toContain("./pretext-markdown-viewer-content")
+        expect(installedViewer).not.toContain("markdown-document-viewer")
+        expect(
+          await readJson("public/r/pretext-markdown-viewer.json")
+        ).toMatchObject({
+          registryDependencies: ["@retab/text-viewer", "button"],
+        })
+      } finally {
+        await rm(projectDir, { recursive: true, force: true })
+      }
+    })
+  }, 90_000)
 
   it("keeps virtual chunks from becoming visible page chrome", () => {
     const forbiddenPageChrome = [

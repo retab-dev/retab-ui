@@ -21,13 +21,7 @@ export function useJsonTableShellHandlers({
   props: JsonTableCellProps
   cellField: JsonTableCellField
 }): JsonTableShellHandlers {
-  const {
-    docId,
-    onCellHoverEnd,
-    onCellHoverStart,
-    projectedCell,
-    startStructuredEditSession,
-  } = props
+  const { cellProjection, hover, structuredEditing } = props
   const {
     cellId,
     fieldMetadata,
@@ -43,8 +37,8 @@ export function useJsonTableShellHandlers({
       fieldPath: materializedFieldPath,
     })
     const target = event.currentTarget
-    onCellHoverStart?.({
-      docId,
+    hover.onStart?.({
+      docId: cellProjection.docId,
       fieldPath: materializedFieldPath,
       getRect: () => target.getBoundingClientRect(),
     })
@@ -52,7 +46,7 @@ export function useJsonTableShellHandlers({
 
   const shellPointerDown = useRefCallback((event: ShellPointerEvent) => {
     if (
-      !projectedCell ||
+      !cellProjection.projectedCell ||
       !materializedFieldPath ||
       !fieldMetadata ||
       !isJsonEditable ||
@@ -66,15 +60,15 @@ export function useJsonTableShellHandlers({
     }
 
     if (isStructuredActive) return
-    startStructuredEditSession(
-      projectedCell,
+    structuredEditing.startSession(
+      cellProjection.projectedCell,
       structuredPointerActivationIntent(event)
     )
   })
 
   const shellKeyDown = useRefCallback((event: ShellKeyEvent) => {
     if (
-      !projectedCell ||
+      !cellProjection.projectedCell ||
       !materializedFieldPath ||
       !fieldMetadata ||
       !isJsonEditable
@@ -91,14 +85,14 @@ export function useJsonTableShellHandlers({
     }
 
     event.preventDefault()
-    startStructuredEditSession(
-      projectedCell,
+    structuredEditing.startSession(
+      cellProjection.projectedCell,
       structuredKeyboardActivationIntent(event)
     )
   })
 
   const shellPointerLeave = useRefCallback(() => {
-    onCellHoverEnd?.()
+    hover.onEnd?.()
   })
 
   return {

@@ -5,13 +5,14 @@ import {
   editableJsonTableCellShellProps,
 } from "@/components/json-table/json-table-cell-shell"
 import type { JsonTableCellProps } from "@/components/json-table/json-table-cell-types"
+import { recordJsonTableRender } from "@/components/json-table/json-table-profiler"
 import { useJsonTableCellField } from "@/components/json-table/use-json-table-cell-field"
-import { useJsonTableCellProfiler } from "@/components/json-table/use-json-table-cell-profiler"
 import { useJsonTableFocusReturn } from "@/components/json-table/use-json-table-focus-return"
 import { useJsonTablePrimitiveControl } from "@/components/json-table/use-json-table-primitive-control"
 import { useJsonTableShellHandlers } from "@/components/json-table/use-json-table-shell-handlers"
 
 export function useJsonTableEditableCellModel(props: JsonTableCellProps) {
+  const { cellProjection, commit, structuredEditing } = props
   const cellField = useJsonTableCellField(props)
   const shellRef = React.useRef<HTMLTableCellElement>(null)
   const primitiveControl = useJsonTablePrimitiveControl({ props, cellField })
@@ -20,10 +21,24 @@ export function useJsonTableEditableCellModel(props: JsonTableCellProps) {
     shellRef,
     isCellEditing: cellField.isCellEditing,
     primitiveActiveCell: cellField.primitiveActiveCell,
-    structuredEditSession: props.structuredEditSession,
+    structuredEditSession: structuredEditing.session,
   })
 
-  useJsonTableCellProfiler({ props, cellField })
+  recordJsonTableRender(
+    "EditableJsonTableCell",
+    cellField.materializedFieldPath ?? cellProjection.column.key,
+    {
+      primitiveActiveFieldPath:
+        cellField.primitiveActiveCell?.fieldPath ?? null,
+      structuredEditSessionFieldPath:
+        structuredEditing.session?.fieldPath ?? null,
+      fieldKind: cellField.fieldMetadata?.kind ?? null,
+      isEditable: cellField.isJsonEditable,
+      isEditing: cellField.isCellEditing,
+      valueType:
+        cellField.cellValue === null ? "null" : typeof cellField.cellValue,
+    }
+  )
 
   const shellHandlers = useJsonTableShellHandlers({
     props,
@@ -34,7 +49,7 @@ export function useJsonTableEditableCellModel(props: JsonTableCellProps) {
     return {
       kind: "disabled" as const,
       shellProps: disabledJsonTableCellShellProps({
-        ariaColumnIndex: props.ariaColumnIndex,
+        ariaColumnIndex: cellProjection.ariaColumnIndex,
         cellWidth: cellField.cellWidth,
         materializedFieldPath: cellField.materializedFieldPath,
       }),
@@ -42,7 +57,7 @@ export function useJsonTableEditableCellModel(props: JsonTableCellProps) {
   }
 
   const shellProps = editableJsonTableCellShellProps({
-    ariaColumnIndex: props.ariaColumnIndex,
+    ariaColumnIndex: cellProjection.ariaColumnIndex,
     cellWidth: cellField.cellWidth,
     isCellEditing: cellField.isCellEditing,
     isJsonEditable: cellField.isJsonEditable,
@@ -68,20 +83,20 @@ export function useJsonTableEditableCellModel(props: JsonTableCellProps) {
     }
   }
 
-  if (cellField.isStructuredActive && props.structuredEditSession) {
+  if (cellField.isStructuredActive && structuredEditing.session) {
     return {
       kind: "structured-active" as const,
       shellProps,
       shellRef,
       structuredActiveProps: {
-        closeStructuredEditSession: props.closeStructuredEditSession,
+        closeStructuredEditSession: structuredEditing.closeSession,
         fieldMetadata: cellField.fieldMetadata,
         materializedFieldPath: cellField.materializedFieldPath,
-        onCellCommit: props.onCellCommit,
-        schema: props.schema,
+        onCellCommit: commit.onCommit,
+        schema: cellProjection.schema,
         setStructuredEditSessionOverlayOpen:
-          props.setStructuredEditSessionOverlayOpen,
-        structuredEditSession: props.structuredEditSession,
+          structuredEditing.setSessionOverlayOpen,
+        structuredEditSession: structuredEditing.session,
         value: cellField.cellValue,
       },
     }

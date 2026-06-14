@@ -245,6 +245,9 @@ function assertScenarioBudget(profileName, scenarioName, scenario, budget) {
     domNodeDelta: scenario.metricsDelta?.Nodes ?? null,
     styleMs: scenario.browserCost?.style?.durationMs ?? null,
     layoutMs: scenario.browserCost?.layout?.durationMs ?? null,
+    traceStyleMs: scenario.trace?.styleDurationMs ?? null,
+    traceLayoutMs: scenario.trace?.layoutDurationMs ?? null,
+    traceScriptMs: scenario.trace?.scriptDurationMs ?? null,
     mountedHeaderCells: scenario.mountedSurface?.after?.headerCells ?? null,
     mountedEditableCells: scenario.mountedSurface?.after?.editableCells ?? null,
     mountedPopupNodes: scenario.mountedSurface?.after?.popupNodes ?? null,
@@ -270,7 +273,18 @@ function printSummary(summary) {
           ? "n/a"
           : `${formatNumber(summary.layoutMs)}ms`
       }`,
-    ].join("  ")
+      summary.traceStyleMs === null
+        ? null
+        : `traceStyle=${formatNumber(summary.traceStyleMs)}ms`,
+      summary.traceLayoutMs === null
+        ? null
+        : `traceLayout=${formatNumber(summary.traceLayoutMs)}ms`,
+      summary.traceScriptMs === null
+        ? null
+        : `traceScript=${formatNumber(summary.traceScriptMs)}ms`,
+    ]
+      .filter(Boolean)
+      .join("  ")
   )
 }
 

@@ -25,25 +25,45 @@ export interface JsonTableCellHoverInfo {
   getRect: () => DOMRect
 }
 
-export interface JsonTableCellProps {
+export interface JsonTableCellProjectionProps {
   column: VisibleColumn
   projectedCell?: ProjectedCell
   schema: JSONSchema7
   document: TableDocument
   docId: string
-  primitiveActiveCellStore: JsonTablePrimitiveActiveCellStore
-  primitiveEditStore: JsonTablePrimitiveEditStore
-  setPrimitiveActiveCell: SetJsonTablePrimitiveActiveCell
-  structuredEditSession: JsonTableStructuredEditSession | null
-  startStructuredEditSession: (
+  isJsonEditable: boolean
+  ariaColumnIndex: number
+}
+
+export interface JsonTablePrimitiveEditingProps {
+  activeCellStore: JsonTablePrimitiveActiveCellStore
+  editStore: JsonTablePrimitiveEditStore
+  setActiveCell: SetJsonTablePrimitiveActiveCell
+}
+
+export interface JsonTableStructuredEditingProps {
+  session: JsonTableStructuredEditSession | null
+  startSession: (
     projectedCell: ProjectedCell,
     intent: JsonTableActivationIntent
   ) => void
-  setStructuredEditSessionOverlayOpen: (open: boolean) => void
-  closeStructuredEditSession: () => void
-  onCellCommit: JsonTableCellCommitHandler
-  onCellHoverStart?: (info: JsonTableCellHoverInfo) => void
-  onCellHoverEnd?: () => void
-  isJsonEditable: boolean
-  ariaColumnIndex: number
+  setSessionOverlayOpen: (open: boolean) => void
+  closeSession: () => void
+}
+
+export interface JsonTableCellCommitProps {
+  onCommit: JsonTableCellCommitHandler
+}
+
+export interface JsonTableCellHoverProps {
+  onStart?: (info: JsonTableCellHoverInfo) => void
+  onEnd?: () => void
+}
+
+export interface JsonTableCellProps {
+  cellProjection: JsonTableCellProjectionProps
+  primitiveEditing: JsonTablePrimitiveEditingProps
+  structuredEditing: JsonTableStructuredEditingProps
+  commit: JsonTableCellCommitProps
+  hover: JsonTableCellHoverProps
 }

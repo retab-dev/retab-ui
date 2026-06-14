@@ -38,22 +38,32 @@ import { PageRibbon } from "@/components/ui/page-ribbon"
 import { PageTimeline } from "@/components/ui/page-timeline"
 import { SegmentLegend } from "@/components/ui/segment-legend"
 import { SegmentSidebar } from "@/components/ui/segment-sidebar"
+import { createSegmentedDocumentModel } from "@/components/ui/segmented-document-model"
+import {
+  SegmentedDocumentProvider,
+  useSegmentedDocument,
+} from "@/components/ui/segmented-document-provider"
 import { SegmentedDocumentViewer } from "@/components/ui/segmented-document-viewer"
 import {
   useControlledSegmentInteraction,
   useSegmentInteraction,
 } from "@/components/ui/use-segment-interaction"
+import { useSegmentViewportController } from "@/components/ui/use-segment-viewport-controller"
 import {
   PartitionViewer,
   PartitionViewerHeader,
   PartitionViewerProvider,
-  usePartitionViewerDocument,
+  usePartitionViewerDocumentControls,
 } from "@/components/viewers/partition/partition-viewer"
 import {
+  createPartitionSegmentedDocumentModel,
+  createPartitionViewerModel,
+} from "@/components/viewers/partition/partition-viewer-model"
+import {
+  createSplitViewerModel,
   SplitViewer,
   useSplitViewerDocumentControls,
 } from "@/components/viewers/split/split-viewer"
-import { useSegmentViewportController } from "@/components/viewers/split/use-segment-viewport-controller"
 
 vi.mock("@/components/ui/pdf-viewer", () => ({
   PdfViewer: () => (
@@ -83,12 +93,14 @@ function PartitionScrollSpy({
 }: {
   onScroll: (page: number) => void
 }) {
-  const document = usePartitionViewerDocument()
+  const controls = usePartitionViewerDocumentControls()
 
   React.useEffect(() => {
-    if (!document.scrollRequest) return
-    onScroll(document.scrollRequest.pageNumber)
-  }, [document.scrollRequest, onScroll])
+    controls.setDocumentHandle({
+      scrollToPage: onScroll,
+    })
+    return () => controls.setDocumentHandle(null)
+  }, [controls, onScroll])
 
   return null
 }
@@ -1583,7 +1595,7 @@ describe("SegmentedDocumentViewer", () => {
 })
 
 describe("partition segment composition", () => {
-  it("uses display-label colors for partition keys with surrounding whitespace", () => {
+  it("groups partition legend keys by display label while preserving ribbon chunks", () => {
     render(
       <PartitionViewer
         result={{
@@ -1597,13 +1609,77 @@ describe("partition segment composition", () => {
       />
     )
 
-    const contractButtons = screen.getAllByRole("button", { name: "Contract" })
-    const swatches = contractButtons.map((button) =>
-      button.querySelector("span[style]")?.getAttribute("style")
+    expect(screen.getAllByRole("button", { name: "Contract" })).toHaveLength(1)
+    expect(screen.getByLabelText("Contract pages 1 to 1")).toBeTruthy()
+    expect(screen.getByLabelText("Contract pages 2 to 2")).toBeTruthy()
+  })
+
+  it("derives a pure partition viewer model from output and votes", () => {
+    const model = createPartitionViewerModel({
+      output: [
+        { key: " Invoices ", pages: [5, 1, 1, 0, -1] },
+        { key: "Invoices", pages: [3] },
+      ],
+      consensus: {
+        choices: [[{ key: "Receipts", pages: [9, 2] }]],
+        likelihoods: null,
+      },
+      usage: null,
+    })
+
+    expect(model.hasOutput).toBe(true)
+    expect(model.pageCount).toBe(9)
+    expect(model.legendSegments).toMatchObject([
+      {
+        id: "partition:Invoices",
+        label: "Invoices",
+        pages: [1, 3, 5],
+        index: 0,
+      },
+    ])
+    expect(model.viewportSegments).toEqual(model.legendSegments)
+    expect(model.ribbonRows.map((row) => row.id)).toEqual([
+      "output:0",
+      "output:1",
+      "vote:0:0",
+    ])
+    expect(model.ribbonRows.map((row) => row.kind)).toEqual([
+      "output",
+      "output",
+      "vote",
+    ])
+    expect(model.ribbonRows[2].voteIndex).toBe(0)
+    expect(model.ribbonRows[0].segments[0].color).toBe(
+      model.ribbonRows[1].segments[0].color
     )
 
-    expect(contractButtons).toHaveLength(2)
-    expect(swatches[0]).toBe(swatches[1])
+    const segmentedModel = createPartitionSegmentedDocumentModel(model)
+    expect(segmentedModel.segments).toBe(model.viewportSegments)
+    expect(segmentedModel.rows).toBe(model.ribbonRows)
+    expect(segmentedModel.pages).toHaveLength(9)
+  })
+
+  it("returns an empty partition viewer model without result or output", () => {
+    expect(createPartitionViewerModel(null)).toEqual({
+      hasOutput: false,
+      legendSegments: [],
+      pageCount: 0,
+      ribbonRows: [],
+      viewportSegments: [],
+    })
+    expect(
+      createPartitionViewerModel({
+        output: [],
+        consensus: { choices: [], likelihoods: null },
+        usage: null,
+      })
+    ).toEqual({
+      hasOutput: false,
+      legendSegments: [],
+      pageCount: 0,
+      ribbonRows: [],
+      viewportSegments: [],
+    })
   })
 
   it("jumps to the earliest normalized page when a partition legend key is selected", async () => {
@@ -1701,10 +1777,8 @@ describe("segment viewport controller", () => {
     )
 
     act(() => {
-      result.current.documentHandlers.setViewerHandle({
+      result.current.documentHandlers.setDocumentHandle({
         scrollToPage,
-        scrollToPageArea: vi.fn(),
-        getViewportElement: () => null,
       })
     })
 
@@ -1715,6 +1789,72 @@ describe("segment viewport controller", () => {
     expect(scrollToPage).toHaveBeenCalledWith(5)
     expect(result.current.model.currentPage).toBe(1)
     expect(result.current.model.currentSegmentId).toBeNull()
+  })
+
+  it("scrolls to anchors through the registered document handle", () => {
+    const controllerSegments = toSegments([{ name: "Total", pages: [2] }])
+    const scrollToPageArea = vi.fn()
+    const { result } = renderHook(() =>
+      useSegmentViewportController({ segments: controllerSegments })
+    )
+
+    act(() => {
+      result.current.documentHandlers.setDocumentHandle({
+        scrollToPage: vi.fn(),
+        scrollToPageArea,
+      })
+    })
+
+    act(() => {
+      result.current.navigation.scrollToAnchor({
+        id: "anchor:total",
+        segmentId: controllerSegments[0].id,
+        pageNumber: 2,
+        bounds: { x: 0.1, y: 0.2, width: 0.3, height: 0.4 },
+      })
+    })
+
+    expect(scrollToPageArea).toHaveBeenCalledWith({
+      pageNumber: 2,
+      left: 10,
+      top: 20,
+      width: 30,
+      height: 40,
+    })
+  })
+
+  it("provides the segmented document model and shared viewport", () => {
+    const controllerSegments = toSegments([{ name: "Evidence", pages: [3] }])
+    const model = createSegmentedDocumentModel({
+      anchors: [
+        {
+          id: "anchor:evidence",
+          segmentId: controllerSegments[0].id,
+          pageNumber: 3,
+        },
+      ],
+      segments: controllerSegments,
+    })
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <SegmentedDocumentProvider model={model}>
+        {children}
+      </SegmentedDocumentProvider>
+    )
+    const { result } = renderHook(() => useSegmentedDocument(), { wrapper })
+
+    expect(result.current.model.pages.map((page) => page.pageNumber)).toEqual([
+      1, 2, 3,
+    ])
+    expect(result.current.model.anchors?.[0].id).toBe("anchor:evidence")
+    expect(result.current.viewport.model.currentSegmentId).toBeNull()
+
+    act(() => {
+      result.current.viewport.documentHandlers.onCurrentPageChange(3)
+    })
+
+    expect(result.current.viewport.model.currentSegmentId).toBe(
+      controllerSegments[0].id
+    )
   })
 
   it("keeps the rail still when the current page marker is visible", () => {
@@ -1822,6 +1962,46 @@ describe("segment viewport controller", () => {
 })
 
 describe("split segment composition", () => {
+  it("derives a pure split viewer model", () => {
+    expect(
+      createSplitViewerModel({
+        result: null,
+        isProcessing: false,
+      })
+    ).toEqual({
+      hasOutput: false,
+      isProcessing: false,
+      pageCount: 0,
+      segments: [],
+    })
+
+    const model = createSplitViewerModel({
+      result: {
+        output: [
+          { name: "Invoices", pages: [5, 1, 1, 0, -1] },
+          { name: "Receipts", pages: [3] },
+        ],
+      },
+      isProcessing: true,
+    })
+
+    expect(model.hasOutput).toBe(true)
+    expect(model.isProcessing).toBe(true)
+    expect(model.pageCount).toBe(5)
+    expect(model.segments).toMatchObject([
+      {
+        label: "Invoices",
+        pages: [1, 5],
+        index: 0,
+      },
+      {
+        label: "Receipts",
+        pages: [3],
+        index: 1,
+      },
+    ])
+  })
+
   it("gives the rendered document pane the full flex width", () => {
     render(
       <SplitViewer result={{ output: [{ name: "Invoices", pages: [1] }] }}>
@@ -1861,16 +2041,14 @@ describe("split segment composition", () => {
     const scrollToPage = vi.fn()
 
     function DocumentWithHandle() {
-      const { setViewerHandle } = useSplitViewerDocumentControls()
+      const { setDocumentHandle } = useSplitViewerDocumentControls()
 
       React.useEffect(() => {
-        setViewerHandle({
+        setDocumentHandle({
           scrollToPage,
-          scrollToPageArea: vi.fn(),
-          getViewportElement: () => null,
         })
-        return () => setViewerHandle(null)
-      }, [setViewerHandle])
+        return () => setDocumentHandle(null)
+      }, [setDocumentHandle])
 
       return <div data-testid="split-document" />
     }
@@ -1888,17 +2066,15 @@ describe("split segment composition", () => {
 
   it("clears clicked category previewing when scrolling outside its pages", () => {
     function DocumentHarness() {
-      const { onCurrentPageChange, setViewerHandle } =
+      const { onCurrentPageChange, setDocumentHandle } =
         useSplitViewerDocumentControls()
 
       React.useEffect(() => {
-        setViewerHandle({
+        setDocumentHandle({
           scrollToPage: (page) => onCurrentPageChange(page),
-          scrollToPageArea: vi.fn(),
-          getViewportElement: () => null,
         })
-        return () => setViewerHandle(null)
-      }, [onCurrentPageChange, setViewerHandle])
+        return () => setDocumentHandle(null)
+      }, [onCurrentPageChange, setDocumentHandle])
 
       return (
         <div>

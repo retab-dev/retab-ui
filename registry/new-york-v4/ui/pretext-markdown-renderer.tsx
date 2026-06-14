@@ -43,19 +43,17 @@ import {
 
 export function PretextMarkdownChunkRenderer({
   chunk,
+  footnoteDefinitionsMarkdown = "",
   referenceDefinitionsMarkdown = "",
 }: {
   chunk: PretextMarkdownChunk
+  footnoteDefinitionsMarkdown?: string
   referenceDefinitionsMarkdown?: string
 }) {
   const remarkPlugins = React.useMemo(
     () => createPretextMarkdownRemarkPlugins(chunk.headingIds),
     [chunk.headingIds]
   )
-  const markdownSource = createPretextMarkdownRenderSource({
-    markdown: chunk.markdown,
-    referenceDefinitionsMarkdown,
-  })
 
   if (chunk.kind === "frontmatter") {
     const language = chunk.frontmatterLanguage ?? "yaml"
@@ -96,6 +94,16 @@ export function PretextMarkdownChunkRenderer({
     )
   }
 
+  if (chunk.isHostile) {
+    return <PretextMarkdownHostileChunk markdown={chunk.markdown} />
+  }
+
+  const markdownSource = createPretextMarkdownRenderSource({
+    footnoteDefinitionsMarkdown,
+    markdown: chunk.markdown,
+    referenceDefinitionsMarkdown,
+  })
+
   return (
     <div className="pretext-markdown-chunk-content min-w-0 text-[16px] leading-7 text-foreground">
       {typeof window === "undefined" ? (
@@ -123,15 +131,110 @@ export function PretextMarkdownChunkRenderer({
   )
 }
 
+function PretextMarkdownHostileChunk({ markdown }: { markdown: string }) {
+  const preview = createPretextMarkdownHostilePreview(markdown)
+
+  return (
+    <section
+      aria-label="Large Markdown block"
+      className="overflow-hidden rounded-md border bg-muted/25 text-sm text-muted-foreground"
+      data-pretext-markdown-hostile-fallback=""
+      data-pretext-markdown-hostile-line-count={preview.lineCount}
+      data-pretext-markdown-hostile-omitted-lines={preview.omittedLineCount}
+    >
+      <div className="flex min-h-9 items-center gap-3 border-b bg-muted/55 px-3">
+        <span className="font-medium text-foreground">
+          Large Markdown block
+        </span>
+        <span className="text-xs">
+          {preview.lineCount} source{" "}
+          {preview.lineCount === 1 ? "line" : "lines"}
+        </span>
+        <PretextMarkdownCopyButton
+          ariaLabel="Copy large Markdown block source"
+          className="ml-auto"
+          text={markdown}
+        />
+      </div>
+      <pre
+        aria-label="Large Markdown block source preview"
+        className="max-h-[36rem] overflow-auto p-4 font-mono text-[13px] leading-6 whitespace-pre"
+        data-pretext-markdown-hostile-preview=""
+        tabIndex={0}
+      >
+        <code>{preview.text}</code>
+      </pre>
+    </section>
+  )
+}
+
+function createPretextMarkdownHostilePreview(markdown: string) {
+  const lines = splitPretextMarkdownSourceLines(markdown || " ")
+  const lineCount = lines.length
+  const previewLineLimit =
+    PRETEXT_MARKDOWN_HOSTILE_PREVIEW_HEAD_LINES +
+    PRETEXT_MARKDOWN_HOSTILE_PREVIEW_TAIL_LINES
+
+  if (lineCount <= previewLineLimit + 1) {
+    return {
+      lineCount,
+      omittedLineCount: 0,
+      text: lines.join("\n"),
+    }
+  }
+
+  const omittedLineCount = Math.max(0, lineCount - previewLineLimit)
+  return {
+    lineCount,
+    omittedLineCount,
+    text: [
+      ...lines.slice(0, PRETEXT_MARKDOWN_HOSTILE_PREVIEW_HEAD_LINES),
+      `... ${omittedLineCount} source lines omitted ...`,
+      ...lines.slice(-PRETEXT_MARKDOWN_HOSTILE_PREVIEW_TAIL_LINES),
+    ].join("\n"),
+  }
+}
+
+function splitPretextMarkdownSourceLines(text: string) {
+  return text.split(/\r\n|[\n\r\u2028\u2029]/)
+}
+
 function createPretextMarkdownRenderSource({
+  footnoteDefinitionsMarkdown,
   markdown,
   referenceDefinitionsMarkdown,
 }: {
+  footnoteDefinitionsMarkdown: string
   markdown: string
   referenceDefinitionsMarkdown: string
 }) {
-  if (!referenceDefinitionsMarkdown.trim()) return markdown
-  return `${referenceDefinitionsMarkdown.trimEnd()}\n\n${markdown}`
+  const renderMarkdown = stripPretextMarkdownFootnoteDefinitions(markdown)
+  const prefixes = [
+    referenceDefinitionsMarkdown,
+    hasPretextMarkdownFootnoteReference(renderMarkdown)
+      ? footnoteDefinitionsMarkdown
+      : "",
+  ]
+    .map((prefix) => prefix.trimEnd())
+    .filter(Boolean)
+
+  return [...prefixes, renderMarkdown].filter(Boolean).join("\n\n")
+}
+
+function stripPretextMarkdownFootnoteDefinitions(markdown: string) {
+  return markdown
+    .split(/\r\n|[\n\r\u2028\u2029]/)
+    .filter((line) => !isPretextMarkdownFootnoteDefinitionLine(line))
+    .join("\n")
+    .trim()
+}
+
+function hasPretextMarkdownFootnoteReference(markdown: string) {
+  return /(^|[^\[])\[\^[^\]\r\n]+\]/u.test(markdown)
+}
+
+function isPretextMarkdownFootnoteDefinitionLine(line: string) {
+  return /^\s{0,3}\[\^[^\]\r\n]+\]:[ \t]?/u.test(line)
 }
 
 const PRETEXT_MARKDOWN_WRAP_CLASS_NAME =
@@ -146,6 +249,8 @@ const PRETEXT_MARKDOWN_CODE_LANGUAGE_ALIASES: Record<string, string> = {
   "mermaid-js": "mermaid",
   mmd: "mermaid",
 }
+const PRETEXT_MARKDOWN_HOSTILE_PREVIEW_HEAD_LINES = 36
+const PRETEXT_MARKDOWN_HOSTILE_PREVIEW_TAIL_LINES = 12
 
 type PretextMarkdownTabRegistration = {
   id: string
@@ -340,7 +445,7 @@ const markdownComponents = {
     return (
       <blockquote
         className={cn(
-          "my-5 border-l-4 border-border pl-4 text-muted-foreground [&>ol]:my-2 [&>p]:my-2 [&>p:first-child]:mt-0 [&>p:last-child]:mb-0 [&>ul]:my-2 [&_blockquote]:my-3 [&_blockquote]:border-l-2 [&_blockquote]:border-muted-foreground/30 [&_blockquote]:pl-3",
+          "my-5 border-l-4 border-border pl-4 text-muted-foreground [&_blockquote]:my-3 [&_blockquote]:border-l-2 [&_blockquote]:border-muted-foreground/30 [&_blockquote]:pl-3 [&>ol]:my-2 [&>p]:my-2 [&>p:first-child]:mt-0 [&>p:last-child]:mb-0 [&>ul]:my-2",
           PRETEXT_MARKDOWN_WRAP_CLASS_NAME,
           className
         )}
@@ -356,7 +461,10 @@ const markdownComponents = {
   ),
   ins: ({ className, node: _node, ...props }) => (
     <ins
-      className={cn("underline decoration-border underline-offset-2", className)}
+      className={cn(
+        "underline decoration-border underline-offset-2",
+        className
+      )}
       {...props}
     />
   ),
@@ -411,7 +519,7 @@ const markdownComponents = {
     />
   ),
   q: ({ className, node: _node, ...props }) => (
-    <q className={cn("italic text-foreground", className)} {...props} />
+    <q className={cn("text-foreground italic", className)} {...props} />
   ),
   samp: ({ className, node: _node, ...props }) => (
     <samp
@@ -425,7 +533,7 @@ const markdownComponents = {
   ),
   var: ({ className, node: _node, ...props }) => (
     <var
-      className={cn("font-medium italic text-foreground", className)}
+      className={cn("font-medium text-foreground italic", className)}
       {...props}
     />
   ),
@@ -602,9 +710,9 @@ const markdownComponents = {
         {...props}
         className={cn(
           diffLineKind === "add" &&
-            "block -mx-4 border-l-2 border-emerald-500 bg-emerald-500/10 px-4",
+            "-mx-4 block border-l-2 border-emerald-500 bg-emerald-500/10 px-4",
           diffLineKind === "remove" &&
-            "block -mx-4 border-l-2 border-red-500 bg-red-500/10 px-4",
+            "-mx-4 block border-l-2 border-red-500 bg-red-500/10 px-4",
           className
         )}
         data-pretext-code-diff-line={diffLineKind ?? undefined}
@@ -693,9 +801,9 @@ function PretextMarkdownHeading({
   )
 }
 
-function omitPretextInternalReactProps<
-  Props extends Record<string, unknown>,
->(props: Props) {
+function omitPretextInternalReactProps<Props extends Record<string, unknown>>(
+  props: Props
+) {
   const safeProps: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(props)) {
     if (/^dataPretext/.test(key) || /^data-pretext-/.test(key)) continue
@@ -1923,9 +2031,9 @@ async function sanitizePretextMarkdownMermaidSvg(svg: string) {
   const sanitizer = isPretextMarkdownSvgSanitizer(defaultExport)
     ? defaultExport
     : typeof defaultExport === "function"
-      ? (defaultExport as (windowObject: Window) => PretextMarkdownSvgSanitizer)(
-          window
-        )
+      ? (
+          defaultExport as (windowObject: Window) => PretextMarkdownSvgSanitizer
+        )(window)
       : isPretextMarkdownSvgSanitizer(moduleExport)
         ? moduleExport
         : null
@@ -2096,9 +2204,11 @@ function isPretextFootnoteBackrefHref(href: string) {
 
 function isPretextTaskListItem(children: React.ReactNode) {
   return React.Children.toArray(children).some((child) => {
-    if (!React.isValidElement<{ children?: React.ReactNode; type?: unknown }>(
-      child
-    ))
+    if (
+      !React.isValidElement<{ children?: React.ReactNode; type?: unknown }>(
+        child
+      )
+    )
       return false
 
     if (child.type === "input" && child.props.type === "checkbox") return true

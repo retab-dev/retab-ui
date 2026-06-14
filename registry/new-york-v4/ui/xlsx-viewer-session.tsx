@@ -3,8 +3,8 @@
 import * as React from "react"
 
 import type { ViewerResource } from "@/lib/viewer-resource"
+import { ViewerToolbar } from "@/components/ui/viewer-toolbar"
 import { XlsxSheetTabs } from "@/components/ui/xlsx-sheet-tabs"
-import { XlsxToolbar } from "@/components/ui/xlsx-toolbar"
 
 import {
   XlsxGridColumn,
@@ -75,14 +75,24 @@ export function XlsxViewerSession({
   return (
     <XlsxViewerFrame className={className} bare={bare}>
       {toolbar ? (
-        <XlsxToolbar
-          downloadActions={downloadActions}
-          sheet={activeSheet ?? undefined}
-          isReady={isReady}
-          scale={scale}
-          onZoomOut={zoomOut}
-          onZoomIn={zoomIn}
-          onResetZoom={resetZoom}
+        <ViewerToolbar
+          title={isReady ? (activeSheet?.name ?? "-") : null}
+          subtitle={
+            isReady && activeSheet
+              ? `${activeSheet.rowCount.toLocaleString()} x ${
+                  activeSheet.columnCount
+                }`
+              : null
+          }
+          loading={!isReady}
+          zoom={{
+            scale,
+            onZoomOut: zoomOut,
+            onZoomIn: zoomIn,
+            onFit: resetZoom,
+            fitLabel: "Actual size",
+          }}
+          downloads={downloadActions}
         />
       ) : null}
 

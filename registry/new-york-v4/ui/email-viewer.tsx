@@ -4,27 +4,28 @@ import * as React from "react"
 import { FileText, Layers3, Mail, Paperclip } from "lucide-react"
 
 import { cn } from "@/lib/utils"
-import type { ViewerSource } from "@/lib/viewer-source"
 
+import { useEmailInlineResourceUrls } from "./email-viewer-inline-resources"
 import {
   buildMimeTree,
-  collectInlineResourceParts,
+  deriveEmailInlineResourceScope,
+  deriveEmailViewerModel,
   findMimeNodeByPath,
   getDefaultMimeSelectionPath,
-  getInlineResourceScope,
-  getMimeDisplayPart,
-  messageIdentity,
-  mimePartLabel,
-  normalizeContentId,
 } from "./email-viewer-model"
 import type {
+  EmailAddress,
+  EmailContentModel,
+  EmailHeaderModel,
+  EmailSidebarItem,
+  EmailSidebarModel,
   EmailViewerMessage,
+  EmailViewerModel,
   EmailViewerProps,
-  MimeDisplayPart,
+  EmailViewerProviderProps,
   MimePartNode,
   MimePartPath,
 } from "./email-viewer-types"
-import { formatFileSize } from "./file-size-format"
 import { FileThumbnail } from "./file-thumbnail"
 import { FileViewer } from "./file-viewer"
 import {
@@ -37,41 +38,83 @@ import {
 } from "./viewer"
 
 export type {
+  EmailAddress,
+  EmailAttachmentSidebarItem,
+  EmailBodySelectionPolicy,
+  EmailBodySidebarItem,
+  EmailContentEmpty,
+  EmailContentEmptyReason,
+  EmailContentFile,
+  EmailContentModel,
+  EmailContentNestedMessage,
+  EmailFilePayload,
+  EmailHeaderModel,
+  EmailInlineResource,
+  EmailInlineResourceKey,
+  EmailInlineResourceScope,
+  EmailSidebarItemBase,
+  EmailSidebarItem,
+  EmailSidebarModel,
+  EmailSidebarSection,
+  EmailSidebarThumbnailModel,
   EmailViewerMessage,
+  EmailViewerModel,
+  EmailViewerProviderProps,
   EmailViewerProps,
-  MimeDisplayPart,
   MimeHeader,
   MimeMessage,
+  MimeMessageScope,
   MimePart,
   MimePartDisposition,
+  MimePartFacts,
+  MimePartKind,
   MimePartNode,
   MimePartPath,
+  MimePreviewPolicy,
 } from "./email-viewer-types"
 
 export {
   buildMimeTree,
+  categoryForMimeNode,
+  createMimeMessageScope,
+  DEFAULT_EMAIL_BODY_SELECTION_POLICY,
+  deriveEmailContentModel,
+  deriveEmailHeaderModel,
+  deriveEmailInlineResourceScope,
+  deriveEmailSidebarModel,
+  deriveEmailViewerModel,
   findMimeNodeByPath,
   getDefaultMimeSelectionPath,
   getInlineResourceScope,
-  getMimeDisplayPart,
+  inlineResourceKeyToString,
+  isAttachmentNode,
+  isInlineResourceNode,
+  isMessageNode,
+  isMultipartNode,
+  isRenderableNode,
+  normalizeContentId,
+  normalizeContentLocation,
+  pathsEqual,
   replaceCidUrls,
+  replaceInlineResourceUrls,
 } from "./email-viewer-model"
 
-export interface EmailViewerProviderProps {
-  message: EmailViewerMessage
-  selectedPath?: MimePartPath | null
-  defaultSelectedPath?: MimePartPath
-  onSelectedPathChange?: (path: MimePartPath, node: MimePartNode) => void
-  children: React.ReactNode
-}
+const DEFAULT_MAX_NESTED_MESSAGE_DEPTH = 8
 
 type EmailViewerContextValue = {
-  display: MimeDisplayPart | null
-  message: EmailViewerMessage
-  rootNode: MimePartNode
-  selectedNode: MimePartNode
-  setSelectedNode: (node: MimePartNode) => void
+  model: EmailViewerModel
+  selectPart: (node: MimePartNode) => void
 }
+
+type EmailViewerProviderInternalProps = EmailViewerProviderProps & {
+  nestedMessageDepth?: number
+}
+
+type EmailViewerInternalProps = EmailViewerProps & {
+  nestedMessageDepth?: number
+}
+
+type EmailViewerChromeProps = Pick<EmailViewerInternalProps, "bare" | "className">
 
 const EmailViewerContext = React.createContext<EmailViewerContextValue | null>(
   null
@@ -85,36 +128,39 @@ export function useEmailViewer() {
   return context
 }
 
-export function useEmailViewerHeader() {
-  const { message } = useEmailViewer()
-  return { message }
+export function useEmailHeader(): EmailHeaderModel {
+  return useEmailViewer().model.header
 }
 
-export function useEmailViewerPartsList() {
-  const { rootNode, selectedNode, setSelectedNode } = useEmailViewer()
+export function useEmailPartsSidebar(): {
+  sidebar: EmailSidebarModel
+  selectPart: (node: MimePartNode) => void
+} {
+  const { model, selectPart } = useEmailViewer()
+
   return {
-    rootNode,
-    selectedPath: selectedNode.path,
-    setSelectedNode,
+    sidebar: model.sidebar,
+    selectPart,
   }
 }
 
-export function useEmailViewerSelectedPart() {
-  const { display, message, selectedNode } = useEmailViewer()
-  return {
-    display,
-    message,
-    selectedNode,
-  }
+export function useEmailContent(): EmailContentModel {
+  return useEmailViewer().model.content
 }
 
-export function EmailViewerProvider({
+export function EmailViewerProvider(props: EmailViewerProviderProps) {
+  return <EmailViewerProviderInternal {...props} nestedMessageDepth={0} />
+}
+
+function EmailViewerProviderInternal({
   message,
   selectedPath,
   defaultSelectedPath,
   onSelectedPathChange,
+  maxNestedMessageDepth = DEFAULT_MAX_NESTED_MESSAGE_DEPTH,
+  nestedMessageDepth = 0,
   children,
-}: EmailViewerProviderProps) {
+}: EmailViewerProviderInternalProps) {
   const rootNode = React.useMemo(
     () => buildMimeTree(message.root),
     [message.root]
@@ -136,6 +182,11 @@ export function EmailViewerProvider({
     findMimeNodeByPath(rootNode, activePath) ??
     findMimeNodeByPath(rootNode, defaultPath) ??
     rootNode
+  const inlineResourceScope = React.useMemo(
+    () => deriveEmailInlineResourceScope(rootNode, selectedNode),
+    [rootNode, selectedNode]
+  )
+  const inlineResourceUrls = useEmailInlineResourceUrls(inlineResourceScope)
 
   React.useEffect(() => {
     if (controlled) return
@@ -143,29 +194,35 @@ export function EmailViewerProvider({
     setInternalSelectedPath(defaultPath)
   }, [controlled, defaultPath, internalSelectedPath, rootNode])
 
-  const setSelectedNode = React.useCallback(
+  const selectPart = React.useCallback(
     (node: MimePartNode) => {
       if (!controlled) setInternalSelectedPath(node.path)
       onSelectedPathChange?.(node.path, node)
     },
     [controlled, onSelectedPathChange]
   )
-  const inlineResourceUrls = useInlineMimeResourceUrls(
-    getInlineResourceScope(selectedNode)
-  )
-  const display = React.useMemo(
-    () => getMimeDisplayPart(selectedNode, inlineResourceUrls),
-    [inlineResourceUrls, selectedNode]
-  )
-  const value = React.useMemo<EmailViewerContextValue>(
-    () => ({
-      display,
+  const model = React.useMemo(
+    () =>
+      deriveEmailViewerModel({
+        inlineResourceUrls,
+        maxNestedMessageDepth,
+        message,
+        nestedMessageDepth,
+        rootNode,
+        selectedNode,
+      }),
+    [
+      inlineResourceUrls,
+      maxNestedMessageDepth,
       message,
+      nestedMessageDepth,
       rootNode,
       selectedNode,
-      setSelectedNode,
-    }),
-    [display, message, rootNode, selectedNode, setSelectedNode]
+    ]
+  )
+  const value = React.useMemo<EmailViewerContextValue>(
+    () => ({ model, selectPart }),
+    [model, selectPart]
   )
 
   return (
@@ -175,120 +232,117 @@ export function EmailViewerProvider({
   )
 }
 
-export function EmailViewer({
+export function EmailViewer(props: EmailViewerProps) {
+  return <EmailViewerInternal {...props} nestedMessageDepth={0} />
+}
+
+function EmailViewerInternal({
   message,
   selectedPath,
   defaultSelectedPath,
   onSelectedPathChange,
+  maxNestedMessageDepth,
+  nestedMessageDepth = 0,
   className,
   bare = false,
-}: EmailViewerProps) {
+}: EmailViewerInternalProps) {
+  if (nestedMessageDepth === 0) {
+    return (
+      <EmailViewerProvider
+        message={message}
+        selectedPath={selectedPath}
+        defaultSelectedPath={defaultSelectedPath}
+        onSelectedPathChange={onSelectedPathChange}
+        maxNestedMessageDepth={maxNestedMessageDepth}
+      >
+        <EmailViewerChrome bare={bare} className={className} />
+      </EmailViewerProvider>
+    )
+  }
+
   return (
-    <EmailViewerProvider
+    <EmailViewerProviderInternal
       message={message}
       selectedPath={selectedPath}
       defaultSelectedPath={defaultSelectedPath}
       onSelectedPathChange={onSelectedPathChange}
+      maxNestedMessageDepth={maxNestedMessageDepth}
+      nestedMessageDepth={nestedMessageDepth}
     >
-      <div data-slot="email-viewer" className={cn("min-h-0", className)}>
-        <ViewerRoot bare={bare} defaultSidebarOpen className="h-full">
-          <EmailViewerHeader />
-          <ViewerBody className="flex-col md:flex-row">
-            <ViewerSurface className="min-h-[26rem] md:min-h-0">
-              <EmailViewerSelectedPart />
-            </ViewerSurface>
-            <ViewerSidebar
-              aria-label="Email parts"
-              side="right"
-              width="19rem"
-              className="border-t md:border-t-0 md:border-l"
-            >
-              <EmailViewerPartsList />
-            </ViewerSidebar>
-          </ViewerBody>
-        </ViewerRoot>
-      </div>
-    </EmailViewerProvider>
+      <EmailViewerChrome bare={bare} className={className} />
+    </EmailViewerProviderInternal>
   )
 }
 
-export function EmailViewerHeader() {
-  const { message } = useEmailViewerHeader()
-  return <MimeMessageHeader message={message} />
-}
-
-export function EmailViewerPartsList() {
-  const { rootNode, selectedPath, setSelectedNode } = useEmailViewerPartsList()
+function EmailViewerChrome({ bare = false, className }: EmailViewerChromeProps) {
   return (
-    <MimePartSidebar
-      root={rootNode}
-      selectedPath={selectedPath}
-      onSelectNode={setSelectedNode}
-    />
+    <div data-slot="email-viewer" className={cn("min-h-0", className)}>
+      <ViewerRoot bare={bare} defaultOpen sidebarSide="right" className="h-full">
+        <EmailHeader />
+        <ViewerBody className="flex-col md:flex-row">
+          <ViewerSurface className="min-h-[26rem] md:min-h-0">
+            <EmailContent />
+          </ViewerSurface>
+          <ViewerSidebar
+            aria-label="Email parts"
+            width="19rem"
+            className="border-t md:border-t-0 md:border-l"
+          >
+            <EmailPartsSidebar />
+          </ViewerSidebar>
+        </ViewerBody>
+      </ViewerRoot>
+    </div>
   )
 }
 
-export function EmailViewerSelectedPart() {
-  const { display, message, selectedNode } = useEmailViewerSelectedPart()
-  return (
-    <MimeViewerContent
-      message={message}
-      selectedNode={selectedNode}
-      display={display}
-    />
-  )
+export function EmailHeader() {
+  return <MimeMessageHeader header={useEmailHeader()} />
 }
 
-function MimeViewerContent({
-  message,
-  selectedNode,
-  display,
-}: {
-  message: EmailViewerMessage
-  selectedNode: MimePartNode
-  display: MimeDisplayPart | null
-}) {
-  if (selectedNode.isMessage && selectedNode.children.length > 0) {
+export function EmailPartsSidebar() {
+  const { sidebar, selectPart } = useEmailPartsSidebar()
+
+  return <MimePartSidebar sidebar={sidebar} onSelectPart={selectPart} />
+}
+
+export function EmailContent() {
+  const content = useEmailContent()
+
+  if (content.kind === "nested-message") {
     return (
-      <EmailViewer
+      <EmailViewerInternal
         bare
         className="h-full"
-        message={{
-          id: `${messageIdentity(message)}:${selectedNode.part.id}`,
-          headers: selectedNode.part.headers,
-          subject: headerValue(selectedNode.part.headers, "subject"),
-          from: headerValue(selectedNode.part.headers, "from"),
-          to: headerValue(selectedNode.part.headers, "to"),
-          sentAt: headerValue(selectedNode.part.headers, "date"),
-          root: selectedNode.part,
-        }}
+        message={content.message}
+        maxNestedMessageDepth={content.maxNestedMessageDepth}
+        nestedMessageDepth={content.nestedMessageDepth}
       />
     )
   }
 
-  if (!display) {
+  if (content.kind === "empty") {
     return (
       <div className="flex size-full items-center justify-center px-6 text-center text-sm text-muted-foreground">
-        This MIME part does not have a previewable body.
+        {content.message}
       </div>
     )
   }
 
   return (
     <FileViewer
-      key={display.node.path.join("/")}
-      source={display.source}
-      as={display.category}
+      key={content.node.path.join("/")}
+      source={content.file.source}
+      as={content.file.category}
       bare
       className="size-full min-h-0"
     />
   )
 }
 
-function MimeMessageHeader({ message }: { message: EmailViewerMessage }) {
-  const subject = message.subject?.trim() || "(no subject)"
-  const recipients = normalizeAddressList(message.to)
-  const sentAt = formatSentAt(message.sentAt)
+function MimeMessageHeader({ header }: { header: EmailHeaderModel }) {
+  const from = formatEmailAddresses(header.from)
+  const to = formatEmailAddresses(header.to)
 
   return (
     <ViewerHeader className="px-3 py-2">
@@ -299,18 +353,16 @@ function MimeMessageHeader({ message }: { message: EmailViewerMessage }) {
         <div className="flex min-w-0 items-center gap-2">
           <Mail className="size-4 flex-shrink-0 text-muted-foreground" />
           <h2 className="min-w-0 flex-1 truncate text-sm font-medium">
-            {subject}
+            {header.subject}
           </h2>
           <ViewerSidebarTrigger className="-mr-1" />
         </div>
         <div className="flex min-w-0 flex-wrap gap-x-3 gap-y-1 pl-6 text-xs text-muted-foreground">
-          {message.from ? (
-            <span className="min-w-0 truncate">From {message.from}</span>
+          {from ? <span className="min-w-0 truncate">From {from}</span> : null}
+          {to ? <span className="min-w-0 truncate">To {to}</span> : null}
+          {header.sentAt ? (
+            <span className="tabular-nums">{header.sentAt}</span>
           ) : null}
-          {recipients ? (
-            <span className="min-w-0 truncate">To {recipients}</span>
-          ) : null}
-          {sentAt ? <span className="tabular-nums">{sentAt}</span> : null}
         </div>
       </div>
     </ViewerHeader>
@@ -318,22 +370,14 @@ function MimeMessageHeader({ message }: { message: EmailViewerMessage }) {
 }
 
 function MimePartSidebar({
-  root,
-  selectedPath,
-  onSelectNode,
+  sidebar,
+  onSelectPart,
   className,
 }: {
-  root: MimePartNode
-  selectedPath: MimePartPath
-  onSelectNode: (node: MimePartNode) => void
+  sidebar: EmailSidebarModel
+  onSelectPart: (node: MimePartNode) => void
   className?: string
 }) {
-  const { bodyNodes, attachmentNodes } = React.useMemo(
-    () => getSidebarSections(root),
-    [root]
-  )
-  const partCount = bodyNodes.length + attachmentNodes.length
-
   return (
     <div
       data-slot="mime-part-sidebar"
@@ -346,45 +390,40 @@ function MimePartSidebar({
         <div className="flex h-6 items-center gap-2 text-xs font-medium">
           <Paperclip className="size-3.5 text-muted-foreground" />
           <span>
-            {partCount} item{partCount === 1 ? "" : "s"}
+            {sidebar.attachmentCount} attachment
+            {sidebar.attachmentCount === 1 ? "" : "s"}
           </span>
         </div>
       </div>
       <div className="min-h-0 flex-1 space-y-2 overflow-auto p-2">
-        <MimePartSidebarSection title="Body">
-          <ul className="flex flex-col gap-1">
-            {bodyNodes.map((node) => (
-              <MimePartSidebarItem
-                key={node.path.join("/")}
-                label="Body"
-                node={node}
-                selectedPath={selectedPath}
-                onSelectNode={onSelectNode}
-              />
-            ))}
-          </ul>
-        </MimePartSidebarSection>
-        <MimePartSidebarSection title="Attachments">
-          {attachmentNodes.length === 0 ? (
-            <p className="px-2 py-3 text-xs text-muted-foreground">
-              No attachments.
-            </p>
-          ) : (
-            <ul className="flex flex-col gap-1">
-              {attachmentNodes.map((node) => (
-                <MimePartSidebarItem
-                  key={node.path.join("/")}
-                  node={node}
-                  selectedPath={selectedPath}
-                  onSelectNode={onSelectNode}
-                />
-              ))}
-            </ul>
-          )}
-        </MimePartSidebarSection>
+        {sidebar.sections.map((section) => (
+          <MimePartSidebarSection key={section.id} title={section.title}>
+            {section.items.length === 0 ? (
+              section.emptyLabel ? (
+                <p className="px-2 py-3 text-xs text-muted-foreground">
+                  {section.emptyLabel}
+                </p>
+              ) : null
+            ) : (
+              <ul className="flex flex-col gap-1">
+                {section.items.map((item) => (
+                  <MimePartSidebarItem
+                    key={item.id}
+                    item={item}
+                    onSelectPart={onSelectPart}
+                  />
+                ))}
+              </ul>
+            )}
+          </MimePartSidebarSection>
+        ))}
       </div>
     </div>
   )
+}
+
+function formatEmailAddresses(addresses: readonly EmailAddress[]) {
+  return addresses.map((address) => address.display).join(", ") || null
 }
 
 function MimePartSidebarSection({
@@ -413,104 +452,40 @@ function MimePartSidebarSection({
   )
 }
 
-function getSidebarSections(root: MimePartNode): {
-  bodyNodes: MimePartNode[]
-  attachmentNodes: MimePartNode[]
-} {
-  const attachmentNodes: MimePartNode[] = []
-
-  walkCurrentMessageNodes(root, (node) => {
-    if (node.isMultipart) return
-    if (node.isInlineResource) return
-    if (node.isAttachment || node.isMessage) {
-      attachmentNodes.push(node)
-      return
-    }
-  })
-
-  const bodyNode = getBodyNode(root)
-  const bodyNodes = bodyNode ? [bodyNode] : [root]
-  return { attachmentNodes, bodyNodes }
-}
-
-function getBodyNode(root: MimePartNode) {
-  const candidates: MimePartNode[] = []
-
-  walkCurrentMessageNodes(root, (node) => {
-    if (!node.isRenderable) return
-    if (node.isInlineResource || node.isAttachment || node.isMessage) return
-    candidates.push(node)
-  })
-
-  return (
-    candidates.find(
-      (node) => normalizedMimeType(node.part.mimeType) === "text/html"
-    ) ??
-    candidates.find(
-      (node) => normalizedMimeType(node.part.mimeType) === "text/plain"
-    ) ??
-    candidates[0] ??
-    null
-  )
-}
-
 function MimePartSidebarItem({
-  label,
-  node,
-  selectedPath,
-  onSelectNode,
+  item,
+  onSelectPart,
 }: {
-  label?: string
-  node: MimePartNode
-  selectedPath: MimePartPath
-  onSelectNode: (node: MimePartNode) => void
+  item: EmailSidebarItem
+  onSelectPart: (node: MimePartNode) => void
 }) {
-  const isSelected = pathsEqual(node.path, selectedPath)
-  const canRenderThumbnail = Boolean(node.part.source && !node.isInlineResource)
-  const meta = sidebarMeta(node)
-  const title = label ?? mimePartLabel(node.part)
-
   return (
     <li data-slot="mime-part-sidebar-item">
       <button
         type="button"
-        aria-current={isSelected ? "page" : undefined}
-        aria-label={`${title} ${meta}`}
-        data-selected={isSelected ? "true" : "false"}
+        aria-current={item.isSelected ? "page" : undefined}
+        aria-label={`${item.title} ${item.description}`}
+        data-selected={item.isSelected ? "true" : "false"}
         className={cn(
           "flex h-auto w-full items-center gap-3 overflow-hidden rounded-lg border p-2 text-left text-sm outline-hidden transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring active:bg-accent",
-          isSelected
+          item.isSelected
             ? "border-border bg-accent text-accent-foreground"
             : "border-transparent"
         )}
-        onClick={() => onSelectNode(node)}
+        onClick={() => onSelectPart(item.node)}
       >
-        {canRenderThumbnail && node.part.source ? (
-          <FileThumbnail
-            source={node.part.source}
-            presentation="decorative"
-            className="size-12 flex-shrink-0"
-            previewAspectRatio={1}
-          />
-        ) : (
-          <span
-            className={cn(
-              "flex size-12 flex-shrink-0 items-center justify-center rounded-md bg-muted/60",
-              isSelected ? "text-accent-foreground" : "text-muted-foreground"
-            )}
-          >
-            <PartIcon node={node} className="size-4" />
-          </span>
-        )}
+        <SidebarItemThumbnail item={item} />
         <span className="flex min-w-0 flex-1 flex-col gap-1">
-          <span className="truncate text-sm font-medium">{title}</span>
+          <span className="truncate text-sm font-medium">{item.title}</span>
           <span
             className={cn(
               "truncate text-xs",
-              isSelected ? "text-accent-foreground/80" : "text-muted-foreground"
+              item.isSelected
+                ? "text-accent-foreground/80"
+                : "text-muted-foreground"
             )}
           >
-            {meta}
+            {item.description}
           </span>
         </span>
       </button>
@@ -518,138 +493,41 @@ function MimePartSidebarItem({
   )
 }
 
+function SidebarItemThumbnail({ item }: { item: EmailSidebarItem }) {
+  if (item.thumbnail.kind === "file") {
+    return (
+      <FileThumbnail
+        source={item.thumbnail.source}
+        presentation="decorative"
+        className="size-12 flex-shrink-0"
+        previewAspectRatio={item.thumbnail.aspectRatio}
+      />
+    )
+  }
+
+  return (
+    <span
+      className={cn(
+        "flex size-12 flex-shrink-0 items-center justify-center rounded-md bg-muted/60",
+        item.isSelected ? "text-accent-foreground" : "text-muted-foreground"
+      )}
+    >
+      <PartIcon icon={item.thumbnail.icon} className="size-4" />
+    </span>
+  )
+}
+
 function PartIcon({
-  node,
+  icon,
   className,
 }: {
-  node: MimePartNode
+  icon: "file" | "layers" | "mail" | "paperclip"
   className?: string
 }) {
-  if (node.isMultipart || node.isMessage) {
-    return <Layers3 className={className} aria-hidden />
-  }
-  if (node.isAttachment) {
+  if (icon === "layers") return <Layers3 className={className} aria-hidden />
+  if (icon === "mail") return <Mail className={className} aria-hidden />
+  if (icon === "paperclip") {
     return <Paperclip className={className} aria-hidden />
   }
   return <FileText className={className} aria-hidden />
-}
-
-function useInlineMimeResourceUrls(node: MimePartNode) {
-  const inlineParts = React.useMemo(
-    () => collectInlineResourceParts(node),
-    [node]
-  )
-  const [urls, setUrls] = React.useState<ReadonlyMap<string, string>>(
-    () => new Map()
-  )
-
-  React.useEffect(() => {
-    const nextUrls = new Map<string, string>()
-    const objectUrls: string[] = []
-
-    for (const inlinePart of inlineParts) {
-      const cid = normalizeContentId(inlinePart.part.contentId)
-      const source = inlinePart.part.source
-      if (!cid || !source) continue
-
-      const url = sourceToInlineUrl(source, objectUrls)
-      if (url) nextUrls.set(cid, url)
-    }
-
-    setUrls(nextUrls)
-
-    return () => {
-      for (const url of objectUrls) URL.revokeObjectURL(url)
-    }
-  }, [inlineParts])
-
-  return urls
-}
-
-function sourceToInlineUrl(source: ViewerSource, objectUrls: string[]) {
-  if (source.kind === "url") return source.url
-  if (source.kind === "blob") {
-    const url = URL.createObjectURL(source.blob)
-    objectUrls.push(url)
-    return url
-  }
-
-  return textSourceToDataUrl(source.text, source.mimeType)
-}
-
-function textSourceToDataUrl(text: string, mimeType: string | undefined) {
-  const bytes = new TextEncoder().encode(text)
-  const chunkSize = 0x8000
-  let binary = ""
-  for (let index = 0; index < bytes.length; index += chunkSize) {
-    binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize))
-  }
-  return `data:${mimeType ?? "text/plain;charset=utf-8"};base64,${btoa(binary)}`
-}
-
-function sidebarMeta(node: MimePartNode) {
-  if (node.part.size != null) {
-    return `${node.part.mimeType} · ${formatFileSize(node.part.size)}`
-  }
-  if (node.isInlineResource) return `${node.part.mimeType} · inline`
-  if (node.isAttachment) return `${node.part.mimeType} · attachment`
-  return node.part.mimeType
-}
-
-function walkMimeNodes(
-  node: MimePartNode,
-  visit: (node: MimePartNode) => void
-) {
-  visit(node)
-  for (const child of node.children) walkMimeNodes(child, visit)
-}
-
-function walkCurrentMessageNodes(
-  root: MimePartNode,
-  visit: (node: MimePartNode) => void
-) {
-  function walk(node: MimePartNode) {
-    visit(node)
-    if (node !== root && node.isMessage) return
-    for (const child of node.children) walk(child)
-  }
-
-  walk(root)
-}
-
-function pathsEqual(left: MimePartPath, right: MimePartPath) {
-  if (left.length !== right.length) return false
-  return left.every((part, index) => part === right[index])
-}
-
-function normalizedMimeType(mimeType: string) {
-  return mimeType.toLowerCase().split(";")[0].trim()
-}
-
-function normalizeAddressList(
-  value: string | readonly string[] | null | undefined
-) {
-  if (typeof value === "string") return value.trim() || null
-  if (value) return value.filter(Boolean).join(", ")
-  return null
-}
-
-function formatSentAt(value: string | Date | null | undefined) {
-  if (!value) return null
-  const date = value instanceof Date ? value : new Date(value)
-  if (Number.isNaN(date.getTime())) return null
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date)
-}
-
-function headerValue(
-  headers: readonly { name: string; value: string }[] | undefined,
-  name: string
-) {
-  return (
-    headers?.find((header) => header.name.toLowerCase() === name.toLowerCase())
-      ?.value ?? null
-  )
 }

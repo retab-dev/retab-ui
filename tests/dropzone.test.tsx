@@ -13,7 +13,7 @@ import {
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { DropzoneBlock } from "@/registry/new-york-v4/blocks/dropzone-block"
-import { DropzoneUploaderViewer } from "@/registry/new-york-v4/blocks/dropzone-uploader-viewer"
+import { FileIntakeViewer } from "@/registry/new-york-v4/blocks/dropzone-uploader-viewer"
 import {
   matchesDropzoneAccept,
   parseDropzoneAccept,
@@ -671,7 +671,7 @@ describe("Dropzone primitive", () => {
 
     expect(root?.getAttribute("aria-disabled")).toBe("true")
     expect(input.accept).toBe(".pdf")
-    expect(input.disabled).toBe(true)
+    expect(input.hasAttribute("disabled")).toBe(true)
     expect(input.multiple).toBe(false)
     expect(customTrigger.getAttribute("aria-disabled")).toBe("true")
     expect(customTrigger.getAttribute("tabindex")).toBe("-1")
@@ -859,7 +859,7 @@ describe("FileUploader", () => {
 })
 
 describe("DropzoneBlock", () => {
-  it("switches the uploader-viewer showcase from empty upload state to viewer state", () => {
+  it("switches the file-intake viewer showcase from empty upload state to viewer state", () => {
     const viewerSources: Array<{
       fileName?: string
       identityKey: string
@@ -868,7 +868,7 @@ describe("DropzoneBlock", () => {
     }> = []
 
     render(
-      <DropzoneUploaderViewer
+      <FileIntakeViewer
         renderViewer={(source) => {
           viewerSources.push(source)
           return <div data-testid="viewer">{source.fileName}</div>
@@ -877,7 +877,7 @@ describe("DropzoneBlock", () => {
     )
 
     const viewerSection = screen
-      .getByText("Uploader + viewer")
+      .getByText("File preview")
       .closest("section") as HTMLElement
     const input = viewerSection.querySelector(
       'input[type="file"]'
@@ -916,6 +916,11 @@ describe("DropzoneBlock", () => {
     ).toBeGreaterThanOrEqual(2)
     expect(within(viewerSection).getByText(formatFileSize(5))).toBeTruthy()
     expect(within(viewerSection).getByText("text/plain")).toBeTruthy()
+    const sidebarThumbnail = body?.querySelector<HTMLElement>(
+      ':scope > [data-slot="viewer-sidebar"] [data-slot="file-thumbnail"]'
+    )
+    expect(sidebarThumbnail?.className).toContain("size-20")
+    expect(sidebarThumbnail?.style.aspectRatio).toBe("1 / 1")
     expect(screen.getByTestId("viewer").textContent).toBe("preview.txt")
     expect(viewerSources.at(-1)).toEqual(
       expect.objectContaining({
@@ -932,6 +937,150 @@ describe("DropzoneBlock", () => {
 
     expect(within(viewerSection).getByText("No file selected")).toBeTruthy()
     expect(screen.queryByTestId("viewer")).toBeNull()
+  })
+
+  it("keeps the file-intake viewer controlled by the files prop", () => {
+    const initialFile = file("initial.txt", "text/plain", "first")
+    const changes: DropzoneFileItem[][] = []
+
+    function ControlledUploaderViewer() {
+      const [files, setFiles] = React.useState<DropzoneFileItem[]>([
+        { id: "initial-file-id", file: initialFile },
+      ])
+
+      return (
+        <FileIntakeViewer
+          files={files}
+          onFilesChange={(nextFiles) => {
+            changes.push(nextFiles)
+            setFiles(nextFiles)
+          }}
+          renderViewer={(source) => (
+            <div data-testid="viewer">{source.identityKey}</div>
+          )}
+        />
+      )
+    }
+
+    render(<ControlledUploaderViewer />)
+
+    const viewerSection = screen
+      .getByText("File preview")
+      .closest("section") as HTMLElement
+    const input = viewerSection.querySelector(
+      'input[type="file"]'
+    ) as HTMLInputElement
+
+    expect(screen.getByTestId("viewer").textContent).toBe("initial-file-id")
+
+    fireEvent.change(input, {
+      target: {
+        files: [file("replacement.txt", "text/plain", "second")],
+      },
+    })
+
+    expect(changes.at(-1)).toEqual([
+      expect.objectContaining({
+        file: expect.objectContaining({ name: "replacement.txt" }),
+      }),
+    ])
+    expect(screen.getByTestId("viewer").textContent).toContain(
+      "replacement.txt-6"
+    )
+
+    fireEvent.click(
+      within(viewerSection).getByRole("button", {
+        name: "Remove replacement.txt",
+      })
+    )
+
+    expect(changes.at(-1)).toEqual([])
+    expect(within(viewerSection).getByText("No file selected")).toBeTruthy()
+  })
+
+  it("keeps the file-intake viewer disabled state conservative", () => {
+    render(
+      <FileIntakeViewer
+        disabled
+        defaultFiles={[
+          {
+            id: "disabled-file-id",
+            file: file("locked.txt", "text/plain", "locked"),
+          },
+        ]}
+        renderViewer={(source) => (
+          <div data-testid="viewer">{source.identityKey}</div>
+        )}
+      />
+    )
+
+    const viewerSection = screen
+      .getByText("File preview")
+      .closest("section") as HTMLElement
+
+    expect(screen.getByTestId("viewer").textContent).toBe("disabled-file-id")
+    expect(
+      within(viewerSection).queryByRole("button", { name: "Remove locked.txt" })
+    ).toBeNull()
+    expect(
+      within(viewerSection)
+        .getByRole("button", { name: "Replace locked.txt" })
+        .hasAttribute("disabled")
+    ).toBe(true)
+  })
+
+  it("renders file-intake viewer rejection state in the empty surface", () => {
+    const onIntake = vi.fn()
+
+    render(
+      <FileIntakeViewer
+        accept="application/pdf"
+        maxSize={4}
+        onIntake={onIntake}
+      />
+    )
+
+    const viewerSection = screen
+      .getByText("File preview")
+      .closest("section") as HTMLElement
+    const input = viewerSection.querySelector(
+      'input[type="file"]'
+    ) as HTMLInputElement
+
+    fireEvent.change(input, {
+      target: {
+        files: [file("notes.txt", "text/plain", "notes")],
+      },
+    })
+
+    expect(onIntake).toHaveBeenCalledWith(
+      expect.objectContaining({
+        acceptedFiles: [],
+        fileRejections: [
+          expect.objectContaining({
+            file: expect.objectContaining({ name: "notes.txt" }),
+            reason: "file-invalid-type",
+          }),
+        ],
+      })
+    )
+    expect(
+      within(viewerSection).getByText("Unsupported file type")
+    ).toBeTruthy()
+    expect(
+      within(viewerSection).getByText("notes.txt cannot be opened here.")
+    ).toBeTruthy()
+
+    fireEvent.change(input, {
+      target: {
+        files: [file("large.pdf", "application/pdf", "xxxxx")],
+      },
+    })
+
+    expect(within(viewerSection).getByText("File is too large")).toBeTruthy()
+    expect(
+      within(viewerSection).getByText("large.pdf must be 4 B or smaller.")
+    ).toBeTruthy()
   })
 
   it("renders focused primitive proofs", () => {
@@ -951,7 +1100,7 @@ describe("DropzoneBlock", () => {
       "Controlled queue",
       "Validation only",
       "Custom thumbnail grid",
-      "Uploader + viewer",
+      "File preview",
       "Audio transcript queue",
       "Avatar image slot",
       "Spreadsheet mapper",
@@ -988,6 +1137,10 @@ describe("Dropzone registry split", () => {
     )
     const dropzoneUploaderViewerSource = readFileSync(
       "registry/new-york-v4/blocks/dropzone-uploader-viewer.tsx",
+      "utf8"
+    )
+    const dropzoneFileIntakePartsSource = readFileSync(
+      "registry/new-york-v4/blocks/dropzone-uploader-viewer-parts.tsx",
       "utf8"
     )
     const dropzoneDocsSource = readFileSync(
@@ -1036,22 +1189,24 @@ describe("Dropzone registry split", () => {
     expect(dropzoneUploaderViewerSource).not.toContain(
       "@/components/ui/file-viewer"
     )
-    expect(dropzoneUploaderViewerSource).toContain(
-      "UploadableFileViewerProvider"
-    )
-    expect(dropzoneUploaderViewerSource).toContain("UploadableFileViewerRoot")
-    expect(dropzoneUploaderViewerSource).not.toContain(
-      "UploadableFileViewerFrame"
-    )
-    expect(dropzoneUploaderViewerSource).toContain(
-      "UploadableFileViewerContent"
-    )
+    expect(dropzoneUploaderViewerSource).toContain("FileIntakeViewerProvider")
+    expect(dropzoneUploaderViewerSource).toContain("FileIntakeViewerRoot")
+    expect(dropzoneUploaderViewerSource).not.toContain("FileIntakeViewerFrame")
+    expect(dropzoneUploaderViewerSource).toContain("FileIntakeViewerSurface")
     expect(dropzoneUploaderViewerSource).toContain(
       "renderViewer?: (source: BlobViewerSource) => React.ReactNode"
     )
     expect(dropzoneUploaderViewerSource).toContain(
-      "<UploadableFileViewerContent renderViewer={renderViewer} />"
+      "<FileIntakeViewerSurface renderViewer={renderViewer} />"
     )
+    expect(dropzoneUploaderViewerSource).not.toContain("DropzoneUploaderViewer")
+    expect(dropzoneUploaderViewerSource).not.toContain("UploadableFileViewer")
+    expect(dropzoneFileIntakePartsSource).not.toContain("UploadableFileViewer")
+    expect(dropzoneFileIntakePartsSource).not.toContain("UploadableFileSummary")
+    expect(dropzoneFileIntakePartsSource).not.toContain(
+      "openFileDialog: () => void"
+    )
+    expect(dropzoneFileIntakePartsSource).not.toContain("canOpenFileDialog")
     expect(dropzoneDocsSource).toContain("Browser file intake is not upload.")
     expect(dropzoneDocsSource).toContain("`files` is selected-file state.")
     expect(dropzoneDocsSource).toContain(

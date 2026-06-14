@@ -12,7 +12,7 @@ leaking virtual chunks as visible pages.
 3. Broader MDX/component markdown beyond the restricted `Metric`, `Badge`,
    `Image`, `Video`, `Diagram`, `Callout`, `Accordion`, and `Tabs` / `Tab`
    subset.
-4. Footnote polish beyond current labelled GFM references, labelled backrefs, and bidirectional fragment targets.
+4. Footnote polish beyond current labelled GFM references, labelled backrefs, bidirectional fragment targets, and document-wide definition resolution across virtual chunks.
 5. Math / KaTeX polish beyond initial inline and block rendering.
 6. Syntax highlighting polish beyond current `rehype-pretty-code` rendering, title/caption metadata, line numbers, highlighted line/character styling, and diff add/remove styling.
 7. Code block copy polish beyond the current full-block and selected-code copy controls.
@@ -27,14 +27,18 @@ leaking virtual chunks as visible pages.
 16. Broader image polish beyond the current blocked/loading/ready/failed/retry surface with associated captions, lazy loading, max-width containment, decoded aspect-ratio stabilization, and resource blocking.
 17. Component-specific stable block heights for rich blocks beyond current top-level prose/code/table/frontmatter estimates.
 18. Browser regression coverage beyond the current dedicated rich-demo smoke
-    check.
+    checks for desktop, narrow mobile, dark mode, fragment navigation, source
+    highlights, link policy, footnotes, and async Mermaid/image scroll
+    stability.
 19. Docs page expansion for migration, threat model, performance limits, and known gaps.
 20. FileViewer rollout verification beyond the current URL, Blob, inline text, and MIME-only Markdown routing tests.
-21. Full shadcn CLI registry install smoke beyond the current generated artifact
-    transitive install-tree import-closure test.
+21. Published Retab registry endpoint verification beyond the current local
+    registry artifact import-closure test and local shadcn CLI install smoke.
 22. Accessibility audit for generated block roles/labels.
 23. Source-mode polish beyond the current virtualized raw Markdown toggle, source-line scrolling, anchored mode switching, and labelled keyboard-focusable source region.
-24. Browser-level fragment navigation regression coverage beyond the current component-level local link, direct hash, hashchange, and popstate tests.
+24. Broader browser-level fragment navigation coverage beyond the current route
+    smoke for direct hash loads, local fragment clicks, and browser
+    back/forward restoration.
 25. Large-document perf/browser scroll verification.
 26. Removal or deprecation plan for the old paged markdown viewer once this path is ready.
 
@@ -49,8 +53,8 @@ leaking virtual chunks as visible pages.
 33. Broader no-DOM-measurement policy beyond current block-aware Pretext estimates, with DOM measurement reserved for explicitly rich blocks.
 34. Broader block virtualization API polish beyond current chunk/frame/window helpers, including remaining inherited source-mode line terminology where it is still accurate but visually confusing.
 35. Separate terminology: `block`, `chunk`, `frame`, and `window` should replace inherited `row`/`line` names where they are no longer accurate.
-36. Broader strategy for splitting very large Markdown blocks after the current hostile chunk isolation, especially huge paragraphs, huge lists, and huge tables.
-37. Broader policy for hostile or pathological Markdown payloads beyond the current oversized code/table/paragraph/list/HTML chunk flags, including links and deeply nested structures.
+36. Broader strategy for splitting very large Markdown blocks after the current hostile chunk isolation and bounded source-preview fallback, especially huge paragraphs, huge lists, and huge tables.
+37. Broader policy for hostile or pathological Markdown payloads beyond the current oversized code/table/paragraph/list/HTML chunk flags and bounded source-preview fallback, including links and deeply nested structures.
 38. A deterministic fallback renderer for unsupported block types.
 39. A common copy/download abstraction for full source, block source, tables, and code blocks.
 40. Cutover cleanup once old Markdown routing no longer has product callers.
@@ -94,7 +98,9 @@ leaking virtual chunks as visible pages.
 72. Table row virtualization for very large tables.
 73. Table header stickiness decision.
 74. Broader table alignment polish beyond current GFM left/center/right alignment and tabular numeric styling for right-aligned cells.
-75. Browser-level footnote reference/backref navigation polish beyond current labelled bidirectional fragment targets.
+75. Broader browser-level footnote reference/backref navigation polish beyond
+    the current route smoke for labelled bidirectional fragment targets and
+    component coverage for document-wide definitions across chunks.
 76. Footnote section layout polish at the end of the continuous document.
 77. Math inline rendering polish.
 78. Math block rendering polish.
@@ -110,7 +116,7 @@ leaking virtual chunks as visible pages.
 85. Rendered/Text toggle browser and product-flow verification beyond the current component tests.
 86. Source-mode selection, search, and horizontal-scroll polish beyond the current labelled keyboard-focusable raw-line virtualizer.
 87. Search/find integration.
-88. Broader source highlight integration beyond current source-mode line highlights and rendered chunk-level highlight regions/data attributes.
+88. Broader source highlight integration beyond current source-mode line highlights, rendered chunk-level highlight regions/data attributes, and rendered/source route smoke.
 89. Browser-level visual scroll-to-source-line verification across variable-height blocks beyond current intra-chunk virtualizer offsets and rendered-mode component coverage.
 90. Browser-level scroll anchor preservation on resize, zoom, font load, and content updates beyond current pure anchor capture/restore coverage.
 91. Zoom behavior audit with continuous block layout.
@@ -121,8 +127,11 @@ leaking virtual chunks as visible pages.
 96. Copy all Markdown polish beyond the current raw-source toolbar action.
 97. Download error-state UI polish beyond the current inline, URL, and Blob
     source download regressions.
-98. Broader hash fragment navigation coverage beyond the current component-level page-load, local-click, and hash-change tests.
-99. Browser-level back/forward navigation coverage beyond the current component-level popstate test.
+98. Broader hash fragment navigation coverage beyond the current component
+    tests and route smoke for initial hash loads, local clicks, and
+    back/forward restoration.
+99. Broader browser-level back/forward navigation coverage beyond the current
+    route smoke around local heading fragments.
 100.  Preserve scroll position when toggling feature flags or switching viewer implementations beyond the current Rendered/Text source-line anchor.
 
 ## Missing Accessibility Work
@@ -133,9 +142,12 @@ leaking virtual chunks as visible pages.
 104. Broader table accessibility beyond the current deterministic header/cell associations for rendered rows.
 105. Broader code block accessibility beyond current labelled code block/source regions and keyboard-focusable horizontal source region, including line-level navigation if line numbers are added.
 106. Broader diagram accessibility beyond current labelled Mermaid group/image/source fallback, including richer descriptions for full Mermaid output.
-107. Broader footnote accessibility beyond current labelled refs/backrefs and labelled collected footnotes section.
+107. Broader footnote accessibility beyond current labelled refs/backrefs,
+     labelled collected footnotes section, document-wide definition resolution,
+     and route-level ref/backref smoke.
 108. Broader callout accessibility beyond current labelled `note` regions for GitHub alerts and directive callouts, including screen-reader verification of separated alert titles and bodies.
-109. Browser-level link target/rel verification beyond current Markdown and raw-HTML invariant tests.
+109. Broader browser-level link target/rel verification beyond the current
+     route smoke for Markdown links, autolinks, and raw-HTML links.
 110. Color contrast audit for prose, tables, code, alerts, and diagrams.
 111. Screen reader behavior for virtualized offscreen content.
 112. Broader reduced-motion handling for render transitions beyond the current automatic scroll behavior.
@@ -164,16 +176,20 @@ leaking virtual chunks as visible pages.
 129. Broader browser regression tests proving there are no visible page shells,
      page gaps, or page labels beyond the current dedicated rich-demo smoke and
      DOM/unit tests.
-130. Fragment navigation tests in the new viewer.
-131. Broader source-line highlight tests in the new viewer beyond current source-mode line coverage, rendered/source scroll range coverage, and rendered chunk highlight data attributes.
+130. Broader fragment navigation tests in the new viewer beyond the current
+     component-level coverage and route smoke.
+131. Broader source-line highlight tests in the new viewer beyond current source-mode line coverage, rendered/source scroll range coverage, rendered chunk highlight data attributes, and route smoke.
 132. Broader browser visual verification for continuous rendering beyond the
-     current rich-demo smoke.
-133. Broader browser scroll stability tests around diagrams, images, tables,
-     and code blocks beyond the current rich-demo measurement-settling check.
-134. Mobile screenshot verification.
-135. Dark mode screenshot verification.
-136. Full CLI registry install smoke beyond the current artifact and transitive
-     install-tree import smoke.
+     current rich-demo desktop/mobile/dark smoke coverage.
+133. Broader browser scroll stability tests around tables, code blocks, and
+     more varied rich blocks beyond the current rich-demo measurement-settling
+     check and async Mermaid/image route smoke.
+134. Broader mobile screenshot verification beyond the current narrow viewport
+     rich-demo smoke.
+135. Broader dark mode screenshot verification beyond the current dark
+     rich-demo smoke.
+136. Published-domain CLI registry install smoke beyond the current local Retab
+     registry namespace install smoke.
 137. Broader FileViewer routing tests beyond current Blob, URL, inline text, and MIME-only Markdown source coverage.
 138. Fuzz tests for malformed Markdown.
 139. XSS/security regression tests for links, images, raw HTML, directives, MDX-like input, and component props.
@@ -316,7 +332,8 @@ leaking virtual chunks as visible pages.
 258. Unicode URL confusable policy decision.
 259. URL sanitizer parity decision between Pretext Markdown Viewer and Markdown Document Viewer.
 260. Broader image URL extension/type policy beyond current SVG/SVGZ resource blocking.
-261. Link `target`/`rel` same-origin routing policy review beyond the current invariant tests.
+261. Link `target`/`rel` same-origin routing policy review beyond the current
+     invariant tests and route smoke.
 262. Raw HTML whitelist review beyond the current safe static HTML policy.
 263. Broader active raw HTML denylist coverage beyond the current iframe/object/embed/form/input/button/style/link/meta tests.
 264. Broader SVG sanitization coverage beyond the current SVG script/style mounting tests.

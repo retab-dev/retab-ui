@@ -4,12 +4,12 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 import { Skeleton } from "@/components/ui/skeleton"
+import {
+  VIEWER_TOOLBAR_HEIGHT_PX,
+  ViewerToolbarSkeleton,
+} from "@/components/ui/viewer-toolbar"
 import { XlsxGridSkeleton } from "@/components/ui/xlsx-grid"
 import { XLSX_SHEET_TABS_HEIGHT_PX } from "@/components/ui/xlsx-sheet-tabs"
-import {
-  XLSX_TOOLBAR_HEIGHT_PX,
-  XlsxToolbarSkeleton,
-} from "@/components/ui/xlsx-toolbar"
 
 export function XlsxViewerFrame({
   className,
@@ -54,7 +54,7 @@ export function XlsxViewerBody({
           ? {
               height: `calc(100% - ${
                 XLSX_SHEET_TABS_HEIGHT_PX +
-                (toolbar ? XLSX_TOOLBAR_HEIGHT_PX : 0)
+                (toolbar ? VIEWER_TOOLBAR_HEIGHT_PX : 0)
               }px)`,
             }
           : undefined
@@ -82,7 +82,7 @@ export function XlsxViewerFallback({
 }) {
   return (
     <XlsxViewerFrame className={className} bare={bare}>
-      {toolbar ? <XlsxToolbarSkeleton /> : null}
+      {toolbar ? <ViewerToolbarSkeleton title subtitle zoom download /> : null}
       <XlsxViewerBody toolbar={toolbar} fallbackSheetTabs={fallbackSheetTabs}>
         <XlsxGridSkeleton />
       </XlsxViewerBody>

@@ -21,10 +21,14 @@ export function useFileSystemSourceController({
   "items" | "resolveSource"
 >): FileSystemSourceController {
   const sourceCache = React.useRef(new Map<string, ViewerSource | null>())
+  const pendingSourceCache = React.useRef(
+    new Map<string, Promise<ViewerSource | null>>()
+  )
   const sourceCacheItemsRef = React.useRef(items)
 
   if (sourceCacheItemsRef.current !== items) {
     sourceCache.current.clear()
+    pendingSourceCache.current.clear()
     sourceCacheItemsRef.current = items
   }
 
@@ -37,12 +41,31 @@ export function useFileSystemSourceController({
       if (sourceCache.current.has(cacheKey)) {
         return sourceCache.current.get(cacheKey) ?? null
       }
+      const pendingSource = pendingSourceCache.current.get(cacheKey)
+      if (pendingSource) return pendingSource
       if (!resolveSource) return null
 
-      const source = await resolveSource({ file, signal })
+      const sourcePromise = resolveSource({ file, signal }).then(
+        (source) => {
+          pendingSourceCache.current.delete(cacheKey)
+          if (!signal.aborted) sourceCache.current.set(cacheKey, source)
+          return source
+        },
+        (error: unknown) => {
+          pendingSourceCache.current.delete(cacheKey)
+          throw error
+        }
+      )
 
-      if (!signal.aborted) sourceCache.current.set(cacheKey, source)
-      return source
+      pendingSourceCache.current.set(cacheKey, sourcePromise)
+      signal.addEventListener(
+        "abort",
+        () => {
+          pendingSourceCache.current.delete(cacheKey)
+        },
+        { once: true }
+      )
+      return sourcePromise
     },
     [resolveSource]
   )

@@ -71,7 +71,7 @@ export function SegmentedDocumentViewer({
   return (
     <ViewerRoot
       bare
-      defaultSidebarOpen
+      defaultOpen
       data-slot="segmented-document-viewer"
       className={cn(
         "flex min-h-0 flex-col overflow-hidden rounded-xl border bg-card",

@@ -30,7 +30,7 @@ vi.mock("mermaid", () => ({
         return {
           svg: [
             '<svg role="img" aria-label="Mermaid diagram" data-testid="mock-mermaid-svg" data-source="unsafe-svg" xmlns="http://www.w3.org/2000/svg" onload="alert(1)">',
-            '<script>alert(1)</script>',
+            "<script>alert(1)</script>",
             '<foreignObject><iframe src="javascript:alert(1)"></iframe></foreignObject>',
             '<a href="javascript:alert(1)"><text onclick="alert(1)">Unsafe</text></a>',
             "<text>Safe label</text>",
@@ -813,6 +813,17 @@ describe("PretextMarkdownViewer", () => {
     expect(
       container.querySelectorAll("[data-pretext-alert-body]")
     ).toHaveLength(5)
+    expect(
+      Array.from(container.querySelectorAll("[data-pretext-alert-body]")).map(
+        (node) => node.textContent?.trim()
+      )
+    ).toEqual([
+      "Read this.",
+      "Try this.",
+      "Remember this.",
+      "Watch this.",
+      "Stop here.",
+    ])
     expect(container.textContent).not.toContain("[!NOTE]")
     expect(container.textContent).not.toContain("[!TIP]")
     expect(container.querySelector(".lucide-info")).toBeTruthy()
@@ -1957,6 +1968,41 @@ describe("PretextMarkdownViewer", () => {
     expect(footnoteSection?.getAttribute("aria-label")).toBe("Footnotes")
   })
 
+  it("resolves GFM footnotes from definitions outside the visible chunk", async () => {
+    const { container } = render(
+      <PretextMarkdownViewer
+        source={markdownSource(
+          [
+            "A distant note.[^far]",
+            "",
+            ...Array.from(
+              { length: 40 },
+              (_, index) => `Paragraph ${index + 1}.`
+            ),
+            "",
+            "[^far]: Footnote body from the end of the document.",
+          ].join("\n\n")
+        )}
+        toolbar={false}
+      />
+    )
+
+    expect(
+      await screen.findByText("Footnote body from the end of the document.")
+    ).toBeTruthy()
+    expect(container.textContent).not.toContain("[^far]:")
+    expect(
+      container
+        .querySelector<HTMLElement>("[data-footnotes]")
+        ?.getAttribute("aria-label")
+    ).toBe("Footnotes")
+    expect(
+      container
+        .querySelector<HTMLAnchorElement>('a[href^="#user-content-fn-far"]')
+        ?.getAttribute("aria-label")
+    ).toBe("Footnote 1")
+  })
+
   it("renders code block language headers and copy controls", async () => {
     render(
       <PretextMarkdownViewer
@@ -1974,6 +2020,48 @@ describe("PretextMarkdownViewer", () => {
       expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
         "const answer = 42"
       )
+    })
+  })
+
+  it("renders hostile chunks as bounded source previews with full source copy", async () => {
+    const hostileLines = Array.from(
+      { length: 401 },
+      (_, index) => `hostile-line-${index}`
+    )
+    const hostileSource = ["```txt", ...hostileLines, "```"].join("\n")
+    const { container } = render(
+      <PretextMarkdownViewer
+        source={markdownSource(hostileSource)}
+        toolbar={false}
+      />
+    )
+
+    expect(await screen.findByText("Large Markdown block")).toBeTruthy()
+
+    const fallback = container.querySelector<HTMLElement>(
+      "[data-pretext-markdown-hostile-fallback]"
+    )
+    const preview = container.querySelector<HTMLElement>(
+      "[data-pretext-markdown-hostile-preview]"
+    )
+
+    expect(fallback).toBeTruthy()
+    expect(
+      fallback?.getAttribute("data-pretext-markdown-hostile-line-count")
+    ).toBe("403")
+    expect(
+      Number(
+        fallback?.getAttribute("data-pretext-markdown-hostile-omitted-lines")
+      )
+    ).toBeGreaterThan(300)
+    expect(preview?.textContent).toContain("hostile-line-0")
+    expect(preview?.textContent).toContain("hostile-line-400")
+    expect(preview?.textContent).toContain("source lines omitted")
+    expect(preview?.textContent).not.toContain("hostile-line-200")
+
+    fireEvent.click(screen.getByLabelText("Copy large Markdown block source"))
+    await waitFor(() => {
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(hostileSource)
     })
   })
 
@@ -2194,13 +2282,11 @@ describe("PretextMarkdownViewer", () => {
     )
 
     expect(await screen.findByText("ts")).toBeTruthy()
-    const code = container.querySelector<HTMLElement>("code[data-language='ts']")
-    const highlightedLine = container.querySelector(
-      "[data-highlighted-line]"
+    const code = container.querySelector<HTMLElement>(
+      "code[data-language='ts']"
     )
-    const highlightedChars = container.querySelector(
-      "[data-highlighted-chars]"
-    )
+    const highlightedLine = container.querySelector("[data-highlighted-line]")
+    const highlightedChars = container.querySelector("[data-highlighted-chars]")
 
     expect(code).toBeTruthy()
     expect(highlightedLine?.textContent).toContain("answer")
@@ -2232,9 +2318,7 @@ describe("PretextMarkdownViewer", () => {
     )
 
     expect(await screen.findByText("diff")).toBeTruthy()
-    const added = container.querySelector(
-      '[data-pretext-code-diff-line="add"]'
-    )
+    const added = container.querySelector('[data-pretext-code-diff-line="add"]')
     const removed = container.querySelector(
       '[data-pretext-code-diff-line="remove"]'
     )
@@ -2590,7 +2674,9 @@ describe("PretextMarkdownViewer", () => {
     expect(
       await screen.findByRole("heading", { name: "Trusted heading" })
     ).toBeTruthy()
-    expect(screen.getByRole("heading", { name: "Spoofed heading" })).toBeTruthy()
+    expect(
+      screen.getByRole("heading", { name: "Spoofed heading" })
+    ).toBeTruthy()
     expect(container.querySelector("#constructor")).toBeNull()
     expect(
       container.querySelector('[data-pretext-component="Metric"]')
@@ -2598,15 +2684,9 @@ describe("PretextMarkdownViewer", () => {
     expect(
       container.querySelector('[data-pretext-callout-kind="warning"]')
     ).toBeNull()
-    expect(
-      container.querySelector("[data-pretext-heading-id]")
-    ).toBeNull()
-    expect(
-      container.querySelector("[data-pretext-component-name]")
-    ).toBeNull()
-    expect(
-      container.querySelector("[data-pretext-callout-kind]")
-    ).toBeNull()
+    expect(container.querySelector("[data-pretext-heading-id]")).toBeNull()
+    expect(container.querySelector("[data-pretext-component-name]")).toBeNull()
+    expect(container.querySelector("[data-pretext-callout-kind]")).toBeNull()
   })
 
   it("sanitizes links and images without mounting unsafe DOM", async () => {
@@ -2733,9 +2813,9 @@ describe("PretextMarkdownViewer", () => {
       screen.getByRole("group", { name: "Image failed: Diagram" })
     ).toBeTruthy()
     expect(screen.getByText("Image failed to load: Diagram")).toBeTruthy()
-    expect(
-      screen.getByRole("img", { name: "Diagram" }).textContent
-    ).toContain("Image failed to load: Diagram")
+    expect(screen.getByRole("img", { name: "Diagram" }).textContent).toContain(
+      "Image failed to load: Diagram"
+    )
     expect(container.querySelector("img")).toBeNull()
 
     fireEvent.click(screen.getByRole("button", { name: "Retry image" }))

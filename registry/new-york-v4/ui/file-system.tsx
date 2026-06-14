@@ -9,11 +9,14 @@ import {
 import {
   FileSystemBrowser,
   FileSystemHeader,
-  FileSystemPreview,
+  FileSystemSelection,
   useFileSystemBrowser,
   useFileSystemHeader,
-  useFileSystemPreview,
+  useFileSystemSelectedItem,
+  useFileSystemSelectedSource,
+  useFileSystemSelection,
 } from "./file-system-parts"
+import { FileSystemSelectionSurface } from "./file-system-preview"
 import { FileSystemProvider, useFileSystem } from "./file-system-provider"
 import type { FileSystemProps } from "./file-system-types"
 import {
@@ -29,12 +32,14 @@ export {
   FileSystemProvider,
   FileSystemBrowser,
   FileSystemHeader,
-  FileSystemPreview,
+  FileSystemSelection,
   useFileSystem,
   useFileSystemBrowser,
   useFileSystemHeader,
   useFileSystemOpenPreview,
-  useFileSystemPreview,
+  useFileSystemSelectedItem,
+  useFileSystemSelectedSource,
+  useFileSystemSelection,
 }
 
 export type {
@@ -52,7 +57,8 @@ export type { FileSystemProviderProps } from "./file-system-provider"
 export type {
   FileSystemBrowserPartState,
   FileSystemHeaderState,
-  FileSystemPreviewState,
+  FileSystemSelectionRenderState,
+  FileSystemSelectionState,
 } from "./file-system-parts"
 
 export function FileSystem({ className, ...providerProps }: FileSystemProps) {
@@ -80,7 +86,24 @@ export function FileSystem({ className, ...providerProps }: FileSystemProps) {
               <FileSystemBrowser />
             </ViewerSidebar>
             <ViewerSurface className="bg-background">
-              <FileSystemPreview />
+              <FileSystemSelection>
+                {({
+                  entry,
+                  renderFileActions,
+                  renderMetadata,
+                  resolveSource,
+                  sourceState,
+                }) => (
+                  <FileSystemSelectionSurface
+                    entry={entry}
+                    renderFileActions={renderFileActions}
+                    renderMetadata={renderMetadata}
+                    resolveFileSource={resolveSource}
+                    sourceState={sourceState}
+                    className="size-full border-l-0"
+                  />
+                )}
+              </FileSystemSelection>
             </ViewerSurface>
           </ViewerBody>
           <FileSystemOpenPreview />

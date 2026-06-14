@@ -1,9 +1,6 @@
 "use client"
 
-import {
-  PdfViewerPages,
-  PdfViewerProvider,
-} from "@/components/ui/pdf-viewer"
+import { PdfViewerPages, PdfViewerProvider } from "@/components/ui/pdf-viewer"
 import type { SplitView } from "@/components/viewers/lib/split-types"
 import {
   SplitViewer,
@@ -51,7 +48,7 @@ function SplitViewerPdfDocument() {
       }}
     >
       <PdfViewerPages
-        ref={controls.setViewerHandle}
+        ref={controls.setDocumentHandle}
         bare
         onVisiblePageChange={controls.onCurrentPageChange}
         onScrollProgressChange={controls.onScrollProgressChange}

@@ -42,9 +42,7 @@ try {
     )}\n`
   )
 
-  await run("pnpm", [
-    "exec",
-    "shadcn",
+  await run(localBin("shadcn"), [
     "build",
     tempRegistryPath,
     "--output",
@@ -72,4 +70,12 @@ function run(command, args) {
       else reject(new Error(`${command} ${args.join(" ")} exited with ${code}`))
     })
   })
+}
+
+function localBin(command) {
+  return join(
+    "node_modules",
+    ".bin",
+    process.platform === "win32" ? `${command}.cmd` : command
+  )
 }

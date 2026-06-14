@@ -8,7 +8,7 @@ import { join } from "node:path"
 import sharp from "sharp"
 
 const targetUrl =
-  process.env.DATA_CELL_URL ?? "http://localhost:3100/docs/components/data-cell"
+  process.env.DATA_CELL_URL ?? "http://127.0.0.1:3100/data-cell-parity"
 const timeoutMs = Number(process.env.DATA_CELL_TIMEOUT_MS ?? 20_000)
 const debugDir = process.env.DATA_CELL_DEBUG_DIR
 const browserLocale = process.env.DATA_CELL_LOCALE ?? "fr-FR"

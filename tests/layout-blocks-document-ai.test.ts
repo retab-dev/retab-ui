@@ -1,6 +1,7 @@
 import documentAiOutput from "@/sample/documentai-output.json"
 import { describe, expect, it } from "vitest"
 
+import { layoutItemsToSegmentedDocumentModel } from "@/components/ui/layout-blocks-segmented-document-model"
 import {
   documentAiToLayoutDocument,
   type DocumentAiDocument,
@@ -12,6 +13,17 @@ import {
   toSvgPoints,
 } from "@/registry/new-york-v4/ui/layout-blocks-geometry"
 import { createLayoutItemIndex } from "@/registry/new-york-v4/ui/layout-blocks-index"
+import {
+  createLayoutBlocksViewerModel,
+  createLayoutItemIndex as createLayoutEvidenceIndex,
+  filterLayoutItems,
+  layoutItemsToEvidenceModel,
+  layoutItemToEvidenceItem,
+} from "@/registry/new-york-v4/ui/layout-blocks-model"
+import type {
+  LayoutDocument,
+  LayoutItem,
+} from "@/registry/new-york-v4/ui/layout-blocks-types"
 
 const documentAiFixture = documentAiOutput as DocumentAiDocument
 
@@ -121,5 +133,246 @@ describe("Document AI layout blocks", () => {
         page
       )
     ).toBeNull()
+  })
+})
+
+describe("layout blocks evidence projection", () => {
+  const layoutItems: LayoutItem[] = [
+    {
+      id: "block-1",
+      pageNumber: 1,
+      level: "block",
+      kind: "paragraph",
+      text: "High confidence block",
+      confidence: 0.98,
+      rect: { left: 100, top: 200, width: 300, height: 400 },
+    },
+    {
+      id: "block-2",
+      pageNumber: 1,
+      level: "block",
+      kind: "paragraph",
+      text: "Low confidence block",
+      confidence: 0.61,
+      rect: { left: 10, top: 20, width: 30, height: 40 },
+    },
+    {
+      id: "line-1",
+      pageNumber: 1,
+      level: "line",
+      kind: "paragraph",
+      text: "Line item",
+      confidence: 0.8,
+      rect: { left: 50, top: 60, width: 70, height: 80 },
+    },
+    {
+      id: "missing-page",
+      pageNumber: 99,
+      level: "block",
+      kind: "paragraph",
+      text: "Missing page",
+      confidence: 0.5,
+      rect: { left: 1, top: 1, width: 1, height: 1 },
+    },
+  ]
+  const layoutDocument: LayoutDocument = {
+    text: "",
+    pages: [{ pageNumber: 1, width: 1000, height: 2000, rotation: 0 }],
+    items: layoutItems,
+  }
+
+  it("projects visible OCR items to evidence rows and provider items", () => {
+    const model = createLayoutBlocksViewerModel({
+      document: layoutDocument,
+      levels: ["block"],
+      threshold: 0.9,
+    })
+
+    expect(model.visibleItems.map((item) => item.id)).toEqual([
+      "block-1",
+      "block-2",
+      "missing-page",
+    ])
+    expect(model.evidenceItems).toMatchObject([
+      {
+        id: "block-1",
+        payload: {
+          item: layoutItems[0],
+          level: "block",
+          kind: "paragraph",
+          text: "High confidence block",
+          confidence: 0.98,
+          pageNumber: 1,
+        },
+        anchor: {
+          status: "resolved",
+          anchor: {
+            kind: "pdf-area",
+            pageNumber: 1,
+            left: 10,
+            top: 10,
+            width: 30,
+            height: 20,
+          },
+        },
+      },
+      {
+        id: "block-2",
+        payload: {
+          item: layoutItems[1],
+          level: "block",
+          kind: "paragraph",
+          text: "Low confidence block",
+          confidence: 0.61,
+          pageNumber: 1,
+        },
+        anchor: { status: "resolved" },
+      },
+      {
+        id: "missing-page",
+        payload: {
+          item: layoutItems[3],
+          level: "block",
+          kind: "paragraph",
+          text: "Missing page",
+          confidence: 0.5,
+          pageNumber: 99,
+        },
+        anchor: { status: "missing" },
+      },
+    ])
+    expect(model.anchoredItems).toEqual([
+      {
+        id: "block-1",
+        anchor: {
+          kind: "pdf-area",
+          pageNumber: 1,
+          left: 10,
+          top: 10,
+          width: 30,
+          height: 20,
+        },
+        disabled: false,
+      },
+      {
+        id: "block-2",
+        anchor: {
+          kind: "pdf-area",
+          pageNumber: 1,
+          left: 1,
+          top: 1,
+          width: 3,
+          height: 2,
+        },
+        disabled: false,
+      },
+      { id: "missing-page", anchor: null, disabled: false },
+    ])
+  })
+
+  it("projects visible OCR items to segmented document segments and anchors", () => {
+    const visibleItems = filterLayoutItems(layoutDocument.items, {
+      levels: ["block"],
+      threshold: 0.9,
+    })
+    const model = layoutItemsToSegmentedDocumentModel({
+      document: layoutDocument,
+      items: visibleItems,
+    })
+
+    expect(model.pages).toEqual([{ pageNumber: 1, width: 1000, height: 2000 }])
+    expect(model.segments).toMatchObject([
+      {
+        id: "layout:block-1",
+        label: "High confidence block",
+        pages: [1],
+        confidence: 0.98,
+        sourceId: "block-1",
+      },
+      {
+        id: "layout:block-2",
+        label: "Low confidence block",
+        pages: [1],
+        confidence: 0.61,
+        sourceId: "block-2",
+      },
+      {
+        id: "layout:missing-page",
+        label: "Missing page",
+        pages: [],
+        confidence: 0.5,
+        sourceId: "missing-page",
+      },
+    ])
+    expect(model.anchors).toEqual([
+      {
+        id: "layout:block-1:anchor",
+        segmentId: "layout:block-1",
+        pageNumber: 1,
+        bounds: { x: 0.1, y: 0.1, width: 0.3, height: 0.2 },
+      },
+      {
+        id: "layout:block-2:anchor",
+        segmentId: "layout:block-2",
+        pageNumber: 1,
+        bounds: { x: 0.01, y: 0.01, width: 0.03, height: 0.02 },
+      },
+    ])
+  })
+
+  it("filters low-confidence OCR items without changing item ids", () => {
+    const model = createLayoutBlocksViewerModel({
+      document: layoutDocument,
+      levels: ["block", "line"],
+      lowConfidenceOnly: true,
+      threshold: 0.9,
+    })
+
+    expect(model.visibleItems.map((item) => item.id)).toEqual([
+      "block-2",
+      "line-1",
+      "missing-page",
+    ])
+    expect(model.evidenceItems.map((item) => item.id)).toEqual([
+      "block-2",
+      "line-1",
+      "missing-page",
+    ])
+    expect(model.anchoredItems.map((item) => item.id)).toEqual([
+      "block-2",
+      "line-1",
+      "missing-page",
+    ])
+  })
+
+  it("keeps OCR filtering separate from evidence projection", () => {
+    const index = createLayoutEvidenceIndex(layoutDocument)
+    const visibleItems = filterLayoutItems(layoutDocument.items, {
+      levels: ["block", "line"],
+      lowConfidenceOnly: true,
+      threshold: 0.9,
+    })
+    const model = layoutItemsToEvidenceModel(visibleItems, index)
+
+    expect(visibleItems.map((item) => item.id)).toEqual([
+      "block-2",
+      "line-1",
+      "missing-page",
+    ])
+    expect(model.evidenceItems.map((item) => item.id)).toEqual([
+      "block-2",
+      "line-1",
+      "missing-page",
+    ])
+  })
+
+  it("projects a single layout item with its original domain item in typed payload", () => {
+    const index = createLayoutEvidenceIndex(layoutDocument)
+    const evidence = layoutItemToEvidenceItem(layoutItems[0]!, index)
+
+    expect(evidence.payload.item).toBe(layoutItems[0])
+    expect(evidence.payload.kind).toBe("paragraph")
+    expect(evidence.payload.level).toBe("block")
+    expect(evidence.anchor.status).toBe("resolved")
   })
 })

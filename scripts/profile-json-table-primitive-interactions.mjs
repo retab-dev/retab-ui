@@ -10,7 +10,24 @@ const styleExperimentMode =
 const verboseOutput =
   process.argv.includes("--verbose") ||
   process.env.JSON_TABLE_PERFORMANCE_VERBOSE === "1"
+const traceMode =
+  process.argv.includes("--trace") ||
+  process.env.JSON_TABLE_PROFILE_TRACE === "1"
 const repeatCount = profileRepeatCount()
+const warmupCount = profileWarmupCount()
+const profileTargetNames = optionNameSet(
+  "--targets",
+  "JSON_TABLE_PROFILE_TARGETS"
+)
+const profileScenarioNames = optionNameSet(
+  "--scenarios",
+  "JSON_TABLE_PROFILE_SCENARIOS"
+)
+if (assertMode && profileScenarioNames) {
+  throw new Error(
+    "JSON table scenario filters are diagnostic-only and cannot be combined with --assert"
+  )
+}
 const profileUrl =
   process.env.PROFILE_URL ?? "http://localhost:3100/json-table-profile"
 const chromePort = Number(process.env.CHROME_PORT ?? 9341)
@@ -20,6 +37,14 @@ const chromePath =
 const outputPath =
   process.env.PROFILE_OUTPUT ??
   "tmp/json-table-primitive-interactions-profile.json"
+const traceCategories =
+  process.env.JSON_TABLE_PROFILE_TRACE_CATEGORIES ??
+  [
+    "devtools.timeline",
+    "blink",
+    "disabled-by-default-devtools.timeline",
+    "disabled-by-default-devtools.timeline.invalidationTracking",
+  ].join(",")
 
 const enumFieldPath = "transactions.0.transaction_type"
 const dateFieldPath = "transactions.0.date"
@@ -29,6 +54,8 @@ const booleanFieldPath = "transactions.0.is_reconciled"
 const farTextFieldPath = "transactions.0.profile_far_note"
 const farEnumFieldPath = "transactions.0.profile_far_status"
 const farDateFieldPath = "transactions.0.profile_far_date"
+const profileSurfaceTimeoutMs = 15_000
+const editableCellTimeoutMs = 10_000
 
 // These budgets guard the overlay mount path against structural regressions.
 // They are intentionally coarse: React render counts are strict elsewhere, while
@@ -61,6 +88,31 @@ function profileRepeatCount() {
     )
   }
   return value
+}
+
+function profileWarmupCount() {
+  const rawValue =
+    optionValue("--warmup") ?? process.env.JSON_TABLE_PROFILE_WARMUP ?? "0"
+  const value = Number(rawValue)
+  if (!Number.isInteger(value) || value < 0) {
+    throw new Error(
+      `Invalid JSON table profile warmup count: ${JSON.stringify(rawValue)}`
+    )
+  }
+  return value
+}
+
+function optionNameSet(optionName, envName) {
+  const rawValue = optionValue(optionName) ?? process.env[envName]
+  if (!rawValue || rawValue === "all") return null
+
+  const names = rawValue
+    .split(",")
+    .map((name) => name.trim())
+    .filter(Boolean)
+  if (names.length === 0) return null
+
+  return new Set(names)
 }
 
 function profileTargets() {
@@ -109,7 +161,46 @@ function profileTargets() {
     )
   }
 
-  return targets
+  if (!profileTargetNames) return targets
+
+  const selectedTargets = targets.filter((target) =>
+    profileTargetNames.has(target.name)
+  )
+  if (selectedTargets.length === 0) {
+    throw new Error(
+      `No JSON table profile target matched ${JSON.stringify([
+        ...profileTargetNames,
+      ])}; available targets: ${targets.map((target) => target.name).join(", ")}`
+    )
+  }
+
+  return selectedTargets
+}
+
+function shouldProfileScenario(name) {
+  return !profileScenarioNames || profileScenarioNames.has(name)
+}
+
+function assertSelectedScenarioNamesMatched(report) {
+  if (!profileScenarioNames) return
+
+  const measuredScenarioNames = new Set()
+  for (const profile of report.profiles ?? []) {
+    for (const scenario of profile.scenarios ?? []) {
+      measuredScenarioNames.add(scenario.name)
+    }
+  }
+
+  const missingScenarioNames = [...profileScenarioNames].filter(
+    (name) => !measuredScenarioNames.has(name)
+  )
+  if (missingScenarioNames.length > 0) {
+    throw new Error(
+      `No JSON table profile scenario matched ${JSON.stringify(
+        missingScenarioNames
+      )}; measured scenarios: ${[...measuredScenarioNames].join(", ")}`
+    )
+  }
 }
 
 function urlWithSearchParam(url, key, value) {
@@ -205,6 +296,79 @@ function repeatedMetricSummary(values) {
   }
 }
 
+function traceEventDurationMs(event) {
+  return Number.isFinite(event.dur) ? event.dur / 1000 : 0
+}
+
+function traceEventGroupSummary(events, predicate, limit = 12) {
+  const groups = new Map()
+  for (const event of events) {
+    if (event.ph !== "X" || !predicate(event)) continue
+    const durationMs = traceEventDurationMs(event)
+    const group = groups.get(event.name) ?? {
+      name: event.name,
+      count: 0,
+      durationMs: 0,
+    }
+    group.count += 1
+    group.durationMs += durationMs
+    groups.set(event.name, group)
+  }
+
+  return [...groups.values()]
+    .sort((a, b) => b.durationMs - a.durationMs)
+    .slice(0, limit)
+    .map((group) => ({
+      ...group,
+      durationMs: Number(group.durationMs.toFixed(3)),
+    }))
+}
+
+function isTraceStyleEvent(event) {
+  return /recalculate|style|selector|invalidation/i.test(event.name)
+}
+
+function isTraceLayoutEvent(event) {
+  return /layout|updateLayoutTree/i.test(event.name)
+}
+
+function isTraceScriptEvent(event) {
+  return /function|evaluate|event|timer|script|v8/i.test(event.name)
+}
+
+function traceDurationMs(events, predicate) {
+  return Number(
+    events
+      .filter((event) => event.ph === "X" && predicate(event))
+      .reduce((total, event) => total + traceEventDurationMs(event), 0)
+      .toFixed(3)
+  )
+}
+
+function traceEventSummary(events) {
+  const timedEvents = events.filter((event) => event.ph === "X")
+  const invalidationEvents = events.filter((event) =>
+    /invalidat/i.test(event.name)
+  )
+
+  return {
+    eventCount: events.length,
+    timedEventCount: timedEvents.length,
+    totalTimedDurationMs: traceDurationMs(timedEvents, () => true),
+    styleDurationMs: traceDurationMs(timedEvents, isTraceStyleEvent),
+    layoutDurationMs: traceDurationMs(timedEvents, isTraceLayoutEvent),
+    scriptDurationMs: traceDurationMs(timedEvents, isTraceScriptEvent),
+    topEvents: traceEventGroupSummary(timedEvents, () => true),
+    topStyleEvents: traceEventGroupSummary(timedEvents, isTraceStyleEvent),
+    topLayoutEvents: traceEventGroupSummary(timedEvents, isTraceLayoutEvent),
+    invalidationEvents: traceEventGroupSummary(
+      invalidationEvents,
+      () => true,
+      16
+    ),
+  }
+}
+
 function scenarioRepeatedMetrics(scenario) {
   return {
     elapsedMs: scenario.elapsedMs,
@@ -222,6 +386,9 @@ function scenarioRepeatedMetrics(scenario) {
     mountedEditableCells: scenario.mountedSurface?.after?.editableCells,
     mountedHeaderCells: scenario.mountedSurface?.after?.headerCells,
     mountedPopupNodes: scenario.mountedSurface?.after?.popupNodes,
+    traceStyleMs: scenario.trace?.styleDurationMs,
+    traceLayoutMs: scenario.trace?.layoutDurationMs,
+    traceScriptMs: scenario.trace?.scriptDurationMs,
   }
 }
 
@@ -270,6 +437,8 @@ function printRepeatedProfileSummary(report) {
     const elapsed = scenario.metrics.elapsedMs
     const style = scenario.metrics.styleMs
     const layout = scenario.metrics.layoutMs
+    const traceStyle = scenario.metrics.traceStyleMs
+    const traceLayout = scenario.metrics.traceLayoutMs
     console.log(
       [
         `${scenario.profile}/${scenario.scenario}`,
@@ -283,7 +452,23 @@ function printRepeatedProfileSummary(report) {
         `layout median=${formatMs(layout?.median)} p90=${formatMs(
           layout?.p90
         )} worst=${formatMs(layout?.worst)}`,
-      ].join("  ")
+        traceStyle
+          ? `traceStyle median=${formatMs(
+              traceStyle.median
+            )} p90=${formatMs(traceStyle.p90)} worst=${formatMs(
+              traceStyle.worst
+            )}`
+          : null,
+        traceLayout
+          ? `traceLayout median=${formatMs(
+              traceLayout.median
+            )} p90=${formatMs(traceLayout.p90)} worst=${formatMs(
+              traceLayout.worst
+            )}`
+          : null,
+      ]
+        .filter(Boolean)
+        .join("  ")
     )
   }
 }
@@ -310,14 +495,57 @@ async function waitForDevToolsEndpoint(endpoint) {
   throw new Error(`Chrome DevTools endpoint did not start at ${endpoint}`)
 }
 
+async function closeChromeTarget(chromeEndpoint, targetId) {
+  if (!targetId) return
+
+  try {
+    await fetch(`${chromeEndpoint}/json/close/${encodeURIComponent(targetId)}`)
+  } catch {}
+}
+
+function isProfileTarget(target) {
+  if (!target?.url) return false
+
+  try {
+    const targetUrl = new URL(target.url)
+    const configuredUrl = new URL(profileUrl)
+    return targetUrl.pathname === configuredUrl.pathname
+  } catch {
+    return false
+  }
+}
+
+async function closeProfileTargets(chromeEndpoint) {
+  let targets = []
+  try {
+    targets = await fetchJson(`${chromeEndpoint}/json/list`)
+  } catch {
+    return
+  }
+
+  for (const target of targets) {
+    if (isProfileTarget(target))
+      await closeChromeTarget(chromeEndpoint, target.id)
+  }
+}
+
 function connectCdp(webSocketUrl) {
   const socket = new WebSocket(webSocketUrl)
   let nextId = 0
   const pending = new Map()
+  const listeners = new Map()
+
+  function emit(method, params) {
+    for (const listener of listeners.get(method) ?? []) listener(params)
+  }
 
   socket.addEventListener("message", (message) => {
     const payload = JSON.parse(message.data)
-    if (!payload.id || !pending.has(payload.id)) return
+    if (!payload.id) {
+      if (payload.method) emit(payload.method, payload.params ?? {})
+      return
+    }
+    if (!pending.has(payload.id)) return
 
     const request = pending.get(payload.id)
     pending.delete(payload.id)
@@ -335,6 +563,12 @@ function connectCdp(webSocketUrl) {
           return new Promise((resolve, reject) => {
             pending.set(id, { resolve, reject })
           })
+        },
+        on(method, listener) {
+          const methodListeners = listeners.get(method) ?? new Set()
+          methodListeners.add(listener)
+          listeners.set(method, methodListeners)
+          return () => methodListeners.delete(listener)
         },
       })
     })
@@ -383,6 +617,36 @@ async function waitInPage(send, expression, timeoutMs = 5_000) {
       return { ok: false, elapsedMs: performance.now() - startedAt };
     })()`
   )
+}
+
+async function startScenarioTrace(page) {
+  if (!traceMode) return null
+
+  const events = []
+  const offData = page.on("Tracing.dataCollected", (params) => {
+    events.push(...(params.value ?? []))
+  })
+  let resolveComplete
+  const completed = new Promise((resolve) => {
+    resolveComplete = resolve
+  })
+  const offComplete = page.on("Tracing.tracingComplete", resolveComplete)
+
+  await page.send("Tracing.start", {
+    categories: traceCategories,
+    options: "sampling-frequency=10000",
+    transferMode: "ReportEvents",
+  })
+
+  return {
+    async stop() {
+      await page.send("Tracing.end")
+      await completed
+      offData()
+      offComplete()
+      return traceEventSummary(events)
+    },
+  }
 }
 
 async function clickPoint(send, point) {
@@ -553,13 +817,10 @@ async function loadEditableProfile(send) {
   const scrollerWait = await waitInPage(
     send,
     `document.querySelector('[data-slot="json-table-scroll"]')`,
-    15_000
+    profileSurfaceTimeoutMs
   )
   if (!scrollerWait.ok) {
-    const pageState = await evaluate(
-      send,
-      `({ href: location.href, text: document.body.innerText.slice(0, 1000) })`
-    )
+    const pageState = await profilePageState(send)
     throw new Error(
       `JSON table scroller did not mount: ${JSON.stringify(pageState)}`
     )
@@ -567,30 +828,102 @@ async function loadEditableProfile(send) {
   const editableButtonWait = await waitInPage(
     send,
     `[...document.querySelectorAll("button")].some((button) => button.textContent?.includes("Editable"))`,
-    15_000
+    profileSurfaceTimeoutMs
   )
   if (!editableButtonWait.ok) {
-    const buttonTexts = await evaluate(
-      send,
-      `({
-        href: location.href,
-        text: document.body.innerText.slice(0, 1000),
-        buttons: [...document.querySelectorAll("button")].map((button) => button.textContent)
-      })`
-    )
+    const buttonTexts = await profilePageState(send)
     throw new Error(
       `Editable button did not mount: ${JSON.stringify(buttonTexts)}`
     )
   }
-  await clickModeButton(send, "JSON edit mode", "Editable")
+  await activateEditableProfile(send)
+  console.error("Editable table mounted")
+  await sleep(500)
+}
+
+async function activateEditableProfile(send) {
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    await clickModeButton(send, "JSON edit mode", "Editable")
+    const wait = await waitInPage(
+      send,
+      `document.querySelectorAll('[data-json-table-editable-cell="true"]').length > 0`,
+      profileSurfaceTimeoutMs
+    )
+    if (wait.ok) return
+
+    const pageState = await profilePageState(send)
+    const recovered = await recoverBlankEditableProfile(
+      send,
+      `editable profile mount attempt ${attempt}`,
+      pageState
+    )
+    if (recovered) return
+    await sleep(150)
+  }
+
+  throw new Error(
+    `Editable JSON table did not mount: ${JSON.stringify(
+      await profilePageState(send)
+    )}`
+  )
+}
+
+async function profilePageState(send) {
+  return evaluate(
+    send,
+    `({
+      href: location.href,
+      readyState: document.readyState,
+      title: document.title,
+      text: document.body.innerText.slice(0, 1000),
+      bodyTextLength: document.body.innerText.length,
+      scrollers: document.querySelectorAll('[data-slot="json-table-scroll"]').length,
+      editableCells: document.querySelectorAll('[data-json-table-editable-cell="true"]').length,
+      buttons: [...document.querySelectorAll("button")].slice(0, 20).map((button) => button.textContent)
+    })`
+  )
+}
+
+function isBlankProfilePage(pageState) {
+  return (
+    pageState.bodyTextLength === 0 &&
+    pageState.scrollers === 0 &&
+    pageState.editableCells === 0
+  )
+}
+
+async function recoverBlankEditableProfile(send, context, pageState) {
+  if (!isBlankProfilePage(pageState)) return false
+
+  console.error(
+    `Recovering blank editable profile page during ${context}: ${JSON.stringify(
+      pageState
+    )}`
+  )
+  await send("Page.reload", { ignoreCache: true })
+  await sleep(700)
+  await installPage(send)
+  await loadEditableProfile(send)
+  return true
+}
+
+async function waitForEditableProfileSurface(send, context) {
   const wait = await waitInPage(
     send,
     `document.querySelectorAll('[data-json-table-editable-cell="true"]').length > 0`,
-    15_000
+    profileSurfaceTimeoutMs
   )
-  if (!wait.ok) throw new Error("Editable JSON table did not mount")
-  console.error("Editable table mounted")
-  await sleep(500)
+  if (wait.ok) return
+
+  const pageState = await profilePageState(send)
+  const recovered = await recoverBlankEditableProfile(send, context, pageState)
+  if (recovered) return
+
+  throw new Error(
+    `Editable profile surface did not mount during ${context}: ${JSON.stringify(
+      pageState
+    )}`
+  )
 }
 
 async function resetProfiler(send) {
@@ -650,7 +983,48 @@ async function restoreRectProbe(send) {
   )
 }
 
+async function waitForEditableCell(
+  send,
+  fieldPath,
+  timeoutMs = editableCellTimeoutMs
+) {
+  const selector = `[data-field-path="${fieldPath}"]`
+  const wait = await waitInPage(
+    send,
+    `document.querySelector(${JSON.stringify(selector)})`,
+    timeoutMs
+  )
+  if (wait.ok) return
+
+  const pageState = await profilePageState(send)
+  const recovered = await recoverBlankEditableProfile(
+    send,
+    `cell lookup for ${fieldPath}`,
+    pageState
+  )
+  if (recovered) {
+    const recoveredWait = await waitInPage(
+      send,
+      `document.querySelector(${JSON.stringify(selector)})`,
+      timeoutMs
+    )
+    if (recoveredWait.ok) return
+  }
+
+  const matchingCells = await evaluate(
+    send,
+    `document.querySelectorAll(${JSON.stringify(selector)}).length`
+  )
+  throw new Error(
+    `Missing cell ${fieldPath}: ${JSON.stringify({
+      ...pageState,
+      matchingCells,
+    })}`
+  )
+}
+
 async function editableCellPoint(send, fieldPath) {
+  await waitForEditableCell(send, fieldPath)
   return evaluate(
     send,
     `(async () => {
@@ -667,6 +1041,7 @@ async function editableCellPoint(send, fieldPath) {
 }
 
 async function mountedEditableCellPoint(send, fieldPath) {
+  await waitForEditableCell(send, fieldPath)
   return evaluate(
     send,
     `(() => {
@@ -679,6 +1054,21 @@ async function mountedEditableCellPoint(send, fieldPath) {
 }
 
 async function editableCellPointByScrolling(send, fieldPath) {
+  const scrollerWait = await waitInPage(
+    send,
+    `document.querySelector('[data-slot="json-table-scroll"]')`,
+    3_000
+  )
+  if (!scrollerWait.ok) {
+    const pageState = await evaluate(
+      send,
+      `({ href: location.href, text: document.body.innerText.slice(0, 1000) })`
+    )
+    throw new Error(
+      `JSON table scroller did not mount before horizontal scan: ${JSON.stringify(pageState)}`
+    )
+  }
+
   return evaluate(
     send,
     `(async () => {
@@ -745,17 +1135,50 @@ async function calendarNextMonthPoint(send) {
 }
 
 async function calendarCommitDatePoint(send) {
+  const buttonWait = await waitInPage(
+    send,
+    `document.querySelector('[data-slot="calendar"] button[data-day]')`,
+    5_000
+  )
+  if (!buttonWait.ok) {
+    const calendarState = await evaluate(
+      send,
+      `(() => {
+        const calendar = document.querySelector('[data-slot="calendar"]');
+        return {
+          calendars: document.querySelectorAll('[data-slot="calendar"]').length,
+          dayButtons: document.querySelectorAll('[data-slot="calendar"] button[data-day]').length,
+          html: calendar?.outerHTML.slice(0, 1000) ?? null
+        };
+      })()`
+    )
+    throw new Error(
+      `No date commit button mounted: ${JSON.stringify(calendarState)}`
+    )
+  }
+
   return evaluate(
     send,
     `(() => {
-      const buttons = [...document.querySelectorAll('[data-slot="calendar"] button')];
-      const button = buttons.find((button) =>
-        button.textContent?.trim() &&
-        !button.disabled &&
-        button.getAttribute("aria-selected") !== "true" &&
-        !button.className.includes("outside")
-      );
-      if (!(button instanceof HTMLElement)) throw new Error("No date commit button found");
+      const buttons = [...document.querySelectorAll('[data-slot="calendar"] button[data-day]')];
+      const visibleButtons = buttons.filter((button) => {
+        if (!(button instanceof HTMLButtonElement)) return false;
+        if (button.disabled) return false;
+        if (button.getAttribute("data-selected-single") === "true") return false;
+        if (button.getAttribute("aria-selected") === "true") return false;
+        const rect = button.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      });
+      const button = visibleButtons[0];
+      if (!(button instanceof HTMLElement)) {
+        throw new Error(
+          "No date commit button found: " +
+            JSON.stringify({
+              dayButtons: buttons.length,
+              enabledVisibleButtons: visibleButtons.length,
+            })
+        );
+      }
       const rect = button.getBoundingClientRect();
       return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
     })()`
@@ -829,9 +1252,7 @@ async function setFocusedInputValue(send, value, fieldPath) {
   }
 
   throw new Error(
-    fieldPath
-      ? `No focused input for ${fieldPath}`
-      : "No focused input"
+    fieldPath ? `No focused input for ${fieldPath}` : "No focused input"
   )
 }
 
@@ -897,6 +1318,23 @@ async function pressSpace(send) {
 }
 
 async function scrollJsonTable(send, deltaY) {
+  const scrollerWait = await waitInPage(
+    send,
+    `document.querySelector('[data-slot="json-table-scroll"]')`,
+    3_000
+  )
+  if (!scrollerWait.ok) {
+    const pageState = await evaluate(
+      send,
+      `({
+        href: location.href,
+        text: document.body.innerText.slice(0, 1000),
+        scrollers: document.querySelectorAll('[data-slot="json-table-scroll"]').length
+      })`
+    )
+    throw new Error(`Missing JSON table scroller: ${JSON.stringify(pageState)}`)
+  }
+
   await evaluate(
     send,
     `(() => {
@@ -976,11 +1414,11 @@ async function summarizeScenario(
   send,
   beforeMetrics,
   mountedSurfaceBefore,
-  startedAt,
+  mountedSurfaceAfter,
+  endedAt,
+  afterMetrics,
   wait
 ) {
-  const afterMetrics = performanceMetrics(await send("Performance.getMetrics"))
-  const mountedSurfaceAfter = await mountedSurfaceSnapshot(send)
   const summary = await evaluate(
     send,
     `(() => {
@@ -1038,10 +1476,7 @@ async function summarizeScenario(
     delta: mountedSurfaceDelta(mountedSurfaceBefore, mountedSurfaceAfter),
   }
   summary.wait = wait
-  summary.elapsedMs = await evaluate(
-    send,
-    `performance.now() - ${JSON.stringify(startedAt)}`
-  )
+  summary.elapsedMs = endedAt
   summary.metricsDelta = metricDelta(beforeMetrics, afterMetrics)
   summary.browserCost = browserCostSummary(
     summary.metricsDelta,
@@ -1051,24 +1486,58 @@ async function summarizeScenario(
   return summary
 }
 
-async function runScenario(send, name, action, waitExpression) {
+async function runScenario(page, name, action, waitExpression) {
+  const send = page.send
   console.error(`Running scenario: ${name}`)
+  await waitForEditableProfileSurface(send, `${name} preflight`)
   await resetProfiler(send)
   const beforeMetrics = performanceMetrics(await send("Performance.getMetrics"))
   const mountedSurfaceBefore = await mountedSurfaceSnapshot(send)
   const startedAt = await evaluate(send, "performance.now()")
+  const trace = await startScenarioTrace(page)
   await action()
   const wait = await waitInPage(send, waitExpression, 5_000)
+  const endedAt =
+    (await evaluate(send, "performance.now()")) - Number(startedAt)
+  const afterMetrics = performanceMetrics(await send("Performance.getMetrics"))
+  const mountedSurfaceAfter = await mountedSurfaceSnapshot(send)
+  const traceSummary = await trace?.stop()
   const summary = await summarizeScenario(
     send,
     beforeMetrics,
     mountedSurfaceBefore,
-    startedAt,
+    mountedSurfaceAfter,
+    endedAt,
+    afterMetrics,
     wait
   )
+  if (traceSummary) summary.trace = traceSummary
   await restoreRectProbe(send)
   console.error(`Finished scenario: ${name}`)
   return { name, ...summary }
+}
+
+async function runSelectedScenario(
+  scenarios,
+  page,
+  name,
+  action,
+  waitExpression
+) {
+  if (shouldProfileScenario(name)) {
+    scenarios.push(await runScenario(page, name, action, waitExpression))
+    return
+  }
+
+  console.error(`Executing unprofiled scenario: ${name}`)
+  await waitForEditableProfileSurface(page.send, `${name} unprofiled preflight`)
+  await resetProfiler(page.send)
+  await action()
+  const wait = await waitInPage(page.send, waitExpression, 3_000)
+  await restoreRectProbe(page.send)
+  if (!wait.ok) {
+    throw new Error(`${name} did not complete while scenario-filtered`)
+  }
 }
 
 async function runProfileTarget(chromeEndpoint, targetConfig) {
@@ -1097,64 +1566,60 @@ async function runProfileTarget(chromeEndpoint, targetConfig) {
     const scenarios = []
     const enumPoint = await mountedEditableCellPoint(send, enumFieldPath)
 
-    scenarios.push(
-      await runScenario(
-        send,
-        "hover-enum",
-        async () => {
-          await send("Input.dispatchMouseEvent", {
-            type: "mouseMoved",
-            x: enumPoint.x,
-            y: enumPoint.y,
-            button: "none",
-          })
-        },
-        "true"
-      )
+    await runSelectedScenario(
+      scenarios,
+      page,
+      "hover-enum",
+      async () => {
+        await send("Input.dispatchMouseEvent", {
+          type: "mouseMoved",
+          x: enumPoint.x,
+          y: enumPoint.y,
+          button: "none",
+        })
+      },
+      "true"
     )
 
-    scenarios.push(
-      await runScenario(
-        send,
-        "open-enum",
-        async () => {
-          await clickPoint(send, enumPoint)
-        },
-        `Boolean(document.querySelector('[data-slot="data-cell-select-popup"] [role="option"]'))`
-      )
+    await runSelectedScenario(
+      scenarios,
+      page,
+      "open-enum",
+      async () => {
+        await clickPoint(send, enumPoint)
+      },
+      `Boolean(document.querySelector('[data-slot="data-cell-select-popup"] [role="option"]'))`
     )
 
     await pressEscape(send)
     await sleep(200)
-    scenarios.push(
-      await runScenario(
-        send,
-        "close-select-with-escape",
-        async () => {
-          const point = await editableCellPoint(send, enumFieldPath)
-          await clickPoint(send, point)
-          await waitInPage(
-            send,
-            `Boolean(document.querySelector('[data-slot="data-cell-select-popup"] [role="option"]'))`,
-            3_000
-          )
-          await pressEscape(send)
-        },
-        `!document.querySelector('[data-slot="data-cell-select-popup"]')`
-      )
+    await runSelectedScenario(
+      scenarios,
+      page,
+      "close-select-with-escape",
+      async () => {
+        const point = await editableCellPoint(send, enumFieldPath)
+        await clickPoint(send, point)
+        await waitInPage(
+          send,
+          `Boolean(document.querySelector('[data-slot="data-cell-select-popup"] [role="option"]'))`,
+          3_000
+        )
+        await pressEscape(send)
+      },
+      `!document.querySelector('[data-slot="data-cell-select-popup"]')`
     )
 
     const focusTextPoint = await editableCellPoint(send, textFieldPath)
     await sleep(200)
-    scenarios.push(
-      await runScenario(
-        send,
-        "focus-text",
-        async () => {
-          await clickPoint(send, focusTextPoint)
-        },
-        `document.activeElement instanceof HTMLInputElement && document.activeElement.getAttribute("data-kind") === "text"`
-      )
+    await runSelectedScenario(
+      scenarios,
+      page,
+      "focus-text",
+      async () => {
+        await clickPoint(send, focusTextPoint)
+      },
+      `document.activeElement instanceof HTMLInputElement && document.activeElement.getAttribute("data-kind") === "text"`
     )
 
     await pressEscape(send)
@@ -1166,36 +1631,38 @@ async function runProfileTarget(chromeEndpoint, targetConfig) {
       `document.activeElement instanceof HTMLInputElement && document.activeElement.getAttribute("data-kind") === "text"`,
       3_000
     )
-    scenarios.push(
-      await runScenario(
-        send,
-        "type-first-character",
-        async () => {
-          await typeFocusedInputText(send, "x")
-        },
-        `document.activeElement instanceof HTMLInputElement && document.activeElement.value.includes("x")`
-      )
+    await runSelectedScenario(
+      scenarios,
+      page,
+      "type-first-character",
+      async () => {
+        await typeFocusedInputText(send, "x")
+      },
+      `document.activeElement instanceof HTMLInputElement && document.activeElement.value.includes("x")`
     )
 
     await pressEscape(send)
     await sleep(200)
-    scenarios.push(
-      await runScenario(
-        send,
-        "cancel-text-edit",
-        async () => {
-          const point = await editableCellPoint(send, textFieldPath)
-          await clickPoint(send, point)
-          await waitInPage(
-            send,
-            `document.activeElement instanceof HTMLInputElement && document.activeElement.getAttribute("data-kind") === "text"`,
-            3_000
-          )
-          await setFocusedInputValue(send, "profile cancelled text", textFieldPath)
-          await pressEscape(send)
-        },
-        `document.querySelectorAll('[data-json-table-editable-cell="true"][data-active="true"]').length === 0`
-      )
+    await runSelectedScenario(
+      scenarios,
+      page,
+      "cancel-text-edit",
+      async () => {
+        const point = await editableCellPoint(send, textFieldPath)
+        await clickPoint(send, point)
+        await waitInPage(
+          send,
+          `document.activeElement instanceof HTMLInputElement && document.activeElement.getAttribute("data-kind") === "text"`,
+          3_000
+        )
+        await setFocusedInputValue(
+          send,
+          "profile cancelled text",
+          textFieldPath
+        )
+        await pressEscape(send)
+      },
+      `document.querySelectorAll('[data-json-table-editable-cell="true"][data-active="true"]').length === 0`
     )
 
     const commitTextPoint = await editableCellPoint(send, textFieldPath)
@@ -1206,67 +1673,72 @@ async function runProfileTarget(chromeEndpoint, targetConfig) {
       3_000
     )
     await setFocusedInputValue(send, "profile text commit", textFieldPath)
-    scenarios.push(
-      await runScenario(
-        send,
-        "commit-text",
-        async () => {
-          await pressEnter(send)
-        },
-        `(window.__jsonTableProfiler?.events ?? []).some((event) => event.type === "mark" && event.name === "document-patch-start") && document.querySelectorAll('[data-json-table-editable-cell="true"][data-active="true"]').length === 0`
-      )
+    await runSelectedScenario(
+      scenarios,
+      page,
+      "commit-text",
+      async () => {
+        await pressEnter(send)
+      },
+      `(window.__jsonTableProfiler?.events ?? []).some((event) => event.type === "mark" && event.name === "document-patch-start") && document.querySelectorAll('[data-json-table-editable-cell="true"][data-active="true"]').length === 0`
     )
 
-    scenarios.push(
-      await runScenario(
-        send,
-        "blur-commit-number",
-        async () => {
-          const point = await editableCellPoint(send, numberFieldPath)
-          await clickPoint(send, point)
-          await waitInPage(
-            send,
-            `document.activeElement instanceof HTMLInputElement && document.activeElement.getAttribute("data-kind") === "number"`,
-            3_000
-          )
-          await setFocusedInputValue(send, "1001.25", numberFieldPath)
-          await clickOutsideTable(send)
-        },
-        `(window.__jsonTableProfiler?.events ?? []).some((event) => event.type === "mark" && event.name === "document-patch-start") && document.querySelectorAll('[data-json-table-editable-cell="true"][data-active="true"]').length === 0`
-      )
+    await runSelectedScenario(
+      scenarios,
+      page,
+      "blur-commit-number",
+      async () => {
+        const point = await editableCellPoint(send, numberFieldPath)
+        await clickPoint(send, point)
+        await waitInPage(
+          send,
+          `document.activeElement instanceof HTMLInputElement && document.activeElement.getAttribute("data-kind") === "number"`,
+          3_000
+        )
+        await setFocusedInputValue(send, "1001.25", numberFieldPath)
+        await clickOutsideTable(send)
+      },
+      `(window.__jsonTableProfiler?.events ?? []).some((event) => event.type === "mark" && event.name === "document-patch-start") && document.querySelectorAll('[data-json-table-editable-cell="true"][data-active="true"]').length === 0`
     )
 
-    scenarios.push(
-      await runScenario(
-        send,
-        "rapid-text-commits",
-        async () => {
-          await focusEditableCell(send, textFieldPath)
-          await pressEnter(send)
-          await waitInPage(
-            send,
-            `document.activeElement instanceof HTMLInputElement && document.activeElement.getAttribute("data-kind") === "text"`,
-            3_000
-          )
-          await setFocusedInputValue(send, "profile rapid text one", textFieldPath)
-          await pressEnter(send)
-          await waitInPage(
-            send,
-            `document.querySelectorAll('[data-json-table-editable-cell="true"][data-active="true"]').length === 0`,
-            3_000
-          )
-          await focusEditableCell(send, textFieldPath)
-          await pressEnter(send)
-          await waitInPage(
-            send,
-            `document.activeElement instanceof HTMLInputElement && document.activeElement.getAttribute("data-kind") === "text"`,
-            3_000
-          )
-          await setFocusedInputValue(send, "profile rapid text two", textFieldPath)
-          await pressEnter(send)
-        },
-        `((window.__jsonTableProfiler?.events ?? []).filter((event) => event.type === "mark" && event.name === "document-patch-start").length === 2) && document.querySelectorAll('[data-json-table-editable-cell="true"][data-active="true"]').length === 0`
-      )
+    await runSelectedScenario(
+      scenarios,
+      page,
+      "rapid-text-commits",
+      async () => {
+        await focusEditableCell(send, textFieldPath)
+        await pressEnter(send)
+        await waitInPage(
+          send,
+          `document.activeElement instanceof HTMLInputElement && document.activeElement.getAttribute("data-kind") === "text"`,
+          3_000
+        )
+        await setFocusedInputValue(
+          send,
+          "profile rapid text one",
+          textFieldPath
+        )
+        await pressEnter(send)
+        await waitInPage(
+          send,
+          `document.querySelectorAll('[data-json-table-editable-cell="true"][data-active="true"]').length === 0`,
+          3_000
+        )
+        await focusEditableCell(send, textFieldPath)
+        await pressEnter(send)
+        await waitInPage(
+          send,
+          `document.activeElement instanceof HTMLInputElement && document.activeElement.getAttribute("data-kind") === "text"`,
+          3_000
+        )
+        await setFocusedInputValue(
+          send,
+          "profile rapid text two",
+          textFieldPath
+        )
+        await pressEnter(send)
+      },
+      `((window.__jsonTableProfiler?.events ?? []).filter((event) => event.type === "mark" && event.name === "document-patch-start").length === 2) && document.querySelectorAll('[data-json-table-editable-cell="true"][data-active="true"]').length === 0`
     )
 
     const commitNumberPoint = await editableCellPoint(send, numberFieldPath)
@@ -1277,113 +1749,106 @@ async function runProfileTarget(chromeEndpoint, targetConfig) {
       3_000
     )
     await setFocusedInputValue(send, "999.5", numberFieldPath)
-    scenarios.push(
-      await runScenario(
-        send,
-        "commit-number",
-        async () => {
-          await pressEnter(send)
-        },
-        `(window.__jsonTableProfiler?.events ?? []).some((event) => event.type === "mark" && event.name === "document-patch-start") && document.querySelectorAll('[data-json-table-editable-cell="true"][data-active="true"]').length === 0`
-      )
+    await runSelectedScenario(
+      scenarios,
+      page,
+      "commit-number",
+      async () => {
+        await pressEnter(send)
+      },
+      `(window.__jsonTableProfiler?.events ?? []).some((event) => event.type === "mark" && event.name === "document-patch-start") && document.querySelectorAll('[data-json-table-editable-cell="true"][data-active="true"]').length === 0`
     )
 
-    scenarios.push(
-      await runScenario(
-        send,
-        "close-date-with-outside-click",
-        async () => {
-          const point = await editableCellPointByScrolling(send, dateFieldPath)
-          await clickPoint(send, point)
-          await waitInPage(
-            send,
-            `Boolean(document.querySelector('[data-slot="calendar"]'))`,
-            3_000
-          )
-          await clickOutsideTable(send)
-        },
-        `!document.querySelector('[data-slot="data-cell-picker-popup"]')`
-      )
+    await runSelectedScenario(
+      scenarios,
+      page,
+      "close-date-with-outside-click",
+      async () => {
+        const point = await editableCellPointByScrolling(send, dateFieldPath)
+        await clickPoint(send, point)
+        await waitInPage(
+          send,
+          `Boolean(document.querySelector('[data-slot="calendar"]'))`,
+          3_000
+        )
+        await clickOutsideTable(send)
+      },
+      `!document.querySelector('[data-slot="data-cell-picker-popup"]')`
     )
 
-    scenarios.push(
-      await runScenario(
-        send,
-        "open-and-commit-date",
-        async () => {
-          const point = await editableCellPointByScrolling(send, dateFieldPath)
-          await clickPoint(send, point)
-          await waitInPage(
-            send,
-            `Boolean(document.querySelector('[data-slot="calendar"]'))`,
-            3_000
-          )
-          const dateCommitPoint = await calendarCommitDatePoint(send)
-          await resetRectProbeCounts(send)
-          await clickPoint(send, dateCommitPoint)
-        },
-        `!document.querySelector('[data-slot="data-cell-picker-popup"]')`
-      )
+    await runSelectedScenario(
+      scenarios,
+      page,
+      "open-and-commit-date",
+      async () => {
+        const point = await editableCellPointByScrolling(send, dateFieldPath)
+        await clickPoint(send, point)
+        await waitInPage(
+          send,
+          `Boolean(document.querySelector('[data-slot="calendar"]'))`,
+          3_000
+        )
+        const dateCommitPoint = await calendarCommitDatePoint(send)
+        await resetRectProbeCounts(send)
+        await clickPoint(send, dateCommitPoint)
+      },
+      `!document.querySelector('[data-slot="data-cell-picker-popup"]')`
     )
 
     const booleanPoint = await editableCellPoint(send, booleanFieldPath)
-    scenarios.push(
-      await runScenario(
-        send,
-        "toggle-boolean",
-        async () => {
-          await clickPoint(send, booleanPoint)
-          const patched = await waitInPage(
-            send,
-            `(window.__jsonTableProfiler?.events ?? []).some((event) => event.type === "mark" && event.name === "document-patch-start")`,
-            250
-          )
-          if (!patched.ok) await pressSpace(send)
-        },
-        `(window.__jsonTableProfiler?.events ?? []).some((event) => event.type === "mark" && event.name === "document-patch-start")`
-      )
+    await runSelectedScenario(
+      scenarios,
+      page,
+      "toggle-boolean",
+      async () => {
+        await clickPoint(send, booleanPoint)
+        const patched = await waitInPage(
+          send,
+          `(window.__jsonTableProfiler?.events ?? []).some((event) => event.type === "mark" && event.name === "document-patch-start")`,
+          250
+        )
+        if (!patched.ok) await pressSpace(send)
+      },
+      `(window.__jsonTableProfiler?.events ?? []).some((event) => event.type === "mark" && event.name === "document-patch-start")`
     )
 
-    scenarios.push(
-      await runScenario(
-        send,
-        "open-date",
-        async () => {
-          const datePoint = await editableCellPoint(send, dateFieldPath)
-          await clickPoint(send, datePoint)
-        },
-        `Boolean(document.querySelector('[data-slot="calendar"]'))`
-      )
+    await runSelectedScenario(
+      scenarios,
+      page,
+      "open-date",
+      async () => {
+        const datePoint = await editableCellPoint(send, dateFieldPath)
+        await clickPoint(send, datePoint)
+      },
+      `Boolean(document.querySelector('[data-slot="calendar"]'))`
     )
 
     const nextMonthPoint = await calendarNextMonthPoint(send)
     if (nextMonthPoint) {
-      scenarios.push(
-        await runScenario(
-          send,
-          "navigate-date-month",
-          async () => {
-            await clickPoint(send, nextMonthPoint)
-          },
-          `Boolean(document.querySelector('[data-slot="calendar"]'))`
-        )
+      await runSelectedScenario(
+        scenarios,
+        page,
+        "navigate-date-month",
+        async () => {
+          await clickPoint(send, nextMonthPoint)
+        },
+        `Boolean(document.querySelector('[data-slot="calendar"]'))`
       )
     }
 
     await pressEscape(send)
     await sleep(200)
-    scenarios.push(
-      await runScenario(
-        send,
-        "scroll-idle",
-        async () => {
-          await scrollJsonTable(send, 48)
-        },
-        `(() => {
+    await runSelectedScenario(
+      scenarios,
+      page,
+      "scroll-idle",
+      async () => {
+        await scrollJsonTable(send, 48)
+      },
+      `(() => {
           const scroller = document.querySelector('[data-slot="json-table-scroll"]');
           return scroller instanceof HTMLElement && scroller.scrollTop !== window.__jsonTableScrollBefore;
         })()`
-      )
     )
 
     await sleep(200)
@@ -1399,18 +1864,17 @@ async function runProfileTarget(chromeEndpoint, targetConfig) {
       `Boolean(document.querySelector('[data-slot="calendar"]'))`,
       3_000
     )
-    scenarios.push(
-      await runScenario(
-        send,
-        "scroll-with-overlay",
-        async () => {
-          await scrollJsonTable(send, 1)
-        },
-        `(() => {
+    await runSelectedScenario(
+      scenarios,
+      page,
+      "scroll-with-overlay",
+      async () => {
+        await scrollJsonTable(send, 1)
+      },
+      `(() => {
           const scroller = document.querySelector('[data-slot="json-table-scroll"]');
           return scroller instanceof HTMLElement && scroller.scrollTop !== window.__jsonTableScrollBefore;
         })()`
-      )
     )
 
     await pressEscape(send)
@@ -1429,47 +1893,48 @@ async function runProfileTarget(chromeEndpoint, targetConfig) {
       send,
       numberFieldPath
     )
-    scenarios.push(
-      await runScenario(
-        send,
-        "switch-dirty-cell",
-        async () => {
-          await clickPoint(send, switchNumberPoint)
-        },
-        `(window.__jsonTableProfiler?.events ?? []).some((event) => event.type === "mark" && event.name === "document-patch-start") && document.activeElement instanceof HTMLInputElement && document.activeElement.getAttribute("data-kind") === "number"`
-      )
+    await runSelectedScenario(
+      scenarios,
+      page,
+      "switch-dirty-cell",
+      async () => {
+        await clickPoint(send, switchNumberPoint)
+      },
+      `(window.__jsonTableProfiler?.events ?? []).some((event) => event.type === "mark" && event.name === "document-patch-start") && document.activeElement instanceof HTMLInputElement && document.activeElement.getAttribute("data-kind") === "number"`
     )
 
     await pressEscape(send)
     await sleep(200)
-    scenarios.push(
-      await runScenario(
-        send,
-        "parent-callback-churn",
-        async () => {
-          await clickCallbackChurnButton(send)
-        },
-        `document.querySelector('[data-json-table-profile-callback-version]')?.getAttribute('data-json-table-profile-callback-version') !== "0"`
-      )
+    await runSelectedScenario(
+      scenarios,
+      page,
+      "parent-callback-churn",
+      async () => {
+        await clickCallbackChurnButton(send)
+      },
+      `document.querySelector('[data-json-table-profile-callback-version]')?.getAttribute('data-json-table-profile-callback-version') !== "0"`
     )
 
-    scenarios.push(
-      await runScenario(
-        send,
-        "post-churn-text-commit",
-        async () => {
-          await focusEditableCell(send, textFieldPath)
-          await pressEnter(send)
-          await waitInPage(
-            send,
-            `document.activeElement instanceof HTMLInputElement && document.activeElement.getAttribute("data-kind") === "text"`,
-            3_000
-          )
-          await setFocusedInputValue(send, "profile post churn text", textFieldPath)
-          await pressEnter(send)
-        },
-        `document.querySelectorAll('[data-json-table-editable-cell="true"][data-active="true"]').length === 0`
-      )
+    await runSelectedScenario(
+      scenarios,
+      page,
+      "post-churn-text-commit",
+      async () => {
+        await focusEditableCell(send, textFieldPath)
+        await pressEnter(send)
+        await waitInPage(
+          send,
+          `document.activeElement instanceof HTMLInputElement && document.activeElement.getAttribute("data-kind") === "text"`,
+          3_000
+        )
+        await setFocusedInputValue(
+          send,
+          "profile post churn text",
+          textFieldPath
+        )
+        await pressEnter(send)
+      },
+      `document.querySelectorAll('[data-json-table-editable-cell="true"][data-active="true"]').length === 0`
     )
 
     if (targetConfig.name.startsWith("large")) {
@@ -1479,15 +1944,14 @@ async function runProfileTarget(chromeEndpoint, targetConfig) {
         send,
         farEnumFieldPath
       )
-      scenarios.push(
-        await runScenario(
-          send,
-          "open-far-enum",
-          async () => {
-            await clickPoint(send, farEnumPoint)
-          },
-          `Boolean(document.querySelector('[data-slot="data-cell-select-popup"] [role="option"]'))`
-        )
+      await runSelectedScenario(
+        scenarios,
+        page,
+        "open-far-enum",
+        async () => {
+          await clickPoint(send, farEnumPoint)
+        },
+        `Boolean(document.querySelector('[data-slot="data-cell-select-popup"] [role="option"]'))`
       )
 
       await pressEscape(send)
@@ -1496,15 +1960,14 @@ async function runProfileTarget(chromeEndpoint, targetConfig) {
         send,
         farDateFieldPath
       )
-      scenarios.push(
-        await runScenario(
-          send,
-          "open-far-date",
-          async () => {
-            await clickPoint(send, farDatePoint)
-          },
-          `Boolean(document.querySelector('[data-slot="calendar"]'))`
-        )
+      await runSelectedScenario(
+        scenarios,
+        page,
+        "open-far-date",
+        async () => {
+          await clickPoint(send, farDatePoint)
+        },
+        `Boolean(document.querySelector('[data-slot="calendar"]'))`
       )
 
       await pressEscape(send)
@@ -1513,22 +1976,25 @@ async function runProfileTarget(chromeEndpoint, targetConfig) {
         send,
         farTextFieldPath
       )
-      scenarios.push(
-        await runScenario(
-          send,
-          "commit-far-text",
-          async () => {
-            await clickPoint(send, farTextPoint)
-            await waitInPage(
-              send,
-              `document.activeElement instanceof HTMLInputElement && document.activeElement.getAttribute("data-kind") === "text"`,
-              3_000
-            )
-            await setFocusedInputValue(send, "profile far text commit", farTextFieldPath)
-            await pressEnter(send)
-          },
-          `document.querySelectorAll('[data-json-table-editable-cell="true"][data-active="true"]').length === 0`
-        )
+      await runSelectedScenario(
+        scenarios,
+        page,
+        "commit-far-text",
+        async () => {
+          await clickPoint(send, farTextPoint)
+          await waitInPage(
+            send,
+            `document.activeElement instanceof HTMLInputElement && document.activeElement.getAttribute("data-kind") === "text"`,
+            3_000
+          )
+          await setFocusedInputValue(
+            send,
+            "profile far text commit",
+            farTextFieldPath
+          )
+          await pressEnter(send)
+        },
+        `document.querySelectorAll('[data-json-table-editable-cell="true"][data-active="true"]').length === 0`
       )
     }
 
@@ -1541,6 +2007,7 @@ async function runProfileTarget(chromeEndpoint, targetConfig) {
     try {
       page.socket.close()
     } catch {}
+    await closeChromeTarget(chromeEndpoint, target.id)
   }
 }
 
@@ -1884,8 +2351,15 @@ async function main() {
 
   try {
     await waitForDevToolsEndpoint(chromeEndpoint)
+    await closeProfileTargets(chromeEndpoint)
     const runs = []
     let profiles = []
+
+    for (let warmupIndex = 0; warmupIndex < warmupCount; warmupIndex += 1) {
+      for (const target of profileTargets()) {
+        await runProfileTarget(chromeEndpoint, target)
+      }
+    }
 
     for (let runIndex = 0; runIndex < repeatCount; runIndex += 1) {
       profiles = []
@@ -1908,6 +2382,13 @@ async function main() {
     const report = {
       measuredAt: new Date().toISOString(),
       repeatCount,
+      warmupCount,
+      traceMode,
+      ...(profileTargetNames ? { targetFilter: [...profileTargetNames] } : {}),
+      ...(profileScenarioNames
+        ? { scenarioFilter: [...profileScenarioNames] }
+        : {}),
+      ...(traceMode ? { traceCategories } : {}),
       profiles,
       scenarios: profiles[0]?.scenarios ?? [],
       ...(repeatCount > 1
@@ -1918,6 +2399,7 @@ async function main() {
         : {}),
     }
 
+    assertSelectedScenarioNamesMatched(report)
     await mkdir("tmp", { recursive: true })
     await writeFile(outputPath, `${JSON.stringify(report, null, 2)}\n`)
     if (verboseOutput) console.log(JSON.stringify(report, null, 2))

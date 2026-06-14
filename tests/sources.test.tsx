@@ -5,6 +5,11 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import type { Source, SourceAnchor, SourceMap } from "@/lib/document-source"
+import {
+  sourceFieldsToSegmentedDocumentModel,
+  sourceMapToSegmentedDocumentModel,
+  sourceToSegmentAnchor,
+} from "@/components/ui/source-segmented-document-model"
 import csvSample from "@/components/viewers/sample-data/csv-sources.json"
 import docxSample from "@/components/viewers/sample-data/docx-sources.json"
 import imageSample from "@/components/viewers/sample-data/image-sources.json"
@@ -15,6 +20,7 @@ import {
   extractionSourcesToSourceMap,
   sourceLocationKey,
 } from "@/registry/new-york-v4/lib/document-source"
+import { evidenceToAnchoredItem } from "@/registry/new-york-v4/ui/anchored-evidence"
 import {
   columnLetterToIndex,
   csvAnchorToTarget,
@@ -41,6 +47,12 @@ import {
   usePdfSourceTarget,
 } from "@/registry/new-york-v4/ui/pdf-source"
 import type { PdfViewerHandle } from "@/registry/new-york-v4/ui/pdf-viewer"
+import { sourceToDocumentAnchor } from "@/registry/new-york-v4/ui/source-anchor"
+import {
+  sourceFieldsToEvidenceModel,
+  sourceMapToEvidenceModel,
+  sourceToDocumentAnchor as sourceToEvidenceAnchor,
+} from "@/registry/new-york-v4/ui/source-evidence"
 import { SourceFieldList } from "@/registry/new-york-v4/ui/source-field-list"
 import { SourceIndicator } from "@/registry/new-york-v4/ui/source-indicator"
 import {
@@ -364,6 +376,290 @@ describe("document source model", () => {
       })
     ).toBe("2:10:20:30:40")
     expect(sourceLocationKey(undefined)).toBeNull()
+  })
+})
+
+describe("source evidence projection", () => {
+  it("converts sources to document anchors without viewer adapters", () => {
+    expect(sourceToDocumentAnchor(pdfSource)).toEqual({
+      kind: "pdf-area",
+      pageNumber: 3,
+      left: 10,
+      top: 20,
+      width: 30,
+      height: 40,
+    })
+    expect(sourceToDocumentAnchor(imageSource)).toEqual({
+      kind: "image-area",
+      frameNumber: 2,
+      left: 15,
+      top: 25,
+      width: 35,
+      height: 45,
+    })
+    expect(
+      sourceToDocumentAnchor(source({ kind: "csv_cell", row: -1, column: "A" }))
+    ).toBeNull()
+  })
+
+  it("projects every source adapter kind to a document anchor", () => {
+    expect(sourceToEvidenceAnchor(pdfSource)).toEqual({
+      status: "resolved",
+      anchor: {
+        kind: "pdf-area",
+        pageNumber: 3,
+        left: 10,
+        top: 20,
+        width: 30,
+        height: 40,
+      },
+    })
+    expect(sourceToEvidenceAnchor(imageSource)).toEqual({
+      status: "resolved",
+      anchor: {
+        kind: "image-area",
+        frameNumber: 2,
+        left: 15,
+        top: 25,
+        width: 35,
+        height: 45,
+      },
+    })
+    expect(sourceToEvidenceAnchor(csvSource)).toEqual({
+      status: "resolved",
+      anchor: { kind: "csv-cell", rowIndex: 3, columnIndex: 26 },
+    })
+    expect(sourceToEvidenceAnchor(xlsxSource)).toEqual({
+      status: "resolved",
+      anchor: {
+        kind: "xlsx-cell",
+        sheetIndex: 2,
+        rowIndex: 7,
+        columnIndex: 51,
+      },
+    })
+    expect(sourceToEvidenceAnchor(textSource)).toEqual({
+      status: "resolved",
+      anchor: { kind: "text-range", startLine: 12, endLine: 14 },
+    })
+    expect(sourceToEvidenceAnchor(docxCellSource)).toEqual({
+      status: "resolved",
+      anchor: {
+        kind: "docx-target",
+        target: { kind: "cell", table: 1, row: 2, column: 3 },
+      },
+    })
+  })
+
+  it("keeps missing and invalid anchors distinct before provider projection", () => {
+    const missing = sourceToEvidenceAnchor(null)
+    const invalid = sourceToEvidenceAnchor(
+      source({ kind: "csv_cell", row: -1, column: "A" })
+    )
+
+    expect(missing).toEqual({ status: "missing" })
+    expect(invalid).toEqual({
+      status: "invalid",
+      reason: "Unsupported or invalid csv_cell",
+    })
+    expect(
+      evidenceToAnchoredItem({
+        id: "missing",
+        anchor: missing,
+      })
+    ).toEqual({
+      id: "missing",
+      anchor: null,
+      disabled: false,
+    })
+    expect(
+      evidenceToAnchoredItem({
+        id: "invalid",
+        anchor: invalid,
+      })
+    ).toEqual({
+      id: "invalid",
+      anchor: null,
+      disabled: true,
+    })
+  })
+
+  it("projects source fields to evidence rows and provider items", () => {
+    const model = sourceFieldsToEvidenceModel([
+      {
+        key: "invoice.total",
+        label: "Total",
+        value: "$120.00",
+        hint: "Page 3",
+        source: pdfSource,
+      },
+      {
+        key: "approver",
+        label: "Approver",
+        value: "Morgan Lee",
+        source: null,
+      },
+    ])
+
+    expect(model.evidenceItems).toMatchObject([
+      {
+        id: "invoice.total",
+        payload: {
+          label: "Total",
+          value: "$120.00",
+          hint: "Page 3",
+          sourceKind: "pdf_bbox",
+        },
+        anchor: { status: "resolved" },
+      },
+      {
+        id: "approver",
+        payload: {
+          label: "Approver",
+          value: "Morgan Lee",
+          sourceKind: null,
+        },
+        anchor: { status: "missing" },
+      },
+    ])
+    expect(model.anchoredItems).toEqual([
+      {
+        id: "invoice.total",
+        anchor: {
+          kind: "pdf-area",
+          pageNumber: 3,
+          left: 10,
+          top: 20,
+          width: 30,
+          height: 40,
+        },
+        disabled: false,
+      },
+      { id: "approver", anchor: null, disabled: false },
+    ])
+  })
+
+  it("projects source maps with dotted and indexed paths without changing ids", () => {
+    const model = sourceMapToEvidenceModel({
+      sourceMap: {
+        "owner.name": pdfSource,
+        "line_items.0.amount": csvSource,
+      },
+      values: {
+        owner: { name: "ACME" },
+        line_items: [{ amount: 1200 }],
+      },
+      schema: {
+        type: "object",
+        properties: {
+          owner: { title: "Owner", type: "object" },
+        },
+      },
+    })
+
+    expect(model.evidenceItems.map((item) => item.id)).toEqual([
+      "owner.name",
+      "line_items.0.amount",
+    ])
+    expect(model.evidenceItems.map((item) => item.payload.value)).toEqual([
+      "ACME",
+      1200,
+    ])
+    expect(model.evidenceItems.map((item) => item.payload.label)).toEqual([
+      "owner.name",
+      "line_items.0.amount",
+    ])
+    expect(model.anchoredItems.map((item) => item.id)).toEqual([
+      "owner.name",
+      "line_items.0.amount",
+    ])
+  })
+
+  it("projects page-local sources to segmented document segments and anchors", () => {
+    const model = sourceFieldsToSegmentedDocumentModel([
+      {
+        id: "invoice.total",
+        label: "Total",
+        source: pdfSource,
+      },
+      {
+        id: "logo",
+        label: "Logo",
+        source: imageSource,
+      },
+      {
+        id: "line_items.0.amount",
+        label: "Amount",
+        source: csvSource,
+      },
+    ])
+
+    expect(model.segments).toMatchObject([
+      {
+        id: "source:invoice.total:0",
+        label: "Total",
+        pages: [3],
+        sourceId: "invoice.total",
+      },
+      {
+        id: "source:logo:1",
+        label: "Logo",
+        pages: [2],
+        sourceId: "logo",
+      },
+      {
+        id: "source:line_items.0.amount:2",
+        label: "Amount",
+        pages: [],
+        sourceId: "line_items.0.amount",
+      },
+    ])
+    expect(model.anchors).toEqual([
+      {
+        id: "source:invoice.total:0:anchor",
+        segmentId: "source:invoice.total:0",
+        pageNumber: 3,
+        bounds: { x: 0.1, y: 0.2, width: 0.3, height: 0.4 },
+      },
+      {
+        id: "source:logo:1:anchor",
+        segmentId: "source:logo:1",
+        pageNumber: 2,
+        bounds: { x: 0.15, y: 0.25, width: 0.35, height: 0.45 },
+      },
+    ])
+    expect(model.pages.map((page) => page.pageNumber)).toEqual([1, 2, 3])
+  })
+
+  it("keeps invalid and non-page-local source anchors out of segmented anchors", () => {
+    expect(sourceToSegmentAnchor(csvSource, "csv")).toBeNull()
+    expect(
+      sourceToSegmentAnchor(
+        source({
+          kind: "pdf_bbox",
+          page: 0,
+          left: 0.1,
+          top: 0.2,
+          width: 0.3,
+          height: 0.4,
+        }),
+        "bad-pdf"
+      )
+    ).toBeNull()
+
+    const model = sourceMapToSegmentedDocumentModel({
+      labels: { "": "Root value" },
+      sourceMap: {
+        "": pdfSource,
+        amount: csvSource,
+      },
+    })
+
+    expect(model.segments.map((segment) => segment.label)).toEqual([
+      "Root value",
+      "amount",
+    ])
+    expect(model.anchors).toHaveLength(1)
   })
 })
 
@@ -1211,8 +1507,8 @@ describe("source UI components", () => {
     expect(screen.getByText("$120.00").textContent).toBe("$120.00")
     expect(screen.getByText("Page 2").textContent).toBe("Page 2")
 
-    const total = screen.getByRole("button", { name: /total/i })
-    expect(total.className).toContain("border-primary/40")
+    const total = screen.getByRole("option", { name: /total/i })
+    expect(total.getAttribute("data-active")).toBe("true")
 
     fireEvent.mouseEnter(total)
     fireEvent.focus(total)
@@ -1246,10 +1542,10 @@ describe("source UI components", () => {
       />
     )
 
-    const total = screen.getByRole("button", { name: /total/i })
-    const tax = screen.getByRole("button", { name: /tax/i })
-    expect(total.className).not.toContain("border-primary/40")
-    expect(tax.className).toContain("border-primary/40")
+    const total = screen.getByRole("option", { name: /total/i })
+    const tax = screen.getByRole("option", { name: /tax/i })
+    expect(total.getAttribute("data-active")).toBe("false")
+    expect(tax.getAttribute("data-active")).toBe("true")
 
     rerender(
       <SourceFieldList
@@ -1261,12 +1557,12 @@ describe("source UI components", () => {
       />
     )
 
-    expect(screen.getByRole("button", { name: /total/i }).className).toContain(
-      "border-primary/40"
-    )
     expect(
-      screen.getByRole("button", { name: /tax/i }).className
-    ).not.toContain("border-primary/40")
+      screen.getByRole("option", { name: /total/i }).getAttribute("data-active")
+    ).toBe("true")
+    expect(
+      screen.getByRole("option", { name: /tax/i }).getAttribute("data-active")
+    ).toBe("false")
   })
 
   it("SourceFieldList renders an empty state without interactive rows", () => {
@@ -1286,7 +1582,7 @@ describe("source UI components", () => {
     expect(screen.getByRole("heading", { name: "No fields" })).toBeTruthy()
     expect(screen.getByText("0 fields").textContent).toBe("0 fields")
     expect(screen.getByText("No fields.")).toBeTruthy()
-    expect(screen.queryAllByRole("button")).toHaveLength(0)
+    expect(screen.queryAllByRole("option")).toHaveLength(0)
     expect(
       container.querySelector('[data-slot="source-field-list"]')?.className
     ).toContain("custom-source-list")
@@ -1309,9 +1605,9 @@ describe("source UI components", () => {
     )
 
     expect(screen.getByText("2 fields").textContent).toBe("2 fields")
-    expect(screen.getByRole("button", { name: /date/i }).className).toContain(
-      "border-primary/40"
-    )
+    expect(
+      screen.getByRole("option", { name: /date/i }).getAttribute("data-active")
+    ).toBe("true")
 
     rerender(
       <SourceFieldList
@@ -1324,10 +1620,12 @@ describe("source UI components", () => {
     )
 
     expect(screen.getByText("2 fields").textContent).toBe("2 fields")
-    expect(screen.queryByRole("button", { name: /date/i })).toBeNull()
+    expect(screen.queryByRole("option", { name: /date/i })).toBeNull()
     expect(
-      screen.getByRole("button", { name: /status/i }).className
-    ).not.toContain("border-primary/40")
+      screen
+        .getByRole("option", { name: /status/i })
+        .getAttribute("data-active")
+    ).toBe("false")
   })
 
   it("SourceIndicator renders empty, found, and missing-source states", () => {

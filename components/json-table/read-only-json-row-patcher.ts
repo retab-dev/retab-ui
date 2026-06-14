@@ -8,6 +8,7 @@ import {
   type FixedGridViewport,
 } from "@/components/ui/fixed-grid-virtualization"
 import type { VisibleColumn } from "@/components/json-table/json-table-cell-types"
+import { markJsonTableProfile } from "@/components/json-table/json-table-profiler"
 import type { ProjectedRow } from "@/components/json-table/lib/document-projection"
 
 export interface ReadOnlyJsonRowPatchState {
@@ -21,6 +22,23 @@ export interface ReadOnlyJsonRowPatcher {
   patch: (viewport: FixedGridViewport) => FixedGridJumpViewportResult
   invalidate: () => void
 }
+
+export type ReadOnlyJsonRowPatchDiagnostic =
+  | {
+      reason: "handled"
+      rowsPatched: number
+    }
+  | {
+      reason:
+        | "disabled"
+        | "empty-cache"
+        | "empty-next-window"
+        | "missing-row-window"
+        | "shape-mismatch"
+        | "unsupported-viewport"
+        | "window-too-large"
+      rowsPatched: 0
+    }
 
 interface JsonCellHandle {
   element: HTMLElement
@@ -49,9 +67,11 @@ const TEXT_NODE = 3
 export function useReadOnlyJsonRowPatcher({
   rowWindowRef,
   getState,
+  onDiagnostic,
 }: {
   rowWindowRef: React.RefObject<HTMLElement | null>
   getState: () => ReadOnlyJsonRowPatchState
+  onDiagnostic?: (diagnostic: ReadOnlyJsonRowPatchDiagnostic) => void
 }): ReadOnlyJsonRowPatcher {
   const rowHandleCacheRef = React.useRef<JsonRowHandleCache | null>(null)
 
@@ -62,10 +82,22 @@ export function useReadOnlyJsonRowPatcher({
   const patch = React.useCallback(
     (viewport: FixedGridViewport): FixedGridJumpViewportResult => {
       const state = getState()
-      if (!canPatchRows(viewport, state)) return "pass"
+      if (!canPatchRows(viewport, state)) {
+        recordPatchDiagnostic(onDiagnostic, {
+          reason: patchDisabledReason(viewport, state),
+          rowsPatched: 0,
+        })
+        return "pass"
+      }
 
       const rowWindow = rowWindowRef.current
-      if (!rowWindow) return "pass"
+      if (!rowWindow) {
+        recordPatchDiagnostic(onDiagnostic, {
+          reason: "missing-row-window",
+          rowsPatched: 0,
+        })
+        return "pass"
+      }
 
       const cache =
         rowHandleCacheRef.current?.rowWindow === rowWindow
@@ -73,7 +105,13 @@ export function useReadOnlyJsonRowPatcher({
           : readRowHandles(rowWindow)
       rowHandleCacheRef.current = cache
 
-      if (cache.rows.length === 0) return "pass"
+      if (cache.rows.length === 0) {
+        recordPatchDiagnostic(onDiagnostic, {
+          reason: "empty-cache",
+          rowsPatched: 0,
+        })
+        return "pass"
+      }
 
       const nextRows = fixedVirtualItems({
         count: state.projectedRows.length,
@@ -83,19 +121,38 @@ export function useReadOnlyJsonRowPatcher({
         overscan: PATCH_ROW_OVERSCAN,
         minimumVisibleCount: MINIMUM_PATCH_VISIBLE_ROWS,
       })
-      if (nextRows.length === 0 || nextRows.length > cache.rows.length) {
+      if (nextRows.length === 0) {
+        recordPatchDiagnostic(onDiagnostic, {
+          reason: "empty-next-window",
+          rowsPatched: 0,
+        })
+        return "pass"
+      }
+      if (nextRows.length > cache.rows.length) {
+        recordPatchDiagnostic(onDiagnostic, {
+          reason: "window-too-large",
+          rowsPatched: 0,
+        })
         return "pass"
       }
 
       if (!canPatchRowHandles(cache.rows, nextRows, state)) {
+        recordPatchDiagnostic(onDiagnostic, {
+          reason: "shape-mismatch",
+          rowsPatched: 0,
+        })
         return "pass"
       }
 
-      patchRows(cache.rows, nextRows, state)
+      const rowsPatched = patchRows(cache.rows, nextRows, state)
+      recordPatchDiagnostic(onDiagnostic, {
+        reason: "handled",
+        rowsPatched,
+      })
 
       return "handled"
     },
-    [getState, rowWindowRef]
+    [getState, onDiagnostic, rowWindowRef]
   )
 
   return React.useMemo(() => ({ invalidate, patch }), [invalidate, patch])
@@ -106,6 +163,7 @@ function patchRows(
   virtualRows: ReturnType<typeof fixedVirtualItems>,
   state: ReadOnlyJsonRowPatchState
 ) {
+  let rowsPatched = 0
   for (let handleIndex = 0; handleIndex < rowHandles.length; handleIndex++) {
     const rowHandle = rowHandles[handleIndex]
     const virtualRow = virtualRows[handleIndex]
@@ -124,7 +182,9 @@ function patchRows(
     rowHandle.rowIndex = rowIndex
     rowHandle.element.dataset.index = String(rowIndex)
     patchCells(rowHandle, state.projectedRows[rowIndex], state.visibleColumns)
+    rowsPatched += 1
   }
+  return rowsPatched
 }
 
 function patchCells(
@@ -175,6 +235,27 @@ function canPatchRows(
     viewport.scrollLeft === 0 &&
     !viewport.isJumpingColumns
   )
+}
+
+function patchDisabledReason(
+  viewport: FixedGridViewport,
+  state: ReadOnlyJsonRowPatchState
+): ReadOnlyJsonRowPatchDiagnostic["reason"] {
+  if (!state.isEnabled || state.rowHeightPx <= 0) return "disabled"
+  if (viewport.scrollLeft !== 0 || viewport.isJumpingColumns) {
+    return "unsupported-viewport"
+  }
+  return "disabled"
+}
+
+function recordPatchDiagnostic(
+  onDiagnostic:
+    | ((diagnostic: ReadOnlyJsonRowPatchDiagnostic) => void)
+    | undefined,
+  diagnostic: ReadOnlyJsonRowPatchDiagnostic
+) {
+  onDiagnostic?.(diagnostic)
+  markJsonTableProfile("read-only-row-patcher", diagnostic)
 }
 
 function canPatchRowHandles(

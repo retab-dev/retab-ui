@@ -67,21 +67,21 @@ export function FileSystemGridView({
 
       return index === -1 ? -1 : Math.floor(index / columnCount)
     },
-    onSelect: browser.commands.selectEntry,
+    onSelect: browser.selectEntry,
     scrollToIndex: (index) => {
       if (index !== -1) virtualizer.scrollToIndex(index)
     },
-    selectedPath: browser.selection.selectedPath,
+    selectedPath: browser.selectedPath,
   })
   const openEntry = React.useCallback(
     (entry: FileSystemEntry) => {
       if (entry.kind === "folder") {
-        browser.commands.navigateTo(entry.path)
+        browser.navigateTo(entry.path)
       } else {
         fileActions.openPreview(entry)
       }
     },
-    [browser.commands, fileActions]
+    [browser.navigateTo, fileActions]
   )
   const handleKeyDown = (event: React.KeyboardEvent) => {
     if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
@@ -101,8 +101,8 @@ export function FileSystemGridView({
       event.preventDefault()
       return
     }
-    if (event.key === "Enter" && browser.selection.selectedEntry) {
-      openEntry(browser.selection.selectedEntry)
+    if (event.key === "Enter" && browser.selectedEntry) {
+      openEntry(browser.selectedEntry)
       event.preventDefault()
       return
     }
@@ -172,7 +172,7 @@ const FileSystemGridTile = React.forwardRef<
   }
 >(function FileSystemGridTile({ controller, entry }, ref) {
   const { browser, fileActions } = controller
-  const selectedPath = browser.selection.selectedPath
+  const selectedPath = browser.selectedPath
   const isSelected = entry.path === selectedPath
 
   return (
@@ -182,10 +182,10 @@ const FileSystemGridTile = React.forwardRef<
       role="option"
       aria-selected={isSelected}
       tabIndex={isSelected || !selectedPath ? 0 : -1}
-      onClick={() => browser.commands.selectEntry(entry)}
+      onClick={() => browser.selectEntry(entry)}
       onDoubleClick={() => {
         if (entry.kind === "folder") {
-          browser.commands.navigateTo(entry.path)
+          browser.navigateTo(entry.path)
         } else {
           fileActions.openPreview(entry)
         }

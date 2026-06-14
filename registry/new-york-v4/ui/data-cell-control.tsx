@@ -4,10 +4,9 @@ import * as React from "react"
 
 import {
   dataCellBooleanControlProps,
-  dataCellNumberControlProps,
+  dataCellInputControlProps,
   dataCellPickerControlProps,
   dataCellSelectControlProps,
-  dataCellTextControlProps,
 } from "@/registry/new-york-v4/ui/data-cell-control-props"
 import { dataCellControlByKind } from "@/registry/new-york-v4/ui/data-cell-control-registry"
 import type {
@@ -28,27 +27,23 @@ export function DataCellControl({ model }: { model: DataCellEditModel }) {
 
   if (model.kind === "text") {
     const Control = dataCellControlByKind.text
-    return (
-      <Control {...dataCellTextControlProps(model)} session={session} />
-    )
+    return <Control {...dataCellInputControlProps(model)} session={session} />
   }
-  if (model.kind === "number" || model.kind === "integer") {
-    const Control = dataCellControlByKind[model.kind]
-    return (
-      <Control {...dataCellNumberControlProps(model)} session={session} />
-    )
+  if (model.kind === "number") {
+    const Control = dataCellControlByKind.number
+    return <Control {...dataCellInputControlProps(model)} session={session} />
+  }
+  if (model.kind === "integer") {
+    const Control = dataCellControlByKind.integer
+    return <Control {...dataCellInputControlProps(model)} session={session} />
   }
   if (model.kind === "boolean") {
     const Control = dataCellControlByKind.boolean
-    return (
-      <Control {...dataCellBooleanControlProps(model)} session={session} />
-    )
+    return <Control {...dataCellBooleanControlProps(model)} session={session} />
   }
   if (model.kind === "select") {
     const Control = dataCellControlByKind.select
-    return (
-      <Control {...dataCellSelectControlProps(model)} session={session} />
-    )
+    return <Control {...dataCellSelectControlProps(model)} session={session} />
   }
 
   return renderDataCellPickerControl(model, session)
@@ -73,7 +68,5 @@ function renderDataCellPickerControl(
   session: DataCellPrimitiveSession
 ) {
   const Control = dataCellControlByKind[model.kind]
-  return (
-    <Control {...dataCellPickerControlProps(model)} session={session} />
-  )
+  return <Control {...dataCellPickerControlProps(model)} session={session} />
 }

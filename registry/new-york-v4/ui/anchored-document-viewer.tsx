@@ -2,65 +2,7 @@
 
 import * as React from "react"
 
-export type PdfAreaAnchor = {
-  kind: "pdf-area"
-  pageNumber: number
-  left: number
-  top: number
-  width: number
-  height: number
-}
-
-export type ImageAreaAnchor = {
-  kind: "image-area"
-  frameNumber?: number
-  left: number
-  top: number
-  width: number
-  height: number
-}
-
-export type TextRangeAnchor = {
-  kind: "text-range"
-  startLine: number
-  endLine: number
-}
-
-export type CsvCellAnchor = {
-  kind: "csv-cell"
-  rowIndex: number
-  columnIndex: number
-}
-
-export type XlsxCellAnchor = {
-  kind: "xlsx-cell"
-  sheetIndex: number
-  rowIndex: number
-  columnIndex: number
-}
-
-export type DocxTargetAnchor = {
-  kind: "docx-target"
-  target:
-    | {
-        kind: "text"
-        text: string
-      }
-    | {
-        kind: "cell"
-        table: number
-        row: number
-        column: number
-      }
-}
-
-export type DocumentAnchor =
-  | PdfAreaAnchor
-  | ImageAreaAnchor
-  | TextRangeAnchor
-  | CsvCellAnchor
-  | XlsxCellAnchor
-  | DocxTargetAnchor
+import type { DocumentAnchor } from "./document-anchor"
 
 export type AnchoredItemId = string
 
@@ -77,10 +19,10 @@ export type AnchoredDocumentTarget = {
   ) => void
 }
 
-export type FieldAnchorLink = {
-  activePath: string | null
-  onFieldHover: (path: string | null) => void
-  selectField?: (path: string) => void
+export type AnchoredItemLink = {
+  activeItemId: AnchoredItemId | null
+  previewItem: (itemId: AnchoredItemId | null) => void
+  activateItem: (itemId: AnchoredItemId) => void
 }
 
 type AnchoredDocumentContextValue = {
@@ -131,12 +73,8 @@ export function AnchoredDocumentProvider({
     },
     [itemsById]
   )
-  const selectedItem = selectedItemId
-    ? getEnabledItem(selectedItemId)
-    : null
-  const previewItem = previewItemId
-    ? getEnabledItem(previewItemId)
-    : null
+  const selectedItem = selectedItemId ? getEnabledItem(selectedItemId) : null
+  const previewItem = previewItemId ? getEnabledItem(previewItemId) : null
   const activeItem = previewItem ?? selectedItem ?? null
   const activeItemId = activeItem?.id ?? null
   const activeAnchor = activeItem?.anchor ?? null
@@ -144,7 +82,8 @@ export function AnchoredDocumentProvider({
   React.useEffect(() => {
     if (
       selectedItemId &&
-      (!itemsById.has(selectedItemId) || itemsById.get(selectedItemId)?.disabled)
+      (!itemsById.has(selectedItemId) ||
+        itemsById.get(selectedItemId)?.disabled)
     ) {
       setSelectedItemId(null)
     }
@@ -187,10 +126,7 @@ export function AnchoredDocumentProvider({
   )
 
   const activateItem = React.useCallback(
-    (
-      itemId: AnchoredItemId,
-      options: { behavior?: ScrollBehavior } = {}
-    ) => {
+    (itemId: AnchoredItemId, options: { behavior?: ScrollBehavior } = {}) => {
       const item = getEnabledItem(itemId)
       if (!item) return
       setPreviewItemId(null)
@@ -271,15 +207,13 @@ export function useAnchoredDocument() {
   return context
 }
 
-export function useAnchoredFieldLink(): FieldAnchorLink {
+export function useAnchoredItemLink(): AnchoredItemLink {
   const { activateItem, activeItemId, previewItem } = useAnchoredDocument()
   return React.useMemo(
     () => ({
-      activePath: activeItemId,
-      onFieldHover: previewItem,
-      selectField: (path: string) => {
-        activateItem(path)
-      },
+      activeItemId,
+      previewItem,
+      activateItem,
     }),
     [activateItem, activeItemId, previewItem]
   )

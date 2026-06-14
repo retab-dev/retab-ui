@@ -20,10 +20,8 @@ import {
   vi,
 } from "vitest"
 
-import {
-  JsonForm,
-} from "@/components/json-form/json-form"
-import type { FieldAnchorLink } from "@/components/ui/anchored-document-viewer"
+import type { FieldAnchorLink } from "@/components/ui/field-anchor-link"
+import { JsonForm } from "@/components/json-form/json-form"
 
 const originalResizeObserver = globalThis.ResizeObserver
 

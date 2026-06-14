@@ -20,14 +20,14 @@ export function FileSystemColumnsView({
 }: {
   controller: FileSystemBrowserController
 }) {
-  const { browser, fileActions } = controller
+  const { browser } = controller
   const columnPaths = React.useMemo(() => {
     const paths = [browser.currentPath]
-    const selectedPath = browser.selection.selectedPath
+    const selectedPath = browser.selectedPath
 
     if (!selectedPath?.startsWith(browser.currentPath)) return paths
 
-    const selectedEntry = browser.selection.selectedEntry
+    const selectedEntry = browser.selectedEntry
     const targetPath =
       selectedEntry?.kind === "folder"
         ? selectedEntry.path
@@ -42,11 +42,7 @@ export function FileSystemColumnsView({
     }
 
     return paths
-  }, [
-    browser.currentPath,
-    browser.selection.selectedEntry,
-    browser.selection.selectedPath,
-  ])
+  }, [browser.currentPath, browser.selectedEntry, browser.selectedPath])
 
   return (
     <ScrollArea
@@ -106,28 +102,28 @@ function FileSystemColumn({
     getScrollIndex: (entry) =>
       entries.findIndex((candidate) => candidate.path === entry.path),
     onSelect: (entry) => {
-      browser.commands.selectEntry(entry)
+      browser.selectEntry(entry)
       if (entry.kind === "folder") {
-        void browser.commands.ensureChildren(entry.path)
+        void browser.ensureChildren(entry.path).catch(() => {})
       }
     },
     scrollToIndex: (index) => {
       if (index !== -1) virtualizer.scrollToIndex(index)
     },
-    selectedPath: browser.selection.selectedPath,
+    selectedPath: browser.selectedPath,
   })
   const openEntry = React.useCallback(
     (entry: FileSystemEntry) => {
       if (entry.kind === "folder") {
-        browser.commands.navigateTo(entry.path)
+        browser.navigateTo(entry.path)
       } else {
         fileActions.openPreview(entry)
       }
     },
-    [browser.commands, fileActions]
+    [browser.navigateTo, fileActions]
   )
   const selectParent = React.useCallback(() => {
-    const selectedEntry = browser.selection.selectedEntry
+    const selectedEntry = browser.selectedEntry
     if (!selectedEntry) return
 
     const parentPath =
@@ -138,22 +134,14 @@ function FileSystemColumn({
       ? (browser.rawIndex.folders.get(parentPath) ?? null)
       : null
 
-    if (parent) browser.commands.selectEntry(parent)
-  }, [
-    browser.commands,
-    browser.rawIndex.folders,
-    browser.selection.selectedEntry,
-  ])
+    if (parent) browser.selectEntry(parent)
+  }, [browser.rawIndex.folders, browser.selectEntry, browser.selectedEntry])
   const selectChild = React.useCallback(() => {
-    const selectedEntry = browser.selection.selectedEntry
+    const selectedEntry = browser.selectedEntry
     if (selectedEntry?.kind !== "folder") return
 
-    void browser.commands.selectFirstChildAfterEnsure(selectedEntry.path)
-  }, [
-    browser.commands,
-    browser.rawIndex.folders,
-    browser.selection.selectedEntry,
-  ])
+    void browser.selectFirstChildAfterEnsure(selectedEntry.path)
+  }, [browser.selectFirstChildAfterEnsure, browser.selectedEntry])
   const handleKeyDown = (event: React.KeyboardEvent) => {
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
       rovingFocus.selectByOffset(event.key === "ArrowDown" ? 1 : -1)
@@ -175,8 +163,8 @@ function FileSystemColumn({
       event.preventDefault()
       return
     }
-    if (event.key === "Enter" && browser.selection.selectedEntry) {
-      openEntry(browser.selection.selectedEntry)
+    if (event.key === "Enter" && browser.selectedEntry) {
+      openEntry(browser.selectedEntry)
       event.preventDefault()
       return
     }
@@ -226,7 +214,7 @@ const FileSystemColumnRow = React.forwardRef<
   }
 >(function FileSystemColumnRow({ controller, entry, style }, ref) {
   const { browser, fileActions } = controller
-  const selectedPath = browser.selection.selectedPath
+  const selectedPath = browser.selectedPath
   const isSelected = entry.path === selectedPath
   const isOnTrail =
     entry.kind === "folder" &&
@@ -241,14 +229,14 @@ const FileSystemColumnRow = React.forwardRef<
       aria-selected={isSelected}
       tabIndex={isSelected || !selectedPath ? 0 : -1}
       onClick={() => {
-        browser.commands.selectEntry(entry)
+        browser.selectEntry(entry)
         if (entry.kind === "folder") {
-          void browser.commands.ensureChildren(entry.path)
+          void browser.ensureChildren(entry.path).catch(() => {})
         }
       }}
       onDoubleClick={() => {
         if (entry.kind === "folder") {
-          browser.commands.navigateTo(entry.path)
+          browser.navigateTo(entry.path)
         } else {
           fileActions.openPreview(entry)
         }

@@ -7,12 +7,9 @@ import { type ViewerDownloadAction } from "@/lib/viewer-download"
 
 import { Button } from "./button"
 import { Skeleton } from "./skeleton"
-import {
-  TextCodeViewerFrame,
-  TextCodeViewerToolbarFrame,
-  TextCodeViewerZoomControls,
-} from "./text-code-viewer-chrome"
+import { TextCodeViewerFrame } from "./text-code-viewer-chrome"
 import { ViewerDownloadControl } from "./viewer-download"
+import { ViewerToolbar, ViewerToolbarSkeleton } from "./viewer-toolbar"
 
 export function CodeViewerFrame({
   className,
@@ -52,20 +49,16 @@ export function CodeViewerToolbar({
   onResetZoom: () => void
 }) {
   return (
-    <TextCodeViewerToolbarFrame
-      leading={`${lineCount} line${lineCount === 1 ? "" : "s"}`}
-      trailing={
-        <>
-          <TextCodeViewerZoomControls
-            fontScale={fontScale}
-            onZoomOut={onZoomOut}
-            onZoomIn={onZoomIn}
-            onResetZoom={onResetZoom}
-          />
-          <div className="mx-1 h-4 w-px bg-border" />
-          <ViewerDownloadControl actions={[downloadAction]} />
-        </>
-      }
+    <ViewerToolbar
+      title={`${lineCount} line${lineCount === 1 ? "" : "s"}`}
+      zoom={{
+        scale: fontScale,
+        onZoomOut,
+        onZoomIn,
+        onFit: onResetZoom,
+        fitLabel: "Reset zoom",
+      }}
+      downloads={[downloadAction]}
     />
   )
 }
@@ -81,12 +74,7 @@ export function CodeViewerFallback({
 }) {
   return (
     <CodeViewerFrame className={className} bare={bare}>
-      {toolbar ? (
-        <TextCodeViewerToolbarFrame
-          leading={<Skeleton className="inline-block h-3 w-16 align-middle" />}
-          trailing={<TextCodeViewerZoomControls disabled fontScale={1} />}
-        />
-      ) : null}
+      {toolbar ? <ViewerToolbarSkeleton title zoom /> : null}
       <div
         className="min-h-0 flex-1 space-y-2 overflow-hidden p-4"
         data-slot="code-body-skeleton"

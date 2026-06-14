@@ -20,8 +20,8 @@ still prevent the component from being simple, fast, complete, and inevitable:
 - browser style recalculation remains the dominant user-visible cost
 - fresh performance verification still depends on fragile local dev-server state
 - the runtime table module owns too many state machines
-- accessibility proof is stronger, but browser-level accessibility proof still
-  lags interaction proof
+- browser-level accessibility proof now covers the critical primitive states,
+  keyboard-only far-column flows, and the far structured object editor path
 - the proof suite is strong on React fanout but weaker on browser-level
   behavior, variance, and root-cause attribution
 - naming has improved, but some concepts still carry historical vocabulary
@@ -194,6 +194,9 @@ Observed shape:
 - Current fresh proof still points to popup mount for `open-enum` and
   `open-date`; non-popup style work now needs trace-backed attribution before
   another structural cut.
+- Trace-mode proof now confirms the dominant style bucket is Chrome style-tree
+  work (`Blink.Style.UpdateTime`, `Document::updateStyle`, and
+  `Document::recalcStyle`), not hidden React fanout.
 
 Why this is still the top issue:
 
@@ -272,16 +275,24 @@ Implemented header-window cut:
 - `tests/json-table-virtualization-stress-hardening.test.tsx` asserts both
   header and body windows mount fewer cells than the full visible schema.
 
-Fresh managed proof from
-`PROFILE_SERVER_MODE=managed PROFILE_DEV_SERVER_TIMEOUT_MS=90000 pnpm
+Fresh auto-lifecycle proof from
+`PROFILE_SERVER_MODE=auto JSON_TABLE_PROFILE_WARMUP=1 pnpm
 verify:json-table-performance:fresh`:
 
 - `large/open-enum`: `surface=header:32/body:143/popup:15`,
-  `owner=popup-mount`, `style=73.8ms`, `elapsed=119.6ms`.
+  `owner=popup-mount`, `style=71.9ms`, `elapsed=119.8ms`.
 - `large/open-date`: `surface=header:32/body:143/popup:99`,
-  `owner=popup-mount`, `style=70.9ms`, `elapsed=135.9ms`.
+  `owner=popup-mount`, `style=71.6ms`, `elapsed=167.3ms`.
 - `large/switch-dirty-cell`: `surface=header:32/body:143/popup:0`,
-  `owner=eager-header-surface`, `style=69.4ms`, `elapsed=118.9ms`.
+  `owner=eager-header-surface`, `style=70.8ms`, `elapsed=114.1ms`.
+
+Trace-mode proof from
+`JSON_TABLE_PROFILE_TRACE=1 PROFILE_OUTPUT=tmp/json-table-primitive-interactions-profile.trace.json node scripts/profile-json-table-primitive-interactions.mjs --assert`:
+
+- `large/open-enum`: normal elapsed stayed separate from trace shutdown
+  overhead; trace style was dominated by Chrome style update/recalc events.
+- `pnpm verify:json-table-performance` accepts trace reports and prints
+  `traceStyle=`, `traceLayout=`, and `traceScript=` buckets when present.
 
 Completion criteria:
 
@@ -333,24 +344,70 @@ Implemented progress:
   refinds or remounts the target edit input before injecting setup values, so
   `switch-dirty-cell` and `post-churn-text-commit` are not dependent on fragile
   focus surviving dev-server/HMR churn.
+- Date commit profiling now selects enabled visible calendar
+  `button[data-day]` elements instead of relying on text content or CSS class
+  names, and reports candidate counts when no commit button exists.
+- Date commit profiling now waits for actionable `button[data-day]` elements,
+  not only the calendar root, so it does not race the picker mount transition.
+- Fresh profiler setup now retries the verified editable-mode activation instead
+  of assuming one synthetic `Editable` click always lands immediately after
+  hydration.
+- Fresh profiler setup now records `profilePageState` diagnostics and recovers a
+  genuinely blank profile document once, while still failing mounted tables that
+  are missing an expected field.
+- Fresh profiler runs now close Chrome profile targets through `/json/close/`
+  and sweep stale profile targets at startup, so warmup tabs do not keep
+  participating in dev-server HMR.
+- `scripts/profile-json-table-primitive-interactions.mjs` supports
+  `--warmup N` and `JSON_TABLE_PROFILE_WARMUP=N`. Warmup runs execute the same
+  target scenarios but are discarded from the saved report.
+- `scripts/profile-json-table-primitive-interactions.mjs` supports diagnostic
+  target and scenario filters through `--targets`,
+  `JSON_TABLE_PROFILE_TARGETS`, `--scenarios`, and
+  `JSON_TABLE_PROFILE_SCENARIOS`. Defaults remain unfiltered, and
+  scenario-filtered runs are refused with `--assert` so the canonical profiler
+  assertion cannot be weakened accidentally.
+- `package.json` now exposes `pnpm verify:json-table` as the canonical
+  JSON-table gate. It runs:
+  - `pnpm test:json-table`
+  - saved performance budget verification
+  - auto-lifecycle fresh performance verification with
+    `JSON_TABLE_PROFILE_WARMUP=1`
+  - auto-lifecycle browser accessibility verification
+- `components/json-table/ARCHITECTURE.md` documents the canonical gate and
+  keeps repository-wide `pnpm typecheck` as a separate whole-app health check.
+- `tests/json-table-architecture.test.ts` guards the canonical command and
+  profiler warmup/filter options.
+- The canonical gate now uses `PROFILE_SERVER_MODE=auto`, because Next 16
+  permits one dev server per repository even across different ports. `auto`
+  reuses a healthy profile route, starts a managed server when no route is
+  reachable, and still fails with diagnostics when a route responds with the
+  wrong page.
+- `pnpm verify:json-table` now passes end to end against the live
+  `http://localhost:3100/json-table-profile` route.
 
 Current weakness:
 
 - Fresh profiling still depends on the app compiling the route successfully.
 - A stale Turbopack/dev-server process can return a 500 for code that no longer
-  matches the source tree; managed mode avoids stale listeners once the old
-  process is stopped.
+  matches the source tree; auto mode avoids validating that page by requiring a
+  healthy profile route and printing the unhealthy response body.
+- Unrelated open app routes can still compile in the same Next dev server and
+  print errors while the JSON-table verifier runs. The profiler now keeps its
+  own profile targets isolated and closed, but it cannot make unrelated routes
+  healthy.
 - Saved reports can pass after the implementation has drifted.
-- One fresh run is too noisy to define final latency budgets.
-- The latest managed fresh run passes, but repeated managed fresh proof should
-  still be run before budgets are tightened.
+- One measured fresh run is still too noisy to define final latency budgets.
+- The canonical gate runs a warmup, but final budget tightening should still use
+  repeated fresh proof, ideally from a quiet process with no other dev server
+  running.
 
 Blueprint:
 
 1. Add one canonical command for JSON-table acceptance.
 2. Finish the fresh verifier lifecycle:
    - avoid silently validating stale pages
-   - preserve the managed-server behavior now in place
+   - preserve the auto lifecycle now in place
 3. Finish repeated-run profiling:
    - add optional warmup run
    - decide whether budgets should validate last run, median, p90, or worst
@@ -364,21 +421,21 @@ Completion criteria:
 - The command does not require manually nursing a stale dev server.
 - A performance failure includes enough context to reproduce or debug it.
 
-Fresh managed proof from
-`PROFILE_SERVER_MODE=managed PROFILE_DEV_SERVER_TIMEOUT_MS=90000 pnpm
+Fresh auto-lifecycle proof from
+`PROFILE_SERVER_MODE=auto JSON_TABLE_PROFILE_WARMUP=1 pnpm
 verify:json-table-performance:fresh`:
 
-- `default/open-enum`: `elapsed=95.9ms`, `style=50.3ms`,
+- `default/open-enum`: `elapsed=96.6ms`, `style=50.9ms`,
   `surface=header:16/body:104/popup:9`, `owner=popup-mount`.
-- `default/open-date`: `elapsed=121.7ms`, `style=53.5ms`,
+- `default/open-date`: `elapsed=172.8ms`, `style=59.6ms`,
   `surface=header:16/body:104/popup:99`, `owner=popup-mount`.
-- `default/switch-dirty-cell`: `elapsed=93.8ms`, `style=51.0ms`,
+- `default/switch-dirty-cell`: `elapsed=94.6ms`, `style=50.3ms`,
   `surface=header:16/body:104/popup:0`, `owner=editable-body-surface`.
-- `large/open-enum`: `elapsed=119.6ms`, `style=73.8ms`,
+- `large/open-enum`: `elapsed=119.8ms`, `style=71.9ms`,
   `surface=header:32/body:143/popup:15`, `owner=popup-mount`.
-- `large/open-date`: `elapsed=135.9ms`, `style=70.9ms`,
+- `large/open-date`: `elapsed=167.3ms`, `style=71.6ms`,
   `surface=header:32/body:143/popup:99`, `owner=popup-mount`.
-- `large/switch-dirty-cell`: `elapsed=118.9ms`, `style=69.4ms`,
+- `large/switch-dirty-cell`: `elapsed=114.1ms`, `style=70.8ms`,
   `surface=header:32/body:143/popup:0`, `owner=eager-header-surface`.
 
 ### Closed. Header/body column strategy is shared and guarded
@@ -437,16 +494,28 @@ Current proof:
 - Vitest stress tests cover far text/enum/date cells after horizontal scroll.
 - Far pending primitive value survives horizontal unmount/remount.
 - Profiler has large-profile far-column scenarios.
+- Browser accessibility verification scrolls the large profile to far columns
+  and checks far enum/date popup exposure in the browser accessibility tree.
+- Browser verification now checks header/body geometry alignment at left,
+  middle, and far horizontal scroll positions.
+- Browser verification now exercises keyboard-only far enum, far date, and far
+  text flows in the large profile.
+- Virtualization stress tests now cover far structured object cells across
+  horizontal unmount/remount.
+- Browser verification now opens a far dynamic structured object cell, verifies
+  its typed dynamic `reviewer` and `priority` controls, checks horizontal
+  unmount/remount, and checks keyboard Enter/Escape focus return.
 
 Remaining gaps:
 
-- Browser screenshots are not part of the proof.
-- Header/body alignment is not visually verified across real scroll positions.
-- Keyboard navigation into far columns is not proven.
-- Focus return after far-column popup close is not proven in browser.
-- Screen-reader semantics for virtualized columns are not proven.
-- Structured object/array cells across horizontal unmounts are not explicitly
-  covered.
+- Stored browser screenshots are not part of the proof; geometry is checked
+  programmatically instead.
+- Array-specific horizontal remount proof is intentionally not duplicated at
+  the browser layer right now. The current object proof exercises the shared
+  structured-session, popover, focus-return, and horizontal virtualization
+  boundary. Add array-specific browser proof only if array editor internals gain
+  behavior that object editors do not share, or if table projection semantics
+  change to expose array-level controls differently.
 
 Blueprint:
 
@@ -456,20 +525,25 @@ Blueprint:
    - far enum open
    - far date open
    - far text commit
-   - screenshot of header/body alignment
+   - header/body alignment at left, middle, and far scroll positions
 2. Add keyboard-only far-column flows:
    - tab/arrow to a horizontally scrolled cell
    - open select with keyboard
    - close with escape and verify focus return
+   - type-to-edit far text and commit with Enter
 3. Decide structured-cell unmount behavior:
-   - preserve session across horizontal unmount, or
-   - intentionally close and commit/cancel according to a documented rule
+   - preserve session across horizontal unmount
+   - unmount popover DOM while the cell is unmounted
+   - reopen from the table-owned structured session when the cell remounts
 4. Add a profile assertion that far-column opening does not rerender table/row.
 
 Completion criteria:
 
 - Far-column primitive interactions pass in tests and browser verification.
-- Header/body alignment is visually and programmatically checked.
+- Header/body alignment is programmatically checked in a real browser.
+- Keyboard-only far enum/date/text flows pass in browser verification.
+- Structured object cells preserve their table-owned session across horizontal
+  unmount/remount in virtualization stress tests and browser verification.
 - The accessibility story for virtualized columns is explicit.
 
 ### P1. `SingleFileVirtualizedTable` owns too many responsibilities
@@ -545,6 +619,10 @@ Implemented cut:
   - overlay open state and close behavior stay local to the coordinator
   - document-id changes reset primitive and structured edit state
   - missing projected cells are ignored
+- `tests/json-table-virtualization-stress-hardening.test.tsx` proves a far
+  structured object session survives horizontal unmount/remount. The popover DOM
+  disappears while the cell is unmounted and reopens when the active cell
+  remounts from the table-owned session.
 - `tests/json-table-rendered-column-window-hook.test.tsx` proves:
   - read-only tables receive the full schema-visible column window
   - editable tables receive the rendered body column window
@@ -836,6 +914,27 @@ Blueprint:
 4. Narrow invalidation to structural changes where possible.
 5. Document why editable mode does not use the read-only patcher.
 
+Implemented cut:
+
+- `components/json-table/ARCHITECTURE.md` now names the two row strategies:
+  editable tables use the React row policy; read-only tables use the DOM row
+  patch policy.
+- The architecture doc explains why editable mode does not use the read-only
+  patcher: editable rows can contain active controls and local edit state that
+  must not be imperatively rewritten.
+- `ReadOnlyJsonRowPatchDiagnostic` now reports one diagnostic per patch attempt:
+  - `reason: "handled"` with `rowsPatched`
+  - fallback reasons including `shape-mismatch`, `unsupported-viewport`,
+    `window-too-large`, `missing-row-window`, and disabled/empty cases
+- `useReadOnlyJsonRowPatcher` accepts an optional `onDiagnostic` callback for
+  tests and emits a `read-only-row-patcher` profiler mark for profiler output.
+- `tests/read-only-json-row-patcher.test.tsx` covers handled patch row counts,
+  shape-mismatch fallback, and unsupported horizontal viewport fallback.
+- `tests/read-only-json-row-patcher.test.tsx` is now part of
+  `pnpm test:json-table`.
+- `tests/json-table-architecture.test.ts` guards the policy docs, diagnostic
+  vocabulary, profiler mark, and diagnostic tests.
+
 Completion criteria:
 
 - Read-only fast path is measured and protected.
@@ -861,10 +960,9 @@ Remaining risks:
 
 - Rows are flex rows rather than native table layout.
 - Virtual rows are absolutely positioned.
-- The virtualized `aria-colindex`/`aria-colcount` story is implemented in DOM
-  tests but not inspected in a real browser accessibility tree.
 - Portaled popups must restore focus correctly.
-- Far-column keyboard access is not as proven as pointer access.
+- Structured object/array browser flows are still thinner than primitive
+  browser flows.
 
 Blueprint:
 
@@ -908,18 +1006,34 @@ Implemented cut:
   - open date dialog/calendar accessibility-tree exposure
   - horizontally scrolled far-column coordinates
   - far enum/date popup accessibility exposure
-- `verify:json-table-accessibility:fresh` runs that verifier against a managed
-  profile route.
+  - header/body geometry alignment at left, middle, and far horizontal scroll
+    positions
+  - keyboard-only far enum open/close with focus return
+  - keyboard-only far date open/close with focus return
+  - keyboard-only far text type-to-edit and Enter commit
+  - far structured object dialog exposure
+  - far structured object typed dynamic controls
+  - far structured object horizontal unmount/remount
+  - keyboard-only far structured object open/close with focus return
+- `verify:json-table-accessibility:fresh` runs that verifier against the
+  auto-lifecycle profile route.
 - The unrelated file-system compile blocker was repaired by restoring the
   current `file-system-browser-state` model and aligning the status bar with
   that state shape.
-- Managed browser accessibility verification now passes against
+- Auto-lifecycle browser accessibility verification now passes against
   `/json-table-profile` and `/json-table-profile?variant=large`.
+- `JsonTableStructuredCell` preserves explicit `additionalProperties` and
+  `patternProperties` schemas when adding structured editor context, so dynamic
+  object cells render typed existing keys instead of an empty arbitrary form.
+- Structured popover close now restores focus to the table cell shell after
+  Escape.
 
 Completion criteria:
 
 - Critical edit states have automated accessibility checks.
-- Keyboard-only primitive and structured editing works.
+- Keyboard-only primitive editing works across early and far columns.
+- Structured object keyboard browser proof covers open, close, focus return,
+  dynamic controls, and the structured horizontal remount boundary.
 - Virtualized columns have intentional semantics.
 
 ### P1. Profiler is good at symptoms but weak at root-cause attribution
@@ -938,9 +1052,10 @@ Current profiler strengths:
 
 Current profiler gaps:
 
-- No Chrome trace selector/style attribution.
-- No selector-level attribution inside Chrome style recalculation.
-- Header/body/popup/global attribution is coarse, not trace-backed.
+- Chrome trace attribution exists, but Chrome still does not expose useful
+  selector-level attribution for these scenarios.
+- Header/body/popup/global attribution is coarse; trace mode identifies event
+  families, not the exact selector that invalidated each cell.
 - Monkey-patching `getBoundingClientRect` is useful but intrusive.
 - Budget failure messages now include a likely owner, but still lack a ranked
   "largest changed metric" diff against baseline.
@@ -965,10 +1080,42 @@ Implemented cut:
   DataCell surfaces, popup nodes, calendars, and total document nodes.
 - `styleAttributionHint` gives immediate coarse ownership in fresh budget
   output.
+- `JSON_TABLE_PROFILE_TRACE=1` / `--trace` enables Chrome trace capture around
+  each measured scenario. The report records `trace` summaries with total timed
+  duration, style/layout/script buckets, top timed trace events, top
+  style/layout events, and invalidation events when Chrome emits them.
+- `scripts/verify-json-table-performance-budget.mjs` prints trace style,
+  layout, and script buckets when the profile report contains trace data.
 - Text setup refinds/remounts the intended edit input before injecting profile
   values, so dirty-switch and post-churn setup does not fail solely because
   focus drifted after an unrelated dev-server event.
-- Architecture tests guard repeatability and mounted-surface attribution.
+- Focused repeated trace profiling now runs against the large profile without
+  paying trace cost for every setup scenario:
+  `JSON_TABLE_PROFILE_WARMUP=1 JSON_TABLE_PROFILE_REPEAT=3
+JSON_TABLE_PROFILE_TRACE=1 JSON_TABLE_PROFILE_TARGETS=large
+JSON_TABLE_PROFILE_SCENARIOS=open-enum,open-date,switch-dirty-cell,open-far-enum,open-far-date,commit-far-text`.
+- Current large-profile targeted p90 style costs are:
+  - `open-enum`: `68.8ms`
+  - `open-date`: `69.1ms`
+  - `switch-dirty-cell`: `69.8ms`
+  - `open-far-enum`: `60.9ms`
+  - `open-far-date`: `62.1ms`
+  - `commit-far-text`: `67.9ms`
+- Budget policy: the canonical gate should keep validating the single measured
+  warmed run for fast local feedback. Repeated profiles are diagnostic evidence.
+  If repeated-run gating is added later, latency/style budgets should use p90;
+  hard structural invariants such as React fanout, document patches, rect
+  reads, and mounted-surface counts should use worst. Median is useful for
+  trend reporting only, not for pass/fail.
+- Checked large-profile budgets were tightened from repeated p90 evidence:
+  `open-enum`, `open-date`, `switch-dirty-cell`, `open-far-enum`,
+  `open-far-date`, and `commit-far-text` now have `maxStyleDurationMs <= 120`.
+- The tracked saved profile fixture
+  `tmp/json-table-primitive-interactions-profile.json` was refreshed from the
+  current warmed fresh profile, so saved budget screening covers the current
+  implementation instead of an older high-style baseline.
+- Architecture tests guard repeatability, mounted-surface attribution, and trace
+  mode.
 
 Completion criteria:
 
@@ -1005,6 +1152,28 @@ Blueprint:
 2. Measure memo stability before and after grouping.
 3. Keep `DataCell` adaptation separate from grouped table props.
 4. Do not create wrapper churn to make call sites look pretty.
+
+Implemented cut:
+
+- `JsonTableCellProps` is now grouped by ownership:
+  - `cellProjection`
+  - `primitiveEditing`
+  - `structuredEditing`
+  - `commit`
+  - `hover`
+- `SingleFileFormRow` creates stable shared group objects for primitive
+  editing, structured editing, commit, and hover; only `cellProjection` is
+  rebuilt per rendered cell because it contains the column, projected cell, and
+  absolute column index.
+- Editable/read-only cells, primitive control, shell handlers, structured
+  active cells, and memo comparison now consume grouped props.
+- `components/json-table/ARCHITECTURE.md` documents the cell prop ownership
+  contract.
+- `tests/json-table-architecture.test.ts` guards the grouped type surface,
+  grouped row construction, grouped memo comparison, and documentation.
+- `PROFILE_SERVER_MODE=existing pnpm verify:json-table-performance:fresh`
+  passes after the grouping cut; active-cell interactions still avoid table/row
+  rerenders and the large profile keeps bounded render counts.
 
 Completion criteria:
 
@@ -1043,6 +1212,21 @@ Blueprint:
 3. Decide whether `visibleThrough` should be renamed to a clearer local owner
    concept.
 
+Implemented cut:
+
+- `useJsonTableStructuredCellController` now stores
+  `projectedValueAtCommit` with the structured pending value.
+- Structured pending state remains visible only while the projected value still
+  equals `projectedValueAtCommit`.
+- A cloned parent echo that matches the structured pending value clears pending
+  state.
+- A divergent projected value clears pending state; the parent value wins.
+- `tests/json-table-controller.test.tsx` covers pre-echo visibility, cloned
+  echo clearing, and divergent parent replacement.
+- `components/json-table/ARCHITECTURE.md` documents the structured pending
+  policy.
+- `tests/json-table-architecture.test.ts` guards the policy vocabulary.
+
 Completion criteria:
 
 - Primitive and structured visibility policies are explicit.
@@ -1079,6 +1263,23 @@ Blueprint:
    - `localVisibilityOwner`
 3. If a better name wins, make a hard cutover.
 4. If not, keep the current name and stop revisiting it.
+
+Implemented cut:
+
+- Kept `visibleThrough`.
+- The call-site sentences are slightly unusual but precise: the phrase names the
+  local owner that keeps a committed value visible before the parent echo is
+  reconciled.
+- `commitVisibilityOwner` and `localVisibilityOwner` are more verbose without
+  making the two enum values clearer.
+- `preEchoVisibilityOwner` is more explicit but leaks parent-echo timing into
+  every commit call site.
+- `components/json-table/json-table-cell-commit.ts` carries the final
+  vocabulary comment.
+- `components/json-table/ARCHITECTURE.md` documents `visibleThrough` as the
+  final commit-lifecycle field.
+- `tests/json-table-architecture.test.ts` guards the current name and rejects
+  old candidate names.
 
 Completion criteria:
 
@@ -1119,6 +1320,18 @@ Blueprint:
 2. Keep generic virtualizer names generic inside generic UI utilities.
 3. Add architecture assertions only for names that protect real ownership.
 
+Implemented cut:
+
+- JSON-table code now translates `visibleColumns` to `schemaVisibleColumns` at
+  the virtualized-table boundary.
+- Mounted body virtualizer items are named `renderedBodyColumnItems`.
+- Row projection indexes are carried as `projectedCellIndexes`.
+- JSON-table spacer widths use `leftPadWidthPx` and `rightPadWidthPx`.
+- Generic fixed-grid virtualizer inputs remain `columnItems`, `leftPad`, and
+  `rightPad` only at the generic utility boundary.
+- `tests/json-table-architecture.test.ts` guards the boundary names and rejects
+  ambiguous local destructuring.
+
 Completion criteria:
 
 - A reader can tell whether a column array is logical or mounted.
@@ -1156,6 +1369,23 @@ Blueprint:
    - modifier keys do not activate editing accidentally
 3. Prevent activation policy from leaking back into select/picker controls.
 
+Implemented cut:
+
+- `components/json-table/ARCHITECTURE.md` now includes a DataCell activation
+  state machine covering display, command, edit activation, activation source
+  storage, active control render, opening-context consumption, and dismissal.
+- The same section names the invariants:
+  - pointer activation stores pointer coordinates and arms a one-shot click
+    tail
+  - keyboard activation stores a keyboard source and does not arm a pointer
+    tail
+  - boolean activation commits as a command without mounting an editor
+  - modifier-key events do not activate editing
+  - `storeDataCellActivationSource()` is the only DataCell `flushSync` boundary
+  - select and picker controls consume `useDataCellOpeningContext()`
+- `tests/json-table-architecture.test.ts` guards that the activation state
+  machine and policy terms remain documented.
+
 Completion criteria:
 
 - A reader can understand activation without reading every control file.
@@ -1191,6 +1421,20 @@ Blueprint:
 3. Keep each test's behavioral setup visible.
 4. Delete per-test harness copies once shared utilities cover the same path.
 
+Implemented cut:
+
+- `tests/json-table-interaction-test-utils.tsx` remains the shared production-like
+  row harness for primitive interaction tests.
+- `tests/json-table-text-number-interactions.test.tsx` now uses
+  `renderInteractionRow` instead of locally recreating primitive active store,
+  primitive edit store, structured session state, and rendered-column-window
+  wiring.
+- `tests/json-table-boolean-enum-interactions.test.tsx` now uses
+  `renderInteractionRow` with its custom schema/document instead of carrying a
+  local row harness copy.
+- `tests/json-table-architecture.test.ts` guards that those tests import the
+  shared harness and do not reintroduce the duplicated row-session wiring.
+
 Completion criteria:
 
 - New regression tests are short.
@@ -1224,6 +1468,17 @@ Blueprint:
 3. Add comments explaining every forbidden pattern.
 4. Delete stale architecture rules after each major refactor.
 
+Implemented cut:
+
+- `tests/json-table-architecture.test.ts` now includes
+  `importedModuleSpecifiers()`, a small import-specifier parser for architecture
+  rules that should apply to actual imports instead of arbitrary text.
+- DataCell registry runtime files now have a semantic import-graph guard:
+  - no import from `@/components/json-table`
+  - no import back through the public `@/components/ui/data-cell` barrel
+- The old string guards remain for deleted compatibility vocabulary,
+  controlled `flushSync` ownership, and hard-cutover names.
+
 Completion criteria:
 
 - Architecture tests protect ownership without freezing incidental text.
@@ -1254,6 +1509,21 @@ Blueprint:
    architecture.
 4. Keep historical reasoning only when it still explains a current decision.
 
+Implemented cut:
+
+- `components/json-table/ARCHITECTURE.md` now has a `Current Documents` section
+  near the top.
+- The section names the canonical read order:
+  - architecture file
+  - this issue ledger
+  - style invalidation findings
+  - checked performance budget
+  - primitive interaction profiler
+  - saved and fresh budget verifiers
+- The section states that older JSON-table blueprints are historical unless the
+  current ledger points back to them.
+- `tests/json-table-architecture.test.ts` guards the indexed document paths.
+
 Completion criteria:
 
 - A new maintainer knows which document to read first.
@@ -1281,6 +1551,19 @@ Blueprint:
 2. Keep JSON-table tests importing public DataCell paths unless intentionally
    testing internals.
 3. Include registry determinism in final acceptance when DataCell files changed.
+
+Implemented cut:
+
+- `components/json-table/ARCHITECTURE.md` now extends the verification contract
+  with DataCell changed-file rules.
+- Runtime DataCell artifact changes require `pnpm verify:data-cell-registry`.
+- Public barrel changes require `pnpm verify:data-cell`.
+- Registry/public artifact changes require `pnpm verify:data-cell-registry`.
+- The architecture doc states that JSON-table tests should import through
+  `components/ui/data-cell` unless intentionally proving DataCell internals.
+- `tests/json-table-architecture.test.ts` guards the acceptance text and the
+  `verify:data-cell` / `verify:data-cell-registry` package scripts.
+- `pnpm verify:data-cell-registry` passes.
 
 Completion criteria:
 
@@ -1418,15 +1701,16 @@ The component can be considered close to platonic only when all of this is true:
 
 ## Immediate Next Cut
 
-The next cut should be performance proof, not another speculative refactor:
+The next cut should be final proof hardening and latency tightening, not another
+speculative refactor. The repeated trace run, budget aggregate policy, and
+array-horizontal proof decision are now recorded, so the remaining work is:
 
-1. Make fresh profiling reliable from one command.
-2. Re-run large style experiments on the current code.
-3. Attribute remaining style cost to header, body, popup, selector, or global
-   page invalidation.
-4. Decide on header virtualization with data.
-5. Then compress `SingleFileVirtualizedTable` and move the rendered column
-   window model only after the performance direction is clear.
+1. Keep the canonical `pnpm verify:json-table` gate green after each proof or
+   budget update.
+2. If repeated-run gating is implemented, validate p90 for latency/style and
+   worst for hard structural invariants.
+3. Make another CSS/DOM structural cut only if trace evidence points to a
+   specific mounted surface or selector family.
 
-That order keeps the work honest: measure the real remaining latency first,
-then simplify the architecture around the winning strategy.
+That order keeps the work honest: the core architecture is now coherent, so the
+remaining work should prove and tighten the user-visible edges.

@@ -63,7 +63,7 @@ function ReadOnlyJsonFormCell({
 }: {
   displayValue: string
   fieldMetadata: FieldMetadata
-  rootSchema: JsonTableCellProps["schema"]
+  rootSchema: JsonTableCellProps["cellProjection"]["schema"]
   value: unknown
 }) {
   const [open, setOpen] = React.useState(false)
@@ -122,19 +122,21 @@ function ReadOnlyJsonFormCell({
 }
 
 function ReadOnlyJsonTableCellContent(props: JsonTableCellProps) {
-  const materializedFieldPath = props.projectedCell?.materializedFieldPath
+  const { cellProjection } = props
+  const materializedFieldPath =
+    cellProjection.projectedCell?.materializedFieldPath
   const fieldMetadata =
-    props.column.fieldMetadata ??
+    cellProjection.column.fieldMetadata ??
     (materializedFieldPath
-      ? getFieldMetadata(props.schema, materializedFieldPath)
+      ? getFieldMetadata(cellProjection.schema, materializedFieldPath)
       : undefined)
-  const value = props.projectedCell?.value
-  const cellWidth = props.column.widthPx
+  const value = cellProjection.projectedCell?.value
+  const cellWidth = cellProjection.column.widthPx
 
   if (!materializedFieldPath || !fieldMetadata) {
     return (
       <TableCell
-        aria-colindex={props.ariaColumnIndex}
+        aria-colindex={cellProjection.ariaColumnIndex}
         data-field-path={materializedFieldPath}
         data-slot="json-table-read-only-cell"
         className="relative cursor-not-allowed bg-muted/60 p-0"
@@ -149,12 +151,12 @@ function ReadOnlyJsonTableCellContent(props: JsonTableCellProps) {
     fieldMetadata.kind === "object" || fieldMetadata.kind === "array"
   const primitiveKind = jsonTablePrimitiveKind(fieldMetadata)
   const displayValue =
-    props.projectedCell?.displayValue ??
+    cellProjection.projectedCell?.displayValue ??
     jsonTableDisplayText({ fieldMetadata, jsonValue: value })
 
   return (
     <TableCell
-      aria-colindex={props.ariaColumnIndex}
+      aria-colindex={cellProjection.ariaColumnIndex}
       data-field-path={materializedFieldPath}
       data-slot="json-table-read-only-cell"
       className="relative m-0 border-t-0 border-r border-b border-l-0 p-0 select-none"
@@ -164,7 +166,7 @@ function ReadOnlyJsonTableCellContent(props: JsonTableCellProps) {
         <ReadOnlyJsonFormCell
           displayValue={displayValue}
           fieldMetadata={fieldMetadata}
-          rootSchema={props.schema}
+          rootSchema={cellProjection.schema}
           value={value}
         />
       ) : (
@@ -180,13 +182,19 @@ function ReadOnlyJsonTableCellContent(props: JsonTableCellProps) {
 export const ReadOnlyJsonTableCell = React.memo(
   ReadOnlyJsonTableCellContent,
   (prev, next) =>
-    prev.column.key === next.column.key &&
-    prev.column.widthPx === next.column.widthPx &&
-    prev.column.fieldMetadata === next.column.fieldMetadata &&
-    prev.projectedCell?.materializedFieldPath ===
-      next.projectedCell?.materializedFieldPath &&
-    Object.is(prev.projectedCell?.value, next.projectedCell?.value) &&
-    prev.projectedCell?.displayValue === next.projectedCell?.displayValue &&
-    prev.schema === next.schema
+    prev.cellProjection.column.key === next.cellProjection.column.key &&
+    prev.cellProjection.column.widthPx === next.cellProjection.column.widthPx &&
+    prev.cellProjection.column.fieldMetadata ===
+      next.cellProjection.column.fieldMetadata &&
+    prev.cellProjection.projectedCell?.materializedFieldPath ===
+      next.cellProjection.projectedCell?.materializedFieldPath &&
+    Object.is(
+      prev.cellProjection.projectedCell?.value,
+      next.cellProjection.projectedCell?.value
+    ) &&
+    prev.cellProjection.projectedCell?.displayValue ===
+      next.cellProjection.projectedCell?.displayValue &&
+    prev.cellProjection.schema === next.cellProjection.schema &&
+    prev.cellProjection.ariaColumnIndex === next.cellProjection.ariaColumnIndex
 )
 ReadOnlyJsonTableCell.displayName = "ReadOnlyJsonTableCell"

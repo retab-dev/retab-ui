@@ -14,10 +14,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { createFakeEmailMessage } from "@/components/email-viewer-demo"
 import {
   buildMimeTree,
+  categoryForMimeNode,
+  createMimeMessageScope,
+  deriveEmailContentModel,
+  deriveEmailHeaderModel,
+  deriveEmailInlineResourceScope,
+  deriveEmailSidebarModel,
   EmailViewer,
   findMimeNodeByPath,
   getDefaultMimeSelectionPath,
   getInlineResourceScope,
+  inlineResourceKeyToString,
 } from "@/registry/new-york-v4/ui/email-viewer"
 import type {
   EmailViewerMessage,
@@ -120,6 +127,16 @@ function imageBlobSource(fileName: string) {
   }
 }
 
+function blobSource(fileName: string, mimeType: string) {
+  return {
+    kind: "blob" as const,
+    blob: new Blob([fileName], { type: mimeType }),
+    identityKey: `blob:${fileName}`,
+    fileName,
+    mimeType,
+  }
+}
+
 function htmlPart(id: string, html: string, fileName = `${id}.html`): MimePart {
   return {
     id,
@@ -152,6 +169,28 @@ function message(root: MimePart): EmailViewerMessage {
 }
 
 describe("EmailViewer MIME model", () => {
+  it("normalizes duplicate sibling ids into stable selectable paths", () => {
+    const tree = buildMimeTree({
+      id: "root",
+      mimeType: "multipart/mixed",
+      children: [
+        textPart("duplicate", "Plain body"),
+        htmlPart("duplicate", "<p>HTML body</p>"),
+      ],
+    })
+
+    expect(tree.children.map((child) => child.path)).toEqual([
+      ["root", "duplicate"],
+      ["root", "duplicate~2"],
+    ])
+    expect(findMimeNodeByPath(tree, ["root", "duplicate"])?.part.mimeType).toBe(
+      "text/plain"
+    )
+    expect(
+      findMimeNodeByPath(tree, ["root", "duplicate~2"])?.part.mimeType
+    ).toBe("text/html")
+  })
+
   it("selects HTML over text inside recursive multipart alternatives", () => {
     const tree = buildMimeTree({
       id: "root",
@@ -186,11 +225,495 @@ describe("EmailViewer MIME model", () => {
     expect(path).toEqual(["root", "alternative", "related", "html"])
     const selected = findMimeNodeByPath(tree, path)
     expect(selected?.part.mimeType).toBe("text/html")
-    expect(getInlineResourceScope(selected!).part.id).toBe("related")
+    expect(getInlineResourceScope(tree, selected!).part.id).toBe("related")
+  })
+
+  it("stores normalized node facts and parent paths without object parents", () => {
+    const tree = buildMimeTree({
+      id: "root",
+      mimeType: "multipart/mixed",
+      children: [htmlPart("", "<p>HTML body</p>")],
+    })
+
+    expect(tree.parentPath).toBeNull()
+    expect(tree.facts.kind).toBe("multipart")
+    expect(tree.children[0]?.path).toEqual(["root", "part-1"])
+    expect(tree.children[0]?.parentPath).toEqual(["root"])
+    expect("parent" in tree.children[0]!).toBe(false)
+    expect(tree.children[0]?.facts).toMatchObject({
+      kind: "body",
+      mimeType: "text/html",
+      isRenderable: true,
+      preview: { kind: "preview", category: "html" },
+    })
+  })
+
+  it("derives scoped body and attachment sections without nested message leakage", () => {
+    const tree = buildMimeTree({
+      id: "root",
+      mimeType: "multipart/mixed",
+      children: [
+        htmlPart("html", "<p>Outer body</p>", "message.html"),
+        {
+          id: "forwarded",
+          mimeType: "message/rfc822",
+          disposition: "attachment",
+          fileName: "forwarded.eml",
+          headers: [{ name: "Subject", value: "Forwarded note" }],
+          children: [
+            htmlPart("forwarded-html", "<p>Forwarded body</p>"),
+            {
+              ...htmlPart("nested-details", "<p>Nested attachment</p>"),
+              disposition: "attachment",
+            },
+          ],
+        },
+      ],
+    })
+    const scope = createMimeMessageScope(message(tree.part), tree)
+    const sidebar = deriveEmailSidebarModel({
+      scope,
+      selectedPath: ["root", "html"],
+    })
+    const body = sidebar.sections.find((section) => section.id === "body")
+    const attachments = sidebar.sections.find(
+      (section) => section.id === "attachments"
+    )
+
+    expect(sidebar.bodyCount).toBe(1)
+    expect(sidebar.attachmentCount).toBe(1)
+    expect(body?.items.map((item) => item.kind)).toEqual(["body"])
+    expect(body?.items.map((item) => item.title)).toEqual(["Body"])
+    expect(attachments?.items.map((item) => item.kind)).toEqual(["attachment"])
+    expect(attachments?.items.map((item) => item.title)).toEqual([
+      "forwarded.eml",
+    ])
+  })
+
+  it("derives structured email header addresses", () => {
+    const header = deriveEmailHeaderModel({
+      ...message(textPart("plain", "Plain body")),
+      from: '"Mina Patel" <mina@example.com>',
+      to: ["Avery Lee <avery@example.com>", "ops@example.com"],
+    })
+
+    expect(header.from).toEqual([
+      {
+        name: "Mina Patel",
+        address: "mina@example.com",
+        display: '"Mina Patel" <mina@example.com>',
+      },
+    ])
+    expect(header.to).toEqual([
+      {
+        name: "Avery Lee",
+        address: "avery@example.com",
+        display: "Avery Lee <avery@example.com>",
+      },
+      {
+        name: null,
+        address: "ops@example.com",
+        display: "ops@example.com",
+      },
+    ])
+  })
+
+  it("derives nested message content and headers in the model", () => {
+    const tree = buildMimeTree({
+      id: "root",
+      mimeType: "multipart/mixed",
+      children: [
+        htmlPart("html", "<p>Outer body</p>", "message.html"),
+        {
+          id: "forwarded",
+          mimeType: "message/rfc822",
+          disposition: "attachment",
+          fileName: "forwarded.eml",
+          headers: [
+            { name: "Subject", value: "Forwarded note" },
+            { name: "From", value: "Nested <nested@example.com>" },
+            { name: "Date", value: "2026-06-13T09:42:00-04:00" },
+          ],
+          children: [htmlPart("forwarded-html", "<p>Forwarded body</p>")],
+        },
+      ],
+    })
+    const selected = findMimeNodeByPath(tree, ["root", "forwarded"])
+    expect(selected).toBeTruthy()
+
+    const content = deriveEmailContentModel({
+      inlineResourceUrls: new Map(),
+      message: message(tree.part),
+      selectedNode: selected!,
+    })
+
+    expect(content.kind).toBe("nested-message")
+    if (content.kind !== "nested-message") return
+    expect(content.message.subject).toBe("Forwarded note")
+    expect(content.message.from).toBe("Nested <nested@example.com>")
+    expect(deriveEmailHeaderModel(content.message).subject).toBe(
+      "Forwarded note"
+    )
+  })
+
+  it("enforces a nested message recursion budget in the content model", () => {
+    const tree = buildMimeTree({
+      id: "root",
+      mimeType: "multipart/mixed",
+      children: [
+        {
+          id: "forwarded",
+          mimeType: "message/rfc822",
+          disposition: "attachment",
+          fileName: "forwarded.eml",
+          children: [htmlPart("forwarded-html", "<p>Forwarded body</p>")],
+        },
+      ],
+    })
+    const selected = findMimeNodeByPath(tree, ["root", "forwarded"])
+    expect(selected).toBeTruthy()
+
+    const content = deriveEmailContentModel({
+      inlineResourceUrls: new Map(),
+      maxNestedMessageDepth: 1,
+      message: message(tree.part),
+      nestedMessageDepth: 1,
+      selectedNode: selected!,
+    })
+
+    expect(content.kind).toBe("empty")
+    if (content.kind !== "empty") return
+    expect(content.reason).toBe("nested-depth-exceeded")
+    expect(content.message).toMatch(/too deeply nested/i)
+  })
+
+  it("derives named empty states for security envelopes", () => {
+    const tree = buildMimeTree({
+      id: "encrypted",
+      mimeType: "application/pgp-encrypted",
+      source: textSource("Version: 1", "encrypted.asc"),
+    })
+
+    const content = deriveEmailContentModel({
+      inlineResourceUrls: new Map(),
+      message: message(tree.part),
+      selectedNode: tree,
+    })
+
+    expect(content.kind).toBe("empty")
+    if (content.kind !== "empty") return
+    expect(content.reason).toBe("security-envelope")
+    expect(content.message).toMatch(/encrypted/i)
+  })
+
+  it("assigns explicit preview policy for less common MIME parts", () => {
+    const tree = buildMimeTree({
+      id: "root",
+      mimeType: "multipart/mixed",
+      children: [
+        {
+          id: "calendar",
+          mimeType: "text/calendar",
+          fileName: "invite.ics",
+          source: textSource("BEGIN:VCALENDAR", "invite.ics"),
+        },
+        {
+          id: "delivery",
+          mimeType: "message/delivery-status",
+          fileName: "delivery-status.txt",
+          source: textSource(
+            "Final-Recipient: rfc822; a@example.com",
+            "delivery-status.txt"
+          ),
+        },
+        {
+          id: "binary",
+          mimeType: "application/octet-stream",
+          fileName: "archive.bin",
+          source: blobSource("archive.bin", "application/octet-stream"),
+        },
+        {
+          id: "inline-image",
+          mimeType: "image/png",
+          disposition: "inline",
+          fileName: "photo.png",
+          source: imageBlobSource("photo.png"),
+        },
+        {
+          id: "pkcs7",
+          mimeType: "application/pkcs7-mime",
+          fileName: "smime.p7m",
+          source: blobSource("smime.p7m", "application/pkcs7-mime"),
+        },
+      ],
+    })
+    const [calendar, delivery, binary, inlineImage, pkcs7] = tree.children
+
+    expect(calendar?.facts).toMatchObject({
+      kind: "attachment",
+      preview: { kind: "attachment", category: "text" },
+    })
+    expect(categoryForMimeNode(calendar!)).toBe("text")
+    expect(delivery?.facts).toMatchObject({
+      kind: "attachment",
+      preview: { kind: "attachment", category: "text" },
+    })
+    expect(binary?.facts).toMatchObject({
+      kind: "attachment",
+      preview: { kind: "attachment" },
+    })
+    expect(inlineImage?.facts).toMatchObject({
+      kind: "attachment",
+      preview: { kind: "attachment", category: "image" },
+    })
+    expect(pkcs7?.facts).toMatchObject({
+      kind: "unsupported",
+      preview: { kind: "security-envelope" },
+    })
+  })
+
+  it("previews the body of multipart signed messages without leaking the signature as body", () => {
+    const tree = buildMimeTree({
+      id: "signed",
+      mimeType: "multipart/signed",
+      children: [
+        htmlPart("html", "<p>Signed body</p>", "message.html"),
+        {
+          id: "signature",
+          mimeType: "application/pkcs7-signature",
+          disposition: "attachment",
+          fileName: "smime.p7s",
+          source: blobSource("smime.p7s", "application/pkcs7-signature"),
+        },
+      ],
+    })
+    const scope = createMimeMessageScope(message(tree.part), tree)
+    const sidebar = deriveEmailSidebarModel({
+      scope,
+      selectedPath: ["signed", "html"],
+    })
+    const content = deriveEmailContentModel({
+      inlineResourceUrls: new Map(),
+      message: message(tree.part),
+      selectedNode: tree,
+    })
+
+    expect(content.kind).toBe("file")
+    if (content.kind !== "file") return
+    expect(content.node.path).toEqual(["signed", "html"])
+    expect(content.file.category).toBe("html")
+    expect(sidebar.bodyCount).toBe(1)
+    expect(sidebar.attachmentCount).toBe(1)
+    expect(
+      sidebar.sections
+        .find((section) => section.id === "attachments")
+        ?.items.map((item) => item.title)
+    ).toEqual(["smime.p7s"])
+  })
+
+  it("keeps malformed ids and empty MIME types selectable through normalized facts", () => {
+    const tree = buildMimeTree({
+      id: "",
+      mimeType: "multipart/mixed",
+      children: [
+        {
+          id: "",
+          mimeType: "",
+          fileName: "unknown.bin",
+          source: blobSource("unknown.bin", "application/octet-stream"),
+        },
+      ],
+    })
+    const child = tree.children[0]
+
+    expect(tree.path).toEqual(["part-1"])
+    expect(child?.path).toEqual(["part-1", "part-1"])
+    expect(child?.facts).toMatchObject({
+      kind: "attachment",
+      mimeType: "",
+      preview: { kind: "attachment" },
+    })
+  })
+
+  it("derives content-location inline resource keys", () => {
+    const tree = buildMimeTree({
+      id: "root",
+      mimeType: "multipart/related",
+      children: [
+        htmlPart("html", '<main><img src="logo.png"></main>', "message.html"),
+        {
+          id: "logo",
+          mimeType: "image/png",
+          contentLocation: "logo.png",
+          disposition: "inline",
+          fileName: "logo.png",
+          source: imageBlobSource("logo.png"),
+        },
+      ],
+    })
+    const selected = findMimeNodeByPath(tree, ["root", "html"])
+    expect(selected).toBeTruthy()
+
+    const scope = deriveEmailInlineResourceScope(tree, selected!)
+
+    expect(scope.resources).toHaveLength(1)
+    expect(scope.resources[0]?.keys).toEqual([
+      { kind: "content-location", value: "logo.png" },
+    ])
+  })
+
+  it("rewrites HTML sidebar thumbnail sources with the same inline resources as the content surface", () => {
+    const tree = buildMimeTree({
+      id: "root",
+      mimeType: "multipart/related",
+      children: [
+        htmlPart(
+          "html",
+          '<main><img alt="Logo" src="cid:<logo@example.com>"></main>',
+          "message.html"
+        ),
+        {
+          id: "logo",
+          mimeType: "image/png",
+          contentId: "<logo@example.com>",
+          disposition: "inline",
+          fileName: "logo.png",
+          source: imageBlobSource("logo.png"),
+        },
+      ],
+    })
+    const scope = createMimeMessageScope(message(tree.part), tree)
+    const sidebar = deriveEmailSidebarModel({
+      inlineResourceUrls: new Map([
+        [
+          inlineResourceKeyToString({
+            kind: "content-id",
+            value: "logo@example.com",
+          }),
+          "blob:inline-1",
+        ],
+      ]),
+      scope,
+      selectedPath: ["root", "html"],
+    })
+    const bodyThumbnail = sidebar.sections[0]?.items[0]?.thumbnail
+
+    expect(bodyThumbnail?.kind).toBe("file")
+    if (bodyThumbnail?.kind !== "file") return
+    expect(bodyThumbnail.source.kind).toBe("text")
+    if (bodyThumbnail.source.kind !== "text") return
+    expect(bodyThumbnail.source.text).toContain('src="blob:inline-1"')
+    expect(bodyThumbnail.source.text).not.toContain("cid:")
   })
 })
 
 describe("EmailViewer", () => {
+  it("treats controlled null selection as a default body selection", async () => {
+    const root: MimePart = {
+      id: "root",
+      mimeType: "multipart/mixed",
+      children: [
+        htmlPart("html", "<p>Email body</p>", "message.html"),
+        {
+          ...htmlPart(
+            "details",
+            "<article>Attachment preview</article>",
+            "details.html"
+          ),
+          disposition: "attachment",
+        },
+      ],
+    }
+
+    const { container } = render(
+      <EmailViewer
+        message={message(root)}
+        selectedPath={null}
+        className="h-[600px]"
+      />
+    )
+
+    await waitFor(() => {
+      expect(iframe(container).getAttribute("srcdoc")).toContain("Email body")
+    })
+    expect(
+      screen
+        .getByRole("button", { name: /Body text\/html/i })
+        .getAttribute("aria-current")
+    ).toBe("page")
+  })
+
+  it("falls back from an invalid controlled path without firing selection callbacks", async () => {
+    const onSelectedPathChange = vi.fn()
+    const root: MimePart = {
+      id: "root",
+      mimeType: "multipart/mixed",
+      children: [
+        htmlPart("html", "<p>Email body</p>", "message.html"),
+        {
+          ...htmlPart("details", "<p>Attachment</p>", "details.html"),
+          disposition: "attachment",
+        },
+      ],
+    }
+
+    const { container } = render(
+      <EmailViewer
+        message={message(root)}
+        selectedPath={["root", "missing"]}
+        onSelectedPathChange={onSelectedPathChange}
+        className="h-[600px]"
+      />
+    )
+
+    await waitFor(() => {
+      expect(iframe(container).getAttribute("srcdoc")).toContain("Email body")
+    })
+    expect(onSelectedPathChange).not.toHaveBeenCalled()
+    expect(
+      screen
+        .getByRole("button", { name: /Body text\/html/i })
+        .getAttribute("aria-current")
+    ).toBe("page")
+  })
+
+  it("emits normalized paths when duplicate MIME ids are selected", async () => {
+    const onSelectedPathChange = vi.fn()
+    const root: MimePart = {
+      id: "root",
+      mimeType: "multipart/mixed",
+      children: [
+        htmlPart("duplicate", "<p>Email body</p>", "message.html"),
+        {
+          ...htmlPart(
+            "duplicate",
+            "<article>Attachment preview</article>",
+            "details.html"
+          ),
+          disposition: "attachment",
+        },
+      ],
+    }
+
+    render(
+      <EmailViewer
+        message={message(root)}
+        onSelectedPathChange={onSelectedPathChange}
+        className="h-[600px]"
+      />
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: /details\.html/i }))
+
+    await waitFor(() => {
+      expect(onSelectedPathChange).toHaveBeenCalled()
+    })
+    expect(onSelectedPathChange.mock.calls[0]?.[0]).toEqual([
+      "root",
+      "duplicate~2",
+    ])
+  })
+
   it("renders the fake recursive MIME fixture without duplicated part headers", async () => {
     const { container } = render(
       <EmailViewer message={createFakeEmailMessage()} className="h-[720px]" />
@@ -352,6 +875,123 @@ describe("EmailViewer", () => {
     expect(screen.queryByRole("button", { name: /logo\.svg/i })).toBeNull()
   })
 
+  it("rewrites content-location relative URLs from multipart/related resources", async () => {
+    const root: MimePart = {
+      id: "root",
+      mimeType: "multipart/related",
+      children: [
+        htmlPart(
+          "html",
+          '<main><img alt="Logo" src="./logo.png"><a href="https://example.com/file">external</a></main>',
+          "message.html"
+        ),
+        {
+          id: "logo",
+          mimeType: "image/png",
+          contentLocation: "logo.png",
+          disposition: "inline",
+          fileName: "logo.png",
+          source: imageBlobSource("logo.png"),
+        },
+      ],
+    }
+
+    const { container } = render(
+      <EmailViewer message={message(root)} className="h-[600px]" />
+    )
+
+    await waitFor(() => {
+      expect(iframe(container).getAttribute("srcdoc")).toContain(
+        'src="blob:inline-1"'
+      )
+    })
+    expect(iframe(container).getAttribute("srcdoc")).toContain(
+      'href="https://example.com/file"'
+    )
+    expect(iframe(container).getAttribute("srcdoc")).not.toContain("./logo.png")
+    expect(screen.queryByRole("button", { name: /logo\.png/i })).toBeNull()
+  })
+
+  it("gives rewritten HTML sources a stable inline-resource identity", async () => {
+    const root: MimePart = {
+      id: "root",
+      mimeType: "multipart/related",
+      children: [
+        htmlPart(
+          "html",
+          '<main><img alt="Logo" src="cid:logo@example.com"></main>',
+          "message.html"
+        ),
+        {
+          id: "logo",
+          mimeType: "image/png",
+          contentId: "<logo@example.com>",
+          disposition: "inline",
+          fileName: "logo.png",
+          source: imageBlobSource("logo.png"),
+        },
+      ],
+    }
+    const tree = buildMimeTree(root)
+    const selected = findMimeNodeByPath(tree, ["root", "html"])
+    expect(selected).toBeTruthy()
+
+    const content = deriveEmailContentModel({
+      inlineResourceUrls: new Map([
+        [
+          inlineResourceKeyToString({
+            kind: "content-id",
+            value: "logo@example.com",
+          }),
+          "blob:inline-1",
+        ],
+      ]),
+      message: message(root),
+      selectedNode: selected!,
+    })
+
+    expect(content.kind).toBe("file")
+    if (content.kind !== "file") return
+    expect(content.file.source.identityKey).toContain("email-inline")
+    expect(content.file.source.identityKey).toContain("content-id")
+  })
+
+  it("revokes blob-backed cid object URLs when the inline scope unmounts", async () => {
+    const root: MimePart = {
+      id: "root",
+      mimeType: "multipart/related",
+      children: [
+        htmlPart(
+          "html",
+          '<main><img alt="Logo" src="cid:<logo@example.com>"></main>',
+          "message.html"
+        ),
+        {
+          id: "logo",
+          mimeType: "image/png",
+          contentId: "<logo@example.com>",
+          disposition: "inline",
+          fileName: "logo.png",
+          source: imageBlobSource("logo.png"),
+        },
+      ],
+    }
+
+    const { container, unmount } = render(
+      <EmailViewer message={message(root)} className="h-[600px]" />
+    )
+
+    await waitFor(() => {
+      expect(iframe(container).getAttribute("srcdoc")).toContain(
+        'src="blob:inline-1"'
+      )
+    })
+
+    unmount()
+
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:inline-1")
+  })
+
   it("does not inline content-id files marked as attachments", async () => {
     const root: MimePart = {
       id: "root",
@@ -378,12 +1018,89 @@ describe("EmailViewer", () => {
     )
 
     await waitFor(() => {
-      expect(iframe(container).getAttribute("srcdoc")).toContain(
-        "cid:logo@example.com"
-      )
+      expect(iframe(container).getAttribute("srcdoc")).not.toContain("cid:")
     })
     expect(URL.createObjectURL).not.toHaveBeenCalled()
     expect(screen.getByRole("button", { name: /logo\.png/i })).toBeTruthy()
+  })
+
+  it("renders less common MIME attachments through the normal content surface", async () => {
+    const root: MimePart = {
+      id: "root",
+      mimeType: "multipart/mixed",
+      children: [
+        htmlPart("html", "<p>Email body</p>", "message.html"),
+        {
+          id: "calendar",
+          mimeType: "text/calendar",
+          fileName: "invite.ics",
+          source: textSource("BEGIN:VCALENDAR", "invite.ics"),
+        },
+        {
+          id: "delivery",
+          mimeType: "message/delivery-status",
+          fileName: "delivery-status.txt",
+          source: textSource(
+            "Final-Recipient: rfc822; avery@example.com",
+            "delivery-status.txt"
+          ),
+        },
+        {
+          id: "binary",
+          mimeType: "application/octet-stream",
+          fileName: "archive.bin",
+          source: blobSource("archive.bin", "application/octet-stream"),
+        },
+        {
+          id: "inline-image",
+          mimeType: "image/png",
+          disposition: "inline",
+          fileName: "photo.png",
+          source: imageBlobSource("photo.png"),
+        },
+      ],
+    }
+
+    const { container } = render(
+      <EmailViewer message={message(root)} className="h-[600px]" />
+    )
+
+    await waitFor(() => {
+      expect(iframe(container).getAttribute("srcdoc")).toContain("Email body")
+    })
+
+    fireEvent.click(screen.getByRole("button", { name: /invite\.ics/i }))
+    await waitFor(() => {
+      expect(iframe(container).getAttribute("srcdoc")).toContain(
+        "BEGIN:VCALENDAR"
+      )
+    })
+    expect(screen.getByTestId("file-viewer").getAttribute("data-as")).toBe(
+      "text"
+    )
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /delivery-status\.txt/i })
+    )
+    await waitFor(() => {
+      expect(iframe(container).getAttribute("srcdoc")).toContain(
+        "Final-Recipient"
+      )
+    })
+
+    fireEvent.click(screen.getByRole("button", { name: /archive\.bin/i }))
+    await waitFor(() => {
+      expect(screen.getByTestId("file-viewer").textContent).toContain(
+        "archive.bin"
+      )
+    })
+
+    fireEvent.click(screen.getByRole("button", { name: /photo\.png/i }))
+    await waitFor(() => {
+      expect(screen.getByTestId("file-viewer").textContent).toContain(
+        "photo.png"
+      )
+    })
   })
 
   it("falls back to a text leaf when no HTML part exists", async () => {

@@ -2,28 +2,38 @@ import type { JsonTableCellProps } from "@/components/json-table/json-table-cell
 import { cmp } from "@/components/json-table/path-utils"
 
 function editableJsonTableCellMemoVariables(props: JsonTableCellProps) {
-  const {
-    document: _document,
-    primitiveActiveCellStore: _primitiveActiveCellStore,
-    structuredEditSession: _structuredEditSession,
-    ...rest
-  } = props
-  const materializedFieldPath = props.projectedCell?.materializedFieldPath
+  const { cellProjection, commit, hover, primitiveEditing, structuredEditing } =
+    props
+  const materializedFieldPath =
+    cellProjection.projectedCell?.materializedFieldPath
   const isStructuredSessionCell =
     Boolean(materializedFieldPath) &&
-    props.structuredEditSession?.fieldPath === materializedFieldPath
+    structuredEditing.session?.fieldPath === materializedFieldPath
   const structuredEditSessionId = isStructuredSessionCell
-    ? (props.structuredEditSession?.id ?? null)
+    ? (structuredEditing.session?.id ?? null)
     : null
   const structuredEditSessionOverlayOpen = isStructuredSessionCell
-    ? (props.structuredEditSession?.isOverlayOpen ?? false)
+    ? (structuredEditing.session?.isOverlayOpen ?? false)
     : false
 
   return {
-    ...rest,
+    ariaColumnIndex: cellProjection.ariaColumnIndex,
+    column: cellProjection.column,
+    commit,
+    docId: cellProjection.docId,
+    hover,
+    isJsonEditable: cellProjection.isJsonEditable,
+    materializedFieldPath,
+    primitiveEditStore: primitiveEditing.editStore,
+    projectedCell: cellProjection.projectedCell,
+    schema: cellProjection.schema,
+    setPrimitiveActiveCell: primitiveEditing.setActiveCell,
+    startStructuredEditSession: structuredEditing.startSession,
+    closeStructuredEditSession: structuredEditing.closeSession,
+    setStructuredEditSessionOverlayOpen:
+      structuredEditing.setSessionOverlayOpen,
     structuredEditSessionId,
     structuredEditSessionOverlayOpen,
-    materializedFieldPath,
   }
 }
 

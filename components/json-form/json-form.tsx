@@ -14,7 +14,6 @@ import {
 } from "react-hook-form"
 
 import { cn } from "@/lib/utils"
-import type { FieldAnchorLink } from "@/components/ui/anchored-document-viewer"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import {
@@ -26,6 +25,7 @@ import {
   type DataCellValue,
   type DataCellValueMeta,
 } from "@/components/ui/data-cell"
+import type { FieldAnchorLink } from "@/components/ui/field-anchor-link"
 import {
   getFixedGridCanvasStyle,
   getFixedGridRowWindowStyle,

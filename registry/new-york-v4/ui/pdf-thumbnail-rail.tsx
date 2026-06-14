@@ -16,7 +16,7 @@ export function getPdfThumbnailItemId(pageNumber: number) {
   return `pdf-thumbnail-page-${pageNumber}`
 }
 
-export function PdfThumbnailRail({
+export function PdfThumbnailRailViewport({
   doc,
   layout,
   visibleItems,

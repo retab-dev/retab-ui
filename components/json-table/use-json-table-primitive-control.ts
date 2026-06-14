@@ -1,8 +1,8 @@
 import * as React from "react"
 
 import {
-  type JsonTableCellCommitHandler,
   isJsonTableNoOpCommit,
+  type JsonTableCellCommitHandler,
 } from "@/components/json-table/json-table-cell-commit"
 import type { JsonTableCellProps } from "@/components/json-table/json-table-cell-types"
 import { replaceJsonTablePrimitiveActiveCell } from "@/components/json-table/json-table-primitive-active-cell-store"
@@ -94,17 +94,16 @@ export function useJsonTablePrimitiveControl({
   props: JsonTableCellProps
   cellField: JsonTableCellField
 }) {
-  const {
-    commitValidatedValue,
-    effectiveValue,
-  } = useJsonTablePrimitiveCommitController({
-    document: props.document,
-    materializedFieldPath: cellField.materializedFieldPath,
-    value: cellField.cellValue,
-    isEditable: cellField.isJsonEditable && cellField.isPrimitiveCell,
-    onCellCommit: props.onCellCommit,
-    primitiveEditStore: props.primitiveEditStore,
-  })
+  const { cellProjection, commit, primitiveEditing } = props
+  const { commitValidatedValue, effectiveValue } =
+    useJsonTablePrimitiveCommitController({
+      document: cellProjection.document,
+      materializedFieldPath: cellField.materializedFieldPath,
+      value: cellField.cellValue,
+      isEditable: cellField.isJsonEditable && cellField.isPrimitiveCell,
+      onCellCommit: commit.onCommit,
+      primitiveEditStore: primitiveEditing.editStore,
+    })
 
   const commitValue = useRefCallback((nextValue: unknown) => {
     if (!cellField.fieldMetadata) return
@@ -124,21 +123,21 @@ export function useJsonTablePrimitiveControl({
       }
       if (nextActive) {
         replaceJsonTablePrimitiveActiveCell({
-          store: props.primitiveActiveCellStore,
-          setPrimitiveActiveCell: props.setPrimitiveActiveCell,
+          store: primitiveEditing.activeCellStore,
+          setPrimitiveActiveCell: primitiveEditing.setActiveCell,
           nextActiveCell: {
             cellId: cellField.cellId,
-            docId: props.docId,
+            docId: cellProjection.docId,
             fieldPath: cellField.materializedFieldPath,
           },
         })
         return
       }
       if (
-        props.primitiveActiveCellStore.getSnapshot() ===
+        primitiveEditing.activeCellStore.getSnapshot() ===
         cellField.primitiveActiveCell
       ) {
-        props.setPrimitiveActiveCell(null)
+        primitiveEditing.setActiveCell(null)
       }
     },
     [
@@ -146,9 +145,9 @@ export function useJsonTablePrimitiveControl({
       cellField.isPrimitiveCell,
       cellField.materializedFieldPath,
       cellField.primitiveActiveCell,
-      props.docId,
-      props.primitiveActiveCellStore,
-      props.setPrimitiveActiveCell,
+      cellProjection.docId,
+      primitiveEditing.activeCellStore,
+      primitiveEditing.setActiveCell,
     ]
   )
 

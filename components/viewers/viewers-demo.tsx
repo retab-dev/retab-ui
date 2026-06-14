@@ -19,7 +19,7 @@ import { ParseViewer } from "@/components/viewers/parse/parse-viewer"
 import {
   PartitionViewerHeader,
   PartitionViewerProvider,
-  usePartitionViewerDocument,
+  usePartitionViewerDocumentControls,
 } from "@/components/viewers/partition/partition-viewer"
 import editSample from "@/components/viewers/sample-data/edit.json"
 import parseSample from "@/components/viewers/sample-data/parse.json"
@@ -159,25 +159,19 @@ export function ClassificationViewerDemo() {
 }
 
 function PartitionDemoDocument() {
-  const document = usePartitionViewerDocument()
-  const viewerRef = React.useRef<PdfViewerHandle | null>(null)
-
-  React.useEffect(() => {
-    if (!document.scrollRequest) return
-    viewerRef.current?.scrollToPage(document.scrollRequest.pageNumber)
-  }, [document.scrollRequest])
+  const controls = usePartitionViewerDocumentControls()
 
   return (
     <PdfViewer
-      ref={viewerRef}
+      ref={controls.setDocumentHandle}
       source={{
         kind: "url",
         url: PARTITION_PDF_URL,
         fileName: "an-image-is-worth-16x16-words.pdf",
       }}
       bare
-      onVisiblePageChange={document.onCurrentPageChange}
-      onScrollProgressChange={document.onScrollProgressChange}
+      onVisiblePageChange={controls.onCurrentPageChange}
+      onScrollProgressChange={controls.onScrollProgressChange}
       className="h-full"
     />
   )
@@ -201,7 +195,7 @@ function SplitViewerDemoDocument() {
 
   return (
     <PdfViewer
-      ref={controls.setViewerHandle}
+      ref={controls.setDocumentHandle}
       source={{
         kind: "url",
         url: SPLIT_PDF_URL,

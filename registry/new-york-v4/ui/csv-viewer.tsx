@@ -28,7 +28,6 @@ import {
   type CsvViewerSource,
 } from "./csv-viewer-resource"
 import { useCsvResourceState, type CsvCellAddress } from "./csv-viewer-state"
-import { useCsvViewerZoom } from "./csv-viewer-toolbar"
 import type { CsvViewerHandle, CsvViewerProps } from "./csv-viewer-types"
 
 export type {
@@ -75,7 +74,7 @@ export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
       retryVersion,
     })
     const gridRef = React.useRef<CsvGridHandle>(null)
-    const { zoom, setZoom } = useCsvViewerZoom()
+    const [zoom, setZoom] = React.useState(1)
     const columns = resourceState.columns
     const sourceRows = resourceState.sourceRows
     const canExportTable =
@@ -100,14 +99,7 @@ export const CsvViewer = React.forwardRef<CsvViewerHandle, CsvViewerProps>(
         fileName: exportFileName,
         canExportTable,
       })
-    }, [
-      canExportTable,
-      columns,
-      dialect,
-      exportFileName,
-      resource,
-      sourceRows,
-    ])
+    }, [canExportTable, columns, dialect, exportFileName, resource, sourceRows])
 
     React.useImperativeHandle(
       ref ?? null,

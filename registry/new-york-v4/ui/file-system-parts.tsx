@@ -2,15 +2,15 @@
 
 import * as React from "react"
 
-import type {
-  FileSystemHeaderState,
-  FileSystemPreviewState as FileSystemPreviewDomainState,
-} from "./file-system-browser-state"
-import { createFileSystemHeaderState } from "./file-system-browser-state"
 import {
   createFileSystemBrowserController,
   type FileSystemBrowserController,
 } from "./file-system-browser-controller"
+import type {
+  FileSystemHeaderState,
+  FileSystemSelectionState as FileSystemSelectionDomainState,
+} from "./file-system-browser-state"
+import { createFileSystemHeaderState } from "./file-system-browser-state"
 import { FileSystemColumnsView } from "./file-system-columns-view"
 import {
   FileSystemCommandBar,
@@ -19,17 +19,31 @@ import {
 } from "./file-system-controls"
 import { FileSystemGridView } from "./file-system-grid-view"
 import { FileSystemListView } from "./file-system-list-view"
-import { FileSystemPreviewPanel } from "./file-system-preview"
 import { useFileSystem } from "./file-system-provider"
-import type { FileSystemProps } from "./file-system-types"
+import {
+  useFileSystemSelectionSourceTask,
+  type FileSystemSelectionSourceTask,
+} from "./file-system-selection-source-task"
+import type {
+  FileSystemEntry,
+  FileSystemFileEntry,
+  FileSystemProps,
+} from "./file-system-types"
 
 export type FileSystemBrowserPartState = FileSystemBrowserController
 
 export type { FileSystemHeaderState } from "./file-system-browser-state"
 
-export type FileSystemPreviewState = FileSystemPreviewDomainState & {
+export type FileSystemSelectionState = FileSystemSelectionDomainState & {
   renderFileActions?: FileSystemProps["renderFileActions"]
   renderMetadata?: FileSystemProps["renderMetadata"]
+}
+
+export type FileSystemSelectionRenderState = FileSystemSelectionState & {
+  file: FileSystemFileEntry | null
+  retry: () => void
+  source: FileSystemSelectionSourceTask["source"]
+  sourceState: FileSystemSelectionSourceTask
 }
 
 export function useFileSystemHeader(): FileSystemHeaderState {
@@ -47,18 +61,29 @@ export function useFileSystemBrowser(): FileSystemBrowserPartState {
   return createFileSystemBrowserController({
     browser: state.browser,
     openPreview: state.openPreview.open,
-    resolveFileSource: state.preview.resolveSource,
+    resolveFileSource: state.selection.resolveSource,
   })
 }
 
-export function useFileSystemPreview(): FileSystemPreviewState {
+export function useFileSystemSelection(): FileSystemSelectionState {
   const state = useFileSystem()
 
   return {
-    ...state.preview,
+    ...state.selection,
     renderFileActions: state.renderers.renderFileActions,
     renderMetadata: state.renderers.renderMetadata,
   }
+}
+
+export function useFileSystemSelectedItem(): FileSystemEntry | null {
+  return useFileSystemSelection().entry
+}
+
+export function useFileSystemSelectedSource(): FileSystemSelectionSourceTask {
+  const selection = useFileSystemSelection()
+  const file = selection.entry?.kind === "file" ? selection.entry : null
+
+  return useFileSystemSelectionSourceTask(file, selection.resolveSource)
 }
 
 export function FileSystemHeader() {
@@ -92,21 +117,27 @@ export function FileSystemBrowser() {
   )
 }
 
-export function FileSystemPreview() {
-  const {
-    entry,
-    renderFileActions,
-    renderMetadata,
-    resolveSource,
-  } = useFileSystemPreview()
+export function FileSystemSelection({
+  children,
+}: {
+  children: (state: FileSystemSelectionRenderState) => React.ReactNode
+}) {
+  const selection = useFileSystemSelection()
+  const file = selection.entry?.kind === "file" ? selection.entry : null
+  const sourceState = useFileSystemSelectionSourceTask(
+    file,
+    selection.resolveSource
+  )
 
   return (
-    <FileSystemPreviewPanel
-      entry={entry}
-      renderFileActions={renderFileActions}
-      renderMetadata={renderMetadata}
-      resolveFileSource={resolveSource}
-      className="size-full border-l-0"
-    />
+    <>
+      {children({
+        ...selection,
+        file,
+        retry: sourceState.retry,
+        source: sourceState.source,
+        sourceState,
+      })}
+    </>
   )
 }

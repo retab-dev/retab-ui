@@ -1,28 +1,27 @@
 import type {
   DataCellControlStaticPropsByKind,
+  DataCellInputControlProps,
 } from "@/registry/new-york-v4/ui/data-cell-control-contract"
 import type { DataCellEditModelByKind } from "@/registry/new-york-v4/ui/data-cell-edit-model"
 
-export function dataCellTextControlProps(
-  model: DataCellEditModelByKind["text"]
-): DataCellControlStaticPropsByKind["text"] {
-  return {
-    ...model.editorProps,
-    kind: model.kind,
-    value: model.value,
-    disabled: model.disabled,
-    name: model.name,
-    placeholder: model.placeholder,
-    className: model.className,
-    autoFocus: model.autoFocus,
-    activationSource: model.activationSource,
-    draft: model.draft,
-  }
-}
+type DataCellInputKind = "text" | "number" | "integer"
+type DataCellInputControlStaticProps = Omit<
+  DataCellInputControlProps,
+  "session"
+>
 
-export function dataCellNumberControlProps(
-  model: DataCellEditModelByKind["number" | "integer"]
-): DataCellControlStaticPropsByKind["number" | "integer"] {
+export function dataCellInputControlProps(
+  model: DataCellEditModelByKind["text"]
+): DataCellControlStaticPropsByKind["text"]
+export function dataCellInputControlProps(
+  model: DataCellEditModelByKind["number"]
+): DataCellControlStaticPropsByKind["number"]
+export function dataCellInputControlProps(
+  model: DataCellEditModelByKind["integer"]
+): DataCellControlStaticPropsByKind["integer"]
+export function dataCellInputControlProps(
+  model: DataCellEditModelByKind[DataCellInputKind]
+): DataCellInputControlStaticProps {
   return {
     ...model.editorProps,
     kind: model.kind,

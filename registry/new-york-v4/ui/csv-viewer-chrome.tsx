@@ -7,8 +7,8 @@ import type { ViewerDownloadAction } from "@/lib/viewer-download"
 import type { ViewerResource } from "@/lib/viewer-resource"
 
 import type { CsvResourceState } from "./csv-viewer-state"
-import { CsvViewerToolbar } from "./csv-viewer-toolbar"
 import { ViewerErrorState } from "./viewer-error"
+import { ViewerToolbar } from "./viewer-toolbar"
 
 export const CSV_VIEWER_BASE_FONT_SIZE = 13
 
@@ -55,16 +55,28 @@ export function CsvViewerHeader({
   downloadActions: ViewerDownloadAction[]
   onZoomChange: (zoom: number) => void
 }) {
+  const rowLabel = `${rowCount.toLocaleString()} row${rowCount === 1 ? "" : "s"}`
+  const columnLabel = `${columnCount} column${columnCount === 1 ? "" : "s"}`
+
   return toolbar ? (
-    <CsvViewerToolbar
-      rowCount={rowCount}
-      columnCount={columnCount}
-      isLoading={isLoading}
-      zoom={zoom}
-      onZoomChange={onZoomChange}
-      downloadActions={downloadActions}
+    <ViewerToolbar
+      title={isLoading ? `${rowLabel} loading` : rowLabel}
+      subtitle={isLoading ? null : columnLabel}
+      loading={isLoading}
+      zoom={{
+        scale: zoom,
+        onZoomOut: () => onZoomChange(clampCsvZoom(zoom / 1.2)),
+        onZoomIn: () => onZoomChange(clampCsvZoom(zoom * 1.2)),
+        onFit: () => onZoomChange(1),
+        fitLabel: "Reset zoom",
+      }}
+      downloads={downloadActions}
     />
   ) : null
+}
+
+function clampCsvZoom(zoom: number) {
+  return Math.max(0.25, Math.min(5, zoom))
 }
 
 export function csvViewerStatusNode({

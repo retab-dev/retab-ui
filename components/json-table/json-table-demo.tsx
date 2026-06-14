@@ -245,6 +245,18 @@ function createDemoSchema(profileOptions: JsonTableDemoProfileOptions) {
               format: "date",
               title: "Profile Far Date",
             },
+            profile_far_details: {
+              type: "object",
+              title: "Profile Far Details",
+              patternProperties: {
+                "^priority$": { type: "number", title: "Priority" },
+              },
+              additionalProperties: { type: "string" },
+            },
+            profile_far_tags: {
+              type: "array",
+              title: "Profile Far Tags",
+            },
           },
         },
       },
@@ -332,6 +344,11 @@ function demoTransactions(profileOptions: JsonTableDemoProfileOptions) {
       profile_far_status:
         index % 5 === 0 ? "archived" : index % 2 === 0 ? "reviewed" : "new",
       profile_far_date: `2025-08-${String((index % 28) + 1).padStart(2, "0")}`,
+      profile_far_details: {
+        reviewer: `reviewer-${index % 11}`,
+        priority: (index % 4) + 1,
+      },
+      profile_far_tags: [`tag-${index % 3}`, `queue-${index % 5}`],
     }
   })
 }

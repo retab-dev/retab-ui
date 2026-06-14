@@ -1,11 +1,6 @@
 "use client"
 
-import type { FileSystemIndexState } from "./file-system-index-state"
-import type { FileSystemLoadingController } from "./file-system-loading-controller"
-import type { FileSystemNavigationController } from "./file-system-navigation-controller"
-import type { FileSystemQueryController } from "./file-system-query-controller"
-import type { FileSystemSelectionController } from "./file-system-selection-controller"
-import type { FileSystemSourceController } from "./file-system-source-controller"
+import type { FileSystemSourceResolver } from "./file-system-selection-source-task"
 import type {
   FileSystemEntry,
   FileSystemIndex,
@@ -13,46 +8,32 @@ import type {
   FileSystemSortKey,
   FileSystemView,
 } from "./file-system-types"
-import type { FileSystemViewController } from "./file-system-view-controller"
 
 export type FileSystemBrowserState = {
-  currentPath: string
-  entries: FileSystemEntry[]
-  index: FileSystemIndex
-  loading: FileSystemBrowserLoadingState
-  navigation: FileSystemBrowserNavigationState
-  query: FileSystemQueryState
-  rawIndex: FileSystemIndex
-  selection: FileSystemBrowserSelectionState
-  commands: FileSystemBrowserCommands
-  view: FileSystemView
-}
-
-export type FileSystemBrowserSelectionState = {
-  selectedEntry: FileSystemEntry | null
-  selectedPath: string | null
-}
-
-export type FileSystemBrowserLoadingState = {
-  folderErrors: ReadonlyMap<string, string>
-  loadingFolders: ReadonlySet<string>
-}
-
-export type FileSystemBrowserNavigationState = {
   canGoBack: boolean
   canGoForward: boolean
-}
-
-export type FileSystemBrowserCommands = {
-  ensureChildren: FileSystemLoadingController["ensureChildren"]
+  currentPath: string
+  entries: FileSystemEntry[]
+  ensureChildren: (
+    path: string,
+    options?: { retry?: boolean }
+  ) => Promise<FileSystemEntry[]>
+  folderErrors: ReadonlyMap<string, string>
   goBack: () => void
   goForward: () => void
+  index: FileSystemIndex
+  loadingFolders: ReadonlySet<string>
   navigateTo: (path: string) => void
+  query: FileSystemQueryState
+  rawIndex: FileSystemIndex
   selectEntry: (entry: FileSystemEntry | null) => void
+  selectedEntry: FileSystemEntry | null
+  selectedPath: string | null
   selectFirstChildAfterEnsure: (path: string) => Promise<FileSystemEntry | null>
   setSearch: (search: string) => void
   setSortKey: (key: FileSystemSortKey) => void
   setView: (view: FileSystemView) => void
+  view: FileSystemView
 }
 
 export type FileSystemHeaderState = {
@@ -69,57 +50,9 @@ export type FileSystemHeaderState = {
   view: FileSystemView
 }
 
-export type FileSystemPreviewState = {
+export type FileSystemSelectionState = {
   entry: FileSystemEntry | null
-  resolveSource: FileSystemSourceController["resolveFileSource"]
-}
-
-export function createFileSystemBrowserState({
-  index,
-  loading,
-  navigation,
-  query,
-  selection,
-  view,
-}: {
-  index: FileSystemIndexState
-  loading: FileSystemLoadingController
-  navigation: FileSystemNavigationController
-  query: FileSystemQueryController
-  selection: FileSystemSelectionController
-  view: FileSystemViewController
-}): FileSystemBrowserState {
-  return {
-    currentPath: navigation.currentPath,
-    entries: index.currentEntries,
-    index: index.index,
-    loading: {
-      folderErrors: loading.folderErrors,
-      loadingFolders: loading.loadingFolders,
-    },
-    navigation: {
-      canGoBack: navigation.canGoBack,
-      canGoForward: navigation.canGoForward,
-    },
-    query: query.query,
-    rawIndex: index.rawIndex,
-    selection: {
-      selectedEntry: selection.selectedEntry,
-      selectedPath: selection.selectedPath,
-    },
-    commands: {
-      ensureChildren: loading.ensureChildren,
-      goBack: navigation.goBack,
-      goForward: navigation.goForward,
-      navigateTo: navigation.navigateTo,
-      selectEntry: selection.selectEntry,
-      selectFirstChildAfterEnsure: selection.selectFirstChildAfterEnsure,
-      setSearch: query.setSearch,
-      setSortKey: query.setSortKey,
-      setView: view.setView,
-    },
-    view: view.view,
-  }
+  resolveSource: FileSystemSourceResolver
 }
 
 export function createFileSystemHeaderState({
@@ -130,29 +63,16 @@ export function createFileSystemHeaderState({
   title: string
 }): FileSystemHeaderState {
   return {
-    canGoBack: browser.navigation.canGoBack,
-    canGoForward: browser.navigation.canGoForward,
+    canGoBack: browser.canGoBack,
+    canGoForward: browser.canGoForward,
     currentPath: browser.currentPath,
-    goBack: browser.commands.goBack,
-    goForward: browser.commands.goForward,
+    goBack: browser.goBack,
+    goForward: browser.goForward,
     query: browser.query,
-    setSearch: browser.commands.setSearch,
-    setSortKey: browser.commands.setSortKey,
-    setView: browser.commands.setView,
+    setSearch: browser.setSearch,
+    setSortKey: browser.setSortKey,
+    setView: browser.setView,
     title,
     view: browser.view,
-  }
-}
-
-export function createFileSystemPreviewState({
-  selection,
-  source,
-}: {
-  selection: FileSystemSelectionController
-  source: FileSystemSourceController
-}): FileSystemPreviewState {
-  return {
-    entry: selection.selectedEntry,
-    resolveSource: source.resolveFileSource,
   }
 }

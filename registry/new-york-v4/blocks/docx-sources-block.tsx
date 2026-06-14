@@ -6,12 +6,11 @@ import type { Source } from "@/lib/document-source"
 import {
   AnchoredDocumentProvider,
   useAnchoredDocument,
-  useAnchoredFieldLink,
   type AnchoredDocumentTarget,
-  type AnchoredItem,
 } from "@/components/ui/anchored-document-viewer"
-import { docxAnchorToTarget } from "@/components/ui/docx-source"
 import { DocxViewer, type DocxViewerHandle } from "@/components/ui/docx-viewer"
+import { useAnchoredFieldLink } from "@/components/ui/field-anchor-link"
+import { sourceFieldsToEvidenceModel } from "@/components/ui/source-evidence"
 import {
   SourceFieldList,
   type SourceField,
@@ -42,18 +41,7 @@ const FIELDS = (docxSample as DocxField[]).map((field) => ({
   ...field,
   hint: hintFor(field.source),
 }))
-const ITEMS: AnchoredItem[] = FIELDS.map((field) => {
-  const target = docxAnchorToTarget(field.source.anchor, field.source)
-  return {
-    id: field.key,
-    anchor: target
-      ? {
-          kind: "docx-target",
-          target,
-        }
-      : null,
-  }
-})
+const EVIDENCE = sourceFieldsToEvidenceModel(FIELDS)
 
 /**
  * DOCX sources block — values extracted from a Word document, linked to where
@@ -67,7 +55,7 @@ export function DocxSourcesBlock() {
 
   return (
     <AnchoredDocumentProvider
-      items={ITEMS}
+      items={EVIDENCE.anchoredItems}
       target={target}
       initialItemId={FIELDS[0]?.key}
     >

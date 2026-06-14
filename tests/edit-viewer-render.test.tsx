@@ -3,7 +3,19 @@ import * as React from "react"
 import { cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import { EditViewer } from "@/components/viewers/edit/edit-viewer"
+import {
+  ViewerBody,
+  ViewerRoot,
+  ViewerSidebar,
+  ViewerSurface,
+} from "@/components/ui/viewer"
+import {
+  EditViewer,
+  EditViewerDocument,
+  EditViewerFields,
+  EditViewerHeader,
+  EditViewerProvider,
+} from "@/components/viewers/edit/edit-viewer"
 import type { EditViewerField } from "@/components/viewers/edit/edit-viewer-types"
 
 const viewerMocks = vi.hoisted(() => ({
@@ -159,6 +171,23 @@ describe("EditViewer", () => {
     expect(screen.getByRole("tab", { name: "Source view" })).toBeTruthy()
   })
 
+  it("treats null controlled mode as best available display mode", () => {
+    const onModeChange = vi.fn()
+
+    render(
+      <EditViewer
+        result={{ fields }}
+        sourceDocument={sourceDocument}
+        mode={null}
+        onModeChange={onModeChange}
+      />
+    )
+
+    expect(screen.getByRole("tab", { name: "Preview view" })).toBeTruthy()
+    expect(screen.getByLabelText("name, text, Ada Lovelace")).toBeTruthy()
+    expect(onModeChange).not.toHaveBeenCalled()
+  })
+
   it("searches and filters the field panel", () => {
     render(<EditViewer result={{ fields }} sourceDocument={sourceDocument} />)
 
@@ -180,6 +209,31 @@ describe("EditViewer", () => {
     expect(screen.queryByText("name")).toBeNull()
   })
 
+  it("exposes the expected accessibility contract", () => {
+    render(
+      <EditViewer
+        result={{ fields }}
+        sourceDocument={sourceDocument}
+        status={{ state: "detecting", message: "Reading fields" }}
+      />
+    )
+
+    expect(screen.getByLabelText("Document fields")).toBeTruthy()
+    expect(screen.getByLabelText("Toggle sidebar")).toBeTruthy()
+    expect(screen.getByRole("tab", { name: "Preview view" })).toBeTruthy()
+    expect(screen.getByRole("status").textContent).toContain("Reading fields")
+
+    const memoRow = screen.getByText("memo").closest("button")
+    expect(memoRow?.tagName).toBe("BUTTON")
+    fireEvent.click(screen.getByText("memo"))
+    expect(memoRow?.getAttribute("aria-current")).toBe("true")
+
+    const emptyFilter = screen.getByRole("button", { name: "Empty" })
+    expect(emptyFilter.getAttribute("aria-pressed")).toBe("false")
+    fireEvent.click(emptyFilter)
+    expect(emptyFilter.getAttribute("aria-pressed")).toBe("true")
+  })
+
   it("applies constrained viewer options", () => {
     render(
       <EditViewer
@@ -192,6 +246,27 @@ describe("EditViewer", () => {
     expect(screen.queryByRole("tab", { name: "Preview view" })).toBeNull()
     expect(screen.queryByLabelText("Search form fields")).toBeNull()
     expect(screen.queryByRole("button", { name: "Empty" })).toBeNull()
+  })
+
+  it("omits the sidebar trigger and sidebar when the field panel is disabled", () => {
+    render(
+      <EditViewer
+        result={{ fields }}
+        sourceDocument={sourceDocument}
+        options={{ fieldPanel: false }}
+      />
+    )
+
+    expect(screen.queryByLabelText("Toggle sidebar")).toBeNull()
+    expect(screen.queryByLabelText("Document fields")).toBeNull()
+  })
+
+  it("hides the header when no document modes are available", () => {
+    render(<EditViewer result={{ fields }} />)
+
+    expect(screen.queryByRole("tab")).toBeNull()
+    expect(screen.getByText("No edit view is available.")).toBeTruthy()
+    expect(screen.getByText("Form fields")).toBeTruthy()
   })
 
   it("scrolls to a selected field with normalized percentages", () => {
@@ -224,6 +299,66 @@ describe("EditViewer", () => {
     )
 
     expect(onSelectedFieldKeyChange).toHaveBeenCalledWith(null)
+  })
+
+  it("notifies controlled selection from sidebar rows and overlay buttons", () => {
+    const onSelectedFieldKeyChange = vi.fn()
+
+    render(
+      <EditViewer
+        result={{ fields }}
+        sourceDocument={sourceDocument}
+        mode="preview"
+        onSelectedFieldKeyChange={onSelectedFieldKeyChange}
+      />
+    )
+
+    fireEvent.click(screen.getByText("memo"))
+    expect(onSelectedFieldKeyChange).toHaveBeenLastCalledWith("memo")
+    expect(
+      screen.getByText("memo").closest("button")?.getAttribute("aria-current")
+    ).toBe("true")
+
+    fireEvent.click(screen.getByLabelText("name, text, Ada Lovelace"))
+    expect(onSelectedFieldKeyChange).toHaveBeenLastCalledWith("name")
+  })
+
+  it("previews field hover without committing controlled selection", () => {
+    const onSelectedFieldKeyChange = vi.fn()
+
+    render(
+      <EditViewer
+        result={{ fields }}
+        sourceDocument={sourceDocument}
+        mode="preview"
+        onSelectedFieldKeyChange={onSelectedFieldKeyChange}
+      />
+    )
+
+    fireEvent.mouseEnter(screen.getByLabelText("name, text, Ada Lovelace"))
+    expect(onSelectedFieldKeyChange).not.toHaveBeenCalled()
+  })
+
+  it("restores the committed field highlight after hover preview leaves", () => {
+    render(
+      <EditViewer
+        result={{ fields }}
+        sourceDocument={sourceDocument}
+        mode="preview"
+      />
+    )
+
+    const memoRow = screen.getByText("memo").closest("button")
+    const nameOverlay = screen.getByLabelText("name, text, Ada Lovelace")
+
+    fireEvent.click(screen.getByText("memo"))
+    expect(memoRow?.classList.contains("bg-muted")).toBe(true)
+
+    fireEvent.mouseEnter(nameOverlay)
+    expect(memoRow?.classList.contains("bg-muted")).toBe(false)
+
+    fireEvent.mouseLeave(nameOverlay)
+    expect(memoRow?.classList.contains("bg-muted")).toBe(true)
   })
 
   it("shows status messages without changing mode semantics", () => {
@@ -291,5 +426,39 @@ describe("EditViewer", () => {
     expect(screen.queryByLabelText("bad_location, text, Ignored")).toBeNull()
     fireEvent.click(screen.getByText("bad_location"))
     expect(viewerMocks.scrollToPageArea).not.toHaveBeenCalled()
+  })
+
+  it("renders the same viewer from provider and named parts", () => {
+    render(
+      <EditViewerProvider result={{ fields }} sourceDocument={sourceDocument}>
+        <ViewerRoot defaultOpen>
+          <EditViewerHeader />
+          <ViewerBody>
+            <ViewerSurface>
+              <EditViewerDocument />
+            </ViewerSurface>
+            <ViewerSidebar aria-label="Document fields" side="right">
+              <EditViewerFields />
+            </ViewerSidebar>
+          </ViewerBody>
+        </ViewerRoot>
+      </EditViewerProvider>
+    )
+
+    expect(screen.getByRole("tab", { name: "Preview view" })).toBeTruthy()
+    expect(screen.getByLabelText("Document fields")).toBeTruthy()
+    expect(screen.getByText("name")).toBeTruthy()
+    expect(screen.getByTestId("pdf-viewer").dataset.src).toBe("/original.pdf")
+  })
+
+  it("keeps EditViewerFields content-only", () => {
+    const { container } = render(
+      <EditViewerProvider result={{ fields }} sourceDocument={sourceDocument}>
+        <EditViewerFields />
+      </EditViewerProvider>
+    )
+
+    expect(screen.getByText("Form fields")).toBeTruthy()
+    expect(container.querySelector("aside")).toBeNull()
   })
 })

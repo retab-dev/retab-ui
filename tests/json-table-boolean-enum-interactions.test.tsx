@@ -1,30 +1,16 @@
 // @vitest-environment jsdom
 
-import * as React from "react"
-import { cleanup, fireEvent, render, waitFor } from "@testing-library/react"
+import { cleanup, fireEvent, waitFor } from "@testing-library/react"
 import type { JSONSchema7 } from "json-schema"
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
 
-import type {
-  JsonTableCellCommit,
-  JsonTableCellCommitHandler,
-} from "@/components/json-table/json-table-cell-commit"
-import type { VisibleColumn } from "@/components/json-table/json-table-cell-types"
-import type {
-  JsonTableActivationIntent,
-  JsonTablePrimitiveActiveCell,
-  JsonTableStructuredEditSession,
-} from "@/components/json-table/json-table-edit-session"
-import { jsonTableCellId } from "@/components/json-table/json-table-edit-session"
-import { createJsonTablePrimitiveActiveCellStore } from "@/components/json-table/json-table-primitive-active-cell-store"
-import { createJsonTablePrimitiveEditStore } from "@/components/json-table/json-table-primitive-edit-store"
-import { jsonTableFullRenderedColumnWindow } from "@/components/json-table/json-table-rendered-column-window"
-import type { ProjectedCell } from "@/components/json-table/lib/document-projection"
-import { projectDocumentRows } from "@/components/json-table/lib/document-projection"
+import type { JsonTableCellCommitHandler } from "@/components/json-table/json-table-cell-commit"
 import type { TableDocument } from "@/components/json-table/lib/projects-types"
-import { getFieldMetadata } from "@/components/json-table/lib/schema-field-metadata"
-import { SingleFileFormRow } from "@/components/json-table/single-file-form-row"
 
+import {
+  primitiveEventTarget,
+  renderInteractionRow,
+} from "./json-table-interaction-test-utils"
 import { installJsonTableDom } from "./json-table-test-dom"
 
 beforeAll(() => installJsonTableDom())
@@ -71,109 +57,6 @@ const tableDocument: TableDocument = {
   },
 }
 
-function visibleColumn(key: string): VisibleColumn {
-  const fieldMetadata = getFieldMetadata(schema, key)
-  if (!fieldMetadata) throw new Error(`Missing field metadata for ${key}`)
-
-  return {
-    key,
-    widthPx: 180,
-    fieldMetadata,
-  }
-}
-
-function SingleFileFormRowHarness({
-  onCellCommit,
-  visibleColumns,
-  ...props
-}: Omit<
-  React.ComponentProps<typeof SingleFileFormRow>,
-  | "renderedColumnWindow"
-  | "primitiveActiveCellStore"
-  | "primitiveEditStore"
-  | "setPrimitiveActiveCell"
-  | "structuredEditSession"
-  | "startStructuredEditSession"
-  | "setStructuredEditSessionOverlayOpen"
-  | "closeStructuredEditSession"
-  | "onCellCommit"
-> & {
-  visibleColumns: VisibleColumn[]
-  onCellCommit?: JsonTableCellCommitHandler
-}) {
-  const primitiveActiveCellStoreRef = React.useRef(
-    createJsonTablePrimitiveActiveCellStore()
-  )
-  const primitiveEditStoreRef = React.useRef(
-    createJsonTablePrimitiveEditStore()
-  )
-  const [structuredEditSession, setStructuredEditSession] =
-    React.useState<JsonTableStructuredEditSession | null>(null)
-  const sessionIdRef = React.useRef(0)
-
-  const setNextPrimitiveActiveCell = React.useCallback(
-    (activeCell: JsonTablePrimitiveActiveCell | null) => {
-      primitiveActiveCellStoreRef.current.setSnapshot(activeCell)
-      if (activeCell) setStructuredEditSession(null)
-    },
-    []
-  )
-
-  const startStructuredEditSession = React.useCallback(
-    (projectedCell: ProjectedCell, intent: JsonTableActivationIntent) => {
-      const nextSessionId = sessionIdRef.current + 1
-      sessionIdRef.current = nextSessionId
-      primitiveActiveCellStoreRef.current.setSnapshot(null)
-      setStructuredEditSession({
-        id: nextSessionId,
-        cellId: jsonTableCellId(
-          props.document.id,
-          projectedCell.materializedFieldPath
-        ),
-        docId: props.document.id,
-        fieldPath: projectedCell.materializedFieldPath,
-        intent,
-        isOverlayOpen: true,
-      })
-    },
-    [props.document.id]
-  )
-  const setStructuredEditSessionOverlayOpen = React.useCallback(
-    (open: boolean) => {
-      setStructuredEditSession((currentSession) =>
-        currentSession && currentSession.isOverlayOpen !== open
-          ? { ...currentSession, isOverlayOpen: open }
-          : currentSession
-      )
-    },
-    []
-  )
-  const closeStructuredEditSession = React.useCallback(() => {
-    setStructuredEditSession(null)
-  }, [])
-  const handleCellCommit = React.useCallback(
-    (commit: JsonTableCellCommit) => {
-      onCellCommit?.(commit)
-    },
-    [onCellCommit]
-  )
-
-  return (
-    <SingleFileFormRow
-      {...props}
-      renderedColumnWindow={jsonTableFullRenderedColumnWindow(visibleColumns)}
-      primitiveActiveCellStore={primitiveActiveCellStoreRef.current}
-      primitiveEditStore={primitiveEditStoreRef.current}
-      setPrimitiveActiveCell={setNextPrimitiveActiveCell}
-      structuredEditSession={structuredEditSession}
-      startStructuredEditSession={startStructuredEditSession}
-      setStructuredEditSessionOverlayOpen={setStructuredEditSessionOverlayOpen}
-      closeStructuredEditSession={closeStructuredEditSession}
-      onCellCommit={handleCellCommit}
-    />
-  )
-}
-
 function renderJsonTableField({
   doc = tableDocument,
   fieldPath,
@@ -185,29 +68,13 @@ function renderJsonTableField({
   isJsonEditable?: boolean
   onCellCommit?: JsonTableCellCommitHandler
 }) {
-  const rows = projectDocumentRows({
+  const view = renderInteractionRow({
     document: doc,
+    schema,
     visiblePaths: [fieldPath],
-    includeArrayAddRows: true,
+    isJsonEditable,
+    onCellCommit,
   })
-
-  const view = render(
-    <table>
-      <tbody>
-        <SingleFileFormRowHarness
-          document={doc}
-          schema={schema}
-          projectedRow={rows[0]}
-          visibleColumns={[visibleColumn(fieldPath)]}
-          rowIdx={0}
-          rowTopPx={0}
-          rowHeightPx={32}
-          onCellCommit={onCellCommit}
-          isJsonEditable={isJsonEditable}
-        />
-      </tbody>
-    </table>
-  )
 
   const findCell = async () => {
     return waitFor(
@@ -223,14 +90,6 @@ function renderJsonTableField({
   }
 
   return { ...view, findCell, onCellCommit }
-}
-
-function primitiveEventTarget(cell: HTMLElement) {
-  return (
-    cell.querySelector<HTMLElement>(
-      '[data-slot="input-control"], [data-slot="data-cell"]'
-    ) ?? cell
-  )
 }
 
 async function activateEnumCell(fieldPath: string) {

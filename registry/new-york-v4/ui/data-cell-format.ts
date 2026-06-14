@@ -1,5 +1,6 @@
 import type {
   DataCellCommitValue,
+  DataCellCommitValueForKind,
   DataCellDateTimeZone,
   DataCellKind,
   DataCellValue,
@@ -57,6 +58,28 @@ export function formatDataCellDisplayValue(
   return text
 }
 
+export function parseDataCellInputValue({
+  kind,
+  value,
+  dateTimeZone,
+  previousValue,
+}: {
+  kind: "text" | "number" | "integer"
+  value: string
+  dateTimeZone: DataCellDateTimeZone
+  previousValue: DataCellValue
+}): DataCellCommitValueForKind<"text" | "number" | "integer">
+export function parseDataCellInputValue({
+  kind,
+  value,
+  dateTimeZone,
+  previousValue,
+}: {
+  kind: "date" | "time" | "date-time"
+  value: string
+  dateTimeZone: DataCellDateTimeZone
+  previousValue: DataCellValue
+}): DataCellCommitValueForKind<"date" | "time" | "date-time">
 export function parseDataCellInputValue({
   kind,
   value,

@@ -74,6 +74,22 @@ function schemaWithContext(
   }
 }
 
+function focusStructuredCellShell(fieldPath: string) {
+  const focusCell = () => {
+    const cells = document.querySelectorAll<HTMLTableCellElement>(
+      "td[data-field-path]"
+    )
+    for (const cell of cells) {
+      if (cell.dataset.fieldPath !== fieldPath) continue
+      cell.focus({ preventScroll: true })
+      return
+    }
+  }
+
+  window.requestAnimationFrame(focusCell)
+  window.setTimeout(focusCell, 0)
+}
+
 export function JsonTableStructuredCell({
   effectiveValue,
   structuredEditSession,
@@ -103,7 +119,10 @@ export function JsonTableStructuredCell({
       open={structuredEditSession.isOverlayOpen}
       onOpenChange={(open) => {
         setStructuredEditSessionOverlayOpen(open)
-        if (!open) closeStructuredEditSession()
+        if (!open) {
+          closeStructuredEditSession()
+          focusStructuredCellShell(fieldPath)
+        }
       }}
     >
       <PopoverTrigger asChild>
@@ -146,8 +165,8 @@ export function JsonTableStructuredCell({
             <JsonObjectEditor
               disabled={!isEditable}
               property={{
-                ...schemaWithContext(fieldSchema, schema),
                 additionalProperties: true,
+                ...schemaWithContext(fieldSchema, schema),
               }}
               currentValue={effectiveValue}
               onSubmit={(values) => {

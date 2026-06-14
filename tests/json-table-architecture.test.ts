@@ -13,7 +13,11 @@ const deletedRuntimeFiles = [
   "components/json-table/json-table-data-cell.tsx",
   "components/json-table/json-table-display-cell.tsx",
   "components/json-table/use-cell-controller.ts",
+  "components/json-table/use-json-table-cell-profiler.ts",
   "components/json-table/use-json-table-primitive-cell-controller.ts",
+  "registry/new-york-v4/ui/data-cell-text-control.tsx",
+  "registry/new-york-v4/ui/data-cell-number-control.tsx",
+  "registry/new-york-v4/ui/data-cell-control-state.ts",
 ]
 
 const runtimeRoots = ["components/json-table"]
@@ -33,7 +37,6 @@ const dataCellRuntimeFiles = [
   "registry/new-york-v4/ui/data-cell-display-model.ts",
   "registry/new-york-v4/ui/data-cell-edit-model.ts",
   "registry/new-york-v4/ui/data-cell-format.ts",
-  "registry/new-york-v4/ui/data-cell-number-control.tsx",
   "registry/new-york-v4/ui/data-cell-picker-control.tsx",
   "registry/new-york-v4/ui/data-cell-picker-icon.tsx",
   "registry/new-york-v4/ui/data-cell-picker-position.ts",
@@ -47,7 +50,7 @@ const dataCellRuntimeFiles = [
   "registry/new-york-v4/ui/data-cell-select-state.ts",
   "registry/new-york-v4/ui/data-cell-session.ts",
   "registry/new-york-v4/ui/data-cell-text-activation.ts",
-  "registry/new-york-v4/ui/data-cell-text-control.tsx",
+  "registry/new-york-v4/ui/data-cell-input-control.tsx",
   "registry/new-york-v4/ui/data-cell-text-hit-test.ts",
   "registry/new-york-v4/ui/data-cell-types.ts",
   "components/ui/data-cell.tsx",
@@ -103,7 +106,6 @@ const forbiddenEditableCoordinatorPatterns = [
   "useCellController",
   "formatValueForCommit",
   "markJsonTableProfile",
-  "recordJsonTableRender",
   "finishPreviousPrimitiveEditor",
   "commitPrimitiveCommand",
   "pointerActivationRequest",
@@ -183,7 +185,7 @@ const dataCellPrimitiveControlFiles = [
   "registry/new-york-v4/ui/data-cell-boolean-control.tsx",
   "registry/new-york-v4/ui/data-cell-picker-control.tsx",
   "registry/new-york-v4/ui/data-cell-select-control.tsx",
-  "registry/new-york-v4/ui/data-cell-text-control.tsx",
+  "registry/new-york-v4/ui/data-cell-input-control.tsx",
 ]
 
 const forbiddenPrimitiveControlPatterns = [
@@ -240,10 +242,6 @@ const jsonTableLineCountLimits = [
     maxLines: 220,
   },
   {
-    file: "components/json-table/use-json-table-cell-profiler.ts",
-    maxLines: 220,
-  },
-  {
     file: "components/json-table/json-table-cell-shell.ts",
     maxLines: 220,
   },
@@ -274,6 +272,15 @@ function isJsonTableRuntimeFile(file: string): boolean {
 
 function lineCount(content: string): number {
   return content.trimEnd().split(/\r?\n/).length
+}
+
+function importedModuleSpecifiers(content: string): string[] {
+  return Array.from(
+    content.matchAll(
+      /\bimport\s+(?:type\s+)?(?:[\s\S]*?\s+from\s+)?["']([^"']+)["']/g
+    ),
+    (match) => match[1]
+  )
 }
 
 type FileBoundary = {
@@ -307,6 +314,25 @@ describe("json table and DataCell architecture", () => {
   it("keeps deleted scalar and auto-edit compatibility files deleted", () => {
     for (const file of deletedRuntimeFiles) {
       expect(existsSync(join(repoRoot, file)), file).toBe(false)
+    }
+
+    const registryManifestContent = readFileSync(
+      join(repoRoot, "registry.json"),
+      "utf8"
+    )
+    const dataCellRegistryContent = readFileSync(
+      join(repoRoot, "public/r/data-cell.json"),
+      "utf8"
+    )
+
+    for (const deletedRegistryFile of [
+      "registry/new-york-v4/ui/data-cell-text-control.tsx",
+      "@ui/data-cell-text-control.tsx",
+      "registry/new-york-v4/ui/data-cell-number-control.tsx",
+      "@ui/data-cell-number-control.tsx",
+    ]) {
+      expect(registryManifestContent.includes(deletedRegistryFile)).toBe(false)
+      expect(dataCellRegistryContent.includes(deletedRegistryFile)).toBe(false)
     }
   })
 
@@ -348,6 +374,24 @@ describe("json table and DataCell architecture", () => {
     }
   })
 
+  it("keeps DataCell registry runtime import graph independent from JSON table internals", () => {
+    for (const file of dataCellRegistryRuntimeFiles) {
+      const content = readFileSync(join(repoRoot, file), "utf8")
+      const imports = importedModuleSpecifiers(content)
+
+      for (const importedModule of imports) {
+        expect(
+          importedModule.startsWith("@/components/json-table"),
+          `${file} imports JSON-table internals through ${importedModule}`
+        ).toBe(false)
+        expect(
+          importedModule.startsWith("@/components/ui/data-cell"),
+          `${file} imports the public DataCell barrel instead of its local runtime through ${importedModule}`
+        ).toBe(false)
+      }
+    }
+  })
+
   it("keeps EditableJsonTableCell as a pure router", () => {
     const file = "components/json-table/editable-json-table-cell.tsx"
     const content = readFileSync(join(repoRoot, file), "utf8")
@@ -385,6 +429,11 @@ describe("json table and DataCell architecture", () => {
 
   it("keeps DataCell activation source as the only DataCell flushSync boundary", () => {
     const allowedFile = "registry/new-york-v4/ui/data-cell.tsx"
+    const architectureFile = "components/json-table/ARCHITECTURE.md"
+    const architectureContent = readFileSync(
+      join(repoRoot, architectureFile),
+      "utf8"
+    )
 
     for (const file of dataCellRuntimeFiles) {
       const content = readFileSync(join(repoRoot, file), "utf8")
@@ -399,6 +448,23 @@ describe("json table and DataCell architecture", () => {
     expect(shellContent.includes("Activation source must be visible")).toBe(
       true
     )
+
+    for (const documentedPolicy of [
+      "### DataCell Activation State Machine",
+      "stateDiagram-v2",
+      "boolean pointer/key command",
+      "pointer coordinates or key",
+      "opening event cannot dismiss",
+      "Modifier-key keyboard events do not activate editing.",
+      "storeDataCellActivationSource()",
+      "only DataCell `flushSync` boundary",
+      "Select and picker controls use `useDataCellOpeningContext()`",
+    ]) {
+      expect(
+        architectureContent.includes(documentedPolicy),
+        `${architectureFile} misses DataCell activation policy ${documentedPolicy}`
+      ).toBe(true)
+    }
   })
 
   it("keeps the JSON-table verification command stable and documented", () => {
@@ -409,6 +475,14 @@ describe("json table and DataCell architecture", () => {
       join(repoRoot, "components/json-table/ARCHITECTURE.md"),
       "utf8"
     )
+    const dataCellParityVerifier = readFileSync(
+      join(repoRoot, "scripts/verify-data-cell-parity.mjs"),
+      "utf8"
+    )
+    const dataCellParityRoute = readFileSync(
+      join(repoRoot, "app/(view)/data-cell-parity/page.tsx"),
+      "utf8"
+    )
 
     expect(packageJson.scripts?.["test:json-table"]).toContain(
       "tests/json-table-session-interactions.test.tsx"
@@ -416,10 +490,172 @@ describe("json table and DataCell architecture", () => {
     expect(packageJson.scripts?.["test:json-table"]).toContain(
       "tests/json-table-enum-accessibility-interactions.test.tsx"
     )
+    expect(packageJson.scripts?.["test:json-table"]).toContain(
+      "tests/read-only-json-row-patcher.test.tsx"
+    )
+    expect(packageJson.scripts?.["test:json-table"]).toContain(
+      "tests/json-table-structured-cell.test.tsx"
+    )
+    expect(packageJson.scripts?.["verify:json-table"]).toContain(
+      "pnpm test:json-table"
+    )
+    expect(packageJson.scripts?.["verify:json-table"]).toContain(
+      "PROFILE_SERVER_MODE=auto"
+    )
+    expect(packageJson.scripts?.["verify:json-table"]).toContain(
+      "JSON_TABLE_PROFILE_WARMUP=1"
+    )
+    expect(packageJson.scripts?.["verify:json-table"]).toContain(
+      "pnpm verify:json-table-performance:fresh"
+    )
+    expect(packageJson.scripts?.["verify:json-table"]).toContain(
+      "pnpm verify:json-table-accessibility:fresh"
+    )
+    expect(packageJson.scripts?.["verify:data-cell"]).toContain(
+      "verify-data-cell-parity.mjs"
+    )
+    expect(dataCellParityVerifier).toContain(
+      "http://127.0.0.1:3100/data-cell-parity"
+    )
+    expect(dataCellParityVerifier).not.toContain(
+      "http://localhost:3100/docs/components/data-cell"
+    )
+    expect(dataCellParityRoute).toContain(
+      'import { DataCellDemo } from "@/components/data-cell-demo"'
+    )
+    expect(dataCellParityRoute).not.toContain("@/components/json-table")
+    expect(dataCellParityRoute).not.toContain("@/components/docs")
+    expect(packageJson.scripts?.["verify:data-cell-registry"]).toContain(
+      "verify-data-cell-registry-determinism.mjs"
+    )
+    expect(architectureContent.includes("pnpm verify:json-table")).toBe(true)
     expect(architectureContent.includes("pnpm test:json-table")).toBe(true)
+    expect(architectureContent.includes("JSON_TABLE_PROFILE_WARMUP=1")).toBe(
+      true
+    )
+    expect(architectureContent.includes("JSON_TABLE_PROFILE_TARGETS")).toBe(
+      true
+    )
+    expect(architectureContent.includes("JSON_TABLE_PROFILE_SCENARIOS")).toBe(
+      true
+    )
+    expect(
+      architectureContent.includes("scenario filters are diagnostic-only")
+    ).toBe(true)
+    expect(
+      architectureContent.includes("use p90 for latency/style budgets")
+    ).toBe(true)
+    expect(architectureContent.includes("pnpm typecheck")).toBe(true)
+    expect(architectureContent.includes("pnpm verify:data-cell")).toBe(true)
+    expect(architectureContent.includes("pnpm verify:data-cell-registry")).toBe(
+      true
+    )
+    expect(architectureContent.includes("components/ui/data-cell")).toBe(true)
+    expect(
+      architectureContent.includes("registry/new-york-v4/ui/data-cell*")
+    ).toBe(true)
     expect(
       architectureContent.includes("pnpm test tests/json-table-*.test")
     ).toBe(false)
+  })
+
+  it("keeps large JSON-table performance budgets tied to repeated evidence", () => {
+    const budgetFile =
+      "components/json-table/json-table-performance-budget.json"
+    const budget = JSON.parse(readFileSync(join(repoRoot, budgetFile), "utf8"))
+    const largeBudget = budget.profiles.large
+
+    for (const scenarioName of [
+      "open-enum",
+      "open-date",
+      "switch-dirty-cell",
+      "open-far-enum",
+      "open-far-date",
+      "commit-far-text",
+    ]) {
+      expect(
+        largeBudget[scenarioName],
+        `${budgetFile} budgets ${scenarioName}`
+      ).toBeTruthy()
+      expect(
+        largeBudget[scenarioName].maxStyleDurationMs,
+        `${budgetFile} keeps ${scenarioName} style budget tight`
+      ).toBeLessThanOrEqual(120)
+    }
+
+    expect(largeBudget["open-enum"].maxElapsedMs).toBeLessThanOrEqual(250)
+    expect(largeBudget["open-date"].maxElapsedMs).toBeLessThanOrEqual(350)
+    expect(largeBudget["switch-dirty-cell"].maxElapsedMs).toBeLessThanOrEqual(
+      250
+    )
+    expect(
+      largeBudget["open-far-enum"].allowedEditableCellRenderFieldPaths
+    ).toContain("transactions.0.profile_far_status")
+    expect(
+      largeBudget["open-far-date"].allowedEditableCellRenderFieldPaths
+    ).toContain("transactions.0.profile_far_date")
+    expect(
+      largeBudget["commit-far-text"].allowedEditableCellRenderFieldPaths
+    ).toContain("transactions.0.profile_far_note")
+  })
+
+  it("keeps the current JSON-table architecture documents indexed", () => {
+    const architectureFile = "components/json-table/ARCHITECTURE.md"
+    const architectureContent = readFileSync(
+      join(repoRoot, architectureFile),
+      "utf8"
+    )
+
+    for (const requiredDocument of [
+      "## Current Documents",
+      "design/data-cell-json-table-platonic-issues-blueprint.md",
+      "design/data-cell-json-table-style-invalidation-findings.md",
+      "components/json-table/json-table-performance-budget.json",
+      "scripts/profile-json-table-primitive-interactions.mjs",
+      "scripts/verify-json-table-performance-budget.mjs",
+      "scripts/verify-json-table-performance-budget-fresh.mjs",
+      "Older JSON-table blueprints are historical",
+    ]) {
+      expect(
+        architectureContent.includes(requiredDocument),
+        `${architectureFile} misses current architecture document ${requiredDocument}`
+      ).toBe(true)
+    }
+  })
+
+  it("keeps primitive interaction tests on the shared row harness", () => {
+    const interactionUtilityFile = "tests/json-table-interaction-test-utils.tsx"
+    const interactionUtilityContent = readFileSync(
+      join(repoRoot, interactionUtilityFile),
+      "utf8"
+    )
+
+    expect(interactionUtilityContent.includes("renderInteractionRow")).toBe(
+      true
+    )
+    expect(interactionUtilityContent.includes("SingleFileFormRowHarness")).toBe(
+      true
+    )
+
+    for (const testFile of [
+      "tests/json-table-text-number-interactions.test.tsx",
+      "tests/json-table-boolean-enum-interactions.test.tsx",
+    ]) {
+      const content = readFileSync(join(repoRoot, testFile), "utf8")
+      expect(content.includes("renderInteractionRow")).toBe(true)
+      for (const duplicatedHarnessToken of [
+        "SingleFileFormRowHarness",
+        "createJsonTablePrimitiveActiveCellStore",
+        "createJsonTablePrimitiveEditStore",
+        "jsonTableFullRenderedColumnWindow",
+        "startStructuredEditSession",
+      ]) {
+        expect(
+          content.includes(duplicatedHarnessToken),
+          `${testFile} keeps duplicated row harness token ${duplicatedHarnessToken}`
+        ).toBe(false)
+      }
+    }
   })
 
   it("keeps useJsonTableEditableCellModel as the editable-cell model boundary", () => {
@@ -497,9 +733,36 @@ describe("json table and DataCell architecture", () => {
     ).toBe(true)
     expect(structuredContent.includes("StructuredPendingValue")).toBe(true)
     expect(structuredContent.includes("structuredPendingValue")).toBe(true)
+    expect(structuredContent.includes("projectedValueAtCommit")).toBe(true)
+    expect(structuredContent.includes("areStructuredValuesEqual")).toBe(true)
     expect(structuredContent.includes("StructuredLocalCommit")).toBe(false)
     expect(structuredContent.includes("localCommit")).toBe(false)
     expect(structuredContent.includes("commitValue(")).toBe(false)
+  })
+
+  it("documents the structured pending visibility policy", () => {
+    const architectureFile = "components/json-table/ARCHITECTURE.md"
+    const architectureContent = readFileSync(
+      join(repoRoot, architectureFile),
+      "utf8"
+    )
+
+    for (const documentedPolicy of [
+      "### Structured Pending Policy",
+      "useJsonTableStructuredCellController",
+      "projectedValueAtCommit",
+      "not echoed the structured commit yet",
+      "cloned object/array",
+      "The parent value wins and pending state is cleared.",
+      "Horizontal virtualization does not cancel a structured session.",
+      "popover DOM unmounts",
+      "reopens with the same active session",
+    ]) {
+      expect(
+        architectureContent.includes(documentedPolicy),
+        `${architectureFile} misses structured pending policy ${documentedPolicy}`
+      ).toBe(true)
+    }
   })
 
   it("keeps primitive echo ownership out of the virtualized table", () => {
@@ -1176,9 +1439,10 @@ describe("json table and DataCell architecture", () => {
     const editModelContent = readFileSync(join(repoRoot, editModelFile), "utf8")
     const sessionFile = "registry/new-york-v4/ui/data-cell-session.ts"
     const sessionContent = readFileSync(join(repoRoot, sessionFile), "utf8")
-    const textControlFile = "registry/new-york-v4/ui/data-cell-text-control.tsx"
-    const textControlContent = readFileSync(
-      join(repoRoot, textControlFile),
+    const inputControlFile =
+      "registry/new-york-v4/ui/data-cell-input-control.tsx"
+    const inputControlContent = readFileSync(
+      join(repoRoot, inputControlFile),
       "utf8"
     )
 
@@ -1201,6 +1465,12 @@ describe("json table and DataCell architecture", () => {
     expect(contractContent.includes("DataCellEditorProps &")).toBe(true)
     expect(contractContent.includes(`is${"Picker"}Open`)).toBe(false)
     expect(contractContent.includes(`on${"Picker"}OpenChange`)).toBe(false)
+    expect(contractContent.includes("DataCellTextInputControlProps")).toBe(true)
+    expect(contractContent.includes("DataCellNumberInputControlProps")).toBe(
+      true
+    )
+    expect(contractContent.includes("DataCellTextControlProps")).toBe(false)
+    expect(contractContent.includes("DataCellNumberControlProps")).toBe(false)
     expect(registryContent.includes("DataCellProps")).toBe(false)
     expect(registryContent.includes("DataCellPublicPropsByKind")).toBe(false)
     expect(registryContent.includes("DataCellControlPropsByKind")).toBe(true)
@@ -1220,24 +1490,52 @@ describe("json table and DataCell architecture", () => {
       registryContent.includes("getDataCellTextPointerActivationSource")
     ).toBe(false)
     expect(registryContent.includes("commitDataCellBooleanToggle")).toBe(false)
+    expect(registryContent.includes("dataCellInputControlProps")).toBe(false)
     expect(registryContent.includes("dataCellTextControlProps")).toBe(false)
-    expect(controlContent.includes("dataCellTextControlProps")).toBe(true)
+    expect(registryContent.includes("dataCellNumberControlProps")).toBe(false)
+    expect(controlContent.includes("dataCellInputControlProps")).toBe(true)
+    expect(controlContent.includes("dataCellTextControlProps")).toBe(false)
+    expect(controlContent.includes("dataCellNumberControlProps")).toBe(false)
     expect(actionsContent.includes("getDataCellPointerControlAction")).toBe(
       true
     )
     expect(actionsContent.includes("getDataCellClickControlAction")).toBe(true)
     expect(actionsContent.includes("getDataCellKeyControlAction")).toBe(true)
     expect(actionsContent.includes("createDataCellControlState")).toBe(true)
+    expect(
+      actionsContent.includes("createDataCellNonBooleanControlState")
+    ).toBe(true)
+    expect(actionsContent.includes('props.kind === "boolean"')).toBe(true)
+    for (const duplicatedControlStateBranch of [
+      'props.kind === "text"',
+      'props.kind === "number"',
+      'props.kind === "integer"',
+      'props.kind === "select"',
+      'props.kind === "date"',
+      'props.kind === "time"',
+      'props.kind === "date-time"',
+    ]) {
+      expect(
+        actionsContent.includes(duplicatedControlStateBranch),
+        `${actionsFile} repeats non-boolean state branch ${duplicatedControlStateBranch}`
+      ).toBe(false)
+    }
     expect(actionsContent.includes("commitDataCellBooleanToggle")).toBe(true)
-    expect(actionsContent.includes("DataCellProps")).toBe(true)
+    expect(actionsContent.includes("DataCellProps")).toBe(false)
     expect(actionsContent.includes("DataCellTextControl")).toBe(false)
     expect(actionsContent.includes("DataCellPickerControl")).toBe(false)
+    expect(actionsContent.includes("data-cell-input-control")).toBe(false)
     expect(actionsContent.includes("data-cell-text-control")).toBe(false)
     expect(actionsContent.includes("data-cell-number-control")).toBe(false)
     expect(actionsContent.includes("data-cell-boolean-control")).toBe(false)
     expect(actionsContent.includes("data-cell-text-activation")).toBe(true)
     expect(actionsContent.includes("data-cell-boolean-value")).toBe(true)
-    expect(propsContent.includes("dataCellTextControlProps")).toBe(true)
+    expect(propsContent.includes("dataCellInputControlProps")).toBe(true)
+    expect(propsContent.includes("dataCellTextControlProps")).toBe(false)
+    expect(propsContent.includes("dataCellNumberControlProps")).toBe(false)
+    expect(propsContent.includes("as DataCellControlStaticPropsByKind")).toBe(
+      false
+    )
     expect(propsContent.includes("dataCellPickerControlProps")).toBe(true)
     expect(propsContent.includes("useDataCellPrimitiveSession")).toBe(false)
     expect(propsContent.includes("createDataCellPointerActivationSource")).toBe(
@@ -1395,6 +1693,24 @@ describe("json table and DataCell architecture", () => {
     expect(registryContent.includes("model.onCommit as")).toBe(false)
     expect(controlContent.includes("model.onCommit as")).toBe(false)
     expect(editModelContent.includes("dataCellCommitHandler")).toBe(true)
+    expect(editModelContent.includes("dataCellEditModelBase")).toBe(true)
+    expect(editModelContent.includes("DataCellTypedPropsForKind")).toBe(true)
+    expect(editModelContent.includes("props.kind,\n      props")).toBe(false)
+    expect(editModelContent.includes("props.onCommit,\n      shellState")).toBe(
+      false
+    )
+    expect(
+      editModelContent.match(/const editState = dataCellEditShellState/g)
+        ?.length ?? 0
+    ).toBe(1)
+    expect(
+      editModelContent.match(/editorProps: dataCellEditorProps\(props\)/g)
+        ?.length ?? 0
+    ).toBe(1)
+    expect(
+      editModelContent.match(/onEditingEnd: editState\.onEditingEnd/g)
+        ?.length ?? 0
+    ).toBe(1)
     expect(editModelContent.includes("isDataCellStringCommitValue")).toBe(true)
     expect(editModelContent.includes("isDataCellNumberCommitValue")).toBe(true)
     expect(editModelContent.includes("isDataCellBooleanCommitValue")).toBe(true)
@@ -1446,23 +1762,25 @@ describe("json table and DataCell architecture", () => {
         `${propsFile} leaks ${internalPublicStateLeak}`
       ).toBe(false)
     }
-    expect(textControlContent.includes("draftValue")).toBe(false)
-    expect(textControlContent.includes("onDraftValueChange")).toBe(false)
+    expect(inputControlContent.includes("draftValue")).toBe(false)
+    expect(inputControlContent.includes("onDraftValueChange")).toBe(false)
     expect(pickerControlContent.includes("draftValue")).toBe(false)
     expect(pickerControlContent.includes("onDraftValueChange")).toBe(false)
     expect(pickerControlContent.includes("openState")).toBe(true)
     expect(selectControlContent.includes("openState")).toBe(true)
     expect(selectStateContent.includes("openState")).toBe(true)
-    expect(textControlContent.includes("useDataCellPrimitiveSession")).toBe(
+    expect(inputControlContent.includes("useDataCellPrimitiveSession")).toBe(
       false
     )
-    expect(textControlContent.includes("useDataCellOpeningContext")).toBe(true)
-    expect(textControlContent.includes("releaseAfterMicrotask: true")).toBe(
+    expect(inputControlContent.includes("useDataCellOpeningContext")).toBe(true)
+    expect(inputControlContent.includes("releaseAfterMicrotask: true")).toBe(
       true
     )
-    expect(textControlContent.includes("isOpeningPointerBlurRef")).toBe(false)
-    expect(textControlContent.includes("setTimeout")).toBe(false)
-    expect(textControlContent.includes("document.addEventListener")).toBe(false)
+    expect(inputControlContent.includes("isOpeningPointerBlurRef")).toBe(false)
+    expect(inputControlContent.includes("setTimeout")).toBe(false)
+    expect(inputControlContent.includes("document.addEventListener")).toBe(
+      false
+    )
     expect(booleanControlContent.includes("useDataCellPrimitiveSession")).toBe(
       false
     )
@@ -1472,12 +1790,24 @@ describe("json table and DataCell architecture", () => {
     expect(selectStateContent.includes("useDataCellPrimitiveSession")).toBe(
       false
     )
-    expect(textControlContent.includes("didFinishEditingRef")).toBe(false)
+    expect(
+      inputControlContent.includes("export function DataCellInputControl")
+    ).toBe(true)
+    expect(
+      inputControlContent.includes("export function DataCellTextControl")
+    ).toBe(false)
+    expect(inputControlContent.includes("DataCellTextControlProps")).toBe(false)
+    expect(inputControlContent.includes("as string | number | null")).toBe(
+      false
+    )
+    expect(pickerControlContent.includes("as string | null")).toBe(false)
+    expect(pickerControlContent.includes("previousValue: value as")).toBe(false)
+    expect(inputControlContent.includes("didFinishEditingRef")).toBe(false)
     for (const lifecycleFileContent of [
       booleanControlContent,
       pickerControlContent,
       selectStateContent,
-      textControlContent,
+      inputControlContent,
     ]) {
       expect(lifecycleFileContent.includes("didFinishEditingRef")).toBe(false)
       expect(lifecycleFileContent.includes("onEditingEnd")).toBe(false)
@@ -1551,6 +1881,13 @@ describe("json table and DataCell architecture", () => {
     expect(registryContent.includes("<DataCellPickerControl {...props}")).toBe(
       false
     )
+    expect(registryContent.includes("DataCellInputControl")).toBe(true)
+    expect(registryContent.includes("DataCellTextControl")).toBe(false)
+    expect(registryContent.includes("DataCellNumberControl")).toBe(false)
+    expect(registryContent.includes("data-cell-number-control")).toBe(false)
+    expect(registryContent.includes("text: DataCellInputControl")).toBe(true)
+    expect(registryContent.includes("number: DataCellInputControl")).toBe(true)
+    expect(registryContent.includes("integer: DataCellInputControl")).toBe(true)
     expect(registryContent.match(/\bcontrolProps:/g)?.length ?? 0).toBe(0)
   })
 
@@ -1658,6 +1995,9 @@ describe("json table and DataCell architecture", () => {
     expect(modelContent.includes("booleanDataCellProps")).toBe(true)
     expect(modelContent.includes("textDataCellProps")).toBe(true)
     expect(modelContent.includes("fallbackTextDataCellProps")).toBe(true)
+    expect(modelContent.includes("type ShellProps")).toBe(true)
+    expect(modelContent.includes("SharedDataCellProps")).toBe(false)
+    expect(modelContent.includes("sharedProps")).toBe(false)
     expect(modelContent.includes("selectDataCellModel")).toBe(false)
     expect(modelContent.includes("numberDataCellModel")).toBe(false)
     expect(modelContent.includes("booleanDataCellModel")).toBe(false)
@@ -1877,7 +2217,8 @@ describe("json table and DataCell architecture", () => {
     const editSessionFile =
       "components/json-table/use-json-table-edit-session-coordinator.ts"
     const cellShellFile = "components/json-table/json-table-cell-shell.ts"
-    const readOnlyCellFile = "components/json-table/read-only-json-table-cell.tsx"
+    const readOnlyCellFile =
+      "components/json-table/read-only-json-table-cell.tsx"
     const columnWindowHookFile =
       "components/json-table/use-json-table-rendered-column-window.ts"
     const columnWindowFile =
@@ -1926,9 +2267,7 @@ describe("json table and DataCell architecture", () => {
     expect(
       columnWindowContent.includes("jsonTableVirtualRenderedColumnWindow")
     ).toBe(true)
-    expect(tableContent.includes("useJsonTableRenderedColumnWindow")).toBe(
-      true
-    )
+    expect(tableContent.includes("useJsonTableRenderedColumnWindow")).toBe(true)
     expect(
       columnWindowHookContent.includes("jsonTableFullRenderedColumnWindow")
     ).toBe(true)
@@ -1939,25 +2278,21 @@ describe("json table and DataCell architecture", () => {
       rowContent.includes("export type JsonTableRenderedColumnWindow")
     ).toBe(false)
     expect(rowContent.includes("jsonTableFullRenderedColumnWindow")).toBe(false)
-    expect(
-      tableContent.includes("jsonTableFullRenderedColumnWindow")
-    ).toBe(false)
-    expect(
-      tableContent.includes("jsonTableVirtualRenderedColumnWindow")
-    ).toBe(false)
+    expect(tableContent.includes("jsonTableFullRenderedColumnWindow")).toBe(
+      false
+    )
+    expect(tableContent.includes("jsonTableVirtualRenderedColumnWindow")).toBe(
+      false
+    )
     expect(tableContent.includes("schemaVisibleColumns")).toBe(true)
     expect(tableContent.includes("renderedBodyColumnItems")).toBe(true)
     expect(tableContent.includes("leftPadWidthPx")).toBe(true)
     expect(tableContent.includes("rightPadWidthPx")).toBe(true)
-    expect(
-      tableContent.includes("columnItems: renderedBodyColumnItems")
-    ).toBe(true)
-    expect(
-      tableContent.includes("leftPad: leftPadWidthPx")
-    ).toBe(true)
-    expect(
-      tableContent.includes("rightPad: rightPadWidthPx")
-    ).toBe(true)
+    expect(tableContent.includes("columnItems: renderedBodyColumnItems")).toBe(
+      true
+    )
+    expect(tableContent.includes("leftPad: leftPadWidthPx")).toBe(true)
+    expect(tableContent.includes("rightPad: rightPadWidthPx")).toBe(true)
     for (const ambiguousColumnWindowName of [
       "const { columnItems",
       " leftPad,",
@@ -1968,15 +2303,11 @@ describe("json table and DataCell architecture", () => {
         `${tableFile} contains ambiguous virtualizer boundary name ${ambiguousColumnWindowName}`
       ).toBe(false)
     }
-    expect(
-      columnWindowHookContent.includes("isJsonEditable")
-    ).toBe(true)
-    expect(
-      columnWindowHookContent.includes("renderedBodyColumnItems")
-    ).toBe(true)
-    expect(
-      columnWindowHookContent.includes("schemaVisibleColumns")
-    ).toBe(true)
+    expect(columnWindowHookContent.includes("isJsonEditable")).toBe(true)
+    expect(columnWindowHookContent.includes("renderedBodyColumnItems")).toBe(
+      true
+    )
+    expect(columnWindowHookContent.includes("schemaVisibleColumns")).toBe(true)
     expect(
       tableContent.includes("renderedColumnWindow={renderedColumnWindow}")
     ).toBe(true)
@@ -2013,6 +2344,159 @@ describe("json table and DataCell architecture", () => {
       ),
       `${rowFile} compares the primitive active store by identity`
     ).toBe(true)
+  })
+
+  it("keeps read-only row patching policy explicit and diagnosed", () => {
+    const architectureFile = "components/json-table/ARCHITECTURE.md"
+    const patcherFile = "components/json-table/read-only-json-row-patcher.ts"
+    const patcherTestFile = "tests/read-only-json-row-patcher.test.tsx"
+    const architectureContent = readFileSync(
+      join(repoRoot, architectureFile),
+      "utf8"
+    )
+    const patcherContent = readFileSync(join(repoRoot, patcherFile), "utf8")
+    const patcherTestContent = readFileSync(
+      join(repoRoot, patcherTestFile),
+      "utf8"
+    )
+
+    for (const documentedPolicy of [
+      "### Editable And Read-Only Row Policies",
+      "Editable tables use the React row policy",
+      "Read-only tables use the DOM row patch policy",
+      "active controls and local edit state",
+      "`read-only-row-patcher` profiler mark",
+    ]) {
+      expect(
+        architectureContent.includes(documentedPolicy),
+        `${architectureFile} misses row policy ${documentedPolicy}`
+      ).toBe(true)
+    }
+
+    for (const diagnosticToken of [
+      "ReadOnlyJsonRowPatchDiagnostic",
+      "rowsPatched",
+      "shape-mismatch",
+      "unsupported-viewport",
+      'markJsonTableProfile("read-only-row-patcher"',
+    ]) {
+      expect(
+        patcherContent.includes(diagnosticToken),
+        `${patcherFile} misses row patch diagnostic ${diagnosticToken}`
+      ).toBe(true)
+    }
+
+    for (const diagnosticTestToken of [
+      "onDiagnostic",
+      "rowsPatched",
+      "shape-mismatch",
+      "unsupported-viewport",
+    ]) {
+      expect(
+        patcherTestContent.includes(diagnosticTestToken),
+        `${patcherTestFile} misses row patch diagnostic coverage ${diagnosticTestToken}`
+      ).toBe(true)
+    }
+  })
+
+  it("keeps JsonTableCellProps grouped by ownership", () => {
+    const typesFile = "components/json-table/json-table-cell-types.ts"
+    const rowFile = "components/json-table/single-file-form-row.tsx"
+    const memoFile = "components/json-table/json-table-cell-memo.ts"
+    const architectureFile = "components/json-table/ARCHITECTURE.md"
+    const typesContent = readFileSync(join(repoRoot, typesFile), "utf8")
+    const rowContent = readFileSync(join(repoRoot, rowFile), "utf8")
+    const memoContent = readFileSync(join(repoRoot, memoFile), "utf8")
+    const architectureContent = readFileSync(
+      join(repoRoot, architectureFile),
+      "utf8"
+    )
+
+    for (const requiredType of [
+      "JsonTableCellProjectionProps",
+      "JsonTablePrimitiveEditingProps",
+      "JsonTableStructuredEditingProps",
+      "JsonTableCellCommitProps",
+      "JsonTableCellHoverProps",
+    ]) {
+      expect(
+        typesContent.includes(`interface ${requiredType}`),
+        `${typesFile} misses ${requiredType}`
+      ).toBe(true)
+    }
+
+    for (const requiredPropGroup of [
+      "cellProjection: JsonTableCellProjectionProps",
+      "primitiveEditing: JsonTablePrimitiveEditingProps",
+      "structuredEditing: JsonTableStructuredEditingProps",
+      "commit: JsonTableCellCommitProps",
+      "hover: JsonTableCellHoverProps",
+    ]) {
+      expect(
+        typesContent.includes(requiredPropGroup),
+        `${typesFile} misses grouped prop ${requiredPropGroup}`
+      ).toBe(true)
+    }
+
+    for (const obsoleteFlatProp of [
+      "primitiveActiveCellStore:",
+      "primitiveEditStore:",
+      "setPrimitiveActiveCell:",
+      "structuredEditSession:",
+      "startStructuredEditSession:",
+      "setStructuredEditSessionOverlayOpen:",
+      "closeStructuredEditSession:",
+      "onCellCommit:",
+      "onCellHoverStart",
+      "onCellHoverEnd",
+    ]) {
+      expect(
+        typesContent.includes(obsoleteFlatProp),
+        `${typesFile} keeps obsolete flat JsonTableCellProps field ${obsoleteFlatProp}`
+      ).toBe(false)
+    }
+
+    for (const requiredRowToken of [
+      "const primitiveEditing = React.useMemo<JsonTablePrimitiveEditingProps>",
+      "const structuredEditing = React.useMemo<JsonTableStructuredEditingProps>",
+      "const commit = React.useMemo<JsonTableCellCommitProps>",
+      "const hover = React.useMemo<JsonTableCellHoverProps>",
+      "cellProjection: {",
+    ]) {
+      expect(
+        rowContent.includes(requiredRowToken),
+        `${rowFile} misses grouped cell prop construction ${requiredRowToken}`
+      ).toBe(true)
+    }
+
+    for (const requiredMemoToken of [
+      "cellProjection",
+      "primitiveEditing",
+      "structuredEditing",
+      "commit",
+      "hover",
+      "structuredEditSessionId",
+      "projectedCell.arrayIndexes",
+    ]) {
+      expect(
+        memoContent.includes(requiredMemoToken),
+        `${memoFile} misses grouped memo token ${requiredMemoToken}`
+      ).toBe(true)
+    }
+
+    for (const documentedGroup of [
+      "## Cell Prop Ownership",
+      "`cellProjection` carries the logical cell",
+      "`primitiveEditing` carries primitive active identity",
+      "`structuredEditing` carries the structured object/array session lifecycle",
+      "`commit` carries the single cell commit boundary",
+      "`hover` carries optional hover measurement callbacks",
+    ]) {
+      expect(
+        architectureContent.includes(documentedGroup),
+        `${architectureFile} misses ${documentedGroup}`
+      ).toBe(true)
+    }
   })
 
   it("creates structured edit sessions open without a layout-effect opener", () => {
@@ -2063,15 +2547,145 @@ describe("json table and DataCell architecture", () => {
     expect(content.includes("Start it with: pnpm dev")).toBe(false)
   })
 
+  it("keeps browser accessibility verification checking virtualized column behavior", () => {
+    const verifierFile = "scripts/verify-json-table-accessibility.mjs"
+    const content = readFileSync(join(repoRoot, verifierFile), "utf8")
+
+    for (const requiredToken of [
+      "assertHeaderBodyAlignment",
+      "assertKeyboardEnumFlow",
+      "assertKeyboardDateFlow",
+      "assertKeyboardTextCommit",
+      "assertOpenStructuredObject",
+      "assertStructuredHorizontalRemount",
+      "assertKeyboardStructuredObjectFlow",
+      "assertStructuredObjectControls",
+      "focusCellSurface",
+      "focusTableCell",
+      "assertFocusWithinCell",
+      "alignmentTolerancePx",
+      "large left columns",
+      "large middle columns",
+      "large far columns",
+      "large keyboard far enum",
+      "large keyboard far date",
+      "large keyboard far text",
+      "large far structured object",
+      "large far structured object remount",
+      "large keyboard far structured object",
+      "farTextFieldPath",
+      "farStructuredObjectFieldPath",
+      "header/body column",
+      'page.keyboard.press("Enter")',
+      'page.keyboard.press("Escape")',
+      'thead th[aria-colindex]:not([aria-hidden="true"])',
+      "tbody tr:first-child td[data-field-path]",
+    ]) {
+      expect(
+        content.includes(requiredToken),
+        `${verifierFile} keeps ${requiredToken}`
+      ).toBe(true)
+    }
+  })
+
+  it("keeps the large browser profile exposing a dynamic structured object cell", () => {
+    const demoFile = "components/json-table/json-table-demo.tsx"
+    const content = readFileSync(join(repoRoot, demoFile), "utf8")
+
+    for (const requiredToken of [
+      "profile_far_details",
+      "Profile Far Details",
+      "patternProperties",
+      '"^priority$"',
+      'additionalProperties: { type: "string" }',
+      "reviewer:",
+      "priority:",
+    ]) {
+      expect(
+        content.includes(requiredToken),
+        `${demoFile} keeps ${requiredToken}`
+      ).toBe(true)
+    }
+  })
+
+  it("keeps structured object editors preserving explicit dynamic schemas", () => {
+    const structuredCellFile =
+      "components/json-table/json-table-structured-cell.tsx"
+    const structuredCellContent = readFileSync(
+      join(repoRoot, structuredCellFile),
+      "utf8"
+    )
+    const structuredTestFile = "tests/json-table-structured-cell.test.tsx"
+    const structuredTestContent = readFileSync(
+      join(repoRoot, structuredTestFile),
+      "utf8"
+    )
+
+    expect(
+      structuredCellContent.includes("additionalProperties: true") &&
+        structuredCellContent.indexOf("additionalProperties: true") <
+          structuredCellContent.indexOf("...schemaWithContext")
+    ).toBe(true)
+
+    for (const requiredToken of [
+      "preserves typed dynamic object properties in the editor schema",
+      'additionalProperties: { type: "string" }',
+      "patternProperties",
+      "reviewer-0",
+      "priority.type",
+    ]) {
+      expect(
+        structuredTestContent.includes(requiredToken),
+        `${structuredTestFile} keeps ${requiredToken}`
+      ).toBe(true)
+    }
+  })
+
+  it("keeps horizontal virtualization proof covering structured cells", () => {
+    const stressFile =
+      "tests/json-table-virtualization-stress-hardening.test.tsx"
+    const content = readFileSync(join(repoRoot, stressFile), "utf8")
+
+    for (const requiredToken of [
+      "far_details",
+      "preserves a far structured session across horizontal unmount and remount",
+      'pointerDownCell(view.container, "lines.0.far_details")',
+      'expect(queryCell(view.container, "lines.0.far_details")).toBeNull()',
+      'expect(await view.findByRole("dialog")).toBeTruthy()',
+      '"data-active"',
+    ]) {
+      expect(
+        content.includes(requiredToken),
+        `${stressFile} keeps ${requiredToken}`
+      ).toBe(true)
+    }
+  })
+
   it("keeps primitive interaction profiling repeatable", () => {
     const profilerFile = "scripts/profile-json-table-primitive-interactions.mjs"
     const content = readFileSync(join(repoRoot, profilerFile), "utf8")
 
     for (const requiredToken of [
       "JSON_TABLE_PROFILE_REPEAT",
+      "JSON_TABLE_PROFILE_WARMUP",
+      "JSON_TABLE_PROFILE_TRACE",
+      "JSON_TABLE_PROFILE_TARGETS",
+      "JSON_TABLE_PROFILE_SCENARIOS",
       '"--repeat"',
+      '"--warmup"',
+      '"--trace"',
+      '"--targets"',
+      '"--scenarios"',
       "buildRepeatedProfileSummary",
       "repeatedScenarios",
+      "targetFilter",
+      "scenarioFilter",
+      "assertSelectedScenarioNamesMatched",
+      "diagnostic-only",
+      "warmupCount",
+      "traceMode",
+      "traceCategories",
+      "traceStyleMs",
       "median",
       "p90",
       "worst",
@@ -2097,6 +2711,9 @@ describe("json table and DataCell architecture", () => {
       "editableCells",
       "popupNodes",
       "styleAttributionHint",
+      "Tracing.start",
+      "Tracing.dataCollected",
+      "traceEventSummary",
     ]) {
       expect(
         profilerContent.includes(requiredToken),
@@ -2111,10 +2728,54 @@ describe("json table and DataCell architecture", () => {
       "styleAttributionHint",
       "surface=header",
       "owner=",
+      "traceStyle=",
+      "traceLayout=",
     ]) {
       expect(
         verifierContent.includes(requiredToken),
         `${verifierFile} keeps ${requiredToken}`
+      ).toBe(true)
+    }
+  })
+
+  it("keeps primitive interaction profiling date commits stable", () => {
+    const profilerFile = "scripts/profile-json-table-primitive-interactions.mjs"
+    const content = readFileSync(join(repoRoot, profilerFile), "utf8")
+
+    for (const requiredToken of [
+      "calendarCommitDatePoint",
+      "button[data-day]",
+      "data-selected-single",
+      "enabledVisibleButtons",
+      "No date commit button found:",
+    ]) {
+      expect(
+        content.includes(requiredToken),
+        `${profilerFile} keeps ${requiredToken}`
+      ).toBe(true)
+    }
+
+    expect(content.includes('className.includes("outside")')).toBe(false)
+  })
+
+  it("keeps primitive interaction profiling lifecycle stable", () => {
+    const profilerFile = "scripts/profile-json-table-primitive-interactions.mjs"
+    const content = readFileSync(join(repoRoot, profilerFile), "utf8")
+
+    for (const requiredToken of [
+      "activateEditableProfile",
+      "profilePageState",
+      "recoverBlankEditableProfile",
+      "closeChromeTarget",
+      "closeProfileTargets",
+      "profileSurfaceTimeoutMs",
+      "editableCellTimeoutMs",
+      "/json/close/",
+      "Editable JSON table did not mount:",
+    ]) {
+      expect(
+        content.includes(requiredToken),
+        `${profilerFile} keeps ${requiredToken}`
       ).toBe(true)
     }
   })

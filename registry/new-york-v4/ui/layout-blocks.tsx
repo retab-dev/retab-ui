@@ -4,24 +4,23 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 import {
-  AnchoredDocumentProvider,
-  useAnchoredDocument,
-  type AnchoredItem,
-} from "@/components/ui/anchored-document-viewer"
-import { usePdfAnchoredTarget } from "@/components/ui/pdf-anchor-target"
-import {
   PdfViewerPages,
   PdfViewerProvider,
   type PdfDocumentSource,
   type PdfViewerHandle,
 } from "@/components/ui/pdf-viewer"
 import {
+  SegmentedDocumentProvider,
+  useSegmentedDocumentModel,
+  useSegmentedDocumentViewport,
+} from "@/components/ui/segmented-document-provider"
+import {
   ViewerBody,
-  ViewerSurface,
   ViewerHeader,
-  ViewerSidebar,
   ViewerRoot,
+  ViewerSidebar,
   ViewerSidebarTrigger,
+  ViewerSurface,
 } from "@/components/ui/viewer"
 
 import {
@@ -29,10 +28,9 @@ import {
   type DocumentAiDocument,
 } from "./layout-blocks-document-ai"
 import { documentAiToPdfBlob } from "./layout-blocks-document-ai-pdf"
-import { getScrollTarget } from "./layout-blocks-geometry"
-import { createLayoutItemIndex } from "./layout-blocks-index"
+import { createLayoutBlocksViewerModel } from "./layout-blocks-model"
 import { LayoutBlocksPanel } from "./layout-blocks-panel"
-import type { LayoutItem } from "./layout-blocks-types"
+import { layoutItemsToSegmentedDocumentModel } from "./layout-blocks-segmented-document-model"
 import { LayoutOverlayLayer } from "./layout-overlay-layer"
 
 const LOW_CONFIDENCE_THRESHOLD = 0.9
@@ -51,123 +49,166 @@ export function DocumentAiLayoutBlocks({
     () => documentAiToLayoutDocument(output),
     [output]
   )
-  const index = React.useMemo(
-    () =>
-      createLayoutItemIndex({
-        items: layoutDocument.items,
-        pages: layoutDocument.pages,
-      }),
-    [layoutDocument.items, layoutDocument.pages]
-  )
   const pdfSource = useDocumentAiPdfSource(output)
-  const viewerRef = React.useRef<PdfViewerHandle>(null)
   const [lowConfidenceOnly, setLowConfidenceOnly] = React.useState(false)
-  const visibleItems = React.useMemo(
+  const model = React.useMemo(
     () =>
-      layoutDocument.items.filter((item) => {
-        if (item.level !== "block") return false
-        if (!lowConfidenceOnly) return true
-        return (
-          item.confidence != null && item.confidence < LOW_CONFIDENCE_THRESHOLD
-        )
+      createLayoutBlocksViewerModel({
+        document: layoutDocument,
+        levels: INSPECTED_LEVELS,
+        lowConfidenceOnly,
+        threshold: LOW_CONFIDENCE_THRESHOLD,
       }),
-    [layoutDocument.items, lowConfidenceOnly]
+    [layoutDocument, lowConfidenceOnly]
   )
-  const anchoredItems = React.useMemo(
+  const segmentedDocumentModel = React.useMemo(
     () =>
-      visibleItems.map((item): AnchoredItem => {
-        const page = index.pagesByNumber.get(item.pageNumber)
-        const target = page ? getScrollTarget(item, page) : null
-        return {
-          id: item.id,
-          anchor: target
-            ? {
-                kind: "pdf-area",
-                pageNumber: target.pageNumber,
-                left: target.left,
-                top: target.top,
-                width: target.width,
-                height: target.height,
-              }
-            : null,
-        }
+      layoutItemsToSegmentedDocumentModel({
+        document: layoutDocument,
+        items: model.visibleItems,
       }),
-    [index.pagesByNumber, visibleItems]
+    [layoutDocument, model.visibleItems]
   )
-  const target = usePdfAnchoredTarget(viewerRef)
 
   return (
-    <AnchoredDocumentProvider items={anchoredItems} target={target}>
+    <SegmentedDocumentProvider model={segmentedDocumentModel}>
       <DocumentAiLayoutBlocksContent
         className={className}
         heightClassName={heightClassName}
-        index={index}
         lowConfidenceOnly={lowConfidenceOnly}
+        model={model}
         pdfSource={pdfSource}
         setLowConfidenceOnly={setLowConfidenceOnly}
-        viewerRef={viewerRef}
-        visibleItems={visibleItems}
       />
-    </AnchoredDocumentProvider>
+    </SegmentedDocumentProvider>
   )
 }
 
 function DocumentAiLayoutBlocksContent({
   className,
   heightClassName,
-  index,
   lowConfidenceOnly,
+  model,
   pdfSource,
   setLowConfidenceOnly,
-  viewerRef,
-  visibleItems,
 }: {
   className?: string
   heightClassName: string
-  index: ReturnType<typeof createLayoutItemIndex>
   lowConfidenceOnly: boolean
+  model: ReturnType<typeof createLayoutBlocksViewerModel>
   pdfSource: ReturnType<typeof useDocumentAiPdfSource>
   setLowConfidenceOnly: React.Dispatch<React.SetStateAction<boolean>>
-  viewerRef: React.RefObject<PdfViewerHandle | null>
-  visibleItems: LayoutItem[]
 }) {
-  const {
-    activeItemId,
-    activateItem,
-    clearPreview,
-    clearSelection,
-    previewItem,
-    selectedItemId,
-  } = useAnchoredDocument()
+  const segmentedDocumentModel = useSegmentedDocumentModel()
+  const segmentedViewport = useSegmentedDocumentViewport()
+  const [selectedItemId, setSelectedItemId] = React.useState<string | null>(
+    null
+  )
+  const segmentByItemId = React.useMemo(
+    () =>
+      new Map(
+        segmentedDocumentModel.segments.map((segment) => [
+          segment.sourceId ?? segment.id,
+          segment,
+        ])
+      ),
+    [segmentedDocumentModel.segments]
+  )
+  const anchorBySegmentId = React.useMemo(
+    () =>
+      new Map(
+        (segmentedDocumentModel.anchors ?? []).map((anchor) => [
+          anchor.segmentId,
+          anchor,
+        ])
+      ),
+    [segmentedDocumentModel.anchors]
+  )
+  const previewItemId =
+    segmentedDocumentModel.segments.find(
+      (segment) =>
+        segment.id === segmentedViewport.model.previewSegmentId &&
+        segment.sourceId
+    )?.sourceId ?? null
+  const activeItemId = previewItemId ?? selectedItemId
+  const clearPreview = segmentedViewport.interaction.clearPreview
+  const previewItem = React.useCallback(
+    (itemId: string | null) => {
+      if (!itemId) {
+        segmentedViewport.interaction.clearPreview()
+        return
+      }
+
+      const segment = segmentByItemId.get(itemId)
+      if (!segment) return
+
+      segmentedViewport.interaction.previewSegment(segment.id)
+    },
+    [segmentByItemId, segmentedViewport.interaction]
+  )
+  const navigateItem = React.useCallback(
+    (itemId: string) => {
+      const segment = segmentByItemId.get(itemId)
+      if (!segment) return
+
+      const anchor = anchorBySegmentId.get(segment.id)
+      if (anchor) {
+        segmentedViewport.navigation.scrollToAnchor(anchor)
+        return
+      }
+
+      segmentedViewport.navigation.scrollToSegmentStart(segment)
+    },
+    [anchorBySegmentId, segmentByItemId, segmentedViewport.navigation]
+  )
+
+  React.useEffect(() => {
+    if (selectedItemId && !segmentByItemId.has(selectedItemId)) {
+      setSelectedItemId(null)
+    }
+  }, [segmentByItemId, selectedItemId])
+
   const renderPageOverlay = React.useCallback(
     ({ pageNumber, rotation }: { pageNumber: number; rotation: number }) => {
-      const page = index.pagesByNumber.get(pageNumber)
+      const page = model.index.pagesByNumber.get(pageNumber)
       if (!page) return null
 
       return (
         <LayoutOverlayLayer
           interactive
           activeItemId={activeItemId}
-          items={visibleItems.filter((item) => item.pageNumber === pageNumber)}
+          items={model.visibleItems.filter(
+            (item) => item.pageNumber === pageNumber
+          )}
           page={page}
           rotation={rotation}
           selectedItemId={selectedItemId}
           visibleLevels={INSPECTED_LEVELS}
-          onItemClick={(item) => activateItem(item.id)}
+          onItemClick={(item) => {
+            setSelectedItemId(item.id)
+            clearPreview()
+            navigateItem(item.id)
+          }}
           onItemPointerEnter={(item) => previewItem(item.id)}
           onItemPointerLeave={clearPreview}
         />
       )
     },
     [
-      activateItem,
       activeItemId,
       clearPreview,
-      index.pagesByNumber,
+      model.index.pagesByNumber,
+      model.visibleItems,
+      navigateItem,
       previewItem,
       selectedItemId,
-      visibleItems,
     ]
+  )
+  const setPdfViewerHandle = React.useCallback(
+    (handle: PdfViewerHandle | null) => {
+      segmentedViewport.documentHandlers.setDocumentHandle(handle)
+    },
+    [segmentedViewport.documentHandlers]
   )
 
   return (
@@ -175,7 +216,8 @@ function DocumentAiLayoutBlocksContent({
       data-layout-blocks=""
       className={cn("bg-background", heightClassName, className)}
       bare
-      defaultSidebarOpen
+      defaultOpen
+      sidebarSide="right"
     >
       <ViewerHeader>
         <div className="flex items-center justify-between gap-3 p-3">
@@ -184,7 +226,7 @@ function DocumentAiLayoutBlocksContent({
             <div className="min-w-0">
               <div className="truncate text-sm font-medium">OCR</div>
               <div className="text-xs text-muted-foreground">
-                {visibleItems.length} blocks
+                {model.visibleItems.length} blocks
               </div>
             </div>
           </div>
@@ -206,9 +248,15 @@ function DocumentAiLayoutBlocksContent({
           {pdfSource.source ? (
             <PdfViewerProvider source={pdfSource.source}>
               <PdfViewerPages
-                ref={viewerRef}
+                ref={setPdfViewerHandle}
                 bare
                 className="h-full"
+                onScrollProgressChange={
+                  segmentedViewport.documentHandlers.onScrollProgressChange
+                }
+                onVisiblePageChange={
+                  segmentedViewport.documentHandlers.onCurrentPageChange
+                }
                 renderPageOverlay={renderPageOverlay}
               />
             </PdfViewerProvider>
@@ -220,7 +268,6 @@ function DocumentAiLayoutBlocksContent({
         </ViewerSurface>
         <ViewerSidebar
           aria-label="OCR blocks"
-          side="right"
           width="320px"
           className="flex min-h-0 shrink-0 flex-col border-l bg-background"
         >
@@ -232,15 +279,19 @@ function DocumentAiLayoutBlocksContent({
                 ? "No low-confidence OCR blocks found."
                 : "No OCR blocks found."
             }
-            items={visibleItems}
+            items={model.evidenceItems}
             selectedItemId={selectedItemId}
             onActiveItemIdChange={previewItem}
+            onNavigateItem={(item, options) => {
+              if (options?.behavior === "auto") return
+              navigateItem(item.id)
+            }}
             onSelectedItemIdChange={(itemId) => {
               if (itemId) {
-                activateItem(itemId)
+                setSelectedItemId(itemId)
                 return
               }
-              clearSelection()
+              setSelectedItemId(null)
             }}
           />
         </ViewerSidebar>
@@ -295,5 +346,9 @@ export type { DocumentAiDocument } from "./layout-blocks-document-ai"
 export { documentAiToLayoutDocument } from "./layout-blocks-document-ai"
 export { documentAiToPdfBlob } from "./layout-blocks-document-ai-pdf"
 export { createLayoutItemIndex } from "./layout-blocks-index"
+export {
+  createLayoutBlocksViewerModel,
+  layoutItemToEvidenceItem,
+} from "./layout-blocks-model"
 export { LayoutBlocksPanel } from "./layout-blocks-panel"
 export { LayoutOverlayLayer } from "./layout-overlay-layer"

@@ -19,6 +19,25 @@ document + schema
 
 Anything outside that line must justify itself.
 
+## Current Documents
+
+Read these documents in this order:
+
+1. `components/json-table/ARCHITECTURE.md`: current runtime ownership and
+   verification contract.
+2. `design/data-cell-json-table-platonic-issues-blueprint.md`: current issue
+   ledger. Older JSON-table blueprints are historical unless this ledger points
+   back to them.
+3. `design/data-cell-json-table-style-invalidation-findings.md`: current
+   style/layout attribution notes for select and picker performance.
+4. `components/json-table/json-table-performance-budget.json`: checked
+   performance budgets.
+5. `scripts/profile-json-table-primitive-interactions.mjs`: profiler that
+   produces saved and fresh JSON-table interaction reports.
+6. `scripts/verify-json-table-performance-budget.mjs` and
+   `scripts/verify-json-table-performance-budget-fresh.mjs`: saved and fresh
+   budget gates.
+
 ## State Glossary
 
 - `sourceDocument` is the latest document received from parent props.
@@ -82,8 +101,7 @@ registry/new-york-v4/ui/data-cell-types.ts
 registry/new-york-v4/ui/data-cell-format.ts
 registry/new-york-v4/ui/data-cell-classes.ts
 registry/new-york-v4/ui/data-cell-display.tsx
-registry/new-york-v4/ui/data-cell-text-control.tsx
-registry/new-york-v4/ui/data-cell-number-control.tsx
+registry/new-york-v4/ui/data-cell-input-control.tsx
 registry/new-york-v4/ui/data-cell-boolean-control.tsx
 registry/new-york-v4/ui/data-cell-picker-control.tsx
 registry/new-york-v4/ui/data-cell-picker-position.ts
@@ -122,6 +140,24 @@ type JsonTableStructuredEditSession = {
 There are no compatibility aliases. Primitive identity, primitive draft,
 overlay state, and structured popover state are separate concepts.
 
+## Cell Prop Ownership
+
+`JsonTableCellProps` is grouped by owner, not by call-site convenience:
+
+- `cellProjection` carries the logical cell: column, projected cell, schema,
+  document identity, editability, and accessibility coordinates.
+- `primitiveEditing` carries primitive active identity and primitive pending
+  value storage.
+- `structuredEditing` carries the structured object/array session lifecycle.
+- `commit` carries the single cell commit boundary.
+- `hover` carries optional hover measurement callbacks.
+
+Rows create stable shared group objects for primitive editing, structured
+editing, commit, and hover. Each mounted cell receives its own `cellProjection`
+because projected cell, rendered column, and absolute column index are
+cell-specific. Cell memoization compares the meaningful fields inside each
+group; it does not depend on group object churn.
+
 ## Interaction Contract
 
 - Hover never mounts an active control.
@@ -137,6 +173,43 @@ overlay state, and structured popover state are separate concepts.
 - Only DataCell receives primitive draft updates.
 - Switching cells synchronously finishes the previous primitive DataCell before
   the next cell action runs.
+
+### DataCell Activation State Machine
+
+DataCell activation has one policy owner: `data-cell.tsx` chooses whether a
+primitive action is a command, an edit activation, or no action. Select and
+picker controls consume the activation source and opening context; they do not
+recreate activation policy.
+
+```mermaid
+stateDiagram-v2
+  [*] --> Display
+  Display --> Command: boolean pointer/key command
+  Command --> Display: commit and arm click tail
+  Display --> EditActivation: text/number/date/select pointer or key
+  EditActivation --> StoreActivationSource: pointer coordinates or key
+  StoreActivationSource --> ActiveControl: flush before first active render
+  ActiveControl --> ConsumeOpeningContext: select/picker opens
+  ConsumeOpeningContext --> ActiveControl: opening event cannot dismiss
+  ActiveControl --> Display: commit, cancel, blur, or outside dismiss
+  Display --> Display: hover, modifier key, disabled, unsupported click
+```
+
+Activation invariants:
+
+- Pointer activation stores pointer coordinates and arms a one-shot click tail
+  so the native click following `pointerdown` cannot immediately dismiss the
+  popup it opened.
+- Keyboard activation stores a keyboard source and never arms a pointer click
+  tail.
+- Boolean activation is a command: it commits directly and does not mount an
+  editor.
+- Modifier-key keyboard events do not activate editing.
+- `storeDataCellActivationSource()` is the only DataCell `flushSync` boundary
+  because the activation source must exist on the first active control render.
+- Select and picker controls use `useDataCellOpeningContext()` and
+  `shouldCancelDismiss()` to consume the opening event. They do not own timeout
+  or next-tick dismissal hacks.
 
 ## Commit Path
 
@@ -167,6 +240,35 @@ structured editor
 
 No active control writes to the document directly, and structured commits do not
 enter primitive pending/confirmed/stale lifecycle.
+
+### Structured Pending Policy
+
+Structured pending state is local to `useJsonTableStructuredCellController`
+because object and array editors are a single mounted popover, not many hot
+scalar controls spread across the grid.
+
+The controller stores:
+
+- `value`: the committed structured value to keep visible locally.
+- `projectedValueAtCommit`: the projected document value at the moment of the
+  commit.
+
+The rules are exact:
+
+- If the projected value still equals `projectedValueAtCommit`, the parent has
+  not echoed the structured commit yet, so the local structured pending value
+  remains visible.
+- If the projected value equals the structured pending value, the parent echo
+  has arrived. The pending value is cleared, including cloned object/array
+  echoes.
+- If the projected value differs from both `projectedValueAtCommit` and the
+  structured pending value, the parent has produced a divergent same-field
+  value. The parent value wins and pending state is cleared.
+
+Horizontal virtualization does not cancel a structured session. If the active
+object/array cell scrolls out of the column window, the popover DOM unmounts
+with that cell. The table-owned `JsonTableStructuredEditSession` remains, and
+when the cell remounts it reopens with the same active session.
 
 ## Document Lifecycle
 
@@ -238,6 +340,26 @@ regressions such as sibling-cell rerenders, extra document patches, unbounded
 rect reads, or unexpected overlay mounts, while keeping the remaining style
 duration visible for future CSS/DOM invalidation work.
 
+### Editable And Read-Only Row Policies
+
+Editable tables use the React row policy:
+
+- default row overscan is `0`
+- row updates flow through React
+- primitive controls, focus, popup ownership, and pending values stay inside the
+  normal component tree
+- the read-only DOM patcher is not used, because editable rows can contain
+  active controls and local edit state that must not be rewritten imperatively
+
+Read-only tables use the DOM row patch policy:
+
+- default row overscan is larger for scroll continuity
+- jump-scroll row updates may be handled by `useReadOnlyJsonRowPatcher`
+- the patcher is limited to scalar/boolean read-only rows with stable DOM shape
+- unsupported shapes fall back to the normal React virtualization path
+- every patch attempt emits a `read-only-row-patcher` profiler mark with a
+  fallback reason or the handled `rowsPatched` count
+
 ## Regression Guards
 
 `tests/json-table-row-render.test.tsx` protects the user-facing interaction
@@ -253,15 +375,58 @@ pnpm test tests/json-table-architecture.test.ts
 ```
 
 Before declaring the JSON table runtime complete, run the focused ownership
-tests, the broad JSON-table interaction suite, and the performance verifiers:
+tests, the broad JSON-table interaction suite, and the fresh browser verifiers
+through the canonical gate:
 
 ```sh
-pnpm test tests/json-table-architecture.test.ts tests/json-table-controller.test.tsx tests/json-table-primitive-edit-store.test.ts tests/json-table-row-render.test.tsx
+pnpm verify:json-table
+```
+
+The canonical gate runs:
+
+```sh
 pnpm test:json-table
 pnpm verify:json-table-performance
-pnpm verify:json-table-performance:fresh
-pnpm typecheck
+PROFILE_SERVER_MODE=auto PROFILE_DEV_SERVER_TIMEOUT_MS=90000 JSON_TABLE_PROFILE_WARMUP=1 pnpm verify:json-table-performance:fresh
+PROFILE_SERVER_MODE=auto PROFILE_DEV_SERVER_TIMEOUT_MS=90000 pnpm verify:json-table-accessibility:fresh
 ```
+
+`PROFILE_SERVER_MODE=auto` reuses a healthy existing profile route, starts a
+managed dev server when no route is reachable, and fails with diagnostics when a
+route responds with the wrong page. Forced `managed` mode is useful only when no
+other Next dev server for this repository is running; Next 16 allows one dev
+server per repository, even on different ports.
+
+Run `pnpm typecheck` before claiming repository-wide TypeScript health; it is
+kept outside `verify:json-table` because the full app typecheck also covers
+unrelated viewers and registry work.
+
+If the change touches DataCell artifacts, extend acceptance:
+
+- `registry/new-york-v4/ui/data-cell*`: run `pnpm verify:data-cell-registry`.
+- `components/ui/data-cell.tsx`: run `pnpm verify:data-cell`.
+- `public/r/data-cell.json` or `registry.json`: run
+  `pnpm verify:data-cell-registry`.
+
+`pnpm verify:data-cell` is a primitive browser certificate. It targets the
+isolated `/data-cell-parity` harness by default so DataCell proof does not
+depend on docs navigation, MDX pages, viewer wrappers, or JSON-table demos. The
+docs page may still render DataCell as a consumer, but it is not the canonical
+primitive verifier.
+
+JSON-table tests should import DataCell through `components/ui/data-cell`
+unless a test is intentionally proving a DataCell internal boundary.
+
+The browser accessibility verifier also checks the virtualized column geometry:
+large-profile header and body cells with the same absolute `aria-colindex` must
+align at left, middle, and far horizontal scroll positions. The same verifier
+checks keyboard-only far-column enum, date, and text flows: focused far cells
+open from Enter, close from Escape with focus returned to the cell, and commit
+text from keyboard input. It also opens a far dynamic structured object cell,
+asserts that its typed dynamic `reviewer` and `priority` controls render in the
+dialog, verifies the structured session survives horizontal unmount/remount in
+the browser, and checks keyboard Enter/Escape focus return for that structured
+cell.
 
 The saved performance verifier reads the checked-in profile fixture and guards
 React work, DOM reads, document patches, and measured interaction budgets. It
@@ -270,7 +435,11 @@ budget sections so structural invariants can stay separate from style/layout
 diagnostics. It is not a universal latency guarantee. The fresh verifier writes
 `tmp/json-table-primitive-interactions-profile.fresh.json` by default, verifies
 that fresh artifact against the same budgets, and must fail with setup
-instructions that make a missing local server/page explicit.
+instructions that make a missing local server/page explicit. The profiler closes
+Chrome profile targets after each target run, retries verified editable-mode
+activation during setup, waits for actionable calendar day buttons before date
+commit profiling, and reports profile-page diagnostics when the editable table
+does not mount.
 
 For style-invalidation work, run the profiler with
 `JSON_TABLE_STYLE_EXPERIMENTS=1` or `--style-experiments`. This adds large-table
@@ -278,6 +447,32 @@ row-count, extra-column-count, and overscan variants and prints a compact
 `open-enum`, `open-date`, and `switch-dirty-cell` style-cost table. Those
 experiment profiles are diagnostic; the normal verifier still gates the stable
 `default` and `large` profiles.
+
+Use `JSON_TABLE_PROFILE_TRACE=1` or `--trace` when a style budget needs root
+cause evidence. Trace mode records per-scenario Chrome trace summaries with
+top timed events, style/layout/script buckets, and invalidation events when
+Chrome reports them. It is opt-in because it makes browser profiling heavier.
+
+Use `JSON_TABLE_PROFILE_TARGETS=large` / `--targets large` and
+`JSON_TABLE_PROFILE_SCENARIOS=open-enum,open-date,...` / `--scenarios ...` for
+focused diagnostic trace runs. Target filters are safe with profiler assertion;
+scenario filters are diagnostic-only and are refused with `--assert`, because
+the canonical assertion must keep covering the full scenario matrix. Filtered
+reports record `targetFilter` and `scenarioFilter` and fail if a requested
+scenario name is never measured.
+
+Repeated profiles report median, p90, and worst. The canonical gate validates a
+single warmed measured run for fast local feedback. If repeated-run gating is
+added, use p90 for latency/style budgets and worst for hard structural
+invariants such as React fanout, document patches, rect reads, and mounted
+surface counts. Median is trend evidence, not a pass/fail aggregate.
+
+The checked large-profile budget uses repeated p90 evidence for the critical
+near/far select, date, dirty-switch, and far text paths. Those scenarios keep
+`maxStyleDurationMs <= 120` in
+`components/json-table/json-table-performance-budget.json`. The tracked saved
+profile fixture must be refreshed when those budgets are intentionally
+tightened, otherwise saved-budget verification proves an obsolete baseline.
 
 Editable tables default to zero row overscan because profiling showed mounted
 row surface contributes directly to select/picker style recalculation. Read-only

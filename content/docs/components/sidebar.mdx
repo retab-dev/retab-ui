@@ -80,17 +80,17 @@ Viewer primitives expose stable structural attributes:
   placement behavior.
 
 Viewer primitives do not encode domain purpose. Put that meaning in the named
-domain part (`SplitViewerPageRail`, `EmailViewerPartsList`) and in accessible
+domain part (`SplitViewerPageRail`, `EmailPartsSidebar`) and in accessible
 labels (`aria-label="PDF pages"`, `aria-label="Email parts"`).
 
 Root ids, trigger markers, and transition readiness attributes are internal
 coordination details, not public styling hooks.
 
-`ViewerSidebarTrigger` stays focusable when no sidebar has registered yet. It
-sets `aria-disabled` and suppresses activation until a `ViewerSidebar` is
-available, which lets conditional viewer compositions become interactive
-without replacing the trigger.
+`ViewerSidebarTrigger` is natively disabled when no toggleable sidebar has
+registered. It omits `aria-controls` and `aria-expanded` until a
+`ViewerSidebar` is available, then becomes interactive without replacing the
+trigger.
 
-With `sidebarMode="auto"`, the viewer starts in overlay mode until the root has
+With `mode="auto"`, the viewer starts in overlay mode until the root has
 a nonzero measured width. The first measurement resolves inline or overlay, and
 zero-width measurements are ignored.

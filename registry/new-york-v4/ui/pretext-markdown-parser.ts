@@ -60,6 +60,8 @@ function readMarkedListStart(token: Token) {
 }
 
 function normalizeMarkedTokenKind(token: Token): PretextMarkdownTokenKind {
+  if (isMarkdownFootnoteDefinition(token.raw ?? "")) return "definition"
+
   switch (token.type) {
     case "code":
       return "code"
@@ -81,4 +83,8 @@ function normalizeMarkedTokenKind(token: Token): PretextMarkdownTokenKind {
 
 function isMarkdownHtmlComment(raw: string) {
   return /^<!--[\s\S]*-->$/.test(raw.trim())
+}
+
+function isMarkdownFootnoteDefinition(raw: string) {
+  return /^\[\^[^\]\r\n]+\]:[ \t]?/u.test(raw.trimStart())
 }

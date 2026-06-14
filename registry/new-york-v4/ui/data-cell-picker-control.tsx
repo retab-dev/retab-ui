@@ -24,7 +24,6 @@ import {
 } from "@/registry/new-york-v4/ui/data-cell-format"
 import { DataCellPickerIcon } from "@/registry/new-york-v4/ui/data-cell-picker-icon"
 import { getDataCellPickerPopupStyleFromAnchor } from "@/registry/new-york-v4/ui/data-cell-picker-position"
-import type { DataCellValue } from "@/registry/new-york-v4/ui/data-cell-types"
 
 function dataCellOutsidePointerDismissCause(
   event: PointerEvent
@@ -199,8 +198,8 @@ export function DataCellPickerControl({
         kind,
         value: nextValue,
         dateTimeZone,
-        previousValue: value as DataCellValue,
-      }) as string | null
+        previousValue: value,
+      })
       session.commit(commitValue, meta, {
         endEditing: false,
         markFinished: false,

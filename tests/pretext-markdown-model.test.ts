@@ -226,9 +226,13 @@ describe("pretext markdown document model", () => {
   })
 
   it("looks up and intersects blocks and chunks by character offset ranges", () => {
-    const source = ["# Title", "", "First paragraph.", "", "Second paragraph."].join(
-      "\n"
-    )
+    const source = [
+      "# Title",
+      "",
+      "First paragraph.",
+      "",
+      "Second paragraph.",
+    ].join("\n")
     const document = createPretextMarkdownDocument(source)
     const firstParagraphOffset = source.indexOf("First")
     const secondParagraphOffset = source.indexOf("Second")
@@ -304,6 +308,28 @@ describe("pretext markdown document model", () => {
     expect(document.chunks.length).toBeGreaterThan(1)
     expect(document.referenceDefinitionsMarkdown).toBe(
       '[docs]: https://example.com/docs "Docs"'
+    )
+    expect(document.blocks.some((block) => block.kind === "definition")).toBe(
+      true
+    )
+  })
+
+  it("keeps document-wide footnote definitions for virtual chunk rendering", () => {
+    const document = createPretextMarkdownDocument(
+      [
+        "# Footnotes",
+        "",
+        "Use a note.[^docs]",
+        "",
+        ...Array.from({ length: 40 }, (_, index) => `Paragraph ${index + 1}.`),
+        "",
+        "[^docs]: Footnote body from the end of the document.",
+      ].join("\n\n")
+    )
+
+    expect(document.chunks.length).toBeGreaterThan(1)
+    expect(document.footnoteDefinitionsMarkdown).toBe(
+      "[^docs]: Footnote body from the end of the document."
     )
     expect(document.blocks.some((block) => block.kind === "definition")).toBe(
       true

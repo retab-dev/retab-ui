@@ -4,7 +4,9 @@ import type { FileSystemBrowserState } from "./file-system-browser-state"
 import type { FileSystemSourceController } from "./file-system-source-controller"
 import type { FileSystemFileEntry } from "./file-system-types"
 
-export type FileSystemOpenPreviewCommand = (file: FileSystemFileEntry) => void
+export type FileSystemOpenPreviewCommand = (
+  file: FileSystemFileEntry
+) => void
 
 export type FileSystemFileActionController = {
   openPreview: FileSystemOpenPreviewCommand

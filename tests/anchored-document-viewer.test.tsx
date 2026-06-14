@@ -8,11 +8,29 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 
 import {
   AnchoredDocumentProvider,
+  useAnchoredDocument,
   type AnchoredDocumentTarget,
   type AnchoredItem,
-  useAnchoredDocument,
 } from "@/registry/new-york-v4/ui/anchored-document-viewer"
 import { usePdfAnchoredOverlay } from "@/registry/new-york-v4/ui/pdf-anchor-target"
+
+vi.mock("@/components/ui/pdf-viewer", () => ({
+  PdfHighlight: ({
+    area,
+  }: {
+    area: { left: number; top: number; width: number; height: number }
+  }) => (
+    <div
+      data-slot="pdf-highlight"
+      style={{
+        left: `${area.left}%`,
+        top: `${area.top}%`,
+        width: `${area.width}%`,
+        height: `${area.height}%`,
+      }}
+    />
+  ),
+}))
 
 afterEach(() => {
   cleanup()
@@ -186,11 +204,10 @@ describe("anchored document viewer", () => {
         <div>
           <output data-testid="active">{activeItemId ?? ""}</output>
           <output data-testid="selected">{selectedItemId ?? ""}</output>
-          <output data-testid="active-anchor">{activeAnchor?.kind ?? ""}</output>
-          <button
-            type="button"
-            onClick={() => selectItem("missing_anchor")}
-          >
+          <output data-testid="active-anchor">
+            {activeAnchor?.kind ?? ""}
+          </output>
+          <button type="button" onClick={() => selectItem("missing_anchor")}>
             select missing anchor
           </button>
         </div>
@@ -372,9 +389,9 @@ describe("anchored document viewer", () => {
     expect(fileContent("registry/new-york-v4/ui/layout-blocks.tsx")).toContain(
       "AnchoredDocumentProvider"
     )
-    expect(fileContent("components/viewers/edit/edit-viewer.tsx")).toContain(
-      "AnchoredDocumentProvider"
-    )
+    expect(
+      fileContent("components/viewers/edit/edit-viewer-provider.tsx")
+    ).toContain("AnchoredDocumentProvider")
     expect(
       fileContent("registry/new-york-v4/blocks/extraction-viewer-block.tsx")
     ).toContain("AnchoredDocumentProvider")
@@ -390,20 +407,28 @@ describe("anchored document viewer", () => {
   })
 
   it("keeps the public anchor vocabulary aligned with the blueprint", () => {
+    const documentAnchor = fileContent(
+      "registry/new-york-v4/ui/document-anchor.ts"
+    )
     const core = fileContent(
       "registry/new-york-v4/ui/anchored-document-viewer.tsx"
     )
-    const pdfTarget = fileContent("registry/new-york-v4/ui/pdf-anchor-target.tsx")
-    const xlsxAnchor = core.match(
+    const pdfTarget = fileContent(
+      "registry/new-york-v4/ui/pdf-anchor-target.tsx"
+    )
+    const xlsxAnchor = documentAnchor.match(
       /export type XlsxCellAnchor = \{[\s\S]*?\n\}/
     )?.[0]
 
-    expect(core).toContain("frameNumber?: number")
+    expect(documentAnchor).toContain("frameNumber?: number")
     expect(xlsxAnchor).toContain("sheetIndex: number")
     expect(xlsxAnchor).toContain("rowIndex: number")
     expect(xlsxAnchor).toContain("columnIndex: number")
     expect(xlsxAnchor).not.toMatch(
       /\bsheet: number\b|\brow: number\b|\bcol: number\b/
+    )
+    expect(core).toContain(
+      'import type { DocumentAnchor } from "./document-anchor"'
     )
     expect(pdfTarget).toContain("sourceToPdfAnchor")
     expect(pdfTarget).not.toContain(`sourceToPdf${"Area"}Anchor`)

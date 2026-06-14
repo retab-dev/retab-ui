@@ -94,22 +94,6 @@ export function usePdfViewerThumbnails(): PdfViewerThumbnailsState {
   }
 }
 
-export function useOptionalPdfViewerThumbnails(): PdfViewerThumbnailsState | null {
-  const context = React.useContext(PdfViewerContext)
-  const onSelectPage = React.useCallback(
-    (page: number) => context?.viewerHandle?.scrollToPage(page),
-    [context?.viewerHandle]
-  )
-
-  if (!context) return null
-
-  return {
-    currentPage: context.currentPage,
-    onSelectPage: context.viewerHandle ? onSelectPage : undefined,
-    resource: context.resource,
-  }
-}
-
 export function useOptionalPdfViewerHeaderControls() {
   return React.useContext(PdfViewerContext)?.setHeaderControls ?? null
 }

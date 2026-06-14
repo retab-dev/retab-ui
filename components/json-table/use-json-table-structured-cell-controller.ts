@@ -9,7 +9,12 @@ import { useRefCallback } from "@/components/json-table/path-utils"
 
 type StructuredPendingValue = {
   fieldPath: string
+  projectedValueAtCommit: unknown
   value: unknown
+}
+
+function areStructuredValuesEqual(previousValue: unknown, nextValue: unknown) {
+  return isJsonTableNoOpCommit(previousValue, nextValue)
 }
 
 export function useJsonTableStructuredCellController({
@@ -34,14 +39,24 @@ export function useJsonTableStructuredCellController({
     : value
 
   React.useEffect(() => {
-    if (
-      !activeStructuredPendingValue ||
-      !Object.is(activeStructuredPendingValue.value, value)
-    ) {
+    if (!structuredPendingValue) return
+    if (structuredPendingValue.fieldPath !== materializedFieldPath) {
+      setStructuredPendingValue(null)
       return
     }
-    setStructuredPendingValue(null)
-  }, [activeStructuredPendingValue, value])
+    if (areStructuredValuesEqual(structuredPendingValue.value, value)) {
+      setStructuredPendingValue(null)
+      return
+    }
+    if (
+      !areStructuredValuesEqual(
+        structuredPendingValue.projectedValueAtCommit,
+        value
+      )
+    ) {
+      setStructuredPendingValue(null)
+    }
+  }, [materializedFieldPath, structuredPendingValue, value])
 
   const commitStructuredValueChange = useRefCallback(function (
     validatedValue: unknown
@@ -54,6 +69,7 @@ export function useJsonTableStructuredCellController({
     })
     setStructuredPendingValue({
       fieldPath: materializedFieldPath,
+      projectedValueAtCommit: value,
       value: validatedValue,
     })
     markJsonTableProfile("cell-commit-local-end", {

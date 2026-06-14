@@ -202,7 +202,7 @@ const PRETEXT_MARKDOWN_VIEWER_DEMO_TEXT = [
   "",
   "## Raw HTML Policy",
   "",
-  "<details><summary>Open raw HTML details</summary><p>Safe static HTML like <mark>mark</mark>, <kbd>Cmd</kbd> + <kbd>K</kbd>, H<sub>2</sub>O, x<sup>2</sup>, and definition lists is allowed.</p></details>",
+  '<details><summary>Open raw HTML details</summary><p>Safe static HTML like <mark>mark</mark>, <kbd>Cmd</kbd> + <kbd>K</kbd>, H<sub>2</sub>O, x<sup>2</sup>, definition lists, <a href="https://example.com/raw" target="_self" rel="opener">raw external links</a>, and <a href="/docs/viewers" target="_blank" rel="opener">raw internal links</a> is allowed.</p></details>',
   "",
   "<dl><dt>Continuous surface</dt><dd>No visible page frames or page labels.</dd><dt>Virtualization</dt><dd>Chunking stays internal to scrolling and measurement.</dd></dl>",
   "",

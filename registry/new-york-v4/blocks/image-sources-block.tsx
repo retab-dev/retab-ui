@@ -4,25 +4,25 @@ import * as React from "react"
 
 import type { Source } from "@/lib/document-source"
 import {
-  AnchoredDocumentProvider,
-  useAnchoredDocument,
-  useAnchoredFieldLink,
-  type AnchoredDocumentTarget,
-  type AnchoredItem,
-} from "@/components/ui/anchored-document-viewer"
-import {
-  imageAnchorToTarget,
-  rotateImageArea,
-} from "@/components/ui/image-source"
+  useSegmentedFieldLink,
+  type SegmentedFieldAnchorLink,
+} from "@/components/ui/field-anchor-link"
+import { rotateImageArea } from "@/components/ui/image-source"
 import {
   ImageViewer,
+  type ImageFrameOverlayProps,
   type ImageViewerHandle,
 } from "@/components/ui/image-viewer"
+import {
+  SegmentedDocumentProvider,
+  useSegmentedDocumentViewport,
+} from "@/components/ui/segmented-document-provider"
 import {
   SourceFieldList,
   type SourceField,
 } from "@/components/ui/source-field-list"
 import { SourceIndicator } from "@/components/ui/source-indicator"
+import { sourceFieldsToSegmentedDocumentModel } from "@/components/ui/source-segmented-document-model"
 import {
   ViewerBody,
   ViewerRoot,
@@ -39,80 +39,57 @@ type ImageField = SourceField & { source: Source }
 
 // Real values read off the scanned page with normalized image_bbox anchors.
 const FIELDS = imageSample as ImageField[]
-const ITEMS: AnchoredItem[] = FIELDS.map((field) => {
-  const target = imageAnchorToTarget(field.source.anchor)
-  return {
+const SEGMENTED_DOCUMENT = sourceFieldsToSegmentedDocumentModel(
+  FIELDS.map((field) => ({
     id: field.key,
-    anchor: target
-      ? {
-          kind: "image-area",
-          frameNumber: target.frame,
-          left: target.area.left,
-          top: target.area.top,
-          width: target.area.width,
-          height: target.area.height,
-        }
-      : null,
-  }
-})
+    label: field.label,
+    source: field.source,
+  }))
+)
 
 /**
  * Image sources block — extracted fields beside a scanned page image. Hovering a
- * field highlights its image_bbox region and scrolls to it through the anchored
+ * field highlights its image_bbox region and scrolls to it through the segmented
  * document provider.
  */
 export function ImageSourcesBlock() {
-  const viewerRef = React.useRef<ImageViewerHandle>(null)
-  const target = useImageAnchoredTarget(viewerRef)
-
   return (
-    <AnchoredDocumentProvider
-      items={ITEMS}
-      target={target}
-      initialItemId={FIELDS[0]?.key}
-    >
-      <ImageSourcesContent viewerRef={viewerRef} />
-    </AnchoredDocumentProvider>
+    <SegmentedDocumentProvider model={SEGMENTED_DOCUMENT}>
+      <ImageSourcesContent />
+    </SegmentedDocumentProvider>
   )
 }
 
-function ImageSourcesContent({
-  viewerRef,
-}: {
-  viewerRef: React.RefObject<ImageViewerHandle | null>
-}) {
-  const link = useAnchoredFieldLink()
-  const { activeAnchor, activeItem } = useAnchoredDocument()
-  const renderFrameOverlay = React.useCallback(
-    ({ frameNumber, rotation }: { frameNumber: number; rotation: number }) => {
-      if (
-        activeAnchor?.kind !== "image-area" ||
-        (activeAnchor.frameNumber ?? 1) !== frameNumber
-      ) {
-        return null
-      }
-      const area = rotateImageArea(
-        {
-          left: activeAnchor.left,
-          top: activeAnchor.top,
-          width: activeAnchor.width,
-          height: activeAnchor.height,
-        },
-        rotation
-      )
-      return (
-        <div
-          className={HIGHLIGHT_CLASS}
-          style={{
-            left: `${area.left}%`,
-            top: `${area.top}%`,
-            width: `${area.width}%`,
-            height: `${area.height}%`,
-          }}
-        />
+function ImageSourcesContent() {
+  const link = useSegmentedFieldLink({ initialPath: FIELDS[0]?.key })
+  const segmentedViewport = useSegmentedDocumentViewport()
+  const renderFrameOverlay = useSegmentedImageSourceOverlay(link)
+  const setImageViewerHandle = React.useCallback(
+    (handle: ImageViewerHandle | null) => {
+      segmentedViewport.documentHandlers.setDocumentHandle(
+        handle
+          ? {
+              getViewportElement: handle.getViewportElement,
+              scrollToPage: (pageNumber, options) => {
+                handle.scrollToFrameArea(pageNumber, { top: 0 }, options)
+              },
+              scrollToPageArea: (target, options) => {
+                handle.scrollToFrameArea(
+                  target.pageNumber,
+                  {
+                    left: target.left,
+                    top: target.top,
+                    width: target.width,
+                    height: target.height,
+                  },
+                  options
+                )
+              },
+            }
+          : null
       )
     },
-    [activeAnchor]
+    [segmentedViewport.documentHandlers]
   )
 
   return (
@@ -120,7 +97,7 @@ function ImageSourcesContent({
       <ViewerBody>
         <ViewerSurface className="relative">
           <ImageViewer
-            ref={viewerRef}
+            ref={setImageViewerHandle}
             source={{
               kind: "url",
               url: IMAGE_URL,
@@ -128,12 +105,15 @@ function ImageSourcesContent({
             }}
             bare
             className="h-full"
+            onScrollProgressChange={
+              segmentedViewport.documentHandlers.onScrollProgressChange
+            }
+            onVisibleFrameChange={
+              segmentedViewport.documentHandlers.onCurrentPageChange
+            }
             renderFrameOverlay={renderFrameOverlay}
           />
-          <SourceIndicator
-            path={link.activePath}
-            found={!!activeItem?.anchor}
-          />
+          <SourceIndicator path={link.activePath} found={!!link.activeAnchor} />
         </ViewerSurface>
         <ViewerSidebar
           aria-label="Source fields"
@@ -149,25 +129,33 @@ function ImageSourcesContent({
   )
 }
 
-function useImageAnchoredTarget(
-  viewerRef: React.RefObject<ImageViewerHandle | null>
-): AnchoredDocumentTarget {
-  return React.useMemo(
-    () => ({
-      scrollToAnchor: (anchor, options) => {
-        if (anchor.kind !== "image-area") return
-        viewerRef.current?.scrollToFrameArea(
-          anchor.frameNumber ?? 1,
-          {
-            left: anchor.left,
-            top: anchor.top,
-            width: anchor.width,
-            height: anchor.height,
-          },
-          options
-        )
-      },
-    }),
-    [viewerRef]
+function useSegmentedImageSourceOverlay(link: SegmentedFieldAnchorLink) {
+  return React.useCallback(
+    ({ frameNumber, rotation }: ImageFrameOverlayProps) => {
+      const anchor = link.activeAnchor
+      if (!anchor?.bounds || anchor.pageNumber !== frameNumber) return null
+
+      const area = rotateImageArea(
+        {
+          left: anchor.bounds.x * 100,
+          top: anchor.bounds.y * 100,
+          width: anchor.bounds.width * 100,
+          height: anchor.bounds.height * 100,
+        },
+        rotation
+      )
+      return (
+        <div
+          className={HIGHLIGHT_CLASS}
+          style={{
+            left: `${area.left}%`,
+            top: `${area.top}%`,
+            width: `${area.width}%`,
+            height: `${area.height}%`,
+          }}
+        />
+      )
+    },
+    [link.activeAnchor]
   )
 }

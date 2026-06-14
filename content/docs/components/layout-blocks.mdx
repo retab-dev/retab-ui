@@ -9,6 +9,11 @@ the page. The first adapter normalizes Google Document AI's `blocks`,
 `paragraphs`, `lines`, and `tokens` into a generic `LayoutDocument`; the default
 inspector keeps the UI focused on document blocks.
 
+The interaction model is the same anchored-evidence primitive used by extraction
+sources: OCR rows project into document anchors, then
+`AnchoredDocumentProvider` owns preview, selection, activation, and target
+scrolling.
+
 <DocumentAiLayoutBlocksDemo />
 
 ## Installation
@@ -43,10 +48,29 @@ line span contains token span
 
 ### Pure helpers
 
-| Export                       | Description                                             |
-| ---------------------------- | ------------------------------------------------------- |
-| `documentAiToLayoutDocument` | Converts Google Document AI output to `LayoutDocument`. |
-| `createLayoutItemIndex`      | Builds `itemsById`, `itemsByPage`, and `itemsByLevel`.  |
-| `LayoutOverlayLayer`         | Renders SVG polygon overlays for one page/frame.        |
-| `LayoutBlocksPanel`          | Renders a virtualized, keyboardable layout item panel.  |
-| `useLayoutBlockSelection`    | Owns hover preview and pinned selection state.          |
+| Export                          | Description                                                           |
+| ------------------------------- | --------------------------------------------------------------------- |
+| `documentAiToLayoutDocument`    | Converts Google Document AI output to `LayoutDocument`.               |
+| `createLayoutItemIndex`         | Builds `itemsById`, `itemsByPage`, and `itemsByLevel`.                |
+| `filterLayoutItems`             | Filters visible OCR items by level and confidence without projecting. |
+| `layoutItemToEvidenceItem`      | Projects one OCR item into `EvidenceItem<LayoutEvidencePayload>`.     |
+| `layoutItemsToEvidenceModel`    | Projects filtered OCR items into evidence rows plus provider items.   |
+| `createLayoutBlocksViewerModel` | Thin convenience wrapper for index, filter, and evidence projection.  |
+| `LayoutOverlayLayer`            | Renders SVG polygon overlays for one page/frame.                      |
+| `LayoutBlocksPanel`             | Renders a virtualized, keyboardable layout item panel.                |
+
+### Evidence payload
+
+`LayoutEvidencePayload` carries OCR-specific row data:
+
+```txt
+item
+level
+kind
+text
+confidence
+pageNumber
+```
+
+The generic anchored layer reads only `id` and `anchor`; OCR presentation reads
+the payload.

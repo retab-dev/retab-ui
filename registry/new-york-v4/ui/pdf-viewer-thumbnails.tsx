@@ -12,8 +12,8 @@ import {
   PDF_THUMBNAIL_INITIAL_VIEWPORT_HEIGHT,
   PDF_THUMBNAIL_OVERSCAN,
 } from "./pdf-thumbnail-layout"
-import { PdfThumbnailRail } from "./pdf-thumbnail-rail"
-import { useOptionalPdfViewerThumbnails } from "./pdf-viewer-context"
+import { PdfThumbnailRailViewport } from "./pdf-thumbnail-rail"
+import { usePdfViewerThumbnails } from "./pdf-viewer-context"
 import { useIsClient } from "./use-is-client"
 import { usePdfThumbnailDocument } from "./use-pdf-thumbnail-document"
 import { usePdfThumbnailPageMetrics } from "./use-pdf-thumbnail-page-metrics"
@@ -22,37 +22,56 @@ import { useThumbnailRailFollow } from "./use-thumbnail-rail-follow"
 import { ViewerErrorBoundary } from "./viewer-error"
 
 export interface PdfViewerThumbnailsProps {
+  /** Thumbnail image width in CSS pixels. The sidebar shell owns rail width. */
+  thumbnailWidth?: number
+  className?: string
+}
+
+export interface PdfThumbnailRailProps {
   /** Same resource object passed to PdfResourceViewer. */
-  resource?: ViewerResource
+  resource: ViewerResource
   /** 1-based current page; its thumbnail is highlighted. */
   currentPage?: number | null
   /** Click a thumbnail to jump the document to that page. */
   onSelectPage?: (page: number) => void
-  /** Thumbnail width in CSS pixels. */
-  width?: number
+  /** Thumbnail image width in CSS pixels. The sidebar shell owns rail width. */
+  thumbnailWidth?: number
   className?: string
 }
 
-export function PdfViewerThumbnails(props: PdfViewerThumbnailsProps) {
-  const thumbnails = useOptionalPdfViewerThumbnails()
-  const resource = props.resource ?? thumbnails?.resource
-  const currentPage = props.currentPage ?? thumbnails?.currentPage
-  const onSelectPage = props.onSelectPage ?? thumbnails?.onSelectPage
+export function PdfViewerThumbnails({
+  className,
+  thumbnailWidth,
+}: PdfViewerThumbnailsProps) {
+  const thumbnails = usePdfViewerThumbnails()
+
+  return (
+    <PdfThumbnailRail
+      className={className}
+      currentPage={thumbnails.currentPage}
+      onSelectPage={thumbnails.onSelectPage}
+      resource={thumbnails.resource}
+      thumbnailWidth={thumbnailWidth}
+    />
+  )
+}
+
+export function PdfThumbnailRail({
+  className,
+  currentPage,
+  onSelectPage,
+  resource,
+  thumbnailWidth,
+}: PdfThumbnailRailProps) {
   const isClient = useIsClient()
 
-  if (!resource) {
-    throw new Error(
-      "PdfViewerThumbnails requires a resource prop or PdfViewerProvider."
-    )
-  }
-
   if (!isClient) {
-    return <ThumbnailsFallback className={props.className} />
+    return <ThumbnailsFallback className={className} />
   }
 
   return (
     <ViewerErrorBoundary
-      className={cn("h-full", props.className)}
+      className={cn("h-full", className)}
       download={resource.originalDownload}
       format="pdf"
       onRetry={() => clearPdfDocumentResource(resource.content)}
@@ -61,11 +80,11 @@ export function PdfViewerThumbnails(props: PdfViewerThumbnailsProps) {
       variant="inline"
     >
       <React.Suspense fallback={<ThumbnailsFallback />}>
-        <PdfViewerThumbnailsInner
-          {...props}
-          resource={resource}
+        <PdfThumbnailRailInner
           currentPage={currentPage}
           onSelectPage={onSelectPage}
+          resource={resource}
+          thumbnailWidth={thumbnailWidth}
           className="h-full"
         />
       </React.Suspense>
@@ -73,13 +92,13 @@ export function PdfViewerThumbnails(props: PdfViewerThumbnailsProps) {
   )
 }
 
-function PdfViewerThumbnailsInner({
+function PdfThumbnailRailInner({
   resource,
   currentPage,
   onSelectPage,
-  width = 120,
+  thumbnailWidth = 120,
   className,
-}: Omit<PdfViewerThumbnailsProps, "resource"> & { resource: ViewerResource }) {
+}: PdfThumbnailRailProps) {
   const doc = usePdfThumbnailDocument(resource)
   const pageMetrics = usePdfThumbnailPageMetrics(doc, doc)
   const { metricByPageNumber, pageCount, requestPageMetrics } = pageMetrics
@@ -89,10 +108,10 @@ function PdfViewerThumbnailsInner({
     () =>
       buildPdfThumbnailLayout({
         pageCount,
-        width,
+        width: thumbnailWidth,
         metricByPageNumber,
       }),
-    [metricByPageNumber, pageCount, width]
+    [metricByPageNumber, pageCount, thumbnailWidth]
   )
   const thumbnailWindow = usePdfThumbnailWindow({
     layout,
@@ -122,7 +141,7 @@ function PdfViewerThumbnailsInner({
   ])
 
   return (
-    <PdfThumbnailRail
+    <PdfThumbnailRailViewport
       doc={doc}
       layout={layout}
       visibleItems={thumbnailWindow.visibleItems}

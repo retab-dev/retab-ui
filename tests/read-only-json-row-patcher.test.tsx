@@ -2,7 +2,7 @@
 
 import { cleanup, renderHook } from "@testing-library/react"
 import type { JSONSchema7 } from "json-schema"
-import { afterEach, describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
 import type { FixedGridViewport } from "@/components/ui/fixed-grid-virtualization"
 import type { VisibleColumn } from "@/components/json-table/json-table-cell-types"
@@ -55,6 +55,30 @@ describe("read-only JSON row patcher", () => {
     expect(rowText(rows[2]!)).toEqual(["row 5", "6"])
   })
 
+  it("reports handled patch diagnostics with the number of repatched rows", () => {
+    const rowWindow = buildRowWindow([
+      { rowIndex: 0, cells: ["row 0", "1"] },
+      { rowIndex: 1, cells: ["row 1", "2"] },
+      { rowIndex: 2, cells: ["row 2", "3"] },
+    ])
+    const onDiagnostic = vi.fn()
+    const state = createPatchState()
+    const { result } = renderHook(() =>
+      useReadOnlyJsonRowPatcher({
+        rowWindowRef: { current: rowWindow },
+        getState: () => state,
+        onDiagnostic,
+      })
+    )
+
+    expect(result.current.patch(createJumpViewport())).toBe("handled")
+
+    expect(onDiagnostic).toHaveBeenCalledWith({
+      reason: "handled",
+      rowsPatched: 3,
+    })
+  })
+
   it("patches boolean cells instead of rejecting the row", () => {
     const rowWindow = buildRowWindow([
       { rowIndex: 0, cells: ["row 0", "1", "false"] },
@@ -100,16 +124,52 @@ describe("read-only JSON row patcher", () => {
       '[data-slot="json-table-read-only-cell"] [data-slot="data-cell-value"]'
     )
     firstText?.replaceChildren(document.createElement("strong"))
+    const onDiagnostic = vi.fn()
     const state = createPatchState()
     const { result } = renderHook(() =>
       useReadOnlyJsonRowPatcher({
         rowWindowRef: { current: rowWindow },
         getState: () => state,
+        onDiagnostic,
       })
     )
 
     expect(result.current.patch(createJumpViewport())).toBe("pass")
     expect(rowText(rowHandles(rowWindow)[0]!)).toEqual(["", "1"])
+    expect(onDiagnostic).toHaveBeenCalledWith({
+      reason: "shape-mismatch",
+      rowsPatched: 0,
+    })
+  })
+
+  it("reports unsupported viewport diagnostics instead of patching horizontal jumps", () => {
+    const rowWindow = buildRowWindow([
+      { rowIndex: 0, cells: ["row 0", "1"] },
+      { rowIndex: 1, cells: ["row 1", "2"] },
+      { rowIndex: 2, cells: ["row 2", "3"] },
+    ])
+    const onDiagnostic = vi.fn()
+    const state = createPatchState()
+    const { result } = renderHook(() =>
+      useReadOnlyJsonRowPatcher({
+        rowWindowRef: { current: rowWindow },
+        getState: () => state,
+        onDiagnostic,
+      })
+    )
+
+    expect(
+      result.current.patch({
+        ...createJumpViewport(),
+        scrollLeft: 24,
+        isJumpingColumns: true,
+      })
+    ).toBe("pass")
+
+    expect(onDiagnostic).toHaveBeenCalledWith({
+      reason: "unsupported-viewport",
+      rowsPatched: 0,
+    })
   })
 })
 

@@ -18,6 +18,7 @@ import {
   useBindFileSystemPierreExpansionModel,
   useFileSystemPierreExpansion,
 } from "./file-system-pierre-expansion"
+import type { FileSystemListContinuity } from "./file-system-list-continuity"
 import type { FileSystemPierreInput } from "./file-system-pierre-input"
 import { createFileSystemPierreLazyFolderCommand } from "./file-system-pierre-lazy-retry"
 import { useFileSystemPierreOrder } from "./file-system-pierre-order"
@@ -42,10 +43,12 @@ export function useFileSystemPierreModel({
   navigation,
   query,
   selection,
+  listContinuity,
 }: {
   decoration: FileSystemPierreDecorationState
   decorationVersion: string
   input: FileSystemPierreInput
+  listContinuity: FileSystemListContinuity<FileSystemPierreInput>
   loading: FileSystemPierreLoadingController
   navigation: FileSystemPierreNavigationController
   query: FileSystemPierreQueryState
@@ -119,6 +122,7 @@ export function useFileSystemPierreModel({
     expansion,
     hasSemanticQuery,
     input,
+    listContinuity,
     model,
     order,
     selectedPath: selection.selectedPath,

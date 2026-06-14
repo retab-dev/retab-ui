@@ -2,15 +2,16 @@
 
 import * as React from "react"
 
+import { useFileSystemKernelRuntime } from "./file-system-kernel-runtime"
 import {
-  createFileSystemBrowserState,
-  createFileSystemPreviewState,
-} from "./file-system-browser-state"
-import { useFileSystemStateSlices } from "./file-system-controller"
+  selectFileSystemBrowserState,
+  selectFileSystemSelectionState,
+} from "./file-system-kernel-selectors"
 import {
   useFileSystemOpenPreviewController,
   type FileSystemOpenPreviewController,
 } from "./file-system-open-preview-state"
+import { useFileSystemSourceController } from "./file-system-source-controller"
 import type { FileSystemProps } from "./file-system-types"
 
 export type FileSystemProviderProps = Omit<FileSystemProps, "className"> & {
@@ -29,8 +30,8 @@ export type FileSystemCompositionState = {
 }
 
 export type FileSystemContextValue = {
-  browser: ReturnType<typeof createFileSystemBrowserState>
-  preview: ReturnType<typeof createFileSystemPreviewState>
+  browser: ReturnType<typeof selectFileSystemBrowserState>
+  selection: ReturnType<typeof selectFileSystemSelectionState>
 } & FileSystemCompositionState
 
 const FileSystemContext = React.createContext<FileSystemContextValue | null>(
@@ -67,42 +68,46 @@ export function FileSystemProvider({
   title = "Files",
   view,
 }: FileSystemProviderProps) {
-  const state = useFileSystemStateSlices({
+  const source = useFileSystemSourceController({ items, resolveSource })
+  const openPreview = useFileSystemOpenPreviewController({
+    onFileOpen,
+    resolveFileSource: source.resolveFileSource,
+  })
+  const kernel = useFileSystemKernelRuntime({
     defaultPath,
     defaultQuery,
     defaultSelectedPath,
     defaultView,
     items,
     loadChildren,
+    onFileCommand: openPreview.open,
     onPathChange,
     onQueryChange,
     onSelectionChange,
     onViewChange,
     path,
     query,
-    resolveSource,
     selectedPath,
     view,
   })
   const browser = React.useMemo(
-    () => createFileSystemBrowserState(state),
-    [
-      state.index,
-      state.loading,
-      state.navigation,
-      state.query,
-      state.selection,
-      state.view,
-    ]
+    () =>
+      selectFileSystemBrowserState({
+        dispatch: kernel.dispatch,
+        ensureChildren: kernel.ensureChildren,
+        getState: kernel.getState,
+        state: kernel.state,
+      }),
+    [kernel.dispatch, kernel.ensureChildren, kernel.getState, kernel.state]
   )
-  const preview = React.useMemo(
-    () => createFileSystemPreviewState(state),
-    [state.selection, state.source]
+  const selection = React.useMemo(
+    () =>
+      selectFileSystemSelectionState({
+        resolveSource: source.resolveFileSource,
+        state: kernel.state,
+      }),
+    [kernel.state, source.resolveFileSource]
   )
-  const openPreview = useFileSystemOpenPreviewController({
-    onFileOpen,
-    resolveFileSource: state.source.resolveFileSource,
-  })
   const renderers = React.useMemo<FileSystemRenderers>(
     () => ({ renderFileActions, renderMetadata }),
     [renderFileActions, renderMetadata]
@@ -110,12 +115,12 @@ export function FileSystemProvider({
   const value = React.useMemo<FileSystemContextValue>(
     () => ({
       browser,
-      preview,
+      selection,
       openPreview,
       renderers,
       title,
     }),
-    [browser, openPreview, preview, renderers, title]
+    [browser, openPreview, renderers, selection, title]
   )
 
   return (
