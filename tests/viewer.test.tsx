@@ -65,6 +65,11 @@ describe("viewer primitives", () => {
       container.querySelector('[data-slot="viewer-sidebar"]')?.textContent
     ).toBe("Sidebar")
     expect(
+      container
+        .querySelector('[data-slot="viewer-sidebar"]')
+        ?.getAttribute("data-viewer-sidebar-mode")
+    ).toBe("inline")
+    expect(
       container.querySelector('[data-slot="viewer-surface"]')?.textContent
     ).toBe("Surface")
   })
@@ -115,6 +120,9 @@ describe("viewer primitives", () => {
         .querySelector('[data-slot="viewer-surface"]')
         ?.getAttribute("data-viewer-role")
     ).toBeNull()
+    expect(
+      container.querySelector('[data-slot="viewer-sidebar"]')?.className
+    ).not.toContain("bg-background")
   })
 
   it("uses explicit side on the base sidebar", () => {
@@ -1141,7 +1149,7 @@ describe("viewer primitives", () => {
 
     try {
       render(
-        <ViewerRoot inlineBreakpoint={768}>
+        <ViewerRoot mode="auto" inlineBreakpoint={768}>
           <ModeProbe />
           <ViewerBody>
             <ViewerSidebar>Sidebar</ViewerSidebar>
@@ -1182,7 +1190,7 @@ describe("viewer primitives", () => {
 
     try {
       render(
-        <ViewerRoot>
+        <ViewerRoot mode="auto">
           <ModeProbe />
           <ViewerBody>
             <ViewerSidebar>Sidebar</ViewerSidebar>
@@ -1239,7 +1247,7 @@ describe("viewer primitives", () => {
 
     try {
       render(
-        <ViewerRoot inlineBreakpoint={768}>
+        <ViewerRoot mode="auto" inlineBreakpoint={768}>
           <ModeProbe />
           <ViewerBody>
             <ViewerSidebar>Sidebar</ViewerSidebar>
@@ -1311,7 +1319,7 @@ describe("viewer primitives", () => {
 
     try {
       render(
-        <ViewerRoot inlineBreakpoint={768}>
+        <ViewerRoot mode="auto" inlineBreakpoint={768}>
           <ModeProbe />
           <ViewerBody>
             <ViewerSidebar>Sidebar</ViewerSidebar>

@@ -6,12 +6,12 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { FileSystem } from "@/components/ui/file-system"
 
 import {
-  DEFAULT_FILE_SYSTEM_DEMO_QUERY,
-  FILE_SYSTEM_DEMO_ITEMS,
-  LARGE_FILE_SYSTEM_DEMO_ITEMS,
   collectFileSystemDemoFolderPaths,
   collectFileSystemDemoItemPaths,
+  DEFAULT_FILE_SYSTEM_DEMO_QUERY,
+  FILE_SYSTEM_DEMO_ITEMS,
   formatFileSystemDemoState,
+  LARGE_FILE_SYSTEM_DEMO_ITEMS,
   parseFileSystemDemoState,
   type FileSystemDemoState,
 } from "./file-system-demo-state"
@@ -73,7 +73,7 @@ export function FileSystemBlock() {
 
   return (
     <FileSystem
-      className="h-full min-h-[680px]"
+      className="h-[680px]"
       items={items}
       onPathChange={(path) => replaceState({ path, selectedPath: null })}
       onQueryChange={(query) => replaceState({ query })}

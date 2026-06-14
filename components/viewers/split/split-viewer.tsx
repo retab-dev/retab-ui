@@ -296,7 +296,7 @@ export function SplitViewerSidebar({
     <ViewerSidebar
       aria-label={ariaLabel}
       width={width}
-      className={cn("border-r bg-background", className)}
+      className={cn("border-r", className)}
       {...props}
     >
       {children ?? <SplitViewerPageRail />}

@@ -181,6 +181,7 @@ function patchRows(
     if (rowHandle.rowIndex === rowIndex) continue
     rowHandle.rowIndex = rowIndex
     rowHandle.element.dataset.index = String(rowIndex)
+    rowHandle.element.setAttribute("aria-rowindex", String(rowIndex + 1))
     patchCells(rowHandle, state.projectedRows[rowIndex], state.visibleColumns)
     rowsPatched += 1
   }

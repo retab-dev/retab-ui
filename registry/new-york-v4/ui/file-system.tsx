@@ -128,10 +128,10 @@ function FileSystemDefaultSelectionContent({
   return (
     <div
       data-slot="file-system-default-selection"
-      className="flex size-full min-h-0 min-w-0 flex-col bg-muted/20"
+      className="flex size-full min-h-0 min-w-0 flex-col overflow-hidden bg-muted/20"
     >
       <div className="flex min-h-0 flex-1 flex-col">
-        <div className="flex min-h-0 flex-1 items-center justify-center bg-background">
+        <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-background">
           {!entry ? (
             <FileSystemDefaultSelectionMessage
               title="No file selected"
@@ -200,7 +200,7 @@ function FileSystemDefaultSelectionFooter({
   const file = entry.kind === "file" ? entry : null
 
   return (
-    <div className="border-t bg-background p-3">
+    <div className="shrink-0 border-t bg-background p-3">
       <div className="flex items-start gap-3">
         {file ? (
           <FileSystemThumbnail

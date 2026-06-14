@@ -170,4 +170,102 @@ describe("usePdfScroll", () => {
     expect(nextProgressChange).toHaveBeenCalled()
     expect(screen.getByTestId("page").textContent).toBe("5")
   })
+
+  it("preserves the semantic page anchor when the layout changes", async () => {
+    const initialLayout = createPdfPageLayout({
+      pageCount: 20,
+      defaultPageSize: { width: 100, height: 200 },
+      pageSizeByNumber: new Map(),
+      scale: 1,
+      rotation: 0,
+    })
+    const nextLayout = createPdfPageLayout({
+      pageCount: 20,
+      defaultPageSize: { width: 100, height: 200 },
+      pageSizeByNumber: new Map(),
+      scale: 2,
+      rotation: 0,
+    })
+    const initialPage = getPdfPageLayout(initialLayout, 10)!
+    const nextPage = getPdfPageLayout(nextLayout, 10)!
+    const viewport = {
+      scrollTop: initialPage.offsetTop + 50,
+      clientHeight: 200,
+      scrollHeight: 10_000,
+      getBoundingClientRect: () => ({ top: 0, height: 200 }) as DOMRect,
+    } as HTMLDivElement
+    const expectedScrollTop =
+      nextPage.offsetTop +
+      nextPage.height * ((50 + 200 * 0.2) / initialPage.height) -
+      200 * 0.2
+
+    function Harness({ layout }: { layout: typeof initialLayout }) {
+      const result = usePdfScroll({
+        pageCount: 20,
+        layout,
+        resetKey: "same-document",
+      })
+
+      React.useEffect(() => {
+        result.setViewportElement(viewport)
+        return () => result.setViewportElement(null)
+      }, [result])
+
+      return <output data-testid="page">{result.currentPage}</output>
+    }
+
+    const view = render(<Harness layout={initialLayout} />)
+
+    await waitFor(() => expect(screen.getByTestId("page")).toBeTruthy())
+
+    view.rerender(<Harness layout={nextLayout} />)
+
+    await waitFor(() => expect(viewport.scrollTop).toBe(expectedScrollTop))
+  })
+
+  it("keeps the viewport at the document top across layout changes", async () => {
+    const initialLayout = createPdfPageLayout({
+      pageCount: 20,
+      defaultPageSize: { width: 100, height: 200 },
+      pageSizeByNumber: new Map(),
+      scale: 1,
+      rotation: 0,
+    })
+    const nextLayout = createPdfPageLayout({
+      pageCount: 20,
+      defaultPageSize: { width: 100, height: 200 },
+      pageSizeByNumber: new Map(),
+      scale: 2,
+      rotation: 0,
+    })
+    const viewport = {
+      scrollTop: 0,
+      clientHeight: 200,
+      scrollHeight: 10_000,
+      getBoundingClientRect: () => ({ top: 0, height: 200 }) as DOMRect,
+    } as HTMLDivElement
+
+    function Harness({ layout }: { layout: typeof initialLayout }) {
+      const result = usePdfScroll({
+        pageCount: 20,
+        layout,
+        resetKey: "same-document",
+      })
+
+      React.useEffect(() => {
+        result.setViewportElement(viewport)
+        return () => result.setViewportElement(null)
+      }, [result])
+
+      return <output data-testid="page">{result.currentPage}</output>
+    }
+
+    const view = render(<Harness layout={initialLayout} />)
+
+    await waitFor(() => expect(screen.getByTestId("page")).toBeTruthy())
+
+    view.rerender(<Harness layout={nextLayout} />)
+
+    await waitFor(() => expect(viewport.scrollTop).toBe(0))
+  })
 })

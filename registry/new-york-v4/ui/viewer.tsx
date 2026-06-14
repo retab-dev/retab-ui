@@ -140,7 +140,7 @@ export function ViewerRoot({
   defaultOpen = false,
   open: openProp,
   onOpenChange,
-  mode = "auto",
+  mode = "inline",
   inlineBreakpoint = VIEWER_SIDEBAR_INLINE_BREAKPOINT,
   sidebarSide = "left",
   sidebarCollapsible = "offcanvas",
@@ -541,7 +541,7 @@ export function ViewerSidebar({
       data-viewer-sidebar-open={open ? "true" : "false"}
       data-viewer-sidebar-state={state}
       className={cn(
-        "z-30 min-h-0 flex-shrink-0 overflow-hidden bg-background",
+        "z-30 min-h-0 flex-shrink-0 overflow-hidden",
         "transition-none data-[viewer-sidebar-transitions=ready]:transition-[translate,margin-left,margin-right,border-color] data-[viewer-sidebar-transitions=ready]:duration-200 data-[viewer-sidebar-transitions=ready]:ease-out",
         collapsible === "none" &&
           "relative translate-x-0 shadow-none data-[side=right]:order-last",

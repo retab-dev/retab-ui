@@ -1,113 +1,98 @@
-# Viewer System Definitive Platonic Ideal Blueprint
+# Viewer System Definitive Platonic Blueprint
 
-## Objective
+## Purpose
 
-Define the final, ideal architecture for the Retab viewer component family.
+This is the final target architecture for the Retab viewer component family.
 
-This blueprint is not a migration plan.
+It is not a migration plan. It is not a compatibility plan. It does not try to
+justify old shapes. It describes the smallest architecture that can express the
+full product:
 
-This blueprint is not a compatibility plan.
+- file viewers;
+- PDF thumbnails;
+- email MIME viewers;
+- split viewers;
+- partition viewers;
+- OCR/layout viewers;
+- source/bbox evidence viewers;
+- upload/dropzone viewers;
+- file-system viewers as consumers only.
 
-This blueprint is the target shape if the only goals are:
-
-- simplicity;
-- speed;
-- complete behavior;
-- no unnecessary abstractions;
-- exact module boundaries;
-- one name per concept;
-- no compatibility wrappers;
-- no duplicated state machines;
-- copy-pasteable registry components;
-- tests that prove the public contract.
-
-File-system implementation is out of scope for this document. File-system may
-consume the primitives described here, but this blueprint does not redesign its
-domain model.
+File-system implementation details are out of scope. File-system may compose
+these primitives, but the viewer system must not absorb file-system state.
 
 ## Verdict
 
-We have not reached perfection.
+The ideal is not one universal viewer.
 
-We have reached the right axis.
-
-The platonic ideal is not a larger universal viewer. It is not a provider for
-everything. It is not a slot object API. It is not a recursive mega-component.
-
-The final architecture is:
+The ideal is four exact centers:
 
 ```txt
-Viewer primitives
-  own spatial layout and viewer-local sidebar state.
+ViewerRoot
+  spatial composition, frame, and viewer-local sidebar state
 
 ViewerSource
-  describes one renderable file/document input.
+  one renderable file/document input
 
 FileViewer
-  renders one ViewerSource through format-specific leaf viewers.
+  rendering of one ViewerSource through format-specific leaf viewers
 
-Domain providers
-  own one domain state machine.
-
-Domain parts
-  render named regions from narrow hooks.
-
-DocumentAnchor
-  describes pure document locations.
-
-Anchored evidence
-  connects domain rows to document anchors without owning the domain.
+SegmentedDocumentProvider
+  shared segment, anchor, page, scroll, hover, and navigation mechanics
 ```
 
-Everything else is an implementation detail.
+Everything else is a domain composition.
 
-The final sentence should be mechanically true:
+The final sentence should stay true:
 
 ```txt
-Domains produce sources, anchors, and rows; viewer primitives place them; file
-viewers render sources; anchored primitives coordinate evidence interaction.
+Domains produce sources, segments, anchors, rows, and selected ids.
+Viewer primitives place regions.
+FileViewer renders sources.
+SegmentedDocumentProvider coordinates document interaction.
 ```
 
-If a component cannot be explained by that sentence, it does not belong in the
-core viewer system.
+If a component cannot be explained by that sentence, it probably does not
+belong in the core viewer system.
 
-## Non-Negotiable Standard
+## Non-Negotiables
 
-The viewer family is finished only when all of these are true:
+The finished system must satisfy all of these:
 
-- a reader can understand the rendered hierarchy by reading JSX;
-- every provider owns exactly one state machine;
-- every generic primitive owns layout or shared interaction, never domain data;
-- every leaf viewer renders exactly one source;
-- no leaf viewer owns a sidebar;
-- no domain provider owns borders, radius, or flex layout;
-- no component has both easy API and composed API that use different internals;
-- no generic metadata bag exists where a typed payload should exist;
-- no hidden compatibility shell is the conceptual center;
-- no public file imports missing private support files;
-- all registry artifacts install independently;
-- all docs use the same vocabulary as the code;
-- tests enforce architectural boundaries, not only rendered snapshots.
+- JSX reveals the hierarchy without reading hidden slot code.
+- Each provider owns one state machine.
+- Generic primitives own layout or shared interaction, never product domain.
+- Leaf viewers render exactly one source.
+- Leaf viewers do not own product sidebars.
+- Domain providers do not own generic borders, radius, or flex layout.
+- Easy APIs are transparent compositions of named parts.
+- No easy API has a different internal model from its composed API.
+- No generic metadata bag exists where a typed payload should exist.
+- No compatibility wrappers remain as conceptual centers.
+- No duplicated hover, preview, scroll, and active-page systems exist.
+- No public registry item depends on private missing files.
+- Public names use one word per concept.
+- Tests prove boundaries, not only visual snapshots.
 
-Perfection here means deletion. A new abstraction is justified only if it
-removes more complexity than it adds.
+Perfection here means deletion. An abstraction is valid only when it removes
+more complexity than it adds.
 
 ## Final Vocabulary
 
-Use these words exactly.
+Use these names exactly.
 
 ```txt
 viewer
-  The component family for rendering and composing document/file experiences.
+  The component family for rendering and composing file/document experiences.
 
 root
-  The outer spatial and sidebar-state boundary of one composed viewer.
+  The outer spatial boundary of one composed viewer.
 
 header
   The full-width top region of a composed viewer.
 
 body
-  The flex region under the header.
+  The flex region below the header.
 
 sidebar
   A viewer-local side region controlled by ViewerRoot.
@@ -119,34 +104,34 @@ source
   One renderable file/document input.
 
 file
-  A source with file-like identity: name, type, size, download behavior.
+  A source with file-like identity: name, MIME type, size, and download.
 
 leaf viewer
   A format-specific renderer for one source.
 
 domain
-  Email, split, upload, extraction, OCR, file-system, or another product model.
+  Email, split, partition, OCR, extraction, upload, or file-system.
 
 provider
-  React transport for one domain state machine.
+  React transport for one state machine.
 
 part
-  A named domain component that reads provider state.
+  A named component that renders one region from a provider.
+
+segment
+  A semantic document span.
 
 anchor
-  A pure document location.
+  A page-local target for a segment.
 
-target
-  An imperative bridge from an anchor to a rendered document.
+row
+  A display grouping of semantic segments.
 
-evidence
-  A domain row that can point at a document anchor.
-
-payload
-  Domain-specific row data carried by evidence.
+handle
+  An imperative bridge from shared navigation to a rendered document.
 ```
 
-Do not use these phrases in public APIs:
+Do not use these public API names:
 
 ```txt
 viewer evidence
@@ -160,7 +145,35 @@ sidebar provider provider
 
 They blur ownership.
 
-## The One Spatial Grammar
+## Layer Map
+
+The system has five layers.
+
+```txt
+1. Viewer primitives
+   ViewerRoot, ViewerHeader, ViewerBody, ViewerSidebar, ViewerSurface,
+   ViewerSidebarTrigger
+
+2. Source rendering
+   ViewerSource, FileViewerProvider, FileViewerHeader, FileViewerContent,
+   FileViewer, format leaf viewers
+
+3. Segmented document mechanics
+   SegmentedDocumentModel, SegmentedDocumentProvider,
+   useSegmentedDocumentViewport, document handles, segment primitives
+
+4. Domain models
+   Email model, split model, partition model, source model, OCR model,
+   upload model
+
+5. Domain compositions
+   EmailViewer, SplitViewer, PartitionViewer, ExtractViewer,
+   UploadableFileViewer, FileSystemViewer
+```
+
+Only lower layers can be imported by higher layers. The reverse is forbidden.
+
+## Viewer Primitives
 
 The only generic spatial primitives are:
 
@@ -185,87 +198,7 @@ The canonical hierarchy is:
 </ViewerRoot>
 ```
 
-`ViewerSidebarTrigger` may be rendered anywhere inside `ViewerRoot`:
-
-```tsx
-<ViewerHeader>
-  <ViewerSidebarTrigger />
-</ViewerHeader>
-```
-
-or:
-
-```tsx
-<DomainToolbar>
-  <ViewerSidebarTrigger />
-</DomainToolbar>
-```
-
-This follows the important shadcn sidebar lesson: the trigger should be
-portable because the state belongs to a high-enough boundary.
-
-The difference from shadcn sidebar is deliberate:
-
-```txt
-ViewerRoot is the sidebar provider.
-```
-
-There should not be:
-
-```tsx
-<ViewerSidebarProvider>
-  <ViewerRoot />
-</ViewerSidebarProvider>
-```
-
-The viewer root already defines the frame where a sidebar exists. A separate
-viewer sidebar provider would duplicate hierarchy and create one provider too
-many.
-
-## ViewerRoot Contract
-
-`ViewerRoot` owns:
-
-- outer frame;
-- border, radius, background;
-- height and overflow policy;
-- generic viewer CSS variables;
-- sidebar open state;
-- controlled and uncontrolled sidebar state;
-- sidebar side, collapsibility, and keyboard shortcut;
-- context consumed by `ViewerSidebar` and `ViewerSidebarTrigger`.
-
-`ViewerRoot` does not own:
-
-- selected file;
-- selected MIME part;
-- selected split segment;
-- upload queue;
-- source map;
-- OCR block;
-- current PDF page;
-- zoom;
-- download action;
-- row rendering.
-
-The final API should be close to:
-
-```ts
-type ViewerRootProps = {
-  open?: boolean
-  defaultOpen?: boolean
-  onOpenChange?: (open: boolean) => void
-  sidebarSide?: "left" | "right"
-  sidebarCollapsible?: "offcanvas" | "icon" | "none"
-  shortcut?: string | null
-}
-```
-
-No domain prop belongs here.
-
-## ViewerHeader Rule
-
-The header is always the full-width top region of the composed viewer.
+The header is outside the body. This is not optional.
 
 Correct:
 
@@ -306,18 +239,105 @@ Wrong:
 </ViewerSurface>
 ```
 
-If the selected attachment is not the whole composed viewer, it should not
-create a second file metadata header around the nested file viewer.
+Nested cards and second metadata headers are not composition. They are duplicate
+chrome.
 
-## ViewerSidebar Contract
+## ViewerRoot Is The Sidebar Provider
 
-`ViewerSidebar` owns the viewer-local side region. It does not own the list
-model inside it.
+There should not be a separate viewer sidebar provider.
 
 Correct:
 
 ```tsx
-<ViewerSidebar>
+<ViewerRoot defaultOpen sidebarSide="right">
+  <ViewerHeader>
+    <ViewerSidebarTrigger />
+  </ViewerHeader>
+  <ViewerBody>
+    <ViewerSurface />
+    <ViewerSidebar />
+  </ViewerBody>
+</ViewerRoot>
+```
+
+Wrong:
+
+```tsx
+<ViewerSidebarProvider>
+  <ViewerRoot>
+    <ViewerSidebar />
+  </ViewerRoot>
+</ViewerSidebarProvider>
+```
+
+The shadcn sidebar lesson is that the trigger should be portable because state
+lives high enough. The viewer-specific improvement is that `ViewerRoot` is
+already the correct boundary. Another provider adds hierarchy without adding
+meaning.
+
+`ViewerSidebarTrigger` may be rendered anywhere inside `ViewerRoot`:
+
+```tsx
+<ViewerHeader>
+  <ViewerSidebarTrigger />
+</ViewerHeader>
+```
+
+```tsx
+<DomainToolbar>
+  <ViewerSidebarTrigger />
+</DomainToolbar>
+```
+
+`ViewerRoot` owns:
+
+- outer frame;
+- border, radius, background;
+- height and overflow policy;
+- generic viewer CSS variables;
+- sidebar open state;
+- controlled and uncontrolled sidebar state;
+- sidebar side;
+- sidebar collapsibility;
+- sidebar keyboard shortcut;
+- context consumed by `ViewerSidebar` and `ViewerSidebarTrigger`.
+
+`ViewerRoot` does not own:
+
+- selected file;
+- selected MIME part;
+- selected split segment;
+- upload queue;
+- source map;
+- OCR block;
+- current PDF page;
+- zoom;
+- download action;
+- row rendering.
+
+The root prop shape should stay close to:
+
+```ts
+type ViewerRootProps = {
+  open?: boolean
+  defaultOpen?: boolean
+  onOpenChange?: (open: boolean) => void
+  sidebarSide?: "left" | "right"
+  sidebarCollapsible?: "offcanvas" | "icon" | "none"
+  shortcut?: string | null
+}
+```
+
+No domain prop belongs here.
+
+## ViewerSidebar Contract
+
+`ViewerSidebar` owns the side region. It does not own the list model inside it.
+
+Correct:
+
+```tsx
+<ViewerSidebar aria-label="Email parts">
   <EmailPartsSidebar />
 </ViewerSidebar>
 ```
@@ -328,15 +348,16 @@ Wrong:
 <ViewerSidebar items={parts} selectedId={selectedPartId} />
 ```
 
-The sidebar should be visually neutral by default:
+The sidebar default should be visually neutral:
 
 - no forced gray background;
-- no opinionated item layout;
+- no opinionated item row layout;
 - stable width through CSS variables;
 - no nested card inside the root frame;
+- no domain icons;
 - focus and resize behavior handled at the spatial layer.
 
-Domain lists decide their own rows.
+Domain lists decide their own sections, rows, thumbnails, icons, and labels.
 
 ## ViewerSurface Contract
 
@@ -357,9 +378,9 @@ or:
 or:
 
 ```tsx
-<AnchoredDocumentTarget>
+<SegmentedDocumentSurface>
   <FileViewer source={source} bare />
-</AnchoredDocumentTarget>
+</SegmentedDocumentSurface>
 ```
 
 It does not:
@@ -371,26 +392,24 @@ It does not:
 - route split segments;
 - decide sidebar content.
 
-## Keep Viewer And FileViewer Separate
+## Viewer And FileViewer Both Deserve To Exist
 
-`Viewer` and `FileViewer` both deserve to exist because they answer different
-questions.
+Do not fold `Viewer` and `FileViewer` together.
+
+They answer different questions:
 
 ```txt
 Viewer primitives answer: where do regions go?
 FileViewer answers: how does this source render?
 ```
 
-Folding them together would create a component that sometimes means spatial
-layout and sometimes means file rendering. That is worse than two names.
-
-The ideal is not:
+The wrong API is:
 
 ```tsx
 <Viewer source={source} sidebar={...} />
 ```
 
-The ideal is:
+The correct composition is:
 
 ```tsx
 <ViewerRoot>
@@ -404,18 +423,12 @@ The ideal is:
 </ViewerRoot>
 ```
 
-The separation is exact:
+This separation is not ceremony. It prevents a single name from meaning both
+spatial layout and file rendering.
 
-```txt
-ViewerRoot is spatial.
-FileViewer is renderable-source routing.
-```
+## ViewerSource
 
-## ViewerSource Contract
-
-`ViewerSource` is the convergence point for rendering.
-
-It is not the convergence point for acquisition.
+`ViewerSource` is the convergence point for rendering, not acquisition.
 
 Different domains acquire sources differently:
 
@@ -459,7 +472,7 @@ Do not add:
 
 Those belong to domains.
 
-## FileViewer Contract
+## FileViewer
 
 The easy API is:
 
@@ -498,7 +511,7 @@ It does not own:
 - extraction field selection;
 - OCR block selection.
 
-`FileViewer` may internally compose:
+`FileViewer` may internally compose a complete framed viewer:
 
 ```tsx
 <FileViewerProvider source={source}>
@@ -544,9 +557,10 @@ remove the outer frame because a parent viewer already owns the frame.
 - become content-only;
 - hide errors;
 - disable download;
-- skip accessibility.
+- skip accessibility;
+- silently switch to another renderer.
 
-Content-only parts should be named content-only:
+Content-only parts must be named content-only:
 
 ```txt
 PdfViewerPages
@@ -558,7 +572,7 @@ MarkdownViewerContent
 
 Do not make `bare` secretly switch APIs.
 
-## Leaf Viewer Rule
+## Leaf Viewers
 
 Leaf viewers render one source.
 
@@ -587,7 +601,7 @@ They own format mechanics:
 - overlays when passed explicit targets;
 - imperative handles for targets.
 
-They do not own domain workflows:
+They do not own product workflows:
 
 - email attachments sidebar;
 - split page rail;
@@ -596,7 +610,295 @@ They do not own domain workflows:
 - OCR block filter;
 - file-system tree.
 
-## Provider Rule
+## Segmented Document
+
+The segmented-document layer is the convergence point for split, partition,
+OCR, sources, and bbox extraction.
+
+It is not a visual mega-viewer.
+
+It is a document annotation and navigation primitive:
+
+```tsx
+<SegmentedDocumentProvider model={model}>{children}</SegmentedDocumentProvider>
+```
+
+It owns shared mechanics:
+
+```txt
+current page
+scroll progress
+hover / preview interaction
+document handle registration
+scroll to page
+scroll to segment start
+scroll to anchor / bounds
+rail follow behavior
+synchronized legend, rail, ribbon, sidebar, and overlays
+```
+
+It does not own:
+
+```txt
+split jobs
+partition consensus
+OCR parsing
+source schemas
+workflow runs
+email MIME parts
+file-system trees
+upload queues
+visual taste
+empty-state copy
+```
+
+Do not build:
+
+```tsx
+<SegmentedViewer
+  mode="partition"
+  showVotes
+  showPageRail={false}
+  overlayMode="bbox"
+/>
+```
+
+That is a hidden product component, not a primitive.
+
+## Segment Is Not Anchor
+
+Do not collapse semantic segments and page-local anchors.
+
+They are different concepts:
+
+```txt
+DocumentSegment = semantic document span
+SegmentAnchor = page-local visual or scroll target
+```
+
+For split and partition, the first-class object is semantic:
+
+```ts
+{
+  id: "appendix",
+  label: "Appendix",
+  pages: [13, 14, 15, 16, 17, 18, 19, 20],
+  color: "var(--chart-4)",
+}
+```
+
+For OCR, sources, and bboxes, the visual target is page-local:
+
+```ts
+{
+  id: "anchor:invoice-total:2",
+  segmentId: "invoice-total",
+  pageNumber: 2,
+  bounds: { x: 0.6, y: 0.7, width: 0.2, height: 0.04 },
+}
+```
+
+If every segment becomes page-local, split and partition get worse. Legend,
+rail, and ribbon surfaces would constantly regroup anchors back into semantic
+segments. That is the wrong direction.
+
+## SegmentedDocumentModel
+
+The shared model describes a segmented document, not a viewer.
+
+```ts
+export type SegmentedDocumentModel = {
+  pages: SegmentedPage[]
+  segments: DocumentSegment[]
+  anchors?: SegmentAnchor[]
+  rows?: SegmentRow[]
+}
+
+export type SegmentedPage = {
+  pageNumber: number
+  width?: number
+  height?: number
+}
+
+export type DocumentSegment = {
+  id: string
+  label: string
+  color: string
+  pages: number[]
+  sourceId?: string
+}
+
+export type SegmentAnchor = {
+  id: string
+  segmentId: string
+  pageNumber: number
+  bounds?: SegmentBounds
+}
+
+export type SegmentBounds = {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+export type SegmentRow = {
+  id: string
+  label?: string
+  segments: DocumentSegment[]
+}
+```
+
+In `SegmentedDocumentModel`, `segments` means:
+
+```txt
+the semantic segment projection used for viewport ownership and navigation
+```
+
+For partition, that is the same concept previously called
+`viewportSegments`. Partition may still keep `legendSegments` and `ribbonRows`
+in its own domain model, but the generic provider must not learn partition
+taste.
+
+The mapping is:
+
+```txt
+split
+  segments
+
+partition
+  segmented model uses viewport/navigation segments
+  partition domain model keeps legendSegments and ribbonRows if needed
+
+sources
+  segments + anchors
+
+OCR
+  segments + anchors
+
+extraction PDF/image bboxes
+  segments + anchors
+```
+
+`rows` is allowed only when the grouping is generic enough to remain a
+document-segment concept. If a row carries partition votes, consensus, output
+metadata, or product-specific controls, it belongs in the partition model, not
+the shared segmented model.
+
+## SegmentedDocumentProvider
+
+The provider owns interaction and navigation, not domain derivation.
+
+```ts
+export type SegmentedDocumentContextValue = {
+  model: SegmentedDocumentModel
+  viewport: SegmentedDocumentViewport
+}
+```
+
+Viewport:
+
+```ts
+export type SegmentedDocumentViewport = {
+  model: SegmentedDocumentViewportModel
+  interaction: SegmentInteraction
+  documentHandlers: SegmentedDocumentHandlers
+  navigation: SegmentedDocumentNavigation
+  rail: SegmentedDocumentRail
+}
+```
+
+Viewport model:
+
+```ts
+export type SegmentedDocumentViewportModel = {
+  currentPage: number | null
+  scrollProgress: number
+  currentSegmentId: string | null
+  previewSegmentId: string | null
+  highlightedSegmentId: string | null
+}
+```
+
+Document handlers:
+
+```ts
+export type SegmentedDocumentHandlers = {
+  onCurrentPageChange: (page: number) => void
+  onScrollProgressChange: (progress: number) => void
+  setDocumentHandle: (handle: SegmentedDocumentHandle | null) => void
+}
+```
+
+Document handle:
+
+```ts
+export type SegmentedDocumentHandle = {
+  getViewportElement?: () => HTMLElement | null
+  scrollToPage: (page: number, options?: ScrollToOptions) => void
+  scrollToAnchor?: (anchor: SegmentAnchor, options?: ScrollToOptions) => void
+  scrollToPageArea?: (
+    target: {
+      pageNumber: number
+      top: number
+      left?: number
+      width?: number
+      height?: number
+    },
+    options?: ScrollToOptions
+  ) => void
+}
+```
+
+Navigation:
+
+```ts
+export type SegmentedDocumentNavigation = {
+  scrollToPage: (page: number) => void
+  scrollToSegmentStart: (segment: DocumentSegment) => void
+  scrollToAnchor: (anchor: SegmentAnchor) => void
+}
+```
+
+This replaces scroll replay protocols such as:
+
+```txt
+scrollRequest.version
+```
+
+Imperative document actions belong behind the registered document handle. They
+should not be replayed by parent effects.
+
+## Segment Primitives
+
+Shared segment parts may exist, but only as optional consumers of the provider:
+
+```tsx
+<SegmentedLegend />
+<SegmentedPageRail />
+<SegmentedRibbon />
+<SegmentedSidebar />
+<SegmentedOverlay />
+```
+
+They must not import:
+
+```txt
+split
+partition
+OCR
+sources
+schemas
+workflow runs
+files
+email
+file-system
+```
+
+Domain viewers compose them. The provider is shared. The visible taste remains
+domain-owned.
+
+## Domain Provider Rule
 
 Providers are allowed only when separated named parts need shared state.
 
@@ -605,33 +907,35 @@ Good providers:
 ```txt
 EmailViewerProvider
 SplitViewerProvider
+PartitionViewerProvider
 PdfViewerProvider
 FileViewerProvider
 UploadableFileViewerProvider
-AnchoredDocumentProvider
+SegmentedDocumentProvider
 ```
 
 Each provider must be describable in one sentence:
 
 ```txt
 EmailViewerProvider owns MIME projection and selected part.
-SplitViewerProvider owns split result navigation and selected segment.
+SplitViewerProvider owns split result normalization and selected segment.
+PartitionViewerProvider owns partition result projections and selected output.
 PdfViewerProvider owns PDF resource, page state, zoom, and page metrics.
 FileViewerProvider owns one source and selected renderer.
 UploadableFileViewerProvider owns acquisition queue and selected upload source.
-AnchoredDocumentProvider owns item-anchor preview, selection, and activation.
+SegmentedDocumentProvider owns segment interaction and document navigation.
 ```
 
 A provider is wrong when it owns:
 
 - layout;
-- `className` choreography;
+- className choreography;
 - render callback slots;
 - unrelated state machines;
 - compatibility paths;
 - styling decisions.
 
-The ideal hook surface is narrow:
+Narrow hooks are better than broad hooks:
 
 ```txt
 useEmailHeader
@@ -639,7 +943,7 @@ useEmailPartsSidebar
 useEmailContent
 ```
 
-Prefer that over:
+is better than forcing every part through:
 
 ```txt
 useEmailViewer()
@@ -674,9 +978,9 @@ Avoid compound dot namespaces:
 </EmailViewer.Root>
 ```
 
-The useful shadcn lesson is composability and local ownership, not necessarily
-dot syntax. Separate named exports are easier to search, copy, tree-shake, and
-combine with the already named viewer primitives.
+The useful shadcn lesson is composability and local ownership, not dot syntax.
+Separate named exports are easier to search, copy, tree-shake, and combine with
+the already named viewer primitives.
 
 ## Easy API Rule
 
@@ -685,10 +989,11 @@ Every domain viewer may expose an easy API:
 ```tsx
 <EmailViewer message={message} />
 <SplitViewer result={result} />
+<PartitionViewer result={result} />
 <UploadableFileViewer />
 ```
 
-But the easy API must be a transparent composition of the named parts.
+The easy API must be a transparent composition of the named parts.
 
 It must not:
 
@@ -698,21 +1003,21 @@ It must not:
 - support deprecated props;
 - become the only complete version.
 
-The easy component is an example made executable.
+The easy component is an executable example.
 
-## Email Viewer Final Shape
+## Email Viewer
 
 Email is a MIME-domain viewer.
 
 It is not a file viewer variant.
 
-The easy API is:
+Easy API:
 
 ```tsx
 <EmailViewer message={message} />
 ```
 
-The composed API is:
+Composed API:
 
 ```tsx
 <EmailViewerProvider message={message}>
@@ -782,20 +1087,20 @@ type MimeMessage = {
 Do not reintroduce flat `htmlBody`, `textBody`, and `attachments` as the core
 model. They can be projections, not input truth.
 
-The sidebar should have two domain sections:
+The default sidebar should have two product sections:
 
 ```txt
 Body
 Attachments
 ```
 
-It should not expose raw MIME tree noise by default. Raw structure can be a
-debug or advanced view only if the product needs it.
+Raw MIME structure is not the default user interface. It can exist only as an
+advanced/debug part.
 
-## PDF Viewer And Thumbnails Final Shape
+## PDF Viewer And Thumbnails
 
-PDF has a domain provider because header controls, pages, thumbnails, metrics,
-and target scrolling share PDF state.
+PDF has a provider because header controls, pages, thumbnails, metrics, and
+target scrolling share PDF state.
 
 Easy API:
 
@@ -846,7 +1151,7 @@ It does not own:
 - PDF loading;
 - file source normalization.
 
-## Split Viewer Final Shape
+## Split Viewer
 
 Split is a domain viewer over a split result.
 
@@ -860,17 +1165,19 @@ Composed API:
 
 ```tsx
 <SplitViewerProvider result={result}>
-  <ViewerRoot defaultOpen>
-    <SplitViewerHeader trailing={<ViewerSidebarTrigger />} />
-    <ViewerBody>
-      <ViewerSidebar aria-label="Segments">
-        <SplitViewerSidebar />
-      </ViewerSidebar>
-      <ViewerSurface>
-        <SplitViewerSelectedFile />
-      </ViewerSurface>
-    </ViewerBody>
-  </ViewerRoot>
+  <SegmentedDocumentProvider model={segmentedModel}>
+    <ViewerRoot defaultOpen>
+      <SplitViewerHeader trailing={<ViewerSidebarTrigger />} />
+      <ViewerBody>
+        <ViewerSidebar aria-label="Segments">
+          <SplitViewerSidebar />
+        </ViewerSidebar>
+        <ViewerSurface>
+          <SplitViewerSelectedFile />
+        </ViewerSurface>
+      </ViewerBody>
+    </ViewerRoot>
+  </SegmentedDocumentProvider>
 </SplitViewerProvider>
 ```
 
@@ -883,21 +1190,174 @@ Split owns:
 - segment labels and legends;
 - confidence or validation status if present.
 
+`SegmentedDocumentProvider` owns:
+
+- current page;
+- scroll progress;
+- segment hover/preview;
+- document handle navigation.
+
 Split does not own:
 
 - file rendering;
 - PDF internals;
-- viewer sidebar state.
+- viewer sidebar state;
+- duplicated segment viewport logic.
 
-The selected segment becomes a `ViewerSource`, then `FileViewer` renders it.
+The selected segment becomes a `ViewerSource`. `FileViewer` renders it.
 
-## Dropzone Final Shape
+## Partition Viewer
+
+Partition is a domain viewer over partition output and vote semantics.
+
+It should converge with split at the interaction layer, not the visual layer.
+
+Easy API:
+
+```tsx
+<PartitionViewer result={result} />
+```
+
+Composed API:
+
+```tsx
+<PartitionViewerProvider result={result}>
+  <SegmentedDocumentProvider model={segmentedModel}>
+    <ViewerRoot defaultOpen>
+      <PartitionViewerHeader trailing={<ViewerSidebarTrigger />} />
+      <ViewerBody>
+        <ViewerSurface>
+          <PartitionRibbon />
+          <PartitionDocument />
+        </ViewerSurface>
+      </ViewerBody>
+    </ViewerRoot>
+  </SegmentedDocumentProvider>
+</PartitionViewerProvider>
+```
+
+Partition owns:
+
+- output/vote semantics;
+- partition result normalization;
+- empty and processing states;
+- `legendSegments`;
+- `ribbonRows`;
+- selected output or row;
+- horizontal ribbon layout;
+- partition-specific copy.
+
+`SegmentedDocumentProvider` owns:
+
+- viewport/navigation segments;
+- current page;
+- scroll progress;
+- hover/preview;
+- document handle registration;
+- `scrollToPage`;
+- `scrollToSegmentStart`.
+
+The partition model may keep:
+
+```ts
+type PartitionViewerModel = {
+  hasOutput: boolean
+  pageCount: number
+  segmentedModel: SegmentedDocumentModel
+  legendSegments: DocumentSegment[]
+  ribbonRows: PartitionRibbonRow[]
+}
+```
+
+The generic provider must not accept:
+
+```txt
+partitionMode
+showConsensusVotes
+voteRows
+outputNames
+```
+
+Those are partition concerns.
+
+## OCR, Sources, And Bbox Evidence
+
+OCR, sources, and bbox extraction are close enough to share segmented-document
+mechanics.
+
+They should produce:
+
+```txt
+DocumentSegment[] for semantic rows or fields
+SegmentAnchor[] for page-local visual targets
+```
+
+Examples:
+
+```txt
+field path -> DocumentSegment
+source bbox -> SegmentAnchor
+OCR block -> DocumentSegment + SegmentAnchor
+provenance item -> SegmentAnchor
+```
+
+The overlay reads `anchors`.
+
+The list/sidebar/legend reads `segments`.
+
+Clicking a field or source item calls:
+
+```ts
+navigation.scrollToAnchor(anchor)
+```
+
+or:
+
+```ts
+navigation.scrollToSegmentStart(segment)
+```
+
+depending on the UI intent.
+
+This does not mean every extraction target belongs in
+`SegmentedDocumentModel`. Page and image bboxes fit naturally. Text ranges,
+CSV cells, XLSX cells, and DOCX targets need a deliberate typed anchor model
+before they are folded in.
+
+The ideal rule is:
+
+```txt
+SegmentedDocumentModel owns semantic document spans and page-local anchors.
+Non-page targets need a first-class typed anchor, not a metadata bag.
+```
+
+Do not pollute `SegmentAnchor` with vague fields such as:
+
+```ts
+metadata?: Record<string, unknown>
+```
+
+If non-bbox targets converge later, they should do it through a typed union:
+
+```ts
+type SegmentAnchor =
+  | PageAreaSegmentAnchor
+  | TextRangeSegmentAnchor
+  | CsvCellSegmentAnchor
+  | XlsxCellSegmentAnchor
+  | DocxTargetSegmentAnchor
+```
+
+until then, keeping non-bbox anchored flows separate is cleaner than making the
+segmented primitive vague.
+
+## Upload And Dropzone
 
 Dropzone is source acquisition, not viewing.
 
 It should produce upload/file items that can become `ViewerSource`.
 
-The correct composition is:
+Correct composition:
 
 ```tsx
 <UploadableFileViewerProvider>
@@ -918,7 +1378,8 @@ The correct composition is:
 Dropzone owns:
 
 - drag state;
-- accepted/rejected files;
+- accepted files;
+- rejected files;
 - upload progress;
 - queue ordering;
 - selected upload item;
@@ -931,192 +1392,23 @@ Dropzone does not own:
 - viewer sidebar styling;
 - extraction anchors.
 
-This keeps acquisition separate from rendering.
+## File-System Viewer
 
-## Sources And OCR Final Shape
+File-system is a domain consumer.
 
-Sources and OCR share anchored evidence interaction, and nothing else.
-
-Shared:
+The direction is:
 
 ```txt
-item id
-anchor resolution
-preview
-selection
-activation
-scroll
-highlight
+file-system contains viewer
 ```
 
-Separate:
+not:
 
 ```txt
-source maps
-field labels
-layout blocks
-row copy
-filtering
-confidence
-rendering
+viewer contains file-system
 ```
 
-The pure anchor vocabulary is:
-
-```ts
-type DocumentAnchor =
-  | PdfAreaAnchor
-  | ImageAreaAnchor
-  | TextRangeAnchor
-  | CsvCellAnchor
-  | XlsxCellAnchor
-  | DocxTargetAnchor
-```
-
-`document-anchor.ts` owns this and nothing else:
-
-- no React;
-- no `"use client"`;
-- no provider;
-- no source types;
-- no OCR types;
-- no viewer imports.
-
-The evidence shape is payload-typed:
-
-```ts
-type AnchorResolution =
-  | { status: "resolved"; anchor: DocumentAnchor }
-  | { status: "missing" }
-  | { status: "invalid"; reason: string }
-
-type EvidenceAnchor = {
-  id: string
-  anchor: AnchorResolution
-}
-
-type EvidenceItem<Payload> = EvidenceAnchor & {
-  payload: Payload
-}
-```
-
-There is no:
-
-```ts
-metadata?: Record<string, unknown>
-```
-
-Source payload:
-
-```ts
-type SourceEvidencePayload = {
-  label: string
-  value?: React.ReactNode
-  hint?: string
-  sourceKind: Source["anchor"]["kind"] | null
-}
-```
-
-OCR payload:
-
-```ts
-type LayoutEvidencePayload = {
-  item: LayoutItem
-  level: LayoutLevel
-  kind: string
-  text: string
-  confidence?: number
-  pageNumber: number
-}
-```
-
-The composed extraction viewer is:
-
-```tsx
-<AnchoredDocumentProvider items={items}>
-  <ViewerRoot defaultOpen>
-    <ExtractionHeader trailing={<ViewerSidebarTrigger />} />
-    <ViewerBody>
-      <ViewerSidebar aria-label="Fields">
-        <SourceFieldList items={sourceEvidenceItems} />
-      </ViewerSidebar>
-      <ViewerSurface>
-        <AnchoredDocumentTarget>
-          <FileViewer source={source} bare />
-        </AnchoredDocumentTarget>
-      </ViewerSurface>
-    </ViewerBody>
-  </ViewerRoot>
-</AnchoredDocumentProvider>
-```
-
-The composed OCR viewer is:
-
-```tsx
-<AnchoredDocumentProvider items={items}>
-  <ViewerRoot defaultOpen>
-    <LayoutBlocksHeader trailing={<ViewerSidebarTrigger />} />
-    <ViewerBody>
-      <ViewerSidebar aria-label="Layout blocks">
-        <LayoutBlocksPanel items={layoutEvidenceItems} />
-      </ViewerSidebar>
-      <ViewerSurface>
-        <AnchoredDocumentTarget>
-          <PdfViewerPages />
-        </AnchoredDocumentTarget>
-      </ViewerSurface>
-    </ViewerBody>
-  </ViewerRoot>
-</AnchoredDocumentProvider>
-```
-
-OCR filtering and projection stay separate:
-
-```txt
-createLayoutItemIndex(document)
-filterLayoutItems(items, filter)
-layoutItemsToEvidenceModel(items, index)
-```
-
-Filtering is domain logic. Projection is evidence logic. Geometry is OCR model
-logic.
-
-## AnchoredDocumentProvider Contract
-
-The provider owns generic anchored interaction:
-
-- registered items;
-- preview item;
-- selected item;
-- active anchor;
-- activation;
-- target registration;
-- scroll-to-anchor;
-- stale item cleanup.
-
-It does not own:
-
-- source maps;
-- field paths;
-- OCR layout;
-- confidence;
-- labels;
-- values;
-- row rendering;
-- leaf document rendering.
-
-This provider is correct because the state is genuinely shared by separated
-parts: a row list and a rendered document target.
-
-It is not a dead end.
-
-The dead end would be making it know what a source field or OCR block is.
-
-## File-System Boundary
-
-File-system should contain a viewer, not the other way around.
-
-Ideal composition:
+The shape may look like:
 
 ```tsx
 <FileSystemViewerProvider>
@@ -1134,235 +1426,22 @@ Ideal composition:
 </FileSystemViewerProvider>
 ```
 
-This document does not redesign file-system internals.
+But file-system owns:
 
-The boundary is:
+- tree state;
+- expansion;
+- selection;
+- lazy loading;
+- file operations;
+- permissions;
+- path semantics;
+- directory actions.
 
-```txt
-file-system owns acquisition, tree state, and source resolution.
-viewer owns layout.
-file viewer owns rendering.
-```
+The viewer system owns none of that.
 
-## Final Module Boundaries
+## Public Composition Examples
 
-### Generic Viewer
-
-```txt
-viewer.tsx
-  ViewerRoot
-  ViewerHeader
-  ViewerBody
-  ViewerSidebar
-  ViewerSurface
-  ViewerSidebarTrigger
-  useViewerSidebar
-```
-
-Forbidden imports:
-
-```txt
-file-viewer
-pdf-viewer
-email-viewer
-split-viewer
-source-evidence
-layout-blocks
-dropzone
-file-system
-```
-
-### File Viewer
-
-```txt
-file-viewer.tsx
-file-viewer-provider.tsx
-file-viewer-header.tsx
-file-viewer-content.tsx
-viewer-source.ts
-```
-
-Allowed imports:
-
-```txt
-leaf viewers
-resource loading utilities
-download utilities
-```
-
-Forbidden imports:
-
-```txt
-email-viewer
-split-viewer
-source-evidence
-layout-blocks
-dropzone
-file-system
-```
-
-### Anchored Evidence
-
-```txt
-document-anchor.ts
-anchored-document-viewer.tsx
-anchored-evidence.ts
-anchored-item-list.tsx
-```
-
-Allowed imports:
-
-```txt
-viewer primitives only where rendering/context is needed
-document-anchor for types
-```
-
-Forbidden imports:
-
-```txt
-source-evidence
-source-anchor
-layout-blocks-model
-file-viewer
-pdf-viewer
-email-viewer
-```
-
-### Sources
-
-```txt
-source-anchor.ts
-source-evidence.ts
-source-field-list.tsx
-```
-
-Allowed imports:
-
-```txt
-document-source
-document-anchor
-anchored-evidence
-anchored-item-list
-field-anchor-link
-```
-
-Forbidden imports:
-
-```txt
-layout-blocks
-email-viewer
-split-viewer
-file-system
-```
-
-### OCR/Layout Blocks
-
-```txt
-layout-blocks-types.ts
-layout-blocks-geometry.ts
-layout-blocks-index.ts
-layout-blocks-model.ts
-layout-blocks-panel.tsx
-layout-blocks.tsx
-```
-
-Allowed imports:
-
-```txt
-anchored-evidence
-anchored-document-viewer
-anchored-item-list
-pdf-anchor-target
-pdf-viewer
-```
-
-Forbidden imports:
-
-```txt
-source-evidence
-source-anchor
-email-viewer
-file-system
-```
-
-## Registry Standard
-
-Every registry item must be independently installable.
-
-Rules:
-
-- every dependency is explicit in `registry.json`;
-- every public mirror is either owned implementation or deliberate re-export;
-- no registry item references a missing file;
-- no item relies on another item through accidental relative imports;
-- generated `public/r/*.json` files match source;
-- docs import only public registry names;
-- examples use the same composed API as production code.
-
-If `registry:build` or `registry:validate` fails because of unrelated items,
-the component slice may still be correct, but the system has not reached
-library perfection.
-
-## Testing Standard
-
-The final test suite must prove both behavior and architecture.
-
-Behavioral tests:
-
-- easy APIs render;
-- composed APIs render;
-- controlled and uncontrolled selection work;
-- sidebar trigger toggles from header, toolbar, and surface;
-- file viewers load, error, empty, unsupported, and downloaded states;
-- PDF page, zoom, thumbnail, and target navigation work;
-- email body and attachment selection work recursively;
-- dropzone queue and selected source work;
-- Sources and OCR rows preview, activate, and scroll anchors.
-
-Architecture tests:
-
-- viewer primitives import no domains;
-- file viewer imports no domains;
-- domain providers import viewer primitives but not sibling domains;
-- `document-anchor.ts` is pure;
-- `anchored-evidence.ts` has no generic metadata;
-- source rows use `SourceEvidencePayload`;
-- OCR rows use `LayoutEvidencePayload`;
-- easy API and composed API share implementation;
-- registry dependencies are explicit;
-- public mirrors resolve without hidden private modules.
-
-Performance tests:
-
-- large PDF thumbnail lists virtualize or remain bounded;
-- large OCR lists do not reproject on hover;
-- anchor preview does not rerender the document surface unnecessarily;
-- file viewer source changes abort stale loads;
-- email MIME trees memoize normalized paths;
-- dropzone drag state does not rerender file content.
-
-## Current Imperfections To Remove
-
-The final system is not reached while any of these remain:
-
-- `ViewerShell` remains the conceptual center;
-- `Viewer` and `FileViewer` names are used interchangeably;
-- any domain owns sidebar provider state instead of `ViewerRoot`;
-- a selected attachment creates a nested duplicate file metadata header;
-- `bare` removes semantic controls instead of only outer frame chrome;
-- raw MIME tree rows are the default email sidebar;
-- Sources and OCR share a fake universal row model;
-- evidence has generic `metadata`;
-- layout blocks cast metadata back into domain objects;
-- registry validation depends on unrelated broken items;
-- docs show an API that is not the production implementation.
-
-## Final Proof
-
-The platonic ideal is reached when these examples all feel inevitable and
-boring.
-
-Email:
+### Email Attachment
 
 ```tsx
 <EmailViewerProvider message={message}>
@@ -1370,9 +1449,9 @@ Email:
     <EmailHeader trailing={<ViewerSidebarTrigger />} />
     <ViewerBody>
       <ViewerSurface>
-        <EmailContent />
+        <FileViewer source={selectedPartSource} bare />
       </ViewerSurface>
-      <ViewerSidebar>
+      <ViewerSidebar aria-label="Email parts">
         <EmailPartsSidebar />
       </ViewerSidebar>
     </ViewerBody>
@@ -1380,15 +1459,18 @@ Email:
 </EmailViewerProvider>
 ```
 
-PDF thumbnails:
+No second attachment metadata header wraps the nested file viewer unless the
+selected attachment is itself the whole viewer.
+
+### PDF With Thumbnails
 
 ```tsx
 <PdfViewerProvider source={source}>
   <ViewerRoot defaultOpen>
     <PdfViewerHeader trailing={<ViewerSidebarTrigger />} />
     <ViewerBody>
-      <ViewerSidebar>
-        <PdfViewerThumbnails />
+      <ViewerSidebar aria-label="Pages">
+        <PdfViewerThumbnails variant="square" />
       </ViewerSidebar>
       <ViewerSurface>
         <PdfViewerPages />
@@ -1398,72 +1480,231 @@ PDF thumbnails:
 </PdfViewerProvider>
 ```
 
-Split:
+### Source Bboxes
 
 ```tsx
-<SplitViewerProvider result={result}>
-  <ViewerRoot defaultOpen>
-    <SplitViewerHeader trailing={<ViewerSidebarTrigger />} />
+<SegmentedDocumentProvider model={sourceSegmentedModel}>
+  <ViewerRoot defaultOpen sidebarSide="right">
+    <SourceHeader trailing={<ViewerSidebarTrigger />} />
     <ViewerBody>
-      <ViewerSidebar>
-        <SplitViewerSidebar />
-      </ViewerSidebar>
       <ViewerSurface>
-        <SplitViewerSelectedFile />
+        <SourceDocument />
       </ViewerSurface>
+      <ViewerSidebar aria-label="Sources">
+        <SourceFieldList />
+      </ViewerSidebar>
     </ViewerBody>
   </ViewerRoot>
-</SplitViewerProvider>
+</SegmentedDocumentProvider>
 ```
 
-Sources:
+## Styling Rules
+
+Viewer primitives provide structural styling only.
+
+They may own:
+
+- frame radius;
+- border;
+- background;
+- sidebar width variables;
+- flex direction;
+- overflow containment;
+- focus-visible rings;
+- collapsed state data attributes.
+
+They may not own:
+
+- email row density;
+- MIME part icons;
+- split segment colors;
+- partition vote visuals;
+- OCR confidence colors;
+- file-system indentation;
+- upload progress row design.
+
+Domain components use tokens and local CSS classes. They do not patch generic
+viewer internals.
+
+## Accessibility Requirements
+
+The final system must include:
+
+- labelled sidebars;
+- keyboard accessible sidebar trigger;
+- focus-visible states;
+- stable tab order when sidebar opens/closes;
+- meaningful file names in headers;
+- progress and loading states with accessible text;
+- unsupported-file states that explain what failed;
+- document navigation controls with button semantics;
+- no clickable `div` rows without keyboard behavior.
+
+Accessibility is part of the component API, not a final polish pass.
+
+## Performance Requirements
+
+The final system must preserve speed at every layer:
+
+- providers memoize context values;
+- large page lists and thumbnails virtualize when needed;
+- PDF pages avoid unnecessary rerenders on hover;
+- overlays render from normalized anchors, not ad hoc source scans;
+- sidebar lists do not recompute MIME/source/partition projections on every
+  pointer move;
+- callbacks exposed by providers are stable;
+- source loading is cached at the file/resource layer;
+- scrolling uses document handles, not parent effect replay loops.
+
+If a generic abstraction forces domain code to rerender more often, the
+abstraction is wrong.
+
+## Testing Standard
+
+Architecture tests:
+
+- viewer primitives import no domain modules;
+- `FileViewer` imports leaf viewers but no email, split, partition, upload, or
+  file-system modules;
+- `SegmentedDocumentProvider` imports no split, partition, OCR, source, email,
+  upload, or file-system modules;
+- domain viewers compose `ViewerRoot`, `ViewerBody`, `ViewerSidebar`, and
+  `ViewerSurface` visibly;
+- no `scrollRequest.version` protocol exists;
+- no generic viewer component accepts domain flags.
+
+Model tests:
+
+- split adapters create semantic `DocumentSegment[]`;
+- partition adapters create `segmentedModel`, `legendSegments`, and
+  `ribbonRows` without mixing their meanings;
+- OCR/source adapters create anchors linked to existing segment ids;
+- invalid anchors are ignored or rejected deterministically;
+- page numbers normalize consistently.
+
+Controller tests:
+
+- current page updates from document callbacks;
+- scroll progress clamps to `0..1`;
+- navigation ignores invalid pages;
+- `scrollToSegmentStart` uses the first normalized segment page;
+- `scrollToAnchor` calls `scrollToAnchor` when available;
+- `scrollToAnchor` falls back to `scrollToPageArea` for bounds;
+- `scrollToAnchor` falls back to `scrollToPage`;
+- result/model changes reset current page, progress, and preview.
+
+Composition tests:
+
+- easy APIs are visible named-part compositions;
+- email sidebar defaults to body and attachments;
+- PDF thumbnails render in `ViewerSidebar`, not a bespoke wrapper;
+- split and partition use segmented-document viewport mechanics;
+- bbox source viewers use segmented-document anchors;
+- non-bbox source viewers do not fake page anchors through metadata bags.
+
+Registry tests:
+
+- each registry item installs with all private support files;
+- generated registry JSON includes the same dependencies as source blocks;
+- blocks can be copied without local app-only imports.
+
+Visual tests:
+
+- PDF thumbnail layout is stable at mobile and desktop widths;
+- email attachment viewer has one frame, not nested cards;
+- sidebar trigger can be placed in headers and toolbars;
+- split, partition, OCR, and source overlays remain aligned after resize;
+- text fits in sidebar rows without overlap.
+
+## Failure Modes
+
+The design has failed if any of these appear:
 
 ```tsx
-<AnchoredDocumentProvider items={items}>
-  <ViewerRoot defaultOpen>
-    <ExtractionHeader trailing={<ViewerSidebarTrigger />} />
-    <ViewerBody>
-      <ViewerSidebar>
-        <SourceFieldList items={sourceEvidenceItems} />
-      </ViewerSidebar>
-      <ViewerSurface>
-        <AnchoredDocumentTarget>
-          <FileViewer source={source} bare />
-        </AnchoredDocumentTarget>
-      </ViewerSurface>
-    </ViewerBody>
-  </ViewerRoot>
-</AnchoredDocumentProvider>
+<Viewer source={source} attachments={parts} />
 ```
-
-Upload:
 
 ```tsx
-<UploadableFileViewerProvider>
-  <ViewerRoot defaultOpen>
-    <UploadableFileViewerHeader trailing={<ViewerSidebarTrigger />} />
-    <ViewerBody>
-      <ViewerSidebar>
-        <UploadQueue />
-      </ViewerSidebar>
-      <ViewerSurface>
-        <FileViewer source={selectedSource} bare />
-      </ViewerSurface>
-    </ViewerBody>
-  </ViewerRoot>
-</UploadableFileViewerProvider>
+<SegmentedViewer mode="partition" showVotes />
 ```
 
-These should all read as the same system:
+```tsx
+<ViewerSidebar items={items} selectedId={id} />
+```
+
+```tsx
+<FileViewer source={source} selectedField={field} />
+```
+
+```tsx
+<SegmentAnchor metadata={{ cell: "A1" }} />
+```
 
 ```txt
-provider owns domain state
-viewer root owns spatial/sidebar state
-header describes the whole viewer
-body splits sidebar and surface
-sidebar renders domain navigation
-surface renders selected source or target
+scrollRequest.version
 ```
 
-That is the final design.
+```txt
+Provider that owns both layout and selected domain item
+```
 
+```txt
+One component that is sometimes a complete viewer and sometimes content-only
+```
+
+## What Is Still Not Perfect
+
+Even with the correct architecture, the system is not perfect until these are
+gone:
+
+- legacy naming where `FieldAnchorLink` now means both anchored and segmented
+  behavior;
+- duplicated PDF/image bbox overlay helpers across examples;
+- non-bbox extraction targets split between older anchored mechanics and the
+  segmented model;
+- any domain easy API that still has private layout wrappers unavailable to
+  composed users;
+- any visual example not verified in browser after structural changes.
+
+These are not reasons to abandon the provider direction. They are the remaining
+proof obligations.
+
+## Final Shape
+
+The platonic ideal is:
+
+```txt
+one spatial grammar
+one source-rendering grammar
+one segmented-document interaction grammar
+many domain-owned compositions
+```
+
+Not:
+
+```txt
+one hidden mega-viewer
+```
+
+Not:
+
+```txt
+many duplicated hover/scroll/navigation systems
+```
+
+Not:
+
+```txt
+viewer absorbs file-system, email, split, partition, OCR, upload, and sources
+```
+
+The final boundary is exact:
+
+```txt
+ViewerRoot places.
+FileViewer renders.
+SegmentedDocumentProvider coordinates document interaction.
+Domain providers decide domain meaning.
+```
+
+That is the architecture to protect.

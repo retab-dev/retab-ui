@@ -2,6 +2,7 @@
 
 ## Response Instructions
 - When asked to write a blueprint, create or update a Markdown file instead of writing the blueprint in chat.
+- If a requested task needs a dev server and it is not already running, do not start it. Ask the user to start it. Never kill, stop, restart, or otherwise interfere with a running dev server unless the user explicitly asks.
 
 ## Design Principles
 - Aim for the platonic ideal of every component: the version that feels complete, inevitable, and exact.

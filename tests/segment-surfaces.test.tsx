@@ -2028,6 +2028,15 @@ describe("split segment composition", () => {
     expect(
       body?.querySelector(':scope > [data-slot="viewer-sidebar"]')
     ).toBeTruthy()
+    expect(
+      body
+        ?.querySelector<HTMLElement>(':scope > [data-slot="viewer-sidebar"]')
+        ?.getAttribute("data-viewer-sidebar-mode")
+    ).toBe("inline")
+    expect(
+      body?.querySelector<HTMLElement>(':scope > [data-slot="viewer-sidebar"]')
+        ?.className
+    ).not.toContain("bg-background")
     const surface = body?.querySelector<HTMLElement>(
       ':scope > [data-slot="viewer-surface"]'
     )

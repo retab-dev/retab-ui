@@ -197,6 +197,17 @@ describe("Markdown/Text viewer contract", () => {
     expect(viewport!.scrollTop).toBeGreaterThan(0)
   })
 
+  it("anchors Pretext Markdown source-mode rows to the source canvas origin", () => {
+    const source = readFileSync(
+      "registry/new-york-v4/ui/pretext-markdown-viewer-content.tsx",
+      "utf8"
+    )
+
+    expect(source).toContain(
+      '"absolute top-0 right-0 left-0 grid whitespace-pre"'
+    )
+  })
+
   it("copies complete FileViewer Markdown tables from the document projection", async () => {
     render(
       <FileViewer

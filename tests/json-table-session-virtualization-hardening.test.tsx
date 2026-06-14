@@ -384,6 +384,74 @@ function installSynchronousAnimationFrame() {
 }
 
 describe("json table session and virtualization hardening", () => {
+  it("attaches the body scroll listener after the JSON table viewport ref resolves", async () => {
+    const originalAddEventListener = EventTarget.prototype.addEventListener
+    const scrollListenerSlots: string[] = []
+    vi.spyOn(EventTarget.prototype, "addEventListener").mockImplementation(
+      function (
+        this: EventTarget,
+        type: string,
+        listener: EventListenerOrEventListenerObject,
+        options?: boolean | AddEventListenerOptions
+      ) {
+        const slot =
+          this instanceof window.HTMLElement ? this.dataset.slot : undefined
+        if (type === "scroll" && slot === "json-table-scroll") {
+          scrollListenerSlots.push(slot)
+        }
+        return originalAddEventListener.call(this, type, listener, options)
+      }
+    )
+
+    renderVirtualTable({
+      tableDocument: linesDocument(),
+      visiblePaths: ["lines.*.name", "lines.*.amount"],
+      jsonEditMode: "readOnly",
+      overscan: 12,
+    })
+
+    await waitFor(() =>
+      expect(scrollListenerSlots).toContain("json-table-scroll")
+    )
+  })
+
+  it("unhides read-only row shells after a patched scroll settles", async () => {
+    const restoreAnimationFrame = installSynchronousAnimationFrame()
+    try {
+      const view = renderVirtualTable({
+        tableDocument: linesDocument(120),
+        visiblePaths: ["lines.*.name", "lines.*.amount"],
+        jsonEditMode: "readOnly",
+        overscan: 12,
+      })
+      const viewport = scrollViewport(view.container)
+      Object.defineProperty(viewport, "clientHeight", {
+        configurable: true,
+        value: 367,
+      })
+      Object.defineProperty(viewport, "clientWidth", {
+        configurable: true,
+        value: 1000,
+      })
+
+      await act(async () => {
+        viewport.scrollTop = 32 * 93
+        fireEvent.scroll(viewport, { target: { scrollTop: viewport.scrollTop } })
+        viewport.dispatchEvent(new window.Event("scroll"))
+      })
+
+      await act(async () => {
+        await new Promise((resolve) => window.setTimeout(resolve, 100))
+      })
+
+      for (const rowIndex of [93, 94, 95, 96, 97, 98, 99, 100, 101, 102]) {
+        expect(rowByIndex(view.container, rowIndex).hidden).toBe(false)
+      }
+    } finally {
+      restoreAnimationFrame()
+    }
+  })
+
   it("keeps one primitive active cell across cell switches", async () => {
     installProfiler()
     const view = renderVirtualTable({

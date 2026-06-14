@@ -131,6 +131,11 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
       rowIdx,
       rowTopPx,
     })
+    const rowRef = React.useRef<HTMLTableRowElement>(null)
+    React.useLayoutEffect(() => {
+      const rowElement = rowRef.current
+      if (rowElement?.hidden) rowElement.hidden = false
+    }, [rowIdx, rowTopPx])
 
     // Render a single sub-row (one of the document's `rowCount` rows). Which
     // rows are mounted is decided by the row virtualizer in the parent.
@@ -180,6 +185,7 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
 
     return (
       <TableRow
+        ref={rowRef}
         aria-rowindex={rowIdx + 1}
         data-index={rowIdx}
         data-slot="json-table-row"

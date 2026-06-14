@@ -657,7 +657,7 @@ function PretextMarkdownSourceCanvas({
           <div
             key={lineNumber}
             className={[
-              "absolute right-0 left-0 grid whitespace-pre",
+              "absolute top-0 right-0 left-0 grid whitespace-pre",
               highlighted ? "bg-primary/10 ring-1 ring-primary/20" : "",
             ].join(" ")}
             data-source-line={lineNumber}

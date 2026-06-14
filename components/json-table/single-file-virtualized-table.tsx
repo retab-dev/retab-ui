@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useRef } from "react"
+import React, { useCallback, useRef, useState } from "react"
 import type { JSONSchema7 } from "json-schema"
 
 import { fixedGridColumnWidths } from "@/components/ui/fixed-grid-columns"
@@ -273,6 +273,12 @@ export const SingleFileVirtualizedTable =
           : defaultReadOnlyRowOverscan)
       const resolvedJumpOverscan = jumpOverscan ?? resolvedOverscan
       const scrollRef = useRef<HTMLDivElement>(null)
+      const [scrollElement, setScrollElement] =
+        useState<HTMLDivElement | null>(null)
+      const setScrollRef = useCallback((element: HTMLDivElement | null) => {
+        scrollRef.current = element
+        setScrollElement((current) => (current === element ? current : element))
+      }, [])
       const headerScrollRef = useRef<HTMLDivElement>(null)
       const rowWindowRef = useRef<HTMLTableSectionElement>(null)
       const getReadOnlyRowPatchState =
@@ -311,6 +317,7 @@ export const SingleFileVirtualizedTable =
         minimumRenderedRows: 1,
         rowScrollStrategy,
         scrollRef,
+        scrollElement,
         virtualizeColumns: isJsonEditable,
       })
       const renderedColumnWindow = useJsonTableRenderedColumnWindow({
@@ -337,8 +344,12 @@ export const SingleFileVirtualizedTable =
 
       const handleBodyScroll = React.useCallback(
         (event: React.UIEvent<HTMLDivElement>) => {
+          const bodyScrollElement = event.currentTarget
+          setScrollElement((current) =>
+            current === bodyScrollElement ? current : bodyScrollElement
+          )
           if (headerScrollRef.current) {
-            headerScrollRef.current.scrollLeft = event.currentTarget.scrollLeft
+            headerScrollRef.current.scrollLeft = bodyScrollElement.scrollLeft
           }
         },
         []
@@ -377,7 +388,7 @@ export const SingleFileVirtualizedTable =
             </table>
           </div>
           <FixedGridViewport
-            scrollRef={scrollRef}
+            scrollRef={setScrollRef}
             dataSlot="json-table-scroll"
             className="w-full flex-1 overflow-auto"
             onScroll={handleBodyScroll}
