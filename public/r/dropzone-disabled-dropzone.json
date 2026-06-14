@@ -1,0 +1,22 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "dropzone-disabled-dropzone",
+  "title": "Disabled Dropzone",
+  "description": "Disabled input, trigger focus, intake, and drag behavior.",
+  "registryDependencies": [
+    "dropzone",
+    "utils"
+  ],
+  "files": [
+    {
+      "path": "registry/new-york-v4/blocks/dropzone-disabled-dropzone.tsx",
+      "content": "\"use client\"\n\nimport { cn } from \"@/lib/utils\"\nimport { useDropzone } from \"@/components/ui/dropzone\"\n\nimport { type DropzoneExampleProps } from \"./dropzone-example-shared\"\n\nexport function DisabledDropzone({ className }: DropzoneExampleProps) {\n  const dropzone = useDropzone({ disabled: true, multiple: true })\n\n  return (\n    <section\n      {...dropzone.getRootProps(\n        dropzone.getTriggerProps({\n          \"data-slot\": \"dropzone\",\n          className: cn(\n            \"flex min-h-40 flex-col justify-center rounded-lg border border-dashed bg-muted/20 p-4 opacity-60 outline-none\",\n            className\n          ),\n        })\n      )}\n    >\n      <input {...dropzone.getInputProps({ className: \"hidden\" })} />\n      <div className=\"text-sm font-medium\">Disabled state</div>\n      <div className=\"mt-1 text-xs text-muted-foreground\">\n        The primitive disables input, trigger focus, and drag state.\n      </div>\n    </section>\n  )\n}\n",
+      "type": "registry:component",
+      "target": "@components/blocks/dropzone-disabled-dropzone.tsx"
+    }
+  ],
+  "categories": [
+    "dropzone"
+  ],
+  "type": "registry:block"
+}

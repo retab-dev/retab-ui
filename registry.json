@@ -450,6 +450,11 @@
           "target": "@ui/data-cell-display.tsx"
         },
         {
+          "path": "registry/new-york-v4/ui/data-cell-edit-model.ts",
+          "type": "registry:ui",
+          "target": "@ui/data-cell-edit-model.ts"
+        },
+        {
           "path": "registry/new-york-v4/ui/data-cell-format.ts",
           "type": "registry:ui",
           "target": "@ui/data-cell-format.ts"
@@ -930,6 +935,11 @@
         "pdfjs-dist@5.4.296"
       ],
       "files": [
+        {
+          "path": "registry/new-york-v4/lib/pdf-document-types.ts",
+          "type": "registry:lib",
+          "target": "@lib/pdf-document-types.ts"
+        },
         {
           "path": "registry/new-york-v4/lib/pdf-document-resource.ts",
           "type": "registry:lib",
@@ -1869,7 +1879,7 @@
         "csv-viewer",
         "code-viewer",
         "text-viewer-chenglou",
-        "markdown-document-viewer",
+        "pretext-markdown-viewer",
         "skeleton"
       ],
       "files": [
@@ -1999,9 +2009,9 @@
           "target": "@ui/file-system-controller.ts"
         },
         {
-          "path": "registry/new-york-v4/ui/file-system-chrome.tsx",
+          "path": "registry/new-york-v4/ui/file-system-controls.tsx",
           "type": "registry:ui",
-          "target": "@ui/file-system-chrome.tsx"
+          "target": "@ui/file-system-controls.tsx"
         },
         {
           "path": "registry/new-york-v4/ui/file-system-navigation.ts",
@@ -2077,38 +2087,6 @@
           "path": "registry/new-york-v4/ui/pdf-source.tsx",
           "type": "registry:ui",
           "target": "@ui/pdf-source.tsx"
-        }
-      ]
-    },
-    {
-      "name": "anchored-document-viewer",
-      "type": "registry:ui",
-      "title": "Anchored Document Viewer",
-      "description": "Shared hover, selection, active-anchor, and target navigation state for document experiences where semantic items point into a rendered document.",
-      "registryDependencies": [],
-      "files": [
-        {
-          "path": "registry/new-york-v4/ui/anchored-document-viewer.tsx",
-          "type": "registry:ui",
-          "target": "@ui/anchored-document-viewer.tsx"
-        }
-      ]
-    },
-    {
-      "name": "pdf-anchor-target",
-      "type": "registry:ui",
-      "title": "PDF anchor target",
-      "description": "Bridges anchored-document pdf-area anchors to PdfViewer scrolling and page overlays without making PdfViewer own anchored item state.",
-      "registryDependencies": [
-        "anchored-document-viewer",
-        "pdf-viewer",
-        "pdf-source"
-      ],
-      "files": [
-        {
-          "path": "registry/new-york-v4/ui/pdf-anchor-target.tsx",
-          "type": "registry:ui",
-          "target": "@ui/pdf-anchor-target.tsx"
         }
       ]
     },
@@ -2309,6 +2287,11 @@
           "path": "registry/new-york-v4/ui/email-viewer.tsx",
           "type": "registry:ui",
           "target": "@ui/email-viewer.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/viewer.tsx",
+          "type": "registry:ui",
+          "target": "@ui/viewer.tsx"
         },
         {
           "path": "registry/new-york-v4/ui/email-viewer-model.ts",
@@ -2729,16 +2712,6 @@
           "target": "@components/viewers/page-markdown/page-markdown-pane.tsx"
         },
         {
-          "path": "components/viewers/page-markdown/page-markdown-document-pane.tsx",
-          "type": "registry:component",
-          "target": "@components/viewers/page-markdown/page-markdown-document-pane.tsx"
-        },
-        {
-          "path": "components/viewers/page-markdown/page-markdown-document-dom.ts",
-          "type": "registry:component",
-          "target": "@components/viewers/page-markdown/page-markdown-document-dom.ts"
-        },
-        {
           "path": "components/viewers/page-markdown/page-markdown-empty-state.tsx",
           "type": "registry:component",
           "target": "@components/viewers/page-markdown/page-markdown-empty-state.tsx"
@@ -3147,6 +3120,31 @@
           "path": "registry/new-york-v4/blocks/dropzone-trigger-examples.tsx",
           "type": "registry:component",
           "target": "@components/blocks/dropzone-trigger-examples.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/blocks/dropzone-controlled-queue.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dropzone-controlled-queue.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/blocks/dropzone-disabled-dropzone.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dropzone-disabled-dropzone.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/blocks/dropzone-native-button-queue.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dropzone-native-button-queue.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/blocks/dropzone-non-button-trigger.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dropzone-non-button-trigger.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/blocks/dropzone-validation-only.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dropzone-validation-only.tsx"
         },
         {
           "path": "registry/new-york-v4/blocks/dropzone-file-examples.tsx",
@@ -3712,9 +3710,29 @@
           "target": "@ui/pretext-markdown-document-model.ts"
         },
         {
+          "path": "registry/new-york-v4/ui/pretext-markdown-layout.ts",
+          "type": "registry:ui",
+          "target": "@ui/pretext-markdown-layout.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/pretext-markdown-parser.ts",
+          "type": "registry:ui",
+          "target": "@ui/pretext-markdown-parser.ts"
+        },
+        {
           "path": "registry/new-york-v4/ui/pretext-markdown-policy.ts",
           "type": "registry:ui",
           "target": "@ui/pretext-markdown-policy.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/pretext-markdown-table-accessibility.ts",
+          "type": "registry:ui",
+          "target": "@ui/pretext-markdown-table-accessibility.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/pretext-markdown-virtualizer.ts",
+          "type": "registry:ui",
+          "target": "@ui/pretext-markdown-virtualizer.ts"
         },
         {
           "path": "registry/new-york-v4/ui/pretext-markdown-renderer.tsx",
@@ -4053,6 +4071,488 @@
           "type": "registry:ui",
           "target": "@ui/source-indicator.tsx"
         }
+      ]
+    },
+    {
+      "name": "anchored-document-viewer",
+      "type": "registry:ui",
+      "title": "Anchored Document Viewer",
+      "description": "Shared hover, selection, active-anchor, and target navigation state for document experiences where semantic items point into a rendered document.",
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/anchored-document-viewer.tsx",
+          "type": "registry:ui",
+          "target": "@ui/anchored-document-viewer.tsx"
+        }
+      ]
+    },
+    {
+      "name": "pdf-anchor-target",
+      "type": "registry:ui",
+      "title": "PDF anchor target",
+      "description": "Bridges anchored-document pdf-area anchors to PdfViewer scrolling and page overlays without making PdfViewer own anchored item state.",
+      "registryDependencies": [
+        "anchored-document-viewer",
+        "pdf-viewer",
+        "pdf-source"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/ui/pdf-anchor-target.tsx",
+          "type": "registry:ui",
+          "target": "@ui/pdf-anchor-target.tsx"
+        }
+      ]
+    },
+    {
+      "name": "dropzone-file-uploader-example",
+      "type": "registry:block",
+      "title": "Default File Uploader",
+      "description": "The standard visual file uploader built on the headless dropzone primitive.",
+      "registryDependencies": [
+        "file-uploader"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/blocks/dropzone-file-uploader-example.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dropzone-file-uploader-example.tsx"
+        }
+      ],
+      "categories": [
+        "dropzone"
+      ]
+    },
+    {
+      "name": "dropzone-file-viewer-example",
+      "type": "registry:block",
+      "title": "Uploader + Viewer",
+      "description": "One upload surface that becomes a file viewer, with the uploaded blob rendered by FileViewer.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "dropzone",
+        "file-viewer",
+        "file-size-format",
+        "file-thumbnail",
+        "viewer"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/blocks/dropzone-file-viewer-example.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dropzone-file-viewer-example.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/blocks/dropzone-uploader-viewer.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dropzone-uploader-viewer.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/blocks/dropzone-uploader-viewer-parts.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dropzone-uploader-viewer-parts.tsx"
+        }
+      ],
+      "categories": [
+        "dropzone"
+      ]
+    },
+    {
+      "name": "dropzone-non-button-trigger",
+      "type": "registry:block",
+      "title": "Non-Button Trigger",
+      "description": "A custom element opens the file dialog while preserving dropzone state.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "dropzone",
+        "file-size-format",
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/blocks/dropzone-non-button-trigger.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dropzone-non-button-trigger.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/blocks/dropzone-example-shared.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dropzone-example-shared.tsx"
+        }
+      ],
+      "categories": [
+        "dropzone"
+      ]
+    },
+    {
+      "name": "dropzone-native-button-queue",
+      "type": "registry:block",
+      "title": "Native Button Queue",
+      "description": "A real button trigger with browser button semantics and a small selected-file queue.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "dropzone",
+        "file-size-format",
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/blocks/dropzone-native-button-queue.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dropzone-native-button-queue.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/blocks/dropzone-example-shared.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dropzone-example-shared.tsx"
+        }
+      ],
+      "categories": [
+        "dropzone"
+      ]
+    },
+    {
+      "name": "dropzone-controlled-queue",
+      "type": "registry:block",
+      "title": "Controlled Queue",
+      "description": "Parent-owned file state with controlled selected files and explicit clear behavior.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "dropzone",
+        "file-size-format",
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/blocks/dropzone-controlled-queue.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dropzone-controlled-queue.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/blocks/dropzone-example-shared.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dropzone-example-shared.tsx"
+        }
+      ],
+      "categories": [
+        "dropzone"
+      ]
+    },
+    {
+      "name": "dropzone-validation-only",
+      "type": "registry:block",
+      "title": "Validation Only",
+      "description": "Validate accepted files and rejection details without storing selected files.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "dropzone",
+        "file-size-format",
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/blocks/dropzone-validation-only.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dropzone-validation-only.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/blocks/dropzone-example-shared.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dropzone-example-shared.tsx"
+        }
+      ],
+      "categories": [
+        "dropzone"
+      ]
+    },
+    {
+      "name": "dropzone-custom-thumbnail-grid",
+      "type": "registry:block",
+      "title": "Custom Thumbnail Grid",
+      "description": "Direct useDropzone composition with FileThumbnail previews in a custom grid.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "dropzone",
+        "file-thumbnail",
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/blocks/dropzone-custom-thumbnail-grid.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dropzone-custom-thumbnail-grid.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/blocks/dropzone-example-shared.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dropzone-example-shared.tsx"
+        }
+      ],
+      "categories": [
+        "dropzone"
+      ]
+    },
+    {
+      "name": "dropzone-media-transcript-queue",
+      "type": "registry:block",
+      "title": "Media Transcript Queue",
+      "description": "Audio and video files queued as transcript jobs with per-file thumbnails.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "dropzone",
+        "file-thumbnail",
+        "file-size-format",
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/blocks/dropzone-media-transcript-queue.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dropzone-media-transcript-queue.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/blocks/dropzone-example-shared.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dropzone-example-shared.tsx"
+        }
+      ],
+      "categories": [
+        "dropzone"
+      ]
+    },
+    {
+      "name": "dropzone-avatar-image-slot",
+      "type": "registry:block",
+      "title": "Avatar Image Slot",
+      "description": "A single replaceable image slot with a custom circular preview.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "dropzone",
+        "file-thumbnail",
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/blocks/dropzone-avatar-image-slot.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dropzone-avatar-image-slot.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/blocks/dropzone-example-shared.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dropzone-example-shared.tsx"
+        }
+      ],
+      "categories": [
+        "dropzone"
+      ]
+    },
+    {
+      "name": "dropzone-spreadsheet-import-card",
+      "type": "registry:block",
+      "title": "Spreadsheet Import",
+      "description": "A single spreadsheet upload feeding a mapping workflow.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "dropzone",
+        "file-thumbnail",
+        "file-size-format",
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/blocks/dropzone-spreadsheet-import-card.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dropzone-spreadsheet-import-card.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/blocks/dropzone-example-shared.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dropzone-example-shared.tsx"
+        }
+      ],
+      "categories": [
+        "dropzone"
+      ]
+    },
+    {
+      "name": "dropzone-evidence-timeline",
+      "type": "registry:block",
+      "title": "Evidence Timeline",
+      "description": "Files become ordered evidence events inside a custom surface.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "dropzone",
+        "file-thumbnail",
+        "file-size-format",
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/blocks/dropzone-evidence-timeline.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dropzone-evidence-timeline.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/blocks/dropzone-example-shared.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dropzone-example-shared.tsx"
+        }
+      ],
+      "categories": [
+        "dropzone"
+      ]
+    },
+    {
+      "name": "dropzone-comparison-pair-upload",
+      "type": "registry:block",
+      "title": "Comparison Pair",
+      "description": "Two independent dropzones model original versus revision documents.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "dropzone",
+        "file-thumbnail",
+        "file-size-format",
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/blocks/dropzone-comparison-pair-upload.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dropzone-comparison-pair-upload.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/blocks/dropzone-example-shared.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dropzone-example-shared.tsx"
+        }
+      ],
+      "categories": [
+        "dropzone"
+      ]
+    },
+    {
+      "name": "dropzone-intake-router",
+      "type": "registry:block",
+      "title": "Intake Router",
+      "description": "One intake target routes selected files into document, image, and table lanes.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "dropzone",
+        "file-thumbnail",
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/blocks/dropzone-intake-router.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dropzone-intake-router.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/blocks/dropzone-example-shared.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dropzone-example-shared.tsx"
+        }
+      ],
+      "categories": [
+        "dropzone"
+      ]
+    },
+    {
+      "name": "dropzone-required-packet-slots",
+      "type": "registry:block",
+      "title": "Required Packet",
+      "description": "Slot-level dropzones for checklist-driven packet collection.",
+      "registryDependencies": [
+        "dropzone",
+        "file-thumbnail",
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/blocks/dropzone-required-packet-slots.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dropzone-required-packet-slots.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/blocks/dropzone-example-shared.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dropzone-example-shared.tsx"
+        }
+      ],
+      "categories": [
+        "dropzone"
+      ]
+    },
+    {
+      "name": "dropzone-pinboard-drop-surface",
+      "type": "registry:block",
+      "title": "Pinboard Drop Surface",
+      "description": "A full canvas trigger that pins dropped files as cards.",
+      "registryDependencies": [
+        "dropzone",
+        "file-thumbnail",
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/blocks/dropzone-pinboard-drop-surface.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dropzone-pinboard-drop-surface.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/blocks/dropzone-example-shared.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dropzone-example-shared.tsx"
+        }
+      ],
+      "categories": [
+        "dropzone"
+      ]
+    },
+    {
+      "name": "dropzone-disabled-dropzone",
+      "type": "registry:block",
+      "title": "Disabled Dropzone",
+      "description": "Disabled input, trigger focus, intake, and drag behavior.",
+      "registryDependencies": [
+        "dropzone",
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/blocks/dropzone-disabled-dropzone.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dropzone-disabled-dropzone.tsx"
+        }
+      ],
+      "categories": [
+        "dropzone"
       ]
     }
   ]

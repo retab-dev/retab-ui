@@ -1,0 +1,21 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "dropzone-file-uploader-example",
+  "title": "Default File Uploader",
+  "description": "The standard visual file uploader built on the headless dropzone primitive.",
+  "registryDependencies": [
+    "file-uploader"
+  ],
+  "files": [
+    {
+      "path": "registry/new-york-v4/blocks/dropzone-file-uploader-example.tsx",
+      "content": "\"use client\"\n\nimport { FileUploader } from \"@/components/ui/file-uploader\"\n\nimport { type DropzoneExampleProps } from \"./dropzone-example-shared\"\n\nexport function DefaultFileUploaderExample({\n  className,\n}: DropzoneExampleProps) {\n  return (\n    <section className={className}>\n      <FileUploader\n        accept=\".pdf,.doc,.docx,.xls,.xlsx,.csv,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg,text/csv\"\n        className=\"min-h-[28rem] justify-start pt-8\"\n        description=\"PDF, DOCX, XLSX, CSV, PNG, or JPG\"\n        maxFiles={6}\n        multiple\n        title=\"Default file uploader\"\n      />\n    </section>\n  )\n}\n",
+      "type": "registry:component",
+      "target": "@components/blocks/dropzone-file-uploader-example.tsx"
+    }
+  ],
+  "categories": [
+    "dropzone"
+  ],
+  "type": "registry:block"
+}
