@@ -21,7 +21,7 @@ function renderEnumCellForTest(overrides: JsonTableCellHarnessProps = {}) {
     fieldMetadata: baseField("enum"),
     fieldPath: "status",
     structuredEditSession: baseSession({ fieldPath: "status" }),
-    onPickerOpenChange: vi.fn(),
+    onOpenChange: vi.fn(),
     onEditingEnd: vi.fn(),
     commitValue: vi.fn(),
     ...overrides,
@@ -143,7 +143,7 @@ describe("json table enum cell", () => {
 
   it("does not close from trigger blur while the table is opening the dropdown", () => {
     const onEditingEnd = vi.fn()
-    const onPickerOpenChange = vi.fn()
+    const onOpenChange = vi.fn()
     const view = renderEnumCellForTest({
       onEditingEnd,
       structuredEditSession: baseSession({
@@ -151,7 +151,7 @@ describe("json table enum cell", () => {
         isOverlayOpen: false,
       }),
       activationSource: createDataCellShellActivationSource(),
-      onPickerOpenChange,
+      onOpenChange,
     })
 
     const trigger = view.container.querySelector<HTMLElement>(
@@ -161,7 +161,7 @@ describe("json table enum cell", () => {
     fireEvent.blur(trigger)
 
     expect(onEditingEnd).not.toHaveBeenCalled()
-    expect(onPickerOpenChange).toHaveBeenCalledWith(true)
+    expect(onOpenChange).toHaveBeenCalledWith(true)
   })
 
   it("distinguishes nullable null from a literal sentinel-like string option", () => {
@@ -313,8 +313,8 @@ describe("json table enum cell", () => {
 
   it("closes immediately after a dropdown dismisses without selecting a value", () => {
     const onEditingEnd = vi.fn()
-    const onPickerOpenChange = vi.fn()
-    const view = renderEnumCellForTest({ onEditingEnd, onPickerOpenChange })
+    const onOpenChange = vi.fn()
+    const view = renderEnumCellForTest({ onEditingEnd, onOpenChange })
 
     fireEvent.keyDown(view.getByRole("combobox"), { key: "Escape" })
 

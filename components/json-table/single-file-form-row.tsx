@@ -13,6 +13,7 @@ import type {
 } from "@/components/json-table/json-table-cell-types"
 import type { JsonTableStructuredEditSession } from "@/components/json-table/json-table-edit-session"
 import type { JsonTablePrimitiveActiveCellStore } from "@/components/json-table/json-table-primitive-active-cell-store"
+import type { JsonTablePrimitivePatchStore } from "@/components/json-table/json-table-primitive-patch-store"
 import { recordJsonTableRender } from "@/components/json-table/json-table-profiler"
 import type { ProjectedRow } from "@/components/json-table/lib/document-projection"
 import type { TableDocument } from "@/components/json-table/lib/projects-types"
@@ -38,6 +39,7 @@ interface SingleFileFormRowProps {
   rowTopPx: number
   rowHeightPx: number
   primitiveActiveCellStore: JsonTablePrimitiveActiveCellStore
+  primitivePatchStore?: JsonTablePrimitivePatchStore
   setPrimitiveActiveCell?: JsonTableCellProps["setPrimitiveActiveCell"]
   primitiveEditorHandleRef?: React.RefObject<DataCellEditorHandle | null>
   structuredEditSession?: JsonTableStructuredEditSession | null
@@ -88,6 +90,7 @@ function areSingleFileFormRowPropsEqual(
     prev.rowTopPx !== next.rowTopPx ||
     prev.rowHeightPx !== next.rowHeightPx ||
     prev.primitiveActiveCellStore !== next.primitiveActiveCellStore ||
+    prev.primitivePatchStore !== next.primitivePatchStore ||
     prev.setPrimitiveActiveCell !== next.setPrimitiveActiveCell ||
     prev.primitiveEditorHandleRef !== next.primitiveEditorHandleRef ||
     prev.startStructuredEditSession !== next.startStructuredEditSession ||
@@ -115,6 +118,7 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
     rowTopPx,
     rowHeightPx,
     primitiveActiveCellStore,
+    primitivePatchStore,
     setPrimitiveActiveCell = () => {},
     primitiveEditorHandleRef,
     structuredEditSession = null,
@@ -181,6 +185,7 @@ export const SingleFileFormRow = React.memo<SingleFileFormRowProps>(
             document,
             docId: documentId,
             primitiveActiveCellStore,
+            primitivePatchStore,
             setPrimitiveActiveCell,
             primitiveEditorHandleRef:
               primitiveEditorHandleRef ?? fallbackPrimitiveEditorHandleRef,

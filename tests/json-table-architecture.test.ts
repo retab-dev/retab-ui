@@ -16,6 +16,7 @@ const dataCellRuntimeFiles = [
   "registry/new-york-v4/ui/data-cell-control-contract.ts",
   "registry/new-york-v4/ui/data-cell-control-registry.tsx",
   "registry/new-york-v4/ui/data-cell-display.tsx",
+  "registry/new-york-v4/ui/data-cell-edit-model.ts",
   "registry/new-york-v4/ui/data-cell-format.ts",
   "registry/new-york-v4/ui/data-cell-number-control.tsx",
   "registry/new-york-v4/ui/data-cell-picker-control.tsx",
@@ -155,6 +156,37 @@ const forbiddenOverlayOpeningPolicyPatterns = [
 const dataCellRegistryRuntimeFiles = dataCellRuntimeFiles.filter((file) =>
   file.startsWith("registry/new-york-v4/ui/")
 )
+
+const dataCellPrimitiveControlFiles = [
+  "registry/new-york-v4/ui/data-cell-boolean-control.tsx",
+  "registry/new-york-v4/ui/data-cell-picker-control.tsx",
+  "registry/new-york-v4/ui/data-cell-select-control.tsx",
+  "registry/new-york-v4/ui/data-cell-text-control.tsx",
+]
+
+const forbiddenPrimitiveControlPatterns = [
+  "DataCellProps",
+  "components/json-table",
+  "@/components/json-table",
+  "JsonTable",
+  "jsonValue",
+  "schema",
+  "sentinel",
+  `is${"Picker"}Open`,
+  `on${"Picker"}OpenChange`,
+]
+
+const forbiddenPrimitiveIgnoredPropAliases = [
+  "_editable",
+  "_active",
+  "_mode",
+  "_showPickerIcon",
+  "_draftValue",
+  "_onDraftValueChange",
+  "_onActiveChange",
+  "_onOpenChange",
+  `_on${"Picker"}OpenChange`,
+]
 
 const jsonTableLineCountLimits = [
   {
@@ -459,6 +491,105 @@ describe("json table and DataCell architecture", () => {
     }
   })
 
+  it("keeps primitive controls on exact kind-specific props", () => {
+    for (const file of dataCellPrimitiveControlFiles) {
+      const content = readFileSync(join(repoRoot, file), "utf8")
+
+      for (const pattern of forbiddenPrimitiveControlPatterns) {
+        expect(content.includes(pattern), `${file} contains ${pattern}`).toBe(
+          false
+        )
+      }
+
+      for (const pattern of forbiddenPrimitiveIgnoredPropAliases) {
+        expect(content.includes(pattern), `${file} contains ${pattern}`).toBe(
+          false
+        )
+      }
+    }
+
+    const contractFile = "registry/new-york-v4/ui/data-cell-control-contract.ts"
+    const displayFile = "registry/new-york-v4/ui/data-cell-display.tsx"
+    const registryFile =
+      "registry/new-york-v4/ui/data-cell-control-registry.tsx"
+    const contractContent = readFileSync(join(repoRoot, contractFile), "utf8")
+    const displayContent = readFileSync(join(repoRoot, displayFile), "utf8")
+    const registryContent = readFileSync(join(repoRoot, registryFile), "utf8")
+    const editModelFile = "registry/new-york-v4/ui/data-cell-edit-model.ts"
+    const editModelContent = readFileSync(join(repoRoot, editModelFile), "utf8")
+
+    expect(contractContent.includes("DataCellControlPropsByKind")).toBe(true)
+    expect(contractContent.includes("DataCellPublicPropsByKind")).toBe(false)
+    expect(contractContent.includes("controlProps")).toBe(true)
+    expect(contractContent.includes("DataCellProps &")).toBe(false)
+    expect(contractContent.includes("props: DataCellProps")).toBe(false)
+    expect(contractContent.includes("DataCellProps")).toBe(false)
+    expect(contractContent.includes(`is${"Picker"}Open`)).toBe(false)
+    expect(contractContent.includes(`on${"Picker"}OpenChange`)).toBe(false)
+    expect(registryContent.includes("DataCellProps")).toBe(false)
+    expect(registryContent.includes("DataCellPublicPropsByKind")).toBe(false)
+    expect(
+      registryContent.includes("export function DataCellControl(props")
+    ).toBe(false)
+    expect(registryContent.includes("model: DataCellEditModel")).toBe(true)
+    expect(displayContent.includes("DataCellProps")).toBe(false)
+    expect(displayContent.includes("DataCellDisplayProps")).toBe(true)
+    expect(editModelContent.includes("createDataCellEditModel")).toBe(true)
+    expect(editModelContent.includes("controlState")).toBe(true)
+    expect(editModelContent.includes("DataCellEditorProps")).toBe(true)
+    expect(editModelContent.includes("DataCellNativePropsForKind")).toBe(false)
+    expect(editModelContent.includes("DataCellEditSource")).toBe(false)
+    expect(editModelContent.includes("nativeProps")).toBe(false)
+    expect(editModelContent.includes("as Record<string, unknown>")).toBe(false)
+    expect(editModelContent.includes("propName as keyof")).toBe(false)
+    expect(editModelContent.includes("assignDataCellAriaAttribute")).toBe(true)
+    expect(editModelContent.includes("assignDataCellDataAttribute")).toBe(true)
+    expect(registryContent.includes("model.nativeProps")).toBe(false)
+    expect(registryContent.includes("model.editorProps")).toBe(true)
+    expect(registryContent.includes("DataCellPointerActionHandlers")).toBe(
+      false
+    )
+    expect(registryContent.includes("DataCellKeyActionHandlers")).toBe(false)
+    expect(registryContent.includes("dataCellKeyActionWithAdapter")).toBe(true)
+    expect(registryContent.includes("textControlAdapter[actionName]")).toBe(
+      true
+    )
+    expect(registryContent.includes("canActivateDataCellFromKeyByKind")).toBe(
+      true
+    )
+    expect(registryContent.includes("isDataCellPickerEditModel")).toBe(true)
+    expect(registryContent.includes("DataCellProps &")).toBe(false)
+    for (const pattern of forbiddenPrimitiveIgnoredPropAliases) {
+      expect(
+        registryContent.includes(pattern),
+        `${registryFile} contains ${pattern}`
+      ).toBe(false)
+      expect(
+        displayContent.includes(pattern),
+        `${displayFile} contains ${pattern}`
+      ).toBe(false)
+    }
+    expect(registryContent.includes("<DataCellTextControl {...props}")).toBe(
+      false
+    )
+    expect(registryContent.includes("<DataCellNumberControl {...props}")).toBe(
+      false
+    )
+    expect(registryContent.includes("<DataCellBooleanControl {...props}")).toBe(
+      false
+    )
+    expect(registryContent.includes("<DataCellSelectControl {...props}")).toBe(
+      false
+    )
+    expect(registryContent.includes("<DataCellPickerControl {...props}")).toBe(
+      false
+    )
+    expect(
+      registryContent.match(/\bcontrolProps:/g)?.length ?? 0,
+      `${registryFile} adapter controlProps count`
+    ).toBeGreaterThanOrEqual(5)
+  })
+
   it("keeps json-table DataCell adaptation pure and outside the renderer", () => {
     const modelFile = "components/json-table/json-table-data-cell-model.ts"
     const displayFile = "components/json-table/json-table-display-cell.tsx"
@@ -705,6 +836,37 @@ describe("json table and DataCell architecture", () => {
       pickerPositionContent.includes("getDataCellPickerPopupStyleFromAnchor")
     ).toBe(true)
     expect(pickerPositionContent.includes("getBoundingClientRect")).toBe(true)
+  })
+
+  it("keeps primitive table-to-row callback boundaries stable", () => {
+    const tableFile = "components/json-table/single-file-virtualized-table.tsx"
+    const rowFile = "components/json-table/single-file-form-row.tsx"
+    const tableContent = readFileSync(join(repoRoot, tableFile), "utf8")
+    const rowContent = readFileSync(join(repoRoot, rowFile), "utf8")
+
+    expect(tableContent.includes("primitiveActiveCellStoreRef")).toBe(true)
+    for (const callbackName of [
+      "setPrimitiveActiveCell",
+      "patchDocumentData",
+      "handleDocumentDataChange",
+      "startStructuredEditSession",
+      "handleBodyScroll",
+    ]) {
+      expect(
+        tableContent.includes(`const ${callbackName} = React.useCallback`),
+        `${tableFile} keeps ${callbackName} stable`
+      ).toBe(true)
+    }
+    expect(
+      rowContent.includes("const handleDataChange = React.useCallback"),
+      `${rowFile} keeps cell data-change callback stable`
+    ).toBe(true)
+    expect(
+      rowContent.includes(
+        "prev.primitiveActiveCellStore !== next.primitiveActiveCellStore"
+      ),
+      `${rowFile} compares the primitive active store by identity`
+    ).toBe(true)
   })
 
   it("keeps the generated DataCell registry artifact complete and clean", () => {

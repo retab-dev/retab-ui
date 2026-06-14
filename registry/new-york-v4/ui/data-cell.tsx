@@ -13,7 +13,11 @@ import {
   getDataCellKeyControlAction,
   getDataCellPointerControlAction,
 } from "@/registry/new-york-v4/ui/data-cell-control-registry"
-import { DataCellDisplay } from "@/registry/new-york-v4/ui/data-cell-display"
+import {
+  DataCellDisplay,
+  type DataCellDisplayProps,
+} from "@/registry/new-york-v4/ui/data-cell-display"
+import { createDataCellEditModel } from "@/registry/new-york-v4/ui/data-cell-edit-model"
 import {
   formatDataCellDisplayValue,
   parseDataCellNumberInput,
@@ -24,7 +28,6 @@ import { DataCellSelectControl } from "@/registry/new-york-v4/ui/data-cell-selec
 import { DataCellTextControl } from "@/registry/new-york-v4/ui/data-cell-text-control"
 import type {
   DataCellActivationSource,
-  DataCellCommitHandler,
   DataCellProps,
 } from "@/registry/new-york-v4/ui/data-cell-types"
 
@@ -84,21 +87,124 @@ function hasDataCellKeyboardModifier(event: React.KeyboardEvent<HTMLElement>) {
   )
 }
 
-export function DataCell({
-  mode,
-  active,
-  editable = false,
-  disabled = false,
-  onActiveChange,
-  onCommit,
-  onEditingEnd,
-  onEditorHandleChange,
-  onClick,
-  onKeyDown,
-  onPointerDown,
-  ...props
-}: DataCellProps) {
-  const displayRef = React.useRef<HTMLElement>(null)
+function dataCellDisplayProps(
+  props: DataCellProps,
+  shellProps: Pick<
+    DataCellDisplayProps,
+    | "disabled"
+    | "editable"
+    | "onClick"
+    | "onKeyDown"
+    | "onPointerDown"
+    | "tabIndex"
+  >
+): DataCellDisplayProps {
+  const {
+    kind,
+    value,
+    placeholder,
+    className,
+    showPickerIcon,
+    formatValue,
+    mode,
+    editable,
+    active,
+    disabled,
+    name,
+    selectOptions,
+    dateTimeZone,
+    activationSource,
+    open,
+    draftValue,
+    autoFocus,
+    onDraftValueChange,
+    onCommit,
+    onEditingEnd,
+    onActiveChange,
+    onOpenChange,
+    onEditorHandleChange,
+    onClick,
+    onKeyDown,
+    onPointerDown,
+    ...surfaceDomProps
+  } = props
+  const displayProps: Pick<
+    DataCellDisplayProps,
+    "className" | "placeholder" | "showPickerIcon"
+  > &
+    Pick<
+      DataCellDisplayProps,
+      | "disabled"
+      | "editable"
+      | "onClick"
+      | "onKeyDown"
+      | "onPointerDown"
+      | "tabIndex"
+    > &
+    React.HTMLAttributes<HTMLDivElement> = {
+    ...surfaceDomProps,
+    ...shellProps,
+    placeholder,
+    className,
+    showPickerIcon,
+  }
+
+  switch (props.kind) {
+    case "text":
+      return {
+        ...displayProps,
+        kind: props.kind,
+        value: props.value,
+        formatValue: props.formatValue,
+      }
+    case "number":
+    case "integer":
+      return {
+        ...displayProps,
+        kind: props.kind,
+        value: props.value,
+        formatValue: props.formatValue,
+      }
+    case "boolean":
+      return {
+        ...displayProps,
+        kind: props.kind,
+        value: props.value,
+        formatValue: props.formatValue,
+      }
+    case "select":
+      return {
+        ...displayProps,
+        kind: props.kind,
+        value: props.value,
+        formatValue: props.formatValue,
+      }
+    case "date":
+    case "time":
+    case "date-time":
+      return {
+        ...displayProps,
+        kind: props.kind,
+        value: props.value,
+        formatValue: props.formatValue,
+        showPickerIcon: props.showPickerIcon ?? true,
+      }
+  }
+}
+
+export function DataCell(props: DataCellProps) {
+  const {
+    mode,
+    active,
+    editable = false,
+    disabled = false,
+    onActiveChange,
+    onEditingEnd,
+    onClick,
+    onKeyDown,
+    onPointerDown,
+  } = props
+  const displayRef = React.useRef<HTMLDivElement>(null)
   const activationClickTail = useDataCellActivationClickTail()
   const activationSourceRef = React.useRef<
     DataCellActivationSource | undefined
@@ -127,6 +233,15 @@ export function DataCell({
     onEditingEnd?.()
   }, [onEditingEnd, setActive])
 
+  const editModel = createDataCellEditModel(props, {
+    disabled,
+    activationSource:
+      props.activationSource ?? activationSource ?? activationSourceRef.current,
+    autoFocus: props.autoFocus ?? canSelfActivate,
+    onEditingEnd: endEditing,
+    onEditorHandleChange: props.onEditorHandleChange,
+  })
+
   const applyControlAction = React.useCallback(
     (
       action: DataCellControlAction,
@@ -140,7 +255,7 @@ export function DataCell({
       if (action.shouldPreventDefault) event.preventDefault()
       event.stopPropagation()
       if (action.kind === "command") {
-        action.commit(onCommit as DataCellCommitHandler | undefined)
+        action.commit()
         if (markClickTail) activationClickTail.arm()
         return
       }
@@ -152,7 +267,7 @@ export function DataCell({
       if (markClickTail) activationClickTail.arm()
       setActive(true)
     },
-    [activationClickTail, onCommit, setActive]
+    [activationClickTail, setActive]
   )
 
   const activateFromPointer = React.useCallback(
@@ -164,7 +279,7 @@ export function DataCell({
 
       applyControlAction(
         getDataCellPointerControlAction({
-          props,
+          controlState: editModel.controlState,
           clientX: event.clientX,
           clientY: event.clientY,
           detail: event.detail,
@@ -175,7 +290,7 @@ export function DataCell({
         true
       )
     },
-    [applyControlAction, canSelfActivate, onPointerDown, props]
+    [applyControlAction, canSelfActivate, editModel, onPointerDown, props]
   )
 
   const activateFromClick = React.useCallback(
@@ -189,7 +304,7 @@ export function DataCell({
 
       applyControlAction(
         getDataCellClickControlAction({
-          props,
+          controlState: editModel.controlState,
           clientX: event.clientX,
           clientY: event.clientY,
           detail: event.detail,
@@ -200,7 +315,13 @@ export function DataCell({
         false
       )
     },
-    [activationClickTail, applyControlAction, canSelfActivate, onClick, props]
+    [
+      activationClickTail,
+      applyControlAction,
+      canSelfActivate,
+      editModel,
+      onClick,
+    ]
   )
 
   const activateFromKey = React.useCallback(
@@ -211,44 +332,33 @@ export function DataCell({
       if (hasDataCellKeyboardModifier(event)) return
 
       applyControlAction(
-        getDataCellKeyControlAction({ props, key: event.key }),
+        getDataCellKeyControlAction({
+          controlState: editModel.controlState,
+          key: event.key,
+        }),
         event,
         false
       )
     },
-    [applyControlAction, canSelfActivate, onKeyDown, props]
+    [applyControlAction, canSelfActivate, editModel, onKeyDown]
   )
 
   if (isActive) {
-    return (
-      <DataCellControl
-        {...props}
-        editable={editable}
-        disabled={disabled}
-        activationSource={
-          props.activationSource ??
-          activationSource ??
-          activationSourceRef.current
-        }
-        autoFocus={props.autoFocus ?? canSelfActivate}
-        onCommit={onCommit as never}
-        onEditingEnd={endEditing}
-        onEditorHandleChange={onEditorHandleChange}
-        onKeyDown={onKeyDown}
-      />
-    )
+    return <DataCellControl model={editModel} />
   }
 
   return (
     <DataCellDisplay
-      {...props}
+      {...dataCellDisplayProps(props, {
+        editable,
+        disabled,
+        onPointerDown: activateFromPointer,
+        onClick: activateFromClick,
+        onKeyDown: activateFromKey,
+        tabIndex:
+          editable && !disabled ? (props.tabIndex ?? 0) : props.tabIndex,
+      })}
       ref={displayRef}
-      editable={editable}
-      disabled={disabled}
-      onPointerDown={activateFromPointer}
-      onClick={activateFromClick}
-      onKeyDown={activateFromKey}
-      tabIndex={editable && !disabled ? (props.tabIndex ?? 0) : props.tabIndex}
     />
   )
 }

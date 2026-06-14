@@ -2,6 +2,11 @@ import * as React from "react"
 
 import { getValueAtPath } from "@/components/json-table/lib/document-paths"
 import type { TableDocument } from "@/components/json-table/lib/projects-types"
+import {
+  fallbackJsonTablePrimitivePatchStore,
+  useJsonTablePrimitivePatchSnapshot,
+  type JsonTablePrimitivePatchStore,
+} from "@/components/json-table/json-table-primitive-patch-store"
 import { markJsonTableProfile } from "@/components/json-table/json-table-profiler"
 import { useRefCallback } from "@/components/json-table/path-utils"
 
@@ -12,6 +17,7 @@ export function useCellController({
   value,
   isEditable,
   onDocumentDataChange,
+  primitivePatchStore,
 }: {
   document: TableDocument
   docId: string
@@ -23,8 +29,13 @@ export function useCellController({
     materializedFieldPath: string,
     value: unknown
   ) => void
+  primitivePatchStore?: JsonTablePrimitivePatchStore
 }) {
-  const [optimisticValue, setOptimisticValue] = React.useState<unknown>()
+  const patchStore = primitivePatchStore ?? fallbackJsonTablePrimitivePatchStore
+  const primitivePatch = useJsonTablePrimitivePatchSnapshot({
+    fieldPath: materializedFieldPath,
+    store: patchStore,
+  })
 
   const safeStringify = React.useCallback((input: unknown) => {
     try {
@@ -39,11 +50,7 @@ export function useCellController({
     []
   )
 
-  React.useEffect(() => {
-    setOptimisticValue(undefined)
-  }, [docId, materializedFieldPath, value])
-
-  const effectiveValue = optimisticValue !== undefined ? optimisticValue : value
+  const effectiveValue = primitivePatch.hasValue ? primitivePatch.value : value
   const committedTextValue =
     effectiveValue !== null && effectiveValue !== undefined
       ? String(effectiveValue)
@@ -52,10 +59,9 @@ export function useCellController({
   const commitValueChange = useRefCallback(function (validatedValue: unknown) {
     if (!materializedFieldPath || !isEditable) return
 
-    const previousValue =
-      optimisticValue !== undefined
-        ? optimisticValue
-        : getValueAtPath(document.data, materializedFieldPath)
+    const previousValue = primitivePatch.hasValue
+      ? primitivePatch.value
+      : getValueAtPath(document.data, materializedFieldPath)
     const previousNormalized = normalize(previousValue)
     const nextNormalized = normalize(validatedValue)
 
@@ -67,7 +73,7 @@ export function useCellController({
     markJsonTableProfile("cell-commit-local-start", {
       fieldPath: materializedFieldPath,
     })
-    setOptimisticValue(validatedValue)
+    patchStore.setValue(materializedFieldPath, validatedValue, previousValue)
     markJsonTableProfile("cell-commit-local-end", {
       fieldPath: materializedFieldPath,
     })

@@ -19,6 +19,7 @@ import type {
 } from "@/components/json-table/json-table-edit-session"
 import { jsonTableCellId } from "@/components/json-table/json-table-edit-session"
 import { createJsonTablePrimitiveActiveCellStore } from "@/components/json-table/json-table-primitive-active-cell-store"
+import { createJsonTablePrimitivePatchStore } from "@/components/json-table/json-table-primitive-patch-store"
 import type {
   ProjectedCell,
   ProjectedRow,
@@ -143,6 +144,7 @@ function SingleFileFormRowHarness({
 }: Omit<
   React.ComponentProps<typeof SingleFileFormRow>,
   | "primitiveActiveCellStore"
+  | "primitivePatchStore"
   | "setPrimitiveActiveCell"
   | "structuredEditSession"
   | "startStructuredEditSession"
@@ -157,6 +159,7 @@ function SingleFileFormRowHarness({
   const primitiveActiveCellStoreRef = React.useRef(
     createJsonTablePrimitiveActiveCellStore()
   )
+  const primitivePatchStoreRef = React.useRef(createJsonTablePrimitivePatchStore())
   const [structuredEditSession, setStructuredEditSession] =
     React.useState<JsonTableStructuredEditSession | null>(null)
   const sessionIdRef = React.useRef(0)
@@ -206,6 +209,7 @@ function SingleFileFormRowHarness({
     <SingleFileFormRow
       {...props}
       primitiveActiveCellStore={primitiveActiveCellStoreRef.current}
+      primitivePatchStore={primitivePatchStoreRef.current}
       setPrimitiveActiveCell={setNextPrimitiveActiveCell}
       structuredEditSession={structuredEditSession}
       startStructuredEditSession={startStructuredEditSession}

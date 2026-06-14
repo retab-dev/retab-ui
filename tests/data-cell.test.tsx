@@ -507,25 +507,33 @@ describe("DataCell", () => {
   it("supports controlled drafts and forwards cell props", () => {
     const onDraftValueChange = vi.fn()
     const onFocus = vi.fn()
+    const onMouseUp = vi.fn()
     render(
       <DataCell
         kind="text"
         mode="edit"
         value="committed"
         draftValue="draft"
+        id="name-cell"
+        data-testid="name-cell"
         onDraftValueChange={onDraftValueChange}
         onFocus={onFocus}
+        onMouseUp={onMouseUp}
         aria-label="Name"
       />
     )
 
     const input = screen.getByRole("textbox", { name: "Name" })
+    expect(screen.getByTestId("name-cell")).toBe(input)
+    expect(input.getAttribute("id")).toBe("name-cell")
     expect((input as HTMLInputElement).value).toBe("draft")
 
     fireEvent.focus(input)
+    fireEvent.mouseUp(input)
     fireEvent.change(input, { target: { value: "next" } })
 
     expect(onFocus).toHaveBeenCalled()
+    expect(onMouseUp).toHaveBeenCalled()
     expect(onDraftValueChange).toHaveBeenCalledWith(
       "next",
       expect.objectContaining({ isValid: true })
@@ -797,21 +805,21 @@ describe("DataCell", () => {
   })
 
   it("can control picker popup state from the caller", () => {
-    const onPickerOpenChange = vi.fn()
+    const onOpenChange = vi.fn()
     const { rerender } = render(
       <DataCell
         kind="date"
         mode="edit"
         value="2026-06-12"
-        isPickerOpen={false}
-        onPickerOpenChange={onPickerOpenChange}
+        open={false}
+        onOpenChange={onOpenChange}
       />
     )
 
     const trigger = getPickerTrigger()
     fireEvent.click(trigger)
 
-    expect(onPickerOpenChange).toHaveBeenCalledWith(true)
+    expect(onOpenChange).toHaveBeenCalledWith(true)
     expect(
       document.querySelector('[data-slot="data-cell-picker-popup"]')
     ).toBeNull()
@@ -821,8 +829,8 @@ describe("DataCell", () => {
         kind="date"
         mode="edit"
         value="2026-06-12"
-        isPickerOpen
-        onPickerOpenChange={onPickerOpenChange}
+        open
+        onOpenChange={onOpenChange}
       />
     )
 

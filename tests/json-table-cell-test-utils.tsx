@@ -25,7 +25,7 @@ export interface JsonTableCellHarnessProps {
   structuredEditSession?: JsonTableStructuredEditSession
   setStructuredEditSessionOverlayOpen?: (open: boolean) => void
   closeStructuredEditSession?: () => void
-  onPickerOpenChange?: (open: boolean) => void
+  onOpenChange?: (open: boolean) => void
   onEditingEnd?: () => void
   commitValue?: (value: unknown, meta?: unknown) => void
   activationSource?: ComponentProps<
@@ -59,7 +59,7 @@ export function renderDataCell(
       isEditable
       autoFocus
       activationSource={overrides.activationSource}
-      onPickerOpenChange={overrides.onPickerOpenChange ?? vi.fn()}
+      onOpenChange={overrides.onOpenChange ?? vi.fn()}
       onEditingEnd={overrides.onEditingEnd ?? vi.fn()}
       onCommit={(value, meta) => overrides.commitValue?.(value, meta)}
     />
@@ -77,7 +77,7 @@ export function renderEnumCell(overrides: JsonTableCellHarnessProps = {}) {
       isEditable={true}
       autoFocus
       activationSource={overrides.activationSource}
-      onPickerOpenChange={overrides.onPickerOpenChange ?? vi.fn()}
+      onOpenChange={overrides.onOpenChange ?? vi.fn()}
       onEditingEnd={overrides.onEditingEnd ?? vi.fn()}
       onCommit={(value, meta) => overrides.commitValue?.(value, meta)}
     />

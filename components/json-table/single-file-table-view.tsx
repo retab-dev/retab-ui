@@ -15,6 +15,7 @@ import {
   recordJsonTableReactCommit,
   recordJsonTableRender,
 } from "@/components/json-table/json-table-profiler"
+import { isRegisteredJsonTableScalarDocumentData } from "@/components/json-table/json-table-primitive-patch-store"
 import {
   projectDocumentRows,
   type ProjectedCell,
@@ -112,6 +113,33 @@ function canReuseProjectedCell(
 function sameArrayIndexes(previous: number[], next: number[]) {
   if (previous.length !== next.length) return false
   return previous.every((value, index) => value === next[index])
+}
+
+function areSingleFileTableViewPropsEqual(
+  previousProps: SingleFileTableViewProps,
+  nextProps: SingleFileTableViewProps
+) {
+  const stableNonDocumentProps =
+    previousProps.schema === nextProps.schema &&
+    previousProps.setSchema === nextProps.setSchema &&
+    previousProps.columnWidth === nextProps.columnWidth &&
+    previousProps.onUpdateDocument === nextProps.onUpdateDocument &&
+    previousProps.jsonEditMode === nextProps.jsonEditMode &&
+    previousProps.schemaEditMode === nextProps.schemaEditMode &&
+    previousProps.onCellHoverStart === nextProps.onCellHoverStart &&
+    previousProps.onCellHoverEnd === nextProps.onCellHoverEnd &&
+    previousProps.overscan === nextProps.overscan &&
+    previousProps.jumpOverscan === nextProps.jumpOverscan
+
+  if (!stableNonDocumentProps) return false
+
+  if (previousProps.document === nextProps.document) return true
+
+  return (
+    previousProps.document.id === nextProps.document.id &&
+    previousProps.document.data !== nextProps.document.data &&
+    isRegisteredJsonTableScalarDocumentData(nextProps.document.data)
+  )
 }
 
 export const SingleFileTableView = React.memo<SingleFileTableViewProps>(
@@ -245,6 +273,7 @@ export const SingleFileTableView = React.memo<SingleFileTableViewProps>(
         </div>
       </div>
     )
-  }
+  },
+  areSingleFileTableViewPropsEqual
 )
 SingleFileTableView.displayName = "SingleFileTableView"

@@ -48,6 +48,7 @@ export type DataCellPickerControlProps = DataCellPickerNativeProps & {
   kind: "date" | "time" | "date-time"
   value?: string | null
   disabled?: boolean
+  name?: string
   placeholder?: string
   dateTimeZone?: DataCellDateTimeZone
   showPickerIcon?: boolean
@@ -96,6 +97,7 @@ export function DataCellPickerControl({
   kind,
   value,
   disabled = false,
+  name,
   placeholder,
   dateTimeZone = "local",
   showPickerIcon = true,
@@ -127,9 +129,8 @@ export function DataCellPickerControl({
   const openingContext = useDataCellOpeningContext(activationSource, {
     enabled: Boolean(autoFocus),
   })
-  const [popupStyle, setPopupStyle] = React.useState<React.CSSProperties | null>(
-    null
-  )
+  const [popupStyle, setPopupStyle] =
+    React.useState<React.CSSProperties | null>(null)
   const popupId = React.useId()
   const open = controlledOpen ?? uncontrolledOpen
   const pickerValue = draftValue ?? uncontrolledDraftValue
@@ -248,11 +249,11 @@ export function DataCellPickerControl({
     onDraftValueChange?.(nextValue, meta)
     if (commit) {
       const commitValue = parseDataCellInputValue({
-          kind,
-          value: nextValue,
-          dateTimeZone,
-          previousValue: value as DataCellValue,
-        }) as string | null
+        kind,
+        value: nextValue,
+        dateTimeZone,
+        previousValue: value as DataCellValue,
+      }) as string | null
       onCommit?.(commitValue, meta)
     }
   }
@@ -302,6 +303,7 @@ export function DataCellPickerControl({
         ref={triggerRef}
         {...props}
         type="button"
+        name={name}
         data-slot="data-cell"
         data-kind={kind}
         data-mode="edit"

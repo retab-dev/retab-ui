@@ -16,6 +16,12 @@ const outputPath =
 
 const enumFieldPath = "transactions.0.transaction_type"
 const dateFieldPath = "transactions.0.date"
+const textFieldPath = "transactions.0.description"
+const numberFieldPath = "transactions.0.amount.amount"
+const maxDateOpenNodeDelta = Number(process.env.DATE_OPEN_NODE_BUDGET ?? 240)
+const maxDateOpenLayoutDurationMs = Number(
+  process.env.DATE_OPEN_LAYOUT_MS_BUDGET ?? 80
+)
 
 function profileTargets() {
   return [
@@ -252,7 +258,7 @@ async function loadEditableProfile(send) {
   const wait = await waitInPage(
     send,
     `document.querySelectorAll('[data-json-table-editable-cell="true"]').length > 0`,
-    5_000
+    15_000
   )
   if (!wait.ok) throw new Error("Editable JSON table did not mount")
   console.error("Editable table mounted")
@@ -263,6 +269,19 @@ async function resetProfiler(send) {
   await evaluate(
     send,
     `(() => {
+      if (!window.__jsonTableProfiler) {
+        window.__jsonTableProfiler = {
+          enabled: true,
+          events: [],
+          renders: {
+            total: 0,
+            byComponent: {},
+            byInstance: {},
+            changedProps: {}
+          },
+          snapshots: {}
+        };
+      }
       window.__jsonTableProfiler.events = [];
       window.__jsonTableProfiler.renders = {
         total: 0,
@@ -350,13 +369,108 @@ async function selectCommitOptionPoint(send) {
   )
 }
 
+async function calendarNextMonthPoint(send) {
+  return evaluate(
+    send,
+    `(() => {
+      const button = document.querySelector('[data-slot="calendar"] .rdp-button_next');
+      if (!(button instanceof HTMLElement)) throw new Error("No next-month button found");
+      const rect = button.getBoundingClientRect();
+      return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+    })()`
+  )
+}
+
+async function calendarCommitDatePoint(send) {
+  return evaluate(
+    send,
+    `(() => {
+      const buttons = [...document.querySelectorAll('[data-slot="calendar"] button')];
+      const button = buttons.find((button) =>
+        button.textContent?.trim() &&
+        !button.disabled &&
+        button.getAttribute("aria-selected") !== "true" &&
+        !button.className.includes("outside")
+      );
+      if (!(button instanceof HTMLElement)) throw new Error("No date commit button found");
+      const rect = button.getBoundingClientRect();
+      return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+    })()`
+  )
+}
+
+async function setFocusedInputValue(send, value) {
+  await evaluate(
+    send,
+    `(() => {
+      const input = document.activeElement;
+      if (!(input instanceof HTMLInputElement)) {
+        throw new Error("No focused input");
+      }
+      const valueSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set;
+      valueSetter.call(input, ${JSON.stringify(value)});
+      input.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText", data: ${JSON.stringify(value)} }));
+    })()`
+  )
+}
+
+async function focusEditableCell(send, fieldPath) {
+  await evaluate(
+    send,
+    `(() => {
+      const cell = document.querySelector('[data-field-path="${fieldPath}"]');
+      if (!(cell instanceof HTMLElement)) throw new Error("Missing cell: ${fieldPath}");
+      cell.focus({ preventScroll: true });
+    })()`
+  )
+}
+
+async function pressEnter(send) {
+  await send("Input.dispatchKeyEvent", {
+    type: "keyDown",
+    key: "Enter",
+    code: "Enter",
+    windowsVirtualKeyCode: 13,
+  })
+  await send("Input.dispatchKeyEvent", {
+    type: "keyUp",
+    key: "Enter",
+    code: "Enter",
+    windowsVirtualKeyCode: 13,
+  })
+}
+
+async function pressSpace(send) {
+  await send("Input.dispatchKeyEvent", {
+    type: "keyDown",
+    key: " ",
+    code: "Space",
+    windowsVirtualKeyCode: 32,
+  })
+  await send("Input.dispatchKeyEvent", {
+    type: "keyUp",
+    key: " ",
+    code: "Space",
+    windowsVirtualKeyCode: 32,
+  })
+}
+
 async function summarizeScenario(send, beforeMetrics, startedAt, wait) {
   const afterMetrics = performanceMetrics(await send("Performance.getMetrics"))
   const summary = await evaluate(
     send,
     `(() => {
-      const profiler = window.__jsonTableProfiler;
+      const profiler = window.__jsonTableProfiler ?? {
+        events: [],
+        renders: {
+          total: 0,
+          byComponent: {},
+          byInstance: {},
+          changedProps: {}
+        }
+      };
       const reactCommits = profiler.events.filter((event) => event.type === "react-commit");
+      const marks = profiler.events.filter((event) => event.type === "mark");
       const popup = document.querySelector('[data-slot="data-cell-select-popup"]');
       const pickerPopup = document.querySelector('[data-slot="data-cell-picker-popup"]');
       const baseUiSelect = document.querySelector('[data-slot="select-popup"], [data-slot="select-positioner"], [data-slot="select-list"]');
@@ -384,7 +498,12 @@ async function summarizeScenario(send, beforeMetrics, startedAt, wait) {
             count: reactCommits.length,
             totalActualDurationMs: reactCommits.reduce((total, event) => total + (event.detail?.actualDuration || 0), 0),
             maxActualDurationMs: Math.max(0, ...reactCommits.map((event) => event.detail?.actualDuration || 0))
-          }
+          },
+          markCounts: Object.fromEntries(
+            [...new Set(marks.map((event) => event.name))]
+              .sort()
+              .map((name) => [name, marks.filter((event) => event.name === name).length])
+          )
         }
       };
     })()`
@@ -435,15 +554,10 @@ async function runProfileTarget(chromeEndpoint, targetConfig) {
 
     const scenarios = []
     const enumPoint = await editableCellPoint(send, enumFieldPath)
-    const checkboxPoint = await firstVisibleCellPoint(
-      send,
-      '[data-field-path="transactions.0.is_reconciled"] [data-kind="boolean"][data-mode="display"]'
-    )
     const datePoint = await firstVisibleCellPoint(
       send,
       '[data-kind="date"][data-mode="display"]'
     )
-    if (!checkboxPoint) throw new Error("No checkbox cell found")
     if (!datePoint) throw new Error("No date cell found")
 
     scenarios.push(
@@ -503,11 +617,70 @@ async function runProfileTarget(chromeEndpoint, targetConfig) {
     scenarios.push(
       await runScenario(
         send,
+        "open-and-commit-text",
+        async () => {
+          const point = await editableCellPoint(send, textFieldPath)
+          await clickPoint(send, point)
+          await waitInPage(
+            send,
+            `document.activeElement instanceof HTMLInputElement && document.activeElement.getAttribute("data-kind") === "text"`,
+            3_000
+          )
+          await setFocusedInputValue(send, "profile text commit")
+          await pressEnter(send)
+        },
+        `document.querySelectorAll('[data-json-table-editable-cell="true"][data-active="true"]').length === 0`
+      )
+    )
+
+    scenarios.push(
+      await runScenario(
+        send,
+        "open-and-commit-number",
+        async () => {
+          const point = await editableCellPoint(send, numberFieldPath)
+          await clickPoint(send, point)
+          await waitInPage(
+            send,
+            `document.activeElement instanceof HTMLInputElement && document.activeElement.getAttribute("data-kind") === "number"`,
+            3_000
+          )
+          await setFocusedInputValue(send, "999.5")
+          await pressEnter(send)
+        },
+        `document.querySelectorAll('[data-json-table-editable-cell="true"][data-active="true"]').length === 0`
+      )
+    )
+
+    scenarios.push(
+      await runScenario(
+        send,
+        "open-and-commit-date",
+        async () => {
+          const point = await editableCellPoint(send, dateFieldPath)
+          await clickPoint(send, point)
+          await waitInPage(
+            send,
+            `Boolean(document.querySelector('[data-slot="calendar"]'))`,
+            3_000
+          )
+          const dateCommitPoint = await calendarCommitDatePoint(send)
+          await resetRectProbeCounts(send)
+          await clickPoint(send, dateCommitPoint)
+        },
+        `!document.querySelector('[data-slot="data-cell-picker-popup"]')`
+      )
+    )
+
+    scenarios.push(
+      await runScenario(
+        send,
         "toggle-checkbox",
         async () => {
-          await clickPoint(send, checkboxPoint)
+          await focusEditableCell(send, "transactions.0.is_reconciled")
+          await pressSpace(send)
         },
-        `document.querySelector('[data-field-path="transactions.0.is_reconciled"] [data-kind="boolean"][data-mode="display"]')`
+        `(window.__jsonTableProfiler?.events ?? []).some((event) => event.type === "mark" && event.name === "document-patch-start")`
       )
     )
 
@@ -517,6 +690,18 @@ async function runProfileTarget(chromeEndpoint, targetConfig) {
         "open-date-picker",
         async () => {
           await clickPoint(send, datePoint)
+        },
+        `Boolean(document.querySelector('[data-slot="calendar"]'))`
+      )
+    )
+
+    const nextMonthPoint = await calendarNextMonthPoint(send)
+    scenarios.push(
+      await runScenario(
+        send,
+        "navigate-date-month",
+        async () => {
+          await clickPoint(send, nextMonthPoint)
         },
         `Boolean(document.querySelector('[data-slot="calendar"]'))`
       )
@@ -570,6 +755,25 @@ function assertNoTableOrRowRender(scenario) {
   )
 }
 
+function assertSingleDocumentPatch(profileLabel, scenario) {
+  const startCount = scenario.profiler.markCounts["document-patch-start"] ?? 0
+  const endCount = scenario.profiler.markCounts["document-patch-end"] ?? 0
+  assertScenario(
+    startCount === 1 && endCount === 1,
+    `${profileLabel}${scenario.name}: expected exactly one document patch, got start=${startCount}, end=${endCount}`
+  )
+}
+
+function assertScalarCommitScenario(profileLabel, scenario, fieldPath) {
+  assertScenario(
+    scenario?.wait.ok,
+    `${profileLabel}${scenario?.name ?? fieldPath} did not complete`
+  )
+  assertOnlyTargetEditableCellRendered(scenario, fieldPath)
+  assertNoTableOrRowRender(scenario)
+  assertSingleDocumentPatch(profileLabel, scenario)
+}
+
 function assertReport(report) {
   const profiles = report.profiles ?? [
     {
@@ -593,11 +797,23 @@ function assertProfile(profile) {
   const commit = profile.scenarios.find(
     (scenario) => scenario.name === "open-and-commit-enum"
   )
+  const textCommit = profile.scenarios.find(
+    (scenario) => scenario.name === "open-and-commit-text"
+  )
+  const numberCommit = profile.scenarios.find(
+    (scenario) => scenario.name === "open-and-commit-number"
+  )
+  const dateCommit = profile.scenarios.find(
+    (scenario) => scenario.name === "open-and-commit-date"
+  )
   const checkbox = profile.scenarios.find(
     (scenario) => scenario.name === "toggle-checkbox"
   )
   const date = profile.scenarios.find(
     (scenario) => scenario.name === "open-date-picker"
+  )
+  const dateMonth = profile.scenarios.find(
+    (scenario) => scenario.name === "navigate-date-month"
   )
   const label = `${profile.name}: `
 
@@ -629,9 +845,17 @@ function assertProfile(profile) {
     `${label}open-and-commit-enum expected 0 commit rect reads, got ${commit.rectProbe.count}`
   )
   assertOnlyTargetEditableCellRendered(commit, enumFieldPath)
+  assertNoTableOrRowRender(commit)
+  assertSingleDocumentPatch(label, commit)
+
+  assertScalarCommitScenario(label, textCommit, textFieldPath)
+  assertScalarCommitScenario(label, numberCommit, numberFieldPath)
+  assertScalarCommitScenario(label, dateCommit, dateFieldPath)
 
   assertScenario(checkbox?.wait.ok, `${label}toggle-checkbox did not complete`)
   assertOnlyTargetEditableCellRendered(checkbox, "transactions.0.is_reconciled")
+  assertNoTableOrRowRender(checkbox)
+  assertSingleDocumentPatch(label, checkbox)
 
   assertScenario(date?.wait.ok, `${label}open-date-picker did not complete`)
   assertScenario(date.pickerPopupMounted, `${label}open-date-picker did not mount picker popup`)
@@ -648,6 +872,36 @@ function assertProfile(profile) {
   )
   assertOnlyTargetEditableCellRendered(date, dateFieldPath)
   assertNoTableOrRowRender(date)
+  assertScenario(
+    date.metricsDelta.Nodes <= maxDateOpenNodeDelta,
+    `${label}open-date-picker expected <= ${maxDateOpenNodeDelta} new nodes, got ${date.metricsDelta.Nodes}`
+  )
+  assertScenario(
+    date.metricsDelta.LayoutDurationMs <= maxDateOpenLayoutDurationMs,
+    `${label}open-date-picker expected <= ${maxDateOpenLayoutDurationMs}ms layout, got ${date.metricsDelta.LayoutDurationMs.toFixed(
+      2
+    )}ms`
+  )
+
+  assertScenario(
+    dateMonth?.wait.ok,
+    `${label}navigate-date-month did not complete`
+  )
+  assertScenario(
+    dateMonth.calendarMounted,
+    `${label}navigate-date-month did not keep calendar mounted`
+  )
+  assertScenario(
+    dateMonth.rectProbe.count === 0,
+    `${label}navigate-date-month expected 0 rect reads, got ${dateMonth.rectProbe.count}`
+  )
+  assertScenario(
+    editableCellRenderNames(dateMonth).length === 0,
+    `${label}navigate-date-month rendered editable cells: ${editableCellRenderNames(
+      dateMonth
+    ).join(", ")}`
+  )
+  assertNoTableOrRowRender(dateMonth)
 }
 
 async function main() {

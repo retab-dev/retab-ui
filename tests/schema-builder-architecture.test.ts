@@ -31,7 +31,10 @@ const deletedFiles = [
   "components/schema-editor/document-property-reorder.ts",
   "components/schema-editor/property-form/fields/object-property-order-focus.ts",
   "components/schema-editor/property-form/fields/object-property-rows.tsx",
-  "components/schema-editor/property-form/fields/property-type-menu-model.ts",
+  [
+    "components/schema-editor/property-form/fields/property-type",
+    "menu-model.ts",
+  ].join("-"),
 ]
 
 const executableFilesToCheck = [
@@ -86,6 +89,7 @@ const executableFilesToCheck = [
   "components/schema-editor/property-form/fields/property-object-template-type-field.tsx",
   "components/schema-editor/property-form/fields/object-properties-drag.ts",
   "components/schema-editor/property-form/fields/object-property-row-details.ts",
+  "components/schema-editor/property-form/fields/object-property-row-identity.ts",
   "components/schema-editor/primitives/schema-row-reorder-actions.tsx",
   "components/schema-editor/primitives/schema-row-drag.ts",
   "components/schema-editor/schema-type-menu-sections.tsx",
@@ -728,7 +732,7 @@ describe("schema builder architecture", () => {
       "schemaNode",
       "schemaContext",
       "onChange",
-      "createPropertyTypeMenu",
+      "createProperty" + "TypeMenu",
     ]) {
       expect(content.includes(forbidden), forbidden).toBe(false)
     }
@@ -945,7 +949,7 @@ describe("schema builder architecture", () => {
     expect(typeFieldContent.includes("schemaNode")).toBe(false)
     expect(typeFieldContent.includes("schemaContext")).toBe(false)
     expect(typeFieldContent.includes("onChange")).toBe(false)
-    expect(typeFieldContent.includes("createPropertyTypeMenu")).toBe(false)
+    expect(typeFieldContent.includes("createProperty" + "TypeMenu")).toBe(false)
     expect(typeFieldContent.includes("object-template")).toBe(false)
     expect(typeFieldContent.includes("ObjectTemplate")).toBe(false)
     expect(typeFieldContent.includes("trailingContent={field.trailingContent}"))
@@ -1062,6 +1066,40 @@ describe("schema builder architecture", () => {
     expect(modelContent.includes("disabled: !editable || !access.type")).toBe(
       false
     )
+  })
+
+  it("keeps object row identity in a named model helper", () => {
+    const modelContent = readFileSync(
+      join(
+        repoRoot,
+        "components/schema-editor/property-form/fields/object-properties-model.ts"
+      ),
+      "utf8"
+    )
+    const rowContent = readFileSync(
+      join(
+        repoRoot,
+        "components/schema-editor/property-form/fields/object-property-row.tsx"
+      ),
+      "utf8"
+    )
+    const identityContent = readFileSync(
+      join(
+        repoRoot,
+        "components/schema-editor/property-form/fields/object-property-row-identity.ts"
+      ),
+      "utf8"
+    )
+
+    expect(modelContent.includes("useObjectPropertyRowIdentity")).toBe(true)
+    expect(modelContent.includes("createRowIdsByName")).toBe(false)
+    expect(modelContent.includes("getPropertyNamesKey")).toBe(false)
+    expect(identityContent.includes("createRowIdsByName")).toBe(true)
+    expect(identityContent.includes("getPropertyNamesKey")).toBe(true)
+    expect(identityContent.includes("preserveAddRowForLocalPropertyNames")).toBe(
+      true
+    )
+    expect(rowContent.includes("useObjectPropertyRowIdentity")).toBe(false)
   })
 
   it("keeps object row recursive details behind one named helper", () => {

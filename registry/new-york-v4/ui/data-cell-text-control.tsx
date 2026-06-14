@@ -36,21 +36,23 @@ type DataCellInputNativeProps = Omit<
   | "value"
 >
 
-type DataCellInputControlBaseProps<Kind extends DataCellKind, Value> =
-  DataCellInputNativeProps & {
-    kind: Kind
-    value?: Value
-    disabled?: boolean
-    name?: string
-    placeholder?: string
-    className?: string
-    draftValue?: string
-    autoFocus?: boolean
-    activationSource?: DataCellActivationSource
-    onDraftValueChange?: (value: string, meta: DataCellValueMeta) => void
-    onEditingEnd?: () => void
-    onEditorHandleChange?: (handle: DataCellEditorHandle | null) => void
-  }
+type DataCellInputControlBaseProps<
+  Kind extends DataCellKind,
+  Value,
+> = DataCellInputNativeProps & {
+  kind: Kind
+  value?: Value
+  disabled?: boolean
+  name?: string
+  placeholder?: string
+  className?: string
+  draftValue?: string
+  autoFocus?: boolean
+  activationSource?: DataCellActivationSource
+  onDraftValueChange?: (value: string, meta: DataCellValueMeta) => void
+  onEditingEnd?: () => void
+  onEditorHandleChange?: (handle: DataCellEditorHandle | null) => void
+}
 
 export type DataCellTextControlProps = DataCellInputControlBaseProps<
   "text",
@@ -227,11 +229,11 @@ export function DataCellInputControl({
       if (onlyIfChanged && rawValue === initialInputValueRef.current) return
       if (markFinished) didFinishEditingRef.current = true
       const commitValue = parseDataCellInputValue({
-          kind,
-          value: rawValue,
-          dateTimeZone: "local",
-          previousValue: value,
-        }) as string | number | null
+        kind,
+        value: rawValue,
+        dateTimeZone: "local",
+        previousValue: value,
+      }) as string | number | null
       ;(
         onCommit as
           | ((value: string | number | null, meta: DataCellValueMeta) => void)
@@ -248,6 +250,11 @@ export function DataCellInputControl({
     },
     [kind, onCommit, onEditingEnd, value]
   )
+  const commitCurrentInputValueRef = React.useRef(commitCurrentInputValue)
+
+  React.useEffect(() => {
+    commitCurrentInputValueRef.current = commitCurrentInputValue
+  }, [commitCurrentInputValue])
 
   const cancelCurrentInputValue = React.useCallback(() => {
     if (didFinishEditingRef.current) return
@@ -265,13 +272,13 @@ export function DataCellInputControl({
 
   React.useEffect(
     () => () => {
-      commitCurrentInputValue(inputRef.current, {
+      commitCurrentInputValueRef.current(inputRef.current, {
         endEditing: false,
         markFinished: false,
         onlyIfChanged: true,
       })
     },
-    [commitCurrentInputValue]
+    []
   )
 
   const inputType = inputTypeForDataCell(kind)

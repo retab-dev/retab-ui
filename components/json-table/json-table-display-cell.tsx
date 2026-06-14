@@ -44,7 +44,7 @@ export function JsonTableDataCell({
   onKeyDown,
   onActiveChange,
   onEditorHandleChange,
-  onPickerOpenChange,
+  onOpenChange,
   value,
 }: {
   activationSource?: React.ComponentProps<typeof DataCell>["activationSource"]
@@ -58,7 +58,7 @@ export function JsonTableDataCell({
   onKeyDown?: React.KeyboardEventHandler<HTMLElement>
   onActiveChange?: (active: boolean) => void
   onEditorHandleChange?: (handle: DataCellEditorHandle | null) => void
-  onPickerOpenChange?: (open: boolean) => void
+  onOpenChange?: (open: boolean) => void
   value: unknown
 }) {
   const model = React.useMemo(
@@ -74,7 +74,7 @@ export function JsonTableDataCell({
     onEditingEnd,
     onActiveChange,
     onEditorHandleChange,
-    onPickerOpenChange,
+    onOpenChange,
     onKeyDown,
   }
 
@@ -127,7 +127,7 @@ type JsonTableDataCellSharedProps = {
   onEditingEnd?: () => void
   onEditorHandleChange?: (handle: DataCellEditorHandle | null) => void
   onKeyDown?: React.KeyboardEventHandler<HTMLElement>
-  onPickerOpenChange?: (open: boolean) => void
+  onOpenChange?: (open: boolean) => void
 }
 
 type JsonTableDataCellCommitHandler = (

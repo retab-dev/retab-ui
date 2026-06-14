@@ -34,19 +34,18 @@ import type {
 import { jsonTableCellId } from "@/components/json-table/json-table-edit-session"
 import { createJsonTablePrimitiveActiveCellStore } from "@/components/json-table/json-table-primitive-active-cell-store"
 import {
+  createJsonTablePrimitivePatchStore,
+  registerJsonTableScalarDocumentData,
+} from "@/components/json-table/json-table-primitive-patch-store"
+import {
   markJsonTableProfile,
   recordJsonTableRender,
 } from "@/components/json-table/json-table-profiler"
+import { getValueAtPath } from "@/components/json-table/lib/document-paths"
 import { setValueAtMaterializedPath } from "@/components/json-table/lib/document-patches"
 import type { ProjectedRow } from "@/components/json-table/lib/document-projection"
 import { buildHeaderGridRows } from "@/components/json-table/lib/header-nodes"
 import type { JsonTableHeaderNode } from "@/components/json-table/lib/header-nodes"
-import {
-  indexProjectedCells,
-  projectedRowWithPendingPrimitivePatch,
-  type PendingPrimitivePatch,
-  type ProjectedCellIndexEntry,
-} from "@/components/json-table/lib/projected-cell-patch"
 import type { TableDocument } from "@/components/json-table/lib/projects-types"
 import {
   useReadOnlyJsonRowPatcher,
@@ -205,13 +204,11 @@ export const SingleFileVirtualizedTable =
       const primitiveActiveCellStoreRef = useRef(
         createJsonTablePrimitiveActiveCellStore()
       )
+      const primitivePatchStoreRef = useRef(createJsonTablePrimitivePatchStore())
       const primitiveEditorHandleRef = useRef<DataCellEditorHandle | null>(null)
       const structuredEditSessionIdRef = useRef(0)
       const documentDataRef = useRef(document.data)
-      const pendingDocumentPatchRef = useRef<PendingPrimitivePatch | null>(null)
       const onUpdateDocumentRef = useRef(onUpdateDocument)
-      const [pendingDocumentPatch, setPendingDocumentPatch] =
-        React.useState<PendingPrimitivePatch | null>(null)
 
       React.useLayoutEffect(() => {
         onUpdateDocumentRef.current = onUpdateDocument
@@ -219,10 +216,7 @@ export const SingleFileVirtualizedTable =
 
       React.useEffect(() => {
         documentDataRef.current = document.data
-        if (pendingDocumentPatchRef.current?.data === document.data) {
-          pendingDocumentPatchRef.current = null
-          setPendingDocumentPatch(null)
-        }
+        primitivePatchStoreRef.current.reconcileDocumentData(document.data)
       }, [document.data])
 
       const totalWidth = fixedGridColumnWidths(visibleColumns).reduce(
@@ -232,25 +226,6 @@ export const SingleFileVirtualizedTable =
 
       const rowHeightPx = getRowHeightPx(rowHeight)
       const isJsonEditable = jsonEditMode === "editable"
-      const projectedCellIndex = React.useMemo(
-        () => indexProjectedCells(projectedRows),
-        [projectedRows]
-      )
-      const pendingCellIndexEntriesByRow = React.useMemo(() => {
-        const entriesByRow = new Map<number, ProjectedCellIndexEntry[]>()
-        if (!pendingDocumentPatch) return entriesByRow
-
-        for (const fieldPath of pendingDocumentPatch.fieldPaths) {
-          const indexEntry = projectedCellIndex.get(fieldPath)
-          if (!indexEntry) continue
-
-          const rowEntries = entriesByRow.get(indexEntry.rowIndex)
-          if (rowEntries) rowEntries.push(indexEntry)
-          else entriesByRow.set(indexEntry.rowIndex, [indexEntry])
-        }
-
-        return entriesByRow
-      }, [pendingDocumentPatch, projectedCellIndex])
       const scrollRef = useRef<HTMLDivElement>(null)
       const headerScrollRef = useRef<HTMLDivElement>(null)
       const rowWindowRef = useRef<HTMLTableSectionElement>(null)
@@ -327,23 +302,20 @@ export const SingleFileVirtualizedTable =
           markJsonTableProfile("document-patch-start", {
             fieldPath: materializedFieldPath,
           })
-          const baseData =
-            pendingDocumentPatchRef.current?.data ?? documentDataRef.current
+          const baseData = documentDataRef.current
+          const previousValue = getValueAtPath(baseData, materializedFieldPath)
           const nextData = setValueAtMaterializedPath(
             baseData,
             materializedFieldPath,
             value
           )
-          const fieldPaths = new Set(
-            pendingDocumentPatchRef.current?.fieldPaths
+          documentDataRef.current = nextData
+          primitivePatchStoreRef.current.setValue(
+            materializedFieldPath,
+            value,
+            previousValue
           )
-          fieldPaths.add(materializedFieldPath)
-          const nextPatch = {
-            data: nextData,
-            fieldPaths,
-          }
-          pendingDocumentPatchRef.current = nextPatch
-          setPendingDocumentPatch(nextPatch)
+          registerJsonTableScalarDocumentData(nextData)
           updateDocument({ data: nextData })
           markJsonTableProfile("document-patch-end", {
             fieldPath: materializedFieldPath,
@@ -451,26 +423,18 @@ export const SingleFileVirtualizedTable =
                     ? `row-${rowIdx}`
                     : `slot-${slotIndex}`
                   const projectedRow = projectedRows[rowIdx]
-                  const effectiveProjectedRow =
-                    pendingDocumentPatch && projectedRow
-                      ? projectedRowWithPendingPrimitivePatch({
-                          projectedRow,
-                          patch: pendingDocumentPatch,
-                          indexEntries:
-                            pendingCellIndexEntriesByRow.get(rowIdx) ?? [],
-                        })
-                      : projectedRow
                   return (
                     <SingleFileFormRow
                       key={rowKey}
                       rowIdx={rowIdx}
                       rowTopPx={virtualRow.start}
                       document={document}
-                      projectedRow={effectiveProjectedRow}
+                      projectedRow={projectedRow}
                       schema={schema}
                       visibleColumns={visibleColumns}
                       rowHeightPx={rowHeightPx}
                       primitiveActiveCellStore={primitiveActiveCellStoreRef.current}
+                      primitivePatchStore={primitivePatchStoreRef.current}
                       setPrimitiveActiveCell={setPrimitiveActiveCell}
                       primitiveEditorHandleRef={primitiveEditorHandleRef}
                       structuredEditSession={structuredEditSession}

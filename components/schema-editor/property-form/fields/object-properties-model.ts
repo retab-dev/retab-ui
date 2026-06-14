@@ -23,6 +23,7 @@ import type {
 import { validatePropertyFormName } from "@/components/schema-editor/property-form/validation"
 
 import { createObjectPropertyRowDetails } from "./object-property-row-details"
+import { useObjectPropertyRowIdentity } from "./object-property-row-identity"
 import { createPropertyTypeFieldWithObjectTemplates } from "./property-object-template-type-field"
 
 interface UseObjectPropertiesModelInput {
@@ -98,12 +99,14 @@ export function useObjectPropertiesModel({
 }: UseObjectPropertiesModelInput): ObjectPropertiesModel {
   const [newPropertyName, setNewPropertyName] = React.useState("")
   const propertyNames = listObjectPropertyNames(schemaNode)
-  const propertyNamesKey = getPropertyNamesKey(propertyNames)
-  const localPropertyNamesKeyRef = React.useRef<string | null>(null)
-  const [rowIdsByName, setRowIdsByName] = React.useState(() =>
-    createRowIdsByName(propertyNames)
-  )
-  const nextRowIdRef = React.useRef(propertyNames.length)
+  const resetNewPropertyName = React.useCallback(() => {
+    setNewPropertyName("")
+  }, [])
+  const rowIdentity = useObjectPropertyRowIdentity({
+    onExternalPropertyNamesChange: resetNewPropertyName,
+    propertyNames,
+    resetKey: schemaContext.resetKey ?? schemaContext.originalName,
+  })
   const trimmedNewPropertyName = newPropertyName.trim()
   const newPropertyNameError = trimmedNewPropertyName
     ? validatePropertyFormName({
@@ -112,44 +115,6 @@ export function useObjectPropertiesModel({
         originalName: "",
       })
     : null
-
-  React.useEffect(() => {
-    if (localPropertyNamesKeyRef.current === propertyNamesKey) {
-      localPropertyNamesKeyRef.current = null
-      return
-    }
-    setNewPropertyName("")
-  }, [propertyNamesKey, schemaContext.originalName])
-
-  const preserveNewPropertyNameForLocalProperties = (
-    nextPropertyNames: string[]
-  ) => {
-    localPropertyNamesKeyRef.current = getPropertyNamesKey(nextPropertyNames)
-  }
-
-  const createRowId = () => {
-    const rowId = `draft-property-${nextRowIdRef.current}`
-    nextRowIdRef.current += 1
-    return rowId
-  }
-
-  const renameRowId = (oldName: string, name: string) => {
-    setRowIdsByName((current) => {
-      const rowId = current[oldName] ?? createRowId()
-      const next = { ...current }
-      delete next[oldName]
-      setRecordValue(next, name, rowId)
-      return next
-    })
-  }
-
-  const removeRowId = (name: string) => {
-    setRowIdsByName((current) => {
-      const next = { ...current }
-      delete next[name]
-      return next
-    })
-  }
 
   const replacePropertySchemaNode = (
     name: string,
@@ -169,12 +134,12 @@ export function useObjectPropertiesModel({
       const propertySchema = schemaNode.properties?.[name]
       if (!isSchemaNode(propertySchema)) return []
 
-      const id = rowIdsByName[name] ?? `external-property-${name}`
+      const id = rowIdentity.getRowId(name)
       const replaceSchemaNode = (nextSchemaNode: ExtendedJSONSchema7) => {
         replacePropertySchemaNode(name, nextSchemaNode)
       }
       const move = (targetIndex: number) => {
-        preserveNewPropertyNameForLocalProperties(
+        rowIdentity.preserveAddRowForLocalPropertyNames(
           moveOrderedItem({
             items: propertyNames,
             sourceIndex: index,
@@ -228,12 +193,12 @@ export function useObjectPropertiesModel({
                 originalName: name,
               }),
             onCommit: (nextName: string) => {
-              preserveNewPropertyNameForLocalProperties(
+              rowIdentity.preserveAddRowForLocalPropertyNames(
                 propertyNames.map((propertyName) =>
                   propertyName === name ? nextName : propertyName
                 )
               )
-              renameRowId(name, nextName)
+              rowIdentity.renameRowId(name, nextName)
               onChange(
                 renameObjectProperty({
                   schemaNode,
@@ -278,10 +243,10 @@ export function useObjectPropertiesModel({
           deleteAction: {
             label: `Remove field ${name}`,
             onDelete: () => {
-              preserveNewPropertyNameForLocalProperties(
+              rowIdentity.preserveAddRowForLocalPropertyNames(
                 propertyNames.filter((propertyName) => propertyName !== name)
               )
-              removeRowId(name)
+              rowIdentity.removeRowId(name)
               onChange(removeObjectProperty({ schemaNode, propertyName: name }))
             },
           },
@@ -296,15 +261,11 @@ export function useObjectPropertiesModel({
     onChange: setNewPropertyName,
     onSubmit: () => {
       if (!trimmedNewPropertyName || newPropertyNameError) return
-      preserveNewPropertyNameForLocalProperties([
+      rowIdentity.preserveAddRowForLocalPropertyNames([
         ...propertyNames,
         trimmedNewPropertyName,
       ])
-      setRowIdsByName((current) => {
-        const next = { ...current }
-        setRecordValue(next, trimmedNewPropertyName, createRowId())
-        return next
-      })
+      rowIdentity.addRowId(trimmedNewPropertyName)
       replacePropertySchemaNode(
         trimmedNewPropertyName,
         createObjectPropertySchema(trimmedNewPropertyName)
@@ -318,25 +279,4 @@ export function useObjectPropertiesModel({
     editable,
     rows,
   }
-}
-
-function getPropertyNamesKey(propertyNames: string[]) {
-  return propertyNames.join("\0")
-}
-
-function createRowIdsByName(propertyNames: string[]) {
-  const rowIdsByName: Record<string, string> = {}
-  propertyNames.forEach((propertyName, index) => {
-    setRecordValue(rowIdsByName, propertyName, `draft-property-${index}`)
-  })
-  return rowIdsByName
-}
-
-function setRecordValue<T>(record: Record<string, T>, key: string, value: T) {
-  Object.defineProperty(record, key, {
-    value,
-    enumerable: true,
-    configurable: true,
-    writable: true,
-  })
 }

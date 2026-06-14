@@ -276,6 +276,17 @@ export function JsonTableDemo({
     React.useState<JsonTableJsonEditMode>("readOnly")
   const [schemaEditMode, setSchemaEditMode] =
     React.useState<JsonTableSchemaEditMode>("descriptionOnly")
+  const updateDocument = React.useCallback(
+    async (patch: Record<string, unknown>) => {
+      if (patch.data && typeof patch.data === "object") {
+        setDocument((currentDocument) => ({
+          ...currentDocument,
+          data: patch.data as Record<string, unknown>,
+        }))
+      }
+    },
+    []
+  )
 
   return (
     <div className="not-prose flex flex-col gap-2">
@@ -302,14 +313,7 @@ export function JsonTableDemo({
           setSchema={setSchema}
           jsonEditMode={jsonEditMode}
           schemaEditMode={schemaEditMode}
-          onUpdateDocument={async (patch) => {
-            if (patch.data && typeof patch.data === "object") {
-              setDocument((currentDocument) => ({
-                ...currentDocument,
-                data: patch.data as Record<string, unknown>,
-              }))
-            }
-          }}
+          onUpdateDocument={updateDocument}
         />
       </div>
     </div>

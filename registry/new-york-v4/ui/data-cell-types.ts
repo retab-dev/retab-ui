@@ -84,9 +84,9 @@ export type DataCellProps =
       selectOptions: DataCellSelectOption[]
       onCommit?: (value: string | null, meta: DataCellValueMeta) => void
     })
-  | (DataCellBaseProps<
-      "text" | "date" | "time" | "date-time",
-      string | null
-    > & {
+  | (DataCellBaseProps<"text", string | null> & {
+      onCommit?: (value: string | null, meta: DataCellValueMeta) => void
+    })
+  | (DataCellBaseProps<"date" | "time" | "date-time", string | null> & {
       onCommit?: (value: string | null, meta: DataCellValueMeta) => void
     })

@@ -21,16 +21,30 @@ type DataCellSelectFormatValue = (
   meta: { kind: "select" }
 ) => React.ReactNode
 
-export type DataCellSelectControlProps = {
+type DataCellSelectNativeProps = Omit<
+  React.ButtonHTMLAttributes<HTMLButtonElement>,
+  | "children"
+  | "className"
+  | "defaultValue"
+  | "disabled"
+  | "name"
+  | "onChange"
+  | "type"
+  | "value"
+>
+
+export type DataCellSelectControlProps = DataCellSelectNativeProps & {
+  kind: "select"
   value?: string | null
   disabled?: boolean
+  name?: string
   placeholder?: string
   className?: string
   formatValue?: DataCellSelectFormatValue
   autoFocus?: boolean
   activationSource?: DataCellActivationSource
   open?: boolean
-  selectOptions: DataCellSelectOption[]
+  options: DataCellSelectOption[]
   onCommit?: (value: string | null, meta: DataCellValueMeta) => void
   onEditingEnd?: () => void
   onOpenChange?: (open: boolean) => void
@@ -38,19 +52,27 @@ export type DataCellSelectControlProps = {
 }
 
 export function DataCellSelectControl({
+  kind,
   value,
   disabled = false,
+  name,
   placeholder = "Select...",
   className,
   formatValue,
   autoFocus,
   activationSource,
   open,
-  selectOptions,
+  options,
   onCommit,
   onEditingEnd,
   onOpenChange,
   onEditorHandleChange,
+  onFocus,
+  onBlur,
+  onKeyDown,
+  onClick,
+  onDoubleClick,
+  ...props
 }: DataCellSelectControlProps) {
   const triggerRef = React.useRef<HTMLButtonElement>(null)
   const popupId = React.useId()
@@ -60,7 +82,7 @@ export function DataCellSelectControl({
     placeholder,
     formatValue,
     open,
-    selectOptions,
+    selectOptions: options,
     onCommit,
     onEditingEnd,
     onOpenChange,
@@ -90,10 +112,10 @@ export function DataCellSelectControl({
     },
     [release, select.commitValue]
   )
-  const onKeyDown = useDataCellSelectKeyboard({
+  const selectOnKeyDown = useDataCellSelectKeyboard({
     activeOption: select.activeOption,
     open: select.open,
-    options: selectOptions,
+    options,
     openEditor: openActivatedEditor,
     closeEditor: closeActivatedEditor,
     commitValue,
@@ -104,8 +126,10 @@ export function DataCellSelectControl({
   return (
     <>
       <button
+        {...props}
         ref={triggerRef}
         type="button"
+        name={name}
         role="combobox"
         aria-expanded={select.open}
         aria-controls={select.open ? popupId : undefined}
@@ -113,10 +137,12 @@ export function DataCellSelectControl({
         aria-activedescendant={select.activeDescendantId}
         disabled={disabled}
         data-slot="data-cell"
-        data-kind="select"
+        data-kind={kind}
         data-mode="edit"
         className={cn(dataCellPickerTriggerClass, className)}
+        onFocus={onFocus}
         onBlur={(event) => {
+          onBlur?.(event)
           const nextFocusTarget = event.relatedTarget
           const isPopupFocus =
             nextFocusTarget instanceof Node &&
@@ -126,6 +152,8 @@ export function DataCellSelectControl({
           }
         }}
         onClick={(event) => {
+          onClick?.(event)
+          if (event.defaultPrevented) return
           if (!select.open) {
             openActivatedEditor()
             return
@@ -134,7 +162,12 @@ export function DataCellSelectControl({
             closeActivatedEditor()
           }
         }}
-        onKeyDown={onKeyDown}
+        onDoubleClick={onDoubleClick}
+        onKeyDown={(event) => {
+          onKeyDown?.(event)
+          if (event.defaultPrevented) return
+          selectOnKeyDown(event)
+        }}
       >
         <span
           data-slot="select-value"
@@ -155,7 +188,7 @@ export function DataCellSelectControl({
           activeDescendantId={select.activeDescendantId}
           value={select.selectedValue}
           activeIndex={select.activeOptionIndex}
-          options={selectOptions}
+          options={options}
           onActiveIndexChange={select.setActiveOptionIndex}
           onCommit={commitValue}
           onCancel={closeActivatedEditor}
