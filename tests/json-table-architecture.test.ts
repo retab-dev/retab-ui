@@ -392,6 +392,25 @@ describe("json table and DataCell architecture", () => {
     }
   })
 
+  it("keeps JSON-table runtime importing DataCell only through the public barrel", () => {
+    const jsonTableRuntimeFiles = runtimeRoots.flatMap((root) =>
+      sourceFilesUnder(join(repoRoot, root)).filter(isJsonTableRuntimeFile)
+    )
+
+    for (const file of jsonTableRuntimeFiles) {
+      const content = readFileSync(join(repoRoot, file), "utf8")
+      const imports = importedModuleSpecifiers(content)
+
+      for (const importedModule of imports) {
+        expect(
+          importedModule.startsWith("@/registry/new-york-v4/ui/data-cell") ||
+            importedModule.includes("/registry/new-york-v4/ui/data-cell"),
+          `${file} imports DataCell registry internals through ${importedModule}; use "@/components/ui/data-cell"`
+        ).toBe(false)
+      }
+    }
+  })
+
   it("keeps EditableJsonTableCell as a pure router", () => {
     const file = "components/json-table/editable-json-table-cell.tsx"
     const content = readFileSync(join(repoRoot, file), "utf8")

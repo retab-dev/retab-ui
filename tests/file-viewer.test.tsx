@@ -7,7 +7,12 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import { inferCsvDialect } from "@/lib/csv"
 import { createViewerResource } from "@/lib/viewer-resource"
 import * as FileViewerModule from "@/registry/new-york-v4/ui/file-viewer"
-import { FileViewer } from "@/registry/new-york-v4/ui/file-viewer"
+import {
+  FileViewer,
+  FileViewerContent,
+  FileViewerHeader,
+  FileViewerProvider,
+} from "@/registry/new-york-v4/ui/file-viewer"
 import {
   descriptorResetKey,
   detectCategory,
@@ -379,8 +384,47 @@ describe("FileViewer detection helpers", () => {
     expect(csvAdapterSource).not.toMatch(/\bmimeType\?:\s*string\b/)
   })
 
-  it("keeps public runtime exports minimal", () => {
-    expect(Object.keys(FileViewerModule)).toEqual(["FileViewer"])
+  it("exports the easy API plus provider-backed named parts", () => {
+    expect(Object.keys(FileViewerModule).sort()).toEqual(
+      [
+        "FileViewer",
+        "FileViewerContent",
+        "FileViewerHeader",
+        "FileViewerProvider",
+        "useFileViewer",
+      ].sort()
+    )
+  })
+
+  it("requires FileViewerContent to be rendered inside FileViewerProvider", () => {
+    expect(() => render(<FileViewerContent />)).toThrow(
+      "useFileViewer must be used within FileViewerProvider."
+    )
+  })
+
+  it("routes composed FileViewerProvider content through the same resource viewer", async () => {
+    const { container } = render(
+      <FileViewerProvider
+        source={urlSource("/files/composed.pdf", "composed.pdf")}
+      >
+        <FileViewerHeader />
+        <FileViewerContent bare className="composed-file" />
+      </FileViewerProvider>
+    )
+
+    expect(container.querySelector('[data-slot="viewer-header"]')).toBeTruthy()
+    expect(screen.getByText("composed.pdf")).toBeTruthy()
+    expect(screen.getByText("pdf")).toBeTruthy()
+    expect(screen.getByRole("link", { name: "Download" })).toBeTruthy()
+    expect(await screen.findByText("Mock PDF viewer")).toBeTruthy()
+    expect(pdfRouteMock.props).toHaveLength(1)
+    expect(pdfRouteMock.props[0]).toMatchObject({
+      bare: true,
+      className: "composed-file",
+    })
+    expect(
+      (pdfRouteMock.props[0]?.resource as { fileName: string }).fileName
+    ).toBe("composed.pdf")
   })
 
   it("keeps abort subscriptions in the neutral async module", () => {

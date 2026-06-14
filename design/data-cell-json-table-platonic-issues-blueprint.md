@@ -1114,6 +1114,14 @@ JSON_TABLE_PROFILE_SCENARIOS=open-enum,open-date,switch-dirty-cell,open-far-enum
   `tmp/json-table-primitive-interactions-profile.json` was refreshed from the
   current warmed fresh profile, so saved budget screening covers the current
   implementation instead of an older high-style baseline.
+- `pnpm verify:json-table` passes after the budget tightening. The final fresh
+  measured large-profile style costs were:
+  - `open-enum`: `63.8ms`
+  - `open-date`: `76.6ms`
+  - `switch-dirty-cell`: `64.0ms`
+  - `open-far-enum`: `69.2ms`
+  - `open-far-date`: `61.9ms`
+  - `commit-far-text`: `62.2ms`
 - Architecture tests guard repeatability, mounted-surface attribution, and trace
   mode.
 
@@ -1476,6 +1484,12 @@ Implemented cut:
 - DataCell registry runtime files now have a semantic import-graph guard:
   - no import from `@/components/json-table`
   - no import back through the public `@/components/ui/data-cell` barrel
+- JSON-table runtime files now have the reverse semantic import-graph guard:
+  - no import from `@/registry/new-york-v4/ui/data-cell*`
+  - DataCell consumption must go through `@/components/ui/data-cell`
+- `JsonTableReadOnlyPrimitiveDisplayCell` now uses public `DataCellDisplay` for
+  boolean read-only rendering instead of importing the registry boolean
+  indicator/classes directly.
 - The old string guards remain for deleted compatibility vocabulary,
   controlled `flushSync` ownership, and hard-cutover names.
 

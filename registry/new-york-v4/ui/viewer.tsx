@@ -104,14 +104,8 @@ function resolveMeasuredSidebarMode({
     : "overlay"
 }
 
-function useIsoLayoutEffect(
-  effect: React.EffectCallback,
-  deps: React.DependencyList
-) {
-  const useEffect =
-    typeof window === "undefined" ? React.useEffect : React.useLayoutEffect
-  useEffect(effect, deps)
-}
+const useIsoLayoutEffect =
+  typeof window === "undefined" ? React.useEffect : React.useLayoutEffect
 
 function isAriaDisabled(value: unknown): boolean {
   return value === true || value === "true"

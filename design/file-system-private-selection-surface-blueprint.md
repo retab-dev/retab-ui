@@ -120,7 +120,7 @@ export function FileSystem({ className, ...providerProps }: FileSystemProps) {
   return (
     <FileSystemProvider {...providerProps}>
       <div data-slot="file-system">
-        <ViewerRoot data-viewer="file-system" bare defaultSidebarOpen>
+        <ViewerRoot data-viewer="file-system" bare defaultOpen>
           <ViewerHeader>
             <FileSystemHeader />
           </ViewerHeader>

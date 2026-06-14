@@ -6,23 +6,24 @@ import { useForm } from "react-hook-form"
 
 import type { Source } from "@/lib/document-source"
 import {
-  AnchoredDocumentProvider,
-  useAnchoredDocument,
-} from "@/components/ui/anchored-document-viewer"
-import { useAnchoredFieldLink } from "@/components/ui/field-anchor-link"
+  useSegmentedFieldLink,
+  type SegmentedFieldAnchorLink,
+} from "@/components/ui/field-anchor-link"
 import {
-  usePdfAnchoredOverlay,
-  usePdfAnchoredTarget,
-} from "@/components/ui/pdf-anchor-target"
-import {
+  PdfHighlight,
   PdfViewerPages,
   PdfViewerProvider,
+  type PageOverlayProps,
   type PdfDocumentSource,
   type PdfViewerHandle,
 } from "@/components/ui/pdf-viewer"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { sourceFieldsToEvidenceModel } from "@/components/ui/source-evidence"
+import {
+  SegmentedDocumentProvider,
+  useSegmentedDocumentViewport,
+} from "@/components/ui/segmented-document-provider"
 import { SourceIndicator } from "@/components/ui/source-indicator"
+import { sourceFieldsToSegmentedDocumentModel } from "@/components/ui/source-segmented-document-model"
 import {
   ViewerBody,
   ViewerHeader,
@@ -67,40 +68,40 @@ const PDF_SOURCE: PdfDocumentSource = {
   url: PDF_URL,
   fileName: "jane-doe-bank-statement-5-pages.pdf",
 }
-const EVIDENCE = sourceFieldsToEvidenceModel(FIELDS)
+const SOURCE_FIELDS = FIELDS.map((field) => ({
+  id: field.key,
+  label: field.label,
+  source: field.source,
+}))
+const SEGMENTED_DOCUMENT = sourceFieldsToSegmentedDocumentModel(SOURCE_FIELDS)
 
 /**
  * Extract viewer block — extracted fields beside the source document, linked by
  * their sources. Hovering or selecting a field highlights where its value came
  * from in the PDF and scrolls it into view; selection persists, hover previews.
  *
- * A thin composition over the anchored-document abstraction: `JsonForm` is the
- * emitter, the anchored provider owns hover/selection, and the PDF adapter is
- * the target.
+ * A thin composition over the segmented-document abstraction: `JsonForm` is the
+ * emitter, the segmented provider owns hover/selection and the PDF pages
+ * register their document handle for navigation.
  */
 export function ExtractViewerBlock() {
-  const viewerRef = React.useRef<PdfViewerHandle>(null)
-  const target = usePdfAnchoredTarget(viewerRef)
-
   return (
-    <AnchoredDocumentProvider
-      items={EVIDENCE.anchoredItems}
-      target={target}
-      initialItemId={FIELDS[0]?.key}
-    >
-      <ExtractViewerContent viewerRef={viewerRef} />
-    </AnchoredDocumentProvider>
+    <SegmentedDocumentProvider model={SEGMENTED_DOCUMENT}>
+      <ExtractViewerContent />
+    </SegmentedDocumentProvider>
   )
 }
 
-function ExtractViewerContent({
-  viewerRef,
-}: {
-  viewerRef: React.RefObject<PdfViewerHandle | null>
-}) {
-  const link = useAnchoredFieldLink()
-  const { activeItem } = useAnchoredDocument()
-  const renderPageOverlay = usePdfAnchoredOverlay({ mode: "active" })
+function ExtractViewerContent() {
+  const link = useSegmentedFieldLink({ initialPath: FIELDS[0]?.key })
+  const segmentedViewport = useSegmentedDocumentViewport()
+  const renderPageOverlay = useSegmentedPdfSourceOverlay(link)
+  const setPdfViewerHandle = React.useCallback(
+    (handle: PdfViewerHandle | null) => {
+      segmentedViewport.documentHandlers.setDocumentHandle(handle)
+    },
+    [segmentedViewport.documentHandlers]
+  )
   const form = useForm<Record<string, unknown>>({ defaultValues })
 
   return (
@@ -116,16 +117,19 @@ function ExtractViewerContent({
         <ViewerSurface className="relative">
           <PdfViewerProvider source={PDF_SOURCE}>
             <PdfViewerPages
-              ref={viewerRef}
+              ref={setPdfViewerHandle}
               bare
               className="h-full"
+              onScrollProgressChange={
+                segmentedViewport.documentHandlers.onScrollProgressChange
+              }
+              onVisiblePageChange={
+                segmentedViewport.documentHandlers.onCurrentPageChange
+              }
               renderPageOverlay={renderPageOverlay}
             />
           </PdfViewerProvider>
-          <SourceIndicator
-            path={link.activePath}
-            found={!!activeItem?.anchor}
-          />
+          <SourceIndicator path={link.activePath} found={!!link.activeAnchor} />
         </ViewerSurface>
         <ViewerSidebar
           aria-label="Extracted fields"
@@ -141,5 +145,26 @@ function ExtractViewerContent({
         </ViewerSidebar>
       </ViewerBody>
     </ViewerRoot>
+  )
+}
+
+function useSegmentedPdfSourceOverlay(link: SegmentedFieldAnchorLink) {
+  return React.useCallback(
+    ({ pageNumber }: PageOverlayProps) => {
+      const anchor = link.activeAnchor
+      if (!anchor?.bounds || anchor.pageNumber !== pageNumber) return null
+
+      return (
+        <PdfHighlight
+          area={{
+            left: anchor.bounds.x * 100,
+            top: anchor.bounds.y * 100,
+            width: anchor.bounds.width * 100,
+            height: anchor.bounds.height * 100,
+          }}
+        />
+      )
+    },
+    [link.activeAnchor]
   )
 }

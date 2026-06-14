@@ -1,5 +1,5 @@
 {
-  "measuredAt": "2026-06-14T15:12:58.519Z",
+  "measuredAt": "2026-06-14T15:28:52.174Z",
   "repeatCount": 1,
   "warmupCount": 1,
   "traceMode": false,
@@ -89,17 +89,17 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 32.69999999925494
+            "elapsedMs": 32.900000002235174
           },
-          "elapsedMs": 35.600000001490116,
+          "elapsedMs": 38.30000000074506,
           "metricsDelta": {
             "Nodes": 0,
             "LayoutCount": 0,
             "RecalcStyleCount": 3,
             "LayoutDurationMs": 0,
-            "RecalcStyleDurationMs": 0.5800000000000125,
-            "ScriptDurationMs": 0.5689999999999884,
-            "TaskDurationMs": 2.987000000000023
+            "RecalcStyleDurationMs": 0.556999999999988,
+            "ScriptDurationMs": 0.532999999999987,
+            "TaskDurationMs": 2.79099999999994
           },
           "browserCost": {
             "dominantCost": "style",
@@ -107,14 +107,14 @@
             "reactDurationMs": 0,
             "style": {
               "count": 3,
-              "durationMs": 0.5800000000000125
+              "durationMs": 0.556999999999988
             },
             "layout": {
               "count": 0,
               "durationMs": 0
             },
-            "scriptDurationMs": 0.5689999999999884,
-            "taskDurationMs": 2.987000000000023
+            "scriptDurationMs": 0.532999999999987,
+            "taskDurationMs": 2.79099999999994
           },
           "styleAttributionHint": "editable-body-surface"
         },
@@ -165,8 +165,8 @@
             },
             "reactCommits": {
               "count": 3,
-              "totalActualDurationMs": 2.7000000029802322,
-              "maxActualDurationMs": 1.2000000029802322
+              "totalActualDurationMs": 2.600000001490116,
+              "maxActualDurationMs": 1.199999999254942
             },
             "markCounts": {
               "pointer-enter-cell": 1
@@ -224,32 +224,32 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 33.5
+            "elapsedMs": 32.5
           },
-          "elapsedMs": 96.19999999925494,
+          "elapsedMs": 98.19999999925494,
           "metricsDelta": {
             "Nodes": 16,
             "LayoutCount": 2,
             "RecalcStyleCount": 13,
-            "LayoutDurationMs": 0.4089999999999998,
-            "RecalcStyleDurationMs": 50.33299999999997,
-            "ScriptDurationMs": 5.571000000000026,
-            "TaskDurationMs": 59.25899999999996
+            "LayoutDurationMs": 0.4169999999999989,
+            "RecalcStyleDurationMs": 50.809000000000026,
+            "ScriptDurationMs": 5.429000000000002,
+            "TaskDurationMs": 59.57300000000009
           },
           "browserCost": {
             "dominantCost": "style",
             "domNodeDelta": 16,
-            "reactDurationMs": 2.7000000029802322,
+            "reactDurationMs": 2.600000001490116,
             "style": {
               "count": 13,
-              "durationMs": 50.33299999999997
+              "durationMs": 50.809000000000026
             },
             "layout": {
               "count": 2,
-              "durationMs": 0.4089999999999998
+              "durationMs": 0.4169999999999989
             },
-            "scriptDurationMs": 5.571000000000026,
-            "taskDurationMs": 59.25899999999996
+            "scriptDurationMs": 5.429000000000002,
+            "taskDurationMs": 59.57300000000009
           },
           "styleAttributionHint": "popup-mount"
         },
@@ -373,8 +373,8 @@
             },
             "reactCommits": {
               "count": 6,
-              "totalActualDurationMs": 11.399999998509884,
-              "maxActualDurationMs": 9.699999999254942
+              "totalActualDurationMs": 12.49999999627471,
+              "maxActualDurationMs": 10.699999999254942
             },
             "markCounts": {
               "pointer-enter-cell": 3
@@ -432,32 +432,32 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 33.399999998509884
+            "elapsedMs": 32.80000000074506
           },
-          "elapsedMs": 205.80000000074506,
+          "elapsedMs": 206.30000000074506,
           "metricsDelta": {
             "Nodes": 20,
             "LayoutCount": 3,
             "RecalcStyleCount": 22,
-            "LayoutDurationMs": 0.3899999999999997,
-            "RecalcStyleDurationMs": 79.697,
-            "ScriptDurationMs": 18.228999999999985,
-            "TaskDurationMs": 106.57600000000002
+            "LayoutDurationMs": 0.3600000000000012,
+            "RecalcStyleDurationMs": 78.47999999999996,
+            "ScriptDurationMs": 18.912000000000063,
+            "TaskDurationMs": 105.81399999999996
           },
           "browserCost": {
             "dominantCost": "style",
             "domNodeDelta": 20,
-            "reactDurationMs": 11.399999998509884,
+            "reactDurationMs": 12.49999999627471,
             "style": {
               "count": 22,
-              "durationMs": 79.697
+              "durationMs": 78.47999999999996
             },
             "layout": {
               "count": 3,
-              "durationMs": 0.3899999999999997
+              "durationMs": 0.3600000000000012
             },
-            "scriptDurationMs": 18.228999999999985,
-            "taskDurationMs": 106.57600000000002
+            "scriptDurationMs": 18.912000000000063,
+            "taskDurationMs": 105.81399999999996
           },
           "styleAttributionHint": "editable-body-surface"
         },
@@ -508,8 +508,8 @@
             },
             "reactCommits": {
               "count": 2,
-              "totalActualDurationMs": 1.2999999970197678,
-              "maxActualDurationMs": 1.0999999977648258
+              "totalActualDurationMs": 1.3999999985098839,
+              "maxActualDurationMs": 1.1000000014901161
             },
             "markCounts": {
               "pointer-enter-cell": 2
@@ -567,32 +567,32 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 33.400000002235174
+            "elapsedMs": 32.19999999925494
           },
-          "elapsedMs": 73.80000000074506,
+          "elapsedMs": 74,
           "metricsDelta": {
             "Nodes": 5,
             "LayoutCount": 1,
             "RecalcStyleCount": 10,
-            "LayoutDurationMs": 0.13900000000000023,
-            "RecalcStyleDurationMs": 27.019000000000005,
-            "ScriptDurationMs": 10.544999999999987,
-            "TaskDurationMs": 41.58799999999985
+            "LayoutDurationMs": 0.13200000000000145,
+            "RecalcStyleDurationMs": 26.901999999999987,
+            "ScriptDurationMs": 10.091999999999985,
+            "TaskDurationMs": 41.06400000000008
           },
           "browserCost": {
             "dominantCost": "style",
             "domNodeDelta": 5,
-            "reactDurationMs": 1.2999999970197678,
+            "reactDurationMs": 1.3999999985098839,
             "style": {
               "count": 10,
-              "durationMs": 27.019000000000005
+              "durationMs": 26.901999999999987
             },
             "layout": {
               "count": 1,
-              "durationMs": 0.13900000000000023
+              "durationMs": 0.13200000000000145
             },
-            "scriptDurationMs": 10.544999999999987,
-            "taskDurationMs": 41.58799999999985
+            "scriptDurationMs": 10.091999999999985,
+            "taskDurationMs": 41.06400000000008
           },
           "styleAttributionHint": "editable-body-surface"
         },
@@ -675,17 +675,17 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 32.600000001490116
+            "elapsedMs": 32.19999999925494
           },
-          "elapsedMs": 36.400000002235174,
+          "elapsedMs": 35.899999998509884,
           "metricsDelta": {
             "Nodes": 0,
             "LayoutCount": 1,
             "RecalcStyleCount": 0,
-            "LayoutDurationMs": 0.11399999999999988,
+            "LayoutDurationMs": 0.09500000000000064,
             "RecalcStyleDurationMs": 0,
-            "ScriptDurationMs": 1.3760000000000616,
-            "TaskDurationMs": 3.548000000000002
+            "ScriptDurationMs": 1.3549999999999613,
+            "TaskDurationMs": 3.365000000000123
           },
           "browserCost": {
             "dominantCost": "script",
@@ -697,10 +697,10 @@
             },
             "layout": {
               "count": 1,
-              "durationMs": 0.11399999999999988
+              "durationMs": 0.09500000000000064
             },
-            "scriptDurationMs": 1.3760000000000616,
-            "taskDurationMs": 3.548000000000002
+            "scriptDurationMs": 1.3549999999999613,
+            "taskDurationMs": 3.365000000000123
           },
           "styleAttributionHint": "not-style-bound"
         },
@@ -751,8 +751,8 @@
               ]
             },
             "reactCommits": {
-              "count": 5,
-              "totalActualDurationMs": 1.1000000014901161,
+              "count": 4,
+              "totalActualDurationMs": 1.1999999955296516,
               "maxActualDurationMs": 0.3999999985098839
             },
             "markCounts": {
@@ -811,32 +811,32 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 33.599999997764826
+            "elapsedMs": 32.899999998509884
           },
-          "elapsedMs": 171.19999999925494,
+          "elapsedMs": 175.19999999925494,
           "metricsDelta": {
             "Nodes": 10,
             "LayoutCount": 3,
             "RecalcStyleCount": 9,
-            "LayoutDurationMs": 0.4639999999999995,
-            "RecalcStyleDurationMs": 51.70599999999996,
-            "ScriptDurationMs": 4.863000000000056,
-            "TaskDurationMs": 61.34199999999987
+            "LayoutDurationMs": 0.44099999999999895,
+            "RecalcStyleDurationMs": 51.58000000000004,
+            "ScriptDurationMs": 4.644999999999982,
+            "TaskDurationMs": 61.18399999999997
           },
           "browserCost": {
             "dominantCost": "style",
             "domNodeDelta": 10,
-            "reactDurationMs": 1.1000000014901161,
+            "reactDurationMs": 1.1999999955296516,
             "style": {
               "count": 9,
-              "durationMs": 51.70599999999996
+              "durationMs": 51.58000000000004
             },
             "layout": {
               "count": 3,
-              "durationMs": 0.4639999999999995
+              "durationMs": 0.44099999999999895
             },
-            "scriptDurationMs": 4.863000000000056,
-            "taskDurationMs": 61.34199999999987
+            "scriptDurationMs": 4.644999999999982,
+            "taskDurationMs": 61.18399999999997
           },
           "styleAttributionHint": "editable-body-surface"
         },
@@ -949,17 +949,17 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 33.600000001490116
+            "elapsedMs": 33.099999997764826
           },
-          "elapsedMs": 65.30000000074506,
+          "elapsedMs": 64.5,
           "metricsDelta": {
             "Nodes": 4,
             "LayoutCount": 1,
             "RecalcStyleCount": 4,
-            "LayoutDurationMs": 0.1429999999999998,
-            "RecalcStyleDurationMs": 25.704000000000065,
-            "ScriptDurationMs": 3.7549999999999955,
-            "TaskDurationMs": 31.29099999999994
+            "LayoutDurationMs": 0.1559999999999988,
+            "RecalcStyleDurationMs": 25.3599999999999,
+            "ScriptDurationMs": 3.725999999999999,
+            "TaskDurationMs": 30.792999999999893
           },
           "browserCost": {
             "dominantCost": "style",
@@ -967,14 +967,14 @@
             "reactDurationMs": 0.9000000022351742,
             "style": {
               "count": 4,
-              "durationMs": 25.704000000000065
+              "durationMs": 25.3599999999999
             },
             "layout": {
               "count": 1,
-              "durationMs": 0.1429999999999998
+              "durationMs": 0.1559999999999988
             },
-            "scriptDurationMs": 3.7549999999999955,
-            "taskDurationMs": 31.29099999999994
+            "scriptDurationMs": 3.725999999999999,
+            "taskDurationMs": 30.792999999999893
           },
           "styleAttributionHint": "editable-body-surface"
         },
@@ -1097,8 +1097,8 @@
             },
             "reactCommits": {
               "count": 8,
-              "totalActualDurationMs": 17.899999994784594,
-              "maxActualDurationMs": 10.199999999254942
+              "totalActualDurationMs": 17.699999999254942,
+              "maxActualDurationMs": 10
             },
             "markCounts": {
               "cell-commit-local-end": 1,
@@ -1162,32 +1162,32 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 32.600000001490116
+            "elapsedMs": 32.900000002235174
           },
-          "elapsedMs": 198.30000000074506,
+          "elapsedMs": 208.69999999925494,
           "metricsDelta": {
             "Nodes": 13,
             "LayoutCount": 3,
             "RecalcStyleCount": 18,
-            "LayoutDurationMs": 0.4220000000000006,
-            "RecalcStyleDurationMs": 53.173999999999864,
-            "ScriptDurationMs": 26.738999999999976,
-            "TaskDurationMs": 89.01800000000003
+            "LayoutDurationMs": 0.4510000000000005,
+            "RecalcStyleDurationMs": 52.70100000000002,
+            "ScriptDurationMs": 26.697000000000003,
+            "TaskDurationMs": 88.64599999999996
           },
           "browserCost": {
             "dominantCost": "style",
             "domNodeDelta": 13,
-            "reactDurationMs": 17.899999994784594,
+            "reactDurationMs": 17.699999999254942,
             "style": {
               "count": 18,
-              "durationMs": 53.173999999999864
+              "durationMs": 52.70100000000002
             },
             "layout": {
               "count": 3,
-              "durationMs": 0.4220000000000006
+              "durationMs": 0.4510000000000005
             },
-            "scriptDurationMs": 26.738999999999976,
-            "taskDurationMs": 89.01800000000003
+            "scriptDurationMs": 26.697000000000003,
+            "taskDurationMs": 88.64599999999996
           },
           "styleAttributionHint": "editable-body-surface"
         },
@@ -1235,8 +1235,8 @@
               ]
             },
             "reactCommits": {
-              "count": 11,
-              "totalActualDurationMs": 3.400000002235174,
+              "count": 12,
+              "totalActualDurationMs": 2.800000011920929,
               "maxActualDurationMs": 0.4000000022351742
             },
             "markCounts": {
@@ -1300,32 +1300,32 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 34.19999999925494
+            "elapsedMs": 33.399999998509884
           },
-          "elapsedMs": 262.1000000014901,
+          "elapsedMs": 262.30000000074506,
           "metricsDelta": {
             "Nodes": 20,
             "LayoutCount": 6,
             "RecalcStyleCount": 22,
-            "LayoutDurationMs": 0.7839999999999989,
-            "RecalcStyleDurationMs": 104.33299999999997,
-            "ScriptDurationMs": 11.531999999999982,
-            "TaskDurationMs": 125.89600000000019
+            "LayoutDurationMs": 0.802999999999999,
+            "RecalcStyleDurationMs": 103.28200000000004,
+            "ScriptDurationMs": 11.964000000000055,
+            "TaskDurationMs": 124.94500000000016
           },
           "browserCost": {
             "dominantCost": "style",
             "domNodeDelta": 20,
-            "reactDurationMs": 3.400000002235174,
+            "reactDurationMs": 2.800000011920929,
             "style": {
               "count": 22,
-              "durationMs": 104.33299999999997
+              "durationMs": 103.28200000000004
             },
             "layout": {
               "count": 6,
-              "durationMs": 0.7839999999999989
+              "durationMs": 0.802999999999999
             },
-            "scriptDurationMs": 11.531999999999982,
-            "taskDurationMs": 125.89600000000019
+            "scriptDurationMs": 11.964000000000055,
+            "taskDurationMs": 124.94500000000016
           },
           "styleAttributionHint": "editable-body-surface"
         },
@@ -1374,8 +1374,8 @@
             },
             "reactCommits": {
               "count": 2,
-              "totalActualDurationMs": 0.7999999970197678,
-              "maxActualDurationMs": 0.3999999985098839
+              "totalActualDurationMs": 0.6000000014901161,
+              "maxActualDurationMs": 0.30000000074505806
             },
             "markCounts": {
               "cell-commit-local-end": 1,
@@ -1438,32 +1438,32 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 33.19999999925494
+            "elapsedMs": 32.79999999701977
           },
-          "elapsedMs": 64.19999999925494,
+          "elapsedMs": 63.69999999925494,
           "metricsDelta": {
             "Nodes": 4,
             "LayoutCount": 1,
-            "RecalcStyleCount": 9,
-            "LayoutDurationMs": 0.13000000000000078,
-            "RecalcStyleDurationMs": 25.706999999999994,
-            "ScriptDurationMs": 3.1680000000000064,
-            "TaskDurationMs": 32.45499999999993
+            "RecalcStyleCount": 8,
+            "LayoutDurationMs": 0.12199999999999989,
+            "RecalcStyleDurationMs": 25.52800000000002,
+            "ScriptDurationMs": 3.158999999999992,
+            "TaskDurationMs": 31.965999999999894
           },
           "browserCost": {
             "dominantCost": "style",
             "domNodeDelta": 4,
-            "reactDurationMs": 0.7999999970197678,
+            "reactDurationMs": 0.6000000014901161,
             "style": {
-              "count": 9,
-              "durationMs": 25.706999999999994
+              "count": 8,
+              "durationMs": 25.52800000000002
             },
             "layout": {
               "count": 1,
-              "durationMs": 0.13000000000000078
+              "durationMs": 0.12199999999999989
             },
-            "scriptDurationMs": 3.1680000000000064,
-            "taskDurationMs": 32.45499999999993
+            "scriptDurationMs": 3.158999999999992,
+            "taskDurationMs": 31.965999999999894
           },
           "styleAttributionHint": "editable-body-surface"
         },
@@ -1515,7 +1515,7 @@
             },
             "reactCommits": {
               "count": 5,
-              "totalActualDurationMs": 22.200000006705523,
+              "totalActualDurationMs": 22.399999994784594,
               "maxActualDurationMs": 14.100000001490116
             },
             "markCounts": {
@@ -1574,32 +1574,32 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 33.19999999925494
+            "elapsedMs": 32.899999998509884
           },
-          "elapsedMs": 227.40000000223517,
+          "elapsedMs": 231.19999999925494,
           "metricsDelta": {
             "Nodes": 185,
             "LayoutCount": 3,
             "RecalcStyleCount": 17,
-            "LayoutDurationMs": 0.7989999999999995,
-            "RecalcStyleDurationMs": 79.79099999999994,
-            "ScriptDurationMs": 28.31499999999994,
-            "TaskDurationMs": 116.41799999999989
+            "LayoutDurationMs": 0.8559999999999999,
+            "RecalcStyleDurationMs": 79.81099999999992,
+            "ScriptDurationMs": 28.783999999999992,
+            "TaskDurationMs": 117.04099999999994
           },
           "browserCost": {
             "dominantCost": "style",
             "domNodeDelta": 185,
-            "reactDurationMs": 22.200000006705523,
+            "reactDurationMs": 22.399999994784594,
             "style": {
               "count": 17,
-              "durationMs": 79.79099999999994
+              "durationMs": 79.81099999999992
             },
             "layout": {
               "count": 3,
-              "durationMs": 0.7989999999999995
+              "durationMs": 0.8559999999999999
             },
-            "scriptDurationMs": 28.31499999999994,
-            "taskDurationMs": 116.41799999999989
+            "scriptDurationMs": 28.783999999999992,
+            "taskDurationMs": 117.04099999999994
           },
           "styleAttributionHint": "editable-body-surface"
         },
@@ -1648,8 +1648,8 @@
             },
             "reactCommits": {
               "count": 7,
-              "totalActualDurationMs": 22.100000001490116,
-              "maxActualDurationMs": 7.699999999254942
+              "totalActualDurationMs": 23,
+              "maxActualDurationMs": 8.099999997764826
             },
             "markCounts": {
               "cell-commit-local-end": 1,
@@ -1713,32 +1713,32 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 33.5
+            "elapsedMs": 33.19999999925494
           },
-          "elapsedMs": 298.80000000074506,
+          "elapsedMs": 300.4000000022352,
           "metricsDelta": {
             "Nodes": 185,
             "LayoutCount": 5,
-            "RecalcStyleCount": 38,
-            "LayoutDurationMs": 0.6589999999999989,
-            "RecalcStyleDurationMs": 105.32000000000005,
-            "ScriptDurationMs": 30.629999999999995,
-            "TaskDurationMs": 147.9559999999999
+            "RecalcStyleCount": 36,
+            "LayoutDurationMs": 0.7139999999999986,
+            "RecalcStyleDurationMs": 108.34400000000005,
+            "ScriptDurationMs": 32.68100000000004,
+            "TaskDurationMs": 153.13799999999992
           },
           "browserCost": {
             "dominantCost": "style",
             "domNodeDelta": 185,
-            "reactDurationMs": 22.100000001490116,
+            "reactDurationMs": 23,
             "style": {
-              "count": 38,
-              "durationMs": 105.32000000000005
+              "count": 36,
+              "durationMs": 108.34400000000005
             },
             "layout": {
               "count": 5,
-              "durationMs": 0.6589999999999989
+              "durationMs": 0.7139999999999986
             },
-            "scriptDurationMs": 30.629999999999995,
-            "taskDurationMs": 147.9559999999999
+            "scriptDurationMs": 32.68100000000004,
+            "taskDurationMs": 153.13799999999992
           },
           "styleAttributionHint": "editable-body-surface"
         },
@@ -1779,8 +1779,8 @@
             },
             "reactCommits": {
               "count": 2,
-              "totalActualDurationMs": 1.1000000014901161,
-              "maxActualDurationMs": 0.6000000014901161
+              "totalActualDurationMs": 1.199999999254942,
+              "maxActualDurationMs": 0.6999999992549419
             },
             "markCounts": {
               "cell-commit-local-end": 1,
@@ -1844,32 +1844,32 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 33.80000000074506
+            "elapsedMs": 32.80000000074506
           },
-          "elapsedMs": 104.90000000223517,
+          "elapsedMs": 103.69999999925494,
           "metricsDelta": {
             "Nodes": 3,
             "LayoutCount": 1,
-            "RecalcStyleCount": 13,
-            "LayoutDurationMs": 0.1050000000000022,
-            "RecalcStyleDurationMs": 25.819999999999936,
-            "ScriptDurationMs": 3.2800000000000296,
-            "TaskDurationMs": 34.16599999999994
+            "RecalcStyleCount": 12,
+            "LayoutDurationMs": 0.09800000000000253,
+            "RecalcStyleDurationMs": 25.50100000000009,
+            "ScriptDurationMs": 3.3290000000000077,
+            "TaskDurationMs": 33.634000000000015
           },
           "browserCost": {
             "dominantCost": "style",
             "domNodeDelta": 3,
-            "reactDurationMs": 1.1000000014901161,
+            "reactDurationMs": 1.199999999254942,
             "style": {
-              "count": 13,
-              "durationMs": 25.819999999999936
+              "count": 12,
+              "durationMs": 25.50100000000009
             },
             "layout": {
               "count": 1,
-              "durationMs": 0.1050000000000022
+              "durationMs": 0.09800000000000253
             },
-            "scriptDurationMs": 3.2800000000000296,
-            "taskDurationMs": 34.16599999999994
+            "scriptDurationMs": 3.3290000000000077,
+            "taskDurationMs": 33.634000000000015
           },
           "styleAttributionHint": "editable-body-surface"
         },
@@ -1921,8 +1921,8 @@
             },
             "reactCommits": {
               "count": 4,
-              "totalActualDurationMs": 17.00000000372529,
-              "maxActualDurationMs": 8.900000002235174
+              "totalActualDurationMs": 17.099999997764826,
+              "maxActualDurationMs": 9.199999999254942
             },
             "markCounts": {
               "pointer-enter-cell": 2
@@ -1980,32 +1980,32 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 34.100000001490116
+            "elapsedMs": 34.19999999925494
           },
-          "elapsedMs": 151.10000000149012,
+          "elapsedMs": 153.89999999850988,
           "metricsDelta": {
             "Nodes": 182,
             "LayoutCount": 2,
-            "RecalcStyleCount": 8,
-            "LayoutDurationMs": 0.4599999999999973,
-            "RecalcStyleDurationMs": 53.38300000000015,
-            "ScriptDurationMs": 21.438999999999965,
-            "TaskDurationMs": 80.07899999999995
+            "RecalcStyleCount": 9,
+            "LayoutDurationMs": 0.49499999999999744,
+            "RecalcStyleDurationMs": 53.31699999999978,
+            "ScriptDurationMs": 21.610000000000014,
+            "TaskDurationMs": 80.76099999999997
           },
           "browserCost": {
             "dominantCost": "style",
             "domNodeDelta": 182,
-            "reactDurationMs": 17.00000000372529,
+            "reactDurationMs": 17.099999997764826,
             "style": {
-              "count": 8,
-              "durationMs": 53.38300000000015
+              "count": 9,
+              "durationMs": 53.31699999999978
             },
             "layout": {
               "count": 2,
-              "durationMs": 0.4599999999999973
+              "durationMs": 0.49499999999999744
             },
-            "scriptDurationMs": 21.438999999999965,
-            "taskDurationMs": 80.07899999999995
+            "scriptDurationMs": 21.610000000000014,
+            "taskDurationMs": 80.76099999999997
           },
           "styleAttributionHint": "popup-mount"
         },
@@ -2031,8 +2031,8 @@
             },
             "reactCommits": {
               "count": 1,
-              "totalActualDurationMs": 7.699999999254942,
-              "maxActualDurationMs": 7.699999999254942
+              "totalActualDurationMs": 8.199999999254942,
+              "maxActualDurationMs": 8.199999999254942
             },
             "markCounts": {
               "pointer-enter-cell": 1
@@ -2090,32 +2090,32 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 33.19999999925494
+            "elapsedMs": 33.29999999701977
           },
-          "elapsedMs": 74.5,
+          "elapsedMs": 83.19999999925494,
           "metricsDelta": {
             "Nodes": 144,
             "LayoutCount": 2,
             "RecalcStyleCount": 4,
-            "LayoutDurationMs": 0.3020000000000014,
-            "RecalcStyleDurationMs": 27.794999999999845,
-            "ScriptDurationMs": 9.701999999999998,
-            "TaskDurationMs": 40.18199999999979
+            "LayoutDurationMs": 0.33500000000000085,
+            "RecalcStyleDurationMs": 27.74000000000001,
+            "ScriptDurationMs": 10.324000000000012,
+            "TaskDurationMs": 41.05400000000009
           },
           "browserCost": {
             "dominantCost": "style",
             "domNodeDelta": 144,
-            "reactDurationMs": 7.699999999254942,
+            "reactDurationMs": 8.199999999254942,
             "style": {
               "count": 4,
-              "durationMs": 27.794999999999845
+              "durationMs": 27.74000000000001
             },
             "layout": {
               "count": 2,
-              "durationMs": 0.3020000000000014
+              "durationMs": 0.33500000000000085
             },
-            "scriptDurationMs": 9.701999999999998,
-            "taskDurationMs": 40.18199999999979
+            "scriptDurationMs": 10.324000000000012,
+            "taskDurationMs": 41.05400000000009
           },
           "styleAttributionHint": "popup-open-surface"
         },
@@ -2216,8 +2216,8 @@
             },
             "reactCommits": {
               "count": 2,
-              "totalActualDurationMs": 2.2999999970197678,
-              "maxActualDurationMs": 2.2999999970197678
+              "totalActualDurationMs": 2.599999997764826,
+              "maxActualDurationMs": 2.599999997764826
             },
             "markCounts": {}
           },
@@ -2273,32 +2273,32 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 59.30000000074506
+            "elapsedMs": 58.899999998509884
           },
-          "elapsedMs": 99.19999999925494,
+          "elapsedMs": 134.39999999850988,
           "metricsDelta": {
             "Nodes": 58,
             "LayoutCount": 1,
             "RecalcStyleCount": 2,
-            "LayoutDurationMs": 0.19799999999999862,
-            "RecalcStyleDurationMs": 25.392000000000053,
-            "ScriptDurationMs": 4.362000000000023,
-            "TaskDurationMs": 31.870999999999867
+            "LayoutDurationMs": 0.18399999999999928,
+            "RecalcStyleDurationMs": 25.393999999999778,
+            "ScriptDurationMs": 4.631000000000029,
+            "TaskDurationMs": 32.29600000000005
           },
           "browserCost": {
             "dominantCost": "style",
             "domNodeDelta": 58,
-            "reactDurationMs": 2.2999999970197678,
+            "reactDurationMs": 2.599999997764826,
             "style": {
               "count": 2,
-              "durationMs": 25.392000000000053
+              "durationMs": 25.393999999999778
             },
             "layout": {
               "count": 1,
-              "durationMs": 0.19799999999999862
+              "durationMs": 0.18399999999999928
             },
-            "scriptDurationMs": 4.362000000000023,
-            "taskDurationMs": 31.870999999999867
+            "scriptDurationMs": 4.631000000000029,
+            "taskDurationMs": 32.29600000000005
           },
           "styleAttributionHint": "editable-body-surface"
         },
@@ -2359,8 +2359,8 @@
             },
             "reactCommits": {
               "count": 3,
-              "totalActualDurationMs": 0.8999999985098839,
-              "maxActualDurationMs": 0.5
+              "totalActualDurationMs": 1.0000000037252903,
+              "maxActualDurationMs": 0.6000000014901161
             },
             "markCounts": {}
           },
@@ -2416,32 +2416,32 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 33.80000000074506
+            "elapsedMs": 38
           },
-          "elapsedMs": 95.19999999925494,
+          "elapsedMs": 73,
           "metricsDelta": {
             "Nodes": 3,
             "LayoutCount": 1,
-            "RecalcStyleCount": 9,
-            "LayoutDurationMs": 0.10800000000000054,
-            "RecalcStyleDurationMs": 25.490999999999985,
-            "ScriptDurationMs": 3.290999999999997,
-            "TaskDurationMs": 31.812000000000126
+            "RecalcStyleCount": 8,
+            "LayoutDurationMs": 0.1280000000000001,
+            "RecalcStyleDurationMs": 26.19699999999989,
+            "ScriptDurationMs": 3.647000000000048,
+            "TaskDurationMs": 32.90800000000013
           },
           "browserCost": {
             "dominantCost": "style",
             "domNodeDelta": 3,
-            "reactDurationMs": 0.8999999985098839,
+            "reactDurationMs": 1.0000000037252903,
             "style": {
-              "count": 9,
-              "durationMs": 25.490999999999985
+              "count": 8,
+              "durationMs": 26.19699999999989
             },
             "layout": {
               "count": 1,
-              "durationMs": 0.10800000000000054
+              "durationMs": 0.1280000000000001
             },
-            "scriptDurationMs": 3.290999999999997,
-            "taskDurationMs": 31.812000000000126
+            "scriptDurationMs": 3.647000000000048,
+            "taskDurationMs": 32.90800000000013
           },
           "styleAttributionHint": "editable-body-surface"
         },
@@ -2494,7 +2494,7 @@
             },
             "reactCommits": {
               "count": 5,
-              "totalActualDurationMs": 1.800000000745058,
+              "totalActualDurationMs": 1.6000000014901161,
               "maxActualDurationMs": 0.5
             },
             "markCounts": {
@@ -2559,32 +2559,32 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 33.600000001490116
+            "elapsedMs": 32.899999998509884
           },
-          "elapsedMs": 93.19999999925494,
+          "elapsedMs": 93.10000000149012,
           "metricsDelta": {
             "Nodes": 12,
             "LayoutCount": 2,
             "RecalcStyleCount": 8,
-            "LayoutDurationMs": 0.30599999999999916,
-            "RecalcStyleDurationMs": 51.38799999999992,
-            "ScriptDurationMs": 5.1720000000000255,
-            "TaskDurationMs": 58.97600000000011
+            "LayoutDurationMs": 0.28399999999999714,
+            "RecalcStyleDurationMs": 51.20499999999993,
+            "ScriptDurationMs": 5.319000000000017,
+            "TaskDurationMs": 59.027000000000044
           },
           "browserCost": {
             "dominantCost": "style",
             "domNodeDelta": 12,
-            "reactDurationMs": 1.800000000745058,
+            "reactDurationMs": 1.6000000014901161,
             "style": {
               "count": 8,
-              "durationMs": 51.38799999999992
+              "durationMs": 51.20499999999993
             },
             "layout": {
               "count": 2,
-              "durationMs": 0.30599999999999916
+              "durationMs": 0.28399999999999714
             },
-            "scriptDurationMs": 5.1720000000000255,
-            "taskDurationMs": 58.97600000000011
+            "scriptDurationMs": 5.319000000000017,
+            "taskDurationMs": 59.027000000000044
           },
           "styleAttributionHint": "editable-body-surface"
         },
@@ -2667,17 +2667,17 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 33.19999999925494
+            "elapsedMs": 32.599999997764826
           },
-          "elapsedMs": 35.69999999925494,
+          "elapsedMs": 35.100000001490116,
           "metricsDelta": {
             "Nodes": 0,
             "LayoutCount": 0,
             "RecalcStyleCount": 0,
             "LayoutDurationMs": 0,
             "RecalcStyleDurationMs": 0,
-            "ScriptDurationMs": 0.7559999999999718,
-            "TaskDurationMs": 1.987999999999829
+            "ScriptDurationMs": 0.8610000000000468,
+            "TaskDurationMs": 1.94399999999996
           },
           "browserCost": {
             "dominantCost": "script",
@@ -2691,8 +2691,8 @@
               "count": 0,
               "durationMs": 0
             },
-            "scriptDurationMs": 0.7559999999999718,
-            "taskDurationMs": 1.987999999999829
+            "scriptDurationMs": 0.8610000000000468,
+            "taskDurationMs": 1.94399999999996
           },
           "styleAttributionHint": "not-style-bound"
         },
@@ -2741,8 +2741,8 @@
             },
             "reactCommits": {
               "count": 5,
-              "totalActualDurationMs": 1.5,
-              "maxActualDurationMs": 0.4000000022351742
+              "totalActualDurationMs": 1.2000000029802322,
+              "maxActualDurationMs": 0.3999999985098839
             },
             "markCounts": {
               "cell-commit-local-end": 1,
@@ -2805,32 +2805,32 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 33.29999999701977
+            "elapsedMs": 32.400000002235174
           },
-          "elapsedMs": 129,
+          "elapsedMs": 127.69999999925494,
           "metricsDelta": {
             "Nodes": 10,
             "LayoutCount": 3,
             "RecalcStyleCount": 10,
-            "LayoutDurationMs": 0.39199999999999946,
-            "RecalcStyleDurationMs": 51.506999999999834,
-            "ScriptDurationMs": 5.015999999999963,
-            "TaskDurationMs": 60.83999999999969
+            "LayoutDurationMs": 0.3979999999999979,
+            "RecalcStyleDurationMs": 50.832999999999856,
+            "ScriptDurationMs": 5.04200000000003,
+            "TaskDurationMs": 60.49499999999989
           },
           "browserCost": {
             "dominantCost": "style",
             "domNodeDelta": 10,
-            "reactDurationMs": 1.5,
+            "reactDurationMs": 1.2000000029802322,
             "style": {
               "count": 10,
-              "durationMs": 51.506999999999834
+              "durationMs": 50.832999999999856
             },
             "layout": {
               "count": 3,
-              "durationMs": 0.39199999999999946
+              "durationMs": 0.3979999999999979
             },
-            "scriptDurationMs": 5.015999999999963,
-            "taskDurationMs": 60.83999999999969
+            "scriptDurationMs": 5.04200000000003,
+            "taskDurationMs": 60.49499999999989
           },
           "styleAttributionHint": "editable-body-surface"
         }
@@ -2921,17 +2921,17 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 32.599999997764826
+            "elapsedMs": 33.5
           },
-          "elapsedMs": 36.5,
+          "elapsedMs": 36.399999998509884,
           "metricsDelta": {
             "Nodes": 0,
             "LayoutCount": 0,
             "RecalcStyleCount": 3,
             "LayoutDurationMs": 0,
-            "RecalcStyleDurationMs": 2.254000000000019,
-            "ScriptDurationMs": 0.5720000000000596,
-            "TaskDurationMs": 4.640999999999849
+            "RecalcStyleDurationMs": 2.1369999999999436,
+            "ScriptDurationMs": 0.42900000000003047,
+            "TaskDurationMs": 4.194999999999936
           },
           "browserCost": {
             "dominantCost": "style",
@@ -2939,14 +2939,14 @@
             "reactDurationMs": 0,
             "style": {
               "count": 3,
-              "durationMs": 2.254000000000019
+              "durationMs": 2.1369999999999436
             },
             "layout": {
               "count": 0,
               "durationMs": 0
             },
-            "scriptDurationMs": 0.5720000000000596,
-            "taskDurationMs": 4.640999999999849
+            "scriptDurationMs": 0.42900000000003047,
+            "taskDurationMs": 4.194999999999936
           },
           "styleAttributionHint": "eager-header-surface"
         },
@@ -2997,8 +2997,8 @@
             },
             "reactCommits": {
               "count": 3,
-              "totalActualDurationMs": 2.699999999254942,
-              "maxActualDurationMs": 1.199999999254942
+              "totalActualDurationMs": 2.800000000745058,
+              "maxActualDurationMs": 1.2000000029802322
             },
             "markCounts": {
               "pointer-enter-cell": 1
@@ -3056,32 +3056,32 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 33.399999998509884
+            "elapsedMs": 32.5
           },
-          "elapsedMs": 110.79999999701977,
+          "elapsedMs": 108.70000000298023,
           "metricsDelta": {
             "Nodes": 24,
             "LayoutCount": 2,
             "RecalcStyleCount": 12,
-            "LayoutDurationMs": 0.30799999999999983,
-            "RecalcStyleDurationMs": 64.70099999999991,
-            "ScriptDurationMs": 5.923000000000002,
-            "TaskDurationMs": 74.21299999999974
+            "LayoutDurationMs": 0.3290000000000006,
+            "RecalcStyleDurationMs": 63.711000000000126,
+            "ScriptDurationMs": 5.526999999999987,
+            "TaskDurationMs": 72.33300000000008
           },
           "browserCost": {
             "dominantCost": "style",
             "domNodeDelta": 24,
-            "reactDurationMs": 2.699999999254942,
+            "reactDurationMs": 2.800000000745058,
             "style": {
               "count": 12,
-              "durationMs": 64.70099999999991
+              "durationMs": 63.711000000000126
             },
             "layout": {
               "count": 2,
-              "durationMs": 0.30799999999999983
+              "durationMs": 0.3290000000000006
             },
-            "scriptDurationMs": 5.923000000000002,
-            "taskDurationMs": 74.21299999999974
+            "scriptDurationMs": 5.526999999999987,
+            "taskDurationMs": 72.33300000000008
           },
           "styleAttributionHint": "popup-mount"
         },
@@ -3093,7 +3093,7 @@
           "popupOptions": 0,
           "baseUiSelectMounted": false,
           "activeEditableCells": 0,
-          "totalDomNodes": 1191,
+          "totalDomNodes": 1192,
           "rectProbe": {
             "count": 1,
             "bySlot": {
@@ -3240,8 +3240,8 @@
             },
             "reactCommits": {
               "count": 3,
-              "totalActualDurationMs": 23.900000002235174,
-              "maxActualDurationMs": 23.00000000372529
+              "totalActualDurationMs": 23.600000001490116,
+              "maxActualDurationMs": 22.300000000745058
             },
             "markCounts": {
               "pointer-enter-cell": 1
@@ -3278,7 +3278,7 @@
               "pickerPopups": 0,
               "calendars": 0,
               "popupNodes": 0,
-              "documentNodes": 1191
+              "documentNodes": 1192
             },
             "delta": {
               "headerRows": 0,
@@ -3294,37 +3294,37 @@
               "pickerPopups": 0,
               "calendars": 0,
               "popupNodes": 0,
-              "documentNodes": 136
+              "documentNodes": 137
             }
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 33
+            "elapsedMs": 33.19999999925494
           },
-          "elapsedMs": 3156.5,
+          "elapsedMs": 3152.400000002235,
           "metricsDelta": {
-            "Nodes": 410,
+            "Nodes": 250,
             "LayoutCount": 2,
-            "RecalcStyleCount": 26,
-            "LayoutDurationMs": 0.4759999999999991,
-            "RecalcStyleDurationMs": 202.99699999999996,
-            "ScriptDurationMs": 165.15699999999998,
-            "TaskDurationMs": 483.28099999999995
+            "RecalcStyleCount": 24,
+            "LayoutDurationMs": 0.4689999999999994,
+            "RecalcStyleDurationMs": 96.07599999999991,
+            "ScriptDurationMs": 32.190999999999974,
+            "TaskDurationMs": 162.87900000000013
           },
           "browserCost": {
             "dominantCost": "style",
-            "domNodeDelta": 410,
-            "reactDurationMs": 23.900000002235174,
+            "domNodeDelta": 250,
+            "reactDurationMs": 23.600000001490116,
             "style": {
-              "count": 26,
-              "durationMs": 202.99699999999996
+              "count": 24,
+              "durationMs": 96.07599999999991
             },
             "layout": {
               "count": 2,
-              "durationMs": 0.4759999999999991
+              "durationMs": 0.4689999999999994
             },
-            "scriptDurationMs": 165.15699999999998,
-            "taskDurationMs": 483.28099999999995
+            "scriptDurationMs": 32.190999999999974,
+            "taskDurationMs": 162.87900000000013
           },
           "styleAttributionHint": "eager-header-surface"
         },
@@ -3336,7 +3336,7 @@
           "popupOptions": 0,
           "baseUiSelectMounted": false,
           "activeEditableCells": 1,
-          "totalDomNodes": 1067,
+          "totalDomNodes": 1068,
           "rectProbe": {
             "count": 1,
             "bySlot": {
@@ -3375,8 +3375,8 @@
             },
             "reactCommits": {
               "count": 2,
-              "totalActualDurationMs": 1.300000000745058,
-              "maxActualDurationMs": 1
+              "totalActualDurationMs": 1.3000000044703484,
+              "maxActualDurationMs": 1.1000000014901161
             },
             "markCounts": {
               "pointer-enter-cell": 2
@@ -3397,7 +3397,7 @@
               "pickerPopups": 0,
               "calendars": 0,
               "popupNodes": 0,
-              "documentNodes": 1068
+              "documentNodes": 1069
             },
             "after": {
               "headerRows": 4,
@@ -3413,7 +3413,7 @@
               "pickerPopups": 0,
               "calendars": 0,
               "popupNodes": 0,
-              "documentNodes": 1067
+              "documentNodes": 1068
             },
             "delta": {
               "headerRows": 0,
@@ -3434,32 +3434,32 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 33.30000000074506
+            "elapsedMs": 32.5
           },
-          "elapsedMs": 94.30000000074506,
+          "elapsedMs": 82.10000000149012,
           "metricsDelta": {
             "Nodes": 5,
             "LayoutCount": 1,
             "RecalcStyleCount": 11,
-            "LayoutDurationMs": 0.1869999999999994,
-            "RecalcStyleDurationMs": 41.44699999999989,
-            "ScriptDurationMs": 10.787999999999897,
-            "TaskDurationMs": 58.40100000000007
+            "LayoutDurationMs": 0.13100000000000023,
+            "RecalcStyleDurationMs": 39.32099999999991,
+            "ScriptDurationMs": 9.941000000000031,
+            "TaskDurationMs": 53.667000000000144
           },
           "browserCost": {
             "dominantCost": "style",
             "domNodeDelta": 5,
-            "reactDurationMs": 1.300000000745058,
+            "reactDurationMs": 1.3000000044703484,
             "style": {
               "count": 11,
-              "durationMs": 41.44699999999989
+              "durationMs": 39.32099999999991
             },
             "layout": {
               "count": 1,
-              "durationMs": 0.1869999999999994
+              "durationMs": 0.13100000000000023
             },
-            "scriptDurationMs": 10.787999999999897,
-            "taskDurationMs": 58.40100000000007
+            "scriptDurationMs": 9.941000000000031,
+            "taskDurationMs": 53.667000000000144
           },
           "styleAttributionHint": "eager-header-surface"
         },
@@ -3471,7 +3471,7 @@
           "popupOptions": 0,
           "baseUiSelectMounted": false,
           "activeEditableCells": 1,
-          "totalDomNodes": 1067,
+          "totalDomNodes": 1068,
           "rectProbe": {
             "count": 0,
             "bySlot": {}
@@ -3505,7 +3505,7 @@
               "pickerPopups": 0,
               "calendars": 0,
               "popupNodes": 0,
-              "documentNodes": 1067
+              "documentNodes": 1068
             },
             "after": {
               "headerRows": 4,
@@ -3521,7 +3521,7 @@
               "pickerPopups": 0,
               "calendars": 0,
               "popupNodes": 0,
-              "documentNodes": 1067
+              "documentNodes": 1068
             },
             "delta": {
               "headerRows": 0,
@@ -3542,17 +3542,17 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 32.100000001490116
+            "elapsedMs": 32.5
           },
-          "elapsedMs": 36,
+          "elapsedMs": 35.600000001490116,
           "metricsDelta": {
             "Nodes": 0,
             "LayoutCount": 1,
             "RecalcStyleCount": 0,
-            "LayoutDurationMs": 0.13199999999999967,
+            "LayoutDurationMs": 0.09500000000000064,
             "RecalcStyleDurationMs": 0,
-            "ScriptDurationMs": 1.4369999999998981,
-            "TaskDurationMs": 4.257000000000062
+            "ScriptDurationMs": 1.297999999999945,
+            "TaskDurationMs": 3.2690000000000055
           },
           "browserCost": {
             "dominantCost": "script",
@@ -3564,10 +3564,10 @@
             },
             "layout": {
               "count": 1,
-              "durationMs": 0.13199999999999967
+              "durationMs": 0.09500000000000064
             },
-            "scriptDurationMs": 1.4369999999998981,
-            "taskDurationMs": 4.257000000000062
+            "scriptDurationMs": 1.297999999999945,
+            "taskDurationMs": 3.2690000000000055
           },
           "styleAttributionHint": "not-style-bound"
         },
@@ -3579,7 +3579,7 @@
           "popupOptions": 0,
           "baseUiSelectMounted": false,
           "activeEditableCells": 0,
-          "totalDomNodes": 1068,
+          "totalDomNodes": 1069,
           "rectProbe": {
             "count": 2,
             "bySlot": {
@@ -3619,8 +3619,8 @@
             },
             "reactCommits": {
               "count": 4,
-              "totalActualDurationMs": 1.2999999970197678,
-              "maxActualDurationMs": 0.5999999977648258
+              "totalActualDurationMs": 1.0000000037252903,
+              "maxActualDurationMs": 0.30000000074505806
             },
             "markCounts": {
               "pointer-enter-cell": 1
@@ -3641,7 +3641,7 @@
               "pickerPopups": 0,
               "calendars": 0,
               "popupNodes": 0,
-              "documentNodes": 1068
+              "documentNodes": 1069
             },
             "after": {
               "headerRows": 4,
@@ -3657,7 +3657,7 @@
               "pickerPopups": 0,
               "calendars": 0,
               "popupNodes": 0,
-              "documentNodes": 1068
+              "documentNodes": 1069
             },
             "delta": {
               "headerRows": 0,
@@ -3678,32 +3678,32 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 33
+            "elapsedMs": 33.100000001490116
           },
-          "elapsedMs": 199.19999999925494,
+          "elapsedMs": 183.10000000149012,
           "metricsDelta": {
             "Nodes": 10,
             "LayoutCount": 3,
             "RecalcStyleCount": 9,
-            "LayoutDurationMs": 0.39699999999999847,
-            "RecalcStyleDurationMs": 63.69600000000014,
-            "ScriptDurationMs": 4.566000000000031,
-            "TaskDurationMs": 73.22800000000007
+            "LayoutDurationMs": 0.38599999999999923,
+            "RecalcStyleDurationMs": 63.63099999999986,
+            "ScriptDurationMs": 3.8810000000000286,
+            "TaskDurationMs": 71.90699999999993
           },
           "browserCost": {
             "dominantCost": "style",
             "domNodeDelta": 10,
-            "reactDurationMs": 1.2999999970197678,
+            "reactDurationMs": 1.0000000037252903,
             "style": {
               "count": 9,
-              "durationMs": 63.69600000000014
+              "durationMs": 63.63099999999986
             },
             "layout": {
               "count": 3,
-              "durationMs": 0.39699999999999847
+              "durationMs": 0.38599999999999923
             },
-            "scriptDurationMs": 4.566000000000031,
-            "taskDurationMs": 73.22800000000007
+            "scriptDurationMs": 3.8810000000000286,
+            "taskDurationMs": 71.90699999999993
           },
           "styleAttributionHint": "eager-header-surface"
         },
@@ -3715,7 +3715,7 @@
           "popupOptions": 0,
           "baseUiSelectMounted": false,
           "activeEditableCells": 0,
-          "totalDomNodes": 1068,
+          "totalDomNodes": 1069,
           "rectProbe": {
             "count": 0,
             "bySlot": {}
@@ -3752,8 +3752,8 @@
             },
             "reactCommits": {
               "count": 2,
-              "totalActualDurationMs": 0.7000000029802322,
-              "maxActualDurationMs": 0.4000000022351742
+              "totalActualDurationMs": 0.7999999970197678,
+              "maxActualDurationMs": 0.3999999985098839
             },
             "markCounts": {
               "cell-commit-local-end": 1,
@@ -3779,7 +3779,7 @@
               "pickerPopups": 0,
               "calendars": 0,
               "popupNodes": 0,
-              "documentNodes": 1067
+              "documentNodes": 1068
             },
             "after": {
               "headerRows": 4,
@@ -3795,7 +3795,7 @@
               "pickerPopups": 0,
               "calendars": 0,
               "popupNodes": 0,
-              "documentNodes": 1068
+              "documentNodes": 1069
             },
             "delta": {
               "headerRows": 0,
@@ -3816,32 +3816,32 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 33.69999999925494
+            "elapsedMs": 33.399999998509884
           },
-          "elapsedMs": 71.40000000223517,
+          "elapsedMs": 70,
           "metricsDelta": {
             "Nodes": 4,
             "LayoutCount": 1,
             "RecalcStyleCount": 4,
-            "LayoutDurationMs": 0.13199999999999967,
-            "RecalcStyleDurationMs": 31.977999999999838,
-            "ScriptDurationMs": 3.6929999999999836,
-            "TaskDurationMs": 37.52100000000064
+            "LayoutDurationMs": 0.14599999999999902,
+            "RecalcStyleDurationMs": 31.258000000000038,
+            "ScriptDurationMs": 3.5299999999999727,
+            "TaskDurationMs": 36.381999999999834
           },
           "browserCost": {
             "dominantCost": "style",
             "domNodeDelta": 4,
-            "reactDurationMs": 0.7000000029802322,
+            "reactDurationMs": 0.7999999970197678,
             "style": {
               "count": 4,
-              "durationMs": 31.977999999999838
+              "durationMs": 31.258000000000038
             },
             "layout": {
               "count": 1,
-              "durationMs": 0.13199999999999967
+              "durationMs": 0.14599999999999902
             },
-            "scriptDurationMs": 3.6929999999999836,
-            "taskDurationMs": 37.52100000000064
+            "scriptDurationMs": 3.5299999999999727,
+            "taskDurationMs": 36.381999999999834
           },
           "styleAttributionHint": "eager-header-surface"
         },
@@ -3853,7 +3853,7 @@
           "popupOptions": 0,
           "baseUiSelectMounted": false,
           "activeEditableCells": 0,
-          "totalDomNodes": 1054,
+          "totalDomNodes": 1055,
           "rectProbe": {
             "count": 1,
             "bySlot": {
@@ -4004,8 +4004,8 @@
             },
             "reactCommits": {
               "count": 9,
-              "totalActualDurationMs": 25.5,
-              "maxActualDurationMs": 13.799999997019768
+              "totalActualDurationMs": 24.400000009685755,
+              "maxActualDurationMs": 13.300000008195639
             },
             "markCounts": {
               "cell-commit-local-end": 1,
@@ -4032,7 +4032,7 @@
               "pickerPopups": 0,
               "calendars": 0,
               "popupNodes": 0,
-              "documentNodes": 1068
+              "documentNodes": 1069
             },
             "after": {
               "headerRows": 4,
@@ -4048,7 +4048,7 @@
               "pickerPopups": 0,
               "calendars": 0,
               "popupNodes": 0,
-              "documentNodes": 1054
+              "documentNodes": 1055
             },
             "delta": {
               "headerRows": 0,
@@ -4069,32 +4069,32 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 32.900000002235174
+            "elapsedMs": 32.899999998509884
           },
-          "elapsedMs": 3401.2000000029802,
+          "elapsedMs": 3359,
           "metricsDelta": {
-            "Nodes": -10923,
+            "Nodes": -13355,
             "LayoutCount": 5,
-            "RecalcStyleCount": 36,
-            "LayoutDurationMs": 0.7880000000000003,
-            "RecalcStyleDurationMs": 144.77800000000002,
-            "ScriptDurationMs": 36.740999999999985,
-            "TaskDurationMs": 220.3380000000002
+            "RecalcStyleCount": 38,
+            "LayoutDurationMs": 0.7620000000000005,
+            "RecalcStyleDurationMs": 144.462,
+            "ScriptDurationMs": 35.28499999999997,
+            "TaskDurationMs": 214.8699999999999
           },
           "browserCost": {
             "dominantCost": "style",
-            "domNodeDelta": -10923,
-            "reactDurationMs": 25.5,
+            "domNodeDelta": -13355,
+            "reactDurationMs": 24.400000009685755,
             "style": {
-              "count": 36,
-              "durationMs": 144.77800000000002
+              "count": 38,
+              "durationMs": 144.462
             },
             "layout": {
               "count": 5,
-              "durationMs": 0.7880000000000003
+              "durationMs": 0.7620000000000005
             },
-            "scriptDurationMs": 36.740999999999985,
-            "taskDurationMs": 220.3380000000002
+            "scriptDurationMs": 35.28499999999997,
+            "taskDurationMs": 214.8699999999999
           },
           "styleAttributionHint": "eager-header-surface"
         },
@@ -4106,7 +4106,7 @@
           "popupOptions": 0,
           "baseUiSelectMounted": false,
           "activeEditableCells": 0,
-          "totalDomNodes": 1054,
+          "totalDomNodes": 1055,
           "rectProbe": {
             "count": 0,
             "bySlot": {}
@@ -4143,7 +4143,7 @@
             },
             "reactCommits": {
               "count": 11,
-              "totalActualDurationMs": 2.800000000745058,
+              "totalActualDurationMs": 2.7999999970197678,
               "maxActualDurationMs": 0.4000000022351742
             },
             "markCounts": {
@@ -4170,7 +4170,7 @@
               "pickerPopups": 0,
               "calendars": 0,
               "popupNodes": 0,
-              "documentNodes": 1054
+              "documentNodes": 1055
             },
             "after": {
               "headerRows": 4,
@@ -4186,7 +4186,7 @@
               "pickerPopups": 0,
               "calendars": 0,
               "popupNodes": 0,
-              "documentNodes": 1054
+              "documentNodes": 1055
             },
             "delta": {
               "headerRows": 0,
@@ -4207,32 +4207,32 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 32.80000000074506
+            "elapsedMs": 32.69999999925494
           },
-          "elapsedMs": 277.8999999985099,
+          "elapsedMs": 277.1000000014901,
           "metricsDelta": {
             "Nodes": 20,
             "LayoutCount": 6,
-            "RecalcStyleCount": 22,
-            "LayoutDurationMs": 0.7129999999999992,
-            "RecalcStyleDurationMs": 127.75500000000011,
-            "ScriptDurationMs": 10.413000000000011,
-            "TaskDurationMs": 146.27999999999975
+            "RecalcStyleCount": 21,
+            "LayoutDurationMs": 0.7030000000000012,
+            "RecalcStyleDurationMs": 126.61300000000006,
+            "ScriptDurationMs": 10.213000000000022,
+            "TaskDurationMs": 143.85100000000034
           },
           "browserCost": {
             "dominantCost": "style",
             "domNodeDelta": 20,
-            "reactDurationMs": 2.800000000745058,
+            "reactDurationMs": 2.7999999970197678,
             "style": {
-              "count": 22,
-              "durationMs": 127.75500000000011
+              "count": 21,
+              "durationMs": 126.61300000000006
             },
             "layout": {
               "count": 6,
-              "durationMs": 0.7129999999999992
+              "durationMs": 0.7030000000000012
             },
-            "scriptDurationMs": 10.413000000000011,
-            "taskDurationMs": 146.27999999999975
+            "scriptDurationMs": 10.213000000000022,
+            "taskDurationMs": 143.85100000000034
           },
           "styleAttributionHint": "eager-header-surface"
         },
@@ -4244,7 +4244,7 @@
           "popupOptions": 0,
           "baseUiSelectMounted": false,
           "activeEditableCells": 0,
-          "totalDomNodes": 1054,
+          "totalDomNodes": 1055,
           "rectProbe": {
             "count": 0,
             "bySlot": {}
@@ -4281,7 +4281,7 @@
             },
             "reactCommits": {
               "count": 2,
-              "totalActualDurationMs": 0.8999999985098839,
+              "totalActualDurationMs": 0.8000000007450581,
               "maxActualDurationMs": 0.5
             },
             "markCounts": {
@@ -4308,7 +4308,7 @@
               "pickerPopups": 0,
               "calendars": 0,
               "popupNodes": 0,
-              "documentNodes": 1053
+              "documentNodes": 1054
             },
             "after": {
               "headerRows": 4,
@@ -4324,7 +4324,7 @@
               "pickerPopups": 0,
               "calendars": 0,
               "popupNodes": 0,
-              "documentNodes": 1054
+              "documentNodes": 1055
             },
             "delta": {
               "headerRows": 0,
@@ -4345,32 +4345,32 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 34
+            "elapsedMs": 33.099999997764826
           },
-          "elapsedMs": 73.89999999850988,
+          "elapsedMs": 70.5,
           "metricsDelta": {
             "Nodes": 4,
             "LayoutCount": 1,
             "RecalcStyleCount": 7,
-            "LayoutDurationMs": 0.11100000000000065,
-            "RecalcStyleDurationMs": 34.41599999999994,
-            "ScriptDurationMs": 3.1219999999999573,
-            "TaskDurationMs": 40.45499999999993
+            "LayoutDurationMs": 0.11600000000000144,
+            "RecalcStyleDurationMs": 33.4380000000001,
+            "ScriptDurationMs": 2.907000000000039,
+            "TaskDurationMs": 38.777000000000044
           },
           "browserCost": {
             "dominantCost": "style",
             "domNodeDelta": 4,
-            "reactDurationMs": 0.8999999985098839,
+            "reactDurationMs": 0.8000000007450581,
             "style": {
               "count": 7,
-              "durationMs": 34.41599999999994
+              "durationMs": 33.4380000000001
             },
             "layout": {
               "count": 1,
-              "durationMs": 0.11100000000000065
+              "durationMs": 0.11600000000000144
             },
-            "scriptDurationMs": 3.1219999999999573,
-            "taskDurationMs": 40.45499999999993
+            "scriptDurationMs": 2.907000000000039,
+            "taskDurationMs": 38.777000000000044
           },
           "styleAttributionHint": "eager-header-surface"
         },
@@ -4382,7 +4382,7 @@
           "popupOptions": 0,
           "baseUiSelectMounted": false,
           "activeEditableCells": 0,
-          "totalDomNodes": 1054,
+          "totalDomNodes": 1055,
           "rectProbe": {
             "count": 2,
             "bySlot": {
@@ -4422,8 +4422,8 @@
             },
             "reactCommits": {
               "count": 5,
-              "totalActualDurationMs": 22.100000005215406,
-              "maxActualDurationMs": 14.5
+              "totalActualDurationMs": 21.299999997019768,
+              "maxActualDurationMs": 13.399999998509884
             },
             "markCounts": {
               "pointer-enter-cell": 2
@@ -4444,7 +4444,7 @@
               "pickerPopups": 0,
               "calendars": 0,
               "popupNodes": 0,
-              "documentNodes": 1054
+              "documentNodes": 1055
             },
             "after": {
               "headerRows": 4,
@@ -4460,7 +4460,7 @@
               "pickerPopups": 0,
               "calendars": 0,
               "popupNodes": 0,
-              "documentNodes": 1054
+              "documentNodes": 1055
             },
             "delta": {
               "headerRows": 0,
@@ -4481,32 +4481,32 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 32.19999999925494
+            "elapsedMs": 33.099999997764826
           },
-          "elapsedMs": 261.80000000074506,
+          "elapsedMs": 236.79999999701977,
           "metricsDelta": {
             "Nodes": 185,
             "LayoutCount": 3,
-            "RecalcStyleCount": 18,
-            "LayoutDurationMs": 0.8580000000000005,
-            "RecalcStyleDurationMs": 102.37800000000016,
-            "ScriptDurationMs": 28.513000000000034,
-            "TaskDurationMs": 139.36000000000013
+            "RecalcStyleCount": 17,
+            "LayoutDurationMs": 0.8779999999999983,
+            "RecalcStyleDurationMs": 98.46299999999997,
+            "ScriptDurationMs": 26.912999999999897,
+            "TaskDurationMs": 132.13400000000001
           },
           "browserCost": {
             "dominantCost": "style",
             "domNodeDelta": 185,
-            "reactDurationMs": 22.100000005215406,
+            "reactDurationMs": 21.299999997019768,
             "style": {
-              "count": 18,
-              "durationMs": 102.37800000000016
+              "count": 17,
+              "durationMs": 98.46299999999997
             },
             "layout": {
               "count": 3,
-              "durationMs": 0.8580000000000005
+              "durationMs": 0.8779999999999983
             },
-            "scriptDurationMs": 28.513000000000034,
-            "taskDurationMs": 139.36000000000013
+            "scriptDurationMs": 26.912999999999897,
+            "taskDurationMs": 132.13400000000001
           },
           "styleAttributionHint": "eager-header-surface"
         },
@@ -4518,7 +4518,7 @@
           "popupOptions": 0,
           "baseUiSelectMounted": false,
           "activeEditableCells": 0,
-          "totalDomNodes": 1054,
+          "totalDomNodes": 1055,
           "rectProbe": {
             "count": 0,
             "bySlot": {}
@@ -4555,8 +4555,8 @@
             },
             "reactCommits": {
               "count": 7,
-              "totalActualDurationMs": 21.600000001490116,
-              "maxActualDurationMs": 8
+              "totalActualDurationMs": 21.599999997764826,
+              "maxActualDurationMs": 7.699999999254942
             },
             "markCounts": {
               "cell-commit-local-end": 1,
@@ -4583,138 +4583,7 @@
               "pickerPopups": 0,
               "calendars": 0,
               "popupNodes": 0,
-              "documentNodes": 1054
-            },
-            "after": {
-              "headerRows": 4,
-              "headerCells": 32,
-              "headerSpacers": 4,
-              "bodyRows": 13,
-              "bodyCells": 156,
-              "editableRows": 5,
-              "editableCells": 55,
-              "activeEditableCells": 0,
-              "dataCellSurfaces": 143,
-              "selectPopups": 0,
-              "pickerPopups": 0,
-              "calendars": 0,
-              "popupNodes": 0,
-              "documentNodes": 1054
-            },
-            "delta": {
-              "headerRows": 0,
-              "headerCells": 0,
-              "headerSpacers": 0,
-              "bodyRows": 0,
-              "bodyCells": 0,
-              "editableRows": 0,
-              "editableCells": 0,
-              "activeEditableCells": 0,
-              "dataCellSurfaces": 0,
-              "selectPopups": 0,
-              "pickerPopups": 0,
-              "calendars": 0,
-              "popupNodes": 0,
-              "documentNodes": 0
-            }
-          },
-          "wait": {
-            "ok": true,
-            "elapsedMs": 33.100000001490116
-          },
-          "elapsedMs": 350.4000000022352,
-          "metricsDelta": {
-            "Nodes": 185,
-            "LayoutCount": 5,
-            "RecalcStyleCount": 35,
-            "LayoutDurationMs": 0.6950000000000003,
-            "RecalcStyleDurationMs": 145.4889999999998,
-            "ScriptDurationMs": 30.826999999999998,
-            "TaskDurationMs": 189.10499999999956
-          },
-          "browserCost": {
-            "dominantCost": "style",
-            "domNodeDelta": 185,
-            "reactDurationMs": 21.600000001490116,
-            "style": {
-              "count": 35,
-              "durationMs": 145.4889999999998
-            },
-            "layout": {
-              "count": 5,
-              "durationMs": 0.6950000000000003
-            },
-            "scriptDurationMs": 30.826999999999998,
-            "taskDurationMs": 189.10499999999956
-          },
-          "styleAttributionHint": "eager-header-surface"
-        },
-        {
-          "name": "toggle-boolean",
-          "popupMounted": false,
-          "pickerPopupMounted": false,
-          "calendarMounted": false,
-          "popupOptions": 0,
-          "baseUiSelectMounted": false,
-          "activeEditableCells": 0,
-          "totalDomNodes": 1055,
-          "rectProbe": {
-            "count": 0,
-            "bySlot": {}
-          },
-          "profiler": {
-            "renders": {
-              "total": 4,
-              "byComponent": [
-                {
-                  "name": "EditableJsonTableCell",
-                  "count": 4
-                }
-              ],
-              "byInstance": [
-                {
-                  "name": "EditableJsonTableCell:transactions.0.is_reconciled",
-                  "count": 4
-                }
-              ],
-              "changedProps": [
-                {
-                  "name": "EditableJsonTableCell.same-props",
-                  "count": 4
-                }
-              ]
-            },
-            "reactCommits": {
-              "count": 2,
-              "totalActualDurationMs": 1.1000000014901161,
-              "maxActualDurationMs": 0.6000000014901161
-            },
-            "markCounts": {
-              "cell-commit-local-end": 1,
-              "cell-commit-local-start": 1,
-              "cell-commit-transition-end": 1,
-              "cell-commit-transition-start": 1,
-              "document-patch-end": 1,
-              "document-patch-start": 1,
-              "pointer-enter-cell": 2
-            }
-          },
-          "mountedSurface": {
-            "before": {
-              "headerRows": 4,
-              "headerCells": 32,
-              "headerSpacers": 4,
-              "bodyRows": 13,
-              "bodyCells": 156,
-              "editableRows": 5,
-              "editableCells": 55,
-              "activeEditableCells": 0,
-              "dataCellSurfaces": 143,
-              "selectPopups": 0,
-              "pickerPopups": 0,
-              "calendars": 0,
-              "popupNodes": 0,
-              "documentNodes": 1054
+              "documentNodes": 1055
             },
             "after": {
               "headerRows": 4,
@@ -4746,37 +4615,168 @@
               "pickerPopups": 0,
               "calendars": 0,
               "popupNodes": 0,
+              "documentNodes": 0
+            }
+          },
+          "wait": {
+            "ok": true,
+            "elapsedMs": 33.5
+          },
+          "elapsedMs": 323.69999999925494,
+          "metricsDelta": {
+            "Nodes": 185,
+            "LayoutCount": 5,
+            "RecalcStyleCount": 35,
+            "LayoutDurationMs": 0.6570000000000018,
+            "RecalcStyleDurationMs": 142.058,
+            "ScriptDurationMs": 30.351,
+            "TaskDurationMs": 183.28600000000006
+          },
+          "browserCost": {
+            "dominantCost": "style",
+            "domNodeDelta": 185,
+            "reactDurationMs": 21.599999997764826,
+            "style": {
+              "count": 35,
+              "durationMs": 142.058
+            },
+            "layout": {
+              "count": 5,
+              "durationMs": 0.6570000000000018
+            },
+            "scriptDurationMs": 30.351,
+            "taskDurationMs": 183.28600000000006
+          },
+          "styleAttributionHint": "eager-header-surface"
+        },
+        {
+          "name": "toggle-boolean",
+          "popupMounted": false,
+          "pickerPopupMounted": false,
+          "calendarMounted": false,
+          "popupOptions": 0,
+          "baseUiSelectMounted": false,
+          "activeEditableCells": 0,
+          "totalDomNodes": 1056,
+          "rectProbe": {
+            "count": 0,
+            "bySlot": {}
+          },
+          "profiler": {
+            "renders": {
+              "total": 4,
+              "byComponent": [
+                {
+                  "name": "EditableJsonTableCell",
+                  "count": 4
+                }
+              ],
+              "byInstance": [
+                {
+                  "name": "EditableJsonTableCell:transactions.0.is_reconciled",
+                  "count": 4
+                }
+              ],
+              "changedProps": [
+                {
+                  "name": "EditableJsonTableCell.same-props",
+                  "count": 4
+                }
+              ]
+            },
+            "reactCommits": {
+              "count": 2,
+              "totalActualDurationMs": 1,
+              "maxActualDurationMs": 0.6000000014901161
+            },
+            "markCounts": {
+              "cell-commit-local-end": 1,
+              "cell-commit-local-start": 1,
+              "cell-commit-transition-end": 1,
+              "cell-commit-transition-start": 1,
+              "document-patch-end": 1,
+              "document-patch-start": 1,
+              "pointer-enter-cell": 2
+            }
+          },
+          "mountedSurface": {
+            "before": {
+              "headerRows": 4,
+              "headerCells": 32,
+              "headerSpacers": 4,
+              "bodyRows": 13,
+              "bodyCells": 156,
+              "editableRows": 5,
+              "editableCells": 55,
+              "activeEditableCells": 0,
+              "dataCellSurfaces": 143,
+              "selectPopups": 0,
+              "pickerPopups": 0,
+              "calendars": 0,
+              "popupNodes": 0,
+              "documentNodes": 1055
+            },
+            "after": {
+              "headerRows": 4,
+              "headerCells": 32,
+              "headerSpacers": 4,
+              "bodyRows": 13,
+              "bodyCells": 156,
+              "editableRows": 5,
+              "editableCells": 55,
+              "activeEditableCells": 0,
+              "dataCellSurfaces": 143,
+              "selectPopups": 0,
+              "pickerPopups": 0,
+              "calendars": 0,
+              "popupNodes": 0,
+              "documentNodes": 1056
+            },
+            "delta": {
+              "headerRows": 0,
+              "headerCells": 0,
+              "headerSpacers": 0,
+              "bodyRows": 0,
+              "bodyCells": 0,
+              "editableRows": 0,
+              "editableCells": 0,
+              "activeEditableCells": 0,
+              "dataCellSurfaces": 0,
+              "selectPopups": 0,
+              "pickerPopups": 0,
+              "calendars": 0,
+              "popupNodes": 0,
               "documentNodes": 1
             }
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 32.69999999925494
+            "elapsedMs": 32.80000000074506
           },
-          "elapsedMs": 110.5,
+          "elapsedMs": 108.60000000149012,
           "metricsDelta": {
             "Nodes": 3,
             "LayoutCount": 1,
-            "RecalcStyleCount": 12,
-            "LayoutDurationMs": 0.09299999999999997,
-            "RecalcStyleDurationMs": 37.694999999999936,
-            "ScriptDurationMs": 3.3209999999999127,
-            "TaskDurationMs": 45.89400000000023
+            "RecalcStyleCount": 11,
+            "LayoutDurationMs": 0.09099999999999753,
+            "RecalcStyleDurationMs": 35.99500000000012,
+            "ScriptDurationMs": 3.175999999999931,
+            "TaskDurationMs": 43.20000000000027
           },
           "browserCost": {
             "dominantCost": "style",
             "domNodeDelta": 3,
-            "reactDurationMs": 1.1000000014901161,
+            "reactDurationMs": 1,
             "style": {
-              "count": 12,
-              "durationMs": 37.694999999999936
+              "count": 11,
+              "durationMs": 35.99500000000012
             },
             "layout": {
               "count": 1,
-              "durationMs": 0.09299999999999997
+              "durationMs": 0.09099999999999753
             },
-            "scriptDurationMs": 3.3209999999999127,
-            "taskDurationMs": 45.89400000000023
+            "scriptDurationMs": 3.175999999999931,
+            "taskDurationMs": 43.20000000000027
           },
           "styleAttributionHint": "eager-header-surface"
         },
@@ -4788,7 +4788,7 @@
           "popupOptions": 0,
           "baseUiSelectMounted": false,
           "activeEditableCells": 1,
-          "totalDomNodes": 1154,
+          "totalDomNodes": 1155,
           "rectProbe": {
             "count": 2,
             "bySlot": {
@@ -4828,8 +4828,8 @@
             },
             "reactCommits": {
               "count": 4,
-              "totalActualDurationMs": 15.800000000745058,
-              "maxActualDurationMs": 8.5
+              "totalActualDurationMs": 16.699999999254942,
+              "maxActualDurationMs": 8.900000002235174
             },
             "markCounts": {
               "pointer-enter-cell": 2
@@ -4850,7 +4850,7 @@
               "pickerPopups": 0,
               "calendars": 0,
               "popupNodes": 0,
-              "documentNodes": 1055
+              "documentNodes": 1056
             },
             "after": {
               "headerRows": 4,
@@ -4866,7 +4866,7 @@
               "pickerPopups": 1,
               "calendars": 1,
               "popupNodes": 99,
-              "documentNodes": 1154
+              "documentNodes": 1155
             },
             "delta": {
               "headerRows": 0,
@@ -4887,32 +4887,32 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 33.80000000074506
+            "elapsedMs": 33.099999997764826
           },
-          "elapsedMs": 171.5,
+          "elapsedMs": 160.79999999701977,
           "metricsDelta": {
             "Nodes": 182,
             "LayoutCount": 2,
             "RecalcStyleCount": 8,
-            "LayoutDurationMs": 0.43599999999999994,
-            "RecalcStyleDurationMs": 65.31899999999996,
-            "ScriptDurationMs": 20.128000000000043,
-            "TaskDurationMs": 90.70399999999972
+            "LayoutDurationMs": 0.41900000000000226,
+            "RecalcStyleDurationMs": 65.0920000000001,
+            "ScriptDurationMs": 20.702999999999975,
+            "TaskDurationMs": 91.19600000000037
           },
           "browserCost": {
             "dominantCost": "style",
             "domNodeDelta": 182,
-            "reactDurationMs": 15.800000000745058,
+            "reactDurationMs": 16.699999999254942,
             "style": {
               "count": 8,
-              "durationMs": 65.31899999999996
+              "durationMs": 65.0920000000001
             },
             "layout": {
               "count": 2,
-              "durationMs": 0.43599999999999994
+              "durationMs": 0.41900000000000226
             },
-            "scriptDurationMs": 20.128000000000043,
-            "taskDurationMs": 90.70399999999972
+            "scriptDurationMs": 20.702999999999975,
+            "taskDurationMs": 91.19600000000037
           },
           "styleAttributionHint": "popup-mount"
         },
@@ -4924,7 +4924,7 @@
           "popupOptions": 0,
           "baseUiSelectMounted": false,
           "activeEditableCells": 1,
-          "totalDomNodes": 1154,
+          "totalDomNodes": 1155,
           "rectProbe": {
             "count": 0,
             "bySlot": {}
@@ -4938,8 +4938,8 @@
             },
             "reactCommits": {
               "count": 1,
-              "totalActualDurationMs": 7.699999999254942,
-              "maxActualDurationMs": 7.699999999254942
+              "totalActualDurationMs": 8.100000001490116,
+              "maxActualDurationMs": 8.100000001490116
             },
             "markCounts": {
               "pointer-enter-cell": 1
@@ -4960,7 +4960,7 @@
               "pickerPopups": 1,
               "calendars": 1,
               "popupNodes": 99,
-              "documentNodes": 1154
+              "documentNodes": 1155
             },
             "after": {
               "headerRows": 4,
@@ -4976,7 +4976,7 @@
               "pickerPopups": 1,
               "calendars": 1,
               "popupNodes": 99,
-              "documentNodes": 1154
+              "documentNodes": 1155
             },
             "delta": {
               "headerRows": 0,
@@ -4997,32 +4997,32 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 33.80000000074506
+            "elapsedMs": 32.5
           },
-          "elapsedMs": 80.60000000149012,
+          "elapsedMs": 79.80000000074506,
           "metricsDelta": {
             "Nodes": 144,
             "LayoutCount": 2,
             "RecalcStyleCount": 4,
-            "LayoutDurationMs": 0.2779999999999987,
-            "RecalcStyleDurationMs": 33.42599999999993,
-            "ScriptDurationMs": 9.569999999999936,
-            "TaskDurationMs": 45.878999999999905
+            "LayoutDurationMs": 0.29199999999999804,
+            "RecalcStyleDurationMs": 33.32999999999993,
+            "ScriptDurationMs": 10.091000000000008,
+            "TaskDurationMs": 45.96199999999999
           },
           "browserCost": {
             "dominantCost": "style",
             "domNodeDelta": 144,
-            "reactDurationMs": 7.699999999254942,
+            "reactDurationMs": 8.100000001490116,
             "style": {
               "count": 4,
-              "durationMs": 33.42599999999993
+              "durationMs": 33.32999999999993
             },
             "layout": {
               "count": 2,
-              "durationMs": 0.2779999999999987
+              "durationMs": 0.29199999999999804
             },
-            "scriptDurationMs": 9.569999999999936,
-            "taskDurationMs": 45.878999999999905
+            "scriptDurationMs": 10.091000000000008,
+            "taskDurationMs": 45.96199999999999
           },
           "styleAttributionHint": "popup-open-surface"
         },
@@ -5034,7 +5034,7 @@
           "popupOptions": 0,
           "baseUiSelectMounted": false,
           "activeEditableCells": 0,
-          "totalDomNodes": 1042,
+          "totalDomNodes": 1043,
           "rectProbe": {
             "count": 0,
             "bySlot": {}
@@ -5131,8 +5131,8 @@
             },
             "reactCommits": {
               "count": 2,
-              "totalActualDurationMs": 2.100000001490116,
-              "maxActualDurationMs": 2.100000001490116
+              "totalActualDurationMs": 2.300000000745058,
+              "maxActualDurationMs": 2.300000000745058
             },
             "markCounts": {}
           },
@@ -5151,7 +5151,7 @@
               "pickerPopups": 0,
               "calendars": 0,
               "popupNodes": 0,
-              "documentNodes": 1055
+              "documentNodes": 1056
             },
             "after": {
               "headerRows": 4,
@@ -5167,7 +5167,7 @@
               "pickerPopups": 0,
               "calendars": 0,
               "popupNodes": 0,
-              "documentNodes": 1042
+              "documentNodes": 1043
             },
             "delta": {
               "headerRows": 0,
@@ -5188,32 +5188,32 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 43.899999998509884
+            "elapsedMs": 35.899999998509884
           },
-          "elapsedMs": 78.80000000074506,
+          "elapsedMs": 70.5,
           "metricsDelta": {
             "Nodes": 46,
             "LayoutCount": 1,
             "RecalcStyleCount": 2,
-            "LayoutDurationMs": 0.11700000000000443,
-            "RecalcStyleDurationMs": 30.67599999999993,
-            "ScriptDurationMs": 4.108000000000061,
-            "TaskDurationMs": 36.47499999999991
+            "LayoutDurationMs": 0.12600000000000122,
+            "RecalcStyleDurationMs": 30.714999999999918,
+            "ScriptDurationMs": 4.293000000000006,
+            "TaskDurationMs": 36.762999999999465
           },
           "browserCost": {
             "dominantCost": "style",
             "domNodeDelta": 46,
-            "reactDurationMs": 2.100000001490116,
+            "reactDurationMs": 2.300000000745058,
             "style": {
               "count": 2,
-              "durationMs": 30.67599999999993
+              "durationMs": 30.714999999999918
             },
             "layout": {
               "count": 1,
-              "durationMs": 0.11700000000000443
+              "durationMs": 0.12600000000000122
             },
-            "scriptDurationMs": 4.108000000000061,
-            "taskDurationMs": 36.47499999999991
+            "scriptDurationMs": 4.293000000000006,
+            "taskDurationMs": 36.762999999999465
           },
           "styleAttributionHint": "eager-header-surface"
         },
@@ -5225,7 +5225,7 @@
           "popupOptions": 0,
           "baseUiSelectMounted": false,
           "activeEditableCells": 0,
-          "totalDomNodes": 1055,
+          "totalDomNodes": 1056,
           "rectProbe": {
             "count": 0,
             "bySlot": {}
@@ -5274,8 +5274,8 @@
             },
             "reactCommits": {
               "count": 3,
-              "totalActualDurationMs": 1.2000000029802322,
-              "maxActualDurationMs": 0.8000000007450581
+              "totalActualDurationMs": 1,
+              "maxActualDurationMs": 0.6999999992549419
             },
             "markCounts": {}
           },
@@ -5294,7 +5294,7 @@
               "pickerPopups": 1,
               "calendars": 1,
               "popupNodes": 99,
-              "documentNodes": 1154
+              "documentNodes": 1155
             },
             "after": {
               "headerRows": 4,
@@ -5310,7 +5310,7 @@
               "pickerPopups": 0,
               "calendars": 0,
               "popupNodes": 0,
-              "documentNodes": 1055
+              "documentNodes": 1056
             },
             "delta": {
               "headerRows": 0,
@@ -5331,32 +5331,32 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 33.599999997764826
+            "elapsedMs": 32.69999999925494
           },
-          "elapsedMs": 102.40000000223517,
+          "elapsedMs": 102.29999999701977,
           "metricsDelta": {
             "Nodes": 3,
             "LayoutCount": 1,
             "RecalcStyleCount": 10,
-            "LayoutDurationMs": 0.12399999999999878,
-            "RecalcStyleDurationMs": 35.208000000000084,
-            "ScriptDurationMs": 3.7450000000000045,
-            "TaskDurationMs": 42.57999999999993
+            "LayoutDurationMs": 0.1319999999999979,
+            "RecalcStyleDurationMs": 35.759000000000015,
+            "ScriptDurationMs": 3.4920000000000755,
+            "TaskDurationMs": 42.75500000000011
           },
           "browserCost": {
             "dominantCost": "style",
             "domNodeDelta": 3,
-            "reactDurationMs": 1.2000000029802322,
+            "reactDurationMs": 1,
             "style": {
               "count": 10,
-              "durationMs": 35.208000000000084
+              "durationMs": 35.759000000000015
             },
             "layout": {
               "count": 1,
-              "durationMs": 0.12399999999999878
+              "durationMs": 0.1319999999999979
             },
-            "scriptDurationMs": 3.7450000000000045,
-            "taskDurationMs": 42.57999999999993
+            "scriptDurationMs": 3.4920000000000755,
+            "taskDurationMs": 42.75500000000011
           },
           "styleAttributionHint": "eager-header-surface"
         },
@@ -5368,7 +5368,7 @@
           "popupOptions": 0,
           "baseUiSelectMounted": false,
           "activeEditableCells": 1,
-          "totalDomNodes": 1054,
+          "totalDomNodes": 1055,
           "rectProbe": {
             "count": 0,
             "bySlot": {}
@@ -5409,7 +5409,7 @@
             },
             "reactCommits": {
               "count": 5,
-              "totalActualDurationMs": 1.6999999955296516,
+              "totalActualDurationMs": 2,
               "maxActualDurationMs": 0.5
             },
             "markCounts": {
@@ -5437,7 +5437,7 @@
               "pickerPopups": 0,
               "calendars": 0,
               "popupNodes": 0,
-              "documentNodes": 1054
+              "documentNodes": 1055
             },
             "after": {
               "headerRows": 4,
@@ -5453,7 +5453,7 @@
               "pickerPopups": 0,
               "calendars": 0,
               "popupNodes": 0,
-              "documentNodes": 1054
+              "documentNodes": 1055
             },
             "delta": {
               "headerRows": 0,
@@ -5474,32 +5474,32 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 32.899999998509884
+            "elapsedMs": 32.69999999925494
           },
-          "elapsedMs": 106.80000000074506,
+          "elapsedMs": 109.59999999776483,
           "metricsDelta": {
             "Nodes": 12,
             "LayoutCount": 2,
             "RecalcStyleCount": 8,
-            "LayoutDurationMs": 0.2519999999999989,
-            "RecalcStyleDurationMs": 62.297999999999774,
-            "ScriptDurationMs": 5.460000000000036,
-            "TaskDurationMs": 70.14300000000003
+            "LayoutDurationMs": 0.2890000000000015,
+            "RecalcStyleDurationMs": 63.802000000000135,
+            "ScriptDurationMs": 5.671000000000163,
+            "TaskDurationMs": 72.07999999999947
           },
           "browserCost": {
             "dominantCost": "style",
             "domNodeDelta": 12,
-            "reactDurationMs": 1.6999999955296516,
+            "reactDurationMs": 2,
             "style": {
               "count": 8,
-              "durationMs": 62.297999999999774
+              "durationMs": 63.802000000000135
             },
             "layout": {
               "count": 2,
-              "durationMs": 0.2519999999999989
+              "durationMs": 0.2890000000000015
             },
-            "scriptDurationMs": 5.460000000000036,
-            "taskDurationMs": 70.14300000000003
+            "scriptDurationMs": 5.671000000000163,
+            "taskDurationMs": 72.07999999999947
           },
           "styleAttributionHint": "eager-header-surface"
         },
@@ -5511,7 +5511,7 @@
           "popupOptions": 0,
           "baseUiSelectMounted": false,
           "activeEditableCells": 0,
-          "totalDomNodes": 1055,
+          "totalDomNodes": 1056,
           "rectProbe": {
             "count": 0,
             "bySlot": {}
@@ -5545,7 +5545,7 @@
               "pickerPopups": 0,
               "calendars": 0,
               "popupNodes": 0,
-              "documentNodes": 1055
+              "documentNodes": 1056
             },
             "after": {
               "headerRows": 4,
@@ -5561,7 +5561,7 @@
               "pickerPopups": 0,
               "calendars": 0,
               "popupNodes": 0,
-              "documentNodes": 1055
+              "documentNodes": 1056
             },
             "delta": {
               "headerRows": 0,
@@ -5582,17 +5582,17 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 32.80000000074506
+            "elapsedMs": 33
           },
-          "elapsedMs": 35.29999999701977,
+          "elapsedMs": 36.70000000298023,
           "metricsDelta": {
             "Nodes": 0,
             "LayoutCount": 0,
             "RecalcStyleCount": 0,
             "LayoutDurationMs": 0,
             "RecalcStyleDurationMs": 0,
-            "ScriptDurationMs": 0.7860000000000582,
-            "TaskDurationMs": 2.1909999999998035
+            "ScriptDurationMs": 0.7859999999999445,
+            "TaskDurationMs": 1.69399999999996
           },
           "browserCost": {
             "dominantCost": "script",
@@ -5606,8 +5606,8 @@
               "count": 0,
               "durationMs": 0
             },
-            "scriptDurationMs": 0.7860000000000582,
-            "taskDurationMs": 2.1909999999998035
+            "scriptDurationMs": 0.7859999999999445,
+            "taskDurationMs": 1.69399999999996
           },
           "styleAttributionHint": "not-style-bound"
         },
@@ -5619,7 +5619,7 @@
           "popupOptions": 0,
           "baseUiSelectMounted": false,
           "activeEditableCells": 0,
-          "totalDomNodes": 1055,
+          "totalDomNodes": 1056,
           "rectProbe": {
             "count": 0,
             "bySlot": {}
@@ -5656,8 +5656,8 @@
             },
             "reactCommits": {
               "count": 6,
-              "totalActualDurationMs": 1.4000000059604645,
-              "maxActualDurationMs": 0.30000000074505806
+              "totalActualDurationMs": 1.6000000014901161,
+              "maxActualDurationMs": 0.5
             },
             "markCounts": {
               "cell-commit-local-end": 1,
@@ -5683,7 +5683,7 @@
               "pickerPopups": 0,
               "calendars": 0,
               "popupNodes": 0,
-              "documentNodes": 1055
+              "documentNodes": 1056
             },
             "after": {
               "headerRows": 4,
@@ -5699,7 +5699,7 @@
               "pickerPopups": 0,
               "calendars": 0,
               "popupNodes": 0,
-              "documentNodes": 1055
+              "documentNodes": 1056
             },
             "delta": {
               "headerRows": 0,
@@ -5720,32 +5720,32 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 33
+            "elapsedMs": 32.69999999925494
           },
-          "elapsedMs": 141.5,
+          "elapsedMs": 148.19999999925494,
           "metricsDelta": {
             "Nodes": 10,
             "LayoutCount": 3,
             "RecalcStyleCount": 10,
-            "LayoutDurationMs": 0.4170000000000016,
-            "RecalcStyleDurationMs": 63.59900000000016,
-            "ScriptDurationMs": 5.385999999999967,
-            "TaskDurationMs": 73.29899999999998
+            "LayoutDurationMs": 0.370000000000001,
+            "RecalcStyleDurationMs": 67.68199999999979,
+            "ScriptDurationMs": 5.8390000000000555,
+            "TaskDurationMs": 80.5590000000002
           },
           "browserCost": {
             "dominantCost": "style",
             "domNodeDelta": 10,
-            "reactDurationMs": 1.4000000059604645,
+            "reactDurationMs": 1.6000000014901161,
             "style": {
               "count": 10,
-              "durationMs": 63.59900000000016
+              "durationMs": 67.68199999999979
             },
             "layout": {
               "count": 3,
-              "durationMs": 0.4170000000000016
+              "durationMs": 0.370000000000001
             },
-            "scriptDurationMs": 5.385999999999967,
-            "taskDurationMs": 73.29899999999998
+            "scriptDurationMs": 5.8390000000000555,
+            "taskDurationMs": 80.5590000000002
           },
           "styleAttributionHint": "eager-header-surface"
         },
@@ -5757,7 +5757,7 @@
           "popupOptions": 4,
           "baseUiSelectMounted": false,
           "activeEditableCells": 1,
-          "totalDomNodes": 982,
+          "totalDomNodes": 983,
           "rectProbe": {
             "count": 1,
             "bySlot": {
@@ -5796,8 +5796,8 @@
             },
             "reactCommits": {
               "count": 3,
-              "totalActualDurationMs": 0.6999999992549419,
-              "maxActualDurationMs": 0.3999999985098839
+              "totalActualDurationMs": 0.8000000044703484,
+              "maxActualDurationMs": 0.4000000022351742
             },
             "markCounts": {
               "pointer-enter-cell": 2
@@ -5818,7 +5818,7 @@
               "pickerPopups": 0,
               "calendars": 0,
               "popupNodes": 0,
-              "documentNodes": 966
+              "documentNodes": 967
             },
             "after": {
               "headerRows": 4,
@@ -5834,7 +5834,7 @@
               "pickerPopups": 0,
               "calendars": 0,
               "popupNodes": 15,
-              "documentNodes": 982
+              "documentNodes": 983
             },
             "delta": {
               "headerRows": 0,
@@ -5855,32 +5855,32 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 32.5
+            "elapsedMs": 33.100000001490116
           },
-          "elapsedMs": 97.19999999925494,
+          "elapsedMs": 111.30000000074506,
           "metricsDelta": {
             "Nodes": 24,
             "LayoutCount": 2,
-            "RecalcStyleCount": 11,
-            "LayoutDurationMs": 0.25099999999999767,
-            "RecalcStyleDurationMs": 57.54999999999973,
-            "ScriptDurationMs": 2.73599999999999,
-            "TaskDurationMs": 63.297999999999774
+            "RecalcStyleCount": 12,
+            "LayoutDurationMs": 0.2830000000000048,
+            "RecalcStyleDurationMs": 60.318999999999505,
+            "ScriptDurationMs": 2.8039999999999736,
+            "TaskDurationMs": 66.61000000000013
           },
           "browserCost": {
             "dominantCost": "style",
             "domNodeDelta": 24,
-            "reactDurationMs": 0.6999999992549419,
+            "reactDurationMs": 0.8000000044703484,
             "style": {
-              "count": 11,
-              "durationMs": 57.54999999999973
+              "count": 12,
+              "durationMs": 60.318999999999505
             },
             "layout": {
               "count": 2,
-              "durationMs": 0.25099999999999767
+              "durationMs": 0.2830000000000048
             },
-            "scriptDurationMs": 2.73599999999999,
-            "taskDurationMs": 63.297999999999774
+            "scriptDurationMs": 2.8039999999999736,
+            "taskDurationMs": 66.61000000000013
           },
           "styleAttributionHint": "popup-mount"
         },
@@ -5892,7 +5892,7 @@
           "popupOptions": 0,
           "baseUiSelectMounted": false,
           "activeEditableCells": 1,
-          "totalDomNodes": 1080,
+          "totalDomNodes": 1081,
           "rectProbe": {
             "count": 1,
             "bySlot": {
@@ -5931,8 +5931,8 @@
             },
             "reactCommits": {
               "count": 4,
-              "totalActualDurationMs": 6.299999997019768,
-              "maxActualDurationMs": 4
+              "totalActualDurationMs": 7,
+              "maxActualDurationMs": 4.399999998509884
             },
             "markCounts": {
               "pointer-enter-cell": 2
@@ -5953,7 +5953,7 @@
               "pickerPopups": 0,
               "calendars": 0,
               "popupNodes": 0,
-              "documentNodes": 966
+              "documentNodes": 967
             },
             "after": {
               "headerRows": 4,
@@ -5969,7 +5969,7 @@
               "pickerPopups": 1,
               "calendars": 1,
               "popupNodes": 114,
-              "documentNodes": 1080
+              "documentNodes": 1081
             },
             "delta": {
               "headerRows": 0,
@@ -5992,30 +5992,30 @@
             "ok": true,
             "elapsedMs": 33.5
           },
-          "elapsedMs": 109.10000000149012,
+          "elapsedMs": 118.69999999925494,
           "metricsDelta": {
             "Nodes": 211,
             "LayoutCount": 2,
-            "RecalcStyleCount": 11,
-            "LayoutDurationMs": 0.5229999999999997,
-            "RecalcStyleDurationMs": 60.159999999999854,
-            "ScriptDurationMs": 10.605999999999995,
-            "TaskDurationMs": 75.48800000000028
+            "RecalcStyleCount": 13,
+            "LayoutDurationMs": 0.4740000000000002,
+            "RecalcStyleDurationMs": 62.84299999999985,
+            "ScriptDurationMs": 11.548999999999864,
+            "TaskDurationMs": 80.13900000000058
           },
           "browserCost": {
             "dominantCost": "style",
             "domNodeDelta": 211,
-            "reactDurationMs": 6.299999997019768,
+            "reactDurationMs": 7,
             "style": {
-              "count": 11,
-              "durationMs": 60.159999999999854
+              "count": 13,
+              "durationMs": 62.84299999999985
             },
             "layout": {
               "count": 2,
-              "durationMs": 0.5229999999999997
+              "durationMs": 0.4740000000000002
             },
-            "scriptDurationMs": 10.605999999999995,
-            "taskDurationMs": 75.48800000000028
+            "scriptDurationMs": 11.548999999999864,
+            "taskDurationMs": 80.13900000000058
           },
           "styleAttributionHint": "popup-mount"
         },
@@ -6027,7 +6027,7 @@
           "popupOptions": 0,
           "baseUiSelectMounted": false,
           "activeEditableCells": 0,
-          "totalDomNodes": 1035,
+          "totalDomNodes": 1036,
           "rectProbe": {
             "count": 1,
             "bySlot": {
@@ -6066,7 +6066,7 @@
             },
             "reactCommits": {
               "count": 5,
-              "totalActualDurationMs": 1.3999999985098839,
+              "totalActualDurationMs": 1.4000000022351742,
               "maxActualDurationMs": 0.4000000022351742
             },
             "markCounts": {
@@ -6094,7 +6094,7 @@
               "pickerPopups": 0,
               "calendars": 0,
               "popupNodes": 0,
-              "documentNodes": 1035
+              "documentNodes": 1036
             },
             "after": {
               "headerRows": 4,
@@ -6110,7 +6110,7 @@
               "pickerPopups": 0,
               "calendars": 0,
               "popupNodes": 0,
-              "documentNodes": 1035
+              "documentNodes": 1036
             },
             "delta": {
               "headerRows": 0,
@@ -6131,32 +6131,32 @@
           },
           "wait": {
             "ok": true,
-            "elapsedMs": 33.19999999925494
+            "elapsedMs": 32.80000000074506
           },
-          "elapsedMs": 145.19999999925494,
+          "elapsedMs": 142.89999999850988,
           "metricsDelta": {
             "Nodes": 10,
             "LayoutCount": 3,
             "RecalcStyleCount": 9,
-            "LayoutDurationMs": 0.375,
-            "RecalcStyleDurationMs": 62.947999999999865,
-            "ScriptDurationMs": 5.848999999999933,
-            "TaskDurationMs": 73.65700000000015
+            "LayoutDurationMs": 0.41799999999999926,
+            "RecalcStyleDurationMs": 62.847999999999956,
+            "ScriptDurationMs": 5.974000000000046,
+            "TaskDurationMs": 73.66699999999946
           },
           "browserCost": {
             "dominantCost": "style",
             "domNodeDelta": 10,
-            "reactDurationMs": 1.3999999985098839,
+            "reactDurationMs": 1.4000000022351742,
             "style": {
               "count": 9,
-              "durationMs": 62.947999999999865
+              "durationMs": 62.847999999999956
             },
             "layout": {
               "count": 3,
-              "durationMs": 0.375
+              "durationMs": 0.41799999999999926
             },
-            "scriptDurationMs": 5.848999999999933,
-            "taskDurationMs": 73.65700000000015
+            "scriptDurationMs": 5.974000000000046,
+            "taskDurationMs": 73.66699999999946
           },
           "styleAttributionHint": "eager-header-surface"
         }
@@ -6245,17 +6245,17 @@
       },
       "wait": {
         "ok": true,
-        "elapsedMs": 32.69999999925494
+        "elapsedMs": 32.900000002235174
       },
-      "elapsedMs": 35.600000001490116,
+      "elapsedMs": 38.30000000074506,
       "metricsDelta": {
         "Nodes": 0,
         "LayoutCount": 0,
         "RecalcStyleCount": 3,
         "LayoutDurationMs": 0,
-        "RecalcStyleDurationMs": 0.5800000000000125,
-        "ScriptDurationMs": 0.5689999999999884,
-        "TaskDurationMs": 2.987000000000023
+        "RecalcStyleDurationMs": 0.556999999999988,
+        "ScriptDurationMs": 0.532999999999987,
+        "TaskDurationMs": 2.79099999999994
       },
       "browserCost": {
         "dominantCost": "style",
@@ -6263,14 +6263,14 @@
         "reactDurationMs": 0,
         "style": {
           "count": 3,
-          "durationMs": 0.5800000000000125
+          "durationMs": 0.556999999999988
         },
         "layout": {
           "count": 0,
           "durationMs": 0
         },
-        "scriptDurationMs": 0.5689999999999884,
-        "taskDurationMs": 2.987000000000023
+        "scriptDurationMs": 0.532999999999987,
+        "taskDurationMs": 2.79099999999994
       },
       "styleAttributionHint": "editable-body-surface"
     },
@@ -6321,8 +6321,8 @@
         },
         "reactCommits": {
           "count": 3,
-          "totalActualDurationMs": 2.7000000029802322,
-          "maxActualDurationMs": 1.2000000029802322
+          "totalActualDurationMs": 2.600000001490116,
+          "maxActualDurationMs": 1.199999999254942
         },
         "markCounts": {
           "pointer-enter-cell": 1
@@ -6380,32 +6380,32 @@
       },
       "wait": {
         "ok": true,
-        "elapsedMs": 33.5
+        "elapsedMs": 32.5
       },
-      "elapsedMs": 96.19999999925494,
+      "elapsedMs": 98.19999999925494,
       "metricsDelta": {
         "Nodes": 16,
         "LayoutCount": 2,
         "RecalcStyleCount": 13,
-        "LayoutDurationMs": 0.4089999999999998,
-        "RecalcStyleDurationMs": 50.33299999999997,
-        "ScriptDurationMs": 5.571000000000026,
-        "TaskDurationMs": 59.25899999999996
+        "LayoutDurationMs": 0.4169999999999989,
+        "RecalcStyleDurationMs": 50.809000000000026,
+        "ScriptDurationMs": 5.429000000000002,
+        "TaskDurationMs": 59.57300000000009
       },
       "browserCost": {
         "dominantCost": "style",
         "domNodeDelta": 16,
-        "reactDurationMs": 2.7000000029802322,
+        "reactDurationMs": 2.600000001490116,
         "style": {
           "count": 13,
-          "durationMs": 50.33299999999997
+          "durationMs": 50.809000000000026
         },
         "layout": {
           "count": 2,
-          "durationMs": 0.4089999999999998
+          "durationMs": 0.4169999999999989
         },
-        "scriptDurationMs": 5.571000000000026,
-        "taskDurationMs": 59.25899999999996
+        "scriptDurationMs": 5.429000000000002,
+        "taskDurationMs": 59.57300000000009
       },
       "styleAttributionHint": "popup-mount"
     },
@@ -6529,8 +6529,8 @@
         },
         "reactCommits": {
           "count": 6,
-          "totalActualDurationMs": 11.399999998509884,
-          "maxActualDurationMs": 9.699999999254942
+          "totalActualDurationMs": 12.49999999627471,
+          "maxActualDurationMs": 10.699999999254942
         },
         "markCounts": {
           "pointer-enter-cell": 3
@@ -6588,32 +6588,32 @@
       },
       "wait": {
         "ok": true,
-        "elapsedMs": 33.399999998509884
+        "elapsedMs": 32.80000000074506
       },
-      "elapsedMs": 205.80000000074506,
+      "elapsedMs": 206.30000000074506,
       "metricsDelta": {
         "Nodes": 20,
         "LayoutCount": 3,
         "RecalcStyleCount": 22,
-        "LayoutDurationMs": 0.3899999999999997,
-        "RecalcStyleDurationMs": 79.697,
-        "ScriptDurationMs": 18.228999999999985,
-        "TaskDurationMs": 106.57600000000002
+        "LayoutDurationMs": 0.3600000000000012,
+        "RecalcStyleDurationMs": 78.47999999999996,
+        "ScriptDurationMs": 18.912000000000063,
+        "TaskDurationMs": 105.81399999999996
       },
       "browserCost": {
         "dominantCost": "style",
         "domNodeDelta": 20,
-        "reactDurationMs": 11.399999998509884,
+        "reactDurationMs": 12.49999999627471,
         "style": {
           "count": 22,
-          "durationMs": 79.697
+          "durationMs": 78.47999999999996
         },
         "layout": {
           "count": 3,
-          "durationMs": 0.3899999999999997
+          "durationMs": 0.3600000000000012
         },
-        "scriptDurationMs": 18.228999999999985,
-        "taskDurationMs": 106.57600000000002
+        "scriptDurationMs": 18.912000000000063,
+        "taskDurationMs": 105.81399999999996
       },
       "styleAttributionHint": "editable-body-surface"
     },
@@ -6664,8 +6664,8 @@
         },
         "reactCommits": {
           "count": 2,
-          "totalActualDurationMs": 1.2999999970197678,
-          "maxActualDurationMs": 1.0999999977648258
+          "totalActualDurationMs": 1.3999999985098839,
+          "maxActualDurationMs": 1.1000000014901161
         },
         "markCounts": {
           "pointer-enter-cell": 2
@@ -6723,32 +6723,32 @@
       },
       "wait": {
         "ok": true,
-        "elapsedMs": 33.400000002235174
+        "elapsedMs": 32.19999999925494
       },
-      "elapsedMs": 73.80000000074506,
+      "elapsedMs": 74,
       "metricsDelta": {
         "Nodes": 5,
         "LayoutCount": 1,
         "RecalcStyleCount": 10,
-        "LayoutDurationMs": 0.13900000000000023,
-        "RecalcStyleDurationMs": 27.019000000000005,
-        "ScriptDurationMs": 10.544999999999987,
-        "TaskDurationMs": 41.58799999999985
+        "LayoutDurationMs": 0.13200000000000145,
+        "RecalcStyleDurationMs": 26.901999999999987,
+        "ScriptDurationMs": 10.091999999999985,
+        "TaskDurationMs": 41.06400000000008
       },
       "browserCost": {
         "dominantCost": "style",
         "domNodeDelta": 5,
-        "reactDurationMs": 1.2999999970197678,
+        "reactDurationMs": 1.3999999985098839,
         "style": {
           "count": 10,
-          "durationMs": 27.019000000000005
+          "durationMs": 26.901999999999987
         },
         "layout": {
           "count": 1,
-          "durationMs": 0.13900000000000023
+          "durationMs": 0.13200000000000145
         },
-        "scriptDurationMs": 10.544999999999987,
-        "taskDurationMs": 41.58799999999985
+        "scriptDurationMs": 10.091999999999985,
+        "taskDurationMs": 41.06400000000008
       },
       "styleAttributionHint": "editable-body-surface"
     },
@@ -6831,17 +6831,17 @@
       },
       "wait": {
         "ok": true,
-        "elapsedMs": 32.600000001490116
+        "elapsedMs": 32.19999999925494
       },
-      "elapsedMs": 36.400000002235174,
+      "elapsedMs": 35.899999998509884,
       "metricsDelta": {
         "Nodes": 0,
         "LayoutCount": 1,
         "RecalcStyleCount": 0,
-        "LayoutDurationMs": 0.11399999999999988,
+        "LayoutDurationMs": 0.09500000000000064,
         "RecalcStyleDurationMs": 0,
-        "ScriptDurationMs": 1.3760000000000616,
-        "TaskDurationMs": 3.548000000000002
+        "ScriptDurationMs": 1.3549999999999613,
+        "TaskDurationMs": 3.365000000000123
       },
       "browserCost": {
         "dominantCost": "script",
@@ -6853,10 +6853,10 @@
         },
         "layout": {
           "count": 1,
-          "durationMs": 0.11399999999999988
+          "durationMs": 0.09500000000000064
         },
-        "scriptDurationMs": 1.3760000000000616,
-        "taskDurationMs": 3.548000000000002
+        "scriptDurationMs": 1.3549999999999613,
+        "taskDurationMs": 3.365000000000123
       },
       "styleAttributionHint": "not-style-bound"
     },
@@ -6907,8 +6907,8 @@
           ]
         },
         "reactCommits": {
-          "count": 5,
-          "totalActualDurationMs": 1.1000000014901161,
+          "count": 4,
+          "totalActualDurationMs": 1.1999999955296516,
           "maxActualDurationMs": 0.3999999985098839
         },
         "markCounts": {
@@ -6967,32 +6967,32 @@
       },
       "wait": {
         "ok": true,
-        "elapsedMs": 33.599999997764826
+        "elapsedMs": 32.899999998509884
       },
-      "elapsedMs": 171.19999999925494,
+      "elapsedMs": 175.19999999925494,
       "metricsDelta": {
         "Nodes": 10,
         "LayoutCount": 3,
         "RecalcStyleCount": 9,
-        "LayoutDurationMs": 0.4639999999999995,
-        "RecalcStyleDurationMs": 51.70599999999996,
-        "ScriptDurationMs": 4.863000000000056,
-        "TaskDurationMs": 61.34199999999987
+        "LayoutDurationMs": 0.44099999999999895,
+        "RecalcStyleDurationMs": 51.58000000000004,
+        "ScriptDurationMs": 4.644999999999982,
+        "TaskDurationMs": 61.18399999999997
       },
       "browserCost": {
         "dominantCost": "style",
         "domNodeDelta": 10,
-        "reactDurationMs": 1.1000000014901161,
+        "reactDurationMs": 1.1999999955296516,
         "style": {
           "count": 9,
-          "durationMs": 51.70599999999996
+          "durationMs": 51.58000000000004
         },
         "layout": {
           "count": 3,
-          "durationMs": 0.4639999999999995
+          "durationMs": 0.44099999999999895
         },
-        "scriptDurationMs": 4.863000000000056,
-        "taskDurationMs": 61.34199999999987
+        "scriptDurationMs": 4.644999999999982,
+        "taskDurationMs": 61.18399999999997
       },
       "styleAttributionHint": "editable-body-surface"
     },
@@ -7105,17 +7105,17 @@
       },
       "wait": {
         "ok": true,
-        "elapsedMs": 33.600000001490116
+        "elapsedMs": 33.099999997764826
       },
-      "elapsedMs": 65.30000000074506,
+      "elapsedMs": 64.5,
       "metricsDelta": {
         "Nodes": 4,
         "LayoutCount": 1,
         "RecalcStyleCount": 4,
-        "LayoutDurationMs": 0.1429999999999998,
-        "RecalcStyleDurationMs": 25.704000000000065,
-        "ScriptDurationMs": 3.7549999999999955,
-        "TaskDurationMs": 31.29099999999994
+        "LayoutDurationMs": 0.1559999999999988,
+        "RecalcStyleDurationMs": 25.3599999999999,
+        "ScriptDurationMs": 3.725999999999999,
+        "TaskDurationMs": 30.792999999999893
       },
       "browserCost": {
         "dominantCost": "style",
@@ -7123,14 +7123,14 @@
         "reactDurationMs": 0.9000000022351742,
         "style": {
           "count": 4,
-          "durationMs": 25.704000000000065
+          "durationMs": 25.3599999999999
         },
         "layout": {
           "count": 1,
-          "durationMs": 0.1429999999999998
+          "durationMs": 0.1559999999999988
         },
-        "scriptDurationMs": 3.7549999999999955,
-        "taskDurationMs": 31.29099999999994
+        "scriptDurationMs": 3.725999999999999,
+        "taskDurationMs": 30.792999999999893
       },
       "styleAttributionHint": "editable-body-surface"
     },
@@ -7253,8 +7253,8 @@
         },
         "reactCommits": {
           "count": 8,
-          "totalActualDurationMs": 17.899999994784594,
-          "maxActualDurationMs": 10.199999999254942
+          "totalActualDurationMs": 17.699999999254942,
+          "maxActualDurationMs": 10
         },
         "markCounts": {
           "cell-commit-local-end": 1,
@@ -7318,32 +7318,32 @@
       },
       "wait": {
         "ok": true,
-        "elapsedMs": 32.600000001490116
+        "elapsedMs": 32.900000002235174
       },
-      "elapsedMs": 198.30000000074506,
+      "elapsedMs": 208.69999999925494,
       "metricsDelta": {
         "Nodes": 13,
         "LayoutCount": 3,
         "RecalcStyleCount": 18,
-        "LayoutDurationMs": 0.4220000000000006,
-        "RecalcStyleDurationMs": 53.173999999999864,
-        "ScriptDurationMs": 26.738999999999976,
-        "TaskDurationMs": 89.01800000000003
+        "LayoutDurationMs": 0.4510000000000005,
+        "RecalcStyleDurationMs": 52.70100000000002,
+        "ScriptDurationMs": 26.697000000000003,
+        "TaskDurationMs": 88.64599999999996
       },
       "browserCost": {
         "dominantCost": "style",
         "domNodeDelta": 13,
-        "reactDurationMs": 17.899999994784594,
+        "reactDurationMs": 17.699999999254942,
         "style": {
           "count": 18,
-          "durationMs": 53.173999999999864
+          "durationMs": 52.70100000000002
         },
         "layout": {
           "count": 3,
-          "durationMs": 0.4220000000000006
+          "durationMs": 0.4510000000000005
         },
-        "scriptDurationMs": 26.738999999999976,
-        "taskDurationMs": 89.01800000000003
+        "scriptDurationMs": 26.697000000000003,
+        "taskDurationMs": 88.64599999999996
       },
       "styleAttributionHint": "editable-body-surface"
     },
@@ -7391,8 +7391,8 @@
           ]
         },
         "reactCommits": {
-          "count": 11,
-          "totalActualDurationMs": 3.400000002235174,
+          "count": 12,
+          "totalActualDurationMs": 2.800000011920929,
           "maxActualDurationMs": 0.4000000022351742
         },
         "markCounts": {
@@ -7456,32 +7456,32 @@
       },
       "wait": {
         "ok": true,
-        "elapsedMs": 34.19999999925494
+        "elapsedMs": 33.399999998509884
       },
-      "elapsedMs": 262.1000000014901,
+      "elapsedMs": 262.30000000074506,
       "metricsDelta": {
         "Nodes": 20,
         "LayoutCount": 6,
         "RecalcStyleCount": 22,
-        "LayoutDurationMs": 0.7839999999999989,
-        "RecalcStyleDurationMs": 104.33299999999997,
-        "ScriptDurationMs": 11.531999999999982,
-        "TaskDurationMs": 125.89600000000019
+        "LayoutDurationMs": 0.802999999999999,
+        "RecalcStyleDurationMs": 103.28200000000004,
+        "ScriptDurationMs": 11.964000000000055,
+        "TaskDurationMs": 124.94500000000016
       },
       "browserCost": {
         "dominantCost": "style",
         "domNodeDelta": 20,
-        "reactDurationMs": 3.400000002235174,
+        "reactDurationMs": 2.800000011920929,
         "style": {
           "count": 22,
-          "durationMs": 104.33299999999997
+          "durationMs": 103.28200000000004
         },
         "layout": {
           "count": 6,
-          "durationMs": 0.7839999999999989
+          "durationMs": 0.802999999999999
         },
-        "scriptDurationMs": 11.531999999999982,
-        "taskDurationMs": 125.89600000000019
+        "scriptDurationMs": 11.964000000000055,
+        "taskDurationMs": 124.94500000000016
       },
       "styleAttributionHint": "editable-body-surface"
     },
@@ -7530,8 +7530,8 @@
         },
         "reactCommits": {
           "count": 2,
-          "totalActualDurationMs": 0.7999999970197678,
-          "maxActualDurationMs": 0.3999999985098839
+          "totalActualDurationMs": 0.6000000014901161,
+          "maxActualDurationMs": 0.30000000074505806
         },
         "markCounts": {
           "cell-commit-local-end": 1,
@@ -7594,32 +7594,32 @@
       },
       "wait": {
         "ok": true,
-        "elapsedMs": 33.19999999925494
+        "elapsedMs": 32.79999999701977
       },
-      "elapsedMs": 64.19999999925494,
+      "elapsedMs": 63.69999999925494,
       "metricsDelta": {
         "Nodes": 4,
         "LayoutCount": 1,
-        "RecalcStyleCount": 9,
-        "LayoutDurationMs": 0.13000000000000078,
-        "RecalcStyleDurationMs": 25.706999999999994,
-        "ScriptDurationMs": 3.1680000000000064,
-        "TaskDurationMs": 32.45499999999993
+        "RecalcStyleCount": 8,
+        "LayoutDurationMs": 0.12199999999999989,
+        "RecalcStyleDurationMs": 25.52800000000002,
+        "ScriptDurationMs": 3.158999999999992,
+        "TaskDurationMs": 31.965999999999894
       },
       "browserCost": {
         "dominantCost": "style",
         "domNodeDelta": 4,
-        "reactDurationMs": 0.7999999970197678,
+        "reactDurationMs": 0.6000000014901161,
         "style": {
-          "count": 9,
-          "durationMs": 25.706999999999994
+          "count": 8,
+          "durationMs": 25.52800000000002
         },
         "layout": {
           "count": 1,
-          "durationMs": 0.13000000000000078
+          "durationMs": 0.12199999999999989
         },
-        "scriptDurationMs": 3.1680000000000064,
-        "taskDurationMs": 32.45499999999993
+        "scriptDurationMs": 3.158999999999992,
+        "taskDurationMs": 31.965999999999894
       },
       "styleAttributionHint": "editable-body-surface"
     },
@@ -7671,7 +7671,7 @@
         },
         "reactCommits": {
           "count": 5,
-          "totalActualDurationMs": 22.200000006705523,
+          "totalActualDurationMs": 22.399999994784594,
           "maxActualDurationMs": 14.100000001490116
         },
         "markCounts": {
@@ -7730,32 +7730,32 @@
       },
       "wait": {
         "ok": true,
-        "elapsedMs": 33.19999999925494
+        "elapsedMs": 32.899999998509884
       },
-      "elapsedMs": 227.40000000223517,
+      "elapsedMs": 231.19999999925494,
       "metricsDelta": {
         "Nodes": 185,
         "LayoutCount": 3,
         "RecalcStyleCount": 17,
-        "LayoutDurationMs": 0.7989999999999995,
-        "RecalcStyleDurationMs": 79.79099999999994,
-        "ScriptDurationMs": 28.31499999999994,
-        "TaskDurationMs": 116.41799999999989
+        "LayoutDurationMs": 0.8559999999999999,
+        "RecalcStyleDurationMs": 79.81099999999992,
+        "ScriptDurationMs": 28.783999999999992,
+        "TaskDurationMs": 117.04099999999994
       },
       "browserCost": {
         "dominantCost": "style",
         "domNodeDelta": 185,
-        "reactDurationMs": 22.200000006705523,
+        "reactDurationMs": 22.399999994784594,
         "style": {
           "count": 17,
-          "durationMs": 79.79099999999994
+          "durationMs": 79.81099999999992
         },
         "layout": {
           "count": 3,
-          "durationMs": 0.7989999999999995
+          "durationMs": 0.8559999999999999
         },
-        "scriptDurationMs": 28.31499999999994,
-        "taskDurationMs": 116.41799999999989
+        "scriptDurationMs": 28.783999999999992,
+        "taskDurationMs": 117.04099999999994
       },
       "styleAttributionHint": "editable-body-surface"
     },
@@ -7804,8 +7804,8 @@
         },
         "reactCommits": {
           "count": 7,
-          "totalActualDurationMs": 22.100000001490116,
-          "maxActualDurationMs": 7.699999999254942
+          "totalActualDurationMs": 23,
+          "maxActualDurationMs": 8.099999997764826
         },
         "markCounts": {
           "cell-commit-local-end": 1,
@@ -7869,32 +7869,32 @@
       },
       "wait": {
         "ok": true,
-        "elapsedMs": 33.5
+        "elapsedMs": 33.19999999925494
       },
-      "elapsedMs": 298.80000000074506,
+      "elapsedMs": 300.4000000022352,
       "metricsDelta": {
         "Nodes": 185,
         "LayoutCount": 5,
-        "RecalcStyleCount": 38,
-        "LayoutDurationMs": 0.6589999999999989,
-        "RecalcStyleDurationMs": 105.32000000000005,
-        "ScriptDurationMs": 30.629999999999995,
-        "TaskDurationMs": 147.9559999999999
+        "RecalcStyleCount": 36,
+        "LayoutDurationMs": 0.7139999999999986,
+        "RecalcStyleDurationMs": 108.34400000000005,
+        "ScriptDurationMs": 32.68100000000004,
+        "TaskDurationMs": 153.13799999999992
       },
       "browserCost": {
         "dominantCost": "style",
         "domNodeDelta": 185,
-        "reactDurationMs": 22.100000001490116,
+        "reactDurationMs": 23,
         "style": {
-          "count": 38,
-          "durationMs": 105.32000000000005
+          "count": 36,
+          "durationMs": 108.34400000000005
         },
         "layout": {
           "count": 5,
-          "durationMs": 0.6589999999999989
+          "durationMs": 0.7139999999999986
         },
-        "scriptDurationMs": 30.629999999999995,
-        "taskDurationMs": 147.9559999999999
+        "scriptDurationMs": 32.68100000000004,
+        "taskDurationMs": 153.13799999999992
       },
       "styleAttributionHint": "editable-body-surface"
     },
@@ -7935,8 +7935,8 @@
         },
         "reactCommits": {
           "count": 2,
-          "totalActualDurationMs": 1.1000000014901161,
-          "maxActualDurationMs": 0.6000000014901161
+          "totalActualDurationMs": 1.199999999254942,
+          "maxActualDurationMs": 0.6999999992549419
         },
         "markCounts": {
           "cell-commit-local-end": 1,
@@ -8000,32 +8000,32 @@
       },
       "wait": {
         "ok": true,
-        "elapsedMs": 33.80000000074506
+        "elapsedMs": 32.80000000074506
       },
-      "elapsedMs": 104.90000000223517,
+      "elapsedMs": 103.69999999925494,
       "metricsDelta": {
         "Nodes": 3,
         "LayoutCount": 1,
-        "RecalcStyleCount": 13,
-        "LayoutDurationMs": 0.1050000000000022,
-        "RecalcStyleDurationMs": 25.819999999999936,
-        "ScriptDurationMs": 3.2800000000000296,
-        "TaskDurationMs": 34.16599999999994
+        "RecalcStyleCount": 12,
+        "LayoutDurationMs": 0.09800000000000253,
+        "RecalcStyleDurationMs": 25.50100000000009,
+        "ScriptDurationMs": 3.3290000000000077,
+        "TaskDurationMs": 33.634000000000015
       },
       "browserCost": {
         "dominantCost": "style",
         "domNodeDelta": 3,
-        "reactDurationMs": 1.1000000014901161,
+        "reactDurationMs": 1.199999999254942,
         "style": {
-          "count": 13,
-          "durationMs": 25.819999999999936
+          "count": 12,
+          "durationMs": 25.50100000000009
         },
         "layout": {
           "count": 1,
-          "durationMs": 0.1050000000000022
+          "durationMs": 0.09800000000000253
         },
-        "scriptDurationMs": 3.2800000000000296,
-        "taskDurationMs": 34.16599999999994
+        "scriptDurationMs": 3.3290000000000077,
+        "taskDurationMs": 33.634000000000015
       },
       "styleAttributionHint": "editable-body-surface"
     },
@@ -8077,8 +8077,8 @@
         },
         "reactCommits": {
           "count": 4,
-          "totalActualDurationMs": 17.00000000372529,
-          "maxActualDurationMs": 8.900000002235174
+          "totalActualDurationMs": 17.099999997764826,
+          "maxActualDurationMs": 9.199999999254942
         },
         "markCounts": {
           "pointer-enter-cell": 2
@@ -8136,32 +8136,32 @@
       },
       "wait": {
         "ok": true,
-        "elapsedMs": 34.100000001490116
+        "elapsedMs": 34.19999999925494
       },
-      "elapsedMs": 151.10000000149012,
+      "elapsedMs": 153.89999999850988,
       "metricsDelta": {
         "Nodes": 182,
         "LayoutCount": 2,
-        "RecalcStyleCount": 8,
-        "LayoutDurationMs": 0.4599999999999973,
-        "RecalcStyleDurationMs": 53.38300000000015,
-        "ScriptDurationMs": 21.438999999999965,
-        "TaskDurationMs": 80.07899999999995
+        "RecalcStyleCount": 9,
+        "LayoutDurationMs": 0.49499999999999744,
+        "RecalcStyleDurationMs": 53.31699999999978,
+        "ScriptDurationMs": 21.610000000000014,
+        "TaskDurationMs": 80.76099999999997
       },
       "browserCost": {
         "dominantCost": "style",
         "domNodeDelta": 182,
-        "reactDurationMs": 17.00000000372529,
+        "reactDurationMs": 17.099999997764826,
         "style": {
-          "count": 8,
-          "durationMs": 53.38300000000015
+          "count": 9,
+          "durationMs": 53.31699999999978
         },
         "layout": {
           "count": 2,
-          "durationMs": 0.4599999999999973
+          "durationMs": 0.49499999999999744
         },
-        "scriptDurationMs": 21.438999999999965,
-        "taskDurationMs": 80.07899999999995
+        "scriptDurationMs": 21.610000000000014,
+        "taskDurationMs": 80.76099999999997
       },
       "styleAttributionHint": "popup-mount"
     },
@@ -8187,8 +8187,8 @@
         },
         "reactCommits": {
           "count": 1,
-          "totalActualDurationMs": 7.699999999254942,
-          "maxActualDurationMs": 7.699999999254942
+          "totalActualDurationMs": 8.199999999254942,
+          "maxActualDurationMs": 8.199999999254942
         },
         "markCounts": {
           "pointer-enter-cell": 1
@@ -8246,32 +8246,32 @@
       },
       "wait": {
         "ok": true,
-        "elapsedMs": 33.19999999925494
+        "elapsedMs": 33.29999999701977
       },
-      "elapsedMs": 74.5,
+      "elapsedMs": 83.19999999925494,
       "metricsDelta": {
         "Nodes": 144,
         "LayoutCount": 2,
         "RecalcStyleCount": 4,
-        "LayoutDurationMs": 0.3020000000000014,
-        "RecalcStyleDurationMs": 27.794999999999845,
-        "ScriptDurationMs": 9.701999999999998,
-        "TaskDurationMs": 40.18199999999979
+        "LayoutDurationMs": 0.33500000000000085,
+        "RecalcStyleDurationMs": 27.74000000000001,
+        "ScriptDurationMs": 10.324000000000012,
+        "TaskDurationMs": 41.05400000000009
       },
       "browserCost": {
         "dominantCost": "style",
         "domNodeDelta": 144,
-        "reactDurationMs": 7.699999999254942,
+        "reactDurationMs": 8.199999999254942,
         "style": {
           "count": 4,
-          "durationMs": 27.794999999999845
+          "durationMs": 27.74000000000001
         },
         "layout": {
           "count": 2,
-          "durationMs": 0.3020000000000014
+          "durationMs": 0.33500000000000085
         },
-        "scriptDurationMs": 9.701999999999998,
-        "taskDurationMs": 40.18199999999979
+        "scriptDurationMs": 10.324000000000012,
+        "taskDurationMs": 41.05400000000009
       },
       "styleAttributionHint": "popup-open-surface"
     },
@@ -8372,8 +8372,8 @@
         },
         "reactCommits": {
           "count": 2,
-          "totalActualDurationMs": 2.2999999970197678,
-          "maxActualDurationMs": 2.2999999970197678
+          "totalActualDurationMs": 2.599999997764826,
+          "maxActualDurationMs": 2.599999997764826
         },
         "markCounts": {}
       },
@@ -8429,32 +8429,32 @@
       },
       "wait": {
         "ok": true,
-        "elapsedMs": 59.30000000074506
+        "elapsedMs": 58.899999998509884
       },
-      "elapsedMs": 99.19999999925494,
+      "elapsedMs": 134.39999999850988,
       "metricsDelta": {
         "Nodes": 58,
         "LayoutCount": 1,
         "RecalcStyleCount": 2,
-        "LayoutDurationMs": 0.19799999999999862,
-        "RecalcStyleDurationMs": 25.392000000000053,
-        "ScriptDurationMs": 4.362000000000023,
-        "TaskDurationMs": 31.870999999999867
+        "LayoutDurationMs": 0.18399999999999928,
+        "RecalcStyleDurationMs": 25.393999999999778,
+        "ScriptDurationMs": 4.631000000000029,
+        "TaskDurationMs": 32.29600000000005
       },
       "browserCost": {
         "dominantCost": "style",
         "domNodeDelta": 58,
-        "reactDurationMs": 2.2999999970197678,
+        "reactDurationMs": 2.599999997764826,
         "style": {
           "count": 2,
-          "durationMs": 25.392000000000053
+          "durationMs": 25.393999999999778
         },
         "layout": {
           "count": 1,
-          "durationMs": 0.19799999999999862
+          "durationMs": 0.18399999999999928
         },
-        "scriptDurationMs": 4.362000000000023,
-        "taskDurationMs": 31.870999999999867
+        "scriptDurationMs": 4.631000000000029,
+        "taskDurationMs": 32.29600000000005
       },
       "styleAttributionHint": "editable-body-surface"
     },
@@ -8515,8 +8515,8 @@
         },
         "reactCommits": {
           "count": 3,
-          "totalActualDurationMs": 0.8999999985098839,
-          "maxActualDurationMs": 0.5
+          "totalActualDurationMs": 1.0000000037252903,
+          "maxActualDurationMs": 0.6000000014901161
         },
         "markCounts": {}
       },
@@ -8572,32 +8572,32 @@
       },
       "wait": {
         "ok": true,
-        "elapsedMs": 33.80000000074506
+        "elapsedMs": 38
       },
-      "elapsedMs": 95.19999999925494,
+      "elapsedMs": 73,
       "metricsDelta": {
         "Nodes": 3,
         "LayoutCount": 1,
-        "RecalcStyleCount": 9,
-        "LayoutDurationMs": 0.10800000000000054,
-        "RecalcStyleDurationMs": 25.490999999999985,
-        "ScriptDurationMs": 3.290999999999997,
-        "TaskDurationMs": 31.812000000000126
+        "RecalcStyleCount": 8,
+        "LayoutDurationMs": 0.1280000000000001,
+        "RecalcStyleDurationMs": 26.19699999999989,
+        "ScriptDurationMs": 3.647000000000048,
+        "TaskDurationMs": 32.90800000000013
       },
       "browserCost": {
         "dominantCost": "style",
         "domNodeDelta": 3,
-        "reactDurationMs": 0.8999999985098839,
+        "reactDurationMs": 1.0000000037252903,
         "style": {
-          "count": 9,
-          "durationMs": 25.490999999999985
+          "count": 8,
+          "durationMs": 26.19699999999989
         },
         "layout": {
           "count": 1,
-          "durationMs": 0.10800000000000054
+          "durationMs": 0.1280000000000001
         },
-        "scriptDurationMs": 3.290999999999997,
-        "taskDurationMs": 31.812000000000126
+        "scriptDurationMs": 3.647000000000048,
+        "taskDurationMs": 32.90800000000013
       },
       "styleAttributionHint": "editable-body-surface"
     },
@@ -8650,7 +8650,7 @@
         },
         "reactCommits": {
           "count": 5,
-          "totalActualDurationMs": 1.800000000745058,
+          "totalActualDurationMs": 1.6000000014901161,
           "maxActualDurationMs": 0.5
         },
         "markCounts": {
@@ -8715,32 +8715,32 @@
       },
       "wait": {
         "ok": true,
-        "elapsedMs": 33.600000001490116
+        "elapsedMs": 32.899999998509884
       },
-      "elapsedMs": 93.19999999925494,
+      "elapsedMs": 93.10000000149012,
       "metricsDelta": {
         "Nodes": 12,
         "LayoutCount": 2,
         "RecalcStyleCount": 8,
-        "LayoutDurationMs": 0.30599999999999916,
-        "RecalcStyleDurationMs": 51.38799999999992,
-        "ScriptDurationMs": 5.1720000000000255,
-        "TaskDurationMs": 58.97600000000011
+        "LayoutDurationMs": 0.28399999999999714,
+        "RecalcStyleDurationMs": 51.20499999999993,
+        "ScriptDurationMs": 5.319000000000017,
+        "TaskDurationMs": 59.027000000000044
       },
       "browserCost": {
         "dominantCost": "style",
         "domNodeDelta": 12,
-        "reactDurationMs": 1.800000000745058,
+        "reactDurationMs": 1.6000000014901161,
         "style": {
           "count": 8,
-          "durationMs": 51.38799999999992
+          "durationMs": 51.20499999999993
         },
         "layout": {
           "count": 2,
-          "durationMs": 0.30599999999999916
+          "durationMs": 0.28399999999999714
         },
-        "scriptDurationMs": 5.1720000000000255,
-        "taskDurationMs": 58.97600000000011
+        "scriptDurationMs": 5.319000000000017,
+        "taskDurationMs": 59.027000000000044
       },
       "styleAttributionHint": "editable-body-surface"
     },
@@ -8823,17 +8823,17 @@
       },
       "wait": {
         "ok": true,
-        "elapsedMs": 33.19999999925494
+        "elapsedMs": 32.599999997764826
       },
-      "elapsedMs": 35.69999999925494,
+      "elapsedMs": 35.100000001490116,
       "metricsDelta": {
         "Nodes": 0,
         "LayoutCount": 0,
         "RecalcStyleCount": 0,
         "LayoutDurationMs": 0,
         "RecalcStyleDurationMs": 0,
-        "ScriptDurationMs": 0.7559999999999718,
-        "TaskDurationMs": 1.987999999999829
+        "ScriptDurationMs": 0.8610000000000468,
+        "TaskDurationMs": 1.94399999999996
       },
       "browserCost": {
         "dominantCost": "script",
@@ -8847,8 +8847,8 @@
           "count": 0,
           "durationMs": 0
         },
-        "scriptDurationMs": 0.7559999999999718,
-        "taskDurationMs": 1.987999999999829
+        "scriptDurationMs": 0.8610000000000468,
+        "taskDurationMs": 1.94399999999996
       },
       "styleAttributionHint": "not-style-bound"
     },
@@ -8897,8 +8897,8 @@
         },
         "reactCommits": {
           "count": 5,
-          "totalActualDurationMs": 1.5,
-          "maxActualDurationMs": 0.4000000022351742
+          "totalActualDurationMs": 1.2000000029802322,
+          "maxActualDurationMs": 0.3999999985098839
         },
         "markCounts": {
           "cell-commit-local-end": 1,
@@ -8961,32 +8961,32 @@
       },
       "wait": {
         "ok": true,
-        "elapsedMs": 33.29999999701977
+        "elapsedMs": 32.400000002235174
       },
-      "elapsedMs": 129,
+      "elapsedMs": 127.69999999925494,
       "metricsDelta": {
         "Nodes": 10,
         "LayoutCount": 3,
         "RecalcStyleCount": 10,
-        "LayoutDurationMs": 0.39199999999999946,
-        "RecalcStyleDurationMs": 51.506999999999834,
-        "ScriptDurationMs": 5.015999999999963,
-        "TaskDurationMs": 60.83999999999969
+        "LayoutDurationMs": 0.3979999999999979,
+        "RecalcStyleDurationMs": 50.832999999999856,
+        "ScriptDurationMs": 5.04200000000003,
+        "TaskDurationMs": 60.49499999999989
       },
       "browserCost": {
         "dominantCost": "style",
         "domNodeDelta": 10,
-        "reactDurationMs": 1.5,
+        "reactDurationMs": 1.2000000029802322,
         "style": {
           "count": 10,
-          "durationMs": 51.506999999999834
+          "durationMs": 50.832999999999856
         },
         "layout": {
           "count": 3,
-          "durationMs": 0.39199999999999946
+          "durationMs": 0.3979999999999979
         },
-        "scriptDurationMs": 5.015999999999963,
-        "taskDurationMs": 60.83999999999969
+        "scriptDurationMs": 5.04200000000003,
+        "taskDurationMs": 60.49499999999989
       },
       "styleAttributionHint": "editable-body-surface"
     }

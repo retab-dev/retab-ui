@@ -712,9 +712,23 @@ describe("viewer architecture", () => {
     expect(fileViewerSource).toContain(
       'import("@/components/ui/pretext-markdown-viewer")'
     )
+    expect(fileViewerSource).toContain("export function FileViewerProvider")
+    expect(fileViewerSource).toContain("export function FileViewerContent")
+    expect(fileViewerSource).toContain("export function FileViewerHeader")
+    expect(fileViewerSource).toContain("export function useFileViewer")
+    expect(fileViewerSource).toContain("<FileViewerProvider")
+    expect(fileViewerSource).toContain("<FileViewerContent")
     expect(publicFileViewerSource).toContain(
       'import("@/components/ui/pretext-markdown-viewer")'
     )
+    expect(publicFileViewerSource).toContain(
+      "export function FileViewerProvider"
+    )
+    expect(publicFileViewerSource).toContain(
+      "export function FileViewerContent"
+    )
+    expect(publicFileViewerSource).toContain("export function FileViewerHeader")
+    expect(publicFileViewerSource).toContain("export function useFileViewer")
     expect(publicFileViewerSource).not.toContain("markdown-document-viewer")
   })
 
@@ -1282,14 +1296,10 @@ describe("viewer architecture", () => {
     expect(asyncTask).toContain("task.key")
     expect(asyncTask).not.toContain("@pierre/trees")
     expect(folderTask).toContain("useFileSystemFolderTask")
-    expect(folderTask).toContain("FolderLoadRequest")
-    expect(folderTask).toContain("FolderLoadWaiter")
-    expect(folderTask).toContain("AbortController")
-    expect(folderTask).toContain("waitersBy" + "RequestId")
-    expect(folderTask).toContain("requestsBy" + "Path")
-    expect(folderTask).toContain("settleRequestFromCommittedChildren")
-    expect(folderTask).not.toContain("createFileSystemAsyncTaskRuntime")
-    expect(folderTask).not.toContain("taskRuntime")
+    expect(folderTask).toContain("FileSystemFolderTask")
+    expect(folderTask).toContain("folder.loadRequested")
+    expect(folderTask).toContain("folder.loadSucceeded")
+    expect(folderTask).toContain("folder.loadFailed")
     expect(folderTask).not.toContain("onPathChange")
     expect(folderTask).not.toContain("onQueryChange")
     expect(folderTask).not.toContain("onSelectionChange")
@@ -1345,6 +1355,7 @@ describe("viewer architecture", () => {
     expect(parts).toContain("export function FileSystemHeader")
     expect(parts).toContain("export function FileSystemBrowser")
     expect(parts).toContain("export function FileSystemSelection")
+    expect(parts).not.toContain("FileViewer")
     expect(parts).toContain("createFileSystemBrowserController")
     expect(parts).toContain("export type FileSystemBrowserPartState")
     expect(parts).toContain("const header = useFileSystemHeader()")
@@ -1367,6 +1378,10 @@ describe("viewer architecture", () => {
     expect(dialog).toContain('status === "resolving"')
     expect(dialog).toContain('status === "unavailable"')
     expect(dialog).toContain('status === "failed"')
+    expect(easyApi).toContain("FileSystemDefaultSelectionContent")
+    expect(easyApi).toContain("<FileViewer")
+    expect(easyApi).not.toContain("FileSystemSelectionSurface")
+    expect(easyApi).not.toContain("./file-system-preview")
   })
 
   it("keeps file-system easy API on invariant browser plus preview grammar", () => {
@@ -1431,6 +1446,12 @@ describe("viewer architecture", () => {
     expect(fileSystemItem?.dependencies ?? []).not.toContain("@pierre/trees")
     expect(fileSystemPaths).toContain(
       "registry/new-york-v4/ui/file-system-list-view.tsx"
+    )
+    expect(fileSystemPaths).toContain(
+      "registry/new-york-v4/ui/file-system-thumbnail.tsx"
+    )
+    expect(fileSystemPaths).not.toContain(
+      "registry/new-york-v4/ui/file-system-preview.tsx"
     )
     expect(fileSystemPaths).not.toContain(
       "registry/new-york-v4/ui/file-system-list-continuity.ts"
@@ -1693,7 +1714,7 @@ describe("viewer architecture", () => {
   it("keeps viewer sidebar child panels content-only when nested inside viewer rails", () => {
     const panelFiles = [
       "registry/new-york-v4/ui/layout-blocks-panel.tsx",
-      "registry/new-york-v4/ui/file-system-preview.tsx",
+      "registry/new-york-v4/ui/file-system-thumbnail.tsx",
     ]
 
     for (const file of panelFiles) {
@@ -1984,6 +2005,12 @@ describe("viewer architecture", () => {
     const imageSources = fileContent(
       "registry/new-york-v4/blocks/image-sources-block.tsx"
     )
+    const extractSources = fileContent(
+      "registry/new-york-v4/blocks/extract-viewer-block.tsx"
+    )
+    const extractionViewer = fileContent(
+      "registry/new-york-v4/blocks/extraction-viewer-block.tsx"
+    )
 
     expect(fieldAnchorLink).toContain("export function useSegmentedFieldLink")
     expect(fieldAnchorLink).toContain("useSegmentedDocument")
@@ -1993,6 +2020,7 @@ describe("viewer architecture", () => {
     for (const [file, content] of [
       ["json-form-sources-block", jsonFormSources],
       ["image-sources-block", imageSources],
+      ["extract-viewer-block", extractSources],
     ] as const) {
       expect(content, `${file} uses segmented provider`).toContain(
         "SegmentedDocumentProvider"
@@ -2026,6 +2054,17 @@ describe("viewer architecture", () => {
     expect(jsonFormSources).not.toContain("usePdfAnchoredOverlay")
     expect(imageSources).toContain("sourceFieldsToSegmentedDocumentModel")
     expect(imageSources).toContain("scrollToFrameArea")
+    expect(extractSources).toContain("sourceFieldsToSegmentedDocumentModel")
+    expect(extractSources).toContain("PdfViewerPages")
+    expect(extractSources).toContain("PdfHighlight")
+    expect(extractionViewer).toContain("sourceMapToSegmentedDocumentModel")
+    expect(extractionViewer).toContain("sourceFieldsToSegmentedDocumentModel")
+    expect(extractionViewer).toContain("SegmentedExtractionShell")
+    expect(extractionViewer).toContain("SegmentedDocumentProvider")
+    expect(extractionViewer).toContain("useSegmentedFieldLink")
+    expect(extractionViewer).toContain("setDocumentHandle")
+    expect(extractionViewer).toContain("AnchoredDocumentProvider")
+    expect(extractionViewer).not.toContain("pdf-anchor-target")
   })
 
   it("keeps source blocks from rebuilding document anchors inline", () => {
@@ -2035,7 +2074,6 @@ describe("viewer architecture", () => {
       "registry/new-york-v4/blocks/xlsx-sources-block.tsx",
       "registry/new-york-v4/blocks/docx-sources-block.tsx",
       "registry/new-york-v4/blocks/json-form-sources-block.tsx",
-      "registry/new-york-v4/blocks/extract-viewer-block.tsx",
       "registry/new-york-v4/blocks/extraction-viewer-block.tsx",
     ]
     const forbidden = [
@@ -2059,6 +2097,7 @@ describe("viewer architecture", () => {
     for (const file of [
       ...evidenceSourceBlocks,
       "registry/new-york-v4/blocks/image-sources-block.tsx",
+      "registry/new-york-v4/blocks/extract-viewer-block.tsx",
     ]) {
       const content = fileContent(file)
       for (const symbol of forbidden) {
@@ -2181,6 +2220,31 @@ describe("viewer architecture", () => {
     expect(
       itemsByName.get("image-sources-block")?.registryDependencies
     ).not.toEqual(expect.arrayContaining(["anchored-document-viewer"]))
+    expect(
+      itemsByName.get("extract-viewer-block")?.registryDependencies
+    ).toEqual(
+      expect.arrayContaining([
+        "segmented-document",
+        "source-segmented-document",
+      ])
+    )
+    expect(
+      itemsByName.get("extract-viewer-block")?.registryDependencies
+    ).not.toEqual(
+      expect.arrayContaining(["anchored-document-viewer", "pdf-anchor-target"])
+    )
+    expect(
+      itemsByName.get("extraction-viewer-block")?.registryDependencies
+    ).toEqual(
+      expect.arrayContaining([
+        "anchored-document-viewer",
+        "segmented-document",
+        "source-segmented-document",
+      ])
+    )
+    expect(
+      itemsByName.get("extraction-viewer-block")?.registryDependencies
+    ).not.toEqual(expect.arrayContaining(["pdf-anchor-target"]))
   })
 
   it("keeps anchored examples on provider, body, sidebar, surface grammar", () => {
@@ -2188,7 +2252,8 @@ describe("viewer architecture", () => {
       {
         file: "registry/new-york-v4/blocks/extract-viewer-block.tsx",
         symbols: [
-          "<AnchoredDocumentProvider",
+          "<SegmentedDocumentProvider",
+          "<ExtractViewerContent",
           "<ViewerRoot",
           "<ViewerBody",
           "<ViewerSurface",

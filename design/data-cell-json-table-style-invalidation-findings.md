@@ -322,6 +322,17 @@ Budget consequence:
   current warmed fresh profile so saved-budget verification exercises the same
   current architecture that produced these findings.
 
+Fresh gate after budget tightening:
+
+| Profile | Scenario            | Elapsed | Style  | Surface               | Owner                  |
+| ------- | ------------------- | ------- | ------ | --------------------- | ---------------------- |
+| `large` | `open-enum`         | 110.5ms | 63.8ms | header:32/body:55/15  | `popup-mount`          |
+| `large` | `open-date`         | 327.4ms | 76.6ms | header:32/body:55/99  | `popup-mount`          |
+| `large` | `switch-dirty-cell` | 107.7ms | 64.0ms | header:32/body:55/0   | `eager-header-surface` |
+| `large` | `open-far-enum`     | 111.0ms | 69.2ms | header:31/body:45/15  | `popup-mount`          |
+| `large` | `open-far-date`     | 112.4ms | 61.9ms | header:31/body:45/114 | `popup-mount`          |
+| `large` | `commit-far-text`   | 144.9ms | 62.2ms | header:34/body:50/0   | `eager-header-surface` |
+
 ## Implemented Proof: Browser Header/Body Alignment
 
 The browser accessibility verifier now checks virtualized column geometry in

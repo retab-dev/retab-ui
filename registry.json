@@ -2010,9 +2010,9 @@
           "target": "@ui/use-file-system-roving-focus.ts"
         },
         {
-          "path": "registry/new-york-v4/ui/file-system-preview.tsx",
+          "path": "registry/new-york-v4/ui/file-system-thumbnail.tsx",
           "type": "registry:ui",
-          "target": "@ui/file-system-preview.tsx"
+          "target": "@ui/file-system-thumbnail.tsx"
         },
         {
           "path": "registry/new-york-v4/ui/file-system-list-view.tsx",
@@ -2912,13 +2912,12 @@
       "title": "Extract Viewer",
       "description": "Extracted data beside the source PDF, rendered as a JSON form and linked by sources — hover or select a field to highlight where its value came from and scroll the page to it.",
       "registryDependencies": [
-        "anchored-document-viewer",
-        "pdf-anchor-target",
         "pdf-viewer",
         "document-source",
         "scroll-area",
+        "segmented-document",
+        "source-segmented-document",
         "utils",
-        "source-evidence",
         "field-anchor-link",
         "source-indicator"
       ],
@@ -2941,7 +2940,7 @@
       "name": "extraction-viewer-block",
       "type": "registry:block",
       "title": "Extraction Viewer",
-      "description": "Every extraction format in one viewer — PDF, image, text, CSV, Excel, and Word — each shown as a JSON form beside its source document, linked through anchored-document target adapters.",
+      "description": "Every extraction format in one viewer — PDF/image bbox sources use segmented-document anchors; text, CSV, Excel, and Word use their format-specific anchored target adapters.",
       "dependencies": [
         "react-hook-form",
         "json-schema",
@@ -2961,12 +2960,13 @@
         "docx-source",
         "document-source",
         "scroll-area",
+        "segmented-document",
         "source-evidence",
+        "source-segmented-document",
         "field-anchor-link",
         "source-indicator",
         "utils",
-        "anchored-document-viewer",
-        "pdf-anchor-target"
+        "anchored-document-viewer"
       ],
       "files": [
         {

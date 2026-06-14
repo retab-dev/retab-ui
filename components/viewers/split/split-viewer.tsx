@@ -236,13 +236,13 @@ function SplitViewerContextProvider({
 export function SplitViewerRoot({
   bare = true,
   className,
-  defaultSidebarOpen = true,
+  defaultOpen = true,
   ...props
 }: SplitViewerRootProps) {
   return (
     <ViewerRoot
       bare={bare}
-      defaultOpen={defaultSidebarOpen}
+      defaultOpen={defaultOpen}
       className={cn("h-full flex-1 bg-background", className)}
       {...props}
     />

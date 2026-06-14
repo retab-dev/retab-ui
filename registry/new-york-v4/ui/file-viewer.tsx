@@ -1,12 +1,16 @@
 "use client"
 
 import * as React from "react"
+import { FileText } from "lucide-react"
 
 import {
   createViewerResource,
   type ViewerResource,
 } from "@/lib/viewer-resource"
+import { cn } from "@/lib/utils"
 import { useIsClient } from "@/components/ui/use-is-client"
+import { ViewerHeader } from "@/components/ui/viewer"
+import { ViewerDownloadButton } from "@/components/ui/viewer-download"
 
 import {
   FileErrorBoundary,
@@ -25,6 +29,33 @@ import { CsvDocViewer } from "./file-viewer-csv-viewer"
 import { HtmlDocViewer } from "./file-viewer-html-viewer"
 
 export { type FileCategory, type FileViewerProps } from "./file-viewer-core"
+
+export type FileViewerProviderProps = Pick<
+  FileViewerProps,
+  "as" | "isolateStyles" | "source"
+> & {
+  children: React.ReactNode
+}
+
+export type FileViewerContentProps = Pick<FileViewerProps, "bare" | "className">
+
+export type FileViewerHeaderProps = React.ComponentProps<typeof ViewerHeader> & {
+  actions?: React.ReactNode
+  showCategory?: boolean
+}
+
+type FileViewerContextValue = {
+  descriptor: FileDescriptor
+  descriptorKey: string
+  descriptorSignal: AbortSignal
+  isClient: boolean
+  isolateStyles: boolean
+  resource: ViewerResource
+}
+
+const FileViewerContext = React.createContext<FileViewerContextValue | null>(
+  null
+)
 
 const PdfResourceViewer = React.lazy(() =>
   import("@/components/ui/pdf-viewer").then((m) => ({
@@ -103,21 +134,68 @@ function useDescriptorSignal(descriptorKey: string): AbortSignal {
   return controller.signal
 }
 
-export function FileViewer(props: FileViewerProps) {
+export function useFileViewer() {
+  const context = React.useContext(FileViewerContext)
+  if (!context) {
+    throw new Error("useFileViewer must be used within FileViewerProvider.")
+  }
+  return context
+}
+
+export function FileViewerProvider({
+  as,
+  children,
+  isolateStyles = false,
+  source,
+}: FileViewerProviderProps) {
   const isClient = useIsClient()
   const resource = React.useMemo(
-    () => createViewerResource(props.source, props.as),
-    [props.source, props.as]
+    () => createViewerResource(source, as),
+    [source, as]
   )
-  const descriptor = resolveFileDescriptor(props)
+  const descriptor = resolveFileDescriptor({ source, as })
   const descriptorKey = descriptorResetKey(descriptor)
   const descriptorSignal = useDescriptorSignal(descriptorKey)
+  const value = React.useMemo<FileViewerContextValue>(
+    () => ({
+      descriptor,
+      descriptorKey,
+      descriptorSignal,
+      isClient,
+      isolateStyles,
+      resource,
+    }),
+    [
+      descriptor,
+      descriptorKey,
+      descriptorSignal,
+      isClient,
+      isolateStyles,
+      resource,
+    ]
+  )
+
+  return (
+    <FileViewerContext.Provider value={value}>
+      {children}
+    </FileViewerContext.Provider>
+  )
+}
+
+export function FileViewerContent({
+  bare = false,
+  className,
+}: FileViewerContentProps) {
+  const {
+    descriptor,
+    descriptorKey,
+    descriptorSignal,
+    isClient,
+    isolateStyles,
+    resource,
+  } = useFileViewer()
   const fallback = (
-    <ViewerFallback
-      resource={resource}
-      className={props.className}
-      bare={props.bare}
-    />
+    <ViewerFallback resource={resource} className={className} bare={bare} />
   )
 
   if (!isClient) return fallback
@@ -127,18 +205,70 @@ export function FileViewer(props: FileViewerProps) {
       key={descriptorKey}
       descriptor={descriptor}
       resource={resource}
-      className={props.className}
+      className={className}
       resetKey={descriptorKey}
     >
       <React.Suspense fallback={fallback}>
         <FileViewerRoute
-          {...props}
+          bare={bare}
+          className={className}
           descriptor={descriptor}
-          resource={resource}
           descriptorSignal={descriptorSignal}
+          isolateStyles={isolateStyles}
+          resource={resource}
         />
       </React.Suspense>
     </FileErrorBoundary>
+  )
+}
+
+export function FileViewerHeader({
+  actions,
+  children,
+  className,
+  showCategory = true,
+  ...props
+}: FileViewerHeaderProps) {
+  const { descriptor, resource } = useFileViewer()
+
+  return (
+    <ViewerHeader
+      className={cn("flex min-h-10 items-center gap-2 px-2", className)}
+      {...props}
+    >
+      {children ?? (
+        <>
+          <FileText className="size-4 shrink-0 text-muted-foreground" />
+          <span
+            className="min-w-0 flex-1 truncate text-sm font-medium"
+            title={descriptor.displayName}
+          >
+            {descriptor.displayName}
+          </span>
+          {showCategory ? (
+            <span className="shrink-0 text-xs text-muted-foreground">
+              {descriptor.category}
+            </span>
+          ) : null}
+          {actions}
+          <ViewerDownloadButton action={resource.originalDownload} />
+        </>
+      )}
+    </ViewerHeader>
+  )
+}
+
+export function FileViewer({
+  as,
+  bare,
+  className,
+  isolateStyles,
+  source,
+}: FileViewerProps) {
+  return (
+    <FileViewerProvider as={as} isolateStyles={isolateStyles} source={source}>
+      <FileViewerContent bare={bare} className={className} />
+    </FileViewerProvider>
   )
 }
 
@@ -146,13 +276,14 @@ function FileViewerRoute({
   descriptor,
   className,
   bare = false,
-  isolateStyles = false,
+  isolateStyles,
   descriptorSignal,
   resource,
-}: FileViewerProps & {
+}: FileViewerContentProps & {
   descriptor: FileDescriptor
-  resource: ViewerResource
   descriptorSignal: AbortSignal
+  isolateStyles: boolean
+  resource: ViewerResource
 }) {
   const { category } = descriptor
   const directLoadUrl = resource.content.directUrl ?? undefined

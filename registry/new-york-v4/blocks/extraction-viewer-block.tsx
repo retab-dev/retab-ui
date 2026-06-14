@@ -18,7 +18,12 @@ import {
 } from "@/components/ui/anchored-document-viewer"
 import { CsvViewer, type CsvViewerHandle } from "@/components/ui/csv-viewer"
 import { DocxViewer, type DocxViewerHandle } from "@/components/ui/docx-viewer"
-import { useAnchoredFieldLink } from "@/components/ui/field-anchor-link"
+import {
+  useAnchoredFieldLink,
+  useSegmentedFieldLink,
+  type FieldAnchorLink,
+  type SegmentedFieldAnchorLink,
+} from "@/components/ui/field-anchor-link"
 import { rotateImageArea } from "@/components/ui/image-source"
 import {
   ImageViewer,
@@ -26,20 +31,26 @@ import {
 } from "@/components/ui/image-viewer"
 import type { ImageFrameOverlayProps } from "@/components/ui/image-viewer-types"
 import {
-  usePdfAnchoredOverlay,
-  usePdfAnchoredTarget,
-} from "@/components/ui/pdf-anchor-target"
-import {
+  PdfHighlight,
   PdfViewerPages,
   PdfViewerProvider,
+  type PageOverlayProps,
   type PdfViewerHandle,
 } from "@/components/ui/pdf-viewer"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import {
+  SegmentedDocumentProvider,
+  useSegmentedDocumentViewport,
+} from "@/components/ui/segmented-document-provider"
 import {
   sourceFieldsToEvidenceModel,
   sourceMapToEvidenceModel,
 } from "@/components/ui/source-evidence"
 import { SourceIndicator } from "@/components/ui/source-indicator"
+import {
+  sourceFieldsToSegmentedDocumentModel,
+  sourceMapToSegmentedDocumentModel,
+} from "@/components/ui/source-segmented-document-model"
 import { TextViewer, type TextViewerHandle } from "@/components/ui/text-viewer"
 import {
   ViewerBody,
@@ -117,13 +128,27 @@ const PDF_EVIDENCE = sourceMapToEvidenceModel({
   schema: jsonFormSample.schema as JSONSchema7,
   values: jsonFormSample.extraction as Record<string, unknown>,
 })
+const PDF_SEGMENTED_DOCUMENT = sourceMapToSegmentedDocumentModel({
+  labels: Object.fromEntries(
+    PDF_EVIDENCE.evidenceItems.map((item) => [item.id, item.payload.label])
+  ),
+  sourceMap: PDF_SOURCE_MAP,
+})
 const PDF_EXTRACTION: Extraction = {
   items: PDF_EVIDENCE.anchoredItems,
   schema: jsonFormSample.schema as JSONSchema7,
   sources: PDF_SOURCE_MAP,
   values: jsonFormSample.extraction as Record<string, unknown>,
 }
-const IMAGE_EXTRACTION = flatExtraction(imageSample as FlatField[])
+const IMAGE_FIELDS = imageSample as FlatField[]
+const IMAGE_EXTRACTION = flatExtraction(IMAGE_FIELDS)
+const IMAGE_SEGMENTED_DOCUMENT = sourceFieldsToSegmentedDocumentModel(
+  IMAGE_FIELDS.map((field) => ({
+    id: field.key,
+    label: field.label,
+    source: field.source,
+  }))
+)
 const TEXT_EXTRACTION = flatExtraction(textSample as FlatField[])
 const CSV_EXTRACTION = flatExtraction(csvSample as FlatField[])
 const XLSX_EXTRACTION = flatExtraction(xlsxSample as FlatField[])
@@ -176,12 +201,47 @@ function ExtractionShell({
   )
 }
 
+function SegmentedExtractionShell({
+  children,
+  extraction,
+  link,
+}: {
+  children: React.ReactNode
+  extraction: Extraction
+  link: SegmentedFieldAnchorLink
+}) {
+  return (
+    <ViewerRoot bare defaultOpen className="h-full bg-background">
+      <ViewerHeader className="flex min-h-10 items-center gap-2 px-2">
+        <ViewerSidebarTrigger />
+        <h2 className="min-w-0 truncate text-sm font-medium">
+          Extraction results
+        </h2>
+      </ViewerHeader>
+      <ViewerBody>
+        <ViewerSurface className="relative">
+          {children}
+          <SourceIndicator path={link.activePath} found={!!link.activeAnchor} />
+        </ViewerSurface>
+        <ViewerSidebar
+          aria-label="Extraction fields"
+          side="right"
+          width="420px"
+          className="flex flex-shrink-0 flex-col border-l"
+        >
+          <ExtractionForm extraction={extraction} link={link} />
+        </ViewerSidebar>
+      </ViewerBody>
+    </ViewerRoot>
+  )
+}
+
 function ExtractionForm({
   extraction,
   link,
 }: {
   extraction: Extraction
-  link: ReturnType<typeof useAnchoredFieldLink>
+  link: FieldAnchorLink
 }) {
   const form = useForm<Record<string, unknown>>({
     defaultValues: extraction.values,
@@ -209,47 +269,39 @@ function ExtractionForm({
 const ACTIVE_ANCHOR_CLASS =
   "pointer-events-none absolute z-10 rounded-[2px] border border-primary/70 bg-primary/12 shadow-[0_4px_16px_rgb(0_0_0_/_8%)]"
 
-function useImageAnchoredTarget(
-  viewerRef: React.RefObject<ImageViewerHandle | null>
-): AnchoredDocumentTarget {
-  return React.useMemo(
-    () => ({
-      scrollToAnchor: (anchor, options) => {
-        if (anchor.kind !== "image-area") return
-        viewerRef.current?.scrollToFrameArea(
-          anchor.frameNumber ?? 1,
-          {
-            left: anchor.left,
-            top: anchor.top,
-            width: anchor.width,
-            height: anchor.height,
-          },
-          options
-        )
-      },
-    }),
-    [viewerRef]
+function useSegmentedPdfSourceOverlay(link: SegmentedFieldAnchorLink) {
+  return React.useCallback(
+    ({ pageNumber }: PageOverlayProps) => {
+      const anchor = link.activeAnchor
+      if (!anchor?.bounds || anchor.pageNumber !== pageNumber) return null
+
+      return (
+        <PdfHighlight
+          area={{
+            left: anchor.bounds.x * 100,
+            top: anchor.bounds.y * 100,
+            width: anchor.bounds.width * 100,
+            height: anchor.bounds.height * 100,
+          }}
+        />
+      )
+    },
+    [link.activeAnchor]
   )
 }
 
-function useImageAnchoredOverlay() {
-  const { activeAnchor } = useAnchoredDocument()
-
+function useSegmentedImageSourceOverlay(link: SegmentedFieldAnchorLink) {
   return React.useCallback(
     ({ frameNumber, rotation }: ImageFrameOverlayProps) => {
-      if (
-        activeAnchor?.kind !== "image-area" ||
-        (activeAnchor.frameNumber ?? 1) !== frameNumber
-      ) {
-        return null
-      }
+      const anchor = link.activeAnchor
+      if (!anchor?.bounds || anchor.pageNumber !== frameNumber) return null
 
       const renderedArea = rotateImageArea(
         {
-          left: activeAnchor.left,
-          top: activeAnchor.top,
-          width: activeAnchor.width,
-          height: activeAnchor.height,
+          left: anchor.bounds.x * 100,
+          top: anchor.bounds.y * 100,
+          width: anchor.bounds.width * 100,
+          height: anchor.bounds.height * 100,
         },
         rotation
       )
@@ -266,7 +318,7 @@ function useImageAnchoredOverlay() {
         />
       )
     },
-    [activeAnchor]
+    [link.activeAnchor]
   )
 }
 
@@ -382,25 +434,26 @@ function useActiveDocxHighlight() {
 // ── Per-format tabs ───────────────────────────────────────────────────────────
 
 function PdfTab() {
-  const viewerRef = React.useRef<PdfViewerHandle>(null)
-  const target = usePdfAnchoredTarget(viewerRef)
-
   return (
-    <AnchoredDocumentProvider items={PDF_EXTRACTION.items} target={target}>
-      <PdfTabContent viewerRef={viewerRef} />
-    </AnchoredDocumentProvider>
+    <SegmentedDocumentProvider model={PDF_SEGMENTED_DOCUMENT}>
+      <PdfTabContent />
+    </SegmentedDocumentProvider>
   )
 }
 
-function PdfTabContent({
-  viewerRef,
-}: {
-  viewerRef: React.RefObject<PdfViewerHandle | null>
-}) {
-  const renderPageOverlay = usePdfAnchoredOverlay({ mode: "active" })
+function PdfTabContent() {
+  const link = useSegmentedFieldLink()
+  const segmentedViewport = useSegmentedDocumentViewport()
+  const renderPageOverlay = useSegmentedPdfSourceOverlay(link)
+  const setPdfViewerHandle = React.useCallback(
+    (handle: PdfViewerHandle | null) => {
+      segmentedViewport.documentHandlers.setDocumentHandle(handle)
+    },
+    [segmentedViewport.documentHandlers]
+  )
 
   return (
-    <ExtractionShell extraction={PDF_EXTRACTION}>
+    <SegmentedExtractionShell extraction={PDF_EXTRACTION} link={link}>
       <PdfViewerProvider
         source={{
           kind: "url",
@@ -409,38 +462,66 @@ function PdfTabContent({
         }}
       >
         <PdfViewerPages
-          ref={viewerRef}
+          ref={setPdfViewerHandle}
           bare
           className="h-full"
+          onScrollProgressChange={
+            segmentedViewport.documentHandlers.onScrollProgressChange
+          }
+          onVisiblePageChange={
+            segmentedViewport.documentHandlers.onCurrentPageChange
+          }
           renderPageOverlay={renderPageOverlay}
         />
       </PdfViewerProvider>
-    </ExtractionShell>
+    </SegmentedExtractionShell>
   )
 }
 
 function ImageTab() {
-  const viewerRef = React.useRef<ImageViewerHandle>(null)
-  const target = useImageAnchoredTarget(viewerRef)
-
   return (
-    <AnchoredDocumentProvider items={IMAGE_EXTRACTION.items} target={target}>
-      <ImageTabContent viewerRef={viewerRef} />
-    </AnchoredDocumentProvider>
+    <SegmentedDocumentProvider model={IMAGE_SEGMENTED_DOCUMENT}>
+      <ImageTabContent />
+    </SegmentedDocumentProvider>
   )
 }
 
-function ImageTabContent({
-  viewerRef,
-}: {
-  viewerRef: React.RefObject<ImageViewerHandle | null>
-}) {
-  const renderFrameOverlay = useImageAnchoredOverlay()
+function ImageTabContent() {
+  const link = useSegmentedFieldLink({ initialPath: IMAGE_FIELDS[0]?.key })
+  const segmentedViewport = useSegmentedDocumentViewport()
+  const renderFrameOverlay = useSegmentedImageSourceOverlay(link)
+  const setImageViewerHandle = React.useCallback(
+    (handle: ImageViewerHandle | null) => {
+      segmentedViewport.documentHandlers.setDocumentHandle(
+        handle
+          ? {
+              getViewportElement: handle.getViewportElement,
+              scrollToPage: (pageNumber, options) => {
+                handle.scrollToFrameArea(pageNumber, { top: 0 }, options)
+              },
+              scrollToPageArea: (target, options) => {
+                handle.scrollToFrameArea(
+                  target.pageNumber,
+                  {
+                    left: target.left,
+                    top: target.top,
+                    width: target.width,
+                    height: target.height,
+                  },
+                  options
+                )
+              },
+            }
+          : null
+      )
+    },
+    [segmentedViewport.documentHandlers]
+  )
 
   return (
-    <ExtractionShell extraction={IMAGE_EXTRACTION}>
+    <SegmentedExtractionShell extraction={IMAGE_EXTRACTION} link={link}>
       <ImageViewer
-        ref={viewerRef}
+        ref={setImageViewerHandle}
         source={{
           kind: "url",
           url: IMAGE_URL,
@@ -448,9 +529,15 @@ function ImageTabContent({
         }}
         bare
         className="h-full"
+        onScrollProgressChange={
+          segmentedViewport.documentHandlers.onScrollProgressChange
+        }
+        onVisibleFrameChange={
+          segmentedViewport.documentHandlers.onCurrentPageChange
+        }
         renderFrameOverlay={renderFrameOverlay}
       />
-    </ExtractionShell>
+    </SegmentedExtractionShell>
   )
 }
 

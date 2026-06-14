@@ -240,20 +240,22 @@ export function ViewerFallback({
         className
       )}
     >
-      <div className="flex h-10 min-w-0 flex-shrink-0 items-center gap-1 border-b bg-card px-2">
-        <span className="min-w-0 flex-1 px-1">
-          <Skeleton className="inline-block h-3 w-16 align-middle" />
-        </span>
-        <div className="ml-auto flex shrink-0 items-center gap-1">
-          {category !== "unsupported" ? (
-            <>
-              <ZoomActionsSkeleton />
-              <Separator orientation="vertical" className="mx-1 h-4" />
-            </>
-          ) : null}
-          <ViewerDownloadButton action={resource.originalDownload} />
+      {!bare ? (
+        <div className="flex h-10 min-w-0 flex-shrink-0 items-center gap-1 border-b bg-card px-2">
+          <span className="min-w-0 flex-1 px-1">
+            <Skeleton className="inline-block h-3 w-16 align-middle" />
+          </span>
+          <div className="ml-auto flex shrink-0 items-center gap-1">
+            {category !== "unsupported" ? (
+              <>
+                <ZoomActionsSkeleton />
+                <Separator orientation="vertical" className="mx-1 h-4" />
+              </>
+            ) : null}
+            <ViewerDownloadButton action={resource.originalDownload} />
+          </div>
         </div>
-      </div>
+      ) : null}
       {tabular ? (
         <TableBodySkeleton />
       ) : (

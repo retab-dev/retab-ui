@@ -9,7 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 
 import type { FileSystemBrowserController } from "./file-system-browser-controller"
 import { folderHasChildren, pathParent } from "./file-system-index"
-import { FileSystemThumbnail } from "./file-system-preview"
+import { FileSystemThumbnail } from "./file-system-thumbnail"
 import type { FileSystemEntry } from "./file-system-types"
 import { useFileSystemRovingFocus } from "./use-file-system-roving-focus"
 
